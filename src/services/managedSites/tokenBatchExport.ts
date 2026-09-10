@@ -1,7 +1,4 @@
-import { ChannelType } from "~/constants/managedSite"
-import { SITE_TYPES } from "~/constants/siteType"
 import {
-  accountRuntimeKeyToLegacyAccountToken,
   isAccountTokenRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
@@ -11,23 +8,19 @@ import {
   ManagedResourceError,
   type ResourceFailure,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import { openNativeManagedChannelImportSession } from "~/services/apiAdapters/managedResources/channelImport"
+import { type ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import {
+  openNativeManagedChannelImportSession,
+  validateNativeManagedChannelImportDraft,
+} from "~/services/apiAdapters/managedResources/channelImport"
+import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import {
   getManagedSiteChannelExactMatch,
   getRecoverableManagedSiteChannelCandidate,
   type ManagedSiteChannelMatchInspection,
 } from "~/services/managedSites/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
-import {
-  getManagedSiteService,
-  type ManagedSiteConfig,
-  type ManagedSiteService,
-} from "~/services/managedSites/managedSiteService"
-import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
-import {
-  resolveManagedUpstreamResourceFeatureCapabilities,
-  type ManagedSiteUpstreamResourcesCapability,
-} from "~/services/managedSites/managedUpstreamResourceService"
 import {
   assertManagedSiteMutationResult,
   MANAGED_SITE_MUTATION_OUTCOMES,
@@ -39,30 +32,28 @@ import {
   createManagedSiteOperationContext,
   type ManagedSiteOperationContext,
 } from "~/services/managedSites/operationContext"
-import { getCurrentManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
+import {
+  getCurrentManagedSiteRuntimeConfig,
+  getCurrentManagedSiteType,
+  type ManagedSiteRuntimeConfigValue,
+} from "~/services/managedSites/runtimeConfig"
 import {
   createManagedSiteTokenBatchImportTarget,
   type ManagedSiteTokenBatchImportTarget,
 } from "~/services/managedSites/tokenBatchImportTarget"
-import {
-  getManagedSiteDuplicateCandidateSource,
-  normalizeManagedSiteChannelBaseUrl,
-  searchManagedUpstreamResourceChannelsForDuplicateMatching,
-} from "~/services/managedSites/utils/channelMatching"
+import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
+import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
 import {
   collectManagedResourceSecrets,
-  hasUsableManagedSiteChannelKey,
   mergeManagedResourceSecretCollections,
-  supportsManagedSiteBaseUrlChannelLookup,
-} from "~/services/managedSites/utils/managedSite"
+} from "~/services/managedSites/utils/resourceSecrets"
 import {
   toManagedSiteAssessmentChannel,
   toManagedSiteVerifiedKeyAssessment,
 } from "~/services/managedSites/verifiedChannelKeyAssessment"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import type { AccountToken } from "~/types"
-import type { ChannelFormData } from "~/types/managedSite"
+import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
 import {
   isExecutableManagedSiteTokenBatchExportPreviewItem,
   isResolvedManagedSiteTokenBatchExportItemInput,
@@ -123,13 +114,6 @@ export class ManagedSiteTokenBatchImportTargetChangedError extends Error {
   }
 }
 
-type TokenBatchExportResourceCapabilities =
-  ManagedSiteUpstreamResourcesCapability<
-    ManagedSiteConfig,
-    unknown,
-    ChannelFormData
-  >
-
 const mapWithConcurrency = async <TItem, TResult>(
   items: TItem[],
   concurrency: number,
@@ -184,10 +168,10 @@ const getInputRuntimeKeyName = (
 ) => input.runtimeKey.label
 
 const getVerificationCandidate = (
-  service: ManagedSiteService,
+  managedSite: ManagedSiteCapabilities,
   resolution: ManagedSiteChannelMatchInspection,
 ) => {
-  if (service.siteType !== SITE_TYPES.NEW_API) {
+  if (!managedSite.matching.secretVerification) {
     return undefined
   }
 
@@ -258,81 +242,35 @@ const isExactVerificationUnavailable = (
   resolution: Awaited<ReturnType<typeof resolveManagedSiteChannelMatch>>,
 ) => resolution.url.matched && !resolution.key.comparable
 
-const resolveTokenBatchExportResourceCapabilities = (
-  siteType: ManagedSiteService["siteType"],
-): TokenBatchExportResourceCapabilities | null => {
-  const resolution = resolveManagedUpstreamResourceFeatureCapabilities(
-    siteType,
-    MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenBatchExport,
-  )
-
-  if (!resolution.supported) {
-    return null
-  }
-
-  return resolution.capabilities as TokenBatchExportResourceCapabilities
-}
-
-const buildTokenBatchExportChannelMatchService = (params: {
-  service: ManagedSiteService
-}): ManagedSiteService => {
-  const matchService: ManagedSiteService = { ...params.service }
-  delete matchService.searchResourceDuplicateChannels
-
-  const resources = resolveTokenBatchExportResourceCapabilities(
-    params.service.siteType,
-  )
-  if (!resources) {
-    return matchService
-  }
-
-  matchService.searchResourceDuplicateChannels = async (config, searchParams) =>
-    await searchManagedUpstreamResourceChannelsForDuplicateMatching({
-      resources,
-      config,
-      accountBaseUrl: searchParams.accountBaseUrl,
-      candidateSource: getManagedSiteDuplicateCandidateSource(
-        params.service.siteType,
-      ),
-    })
-
-  return matchService
-}
-
 const getDraftBlockedReason = (
-  service: ManagedSiteService,
-  draft: ChannelFormData,
+  managedSite: ManagedSiteCapabilities,
+  draft: ManagedSiteChannelDraft,
 ): ManagedSiteTokenBatchExportBlockedReasonCode | null => {
-  if (!draft.name.trim()) {
-    return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.NAME_REQUIRED
-  }
-
-  if (
-    service.siteType === SITE_TYPES.CLAUDE_CODE_HUB &&
-    !hasUsableManagedSiteChannelKey(draft.key)
-  ) {
-    return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.REAL_KEY_REQUIRED
-  }
-
-  if (!draft.key.trim()) {
-    return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.KEY_REQUIRED
-  }
-
-  const requiresBaseUrl =
-    service.siteType === SITE_TYPES.AXON_HUB ||
-    service.siteType === SITE_TYPES.CLAUDE_CODE_HUB ||
-    draft.type === ChannelType.VolcEngine ||
-    draft.type === ChannelType.SunoAPI
-
-  if (requiresBaseUrl && !draft.base_url.trim()) {
-    return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.BASE_URL_REQUIRED
-  }
-
-  if (service.siteType !== SITE_TYPES.SUB2API && draft.models.length === 0) {
+  if (draft.modelPrefillFetchFailed && draft.models.length === 0) {
     return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED
   }
+  const validation = validateNativeManagedChannelImportDraft(
+    managedSite.siteType,
+    draft,
+  )
+  if (validation.valid) return null
 
-  return null
+  const invalidFields = new Set(validation.issues.map((issue) => issue.fieldId))
+  if (invalidFields.has("name") && !draft.name.trim()) {
+    return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.NAME_REQUIRED
+  }
+  if (invalidFields.has("credential")) {
+    return draft.key.trim()
+      ? MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.REAL_KEY_REQUIRED
+      : MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.KEY_REQUIRED
+  }
+  if (invalidFields.has("baseUrl") && !draft.base_url.trim()) {
+    return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.BASE_URL_REQUIRED
+  }
+  if (invalidFields.has("models") && draft.models.length === 0) {
+    return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED
+  }
+  return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.INPUT_PREPARATION_FAILED
 }
 
 type ManagedResourceSecretCollection = ReturnType<
@@ -364,19 +302,9 @@ const resolveInputRuntimeKeyForManagedSiteExport = async (
   )
 }
 
-const resolveInputTokenForManagedSiteExport = async (
+const buildInputDraftSource = (
   input: ResolvedManagedSiteTokenBatchExportItemInput,
-  protectionBypassExecution?: ProtectionBypassExecution,
-): Promise<AccountToken> =>
-  accountRuntimeKeyToLegacyAccountToken(
-    await resolveInputRuntimeKeyForManagedSiteExport(
-      input,
-      protectionBypassExecution,
-    ),
-  )
-
-const resolveInputAccountForManagedSiteExport = (
-  input: ResolvedManagedSiteTokenBatchExportItemInput,
+  runtimeKey: AccountRuntimeKey,
 ) => {
   const runtimeKeyBaseUrl = input.runtimeKey.baseUrl.trim()
   const baseUrl = isAccountTokenRuntimeKey(input.runtimeKey)
@@ -386,34 +314,34 @@ const resolveInputAccountForManagedSiteExport = (
     : runtimeKeyBaseUrl ||
       normalizeManagedSiteChannelBaseUrl(input.account.baseUrl)
 
-  return {
-    ...input.account,
+  return buildManagedSiteChannelDraftSource({
+    ...runtimeKey,
     baseUrl,
-  }
+  })
 }
 
 const preparePreviewItem = async (params: {
   input: ResolvedManagedSiteTokenBatchExportItemInput
-  service: ManagedSiteService
-  managedConfig: ManagedSiteConfig
+  managedSite: ManagedSiteCapabilities
+  managedConfig: ManagedSiteRuntimeConfigValue
   verification: ManagedSiteBatchImportIntent["verification"]
-  resolvedChannelKeysById?: Record<number, string>
+  resolvedChannelKeysByResourceKey?: Record<string, string>
   operationContext?: ManagedSiteOperationContext
   protectionBypassExecution?: ProtectionBypassExecution
 }): Promise<ManagedSiteTokenBatchExportPreviewItem> => {
-  const { input, service, managedConfig } = params
+  const { input, managedSite, managedConfig } = params
   let secretCollection = collectManagedResourceSecrets(input, managedConfig)
 
-  let resolvedToken: AccountToken
+  let resolvedRuntimeKey: AccountRuntimeKey
 
   try {
-    resolvedToken = await resolveInputTokenForManagedSiteExport(
+    resolvedRuntimeKey = await resolveInputRuntimeKeyForManagedSiteExport(
       input,
       params.protectionBypassExecution,
     )
     secretCollection = mergeManagedResourceSecretCollections(
       secretCollection,
-      collectManagedResourceSecrets(resolvedToken),
+      collectManagedResourceSecrets(resolvedRuntimeKey),
     )
   } catch (error) {
     const diagnostic = toSafePreviewDiagnostic(error, secretCollection)
@@ -421,7 +349,7 @@ const preparePreviewItem = async (params: {
       accountId: input.account.id,
       runtimeKeyId: input.runtimeKey.id,
       runtimeKeySource: input.runtimeKey.source,
-      siteType: service.siteType,
+      siteType: managedSite.siteType,
       diagnostic,
     })
 
@@ -433,10 +361,8 @@ const preparePreviewItem = async (params: {
   }
 
   try {
-    const channelDraftAccount = resolveInputAccountForManagedSiteExport(input)
-    const draft = await service.prepareChannelFormData(
-      channelDraftAccount,
-      resolvedToken,
+    const draft = await managedSite.channelDrafts.prepareFormData(
+      buildInputDraftSource(input, resolvedRuntimeKey),
       {
         operationContext: params.operationContext,
       },
@@ -445,7 +371,7 @@ const preparePreviewItem = async (params: {
       secretCollection,
       collectManagedResourceSecrets(draft),
     )
-    const blockedReason = getDraftBlockedReason(service, draft)
+    const blockedReason = getDraftBlockedReason(managedSite, draft)
 
     if (blockedReason) {
       return {
@@ -479,10 +405,7 @@ const preparePreviewItem = async (params: {
       }
     }
 
-    if (
-      !service.searchResourceDuplicateChannels &&
-      !supportsManagedSiteBaseUrlChannelLookup(service.siteType)
-    ) {
+    if (!supportsManagedSiteBaseUrlChannelLookup(managedSite.siteType)) {
       warningCodes.push(
         MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.DEDUPE_UNSUPPORTED,
       )
@@ -500,22 +423,25 @@ const preparePreviewItem = async (params: {
 
     const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(draft.base_url)
     const resolution = await resolveManagedSiteChannelMatch({
-      service: buildTokenBatchExportChannelMatchService({ service }),
+      managedSite,
       managedConfig,
       accountBaseUrl: searchBaseUrl,
       models: draft.models,
       key: draft.key,
-      resolvedChannelKeysById: params.resolvedChannelKeysById,
+      resolvedChannelKeysByResourceKey: params.resolvedChannelKeysByResourceKey,
       resolveHiddenKeys: true,
       requestCache: params.operationContext?.channelMatch,
       protectionBypassExecution: params.protectionBypassExecution,
     })
     const exactMatch = getManagedSiteChannelExactMatch(
       resolution,
-      service.siteType,
+      managedSite.matching,
     )
     const assessment = toManagedSiteVerifiedKeyAssessment(resolution)
-    const verificationCandidate = getVerificationCandidate(service, resolution)
+    const verificationCandidate = getVerificationCandidate(
+      managedSite,
+      resolution,
+    )
     const exactVerificationUnavailable =
       isExactVerificationUnavailable(resolution)
 
@@ -565,7 +491,7 @@ const preparePreviewItem = async (params: {
       accountId: input.account.id,
       runtimeKeyId: input.runtimeKey.id,
       runtimeKeySource: input.runtimeKey.source,
-      siteType: service.siteType,
+      siteType: managedSite.siteType,
       diagnostic,
     })
 
@@ -580,7 +506,7 @@ const preparePreviewItem = async (params: {
 const buildPreview = (
   params: {
     intent: ManagedSiteBatchImportIntent
-    siteType: ManagedSiteService["siteType"]
+    siteType: ManagedSiteCapabilities["siteType"]
     target: ManagedSiteTokenBatchImportTarget | null
   },
   items: ManagedSiteTokenBatchExportPreviewItem[],
@@ -630,16 +556,18 @@ const buildPreview = (
 export async function prepareManagedSiteTokenBatchExportPreview(params: {
   items: ManagedSiteTokenBatchExportItemInput[]
   intent?: ManagedSiteBatchImportIntent
-  resolvedChannelKeysByItemId?: Record<string, Record<number, string>>
+  resolvedChannelKeysByItemId?: Record<string, Record<string, string>>
   protectionBypassExecution?: ProtectionBypassExecution
 }): Promise<ManagedSiteTokenBatchExportPreview> {
   const intent = params.intent ?? DEFAULT_MANAGED_SITE_TOKEN_BATCH_IMPORT_INTENT
   const runtimeConfig = await getCurrentManagedSiteRuntimeConfig()
 
   if (!runtimeConfig) {
-    const service = await getManagedSiteService()
+    const managedSite = getManagedSiteCapabilities(
+      await getCurrentManagedSiteType(),
+    )
     return buildPreview(
-      { intent, siteType: service.siteType, target: null },
+      { intent, siteType: managedSite.siteType, target: null },
       params.items.map((input) =>
         isResolvedManagedSiteTokenBatchExportItemInput(input)
           ? buildBlockedPreviewItem(
@@ -663,10 +591,10 @@ export async function prepareManagedSiteTokenBatchExportPreview(params: {
 
       return preparePreviewItem({
         input,
-        service: target.service,
+        managedSite: target.managedSite,
         managedConfig: target.config,
         verification: intent.verification,
-        resolvedChannelKeysById:
+        resolvedChannelKeysByResourceKey:
           params.resolvedChannelKeysByItemId?.[getInputRuntimeKeyId(input)],
         operationContext,
         protectionBypassExecution: params.protectionBypassExecution,
@@ -675,7 +603,7 @@ export async function prepareManagedSiteTokenBatchExportPreview(params: {
   )
 
   return buildPreview(
-    { intent, siteType: target.service.siteType, target },
+    { intent, siteType: target.managedSite.siteType, target },
     items,
   )
 }
@@ -714,7 +642,9 @@ export async function executeManagedSiteTokenBatchExport(params: {
     isSelectedExecutablePreviewItem,
   )
   const nativeImportSessionResult = executableItems.length
-    ? await openNativeManagedChannelImportSession(target.service.siteType).then(
+    ? await openNativeManagedChannelImportSession(
+        target.managedSite.siteType,
+      ).then(
         (session) => ({ session, error: null }),
         (error: unknown) => ({ session: null, error }),
       )
@@ -729,7 +659,10 @@ export async function executeManagedSiteTokenBatchExport(params: {
           target.config,
           item.draft,
         )
-        if (nativeImportSessionResult.error) {
+        if (
+          nativeImportSessionResult.error ||
+          !nativeImportSessionResult.session
+        ) {
           const message = preDispatchSecretCollection.complete
             ? toPrivateManagedSiteThrownErrorMessage(
                 nativeImportSessionResult.error,
@@ -748,9 +681,9 @@ export async function executeManagedSiteTokenBatchExport(params: {
               : FALLBACK_EXECUTION_ERROR,
           }
         }
-        let secretCollection = preDispatchSecretCollection
+        const secretCollection = preDispatchSecretCollection
         let mutation: ManagedSiteMutationResult<unknown>
-        if (nativeImportSessionResult.session) {
+        {
           try {
             mutation = await nativeImportSessionResult.session.submit(
               item.draft,
@@ -768,56 +701,6 @@ export async function executeManagedSiteTokenBatchExport(params: {
               result: isDefiniteNativeImportFailure(error)
                 ? MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.FAILED
                 : MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.UNCERTAIN,
-              success: false,
-              skipped: false,
-              error: message
-                ? `${FALLBACK_EXECUTION_ERROR}: ${message}`
-                : FALLBACK_EXECUTION_ERROR,
-            }
-          }
-        } else {
-          let payload: ReturnType<typeof target.service.buildChannelPayload>
-          try {
-            payload = target.service.buildChannelPayload(item.draft)
-          } catch (error) {
-            const message = preDispatchSecretCollection.complete
-              ? toPrivateManagedSiteThrownErrorMessage(error, {
-                  knownSecrets: preDispatchSecretCollection.knownSecrets,
-                })
-              : undefined
-            return {
-              id: item.id,
-              accountName: item.accountName,
-              runtimeKeyName: item.runtimeKeyName,
-              result: MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.FAILED,
-              success: false,
-              skipped: false,
-              error: message
-                ? `${FALLBACK_EXECUTION_ERROR}: ${message}`
-                : FALLBACK_EXECUTION_ERROR,
-            }
-          }
-          secretCollection = mergeManagedResourceSecretCollections(
-            preDispatchSecretCollection,
-            collectManagedResourceSecrets(payload),
-          )
-          try {
-            mutation = await target.service.createChannel(
-              target.config,
-              payload,
-            )
-          } catch (error) {
-            const message = secretCollection.complete
-              ? toPrivateManagedSiteThrownErrorMessage(error, {
-                  knownSecrets: secretCollection.knownSecrets,
-                })
-              : undefined
-            return {
-              id: item.id,
-              accountName: item.accountName,
-              runtimeKeyName: item.runtimeKeyName,
-              result:
-                MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.UNCERTAIN,
               success: false,
               skipped: false,
               error: message
@@ -888,7 +771,7 @@ export async function executeManagedSiteTokenBatchExport(params: {
     )
   } catch (error) {
     try {
-      await target.service.listChannels(target.config)
+      await nativeImportSessionResult.session?.reconcile()
     } catch {
       // Reconciliation is best effort; post-invocation failures stay non-replayable.
     }
@@ -903,7 +786,7 @@ export async function executeManagedSiteTokenBatchExport(params: {
     )
   ) {
     try {
-      await target.service.listChannels(target.config)
+      await nativeImportSessionResult.session?.reconcile()
     } catch {
       // Reconciliation is best effort; ambiguous creates remain non-replayable.
     }

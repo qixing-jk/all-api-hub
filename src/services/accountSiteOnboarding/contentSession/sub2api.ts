@@ -1,4 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import { readIdentityStorageString } from "~/services/accountBrowserSession/localIdentityState"
 import { parseSub2ApiUserIdentity } from "~/services/apiService/sub2api/parsing"
 
 import type { ContentSessionExtractor } from "../contracts"
@@ -49,6 +50,17 @@ const tryParseTimestamp = (value: string | null): number | null => {
   if (!value) return null
   const parsed = Number.parseInt(value, 10)
   return Number.isFinite(parsed) ? parsed : null
+}
+
+/** Reads the website token and expiry without invoking the onboarding refresh flow. */
+export function readSub2ApiBrowserToken() {
+  return {
+    token: readIdentityStorageString(SUB2API_AUTH_STORAGE_KEYS.accessToken),
+    expiresAt:
+      tryParseTimestamp(
+        readIdentityStorageString(SUB2API_AUTH_STORAGE_KEYS.tokenExpiresAt),
+      ) ?? undefined,
+  }
 }
 
 const readStoredTokenState = () => ({

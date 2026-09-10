@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { Alert } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
-import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
+import toast from "~/lib/notify"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import { normalizeDefaultTokenRequestName } from "~/services/accounts/defaultTokenLifecycle"
 import {
@@ -19,7 +18,6 @@ import {
   requireDisplayAccountKeyManagement,
 } from "~/services/accounts/utils/apiServiceRequest"
 import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
-import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -254,15 +252,15 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
         const createdSecret =
           createdToken &&
           showOneTimeKeyDialog &&
-          currentAccount.siteType === SITE_TYPES.AIHUBMIX
+          keyManagement?.createRuntimeSecret
             ? (() => {
                 try {
-                  return createAIHubMixCreatedRuntimeSecret({
+                  return keyManagement.createRuntimeSecret({
                     account: currentAccount,
                     token: createdToken,
                   })
                 } catch (error) {
-                  logger.warn("AIHubMix created secret projection failed", {
+                  logger.warn("Created secret projection failed", {
                     error: getErrorMessage(error),
                   })
                   return null

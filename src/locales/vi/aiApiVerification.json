@@ -32,11 +32,16 @@
     "meta": {
       "apiType": "Loại API",
       "apiTypePlaceholder": "Chọn loại API",
+      "mode": "Chế độ kiểm tra",
       "model": "Mô hình",
       "modelPlaceholder": "Nhập ID mô hình",
       "runtimeKey": "Khóa",
       "runtimeKeyIncompatible": "Không dùng được cho mô hình này",
       "runtimeKeyPlaceholder": "Chọn khóa"
+    },
+    "modes": {
+      "nonStreaming": "Không truyền luồng",
+      "streaming": "Truyền luồng"
     },
     "noCompatibleRuntimeKeyHint": "Không có khóa nào dùng được cho nhóm của mô hình này. Hãy tạo hoặc chọn khóa thuộc nhóm khả dụng trong Quản lý khóa.",
     "notRunYet": "Chưa chạy",

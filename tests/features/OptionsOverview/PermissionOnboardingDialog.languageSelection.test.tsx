@@ -173,7 +173,7 @@ vi.mock("~/entrypoints/options/components/ThemeToggle", () => ({
   default: () => <div data-testid="theme-toggle" />,
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/operationFeedback", () => ({
   showResultToast: toastHelperMocks.showResultToast,
 }))
 
@@ -556,11 +556,11 @@ describe("PermissionOnboardingDialog language selection", () => {
       ])
     })
 
-    expect(toastHelperMocks.showResultToast).toHaveBeenCalledWith(
-      true,
-      i18n.t("permissionsOnboarding.toasts.success"),
-      i18n.t("permissionsOnboarding.toasts.error"),
-    )
+    expect(toastHelperMocks.showResultToast).toHaveBeenCalledWith({
+      success: true,
+      successFallback: i18n.t("permissionsOnboarding.toasts.success"),
+      errorFallback: i18n.t("permissionsOnboarding.toasts.error"),
+    })
     expect(onClose).not.toHaveBeenCalled()
   })
 
@@ -679,10 +679,10 @@ describe("PermissionOnboardingDialog language selection", () => {
     )
 
     await waitFor(() => {
-      expect(toastHelperMocks.showResultToast).toHaveBeenCalledWith(
-        false,
-        i18n.t("permissionsOnboarding.toasts.error"),
-      )
+      expect(toastHelperMocks.showResultToast).toHaveBeenCalledWith({
+        success: false,
+        message: i18n.t("permissionsOnboarding.toasts.error"),
+      })
     })
 
     expect(onClose).not.toHaveBeenCalled()

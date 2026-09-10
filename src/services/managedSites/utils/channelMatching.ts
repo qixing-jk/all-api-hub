@@ -1,5 +1,4 @@
 import {
-  SITE_TYPES,
   type AccountSiteType,
   type ManagedSiteType,
 } from "~/constants/siteType"
@@ -7,7 +6,6 @@ import {
   formatOptionalSkPrefixTokenComparableKey,
   hasOptionalSkPrefixSiteTokenSemantics,
 } from "~/services/accountTokens/apiTokenKey"
-import type { ManagedUpstreamResourceItemsCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import {
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
   MANAGED_SITE_CHANNEL_MATCH_LEVELS,
@@ -19,27 +17,12 @@ import {
   type ManagedSiteChannelModelsAssessment,
 } from "~/services/managedSites/channelMatch"
 import { normalizeOpenAiFamilyBaseUrl } from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
-import type {
-  ManagedSiteChannel,
-  ManagedSiteChannelListData,
-} from "~/types/managedSite"
-import type {
-  ManagedUpstreamResourceDetail,
-  ManagedUpstreamResourceSummary,
-} from "~/types/managedUpstreamResource"
+import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 import { isArraysEqual } from "~/utils"
 import { normalizeList, parseDelimitedList } from "~/utils/core/string"
 
-export const MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES = {
-  Search: "search",
-  List: "list",
-} as const
-
-type ManagedSiteDuplicateCandidateSource =
-  (typeof MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES)[keyof typeof MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES]
-
 interface FindManagedSiteChannelByComparableInputsParams {
-  channels: ManagedSiteChannel[]
+  channels: ManagedResourceMatchCandidate[]
   accountBaseUrl: string
   models: string[]
   key?: string
@@ -47,41 +30,27 @@ interface FindManagedSiteChannelByComparableInputsParams {
 }
 
 interface FindManagedSiteChannelsByBaseUrlParams {
-  channels: ManagedSiteChannel[]
+  channels: ManagedResourceMatchCandidate[]
   accountBaseUrl: string
 }
 
 interface FindManagedSiteChannelsByBaseUrlAndModelsParams {
-  channels: ManagedSiteChannel[]
+  channels: ManagedResourceMatchCandidate[]
   accountBaseUrl: string
   models: string[]
 }
 
 interface FindBestManagedSiteChannelMatchParams {
-  channels: ManagedSiteChannel[]
+  channels: ManagedResourceMatchCandidate[]
   accountBaseUrl: string
   models: string[]
 }
 
-interface SearchManagedUpstreamResourceChannelsForDuplicateMatchingParams<
-  TConfig = unknown,
-> {
-  resources: {
-    items: Pick<
-      ManagedUpstreamResourceItemsCapability<TConfig>,
-      "list" | "search" | "getDetail"
-    >
-  }
-  config: TConfig
-  accountBaseUrl: string
-  candidateSource?: ManagedSiteDuplicateCandidateSource
-}
-
 interface InspectManagedSiteChannelKeyMatchParams {
-  channels: ManagedSiteChannel[]
+  channels: ManagedResourceMatchCandidate[]
   accountBaseUrl: string
   key?: string
-  exactChannel?: ManagedSiteChannel | null
+  exactChannel?: ManagedResourceMatchCandidate | null
   keyComparisonMode?: ManagedSiteChannelKeyComparisonMode
 }
 
@@ -92,26 +61,14 @@ interface InspectManagedSiteChannelKeyValueMatchParams {
 }
 
 interface InspectManagedSiteChannelModelsMatchParams {
-  channels: ManagedSiteChannel[]
+  channels: ManagedResourceMatchCandidate[]
   accountBaseUrl: string
   models: string[]
-  exactChannel?: ManagedSiteChannel | null
+  exactChannel?: ManagedResourceMatchCandidate | null
 }
 
-/**
- * Sub2API's native account search is name-only, so URL-based duplicate checks
- * must inventory accounts before filtering the normalized URL bucket locally.
- * Source: Wei-Shaw/sub2api@48eb376 account_query.go.
- */
-export const getManagedSiteDuplicateCandidateSource = (
-  siteType: ManagedSiteType,
-): ManagedSiteDuplicateCandidateSource =>
-  siteType === SITE_TYPES.SUB2API
-    ? MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES.List
-    : MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES.Search
-
 interface RankedManagedSiteChannelCandidate {
-  channel: ManagedSiteChannel
+  channel: ManagedResourceMatchCandidate
   reason: RankedManagedSiteChannelMatchReason
   similarityScore: number
   lengthDelta: number
@@ -133,78 +90,6 @@ const MODEL_MATCH_REASON_PRIORITY: Record<
 
 const toNormalizedModelList = (models: string[] | string): string[] =>
   normalizeList(Array.isArray(models) ? models : parseDelimitedList(models))
-
-const isObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null
-
-const toIntegerId = (value: unknown): number | null => {
-  if (typeof value === "number" && Number.isInteger(value)) {
-    return value
-  }
-
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value)
-    return Number.isInteger(parsed) ? parsed : null
-  }
-
-  return null
-}
-
-const toChannelLikeNative = (value: unknown): ManagedSiteChannel | null => {
-  if (!isObject(value)) {
-    return null
-  }
-
-  const id = toIntegerId(value.id)
-
-  if (
-    id == null ||
-    typeof value.name !== "string" ||
-    typeof value.base_url !== "string" ||
-    typeof value.models !== "string"
-  ) {
-    return null
-  }
-
-  return {
-    ...value,
-    id,
-  } as ManagedSiteChannel
-}
-
-const toNumericResourceId = (
-  resource: ManagedUpstreamResourceSummary,
-): number | null => toIntegerId(resource.ref.resourceId)
-
-const toChannelFromResourceSummary = (
-  resource: ManagedUpstreamResourceSummary,
-): ManagedSiteChannel | null => {
-  const id = toNumericResourceId(resource)
-
-  if (id == null) {
-    return null
-  }
-
-  return {
-    id,
-    name: resource.displayName,
-    base_url: resource.endpointLabel ?? "",
-    models: (resource.modelPreview ?? []).join(","),
-    key: "",
-  } as ManagedSiteChannel
-}
-
-const toChannelFromResourceDetail = (
-  detail: ManagedUpstreamResourceDetail,
-): ManagedSiteChannel | null => {
-  const nativeChannel = toChannelLikeNative(detail.native)
-
-  if (nativeChannel) {
-    return nativeChannel
-  }
-
-  return toChannelFromResourceSummary(detail.summary)
-}
 
 export const MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES = {
   EXACT: "exact",
@@ -251,7 +136,7 @@ const toChannelKeyCandidatesFromString = (
     .filter(Boolean)
 
 const toChannelKeyCandidates = (
-  channel: ManagedSiteChannel,
+  channel: ManagedResourceMatchCandidate,
   mode: ManagedSiteChannelKeyComparisonMode,
 ): string[] => toChannelKeyCandidatesFromString(channel.key ?? "", mode)
 
@@ -318,59 +203,11 @@ export function normalizeManagedSiteChannelBaseUrl(baseUrl: string): string {
 }
 
 /**
- * Uses migrated resource listing/detail APIs to produce the channel-shaped
- * candidates expected by the existing duplicate warning contract.
- */
-export async function searchManagedUpstreamResourceChannelsForDuplicateMatching<
-  TConfig,
->(
-  params: SearchManagedUpstreamResourceChannelsForDuplicateMatchingParams<TConfig>,
-): Promise<ManagedSiteChannelListData | null> {
-  const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(
-    params.accountBaseUrl,
-  )
-  const searchResults =
-    params.candidateSource === MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES.List
-      ? await params.resources.items.list(params.config)
-      : await params.resources.items.search(params.config, searchBaseUrl)
-
-  if (!searchResults) {
-    return null
-  }
-
-  const channels: ManagedSiteChannel[] = []
-
-  for (const resource of searchResults.items) {
-    let channel: ManagedSiteChannel | null = null
-
-    try {
-      const detail = await params.resources.items.getDetail(
-        params.config,
-        resource.ref,
-      )
-      channel = toChannelFromResourceDetail(detail)
-    } catch {
-      channel = toChannelFromResourceSummary(resource)
-    }
-
-    if (channel) {
-      channels.push(channel)
-    }
-  }
-
-  return {
-    items: channels,
-    total: channels.length,
-    type_counts: {},
-  }
-}
-
-/**
  * Filters managed-site channels by normalized base URL.
  */
 export function findManagedSiteChannelsByBaseUrl(
   params: FindManagedSiteChannelsByBaseUrlParams,
-): ManagedSiteChannel[] {
+): ManagedResourceMatchCandidate[] {
   const normalizedAccountBaseUrl = normalizeManagedSiteChannelBaseUrl(
     params.accountBaseUrl,
   )
@@ -387,7 +224,7 @@ export function findManagedSiteChannelsByBaseUrl(
  */
 export function findManagedSiteChannelsByBaseUrlAndModels(
   params: FindManagedSiteChannelsByBaseUrlAndModelsParams,
-): ManagedSiteChannel[] {
+): ManagedResourceMatchCandidate[] {
   const { accountBaseUrl, models } = params
   const normalizedDesiredModels = normalizeList(models)
   const urlBucket = findManagedSiteChannelsByBaseUrl({
@@ -410,7 +247,7 @@ export function findManagedSiteChannelsByBaseUrlAndModels(
  */
 export function findManagedSiteChannelByComparableInputs(
   params: FindManagedSiteChannelByComparableInputsParams,
-): ManagedSiteChannel | null {
+): ManagedResourceMatchCandidate | null {
   const { channels, accountBaseUrl, models, key } = params
   const keyComparisonMode =
     params.keyComparisonMode ?? MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.EXACT

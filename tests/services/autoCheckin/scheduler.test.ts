@@ -29,6 +29,7 @@ import {
   updateAutoCheckinSettings,
 } from "~/services/checkin/autoCheckin/scheduler"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
+import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -193,6 +194,10 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   },
 }))
 
+vi.mock("~/services/notifications/taskNotificationService", () => ({
+  notifyTaskResult: vi.fn(),
+}))
+
 vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
   accountQueries: {
     getAllAccounts: vi.fn(),
@@ -337,6 +342,8 @@ const mockedBrowserApi = {
   onAlarm: onAlarm as unknown as ReturnType<typeof vi.fn>,
   sendRuntimeMessage: sendRuntimeMessage as unknown as ReturnType<typeof vi.fn>,
 }
+
+const mockedNotifyTaskResult = vi.mocked(notifyTaskResult)
 
 const mockedProductAnalytics = {
   trackProductAnalyticsActionCompleted:
@@ -2527,6 +2534,72 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       { maxAttempts: 1 },
     )
 
+    vi.useRealTimers()
+  })
+
+  it("keeps already-checked and uncertain retry outcomes distinct in notifications", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 30, 0))
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...DEFAULT_PREFERENCES.autoCheckin!,
+        globalEnabled: true,
+        notifyUiOnCompletion: false,
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+    const accounts = ["already", "uncertain"].map((id) => ({
+      id,
+      site_name: id,
+      site_type: SITE_TYPES.VELOERA,
+      account_info: { username: id },
+      checkIn: runnableCheckIn(),
+    }))
+    storedStatus = {
+      lastDailyRunDay: "2024-01-01",
+      retryState: {
+        day: "2024-01-01",
+        pendingAccountIds: ["already", "uncertain"],
+        attemptsByAccount: { already: 1, uncertain: 1 },
+      },
+      perAccount: {},
+    } as any
+    mockedAccountStorage.getAllAccounts.mockResolvedValue(accounts)
+    mockedAccountStorage.getAccountById.mockImplementation(async (id: string) =>
+      accounts.find((account) => account.id === id),
+    )
+    resolveProviderForTest.mockReturnValue({
+      getReadiness: vi.fn(() => ({ ready: true })),
+      checkIn: vi.fn(async (account: any) =>
+        account.id === "already"
+          ? { status: "already_checked" }
+          : {
+              status: "uncertain",
+              reconciliation: "unknown",
+              retryable: false,
+            },
+      ),
+    })
+    await (autoCheckinScheduler as any).runRetryCheckins()
+    expect(mockedNotifyTaskResult).toHaveBeenCalledWith({
+      task: "autoCheckin",
+      status: "partial_success",
+      counts: {
+        total: 2,
+        success: 0,
+        alreadyChecked: 1,
+        failed: 0,
+        uncertain: 1,
+        skipped: 0,
+      },
+    })
+    expect(storedStatus.perAccount.already.status).toBe("already_checked")
+    expect(storedStatus.perAccount.uncertain.status).toBe("uncertain")
+    expect(storedStatus.retryState).toBeUndefined()
     vi.useRealTimers()
   })
 
@@ -6163,6 +6236,30 @@ describe("autoCheckinScheduler debug helpers", () => {
 })
 
 describe("autoCheckinScheduler private helpers", () => {
+  it("sends already-checked results as a distinct notification count", async () => {
+    await (autoCheckinScheduler as any).notifyScheduledRunResult({
+      successCount: 2,
+      alreadyCheckedCount: 1,
+      failedCount: 1,
+      uncertainCount: 1,
+      skippedCount: 0,
+      total: 4,
+    })
+
+    expect(mockedNotifyTaskResult).toHaveBeenCalledWith({
+      task: "autoCheckin",
+      status: "partial_success",
+      counts: {
+        total: 4,
+        success: 1,
+        alreadyChecked: 1,
+        failed: 1,
+        uncertain: 1,
+        skipped: 0,
+      },
+    })
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -7060,8 +7157,9 @@ describe("autoCheckinScheduler private helpers", () => {
       (autoCheckinScheduler as any).recalculateSummaryFromResults(
         {
           a: { status: "success" },
-          b: { status: "failed" },
-          c: { status: "skipped" },
+          b: { status: "already_checked" },
+          c: { status: "failed" },
+          d: { status: "skipped" },
         },
         {
           totalEligible: 7,
@@ -7069,8 +7167,9 @@ describe("autoCheckinScheduler private helpers", () => {
       ),
     ).toEqual({
       totalEligible: 7,
-      executed: 2,
-      successCount: 1,
+      executed: 3,
+      successCount: 2,
+      alreadyCheckedCount: 1,
       failedCount: 1,
       skippedCount: 1,
       needsRetry: true,

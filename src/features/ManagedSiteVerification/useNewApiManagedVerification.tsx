@@ -1,6 +1,8 @@
+import type { TFunction } from "i18next"
 import { useCallback, useRef, useState } from "react"
-import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 
+import toast from "~/lib/notify"
 import { cleanupNewApiOwnedSession } from "~/services/managedSites/newApiOwnedSession/client"
 import {
   ensureNewApiManagedSession,
@@ -14,7 +16,12 @@ import { createTab } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
-import { getNewApiManagedVerificationErrorMessage } from "./errorMessages"
+import {
+  getNewApiManagedVerificationErrorMessage,
+  getNewApiManagedVerificationFailure,
+  presentNewApiManagedVerificationFailure,
+  type NewApiManagedVerificationFailure,
+} from "./errorMessages"
 
 const logger = createLogger("NewApiManagedVerification")
 
@@ -52,7 +59,7 @@ export interface OpenNewApiManagedVerificationParams {
   onVerified?: () => Promise<void> | void
   closeMode?: NewApiManagedVerificationCloseMode
   initialSessionResult?: EnsureNewApiManagedSessionResult
-  initialFailureMessage?: string
+  initialFailure?: NewApiManagedVerificationFailure
 }
 
 export type NewApiManagedVerificationConfigUpdate = Partial<
@@ -61,16 +68,70 @@ export type NewApiManagedVerificationConfigUpdate = Partial<
 
 type StoredNewApiManagedVerificationRequest = Omit<
   OpenNewApiManagedVerificationParams,
-  "initialFailureMessage" | "initialSessionResult"
+  "initialFailure" | "initialSessionResult"
 >
+
+type VerificationBusyPhase =
+  | "starting"
+  | "submitting"
+  | "cleanup"
+  | "refreshing-token"
+  | "refreshing-channel"
+  | "finishing"
+type VerificationFailure =
+  | NewApiManagedVerificationFailure
+  | { kind: "missing-base-url" | "missing-code" | "cleanup-failed" }
+
+/** Renders the current operation phase without affecting the verification lifecycle. */
+function presentBusyPhase(
+  phase: VerificationBusyPhase | undefined,
+  t: TFunction,
+) {
+  switch (phase) {
+    case "starting":
+      return t("newApiManagedVerification:dialog.messages.starting")
+    case "submitting":
+      return t("newApiManagedVerification:dialog.messages.submitting")
+    case "cleanup":
+      return t("newApiManagedVerification:dialog.messages.cleaningOwnedSession")
+    case "refreshing-token":
+      return t("newApiManagedVerification:dialog.messages.refreshingToken")
+    case "refreshing-channel":
+      return t("newApiManagedVerification:dialog.messages.refreshingChannel")
+    case "finishing":
+      return t("newApiManagedVerification:dialog.messages.finishing")
+    default:
+      return undefined
+  }
+}
+
+/** Renders local validation or a sanitized provider failure. */
+function presentFailure(
+  failure: VerificationFailure | undefined,
+  t: TFunction,
+) {
+  if (!failure) return undefined
+  switch (failure.kind) {
+    case "missing-base-url":
+      return t("newApiManagedVerification:dialog.messages.missingBaseUrl")
+    case "missing-code":
+      return t("newApiManagedVerification:dialog.messages.missingCode")
+    case "cleanup-failed":
+      return t(
+        "newApiManagedVerification:dialog.messages.ownedSessionCleanupFailed",
+      )
+    default:
+      return presentNewApiManagedVerificationFailure(failure, t)
+  }
+}
 
 interface NewApiManagedVerificationState {
   isOpen: boolean
   step: NewApiManagedVerificationStep
   isBusy: boolean
-  busyMessage?: string
+  busyPhase?: VerificationBusyPhase
   code: string
-  errorMessage?: string
+  failure?: VerificationFailure
   request: StoredNewApiManagedVerificationRequest | null
 }
 
@@ -78,9 +139,9 @@ const INITIAL_STATE: NewApiManagedVerificationState = {
   isOpen: false,
   step: NEW_API_MANAGED_VERIFICATION_STEPS.LOGGING_IN,
   isBusy: false,
-  busyMessage: undefined,
+  busyPhase: undefined,
   code: "",
-  errorMessage: undefined,
+  failure: undefined,
   request: null,
 }
 
@@ -161,6 +222,10 @@ const shouldRetryInitialSessionWithAutomaticTotp = (
  * provider-local session helper used by Settings and Key Management.
  */
 export function useNewApiManagedVerification() {
+  const { t: translate } = useTranslation([
+    "newApiManagedVerification",
+    "messages",
+  ])
   const [state, setState] =
     useState<NewApiManagedVerificationState>(INITIAL_STATE)
   const activeRequestScopeRef = useRef<string | null>(null)
@@ -211,14 +276,12 @@ export function useNewApiManagedVerification() {
         setState((prev) => ({
           ...prev,
           isBusy: true,
-          busyMessage:
+          busyPhase:
             request.kind === "token"
-              ? t("newApiManagedVerification:dialog.messages.refreshingToken")
+              ? "refreshing-token"
               : request.kind === "channel"
-                ? t(
-                    "newApiManagedVerification:dialog.messages.refreshingChannel",
-                  )
-                : t("newApiManagedVerification:dialog.messages.finishing"),
+                ? "refreshing-channel"
+                : "finishing",
         }))
 
         await Promise.resolve(request.onVerified())
@@ -252,9 +315,11 @@ export function useNewApiManagedVerification() {
         ...prev,
         step: mapSessionResultToStep(result),
         isBusy: false,
-        busyMessage: undefined,
-        errorMessage:
-          "errorMessage" in result ? result.errorMessage : undefined,
+        busyPhase: undefined,
+        failure:
+          "errorMessage" in result && result.errorMessage
+            ? { kind: "message", message: result.errorMessage }
+            : undefined,
         code: "",
       }))
     },
@@ -272,24 +337,22 @@ export function useNewApiManagedVerification() {
           isOpen: true,
           step: NEW_API_MANAGED_VERIFICATION_STEPS.FAILURE,
           isBusy: false,
-          busyMessage: undefined,
+          busyPhase: undefined,
           code: "",
-          errorMessage: t(
-            "newApiManagedVerification:dialog.messages.missingBaseUrl",
-          ),
+          failure: { kind: "missing-base-url" },
           request: normalizedRequest,
         })
         return
       }
 
-      if (request.initialFailureMessage) {
+      if (request.initialFailure) {
         setState({
           isOpen: true,
           step: NEW_API_MANAGED_VERIFICATION_STEPS.FAILURE,
           isBusy: false,
-          busyMessage: undefined,
+          busyPhase: undefined,
           code: "",
-          errorMessage: request.initialFailureMessage,
+          failure: request.initialFailure,
           request: normalizedRequest,
         })
         return
@@ -299,9 +362,9 @@ export function useNewApiManagedVerification() {
         isOpen: true,
         step: NEW_API_MANAGED_VERIFICATION_STEPS.LOGGING_IN,
         isBusy: true,
-        busyMessage: t("newApiManagedVerification:dialog.messages.starting"),
+        busyPhase: "starting",
         code: "",
-        errorMessage: undefined,
+        failure: undefined,
         request: normalizedRequest,
       })
 
@@ -320,8 +383,8 @@ export function useNewApiManagedVerification() {
           ...prev,
           step: NEW_API_MANAGED_VERIFICATION_STEPS.FAILURE,
           isBusy: false,
-          busyMessage: undefined,
-          errorMessage: getNewApiManagedVerificationErrorMessage(error),
+          busyPhase: undefined,
+          failure: getNewApiManagedVerificationFailure(error),
         }))
       }
     },
@@ -337,9 +400,7 @@ export function useNewApiManagedVerification() {
     if (!trimmedCode) {
       setState((prev) => ({
         ...prev,
-        errorMessage: t(
-          "newApiManagedVerification:dialog.messages.missingCode",
-        ),
+        failure: { kind: "missing-code" },
       }))
       return
     }
@@ -347,8 +408,8 @@ export function useNewApiManagedVerification() {
     setState((prev) => ({
       ...prev,
       isBusy: true,
-      busyMessage: t("newApiManagedVerification:dialog.messages.submitting"),
-      errorMessage: undefined,
+      busyPhase: "submitting",
+      failure: undefined,
     }))
 
     try {
@@ -365,9 +426,9 @@ export function useNewApiManagedVerification() {
       setState((prev) => ({
         ...prev,
         isBusy: false,
-        busyMessage: undefined,
+        busyPhase: undefined,
         code: "",
-        errorMessage: getNewApiManagedVerificationErrorMessage(error),
+        failure: getNewApiManagedVerificationFailure(error),
       }))
     }
   }, [applySessionResult, state.code, state.request, state.step])
@@ -383,10 +444,8 @@ export function useNewApiManagedVerification() {
       setState((prev) => ({
         ...prev,
         isBusy: true,
-        busyMessage: t(
-          "newApiManagedVerification:dialog.messages.cleaningOwnedSession",
-        ),
-        errorMessage: undefined,
+        busyPhase: "cleanup",
+        failure: undefined,
       }))
       let cleanupSucceeded = false
       try {
@@ -400,10 +459,8 @@ export function useNewApiManagedVerification() {
         setState((prev) => ({
           ...prev,
           isBusy: false,
-          busyMessage: undefined,
-          errorMessage: t(
-            "newApiManagedVerification:dialog.messages.ownedSessionCleanupFailed",
-          ),
+          busyPhase: undefined,
+          failure: { kind: "cleanup-failed" },
         }))
         return
       }
@@ -467,7 +524,11 @@ export function useNewApiManagedVerification() {
   )
 
   return {
-    dialogState: state,
+    dialogState: {
+      ...state,
+      busyMessage: presentBusyPhase(state.busyPhase, translate),
+      errorMessage: presentFailure(state.failure, translate),
+    },
     setCode,
     closeDialog,
     openBaseUrl,

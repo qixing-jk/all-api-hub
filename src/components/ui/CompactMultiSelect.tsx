@@ -6,9 +6,9 @@ import {
   XIcon,
 } from "lucide-react"
 import * as React from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import toast from "~/lib/notify"
 import { cn } from "~/lib/utils"
 import { createLogger } from "~/utils/core/logger"
 

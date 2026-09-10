@@ -1,5 +1,8 @@
+import { CircleCheck, CircleX, LoaderCircle } from "lucide-react"
 import React from "react"
 import { useToaster } from "react-hot-toast/headless"
+
+import { NOTIFICATION_DURATIONS } from "~/lib/notify/defaults"
 
 /**
  * Headless Toaster rendered inside the Shadow DOM root.
@@ -11,7 +14,12 @@ import { useToaster } from "react-hot-toast/headless"
  * @see https://github.com/timolins/react-hot-toast/issues/139
  */
 export const RedemptionToaster: React.FC = () => {
-  const { toasts, handlers } = useToaster()
+  const { toasts, handlers } = useToaster({
+    duration: NOTIFICATION_DURATIONS.info,
+    success: { duration: NOTIFICATION_DURATIONS.success },
+    error: { duration: NOTIFICATION_DURATIONS.error },
+    loading: { duration: NOTIFICATION_DURATIONS.loading },
+  })
   const { startPause, endPause } = handlers
 
   const visibleToasts = toasts.filter((toast) => toast.visible)
@@ -55,6 +63,20 @@ export const RedemptionToaster: React.FC = () => {
 
           return (
             <div key={toast.id} {...toast.ariaProps} className={cardClassName}>
+              {toast.icon ??
+                (toast.type === "success" ? (
+                  <CircleCheck
+                    aria-hidden="true"
+                    className="h-5 w-5 shrink-0"
+                  />
+                ) : toast.type === "error" ? (
+                  <CircleX aria-hidden="true" className="h-5 w-5 shrink-0" />
+                ) : toast.type === "loading" ? (
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="h-5 w-5 shrink-0 animate-spin"
+                  />
+                ) : null)}
               {typeof toast.message === "function"
                 ? toast.message(toast)
                 : toast.message}

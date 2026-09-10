@@ -1,4 +1,27 @@
 {
+  "accessTokenVerification": {
+    "apiyi": {
+      "generateStep": "若已有有效且完整的 Access Token，可直接使用。否則請開啟 APIyi「個人資料」中的「System token」，在官網輸入密碼並產生權杖。",
+      "openProfile": "開啟 APIyi 個人資料",
+      "openProfileFailed": "無法開啟頁面。請手動開啟 APIyi「個人資料」中的「System token」，完成驗證後回到這裡貼上 Access Token。"
+    },
+    "continueFailed": "暫時無法開啟側邊欄或完整頁面，目前的表單已保留，請重試。",
+    "continueInFullPage": "在完整頁面繼續",
+    "continueInSidePanel": "轉到側邊欄繼續",
+    "continuing": "正在準備表單…",
+    "description": "此站點要求先完成安全驗證，擴充功能暫時無法自動取得 Access Token。已識別的資訊已保留，請手動填寫帳號管理權杖。",
+    "destinationBusy": "這裡已有未完成的帳號表單。儲存或關閉後，將繼續從彈出視窗帶來的表單。",
+    "fullPageHint": "在完整頁面繼續可保留目前的表單，切換到站點複製權杖時不會關閉。",
+    "generateStep": "已有有效的完整 Access Token 時可直接填寫；否則，開啟站點的「安全設定 → Access Token」，完成驗證並產生權杖。",
+    "openSecurity": "開啟站點安全設定",
+    "openSecurityFailed": "無法開啟頁面。請手動進入站點的「安全設定 → Access Token」，複製權杖後回到這裡填寫。",
+    "pasteStep": "立即複製完整的 Access Token，貼到下方「存取權杖」欄位，確認帳號資訊後儲存。",
+    "popupHint": "轉到側邊欄後，目前的表單會保留；你可以在站點完成驗證、複製權杖，同時繼續填寫。若無法開啟側邊欄，會在完整頁面繼續。",
+    "prepareFailed": "無法暫存目前的表單。請先複製需要保留的資訊，再從側邊欄重新開啟帳號表單。",
+    "restoreFailed": "無法還原未完成的表單，可能已過期。請重新開啟帳號表單。",
+    "rotationWarning": "重新產生會使舊的 Access Token 失效，其他使用舊權杖的工具也需要更新。",
+    "title": "手動填寫 Access Token"
+  },
   "actions": {
     "autoConfigAriaLabel": "儲存帳號並前往 {{managedSite}} 渠道設定",
     "autoConfigRequiresValidAccount": "請先補齊目前帳號資訊",
@@ -56,6 +79,7 @@
     "automaticCheckInSelectionWithDetail": "自動選擇：{{detail}}",
     "checkInMethod": "簽到方式",
     "checkInMethodNeedsChoice": "偵測到多個方式，請選擇",
+    "checkInMethodNeedsConfirmation": "{{method}}（待確認）",
     "checkInMethodNotSelected": "尚未選擇簽到方式",
     "checkInMethodPendingConfirmation": "待確認可用方式",
     "checkInMethodUnavailable": "無可用方式",
@@ -65,6 +89,7 @@
     "checkInSelectionAutomaticUnavailable": "目前未偵測到可用方式；自動簽到不會執行。",
     "checkInSelectionManual": "目前已手動選擇：{{method}}。系統不會自動取代此方式。",
     "checkInSelectionStale": "請重新偵測以確認此方式是否仍可用。",
+    "checkInSelectionUnconfirmed": "已保留所選方式：{{method}}，但尚未確認目前站點是否支援。請重新偵測。",
     "checkInStatus": "簽到狀態",
     "checkInStatusDesc": "系統會在帳號重新整理時檢查並顯示今日簽到狀態；這只是狀態顯示，不會主動執行簽到。",
     "checkInStatusDisabled": "站點目前未啟用簽到功能，自動簽到已暫停。",
@@ -163,6 +188,7 @@
     "addSuccess": "帳號 {{name}} 新增成功!",
     "autoDetectCookiePermissionReloadHint": "如果剛授予 Cookie 多帳號權限後首次識別一直沒有結果，可重新載入擴充套件後再試。",
     "autoDetectFailed": "自動識別失敗: {{error}}",
+    "autoDetectIdentityMismatch": "識別到的帳號與目前帳號不一致，已保留原有資料。請檢查站點網址，並登入對應帳號後重試。",
     "autoDetectSuccess": "自動識別成功！",
     "autoDetectTakingTooLong": "自動識別耗時較長？點擊開啟排查文件",
     "checkInRedetectAmbiguous": "偵測到多種簽到方式，請在下方選擇。",
@@ -176,7 +202,7 @@
       "identity_mismatch": "站點傳回的帳號身分與目前帳號不一致，請檢查站點網址和帳號憑證。",
       "invalid_response": "目標站點傳回了擴充功能無法辨識的回應，請確認站點網址正確，並在更新擴充功能後再試。",
       "network": "偵測時無法連線到目標站點，請檢查網路連線或站點狀態後再試。",
-      "permission_denied": "目標站點拒絕了偵測請求，請重新登入並檢查帳號權限。",
+      "permission_denied": "目標站點拒絕了簽到偵測請求，暫時無法確認是否支援簽到。請在站點頁面核實功能和帳號權限。",
       "source_unavailable": "目標站點暫時無法使用，請稍後再試。",
       "timeout": "目標站點在偵測逾時前未回應，請稍後再試。"
     },
@@ -260,10 +286,10 @@
         "continue": "繼續",
         "disableAndContinue": "以後不再提醒，並繼續"
       },
-      "description_other": "你已在 {{siteUrl}} 新增了 {{count}} 個帳號。繼續新增可能會造成重複，是否繼續？",
-      "descriptionExact": "在 {{siteUrl}} 上，使用者 ID {{userId}} 的帳號已存在（{{username}}）。繼續新增可能會造成重複，是否繼續？",
+      "description_other": "{{siteUrl}} 的這個 Management Key 已儲存在 {{count}} 個帳號中，是否再次新增？",
+      "descriptionExact": "{{siteUrl}} 上使用者 ID 為 {{userId}} 的帳號已儲存（{{username}}），是否再次新增？",
       "title": "重複帳號",
-      "warningTitle": "該站點已存在帳號"
+      "warningTitle": "偵測到已儲存的帳號"
     },
     "managedSiteConfig": {
       "actions": {

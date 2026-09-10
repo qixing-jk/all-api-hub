@@ -13,7 +13,10 @@ import {
   type ApiErrorCode,
 } from "~/services/apiTransport/errors"
 import { applyLocalRemoteFetchResultEvidence } from "~/services/apiTransport/remoteLifecycle"
-import { DEFAULT_TEMP_CONTEXT_PREFERENCE } from "~/services/preferences/tempWindowFallbackPreferences"
+import {
+  DEFAULT_TEMP_CONTEXT_PREFERENCE,
+  normalizeTempWindowFallbackPreferences,
+} from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   userPreferences,
   type TempWindowFallbackPreferences,
@@ -40,7 +43,7 @@ import {
 import {
   PROTECTION_BYPASS_DECISION_RESULTS,
   TEMP_CONTEXT_TASK_KINDS,
-  type ProtectionBypassDecisionResult,
+  type AuthorizedTempContextOutcome,
   type ProtectionBypassSurface,
   type TempContextTask,
 } from "~/services/protectionBypass/contracts"
@@ -246,6 +249,20 @@ async function resolveTempContextPreferenceMode(): Promise<
   } catch {
     return DEFAULT_TEMP_CONTEXT_PREFERENCE
   }
+}
+
+/** Reads window dimensions at creation time, including for legacy preferences. */
+async function resolveTempWindowSize() {
+  let storedPreferences: unknown
+  try {
+    storedPreferences = (await userPreferences.getPreferences())
+      .tempWindowFallback
+  } catch {
+    // Window creation remains available when preference storage is unavailable.
+  }
+  const { windowWidth, windowHeight } =
+    normalizeTempWindowFallbackPreferences(storedPreferences)
+  return { width: windowWidth, height: windowHeight }
 }
 
 /**
@@ -475,17 +492,6 @@ function getOctopusCookieContextPageUrl(originUrl: string): string {
   return new URL(OCTOPUS_COOKIE_SESSION_STATUS_PATH, originUrl).toString()
 }
 
-export type AuthorizedTempContextOutcome =
-  | {
-      kind: Extract<
-        ProtectionBypassDecisionResult,
-        typeof PROTECTION_BYPASS_DECISION_RESULTS.Allowed
-      >
-      adapter: TempContextMode
-    }
-  | { kind: typeof PROTECTION_BYPASS_DECISION_RESULTS.Denied }
-  | { kind: typeof PROTECTION_BYPASS_DECISION_RESULTS.Unavailable }
-
 export type ReportAuthorizedTempContextOutcome = (
   outcome: AuthorizedTempContextOutcome,
 ) => void
@@ -495,7 +501,7 @@ export type AuthorizeTempContextAtAcquire =
     reportOutcome?: ReportAuthorizedTempContextOutcome
   }
 
-/** Notifies policy analytics after releasing the acquisition lock. */
+/** Reports acquisition facts without letting observers change task outcomes. */
 function reportAuthorizedTempContextOutcome(
   authorizeAtAcquire: AuthorizeTempContextAtAcquire | undefined,
   outcome: AuthorizedTempContextOutcome,
@@ -503,7 +509,7 @@ function reportAuthorizedTempContextOutcome(
   try {
     authorizeAtAcquire?.reportOutcome?.(outcome)
   } catch {
-    // Analytics observers are best effort and cannot change pool outcomes.
+    // Diagnostic observers are best effort and cannot change pool outcomes.
   }
 }
 
@@ -655,6 +661,10 @@ export async function executeAuthorizedTempContextTask(
     presentationSource,
   )
   if (presentation.kind === "blocked") {
+    reportAuthorizedTempContextOutcome(authorizeAtAcquire, {
+      kind: "unavailable",
+      reason: presentation.reason,
+    })
     sendResponse(
       buildPresentationFailure(
         task,
@@ -1394,6 +1404,10 @@ async function executeAutoDetectSite(
     if (useIncognito) {
       const allowed = await isAllowedIncognitoAccess()
       if (allowed === false) {
+        reportAuthorizedTempContextOutcome(authorizeAtAcquire, {
+          kind: "unavailable",
+          reason: "incognito_access_required",
+        })
         sendResponse({
           success: false,
           error: t("messages:background.incognitoAccessRequired"),
@@ -1505,6 +1519,10 @@ async function executeTempWindowFetch(
       const allowed = await isAllowedIncognitoAccess()
       if (allowed === false) {
         const error = t("messages:background.incognitoAccessRequired")
+        reportAuthorizedTempContextOutcome(authorizeAtAcquire, {
+          kind: "unavailable",
+          reason: "incognito_access_required",
+        })
         sendResponse({
           success: false,
           error,
@@ -1880,6 +1898,10 @@ async function executeTempWindowTurnstileFetch(
       const allowed = await isAllowedIncognitoAccess()
       if (allowed === false) {
         const error = t("messages:background.incognitoAccessRequired")
+        reportAuthorizedTempContextOutcome(authorizeAtAcquire, {
+          kind: "unavailable",
+          reason: "incognito_access_required",
+        })
         sendResponse({
           success: false,
           error,
@@ -2186,6 +2208,7 @@ async function acquireTempContext(
 ) {
   const origin = buildTempContextOriginKey(normalizeOrigin(url), options)
   let finalDecision: ProtectionBypassPolicyDecision | undefined
+  let reused = false
 
   logTempWindow("acquireTempContextStart", {
     requestId,
@@ -2230,6 +2253,7 @@ async function acquireTempContext(
 
       try {
         acquiredContext = await getReusableContext(origin)
+        reused = acquiredContext !== null
         if (!acquiredContext) {
           logTempWindow("acquireTempContextCreate", {
             requestId,
@@ -2308,6 +2332,7 @@ async function acquireTempContext(
       reportAuthorizedTempContextOutcome(authorizeAtAcquire, {
         kind: PROTECTION_BYPASS_DECISION_RESULTS.Allowed,
         adapter: context.mode,
+        reused,
       })
     }
     return context
@@ -2542,8 +2567,7 @@ async function openPopupWindowTempContext(params: {
       popupWindow = await createWindow({
         url: TEMP_CONTEXT_INITIAL_URL,
         type: "popup",
-        width: 420,
-        height: 520,
+        ...(await resolveTempWindowSize()),
         focused: false,
         incognito: Boolean(params.incognito),
       })
@@ -2972,8 +2996,7 @@ async function openTabInCompositeWindowLocked(params: {
       compositeWindow = await createWindow({
         url: initialUrl,
         type: "normal",
-        width: 420,
-        height: 520,
+        ...(await resolveTempWindowSize()),
         focused: false,
       })
     } catch (error) {

@@ -1,7 +1,7 @@
 import { act, fireEvent, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import KeyManagement from "~/entrypoints/options/pages/KeyManagement"
@@ -18,6 +18,8 @@ import {
   OPENROUTER_KEY_LIMIT_MODES,
   OPENROUTER_KEY_LIMIT_RESETS,
 } from "~/services/apiAdapters/openrouter/keyResourceFields"
+import * as capabilityRegistry from "~/services/apiAdapters/registry"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -320,6 +322,7 @@ type LegacyHarnessConfig = {
   } | null
   failedAccounts?: any[]
   allAccountsFilterAccountIds?: string[]
+  isManagedSiteChannelStatusSupported?: boolean
 }
 
 let legacyHarnessConfig: LegacyHarnessConfig
@@ -353,7 +356,8 @@ function useLegacyKeyManagementHarness() {
     failedAccounts: legacyHarnessConfig.failedAccounts ?? [],
     accountSummaryItems: legacyHarnessConfig.accountSummaryItems ?? [],
     managedSiteTokenStatuses: {},
-    isManagedSiteChannelStatusSupported: true,
+    isManagedSiteChannelStatusSupported:
+      legacyHarnessConfig.isManagedSiteChannelStatusSupported ?? true,
     isManagedSiteStatusRefreshing: false,
     allAccountsFilterAccountIds,
     setAllAccountsFilterAccountIds,
@@ -646,6 +650,8 @@ function expectSecretActionTelemetry(
 }
 
 describe("KeyManagement native page integration", () => {
+  afterEach(() => vi.restoreAllMocks())
+
   beforeEach(() => {
     accountKeyResourceControllerOptionsSpy.mockReset()
     accountKeyResourceControllerReplaceRouteSpy.mockReset()
@@ -669,13 +675,26 @@ describe("KeyManagement native page integration", () => {
     legacyRetryFailedAccountsSpy.mockReset()
 
     useKeyManagementMock.mockImplementation(useLegacyKeyManagementHarness)
+    const newApi = {
+      ...DEFAULT_PREFERENCES.newApi,
+      baseUrl: "https://managed.example.invalid",
+      userId: "1",
+      username: "operator",
+      password: "placeholder",
+      totpSecret: "placeholder",
+    }
     useUserPreferencesContextMock.mockReturnValue({
+      preferences: {
+        ...DEFAULT_PREFERENCES,
+        managedSiteType: SITE_TYPES.NEW_API,
+        newApi,
+      },
       managedSiteType: SITE_TYPES.NEW_API,
-      newApiBaseUrl: "https://managed.example.invalid",
-      newApiUserId: "1",
-      newApiUsername: "operator",
-      newApiPassword: "placeholder",
-      newApiTotpSecret: "placeholder",
+      newApiBaseUrl: newApi.baseUrl,
+      newApiUserId: newApi.userId,
+      newApiUsername: newApi.username,
+      newApiPassword: newApi.password,
+      newApiTotpSecret: newApi.totpSecret,
     })
     sendRuntimeActionMessageMock.mockResolvedValue({ success: false })
     startProductAnalyticsActionMock.mockReturnValue({
@@ -1186,6 +1205,7 @@ describe("KeyManagement native page integration", () => {
     })
 
     act(() => emptyList.resolve({ items: [] }))
+    expect(screen.getByText(scope.displayName)).toBeVisible()
     await waitFor(() =>
       expect(accountSummaryBarPropsSpy.mock.lastCall?.[0]).toMatchObject({
         items: expect.arrayContaining([
@@ -1215,77 +1235,114 @@ describe("KeyManagement native page integration", () => {
     ).toBeEnabled()
   })
 
-  it("routes Add exclusively to the native editor for an empty native account and suppresses legacy managed actions", async () => {
-    const user = userEvent.setup()
-    const account = createAccount({
-      id: "native-account",
-      name: "Native account",
-      siteType: SITE_TYPES.OPENROUTER,
-      baseUrl: "https://native.example.invalid",
-    })
-    const scope = createScope(
-      "workspace-example-id",
-      "default",
-      "Default workspace",
-      true,
-    )
-    const createEditor = createOpenRouterEditor({
-      scopes: [scope],
-      destinationScopeKey: scope.scopeKey,
-      submit: vi.fn(),
-    })
-    const { session } = createNativeSession({
-      scopes: [scope],
-      createEditor,
-    })
-    createDisplayAccountApiContextMock.mockReturnValue({
-      accountKeyResources: { open: vi.fn().mockResolvedValue(session) },
-      request: {},
-    })
-    legacyHarnessConfig = {
-      accounts: [account],
-      initialSelectedAccount: account.id,
-    }
+  it.each([SITE_TYPES.OPENROUTER, SITE_TYPES.NEW_API])(
+    "routes Add and refresh through registered native key management for %s",
+    async (siteType) => {
+      // Registration, not the provider name, opts an account into the native UI.
+      const originalGetCapabilities = capabilityRegistry.getSiteTypeCapabilities
+      const nativeCapability = originalGetCapabilities(SITE_TYPES.OPENROUTER)
+        .account!.keyResourceManagement
+      vi.spyOn(
+        capabilityRegistry,
+        "getSiteTypeCapabilities",
+      ).mockImplementation((type) => {
+        const capabilities = originalGetCapabilities(type)
+        return type === siteType
+          ? {
+              ...capabilities,
+              account: {
+                ...capabilities.account,
+                keyResourceManagement: nativeCapability,
+              },
+            }
+          : capabilities
+      })
+      const user = userEvent.setup()
+      const account = createAccount({
+        id: "native-account",
+        name: "Native account",
+        siteType,
+        baseUrl: "https://native.example.invalid",
+      })
+      const scope = createScope(
+        "workspace-example-id",
+        "default",
+        "Default workspace",
+        true,
+      )
+      const createEditor = createOpenRouterEditor({
+        scopes: [scope],
+        destinationScopeKey: scope.scopeKey,
+        submit: vi.fn(),
+      })
+      const { session } = createNativeSession({
+        scopes: [scope],
+        createEditor,
+      })
+      createDisplayAccountApiContextMock.mockReturnValue({
+        accountKeyResources: { open: vi.fn().mockResolvedValue(session) },
+        request: {},
+      })
+      legacyHarnessConfig = {
+        accounts: [account],
+        initialSelectedAccount: account.id,
+        isManagedSiteChannelStatusSupported: false,
+      }
 
-    render(
-      <KeyManagement
-        routeParams={{ accountId: account.id, workspace: scope.routeKey }}
-      />,
-    )
+      render(
+        <KeyManagement
+          routeParams={{ accountId: account.id, workspace: scope.routeKey }}
+        />,
+      )
 
-    const addButton = await screen.findByTestId(
-      KEY_MANAGEMENT_TEST_IDS.addTokenButton,
-    )
-    await waitFor(() => expect(addButton).toBeEnabled())
-    expect(
-      screen.queryByText("keyManagement:managedSiteStatus.pageUnsupported"),
-    ).toBeNull()
-    expect(
-      screen.queryByTestId(
-        KEY_MANAGEMENT_TEST_IDS.openSelectedAccountModelsButton,
-      ),
-    ).toBeNull()
-    expect(
-      screen.queryByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    ).toBeNull()
-    expect(
-      screen.queryByRole("button", {
-        name: "keyManagement:managedSiteStatus.actions.refresh",
-      }),
-    ).toBeNull()
+      const addButton = await screen.findByTestId(
+        KEY_MANAGEMENT_TEST_IDS.addTokenButton,
+      )
+      await waitFor(() => expect(addButton).toBeEnabled())
+      expect(
+        screen.queryByText("keyManagement:managedSiteStatus.pageUnsupported"),
+      ).toBeNull()
+      expect(
+        screen.getByTestId(
+          KEY_MANAGEMENT_TEST_IDS.openSelectedAccountModelsButton,
+        ),
+      ).toBeVisible()
+      expect(
+        screen.getByRole("button", {
+          name: "keyManagement:repairMissingKeys.action",
+        }),
+      ).toBeVisible()
+      expect(
+        screen.getByText(
+          "keyManagement:managedSiteStatus.nativeResourceUnsupported",
+        ),
+      ).toBeVisible()
+      expect(
+        screen.queryByRole("button", {
+          name: "keyManagement:managedSiteStatus.actions.refresh",
+        }),
+      ).toBeNull()
 
-    await user.click(addButton)
+      legacyLoadTokensSpy.mockClear()
+      await user.click(
+        screen.getByRole("button", { name: "keyManagement:refreshTokenList" }),
+      )
+      await waitFor(() =>
+        expect(session.openCollection).toHaveBeenCalledTimes(2),
+      )
+      expect(legacyLoadTokensSpy).not.toHaveBeenCalled()
 
-    await waitFor(() =>
-      expect(session.openCreateEditor).toHaveBeenCalledTimes(1),
-    )
-    expect(legacyAddTokenSpy).not.toHaveBeenCalled()
-    expect(addTokenDialogPropsSpy.mock.lastCall?.[0]).toMatchObject({
-      isOpen: false,
-    })
-  })
+      await user.click(addButton)
+
+      await waitFor(() =>
+        expect(session.openCreateEditor).toHaveBeenCalledTimes(1),
+      )
+      expect(legacyAddTokenSpy).not.toHaveBeenCalled()
+      expect(addTokenDialogPropsSpy.mock.lastCall?.[0]).toMatchObject({
+        isOpen: false,
+      })
+    },
+  )
 
   it("keeps the default workspace usable while exposing and retrying a partial workspace inventory", async () => {
     const user = userEvent.setup()
@@ -1803,6 +1860,11 @@ describe("KeyManagement native page integration", () => {
       />,
     )
 
+    expect(
+      await screen.findByRole("button", {
+        name: "keyManagement:managedSiteStatus.actions.refresh",
+      }),
+    ).toBeEnabled()
     await waitFor(() => expect(failedOpen).toHaveBeenCalledTimes(1))
     await waitFor(() =>
       expect(accountSummaryBarPropsSpy.mock.lastCall?.[0]).toMatchObject({
@@ -2298,6 +2360,9 @@ describe("KeyManagement native page integration", () => {
     expect(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton),
     ).toHaveTextContent("keyManagement:openRouter.delete.refresh")
+    expect(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton),
+    ).toHaveAttribute("data-variant", "warning")
 
     const openCountAfterRecovery = open.mock.calls.length
     await user.click(

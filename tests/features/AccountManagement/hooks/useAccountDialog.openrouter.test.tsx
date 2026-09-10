@@ -25,7 +25,7 @@ const {
   mockAutoDetectAccount,
   mockGenericAutoDetectAccount,
   mockCancelAccountAutoDetect,
-  mockShowWarningToast,
+  mockWarningToast,
   mockValidateAndSaveAccount,
   mockIsExtensionPopup,
   mockStartPopupCriticalFlow,
@@ -38,7 +38,7 @@ const {
   mockAutoDetectAccount: vi.fn(),
   mockGenericAutoDetectAccount: vi.fn(),
   mockCancelAccountAutoDetect: vi.fn(),
-  mockShowWarningToast: vi.fn(),
+  mockWarningToast: vi.fn(),
   mockValidateAndSaveAccount: vi.fn(),
   mockIsExtensionPopup: vi.fn(),
   mockStartPopupCriticalFlow: vi.fn(),
@@ -103,12 +103,6 @@ vi.mock("~/services/apiAdapters/openrouter/accountProvisioning", () => ({
   onboardOpenRouterAccount: mockAutoDetectAccount,
   cancelOpenRouterAccountProvisioning: mockCancelAccountAutoDetect,
 }))
-
-vi.mock("~/utils/core/toastHelpers", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/core/toastHelpers")>()
-  return { ...actual, showWarningToast: mockShowWarningToast }
-})
 
 vi.mock("~/services/popupInterruptionHint", async (importOriginal) => {
   const actual =
@@ -187,7 +181,7 @@ describe("useAccountDialog OpenRouter behavior", () => {
     mockAutoDetectAccount.mockReset()
     mockGenericAutoDetectAccount.mockReset()
     mockCancelAccountAutoDetect.mockReset()
-    mockShowWarningToast.mockReset()
+    mockWarningToast.mockReset()
     mockValidateAndSaveAccount.mockReset()
     mockIsExtensionPopup.mockReset()
     mockStartPopupCriticalFlow.mockReset()
@@ -478,38 +472,30 @@ describe("useAccountDialog OpenRouter behavior", () => {
       await result.current.handlers.handleClose()
     })
 
-    expect(mockShowWarningToast).not.toHaveBeenCalled()
+    expect(mockWarningToast).not.toHaveBeenCalled()
   })
 
-  it("does not dispatch a canonical bootstrap after duplicate confirmation changes context", async () => {
+  it("starts a canonical bootstrap without treating an existing site as a duplicate", async () => {
     await accountStorage.addAccount(
       buildSiteAccount({
         site_url: "https://openrouter.ai",
         site_type: SITE_TYPES.OPENROUTER,
       }),
     )
+    mockAutoDetectAccount.mockResolvedValueOnce(
+      createCompletedBootstrapResult(),
+    )
     const { result } = await renderCanonicalOpenRouterUrlHook()
 
-    let autoDetectPromise!: Promise<void>
-    act(() => {
-      autoDetectPromise = result.current.handlers.handleAutoDetect()
-    })
-    await waitFor(() => {
-      expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true)
-    })
-
     await act(async () => {
-      result.current.handlers.handleUrlChange("https://example.invalid")
-      result.current.setters.setSiteType(SITE_TYPES.NEW_API)
-      result.current.handlers.handleDuplicateAccountWarningContinue()
-      await autoDetectPromise
+      await result.current.handlers.handleAutoDetect()
     })
 
-    expect(mockAutoDetectAccount).not.toHaveBeenCalled()
-    expect(result.current.state.url).toBe("https://example.invalid")
-    expect(result.current.state.siteType).toBe(SITE_TYPES.NEW_API)
-    expect(result.current.state.accessToken).toBe("")
-    expect(mockShowWarningToast).not.toHaveBeenCalled()
+    expect(mockAutoDetectAccount).toHaveBeenCalledOnce()
+    expect(result.current.state.duplicateAccountWarning.isOpen).toBe(false)
+    expect(result.current.state.siteType).toBe(SITE_TYPES.OPENROUTER)
+    expect(result.current.state.accessToken).toBe("management-key-placeholder")
+    expect(mockWarningToast).not.toHaveBeenCalled()
   })
 
   it("does not dispatch a canonical bootstrap after popup setup changes context", async () => {
@@ -537,7 +523,7 @@ describe("useAccountDialog OpenRouter behavior", () => {
     expect(result.current.state.url).toBe("https://example.invalid")
     expect(result.current.state.siteType).toBe(SITE_TYPES.NEW_API)
     expect(result.current.state.accessToken).toBe("")
-    expect(mockShowWarningToast).not.toHaveBeenCalled()
+    expect(mockWarningToast).not.toHaveBeenCalled()
   })
 
   it("does not dispatch a prepared popup bootstrap after the dialog closes", async () => {
@@ -563,20 +549,15 @@ describe("useAccountDialog OpenRouter behavior", () => {
     expect(mockAutoDetectAccount).not.toHaveBeenCalled()
     expect(result.current.state.siteType).toBe(SITE_TYPES.UNKNOWN)
     expect(result.current.state.accessToken).toBe("")
-    expect(mockShowWarningToast).not.toHaveBeenCalled()
+    expect(mockWarningToast).not.toHaveBeenCalled()
   })
 
-  it("admits only one real auto-detect attempt through duplicate and popup preflight", async () => {
-    const duplicateLookup =
-      createDeferred<
-        Awaited<ReturnType<typeof accountStorage.getAllAccountsOrThrow>>
-      >()
+  it("admits only one real auto-detect attempt through popup preflight and provisioning", async () => {
+    const popupSetup = createDeferred<void>()
     const provisioning =
       createDeferred<ReturnType<typeof createCompletedBootstrapResult>>()
-    const duplicateLookupSpy = vi
-      .spyOn(accountStorage, "getAllAccountsOrThrow")
-      .mockReturnValue(duplicateLookup.promise)
     mockIsExtensionPopup.mockReturnValue(true)
+    mockStartPopupCriticalFlow.mockReturnValueOnce(popupSetup.promise)
     mockAutoDetectAccount.mockReturnValue(provisioning.promise)
     const { result } = await renderCanonicalOpenRouterUrlHook()
 
@@ -587,13 +568,13 @@ describe("useAccountDialog OpenRouter behavior", () => {
       secondAttempt = result.current.handlers.handleAutoDetect()
     })
 
-    expect(duplicateLookupSpy).toHaveBeenCalledTimes(1)
     expect(mockStartProductAnalyticsAction).toHaveBeenCalledTimes(1)
-    expect(mockStartPopupCriticalFlow).not.toHaveBeenCalled()
-    expect(result.current.state.isDetecting).toBe(false)
+    expect(mockStartPopupCriticalFlow).toHaveBeenCalledOnce()
+    expect(mockAutoDetectAccount).not.toHaveBeenCalled()
+    expect(result.current.state.isDetecting).toBe(true)
 
     await act(async () => {
-      duplicateLookup.resolve([])
+      popupSetup.resolve()
     })
     await waitFor(() => expect(mockAutoDetectAccount).toHaveBeenCalledOnce())
     expect(mockStartPopupCriticalFlow).toHaveBeenCalledOnce()
@@ -605,7 +586,6 @@ describe("useAccountDialog OpenRouter behavior", () => {
       thirdAttempt = result.current.handlers.handleAutoDetect()
     })
     await thirdAttempt
-    expect(duplicateLookupSpy).toHaveBeenCalledTimes(1)
     expect(mockStartProductAnalyticsAction).toHaveBeenCalledTimes(1)
     expect(mockStartPopupCriticalFlow).toHaveBeenCalledTimes(1)
     expect(mockAutoDetectAccount).toHaveBeenCalledTimes(1)
@@ -629,14 +609,10 @@ describe("useAccountDialog OpenRouter behavior", () => {
     expect(result.current.state.accessToken).toBe("management-key-placeholder")
   })
 
-  it("keeps a stale OpenRouter duplicate-preflight owner ahead of an ordinary click", async () => {
-    const duplicateLookup =
-      createDeferred<
-        Awaited<ReturnType<typeof accountStorage.getAllAccountsOrThrow>>
-      >()
-    const duplicateLookupSpy = vi
-      .spyOn(accountStorage, "getAllAccountsOrThrow")
-      .mockReturnValue(duplicateLookup.promise)
+  it("keeps a stale OpenRouter popup-preflight owner ahead of an ordinary click", async () => {
+    const popupSetup = createDeferred<void>()
+    mockIsExtensionPopup.mockReturnValue(true)
+    mockStartPopupCriticalFlow.mockReturnValueOnce(popupSetup.promise)
     mockGenericAutoDetectAccount.mockResolvedValue(
       createGenericAutoDetectResult(),
     )
@@ -646,7 +622,9 @@ describe("useAccountDialog OpenRouter behavior", () => {
     act(() => {
       staleAttempt = result.current.handlers.handleAutoDetect()
     })
-    await waitFor(() => expect(duplicateLookupSpy).toHaveBeenCalledOnce())
+    await waitFor(() =>
+      expect(mockStartPopupCriticalFlow).toHaveBeenCalledOnce(),
+    )
 
     let competingAttempt!: Promise<void>
     act(() => {
@@ -658,18 +636,19 @@ describe("useAccountDialog OpenRouter behavior", () => {
     act(() => {
       competingAttempt = result.current.handlers.handleAutoDetect()
     })
-    const duplicateLookupsBeforeOwnerExit = duplicateLookupSpy.mock.calls.length
+    const popupStartsBeforeOwnerExit =
+      mockStartPopupCriticalFlow.mock.calls.length
     const analyticsStartsBeforeOwnerExit =
       mockStartProductAnalyticsAction.mock.calls.length
 
     await act(async () => {
-      duplicateLookup.resolve([])
+      popupSetup.resolve()
       await Promise.all([staleAttempt, competingAttempt])
     })
 
-    expect(duplicateLookupsBeforeOwnerExit).toBe(1)
+    expect(popupStartsBeforeOwnerExit).toBe(1)
     expect(analyticsStartsBeforeOwnerExit).toBe(1)
-    expect(mockStartPopupCriticalFlow).not.toHaveBeenCalled()
+    expect(mockStartPopupCriticalFlow).toHaveBeenCalledOnce()
     expect(mockAutoDetectAccount).not.toHaveBeenCalled()
     expect(mockGenericAutoDetectAccount).not.toHaveBeenCalled()
 
@@ -968,9 +947,17 @@ describe("useAccountDialog OpenRouter behavior", () => {
     expect(mockGenericAutoDetectAccount).toHaveBeenCalledOnce()
   })
 
-  it("releases the ordinary invocation lease after duplicate cancellation", async () => {
+  it("redetects the current identity without prompting for the previous draft user", async () => {
     await accountStorage.addAccount(
-      buildSiteAccount({ site_url: "https://example.invalid" }),
+      buildSiteAccount({
+        site_url: "https://example.invalid",
+        account_info: {
+          ...buildSiteAccount().account_info,
+          id: "previous-user-placeholder",
+          username: "Previous User",
+          access_token: "previous-token-placeholder",
+        },
+      }),
     )
     mockGenericAutoDetectAccount.mockResolvedValueOnce(
       createGenericAutoDetectResult(),
@@ -986,26 +973,18 @@ describe("useAccountDialog OpenRouter behavior", () => {
     await waitFor(() => expect(hook.result.current).toBeTruthy())
     await act(async () => {
       hook.result.current.handlers.handleUrlChange("https://example.invalid")
+      hook.result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+      hook.result.current.setters.setUserId("previous-user-placeholder")
     })
 
-    let cancelledAttempt!: Promise<void>
-    act(() => {
-      cancelledAttempt = hook.result.current.handlers.handleAutoDetect()
-    })
-    await waitFor(() => {
-      expect(hook.result.current.state.duplicateAccountWarning.isOpen).toBe(
-        true,
-      )
-    })
     await act(async () => {
-      hook.result.current.handlers.handleDuplicateAccountWarningCancel()
-      await cancelledAttempt
-      await accountStorage.clearAllData()
       await hook.result.current.handlers.handleAutoDetect()
     })
 
-    expect(mockStartProductAnalyticsAction).toHaveBeenCalledTimes(2)
-    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledTimes(2)
+    expect(hook.result.current.state.duplicateAccountWarning.isOpen).toBe(false)
+    expect(hook.result.current.state.userId).toBe("example-user-placeholder")
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledOnce()
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledOnce()
     expect(mockGenericAutoDetectAccount).toHaveBeenCalledOnce()
   })
 
@@ -1041,41 +1020,6 @@ describe("useAccountDialog OpenRouter behavior", () => {
     expect(mockCompletePopupCriticalFlow).toHaveBeenCalledOnce()
     expect(mockGenericAutoDetectAccount).toHaveBeenCalledOnce()
     expect(result.current.state.isDetecting).toBe(false)
-  })
-
-  it("releases admission after duplicate confirmation is cancelled", async () => {
-    await accountStorage.addAccount(
-      buildSiteAccount({
-        site_url: "https://openrouter.ai",
-        site_type: SITE_TYPES.OPENROUTER,
-      }),
-    )
-    mockAutoDetectAccount.mockResolvedValueOnce(
-      createCompletedBootstrapResult({
-        requestId: "retry-after-cancel-request-placeholder",
-      }),
-    )
-    const { result } = await renderCanonicalOpenRouterUrlHook()
-
-    let cancelledAttempt!: Promise<void>
-    act(() => {
-      cancelledAttempt = result.current.handlers.handleAutoDetect()
-    })
-    await waitFor(() => {
-      expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true)
-    })
-    await act(async () => {
-      result.current.handlers.handleDuplicateAccountWarningCancel()
-      await cancelledAttempt
-      await accountStorage.clearAllData()
-    })
-
-    await act(async () => {
-      await result.current.handlers.handleAutoDetect()
-    })
-
-    expect(mockAutoDetectAccount).toHaveBeenCalledOnce()
-    expect(result.current.state.accessToken).toBe("management-key-placeholder")
   })
 
   it("releases admission when popup preflight fails before dispatch", async () => {
@@ -1756,4 +1700,9 @@ describe("useAccountDialog OpenRouter behavior", () => {
       account_info: { access_token: "new-management-key" },
     })
   })
+})
+
+vi.mock("~/lib/notify", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/notify")>()
+  return { default: { ...actual.default, warning: mockWarningToast } }
 })

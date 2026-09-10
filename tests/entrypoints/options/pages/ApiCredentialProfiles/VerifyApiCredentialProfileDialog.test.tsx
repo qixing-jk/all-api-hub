@@ -1,5 +1,6 @@
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
+import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
@@ -26,7 +27,14 @@ import {
   verificationResultHistoryStorage,
 } from "~/services/verification/verificationResultHistory"
 import { requireHistoryTarget } from "~~/tests/test-utils/history"
-import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
+import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 
 const {
   loggerErrorMock,
@@ -239,6 +247,93 @@ describe("VerifyApiCredentialProfileDialog", () => {
     mockFetchGoogleModelIds.mockResolvedValue([])
     await verificationResultHistoryStorage.clearAllData()
   })
+
+  it.each(["pass", "fail"] as const)(
+    "keeps the credential verification mode for %s results",
+    async (status) => {
+      const user = userEvent.setup()
+      if (status === "fail") {
+        mockRunApiVerificationProbe.mockRejectedValueOnce(
+          new Error("Probe failed"),
+        )
+      } else {
+        mockRunApiVerificationProbe.mockResolvedValueOnce({
+          id: "text-generation",
+          status: "pass",
+          latencyMs: 1,
+          summary: "Text generation succeeded",
+          mode: "non-streaming",
+        })
+      }
+      render(
+        <VerifyApiCredentialProfileDialog
+          isOpen
+          onClose={() => {}}
+          initialModelId="gpt-test"
+          profile={{
+            id: "p-1",
+            name: "Profile",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.invalid",
+            apiKey: "sk-synthetic",
+            tagIds: [],
+            notes: "",
+            createdAt: 1,
+            updatedAt: 1,
+          }}
+        />,
+      )
+
+      const modeSelect = await screen.findByRole("combobox", {
+        name: "aiApiVerification:verifyDialog.meta.mode",
+      })
+      expect(modeSelect).toHaveTextContent(
+        "aiApiVerification:verifyDialog.modes.streaming",
+      )
+      await user.click(modeSelect)
+      await user.click(
+        await screen.findByRole("option", {
+          name: "aiApiVerification:verifyDialog.modes.nonStreaming",
+        }),
+      )
+      const probeCard = screen.getByTestId(
+        getApiCredentialProfileVerifyProbeTestId("text-generation"),
+      )
+      await user.click(
+        within(probeCard).getByRole("button", {
+          name: "aiApiVerification:verifyDialog.actions.runOne",
+        }),
+      )
+
+      await waitFor(() =>
+        expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+          expect.objectContaining({
+            mode: "non-streaming",
+            probeId: "text-generation",
+          }),
+        ),
+      )
+      expect(
+        await within(probeCard).findByText(
+          "aiApiVerification:verifyDialog.modes.nonStreaming",
+        ),
+      ).toBeVisible()
+      const target = requireHistoryTarget(
+        createProfileModelVerificationHistoryTarget("p-1", "gpt-test"),
+      )
+      await waitFor(async () => {
+        const summary =
+          await verificationResultHistoryStorage.getLatestSummary(target)
+        expect(summary?.probes).toEqual([
+          expect.objectContaining({
+            id: "text-generation",
+            status,
+            mode: "non-streaming",
+          }),
+        ])
+      })
+    },
+  )
 
   it("renders probe items before running", async () => {
     render(
@@ -602,6 +697,59 @@ describe("VerifyApiCredentialProfileDialog", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("retranslates model-discovery fallback without fetching or resetting again", async () => {
+    const i18n = await createResourceTestI18n({
+      en: {
+        apiCredentialProfiles: (
+          await import("~/locales/en/apiCredentialProfiles.json")
+        ).default,
+      },
+      "zh-CN": {
+        apiCredentialProfiles: (
+          await import("~/locales/zh-CN/apiCredentialProfiles.json")
+        ).default,
+      },
+    })
+    mockFetchOpenAICompatibleModelIds.mockRejectedValueOnce(new Error())
+    const profile = {
+      id: "language-profile",
+      name: "Profile",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://example.invalid",
+      apiKey: "sk-test",
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 1,
+    }
+    render(
+      <I18nextProvider i18n={i18n}>
+        <VerifyApiCredentialProfileDialog
+          isOpen
+          onClose={() => {}}
+          profile={profile}
+          initialModelId="draft-model"
+        />
+      </I18nextProvider>,
+    )
+    expect(
+      await screen.findByText(
+        i18n.t("apiCredentialProfiles:verify.modelsFetchFailed"),
+      ),
+    ).toBeVisible()
+    const calls = mockFetchOpenAICompatibleModelIds.mock.calls.length
+    await act(async () => {
+      await i18n.changeLanguage("zh-CN")
+    })
+    expect(
+      screen.getByText(
+        i18n.t("apiCredentialProfiles:verify.modelsFetchFailed"),
+      ),
+    ).toBeVisible()
+    expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(calls)
+    expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
+  })
+
   it("redacts secrets when the initial model fetch fails", async () => {
     mockFetchOpenAICompatibleModelIds.mockRejectedValueOnce(
       new Error("401 https://example.com sk-test invalid"),
@@ -796,6 +944,11 @@ describe("VerifyApiCredentialProfileDialog", () => {
         message: "[REDACTED] [REDACTED] probe failed",
       }),
     )
+    expect(
+      within(probeCard).queryByText(
+        "aiApiVerification:verifyDialog.modes.streaming",
+      ),
+    ).not.toBeInTheDocument()
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {

@@ -111,6 +111,7 @@ const requireArray = (value: Record<string, unknown>, field: string) => {
 const parseCustomHeader = (value: unknown): OctopusCustomHeader => {
   if (!isRecord(value)) throw invalidV013Response("custom_header")
   return {
+    ...value,
     header_key: requireString(value, "header_key"),
     header_value: requireString(value, "header_value"),
   }
@@ -119,6 +120,7 @@ const parseCustomHeader = (value: unknown): OctopusCustomHeader => {
 const parseChannelKey = (value: unknown): OctopusV013ChannelKeyDto => {
   if (!isRecord(value)) throw invalidV013Response("keys")
   return {
+    ...value,
     name: requireString(value, "name"),
     key: requireString(value, "key"),
     enabled: requireBoolean(value, "enabled"),
@@ -128,6 +130,7 @@ const parseChannelKey = (value: unknown): OctopusV013ChannelKeyDto => {
 const parseChannelGrant = (value: unknown): OctopusV013ChannelGrantDto => {
   if (!isRecord(value)) throw invalidV013Response("grants")
   return {
+    ...value,
     model_name: requireString(value, "model_name"),
     key_name: requireString(value, "key_name"),
     protocols: requireInteger(value, "protocols"),
@@ -159,7 +162,12 @@ const parseChannelStats = (value: unknown): OctopusV013ChannelStatsDto => {
 
 const parseChannelDetail = (value: unknown): OctopusV013ChannelDetailDto => {
   if (!isRecord(value)) throw invalidV013Response()
+  // Updates replace the native detail body. Validate the fields we consume
+  // without stripping upstream-owned members, including nested key/grant/header
+  // members, so additions in newer servers survive unrelated edits.
+  // https://github.com/bestruirui/octopus/blob/27aa40dc0f3b2902bce3e96ccdba019d17041606/internal/op/channel.go
   return {
+    ...value,
     id: requireInteger(value, "id"),
     name: requireString(value, "name"),
     dialect: requireString(value, "dialect"),
@@ -316,7 +324,8 @@ const encodeUpdate = (
   let grants = existing.grants
     .filter(
       (grant) =>
-        modelNames.has(grant.model_name) && keyNames.has(grant.key_name),
+        !replacesModels ||
+        (modelNames.has(grant.model_name) && keyNames.has(grant.key_name)),
     )
     .map((grant) => ({
       ...grant,

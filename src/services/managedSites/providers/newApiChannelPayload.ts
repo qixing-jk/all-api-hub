@@ -1,9 +1,10 @@
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import type {
-  ChannelFormData,
-  ManagedSiteChannel,
+  ChannelStatus,
+  NewApiChannel,
   UpdateChannelPayload,
-} from "~/types/managedSite"
+} from "~/types/newApi"
+import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
 
 /**
  * Builds a full New API update from the latest native detail.
@@ -12,8 +13,8 @@ import type {
  * https://github.com/QuantumNous/new-api/blob/f116414284162ad15d8925f7bca494c109b83e93/controller/channel.go
  */
 export function buildNewApiUpdatePayload(
-  native: ManagedSiteChannel,
-  draft: ChannelFormData,
+  native: NewApiChannel,
+  draft: NewApiFamilyChannelCommand,
 ): UpdateChannelPayload {
   const payload: UpdateChannelPayload = {
     ...native,
@@ -29,7 +30,7 @@ export function buildNewApiUpdatePayload(
   }
 
   if (draft.status !== native.status) {
-    payload.status = draft.status
+    payload.status = draft.status as ChannelStatus
   } else {
     delete payload.status
   }

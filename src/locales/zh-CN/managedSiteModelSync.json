@@ -73,6 +73,7 @@
       "finishedAt": "完成时间",
       "manageChannel": "管理渠道",
       "message": "错误信息",
+      "resourceUnavailable": "此记录无法关联当前站点，请从手动同步列表重新选择渠道。",
       "selectAllChannels": "选择所有渠道",
       "selectChannel": "选择渠道 {{name}}",
       "status": "状态",

@@ -12,6 +12,7 @@ const ACCOUNT_SITE_CAPABILITY_INVENTORY = {
   providerModelCatalog: true,
   modelPricing: true,
   data: true,
+  persistence: true,
   bootstrap: true,
   completion: true,
   inviteLink: true,

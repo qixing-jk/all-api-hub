@@ -56,7 +56,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: startActionMock,
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: toastSuccessMock,
     error: toastErrorMock,

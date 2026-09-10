@@ -1,7 +1,9 @@
 import { useCallback, useMemo } from "react"
 
-import { resolveAccountExchangeRate } from "~/features/ModelList/accountExchangeRate"
-import { applyAihubmixModelListCapabilities } from "~/features/ModelList/aihubmixModelList"
+import {
+  resolveAccountExchangeRate,
+  resolveKnownAccountExchangeRate,
+} from "~/features/ModelList/accountExchangeRate"
 import {
   MODEL_GROUP_ACCESS_STATES,
   normalizeGroupRatios,
@@ -33,11 +35,24 @@ import {
   MODEL_LIST_SORT_MODES,
   type ModelListSortMode,
 } from "~/features/ModelList/sortModes"
+import { resolveAccountSitePricingUrl } from "~/services/accounts/accountSiteProfile/urls"
 import {
   isModelPriceUnavailable,
   MODEL_UNAVAILABLE_PRICE_REASONS,
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
+import {
+  CALCULATED_PRICE_KINDS,
+  PRICING_PURPOSES,
+  PRICING_SOURCE_KINDS,
+  QUOTE_STATUSES,
+  QUOTE_UNITS,
+} from "~/services/modelPricing/pricingConstants"
+import type {
+  PricingScenario,
+  QuoteResult,
+} from "~/services/modelPricing/pricingPlan"
+import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
 import {
   resolveComparableModelIdentity,
   resolveModelIdentity,
@@ -85,6 +100,8 @@ interface UseFilteredModelsProps {
   modelMetadata: ModelMetadata[]
   sortMode: ModelListSortMode
   priceComparisonWeights: ModelPriceComparisonWeights
+  pricingScenario?: PricingScenario
+  isPriceComparisonActive?: boolean
   showRealPrice: boolean
   accountFilterAccountIds?: string[]
 }
@@ -94,6 +111,7 @@ type PricingBillingMode =
   | typeof MODEL_LIST_BILLING_MODES.PER_CALL
 
 interface ComparablePriceKey {
+  unit?: QuoteResult["unit"]
   billingMode: PricingBillingMode
   primary: number | null
   secondary: number | null
@@ -153,7 +171,7 @@ function compareVendorKeys(left: string, right: string) {
 
 /** Derives tab entries and counts from rows that passed every base filter. */
 function deriveVendorCatalog(
-  items: readonly CalculatedModelItem[],
+  items: readonly Pick<RawModelItem, "resolvedVendor">[],
 ): CountedModelVendorCatalogEntry[] {
   const entriesByKey = new Map<string, CountedModelVendorCatalogEntry>()
 
@@ -194,7 +212,7 @@ function deriveVendorCatalog(
 
 /** Counts rows that passed every base filter but have no resolved vendor. */
 function deriveUnclassifiedVendorCount(
-  items: readonly CalculatedModelItem[],
+  items: readonly Pick<RawModelItem, "resolvedVendor">[],
 ): number {
   return items.filter((item) => item.resolvedVendor.state === "unknown").length
 }
@@ -220,8 +238,8 @@ function resolveEffectiveSelectedVendor(
 }
 
 /** Applies only an already-clamped vendor selection. */
-function filterCalculatedModelsByVendor(
-  items: CalculatedModelItem[],
+function filterModelsByVendor<T extends Pick<RawModelItem, "resolvedVendor">>(
+  items: T[],
   selectedVendor: ModelVendorFilterValue,
 ) {
   if (selectedVendor === MODEL_VENDOR_FILTER_VALUES.All) return items
@@ -300,9 +318,20 @@ function getComparablePriceKey(
   showRealPrice: boolean,
   priceComparisonWeights: ModelPriceComparisonWeights,
 ): ComparablePriceKey {
+  const quote = item.calculatedPrice.quote
+  if (quote)
+    return {
+      unit: quote.unit,
+      billingMode:
+        quote.unit === QUOTE_UNITS.REQUEST
+          ? MODEL_LIST_BILLING_MODES.PER_CALL
+          : MODEL_LIST_BILLING_MODES.TOKEN_BASED,
+      primary: quote.status === QUOTE_STATUSES.COMPLETE ? quote.amount : null,
+      secondary: null,
+    }
   if (
     isModelPriceUnavailable(item.model) ||
-    item.calculatedPrice.kind === "unavailable"
+    item.calculatedPrice.kind === CALCULATED_PRICE_KINDS.UNAVAILABLE
   ) {
     return {
       billingMode: getModelBillingMode(item.model.quota_type),
@@ -311,7 +340,7 @@ function getComparablePriceKey(
     }
   }
 
-  if (item.calculatedPrice.kind === "token") {
+  if (item.calculatedPrice.kind === CALCULATED_PRICE_KINDS.TOKEN) {
     const currency = showRealPrice ? "CNY" : "USD"
     const exchangeRate = getSourceExchangeRate(item)
     const inputPrice = resolvePriceAmount(
@@ -412,12 +441,24 @@ function compareNullableNumber(
   return 0
 }
 
-/** Compares normalized price keys in the requested sort direction. */
+/** Resolves the billing unit for planned and legacy prices. */
+function comparisonUnit(key: ComparablePriceKey) {
+  return (
+    key.unit ??
+    (key.billingMode === MODEL_LIST_BILLING_MODES.PER_CALL
+      ? QUOTE_UNITS.REQUEST
+      : QUOTE_UNITS.MILLION_SELECTED_TOKENS)
+  )
+}
+
+/** Compares prices within their billing units in the requested direction. */
 function comparePriceKeys(
   a: ComparablePriceKey,
   b: ComparablePriceKey,
   direction: 1 | -1,
 ) {
+  const unitComparison = compareCodePoints(comparisonUnit(a), comparisonUnit(b))
+  if (unitComparison) return unitComparison
   const primaryComparison = compareNullableNumber(
     a.primary,
     b.primary,
@@ -513,7 +554,53 @@ function resolveBestCalculatedItem(
   groupCandidates: string[] | undefined,
   showRealPrice: boolean,
   priceComparisonWeights: ModelPriceComparisonWeights,
+  pricingScenario?: PricingScenario,
+  isPriceComparisonActive = pricingScenario !== undefined,
 ): CalculatedModelItem | null {
+  const calculatePrice = (
+    model: typeof rawItem.model,
+    groupMultiplier: number,
+  ) => {
+    const price = calculateModelPrice(model, groupMultiplier)
+    if (
+      (price.kind === CALCULATED_PRICE_KINDS.UNAVAILABLE &&
+        !model.pricingPlan) ||
+      (!isPriceComparisonActive &&
+        !model.pricingPlan &&
+        price.kind !== CALCULATED_PRICE_KINDS.TOKEN)
+    )
+      return price
+    const scenario = pricingScenario ?? {
+      purpose: PRICING_PURPOSES.TOKEN_INDEX,
+      usage: priceComparisonWeights,
+    }
+    const quote = quoteCanonicalModelPrice(model, scenario, {
+      groupMultiplier,
+      currency: showRealPrice ? "CNY" : "USD",
+      ...(rawItem.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+        ? { cnyPerUsd: resolveKnownAccountExchangeRate(rawItem.source.account) }
+        : {}),
+    })
+    if (
+      !quote.source.url &&
+      quote.source.kind === PRICING_SOURCE_KINDS.ACCOUNT &&
+      rawItem.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+    ) {
+      quote.source = {
+        ...quote.source,
+        url: resolveAccountSitePricingUrl({
+          siteType: rawItem.source.account.siteType,
+          baseUrl: rawItem.source.account.baseUrl,
+          modelName: model.model_name,
+        }),
+      }
+    }
+    return {
+      ...price,
+      quote,
+      isComparisonActive: isPriceComparisonActive,
+    }
+  }
   const activeGroupContext = resolveActiveModelGroupContext({
     context: rawItem.groupContext,
     candidateGroups: groupCandidates,
@@ -543,14 +630,14 @@ function resolveBestCalculatedItem(
     MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE
   ) {
     return createCalculatedItem({
-      calculatedPrice: calculateModelPrice(rawItem.model, 1),
+      calculatedPrice: calculatePrice(rawItem.model, 1),
       activeGroupContext,
     })
   }
 
   if (isModelPriceUnavailable(rawItem.model)) {
     return createCalculatedItem({
-      calculatedPrice: calculateModelPrice(rawItem.model, 1),
+      calculatedPrice: calculatePrice(rawItem.model, 1),
       activeGroupContext,
     })
   }
@@ -571,7 +658,7 @@ function resolveBestCalculatedItem(
 
     return createCalculatedItem({
       calculatedPrice: {
-        kind: "unavailable",
+        kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
         billingMode: isTokenBillingType(rawItem.model.quota_type)
           ? "token"
           : "per-call",
@@ -586,7 +673,7 @@ function resolveBestCalculatedItem(
   let bestPriceMatchCount = 0
 
   for (const group of activeGroupContext.activePriceableGroups) {
-    const calculatedPrice = calculateModelPrice(
+    const calculatedPrice = calculatePrice(
       rawItem.model,
       rawItem.groupRatios[group],
     )
@@ -651,12 +738,16 @@ function resolveCalculatedModels(params: {
   getGroupCandidates: (item: RawModelItem) => string[] | undefined
   showRealPrice: boolean
   priceComparisonWeights: ModelPriceComparisonWeights
+  pricingScenario?: PricingScenario
+  isPriceComparisonActive?: boolean
 }) {
   const {
     rawItems,
     getGroupCandidates,
     showRealPrice,
     priceComparisonWeights,
+    pricingScenario,
+    isPriceComparisonActive,
   } = params
 
   return rawItems
@@ -666,6 +757,8 @@ function resolveCalculatedModels(params: {
         getGroupCandidates(item),
         showRealPrice,
         priceComparisonWeights,
+        pricingScenario,
+        isPriceComparisonActive,
       ),
     )
     .filter((item): item is CalculatedModelItem => item !== null)
@@ -710,6 +803,8 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     modelMetadata,
     sortMode,
     priceComparisonWeights,
+    pricingScenario,
+    isPriceComparisonActive,
     showRealPrice,
     accountFilterAccountIds = [],
   } = params
@@ -846,16 +941,13 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
                 supportsAccountSummary: true,
               },
             }
-            const source = applyAihubmixModelListCapabilities(
-              {
-                ...allAccountsRowSource,
-                capabilities: deriveModelListSourceCapabilities({
-                  capabilities: allAccountsRowSource.capabilities,
-                  modelListSource: pricing.model_list_source,
-                }),
-              },
-              pricing,
-            )
+            const source = {
+              ...allAccountsRowSource,
+              capabilities: deriveModelListSourceCapabilities({
+                capabilities: allAccountsRowSource.capabilities,
+                modelListSource: pricing.model_list_source,
+              }),
+            }
             const { groupRatios, sourceItems } = createPricingSourceItems({
               pricing,
               source,
@@ -906,16 +998,13 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
 
       const exchangeRate = resolveAccountExchangeRate(selectedSource.account)
 
-      const source = applyAihubmixModelListCapabilities(
-        {
-          ...selectedSource,
-          capabilities: deriveModelListSourceCapabilities({
-            capabilities: selectedSource.capabilities,
-            modelListSource: pricingData.model_list_source,
-          }),
-        },
-        pricingData,
-      )
+      const source = {
+        ...selectedSource,
+        capabilities: deriveModelListSourceCapabilities({
+          capabilities: selectedSource.capabilities,
+          modelListSource: pricingData.model_list_source,
+        }),
+      }
       const { groupRatios, sourceItems } = createPricingSourceItems({
         pricing: pricingData,
         source,
@@ -1276,37 +1365,21 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     [baseFilteredRawModels, getAccountFilteredRawModels],
   )
 
+  // Filter previews and metadata counts need row identities, never quotes.
   const getFilteredModels = useCallback(
     (overrides: FilterOverrides = {}) => {
-      const baseModels = resolveCalculatedModels({
-        rawItems: getAccountFilteredRawModels(
-          getBaseFilteredRawModels(overrides),
-        ),
-        getGroupCandidates: (item) =>
-          getGroupCandidatesForRawItem(
-            item,
-            overrides.selectedGroups ?? selectedGroups,
-          ),
-        showRealPrice,
-        priceComparisonWeights,
-      })
+      const baseModels = getAccountFilteredRawModels(
+        getBaseFilteredRawModels(overrides),
+      )
 
       const effectiveVendor = resolveEffectiveSelectedVendor(
         selectedProvider,
         deriveVendorCatalog(baseModels),
         deriveUnclassifiedVendorCount(baseModels),
       )
-      return filterCalculatedModelsByVendor(baseModels, effectiveVendor)
+      return filterModelsByVendor(baseModels, effectiveVendor)
     },
-    [
-      getAccountFilteredRawModels,
-      getBaseFilteredRawModels,
-      getGroupCandidatesForRawItem,
-      priceComparisonWeights,
-      selectedGroups,
-      selectedProvider,
-      showRealPrice,
-    ],
+    [getAccountFilteredRawModels, getBaseFilteredRawModels, selectedProvider],
   )
 
   const getFilteredResultCount = useCallback(
@@ -1362,11 +1435,15 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         getGroupCandidates: getGroupCandidatesForRawItem,
         showRealPrice,
         priceComparisonWeights,
+        pricingScenario,
+        isPriceComparisonActive,
       }),
     [
       accountFilteredBaseRawModels,
       getGroupCandidatesForRawItem,
       priceComparisonWeights,
+      pricingScenario,
+      isPriceComparisonActive,
       showRealPrice,
     ],
   )
@@ -1392,7 +1469,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     effectiveSelectedVendor !== selectedProvider
 
   const filteredModels = useMemo(() => {
-    const vendorFilteredModels = filterCalculatedModelsByVendor(
+    const vendorFilteredModels = filterModelsByVendor(
       baseFilteredModels,
       effectiveSelectedVendor,
     )
@@ -1428,6 +1505,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         const groupKey = JSON.stringify([
           item.comparableModelIdentity.key,
           priceKey.billingMode,
+          comparisonUnit(priceKey),
         ])
         const group = groups.get(groupKey) ?? []
         group.push(item)
@@ -1440,7 +1518,9 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
           return priceKey && hasComparablePriceValue(priceKey)
         })
 
-        if (comparableItems.length === 0) {
+        // The badge describes this comparison's complete quotes. Provenance
+        // remains visible on each quote and does not determine comparability.
+        if (comparableItems.length < 2) {
           return
         }
 

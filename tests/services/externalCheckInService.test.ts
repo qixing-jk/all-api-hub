@@ -76,6 +76,34 @@ const getMockedRouteResolver = async () => {
 }
 
 describe("openExternalCheckInsAndMark", () => {
+  it("opens and marks custom check-in while skipping an unsupported redeem page", async () => {
+    mockedAccountStorage.getAccountById.mockResolvedValueOnce({
+      id: "no-redeem",
+      site_url: "https://example.com",
+      site_type: "sharedchat",
+      checkIn: {
+        customCheckIn: {
+          url: "https://example.com/check",
+          openRedeemWithCheckIn: true,
+        },
+      },
+    } as any)
+    const resolver = await getMockedRouteResolver()
+    resolver.mockResolvedValueOnce(null)
+    mockedCreateTab.mockResolvedValueOnce({ id: 42 } as any)
+    const response = await openExternalCheckInsAndMark({
+      accountIds: ["no-redeem"],
+    })
+    expect(mockedCreateTab).toHaveBeenCalledTimes(1)
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      "https://example.com/check",
+      true,
+    )
+    expect(response).toMatchObject({
+      success: true,
+      data: { results: [{ openedRedeem: null, openedCheckIn: true }] },
+    })
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     mockedHasWindowsAPI.mockReturnValue(false)

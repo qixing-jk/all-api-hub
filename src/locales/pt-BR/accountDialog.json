@@ -1,4 +1,27 @@
 {
+  "accessTokenVerification": {
+    "apiyi": {
+      "generateStep": "Se já tiver um Access Token válido e completo, você pode usá-lo. Caso contrário, abra “System token” no seu perfil da APIyi e digite sua senha no site para gerar um.",
+      "openProfile": "Abrir perfil da APIyi",
+      "openProfileFailed": "Não foi possível abrir a página. Abra “System token” no seu perfil da APIyi manualmente, conclua a verificação e volte aqui para colar o Access Token."
+    },
+    "continueFailed": "Não foi possível abrir o painel lateral nem a página completa. Seu formulário foi mantido. Tente novamente.",
+    "continueInFullPage": "Continuar em uma página completa",
+    "continueInSidePanel": "Continuar no painel lateral",
+    "continuing": "Preparando o formulário…",
+    "description": "Este site exige uma verificação de segurança antes de gerar um Access Token, por isso ele não pode ser obtido automaticamente. Os dados detectados da conta foram mantidos. Insira um Access Token de gerenciamento de conta para continuar.",
+    "destinationBusy": "Já existe um formulário de conta incompleto aqui. Salve ou feche esse formulário para continuar com o formulário do popup.",
+    "fullPageHint": "Continue em uma página completa para manter este formulário aberto enquanto copia o token no site.",
+    "generateStep": "Se já tiver um Access Token válido e completo, use-o diretamente. Caso contrário, abra Segurança → Access Token no site, conclua a verificação e gere um token.",
+    "openSecurity": "Abrir segurança do site",
+    "openSecurityFailed": "Não foi possível abrir a página. Abra Segurança → Access Token manualmente no site e volte aqui para colar o token.",
+    "pasteStep": "Copie imediatamente o Access Token completo, cole no campo Access Token abaixo, confira os dados da conta e salve.",
+    "popupHint": "Continue no painel lateral para manter este formulário enquanto verifica sua identidade e copia o token no site. Se o painel lateral não puder ser aberto, o formulário será aberto em uma página completa.",
+    "prepareFailed": "Não foi possível preservar este formulário. Copie os dados necessários antes de reabrir o formulário de conta no painel lateral.",
+    "restoreFailed": "Não foi possível restaurar o formulário incompleto. Ele pode ter expirado. Reabra o formulário de conta.",
+    "rotationWarning": "Gerar um novo Access Token invalida o anterior. Atualize também as outras ferramentas que usam o token antigo.",
+    "title": "Insira um Access Token manualmente"
+  },
   "actions": {
     "autoConfigAriaLabel": "Salve a conta e abra a configuração do canal {{managedSite}}",
     "autoConfigRequiresValidAccount": "Preencha primeiro o formulário de conta",
@@ -56,6 +79,7 @@
     "automaticCheckInSelectionWithDetail": "Seleção automática: {{detail}}",
     "checkInMethod": "Método de check-in",
     "checkInMethodNeedsChoice": "Vários métodos detectados; escolha um",
+    "checkInMethodNeedsConfirmation": "{{method}} (não confirmado)",
     "checkInMethodNotSelected": "Nenhum método selecionado",
     "checkInMethodPendingConfirmation": "Aguardando confirmação de um método disponível",
     "checkInMethodUnavailable": "Nenhum método disponível",
@@ -65,6 +89,7 @@
     "checkInSelectionAutomaticUnavailable": "Nenhum método disponível foi detectado. O check-in automático não será executado.",
     "checkInSelectionManual": "Você selecionou {{method}} manualmente. O sistema não substituirá este método automaticamente.",
     "checkInSelectionStale": "Detecte novamente para confirmar se ele ainda está disponível.",
+    "checkInSelectionUnconfirmed": "Sua seleção, {{method}}, foi mantida, mas o suporte neste site não foi confirmado. Execute a detecção novamente.",
     "checkInStatus": "Status do check-in",
     "checkInStatusDesc": "O sistema verifica e exibe o status do check-in de hoje durante a atualização da conta. Esta é apenas a exibição de status e não realiza check-in.",
     "checkInStatusDisabled": "O site ainda não habilitou o check-in, portanto o check-in automático está pausado.",
@@ -165,6 +190,7 @@
     "addSuccess": "Conta {{name}} adicionada com sucesso!",
     "autoDetectCookiePermissionReloadHint": "Se a primeira detecção continuar aguardando após você conceder permissões de Cookie para várias contas, recarregue a extensão e tente novamente.",
     "autoDetectFailed": "Falha na detecção automática: {{error}}",
+    "autoDetectIdentityMismatch": "A conta detectada não corresponde à conta atual. Seus dados existentes foram mantidos. Verifique a URL do site, entre na conta correta e tente novamente.",
     "autoDetectSuccess": "Detecção automática bem-sucedida!",
     "autoDetectTakingTooLong": "A detecção automática está demorando mais que o esperado. Abra o guia de solução de problemas.",
     "checkInRedetectAmbiguous": "Foram detectados vários métodos de check-in. Selecione um abaixo.",
@@ -178,7 +204,7 @@
       "identity_mismatch": "A conta retornada pelo site não corresponde a esta conta. Verifique a URL do site e as credenciais.",
       "invalid_response": "O site retornou uma resposta que a extensão não reconheceu. Verifique a URL e tente novamente após atualizar a extensão.",
       "network": "A detecção não conseguiu acessar o site de destino. Verifique sua conexão ou o status do site e tente novamente.",
-      "permission_denied": "O site de destino recusou a solicitação de detecção. Entre novamente e verifique as permissões da conta.",
+      "permission_denied": "O site rejeitou a solicitação de detecção de check-in, por isso não foi possível confirmar o suporte. Verifique a função e as permissões da sua conta no site.",
       "source_unavailable": "O site de destino está temporariamente indisponível. Tente novamente mais tarde.",
       "timeout": "O site de destino não respondeu antes do tempo limite da detecção. Tente novamente mais tarde."
     },
@@ -262,12 +288,12 @@
         "continue": "Continuar",
         "disableAndContinue": "Não me lembre novamente e continue"
       },
-      "description_one": "Você já tem {{count}} conta de {{siteUrl}}. Adicionar outra pode criar uma duplicata. Deseja continuar?",
-      "description_many": "Você já tem {{count}} contas de {{siteUrl}}. Adicionar outra pode criar uma duplicata. Deseja continuar?",
-      "description_other": "Você já tem {{count}} contas de {{siteUrl}}. Adicionar outra pode criar uma duplicata. Deseja continuar?",
-      "descriptionExact": "Já existe uma conta de {{siteUrl}} com o ID de usuário {{userId}} ({{username}}). Adicionar outra pode criar uma duplicata. Deseja continuar?",
+      "description_one": "Esta Management Key de {{siteUrl}} já está salva em {{count}} conta. Deseja adicioná-la novamente?",
+      "description_many": "Esta Management Key de {{siteUrl}} já está salva em {{count}} contas. Deseja adicioná-la novamente?",
+      "description_other": "Esta Management Key de {{siteUrl}} já está salva em {{count}} contas. Deseja adicioná-la novamente?",
+      "descriptionExact": "Uma conta de {{siteUrl}} com o ID de usuário {{userId}} já está salva ({{username}}). Deseja adicioná-la novamente?",
       "title": "Conta duplicada",
-      "warningTitle": "Este site já possui contas"
+      "warningTitle": "Conta salva correspondente encontrada"
     },
     "managedSiteConfig": {
       "actions": {

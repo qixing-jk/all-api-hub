@@ -1,12 +1,12 @@
 import type { TFunction } from "i18next"
 import { CloudDownload, Download, RefreshCw } from "lucide-react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { RELEASE_UPDATE_STATUS_PANEL_TEST_IDS } from "~/components/ReleaseUpdateStatusPanel.testIds"
 import { BodySmall, Button, Card, CardItem, CardList } from "~/components/ui"
 import { useReleaseUpdateStatus } from "~/contexts/ReleaseUpdateStatusContext"
+import toast from "~/lib/notify"
 import {
   deriveReleaseUpdateCheckOutcome,
   deriveReleaseUpdatePresentation,

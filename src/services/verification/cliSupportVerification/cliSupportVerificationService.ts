@@ -1,3 +1,4 @@
+import type { ApiVerificationMode } from "~/services/verification/aiApiVerification"
 import { runCliSupportToolFromRegistry } from "~/services/verification/cliSupportVerification/registry"
 
 import { nowMs } from "../aiApiVerification/probeTiming"
@@ -10,6 +11,7 @@ import { CLI_TOOL_IDS } from "./types"
 type RunCliSupportSimulationParams = {
   baseUrl: string
   apiKey: string
+  mode?: ApiVerificationMode
   /**
    * Model id to use for all tool simulations.
    *
@@ -38,6 +40,7 @@ export async function runCliSupportTool(
   return runCliSupportToolFromRegistry(params.toolId, {
     baseUrl: params.baseUrl,
     apiKey: params.apiKey,
+    mode: params.mode,
     modelId: params.modelId,
     abortSignal: params.abortSignal,
   })
@@ -60,6 +63,7 @@ export async function runCliSupportSimulation(
       await runCliSupportToolFromRegistry(toolId, {
         baseUrl: params.baseUrl,
         apiKey: params.apiKey,
+        mode: params.mode,
         modelId: params.modelId,
         abortSignal: params.abortSignal,
       }),

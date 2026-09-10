@@ -33,7 +33,7 @@ function createStatusResponse(accountId: string, accountName: string) {
   }
 }
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     loading: vi.fn(),
     dismiss: vi.fn(),

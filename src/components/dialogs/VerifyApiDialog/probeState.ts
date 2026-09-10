@@ -29,6 +29,7 @@ export function buildProbeState(
       result: persistedProbe
         ? {
             id: persistedProbe.id,
+            mode: persistedProbe.mode,
             status: persistedProbe.status,
             latencyMs: persistedProbe.latencyMs,
             summary: persistedProbe.summary,

@@ -8,7 +8,7 @@ import {
   ChannelSecretField,
   ChannelStatusField,
   ChannelTypeField,
-} from "~/components/dialogs/ChannelDialog/components/ChannelCommonFieldsBody"
+} from "~/components/dialogs/ChannelDialog/components/ChannelFields"
 import { Button } from "~/components/ui"
 import {
   normalizeResourceList,

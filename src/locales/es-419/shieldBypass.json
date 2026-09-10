@@ -1,4 +1,134 @@
 {
+  "history": {
+    "accountOnboarding": "Configuración y detección de cuentas",
+    "actions": "Acciones del historial",
+    "allStatuses": "Todos los resultados",
+    "causes": {
+      "api_error_fallback": "Se solicitó una página temporal después de un error de la API.",
+      "browser_profile_isolation": "Esta operación requiere un entorno temporal del navegador, por ejemplo, para aislar la sesión de una cuenta.",
+      "explicit_context": "Esta operación solicitó explícitamente un entorno de página del sitio.",
+      "rendered_page_required": "Esta operación necesita información de la página renderizada.",
+      "session_required": "Esta operación necesita leer o usar la sesión de inicio de sesión del sitio en el navegador.",
+      "verification_required": "Esta operación necesita una verificación o una acción nativa en la página del sitio."
+    },
+    "clear": "Borrar historial",
+    "clearDescription": "¿Borrar el historial de evasión de protección de este dispositivo? Los nuevos intentos se seguirán registrando.",
+    "clearFailed": "No se pudo borrar el historial. Inténtalo de nuevo.",
+    "clearFilters": "Borrar filtros",
+    "commands": {
+      "add_account": "Agregar cuenta",
+      "detect_account": "Detectar cuenta",
+      "manage_api_keys": "Administrar claves API",
+      "manage_site_channels": "Administrar canales del sitio",
+      "manual_checkin": "Registro diario manual",
+      "reauthenticate_account": "Volver a autenticar la cuenta",
+      "refresh_account": "Actualizar cuenta",
+      "refresh_all_accounts": "Actualizar todas las cuentas",
+      "refresh_disabled_accounts": "Actualizar cuentas deshabilitadas",
+      "retry_checkin_account": "Reintentar registro diario",
+      "sync_managed_site_models": "Sincronizar modelos del sitio administrado"
+    },
+    "copied": "Detalles de diagnóstico copiados",
+    "copy": "Copiar detalles de diagnóstico",
+    "copyFailed": "No se pudieron copiar los detalles. Inténtalo de nuevo.",
+    "created": "Se creó una página temporal",
+    "denials": {
+      "automatic_disabled": "La evasión automática de protección está desactivada. Actívala en la configuración relacionada y reintenta desde la función original.",
+      "feature_disabled": "La evasión automática de protección está desactivada para esta función. Activa su configuración y reintenta desde la función original.",
+      "invalid_execution": "La información de la operación no es válida. Vuelve a iniciarla desde la función original.",
+      "missing_execution": "Falta la información de la operación que inició la solicitud. Vuelve a iniciarla desde la función original.",
+      "permission_required": "Faltan permisos del navegador. Concédelos en la configuración de permisos y reintenta.",
+      "policy_unavailable": "No se pudo leer la configuración de evasión de protección. Inténtalo más tarde.",
+      "resource_stale": "La configuración de la cuenta o del sitio cambió. Actualiza la página original y reintenta.",
+      "task_not_permitted": "Esta función no admite este tipo de operación en una página temporal.",
+      "unsupported_environment": "Este entorno del navegador no ofrece la capacidad de página temporal necesaria."
+    },
+    "description": "Los últimos {{limit}} registros se guardan en este dispositivo, sin datos sensibles.",
+    "empty": "Aún no hay historial de evasión de protección",
+    "emptyDescription": "Las nuevas solicitudes de páginas temporales se registran aquí después de actualizar a esta versión. Actualiza una cuenta de un sitio protegido y vuelve a consultar.",
+    "entryDescription": "Consulta por qué se solicitó una página temporal y cuál fue el resultado.",
+    "failures": {
+      "execution_error": "La ejecución se detuvo inesperadamente. Revisa el mensaje de la función original antes de reintentar.",
+      "firefox_popup_unsupported": "Firefox no puede ejecutar esta operación desde la ventana emergente de la extensión. Reintenta desde la configuración o el panel lateral.",
+      "identity_mismatch": "La cuenta que inició sesión en la página del sitio es distinta de la cuenta de esta operación.",
+      "identity_missing": "La página del sitio no proporcionó una identidad de cuenta verificable.",
+      "incognito_access_required": "La extensión no tiene permiso para ejecutarse en ventanas privadas o de incógnito. Concédelo en la configuración de extensiones del navegador.",
+      "invalid_request": "La solicitud de la acción de página está incompleta o no es válida.",
+      "no_response": "El controlador no devolvió un resultado. Revisa el estado actual en la función original.",
+      "target_not_found": "No se encontró el botón o el elemento necesario en la página.",
+      "throttled": "Se limitó la frecuencia de la acción de página. Inténtalo más tarde.",
+      "trigger_failed": "No se pudo ejecutar la acción de página. Revisa la página del sitio."
+    },
+    "fields": {
+      "context": "Obtención de la página",
+      "contextMode": "Modo de apertura real",
+      "duration": "Duración",
+      "evidence": "Evidencia del error original",
+      "finishedAt": "Hora de finalización",
+      "method": "Método de solicitud",
+      "mutation": "Estado de escritura",
+      "operation": "Operación que inició la solicitud",
+      "preferredMode": "Modo de apertura configurado",
+      "profile": "Entorno del navegador",
+      "result": "Respuesta y códigos de error",
+      "surface": "Origen",
+      "trigger": "Desencadenante",
+      "verification": "Verificación de la página"
+    },
+    "filterStatus": "Filtrar por resultado",
+    "groups": {
+      "context": "Navegador y solicitud",
+      "outcome": "Resultado",
+      "trigger": "Origen de la solicitud"
+    },
+    "incognito": "Entorno incógnito / privado",
+    "loadFailed": "No se pudo leer el historial. Inténtalo de nuevo.",
+    "manual": "Acción manual del usuario",
+    "mutations": {
+      "created": "Creación confirmada",
+      "dispatched_unconfirmed": "Solicitud enviada, resultado sin confirmar; revisa primero el estado del sitio",
+      "not_dispatched": "Solicitud de creación no enviada"
+    },
+    "newRecords_one": "Mostrar {{count}} registro nuevo",
+    "newRecords_many": "Mostrar {{count}} registros nuevos",
+    "newRecords_other": "Mostrar {{count}} registros nuevos",
+    "noMatches": "No hay registros que coincidan con los filtros",
+    "noOriginalError": "Se solicitó una página temporal; no se proporcionaron detalles del error anterior.",
+    "open": "Ver historial de evasión de protección",
+    "openSettings": "Ver configuración relacionada",
+    "pendingDescription": "Se registró el inicio, pero aún no hay un resultado final. La tarea puede seguir en curso o haberse interrumpido al cerrar el navegador o reiniciar la extensión.",
+    "reused": "Se reutilizó una página existente",
+    "search": "Buscar sitios, operaciones o diagnósticos",
+    "shown": "Se muestran {{visible}} / {{total}} registros",
+    "statuses": {
+      "completed": "Completado",
+      "denied": "No se abrió la página temporal",
+      "failed": "Falló",
+      "started": "Iniciado, sin resultado aún",
+      "unavailable": "Entorno no disponible"
+    },
+    "surfaces": {
+      "background": "Segundo plano de la extensión",
+      "content_script": "Página del sitio",
+      "options": "Página de configuración",
+      "popup": "Ventana emergente de la extensión",
+      "sidepanel": "Panel lateral"
+    },
+    "title": "Historial de evasión de protección",
+    "triggers": {
+      "background_recovery": "Recuperación en segundo plano",
+      "retry": "Reintento automático",
+      "scheduled": "Tarea programada",
+      "ui_lifecycle": "Automático al abrir una página o componente"
+    },
+    "turnstile": {
+      "error": "Falló la verificación de Turnstile",
+      "not_present": "No se detectó un widget de Turnstile",
+      "timeout": "Se agotó el tiempo de espera de Turnstile",
+      "token_obtained": "Se obtuvo la credencial de verificación de Turnstile"
+    },
+    "unexpectedContent": "La respuesta tenía un formato inesperado y pudo haber sido una página de verificación del sitio."
+  },
   "titlePrefix": "All API Hub · Omisión de protección",
   "toast": {
     "actions": {

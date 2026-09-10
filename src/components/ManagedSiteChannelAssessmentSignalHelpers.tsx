@@ -2,7 +2,8 @@ import type { TFunction } from "i18next"
 
 import Tooltip from "~/components/Tooltip"
 import { Badge } from "~/components/ui"
-import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import type { ManagedSiteType } from "~/constants/siteType"
+import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import type { ManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
 import {
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
@@ -67,21 +68,24 @@ export const getSignalBadgeVariant = (params: {
   return "outline" as const
 }
 
-export const appendNewApiKeyHintToTooltip = (
+const appendSecretVerificationHintToTooltip = (
   managedSiteType: ManagedSiteType,
   message: string,
   assessment: ManagedSiteAssessmentSignalsLike,
   t: TFunction,
 ) => {
   if (
-    managedSiteType !== SITE_TYPES.NEW_API ||
     assessment.key.reason !==
-      MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE
+    MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE
   ) {
     return message
   }
 
-  return `${message} ${t("keyManagement:managedSiteStatus.descriptions.newApiRetrieveKeyHint")}`
+  const verification =
+    getManagedSiteCapabilities(managedSiteType).matching.secretVerification
+  return verification
+    ? `${message} ${verification.getUnavailableHint(t)}`
+    : message
 }
 
 export const getUrlSignalLabel = (
@@ -155,7 +159,7 @@ export const getKeySignalTooltip = (
     case MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.NO_KEY_PROVIDED:
       return t("keyManagement:managedSiteStatus.signals.key.tooltipNotProvided")
     case MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE:
-      return appendNewApiKeyHintToTooltip(
+      return appendSecretVerificationHintToTooltip(
         managedSiteType,
         t("keyManagement:managedSiteStatus.signals.key.tooltipUnavailable"),
         assessment,

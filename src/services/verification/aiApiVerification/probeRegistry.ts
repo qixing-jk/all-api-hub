@@ -6,6 +6,7 @@ import { runWebSearchProbe } from "./probes/webSearchProbe"
 import {
   API_VERIFICATION_PROBE_IDS,
   type ApiVerificationApiType,
+  type ApiVerificationMode,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
 } from "./types"
@@ -17,6 +18,7 @@ type ProbeRunnerParams = {
   baseUrl: string
   apiKey: string
   apiType: ApiVerificationApiType
+  mode?: ApiVerificationMode
   modelId?: string
   abortSignal?: AbortSignal
 }
@@ -57,6 +59,7 @@ export const apiVerificationProbeRegistry: Record<
         apiKey: params.apiKey,
         apiType: params.apiType,
         modelId: params.modelId as string,
+        mode: params.mode,
         abortSignal: params.abortSignal,
       }),
   },
@@ -68,6 +71,7 @@ export const apiVerificationProbeRegistry: Record<
         apiKey: params.apiKey,
         apiType: params.apiType,
         modelId: params.modelId as string,
+        mode: params.mode,
         abortSignal: params.abortSignal,
       }),
   },
@@ -79,6 +83,7 @@ export const apiVerificationProbeRegistry: Record<
         apiKey: params.apiKey,
         apiType: params.apiType,
         modelId: params.modelId as string,
+        mode: params.mode,
         abortSignal: params.abortSignal,
       }),
   },
@@ -90,6 +95,7 @@ export const apiVerificationProbeRegistry: Record<
         apiKey: params.apiKey,
         apiType: params.apiType,
         modelId: params.modelId as string,
+        mode: params.mode,
         abortSignal: params.abortSignal,
       }),
   },

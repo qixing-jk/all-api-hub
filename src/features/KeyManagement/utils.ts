@@ -61,8 +61,7 @@ const buildAccountRuntimeKeyEntryIdentityPrefix = (
 
 export interface ManagedSiteStatusCheckTargetInput {
   identityKey: string
-  account: DisplaySiteData
-  token: AccountToken
+  runtimeKey: AccountRuntimeKey
 }
 
 export const isManagedSiteStatusIdentityForAccount = (
@@ -129,23 +128,11 @@ export const toLegacyAccountTokenForKeyManagementEntry = (
 ): AccountToken => accountRuntimeKeyToLegacyAccountToken(entry.runtimeKey)
 
 export const buildServiceCredentialManagedSiteStatusTarget = (
-  account: DisplaySiteData,
   runtimeKey: ServiceCredentialRuntimeKey,
-): ManagedSiteStatusCheckTargetInput => {
-  const statusAccount = {
-    ...account,
-    baseUrl: runtimeKey.baseUrl,
-  }
-
-  return {
-    identityKey: buildAccountRuntimeKeyEntryIdentityKey(runtimeKey.id),
-    account: statusAccount,
-    token: accountRuntimeKeyToLegacyAccountToken({
-      ...runtimeKey,
-      account: statusAccount,
-    }),
-  }
-}
+): ManagedSiteStatusCheckTargetInput => ({
+  identityKey: buildAccountRuntimeKeyEntryIdentityKey(runtimeKey.id),
+  runtimeKey,
+})
 
 export const loadServiceCredentialKeyManagementRuntimeKey = async (params: {
   account: DisplaySiteData

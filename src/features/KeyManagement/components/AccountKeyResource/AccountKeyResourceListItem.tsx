@@ -1,6 +1,5 @@
 import { Copy, Eye, EyeOff, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { IconButton } from "~/components/ui"
@@ -9,6 +8,7 @@ import type { KeyResourceCredentialAssociation } from "~/features/KeyManagement/
 import { LinkedCredentialProfileActions } from "~/features/KeyManagement/components/LinkedCredentialProfileActions"
 import type { AccountKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/accountKeyResourceCardAdapter"
 import type { KeyResourceDetailState } from "~/features/KeyManagement/presentation/keyResourceCard"
+import toast from "~/lib/notify"
 import type {
   AccountKeyResourceFacts,
   ResourceFailure,

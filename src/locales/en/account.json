@@ -218,7 +218,6 @@
     "site": {
       "checkedInToday": "Checked in today, click to view",
       "checkInStatusOutdated": "Check-in status wasn't detected today (last check time: {{time}}). Click to refresh",
-      "checkInStatusUnavailable": "Check-in is supported, but today's status cannot be read automatically",
       "currentSite": "Current Site",
       "currentSiteExists": "Same site as the current tab",
       "disabled": "Disabled",

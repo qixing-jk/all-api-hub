@@ -240,13 +240,23 @@ describe("ManagedSiteMigrationDialogView", () => {
     ).toBeNull()
 
     rerender(<ManagedSiteMigrationDialogView {...props} isConfirmationOpen />)
-    await user.click(
-      within(
-        screen.getByRole("dialog", { name: "Confirm migration" }),
-      ).getByRole("button", {
-        name: "Confirm migration",
-      }),
-    )
+    const confirmation = screen.getByRole("dialog", {
+      name: "Confirm migration",
+    })
+    const confirmButton = within(confirmation).getByRole("button", {
+      name: "Confirm migration",
+    })
+    expect.soft(confirmButton).toHaveAttribute("data-variant", "default")
+    expect
+      .soft(confirmation.querySelector(".lucide-trash2, .lucide-trash-2"))
+      .not.toBeInTheDocument()
+    expect(
+      within(confirmation).getByText(labels.confirmationDescription),
+    ).toBeVisible()
+    expect(
+      within(confirmation).getByText(labels.confirmationWarningTitle),
+    ).toBeVisible()
+    await user.click(confirmButton)
     expect(onConfirm).toHaveBeenCalledTimes(1)
   })
 

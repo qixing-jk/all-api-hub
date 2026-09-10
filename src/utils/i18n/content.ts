@@ -9,7 +9,7 @@ import { resolveInitialAppLanguage } from "./language"
 import { loadAppLanguageResources } from "./resources"
 
 let contentI18nReadyPromise: Promise<void> | null = null
-let contentI18nInitialized = false
+let contentLanguageRefreshQueue: Promise<void> = Promise.resolve()
 
 /**
  * Initializes i18n for content scripts without reading host-page storage.
@@ -33,14 +33,15 @@ async function initContentI18n() {
   })
 
   await i18n.changeLanguage(initialLanguage)
-  contentI18nInitialized = true
 }
 
 /**
- * Waits for content i18n initialization and refreshes the current preference.
+ * Waits for initialization and serializes preference refreshes so a slower old
+ * language load cannot overwrite a newer preference. Each refresh reads the
+ * latest stored preference when its turn starts.
  */
 export async function ensureContentI18nReady() {
-  const shouldRefreshLanguage = contentI18nInitialized
+  const shouldRefreshLanguage = contentI18nReadyPromise !== null
 
   if (!contentI18nReadyPromise) {
     contentI18nReadyPromise = initContentI18n().catch((error) => {
@@ -49,8 +50,17 @@ export async function ensureContentI18nReady() {
     })
   }
 
-  await contentI18nReadyPromise
-  if (shouldRefreshLanguage) {
-    await applyPreferenceLanguage(await userPreferences.getLanguage())
+  const readiness = contentI18nReadyPromise
+  if (!shouldRefreshLanguage) {
+    await readiness
+    return
   }
+
+  const refresh = contentLanguageRefreshQueue.then(async () => {
+    await readiness
+    await applyPreferenceLanguage(await userPreferences.getLanguage())
+  })
+  // Report this call's error to its caller while allowing later refreshes to run.
+  contentLanguageRefreshQueue = refresh.catch(() => undefined)
+  await refresh
 }

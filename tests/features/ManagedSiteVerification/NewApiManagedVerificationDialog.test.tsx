@@ -1,4 +1,9 @@
-import { fireEvent, render as rtlRender, screen } from "@testing-library/react"
+import {
+  act,
+  fireEvent,
+  render as rtlRender,
+  screen,
+} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import {
   useState,
@@ -11,7 +16,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { NEW_API_MANAGED_VERIFICATION_STEPS } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
-import { testI18n } from "~~/tests/test-utils/i18n"
+import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
 
 const updateNewApiBaseUrlMock = vi.fn()
 const updateNewApiUsernameMock = vi.fn()
@@ -25,12 +30,14 @@ const preferenceWriteSuccess = () => ({
   preferences: {},
 })
 
-const preferenceWriteFailure = () => ({
+const preferenceWriteFailure = (
+  type: "storage-error" | "stale" = "storage-error",
+) => ({
   ok: false,
-  reason: {
-    type: "storage-error",
-    error: new Error("save failed"),
-  },
+  reason:
+    type === "stale"
+      ? { type, expectedLastUpdated: 1, actualLastUpdated: 2 }
+      : { type, error: new Error("save failed") },
 })
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
@@ -172,6 +179,82 @@ describe("NewApiManagedVerificationDialog", () => {
     updateNewApiUsernameMock.mockResolvedValue(preferenceWriteSuccess())
     updateNewApiPasswordMock.mockResolvedValue(preferenceWriteSuccess())
   })
+
+  it.each(["required", "save", "stale", "diagnostic"])(
+    "retranslates %s feedback while preserving quick-config input",
+    async (failure) => {
+      const i18n = await createResourceTestI18n({
+        en: {
+          newApiManagedVerification: (
+            await import("~/locales/en/newApiManagedVerification.json")
+          ).default,
+          settings: (await import("~/locales/en/settings.json")).default,
+        },
+        "zh-CN": {
+          newApiManagedVerification: (
+            await import("~/locales/zh-CN/newApiManagedVerification.json")
+          ).default,
+          settings: (await import("~/locales/zh-CN/settings.json")).default,
+        },
+      })
+      const diagnostic = "Settings storage unavailable"
+      if (failure === "diagnostic") {
+        updateNewApiUsernameMock.mockRejectedValue(new Error(diagnostic))
+      } else {
+        updateNewApiUsernameMock.mockResolvedValue(
+          preferenceWriteFailure(
+            failure === "stale" ? "stale" : "storage-error",
+          ),
+        )
+      }
+      const user = userEvent.setup()
+      const props = createProps()
+      rtlRender(
+        <I18nextProvider i18n={i18n}>
+          <NewApiManagedVerificationDialog {...props} />
+        </I18nextProvider>,
+      )
+      await user.type(
+        screen.getByLabelText(i18n.t("settings:newApi.fields.usernameLabel")),
+        "admin",
+      )
+      if (failure !== "required")
+        await user.type(
+          screen.getByLabelText(i18n.t("settings:newApi.fields.passwordLabel")),
+          "secret",
+        )
+      await user.click(
+        screen.getByRole("button", {
+          name: i18n.t("newApiManagedVerification:dialog.actions.saveAndRetry"),
+        }),
+      )
+      const key =
+        failure === "required"
+          ? "newApiManagedVerification:dialog.messages.completeRequiredConfig"
+          : failure === "stale"
+            ? "settings:messages.preferencesChangedExternally"
+            : "newApiManagedVerification:dialog.messages.quickConfigSaveFailed"
+      expect(
+        await screen.findByText(
+          failure === "diagnostic" ? diagnostic : i18n.t(key),
+        ),
+      ).toBeVisible()
+      const writes = updateNewApiUsernameMock.mock.calls.length
+      await act(async () => {
+        await i18n.changeLanguage("zh-CN")
+      })
+      expect(
+        screen.getByText(failure === "diagnostic" ? diagnostic : i18n.t(key)),
+      ).toBeVisible()
+      expect(
+        screen.getByLabelText(i18n.t("settings:newApi.fields.usernameLabel")),
+      ).toHaveValue("admin")
+      expect(updateNewApiUsernameMock).toHaveBeenCalledTimes(writes)
+      expect(updateNewApiPasswordMock).not.toHaveBeenCalled()
+      expect(props.onUpdateRequestConfig).not.toHaveBeenCalled()
+      expect(props.onRetry).not.toHaveBeenCalled()
+    },
+  )
 
   it("offers exact extension-session cleanup for a recoverable active limit", () => {
     const props = createProps({
@@ -331,79 +414,102 @@ describe("NewApiManagedVerificationDialog", () => {
     expect(props.onRetry).not.toHaveBeenCalled()
   })
 
-  it("shows base-url save failures without retrying verification", async () => {
-    const user = userEvent.setup()
-    updateNewApiBaseUrlMock.mockResolvedValue(preferenceWriteFailure())
-    const props = createProps({
-      step: NEW_API_MANAGED_VERIFICATION_STEPS.FAILURE,
-      request: {
-        ...BASE_REQUEST,
-        config: {
-          ...BASE_REQUEST.config,
-          baseUrl: "",
+  it.each(["storage-error", "stale", "required"] as const)(
+    "stops base-url configuration after %s without retrying verification",
+    async (failure) => {
+      const user = userEvent.setup()
+      updateNewApiBaseUrlMock.mockResolvedValue(
+        preferenceWriteFailure(failure === "stale" ? "stale" : "storage-error"),
+      )
+      const props = createProps({
+        step: NEW_API_MANAGED_VERIFICATION_STEPS.FAILURE,
+        request: {
+          ...BASE_REQUEST,
+          config: {
+            ...BASE_REQUEST.config,
+            baseUrl: "",
+          },
         },
-      },
-      errorMessage: "newApiManagedVerification:dialog.messages.missingBaseUrl",
-    })
+        errorMessage:
+          "newApiManagedVerification:dialog.messages.missingBaseUrl",
+      })
 
-    render(<NewApiManagedVerificationDialog {...props} />)
+      render(<NewApiManagedVerificationDialog {...props} />)
 
-    await user.clear(
-      screen.getByLabelText("settings:newApi.fields.baseUrlLabel"),
-    )
-    await user.type(
-      screen.getByLabelText("settings:newApi.fields.baseUrlLabel"),
-      "https://changed.example",
-    )
-    await user.click(
-      screen.getByRole("button", {
-        name: "newApiManagedVerification:dialog.actions.saveAndRetry",
-      }),
-    )
+      await user.clear(
+        screen.getByLabelText("settings:newApi.fields.baseUrlLabel"),
+      )
+      if (failure !== "required") {
+        await user.type(
+          screen.getByLabelText("settings:newApi.fields.baseUrlLabel"),
+          "https://changed.example",
+        )
+      }
+      await user.click(
+        screen.getByRole("button", {
+          name: "newApiManagedVerification:dialog.actions.saveAndRetry",
+        }),
+      )
 
-    expect(updateNewApiBaseUrlMock).toHaveBeenCalledWith(
-      "https://changed.example",
-    )
-    expect(
-      await screen.findByText(
-        "newApiManagedVerification:dialog.messages.quickConfigSaveFailed",
-      ),
-    ).toBeInTheDocument()
-    expect(props.onUpdateRequestConfig).not.toHaveBeenCalled()
-    expect(props.onRetry).not.toHaveBeenCalled()
-  })
+      if (failure === "required") {
+        expect(updateNewApiBaseUrlMock).not.toHaveBeenCalled()
+      } else {
+        expect(updateNewApiBaseUrlMock).toHaveBeenCalledWith(
+          "https://changed.example",
+        )
+      }
+      expect(
+        await screen.findByText(
+          failure === "required"
+            ? "newApiManagedVerification:dialog.messages.completeRequiredConfig"
+            : failure === "stale"
+              ? "settings:messages.preferencesChangedExternally"
+              : "newApiManagedVerification:dialog.messages.quickConfigSaveFailed",
+        ),
+      ).toBeInTheDocument()
+      expect(props.onUpdateRequestConfig).not.toHaveBeenCalled()
+      expect(props.onRetry).not.toHaveBeenCalled()
+    },
+  )
 
-  it("shows password save failures without retrying verification", async () => {
-    const user = userEvent.setup()
-    updateNewApiPasswordMock.mockResolvedValue(preferenceWriteFailure())
-    const props = createProps()
+  it.each(["storage-error", "stale"] as const)(
+    "stops password configuration after %s without retrying verification",
+    async (failure) => {
+      const user = userEvent.setup()
+      updateNewApiPasswordMock.mockResolvedValue(
+        preferenceWriteFailure(failure),
+      )
+      const props = createProps()
 
-    render(<NewApiManagedVerificationDialog {...props} />)
+      render(<NewApiManagedVerificationDialog {...props} />)
 
-    await user.type(
-      screen.getByLabelText("settings:newApi.fields.usernameLabel"),
-      "admin",
-    )
-    await user.type(
-      screen.getByLabelText("settings:newApi.fields.passwordLabel"),
-      "secret",
-    )
-    await user.click(
-      screen.getByRole("button", {
-        name: "newApiManagedVerification:dialog.actions.saveAndRetry",
-      }),
-    )
+      await user.type(
+        screen.getByLabelText("settings:newApi.fields.usernameLabel"),
+        "admin",
+      )
+      await user.type(
+        screen.getByLabelText("settings:newApi.fields.passwordLabel"),
+        "secret",
+      )
+      await user.click(
+        screen.getByRole("button", {
+          name: "newApiManagedVerification:dialog.actions.saveAndRetry",
+        }),
+      )
 
-    expect(updateNewApiUsernameMock).toHaveBeenCalledWith("admin")
-    expect(updateNewApiPasswordMock).toHaveBeenCalledWith("secret")
-    expect(
-      await screen.findByText(
-        "newApiManagedVerification:dialog.messages.quickConfigSaveFailed",
-      ),
-    ).toBeInTheDocument()
-    expect(props.onUpdateRequestConfig).not.toHaveBeenCalled()
-    expect(props.onRetry).not.toHaveBeenCalled()
-  })
+      expect(updateNewApiUsernameMock).toHaveBeenCalledWith("admin")
+      expect(updateNewApiPasswordMock).toHaveBeenCalledWith("secret")
+      expect(
+        await screen.findByText(
+          failure === "stale"
+            ? "settings:messages.preferencesChangedExternally"
+            : "newApiManagedVerification:dialog.messages.quickConfigSaveFailed",
+        ),
+      ).toBeInTheDocument()
+      expect(props.onUpdateRequestConfig).not.toHaveBeenCalled()
+      expect(props.onRetry).not.toHaveBeenCalled()
+    },
+  )
 
   it("patches stale request config even when storage already has the same values", async () => {
     const user = userEvent.setup()

@@ -695,7 +695,24 @@ describe("KeyManagement empty-state actions", () => {
     )
   })
 
+  it("omits the model shortcut when the selected account has no supported model route", () => {
+    const account = createAccount({ id: "acc-1", name: "Account 1" })
+    getSiteTypeCapabilitiesMock.mockReturnValue({ account: {} })
+    useKeyManagementMock.mockReturnValue(
+      createHookResult({ displayData: [account], selectedAccount: account.id }),
+    )
+    render(<KeyManagement />)
+    expect(
+      screen.queryByTestId(
+        KEY_MANAGEMENT_TEST_IDS.openSelectedAccountModelsButton,
+      ),
+    ).toBeNull()
+  })
+
   it("opens the model list for the selected account from the title action", async () => {
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      account: { modelCatalog: {} },
+    })
     const user = userEvent.setup()
     const account = createAccount({
       id: "acc-1",

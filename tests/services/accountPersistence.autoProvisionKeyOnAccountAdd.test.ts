@@ -23,7 +23,7 @@ const {
   getSiteTypeCapabilitiesMock,
   toastSuccessMock,
   toastErrorMock,
-  toastCustomMock,
+  toastWarningMock,
   toastLoadingMock,
   toastDismissMock,
   validateManagementKeyMock,
@@ -33,17 +33,17 @@ const {
   getSiteTypeCapabilitiesMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
-  toastCustomMock: vi.fn(),
+  toastWarningMock: vi.fn(),
   toastLoadingMock: vi.fn(),
   toastDismissMock: vi.fn(),
   validateManagementKeyMock: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: toastSuccessMock,
     error: toastErrorMock,
-    custom: toastCustomMock,
+    warning: toastWarningMock,
     loading: toastLoadingMock,
     dismiss: toastDismissMock,
   },
@@ -95,7 +95,7 @@ describe("accountPersistence auto-provision key on add", () => {
     getSiteTypeCapabilitiesMock.mockReset()
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
-    toastCustomMock.mockReset()
+    toastWarningMock.mockReset()
     toastLoadingMock.mockReset()
     toastDismissMock.mockReset()
     validateManagementKeyMock.mockReset()
@@ -152,7 +152,7 @@ describe("accountPersistence auto-provision key on add", () => {
 
     expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
     expect(toastSuccessMock).not.toHaveBeenCalled()
-    expect(toastCustomMock).not.toHaveBeenCalled()
+    expect(toastWarningMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
   })
 
@@ -180,7 +180,7 @@ describe("accountPersistence auto-provision key on add", () => {
 
     expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
     expect(toastSuccessMock).toHaveBeenCalledTimes(1)
-    expect(toastCustomMock).not.toHaveBeenCalled()
+    expect(toastWarningMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
   })
 
@@ -290,7 +290,7 @@ describe("accountPersistence auto-provision key on add", () => {
     await flushPromises()
 
     expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
-    expect(toastCustomMock).toHaveBeenCalledTimes(1)
+    expect(toastWarningMock).toHaveBeenCalledTimes(1)
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
   })
@@ -373,7 +373,7 @@ describe("accountPersistence auto-provision key on add", () => {
 
     expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
     expect(toastSuccessMock).toHaveBeenCalledTimes(1)
-    expect(toastCustomMock).not.toHaveBeenCalled()
+    expect(toastWarningMock).not.toHaveBeenCalled()
     expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledWith({
       account: expect.objectContaining({
         site_name: "Test Site",
@@ -443,7 +443,7 @@ describe("accountPersistence auto-provision key on add", () => {
     expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
-    expect(toastCustomMock).toHaveBeenCalledTimes(1)
+    expect(toastWarningMock).toHaveBeenCalledTimes(1)
   })
 
   it("explains when a one-time key must be created manually", async () => {
@@ -478,7 +478,7 @@ describe("accountPersistence auto-provision key on add", () => {
     expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
-    expect(toastCustomMock).toHaveBeenCalledTimes(1)
+    expect(toastWarningMock).toHaveBeenCalledTimes(1)
   })
 
   it("explains that OpenRouter does not use legacy automatic key creation", async () => {
@@ -511,7 +511,7 @@ describe("accountPersistence auto-provision key on add", () => {
     await flushPromises()
 
     expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
-    expect(toastCustomMock).toHaveBeenCalledTimes(1)
+    expect(toastWarningMock).toHaveBeenCalledTimes(1)
   })
 
   it("skips auto-provision for none-auth accounts", async () => {
@@ -576,7 +576,7 @@ describe("accountPersistence auto-provision key on add", () => {
 
     expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
     expect(toastSuccessMock).not.toHaveBeenCalled()
-    expect(toastCustomMock).toHaveBeenCalledTimes(1)
+    expect(toastWarningMock).toHaveBeenCalledTimes(1)
     expect(toastErrorMock).not.toHaveBeenCalled()
   })
 

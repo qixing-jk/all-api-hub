@@ -1,17 +1,18 @@
-import toast from "react-hot-toast"
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ModelRedirectSettings from "~/features/BasicSettings/components/tabs/ManagedSite/ModelRedirectSettings"
+import toast from "~/lib/notify"
+import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import {
-  getManagedSiteServiceForType,
   hasValidManagedSiteConfig,
-} from "~/services/managedSites/managedSiteService"
-import { getManagedSiteAdminConfig } from "~/services/managedSites/utils/managedSite"
+  resolveCurrentManagedSiteRuntimeConfig,
+} from "~/services/managedSites/runtimeConfig"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { supportsManagedSiteModelRedirect } from "~/services/models/modelRedirect/capabilities"
-import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("~/contexts/UserPreferencesContext", async () => {
@@ -25,18 +26,26 @@ vi.mock("~/contexts/UserPreferencesContext", async () => {
   }
 })
 
-vi.mock("~/services/managedSites/managedSiteService", () => ({
-  getManagedSiteServiceForType: vi.fn(() => ({
-    fetchAccountAvailableModels: vi.fn().mockResolvedValue([]),
+vi.mock("~/services/apiAdapters/registry", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/services/apiAdapters/registry")>()),
+  getManagedSiteCapabilities: vi.fn(() => ({
+    queries: {
+      accountAvailableModels: { fetch: vi.fn().mockResolvedValue([]) },
+    },
   })),
-  hasValidManagedSiteConfig: vi.fn(),
 }))
-
-vi.mock("~/services/managedSites/utils/managedSite", () => ({
-  getManagedSiteAdminConfig: vi.fn(() => ({
-    baseUrl: "https://example.com",
-    adminToken: "token",
-    userId: "1",
+vi.mock("~/services/managedSites/runtimeConfig", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/managedSites/runtimeConfig")
+  >()),
+  hasValidManagedSiteConfig: vi.fn(),
+  resolveCurrentManagedSiteRuntimeConfig: vi.fn(() => ({
+    siteType: "new-api",
+    config: {
+      baseUrl: "https://example.com",
+      adminToken: "token",
+      userId: "1",
+    },
   })),
 }))
 
@@ -52,10 +61,11 @@ vi.mock("~/services/models/modelRedirect/capabilities", () => ({
   supportsManagedSiteModelRedirect: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: vi.fn(),
     error: vi.fn(),
+    warning: vi.fn(),
   },
 }))
 
@@ -63,8 +73,8 @@ const mockedUseUserPreferencesContext =
   useUserPreferencesContext as unknown as ReturnType<typeof vi.fn>
 const mockedHasValidManagedSiteConfig =
   hasValidManagedSiteConfig as unknown as ReturnType<typeof vi.fn>
-const mockedGetManagedSiteServiceForType =
-  getManagedSiteServiceForType as unknown as ReturnType<typeof vi.fn>
+const mockedGetManagedSiteCapabilitiesForType =
+  getManagedSiteCapabilities as unknown as ReturnType<typeof vi.fn>
 const mockedModelRedirectService = ModelRedirectService as unknown as {
   listManagedSiteChannels: ReturnType<typeof vi.fn>
   clearChannelModelMappings: ReturnType<typeof vi.fn>
@@ -78,8 +88,10 @@ describe("Model redirect bulk clear flow", () => {
 
     mockedHasValidManagedSiteConfig.mockReturnValue(true)
     vi.mocked(supportsManagedSiteModelRedirect).mockReturnValue(true)
-    mockedGetManagedSiteServiceForType.mockReturnValue({
-      fetchAccountAvailableModels: vi.fn().mockResolvedValue([]),
+    mockedGetManagedSiteCapabilitiesForType.mockReturnValue({
+      queries: {
+        accountAvailableModels: { fetch: vi.fn().mockResolvedValue([]) },
+      },
     })
     mockedUseUserPreferencesContext.mockReturnValue({
       preferences: {
@@ -96,22 +108,71 @@ describe("Model redirect bulk clear flow", () => {
     mockedModelRedirectService.listManagedSiteChannels.mockResolvedValue({
       success: true,
       channels: [
-        buildManagedSiteChannel({
-          id: 1,
+        {
+          ref: modelResourceRef(1),
           name: "Channel One",
-          model_mapping: '{"gpt-4o":"openai/gpt-4o"}',
-        }),
-        buildManagedSiteChannel({
-          id: 2,
+          modelMapping: '{"gpt-4o":"openai/gpt-4o"}',
+        },
+        {
+          ref: modelResourceRef(2),
           name: "Channel Two",
-          model_mapping: "{}",
-        }),
+          modelMapping: "{}",
+        },
       ],
       errors: [],
     })
   })
 
   const renderSubject = () => render(<ModelRedirectSettings />)
+
+  it("discovers models from the default New API configuration in legacy preferences", async () => {
+    const user = userEvent.setup()
+    const runtimeConfig = await vi.importActual<
+      typeof import("~/services/managedSites/runtimeConfig")
+    >("~/services/managedSites/runtimeConfig")
+    const redirectCapabilities = await vi.importActual<
+      typeof import("~/services/models/modelRedirect/capabilities")
+    >("~/services/models/modelRedirect/capabilities")
+    const registry = await vi.importActual<
+      typeof import("~/services/apiAdapters/registry")
+    >("~/services/apiAdapters/registry")
+    const config = {
+      baseUrl: "https://legacy.example.invalid",
+      adminToken: "legacy-admin-token",
+      userId: "7",
+    }
+    const fetch = vi.fn().mockResolvedValue(["legacy-discovered-model"])
+    vi.mocked(resolveCurrentManagedSiteRuntimeConfig).mockImplementationOnce(
+      runtimeConfig.resolveCurrentManagedSiteRuntimeConfig,
+    )
+    vi.mocked(supportsManagedSiteModelRedirect).mockImplementation(
+      redirectCapabilities.supportsManagedSiteModelRedirect,
+    )
+    mockedGetManagedSiteCapabilitiesForType.mockImplementation((siteType) => ({
+      ...registry.getManagedSiteCapabilities(siteType),
+      queries: { accountAvailableModels: { fetch } },
+    }))
+    mockedUseUserPreferencesContext.mockReturnValue({
+      preferences: {
+        newApi: config,
+        modelRedirect: { enabled: true, standardModels: [] },
+      },
+      updateModelRedirect: vi.fn(),
+      resetModelRedirectConfig: vi.fn(),
+    })
+
+    renderSubject()
+
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "modelRedirect:standardModels",
+      }),
+    )
+    expect(
+      await screen.findByRole("option", { name: "legacy-discovered-model" }),
+    ).toBeVisible()
+    expect(fetch).toHaveBeenCalledWith(config)
+  })
 
   it("shows the preference write failure message when enabling redirects fails", async () => {
     const updateModelRedirect = vi.fn().mockResolvedValue({
@@ -172,7 +233,7 @@ describe("Model redirect bulk clear flow", () => {
   })
 
   it("explains when model discovery is unsupported but keeps preset configuration available", async () => {
-    mockedGetManagedSiteServiceForType.mockReturnValue({})
+    mockedGetManagedSiteCapabilitiesForType.mockReturnValue({})
 
     renderSubject()
 
@@ -202,7 +263,7 @@ describe("Model redirect bulk clear flow", () => {
 
   it("explains that model discovery is not ready when managed-site setup is invalid", async () => {
     mockedHasValidManagedSiteConfig.mockReturnValue(false)
-    vi.mocked(getManagedSiteAdminConfig).mockReturnValueOnce(null)
+    vi.mocked(resolveCurrentManagedSiteRuntimeConfig).mockReturnValueOnce(null)
 
     renderSubject()
 
@@ -216,10 +277,12 @@ describe("Model redirect bulk clear flow", () => {
   })
 
   it("reports model discovery failures instead of silently using presets", async () => {
-    mockedGetManagedSiteServiceForType.mockReturnValue({
-      fetchAccountAvailableModels: vi
-        .fn()
-        .mockRejectedValue(new Error("request failed")),
+    mockedGetManagedSiteCapabilitiesForType.mockReturnValue({
+      queries: {
+        accountAvailableModels: {
+          fetch: vi.fn().mockRejectedValue(new Error("request failed")),
+        },
+      },
     })
 
     renderSubject()
@@ -253,41 +316,140 @@ describe("Model redirect bulk clear flow", () => {
     ).not.toHaveBeenCalled()
   })
 
-  it("calls the service with selected IDs", async () => {
+  it.each([
+    { clearedChannels: 1, skippedChannels: 1, messageKey: "successWithSkips" },
+    { clearedChannels: 0, skippedChannels: 2, messageKey: "nothingToClear" },
+  ])(
+    "warns with $messageKey after clearing selected resource references",
+    async ({ clearedChannels, skippedChannels, messageKey }) => {
+      mockedModelRedirectService.clearChannelModelMappings.mockResolvedValue({
+        success: true,
+        totalSelected: 2,
+        clearedChannels,
+        skippedChannels,
+        failedChannels: 0,
+        results: [],
+        errors: [],
+      })
+
+      renderSubject()
+
+      fireEvent.click(
+        await screen.findByRole("button", { name: t("bulkClear.action") }),
+      )
+
+      await screen.findByText("Channel One")
+
+      fireEvent.click(
+        screen.getByRole("button", { name: t("bulkClear.actions.continue") }),
+      )
+      await screen.findByText(t("bulkClear.confirm.title"))
+
+      fireEvent.click(
+        screen.getByRole("button", { name: t("bulkClear.actions.confirm") }),
+      )
+
+      await waitFor(() => {
+        expect(
+          mockedModelRedirectService.clearChannelModelMappings,
+        ).toHaveBeenCalledWith([modelResourceRef(1), modelResourceRef(2)])
+      })
+
+      await waitFor(() => {
+        expect(toast.warning).toHaveBeenCalledWith(
+          testI18n.t(`modelRedirect:bulkClear.messages.${messageKey}`, {
+            cleared: clearedChannels,
+            skipped: skippedChannels,
+          }),
+        )
+      })
+      expect(toast.success).not.toHaveBeenCalled()
+      expect(toast.error).not.toHaveBeenCalled()
+      expect(
+        screen.queryByText(t("bulkClear.confirm.title")),
+      ).not.toBeInTheDocument()
+    },
+  )
+
+  it("preserves hidden selections while toggling and bulk-selecting filtered resource references", async () => {
+    const user = userEvent.setup()
+    mockedModelRedirectService.listManagedSiteChannels.mockResolvedValue({
+      success: true,
+      channels: [
+        {
+          ref: modelResourceRef(10),
+          name: "Shared",
+          modelMapping: '{"a":"b"}',
+        },
+        { ref: modelResourceRef(2), name: "Shared", modelMapping: '{"a":"b"}' },
+        {
+          ref: modelResourceRef(3),
+          name: "Unfiltered",
+          modelMapping: '{"a":"b"}',
+        },
+      ],
+      errors: [],
+    })
     mockedModelRedirectService.clearChannelModelMappings.mockResolvedValue({
       success: true,
       totalSelected: 2,
-      clearedChannels: 1,
-      skippedChannels: 1,
+      clearedChannels: 2,
+      skippedChannels: 0,
       failedChannels: 0,
       results: [],
       errors: [],
     })
-
     renderSubject()
-
-    fireEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: t("bulkClear.action") }),
     )
 
-    await screen.findByText("Channel One")
+    const second = await screen.findByRole("checkbox", { name: "Shared (#2)" })
+    const tenth = screen.getByRole("checkbox", { name: "Shared (#10)" })
+    const hidden = screen.getByRole("checkbox", { name: "Unfiltered (#3)" })
+    expect(
+      screen.getAllByRole("checkbox", { name: /^(Shared|Unfiltered) \(#/ }),
+    ).toEqual([second, tenth, hidden])
+    await user.click(second)
+    expect(second).not.toBeChecked()
+    await user.click(second)
+    expect(second).toBeChecked()
 
-    fireEvent.click(
+    const search = screen.getByPlaceholderText(
+      t("bulkClear.search.placeholder"),
+    )
+    await user.type(search, "Shared")
+    await user.click(
+      screen.getByRole("button", { name: t("bulkClear.actions.selectNone") }),
+    )
+    expect(second).not.toBeChecked()
+    expect(tenth).not.toBeChecked()
+    await user.clear(search)
+    expect(
+      screen.getByRole("checkbox", { name: "Unfiltered (#3)" }),
+    ).toBeChecked()
+
+    await user.type(search, "Shared")
+    await user.click(
+      screen.getByRole("button", { name: t("bulkClear.actions.selectAll") }),
+    )
+    expect(second).toBeChecked()
+    expect(tenth).toBeChecked()
+    await user.click(tenth)
+    await user.click(
       screen.getByRole("button", { name: t("bulkClear.actions.continue") }),
     )
-    await screen.findByText(t("bulkClear.confirm.title"))
-
-    fireEvent.click(
-      screen.getByRole("button", { name: t("bulkClear.actions.confirm") }),
+    await user.click(
+      await screen.findByRole("button", {
+        name: t("bulkClear.actions.confirm"),
+      }),
     )
 
     await waitFor(() => {
       expect(
         mockedModelRedirectService.clearChannelModelMappings,
-      ).toHaveBeenCalledWith([1, 2])
+      ).toHaveBeenCalledWith([modelResourceRef(2), modelResourceRef(3)])
     })
-
-    expect(toast.success).toHaveBeenCalled()
   })
 
   it("filters channels by search and previews mapping", async () => {
@@ -320,17 +482,17 @@ describe("Model redirect bulk clear flow", () => {
     mockedModelRedirectService.listManagedSiteChannels.mockResolvedValue({
       success: true,
       channels: [
-        buildManagedSiteChannel({
-          id: 1,
+        {
+          ref: modelResourceRef(1),
           name: "Few",
-          model_mapping: '{"a":"b"}',
-        }),
-        buildManagedSiteChannel({
-          id: 2,
+          modelMapping: '{"a":"b"}',
+        },
+        {
+          ref: modelResourceRef(2),
           name: "Many",
-          model_mapping: '{"a":"b","c":"d"}',
-        }),
-        buildManagedSiteChannel({ id: 3, name: "Empty", model_mapping: "{}" }),
+          modelMapping: '{"a":"b","c":"d"}',
+        },
+        { ref: modelResourceRef(3), name: "Empty", modelMapping: "{}" },
       ],
       errors: [],
     })

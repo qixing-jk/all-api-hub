@@ -3,7 +3,8 @@ import { describe, expect, it, vi } from "vitest"
 
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import type { Tag } from "~/types"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { testI18n } from "~~/tests/test-utils/i18n"
+import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void
@@ -450,7 +451,7 @@ describe("TagPicker", () => {
     expect(onRenameTag).toHaveBeenCalledWith("t1", "Renamed")
   })
 
-  it("marks only the current tag rename busy and restores it after rejection", async () => {
+  it("retranslates rename errors while retaining the draft and restoring the action", async () => {
     const user = userEvent.setup()
     const deferred = createDeferred<Tag>()
     const onRenameTag = vi.fn(() => deferred.promise)
@@ -497,6 +498,28 @@ describe("TagPicker", () => {
     expect(
       await screen.findByLabelText("accountDialog:form.tagsRenameSave"),
     ).toBeEnabled()
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "accountDialog",
+      (await import("~/locales/zh-CN/accountDialog.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        testI18n.t("accountDialog:messages.operationFailed", {
+          error: "rename failed",
+        }),
+      )
+      expect(input).toHaveValue("Renamed")
+      expect(onRenameTag).toHaveBeenCalledTimes(1)
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "accountDialog")
+    }
   })
 
   it("keeps inline rename pending when the edited name normalizes to empty", async () => {

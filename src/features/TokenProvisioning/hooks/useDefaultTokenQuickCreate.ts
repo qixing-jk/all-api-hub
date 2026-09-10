@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -12,7 +13,9 @@ import {
 } from "~/services/accounts/utils/apiServiceRequest"
 import {
   isCreatedApiToken,
+  TOKEN_PROVISIONING_BLOCK_REASONS,
   TOKEN_PROVISIONING_ERRORS,
+  type TokenProvisioningBlockReason,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
@@ -25,16 +28,44 @@ export const DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS = {
   Creating: "creating",
 } as const
 
+type QuickCreateFailure =
+  | { kind: "unsupported" }
+  | { kind: "blocked"; reason: TokenProvisioningBlockReason }
+  | { kind: "failed"; message: string }
+
+/** Presents policy feedback using reasons rather than the service's event-time message. */
+function presentQuickCreateFailure(
+  failure: QuickCreateFailure | null,
+  t: TFunction,
+): string | null {
+  if (!failure) return null
+  if (failure.kind === "unsupported")
+    return t("ui:dialog.copyKey.createNotSupported")
+  if (failure.kind === "failed")
+    return t("ui:dialog.copyKey.createFailed", { error: failure.message })
+  if (
+    failure.reason === TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired
+  ) {
+    return t("messages:tokenProvisioning.createRequiresAvailableGroup")
+  }
+  if (
+    failure.reason === TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired
+  ) {
+    return t("messages:tokenProvisioning.createRequiresOneTimeSecretHandling")
+  }
+  return t("messages:tokenProvisioning.createRequiresGroup")
+}
+
 type DefaultTokenQuickCreateState =
   | {
       kind: typeof DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Idle
-      error: string | null
+      error: QuickCreateFailure | null
     }
   | { kind: typeof DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Resolving }
   | {
       kind: typeof DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Selecting
       selection: DefaultTokenGroupSelection
-      error: string | null
+      error: QuickCreateFailure | null
     }
   | {
       kind: typeof DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Creating
@@ -51,6 +82,7 @@ interface DefaultTokenQuickCreateViewState {
 /** Projects state-machine details into the display contract consumed by dialogs. */
 function getDefaultTokenQuickCreateViewState(
   state: DefaultTokenQuickCreateState,
+  t: TFunction,
 ): DefaultTokenQuickCreateViewState {
   const isSelecting =
     state.kind === DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Selecting
@@ -65,7 +97,7 @@ function getDefaultTokenQuickCreateViewState(
     isCreating,
     error:
       state.kind === DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Idle || isSelecting
-        ? state.error
+        ? presentQuickCreateFailure(state.error, t)
         : null,
   }
 }
@@ -92,7 +124,7 @@ type DefaultTokenQuickCreateExecutionResult =
     }
 
 const createIdleState = (
-  error: string | null = null,
+  error: QuickCreateFailure | null = null,
 ): DefaultTokenQuickCreateState => ({
   kind: DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Idle,
   error,
@@ -100,7 +132,7 @@ const createIdleState = (
 
 const createFailureState = (
   selection: DefaultTokenGroupSelection | null,
-  error: string,
+  error: QuickCreateFailure,
 ): DefaultTokenQuickCreateState =>
   selection
     ? {
@@ -170,8 +202,7 @@ export function useDefaultTokenQuickCreate({
       if (!isActive || !account) return
 
       if (!canCreate) {
-        const error = t("dialog.copyKey.createNotSupported")
-        setState(createFailureState(currentSelection, error))
+        setState(createFailureState(currentSelection, { kind: "unsupported" }))
         return
       }
 
@@ -197,7 +228,12 @@ export function useDefaultTokenQuickCreate({
         if (operationIdRef.current !== operationId) return
 
         if (result.kind === TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked) {
-          setState(createFailureState(currentSelection, result.message))
+          setState(
+            createFailureState(currentSelection, {
+              kind: "blocked",
+              reason: result.reason,
+            }),
+          )
           return
         }
 
@@ -226,17 +262,19 @@ export function useDefaultTokenQuickCreate({
           baseUrl: account.baseUrl,
           siteType: account.siteType,
         })
-        const createError = t("dialog.copyKey.createFailed", {
-          error: getErrorMessage(error),
-        })
-        setState(createFailureState(currentSelection, createError))
+        setState(
+          createFailureState(currentSelection, {
+            kind: "failed",
+            message: getErrorMessage(error),
+          }),
+        )
       } finally {
         if (operationIdRef.current === operationId) {
           isOperationActiveRef.current = false
         }
       }
     },
-    [account, canCreate, isActive, onCreated, t],
+    [account, canCreate, isActive, onCreated],
   )
 
   const start = useCallback(() => execute(), [execute])
@@ -259,7 +297,7 @@ export function useDefaultTokenQuickCreate({
     setState(createIdleState())
   }, [state.kind])
 
-  const view = getDefaultTokenQuickCreateViewState(state)
+  const view = getDefaultTokenQuickCreateViewState(state, t)
 
   return {
     state,

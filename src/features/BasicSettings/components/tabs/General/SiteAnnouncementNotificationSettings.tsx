@@ -1,5 +1,4 @@
 import { Clock, Megaphone } from "lucide-react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
@@ -16,7 +15,8 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useDeferredPreferenceField } from "~/hooks/useDeferredPreferenceField"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import toast from "~/lib/notify"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
 const MIN_POLLING_INTERVAL_MINUTES = 15

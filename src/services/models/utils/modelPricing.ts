@@ -8,13 +8,26 @@ import {
   type ModelUnavailablePriceReason,
   type PerCallPrice,
 } from "~/services/modelList/pricingModel"
+import {
+  CALCULATED_PRICE_KINDS,
+  PRICE_RATE_UNITS,
+  PRICING_GROUP_MULTIPLIERS,
+  PRICING_METERS,
+  PRICING_USAGE_MODES,
+  TOKENS_PER_MILLION,
+} from "~/services/modelPricing/pricingConstants"
+import type {
+  PriceMeter,
+  QuoteResult,
+} from "~/services/modelPricing/pricingPlan"
 import type { CurrencyType } from "~/types"
 import { t } from "~/utils/i18n/core"
 
-export type CalculatedPrice =
+export type CalculatedPrice = (
   | CalculatedTokenPrice
   | CalculatedPerCallPrice
   | UnavailableCalculatedPrice
+) & { quote?: QuoteResult; isComparisonActive?: boolean }
 
 export interface TokenPricesUSD {
   input: number
@@ -24,25 +37,24 @@ export interface TokenPricesUSD {
 }
 
 export interface CalculatedTokenPrice {
-  kind: "token"
+  kind: typeof CALCULATED_PRICE_KINDS.TOKEN
   usdPerMillionTokens: TokenPricesUSD
 }
 
 export interface CalculatedPerCallPrice {
-  kind: "per-call"
+  kind: typeof CALCULATED_PRICE_KINDS.PER_CALL
   usdPerCall: PerCallPrice
 }
 
 export interface UnavailableCalculatedPrice {
-  kind: "unavailable"
+  kind: typeof CALCULATED_PRICE_KINDS.UNAVAILABLE
   billingMode: "token" | "per-call"
   reason?: ModelUnavailablePriceReason
 }
 
 const NEW_API_QUOTA_PER_USD = 500_000
-const TOKEN_PRICE_UNIT_TOKENS = 1_000_000
 const NEW_API_RATIO_BASE_USD_PER_MILLION_TOKENS =
-  TOKEN_PRICE_UNIT_TOKENS / NEW_API_QUOTA_PER_USD
+  TOKENS_PER_MILLION / NEW_API_QUOTA_PER_USD
 
 type PartialTokenPricesUSD = Partial<TokenPricesUSD>
 
@@ -87,7 +99,7 @@ const resolveDirectTokenPriceUSD = (
  * Calculates token prices for New API/One API-compatible ratio responses.
  */
 const calculateRatioTokenPriceUSD = (
-  model: ModelPricing,
+  model: Pick<ModelPricing, "model_ratio" | "completion_ratio">,
   groupMultiplier: number,
 ): TokenPricesUSD => {
   const input =
@@ -113,8 +125,10 @@ export const calculateModelPrice = (
 ): CalculatedPrice => {
   if (isModelPriceUnavailable(model)) {
     return {
-      kind: "unavailable",
-      billingMode: isTokenBillingType(model.quota_type) ? "token" : "per-call",
+      kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
+      billingMode: isTokenBillingType(model.quota_type)
+        ? CALCULATED_PRICE_KINDS.TOKEN
+        : CALCULATED_PRICE_KINDS.PER_CALL,
       reason: model.price_metadata?.unavailable_reason,
     }
   }
@@ -123,6 +137,54 @@ export const calculateModelPrice = (
     Number.isFinite(groupMultiplier) && groupMultiplier >= 0
       ? groupMultiplier
       : 1
+
+  // Browse the same independent base prices used by the scenario evaluator.
+  const plan = model.pricingPlan
+  if (plan?.usageMode === PRICING_USAGE_MODES.IMAGE)
+    return { kind: CALCULATED_PRICE_KINDS.UNAVAILABLE, billingMode: "per-call" }
+  const basePrice = (meter: PriceMeter) => {
+    const rate = plan?.rates[meter]
+    if (!rate || rate.currency !== "USD") return undefined
+    const amount =
+      (rate.amount / rate.per) *
+      (rate.unit === PRICE_RATE_UNITS.TOKEN ? TOKENS_PER_MILLION : 1) *
+      (plan?.groupMultiplier === PRICING_GROUP_MULTIPLIERS.INCLUDED
+        ? 1
+        : effectiveGroupMultiplier)
+    return Number.isFinite(amount) && amount >= 0 ? amount : undefined
+  }
+  const planInput = basePrice(PRICING_METERS.INPUT),
+    planOutput = basePrice(PRICING_METERS.OUTPUT)
+  if (
+    isTokenBillingType(model.quota_type) &&
+    planInput !== undefined &&
+    planOutput !== undefined
+  ) {
+    const cacheRead = basePrice(PRICING_METERS.CACHE_READ),
+      cacheWrite = basePrice(PRICING_METERS.CACHE_WRITE)
+    return {
+      kind: CALCULATED_PRICE_KINDS.TOKEN,
+      usdPerMillionTokens: {
+        input: planInput,
+        output: planOutput,
+        ...(cacheRead !== undefined ? { cacheRead } : {}),
+        ...(cacheWrite !== undefined ? { cacheWrite } : {}),
+      },
+    }
+  }
+  const planRequest = basePrice(PRICING_METERS.REQUEST)
+  if (!isTokenBillingType(model.quota_type) && planRequest !== undefined)
+    return { kind: CALCULATED_PRICE_KINDS.PER_CALL, usdPerCall: planRequest }
+
+  // Structured schedules are authoritative; missing base rates cannot be
+  // replaced by legacy ratios that omit their conditions or unknown fees.
+  if (plan)
+    return {
+      kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
+      billingMode: isTokenBillingType(model.quota_type)
+        ? CALCULATED_PRICE_KINDS.TOKEN
+        : CALCULATED_PRICE_KINDS.PER_CALL,
+    }
 
   if (isTokenBillingType(model.quota_type)) {
     // 按 New API/One API 兼容倍率计费；倍率基准来自 1M tokens / 500,000 quota-per-USD。
@@ -146,7 +208,7 @@ export const calculateModelPrice = (
     )
 
     return {
-      kind: "token",
+      kind: CALCULATED_PRICE_KINDS.TOKEN,
       usdPerMillionTokens: {
         input,
         output: directPrice.output ?? ratioPrice.output,
@@ -162,7 +224,7 @@ export const calculateModelPrice = (
     )
 
     return {
-      kind: "per-call",
+      kind: CALCULATED_PRICE_KINDS.PER_CALL,
       usdPerCall: perCallPrice,
     }
   }

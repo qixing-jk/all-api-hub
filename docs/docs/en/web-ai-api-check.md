@@ -25,6 +25,7 @@ On specific whitelisted sites (e.g., `linux.do`), when you open a post containin
 Perform the following operations without leaving the current webpage:
 - **Automatic Extraction**: Automatically separate `Base URL`, `Secret Key`, and `API Type` from the source text.
 - **Instant Testing**: Click "Start Test" to verify the connectivity of the key and available models.
+- **Test mode**: Choose **`Streaming`** (the default) or **`Non-streaming`**. Generation tests use that mode without switching automatically on failure. Results and verification history saved to the API Credential Library show the mode used. Fetching the model list is unaffected.
 - **Get Model List**: Fetch the full list of model IDs supported by the upstream site with one click.
 - **Save to API Credential Library**: Once verified, save it with one click to the extension's [API Credential Library](./api-credential-profiles.md) for later copying, verification, or export to tools like CherryStudio.
 

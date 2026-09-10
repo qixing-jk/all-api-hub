@@ -72,6 +72,7 @@ import {
   removeContextMenu,
   removePermissions,
   removePermissionsDetailed,
+  removeSessionStorageValues,
   removeTab,
   removeTabOrWindow,
   removeWindow,
@@ -268,23 +269,39 @@ describe("browserApi session storage helpers", () => {
   })
 
   it("returns compatibility fallbacks when storage.session is unavailable", async () => {
+    const removeLocal = vi.fn()
+    ;(globalThis as any).browser = {
+      storage: { local: { remove: removeLocal } },
+    }
     expect(hasSessionStorageArea()).toBe(false)
     await expect(getSessionStorageValues("key")).resolves.toEqual({})
     await expect(setSessionStorageValues({ key: "value" })).resolves.toBe(false)
+    await expect(removeSessionStorageValues("key")).resolves.toBeUndefined()
+    expect(removeLocal).not.toHaveBeenCalled()
   })
 
-  it("reads and writes through storage.session when supported", async () => {
+  it("reads, writes, and removes ephemeral data only through storage.session", async () => {
     const get = vi.fn().mockResolvedValue({ key: "value" })
     const set = vi.fn().mockResolvedValue(undefined)
-    ;(globalThis as any).browser = { storage: { session: { get, set } } }
+    const remove = vi.fn().mockResolvedValue(undefined)
+    const removeLocal = vi.fn()
+    ;(globalThis as any).browser = {
+      storage: {
+        session: { get, set, remove },
+        local: { remove: removeLocal },
+      },
+    }
 
     expect(hasSessionStorageArea()).toBe(true)
     await expect(getSessionStorageValues("key")).resolves.toEqual({
       key: "value",
     })
     await expect(setSessionStorageValues({ key: "next" })).resolves.toBe(true)
+    await expect(removeSessionStorageValues(["key"])).resolves.toBeUndefined()
     expect(get).toHaveBeenCalledWith("key")
     expect(set).toHaveBeenCalledWith({ key: "next" })
+    expect(remove).toHaveBeenCalledWith(["key"])
+    expect(removeLocal).not.toHaveBeenCalled()
   })
 
   it("returns false when storage.session rejects a write", async () => {

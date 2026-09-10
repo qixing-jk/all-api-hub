@@ -1,6 +1,7 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
+import { isAccountSiteType } from "~/constants/siteType"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import { normalizeContentSessionTransientAuth } from "~/services/accountSiteOnboarding/transientAuth"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import {
   getAllTabs,
@@ -11,7 +12,6 @@ import { executeProtectionBypassTask } from "~/utils/browser/tempWindowFetch"
 import { createLogger } from "~/utils/core/logger"
 import { tryParseOrigin } from "~/utils/core/urlParsing"
 
-import { normalizeContentSessionTransientAuth } from "./transientAuth"
 import type {
   AccountBrowserSession,
   AccountBrowserSessionFetchContext,
@@ -131,17 +131,13 @@ const normalizeSessionData = (
       ? payload.siteType
       : undefined
   const sub2apiAuth = normalizeSub2ApiAuth(payload.sub2apiAuth)
-  const transientAuthSiteType =
-    options.allowNewApiAuthProbe === true &&
-    options.siteType === SITE_TYPES.UNKNOWN &&
-    siteTypeHint === SITE_TYPES.NEW_API
-      ? SITE_TYPES.NEW_API
-      : options.siteType
   const transientAuth = normalizeContentSessionTransientAuth(
     payload.transientAuth,
     {
       baseUrl: options.baseUrl,
-      siteType: transientAuthSiteType,
+      siteType: options.siteType,
+      siteTypeHint,
+      allowNewApiAuthProbe: options.allowNewApiAuthProbe,
     },
   )
   const fetchContext =

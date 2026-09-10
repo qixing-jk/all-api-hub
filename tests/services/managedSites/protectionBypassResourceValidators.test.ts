@@ -14,12 +14,13 @@ import {
   PROTECTION_BYPASS_USER_COMMANDS,
   TEMP_CONTEXT_TASK_KINDS,
 } from "~/services/protectionBypass/contracts"
+import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 
 const mocks = vi.hoisted(() => ({
   getPreferencesStrict: vi.fn(),
   resolveForType: vi.fn(),
   resolveCurrent: vi.fn(),
-  searchChannel: vi.fn(),
+  matching: { search: vi.fn() },
 }))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
@@ -33,9 +34,10 @@ vi.mock("~/services/managedSites/runtimeConfig", () => ({
   resolveCurrentManagedSiteRuntimeConfig: mocks.resolveCurrent,
 }))
 
-vi.mock("~/services/managedSites/managedSiteService", () => ({
-  getManagedSiteServiceForType: vi.fn(() => ({
-    searchChannel: mocks.searchChannel,
+vi.mock("~/services/apiAdapters/registry", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/services/apiAdapters/registry")>()),
+  getManagedSiteCapabilities: vi.fn(() => ({
+    matching: { search: mocks.matching.search },
   })),
 }))
 
@@ -81,8 +83,14 @@ describe("protection-bypass managed-site resource validators", () => {
         userId: "example-user",
       },
     })
-    mocks.searchChannel.mockResolvedValue({
-      items: [{ id: 12 }],
+    mocks.matching.search.mockResolvedValue({
+      items: [
+        {
+          ref: matchingResourceRef(12, {
+            scopeKey: "https://new-api.example.invalid",
+          }),
+        },
+      ],
       total: 1,
     })
 
@@ -98,7 +106,7 @@ describe("protection-bypass managed-site resource validators", () => {
       expect.anything(),
       SITE_TYPES.NEW_API,
     )
-    expect(mocks.searchChannel).toHaveBeenCalledWith(expect.anything(), "12")
+    expect(mocks.matching.search).toHaveBeenCalledWith(expect.anything(), "12")
   })
 
   it("fails closed when the New API resource does not match or cannot be read", async () => {
@@ -117,7 +125,7 @@ describe("protection-bypass managed-site resource validators", () => {
         channelId: 12,
       }),
     ).resolves.toBe(false)
-    expect(mocks.searchChannel).not.toHaveBeenCalled()
+    expect(mocks.matching.search).not.toHaveBeenCalled()
 
     mocks.resolveForType.mockImplementationOnce(() => {
       throw new Error("storage unavailable")
@@ -141,7 +149,7 @@ describe("protection-bypass managed-site resource validators", () => {
           userId: "example-user",
         },
       })
-      mocks.searchChannel.mockReturnValue(new Promise(() => {}))
+      mocks.matching.search.mockReturnValue(new Promise(() => {}))
 
       const validation = validateNewApiSessionReadResource({
         origin: "https://new-api.example.invalid",
@@ -149,7 +157,7 @@ describe("protection-bypass managed-site resource validators", () => {
         channelId: 12,
       })
       await vi.dynamicImportSettled()
-      expect(mocks.searchChannel).toHaveBeenCalledOnce()
+      expect(mocks.matching.search).toHaveBeenCalledOnce()
       await vi.advanceTimersByTimeAsync(NEW_API_RESOURCE_VALIDATION_TIMEOUT_MS)
 
       await expect(validation).resolves.toBe(false)

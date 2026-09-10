@@ -3,31 +3,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   CLAUDE_CODE_HUB_PROVIDER_TYPE,
   ClaudeCodeHubProviderTypeOptions,
-  DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS,
 } from "~/constants/claudeCodeHub"
 import { SITE_TYPES } from "~/constants/siteType"
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
 import {
-  buildChannelPayload,
-  buildClaudeCodeHubCreatePayloadFromFormData,
-  buildClaudeCodeHubUpdatePayloadFromChannelData,
   checkValidClaudeCodeHubConfig,
-  fetchAvailableModels,
   fetchChannelSecretKey,
-  getClaudeCodeHubConfig,
   hydrateComparableChannelKeys,
-  listChannels,
   prepareChannelFormData,
-  providerToManagedSiteChannel,
-  searchChannel,
-  toClaudeCodeHubDisclosureError,
 } from "~/services/managedSites/providers/claudeCodeHub"
-import { CHANNEL_STATUS } from "~/types/managedSite"
+import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 
-const mockFetchTokenScopedModels = vi.fn()
+const mockFetchManagedSiteImportModels = vi.fn()
 const mockFetchManagedSiteAvailableModels = vi.fn()
 const mockListProviders = vi.fn()
 const mockSearchProviders = vi.fn()
@@ -41,18 +33,10 @@ const mockLogger = vi.hoisted(() => ({
   error: vi.fn(),
 }))
 
-vi.mock("~/services/managedSites/utils/fetchTokenScopedModels", () => ({
-  fetchTokenScopedModels: (...args: unknown[]) =>
-    mockFetchTokenScopedModels(...args),
+vi.mock("~/services/managedSites/utils/fetchManagedSiteImportModels", () => ({
+  fetchManagedSiteImportModels: (...args: unknown[]) =>
+    mockFetchManagedSiteImportModels(...args),
 }))
-
-vi.mock(
-  "~/services/managedSites/utils/fetchManagedSiteAvailableModels",
-  () => ({
-    fetchManagedSiteAvailableModels: (...args: unknown[]) =>
-      mockFetchManagedSiteAvailableModels(...args),
-  }),
-)
 
 vi.mock("~/services/apiService/claudeCodeHub", () => ({
   listProviders: (...args: unknown[]) => mockListProviders(...args),
@@ -92,7 +76,7 @@ describe("Claude Code Hub managed-site provider", () => {
   }
 
   beforeEach(() => {
-    mockFetchTokenScopedModels.mockReset()
+    mockFetchManagedSiteImportModels.mockReset()
     mockFetchManagedSiteAvailableModels.mockReset()
     mockListProviders.mockReset()
     mockSearchProviders.mockReset()
@@ -103,40 +87,6 @@ describe("Claude Code Hub managed-site provider", () => {
     mockGetPreferences.mockReset()
     mockLogger.warn.mockReset()
     mockLogger.error.mockReset()
-  })
-
-  it("normalizes provider display records into managed-site channels", () => {
-    const channel = providerToManagedSiteChannel({
-      id: 7,
-      name: "OpenAI Provider",
-      providerType: "openai-compatible",
-      url: "https://api.example.com",
-      maskedKey: "sk-***",
-      isEnabled: false,
-      weight: 3,
-      priority: 9,
-      groupTag: "paid",
-      allowedModels: [
-        { matchType: "exact", pattern: "gpt-4o" },
-        { matchType: "regex", pattern: "gpt-.*" },
-        "claude-sonnet",
-      ],
-      createdAt: "2026-04-27T00:00:00.000Z",
-    })
-
-    expect(channel).toMatchObject({
-      id: 7,
-      name: "OpenAI Provider",
-      type: "openai-compatible",
-      base_url: "https://api.example.com",
-      key: "sk-***",
-      status: CHANNEL_STATUS.ManuallyDisabled,
-      weight: 3,
-      priority: 9,
-      group: "paid",
-      models: "gpt-4o,claude-sonnet",
-    })
-    expect(channel._claudeCodeHubData.name).toBe("OpenAI Provider")
   })
 
   it("exposes only the supported provider types in add-flow options", () => {
@@ -160,122 +110,29 @@ describe("Claude Code Hub managed-site provider", () => {
     ])
   })
 
-  it("preserves legacy provider types returned by Claude Code Hub", () => {
-    const channel = providerToManagedSiteChannel({
-      id: 8,
-      name: "Legacy Gemini CLI Provider",
-      providerType: "gemini-cli",
-      url: "https://api.example.com",
-      allowedModels: ["gemini-2.5-pro"],
-    })
-
-    expect(channel.type).toBe("gemini-cli")
-  })
-
-  it("maps create form data to CCH provider payloads and validates real keys", () => {
-    expect(
-      buildClaudeCodeHubCreatePayloadFromFormData({
-        name: "Provider",
-        type: CLAUDE_CODE_HUB_PROVIDER_TYPE.CODEX,
-        key: "sk-real-key",
-        base_url: "https://api.example.com",
-        models: ["gpt-4o"],
-        groups: ["paid"],
-        priority: 2,
-        weight: 0,
-        status: CHANNEL_STATUS.Enable,
-      }),
-    ).toEqual({
-      name: "Provider",
-      url: "https://api.example.com",
-      key: "sk-real-key",
-      provider_type: CLAUDE_CODE_HUB_PROVIDER_TYPE.CODEX,
-      allowed_models: [{ matchType: "exact", pattern: "gpt-4o" }],
-      is_enabled: true,
-      weight: 1,
-      priority: 2,
-      group_tag: "paid",
-    })
-
-    expect(() =>
-      buildClaudeCodeHubCreatePayloadFromFormData({
-        ...DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS,
-        name: "Provider",
-        key: "sk-***",
-        base_url: "https://api.example.com",
-        models: ["gpt-4o"],
-      }),
-    ).toThrow("messages:claudecodehub.realProviderKeyRequired")
-
-    expect(
-      buildClaudeCodeHubCreatePayloadFromFormData({
-        name: "Weighted Provider",
-        type: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-        key: "sk-real-key",
-        base_url: "https://api.example.com",
-        models: ["gpt-4o"],
-        groups: ["paid"],
-        priority: 2,
-        weight: Number.NaN,
-        status: CHANNEL_STATUS.Enable,
-      }),
-    ).toMatchObject({
-      weight: 1,
-    })
-  })
-
-  it("omits masked keys on update and sends replacement keys only when usable", () => {
-    expect(
-      buildClaudeCodeHubUpdatePayloadFromChannelData({
-        id: 7,
-        name: "Provider",
-        type: "gemini-cli",
-        key: "sk-***",
-        base_url: "https://api.example.com",
-        models: "gemini-2.5-pro",
-        groups: ["default"],
-        priority: 3,
-        weight: 4,
-        status: CHANNEL_STATUS.ManuallyDisabled,
-      }),
-    ).toEqual({
-      providerId: 7,
-      name: "Provider",
-      provider_type: "gemini-cli",
-      url: "https://api.example.com",
-      allowed_models: [{ matchType: "exact", pattern: "gemini-2.5-pro" }],
-      is_enabled: false,
-      weight: 4,
-      priority: 3,
-      group_tag: "default",
-    })
-
-    expect(
-      buildClaudeCodeHubUpdatePayloadFromChannelData({
-        id: 7,
-        key: "sk-replacement",
-      }),
-    ).toMatchObject({ providerId: 7, key: "sk-replacement" })
-  })
-
   it("prepares account-token import form data with default provider type and model fallback", async () => {
-    mockFetchTokenScopedModels.mockResolvedValueOnce({
+    mockFetchManagedSiteImportModels.mockResolvedValueOnce({
       models: ["gpt-4o"],
       fetchFailed: false,
     })
 
     await expect(
       prepareChannelFormData(
-        {
-          id: "account-1",
-          name: "Account",
-          baseUrl: "https://api.example.com",
-        } as any,
-        { id: 1, name: "Token", key: "sk-real-key" } as any,
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(
+            {
+              id: "account-1",
+              name: "Account",
+              baseUrl: "https://api.example.com",
+            } as any,
+            { id: 1, name: "Token", key: "sk-real-key" } as any,
+          ),
+        ),
       ),
     ).resolves.toMatchObject({
       name: "Account | Token (auto)",
       type: "openai-compatible",
+      enabled: true,
       key: "sk-real-key",
       base_url: "https://api.example.com",
       models: ["gpt-4o"],
@@ -283,19 +140,23 @@ describe("Claude Code Hub managed-site provider", () => {
       weight: 1,
     })
 
-    mockFetchTokenScopedModels.mockResolvedValueOnce({
+    mockFetchManagedSiteImportModels.mockResolvedValueOnce({
       models: [],
       fetchFailed: true,
     })
 
     await expect(
       prepareChannelFormData(
-        {
-          id: "account-1",
-          name: "Account",
-          baseUrl: "https://api.example.com",
-        } as any,
-        { id: 1, name: "Token", key: "sk-real-key" } as any,
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(
+            {
+              id: "account-1",
+              name: "Account",
+              baseUrl: "https://api.example.com",
+            } as any,
+            { id: 1, name: "Token", key: "sk-real-key" } as any,
+          ),
+        ),
       ),
     ).resolves.toMatchObject({
       models: [],
@@ -304,7 +165,7 @@ describe("Claude Code Hub managed-site provider", () => {
   })
 
   it("uses the AIHubMix API origin for managed-site channel imports", async () => {
-    mockFetchTokenScopedModels.mockResolvedValueOnce({
+    mockFetchManagedSiteImportModels.mockResolvedValueOnce({
       models: ["gpt-aihubmix-mini"],
       fetchFailed: false,
     })
@@ -313,13 +174,17 @@ describe("Claude Code Hub managed-site provider", () => {
 
     await expect(
       prepareChannelFormData(
-        {
-          id: "account-1",
-          name: "AIHubMix",
-          siteType: SITE_TYPES.AIHUBMIX,
-          baseUrl: "https://console.aihubmix.com",
-        } as any,
-        token,
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(
+            {
+              id: "account-1",
+              name: "AIHubMix",
+              siteType: SITE_TYPES.AIHUBMIX,
+              baseUrl: "https://console.aihubmix.com",
+            } as any,
+            token,
+          ),
+        ),
       ),
     ).resolves.toMatchObject({
       key: "sk-aihubmix-key",
@@ -327,11 +192,11 @@ describe("Claude Code Hub managed-site provider", () => {
       models: ["gpt-aihubmix-mini"],
     })
 
-    expect(mockFetchTokenScopedModels).toHaveBeenCalledWith(
+    expect(mockFetchManagedSiteImportModels).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://aihubmix.com",
+        apiKey: token.key,
       }),
-      token,
     )
   })
 
@@ -340,9 +205,10 @@ describe("Claude Code Hub managed-site provider", () => {
       claudeCodeHub: storedClaudeCodeHubConfig,
     })
 
-    await expect(getClaudeCodeHubConfig()).resolves.toEqual(
-      storedClaudeCodeHubConfig,
-    )
+    expect(
+      (await getManagedSiteRuntimeConfigForType(SITE_TYPES.CLAUDE_CODE_HUB))
+        ?.config ?? null,
+    ).toEqual(storedClaudeCodeHubConfig)
   })
 
   it("validates saved Claude Code Hub config only when required fields exist", async () => {
@@ -402,121 +268,15 @@ describe("Claude Code Hub managed-site provider", () => {
     )
   })
 
-  it("logs only a normalized summary when reading preferences fails", async () => {
+  it("returns unavailable configuration without logging the storage error", async () => {
     const preferencesError = new Error("preferences unavailable")
     mockGetPreferences.mockRejectedValueOnce(preferencesError)
 
-    await expect(getClaudeCodeHubConfig()).resolves.toBeNull()
-    expect(mockLogger.error).toHaveBeenCalledWith(
-      "Error getting Claude Code Hub config",
-      "preferences unavailable",
-    )
-    expect(mockLogger.error).not.toHaveBeenCalledWith(
-      expect.anything(),
-      preferencesError,
-    )
-  })
-
-  it("lists providers through the same normalized channel list shape", async () => {
-    const requestSignal = new AbortController().signal
-    const beforeRequest = vi.fn().mockResolvedValue(undefined)
-    mockListProviders.mockResolvedValue([
-      {
-        id: 22,
-        name: "Provider Beta",
-        providerType: "claude",
-        url: "https://beta.example.com",
-        maskedKey: "sk-***",
-        allowedModels: ["claude-sonnet"],
-        groupTag: "team-b",
-      },
-    ])
-
-    await expect(
-      listChannels(passedClaudeCodeHubConfig, {
-        signal: requestSignal,
-        beforeRequest,
-      }),
-    ).resolves.toMatchObject({
-      total: 1,
-      items: [
-        expect.objectContaining({
-          id: 22,
-          name: "Provider Beta",
-          models: "claude-sonnet",
-        }),
-      ],
-      type_counts: {
-        claude: 1,
-      },
-    })
-    expect(beforeRequest).toHaveBeenCalledTimes(1)
-    expect(mockListProviders).toHaveBeenCalledWith(passedClaudeCodeHubConfig, {
-      signal: requestSignal,
-    })
-    expect(mockSearchProviders).not.toHaveBeenCalled()
-  })
-
-  it("discloses provider failures as detached sanitized errors", async () => {
-    const raw = Object.assign(
-      new Error(
-        "bad token passed-admin-token at https://passed-cch.example.com/private",
-      ),
-      {
-        raw: { adminToken: "passed-admin-token" },
-        cause: new Error("passed-admin-token"),
-      },
-    )
-    const disclosed = toClaudeCodeHubDisclosureError(
-      raw,
-      passedClaudeCodeHubConfig,
-    )
-
-    expect(disclosed).toBeInstanceOf(Error)
-    expect(disclosed.message).not.toContain("passed-admin-token")
-    expect(disclosed).not.toHaveProperty("raw")
-    expect(disclosed).not.toHaveProperty("cause")
-    expect(Object.keys(disclosed)).toEqual([])
-
-    mockListProviders.mockRejectedValueOnce(raw)
-    const failure = await listChannels(passedClaudeCodeHubConfig).catch(
-      (error: unknown) => error,
-    )
-    expect(failure).toBeInstanceOf(Error)
-    expect((failure as Error).message).toBe(disclosed.message)
-    expect(failure).not.toHaveProperty("raw")
-    expect(failure).not.toHaveProperty("cause")
-  })
-
-  it("searches providers with passed admin config and maps failures to null", async () => {
-    mockSearchProviders.mockResolvedValueOnce([
-      {
-        id: 21,
-        name: "Provider Alpha",
-        providerType: "codex",
-        url: "https://alpha.example.com",
-        key: "sk-real-key",
-        allowedModels: ["gpt-4o"],
-        groupTag: "team-a",
-      },
-    ])
-
-    await expect(
-      searchChannel(passedClaudeCodeHubConfig, "alpha"),
-    ).resolves.toMatchObject({
-      total: 1,
-      items: [expect.objectContaining({ id: 21, name: "Provider Alpha" })],
-      type_counts: { codex: 1 },
-    })
-    expect(mockSearchProviders).toHaveBeenCalledWith(
-      passedClaudeCodeHubConfig,
-      "alpha",
-    )
-
-    mockSearchProviders.mockRejectedValueOnce(new Error("search failed"))
-    await expect(
-      searchChannel(passedClaudeCodeHubConfig, "alpha"),
-    ).resolves.toBeNull()
+    expect(
+      (await getManagedSiteRuntimeConfigForType(SITE_TYPES.CLAUDE_CODE_HUB))
+        ?.config ?? null,
+    ).toBeNull()
+    expect(mockLogger.error).not.toHaveBeenCalled()
   })
 
   it("fetches real provider keys through the Claude Code Hub provider API", async () => {
@@ -641,47 +401,7 @@ describe("Claude Code Hub managed-site provider", () => {
         MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
     })
   })
-
-  it("builds channel payloads, fetches models, and matches only comparable providers", async () => {
-    const payload = buildChannelPayload(
-      {
-        name: "Imported Provider",
-        type: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
-        key: "sk-imported-key",
-        base_url: "https://imported.example.com",
-        models: ["claude-sonnet"],
-        groups: ["team-a"],
-        priority: 4,
-        weight: 2,
-        status: CHANNEL_STATUS.Enable,
-      },
-      "single",
-    )
-
-    expect(payload).toEqual({
-      mode: "single",
-      channel: {
-        name: "Imported Provider",
-        type: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
-        key: "sk-imported-key",
-        base_url: "https://imported.example.com",
-        models: "claude-sonnet",
-        groups: ["team-a"],
-        group: "team-a",
-        priority: 4,
-        weight: 2,
-        status: CHANNEL_STATUS.Enable,
-      },
-    })
-
-    mockFetchManagedSiteAvailableModels.mockResolvedValueOnce(["gpt-4o"])
-    await expect(
-      fetchAvailableModels(
-        { id: "account-1", baseUrl: "https://api.example.com" } as any,
-        { id: 1, key: "sk-real-key" } as any,
-      ),
-    ).resolves.toEqual(["gpt-4o"])
-
+  it("matches only comparable providers", async () => {
     mockGetPreferences.mockResolvedValue({
       claudeCodeHub: storedClaudeCodeHubConfig,
     })

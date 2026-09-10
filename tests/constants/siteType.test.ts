@@ -46,7 +46,7 @@ describe("siteType constants", () => {
     expect(isManagedSiteType("toString")).toBe(false)
   })
 
-  it("returns default routes for site types without overrides", () => {
+  it("returns fallback routes for the unknown site type", () => {
     expect(getAccountSiteApiRouter(SITE_TYPES.UNKNOWN)).toMatchObject({
       loginPath: "/login",
       usagePath: "/console/log",
@@ -73,11 +73,11 @@ describe("siteType constants", () => {
     expect(SITE_TYPES.VO_API_V2).not.toBe(SITE_TYPES.VO_API)
   })
 
-  it("returns default routes for AIHubMix account pages", () => {
+  it("declares AIHubMix pages without a check-in placeholder", () => {
     expect(getAccountSiteApiRouter(SITE_TYPES.AIHUBMIX)).toMatchObject({
       loginPath: "/sign-in",
       usagePath: "/statistics",
-      checkInPath: "/",
+      checkInPath: null,
       redeemPath: "/topup",
       adminCredentialsPath: "/",
       siteAnnouncementsPath: "/",

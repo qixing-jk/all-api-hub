@@ -3,12 +3,16 @@ import { describe, expect, it } from "vitest"
 import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
   ACCOUNT_SITE_TYPES,
+  MANAGED_SITE_TYPES,
   SITE_TYPES,
   type SiteType,
 } from "~/constants/siteType"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
-import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import {
+  getManagedSiteCapabilities,
+  getSiteTypeCapabilities,
+} from "~/services/apiAdapters/registry"
 
 const expectTokenProvisioningCapability = (
   capabilities: ReturnType<typeof getSiteTypeCapabilities>,
@@ -99,17 +103,15 @@ const expectRedemptionCapability = (
 const expectManagedSiteCapabilities = (
   capabilities: ReturnType<typeof getSiteTypeCapabilities>,
 ) => {
-  expect(capabilities.managedSites?.channels).toBeDefined()
+  expect(capabilities.managedSites?.matching?.search).toBeTypeOf("function")
   expect(capabilities.managedSites?.config).toEqual({
     checkValid: expect.any(Function),
     get: expect.any(Function),
   })
   expect(capabilities.managedSites?.channelDrafts).toEqual({
-    fetchAvailableModels: expect.any(Function),
-    buildName: expect.any(Function),
     prepareFormData: expect.any(Function),
-    buildPayload: expect.any(Function),
   })
+  expect(capabilities.managedSites).not.toHaveProperty("channels")
   expect(capabilities.managedSites).not.toHaveProperty("imports")
 }
 
@@ -123,6 +125,15 @@ const expectManagedSiteQueries = (
 }
 
 describe("apiAdapters registry", () => {
+  it("shares the managed-site registration across capability lookup paths", () => {
+    for (const siteType of MANAGED_SITE_TYPES) {
+      const managedSite = getManagedSiteCapabilities(siteType)
+
+      expect(managedSite.siteType).toBe(siteType)
+      expect(getSiteTypeCapabilities(siteType).managedSites).toBe(managedSite)
+    }
+  })
+
   it("registers both AccountData producer paths for every account site type", () => {
     for (const siteType of ACCOUNT_SITE_TYPES) {
       const capabilities = getSiteTypeCapabilities(siteType)
@@ -254,7 +265,11 @@ describe("apiAdapters registry", () => {
     expectKeyManagementCapability(capabilities)
     expectTokenProvisioningCapability(capabilities)
     expectAccountRefreshCapability(capabilities)
-    expectModelPricingCapability(capabilities)
+    expect(capabilities.account?.modelPricing).toEqual({
+      fetchPricing: expect.any(Function),
+      invalidateCache: expect.any(Function),
+      runtimeKeyFallback: "account-pricing",
+    })
     expectInviteLinkCapability(capabilities)
     expect(capabilities.account?.announcements).toBeUndefined()
     expect(capabilities.account?.modelCatalog).toBeUndefined()
@@ -274,9 +289,17 @@ describe("apiAdapters registry", () => {
       "data",
       "keyResourceManagement",
       "keyResources",
+      "persistence",
       "providerModelCatalog",
       "refresh",
     ])
+    expect(capabilities.account?.persistence).toMatchObject({
+      prepareIdentity: expect.any(Function),
+      getCredentialKey: expect.any(Function),
+      getValidationFailureMessage: expect.any(Function),
+      getHealthFailureReason: expect.any(Function),
+      getOperationLogDetails: expect.any(Function),
+    })
     expect(capabilities.account?.bootstrap).toBeUndefined()
     expect(capabilities.account?.completion).toBeUndefined()
     expect(capabilities.account).not.toHaveProperty("credential")
@@ -378,10 +401,10 @@ describe("apiAdapters registry", () => {
     ] satisfies SiteType[]) {
       const capabilities = getSiteTypeCapabilities(siteType)
 
-      expect(capabilities.managedSites?.channels?.fetchModels).toBeUndefined()
-      expect(capabilities.managedSites?.channels?.updateModels).toBeUndefined()
+      expect(capabilities.managedSites?.models?.fetchModels).toBeUndefined()
+      expect(capabilities.managedSites?.models?.updateModels).toBeUndefined()
       expect(
-        capabilities.managedSites?.channels?.updateModelMapping,
+        capabilities.managedSites?.models?.updateModelMapping,
       ).toBeUndefined()
     }
   })
@@ -392,5 +415,29 @@ describe("apiAdapters registry", () => {
     expect(capabilities).toEqual({
       siteType: "__unsupported__",
     })
+  })
+})
+
+describe("model mapping policies", () => {
+  it("registers chained targets only for New API", () => {
+    for (const siteType of MANAGED_SITE_TYPES) {
+      expect(
+        Boolean(
+          getManagedSiteCapabilities(siteType).models?.modelMappingPolicy
+            ?.supportsChaining,
+        ),
+      ).toBe(siteType === SITE_TYPES.NEW_API)
+    }
+  })
+
+  it("keeps DoneHub billing prefixes out of availability comparisons", () => {
+    const policy = getManagedSiteCapabilities(SITE_TYPES.DONE_HUB).models
+      ?.modelMappingPolicy
+    expect(policy?.normalizeTargetForAvailability?.("+ gpt-4o")).toBe("gpt-4o")
+    expect(policy?.normalizeTargetForAvailability?.("gpt-4o")).toBe("gpt-4o")
+    expect(
+      getManagedSiteCapabilities(SITE_TYPES.NEW_API).models?.modelMappingPolicy
+        ?.normalizeTargetForAvailability,
+    ).toBeUndefined()
   })
 })

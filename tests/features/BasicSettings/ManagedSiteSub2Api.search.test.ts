@@ -16,6 +16,7 @@ describe("Sub2API managed-site settings search definitions", () => {
       managedSiteSub2ApiSearchControls.map((definition) => definition.targetId),
     ).toEqual([
       SETTINGS_ANCHORS.SUB2API_BASE_URL,
+      SETTINGS_ANCHORS.SUB2API_ADMIN_CREDENTIALS_LINK,
       SETTINGS_ANCHORS.SUB2API_ADMIN_API_KEY,
       SETTINGS_ANCHORS.SUB2API_VALIDATE,
       SETTINGS_ANCHORS.SUB2API_DEFAULT_SCOPE,

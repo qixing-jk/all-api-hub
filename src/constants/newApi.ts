@@ -1,5 +1,3 @@
-import type { ChannelDefaults } from "~/types/managedSite"
-
 /**
  * Channel Type enumeration
  * Based on https://github.com/QuantumNous/new-api/blob/f116414284162ad15d8925f7bca494c109b83e93/constant/channel.go
@@ -65,19 +63,6 @@ export const ChannelType = {
 } as const
 
 export type ChannelType = (typeof ChannelType)[keyof typeof ChannelType]
-
-/**
- * Default field values for all channels
- */
-export const DEFAULT_CHANNEL_FIELDS: ChannelDefaults = {
-  mode: "single",
-  status: 1,
-  priority: 0,
-  weight: 0,
-  groups: ["default"],
-  models: [],
-  type: ChannelType.OpenAI,
-}
 
 /**
  * Mapping of ChannelType enum to human-readable names

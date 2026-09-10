@@ -12,11 +12,9 @@ import {
 import { MANAGED_SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { cn } from "~/lib/utils"
-import {
-  getManagedSiteAdminConfigForType,
-  getManagedSiteLabel,
-} from "~/services/managedSites/utils/managedSite"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
+import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 
 interface ManagedSiteTypeSwitcherProps {
   ariaLabel?: string
@@ -55,7 +53,10 @@ export default function ManagedSiteTypeSwitcher({
     const allOptions = MANAGED_SITE_TYPES.map((siteType) => ({
       siteType,
       isConfigured: Boolean(
-        preferences && getManagedSiteAdminConfigForType(preferences, siteType),
+        preferences &&
+          (resolveManagedSiteRuntimeConfigForType(preferences, siteType)
+            ?.config ??
+            null),
       ),
     }))
 

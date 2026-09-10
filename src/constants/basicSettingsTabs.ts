@@ -17,6 +17,7 @@ export type BasicSettingsTabId =
 
 export const BASIC_SETTINGS_ANCHOR_TO_TAB: Record<string, BasicSettingsTabId> =
   {
+    [SETTINGS_ANCHORS.SHIELD_WINDOW_SIZE]: "refresh",
     "general-display": "general",
     display: "general",
     appearance: "general",
@@ -53,6 +54,7 @@ export const BASIC_SETTINGS_ANCHOR_TO_TAB: Record<string, BasicSettingsTabId> =
     "auto-refresh": "refresh",
     refresh: "refresh",
     [SETTINGS_ANCHORS.SHIELD_SETTINGS]: "refresh",
+    [SETTINGS_ANCHORS.SHIELD_HISTORY]: "refresh",
     [SETTINGS_ANCHORS.AUTO_CHECKIN]: "checkinRedeem",
     "checkin-redeem": "checkinRedeem",
     checkin: "checkinRedeem",

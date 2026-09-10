@@ -10,6 +10,7 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import notify from "~/lib/notify"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -35,7 +36,7 @@ import type {
 import { SITE_ANNOUNCEMENT_STATUS } from "~/types/siteAnnouncements"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { showResultToast, showWarningToast } from "~/utils/core/toastHelpers"
+import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
 
 import { SiteAnnouncementsFiltersCard } from "./components/SiteAnnouncementsFiltersCard"
@@ -83,7 +84,7 @@ export default function SiteAnnouncementsPage({
   routeParams,
   refreshKey,
 }: SiteAnnouncementsPageProps) {
-  const { t } = useTranslation(["siteAnnouncements", "common"])
+  const { t, i18n } = useTranslation(["siteAnnouncements", "common"])
   const { siteAnnouncementNotifications } = useUserPreferencesContext()
   const [records, setRecords] = useState<SiteAnnouncementRecord[]>([])
   const [status, setStatus] = useState<SiteAnnouncementSiteState[]>([])
@@ -95,14 +96,17 @@ export default function SiteAnnouncementsPage({
   const [expandedIds, setExpandedIds] = useState<Set<string>>(
     () => new Set(routeParams?.recordId ? [routeParams.recordId] : []),
   )
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const [hasLoadError, setHasLoadError] = useState(false)
+  const loadError = hasLoadError
+    ? t("siteAnnouncements:messages.loadFailed")
+    : null
   const [enabledAccountCount, setEnabledAccountCount] = useState<number | null>(
     null,
   )
 
   const loadData = useCallback(async () => {
     setIsLoading(true)
-    setLoadError(null)
+    setHasLoadError(false)
     try {
       const [recordsResponse, statusResponse, nextEnabledAccountCount] =
         await Promise.all([
@@ -119,11 +123,11 @@ export default function SiteAnnouncementsPage({
           success: false,
           message: getRuntimeMessageFailureMessage(
             recordsResponse,
-            t("messages.loadFailed"),
+            i18n.t("siteAnnouncements:messages.loadFailed"),
           ),
-          errorFallback: t("messages.loadFailed"),
+          errorFallback: i18n.t("siteAnnouncements:messages.loadFailed"),
         })
-        setLoadError(t("messages.loadFailed"))
+        setHasLoadError(true)
         return
       }
 
@@ -132,27 +136,27 @@ export default function SiteAnnouncementsPage({
           success: false,
           message: getRuntimeMessageFailureMessage(
             statusResponse,
-            t("messages.loadFailed"),
+            i18n.t("siteAnnouncements:messages.loadFailed"),
           ),
-          errorFallback: t("messages.loadFailed"),
+          errorFallback: i18n.t("siteAnnouncements:messages.loadFailed"),
         })
-        setLoadError(t("messages.loadFailed"))
+        setHasLoadError(true)
         return
       }
 
       setRecords(recordsResponse.data)
       setStatus(statusResponse.data)
     } catch (error) {
-      setLoadError(t("messages.loadFailed"))
+      setHasLoadError(true)
       showResultToast({
         success: false,
         message: getErrorMessage(error),
-        errorFallback: t("messages.loadFailed"),
+        errorFallback: i18n.t("siteAnnouncements:messages.loadFailed"),
       })
     } finally {
       setIsLoading(false)
     }
-  }, [t])
+  }, [i18n])
 
   useEffect(() => {
     void loadData()
@@ -303,7 +307,7 @@ export default function SiteAnnouncementsPage({
         )
       }
       if (hasPartialIssues) {
-        showWarningToast(
+        notify.warning(
           t("messages.checkCompletedWithIssues", {
             failed: failedCount,
             unsupported: unsupportedCount,

@@ -34,16 +34,19 @@
     },
     "filters": {
       "all": "Tất cả",
+      "alreadyChecked": "Đã điểm danh",
       "clearAll": "Xóa bộ lọc",
       "countFiltered": "Hiển thị {{filtered}} / {{total}}",
       "countTotal": "Tổng cộng {{total}}",
       "failed": "Thất bại",
-      "failedOrSkipped": "Thất bại hoặc bỏ qua",
+      "needsAttention": "Cần xử lý",
       "searchLabel": "Tìm kiếm kết quả thực hiện",
       "searchPlaceholder": "Tìm theo tên tài khoản, ID hoặc tin nhắn...",
-      "skipped": "Đã bỏ qua",
+      "selectedStatuses_other": "Đã chọn {{count}} trạng thái",
+      "skipped": "Chưa thực hiện",
       "statusLabel": "Lọc theo trạng thái thực hiện",
-      "success": "Thành công"
+      "success": "Điểm danh trong lần này",
+      "uncertain": "Đang chờ xác nhận"
     },
     "hints": {
       "invalidAccessToken": "Giải pháp: Access Token có thể đã hết hạn. Vui lòng đăng nhập lại trang web này, sau đó tự động nhận diện/làm mới lại Access Token trong \"Quản lý tài khoản → Chỉnh sửa tài khoản\"; nếu sự cố này vẫn xảy ra sau khi nhận diện tự động, vui lòng lấy và sửa đổi Access Token theo cách thủ công.",
@@ -67,8 +70,8 @@
     "status": {
       "alreadyChecked": "Đã điểm danh",
       "failed": "Thất bại",
-      "skipped": "Đã bỏ qua",
-      "success": "Thành công",
+      "skipped": "Chưa thực hiện",
+      "success": "Điểm danh trong lần này",
       "uncertain": "Đang chờ xác nhận"
     },
     "table": {
@@ -247,12 +250,14 @@
     },
     "retryDisabled": "Thử lại chưa bật",
     "summary": {
+      "alreadyChecked": "Đã điểm danh",
       "eligible": "Đủ điều kiện",
       "executed": "Đã thực hiện",
       "failed": "Thất bại",
-      "skipped": "Bỏ qua",
-      "success": "Thành công",
-      "title": "Thống kê thực hiện"
+      "skipped": "Chưa thực hiện",
+      "success": "Điểm danh trong lần này",
+      "title": "Thống kê thực hiện",
+      "uncertain": "Đang chờ xác nhận"
     }
   },
   "uiOpenPretrigger": {

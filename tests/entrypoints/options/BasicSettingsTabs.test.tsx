@@ -55,10 +55,7 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/core/toastHelpers", () => ({
-  createVersionedPreferenceSaveOptions: (expectedLastUpdated: number) => ({
-    expectedLastUpdated,
-  }),
+vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   runPreferenceUpdateWithToast: async ({
     expectedLastUpdated,
     setting,

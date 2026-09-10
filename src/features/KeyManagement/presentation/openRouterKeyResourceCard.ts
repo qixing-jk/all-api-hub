@@ -238,7 +238,7 @@ export const buildOpenRouterKeyResourceCardPresentation = (
   const contextFact = {
     id: OPENROUTER_KEY_FIELD_IDS.Workspace,
     label: fieldLabel(OPENROUTER_KEY_FIELD_IDS.Workspace, t),
-    value: row.workspaceName,
+    value: row.scopeName,
   }
 
   return {

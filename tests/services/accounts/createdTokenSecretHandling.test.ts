@@ -1,10 +1,17 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { createLegacyCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import {
+  createDisplayAccountTokenRuntimeSecret,
   shouldShowOneTimeKeyDialogForAccount,
   shouldShowOneTimeKeyDialogForCreatedToken,
 } from "~/services/accounts/createdTokenSecretHandling"
+import * as registry from "~/services/apiAdapters/registry"
+import {
+  buildApiToken,
+  buildDisplaySiteData,
+} from "~~/tests/test-utils/factories"
 
 describe("created token secret handling", () => {
   describe("shouldShowOneTimeKeyDialogForAccount", () => {
@@ -52,5 +59,34 @@ describe("created token secret handling", () => {
         ),
       ).toBe(false)
     })
+  })
+})
+
+describe("created secret projection", () => {
+  afterEach(() => vi.restoreAllMocks())
+  it("projects a newly created secret through the registered capability independently of the site name", () => {
+    const account = buildDisplaySiteData({ siteType: SITE_TYPES.NEW_API })
+    const token = buildApiToken({ key: "created-response-secret" })
+    const secret = createLegacyCreatedRuntimeSecret({ account, token })
+    const project = vi.fn().mockReturnValue(secret)
+    vi.spyOn(registry, "getSiteTypeCapabilities").mockReturnValue({
+      account: { keyManagement: { createRuntimeSecret: project } },
+    } as any)
+    expect(createDisplayAccountTokenRuntimeSecret({ account, token })).toBe(
+      secret,
+    )
+    expect(project).toHaveBeenCalledWith({ account, token })
+  })
+
+  it("rejects foreground handoff when no secret projection is registered instead of falling back to a provider", () => {
+    vi.spyOn(registry, "getSiteTypeCapabilities").mockReturnValue({
+      siteType: SITE_TYPES.AIHUBMIX,
+      account: {},
+    })
+    const account = buildDisplaySiteData({ siteType: SITE_TYPES.AIHUBMIX })
+    const token = buildApiToken({ key: "created-response-secret" })
+    expect(() =>
+      createDisplayAccountTokenRuntimeSecret({ account, token }),
+    ).toThrow("Created token secret projection is unavailable")
   })
 })

@@ -1,52 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import {
-  AXON_HUB_CHANNEL_STATUS,
-  AXON_HUB_CHANNEL_TYPE,
-} from "~/constants/axonHub"
+import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { SITE_TYPES } from "~/constants/siteType"
-import { CHANNEL_STATUS } from "~/types/managedSite"
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
+import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import {
   buildApiToken,
   buildDisplaySiteData,
   buildUserPreferences,
 } from "~~/tests/test-utils/factories"
 
-const {
-  mockCreateAxonHubChannel,
-  mockDeleteAxonHubChannel,
-  mockAxonHubChannelToManagedSite,
-  mockFetchManagedSiteAvailableModels,
-  mockFetchTokenScopedModels,
-  mockGetPreferences,
-  mockListChannels,
-  mockResolveAxonHubGraphqlIdForMutation,
-  mockSearchChannels,
-  mockSignIn,
-  mockUpdateAxonHubChannel,
-  mockUpdateAxonHubChannelStatus,
-} = vi.hoisted(() => ({
-  mockAxonHubChannelToManagedSite: vi.fn(
-    (channel: { id: string; name: string; status?: string }) => ({
-      id: channel.id,
-      name: channel.name,
-      ...(channel.status ? { status: channel.status } : {}),
-    }),
-  ),
-  mockCreateAxonHubChannel: vi.fn(),
-  mockDeleteAxonHubChannel: vi.fn(),
-  mockFetchManagedSiteAvailableModels: vi.fn(),
-  mockFetchTokenScopedModels: vi.fn(),
-  mockGetPreferences: vi.fn(),
-  mockListChannels: vi.fn(),
-  mockResolveAxonHubGraphqlIdForMutation: vi.fn(
-    (_config: unknown, id: number) => Promise.resolve(`gid-${id}`),
-  ),
-  mockSearchChannels: vi.fn(),
-  mockSignIn: vi.fn(),
-  mockUpdateAxonHubChannel: vi.fn(),
-  mockUpdateAxonHubChannelStatus: vi.fn(),
-}))
+const { mockFetchManagedSiteImportModels, mockGetPreferences, mockSignIn } =
+  vi.hoisted(() => ({
+    mockFetchManagedSiteImportModels: vi.fn(),
+    mockGetPreferences: vi.fn(),
+    mockSignIn: vi.fn(),
+  }))
 
 vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   const actual =
@@ -61,28 +31,11 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/apiService/axonHub", () => ({
-  axonHubChannelToManagedSite: mockAxonHubChannelToManagedSite,
-  createAxonHubChannel: mockCreateAxonHubChannel,
-  deleteAxonHubChannel: mockDeleteAxonHubChannel,
-  listChannels: mockListChannels,
-  resolveAxonHubGraphqlIdForMutation: mockResolveAxonHubGraphqlIdForMutation,
-  searchChannels: mockSearchChannels,
-  signIn: mockSignIn,
-  updateAxonHubChannel: mockUpdateAxonHubChannel,
-  updateAxonHubChannelStatus: mockUpdateAxonHubChannelStatus,
-}))
+vi.mock("~/services/apiService/axonHub", () => ({ signIn: mockSignIn }))
 
-vi.mock("~/services/managedSites/utils/fetchTokenScopedModels", () => ({
-  fetchTokenScopedModels: mockFetchTokenScopedModels,
+vi.mock("~/services/managedSites/utils/fetchManagedSiteImportModels", () => ({
+  fetchManagedSiteImportModels: mockFetchManagedSiteImportModels,
 }))
-
-vi.mock(
-  "~/services/managedSites/utils/fetchManagedSiteAvailableModels",
-  () => ({
-    fetchManagedSiteAvailableModels: mockFetchManagedSiteAvailableModels,
-  }),
-)
 
 vi.mock("~/utils/i18n/core", () => ({
   t: (key: string, options?: Record<string, unknown>) =>
@@ -95,83 +48,28 @@ const axonHubConfig = {
   password: "admin-password",
 }
 
-const passedAxonHubConfig = {
-  baseUrl: "https://passed-axonhub.example",
-  email: "passed-admin@example.com",
-  password: "passed-admin-password",
-}
-
 describe("AxonHub managed-site provider", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetPreferences.mockResolvedValue(
-      buildUserPreferences({
-        axonHub: axonHubConfig,
-      }),
+      buildUserPreferences({ axonHub: axonHubConfig }),
     )
-    mockFetchTokenScopedModels.mockResolvedValue({
+    mockFetchManagedSiteImportModels.mockResolvedValue({
       models: ["gpt-4o", "gpt-4.1"],
       fetchFailed: false,
     })
-    mockCreateAxonHubChannel.mockResolvedValue({
-      id: "created-channel-id",
-      name: "Created",
-      status: AXON_HUB_CHANNEL_STATUS.DISABLED,
-    })
-    mockUpdateAxonHubChannel.mockResolvedValue({
-      id: "updated-channel-id",
-      name: "Updated",
-      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
-    })
-    mockDeleteAxonHubChannel.mockResolvedValue(true)
-    mockSearchChannels.mockResolvedValue({
-      items: [],
-      total: 0,
-      page: 1,
-      pageSize: 100,
-    })
-    mockListChannels.mockResolvedValue({
-      items: [],
-      total: 0,
-      page: 1,
-      pageSize: 100,
-    })
   })
 
-  it("validates saved config, reads config, searches, and lists through passed config", async () => {
+  it("validates and reads saved config", async () => {
     const provider = await import("~/services/managedSites/providers/axonHub")
 
     await expect(provider.checkValidAxonHubConfig()).resolves.toBe(true)
-    await expect(provider.getAxonHubConfig()).resolves.toEqual(axonHubConfig)
-
-    const signal = new AbortController().signal
-    await provider.searchChannel(passedAxonHubConfig, "alpha")
+    expect(
+      (await getManagedSiteRuntimeConfigForType(SITE_TYPES.AXON_HUB))?.config ??
+        null,
+    ).toEqual(axonHubConfig)
 
     expect(mockSignIn).toHaveBeenCalledWith(axonHubConfig)
-    expect(mockSearchChannels).toHaveBeenCalledWith(
-      passedAxonHubConfig,
-      "alpha",
-    )
-
-    await provider.listChannels(passedAxonHubConfig, { signal })
-
-    expect(mockListChannels).toHaveBeenCalledWith(passedAxonHubConfig, {
-      signal,
-    })
-  })
-
-  it("returns null for search failures and rethrows list failures", async () => {
-    const provider = await import("~/services/managedSites/providers/axonHub")
-
-    mockSearchChannels.mockRejectedValueOnce(new Error("search failed"))
-    await expect(
-      provider.searchChannel(passedAxonHubConfig, "missing"),
-    ).resolves.toBeNull()
-
-    mockListChannels.mockRejectedValueOnce(new Error("list failed"))
-    await expect(provider.listChannels(passedAxonHubConfig)).rejects.toThrow(
-      "list failed",
-    )
   })
 
   it("returns missing-config fallbacks for saved AxonHub config helpers", async () => {
@@ -188,27 +86,24 @@ describe("AxonHub managed-site provider", () => {
     const provider = await import("~/services/managedSites/providers/axonHub")
 
     await expect(provider.checkValidAxonHubConfig()).resolves.toBe(false)
-    await expect(provider.getAxonHubConfig()).resolves.toBeNull()
+    expect(
+      (await getManagedSiteRuntimeConfigForType(SITE_TYPES.AXON_HUB))?.config ??
+        null,
+    ).toBeNull()
 
     expect(mockSignIn).not.toHaveBeenCalled()
-    expect(mockCreateAxonHubChannel).not.toHaveBeenCalled()
   })
 
-  it("prefills imports from selected token credentials and requires final models", async () => {
+  it("prefills imports directly from resolved credential values", async () => {
     const provider = await import("~/services/managedSites/providers/axonHub")
-    const account = buildDisplaySiteData({
-      name: "Source Site",
+    const source = {
+      name: "Source Site | Primary (auto)",
       baseUrl: "https://source.example/v1",
-    })
-    const token = buildApiToken({
-      name: "Primary",
-      key: "test-selected-token-key",
-      models: "metadata-model",
-    })
+      apiKey: "test-selected-token-key",
+      modelHints: ["metadata-model"],
+    }
 
-    await expect(
-      provider.prepareChannelFormData(account, token),
-    ).resolves.toEqual(
+    await expect(provider.prepareChannelFormData(source)).resolves.toEqual(
       expect.objectContaining({
         name: "Source Site | Primary (auto)",
         type: AXON_HUB_CHANNEL_TYPE.OPENAI,
@@ -218,50 +113,11 @@ describe("AxonHub managed-site provider", () => {
         groups: [],
         priority: 0,
         weight: 0,
-        status: CHANNEL_STATUS.Enable,
+        enabled: true,
       }),
     )
 
-    expect(mockFetchTokenScopedModels).toHaveBeenCalledWith(account, token)
-    expect(
-      provider.buildChannelPayload({
-        name: "Manual",
-        type: AXON_HUB_CHANNEL_TYPE.OPENAI,
-        key: "test-selected-token-key",
-        base_url: "https://source.example/v1",
-        models: ["manual-model"],
-        groups: [],
-        priority: 0,
-        weight: 0,
-        status: CHANNEL_STATUS.Enable,
-      }),
-    ).toEqual({
-      mode: "single",
-      channel: {
-        name: "Manual",
-        type: AXON_HUB_CHANNEL_TYPE.OPENAI,
-        key: "test-selected-token-key",
-        base_url: "https://source.example/v1",
-        models: "manual-model",
-        groups: [],
-        priority: 0,
-        weight: 0,
-        status: CHANNEL_STATUS.Enable,
-      },
-    })
-    expect(() =>
-      provider.buildChannelPayload({
-        name: "Missing models",
-        type: AXON_HUB_CHANNEL_TYPE.OPENAI,
-        key: "test-selected-token-key",
-        base_url: "https://source.example/v1",
-        models: [],
-        groups: [],
-        priority: 0,
-        weight: 0,
-        status: CHANNEL_STATUS.Enable,
-      }),
-    ).toThrow("messages:axonhub.modelsMissing")
+    expect(mockFetchManagedSiteImportModels).toHaveBeenCalledWith(source)
   })
 
   it("uses the AIHubMix API origin for managed-site channel imports", async () => {
@@ -276,7 +132,11 @@ describe("AxonHub managed-site provider", () => {
     })
 
     await expect(
-      provider.prepareChannelFormData(account, token),
+      provider.prepareChannelFormData(
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(account, token),
+        ),
+      ),
     ).resolves.toEqual(
       expect.objectContaining({
         key: "test-aihubmix-token-key",
@@ -284,15 +144,15 @@ describe("AxonHub managed-site provider", () => {
       }),
     )
 
-    expect(mockFetchTokenScopedModels).toHaveBeenCalledWith(
+    expect(mockFetchManagedSiteImportModels).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://aihubmix.com",
+        apiKey: token.key,
       }),
-      token,
     )
   })
 
-  it("marks model prefill failures for manual review and still accepts manual fallback models", async () => {
+  it("marks model prefill failures for manual review", async () => {
     const provider = await import("~/services/managedSites/providers/axonHub")
     const account = buildDisplaySiteData({
       baseUrl: "https://source.example/v1",
@@ -302,57 +162,23 @@ describe("AxonHub managed-site provider", () => {
       model_limits: "metadata-model",
     })
 
-    mockFetchTokenScopedModels.mockResolvedValueOnce({
+    mockFetchManagedSiteImportModels.mockResolvedValueOnce({
       models: [],
       fetchFailed: true,
     })
 
     await expect(
-      provider.prepareChannelFormData(account, token),
+      provider.prepareChannelFormData(
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(account, token),
+        ),
+      ),
     ).resolves.toEqual(
       expect.objectContaining({
         key: "test-token-without-live-models",
         models: [],
         modelPrefillFetchFailed: true,
       }),
-    )
-
-    expect(() =>
-      provider.buildChannelPayload({
-        name: "Manual fallback",
-        type: AXON_HUB_CHANNEL_TYPE.OPENAI,
-        key: "test-token-without-live-models",
-        base_url: "https://source.example/v1",
-        models: ["manually-entered-model"],
-        groups: [],
-        priority: 0,
-        weight: 0,
-        status: CHANNEL_STATUS.Enable,
-      }),
-    ).not.toThrow()
-  })
-
-  it("fetches available models through the shared managed-site model resolver", async () => {
-    const provider = await import("~/services/managedSites/providers/axonHub")
-    const account = buildDisplaySiteData({
-      name: "Converted",
-      baseUrl: "https://converted.example/v1",
-    })
-    const token = buildApiToken({
-      name: "Auto",
-      key: "test-auto-token-key",
-    })
-
-    mockFetchManagedSiteAvailableModels.mockResolvedValue(["gpt-4o"])
-    await expect(
-      provider.fetchAvailableModels(account, token),
-    ).resolves.toEqual(["gpt-4o"])
-    expect(mockFetchManagedSiteAvailableModels).toHaveBeenCalledWith(
-      account,
-      token,
-      {
-        includeAccountFallback: false,
-      },
     )
   })
 })

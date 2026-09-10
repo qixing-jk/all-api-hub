@@ -1,6 +1,7 @@
 export const SITE_TYPES = {
   ONE_API: "one-api",
   NEW_API: "new-api",
+  APIYI: "apiyi",
   MODELFLARE: "ModelFlare",
   ANYROUTER: "anyrouter",
   VELOERA: "Veloera",
@@ -24,6 +25,8 @@ export const SITE_TYPES = {
 } as const
 
 export type SiteType = (typeof SITE_TYPES)[keyof typeof SITE_TYPES]
+
+export const APIYI_HOSTNAME = "api.apiyi.com"
 
 export const MODELFLARE_HOSTNAME = "modelflare.dev"
 

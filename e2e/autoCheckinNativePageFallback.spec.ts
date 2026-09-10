@@ -234,6 +234,7 @@ async function createNativeCheckinFixture(): Promise<NativeCheckinFixture> {
         success: true,
         message: "",
         data: {
+          enabled: true,
           stats: {
             checked_in_today: counts.nativePageClickCount > 0,
           },

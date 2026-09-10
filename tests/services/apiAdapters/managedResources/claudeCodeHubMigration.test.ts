@@ -4,7 +4,7 @@ import {
   CLAUDE_CODE_HUB_PROVIDER_TYPE,
   type ClaudeCodeHubProviderType,
 } from "~/constants/claudeCodeHub"
-import { ChannelType } from "~/constants/managedSite"
+import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
@@ -109,7 +109,7 @@ const buildCreateCommand = (
     groups: ["team"],
     priority: 0,
     weight: 100,
-    status: 1,
+    enabled: true,
     ...projectionOverrides,
   },
   credential: "credential-placeholder",
@@ -165,7 +165,7 @@ describe("Claude Code Hub native migration capability", () => {
       status: "ready",
       source: {
         sourceSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
-        resourceType: ChannelType.Anthropic,
+        resourceType: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
         baseUrl: "https://upstream.example.invalid",
         models: ["claude-example"],
         groups: ["team"],
@@ -315,7 +315,7 @@ describe("Claude Code Hub native migration capability", () => {
       claudeCodeHubManagedSiteMigrationCapability.source!.prepare(selection),
     ).resolves.toMatchObject({
       status: "ready",
-      source: { resourceType: ChannelType.OpenAI },
+      source: { resourceType: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE },
     })
   })
 
@@ -489,7 +489,7 @@ describe("Claude Code Hub native migration capability", () => {
         groups: ["team"],
         priority: 0,
         weight: 100,
-        status: 2,
+        enabled: false,
       },
       adjustments: {
         remappedType: false,

@@ -14,6 +14,8 @@ interface AccountFormSectionProps {
   title: string
   description?: string
   defaultOpen?: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
   testId: string
   id?: string
   children: ReactNode
@@ -27,6 +29,8 @@ export function AccountFormSection({
   title,
   description,
   defaultOpen = false,
+  open,
+  onOpenChange,
   testId,
   id,
   children,
@@ -55,6 +59,8 @@ export function AccountFormSection({
             </div>
           }
           defaultOpen={defaultOpen}
+          open={open}
+          onOpenChange={onOpenChange}
           className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm"
           buttonClassName="rounded-md px-0 py-0 text-left hover:bg-transparent dark:hover:bg-transparent"
           panelClassName="mt-3 border-0 bg-transparent p-0"

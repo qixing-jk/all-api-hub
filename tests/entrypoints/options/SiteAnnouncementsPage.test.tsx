@@ -1,9 +1,11 @@
 import userEvent from "@testing-library/user-event"
+import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import SiteAnnouncementsPage from "~/entrypoints/options/pages/SiteAnnouncements"
+import notify from "~/lib/notify"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
   DEFAULT_PREFERENCES,
@@ -25,9 +27,10 @@ import type {
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
 import { deepOverride } from "~/utils"
-import { showResultToast, showWarningToast } from "~/utils/core/toastHelpers"
+import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { openSettingsTab } from "~/utils/navigation"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
+import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
   sendSiteAnnouncementsMessageMock,
@@ -61,9 +64,8 @@ vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
   },
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/operationFeedback", () => ({
   showResultToast: vi.fn(),
-  showWarningToast: vi.fn(),
 }))
 
 vi.mock("~/utils/navigation", () => ({
@@ -179,6 +181,39 @@ describe("SiteAnnouncementsPage", () => {
         }
       },
     )
+  })
+
+  it("retranslates load feedback without reloading announcements or repeating notifications", async () => {
+    sendSiteAnnouncementsMessageMock.mockRejectedValue(new Error("offline"))
+    const i18n = await createResourceTestI18n({
+      en: {
+        siteAnnouncements: (await import("~/locales/en/siteAnnouncements.json"))
+          .default,
+      },
+      "zh-CN": {
+        siteAnnouncements: (
+          await import("~/locales/zh-CN/siteAnnouncements.json")
+        ).default,
+      },
+    })
+    render(
+      <I18nextProvider i18n={i18n}>
+        <SiteAnnouncementsPage />
+      </I18nextProvider>,
+    )
+    expect(
+      await screen.findByText(i18n.t("siteAnnouncements:messages.loadFailed")),
+    ).toBeVisible()
+    const requests = sendSiteAnnouncementsMessageMock.mock.calls.length
+    const notifications = vi.mocked(showResultToast).mock.calls.length
+    await act(async () => {
+      await i18n.changeLanguage("zh-CN")
+    })
+    expect(
+      screen.getByText(i18n.t("siteAnnouncements:messages.loadFailed")),
+    ).toBeVisible()
+    expect(sendSiteAnnouncementsMessageMock).toHaveBeenCalledTimes(requests)
+    expect(showResultToast).toHaveBeenCalledTimes(notifications)
   })
 
   const expectCheckNowAnalyticsStarted = (surfaceId: string) => {
@@ -654,7 +689,7 @@ describe("SiteAnnouncementsPage", () => {
           },
         },
       )
-      expect(showWarningToast).toHaveBeenCalledWith(
+      expect(notify.warning).toHaveBeenCalledWith(
         "siteAnnouncements:messages.checkCompletedWithIssues",
       )
       expect(showResultToast).not.toHaveBeenCalled()
@@ -695,7 +730,7 @@ describe("SiteAnnouncementsPage", () => {
         errorFallback: "siteAnnouncements:messages.checkFailed",
       })
     })
-    expect(showWarningToast).not.toHaveBeenCalled()
+    expect(notify.warning).not.toHaveBeenCalled()
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
       {
@@ -730,7 +765,7 @@ describe("SiteAnnouncementsPage", () => {
     )
 
     await waitFor(() => {
-      expect(showWarningToast).toHaveBeenCalledWith(
+      expect(notify.warning).toHaveBeenCalledWith(
         "siteAnnouncements:messages.checkCompletedWithIssues",
       )
     })
@@ -1253,4 +1288,9 @@ describe("SiteAnnouncementsPage", () => {
       )
     })
   })
+})
+
+vi.mock("~/lib/notify", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/notify")>()
+  return { default: { ...actual.default, warning: vi.fn() } }
 })

@@ -1,256 +1,13 @@
 import type { TFunction } from "i18next"
 
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
-import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
+import type {
+  ManagedSiteLabelKey,
+  ManagedSiteMessagesKey,
+} from "~/services/accountSiteDefinitions/contracts"
+import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import {
-  getManagedSiteLegacyAdminConfig,
-  resolveManagedSiteRuntimeConfigForType,
-  type ManagedSiteRuntimeConfigValue,
-} from "~/services/managedSites/runtimeConfig"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
-
-export type ManagedSiteLabelKey =
-  | "settings:managedSite.newApi"
-  | "settings:managedSite.doneHub"
-  | "settings:managedSite.veloera"
-  | "settings:managedSite.octopus"
-  | "settings:managedSite.axonHub"
-  | "settings:managedSite.claudeCodeHub"
-  | "settings:managedSite.sub2api"
-
-/**
- * Managed site namespace key used under the `messages` i18n namespace.
- */
-export type ManagedSiteMessagesKey =
-  | "newapi"
-  | "donehub"
-  | "veloera"
-  | "octopus"
-  | "axonhub"
-  | "claudecodehub"
-  | "sub2api"
-
-export interface ManagedSiteAdminConfig {
-  baseUrl: string
-  adminToken: string
-  userId: string
-}
-
-export interface ManagedSiteTargetOption {
-  siteType: ManagedSiteType
-  labelKey: ManagedSiteLabelKey
-  messagesKey: ManagedSiteMessagesKey
-  config: ManagedSiteAdminConfig
-}
-
-export const collectManagedConfigSecrets = (
-  managedConfig: ManagedSiteRuntimeConfigValue,
-): string[] => {
-  const secrets: string[] = []
-  if ("token" in managedConfig && typeof managedConfig.token === "string") {
-    secrets.push(managedConfig.token)
-  }
-  if ("adminToken" in managedConfig) {
-    secrets.push(managedConfig.adminToken)
-  }
-  if (
-    "password" in managedConfig &&
-    typeof managedConfig.password === "string"
-  ) {
-    secrets.push(managedConfig.password)
-  }
-  return secrets
-}
-
-const MANAGED_RESOURCE_SECRET_FIELD_PATTERN =
-  /(?:authorization|cookie|credential|password|secret|token|api[_-]?key|^key$|header[_-]?value|channel[_-]?proxy|param(?:eter)?[_-]?override)/i
-const MANAGED_RESOURCE_OVERRIDE_OPERATIONS_FIELD_PATTERN =
-  /^(?:header|body)[_-]?override[_-]?operations$/i
-
-// Provider resource payloads are expected to be shallow. These conservative
-// ceilings keep defensive redaction from becoming an unbounded object walk.
-const MAX_MANAGED_RESOURCE_SECRET_DEPTH = 128
-const MAX_MANAGED_RESOURCE_SECRET_OBJECT_CONTEXTS = 10_000
-const MAX_MANAGED_RESOURCE_SECRET_PROPERTIES = 50_000
-// Bound both collection cardinality and retained text for adversarial payloads.
-const MAX_MANAGED_RESOURCE_SECRET_STRINGS = 1_024
-const MAX_MANAGED_RESOURCE_SECRET_CODE_UNITS = 256 * 1_024
-
-type ManagedResourceSecretTraversalFrame =
-  | {
-      kind: "visit"
-      value: unknown
-      insideSecretField: boolean
-      insideOverrideOperations: boolean
-      depth: number
-    }
-  | {
-      kind: "property"
-      owner: object
-      key: PropertyKey
-      insideSecretField: boolean
-      insideOverrideOperations: boolean
-      depth: number
-    }
-  | { kind: "leave"; value: object }
-
-export type ManagedResourceSecretCollection = Readonly<{
-  knownSecrets: readonly string[]
-  complete: boolean
-}>
-
-/** Combines secret snapshots without weakening an incomplete collection. */
-export const mergeManagedResourceSecretCollections = (
-  ...collections: readonly ManagedResourceSecretCollection[]
-): ManagedResourceSecretCollection =>
-  Object.freeze({
-    knownSecrets: Object.freeze([
-      ...new Set(collections.flatMap((collection) => collection.knownSecrets)),
-    ]),
-    complete: collections.every((collection) => collection.complete),
-  })
-
-/**
- * Collects secret values from provider-owned resource details and edit drafts.
- * Callers must ignore provider messages when `complete` is false because a
- * guarded inspection or traversal ceiling may have hidden another secret.
- */
-export const collectManagedResourceSecrets = (
-  ...values: readonly unknown[]
-): ManagedResourceSecretCollection => {
-  const secrets = new Set<string>()
-  const visitedContexts = new WeakMap<object, Set<number>>()
-  const activePath = new WeakSet<object>()
-  const stack: ManagedResourceSecretTraversalFrame[] = values
-    .map(
-      (value): ManagedResourceSecretTraversalFrame => ({
-        kind: "visit",
-        value,
-        insideSecretField: false,
-        insideOverrideOperations: false,
-        depth: 0,
-      }),
-    )
-    .reverse()
-  let visitedObjectContexts = 0
-  let scheduledProperties = 0
-  let collectedCodeUnits = 0
-  let complete = true
-
-  while (stack.length > 0) {
-    const frame = stack.pop()!
-    if (frame.kind === "leave") {
-      activePath.delete(frame.value)
-      continue
-    }
-
-    if (frame.kind === "property") {
-      let descriptor: PropertyDescriptor | undefined
-      try {
-        descriptor = Reflect.getOwnPropertyDescriptor(frame.owner, frame.key)
-      } catch {
-        complete = false
-        continue
-      }
-      if (!descriptor || !("value" in descriptor)) {
-        complete = false
-        continue
-      }
-
-      const propertyName = typeof frame.key === "string" ? frame.key : null
-      const itemIsInsideOverrideOperations =
-        frame.insideOverrideOperations ||
-        (propertyName !== null &&
-          MANAGED_RESOURCE_OVERRIDE_OPERATIONS_FIELD_PATTERN.test(propertyName))
-      const itemIsSecret =
-        frame.insideSecretField ||
-        (propertyName !== null &&
-          (MANAGED_RESOURCE_SECRET_FIELD_PATTERN.test(propertyName) ||
-            (frame.insideOverrideOperations && propertyName === "value")))
-      stack.push({
-        kind: "visit",
-        value: descriptor.value,
-        insideSecretField: itemIsSecret,
-        insideOverrideOperations: itemIsInsideOverrideOperations,
-        depth: frame.depth,
-      })
-      continue
-    }
-
-    if (frame.depth > MAX_MANAGED_RESOURCE_SECRET_DEPTH) {
-      complete = false
-      continue
-    }
-    if (typeof frame.value === "string") {
-      if (
-        !frame.insideSecretField ||
-        !frame.value ||
-        secrets.has(frame.value)
-      ) {
-        continue
-      }
-      if (
-        secrets.size >= MAX_MANAGED_RESOURCE_SECRET_STRINGS ||
-        collectedCodeUnits + frame.value.length >
-          MAX_MANAGED_RESOURCE_SECRET_CODE_UNITS
-      ) {
-        complete = false
-        continue
-      }
-      secrets.add(frame.value)
-      collectedCodeUnits += frame.value.length
-      continue
-    }
-    if (!frame.value || typeof frame.value !== "object") continue
-    if (activePath.has(frame.value)) continue
-
-    const contextId =
-      (frame.insideSecretField ? 1 : 0) |
-      (frame.insideOverrideOperations ? 2 : 0)
-    const seenContexts = visitedContexts.get(frame.value)
-    if (seenContexts?.has(contextId)) continue
-    if (visitedObjectContexts >= MAX_MANAGED_RESOURCE_SECRET_OBJECT_CONTEXTS) {
-      complete = false
-      continue
-    }
-    if (seenContexts) seenContexts.add(contextId)
-    else visitedContexts.set(frame.value, new Set([contextId]))
-    visitedObjectContexts += 1
-
-    activePath.add(frame.value)
-    let keys: readonly PropertyKey[]
-    try {
-      keys = Reflect.ownKeys(frame.value)
-    } catch {
-      complete = false
-      activePath.delete(frame.value)
-      continue
-    }
-
-    stack.push({ kind: "leave", value: frame.value })
-    const remainingPropertyBudget =
-      MAX_MANAGED_RESOURCE_SECRET_PROPERTIES - scheduledProperties
-    const propertyCount = Math.min(keys.length, remainingPropertyBudget)
-    if (propertyCount < keys.length) complete = false
-    scheduledProperties += propertyCount
-    for (let index = propertyCount - 1; index >= 0; index -= 1) {
-      stack.push({
-        kind: "property",
-        owner: frame.value,
-        key: keys[index],
-        insideSecretField: frame.insideSecretField,
-        insideOverrideOperations: frame.insideOverrideOperations,
-        depth: frame.depth + 1,
-      })
-    }
-  }
-
-  return Object.freeze({
-    knownSecrets: Object.freeze([...secrets]),
-    complete,
-  })
-}
 
 /**
  * Returns the i18n key for the managed site label shown in UI.
@@ -258,47 +15,17 @@ export const collectManagedResourceSecrets = (
 export function getManagedSiteLabelKey(
   siteType: ManagedSiteType,
 ): ManagedSiteLabelKey {
-  if (siteType === SITE_TYPES.OCTOPUS) {
-    return "settings:managedSite.octopus"
-  }
-  if (siteType === SITE_TYPES.AXON_HUB) {
-    return "settings:managedSite.axonHub"
-  }
-  if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-    return "settings:managedSite.claudeCodeHub"
-  }
-  if (siteType === SITE_TYPES.SUB2API) {
-    return "settings:managedSite.sub2api"
-  }
-  if (siteType === SITE_TYPES.DONE_HUB) {
-    return "settings:managedSite.doneHub"
-  }
-  return siteType === SITE_TYPES.VELOERA
-    ? "settings:managedSite.veloera"
-    : "settings:managedSite.newApi"
+  return (
+    getAccountSiteDefinition(siteType)?.managedResource?.labelKey ??
+    "settings:managedSite.newApi"
+  )
 }
 
 /**
  * Returns the translated managed-site label for the given site type.
  */
 export function getManagedSiteLabel(t: TFunction, siteType: ManagedSiteType) {
-  switch (siteType) {
-    case SITE_TYPES.OCTOPUS:
-      return t("settings:managedSite.octopus")
-    case SITE_TYPES.AXON_HUB:
-      return t("settings:managedSite.axonHub")
-    case SITE_TYPES.CLAUDE_CODE_HUB:
-      return t("settings:managedSite.claudeCodeHub")
-    case SITE_TYPES.SUB2API:
-      return t("settings:managedSite.sub2api")
-    case SITE_TYPES.DONE_HUB:
-      return t("settings:managedSite.doneHub")
-    case SITE_TYPES.VELOERA:
-      return t("settings:managedSite.veloera")
-    case SITE_TYPES.NEW_API:
-    default:
-      return t("settings:managedSite.newApi")
-  }
+  return t(getManagedSiteLabelKey(siteType))
 }
 
 /**
@@ -307,49 +34,9 @@ export function getManagedSiteLabel(t: TFunction, siteType: ManagedSiteType) {
 export function getManagedSiteMessagesKeyFromSiteType(
   siteType: ManagedSiteType,
 ): ManagedSiteMessagesKey {
-  if (siteType === SITE_TYPES.OCTOPUS) {
-    return "octopus"
-  }
-  if (siteType === SITE_TYPES.AXON_HUB) {
-    return "axonhub"
-  }
-  if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-    return "claudecodehub"
-  }
-  if (siteType === SITE_TYPES.SUB2API) {
-    return "sub2api"
-  }
-  if (siteType === SITE_TYPES.DONE_HUB) {
-    return "donehub"
-  }
-  return siteType === SITE_TYPES.VELOERA ? "veloera" : "newapi"
-}
-
-/**
- * Extracts the current managed site admin config from user preferences.
- *
- * Note: this intentionally reads `preferences.managedSiteType` to ensure the
- * returned config always matches the real selected managed site type.
- */
-export function getManagedSiteAdminConfig(
-  preferences: UserPreferences,
-): ManagedSiteAdminConfig | null {
-  const siteType = getManagedSiteType(preferences)
-  return getManagedSiteAdminConfigForType(preferences, siteType)
-}
-
-/**
- * Extracts a managed-site admin config for an explicit target site type.
- */
-export function getManagedSiteAdminConfigForType(
-  preferences: UserPreferences,
-  siteType: ManagedSiteType,
-): ManagedSiteAdminConfig | null {
-  const runtimeConfig = resolveManagedSiteRuntimeConfigForType(
-    preferences,
-    siteType,
+  return (
+    getAccountSiteDefinition(siteType)?.managedResource?.messagesKey ?? "newapi"
   )
-  return runtimeConfig ? getManagedSiteLegacyAdminConfig(runtimeConfig) : null
 }
 
 /**
@@ -366,16 +53,15 @@ export function getManagedSiteType(prefs: UserPreferences): ManagedSiteType {
 export function supportsManagedSiteBaseUrlChannelLookup(
   siteType: ManagedSiteType,
 ): boolean {
-  return siteType !== SITE_TYPES.VELOERA
+  return Boolean(getSiteTypeCapabilities(siteType).managedSites?.matching)
 }
 
 /** Whether the registered managed-site channel adapter supports model writes. */
 export function supportsManagedSiteModelSync(
   siteType: ManagedSiteType,
 ): boolean {
-  return Boolean(
-    getSiteTypeCapabilities(siteType).managedSites?.channels?.updateModels,
-  )
+  const models = getSiteTypeCapabilities(siteType).managedSites?.models
+  return Boolean(models?.createSync || models?.updateModels)
 }
 
 /**
@@ -400,61 +86,6 @@ export function getManagedSiteContextForType(siteType: ManagedSiteType): {
     siteType,
     messagesKey: getManagedSiteMessagesKeyFromSiteType(siteType),
   }
-}
-
-/**
- * Enumerates fully configured managed-site targets that can be used for
- * cross-site operations such as channel migration.
- */
-export function getManagedSiteTargetOptions(
-  preferences: UserPreferences,
-  options?: {
-    excludeSiteTypes?: ManagedSiteType[]
-  },
-): ManagedSiteTargetOption[] {
-  const excluded = new Set(options?.excludeSiteTypes ?? [])
-  const siteTypes: ManagedSiteType[] = [
-    SITE_TYPES.NEW_API,
-    SITE_TYPES.VELOERA,
-    SITE_TYPES.DONE_HUB,
-    SITE_TYPES.OCTOPUS,
-    SITE_TYPES.AXON_HUB,
-    SITE_TYPES.CLAUDE_CODE_HUB,
-  ]
-
-  return siteTypes
-    .filter((siteType) => !excluded.has(siteType))
-    .map((siteType) => {
-      const config = getManagedSiteAdminConfigForType(preferences, siteType)
-      if (!config) return null
-
-      return {
-        siteType,
-        labelKey: getManagedSiteLabelKey(siteType),
-        messagesKey: getManagedSiteMessagesKeyFromSiteType(siteType),
-        config,
-      } satisfies ManagedSiteTargetOption
-    })
-    .filter((item): item is ManagedSiteTargetOption => item !== null)
-}
-
-/**
- * Returns true when a managed-site channel key can be used directly as a real
- * credential rather than a masked inventory placeholder.
- */
-export function hasUsableManagedSiteChannelKey(key?: string | null): boolean {
-  const trimmed = key?.trim() ?? ""
-  return hasUsableApiTokenKey(trimmed)
-}
-
-/**
- * Returns true when the source channel key must be hydrated from a detail or
- * verification flow before it can be reused safely.
- */
-export function needsManagedSiteChannelKeyResolution(
-  key?: string | null,
-): boolean {
-  return !hasUsableManagedSiteChannelKey(key)
 }
 
 /**

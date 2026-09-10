@@ -4,6 +4,7 @@ import {
   handleGetLocalStorage,
   handleGetUserFromLocalStorage,
 } from "~/entrypoints/content/messageHandlers/handlers/storage"
+import { setupAccountBrowserIdentityRateLimitMessaging } from "~/services/accountBrowserSession/identityRateLimit"
 import { compatibleUserContentSessionExtractor } from "~/services/accountSiteOnboarding/contentSession/compatibleUser"
 import { newApiAuthBundleContentSessionExtractor } from "~/services/accountSiteOnboarding/contentSession/newApiAuthBundle"
 import { sharedChatContentSessionExtractor } from "~/services/accountSiteOnboarding/contentSession/sharedchat"
@@ -17,9 +18,15 @@ const { mockGetContentSessionExtractors } = vi.hoisted(() => ({
   mockGetContentSessionExtractors: vi.fn(),
 }))
 
-vi.mock("~/services/accountSiteOnboarding/registry", () => ({
-  getContentSessionExtractors: mockGetContentSessionExtractors,
-}))
+vi.mock(
+  "~/services/accountSiteOnboarding/registry",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/accountSiteOnboarding/registry")
+    >()),
+    getContentSessionExtractors: mockGetContentSessionExtractors,
+  }),
+)
 
 vi.mock("~/utils/i18n/core", () => ({
   t: vi.fn((key: string) => key),
@@ -79,6 +86,53 @@ describe("content storage handler", () => {
       success: false,
       error: "storage blocked",
     })
+  })
+
+  it("verifies the current browser login against the server instead of trusting stored user data", async () => {
+    setupAccountBrowserIdentityRateLimitMessaging()
+    vi.stubGlobal("location", new URL("https://site.example.com/dashboard"))
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ id: 1, username: "old-user" }),
+    )
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            id: 2,
+            username: "current-user",
+            access_token: "private-test-token",
+          },
+        }),
+        { status: 200 },
+      ),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const response = await new Promise<unknown>((resolve) => {
+      handleGetUserFromLocalStorage(
+        {
+          url: "https://site.example.com",
+          siteType: "new-api",
+          verifyIdentity: true,
+        },
+        resolve,
+      )
+    })
+
+    expect(response).toEqual({
+      success: true,
+      data: { userId: "2", identityVerified: true },
+    })
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://site.example.com/api/user/self",
+      expect.objectContaining({
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      }),
+    )
   })
 
   it("prefers the current V-API user store over legacy storage", async () => {

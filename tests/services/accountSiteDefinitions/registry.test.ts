@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, expectTypeOf, it } from "vitest"
 
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
@@ -44,6 +44,10 @@ import {
   type AccountSiteType,
   type ManagedSiteType,
 } from "~/services/accountSiteDefinitions"
+import type {
+  AccountSiteRouteConfig,
+  RegisteredAccountSiteDefinition,
+} from "~/services/accountSiteDefinitions/contracts"
 import {
   ACCOUNT_SITE_TYPE_ORDER,
   MANAGED_SITE_TYPE_ORDER,
@@ -63,6 +67,7 @@ type ExpectExact<T, Expected> = [T] extends [Expected]
 type ExpectedAccountSiteType =
   | typeof SITE_TYPES.ONE_API
   | typeof SITE_TYPES.NEW_API
+  | typeof SITE_TYPES.APIYI
   | typeof SITE_TYPES.MODELFLARE
   | typeof SITE_TYPES.ANYROUTER
   | typeof SITE_TYPES.VELOERA
@@ -117,6 +122,55 @@ const productProfileSiteTypeIsForbidden: "siteType" extends keyof NonNullable<
   : true = true
 
 describe("account site definition registry", () => {
+  it("requires every account registration to explicitly declare every page or null", () => {
+    const routeKeys = [
+      "loginPath",
+      "usagePath",
+      "checkInPath",
+      "adminCredentialsPath",
+      "accessTokenPath",
+      "redeemPath",
+      "siteAnnouncementsPath",
+    ]
+    for (const definition of getAccountSiteOnboardingDefinitions()) {
+      const { pricingPath, pricingSearchParam, ...requiredRoutes } =
+        definition.routes
+      expect(Object.keys(requiredRoutes).sort(), definition.siteType).toEqual(
+        [...routeKeys].sort(),
+      )
+      expect(definition.routes.loginPath).toMatch(/^\/(?!\/)/)
+      for (const path of Object.values(requiredRoutes)) {
+        if (path !== null) expect(path).toMatch(/^\/(?!\/)/)
+      }
+      if (pricingPath != null) expect(pricingPath).toMatch(/^\/(?!\/)/)
+      if (pricingSearchParam !== undefined) {
+        expect(pricingPath).toEqual(expect.any(String))
+        expect(pricingSearchParam).toMatch(/^[A-Za-z][A-Za-z0-9_]*$/)
+      }
+    }
+    expectTypeOf<
+      Partial<AccountSiteRouteConfig>
+    >().not.toExtend<AccountSiteRouteConfig>()
+    expectTypeOf<
+      Omit<RegisteredAccountSiteDefinition, "onboarding">
+    >().not.toExtend<RegisteredAccountSiteDefinition>()
+  })
+
+  it.each([undefined, null, "", "unregistered", "toString"])(
+    "uses unknown routes only for an unregistered input: %s",
+    (siteType) => {
+      expect(getAccountSiteApiRouter(siteType)).toEqual(
+        getAccountSiteApiRouter(SITE_TYPES.UNKNOWN),
+      )
+    },
+  )
+
+  it("preserves explicit unsupported pages and returns independent route objects", () => {
+    const routes = getAccountSiteApiRouter(SITE_TYPES.SHAREDCHAT)
+    expect(routes.redeemPath).toBeNull()
+    routes.redeemPath = "/changed"
+    expect(getAccountSiteApiRouter(SITE_TYPES.SHAREDCHAT).redeemPath).toBeNull()
+  })
   it("keeps public site type aliases exact", () => {
     expect([...typeAssertions, productProfileSiteTypeIsForbidden]).toEqual([
       true,
@@ -175,9 +229,9 @@ describe("account site definition registry", () => {
         (definition) => definition.siteType === siteType,
       )?.routes
 
-      expect(getAccountSiteApiRouter(siteType)).toMatchObject(routes ?? {})
-      expect(routes ?? {}).toEqual(
-        getAccountSiteDefinition(siteType)?.onboarding?.routes ?? {},
+      expect(getAccountSiteApiRouter(siteType)).toEqual(routes)
+      expect(routes).toEqual(
+        getAccountSiteDefinition(siteType)?.onboarding?.routes,
       )
     }
   })
@@ -221,6 +275,7 @@ describe("account site definition registry", () => {
     expect(getAccountSiteTypeValues()).toEqual([
       SITE_TYPES.ONE_API,
       SITE_TYPES.NEW_API,
+      SITE_TYPES.APIYI,
       SITE_TYPES.MODELFLARE,
       SITE_TYPES.ANYROUTER,
       SITE_TYPES.VELOERA,
@@ -376,6 +431,11 @@ describe("account site definition registry", () => {
     const mutableDetailFields = first.managedResource!
       .detailFieldIds as string[]
     first.managedResource!.settingsTarget.anchor = "changed"
+    first.managedResource!.consoleRoutes.channels = "/changed"
+    expect(
+      getAccountSiteDefinition(SITE_TYPES.AXON_HUB)?.managedResource
+        ?.consoleRoutes.channels,
+    ).toBe("/channels")
     mutableDetailFields[0] = "changed"
 
     expect(
@@ -685,7 +745,7 @@ describe("account site definition registry", () => {
           ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
         statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
         displayCapabilitiesSource:
-          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
       },
       tokenForm: {
         networkLimitPolicy:

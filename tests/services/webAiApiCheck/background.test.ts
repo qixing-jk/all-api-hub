@@ -483,45 +483,14 @@ describe("webAiApiCheck background handlers", () => {
     })
   })
 
-  it("runProbe forwards undefined model ids when the input only contains whitespace", async () => {
-    vi.resetModules()
-    const { runApiVerificationProbe } = await import(
-      "~/services/verification/aiApiVerification"
-    )
-    vi.mocked(runApiVerificationProbe).mockResolvedValue({
-      id: "text-generation",
-      status: "pass",
-      latencyMs: 42,
-      summary: "ok",
-      input: {
-        apiType: "openai-compatible",
-        baseUrl: "https://proxy.example.com/api",
-      },
-    } as any)
-
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-
-    const response = await background.resolveWebAiApiCheckRunProbeMessage({
-      apiType: "openai-compatible",
-      baseUrl: "https://proxy.example.com/api/v1",
-      apiKey: "sk-test-secret-fixture",
-      modelId: "   ",
-      probeId: "text-generation",
-    })
-
-    expect(runApiVerificationProbe).toHaveBeenCalledWith({
-      apiType: "openai-compatible",
-      apiKey: "sk-test-secret-fixture",
-      baseUrl: "https://proxy.example.com/api",
-      modelId: undefined,
-      probeId: "text-generation",
-      abortSignal: undefined,
-    })
-    expect(response).toEqual({
-      success: true,
-      result: {
+  it.each([undefined, "streaming", "non-streaming"] as const)(
+    "runProbe forwards mode %s and trims blank model ids",
+    async (mode) => {
+      vi.resetModules()
+      const { runApiVerificationProbe } = await import(
+        "~/services/verification/aiApiVerification"
+      )
+      vi.mocked(runApiVerificationProbe).mockResolvedValue({
         id: "text-generation",
         status: "pass",
         latencyMs: 42,
@@ -530,8 +499,70 @@ describe("webAiApiCheck background handlers", () => {
           apiType: "openai-compatible",
           baseUrl: "https://proxy.example.com/api",
         },
-      },
+      } as any)
+
+      const background = await import(
+        "~/services/verification/webAiApiCheck/background"
+      )
+
+      const response = await background.resolveWebAiApiCheckRunProbeMessage({
+        apiType: "openai-compatible",
+        baseUrl: "https://proxy.example.com/api/v1",
+        apiKey: "sk-test-secret-fixture",
+        modelId: "   ",
+        probeId: "text-generation",
+        mode,
+      })
+
+      expect(runApiVerificationProbe).toHaveBeenCalledWith({
+        apiType: "openai-compatible",
+        apiKey: "sk-test-secret-fixture",
+        baseUrl: "https://proxy.example.com/api",
+        modelId: undefined,
+        probeId: "text-generation",
+        mode: mode ?? "streaming",
+        abortSignal: undefined,
+      })
+      expect(response).toEqual({
+        success: true,
+        result: {
+          id: "text-generation",
+          status: "pass",
+          latencyMs: 42,
+          summary: "ok",
+          input: {
+            apiType: "openai-compatible",
+            baseUrl: "https://proxy.example.com/api",
+          },
+        },
+      })
+    },
+  )
+
+  it("runProbe rejects invalid verification modes without dispatching a probe", async () => {
+    vi.resetModules()
+    const { runApiVerificationProbe } = await import(
+      "~/services/verification/aiApiVerification"
+    )
+    vi.mocked(runApiVerificationProbe).mockClear()
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+
+    const response = await background.resolveWebAiApiCheckRunProbeMessage({
+      apiType: "openai-compatible",
+      baseUrl: "https://proxy.example.com",
+      apiKey: "sk-test-mode-fixture",
+      modelId: "mode-test",
+      probeId: "text-generation",
+      mode: "automatic" as never,
     })
+
+    expect(response).toMatchObject({
+      success: false,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+    })
+    expect(runApiVerificationProbe).not.toHaveBeenCalled()
   })
 
   it("runProbe can be cancelled by run id while the probe is in flight", async () => {
@@ -673,32 +704,45 @@ describe("webAiApiCheck background handlers", () => {
     await probePromise
   })
 
-  it("runProbe sanitizes apiKey when probe execution throws", async () => {
-    vi.resetModules()
-    const { runApiVerificationProbe } = await import(
-      "~/services/verification/aiApiVerification"
-    )
-    vi.mocked(runApiVerificationProbe).mockRejectedValue(
-      new Error("Forbidden: sk-test-secret-fixture"),
-    )
-
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-
-    const response = await background.resolveWebAiApiCheckRunProbeMessage({
-      apiType: "openai-compatible",
-      baseUrl: "https://proxy.example.com/api/v1",
-      apiKey: "sk-test-secret-fixture",
-      modelId: "gpt-4o-mini",
+  it.each([
+    { probeId: "text-generation", mode: undefined, expectedMode: "streaming" },
+    {
       probeId: "text-generation",
-    })
+      mode: "non-streaming",
+      expectedMode: "non-streaming",
+    },
+    { probeId: "models", mode: "non-streaming", expectedMode: undefined },
+  ] as const)(
+    "runProbe preserves $probeId mode $mode and redacts thrown errors",
+    async ({ probeId, mode, expectedMode }) => {
+      vi.resetModules()
+      const { runApiVerificationProbe } = await import(
+        "~/services/verification/aiApiVerification"
+      )
+      vi.mocked(runApiVerificationProbe).mockRejectedValue(
+        new Error("Forbidden: sk-test-secret-fixture"),
+      )
 
-    const responsePayload = response as any
-    expect(responsePayload?.success).toBe(true)
-    expect(responsePayload?.result?.status).toBe("fail")
-    expect(responsePayload?.result?.summary).toBe("Forbidden: [REDACTED]")
-  })
+      const background = await import(
+        "~/services/verification/webAiApiCheck/background"
+      )
+
+      const response = await background.resolveWebAiApiCheckRunProbeMessage({
+        apiType: "openai-compatible",
+        baseUrl: "https://proxy.example.com/api/v1",
+        apiKey: "sk-test-secret-fixture",
+        modelId: "gpt-4o-mini",
+        probeId,
+        mode,
+      })
+
+      const responsePayload = response as any
+      expect(responsePayload?.success).toBe(true)
+      expect(responsePayload?.result?.status).toBe("fail")
+      expect(responsePayload?.result?.summary).toBe("Forbidden: [REDACTED]")
+      expect(responsePayload?.result?.mode).toBe(expectedMode)
+    },
+  )
 
   it("runProbe omits analytics HTTP status when status is message-derived", async () => {
     vi.resetModules()
@@ -784,6 +828,7 @@ describe("webAiApiCheck background handlers", () => {
         status: "fail",
         latencyMs: 0,
         summary: "Socket hang up: [REDACTED]",
+        mode: "streaming",
         summaryKey: undefined,
         summaryParams: undefined,
         input: {

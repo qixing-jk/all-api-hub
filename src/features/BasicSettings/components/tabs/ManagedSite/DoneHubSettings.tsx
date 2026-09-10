@@ -15,8 +15,8 @@ import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
 import { createTab } from "~/utils/browser/browserApi"
-import { runPreferenceUpdateWithToast } from "~/utils/core/toastHelpers"
 import { joinUrl } from "~/utils/core/url"
+import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
 /**
  * Settings panel for configuring Done Hub connection credentials (base URL, admin token, user ID).
@@ -93,13 +93,14 @@ export default function DoneHubSettings() {
     !isManagedSiteAdminUserIdInputValid(localUserId)
       ? t("messages:errors.validation.userIdNumeric")
       : undefined
-  const shouldShowAdminCredentialsLink = Boolean(trimmedBaseUrl)
-  const adminCredentialsUrl = shouldShowAdminCredentialsLink
-    ? joinUrl(
-        trimmedBaseUrl,
-        getSiteRouteConfigForKey(SITE_TYPES.DONE_HUB).adminCredentialsPath,
-      )
-    : ""
+  const adminCredentialsPath = getSiteRouteConfigForKey(
+    SITE_TYPES.DONE_HUB,
+  ).adminCredentialsPath
+  const adminCredentialsUrl =
+    trimmedBaseUrl && adminCredentialsPath
+      ? joinUrl(trimmedBaseUrl, adminCredentialsPath)
+      : ""
+  const shouldShowAdminCredentialsLink = Boolean(adminCredentialsUrl)
 
   const handleOpenAdminCredentials = async () => {
     if (!adminCredentialsUrl) return

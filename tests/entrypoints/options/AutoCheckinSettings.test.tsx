@@ -46,7 +46,7 @@ const preferenceWriteFailure = () => ({
   reason: { type: "storage-error", error: new Error("save failed") },
 })
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: toastMocks,
 }))
 

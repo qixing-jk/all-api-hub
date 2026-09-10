@@ -4,7 +4,10 @@ import {
   TEMP_CONTEXT_MODES,
   TEMP_CONTEXT_PREFERENCE_MODES,
 } from "~/constants/tempContextMode"
-import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
+import {
+  DEFAULT_TEMP_WINDOW_SIZE,
+  normalizeTempWindowFallbackPreferences,
+} from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   getTempContextTaskMetadata,
   NEW_API_SESSION_READ_ACTIONS,
@@ -199,6 +202,7 @@ describe("canonical protection-bypass surfaces", () => {
 
 describe("normalizeProtectionBypassPreferences", () => {
   const source = {
+    ...DEFAULT_TEMP_WINDOW_SIZE,
     enabled: false,
     automaticFeatureBypass: {
       account_refresh: false,

@@ -1,4 +1,132 @@
 {
+  "history": {
+    "accountOnboarding": "新增與識別帳號",
+    "actions": "歷史記錄操作",
+    "allStatuses": "全部結果",
+    "causes": {
+      "api_error_fallback": "API 請求失敗，申請使用臨時頁面處理。",
+      "browser_profile_isolation": "此操作要求直接使用臨時瀏覽器環境，例如隔離帳號工作階段。",
+      "explicit_context": "此操作主動要求開啟站點頁面環境。",
+      "rendered_page_required": "此操作需要讀取頁面渲染後的資訊。",
+      "session_required": "此操作需要讀取或使用站點的瀏覽器登入工作階段。",
+      "verification_required": "此操作需要在站點頁面完成驗證或執行頁面動作。"
+    },
+    "clear": "清空歷史",
+    "clearDescription": "清空本機已記錄的過盾歷史？清空後仍會繼續記錄新的嘗試。",
+    "clearFailed": "清空失敗，請重試。",
+    "clearFilters": "清除篩選",
+    "commands": {
+      "add_account": "新增帳號",
+      "detect_account": "識別帳號",
+      "manage_api_keys": "管理 API 金鑰",
+      "manage_site_channels": "管理站點渠道",
+      "manual_checkin": "手動簽到",
+      "reauthenticate_account": "重新驗證帳號",
+      "refresh_account": "重新整理帳號",
+      "refresh_all_accounts": "重新整理全部帳號",
+      "refresh_disabled_accounts": "重新整理已停用帳號",
+      "retry_checkin_account": "重試簽到",
+      "sync_managed_site_models": "同步託管站點模型"
+    },
+    "copied": "診斷詳情已複製",
+    "copy": "複製診斷詳情",
+    "copyFailed": "複製失敗，請重試。",
+    "created": "新建臨時頁面",
+    "denials": {
+      "automatic_disabled": "自動過盾總開關已關閉。可在相關設定中開啟，再回到原功能重試。",
+      "feature_disabled": "此功能的自動過盾已關閉。可開啟對應設定，再回到原功能重試。",
+      "invalid_execution": "觸發操作資訊無效，請從原功能重新發起。",
+      "missing_execution": "缺少觸發操作資訊，請從原功能重新發起。",
+      "permission_required": "缺少所需瀏覽器權限。請在權限設定中授權後重試。",
+      "policy_unavailable": "無法讀取過盾設定，請稍後重試。",
+      "resource_stale": "帳號或站點設定已變更。請重新整理原頁面後重試。",
+      "task_not_permitted": "此功能不支援這類臨時頁面操作。",
+      "unsupported_environment": "目前的瀏覽器環境無法提供所需的臨時頁面能力。"
+    },
+    "description": "僅在本機保留最近 {{limit}} 筆記錄，敏感資訊已過濾。",
+    "empty": "尚無過盾歷史",
+    "emptyDescription": "升級到此版本後，新發生的臨時頁面請求會自動記錄在這裡。可嘗試重新整理受防護站點的帳號後再查看。",
+    "entryDescription": "排查臨時頁面的觸發原因與處理結果。",
+    "failures": {
+      "execution_error": "執行過程異常中止，請查看原功能的提示後重試。",
+      "firefox_popup_unsupported": "Firefox 不支援從擴充功能彈出視窗執行此操作，請在設定頁或側邊欄重試。",
+      "identity_mismatch": "站點頁面登入的帳號與本次操作的帳號不一致。",
+      "identity_missing": "站點頁面未提供可驗證的帳號身分。",
+      "incognito_access_required": "擴充功能尚未獲准在無痕 / 私密視窗執行，請在瀏覽器擴充功能設定中授權。",
+      "invalid_request": "頁面操作的請求資訊不完整或無效。",
+      "no_response": "處理程序未回傳結果，請從原功能查看目前狀態。",
+      "target_not_found": "頁面中未找到需要操作的按鈕或目標。",
+      "throttled": "頁面操作受到頻率限制，請稍後重試。",
+      "trigger_failed": "無法執行頁面操作，請查看站點頁面。"
+    },
+    "fields": {
+      "context": "頁面取得方式",
+      "contextMode": "實際開啟方式",
+      "duration": "處理耗時",
+      "evidence": "原始觸發證據",
+      "finishedAt": "結束時間",
+      "method": "請求方法",
+      "mutation": "寫入狀態",
+      "operation": "觸發操作",
+      "preferredMode": "設定的開啟方式",
+      "profile": "瀏覽器環境",
+      "result": "回應與錯誤碼",
+      "surface": "發起位置",
+      "trigger": "觸發方式",
+      "verification": "頁面驗證情況"
+    },
+    "filterStatus": "依處理結果篩選",
+    "groups": {
+      "context": "瀏覽器與請求",
+      "outcome": "處理結果",
+      "trigger": "觸發資訊"
+    },
+    "incognito": "無痕 / 私密環境",
+    "loadFailed": "無法讀取過盾歷史，請重試。",
+    "manual": "使用者手動操作",
+    "mutations": {
+      "created": "已確認建立成功",
+      "dispatched_unconfirmed": "已傳送請求，結果尚未確認；請先核對站點狀態",
+      "not_dispatched": "未傳送建立請求"
+    },
+    "newRecords_other": "查看 {{count}} 筆新記錄",
+    "noMatches": "沒有符合篩選條件的記錄",
+    "noOriginalError": "已請求臨時頁面，呼叫端未提供先前的錯誤資訊。",
+    "open": "查看過盾歷史",
+    "openSettings": "查看相關設定",
+    "pendingDescription": "已記錄觸發，尚未收到最終結果。任務可能仍在進行，也可能因瀏覽器關閉或擴充功能重新啟動而中斷。",
+    "reused": "重用既有頁面",
+    "search": "搜尋站點、操作或診斷資訊",
+    "shown": "已顯示 {{visible}} / {{total}} 筆記錄",
+    "statuses": {
+      "completed": "處理完成",
+      "denied": "未開啟臨時頁面",
+      "failed": "處理失敗",
+      "started": "已觸發，尚無結果",
+      "unavailable": "臨時環境無法使用"
+    },
+    "surfaces": {
+      "background": "擴充功能背景",
+      "content_script": "站點頁面",
+      "options": "設定頁面",
+      "popup": "擴充功能彈出視窗",
+      "sidepanel": "側邊欄"
+    },
+    "title": "過盾歷史",
+    "triggers": {
+      "background_recovery": "背景復原任務",
+      "retry": "自動重試",
+      "scheduled": "排程任務",
+      "ui_lifecycle": "開啟頁面或元件時自動觸發"
+    },
+    "turnstile": {
+      "error": "Turnstile 驗證失敗",
+      "not_present": "未偵測到 Turnstile 驗證元件",
+      "timeout": "等待 Turnstile 驗證逾時",
+      "token_obtained": "已取得 Turnstile 驗證憑證"
+    },
+    "unexpectedContent": "API 回應不是預期格式，可能回傳了站點驗證頁面。"
+  },
   "titlePrefix": "All API Hub · 過盾助手",
   "toast": {
     "actions": {

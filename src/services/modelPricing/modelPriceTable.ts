@@ -1,6 +1,11 @@
+import { buildLiteLlmPricingPlan } from "~/services/modelPricing/liteLlmPricingPlan"
+import { TOKENS_PER_MILLION } from "~/services/modelPricing/pricingConstants"
+import type { PricingPlan } from "~/services/modelPricing/pricingPlan"
 import { isAbortError as isSharedAbortError } from "~/services/verification/aiApiVerification/utils"
+import { isRecord } from "~/utils/core/object"
 
 export type ModelPriceTableEntry = {
+  pricingPlan?: PricingPlan
   input?: number | string | null
   output?: number | string | null
   cache_read?: number | string | null
@@ -23,9 +28,10 @@ type LiteLlmPriceTableEntry = {
 export const LITELLM_MODEL_PRICE_TABLE_URL =
   "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
 
-export const MODEL_PRICE_TABLE_FETCH_TIMEOUT_MS = 10_000
+const LITELLM_MODEL_PRICE_TABLE_PAGE_URL =
+  "https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json"
 
-const USD_PER_TOKEN_TO_USD_PER_MILLION = 1_000_000
+export const MODEL_PRICE_TABLE_FETCH_TIMEOUT_MS = 10_000
 
 const toFiniteNonNegativeNumber = (value: unknown): number | undefined => {
   if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
@@ -43,12 +49,9 @@ const toFiniteNonNegativeNumber = (value: unknown): number | undefined => {
 const toUsdPerMillion = (value: unknown): number | undefined => {
   const pricePerToken = toFiniteNonNegativeNumber(value)
   return typeof pricePerToken === "number"
-    ? pricePerToken * USD_PER_TOKEN_TO_USD_PER_MILLION
+    ? pricePerToken * TOKENS_PER_MILLION
     : undefined
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
 
 const normalizeLiteLlmPriceTable = (payload: unknown): ModelPriceTable => {
   if (!isRecord(payload)) {
@@ -74,12 +77,18 @@ const normalizeLiteLlmPriceTable = (payload: unknown): ModelPriceTable => {
         ),
       ) as ModelPriceTableEntry
 
+      const plan = buildLiteLlmPricingPlan(
+        value,
+        LITELLM_MODEL_PRICE_TABLE_PAGE_URL,
+      )
+      if (plan) cleaned.pricingPlan = plan
+
       return Object.keys(cleaned).length > 0 ? [[modelId, cleaned]] : []
     }),
   )
 
   return {
-    source: LITELLM_MODEL_PRICE_TABLE_URL,
+    source: LITELLM_MODEL_PRICE_TABLE_PAGE_URL,
     models,
   }
 }

@@ -222,9 +222,9 @@
     "userIdDesc": "ID người dùng quản trị viên (chỉ số), quản trị viên root thường là 1"
   },
   "duplicateAccountWarningOnAdd": {
-    "description": "Kiểm soát việc có cần hộp thoại xác nhận khi thêm tài khoản nếu trang đó đã có tài khoản hay không.",
+    "description": "Kiểm tra tài khoản đã lưu trước khi thêm để tránh trùng lặp.",
     "title": "Tài khoản",
-    "toggleDesc": "Sau khi bật, khi bạn cố thêm một tài khoản nữa cho cùng URL trang, hộp thoại xác nhận sẽ bật lên.",
+    "toggleDesc": "Yêu cầu xác nhận khi cùng ID người dùng đã được lưu cho trang web này. Với OpenRouter, kiểm tra Management Key giống hệt nhau.",
     "toggleLabel": "Nhắc trước khi thêm tài khoản trùng lặp"
   },
   "logging": {
@@ -506,6 +506,11 @@
     "shieldPermissionWarningTitle": "Cần các quyền Cookies, Web Request và Web Request Blocking",
     "shieldPopupFirefoxNote": "Trên Firefox, bắt đầu tính năng này từ popup của tiện ích sẽ làm popup đóng lại, nên không thể dùng điểm truy cập này. Hãy dùng thanh bên hoặc trang cài đặt.",
     "shieldTitle": "Hỗ trợ xác minh trang web",
+    "shieldWindowHeight": "Chiều cao (px)",
+    "shieldWindowSizeDesc": "Đặt chiều rộng và chiều cao theo pixel rồi lưu. Áp dụng cho cửa sổ xác minh mở mới; cửa sổ và thẻ hiện có giữ nguyên kích thước.",
+    "shieldWindowSizeReset": "Khôi phục mặc định",
+    "shieldWindowSizeTitle": "Kích thước cửa sổ xác minh",
+    "shieldWindowWidth": "Chiều rộng (px)",
     "title": "Cài đặt làm mới"
   },
   "releaseUpdate": {
@@ -592,30 +597,36 @@
     "userCustomSort": "Sắp xếp tùy chỉnh của người dùng"
   },
   "sub2apiManagedSite": {
-    "defaultScope": {
-      "description": "Phiên bản đầu chỉ hỗ trợ URL + Admin API Key khi step_up_enabled là false. Đăng nhập quản trị, JWT, TOTP và mở khóa step-up chưa được hỗ trợ.",
-      "title": "Chỉ hỗ trợ thiết lập bảo mật mặc định"
+    "adminCredentialsLink": {
+      "description": "Đăng nhập bằng tài khoản quản trị rồi tạo và sao chép khóa trong Cài đặt hệ thống → Bảo mật và xác thực. Khóa đầy đủ chỉ hiển thị một lần; tạo lại sẽ làm khóa cũ mất hiệu lực.",
+      "missingBaseUrl": "Trước tiên, hãy nhập URL trang web hợp lệ để mở trang quản trị và lấy Admin API Key.",
+      "open": "Mở cài đặt hệ thống",
+      "title": "Lấy Admin API Key"
     },
-    "description": "Quản lý tài khoản API Key của Sub2API qua API quản trị.",
+    "defaultScope": {
+      "description": "Nếu trang web yêu cầu xác minh bổ sung cho thao tác nhạy cảm, tiện ích không thể xem hoặc xuất khóa kênh. Hãy thực hiện các thao tác này trong trang quản trị Sub2API. Việc di chuyển cũng bị ảnh hưởng khi cần đọc khóa nguồn.",
+      "title": "Giới hạn khi xem và xuất khóa"
+    },
+    "description": "Kết nối trang web để nhập các khóa API hiện có vào Sub2API, đồng thời xem, chỉnh sửa và di chuyển kênh trong All API Hub.",
     "fields": {
-      "adminApiKeyDesc": "Admin API Key được gửi qua header x-api-key",
+      "adminApiKeyDesc": "Dùng Admin API Key được tạo trong trang quản trị để quản lý kênh. Khóa API thông thường dùng để gọi mô hình không dùng được ở đây.",
       "adminApiKeyLabel": "Admin API Key",
-      "adminApiKeyPlaceholder": "Nhập Admin API Key",
-      "baseUrlDesc": "Đặt URL gốc của trang Sub2API",
-      "baseUrlLabel": "URL gốc",
+      "adminApiKeyPlaceholder": "Dán Admin API Key từ trang quản trị",
+      "baseUrlDesc": "Nhập URL trang quản trị Sub2API, bao gồm http:// hoặc https://.",
+      "baseUrlLabel": "URL trang web",
       "baseUrlPlaceholder": "https://sub2api.example.com",
       "hideAdminApiKey": "Ẩn Admin API Key",
       "showAdminApiKey": "Hiện Admin API Key"
     },
-    "title": "Thiết lập tích hợp Sub2API",
+    "title": "Kết nối với Sub2API",
     "validation": {
-      "description": "Kiểm tra Admin API Key có thể liệt kê tài khoản API Key hay không",
-      "failed": "Xác thực Sub2API thất bại: {{error}}",
-      "missingFields": "Vui lòng nhập URL gốc và Admin API Key",
-      "success": "Xác thực cấu hình Sub2API thành công",
-      "title": "Xác thực cấu hình",
-      "validate": "Xác thực",
-      "validating": "Đang xác thực..."
+      "description": "Kiểm tra URL trang web và Admin API Key trước khi mở phần quản lý kênh.",
+      "failed": "Kiểm tra kết nối Sub2API thất bại: {{error}}",
+      "missingFields": "Vui lòng nhập URL trang web và Admin API Key trước",
+      "success": "Đã kết nối. Bạn có thể quản lý kênh Sub2API.",
+      "title": "Kiểm tra kết nối",
+      "validate": "Xác minh kết nối",
+      "validating": "Đang xác minh…"
     }
   },
   "tabs": {
@@ -715,6 +726,7 @@
         "success": "{{task}} đã hoàn tất thành công."
       },
       "counts": "Tổng {{total}}, thành công {{success}}, thất bại {{failed}}, bỏ qua {{skipped}}.",
+      "countsWithAutoCheckinCategories": "Tổng {{total}}, điểm danh trong lần này {{success}}, đã điểm danh {{alreadyChecked}}, thất bại {{failed}}, đang chờ xác nhận {{uncertain}}, chưa thực hiện {{skipped}}.",
       "title": {
         "failure": "{{task}} thất bại",
         "partialSuccess": "{{task}} thành công một phần",

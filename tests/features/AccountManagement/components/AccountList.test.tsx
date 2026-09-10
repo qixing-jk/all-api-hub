@@ -288,7 +288,7 @@ vi.mock("~/components/ui", () => {
         {...props}
       />
     ),
-    DestructiveConfirmDialog: ({
+    ConfirmDialog: ({
       isOpen,
       title,
       description,
@@ -368,9 +368,10 @@ vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
   }
 })
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: Object.assign(toastDefaultMock, {
     success: toastSuccessMock,
+    warning: toastDefaultMock,
     error: toastErrorMock,
   }),
 }))
@@ -963,9 +964,10 @@ describe("AccountList", () => {
     await user.click(
       screen.getByRole("button", { name: "account:list.reorder" }),
     )
+    await screen.findByTestId(TEST_IDS.dndContext)
 
     expect(
-      (await screen.findByText("Enabled Alpha")).closest(".border-l-blue-500"),
+      screen.getByText("Enabled Alpha").closest(".border-l-blue-500"),
     ).toBeInTheDocument()
   })
 
@@ -1168,8 +1170,6 @@ describe("AccountList", () => {
     expect(toastDefaultMock).toHaveBeenCalledWith(
       "account:list.reorderPinnedBoundary",
       {
-        duration: 5000,
-        icon: expect.any(Object),
         id: "account-reorder-boundary",
       },
     )

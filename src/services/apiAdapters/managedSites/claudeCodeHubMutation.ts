@@ -35,7 +35,7 @@ const toClaudeCodeHubDiagnostic = (error: ClaudeCodeHubApiError) => {
   }
 }
 
-/** Preserves mutation certainty for both legacy and native resource adapters. */
+/** Preserves mutation certainty for Claude Code Hub resource operations. */
 export const runClaudeCodeHubMutation = async <TData, TResult = TData>(input: {
   effect: ManagedSiteMutationConfirmedEffect
   execute(): Promise<TData>

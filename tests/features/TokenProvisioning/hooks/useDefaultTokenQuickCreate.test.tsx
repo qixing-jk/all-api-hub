@@ -146,8 +146,10 @@ describe("useDefaultTokenQuickCreate", () => {
 
     expect(result.current.state).toMatchObject({
       kind: DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Selecting,
-      error: expect.stringContaining("ui:dialog.copyKey.createFailed"),
     })
+    expect(result.current.view.error).toContain(
+      "ui:dialog.copyKey.createFailed",
+    )
   })
 
   it("cancels selection without creating a token", async () => {
@@ -233,10 +235,12 @@ describe("useDefaultTokenQuickCreate", () => {
     await act(async () => result.current.start())
 
     expect(resolveQuickCreateMock).toHaveBeenLastCalledWith(replacementAccount)
-    expect(result.current.state).toEqual({
+    expect(result.current.state).toMatchObject({
       kind: DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Idle,
-      error: "No available groups",
     })
+    expect(result.current.view.error).toBe(
+      "messages:tokenProvisioning.createRequiresAvailableGroup",
+    )
   })
 
   it("surfaces policy blocks without attempting token creation", async () => {
@@ -257,10 +261,12 @@ describe("useDefaultTokenQuickCreate", () => {
 
     await act(async () => result.current.start())
 
-    expect(result.current.state).toEqual({
+    expect(result.current.state).toMatchObject({
       kind: DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Idle,
-      error: "No available groups",
     })
+    expect(result.current.view.error).toBe(
+      "messages:tokenProvisioning.createRequiresAvailableGroup",
+    )
     expect(createTokenMock).not.toHaveBeenCalled()
   })
 
@@ -276,10 +282,12 @@ describe("useDefaultTokenQuickCreate", () => {
 
     await act(async () => result.current.start())
 
-    expect(result.current.state).toEqual({
+    expect(result.current.state).toMatchObject({
       kind: DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Idle,
-      error: "ui:dialog.copyKey.createNotSupported",
     })
+    expect(result.current.view.error).toBe(
+      "ui:dialog.copyKey.createNotSupported",
+    )
     expect(resolveQuickCreateMock).not.toHaveBeenCalled()
     expect(createTokenMock).not.toHaveBeenCalled()
   })

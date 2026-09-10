@@ -436,36 +436,41 @@ describe("account browser-session reader", () => {
     },
   )
 
-  it("drops transient dashboard auth for non-New API sites while preserving identity", async () => {
-    mockSendTabMessage.mockResolvedValueOnce({
-      success: true,
-      data: {
-        userId: "user-42",
-        transientAuth: {
-          kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
-          token: "placeholder-token",
-          expiresAt: 2_000_000_000,
-          sessionId: "placeholder-session",
-          origin: "https://dashboard.example.invalid",
+  it.each([false, true])(
+    "drops transient dashboard auth for a known other site even with probe permission: %s",
+    async (allowNewApiAuthProbe) => {
+      mockSendTabMessage.mockResolvedValueOnce({
+        success: true,
+        data: {
+          userId: "user-42",
+          siteTypeHint: SITE_TYPES.NEW_API,
+          transientAuth: {
+            kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+            token: "placeholder-token",
+            expiresAt: 2_000_000_000,
+            sessionId: "placeholder-session",
+            origin: "https://dashboard.example.invalid",
+          },
         },
-      },
-    })
+      })
 
-    const session = await readAccountBrowserSessionFromTab({
-      tabId: 15,
-      baseUrl: "https://dashboard.example.invalid/account",
-      siteType: SITE_TYPES.VELOERA,
-      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
-    })
-
-    expect(session).toEqual(
-      expect.objectContaining({
-        userId: "user-42",
+      const session = await readAccountBrowserSessionFromTab({
+        tabId: 15,
+        baseUrl: "https://dashboard.example.invalid/account",
         siteType: SITE_TYPES.VELOERA,
-      }),
-    )
-    expect(session).not.toHaveProperty("transientAuth")
-  })
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+        allowNewApiAuthProbe,
+      })
+
+      expect(session).toEqual(
+        expect.objectContaining({
+          userId: "user-42",
+          siteType: SITE_TYPES.VELOERA,
+        }),
+      )
+      expect(session).not.toHaveProperty("transientAuth")
+    },
+  )
 
   it.each(["kind", "token", "expiresAt", "sessionId", "origin"])(
     "drops transient dashboard auth when %s is inherited",

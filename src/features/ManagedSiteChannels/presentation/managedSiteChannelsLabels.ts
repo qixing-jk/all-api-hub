@@ -7,7 +7,7 @@ type ManagedSiteChannelsLabelOverrides = Pick<
   "rowActions" | "statusLabels"
 >
 
-/** Builds copy shared by legacy and native managed-channel presentations. */
+/** Builds copy shared by managed-channel presentations. */
 export const createManagedSiteChannelsLabels = (
   t: TFunction,
   overrides: ManagedSiteChannelsLabelOverrides,

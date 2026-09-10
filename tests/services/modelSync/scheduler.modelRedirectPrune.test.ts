@@ -4,8 +4,9 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { modelSyncScheduler } from "~/services/models/modelSync/scheduler"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import type { ManagedModelChannel } from "~/types/managedResourceModels"
 import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types/managedSiteModelRedirect"
-import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
   ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
@@ -130,16 +131,20 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
     oldModels?: string[]
     newModels?: string[]
   }) => {
-    const channel = buildManagedSiteChannel({
-      id: 1,
+    const channel: ManagedModelChannel = {
+      ref: modelResourceRef(1),
       name: "channel-1",
-      model_mapping: "{}",
-    })
+      type: 1,
+      baseUrl: "https://channel.example.com",
+      models: ["a"],
+      disabled: false,
+      modelMapping: "{}",
+    }
     mockListChannels.mockResolvedValue({ items: [channel] })
 
     mockRunBatch.mockImplementation(async (_channels: any, options: any) => {
       const lastResult = {
-        channelId: 1,
+        resourceRef: modelResourceRef(1),
         channelName: "channel-1",
         ok: true,
         attempts: 1,
@@ -178,17 +183,15 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
       newModels,
     })
 
-    await modelSyncScheduler.executeSync([1])
+    await modelSyncScheduler.executeSync([modelResourceRef(1)])
 
-    expect(mockListChannels).toHaveBeenCalledWith({
-      preferResourceBacked: false,
-    })
+    expect(mockListChannels).toHaveBeenCalledWith()
     expect(
       mockedModelRedirectService.applyModelMappingToChannel,
     ).toHaveBeenCalledWith(channel, {}, expect.anything(), {
       pruneMissingTargets: true,
       availableModels: newModels,
-      siteType: SITE_TYPES.NEW_API,
+      modelMappingPolicy: { supportsChaining: true },
     })
   })
 
@@ -203,14 +206,14 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
       newModels,
     })
 
-    await modelSyncScheduler.executeSync([1])
+    await modelSyncScheduler.executeSync([modelResourceRef(1)])
 
     expect(
       mockedModelRedirectService.applyModelMappingToChannel,
     ).toHaveBeenCalledWith(channel, {}, expect.anything(), {
       pruneMissingTargets: true,
       availableModels: newModels,
-      siteType: SITE_TYPES.NEW_API,
+      modelMappingPolicy: { supportsChaining: true },
     })
   })
 
@@ -222,7 +225,7 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
       newModels,
     })
 
-    await modelSyncScheduler.executeSync([1])
+    await modelSyncScheduler.executeSync([modelResourceRef(1)])
 
     expect(
       mockedModelRedirectService.applyModelMappingToChannel,
@@ -236,7 +239,7 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
       newModels: [],
     })
 
-    await modelSyncScheduler.executeSync([1])
+    await modelSyncScheduler.executeSync([modelResourceRef(1)])
 
     expect(
       mockedModelRedirectService.applyModelMappingToChannel,
@@ -250,7 +253,7 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
       newModels: ["a", "b"],
     })
 
-    await modelSyncScheduler.executeSync([1])
+    await modelSyncScheduler.executeSync([modelResourceRef(1)])
 
     expect(
       mockedModelRedirectService.applyModelMappingToChannel,

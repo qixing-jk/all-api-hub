@@ -15,9 +15,8 @@ const {
   fetchAccountTokensMock,
   fetchDisplayAccountInviteLinkMock,
   canFetchDisplayAccountInviteLinkMock,
-  getManagedSiteServiceMock,
+  getManagedSiteCapabilitiesMock,
   openKeysPageMock,
-  openManagedSiteChannelsForChannelMock,
   openManagedSiteChannelsPageMock,
   openModelsPageMock,
   sendRuntimeMessageMock,
@@ -30,7 +29,7 @@ const {
   toastLoadingMock,
   toastSuccessMock,
   toastErrorMock,
-  toastCustomMock,
+  toastWarningMock,
   hasValidManagedSiteConfigMock,
   clipboardWriteTextMock,
   trackStartedMock,
@@ -48,9 +47,8 @@ const {
   fetchAccountTokensMock: vi.fn(),
   fetchDisplayAccountInviteLinkMock: vi.fn(),
   canFetchDisplayAccountInviteLinkMock: vi.fn(),
-  getManagedSiteServiceMock: vi.fn(),
+  getManagedSiteCapabilitiesMock: vi.fn(),
   openKeysPageMock: vi.fn(),
-  openManagedSiteChannelsForChannelMock: vi.fn(),
   openManagedSiteChannelsPageMock: vi.fn(),
   openModelsPageMock: vi.fn(),
   sendRuntimeMessageMock: vi.fn(),
@@ -81,7 +79,7 @@ const {
   toastLoadingMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
-  toastCustomMock: vi.fn(),
+  toastWarningMock: vi.fn(),
   hasValidManagedSiteConfigMock: vi.fn(() => true),
   clipboardWriteTextMock: vi.fn(),
   trackStartedMock: vi.fn(),
@@ -110,24 +108,25 @@ vi.mock("~/utils/browser/tempWindowRequestSource", () => ({
   getCurrentTempWindowRequestSource: getCurrentTempWindowRequestSourceMock,
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     dismiss: toastDismissMock,
     loading: toastLoadingMock,
     success: toastSuccessMock,
     error: toastErrorMock,
-    custom: toastCustomMock,
+    warning: toastWarningMock,
   },
 }))
 
-vi.mock("~/services/managedSites/managedSiteService", () => ({
-  getManagedSiteService: getManagedSiteServiceMock,
-  hasValidManagedSiteConfig: hasValidManagedSiteConfigMock,
+vi.mock("~/services/apiAdapters/registry", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/services/apiAdapters/registry")>()),
+  getManagedSiteCapabilities: getManagedSiteCapabilitiesMock,
 }))
-
-vi.mock("~/services/managedSites/managedUpstreamResourceService", () => ({
-  resolveManagedUpstreamResourceFeatureCapabilities: (...args: unknown[]) =>
-    resolveManagedUpstreamResourceFeatureCapabilitiesMock(...args),
+vi.mock("~/services/managedSites/runtimeConfig", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/managedSites/runtimeConfig")
+  >()),
+  hasValidManagedSiteConfig: hasValidManagedSiteConfigMock,
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -186,7 +185,6 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
 
 vi.mock("~/utils/navigation", () => ({
   openKeysPage: openKeysPageMock,
-  openManagedSiteChannelsForChannel: openManagedSiteChannelsForChannelMock,
   openManagedSiteChannelsPage: openManagedSiteChannelsPageMock,
   openModelsPage: openModelsPageMock,
   openRedeemPage: vi.fn(),
@@ -276,36 +274,35 @@ vi.mock(
 )
 
 export {
-  mockHandleSetAccountDisabled,
-  mockHandleRefreshAccount,
-  mockTogglePinAccount,
+  accountActionsContextValue,
+  accountDataContextValue,
+  canFetchDisplayAccountInviteLinkMock,
+  clipboardWriteTextMock,
+  completeProductAnalyticsActionMock,
+  exportShareSnapshotWithToastMock,
   fetchAccountTokensMock,
   fetchDisplayAccountInviteLinkMock,
-  canFetchDisplayAccountInviteLinkMock,
-  getManagedSiteServiceMock,
+  getCurrentTempWindowRequestSourceMock,
+  getManagedSiteCapabilitiesMock,
+  hasValidManagedSiteConfigMock,
+  loadAccountDataMock,
+  mockHandleRefreshAccount,
+  mockHandleSetAccountDisabled,
+  mockTogglePinAccount,
   openKeysPageMock,
-  openManagedSiteChannelsForChannelMock,
   openManagedSiteChannelsPageMock,
   openModelsPageMock,
-  sendRuntimeMessageMock,
-  loadAccountDataMock,
-  exportShareSnapshotWithToastMock,
-  userPreferencesContextValue,
-  accountDataContextValue,
-  accountActionsContextValue,
-  toastDismissMock,
-  toastLoadingMock,
-  toastSuccessMock,
-  toastErrorMock,
-  toastCustomMock,
-  hasValidManagedSiteConfigMock,
-  clipboardWriteTextMock,
-  trackStartedMock,
-  startProductAnalyticsActionMock,
-  completeProductAnalyticsActionMock,
-  resolveProductAnalyticsErrorCategoryFromErrorMock,
   resolveDisplayAccountRuntimeKeySecretMock,
   resolveManagedUpstreamResourceFeatureCapabilitiesMock,
-  getCurrentTempWindowRequestSourceMock,
+  resolveProductAnalyticsErrorCategoryFromErrorMock,
+  sendRuntimeMessageMock,
+  startProductAnalyticsActionMock,
+  toastWarningMock,
+  toastDismissMock,
+  toastErrorMock,
+  toastLoadingMock,
+  toastSuccessMock,
+  trackStartedMock,
+  userPreferencesContextValue,
   withProtectionBypassUserCommandMock,
 }

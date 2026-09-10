@@ -1,5 +1,4 @@
-import toast from "react-hot-toast"
-
+import toast from "~/lib/notify"
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"

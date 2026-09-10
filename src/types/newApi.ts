@@ -1,28 +1,3 @@
-import { type ChannelType } from "~/constants"
-import type { AxonHubChannelType } from "~/constants/axonHub"
-import type { ClaudeCodeHubProviderType } from "~/constants/claudeCodeHub"
-
-import type { OctopusOutboundType } from "./octopus"
-
-/**
- * Group data from New API
- */
-export interface ChannelGroup {
-  id: string
-  name: string
-}
-
-/**
- * Model data from New API or model suggestion
- */
-export interface ChannelModel {
-  id: string
-  name: string
-  provider?: string
-  description?: string
-  tags?: string[]
-}
-
 /**
  * Channel status constants
  * @see https://github.com/QuantumNous/new-api/blob/f116414284162ad15d8925f7bca494c109b83e93/common/constants.go
@@ -47,41 +22,6 @@ export const CHANNEL_MODE = {
 export type ChannelMode = (typeof CHANNEL_MODE)[keyof typeof CHANNEL_MODE]
 
 /**
- * Channel default field values
- */
-export interface ChannelDefaults {
-  mode: ChannelMode
-  status: ChannelStatus
-  priority: number
-  weight: number
-  groups: string[]
-  models: string[]
-  type:
-    | ChannelType
-    | OctopusOutboundType
-    | AxonHubChannelType
-    | ClaudeCodeHubProviderType
-}
-
-/**
- * Channel creation/edit form data
- */
-export interface ChannelFormData {
-  name: string
-  type: ChannelType | OctopusOutboundType | AxonHubChannelType | string
-  key: string
-  base_url: string
-  models: string[]
-  modelPrefillFetchFailed?: boolean
-  groups: string[]
-  priority: number
-  weight: number
-  status: ChannelStatus
-  /** Provider-native notes carried by import drafts when supported. */
-  notes?: string
-}
-
-/**
  * Channel creation payload for New API
  */
 export interface CreateChannelPayload {
@@ -99,7 +39,7 @@ export interface UpdateChannelPayload {
    * 渠道ID
    */
   id: number
-  type?: ChannelType | OctopusOutboundType | AxonHubChannelType | string
+  type?: number | string
   max_input_tokens?: number
   other?: string
   models?: string
@@ -152,7 +92,7 @@ export interface ChannelInfo {
  */
 export interface NewApiChannel {
   id: number
-  type: ChannelType | AxonHubChannelType | string
+  type: number | string
   /**
    * 渠道key
    * 通常从接口获取时该字段为空字符串，拿到原始值需要管理员用户的两步验证。

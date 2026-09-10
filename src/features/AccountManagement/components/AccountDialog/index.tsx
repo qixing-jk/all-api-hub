@@ -1,11 +1,10 @@
 import { Info } from "lucide-react"
-import { useEffect, useState, type ComponentProps } from "react"
+import { useEffect, useRef, useState, type ComponentProps } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Alert } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
-import { AIHUBMIX_API_ORIGIN } from "~/constants/siteType"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
 import { SPONSOR_RECOMMENDATION_SURFACES } from "~/features/AccountManagement/sponsors/constants"
@@ -17,18 +16,18 @@ import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testId
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { buildDefaultTokenCreatePrefill } from "~/features/TokenProvisioning/components/AddTokenDialog/defaultTokenCreatePrefill"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
-import { useLegacyApiTokenSecretResult } from "~/features/TokenProvisioning/hooks/useLegacyApiTokenSecretResult"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
 import type { DisplaySiteData } from "~/types"
+import { isExtensionPopup } from "~/utils/browser"
 import { createLogger } from "~/utils/core/logger"
 import {
   openApiCredentialProfilesPage,
   openFullBookmarkManagerPage,
 } from "~/utils/navigation"
 
-import AccountForm from "./AccountForm"
+import AccountForm, { type AccountFormHandle } from "./AccountForm"
 import ActionButtons from "./ActionButtons"
 import { AihubmixDefaultKeyPromptDialog } from "./AihubmixDefaultKeyPromptDialog"
 import AutoDetectErrorAlert from "./AutoDetectErrorAlert"
@@ -36,9 +35,13 @@ import AutoDetectSlowHintAlert from "./AutoDetectSlowHintAlert"
 import DialogHeader from "./DialogHeader"
 import { DuplicateAccountWarningDialog } from "./DuplicateAccountWarningDialog"
 import { useAccountDialog } from "./hooks/useAccountDialog"
+import { useAccountDialogRecoveryHandoff } from "./hooks/useAccountDialogRecoveryHandoff"
 import InfoPanel from "./InfoPanel"
 import { ManagedSiteConfigPromptDialog } from "./ManagedSiteConfigPromptDialog"
-import { ACCOUNT_DIALOG_PHASES } from "./models"
+import {
+  ACCOUNT_DIALOG_PHASES,
+  type AccountDialogRecoveryState,
+} from "./models"
 import SiteInfoInput from "./SiteInfoInput"
 import { getAccountDialogSitePolicy } from "./sitePolicy"
 
@@ -50,6 +53,7 @@ interface AccountDialogProps {
   mode: DialogMode
   account?: DisplaySiteData | null
   prefill?: AddAccountPrefill | null
+  recoveryState?: AccountDialogRecoveryState | null
   onSuccess: (data: any) => void
   onError: (error: any) => void
   onOpenBookmarkImport?: () => void
@@ -63,6 +67,7 @@ interface AccountDialogProps {
  * @param props.mode Current dialog mode (add or edit).
  * @param props.account Account data to prefill the form when editing.
  * @param props.prefill Optional add-mode account prefill.
+ * @param props.recoveryState Form carried from the popup for token recovery.
  * @param props.onSuccess Callback fired with saved data.
  * @param props.onError Callback fired when submission fails.
  * @param props.onOpenBookmarkImport Optional handler for switching to batch bookmark import.
@@ -73,6 +78,7 @@ export default function AccountDialog({
   mode,
   account,
   prefill,
+  recoveryState,
   onSuccess,
   onError,
   onOpenBookmarkImport,
@@ -100,8 +106,15 @@ export default function AccountDialog({
     mode,
     account,
     prefill,
+    recoveryState,
     onPostSaveAccountRefresh: reloadAccountsById,
     onSuccess,
+  })
+
+  const accountFormRef = useRef<AccountFormHandle>(null)
+  const accessTokenContinuation = useAccountDialogRecoveryHandoff({
+    enabled: isOpen && isExtensionPopup(),
+    state: state.tokenRecoveryState ?? null,
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -220,21 +233,7 @@ export default function AccountDialog({
         logger,
         source: "AccountDialog",
       })
-    : state.postSaveOneTimeToken
-      ? buildOneTimeApiKeyProfileSaveAction({
-          accountName: state.draft.siteName || "AIHubMix",
-          baseUrl: AIHUBMIX_API_ORIGIN,
-          siteType: state.siteType,
-          tagIds: state.draft.tagIds,
-          token: state.postSaveOneTimeToken,
-          t,
-          logger,
-          source: "AccountDialog",
-        })
-      : undefined
-  const postSaveOneTimeSecretResult = useLegacyApiTokenSecretResult(
-    state.postSaveOneTimeToken,
-  )
+    : undefined
 
   const handleOpenApiCredentialProfilesFromDetectFailure = () => {
     void openApiCredentialProfilesPage()
@@ -291,6 +290,10 @@ export default function AccountDialog({
                 error={state.detectionError}
                 siteUrl={state.url}
                 siteType={state.siteType}
+                accessTokenContinuation={accessTokenContinuation}
+                onPrepareAccessTokenInput={() =>
+                  accountFormRef.current?.focusAccessToken()
+                }
                 manualAddGuideAnchor={
                   mode === DIALOG_MODES.ADD ? manualAddGuideAnchor : undefined
                 }
@@ -400,6 +403,7 @@ export default function AccountDialog({
 
             {state.phase === ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM && (
               <AccountForm
+                ref={accountFormRef}
                 draft={state.draft}
                 sitePolicy={currentSitePolicy}
                 isDetected={state.isDetected}
@@ -525,9 +529,9 @@ export default function AccountDialog({
       ) : null}
 
       <OneTimeSecretDialog
-        isOpen={!!state.postSaveOneTimeToken}
-        result={postSaveOneTimeSecretResult}
-        onClose={handlers.handlePostSaveOneTimeTokenClose}
+        isOpen={!!state.postSaveOneTimeSecret}
+        result={state.postSaveOneTimeSecret}
+        onClose={handlers.handlePostSaveOneTimeSecretClose}
         saveAction={postSaveOneTimeKeySaveAction}
       />
     </>

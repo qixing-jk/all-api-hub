@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   EMPTY_MANAGED_RESOURCE_CAPABILITIES,
-  getManagedResourceRefKey,
   toSafeManagedResourceFailure,
 } from "~/features/ManagedSiteChannels/utils/managedResource"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
@@ -12,6 +11,7 @@ import {
   ManagedResourceError,
   type ManagedResourceRef,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 
 const createRef = (overrides: Partial<ManagedResourceRef> = {}) => ({
   siteType: SITE_TYPES.NEW_API,

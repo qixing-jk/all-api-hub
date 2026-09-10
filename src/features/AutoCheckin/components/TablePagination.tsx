@@ -35,7 +35,7 @@ export default function TablePagination({
 }: TablePaginationProps) {
   const { t } = useTranslation("autoCheckin")
 
-  if (total <= PAGE_SIZE_OPTIONS[0]) return null
+  if (total <= pageSize) return null
 
   const start = pageIndex * pageSize + 1
   const end = Math.min((pageIndex + 1) * pageSize, total)

@@ -1,21 +1,6 @@
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import type { AccountSiteType } from "~/constants/siteType"
+import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import type { ApiToken } from "~/types"
-
-const OPTIONAL_SK_PREFIX_SITE_TYPES = new Set<string>([
-  SITE_TYPES.ONE_API,
-  SITE_TYPES.NEW_API,
-  SITE_TYPES.MODELFLARE,
-  SITE_TYPES.ANYROUTER,
-  SITE_TYPES.VELOERA,
-  SITE_TYPES.ONE_HUB,
-  SITE_TYPES.DONE_HUB,
-  SITE_TYPES.V_API,
-  SITE_TYPES.VO_API,
-  SITE_TYPES.SUPER_API,
-  SITE_TYPES.RIX_API,
-  SITE_TYPES.NEO_API,
-  SITE_TYPES.WONG_GONGYI,
-])
 
 /**
  * Normalizes a raw token key string without changing the backend-provided
@@ -38,7 +23,9 @@ export function normalizeApiTokenKeyValue(key: string): string {
 export function hasOptionalSkPrefixSiteTokenSemantics(
   siteType?: AccountSiteType | string,
 ): boolean {
-  return siteType ? OPTIONAL_SK_PREFIX_SITE_TYPES.has(siteType) : false
+  return siteType
+    ? getAccountSiteDefinition(siteType)?.tokenKey?.optionalSkPrefix === true
+    : false
 }
 
 /**

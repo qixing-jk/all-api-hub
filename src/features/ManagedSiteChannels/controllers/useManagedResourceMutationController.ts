@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import {
   MANAGED_CHANNELS_DELETE_RESULT_STATUSES,
   type ManagedChannelsDeleteResultStatus,
-  type ManagedChannelsRowViewModel,
 } from "~/features/ManagedSiteChannels/presentation/contracts"
 import {
   MANAGED_RESOURCE_FAILURE_CODES,
@@ -15,12 +14,13 @@ import {
   type ResourceEditor,
   type ResourceFailure,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import {
   assertManagedSiteMutationResult,
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationConfirmedEffect,
 } from "~/services/managedSites/mutations"
-import { collectManagedResourceSecrets } from "~/services/managedSites/utils/managedSite"
+import { collectManagedResourceSecrets } from "~/services/managedSites/utils/resourceSecrets"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
@@ -32,9 +32,9 @@ import {
   MANAGED_RESOURCE_EDITOR_MODES,
   type ManagedResourceEditorMode,
 } from "../presentation/managedResourceFieldPolicy"
+import type { ManagedResourceRowData } from "../presentation/managedResourcePresentation"
 import {
   EMPTY_MANAGED_RESOURCE_CAPABILITIES,
-  getManagedResourceRefKey,
   toSafeManagedResourceFailure,
 } from "../utils/managedResource"
 import { mapSettledWithConcurrency } from "./managedResourceConcurrency"
@@ -112,7 +112,7 @@ export function useManagedResourceMutationController({
   workspace: ManagedResourceWorkspace | null
   refresh?: () => Promise<boolean>
   resolveRef?: (rowKey: string) => ManagedResourceRef | undefined
-  mapFacts?: (facts: ResourceDisplayFacts) => ManagedChannelsRowViewModel
+  mapFacts?: (facts: ResourceDisplayFacts) => ManagedResourceRowData
   acceptMutationResult?: (
     mode: ManagedResourceEditorMode,
     facts: ResourceDisplayFacts,
@@ -124,7 +124,7 @@ export function useManagedResourceMutationController({
   onMutationSuccess?: (mode: ManagedResourceEditorMode) => void
   analytics?: ManagedResourceControllerAnalytics
 }) {
-  const [detail, setDetail] = useState<ManagedChannelsRowViewModel | null>(null)
+  const [detail, setDetail] = useState<ManagedResourceRowData | null>(null)
   const [detailFailure, setDetailFailure] = useState<ResourceFailure | null>(
     null,
   )

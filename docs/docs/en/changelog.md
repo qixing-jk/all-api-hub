@@ -8,6 +8,21 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 3.61.0
+- **New Features:**
+  - **APIyi accounts**: Add APIyi accounts and view available models, key groups, and group multipliers. If an account management token is needed, follow the prompts to obtain it on the site and paste it into the extension. See [Account Management](./account-management.md).
+  - **Channel migration**: Copy supported API key channels between Sub2API and other configured self-hosted sites. Preview configuration differences before migrating; channels on the source site remain unchanged. Migrating out of Sub2API is currently restricted when additional verification is required to access keys. See [Self-Hosted Site Management](./self-hosted-site-management.md).
+  - **API verification**: Test streaming and non-streaming modes separately to investigate problems that affect one response mode. This option is also available in related CLI compatibility tests.
+  - **Protection bypass history**: See why actions such as refreshing accounts or checking in opened a temporary page, and whether they completed successfully. Search and filter records, copy diagnostic information, or clear the history. Records are stored only on your device.
+- **Experience Improvements:**
+  - **Key creation**: When adding an account, you can choose to automatically create missing keys for all available groups. Groups with usable keys are skipped. You can also fill in missing keys for saved accounts in Key Management, with prompts for groups that need manual attention. See [Key Management](./key-management.md).
+  - **Automatic check-in**: Results now distinguish successful check-ins in the current run, accounts already checked in, failures, unconfirmed results, and accounts not run. Combine multiple status filters or use “Needs attention” to focus on accounts that need follow-up. See [Automatic Check-in](./auto-checkin.md).
+  - **Adding and detecting New API accounts**: Supports the password verification required by newer New API versions when creating account management tokens. The extension guides you to the site to complete verification and copy the token, while keeping your form entries so you can return and continue adding the account. Re-detecting the same account on the same site reuses its existing valid management token, reducing the need to obtain another one. See [Auto-Detection Troubleshooting](./auto-detect.md).
+  - **Changelog**: A larger reading area lets you see more update details at once.
+- **Bug Fixes:**
+  - **Multiple-account detection**: Reduces cases where the previous account is still detected after switching logins. Adding a different account on the same site no longer triggers a duplicate warning just because the site address matches.
+  - **Channel editing**: Editing channels in Veloera and Octopus more reliably preserves untouched settings in the site’s admin panel, reducing accidental resets of other configuration when saving. See [Self-Hosted Site Management](./self-hosted-site-management.md).
+
 ## 3.60.0
 - **New Features:**
   - `Denxio` daily check-in: On `Sub2API` sites that offer Denxio check-in, the extension can now check in automatically each day and show the results. Add or re-detect the account, then enable automatic check-in once this method is detected as available. See [Automatic Check-in](./auto-checkin.md).

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { DoneHubChannelType } from "~/constants/doneHub"
 import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
@@ -8,23 +9,21 @@ import {
   matchesProbeFilterRule,
 } from "~/services/models/modelSync/channelModelFilterEvaluator"
 import { ModelSyncService } from "~/services/models/modelSync/modelSyncService"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import type { ChannelResourceConfigMap } from "~/types/channelConfig"
 import type {
   ChannelModelFilterRule,
   ChannelModelPatternFilterRule,
   ChannelModelProbeFilterRule,
 } from "~/types/channelModelFilters"
-import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
+import type { ManagedModelChannel } from "~/types/managedResourceModels"
 import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
 import {
   createManagedUpstreamResourceRef,
   getManagedUpstreamResourceRefKey,
-  MANAGED_UPSTREAM_RESOURCE_NATIVE_KINDS,
-  MANAGED_UPSTREAM_RESOURCE_SECRET_STATES,
-  MANAGED_UPSTREAM_RESOURCE_STATUSES,
-  type ManagedUpstreamResourceDetail,
-  type ManagedUpstreamResourceSummary,
 } from "~/types/managedUpstreamResource"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 const loggerMocks = vi.hoisted(() => ({
   debug: vi.fn(),
@@ -44,12 +43,8 @@ const {
   updateChannelModelsMock,
   updateChannelModelMappingMock,
   fetchChannelSecretKeyMock,
-  getManagedSiteServiceForTypeMock,
+  getManagedSiteCapabilitiesForTypeMock,
   runApiVerificationProbeMock,
-  resourceListMock,
-  resourceGetDetailMock,
-  resourceUpdateMock,
-  resourcePrepareEditDraftMock,
 } = vi.hoisted(() => ({
   getSiteTypeCapabilitiesMock: vi.fn(),
   listAllChannelsMock: vi.fn(),
@@ -57,20 +52,13 @@ const {
   updateChannelModelsMock: vi.fn(),
   updateChannelModelMappingMock: vi.fn(),
   fetchChannelSecretKeyMock: vi.fn(),
-  getManagedSiteServiceForTypeMock: vi.fn(),
+  getManagedSiteCapabilitiesForTypeMock: vi.fn(),
   runApiVerificationProbeMock: vi.fn(),
-  resourceListMock: vi.fn(),
-  resourceGetDetailMock: vi.fn(),
-  resourceUpdateMock: vi.fn(),
-  resourcePrepareEditDraftMock: vi.fn(),
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
-}))
-
-vi.mock("~/services/managedSites/managedSiteService", () => ({
-  getManagedSiteServiceForType: getManagedSiteServiceForTypeMock,
+  getManagedSiteCapabilities: getManagedSiteCapabilitiesForTypeMock,
 }))
 
 vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
@@ -157,7 +145,7 @@ function makeRuntimeConfig(
     return {
       siteType: SITE_TYPES.OCTOPUS,
       config: {
-        baseUrl: "https://managed.example.com",
+        baseUrl: "https://example.com",
         username: "admin",
         password: "secret",
         ...partial.config,
@@ -169,7 +157,7 @@ function makeRuntimeConfig(
     return {
       siteType: SITE_TYPES.AXON_HUB,
       config: {
-        baseUrl: "https://managed.example.com",
+        baseUrl: "https://example.com",
         email: "admin@example.com",
         password: "secret",
         ...partial.config,
@@ -181,7 +169,7 @@ function makeRuntimeConfig(
     return {
       siteType: SITE_TYPES.CLAUDE_CODE_HUB,
       config: {
-        baseUrl: "https://managed.example.com",
+        baseUrl: "https://example.com",
         adminToken: "admin-token",
         ...partial.config,
       },
@@ -192,7 +180,7 @@ function makeRuntimeConfig(
     return {
       siteType: SITE_TYPES.DONE_HUB,
       config: {
-        baseUrl: "https://managed.example.com",
+        baseUrl: "https://example.com",
         adminToken: "admin-token",
         userId: "1",
         ...partial.config,
@@ -204,7 +192,7 @@ function makeRuntimeConfig(
     return {
       siteType: SITE_TYPES.VELOERA,
       config: {
-        baseUrl: "https://managed.example.com",
+        baseUrl: "https://example.com",
         adminToken: "admin-token",
         userId: "1",
         ...partial.config,
@@ -215,7 +203,7 @@ function makeRuntimeConfig(
   return {
     siteType: SITE_TYPES.NEW_API,
     config: {
-      baseUrl: "https://managed.example.com",
+      baseUrl: "https://example.com",
       adminToken: "admin-token",
       userId: "1",
       ...(partial.config as
@@ -240,7 +228,7 @@ const makeNewApiRuntimeConfig = (
   makeRuntimeConfig({
     siteType: SITE_TYPES.NEW_API,
     config: {
-      baseUrl: config.baseUrl ?? "https://managed.example.com",
+      baseUrl: config.baseUrl ?? "https://example.com",
       adminToken: config.adminToken ?? "admin-token",
       userId: config.userId ?? "1",
     },
@@ -254,104 +242,16 @@ const makeExampleRuntimeConfig = (): ManagedSiteRuntimeConfig =>
   })
 
 const makeChannel = (
-  partial: Partial<ManagedSiteChannel> & Pick<ManagedSiteChannel, "id">,
-): ManagedSiteChannel => ({
-  id: partial.id,
+  partial: Partial<ManagedModelChannel> & { id: number | string },
+): ManagedModelChannel => ({
+  ref: partial.ref ?? modelResourceRef(partial.id),
   type: partial.type ?? ChannelType.OpenAI,
-  key: partial.key ?? "",
+  credential: partial.credential ?? "",
   name: partial.name ?? `Channel ${partial.id}`,
-  base_url: partial.base_url ?? "https://channel.example.com",
-  models: partial.models ?? "",
-  status: partial.status ?? 1,
-  weight: partial.weight ?? 1,
-  priority: partial.priority ?? 0,
-  openai_organization: partial.openai_organization ?? null,
-  test_model: partial.test_model ?? null,
-  created_time: partial.created_time ?? 0,
-  test_time: partial.test_time ?? 0,
-  response_time: partial.response_time ?? 0,
-  other: partial.other ?? "",
-  balance: partial.balance ?? 0,
-  balance_updated_time: partial.balance_updated_time ?? 0,
-  group: partial.group ?? "",
-  used_quota: partial.used_quota ?? 0,
-  model_mapping: partial.model_mapping ?? "",
-  status_code_mapping: partial.status_code_mapping ?? "",
-  auto_ban: partial.auto_ban ?? 0,
-  other_info: partial.other_info ?? "",
-  tag: partial.tag ?? null,
-  param_override: partial.param_override ?? null,
-  header_override: partial.header_override ?? null,
-  remark: partial.remark ?? null,
-  channel_info: partial.channel_info ?? {
-    is_multi_key: false,
-    multi_key_size: 0,
-    multi_key_status_list: null,
-    multi_key_polling_index: 0,
-    multi_key_mode: "",
-  },
-  setting: partial.setting ?? "",
-  settings: partial.settings ?? "",
-})
-
-const makeResourceSummary = (
-  partial: Partial<ManagedUpstreamResourceSummary> & {
-    id: number
-    name?: string
-  },
-): ManagedUpstreamResourceSummary => ({
-  ref: createManagedUpstreamResourceRef({
-    managedSiteType: SITE_TYPES.NEW_API,
-    scopeKey: "https://managed.example.com",
-    resourceId: partial.id,
-  }),
-  displayName: partial.name ?? `Channel ${partial.id}`,
-  nativeKind: MANAGED_UPSTREAM_RESOURCE_NATIVE_KINDS.Channel,
-  status: MANAGED_UPSTREAM_RESOURCE_STATUSES.Enabled,
-  typeLabel: "1",
-  endpointLabel: "https://channel.example.com",
-  modelCount: 0,
-  modelPreview: [],
-  secretState: MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Available,
-  capabilities: {
-    canUpdate: true,
-  },
-  ...partial,
-})
-
-const makeChannelFormData = (channel: ManagedSiteChannel): ChannelFormData => ({
-  name: channel.name,
-  type: channel.type,
-  key: channel.key,
-  base_url: channel.base_url,
-  models: channel.models
-    .split(",")
-    .map((model) => model.trim())
-    .filter(Boolean),
-  groups: channel.group
-    .split(",")
-    .map((group) => group.trim())
-    .filter(Boolean),
-  priority: channel.priority,
-  weight: channel.weight,
-  status: channel.status,
-})
-
-const makeResourceCapabilities = () => ({
-  items: {
-    list: resourceListMock,
-    search: vi.fn(),
-    getDetail: resourceGetDetailMock,
-    create: vi.fn(),
-    update: resourceUpdateMock,
-    delete: vi.fn(),
-  },
-  drafts: {
-    prepareImportDraft: vi.fn(),
-    prepareEditDraft: resourcePrepareEditDraftMock,
-    describeFields: vi.fn(),
-    validateDraft: vi.fn(),
-  },
+  baseUrl: partial.baseUrl ?? "https://channel.example.com",
+  models: partial.models ?? [],
+  disabled: partial.disabled ?? false,
+  modelMapping: partial.modelMapping ?? "",
 })
 
 const makeChannelConfigs = (
@@ -387,7 +287,8 @@ beforeEach(() => {
   getSiteTypeCapabilitiesMock.mockImplementation((siteType) => ({
     siteType,
     managedSites: {
-      channels: {
+      matching: getManagedSiteCapabilitiesForTypeMock()?.matching,
+      models: {
         list: listAllChannelsMock,
         fetchModels: fetchChannelModelsMock,
         updateModels: updateChannelModelsMock,
@@ -395,8 +296,8 @@ beforeEach(() => {
       },
     },
   }))
-  getManagedSiteServiceForTypeMock.mockReturnValue({
-    fetchChannelSecretKey: fetchChannelSecretKeyMock,
+  getManagedSiteCapabilitiesForTypeMock.mockReturnValue({
+    matching: { fetchSecretKey: fetchChannelSecretKeyMock },
   })
   fetchChannelSecretKeyMock.mockResolvedValue("sk-resolved-channel-key")
   updateChannelModelsMock.mockResolvedValue({
@@ -417,17 +318,6 @@ beforeEach(() => {
       },
     ],
   })
-  resourceUpdateMock.mockResolvedValue({
-    outcome: "succeeded",
-    data: null,
-    confirmedEffects: [
-      { kind: "resource-updated", resourceKind: "channel", resourceId: 1 },
-    ],
-  })
-  resourcePrepareEditDraftMock.mockImplementation(
-    (detail: ManagedUpstreamResourceDetail<ManagedSiteChannel>) =>
-      makeChannelFormData(detail.native),
-  )
   runApiVerificationProbeMock.mockResolvedValue({
     id: "text-generation",
     status: "pass",
@@ -584,7 +474,13 @@ describe("ModelSyncService - siteType routing", () => {
       siteType: SITE_TYPES.AXON_HUB,
     })
     const listResponse = {
-      items: [makeChannel({ id: 1, name: "Axon" })],
+      items: [
+        makeChannel({
+          id: 1,
+          name: "Axon",
+          ref: modelResourceRef(1, { siteType: SITE_TYPES.AXON_HUB }),
+        }),
+      ],
       total: 1,
       type_counts: { openai: 1 },
     }
@@ -592,7 +488,7 @@ describe("ModelSyncService - siteType routing", () => {
     getSiteTypeCapabilitiesMock.mockReturnValueOnce({
       siteType: SITE_TYPES.AXON_HUB,
       managedSites: {
-        channels: {
+        models: {
           list: listAllChannelsMock,
           search: vi.fn(),
           create: vi.fn(),
@@ -620,7 +516,7 @@ describe("ModelSyncService - siteType routing", () => {
     getSiteTypeCapabilitiesMock.mockReturnValueOnce({
       siteType: SITE_TYPES.CLAUDE_CODE_HUB,
       managedSites: {
-        channels: {
+        models: {
           search: vi.fn(),
           create: vi.fn(),
           update: vi.fn(),
@@ -643,7 +539,7 @@ describe("ModelSyncService - siteType routing", () => {
     getSiteTypeCapabilitiesMock.mockReturnValueOnce({
       siteType: SITE_TYPES.AXON_HUB,
       managedSites: {
-        channels: {
+        models: {
           list: listAllChannelsMock,
           search: vi.fn(),
           create: vi.fn(),
@@ -654,224 +550,10 @@ describe("ModelSyncService - siteType routing", () => {
     })
 
     await expect(
-      new ModelSyncService(axonHubConfig).fetchChannelModels(1),
+      new ModelSyncService(axonHubConfig).fetchChannelModels(
+        modelResourceRef(1, { siteType: SITE_TYPES.AXON_HUB }),
+      ),
     ).rejects.toThrow("managed-site model sync is not implemented for axonhub")
-  })
-
-  it("keeps shared channel listing on the legacy path unless resource-backed candidates are requested", async () => {
-    const legacyList = {
-      items: [
-        makeChannel({
-          id: 1,
-          name: "Legacy Channel",
-          models: "gpt-4o",
-          model_mapping: JSON.stringify({ "gpt-4": "gpt-4o" }),
-        }),
-      ],
-      total: 1,
-      type_counts: {
-        "1": 1,
-      },
-    }
-    listAllChannelsMock.mockResolvedValueOnce(legacyList)
-    getSiteTypeCapabilitiesMock.mockReturnValue({
-      siteType: SITE_TYPES.NEW_API,
-      managedSites: {
-        channels: {
-          list: listAllChannelsMock,
-          fetchModels: fetchChannelModelsMock,
-          updateModels: updateChannelModelsMock,
-          updateModelMapping: updateChannelModelMappingMock,
-        },
-        resources: makeResourceCapabilities(),
-      },
-    })
-
-    await expect(
-      new ModelSyncService(
-        makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
-      ).listChannels(),
-    ).resolves.toBe(legacyList)
-
-    expect(resourceListMock).not.toHaveBeenCalled()
-    expect(listAllChannelsMock).toHaveBeenCalledWith(
-      expect.any(Object),
-      expect.objectContaining({
-        beforeRequest: expect.any(Function),
-      }),
-    )
-  })
-
-  it("lists model-sync channels through feature-gated resource details when explicitly requested", async () => {
-    const alphaSummary = makeResourceSummary({
-      id: 1,
-      name: "Alpha",
-      modelCount: 2,
-      modelPreview: ["gpt-4o", "claude-3"],
-    })
-    const betaSummary = makeResourceSummary({
-      id: 2,
-      name: "Beta",
-      typeLabel: "2",
-      modelCount: 0,
-      modelPreview: [],
-    })
-    resourceListMock.mockResolvedValueOnce({
-      items: [alphaSummary, betaSummary],
-      total: 2,
-    })
-    getSiteTypeCapabilitiesMock.mockReturnValueOnce({
-      siteType: SITE_TYPES.NEW_API,
-      managedSites: {
-        channels: {
-          list: listAllChannelsMock,
-          fetchModels: fetchChannelModelsMock,
-          updateModels: updateChannelModelsMock,
-          updateModelMapping: updateChannelModelMappingMock,
-        },
-        resources: makeResourceCapabilities(),
-      },
-    })
-
-    const result = await new ModelSyncService(
-      makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
-    ).listChannels({ preferResourceBacked: true })
-
-    expect(result).toEqual({
-      items: [
-        expect.objectContaining({
-          id: 1,
-          name: "Alpha",
-          models: "gpt-4o,claude-3",
-        }),
-        expect.objectContaining({
-          id: 2,
-          name: "Beta",
-          type: 2,
-        }),
-      ],
-      total: 2,
-      type_counts: {
-        "1": 1,
-        "2": 1,
-      },
-    })
-    expect(resourceListMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        baseUrl: "https://managed.example.com",
-        adminToken: "admin-token",
-        userId: "1",
-      }),
-      undefined,
-    )
-    expect(resourceGetDetailMock).not.toHaveBeenCalled()
-    expect(listAllChannelsMock).not.toHaveBeenCalled()
-  })
-
-  it("falls back to legacy channel listing when resource summaries do not contain complete model candidates", async () => {
-    const summary = makeResourceSummary({
-      id: 3,
-      name: "Large Model Set",
-      modelCount: 4,
-      modelPreview: ["a", "b", "c"],
-    })
-    const legacyList = {
-      items: [
-        makeChannel({
-          id: 3,
-          name: "Large Model Set",
-          models: "a,b,c,d",
-        }),
-      ],
-      total: 1,
-      type_counts: {
-        "1": 1,
-      },
-    }
-    resourceListMock.mockResolvedValueOnce({
-      items: [summary],
-      total: 1,
-    })
-    listAllChannelsMock.mockResolvedValueOnce(legacyList)
-    getSiteTypeCapabilitiesMock.mockReturnValue({
-      siteType: SITE_TYPES.NEW_API,
-      managedSites: {
-        channels: {
-          list: listAllChannelsMock,
-          fetchModels: fetchChannelModelsMock,
-          updateModels: updateChannelModelsMock,
-          updateModelMapping: updateChannelModelMappingMock,
-        },
-        resources: makeResourceCapabilities(),
-      },
-    })
-
-    await expect(
-      new ModelSyncService(
-        makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
-      ).listChannels({ preferResourceBacked: true }),
-    ).resolves.toBe(legacyList)
-
-    expect(resourceGetDetailMock).not.toHaveBeenCalled()
-    expect(listAllChannelsMock).toHaveBeenCalledWith(
-      expect.any(Object),
-      expect.objectContaining({
-        beforeRequest: expect.any(Function),
-      }),
-    )
-  })
-
-  it("falls back to legacy channel listing when resource summaries omit model counts", async () => {
-    const summary = makeResourceSummary({
-      id: 4,
-      name: "Unknown Model Count",
-      modelCount: undefined,
-      modelPreview: ["a"],
-    })
-    const legacyList = {
-      items: [
-        makeChannel({
-          id: 4,
-          name: "Unknown Model Count",
-          models: "a,b",
-        }),
-      ],
-      total: 1,
-      type_counts: {
-        "1": 1,
-      },
-    }
-    resourceListMock.mockResolvedValueOnce({
-      items: [summary],
-      total: 1,
-    })
-    listAllChannelsMock.mockResolvedValueOnce(legacyList)
-    getSiteTypeCapabilitiesMock.mockReturnValue({
-      siteType: SITE_TYPES.NEW_API,
-      managedSites: {
-        channels: {
-          list: listAllChannelsMock,
-          fetchModels: fetchChannelModelsMock,
-          updateModels: updateChannelModelsMock,
-          updateModelMapping: updateChannelModelMappingMock,
-        },
-        resources: makeResourceCapabilities(),
-      },
-    })
-
-    await expect(
-      new ModelSyncService(
-        makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
-      ).listChannels({ preferResourceBacked: true }),
-    ).resolves.toBe(legacyList)
-
-    expect(resourceGetDetailMock).not.toHaveBeenCalled()
-    expect(listAllChannelsMock).toHaveBeenCalledWith(
-      expect.any(Object),
-      expect.objectContaining({
-        beforeRequest: expect.any(Function),
-      }),
-    )
   })
 })
 
@@ -1023,13 +705,13 @@ describe("ModelSyncService - channel execution", () => {
     const channel = makeChannel({
       id: 1,
       name: "Alpha",
-      models: "model-a,model-b",
+      models: ["model-a", "model-b"],
     })
 
     const result = await service.runForChannel(channel, 0)
 
     expect(result).toMatchObject({
-      channelId: 1,
+      resourceRef: modelResourceRef(1),
       channelName: "Alpha",
       ok: true,
       oldModels: ["model-a", "model-b"],
@@ -1074,7 +756,7 @@ describe("ModelSyncService - channel execution", () => {
     const channel = makeChannel({
       id: 7,
       name: "Scoped",
-      models: "gpt-4o",
+      models: ["gpt-4o"],
     })
 
     const result = await service.runForChannel(channel, 0)
@@ -1085,87 +767,17 @@ describe("ModelSyncService - channel execution", () => {
         adminToken: "token",
         userId: "1",
       }),
-      7,
+      modelResourceRef(7),
       ["claude-3"],
       undefined,
     )
-    expect(channel.models).toBe("claude-3")
+    expect(channel.models).toEqual(["claude-3"])
     expect(result).toMatchObject({
-      channelId: 7,
+      resourceRef: modelResourceRef(7),
       ok: true,
       oldModels: ["gpt-4o"],
       newModels: ["claude-3"],
     })
-  })
-
-  it("updates changed models through the cached feature-gated resource draft", async () => {
-    const channel = makeChannel({
-      id: 7,
-      name: "Resource Backed",
-      models: "old-model",
-    })
-    const summary = makeResourceSummary({
-      id: 7,
-      name: "Resource Backed",
-      modelCount: 1,
-      modelPreview: ["old-model"],
-    })
-    const resourceCapabilities = makeResourceCapabilities()
-
-    resourceListMock.mockResolvedValueOnce({
-      items: [summary],
-      total: 1,
-    })
-    resourceGetDetailMock.mockResolvedValueOnce({
-      summary,
-      native: channel,
-    })
-    fetchChannelModelsMock.mockResolvedValueOnce(["new-model"])
-    getSiteTypeCapabilitiesMock.mockReturnValue({
-      siteType: SITE_TYPES.NEW_API,
-      managedSites: {
-        channels: {
-          list: listAllChannelsMock,
-          fetchModels: fetchChannelModelsMock,
-          updateModels: updateChannelModelsMock,
-          updateModelMapping: updateChannelModelMappingMock,
-        },
-        resources: resourceCapabilities,
-      },
-    })
-
-    const service = new ModelSyncService(
-      makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
-    )
-    const [resourceBackedChannel] = (
-      await service.listChannels({ preferResourceBacked: true })
-    ).items
-
-    const result = await service.runForChannel(resourceBackedChannel, 0)
-
-    expect(result).toMatchObject({
-      channelId: 7,
-      ok: true,
-      oldModels: ["old-model"],
-      newModels: ["new-model"],
-    })
-    expect(resourceUpdateMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        baseUrl: "https://managed.example.com",
-        adminToken: "admin-token",
-        userId: "1",
-      }),
-      expect.objectContaining({ summary }),
-      expect.objectContaining({
-        name: "Resource Backed",
-        models: ["new-model"],
-      }),
-    )
-    expect(resourceGetDetailMock).toHaveBeenCalledWith(
-      expect.any(Object),
-      summary.ref,
-    )
-    expect(updateChannelModelsMock).not.toHaveBeenCalled()
   })
 
   it("retries rejected channel writes only through the shared retry policy", async () => {
@@ -1179,7 +791,7 @@ describe("ModelSyncService - channel execution", () => {
 
     try {
       const resultPromise = service.runForChannel(
-        makeChannel({ id: 21, models: "old-model" }),
+        makeChannel({ id: 21, models: ["old-model"] }),
         1,
       )
       await vi.runAllTimersAsync()
@@ -1187,7 +799,7 @@ describe("ModelSyncService - channel execution", () => {
 
       expect(updateChannelModelsMock).toHaveBeenCalledTimes(2)
       expect(result).toMatchObject({
-        channelId: 21,
+        resourceRef: modelResourceRef(21),
         ok: false,
         attempts: 2,
         message: "write rejected",
@@ -1210,7 +822,7 @@ describe("ModelSyncService - channel execution", () => {
       const service = new ModelSyncService(makeExampleRuntimeConfig())
 
       const execution = service.runForChannel(
-        makeChannel({ id: 211, models: "old-model" }),
+        makeChannel({ id: 211, models: ["old-model"] }),
         2,
       )
 
@@ -1247,7 +859,7 @@ describe("ModelSyncService - channel execution", () => {
 
       try {
         const observed = service
-          .runForChannel(makeChannel({ id: 212, models: "old-model" }), 2)
+          .runForChannel(makeChannel({ id: 212, models: ["old-model"] }), 2)
           .then(
             () => ({ status: "resolved" as const, error: undefined }),
             (error: unknown) => ({ status: "rejected" as const, error }),
@@ -1282,11 +894,14 @@ describe("ModelSyncService - channel execution", () => {
 
     try {
       await expect(
-        service.runForChannel(makeChannel({ id: 213, models: "old-model" }), 0),
+        service.runForChannel(
+          makeChannel({ id: 213, models: ["old-model"] }),
+          0,
+        ),
       ).rejects.toBe(reused)
 
       const laterRead = service
-        .runForChannel(makeChannel({ id: 214, models: "old-model" }), 1)
+        .runForChannel(makeChannel({ id: 214, models: ["old-model"] }), 1)
         .then(
           (result) => ({ status: "resolved" as const, result }),
           (error: unknown) => ({ status: "rejected" as const, error }),
@@ -1295,7 +910,7 @@ describe("ModelSyncService - channel execution", () => {
 
       await expect(laterRead).resolves.toMatchObject({
         status: "resolved",
-        result: { channelId: 214, ok: true, attempts: 1 },
+        result: { resourceRef: modelResourceRef(214), ok: true, attempts: 1 },
       })
       expect(fetchChannelModelsMock).toHaveBeenCalledTimes(3)
       expect(updateChannelModelsMock).toHaveBeenCalledOnce()
@@ -1328,342 +943,27 @@ describe("ModelSyncService - channel execution", () => {
             },
       )
       listAllChannelsMock.mockResolvedValue({
-        items: [makeChannel({ id: 22, models: "new-model" })],
+        items: [makeChannel({ id: 22, models: ["new-model"] })],
         total: 1,
         type_counts: { "1": 1 },
       })
       const service = new ModelSyncService(makeExampleRuntimeConfig())
 
       const result = await service.runForChannel(
-        makeChannel({ id: 22, models: "old-model" }),
+        makeChannel({ id: 22, models: ["old-model"] }),
         2,
       )
 
       expect(updateChannelModelsMock).toHaveBeenCalledTimes(1)
       expect(listAllChannelsMock).toHaveBeenCalledOnce()
       expect(result).toMatchObject({
-        channelId: 22,
+        resourceRef: modelResourceRef(22),
         ok: false,
         attempts: 1,
         message: `${outcome} write`,
       })
     },
   )
-
-  it.each(["partial", "uncertain"] as const)(
-    "refreshes a resource detail and never replays a %s resource write",
-    async (outcome) => {
-      const channel = makeChannel({
-        id: 23,
-        name: "Resource Reconcile",
-        models: "old-model",
-      })
-      const summary = makeResourceSummary({
-        id: 23,
-        name: "Resource Reconcile",
-        modelCount: 1,
-        modelPreview: ["old-model"],
-      })
-      resourceListMock.mockResolvedValue({ items: [summary], total: 1 })
-      resourceGetDetailMock.mockResolvedValue({ summary, native: channel })
-      resourceUpdateMock.mockResolvedValue(
-        outcome === "partial"
-          ? {
-              outcome,
-              confirmedEffects: [
-                {
-                  kind: "resource-updated",
-                  resourceKind: "channel",
-                  resourceId: 23,
-                },
-              ],
-              completion: "uncertain",
-              diagnostic: { message: `${outcome} resource write` },
-            }
-          : {
-              outcome,
-              diagnostic: { message: `${outcome} resource write` },
-            },
-      )
-      fetchChannelModelsMock.mockResolvedValue(["new-model"])
-      getSiteTypeCapabilitiesMock.mockReturnValue({
-        siteType: SITE_TYPES.NEW_API,
-        managedSites: {
-          channels: {
-            list: listAllChannelsMock,
-            fetchModels: fetchChannelModelsMock,
-            updateModels: updateChannelModelsMock,
-            updateModelMapping: updateChannelModelMappingMock,
-          },
-          resources: makeResourceCapabilities(),
-        },
-      })
-      const service = new ModelSyncService(
-        makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
-      )
-      const [resourceBackedChannel] = (
-        await service.listChannels({ preferResourceBacked: true })
-      ).items
-
-      const result = await service.runForChannel(resourceBackedChannel, 2)
-
-      expect(resourceUpdateMock).toHaveBeenCalledTimes(1)
-      expect(resourceGetDetailMock).toHaveBeenCalledTimes(2)
-      expect(result).toMatchObject({
-        channelId: 23,
-        ok: false,
-        attempts: 1,
-        message: `${outcome} resource write`,
-      })
-    },
-  )
-
-  it("redacts preserved resource payload secrets from model-sync errors, logs, and results", async () => {
-    const draftSecret = "draft-secret-placeholder"
-    const headerValue = "header-secret-placeholder"
-    const channelProxy = "http://proxy-user:proxy-secret@example.invalid:8080"
-    const paramOverride = '{"api_key":"param-secret-placeholder"}'
-    const diagnosticPrefix = "Provider rejected preserved payload"
-    const channel = makeChannel({
-      id: 24,
-      name: "Resource Secret Boundary",
-      key: draftSecret,
-      models: "old-model",
-    })
-    const native = {
-      ...channel,
-      custom_header: [
-        { header_key: "X-Example-Key", header_value: headerValue },
-      ],
-      channel_proxy: channelProxy,
-      param_override: paramOverride,
-    }
-    const summary = makeResourceSummary({
-      id: 24,
-      name: "Resource Secret Boundary",
-      modelCount: 1,
-      modelPreview: ["old-model"],
-    })
-    resourceListMock.mockResolvedValue({ items: [summary], total: 1 })
-    resourceGetDetailMock.mockResolvedValue({ summary, native })
-    resourceUpdateMock.mockResolvedValue({
-      outcome: "rejected",
-      diagnostic: {
-        message: `${diagnosticPrefix} ${draftSecret} ${headerValue} ${channelProxy} ${paramOverride}`,
-      },
-    })
-    fetchChannelModelsMock.mockResolvedValue(["new-model"])
-    getSiteTypeCapabilitiesMock.mockReturnValue({
-      siteType: SITE_TYPES.NEW_API,
-      managedSites: {
-        channels: {
-          list: listAllChannelsMock,
-          fetchModels: fetchChannelModelsMock,
-          updateModels: updateChannelModelsMock,
-          updateModelMapping: updateChannelModelMappingMock,
-        },
-        resources: makeResourceCapabilities(),
-      },
-    })
-    const service = new ModelSyncService(
-      makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
-    )
-    const [resourceBackedChannel] = (
-      await service.listChannels({ preferResourceBacked: true })
-    ).items
-
-    const result = await service.runForChannel(resourceBackedChannel, 0)
-
-    expect(result.message).toContain(diagnosticPrefix)
-    const loggedPayload = loggerMocks.error.mock.calls.at(-1)?.[1] as {
-      error?: Error
-    }
-    expect(loggedPayload.error?.message).toContain(diagnosticPrefix)
-    for (const secret of [
-      draftSecret,
-      headerValue,
-      channelProxy,
-      paramOverride,
-    ]) {
-      expect(result.message).not.toContain(secret)
-      expect(loggedPayload.error?.message).not.toContain(secret)
-    }
-  })
-
-  it("snapshots resource secrets before an adapter mutates update inputs", async () => {
-    const originalSecret = "mutable-draft-secret-placeholder"
-    const diagnosticPrefix = "Provider rejected mutable update"
-    const channel = makeChannel({
-      id: 25,
-      name: "Mutable Resource Secret",
-      key: originalSecret,
-      models: "old-model",
-    })
-    const summary = makeResourceSummary({
-      id: 25,
-      name: "Mutable Resource Secret",
-    })
-    resourceListMock.mockResolvedValue({ items: [summary], total: 1 })
-    resourceGetDetailMock.mockResolvedValue({ summary, native: channel })
-    resourceUpdateMock.mockImplementation(
-      async (_config, detail, draft: ChannelFormData) => {
-        const mutableNative = detail.native as ManagedSiteChannel
-        mutableNative.key = ""
-        draft.key = ""
-        return {
-          outcome: "rejected",
-          diagnostic: {
-            message: `${diagnosticPrefix} ${originalSecret}`,
-          },
-        }
-      },
-    )
-    fetchChannelModelsMock.mockResolvedValue(["new-model"])
-    getSiteTypeCapabilitiesMock.mockReturnValue({
-      siteType: SITE_TYPES.NEW_API,
-      managedSites: {
-        channels: {
-          list: listAllChannelsMock,
-          fetchModels: fetchChannelModelsMock,
-          updateModels: updateChannelModelsMock,
-          updateModelMapping: updateChannelModelMappingMock,
-        },
-        resources: makeResourceCapabilities(),
-      },
-    })
-    const service = new ModelSyncService(
-      makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
-    )
-    const [resourceBackedChannel] = (
-      await service.listChannels({ preferResourceBacked: true })
-    ).items
-
-    const result = await service.runForChannel(resourceBackedChannel, 0)
-    const loggedPayload = loggerMocks.error.mock.calls.at(-1)?.[1] as {
-      error?: Error
-    }
-
-    expect(result.message).toContain(diagnosticPrefix)
-    expect(result.message).not.toContain(originalSecret)
-    expect(loggedPayload.error?.message).toContain(diagnosticPrefix)
-    expect(loggedPayload.error?.message).not.toContain(originalSecret)
-  })
-
-  it("uses only the local fallback when resource secret collection is incomplete", async () => {
-    const hiddenSecret = "proxy-hidden-secret-placeholder"
-    const providerText = "Provider diagnostic must not be projected"
-    const channel = makeChannel({
-      id: 26,
-      name: "Incomplete Resource Secret",
-      models: "old-model",
-    })
-    const native = new Proxy(channel, {
-      ownKeys() {
-        throw new Error("resource inspection unavailable")
-      },
-    })
-    const summary = makeResourceSummary({
-      id: 26,
-      name: "Incomplete Resource Secret",
-    })
-    resourceListMock.mockResolvedValue({ items: [summary], total: 1 })
-    resourceGetDetailMock.mockResolvedValue({ summary, native })
-    resourceUpdateMock.mockResolvedValue({
-      outcome: "rejected",
-      diagnostic: { message: `${providerText} ${hiddenSecret}` },
-    })
-    fetchChannelModelsMock.mockResolvedValue(["new-model"])
-    getSiteTypeCapabilitiesMock.mockReturnValue({
-      siteType: SITE_TYPES.NEW_API,
-      managedSites: {
-        channels: {
-          list: listAllChannelsMock,
-          fetchModels: fetchChannelModelsMock,
-          updateModels: updateChannelModelsMock,
-          updateModelMapping: updateChannelModelMappingMock,
-        },
-        resources: makeResourceCapabilities(),
-      },
-    })
-    const service = new ModelSyncService(
-      makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
-    )
-    const [resourceBackedChannel] = (
-      await service.listChannels({ preferResourceBacked: true })
-    ).items
-
-    const result = await service.runForChannel(resourceBackedChannel, 0)
-    const loggedPayload = loggerMocks.error.mock.calls.at(-1)?.[1] as {
-      error?: Error
-    }
-
-    expect(result.message).toBe("Model update was rejected")
-    expect(loggedPayload.error?.message).toBe("Model update was rejected")
-    expect(JSON.stringify({ result, loggedPayload })).not.toContain(
-      providerText,
-    )
-    expect(JSON.stringify({ result, loggedPayload })).not.toContain(
-      hiddenSecret,
-    )
-  })
-
-  it("clears cached resource drafts when a later legacy channel list is requested", async () => {
-    const summary = makeResourceSummary({
-      id: 9,
-      name: "Resource Then Legacy",
-      modelCount: 1,
-      modelPreview: ["old-model"],
-    })
-    const legacyChannel = makeChannel({
-      id: 9,
-      name: "Resource Then Legacy",
-      models: "old-model",
-    })
-    const resourceCapabilities = makeResourceCapabilities()
-
-    resourceListMock.mockResolvedValueOnce({
-      items: [summary],
-      total: 1,
-    })
-    listAllChannelsMock.mockResolvedValueOnce({
-      items: [legacyChannel],
-      total: 1,
-      type_counts: { "1": 1 },
-    })
-    fetchChannelModelsMock.mockResolvedValueOnce(["new-model"])
-    getSiteTypeCapabilitiesMock.mockReturnValue({
-      siteType: SITE_TYPES.NEW_API,
-      managedSites: {
-        channels: {
-          list: listAllChannelsMock,
-          fetchModels: fetchChannelModelsMock,
-          updateModels: updateChannelModelsMock,
-          updateModelMapping: updateChannelModelMappingMock,
-        },
-        resources: resourceCapabilities,
-      },
-    })
-
-    const service = new ModelSyncService(
-      makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
-    )
-    await service.listChannels({ preferResourceBacked: true })
-    const [channelFromLegacyList] = (await service.listChannels()).items
-
-    await service.runForChannel(channelFromLegacyList, 0)
-
-    expect(resourceUpdateMock).not.toHaveBeenCalled()
-    expect(updateChannelModelsMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        baseUrl: "https://managed.example.com",
-        adminToken: "admin-token",
-        userId: "1",
-      }),
-      9,
-      ["new-model"],
-      undefined,
-    )
-  })
 
   it("clears stored models when the upstream response only contains blank entries", async () => {
     fetchChannelModelsMock.mockResolvedValueOnce([" ", "", "   "])
@@ -1672,7 +972,7 @@ describe("ModelSyncService - channel execution", () => {
     const channel = makeChannel({
       id: 8,
       name: "Blank Upstream",
-      models: "gpt-4o",
+      models: ["gpt-4o"],
     })
 
     const result = await service.runForChannel(channel, 0)
@@ -1683,13 +983,13 @@ describe("ModelSyncService - channel execution", () => {
         adminToken: "token",
         userId: "1",
       }),
-      8,
+      modelResourceRef(8),
       [],
       undefined,
     )
-    expect(channel.models).toBe("")
+    expect(channel.models).toEqual([])
     expect(result).toMatchObject({
-      channelId: 8,
+      resourceRef: modelResourceRef(8),
       ok: true,
       oldModels: ["gpt-4o"],
       newModels: [],
@@ -1704,7 +1004,7 @@ describe("ModelSyncService - channel execution", () => {
     const channel = makeChannel({
       id: 2,
       name: "Beta",
-      models: "gpt-4o",
+      models: ["gpt-4o"],
     })
 
     try {
@@ -1714,7 +1014,7 @@ describe("ModelSyncService - channel execution", () => {
 
       expect(fetchChannelModelsMock).toHaveBeenCalledTimes(2)
       expect(result).toMatchObject({
-        channelId: 2,
+        resourceRef: modelResourceRef(2),
         channelName: "Beta",
         ok: false,
         attempts: 2,
@@ -1734,13 +1034,13 @@ describe("ModelSyncService - channel execution", () => {
     const channel = makeChannel({
       id: 9,
       name: "Status Only",
-      models: "gpt-4o",
+      models: ["gpt-4o"],
     })
 
     const result = await service.runForChannel(channel, 0)
 
     expect(result).toMatchObject({
-      channelId: 9,
+      resourceRef: modelResourceRef(9),
       ok: false,
       httpStatus: 503,
       attempts: 1,
@@ -1771,9 +1071,9 @@ describe("ModelSyncService - probe-backed filters", () => {
       id: 77,
       name: "Probe Channel",
       type: ChannelType.OpenAI,
-      base_url: "https://channel.example.com",
-      key: "sk-channel-key",
-      models: "model-a,model-b",
+      baseUrl: "https://channel.example.com",
+      credential: "sk-channel-key",
+      models: ["model-a", "model-b"],
     })
 
     const result = await service.runForChannel(channel, 0)
@@ -1796,11 +1096,11 @@ describe("ModelSyncService - probe-backed filters", () => {
     })
     expect(updateChannelModelsMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        baseUrl: "https://managed.example.com",
+        baseUrl: "https://example.com",
         adminToken: "admin-token",
         userId: "1",
       }),
-      77,
+      modelResourceRef(77),
       ["model-a"],
       undefined,
     )
@@ -1825,16 +1125,16 @@ describe("ModelSyncService - probe-backed filters", () => {
       id: 78,
       name: "Hidden Key",
       type: ChannelType.OpenAI,
-      base_url: "https://channel.example.com",
-      key: "",
-      models: "",
+      baseUrl: "https://channel.example.com",
+      credential: "",
+      models: [],
     })
 
     await service.runForChannel(channel, 0)
 
     expect(fetchChannelSecretKeyMock).toHaveBeenCalledWith(
       runtimeConfig.config,
-      78,
+      modelResourceRef(78),
     )
     expect(runApiVerificationProbeMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1861,7 +1161,7 @@ describe("ModelSyncService - probe-backed filters", () => {
         {
           79: [makeProbeRule({ id: "channel-duplicate" })],
         },
-        "https://managed.example.com",
+        "https://example.com",
       ),
     )
 
@@ -1869,9 +1169,9 @@ describe("ModelSyncService - probe-backed filters", () => {
       id: 79,
       name: "Cached",
       type: ChannelType.OpenAI,
-      base_url: "https://channel.example.com",
-      key: "sk-channel-key",
-      models: "",
+      baseUrl: "https://channel.example.com",
+      credential: "sk-channel-key",
+      models: [],
     })
 
     await service.runForChannel(channel, 0)
@@ -1906,9 +1206,9 @@ describe("ModelSyncService - probe-backed filters", () => {
       id: 99,
       name: "Any Mode",
       type: ChannelType.OpenAI,
-      base_url: "https://channel.example.com",
-      key: "sk-key",
-      models: "",
+      baseUrl: "https://channel.example.com",
+      credential: "sk-key",
+      models: [],
     })
 
     const result = await service.runForChannel(channel, 0)
@@ -1919,11 +1219,11 @@ describe("ModelSyncService - probe-backed filters", () => {
     })
     expect(updateChannelModelsMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        baseUrl: "https://managed.example.com",
+        baseUrl: "https://example.com",
         adminToken: "admin-token",
         userId: "1",
       }),
-      99,
+      modelResourceRef(99),
       ["model-a"],
       undefined,
     )
@@ -1931,11 +1231,13 @@ describe("ModelSyncService - probe-backed filters", () => {
 
   it("marks a model as unmatched when probe execution throws", async () => {
     const context = {
+      matching: { fetchSecretKey: fetchChannelSecretKeyMock },
       channel: makeChannel({
         id: 92,
+        ref: modelResourceRef(92, { siteType: SITE_TYPES.VELOERA }),
         type: ChannelType.OpenAI,
-        base_url: "https://channel.example.com",
-        key: "sk-channel-key",
+        baseUrl: "https://channel.example.com",
+        credential: "sk-channel-key",
       }),
       managedConfig: makeRuntimeConfig({ siteType: SITE_TYPES.VELOERA }),
       cache: new Map<string, boolean>(),
@@ -1953,11 +1255,13 @@ describe("ModelSyncService - probe-backed filters", () => {
 
   it("rejects probe filtering when the channel base URL is missing", async () => {
     const context = {
+      matching: { fetchSecretKey: fetchChannelSecretKeyMock },
       channel: makeChannel({
         id: 93,
+        ref: modelResourceRef(93, { siteType: SITE_TYPES.VELOERA }),
         type: ChannelType.OpenAI,
-        base_url: "   ",
-        key: "sk-channel-key",
+        baseUrl: "   ",
+        credential: "sk-channel-key",
       }),
       managedConfig: makeRuntimeConfig({ siteType: SITE_TYPES.VELOERA }),
       cache: new Map<string, boolean>(),
@@ -1978,20 +1282,98 @@ describe("ModelSyncService - probe-backed filters", () => {
     )
 
     expect(
-      resolveApiVerificationTypeForChannelType(String(ChannelType.Anthropic)),
+      resolveApiVerificationTypeForChannelType(
+        SITE_TYPES.NEW_API,
+        String(ChannelType.Anthropic),
+      ),
     ).toBe("anthropic")
-    expect(resolveApiVerificationTypeForChannelType(ChannelType.PaLM)).toBe(
-      "google",
-    )
-    expect(resolveApiVerificationTypeForChannelType("anthropic")).toBe(
-      "anthropic",
-    )
-    expect(resolveApiVerificationTypeForChannelType("gemini")).toBe("google")
+    expect(
+      resolveApiVerificationTypeForChannelType(
+        SITE_TYPES.NEW_API,
+        ChannelType.PaLM,
+      ),
+    ).toBe("google")
+    expect(
+      resolveApiVerificationTypeForChannelType(
+        SITE_TYPES.AXON_HUB,
+        "anthropic",
+      ),
+    ).toBe("anthropic")
+    expect(
+      resolveApiVerificationTypeForChannelType(SITE_TYPES.AXON_HUB, "gemini"),
+    ).toBe("google")
+  })
+
+  it.each([undefined, null, {}])(
+    "rejects malformed native channel type %j during protocol selection",
+    async (channelType) => {
+      const { resolveApiVerificationTypeForChannelType } = await import(
+        "~/services/models/modelSync/channelModelFilterEvaluator"
+      )
+
+      expect(
+        resolveApiVerificationTypeForChannelType(
+          SITE_TYPES.NEW_API,
+          channelType,
+        ),
+      ).toBeNull()
+    },
+  )
+
+  it.each([
+    { channelType: DoneHubChannelType.Gemini, expectedApiType: "google" },
+    {
+      channelType: DoneHubChannelType.Mistral,
+      expectedApiType: "openai-compatible",
+    },
+  ])(
+    "probes DoneHub channel type $channelType using its native protocol",
+    async ({ channelType, expectedApiType }) => {
+      runApiVerificationProbeMock.mockResolvedValue({ status: "pass" })
+
+      await expect(
+        matchesProbeFilterRule(makeProbeRule(), "model-a", {
+          channel: makeChannel({
+            id: 94,
+            ref: modelResourceRef(94, { siteType: SITE_TYPES.DONE_HUB }),
+            type: channelType,
+            credential: "native-donehub-key",
+          }),
+          managedConfig: makeRuntimeConfig({ siteType: SITE_TYPES.DONE_HUB }),
+          cache: new Map<string, boolean>(),
+        }),
+      ).resolves.toBe(true)
+
+      expect(runApiVerificationProbeMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          apiType: expectedApiType,
+          apiKey: "native-donehub-key",
+          modelId: "model-a",
+        }),
+      )
+    },
+  )
+
+  it("does not treat DoneHub Azure Speech as New API Gemini", async () => {
+    await expect(
+      matchesProbeFilterRule(makeProbeRule(), "model-a", {
+        channel: makeChannel({
+          id: 94,
+          ref: modelResourceRef(94, { siteType: SITE_TYPES.DONE_HUB }),
+          type: DoneHubChannelType.AzureSpeech,
+          credential: "native-donehub-key",
+        }),
+        managedConfig: makeRuntimeConfig({ siteType: SITE_TYPES.DONE_HUB }),
+        cache: new Map<string, boolean>(),
+      }),
+    ).rejects.toMatchObject({ reason: "channel-type-unsupported" })
+
+    expect(runApiVerificationProbeMock).not.toHaveBeenCalled()
   })
 
   it("does not update models when probe filtering cannot resolve a hidden key", async () => {
     fetchChannelModelsMock.mockResolvedValueOnce(["model-a"])
-    getManagedSiteServiceForTypeMock.mockReturnValue({})
+    getManagedSiteCapabilitiesForTypeMock.mockReturnValue({})
 
     const service = new ModelSyncService(
       makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
@@ -2004,9 +1386,9 @@ describe("ModelSyncService - probe-backed filters", () => {
       id: 80,
       name: "Unsupported Provider",
       type: ChannelType.OpenAI,
-      base_url: "https://channel.example.com",
-      key: "",
-      models: "model-a",
+      baseUrl: "https://channel.example.com",
+      credential: "",
+      models: ["model-a"],
     })
 
     const result = await service.runForChannel(channel, 0)
@@ -2033,9 +1415,9 @@ describe("ModelSyncService - probe-backed filters", () => {
       id: 81,
       name: "Unsupported Type",
       type: ChannelType.Midjourney,
-      base_url: "https://channel.example.com",
-      key: "sk-channel-key",
-      models: "model-a",
+      baseUrl: "https://channel.example.com",
+      credential: "sk-channel-key",
+      models: ["model-a"],
     })
 
     const result = await service.runForChannel(channel, 0)
@@ -2065,9 +1447,9 @@ describe("ModelSyncService - probe-backed filters", () => {
       id: 82,
       name: "Secret Safe",
       type: ChannelType.OpenAI,
-      base_url: "https://channel.example.com",
-      key: "",
-      models: "model-a",
+      baseUrl: "https://channel.example.com",
+      credential: "",
+      models: ["model-a"],
     })
 
     const result = await service.runForChannel(channel, 0)
@@ -2083,16 +1465,17 @@ describe("ModelSyncService - probe-backed filters", () => {
       new Error("failed with runtime-token sk-hidden-channel-key 123456"),
     )
     const context = {
+      matching: { fetchSecretKey: fetchChannelSecretKeyMock },
       channel: makeChannel({
         id: 83,
         type: ChannelType.OpenAI,
-        base_url: "https://channel.example.com",
-        key: "",
+        baseUrl: "https://channel.example.com",
+        credential: "",
       }),
       managedConfig: {
         siteType: SITE_TYPES.NEW_API,
         config: {
-          baseUrl: "https://managed.example.com",
+          baseUrl: "https://example.com",
           token: "runtime-token",
           userId: "1",
         },
@@ -2124,11 +1507,14 @@ describe("ModelSyncService - probe-backed filters", () => {
         new Error(`failed with ${item.secret} sk-hidden-channel-key 123456`),
       )
       const context = {
+        matching: { fetchSecretKey: fetchChannelSecretKeyMock },
         channel: makeChannel({
           id: 84,
-          type: ChannelType.OpenAI,
-          base_url: "https://channel.example.com",
-          key: "",
+          ref: modelResourceRef(84, { siteType: item.runtimeConfig.siteType }),
+          type:
+            item.runtimeConfig.siteType === SITE_TYPES.OCTOPUS ? 0 : "openai",
+          baseUrl: "https://channel.example.com",
+          credential: "",
         }),
         managedConfig: item.runtimeConfig,
         cache: new Map<string, boolean>(),
@@ -2145,11 +1531,12 @@ describe("ModelSyncService - probe-backed filters", () => {
   it("rejects unusable keys returned by the managed-site provider", async () => {
     fetchChannelSecretKeyMock.mockResolvedValueOnce("sk-mask***")
     const context = {
+      matching: { fetchSecretKey: fetchChannelSecretKeyMock },
       channel: makeChannel({
         id: 85,
         type: ChannelType.OpenAI,
-        base_url: "https://channel.example.com",
-        key: "",
+        baseUrl: "https://channel.example.com",
+        credential: "",
       }),
       managedConfig: makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
       cache: new Map<string, boolean>(),
@@ -2164,11 +1551,13 @@ describe("ModelSyncService - probe-backed filters", () => {
 
   it("resolves a hidden key only once across repeated probe evaluations", async () => {
     const context = {
+      matching: { fetchSecretKey: fetchChannelSecretKeyMock },
       channel: makeChannel({
         id: 90,
+        ref: modelResourceRef(90, { siteType: SITE_TYPES.VELOERA }),
         type: ChannelType.OpenAI,
-        base_url: "https://channel.example.com",
-        key: "",
+        baseUrl: "https://channel.example.com",
+        credential: "",
       }),
       managedConfig: makeRuntimeConfig({ siteType: SITE_TYPES.VELOERA }),
       cache: new Map<string, boolean>(),
@@ -2184,13 +1573,47 @@ describe("ModelSyncService - probe-backed filters", () => {
     expect(fetchChannelSecretKeyMock).toHaveBeenCalledTimes(1)
   })
 
+  it("passes explicit model-sync intent through hidden-key resolution before probing", async () => {
+    const protectionBypassExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.SyncManagedSiteModels,
+    )
+    const context = {
+      matching: { fetchSecretKey: fetchChannelSecretKeyMock },
+      channel: makeChannel({
+        id: 90,
+        type: ChannelType.OpenAI,
+        baseUrl: "https://channel.example.com",
+        credential: "",
+      }),
+      managedConfig: makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
+      protectionBypassExecution,
+      cache: new Map<string, boolean>(),
+    }
+
+    await expect(
+      matchesProbeFilterRule(makeProbeRule(), "model-a", context),
+    ).resolves.toBe(true)
+    expect(fetchChannelSecretKeyMock).toHaveBeenCalledWith(
+      context.managedConfig.config,
+      context.channel.ref,
+      { protectionBypassExecution },
+    )
+    expect(runApiVerificationProbeMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        apiKey: "sk-resolved-channel-key",
+        modelId: "model-a",
+      }),
+    )
+  })
+
   it("treats empty probe rules as non-matches", async () => {
     const context = {
+      matching: { fetchSecretKey: fetchChannelSecretKeyMock },
       channel: makeChannel({
         id: 91,
         type: ChannelType.OpenAI,
-        base_url: "https://channel.example.com",
-        key: "sk-channel-key",
+        baseUrl: "https://channel.example.com",
+        credential: "sk-channel-key",
       }),
       managedConfig: makeRuntimeConfig({ siteType: SITE_TYPES.VELOERA }),
       cache: new Map<string, boolean>(),
@@ -2235,12 +1658,12 @@ describe("ModelSyncService - batching and mapping", () => {
     const runForChannelSpy = vi
       .spyOn(service, "runForChannel")
       .mockImplementation(async (channel): Promise<ExecutionItemResult> => {
-        if (channel.id === 2) {
+        if (channel.ref.resourceId === "2") {
           throw new Error("worker exploded")
         }
 
         return {
-          channelId: channel.id,
+          resourceRef: channel.ref,
           channelName: channel.name,
           ok: true,
           attempts: 0,
@@ -2252,8 +1675,8 @@ describe("ModelSyncService - batching and mapping", () => {
     const onProgress = vi.fn()
     const result = await service.runBatch(
       [
-        makeChannel({ id: 1, name: "Alpha", models: "" }),
-        makeChannel({ id: 2, name: "Beta", models: "" }),
+        makeChannel({ id: 1, name: "Alpha", models: [] }),
+        makeChannel({ id: 2, name: "Beta", models: [] }),
       ],
       {
         concurrency: 5,
@@ -2271,11 +1694,11 @@ describe("ModelSyncService - batching and mapping", () => {
     })
     expect(result.items).toEqual([
       expect.objectContaining({
-        channelId: 1,
+        resourceRef: modelResourceRef(1),
         ok: true,
       }),
       expect.objectContaining({
-        channelId: 2,
+        resourceRef: modelResourceRef(2),
         ok: false,
         attempts: 1,
         message: "worker exploded",
@@ -2295,7 +1718,7 @@ describe("ModelSyncService - batching and mapping", () => {
 
       const onProgress = vi.fn()
       const resultPromise = service.runBatch(
-        [makeChannel({ id: 10, name: "Slow Channel", models: "gpt-4o" })],
+        [makeChannel({ id: 10, name: "Slow Channel", models: ["gpt-4o"] })],
         {
           concurrency: 1,
           maxRetries: 2,
@@ -2309,7 +1732,7 @@ describe("ModelSyncService - batching and mapping", () => {
 
       expect(runForChannelSpy).toHaveBeenCalledTimes(1)
       expect(runForChannelSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 10 }),
+        expect.objectContaining({ ref: modelResourceRef(10) }),
         2,
         expect.any(AbortSignal),
         expect.any(Object),
@@ -2321,7 +1744,7 @@ describe("ModelSyncService - batching and mapping", () => {
       })
       expect(result.items).toEqual([
         expect.objectContaining({
-          channelId: 10,
+          resourceRef: modelResourceRef(10),
           channelName: "Slow Channel",
           ok: false,
           attempts: 3,
@@ -2332,7 +1755,7 @@ describe("ModelSyncService - batching and mapping", () => {
         completed: 1,
         total: 1,
         lastResult: expect.objectContaining({
-          channelId: 10,
+          resourceRef: modelResourceRef(10),
           ok: false,
           message: "managedSiteModelSync:execution.errors.channelTimeout",
         }),
@@ -2352,7 +1775,7 @@ describe("ModelSyncService - batching and mapping", () => {
 
     fetchChannelModelsMock.mockResolvedValueOnce(["gpt-4o"])
 
-    await service.fetchChannelModels(123)
+    await service.fetchChannelModels(modelResourceRef(123))
 
     expect(acquire).toHaveBeenCalledTimes(1)
     expect(fetchChannelModelsMock).toHaveBeenCalledWith(
@@ -2361,7 +1784,7 @@ describe("ModelSyncService - batching and mapping", () => {
         adminToken: "token",
         userId: "1",
       }),
-      123,
+      modelResourceRef(123),
       { bypassSiteRequestLimit: true },
     )
   })
@@ -2390,14 +1813,14 @@ describe("ModelSyncService - batching and mapping", () => {
       ],
     })
 
-    await service.fetchChannelModels(123, controller.signal)
+    await service.fetchChannelModels(modelResourceRef(123), controller.signal)
     await service.updateChannelModels(
-      makeChannel({ id: 123, models: "" }),
+      makeChannel({ id: 123, models: [] }),
       ["gpt-4o"],
       controller.signal,
     )
     await service.updateChannelModelMapping(
-      makeChannel({ id: 123, models: "gpt-4o" }),
+      makeChannel({ id: 123, models: ["gpt-4o"] }),
       { "gpt-4o": "gpt-4o" },
       controller.signal,
     )
@@ -2408,7 +1831,7 @@ describe("ModelSyncService - batching and mapping", () => {
         adminToken: "token",
         userId: "1",
       }),
-      123,
+      modelResourceRef(123),
       { signal: controller.signal },
     )
     expect(updateChannelModelsMock).toHaveBeenCalledWith(
@@ -2417,7 +1840,7 @@ describe("ModelSyncService - batching and mapping", () => {
         adminToken: "token",
         userId: "1",
       }),
-      123,
+      modelResourceRef(123),
       ["gpt-4o"],
       { signal: controller.signal },
     )
@@ -2427,7 +1850,7 @@ describe("ModelSyncService - batching and mapping", () => {
         adminToken: "token",
         userId: "1",
       }),
-      123,
+      modelResourceRef(123),
       ["gpt-4o"],
       { "gpt-4o": "gpt-4o" },
       { signal: controller.signal },
@@ -2443,7 +1866,7 @@ describe("ModelSyncService - batching and mapping", () => {
 
     fetchChannelModelsMock.mockResolvedValueOnce(["gpt-4o"])
 
-    await service.fetchChannelModels(123, controller.signal)
+    await service.fetchChannelModels(modelResourceRef(123), controller.signal)
 
     expect(fetchChannelModelsMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -2451,7 +1874,7 @@ describe("ModelSyncService - batching and mapping", () => {
         adminToken: "token",
         userId: "1",
       }),
-      123,
+      modelResourceRef(123),
       {
         signal: controller.signal,
         bypassSiteRequestLimit: true,
@@ -2465,18 +1888,18 @@ describe("ModelSyncService - batching and mapping", () => {
     controller.abort(new Error("cancelled"))
 
     await expect(
-      service.fetchChannelModels(123, controller.signal),
+      service.fetchChannelModels(modelResourceRef(123), controller.signal),
     ).rejects.toThrow("cancelled")
     await expect(
       service.updateChannelModels(
-        makeChannel({ id: 123, models: "" }),
+        makeChannel({ id: 123, models: [] }),
         ["gpt-4o"],
         controller.signal,
       ),
     ).rejects.toThrow("cancelled")
     await expect(
       service.updateChannelModelMapping(
-        makeChannel({ id: 123, models: "gpt-4o" }),
+        makeChannel({ id: 123, models: ["gpt-4o"] }),
         { "gpt-4o": "gpt-4o" },
         controller.signal,
       ),
@@ -2494,7 +1917,7 @@ describe("ModelSyncService - batching and mapping", () => {
 
     await expect(
       service.runForChannel(
-        makeChannel({ id: 123, models: "" }),
+        makeChannel({ id: 123, models: [] }),
         0,
         controller.signal,
       ),
@@ -2508,7 +1931,7 @@ describe("ModelSyncService - batching and mapping", () => {
 
     fetchChannelModelsMock.mockResolvedValueOnce(["gpt-4o"])
 
-    await service.fetchChannelModels(123)
+    await service.fetchChannelModels(modelResourceRef(123))
 
     expect(fetchChannelModelsMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -2516,7 +1939,7 @@ describe("ModelSyncService - batching and mapping", () => {
         adminToken: "token",
         userId: "1",
       }),
-      123,
+      modelResourceRef(123),
       undefined,
     )
   })
@@ -2540,7 +1963,7 @@ describe("ModelSyncService - batching and mapping", () => {
       makeChannel({
         id: 3,
         name: "Gamma",
-        models: "gpt-4o,claude-3",
+        models: ["gpt-4o", "claude-3"],
       }),
       {
         "gpt-4o": "gpt-4o",
@@ -2554,7 +1977,7 @@ describe("ModelSyncService - batching and mapping", () => {
         adminToken: "token",
         userId: "1",
       }),
-      3,
+      modelResourceRef(3),
       ["gpt-4o", "claude-3", "deepseek-chat"],
       {
         "gpt-4o": "gpt-4o",
@@ -2579,7 +2002,7 @@ describe("ModelSyncService - batching and mapping", () => {
 
     await expect(
       service.updateChannelModelMapping(
-        makeChannel({ id: 3, models: "gpt-4o" }),
+        makeChannel({ id: 3, models: ["gpt-4o"] }),
         { "gpt-4o": "gpt-4o" },
       ),
     ).rejects.toMatchObject({

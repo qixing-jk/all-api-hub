@@ -1,4 +1,27 @@
 {
+  "accessTokenVerification": {
+    "apiyi": {
+      "generateStep": "Use an existing valid, complete Access Token if you have one. Otherwise, open System token in your APIyi profile and enter your password on the site to generate one.",
+      "openProfile": "Open APIyi profile",
+      "openProfileFailed": "Could not open the page. Open System token in your APIyi profile manually, complete verification, then return here to paste the Access Token."
+    },
+    "continueFailed": "Could not open the side panel or full page. Your form has been kept. Please try again.",
+    "continueInFullPage": "Continue in full page",
+    "continueInSidePanel": "Continue in side panel",
+    "continuing": "Preparing your form…",
+    "description": "This site requires security verification before an Access Token can be generated automatically. Your detected account details have been kept. Enter an account management Access Token to continue.",
+    "destinationBusy": "There is an unfinished account form here. Save or close it to continue with the form from the popup.",
+    "fullPageHint": "Continue in a full page to keep this form open while you copy the token on the site.",
+    "generateStep": "Use an existing valid, complete Access Token if you have one. Otherwise, open Security → Access Token on the site, complete verification, and generate a token.",
+    "openSecurity": "Open site security settings",
+    "openSecurityFailed": "Could not open the page. Open Security → Access Token on the site manually, then return here to paste the token.",
+    "pasteStep": "Copy the full Access Token immediately, paste it into the Access Token field below, then check your account details and save.",
+    "popupHint": "Continue in the side panel to keep this form while you verify your identity and copy the token on the site. If the side panel cannot open, the form will open in a full page.",
+    "prepareFailed": "Could not preserve this form. Copy any details you need before reopening the account form in the side panel.",
+    "restoreFailed": "Could not restore the unfinished form. It may have expired. Please reopen the account form.",
+    "rotationWarning": "Generating a new Access Token invalidates the old one. Update any other tools that use the old token.",
+    "title": "Enter an Access Token manually"
+  },
   "actions": {
     "autoConfigAriaLabel": "Save account and open {{managedSite}} channel setup",
     "autoConfigRequiresValidAccount": "Complete the account form first",
@@ -56,6 +79,7 @@
     "automaticCheckInSelectionWithDetail": "Automatic selection: {{detail}}",
     "checkInMethod": "Check-in method",
     "checkInMethodNeedsChoice": "Multiple methods detected; choose one",
+    "checkInMethodNeedsConfirmation": "{{method}} (unconfirmed)",
     "checkInMethodNotSelected": "No method selected",
     "checkInMethodPendingConfirmation": "Waiting to confirm an available method",
     "checkInMethodUnavailable": "No available method",
@@ -65,6 +89,7 @@
     "checkInSelectionAutomaticUnavailable": "No available method was detected. Automatic check-in will not run.",
     "checkInSelectionManual": "You manually selected {{method}}. The system will not replace it automatically.",
     "checkInSelectionStale": "Re-detect to confirm whether it is still available.",
+    "checkInSelectionUnconfirmed": "Your selection, {{method}}, has been kept, but support on this site has not been confirmed. Detect again to verify.",
     "checkInStatus": "Check-in status",
     "checkInStatusDesc": "The system checks and displays today's check-in status during account refresh. This is status display only and does not perform check-in.",
     "checkInStatusDisabled": "This site has not enabled check-in, so automatic check-in is paused.",
@@ -164,6 +189,7 @@
     "addSuccess": "Account {{name}} added successfully!",
     "autoDetectCookiePermissionReloadHint": "If the first detection keeps waiting right after granting Cookie multi-account permissions, reload the extension and try again.",
     "autoDetectFailed": "Auto-detect failed: {{error}}",
+    "autoDetectIdentityMismatch": "The detected account does not match the current account. Your existing data has been kept. Check the site URL and sign in to the intended account, then try again.",
     "autoDetectSuccess": "Auto-detect successful!",
     "autoDetectTakingTooLong": "Auto-detect is taking longer than expected. Open troubleshooting guide.",
     "checkInRedetectAmbiguous": "Multiple check-in methods were detected. Select one below.",
@@ -177,7 +203,7 @@
       "identity_mismatch": "The account returned by the site does not match this account. Check the site URL and account credentials.",
       "invalid_response": "The site returned a response this extension could not recognize. Check the site URL and retry after updating the extension.",
       "network": "Detection could not reach the target site. Check your connection or the site status, then retry.",
-      "permission_denied": "The target site denied the detection request. Sign in again and check the account permissions.",
+      "permission_denied": "The site rejected the check-in detection request, so check-in support could not be confirmed. Check the feature and your account permissions on the site.",
       "source_unavailable": "The target site is temporarily unavailable. Try again later.",
       "timeout": "The target site did not respond before detection timed out. Try again later."
     },
@@ -261,11 +287,11 @@
         "continue": "Continue",
         "disableAndContinue": "Don't remind me again and continue"
       },
-      "description_one": "You already have {{count}} account for {{siteUrl}}. Adding another may create duplicates. Do you want to continue?",
-      "description_other": "You already have {{count}} accounts for {{siteUrl}}. Adding another may create duplicates. Do you want to continue?",
-      "descriptionExact": "An account for {{siteUrl}} with user ID {{userId}} already exists ({{username}}). Adding another may create duplicates. Do you want to continue?",
+      "description_one": "The Management Key for {{siteUrl}} is already saved in {{count}} account. Do you want to add it again?",
+      "description_other": "The Management Key for {{siteUrl}} is already saved in {{count}} accounts. Do you want to add it again?",
+      "descriptionExact": "An account for {{siteUrl}} with user ID {{userId}} is already saved ({{username}}). Do you want to add it again?",
       "title": "Duplicate account",
-      "warningTitle": "This site already has accounts"
+      "warningTitle": "Matching saved account found"
     },
     "managedSiteConfig": {
       "actions": {

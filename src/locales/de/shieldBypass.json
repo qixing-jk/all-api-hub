@@ -1,4 +1,133 @@
 {
+  "history": {
+    "accountOnboarding": "Kontoeinrichtung und Erkennung",
+    "actions": "Aktionen für den Verlauf",
+    "allStatuses": "Alle Ergebnisse",
+    "causes": {
+      "api_error_fallback": "Nach einem API-Fehler wurde eine temporäre Seite angefordert.",
+      "browser_profile_isolation": "Diese Aktion benötigt eine temporäre Browserumgebung, etwa zur Trennung einer Kontositzung.",
+      "explicit_context": "Diese Aktion hat ausdrücklich eine Website-Seitenumgebung angefordert.",
+      "rendered_page_required": "Diese Aktion benötigt Informationen aus der gerenderten Seite.",
+      "session_required": "Diese Aktion muss die Browser-Anmeldesitzung der Website lesen oder verwenden.",
+      "verification_required": "Diese Aktion benötigt eine Verifizierung oder eine direkte Aktion auf der Website-Seite."
+    },
+    "clear": "Verlauf löschen",
+    "clearDescription": "Den Verlauf der Schutzumgehung auf diesem Gerät löschen? Neue Versuche werden weiterhin aufgezeichnet.",
+    "clearFailed": "Verlauf konnte nicht gelöscht werden. Bitte erneut versuchen.",
+    "clearFilters": "Filter zurücksetzen",
+    "commands": {
+      "add_account": "Konto hinzufügen",
+      "detect_account": "Konto erkennen",
+      "manage_api_keys": "API-Schlüssel verwalten",
+      "manage_site_channels": "Website-Kanäle verwalten",
+      "manual_checkin": "Manuelles Einchecken",
+      "reauthenticate_account": "Konto erneut authentifizieren",
+      "refresh_account": "Konto aktualisieren",
+      "refresh_all_accounts": "Alle Konten aktualisieren",
+      "refresh_disabled_accounts": "Deaktivierte Konten aktualisieren",
+      "retry_checkin_account": "Einchecken wiederholen",
+      "sync_managed_site_models": "Modelle verwalteter Websites synchronisieren"
+    },
+    "copied": "Diagnosedetails kopiert",
+    "copy": "Diagnosedetails kopieren",
+    "copyFailed": "Kopieren fehlgeschlagen. Bitte erneut versuchen.",
+    "created": "Temporäre Seite erstellt",
+    "denials": {
+      "automatic_disabled": "Die automatische Schutzumgehung ist deaktiviert. Aktivieren Sie sie in den zugehörigen Einstellungen und versuchen Sie es in der ursprünglichen Funktion erneut.",
+      "feature_disabled": "Die automatische Schutzumgehung ist für diese Funktion deaktiviert. Aktivieren Sie die entsprechende Einstellung und versuchen Sie es in der ursprünglichen Funktion erneut.",
+      "invalid_execution": "Die auslösende Aktion ist ungültig. Starten Sie erneut über die ursprüngliche Funktion.",
+      "missing_execution": "Die auslösende Aktion fehlt. Starten Sie erneut über die ursprüngliche Funktion.",
+      "permission_required": "Erforderliche Browserberechtigungen fehlen. Erteilen Sie sie in den Berechtigungseinstellungen.",
+      "policy_unavailable": "Die Einstellungen zur Schutzumgehung konnten nicht gelesen werden. Versuchen Sie es später erneut.",
+      "resource_stale": "Die Konto- oder Website-Konfiguration wurde geändert. Aktualisieren Sie die ursprüngliche Seite und versuchen Sie es erneut.",
+      "task_not_permitted": "Diese Funktion unterstützt diese Art von temporärer Seitenaktion nicht.",
+      "unsupported_environment": "Diese Browserumgebung stellt die benötigte Funktion für temporäre Seiten nicht bereit."
+    },
+    "description": "Die letzten {{limit}} Einträge bleiben auf diesem Gerät. Vertrauliche Daten werden nicht gespeichert.",
+    "empty": "Noch kein Verlauf der Schutzumgehung",
+    "emptyDescription": "Neue Anforderungen temporärer Seiten werden nach dem Update auf diese Version hier aufgezeichnet. Aktualisieren Sie ein Konto auf einer geschützten Website und prüfen Sie den Verlauf erneut.",
+    "entryDescription": "Erfahren Sie, warum eine temporäre Seite angefordert wurde und wie die Aktion endete.",
+    "failures": {
+      "execution_error": "Die Ausführung wurde unerwartet beendet. Prüfen Sie vor einem erneuten Versuch die Meldung der ursprünglichen Funktion.",
+      "firefox_popup_unsupported": "Firefox kann diese Aktion nicht im Erweiterungs-Popup ausführen. Nutzen Sie die Einstellungen oder die Seitenleiste.",
+      "identity_mismatch": "Das auf der Website-Seite angemeldete Konto unterscheidet sich vom Konto dieser Aktion.",
+      "identity_missing": "Die Website-Seite lieferte keine überprüfbare Kontoidentität.",
+      "incognito_access_required": "Die Erweiterung darf nicht in privaten Fenstern ausgeführt werden. Erlauben Sie dies in den Erweiterungseinstellungen des Browsers.",
+      "invalid_request": "Die Anfrage für die Seitenaktion ist unvollständig oder ungültig.",
+      "no_response": "Die Verarbeitung lieferte kein Ergebnis. Prüfen Sie den aktuellen Zustand in der ursprünglichen Funktion.",
+      "target_not_found": "Die erforderliche Schaltfläche oder das Ziel wurde auf der Seite nicht gefunden.",
+      "throttled": "Die Seitenaktion wurde wegen zu vieler Anfragen begrenzt. Versuchen Sie es später erneut.",
+      "trigger_failed": "Die Seitenaktion konnte nicht ausgeführt werden. Prüfen Sie die Website-Seite."
+    },
+    "fields": {
+      "context": "Seitenbereitstellung",
+      "contextMode": "Tatsächlicher Öffnungsmodus",
+      "duration": "Dauer",
+      "evidence": "Ursprüngliche Fehlerdaten",
+      "finishedAt": "Abgeschlossen um",
+      "method": "Anfragemethode",
+      "mutation": "Schreibstatus",
+      "operation": "Auslösende Aktion",
+      "preferredMode": "Eingestellter Öffnungsmodus",
+      "profile": "Browserumgebung",
+      "result": "Antwort und Fehlercodes",
+      "surface": "Quelle",
+      "trigger": "Auslöser",
+      "verification": "Seitenverifizierung"
+    },
+    "filterStatus": "Nach Ergebnis filtern",
+    "groups": {
+      "context": "Browser und Anfrage",
+      "outcome": "Ergebnis",
+      "trigger": "Auslöser"
+    },
+    "incognito": "Inkognito- / private Umgebung",
+    "loadFailed": "Verlauf konnte nicht gelesen werden. Bitte erneut versuchen.",
+    "manual": "Manuelle Benutzeraktion",
+    "mutations": {
+      "created": "Erstellung bestätigt",
+      "dispatched_unconfirmed": "Anfrage gesendet, Ergebnis unbestätigt; zuerst den Website-Zustand prüfen",
+      "not_dispatched": "Erstellungsanfrage nicht gesendet"
+    },
+    "newRecords_one": "{{count}} neuen Eintrag anzeigen",
+    "newRecords_other": "{{count}} neue Einträge anzeigen",
+    "noMatches": "Keine Einträge entsprechen den Filtern",
+    "noOriginalError": "Eine temporäre Seite wurde angefordert. Details zum vorherigen Fehler wurden nicht angegeben.",
+    "open": "Verlauf der Schutzumgehung anzeigen",
+    "openSettings": "Zugehörige Einstellungen öffnen",
+    "pendingDescription": "Der Auslöser wurde aufgezeichnet, aber es liegt noch kein Endergebnis vor. Die Aufgabe läuft möglicherweise noch oder wurde durch Schließen des Browsers oder Neustarten der Erweiterung unterbrochen.",
+    "reused": "Vorhandene Seite wiederverwendet",
+    "search": "Websites, Aktionen oder Diagnosen suchen",
+    "shown": "{{visible}} / {{total}} Einträge angezeigt",
+    "statuses": {
+      "completed": "Abgeschlossen",
+      "denied": "Temporäre Seite nicht geöffnet",
+      "failed": "Fehlgeschlagen",
+      "started": "Ausgelöst, Ergebnis ausstehend",
+      "unavailable": "Umgebung nicht verfügbar"
+    },
+    "surfaces": {
+      "background": "Hintergrund der Erweiterung",
+      "content_script": "Website-Seite",
+      "options": "Einstellungsseite",
+      "popup": "Erweiterungs-Popup",
+      "sidepanel": "Seitenleiste"
+    },
+    "title": "Verlauf der Schutzumgehung",
+    "triggers": {
+      "background_recovery": "Wiederherstellung im Hintergrund",
+      "retry": "Automatischer Wiederholungsversuch",
+      "scheduled": "Geplante Aufgabe",
+      "ui_lifecycle": "Automatisch beim Öffnen einer Seite oder Komponente"
+    },
+    "turnstile": {
+      "error": "Turnstile-Verifizierung fehlgeschlagen",
+      "not_present": "Kein Turnstile-Widget erkannt",
+      "timeout": "Zeitüberschreitung beim Warten auf Turnstile",
+      "token_obtained": "Turnstile-Verifizierungsnachweis erhalten"
+    },
+    "unexpectedContent": "Die Antwort hatte ein unerwartetes Format und könnte eine Verifizierungsseite der Website gewesen sein."
+  },
   "titlePrefix": "All API Hub · Schutzumgehung",
   "toast": {
     "actions": {

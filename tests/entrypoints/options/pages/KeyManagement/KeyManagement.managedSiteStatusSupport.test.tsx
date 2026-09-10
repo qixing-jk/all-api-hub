@@ -12,6 +12,7 @@ import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
 } from "~/services/managedSites/tokenChannelStatus"
+import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -381,7 +382,7 @@ describe("KeyManagement managed-site status support", () => {
       .mockResolvedValue({
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
         matchedChannel: {
-          id: 88,
+          ref: matchingResourceRef(88),
           name: "Managed Channel 88",
         },
       })
@@ -413,7 +414,7 @@ describe("KeyManagement managed-site status support", () => {
           matched: true,
           candidateCount: 1,
           channel: {
-            id: 88,
+            ref: matchingResourceRef(88),
             name: "Managed Channel 88",
           },
         },
@@ -427,7 +428,7 @@ describe("KeyManagement managed-site status support", () => {
           matched: true,
           reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
           channel: {
-            id: 88,
+            ref: matchingResourceRef(88),
             name: "Managed Channel 88",
           },
         },
@@ -444,7 +445,7 @@ describe("KeyManagement managed-site status support", () => {
 
     expect(loadNewApiChannelKeyWithVerificationMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        channelId: 88,
+        resourceRef: matchingResourceRef(88),
         requestKind: "token",
         label: "Token 1",
         config: expect.objectContaining({
@@ -463,7 +464,7 @@ describe("KeyManagement managed-site status support", () => {
           MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
       }),
       {
-        channelId: 88,
+        resourceRef: matchingResourceRef(88),
         channelKey: "token-1-secret",
       },
     )
@@ -484,7 +485,7 @@ describe("KeyManagement managed-site status support", () => {
         url: {
           matched: true,
           candidateCount: 1,
-          channel: { id: 88, name: "Managed Channel 88" },
+          channel: { ref: matchingResourceRef(88), name: "Managed Channel 88" },
         },
         key: {
           comparable: false,
@@ -495,7 +496,7 @@ describe("KeyManagement managed-site status support", () => {
           comparable: true,
           matched: true,
           reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
-          channel: { id: 88, name: "Managed Channel 88" },
+          channel: { ref: matchingResourceRef(88), name: "Managed Channel 88" },
         },
       },
       recovery: {

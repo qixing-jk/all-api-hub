@@ -1,4 +1,4 @@
-import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
+import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
 import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
@@ -7,42 +7,26 @@ import {
   ManagedResourceError,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import {
+  isManagedSiteMigrationSourceType,
+  resolveManagedSiteMigrationType,
+} from "~/services/apiAdapters/managedResources/migrationTypeRoutes"
 import { openOctopusNativeResourceOperations } from "~/services/apiAdapters/managedResources/octopus"
 import {
   isOctopusHttpUrl,
   octopusModels,
 } from "~/services/apiAdapters/managedResources/octopusEditor"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES as blockers } from "~/types/managedSiteMigration"
 import {
   MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES as failures,
   type ManagedSiteMigrationCapability,
   type ManagedSiteMigrationSelection,
 } from "~/types/managedSiteMigrationCapability"
-import { OctopusAutoGroupType, OctopusOutboundType } from "~/types/octopus"
+import { OctopusAutoGroupType } from "~/types/octopus"
 import { normalizeList } from "~/utils/core/string"
 
-// The canonical draft has no Responses/Embedding protocol discriminator;
-// those known source types disclose the lost mode through advanced settings.
-const sourceTypes: Readonly<Partial<Record<OctopusOutboundType, ChannelType>>> =
-  {
-    [OctopusOutboundType.OpenAIChat]: ChannelType.OpenAI,
-    [OctopusOutboundType.OpenAIResponse]: ChannelType.OpenAI,
-    [OctopusOutboundType.OpenAIEmbedding]: ChannelType.OpenAI,
-    [OctopusOutboundType.Anthropic]: ChannelType.Anthropic,
-    [OctopusOutboundType.Gemini]: ChannelType.Gemini,
-    [OctopusOutboundType.Volcengine]: ChannelType.VolcEngine,
-  }
-// Only explicit protocol matches are accepted; unknown provider families must
-// not silently become an OpenAI Chat channel.
-const targetTypes: Readonly<Partial<Record<ChannelType, OctopusOutboundType>>> =
-  {
-    [ChannelType.OpenAI]: OctopusOutboundType.OpenAIChat,
-    [ChannelType.Anthropic]: OctopusOutboundType.Anthropic,
-    [ChannelType.Gemini]: OctopusOutboundType.Gemini,
-    [ChannelType.VolcEngine]: OctopusOutboundType.Volcengine,
-  }
 const throwIfAborted = (options?: ResourceOperationOptions) => {
   if (options?.signal?.aborted)
     throw options.signal.reason ?? new DOMException("Aborted", "AbortError")
@@ -97,7 +81,7 @@ const openSelection = async (
   return { operations, id, detail }
 }
 
-/** Canonical migration for native Octopus channels without the legacy channel facade. */
+/** Canonical migration mapping for native Octopus channels. */
 export const octopusManagedSiteMigrationCapability: ManagedSiteMigrationCapability =
   {
     source: {
@@ -120,8 +104,7 @@ export const octopusManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
             reasonCode: blockers.SOURCE_KEY_RESOLUTION_FAILED,
           }
         const { detail } = resolved
-        const resourceType = sourceTypes[detail.type]
-        if (resourceType === undefined)
+        if (!isManagedSiteMigrationSourceType(SITE_TYPES.OCTOPUS, detail.type))
           return {
             status: "blocked",
             reasonCode: blockers.SOURCE_TYPE_UNSUPPORTED,
@@ -130,7 +113,7 @@ export const octopusManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
           status: "ready",
           source: {
             sourceSiteType: SITE_TYPES.OCTOPUS,
-            resourceType,
+            resourceType: detail.type,
             baseUrl: detail.base_urls[0]?.url.trim() ?? "",
             models: octopusModels(detail.model),
             groups: [],
@@ -144,8 +127,8 @@ export const octopusManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
                 detail.keys.length > 1 ||
                 detail.keys.some((key) => !key.enabled),
               hasAdvancedSettings: Boolean(
-                // v0.13 grants and protocol paths cannot be represented by one
-                // canonical channel type: github.com/bestruirui/octopus/blob/27aa40dc0f3b2902bce3e96ccdba019d17041606/internal/model/channel.go
+                // v0.13 grants and per-protocol settings are not carried by
+                // the migration fields: github.com/bestruirui/octopus/blob/27aa40dc0f3b2902bce3e96ccdba019d17041606/internal/model/channel.go
                 detail.hasUnrepresentedProtocolSettings ||
                   detail.base_urls.length > 1 ||
                   detail.custom_model?.trim() ||
@@ -155,9 +138,7 @@ export const octopusManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
                   detail.custom_header?.length ||
                   detail.param_override?.trim() ||
                   detail.channel_proxy?.trim() ||
-                  detail.match_regex?.trim() ||
-                  detail.type === OctopusOutboundType.OpenAIResponse ||
-                  detail.type === OctopusOutboundType.OpenAIEmbedding,
+                  detail.match_regex?.trim(),
               ),
             },
           },
@@ -193,8 +174,8 @@ export const octopusManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
     target: {
       prepare: async (source, options) => {
         throwIfAborted(options)
-        const type = targetTypes[source.resourceType]
-        if (type === undefined)
+        const type = resolveManagedSiteMigrationType(source, SITE_TYPES.OCTOPUS)
+        if (type.status === "unsupported")
           throw new Error(
             "Octopus does not support this migration channel type",
           )
@@ -204,22 +185,26 @@ export const octopusManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
         )
         const baseUrl = await withCancellation(
           () =>
-            operations.prepareMigrationBaseUrl(source.baseUrl, type, options),
+            operations.prepareMigrationBaseUrl(
+              source.baseUrl,
+              type.value,
+              options,
+            ),
           options,
         )
         return {
           projection: {
             name: "",
-            type: String(type),
+            type: type.value,
             baseUrl,
             models: [...source.models],
             groups: [...DEFAULT_CHANNEL_FIELDS.groups],
             priority: DEFAULT_CHANNEL_FIELDS.priority,
             weight: DEFAULT_CHANNEL_FIELDS.weight,
-            status: source.status === "enabled" ? 1 : 2,
+            enabled: source.status === "enabled",
           },
           adjustments: {
-            remappedType: Number(type) !== Number(source.resourceType),
+            remappedType: type.remappedType,
             normalizedBaseUrl: baseUrl !== source.baseUrl,
             forcedDefaultGroup:
               source.groups.length !== 1 ||
@@ -233,17 +218,17 @@ export const octopusManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
       },
       create: async (command, options) => {
         throwIfAborted(options)
-        const type = Number(command.projection.type)
+        const type = command.projection.type
         const models = normalizeList(command.projection.models)
         if (
           command.targetSiteType !== SITE_TYPES.OCTOPUS ||
-          String(command.projection.type).trim() === "" ||
+          typeof type !== "number" ||
           !Number.isInteger(type) ||
-          sourceTypes[type as OctopusOutboundType] === undefined ||
+          !isManagedSiteMigrationSourceType(SITE_TYPES.OCTOPUS, type) ||
           !command.projection.name.trim() ||
           !isOctopusHttpUrl(command.projection.baseUrl) ||
           models.length === 0 ||
-          ![1, 2].includes(command.projection.status) ||
+          typeof command.projection.enabled !== "boolean" ||
           !hasUsableManagedSiteChannelKey(command.credential)
         )
           return { status: "failed", failureCode: failures.TargetRejected }
@@ -260,7 +245,7 @@ export const octopusManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
                 baseUrl: command.projection.baseUrl.trim(),
                 key: command.credential.trim(),
                 model: models.join(","),
-                enabled: command.projection.status === 1,
+                enabled: command.projection.enabled,
               },
               options,
             ),

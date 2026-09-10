@@ -333,6 +333,8 @@ describe("defineNativeResourceKind", () => {
         {
           kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
           project,
+          validate: () => ({ valid: true }),
+          sourceFieldIds: {},
         },
       ],
     })
@@ -393,6 +395,51 @@ describe("defineNativeResourceKind", () => {
     expect(definition.createEditor).not.toHaveBeenCalled()
   })
 
+  it("validates imported fields without opening provider configuration and reports the source field", () => {
+    const { definition, registration } = createHarness({
+      createSeedBindings: [
+        {
+          kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+          project: (seed) => ({ nativeName: seed.name.trim() }),
+          validate: (values) =>
+            values.nativeName
+              ? { valid: true }
+              : {
+                  valid: false,
+                  issues: [
+                    {
+                      fieldId: "nativeName",
+                      code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
+                    },
+                  ],
+                },
+          sourceFieldIds: { nativeName: "name" },
+        },
+      ],
+    })
+
+    const result = registration.validateCreateSeed?.({
+      kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+      name: " ",
+      channelType: "example",
+      credential: "credential-placeholder",
+      baseUrl: "https://upstream.example.invalid",
+      enabled: true,
+      models: [],
+      orderingWeight: 0,
+      priority: 0,
+      notes: "",
+    })
+
+    expect(result).toEqual({
+      valid: false,
+      issues: [{ fieldId: "name", code: "required" }],
+    })
+    expect(definition.openConfig).not.toHaveBeenCalled()
+    expect(definition.createEditor).not.toHaveBeenCalled()
+    expect(definition.create).not.toHaveBeenCalled()
+  })
+
   it("forwards only the abort signal beside a credential-bearing create seed", async () => {
     const project = vi.fn(() => ({ name: "Imported channel" }))
     const { definition, registration } = createHarness({
@@ -400,6 +447,8 @@ describe("defineNativeResourceKind", () => {
         {
           kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
           project,
+          validate: () => ({ valid: true }),
+          sourceFieldIds: {},
         },
       ],
     })

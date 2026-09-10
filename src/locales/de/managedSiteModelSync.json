@@ -76,6 +76,7 @@
       "finishedAt": "Fertiggestellt um",
       "manageChannel": "Kanal verwalten",
       "message": "Nachricht",
+      "resourceUnavailable": "Dieser Eintrag kann der aktuellen Website nicht zugeordnet werden. Wählen Sie den Kanal erneut in der Liste für die manuelle Synchronisierung aus.",
       "selectAllChannels": "Alle Kanäle auswählen",
       "selectChannel": "Kanal auswählen {{name}}",
       "status": "Status",

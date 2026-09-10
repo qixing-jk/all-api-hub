@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ModelRedirectService } from "~/services/models/modelRedirect/ModelRedirectService"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 const {
   getSiteTypeCapabilitiesMock,
@@ -29,11 +30,6 @@ const succeededMappingResult = {
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: (...args: unknown[]) =>
     getSiteTypeCapabilitiesMock(...args),
-}))
-
-vi.mock("~/services/managedSites/managedUpstreamResourceService", () => ({
-  resolveManagedUpstreamResourceFeatureCapabilities: (...args: unknown[]) =>
-    resolveManagedUpstreamResourceFeatureCapabilitiesMock(...args),
 }))
 
 vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
@@ -66,7 +62,7 @@ describe("ModelRedirectService managed channel operations", () => {
     })
     getSiteTypeCapabilitiesMock.mockReturnValue({
       managedSites: {
-        channels: {
+        models: {
           list: listChannelsMock,
           updateModelMapping: updateChannelModelMappingMock,
         },
@@ -92,7 +88,10 @@ describe("ModelRedirectService managed channel operations", () => {
       },
     })
 
-    const result = await ModelRedirectService.clearChannelModelMappings([1, 2])
+    const result = await ModelRedirectService.clearChannelModelMappings([
+      modelResourceRef(1),
+      modelResourceRef(2),
+    ])
 
     expect(result.success).toBe(false)
     expect(result.totalSelected).toBe(2)
@@ -101,9 +100,15 @@ describe("ModelRedirectService managed channel operations", () => {
     expect(result.errors[0]).toContain("Managed site configuration is missing")
   })
 
-  it("lists the complete managed-site channel inventory", async () => {
+  it("lists mapping preview facts without disclosing execution credentials", async () => {
     const channels = [
-      { id: 1, name: "Example channel", models: "model-a,model-b" },
+      {
+        ref: modelResourceRef(1),
+        name: "Example channel",
+        models: ["model-a", "model-b"],
+        credential: "private-key",
+        modelMapping: '{"model-a":"remote-a"}',
+      },
     ]
     listChannelsMock.mockResolvedValue({ items: channels })
 
@@ -111,7 +116,13 @@ describe("ModelRedirectService managed channel operations", () => {
       ModelRedirectService.listManagedSiteChannels(),
     ).resolves.toEqual({
       success: true,
-      channels,
+      channels: [
+        {
+          ref: modelResourceRef(1),
+          name: "Example channel",
+          modelMapping: '{"model-a":"remote-a"}',
+        },
+      ],
       errors: [],
     })
     expect(listChannelsMock).toHaveBeenCalledWith(
@@ -123,14 +134,17 @@ describe("ModelRedirectService managed channel operations", () => {
     const searchChannelsMock = vi.fn().mockResolvedValue({ items: [] })
     getSiteTypeCapabilitiesMock.mockReturnValue({
       managedSites: {
-        channels: {
+        models: {
           search: searchChannelsMock,
           updateModelMapping: updateChannelModelMappingMock,
         },
       },
     })
 
-    const result = await ModelRedirectService.clearChannelModelMappings([1, 2])
+    const result = await ModelRedirectService.clearChannelModelMappings([
+      modelResourceRef(1),
+      modelResourceRef(2),
+    ])
 
     expect(result).toMatchObject({
       success: false,
@@ -147,17 +161,25 @@ describe("ModelRedirectService managed channel operations", () => {
     listChannelsMock.mockResolvedValue({
       items: [
         {
-          id: 1,
+          ref: modelResourceRef(1),
           name: "c1",
-          models: "a,b",
-          model_mapping: '{"gpt-4o":"openai/gpt-4o"}',
+          models: ["a", "b"],
+          modelMapping: '{"gpt-4o":"openai/gpt-4o"}',
         },
-        { id: 2, name: "c2", models: "a,b", model_mapping: '{"x":"y"}' },
+        {
+          ref: modelResourceRef(2),
+          name: "c2",
+          models: ["a", "b"],
+          modelMapping: '{"x":"y"}',
+        },
       ],
     })
     updateChannelModelMappingMock.mockResolvedValue(succeededMappingResult)
 
-    const result = await ModelRedirectService.clearChannelModelMappings([1, 2])
+    const result = await ModelRedirectService.clearChannelModelMappings([
+      modelResourceRef(1),
+      modelResourceRef(2),
+    ])
 
     expect(result.success).toBe(true)
     expect(result.totalSelected).toBe(2)
@@ -166,13 +188,13 @@ describe("ModelRedirectService managed channel operations", () => {
     expect(updateChannelModelMappingMock).toHaveBeenCalledTimes(2)
     expect(updateChannelModelMappingMock).toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl: "https://example.com" }),
-      1,
+      modelResourceRef(1),
       ["a", "b"],
       {},
     )
     expect(updateChannelModelMappingMock).toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl: "https://example.com" }),
-      2,
+      modelResourceRef(2),
       ["a", "b"],
       {},
     )
@@ -181,13 +203,26 @@ describe("ModelRedirectService managed channel operations", () => {
   it("counts empty model_mapping channels as skipped and does not update them", async () => {
     listChannelsMock.mockResolvedValue({
       items: [
-        { id: 1, name: "empty", models: "a,b", model_mapping: "{}" },
-        { id: 2, name: "non-empty", models: "a,b", model_mapping: '{"x":"y"}' },
+        {
+          ref: modelResourceRef(1),
+          name: "empty",
+          models: ["a", "b"],
+          modelMapping: "{}",
+        },
+        {
+          ref: modelResourceRef(2),
+          name: "non-empty",
+          models: ["a", "b"],
+          modelMapping: '{"x":"y"}',
+        },
       ],
     })
     updateChannelModelMappingMock.mockResolvedValue(succeededMappingResult)
 
-    const result = await ModelRedirectService.clearChannelModelMappings([1, 2])
+    const result = await ModelRedirectService.clearChannelModelMappings([
+      modelResourceRef(1),
+      modelResourceRef(2),
+    ])
 
     expect(result.success).toBe(true)
     expect(result.totalSelected).toBe(2)
@@ -197,90 +232,15 @@ describe("ModelRedirectService managed channel operations", () => {
     expect(updateChannelModelMappingMock).toHaveBeenCalledTimes(1)
     expect(updateChannelModelMappingMock).toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl: "https://example.com" }),
-      2,
+      modelResourceRef(2),
       ["a", "b"],
       {},
     )
     expect(updateChannelModelMappingMock).not.toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl: "https://example.com" }),
-      1,
+      modelResourceRef(1),
       expect.anything(),
       {},
-    )
-  })
-
-  it("uses resource detail drafts for clear writes when the resource feature is supported", async () => {
-    const channel = {
-      id: 1,
-      name: "c1",
-      models: "a,b",
-      model_mapping: '{"gpt-4o":"openai/gpt-4o"}',
-    }
-    listChannelsMock.mockResolvedValue({
-      items: [channel],
-    })
-
-    const detail = {
-      summary: {
-        ref: {
-          managedSiteType: SITE_TYPES.NEW_API,
-          scopeKey: "https://example.com",
-          resourceId: "1",
-        },
-      },
-      native: {
-        ...channel,
-        key: "sk-real-key",
-      },
-    }
-    const resources = {
-      items: {
-        list: vi.fn().mockResolvedValue({
-          items: [detail.summary],
-          total: 1,
-        }),
-        getDetail: vi.fn().mockResolvedValue(detail),
-        update: vi.fn().mockResolvedValue(succeededMappingResult),
-      },
-      drafts: {
-        prepareEditDraft: vi.fn().mockReturnValue({
-          name: "c1",
-          type: 1,
-          key: "sk-real-key",
-          base_url: "https://upstream.example.invalid",
-          models: ["a", "b"],
-          groups: [],
-          priority: 0,
-          weight: 1,
-          status: 1,
-        }),
-      },
-    }
-    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReturnValue({
-      supported: true,
-      siteType: SITE_TYPES.NEW_API,
-      feature: "modelRedirect",
-      capabilities: resources,
-    })
-
-    const result = await ModelRedirectService.clearChannelModelMappings([1])
-
-    expect(result.success).toBe(true)
-    expect(result.clearedChannels).toBe(1)
-    expect(updateChannelModelMappingMock).not.toHaveBeenCalled()
-    expect(resources.items.update).toHaveBeenCalledWith(
-      expect.objectContaining({ baseUrl: "https://example.com" }),
-      expect.objectContaining({
-        native: expect.objectContaining({
-          model_mapping: "{}",
-          models: "a,b",
-          key: "sk-real-key",
-        }),
-      }),
-      expect.objectContaining({
-        models: ["a", "b"],
-        key: "sk-real-key",
-      }),
     )
   })
 
@@ -288,12 +248,17 @@ describe("ModelRedirectService managed channel operations", () => {
     listChannelsMock.mockResolvedValue({
       items: [
         {
-          id: 1,
+          ref: modelResourceRef(1),
           name: "c1",
-          models: "a,b",
-          model_mapping: '{"gpt-4o":"openai/gpt-4o"}',
+          models: ["a", "b"],
+          modelMapping: '{"gpt-4o":"openai/gpt-4o"}',
         },
-        { id: 2, name: "c2", models: "a,b", model_mapping: '{"x":"y"}' },
+        {
+          ref: modelResourceRef(2),
+          name: "c2",
+          models: ["a", "b"],
+          modelMapping: '{"x":"y"}',
+        },
       ],
     })
 
@@ -301,7 +266,10 @@ describe("ModelRedirectService managed channel operations", () => {
       .mockRejectedValueOnce(new Error("boom"))
       .mockResolvedValueOnce(succeededMappingResult)
 
-    const result = await ModelRedirectService.clearChannelModelMappings([1, 2])
+    const result = await ModelRedirectService.clearChannelModelMappings([
+      modelResourceRef(1),
+      modelResourceRef(2),
+    ])
 
     expect(result.success).toBe(false)
     expect(result.clearedChannels).toBe(1)
@@ -316,10 +284,10 @@ describe("ModelRedirectService managed channel operations", () => {
       listChannelsMock.mockResolvedValue({
         items: [
           {
-            id: 1,
+            ref: modelResourceRef(1),
             name: "c1",
-            models: "a,b",
-            model_mapping: '{"x":"y"}',
+            models: ["a", "b"],
+            modelMapping: '{"x":"y"}',
           },
         ],
       })
@@ -343,7 +311,9 @@ describe("ModelRedirectService managed channel operations", () => {
             },
       )
 
-      const result = await ModelRedirectService.clearChannelModelMappings([1])
+      const result = await ModelRedirectService.clearChannelModelMappings([
+        modelResourceRef(1),
+      ])
 
       expect(updateChannelModelMappingMock).toHaveBeenCalledOnce()
       expect(listChannelsMock).toHaveBeenCalledTimes(2)
@@ -352,16 +322,18 @@ describe("ModelRedirectService managed channel operations", () => {
         clearedChannels: 0,
         failedChannels: 1,
       })
-      expect(result.errors.join(" ")).toContain(`${outcome} clear write`)
+      expect(result.errors.join(" ")).toContain(
+        "Model mapping update requires reconciliation",
+      )
     },
   )
 
   it("uses a no-op reconciliation when an injected writer omits the optional hook", async () => {
     const channel = {
-      id: 1,
+      ref: modelResourceRef(1),
       name: "optional-reconcile",
-      models: "a,b",
-      model_mapping: '{"x":"y"}',
+      models: ["a", "b"],
+      modelMapping: '{"x":"y"}',
     }
     const updateChannelModelMapping = vi.fn().mockResolvedValue({
       outcome: "uncertain",
@@ -377,7 +349,9 @@ describe("ModelRedirectService managed channel operations", () => {
       })
 
     try {
-      const result = await ModelRedirectService.clearChannelModelMappings([1])
+      const result = await ModelRedirectService.clearChannelModelMappings([
+        modelResourceRef(1),
+      ])
 
       expect(result).toMatchObject({
         success: false,
@@ -405,10 +379,10 @@ describe("ModelRedirectService managed channel operations", () => {
     listChannelsMock.mockResolvedValue({
       items: [
         {
-          id: 1,
+          ref: modelResourceRef(1),
           name: "c1",
-          models: "a,b",
-          model_mapping: '{"x":"y"}',
+          models: ["a", "b"],
+          modelMapping: '{"x":"y"}',
         },
       ],
     })
@@ -423,14 +397,18 @@ describe("ModelRedirectService managed channel operations", () => {
       }
     })
 
-    const result = await ModelRedirectService.clearChannelModelMappings([1])
+    const result = await ModelRedirectService.clearChannelModelMappings([
+      modelResourceRef(1),
+    ])
 
     expect(result).toMatchObject({
       success: false,
       clearedChannels: 0,
       failedChannels: 1,
     })
-    expect(result.errors.join(" ")).toContain("clear rejected")
+    expect(result.errors.join(" ")).toContain(
+      "Model mapping update was rejected",
+    )
     expect(result.errors.join(" ")).not.toContain(originalSecret)
     expect(mutableConfig.adminToken).toBe("")
     expect(updateChannelModelMappingMock).toHaveBeenCalledOnce()
@@ -440,16 +418,18 @@ describe("ModelRedirectService managed channel operations", () => {
     listChannelsMock.mockResolvedValue({
       items: [
         {
-          id: 1,
+          ref: modelResourceRef(1),
           name: "c1",
-          models: "a,b",
-          model_mapping: '{"x":"y"}',
+          models: ["a", "b"],
+          modelMapping: '{"x":"y"}',
         },
       ],
     })
     updateChannelModelMappingMock.mockResolvedValue(undefined)
 
-    const result = await ModelRedirectService.clearChannelModelMappings([1])
+    const result = await ModelRedirectService.clearChannelModelMappings([
+      modelResourceRef(1),
+    ])
 
     expect(result).toMatchObject({
       success: false,
@@ -463,15 +443,87 @@ describe("ModelRedirectService managed channel operations", () => {
 
   it("reports missing channels as failures", async () => {
     listChannelsMock.mockResolvedValue({
-      items: [{ id: 1, name: "c1", models: "a,b" }],
+      items: [{ ref: modelResourceRef(1), name: "c1", models: ["a", "b"] }],
     })
 
     const result = await ModelRedirectService.clearChannelModelMappings([
-      1, 999,
+      modelResourceRef(1),
+      modelResourceRef(999),
     ])
 
     expect(result.success).toBe(false)
     expect(result.failedChannels).toBe(1)
     expect(result.errors.join(" ")).toContain("Channel not found")
+  })
+
+  it("preserves opaque references when clearing mappings", async () => {
+    const ref = modelResourceRef("provider/key:alpha")
+    listChannelsMock.mockResolvedValue({
+      items: [
+        {
+          ref,
+          name: "Opaque",
+          models: ["model-a"],
+          modelMapping: '{"a":"b"}',
+        },
+      ],
+    })
+
+    const result = await ModelRedirectService.clearChannelModelMappings([ref])
+
+    expect(result).toMatchObject({
+      success: true,
+      clearedChannels: 1,
+      results: [{ resourceRef: ref, success: true }],
+    })
+    expect(updateChannelModelMappingMock).toHaveBeenCalledWith(
+      expect.any(Object),
+      ref,
+      ["model-a"],
+      {},
+    )
+  })
+
+  it.each([
+    modelResourceRef(1, { scopeKey: "https://other.example" }),
+    modelResourceRef(1, { siteType: SITE_TYPES.VELOERA }),
+  ])(
+    "rejects a foreign selection before listing or writing",
+    async (foreignRef) => {
+      const result = await ModelRedirectService.clearChannelModelMappings([
+        modelResourceRef(1),
+        foreignRef,
+      ])
+
+      expect(result.success).toBe(false)
+      expect(listChannelsMock).not.toHaveBeenCalled()
+      expect(updateChannelModelMappingMock).not.toHaveBeenCalled()
+    },
+  )
+
+  it("rejects a foreign inventory before clearing any mappings", async () => {
+    listChannelsMock.mockResolvedValue({
+      items: [
+        {
+          ref: modelResourceRef(1),
+          name: "Current",
+          models: ["a"],
+          modelMapping: '{"a":"b"}',
+        },
+        {
+          ref: modelResourceRef(1, { scopeKey: "https://other.example" }),
+          name: "Other",
+          models: ["a"],
+          modelMapping: '{"a":"b"}',
+        },
+      ],
+    })
+
+    const result = await ModelRedirectService.clearChannelModelMappings([
+      modelResourceRef(1),
+    ])
+
+    expect(result.success).toBe(false)
+    expect(updateChannelModelMappingMock).not.toHaveBeenCalled()
   })
 })

@@ -1,4 +1,8 @@
-import { API_TYPES } from "~/services/verification/aiApiVerification"
+import {
+  API_TYPES,
+  API_VERIFICATION_MODES,
+  type ApiVerificationMode,
+} from "~/services/verification/aiApiVerification"
 
 import { runCliToolCallingSimulation } from "./runners/toolCalling"
 import type { CliSupportResult, CliToolId } from "./types"
@@ -9,6 +13,7 @@ import type { CliSupportResult, CliToolId } from "./types"
 type CliToolRunnerParams = {
   baseUrl: string
   apiKey: string
+  mode?: ApiVerificationMode
   modelId?: string
   abortSignal?: AbortSignal
 }
@@ -32,10 +37,7 @@ export async function runCliSupportToolFromRegistry(
   return entry.run(params)
 }
 
-const CLI_TOOL_CONFIG: Record<
-  CliToolId,
-  { apiType: (typeof API_TYPES)[keyof typeof API_TYPES]; endpointPath: string }
-> = {
+const CLI_TOOL_CONFIG = {
   claude: { apiType: API_TYPES.ANTHROPIC, endpointPath: "/v1/messages" },
   codex: {
     apiType: API_TYPES.OPENAI,
@@ -44,8 +46,16 @@ const CLI_TOOL_CONFIG: Record<
   gemini: {
     apiType: API_TYPES.GOOGLE,
     endpointPath: "/v1beta/models/{model}:generateContent",
+    streamingEndpointPath: "/v1beta/models/{model}:streamGenerateContent",
   },
-}
+} as const satisfies Record<
+  CliToolId,
+  {
+    apiType: (typeof API_TYPES)[keyof typeof API_TYPES]
+    endpointPath: string
+    streamingEndpointPath?: string
+  }
+>
 
 /**
  * Typed registry for dispatching tool simulation execution without conditional chains.
@@ -61,6 +71,7 @@ const cliSupportToolRegistry: Record<CliToolId, CliToolRegistryEntry> = {
         toolId: "claude",
         baseUrl: params.baseUrl,
         apiKey: params.apiKey,
+        mode: params.mode,
         apiType: CLI_TOOL_CONFIG.claude.apiType,
         modelId: params.modelId,
         abortSignal: params.abortSignal,
@@ -74,6 +85,7 @@ const cliSupportToolRegistry: Record<CliToolId, CliToolRegistryEntry> = {
         toolId: "codex",
         baseUrl: params.baseUrl,
         apiKey: params.apiKey,
+        mode: params.mode,
         apiType: CLI_TOOL_CONFIG.codex.apiType,
         modelId: params.modelId,
         abortSignal: params.abortSignal,
@@ -87,10 +99,14 @@ const cliSupportToolRegistry: Record<CliToolId, CliToolRegistryEntry> = {
         toolId: "gemini",
         baseUrl: params.baseUrl,
         apiKey: params.apiKey,
+        mode: params.mode,
         apiType: CLI_TOOL_CONFIG.gemini.apiType,
         modelId: params.modelId,
         abortSignal: params.abortSignal,
-        endpointPath: CLI_TOOL_CONFIG.gemini.endpointPath,
+        endpointPath:
+          params.mode === API_VERIFICATION_MODES.NonStreaming
+            ? CLI_TOOL_CONFIG.gemini.endpointPath
+            : CLI_TOOL_CONFIG.gemini.streamingEndpointPath,
       })
     },
   },

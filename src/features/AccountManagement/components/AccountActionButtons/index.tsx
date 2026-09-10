@@ -20,7 +20,6 @@ import {
   Trash2,
 } from "lucide-react"
 import React, { useEffect, useRef, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { IconButton } from "~/components/ui"
@@ -30,7 +29,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import { SITE_TYPES } from "~/constants/siteType"
+import { getAccountSiteApiRouter } from "~/constants/siteType"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
@@ -48,9 +47,10 @@ import {
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
+import toast from "~/lib/notify"
 import {
-  accountRuntimeKeyToLegacyAccountToken,
   collectAccountRuntimeKeySecrets,
+  isAccountTokenRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { isAccountTodayMetricComplete } from "~/services/accounts/accountTodayStats"
 import {
@@ -63,8 +63,11 @@ import {
   InvalidTokenPayloadError,
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { MANAGED_RESOURCE_SECRET_VERIFICATION_KINDS } from "~/services/apiAdapters/contracts/managedResourceMatching"
+import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/inspection"
 import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import {
   getManagedSiteChannelExactMatch,
   getRecoverableManagedSiteChannelCandidate,
@@ -74,18 +77,16 @@ import {
   createManagedSiteChannelMatchRequestCache,
   resolveManagedSiteChannelMatch,
 } from "~/services/managedSites/channelMatchResolver"
-import { getManagedSiteChannelNavigationId } from "~/services/managedSites/managedSiteChannelResourceIdentity"
 import {
-  getManagedSiteService,
+  getCurrentManagedSiteType,
   hasValidManagedSiteConfig,
-} from "~/services/managedSites/managedSiteService"
-import { buildTokenChannelStatusChannelMatchService } from "~/services/managedSites/tokenChannelStatus"
+} from "~/services/managedSites/runtimeConfig"
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
 import {
-  collectManagedConfigSecrets,
   getManagedSiteType,
   supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
+import { collectManagedConfigSecrets } from "~/services/managedSites/utils/resourceSecrets"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
@@ -113,11 +114,9 @@ import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { showWarningToast } from "~/utils/core/toastHelpers"
 import { sanitizeOriginUrl } from "~/utils/core/url"
 import {
   openKeysPage,
-  openManagedSiteChannelsForChannel,
   openManagedSiteChannelsPage,
   openModelsPage,
   openRedeemPage,
@@ -482,6 +481,11 @@ export default function AccountActionButtons({
     navigateAfterClosingMoreActions(() => openModelsPage(site.id))
   }
 
+  const pageRoutes = getAccountSiteApiRouter(site.siteType)
+  const canOpenRedeemPage = Boolean(
+    site.checkIn?.customCheckIn?.redeemUrl || pageRoutes.redeemPath,
+  )
+
   const handleNavigateToUsageManagement = () => {
     openUsagePage(site)
   }
@@ -503,7 +507,7 @@ export default function AccountActionButtons({
     }
     const handleChannelLocateFallback = (message: string) => {
       openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
-      showWarningToast(message)
+      toast.warning(message)
     }
 
     const secretsToRedact = new Set<string>()
@@ -513,8 +517,10 @@ export default function AccountActionButtons({
     ])
 
     try {
-      const service = await getManagedSiteService()
-      const managedConfig = await service.getConfig()
+      const managedSite = getManagedSiteCapabilities(
+        await getCurrentManagedSiteType(),
+      )
+      const managedConfig = await managedSite.config.get()
 
       if (!managedConfig) {
         return handleChannelLocateFallback(
@@ -553,13 +559,17 @@ export default function AccountActionButtons({
         runtimeKey,
       )
       addRuntimeKeyRedactionSecrets(secretsToRedact, [resolvedRuntimeKey])
-      const resolvedToken =
-        accountRuntimeKeyToLegacyAccountToken(resolvedRuntimeKey)
-      let formData: Awaited<ReturnType<typeof service.prepareChannelFormData>>
+      let formData: Awaited<
+        ReturnType<typeof managedSite.channelDrafts.prepareFormData>
+      >
       try {
-        formData = await service.prepareChannelFormData(
-          { ...site, baseUrl: normalizedAccountBaseUrl },
-          resolvedToken,
+        formData = await managedSite.channelDrafts.prepareFormData(
+          buildManagedSiteChannelDraftSource({
+            ...resolvedRuntimeKey,
+            baseUrl: isAccountTokenRuntimeKey(resolvedRuntimeKey)
+              ? normalizedAccountBaseUrl
+              : resolvedRuntimeKey.baseUrl,
+          }),
         )
       } catch (error) {
         logger.warn(
@@ -591,7 +601,7 @@ export default function AccountActionButtons({
 
       const requestCache = createManagedSiteChannelMatchRequestCache()
       const matchParams = {
-        service: buildTokenChannelStatusChannelMatchService({ service }),
+        managedSite,
         managedConfig,
         accountBaseUrl: searchBaseUrl,
         models: formData.models,
@@ -606,7 +616,8 @@ export default function AccountActionButtons({
 
       if (
         recoverableCandidate &&
-        service.siteType === SITE_TYPES.NEW_API &&
+        managedSite.matching.secretVerification?.kind ===
+          MANAGED_RESOURCE_SECRET_VERIFICATION_KINDS.NEW_API_SESSION &&
         "userId" in managedConfig
       ) {
         resolution = await withProtectionBypassUserCommand(
@@ -616,7 +627,7 @@ export default function AccountActionButtons({
             await resolveManagedSiteChannelMatch({
               ...matchParams,
               resolveHiddenKeys: true,
-              hiddenKeyChannelIds: [recoverableCandidate.id],
+              hiddenKeyResourceRefs: [recoverableCandidate.ref],
               protectionBypassExecution,
             }),
         )
@@ -625,18 +636,11 @@ export default function AccountActionButtons({
 
       if (
         exactMatch &&
-        exactMatch.id != null &&
         resolution.models.reason ===
           MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT
       ) {
-        const navigationId = getManagedSiteChannelNavigationId(
-          service.siteType,
-          exactMatch,
-        )
-        if (navigationId !== undefined) {
-          openManagedSiteChannelsForChannel(navigationId)
-          return
-        }
+        openManagedSiteChannelsPage({ resourceRef: exactMatch.ref })
+        return
       }
 
       openManagedSiteChannelsPage({ search: resolution.searchBaseUrl })
@@ -1158,24 +1162,30 @@ export default function AccountActionButtons({
                 <ProductAnalyticsScope
                   featureId={PRODUCT_ANALYTICS_FEATURE_IDS.UsageAnalytics}
                 >
-                  <AccountActionMenuItem
-                    onClick={handleNavigateToUsageManagement}
-                    icon={ChartPie}
-                    label={t("actions.usageLog")}
-                    testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowUsageLogMenuItem}
-                    analyticsAction={
-                      PRODUCT_ANALYTICS_ACTION_IDS.OpenAccountUsageLog
-                    }
-                  />
+                  {pageRoutes.usagePath && (
+                    <AccountActionMenuItem
+                      onClick={handleNavigateToUsageManagement}
+                      icon={ChartPie}
+                      label={t("actions.usageLog")}
+                      testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowUsageLogMenuItem}
+                      analyticsAction={
+                        PRODUCT_ANALYTICS_ACTION_IDS.OpenAccountUsageLog
+                      }
+                    />
+                  )}
                 </ProductAnalyticsScope>
 
-                <AccountActionMenuItem
-                  onClick={handleNavigateToRedeemPage}
-                  icon={Banknote}
-                  label={t("actions.redeemPage")}
-                  testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowRedeemMenuItem}
-                  analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenRedeemPage}
-                />
+                {canOpenRedeemPage && (
+                  <AccountActionMenuItem
+                    onClick={handleNavigateToRedeemPage}
+                    icon={Banknote}
+                    label={t("actions.redeemPage")}
+                    testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowRedeemMenuItem}
+                    analyticsAction={
+                      PRODUCT_ANALYTICS_ACTION_IDS.OpenRedeemPage
+                    }
+                  />
+                )}
 
                 <DropdownMenuSeparator className="dark:bg-dark-bg-tertiary my-1 bg-gray-200" />
 

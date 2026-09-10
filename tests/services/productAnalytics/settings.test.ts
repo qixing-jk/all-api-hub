@@ -5,6 +5,7 @@ import {
   TEMP_CONTEXT_MODES,
   TEMP_CONTEXT_PREFERENCE_MODES,
 } from "~/constants/tempContextMode"
+import { DEFAULT_TEMP_WINDOW_SIZE } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   createDefaultPreferences,
   type UserPreferences,
@@ -297,6 +298,7 @@ describe("settings product analytics snapshots", () => {
         },
       },
       tempWindowFallback: {
+        ...DEFAULT_TEMP_WINDOW_SIZE,
         enabled: true,
         automaticFeatureBypass: {
           account_refresh: true,
@@ -899,6 +901,7 @@ describe("settings product analytics snapshots", () => {
         lastModified: 1,
       },
       tempWindowFallback: {
+        ...DEFAULT_TEMP_WINDOW_SIZE,
         enabled: true,
         automaticFeatureBypass: {
           account_refresh: false,

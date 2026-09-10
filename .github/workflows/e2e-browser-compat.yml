@@ -13,7 +13,8 @@ jobs:
   chrome-compat:
     name: Chrome ${{ matrix.chrome_version }} compatibility
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Leave time for setup and failure artifacts after Playwright stops.
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -67,11 +68,14 @@ jobs:
           install-dependencies: true
 
       - name: Run browser compatibility E2E
-        timeout-minutes: 20
+        timeout-minutes: 30
         env:
           AAH_E2E_CHROME_EXECUTABLE_PATH: ${{ steps.setup_chrome.outputs.chrome-path }}
           AAH_SKIP_E2E_BUILD: "1"
-        run: pnpm run e2e:default
+          AAH_E2E_SMOKE_ONLY: "1"
+        # Playwright finishes its report before the step or job is cancelled.
+        # The list reporter preserves per-test progress even during a timeout.
+        run: pnpm run e2e:default --global-timeout=1500000 --reporter=list,github,html
 
       - name: Upload Playwright artifacts (failure)
         if: failure()

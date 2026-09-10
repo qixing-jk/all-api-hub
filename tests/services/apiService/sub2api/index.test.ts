@@ -17,6 +17,7 @@ import {
   fetchInviteLink,
   fetchSiteStatus,
   fetchSub2ApiAnnouncements,
+  fetchSub2ApiPricingCatalogs,
   fetchSub2ApiRuntimeModels,
   fetchSupportCheckIn,
   fetchTodayIncome,
@@ -2545,6 +2546,35 @@ describe("apiService sub2api exported operations", () => {
     allow_ips: "",
     group: "default",
     ...overrides,
+  })
+
+  it("reads station prices with dashboard authentication and tolerates an unavailable optional endpoint", async () => {
+    vi.mocked(fetchApi).mockImplementation(async (_request, options) => {
+      if (options?.endpoint === "/api/v1/model-plaza")
+        return {
+          code: 0,
+          message: "ok",
+          data: { groups: [{ id: 9, models: [] }] },
+        }
+      throw new ApiError("not found", 404)
+    })
+    await expect(fetchSub2ApiPricingCatalogs(baseRequest)).resolves.toEqual({
+      plaza: { groups: [{ id: 9, models: [] }] },
+      channels: undefined,
+    })
+    expect(
+      vi
+        .mocked(fetchApi)
+        .mock.calls.map(([, options]) => options?.endpoint)
+        .sort(),
+    ).toEqual(["/api/v1/channels/available", "/api/v1/model-plaza"])
+    expect(
+      vi
+        .mocked(fetchApi)
+        .mock.calls.every(
+          ([request]) => request.auth?.accessToken === "jwt-token",
+        ),
+    ).toBe(true)
   })
 
   it("checks the public flag before fetching and encoding the affiliate code", async () => {

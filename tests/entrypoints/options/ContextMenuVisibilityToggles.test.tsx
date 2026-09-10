@@ -19,7 +19,7 @@ const { mockSendPreferencesMessage, mockSendRedemptionAssistMessage } =
     mockSendRedemptionAssistMessage: vi.fn(),
   }))
 
-vi.mock("react-hot-toast", () => {
+vi.mock("~/lib/notify", () => {
   const toast = Object.assign(vi.fn(), {
     dismiss: vi.fn(),
     error: vi.fn(),

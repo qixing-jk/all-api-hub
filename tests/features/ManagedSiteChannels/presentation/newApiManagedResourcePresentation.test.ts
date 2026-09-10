@@ -6,7 +6,8 @@ import {
   NEW_API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
-import { createManagedResourcePresentationMapper } from "~/features/ManagedSiteChannels/presentation/managedResourcePresentation"
+import { createManagedResourceRowMapper } from "~/features/ManagedSiteChannels/controllers/managedResourceRowMapper"
+import { presentManagedResourceRow } from "~/features/ManagedSiteChannels/presentation/managedResourcePresentation"
 import {
   createManagedResourceColumns,
   getManagedResourcePresentationSemantics,
@@ -24,14 +25,13 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: { getPreferences: mocks.getPreferences },
 }))
 
-vi.mock("~/services/apiAdapters/managedSites/newApi", () => ({
-  newApiManagedSiteCapabilities: {
-    channels: {
-      list: mocks.list,
-    },
-    channelDrafts: {},
-    queries: {},
+vi.mock("~/services/apiAdapters/managedResources/newApiOperations", () => ({
+  newApiChannelOperations: {
+    list: mocks.list,
   },
+}))
+vi.mock("~/services/apiAdapters/managedSites/newApi", () => ({
+  newApiManagedSiteCapabilities: { channelDrafts: {}, queries: {} },
 }))
 
 describe("New API managed-resource presentation", () => {
@@ -64,13 +64,16 @@ describe("New API managed-resource presentation", () => {
       key === "managedSiteChannels:statusLabels.autoDisabled"
         ? "Localized auto disabled"
         : key) as TFunction
-    const mapper = createManagedResourcePresentationMapper({
-      resolveLabel,
+    const mapper = createManagedResourceRowMapper({
       fieldIds: NEW_API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       semantics: getManagedResourcePresentationSemantics(SITE_TYPES.NEW_API),
     })
 
-    const row = mapper.map(page.items[0]!)
+    const row = presentManagedResourceRow(
+      mapper.map(page.items[0]!),
+      resolveLabel,
+      getManagedResourcePresentationSemantics(SITE_TYPES.NEW_API),
+    )
 
     expect(row.baseURL).toBe("https://gateway.example.invalid/v1")
     expect(row.cells[NEW_API_MANAGED_RESOURCE_FIELD_IDS.Type]).toMatchObject({
@@ -135,13 +138,15 @@ describe("New API managed-resource presentation", () => {
       key === "managedSiteChannels:statusLabels.manualPause"
         ? "Localized manual pause"
         : key) as TFunction
-    const mapper = createManagedResourcePresentationMapper({
-      resolveLabel,
+    const mapper = createManagedResourceRowMapper({
       fieldIds: NEW_API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       semantics: getManagedResourcePresentationSemantics(SITE_TYPES.NEW_API),
     })
 
-    expect(mapper.map(page.items[0]!).cells.status).toEqual({
+    expect(
+      presentManagedResourceRow(mapper.map(page.items[0]!), resolveLabel).cells
+        .status,
+    ).toEqual({
       kind: "status",
       value: "Localized manual pause",
       sortValue: "manually-disabled",

@@ -3,6 +3,7 @@ import {
   API_VERIFICATION_PROBE_STATUSES,
   runApiVerificationProbe,
   type ApiVerificationApiType,
+  type ApiVerificationMode,
 } from "~/services/verification/aiApiVerification"
 
 import type { CliSupportResult, CliSupportStatus, CliToolId } from "../types"
@@ -12,6 +13,7 @@ interface RunCliToolCallingSimulationParams {
   baseUrl: string
   apiKey: string
   apiType: ApiVerificationApiType
+  mode?: ApiVerificationMode
   modelId?: string
   abortSignal?: AbortSignal
   /**
@@ -38,6 +40,7 @@ export async function runCliToolCallingSimulation(
     baseUrl: params.baseUrl,
     apiKey: params.apiKey,
     apiType: params.apiType,
+    mode: params.mode,
     modelId: params.modelId,
     probeId: API_VERIFICATION_PROBE_IDS.ToolCalling,
     abortSignal: params.abortSignal,

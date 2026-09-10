@@ -1,5 +1,6 @@
 import {
   DONE_HUB_MANAGED_RESOURCE_FIELD_IDS,
+  DoneHubChannelStatus,
   DoneHubChannelType,
   DoneHubChannelTypeNames,
   DoneHubChannelTypeOptions,
@@ -7,7 +8,6 @@ import {
 import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
-  MANAGED_RESOURCE_CREATE_SEED_KINDS,
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
   type ManagedResourceRef,
@@ -29,24 +29,31 @@ import { toManagedSiteApiServiceRequest } from "~/services/apiAdapters/managedSi
 import {
   fetchChannelRaw,
   normalizeDoneHubChannel,
-  type DoneHubChannelRaw,
 } from "~/services/apiService/doneHub"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
 import {
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationResult,
 } from "~/services/managedSites/mutations"
+import { buildChannelPayload } from "~/services/managedSites/providers/doneHubService"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import type { DoneHubConfig } from "~/types/doneHubConfig"
 import type {
-  ChannelFormData,
-  ManagedSiteChannel,
-  UpdateChannelPayload,
-} from "~/types/managedSite"
+  DoneHubChannel,
+  DoneHubUpdateChannelPayload,
+} from "~/types/doneHub"
+import { type DoneHubChannelRaw } from "~/types/doneHub"
+import type { DoneHubConfig } from "~/types/doneHubConfig"
 import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"
+import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
 import { normalizeList } from "~/utils/core/string"
+
+import {
+  doneHubChannelOperations,
+  doneHubManagedResourceModels,
+} from "./doneHubOperations"
 
 type DoneHubNativeConfig = {
   config: DoneHubConfig
@@ -61,7 +68,7 @@ type DoneHubNativeResourceOperations = {
   list(
     query?: ResourceListQuery,
     options?: ResourceOperationOptions,
-  ): Promise<{ items: ManagedSiteChannel[]; total: number }>
+  ): Promise<{ items: DoneHubChannel[]; total: number }>
   get(
     locator: number,
     options?: ResourceOperationOptions,
@@ -71,12 +78,12 @@ type DoneHubNativeResourceOperations = {
     options?: ResourceOperationOptions,
   ): Promise<string>
   create(
-    draft: ChannelFormData,
+    draft: NewApiFamilyChannelCommand,
     options?: ResourceOperationOptions,
   ): Promise<ManagedSiteMutationResult<DoneHubNativeDetail>>
   update(
     detail: DoneHubNativeDetail,
-    command: ChannelFormData,
+    command: NewApiFamilyChannelCommand,
     options?: ResourceOperationOptions,
   ): Promise<ManagedSiteMutationResult<DoneHubNativeDetail>>
   delete(
@@ -96,10 +103,12 @@ type DoneHubNativeResourceOperations = {
   ): Promise<readonly string[]>
 }
 
-const channels = doneHubManagedSiteCapabilities.channels
+const channels = doneHubChannelOperations
 const queries = doneHubManagedSiteCapabilities.queries
 const doneHubEditor = createNewApiFamilyEditorBindings({
   fields: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS,
+  defaultType: DoneHubChannelType.OpenAI,
+  status: DoneHubChannelStatus,
   typeNames: DoneHubChannelTypeNames,
   typeOptions: DoneHubChannelTypeOptions,
   unsupportedCreateTypes: new Set([
@@ -122,6 +131,7 @@ const doneHubEditor = createNewApiFamilyEditorBindings({
 const doneHubResourceFacts = createNewApiFamilyResourceFacts({
   fields: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS,
   typeNames: DoneHubChannelTypeNames,
+  statusCodes: DoneHubChannelStatus,
   emptyInventorySecretState: "masked",
 })
 
@@ -183,11 +193,6 @@ const listChannels = async (
   options?: ResourceOperationOptions,
 ) => {
   throwIfNewApiResourceOperationAborted(options)
-  if (!channels.list) {
-    throw new ManagedResourceError({
-      code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
-    })
-  }
   const result = await channels.list(nativeConfig.config, options)
   throwIfNewApiResourceOperationAborted(options)
   const search = query?.search?.trim().toLocaleLowerCase()
@@ -204,11 +209,6 @@ const listCompleteChannelInventory = async (
   nativeConfig: DoneHubNativeConfig,
   options?: ResourceOperationOptions,
 ) => {
-  if (!channels.list) {
-    throw new ManagedResourceError({
-      code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
-    })
-  }
   return await channels.list(nativeConfig.config, {
     ...options,
     requireCompleteInventory: true,
@@ -252,7 +252,7 @@ const loadChannelSecret = async (
 
 const createChannel = async (
   nativeConfig: DoneHubNativeConfig,
-  draft: ChannelFormData,
+  draft: NewApiFamilyChannelCommand,
   options?: ResourceOperationOptions,
 ): Promise<ManagedSiteMutationResult<DoneHubNativeDetail>> =>
   await attributeCreatedNativeResource({
@@ -264,7 +264,7 @@ const createChannel = async (
     create: async () =>
       await channels.create(
         nativeConfig.config,
-        doneHubManagedSiteCapabilities.channelDrafts.buildPayload(draft),
+        buildChannelPayload(draft),
         options,
       ),
     identity: (item) => item.id,
@@ -276,14 +276,14 @@ const sameList = (left: string[], right: string[]) =>
 
 const planDoneHubUpdate = (
   detail: DoneHubNativeDetail,
-  draft: ChannelFormData,
-): UpdateChannelPayload & Record<string, unknown> => {
+  draft: NewApiFamilyChannelCommand,
+): DoneHubUpdateChannelPayload & Record<string, unknown> => {
   const current = normalizeDoneHubChannel(detail)
   const models = normalizeList(draft.models)
   const groups = normalizeList(draft.groups)
   const currentModels = parseNewApiResourceList(current.models)
   const currentGroups = parseNewApiResourceList(current.group)
-  const partial: UpdateChannelPayload & Record<string, unknown> = {
+  const partial: DoneHubUpdateChannelPayload & Record<string, unknown> = {
     id: current.id,
   }
   let requiresFullUpdate = false
@@ -372,7 +372,7 @@ const planDoneHubUpdate = (
 const updateChannel = async (
   nativeConfig: DoneHubNativeConfig,
   detail: DoneHubNativeDetail,
-  draft: ChannelFormData,
+  draft: NewApiFamilyChannelCommand,
   options?: ResourceOperationOptions,
 ): Promise<ManagedSiteMutationResult<DoneHubNativeDetail>> => {
   const payload = planDoneHubUpdate(detail, draft)
@@ -410,20 +410,18 @@ export async function openDoneHubNativeResourceOperations(): Promise<DoneHubNati
     delete: (locator, options) =>
       channels.delete(nativeConfig.config, locator, options),
     fetchModels: async (locator, options) => {
-      if (!channels.fetchModels) {
-        throw new ManagedResourceError({
-          code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
-        })
-      }
-      return await channels.fetchModels(nativeConfig.config, locator, options)
+      return await doneHubManagedResourceModels.fetchModels(
+        nativeConfig.config,
+        createManagedChannelResourceRef(
+          SITE_TYPES.DONE_HUB,
+          nativeConfig.config.baseUrl,
+          locator,
+        ),
+        options,
+      )
     },
     fetchDraftModels: async (probe, options) => {
-      if (!channels.fetchDraftModels) {
-        throw new ManagedResourceError({
-          code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
-        })
-      }
-      return await channels.fetchDraftModels(
+      return await doneHubManagedResourceModels.fetchDraftModels(
         nativeConfig.config,
         probe,
         options,
@@ -448,12 +446,7 @@ export async function openDoneHubNativeResourceOperations(): Promise<DoneHubNati
 const doneHubNativeDefinition = {
   siteType: SITE_TYPES.DONE_HUB,
   kind: MANAGED_RESOURCE_KINDS.Channel,
-  createSeedBindings: [
-    {
-      kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
-      project: doneHubEditor.projectImportSeed,
-    },
-  ],
+  createSeedBindings: [doneHubEditor.importSeedBinding],
   capabilities: {
     canSearch: true,
     canCreate: true,
@@ -473,7 +466,7 @@ const doneHubNativeDefinition = {
     }
     return locator
   },
-  locatorFromListItem: (item: ManagedSiteChannel) => item.id,
+  locatorFromListItem: (item: DoneHubChannel) => item.id,
   locatorFromDetail: (detail: DoneHubNativeDetail) => detail.id,
   list: (
     operations: DoneHubNativeResourceOperations,
@@ -485,7 +478,7 @@ const doneHubNativeDefinition = {
     locator: number,
     options?: ResourceOperationOptions,
   ) => operations.get(locator, options),
-  toListFacts: (channel: ManagedSiteChannel, ref: ManagedResourceRef) =>
+  toListFacts: (channel: DoneHubChannel, ref: ManagedResourceRef) =>
     doneHubResourceFacts.toFacts(channel, ref, { inventory: true }),
   toDetailFacts: (detail: DoneHubNativeDetail, ref: ManagedResourceRef) =>
     doneHubResourceFacts.toFacts(normalizeDoneHubChannel(detail), ref, {
@@ -508,13 +501,13 @@ const doneHubNativeDefinition = {
     ) as DoneHubNativeDetail,
   create: (
     operations: DoneHubNativeResourceOperations,
-    draft: ChannelFormData,
+    draft: NewApiFamilyChannelCommand,
     options?: ResourceOperationOptions,
   ) => operations.create(draft, options),
   update: (
     operations: DoneHubNativeResourceOperations,
     detail: DoneHubNativeDetail,
-    draft: ChannelFormData,
+    draft: NewApiFamilyChannelCommand,
     options?: ResourceOperationOptions,
   ) => operations.update(detail, draft, options),
   delete: (

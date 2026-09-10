@@ -22,7 +22,7 @@ import {
 } from "~/services/accounts/utils/siteRouteResolver"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
 import { createTab } from "~/utils/browser/browserApi"
-import { runPreferenceUpdateWithToast } from "~/utils/core/toastHelpers"
+import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
 /**
  * Settings panel for configuring New API connection credentials (base URL, admin token, user ID).
@@ -156,6 +156,7 @@ export default function NewApiSettings() {
       { baseUrl: trimmedBaseUrl, siteType: SITE_TYPES.NEW_API },
       SITE_ROUTE_KINDS.AdminCredentials,
     )
+    if (!adminCredentialsUrl) return
     try {
       await createTab(adminCredentialsUrl, true)
     } catch {

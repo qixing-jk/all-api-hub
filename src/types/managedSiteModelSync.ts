@@ -1,10 +1,12 @@
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+
 import type { ChannelModelFilterRule } from "./channelModelFilters"
 
 /**
  * Single channel execution result
  */
 export interface ExecutionItemResult {
-  channelId: number
+  resourceRef: ManagedResourceRef
   channelName: string
   ok: boolean
   httpStatus?: number
@@ -30,10 +32,21 @@ export interface ExecutionStatistics {
 /**
  * Complete execution result with items and stats
  */
-export interface ExecutionResult {
-  items: ExecutionItemResult[]
+export interface ExecutionResult<TItem = ExecutionItemResult> {
+  items: TItem[]
   statistics: ExecutionStatistics
 }
+
+/** Older executions cannot safely be assigned to a deployment after the fact. */
+export type ExecutionHistoryItemResult = Omit<
+  ExecutionItemResult,
+  "resourceRef"
+> & {
+  resourceRef: ManagedResourceRef | null
+  legacyResourceId?: string
+}
+
+export type ExecutionHistoryResult = ExecutionResult<ExecutionHistoryItemResult>
 
 /**
  * Execution filter options
@@ -97,4 +110,9 @@ export interface ExecutionProgress {
   failed: number
   lastResult?: ExecutionItemResult
   currentChannel?: string
+}
+
+/** Live progress is owned by the configuration captured when its run started. */
+export interface ScopedExecutionProgress extends ExecutionProgress {
+  configFingerprint: string
 }

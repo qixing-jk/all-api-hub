@@ -393,17 +393,13 @@ export function mergeCheckInDiscoveryResults(input: {
     ? methods[selectedMethodId]?.detection
     : undefined
   if (
-    (!selectedMethodIsCandidate ||
-      selectedDetection?.outcome ===
-        CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported) &&
-    decision.outcome === CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Resolved
+    !selectedMethodIsCandidate ||
+    selectedDetection?.outcome ===
+      CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported
   ) {
     return {
       ...merged,
-      selection: {
-        mode: CHECK_IN_SELECTION_MODES.Automatic,
-        methodId: decision.methodId,
-      },
+      selection: automaticSelectionFromDecision(decision),
     }
   }
 

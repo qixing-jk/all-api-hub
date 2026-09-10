@@ -60,13 +60,19 @@ export type AccountSiteModelListGroupSemantics =
 
 export type AccountSiteUrlProfile = {
   recognizedHostnames: readonly string[]
+  /** Apply canonical URL rules without an explicit site-type hint. */
+  inferFromHostname?: boolean
+  loginOrigin?: string
   storageOrigin?: string
+  /** Canonical browser/API origin used by automatic account detection. */
+  autoDetectOrigin?: string
   managedChannelOrigin?: string
   duplicateOrigin?: string
 }
 
 export type AccountSiteIdentityProfile = {
   usernameRequired: boolean
+  userIdRequired: boolean
   storedUserIdentityFields: readonly string[]
 }
 

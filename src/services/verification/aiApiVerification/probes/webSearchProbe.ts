@@ -1,14 +1,14 @@
-import { generateText } from "ai"
-
 import { nowMs, okLatency } from "../probeTiming"
 import { createGoogleProvider, createOpenAIProvider } from "../providers"
 import {
   API_TYPES,
+  API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
 } from "../types"
 import type {
   ApiVerificationApiType,
+  ApiVerificationMode,
   ApiVerificationProbeResult,
 } from "../types"
 import {
@@ -16,12 +16,14 @@ import {
   isAbortError,
   toSanitizedErrorSummary,
 } from "../utils"
+import { runProbeGeneration } from "./probeGeneration"
 
 type RunWebSearchProbeParams = {
   baseUrl: string
   apiKey: string
   apiType: ApiVerificationApiType
   modelId: string
+  mode?: ApiVerificationMode
   abortSignal?: AbortSignal
 }
 
@@ -32,6 +34,7 @@ export async function runWebSearchProbe(
   params: RunWebSearchProbeParams,
 ): Promise<ApiVerificationProbeResult> {
   const startedAt = nowMs()
+  const mode = params.mode ?? API_VERIFICATION_MODES.Streaming
   const secretsToRedact = [params.apiKey]
 
   if (params.apiType === API_TYPES.ANTHROPIC) {
@@ -57,18 +60,21 @@ export async function runWebSearchProbe(
       })
 
       const prompt = "Use web search to find one recent headline about AI SDK."
-      const result = await generateText({
-        model: provider(params.modelId),
-        prompt,
-        tools: {
-          web_search: provider.tools.webSearch({
-            externalWebAccess: true,
-            searchContextSize: "low",
-          }),
+      const result = await runProbeGeneration(
+        {
+          model: provider(params.modelId),
+          prompt,
+          tools: {
+            web_search: provider.tools.webSearch({
+              externalWebAccess: true,
+              searchContextSize: "low",
+            }),
+          },
+          toolChoice: { type: "tool", toolName: "web_search" },
+          abortSignal: params.abortSignal,
         },
-        toolChoice: { type: "tool", toolName: "web_search" },
-        abortSignal: params.abortSignal,
-      })
+        mode,
+      )
 
       const searched =
         (result.toolResults ?? []).some(
@@ -77,6 +83,7 @@ export async function runWebSearchProbe(
 
       return {
         id: API_VERIFICATION_PROBE_IDS.WebSearch,
+        mode,
         status: searched
           ? API_VERIFICATION_PROBE_STATUSES.Pass
           : API_VERIFICATION_PROBE_STATUSES.Fail,
@@ -108,15 +115,18 @@ export async function runWebSearchProbe(
 
       const prompt =
         "Use Google search grounding to find one recent AI headline."
-      const result = await generateText({
-        model: google(params.modelId),
-        prompt,
-        tools: {
-          google_search: google.tools.googleSearch({}),
+      const result = await runProbeGeneration(
+        {
+          model: google(params.modelId),
+          prompt,
+          tools: {
+            google_search: google.tools.googleSearch({}),
+          },
+          toolChoice: { type: "tool", toolName: "google_search" },
+          abortSignal: params.abortSignal,
         },
-        toolChoice: { type: "tool", toolName: "google_search" },
-        abortSignal: params.abortSignal,
-      })
+        mode,
+      )
 
       const searched =
         (result.toolResults ?? []).some(
@@ -125,6 +135,7 @@ export async function runWebSearchProbe(
 
       return {
         id: API_VERIFICATION_PROBE_IDS.WebSearch,
+        mode,
         status: searched
           ? API_VERIFICATION_PROBE_STATUSES.Pass
           : API_VERIFICATION_PROBE_STATUSES.Fail,
@@ -173,6 +184,7 @@ export async function runWebSearchProbe(
     return {
       id: API_VERIFICATION_PROBE_IDS.WebSearch,
       status: API_VERIFICATION_PROBE_STATUSES.Fail,
+      mode,
       latencyMs: okLatency(startedAt),
       summary,
       summaryKey: diagnostics.summaryKey,

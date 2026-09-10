@@ -1,3 +1,4 @@
+import { RotateCcw } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -7,11 +8,11 @@ import {
   AlertTitle,
   BodySmall,
   Button,
-  DestructiveConfirmDialog,
+  ConfirmDialog,
   Heading5,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { showResetToast } from "~/utils/core/toastHelpers"
+import { showResetToast } from "~/utils/feedback/preferenceFeedback"
 
 /**
  * Renders the destructive reset section with confirmation dialog for settings.
@@ -73,7 +74,9 @@ export default function ResetSettingsSection() {
         </Alert>
       </section>
 
-      <DestructiveConfirmDialog
+      <ConfirmDialog
+        intent="destructive"
+        icon={RotateCcw}
         isOpen={isConfirmDialogOpen}
         onClose={handleCloseConfirmDialog}
         size="sm"

@@ -25,6 +25,7 @@ vi.mock("~/services/apiService/newApiFamily/default/modelPricing", () => ({
 
 vi.mock("~/services/apiService/aihubmix", () => ({
   fetchModelPricing: mockAihubmixFetchModelPricing,
+  invalidateAIHubMixPublicCatalogs: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/newApiFamily/variants/oneHub", () => ({
@@ -68,7 +69,7 @@ describe("apiAdapter modelPricing", () => {
 
     const modelPricing = createNewApiModelPricing(SITE_TYPES.NEW_API)
 
-    await expect(modelPricing.fetchPricing(request)).resolves.toEqual(
+    await expect(modelPricing.fetchPricing(request)).resolves.toMatchObject(
       pricingResponse,
     )
 
@@ -87,12 +88,16 @@ describe("apiAdapter modelPricing", () => {
         pricingResponse,
       )
 
-      expect(mockOneHubFetchModelPricing).toHaveBeenCalledWith(request)
+      expect(mockOneHubFetchModelPricing).toHaveBeenCalledWith(
+        request,
+        siteType === SITE_TYPES.DONE_HUB,
+      )
       expect(mockFetchModelPricing).not.toHaveBeenCalled()
     },
   )
 
   it("delegates AIHubMix model pricing to the AIHubMix helper", async () => {
+    expect(aihubmixModelPricing.runtimeKeyFallback).toBe("account-pricing")
     const aihubmixPricingResponse: PricingResponse = {
       ...pricingResponse,
       data: [

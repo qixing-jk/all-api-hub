@@ -2,23 +2,25 @@ import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import type { AccountBootstrapCapability } from "~/services/apiAdapters/contracts/accountBootstrap"
 import * as accountBootstrap from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import * as anyrouter from "~/services/apiService/newApiFamily/variants/anyrouter"
+import * as apiyi from "~/services/apiService/newApiFamily/variants/apiyi"
 import * as veloera from "~/services/apiService/newApiFamily/variants/veloera"
 import * as wong from "~/services/apiService/newApiFamily/variants/wong"
 
-import { resolveStaticAccountRoutePath } from "../accountRoutes"
+import { resolveNewApiAccountRoutePath } from "./accountRoutes"
 
 type AccountBootstrapImplementation =
   typeof accountBootstrap.defaultAccountBootstrapImplementation
 
-interface NewApiAccountBootstrapOptions {
-  accessTokenCreationPolicy?: Parameters<
-    typeof accountBootstrap.getOrCreateAccessToken
-  >[1]
-}
+type NewApiAccountBootstrapOptions = Parameters<
+  typeof accountBootstrap.getOrCreateAccessToken
+>[1]
 
 const accountBootstrapOverrides: Partial<
   Record<AccountSiteType, Partial<AccountBootstrapImplementation>>
 > = {
+  [SITE_TYPES.APIYI]: {
+    getOrCreateAccessToken: apiyi.getAccessToken,
+  },
   [SITE_TYPES.ANYROUTER]: {
     fetchSupportCheckIn: anyrouter.fetchSupportCheckIn,
   },
@@ -43,13 +45,13 @@ export function createNewApiAccountBootstrap(
   }
 
   return {
-    fetchUserInfo: (request) => implementation.fetchUserInfo(request),
+    fetchUserInfo: (request) =>
+      options?.expectedUserId
+        ? implementation.fetchUserInfo(request, options.expectedUserId)
+        : implementation.fetchUserInfo(request),
     getOrCreateAccessToken: (request) =>
-      options?.accessTokenCreationPolicy
-        ? implementation.getOrCreateAccessToken(
-            request,
-            options.accessTokenCreationPolicy,
-          )
+      options
+        ? implementation.getOrCreateAccessToken(request, options)
         : implementation.getOrCreateAccessToken(request),
     fetchSiteStatus: (request) => implementation.fetchSiteStatus(request),
     fetchCheckInSupport: (request) =>
@@ -57,6 +59,6 @@ export function createNewApiAccountBootstrap(
     extractDefaultExchangeRate: (siteStatus) =>
       implementation.extractDefaultExchangeRate(siteStatus),
     resolveRoutePath: async (target, route) =>
-      resolveStaticAccountRoutePath(target, route),
+      resolveNewApiAccountRoutePath(target, route, implementation),
   }
 }

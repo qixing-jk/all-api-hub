@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import toast from "~/lib/notify"
 import {
   isAccountRuntimeKeyLocatorEqual,
   type AccountRuntimeKeyLocator,

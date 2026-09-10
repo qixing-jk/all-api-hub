@@ -32,11 +32,16 @@
     "meta": {
       "apiType": "介面型別",
       "apiTypePlaceholder": "選擇介面型別",
+      "mode": "測試方式",
       "model": "模型",
       "modelPlaceholder": "輸入模型 ID",
       "runtimeKey": "金鑰",
       "runtimeKeyIncompatible": "不適用於此模型",
       "runtimeKeyPlaceholder": "選擇金鑰"
+    },
+    "modes": {
+      "nonStreaming": "非串流",
+      "streaming": "串流"
     },
     "noCompatibleRuntimeKeyHint": "目前沒有適用於此模型分組的金鑰。請在金鑰管理中建立或選擇可用分組的金鑰。",
     "notRunYet": "尚未執行",

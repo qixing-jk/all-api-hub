@@ -1111,44 +1111,92 @@ test("adds an AIHubMix account, preserves its one-time key, and opens managed-si
   await sitePage.close()
 })
 
-test("requires duplicate-warning confirmation before the manual add flow continues", async ({
-  context,
-  extensionId,
-  page,
-}) => {
-  const serviceWorker = await getServiceWorker(context)
-  await seedStoredAccounts(serviceWorker, [
-    createStoredAccount({
-      id: "existing-account",
-      site_name: "Existing Example",
-      site_url: "https://example.com",
-      account_info: {
-        id: "99",
-        username: "existing-user",
-        access_token: "existing-token",
-      },
-    }),
-  ])
-  await seedUserPreferences(serviceWorker, {
-    warnOnDuplicateAccountAdd: true,
+for (const scenario of [
+  { userId: 99, duplicate: true },
+  { userId: 100, duplicate: false },
+]) {
+  test(`checks a manual addition by identity before saving: ${scenario.duplicate ? "same user" : "different user"}`, async ({
+    context,
+    extensionId,
+    page,
+  }) => {
+    const serviceWorker = await getServiceWorker(context)
+    await seedStoredAccounts(serviceWorker, [
+      createStoredAccount({
+        id: "existing-account",
+        site_name: "Existing Example",
+        site_url: "https://example.com",
+        account_info: {
+          id: "99",
+          username: "existing-user",
+          access_token: "existing-token",
+        },
+      }),
+    ])
+    await seedUserPreferences(serviceWorker, {
+      warnOnDuplicateAccountAdd: true,
+      autoProvisionKeyOnAccountAdd: false,
+    })
+    await stubNewApiSiteRoutes(context, {
+      userId: scenario.userId,
+      username: "added-user",
+      accessToken: "added-token",
+    })
+
+    await page.goto(
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
+    )
+    await waitForExtensionRoot(page)
+    await expectPermissionOnboardingHidden(page)
+
+    await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton).click()
+
+    await expect(page.locator("#site-url")).toBeVisible()
+    await page.locator("#site-url").fill("https://example.com")
+    await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.manualAddButton).click()
+
+    await expect(page.getByLabel("Site Type")).toBeVisible()
+    const duplicateHeading = page.getByRole("heading", {
+      name: "Duplicate account",
+      exact: true,
+    })
+    await expect(duplicateHeading).toBeHidden()
+    await page.getByLabel("Site Type").click()
+    await page
+      .getByRole("option", { name: SITE_TYPES.NEW_API, exact: true })
+      .click()
+    await page
+      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput)
+      .fill("Added Example")
+    await page
+      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.usernameInput)
+      .fill("added-user")
+    await page
+      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput)
+      .fill(String(scenario.userId))
+    await page
+      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput)
+      .fill("added-token")
+    await page.getByPlaceholder("Please enter exchange rate").fill("7")
+    await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton).click()
+
+    if (scenario.duplicate) {
+      await expect(duplicateHeading).toBeVisible()
+      await expect(
+        page.getByText(/user ID 99 is already saved \(existing-user\)/),
+      ).toBeVisible()
+      expect(await readStoredAccounts(serviceWorker)).toHaveLength(1)
+      await page
+        .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.duplicateWarningContinueButton)
+        .click()
+    }
+
+    await expect
+      .poll(async () => (await readStoredAccounts(serviceWorker)).length)
+      .toBe(2)
+    await expect(duplicateHeading).toBeHidden()
+    await expect(
+      page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog),
+    ).toBeHidden()
   })
-
-  await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
-  )
-  await waitForExtensionRoot(page)
-  await expectPermissionOnboardingHidden(page)
-
-  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton).click()
-
-  await expect(page.locator("#site-url")).toBeVisible()
-  await page.locator("#site-url").fill("https://example.com")
-  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.manualAddButton).click()
-
-  await expect(page.getByText("Duplicate account")).toBeVisible()
-  await page
-    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.duplicateWarningContinueButton)
-    .click()
-
-  await expect(page.getByLabel("Site Type")).toBeVisible()
-})
+}

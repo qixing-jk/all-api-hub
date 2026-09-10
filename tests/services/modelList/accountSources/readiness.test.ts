@@ -214,7 +214,7 @@ describe("resolveModelListAccountSourceReadiness", () => {
     })
   })
 
-  it("carries profile display capability source for AIHubMix", () => {
+  it("carries response display capability source for AIHubMix", () => {
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.AIHUBMIX,
       account: {
@@ -230,7 +230,7 @@ describe("resolveModelListAccountSourceReadiness", () => {
       route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing,
       statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
       displayCapabilitiesSource:
-        ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+        ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
     })
   })
 })

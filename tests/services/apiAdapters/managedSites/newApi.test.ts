@@ -1,39 +1,28 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
+import { newApiManagedResourceModels } from "~/services/apiAdapters/managedResources/newApiOperations"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
-import { CHANNEL_STATUS } from "~/types/managedSite"
-import type {
-  ChannelFormData,
-  CreateChannelPayload,
-  ManagedSiteChannel,
-} from "~/types/managedSite"
+import type { CreateChannelPayload } from "~/types/newApi"
+import { CHANNEL_STATUS } from "~/types/newApi"
 import {
   CHANNEL_MUTATION_SCENARIOS,
   testManagedSiteChannelMutationContract,
   type ChannelMutationScenario,
 } from "~~/tests/services/apiAdapters/managedSites/channelMutationContract"
-import { testManagedUpstreamResourceMutationContract } from "~~/tests/services/apiAdapters/managedSites/resourceMutationContract"
-import {
-  buildApiToken,
-  buildDisplaySiteData,
-} from "~~/tests/test-utils/factories"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 const channelManagement = vi.hoisted(() => ({
-  searchChannel: vi.fn(),
   listAllChannels: vi.fn(),
   fetchChannel: vi.fn(),
   createChannel: vi.fn(),
-  updateChannel: vi.fn(),
   updateChannelFields: vi.fn(),
   updateChannelStatus: vi.fn(),
   isNewApiManualStatus: vi.fn((status) => status === 1 || status === 2),
   deleteChannel: vi.fn(),
   fetchChannelModels: vi.fn(),
   fetchDraftChannelModels: vi.fn(),
-  updateChannelModels: vi.fn(),
-  updateChannelModelMapping: vi.fn(),
+  searchChannel: vi.fn(),
 }))
 
 const keyManagement = vi.hoisted(() => ({
@@ -58,10 +47,7 @@ const keyManagement = vi.hoisted(() => ({
 
 const newApiProvider = vi.hoisted(() => ({
   checkValidNewApiConfig: vi.fn(),
-  fetchAvailableModels: vi.fn(),
-  buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
-  buildChannelPayload: vi.fn(),
 }))
 
 const userPreferences = vi.hoisted(() => ({
@@ -90,48 +76,6 @@ describe("newApi managed-site channel capability", () => {
     adminToken: "admin-token",
     userId: "42",
   }
-  const buildManagedSiteChannel = (
-    overrides: Partial<ManagedSiteChannel> = {},
-  ): ManagedSiteChannel =>
-    ({
-      id: 7,
-      type: 1,
-      key: "sk-live-channel-key",
-      name: "Example Channel",
-      base_url: "https://upstream.example.invalid",
-      models: "gpt-4o,gpt-4o-mini",
-      status: 1,
-      weight: 11,
-      priority: 13,
-      openai_organization: null,
-      test_model: null,
-      created_time: 0,
-      test_time: 0,
-      response_time: 0,
-      other: "advanced",
-      balance: 0,
-      balance_updated_time: 0,
-      group: "default,vip",
-      used_quota: 0,
-      model_mapping: '{"gpt-4o":"upstream-gpt-4o"}',
-      status_code_mapping: '{"429":"quota"}',
-      auto_ban: 1,
-      other_info: '{"status_reason":"ok"}',
-      tag: "tag-a",
-      param_override: { temperature: 0.2 },
-      header_override: { "x-provider": "example" },
-      remark: "keep me",
-      channel_info: {
-        is_multi_key: false,
-        multi_key_size: 0,
-        multi_key_status_list: null,
-        multi_key_polling_index: 0,
-        multi_key_mode: "",
-      },
-      setting: '{"proxy":"on"}',
-      settings: '{"retry":2}',
-      ...overrides,
-    }) satisfies ManagedSiteChannel
 
   const createPayload = {
     mode: "single",
@@ -140,6 +84,48 @@ describe("newApi managed-site channel capability", () => {
   const updatePayload = { id: 7, name: "updated" }
   const models = ["model-a", "model-b"]
   const modelMapping = { "model-a": "upstream-model-a" }
+
+  it.each([
+    { case: "missing", modelFields: {} },
+    { case: "null", modelFields: { models: null } },
+  ])(
+    "keeps the model inventory usable with $case channel models",
+    async ({ modelFields }) => {
+      const channel = {
+        id: 7,
+        name: "Unconfigured models",
+        type: 1,
+        status: 1,
+        base_url: "https://upstream.example.invalid",
+        key: "",
+        model_mapping: "{}",
+      }
+      channelManagement.listAllChannels.mockResolvedValueOnce({
+        items: [
+          { ...channel, ...modelFields },
+          { ...channel, id: 8, models: " model-a, , model-b " },
+        ],
+        total: 2,
+        type_counts: { "1": 2 },
+      })
+
+      await expect(
+        newApiManagedResourceModels.list(config, undefined),
+      ).resolves.toMatchObject({
+        total: 2,
+        items: [
+          {
+            ref: modelResourceRef(7, { scopeKey: config.baseUrl }),
+            models: [],
+          },
+          {
+            ref: modelResourceRef(8, { scopeKey: config.baseUrl }),
+            models: ["model-a", "model-b"],
+          },
+        ],
+      })
+    },
+  )
 
   const arrangeRestMutation =
     (mock: typeof channelManagement.createChannel, successData: unknown) =>
@@ -179,10 +165,10 @@ describe("newApi managed-site channel capability", () => {
       successData: { id: 17 },
       arrange: arrangeRestMutation(channelManagement.createChannel, { id: 17 }),
       invoke: async () => {
-        const { newApiManagedSiteChannels } = await import(
-          "~/services/apiAdapters/managedSites/newApi"
+        const { newApiChannelOperations } = await import(
+          "~/services/apiAdapters/managedResources/newApiOperations"
         )
-        return await newApiManagedSiteChannels.create(config, createPayload)
+        return await newApiChannelOperations.create(config, createPayload)
       },
       assertRequestPayload: () =>
         expect(channelManagement.createChannel.mock.calls.at(-1)?.[1]).toBe(
@@ -201,10 +187,10 @@ describe("newApi managed-site channel capability", () => {
         id: 7,
       }),
       invoke: async () => {
-        const { newApiManagedSiteChannels } = await import(
-          "~/services/apiAdapters/managedSites/newApi"
+        const { newApiChannelOperations } = await import(
+          "~/services/apiAdapters/managedResources/newApiOperations"
         )
-        return await newApiManagedSiteChannels.update(config, updatePayload)
+        return await newApiChannelOperations.update(config, updatePayload)
       },
       assertRequestPayload: () =>
         expect(
@@ -221,10 +207,10 @@ describe("newApi managed-site channel capability", () => {
       successData: undefined,
       arrange: arrangeRestMutation(channelManagement.deleteChannel, null),
       invoke: async () => {
-        const { newApiManagedSiteChannels } = await import(
-          "~/services/apiAdapters/managedSites/newApi"
+        const { newApiChannelOperations } = await import(
+          "~/services/apiAdapters/managedResources/newApiOperations"
         )
-        return await newApiManagedSiteChannels.delete(config, 7)
+        return await newApiChannelOperations.delete(config, 7)
       },
       assertRequestPayload: () =>
         expect(channelManagement.deleteChannel.mock.calls.at(-1)?.[1]).toBe(7),
@@ -239,10 +225,14 @@ describe("newApi managed-site channel capability", () => {
       successData: undefined,
       arrange: arrangeRestMutation(channelManagement.updateChannelFields, null),
       invoke: async () => {
-        const { newApiManagedSiteChannels } = await import(
-          "~/services/apiAdapters/managedSites/newApi"
+        return await newApiManagedResourceModels.updateModels!(
+          config,
+          modelResourceRef(7, {
+            siteType: "new-api",
+            scopeKey: config.baseUrl,
+          }),
+          models,
         )
-        return await newApiManagedSiteChannels.updateModels!(config, 7, models)
       },
       assertRequestPayload: () =>
         expect(
@@ -259,12 +249,12 @@ describe("newApi managed-site channel capability", () => {
       successData: undefined,
       arrange: arrangeRestMutation(channelManagement.updateChannelFields, null),
       invoke: async () => {
-        const { newApiManagedSiteChannels } = await import(
-          "~/services/apiAdapters/managedSites/newApi"
-        )
-        return await newApiManagedSiteChannels.updateModelMapping!(
+        return await newApiManagedResourceModels.updateModelMapping!(
           config,
-          7,
+          modelResourceRef(7, {
+            siteType: "new-api",
+            scopeKey: config.baseUrl,
+          }),
           models,
           modelMapping,
         )
@@ -287,12 +277,12 @@ describe("newApi managed-site channel capability", () => {
       request.observer?.onResponse()
       throw responseError
     })
-    const { newApiManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
+    const { newApiChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/newApiOperations"
     )
 
     await expect(
-      newApiManagedSiteChannels.create(config, createPayload),
+      newApiChannelOperations.create(config, createPayload),
     ).rejects.toBe(responseError)
   })
 
@@ -303,203 +293,17 @@ describe("newApi managed-site channel capability", () => {
       request.observer?.onResponse()
       return rejectionResponse
     })
-    const { newApiManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
+    const { newApiChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/newApiOperations"
     )
 
     await expect(
-      newApiManagedSiteChannels.create(config, createPayload),
+      newApiChannelOperations.create(config, createPayload),
     ).resolves.toEqual({
       outcome: "rejected",
       diagnostic: {
         message: "Provider rejected the mutation",
         raw: rejectionResponse,
-      },
-    })
-  })
-
-  const resourceDraft = {
-    name: "Resource channel",
-    type: 1,
-    key: "sk-resource",
-    base_url: "https://resource.example.invalid/v1",
-    models: ["model-a"],
-    groups: ["default"],
-    priority: 2,
-    weight: 3,
-    status: 0,
-  } satisfies ChannelFormData
-  const resourceNative = buildManagedSiteChannel({ id: 19, status: 0 })
-  const resourceDetail = {
-    summary: {
-      ref: {
-        managedSiteType: SITE_TYPES.NEW_API,
-        scopeKey: "https://new-api.example.invalid",
-        resourceId: "19",
-      },
-      displayName: resourceNative.name,
-      nativeKind: "channel",
-      status: "disabled",
-      secretState: "available",
-      capabilities: { canUpdate: true },
-    },
-    native: resourceNative,
-  } as const
-
-  testManagedUpstreamResourceMutationContract([
-    {
-      name: "create",
-      effect: { kind: "resource-created", resourceKind: "channel" },
-      successData: null,
-      arrange: (scenario) => {
-        newApiProvider.buildChannelPayload.mockReturnValue(createPayload)
-        return arrangeRestMutation(
-          channelManagement.createChannel,
-          null,
-        )(scenario)
-      },
-      invoke: async () => {
-        const { newApiManagedSiteCapabilities } = await import(
-          "~/services/apiAdapters/managedSites/newApi"
-        )
-        return await newApiManagedSiteCapabilities.resources!.items.create(
-          config,
-          resourceDraft,
-        )
-      },
-      assertRequestPayload: () =>
-        expect(channelManagement.createChannel.mock.calls.at(-1)?.[1]).toBe(
-          createPayload,
-        ),
-    },
-    {
-      name: "update",
-      effect: {
-        kind: "resource-updated",
-        resourceKind: "channel",
-        resourceId: 19,
-      },
-      successData: null,
-      arrange: (scenario) => {
-        arrangeRestMutation(channelManagement.updateChannel, null)(scenario)
-        return arrangeRestMutation(
-          channelManagement.updateChannelFields,
-          null,
-        )(scenario)
-      },
-      invoke: async () => {
-        const { newApiManagedSiteCapabilities } = await import(
-          "~/services/apiAdapters/managedSites/newApi"
-        )
-        return await newApiManagedSiteCapabilities.resources!.items.update(
-          config,
-          resourceDetail,
-          resourceDraft,
-        )
-      },
-      assertRequestPayload: () =>
-        expect(
-          channelManagement.updateChannelFields.mock.calls.at(-1)?.[1],
-        ).toEqual(
-          expect.objectContaining({
-            id: 19,
-            name: resourceDraft.name,
-            base_url: resourceDraft.base_url,
-            models: "model-a",
-            group: "default",
-            other: "advanced",
-          }),
-        ),
-    },
-    {
-      name: "delete",
-      effect: {
-        kind: "resource-deleted",
-        resourceKind: "channel",
-        resourceId: 19,
-      },
-      successData: undefined,
-      arrange: arrangeRestMutation(channelManagement.deleteChannel, null),
-      invoke: async () => {
-        const { newApiManagedSiteCapabilities } = await import(
-          "~/services/apiAdapters/managedSites/newApi"
-        )
-        return await newApiManagedSiteCapabilities.resources!.items.delete(
-          config,
-          resourceDetail.summary.ref,
-        )
-      },
-      assertRequestPayload: () =>
-        expect(channelManagement.deleteChannel.mock.calls.at(-1)?.[1]).toBe(19),
-    },
-  ])
-
-  it("does not dispatch the status endpoint when resource status is unchanged", async () => {
-    channelManagement.updateChannelStatus.mockClear()
-    channelManagement.updateChannelFields.mockImplementationOnce(
-      async (request) => {
-        request.observer?.onDispatch()
-        request.observer?.onResponse()
-        return { success: true, data: null, message: "success" }
-      },
-    )
-    const { newApiManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
-    )
-
-    await expect(
-      newApiManagedSiteCapabilities.resources!.items.update(
-        config,
-        resourceDetail,
-        resourceDraft,
-      ),
-    ).resolves.toMatchObject({ outcome: "succeeded" })
-    expect(channelManagement.updateChannelStatus).not.toHaveBeenCalled()
-  })
-
-  it("returns a partial resource update when status rejects after fields apply", async () => {
-    const statusResponse = {
-      success: false,
-      data: null,
-      message: "provider rejected status",
-    }
-    channelManagement.updateChannelFields.mockImplementationOnce(
-      async (request) => {
-        request.observer?.onDispatch()
-        request.observer?.onResponse()
-        return { success: true, data: null, message: "success" }
-      },
-    )
-    channelManagement.updateChannelStatus.mockImplementationOnce(
-      async (request) => {
-        request.observer?.onDispatch()
-        request.observer?.onResponse()
-        return statusResponse
-      },
-    )
-    const { newApiManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
-    )
-
-    await expect(
-      newApiManagedSiteCapabilities.resources!.items.update(
-        config,
-        resourceDetail,
-        { ...resourceDraft, status: CHANNEL_STATUS.ManuallyDisabled },
-      ),
-    ).resolves.toEqual({
-      outcome: "partial",
-      confirmedEffects: [
-        {
-          kind: "resource-updated",
-          resourceKind: "channel",
-          resourceId: 19,
-        },
-      ],
-      completion: "rejected",
-      diagnostic: {
-        message: "provider rejected status",
-        raw: statusResponse,
       },
     })
   })
@@ -510,8 +314,8 @@ describe("newApi managed-site channel capability", () => {
       request.observer?.onResponse()
       return { success: true, data: { id: 17 }, message: "created" }
     })
-    const { newApiManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
+    const { newApiChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/newApiOperations"
     )
     const payload = {
       mode: "single",
@@ -519,7 +323,7 @@ describe("newApi managed-site channel capability", () => {
     } as CreateChannelPayload
 
     await expect(
-      newApiManagedSiteChannels.create(config, payload),
+      newApiChannelOperations.create(config, payload),
     ).resolves.toEqual({
       outcome: "succeeded",
       data: { id: 17 },
@@ -553,12 +357,12 @@ describe("newApi managed-site channel capability", () => {
         return statusResponse
       },
     )
-    const { newApiManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
+    const { newApiChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/newApiOperations"
     )
 
     await expect(
-      newApiManagedSiteChannels.update(config, {
+      newApiChannelOperations.update(config, {
         id: 7,
         name: "updated",
         status: CHANNEL_STATUS.Enable,
@@ -592,12 +396,12 @@ describe("newApi managed-site channel capability", () => {
         throw raw
       },
     )
-    const { newApiManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
+    const { newApiChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/newApiOperations"
     )
 
     await expect(
-      newApiManagedSiteChannels.update(config, {
+      newApiChannelOperations.update(config, {
         id: 7,
         status: CHANNEL_STATUS.Enable,
       }),
@@ -628,12 +432,12 @@ describe("newApi managed-site channel capability", () => {
         return fieldResponse
       },
     )
-    const { newApiManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
+    const { newApiChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/newApiOperations"
     )
 
     await expect(
-      newApiManagedSiteChannels.update(config, {
+      newApiChannelOperations.update(config, {
         id: 7,
         status: CHANNEL_STATUS.Enable,
       }),
@@ -659,12 +463,12 @@ describe("newApi managed-site channel capability", () => {
         return { success: true, data: true, message: "success" }
       },
     )
-    const { newApiManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
+    const { newApiChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/newApiOperations"
     )
 
     await expect(
-      newApiManagedSiteChannels.update(config, {
+      newApiChannelOperations.update(config, {
         id: 7,
         status: CHANNEL_STATUS.Enable,
       }),
@@ -687,8 +491,8 @@ describe("newApi managed-site channel capability", () => {
   })
 
   it("delegates channel operations to direct New API family helpers", async () => {
-    const { newApiManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
+    const { newApiChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/newApiOperations"
     )
     const request = {
       baseUrl: config.baseUrl,
@@ -706,27 +510,34 @@ describe("newApi managed-site channel capability", () => {
       },
     } as CreateChannelPayload
 
-    await newApiManagedSiteChannels.search(config, "keyword")
-    await newApiManagedSiteChannels.list?.(config, {
+    await newApiChannelOperations.search(config, "keyword")
+    await newApiChannelOperations.list?.(config, {
       bypassSiteRequestLimit: true,
     })
-    await newApiManagedSiteChannels.get?.(config, 1)
-    await newApiManagedSiteChannels.create(config, createPayload)
-    await newApiManagedSiteChannels.update(config, {
+    await newApiChannelOperations.get?.(config, 1)
+    await newApiChannelOperations.create(config, createPayload)
+    await newApiChannelOperations.update(config, {
       id: 1,
       name: "updated",
     })
-    await newApiManagedSiteChannels.delete(config, 1)
-    await newApiManagedSiteChannels.fetchModels?.(config, 1)
-    await newApiManagedSiteChannels.fetchDraftModels?.(config, {
+    await newApiChannelOperations.delete(config, 1)
+    await newApiManagedResourceModels.fetchModels?.(
+      config,
+      modelResourceRef(1, { siteType: "new-api", scopeKey: config.baseUrl }),
+    )
+    await newApiManagedResourceModels.fetchDraftModels?.(config, {
       channelType: 1,
       baseUrl: "https://upstream.example.invalid",
       credential: "credential-placeholder",
     })
-    await newApiManagedSiteChannels.updateModels?.(config, 1, ["gpt-4o"])
-    await newApiManagedSiteChannels.updateModelMapping?.(
+    await newApiManagedResourceModels.updateModels?.(
       config,
-      1,
+      modelResourceRef(1, { siteType: "new-api", scopeKey: config.baseUrl }),
+      ["gpt-4o"],
+    )
+    await newApiManagedResourceModels.updateModelMapping?.(
+      config,
+      modelResourceRef(1, { siteType: "new-api", scopeKey: config.baseUrl }),
       ["gpt-4o"],
       { "gpt-4o": "upstream-gpt-4o" },
     )
@@ -817,9 +628,6 @@ describe("newApi managed-site channel capability", () => {
   })
 
   it("propagates model-sync request options to direct New API helpers", async () => {
-    const { newApiManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
-    )
     const signal = new AbortController().signal
     const request = {
       baseUrl: config.baseUrl,
@@ -831,10 +639,14 @@ describe("newApi managed-site channel capability", () => {
       bypassSiteRequestLimit: true,
     }
 
-    await newApiManagedSiteChannels.fetchModels?.(config, 1, {
-      signal,
-      bypassSiteRequestLimit: true,
-    })
+    await newApiManagedResourceModels.fetchModels?.(
+      config,
+      modelResourceRef(1, { siteType: "new-api", scopeKey: config.baseUrl }),
+      {
+        signal,
+        bypassSiteRequestLimit: true,
+      },
+    )
 
     expect(channelManagement.fetchChannelModels).toHaveBeenCalledWith(
       expect.objectContaining(request),
@@ -844,8 +656,8 @@ describe("newApi managed-site channel capability", () => {
   })
 
   it("propagates channel operation signals to the API transport request", async () => {
-    const { newApiManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
+    const { newApiChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/newApiOperations"
     )
     const signal = new AbortController().signal
 
@@ -866,11 +678,11 @@ describe("newApi managed-site channel capability", () => {
       succeedMutation("deleted"),
     )
 
-    await newApiManagedSiteChannels.search(config, "keyword", { signal })
-    await newApiManagedSiteChannels.get?.(config, 7, { signal })
-    await newApiManagedSiteChannels.create(config, createPayload, { signal })
-    await newApiManagedSiteChannels.update(config, updatePayload, { signal })
-    await newApiManagedSiteChannels.delete(config, 7, { signal })
+    await newApiChannelOperations.search(config, "keyword", { signal })
+    await newApiChannelOperations.get?.(config, 7, { signal })
+    await newApiChannelOperations.create(config, createPayload, { signal })
+    await newApiChannelOperations.update(config, updatePayload, { signal })
+    await newApiChannelOperations.delete(config, 7, { signal })
 
     for (const mock of [
       channelManagement.searchChannel,
@@ -908,418 +720,8 @@ describe("newApi managed-site channel capability", () => {
       newApiProvider.checkValidNewApiConfig,
     )
     expect(newApiManagedSiteCapabilities.channelDrafts).toEqual({
-      fetchAvailableModels: expect.any(Function),
-      buildName: newApiProvider.buildChannelName,
       prepareFormData: newApiProvider.prepareChannelFormData,
-      buildPayload: newApiProvider.buildChannelPayload,
     })
     expect(newApiManagedSiteCapabilities).not.toHaveProperty("imports")
-  })
-
-  it("injects account model fallback into the provider draft capability", async () => {
-    const { newApiManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
-    )
-    const account = buildDisplaySiteData({
-      id: "1",
-      siteType: "new-api",
-      baseUrl: config.baseUrl,
-    })
-    const token = buildApiToken({
-      id: 10,
-      name: "token",
-      key: "token-key",
-    })
-
-    await newApiManagedSiteCapabilities.channelDrafts.fetchAvailableModels(
-      account,
-      token,
-    )
-
-    expect(newApiProvider.fetchAvailableModels).toHaveBeenCalledWith(
-      account,
-      token,
-      {
-        fetchAccountAvailableModels: keyManagement.fetchAccountAvailableModels,
-      },
-    )
-  })
-
-  it("maps channels to core resource summaries and resolves detail through list fallback", async () => {
-    const { newApiManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
-    )
-    const channel = buildManagedSiteChannel({
-      id: 12,
-      key: "sk-********",
-      name: "Masked Channel",
-      status: 3,
-    })
-    channelManagement.listAllChannels.mockResolvedValue({
-      items: [channel],
-      total: 1,
-      type_counts: {},
-    })
-
-    const list =
-      await newApiManagedSiteCapabilities.resources.items.list(config)
-
-    expect(list.total).toBe(1)
-    expect(list.items[0]).toEqual(
-      expect.objectContaining({
-        displayName: "Masked Channel",
-        nativeKind: "channel",
-        status: "auto_disabled",
-        endpointLabel: "https://upstream.example.invalid",
-        modelCount: 2,
-        secretState: "masked",
-        ref: {
-          managedSiteType: "new-api",
-          scopeKey: "https://new-api.example.invalid",
-          resourceId: "12",
-        },
-      }),
-    )
-
-    await expect(
-      newApiManagedSiteCapabilities.resources.items.getDetail(
-        config,
-        list.items[0].ref,
-      ),
-    ).resolves.toEqual({ summary: list.items[0], native: channel })
-  })
-
-  it("maps New API resource status and secret-state variants", async () => {
-    const { newApiManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
-    )
-    channelManagement.listAllChannels.mockResolvedValue({
-      items: [
-        buildManagedSiteChannel({
-          id: 31,
-          name: "Enabled",
-          key: "sk-live",
-          status: 1,
-        }),
-        buildManagedSiteChannel({
-          id: 32,
-          name: "Disabled",
-          key: "",
-          status: 2,
-        }),
-        buildManagedSiteChannel({
-          id: 33,
-          name: "Unknown",
-          key: "sk-********",
-          status: 0,
-        }),
-      ],
-      total: 3,
-      type_counts: {},
-    })
-
-    await expect(
-      newApiManagedSiteCapabilities.resources.items.list(config),
-    ).resolves.toEqual({
-      items: [
-        expect.objectContaining({
-          displayName: "Enabled",
-          status: "enabled",
-          secretState: "available",
-        }),
-        expect.objectContaining({
-          displayName: "Disabled",
-          status: "disabled",
-          secretState: "masked",
-        }),
-        expect.objectContaining({
-          displayName: "Unknown",
-          status: "unknown",
-          secretState: "masked",
-        }),
-      ],
-      total: 3,
-    })
-  })
-
-  it("returns null for New API resource search misses", async () => {
-    const { newApiManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
-    )
-    channelManagement.searchChannel.mockResolvedValue(null)
-
-    await expect(
-      newApiManagedSiteCapabilities.resources.items.search(config, "missing"),
-    ).resolves.toBeNull()
-  })
-
-  it("rejects stale resource refs from a different site or scope before native access", async () => {
-    const { newApiManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
-    )
-
-    await expect(
-      newApiManagedSiteCapabilities.resources.items.getDetail(config, {
-        managedSiteType: SITE_TYPES.DONE_HUB,
-        scopeKey: "https://new-api.example.invalid",
-        resourceId: "12",
-      }),
-    ).rejects.toThrow("Resource reference does not match this managed site")
-    await expect(
-      newApiManagedSiteCapabilities.resources.items.delete(config, {
-        managedSiteType: SITE_TYPES.NEW_API,
-        scopeKey: "https://other.example.invalid",
-        resourceId: "12",
-      }),
-    ).rejects.toThrow("Resource reference does not match this managed site")
-
-    expect(channelManagement.listAllChannels).not.toHaveBeenCalled()
-    expect(channelManagement.deleteChannel).not.toHaveBeenCalled()
-  })
-
-  it("reports missing New API resource detail after a scoped lookup", async () => {
-    const { newApiManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
-    )
-    channelManagement.listAllChannels.mockResolvedValue({
-      items: [],
-      total: 0,
-      type_counts: {},
-    })
-
-    await expect(
-      newApiManagedSiteCapabilities.resources.items.getDetail(config, {
-        managedSiteType: SITE_TYPES.NEW_API,
-        scopeKey: "https://new-api.example.invalid",
-        resourceId: "404",
-      }),
-    ).rejects.toThrow("Channel 404 was not found")
-  })
-
-  it("updates resource drafts by preserving native fields and omitting masked keys", async () => {
-    const { newApiManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
-    )
-    arrangeRestMutation(
-      channelManagement.updateChannelFields,
-      null,
-    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
-    arrangeRestMutation(
-      channelManagement.updateChannelStatus,
-      null,
-    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
-    const native = buildManagedSiteChannel({
-      id: 19,
-      key: "sk-********",
-    })
-    const detail = {
-      summary: {
-        ref: {
-          managedSiteType: SITE_TYPES.NEW_API,
-          scopeKey: "https://new-api.example.invalid",
-          resourceId: "19",
-        },
-        displayName: native.name,
-        nativeKind: "channel",
-        status: "enabled",
-        secretState: "masked",
-        capabilities: { canUpdate: true },
-      },
-      native,
-    } as const
-
-    await newApiManagedSiteCapabilities.resources.items.update(config, detail, {
-      name: "Edited Channel",
-      type: native.type,
-      key: "sk-********",
-      base_url: "https://edited-upstream.example.invalid",
-      models: ["gpt-4o-mini"],
-      groups: ["vip"],
-      priority: 21,
-      weight: 34,
-      status: 2,
-    })
-
-    expect(channelManagement.updateChannelFields).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        id: 19,
-        name: "Edited Channel",
-        base_url: "https://edited-upstream.example.invalid",
-        models: "gpt-4o-mini",
-        groups: ["vip"],
-        group: "vip",
-        priority: 21,
-        weight: 34,
-        status: 2,
-        model_mapping: '{"gpt-4o":"upstream-gpt-4o"}',
-        status_code_mapping: '{"429":"quota"}',
-        setting: '{"proxy":"on"}',
-        settings: '{"retry":2}',
-      }),
-    )
-    expect(
-      channelManagement.updateChannelFields.mock.calls.at(-1)?.[1],
-    ).not.toHaveProperty("key")
-  })
-
-  it("writes a New API resource key only when the draft contains a usable key", async () => {
-    const { newApiManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
-    )
-    arrangeRestMutation(
-      channelManagement.updateChannelFields,
-      null,
-    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
-    arrangeRestMutation(
-      channelManagement.updateChannelStatus,
-      null,
-    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
-    const native = buildManagedSiteChannel({
-      id: 29,
-      key: "sk-********",
-    })
-    const detail = {
-      summary: {
-        ref: {
-          managedSiteType: SITE_TYPES.NEW_API,
-          scopeKey: "https://new-api.example.invalid",
-          resourceId: "29",
-        },
-        displayName: native.name,
-        nativeKind: "channel",
-        status: "enabled",
-        secretState: "masked",
-        capabilities: { canUpdate: true },
-      },
-      native,
-    } as const
-
-    await newApiManagedSiteCapabilities.resources.items.update(config, detail, {
-      ...newApiManagedSiteCapabilities.resources.drafts.prepareEditDraft(
-        detail,
-      ),
-      key: " sk-new-real-key ",
-    })
-
-    expect(channelManagement.updateChannelFields).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        id: 29,
-        key: "sk-new-real-key",
-      }),
-    )
-  })
-
-  it("delegates resource create and delete to channel operations", async () => {
-    const { newApiManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
-    )
-    arrangeRestMutation(
-      channelManagement.createChannel,
-      null,
-    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
-    arrangeRestMutation(
-      channelManagement.deleteChannel,
-      null,
-    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
-    newApiProvider.buildChannelPayload.mockReturnValue({
-      mode: "single",
-      channel: {
-        name: "Created",
-        key: "sk-created",
-        status: 1,
-      },
-    })
-
-    await newApiManagedSiteCapabilities.resources.items.create(config, {
-      name: "Created",
-      type: 1,
-      key: "sk-created",
-      base_url: "https://created.example.invalid",
-      models: ["gpt-4o"],
-      groups: ["default"],
-      priority: 0,
-      weight: 0,
-      status: 1,
-    })
-    await newApiManagedSiteCapabilities.resources.items.delete(config, {
-      managedSiteType: SITE_TYPES.NEW_API,
-      scopeKey: "https://new-api.example.invalid",
-      resourceId: "25",
-    })
-
-    expect(channelManagement.createChannel).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ mode: "single" }),
-    )
-    expect(channelManagement.deleteChannel).toHaveBeenCalledWith(
-      expect.anything(),
-      25,
-    )
-  })
-
-  it("prepares and validates New API resource import drafts", async () => {
-    const { newApiManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
-    )
-    const sourceDraft = {
-      name: "Source",
-      type: 1,
-      key: "sk-source",
-      base_url: "https://source.example.invalid",
-      models: ["gpt-4o"],
-      groups: ["vip"],
-      priority: 1,
-      weight: 2,
-      status: CHANNEL_STATUS.Enable,
-    }
-
-    await expect(
-      newApiManagedSiteCapabilities.resources.drafts.prepareImportDraft({
-        source: sourceDraft,
-      }),
-    ).resolves.toBe(sourceDraft)
-    await expect(
-      newApiManagedSiteCapabilities.resources.drafts.prepareImportDraft({
-        resource: {
-          ref: {
-            managedSiteType: SITE_TYPES.NEW_API,
-            scopeKey: "https://new-api.example.invalid",
-            resourceId: "30",
-          },
-          displayName: "Imported",
-          nativeKind: "channel",
-          status: "enabled",
-          endpointLabel: "https://imported.example.invalid",
-          modelPreview: ["gpt-4o-mini"],
-          secretState: "masked",
-          capabilities: {},
-        },
-      }),
-    ).resolves.toEqual({
-      name: "Imported",
-      type: 1,
-      key: "",
-      base_url: "https://imported.example.invalid",
-      models: ["gpt-4o-mini"],
-      groups: [],
-      priority: 0,
-      weight: 0,
-      status: CHANNEL_STATUS.Enable,
-    })
-    expect(
-      newApiManagedSiteCapabilities.resources.drafts.validateDraft({
-        ...sourceDraft,
-        name: "",
-        models: [],
-      }),
-    ).toEqual({
-      valid: false,
-      errors: [
-        { field: "name", message: "Channel name is required" },
-        { field: "models", message: "At least one model is required" },
-      ],
-    })
   })
 })

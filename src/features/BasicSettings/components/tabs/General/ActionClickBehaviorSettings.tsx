@@ -11,7 +11,8 @@ import {
   type ToolbarActionClickBehavior,
 } from "~/services/preferences/userPreferences"
 import { getSidePanelSupport } from "~/utils/browser/browserApi"
-import { showResultToast, showUpdateToast } from "~/utils/core/toastHelpers"
+import { showResultToast } from "~/utils/feedback/operationFeedback"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 
 /**
  * Lets users choose what the toolbar icon does, while reflecting runtime
@@ -36,7 +37,10 @@ export default function ActionClickBehaviorSettings() {
       behavior === TOOLBAR_ACTION_CLICK_BEHAVIORS.SidePanel &&
       !sidePanelSupported
     ) {
-      showResultToast(true, t("actionClick.sidepanelFallbackToast"))
+      showResultToast({
+        success: true,
+        message: t("actionClick.sidepanelFallbackToast"),
+      })
       return
     }
 

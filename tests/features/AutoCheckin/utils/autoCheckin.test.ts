@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from "vitest"
 
 import {
   countAutoCheckinResults,
-  FILTER_STATUS,
   filterAutoCheckinResults,
   getAutoCheckinResultMessage,
   isInvalidAccessTokenMessage,
   isNoTabWithIdMessage,
+  NEEDS_ATTENTION_RESULT_STATUSES,
   resolveAutoCheckinTroubleshootingHintKey,
   translateAutoCheckinMessageKey,
 } from "~/features/AutoCheckin/utils/autoCheckin"
@@ -16,7 +16,7 @@ import {
 } from "~/types/autoCheckin"
 
 describe("autoCheckin utils", () => {
-  it("counts already-checked outcomes as successful", () => {
+  it("counts already-checked outcomes separately from successful check-ins", () => {
     expect(
       countAutoCheckinResults([
         {
@@ -51,7 +51,40 @@ describe("autoCheckin utils", () => {
           timestamp: 5,
         },
       ]),
-    ).toEqual({ total: 5, success: 2, failed: 2, skipped: 1 })
+    ).toEqual({
+      total: 5,
+      success: 1,
+      alreadyChecked: 1,
+      failed: 1,
+      uncertain: 1,
+      skipped: 1,
+    })
+  })
+
+  it("filters already-checked outcomes independently", () => {
+    const result = {
+      accountId: "already-checked",
+      accountName: "Already checked",
+      status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+      timestamp: 1,
+    } satisfies CheckinAccountResult
+
+    expect(
+      filterAutoCheckinResults(
+        [result],
+        [CHECKIN_RESULT_STATUS.ALREADY_CHECKED],
+        "",
+        vi.fn() as any,
+      ),
+    ).toEqual([result])
+    expect(
+      filterAutoCheckinResults(
+        [result],
+        [CHECKIN_RESULT_STATUS.SUCCESS],
+        "",
+        vi.fn() as any,
+      ),
+    ).toEqual([])
   })
 
   describe("translateAutoCheckinMessageKey", () => {
@@ -207,14 +240,14 @@ describe("autoCheckin utils", () => {
               timestamp: 1,
             },
           ],
-          FILTER_STATUS.SKIPPED,
+          [CHECKIN_RESULT_STATUS.SKIPPED],
           "  无法确认  ",
           t as any,
         ),
       ).toHaveLength(1)
     })
 
-    it("keeps uncertain results in the existing failure attention filters", () => {
+    it("filters uncertain results independently while keeping them in attention", () => {
       const results: CheckinAccountResult[] = [
         {
           accountId: "failed",
@@ -246,7 +279,7 @@ describe("autoCheckin utils", () => {
       expect(
         filterAutoCheckinResults(
           results,
-          FILTER_STATUS.FAILED_OR_SKIPPED,
+          NEEDS_ATTENTION_RESULT_STATUSES,
           "",
           vi.fn((key: string) => key) as any,
         ).map((result) => result.accountId),
@@ -255,11 +288,58 @@ describe("autoCheckin utils", () => {
       expect(
         filterAutoCheckinResults(
           results,
-          FILTER_STATUS.FAILED,
+          [CHECKIN_RESULT_STATUS.FAILED],
           "",
           vi.fn((key: string) => key) as any,
         ).map((result) => result.accountId),
-      ).toEqual(["failed", "uncertain"])
+      ).toEqual(["failed"])
+
+      expect(
+        filterAutoCheckinResults(
+          results,
+          [CHECKIN_RESULT_STATUS.UNCERTAIN],
+          "",
+          vi.fn((key: string) => key) as any,
+        ).map((result) => result.accountId),
+      ).toEqual(["uncertain"])
+    })
+
+    it("combines selected result statuses while an empty selection shows all", () => {
+      const results: CheckinAccountResult[] = [
+        {
+          accountId: "success",
+          accountName: "Success",
+          status: CHECKIN_RESULT_STATUS.SUCCESS,
+          timestamp: 1,
+        },
+        {
+          accountId: "already-checked",
+          accountName: "Already checked",
+          status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+          timestamp: 2,
+        },
+        {
+          accountId: "failed",
+          accountName: "Failed",
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          timestamp: 3,
+        },
+      ]
+
+      expect(
+        filterAutoCheckinResults(
+          results,
+          [
+            CHECKIN_RESULT_STATUS.SUCCESS,
+            CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+          ],
+          "",
+          vi.fn() as any,
+        ).map((result) => result.accountId),
+      ).toEqual(["success", "already-checked"])
+      expect(filterAutoCheckinResults(results, [], "", vi.fn() as any)).toEqual(
+        results,
+      )
     })
   })
 

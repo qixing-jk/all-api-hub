@@ -218,7 +218,6 @@
     "site": {
       "checkedInToday": "Heute eingecheckt, zum Ansehen klicken",
       "checkInStatusOutdated": "Der Check-in-Status wurde heute nicht erkannt (letzte Überprüfungszeit: {{time}}). Zum Aktualisieren klicken",
-      "checkInStatusUnavailable": "Check-in wird unterstützt, aber der heutige Status kann nicht automatisch abgerufen werden",
       "currentSite": "Aktuelle Website",
       "currentSiteExists": "Dieselbe Website wie im aktuellen Tab",
       "disabled": "Deaktiviert",

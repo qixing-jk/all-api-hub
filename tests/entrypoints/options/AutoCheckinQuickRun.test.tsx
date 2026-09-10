@@ -62,7 +62,7 @@ vi.mock("~/utils/browser/tempWindowRequestSource", () => ({
   getCurrentTempWindowRequestSource: getCurrentTempWindowRequestSourceMock,
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     loading: vi.fn(),
     dismiss: vi.fn(),

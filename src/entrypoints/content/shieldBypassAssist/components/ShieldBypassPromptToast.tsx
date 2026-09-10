@@ -10,6 +10,7 @@ import {
   Heading3,
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import { ProtectionBypassHistoryLink } from "~/features/ProtectionBypass/components/ProtectionBypassHistoryLink"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -106,9 +107,11 @@ function usePrefixedDocumentTitle(prefix: string) {
 export function ShieldBypassPromptToast({
   onDismiss,
   onOpenSettings,
+  onOpenHistory,
 }: {
   onDismiss: () => void
   onOpenSettings: () => void
+  onOpenHistory: () => void | Promise<void>
 }) {
   const { t } = useTranslation("shieldBypass")
 
@@ -135,7 +138,11 @@ export function ShieldBypassPromptToast({
         </CardHeader>
         <CardContent padding="sm">
           <Body className="whitespace-pre-line">{t("toast.body")}</Body>
-          <div className="mt-3 flex justify-end gap-2">
+          <ProtectionBypassHistoryLink
+            className="mt-3"
+            onOpen={onOpenHistory}
+          />
+          <div className="mt-3 flex flex-wrap justify-end gap-2">
             <Button
               variant="secondary"
               analyticsAction={

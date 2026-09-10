@@ -41,7 +41,12 @@ vi.mock("~/services/managedSites/providers/newApiSession", () => ({
 }))
 
 const BASE_PARAMS = {
-  channelId: 12,
+  resourceRef: {
+    siteType: "new-api" as const,
+    kind: "channel" as const,
+    scopeKey: "https://managed.example",
+    resourceId: "12",
+  },
   command: PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
   label: "Channel A",
   requestKind: "channel" as const,
@@ -58,6 +63,28 @@ describe("loadNewApiChannelKeyWithVerification", () => {
   beforeEach(() => {
     fetchNewApiChannelKeyMock.mockReset()
     withProtectionBypassUserCommandMock.mockClear()
+  })
+
+  it("rejects a stale deployment reference before reading or opening verification", async () => {
+    fetchNewApiChannelKeyMock.mockResolvedValue("wrong-deployment-key")
+    const setKey = vi.fn()
+    const openVerification = vi.fn()
+    await expect(
+      loadNewApiChannelKeyWithVerification({
+        ...BASE_PARAMS,
+        resourceRef: {
+          siteType: "new-api",
+          kind: "channel",
+          scopeKey: "https://other.example",
+          resourceId: "12",
+        },
+        setKey,
+        openVerification,
+      }),
+    ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+    expect(fetchNewApiChannelKeyMock).not.toHaveBeenCalled()
+    expect(setKey).not.toHaveBeenCalled()
+    expect(openVerification).not.toHaveBeenCalled()
   })
 
   it("opens verification from the requirement result returned by the provider layer", async () => {
@@ -87,7 +114,7 @@ describe("loadNewApiChannelKeyWithVerification", () => {
       username: BASE_PARAMS.config.username,
       password: BASE_PARAMS.config.password,
       totpSecret: BASE_PARAMS.config.totpSecret,
-      channelId: BASE_PARAMS.channelId,
+      channelId: 12,
       protectionBypassExecution: expect.any(Object),
     })
     expect(openVerification).toHaveBeenCalledWith({
@@ -122,7 +149,7 @@ describe("loadNewApiChannelKeyWithVerification", () => {
       username: BASE_PARAMS.config.username,
       password: BASE_PARAMS.config.password,
       totpSecret: BASE_PARAMS.config.totpSecret,
-      channelId: BASE_PARAMS.channelId,
+      channelId: 12,
       protectionBypassExecution: expect.objectContaining({
         kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
         command: PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
@@ -196,7 +223,7 @@ describe("loadNewApiChannelKeyWithVerification", () => {
       label: "Channel A",
       config: BASE_PARAMS.config,
       initialSessionResult: undefined,
-      initialFailureMessage: "messages:background.windowCreationUnavailable",
+      initialFailure: { kind: "window-unavailable" },
       onVerified: expect.any(Function),
     })
     expect(setKey).not.toHaveBeenCalled()

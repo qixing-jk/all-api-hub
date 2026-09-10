@@ -68,7 +68,7 @@ vi.mock(
   () => ({ VerifyApiCredentialProfileDialog: () => null }),
 )
 vi.mock("~/components/ui", () => ({
-  DestructiveConfirmDialog: () => null,
+  ConfirmDialog: () => null,
 }))
 
 it("passes Kelivo profile analytics and clears the profile on close", async () => {

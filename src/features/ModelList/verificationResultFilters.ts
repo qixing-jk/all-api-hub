@@ -25,7 +25,9 @@ export const DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS = Object.values(
 )
 
 /** Builds the verification history lookup key for a model-list row. */
-function getVerificationSummaryKeyForModelItem(item: CalculatedModelItem) {
+function getVerificationSummaryKeyForModelItem(
+  item: Pick<CalculatedModelItem, "model" | "source">,
+) {
   const modelId = item.model.model_name?.trim()
   if (!modelId) return null
 
@@ -46,8 +48,10 @@ function getVerificationSummaryKeyForModelItem(item: CalculatedModelItem) {
 }
 
 /** Applies verification-result filtering and optional latency sorting. */
-export function applyVerificationResultView(
-  models: CalculatedModelItem[],
+export function applyVerificationResultView<
+  T extends Pick<CalculatedModelItem, "model" | "source" | "sourceIdentity">,
+>(
+  models: T[],
   params: {
     selectedResults: ModelListVerificationResultFilter[]
     shouldSortByLatency: boolean

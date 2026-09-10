@@ -13,7 +13,6 @@
       "title": "Không thể lưu kênh"
     },
     "loadError": {
-      "description": "{{error}}",
       "title": "Không thể tải kênh"
     },
     "partialMutation": {
@@ -287,13 +286,9 @@
       "running": "Đang di chuyển…",
       "start": "Bắt đầu di chuyển"
     },
-    "alerts": {
-      "noTargets": {
-        "description": "Vui lòng cấu hình một trang web lưu trữ mục tiêu khả dụng khác trong phần cài đặt trước khi bật tính năng di chuyển kênh."
-      }
-    },
     "betaBadge": "Beta",
     "blockedReasons": {
+      "sourceKeyExportRestricted": "Xuất khóa từ trang nguồn yêu cầu xác minh trên web mà Admin API Key đã cấu hình không thể thực hiện. Hãy lấy khóa từ trang quản trị nguồn rồi di chuyển kênh này theo cách thủ công.",
       "sourceKeyMissing": "Thiếu khóa kênh nguồn, hiện không thể di chuyển.",
       "sourceKeyResolutionFailed": "Không thể lấy khóa kênh nguồn. Nếu bạn vừa hoàn tất xác thực, hãy làm mới bản xem trước và thử lại.",
       "sourceTypeUnsupported": "Loại kênh nguồn này không được hỗ trợ để di chuyển. Hãy chọn kênh được hỗ trợ hoặc di chuyển thủ công.",
@@ -318,6 +313,7 @@
       "dropsModelMapping": "Cấu hình ánh xạ mô hình sẽ không được di chuyển cùng.",
       "dropsMultiKeyState": "Thông tin vòng lặp hoặc trạng thái nhiều khóa sẽ không được di chuyển cùng.",
       "dropsStatusCodeMapping": "Cấu hình ánh xạ mã trạng thái sẽ không được di chuyển cùng.",
+      "sub2apiDefaultGroup": "Các nhóm nguồn không được sao chép. Đích sẽ sử dụng nhóm mặc định của nền tảng nếu có. Hãy kiểm tra việc gán nhóm sau khi di chuyển.",
       "targetForcesDefaultGroup": "Trang web mục tiêu sẽ chuyển sang sử dụng nhóm mặc định.",
       "targetIgnoresPriority": "Trang web mục tiêu không giữ lại mức độ ưu tiên của kênh nguồn.",
       "targetIgnoresWeight": "Trang web mục tiêu không giữ lại trọng số của kênh nguồn.",
@@ -335,7 +331,6 @@
       },
       "loadFailed": "Tải bản xem trước di chuyển thất bại: {{error}}",
       "loading": "Đang tạo bản xem trước di chuyển…",
-      "selectedCount": "Đã chọn {{selectedCount}} kênh",
       "status": {
         "blocked": "Đã chặn",
         "ready": "Sẵn sàng"
@@ -365,6 +360,7 @@
       },
       "title": "Kết quả di chuyển"
     },
+    "sub2apiDefaultGroup": "Nhóm mặc định của nền tảng (nếu có)",
     "target": {
       "destinationLabel": "Trang web mục tiêu",
       "label": "Mục tiêu di chuyển",
@@ -415,15 +411,8 @@
   },
   "title": "Quản lý kênh",
   "toasts": {
-    "channelDeleted": "Đã xóa 1 kênh",
     "channelSaved": "Đã lưu kênh",
-    "channelsDeleted_other": "Đã xóa {{count}} kênh",
     "channelUpdated": "Đã cập nhật kênh",
-    "revealKeyFailed": "Tải key của kênh thật thất bại: {{error}}",
-    "revealKeyMasked": "Key của kênh vẫn đang bị che",
-    "revealKeyUnavailable": "Không thể lấy key của kênh",
-    "revealKeyUnsupported": "Trang được quản lý này không hỗ trợ hiển thị key của kênh",
-    "someDeletesFailed_other": "Xóa {{count}} kênh thất bại: {{error}}",
     "syncCompleted": "Đồng bộ mô hình hoàn tất ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Đã đồng bộ mô hình ({{success}}/{{total}}), nhưng không thể làm mới danh sách kênh. Hãy làm mới rồi thử lại.",
     "syncFailed": "Đồng bộ mô hình thất bại: {{error}}",

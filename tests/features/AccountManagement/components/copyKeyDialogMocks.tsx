@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
 import {
   CREATED_TOKEN_SECRET_DECISION_KINDS,
@@ -159,7 +160,7 @@ const createSub2ApiTokenProvisioningMock = () => ({
   ),
 })
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: toastSuccessMock,
     error: toastErrorMock,
@@ -193,6 +194,10 @@ vi.mock("~/services/apiAdapters/registry", () => ({
     return {
       account: {
         keyManagement: {
+          createRuntimeSecret:
+            siteType === SITE_TYPES.AIHUBMIX
+              ? createAIHubMixCreatedRuntimeSecret
+              : undefined,
           fetchTokens: (...args: any[]) => fetchAccountTokensMock(...args),
           createToken: (...args: any[]) => createApiTokenMock(...args),
           resolveTokenKey: (...args: any[]) => resolveApiTokenKeyMock(...args),
@@ -227,7 +232,7 @@ vi.mock("~/utils/core/logger", () => ({
     debug: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
-    error: loggerErrorMock,
+    error: mocks.loggerErrorMock,
   }),
 }))
 

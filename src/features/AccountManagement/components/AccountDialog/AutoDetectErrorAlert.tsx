@@ -29,10 +29,16 @@ import {
   openSiteSupportRequestPage,
 } from "~/utils/navigation"
 
+import {
+  AccessTokenVerificationGuide,
+  type AccessTokenContinuationAction,
+} from "./AccessTokenVerificationGuide"
 import { ManualAddGuideButton } from "./ManualAddGuideButton"
 
 interface AutoDetectErrorAlertProps extends AutoDetectErrorProps {
   manualAddGuideAnchor?: AccountSiteManualAddGuideAnchor
+  accessTokenContinuation?: AccessTokenContinuationAction
+  onPrepareAccessTokenInput?: () => void
 }
 
 const apiCredentialRecoveryErrorTypes = new Set<AutoDetectErrorType>([
@@ -52,6 +58,8 @@ const apiCredentialRecoveryErrorTypes = new Set<AutoDetectErrorType>([
  * @param props.onActionClick Optional handler invoked when custom action button is pressed.
  * @param props.onApiCredentialProfilesClick Optional handler invoked when API credential fallback is selected.
  * @param props.manualAddGuideAnchor Optional site-specific manual completion guide.
+ * @param props.accessTokenContinuation Optional popup-to-persistent-view action.
+ * @param props.onPrepareAccessTokenInput Reveals and focuses the token field before site navigation.
  */
 export default function AutoDetectErrorAlert({
   error,
@@ -61,6 +69,8 @@ export default function AutoDetectErrorAlert({
   onActionClick,
   onApiCredentialProfilesClick,
   manualAddGuideAnchor,
+  accessTokenContinuation,
+  onPrepareAccessTokenInput,
 }: AutoDetectErrorAlertProps) {
   const { t } = useTranslation("accountDialog")
 
@@ -121,6 +131,19 @@ export default function AutoDetectErrorAlert({
     apiCredentialRecoveryErrorTypes.has(error.type)
   const canShowApiCredentialFallback =
     Boolean(siteUrl) && canRecoverWithApiCredentialProfile
+
+  if (error.type === AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED) {
+    return (
+      <AccessTokenVerificationGuide
+        message={error.message}
+        siteUrl={siteUrl}
+        siteType={siteType}
+        manualAddGuideAnchor={manualAddGuideAnchor}
+        continuation={accessTokenContinuation}
+        onPrepareAccessTokenInput={onPrepareAccessTokenInput}
+      />
+    )
+  }
 
   return (
     <div className="mb-4 space-y-3">

@@ -15,7 +15,37 @@ import zhCnSettings from "~/locales/zh-CN/settings.json"
 import zhTwSettings from "~/locales/zh-TW/settings.json"
 
 describe("refresh settings search definitions", () => {
+  it("makes diagnostic history searchable and opens the refresh tab at its rendered anchor", () => {
+    expect(refreshSearchSections).toContainEqual(
+      expect.objectContaining({
+        id: "section:shield-history",
+        tabId: "refresh",
+        targetId: SHIELD_SETTINGS_TARGET_IDS.history,
+        titleKey: "shieldBypass:history.title",
+        descriptionKey: "shieldBypass:history.entryDescription",
+        breadcrumbsKeys: expect.arrayContaining([
+          "settings:tabs.refresh",
+          "settings:refresh.shieldTitle",
+        ]),
+        keywords: expect.arrayContaining(["diagnostics", "触发原因"]),
+      }),
+    )
+    expect(
+      BASIC_SETTINGS_ANCHOR_TO_TAB[SHIELD_SETTINGS_TARGET_IDS.history],
+    ).toBe("refresh")
+  })
+
   it("keeps website verification labels aligned with stable rendered targets", () => {
+    expect(refreshSearchControls).toContainEqual(
+      expect.objectContaining({
+        targetId: SHIELD_SETTINGS_TARGET_IDS.windowSize,
+        titleKey: "settings:refresh.shieldWindowSizeTitle",
+        tabId: "refresh",
+      }),
+    )
+    expect(
+      BASIC_SETTINGS_ANCHOR_TO_TAB[SHIELD_SETTINGS_TARGET_IDS.windowSize],
+    ).toBe("refresh")
     expect(refreshSearchSections).toContainEqual(
       expect.objectContaining({
         id: "section:shield-settings",

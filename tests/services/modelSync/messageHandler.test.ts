@@ -27,6 +27,7 @@ import {
   onAlarm,
 } from "~/utils/browser/browserApi"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 const MODEL_SYNC_EXECUTION = userCommandExecution(
   PROTECTION_BYPASS_USER_COMMANDS.SyncManagedSiteModels,
@@ -152,11 +153,15 @@ describe("ManagedSiteModelSync operation helpers", () => {
 
   it("routes background actions through the scheduler and storage helpers", async () => {
     const executionResult = {
-      items: [{ channelId: 1, channelName: "Alpha", ok: true }],
+      items: [
+        { resourceRef: modelResourceRef(1), channelName: "Alpha", ok: true },
+      ],
       statistics: { total: 1, successCount: 1, failureCount: 0 },
     }
     const failedOnlyResult = {
-      items: [{ channelId: 2, channelName: "Beta", ok: false }],
+      items: [
+        { resourceRef: modelResourceRef(2), channelName: "Beta", ok: false },
+      ],
       statistics: { total: 1, successCount: 0, failureCount: 1 },
     }
     const progress = {
@@ -166,7 +171,7 @@ describe("ManagedSiteModelSync operation helpers", () => {
       failed: 0,
     }
     const channels = {
-      items: [{ id: 1, name: "Alpha" }],
+      items: [{ ref: modelResourceRef(1), name: "Alpha" }],
       total: 1,
       type_counts: {},
     }
@@ -188,7 +193,9 @@ describe("ManagedSiteModelSync operation helpers", () => {
       data: executionResult,
     })
 
-    await expect(triggerSelectedModelSync([1])).resolves.toEqual({
+    await expect(
+      triggerSelectedModelSync([modelResourceRef(1)]),
+    ).resolves.toEqual({
       success: true,
       data: executionResult,
     })
@@ -235,7 +242,11 @@ describe("ManagedSiteModelSync operation helpers", () => {
     ["all", () => triggerAllModelSync(WRONG_MODEL_SYNC_EXECUTION)],
     [
       "selected",
-      () => triggerSelectedModelSync([1], WRONG_MODEL_SYNC_EXECUTION),
+      () =>
+        triggerSelectedModelSync(
+          [modelResourceRef(1)],
+          WRONG_MODEL_SYNC_EXECUTION,
+        ),
     ],
     [
       "failed only",
@@ -259,12 +270,12 @@ describe("ManagedSiteModelSync operation helpers", () => {
     },
   )
 
-  it("rejects selected sync requests without channel ids", async () => {
+  it("rejects selected sync requests without resource references", async () => {
     const executeSyncSpy = vi.spyOn(modelSyncScheduler, "executeSync")
 
     await expect(triggerSelectedModelSync()).resolves.toEqual({
       success: false,
-      error: "channelIds must be a non-empty array for selected sync",
+      error: "resourceRefs must be a non-empty array for selected sync",
     })
 
     expect(executeSyncSpy).not.toHaveBeenCalled()
@@ -308,7 +319,7 @@ describe("ManagedSiteModelSync operation helpers", () => {
       }),
     ).resolves.toEqual({
       success: false,
-      error: "channelIds must be a non-empty array for selected sync",
+      error: "resourceRefs must be a non-empty array for selected sync",
     })
     expect(executeSyncSpy).not.toHaveBeenCalled()
 
@@ -342,15 +353,22 @@ describe("ManagedSiteModelSync operation helpers", () => {
 
   it("wires typed model sync messages through registered listeners", async () => {
     const executionResult = {
-      items: [{ channelId: 1, channelName: "Alpha", ok: true }],
+      items: [
+        { resourceRef: modelResourceRef(1), channelName: "Alpha", ok: true },
+      ],
       statistics: { total: 1, successCount: 1, failureCount: 0 },
     }
     const failedOnlyResult = {
-      items: [{ channelId: 2, channelName: "Beta", ok: false }],
+      items: [
+        { resourceRef: modelResourceRef(2), channelName: "Beta", ok: false },
+      ],
       statistics: { total: 1, successCount: 0, failureCount: 1 },
     }
     const progress = { isRunning: false, total: 1, completed: 1, failed: 0 }
-    const channels = { items: [{ id: 1, name: "Alpha" }], total: 1 }
+    const channels = {
+      items: [{ ref: modelResourceRef(1), name: "Alpha" }],
+      total: 1,
+    }
     vi.spyOn(modelSyncScheduler, "executeSync").mockResolvedValue(
       executionResult as any,
     )
@@ -380,7 +398,7 @@ describe("ManagedSiteModelSync operation helpers", () => {
     await expect(
       modelSyncMessageHandlers.get("modelSync:triggerSelected")?.({
         data: {
-          channelIds: [1],
+          resourceRefs: [modelResourceRef(1)],
           protectionBypassExecution: structuredClone(MODEL_SYNC_EXECUTION),
         },
       }),
@@ -410,7 +428,7 @@ describe("ManagedSiteModelSync operation helpers", () => {
 
     for (const [type, data] of [
       ["modelSync:triggerAll", {}],
-      ["modelSync:triggerSelected", { channelIds: [1] }],
+      ["modelSync:triggerSelected", { resourceRefs: [modelResourceRef(1)] }],
       ["modelSync:triggerFailedOnly", {}],
     ] as const) {
       await expect(
@@ -595,7 +613,9 @@ describe("ManagedSiteModelSync scheduler lifecycle", () => {
     )
 
     mockedStorage.getLastExecution.mockResolvedValueOnce({
-      items: [{ channelId: 1, channelName: "Alpha", ok: true }],
+      items: [
+        { resourceRef: modelResourceRef(1), channelName: "Alpha", ok: true },
+      ],
       statistics: { total: 1, successCount: 1, failureCount: 0 },
     })
 

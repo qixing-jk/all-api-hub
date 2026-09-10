@@ -9,6 +9,7 @@ import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contra
 import {
   MANAGED_RESOURCE_CREATE_SEED_KINDS,
   MANAGED_RESOURCE_FAILURE_CODES,
+  MANAGED_RESOURCE_FIELD_ISSUE_CODES,
   ManagedResourceError,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
@@ -34,26 +35,30 @@ const mocks = vi.hoisted(() => ({
   fetchModels: vi.fn(),
   fetchDraftModels: vi.fn(),
   fetchSiteUserGroups: vi.fn(),
-  buildPayload: vi.fn(),
 }))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: { getPreferences: mocks.getPreferences },
 }))
 
+vi.mock("~/services/apiAdapters/managedResources/veloeraOperations", () => ({
+  veloeraChannelOperations: {
+    list: mocks.list,
+    get: mocks.get,
+    create: mocks.create,
+    update: mocks.update,
+    delete: mocks.remove,
+    fetchSecretKey: mocks.fetchSecretKey,
+    fetchModels: mocks.fetchModels,
+    fetchDraftModels: mocks.fetchDraftModels,
+  },
+  veloeraManagedResourceModels: {
+    fetchModels: mocks.fetchModels,
+    fetchDraftModels: mocks.fetchDraftModels,
+  },
+}))
 vi.mock("~/services/apiAdapters/managedSites/veloera", () => ({
   veloeraManagedSiteCapabilities: {
-    channels: {
-      list: mocks.list,
-      get: mocks.get,
-      create: mocks.create,
-      update: mocks.update,
-      delete: mocks.remove,
-      fetchSecretKey: mocks.fetchSecretKey,
-      fetchModels: mocks.fetchModels,
-      fetchDraftModels: mocks.fetchDraftModels,
-    },
-    channelDrafts: { buildPayload: mocks.buildPayload },
     queries: { siteUserGroups: { fetch: mocks.fetchSiteUserGroups } },
   },
 }))
@@ -64,14 +69,16 @@ const config = {
   userId: "42",
 }
 
-const channel = buildManagedSiteChannel({
-  id: 17,
-  name: "Primary channel",
-  type: VeloeraChannelType.GitHubModels,
-  key: "sk-********",
-  models: "model-a,model-b",
-  group: "default,vip",
-})
+const channel = {
+  ...buildManagedSiteChannel({
+    id: 17,
+    name: "Primary channel",
+    type: VeloeraChannelType.GitHubModels,
+    key: "sk-********",
+    models: "model-a,model-b",
+    group: "default,vip",
+  }),
+}
 
 const createDraft = (name: string) => ({
   name,
@@ -130,10 +137,6 @@ describe("Veloera native managed resource", () => {
       ],
     })
     mocks.fetchSiteUserGroups.mockResolvedValue(["default", "vip"])
-    mocks.buildPayload.mockImplementation((draft) => ({
-      mode: "single",
-      channel: draft,
-    }))
   })
 
   it("projects Veloera channel identity with provider-owned type vocabulary", async () => {
@@ -382,7 +385,7 @@ describe("Veloera native managed resource", () => {
     expect(mocks.get).toHaveBeenLastCalledWith(config, channel.id, { signal })
   })
 
-  it("preserves latest Veloera-only fields and omits an unchanged masked key", async () => {
+  it("sends only a renamed field without replaying Veloera-only fields or a masked key", async () => {
     const openedDetail = {
       ...channel,
       model_prefix: "opened-",
@@ -408,15 +411,70 @@ describe("Veloera native managed resource", () => {
 
     expect(mocks.update).toHaveBeenCalledWith(
       config,
-      expect.objectContaining({
+      {
         id: channel.id,
         name: "Renamed channel",
-        model_prefix: "latest-",
-        system_prompt: "Latest policy",
-      }),
+      },
       undefined,
     )
     expect(mocks.update.mock.calls.at(-1)?.[1]).not.toHaveProperty("key")
+  })
+
+  it("includes the required region only when changing to Vertex", async () => {
+    const operations = await openVeloeraNativeResourceOperations()
+    await operations.update(
+      { ...channel, other: "us-central1", model_prefix: "keep-prefix" },
+      { ...createDraft("Vertex channel"), type: VeloeraChannelType.VertexAi },
+    )
+    expect(mocks.update.mock.calls[0][1]).toMatchObject({
+      type: VeloeraChannelType.VertexAi,
+      other: "us-central1",
+    })
+    expect(mocks.update.mock.calls[0][1]).not.toHaveProperty("model_prefix")
+  })
+
+  it("preserves explicit empty and zero-valued edits while rejecting a cleared group", async () => {
+    const operations = await openVeloeraNativeResourceOperations()
+    await operations.update(
+      { ...channel, priority: 12, weight: 8 },
+      {
+        ...createDraft("Primary channel"),
+        base_url: " ",
+        groups: ["default", "vip"],
+        priority: 0,
+        weight: 0,
+      },
+    )
+    expect(mocks.update.mock.calls[0][1]).toMatchObject({
+      id: channel.id,
+      base_url: "",
+      priority: 0,
+      weight: 0,
+    })
+
+    const workspace = await veloeraManagedResourceRegistration.open()
+    const ref = (await workspace.list()).items[0]!.ref
+    const editor = await workspace.openEditEditor(ref)
+    expect(
+      editor.validate({
+        ...editor.initialValues,
+        [VELOERA_MANAGED_RESOURCE_FIELD_IDS.Groups]: [],
+      }),
+    ).toEqual({
+      valid: false,
+      issues: [
+        {
+          fieldId: VELOERA_MANAGED_RESOURCE_FIELD_IDS.Groups,
+          code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
+        },
+      ],
+    })
+
+    mocks.get.mockResolvedValueOnce({ ...channel, group: "" })
+    const legacyEditor = await workspace.openEditEditor(ref)
+    expect(legacyEditor.validate(legacyEditor.initialValues)).toEqual({
+      valid: true,
+    })
   })
 
   it("projects partial updates and preserves the saved key while returning rejections unchanged", async () => {
@@ -656,15 +714,51 @@ describe("Veloera native managed resource", () => {
     await operations.delete(channel.id, { signal })
     await expect(operations.loadEditorGroups({ signal })).resolves.toEqual([])
 
-    expect(mocks.fetchModels).toHaveBeenCalledWith(config, channel.id, {
-      signal,
-    })
+    expect(mocks.fetchModels).toHaveBeenCalledWith(
+      config,
+      {
+        siteType: SITE_TYPES.VELOERA,
+        kind: "channel",
+        scopeKey: "https://veloera.example.invalid",
+        resourceId: String(channel.id),
+      },
+      { signal },
+    )
     expect(mocks.fetchDraftModels).toHaveBeenCalledWith(
       config,
       expect.objectContaining({ channelType: VeloeraChannelType.OpenAI }),
       { signal },
     )
     expect(mocks.remove).toHaveBeenCalledWith(config, channel.id, { signal })
+  })
+
+  it("preserves HTTP and LAN compatibility for saved and draft model probes", async () => {
+    const httpConfig = { ...config, baseUrl: "http://192.168.1.10:3000/" }
+    mocks.getPreferences.mockResolvedValue({
+      managedSiteType: SITE_TYPES.VELOERA,
+      veloera: httpConfig,
+    })
+    mocks.fetchModels.mockResolvedValue(["saved-model"])
+    mocks.fetchDraftModels.mockResolvedValue(["draft-model"])
+    const operations = await openVeloeraNativeResourceOperations()
+    await expect(operations.fetchModels(17)).resolves.toEqual(["saved-model"])
+    await expect(
+      operations.fetchDraftModels({
+        channelType: VeloeraChannelType.OpenAI,
+        baseUrl: "http://localhost:8080",
+        credential: "test-key",
+      }),
+    ).resolves.toEqual(["draft-model"])
+    expect(mocks.fetchModels).toHaveBeenCalledWith(
+      httpConfig,
+      {
+        siteType: SITE_TYPES.VELOERA,
+        kind: "channel",
+        scopeKey: "http://192.168.1.10:3000",
+        resourceId: "17",
+      },
+      undefined,
+    )
   })
 
   it("rejects invalid resource locators before provider reads", async () => {

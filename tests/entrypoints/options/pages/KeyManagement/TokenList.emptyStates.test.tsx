@@ -311,7 +311,7 @@ describe("TokenList empty states", () => {
             rowKey: "native-row-1",
             accountId: account.id,
             accountName: account.name,
-            workspaceName: "Example workspace",
+            scopeName: "Example workspace",
             facts: {
               ref: {
                 accountId: account.id,
@@ -401,7 +401,7 @@ describe("TokenList empty states", () => {
       rowKey: "native-row-1",
       accountId: account.id,
       accountName: account.name,
-      workspaceName: "Workspace",
+      scopeName: "Workspace",
       facts: {
         ref: {
           accountId: account.id,

@@ -1,9 +1,9 @@
 import userEvent from "@testing-library/user-event"
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import UsageHistorySyncTab from "~/features/BasicSettings/components/tabs/UsageHistorySync/UsageHistorySyncTab"
+import toast from "~/lib/notify"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { sendUsageHistoryMessage } from "~/services/history/usageHistory/messaging"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
@@ -17,14 +17,14 @@ import {
   within,
 } from "~~/tests/test-utils/render"
 
-const { mockToast, mockShowWarningToast } = vi.hoisted(() => ({
+const { mockToast, mockWarningToast } = vi.hoisted(() => ({
   mockToast: Object.assign(vi.fn(), {
     dismiss: vi.fn(),
     error: vi.fn(),
     loading: vi.fn(),
     success: vi.fn(),
   }),
-  mockShowWarningToast: vi.fn(),
+  mockWarningToast: vi.fn(),
 }))
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
@@ -60,12 +60,8 @@ vi.mock("~/services/history/usageHistory/messaging", () => ({
 const mockedSendUsageHistoryMessage =
   sendUsageHistoryMessage as unknown as ReturnType<typeof vi.fn>
 
-vi.mock("react-hot-toast", () => ({
-  default: mockToast,
-}))
-
-vi.mock("~/utils/core/toastHelpers", () => ({
-  showWarningToast: mockShowWarningToast,
+vi.mock("~/lib/notify", () => ({
+  default: { ...mockToast, warning: mockWarningToast },
 }))
 
 describe("UsageHistorySyncTab", () => {
@@ -195,7 +191,7 @@ describe("UsageHistorySyncTab", () => {
     )
 
     await waitFor(() => {
-      expect(mockShowWarningToast).toHaveBeenCalledWith(
+      expect(mockWarningToast).toHaveBeenCalledWith(
         "usageAnalytics:messages.warning.scheduleFallback",
       )
     })
@@ -570,7 +566,7 @@ describe("UsageHistorySyncTab", () => {
     )
 
     await waitFor(() => {
-      expect(mockShowWarningToast).toHaveBeenCalledWith(
+      expect(mockWarningToast).toHaveBeenCalledWith(
         "usageAnalytics:messages.warning.syncCompletedWithIssues",
         expect.objectContaining({
           id: "sync-toast",
@@ -581,7 +577,7 @@ describe("UsageHistorySyncTab", () => {
       )
     })
 
-    const warningOptions = mockShowWarningToast.mock.calls[0]?.[1]
+    const warningOptions = mockWarningToast.mock.calls[0]?.[1]
     const warningAction = warningOptions?.action
     expect(warningAction).toEqual(
       expect.objectContaining({

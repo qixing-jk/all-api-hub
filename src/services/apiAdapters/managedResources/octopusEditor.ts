@@ -15,7 +15,7 @@ import {
   type ResourceValidationResult,
   type SecretEditIntent,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import {
   OctopusOutboundType,
   type OctopusChannel,

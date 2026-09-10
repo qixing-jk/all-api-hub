@@ -9,11 +9,6 @@ const { resolveManagedUpstreamResourceFeatureCapabilitiesMock } = vi.hoisted(
   }),
 )
 
-vi.mock("~/services/managedSites/managedUpstreamResourceService", () => ({
-  resolveManagedUpstreamResourceFeatureCapabilities: (...args: unknown[]) =>
-    resolveManagedUpstreamResourceFeatureCapabilitiesMock(...args),
-}))
-
 describe("managed site migration capability registry", () => {
   beforeEach(() => {
     resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReset()

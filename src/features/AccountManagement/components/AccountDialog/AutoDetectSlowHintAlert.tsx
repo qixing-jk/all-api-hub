@@ -3,7 +3,7 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Alert, Button } from "~/components/ui"
-import { DestructiveConfirmDialog } from "~/components/ui/Dialog/DestructiveConfirmDialog"
+import { ConfirmDialog } from "~/components/ui/Dialog/ConfirmDialog"
 import { createTab, reloadRuntime } from "~/utils/browser/browserApi"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 
@@ -73,7 +73,9 @@ export default function AutoDetectSlowHintAlert({
         </div>
       </Alert>
 
-      <DestructiveConfirmDialog
+      <ConfirmDialog
+        intent="warning"
+        icon={RefreshCw}
         isOpen={isReloadConfirmOpen}
         onClose={() => setIsReloadConfirmOpen(false)}
         title={t("accountDialog:warnings.reloadExtension.title")}

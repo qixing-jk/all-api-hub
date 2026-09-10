@@ -20,8 +20,8 @@ import {
   type NewApiManagedVerificationStep,
   type OpenNewApiManagedVerificationParams,
 } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
+import { PREFERENCE_WRITE_FAILURE_TYPES } from "~/services/preferences/userPreferences"
 import { getErrorMessage } from "~/utils/core/error"
-import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
 
 const NEW_API_VERIFICATION_CODE_LENGTH = 6
 
@@ -115,7 +115,20 @@ export function NewApiManagedVerificationDialog(
   const [quickBaseUrl, setQuickBaseUrl] = useState(newApiBaseUrl)
   const [quickUsername, setQuickUsername] = useState(newApiUsername)
   const [quickPassword, setQuickPassword] = useState(newApiPassword)
-  const [quickConfigError, setQuickConfigError] = useState<string | null>(null)
+  const [quickConfigFailure, setQuickConfigFailure] = useState<
+    | { kind: "required" | "stale" | "save" }
+    | { kind: "diagnostic"; message: string }
+    | null
+  >(null)
+  const quickConfigError = !quickConfigFailure
+    ? null
+    : quickConfigFailure.kind === "required"
+      ? t("dialog.messages.completeRequiredConfig")
+      : quickConfigFailure.kind === "stale"
+        ? t("settings:messages.preferencesChangedExternally")
+        : quickConfigFailure.kind === "diagnostic" && quickConfigFailure.message
+          ? quickConfigFailure.message
+          : t("dialog.messages.quickConfigSaveFailed")
   const [isSavingQuickConfig, setIsSavingQuickConfig] = useState(false)
 
   const header = (
@@ -170,7 +183,7 @@ export function NewApiManagedVerificationDialog(
     setQuickBaseUrl(newApiBaseUrl)
     setQuickUsername(newApiUsername)
     setQuickPassword(newApiPassword)
-    setQuickConfigError(null)
+    setQuickConfigFailure(null)
   }, [newApiBaseUrl, newApiPassword, newApiUsername, props.isOpen, props.step])
 
   const handleSaveQuickConfig = async () => {
@@ -179,12 +192,12 @@ export function NewApiManagedVerificationDialog(
     const requestConfigUpdates: NewApiManagedVerificationConfigUpdate = {}
 
     if (needsBaseUrl && !nextBaseUrl) {
-      setQuickConfigError(t("dialog.messages.completeRequiredConfig"))
+      setQuickConfigFailure({ kind: "required" })
       return
     }
 
     if (needsCredentials && (!nextUsername || !quickPassword)) {
-      setQuickConfigError(t("dialog.messages.completeRequiredConfig"))
+      setQuickConfigFailure({ kind: "required" })
       return
     }
 
@@ -198,39 +211,45 @@ export function NewApiManagedVerificationDialog(
     }
 
     setIsSavingQuickConfig(true)
-    setQuickConfigError(null)
+    setQuickConfigFailure(null)
 
     try {
       if (needsBaseUrl && nextBaseUrl !== newApiBaseUrl) {
         const writeResult = await updateNewApiBaseUrl(nextBaseUrl)
         if (!writeResult.ok) {
-          throw new Error(
-            getPreferenceWriteFailureMessage(writeResult.reason, {
-              fallback: t("dialog.messages.quickConfigSaveFailed"),
-            }),
-          )
+          setQuickConfigFailure({
+            kind:
+              writeResult.reason.type === PREFERENCE_WRITE_FAILURE_TYPES.Stale
+                ? "stale"
+                : "save",
+          })
+          return
         }
       }
 
       if (needsCredentials && nextUsername !== newApiUsername) {
         const writeResult = await updateNewApiUsername(nextUsername)
         if (!writeResult.ok) {
-          throw new Error(
-            getPreferenceWriteFailureMessage(writeResult.reason, {
-              fallback: t("dialog.messages.quickConfigSaveFailed"),
-            }),
-          )
+          setQuickConfigFailure({
+            kind:
+              writeResult.reason.type === PREFERENCE_WRITE_FAILURE_TYPES.Stale
+                ? "stale"
+                : "save",
+          })
+          return
         }
       }
 
       if (needsCredentials && quickPassword !== newApiPassword) {
         const writeResult = await updateNewApiPassword(quickPassword)
         if (!writeResult.ok) {
-          throw new Error(
-            getPreferenceWriteFailureMessage(writeResult.reason, {
-              fallback: t("dialog.messages.quickConfigSaveFailed"),
-            }),
-          )
+          setQuickConfigFailure({
+            kind:
+              writeResult.reason.type === PREFERENCE_WRITE_FAILURE_TYPES.Stale
+                ? "stale"
+                : "save",
+          })
+          return
         }
       }
 
@@ -240,7 +259,10 @@ export function NewApiManagedVerificationDialog(
 
       await Promise.resolve(props.onRetry())
     } catch (error) {
-      setQuickConfigError(getErrorMessage(error))
+      setQuickConfigFailure({
+        kind: "diagnostic",
+        message: getErrorMessage(error),
+      })
     } finally {
       setIsSavingQuickConfig(false)
     }

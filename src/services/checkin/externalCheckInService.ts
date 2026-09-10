@@ -158,8 +158,8 @@ export async function openExternalCheckInsAndMark(
                 { baseUrl: account.site_url, siteType: account.site_type },
                 SITE_ROUTE_KINDS.Redeem,
               ))
-            openedRedeem = await openExternalPage(redeemUrl)
-            if (!openedRedeem) {
+            openedRedeem = redeemUrl ? await openExternalPage(redeemUrl) : null
+            if (openedRedeem === false) {
               redeemError = "Failed to open redeem tab"
             }
           } catch (error) {

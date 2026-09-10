@@ -57,7 +57,16 @@ export function useInvalidKeyDeletion({
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   const [isDeletingInvalidResources, setIsDeletingInvalidResources] =
     useState(false)
-  const [deleteResultMessage, setDeleteResultMessage] = useState("")
+  const [deleteResult, setDeleteResult] = useState<
+    | { kind: "failed" }
+    | {
+        kind: "completed"
+        applied: number
+        rejected: number
+        uncertain: number
+      }
+    | null
+  >(null)
 
   const selectedInvalidResources = useMemo(
     () =>
@@ -84,7 +93,7 @@ export function useInvalidKeyDeletion({
   const resetInvalidResourceDeletionState = useCallback(() => {
     setSelectedInvalidResourceKeys(new Set())
     setIsDeleteConfirmOpen(false)
-    setDeleteResultMessage("")
+    setDeleteResult(null)
   }, [])
 
   const handleDeleteInvalidResources = useCallback(async () => {
@@ -93,7 +102,7 @@ export function useInvalidKeyDeletion({
     if (resourcesToDelete.length === 0) return
 
     setIsDeletingInvalidResources(true)
-    setDeleteResultMessage("")
+    setDeleteResult(null)
     void trackProductAnalyticsActionStarted(deleteInvalidKeysAnalyticsContext)
     try {
       const response = await sendAccountKeyRepairMessage(
@@ -102,9 +111,7 @@ export function useInvalidKeyDeletion({
       )
 
       if (!response?.success || !response.data) {
-        setDeleteResultMessage(
-          t("keyManagement:repairMissingKeys.invalidKeys.deleteFailed"),
-        )
+        setDeleteResult({ kind: "failed" })
         setIsDeleteConfirmOpen(false)
         void trackProductAnalyticsActionCompleted({
           ...deleteInvalidKeysAnalyticsContext,
@@ -173,20 +180,12 @@ export function useInvalidKeyDeletion({
       })
 
       const nonAppliedCount = rejectedCount + uncertainCount
-      setDeleteResultMessage(
-        nonAppliedCount > 0
-          ? t(
-              "keyManagement:repairMissingKeys.invalidKeys.deleteNeedsAttention",
-              {
-                applied: appliedResults.length,
-                rejected: rejectedCount,
-                uncertain: uncertainCount,
-              },
-            )
-          : t("keyManagement:repairMissingKeys.invalidKeys.deleteSuccess", {
-              count: appliedResults.length,
-            }),
-      )
+      setDeleteResult({
+        kind: "completed",
+        applied: appliedResults.length,
+        rejected: rejectedCount,
+        uncertain: uncertainCount,
+      })
       setIsDeleteConfirmOpen(false)
       void trackProductAnalyticsActionCompleted({
         ...deleteInvalidKeysAnalyticsContext,
@@ -206,9 +205,7 @@ export function useInvalidKeyDeletion({
         },
       })
     } catch {
-      setDeleteResultMessage(
-        t("keyManagement:repairMissingKeys.invalidKeys.deleteFailed"),
-      )
+      setDeleteResult({ kind: "failed" })
       setIsDeleteConfirmOpen(false)
       void trackProductAnalyticsActionCompleted({
         ...deleteInvalidKeysAnalyticsContext,
@@ -225,7 +222,24 @@ export function useInvalidKeyDeletion({
     } finally {
       setIsDeletingInvalidResources(false)
     }
-  }, [isDeletingInvalidResources, selectedInvalidResources, setProgress, t])
+  }, [isDeletingInvalidResources, selectedInvalidResources, setProgress])
+
+  const deleteResultMessage = !deleteResult
+    ? ""
+    : deleteResult.kind === "failed"
+      ? t("keyManagement:repairMissingKeys.invalidKeys.deleteFailed")
+      : deleteResult.rejected + deleteResult.uncertain > 0
+        ? t(
+            "keyManagement:repairMissingKeys.invalidKeys.deleteNeedsAttention",
+            {
+              applied: deleteResult.applied,
+              rejected: deleteResult.rejected,
+              uncertain: deleteResult.uncertain,
+            },
+          )
+        : t("keyManagement:repairMissingKeys.invalidKeys.deleteSuccess", {
+            count: deleteResult.applied,
+          })
 
   return {
     deleteResultMessage,

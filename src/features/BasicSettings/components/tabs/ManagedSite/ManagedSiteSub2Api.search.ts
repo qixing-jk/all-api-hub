@@ -41,11 +41,32 @@ export const managedSiteSub2ApiSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildControlDefinition(
+    "control:sub2api-managed-site-admin-credentials-link",
+    "managedSite",
+    SETTINGS_ANCHORS.SUB2API_ADMIN_CREDENTIALS_LINK,
+    "settings:sub2apiManagedSite.adminCredentialsLink.title",
+    681,
+    {
+      descriptionKey:
+        "settings:sub2apiManagedSite.adminCredentialsLink.description",
+      breadcrumbsKeys: breadcrumbs,
+      keywords: [
+        "sub2api",
+        "admin api key",
+        "get key",
+        "security",
+        "管理key",
+        "获取密钥",
+      ],
+      isVisible: isSub2Api,
+    },
+  ),
+  buildControlDefinition(
     "control:sub2api-managed-site-admin-api-key",
     "managedSite",
     SETTINGS_ANCHORS.SUB2API_ADMIN_API_KEY,
     "settings:sub2apiManagedSite.fields.adminApiKeyLabel",
-    681,
+    682,
     {
       descriptionKey: "settings:sub2apiManagedSite.fields.adminApiKeyDesc",
       breadcrumbsKeys: breadcrumbs,
@@ -58,7 +79,7 @@ export const managedSiteSub2ApiSearchControls: OptionsSearchItemDefinition[] = [
     "managedSite",
     SETTINGS_ANCHORS.SUB2API_VALIDATE,
     "settings:sub2apiManagedSite.validation.title",
-    682,
+    683,
     {
       descriptionKey: "settings:sub2apiManagedSite.validation.description",
       breadcrumbsKeys: breadcrumbs,
@@ -71,7 +92,7 @@ export const managedSiteSub2ApiSearchControls: OptionsSearchItemDefinition[] = [
     "managedSite",
     SETTINGS_ANCHORS.SUB2API_DEFAULT_SCOPE,
     "settings:sub2apiManagedSite.defaultScope.title",
-    683,
+    684,
     {
       descriptionKey: "settings:sub2apiManagedSite.defaultScope.description",
       breadcrumbsKeys: breadcrumbs,

@@ -1,11 +1,11 @@
 import { fireEvent } from "@testing-library/react"
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import SiteAnnouncementNotificationSettings, {
   normalizePollingIntervalInput,
 } from "~/features/BasicSettings/components/tabs/General/SiteAnnouncementNotificationSettings"
+import toast from "~/lib/notify"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -30,7 +30,7 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   }),
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   showUpdateToast: (...args: unknown[]) => showUpdateToastMock(...args),
 }))
 
@@ -39,7 +39,7 @@ vi.mock("~/utils/navigation", () => ({
     openOrFocusOptionsMenuItemMock(...args),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: { error: vi.fn() },
 }))
 

@@ -1,3 +1,5 @@
+import { ChevronDown } from "lucide-react"
+import { useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Badge, Card, CardContent } from "~/components/ui"
@@ -11,6 +13,8 @@ interface AccountSummaryItem {
   accountId: string
   name: string
   count: number
+  /** Whether the query retains data, independent of the current model filters. */
+  hasData?: boolean
   isLoading?: boolean
   errorType?: ModelListAccountErrorType
   errorMessage?: string
@@ -28,25 +32,17 @@ interface StatusPresentation {
   title?: string
 }
 
-/**
- * Shows clickable badges summarizing model counts per account.
- * @param props Component props.
- * @param props.items Accounts with model counts and error states.
- * @param props.activeAccountIds Currently highlighted account ids.
- * @param props.onAccountClick Callback when a badge is clicked.
- * @returns Card containing account summary badges or null when empty.
- */
-export function AccountSummaryBar({
-  items,
-  activeAccountIds = [],
+/** Renders one account filter and owns its status presentation. */
+function AccountSummaryBadge({
+  item,
+  isActive,
   onAccountClick,
-}: AccountSummaryBarProps) {
+}: {
+  item: AccountSummaryItem
+  isActive: boolean
+  onAccountClick: AccountSummaryBarProps["onAccountClick"]
+}) {
   const { t } = useTranslation("modelList")
-  const activeAccountIdSet = new Set(activeAccountIds)
-
-  if (!items || items.length === 0) {
-    return null
-  }
 
   const getStatusPresentation = (
     item: AccountSummaryItem,
@@ -96,6 +92,79 @@ export function AccountSummaryBar({
     }
   }
 
+  const statusPresentation = getStatusPresentation(item)
+
+  return (
+    <Badge
+      asChild
+      variant={isActive ? "info" : "secondary"}
+      size="default"
+      className="cursor-pointer"
+      title={statusPresentation.title}
+      aria-label={
+        statusPresentation.title
+          ? `${item.name} ${statusPresentation.label} ${statusPresentation.title}`
+          : undefined
+      }
+    >
+      <button
+        type="button"
+        aria-pressed={isActive}
+        onClick={() => onAccountClick?.(item.accountId)}
+      >
+        <span className="truncate font-medium">{item.name}</span>
+        <span className={cn("ml-2", statusPresentation.className)}>
+          {statusPresentation.label}
+        </span>
+      </button>
+    </Badge>
+  )
+}
+
+/**
+ * Shows clickable badges summarizing model counts per account.
+ * @param props Component props.
+ * @param props.items Accounts with model counts and error states.
+ * @param props.activeAccountIds Currently highlighted account ids.
+ * @param props.onAccountClick Callback when a badge is clicked.
+ * @returns Card containing account summary badges or null when empty.
+ */
+export function AccountSummaryBar({
+  items,
+  activeAccountIds = [],
+  onAccountClick,
+}: AccountSummaryBarProps) {
+  const { t } = useTranslation("modelList")
+  const [isExpanded, setIsExpanded] = useState(false)
+  const failureRegionId = useId()
+  const activeAccountIdSet = new Set(activeAccountIds)
+
+  if (!items || items.length === 0) {
+    return null
+  }
+
+  const isUnavailable = (item: AccountSummaryItem) =>
+    !item.isLoading && item.hasData === false && Boolean(item.errorType)
+  const allUnavailable = items.every(isUnavailable)
+  const foldedItems = items.filter(
+    (item) =>
+      !allUnavailable &&
+      isUnavailable(item) &&
+      !activeAccountIdSet.has(item.accountId),
+  )
+  const foldedIds = new Set(foldedItems.map((item) => item.accountId))
+  const visibleItems = items.filter((item) => !foldedIds.has(item.accountId))
+
+  /** Uses the same account control in both visible and expanded groups. */
+  const renderAccountBadge = (item: AccountSummaryItem) => (
+    <AccountSummaryBadge
+      key={item.accountId}
+      item={item}
+      isActive={activeAccountIdSet.has(item.accountId)}
+      onAccountClick={onAccountClick}
+    />
+  )
+
   return (
     <Card className="mb-4">
       <CardContent className="py-3">
@@ -104,34 +173,36 @@ export function AccountSummaryBar({
             {t("accountSummary.title")}
           </div>
           <div className="flex flex-wrap gap-2">
-            {items.map((item) => {
-              const statusPresentation = getStatusPresentation(item)
-
-              return (
-                <Badge
-                  key={item.accountId}
-                  variant={
-                    activeAccountIdSet.has(item.accountId)
-                      ? "info"
-                      : "secondary"
-                  }
-                  size="default"
-                  className="cursor-pointer"
-                  title={statusPresentation.title}
-                  aria-label={
-                    statusPresentation.title
-                      ? `${item.name} ${statusPresentation.label} ${statusPresentation.title}`
-                      : undefined
-                  }
-                  onClick={() => onAccountClick?.(item.accountId)}
+            {visibleItems.map(renderAccountBadge)}
+            {foldedItems.length > 0 && (
+              <Badge asChild variant="secondary">
+                <button
+                  type="button"
+                  aria-expanded={isExpanded}
+                  aria-controls={failureRegionId}
+                  onClick={() => setIsExpanded((expanded) => !expanded)}
                 >
-                  <span className="truncate font-medium">{item.name}</span>
-                  <span className={cn("ml-2", statusPresentation.className)}>
-                    {statusPresentation.label}
-                  </span>
-                </Badge>
-              )
-            })}
+                  {t("accountSummary.unavailableAccounts", {
+                    count: foldedItems.length,
+                  })}
+                  <ChevronDown
+                    aria-hidden="true"
+                    className={cn(isExpanded && "rotate-180")}
+                  />
+                </button>
+              </Badge>
+            )}
+            <div
+              id={failureRegionId}
+              hidden={!isExpanded || foldedItems.length === 0}
+              className="w-full"
+            >
+              {isExpanded && foldedItems.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {foldedItems.map(renderAccountBadge)}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>

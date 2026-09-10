@@ -50,14 +50,17 @@ import {
   MANAGED_RESOURCE_KINDS,
   type AccountSiteDefinition,
   type ManagedResourceProductPolicy,
+  type RegisteredAccountSiteDefinition,
 } from "./contracts"
 import {
   AIHUBMIX_API_ORIGIN,
   AIHUBMIX_HOSTNAMES,
   AIHUBMIX_LOGIN_PATH,
   AIHUBMIX_WEB_ORIGIN,
+  APIYI_HOSTNAME,
   MODELFLARE_HOSTNAME,
   MODELFLARE_USER_ID_HEADER_NAME,
+  OPENROUTER_DISPLAY_NAME,
   OPENROUTER_HOSTNAMES,
   OPENROUTER_WEB_ORIGIN,
   SHAREDCHAT_HOSTNAMES,
@@ -74,8 +77,10 @@ function makeTitleRegex(name: string): RegExp {
   return new RegExp(`\\b${pattern}\\b`, "i")
 }
 
-const DEFAULT_USAGE_PATH = "/console/log"
-const DEFAULT_CHECKIN_PATH = "/console/personal"
+const NEW_API_USAGE_PATH = "/console/log"
+const NEW_API_CHECKIN_PATH = "/console/personal"
+// https://github.com/QuantumNous/new-api/blob/387a40914853310d69adc2f52474134ced5f4811/web/src/features/security/index.tsx
+const NEW_API_ACCESS_TOKEN_PATH = "/security#security-access"
 const SHAREDCHAT_CODEX_DASHBOARD_PATH =
   "/list/#/vibe-code/dashboard?activeMenu=dashboard&service=codex"
 
@@ -91,18 +96,25 @@ const ACCOUNT_AND_MANAGED_SCOPES = [
   ACCOUNT_SITE_DEFINITION_SCOPES.Managed,
 ] as const
 
+// Console routes below preserve the verified provider navigation contracts:
+// New API/Veloera/DoneHub upstream route definitions;
+// Wheel: github.com/kunish/wheel/blob/HEAD/apps/web/src/routes.tsx
+// AxonHub: github.com/looplj/axonhub/blob/HEAD/frontend/src/routeTree.gen.ts
+// Claude Code Hub: github.com/ding113/claude-code-hub/tree/HEAD/src/app
 const LEGACY_MANAGED_CHANNEL_POLICY = {
+  labelKey: "settings:managedSite.newApi",
+  messagesKey: "newapi",
   primaryKind: MANAGED_RESOURCE_KINDS.Channel,
-  titleKey: "managedSiteChannels:title",
   itemLabelKey: "managedSiteChannels:table.columns.name",
   tableFieldIds: [],
   detailFieldIds: [],
   settingsTarget: { tabId: "managedSite" },
-} as const satisfies ManagedResourceProductPolicy
+} as const satisfies Omit<ManagedResourceProductPolicy, "consoleRoutes">
 
 export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.ONE_API,
   SITE_TYPES.NEW_API,
+  SITE_TYPES.APIYI,
   SITE_TYPES.MODELFLARE,
   SITE_TYPES.ANYROUTER,
   SITE_TYPES.VELOERA,
@@ -139,19 +151,32 @@ export type ManagedSiteDefinitionType = (typeof MANAGED_SITE_TYPE_ORDER)[number]
 const ACCOUNT_SITE_DEFINITIONS = [
   {
     siteType: SITE_TYPES.ONE_API,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.ONE_API)] },
-      routes: { usagePath: DEFAULT_USAGE_PATH },
+      routes: {
+        // One API default/air themes: https://github.com/songquanpeng/one-api/blob/main/web/default/src/App.js
+        // These pages do not use New API's /console prefix.
+        usagePath: "/log",
+        redeemPath: "/topup",
+        adminCredentialsPath: "/user/edit",
+        loginPath: "/login",
+        checkInPath: null,
+        accessTokenPath: null,
+        siteAnnouncementsPath: "/",
+      },
     },
   },
   {
     siteType: SITE_TYPES.NEW_API,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_AND_MANAGED_SCOPES,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      consoleRoutes: { channels: "/channels", tokens: "/keys" },
       tableFieldIds: NEW_API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: NEW_API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
     },
@@ -162,14 +187,43 @@ const ACCOUNT_SITE_DEFINITIONS = [
         compatUserIdHeaderNames: ["New-API-User"],
       },
       routes: {
-        usagePath: DEFAULT_USAGE_PATH,
-        checkInPath: DEFAULT_CHECKIN_PATH,
-        adminCredentialsPath: DEFAULT_CHECKIN_PATH,
+        // https://github.com/QuantumNous/new-api/blob/bdef117505247769268b209665fb3ad7554c3da7/web/src/routes/pricing/index.tsx
+        pricingPath: "/pricing",
+        pricingSearchParam: "search",
+        usagePath: NEW_API_USAGE_PATH,
+        checkInPath: NEW_API_CHECKIN_PATH,
+        adminCredentialsPath: NEW_API_CHECKIN_PATH,
+        loginPath: "/login",
+        accessTokenPath: NEW_API_ACCESS_TOKEN_PATH,
+        redeemPath: "/console/topup",
+        siteAnnouncementsPath: "/",
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.APIYI,
+    tokenKey: { optionalSkPrefix: true },
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    onboarding: {
+      detection: { hostnames: [APIYI_HOSTNAME] },
+      routes: {
+        // https://api.apiyi.com/account/pricing (v29.8.9)
+        pricingPath: "/account/pricing",
+        // https://api.apiyi.com/ (v29.8.9) dashboard routes.
+        usagePath: "/log",
+        redeemPath: "/account/topup/recharge",
+        adminCredentialsPath: "/account/profile",
+        accessTokenPath: "/account/profile",
+        loginPath: "/login",
+        checkInPath: null,
+        siteAnnouncementsPath: "/",
       },
     },
   },
   {
     siteType: SITE_TYPES.MODELFLARE,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
@@ -179,9 +233,13 @@ const ACCOUNT_SITE_DEFINITIONS = [
         compatUserIdHeaderNames: [MODELFLARE_USER_ID_HEADER_NAME],
       },
       routes: {
-        usagePath: DEFAULT_USAGE_PATH,
-        checkInPath: DEFAULT_CHECKIN_PATH,
-        adminCredentialsPath: DEFAULT_CHECKIN_PATH,
+        usagePath: NEW_API_USAGE_PATH,
+        checkInPath: NEW_API_CHECKIN_PATH,
+        adminCredentialsPath: NEW_API_CHECKIN_PATH,
+        loginPath: "/login",
+        accessTokenPath: NEW_API_ACCESS_TOKEN_PATH,
+        redeemPath: "/console/topup",
+        siteAnnouncementsPath: "/",
       },
     },
     productProfile: {
@@ -195,11 +253,20 @@ const ACCOUNT_SITE_DEFINITIONS = [
   },
   {
     siteType: SITE_TYPES.ANYROUTER,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
       detection: { titlePatterns: [/\bany\s*router\b/i] },
-      routes: { checkInPath: "/console/topup" },
+      routes: {
+        checkInPath: "/console/topup",
+        loginPath: "/login",
+        usagePath: NEW_API_USAGE_PATH,
+        adminCredentialsPath: NEW_API_CHECKIN_PATH,
+        accessTokenPath: null,
+        redeemPath: "/console/topup",
+        siteAnnouncementsPath: "/",
+      },
     },
     productProfile: {
       auth: {
@@ -214,6 +281,9 @@ const ACCOUNT_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      consoleRoutes: { channels: "/admin/accounts", tokens: "/keys" },
+      labelKey: "settings:managedSite.sub2api",
+      messagesKey: "sub2api",
       tableFieldIds: SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: SUB2API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
       settingsTarget: {
@@ -222,12 +292,21 @@ const ACCOUNT_SITE_DEFINITIONS = [
       },
     },
     onboarding: {
+      displayName: "Sub2API",
       manualAddGuideAnchor: ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.Sub2Api,
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.SUB2API)] },
       routes: {
+        // https://github.com/Wei-Shaw/sub2api/blob/main/frontend/src/router/index.ts
+        pricingPath: "/model-plaza",
         usagePath: "/usage",
         redeemPath: "/redeem",
+        // Admin API Key lives in Settings > Security; the tab has no URL route.
+        // github.com/Wei-Shaw/sub2api/blob/b7dba62678a834080564966c002fd0ca2b328b7a/frontend/src/views/admin/SettingsView.vue
+        adminCredentialsPath: "/admin/settings",
         siteAnnouncementsPath: "/dashboard",
+        loginPath: "/login",
+        checkInPath: null,
+        accessTokenPath: null,
       },
     },
     productProfile: {
@@ -265,8 +344,10 @@ const ACCOUNT_SITE_DEFINITIONS = [
         loginPath: AIHUBMIX_LOGIN_PATH,
         usagePath: "/statistics",
         redeemPath: "/topup",
-        checkInPath: "/",
+        checkInPath: null,
         adminCredentialsPath: "/",
+        accessTokenPath: null,
+        siteAnnouncementsPath: "/",
       },
     },
     productProfile: {
@@ -308,7 +389,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
           ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
         statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
         displayCapabilitiesSource:
-          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
         groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
       },
       tokenForm: {
@@ -317,8 +398,11 @@ const ACCOUNT_SITE_DEFINITIONS = [
       },
       urls: {
         recognizedHostnames: AIHUBMIX_HOSTNAMES,
+        inferFromHostname: true,
+        loginOrigin: AIHUBMIX_WEB_ORIGIN,
         storageOrigin: AIHUBMIX_WEB_ORIGIN,
         duplicateOrigin: AIHUBMIX_WEB_ORIGIN,
+        autoDetectOrigin: AIHUBMIX_API_ORIGIN,
         managedChannelOrigin: AIHUBMIX_API_ORIGIN,
       },
     },
@@ -336,6 +420,9 @@ const ACCOUNT_SITE_DEFINITIONS = [
         usagePath: SHAREDCHAT_CODEX_DASHBOARD_PATH,
         adminCredentialsPath: SHAREDCHAT_CODEX_DASHBOARD_PATH,
         siteAnnouncementsPath: SHAREDCHAT_CODEX_DASHBOARD_PATH,
+        checkInPath: null,
+        accessTokenPath: null,
+        redeemPath: null,
       },
     },
     productProfile: {
@@ -375,6 +462,10 @@ const ACCOUNT_SITE_DEFINITIONS = [
         usagePath: "/dash?_userMenuKey=dash",
         checkInPath: "/checkIn?_userMenuKey=checkIn",
         adminCredentialsPath: "/keys?_userMenuKey=keys",
+        loginPath: "/login",
+        accessTokenPath: null,
+        redeemPath: null,
+        siteAnnouncementsPath: "/",
       },
     },
     productProfile: {
@@ -401,9 +492,24 @@ const ACCOUNT_SITE_DEFINITIONS = [
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.OpenRouter,
     onboarding: {
+      displayName: OPENROUTER_DISPLAY_NAME,
+      accountForm: {
+        fixedSiteUrl: OPENROUTER_WEB_ORIGIN,
+        defaultSiteName: OPENROUTER_DISPLAY_NAME,
+      },
       manualAddGuideAnchor: ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.OpenRouter,
       detection: { hostnames: OPENROUTER_HOSTNAMES },
-      routes: { adminCredentialsPath: "/settings/management-keys" },
+      routes: {
+        // Hosted dashboard: https://openrouter.ai/activity and /settings/credits.
+        // Both pages redirect signed-out users to /sign-in.
+        loginPath: "/sign-in",
+        usagePath: "/activity",
+        redeemPath: "/settings/credits",
+        adminCredentialsPath: "/settings/management-keys",
+        checkInPath: null,
+        accessTokenPath: "/settings/management-keys",
+        siteAnnouncementsPath: null,
+      },
     },
     productProfile: {
       metrics: {
@@ -418,6 +524,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
       },
       identity: {
         usernameRequired: false,
+        userIdRequired: false,
         storedUserIdentityFields: [],
       },
       modelList: {
@@ -435,7 +542,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
       },
     },
   },
-] as const satisfies readonly AccountSiteDefinition[]
+] as const satisfies readonly RegisteredAccountSiteDefinition[]
 
 const MANAGED_ONLY_SITE_DEFINITIONS = [
   {
@@ -444,6 +551,9 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      consoleRoutes: { channels: "/model", tokens: "/keys" },
+      labelKey: "settings:managedSite.octopus",
+      messagesKey: "octopus",
       tableFieldIds: OCTOPUS_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: OCTOPUS_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
     },
@@ -454,6 +564,9 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      consoleRoutes: { channels: "/channels", tokens: "/api-keys" },
+      labelKey: "settings:managedSite.axonHub",
+      messagesKey: "axonhub",
       tableFieldIds: AXON_HUB_TABLE_FIELD_IDS,
       detailFieldIds: AXON_HUB_DETAIL_FIELD_IDS,
       settingsTarget: {
@@ -468,6 +581,12 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      consoleRoutes: {
+        channels: "/settings/providers",
+        tokens: "/dashboard/users",
+      },
+      labelKey: "settings:managedSite.claudeCodeHub",
+      messagesKey: "claudecodehub",
       tableFieldIds: CLAUDE_CODE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: CLAUDE_CODE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
     },
@@ -477,10 +596,14 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
 const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
   {
     siteType: SITE_TYPES.VELOERA,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_AND_MANAGED_SCOPES,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      consoleRoutes: { channels: "/admin/channels", tokens: "/app/tokens" },
+      labelKey: "settings:managedSite.veloera",
+      messagesKey: "veloera",
       tableFieldIds: VELOERA_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: VELOERA_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
     },
@@ -494,45 +617,66 @@ const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
         checkInPath: "/app/me",
         redeemPath: "/app/wallet",
         adminCredentialsPath: "/app/me",
+        loginPath: "/login",
+        accessTokenPath: null,
+        siteAnnouncementsPath: "/",
       },
     },
   },
   {
     siteType: SITE_TYPES.DONE_HUB,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_AND_MANAGED_SCOPES,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      consoleRoutes: { channels: "/panel/channel", tokens: "/panel/token" },
+      labelKey: "settings:managedSite.doneHub",
+      messagesKey: "donehub",
       tableFieldIds: DONE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: DONE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
     },
     onboarding: {
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.DONE_HUB)] },
       routes: {
+        // https://github.com/deanxv/done-hub/blob/main/web/src/routes/MainRoutes.jsx
+        pricingPath: "/panel/model_price",
         usagePath: "/panel/log",
         redeemPath: "/panel/topup",
         adminCredentialsPath: "/panel/profile",
+        loginPath: "/login",
+        checkInPath: null,
+        accessTokenPath: null,
+        siteAnnouncementsPath: "/",
       },
     },
   },
-] as const satisfies readonly AccountSiteDefinition[]
+] as const satisfies readonly RegisteredAccountSiteDefinition[]
 
 const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
   {
     siteType: SITE_TYPES.ONE_HUB,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.ONE_HUB)] },
       routes: {
+        // https://github.com/MartialBE/one-hub/blob/main/web/src/routes/MainRoutes.jsx
+        pricingPath: "/panel/model_price",
         usagePath: "/panel/log",
         redeemPath: "/panel/topup",
         adminCredentialsPath: "/panel/profile",
+        loginPath: "/login",
+        checkInPath: null,
+        accessTokenPath: null,
+        siteAnnouncementsPath: "/",
       },
     },
   },
   {
     siteType: SITE_TYPES.V_API,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
@@ -545,11 +689,15 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
         checkInPath: "/panel/profile",
         redeemPath: "/panel/topup",
         adminCredentialsPath: "/panel/profile",
+        loginPath: "/login",
+        accessTokenPath: null,
+        siteAnnouncementsPath: "/",
       },
     },
   },
   {
     siteType: SITE_TYPES.VO_API,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
@@ -557,19 +705,38 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
         titlePatterns: [makeTitleRegex(SITE_TYPES.VO_API)],
         compatUserIdHeaderNames: ["voapi-user"],
       },
-      routes: { usagePath: DEFAULT_USAGE_PATH, redeemPath: "/wallet" },
+      routes: {
+        usagePath: NEW_API_USAGE_PATH,
+        redeemPath: "/wallet",
+        loginPath: "/login",
+        checkInPath: NEW_API_CHECKIN_PATH,
+        adminCredentialsPath: NEW_API_CHECKIN_PATH,
+        accessTokenPath: null,
+        siteAnnouncementsPath: "/",
+      },
     },
   },
   {
     siteType: SITE_TYPES.SUPER_API,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
+      routes: {
+        loginPath: "/login",
+        usagePath: NEW_API_USAGE_PATH,
+        checkInPath: NEW_API_CHECKIN_PATH,
+        adminCredentialsPath: NEW_API_CHECKIN_PATH,
+        accessTokenPath: null,
+        redeemPath: "/console/topup",
+        siteAnnouncementsPath: "/",
+      },
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.SUPER_API)] },
     },
   },
   {
     siteType: SITE_TYPES.RIX_API,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
@@ -581,14 +748,28 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
         usagePath: "/log",
         checkInPath: "/panel",
         redeemPath: "/topup",
+        loginPath: "/login",
+        adminCredentialsPath: NEW_API_CHECKIN_PATH,
+        accessTokenPath: null,
+        siteAnnouncementsPath: "/",
       },
     },
   },
   {
     siteType: SITE_TYPES.NEO_API,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
+      routes: {
+        loginPath: "/login",
+        usagePath: NEW_API_USAGE_PATH,
+        checkInPath: NEW_API_CHECKIN_PATH,
+        adminCredentialsPath: NEW_API_CHECKIN_PATH,
+        accessTokenPath: null,
+        redeemPath: "/console/topup",
+        siteAnnouncementsPath: "/",
+      },
       detection: {
         titlePatterns: [makeTitleRegex(SITE_TYPES.NEO_API)],
         compatUserIdHeaderNames: ["neo-api-user"],
@@ -597,11 +778,20 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
   },
   {
     siteType: SITE_TYPES.WONG_GONGYI,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
       detection: { titlePatterns: [/wong\s*公益站/i] },
-      routes: { checkInPath: "/console/topup" },
+      routes: {
+        checkInPath: "/console/topup",
+        loginPath: "/login",
+        usagePath: NEW_API_USAGE_PATH,
+        adminCredentialsPath: NEW_API_CHECKIN_PATH,
+        accessTokenPath: null,
+        redeemPath: "/console/topup",
+        siteAnnouncementsPath: "/",
+      },
     },
   },
   {
@@ -609,10 +799,19 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
+      routes: {
+        loginPath: "/login",
+        usagePath: NEW_API_USAGE_PATH,
+        checkInPath: NEW_API_CHECKIN_PATH,
+        adminCredentialsPath: NEW_API_CHECKIN_PATH,
+        accessTokenPath: NEW_API_ACCESS_TOKEN_PATH,
+        redeemPath: "/console/topup",
+        siteAnnouncementsPath: "/",
+      },
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.UNKNOWN)] },
     },
   },
-] as const satisfies readonly AccountSiteDefinition[]
+] as const satisfies readonly RegisteredAccountSiteDefinition[]
 
 export const SITE_TYPE_DEFINITIONS: readonly AccountSiteDefinition[] = [
   ...ACCOUNT_SITE_DEFINITIONS,

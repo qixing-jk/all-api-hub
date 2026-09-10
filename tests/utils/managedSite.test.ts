@@ -2,17 +2,14 @@ import type { TFunction } from "i18next"
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { getManagedSiteTargetOptions } from "~/services/managedSites/channelMigrationTargets"
 import {
-  getManagedSiteAdminConfig,
-  getManagedSiteAdminConfigForType,
   getManagedSiteContext,
   getManagedSiteContextForType,
+  getManagedSiteLabel,
   getManagedSiteLabelKey,
   getManagedSiteMessagesKeyFromSiteType,
-  getManagedSiteTargetOptions,
   getManagedSiteUnsupportedModelSyncMessage,
-  hasUsableManagedSiteChannelKey,
-  needsManagedSiteChannelKeyResolution,
 } from "~/services/managedSites/utils/managedSite"
 import {
   DEFAULT_PREFERENCES,
@@ -20,6 +17,52 @@ import {
 } from "~/services/preferences/userPreferences"
 
 describe("managedSite", () => {
+  it.each([
+    [SITE_TYPES.NEW_API, "settings:managedSite.newApi", "newapi"],
+    [SITE_TYPES.VELOERA, "settings:managedSite.veloera", "veloera"],
+    [SITE_TYPES.DONE_HUB, "settings:managedSite.doneHub", "donehub"],
+    [SITE_TYPES.OCTOPUS, "settings:managedSite.octopus", "octopus"],
+    [SITE_TYPES.AXON_HUB, "settings:managedSite.axonHub", "axonhub"],
+    [
+      SITE_TYPES.CLAUDE_CODE_HUB,
+      "settings:managedSite.claudeCodeHub",
+      "claudecodehub",
+    ],
+    [SITE_TYPES.SUB2API, "settings:managedSite.sub2api", "sub2api"],
+  ] as const)(
+    "preserves registered label and messages for %s",
+    (siteType, labelKey, messagesKey) => {
+      const t = vi.fn(
+        (key: string) => `translated:${key}`,
+      ) as unknown as TFunction
+      expect(getManagedSiteLabelKey(siteType)).toBe(labelKey)
+      expect(getManagedSiteLabel(t, siteType)).toBe(`translated:${labelKey}`)
+      expect(getManagedSiteMessagesKeyFromSiteType(siteType)).toBe(messagesKey)
+    },
+  )
+
+  it("includes configured Sub2API targets now that their native migration capability is registered", () => {
+    const config = {
+      baseUrl: "http://sub2api.local",
+      adminToken: "admin-token",
+    }
+    const preferences = { ...DEFAULT_PREFERENCES, sub2apiManagedSite: config }
+    expect(getManagedSiteTargetOptions(preferences)).toContainEqual({
+      siteType: SITE_TYPES.SUB2API,
+      labelKey: "settings:managedSite.sub2api",
+      messagesKey: "sub2api",
+      config,
+    })
+    expect(
+      getManagedSiteTargetOptions(preferences, {
+        excludeSiteTypes: [SITE_TYPES.SUB2API],
+      }),
+    ).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ siteType: SITE_TYPES.SUB2API }),
+      ]),
+    )
+  })
   it("renders unsupported model-sync copy from the managed-site label", () => {
     const t = vi.fn((key: string, options?: { siteName?: string }) =>
       key === "settings:managedSite.sub2api"
@@ -33,24 +76,6 @@ describe("managedSite", () => {
     expect(getManagedSiteLabelKey(SITE_TYPES.SUB2API)).toBe(
       "settings:managedSite.sub2api",
     )
-  })
-
-  it("resolves Done Hub admin config when selected", () => {
-    const prefs = {
-      ...DEFAULT_PREFERENCES,
-      managedSiteType: SITE_TYPES.DONE_HUB,
-      doneHub: {
-        baseUrl: "https://donehub.example.com",
-        adminToken: "token",
-        userId: "1",
-      },
-    } satisfies UserPreferences
-
-    expect(getManagedSiteAdminConfig(prefs)).toEqual({
-      baseUrl: prefs.doneHub.baseUrl,
-      adminToken: prefs.doneHub.adminToken,
-      userId: prefs.doneHub.userId,
-    })
   })
 
   it("returns Done Hub messages key + label key", () => {
@@ -70,58 +95,6 @@ describe("managedSite", () => {
     expect(getManagedSiteContext(prefs)).toEqual({
       siteType: SITE_TYPES.DONE_HUB,
       messagesKey: "donehub",
-    })
-  })
-
-  it("returns null admin config when Done Hub credentials are incomplete", () => {
-    const prefs = {
-      ...DEFAULT_PREFERENCES,
-      managedSiteType: SITE_TYPES.DONE_HUB,
-      doneHub: {
-        baseUrl: "",
-        adminToken: "token",
-        userId: "1",
-      },
-    } satisfies UserPreferences
-
-    expect(getManagedSiteAdminConfig(prefs)).toBeNull()
-  })
-
-  it("returns admin config when Done Hub credentials are present", () => {
-    const prefs = {
-      ...DEFAULT_PREFERENCES,
-      managedSiteType: SITE_TYPES.DONE_HUB,
-      doneHub: {
-        baseUrl: "https://donehub.example.com",
-        adminToken: "token",
-        userId: "1",
-      },
-    } satisfies UserPreferences
-
-    expect(getManagedSiteAdminConfig(prefs)).toEqual({
-      baseUrl: prefs.doneHub.baseUrl,
-      adminToken: prefs.doneHub.adminToken,
-      userId: prefs.doneHub.userId,
-    })
-  })
-
-  it("can resolve admin config for an explicit target site type", () => {
-    const prefs = {
-      ...DEFAULT_PREFERENCES,
-      managedSiteType: SITE_TYPES.NEW_API,
-      doneHub: {
-        baseUrl: "https://donehub.example.com",
-        adminToken: "donehub-token",
-        userId: "7",
-      },
-    } satisfies UserPreferences
-
-    expect(
-      getManagedSiteAdminConfigForType(prefs, SITE_TYPES.DONE_HUB),
-    ).toEqual({
-      baseUrl: prefs.doneHub.baseUrl,
-      adminToken: prefs.doneHub.adminToken,
-      userId: prefs.doneHub.userId,
     })
   })
 
@@ -174,24 +147,11 @@ describe("managedSite", () => {
         messagesKey: "octopus",
         config: {
           baseUrl: "https://octopus.example.com",
-          adminToken: "",
-          userId: "admin",
+          username: "admin",
+          password: "secret",
         },
       },
     ])
-  })
-
-  it("reuses shared masked-key detection for managed-site channel keys", () => {
-    expect(hasUsableManagedSiteChannelKey("sk-********")).toBe(false)
-    expect(needsManagedSiteChannelKeyResolution("sk-********")).toBe(true)
-
-    expect(hasUsableManagedSiteChannelKey("AIza-real-provider-key")).toBe(true)
-    expect(needsManagedSiteChannelKeyResolution("AIza-real-provider-key")).toBe(
-      false,
-    )
-
-    expect(hasUsableManagedSiteChannelKey("")).toBe(false)
-    expect(needsManagedSiteChannelKeyResolution("")).toBe(true)
   })
 
   it("preserves existing behavior for New API selection", () => {

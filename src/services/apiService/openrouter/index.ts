@@ -47,7 +47,7 @@ type OpenRouterManagementKeyValidationInput = {
   signal?: AbortSignal
 }
 
-export type OpenRouterManagementKeyValidation = {
+type OpenRouterManagementKeyValidation = {
   userId?: AccountIdentity
 }
 

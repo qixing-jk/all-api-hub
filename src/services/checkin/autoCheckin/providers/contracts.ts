@@ -12,6 +12,7 @@ import type { SiteAccount } from "~/types"
 import type {
   CheckInMethodDetection,
   CheckInMethodStatus,
+  CheckInMethodUnknownReason,
 } from "~/types/checkIn"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
@@ -72,6 +73,8 @@ export type AutoCheckinProviderReadiness =
 
 /** Executable compatibility contract for a registered check-in method. */
 export interface AutoCheckinProvider {
+  /** Maps provider-specific status errors for both discovery and execution. */
+  classifyStatusError?: (error: unknown) => CheckInMethodUnknownReason
   /** This protocol must never mutate without fresh authoritative readback. */
   readonly requiresAuthoritativeStatusBeforeMutation?: boolean
   /** Pinned server idempotency permits a later status-first retry. */

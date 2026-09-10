@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/newApi"
+import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
+import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
+import { DoneHubChannelType } from "~/constants/doneHub"
+import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
+import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
+import { VeloeraChannelType } from "~/constants/veloera"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import { newApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/newApiMigration"
 import {
@@ -16,6 +21,7 @@ import {
   type ManagedSiteMigrationSource,
 } from "~/types/managedSiteMigrationCapability"
 import { CHANNEL_STATUS } from "~/types/newApi"
+import { OctopusOutboundType } from "~/types/octopus"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 
 const mocks = vi.hoisted(() => ({
@@ -66,6 +72,45 @@ const source: ManagedSiteMigrationSource = {
 }
 
 describe("New API managed-site migration capability", () => {
+  it.each([
+    [SITE_TYPES.DONE_HUB, DoneHubChannelType.DeepSeek, 43],
+    [SITE_TYPES.DONE_HUB, DoneHubChannelType.Gemini, 24],
+    [SITE_TYPES.VELOERA, VeloeraChannelType.Anthropic, 14],
+    [SITE_TYPES.OCTOPUS, OctopusOutboundType.Anthropic, 14],
+    [SITE_TYPES.AXON_HUB, AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES, 1],
+    [SITE_TYPES.CLAUDE_CODE_HUB, CLAUDE_CODE_HUB_PROVIDER_TYPE.CODEX, 57],
+  ] as const)(
+    "prepares the New API target from native %s type %s",
+    async (sourceSiteType, resourceType, expectedType) => {
+      const prepared =
+        await newApiManagedSiteMigrationCapability.target!.prepare({
+          ...source,
+          sourceSiteType,
+          resourceType,
+        })
+
+      expect(prepared.projection.type).toBe(expectedType)
+    },
+  )
+
+  it.each([
+    [SITE_TYPES.NEW_API, ChannelType.Unknown],
+    [SITE_TYPES.VELOERA, VeloeraChannelType.GitHubModels],
+    [SITE_TYPES.DONE_HUB, DoneHubChannelType.GitHubModels],
+    [SITE_TYPES.CLAUDE_CODE_HUB, 14],
+  ] as const)(
+    "rejects native %s type %s without reinterpreting its numeric identity",
+    async (sourceSiteType, resourceType) => {
+      await expect(
+        newApiManagedSiteMigrationCapability.target!.prepare({
+          ...source,
+          sourceSiteType,
+          resourceType,
+        }),
+      ).rejects.toThrow()
+    },
+  )
+
   beforeEach(() => {
     vi.resetAllMocks()
     mocks.openOperations.mockResolvedValue({
@@ -133,7 +178,7 @@ describe("New API managed-site migration capability", () => {
         groups: [...DEFAULT_CHANNEL_FIELDS.groups],
         priority: 2,
         weight: 4,
-        status: CHANNEL_STATUS.ManuallyDisabled,
+        enabled: false,
       },
       adjustments: {
         remappedType: false,
@@ -145,6 +190,38 @@ describe("New API managed-site migration capability", () => {
       },
     })
   })
+
+  it.each([
+    { status: "enabled", nativeStatus: CHANNEL_STATUS.Enable },
+    { status: "disabled", nativeStatus: CHANNEL_STATUS.ManuallyDisabled },
+  ] as const)(
+    "preserves an $status source when creating a New API channel",
+    async ({ status, nativeStatus }) => {
+      const currentSource = { ...source, status }
+      const prepared =
+        await newApiManagedSiteMigrationCapability.target!.prepare(
+          currentSource,
+        )
+      mocks.create.mockResolvedValueOnce({
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+        data: channel,
+        confirmedEffects: [],
+      })
+
+      await expect(
+        newApiManagedSiteMigrationCapability.target!.create({
+          source: currentSource,
+          targetSiteType: SITE_TYPES.NEW_API,
+          projection: prepared.projection,
+          credential: "credential-placeholder",
+        }),
+      ).resolves.toEqual({ status: "created" })
+      expect(mocks.create).toHaveBeenCalledWith(
+        expect.objectContaining({ status: nativeStatus }),
+        undefined,
+      )
+    },
+  )
 
   it.each([
     {

@@ -16,6 +16,21 @@
 3. After successful verification, the plugin will automatically return to the identification process and continue to read data such as Access Token, balance, and model list.
 4. If rate limiting is triggered during the API request phase (common in CC Switch/CherryStudio export or New API synchronization), the system will automatically enable the temporary window to resend, no additional action is required.
 
+## Troubleshoot with shield bypass history
+
+To find out why a temporary page opened, or why it did not open, go to **Settings → Data Refresh** and select **Shield bypass history** beside the **Website verification assistance** heading. The history dialog stays closed until you open it.
+
+You can also select **View shield bypass history** from account warnings about shield bypass, automatic-bypass restriction reminders, check-in results that mention failed verification or a closed temporary page, and the helper prompt on a temporary page.
+
+1. Search by site, operation, or diagnostic information, or filter by processing status. Search and filters cover all retained records.
+2. Expand a record to see the triggering operation, its source, available HTTP status or error codes, and whether a temporary page was created or reused.
+3. If settings or permissions blocked the request, select **View related settings** to find the relevant option and adjust it as needed.
+4. Select **Copy diagnostic details** to keep troubleshooting information. To delete local records, choose **Clear history** from the history dialog's upper-right menu and confirm.
+
+History retains the latest **100 records** on this device. It records new temporary-page requests and does not backfill operations from before the upgrade. Site addresses retain only their origin; URL paths, query parameters, tokens, cookies, and request or response bodies are not stored.
+
+**Completed** means that the temporary-page task returned a completion result. Use the final refresh, check-in, or other operation result to confirm whether the account is working again.
+
 ## Notes
 
 - **IP Quality**: If verification fails continuously, you need to change your network or temporarily relax protection on the site side; the default timeout is 20 seconds.

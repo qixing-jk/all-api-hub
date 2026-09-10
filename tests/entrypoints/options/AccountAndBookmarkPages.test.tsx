@@ -58,7 +58,7 @@ const accountDataContextState = vi.hoisted(() => ({
   },
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     promise: toastPromiseMock,
   },

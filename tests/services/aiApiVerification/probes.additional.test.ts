@@ -40,7 +40,7 @@ vi.mock("~/services/aiApi/google", () => ({
 function createAbortedSignalFixture() {
   const controller = new AbortController()
   const abortError = new DOMException("Aborted", "AbortError")
-  controller.abort()
+  controller.abort(abortError)
   return { abortError, abortSignal: controller.signal }
 }
 
@@ -135,6 +135,7 @@ describe("AI API verification probes", () => {
 
       await expect(
         runWebSearchProbe({
+          mode: "non-streaming",
           apiType: "anthropic",
           baseUrl: "https://example.com",
           apiKey: "secret",
@@ -159,6 +160,7 @@ describe("AI API verification probes", () => {
 
       await expect(
         runWebSearchProbe({
+          mode: "non-streaming",
           apiType: "openai",
           baseUrl: "https://example.com",
           apiKey: "sk-secret",
@@ -187,6 +189,7 @@ describe("AI API verification probes", () => {
 
       await expect(
         runWebSearchProbe({
+          mode: "non-streaming",
           apiType: "google",
           baseUrl: "https://generativelanguage.googleapis.com",
           apiKey: "AIza-secret",
@@ -211,6 +214,7 @@ describe("AI API verification probes", () => {
       )
 
       const result = await runWebSearchProbe({
+        mode: "non-streaming",
         apiType: "openai",
         baseUrl: "https://example.com",
         apiKey: "sk-secret",
@@ -237,6 +241,7 @@ describe("AI API verification probes", () => {
 
       await expect(
         runWebSearchProbe({
+          mode: "non-streaming",
           apiType: "openai",
           baseUrl: "https://example.com",
           apiKey: "sk-secret",
@@ -258,6 +263,7 @@ describe("AI API verification probes", () => {
 
       await expect(
         runWebSearchProbe({
+          mode: "non-streaming",
           apiType: "openai",
           baseUrl: "https://example.com",
           apiKey: "sk-secret",
@@ -286,6 +292,7 @@ describe("AI API verification probes", () => {
 
       await expect(
         runWebSearchProbe({
+          mode: "non-streaming",
           apiType: "google",
           baseUrl: "https://generativelanguage.googleapis.com",
           apiKey: "AIza-secret",
@@ -315,6 +322,7 @@ describe("AI API verification probes", () => {
 
       await expect(
         runWebSearchProbe({
+          mode: "non-streaming",
           apiType: "google",
           baseUrl: "https://generativelanguage.googleapis.com",
           apiKey: "AIza-secret",
@@ -341,6 +349,7 @@ describe("AI API verification probes", () => {
 
       await expect(
         runWebSearchProbe({
+          mode: "non-streaming",
           apiType: "google",
           baseUrl: "https://generativelanguage.googleapis.com",
           apiKey: "AIza-secret",
@@ -359,6 +368,7 @@ describe("AI API verification probes", () => {
 
       await expect(
         runWebSearchProbe({
+          mode: "non-streaming",
           apiType: "openai",
           baseUrl: "https://example.com",
           apiKey: "sk-secret",
@@ -385,6 +395,7 @@ describe("AI API verification probes", () => {
 
       await expect(
         runWebSearchProbe({
+          mode: "non-streaming",
           apiType: "google",
           baseUrl: "https://generativelanguage.googleapis.com",
           apiKey: "AIza-secret",
@@ -409,6 +420,7 @@ describe("AI API verification probes", () => {
 
       await expect(
         runWebSearchProbe({
+          mode: "non-streaming",
           apiType: "openai-compatible",
           baseUrl: "https://example.com",
           apiKey: "sk-secret",
@@ -434,6 +446,7 @@ describe("AI API verification probes", () => {
 
       await expect(
         runTextGenerationProbe({
+          mode: "non-streaming",
           apiType: "openai",
           baseUrl: "https://example.com",
           apiKey: "sk-secret",
@@ -461,6 +474,7 @@ describe("AI API verification probes", () => {
 
       await expect(
         runTextGenerationProbe({
+          mode: "non-streaming",
           apiType: "openai",
           baseUrl: "https://example.com",
           apiKey: "sk-secret",
@@ -491,6 +505,7 @@ describe("AI API verification probes", () => {
       )
 
       const result = await runTextGenerationProbe({
+        mode: "non-streaming",
         apiType: "openai",
         baseUrl: "https://example.com",
         apiKey: "sk-secret",
@@ -516,6 +531,7 @@ describe("AI API verification probes", () => {
 
       await expect(
         runTextGenerationProbe({
+          mode: "non-streaming",
           apiType: "openai",
           baseUrl: "https://example.com",
           apiKey: "sk-secret",
@@ -538,6 +554,7 @@ describe("AI API verification probes", () => {
 
       await expect(
         runStructuredOutputProbe({
+          mode: "non-streaming",
           apiType: "openai",
           baseUrl: "https://example.com",
           apiKey: "sk-secret",
@@ -564,6 +581,7 @@ describe("AI API verification probes", () => {
 
       await expect(
         runStructuredOutputProbe({
+          mode: "non-streaming",
           apiType: "openai",
           baseUrl: "https://example.com",
           apiKey: "sk-secret",
@@ -591,6 +609,7 @@ describe("AI API verification probes", () => {
       )
 
       const result = await runStructuredOutputProbe({
+        mode: "non-streaming",
         apiType: "openai",
         baseUrl: "https://example.com",
         apiKey: "sk-secret",
@@ -616,6 +635,7 @@ describe("AI API verification probes", () => {
 
       await expect(
         runStructuredOutputProbe({
+          mode: "non-streaming",
           apiType: "openai",
           baseUrl: "https://example.com",
           apiKey: "sk-secret",
@@ -640,6 +660,7 @@ describe("AI API verification probes", () => {
 
       await expect(
         runToolCallingProbe({
+          mode: "non-streaming",
           apiType: "openai",
           baseUrl: "https://example.com",
           apiKey: "sk-secret",
@@ -662,6 +683,7 @@ describe("AI API verification probes", () => {
       )
 
       const result = await runToolCallingProbe({
+        mode: "non-streaming",
         apiType: "openai",
         baseUrl: "https://example.com",
         apiKey: "sk-secret",
@@ -692,6 +714,7 @@ describe("AI API verification probes", () => {
 
       await expect(
         runToolCallingProbe({
+          mode: "non-streaming",
           apiType: "openai",
           baseUrl: "https://example.com",
           apiKey: "sk-secret",
@@ -720,6 +743,7 @@ describe("AI API verification probes", () => {
       )
 
       await runToolCallingProbe({
+        mode: "non-streaming",
         apiType: "openai",
         baseUrl: "https://example.com",
         apiKey: "sk-secret",
@@ -743,6 +767,7 @@ describe("AI API verification probes", () => {
       )
 
       const result = await runToolCallingProbe({
+        mode: "non-streaming",
         apiType: "openai",
         baseUrl: "https://example.com",
         apiKey: "sk-secret",
@@ -766,6 +791,7 @@ describe("AI API verification probes", () => {
       )
 
       const result = await runToolCallingProbe({
+        mode: "non-streaming",
         apiType: "openai",
         baseUrl: "https://example.com",
         apiKey: "sk-secret",
@@ -789,6 +815,7 @@ describe("AI API verification probes", () => {
 
       await expect(
         runToolCallingProbe({
+          mode: "non-streaming",
           apiType: "openai",
           baseUrl: "https://example.com",
           apiKey: "sk-secret",

@@ -21,13 +21,6 @@ export function getNewAccountAutomaticExecutionDefault(
   return getAutoCheckinCandidateMethodIds(siteType).length > 0
 }
 
-/** Returns whether legacy compatibility may preselect a new account method. */
-export function hasNewAccountCompatibilityRegistration(
-  siteType: AccountSiteType,
-): boolean {
-  return getNewAccountCompatibilityMethodIds(siteType).length > 0
-}
-
 /**
  * Applies the candidate-backed default while preserving an explicit user
  * choice for a site type that still has a registered provider candidate.

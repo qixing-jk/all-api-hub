@@ -15,6 +15,27 @@ const shieldBreadcrumbs = [
 
 export const refreshSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
+    "section:shield-history",
+    "refresh",
+    SHIELD_SETTINGS_TARGET_IDS.history,
+    "shieldBypass:history.title",
+    242,
+    {
+      descriptionKey: "shieldBypass:history.entryDescription",
+      breadcrumbsKeys: shieldBreadcrumbs,
+      keywords: [
+        "shield",
+        "cloudflare",
+        "history",
+        "diagnostics",
+        "过盾",
+        "排查",
+        "历史",
+        "触发原因",
+      ],
+    },
+  ),
+  buildSectionDefinition(
     "section:auto-refresh",
     "refresh",
     "auto-refresh",
@@ -144,6 +165,22 @@ export const refreshSearchControls: OptionsSearchItemDefinition[] = [
       descriptionKey: "settings:refresh.shieldAutomaticFeaturesDesc",
       breadcrumbsKeys: shieldBreadcrumbs,
       keywords: ["automatic", "temporary page"],
+    },
+  ),
+  buildControlDefinition(
+    "control:shield-window-size",
+    "refresh",
+    SHIELD_SETTINGS_TARGET_IDS.windowSize,
+    "settings:refresh.shieldWindowSizeTitle",
+    546,
+    {
+      descriptionKey: "settings:refresh.shieldWindowSizeDesc",
+      breadcrumbsKeys: shieldBreadcrumbs,
+      keywordKeys: [
+        "settings:refresh.shieldWindowWidth",
+        "settings:refresh.shieldWindowHeight",
+      ],
+      keywords: ["window", "size", "width", "height", "captcha"],
     },
   ),
   ...SHIELD_AUTOMATIC_FEATURE_ITEMS.map(

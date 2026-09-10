@@ -84,7 +84,7 @@ export {
 export { Switch, switchVariants } from "./Switch"
 export { EmptyState } from "./EmptyState"
 export { Modal } from "./Dialog/Modal"
-export { DestructiveConfirmDialog } from "./Dialog/DestructiveConfirmDialog"
+export { ConfirmDialog } from "./Dialog/ConfirmDialog"
 export { Separator } from "./Separator"
 export {
   Sheet,

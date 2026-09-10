@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next"
-import toast from "react-hot-toast"
 
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
+import toast from "~/lib/notify"
 import {
   collectAccountRuntimeKeySecrets,
   getAccountRuntimeKeyLocator,

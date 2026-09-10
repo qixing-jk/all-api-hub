@@ -1,41 +1,23 @@
-import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
-import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
+import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
+import { ChannelType } from "~/constants/newApi"
+import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import { fetchSiteUserGroups } from "~/services/apiService/newApiFamily/default/keyManagement"
+import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
+import { AuthTypeEnum } from "~/types"
 import type {
-  ManagedSiteChannelDraftRequestOptions,
-  ManagedSiteChannelSecretReadOptions,
-} from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { searchChannel as searchNewApiChannel } from "~/services/apiService/newApiFamily/channelManagement"
-import {
-  fetchAccountAvailableModels,
-  fetchSiteUserGroups,
-} from "~/services/apiService/newApiFamily/default/keyManagement"
-import {
-  MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
-  MatchResolutionUnresolvedError,
-} from "~/services/managedSites/channelMatch"
-import {
-  fetchNewApiChannelKey,
-  NewApiChannelKeyRequirementError,
-} from "~/services/managedSites/providers/newApiSession"
-import {
-  fetchManagedSiteAvailableModels,
-  type FetchManagedSiteAvailableModelsOptions,
-} from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
-import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
-import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
-import type { AccountToken } from "~/types"
+  ManagedSiteChannelDraft,
+  ManagedSiteChannelDraftSource,
+} from "~/types/managedSiteChannelDraft"
 import type {
-  ChannelFormData,
   ChannelMode,
+  ChannelStatus,
   CreateChannelPayload,
-  ManagedSiteChannel,
-  ManagedSiteChannelListData,
-} from "~/types/managedSite"
+} from "~/types/newApi"
+import { CHANNEL_MODE } from "~/types/newApi"
 import type { NewApiConfig } from "~/types/newApiConfig"
-import { getErrorMessage } from "~/utils/core/error"
+import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
-import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 import {
   userPreferences,
@@ -60,89 +42,6 @@ const toNewApiRequestConfig = (config: NewApiConfig) => ({
 
 const fetchNewApiConfigUserGroups = async (config: NewApiConfig) =>
   await fetchSiteUserGroups(toNewApiRequestConfig(config))
-
-/**
- * 搜索指定关键词的渠道
- * @param config New API runtime config
- * @param keyword 搜索关键词
- */
-export async function searchChannel(
-  config: NewApiConfig,
-  keyword: string,
-): Promise<ManagedSiteChannelListData | null> {
-  return await searchNewApiChannel(toNewApiRequestConfig(config), keyword)
-}
-/**
- * Reads a single managed-site channel key using the New API verification flow.
- */
-export async function fetchChannelSecretKey(
-  config: NewApiConfig,
-  channelId: number,
-  options: ManagedSiteChannelSecretReadOptions,
-): Promise<string> {
-  const sessionConfig = await getNewApiManagedSessionConfig(config)
-
-  return await fetchNewApiChannelKey({
-    ...sessionConfig,
-    channelId,
-    protectionBypassExecution: options.protectionBypassExecution,
-    signal: options.signal,
-  })
-}
-
-/**
- * Hydrates hidden New API channel keys so the shared resolver can compare them.
- */
-export async function hydrateComparableChannelKeys(
-  config: NewApiConfig,
-  candidates: ManagedSiteChannel[],
-  options: ManagedSiteChannelSecretReadOptions,
-): Promise<ManagedSiteChannel[]> {
-  const sessionConfig = await getNewApiManagedSessionConfig(config)
-  const hydratedCandidates: ManagedSiteChannel[] = []
-
-  for (const candidate of candidates) {
-    if (candidate.key?.trim()) {
-      hydratedCandidates.push(candidate)
-      continue
-    }
-
-    try {
-      const resolvedKey = await fetchNewApiChannelKey({
-        ...sessionConfig,
-        channelId: candidate.id,
-        protectionBypassExecution: options.protectionBypassExecution,
-        signal: options.signal,
-      })
-
-      hydratedCandidates.push({
-        ...candidate,
-        key: resolvedKey,
-      })
-    } catch (error) {
-      if (options.signal?.aborted) {
-        throw error
-      }
-      if (error instanceof NewApiChannelKeyRequirementError) {
-        throw new MatchResolutionUnresolvedError(
-          MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
-        )
-      }
-
-      logger.warn("Failed to hydrate hidden New API channel key", {
-        baseUrl: config.baseUrl,
-        channelId: candidate.id,
-        error: getErrorMessage(error),
-      })
-
-      throw new MatchResolutionUnresolvedError(
-        MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
-      )
-    }
-  }
-
-  return hydratedCandidates
-}
 
 /**
  * Checks whether the given user preferences contain a complete New API config.
@@ -204,112 +103,16 @@ export async function getNewApiConfig(): Promise<{
 }
 
 /**
- * Reads the optional New API login-assist fields used by the session-backed
- * verification flow without changing the existing admin-token config contract.
- */
-export async function getNewApiLoginAssistConfig(): Promise<Pick<
-  NewApiConfig,
-  "baseUrl" | "username" | "password" | "totpSecret"
-> | null> {
-  try {
-    const prefs = await userPreferences.getPreferences()
-    const newApi = prefs?.newApi
-
-    if (!newApi?.baseUrl) {
-      return null
-    }
-
-    return {
-      baseUrl: newApi.baseUrl,
-      username: newApi.username ?? "",
-      password: newApi.password ?? "",
-      totpSecret: newApi.totpSecret ?? "",
-    }
-  } catch (error) {
-    logger.error("Error getting New API login-assist config", error)
-    return null
-  }
-}
-
-const sharesNewApiOrigin = (leftBaseUrl: string, rightBaseUrl: string) => {
-  const leftOrigin =
-    normalizeUrlForOriginKey(leftBaseUrl, { stripTrailingSlashes: true }) ||
-    leftBaseUrl.trim()
-  const rightOrigin =
-    normalizeUrlForOriginKey(rightBaseUrl, { stripTrailingSlashes: true }) ||
-    rightBaseUrl.trim()
-
-  return Boolean(leftOrigin && rightOrigin && leftOrigin === rightOrigin)
-}
-
-const getNewApiManagedSessionConfig = async (
-  config: Pick<NewApiConfig, "baseUrl" | "userId">,
-): Promise<
-  Pick<
-    NewApiConfig,
-    "baseUrl" | "userId" | "username" | "password" | "totpSecret"
-  >
-> => {
-  const loginAssistConfig = await getNewApiLoginAssistConfig()
-  const canReuseLoginAssist =
-    loginAssistConfig &&
-    sharesNewApiOrigin(loginAssistConfig.baseUrl, config.baseUrl)
-
-  return {
-    baseUrl: config.baseUrl,
-    userId: config.userId?.toString() ?? "",
-    username: canReuseLoginAssist ? loginAssistConfig.username ?? "" : "",
-    password: canReuseLoginAssist ? loginAssistConfig.password ?? "" : "",
-    totpSecret: canReuseLoginAssist ? loginAssistConfig.totpSecret ?? "" : "",
-  }
-}
-
-/**
- * 获取账号支持的模型列表。
- * 仅基于实时探测结果返回模型，不读取 token.models 这类静态限制元数据。
- */
-export async function fetchAvailableModels(
-  account: DisplaySiteData,
-  token: ApiToken,
-  options?: FetchManagedSiteAvailableModelsOptions,
-): Promise<string[]> {
-  return await fetchManagedSiteAvailableModels(account, token, {
-    fetchAccountAvailableModels:
-      options?.fetchAccountAvailableModels ?? fetchAccountAvailableModels,
-    ...options,
-  })
-}
-
-/**
- * 构建默认渠道名称
- */
-export function buildChannelName(
-  account: DisplaySiteData,
-  token: ApiToken,
-): string {
-  let channelName = `${account.name} | ${token.name}`.trim()
-  if (!channelName.endsWith("(auto)")) {
-    channelName += " (auto)"
-  }
-  return channelName
-}
-
-/**
  * 构建渠道表单默认值
  */
 export async function prepareChannelFormData(
-  account: DisplaySiteData,
-  token: ApiToken | AccountToken,
+  source: ManagedSiteChannelDraftSource,
   options?: ManagedSiteChannelDraftRequestOptions,
-): Promise<ChannelFormData> {
-  const upstreamAccount = normalizeAccountForManagedChannel(account)
-
+): Promise<ManagedSiteChannelDraft> {
   // Channel import prefill must reflect only the selected key's live upstream
   // model list; on failure we keep the dialog editable and require manual input.
-  const { models: availableModels, fetchFailed } = await fetchTokenScopedModels(
-    upstreamAccount,
-    token,
-  )
+  const { models: availableModels, fetchFailed } =
+    await fetchManagedSiteImportModels(source)
 
   const resolvedGroups = await resolveDefaultChannelGroups({
     getConfig: getNewApiConfig,
@@ -321,16 +124,16 @@ export async function prepareChannelFormData(
   })
 
   return {
-    name: buildChannelName(account, token),
-    type: DEFAULT_CHANNEL_FIELDS.type,
-    key: token.key,
-    base_url: upstreamAccount.baseUrl,
+    name: source.name,
+    type: ChannelType.OpenAI,
+    key: source.apiKey,
+    base_url: source.baseUrl,
     models: normalizeList(availableModels),
     ...(fetchFailed ? { modelPrefillFetchFailed: true } : {}),
     groups: normalizeList(resolvedGroups),
     priority: DEFAULT_CHANNEL_FIELDS.priority,
     weight: DEFAULT_CHANNEL_FIELDS.weight,
-    status: DEFAULT_CHANNEL_FIELDS.status,
+    enabled: DEFAULT_CHANNEL_FIELDS.enabled,
   }
 }
 
@@ -338,8 +141,8 @@ export async function prepareChannelFormData(
  * 构建渠道创建 payload
  */
 export function buildChannelPayload(
-  formData: ChannelFormData,
-  mode: ChannelMode = DEFAULT_CHANNEL_FIELDS.mode,
+  formData: NewApiFamilyChannelCommand,
+  mode: ChannelMode = CHANNEL_MODE.SINGLE,
 ): CreateChannelPayload {
   const trimmedBaseUrl = formData.base_url.trim()
   const groups = normalizeList(
@@ -360,7 +163,7 @@ export function buildChannelPayload(
       groups,
       priority: formData.priority,
       weight: formData.weight,
-      status: formData.status,
+      status: formData.status as ChannelStatus,
     },
   }
 }

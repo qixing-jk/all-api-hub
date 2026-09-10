@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import AutoDetectSlowHintAlert from "~/features/AccountManagement/components/AccountDialog/AutoDetectSlowHintAlert"
@@ -46,6 +47,7 @@ describe("AutoDetectSlowHintAlert", () => {
   })
 
   it("offers a confirmed extension reload recovery action for slow Cookie permission detection", async () => {
+    const user = userEvent.setup()
     const { reloadRuntime } = await import("~/utils/browser/browserApi")
 
     render(<AutoDetectSlowHintAlert />)
@@ -59,7 +61,7 @@ describe("AutoDetectSlowHintAlert", () => {
     const reloadButton = screen.getByRole("button", {
       name: "accountDialog:actions.reloadExtensionAndRetry",
     })
-    fireEvent.click(reloadButton)
+    await user.click(reloadButton)
 
     const reloadDialog = await screen.findByRole("dialog", {
       name: "accountDialog:warnings.reloadExtension.title",
@@ -75,7 +77,11 @@ describe("AutoDetectSlowHintAlert", () => {
     const confirmButton = within(reloadDialog).getByRole("button", {
       name: "accountDialog:actions.reloadExtensionAndRetry",
     })
-    fireEvent.click(confirmButton)
+    expect.soft(confirmButton).toHaveAttribute("data-variant", "warning")
+    expect
+      .soft(reloadDialog.querySelector(".lucide-trash2, .lucide-trash-2"))
+      .not.toBeInTheDocument()
+    await user.click(confirmButton)
 
     expect(reloadRuntime).toHaveBeenCalledTimes(1)
   })

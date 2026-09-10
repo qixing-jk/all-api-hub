@@ -34,16 +34,20 @@
     },
     "filters": {
       "all": "Alle",
+      "alreadyChecked": "Bereits eingecheckt",
       "clearAll": "Filter löschen",
       "countFiltered": "{{filtered}} von {{total}} angezeigt",
       "countTotal": "Insgesamt {{total}}",
       "failed": "Fehlgeschlagen",
-      "failedOrSkipped": "Fehlgeschlagen oder übersprungen",
+      "needsAttention": "Handlungsbedarf",
       "searchLabel": "Ausführungsergebnisse durchsuchen",
       "searchPlaceholder": "Nach Kontoname, ID oder Nachricht suchen...",
-      "skipped": "Übersprungen",
+      "selectedStatuses_one": "{{count}} Status ausgewählt",
+      "selectedStatuses_other": "{{count}} Status ausgewählt",
+      "skipped": "Nicht ausgeführt",
       "statusLabel": "Nach Ausführungsstatus filtern",
-      "success": "Erfolg"
+      "success": "In diesem Lauf eingecheckt",
+      "uncertain": "Bestätigung ausstehend"
     },
     "hints": {
       "invalidAccessToken": "Lösung: Das Zugriffstoken ist möglicherweise abgelaufen. Bitte melden Sie sich erneut auf der Website an und identifizieren/aktualisieren Sie dann unter „Kontoverwaltung → Konto bearbeiten“ automatisch das Zugriffstoken. Wenn dieses Problem nach der automatischen Identifizierung weiterhin auftritt, besorgen Sie sich bitte manuell das Zugriffstoken und ändern Sie es.",
@@ -67,8 +71,8 @@
     "status": {
       "alreadyChecked": "Bereits eingecheckt",
       "failed": "Fehlgeschlagen",
-      "skipped": "Übersprungen",
-      "success": "Erfolg",
+      "skipped": "Nicht ausgeführt",
+      "success": "In diesem Lauf eingecheckt",
       "uncertain": "Bestätigung ausstehend"
     },
     "table": {
@@ -249,12 +253,14 @@
     },
     "retryDisabled": "Wiederholung deaktiviert",
     "summary": {
+      "alreadyChecked": "Bereits eingecheckt",
       "eligible": "Berechtigt",
       "executed": "Ausgeführt",
       "failed": "Fehlgeschlagen",
-      "skipped": "Übersprungen",
-      "success": "Erfolg",
-      "title": "Ausführungszusammenfassung"
+      "skipped": "Nicht ausgeführt",
+      "success": "In diesem Lauf eingecheckt",
+      "title": "Ausführungszusammenfassung",
+      "uncertain": "Bestätigung ausstehend"
     }
   },
   "uiOpenPretrigger": {

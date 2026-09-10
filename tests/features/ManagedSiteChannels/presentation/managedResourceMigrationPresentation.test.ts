@@ -2,13 +2,16 @@ import { createInstance, type TFunction } from "i18next"
 import { describe, expect, it } from "vitest"
 
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
+import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { DoneHubChannelType } from "~/constants/doneHub"
-import { ChannelType } from "~/constants/managedSite"
+import { type ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import { VeloeraChannelType } from "~/constants/veloera"
 import {
   mapManagedResourceMigrationExecutionResult,
   mapManagedResourceMigrationPreview,
+  projectManagedResourceMigrationExecutionResult,
+  projectManagedResourceMigrationPreview,
 } from "~/features/ManagedSiteChannels/presentation/managedResourceMigrationPresentation"
 import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
 import es419ManagedSiteChannels from "~/locales/es-419/managedSiteChannels.json"
@@ -27,6 +30,7 @@ import {
   type ManagedSiteMigrationCanonicalPreview,
   type ManagedSiteMigrationSource,
 } from "~/types/managedSiteMigrationCapability"
+import { OctopusOutboundType } from "~/types/octopus"
 
 const translations: Record<string, string> = {
   "channelDialog:fields.baseUrl.label": "Base URL",
@@ -59,6 +63,10 @@ const translations: Record<string, string> = {
     "Target normalizes Base URL",
   "managedSiteChannels:migration.itemWarnings.targetForcesDefaultGroup":
     "Target forces default group",
+  "managedSiteChannels:migration.sub2apiDefaultGroup":
+    "Platform default group (if available)",
+  "managedSiteChannels:migration.itemWarnings.sub2apiDefaultGroup":
+    "Source groups are not copied. Check the target platform's default group after migration.",
   "managedSiteChannels:migration.itemWarnings.targetIgnoresPriority":
     "Target ignores priority",
   "managedSiteChannels:migration.itemWarnings.targetIgnoresWeight":
@@ -69,6 +77,8 @@ const translations: Record<string, string> = {
     "Source credential unavailable",
   "managedSiteChannels:migration.blockedReasons.sourceKeyResolutionFailed":
     "Source access could not be verified",
+  "managedSiteChannels:migration.blockedReasons.sourceKeyExportRestricted":
+    "Retrieve the key from the source dashboard and migrate this channel manually.",
   "managedSiteChannels:migration.blockedReasons.sourceTypeUnsupported":
     "Source type unsupported",
   "managedSiteChannels:migration.blockedReasons.targetDraftPreparationFailed":
@@ -97,7 +107,7 @@ const buildSource = (
   overrides: Partial<ManagedSiteMigrationSource> = {},
 ): ManagedSiteMigrationSource => ({
   sourceSiteType: SITE_TYPES.AXON_HUB,
-  resourceType: ChannelType.Anthropic,
+  resourceType: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
   baseUrl: "https://source.example.invalid/v1",
   models: ["model-b", "model-a"],
   groups: ["source-group"],
@@ -143,7 +153,7 @@ const preview: ManagedSiteMigrationCanonicalPreview = {
           groups: ["default", "fallback"],
           priority: 2,
           weight: 8,
-          status: 2,
+          enabled: false,
         },
         adjustments: {
           remappedType: true,
@@ -183,6 +193,69 @@ const preview: ManagedSiteMigrationCanonicalPreview = {
 }
 
 describe("managedResourceMigrationPresentation", () => {
+  it("retains safe comparison and outcome data without native refs or extra execution fields", () => {
+    const unsafePreview = {
+      ...preview,
+      command: { credential: "private-command" },
+      items: preview.items.map((item) => ({
+        ...item,
+        backendMessage: "private-backend-message",
+        ...(item.source
+          ? {
+              source: {
+                ...item.source,
+                credential: "private-source-credential",
+              },
+            }
+          : {}),
+      })),
+    }
+    const data = projectManagedResourceMigrationPreview(unsafePreview)
+    expect(data.items.map((item) => item.selection.selectionId)).toEqual(
+      preview.items.map((item) => item.selection.selectionId),
+    )
+    expect(data.items.map((item) => item.status)).toEqual(["ready", "blocked"])
+    expect(data.readyCount).toBe(1)
+    expect(data.blockedCount).toBe(1)
+    expect(JSON.stringify(data)).not.toMatch(
+      /private|scopeKey|resourceId|credential|command|backendMessage/,
+    )
+
+    const unsafeResult = {
+      totalSelected: 1,
+      attemptedCount: 1,
+      createdCount: 0,
+      failedCount: 0,
+      skippedCount: 0,
+      uncertainCount: 1,
+      credential: "private-result-credential",
+      items: [
+        {
+          selectionId: "opaque:row/outcome",
+          displayName: "Uncertain example",
+          status: "uncertain" as const,
+          failureCode:
+            MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.MutationStateUncertain,
+          rawError: "private-upstream-error",
+        },
+      ],
+    }
+    const outcome = projectManagedResourceMigrationExecutionResult(unsafeResult)
+    expect(outcome.items).toEqual([
+      {
+        selectionId: "opaque:row/outcome",
+        displayName: "Uncertain example",
+        status: "uncertain",
+      },
+    ])
+    expect(outcome.uncertainCount).toBe(1)
+    expect(JSON.stringify(outcome)).not.toMatch(/private|credential|rawError/)
+    expect(
+      mapManagedResourceMigrationExecutionResult(outcome, { t })
+        .refreshRequired,
+    ).toBe(true)
+  })
+
   it.each([
     ["0", "OpenAI Chat"],
     ["2", "Anthropic"],
@@ -279,7 +352,7 @@ describe("managedResourceMigrationPresentation", () => {
     )
   })
 
-  it("keeps canonical source types distinct from Veloera target types", () => {
+  it("shows Veloera's native source and target vocabulary for colliding numeric types", () => {
     const readyItem = preview.items[0]!
     if (readyItem.status !== "ready") throw new Error("expected ready item")
     const veloeraPreview: ManagedSiteMigrationCanonicalPreview = {
@@ -314,9 +387,115 @@ describe("managedResourceMigrationPresentation", () => {
 
     expect(mapped.rows[0].comparisons.find(({ id }) => id === "type")).toEqual(
       expect.objectContaining({
-        source: "Coze",
+        source: "GitHub Models",
         target: "GitHub Models",
       }),
+    )
+  })
+
+  it.each([
+    [SITE_TYPES.SUB2API, "openai", "OpenAI"],
+    [SITE_TYPES.SUB2API, "anthropic", "Anthropic"],
+    [SITE_TYPES.SUB2API, "gemini", "Gemini"],
+    [SITE_TYPES.SUB2API, "grok", "Grok"],
+    [SITE_TYPES.DONE_HUB, DoneHubChannelType.DeepSeek, "DeepSeek"],
+    [SITE_TYPES.OCTOPUS, OctopusOutboundType.Anthropic, "Anthropic"],
+    [
+      SITE_TYPES.AXON_HUB,
+      AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES,
+      "OpenAI Responses",
+    ],
+    [
+      SITE_TYPES.CLAUDE_CODE_HUB,
+      CLAUDE_CODE_HUB_PROVIDER_TYPE.CODEX,
+      "Codex (Responses API)",
+    ],
+    [SITE_TYPES.AXON_HUB, 14, "Unsupported type"],
+    [SITE_TYPES.CLAUDE_CODE_HUB, 14, "Unsupported type"],
+  ] as const)(
+    "shows the native %s source type %s without New API label fallback",
+    (sourceSiteType, resourceType, expected) => {
+      const readyItem = preview.items[0]!
+      if (readyItem.status !== "ready") throw new Error("expected ready item")
+      const mapped = mapManagedResourceMigrationPreview(
+        {
+          ...preview,
+          sourceSiteType,
+          items: [
+            {
+              ...readyItem,
+              source: buildSource({ sourceSiteType, resourceType }),
+            },
+          ],
+        },
+        { t, getSiteLabel: String },
+      )
+
+      expect(
+        mapped.rows[0].comparisons.find(({ id }) => id === "type")?.source,
+      ).toBe(expected)
+    },
+  )
+
+  it("shows the Sub2API destination platform and its default-group policy", () => {
+    const readyItem = preview.items[0]!
+    if (readyItem.status !== "ready") throw new Error("expected ready item")
+    const mapped = mapManagedResourceMigrationPreview(
+      {
+        ...preview,
+        targetSiteType: SITE_TYPES.SUB2API,
+        items: [
+          {
+            ...readyItem,
+            target: {
+              ...readyItem.target,
+              projection: {
+                ...readyItem.target.projection,
+                type: "anthropic",
+                groups: [],
+              },
+            },
+            warningCodes: [
+              MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
+            ],
+          },
+        ],
+      },
+      { t, getSiteLabel: String },
+    )
+    expect(
+      mapped.rows[0].comparisons.find(({ id }) => id === "type")?.target,
+    ).toBe("Anthropic")
+    expect(
+      mapped.rows[0].comparisons.find(({ id }) => id === "groups")?.target,
+    ).toBe("Platform default group (if available)")
+    expect(mapped.rows[0].warningText).toEqual([
+      "Source groups are not copied. Check the target platform's default group after migration.",
+    ])
+  })
+
+  it("explains how to recover when source key export requires web verification", () => {
+    const mapped = mapManagedResourceMigrationExecutionResult(
+      {
+        totalSelected: 1,
+        createdCount: 0,
+        failedCount: 0,
+        skippedCount: 1,
+        uncertainCount: 0,
+        items: [
+          {
+            selectionId: "restricted",
+            displayName: "Restricted upstream",
+            status: "skipped",
+            blockingReasonCode:
+              MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_EXPORT_RESTRICTED,
+          },
+        ],
+      },
+      { t },
+    )
+    expect(mapped.items[0].message).toBe(
+      "Retrieve the key from the source dashboard and migrate this channel manually.",
     )
   })
 
@@ -658,7 +837,6 @@ describe("managedResourceMigrationPresentation", () => {
     const summary = mapManagedResourceMigrationExecutionResult(
       {
         totalSelected: 6,
-        attemptedCount: 6,
         createdCount: 1,
         failedCount: 2,
         skippedCount: 1,

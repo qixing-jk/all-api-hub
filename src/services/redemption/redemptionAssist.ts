@@ -311,10 +311,14 @@ class RedemptionAssistService {
             SITE_ROUTE_KINDS.Redeem,
           ))
 
-        const checkInPattern = buildOriginWhitelistPattern(resolvedCheckInUrl)
+        const checkInPattern = resolvedCheckInUrl
+          ? buildOriginWhitelistPattern(resolvedCheckInUrl)
+          : null
         if (checkInPattern) patterns.push(checkInPattern)
 
-        const redeemPattern = buildUrlPrefixWhitelistPattern(resolvedRedeemUrl)
+        const redeemPattern = resolvedRedeemUrl
+          ? buildUrlPrefixWhitelistPattern(resolvedRedeemUrl)
+          : null
         if (redeemPattern) patterns.push(redeemPattern)
       }
     }

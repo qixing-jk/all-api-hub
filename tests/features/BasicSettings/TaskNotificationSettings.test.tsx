@@ -102,8 +102,10 @@ vi.mock("~/services/notifications/messaging", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/operationFeedback", () => ({
   showResultToast: (...args: unknown[]) => showResultToastMock(...args),
+}))
+vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   showUpdateToast: (...args: unknown[]) => showUpdateToastMock(...args),
 }))
 
@@ -160,11 +162,11 @@ describe("TaskNotificationSettings", () => {
       )
     })
 
-    expect(showResultToastMock).toHaveBeenCalledWith(
-      true,
-      "settings:taskNotifications.permission.requestSuccess",
-      "settings:taskNotifications.permission.requestFailed",
-    )
+    expect(showResultToastMock).toHaveBeenCalledWith({
+      success: true,
+      successFallback: "settings:taskNotifications.permission.requestSuccess",
+      errorFallback: "settings:taskNotifications.permission.requestFailed",
+    })
     expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_EVENTS.PermissionResult,
       {
@@ -239,11 +241,11 @@ describe("TaskNotificationSettings", () => {
     )
 
     await waitFor(() => {
-      expect(showResultToastMock).toHaveBeenCalledWith(
-        false,
-        "settings:taskNotifications.permission.requestSuccess",
-        "settings:taskNotifications.permission.requestFailed",
-      )
+      expect(showResultToastMock).toHaveBeenCalledWith({
+        success: false,
+        successFallback: "settings:taskNotifications.permission.requestSuccess",
+        errorFallback: "settings:taskNotifications.permission.requestFailed",
+      })
     })
     expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_EVENTS.PermissionResult,
@@ -278,11 +280,11 @@ describe("TaskNotificationSettings", () => {
     )
 
     await waitFor(() => {
-      expect(showResultToastMock).toHaveBeenCalledWith(
-        false,
-        "settings:taskNotifications.permission.requestSuccess",
-        "settings:taskNotifications.permission.requestFailed",
-      )
+      expect(showResultToastMock).toHaveBeenCalledWith({
+        success: false,
+        successFallback: "settings:taskNotifications.permission.requestSuccess",
+        errorFallback: "settings:taskNotifications.permission.requestFailed",
+      })
     })
     expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_EVENTS.PermissionResult,
@@ -317,11 +319,11 @@ describe("TaskNotificationSettings", () => {
     )
 
     await waitFor(() => {
-      expect(showResultToastMock).toHaveBeenCalledWith(
-        false,
-        "settings:taskNotifications.permission.requestSuccess",
-        "settings:taskNotifications.permission.requestFailed",
-      )
+      expect(showResultToastMock).toHaveBeenCalledWith({
+        success: false,
+        successFallback: "settings:taskNotifications.permission.requestSuccess",
+        errorFallback: "settings:taskNotifications.permission.requestFailed",
+      })
     })
     expect(hasPermissionMock).toHaveBeenCalledTimes(2)
     expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(

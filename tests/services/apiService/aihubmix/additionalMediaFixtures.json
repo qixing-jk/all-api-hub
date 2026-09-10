@@ -1,0 +1,99 @@
+{
+  "website": [
+    {
+      "model": "doubao-seedance-2-0-260128",
+      "billing_config": "",
+      "img_price_config": "{\n    \"generate\":\n    {\n        \"standard\":\n        {\n            \"standard\": 0.704,\n            \"480p\": 0.071,\n            \"720p\": 0.142,\n            \"1080p\": 0.352,\n            \"4k\": 0.704\n        }\n    },\n    \"video_reference\":\n    {\n        \"standard\":\n        {\n            \"standard\": 0.876,\n            \"480p\": 0.078,\n            \"720p\": 0.171,\n            \"1080p\": 0.423,\n            \"4k\": 0.876\n        }\n    }\n}",
+      "display_input": "Input without video: 480p: $0.071/s; 720p: $0.142/s; 1080p: $0.352/s; 4K: $0.704/s.\nInput with video: 480p: $0.078/s; 720p: $0.171/s; 1080p: $0.423/s; 4K: $0.876/s.",
+      "display_output": "输入不含视频：480p：每秒价格0.071美元；720p：每秒价格0.142美元；1080p：每秒价格0.352美元；4k：每秒价格0.704美元。\n输入包含视频：480p：每秒价格0.078美元；720p：每秒价格0.171美元；1080p：每秒价格0.423美元；4k：每秒价格0.876美元。"
+    },
+    {
+      "model": "doubao-seedance-2-0-fast-260128",
+      "billing_config": "",
+      "img_price_config": "{\n    \"generate\":\n    {\n        \"standard\":\n        {\n    \"standard\":0.113,\n    \"480p\":0.055,\n    \"720p\":0.113\n        }\n    },\n    \"video_reference\":\n    {\n        \"standard\":\n        {\n            \"standard\": 0.268,\n            \"480p\": 0.124,\n            \"720p\": 0.268\n        }\n    }\n}",
+      "display_input": "Input without video: 480p: $0.055 per second; 720p: $0.113 per second.\nInput with video: 480p: $0.124 per second; 720p: $0.268 per second.",
+      "display_output": "输入不含视频：480p：每秒价格0.055美元；720p：每秒价格0.113美元。\n输入包含视频：480p：每秒价格0.124美元；720p：每秒价格0.268美元。"
+    },
+    {
+      "model": "doubao-seedance-2-0-mini-260615",
+      "billing_config": "",
+      "img_price_config": "{\n    \"generate\":\n    {\n        \"standard\":\n        {\n    \"standard\":0.0706,\n    \"480p\":0.0344,\n    \"720p\":0.0706\n        }\n    },\n    \"video_reference\":\n    {\n        \"standard\":\n        {\n            \"standard\": 0.1675,\n            \"480p\": 0.0775,\n            \"720p\": 0.1675\n        }\n    }\n}",
+      "display_input": "Input without video: 480p: $0.055 per second; 720p: $0.113 per second.\nInput with video: 480p: $0.124 per second; 720p: $0.268 per second.",
+      "display_output": "输入不含视频：480p：每秒价格0.0344美元；720p：每秒价格0.0706美元。\n输入包含视频：480p：每秒价格0.0775美元；720p：每秒价格0.1675美元。"
+    },
+    {
+      "model": "gemini-3-flash-preview",
+      "billing_config": "{\"model_name\": \"gemini-3-flash-preview\", \"default_tier\": \"tier1\", \"enabled_billing_items\": [\"prompt_tokens\", \"completion_tokens\", \"cached_tokens\", \"input_audio_tokens\", \"cached_audio_tokens\", \"web_search_requests\", \"cache_storage_hours\"], \"per_unit_price_config\": {\"web_search_price\": 0.014, \"cache_storage_price\": 1.0}, \"token_based_tier_configs\": {\"tier1\": {\"model_ratio\": 0.25, \"tier_condition\": {\"max_tokens\": -1, \"min_tokens\": 0}, \"cached_tokens_ratio\": 0.1, \"prompt_tokens_ratio\": 1.0, \"completion_tokens_ratio\": 6.0, \"input_audio_tokens_ratio\": 2.0, \"cached_audio_tokens_ratio\": 0.2}}}",
+      "img_price_config": "",
+      "display_input": "",
+      "display_output": ""
+    },
+    {
+      "model": "gemini-3-flash-preview-search",
+      "billing_config": "{\"model_name\": \"gemini-3-flash-preview\", \"default_tier\": \"tier1\", \"enabled_billing_items\": [\"prompt_tokens\", \"completion_tokens\", \"cached_tokens\", \"input_audio_tokens\", \"cached_audio_tokens\", \"web_search_requests\", \"cache_storage_hours\"], \"per_unit_price_config\": {\"web_search_price\": 0.014, \"cache_storage_price\": 1.0}, \"token_based_tier_configs\": {\"tier1\": {\"model_ratio\": 0.25, \"tier_condition\": {\"max_tokens\": -1, \"min_tokens\": 0}, \"cached_tokens_ratio\": 0.1, \"prompt_tokens_ratio\": 1.0, \"completion_tokens_ratio\": 6.0, \"input_audio_tokens_ratio\": 2.0, \"cached_audio_tokens_ratio\": 0.2}}}",
+      "img_price_config": "",
+      "display_input": "",
+      "display_output": ""
+    },
+    {
+      "model": "glm-image",
+      "billing_config": "",
+      "img_price_config": "{\"generate\":{\"standard\":{\"standard\":0.015}}}",
+      "display_input": "$0.015 / IMG",
+      "display_output": "$0.015 / IMG"
+    }
+  ],
+  "catalog": [
+    {
+      "model_id": "doubao-seedance-2-0-260128",
+      "pricing": {
+        "input": 2,
+        "output": 0
+      },
+      "promotion": null
+    },
+    {
+      "model_id": "doubao-seedance-2-0-fast-260128",
+      "pricing": {
+        "input": 2,
+        "output": 0
+      },
+      "promotion": null
+    },
+    {
+      "model_id": "doubao-seedance-2-0-mini-260615",
+      "pricing": {
+        "input": 2,
+        "output": 0
+      },
+      "promotion": null
+    },
+    {
+      "model_id": "glm-image",
+      "pricing": {
+        "cache_read": 0,
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null
+    },
+    {
+      "model_id": "gemini-3-flash-preview",
+      "pricing": {
+        "cache_read": 0.05,
+        "input": 0.5,
+        "output": 3
+      },
+      "promotion": null
+    },
+    {
+      "model_id": "gemini-3-flash-preview-search",
+      "pricing": {
+        "cache_read": 0.05,
+        "input": 0.5,
+        "output": 3
+      },
+      "promotion": null
+    }
+  ]
+}

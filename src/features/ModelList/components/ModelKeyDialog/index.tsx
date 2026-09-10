@@ -19,7 +19,6 @@ import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { normalizeGroupNames } from "~/features/ModelList/groupNormalization"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
-import { useLegacyApiTokenSecretResult } from "~/features/TokenProvisioning/hooks/useLegacyApiTokenSecretResult"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import {
   buildGroupDefaultTokenRequest,
@@ -162,13 +161,12 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
     ineligibleDescription,
     isCreating,
     createError,
-    oneTimeToken,
     oneTimeSecret,
     fetchRuntimeKeys,
     copySelectedKey,
     createDefaultKey,
     refreshRuntimeKeysAfterCreate,
-    clearOneTimeToken,
+    clearOneTimeSecret,
   } = useModelKeyDialog({
     isOpen,
     account,
@@ -183,7 +181,6 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
         source: "ModelKeyDialog",
       })
     : undefined
-  const oneTimeSecretResult = useLegacyApiTokenSecretResult(oneTimeToken)
 
   const requiresExplicitSelection = compatibleRuntimeKeys.length > 1
 
@@ -548,9 +545,9 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
         showOneTimeKeyDialog={false}
       />
       <OneTimeSecretDialog
-        isOpen={!!oneTimeToken}
-        result={oneTimeSecretResult}
-        onClose={clearOneTimeToken}
+        isOpen={!!oneTimeSecret}
+        result={oneTimeSecret}
+        onClose={clearOneTimeSecret}
         saveAction={oneTimeKeySaveAction}
       />
     </>

@@ -59,7 +59,7 @@ vi.mock("~/services/integrations/cliProxyService", () => ({
   importToCliProxy: (...args: any[]) => mockImportToCliProxy(...args),
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/operationFeedback", () => ({
   showResultToast: (...args: any[]) => mockShowResultToast(...args),
 }))
 

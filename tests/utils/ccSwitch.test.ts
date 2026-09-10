@@ -4,7 +4,7 @@ import { openInCCSwitch } from "~/services/integrations/ccSwitch"
 import type { ApiToken } from "~/types"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: vi.fn(),
     error: vi.fn(),

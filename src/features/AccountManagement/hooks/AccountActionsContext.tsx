@@ -7,9 +7,9 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import toast from "react-hot-toast"
 
 import { openExternalCheckIns } from "~/features/AccountManagement/utils/openExternalCheckIns"
+import toast from "~/lib/notify"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"

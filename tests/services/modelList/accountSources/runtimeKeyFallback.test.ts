@@ -5,6 +5,7 @@ import {
   ACCOUNT_RUNTIME_KEY_SOURCES,
   buildServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
+import { MODEL_PRICING_RUNTIME_KEY_FALLBACKS } from "~/services/apiAdapters/contracts/modelPricing"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   ACCOUNT_RUNTIME_KEY_FALLBACK_LOAD_FAILED,
@@ -382,6 +383,8 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       account: {
         modelPricing: {
           fetchPricing: fetchPricingMock,
+          runtimeKeyFallback:
+            MODEL_PRICING_RUNTIME_KEY_FALLBACKS.ACCOUNT_PRICING,
         },
       },
     })
@@ -916,6 +919,8 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       account: {
         modelPricing: {
           fetchPricing: fetchPricingMock,
+          runtimeKeyFallback:
+            MODEL_PRICING_RUNTIME_KEY_FALLBACKS.ACCOUNT_PRICING,
         },
       },
     })
@@ -960,6 +965,8 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       account: {
         modelPricing: {
           fetchPricing: fetchPricingMock,
+          runtimeKeyFallback:
+            MODEL_PRICING_RUNTIME_KEY_FALLBACKS.ACCOUNT_PRICING,
         },
       },
     })
@@ -991,6 +998,8 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       account: {
         modelPricing: {
           fetchPricing: fetchPricingMock,
+          runtimeKeyFallback:
+            MODEL_PRICING_RUNTIME_KEY_FALLBACKS.ACCOUNT_PRICING,
         },
       },
     })

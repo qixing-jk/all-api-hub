@@ -8,11 +8,13 @@ import {
   getAutoCheckinResultMessage,
   resolveAutoCheckinTroubleshootingHintKey,
 } from "~/features/AutoCheckin/utils/autoCheckin"
+import { ProtectionBypassHistoryLink } from "~/features/ProtectionBypass/components/ProtectionBypassHistoryLink"
 import { cn } from "~/lib/utils"
 import {
   CHECKIN_RESULT_STATUS,
   type CheckinAccountResult,
 } from "~/types/autoCheckin"
+import { openProtectionBypassHistory } from "~/utils/navigation"
 
 import { formatTimestamp } from "../utils/tableUtils"
 import type { ResultsTableActionsProps } from "./ResultsTable.types"
@@ -115,6 +117,14 @@ export default function ResultsTableRow({
             <div className="text-xs text-gray-400 dark:text-gray-500">
               {getTroubleshootingHintLabel(troubleshootingHintKey)}
             </div>
+          )}
+          {(troubleshootingHintKey ===
+            "execution.hints.manualVerificationRequired" ||
+            troubleshootingHintKey === "execution.hints.noTabWithId") && (
+            <ProtectionBypassHistoryLink
+              className="text-xs"
+              onOpen={openProtectionBypassHistory}
+            />
           )}
         </div>
       </TableCell>

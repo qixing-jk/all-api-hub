@@ -234,6 +234,7 @@ export function toPersistedProbeSummary(
 ): PersistedApiVerificationProbeSummary {
   return {
     id: result.id,
+    ...(result.mode ? { mode: result.mode } : {}),
     status: result.status,
     latencyMs:
       typeof result.latencyMs === "number" && Number.isFinite(result.latencyMs)

@@ -10,6 +10,7 @@ import {
 } from "~/services/accounts/accountFormValidation"
 import { validateAndUpdateAccount } from "~/services/accounts/accountUpdate"
 import { extractDomainPrefix, getSiteName } from "~/services/accounts/siteName"
+import { openRouterAccountPersistence } from "~/services/apiAdapters/openrouter/accountPersistence"
 import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
@@ -67,9 +68,13 @@ describe("account persistence and form validation", () => {
     mockGetAllAccountsOrThrow.mockReset()
     mockValidateManagementKey.mockReset()
     mockValidateManagementKey.mockResolvedValue({})
-    mockgetSiteTypeCapabilities.mockReturnValue({
+    mockgetSiteTypeCapabilities.mockImplementation((siteType) => ({
       siteType: SITE_TYPES.NEW_API,
       account: {
+        persistence:
+          siteType === SITE_TYPES.OPENROUTER
+            ? openRouterAccountPersistence
+            : undefined,
         data: {
           fetchData: mockFetchAccountData,
         },
@@ -77,7 +82,7 @@ describe("account persistence and form validation", () => {
           fetchSiteStatus: mockFetchSiteStatus,
         },
       },
-    })
+    }))
   })
 
   const checkInDisabled = buildCheckInConfig()

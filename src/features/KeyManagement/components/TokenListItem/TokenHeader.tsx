@@ -15,7 +15,6 @@ import {
 } from "~/components/ManagedSiteChannelAssessmentSignalHelpers"
 import ManagedSiteChannelLinkButton from "~/components/ManagedSiteChannelLinkButton"
 import { Badge, Button, WorkflowTransitionButton } from "~/components/ui"
-import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   KeyResourceCardHeader,
@@ -253,11 +252,6 @@ export function TokenHeader({
     managedSiteStatus && "matchedChannel" in managedSiteStatus
       ? managedSiteStatus.matchedChannel
       : undefined
-  const matchedChannelNavigationId =
-    matchedManagedSiteChannel?.resourceId ??
-    (managedSiteType === SITE_TYPES.AXON_HUB
-      ? undefined
-      : matchedManagedSiteChannel?.id)
   const shouldShowManagedSiteVerificationRetry = Boolean(
     canRetryManagedSiteVerification &&
       managedSiteStatus &&
@@ -384,16 +378,15 @@ export function TokenHeader({
       {matchedManagedSiteChannel ? (
         <ManagedSiteChannelLinkButton
           channelName={matchedManagedSiteChannel.name}
-          channelId={
+          resourceRef={
             managedSiteStatus?.status ===
             MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED
-              ? matchedChannelNavigationId
+              ? matchedManagedSiteChannel.ref
               : undefined
           }
           search={
             managedSiteStatus?.status ===
-              MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED &&
-            matchedChannelNavigationId !== undefined
+            MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED
               ? undefined
               : managedSiteAssessment?.searchBaseUrl
           }

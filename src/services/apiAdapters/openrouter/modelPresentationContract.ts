@@ -8,7 +8,6 @@ export const finiteNumberSchema = z.number().finite()
 export const tokenQuantitySchema = z.number().int().nonnegative()
 export const booleanSchema = z.boolean()
 export const unknownArraySchema = z.array(z.unknown())
-export const unknownRecordSchema = z.record(z.string(), z.unknown())
 export const isoDateSchema = z.string().refine(isIsoCalendarDate)
 
 /**

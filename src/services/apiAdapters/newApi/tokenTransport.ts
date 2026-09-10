@@ -1,5 +1,6 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import * as defaultTransport from "~/services/apiService/newApiFamily/default/keyManagement"
+import * as apiyi from "~/services/apiService/newApiFamily/variants/apiyi"
 import * as oneHub from "~/services/apiService/newApiFamily/variants/oneHub"
 import * as vApi from "~/services/apiService/newApiFamily/variants/vApi"
 import * as wong from "~/services/apiService/newApiFamily/variants/wong"
@@ -53,6 +54,12 @@ const compatibleTokenInventoryOverrides: Partial<NewApiFamilyTokenTransport> = {
 const overrides: Partial<
   Record<AccountSiteType, Partial<NewApiFamilyTokenTransport>>
 > = {
+  [SITE_TYPES.APIYI]: {
+    // https://api.apiyi.com/ (v29.8.9) returns token arrays starting at p=0.
+    ...compatibleTokenInventoryOverrides,
+    fetchAccountAvailableModels: apiyi.fetchAccountAvailableModels,
+    fetchUserGroups: apiyi.fetchUserGroups,
+  },
   [SITE_TYPES.ANYROUTER]: compatibleTokenInventoryOverrides,
   [SITE_TYPES.ONE_API]: oneApiTokenInventoryOverrides,
   [SITE_TYPES.VELOERA]: veloeraTokenInventoryOverrides,

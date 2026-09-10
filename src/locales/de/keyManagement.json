@@ -303,6 +303,7 @@
       "inputPreparationFailed": "Die Verifizierung konnte keine vergleichbaren Kanaleingaben vorbereiten.",
       "newApiRetrieveKeyHint": "Für New API hängt der vollständige Schlüsselvergleich vom Kanalschlüssel ab und die Anzeige dieses Kanalschlüssels selbst erfordert eine 2FA-Verifizierung, sodass ein vollständiger Schlüsselvergleich derzeit nicht verfügbar ist."
     },
+    "nativeResourceUnsupported": "Der Abgleich mit verwalteten Websites unterstützt auf dieser Seite noch keine nativen Ressourcenschlüssel. Die Aktualisierung gilt nur für unterstützte Schlüssel.",
     "pageUnsupported": "Kanalprüfungen für verwaltete Websites sind auf dieser Seite nicht verfügbar, da die aktuell verwaltete Website die Suche nach Kanälen nach URL derzeit nicht unterstützt.",
     "recovery": {
       "configureLogin": "Fügen Sie zuerst in den Einstellungen die Felder für die New-API-Anmeldung und die 2FA-Unterstützung hinzu. Bis dahin kann der Kanalschlüssel nicht gelesen und kein vollständiger Schlüsselvergleich durchgeführt werden.",
@@ -362,6 +363,28 @@
     "serviceCredentialRotateFailed": "Dienstschlüssel konnte nicht zurückgesetzt werden",
     "verifyApiFailed": "Fehler beim Öffnen der API-Verifizierung",
     "verifyCliSupportFailed": "Fehler beim Öffnen der CLI-Kompatibilitätsüberprüfung"
+  },
+  "native": {
+    "detailsLoadFailed": "Schlüsseldetails konnten nicht geladen werden.",
+    "heading": "API-Schlüssel",
+    "missing": "Nicht verfügbar",
+    "scope": {
+      "empty": "Keine Bereiche verfügbar",
+      "error": "Bereiche konnten nicht geladen werden",
+      "errorHelp": "Prüfe den Kontozugriff und versuche es erneut.",
+      "heading": "Bereich",
+      "label": "Bereich auswählen",
+      "loading": "Bereiche werden geladen…",
+      "partial": "Einige Bereiche konnten nicht geladen werden. Verfügbare Bereiche können weiterhin verwendet werden.",
+      "placeholder": "Bereich wählen",
+      "retry": "Bereiche erneut laden"
+    },
+    "status": {
+      "disabled": "Deaktiviert",
+      "enabled": "Aktiviert",
+      "expired": "Abgelaufen",
+      "unknown": "Unbekannt"
+    }
   },
   "noAccountsSupportKeyCreation": "Keines der Konten in dieser Ansicht unterstützt das Erstellen von API-Schlüsseln. Wählen Sie ein anderes Konto oder fügen Sie ein unterstütztes Konto hinzu.",
   "noKeys": "Noch keine Schlüsseldaten",
@@ -550,7 +573,6 @@
         "usageWeekly": "Wöchentliche Nutzung",
         "workspace": "Arbeitsbereich"
       },
-      "heading": "OpenRouter-Schlüssel",
       "status": {
         "all": "Alle",
         "disabled": "Deaktiviert",

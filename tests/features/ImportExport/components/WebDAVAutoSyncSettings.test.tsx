@@ -6,13 +6,13 @@ import {
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
-import toast from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
 import WebDAVAutoSyncSettings from "~/features/ImportExport/components/WebDAVAutoSyncSettings"
+import toast from "~/lib/notify"
 import { resolveProductAnalyticsActionContext } from "~/services/productAnalytics/actionConfig"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -53,7 +53,7 @@ const {
   },
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: vi.fn(),
     error: vi.fn(),

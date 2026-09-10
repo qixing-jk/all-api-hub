@@ -12,7 +12,9 @@ import {
 
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import AccountDialog from "~/features/AccountManagement/components/AccountDialog"
+import type { AccountDialogRecoveryState } from "~/features/AccountManagement/components/AccountDialog/models"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { useAccountDialogRecoveryReceiver } from "~/features/AccountManagement/hooks/useAccountDialogRecoveryReceiver"
 import {
   getAndClearPendingSponsorAddAccountPrefill,
   isAddAccountPrefill,
@@ -26,6 +28,7 @@ interface DialogOptions {
   mode: DialogMode
   account?: DisplaySiteData | null
   prefill?: AddAccountPrefill | null
+  recoveryState?: AccountDialogRecoveryState | null
 }
 
 interface DialogState {
@@ -33,6 +36,7 @@ interface DialogState {
   mode: DialogMode
   account: DisplaySiteData | null
   prefill: AddAccountPrefill | null
+  recoveryState?: AccountDialogRecoveryState | null
 }
 
 interface DialogStateContextType {
@@ -56,11 +60,14 @@ const DialogStateContext = createContext<DialogStateContextType | undefined>(
 export const DialogStateProvider = ({
   children,
   onOpenBookmarkImport,
+  initialRecoveryId,
 }: {
   children: ReactNode
   onOpenBookmarkImport?: () => void
+  initialRecoveryId?: string
 }) => {
-  const { loadAccountData } = useAccountDataContext()
+  const { loadAccountData, displayData, isInitialLoad } =
+    useAccountDataContext()
   const [dialogState, setDialogState] = useState<DialogState>({
     isOpen: false,
     mode: DIALOG_MODES.ADD,
@@ -80,10 +87,36 @@ export const DialogStateProvider = ({
         mode: options.mode,
         account: options.account || null,
         prefill: options.prefill ?? null,
+        recoveryState: options.recoveryState ?? null,
       })
       promiseRef.current = { resolve, reject }
     })
   }, [])
+
+  const receiveRecovery = useCallback(
+    (recoveryState: AccountDialogRecoveryState) => {
+      if (dialogState.isOpen) return "busy" as const
+      const account = recoveryState.accountId
+        ? displayData?.find(
+            (candidate) => candidate.id === recoveryState.accountId,
+          )
+        : undefined
+      if (recoveryState.accountId && !account) return "unavailable" as const
+      void openAccountDialog({
+        mode: account ? DIALOG_MODES.EDIT : DIALOG_MODES.ADD,
+        account,
+        recoveryState,
+      })
+      return "accepted" as const
+    },
+    [dialogState.isOpen, displayData, openAccountDialog],
+  )
+
+  useAccountDialogRecoveryReceiver({
+    enabled: !isInitialLoad,
+    initialRecoveryId,
+    onReceive: receiveRecovery,
+  })
 
   const handleClose = () => {
     setDialogState((prev) => ({ ...prev, isOpen: false }))
@@ -189,6 +222,7 @@ export const DialogStateProvider = ({
           mode={dialogState.mode}
           account={dialogState.account}
           prefill={dialogState.prefill}
+          recoveryState={dialogState.recoveryState}
           onSuccess={handleSuccess}
           onError={handleError}
           onOpenBookmarkImport={handleOpenBookmarkImport}

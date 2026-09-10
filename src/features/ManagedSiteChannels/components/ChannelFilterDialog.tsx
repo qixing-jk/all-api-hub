@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import ChannelFiltersEditor from "~/components/ChannelFiltersEditor"
@@ -7,6 +6,7 @@ import type { EditableFilterField } from "~/components/ChannelFiltersEditor"
 import { Modal } from "~/components/ui"
 import { Button } from "~/components/ui/button"
 import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
+import toast from "~/lib/notify"
 import {
   normalizeChannelFilters,
   type IncomingChannelFilter,
@@ -28,20 +28,21 @@ import {
   DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS,
   isProbeChannelModelFilterRule,
 } from "~/types/channelModelFilters"
+import type { ManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 
-import type { ChannelRow } from "../types"
 import {
   fetchChannelFilters,
   saveChannelFilters,
   type ChannelFilterStorageIdentity,
 } from "../utils/channelFilters"
 
-export type ChannelFilterTarget = Pick<
-  ChannelRow,
-  "id" | "name" | "type" | "resourceRef"
->
+export interface ChannelFilterTarget {
+  name: string
+  type: number | string
+  resourceRef?: ManagedUpstreamResourceRef
+}
 
 interface ChannelFilterDialogProps {
   channel: ChannelFilterTarget | null
@@ -85,7 +86,6 @@ function getChannelFilterStorageIdentity(
   }
 
   return {
-    channelId: channel.id,
     resourceRef: channel.resourceRef,
   }
 }
@@ -148,7 +148,11 @@ export default function ChannelFilterDialog({
     return null
   }
   const probeRulesSupported = Boolean(
-    resolveApiVerificationTypeForChannelType(channel.type),
+    channel.resourceRef &&
+      resolveApiVerificationTypeForChannelType(
+        channel.resourceRef.managedSiteType,
+        channel.type,
+      ),
   )
 
   const handleFieldChange = (

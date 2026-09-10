@@ -30,7 +30,7 @@ import {
   MANAGED_SITE_MUTATION_OUTCOMES,
 } from "~/services/managedSites/mutations"
 import { NewApiChannelKeyRequirementError } from "~/services/managedSites/providers/newApiSession"
-import { CHANNEL_STATUS } from "~/types/managedSite"
+import { CHANNEL_STATUS } from "~/types/newApi"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 
 const mocks = vi.hoisted(() => ({
@@ -44,30 +44,34 @@ const mocks = vi.hoisted(() => ({
   fetchSecretKey: vi.fn(),
   fetchModels: vi.fn(),
   fetchDraftModels: vi.fn(),
+  withProtectionBypass: vi.fn(),
   fetchSiteUserGroups: vi.fn(),
   fetchAccountAvailableModels: vi.fn(),
-  buildPayload: vi.fn(),
-  withProtectionBypass: vi.fn(),
 }))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: { getPreferences: mocks.getPreferences },
 }))
 
+vi.mock("~/services/apiAdapters/managedResources/newApiOperations", () => ({
+  newApiChannelOperations: {
+    list: mocks.list,
+    get: mocks.get,
+    search: mocks.search,
+    create: mocks.create,
+    update: mocks.update,
+    delete: mocks.remove,
+    fetchSecretKey: mocks.fetchSecretKey,
+    fetchModels: mocks.fetchModels,
+    fetchDraftModels: mocks.fetchDraftModels,
+  },
+  newApiManagedResourceModels: {
+    fetchModels: mocks.fetchModels,
+    fetchDraftModels: mocks.fetchDraftModels,
+  },
+}))
 vi.mock("~/services/apiAdapters/managedSites/newApi", () => ({
   newApiManagedSiteCapabilities: {
-    channels: {
-      list: mocks.list,
-      get: mocks.get,
-      search: mocks.search,
-      create: mocks.create,
-      update: mocks.update,
-      delete: mocks.remove,
-      fetchSecretKey: mocks.fetchSecretKey,
-      fetchModels: mocks.fetchModels,
-      fetchDraftModels: mocks.fetchDraftModels,
-    },
-    channelDrafts: { buildPayload: mocks.buildPayload },
     queries: {
       siteUserGroups: { fetch: mocks.fetchSiteUserGroups },
       accountAvailableModels: { fetch: mocks.fetchAccountAvailableModels },
@@ -173,10 +177,6 @@ describe("New API native managed resource", () => {
     mocks.fetchDraftModels.mockResolvedValue(["draft-model-a", "draft-model-b"])
     mocks.fetchSiteUserGroups.mockResolvedValue(["default", "vip"])
     mocks.fetchAccountAvailableModels.mockResolvedValue(["model-a", "model-b"])
-    mocks.buildPayload.mockImplementation((draft) => ({
-      mode: "single",
-      channel: draft,
-    }))
     mocks.withProtectionBypass.mockImplementation(
       async (_command, _surface, operation) =>
         await operation({ commandId: "command-1" }),
@@ -213,7 +213,6 @@ describe("New API native managed resource", () => {
           canUpdate: true,
           canDelete: true,
           channel: {
-            channelId: 17,
             channelType: channel.type,
             canSyncModels: true,
             canOpenModelSync: true,
@@ -504,26 +503,50 @@ describe("New API native managed resource", () => {
     expect(mocks.update.mock.calls.at(-1)?.[1]).not.toHaveProperty("key")
   })
 
-  it("omits an unchanged status from the provider update command", async () => {
-    const workspace = await newApiManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0]!.ref
-    const editor = await workspace.openEditEditor(ref)
+  it.each([
+    CHANNEL_STATUS.Enable,
+    CHANNEL_STATUS.AutoDisabled,
+    CHANNEL_STATUS.Unknown,
+  ])(
+    "retains native status %s when only the channel name changes",
+    async (status) => {
+      const currentChannel = { ...channel, status }
+      mocks.list.mockResolvedValue({ items: [currentChannel], total: 1 })
+      mocks.get.mockResolvedValue(currentChannel)
+      const workspace = await newApiManagedResourceRegistration.open()
+      const ref = (await workspace.list()).items[0]!.ref
+      const editor = await workspace.openEditEditor(ref)
 
-    await editor.submit({
-      ...editor.initialValues,
-      [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Name]: "Renamed channel",
-    })
+      expect(
+        editor.initialValues[NEW_API_MANAGED_RESOURCE_FIELD_IDS.Status],
+      ).toBe(String(status))
+      expect(
+        editor.fields.find(
+          (field) =>
+            field.fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.Status,
+        ),
+      ).toMatchObject({
+        type: "select",
+        options: expect.arrayContaining([{ value: String(status) }]),
+      })
+      await expect(
+        editor.submit({
+          ...editor.initialValues,
+          [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Name]: "Renamed channel",
+        }),
+      ).resolves.toMatchObject({ outcome: "succeeded" })
 
-    expect(mocks.update).toHaveBeenCalledWith(
-      config,
-      expect.objectContaining({
-        id: channel.id,
-        name: "Renamed channel",
-      }),
-      undefined,
-    )
-    expect(mocks.update.mock.calls.at(-1)?.[1]).not.toHaveProperty("status")
-  })
+      expect(mocks.update).toHaveBeenCalledWith(
+        config,
+        expect.objectContaining({
+          id: channel.id,
+          name: "Renamed channel",
+        }),
+        undefined,
+      )
+      expect(mocks.update.mock.calls.at(-1)?.[1]).not.toHaveProperty("status")
+    },
+  )
 
   it("keeps a changed status in the provider update command", async () => {
     const workspace = await newApiManagedResourceRegistration.open()
@@ -953,11 +976,7 @@ describe("New API native managed resource", () => {
       editor.initialValues,
     )
 
-    expect(mocks.fetchModels).toHaveBeenCalledWith(
-      config,
-      channel.id,
-      undefined,
-    )
+    expect(mocks.fetchModels).toHaveBeenCalledWith(config, ref, undefined)
     expect(mocks.fetchDraftModels).not.toHaveBeenCalled()
   })
 
@@ -1006,44 +1025,59 @@ describe("New API native managed resource", () => {
     )
   })
 
-  it("binds account import drafts and confirms the created identity by inventory diff", async () => {
-    mocks.list
-      .mockResolvedValueOnce({ items: [channel], total: 1 })
-      .mockResolvedValueOnce({ items: [channel, createdChannel], total: 2 })
-    const opened = await openNativeManagedChannelImportEditor(
-      SITE_TYPES.NEW_API,
-      {
-        name: "Imported channel",
-        type: 1,
-        key: "sk-example",
-        base_url: "https://upstream.example.invalid",
-        models: ["model-a"],
-        groups: ["default"],
-        priority: 2,
-        weight: 4,
-        status: 1,
-      },
-    )
-
-    expect(opened?.editor.initialValues).toEqual(
-      expect.objectContaining({
-        [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Name]: "Imported channel",
-        [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
-          kind: "replace",
-          value: "sk-example",
+  it.each([
+    { enabled: true, nativeStatus: "1" },
+    { enabled: false, nativeStatus: "2" },
+  ])(
+    "imports enabled=$enabled with native status $nativeStatus and confirms the created identity",
+    async ({ enabled, nativeStatus }) => {
+      mocks.list
+        .mockResolvedValueOnce({ items: [channel], total: 1 })
+        .mockResolvedValueOnce({ items: [channel, createdChannel], total: 2 })
+      const opened = await openNativeManagedChannelImportEditor(
+        SITE_TYPES.NEW_API,
+        {
+          name: "Imported channel",
+          type: 1,
+          key: "sk-example",
+          base_url: "https://upstream.example.invalid",
+          models: ["model-a"],
+          groups: ["default"],
+          priority: 2,
+          weight: 4,
+          enabled,
         },
-      }),
-    )
-    const result = await opened!.editor.submit(opened!.editor.initialValues)
-    expect(result).toEqual(
-      expect.objectContaining({
-        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
-        data: expect.objectContaining({
-          ref: expect.objectContaining({ resourceId: "18" }),
+      )
+
+      expect(opened?.editor.initialValues).toEqual(
+        expect.objectContaining({
+          [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Name]: "Imported channel",
+          [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Type]: "1",
+          [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Status]: nativeStatus,
+          [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
+            kind: "replace",
+            value: "sk-example",
+          },
         }),
-      }),
-    )
-  })
+      )
+      const result = await opened!.editor.submit(opened!.editor.initialValues)
+      expect(mocks.create).toHaveBeenCalledWith(
+        config,
+        expect.objectContaining({
+          channel: expect.objectContaining({ status: Number(nativeStatus) }),
+        }),
+        undefined,
+      )
+      expect(result).toEqual(
+        expect.objectContaining({
+          outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+          data: expect.objectContaining({
+            ref: expect.objectContaining({ resourceId: "18" }),
+          }),
+        }),
+      )
+    },
+  )
 
   it("attributes two concurrent creates to their own provider identities", async () => {
     const firstCreatedChannel = buildManagedSiteChannel({

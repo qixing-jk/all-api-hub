@@ -6,11 +6,25 @@ import { ModelItemPerCallPricingView } from "~/features/ModelList/components/Mod
 import { PriceView } from "~/features/ModelList/components/ModelItem/ModelItemPicingView"
 import { ModelItemPricing } from "~/features/ModelList/components/ModelItem/ModelItemPricing"
 import { MODEL_LIST_GROUP_SELECTION_SCOPES } from "~/features/ModelList/groupSelectionScopes"
+import { normalizeOpenRouterPricingPlan } from "~/services/apiAdapters/openrouter/pricingPlan"
 import {
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
 } from "~/services/modelList/pricingModel"
+import {
+  CALCULATED_PRICE_KINDS,
+  PRICE_RATE_UNITS,
+  PRICING_CONDITION_KINDS,
+  PRICING_GROUP_MULTIPLIERS,
+  PRICING_ISSUE_CODES,
+  PRICING_PURPOSES,
+  PRICING_RANGE_AXES,
+  PRICING_USAGE_MODES,
+  QUOTE_STATUSES,
+} from "~/services/modelPricing/pricingConstants"
+import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
+import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
 
 const { formatPriceCompactMock, isTokenBillingTypeMock } = vi.hoisted(() => ({
   formatPriceCompactMock: vi.fn(
@@ -25,6 +39,7 @@ vi.mock("react-i18next", async (importOriginal) => {
   return {
     ...actual,
     useTranslation: () => ({
+      i18n: { language: "en" },
       t: (
         key: string,
         options?: {
@@ -53,7 +68,7 @@ vi.mock("~/services/models/utils/modelPricing", async (importOriginal) => {
 const createCalculatedPrice = (overrides: Record<string, unknown> = {}) => {
   if (overrides.priceAvailability === "unavailable") {
     return {
-      kind: "unavailable",
+      kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
       billingMode: "token",
       reason: overrides.unavailableReason,
     } as const
@@ -61,13 +76,13 @@ const createCalculatedPrice = (overrides: Record<string, unknown> = {}) => {
 
   if ("perCallPrice" in overrides) {
     return {
-      kind: "per-call",
+      kind: CALCULATED_PRICE_KINDS.PER_CALL,
       usdPerCall: overrides.perCallPrice,
     } as any
   }
 
   return {
-    kind: "token",
+    kind: CALCULATED_PRICE_KINDS.TOKEN,
     usdPerMillionTokens: {
       input: overrides.inputUSD ?? 1.25,
       output: overrides.outputUSD ?? 2.5,
@@ -802,4 +817,124 @@ describe("Model item pricing and description", () => {
       )
     })
   })
+})
+
+it("renders a scenario image quote when a flat per-call price cannot describe the model", () => {
+  const plan = {
+    usageMode: PRICING_USAGE_MODES.IMAGE,
+    rates: {
+      image: {
+        amount: 0.2,
+        currency: "USD" as const,
+        unit: PRICE_RATE_UNITS.IMAGE,
+        per: 1,
+      },
+    },
+    rules: [],
+    source: { kind: "account" as const },
+    groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
+    issues: [],
+  }
+  render(
+    <ModelItemPricing
+      model={createModel({ quota_type: 1, pricingPlan: plan })}
+      calculatedPrice={{
+        kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
+        billingMode: "per-call",
+        isComparisonActive: true,
+        quote: quoteModelPrice(plan, {
+          purpose: PRICING_PURPOSES.REQUEST,
+          usage: { image: 2 },
+        }),
+      }}
+      exchangeRate={7}
+      showRealPrice={false}
+      showPricing={true}
+      isAvailableForUser={true}
+      groupRatios={{ default: 1 }}
+    />,
+  )
+  expect(screen.getByText("$0.400000")).toBeVisible()
+  expect(
+    screen.queryByText("unavailablePriceReasons.pricingSourceUnavailable"),
+  ).not.toBeInTheDocument()
+})
+
+it("keeps published unit prices and a tier badge visible while browsing an incomplete quote", () => {
+  const plan = {
+    rates: {},
+    rules: [
+      {
+        id: "long",
+        conditions: [
+          {
+            kind: PRICING_CONDITION_KINDS.RANGE,
+            axis: PRICING_RANGE_AXES.INPUT_TOKENS,
+            min: 100001,
+          },
+        ],
+        rates: {},
+      },
+    ],
+    issues: [{ code: PRICING_ISSUE_CODES.UNSUPPORTED_RULE }],
+  }
+  render(
+    <ModelItemPricing
+      model={createModel({ pricingPlan: plan })}
+      calculatedPrice={{
+        ...createCalculatedPrice(),
+        isComparisonActive: false,
+        quote: {
+          status: QUOTE_STATUSES.UNAVAILABLE,
+          amount: null,
+          issues: [{ code: PRICING_ISSUE_CODES.UNSUPPORTED_RULE }],
+        },
+      }}
+      exchangeRate={7}
+      showRealPrice={false}
+      showPricing
+      isAvailableForUser
+      groupRatios={{ default: 1 }}
+    />,
+  )
+  expect(screen.getByText("scenario.tiered")).toBeVisible()
+  expect(screen.queryByText("scenario.unavailable")).not.toBeInTheDocument()
+})
+
+it("renders structured placeholder guidance even when legacy prices are unavailable", () => {
+  const model = createModel({
+    pricingPlan: normalizeOpenRouterPricingPlan({
+      prompt: "-1",
+      completion: "-1",
+    }),
+    price_metadata: {
+      source: MODEL_PRICE_SOURCE_KINDS.PROVIDER_CATALOG,
+      precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+      unavailable_reason:
+        MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_INVALID,
+    },
+  })
+  const quote = quoteCanonicalModelPrice(
+    model,
+    { purpose: PRICING_PURPOSES.TOKEN_INDEX, usage: { input: 80, output: 20 } },
+    {},
+  )
+  render(
+    <ModelItemPricing
+      model={model}
+      calculatedPrice={{
+        kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
+        billingMode: "token",
+        quote,
+        isComparisonActive: true,
+      }}
+      exchangeRate={7}
+      showRealPrice={false}
+      showPricing
+      isAvailableForUser
+      groupRatios={{}}
+    />,
+  )
+  expect(screen.getByText("scenario.fixedPriceUnavailable")).toBeVisible()
+  expect(screen.queryByText("scenario.unsupportedRule")).not.toBeInTheDocument()
 })

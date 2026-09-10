@@ -17,7 +17,7 @@ describe("resolveManagedSiteModelRedirectCapabilities", () => {
     const list = vi.fn()
     const updateModelMapping = vi.fn()
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
-      managedSites: { channels: { list, updateModelMapping } },
+      managedSites: { models: { list, updateModelMapping } },
     } as any)
 
     expect(
@@ -27,9 +27,9 @@ describe("resolveManagedSiteModelRedirectCapabilities", () => {
 
   it.each([{ list: vi.fn() }, { updateModelMapping: vi.fn() }, {}])(
     "is unsupported when a required operation is absent",
-    (channels) => {
+    (models) => {
       vi.mocked(getSiteTypeCapabilities).mockReturnValue({
-        managedSites: { channels },
+        managedSites: { models },
       } as any)
 
       expect(

@@ -32,7 +32,6 @@
   },
   "axonhub": {
     "configMissing": "先に設定で AxonHub のアドレス、管理者メール、パスワードを設定してください",
-    "modelsMissing": "少なくとも 1 つのモデルを指定してください",
     "noChannelsToSync": "同期するチャネルがありません"
   },
   "background": {
@@ -59,9 +58,7 @@
   },
   "claudecodehub": {
     "configMissing": "先に設定で Claude Code Hub のアドレスと管理者トークンを設定してください",
-    "modelsMissing": "少なくとも 1 つのモデルを指定してください",
-    "noChannelsToSync": "同期できるプロバイダーがありません",
-    "realProviderKeyRequired": "Claude Code Hub でプロバイダーを作成するには実際の上流キーが必要です。空またはマスク済みのキーは作成に使用できません。"
+    "noChannelsToSync": "同期できるプロバイダーがありません"
   },
   "claudeCodeRouter": {
     "configMissing": "先に設定で Claude Code Router の Base URL を設定してください",

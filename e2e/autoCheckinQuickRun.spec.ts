@@ -426,6 +426,18 @@ test("auto-checkin UI-open pretrigger runs once through the real MV3 scheduler b
   const serviceWorker = await getServiceWorker(context)
   let checkinRequests = 0
 
+  await context.route(
+    `${PRETRIGGER_SITE_URL}/api/user/checkin?month=*`,
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: { enabled: true, stats: { checked_in_today: false } },
+        }),
+      }),
+  )
   await context.route(`${PRETRIGGER_SITE_URL}/api/user/checkin`, (route) => {
     checkinRequests += 1
     return route.fulfill({

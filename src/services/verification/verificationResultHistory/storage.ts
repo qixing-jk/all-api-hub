@@ -10,6 +10,7 @@ import type {
   ApiVerificationProbeStatus,
 } from "~/services/verification/aiApiVerification"
 import {
+  API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
 } from "~/services/verification/aiApiVerification"
@@ -204,6 +205,10 @@ function coerceProbeSummary(
 
   return {
     id: id as ApiVerificationProbeId,
+    ...(value.mode === API_VERIFICATION_MODES.Streaming ||
+    value.mode === API_VERIFICATION_MODES.NonStreaming
+      ? { mode: value.mode }
+      : {}),
     status: value.status,
     latencyMs:
       typeof value.latencyMs === "number" && Number.isFinite(value.latencyMs)

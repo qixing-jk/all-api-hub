@@ -8,7 +8,7 @@ import {
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
   ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES,
-  doAccountSiteIdentitiesMatch,
+  findAccountSiteProfileForHostname,
   getAccountSiteModelListProfile,
   getAccountSiteProductProfile,
   isAccountAuthTypeAllowed,
@@ -26,6 +26,7 @@ import {
   shouldDecorateAccountApiRequestWithAuthSession,
 } from "~/services/accounts/accountSiteProfile"
 import * as accountSiteProfileApi from "~/services/accounts/accountSiteProfile"
+import { resolveAccountSitePricingUrl } from "~/services/accounts/accountSiteProfile/urls"
 import {
   AIHUBMIX_API_ORIGIN,
   AIHUBMIX_WEB_ORIGIN,
@@ -39,6 +40,63 @@ import {
 } from "~/types/accountTodayStats"
 
 describe("accountSiteProfile", () => {
+  it("opens provider-owned pricing pages without leaking base URL credentials or queries", () => {
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.NEW_API,
+        baseUrl:
+          "https://user:secret@example.com/gateway/?token=secret#settings",
+        modelName: "vendor/model + pro",
+      }),
+    ).toBe("https://example.com/gateway/pricing?search=vendor%2Fmodel+%2B+pro")
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.ONE_HUB,
+        baseUrl: "https://example.com/",
+      }),
+    ).toBe("https://example.com/panel/model_price")
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.DONE_HUB,
+        baseUrl: "https://example.com",
+      }),
+    ).toBe("https://example.com/panel/model_price")
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.SUB2API,
+        baseUrl: "https://example.com",
+      }),
+    ).toBe("https://example.com/model-plaza")
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.APIYI,
+        baseUrl: "https://api.apiyi.com",
+      }),
+    ).toBe("https://api.apiyi.com/account/pricing")
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.UNKNOWN,
+        baseUrl: "https://example.com",
+      }),
+    ).toBeUndefined()
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.NEW_API,
+        baseUrl: "javascript:alert(1)",
+      }),
+    ).toBeUndefined()
+  })
+  it("only infers URL policy for registrations that explicitly opt in", () => {
+    expect(
+      findAccountSiteProfileForHostname("WWW.AIHUBMIX.COM")?.siteType,
+    ).toBe(SITE_TYPES.AIHUBMIX)
+    expect(findAccountSiteProfileForHostname("openrouter.ai")).toBeNull()
+    expect(
+      findAccountSiteProfileForHostname("aihubmix.com.example.invalid"),
+    ).toBeNull()
+    expect(findAccountSiteProfileForHostname("https://[invalid-url")).toBeNull()
+    expect(findAccountSiteProfileForHostname("ftp://aihubmix.com")).toBeNull()
+  })
   it("derives auth support from the allowed authentication types", () => {
     expect(
       isAccountAuthTypeAllowed(SITE_TYPES.AIHUBMIX, AuthTypeEnum.AccessToken),
@@ -111,6 +169,7 @@ describe("accountSiteProfile", () => {
       getAccountSiteProductProfile(SITE_TYPES.OPENROUTER).identity,
     ).toEqual({
       usernameRequired: false,
+      userIdRequired: false,
       storedUserIdentityFields: [],
     })
   })
@@ -199,7 +258,7 @@ describe("accountSiteProfile", () => {
     )
     expect(profile.auth.allowedAuthTypes).toEqual([AuthTypeEnum.AccessToken])
     expect(profile.modelList.displayCapabilitiesSource).toBe(
-      ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+      ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
     )
     expect(profile.modelList.groupSemantics).toBe(
       ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
@@ -313,43 +372,6 @@ describe("accountSiteProfile", () => {
         user: { id: 42 },
       }),
     ).toBeNull()
-  })
-
-  it("matches saved and current identities through the same profile rule", () => {
-    expect(
-      doAccountSiteIdentitiesMatch({
-        siteType: SITE_TYPES.NEW_API,
-        savedUser: null,
-        currentUser: { id: 42 },
-      }),
-    ).toBe(false)
-    expect(
-      doAccountSiteIdentitiesMatch({
-        siteType: SITE_TYPES.AIHUBMIX,
-        savedUser: {
-          id: "aihubmix-stable-id",
-          username: "Display Name",
-        },
-        currentUser: { username: "aihubmix-stable-id" },
-      }),
-    ).toBe(true)
-    expect(
-      doAccountSiteIdentitiesMatch({
-        siteType: SITE_TYPES.AIHUBMIX,
-        savedUser: {
-          id: "aihubmix-stable-id",
-          username: "Display Name",
-        },
-        currentUser: { username: "Display Name" },
-      }),
-    ).toBe(false)
-    expect(
-      doAccountSiteIdentitiesMatch({
-        siteType: SITE_TYPES.NEW_API,
-        savedUser: { id: "42" },
-        currentUser: { id: 42 },
-      }),
-    ).toBe(true)
   })
 
   it("keeps AnyRouter cookie auth default as profile data", () => {

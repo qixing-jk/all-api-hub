@@ -11,6 +11,9 @@
 export const I18NEXT_LANGUAGE_STORAGE_KEY = "all-api-hub-i18nextLng"
 
 export const STORAGE_LOCKS = {
+  /** Serializes the shared cooldown for passive browser identity requests. */
+  ACCOUNT_BROWSER_IDENTITY_RATE_LIMIT:
+    "all-api-hub:account-browser-identity-rate-limit",
   /**
    * Exclusive lock used for any read-modify-write sequences touching account
    * storage and related derived blobs (e.g. global tag store).
@@ -39,6 +42,8 @@ export const STORAGE_LOCKS = {
    * verification result history.
    */
   API_VERIFICATION_HISTORY: "all-api-hub:api-verification-history",
+  /** Exclusive lock for local protection-bypass diagnostic history. */
+  PROTECTION_BYPASS_HISTORY: "all-api-hub:protection-bypass-history",
   /**
    * Exclusive lock used for read-modify-write sequences touching Web AI API
    * Check input-assist history.
@@ -92,10 +97,16 @@ export const STORAGE_LOCKS = {
    * recommendation catalog cache.
    */
   SPONSOR_CATALOG: "all-api-hub:sponsor-catalog",
+  /** Exclusive claim of a popup account draft by its destination view. */
+  ACCOUNT_DIALOG_RECOVERY: "all-api-hub:account-dialog-recovery",
 } as const
 
 export const ACCOUNT_STORAGE_KEYS = {
   ACCOUNTS: "site_accounts",
+} as const
+
+export const ACCOUNT_BROWSER_IDENTITY_STORAGE_KEYS = {
+  RATE_LIMITS: "accountBrowserIdentity_rateLimits_v1",
 } as const
 
 export const TAG_STORAGE_KEYS = {
@@ -180,6 +191,11 @@ const POPUP_INTERRUPTION_STORAGE_KEYS = {
   HINT: "popupInterruption_hint_v1",
 } as const
 
+export const ACCOUNT_DIALOG_RECOVERY_STORAGE_KEYS = {
+  DRAFT_PREFIX: "accountDialogRecovery_draft_v1:",
+  PENDING_PREFIX: "accountDialogRecovery_pending_v1:",
+} as const
+
 /**
  * Centralized storage keys registry.
  *
@@ -187,6 +203,7 @@ const POPUP_INTERRUPTION_STORAGE_KEYS = {
  * specific storage module so discovery and auditing remain straightforward.
  */
 export const STORAGE_KEYS = {
+  PROTECTION_BYPASS_HISTORY: "protectionBypass_history_v1",
   ...ACCOUNT_STORAGE_KEYS,
   ...TAG_STORAGE_KEYS,
   ...API_CREDENTIAL_PROFILES_STORAGE_KEYS,

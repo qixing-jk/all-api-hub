@@ -72,7 +72,6 @@ const config: KnipConfig = {
     // local references are sparse.
     "src/constants/designTokens.ts": ["exports"],
     "src/types/index.ts": ["types"],
-    "src/types/managedSite.ts": ["exports", "types"],
     "src/types/autoCheckin.ts": ["exports", "types"],
     "src/types/managedSiteModelRedirect.ts": ["exports"],
     "src/types/managedSiteModelSync.ts": ["types"],

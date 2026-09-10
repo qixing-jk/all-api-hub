@@ -6,7 +6,7 @@ import {
   SortingCriteriaType,
   type SortingPriorityConfig,
 } from "~/types/sorting"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -41,7 +41,7 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   showUpdateToast: vi.fn(),
 }))
 

@@ -12,6 +12,71 @@ function anthropicEventStream(events: unknown[]) {
 }
 
 describe("AI API verification HTTP routing", () => {
+  it("uses streaming directly when a Chat Completions endpoint requires it", async () => {
+    const requestBodies: unknown[] = []
+    server.use(
+      http.post(
+        "https://chat-stream.example.invalid/v1/chat/completions",
+        async ({ request }) => {
+          const body = (await request.json()) as { stream?: boolean }
+          requestBodies.push(body)
+          if (!body.stream) {
+            return HttpResponse.json(
+              { error: { message: "'stream' must be true" } },
+              { status: 400 },
+            )
+          }
+          const chunks = [
+            {
+              id: "chatcmpl-test",
+              object: "chat.completion.chunk",
+              created: 0,
+              model: "chat-model",
+              choices: [
+                {
+                  index: 0,
+                  delta: { role: "assistant", content: "OK" },
+                  finish_reason: null,
+                },
+              ],
+            },
+            {
+              id: "chatcmpl-test",
+              object: "chat.completion.chunk",
+              created: 0,
+              model: "chat-model",
+              choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+            },
+          ]
+          return new HttpResponse(
+            chunks
+              .map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`)
+              .join("") + "data: [DONE]\n\n",
+            { headers: { "Content-Type": "text/event-stream" } },
+          )
+        },
+      ),
+    )
+
+    const result = await runApiVerificationProbe({
+      baseUrl: "https://chat-stream.example.invalid",
+      apiKey: "sk-synthetic",
+      apiType: "openai-compatible",
+      modelId: "chat-model",
+      probeId: "text-generation",
+    })
+
+    expect(result, result.summary).toMatchObject({
+      status: "pass",
+      output: { text: "OK" },
+    })
+    expect(requestBodies).toHaveLength(1)
+    expect(requestBodies[0]).toMatchObject({
+      stream: true,
+      model: "chat-model",
+    })
+  })
+
   it("sends Volcengine Ark Coding Plan text generation below its complete OpenAI-compatible prefix", async () => {
     const hit = vi.fn()
     server.use(
@@ -44,6 +109,7 @@ describe("AI API verification HTTP routing", () => {
     await expect(
       runApiVerificationProbe({
         baseUrl: "https://volcengine-coding-plan.example.invalid/api/coding/v3",
+        mode: "non-streaming",
         apiKey: "sk-synthetic",
         apiType: "openai-compatible",
         modelId: "coding-model",

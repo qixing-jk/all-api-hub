@@ -20,7 +20,7 @@ import {
   trackOptionalPermissionRequestResult,
 } from "~/services/productAnalytics/permissions"
 import { createLogger } from "~/utils/core/logger"
-import { showResultToast } from "~/utils/core/toastHelpers"
+import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { openLanguageRequestPage } from "~/utils/navigation"
 import { getDocsGetStartedUrl } from "~/utils/navigation/docsLinks"
 
@@ -84,11 +84,11 @@ export function PermissionOnboardingDialog({
           wasGrantedAfter: permissionResult.wasGrantedAfter,
         })
       }
-      showResultToast(
+      showResultToast({
         success,
-        t("permissionsOnboarding.toasts.success"),
-        t("permissionsOnboarding.toasts.error"),
-      )
+        successFallback: t("permissionsOnboarding.toasts.success"),
+        errorFallback: t("permissionsOnboarding.toasts.error"),
+      })
     } catch (error) {
       for (const permissionId of OPTIONAL_PERMISSIONS) {
         const wasGrantedBefore = statuses[permissionId] === true
@@ -102,7 +102,10 @@ export function PermissionOnboardingDialog({
       }
       logger.error("Failed to grant all optional permissions", error)
       success = false
-      showResultToast(false, t("permissionsOnboarding.toasts.error"))
+      showResultToast({
+        success: false,
+        message: t("permissionsOnboarding.toasts.error"),
+      })
     } finally {
       await loadStatuses()
       setIsRequesting(false)

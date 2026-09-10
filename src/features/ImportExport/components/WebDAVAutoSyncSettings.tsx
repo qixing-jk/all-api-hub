@@ -1,6 +1,5 @@
 import { CircleCheck, CircleX, Clock, RefreshCw } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { OPTIONS_CAPABILITY_ICONS } from "~/components/icons/optionsPageIcons"
@@ -23,6 +22,7 @@ import {
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
+import toast from "~/lib/notify"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

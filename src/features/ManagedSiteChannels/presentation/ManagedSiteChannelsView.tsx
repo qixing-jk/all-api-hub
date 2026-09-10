@@ -15,12 +15,7 @@ import { useRef, type ReactNode } from "react"
 import ManagedSiteConfigRequiredState from "~/components/ManagedSiteConfigRequiredState"
 import { PageHeader } from "~/components/PageHeader"
 import Tooltip from "~/components/Tooltip"
-import {
-  Badge,
-  DestructiveConfirmDialog,
-  IconButton,
-  Input,
-} from "~/components/ui"
+import { Badge, ConfirmDialog, IconButton, Input } from "~/components/ui"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/Alert"
 import { Button, BUTTON_LOADING_BEHAVIORS } from "~/components/ui/button"
 import { Checkbox } from "~/components/ui/checkbox"
@@ -81,7 +76,7 @@ type ManagedSiteChannelsViewProps = {
   filterDialog?: ReactNode
 }
 
-/** Renders the shared managed-channel page for legacy and native controllers. */
+/** Renders the shared managed-channel page from native resource controllers. */
 export function ManagedSiteChannelsView({
   state,
   capabilities,
@@ -270,6 +265,7 @@ export function ManagedSiteChannelsView({
                   callbacks.onReplaceRouteQuery({
                     ...state.routeQuery,
                     channelId: undefined,
+                    resourceRef: undefined,
                     search: value || undefined,
                   })
                 }}
@@ -288,6 +284,7 @@ export function ManagedSiteChannelsView({
                     callbacks.onReplaceRouteQuery({
                       ...state.routeQuery,
                       channelId: undefined,
+                      resourceRef: undefined,
                       search: undefined,
                     })
                     searchInputRef.current?.focus()
@@ -493,7 +490,8 @@ export function ManagedSiteChannelsView({
         </>
       )}
 
-      <DestructiveConfirmDialog
+      <ConfirmDialog
+        intent="destructive"
         isOpen={state.deleteState.isOpen && !isDeleteReplayBlocked}
         onClose={callbacks.onDeleteCancel}
         title={

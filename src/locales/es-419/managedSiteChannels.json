@@ -13,7 +13,6 @@
       "title": "No se pudo guardar el canal"
     },
     "loadError": {
-      "description": "{{error}}",
       "title": "No se pudieron cargar los canales"
     },
     "partialMutation": {
@@ -287,13 +286,9 @@
       "running": "Migrando...",
       "start": "Iniciar migración"
     },
-    "alerts": {
-      "noTargets": {
-        "description": "Configura otro destino de sitio administrado en la configuración antes de usar la migración de canales."
-      }
-    },
     "betaBadge": "Beta",
     "blockedReasons": {
+      "sourceKeyExportRestricted": "Exportar claves del sitio de origen requiere una verificación web que la Admin API Key configurada no puede completar. Obtén la clave desde el panel de origen y migra este canal manualmente.",
       "sourceKeyMissing": "La clave del canal de origen no está disponible, por lo que este canal aún no se puede migrar.",
       "sourceKeyResolutionFailed": "No se pudo cargar la clave del canal de origen. Si acabas de completar la verificación, actualiza la vista previa e inténtalo de nuevo.",
       "sourceTypeUnsupported": "Este tipo de canal de origen no es compatible con la migración. Elige un canal compatible o migra el canal manualmente.",
@@ -318,6 +313,7 @@
       "dropsModelMapping": "Las asignaciones de redirección de modelos no se copiarán.",
       "dropsMultiKeyState": "El estado de ejecución con múltiples claves no se copiará.",
       "dropsStatusCodeMapping": "Las configuraciones de asignación de códigos de estado no se copiarán.",
+      "sub2apiDefaultGroup": "Los grupos de origen no se copian. El destino usa el grupo predeterminado de la plataforma si existe. Revisa la asignación de grupos después de la migración.",
       "targetForcesDefaultGroup": "El sitio de destino reemplazará los grupos de origen con su grupo predeterminado.",
       "targetIgnoresPriority": "El sitio de destino no conservará el valor de prioridad de origen.",
       "targetIgnoresWeight": "El sitio de destino no conservará el valor de peso de origen.",
@@ -335,7 +331,6 @@
       },
       "loadFailed": "No se pudo cargar la vista previa de migración: {{error}}",
       "loading": "Construyendo vista previa de migración...",
-      "selectedCount": "{{selectedCount}} canales seleccionados",
       "status": {
         "blocked": "Bloqueado",
         "ready": "Listo"
@@ -370,6 +365,7 @@
       },
       "title": "Resultados de migración"
     },
+    "sub2apiDefaultGroup": "Grupo predeterminado de la plataforma (si existe)",
     "target": {
       "destinationLabel": "Sitio de destino",
       "label": "Destino de migración",
@@ -420,19 +416,8 @@
   },
   "title": "Administración de canales",
   "toasts": {
-    "channelDeleted": "Canal eliminado",
     "channelSaved": "Canal guardado",
-    "channelsDeleted_one": "{{count}} canal eliminado",
-    "channelsDeleted_many": "{{count}} canales eliminados",
-    "channelsDeleted_other": "{{count}} canales eliminados",
     "channelUpdated": "Canal actualizado",
-    "revealKeyFailed": "No se pudo cargar la clave real del canal: {{error}}",
-    "revealKeyMasked": "La clave del canal sigue oculta",
-    "revealKeyUnavailable": "La clave del canal no está disponible",
-    "revealKeyUnsupported": "Este sitio administrado no permite revelar claves de canal",
-    "someDeletesFailed_one": "No se pudo eliminar {{count}} canal: {{error}}",
-    "someDeletesFailed_many": "No se pudieron eliminar {{count}} canales: {{error}}",
-    "someDeletesFailed_other": "No se pudieron eliminar {{count}} canales: {{error}}",
     "syncCompleted": "Sincronización de modelos completada ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Los modelos se sincronizaron ({{success}}/{{total}}), pero no se pudo actualizar la lista de canales. Actualízala y vuelve a intentarlo.",
     "syncFailed": "Falló la sincronización de modelos: {{error}}",

@@ -35,6 +35,7 @@ class AccountPresentation {
 
     const transform = (account: SiteAccount): DisplaySiteData => ({
       id: account.id,
+      exchangeRate: account.exchange_rate,
       name: resolveAccountDisplayName({
         baseName: account.site_name,
         username: account.account_info.username,

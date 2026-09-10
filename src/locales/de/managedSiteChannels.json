@@ -13,7 +13,6 @@
       "title": "Kanal kann nicht gespeichert werden"
     },
     "loadError": {
-      "description": "{{error}}",
       "title": "Kanäle können nicht geladen werden"
     },
     "partialMutation": {
@@ -287,13 +286,9 @@
       "running": "Migration...",
       "start": "Migration starten"
     },
-    "alerts": {
-      "noTargets": {
-        "description": "Konfigurieren Sie in den Einstellungen eine weitere verwaltete Website als Ziel, bevor Sie die Kanalmigration verwenden."
-      }
-    },
     "betaBadge": "Beta",
     "blockedReasons": {
+      "sourceKeyExportRestricted": "Der Schlüsselexport erfordert eine Bestätigung im Web, die mit dem konfigurierten Admin API Key nicht möglich ist. Rufe den Schlüssel im Dashboard der Quellsite ab und migriere diesen Kanal manuell.",
       "sourceKeyMissing": "Der Quellkanalschlüssel ist nicht verfügbar, daher kann dieser Kanal noch nicht migriert werden.",
       "sourceKeyResolutionFailed": "Der Quellkanalschlüssel konnte nicht geladen werden. Wenn Sie die Überprüfung gerade abgeschlossen haben, aktualisieren Sie die Vorschau und versuchen Sie es erneut.",
       "sourceTypeUnsupported": "Dieser Quellkanaltyp wird für die Migration nicht unterstützt. Wählen Sie einen unterstützten Kanal oder migrieren Sie ihn manuell.",
@@ -318,6 +313,7 @@
       "dropsModelMapping": "Modellumleitungszuordnungen werden nicht kopiert.",
       "dropsMultiKeyState": "Der Multi-Key-Laufzeitstatus wird nicht kopiert.",
       "dropsStatusCodeMapping": "Statuscode-Zuordnungseinstellungen werden nicht kopiert.",
+      "sub2apiDefaultGroup": "Quellgruppen werden nicht kopiert. Das Ziel verwendet die Standardgruppe der Plattform, falls vorhanden. Prüfe die Gruppenzuordnung nach der Migration.",
       "targetForcesDefaultGroup": "Die Zielsite ersetzt die Quellgruppen durch ihre Standardgruppe.",
       "targetIgnoresPriority": "Die Zielsite behält den Quellprioritätswert nicht bei.",
       "targetIgnoresWeight": "Die Zielseite behält den Quellgewichtungswert nicht bei.",
@@ -335,7 +331,6 @@
       },
       "loadFailed": "Migrationsvorschau konnte nicht geladen werden: {{error}}",
       "loading": "Migrationsvorschau wird erstellt...",
-      "selectedCount": "Ausgewählte Kanäle: {{selectedCount}}",
       "status": {
         "blocked": "Blockiert",
         "ready": "Bereit"
@@ -365,6 +360,7 @@
       },
       "title": "Migrationsergebnisse"
     },
+    "sub2apiDefaultGroup": "Standardgruppe der Plattform (falls vorhanden)",
     "target": {
       "destinationLabel": "Zielseite",
       "label": "Migrationsziel",
@@ -415,17 +411,8 @@
   },
   "title": "Kanalverwaltung",
   "toasts": {
-    "channelDeleted": "Kanal gelöscht",
     "channelSaved": "Kanal gespeichert",
-    "channelsDeleted_one": "{{count}} Kanal gelöscht",
-    "channelsDeleted_other": "{{count}} Kanäle gelöscht",
     "channelUpdated": "Kanal aktualisiert",
-    "revealKeyFailed": "Der echte Kanalschlüssel konnte nicht geladen werden: {{error}}",
-    "revealKeyMasked": "Der Kanalschlüssel ist weiterhin maskiert",
-    "revealKeyUnavailable": "Der Kanalschlüssel ist nicht verfügbar",
-    "revealKeyUnsupported": "Diese verwaltete Website unterstützt die Offenlegung von Kanalschlüsseln nicht",
-    "someDeletesFailed_one": "Fehler beim Löschen von {{count}} Kanal: {{error}}",
-    "someDeletesFailed_other": "Fehler beim Löschen von {{count}} Kanälen: {{error}}",
     "syncCompleted": "Modellsynchronisierung abgeschlossen ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Die Modelle wurden synchronisiert ({{success}}/{{total}}), aber die Kanalliste konnte nicht aktualisiert werden. Aktualisieren Sie die Liste und versuchen Sie es erneut.",
     "syncFailed": "Modellsynchronisierung fehlgeschlagen: {{error}}",

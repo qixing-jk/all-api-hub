@@ -2,13 +2,12 @@ import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  isAIHubMixSiteUrl,
   isSameAccountSiteOrigin,
-  normalizeAccountSiteUrlForDuplicateCheck,
-  normalizeAccountSiteUrlForManagedChannel,
-  normalizeAccountSiteUrlForOriginKey,
-  normalizeAccountSiteUrlForStorage,
-} from "~/services/accounts/utils/siteUrlNormalization"
+  normalizeAccountSiteProfileUrlForDuplicateCheck,
+  normalizeAccountSiteProfileUrlForManagedChannel,
+  normalizeAccountSiteProfileUrlForOriginKey,
+  normalizeAccountSiteProfileUrlForStorage,
+} from "~/services/accounts/accountSiteProfile/urls"
 import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
 
 describe("siteUrlNormalization", () => {
@@ -28,26 +27,15 @@ describe("siteUrlNormalization", () => {
     expect(isCanonicalOpenRouterUrl(value)).toBe(expected)
   })
 
-  it("recognizes supported AIHubMix hostnames", () => {
-    expect(isAIHubMixSiteUrl("aihubmix.com")).toBe(true)
-    expect(isAIHubMixSiteUrl("https://www.aihubmix.com/statistics")).toBe(true)
-    expect(isAIHubMixSiteUrl("https://console.aihubmix.com")).toBe(true)
-  })
-
-  it("rejects invalid and unsupported URLs", () => {
-    expect(isAIHubMixSiteUrl("https://[invalid-url")).toBe(false)
-    expect(isAIHubMixSiteUrl("https://example.com")).toBe(false)
-  })
-
   it("canonicalizes AIHubMix storage and origin keys", () => {
     expect(
-      normalizeAccountSiteUrlForStorage({
+      normalizeAccountSiteProfileUrlForStorage({
         siteType: SITE_TYPES.AIHUBMIX,
         url: "https://aihubmix.com/statistics",
       }),
     ).toBe("https://console.aihubmix.com")
     expect(
-      normalizeAccountSiteUrlForOriginKey({
+      normalizeAccountSiteProfileUrlForOriginKey({
         url: "https://aihubmix.com/statistics",
       }),
     ).toBe("https://console.aihubmix.com")
@@ -55,13 +43,13 @@ describe("siteUrlNormalization", () => {
 
   it("resolves AIHubMix managed-channel upstreams to the API origin", () => {
     expect(
-      normalizeAccountSiteUrlForManagedChannel({
+      normalizeAccountSiteProfileUrlForManagedChannel({
         siteType: SITE_TYPES.AIHUBMIX,
         url: "https://console.aihubmix.com",
       }),
     ).toBe("https://aihubmix.com")
     expect(
-      normalizeAccountSiteUrlForManagedChannel({
+      normalizeAccountSiteProfileUrlForManagedChannel({
         url: "https://www.aihubmix.com/statistics",
       }),
     ).toBe("https://aihubmix.com")
@@ -83,12 +71,12 @@ describe("siteUrlNormalization", () => {
 
   it("keeps duplicate-check keys scannable and rejects invalid URLs", () => {
     expect(
-      normalizeAccountSiteUrlForDuplicateCheck({
+      normalizeAccountSiteProfileUrlForDuplicateCheck({
         url: "example.com/path",
       }),
     ).toBe("https://example.com")
     expect(
-      normalizeAccountSiteUrlForDuplicateCheck({
+      normalizeAccountSiteProfileUrlForDuplicateCheck({
         url: "not a valid url",
       }),
     ).toBeUndefined()
@@ -96,19 +84,19 @@ describe("siteUrlNormalization", () => {
 
   it("preserves non-AIHubMix storage URLs and origin keys", () => {
     expect(
-      normalizeAccountSiteUrlForStorage({
+      normalizeAccountSiteProfileUrlForStorage({
         siteType: SITE_TYPES.NEW_API,
         url: " https://example.com/path ",
       }),
     ).toBe("https://example.com/path")
     expect(
-      normalizeAccountSiteUrlForOriginKey({
+      normalizeAccountSiteProfileUrlForOriginKey({
         siteType: SITE_TYPES.NEW_API,
         url: "https://example.com/path?tab=1",
       }),
     ).toBe("https://example.com")
     expect(
-      normalizeAccountSiteUrlForManagedChannel({
+      normalizeAccountSiteProfileUrlForManagedChannel({
         siteType: SITE_TYPES.NEW_API,
         url: " https://example.com/path ",
       }),
@@ -117,19 +105,19 @@ describe("siteUrlNormalization", () => {
 
   it("canonicalizes OpenRouter account origins", () => {
     expect(
-      normalizeAccountSiteUrlForStorage({
+      normalizeAccountSiteProfileUrlForStorage({
         siteType: SITE_TYPES.OPENROUTER,
         url: "https://openrouter.ai/settings/management-keys",
       }),
     ).toBe("https://openrouter.ai")
     expect(
-      normalizeAccountSiteUrlForOriginKey({
+      normalizeAccountSiteProfileUrlForOriginKey({
         siteType: SITE_TYPES.OPENROUTER,
         url: "https://openrouter.ai/api/v1/key",
       }),
     ).toBe("https://openrouter.ai")
     expect(
-      normalizeAccountSiteUrlForDuplicateCheck({
+      normalizeAccountSiteProfileUrlForDuplicateCheck({
         siteType: SITE_TYPES.OPENROUTER,
         url: "https://openrouter.ai/settings/management-keys",
       }),

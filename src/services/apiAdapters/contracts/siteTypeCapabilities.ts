@@ -5,16 +5,11 @@ import type { AccountBootstrapCapability } from "./accountBootstrap"
 import type { AccountCompletionCapability } from "./accountCompletion"
 import type { AccountDataCapability } from "./accountData"
 import type { AccountKeyResourceCapability } from "./accountKeyResource"
+import type { AccountPersistenceCapability } from "./accountPersistence"
 import type { AccountRefreshCapability } from "./accountRefresh"
 import type { InviteLinkCapability } from "./inviteLink"
 import type { KeyManagementCapability } from "./keyManagement"
-import type {
-  ManagedSiteChannelDraftsCapability,
-  ManagedSiteChannelsCapability,
-  ManagedSiteConfigCapability,
-  ManagedSiteQueriesCapability,
-} from "./managedSiteCapabilities"
-import type { ManagedUpstreamResourcesCapability } from "./managedUpstreamResources"
+import type { ManagedSiteCapabilities } from "./managedSiteCapabilities"
 import type { ModelCatalogCapability } from "./modelCatalog"
 import type { ModelPricingCapability } from "./modelPricing"
 import type { ProviderModelCatalogCapability } from "./providerModelCatalog"
@@ -42,6 +37,7 @@ export type SiteTypeCapabilities = {
     providerModelCatalog?: ProviderModelCatalogCapability
     modelPricing?: ModelPricingCapability
     data?: AccountDataCapability
+    persistence?: AccountPersistenceCapability
     bootstrap?: AccountBootstrapCapability
     completion?: AccountCompletionCapability
     inviteLink?: InviteLinkCapability
@@ -59,13 +55,7 @@ export type SiteTypeCapabilities = {
     refresh?: AccountRefreshCapability
     redemption?: RedemptionCapability
   }
-  managedSites?: {
-    channels?: ManagedSiteChannelsCapability
-    resources?: ManagedUpstreamResourcesCapability
-    config?: ManagedSiteConfigCapability
-    queries?: ManagedSiteQueriesCapability
-    channelDrafts?: ManagedSiteChannelDraftsCapability
-  }
+  managedSites?: Partial<ManagedSiteCapabilities>
 }
 
 export type AccountSiteCapabilities = NonNullable<

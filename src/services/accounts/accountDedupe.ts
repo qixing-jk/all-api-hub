@@ -1,6 +1,6 @@
-import { SITE_TYPES } from "~/constants/siteType"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
-import { normalizeAccountSiteUrlForDuplicateCheck } from "~/services/accounts/utils/siteUrlNormalization"
+import { normalizeAccountSiteProfileUrlForDuplicateCheck } from "~/services/accounts/accountSiteProfile/urls"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { SiteAccount } from "~/types"
 
 export type AccountDedupeKeepStrategy =
@@ -139,13 +139,20 @@ function buildKeepComparator(
   }
 }
 
-/** Returns the exact non-blank credential only for OpenRouter accounts. */
+/** Whether the provider owns account identity through an exact credential. */
+export function usesAccountCredentialIdentity(
+  siteType: SiteAccount["site_type"],
+): boolean {
+  return Boolean(
+    getSiteTypeCapabilities(siteType).account?.persistence?.getCredentialKey,
+  )
+}
+
+/** Returns the provider's private comparison key; never included in scan results. */
 function getOwnedCredentialKey(account: SiteAccount): string | undefined {
-  if (account.site_type !== SITE_TYPES.OPENROUTER) {
-    return undefined
-  }
-  const credential = account.account_info.access_token?.trim()
-  return credential || undefined
+  return getSiteTypeCapabilities(
+    account.site_type,
+  ).account?.persistence?.getCredentialKey?.(account.account_info.access_token)
 }
 
 /** Finds an exact local-credential duplicate without exposing account data. */
@@ -155,7 +162,9 @@ export function findExactCredentialDuplicateAccountId(input: {
   accessToken: string
   excludeAccountId?: string
 }): string | undefined {
-  const candidate = input.accessToken.trim()
+  const candidate = getSiteTypeCapabilities(
+    input.siteType,
+  ).account?.persistence?.getCredentialKey?.(input.accessToken)
   if (!candidate) return undefined
 
   return input.accounts
@@ -186,7 +195,7 @@ export function scanDuplicateAccounts(input: {
   >()
 
   for (const account of input.accounts) {
-    const origin = normalizeAccountSiteUrlForDuplicateCheck({
+    const origin = normalizeAccountSiteProfileUrlForDuplicateCheck({
       url: account.site_url,
       siteType: account.site_type,
     })
@@ -196,7 +205,7 @@ export function scanDuplicateAccounts(input: {
     }
 
     const ownedCredential = getOwnedCredentialKey(account)
-    if (account.site_type === SITE_TYPES.OPENROUTER && !ownedCredential) {
+    if (usesAccountCredentialIdentity(account.site_type) && !ownedCredential) {
       unscannable.push(account)
       continue
     }

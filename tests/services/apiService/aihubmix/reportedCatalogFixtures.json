@@ -1,0 +1,237 @@
+{
+  "website": [
+    {
+      "model": "auto",
+      "billing_config": "",
+      "display_input": "Charges are based on the original price of the model actually hit, and the smart routing itself does not charge any additional fees.",
+      "display_output": "按实际命中的模型原价计费，智能路由本身不收取任何附加费。",
+      "img_price_config": ""
+    },
+    {
+      "model": "claude-fable-5-1",
+      "billing_config": "{\n  \"model_name\": \"claude-fable-5.1\",\n  \"default_tier\": \"tier1\",\n  \"token_based_tier_configs\": {\n    \"tier1\": {\n      \"tier_condition\": {\n        \"min_tokens\": 0,\n        \"max_tokens\": -1\n      },\n      \"model_ratio\": 5.5,\n      \"prompt_tokens_ratio\": 1.0,\n      \"completion_tokens_ratio\": 5.0,\n      \"cached_tokens_ratio\": 0.025,\n      \"cache_write_tokens_ratio\": 1.25,\n      \"cache_write_5_minutes_tokens_ratio\": 1.25,\n      \"cache_write_1_hour_tokens_ratio\": 2\n    }\n  },\n  \"per_unit_price_config\": {\n    \"web_search_price\": 0.01\n  },\n  \"enabled_billing_items\": [\n    \"prompt_tokens\",\n    \"completion_tokens\",\n    \"cached_tokens\",\n    \"web_search_requests\",\n    \"cache_write_tokens\",\n    \"cache_write_5_minutes_tokens\",\n    \"cache_write_1_hour_tokens\"\n  ]\n}",
+      "display_input": "",
+      "display_output": "",
+      "img_price_config": ""
+    },
+    {
+      "model": "deepseek-v4.1-flash",
+      "billing_config": "{\n  \"model_name\": \"deepseek-v4-flash-0731\",\n  \"default_tier\": \"tier1\",\n  \"token_based_tier_configs\": {\n    \"tier1\": {\n      \"tier_condition\": {\n        \"min_tokens\": 0,\n        \"max_tokens\": -1\n      },\n      \"model_ratio\": 0.071,\n      \"prompt_tokens_ratio\": 1.0,\n      \"completion_tokens_ratio\": 2.0,\n      \"cached_tokens_ratio\": 0.2\n    }\n  },\n  \"per_unit_price_config\": {\n    \"web_search_price\": 0.00056\n  },\n  \"enabled_billing_items\": [\n    \"prompt_tokens\",\n    \"completion_tokens\",\n    \"web_search_requests\",\n    \"cached_tokens\"\n  ]\n}",
+      "display_input": "",
+      "display_output": "",
+      "img_price_config": ""
+    },
+    {
+      "model": "gemini-3.8-flash",
+      "billing_config": "{\n  \"model_name\": \"gemini-3.7-flash\",\n  \"default_tier\": \"tier1\",\n  \"token_based_tier_configs\": {\n    \"tier1\": {\n      \"tier_condition\": {\n        \"min_tokens\": 0,\n        \"max_tokens\": -1\n      },\n      \"model_ratio\": 0.375,\n      \"input_video_tokens_ratio\": 1.0,\n      \"input_audio_tokens_ratio\": 1.0,\n      \"prompt_tokens_ratio\": 1.0,\n     \"cached_tokens_ratio\": 0.1,\n      \"completion_tokens_ratio\": 5.0\n    }\n  },\n  \"per_unit_price_config\": {\n    \"web_search_price\": 0.014,\n    \"cache_storage_price\": 1.0\n  },\n  \"enabled_billing_items\": [\n    \"prompt_tokens\",\n    \"cached_tokens\",\n    \"completion_tokens\",\n    \"input_video_tokens\",\n    \"input_audio_tokens\",\n    \"web_search_requests\",\n    \"cache_storage_hours\"\n  ]\n}",
+      "display_input": "",
+      "display_output": "",
+      "img_price_config": ""
+    },
+    {
+      "model": "gemini-3.8-flash-free",
+      "billing_config": "{\n  \"model_name\": \"gemini-3.7-flash\",\n  \"default_tier\": \"tier1\",\n  \"token_based_tier_configs\": {\n    \"tier1\": {\n      \"tier_condition\": {\n        \"min_tokens\": 0,\n        \"max_tokens\": -1\n      },\n      \"model_ratio\": 0,\n      \"input_video_tokens_ratio\": 1.0,\n      \"input_audio_tokens_ratio\": 2.0,\n      \"prompt_tokens_ratio\": 1.0,\n      \"completion_tokens_ratio\": 5.0\n    }\n  },\n  \"per_unit_price_config\": {\n    \"web_search_price\": 0.014,\n    \"cache_storage_price\": 1.0\n  },\n  \"enabled_billing_items\": [\n    \"prompt_tokens\",\n    \"completion_tokens\",\n    \"input_video_tokens\",\n    \"input_audio_tokens\",\n    \"web_search_requests\",\n    \"cache_storage_hours\"\n  ]\n}",
+      "display_input": "",
+      "display_output": "",
+      "img_price_config": ""
+    },
+    {
+      "model": "glm-5.3",
+      "billing_config": "",
+      "display_input": "",
+      "display_output": "",
+      "img_price_config": ""
+    },
+    {
+      "model": "glm-5.3-flash",
+      "billing_config": "",
+      "display_input": "",
+      "display_output": "",
+      "img_price_config": ""
+    },
+    {
+      "model": "gpt-6-astra",
+      "billing_config": "{\n  \"model_name\": \"gpt-6\",\n  \"default_tier\": \"tier1\",\n  \"enabled_billing_items\": [\n    \"prompt_tokens\",\n    \"completion_tokens\",\n    \"cached_tokens\",\n\"cache_write_tokens\",\n\"image_generation\",\n    \"web_search_requests\"\n  ],\n  \"per_unit_price_config\": {\n    \"web_search_price\": 0.01\n  },\n  \"token_based_tier_configs\": {\n    \"tier1\": {\n      \"model_ratio\": 5,\n      \"tier_condition\": {\n        \"max_tokens\": 272000,\n        \"min_tokens\": 0\n      },\n      \"cached_tokens_ratio\": 0.1,\n      \"prompt_tokens_ratio\": 1.0,\n\"cache_write_tokens_ratio\": 1.25,\n      \"completion_tokens_ratio\": 5.0\n    },\n    \"tier2\": {\n      \"model_ratio\": 10,\n      \"tier_condition\": {\n        \"max_tokens\": -1,\n        \"min_tokens\": 272001\n      },\n      \"cached_tokens_ratio\": 0.1,\n      \"prompt_tokens_ratio\": 1.0,\n\"cache_write_tokens_ratio\": 1.25,\n      \"completion_tokens_ratio\": 3.75\n    }\n  }\n}",
+      "display_input": "",
+      "display_output": "",
+      "img_price_config": ""
+    },
+    {
+      "model": "gpt-image-2.5-flare",
+      "billing_config": "{\n    \"model_name\": \"gpt-image-2.5-flare\",\n    \"default_tier\": \"tier1\",\n    \"token_based_tier_configs\":\n    {\n        \"tier1\":\n        {\n            \"tier_condition\":\n            {\n                \"min_tokens\": 0,\n                \"max_tokens\": -1\n            },\n            \"model_ratio\": 2.5,\n            \"prompt_tokens_ratio\": 1.0,\n            \"completion_tokens_ratio\": 2.0,\n            \"cached_tokens_ratio\": 0.25,\n            \"input_image_tokens_ratio\": 1.6,\n            \"output_image_tokens_ratio\": 6.0\n        }\n    },\n    \"per_unit_price_config\":\n    {},\n    \"enabled_billing_items\":\n    [\n        \"prompt_tokens\",\n        \"completion_tokens\",\n        \"input_image_tokens\",\n        \"cached_tokens\",\n        \"output_image_tokens\"\n    ]\n}",
+      "display_input": "Token-based pricing: Text input $5 / 1M tokens ｜ Image input $8 / 1M tokens ｜ Image output $30 / 1M tokens",
+      "display_output": "按 Tokens 计费：文本输入 $5 / 1M tokens ｜ 图像输入 $8 / 1M tokens ｜ 图像输出 $30 / 1M tokens",
+      "img_price_config": "{\n  \"generate\": {\n    \"low\": {\n      \"1024x1024\": 0.006,\n      \"1024x1536\": 0.005,\n      \"1536x1024\": 0.005\n    },\n    \"medium\": {\n      \"1024x1024\": 0.053,\n      \"1024x1536\": 0.041,\n      \"1536x1024\": 0.041\n    },\n    \"high\": {\n      \"1024x1024\": 0.211,\n      \"1024x1536\": 0.165,\n      \"1536x1024\": 0.165\n    },\n    \"auto\": {\n      \"1024x1024\": 0.211,\n      \"1024x1536\": 0.165,\n      \"1536x1024\": 0.165\n    }\n  }\n}"
+    },
+    {
+      "model": "gpt-image-2.5-sunburst",
+      "billing_config": "{\n    \"model_name\": \"gpt-image-2.5-sunburst\",\n    \"default_tier\": \"tier1\",\n    \"token_based_tier_configs\":\n    {\n        \"tier1\":\n        {\n            \"tier_condition\":\n            {\n                \"min_tokens\": 0,\n                \"max_tokens\": -1\n            },\n            \"model_ratio\": 2.5,\n            \"prompt_tokens_ratio\": 1.0,\n            \"completion_tokens_ratio\": 2.0,\n            \"cached_tokens_ratio\": 0.25,\n            \"input_image_tokens_ratio\": 1.6,\n            \"output_image_tokens_ratio\": 6.0\n        }\n    },\n    \"per_unit_price_config\":\n    {},\n    \"enabled_billing_items\":\n    [\n        \"prompt_tokens\",\n        \"completion_tokens\",\n        \"input_image_tokens\",\n        \"cached_tokens\",\n        \"output_image_tokens\"\n    ]\n}",
+      "display_input": "Token-based pricing: Text input $5 / 1M tokens ｜ Image input $8 / 1M tokens ｜ Image output $30 / 1M tokens",
+      "display_output": "按 Tokens 计费：文本输入 $5 / 1M tokens ｜ 图像输入 $8 / 1M tokens ｜ 图像输出 $30 / 1M tokens",
+      "img_price_config": "{\n  \"generate\": {\n    \"low\": {\n      \"1024x1024\": 0.006,\n      \"1024x1536\": 0.005,\n      \"1536x1024\": 0.005\n    },\n    \"medium\": {\n      \"1024x1024\": 0.053,\n      \"1024x1536\": 0.041,\n      \"1536x1024\": 0.041\n    },\n    \"high\": {\n      \"1024x1024\": 0.211,\n      \"1024x1536\": 0.165,\n      \"1536x1024\": 0.165\n    },\n    \"auto\": {\n      \"1024x1024\": 0.211,\n      \"1024x1536\": 0.165,\n      \"1536x1024\": 0.165\n    }\n  }\n}"
+    },
+    {
+      "model": "hy4-preview",
+      "billing_config": "",
+      "display_input": "",
+      "display_output": "",
+      "img_price_config": ""
+    },
+    {
+      "model": "mercury-2.5-preview",
+      "billing_config": "",
+      "display_input": "",
+      "display_output": "",
+      "img_price_config": ""
+    },
+    {
+      "model": "qwen3.8-max-2026-09-02",
+      "billing_config": "{\n  \"model_name\": \"qwen3.8-max\",\n  \"default_tier\": \"tier1\",\n  \"token_based_tier_configs\": {\n    \"tier1\": {\n      \"tier_condition\": {\n        \"min_tokens\": 1,\n        \"max_tokens\": -1\n      },\n      \"model_ratio\": 0.845,\n      \"prompt_tokens_ratio\": 1.0,\n      \"cache_write_tokens_ratio\": 1.25,\n      \"cached_tokens_ratio\": 0.1,\n      \"completion_tokens_ratio\": 3.0\n    }\n  },\n  \"per_unit_price_config\": {\n    \"web_search_price\": 0.000548\n  },\n  \"enabled_billing_items\": [\n    \"prompt_tokens\",\n    \"completion_tokens\",\n    \"web_search_requests\",\n    \"cache_write_tokens\",\n    \"cached_tokens\"\n  ]\n}",
+      "display_input": "",
+      "display_output": "",
+      "img_price_config": ""
+    }
+  ],
+  "catalog": [
+    {
+      "model_id": "auto",
+      "pricing": {
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null
+    },
+    {
+      "model_id": "gpt-6-astra",
+      "pricing": {
+        "cache_read": 1,
+        "cache_write": 12.5,
+        "input": 10,
+        "output": 50
+      },
+      "promotion": null
+    },
+    {
+      "model_id": "gemini-3.8-flash",
+      "pricing": {
+        "cache_read": 0.075,
+        "input": 0.75,
+        "output": 3.75
+      },
+      "promotion": null
+    },
+    {
+      "model_id": "gemini-3.8-flash-free",
+      "pricing": {
+        "cache_read": 0,
+        "input": 0,
+        "output": 0
+      },
+      "promotion": null
+    },
+    {
+      "model_id": "deepseek-v4.1-flash",
+      "pricing": {
+        "cache_read": 0.0284,
+        "input": 0.142,
+        "output": 0.284
+      },
+      "promotion": null
+    },
+    {
+      "model_id": "glm-5.3-flash",
+      "pricing": {
+        "cache_read": 0.02817,
+        "input": 0.11268,
+        "output": 0.39438
+      },
+      "promotion": {
+        "name": "GLM-5.3-FLASH limited-time special offer",
+        "off_percent": 50,
+        "time_type": "daily",
+        "daily": {
+          "ranges": ["00:00-23:59"]
+        }
+      }
+    },
+    {
+      "model_id": "claude-fable-5-1",
+      "pricing": {
+        "cache_read": 0.275,
+        "cache_write": 13.75,
+        "input": 11,
+        "output": 55
+      },
+      "promotion": null
+    },
+    {
+      "model_id": "glm-5.3",
+      "pricing": {
+        "cache_read": 0.2817,
+        "input": 1.1268,
+        "output": 3.9438
+      },
+      "promotion": {
+        "name": "GLM-5.3 limited-time special offer",
+        "off_percent": 10,
+        "time_type": "daily",
+        "daily": {
+          "ranges": ["00:00-23:59"]
+        }
+      }
+    },
+    {
+      "model_id": "qwen3.8-max-2026-09-02",
+      "pricing": {
+        "cache_read": 0.169,
+        "cache_write": 2.1125,
+        "input": 1.69,
+        "output": 5.07
+      },
+      "promotion": null
+    },
+    {
+      "model_id": "gpt-image-2.5-flare",
+      "pricing": {
+        "cache_read": 1.25,
+        "input": 5,
+        "output": 30
+      },
+      "promotion": null
+    },
+    {
+      "model_id": "gpt-image-2.5-sunburst",
+      "pricing": {
+        "cache_read": 1.25,
+        "input": 5,
+        "output": 30
+      },
+      "promotion": null
+    },
+    {
+      "model_id": "mercury-2.5-preview",
+      "pricing": {
+        "cache_read": 0.02,
+        "input": 0.2,
+        "output": 0.75
+      },
+      "promotion": {
+        "name": "mercury-2.5-preview limited-time special offer",
+        "off_percent": 80,
+        "time_type": "daily",
+        "daily": {
+          "ranges": ["00:00-23:59"]
+        }
+      }
+    },
+    {
+      "model_id": "hy4-preview",
+      "pricing": {
+        "cache_read": 0.04225,
+        "input": 0.845,
+        "output": 2.535
+      },
+      "promotion": null
+    }
+  ]
+}

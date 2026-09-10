@@ -1,13 +1,13 @@
 import { RefreshCw } from "lucide-react"
 import { useState, type ReactNode } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { BodySmall, Button, Heading3 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
+import toast from "~/lib/notify"
 import type { PreferenceWriteResult } from "~/services/preferences/userPreferences"
 import { createLogger } from "~/utils/core/logger"
-import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
+import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
 
 /**
  * Unified logger scoped to shared settings section UI primitives.
@@ -17,6 +17,7 @@ const logger = createLogger("SettingSection")
 interface SettingSectionProps {
   title: string
   description?: string
+  actions?: ReactNode
   onReset?: () => Promise<PreferenceWriteResult>
   resetButtonLabel?: string
   children: ReactNode
@@ -26,11 +27,12 @@ interface SettingSectionProps {
 
 /**
  * Unified setting section component that provides consistent UI structure
- * with optional reset functionality
+ * with optional header actions and reset functionality
  */
 export function SettingSection({
   title,
   description,
+  actions,
   onReset,
   resetButtonLabel,
   children,
@@ -74,27 +76,41 @@ export function SettingSection({
     setIsResetDialogOpen(false)
   }
 
+  const resetButton = onReset && (
+    <Button
+      onClick={handleResetClick}
+      variant="outline"
+      size="sm"
+      className="shrink-0"
+      leftIcon={<RefreshCw className="h-4 w-4" />}
+    >
+      {resetButtonLabel || t("common:actions.reset")}
+    </Button>
+  )
+
   return (
     <>
       <section id={id} className={`space-y-6 ${className}`.trim()}>
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 space-y-1.5">
-            <Heading3>{title}</Heading3>
+        {actions ? (
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+              <Heading3>{title}</Heading3>
+              <div className="flex max-w-full flex-wrap items-center gap-2">
+                {actions}
+                {resetButton}
+              </div>
+            </div>
             {description && <BodySmall>{description}</BodySmall>}
           </div>
-
-          {onReset && (
-            <Button
-              onClick={handleResetClick}
-              variant="outline"
-              size="sm"
-              className="shrink-0"
-              leftIcon={<RefreshCw className="h-4 w-4" />}
-            >
-              {resetButtonLabel || t("common:actions.reset")}
-            </Button>
-          )}
-        </div>
+        ) : (
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 space-y-1.5">
+              <Heading3>{title}</Heading3>
+              {description && <BodySmall>{description}</BodySmall>}
+            </div>
+            {resetButton}
+          </div>
+        )}
 
         {children}
       </section>

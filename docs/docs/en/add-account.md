@@ -32,6 +32,12 @@ Quick links:
 
 > Page layouts, button labels, and feature locations may differ between customized New API sites. Follow the interface shown by the site you use.
 
+::: tip Security verification during auto-detection
+Newer New API versions require verification on the site before generating an Access Token. When **"Enter an Access Token manually"** appears, the extension keeps detected account details and switches to Access Token authentication.
+
+In the extension popup, click **"Continue in side panel"** to carry your current form into the side panel. If side panels are not supported, click **"Continue in full page"**. The form also opens in a full page if the side panel fails to open. Then select **"Open site security settings"**, complete verification on the site, copy the token, and return to the preserved form to paste it and save.
+:::
+
 1. Sign in to your New API site.
 2. Click the **All API Hub** extension icon in the browser toolbar. Opening it in the side panel is recommended so you can compare both interfaces while filling in the form.
 3. Click **"Add Account"**, then use the current site address or enter the address manually.
@@ -68,7 +74,11 @@ Quick links:
 
    **5.2 Finding the Access Token**
 
-   On the New API profile page, scroll down to the Security section and locate Access Token. Click it to generate or obtain the token. This Access Token is not an API key from Token Management used to call models.
+   If you have already saved a valid, complete Access Token, you can enter it directly. Otherwise, open **Security → Access Token** on newer New API sites (usually `/security`), generate a token, and complete the site's security verification. The full token is shown only once. Copy it immediately and paste it into the extension's **Access Token** field.
+
+   Generating a new Access Token invalidates the old one. Update any other tools that use the old token. This token manages your account; API keys from Token Management are used for model calls.
+
+   Older versions usually place Access Token in the Security section near the bottom of the profile page, as shown below.
 
    ![Access Token in the Security section](../static/image/manual/new-api/access-token.png)
 

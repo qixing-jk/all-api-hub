@@ -61,7 +61,10 @@ function cloneOnboarding(
           ),
         }
       : undefined,
-    routes: onboarding.routes ? { ...onboarding.routes } : undefined,
+    routes: { ...onboarding.routes },
+    accountForm: onboarding.accountForm
+      ? { ...onboarding.accountForm }
+      : undefined,
   }
 }
 
@@ -134,11 +137,13 @@ function cloneDefinition(
   return {
     ...definition,
     scopes: [...definition.scopes],
+    tokenKey: definition.tokenKey ? { ...definition.tokenKey } : undefined,
     managedResource: definition.managedResource
       ? {
           ...definition.managedResource,
           tableFieldIds: [...definition.managedResource.tableFieldIds],
           detailFieldIds: [...definition.managedResource.detailFieldIds],
+          consoleRoutes: { ...definition.managedResource.consoleRoutes },
           settingsTarget: { ...definition.managedResource.settingsTarget },
         }
       : undefined,
@@ -229,11 +234,18 @@ export function getAccountSiteOnboardingDefinitions() {
       hasScope(definition, ACCOUNT_SITE_DEFINITION_SCOPES.Account),
     ),
     ACCOUNT_SITE_TYPE_ORDER,
-  ).map((definition) => ({
-    siteType: definition.siteType,
-    adapterFamily: definition.adapterFamily,
-    ...cloneOnboarding(definition.onboarding),
-  }))
+  ).map((definition) => {
+    const onboarding = cloneOnboarding(definition.onboarding)
+    if (!onboarding)
+      throw new Error(
+        `Account site ${definition.siteType} is missing onboarding metadata`,
+      )
+    return {
+      siteType: definition.siteType,
+      adapterFamily: definition.adapterFamily,
+      ...onboarding,
+    }
+  })
 }
 
 /**

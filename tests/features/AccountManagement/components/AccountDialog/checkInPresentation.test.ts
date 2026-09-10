@@ -10,11 +10,15 @@ import {
   CHECK_IN_SELECTION_MODES,
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   getCheckInMethodPresentation,
   getCheckInRedetectionFeedbackPresentation,
   getCheckInSelectionPresentation,
 } from "~/features/AccountManagement/components/AccountDialog/checkInPresentation"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { mergeCheckInDiscoveryResults } from "~/services/checkin/autoCheckin/domain"
+import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import type { CheckInAccountState } from "~/types/checkIn"
 
 const t = ((key: string, options?: Record<string, unknown>) =>
@@ -60,6 +64,83 @@ const createAmbiguousState = (): CheckInAccountState => ({
 })
 
 describe("check-in presentation", () => {
+  it("keeps an unsupported manual selection stale rather than unconfirmed", () => {
+    const methodId = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+    const config = createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+      automaticExecutionEnabled: true,
+    })
+    config.selection = { mode: CHECK_IN_SELECTION_MODES.Manual, methodId }
+    const updated = mergeCheckInDiscoveryResults({
+      config,
+      candidateMethodIds: [methodId],
+      detections: {
+        [methodId]: {
+          outcome: "unsupported",
+          evidence: { source: "probe", observedAt: 200 },
+        },
+      },
+      completedAt: 200,
+    })
+    const state = inspectAccountCheckIn({
+      config: updated,
+      siteType: SITE_TYPES.NEW_API,
+    })
+
+    expect(updated.selection).toEqual(config.selection)
+    expect(state.executionEligibility.eligible).toBe(false)
+    expect(
+      getCheckInSelectionPresentation(t, state, updated.selection),
+    ).toMatchObject({
+      selectedMethodId: methodId,
+      triggerLabel: "form.dailyCheckInMethod",
+      helperText: "form.checkInSelectionStale",
+    })
+  })
+
+  it.each(["automatic", "manual"] as const)(
+    "marks a retained %s selection as unconfirmed after failed redetection",
+    (mode) => {
+      const methodId = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+      const config = createCompatibilityCheckInConfig({
+        siteType: SITE_TYPES.NEW_API,
+        supported: true,
+        automaticExecutionEnabled: true,
+      })
+      config.selection = { mode, methodId }
+      const updated = mergeCheckInDiscoveryResults({
+        config,
+        candidateMethodIds: [methodId],
+        detections: {
+          [methodId]: {
+            outcome: "unknown",
+            reason: "permission_denied",
+            attemptedAt: 200,
+          },
+        },
+        completedAt: 200,
+      })
+      const state = inspectAccountCheckIn({
+        config: updated,
+        siteType: SITE_TYPES.NEW_API,
+      })
+      const presentation = getCheckInSelectionPresentation(
+        t,
+        state,
+        updated.selection,
+      )
+
+      expect(updated.selection).toEqual(config.selection)
+      expect(presentation.triggerLabel).toContain(
+        "form.checkInMethodNeedsConfirmation:form.dailyCheckInMethod",
+      )
+      expect(presentation.helperText).toBe(
+        "form.checkInSelectionUnconfirmed:form.dailyCheckInMethod",
+      )
+    },
+  )
+
   it("discloses third-party method sources without changing official labels", () => {
     expect(
       getCheckInMethodPresentation(
@@ -136,7 +217,8 @@ describe("check-in presentation", () => {
     expect(
       getCheckInRedetectionFeedbackPresentation(t, {
         kind: "failed",
-        message: "  ",
+        reason: "operation",
+        diagnostic: "  ",
       }),
     ).toEqual({
       tone: "destructive",

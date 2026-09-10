@@ -8,11 +8,15 @@ import {
 } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import type { ConfirmDialog } from "~/components/ui"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ManagedSiteTokenBatchExportDialog } from "~/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog"
 import { ManagedSiteTokenBatchExportFooter } from "~/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog/ManagedSiteTokenBatchExportFooter"
 import { NEW_API_MANAGED_VERIFICATION_CLOSE_MODES } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import { buildAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
+import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -37,10 +41,13 @@ import {
   type ManagedSiteTokenBatchExportPreview,
   type ManagedSiteTokenBatchExportPreviewItem,
 } from "~/types/managedSiteTokenBatchExport"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import {
   buildApiToken,
   buildDisplaySiteData,
 } from "~~/tests/test-utils/factories"
+import { testI18n } from "~~/tests/test-utils/i18n"
+import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 const manualPreviewTarget = {
@@ -52,7 +59,6 @@ const manualPreviewTarget = {
   targetSummary: {
     siteType: SITE_TYPES.NEW_API,
     baseUrl: "https://target.example.invalid",
-    compatibleUserId: "1",
   },
 }
 
@@ -61,21 +67,10 @@ const trustedRepairIntent = {
   verification: "trusted-new",
 } as const
 
-const createDeferred = <T,>() => {
-  let resolve!: (value: T) => void
-  let reject!: (reason?: unknown) => void
-  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
-    resolve = resolvePromise
-    reject = rejectPromise
-  })
-
-  return { promise, reject, resolve }
-}
-
 const {
   mockAllowDisabledBatchActionClicks,
   mockAllowDisabledVerificationButtonClicks,
-  mockDestructiveConfirmDialogRender,
+  mockConfirmDialogRender,
   mockExecuteBatchExport,
   mockCloseNewApiManagedVerification,
   mockGetPreviewVerificationTargets,
@@ -96,7 +91,7 @@ const {
   mockAllowDisabledVerificationButtonClicks: {
     current: false,
   },
-  mockDestructiveConfirmDialogRender: vi.fn(),
+  mockConfirmDialogRender: vi.fn(),
   mockExecuteBatchExport: vi.fn(),
   mockCloseNewApiManagedVerification: vi.fn(),
   mockGetPreviewVerificationTargets: vi.fn(),
@@ -221,7 +216,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     mockTrackProductAnalyticsActionCompleted,
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: mockToastSuccess,
   },
@@ -307,7 +302,7 @@ vi.mock("~/components/ui", async (importOriginal) => {
         </button>
       </div>
     ),
-    DestructiveConfirmDialog: ({
+    ConfirmDialog: ({
       isOpen,
       onClose,
       onConfirm,
@@ -316,23 +311,13 @@ vi.mock("~/components/ui", async (importOriginal) => {
       cancelLabel,
       isWorking,
       icon,
-      confirmVariant,
-    }: {
-      isOpen: boolean
-      onClose: () => void
-      onConfirm: () => void
-      title: string
-      confirmLabel: string
-      cancelLabel: string
-      isWorking?: boolean
-      icon?: ReactNode
-      confirmVariant?: string
-    }) => {
-      mockDestructiveConfirmDialogRender({
+      intent,
+    }: ComponentProps<typeof ConfirmDialog>) => {
+      mockConfirmDialogRender({
         isOpen,
         onConfirm,
         icon,
-        confirmVariant,
+        intent,
       })
       return isOpen ? (
         <div role="dialog" aria-label={title}>
@@ -401,7 +386,7 @@ const buildDialogPreviewItem = (
 
 const buildRecoverablePreviewItem = (
   item: ManagedSiteTokenBatchExportPreviewItem,
-  channel: { id: number; name: string },
+  channel: { ref: ManagedResourceRef; name: string },
 ): ManagedSiteTokenBatchExportPreviewItem => ({
   ...item,
   status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
@@ -454,7 +439,7 @@ const preview: ManagedSiteTokenBatchExportPreview = {
         groups: ["default"],
         priority: 0,
         weight: 0,
-        status: 1,
+        enabled: true,
       },
     }),
     buildDialogPreviewItem(2, "Token 2", {
@@ -469,7 +454,7 @@ const preview: ManagedSiteTokenBatchExportPreview = {
         groups: ["default"],
         priority: 0,
         weight: 0,
-        status: 1,
+        enabled: true,
       },
     }),
   ],
@@ -485,7 +470,7 @@ const buildSingleRecoverablePreview =
     blockedCount: 0,
     items: [
       buildRecoverablePreviewItem(preview.items[0], {
-        id: 7,
+        ref: matchingResourceRef(7),
         name: "Potential channel",
       }),
     ],
@@ -524,10 +509,10 @@ const richPreview: ManagedSiteTokenBatchExportPreview = {
         groups: ["default"],
         priority: 0,
         weight: 0,
-        status: 1,
+        enabled: true,
       },
       matchedChannel: {
-        id: 8,
+        ref: matchingResourceRef(8),
         name: "Existing channel",
       },
     }),
@@ -565,7 +550,7 @@ const modelsRequiredPreview: ManagedSiteTokenBatchExportPreview = {
         groups: ["default"],
         priority: 0,
         weight: 0,
-        status: 1,
+        enabled: true,
       },
     }),
     buildDialogPreviewItem(3, "Token 3", {
@@ -580,10 +565,10 @@ const modelsRequiredPreview: ManagedSiteTokenBatchExportPreview = {
         groups: ["default"],
         priority: 0,
         weight: 0,
-        status: 1,
+        enabled: true,
       },
       matchedChannel: {
-        id: 8,
+        ref: matchingResourceRef(8),
         name: "Existing channel",
       },
     }),
@@ -616,7 +601,7 @@ const sub2ApiPreview: ManagedSiteTokenBatchExportPreview = {
         groups: [],
         priority: 1,
         weight: 1,
-        status: 1,
+        enabled: true,
         notes: "",
       } as any,
     }),
@@ -1111,6 +1096,245 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     ).toHaveTextContent("settings:managedSite.doneHub")
   })
 
+  it.each([
+    ["adminToken", "newApiAdminToken", "replacement-admin-token"],
+    ["userId", "newApiUserId", "2"],
+    ["username", "newApiUsername", "replacement-user"],
+    ["password", "newApiPassword", "replacement-password"],
+    ["totpSecret", "newApiTotpSecret", "replacement-totp"],
+  ] as const)(
+    "discards cached verification keys when the active %s changes",
+    async (field, contextField, value) => {
+      const user = userEvent.setup()
+      const recoverablePreview = buildSingleRecoverablePreview()
+      mockPreparePreview.mockResolvedValue(recoverablePreview)
+      mockLoadNewApiChannelKeyWithVerification.mockImplementationOnce(
+        async (params) => {
+          params.setKey("test-key")
+          await params.onLoaded?.()
+          return true
+        },
+      )
+      const items = [{ account, runtimeKey }]
+      const view = renderDialog({ items })
+      await user.click(
+        await screen.findByRole("button", {
+          name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+        }),
+      )
+      expect(
+        await screen.findByText(
+          "keyManagement:batchManagedSiteExport.status.skipped",
+        ),
+      ).toBeVisible()
+
+      const context = mockUserPreferencesContextValue.current
+      const preferences = context.preferences as UserPreferences
+      mockUserPreferencesContextValue.current = {
+        ...context,
+        [contextField]: value,
+        preferences: {
+          ...preferences,
+          newApi: { ...preferences.newApi, [field]: value },
+        },
+      }
+      view.rerender(
+        <ManagedSiteTokenBatchExportDialog
+          isOpen
+          onClose={vi.fn()}
+          items={items}
+        />,
+      )
+
+      await waitFor(() => expect(mockPreparePreview).toHaveBeenCalledTimes(2))
+      expect(mockPreparePreview).toHaveBeenLastCalledWith(
+        expect.objectContaining({ resolvedChannelKeysByItemId: {} }),
+      )
+      expect(
+        await screen.findByRole("button", {
+          name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+        }),
+      ).toBeEnabled()
+      expect(
+        screen.queryByText(
+          "keyManagement:batchManagedSiteExport.status.skipped",
+        ),
+      ).not.toBeInTheDocument()
+    },
+  )
+
+  it("preserves verified keys when unrelated preferences change", async () => {
+    const user = userEvent.setup()
+    const recoverablePreview = buildSingleRecoverablePreview()
+    mockPreparePreview.mockResolvedValue(recoverablePreview)
+    mockLoadNewApiChannelKeyWithVerification.mockImplementationOnce(
+      async (params) => {
+        params.setKey("test-key")
+        await params.onLoaded?.()
+        return true
+      },
+    )
+    const items = [{ account, runtimeKey }]
+    const view = renderDialog({ items })
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+      }),
+    )
+    expect(
+      await screen.findByText(
+        "keyManagement:batchManagedSiteExport.status.skipped",
+      ),
+    ).toBeVisible()
+
+    const context = mockUserPreferencesContextValue.current
+    const preferences = context.preferences as UserPreferences
+    mockUserPreferencesContextValue.current = {
+      ...context,
+      preferences: { ...preferences, language: "zh-CN" },
+    }
+    view.rerender(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen
+        onClose={vi.fn()}
+        items={items}
+      />,
+    )
+
+    expect(mockPreparePreview).toHaveBeenCalledOnce()
+    expect(
+      screen.getByText("keyManagement:batchManagedSiteExport.status.skipped"),
+    ).toBeVisible()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.refreshPreview",
+      }),
+    )
+    expect(mockPreparePreview).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        resolvedChannelKeysByItemId: {
+          [recoverablePreview.items[0].id]: {
+            [getManagedResourceRefKey(
+              recoverablePreview.items[0].verificationCandidate!.ref,
+            )]: "test-key",
+          },
+        },
+      }),
+    )
+  })
+
+  it("replaces an in-flight preview when the active runtime configuration changes", async () => {
+    const stalePreview = createDeferred<ManagedSiteTokenBatchExportPreview>()
+    mockPreparePreview
+      .mockReturnValueOnce(stalePreview.promise)
+      .mockResolvedValue(preview)
+    const items = [{ account, runtimeKey }]
+    const view = renderDialog({ items })
+    await waitFor(() => expect(mockPreparePreview).toHaveBeenCalledOnce())
+
+    const context = mockUserPreferencesContextValue.current
+    const preferences = context.preferences as UserPreferences
+    mockUserPreferencesContextValue.current = {
+      ...context,
+      newApiUserId: "2",
+      preferences: {
+        ...preferences,
+        newApi: { ...preferences.newApi, userId: "2" },
+      },
+    }
+    view.rerender(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen
+        onClose={vi.fn()}
+        items={items}
+      />,
+    )
+    expect(await screen.findByText("Account 1 / Token 1")).toBeVisible()
+
+    await act(async () => {
+      stalePreview.resolve(buildSingleRecoverablePreview())
+      await stalePreview.promise
+    })
+
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+      }),
+    ).not.toBeInTheDocument()
+    expect(mockPreparePreview).toHaveBeenCalledTimes(2)
+  })
+
+  it.each(["success", "failure"] as const)(
+    "discards deferred verification %s after the active account changes",
+    async (outcome) => {
+      const user = userEvent.setup()
+      const staleVerification = createDeferred<void>()
+      const recoverablePreview = buildSingleRecoverablePreview()
+      mockPreparePreview.mockResolvedValue(recoverablePreview)
+      mockLoadNewApiChannelKeyWithVerification.mockImplementationOnce(
+        async (params) => {
+          await staleVerification.promise
+          if (outcome === "failure")
+            throw new Error("stale verification failed")
+          params.setKey("test-key")
+          params.openVerification({})
+          await params.onLoaded?.()
+          return false
+        },
+      )
+      const items = [{ account, runtimeKey }]
+      const view = renderDialog({ items })
+      await user.click(
+        await screen.findByRole("button", {
+          name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+        }),
+      )
+      expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledOnce()
+
+      const context = mockUserPreferencesContextValue.current
+      const preferences = context.preferences as UserPreferences
+      mockUserPreferencesContextValue.current = {
+        ...context,
+        newApiUserId: "2",
+        preferences: {
+          ...preferences,
+          newApi: { ...preferences.newApi, userId: "2" },
+        },
+      }
+      view.rerender(
+        <ManagedSiteTokenBatchExportDialog
+          isOpen
+          onClose={vi.fn()}
+          items={items}
+        />,
+      )
+      await act(async () => {
+        staleVerification.resolve()
+        await staleVerification.promise
+      })
+
+      expect(mockOpenNewApiManagedVerification).not.toHaveBeenCalled()
+      expect(
+        screen.queryByText(
+          "keyManagement:batchManagedSiteExport.status.skipped",
+        ),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByText(
+          "keyManagement:batchManagedSiteExport.messages.executionFailed",
+        ),
+      ).not.toBeInTheDocument()
+      expect(
+        await screen.findByRole("button", {
+          name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+        }),
+      ).toBeEnabled()
+      expect(mockPreparePreview).toHaveBeenLastCalledWith(
+        expect.objectContaining({ resolvedChannelKeysByItemId: {} }),
+      )
+    },
+  )
+
   it("assigns manual preview loading only to the visible refresh control", async () => {
     const user = userEvent.setup()
     const manualPreview = createDeferred<ManagedSiteTokenBatchExportPreview>()
@@ -1368,9 +1592,9 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         name: "keyManagement:batchManagedSiteExport.confirm.title",
       }),
     ).toBeInTheDocument()
-    expect(mockDestructiveConfirmDialogRender.mock.calls.at(-1)?.[0]).toEqual(
+    expect(mockConfirmDialogRender.mock.calls.at(-1)?.[0]).toEqual(
       expect.objectContaining({
-        confirmVariant: "default",
+        intent: "confirm",
         icon: expect.anything(),
       }),
     )
@@ -1410,12 +1634,10 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         name: "keyManagement:batchManagedSiteExport.confirm.title",
       }),
     ).toBeInTheDocument()
-    const capturedConfirm = mockDestructiveConfirmDialogRender.mock.calls.at(
-      -1,
-    )?.[0].onConfirm as () => Promise<void>
+    const capturedConfirm = mockConfirmDialogRender.mock.calls.at(-1)?.[0]
+      .onConfirm as () => Promise<void>
 
-    const renderCountBeforeClose =
-      mockDestructiveConfirmDialogRender.mock.calls.length
+    const renderCountBeforeClose = mockConfirmDialogRender.mock.calls.length
     rerender(
       <ManagedSiteTokenBatchExportDialog
         isOpen={false}
@@ -1424,7 +1646,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       />,
     )
 
-    const closedRenderStates = mockDestructiveConfirmDialogRender.mock.calls
+    const closedRenderStates = mockConfirmDialogRender.mock.calls
       .slice(renderCountBeforeClose)
       .map(([props]) => props.isOpen)
     expect(closedRenderStates).not.toContain(true)
@@ -1806,11 +2028,15 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     const user = userEvent.setup()
     mockLoadNewApiChannelKeyWithVerification.mockImplementation(
       async (params) => {
-        const keyByChannelId: Record<number, string> = {
-          7: "test-key",
-          8: "test-key-2",
+        const keysByResourceKey: Record<string, string> = {
+          [getManagedResourceRefKey(matchingResourceRef(7))]: "test-key",
+          [getManagedResourceRefKey(matchingResourceRef(8))]: "test-key-2",
         }
-        await Promise.resolve(params.setKey(keyByChannelId[params.channelId]))
+        await Promise.resolve(
+          params.setKey(
+            keysByResourceKey[getManagedResourceRefKey(params.resourceRef)],
+          ),
+        )
         await Promise.resolve(params.onLoaded?.())
         return true
       },
@@ -1824,11 +2050,11 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       blockedCount: 0,
       items: [
         buildRecoverablePreviewItem(preview.items[0], {
-          id: 7,
+          ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
         buildRecoverablePreviewItem(preview.items[1], {
-          id: 8,
+          ref: matchingResourceRef(8),
           name: "Second potential channel",
         }),
       ],
@@ -1847,7 +2073,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     await waitFor(() => {
       expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledWith(
         expect.objectContaining({
-          channelId: 7,
+          resourceRef: matchingResourceRef(7),
           label: "Potential channel",
           requestKind: "channel",
           config: {
@@ -1870,7 +2096,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     })
     expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledWith(
       expect.objectContaining({
-        channelId: 8,
+        resourceRef: matchingResourceRef(8),
         label: "Second potential channel",
       }),
     )
@@ -1890,11 +2116,11 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       blockedCount: 0,
       items: [
         buildRecoverablePreviewItem(preview.items[0], {
-          id: 7,
+          ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
         buildRecoverablePreviewItem(preview.items[1], {
-          id: 8,
+          ref: matchingResourceRef(8),
           name: "Second potential channel",
         }),
       ],
@@ -2171,7 +2397,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       },
     )
     const recoverableItem = buildRecoverablePreviewItem(preview.items[0], {
-      id: 7,
+      ref: matchingResourceRef(7),
       name: "Potential channel",
     })
     const staleVerificationTarget = {
@@ -2291,11 +2517,11 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       blockedCount: 0,
       items: [
         buildRecoverablePreviewItem(preview.items[0], {
-          id: 7,
+          ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
         buildRecoverablePreviewItem(preview.items[1], {
-          id: 8,
+          ref: matchingResourceRef(8),
           name: "Second potential channel",
         }),
       ],
@@ -2316,7 +2542,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     })
     expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledWith(
       expect.objectContaining({
-        channelId: 7,
+        resourceRef: matchingResourceRef(7),
       }),
     )
 
@@ -2332,7 +2558,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     await waitFor(() => {
       expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledWith(
         expect.objectContaining({
-          channelId: 8,
+          resourceRef: matchingResourceRef(8),
           label: "Second potential channel",
         }),
       )
@@ -2378,7 +2604,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       blockedCount: 0,
       items: [
         buildRecoverablePreviewItem(preview.items[0], {
-          id: 7,
+          ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
       ],
@@ -2415,7 +2641,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       blockedCount: 0,
       items: [
         buildRecoverablePreviewItem(preview.items[0], {
-          id: 7,
+          ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
       ],
@@ -2461,7 +2687,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       blockedCount: 0,
       items: [
         buildRecoverablePreviewItem(preview.items[0], {
-          id: 7,
+          ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
       ],
@@ -2480,7 +2706,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
 
     expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledWith(
       expect.objectContaining({
-        channelId: 7,
+        resourceRef: matchingResourceRef(7),
         label: "Potential channel",
       }),
     )
@@ -2497,7 +2723,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       blockedCount: 0,
       items: [
         buildRecoverablePreviewItem(preview.items[0], {
-          id: 7,
+          ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
       ],
@@ -3505,7 +3731,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     ).toBeEnabled()
   })
 
-  it("offers shared target recovery when the prepared target changed", async () => {
+  it("retranslates target recovery feedback without preparing or executing the import again", async () => {
     const user = userEvent.setup()
     const targetChanged = Object.assign(new Error("stale target"), {
       code: "managed-site-token-import-target-changed",
@@ -3538,6 +3764,37 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         "key-management-managed-site-batch-export-target-switcher",
       ),
     ).toBeEnabled()
+    const prepareCount = mockPreparePreview.mock.calls.length
+    const executeCount = mockExecuteBatchExport.mock.calls.length
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "keyManagement",
+      (await import("~/locales/zh-CN/keyManagement.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(
+        screen.getByText(
+          testI18n.t(
+            "keyManagement:batchManagedSiteExport.messages.targetChanged",
+          ),
+        ),
+      ).toBeVisible()
+      expect(mockPreparePreview).toHaveBeenCalledTimes(prepareCount)
+      expect(mockExecuteBatchExport).toHaveBeenCalledTimes(executeCount)
+      expect(
+        screen.getByTestId(
+          "key-management-managed-site-batch-export-target-switcher",
+        ),
+      ).toBeEnabled()
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "keyManagement")
+    }
   })
 
   it("maps known execution error codes to user-facing text", async () => {

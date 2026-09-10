@@ -1,11 +1,11 @@
 import { useState, type ReactNode } from "react"
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import OctopusSettings from "~/features/BasicSettings/components/tabs/ManagedSite/OctopusSettings"
+import toast from "~/lib/notify"
 import { validateOctopusConfig } from "~/services/apiService/octopus"
 import type { PreferenceWriteResult } from "~/services/preferences/userPreferences"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -43,10 +43,7 @@ vi.mock("~/services/apiService/octopus", async (importOriginal) => ({
   validateOctopusConfig: vi.fn(),
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
-  createVersionedPreferenceSaveOptions: (expectedLastUpdated: number) => ({
-    expectedLastUpdated,
-  }),
+vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   runPreferenceUpdateWithToast: async ({
     expectedLastUpdated,
     setting,
@@ -70,7 +67,7 @@ vi.mock("~/utils/core/toastHelpers", () => ({
   showUpdateToast: showUpdateToastMock,
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     error: vi.fn(),
     success: vi.fn(),

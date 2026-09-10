@@ -1,9 +1,22 @@
-import { SITE_TYPES } from "~/constants/siteType"
-import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
-import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
+import type { ManagedSiteMessagesKey } from "~/services/accountSiteDefinitions/contracts"
+import type {
+  ManagedResourceModelSyncBatchOptions,
+  ManagedResourceModelSyncWorkflow,
+} from "~/services/apiAdapters/contracts/managedResourceModelSync"
 import {
+  isManagedResourceRef,
+  type ManagedResourceRef,
+} from "~/services/apiAdapters/contracts/managedResourceNative"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
+import {
+  assertManagedResourceRefForSite,
+  getManagedResourceRefKey,
+} from "~/services/managedSites/managedResourceIdentity"
+import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
+import {
+  getManagedSiteRuntimeConfigFingerprint,
   resolveCurrentManagedSiteRuntimeConfig,
-  resolveManagedSiteRuntimeConfigForType,
 } from "~/services/managedSites/runtimeConfig"
 import {
   getManagedSiteConfigMissingMessage,
@@ -11,10 +24,8 @@ import {
   getManagedSiteNoChannelsToSyncMessage,
   getManagedSiteUnsupportedModelSyncMessage,
   supportsManagedSiteModelSync,
-  type ManagedSiteMessagesKey,
 } from "~/services/managedSites/utils/managedSite"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
-import { createOctopusModelSyncCapability } from "~/services/models/modelSync/octopusModelSync"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -41,16 +52,17 @@ import {
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import type {
-  ManagedSiteChannel,
-  ManagedSiteChannelListData,
-} from "~/types/managedSite"
+  ManagedModelChannel,
+  ManagedModelChannelSummaryListData,
+} from "~/types/managedResourceModels"
 import {
   ALL_PRESET_STANDARD_MODELS,
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
 } from "~/types/managedSiteModelRedirect"
 import {
-  type ExecutionProgress,
+  type ExecutionItemResult,
   type ExecutionResult,
+  type ScopedExecutionProgress,
 } from "~/types/managedSiteModelSync"
 import {
   getTaskNotificationStatusFromCounts,
@@ -71,7 +83,6 @@ import { t } from "~/utils/i18n/core"
 
 import { channelConfigStorage } from "../../managedSites/channelConfigStorage"
 import { sanitizeChannelFiltersForStorage } from "../../managedSites/channelModelFilterRules"
-import { octopusChannelToManagedSite } from "../../managedSites/providers/octopus"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -188,8 +199,13 @@ function classifyModelSyncResultError(
   return classifyModelSyncError(failedItem.message ?? "unknown")
 }
 
+interface ProgressOwner {
+  sequence: number
+  configFingerprint: string
+}
+
 /**
- * Scheduler for New API Model Sync.
+ * Scheduler for managed-site model sync.
  * Responsibilities:
  * - Sets up alarms to run sync on a fixed cadence (when alarms API is available).
  * - Orchestrates execution with user preferences (interval, concurrency, retries).
@@ -198,7 +214,9 @@ function classifyModelSyncResultError(
 class ModelSyncScheduler {
   static readonly ALARM_NAME = "managedSiteModelSync"
   private isInitialized = false
-  private currentProgress: ExecutionProgress | null = null
+  private currentProgress: ScopedExecutionProgress | null = null
+  private executionSequence = 0
+  private latestProgressSequence = 0
 
   /**
    * Build a ModelSyncService instance using persisted preferences and channel configs.
@@ -207,8 +225,12 @@ class ModelSyncScheduler {
   private async createService(
     trigger: ProtectionBypassAutomaticTrigger = PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
     protectionBypassExecution?: ProtectionBypassExecution,
+    preferencesSnapshot?: Awaited<
+      ReturnType<typeof userPreferences.getPreferences>
+    >,
   ): Promise<ModelSyncService> {
-    const userPrefs = await userPreferences.getPreferences()
+    const userPrefs =
+      preferencesSnapshot ?? (await userPreferences.getPreferences())
 
     const { messagesKey } = getManagedSiteContext(userPrefs)
     const managedConfig = resolveCurrentManagedSiteRuntimeConfig(userPrefs)
@@ -405,74 +427,75 @@ class ModelSyncScheduler {
     }
   }
 
-  async listChannels(): Promise<ManagedSiteChannelListData> {
+  async listChannels(): Promise<ManagedModelChannelSummaryListData> {
     const userPrefs = await userPreferences.getPreferences()
     const { siteType, messagesKey } = getManagedSiteContext(userPrefs)
 
-    // Octopus 使用独立的 API 服务
-    if (siteType === SITE_TYPES.OCTOPUS) {
-      const octopusRuntimeConfig =
-        resolveCurrentManagedSiteRuntimeConfig(userPrefs)
+    if (!supportsManagedSiteModelSync(siteType)) {
+      throw new Error(getManagedSiteUnsupportedModelSyncMessage(t, siteType))
+    }
 
-      // Validate config like createService does
-      if (
-        !octopusRuntimeConfig ||
-        octopusRuntimeConfig.siteType !== SITE_TYPES.OCTOPUS ||
-        !octopusRuntimeConfig.config.baseUrl ||
-        !octopusRuntimeConfig.config.username ||
-        !octopusRuntimeConfig.config.password
-      ) {
+    const createSync =
+      getSiteTypeCapabilities(siteType).managedSites?.models?.createSync
+    if (createSync) {
+      const runtimeConfig = resolveCurrentManagedSiteRuntimeConfig(userPrefs)
+      if (!runtimeConfig) {
         throw new Error(getManagedSiteConfigMissingMessage(t, messagesKey))
       }
-
-      const channels = await createOctopusModelSyncCapability(
-        octopusRuntimeConfig.config,
+      return createSync(
+        runtimeConfig.config,
         resolveModelSyncProtectionExecution(
           PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
         ),
       ).listChannels()
-      return {
-        items: channels.map(octopusChannelToManagedSite),
-        total: channels.length,
-        type_counts: {},
-      }
     }
 
-    if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-      const managedConfig = resolveManagedSiteRuntimeConfigForType(
-        userPrefs,
-        SITE_TYPES.CLAUDE_CODE_HUB,
-      )
-      if (!managedConfig) {
-        throw new Error(getManagedSiteConfigMissingMessage(t, messagesKey))
-      }
-
-      const service = getManagedSiteServiceForType(siteType)
-      const channels = await service.searchChannel(managedConfig.config, "")
-
-      return channels ?? { items: [], total: 0, type_counts: {} }
+    const service = await this.createService(undefined, undefined, userPrefs)
+    const list = await service.listChannels()
+    return {
+      items: list.items.map(({ ref, name }) => ({ ref, name })),
+      total: list.total,
     }
-
-    const service = await this.createService()
-    return service.listChannels()
   }
 
   /**
    * Execute model sync for all channels (or a filtered subset).
    * Also generates model redirect mappings immediately after successful channel syncs.
-   * @param channelIds Optional subset of channel IDs to sync; defaults to all.
+   * @param resourceRefs Optional subset of scoped channel references; defaults to all.
    * @returns ExecutionResult with per-channel outcomes and statistics.
    */
   async executeSync(
-    channelIds?: number[],
+    resourceRefs?: ManagedResourceRef[],
     trigger: ProtectionBypassAutomaticTrigger = PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
     protectionBypassExecution?: ProtectionBypassExecution,
   ): Promise<ExecutionResult> {
+    const executionSequence = ++this.executionSequence
     logger.info("Starting execution")
 
     // Get preferences from userPreferences
     const prefs = await userPreferences.getPreferences()
     const { siteType, messagesKey } = getManagedSiteContext(prefs)
+    const progressOwner: ProgressOwner = {
+      sequence: executionSequence,
+      configFingerprint: getManagedSiteRuntimeConfigFingerprint(
+        prefs,
+        siteType,
+      ),
+    }
+    const selectedTarget = resolveCurrentManagedSiteRuntimeConfig(prefs)
+    if (resourceRefs !== undefined) {
+      if (
+        !selectedTarget ||
+        !Array.isArray(resourceRefs) ||
+        resourceRefs.length === 0
+      ) {
+        throw new Error(
+          "A configured managed site and non-empty resource selection are required",
+        )
+      }
+      for (const ref of resourceRefs)
+        assertManagedResourceRefForSite(ref, selectedTarget)
+    }
 
     const config =
       prefs.managedSiteModelSync ?? DEFAULT_PREFERENCES.managedSiteModelSync!
@@ -482,20 +505,25 @@ class ModelSyncScheduler {
       config.channelProcessingTimeout,
     )
 
-    // Octopus 使用独立的模型同步逻辑
-    if (siteType === SITE_TYPES.OCTOPUS) {
-      const octopusExecution = resolveModelSyncProtectionExecution(
-        trigger,
-        protectionBypassExecution,
-      )
-      return this.executeSyncForOctopus(
-        channelIds,
-        prefs,
+    const createSync =
+      getSiteTypeCapabilities(siteType).managedSites?.models?.createSync
+    if (createSync) {
+      if (!selectedTarget) {
+        throw new Error(getManagedSiteConfigMissingMessage(t, messagesKey))
+      }
+      return this.executeSyncWithProvider(
+        createSync(
+          selectedTarget.config,
+          resolveModelSyncProtectionExecution(
+            trigger,
+            protectionBypassExecution,
+          ),
+        ),
+        selectedTarget,
+        resourceRefs,
         messagesKey,
-        concurrency,
-        maxRetries,
-        channelProcessingTimeout,
-        octopusExecution,
+        { concurrency, maxRetries, channelProcessingTimeout },
+        progressOwner,
       )
     }
 
@@ -503,22 +531,29 @@ class ModelSyncScheduler {
       throw new Error(getManagedSiteUnsupportedModelSyncMessage(t, siteType))
     }
 
-    // Initialize service (for non-Octopus sites)
-    const service = await this.createService(trigger, protectionBypassExecution)
+    // Initialize the shared runner for providers with individual model operations.
+    const service = await this.createService(
+      trigger,
+      protectionBypassExecution,
+      prefs,
+    )
 
     const modelRedirectConfig =
       prefs.modelRedirect ?? DEFAULT_MODEL_REDIRECT_PREFERENCES
 
     // List channels
-    const channelListResponse = await service.listChannels({
-      preferResourceBacked: !modelRedirectConfig.enabled,
-    })
+    const channelListResponse = await service.listChannels()
     const allChannels = channelListResponse.items
 
-    // Filter channels if specific IDs provided
-    let channels: ManagedSiteChannel[]
-    if (channelIds && channelIds.length > 0) {
-      channels = allChannels.filter((c) => channelIds.includes(c.id))
+    // Match selected resources within the captured managed-site scope.
+    let channels: ManagedModelChannel[]
+    if (resourceRefs && resourceRefs.length > 0) {
+      channels = allChannels.filter((c) =>
+        resourceRefs.some(
+          (ref) =>
+            getManagedResourceRefKey(ref) === getManagedResourceRefKey(c.ref),
+        ),
+      )
     } else {
       channels = allChannels
     }
@@ -532,14 +567,7 @@ class ModelSyncScheduler {
         ? modelRedirectConfig.standardModels
         : ALL_PRESET_STANDARD_MODELS
 
-    // Update progress
-    this.currentProgress = {
-      isRunning: true,
-      total: channels.length,
-      completed: 0,
-      failed: 0,
-    }
-    this.notifyProgress()
+    const progress = this.startProgress(progressOwner, channels.length)
 
     let failureCount = 0
     let mappingSuccessCount = 0
@@ -561,11 +589,13 @@ class ModelSyncScheduler {
               try {
                 // Find the channel that was just synced
                 const channel = allChannels.find(
-                  (c) => c.id === payload.lastResult.channelId,
+                  (c) =>
+                    getManagedResourceRefKey(c.ref) ===
+                    getManagedResourceRefKey(payload.lastResult.resourceRef),
                 )
                 if (!channel) {
                   logger.warn("Channel not found", {
-                    channelId: payload.lastResult.channelId,
+                    resourceRef: payload.lastResult.resourceRef,
                   })
                 } else {
                   const actualModels = payload.lastResult.newModels || []
@@ -607,13 +637,15 @@ class ModelSyncScheduler {
                         ? {
                             pruneMissingTargets: true,
                             availableModels: actualModels,
-                            siteType,
+                            modelMappingPolicy:
+                              getSiteTypeCapabilities(siteType).managedSites
+                                ?.models?.modelMappingPolicy,
                           }
                         : undefined,
                     )
                   mappingSuccessCount++
                   logger.info("Applied model redirects to channel", {
-                    channelId: channel.id,
+                    resourceRef: channel.ref,
                     channelName: channel.name,
                     mappingCount: Object.keys(newMapping).length,
                     modelsChanged,
@@ -625,7 +657,7 @@ class ModelSyncScheduler {
                 }
               } catch (error) {
                 logger.error("Failed to apply mapping for channel", {
-                  channelId: payload.lastResult.channelId,
+                  resourceRef: payload.lastResult.resourceRef,
                   channelName: payload.lastResult.channelName,
                   error,
                 })
@@ -634,13 +666,7 @@ class ModelSyncScheduler {
             }
           }
 
-          if (this.currentProgress) {
-            this.currentProgress.completed = payload.completed
-            this.currentProgress.lastResult = payload.lastResult
-            this.currentProgress.currentChannel = payload.lastResult.channelName
-            this.currentProgress.failed = failureCount
-          }
-          this.notifyProgress()
+          progress.update(payload.completed, payload.lastResult, failureCount)
         },
       })
 
@@ -648,7 +674,7 @@ class ModelSyncScheduler {
       await managedSiteModelSyncStorage.saveLastExecution(result)
 
       // Cache upstream model options for allow-list selection, only if full sync
-      if (!channelIds) {
+      if (!resourceRefs) {
         const collectedModels = collectModelsFromExecution(result)
         if (collectedModels.length > 0) {
           await managedSiteModelSyncStorage.saveChannelUpstreamModelOptions(
@@ -672,75 +698,25 @@ class ModelSyncScheduler {
 
       return result
     } finally {
-      // Clear progress
-      this.currentProgress = null
-      this.notifyProgress()
+      progress.finish()
     }
   }
 
-  /**
-   * Execute model sync for Octopus site.
-   * Octopus uses a different API structure for fetching and updating models.
-   *
-   * NOTE: This Octopus-specific sync path intentionally omits ModelRedirectService
-   * mappings (unlike executeSync for New API/Veloera). This is because:
-   * 1. The Octopus sync capability only updates the model list directly
-   * 2. Octopus channels initialize model_mapping as an empty string
-   * 3. Redirect logic is not applicable to Octopus's channel architecture
-   *
-   * If redirect behavior is ever required for Octopus, refer to ModelRedirectService
-   * and the executeSync method for the pattern used by New API/Veloera channels.
-   */
-  private async executeSyncForOctopus(
-    channelIds: number[] | undefined,
-    prefs: Awaited<ReturnType<typeof userPreferences.getPreferences>>,
+  /** Runs a provider-owned sync batch using only scoped selection and result facts. */
+  private async executeSyncWithProvider(
+    workflow: ManagedResourceModelSyncWorkflow,
+    runtimeConfig: ManagedSiteRuntimeConfig,
+    resourceRefs: ManagedResourceRef[] | undefined,
     messagesKey: ManagedSiteMessagesKey,
-    concurrency: number,
-    maxRetries: number,
-    channelProcessingTimeout: number,
-    protectionBypassExecution: ProtectionBypassExecution,
+    options: ManagedResourceModelSyncBatchOptions,
+    progressOwner: ProgressOwner,
   ): Promise<ExecutionResult> {
-    const octopusRuntimeConfig = resolveCurrentManagedSiteRuntimeConfig(prefs)
-
-    // Validate config like createService does
-    if (
-      !octopusRuntimeConfig ||
-      octopusRuntimeConfig.siteType !== SITE_TYPES.OCTOPUS ||
-      !octopusRuntimeConfig.config.baseUrl ||
-      !octopusRuntimeConfig.config.username ||
-      !octopusRuntimeConfig.config.password
-    ) {
-      throw new Error(getManagedSiteConfigMissingMessage(t, messagesKey))
-    }
-
-    const octopusModelSync = createOctopusModelSyncCapability(
-      octopusRuntimeConfig.config,
-      protectionBypassExecution,
-    )
-    // List channels through the same intent-bound capability used by the batch.
-    const octopusChannels = await octopusModelSync.listChannels()
-    const allChannels = octopusChannels.map(octopusChannelToManagedSite)
-
-    // Filter channels if specific IDs provided
-    let channels: ManagedSiteChannel[]
-    if (channelIds && channelIds.length > 0) {
-      channels = allChannels.filter((c) => channelIds.includes(c.id))
-    } else {
-      channels = allChannels
-    }
-
-    if (channels.length === 0) {
+    const batch = await workflow.prepareBatch(resourceRefs)
+    if (batch.resources.length === 0) {
       throw new Error(getManagedSiteNoChannelsToSyncMessage(t, messagesKey))
     }
 
-    // Update progress
-    this.currentProgress = {
-      isRunning: true,
-      total: channels.length,
-      completed: 0,
-      failed: 0,
-    }
-    this.notifyProgress()
+    const progress = this.startProgress(progressOwner, batch.resources.length)
 
     let failureCount = 0
 
@@ -748,27 +724,18 @@ class ModelSyncScheduler {
     try {
       await ensureLegacyChannelConfigMigrationReady()
       const channelConfigs = await channelConfigStorage.getConfigsForScope({
-        managedSiteType: octopusRuntimeConfig.siteType,
-        scopeKey: octopusRuntimeConfig.config.baseUrl,
+        managedSiteType: runtimeConfig.siteType,
+        scopeKey: runtimeConfig.config.baseUrl,
       })
-      // Execute batch sync using Octopus-specific implementation
-      result = await octopusModelSync.runBatch(channels, {
-        concurrency,
-        maxRetries,
-        channelProcessingTimeout,
+      result = await batch.run({
+        ...options,
         channelConfigs,
         onProgress: async (payload) => {
           if (!payload.lastResult.ok) {
             failureCount += 1
           }
 
-          if (this.currentProgress) {
-            this.currentProgress.completed = payload.completed
-            this.currentProgress.lastResult = payload.lastResult
-            this.currentProgress.currentChannel = payload.lastResult.channelName
-            this.currentProgress.failed = failureCount
-          }
-          this.notifyProgress()
+          progress.update(payload.completed, payload.lastResult, failureCount)
         },
       })
 
@@ -776,7 +743,7 @@ class ModelSyncScheduler {
       await managedSiteModelSyncStorage.saveLastExecution(result)
 
       // Cache upstream model options for allow-list selection, only if full sync
-      if (!channelIds) {
+      if (!resourceRefs) {
         const collectedModels = collectModelsFromExecution(result)
         if (collectedModels.length > 0) {
           await managedSiteModelSyncStorage.saveChannelUpstreamModelOptions(
@@ -785,16 +752,14 @@ class ModelSyncScheduler {
         }
       }
 
-      logger.info("Octopus execution completed", {
+      logger.info("Provider execution completed", {
         successCount: result.statistics.successCount,
         total: result.statistics.total,
       })
 
       return result
     } finally {
-      // Clear progress
-      this.currentProgress = null
-      this.notifyProgress()
+      progress.finish()
     }
   }
 
@@ -811,28 +776,28 @@ class ModelSyncScheduler {
       throw new Error("No previous execution found")
     }
 
-    const failedChannelIds = lastExecution.items
+    const failedResourceRefs = lastExecution.items
       .filter((item) => !item.ok)
-      .map((item) => item.channelId)
+      .flatMap((item) => (item.resourceRef ? [item.resourceRef] : []))
 
-    if (failedChannelIds.length === 0) {
+    if (failedResourceRefs.length === 0) {
       throw new Error("No failed channels to retry")
     }
 
     return protectionBypassExecution
       ? this.executeSync(
-          failedChannelIds,
+          failedResourceRefs,
           PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
           protectionBypassExecution,
         )
-      : this.executeSync(failedChannelIds)
+      : this.executeSync(failedResourceRefs)
   }
 
   /**
    * Get current execution progress
    * @returns Latest progress snapshot or null when idle.
    */
-  getProgress(): ExecutionProgress | null {
+  getProgress(): ScopedExecutionProgress | null {
     return this.currentProgress
   }
 
@@ -918,16 +883,59 @@ class ModelSyncScheduler {
     logger.info("Settings updated", updated)
   }
 
+  /** Captures run ownership so older callbacks cannot overwrite or clear newer progress. */
+  private startProgress(owner: ProgressOwner, total: number) {
+    let progress: ScopedExecutionProgress = {
+      configFingerprint: owner.configFingerprint,
+      isRunning: true,
+      total,
+      completed: 0,
+      failed: 0,
+    }
+    // Preserve invocation order even when an earlier inventory request finishes later.
+    if (owner.sequence > this.latestProgressSequence) {
+      this.latestProgressSequence = owner.sequence
+      this.currentProgress = progress
+      this.notifyProgress(progress)
+    }
+
+    return {
+      update: (
+        completed: number,
+        lastResult: ExecutionItemResult,
+        failed: number,
+      ) => {
+        if (this.currentProgress !== progress) return
+
+        progress = {
+          ...progress,
+          completed,
+          lastResult,
+          currentChannel: lastResult.channelName,
+          failed,
+        }
+        this.currentProgress = progress
+        this.notifyProgress(progress)
+      },
+      finish: () => {
+        if (this.currentProgress !== progress) return
+
+        this.currentProgress = null
+        this.notifyProgress({ ...progress, isRunning: false })
+      },
+    }
+  }
+
   /**
    * Notify frontend about progress.
    * Swallows missing-receiver errors because UI may not be open.
    */
-  private notifyProgress() {
+  private notifyProgress(progress: ScopedExecutionProgress) {
     try {
       void sendRuntimeMessage(
         {
           type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
-          payload: this.currentProgress,
+          payload: progress,
         },
         { maxAttempts: 1 },
       ).catch(() => {
@@ -995,7 +1003,7 @@ export async function triggerAllModelSync(
  * Run model sync for the selected managed-site channels.
  */
 export async function triggerSelectedModelSync(
-  channelIds?: number[],
+  resourceRefs?: ManagedResourceRef[],
   protectionBypassExecution?: ProtectionBypassExecution,
 ) {
   if (
@@ -1004,20 +1012,24 @@ export async function triggerSelectedModelSync(
   ) {
     return createInvalidModelSyncExecutionFailure()
   }
-  if (!Array.isArray(channelIds) || channelIds.length === 0) {
+  if (
+    !Array.isArray(resourceRefs) ||
+    resourceRefs.length === 0 ||
+    !resourceRefs.every(isManagedResourceRef)
+  ) {
     return {
       success: false as const,
-      error: "channelIds must be a non-empty array for selected sync",
+      error: "resourceRefs must be a non-empty array for selected sync",
     }
   }
 
   const resultSelected = protectionBypassExecution
     ? await modelSyncScheduler.executeSync(
-        channelIds,
+        resourceRefs,
         PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
         protectionBypassExecution,
       )
-    : await modelSyncScheduler.executeSync(channelIds)
+    : await modelSyncScheduler.executeSync(resourceRefs)
   return { success: true as const, data: resultSelected }
 }
 
@@ -1147,7 +1159,7 @@ export function setupManagedSiteModelSyncMessagingListeners() {
         try {
           const execution = message?.data.protectionBypassExecution
           return await resolveVerifiedModelSyncMessage(execution, () =>
-            triggerSelectedModelSync(message?.data.channelIds, execution),
+            triggerSelectedModelSync(message?.data.resourceRefs, execution),
           )
         } catch (error) {
           return toModelSyncFailure(error)

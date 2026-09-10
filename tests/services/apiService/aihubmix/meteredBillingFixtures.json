@@ -1,0 +1,348 @@
+[
+  {
+    "model": "agnes-image-2.1-flash",
+    "billing": {
+      "model_name": "agnes-image-2.1-flash",
+      "enabled_billing_items": ["image_generation", "image_input"],
+      "metered_price_config": {
+        "image_generation": {
+          "unit": "image",
+          "price_rules": [
+            {
+              "match": {
+                "size": "1K"
+              },
+              "unit_price": 0.01
+            },
+            {
+              "match": {
+                "size": "1024x1024"
+              },
+              "unit_price": 0.01
+            },
+            {
+              "match": {
+                "size": "864x1152"
+              },
+              "unit_price": 0.01
+            },
+            {
+              "match": {
+                "size": "1152x864"
+              },
+              "unit_price": 0.01
+            },
+            {
+              "match": {
+                "size": "1312x736"
+              },
+              "unit_price": 0.01
+            },
+            {
+              "match": {
+                "size": "736x1312"
+              },
+              "unit_price": 0.01
+            },
+            {
+              "match": {
+                "size": "832x1248"
+              },
+              "unit_price": 0.01
+            },
+            {
+              "match": {
+                "size": "1248x832"
+              },
+              "unit_price": 0.01
+            },
+            {
+              "match": {
+                "size": "1568x672"
+              },
+              "unit_price": 0.01
+            },
+            {
+              "match": {
+                "size": "1024x768"
+              },
+              "unit_price": 0.01
+            },
+            {
+              "match": {
+                "size": "2K"
+              },
+              "unit_price": 0.018
+            },
+            {
+              "match": {
+                "size": "2048x2048"
+              },
+              "unit_price": 0.018
+            },
+            {
+              "match": {
+                "size": "1728x2304"
+              },
+              "unit_price": 0.018
+            },
+            {
+              "match": {
+                "size": "2304x1728"
+              },
+              "unit_price": 0.018
+            },
+            {
+              "match": {
+                "size": "2624x1472"
+              },
+              "unit_price": 0.018
+            },
+            {
+              "match": {
+                "size": "1472x2624"
+              },
+              "unit_price": 0.018
+            },
+            {
+              "match": {
+                "size": "1664x2496"
+              },
+              "unit_price": 0.018
+            },
+            {
+              "match": {
+                "size": "2496x1664"
+              },
+              "unit_price": 0.018
+            },
+            {
+              "match": {
+                "size": "3136x1344"
+              },
+              "unit_price": 0.018
+            },
+            {
+              "match": {
+                "size": "3K"
+              },
+              "unit_price": 0.021
+            },
+            {
+              "match": {
+                "size": "3072x3072"
+              },
+              "unit_price": 0.021
+            },
+            {
+              "match": {
+                "size": "2592x3456"
+              },
+              "unit_price": 0.021
+            },
+            {
+              "match": {
+                "size": "3456x2592"
+              },
+              "unit_price": 0.021
+            },
+            {
+              "match": {
+                "size": "3936x2208"
+              },
+              "unit_price": 0.021
+            },
+            {
+              "match": {
+                "size": "2208x3936"
+              },
+              "unit_price": 0.021
+            },
+            {
+              "match": {
+                "size": "2496x3744"
+              },
+              "unit_price": 0.021
+            },
+            {
+              "match": {
+                "size": "3744x2496"
+              },
+              "unit_price": 0.021
+            },
+            {
+              "match": {
+                "size": "4704x2016"
+              },
+              "unit_price": 0.021
+            },
+            {
+              "match": {
+                "size": "4K"
+              },
+              "unit_price": 0.024
+            },
+            {
+              "match": {
+                "size": "4096x4096"
+              },
+              "unit_price": 0.024
+            },
+            {
+              "match": {
+                "size": "3456x4608"
+              },
+              "unit_price": 0.024
+            },
+            {
+              "match": {
+                "size": "4608x3456"
+              },
+              "unit_price": 0.024
+            },
+            {
+              "match": {
+                "size": "5248x2944"
+              },
+              "unit_price": 0.024
+            },
+            {
+              "match": {
+                "size": "2944x5248"
+              },
+              "unit_price": 0.024
+            },
+            {
+              "match": {
+                "size": "3328x4992"
+              },
+              "unit_price": 0.024
+            },
+            {
+              "match": {
+                "size": "4992x3328"
+              },
+              "unit_price": 0.024
+            },
+            {
+              "match": {
+                "size": "6272x2688"
+              },
+              "unit_price": 0.024
+            }
+          ],
+          "fallback_unit_price": 0.01
+        },
+        "image_input": {
+          "unit": "image",
+          "free_quantity": 3,
+          "fallback_unit_price": 0.003
+        }
+      }
+    }
+  },
+  {
+    "model": "qwen-image-3.0",
+    "billing": {
+      "model_name": "qwen-image-3.0",
+      "enabled_billing_items": ["image_input", "image_generation"],
+      "metered_price_config": {
+        "image_input": {
+          "unit": "image",
+          "fallback_unit_price": 0.00286
+        },
+        "image_generation": {
+          "unit": "image",
+          "price_rules": [
+            {
+              "match": {
+                "long_edge_px": {
+                  "lte": 1024
+                }
+              },
+              "unit_price": 0.02535
+            },
+            {
+              "match": {
+                "long_edge_px": {
+                  "gt": 1024,
+                  "lte": 2048
+                }
+              },
+              "unit_price": 0.02535
+            }
+          ],
+          "fallback_unit_price": 0.02535
+        }
+      }
+    }
+  },
+  {
+    "model": "qwen-image-3.0-pro",
+    "billing": {
+      "model_name": "qwen-image-3.0-pro",
+      "enabled_billing_items": ["image_input", "image_generation"],
+      "metered_price_config": {
+        "image_input": {
+          "unit": "image",
+          "fallback_unit_price": 0.00286
+        },
+        "image_generation": {
+          "unit": "image",
+          "price_rules": [
+            {
+              "match": {
+                "long_edge_px": {
+                  "lte": 1024
+                }
+              },
+              "unit_price": 0.03572
+            },
+            {
+              "match": {
+                "long_edge_px": {
+                  "gt": 1024,
+                  "lte": 2048
+                }
+              },
+              "unit_price": 0.07143
+            }
+          ],
+          "fallback_unit_price": 0.07143
+        }
+      }
+    }
+  },
+  {
+    "model": "qwen3.8-max-preview",
+    "billing": {
+      "model_name": "qwen3.8-max-preview",
+      "default_tier": "tier1",
+      "token_based_tier_configs": {
+        "tier1": {
+          "tier_condition": {
+            "min_tokens": 1,
+            "max_tokens": -1
+          },
+          "model_ratio": 0.169,
+          "prompt_tokens_ratio": 1.0,
+          "cache_write_tokens_ratio": 1.25,
+          "cached_tokens_ratio": 0.2,
+          "explicit_cached_tokens_ratio": 0.1,
+          "implicit_cached_tokens_ratio": 0.2,
+          "completion_tokens_ratio": 3.0
+        }
+      },
+      "per_unit_price_config": {
+        "web_search_price": 0.000548
+      },
+      "enabled_billing_items": [
+        "prompt_tokens",
+        "completion_tokens",
+        "web_search_requests",
+        "cache_write_tokens",
+        "cached_tokens"
+      ]
+    }
+  }
+]

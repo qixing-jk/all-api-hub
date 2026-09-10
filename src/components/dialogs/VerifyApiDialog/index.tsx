@@ -43,6 +43,8 @@ import {
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
   API_TYPES,
+  API_VERIFICATION_MODES,
+  API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
   getApiVerificationProbeDefinitions,
   guessModelIdFromToken,
@@ -50,6 +52,7 @@ import {
 } from "~/services/verification/aiApiVerification"
 import type {
   ApiVerificationApiType,
+  ApiVerificationMode,
   ApiVerificationProbeId,
   ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
@@ -76,6 +79,7 @@ import { buildProbeState } from "./probeState"
 import type { VerifyApiDialogProps } from "./types"
 import { useVerificationDialogState } from "./useVerificationDialogState"
 import { formatLatency, safeJsonStringify } from "./utils"
+import { VerificationModeSelect } from "./VerificationMode"
 
 /**
  * Unified logger scoped to the API verification dialog.
@@ -87,9 +91,11 @@ const logger = createLogger("VerifyApiDialog")
  */
 function buildStoppedProbeResult(
   probeId: ApiVerificationProbeId,
+  mode?: ApiVerificationMode,
 ): ApiVerificationProbeResult {
   return {
     id: probeId,
+    mode: probeId === API_VERIFICATION_PROBE_IDS.Models ? undefined : mode,
     status: API_VERIFICATION_PROBE_STATUSES.Unsupported,
     latencyMs: 0,
     summary: "Stopped",
@@ -141,6 +147,9 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     API_TYPES.OPENAI_COMPATIBLE,
   )
   const [modelId, setModelId] = useState<string>(initialModelId?.trim() ?? "")
+  const [verificationMode, setVerificationMode] = useState<ApiVerificationMode>(
+    API_VERIFICATION_MODES.Streaming,
+  )
   const shouldStopRef = useRef(false)
   const suiteAbortControllerRef = useRef<AbortController | null>(null)
   const probeAbortControllersRef = useRef(
@@ -278,6 +287,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     if (abortSignal?.aborted || shouldStopRef.current) return null
     if (!selectedRuntimeKey || !selectedRuntimeKeyIsCompatible) return null
     let resolvedRuntimeKey = selectedRuntimeKey
+    let executedMode: ApiVerificationMode | undefined
 
     const pendingProbes = probesRef.current.map((probe) =>
       probe.definition.id === probeId
@@ -306,10 +316,12 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         )
         return null
       }
+      executedMode = verificationMode
       const result = await runApiVerificationProbe({
         baseUrl: resolvedRuntimeKey.baseUrl,
         apiKey: resolvedRuntimeKey.secret,
         apiType,
+        mode: executedMode,
         modelId: modelId.trim() || undefined,
         tokenMeta: isAccountTokenRuntimeKey(resolvedRuntimeKey)
           ? {
@@ -330,7 +342,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
               ? {
                   ...probe,
                   isRunning: false,
-                  result: buildStoppedProbeResult(probeId),
+                  result: buildStoppedProbeResult(probeId, executedMode),
                 }
               : probe,
           ),
@@ -358,7 +370,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
               ? {
                   ...probe,
                   isRunning: false,
-                  result: buildStoppedProbeResult(probeId),
+                  result: buildStoppedProbeResult(probeId, executedMode),
                 }
               : probe,
           ),
@@ -384,6 +396,10 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
 
       const fallback: ApiVerificationProbeResult = {
         id: probeId,
+        mode:
+          probeId === API_VERIFICATION_PROBE_IDS.Models
+            ? undefined
+            : verificationMode,
         status: API_VERIFICATION_PROBE_STATUSES.Fail,
         latencyMs: 0,
         summary: t("verifyDialog.errors.unexpected"),
@@ -532,6 +548,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     setAccountRuntimeKeys([])
     setSelectedRuntimeKeyId("")
     setModelId(trimmedModelId)
+    setVerificationMode(API_VERIFICATION_MODES.Streaming)
     applyPersistedSummary(null)
 
     const providerType = trimmedModelId
@@ -623,7 +640,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
               {t("verifyDialog.meta.runtimeKey")}
@@ -708,6 +725,12 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
               placeholder={t("verifyDialog.meta.apiTypePlaceholder")}
             />
           </div>
+
+          <VerificationModeSelect
+            value={verificationMode}
+            onChange={setVerificationMode}
+            disabled={!canClose}
+          />
 
           <div className="space-y-1.5">
             <div className="dark:text-dark-text-tertiary text-xs text-gray-500">

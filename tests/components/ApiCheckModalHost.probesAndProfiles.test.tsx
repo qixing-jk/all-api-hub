@@ -9,7 +9,6 @@ import {
   within,
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import toast from "react-hot-toast/headless"
 import { describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -23,6 +22,7 @@ import {
   getWebAiApiCheckProbeTestId,
   WEB_AI_API_CHECK_TEST_IDS,
 } from "~/entrypoints/content/webAiApiCheck/testIds"
+import toast from "~/lib/notify/content"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -42,6 +42,7 @@ import {
 } from "~/services/verification/webAiApiCheck/messaging"
 import type { ApiCheckRunProbeResponse } from "~/services/verification/webAiApiCheck/types"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { testI18n } from "~~/tests/test-utils/i18n"
 
 import {
   completeProductAnalyticsActionMock,
@@ -693,7 +694,7 @@ describe("ApiCheckModalHost", () => {
     )
   })
 
-  it("stops the running API probe suite, cancels the active background run, and keeps queued probes idle", async () => {
+  it("retranslates stopping and stopped API probes without replaying queued probes", async () => {
     const user = userEvent.setup()
     const firstProbeDeferred = createDeferred<ApiCheckRunProbeResponse>()
     const runProbeMessages: Array<Record<string, unknown>> = []
@@ -756,15 +757,49 @@ describe("ApiCheckModalHost", () => {
       WebAiApiCheckMessageTypes.CancelRunProbe,
       { runId: activeRunId },
     )
-    firstProbeDeferred.resolve({
-      success: true,
-      result: {
-        id: "text-generation",
-        status: "fail",
-        latencyMs: 0,
-        summary: "Cancelled by user",
-      },
-    })
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "webAiApiCheck",
+      (await import("~/locales/zh-CN/webAiApiCheck.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(
+        screen.getByText(
+          testI18n.t("webAiApiCheck:modal.messages.stoppingTest"),
+        ),
+      ).toBeVisible()
+      await act(async () => {
+        firstProbeDeferred.resolve({
+          success: true,
+          result: {
+            id: "text-generation",
+            status: "fail",
+            latencyMs: 0,
+            summary: "Cancelled by user",
+          },
+        })
+      })
+      expect(
+        await screen.findByText(
+          testI18n.t("webAiApiCheck:modal.messages.testStopped"),
+        ),
+      ).toBeVisible()
+      expect(runProbeMessages).toHaveLength(2)
+      expect(
+        getApiCheckMessageCalls(WebAiApiCheckMessageTypes.CancelRunProbe),
+      ).toHaveLength(1)
+      expect(
+        screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
+      ).toHaveTextContent("gpt-test-model")
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "webAiApiCheck")
+    }
 
     expect(
       await screen.findByText("webAiApiCheck:modal.messages.testStopped"),
@@ -1189,6 +1224,7 @@ describe("ApiCheckModalHost", () => {
             success: true,
             result: {
               id: message.probeId,
+              mode: message.mode,
               status: "pass",
               latencyMs: 12,
               summary: "Text generation OK",
@@ -1229,6 +1265,16 @@ describe("ApiCheckModalHost", () => {
       getWebAiApiCheckProbeTestId("text-generation"),
     )
     await user.click(
+      screen.getByRole("combobox", {
+        name: "aiApiVerification:verifyDialog.meta.mode",
+      }),
+    )
+    await user.click(
+      screen.getByRole("option", {
+        name: "aiApiVerification:verifyDialog.modes.nonStreaming",
+      }),
+    )
+    await user.click(
       within(probeCard).getByRole("button", {
         name: "webAiApiCheck:modal.actions.runOne",
       }),
@@ -1260,6 +1306,7 @@ describe("ApiCheckModalHost", () => {
           probes: [
             expect.objectContaining({
               id: "text-generation",
+              mode: "non-streaming",
               status: "pass",
               latencyMs: 12,
               summary: "Text generation OK",
@@ -2222,7 +2269,7 @@ describe("ApiCheckModalHost", () => {
     })
   })
 
-  it("falls back to the local probe error when background returns no result payload", async () => {
+  it("retranslates local probe failures without running verification again", async () => {
     const user = userEvent.setup()
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any) => {
@@ -2262,9 +2309,41 @@ describe("ApiCheckModalHost", () => {
         "webAiApiCheck:modal.errors.runProbeFailed",
       ),
     ).toBeInTheDocument()
+    await screen.findByRole("button", {
+      name: "webAiApiCheck:modal.actions.test",
+    })
+    const runCount = getApiCheckMessageCalls(
+      WebAiApiCheckMessageTypes.RunProbe,
+    ).length
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "webAiApiCheck",
+      (await import("~/locales/zh-CN/webAiApiCheck.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(
+        within(probeCard).getByText(
+          testI18n.t("webAiApiCheck:modal.errors.runProbeFailed"),
+        ),
+      ).toBeVisible()
+      expect(
+        getApiCheckMessageCalls(WebAiApiCheckMessageTypes.RunProbe),
+      ).toHaveLength(runCount)
+      expect(
+        screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
+      ).toHaveTextContent("gpt-test-model")
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "webAiApiCheck")
+    }
   })
 
-  it("shows validation error instead of fetching models without credentials", async () => {
+  it("retranslates missing credentials without fetching models", async () => {
     const user = userEvent.setup()
 
     await openModal()
@@ -2281,6 +2360,29 @@ describe("ApiCheckModalHost", () => {
     expect(
       getApiCheckMessageCalls(WebAiApiCheckMessageTypes.FetchModels),
     ).toHaveLength(0)
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "webAiApiCheck",
+      (await import("~/locales/zh-CN/webAiApiCheck.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(
+        screen.getByText(
+          testI18n.t("webAiApiCheck:modal.errors.missingBaseUrlOrKey"),
+        ),
+      ).toBeVisible()
+      expect(
+        getApiCheckMessageCalls(WebAiApiCheckMessageTypes.FetchModels),
+      ).toHaveLength(0)
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "webAiApiCheck")
+    }
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Skipped,
       expect.objectContaining({
@@ -2358,6 +2460,15 @@ describe("ApiCheckModalHost", () => {
     )
     await pasteIntoField(user, baseUrlInput, "https://proxy.example.com/api")
     await pasteIntoField(user, apiKeyInput, "sk-test-missing-model-fixture")
+    const modeSelect = screen.getByRole("combobox", {
+      name: "aiApiVerification:verifyDialog.meta.mode",
+    })
+    await user.click(modeSelect)
+    await user.click(
+      screen.getByRole("option", {
+        name: "aiApiVerification:verifyDialog.modes.nonStreaming",
+      }),
+    )
 
     const probeCard = await screen.findByTestId(
       getWebAiApiCheckProbeTestId("text-generation"),
@@ -2377,6 +2488,11 @@ describe("ApiCheckModalHost", () => {
     expect(
       getApiCheckMessageCalls(WebAiApiCheckMessageTypes.RunProbe),
     ).toHaveLength(0)
+    expect(
+      within(probeCard).getByText(
+        "aiApiVerification:verifyDialog.modes.nonStreaming",
+      ),
+    ).toBeVisible()
   })
 
   it("skips model-required probes during run-all until a model is selected", async () => {
@@ -2417,6 +2533,15 @@ describe("ApiCheckModalHost", () => {
       apiKeyInput,
       "sk-test-run-all-missing-model-fixture",
     )
+    const modeSelect = screen.getByRole("combobox", {
+      name: "aiApiVerification:verifyDialog.meta.mode",
+    })
+    await user.click(modeSelect)
+    await user.click(
+      screen.getByRole("option", {
+        name: "aiApiVerification:verifyDialog.modes.nonStreaming",
+      }),
+    )
     await user.click(
       await screen.findByText("webAiApiCheck:modal.actions.test"),
     )
@@ -2432,9 +2557,19 @@ describe("ApiCheckModalHost", () => {
           .length,
       ).toBeGreaterThanOrEqual(4)
     })
+    expect(
+      within(
+        screen.getByTestId(getWebAiApiCheckProbeTestId("text-generation")),
+      ).getByText("aiApiVerification:verifyDialog.modes.nonStreaming"),
+    ).toBeVisible()
+    expect(
+      within(
+        screen.getByTestId(getWebAiApiCheckProbeTestId("models")),
+      ).queryByText("aiApiVerification:verifyDialog.modes.nonStreaming"),
+    ).not.toBeInTheDocument()
   }, 30_000)
 
-  it("falls back to local fetch-models error when background returns no message", async () => {
+  it("retranslates local model discovery errors without fetching or clearing credentials", async () => {
     const user = userEvent.setup()
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any) => {
@@ -2460,6 +2595,34 @@ describe("ApiCheckModalHost", () => {
     expect(
       await screen.findByText("webAiApiCheck:modal.errors.fetchModelsFailed"),
     ).toBeInTheDocument()
+    const fetchCount = getApiCheckMessageCalls(
+      WebAiApiCheckMessageTypes.FetchModels,
+    ).length
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "webAiApiCheck",
+      (await import("~/locales/zh-CN/webAiApiCheck.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(
+        screen.getByText(
+          testI18n.t("webAiApiCheck:modal.errors.fetchModelsFailed"),
+        ),
+      ).toBeVisible()
+      expect(
+        getApiCheckMessageCalls(WebAiApiCheckMessageTypes.FetchModels),
+      ).toHaveLength(fetchCount)
+      expect(baseUrlInput).toHaveValue("https://proxy.example.com/api")
+      expect(apiKeyInput).toHaveValue("sk-test-secret-fixture")
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "webAiApiCheck")
+    }
   })
 
   it("shows a local fetch-models error when the background request rejects", async () => {

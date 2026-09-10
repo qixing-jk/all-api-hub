@@ -245,7 +245,7 @@ const createValueColumn = (
     defaultDirection: MANAGED_CHANNELS_SORT_DIRECTIONS.Ascending,
     missing: MANAGED_CHANNELS_SORT_MISSING_PLACEMENTS.Last,
   },
-  extension: { kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.LegacyCommon },
+  extension: { kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.Common },
   ...options,
 })
 
@@ -256,7 +256,7 @@ const selectionColumn = {
   canHide: false,
   defaultVisible: true,
   visible: true,
-  extension: { kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.LegacyCommon },
+  extension: { kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.Common },
 } as const satisfies ManagedChannelsColumn
 
 const createActionsColumn = (t: TFunction) =>
@@ -268,7 +268,7 @@ const createActionsColumn = (t: TFunction) =>
     defaultVisible: true,
     visible: true,
     size: 60,
-    extension: { kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.LegacyCommon },
+    extension: { kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.Common },
   }) as const satisfies ManagedChannelsColumn
 
 const createChannelColumn = (
@@ -289,7 +289,7 @@ const createChannelColumn = (
     missing: MANAGED_CHANNELS_SORT_MISSING_PLACEMENTS.Last,
   },
   size,
-  extension: { kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.LegacyCommon },
+  extension: { kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.Common },
 })
 
 type ColumnBuilderOptions = {
@@ -429,7 +429,7 @@ const createCanonicalColumns = ({
       },
       size: 40,
       extension: {
-        kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.LegacyCommon,
+        kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.Common,
       },
     },
     createChannelColumn(t, MANAGED_CHANNELS_COLUMN_IDS.Name, 300),
@@ -510,7 +510,7 @@ export const createManagedResourceColumns = (
     case NATIVE_TABLE_COLUMN_LAYOUTS.Sub2Api:
       return createSub2ApiColumns(options)
     default:
-      // Canonical compatibility registrations get neutral columns only.
+      // Providers using canonical fields share the neutral column layout.
       return createCanonicalColumns(options)
   }
 }

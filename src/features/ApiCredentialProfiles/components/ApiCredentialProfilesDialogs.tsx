@@ -6,7 +6,7 @@ import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
 import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { KelivoExportDialog } from "~/components/KelivoExportDialog"
-import { DestructiveConfirmDialog } from "~/components/ui"
+import { ConfirmDialog } from "~/components/ui"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -162,7 +162,8 @@ export function ApiCredentialProfilesDialogs({
         />
       ) : null}
 
-      <DestructiveConfirmDialog
+      <ConfirmDialog
+        intent="destructive"
         isOpen={Boolean(controller.deletingProfile)}
         onClose={() =>
           controller.isDeleting ? null : controller.closeDeleteDialog()

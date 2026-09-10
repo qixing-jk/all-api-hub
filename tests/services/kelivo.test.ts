@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import toast from "~/lib/notify"
 import {
   buildKelivoProviderShareCode,
   copyKelivoProviderShareCode,
@@ -11,7 +11,7 @@ import {
 } from "~/services/integrations/kelivo"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     error: vi.fn(),
     success: vi.fn(),

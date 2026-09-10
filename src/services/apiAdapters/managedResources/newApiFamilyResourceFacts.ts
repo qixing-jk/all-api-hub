@@ -8,9 +8,9 @@ import {
   type ResourceSecretState,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { parseNewApiResourceList } from "~/services/apiAdapters/managedResources/newApiResourceUtils"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
-import type { ManagedSiteChannel } from "~/types/managedSite"
-import { CHANNEL_STATUS } from "~/types/newApi"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
+
+import type { NewApiFamilyChannelFields } from "./newApiFamilyChannelFields"
 
 type NewApiFamilyResourceFieldIds = {
   readonly Id: string
@@ -26,21 +26,28 @@ type NewApiFamilyResourceFieldIds = {
   readonly Weight: string
 }
 
+type NativeChannelStatusCodes = {
+  readonly Enable: number
+  readonly ManuallyDisabled: number
+  readonly AutoDisabled: number
+}
+
 const statusToDisplay = (
-  status: ManagedSiteChannel["status"],
+  status: NewApiFamilyChannelFields["status"],
+  codes: NativeChannelStatusCodes,
 ): ResourceDisplayFacts["status"] => {
-  if (status === CHANNEL_STATUS.Enable) return MANAGED_RESOURCE_STATUSES.Enabled
-  if (status === CHANNEL_STATUS.ManuallyDisabled) {
+  if (status === codes.Enable) return MANAGED_RESOURCE_STATUSES.Enabled
+  if (status === codes.ManuallyDisabled) {
     return MANAGED_RESOURCE_STATUSES.ManuallyDisabled
   }
-  if (status === CHANNEL_STATUS.AutoDisabled) {
+  if (status === codes.AutoDisabled) {
     return MANAGED_RESOURCE_STATUSES.AutoDisabled
   }
   return MANAGED_RESOURCE_STATUSES.Unknown
 }
 
 const secretState = (
-  key: ManagedSiteChannel["key"],
+  key: NewApiFamilyChannelFields["key"],
   emptyState: ResourceSecretState,
 ) => {
   if (hasUsableManagedSiteChannelKey(key)) {
@@ -49,13 +56,14 @@ const secretState = (
   return key?.trim() ? MANAGED_RESOURCE_SECRET_STATES.Masked : emptyState
 }
 
-/** Builds provider-owned facts and search values for New API-shaped channels. */
+/** Builds display facts from the native fields shared by these provider editors. */
 export function createNewApiFamilyResourceFacts(policy: {
   fields: NewApiFamilyResourceFieldIds
   typeNames: Readonly<Record<number, string>>
+  statusCodes: NativeChannelStatusCodes
   emptyInventorySecretState: ResourceSecretState
 }) {
-  const getSearchData = (channel: ManagedSiteChannel) => {
+  const getSearchData = (channel: NewApiFamilyChannelFields) => {
     const models = parseNewApiResourceList(channel.models)
     const groups = parseNewApiResourceList(channel.group)
     const rawType = String(channel.type)
@@ -77,13 +85,13 @@ export function createNewApiFamilyResourceFacts(policy: {
   }
 
   const toFacts = (
-    channel: ManagedSiteChannel,
+    channel: NewApiFamilyChannelFields,
     ref: ManagedResourceRef,
     options: { inventory: boolean },
   ): ResourceDisplayFacts => {
     const { models, groups, searchValues } = getSearchData(channel)
     const rawType = String(channel.type)
-    const status = statusToDisplay(channel.status)
+    const status = statusToDisplay(channel.status, policy.statusCodes)
     const emptySecretState = options.inventory
       ? policy.emptyInventorySecretState
       : MANAGED_RESOURCE_SECRET_STATES.Unavailable
@@ -154,7 +162,6 @@ export function createNewApiFamilyResourceFacts(policy: {
         canUpdate: true,
         canDelete: true,
         channel: {
-          channelId: channel.id,
           channelType: channel.type,
           canSyncModels: true,
           canOpenModelSync: true,

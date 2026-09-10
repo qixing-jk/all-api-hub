@@ -1,21 +1,21 @@
-import { DEFAULT_CHANNEL_FIELDS } from "~/constants/newApi"
+import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
 import { SITE_TYPES } from "~/constants/siteType"
+import { VeloeraChannelStatus } from "~/constants/veloera"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
   isManagedResourceRefFor,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
+  isManagedSiteMigrationSourceType,
+  resolveManagedSiteMigrationType,
+} from "~/services/apiAdapters/managedResources/migrationTypeRoutes"
+import {
   parseNewApiResourceList,
   throwIfNewApiResourceOperationAborted,
 } from "~/services/apiAdapters/managedResources/newApiResourceUtils"
 import { openVeloeraNativeResourceOperations } from "~/services/apiAdapters/managedResources/veloera"
-import {
-  mapChannelTypeToVeloeraChannelTypeStrict,
-  mapVeloeraChannelTypeToChannelTypeStrict,
-} from "~/services/apiAdapters/managedResources/veloeraChannelType"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
-import type { ChannelFormData } from "~/types/managedSite"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"
 import {
   MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES,
@@ -23,8 +23,8 @@ import {
   type ManagedSiteMigrationSelection,
   type ManagedSiteMigrationSource,
 } from "~/types/managedSiteMigrationCapability"
-import { CHANNEL_STATUS } from "~/types/newApi"
-import type { VeloeraManagedSiteChannel } from "~/types/veloera"
+import type { VeloeraChannel } from "~/types/veloera"
+import { isRecord } from "~/utils/core/object"
 
 const blockers = MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES
 const failures = MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES
@@ -85,7 +85,7 @@ const createSelectionValidationContext = async (
 }
 
 const toSource = (
-  channel: VeloeraManagedSiteChannel,
+  channel: VeloeraChannel,
   resourceType: ManagedSiteMigrationSource["resourceType"],
 ): ManagedSiteMigrationSource => ({
   sourceSiteType: SITE_TYPES.VELOERA,
@@ -96,9 +96,9 @@ const toSource = (
   priority: channel.priority ?? DEFAULT_CHANNEL_FIELDS.priority,
   weight: channel.weight ?? DEFAULT_CHANNEL_FIELDS.weight,
   status:
-    channel.status === CHANNEL_STATUS.Enable
+    channel.status === VeloeraChannelStatus.Enable
       ? "enabled"
-      : channel.status === CHANNEL_STATUS.ManuallyDisabled
+      : channel.status === VeloeraChannelStatus.ManuallyDisabled
         ? "disabled"
         : "other",
   // Veloera carries provider-owned fields that the canonical migration draft
@@ -120,7 +120,9 @@ const toSource = (
       channel.model_prefix,
       channel.system_prompt,
     ].some(hasMeaningfulAdvancedValue),
-    hasMultiKeyState: channel.channel_info?.is_multi_key === true,
+    hasMultiKeyState:
+      isRecord(channel.channel_info) &&
+      channel.channel_info.is_multi_key === true,
   },
 })
 
@@ -137,17 +139,18 @@ export const veloeraManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
             reasonCode: blockers.SOURCE_KEY_RESOLUTION_FAILED,
           }
         }
-        const type = mapVeloeraChannelTypeToChannelTypeStrict(
-          resolved.channel.type,
+        const resourceType = Number(resolved.channel.type)
+        return !isManagedSiteMigrationSourceType(
+          SITE_TYPES.VELOERA,
+          resourceType,
         )
-        return type.status === "unsupported"
           ? {
               status: "blocked",
               reasonCode: blockers.SOURCE_TYPE_UNSUPPORTED,
             }
           : {
               status: "ready",
-              source: toSource(resolved.channel, type.value),
+              source: toSource(resolved.channel, resourceType),
             }
       },
       resolveCredential: async (selection, options) => {
@@ -184,9 +187,7 @@ export const veloeraManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
     },
     target: {
       prepare: async (source) => {
-        const type = mapChannelTypeToVeloeraChannelTypeStrict(
-          source.resourceType,
-        )
+        const type = resolveManagedSiteMigrationType(source, SITE_TYPES.VELOERA)
         if (type.status === "unsupported") {
           throw new Error(
             "Veloera does not support this migration channel type",
@@ -204,13 +205,10 @@ export const veloeraManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
                 : [...DEFAULT_CHANNEL_FIELDS.groups],
             priority: source.priority,
             weight: source.weight,
-            status:
-              source.status === "enabled"
-                ? CHANNEL_STATUS.Enable
-                : CHANNEL_STATUS.ManuallyDisabled,
+            enabled: source.status === "enabled",
           },
           adjustments: {
-            remappedType: type.value !== source.resourceType,
+            remappedType: type.remappedType,
             normalizedBaseUrl: false,
             forcedDefaultGroup: source.groups.length === 0,
             ignoredPriority: false,
@@ -221,7 +219,7 @@ export const veloeraManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
       },
       create: async (command, options) => {
         const operations = await openVeloeraNativeResourceOperations()
-        const draft: ChannelFormData = {
+        const commandFields = {
           name: command.projection.name,
           type: command.projection.type,
           key: command.credential,
@@ -230,9 +228,11 @@ export const veloeraManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
           groups: [...command.projection.groups],
           priority: command.projection.priority,
           weight: command.projection.weight,
-          status: command.projection.status,
+          status: command.projection.enabled
+            ? VeloeraChannelStatus.Enable
+            : VeloeraChannelStatus.ManuallyDisabled,
         }
-        const result = await operations.create(draft, options)
+        const result = await operations.create(commandFields, options)
         switch (result.outcome) {
           case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
             return { status: "created" }

@@ -1,4 +1,5 @@
 import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
+import { buildDoneHubPricingPlan } from "~/services/apiService/oneHub/pricingPlan"
 import type {
   OneHubModelPricing,
   OneHubUserGroupMap,
@@ -28,6 +29,7 @@ const isFiniteNonnegativeRatio = (value: number | undefined): value is number =>
 export function transformModelPricing(
   modelPricing: OneHubModelPricing,
   userGroupMap: OneHubUserGroupMap = {},
+  isDoneHub = false,
 ): PricingResponse {
   const data: ModelPricing[] = Object.entries(modelPricing).map(
     ([modelName, model]) => {
@@ -56,9 +58,12 @@ export function transformModelPricing(
         model.price.type !== "tokens" ||
         (isFiniteNonnegativeRatio(model.price.input) &&
           isFiniteNonnegativeRatio(model.price.output) &&
-          (model.price.input > 0 || model.price.output === 0))
+          (isDoneHub || model.price.input > 0 || model.price.output === 0))
 
       return {
+        ...(isDoneHub
+          ? { pricingPlan: buildDoneHubPricingPlan(model.price) }
+          : {}),
         model_name: modelName,
         ...(vendorEvidence === undefined ? {} : { vendorEvidence }),
         quota_type: model.price.type === "tokens" ? 0 : 1,

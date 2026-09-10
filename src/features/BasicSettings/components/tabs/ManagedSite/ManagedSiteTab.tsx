@@ -13,7 +13,7 @@ import {
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { canResolveAccountRuntimeKeySecret } from "~/services/accounts/keyProductCapabilities"
-import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
+import { hasValidManagedSiteConfig } from "~/services/managedSites/runtimeConfig"
 import {
   getManagedSiteUnsupportedModelSyncMessage,
   supportsManagedSiteModelSync,

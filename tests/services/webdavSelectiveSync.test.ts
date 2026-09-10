@@ -1487,6 +1487,8 @@ describe("WebDAV preference convergence", () => {
 
       expect(storageSetSpy).toHaveBeenCalledTimes(1)
       expect(storedAfterImport.tempWindowFallback).toEqual({
+        windowWidth: 600,
+        windowHeight: 720,
         enabled: false,
         automaticFeatureBypass: {
           account_refresh: false,

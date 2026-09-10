@@ -6,13 +6,12 @@ import {
   useRef,
   useState,
 } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { useAccountData } from "~/hooks/useAccountData"
+import toast from "~/lib/notify"
 import {
   buildDisplayAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
@@ -25,10 +24,12 @@ import {
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { formatOptionalSkPrefixSiteTokenAuthKey } from "~/services/accountTokens/apiTokenKey"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { subscribeToApiCredentialProfilesChanges } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { createManagedSiteOperationContext } from "~/services/managedSites/operationContext"
+import { getManagedSiteRuntimeConfigFingerprint } from "~/services/managedSites/runtimeConfig"
 import {
   getManagedSiteTokenChannelStatus,
   resolveManagedSiteTokenChannelStatusWithVerifiedKey,
@@ -228,12 +229,12 @@ type ManagedSiteTokenChannelStatusResult = Awaited<
 >
 
 interface RefreshManagedSiteTokenStatusOptions {
-  resolvedChannelKeysById?: Record<number, string>
+  resolvedChannelKeysByResourceKey?: Record<string, string>
   protectionBypassExecution?: ProtectionBypassExecution
 }
 
 interface ConfirmManagedSiteTokenStatusWithChannelKeyOptions {
-  channelId: number
+  resourceRef: ManagedResourceRef
   channelKey: string
 }
 
@@ -241,7 +242,7 @@ const toDisplayManagedSiteTokenStatusResult = (
   result: ManagedSiteTokenChannelStatusResult,
 ): ManagedSiteTokenChannelStatusResult => {
   const displayResult = { ...result }
-  delete displayResult.resolvedChannelKeysById
+  delete displayResult.resolvedChannelKeysByResourceKey
   return displayResult
 }
 
@@ -274,17 +275,6 @@ const normalizeOrigin = (baseUrl: string) => {
   return normalizeUrlForOriginKey(baseUrl, { stripTrailingSlashes: false })
 }
 
-const hashStringForCache = (value: string) => {
-  let hash = 2166136261
-
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index)
-    hash = Math.imul(hash, 16777619)
-  }
-
-  return (hash >>> 0).toString(16)
-}
-
 /**
  * Manages key management page state: selection, loading, filtering, and CRUD handlers.
  * @param routeParams Optional route params containing preselected accountId.
@@ -294,24 +284,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   const isRouteControlled = routeParams !== undefined
   const { t } = useTranslation(["keyManagement", "messages"])
   const { enabledDisplayData } = useAccountData()
-  const {
-    managedSiteType,
-    newApiBaseUrl,
-    newApiAdminToken,
-    newApiUserId,
-    newApiUsername,
-    newApiPassword,
-    newApiTotpSecret,
-    doneHubBaseUrl,
-    doneHubAdminToken,
-    doneHubUserId,
-    veloeraBaseUrl,
-    veloeraAdminToken,
-    veloeraUserId,
-    octopusBaseUrl,
-    octopusUsername,
-    octopusPassword,
-  } = useUserPreferencesContext()
+  const { managedSiteType, preferences } = useUserPreferencesContext()
   const [selectedAccount, setSelectedAccount] = useState<string>("")
   const [searchTerm, setSearchTerm] = useState("")
   const [allAccountsFilterAccountIds, setAllAccountsFilterAccountIds] =
@@ -354,12 +327,13 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     [],
   )
   const resolvedChannelKeysByIdentityKeyRef = useRef<
-    Record<string, Record<number, string>>
+    Record<string, Record<string, string>>
   >({})
   const [isManagedSiteStatusRefreshing, setIsManagedSiteStatusRefreshing] =
     useState(false)
 
   const loadFailedMessage = t("keyManagement:messages.loadFailed")
+  // Used only for a notification at request completion, never for stored UI state.
   const loadFailedMessageRef = useRef(loadFailedMessage)
   loadFailedMessageRef.current = loadFailedMessage
 
@@ -400,61 +374,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     [accountById],
   )
 
-  const managedSiteConfigFingerprint = useMemo(() => {
-    if (managedSiteType === SITE_TYPES.OCTOPUS) {
-      return [
-        managedSiteType,
-        (octopusBaseUrl ?? "").trim(),
-        (octopusUsername ?? "").trim(),
-        hashStringForCache((octopusPassword ?? "").trim()),
-      ].join("|")
-    }
-
-    if (managedSiteType === SITE_TYPES.DONE_HUB) {
-      return [
-        managedSiteType,
-        (doneHubBaseUrl ?? "").trim(),
-        (doneHubUserId ?? "").trim(),
-        hashStringForCache((doneHubAdminToken ?? "").trim()),
-      ].join("|")
-    }
-
-    if (managedSiteType === SITE_TYPES.VELOERA) {
-      return [
-        managedSiteType,
-        (veloeraBaseUrl ?? "").trim(),
-        (veloeraUserId ?? "").trim(),
-        hashStringForCache((veloeraAdminToken ?? "").trim()),
-      ].join("|")
-    }
-
-    return [
-      managedSiteType,
-      (newApiBaseUrl ?? "").trim(),
-      (newApiUserId ?? "").trim(),
-      hashStringForCache((newApiAdminToken ?? "").trim()),
-      (newApiUsername ?? "").trim(),
-      hashStringForCache((newApiPassword ?? "").trim()),
-      hashStringForCache((newApiTotpSecret ?? "").trim()),
-    ].join("|")
-  }, [
-    doneHubAdminToken,
-    doneHubBaseUrl,
-    doneHubUserId,
-    managedSiteType,
-    newApiAdminToken,
-    newApiBaseUrl,
-    newApiPassword,
-    newApiTotpSecret,
-    newApiUserId,
-    newApiUsername,
-    octopusBaseUrl,
-    octopusPassword,
-    octopusUsername,
-    veloeraAdminToken,
-    veloeraBaseUrl,
-    veloeraUserId,
-  ])
+  const managedSiteConfigFingerprint = useMemo(
+    () => getManagedSiteRuntimeConfigFingerprint(preferences, managedSiteType),
+    [managedSiteType, preferences],
+  )
 
   const normalizedSearchTerm = searchTerm.trim().toLowerCase()
 
@@ -539,10 +462,13 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   )
 
   const mergeResolvedChannelKeysForIdentity = useCallback(
-    (identityKey: string, resolvedChannelKeysById?: Record<number, string>) => {
+    (
+      identityKey: string,
+      resolvedChannelKeysByResourceKey?: Record<string, string>,
+    ) => {
       if (
-        !resolvedChannelKeysById ||
-        Object.keys(resolvedChannelKeysById).length === 0
+        !resolvedChannelKeysByResourceKey ||
+        Object.keys(resolvedChannelKeysByResourceKey).length === 0
       ) {
         return
       }
@@ -551,7 +477,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         ...resolvedChannelKeysByIdentityKeyRef.current,
         [identityKey]: {
           ...(resolvedChannelKeysByIdentityKeyRef.current[identityKey] ?? {}),
-          ...resolvedChannelKeysById,
+          ...resolvedChannelKeysByResourceKey,
         },
       }
     },
@@ -563,7 +489,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       tokens: AccountToken[]
       targets?: ManagedSiteStatusCheckTargetInput[]
       force?: boolean
-      resolvedChannelKeysByIdentityKey?: Record<string, Record<number, string>>
+      resolvedChannelKeysByIdentityKey?: Record<string, Record<string, string>>
       protectionBypassExecution?: ProtectionBypassExecution
     }): Promise<Record<string, ManagedSiteTokenChannelStatusResult>> => {
       const resultsByIdentityKey: Record<
@@ -585,11 +511,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       const uniqueTargets = new Map<
         string,
         {
-          token: AccountToken
-          account: (typeof enabledDisplayData)[number]
+          runtimeKey: AccountRuntimeKey
           identityKey: string
           cacheKey: string
-          resolvedChannelKeysById?: Record<number, string>
+          resolvedChannelKeysByResourceKey?: Record<string, string>
         }
       >()
 
@@ -608,11 +533,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         }
 
         uniqueTargets.set(identityKey, {
-          token,
-          account,
+          runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
           identityKey,
           cacheKey,
-          resolvedChannelKeysById:
+          resolvedChannelKeysByResourceKey:
             resolvedChannelKeysByIdentityKey[identityKey] ??
             resolvedChannelKeysByIdentityKeyRef.current[identityKey],
         })
@@ -631,11 +555,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         }
 
         uniqueTargets.set(targetInput.identityKey, {
-          token: targetInput.token,
-          account: targetInput.account,
+          runtimeKey: targetInput.runtimeKey,
           identityKey: targetInput.identityKey,
           cacheKey,
-          resolvedChannelKeysById:
+          resolvedChannelKeysByResourceKey:
             resolvedChannelKeysByIdentityKey[targetInput.identityKey] ??
             resolvedChannelKeysByIdentityKeyRef.current[
               targetInput.identityKey
@@ -688,9 +611,9 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
             }
 
             const result = await getManagedSiteTokenChannelStatus({
-              account: target.account,
-              token: target.token,
-              resolvedChannelKeysById: target.resolvedChannelKeysById,
+              runtimeKey: target.runtimeKey,
+              resolvedChannelKeysByResourceKey:
+                target.resolvedChannelKeysByResourceKey,
               operationContext,
               protectionBypassExecution:
                 protectionBypassExecution ??
@@ -732,7 +655,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
               mergeResolvedChannelKeysForIdentity(
                 target.identityKey,
-                result.resolvedChannelKeysById,
+                result.resolvedChannelKeysByResourceKey,
               )
 
               return {
@@ -896,10 +819,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           void runManagedSiteStatusChecks({
             tokens: [],
             targets: [
-              buildServiceCredentialManagedSiteStatusTarget(
-                account,
-                runtimeKey,
-              ),
+              buildServiceCredentialManagedSiteStatusTarget(runtimeKey),
             ],
           })
           return KEY_MANAGEMENT_LOAD_STATUSES.Loaded
@@ -914,7 +834,6 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         if (!isLatestAccountRequest(accountId, requestEpoch)) return null
 
         if (!Array.isArray(tokens)) {
-          const errorMessage = loadFailedMessageRef.current
           const errorCategory = PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
           tokenLoadErrorCategoriesRef.current[accountId] = errorCategory
           setTokenInventories((prev) => ({
@@ -922,13 +841,13 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
             [accountId]: {
               status: KEY_MANAGEMENT_LOAD_STATUSES.Error,
               tokens: prev[accountId]?.tokens ?? [],
-              errorMessage,
+              errorMessage: undefined,
               errorCategory,
               errorKind: undefined,
             },
           }))
           if (toastOnError) {
-            toast.error(errorMessage)
+            toast.error(loadFailedMessageRef.current)
           }
           return KEY_MANAGEMENT_LOAD_STATUSES.Error
         }
@@ -955,8 +874,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         if (!isEpochActive(loadEpoch)) return null
         if (!isLatestAccountRequest(accountId, requestEpoch)) return null
 
-        const errorMessage =
-          getErrorMessage(error) || loadFailedMessageRef.current
+        const errorMessage = getErrorMessage(error) || undefined
         const errorCategory =
           resolveProductAnalyticsErrorCategoryFromError(error)
         tokenLoadErrorCategoriesRef.current[accountId] = errorCategory
@@ -976,6 +894,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
               ...credentialState,
               status: KEY_MANAGEMENT_LOAD_STATUSES.Error,
               errorMessage,
+              errorKind: undefined,
               isRotating: false,
             },
           }
@@ -991,7 +910,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           },
         }))
         if (toastOnError) {
-          toast.error(errorMessage)
+          toast.error(errorMessage || loadFailedMessageRef.current)
         }
         return KEY_MANAGEMENT_LOAD_STATUSES.Error
       }
@@ -1606,11 +1525,22 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
     const serviceCredential = serviceCredentials[selectedAccount]
     if (serviceCredential?.status === KEY_MANAGEMENT_LOAD_STATUSES.Error) {
-      return serviceCredential.errorMessage ?? loadFailedMessage
+      return (
+        serviceCredential.errorMessage ??
+        (serviceCredential.errorKind === "rotation"
+          ? t("keyManagement:messages.serviceCredentialRotateFailed")
+          : loadFailedMessage)
+      )
     }
 
     return null
-  }, [loadFailedMessage, selectedAccount, serviceCredentials, tokenInventories])
+  }, [
+    loadFailedMessage,
+    selectedAccount,
+    serviceCredentials,
+    tokenInventories,
+    t,
+  ])
 
   const currentAccountUnsupportedKeyManagement = useMemo(() => {
     if (
@@ -1739,11 +1669,12 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       const results = await runManagedSiteStatusChecks({
         tokens: [token],
         force: true,
-        resolvedChannelKeysByIdentityKey: options?.resolvedChannelKeysById
-          ? {
-              [identityKey]: options.resolvedChannelKeysById,
-            }
-          : undefined,
+        resolvedChannelKeysByIdentityKey:
+          options?.resolvedChannelKeysByResourceKey
+            ? {
+                [identityKey]: options.resolvedChannelKeysByResourceKey,
+              }
+            : undefined,
         protectionBypassExecution: options?.protectionBypassExecution,
       })
 
@@ -1810,7 +1741,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       const result = resolveManagedSiteTokenChannelStatusWithVerifiedKey({
         status,
         tokenKey: resolvedToken.key,
-        channelId: options.channelId,
+        resourceRef: options.resourceRef,
         channelKey: options.channelKey,
         siteType: managedSiteType,
       })
@@ -1818,7 +1749,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
       mergeResolvedChannelKeysForIdentity(
         identityKey,
-        result.resolvedChannelKeysById,
+        result.resolvedChannelKeysByResourceKey,
       )
 
       updateManagedSiteTokenStatuses((prev) => ({
@@ -1987,18 +1918,14 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       )
       void runManagedSiteStatusChecks({
         tokens: [],
-        targets: [
-          buildServiceCredentialManagedSiteStatusTarget(account, runtimeKey),
-        ],
+        targets: [buildServiceCredentialManagedSiteStatusTarget(runtimeKey)],
         force: true,
       })
       toast.success(t("keyManagement:messages.serviceCredentialRotated"))
     } catch (error) {
       if (!isRotateRequestCurrent()) return
 
-      const errorMessage =
-        getErrorMessage(error) ||
-        t("keyManagement:messages.serviceCredentialRotateFailed")
+      const errorMessage = getErrorMessage(error) || undefined
       setServiceCredentials((prev) => ({
         ...prev,
         [account.id]: {
@@ -2007,10 +1934,14 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           }),
           status: KEY_MANAGEMENT_LOAD_STATUSES.Error,
           errorMessage,
+          errorKind: "rotation",
           isRotating: false,
         },
       }))
-      toast.error(errorMessage)
+      toast.error(
+        errorMessage ||
+          t("keyManagement:messages.serviceCredentialRotateFailed"),
+      )
       logger.warn("Failed to rotate service credential", error)
     }
   }

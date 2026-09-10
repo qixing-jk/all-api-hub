@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -87,6 +88,188 @@ describe("AccountDialog warnings", () => {
     trackProductAnalyticsEventMock.mockReset()
     trackProductAnalyticsEventMock.mockResolvedValue(true)
     ;(browser.tabs as any).create = vi.fn()
+  })
+
+  it("keeps access-token recovery in the popup until the user continues in a persistent view", async () => {
+    const user = userEvent.setup()
+    const onContinue = vi.fn()
+
+    render(
+      <AutoDetectErrorAlert
+        error={{
+          type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+          message: "Complete security verification on the site",
+        }}
+        siteUrl="https://site.example.com"
+        siteType={SITE_TYPES.NEW_API}
+        manualAddGuideAnchor={ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.NewApi}
+        accessTokenContinuation={{
+          onContinue,
+          isPending: false,
+          sidePanelSupported: true,
+        }}
+      />,
+    )
+
+    expect(screen.getByText("accessTokenVerification.title")).toBeVisible()
+    expect(screen.getByText("accessTokenVerification.popupHint")).toBeVisible()
+    expect(
+      screen.queryByRole("button", {
+        name: "accessTokenVerification.openSecurity",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "actions.openManualAddGuide" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("apiCredentialFallback.title"),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "accessTokenVerification.continueInSidePanel",
+      }),
+    )
+
+    expect(onContinue).toHaveBeenCalledTimes(1)
+    expect(browser.tabs.create).not.toHaveBeenCalled()
+  })
+
+  it("opens the New API access-token location from a persistent view and explains token rotation", async () => {
+    const user = userEvent.setup()
+    render(
+      <AutoDetectErrorAlert
+        error={{
+          type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+          message: "Verify on the site",
+        }}
+        siteUrl="http://local.example.test/new-api"
+        siteType={SITE_TYPES.NEW_API}
+        manualAddGuideAnchor={ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.NewApi}
+      />,
+    )
+    expect(
+      screen.getByText("accessTokenVerification.generateStep"),
+    ).toBeVisible()
+    expect(screen.getByText("accessTokenVerification.pasteStep")).toBeVisible()
+    expect(
+      screen.getByText("accessTokenVerification.rotationWarning"),
+    ).toBeVisible()
+    await user.click(
+      screen.getByRole("button", {
+        name: "accessTokenVerification.openSecurity",
+      }),
+    )
+    expect(browser.tabs.create).toHaveBeenCalledWith({
+      url: "http://local.example.test/new-api/security#security-access",
+      active: true,
+    })
+    expect(
+      screen.getByRole("button", { name: "actions.openManualAddGuide" }),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("apiCredentialFallback.title"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("guides APIyi verification to System token in the profile and prepares manual entry", async () => {
+    const user = userEvent.setup()
+    const onPrepareAccessTokenInput = vi.fn()
+    render(
+      <AutoDetectErrorAlert
+        error={{
+          type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+          message: "Verify on the site",
+        }}
+        siteUrl="https://api.apiyi.com"
+        siteType={SITE_TYPES.APIYI}
+        onPrepareAccessTokenInput={onPrepareAccessTokenInput}
+      />,
+    )
+
+    expect(
+      screen.getByText("accessTokenVerification.apiyi.generateStep"),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("accessTokenVerification.rotationWarning"),
+    ).not.toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "accessTokenVerification.apiyi.openProfile",
+      }),
+    )
+
+    expect(onPrepareAccessTokenInput).toHaveBeenCalledTimes(1)
+    expect(browser.tabs.create).toHaveBeenCalledWith({
+      url: "https://api.apiyi.com/account/profile",
+      active: true,
+    })
+  })
+
+  it("gives the APIyi profile location when opening the page fails", async () => {
+    const user = userEvent.setup()
+    vi.mocked(browser.tabs.create).mockRejectedValueOnce(
+      new Error("Tab unavailable"),
+    )
+    render(
+      <AutoDetectErrorAlert
+        error={{
+          type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+          message: "Verify on the site",
+        }}
+        siteUrl="https://api.apiyi.com"
+        siteType={SITE_TYPES.APIYI}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "accessTokenVerification.apiyi.openProfile",
+      }),
+    )
+
+    expect(
+      await screen.findByText(
+        "accessTokenVerification.apiyi.openProfileFailed",
+      ),
+    ).toHaveAttribute("role", "alert")
+  })
+
+  it("prepares the token input even when opening the security page fails and allows retry", async () => {
+    const user = userEvent.setup()
+    const onPrepareAccessTokenInput = vi.fn()
+    vi.mocked(browser.tabs.create).mockRejectedValueOnce(
+      new Error("Tab unavailable"),
+    )
+    render(
+      <AutoDetectErrorAlert
+        error={{
+          type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+          message: "Verify on the site",
+        }}
+        siteUrl="https://site.example.com"
+        siteType={SITE_TYPES.NEW_API}
+        onPrepareAccessTokenInput={onPrepareAccessTokenInput}
+      />,
+    )
+    const openSecurity = screen.getByRole("button", {
+      name: "accessTokenVerification.openSecurity",
+    })
+
+    await user.click(openSecurity)
+
+    expect(
+      await screen.findByText("accessTokenVerification.openSecurityFailed"),
+    ).toHaveAttribute("role", "alert")
+    expect(onPrepareAccessTokenInput).toHaveBeenCalledTimes(1)
+    expect(onPrepareAccessTokenInput.mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(browser.tabs.create).mock.invocationCallOrder[0],
+    )
+    await user.click(openSecurity)
+    expect(onPrepareAccessTokenInput).toHaveBeenCalledTimes(2)
+    expect(
+      screen.queryByText("accessTokenVerification.openSecurityFailed"),
+    ).not.toBeInTheDocument()
   })
 
   it("shows only the message when no action or help recovery is available", () => {

@@ -56,7 +56,7 @@ import type { ApiToken, DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { showResultToast } from "~/utils/core/toastHelpers"
+import { showResultToast } from "~/utils/feedback/operationFeedback"
 
 const logger = createLogger("RuntimeKeyActionControls")
 
@@ -125,7 +125,7 @@ export function RuntimeKeyActionControls({
     cliProxyManagementKey,
   } = useUserPreferencesContext()
   const { markGatewayGuidanceOnboardingCompleted } = useFeatureGuidanceContext()
-  const { openWithAccount, openWithCredentials } = useChannelDialog()
+  const { openWithAccount } = useChannelDialog()
 
   const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)
   const [isCliProxyDialogOpen, setIsCliProxyDialogOpen] = useState(false)
@@ -281,33 +281,16 @@ export function RuntimeKeyActionControls({
     })
 
     try {
-      const result = serviceCredentialProfile
-        ? await openWithCredentials(
-            {
-              name: serviceCredentialProfile.name,
-              baseUrl: serviceCredentialProfile.baseUrl,
-              apiKey: serviceCredentialProfile.apiKey,
-            },
-            (channelResult) => {
-              showResultToast(channelResult)
-              if (channelResult?.success) {
-                markGatewayGuidanceComplete()
-              }
-            },
-            {
-              managedSiteStatus: undefined,
-            },
-          )
-        : await openWithAccount(
-            account,
-            accountRuntimeKeyToLegacyAccountToken(runtimeKey),
-            (channelResult) => {
-              showResultToast(channelResult)
-              if (channelResult?.success) {
-                markGatewayGuidanceComplete()
-              }
-            },
-          )
+      const result = await openWithAccount(
+        account,
+        runtimeKey,
+        (channelResult) => {
+          showResultToast(channelResult)
+          if (channelResult?.success) {
+            markGatewayGuidanceComplete()
+          }
+        },
+      )
 
       if (result.opened || result.deferred) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)

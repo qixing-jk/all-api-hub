@@ -1,7 +1,6 @@
-import {
-  fetchNewApiChannelKey,
-  NewApiChannelKeyRequirementError,
-} from "~/services/managedSites/providers/newApiSession"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { fetchNewApiResourceKeyWithSession } from "~/services/managedSites/providers/newApiChannelSecrets"
+import { NewApiChannelKeyRequirementError } from "~/services/managedSites/providers/newApiSession"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import {
   PROTECTION_BYPASS_SURFACES,
@@ -10,13 +9,13 @@ import {
 import type { NewApiConfig } from "~/types/newApiConfig"
 
 import {
-  getNewApiManagedVerificationErrorMessage,
+  getNewApiManagedVerificationFailure,
   isNewApiManagedVerificationWindowError,
 } from "./errorMessages"
 import type { OpenNewApiManagedVerificationParams } from "./useNewApiManagedVerification"
 
 interface LoadNewApiChannelKeyWithVerificationParams {
-  channelId: number
+  resourceRef: ManagedResourceRef
   command:
     | typeof PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys
     | typeof PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels
@@ -45,15 +44,11 @@ export async function loadNewApiChannelKeyWithVerification(
       params.command,
       PROTECTION_BYPASS_SURFACES.Options,
       async (protectionBypassExecution) =>
-        await fetchNewApiChannelKey({
-          baseUrl: params.config.baseUrl,
-          userId: params.config.userId,
-          channelId: params.channelId,
-          username: params.config.username,
-          password: params.config.password,
-          totpSecret: params.config.totpSecret,
-          protectionBypassExecution,
-        }),
+        await fetchNewApiResourceKeyWithSession(
+          params.config,
+          params.resourceRef,
+          { protectionBypassExecution },
+        ),
     )
 
     await Promise.resolve(params.setKey(key))
@@ -62,7 +57,7 @@ export async function loadNewApiChannelKeyWithVerification(
 
   const openVerification = async (
     request?: OpenNewApiManagedVerificationParams["initialSessionResult"],
-    initialFailureMessage?: string,
+    initialFailure?: OpenNewApiManagedVerificationParams["initialFailure"],
   ) => {
     await Promise.resolve(
       params.openVerification({
@@ -70,7 +65,7 @@ export async function loadNewApiChannelKeyWithVerification(
         label: params.label,
         config: params.config,
         initialSessionResult: request ?? undefined,
-        initialFailureMessage,
+        initialFailure,
         onVerified: async () => {
           await loadKey()
         },
@@ -90,7 +85,7 @@ export async function loadNewApiChannelKeyWithVerification(
     if (isNewApiManagedVerificationWindowError(error)) {
       await openVerification(
         undefined,
-        getNewApiManagedVerificationErrorMessage(error),
+        getNewApiManagedVerificationFailure(error),
       )
       return false
     }

@@ -9,7 +9,6 @@ import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDial
 import { DefaultTokenGroupSelectionDialog } from "~/features/TokenProvisioning/components/DefaultTokenGroupSelectionDialog"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import { useDefaultTokenQuickCreate } from "~/features/TokenProvisioning/hooks/useDefaultTokenQuickCreate"
-import { useLegacyApiTokenSecretResult } from "~/features/TokenProvisioning/hooks/useLegacyApiTokenSecretResult"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keyProductCapabilities"
 import type { ApiToken, DisplaySiteData } from "~/types"
@@ -48,7 +47,6 @@ export default function CopyKeyDialog({
     isLoading,
     error,
     postCreateError,
-    oneTimeToken,
     oneTimeSecret,
     copiedRuntimeKeyId,
     expandedRuntimeKeys,
@@ -58,7 +56,7 @@ export default function CopyKeyDialog({
     copyKey,
     refreshRuntimeKeysAfterCreate,
     toggleRuntimeKeyExpansion,
-    clearOneTimeToken,
+    clearOneTimeSecret,
   } = useCopyKeyDialog(isOpen, account)
   const defaultTokenQuickCreate = useDefaultTokenQuickCreate({
     isActive: isOpen,
@@ -81,7 +79,6 @@ export default function CopyKeyDialog({
           source: "CopyKeyDialog",
         })
       : undefined
-  const oneTimeSecretResult = useLegacyApiTokenSecretResult(oneTimeToken)
   const showCreateResponseOnlyWarning =
     account !== null &&
     !supportsRecoverableAccountRuntimeKeySecrets(account.siteType)
@@ -211,9 +208,9 @@ export default function CopyKeyDialog({
         onConfirm={defaultTokenQuickCreate.confirmGroup}
       />
       <OneTimeSecretDialog
-        isOpen={!!oneTimeToken}
-        result={oneTimeSecretResult}
-        onClose={clearOneTimeToken}
+        isOpen={!!oneTimeSecret}
+        result={oneTimeSecret}
+        onClose={clearOneTimeSecret}
         saveAction={oneTimeKeySaveAction}
       />
     </>

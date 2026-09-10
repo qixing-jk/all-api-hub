@@ -1,22 +1,32 @@
 import { useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
-import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
+import {
+  Button,
+  Card,
+  CardItem,
+  CardList,
+  Input,
+  WorkflowTransitionButton,
+} from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
+import { getSiteRouteConfigForKey, SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
+import toast from "~/lib/notify"
 import { validateSub2ApiManagedSiteConfig } from "~/services/managedSites/providers/sub2api"
+import { createTab } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
+import { joinUrl } from "~/utils/core/url"
+import { tryParseHttpUrl } from "~/utils/core/urlParsing"
 import {
-  createVersionedPreferenceSaveOptions,
   getPreferenceWriteFailureMessage,
   runPreferenceUpdateWithToast,
-} from "~/utils/core/toastHelpers"
+} from "~/utils/feedback/preferenceFeedback"
 
-/** Configures the default Admin API Key integration for Sub2API. */
+/** Configures Sub2API management and guides administrators to key setup. */
 export default function Sub2ApiSettings() {
   const { t } = useTranslation("settings")
   const {
@@ -44,6 +54,26 @@ export default function Sub2ApiSettings() {
     savedVersion: preferences.lastUpdated,
   })
   const [isValidating, setIsValidating] = useState(false)
+  const parsedBaseUrl = tryParseHttpUrl(localConfig.baseUrl)
+  const adminCredentialsPath = getSiteRouteConfigForKey(
+    SITE_TYPES.SUB2API,
+  ).adminCredentialsPath
+  const adminCredentialsUrl =
+    parsedBaseUrl && adminCredentialsPath
+      ? joinUrl(
+          `${parsedBaseUrl.origin}${parsedBaseUrl.pathname}`,
+          adminCredentialsPath,
+        )
+      : null
+
+  const handleOpenAdminCredentials = async () => {
+    if (!adminCredentialsUrl) return
+    try {
+      await createTab(adminCredentialsUrl, true)
+    } catch {
+      window.open(adminCredentialsUrl, "_blank", "noopener,noreferrer")
+    }
+  }
 
   const handleBaseUrlChange = async (value: string) => {
     const baseUrl = value.trim()
@@ -80,7 +110,7 @@ export default function Sub2ApiSettings() {
       await validateSub2ApiManagedSiteConfig({ baseUrl, adminToken })
       const saveResult = await updateSub2ApiManagedSiteConfig(
         { baseUrl, adminToken },
-        createVersionedPreferenceSaveOptions(expectedLastUpdated),
+        { expectedLastUpdated },
       )
       if (saveResult.ok) {
         toast.success(t("sub2apiManagedSite.validation.success"))
@@ -131,6 +161,25 @@ export default function Sub2ApiSettings() {
                 onKeyDown={blurInputOnEnter}
                 placeholder={t("sub2apiManagedSite.fields.baseUrlPlaceholder")}
               />
+            }
+          />
+          <CardItem
+            id={SETTINGS_ANCHORS.SUB2API_ADMIN_CREDENTIALS_LINK}
+            title={t("sub2apiManagedSite.adminCredentialsLink.title")}
+            description={
+              adminCredentialsUrl
+                ? t("sub2apiManagedSite.adminCredentialsLink.description")
+                : t("sub2apiManagedSite.adminCredentialsLink.missingBaseUrl")
+            }
+            rightContent={
+              <WorkflowTransitionButton
+                variant="link"
+                size="sm"
+                disabled={!adminCredentialsUrl}
+                onClick={handleOpenAdminCredentials}
+              >
+                {t("sub2apiManagedSite.adminCredentialsLink.open")}
+              </WorkflowTransitionButton>
             }
           />
           <CardItem

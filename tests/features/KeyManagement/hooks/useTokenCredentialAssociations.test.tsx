@@ -65,7 +65,7 @@ const nativeRow = {
   rowKey: "native-example",
   accountId: nativeRef.accountId,
   accountName: "Example account",
-  workspaceName: "Example workspace",
+  scopeName: "Example workspace",
   facts: { ref: nativeRef },
 } as NativeKeyManagementRow
 

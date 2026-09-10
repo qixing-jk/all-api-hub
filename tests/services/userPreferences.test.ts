@@ -126,6 +126,29 @@ describe("userPreferences", () => {
   })
 
   describe("temporary window fallback preferences", () => {
+    it("uses taller defaults for existing preferences and preserves custom dimensions", () => {
+      expect(normalizeTempWindowFallbackPreferences({})).toMatchObject({
+        windowWidth: 600,
+        windowHeight: 720,
+      })
+      expect(
+        normalizeTempWindowFallbackPreferences({
+          windowWidth: 800,
+          windowHeight: 1000,
+        }),
+      ).toMatchObject({ windowWidth: 800, windowHeight: 1000 })
+    })
+    it.each([null, "900", 0, -1, 319, 4097, 800.5, NaN, Infinity])(
+      "replaces invalid stored dimensions %s with defaults",
+      (value) => {
+        expect(
+          normalizeTempWindowFallbackPreferences({
+            windowWidth: value,
+            windowHeight: value,
+          }),
+        ).toMatchObject({ windowWidth: 600, windowHeight: 720 })
+      },
+    )
     it.each(Object.values(TEMP_CONTEXT_MODES))(
       "preserves stored concrete mode %s",
       (tempContextMode) => {

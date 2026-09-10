@@ -99,7 +99,7 @@ const keyAccessibleAccount = (id = "account-1") => ({
   authType: AuthTypeEnum.AccessToken,
 })
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     promise: toastPromiseMock,
   },

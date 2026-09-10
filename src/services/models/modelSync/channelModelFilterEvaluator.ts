@@ -1,11 +1,17 @@
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
-import { ChannelType } from "~/constants/newApi"
-import { SITE_TYPES } from "~/constants/siteType"
+import { DoneHubChannelType } from "~/constants/doneHub"
+import { ChannelType as NewApiChannelType } from "~/constants/newApi"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import { VeloeraChannelType } from "~/constants/veloera"
+import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import { isSafeChannelModelFilterRegex } from "~/services/managedSites/channelModelFilterRules"
-import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
+import {
+  assertManagedResourceRefForSite,
+  getManagedResourceRefKey,
+} from "~/services/managedSites/managedResourceIdentity"
 import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import {
   API_TYPES,
@@ -21,11 +27,12 @@ import {
   isProbeChannelModelFilterRule,
   type ChannelModelFilterRule,
 } from "~/types/channelModelFilters"
-import type { ManagedSiteChannel } from "~/types/managedSite"
+import type { ManagedModelChannel } from "~/types/managedResourceModels"
 import {
   createManagedUpstreamResourceRef,
   getManagedUpstreamResourceRefKey,
 } from "~/types/managedUpstreamResource"
+import { OctopusOutboundType } from "~/types/octopus"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("ManagedSiteModelSyncProbeFilters")
@@ -53,7 +60,8 @@ export class ProbeFilterUnavailableError extends Error {
  * Per-channel context required to run probe-backed model filters.
  */
 export interface ProbeFilterContext {
-  channel: ManagedSiteChannel
+  channel: Pick<ManagedModelChannel, "ref" | "type" | "baseUrl" | "credential">
+  matching?: Pick<ManagedResourceMatchingCapability, "fetchSecretKey">
   managedConfig: ManagedSiteRuntimeConfig
   cache: Map<string, boolean>
   resolvedKey?: string
@@ -67,53 +75,99 @@ interface ProbeExecutionInput {
   apiType: ApiVerificationApiType
 }
 
-const OPENAI_COMPATIBLE_NUMERIC_CHANNEL_TYPES = new Set<unknown>([
-  ChannelType.OpenAI,
-  ChannelType.Azure,
-  ChannelType.OpenAIMax,
-  ChannelType.OhMyGPT,
-  ChannelType.Custom,
-  ChannelType.AILS,
-  ChannelType.AIProxy,
-  ChannelType.API2GPT,
-  ChannelType.AIGC2D,
-  ChannelType.OpenRouter,
-  ChannelType.Moonshot,
-  ChannelType.SiliconFlow,
-  ChannelType.DeepSeek,
-  ChannelType.VolcEngine,
-  ChannelType.Xai,
-  ChannelType.Mistral,
-])
-
-const OPENAI_COMPATIBLE_STRING_CHANNEL_TYPES = new Set<unknown>([
-  AXON_HUB_CHANNEL_TYPE.OPENAI,
-  AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES,
-  AXON_HUB_CHANNEL_TYPE.GEMINI_OPENAI,
-  AXON_HUB_CHANNEL_TYPE.DEEPSEEK,
-  AXON_HUB_CHANNEL_TYPE.OPENROUTER,
-  AXON_HUB_CHANNEL_TYPE.XAI,
-  AXON_HUB_CHANNEL_TYPE.SILICONFLOW,
-  AXON_HUB_CHANNEL_TYPE.VOLCENGINE,
-  AXON_HUB_CHANNEL_TYPE.GITHUB_COPILOT,
-  AXON_HUB_CHANNEL_TYPE.NANOGPT,
-  CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-  CLAUDE_CODE_HUB_PROVIDER_TYPE.CODEX,
-])
-
-const ANTHROPIC_STRING_CHANNEL_TYPES = new Set<unknown>([
-  AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
-  AXON_HUB_CHANNEL_TYPE.ANTHROPIC_AWS,
-  AXON_HUB_CHANNEL_TYPE.ANTHROPIC_GCP,
-  AXON_HUB_CHANNEL_TYPE.DEEPSEEK_ANTHROPIC,
-  CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
-])
-
-const GOOGLE_STRING_CHANNEL_TYPES = new Set<unknown>([
-  AXON_HUB_CHANNEL_TYPE.GEMINI,
-  AXON_HUB_CHANNEL_TYPE.GEMINI_VERTEX,
-  CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI,
-])
+// Type ids come from each provider's pinned channel constants. Equal numbers
+// across New API, DoneHub and Octopus do not identify the same upstream protocol.
+const CHANNEL_VERIFICATION_PROTOCOLS: Partial<
+  Record<ManagedSiteType, Readonly<Record<string, ApiVerificationApiType>>>
+> = {
+  [SITE_TYPES.NEW_API]: {
+    [NewApiChannelType.OpenAI]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.Azure]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.OpenAIMax]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.OhMyGPT]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.Custom]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.AILS]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.AIProxy]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.API2GPT]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.AIGC2D]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.OpenRouter]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.Moonshot]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.SiliconFlow]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.DeepSeek]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.VolcEngine]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.Xai]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.Mistral]: API_TYPES.OPENAI_COMPATIBLE,
+    [NewApiChannelType.Anthropic]: API_TYPES.ANTHROPIC,
+    [NewApiChannelType.Gemini]: API_TYPES.GOOGLE,
+    [NewApiChannelType.VertexAi]: API_TYPES.GOOGLE,
+    [NewApiChannelType.PaLM]: API_TYPES.GOOGLE,
+  },
+  [SITE_TYPES.VELOERA]: {
+    [VeloeraChannelType.OpenAI]: API_TYPES.OPENAI_COMPATIBLE,
+    [VeloeraChannelType.Azure]: API_TYPES.OPENAI_COMPATIBLE,
+    [VeloeraChannelType.Custom]: API_TYPES.OPENAI_COMPATIBLE,
+    [VeloeraChannelType.OpenRouter]: API_TYPES.OPENAI_COMPATIBLE,
+    [VeloeraChannelType.Moonshot]: API_TYPES.OPENAI_COMPATIBLE,
+    [VeloeraChannelType.SiliconFlow]: API_TYPES.OPENAI_COMPATIBLE,
+    [VeloeraChannelType.DeepSeek]: API_TYPES.OPENAI_COMPATIBLE,
+    [VeloeraChannelType.VolcEngine]: API_TYPES.OPENAI_COMPATIBLE,
+    [VeloeraChannelType.Xai]: API_TYPES.OPENAI_COMPATIBLE,
+    [VeloeraChannelType.Mistral]: API_TYPES.OPENAI_COMPATIBLE,
+    [VeloeraChannelType.Anthropic]: API_TYPES.ANTHROPIC,
+    [VeloeraChannelType.Gemini]: API_TYPES.GOOGLE,
+    [VeloeraChannelType.VertexAi]: API_TYPES.GOOGLE,
+    [VeloeraChannelType.PaLM]: API_TYPES.GOOGLE,
+  },
+  [SITE_TYPES.DONE_HUB]: {
+    [DoneHubChannelType.OpenAI]: API_TYPES.OPENAI_COMPATIBLE,
+    [DoneHubChannelType.AzureOpenAI]: API_TYPES.OPENAI_COMPATIBLE,
+    [DoneHubChannelType.Custom]: API_TYPES.OPENAI_COMPATIBLE,
+    [DoneHubChannelType.OpenRouter]: API_TYPES.OPENAI_COMPATIBLE,
+    [DoneHubChannelType.Moonshot]: API_TYPES.OPENAI_COMPATIBLE,
+    [DoneHubChannelType.SiliconFlow]: API_TYPES.OPENAI_COMPATIBLE,
+    [DoneHubChannelType.DeepSeek]: API_TYPES.OPENAI_COMPATIBLE,
+    [DoneHubChannelType.XAI]: API_TYPES.OPENAI_COMPATIBLE,
+    [DoneHubChannelType.Mistral]: API_TYPES.OPENAI_COMPATIBLE,
+    [DoneHubChannelType.Anthropic]: API_TYPES.ANTHROPIC,
+    [DoneHubChannelType.Gemini]: API_TYPES.GOOGLE,
+    [DoneHubChannelType.VertexAI]: API_TYPES.GOOGLE,
+    [DoneHubChannelType.PaLM2]: API_TYPES.GOOGLE,
+  },
+  // https://github.com/bestruirui/octopus: native OutboundType distinguishes
+  // Chat Completions, Responses, Anthropic and Gemini; embeddings lack chat probes.
+  [SITE_TYPES.OCTOPUS]: {
+    [OctopusOutboundType.OpenAIChat]: API_TYPES.OPENAI_COMPATIBLE,
+    [OctopusOutboundType.OpenAIResponse]: API_TYPES.OPENAI,
+    [OctopusOutboundType.Anthropic]: API_TYPES.ANTHROPIC,
+    [OctopusOutboundType.Gemini]: API_TYPES.GOOGLE,
+    [OctopusOutboundType.Volcengine]: API_TYPES.OPENAI_COMPATIBLE,
+  },
+  [SITE_TYPES.AXON_HUB]: {
+    [AXON_HUB_CHANNEL_TYPE.OPENAI]: API_TYPES.OPENAI_COMPATIBLE,
+    [AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES]: API_TYPES.OPENAI,
+    [AXON_HUB_CHANNEL_TYPE.GEMINI_OPENAI]: API_TYPES.OPENAI_COMPATIBLE,
+    [AXON_HUB_CHANNEL_TYPE.DEEPSEEK]: API_TYPES.OPENAI_COMPATIBLE,
+    [AXON_HUB_CHANNEL_TYPE.OPENROUTER]: API_TYPES.OPENAI_COMPATIBLE,
+    [AXON_HUB_CHANNEL_TYPE.XAI]: API_TYPES.OPENAI_COMPATIBLE,
+    [AXON_HUB_CHANNEL_TYPE.SILICONFLOW]: API_TYPES.OPENAI_COMPATIBLE,
+    [AXON_HUB_CHANNEL_TYPE.VOLCENGINE]: API_TYPES.OPENAI_COMPATIBLE,
+    [AXON_HUB_CHANNEL_TYPE.GITHUB_COPILOT]: API_TYPES.OPENAI_COMPATIBLE,
+    [AXON_HUB_CHANNEL_TYPE.NANOGPT]: API_TYPES.OPENAI_COMPATIBLE,
+    [AXON_HUB_CHANNEL_TYPE.ANTHROPIC]: API_TYPES.ANTHROPIC,
+    [AXON_HUB_CHANNEL_TYPE.ANTHROPIC_AWS]: API_TYPES.ANTHROPIC,
+    [AXON_HUB_CHANNEL_TYPE.ANTHROPIC_GCP]: API_TYPES.ANTHROPIC,
+    [AXON_HUB_CHANNEL_TYPE.DEEPSEEK_ANTHROPIC]: API_TYPES.ANTHROPIC,
+    [AXON_HUB_CHANNEL_TYPE.GEMINI]: API_TYPES.GOOGLE,
+    [AXON_HUB_CHANNEL_TYPE.GEMINI_VERTEX]: API_TYPES.GOOGLE,
+  },
+  [SITE_TYPES.CLAUDE_CODE_HUB]: {
+    [CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE]:
+      API_TYPES.OPENAI_COMPATIBLE,
+    [CLAUDE_CODE_HUB_PROVIDER_TYPE.CODEX]: API_TYPES.OPENAI,
+    [CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE]: API_TYPES.ANTHROPIC,
+    [CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI]: API_TYPES.GOOGLE,
+  },
+}
 
 /**
  * Maps only channel types whose protocol is represented by API Verification.
@@ -121,60 +175,30 @@ const GOOGLE_STRING_CHANNEL_TYPES = new Set<unknown>([
  * unsupported until reusable verification probes exist for those surfaces.
  */
 export function resolveApiVerificationTypeForChannelType(
+  siteType: ManagedSiteType,
   channelType: unknown,
 ): ApiVerificationApiType | null {
-  const normalizedString =
-    typeof channelType === "string" ? channelType.trim() : ""
-  const numericType =
-    typeof channelType === "number"
-      ? channelType
-      : normalizedString && /^\d+$/.test(normalizedString)
-        ? Number(normalizedString)
-        : null
-
-  if (numericType === ChannelType.Anthropic) {
-    return API_TYPES.ANTHROPIC
-  }
-
-  if (
-    numericType === ChannelType.Gemini ||
-    numericType === ChannelType.VertexAi ||
-    numericType === ChannelType.PaLM
-  ) {
-    return API_TYPES.GOOGLE
-  }
-
-  if (OPENAI_COMPATIBLE_NUMERIC_CHANNEL_TYPES.has(numericType)) {
-    return API_TYPES.OPENAI_COMPATIBLE
-  }
-
-  if (ANTHROPIC_STRING_CHANNEL_TYPES.has(normalizedString)) {
-    return API_TYPES.ANTHROPIC
-  }
-
-  if (GOOGLE_STRING_CHANNEL_TYPES.has(normalizedString)) {
-    return API_TYPES.GOOGLE
-  }
-
-  if (OPENAI_COMPATIBLE_STRING_CHANNEL_TYPES.has(normalizedString)) {
-    return API_TYPES.OPENAI_COMPATIBLE
-  }
-
-  return null
+  const rawType =
+    typeof channelType === "number" || typeof channelType === "string"
+      ? String(channelType).trim()
+      : ""
+  const type = /^\d+$/.test(rawType) ? String(Number(rawType)) : rawType
+  const protocols = CHANNEL_VERIFICATION_PROTOCOLS[siteType]
+  return protocols && Object.hasOwn(protocols, type) ? protocols[type] : null
 }
 
 /**
  * Build an in-memory cache key without embedding raw channel keys.
  */
 function createCacheKey(params: {
-  channelId: number
+  resourceKey: string
   keyHash: string
   apiType: ApiVerificationApiType
   modelId: string
   probeId: ApiVerificationProbeId
 }) {
   return [
-    params.channelId,
+    params.resourceKey,
     params.keyHash,
     params.apiType,
     params.modelId,
@@ -212,18 +236,19 @@ function getRuntimeConfigSecrets(config: ManagedSiteRuntimeConfig): string[] {
  * Resolve the usable channel key from the channel row or provider capability.
  */
 async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
+  assertManagedResourceRefForSite(context.channel.ref, context.managedConfig)
   if (context.resolvedKey !== undefined) {
     return context.resolvedKey
   }
 
-  const directKey = context.channel.key?.trim() ?? ""
+  const directKey = context.channel.credential?.trim() ?? ""
   if (hasUsableManagedSiteChannelKey(directKey)) {
     context.resolvedKey = directKey
     return directKey
   }
 
-  const service = getManagedSiteServiceForType(context.managedConfig.siteType)
-  if (!service.fetchChannelSecretKey) {
+  const matching = context.matching
+  if (!matching?.fetchSecretKey) {
     throw new ProbeFilterUnavailableError(
       "provider-unsupported",
       "Probe filtering is unsupported because this managed-site provider cannot resolve hidden channel keys.",
@@ -232,14 +257,14 @@ async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
 
   try {
     const key = context.protectionBypassExecution
-      ? await service.fetchChannelSecretKey(
+      ? await matching.fetchSecretKey(
           context.managedConfig.config,
-          context.channel.id,
+          context.channel.ref,
           { protectionBypassExecution: context.protectionBypassExecution },
         )
-      : await service.fetchChannelSecretKey(
+      : await matching.fetchSecretKey(
           context.managedConfig.config,
-          context.channel.id,
+          context.channel.ref,
         )
     if (!hasUsableManagedSiteChannelKey(key)) {
       throw new Error("channel_key_unavailable")
@@ -252,7 +277,7 @@ async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
       directKey,
     ])
     logger.warn("Probe filter channel key resolution failed", {
-      channelId: context.channel.id,
+      resourceKey: getManagedResourceRefKey(context.channel.ref),
       reason: diagnostic,
     })
     throw new ProbeFilterUnavailableError(
@@ -268,7 +293,10 @@ async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
 async function getProbeExecutionInput(
   context: ProbeFilterContext,
 ): Promise<ProbeExecutionInput> {
-  const apiType = resolveApiVerificationTypeForChannelType(context.channel.type)
+  const apiType = resolveApiVerificationTypeForChannelType(
+    context.managedConfig.siteType,
+    context.channel.type,
+  )
   if (!apiType) {
     throw new ProbeFilterUnavailableError(
       "channel-type-unsupported",
@@ -276,7 +304,7 @@ async function getProbeExecutionInput(
     )
   }
 
-  const baseUrl = context.channel.base_url?.trim() ?? ""
+  const baseUrl = context.channel.baseUrl.trim()
   if (!baseUrl) {
     throw new ProbeFilterUnavailableError(
       "base-url-missing",
@@ -310,7 +338,7 @@ export async function matchesProbeFilterRule(
   const probeMatches = await Promise.all(
     rule.probeIds.map(async (probeId) => {
       const cacheKey = createCacheKey({
-        channelId: context.channel.id,
+        resourceKey: getManagedResourceRefKey(context.channel.ref),
         keyHash,
         apiType: executionInput.apiType,
         modelId,
@@ -336,7 +364,7 @@ export async function matchesProbeFilterRule(
           executionInput.apiKey,
         ])
         logger.warn("Probe filter execution failed", {
-          channelId: context.channel.id,
+          resourceKey: getManagedResourceRefKey(context.channel.ref),
           modelId,
           probeId,
           diagnostic,

@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -8,13 +7,13 @@ import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
+import toast from "~/lib/notify"
 import { signIn } from "~/services/apiService/axonHub"
 import { getErrorMessage } from "~/utils/core/error"
 import {
-  createVersionedPreferenceSaveOptions,
   getPreferenceWriteFailureMessage,
   runPreferenceUpdateWithToast,
-} from "~/utils/core/toastHelpers"
+} from "~/utils/feedback/preferenceFeedback"
 
 const isLikelyCorsSetupError = (message: string) =>
   /cors|failed to fetch|network|http 403|forbidden/i.test(message)
@@ -112,7 +111,7 @@ export default function AxonHubSettings() {
           email: trimmedEmail,
           password: localConfig.password,
         },
-        createVersionedPreferenceSaveOptions(expectedLastUpdated),
+        { expectedLastUpdated },
       )
 
       if (saveResult.ok) {

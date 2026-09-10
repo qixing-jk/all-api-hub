@@ -1,21 +1,20 @@
-import type { ManagedSiteType } from "~/constants/siteType"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
   type ManagedSiteChannelKeyMatchReasonValue,
   type ManagedSiteChannelMatchInspection,
   type ManagedSiteChannelModelsMatchReasonValue,
 } from "~/services/managedSites/channelMatch"
-import { getManagedSiteChannelNavigationId } from "~/services/managedSites/managedSiteChannelResourceIdentity"
+import { areManagedResourceRefsEqual } from "~/services/managedSites/managedResourceIdentity"
 import {
   getManagedSiteChannelKeyComparisonMode,
   inspectManagedSiteChannelKeyValueMatch,
 } from "~/services/managedSites/utils/channelMatching"
-import type { ManagedSiteChannel } from "~/types/managedSite"
+import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 
 export interface ManagedSiteAssessmentChannel {
-  id: number
+  ref: ManagedResourceRef
   name: string
-  resourceId?: string | number
 }
 
 export interface ManagedSiteVerifiedKeyAssessment<
@@ -44,52 +43,37 @@ export interface ManagedSiteVerifiedKeyAssessment<
 }
 
 export const toManagedSiteAssessmentChannel = (
-  channel: ManagedSiteChannel,
-  siteType?: ManagedSiteType,
+  channel: ManagedResourceMatchCandidate,
 ): ManagedSiteAssessmentChannel => ({
-  id: channel.id,
+  ref: channel.ref,
   name: channel.name,
-  ...(siteType
-    ? { resourceId: getManagedSiteChannelNavigationId(siteType, channel) }
-    : {}),
 })
 
 const toOptionalManagedSiteAssessmentChannel = (
-  channel: ManagedSiteChannel | null,
-  siteType?: ManagedSiteType,
-) => (channel ? toManagedSiteAssessmentChannel(channel, siteType) : undefined)
+  channel: ManagedResourceMatchCandidate | null,
+) => (channel ? toManagedSiteAssessmentChannel(channel) : undefined)
 
 export const toManagedSiteVerifiedKeyAssessment = (
   inspection: ManagedSiteChannelMatchInspection,
-  siteType?: ManagedSiteType,
 ): ManagedSiteVerifiedKeyAssessment<ManagedSiteAssessmentChannel> => ({
   searchBaseUrl: inspection.searchBaseUrl,
   searchCompleted: inspection.searchCompleted,
   url: {
     matched: inspection.url.matched,
     candidateCount: inspection.url.candidateCount,
-    channel: toOptionalManagedSiteAssessmentChannel(
-      inspection.url.channel,
-      siteType,
-    ),
+    channel: toOptionalManagedSiteAssessmentChannel(inspection.url.channel),
   },
   key: {
     comparable: inspection.key.comparable,
     matched: inspection.key.matched,
     reason: inspection.key.reason,
-    channel: toOptionalManagedSiteAssessmentChannel(
-      inspection.key.channel,
-      siteType,
-    ),
+    channel: toOptionalManagedSiteAssessmentChannel(inspection.key.channel),
   },
   models: {
     comparable: inspection.models.comparable,
     matched: inspection.models.matched,
     reason: inspection.models.reason,
-    channel: toOptionalManagedSiteAssessmentChannel(
-      inspection.models.channel,
-      siteType,
-    ),
+    channel: toOptionalManagedSiteAssessmentChannel(inspection.models.channel),
     similarityScore: inspection.models.similarityScore,
   },
 })
@@ -131,7 +115,10 @@ export function applyVerifiedManagedSiteChannelKey<
     assessment.models.matched &&
     assessment.models.reason ===
       MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT &&
-    assessment.models.channel?.id === params.candidate.id
+    areManagedResourceRefsEqual(
+      assessment.models.channel?.ref,
+      params.candidate.ref,
+    )
 
   return {
     assessment,

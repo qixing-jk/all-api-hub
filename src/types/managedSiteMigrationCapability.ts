@@ -1,4 +1,3 @@
-import type { ChannelType } from "~/constants/managedSite"
 import type { ManagedSiteType } from "~/constants/siteType"
 import type {
   ManagedResourceRef,
@@ -28,7 +27,8 @@ export type ManagedSiteMigrationLossSignals = {
 
 export type ManagedSiteMigrationSource = {
   sourceSiteType: ManagedSiteType
-  resourceType: ChannelType
+  /** Native type identifier, interpreted only together with sourceSiteType. */
+  resourceType: string | number
   baseUrl: string
   models: string[]
   groups: string[]
@@ -40,13 +40,14 @@ export type ManagedSiteMigrationSource = {
 
 export type ManagedSiteMigrationPreviewProjection = {
   name: string
-  type: ChannelType | string
+  /** Target-native type identifier; never a shared provider enum. */
+  type: string | number
   baseUrl: string
   models: string[]
   groups: string[]
   priority: number
   weight: number
-  status: 1 | 2
+  enabled: boolean
 }
 
 export type ManagedSiteMigrationTargetAdjustments = {

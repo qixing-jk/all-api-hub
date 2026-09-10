@@ -200,11 +200,10 @@ test("reconciles a persisted uncertain check-in on retry re-entry without a dupl
   // the retry alarm. Otherwise the alarm can fire, rewrite perAccount to
   // "skipped", and its RunCompleted refresh can beat the first GetStatus
   // response under CI worker contention, so the uncertain badge never paints.
+  const accountRow = page.getByRole("row").filter({ hasText: ACCOUNT_NAME })
+  await expect(accountRow).toBeVisible()
   await expect(
-    page.getByRole("table").getByText(ACCOUNT_NAME, { exact: true }),
-  ).toBeVisible()
-  await expect(
-    page.getByText("Pending confirmation", { exact: true }),
+    accountRow.getByText("Pending confirmation", { exact: true }),
   ).toBeVisible()
 
   // Scheduling the real MV3 alarm exercises a fresh scheduler boundary. The
@@ -243,6 +242,6 @@ test("reconciles a persisted uncertain check-in on retry re-entry without a dupl
   await page.reload()
   await waitForExtensionRoot(page)
   await expect(
-    page.getByRole("table").getByText("Skipped", { exact: true }),
+    accountRow.getByText("Not executed", { exact: true }),
   ).toBeVisible()
 })

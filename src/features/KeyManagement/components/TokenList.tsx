@@ -72,7 +72,6 @@ import {
   isKeyResourceBatchSelectable,
   isKeyResourceExportable,
 } from "../presentation/legacyKeyResourceCard"
-import { openRouterKeyResourceCardAdapter } from "../presentation/openRouterKeyResourceCard"
 import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
 import {
   KEY_MANAGEMENT_DISPLAY_ROW_KINDS,
@@ -1120,8 +1119,7 @@ export function TokenList(props: TokenListProps) {
   ) => (
     <AccountKeyResourceList
       rows={rows}
-      ariaLabel={t("keyManagement:openRouter.list.heading")}
-      cardAdapter={openRouterKeyResourceCardAdapter}
+      ariaLabel={t("keyManagement:native.heading")}
       onOpenDetail={onOpenNativeDetail}
       onEdit={onEditNativeKey ?? (() => undefined)}
       onDelete={onDeleteNativeKey ?? (() => undefined)}

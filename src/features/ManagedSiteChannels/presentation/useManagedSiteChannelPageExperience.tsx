@@ -52,7 +52,7 @@ type Options = {
   canImportChannel: boolean
 }
 
-/** Owns the shared gateway guidance shown by both legacy and native routes. */
+/** Owns the gateway guidance shared by managed-site channel pages. */
 export function useManagedSiteChannelPageExperience({
   siteType,
   baseUrl = "",

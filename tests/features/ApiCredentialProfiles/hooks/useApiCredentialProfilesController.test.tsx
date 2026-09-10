@@ -49,7 +49,7 @@ const {
   updateProfileMock: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     error: vi.fn(),
     promise: (...args: unknown[]) => toastPromiseMock(...args),

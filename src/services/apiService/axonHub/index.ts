@@ -1,7 +1,4 @@
-import {
-  AXON_HUB_CHANNEL_STATUS,
-  AXON_HUB_GRAPHQL_ERROR_CODES,
-} from "~/constants/axonHub"
+import { AXON_HUB_GRAPHQL_ERROR_CODES } from "~/constants/axonHub"
 import type {
   AxonHubChannel,
   AxonHubChannelMutationReceipt,
@@ -9,14 +6,10 @@ import type {
   AxonHubUpdateChannelInput,
 } from "~/types/axonHub"
 import type { AxonHubConfig } from "~/types/axonHubConfig"
-import {
-  CHANNEL_STATUS,
-  type ManagedSiteChannelListData,
-} from "~/types/managedSite"
 import { normalizeList } from "~/utils/core/string"
 
-// Channel list responses are cached briefly, so keep this selection limited to
-// non-secret summary fields and sanitize over-returned nodes before caching.
+// Keep channel-list reads limited to non-secret summary fields and sanitize
+// over-returned nodes before exposing native resource summaries.
 const AXON_HUB_CHANNEL_LIST_SELECTION = `
   id
   type
@@ -124,55 +117,6 @@ const AXON_HUB_CHANNEL_MUTATION_SELECTION = `
   status
 `
 
-// The legacy table still needs the primary API key and model mappings, but it
-// must not retain unrelated provider credentials or secret-bearing settings.
-const AXON_HUB_LEGACY_CHANNEL_SELECTION = `
-  __typename
-  id
-  createdAt
-  updatedAt
-  type
-  baseURL
-  name
-  status
-  credentials {
-    apiKey
-    apiKeys
-  }
-  supportedModels
-  manualModels
-  tags
-  defaultTestModel
-  settings {
-    extraModelPrefix
-    modelMappings {
-      from
-      to
-    }
-  }
-  orderingWeight
-  errorMessage
-  remark
-`
-
-const QUERY_CHANNELS = `
-  query QueryChannels($input: QueryChannelInput!) {
-    queryChannels(input: $input) {
-      edges {
-        node {
-          ${AXON_HUB_CHANNEL_LIST_SELECTION}
-        }
-        cursor
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      totalCount
-    }
-  }
-`
-
 const LIST_AXON_HUB_CHANNEL_PAGE = `
   query ListAxonHubChannelPage($input: QueryChannelInput!) {
     queryChannels(input: $input) {
@@ -206,16 +150,6 @@ const GET_AXON_HUB_CHANNEL_CORE = `
     node(id: $id) {
       ... on Channel {
         ${AXON_HUB_CHANNEL_CORE_DETAIL_SELECTION}
-      }
-    }
-  }
-`
-
-const GET_AXON_HUB_LEGACY_CHANNEL = `
-  query GetAxonHubChannel($id: ID!) {
-    node(id: $id) {
-      ... on Channel {
-        ${AXON_HUB_LEGACY_CHANNEL_SELECTION}
       }
     }
   }
@@ -326,103 +260,23 @@ type AxonHubChannelStatusResult = Pick<AxonHubChannel, "id" | "status">
 
 const tokenCache = new Map<string, string>()
 const inflightSignIns = new Map<string, Promise<string>>()
-const safeChannelListCache = new Map<
-  string,
-  {
-    data: { items: AxonHubChannel[]; total: number }
-    expiresAt: number
-  }
->()
 const advancedDetailUnsupportedScopes = new Set<string>()
-const legacyDetailUnsupportedScopes = new Set<string>()
 const incompleteAdvancedDetails = new WeakSet<object>()
-const numericIdToGraphqlId = new Map<number, string>()
-const CHANNEL_LIST_CACHE_TTL_MS = 15_000
-const MAX_LIST_CHANNEL_PAGES = 100
-const LEGACY_CHANNEL_DETAIL_CONCURRENCY = 4
 
 const normalizeBaseUrl = (baseUrl: string) => baseUrl.trim().replace(/\/+$/, "")
 
 const cacheKeyForConfig = (config: AxonHubConfig) =>
   `${normalizeBaseUrl(config.baseUrl)}|${config.email.trim().toLowerCase()}`
 
-const invalidateChannelListCache = (config: AxonHubConfig) => {
-  safeChannelListCache.delete(cacheKeyForConfig(config))
-}
-
 const invalidateDetailSchemaCapabilityCache = (config: AxonHubConfig) => {
   const scopeKey = cacheKeyForConfig(config)
   advancedDetailUnsupportedScopes.delete(scopeKey)
-  legacyDetailUnsupportedScopes.delete(scopeKey)
 }
 
 export const __resetCachesForTesting = () => {
   tokenCache.clear()
   inflightSignIns.clear()
-  safeChannelListCache.clear()
   advancedDetailUnsupportedScopes.clear()
-  legacyDetailUnsupportedScopes.clear()
-  numericIdToGraphqlId.clear()
-}
-
-const reserveNumericIdSlot = (preferredNumericId: number, id: string) => {
-  let numericId = preferredNumericId
-
-  while (true) {
-    const existing = numericIdToGraphqlId.get(numericId)
-    if (!existing || existing === id) {
-      numericIdToGraphqlId.set(numericId, id)
-      return numericId
-    }
-    numericId = (numericId + 1) >>> 0 || 1
-  }
-}
-
-const numericIdFromGraphqlId = (id: string): number => {
-  const parsed = Number(id)
-  if (Number.isSafeInteger(parsed) && parsed > 0) {
-    return reserveNumericIdSlot(parsed, id)
-  }
-
-  let hash = 0
-  for (const char of id) {
-    hash = (hash * 31 + char.charCodeAt(0)) >>> 0
-  }
-  const numericId = hash || 1
-  // GraphQL IDs can be opaque strings; keep a reversible session map for UI
-  // mutations that only pass the New API-shaped numeric row id back down.
-  // Probe forward on collision so distinct opaque ids never share a slot.
-  return reserveNumericIdSlot(numericId, id)
-}
-
-export const resolveAxonHubGraphqlId = (id: number) =>
-  numericIdToGraphqlId.get(id) ?? String(id)
-
-/**
- * Resolve the GraphQL global id required by AxonHub channel mutations.
- */
-export async function resolveAxonHubGraphqlIdForMutation(
-  config: AxonHubConfig,
-  id: number,
-) {
-  let graphqlId = numericIdToGraphqlId.get(id)
-  if (graphqlId) {
-    return graphqlId
-  }
-
-  // AxonHub mutations reject bare numeric row ids; hydrate the reversible map
-  // from the channel list before sending update/delete mutations.
-  await listChannels(config)
-  graphqlId = numericIdToGraphqlId.get(id)
-  if (graphqlId) {
-    return graphqlId
-  }
-
-  throw new AxonHubRequestError(
-    "not-found",
-    "not-dispatched",
-    `Unable to resolve AxonHub GraphQL id for channel ${id}`,
-  )
 }
 
 const isAbortError = (error: unknown) =>
@@ -637,74 +491,6 @@ const isAxonHubChannelMutationProjection = (
   isOutputNullableString(value.baseURL) &&
   typeof value.name === "string" &&
   typeof value.status === "string"
-
-const isLegacyOutputCredentials = isOutputPrimaryCredentials
-
-const isLegacyOutputSettings = (value: unknown) =>
-  value === null ||
-  (isRecord(value) &&
-    isOutputNullableString(value.extraModelPrefix) &&
-    isOutputModelMappings(value.modelMappings))
-
-const isLegacyAxonHubChannel = (
-  value: unknown,
-): value is AxonHubChannel & { __typename: "Channel" } =>
-  isRecord(value) &&
-  value.__typename === "Channel" &&
-  isNonEmptyString(value.id) &&
-  typeof value.createdAt === "string" &&
-  typeof value.updatedAt === "string" &&
-  typeof value.type === "string" &&
-  isOutputNullableString(value.baseURL) &&
-  typeof value.name === "string" &&
-  typeof value.status === "string" &&
-  isLegacyOutputCredentials(value.credentials) &&
-  isOutputStringArray(value.supportedModels) &&
-  isOutputNullableStringArray(value.manualModels) &&
-  isOutputNullableStringArray(value.tags) &&
-  typeof value.defaultTestModel === "string" &&
-  isLegacyOutputSettings(value.settings) &&
-  typeof value.orderingWeight === "number" &&
-  Number.isInteger(value.orderingWeight) &&
-  isOutputNullableString(value.errorMessage) &&
-  isOutputNullableString(value.remark)
-
-const sanitizeLegacyAxonHubChannel = (
-  value: AxonHubChannel,
-): AxonHubChannel => {
-  const primaryApiKey =
-    value.credentials?.apiKeys
-      ?.map((key) => key.trim())
-      .find((key) => key.length > 0) ?? value.credentials?.apiKey?.trim()
-  const settings = value.settings
-
-  return {
-    id: value.id,
-    type: value.type,
-    baseURL: value.baseURL,
-    name: value.name,
-    status: value.status,
-    credentials: primaryApiKey ? { apiKeys: [primaryApiKey] } : null,
-    supportedModels: value.supportedModels ? [...value.supportedModels] : null,
-    manualModels: value.manualModels ? [...value.manualModels] : null,
-    tags: value.tags ? [...value.tags] : null,
-    defaultTestModel: value.defaultTestModel ?? null,
-    settings:
-      settings == null
-        ? null
-        : {
-            extraModelPrefix: settings.extraModelPrefix ?? null,
-            modelMappings:
-              settings.modelMappings?.map(({ from, to }) => ({ from, to })) ??
-              null,
-          },
-    createdAt: value.createdAt ?? null,
-    updatedAt: value.updatedAt ?? null,
-    orderingWeight: value.orderingWeight ?? null,
-    errorMessage: value.errorMessage ?? null,
-    remark: value.remark ?? null,
-  }
-}
 
 const toSafeAxonHubChannelSummary = (value: unknown): AxonHubChannel | null => {
   if (!isAxonHubChannelCore(value)) return null
@@ -1142,85 +928,6 @@ export async function graphqlRequest<T>(
   }
 }
 
-/**
- * Convert an AxonHub GraphQL channel into the managed-site channel row shape.
- */
-export function axonHubChannelToManagedSite(
-  authoritativeChannel: AxonHubChannel,
-) {
-  const channel = sanitizeLegacyAxonHubChannel(authoritativeChannel)
-  const models = normalizeList([
-    ...(channel.supportedModels ?? []),
-    ...(channel.manualModels ?? []),
-  ])
-  const mappingObject = (channel.settings?.modelMappings ?? []).reduce<
-    Record<string, string>
-  >((acc, mapping) => {
-    const from = mapping.from?.trim()
-    const to = mapping.to?.trim()
-    if (from && to) {
-      acc[from] = to
-    }
-    return acc
-  }, {})
-  const modelMapping =
-    Object.keys(mappingObject).length > 0 ? JSON.stringify(mappingObject) : ""
-  const credentials = channel.credentials ?? {}
-  const apiKey =
-    credentials.apiKeys
-      ?.map((key) => key.trim())
-      .find((key) => key.length > 0) ??
-    credentials.apiKey?.trim() ??
-    ""
-
-  return {
-    id: numericIdFromGraphqlId(channel.id),
-    name: channel.name,
-    type: channel.type,
-    base_url: channel.baseURL ?? "",
-    key: apiKey,
-    models: models.join(","),
-    status:
-      channel.status === AXON_HUB_CHANNEL_STATUS.ENABLED
-        ? CHANNEL_STATUS.Enable
-        : CHANNEL_STATUS.ManuallyDisabled,
-    priority: 0,
-    weight: channel.orderingWeight ?? 0,
-    group: "",
-    model_mapping: modelMapping,
-    status_code_mapping: "",
-    test_model: channel.defaultTestModel ?? null,
-    auto_ban: 0,
-    created_time: (() => {
-      if (!channel.createdAt) return 0
-      const parsed = Date.parse(channel.createdAt)
-      return Number.isFinite(parsed) ? Math.floor(parsed / 1000) : 0
-    })(),
-    test_time: 0,
-    response_time: 0,
-    balance: 0,
-    balance_updated_time: 0,
-    used_quota: 0,
-    tag: null,
-    remark: channel.remark ?? null,
-    setting: channel.settings ? JSON.stringify(channel.settings) : "",
-    settings: channel.settings ? JSON.stringify(channel.settings) : "",
-    openai_organization: null,
-    other: "",
-    other_info: channel.errorMessage ?? "",
-    param_override: null,
-    header_override: null,
-    channel_info: {
-      is_multi_key: false,
-      multi_key_size: credentials.apiKeys?.length ?? 0,
-      multi_key_status_list: null,
-      multi_key_polling_index: 0,
-      multi_key_mode: "",
-    },
-    _axonHubData: channel,
-  }
-}
-
 const requestAxonHubChannelPage = async (
   config: AxonHubConfig,
   input: { cursor?: string; limit: number },
@@ -1377,203 +1084,25 @@ export async function getAxonHubChannel(
   return node
 }
 
-const getLegacyAxonHubChannel = async (
+/** Resolve matching credentials without requesting optional advanced editor fields. */
+export async function getAxonHubChannelSecretKey(
   config: AxonHubConfig,
   id: string,
   options?: Pick<RequestInit, "signal">,
-): Promise<AxonHubChannel> => {
-  const scopeKey = cacheKeyForConfig(config)
-  let complete = !legacyDetailUnsupportedScopes.has(scopeKey)
-  let node: unknown
-  try {
-    node = await requestAxonHubChannelNode(
-      config,
-      id,
-      complete ? GET_AXON_HUB_LEGACY_CHANNEL : GET_AXON_HUB_CHANNEL_CORE,
-      options,
-    )
-  } catch (error) {
-    if (!complete || !isAxonHubSchemaValidationError(error)) throw error
-    complete = false
-    legacyDetailUnsupportedScopes.add(scopeKey)
-    node = await requestAxonHubChannelNode(
-      config,
-      id,
-      GET_AXON_HUB_CHANNEL_CORE,
-      options,
-    )
-  }
-
-  if (complete) {
-    if (!isLegacyAxonHubChannel(node) || node.id !== id) {
-      throw new AxonHubRequestError("protocol", "not-dispatched")
-    }
-    legacyDetailUnsupportedScopes.delete(scopeKey)
-    return sanitizeLegacyAxonHubChannel(node)
-  }
-
+): Promise<string> {
+  const node = await requestAxonHubChannelNode(
+    config,
+    id,
+    GET_AXON_HUB_CHANNEL_CORE,
+    options,
+  )
   if (!isAxonHubChannelCoreDetail(node) || node.id !== id) {
     throw new AxonHubRequestError("protocol", "not-dispatched")
   }
-  return sanitizeLegacyAxonHubChannel(node)
-}
-
-const hydrateLegacyAxonHubChannels = async (
-  config: AxonHubConfig,
-  channels: readonly AxonHubChannel[],
-  options?: Pick<RequestInit, "signal">,
-): Promise<ManagedSiteChannelListData["items"]> => {
-  if (channels.length === 0) return []
-
-  const items = new Array<ManagedSiteChannelListData["items"][number]>(
-    channels.length,
-  )
-  let nextIndex = 0
-  let stopped = false
-
-  const worker = async () => {
-    while (!stopped) {
-      throwIfAborted(options?.signal)
-      const index = nextIndex
-      if (index >= channels.length) return
-      nextIndex += 1
-
-      try {
-        const channel = channels[index]
-        if (!channel) return
-        items[index] = axonHubChannelToManagedSite(
-          await getLegacyAxonHubChannel(config, channel.id, options),
-        )
-      } catch (error) {
-        stopped = true
-        throw error
-      }
-    }
-  }
-
-  await Promise.all(
-    Array.from(
-      {
-        length: Math.min(LEGACY_CHANNEL_DETAIL_CONCURRENCY, channels.length),
-      },
-      worker,
-    ),
-  )
-  return items
-}
-
-const listSafeAxonHubChannels = async (
-  config: AxonHubConfig,
-  options?: Pick<RequestInit, "signal">,
-): Promise<{ items: AxonHubChannel[]; total: number }> => {
-  const cacheKey = cacheKeyForConfig(config)
-  const cachedChannels = safeChannelListCache.get(cacheKey)
-  if (cachedChannels && cachedChannels.expiresAt > Date.now()) {
-    return cachedChannels.data
-  }
-
-  safeChannelListCache.delete(cacheKey)
-  const items: AxonHubChannel[] = []
-  let after: string | null | undefined
-  let total = 0
-  let pageCount = 0
-  const seenCursors = new Set<string>()
-
-  do {
-    if (pageCount >= MAX_LIST_CHANNEL_PAGES) {
-      throw new Error("AxonHub returned too many channel-list pages")
-    }
-    pageCount += 1
-
-    const page = await requestAxonHubChannelPage(
-      config,
-      {
-        cursor: after ?? undefined,
-        limit: 100,
-      },
-      QUERY_CHANNELS,
-      options,
-    )
-
-    total = page.total ?? total
-    items.push(...page.items)
-    const nextCursor = page.nextCursor
-    if (nextCursor) {
-      if (seenCursors.has(nextCursor)) {
-        throw new Error("AxonHub channel pagination cursor repeated")
-      }
-      seenCursors.add(nextCursor)
-    }
-    after = nextCursor
-  } while (after)
-
-  const result = {
-    items,
-    total: total || items.length,
-  }
-
-  safeChannelListCache.set(cacheKey, {
-    data: result,
-    expiresAt: Date.now() + CHANNEL_LIST_CACHE_TTL_MS,
-  })
-
-  return result
-}
-
-/**
- * List all AxonHub channels through the legacy managed-site contract.
- */
-export async function listChannels(
-  config: AxonHubConfig,
-  options?: Pick<RequestInit, "signal">,
-): Promise<ManagedSiteChannelListData> {
-  const safeChannels = await listSafeAxonHubChannels(config, options)
-  const items = await hydrateLegacyAxonHubChannels(
-    config,
-    safeChannels.items,
-    options,
-  )
-
-  return {
-    items,
-    total: safeChannels.total,
-    type_counts: items.reduce<Record<string, number>>((acc, channel) => {
-      const key = String(channel.type)
-      acc[key] = (acc[key] ?? 0) + 1
-      return acc
-    }, {}),
-  }
-}
-
-/**
- * Search AxonHub channels client-side across display fields.
- */
-export async function searchChannels(
-  config: AxonHubConfig,
-  keyword: string,
-): Promise<ManagedSiteChannelListData> {
-  const channels = await listChannels(config)
-  const normalizedKeyword = keyword.trim().toLowerCase()
-
-  if (!normalizedKeyword) {
-    return channels
-  }
-
-  const items = channels.items.filter((channel) =>
-    [
-      channel.name,
-      channel.base_url,
-      channel.models,
-      channel.key,
-      String(channel.type),
-    ].some((value) => value?.toLowerCase().includes(normalizedKeyword)),
-  )
-
-  return {
-    items,
-    total: items.length,
-    type_counts: channels.type_counts,
-  }
+  return normalizeList([
+    ...(node.credentials?.apiKeys ?? []),
+    node.credentials?.apiKey ?? "",
+  ]).join("\n")
 }
 
 /**
@@ -1596,7 +1125,6 @@ export async function createAxonHubChannel(
   ) {
     throw new AxonHubRequestError("protocol", "dispatched")
   }
-  invalidateChannelListCache(config)
   return data.createChannel
 }
 
@@ -1626,7 +1154,6 @@ export async function updateAxonHubChannel(
   ) {
     throw new AxonHubRequestError("protocol", "dispatched")
   }
-  invalidateChannelListCache(config)
   return data.updateChannel
 }
 
@@ -1654,7 +1181,6 @@ export async function updateAxonHubChannelStatus(
   ) {
     throw new AxonHubRequestError("protocol", "dispatched")
   }
-  invalidateChannelListCache(config)
   return { id, status } as AxonHubChannelStatusResult
 }
 
@@ -1675,7 +1201,6 @@ export async function deleteAxonHubChannel(
   if (!isRecord(data) || typeof data.deleteChannel !== "boolean") {
     throw new AxonHubRequestError("protocol", "dispatched")
   }
-  invalidateChannelListCache(config)
   return data.deleteChannel
 }
 

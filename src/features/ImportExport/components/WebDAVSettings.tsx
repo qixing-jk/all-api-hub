@@ -8,7 +8,6 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { OPTIONS_CAPABILITY_ICONS } from "~/components/icons/optionsPageIcons"
@@ -34,6 +33,7 @@ import { Popover, PopoverAnchor, PopoverContent } from "~/components/ui/popover"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
+import toast from "~/lib/notify"
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
@@ -90,7 +90,7 @@ import {
   type WebDAVSyncDataSelection,
 } from "~/types/webdav"
 import { createLogger } from "~/utils/core/logger"
-import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
+import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
 import { applyPreferenceLanguage } from "~/utils/i18n/applyPreferenceLanguage"
 import { t as translate } from "~/utils/i18n/core"
 import { changePageLanguage } from "~/utils/i18n/pageLanguage"

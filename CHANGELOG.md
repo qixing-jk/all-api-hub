@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.61.0](https://github.com/qixing-jk/all-api-hub/compare/v3.60.0...v3.61.0) (2026-09-08)
+
+
+### Features
+
+* **accounts:** add APIyi account compatibility ([#1413](https://github.com/qixing-jk/all-api-hub/issues/1413)) ([5c457f8](https://github.com/qixing-jk/all-api-hub/commit/5c457f86d750b750fb9de598012230e57eb3b063))
+* **accounts:** auto-provision keys for all available groups ([#1404](https://github.com/qixing-jk/all-api-hub/issues/1404)) ([1f697b7](https://github.com/qixing-jk/all-api-hub/commit/1f697b79f427d0cb70eda7f485d905b12db6fe9a))
+* **managed-sites:** support Sub2API channel migration ([#1415](https://github.com/qixing-jk/all-api-hub/issues/1415)) ([4161082](https://github.com/qixing-jk/all-api-hub/commit/41610825db20bcd3328a6a83d1b7f1e10ed36e45))
+* refine check-in result categories and simplify filters ([#1418](https://github.com/qixing-jk/all-api-hub/issues/1418)) ([cc52485](https://github.com/qixing-jk/all-api-hub/commit/cc524857dec35708c0b6ad2e9cfccea10db4c804))
+* **shield:** add local protection bypass history ([#1407](https://github.com/qixing-jk/all-api-hub/issues/1407)) ([0285615](https://github.com/qixing-jk/all-api-hub/commit/02856151364f3bef31fbeacbd4dd513105a35efb))
+* **verification:** add selectable streaming test modes ([#1406](https://github.com/qixing-jk/all-api-hub/issues/1406)) ([499a6f6](https://github.com/qixing-jk/all-api-hub/commit/499a6f6817a30e538f15bb3b932082c990970ca3))
+
+
+### Bug Fixes
+
+* **accounts:** preserve New API manual token recovery and focus the input ([#1408](https://github.com/qixing-jk/all-api-hub/issues/1408)) ([44221e7](https://github.com/qixing-jk/all-api-hub/commit/44221e7c245242b2a0592f31edfa9e257be6d870))
+* **accounts:** preserve valid credentials during New API detection ([#1414](https://github.com/qixing-jk/all-api-hub/issues/1414)) ([a904ddf](https://github.com/qixing-jk/all-api-hub/commit/a904ddf2e759495fa1d9a88722592610cf6793b9))
+* **accounts:** verify browser identity before matching saved accounts ([#1412](https://github.com/qixing-jk/all-api-hub/issues/1412)) ([0353a30](https://github.com/qixing-jk/all-api-hub/commit/0353a30ba3e9b06946fa4557c5948140f10e283e))
+* **e2e:** follow New API manual token recovery ([#1410](https://github.com/qixing-jk/all-api-hub/issues/1410)) ([abae4a9](https://github.com/qixing-jk/all-api-hub/commit/abae4a914bc52b951f6f0b2dfb1dff35a2402f0a))
+* **e2e:** handle recovery fallbacks and deferred tab navigation ([#1416](https://github.com/qixing-jk/all-api-hub/issues/1416)) ([b56218c](https://github.com/qixing-jk/all-api-hub/commit/b56218c75aa2c05e96212d0b84d65e2f16900906))
+* **managed-sites:** preserve upstream configuration during channel updates ([#1419](https://github.com/qixing-jk/all-api-hub/issues/1419)) ([07dc5e0](https://github.com/qixing-jk/all-api-hub/commit/07dc5e059a9663c476dd4b80c2cff450a0638c1d))
+* **ui:** enlarge update log dialog reading area ([fe7de1a](https://github.com/qixing-jk/all-api-hub/commit/fe7de1a2dfcf2b21f7abac399851b00650b03a97))
+
 ## [3.60.0](https://github.com/qixing-jk/all-api-hub/compare/v3.59.0...v3.60.0) (2026-09-06)
 
 

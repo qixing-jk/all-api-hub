@@ -1,7 +1,6 @@
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import { isValidAccount } from "~/services/accounts/accountFormValidation"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import {
   ACCOUNT_PERSISTENCE_LOG_STATUSES,
   ACCOUNT_SAVE_FEEDBACK_LEVELS,
@@ -12,15 +11,13 @@ import {
   getAccountOperationLogDetails,
   getCredentialValidationMessage,
   accountPersistenceLogger as logger,
+  prepareAccountPersistenceIdentity,
   requireAccountDataCapability,
-  validateOpenRouterManagementKeyIfRequired,
   type TagIdsInput,
 } from "~/services/accounts/accountPersistence/shared"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
-import { resolveOpenRouterAccountUserId } from "~/services/apiAdapters/openrouter/accountIdentity"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import type { OpenRouterManagementKeyValidation } from "~/services/apiService/openrouter"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   AuthTypeEnum,
@@ -108,11 +105,10 @@ export async function validateAndUpdateAccount(
     }
   }
 
-  const isOpenRouter = normalizedSiteType === SITE_TYPES.OPENROUTER
-  let existingAccountInfo: SiteAccount["account_info"] | undefined
-  let existingAccountSiteType: SiteAccount["site_type"] | undefined
-  if (isOpenRouter) {
-    let existingAccount: SiteAccount | undefined
+  const persistence =
+    getSiteTypeCapabilities(normalizedSiteType).account?.persistence
+  let existingAccount: SiteAccount | undefined
+  if (persistence) {
     try {
       existingAccount = (await accountQueries.getAllAccountsOrThrow()).find(
         (account) => account.id === accountId,
@@ -141,19 +137,14 @@ export async function validateAndUpdateAccount(
         }),
       }
     }
-    existingAccountInfo = existingAccount.account_info
-    existingAccountSiteType = existingAccount.site_type
   }
-  const normalizedAccessToken = accessToken.trim()
-  const existingAccessToken = existingAccountInfo?.access_token?.trim() ?? ""
-  let credentialValidation: OpenRouterManagementKeyValidation
+  let accountIdentity: string
   try {
-    credentialValidation = await validateOpenRouterManagementKeyIfRequired({
+    accountIdentity = await prepareAccountPersistenceIdentity({
       siteType: normalizedSiteType,
-      accessToken: normalizedAccessToken,
-      shouldValidate:
-        existingAccountSiteType !== SITE_TYPES.OPENROUTER ||
-        normalizedAccessToken !== existingAccessToken,
+      accessToken,
+      userId,
+      existingAccount,
     })
   } catch (error) {
     logger.warn("Account credential validation failed", {
@@ -162,16 +153,9 @@ export async function validateAndUpdateAccount(
     })
     return {
       success: false,
-      message: getCredentialValidationMessage(error),
+      message: getCredentialValidationMessage(normalizedSiteType, error),
     }
   }
-  const accountIdentity = isOpenRouter
-    ? resolveOpenRouterAccountUserId({
-        enteredUserId: userId,
-        creatorUserId: credentialValidation.userId,
-        existingUserId: existingAccountInfo?.id,
-      })
-    : normalizeAccountIdentity(userId)!
   const persistenceContext = buildAccountPersistenceContext({
     url,
     siteName,

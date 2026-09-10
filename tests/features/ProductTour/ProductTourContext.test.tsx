@@ -67,7 +67,7 @@ vi.mock("~/services/productAnalytics/dispatch", () => ({
   trackProductAnalyticsEvent: (...args: unknown[]) => mocks.track(...args),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: { error: mocks.toastError },
 }))
 

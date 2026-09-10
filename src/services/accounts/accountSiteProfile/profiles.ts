@@ -28,6 +28,7 @@ export const DEFAULT_ACCOUNT_SITE_PRODUCT_PROFILE: AccountSiteProductProfile = {
   },
   identity: {
     usernameRequired: true,
+    userIdRequired: true,
     storedUserIdentityFields: ["id"],
   },
   modelList: {

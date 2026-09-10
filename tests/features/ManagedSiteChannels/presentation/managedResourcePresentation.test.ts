@@ -1,8 +1,14 @@
 import type { TFunction } from "i18next"
 import { describe, expect, it } from "vitest"
 
-import { createManagedResourcePresentationMapper as createPresentationMapper } from "~/features/ManagedSiteChannels/presentation/managedResourcePresentation"
+import { createManagedResourceRowMapper } from "~/features/ManagedSiteChannels/controllers/managedResourceRowMapper"
+import { presentManagedResourceRow } from "~/features/ManagedSiteChannels/presentation/managedResourcePresentation"
+import enCommon from "~/locales/en/common.json"
+import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
+import zhCnCommon from "~/locales/zh-CN/common.json"
+import zhCnManagedSiteChannels from "~/locales/zh-CN/managedSiteChannels.json"
 import type { ResourceDisplayFacts } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 import { createManagedResourceFacts } from "~~/tests/test-utils/managedResourceWorkspace"
 
 const TEST_FIELD_IDS = [
@@ -17,6 +23,24 @@ const TEST_FIELD_IDS = [
   "remark",
 ] as const
 
+const createPresentationMapper = ({
+  resolveLabel = ((key: string) => key) as TFunction,
+  ...options
+}: Parameters<typeof createManagedResourceRowMapper>[0] & {
+  resolveLabel?: TFunction
+} = {}) => {
+  const mapper = createManagedResourceRowMapper(options)
+  return {
+    ...mapper,
+    map: (facts: ResourceDisplayFacts) =>
+      presentManagedResourceRow(
+        mapper.map(facts),
+        resolveLabel,
+        options.semantics,
+      ),
+  }
+}
+
 const createManagedResourcePresentationMapper = (
   options: Parameters<typeof createPresentationMapper>[0] = {},
 ) =>
@@ -27,6 +51,85 @@ const createManagedResourcePresentationMapper = (
   })
 
 describe("managedResourcePresentation", () => {
+  it("retranslates accepted status, boolean, secret and option values without changing safe row data", async () => {
+    const resourceI18n = await createResourceTestI18n({
+      en: { common: enCommon, managedSiteChannels: enManagedSiteChannels },
+      "zh-CN": {
+        common: zhCnCommon,
+        managedSiteChannels: zhCnManagedSiteChannels,
+      },
+    })
+    const mapper = createManagedResourceRowMapper({
+      fieldIds: ["autoSyncSupportedModels", "key", "type"],
+    })
+    const facts = {
+      ...createManagedResourceFacts("private-ref", "Safe display name"),
+      fields: [
+        { fieldId: "autoSyncSupportedModels", kind: "boolean", value: true },
+        {
+          fieldId: "key",
+          kind: "secret",
+          state: "masked",
+          rawValue: "private-credential",
+        },
+        { fieldId: "type", kind: "text", value: "unknown-type" },
+        {
+          fieldId: "backendMessage",
+          kind: "text",
+          value: "private-service-error",
+        },
+      ],
+    } as ResourceDisplayFacts
+    const data = mapper.accept([facts])[0]
+    const snapshot = JSON.stringify(data)
+    const semantics = {
+      fieldValuePresentations: {
+        type: {
+          optionLabelResolvers: {},
+          resolveOptionFallback: (t: TFunction) =>
+            t("managedSiteChannels:editor.options.channelType.unsupported"),
+        },
+      },
+    }
+    const english = presentManagedResourceRow(
+      data,
+      resourceI18n.getFixedT("en"),
+      semantics,
+    )
+    const chineseT = resourceI18n.getFixedT("zh-CN")
+    const chinese = presentManagedResourceRow(data, chineseT, semantics)
+
+    expect(chinese.cells.status).toMatchObject({
+      value: chineseT("managedSiteChannels:editor.options.status.enabled"),
+    })
+    expect(chinese.cells.autoSyncSupportedModels).toMatchObject({
+      value: chineseT("common:status.enabled"),
+    })
+    expect(chinese.cells.key).toMatchObject({
+      value: chineseT("managedSiteChannels:editor.secret.state.masked"),
+    })
+    expect(chinese.cells.type).toMatchObject({
+      value: chineseT(
+        "managedSiteChannels:editor.options.channelType.unsupported",
+      ),
+    })
+    for (const fieldId of [
+      "status",
+      "autoSyncSupportedModels",
+      "key",
+      "type",
+    ]) {
+      expect(chinese.cells[fieldId]).not.toEqual(english.cells[fieldId])
+    }
+    expect(chinese.rowKey).toBe(english.rowKey)
+    expect(chinese.testToken).toBe(english.testToken)
+    expect(mapper.resolveRef(chinese.rowKey)).toEqual(facts.ref)
+    expect(JSON.stringify(data)).toBe(snapshot)
+    expect(snapshot).not.toMatch(
+      /private-ref|private-credential|private-service-error|backendMessage/,
+    )
+  })
+
   const labels: Record<string, string> = {
     "managedSiteChannels:editor.options.channelType.openai": "Localized OpenAI",
     "managedSiteChannels:editor.options.status.enabled": "Localized enabled",
@@ -63,7 +166,6 @@ describe("managedResourcePresentation", () => {
       actions: {
         ...facts.actions,
         channel: {
-          channelId: 42,
           channelType: "openai",
           canSyncModels: true,
           canOpenModelSync: true,
@@ -73,7 +175,6 @@ describe("managedResourcePresentation", () => {
     })
 
     expect(row.channelActions).toEqual({
-      channelId: 42,
       channelType: "openai",
       canSyncModels: true,
       canOpenModelSync: true,
@@ -91,8 +192,7 @@ describe("managedResourcePresentation", () => {
       actions: {
         ...facts.actions,
         channel: {
-          channelId: 0,
-          channelType: "openai",
+          channelType: null as unknown as string,
           canSyncModels: true,
           canOpenModelSync: true,
           canConfigureModelFilters: true,

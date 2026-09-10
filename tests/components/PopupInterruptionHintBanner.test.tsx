@@ -44,7 +44,7 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   showUpdateToast: mockShowUpdateToast,
 }))
 

@@ -295,6 +295,7 @@
       "inputPreparationFailed": "Không thể chuẩn bị dữ liệu nhập kênh có thể so sánh, tạm thời không thể hoàn tất kiểm tra.",
       "newApiRetrieveKeyHint": "Đối với New API, việc so sánh toàn bộ key phụ thuộc vào key kênh, và việc xem key kênh yêu cầu phải hoàn tất xác minh 2FA trước, do đó hiện tại chưa thể hoàn tất so sánh toàn bộ key."
     },
+    "nativeResourceUnsupported": "Tính năng đối chiếu trang web được quản lý trên trang này chưa hỗ trợ khóa tài nguyên gốc. Việc làm mới chỉ áp dụng cho các khóa được hỗ trợ.",
     "pageUnsupported": "Do trang web lưu trữ hiện tại tạm thời không hỗ trợ tìm kiếm kênh bằng URL, chức năng kiểm tra kênh trang web quản lý không khả dụng.",
     "recovery": {
       "configureLogin": "Vui lòng điền thông tin đăng nhập New API và thông tin hỗ trợ xác minh hai bước trong cài đặt trước, nếu không hiện tại không thể đọc key kênh, cũng như không thể hoàn tất so sánh toàn bộ key.",
@@ -353,6 +354,28 @@
     "serviceCredentialRotateFailed": "Đặt lại khóa dịch vụ thất bại",
     "verifyApiFailed": "Không thể mở xác minh API",
     "verifyCliSupportFailed": "Không thể mở xác minh tính tương thích CLI"
+  },
+  "native": {
+    "detailsLoadFailed": "Không thể tải chi tiết khóa.",
+    "heading": "Khóa API",
+    "missing": "Không khả dụng",
+    "scope": {
+      "empty": "Không có phạm vi khả dụng",
+      "error": "Không thể tải phạm vi",
+      "errorHelp": "Kiểm tra quyền truy cập tài khoản rồi thử lại.",
+      "heading": "Phạm vi",
+      "label": "Chọn phạm vi",
+      "loading": "Đang tải phạm vi…",
+      "partial": "Không thể tải một số phạm vi. Bạn vẫn có thể dùng các phạm vi đã tải.",
+      "placeholder": "Chọn một phạm vi",
+      "retry": "Tải lại phạm vi"
+    },
+    "status": {
+      "disabled": "Đã tắt",
+      "enabled": "Đang bật",
+      "expired": "Đã hết hạn",
+      "unknown": "Không rõ"
+    }
   },
   "noAccountsSupportKeyCreation": "Không có tài khoản nào trong chế độ xem này hỗ trợ tạo khóa API. Hãy chọn tài khoản khác hoặc thêm tài khoản được hỗ trợ.",
   "noKeys": "Chưa có dữ liệu khóa",
@@ -541,7 +564,6 @@
         "usageWeekly": "Sử dụng hàng tuần",
         "workspace": "Không gian làm việc"
       },
-      "heading": "Khóa OpenRouter",
       "status": {
         "all": "Tất cả",
         "disabled": "Đã tắt",

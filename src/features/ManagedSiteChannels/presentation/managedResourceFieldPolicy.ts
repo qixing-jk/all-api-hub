@@ -12,6 +12,7 @@ import {
 } from "~/constants/claudeCodeHub"
 import {
   DONE_HUB_MANAGED_RESOURCE_FIELD_IDS,
+  DoneHubChannelStatus,
   DoneHubChannelTypeNames,
 } from "~/constants/doneHub"
 import {
@@ -30,6 +31,7 @@ import {
 } from "~/constants/sub2api"
 import {
   VELOERA_MANAGED_RESOURCE_FIELD_IDS,
+  VeloeraChannelStatus,
   VeloeraChannelTypeNames,
 } from "~/constants/veloera"
 import {
@@ -387,24 +389,41 @@ const doneHubTypeOptionLabelResolvers = Object.fromEntries(
   ]),
 ) satisfies Readonly<Record<string, ManagedResourceTextResolver>>
 
-const newApiStatusOptionLabelResolvers = {
-  [String(CHANNEL_STATUS.Unknown)]: (t: TFunction) =>
-    t("managedSiteChannels:statusLabels.unknown"),
-  [String(CHANNEL_STATUS.Enable)]: (t: TFunction) =>
-    t("managedSiteChannels:statusLabels.enabled"),
-  [String(CHANNEL_STATUS.ManuallyDisabled)]: (t: TFunction) =>
-    t("managedSiteChannels:statusLabels.manualPause"),
-  [String(CHANNEL_STATUS.AutoDisabled)]: (t: TFunction) =>
-    t("managedSiteChannels:statusLabels.autoDisabled"),
-} as const satisfies Readonly<Record<string, ManagedResourceTextResolver>>
+const createStatusOptionLabelResolvers = (codes: {
+  readonly Unknown: number
+  readonly Enable: number
+  readonly ManuallyDisabled: number
+  readonly AutoDisabled: number
+}) =>
+  ({
+    [String(codes.Unknown)]: (t: TFunction) =>
+      t("managedSiteChannels:statusLabels.unknown"),
+    [String(codes.Enable)]: (t: TFunction) =>
+      t("managedSiteChannels:statusLabels.enabled"),
+    [String(codes.ManuallyDisabled)]: (t: TFunction) =>
+      t("managedSiteChannels:statusLabels.manualPause"),
+    [String(codes.AutoDisabled)]: (t: TFunction) =>
+      t("managedSiteChannels:statusLabels.autoDisabled"),
+  }) satisfies Readonly<Record<string, ManagedResourceTextResolver>>
 
 type NewApiFamilyFieldIds = {
-  [TKey in keyof typeof NEW_API_MANAGED_RESOURCE_FIELD_IDS]: string
+  Name: string
+  Type: string
+  Status: string
+  BaseUrl: string
+  Key: string
+  Models: string
+  Groups: string
+  Priority: string
+  Weight: string
 }
 
 const createNewApiFamilyFields = (
   fieldIds: NewApiFamilyFieldIds,
   typeOptionLabelResolvers: Readonly<
+    Record<string, ManagedResourceTextResolver>
+  >,
+  statusOptionLabelResolvers: Readonly<
     Record<string, ManagedResourceTextResolver>
   >,
 ) =>
@@ -432,7 +451,7 @@ const createNewApiFamilyFields = (
       section: MANAGED_RESOURCE_SECTIONS.Basic,
       order: 30,
       resolveLabel: (t) => t("channelDialog:fields.status.label"),
-      optionLabelResolvers: newApiStatusOptionLabelResolvers,
+      optionLabelResolvers: statusOptionLabelResolvers,
       resolveOptionFallback: managedResourceStatusFallbackLabelResolver,
       renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Select,
       channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Status,
@@ -491,16 +510,19 @@ const createNewApiFamilyFields = (
 const newApiFields = createNewApiFamilyFields(
   NEW_API_MANAGED_RESOURCE_FIELD_IDS,
   newApiTypeOptionLabelResolvers,
+  createStatusOptionLabelResolvers(CHANNEL_STATUS),
 )
 
 const veloeraFields = createNewApiFamilyFields(
   VELOERA_MANAGED_RESOURCE_FIELD_IDS,
   veloeraTypeOptionLabelResolvers,
+  createStatusOptionLabelResolvers(VeloeraChannelStatus),
 )
 
 const doneHubFields = createNewApiFamilyFields(
   DONE_HUB_MANAGED_RESOURCE_FIELD_IDS,
   doneHubTypeOptionLabelResolvers,
+  createStatusOptionLabelResolvers(DoneHubChannelStatus),
 )
 
 const newApiManagedResourceFieldPolicy = defineManagedResourceFieldPolicy({

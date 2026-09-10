@@ -48,6 +48,85 @@ const parseRequestBody = (
 
 describe("Octopus v0.13 contract", () => {
   it.each([
+    { name: "Renamed channel" },
+    { key: "replacement-key" },
+    { model: "model-a,model-b" },
+  ])(
+    "retains upstream-owned fields through parsing and update serialization: %j",
+    (patch) => {
+      const futurePolicy = { mode: "upstream", options: [1, 2] }
+      const original = detailResponse({
+        future_policy: futurePolicy,
+        keys: [
+          {
+            name: "default",
+            key: "credential-placeholder",
+            enabled: true,
+            future_key_policy: { limit: 8 },
+          },
+        ],
+        grants: [
+          {
+            model_name: "model-a",
+            key_name: "default",
+            protocols: 2,
+            future_grant_policy: "keep",
+          },
+        ],
+        custom_header: [
+          {
+            header_key: "X-Example",
+            header_value: "value",
+            future_header_policy: false,
+          },
+        ],
+      })
+      const body = parseRequestBody(
+        octopusV013Contract.createRequest(
+          {
+            kind: OCTOPUS_API_OPERATIONS.UpdateChannel,
+            input: { id: 7, ...patch },
+          },
+          {},
+          octopusV013Contract.parseDetail(original),
+        ),
+      )
+      expect(body).toMatchObject({
+        future_policy: futurePolicy,
+        keys: [expect.objectContaining({ future_key_policy: { limit: 8 } })],
+        custom_header: original.custom_header,
+      })
+      expect(body.grants).toContainEqual(
+        expect.objectContaining({ future_grant_policy: "keep" }),
+      )
+      expect(original.keys[0].key).toBe("credential-placeholder")
+    },
+  )
+
+  it("does not reinterpret upstream grant associations while renaming", () => {
+    const original = detailResponse({
+      grants: [
+        {
+          model_name: "upstream-managed-model",
+          key_name: "upstream-managed-key",
+          protocols: 2,
+        },
+      ],
+    })
+    const body = parseRequestBody(
+      octopusV013Contract.createRequest(
+        {
+          kind: OCTOPUS_API_OPERATIONS.UpdateChannel,
+          input: { id: 7, name: "Renamed channel" },
+        },
+        {},
+        octopusV013Contract.parseDetail(original),
+      ),
+    )
+    expect(body).toEqual({ ...original, name: "Renamed channel" })
+  })
+
+  it.each([
     { dialect: "custom" },
     { openai_chat_completion_path: "/custom/chat" },
     { grants: [{ model_name: "model-a", key_name: "default", protocols: 6 }] },

@@ -9,14 +9,14 @@ import {
   AXON_HUB_EDITABLE_FIELD_IDS,
   AXON_HUB_TABLE_FIELD_IDS,
 } from "~/constants/axonHub"
-import { ChannelType } from "~/constants/managedSite"
+import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
+import { createManagedResourceRowMapper } from "~/features/ManagedSiteChannels/controllers/managedResourceRowMapper"
 import {
   getManagedResourceFieldPolicy,
   resolveManagedResourceFieldPolicy,
   type ManagedResourceEditorMode,
 } from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
-import { createManagedResourcePresentationMapper } from "~/features/ManagedSiteChannels/presentation/managedResourcePresentation"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import * as accountSiteDefinitionRegistry from "~/services/accountSiteDefinitions/registry"
 import {
@@ -30,6 +30,7 @@ import {
   type SecretEditIntent,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { RESOURCE_FIELD_TYPES } from "~/services/apiAdapters/contracts/resourceNative"
+import * as axonHubNativeResources from "~/services/apiAdapters/managedResources/axonHub"
 import {
   axonHubManagedResourceRegistration,
   AxonHubNativeError,
@@ -37,7 +38,6 @@ import {
   type AxonHubNativeFailure,
   type AxonHubNativeResourceOperations,
 } from "~/services/apiAdapters/managedResources/axonHub"
-import * as axonHubNativeResources from "~/services/apiAdapters/managedResources/axonHub"
 import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
@@ -669,7 +669,7 @@ describe("AxonHub native managed-resource Adapter", () => {
       value: 2,
     })
 
-    const row = createManagedResourcePresentationMapper({
+    const row = createManagedResourceRowMapper({
       fieldIds: AXON_HUB_TABLE_FIELD_IDS,
     }).map(page.items[0]!)
     expect(row.searchText).toContain("manual-model")
@@ -2780,7 +2780,7 @@ describe("AxonHub native managed-resource Adapter", () => {
       status: "ready",
       source: {
         sourceSiteType: SITE_TYPES.AXON_HUB,
-        resourceType: ChannelType.Anthropic,
+        resourceType: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
         baseUrl: "https://native.example.invalid/v1",
         models: ["supported-model", "shared-model", "manual-model"],
         groups: [],
@@ -2938,10 +2938,10 @@ describe("AxonHub native managed-resource Adapter", () => {
         groups: ["default"],
         priority: 0,
         weight: 13,
-        status: 1,
+        enabled: true,
       },
       adjustments: {
-        remappedType: true,
+        remappedType: false,
         normalizedBaseUrl: false,
         forcedDefaultGroup: true,
         ignoredPriority: true,
@@ -3238,7 +3238,7 @@ describe("AxonHub native managed-resource Adapter", () => {
     await expect(
       axonHubManagedSiteMigrationCapability.target!.create({
         ...command,
-        projection: { ...command.projection, status: 1 },
+        projection: { ...command.projection, enabled: true },
       }),
     ).resolves.toEqual({ status: "uncertain" })
     expect(mocks.createChannel).toHaveBeenCalledTimes(3)

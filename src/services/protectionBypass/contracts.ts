@@ -1,5 +1,6 @@
 import { OCTOPUS_LOGIN_PATH } from "~/constants/octopus"
 import { isAccountSiteType, type AccountSiteType } from "~/constants/siteType"
+import type { TempContextMode } from "~/constants/tempContextMode"
 import {
   OPENROUTER_MANAGEMENT_KEY_LABEL_MAX_LENGTH,
   type TempWindowOpenRouterManagementKeyActionParams,
@@ -50,6 +51,15 @@ export type ProtectionBypassDecisionKind = Exclude<
   ProtectionBypassDecisionResult,
   typeof PROTECTION_BYPASS_DECISION_RESULTS.Unavailable
 >
+
+/** Browser-context acquisition facts shared by execution and local diagnostics. */
+export type AuthorizedTempContextOutcome =
+  | { kind: "allowed"; adapter: TempContextMode; reused?: boolean }
+  | { kind: "denied" }
+  | {
+      kind: "unavailable"
+      reason?: "firefox_popup_unsupported" | "incognito_access_required"
+    }
 
 export const PROTECTION_BYPASS_CAPABILITY_KINDS = {
   Available: "available",

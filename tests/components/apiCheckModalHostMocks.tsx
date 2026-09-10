@@ -50,7 +50,7 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   }
 })
 
-vi.mock("react-hot-toast/headless", () => ({
+vi.mock("~/lib/notify/content", () => ({
   default: {
     success: vi.fn(),
     error: vi.fn(),

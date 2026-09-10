@@ -1,11 +1,13 @@
 import { nowMs, okLatency } from "../probeTiming"
 import { createModel } from "../providers"
 import {
+  API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
 } from "../types"
 import type {
   ApiVerificationApiType,
+  ApiVerificationMode,
   ApiVerificationProbeResult,
 } from "../types"
 import {
@@ -20,6 +22,7 @@ type RunTextGenerationProbeParams = {
   apiKey: string
   apiType: ApiVerificationApiType
   modelId: string
+  mode?: ApiVerificationMode
   abortSignal?: AbortSignal
 }
 
@@ -32,6 +35,7 @@ export async function runTextGenerationProbe(
   params: RunTextGenerationProbeParams,
 ): Promise<ApiVerificationProbeResult> {
   const startedAt = nowMs()
+  const mode = params.mode ?? API_VERIFICATION_MODES.Streaming
   const secretsToRedact = [params.apiKey]
 
   try {
@@ -43,17 +47,21 @@ export async function runTextGenerationProbe(
       modelId: params.modelId,
     })
 
-    const result = await runProbeGeneration(params.apiType, {
-      model,
-      prompt,
-      abortSignal: params.abortSignal,
-    })
+    const result = await runProbeGeneration(
+      {
+        model,
+        prompt,
+        abortSignal: params.abortSignal,
+      },
+      mode,
+    )
 
     const text = (result.text ?? "").trim().toLowerCase()
     const ok = text === "ok" || text.includes("ok")
 
     return {
       id: API_VERIFICATION_PROBE_IDS.TextGeneration,
+      mode,
       status: ok
         ? API_VERIFICATION_PROBE_STATUSES.Pass
         : API_VERIFICATION_PROBE_STATUSES.Fail,
@@ -85,6 +93,7 @@ export async function runTextGenerationProbe(
 
     return {
       id: API_VERIFICATION_PROBE_IDS.TextGeneration,
+      mode,
       status: API_VERIFICATION_PROBE_STATUSES.Fail,
       latencyMs: okLatency(startedAt),
       summary,

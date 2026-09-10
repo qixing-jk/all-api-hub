@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react"
 
 import type { KeyResourceCredentialAssociation } from "~/features/KeyManagement/components/KeyResourceCard"
-import type { AccountKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/accountKeyResourceCardAdapter"
+import { getAccountKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/accountKeyResourcePresentation"
 import type {
   AccountKeyResourceFacts,
   AccountKeyResourceRef,
@@ -19,7 +19,6 @@ import { AccountKeyResourceListItem } from "./AccountKeyResourceListItem"
 export function AccountKeyResourceList({
   rows,
   ariaLabel,
-  cardAdapter,
   onOpenDetail,
   onEdit,
   onDelete,
@@ -35,7 +34,6 @@ export function AccountKeyResourceList({
 }: {
   rows: readonly NativeKeyManagementRow[]
   ariaLabel: string
-  cardAdapter: AccountKeyResourceCardAdapter
   onOpenDetail?: (ref: AccountKeyResourceRef) => void
   onEdit: NativeKeyManagementRowAction
   onDelete: NativeKeyManagementRowAction
@@ -80,7 +78,7 @@ export function AccountKeyResourceList({
         <AccountKeyResourceListItem
           key={row.rowKey}
           row={row}
-          cardAdapter={cardAdapter}
+          cardAdapter={getAccountKeyResourceCardAdapter(row.facts.ref.siteType)}
           onEdit={onEdit}
           onDelete={onDelete}
           expanded={expandedRowKey === row.rowKey}

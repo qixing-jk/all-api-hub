@@ -1,4 +1,5 @@
-import { DEFAULT_CHANNEL_FIELDS } from "~/constants/newApi"
+import { DoneHubChannelStatus } from "~/constants/doneHub"
+import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
 import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
@@ -7,17 +8,16 @@ import {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { openDoneHubNativeResourceOperations } from "~/services/apiAdapters/managedResources/doneHub"
 import {
-  mapChannelTypeToDoneHubChannelTypeStrict,
-  mapDoneHubChannelTypeToChannelTypeStrict,
-} from "~/services/apiAdapters/managedResources/doneHubChannelType"
+  isManagedSiteMigrationSourceType,
+  resolveManagedSiteMigrationType,
+} from "~/services/apiAdapters/managedResources/migrationTypeRoutes"
 import {
   parseNewApiResourceList,
   throwIfNewApiResourceOperationAborted,
 } from "~/services/apiAdapters/managedResources/newApiResourceUtils"
-import type { DoneHubChannelRaw } from "~/services/apiService/doneHub"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
-import type { ChannelFormData } from "~/types/managedSite"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
+import type { DoneHubChannelRaw } from "~/types/doneHub"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"
 import {
   MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES,
@@ -25,7 +25,7 @@ import {
   type ManagedSiteMigrationSelection,
   type ManagedSiteMigrationSource,
 } from "~/types/managedSiteMigrationCapability"
-import { CHANNEL_STATUS } from "~/types/newApi"
+import { isRecord } from "~/utils/core/object"
 
 const blockers = MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES
 const failures = MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES
@@ -103,9 +103,9 @@ const toSource = (
       ? channel.weight
       : DEFAULT_CHANNEL_FIELDS.weight,
   status:
-    channel.status === CHANNEL_STATUS.Enable
+    channel.status === DoneHubChannelStatus.Enable
       ? "enabled"
-      : channel.status === CHANNEL_STATUS.ManuallyDisabled
+      : channel.status === DoneHubChannelStatus.ManuallyDisabled
         ? "disabled"
         : "other",
   // DoneHub owns additional channel fields that the canonical migration draft
@@ -128,7 +128,9 @@ const toSource = (
       channel.setting,
       channel.settings,
     ].some(hasMeaningfulAdvancedValue),
-    hasMultiKeyState: channel.channel_info?.is_multi_key === true,
+    hasMultiKeyState:
+      isRecord(channel.channel_info) &&
+      channel.channel_info.is_multi_key === true,
   },
 })
 
@@ -145,17 +147,18 @@ export const doneHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
             reasonCode: blockers.SOURCE_KEY_RESOLUTION_FAILED,
           }
         }
-        const type = mapDoneHubChannelTypeToChannelTypeStrict(
-          resolved.channel.type,
+        const resourceType = Number(resolved.channel.type)
+        return !isManagedSiteMigrationSourceType(
+          SITE_TYPES.DONE_HUB,
+          resourceType,
         )
-        return type.status === "unsupported"
           ? {
               status: "blocked",
               reasonCode: blockers.SOURCE_TYPE_UNSUPPORTED,
             }
           : {
               status: "ready",
-              source: toSource(resolved.channel, type.value),
+              source: toSource(resolved.channel, resourceType),
             }
       },
       resolveCredential: async (selection, options) => {
@@ -192,8 +195,9 @@ export const doneHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
     },
     target: {
       prepare: async (source) => {
-        const type = mapChannelTypeToDoneHubChannelTypeStrict(
-          source.resourceType,
+        const type = resolveManagedSiteMigrationType(
+          source,
+          SITE_TYPES.DONE_HUB,
         )
         if (type.status === "unsupported") {
           throw new Error(
@@ -203,7 +207,7 @@ export const doneHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
         return {
           projection: {
             name: "",
-            type: String(type.value),
+            type: type.value,
             baseUrl: source.baseUrl,
             models: [...source.models],
             groups:
@@ -212,13 +216,10 @@ export const doneHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
                 : [...DEFAULT_CHANNEL_FIELDS.groups],
             priority: source.priority,
             weight: source.weight,
-            status:
-              source.status === "enabled"
-                ? CHANNEL_STATUS.Enable
-                : CHANNEL_STATUS.ManuallyDisabled,
+            enabled: source.status === "enabled",
           },
           adjustments: {
-            remappedType: type.value !== source.resourceType,
+            remappedType: type.remappedType,
             normalizedBaseUrl: false,
             forcedDefaultGroup: source.groups.length === 0,
             ignoredPriority: false,
@@ -229,20 +230,20 @@ export const doneHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
       },
       create: async (command, options) => {
         const operations = await openDoneHubNativeResourceOperations()
-        const draft: ChannelFormData = {
+        const commandFields = {
           name: command.projection.name,
-          // The generic preview carries provider-native numeric enums as
-          // strings; DoneHub's Go payload requires the JSON value to be numeric.
-          type: Number(command.projection.type) as ChannelFormData["type"],
+          type: command.projection.type,
           key: command.credential,
           base_url: command.projection.baseUrl,
           models: [...command.projection.models],
           groups: [...command.projection.groups],
           priority: command.projection.priority,
           weight: command.projection.weight,
-          status: command.projection.status,
+          status: command.projection.enabled
+            ? DoneHubChannelStatus.Enable
+            : DoneHubChannelStatus.ManuallyDisabled,
         }
-        const result = await operations.create(draft, options)
+        const result = await operations.create(commandFields, options)
         switch (result.outcome) {
           case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
             return { status: "created" }

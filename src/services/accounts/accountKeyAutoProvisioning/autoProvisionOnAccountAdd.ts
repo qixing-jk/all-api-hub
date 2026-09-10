@@ -1,5 +1,4 @@
-import toast from "react-hot-toast"
-
+import toast from "~/lib/notify"
 import { ensureAllGroupKeysForAccount } from "~/services/accounts/accountKeyAutoProvisioning/ensureAllGroupKeys"
 import { ensureDefaultApiTokenForAccount } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import {
@@ -25,7 +24,6 @@ import {
 } from "~/types/accountKeyAutoProvisioning"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { showWarningToast } from "~/utils/core/toastHelpers"
 import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("AccountOperations")
@@ -37,7 +35,7 @@ function showAllGroupProvisioningResult(
 ) {
   const actionLabel = t("keyManagement:repairMissingKeys.action")
   if (!result) {
-    showWarningToast(
+    toast.warning(
       t("messages:accountOperations.autoProvisionGroupsUnsupported", {
         accountName,
       }),
@@ -61,7 +59,7 @@ function showAllGroupProvisioningResult(
       ACCOUNT_KEY_RECONCILIATION_INVENTORY_STATUSES.Incomplete ||
     pendingCount > 0
   ) {
-    showWarningToast(
+    toast.warning(
       t("messages:accountOperations.autoProvisionGroupsIncomplete", {
         accountName,
         count: createdCount,
@@ -72,7 +70,7 @@ function showAllGroupProvisioningResult(
   }
 
   if (result.requirementResults.length === 0) {
-    showWarningToast(
+    toast.warning(
       t("messages:accountOperations.autoProvisionGroupsUnavailable", {
         accountName,
         actionLabel,
@@ -130,7 +128,7 @@ export async function autoProvisionKeyOnAccountAdd(
       capabilities,
     )
     if (featureAvailability.status === "unsupported") {
-      showWarningToast(
+      toast.warning(
         t("messages:accountOperations.autoProvisionUnsupported", {
           accountName: account.site_name,
         }),
@@ -159,7 +157,7 @@ export async function autoProvisionKeyOnAccountAdd(
         }),
       )
     } else {
-      showWarningToast(
+      toast.warning(
         t("messages:accountOperations.autoProvisionAlreadyHad", {
           accountName: account.site_name,
         }),
@@ -167,7 +165,7 @@ export async function autoProvisionKeyOnAccountAdd(
     }
   } catch (error) {
     if (error instanceof DefaultTokenLifecyclePolicyBlockedError) {
-      showWarningToast(
+      toast.warning(
         t("messages:accountOperations.autoProvisionNeedsManualAction", {
           accountName,
           actionLabel: t("keyManagement:dialog.createToken"),

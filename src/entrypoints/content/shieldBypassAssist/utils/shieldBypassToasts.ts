@@ -1,8 +1,8 @@
 import * as React from "react"
-import toast from "react-hot-toast/headless"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ensureRedemptionToastUi } from "~/entrypoints/content/shared/uiRoot"
+import toast from "~/lib/notify/content"
 import { recordShieldBypassPromptShown } from "~/services/productAnalytics/shieldBypassSummary"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
@@ -28,6 +28,14 @@ export async function showShieldBypassPromptToast() {
     () =>
       React.createElement(ShieldBypassPromptToast, {
         onDismiss: () => toast.dismiss(SHIELD_BYPASS_TOAST_ID),
+        onOpenHistory: async () => {
+          const response = await sendRuntimeMessage({
+            action: RuntimeActionIds.OpenSettingsShieldHistory,
+          })
+          if (!response?.success) {
+            throw new Error(response?.error || "Failed to open shield history")
+          }
+        },
         onOpenSettings: async () => {
           try {
             await sendRuntimeMessage({

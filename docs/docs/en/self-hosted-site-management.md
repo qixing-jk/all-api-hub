@@ -1,6 +1,6 @@
 # Self-Hosted Site Management
 
-> 🧪 This feature aims to condense the most common channel operation actions (site building, parameter adjustment, synchronization) into the extension, so you don't have to frequently go back and forth between different system backends.
+> Bring the accounts you already use in the extension into your self-hosted site without copying URLs and keys again. Once connected, you can use your own API to access them, then manage settings, update models, and move channels to another site from the extension.
 
 ## Supported System Types
 
@@ -16,11 +16,12 @@ All API Hub is deeply adapted to the following open-source/self-hosted AI distri
 
 ## Features at a Glance
 
-- 📋 **Unified List View**: See the names, types, model lists, priorities, and statuses of all channels/providers at a glance.
-- ✏️ **Cross-Platform CRUD**: Automatically adapts form fields according to the selected system type, without the need to manually convert parameters.
-- 🔄 **Channel Migration and Sync**: Supports directly importing existing accounts/keys as channels for self-hosted sites, and supports single-channel or batch model synchronization.
-- 🗑️ **Safe Batch Operations**: Supports batch enabling, disabling, and deleting, with confirmation popups before operations.
-- 🔌 **Downstream Ecosystem Linkage**: After creating a channel, it can be linked with "Key Management" to export to CherryStudio, CC Switch, etc., with one click.
+- 🔑 **Use Your Own API for Multiple Accounts**: Connect your self-hosted site, then choose the keys you want in "Key Management" and import them as channels, individually or in bulk. URLs and keys are filled in for you, saving repeated copying and typing.
+- 📋 **Make Channel Changes in the Extension**: When you need to add a channel or change settings, open the extension's channel list. Select channels you no longer need to delete them together, and switch sites here when you manage more than one.
+- 🔄 **Let the Extension Keep Up with Model Updates**: You can sync model lists for one channel or several at once. Turn on scheduled sync to have the extension update them at the interval you choose, then check the sync results.
+- 📦 **Take Your Channels with You When Switching Sites**: Choose the channels and destination, then use Channel Migration (Beta) to copy them over. The preview shows which settings can be kept and which need attention, so you can review them before starting and save yourself repeated setup.
+
+What you can do depends on the site you select. Check the available actions and guidance on its page.
 
 ## Configuration Guide
 
@@ -34,7 +35,7 @@ Open the extension settings page, go to **"Basic Settings"** in the left menu, a
 | Option | Description |
 |------|------|
 | **Base URL** | Your self-hosted system's backend address (usually the web access address). |
-| **Authentication Credentials** | **New API Series**: Requires `Admin Token` and User ID.<br>**Sub2API**: Admin API Key (only for deployments without `step-up` enabled).<br>**AxonHub**: Admin email and password.<br>**Claude Code Hub**: Admin email and password.<br>**Octopus**: Username and password. |
+| **Authentication Credentials** | **New API Series**: Requires `Admin Token` and User ID.<br>**Sub2API**: Admin API Key (if key access requires additional web verification, the extension cannot view or export keys or migrate channels out).<br>**AxonHub**: Admin email and password.<br>**Claude Code Hub**: Admin email and password.<br>**Octopus**: Username and password. |
 
 ### 3. Verify Connection
 Click **"Verify Configuration"**. After successful verification, the management entrance for the corresponding system will be automatically unlocked.
@@ -61,14 +62,19 @@ When performing sensitive operations (e.g., viewing a channel's real key), if th
 - For details, see: [New API Security Verification](./new-api-security-verification.md)
 
 ### 4. Channel Migration (Beta)
-This is an advanced feature that allows you to quickly convert existing accounts from **"Account Management"** into channels for your self-hosted site.
 
-1. Click **"Channel Migration"** on the channel list page.
-2. Select the source (existing account/bookmark) and target (current self-hosted site).
-3. The extension will automatically:
-   - Extract the Base URL and API Key.
-   - Attempt to automatically identify available upstream model lists.
-   - Generate channel names according to preset rules.
+Copy channels from the current self-hosted site to another configured site without recreating each one manually. Configure connections for both sites before starting.
+
+1. Enable **"Channel Migration"** on the source site's channel list, then select channels or use the current filtered results.
+2. Choose the target site. Review the preview for changes to types, URLs, models, groups, and statuses, along with settings that cannot be preserved.
+3. Click **"Start migration"** and confirm. The extension reads each source channel's key and creates a channel on the target site.
+4. Check each result. If a result is **"Uncertain"**, refresh the list and inspect the target site before deciding whether to retry, to avoid duplicates.
+
+Migration only creates new channels. It does not modify the source, detect duplicates, overwrite existing channels, or roll back changes automatically.
+
+Supported channel types and settings vary by system; follow the statuses and guidance in the migration preview. Groups, model mappings, priorities, and other settings may change or be omitted. After migration, check the channel settings and enabled status on the target site.
+
+If prompted to complete verification before reading a source key, do so and retry. If the required verification method is not supported, retrieve the key from the source dashboard and add the channel manually on the target site.
 
 ## FAQ
 

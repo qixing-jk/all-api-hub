@@ -377,7 +377,6 @@ describe("RepairMissingKeysDialog", () => {
       targetSummary: {
         siteType: SITE_TYPES.NEW_API,
         baseUrl: "https://target.example.invalid",
-        compatibleUserId: "1",
       },
     })
     mockResolveRepairCreatedKeyBatchImportCandidate.mockResolvedValue(null)
@@ -1232,7 +1231,6 @@ describe("RepairMissingKeysDialog", () => {
       targetSummary: {
         siteType: SITE_TYPES.DONE_HUB,
         baseUrl: "https://done-hub.example.invalid",
-        compatibleUserId: "2",
       },
     })
 

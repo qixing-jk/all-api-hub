@@ -1,43 +1,24 @@
-import {
-  CLAUDE_CODE_HUB_PROVIDER_TYPE,
-  isClaudeCodeHubProviderType,
-} from "~/constants/claudeCodeHub"
-import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
+import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
+import { requireNumericManagedResourceId } from "~/services/apiAdapters/managedResources/resourceIds"
 import * as claudeCodeHubApi from "~/services/apiService/claudeCodeHub"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
-import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
-import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
-import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
+import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
 import {
   userPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
-import type {
-  ClaudeCodeHubAllowedModel,
-  ClaudeCodeHubChannelWithData,
-  ClaudeCodeHubProviderCreatePayload,
-  ClaudeCodeHubProviderDisplay,
-  ClaudeCodeHubProviderUpdatePayload,
-} from "~/types/claudeCodeHub"
 import type { ClaudeCodeHubConfig } from "~/types/claudeCodeHubConfig"
-import {
-  CHANNEL_STATUS,
-  type ChannelFormData,
-  type ChannelMode,
-  type CreateChannelPayload,
-  type ManagedSiteChannel,
-  type ManagedSiteChannelListData,
-  type UpdateChannelPayload,
-} from "~/types/managedSite"
+import type {
+  ManagedSiteChannelDraft,
+  ManagedSiteChannelDraftSource,
+} from "~/types/managedSiteChannelDraft"
 import { createLogger } from "~/utils/core/logger"
-import { normalizeList, parseDelimitedList } from "~/utils/core/string"
-import { t } from "~/utils/i18n/core"
+import { normalizeList } from "~/utils/core/string"
 
 const logger = createLogger("ClaudeCodeHubService")
 const DEFAULT_GROUP_TAG = "default"
@@ -99,189 +80,11 @@ export async function checkValidClaudeCodeHubConfig(): Promise<boolean> {
 }
 
 /**
- * Adapts Claude Code Hub preferences into the managed-site config contract.
- */
-export async function getClaudeCodeHubConfig(): Promise<ManagedSiteConfig | null> {
-  try {
-    const prefs = await userPreferences.getPreferences()
-    if (hasValidClaudeCodeHubConfig(prefs) && prefs.claudeCodeHub) {
-      return prefs.claudeCodeHub
-    }
-    return null
-  } catch (error) {
-    logger.error(
-      "Error getting Claude Code Hub config",
-      toSanitizedErrorSummary(error, []),
-    )
-    return null
-  }
-}
-
-/**
- * Converts an ISO-like timestamp string to Unix seconds.
- */
-function toUnixSeconds(value?: string): number {
-  if (!value) return 0
-  const parsed = Date.parse(value)
-  return Number.isFinite(parsed) ? Math.floor(parsed / 1000) : 0
-}
-
-/**
- * Normalizes provider types to the supported Claude Code Hub enum fallback.
- */
-function normalizeProviderType(value: unknown) {
-  return isClaudeCodeHubProviderType(value)
-    ? value
-    : CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE
-}
-
-/**
- * Preserve legacy backend-owned provider types when editing existing records,
- * while still defaulting missing or invalid values for new payloads.
- */
-function preserveProviderType(value: unknown) {
-  return typeof value === "string" && value.trim()
-    ? value
-    : CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE
-}
-
-/**
- * Normalizes allowed-model rules into a flat list of exact model identifiers.
- */
-function normalizeAllowedModels(
-  allowedModels?: ClaudeCodeHubAllowedModel[] | null,
-): string[] {
-  return normalizeList(
-    (allowedModels ?? [])
-      .map((item) => {
-        if (typeof item === "string") return item
-        if (item?.matchType && item.matchType !== "exact") return ""
-        return item?.pattern ?? ""
-      })
-      .filter(Boolean),
-  )
-}
-
-/**
- * Converts model identifiers into exact-match Claude Code Hub rules.
- */
-function toAllowedModelRules(models: string[]): ClaudeCodeHubAllowedModel[] {
-  return normalizeList(models).map((model) => ({
-    matchType: "exact",
-    pattern: model,
-  }))
-}
-
-/**
- * Resolves the primary provider group tag from channel form data.
- */
-function getProviderGroupTag(formData: Pick<ChannelFormData, "groups">) {
-  return normalizeList(formData.groups)[0] ?? DEFAULT_GROUP_TAG
-}
-
-/**
- * Converts Claude Code Hub provider rows into the shared managed-site list shape.
- */
-function toManagedSiteChannelListData(
-  providers: ClaudeCodeHubProviderDisplay[],
-): ManagedSiteChannelListData {
-  const items = providers.map(providerToManagedSiteChannel)
-  const typeCounts = items.reduce<Record<string, number>>((acc, item) => {
-    const type = String(item.type)
-    acc[type] = (acc[type] ?? 0) + 1
-    return acc
-  }, {})
-
-  return {
-    items,
-    total: items.length,
-    type_counts: typeCounts,
-  }
-}
-
-/**
- * Clamps provider weights to Claude Code Hub's expected positive integer shape.
- */
-function toSafeWeight(weight?: number): number {
-  const numericWeight = Number(weight ?? 1)
-  if (!Number.isFinite(numericWeight)) {
-    return 1
-  }
-  return Math.max(1, Math.trunc(numericWeight))
-}
-
-/**
- * Maps a Claude Code Hub provider record into the managed-site channel shape.
- */
-export function providerToManagedSiteChannel(
-  provider: ClaudeCodeHubProviderDisplay,
-): ClaudeCodeHubChannelWithData {
-  const models = normalizeAllowedModels(provider.allowedModels)
-  const groupTag = provider.groupTag?.trim() || DEFAULT_GROUP_TAG
-  const createdTime = toUnixSeconds(provider.createdAt)
-
-  return {
-    id: provider.id,
-    type: preserveProviderType(provider.providerType),
-    key: provider.maskedKey ?? provider.key ?? "",
-    name: provider.name || `Provider ${provider.id}`,
-    base_url: provider.url ?? "",
-    models: models.join(","),
-    status:
-      provider.isEnabled === false
-        ? CHANNEL_STATUS.ManuallyDisabled
-        : CHANNEL_STATUS.Enable,
-    weight: toSafeWeight(provider.weight),
-    priority: provider.priority ?? 0,
-    openai_organization: null,
-    test_model: models[0] ?? null,
-    created_time: createdTime,
-    test_time: 0,
-    response_time: 0,
-    other: "",
-    balance: 0,
-    balance_updated_time: 0,
-    group: groupTag,
-    used_quota: 0,
-    model_mapping: "",
-    status_code_mapping: "",
-    auto_ban: 0,
-    other_info: "",
-    tag: null,
-    param_override: null,
-    header_override: null,
-    remark: null,
-    channel_info: {
-      is_multi_key: false,
-      multi_key_size: 1,
-      multi_key_status_list: null,
-      multi_key_polling_index: 0,
-      multi_key_mode: "",
-    },
-    setting: "",
-    settings: "",
-    _claudeCodeHubData: provider,
-  }
-}
-
-/**
- * Searches Claude Code Hub providers through the upstream admin search API.
- */
-async function searchClaudeCodeHubChannels(
-  config: ClaudeCodeHubConfig,
-  keyword: string,
-): Promise<ManagedSiteChannelListData> {
-  const providers = await claudeCodeHubApi.searchProviders(config, keyword)
-  return toManagedSiteChannelListData(providers)
-}
-
-/**
  * Resolves a real provider key when list data only contains a masked key.
  */
-async function hydrateComparableChannelKey(
-  config: ClaudeCodeHubConfig,
-  channel: ManagedSiteChannel,
-): Promise<ManagedSiteChannel | null> {
+async function hydrateComparableChannelKey<
+  T extends { id: number; key?: string },
+>(config: ClaudeCodeHubConfig, channel: T): Promise<T | null> {
   if (hasUsableManagedSiteChannelKey(channel.key)) {
     return channel
   }
@@ -289,7 +92,7 @@ async function hydrateComparableChannelKey(
   try {
     const key = await claudeCodeHubApi.getUnmaskedProviderKey(
       config,
-      channel.id,
+      requireNumericManagedResourceId(channel.id),
     )
     if (!hasUsableManagedSiteChannelKey(key)) {
       throw new Error("Claude Code Hub returned an unusable provider key")
@@ -311,11 +114,10 @@ async function hydrateComparableChannelKey(
 /**
  * Hydrates Claude Code Hub provider keys for shared channel comparison.
  */
-export async function hydrateComparableChannelKeys(
-  config: ClaudeCodeHubConfig,
-  candidates: ManagedSiteChannel[],
-): Promise<ManagedSiteChannel[]> {
-  const hydratedCandidates: ManagedSiteChannel[] = []
+export async function hydrateComparableChannelKeys<
+  T extends { id: number; key?: string },
+>(config: ClaudeCodeHubConfig, candidates: T[]): Promise<T[]> {
+  const hydratedCandidates: T[] = []
 
   for (const candidate of candidates) {
     if (hasUsableManagedSiteChannelKey(candidate.key)) {
@@ -338,116 +140,6 @@ export async function hydrateComparableChannelKeys(
 }
 
 /**
- * Builds a Claude Code Hub create payload from managed-site form data.
- */
-export function buildClaudeCodeHubCreatePayloadFromFormData(
-  formData: ChannelFormData,
-): ClaudeCodeHubProviderCreatePayload {
-  const models = normalizeList(formData.models ?? [])
-  if (models.length === 0) {
-    throw new Error(t("messages:claudecodehub.modelsMissing"))
-  }
-
-  const key = formData.key.trim()
-  if (!hasUsableManagedSiteChannelKey(key)) {
-    throw new Error(t("messages:claudecodehub.realProviderKeyRequired"))
-  }
-
-  return {
-    name: formData.name.trim(),
-    url: formData.base_url.trim(),
-    key,
-    provider_type: normalizeProviderType(formData.type),
-    allowed_models: toAllowedModelRules(models),
-    is_enabled: formData.status === CHANNEL_STATUS.Enable,
-    weight: toSafeWeight(formData.weight),
-    priority: formData.priority,
-    group_tag: getProviderGroupTag(formData),
-  }
-}
-
-/**
- * Builds a Claude Code Hub update payload from managed-site channel data.
- */
-export function buildClaudeCodeHubUpdatePayloadFromChannelData(
-  channelData: UpdateChannelPayload & { status?: number },
-): ClaudeCodeHubProviderUpdatePayload {
-  const models = normalizeList(parseDelimitedList(channelData.models ?? ""))
-  const payload: ClaudeCodeHubProviderUpdatePayload = {
-    providerId: channelData.id,
-  }
-
-  if (channelData.name !== undefined) payload.name = channelData.name.trim()
-  if (channelData.base_url !== undefined)
-    payload.url = channelData.base_url.trim()
-  if (channelData.type !== undefined) {
-    payload.provider_type = preserveProviderType(channelData.type)
-  }
-  if (models.length > 0) payload.allowed_models = toAllowedModelRules(models)
-  if (channelData.status !== undefined) {
-    payload.is_enabled = channelData.status === CHANNEL_STATUS.Enable
-  }
-  if (channelData.weight !== undefined)
-    payload.weight = toSafeWeight(channelData.weight)
-  if (channelData.priority !== undefined)
-    payload.priority = channelData.priority
-  if (channelData.groups !== undefined || channelData.group !== undefined) {
-    payload.group_tag =
-      normalizeList(
-        channelData.groups ?? parseDelimitedList(channelData.group ?? ""),
-      )[0] ?? DEFAULT_GROUP_TAG
-  }
-
-  // Claude Code Hub only returns masked provider keys in list responses. Sending
-  // that placeholder back would overwrite the real credential, so only include
-  // a key when the user supplied comparable key material.
-  if (hasUsableManagedSiteChannelKey(channelData.key)) {
-    payload.key = channelData.key?.trim()
-  }
-
-  return payload
-}
-
-/**
- * Searches Claude Code Hub channels by keyword through the provider search API.
- */
-export async function searchChannel(
-  config: ClaudeCodeHubConfig,
-  keyword: string,
-): Promise<ManagedSiteChannelListData | null> {
-  try {
-    return await searchClaudeCodeHubChannels(config, keyword)
-  } catch (error) {
-    logger.error(
-      "Failed to search Claude Code Hub providers",
-      toClaudeCodeHubDisclosureError(error, config).message,
-    )
-    return null
-  }
-}
-
-/**
- * Lists Claude Code Hub channels through the provider v1 list API.
- */
-export async function listChannels(
-  config: ClaudeCodeHubConfig,
-  options?: {
-    signal?: AbortSignal
-    beforeRequest?: () => Promise<void>
-  },
-): Promise<ManagedSiteChannelListData> {
-  await options?.beforeRequest?.()
-  const providers = await runClaudeCodeHubRead(
-    config,
-    async () =>
-      await claudeCodeHubApi.listProviders(config, {
-        ...(options?.signal ? { signal: options.signal } : {}),
-      }),
-  )
-  return toManagedSiteChannelListData(providers)
-}
-
-/**
  * Fetches the real Claude Code Hub provider key for edit, comparison, and export flows.
  */
 export async function fetchChannelSecretKey(
@@ -462,79 +154,24 @@ export async function fetchChannelSecretKey(
 }
 
 /**
- * Fetches available models for a managed-site account token pair.
- */
-export async function fetchAvailableModels(
-  account: DisplaySiteData,
-  token: ApiToken,
-): Promise<string[]> {
-  return await fetchManagedSiteAvailableModels(account, token, {
-    includeAccountFallback: false,
-  })
-}
-
-/**
- * Builds the default Claude Code Hub channel name for imported tokens.
- */
-export function buildChannelName(
-  account: DisplaySiteData,
-  token: ApiToken,
-): string {
-  let channelName = `${account.name} | ${token.name}`.trim()
-  if (!channelName.endsWith("(auto)")) {
-    channelName += " (auto)"
-  }
-  return channelName
-}
-
-/**
- * Prefills channel form data from an account and its scoped token models.
+ * Prefills channel form data from resolved credentials and their live models.
  */
 export async function prepareChannelFormData(
-  account: DisplaySiteData,
-  token: ApiToken | AccountToken,
-): Promise<ChannelFormData> {
-  const upstreamAccount = normalizeAccountForManagedChannel(account)
-  const { models: availableModels, fetchFailed } = await fetchTokenScopedModels(
-    upstreamAccount,
-    token,
-  )
+  source: ManagedSiteChannelDraftSource,
+): Promise<ManagedSiteChannelDraft> {
+  const { models: availableModels, fetchFailed } =
+    await fetchManagedSiteImportModels(source)
 
   return {
-    name: buildChannelName(account, token),
+    name: source.name,
     type: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-    key: token.key,
-    base_url: upstreamAccount.baseUrl,
+    key: source.apiKey,
+    base_url: source.baseUrl,
     models: normalizeList(availableModels),
     ...(fetchFailed ? { modelPrefillFetchFailed: true } : {}),
     groups: [DEFAULT_GROUP_TAG],
     priority: 0,
     weight: 1,
-    status: CHANNEL_STATUS.Enable,
-  }
-}
-
-/**
- * Builds a managed-site channel payload for Claude Code Hub creation flows.
- */
-export function buildChannelPayload(
-  formData: ChannelFormData,
-  mode: ChannelMode = "single",
-): CreateChannelPayload {
-  const payload = buildClaudeCodeHubCreatePayloadFromFormData(formData)
-  return {
-    mode,
-    channel: {
-      name: payload.name,
-      type: payload.provider_type,
-      key: payload.key,
-      base_url: payload.url,
-      models: normalizeList(formData.models ?? []).join(","),
-      groups: [payload.group_tag ?? DEFAULT_GROUP_TAG],
-      group: payload.group_tag ?? DEFAULT_GROUP_TAG,
-      priority: payload.priority ?? 0,
-      weight: payload.weight ?? 1,
-      status: formData.status,
-    },
+    enabled: true,
   }
 }

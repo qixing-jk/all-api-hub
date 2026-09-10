@@ -51,7 +51,8 @@ import {
 import type { DeepPartial } from "~/types/utils"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { showResultToast, showUpdateToast } from "~/utils/core/toastHelpers"
+import { showResultToast } from "~/utils/feedback/operationFeedback"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import {
   getDocsTaskNotificationsDingtalkUrl,
   getDocsTaskNotificationsFeishuUrl,
@@ -527,11 +528,11 @@ export default function TaskNotificationSettings() {
         },
       )
       await refreshPermissionStatus()
-      showResultToast(
+      showResultToast({
         success,
-        t("taskNotifications.permission.requestSuccess"),
-        t("taskNotifications.permission.requestFailed"),
-      )
+        successFallback: t("taskNotifications.permission.requestSuccess"),
+        errorFallback: t("taskNotifications.permission.requestFailed"),
+      })
     } catch (error) {
       trackOptionalPermissionRequestResult(
         OPTIONAL_PERMISSION_IDS.Notifications,
@@ -544,11 +545,11 @@ export default function TaskNotificationSettings() {
       )
       logger.warn("Failed to request notification permission", error)
       await refreshPermissionStatus()
-      showResultToast(
-        false,
-        t("taskNotifications.permission.requestSuccess"),
-        t("taskNotifications.permission.requestFailed"),
-      )
+      showResultToast({
+        success: false,
+        successFallback: t("taskNotifications.permission.requestSuccess"),
+        errorFallback: t("taskNotifications.permission.requestFailed"),
+      })
     } finally {
       setIsRequestingPermission(false)
     }

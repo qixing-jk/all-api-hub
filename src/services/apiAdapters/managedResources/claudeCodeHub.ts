@@ -54,7 +54,7 @@ import {
 } from "~/services/managedSites/mutations"
 import { toClaudeCodeHubDisclosureError } from "~/services/managedSites/providers/claudeCodeHub"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type {
   ClaudeCodeHubAllowedModel,
@@ -857,6 +857,17 @@ const definition = {
     {
       kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
       project: createImportProjection,
+      validate: validateValues,
+      sourceFieldIds: {
+        [fields.Name]: "name",
+        [fields.Type]: "channelType",
+        [fields.Status]: "enabled",
+        [fields.BaseUrl]: "baseUrl",
+        [fields.Key]: "credential",
+        [fields.Models]: "models",
+        [fields.Priority]: "priority",
+        [fields.Weight]: "orderingWeight",
+      } as const,
     },
   ],
   capabilities: {

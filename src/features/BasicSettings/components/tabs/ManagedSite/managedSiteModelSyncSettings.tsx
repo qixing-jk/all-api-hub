@@ -1,6 +1,5 @@
 import type { TFunction } from "i18next"
 import { useEffect, useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import ChannelFiltersEditor from "~/components/ChannelFiltersEditor"
@@ -21,6 +20,7 @@ import {
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useDeferredPreferenceField } from "~/hooks/useDeferredPreferenceField"
+import toast from "~/lib/notify"
 import { normalizeChannelFilters } from "~/services/managedSites/channelModelFilterRules"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import type { ModelMetadata } from "~/services/models/modelMetadata/types"
@@ -47,7 +47,7 @@ import type { PartialWithNested } from "~/types/utils"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
-import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
+import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
 import { MANAGED_SITE_MODEL_SYNC_CHANNEL_PROCESSING_TIMEOUT_TARGET_ID } from "./managedSiteModelSyncTargetIds"

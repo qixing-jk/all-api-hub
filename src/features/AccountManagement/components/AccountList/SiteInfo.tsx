@@ -14,7 +14,6 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import { useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { LdohIcon } from "~/components/icons/LdohIcon"
@@ -28,11 +27,13 @@ import {
   WorkflowTransitionButton,
 } from "~/components/ui"
 import {
+  CHECK_IN_METHOD_AVAILABILITIES,
   CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
+import { getAccountSiteApiRouter } from "~/constants/siteType"
 import { isSelectedCheckInStatusCurrent } from "~/features/AccountManagement/components/AccountList/checkInFilter"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
@@ -50,6 +51,8 @@ import {
   getTempWindowFallbackSettingsTab,
 } from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
 import { useLdohSiteLookupContext } from "~/features/LdohSiteLookup/hooks/LdohSiteLookupContext"
+import { ProtectionBypassHistoryLink } from "~/features/ProtectionBypass/components/ProtectionBypassHistoryLink"
+import toast from "~/lib/notify"
 import { cn } from "~/lib/utils"
 import {
   getSelectedCheckInStatus,
@@ -69,6 +72,7 @@ import {
   openCheckInAndRedeem,
   openCheckInPage,
   openCustomCheckInPage,
+  openProtectionBypassHistory,
   openSettingsTab,
 } from "~/utils/navigation"
 
@@ -93,6 +97,7 @@ const logger = createLogger("AccountList.SiteInfo")
 
 interface CheckInStatusButtonProps {
   checkedIn: boolean
+  disabled?: boolean
   icon: LucideIcon
   label: string
   onClick: () => void
@@ -102,6 +107,7 @@ interface CheckInStatusButtonProps {
 /** Renders a check-in action with its source-specific icon and shared status color. */
 function CheckInStatusButton({
   checkedIn,
+  disabled,
   icon: Icon,
   label,
   onClick,
@@ -115,6 +121,7 @@ function CheckInStatusButton({
     >
       <IconButton
         onClick={onClick}
+        disabled={disabled}
         variant="ghost"
         size="xs"
         aria-label={label}
@@ -202,6 +209,11 @@ export default function SiteInfo({
   )
 
   const healthCode = site.health?.code
+  const canOpenProtectionBypassHistory =
+    site.health?.status === SiteHealthStatus.Warning &&
+    Object.values(TEMP_WINDOW_HEALTH_STATUS_CODES).some(
+      (code) => code === healthCode,
+    )
   const canOpenHealthSettings =
     site.health?.status === SiteHealthStatus.Warning &&
     (healthCode === TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED ||
@@ -352,20 +364,12 @@ export default function SiteInfo({
 
     if (
       checkInInspection.selectionState.status ===
-      CHECK_IN_SELECTION_STATUSES.Selected
+        CHECK_IN_SELECTION_STATUSES.Selected &&
+      selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
+      selectedStatus.availability !== CHECK_IN_METHOD_AVAILABILITIES.Disabled &&
+      siteCheckedIn !== undefined
     ) {
-      if (siteCheckedIn === undefined) {
-        indicators.push(
-          <Tooltip
-            key="site-checkin"
-            content={t("list.site.checkInStatusUnavailable")}
-            position="top"
-            wrapperClassName="flex items-center"
-          >
-            <TriangleAlert className="h-4 w-4 text-yellow-500" />
-          </Tooltip>,
-        )
-      } else if (!isSelectedCheckInStatusCurrent(site)) {
+      if (!isSelectedCheckInStatusCurrent(site)) {
         const staleStatusLabel = t("list.site.checkInStatusOutdated", {
           time: formatLocaleDateTime(
             selectedStatusObservedAt,
@@ -403,6 +407,7 @@ export default function SiteInfo({
             icon={CircleCheck}
             label={t("list.site.checkedInToday")}
             onClick={handleSiteCheckIn}
+            disabled={!getAccountSiteApiRouter(site.siteType).checkInPath}
             testId={ACCOUNT_MANAGEMENT_TEST_IDS.siteCheckInStatusButton}
           />,
         )
@@ -414,6 +419,7 @@ export default function SiteInfo({
             icon={CircleX}
             label={t("list.site.notCheckedInToday")}
             onClick={handleSiteCheckIn}
+            disabled={!getAccountSiteApiRouter(site.siteType).checkInPath}
             testId={ACCOUNT_MANAGEMENT_TEST_IDS.siteCheckInStatusButton}
           />,
         )
@@ -502,6 +508,12 @@ export default function SiteInfo({
                   t("list.site.notAvailable"),
                 )}
               </p>
+              {canOpenProtectionBypassHistory && (
+                <ProtectionBypassHistoryLink
+                  className="text-xs"
+                  onOpen={openProtectionBypassHistory}
+                />
+              )}
             </div>
           }
           position="right"

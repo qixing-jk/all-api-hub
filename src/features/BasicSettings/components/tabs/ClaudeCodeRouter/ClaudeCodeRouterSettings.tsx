@@ -6,7 +6,7 @@ import { Card, CardItem, CardList, Input } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
-import { runPreferenceUpdateWithToast } from "~/utils/core/toastHelpers"
+import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
 /**
  * Settings section for configuring Claude Code Router admin API connection.

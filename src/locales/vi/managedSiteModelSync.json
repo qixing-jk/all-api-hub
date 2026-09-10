@@ -73,6 +73,7 @@
       "finishedAt": "Thời gian hoàn thành",
       "manageChannel": "Quản lý kênh",
       "message": "Thông báo lỗi",
+      "resourceUnavailable": "Không thể liên kết bản ghi này với trang hiện tại. Hãy chọn lại kênh từ danh sách đồng bộ thủ công.",
       "selectAllChannels": "Chọn tất cả các kênh",
       "selectChannel": "Chọn kênh {{name}}",
       "status": "Trạng thái",

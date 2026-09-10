@@ -13,11 +13,10 @@ import {
   resolveKnownGroupRatio,
 } from "~/features/ModelList/groupLabels"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
+import { CALCULATED_PRICE_KINDS } from "~/services/modelPricing/pricingConstants"
 import {
-  formatPrice,
   getEndpointTypesText,
   isTokenBillingType,
-  resolvePriceAmount,
   type CalculatedPrice,
 } from "~/services/models/utils/modelPricing"
 
@@ -25,8 +24,11 @@ import {
   getUnavailablePriceReasonText,
   resolveUnavailablePriceReason,
 } from "./ModelItemPricing"
+import { ModelItemTokenPricingDetails } from "./ModelItemTokenPricingDetails"
+import { ModelPriceQuote } from "./ModelPriceQuote"
 
 interface ModelItemDetailsProps {
+  sourceLabel?: string
   model: ModelPricing
   calculatedPrice: CalculatedPrice
   exchangeRate: number
@@ -50,46 +52,21 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
   showGroupDetails,
   showPricingDetails,
   onGroupClick,
+  sourceLabel,
 }) => {
   const { t } = useTranslation("modelList")
   const hasGroupSemantics =
     groupContext.accessState !== MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE
   const shouldShowGroupDetails = showGroupDetails && hasGroupSemantics
-  const tokenPriceDetails =
-    calculatedPrice.kind === "token"
-      ? [
-          {
-            key: "input",
-            label: t("input1MTokens"),
-            amount: calculatedPrice.usdPerMillionTokens.input,
-          },
-          {
-            key: "output",
-            label: t("output1MTokens"),
-            amount: calculatedPrice.usdPerMillionTokens.output,
-          },
-          ...(calculatedPrice.usdPerMillionTokens.cacheRead !== undefined
-            ? [
-                {
-                  key: "cache-read",
-                  label: t("cacheRead1MTokens"),
-                  amount: calculatedPrice.usdPerMillionTokens.cacheRead,
-                },
-              ]
-            : []),
-          ...(calculatedPrice.usdPerMillionTokens.cacheWrite !== undefined
-            ? [
-                {
-                  key: "cache-write",
-                  label: t("cacheWrite1MTokens"),
-                  amount: calculatedPrice.usdPerMillionTokens.cacheWrite,
-                },
-              ]
-            : []),
-        ]
-      : []
+  const shouldShowEndpointTypes =
+    showEndpointTypes &&
+    model.supported_endpoint_types?.some((endpoint) => endpoint.trim())
 
-  if (!shouldShowGroupDetails && !showEndpointTypes && !showPricingDetails) {
+  if (
+    !shouldShowGroupDetails &&
+    !shouldShowEndpointTypes &&
+    !showPricingDetails
+  ) {
     return null
   }
 
@@ -105,6 +82,17 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
 
   return (
     <>
+      {showPricingDetails && calculatedPrice.quote && (
+        <ModelPriceQuote
+          quote={calculatedPrice.quote}
+          details
+          sourceLabel={sourceLabel}
+          effectiveGroup={effectiveGroup}
+          showSummary={
+            calculatedPrice.isComparisonActive === false || !!unavailableReason
+          }
+        />
+      )}
       <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
         {/* 可用分组 */}
         {shouldShowGroupDetails && groupContext.usableGroups.length > 0 && (
@@ -195,7 +183,7 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
         )}
 
         {/* 可用端点类型 */}
-        {showEndpointTypes && (
+        {shouldShowEndpointTypes && (
           <div>
             <div className="mb-2 flex items-center space-x-2">
               <Server className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
@@ -210,41 +198,28 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
         )}
 
         {/* 详细定价信息（仅按量计费模型） */}
-        {showPricingDetails && isTokenBillingType(model.quota_type) && (
-          <div className="md:col-span-2">
-            <div className="mb-2 flex items-center space-x-2">
-              <DollarSign className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
-              <span className="dark:text-dark-text-secondary font-medium text-gray-700">
-                {t("detailedPricing")}
-              </span>
+        {showPricingDetails &&
+          !calculatedPrice.quote &&
+          isTokenBillingType(model.quota_type) && (
+            <div className="md:col-span-2">
+              <div className="mb-2 flex items-center space-x-2">
+                <DollarSign className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
+                <span className="dark:text-dark-text-secondary font-medium text-gray-700">
+                  {t("detailedPricing")}
+                </span>
+              </div>
+              {unavailableReason ? (
+                <div className="dark:text-dark-text-secondary text-xs leading-snug text-gray-600">
+                  {getUnavailablePriceReasonText(t, unavailableReason)}
+                </div>
+              ) : calculatedPrice.kind === CALCULATED_PRICE_KINDS.TOKEN ? (
+                <ModelItemTokenPricingDetails
+                  calculatedPrice={calculatedPrice}
+                  exchangeRate={exchangeRate}
+                />
+              ) : null}
             </div>
-            {unavailableReason ? (
-              <div className="dark:text-dark-text-secondary text-xs leading-snug text-gray-600">
-                {getUnavailablePriceReasonText(t, unavailableReason)}
-              </div>
-            ) : calculatedPrice.kind === "token" ? (
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                {tokenPriceDetails.map((price) => (
-                  <div key={price.key} className="space-y-1">
-                    <div className="dark:text-dark-text-tertiary text-gray-500">
-                      {price.label}
-                    </div>
-                    <div className="dark:text-dark-text-primary font-medium text-gray-900">
-                      USD: {formatPrice(price.amount, "USD")}
-                    </div>
-                    <div className="dark:text-dark-text-primary font-medium text-gray-900">
-                      CNY:{" "}
-                      {formatPrice(
-                        resolvePriceAmount(price.amount, "CNY", exchangeRate),
-                        "CNY",
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        )}
+          )}
       </div>
     </>
   )

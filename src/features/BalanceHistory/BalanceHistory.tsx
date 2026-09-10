@@ -7,7 +7,6 @@ import {
   Settings,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { EChart } from "~/components/charts/EChart"
@@ -34,6 +33,7 @@ import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useTheme } from "~/contexts/ThemeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import toast from "~/lib/notify"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
   buildAccountDisplayNameMap,

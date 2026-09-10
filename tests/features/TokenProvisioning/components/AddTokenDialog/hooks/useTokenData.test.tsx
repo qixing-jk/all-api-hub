@@ -22,10 +22,12 @@ const {
   fetchAccountAvailableModelsMock: vi.fn(),
   fetchUserGroupsMock: vi.fn(),
   toastErrorMock: vi.fn(),
-  translateMock: vi.fn((key: string) => `keyManagement:${key}`),
+  translateMock: vi.fn((key: string) =>
+    key.startsWith("keyManagement:") ? key : `keyManagement:${key}`,
+  ),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     error: toastErrorMock,
   },
@@ -33,10 +35,12 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>()
+  const i18n = { t: translateMock }
   return {
     ...actual,
     useTranslation: () => ({
       t: translateMock,
+      i18n,
     }),
   }
 })

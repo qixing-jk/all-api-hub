@@ -233,9 +233,13 @@ class AccountRefresh {
     try {
       const account = await accountQueries.getAccountById(id)
       const shouldSerializeSub2ApiRefresh =
-        account?.site_type === SITE_TYPES.SUB2API &&
-        typeof account.sub2apiAuth?.refreshToken === "string" &&
-        account.sub2apiAuth.refreshToken.trim().length > 0
+        account &&
+        Boolean(
+          normalizeAccountSiteSupplementalAuth({
+            siteType: account.site_type,
+            sub2apiAuth: account.sub2apiAuth,
+          }).sub2apiAuth,
+        )
       return shouldSerializeSub2ApiRefresh
         ? await withExtensionStorageWriteLock(
             `all-api-hub:sub2api-refresh:${id}`,

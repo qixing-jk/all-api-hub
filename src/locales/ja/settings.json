@@ -222,9 +222,9 @@
     "userIdDesc": "管理者ユーザー ID（数値のみ）。通常 root admin は 1 です。"
   },
   "duplicateAccountWarningOnAdd": {
-    "description": "既に登録済みのサイトにアカウントを追加するとき、確認を求めるかどうかを制御します。",
+    "description": "追加前に保存済みアカウントを確認し、重複追加を防ぎます。",
     "title": "アカウント",
-    "toggleDesc": "有効にすると、同じサイト URL に別のアカウントを追加しようとしたときに確認ダイアログを表示します。",
+    "toggleDesc": "同じサイトの同じユーザー ID が保存済みの場合に確認します。OpenRouter では同一の Management Key を確認します。",
     "toggleLabel": "重複追加前に警告する"
   },
   "logging": {
@@ -506,6 +506,11 @@
     "shieldPermissionWarningTitle": "Cookies、Web Request、Web Request Blocking の権限が必要です",
     "shieldPopupFirefoxNote": "Firefox では、拡張機能のポップアップからこの機能を開始するとポップアップが閉じるため、この入口は利用できません。サイドパネルまたは設定ページを使用してください。",
     "shieldTitle": "サイト認証の補助",
+    "shieldWindowHeight": "高さ（px）",
+    "shieldWindowSizeDesc": "幅と高さをピクセル単位で設定して保存します。次に開く認証ウィンドウに適用されます。既存のウィンドウとタブのサイズは変わりません。",
+    "shieldWindowSizeReset": "既定値に戻す",
+    "shieldWindowSizeTitle": "認証ウィンドウのサイズ",
+    "shieldWindowWidth": "幅（px）",
     "title": "更新設定"
   },
   "releaseUpdate": {
@@ -592,30 +597,36 @@
     "userCustomSort": "ユーザー指定の並び替え"
   },
   "sub2apiManagedSite": {
-    "defaultScope": {
-      "description": "初期版では step_up_enabled が false の場合の URL + 管理者 API Key のみをサポートします。管理者ログイン、JWT、TOTP、step-up 解除は未対応です。",
-      "title": "デフォルトのセキュリティ設定のみ"
+    "adminCredentialsLink": {
+      "description": "管理者としてログインし、「システム設定 → セキュリティと認証」でキーを作成してコピーしてください。キー全体は一度だけ表示されます。再生成すると以前のキーは無効になります。",
+      "missingBaseUrl": "有効なサイト URL を入力すると、管理画面を開いて管理者 API キーを取得できます。",
+      "open": "システム設定を開く",
+      "title": "管理者 API キーを取得"
     },
-    "description": "管理 API を使用して Sub2API の API Key アカウントを管理します。",
+    "defaultScope": {
+      "description": "サイトが機密操作に追加認証を要求する場合、拡張機能ではチャネルのキーを表示・エクスポートできません。Sub2API の管理画面で操作してください。移行元のキーを読み取る必要がある移行も制限されます。",
+      "title": "キーの表示・エクスポートの制限"
+    },
+    "description": "サイトを接続すると、既存の API キーを Sub2API にインポートし、All API Hub でチャネルの表示・編集・移行ができます。",
     "fields": {
-      "adminApiKeyDesc": "x-api-key ヘッダーで送信する管理者 API Key",
+      "adminApiKeyDesc": "チャネル管理には、管理画面で作成した管理者 API キーを使用してください。モデル呼び出し用の通常の API キーは使用できません。",
       "adminApiKeyLabel": "管理者 API Key",
-      "adminApiKeyPlaceholder": "管理者 API Key を入力",
-      "baseUrlDesc": "Sub2API サイトのベース URL を設定します",
-      "baseUrlLabel": "ベース URL",
+      "adminApiKeyPlaceholder": "管理画面で取得した管理者 API キーを貼り付け",
+      "baseUrlDesc": "http:// または https:// を含む Sub2API 管理画面の URL を入力してください。",
+      "baseUrlLabel": "サイト URL",
       "baseUrlPlaceholder": "https://sub2api.example.com",
       "hideAdminApiKey": "管理者 API Key を非表示",
       "showAdminApiKey": "管理者 API Key を表示"
     },
-    "title": "Sub2API 連携設定",
+    "title": "Sub2API の接続設定",
     "validation": {
-      "description": "管理者 API Key で API Key アカウント一覧を取得できるか確認します",
-      "failed": "Sub2API の検証に失敗しました: {{error}}",
-      "missingFields": "ベース URL と管理者 API Key を入力してください",
-      "success": "Sub2API の設定を検証しました",
-      "title": "設定を検証",
-      "validate": "検証",
-      "validating": "検証中..."
+      "description": "チャネル管理を開く前に、サイト URL と管理者 API キーが使用できるか確認します。",
+      "failed": "Sub2API の接続確認に失敗しました：{{error}}",
+      "missingFields": "先にサイト URL と管理者 API キーを入力してください",
+      "success": "接続できました。Sub2API のチャネルを管理できます。",
+      "title": "接続を確認",
+      "validate": "接続を検証",
+      "validating": "確認中…"
     }
   },
   "tabs": {
@@ -715,6 +726,7 @@
         "success": "{{task}} が正常に完了しました。"
       },
       "counts": "合計 {{total}}、成功 {{success}}、失敗 {{failed}}、スキップ {{skipped}}。",
+      "countsWithAutoCheckinCategories": "合計 {{total}}、今回チェックイン成功 {{success}}、チェックイン済み {{alreadyChecked}}、失敗 {{failed}}、確認待ち {{uncertain}}、未実行 {{skipped}}。",
       "title": {
         "failure": "{{task}} が失敗しました",
         "partialSuccess": "{{task}} が一部成功しました",

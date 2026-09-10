@@ -1,7 +1,7 @@
 import type { BrowserContext, Page, Route, Worker } from "@playwright/test"
 
-import { ChannelType } from "~/constants"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
+import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
@@ -23,11 +23,11 @@ import {
   WebdavAutoSyncMessageTypes,
 } from "~/services/runtimeMessaging/messageTypes"
 import { SITE_ANNOUNCEMENTS_ALARM_NAME } from "~/services/siteAnnouncements/constants"
-import { AUTO_CHECKIN_SCHEDULE_MODE } from "~/types/autoCheckin"
 import type { AutoCheckinStatus } from "~/types/autoCheckin"
+import { AUTO_CHECKIN_SCHEDULE_MODE } from "~/types/autoCheckin"
 import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
-import { CHANNEL_STATUS, type ManagedSiteChannel } from "~/types/managedSite"
 import type { ExecutionResult } from "~/types/managedSiteModelSync"
+import { CHANNEL_STATUS, type NewApiChannel } from "~/types/newApi"
 import type { UsageHistoryStore } from "~/types/usageHistory"
 import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
 import { WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
@@ -93,8 +93,8 @@ type AlarmSnapshot = {
 } | null
 
 function createManagedSiteChannel(
-  overrides: Partial<ManagedSiteChannel>,
-): ManagedSiteChannel {
+  overrides: Partial<NewApiChannel>,
+): NewApiChannel {
   return {
     id: 101,
     type: ChannelType.OpenAI,
@@ -260,7 +260,7 @@ function getLocalDay(date = new Date()) {
 async function stubManagedSiteAdminRoutes(
   context: BrowserContext,
   options: {
-    channels?: ManagedSiteChannel[]
+    channels?: NewApiChannel[]
     fetchedModelsByChannelId?: Record<number, string[]>
   } = {},
 ) {
@@ -353,7 +353,7 @@ async function stubManagedSiteAdminRoutes(
         (item) => item.id === Number((payload as { id?: number }).id),
       )
       if (channel) {
-        const updates = payload as Partial<ManagedSiteChannel>
+        const updates = payload as Partial<NewApiChannel>
         if (typeof updates.models === "string") channel.models = updates.models
       }
 
@@ -1415,6 +1415,16 @@ test("runs auto-checkin daily check-ins when its MV3 alarm fires", async ({
   const today = getLocalDay()
   let checkinRequests = 0
 
+  await context.route(`${baseUrl}/api/user/checkin?month=*`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        success: true,
+        data: { enabled: true, stats: { checked_in_today: false } },
+      }),
+    }),
+  )
   await context.route(`${baseUrl}/api/user/checkin`, (route) => {
     checkinRequests += 1
     return route.fulfill({
@@ -1648,7 +1658,12 @@ test("runs managed-site model sync when its MV3 alarm fires", async ({
         }),
         items: [
           expect.objectContaining({
-            channelId: 101,
+            resourceRef: {
+              siteType: SITE_TYPES.NEW_API,
+              kind: "channel",
+              scopeKey: MANAGED_SITE_ALARM_BASE_URL,
+              resourceId: "101",
+            },
             channelName: "Alarm Synced Channel",
             ok: true,
             oldModels: ["gpt-4o-mini"],

@@ -12,12 +12,6 @@ import type { OctopusConfig } from "~/types/octopusConfig"
 import type { Sub2ApiManagedSiteConfig } from "~/types/sub2apiManagedSiteConfig"
 import type { VeloeraConfig } from "~/types/veloeraConfig"
 
-interface ManagedSiteLegacyAdminConfig {
-  baseUrl: string
-  adminToken: string
-  userId: string
-}
-
 export type ManagedSiteRuntimeConfig =
   | { siteType: typeof SITE_TYPES.NEW_API; config: NewApiConfig }
   | { siteType: typeof SITE_TYPES.DONE_HUB; config: DoneHubConfig }
@@ -36,6 +30,23 @@ export type ManagedSiteRuntimeConfigForType<TSiteType extends ManagedSiteType> =
 export type ManagedSiteRuntimeConfigValueForType<
   TSiteType extends ManagedSiteType,
 > = ManagedSiteRuntimeConfigForType<TSiteType>["config"]
+
+/** Returns the configured principal used by the persisted v1 repair receipt. */
+export function getManagedSiteRuntimePrincipal(
+  runtimeConfig: ManagedSiteRuntimeConfig,
+): string {
+  switch (runtimeConfig.siteType) {
+    case SITE_TYPES.OCTOPUS:
+      return runtimeConfig.config.username.trim()
+    case SITE_TYPES.AXON_HUB:
+      return runtimeConfig.config.email.trim()
+    case SITE_TYPES.CLAUDE_CODE_HUB:
+    case SITE_TYPES.SUB2API:
+      return "admin"
+    default:
+      return runtimeConfig.config.userId.trim()
+  }
+}
 
 const hasText = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0
@@ -180,6 +191,33 @@ export function resolveManagedSiteRuntimeConfigForType<
   return exhaustiveSiteType
 }
 
+const hashStringForCache = (value: string) => {
+  let hash = 2166136261
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+
+  return (hash >>> 0).toString(16)
+}
+
+/** Identifies active configuration changes without retaining credentials in cache keys. */
+export function getManagedSiteRuntimeConfigFingerprint(
+  preferences: UserPreferences,
+  siteType: ManagedSiteType,
+): string {
+  const config = resolveManagedSiteRuntimeConfigForType(
+    preferences,
+    siteType,
+  )?.config
+  const configEntries = Object.entries(config ?? {}).sort(([left], [right]) =>
+    left.localeCompare(right),
+  )
+
+  return [siteType, hashStringForCache(JSON.stringify(configEntries))].join("|")
+}
+
 /**
  * Resolves the runtime config for the currently selected managed-site type.
  */
@@ -207,9 +245,11 @@ export async function getCurrentManagedSiteRuntimeConfig(): Promise<ManagedSiteR
 /**
  * Loads preferences and resolves a runtime config for an explicit site type.
  */
-export async function getManagedSiteRuntimeConfigForType(
-  siteType: ManagedSiteType,
-): Promise<ManagedSiteRuntimeConfig | null> {
+export async function getManagedSiteRuntimeConfigForType<
+  TSiteType extends ManagedSiteType,
+>(
+  siteType: TSiteType,
+): Promise<ManagedSiteRuntimeConfigForType<TSiteType> | null> {
   try {
     const preferences = await userPreferences.getPreferences()
     return resolveManagedSiteRuntimeConfigForType(preferences, siteType)
@@ -218,47 +258,30 @@ export async function getManagedSiteRuntimeConfigForType(
   }
 }
 
+/** Loads the selected managed-site type even when its configuration is incomplete. */
+export async function getCurrentManagedSiteType(): Promise<ManagedSiteType> {
+  try {
+    const preferences = await userPreferences.getPreferences()
+    return preferences.managedSiteType || SITE_TYPES.NEW_API
+  } catch {
+    return SITE_TYPES.NEW_API
+  }
+}
+
 /**
- * Converts a runtime config to the legacy admin shape for compatibility callers.
+ * Check if preferences contain a valid managed site admin configuration.
  */
-export function getManagedSiteLegacyAdminConfig(
-  runtimeConfig: ManagedSiteRuntimeConfig,
-): ManagedSiteLegacyAdminConfig {
-  if (runtimeConfig.siteType === SITE_TYPES.OCTOPUS) {
-    return {
-      baseUrl: runtimeConfig.config.baseUrl,
-      adminToken: "",
-      userId: runtimeConfig.config.username,
-    }
+export function hasValidManagedSiteConfig(
+  prefs: UserPreferences | null,
+  siteType?: ManagedSiteType,
+): boolean {
+  if (!prefs) {
+    return false
   }
 
-  if (runtimeConfig.siteType === SITE_TYPES.AXON_HUB) {
-    return {
-      baseUrl: runtimeConfig.config.baseUrl,
-      adminToken: runtimeConfig.config.password,
-      userId: runtimeConfig.config.email,
-    }
-  }
-
-  if (runtimeConfig.siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-    return {
-      baseUrl: runtimeConfig.config.baseUrl,
-      adminToken: runtimeConfig.config.adminToken,
-      userId: "admin",
-    }
-  }
-
-  if (runtimeConfig.siteType === SITE_TYPES.SUB2API) {
-    return {
-      baseUrl: runtimeConfig.config.baseUrl,
-      adminToken: runtimeConfig.config.adminToken,
-      userId: "admin",
-    }
-  }
-
-  return {
-    baseUrl: runtimeConfig.config.baseUrl,
-    adminToken: runtimeConfig.config.adminToken,
-    userId: runtimeConfig.config.userId,
-  }
+  return Boolean(
+    siteType
+      ? resolveManagedSiteRuntimeConfigForType(prefs, siteType)?.config ?? null
+      : resolveCurrentManagedSiteRuntimeConfig(prefs)?.config ?? null,
+  )
 }

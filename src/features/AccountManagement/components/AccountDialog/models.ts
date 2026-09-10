@@ -6,7 +6,6 @@ import {
 import {
   createCompatibilityCheckInConfig,
   getNewAccountAutomaticExecutionDefault,
-  hasNewAccountCompatibilityRegistration,
 } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 import type {
@@ -53,6 +52,15 @@ export interface AccountDialogDraft {
   sub2apiTokenExpiresAt: number | null
 }
 
+/** Form state carried from a popup into manual New API token recovery. */
+export interface AccountDialogRecoveryState {
+  url: string
+  draft: AccountDialogDraft
+  accountId?: string
+  checkInSelectionChanged: boolean
+  checkInDiscoveryBaseSelection: CheckInConfig["selection"] | null
+}
+
 export type AccountCheckInRedetectionFeedback =
   | {
       kind: "completed"
@@ -63,7 +71,12 @@ export type AccountCheckInRedetectionFeedback =
     }
   | {
       kind: "failed"
-      message: string
+      reason: "url-required"
+    }
+  | {
+      kind: "failed"
+      reason: "operation"
+      diagnostic: string
     }
 
 /**
@@ -85,7 +98,7 @@ export function createEmptyAccountDialogDraft(
     excludeFromTodayIncome: false,
     checkIn: createCompatibilityCheckInConfig({
       siteType,
-      supported: hasNewAccountCompatibilityRegistration(siteType),
+      supported: false,
       automaticExecutionEnabled:
         getNewAccountAutomaticExecutionDefault(siteType),
       customCheckIn: {

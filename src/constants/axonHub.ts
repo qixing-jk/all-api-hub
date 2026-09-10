@@ -1,5 +1,3 @@
-import type { ChannelDefaults } from "~/types/managedSite"
-
 export const AXON_HUB_CHANNEL_STATUS = {
   ENABLED: "enabled",
   DISABLED: "disabled",
@@ -105,13 +103,6 @@ export const AxonHubChannelTypeNames: Record<AxonHubChannelType, string> = {
   [AXON_HUB_CHANNEL_TYPE.OLLAMA]: "Ollama",
 }
 
-export const AxonHubChannelTypeOptions = Object.entries(
-  AxonHubChannelTypeNames,
-).map(([value, label]) => ({
-  value: value as AxonHubChannelType,
-  label,
-}))
-
 export const isAxonHubChannelType = (
   value: unknown,
 ): value is AxonHubChannelType =>
@@ -122,13 +113,3 @@ export const isAxonHubChannelType = (
 export const isAxonHubModelAutoSyncSupported = (value: unknown): boolean =>
   isAxonHubChannelType(value) &&
   !AXON_HUB_AUTO_SYNC_UNSUPPORTED_TYPES.has(value)
-
-export const DEFAULT_AXON_HUB_CHANNEL_FIELDS = {
-  mode: "single",
-  status: 1,
-  priority: 0,
-  weight: 0,
-  groups: ["default"],
-  models: [],
-  type: AXON_HUB_CHANNEL_TYPE.OPENAI,
-} satisfies ChannelDefaults

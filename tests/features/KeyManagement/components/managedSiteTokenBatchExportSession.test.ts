@@ -37,7 +37,7 @@ const buildItem = (
     groups: ["default"],
     priority: 0,
     weight: 0,
-    status: 1,
+    enabled: true,
   },
 })
 
@@ -53,7 +53,6 @@ const buildPreview = (
   targetSummary: {
     siteType: SITE_TYPES.NEW_API,
     baseUrl: "https://target.example.invalid",
-    compatibleUserId: "1",
   },
   items,
   totalCount: items.length,

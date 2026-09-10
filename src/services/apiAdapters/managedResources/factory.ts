@@ -59,6 +59,19 @@ export type NativeResourceCreateSeedBinding = {
     project(
       seed: Extract<ManagedResourceCreateSeed, { kind: TKind }>,
     ): EditableResourceProjection
+    validate(values: EditableResourceProjection): ResourceValidationResult
+    /** Maps native editor field issues back to the product's import inputs. */
+    sourceFieldIds: Readonly<
+      Partial<
+        Record<
+          string,
+          Exclude<
+            keyof Extract<ManagedResourceCreateSeed, { kind: TKind }>,
+            "kind"
+          >
+        >
+      >
+    >
   }
 }[ManagedResourceCreateSeedKind]
 
@@ -218,6 +231,29 @@ export function defineNativeResourceKind<
     siteType: definition.siteType,
     kind: definition.kind,
     createSeedKinds,
+    ...(createSeedKinds.length
+      ? {
+          validateCreateSeed: (
+            seed: ManagedResourceCreateSeed,
+          ): ResourceValidationResult => {
+            const binding = definition.createSeedBindings?.find(
+              (candidate) => candidate.kind === seed.kind,
+            )
+            if (!binding) throw invalidPublicInput()
+            const validation = binding.validate(binding.project(seed))
+            return validation.valid
+              ? validation
+              : {
+                  valid: false,
+                  issues: validation.issues.map((issue) => ({
+                    ...issue,
+                    fieldId:
+                      binding.sourceFieldIds[issue.fieldId] ?? issue.fieldId,
+                  })),
+                }
+          },
+        }
+      : {}),
     open: (options) =>
       mapOperationFailure(async () => {
         const config = await definition.openConfig(options)
