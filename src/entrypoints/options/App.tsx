@@ -166,7 +166,7 @@ function OptionsPage() {
             <div className="mx-auto w-full max-w-7xl px-2 py-3 sm:px-4 sm:py-5 md:px-6 md:py-6">
               <PopupInterruptionHintBanner className="mb-3 sm:mb-4" />
               <div
-                className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+                className="dark:border-dark-bg-tertiary bg-background overflow-hidden rounded-2xl border border-gray-200 shadow-sm"
                 data-testid={OPTIONS_TEST_IDS.contentCard}
                 {...{
                   [PRODUCT_TOUR_TARGET_ATTRIBUTE]: PRODUCT_TOUR_TARGETS.Content,

@@ -70,9 +70,14 @@ export async function requestCliProxyApi(
   const [pathname, query] = path.split("?")
   url.pathname += `/${pathname}`
   url.search = query ?? ""
-  let response: Response
+  const callerSignal = options?.signal
+  if (callerSignal?.aborted) throw callerSignal.reason
+  const controller = new AbortController()
+  const cancel = () => controller.abort(callerSignal?.reason)
+  callerSignal?.addEventListener("abort", cancel, { once: true })
+  const timeout = setTimeout(() => controller.abort(), 30_000)
   try {
-    response = await fetch(url, {
+    const response = await fetch(url, {
       method,
       headers: {
         Authorization: `Bearer ${config.adminToken.trim()}`,
@@ -80,17 +85,12 @@ export async function requestCliProxyApi(
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-      signal: options?.signal,
+      signal: controller.signal,
       redirect: "error",
       credentials: "omit",
       cache: "no-store",
     })
-  } catch (error) {
-    if (options?.signal?.aborted) throw error
-    throw new CliProxyApiError()
-  }
-  if (!response.ok) throw new CliProxyApiError(response.status)
-  try {
+    if (!response.ok) throw new CliProxyApiError(response.status)
     const result: unknown = await response.json()
     if (
       method !== "GET" &&
@@ -102,8 +102,12 @@ export async function requestCliProxyApi(
       throw new CliProxyApiError()
     }
     return result
-  } catch {
+  } catch (error) {
+    if (callerSignal?.aborted || error instanceof CliProxyApiError) throw error
     throw new CliProxyApiError()
+  } finally {
+    clearTimeout(timeout)
+    callerSignal?.removeEventListener("abort", cancel)
   }
 }
 

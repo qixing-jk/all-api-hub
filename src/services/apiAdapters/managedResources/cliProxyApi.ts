@@ -757,6 +757,7 @@ export const cliProxyApiManagedResourceRegistration = defineNativeResourceKind({
         type: "channelType",
         baseURL: "baseUrl",
         key: "credential",
+        credentials: "credential",
         supportedModels: "models",
       },
     },

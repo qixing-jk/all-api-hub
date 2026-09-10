@@ -46,17 +46,12 @@ test("shares the page palette with portaled dialogs before visiting feature page
       mode === "dark",
     )
     const surface = page.getByTestId(OPTIONS_TEST_IDS.contentCard)
-    await expect(surface).toHaveCSS(
-      "background-color",
-      mode === "dark" ? "rgb(30, 41, 59)" : "rgb(255, 255, 255)",
-    )
+    const background = mode === "dark" ? "rgb(30, 41, 59)" : "oklch(1 0 0)"
+    await expect(surface).toHaveCSS("background-color", background)
     await page.getByRole("button", { name: "Open settings search" }).click()
     const dialog = page.getByRole("dialog", { name: "Search settings" })
     await expect(dialog).toBeVisible()
-    await expect(dialog).toHaveCSS(
-      "background-color",
-      mode === "dark" ? "rgb(30, 41, 59)" : "oklch(1 0 0)",
-    )
+    await expect(dialog).toHaveCSS("background-color", background)
     await page.keyboard.press("Escape")
     await expect(dialog).toBeHidden()
   }

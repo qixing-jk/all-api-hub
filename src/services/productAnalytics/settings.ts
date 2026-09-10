@@ -176,7 +176,8 @@ function isManagedSiteType(
     value === SITE_TYPES.DONE_HUB ||
     value === SITE_TYPES.OCTOPUS ||
     value === SITE_TYPES.AXON_HUB ||
-    value === SITE_TYPES.CLAUDE_CODE_HUB
+    value === SITE_TYPES.CLAUDE_CODE_HUB ||
+    value === SITE_TYPES.CLI_PROXY_API
   )
 }
 

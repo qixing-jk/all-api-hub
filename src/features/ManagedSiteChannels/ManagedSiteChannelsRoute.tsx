@@ -459,6 +459,10 @@ function NativeManagedSiteChannels({
         )
       : undefined
   const editorValidation = mutation.editor?.validate(editorValues) ?? null
+  const initialEditorValidation = useMemo(
+    () => mutation.editor?.validate(mutation.editor.initialValues) ?? null,
+    [mutation.editor],
+  )
   const liveEditorValidation =
     mutation.editorFailure?.code ===
     MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed
@@ -473,6 +477,7 @@ function NativeManagedSiteChannels({
         editorValidation,
         editorValues,
         mutation.editor?.initialValues ?? {},
+        initialEditorValidation,
       )
   const columns = useMemo(
     () => createManagedResourceColumns(t, siteType, policy, columnVisibility),

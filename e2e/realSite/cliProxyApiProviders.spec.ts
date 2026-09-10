@@ -123,13 +123,48 @@ test.describe("real-site E2E: CLIProxyAPI providers", () => {
           if (kind === "openai-compatibility")
             await dialog.getByLabel("Channel Name", { exact: true }).fill(name)
           await dialog.getByLabel("Base URL", { exact: true }).fill(baseUrl)
-          await dialog.getByLabel(/^API Key/).fill(key)
+          const firstCredential =
+            kind === "openai-compatibility"
+              ? dialog.getByRole("group", { name: "API Key 1", exact: true })
+              : dialog
+          await firstCredential
+            .getByLabel(
+              kind === "openai-compatibility" ? "API Key 1" : /^API Key/,
+              { exact: true },
+            )
+            .fill(key)
           await dialog
-            .getByLabel("Available Models", { exact: true })
-            .fill("aah-test-model = aah-test-alias")
+            .getByRole("button", { name: "Models", exact: true })
+            .click()
+          const models = dialog.getByRole("group", {
+            name: "Available Models",
+            exact: true,
+          })
+          await models
+            .getByRole("button", { name: "Add row", exact: true })
+            .click()
+          await models
+            .getByRole("textbox", { name: "Original model 1", exact: true })
+            .fill("aah-test-model")
+          await models
+            .getByRole("textbox", { name: "Alias (optional) 1", exact: true })
+            .fill("aah-test-alias")
           await dialog
-            .getByLabel("Request headers", { exact: true })
-            .fill("X-AAH-E2E: preserve")
+            .getByRole("button", { name: "Advanced", exact: true })
+            .click()
+          const requestHeaders = dialog.getByRole("group", {
+            name: "Request headers",
+            exact: true,
+          })
+          await requestHeaders
+            .getByRole("button", { name: "Add row", exact: true })
+            .click()
+          await requestHeaders
+            .getByRole("textbox", { name: "Header name 1", exact: true })
+            .fill("X-AAH-E2E")
+          await requestHeaders
+            .getByRole("textbox", { name: "Value 1", exact: true })
+            .fill("preserve")
           await dialog
             .getByLabel("Proxy URL", { exact: true })
             .fill("socks5://127.0.0.1:9")
@@ -182,8 +217,14 @@ test.describe("real-site E2E: CLIProxyAPI providers", () => {
             )
             .click()
           await dialog
-            .getByLabel("Available Models", { exact: true })
-            .fill("aah-replacement = aah-replacement-alias")
+            .getByRole("button", { name: "Models", exact: true })
+            .click()
+          await models
+            .getByRole("textbox", { name: "Original model 1", exact: true })
+            .fill("aah-replacement")
+          await models
+            .getByRole("textbox", { name: "Alias (optional) 1", exact: true })
+            .fill("aah-replacement-alias")
           if (kind === "openai-compatibility") {
             const first = dialog.getByRole("group", {
               name: "API Key 1",
@@ -193,6 +234,12 @@ test.describe("real-site E2E: CLIProxyAPI providers", () => {
               name: "API Key 3",
               exact: true,
             })
+            await first
+              .getByRole("button", { name: "Expand API Key 1", exact: true })
+              .click()
+            await third
+              .getByRole("button", { name: "Expand API Key 3", exact: true })
+              .click()
             await expect(
               first.getByLabel("API Key 1", { exact: true }),
             ).toHaveValue("")
