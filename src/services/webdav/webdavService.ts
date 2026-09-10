@@ -107,55 +107,74 @@ export function parseWebdavBackupJson<T = unknown>(
       }
     }
 
-    if ("accounts" in root) {
-      if (Array.isArray(root.accounts)) {
-        // Legacy V1 backups may put the account list directly at the root.
-      } else if (!root.accounts || typeof root.accounts !== "object") {
-        throw new Error("accounts section is invalid")
-      } else {
-        const accountsSection = root.accounts as Record<string, unknown>
-        const accountSectionKeys = [
-          "accounts",
-          "bookmarks",
-          "pinnedAccountIds",
-          "orderedAccountIds",
-          "deletedEntryRecords",
-          "last_updated",
-        ]
-        if (
-          !accountSectionKeys.some((key) =>
-            Object.prototype.hasOwnProperty.call(accountsSection, key),
-          )
+    const validateSections = (container: Record<string, unknown>) => {
+      if ("accounts" in container) {
+        if (Array.isArray(container.accounts)) {
+          // Legacy V1 backups may put the account list directly in a data container.
+        } else if (
+          !container.accounts ||
+          typeof container.accounts !== "object"
         ) {
-          throw new Error("accounts section is empty")
-        }
-        for (const key of [
-          "accounts",
-          "bookmarks",
-          "pinnedAccountIds",
-          "orderedAccountIds",
-        ]) {
-          if (key in accountsSection && !Array.isArray(accountsSection[key])) {
-            throw new Error(`${key} section is invalid`)
+          throw new Error("accounts section is invalid")
+        } else {
+          const accountsSection = container.accounts as Record<string, unknown>
+          const accountSectionKeys = [
+            "accounts",
+            "bookmarks",
+            "pinnedAccountIds",
+            "orderedAccountIds",
+            "deletedEntryRecords",
+            "last_updated",
+          ]
+          if (
+            !accountSectionKeys.some((key) =>
+              Object.prototype.hasOwnProperty.call(accountsSection, key),
+            )
+          ) {
+            throw new Error("accounts section is empty")
+          }
+          for (const key of [
+            "accounts",
+            "bookmarks",
+            "pinnedAccountIds",
+            "orderedAccountIds",
+          ]) {
+            if (
+              key in accountsSection &&
+              !Array.isArray(accountsSection[key])
+            ) {
+              throw new Error(`${key} section is invalid`)
+            }
+          }
+          if (
+            "deletedEntryRecords" in accountsSection &&
+            (!accountsSection.deletedEntryRecords ||
+              typeof accountsSection.deletedEntryRecords !== "object" ||
+              Array.isArray(accountsSection.deletedEntryRecords))
+          ) {
+            throw new Error("deletedEntryRecords section is invalid")
           }
         }
-        if (
-          "deletedEntryRecords" in accountsSection &&
-          (!accountsSection.deletedEntryRecords ||
-            typeof accountsSection.deletedEntryRecords !== "object" ||
-            Array.isArray(accountsSection.deletedEntryRecords))
-        ) {
-          throw new Error("deletedEntryRecords section is invalid")
-        }
+      }
+
+      if (
+        "preferences" in container &&
+        (!container.preferences ||
+          typeof container.preferences !== "object" ||
+          Array.isArray(container.preferences))
+      ) {
+        throw new Error("preferences section is invalid")
       }
     }
+
+    validateSections(root)
     if (
-      "preferences" in root &&
-      (!root.preferences ||
-        typeof root.preferences !== "object" ||
-        Array.isArray(root.preferences))
+      options?.requireBackupShape &&
+      root.data &&
+      typeof root.data === "object" &&
+      !Array.isArray(root.data)
     ) {
-      throw new Error("preferences section is invalid")
+      validateSections(root.data as Record<string, unknown>)
     }
 
     return parsed as T

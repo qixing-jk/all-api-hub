@@ -723,6 +723,29 @@ describe("WebDAVSettings", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("hides a persisted Gist link while WebDAV is selected", async () => {
+    mockUserPreferences.getPreferences.mockResolvedValue(
+      createPersistedPreferencesFixture({
+        webdav: {
+          provider: "webdav",
+          url: "https://dav.example.com/backup.json",
+          username: "alice",
+          password: "pw",
+          githubGist: {
+            token: "saved-token",
+            gistId: "saved-gist",
+            gistUrl: "https://gist.github.com/saved-gist",
+          },
+        },
+      }),
+    )
+
+    render(<WebDAVSettings />)
+
+    expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
+    expect(document.getElementById(WEBDAV_TARGET_IDS.gistUrl)).toBeNull()
+  })
+
   it("exercises GitHub Gist settings, connection, upload, and failure states", async () => {
     const gistPreferences = createPersistedPreferencesFixture({
       webdav: {

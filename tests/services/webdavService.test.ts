@@ -152,6 +152,18 @@ describe("webdavService", () => {
       ).toThrow("messages:webdav.invalidBackupJson")
     })
 
+    it("rejects malformed sections inside a legacy data wrapper", () => {
+      for (const content of [
+        '{"version":"1.0","data":{"accounts":0}}',
+        '{"version":"1.0","data":{"accounts":{}}}',
+        '{"version":"1.0","data":{"preferences":null}}',
+      ]) {
+        expect(() =>
+          parseWebdavBackupJson(content, { requireBackupShape: true }),
+        ).toThrow("messages:webdav.invalidBackupJson")
+      }
+    })
+
     it("rejects empty, non-object, and malformed data sections", () => {
       for (const content of [
         "",

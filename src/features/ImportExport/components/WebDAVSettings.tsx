@@ -1545,23 +1545,24 @@ export default function WebDAVSettings({
                 >
                   {saving ? t("common:status.saving") : t("webdav.saveConfig")}
                 </Button>
-                {githubGist.gistUrl && (
-                  <Button
-                    asChild
-                    variant="secondary"
-                    size="sm"
-                    className="ml-auto"
-                  >
-                    <a
-                      id={WEBDAV_TARGET_IDS.gistUrl}
-                      href={githubGist.gistUrl}
-                      target="_blank"
-                      rel="noreferrer"
+                {provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST &&
+                  githubGist.gistUrl && (
+                    <Button
+                      asChild
+                      variant="secondary"
+                      size="sm"
+                      className="ml-auto"
                     >
-                      {t("webdav.gist.openLink")}
-                    </a>
-                  </Button>
-                )}
+                      <a
+                        id={WEBDAV_TARGET_IDS.gistUrl}
+                        href={githubGist.gistUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {t("webdav.gist.openLink")}
+                      </a>
+                    </Button>
+                  )}
               </div>
             </ProductAnalyticsScope>
           </div>

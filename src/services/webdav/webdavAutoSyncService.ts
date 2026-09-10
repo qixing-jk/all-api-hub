@@ -590,14 +590,15 @@ class WebdavAutoSyncService {
     }
   }
 
-  private async downloadRemoteBackupForWrite(): Promise<{
+  private async downloadRemoteBackupForWrite(
+    settings: WebDAVSettings,
+  ): Promise<{
     data: BackupFullV2 | null
     remote?: CloudSyncRemote
   }> {
-    const preferences = await userPreferences.getPreferences()
-    const provider = getCloudSyncProvider(preferences.webdav)
+    const provider = getCloudSyncProvider(settings)
     try {
-      const result = await downloadCloudSyncBackup(preferences.webdav, {
+      const result = await downloadCloudSyncBackup(settings, {
         prepareForWrite: true,
       })
       const remoteData = parseWebdavBackupJson<BackupFullV2>(result.content, {
@@ -620,6 +621,7 @@ class WebdavAutoSyncService {
 
   private async uploadLocalSnapshotToWebdav() {
     const {
+      preferences,
       syncDataSelection,
       localAccountsConfig,
       localTagStore,
@@ -635,7 +637,9 @@ class WebdavAutoSyncService {
       ...localAccounts.map((account) => account.id),
       ...localBookmarks.map((bookmark) => bookmark.id),
     ])
-    const remoteResult = await this.downloadRemoteBackupForWrite()
+    const remoteResult = await this.downloadRemoteBackupForWrite(
+      preferences.webdav,
+    )
     const remoteData = remoteResult.data
     const exportData = this.buildBackupExportData({
       accounts: localAccounts,
@@ -665,7 +669,7 @@ class WebdavAutoSyncService {
 
     await uploadCloudSyncBackup(
       JSON.stringify(payload, null, 2),
-      (await userPreferences.getPreferences()).webdav,
+      preferences.webdav,
       remoteResult.remote?.revision,
     )
     logger.info("本地快照已尽力上传到云端同步服务")
@@ -716,7 +720,9 @@ class WebdavAutoSyncService {
     }
 
     // 下载远程数据
-    const remoteResult = await this.downloadRemoteBackupForWrite()
+    const remoteResult = await this.downloadRemoteBackupForWrite(
+      preferences.webdav,
+    )
     const remoteData = remoteResult.data
 
     const localPinnedAccountIds = localAccountsConfig.pinnedAccountIds || []

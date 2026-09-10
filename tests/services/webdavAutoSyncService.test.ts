@@ -2257,6 +2257,55 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
     })
   })
 
+  it("uses one settings snapshot for the remote read and write", async () => {
+    const service = createService() as any
+    const initialPreferences = {
+      ...basePreferences,
+      webdav: {
+        ...basePreferences.webdav,
+        url: "https://snapshot.example.test/webdav",
+      },
+    }
+    const changedPreferences = {
+      ...basePreferences,
+      webdav: {
+        ...basePreferences.webdav,
+        url: "https://changed.example.test/webdav",
+      },
+    }
+    mockGetPreferences
+      .mockResolvedValueOnce(initialPreferences)
+      .mockResolvedValue(changedPreferences)
+    mockAccountStorageExportData.mockResolvedValue({
+      accounts: [],
+      bookmarks: [],
+      pinnedAccountIds: [],
+      orderedAccountIds: [],
+    })
+    mockDownloadBackup.mockResolvedValue(
+      JSON.stringify({
+        version: BACKUP_VERSION,
+        accounts: { accounts: [], bookmarks: [] },
+      }),
+    )
+
+    await service.uploadLocalSnapshotToWebdav()
+
+    const expectedConfig = {
+      url: "https://snapshot.example.test/webdav",
+      username: "user",
+      password: "pass",
+    }
+    expect(mockDownloadBackup).toHaveBeenCalledWith(expectedConfig, {
+      prepareForWrite: true,
+    })
+    expect(mockUploadBackup).toHaveBeenCalledWith(
+      expect.any(String),
+      expectedConfig,
+    )
+    expect(mockGetPreferences).toHaveBeenCalledTimes(1)
+  })
+
   it("reschedules when a best-effort upload collides with an in-flight sync", async () => {
     const service = createService() as any
     const scheduleSpy = vi
