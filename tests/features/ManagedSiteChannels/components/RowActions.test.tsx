@@ -246,15 +246,16 @@ describe("ManagedSiteChannels RowActions", () => {
     ).toBeInTheDocument()
   })
 
-  it("keeps an externally syncing row locked without announcing local work", () => {
+  it("announces externally initiated sync and keeps the row busy", () => {
     setup({ isSyncing: true })
 
     const trigger = screen.getByRole("button", { name: labels.trigger })
     expect(trigger).toBeDisabled()
-    expect(trigger).not.toHaveAttribute("aria-busy")
+    expect(trigger).toHaveAttribute("aria-busy", "true")
+    expect(screen.getByRole("status")).toHaveTextContent(labels.syncing)
   })
 
-  it("marks only locally initiated sync as busy and suppresses duplicate syncs", async () => {
+  it("keeps local sync visible after selection and suppresses duplicate syncs", async () => {
     const deferredSync = createDeferred()
     const onSync = vi.fn(() => deferredSync.promise)
     setup({ onSync })
@@ -268,6 +269,10 @@ describe("ManagedSiteChannels RowActions", () => {
     expect(trigger).toBeDisabled()
     expect(trigger).toHaveAttribute("aria-busy", "true")
     expect(trigger).toHaveAccessibleName(labels.trigger)
+    expect(screen.getByRole("status")).toHaveTextContent(labels.syncing)
+    expect(
+      screen.getByRole("menuitem", { name: labels.syncing }),
+    ).toBeDisabled()
 
     deferredSync.resolve()
 
@@ -275,5 +280,6 @@ describe("ManagedSiteChannels RowActions", () => {
       expect(trigger).toBeEnabled()
     })
     expect(trigger).not.toHaveAttribute("aria-busy")
+    expect(screen.queryByRole("status")).not.toBeInTheDocument()
   })
 })

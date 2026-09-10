@@ -17,6 +17,7 @@
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
+  --table-header: var(--color-slate-50);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
@@ -108,21 +109,24 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
+  /* Shared surfaces, including body portals, use the application slate palette. */
+  --background: var(--color-dark-bg-secondary);
+  --foreground: var(--color-dark-text-primary);
+  --card: var(--background);
+  --card-foreground: var(--foreground);
+  --popover: var(--background);
+  --popover-foreground: var(--foreground);
   --primary: oklch(0.985 0 0);
   --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
+  --secondary: var(--color-dark-bg-tertiary);
+  --secondary-foreground: var(--foreground);
+  --muted: color-mix(in srgb, var(--background) 60%, var(--secondary));
+  --muted-foreground: var(--color-dark-text-secondary);
+  /* Opaque so sticky cells match the rest of the header while scrolling. */
+  --table-header: color-mix(in srgb, var(--muted) 60%, var(--background));
+  --accent: var(--secondary);
+  --accent-foreground: var(--foreground);
+  --destructive: var(--color-red-400);
   --destructive-foreground: oklch(0.637 0.237 25.331);
   --button-primary-bg: var(--color-brand-blue);
   --button-primary-bg-hover: color-mix(
@@ -195,8 +199,8 @@
     white 30%
   );
   --spinner-primary-color: var(--color-dark-text-primary);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
+  --border: var(--color-dark-bg-tertiary);
+  --input: var(--border);
   --ring: oklch(0.439 0 0);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
@@ -226,6 +230,7 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-table-header: var(--table-header);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);

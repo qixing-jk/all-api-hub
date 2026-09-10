@@ -1,3 +1,6 @@
+import { useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
+
 import { Badge } from "~/components/ui"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/Alert"
 import { Button } from "~/components/ui/button"
@@ -25,6 +28,26 @@ export function ManagedSiteChannelsDeleteFeedback({
   isRefreshing,
   onRefresh,
 }: ManagedSiteChannelsDeleteFeedbackProps) {
+  const { t } = useTranslation("common")
+  const [dismissed, setDismissed] = useState(false)
+  useEffect(() => {
+    if (deleteState.isWorking || deleteState.results.length === 0)
+      setDismissed(false)
+  }, [deleteState.isWorking, deleteState.results.length])
+  const showResults =
+    !dismissed &&
+    !deleteState.isWorking &&
+    deleteState.results.some(
+      ({ status }) =>
+        status !== MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Success,
+    )
+  const showRefreshNotice =
+    deleteState.results.length > 0 &&
+    !deleteState.isWorking &&
+    deleteState.requiresRefresh &&
+    !deleteState.failure &&
+    !showResults
+
   const renderRefreshAction = () => (
     <Button
       type="button"
@@ -51,20 +74,37 @@ export function ManagedSiteChannelsDeleteFeedback({
         </Alert>
       ) : null}
 
-      {deleteState.results.length > 0 ? (
+      {showRefreshNotice ? (
+        <Alert>
+          <AlertDescription className="space-y-3">
+            <p>{labels.deleteRefreshRequired}</p>
+            {renderRefreshAction()}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {showResults ? (
         <section
           role="status"
           aria-label={labels.deleteResultsTitle}
           className="space-y-3 rounded-md border p-4"
         >
-          <div>
+          <div className="flex items-center justify-between gap-3">
             <h3 className="font-medium">{labels.deleteResultsTitle}</h3>
-            {deleteState.requiresRefresh ? (
-              <p className="text-muted-foreground mt-1 text-sm">
-                {labels.deleteRefreshRequired}
-              </p>
-            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setDismissed(true)}
+            >
+              {t("common:actions.close")}
+            </Button>
           </div>
+          {deleteState.requiresRefresh ? (
+            <p className="text-muted-foreground text-sm">
+              {labels.deleteRefreshRequired}
+            </p>
+          ) : null}
           <ol className="space-y-2">
             {deleteState.results.map((result) => (
               <li

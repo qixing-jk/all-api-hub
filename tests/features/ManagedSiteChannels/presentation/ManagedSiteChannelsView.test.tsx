@@ -404,6 +404,39 @@ describe("ManagedSiteChannelsView", () => {
     expect(onRefresh).toHaveBeenCalledOnce()
   })
 
+  it("shows selected sync as busy and prevents resubmission until it finishes", async () => {
+    const user = userEvent.setup()
+    const onSyncSelected = vi.fn()
+    const state = createState({
+      rows: [{ ...rows[0], isSyncing: true }],
+      selectedRowKeys: { "opaque:first": true },
+    })
+    const view = render(
+      <ManagedSiteChannelsView
+        {...commonProps}
+        state={state}
+        callbacks={createCallbacks({ onSyncSelected })}
+      />,
+    )
+    const button = screen.getByRole("button", {
+      name: labels.rowActions.syncing,
+    })
+    expect(button).toBeDisabled()
+    expect(button).toHaveAttribute("aria-busy", "true")
+    await user.click(button)
+    expect(onSyncSelected).not.toHaveBeenCalled()
+    view.rerender(
+      <ManagedSiteChannelsView
+        {...commonProps}
+        state={{ ...state, rows }}
+        callbacks={createCallbacks({ onSyncSelected })}
+      />,
+    )
+    expect(
+      screen.getByRole("button", { name: labels.syncSelected }),
+    ).toBeEnabled()
+  })
+
   it("keeps unsupported bulk model sync visible and explains why it is unavailable", () => {
     const onSyncSelected = vi.fn()
     render(

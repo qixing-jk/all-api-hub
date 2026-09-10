@@ -146,6 +146,42 @@ describe("useManagedSiteChannelModelSync", () => {
     expect(result.current.syncingResourceKeys).toEqual(new Set())
   })
 
+  it.each([0, 1])(
+    "reports %s successful channels without a success toast when some fail",
+    async (successCount) => {
+      sendModelSyncMessageMock.mockResolvedValue({
+        success: true,
+        data: {
+          statistics: { successCount, failureCount: 2 - successCount },
+          items: [],
+        },
+      })
+      const { result } = renderHook(() =>
+        useManagedSiteChannelModelSync({
+          scopeKey: "https://example.com",
+          siteType: SITE_TYPES.NEW_API,
+        }),
+      )
+      await act(async () =>
+        result.current.syncChannels(
+          [ref42, modelResourceRef("another")],
+          analyticsContext,
+        ),
+      )
+      expect(toastSuccessMock).not.toHaveBeenCalled()
+      expect(toastErrorMock).toHaveBeenCalledWith("toasts.syncIncomplete")
+      expect(translationMock).toHaveBeenCalledWith("toasts.syncIncomplete", {
+        success: successCount,
+        total: 2,
+      })
+      expect(trackerCompleteMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        expect.any(Object),
+      )
+      expect(result.current.syncingResourceKeys.size).toBe(0)
+    },
+  )
+
   it("uses localized fallback copy when model sync returns no error", async () => {
     sendModelSyncMessageMock.mockResolvedValue({ success: false })
     translationMock.mockImplementation((key: string) =>

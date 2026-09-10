@@ -665,3 +665,60 @@ test.describe("mobile AxonHub parity", () => {
     await expect(page.getByRole("columnheader", { name: "Tags" })).toBeVisible()
   })
 })
+
+test("keeps channel surfaces coherent in light and dark modes", async ({
+  context,
+  extensionId,
+  page,
+}, testInfo) => {
+  await openInterceptedNewApiManagedSiteChannels({ context, extensionId, page })
+  await waitForExtensionRoot(page)
+  await expect(channelRowByName(page, "Example primary")).toBeVisible()
+  for (const mode of ["light", "dark"] as const) {
+    await page.evaluate(
+      (dark) => document.documentElement.classList.toggle("dark", dark),
+      mode === "dark",
+    )
+    if (mode === "dark") {
+      await expect(
+        page.getByRole("table").locator("..").locator(".."),
+      ).toHaveCSS("background-color", "rgb(30, 41, 59)")
+    }
+    await openManagedSiteChannelRowActions(page, "Example primary")
+    const menu = page.getByRole("menu")
+    await expect(menu).toBeVisible()
+    await expect(menu).toHaveCSS("opacity", "1")
+    if (mode === "dark") {
+      await expect(menu).toHaveCSS("background-color", "rgb(30, 41, 59)")
+    }
+    await page.screenshot({
+      path: testInfo.outputPath(`channels-${mode}.png`),
+      fullPage: true,
+      animations: "disabled",
+    })
+    await page.keyboard.press("Escape")
+    await expect(menu).toBeHidden()
+    const header = page.getByRole("table").locator("thead")
+    const headerBackground = await header.evaluate(
+      (element) => getComputedStyle(element).backgroundColor,
+    )
+    await expect(page.getByRole("columnheader").last()).toHaveCSS(
+      "background-color",
+      headerBackground,
+    )
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(
+    page.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.addChannelButton),
+  ).toBeVisible()
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true)
+  await page.screenshot({
+    path: testInfo.outputPath("channels-mobile.png"),
+    fullPage: true,
+    animations: "disabled",
+  })
+})

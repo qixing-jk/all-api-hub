@@ -78,7 +78,7 @@ function OptionsPageContentFallback() {
   const { t } = useTranslation("common")
 
   return (
-    <div className="flex min-h-[400px] items-center justify-center md:min-h-[600px]">
+    <div className="flex items-center justify-center py-12">
       <Spinner size="lg" aria-label={t("status.loading")} />
     </div>
   )
@@ -166,7 +166,7 @@ function OptionsPage() {
             <div className="mx-auto w-full max-w-7xl px-2 py-3 sm:px-4 sm:py-5 md:px-6 md:py-6">
               <PopupInterruptionHintBanner className="mb-3 sm:mb-4" />
               <div
-                className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary min-h-[400px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm md:min-h-[600px]"
+                className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
                 data-testid={OPTIONS_TEST_IDS.contentCard}
                 {...{
                   [PRODUCT_TOUR_TARGET_ATTRIBUTE]: PRODUCT_TOUR_TARGETS.Content,

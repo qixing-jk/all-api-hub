@@ -40,7 +40,7 @@ export function ManagedSiteChannelsPagination({
   const end = Math.min((pagination.pageIndex + 1) * pagination.pageSize, total)
 
   return (
-    <div className="flex flex-wrap items-center gap-4 text-sm">
+    <div className="border-border flex flex-wrap items-center gap-3 border-t bg-slate-50/70 px-4 py-3 text-sm dark:bg-slate-900/20">
       <div className="flex items-center gap-2">
         <Label htmlFor="rows-per-page" className="text-xs font-medium">
           {labels.rowsPerPage}
