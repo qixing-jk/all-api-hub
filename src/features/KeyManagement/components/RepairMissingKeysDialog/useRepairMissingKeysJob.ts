@@ -146,6 +146,7 @@ export function useRepairMissingKeysJob({
   const startInFlightRef = useRef(false)
   const startRequestIdRef = useRef(0)
   const progressRevisionRef = useRef(0)
+  const progressReadInFlightRef = useRef<object | null>(null)
 
   const setProgress = useCallback(
     (update: SetStateAction<AccountKeyRepairProgress | null>) => {
@@ -154,6 +155,9 @@ export function useRepairMissingKeysJob({
       if (next && current?.jobId === next.jobId) {
         if (
           (current.updatedAt ?? 0) > (next.updatedAt ?? 0) ||
+          (typeof update !== "function" &&
+            current.updatedAt !== undefined &&
+            current.updatedAt === next.updatedAt) ||
           (current.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Running &&
             current.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Idle &&
             next.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Running)
@@ -175,7 +179,10 @@ export function useRepairMissingKeysJob({
   )
 
   const readProgress = useCallback(
-    async (isCancelled: () => boolean, onSuccess?: () => void) => {
+    async (isCancelled: () => boolean) => {
+      if (progressReadInFlightRef.current) return
+      const request = {}
+      progressReadInFlightRef.current = request
       const revision = progressRevisionRef.current
       const isStale = () =>
         isCancelled() || revision !== progressRevisionRef.current
@@ -186,12 +193,16 @@ export function useRepairMissingKeysJob({
         if (isStale()) return
         if (response?.success && response.data) {
           setProgress(response.data)
-          onSuccess?.()
+          setFailure((current) => (current === "load" ? null : current))
         } else {
           setFailure("load")
         }
       } catch {
         if (!isStale()) setFailure("load")
+      } finally {
+        if (progressReadInFlightRef.current === request) {
+          progressReadInFlightRef.current = null
+        }
       }
     },
     [setProgress],
@@ -358,6 +369,7 @@ export function useRepairMissingKeysJob({
 
     return () => {
       cancelled = true
+      progressReadInFlightRef.current = null
     }
   }, [isOpen, readProgress])
 
@@ -367,22 +379,10 @@ export function useRepairMissingKeysJob({
     }
 
     let cancelled = false
-    let inFlight = false
     // Broadcasts are best-effort. Reconcile while visible so a missed terminal
     // notification (including a restarted worker) cannot leave the UI running.
-    const timer = setInterval(async () => {
-      if (inFlight) return
-      inFlight = true
-      try {
-        await readProgress(
-          () => cancelled,
-          () => {
-            setFailure((current) => (current === "load" ? null : current))
-          },
-        )
-      } finally {
-        inFlight = false
-      }
+    const timer = setInterval(() => {
+      void readProgress(() => cancelled)
     }, REPAIR_PROGRESS_POLL_INTERVAL_MS)
 
     return () => {

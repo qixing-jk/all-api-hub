@@ -1115,7 +1115,9 @@ class AccountKeyRepairRunner {
       }
       const pendingProgress = {
         ...nextProgress,
-        updatedAt: Date.now(),
+        // Preserve ordering when multiple updates share a millisecond or the
+        // wall clock moves backwards, without changing the persisted schema.
+        updatedAt: Math.max(Date.now(), (base.updatedAt ?? 0) + 1),
       }
       await this.persistProgressWithRollback(pendingProgress, previousProgress)
     })

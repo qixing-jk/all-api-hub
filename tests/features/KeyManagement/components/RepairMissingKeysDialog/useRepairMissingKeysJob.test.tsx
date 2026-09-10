@@ -131,6 +131,120 @@ describe("useRepairMissingKeysJob", () => {
     vi.clearAllMocks()
   })
 
+  it("ignores a delayed older job without replacing the current job", async () => {
+    const current = buildProgress({
+      jobId: "new",
+      startedAt: 30,
+      updatedAt: 31,
+    })
+    sendAccountKeyRepairMessageMock.mockResolvedValue({
+      success: true,
+      data: current,
+    })
+    const { result } = renderHook(() =>
+      useRepairMissingKeysJob({
+        accounts: [buildAccount()],
+        isOpen: true,
+        startOnOpen: false,
+        t: testI18n.t,
+      }),
+    )
+    await waitFor(() => expect(result.current.progress).toEqual(current))
+    act(() => {
+      vi.mocked(onRuntimeMessage).mock.calls.at(-1)![0](
+        {
+          type: RuntimeMessageTypes.AccountKeyRepairProgress,
+          payload: buildProgress({
+            jobId: "old",
+            startedAt: 10,
+            updatedAt: 11,
+            state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
+          }),
+        },
+        {} as never,
+        vi.fn(),
+      )
+    })
+    expect(result.current.progress).toEqual(current)
+  })
+
+  it("does not overlap a reopened dialog's initial read with polling", async () => {
+    let finishRead!: (value: {
+      success: true
+      data: AccountKeyRepairProgress
+    }) => void
+    const running = buildProgress()
+    sendAccountKeyRepairMessageMock
+      .mockResolvedValueOnce({ success: true, data: running })
+      .mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            finishRead = resolve
+          }),
+      )
+    const { result, rerender, unmount } = renderHook(
+      ({ isOpen }) =>
+        useRepairMissingKeysJob({
+          accounts: [buildAccount()],
+          isOpen,
+          startOnOpen: false,
+          t: testI18n.t,
+        }),
+      { initialProps: { isOpen: true } },
+    )
+    await waitFor(() => expect(result.current.progress).toEqual(running))
+    rerender({ isOpen: false })
+    vi.useFakeTimers()
+    try {
+      await act(async () => {
+        rerender({ isOpen: true })
+      })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(6000)
+      })
+      expect(sendAccountKeyRepairMessageMock).toHaveBeenCalledTimes(2)
+      await act(async () => {
+        finishRead({ success: true, data: running })
+      })
+    } finally {
+      unmount()
+      vi.useRealTimers()
+    }
+  })
+
+  it("preserves local changes when an equal-version snapshot is delivered again", async () => {
+    const progress = buildProgress({
+      updatedAt: 20,
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
+    })
+    sendAccountKeyRepairMessageMock.mockResolvedValue({
+      success: true,
+      data: progress,
+    })
+    const { result } = renderHook(() =>
+      useRepairMissingKeysJob({
+        accounts: [buildAccount()],
+        isOpen: true,
+        startOnOpen: false,
+        t: testI18n.t,
+      }),
+    )
+    await waitFor(() => expect(result.current.progress).toEqual(progress))
+    act(() => {
+      result.current.setProgress(
+        (current) =>
+          current && {
+            ...current,
+            summary: { ...current.summary, deleteApplied: 1 },
+          },
+      )
+    })
+    act(() => {
+      result.current.setProgress(progress)
+    })
+    expect(result.current.progress?.summary.deleteApplied).toBe(1)
+  })
+
   it.each([
     AccountKeyRepairMessageTypes.GetProgress,
     AccountKeyRepairMessageTypes.Start,

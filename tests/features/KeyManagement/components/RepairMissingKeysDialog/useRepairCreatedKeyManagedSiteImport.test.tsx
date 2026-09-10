@@ -152,6 +152,151 @@ const languageI18n = await createResourceTestI18n({
 })
 
 describe("useRepairCreatedKeyManagedSiteImport", () => {
+  it.each(["configuration", "target"])(
+    "stops preparation closed during %s loading",
+    async (stage) => {
+      let finish!: (value: unknown) => void
+      mocks.getCurrentManagedSiteRuntimeConfig.mockReset().mockResolvedValue({})
+      mocks.createManagedSiteTokenBatchImportTarget
+        .mockReset()
+        .mockResolvedValue({ targetFingerprint: "a".repeat(64) })
+      mocks.resolveRepairCreatedKeyBatchImportCandidate.mockClear()
+      const loader =
+        stage === "configuration"
+          ? mocks.getCurrentManagedSiteRuntimeConfig
+          : mocks.createManagedSiteTokenBatchImportTarget
+      loader.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve
+          }),
+      )
+      const account = createAccount()
+      const ref = {
+        accountId: account.id,
+        siteType: account.siteType,
+        scopeKey: "account",
+        resourceId: "key",
+      }
+      const { result, rerender } = renderHook(
+        ({ isOpen }) =>
+          useRepairCreatedKeyManagedSiteImport({
+            accounts: [account],
+            isOpen,
+            isCurrentSessionResult: true,
+            managedSiteType: SITE_TYPES.NEW_API,
+            progress: createProgress(account, ref),
+            setProgress: vi.fn(),
+            t: testI18n.t,
+          }),
+        { initialProps: { isOpen: true } },
+      )
+      let pending!: Promise<void>
+      act(() => {
+        pending = result.current.openBatchImport()
+      })
+      await waitFor(() => expect(finish).toBeTypeOf("function"))
+      rerender({ isOpen: false })
+      await act(async () => {
+        finish({ targetFingerprint: "a".repeat(64) })
+        await pending
+      })
+      expect(
+        mocks.resolveRepairCreatedKeyBatchImportCandidate,
+      ).not.toHaveBeenCalled()
+      expect(result.current.isResolving).toBe(false)
+      expect(result.current.isBatchImportOpen).toBe(false)
+    },
+  )
+
+  it.each(["success", "failure"])(
+    "ignores stale preparation %s after closing and reopening",
+    async (outcome) => {
+      let finishOld!: (value: unknown) => void
+      let failOld!: (reason: Error) => void
+      mocks.getCurrentManagedSiteRuntimeConfig.mockResolvedValue({})
+      mocks.createManagedSiteTokenBatchImportTarget.mockResolvedValue({
+        targetFingerprint: "a".repeat(64),
+      })
+      mocks.resolveRepairCreatedKeyBatchImportCandidate.mockImplementationOnce(
+        () =>
+          new Promise((resolve, reject) => {
+            finishOld = resolve
+            failOld = reject
+          }),
+      )
+      const account = createAccount()
+      const ref = {
+        accountId: account.id,
+        siteType: account.siteType,
+        scopeKey: "account",
+        resourceId: "key",
+      }
+      const { result, rerender } = renderHook(
+        ({ isOpen }) =>
+          useRepairCreatedKeyManagedSiteImport({
+            accounts: [account],
+            isOpen,
+            isCurrentSessionResult: true,
+            managedSiteType: SITE_TYPES.NEW_API,
+            progress: createProgress(account, ref),
+            setProgress: vi.fn(),
+            t: testI18n.t,
+          }),
+        { initialProps: { isOpen: true } },
+      )
+      let pending!: Promise<void>
+      act(() => {
+        pending = result.current.openBatchImport()
+      })
+      await waitFor(() => expect(finishOld).toBeTypeOf("function"))
+      rerender({ isOpen: false })
+      rerender({ isOpen: true })
+      expect(result.current.isResolving).toBe(false)
+      let finishNew!: (value: unknown) => void
+      mocks.resolveRepairCreatedKeyBatchImportCandidate.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishNew = resolve
+          }),
+      )
+      let newPending!: Promise<void>
+      act(() => {
+        newPending = result.current.openBatchImport()
+      })
+      await waitFor(() => expect(finishNew).toBeTypeOf("function"))
+      await act(async () => {
+        if (outcome === "success")
+          finishOld({
+            items: [],
+            intent: {
+              source: MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES.REPAIR_CREATED,
+              verification:
+                MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.TRUSTED_NEW,
+            },
+          })
+        else failOld(new Error("stale failure"))
+        await pending
+      })
+      expect(result.current.isBatchImportOpen).toBe(false)
+      expect(result.current.importFeedback).toBeNull()
+      expect(result.current.isResolving).toBe(true)
+      await act(async () => {
+        finishNew({
+          items: [],
+          intent: {
+            source: MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES.REPAIR_CREATED,
+            verification:
+              MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.TRUSTED_NEW,
+          },
+        })
+        await newPending
+      })
+      expect(result.current.isBatchImportOpen).toBe(true)
+      expect(result.current.isResolving).toBe(false)
+    },
+  )
+
   it("retranslates configuration feedback without preparing or importing again", async () => {
     mocks.getCurrentManagedSiteRuntimeConfig.mockResolvedValueOnce(null)
     const account = createAccount()

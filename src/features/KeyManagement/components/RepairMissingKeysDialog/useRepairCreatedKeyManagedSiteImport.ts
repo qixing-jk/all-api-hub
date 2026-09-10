@@ -222,6 +222,8 @@ export function useRepairCreatedKeyManagedSiteImport({
   const activeJobIdRef = useRef<string | null>(null)
   const activeTargetFingerprintRef = useRef<string | null>(null)
   const activeItemsRef = useRef<ManagedSiteTokenBatchExportItemInput[]>([])
+  const preparationGenerationRef = useRef(0)
+  const preparationInFlightRef = useRef(false)
 
   const createdReferenceCount = useMemo(
     () => countCreatedReferences(progress, accounts),
@@ -229,6 +231,9 @@ export function useRepairCreatedKeyManagedSiteImport({
   )
 
   const resetBatchImport = useCallback(() => {
+    preparationGenerationRef.current += 1
+    preparationInFlightRef.current = false
+    setIsResolving(false)
     setIsBatchImportOpen(false)
     setBatchImportItems([])
     setBatchImportIntent(null)
@@ -245,7 +250,8 @@ export function useRepairCreatedKeyManagedSiteImport({
   const prepareBatchImport = useCallback(
     async (includeCompletedReferences = false) => {
       if (
-        isResolving ||
+        !isOpen ||
+        preparationInFlightRef.current ||
         isBatchImportOpen ||
         !progress ||
         createdReferenceCount === 0
@@ -255,8 +261,12 @@ export function useRepairCreatedKeyManagedSiteImport({
 
       setIsResolving(true)
       setImportFeedback(null)
+      preparationInFlightRef.current = true
+      const generation = ++preparationGenerationRef.current
+      const isStale = () => generation !== preparationGenerationRef.current
       try {
         const runtimeConfig = await getCurrentManagedSiteRuntimeConfig()
+        if (isStale()) return
         if (!runtimeConfig) {
           setImportFeedback({
             action: "configure-managed-site",
@@ -268,6 +278,7 @@ export function useRepairCreatedKeyManagedSiteImport({
 
         const target =
           await createManagedSiteTokenBatchImportTarget(runtimeConfig)
+        if (isStale()) return
         const visibleProgress = getVisibleProgress(progress, accounts)
         const candidate = await resolveRepairCreatedKeyBatchImportCandidate({
           progress: visibleProgress,
@@ -279,6 +290,7 @@ export function useRepairCreatedKeyManagedSiteImport({
           forceCompleteVerification: includeCompletedReferences,
           includeCompletedReferences,
         })
+        if (isStale()) return
         if (!candidate) {
           const absenceReason = getRepairCreatedKeyBatchImportAbsenceReason({
             progress: visibleProgress,
@@ -305,12 +317,16 @@ export function useRepairCreatedKeyManagedSiteImport({
         setBatchImportIntent(candidate.intent)
         setIsBatchImportOpen(true)
       } catch {
+        if (isStale()) return
         setImportFeedback({
           reason: "failed",
           variant: "destructive",
         })
       } finally {
-        setIsResolving(false)
+        if (!isStale()) {
+          preparationInFlightRef.current = false
+          setIsResolving(false)
+        }
       }
     },
     [
@@ -318,7 +334,7 @@ export function useRepairCreatedKeyManagedSiteImport({
       isBatchImportOpen,
       isCurrentSessionResult,
       createdReferenceCount,
-      isResolving,
+      isOpen,
       progress,
     ],
   )
@@ -386,6 +402,14 @@ export function useRepairCreatedKeyManagedSiteImport({
   useEffect(() => {
     setImportFeedback(null)
   }, [managedSiteType])
+
+  useEffect(
+    () => () => {
+      preparationGenerationRef.current += 1
+      preparationInFlightRef.current = false
+    },
+    [],
+  )
 
   useEffect(() => {
     if (isOpen) return
