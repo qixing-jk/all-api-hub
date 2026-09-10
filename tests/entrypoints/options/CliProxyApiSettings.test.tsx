@@ -4,7 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import CliProxyApiSettings from "~/features/BasicSettings/components/tabs/ManagedSite/CliProxyApiSettings"
-import { listAllCliProxyApiProviders } from "~/services/apiService/cliProxyApi"
+import {
+  CliProxyApiError,
+  listAllCliProxyApiProviders,
+} from "~/services/apiService/cliProxyApi"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { testI18n } from "~~/tests/test-utils/i18n"
@@ -89,6 +92,33 @@ describe("CliProxyApiSettings", () => {
       </I18nextProvider>,
     )
 
+  it.each([
+    [401, "managementApiInvalidKey"],
+    [403, "managementApiForbidden"],
+    [404, "managementApiNotFound"],
+    [500, "managementApiHttpError"],
+  ])(
+    "shows actionable connection feedback for HTTP %s",
+    async (status, message) => {
+      vi.mocked(listAllCliProxyApiProviders).mockRejectedValue(
+        new CliProxyApiError(Number(status)),
+      )
+      renderSubject()
+      const input = screen.getByPlaceholderText(
+        "http://localhost:8317/v0/management",
+      )
+      fireEvent.change(input, { target: { value: "http://localhost:9000" } })
+      input.focus()
+      fireEvent.keyDown(input, { key: "Enter" })
+      await waitFor(() =>
+        expect(showResultToastMock).toHaveBeenCalledWith({
+          success: false,
+          message: `messages:cliProxyApi.${message}`,
+        }),
+      )
+    },
+  )
+
   it("saves a trimmed base URL on Enter and re-checks the connection", async () => {
     const updateCliProxyApiBaseUrl = vi
       .fn()
@@ -115,6 +145,7 @@ describe("CliProxyApiSettings", () => {
     fireEvent.change(input, {
       target: { value: "  http://localhost:9000/v0/management  " },
     })
+    input.focus()
     input.focus()
     fireEvent.keyDown(input, { key: "Enter" })
 
@@ -283,6 +314,7 @@ describe("CliProxyApiSettings", () => {
       "settings:cliProxyApi.managementKeyLabel",
     )
     fireEvent.change(input, { target: { value: "  enter-secret-key  " } })
+    input.focus()
     input.focus()
     fireEvent.keyDown(input, { key: "Enter" })
 

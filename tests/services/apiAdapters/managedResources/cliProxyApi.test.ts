@@ -82,6 +82,164 @@ beforeEach(() => {
 const workspace = () => cliProxyApiManagedResourceRegistration.open()
 
 describe("CLIProxyAPI native managed resources", () => {
+  it.each([
+    ["type", "unsupported"],
+    ["name", ""],
+    ["baseURL", ""],
+    ["baseURL", "invalid-url"],
+    ["baseURL", "file:///tmp/model"],
+    ["supportedModels", "model=alias=duplicate"],
+    ["headers", "missing-colon"],
+    ["credentials", "invalid-list"],
+  ])("rejects invalid %s before an import can write", async (field, value) => {
+    const editor = await (await workspace()).openCreateEditor()
+    const values = {
+      ...editor.initialValues,
+      name: "Provider",
+      baseURL: "https://upstream.example",
+      credentials: { kind: "secret-list" as const, entries: [] },
+      [field]: value,
+    }
+    expect(editor.validate(values)).toMatchObject({
+      valid: false,
+      issues: [{ fieldId: field }],
+    })
+    expect(writes).toEqual([])
+  })
+
+  it.each([400, 401, 403, 404, 500])(
+    "maps HTTP %s into a controlled list failure",
+    async (status) => {
+      fetchMock.mockResolvedValueOnce(
+        new Response("sensitive-backend-body", { status }),
+      )
+      await expect((await workspace()).list()).rejects.toMatchObject({
+        failure: {
+          code: (
+            {
+              400: "upstream_rejected",
+              401: "authentication_failed",
+              403: "permission_denied",
+              404: "not_found",
+              500: "unavailable",
+            } as Record<number, string>
+          )[status],
+        },
+      })
+      expect(writes).toEqual([])
+    },
+  )
+
+  it("detects duplicate creation without changing existing providers", async () => {
+    const view = await workspace()
+    const editor = await view.openCreateEditor()
+    const result = await editor.submit({
+      ...editor.initialValues,
+      name: "Primary",
+      baseURL: "https://upstream.example/v1",
+      credentials: { kind: "secret-list", entries: [] },
+    })
+    expect(result).toMatchObject({ outcome: "rejected" })
+    expect(writes).toEqual([])
+  })
+
+  it("rejects secret access after a provider disappears or becomes ambiguous", async () => {
+    const view = await workspace()
+    const ref = (await view.list()).items[0].ref
+    inventory["openai-compatibility"].push(
+      structuredClone(inventory["openai-compatibility"][0]),
+    )
+    await expect(view.openEditEditor(ref)).rejects.toMatchObject({
+      failure: { code: "validation_failed" },
+    })
+    inventory["openai-compatibility"] = []
+    await expect(view.openEditEditor(ref)).rejects.toMatchObject({
+      failure: { code: "not_found" },
+    })
+    expect(writes).toEqual([])
+  })
+
+  it("rejects a provider changed between the editor read and the final pre-write inventory", async () => {
+    const view = await workspace()
+    const editor = await view.openEditEditor((await view.list()).items[0].ref)
+    const original = fetchMock.getMockImplementation()!
+    let reads = 0
+    fetchMock.mockImplementation((input, init) => {
+      if (init.method === undefined || init.method === "GET") {
+        reads++
+        if (reads === 2)
+          inventory["openai-compatibility"][0].headers = {
+            "X-Remote": "changed",
+          }
+      }
+      return original(input, init)
+    })
+    expect(
+      await editor.submit({ ...editor.initialValues, name: "Renamed" }),
+    ).toMatchObject({
+      outcome: "rejected",
+      diagnostic: { code: "resource_changed" },
+    })
+    expect(writes).toEqual([])
+  })
+
+  it("reports an unpersisted create as uncertain despite an acknowledgment", async () => {
+    const editor = await (await workspace()).openCreateEditor()
+    const original = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation((input, init) =>
+      init.method === "PUT"
+        ? Promise.resolve(Response.json({ status: "ok" }))
+        : original(input, init),
+    )
+    expect(
+      await editor.submit({
+        ...editor.initialValues,
+        name: "New",
+        baseURL: "https://new.example",
+        credentials: { kind: "secret-list", entries: [] },
+      }),
+    ).toMatchObject({ outcome: "uncertain" })
+  })
+
+  it.each([400, 500])(
+    "distinguishes a rejected write from an uncertain HTTP %s outcome",
+    async (status) => {
+      const view = await workspace()
+      const editor = await view.openEditEditor((await view.list()).items[0].ref)
+      const original = fetchMock.getMockImplementation()!
+      fetchMock.mockImplementation((input, init) =>
+        init.method === "PATCH"
+          ? Promise.resolve(new Response("private", { status }))
+          : original(input, init),
+      )
+      expect(
+        await editor.submit({ ...editor.initialValues, name: "Renamed" }),
+      ).toMatchObject({ outcome: status === 400 ? "rejected" : "uncertain" })
+    },
+  )
+
+  it("loads a native key and toggles native exclusion while retaining explicit model exclusions", async () => {
+    inventory["codex-api-key"] = [
+      {
+        "api-key": "native-key",
+        "base-url": "https://upstream.example",
+        "excluded-models": ["excluded"],
+      },
+    ]
+    const view = await workspace()
+    const row = (await view.list()).items.find((item) =>
+      item.ref.resourceId.startsWith("codex-api-key:"),
+    )!
+    const editor = await view.openEditEditor(row.ref)
+    expect(await editor.loadSecret?.("key")).toBe("native-key")
+    expect(
+      await editor.submit({ ...editor.initialValues, status: false }),
+    ).toMatchObject({ outcome: "succeeded" })
+    expect(inventory["codex-api-key"][0]["excluded-models"]).toEqual([
+      "excluded",
+      "*",
+    ])
+  })
   it("accepts deployment roots and released management URLs with reverse-proxy prefixes", () => {
     expect(cliProxyApiManagementUrl("http://localhost:8317").href).toBe(
       "http://localhost:8317/v0/management",
@@ -361,6 +519,8 @@ describe("CLIProxyAPI multiple credentials", () => {
     "unknown-saved",
     "empty-key",
     "invalid-proxy",
+    "malformed-proxy",
+    "cleared-key",
     "fractional-weight",
     "excess-weight",
   ])("rejects %s before writing", async (invalidCase) => {
@@ -375,6 +535,8 @@ describe("CLIProxyAPI multiple credentials", () => {
     if (invalidCase === "empty-key")
       row.secret = { kind: "replace", value: " " }
     if (invalidCase === "invalid-proxy") row.fields.proxy_url = "file:///tmp"
+    if (invalidCase === "malformed-proxy") row.fields.proxy_url = "not a URL"
+    if (invalidCase === "cleared-key") row.secret = { kind: "clear" }
     if (invalidCase === "fractional-weight") row.fields.weight = "1.5"
     if (invalidCase === "excess-weight") row.fields.weight = "1000001"
     expect(

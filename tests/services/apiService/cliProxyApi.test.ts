@@ -1,8 +1,82 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { requestCliProxyApi } from "~/services/apiService/cliProxyApi"
+import {
+  cliProxyApiManagementUrl,
+  listCliProxyApiProviders,
+  requestCliProxyApi,
+} from "~/services/apiService/cliProxyApi"
 
 const config = { baseUrl: "http://localhost:8317", adminToken: "test-key" }
+
+describe("CLIProxyAPI response trust boundary", () => {
+  afterEach(() => vi.unstubAllGlobals())
+  it.each(["file:///tmp/config", "https://user:secret@example.com"])(
+    "rejects unsafe management URL %s",
+    (url) => {
+      expect(() => cliProxyApiManagementUrl(url)).toThrow(
+        "CLIProxyAPI HTTP 400",
+      )
+    },
+  )
+  it.each([
+    null,
+    [null],
+    [{ name: 123 }],
+    [
+      {
+        name: "p",
+        "base-url": "https://upstream.example",
+        models: ["invalid"],
+      },
+    ],
+    [
+      {
+        name: "p",
+        "base-url": "https://upstream.example",
+        "api-key-entries": [null],
+      },
+    ],
+    [
+      {
+        name: "p",
+        "base-url": "https://upstream.example",
+        "api-key-entries": [{ "api-key": 123 }],
+      },
+    ],
+    [
+      {
+        name: "p",
+        "base-url": "https://upstream.example",
+        headers: { authorization: 123 },
+      },
+    ],
+    [
+      {
+        name: "p",
+        "base-url": "https://upstream.example",
+        "excluded-models": [123],
+      },
+    ],
+    [{ "base-url": "https://upstream.example" }],
+  ])(
+    "rejects malformed inventory %# before it can be used for a collection update",
+    async (payload) => {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(payload)))
+      await expect(
+        listCliProxyApiProviders(config, "openai-compatibility"),
+      ).rejects.toThrow("CLIProxyAPI request failed")
+    },
+  )
+  it("does not accept a successful HTTP response without a mutation acknowledgment", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(Response.json({ error: "private details" })),
+    )
+    await expect(
+      requestCliProxyApi(config, "openai-compatibility", "PUT", []),
+    ).rejects.toThrow("CLIProxyAPI request failed")
+  })
+})
 
 describe("CLIProxyAPI request deadlines", () => {
   beforeEach(() => vi.useFakeTimers())
