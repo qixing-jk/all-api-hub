@@ -46,7 +46,7 @@ describe("userPreferences shared preference timestamps", () => {
     expect(storedAfter.sharedPreferencesLastUpdated).toBeUndefined()
   })
 
-  it("keeps stored v26 preferences unchanged until a normal save writes v27", async () => {
+  it("keeps stored v26 preferences unchanged until a normal save writes the current version", async () => {
     const legacyTimestamp = 123457
     const storedPreferences = {
       ...DEFAULT_PREFERENCES,
@@ -73,7 +73,7 @@ describe("userPreferences shared preference timestamps", () => {
       USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
     )) as any
 
-    expect(preferences.preferencesVersion).toBe(27)
+    expect(preferences.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
     expect(preferences.lastUpdated).toBe(legacyTimestamp)
     expect(preferences.sharedPreferencesLastUpdated).toBe(legacyTimestamp)
     expect(preferences.tempWindowFallback).not.toHaveProperty(
@@ -95,7 +95,7 @@ describe("userPreferences shared preference timestamps", () => {
     )) as any
 
     expect(saveResult).toMatchObject({ ok: true })
-    expect(storedAfterSave.preferencesVersion).toBe(27)
+    expect(storedAfterSave.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
     expect(storedAfterSave.lastUpdated).toBe(legacyTimestamp + 1)
     expect(storedAfterSave.tempWindowFallback).not.toHaveProperty(
       "useForAutoRefresh",
@@ -168,7 +168,7 @@ describe("userPreferences shared preference timestamps", () => {
       const storedAfter = (await storage.get(
         USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
       )) as any
-      expect(storedAfter.preferencesVersion).toBe(27)
+      expect(storedAfter.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
       expect(storedAfter.tempWindowFallback).toEqual({
         windowWidth: 600,
         windowHeight: 720,

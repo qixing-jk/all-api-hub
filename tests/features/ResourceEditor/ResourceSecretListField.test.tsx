@@ -191,7 +191,7 @@ describe("ResourceSecretListField", () => {
     expect(change).not.toHaveBeenCalled()
   })
 
-  it("keeps revealed edits visible and distinguishes retaining, replacing and new keys", async () => {
+  it("keeps revealed edits visible and identifies a replacement key", async () => {
     const user = userEvent.setup()
     const load = vi.fn().mockResolvedValue("saved-secret")
     render(<Harness load={load} />)
@@ -203,16 +203,32 @@ describe("ResourceSecretListField", () => {
       "saved-secret-edited",
     )
     expect(row(1).getByText("ui:secretList.replacementState")).toBeVisible()
+  })
+
+  it("returns a cleared replacement to the masked saved-key state", async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+    await user.click(row(1).getByLabelText("API Key 1"))
+    await user.paste("replacement")
+    await user.click(row(1).getByRole("button", { name: "Show key" }))
+    expect(row(1).getByLabelText("API Key 1")).toHaveAttribute("type", "text")
     await user.clear(row(1).getByLabelText("API Key 1"))
     expect(row(1).getByText("ui:secretList.retainedState")).toBeVisible()
     expect(row(1).getByLabelText("API Key 1")).toHaveAttribute(
       "type",
       "password",
     )
+  })
+
+  it("identifies new keys and preserves their visibility while editing", async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
     await user.click(screen.getByRole("button", { name: "Add key" }))
     expect(row(3).getByText("ui:secretList.newState")).toBeVisible()
     await user.click(row(3).getByRole("button", { name: "Show key" }))
-    await user.type(row(3).getByLabelText("API Key 3"), "new-visible-key")
+    await user.click(row(3).getByLabelText("API Key 3"))
+    await user.paste("new-visible-key")
+    expect(row(3).getByLabelText("API Key 3")).toHaveValue("new-visible-key")
     expect(row(3).getByLabelText("API Key 3")).toHaveAttribute("type", "text")
   })
 
@@ -221,9 +237,10 @@ describe("ResourceSecretListField", () => {
     const change = vi.fn()
     render(<Harness onChange={change} />)
     await user.click(screen.getByRole("button", { name: "Add key" }))
-    await user.type(row(3).getByLabelText("API Key 3"), "added-key")
+    await user.click(row(3).getByLabelText("API Key 3"))
+    await user.paste("added-key")
     await user.clear(row(1).getByLabelText("Proxy"))
-    await user.type(row(1).getByLabelText("Proxy"), "http://changed.example")
+    await user.paste("http://changed.example")
     await user.click(row(2).getByRole("button", { name: "Remove key" }))
     const value = change.mock.lastCall![0] as ResourceSecretListValue
     expect(value.entries).toHaveLength(2)

@@ -11,6 +11,7 @@ import {
 } from "~/services/featureGuidance/featureGuidanceState"
 import { readBackupFeatureGuidance } from "~/services/importExport/importExportService"
 import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
+import { CURRENT_PREFERENCES_VERSION } from "~/services/preferences/migrations/preferencesMigration"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -1310,7 +1311,7 @@ describe("WebDAV preference convergence", () => {
     await storage.remove(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES)
   })
 
-  it("imports a legacy v26 preference selection as canonical v27 and re-exports it canonically", async () => {
+  it("imports a legacy v26 preference selection as the current canonical version and re-exports it canonically", async () => {
     await storage.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
       ...DEFAULT_PREFERENCES,
       lastUpdated: 100,
@@ -1369,7 +1370,9 @@ describe("WebDAV preference convergence", () => {
     const storedAfterImport = (await storage.get(
       USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
     )) as any
-    expect(storedAfterImport.preferencesVersion).toBe(27)
+    expect(storedAfterImport.preferencesVersion).toBe(
+      CURRENT_PREFERENCES_VERSION,
+    )
     expect(storedAfterImport.tempWindowFallback).toMatchObject({
       automaticFeatureBypass: { account_refresh: false },
     })
@@ -1392,7 +1395,9 @@ describe("WebDAV preference convergence", () => {
       },
     })
 
-    expect((nextUpload.preferences as any).preferencesVersion).toBe(27)
+    expect((nextUpload.preferences as any).preferencesVersion).toBe(
+      CURRENT_PREFERENCES_VERSION,
+    )
     expect((nextUpload.preferences as any).tempWindowFallback).toMatchObject({
       automaticFeatureBypass: { account_refresh: false },
     })
@@ -1415,7 +1420,7 @@ describe("WebDAV preference convergence", () => {
         timestamp: 200,
         preferences: {
           ...DEFAULT_PREFERENCES,
-          preferencesVersion: 27,
+          preferencesVersion: CURRENT_PREFERENCES_VERSION,
           lastUpdated: 200,
           sharedPreferencesLastUpdated: 200,
           tempWindowFallback: {
@@ -1503,7 +1508,7 @@ describe("WebDAV preference convergence", () => {
         tempContextMode: "window",
       })
       expect(nextUpload.preferences).toMatchObject({
-        preferencesVersion: 27,
+        preferencesVersion: CURRENT_PREFERENCES_VERSION,
         tempWindowFallback: storedAfterImport.tempWindowFallback,
       })
       expect(

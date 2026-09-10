@@ -7,6 +7,7 @@ import {
   ACCOUNT_STORAGE_KEYS,
   USER_PREFERENCES_STORAGE_KEYS,
 } from "~/services/core/storageKeys"
+import { CURRENT_PREFERENCES_VERSION } from "~/services/preferences/migrations/preferencesMigration"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -1314,7 +1315,7 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
     expect(uploaded.preferences.webdav).toBeUndefined()
   })
 
-  it("converges legacy WebDAV preferences to a canonical v27 snapshot before the next upload", async () => {
+  it("converges legacy WebDAV preferences to the current canonical snapshot before the next upload", async () => {
     const storage = new Storage({ area: "local" })
     const service = createService()
     const userPreferencesPrototype = Object.getPrototypeOf(userPreferences)
@@ -1366,7 +1367,9 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
       const storedAfterImport = (await storage.get(
         USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
       )) as any
-      expect(storedAfterImport.preferencesVersion).toBe(27)
+      expect(storedAfterImport.preferencesVersion).toBe(
+        CURRENT_PREFERENCES_VERSION,
+      )
       expect(storedAfterImport.tempWindowFallback).toMatchObject({
         automaticFeatureBypass: { account_refresh: false },
       })
@@ -1394,7 +1397,9 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
       await service.syncWithWebdav()
 
       const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
-      expect(uploaded.preferences.preferencesVersion).toBe(27)
+      expect(uploaded.preferences.preferencesVersion).toBe(
+        CURRENT_PREFERENCES_VERSION,
+      )
       expect(uploaded.preferences.tempWindowFallback).toMatchObject({
         automaticFeatureBypass: { account_refresh: false },
       })
