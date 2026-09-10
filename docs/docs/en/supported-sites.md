@@ -155,6 +155,7 @@ If you are also building your own backend system, All API Hub supports importing
 
 | Backend System | Official Description | Official Link |
 |----------------|----------------------|---------------|
+| [CLIProxyAPI](./cliproxyapi-integration.md) | Encapsulates Gemini CLI, Antigravity, ChatGPT Codex, Claude Code, Qwen Code, and iFlow into API services compatible with OpenAI / Gemini / Claude / Codex. | [Documentation](https://help.router-for.me/) / [GitHub](https://github.com/router-for-me/CLIProxyAPI)                             |
 | New API | Unified AI model aggregation and distribution center. | [Official Website](https://www.newapi.ai/) / [GitHub](https://github.com/QuantumNous/new-api) |
 | Sub2API | Sub2API-CRS2 one-stop open-source relay service, providing unified access to Claude, OpenAI, Gemini, and Antigravity subscriptions, with support for shared plans and native tools. | [GitHub](https://github.com/Wei-Shaw/sub2api) |
 | AxonHub | Open-source AI Gateway, callable via any SDK for 100+ LLMs, with built-in failover, load balancing, cost control, and full-link tracing. | [Official Website](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |

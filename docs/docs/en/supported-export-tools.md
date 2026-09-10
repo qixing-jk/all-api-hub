@@ -4,26 +4,25 @@
 
 ## Chat Clients
 
-| Product | Official Description | Official Link |
-|---|---|---|
+| Product       | Official Description                                                                                                                                         | Official Link                                                                                        |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
 | Cherry Studio | An AI productivity studio offering intelligent conversations, autonomous agents, and 300+ assistants, providing unified access to cutting-edge large models. | [Official Website](https://www.cherry-ai.com/) / [GitHub](https://github.com/CherryHQ/cherry-studio) |
-| Kelivo | A Flutter-based LLM chat client for mobile and desktop. | [GitHub](https://github.com/Chevey339/kelivo) |
+| Kelivo        | A Flutter-based LLM chat client for mobile and desktop.                                                                                                      | [GitHub](https://github.com/Chevey339/kelivo)                                                        |
 
 ## Coding Agents
 
-| Product | Official Description | Official Link |
-|---|---|---|
-| CC Switch | A cross-platform desktop assistant for Claude Code, Codex, Gemini CLI, Grok CLI, Hermes, OpenCode, and OpenClaw. | [GitHub](https://github.com/farion1231/cc-switch) |
-| Kilo Code | Kilo is an integrated Agentic Engineering platform. | [Official Website](https://kilocode.ai/) / [GitHub](https://github.com/Kilo-Org/kilocode) |
-| Roo Code | Roo Code allows an entire AI development team to reside directly within your code editor. | [Official Website](https://roocode.com/) / [GitHub](https://github.com/RooCodeInc/Roo-Code) |
-| Cursor++ | Use Anthropic, OpenAI, Gemini, and other models in Cursor with your own API keys. | [Official Website](https://ccursor.cometix.dev/) |
+| Product   | Official Description                                                                                             | Official Link                                                                               |
+| --------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| CC Switch | A cross-platform desktop assistant for Claude Code, Codex, Gemini CLI, Grok CLI, Hermes, OpenCode, and OpenClaw. | [GitHub](https://github.com/farion1231/cc-switch)                                           |
+| Kilo Code | Kilo is an integrated Agentic Engineering platform.                                                              | [Official Website](https://kilocode.ai/) / [GitHub](https://github.com/Kilo-Org/kilocode)   |
+| Roo Code  | Roo Code allows an entire AI development team to reside directly within your code editor.                        | [Official Website](https://roocode.com/) / [GitHub](https://github.com/RooCodeInc/Roo-Code) |
+| Cursor++  | Use Anthropic, OpenAI, Gemini, and other models in Cursor with your own API keys.                                | [Official Website](https://ccursor.cometix.dev/)                                            |
 
 ## Gateways and Routing Tools
 
-| Product | Official Description | Official Link |
-|---|---|---|
-| CLIProxyAPI | Encapsulates Gemini CLI, Antigravity, ChatGPT Codex, Claude Code, Qwen Code, and iFlow into API services compatible with OpenAI / Gemini / Claude / Codex. | [Documentation](https://help.router-for.me/) / [GitHub](https://github.com/router-for-me/CLIProxyAPI) |
-| Claude Code Router | Uses Claude Code as the coding infrastructure, allowing you to continuously receive Anthropic updates while deciding how to interact with the model. | [Official Website](https://musistudio.github.io/claude-code-router/) / [GitHub](https://github.com/musistudio/claude-code-router) |
+| Product                                     | Official Description                                                                                                                                       | Official Link                                                                                                                     |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code Router                          | Uses Claude Code as the coding infrastructure, allowing you to continuously receive Anthropic updates while deciding how to interact with the model.       | [Official Website](https://musistudio.github.io/claude-code-router/) / [GitHub](https://github.com/musistudio/claude-code-router) |
 
 ## Exporting to Kelivo Mobile
 
@@ -93,19 +92,20 @@ The legacy format exports one model per configuration. After selecting **Copy Le
 
 If you have also set up an AI relay or aggregation backend, All API Hub can directly import the current site into your chosen backend target.
 
-| Product | Official Description | Official Link |
-|---|---|---|
-| New API | A unified AI model aggregation and distribution center. | [Official Website](https://www.newapi.ai/) / [GitHub](https://github.com/QuantumNous/new-api) |
-| Sub2API | Sub2API-CRS2 is an all-in-one open-source relay service that provides unified access to Claude, OpenAI, Gemini, and Antigravity subscriptions. | [GitHub](https://github.com/Wei-Shaw/sub2api) |
-| AxonHub | Open-source AI Gateway, callable via any SDK with 100+ LLMs, built-in failover, load balancing, cost control, and full-link tracing. | [Official Website](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |
-| Claude Code Hub | A multi-vendor AI API proxy and operations platform for teams, unifying access to Claude, OpenAI Compatible, Codex, and Gemini, with support for elastic scheduling, monitoring, and price management. | [GitHub](https://github.com/ding113/claude-code-hub) |
-| Octopus | An LLM API aggregation service for individuals. | [GitHub](https://github.com/bestruirui/octopus) |
-| Veloera | This project is no longer maintained. | [GitHub](https://github.com/Veloera/Veloera) |
-| DoneHub | This project is a secondary development based on one-hub. | [GitHub](https://github.com/deanxv/done-hub) |
+| Product         | Official Description                                                                                                                                                                                   | Official Link                                                                                   |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| [CLIProxyAPI](./cliproxyapi-integration.md) | Encapsulates Gemini CLI, Antigravity, ChatGPT Codex, Claude Code, Qwen Code, and iFlow into API services compatible with OpenAI / Gemini / Claude / Codex. | [Documentation](https://help.router-for.me/) / [GitHub](https://github.com/router-for-me/CLIProxyAPI)                             |
+| New API         | A unified AI model aggregation and distribution center.                                                                                                                                                | [Official Website](https://www.newapi.ai/) / [GitHub](https://github.com/QuantumNous/new-api)   |
+| Sub2API         | Sub2API-CRS2 is an all-in-one open-source relay service that provides unified access to Claude, OpenAI, Gemini, and Antigravity subscriptions.                                                         | [GitHub](https://github.com/Wei-Shaw/sub2api)                                                   |
+| AxonHub         | Open-source AI Gateway, callable via any SDK with 100+ LLMs, built-in failover, load balancing, cost control, and full-link tracing.                                                                   | [Official Website](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |
+| Claude Code Hub | A multi-vendor AI API proxy and operations platform for teams, unifying access to Claude, OpenAI Compatible, Codex, and Gemini, with support for elastic scheduling, monitoring, and price management. | [GitHub](https://github.com/ding113/claude-code-hub)                                            |
+| Octopus         | An LLM API aggregation service for individuals.                                                                                                                                                        | [GitHub](https://github.com/bestruirui/octopus)                                                 |
+| Veloera         | This project is no longer maintained.                                                                                                                                                                  | [GitHub](https://github.com/Veloera/Veloera)                                                    |
+| DoneHub         | This project is a secondary development based on one-hub.                                                                                                                                              | [GitHub](https://github.com/deanxv/done-hub)                                                    |
 
 ## Related Documentation
 
 - [Supported Site List](./supported-sites.md)
 - [Quick Export Site Configuration](./quick-export.md)
-- [CLIProxyAPI Integration](./cliproxyapi-integration.md)
+- [CLIProxyAPI Management](./cliproxyapi-integration.md)
 - [Self-Hosted Site Management](./self-hosted-site-management.md)

@@ -178,7 +178,7 @@ WebDAV 备份可以帮你在多设备间同步数据：
 导出到 New API 时，插件会自动检测是否已存在相同的渠道，避免重复添加。
 :::
 
-如需更完整的导出与集成说明，请参阅 [快速导出站点配置](./quick-export.md)；若希望对接 CLIProxyAPI 管理接口，可参阅 [CLIProxyAPI 集成](./cliproxyapi-integration.md)。
+如需更完整的导出与集成说明，请参阅 [快速导出站点配置](./quick-export.md)；若希望对接 CLIProxyAPI 管理接口，可参阅 [CLIProxyAPI 管理](./cliproxyapi-integration.md)。
 
 ### 如何使用站点签到功能？
 

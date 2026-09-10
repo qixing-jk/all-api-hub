@@ -43,6 +43,7 @@
 </div>
 
 <a id="introduction"></a>
+
 ## ❓ Why All API Hub?
 
 **In simple terms**: AI relay sites are like a marketplace for AI credits, giving you low-cost or even free access to models such as ChatGPT, Claude, and GPT Image.
@@ -57,61 +58,70 @@ But once you have multiple accounts, management quickly becomes painful:
 **All API Hub is your AI asset manager**: add your site URLs and let the extension handle the rest.
 
 <a id="features"></a>
+
 ## ✨ What Can It Do for You?
 
 ### 📊 All Your AI Assets in One View
+
 - **Unified Relay Account Dashboard**: Manage multiple AI relay accounts in one place and review balances, usage, and account status without signing in to each site.
 - **API Credential Library**: No site account required—bring Base URLs and API Keys shared by others or collected over time together, then check balances, view models, test connections, or export whenever needed.
 - **Usage & Trend Analytics**: Track balance changes and view charts by site, account, and model to understand where your credits go.
 
 ### 💰 Price Comparison & Auto Check-In
+
 - **Cross-Site Model Price Comparison**: Compare the effective price of the same model across sites and quickly find a better-value endpoint.
 - **Multi-Site Auto Check-In**: Check in to supported sites with one click or on a schedule, collect rewards automatically, and skip daily logins.
 
 ### 🚀 Quick Capture & Client Integration
+
 - **Quick Web Capture**: Find Base URLs and API Keys on a page, test them immediately, and save them to your credential library with less copying and tab switching.
-- **One-Click Client Export**: Send credentials to CherryStudio, CC Switch, CLIProxyAPI, Claude Code Router, Kilo Code, and other [supported tools](https://all-api-hub.qixing1217.top/en/supported-export-tools.html).
+- **One-Click Client Export**: Send credentials to CherryStudio, CC Switch, Claude Code Router, Kilo Code, and other [supported tools](https://all-api-hub.qixing1217.top/en/supported-export-tools.html).
 
 ### 🧪 API Verification & Troubleshooting
+
 - **API & Model Verification**: Check API connectivity and model availability in one click to see whether a Key works and a model can be called.
 - **CLI Integration Testing**: Confirm that common command-line tools can use the target API before you spend time troubleshooting a full setup.
 
 ### 🔔 Announcements & Task Alerts
+
 - **Announcements in One Place**: Automatically collect and display announcements from added sites in one place, with timely alerts for maintenance, model, pricing, and other updates—no need to check sites one by one.
 - **Task Result Alerts**: After automated check-ins, WebDAV auto-sync, or model sync completes, receive the result through your browser or a configured notification method so failures and exceptions can be handled promptly.
 
 ### 🛠️ Self-Hosted AI Gateway Management
-- **Manage Popular AI Gateways in One Place**: Manage New API, Sub2API, AxonHub, Claude Code Hub, Octopus, Veloera, and DoneHub directly in the extension without opening each admin panel.
+
+- **Manage Popular AI Gateways in One Place**: Manage CLIProxyAPI, New API, Sub2API, AxonHub, Claude Code Hub, Octopus, Veloera, and DoneHub directly in the extension without opening each admin panel.
 - **Quickly Create Gateway Channels**: Turn saved site accounts or credentials from the API Credential Library into self-hosted AI gateway channels, then call models through the gateway and switch between channels as needed.
-- **Model Sync & Redirects**: Sync channel model lists manually or automatically on a schedule as upstream models change, and define custom redirects so clients can use the model names they prefer.
+- **Model Sync & Redirects**: On supported sites, sync channel model lists manually or automatically on a schedule as upstream models change, and define custom redirects so clients can use the model names they prefer.
 
 ### 🔐 Data Security & Cloud Sync
+
 - **Local-First Storage**: API Keys, accounts, and settings stay in your browser by default and are written to WebDAV only when you enable backup or sync.
 - **Encrypted WebDAV Auto-Sync**: Enable encryption and scheduled auto-sync to keep data safely synchronized across devices and pick up where you left off after switching computers.
 
 <a id="installation"></a>
+
 ## 🚀 Quick Installation
 
-> [!IMPORTANT]
-> **For most users, the store build is recommended.** It is easy to install and supports automatic updates.
+> [!IMPORTANT] > **For most users, the store build is recommended.** It is easy to install and supports automatic updates.
 
-| Channel | Install Link | Current Version | Users |
-|------|----------|----------|-------|
-| Chrome Web Store | [Chrome Web Store](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) | [![Chrome version](https://img.shields.io/chrome-web-store/v/lapnciffpekdengooeolaienkeoilfeo?label=Chrome&logo=googlechrome&style=flat)](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) | [![Chrome Web Store Users](https://img.shields.io/chrome-web-store/users/lapnciffpekdengooeolaienkeoilfeo?label=Chrome%20Users)](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) |
-| Edge Add-ons | [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa) | [![Edge version](https://img.shields.io/badge/dynamic/json?label=Edge&prefix=v&query=%24.version&url=https%3A%2F%2Fmicrosoftedge.microsoft.com%2Faddons%2Fgetproductdetailsbycrxid%2Fpcokpjaffghgipcgjhapgdpeddlhblaa&logo=microsoftedge&style=flat)](https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa) | [![Edge Add-ons Users](https://img.shields.io/badge/dynamic/json?label=Edge%20Users&query=$.activeInstallCount&url=https://microsoftedge.microsoft.com/addons/getproductdetailsbycrxid/pcokpjaffghgipcgjhapgdpeddlhblaa)](https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa) |
-| Firefox Add-ons | [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}) | [![Firefox version](https://img.shields.io/amo/v/%7Bbc73541a-133d-4b50-b261-36ea20df0d24%7D?label=Firefox&logo=firefoxbrowser&style=flat)](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}) | [![Mozilla Add-on Users](https://img.shields.io/amo/users/%7Bbc73541a-133d-4b50-b261-36ea20df0d24%7D?label=Firefox%20Users)](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}) |
+| Channel          | Install Link                                                                                       | Current Version                                                                                                                                                                                                                                                                                                                           | Users                                                                                                                                                                                                                                                                                                         |
+| ---------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chrome Web Store | [Chrome Web Store](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo)      | [![Chrome version](https://img.shields.io/chrome-web-store/v/lapnciffpekdengooeolaienkeoilfeo?label=Chrome&logo=googlechrome&style=flat)](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo)                                                                                                                      | [![Chrome Web Store Users](https://img.shields.io/chrome-web-store/users/lapnciffpekdengooeolaienkeoilfeo?label=Chrome%20Users)](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo)                                                                                                   |
+| Edge Add-ons     | [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa) | [![Edge version](https://img.shields.io/badge/dynamic/json?label=Edge&prefix=v&query=%24.version&url=https%3A%2F%2Fmicrosoftedge.microsoft.com%2Faddons%2Fgetproductdetailsbycrxid%2Fpcokpjaffghgipcgjhapgdpeddlhblaa&logo=microsoftedge&style=flat)](https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa) | [![Edge Add-ons Users](https://img.shields.io/badge/dynamic/json?label=Edge%20Users&query=$.activeInstallCount&url=https://microsoftedge.microsoft.com/addons/getproductdetailsbycrxid/pcokpjaffghgipcgjhapgdpeddlhblaa)](https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa) |
+| Firefox Add-ons  | [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}) | [![Firefox version](https://img.shields.io/amo/v/%7Bbc73541a-133d-4b50-b261-36ea20df0d24%7D?label=Firefox&logo=firefoxbrowser&style=flat)](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24})                                                                                                               | [![Mozilla Add-on Users](https://img.shields.io/amo/users/%7Bbc73541a-133d-4b50-b261-36ea20df0d24%7D?label=Firefox%20Users)](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24})                                                                                                 |
 
 <details>
 <summary>📦 Need manual installation or Nightly builds? (Click to expand)</summary>
 
-| Channel | Download Link | Best For |
-|------|----------|----------|
-| GitHub Stable | [Download Stable](https://github.com/qixing-jk/all-api-hub/releases/latest) | When you cannot install the store build or need to temporarily install a published fix manually |
+| Channel             | Download Link                                                                     | Best For                                                                                            |
+| ------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| GitHub Stable       | [Download Stable](https://github.com/qixing-jk/all-api-hub/releases/latest)       | When you cannot install the store build or need to temporarily install a published fix manually     |
 | Nightly pre-release | [Download Nightly](https://github.com/qixing-jk/all-api-hub/releases/tag/nightly) | When you want early access and are willing to help test; it may be less stable than the store build |
 
 GitHub Stable and Nightly are manual installation channels and do not auto-update. Star / Watch the repository to receive new version notifications. See the [installation and update guide](https://all-api-hub.qixing1217.top/en/extension-update-install.html) for more details.
 
 **Other environments:**
+
 - **Mobile browsers**: Supports mobile Edge, Firefox for Android, Kiwi, and more. See the [mobile browser guide](https://all-api-hub.qixing1217.top/en/faq.html#mobile-browser-support).
 - **QQ Browser / 360 Browser / similar**: See the [manual loading guide](https://all-api-hub.qixing1217.top/en/other-browser-install.html).
 - **Safari (Mac)**: Requires Xcode for compilation. See the [Safari installation guide](https://all-api-hub.qixing1217.top/en/safari-install.html).
@@ -119,6 +129,7 @@ GitHub Stable and Nightly are manual installation channels and do not auto-updat
 </details>
 
 <a id="sponsors"></a>
+
 ## ❤️ Sponsors
 
 Thank you to all our sponsors for supporting the project's long-term feature development and maintenance. We are also grateful to every user, contributor, and community member for using, testing, sharing, and improving All API Hub.
@@ -223,7 +234,6 @@ Thank you to all our sponsors for supporting the project's long-term feature dev
   </p>
 </div>
 
-
 <hr>
 
 <div>
@@ -250,11 +260,11 @@ Thank you to all our sponsors for supporting the project's long-term feature dev
 
 <hr>
 
-
 > [!NOTE]
 > If you previously used [One API Hub](https://github.com/fxaxg/one-api-hub), All API Hub has been heavily refactored while preserving data compatibility, so you can import your existing data with one click.
 
 <a id="quick-start"></a>
+
 ## 🧑‍🚀 30-Second Quick Start
 
 1. **Install the extension**: Use one of the store links above.
@@ -265,14 +275,18 @@ Thank you to all our sponsors for supporting the project's long-term feature dev
 👉 **[Click here for the full illustrated beginner guide](https://all-api-hub.qixing1217.top/en/get-started.html)**
 
 <a id="introduction-tech"></a>
+
 ### 🧩 Strong Compatibility
+
 No matter which architecture you use, there is a good chance we support it:
+
 - **Account-site compatible architectures**: [new-api](https://github.com/QuantumNous/new-api), [one-api](https://github.com/songquanpeng/one-api), [Sub2API](https://github.com/Wei-Shaw/sub2api), [one-hub](https://github.com/MartialBE/one-hub), [Veloera](https://github.com/Veloera/Veloera), [done-hub](https://github.com/deanxv/done-hub), and more
 - **Specialized account platforms and compatible implementations**: [OpenRouter](https://openrouter.ai), [AnyRouter](https://anyrouter.top/register?aff=tDKX), [AgentRouter](https://agentrouter.org/register?aff=TUX6), [AIHubMix](https://aihubmix.com/?aff=W3DN), Super-API, v-api, Neo-API, and more
-- **Self-hosted admin backends**: [new-api](https://github.com/QuantumNous/new-api), [Sub2API](https://github.com/Wei-Shaw/sub2api), [AxonHub](https://github.com/looplj/axonhub), [Claude Code Hub](https://github.com/ding113/claude-code-hub), [Octopus](https://github.com/bestruirui/octopus), [Veloera](https://github.com/Veloera/Veloera), [done-hub](https://github.com/deanxv/done-hub), and more, for gateway management, migration, and partial model sync
+- **Self-hosted admin backends**: [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI), [New API](https://github.com/QuantumNous/new-api), [Sub2API](https://github.com/Wei-Shaw/sub2api), [AxonHub](https://github.com/looplj/axonhub), [Claude Code Hub](https://github.com/ding113/claude-code-hub), [Octopus](https://github.com/bestruirui/octopus), [Veloera](https://github.com/Veloera/Veloera), [DoneHub](https://github.com/deanxv/done-hub), and more, for channel or provider management, with migration and model sync where supported
 - **Full list**: 👉 [Supported Sites](https://all-api-hub.qixing1217.top/en/supported-sites.html)
 
 <a id="ui-preview"></a>
+
 ## 🖼️ UI Preview
 
 <table>
@@ -319,11 +333,13 @@ No matter which architecture you use, there is a good chance we support it:
 </table>
 
 <a id="development-guide"></a>
+
 ## 🛠️ Development Guide
 
 Please refer to the [CONTRIBUTING](CONTRIBUTING.md) for more information.
 
 <a id="license"></a>
+
 ## 📜 License and Commercial Licensing
 
 All API Hub is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
@@ -335,6 +351,7 @@ For commercial licensing, contact: <street-anime-olive@duck.com>
 Commercial licenses apply only to code and assets for which the All API Hub maintainers have the right to grant commercial terms. Third-party dependencies and historical MIT-licensed portions derived from [One API Hub](https://github.com/fxaxg/one-api-hub) remain subject to their own copyright and license notices. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 <a id="tech-stack"></a>
+
 ## 🏗️ Tech Stack
 
 - **Framework**: [WXT](https://wxt.dev) powers the multi-browser extension tooling and build pipeline
@@ -344,20 +361,21 @@ Commercial licenses apply only to code and assets for which the All API Hub main
 - **Components**: [Radix UI](https://www.radix-ui.com/) provides accessible primitives for our design system
 
 <a id="community-ecosystem"></a>
+
 ## 🔗 Ecosystem Projects
 
 Community extensions and integrations around All API Hub:
 
-| Project | Description | Features |
-|---------|-------------|----------|
-| [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) | AI API proxy service | Import and update provider configurations from All API Hub through its Management API. |
-| [Metapi](https://github.com/cita-777/metapi) | Self-hosted meta-aggregation gateway | Combine multiple relay accounts behind one API entry; originally inspired by All API Hub. |
-| [Fl API Hub](https://github.com/RebornQ/fl_api_hub) | Cross-platform native management client | Manage accounts, balances, and keys with quick check-in support; inspired by All API Hub. |
-| [APIManager](https://github.com/zhalice2011/api-manager) | Local AI API aggregation proxy | Sync accounts from All API Hub and provide unified proxying, routing, and usage dashboards. |
+| Project                                                     | Description                             | Features                                                                                    |
+| ----------------------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------- |
+| [Metapi](https://github.com/cita-777/metapi)                | Self-hosted meta-aggregation gateway    | Combine multiple relay accounts behind one API entry; originally inspired by All API Hub.   |
+| [Fl API Hub](https://github.com/RebornQ/fl_api_hub)         | Cross-platform native management client | Manage accounts, balances, and keys with quick check-in support; inspired by All API Hub.   |
+| [APIManager](https://github.com/zhalice2011/api-manager)    | Local AI API aggregation proxy          | Sync accounts from All API Hub and provide unified proxying, routing, and usage dashboards. |
 
 > If you have developed a project based on, integrated with, or inspired by All API Hub, please open a PR to add it to this list.
 
 <a id="acknowledgements"></a>
+
 ## 🙏 Acknowledgements
 
 - Thanks to [@AngleNaris](https://github.com/AngleNaris) for designing the project logo 🎨

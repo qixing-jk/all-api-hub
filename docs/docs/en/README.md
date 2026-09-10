@@ -3,7 +3,7 @@ home: true
 title: "Homepage"
 heroImage: "/512.png"
 heroText: "All API Hub - Your All-in-One AI Asset Manager"
-tagline: "Open-source browser extension to unify the management of third-party AI aggregation relays and self-built New APIs: automatically identify accounts, compare model prices, verify API/CLI compatibility, synchronize models and channels, and support cross-platform and encrypted WebDAV backups."
+tagline: "An open-source browser extension for AI relay accounts and API credentials, with management for self-hosted gateways such as CLIProxyAPI, New API, and Sub2API. Check balances, compare model prices, verify APIs, and back up with encrypted WebDAV."
 actions:
   - text: "Get Started"
     link: "./get-started.html"
@@ -41,7 +41,7 @@ features:
   - title: "🚀 Web Capture & One-Click Export"
     details: "Quickly find Base URLs or API Keys on web pages and export them to popular AI clients with one click."
   - title: "🛠️ Popular AI Gateway Support"
-    details: "Manage New API, Sub2API, AxonHub, Claude Code Hub, Octopus, Veloera, and DoneHub in one place; quickly add site configurations from saved accounts or API credentials, with support for model sync and redirects."
+    details: "Manage CLIProxyAPI, New API, Sub2API, AxonHub, Claude Code Hub, Octopus, Veloera, and DoneHub in one place; quickly add site configurations from saved accounts or API credentials, with model sync and redirects where supported."
   - title: "🔐 Local-First Storage & Auto-Sync"
     details: "Data stays in your browser by default; enable encrypted WebDAV auto-sync to keep it safely synchronized across devices and continue where you left off after switching computers."
 
@@ -80,7 +80,7 @@ No matter which architecture you use, there is a good chance we support it:
 
 - **Account-site compatible architectures**: New API, One API, Sub2API, One-Hub, Veloera, Done-Hub, and more.
 - **Specialized account platforms and compatible implementations**: [OpenRouter](https://openrouter.ai/), [AnyRouter](https://anyrouter.top/register?aff=tDKX), [AgentRouter](https://agentrouter.org/register?aff=TUX6), [AIHubMix](https://aihubmix.com/?aff=W3DN), Super-API, v-api, Neo-API, and more.
-- **Self-hosted admin backends**: New API, Sub2API, AxonHub, Claude Code Hub, [Octopus](https://github.com/bestruirui/octopus), Veloera, Done-Hub, and more, for backend management, migration, and partial model sync.
+- **Self-hosted admin backends**: CLIProxyAPI, New API, Sub2API, AxonHub, Claude Code Hub, Octopus, Veloera, DoneHub, and more, for backend management, with migration and model sync where supported.
 
 > If you use Safari on macOS, read the [Safari Installation Guide](./safari-install.md) first.
 > If you use QQ Browser, 360 Browser, Brave, Vivaldi, Opera, or similar browsers, read the [Other Browser Installation Guide](./other-browser-install.md).

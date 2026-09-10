@@ -3,7 +3,7 @@ home: true
 title: "首页"
 heroImage: "/512.png"
 heroText: "All API Hub - 你的全能 AI 资产管家"
-tagline: "开源浏览器插件，统一管理第三方 AI 聚合中转站与自建 New API：自动识别账号、比对模型价格、验证 API/CLI 兼容性、同步模型与渠道，并支持跨平台与加密 WebDAV 备份"
+tagline: "开源浏览器插件，集中管理 AI 中转站账号与 API 凭据，接入 CLIProxyAPI、New API、Sub2API 等自建网关，提供余额查询、模型比价、API 验证与加密 WebDAV 备份。"
 actions:
   - text: "🚀 开始使用"
     link: "./get-started.html"
@@ -41,7 +41,7 @@ features:
   - title: "🚀 网页录入与一键导出"
     details: "从网页快速识别 Base URL 或 API Key，并一键导出至常用 AI 客户端。"
   - title: "🛠️ 主流 AI 网关支持"
-    details: "统一管理 New API、Sub2API、AxonHub、Claude Code Hub、Octopus、Veloera、DoneHub；可用已保存的站点账号或 API 凭据快速添加站点配置，也支持模型同步与重定向。"
+    details: "统一管理 CLIProxyAPI、New API、Sub2API、AxonHub、Claude Code Hub、Octopus、Veloera、DoneHub 自建网关；可用已保存的站点账号或 API 凭据快速添加站点配置，并按站点能力提供模型同步与重定向。"
   - title: "🔐 本地优先与自动同步"
     details: "数据默认保存在浏览器本地；开启加密 WebDAV 自动同步后，可在多台设备间安全同步，换电脑也能接着使用。"
 
@@ -76,7 +76,7 @@ footer: "AGPL-3.0 Licensed | Copyright 2025-present All API Hub"
 不论你用的是哪种架构，我们基本都支持：
 - **账号站点兼容架构**：New API, One API, Sub2API, One-Hub, Veloera, Done-Hub 等。
 - **特色账号平台与兼容实现**：[OpenRouter](https://openrouter.ai/)、[AnyRouter](https://anyrouter.top/register?aff=tDKX)、[AgentRouter](https://agentrouter.org/register?aff=TUX6)、[AIHubMix](https://aihubmix.com/?aff=W3DN)、Super-API、v-api、Neo-API 等。
-- **自建管理后台**：New API, Sub2API, AxonHub, Claude Code Hub, Octopus, Veloera, Done-Hub 等，用于后台管理、迁移和部分模型同步。
+- **自建管理后台**：CLIProxyAPI、New API、Sub2API、AxonHub、Claude Code Hub、Octopus、Veloera、DoneHub 等，用于后台管理，并按站点能力提供迁移和模型同步。
 
 > 如果你在 macOS 上使用 Safari，请先查看 [Safari 安装指南](./safari-install.md)。
 > 如果你使用 QQ/360/Brave/Vivaldi/Opera 等浏览器，请查看 [其他浏览器安装指南](./other-browser-install.md)。

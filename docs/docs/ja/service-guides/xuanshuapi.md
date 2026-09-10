@@ -4,7 +4,7 @@
 
 XuanShu API は、企業、技術チーム、個人開発者向けの次世代 AI モデルルーティングゲートウェイです。Claude、GPT、Grok など世界トップクラスのモデルへ、エンタープライズ級の安定性を備えた API で一括アクセスできます。複数の XuanShu API アカウントを使っている場合、複数の AI API プラットフォームを併用している場合、または XuanShu API を複数のクライアントに設定することが多い場合、**All API Hub** を使うとアカウントと認証情報を 1 つのローカル管理画面にまとめられます。
 
-XuanShu API アカウントを追加すると、All API Hub で残高確認、API キー管理、モデル価格確認、Cherry Studio、CC Switch、Kilo Code、CLIProxyAPI、Claude Code Router、またはセルフホスト型バックエンドへの認証情報エクスポートができます。
+XuanShu API アカウントを追加すると、All API Hub で残高確認、API キー管理、モデル価格確認、Cherry Studio、CC Switch、Kilo Code、Claude Code Router、または CLIProxyAPI、New API、Sub2API などのセルフホスト型ゲートウェイへの認証情報エクスポートができます。
 
 ![All API Hub ホーム画面のプレビュー](../../static/image/sponsor-guides/xuanshuapi/all-api-hub-home-preview.png)
 
@@ -97,7 +97,7 @@ XuanShu API を他のツールで使う場合は、All API Hub から直接エ�
 
 1. **キー管理** で XuanShu API キーを見つけます。
 2. 必要なエクスポート操作を選択します。
-3. **Cherry Studio**、**CC Switch**、**Kilo Code**、**CLIProxyAPI**、**Claude Code Router**、または設定済みのセルフホスト型サイトを選びます。
+3. **Cherry Studio**、**CC Switch**、**Kilo Code**、**Claude Code Router**、または設定済みのセルフホスト型サイトを選びます。
 
 ![キー管理から XuanShu API キーをエクスポート](../../static/image/sponsor-guides/xuanshuapi/xuanshuapi-credential-export-menu.png)
 
@@ -109,7 +109,7 @@ XuanShu API を他のツールで使う場合は、All API Hub から直接エ�
 
 ### 4.4 セルフホスト型チャネルへインポートする
 
-AI 分配バックエンドを運用している場合、XuanShu API を上流プロバイダーとして使えます。**基本設定 → セルフホスト型サイト管理** でバックエンドを設定し、**キー管理** に戻って XuanShu API キーを現在のセルフホスト型サイトへインポートします。複数キーの一括インポートも可能です。
+CLIProxyAPI、New API、Sub2API などのセルフホスト型ゲートウェイを運用している場合、XuanShu API を上流プロバイダーとして使えます。**基本設定 → セルフホスト型サイト管理** でバックエンドを設定し、**キー管理** に戻って XuanShu API キーを現在のセルフホスト型サイトへインポートします。複数キーの一括インポートも可能です。
 
 ### 4.5 バックアップと端末移行
 

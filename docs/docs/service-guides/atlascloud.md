@@ -4,7 +4,7 @@
 
 Atlas Cloud 是全模态 AI 推理平台，一个 AI API 即可访问视频生成、图像生成和 LLM API，覆盖 300+ 精选模型。如果你同时使用多个 Atlas Cloud 账号、多个 AI API 平台，或经常把 Atlas Cloud 配置到不同客户端里，**All API Hub** 可以作为一个本地管理助手，帮你把这些信息放到同一个入口里查看和复用。
 
-添加 Atlas Cloud API 凭据后，你可以在 All API Hub 中查询模型价格，并快速导出到 Cherry Studio、CC Switch、Kilo Code、CLIProxyAPI、Claude Code Router 或自己的自建后台。这样，Atlas Cloud 可以自然接入你的多账号、多工具 API 使用流程。
+添加 Atlas Cloud API 凭据后，你可以在 All API Hub 中查询模型价格，并快速导出到 Cherry Studio、CC Switch、Kilo Code、Claude Code Router 或 CLIProxyAPI、New API、Sub2API 等自建网关。这样，Atlas Cloud 可以自然接入你的多账号、多工具 API 使用流程。
 
 ![All API Hub 首页预览](../static/image/sponsor-guides/atlascloud/all-api-hub-home-preview.png)
 
@@ -86,7 +86,7 @@ Atlas Cloud 适合接入多种模型和客户端。加入 All API Hub 后，你�
 
 1.  在 **“API 凭据库”** 中找到你的 Atlas Cloud 密钥。
 2.  点击导出按钮。
-3.  选择目标工具，例如 **Cherry Studio**、**CC Switch**、**Kilo Code**、**CLIProxyAPI**、**Claude Code Router**，或导入到当前已配置的自建托管站点渠道。
+3.  选择目标工具，例如 **Cherry Studio**、**CC Switch**、**Kilo Code**、**Claude Code Router**，或导入到当前已配置的自建托管站点渠道。
 
 ![从 API 凭据库导出 Atlas Cloud 密钥](../static/image/sponsor-guides/atlascloud/atlascloud-credential-export-menu.png)
 
@@ -104,7 +104,7 @@ Atlas Cloud 适合接入多种模型和客户端。加入 All API Hub 后，你�
 :::
 
 ### 4.2 导入到自建站点渠道
-如果你自己有 AI 分发后台，可以把 Atlas Cloud 作为其中一个上游供应商。All API Hub 可以把 Atlas Cloud 密钥作为上游渠道直接导入进去，减少手动创建渠道、填写地址和复制 Key 的步骤。
+如果你维护着 CLIProxyAPI、New API、Sub2API 等自建网关，可以把 Atlas Cloud 作为其中一个上游供应商。All API Hub 可以把 Atlas Cloud 密钥作为上游渠道直接导入进去，减少手动创建渠道、填写地址和复制 Key 的步骤。
 
 使用时只需要先在 **“基础设置” → “自建站点管理”** 完成后台配置，然后回到 **“API 凭据库”**，在 Atlas Cloud 凭据中选择导入到当前自建站点；如果要一次处理多个凭据，也可以先勾选后批量导入。
 
@@ -141,7 +141,7 @@ A: 可以。添加 Atlas Cloud 凭据后，就可以使用密钥管理、模型�
 
 **Q: 导出到客户端后，客户端还能正常独立使用吗？**
 
-A: 可以。All API Hub 只是帮你生成或填入配置；真正的模型调用仍由 Cherry Studio、CC Switch、Kilo Code、CLIProxyAPI、Claude Code Router 等目标工具完成。
+A: 可以。All API Hub 只是帮你生成或填入配置；真正的模型调用仍由 Cherry Studio、CC Switch、Kilo Code、Claude Code Router 等目标工具完成。
 
 **Q: All API Hub 和 Atlas Cloud 控制台是什么关系？**
 

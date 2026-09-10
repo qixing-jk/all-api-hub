@@ -14,7 +14,7 @@ OpenRouter を追加すると、残高とアカウント状態の確認、ワー
 - **ワークスペースの API Key を管理**：API Key の表示、作成、編集、無効化、削除を 1 か所で行えます。
 - **モデルと価格を比較**：OpenRouter のモデルを検索し、他のアカウントのモデル情報と比較できます。
 - **完全な API Key を保存**：新しい Key の全体が表示されている間に API 認証情報ライブラリへ保存できます。
-- **いつものツールをすばやく設定**：Cherry Studio、CC Switch、Kilo Code、CLIProxyAPI、Claude Code Router などへエクスポートできます。
+- **いつものツールをすばやく設定**：Cherry Studio、CC Switch、Kilo Code、Claude Code Router などへエクスポートできます。
 
 おすすめの流れは、OpenRouter アカウントを自動で追加し、All API Hub で残高、API Key、モデルを管理して、AI ツールで使うときに保存済みの設定をコピーまたはエクスポートする方法です。
 

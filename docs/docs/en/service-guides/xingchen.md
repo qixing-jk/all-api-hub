@@ -4,7 +4,7 @@
 
 Xingchen AI provides stable relay access for AI API users. If you use multiple Xingchen AI accounts, work across several AI API platforms, or often configure Xingchen AI in different clients, **All API Hub** can keep those accounts and credentials in one local management entry point.
 
-After adding a Xingchen AI account, you can view balances, manage API keys, check model pricing, and export credentials to Cherry Studio, CC Switch, Kilo Code, CLIProxyAPI, Claude Code Router, or your own self-hosted backend.
+After adding a Xingchen AI account, you can view balances, manage API keys, check model pricing, and export credentials to Cherry Studio, CC Switch, Kilo Code, Claude Code Router, or a self-hosted gateway such as CLIProxyAPI, New API, or Sub2API.
 
 ![All API Hub home preview](../../static/image/sponsor-guides/xingchen/all-api-hub-home-preview.png)
 
@@ -88,7 +88,7 @@ Open **Model Pricing** and select the Xingchen AI account as the data source. Yo
 
 1. Find your Xingchen AI key in **Key Management**.
 2. Choose an export action.
-3. Select the target tool, such as **Cherry Studio**, **CC Switch**, **Kilo Code**, **CLIProxyAPI**, **Claude Code Router**, or a configured self-hosted site.
+3. Select the target tool, such as **Cherry Studio**, **CC Switch**, **Kilo Code**, **Claude Code Router**, or a configured self-hosted site.
 
 ![Export a Xingchen AI key from Key Management](../../static/image/sponsor-guides/xingchen/xingchen-credential-export-menu.png)
 
@@ -96,7 +96,7 @@ You can also copy `Base URL + API Key`, verify availability, view available mode
 
 ### 4.4 Import into a Self-Hosted Channel
 
-If you maintain an AI distribution backend, configure it under **Basic Settings → Self-hosted Site Management**, then return to **Key Management** and import the Xingchen AI key into the current self-hosted site.
+If you maintain a self-hosted gateway such as CLIProxyAPI, New API, or Sub2API, configure it under **Basic Settings → Self-hosted Site Management**, then return to **Key Management** and import the Xingchen AI key into the current self-hosted site.
 
 ### 4.5 Back Up and Move Between Devices
 

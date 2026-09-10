@@ -4,7 +4,7 @@
 
 Suixiang AI Relay provides Claude, Codex, Gemini, and other API relay services, with pay-as-you-go billing, daily sign-in credits, multiple routes, and automatic failover. If you use multiple Suixiang accounts, several AI API platforms, or different clients, **All API Hub** gives you one local place to manage and reuse them.
 
-After adding a Suixiang account, you can view balances, manage API keys, check model pricing, and export credentials to Cherry Studio, CC Switch, Kilo Code, CLIProxyAPI, Claude Code Router, or your own self-hosted backend.
+After adding a Suixiang account, you can view balances, manage API keys, check model pricing, and export credentials to Cherry Studio, CC Switch, Kilo Code, Claude Code Router, or a self-hosted gateway such as CLIProxyAPI, New API, or Sub2API.
 
 ![All API Hub home preview](../../static/image/sponsor-guides/suixiang/all-api-hub-home-preview.png)
 
@@ -75,7 +75,7 @@ Open **Model Pricing** and select the Suixiang account. You can view its model l
 
 1. Find your Suixiang key in **Key Management**.
 2. Choose an export action.
-3. Select **Cherry Studio**, **CC Switch**, **Kilo Code**, **CLIProxyAPI**, **Claude Code Router**, or a configured self-hosted channel.
+3. Select **Cherry Studio**, **CC Switch**, **Kilo Code**, **Claude Code Router**, or a configured self-hosted channel.
 
 ![Export a Suixiang key](../../static/image/sponsor-guides/suixiang/suixiang-credential-export-menu.png)
 
@@ -87,7 +87,7 @@ Browser local storage is only the default save location. Exporting, self-hosted 
 
 ### 4.4 Import into a self-hosted channel
 
-Configure your backend under **Basic Settings -> Self-hosted Site Management**, then return to **Key Management** and import the Suixiang key into the current site. Multiple keys can be imported in bulk.
+If you maintain a self-hosted gateway such as CLIProxyAPI, New API, or Sub2API, you can use Suixiang as an upstream provider. Configure your backend under **Basic Settings -> Self-hosted Site Management**, then return to **Key Management** and import the Suixiang key into the current site. Multiple keys can be imported in bulk.
 
 ### 4.5 Move between devices and back up
 

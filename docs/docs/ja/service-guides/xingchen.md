@@ -4,7 +4,7 @@
 
 Xingchen AI は AI API ユーザー向けに安定した中継アクセスを提供します。複数の Xingchen AI アカウントを使っている場合、複数の AI API プラットフォームを併用している場合、または Xingchen AI を複数のクライアントに設定することが多い場合、**All API Hub** を使うとアカウントと認証情報を 1 つのローカル管理画面にまとめられます。
 
-Xingchen AI アカウントを追加すると、All API Hub で残高確認、API キー管理、モデル価格確認、Cherry Studio、CC Switch、Kilo Code、CLIProxyAPI、Claude Code Router、またはセルフホスト型バックエンドへの認証情報エクスポートができます。
+Xingchen AI アカウントを追加すると、All API Hub で残高確認、API キー管理、モデル価格確認、Cherry Studio、CC Switch、Kilo Code、Claude Code Router、または CLIProxyAPI、New API、Sub2API などのセルフホスト型ゲートウェイへの認証情報エクスポートができます。
 
 ![All API Hub ホーム画面のプレビュー](../../static/image/sponsor-guides/xingchen/all-api-hub-home-preview.png)
 
@@ -88,7 +88,7 @@ All API Hub のダッシュボードでは、Xingchen AI と他の AI API アカ
 
 1. **キー管理** で Xingchen AI キーを見つけます。
 2. 必要なエクスポート操作を選択します。
-3. **Cherry Studio**、**CC Switch**、**Kilo Code**、**CLIProxyAPI**、**Claude Code Router**、または設定済みのセルフホスト型サイトを選びます。
+3. **Cherry Studio**、**CC Switch**、**Kilo Code**、**Claude Code Router**、または設定済みのセルフホスト型サイトを選びます。
 
 ![キー管理から Xingchen AI キーをエクスポート](../../static/image/sponsor-guides/xingchen/xingchen-credential-export-menu.png)
 
@@ -96,7 +96,7 @@ All API Hub のダッシュボードでは、Xingchen AI と他の AI API アカ
 
 ### 4.4 セルフホスト型チャネルへインポートする
 
-AI 分配バックエンドを運用している場合、**基本設定 → セルフホスト型サイト管理** でバックエンドを設定し、**キー管理** に戻って Xingchen AI キーを現在のセルフホスト型サイトへインポートします。
+CLIProxyAPI、New API、Sub2API などのセルフホスト型ゲートウェイを運用している場合、**基本設定 → セルフホスト型サイト管理** でバックエンドを設定し、**キー管理** に戻って Xingchen AI キーを現在のセルフホスト型サイトへインポートします。
 
 ### 4.5 バックアップと端末移行
 

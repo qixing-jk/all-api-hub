@@ -4,7 +4,7 @@
 
 Atlas Cloud は、動画生成、画像生成、LLM API を 1 つの API で提供するマルチモーダル AI 推論プラットフォームです。300 以上の厳選モデルに対応しています。複数の Atlas Cloud アカウントや AI API プラットフォームを使っている場合、All API Hub で認証情報を 1 つのローカル管理画面にまとめられます。
 
-Atlas Cloud の認証情報を追加すると、モデル価格の確認と、Cherry Studio、CC Switch、Kilo Code、CLIProxyAPI、Claude Code Router、セルフホスト型バックエンドへのエクスポートができます。
+Atlas Cloud の認証情報を追加すると、モデル価格の確認と、Cherry Studio、CC Switch、Kilo Code、Claude Code Router、または CLIProxyAPI、New API、Sub2API などのセルフホスト型ゲートウェイへのエクスポートができます。
 
 ![All API Hub ホーム画面のプレビュー](../../static/image/sponsor-guides/atlascloud/all-api-hub-home-preview.png)
 
@@ -73,7 +73,7 @@ Atlas Cloud は現在、自動認識に対応していません。Atlas Cloud �
 
 1. **API 認証情報プロファイル** で Atlas Cloud のキーを見つけます。
 2. エクスポートボタンをクリックします。
-3. **Cherry Studio**、**CC Switch**、**Kilo Code**、**CLIProxyAPI**、**Claude Code Router**、または設定済みのセルフホスト型チャネルを選びます。
+3. **Cherry Studio**、**CC Switch**、**Kilo Code**、**Claude Code Router**、または設定済みのセルフホスト型チャネルを選びます。
 
 ![API 認証情報プロファイルから Atlas Cloud キーをエクスポート](../../static/image/sponsor-guides/atlascloud/atlascloud-credential-export-menu.png)
 
@@ -85,7 +85,7 @@ Atlas Cloud は現在、自動認識に対応していません。Atlas Cloud �
 
 ### 4.2 セルフホスト型チャネルへインポートする
 
-AI 分配バックエンドを運用している場合、Atlas Cloud を上流プロバイダーとして利用できます。**基本設定 → セルフホスト型サイト管理** でバックエンドを設定し、**API 認証情報プロファイル** から現在のサイトへ認証情報をインポートします。複数の認証情報を一括処理することもできます。
+CLIProxyAPI、New API、Sub2API などのセルフホスト型ゲートウェイを運用している場合、Atlas Cloud を上流プロバイダーとして利用できます。**基本設定 → セルフホスト型サイト管理** でバックエンドを設定し、**API 認証情報プロファイル** から現在のサイトへ認証情報をインポートします。複数の認証情報を一括処理することもできます。
 
 ### 4.3 バックアップと端末移行
 

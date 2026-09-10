@@ -4,26 +4,25 @@
 
 ## チャットクライアント
 
-| 製品 | 公式説明 | 公式リンク |
-|------|----------|----------|
+| 製品          | 公式説明                                                                                                                          | 公式リンク                                                                                     |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | Cherry Studio | AI 生産性スタジオ。スマート対話、自律エージェント、300 以上のヘルパーを提供し、最先端の大規模モデルへの統一アクセスを実現します。 | [公式サイト](https://www.cherry-ai.com/) / [GitHub](https://github.com/CherryHQ/cherry-studio) |
-| Kelivo | モバイルとデスクトップに対応した Flutter 製の大規模言語モデルチャットクライアント。 | [GitHub](https://github.com/Chevey339/kelivo) |
+| Kelivo        | モバイルとデスクトップに対応した Flutter 製の大規模言語モデルチャットクライアント。                                               | [GitHub](https://github.com/Chevey339/kelivo)                                                  |
 
 ## コーディングエージェント
 
-| 製品 | 公式説明 | 公式リンク |
-|------|----------|----------|
-| CC Switch | Claude Code、Codex、Gemini CLI、Grok CLI、Hermes、OpenCode、OpenClaw 向けのクロスプラットフォームデスクトップ統合アシスタント。 | [GitHub](https://github.com/farion1231/cc-switch) |
-| Kilo Code | Kilo は、統合されたエージェンティブエンジニアリングプラットフォームです。 | [公式サイト](https://kilocode.ai/) / [GitHub](https://github.com/Kilo-Org/kilocode) |
-| Roo Code | Roo Code は、AI 開発チーム全体をコードエディタに直接配置します。 | [公式サイト](https://roocode.com/) / [GitHub](https://github.com/RooCodeInc/Roo-Code) |
-| Cursor++ | 自分の API キーを使用して、Cursor で Anthropic、OpenAI、Gemini などのモデルを利用できます。 | [公式サイト](https://ccursor.cometix.dev/) |
+| 製品      | 公式説明                                                                                                                        | 公式リンク                                                                            |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| CC Switch | Claude Code、Codex、Gemini CLI、Grok CLI、Hermes、OpenCode、OpenClaw 向けのクロスプラットフォームデスクトップ統合アシスタント。 | [GitHub](https://github.com/farion1231/cc-switch)                                     |
+| Kilo Code | Kilo は、統合されたエージェンティブエンジニアリングプラットフォームです。                                                       | [公式サイト](https://kilocode.ai/) / [GitHub](https://github.com/Kilo-Org/kilocode)   |
+| Roo Code  | Roo Code は、AI 開発チーム全体をコードエディタに直接配置します。                                                                | [公式サイト](https://roocode.com/) / [GitHub](https://github.com/RooCodeInc/Roo-Code) |
+| Cursor++  | 自分の API キーを使用して、Cursor で Anthropic、OpenAI、Gemini などのモデルを利用できます。                                     | [公式サイト](https://ccursor.cometix.dev/)                                            |
 
 ## ゲートウェイとルーティングツール
 
-| 製品 | 公式説明 | 公式リンク |
-|------|----------|----------|
-| CLIProxyAPI | Gemini CLI、Antigravity、ChatGPT Codex、Claude Code、Qwen Code、iFlow を OpenAI / Gemini / Claude / Codex と互換性のある API サービスにラップします。 | [ドキュメント](https://help.router-for.me/) / [GitHub](https://github.com/router-for-me/CLIProxyAPI) |
-| Claude Code Router | Claude Code をコーディングインフラストラクチャとして使用し、Anthropic の最新情報を継続的に取得しながら、モデルとの対話を自分で決定できるようにします。 | [公式サイト](https://musistudio.github.io/claude-code-router/) / [GitHub](https://github.com/musistudio/claude-code-router) |
+| 製品                                        | 公式説明                                                                                                                                               | 公式リンク                                                                                                                  |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code Router                          | Claude Code をコーディングインフラストラクチャとして使用し、Anthropic の最新情報を継続的に取得しながら、モデルとの対話を自分で決定できるようにします。 | [公式サイト](https://musistudio.github.io/claude-code-router/) / [GitHub](https://github.com/musistudio/claude-code-router) |
 
 ## Kelivo モバイルへのエクスポート
 
@@ -93,19 +92,20 @@ Kilo Code の設定インポート上限は現在 1 MiB です。ファイルが
 
 独自の AI プロキシまたは集約バックエンドを構築している場合でも、All API Hub は現在のサイトを直接選択したバックエンドターゲットにインポートできます。
 
-| 製品 | 公式説明 | 公式リンク |
-|------|----------|----------|
-| New API | 統合された AI モデル集約および配布センター。 | [公式サイト](https://www.newapi.ai/) / [GitHub](https://github.com/QuantumNous/new-api) |
-| Sub2API | Sub2API-CRS2 は、Claude、OpenAI、Gemini、Antigravity のサブスクリプションを統一的に接続できる、オールインワンのオープンソースプロキシサービスです。 | [GitHub](https://github.com/Wei-Shaw/sub2api) |
-| AxonHub | オープンソース AI Gateway。任意の SDK を介して 100 以上の LLM を呼び出すことができ、フェイルオーバー、ロードバランシング、コスト管理、およびエンドツーエンドの追跡が組み込まれています。 | [公式サイト](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |
-| Claude Code Hub | チーム向けのマルチベンダー AI API プロキシおよび運用プラットフォーム。Claude、OpenAI Compatible、Codex、Gemini への統一アクセスを提供し、弾力的なスケジューリング、監視、価格設定をサポートします。 | [GitHub](https://github.com/ding113/claude-code-hub) |
-| Octopus | 個人向けの LLM API 集約サービス。 | [GitHub](https://github.com/bestruirui/octopus) |
-| Veloera | このプロジェクトはメンテナンスを停止しました。 | [GitHub](https://github.com/Veloera/Veloera) |
-| DoneHub | このプロジェクトは one-hub をベースに二次開発されました。 | [GitHub](https://github.com/deanxv/done-hub) |
+| 製品            | 公式説明                                                                                                                                                                                            | 公式リンク                                                                                |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| [CLIProxyAPI](./cliproxyapi-integration.md) | Gemini CLI、Antigravity、ChatGPT Codex、Claude Code、Qwen Code、iFlow を OpenAI / Gemini / Claude / Codex と互換性のある API サービスにラップします。  | [ドキュメント](https://help.router-for.me/) / [GitHub](https://github.com/router-for-me/CLIProxyAPI)                        |
+| New API         | 統合された AI モデル集約および配布センター。                                                                                                                                                        | [公式サイト](https://www.newapi.ai/) / [GitHub](https://github.com/QuantumNous/new-api)   |
+| Sub2API         | Sub2API-CRS2 は、Claude、OpenAI、Gemini、Antigravity のサブスクリプションを統一的に接続できる、オールインワンのオープンソースプロキシサービスです。                                                 | [GitHub](https://github.com/Wei-Shaw/sub2api)                                             |
+| AxonHub         | オープンソース AI Gateway。任意の SDK を介して 100 以上の LLM を呼び出すことができ、フェイルオーバー、ロードバランシング、コスト管理、およびエンドツーエンドの追跡が組み込まれています。            | [公式サイト](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |
+| Claude Code Hub | チーム向けのマルチベンダー AI API プロキシおよび運用プラットフォーム。Claude、OpenAI Compatible、Codex、Gemini への統一アクセスを提供し、弾力的なスケジューリング、監視、価格設定をサポートします。 | [GitHub](https://github.com/ding113/claude-code-hub)                                      |
+| Octopus         | 個人向けの LLM API 集約サービス。                                                                                                                                                                   | [GitHub](https://github.com/bestruirui/octopus)                                           |
+| Veloera         | このプロジェクトはメンテナンスを停止しました。                                                                                                                                                      | [GitHub](https://github.com/Veloera/Veloera)                                              |
+| DoneHub         | このプロジェクトは one-hub をベースに二次開発されました。                                                                                                                                           | [GitHub](https://github.com/deanxv/done-hub)                                              |
 
 ## 関連ドキュメント
 
 - [サポートされているサイトリスト](./supported-sites.md)
 - [サイト設定のエクスポートを迅速化](./quick-export.md)
-- [CLIProxyAPI の統合](./cliproxyapi-integration.md)
+- [CLIProxyAPI の管理](./cliproxyapi-integration.md)
 - [セルフホスト型サイト管理](./self-hosted-site-management.md)

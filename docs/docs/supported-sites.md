@@ -156,6 +156,7 @@
 
 | 后台系统 | 官方描述 | 官方链接 |
 |----------|----------|----------|
+| [CLIProxyAPI](./cliproxyapi-integration.md) | 将 Gemini CLI、Antigravity、ChatGPT Codex、Claude Code、Qwen Code、iFlow 封装为兼容 OpenAI / Gemini / Claude / Codex 的 API 服务。 | [文档](https://help.router-for.me/) / [GitHub](https://github.com/router-for-me/CLIProxyAPI)                          |
 | New API | 统一的 AI 模型聚合与分发中心。 | [官网](https://www.newapi.ai/) / [GitHub](https://github.com/QuantumNous/new-api) |
 | Sub2API | Sub2API-CRS2 一站式开源中转服务，让 Claude、OpenAI、Gemini、Antigravity 订阅统一接入，支持拼车共享与原生工具使用。 | [GitHub](https://github.com/Wei-Shaw/sub2api) |
 | AxonHub | 开源 AI Gateway，可通过任意 SDK 调用 100+ LLM，内置故障切换、负载均衡、成本控制与全链路追踪。 | [官网](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |

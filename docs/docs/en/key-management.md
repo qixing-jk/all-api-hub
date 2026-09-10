@@ -105,7 +105,6 @@ The key action area provides **`Verify API`** and **`Verify CLI Compatibility`**
 After selecting keys—by selecting the current filtered results, selecting account groups, or clearing the selection—you can:
 
 - **`Save to API Credential Library`**: Save selected keys to the [API Credential Library](./api-credential-profiles.md).
-- **`Bulk Import to CLIProxyAPI`**: Generate CLIProxyAPI configuration using unified Provider rules.
 - **`Bulk Import to Self-hosted AI Gateway (Managed Site)`**: Check, prefill, and preview before submission. Clicking the entry point does not itself write remote data.
 
 > Only keys that support bulk operations participate. Bulk delete, bulk enable/disable, plain-text bulk copy, and CSV export are not currently available.
@@ -116,7 +115,7 @@ The token action area provides different entry points by target:
 
 - **Chat clients**: Cherry Studio, Kelivo
 - **Coding agents**: CC Switch, Kilo Code / Roo Code, Cursor++
-- **Gateways and routing tools**: CLIProxyAPI, Claude Code Router
+- **Gateways and routing tools**: Claude Code Router
 - **Self-hosted managed sites**: The current managed-site icon is displayed directly. Clicking it opens a prefilled create-channel flow. An existing match only triggers a duplicate-risk warning; it does not update or overwrite the existing channel.
 
 #### Export to Kilo Code / Roo Code

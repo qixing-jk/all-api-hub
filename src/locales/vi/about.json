@@ -30,7 +30,7 @@
   "homepage": "Trang web chính thức của dự án",
   "homepageDesc": "Xem tài liệu chi tiết, hướng dẫn sử dụng và thông tin khác",
   "implementedFeatures": "Tính năng đã triển khai",
-  "intro": "All API Hub là một tiện ích mở rộng trình duyệt dành cho cả các trạm trung chuyển thuộc sê-ri New API của bên thứ ba và các phiên bản New API tự xây dựng. Nó hiển thị tập trung tài khoản và số dư, phân loại thông minh và nhận biết trang web hiện tại, đồng thời cung cấp các khả năng tự động hóa như tự động làm mới và vượt tường lửa bằng cửa sổ tạm thời; đối với New API tự xây dựng, nó cũng hỗ trợ quản lý kênh và đồng bộ hóa danh sách mô hình, cũng như tích hợp CLIProxyAPI, sao lưu WebDAV và các công cụ xuất/nhập dữ liệu.",
+  "intro": "All API Hub tập trung quản lý tài khoản trạm trung chuyển, số dư và thông tin xác thực API, đồng thời cung cấp tính năng tự động làm mới, điểm danh và xác minh mô hình. Quản lý kênh hoặc nhà cung cấp trên các trang web tự lưu trữ như CLIProxyAPI, New API và Sub2API, với tính năng đồng bộ mô hình tại các trang được hỗ trợ. Ngoài ra còn có sao lưu WebDAV và nhập/xuất dữ liệu.",
   "privacyText": "Các dữ liệu nhạy cảm như tài khoản, API Key, Cookie, số dư, nội dung yêu cầu và thông tin người dùng nhập mặc định chỉ được lưu trữ cục bộ. Số liệu thống kê sản phẩm ẩn danh có thể tắt được chỉ được sử dụng để ưu tiên khắc phục các sự cố phổ biến, cải thiện các luồng công việc thường dùng và tính tương thích, đồng thời giảm bớt sự can thiệp không cần thiết, và sẽ không thu thập các dữ liệu nhạy cảm nêu trên.",
   "privacyTitle": "Bảo vệ quyền riêng tư",
   "projectLinks": "Liên kết dự án",

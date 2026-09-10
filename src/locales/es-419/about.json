@@ -30,7 +30,7 @@
   "homepage": "Página principal del proyecto",
   "homepageDesc": "Ver documentación detallada, guías de usuario y más información",
   "implementedFeatures": "Funciones implementadas",
-  "intro": "All API Hub es una extensión de navegador para administrar sitios relay de terceros compatibles con New API y tu propia instancia de New API. Centraliza el monitoreo de cuentas y saldos, el ordenamiento inteligente y la detección de sitios, y ofrece automatizaciones como actualización automática y omisión de firewall con ventana temporal. Para New API autohospedado, también ofrece administración de canales y sincronización de lista de modelos, además de integrarse con CLIProxyAPI, respaldo WebDAV y herramientas de importación/exportación.",
+  "intro": "All API Hub reúne cuentas de sitios relay, saldos y credenciales de API, con actualización automática, registros diarios y verificación de modelos. Administra canales o proveedores en sitios autohospedados como CLIProxyAPI, New API y Sub2API, con sincronización de modelos donde esté disponible. También incluye respaldo WebDAV e importación y exportación de datos.",
   "privacyText": "Los datos sensibles, como cuentas, claves de API, cookies, saldos, contenido de solicitudes y entradas del usuario, permanecen locales de forma predeterminada. Los análisis anónimos opcionales del producto se usan solo para priorizar correcciones de problemas comunes, mejorar los flujos principales y la compatibilidad, y reducir fricciones innecesarias; no recopilan esos datos sensibles.",
   "privacyTitle": "Protección de privacidad",
   "projectLinks": "Enlaces del proyecto",

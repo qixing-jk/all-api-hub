@@ -14,7 +14,7 @@
 - **管理工作区 API Key**：集中查看、创建、修改、停用或删除 API Key。
 - **比较模型与价格**：搜索 OpenRouter 模型，也可以和其他账号中的模型一起比较。
 - **保存完整 API Key**：在新建 Key 仍然可见时存入 API 凭据库，避免之后无法找回。
-- **快速配置常用工具**：导出到 Cherry Studio、CC Switch、Kilo Code、CLIProxyAPI、Claude Code Router 等工具，减少重复录入。
+- **快速配置常用工具**：导出到 Cherry Studio、CC Switch、Kilo Code、Claude Code Router 等工具，减少重复录入。
 
 比较顺手的用法是：先自动添加 OpenRouter 账号，平时在 All API Hub 中看余额、管理 API Key 和比较模型；需要在 AI 工具中使用时，再从 API 凭据库复制或导出配置。
 

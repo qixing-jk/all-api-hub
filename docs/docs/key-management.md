@@ -105,7 +105,6 @@
 选中多个密钥后（可全选当前过滤结果、按账号组选择或清空选择），可以使用：
 
 - **`保存到 API 凭据库`**：把选中的密钥保存到 [API 凭据库](./api-credential-profiles.md)。
-- **`批量导入到 CLIProxyAPI`**：按统一 Provider 规则生成 CLIProxyAPI 配置。
 - **`批量导入到自建 AI 网关（Managed Site）`**：先检查、预填并预览，再提交；点击入口不等于已写入远端。
 
 > 只有“支持批量操作”的密钥才会参与；当前没有批量删除、批量启用/禁用、纯文本批量复制或 CSV 导出。
@@ -116,7 +115,7 @@ Token 操作区会根据目标提供不同入口，主要分为：
 
 - **聊天客户端**：Cherry Studio、Kelivo
 - **编程 Agents**：CC Switch、Kilo Code / Roo Code、Cursor++
-- **网关与路由工具**：CLIProxyAPI、Claude Code Router
+- **网关与路由工具**：Claude Code Router
 - **自建托管站点**：直接显示当前托管站点图标，点击后进入预填的新增渠道流程；检测到相同渠道时只会提示重复风险，不会更新或覆盖原渠道
 
 #### 导出到 Kilo Code / Roo Code

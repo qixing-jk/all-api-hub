@@ -4,26 +4,25 @@
 
 ## 聊天客户端
 
-| 产品 | 官方描述 | 官方链接 |
-|------|----------|----------|
+| 产品          | 官方描述                                                                  | 官方链接                                                                                 |
+| ------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | Cherry Studio | AI 生产力工作室，提供智能对话、自主代理和 300+ 助手，统一接入前沿大模型。 | [官网](https://www.cherry-ai.com/) / [GitHub](https://github.com/CherryHQ/cherry-studio) |
-| Kelivo | 支持移动端与桌面端的 Flutter 大模型聊天客户端。 | [GitHub](https://github.com/Chevey339/kelivo) |
+| Kelivo        | 支持移动端与桌面端的 Flutter 大模型聊天客户端。                           | [GitHub](https://github.com/Chevey339/kelivo)                                            |
 
 ## 编程 Agents
 
-| 产品 | 官方描述 | 官方链接 |
-|------|----------|----------|
-| CC Switch | 面向 Claude Code、Codex、Gemini CLI、Grok CLI、Hermes、OpenCode 与 OpenClaw 的跨平台桌面一体化助手。 | [GitHub](https://github.com/farion1231/cc-switch) |
-| Kilo Code | Kilo 是一体化的 Agentic Engineering 平台。 | [官网](https://kilocode.ai/) / [GitHub](https://github.com/Kilo-Org/kilocode) |
-| Roo Code | Roo Code 让一整支 AI 开发团队直接驻留在你的代码编辑器里。 | [官网](https://roocode.com/) / [GitHub](https://github.com/RooCodeInc/Roo-Code) |
-| Cursor++ | 通过自备 API 密钥在 Cursor 中使用 Anthropic、OpenAI 与 Gemini 等模型。 | [官网](https://ccursor.cometix.dev/) |
+| 产品      | 官方描述                                                                                             | 官方链接                                                                        |
+| --------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| CC Switch | 面向 Claude Code、Codex、Gemini CLI、Grok CLI、Hermes、OpenCode 与 OpenClaw 的跨平台桌面一体化助手。 | [GitHub](https://github.com/farion1231/cc-switch)                               |
+| Kilo Code | Kilo 是一体化的 Agentic Engineering 平台。                                                           | [官网](https://kilocode.ai/) / [GitHub](https://github.com/Kilo-Org/kilocode)   |
+| Roo Code  | Roo Code 让一整支 AI 开发团队直接驻留在你的代码编辑器里。                                            | [官网](https://roocode.com/) / [GitHub](https://github.com/RooCodeInc/Roo-Code) |
+| Cursor++  | 通过自备 API 密钥在 Cursor 中使用 Anthropic、OpenAI 与 Gemini 等模型。                               | [官网](https://ccursor.cometix.dev/)                                            |
 
 ## 网关与路由工具
 
-| 产品 | 官方描述 | 官方链接 |
-|------|----------|----------|
-| CLIProxyAPI | 将 Gemini CLI、Antigravity、ChatGPT Codex、Claude Code、Qwen Code、iFlow 封装为兼容 OpenAI / Gemini / Claude / Codex 的 API 服务。 | [文档](https://help.router-for.me/) / [GitHub](https://github.com/router-for-me/CLIProxyAPI) |
-| Claude Code Router | 以 Claude Code 作为编码基础设施，让你在持续获得 Anthropic 更新的同时，自行决定如何与模型交互。 | [官网](https://musistudio.github.io/claude-code-router/) / [GitHub](https://github.com/musistudio/claude-code-router) |
+| 产品                                        | 官方描述                                                                                                                           | 官方链接                                                                                                              |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Claude Code Router                          | 以 Claude Code 作为编码基础设施，让你在持续获得 Anthropic 更新的同时，自行决定如何与模型交互。                                     | [官网](https://musistudio.github.io/claude-code-router/) / [GitHub](https://github.com/musistudio/claude-code-router) |
 
 ## Kelivo 移动端导出
 
@@ -93,20 +92,20 @@ Kilo Code 当前的设置导入大小上限为 1 MiB。文件超出限制时，�
 
 如果你自己也搭了 AI 中转或聚合后台，All API Hub 还可以把当前站点直接导入到你选中的后台目标里。
 
-| 产品 | 官方描述 | 官方链接 |
-|------|----------|----------|
-| New API | 统一的 AI 模型聚合与分发中心。 | [官网](https://www.newapi.ai/) / [GitHub](https://github.com/QuantumNous/new-api) |
-| Sub2API | Sub2API-CRS2 一站式开源中转服务，让 Claude、OpenAI、Gemini、Antigravity 订阅统一接入。 | [GitHub](https://github.com/Wei-Shaw/sub2api) |
-| AxonHub | 开源 AI Gateway，可通过任意 SDK 调用 100+ LLM，内置故障切换、负载均衡、成本控制与全链路追踪。 | [官网](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |
-| Claude Code Hub | 面向团队的多供应商 AI API 代理与运营平台，统一接入 Claude、OpenAI Compatible、Codex 与 Gemini，并支持弹性调度、监控与价格管理。 | [GitHub](https://github.com/ding113/claude-code-hub) |
-| Octopus | 面向个人的 LLM API 聚合服务。 | [GitHub](https://github.com/bestruirui/octopus) |
-| Veloera | 本项目已停止维护。 | [GitHub](https://github.com/Veloera/Veloera) |
-| DoneHub | 本项目是基于 one-hub 二次开发而来的。 | [GitHub](https://github.com/deanxv/done-hub) |
+| 产品            | 官方描述                                                                                                                        | 官方链接                                                                            |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| [CLIProxyAPI](./cliproxyapi-integration.md) | 将 Gemini CLI、Antigravity、ChatGPT Codex、Claude Code、Qwen Code、iFlow 封装为兼容 OpenAI / Gemini / Claude / Codex 的 API 服务。 | [文档](https://help.router-for.me/) / [GitHub](https://github.com/router-for-me/CLIProxyAPI)                          |
+| New API         | 统一的 AI 模型聚合与分发中心。                                                                                                  | [官网](https://www.newapi.ai/) / [GitHub](https://github.com/QuantumNous/new-api)   |
+| Sub2API         | Sub2API-CRS2 一站式开源中转服务，让 Claude、OpenAI、Gemini、Antigravity 订阅统一接入。                                          | [GitHub](https://github.com/Wei-Shaw/sub2api)                                       |
+| AxonHub         | 开源 AI Gateway，可通过任意 SDK 调用 100+ LLM，内置故障切换、负载均衡、成本控制与全链路追踪。                                   | [官网](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |
+| Claude Code Hub | 面向团队的多供应商 AI API 代理与运营平台，统一接入 Claude、OpenAI Compatible、Codex 与 Gemini，并支持弹性调度、监控与价格管理。 | [GitHub](https://github.com/ding113/claude-code-hub)                                |
+| Octopus         | 面向个人的 LLM API 聚合服务。                                                                                                   | [GitHub](https://github.com/bestruirui/octopus)                                     |
+| Veloera         | 本项目已停止维护。                                                                                                              | [GitHub](https://github.com/Veloera/Veloera)                                        |
+| DoneHub         | 本项目是基于 one-hub 二次开发而来的。                                                                                           | [GitHub](https://github.com/deanxv/done-hub)                                        |
 
 ## 相关文档
 
 - [支持的站点列表](./supported-sites.md)
 - [快速导出站点配置](./quick-export.md)
-- [CLIProxyAPI 集成](./cliproxyapi-integration.md)
+- [CLIProxyAPI 管理](./cliproxyapi-integration.md)
 - [自建站点管理](./self-hosted-site-management.md)
-
