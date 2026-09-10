@@ -428,8 +428,21 @@ test("keeps manual batch check-in available when global automatic check-in is di
   page,
 }) => {
   const serviceWorker = await getServiceWorker(context)
+  const today = getLocalDay()
   let checkinRequests = 0
 
+  await context.route(
+    `${MANUAL_BATCH_SITE_URL}/api/user/checkin?month=*`,
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: { enabled: true, stats: { checked_in_today: false } },
+        }),
+      }),
+  )
   await context.route(`${MANUAL_BATCH_SITE_URL}/api/user/checkin`, (route) => {
     checkinRequests += 1
     return route.fulfill({
@@ -438,7 +451,7 @@ test("keeps manual batch check-in available when global automatic check-in is di
       body: JSON.stringify({
         success: true,
         message: "check-in completed",
-        data: { checkin_date: getLocalDay(), quota_awarded: 1 },
+        data: { checkin_date: today, quota_awarded: 1 },
       }),
     })
   })
