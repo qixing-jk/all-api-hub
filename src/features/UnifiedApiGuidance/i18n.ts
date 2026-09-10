@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next"
 
-import { GATEWAY_GUIDANCE_SURFACES } from "~/services/preferences/userPreferences"
+import { GATEWAY_GUIDANCE_SURFACES } from "~/services/featureGuidance/featureGuidanceState"
 import { assertNever } from "~/utils/core/assert"
 
 import {

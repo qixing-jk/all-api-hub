@@ -16,6 +16,7 @@ const {
   trackStartedMock,
   recordDismissedMock,
   recordSettingsVisitedMock,
+  toastErrorMock,
 } = vi.hoisted(() => ({
   translationMap: {
     titlePrefix: "Shield Mode",
@@ -23,10 +24,20 @@ const {
     "toast.body": "Complete the browser verification first.",
     "toast.actions.dismiss": "Dismiss",
     "toast.actions.openSettings": "Open settings",
+    "shieldBypass:history.open": "View shield history",
+    "shieldBypass:history.entryDescription":
+      "Review temporary page triggers and results.",
+    "messages:toast.error.operationFailedGeneric":
+      "Could not open history. Please try again.",
   } as Record<string, string>,
   trackStartedMock: vi.fn(),
   recordDismissedMock: vi.fn(),
   recordSettingsVisitedMock: vi.fn(),
+  toastErrorMock: vi.fn(),
+}))
+
+vi.mock("~/lib/notify/content", () => ({
+  default: { error: toastErrorMock },
 }))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
@@ -75,7 +86,11 @@ describe("ShieldBypassPromptToast", () => {
     document.title = "Original Title"
 
     const { unmount } = render(
-      <ShieldBypassPromptToast onDismiss={vi.fn()} onOpenSettings={vi.fn()} />,
+      <ShieldBypassPromptToast
+        onDismiss={vi.fn()}
+        onOpenSettings={vi.fn()}
+        onOpenHistory={vi.fn()}
+      />,
     )
 
     await waitFor(() => {
@@ -113,6 +128,7 @@ describe("ShieldBypassPromptToast", () => {
         <ShieldBypassPromptToast
           onDismiss={vi.fn()}
           onOpenSettings={vi.fn()}
+          onOpenHistory={vi.fn()}
         />,
       )
 
@@ -154,6 +170,7 @@ describe("ShieldBypassPromptToast", () => {
       <ShieldBypassPromptToast
         onDismiss={onDismiss}
         onOpenSettings={onOpenSettings}
+        onOpenHistory={vi.fn()}
       />,
     )
 
@@ -195,7 +212,11 @@ describe("ShieldBypassPromptToast", () => {
     document.title = ""
 
     const { unmount } = render(
-      <ShieldBypassPromptToast onDismiss={vi.fn()} onOpenSettings={vi.fn()} />,
+      <ShieldBypassPromptToast
+        onDismiss={vi.fn()}
+        onOpenSettings={vi.fn()}
+        onOpenHistory={vi.fn()}
+      />,
     )
 
     await waitFor(() => {
@@ -207,12 +228,68 @@ describe("ShieldBypassPromptToast", () => {
     expect(document.title).toBe("")
   })
 
+  it("opens diagnostic history without dismissing the verification prompt or opening settings", async () => {
+    const user = userEvent.setup()
+    const onOpenHistory = vi.fn().mockResolvedValue(undefined)
+    const onDismiss = vi.fn()
+    const onOpenSettings = vi.fn()
+    render(
+      <ShieldBypassPromptToast
+        onDismiss={onDismiss}
+        onOpenSettings={onOpenSettings}
+        onOpenHistory={onOpenHistory}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", { name: "View shield history" }),
+    )
+
+    expect(onOpenHistory).toHaveBeenCalledTimes(1)
+    expect(onDismiss).not.toHaveBeenCalled()
+    expect(onOpenSettings).not.toHaveBeenCalled()
+    expect(recordSettingsVisitedMock).not.toHaveBeenCalled()
+    expect(screen.getByText("Shield Prompt")).toBeVisible()
+  })
+
+  it("keeps history available for retry and reports a navigation failure", async () => {
+    const user = userEvent.setup()
+    const onOpenHistory = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("navigation failed"))
+    render(
+      <ShieldBypassPromptToast
+        onDismiss={vi.fn()}
+        onOpenSettings={vi.fn()}
+        onOpenHistory={onOpenHistory}
+      />,
+    )
+
+    const historyButton = await screen.findByRole("button", {
+      name: "View shield history",
+    })
+    await user.click(historyButton)
+
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "Could not open history. Please try again.",
+    )
+    expect(historyButton).toBeEnabled()
+    expect(screen.getByText("Shield Prompt")).toBeVisible()
+
+    await user.click(historyButton)
+    expect(onOpenHistory).toHaveBeenCalledTimes(2)
+  })
+
   it("does not modify the document title when the translated prefix is blank", async () => {
     translationMap.titlePrefix = "   "
     document.title = "Unchanged Title"
 
     const { unmount } = render(
-      <ShieldBypassPromptToast onDismiss={vi.fn()} onOpenSettings={vi.fn()} />,
+      <ShieldBypassPromptToast
+        onDismiss={vi.fn()}
+        onOpenSettings={vi.fn()}
+        onOpenHistory={vi.fn()}
+      />,
     )
 
     await waitFor(() => {

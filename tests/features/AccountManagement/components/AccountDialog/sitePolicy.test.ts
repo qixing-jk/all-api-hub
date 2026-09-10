@@ -14,6 +14,7 @@ import {
   shouldOpenSub2ApiTokenDialogForAccountDialogSite,
 } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
 import { AuthTypeEnum } from "~/types"
+import { ACCOUNT_KEY_AUTO_PROVISION_MODES } from "~/types/accountKeyAutoProvisioning"
 
 function createDraft(
   overrides: Partial<AccountDialogDraft> = {},
@@ -62,6 +63,21 @@ describe("Account Dialog site policy", () => {
       allowCookieAuthSession: false,
     })
     expect(policy).not.toHaveProperty("credentialKind")
+  })
+
+  it.each([
+    SITE_TYPES.SUB2API,
+    SITE_TYPES.AIHUBMIX,
+    SITE_TYPES.VO_API_V2,
+    SITE_TYPES.OPENROUTER,
+  ])("locks %s when access token is its only allowed auth type", (siteType) => {
+    expect(getAccountDialogSitePolicy(siteType).forceAccessTokenAuth).toBe(true)
+  })
+
+  it("does not mistake cookie-only authentication for access-token locking", () => {
+    expect(
+      getAccountDialogSitePolicy(SITE_TYPES.SHAREDCHAT).forceAccessTokenAuth,
+    ).toBe(false)
   })
 
   it.each([SITE_TYPES.SUB2API, SITE_TYPES.SHAREDCHAT, SITE_TYPES.VO_API_V2])(
@@ -157,10 +173,10 @@ describe("Account Dialog site policy", () => {
               ...profile,
               auth: {
                 ...profile.auth,
-                supportsCookieAuth: false,
+                allowedAuthTypes: [AuthTypeEnum.AccessToken],
               },
-              supplementalAuth: {
-                ...profile.supplementalAuth,
+              authSession: {
+                ...profile.authSession,
                 kind: actual.ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.None,
               },
             }
@@ -325,6 +341,19 @@ describe("Account Dialog site policy", () => {
     ).toBeUndefined()
   })
 
+  it("does not substitute one-time default-key creation for all-group provisioning", () => {
+    expect(
+      shouldDeferAccountSaveSuccessForAccountDialogSite({
+        policy: getAccountDialogSitePolicy(SITE_TYPES.AIHUBMIX),
+        isAddMode: true,
+        autoProvisionKeyOnAccountAdd: true,
+        autoProvisionKeyOnAccountAddMode:
+          ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+        skipAutoProvisionKeyOnAccountAdd: false,
+      }),
+    ).toBe(false)
+  })
+
   it("keeps post-save decisions policy-driven", () => {
     expect(
       shouldOpenSub2ApiTokenDialogForAccountDialogSite({
@@ -363,6 +392,8 @@ describe("Account Dialog site policy", () => {
         policy: getAccountDialogSitePolicy(SITE_TYPES.AIHUBMIX),
         isAddMode: true,
         autoProvisionKeyOnAccountAdd: true,
+        autoProvisionKeyOnAccountAddMode:
+          ACCOUNT_KEY_AUTO_PROVISION_MODES.Default,
         skipAutoProvisionKeyOnAccountAdd: false,
       }),
     ).toBe(true)
@@ -372,6 +403,8 @@ describe("Account Dialog site policy", () => {
         policy: getAccountDialogSitePolicy(SITE_TYPES.UNKNOWN),
         isAddMode: true,
         autoProvisionKeyOnAccountAdd: true,
+        autoProvisionKeyOnAccountAddMode:
+          ACCOUNT_KEY_AUTO_PROVISION_MODES.Default,
         skipAutoProvisionKeyOnAccountAdd: false,
       }),
     ).toBe(false)
@@ -381,6 +414,8 @@ describe("Account Dialog site policy", () => {
         policy: getAccountDialogSitePolicy(SITE_TYPES.AIHUBMIX),
         isAddMode: true,
         autoProvisionKeyOnAccountAdd: true,
+        autoProvisionKeyOnAccountAddMode:
+          ACCOUNT_KEY_AUTO_PROVISION_MODES.Default,
         skipAutoProvisionKeyOnAccountAdd: true,
       }),
     ).toBe(false)

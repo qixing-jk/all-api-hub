@@ -1,10 +1,22 @@
-import { describe, expect, it } from "vitest"
+import userEvent from "@testing-library/user-event"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ResultsTable from "~/features/AutoCheckin/components/ResultsTable"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { openProtectionBypassHistory } from "~/utils/navigation"
 import { render, screen } from "~~/tests/test-utils/render"
 
+vi.mock("~/utils/navigation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+  return {
+    ...actual,
+    openProtectionBypassHistory: vi.fn().mockResolvedValue(undefined),
+  }
+})
+
 describe("AutoCheckin ResultsTable troubleshooting hints", () => {
+  beforeEach(() => vi.clearAllMocks())
+
   it("shows invalidAccessToken hint when the backend reports an invalid access token", async () => {
     render(
       <ResultsTable
@@ -23,9 +35,13 @@ describe("AutoCheckin ResultsTable troubleshooting hints", () => {
     expect(
       await screen.findByText("autoCheckin:execution.hints.invalidAccessToken"),
     ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "shieldBypass:history.open" }),
+    ).not.toBeInTheDocument()
   })
 
   it("shows noTabWithId hint when a temporary tab is closed before the flow finishes", async () => {
+    const user = userEvent.setup()
     render(
       <ResultsTable
         results={[
@@ -43,9 +59,14 @@ describe("AutoCheckin ResultsTable troubleshooting hints", () => {
     expect(
       await screen.findByText("autoCheckin:execution.hints.noTabWithId"),
     ).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", { name: "shieldBypass:history.open" }),
+    )
+    expect(openProtectionBypassHistory).toHaveBeenCalledTimes(1)
   })
 
   it("shows manual verification hint when protected check-in requires opening the site first", async () => {
+    const user = userEvent.setup()
     render(
       <ResultsTable
         results={[
@@ -65,6 +86,10 @@ describe("AutoCheckin ResultsTable troubleshooting hints", () => {
         "autoCheckin:execution.hints.manualVerificationRequired",
       ),
     ).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", { name: "shieldBypass:history.open" }),
+    )
+    expect(openProtectionBypassHistory).toHaveBeenCalledTimes(1)
   })
 
   it("shows site-type troubleshooting for skipped no-provider results", async () => {
@@ -108,6 +133,9 @@ describe("AutoCheckin ResultsTable troubleshooting hints", () => {
 
     expect(
       screen.queryByText("autoCheckin:execution.hints.invalidAccessToken"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "shieldBypass:history.open" }),
     ).not.toBeInTheDocument()
   })
 })

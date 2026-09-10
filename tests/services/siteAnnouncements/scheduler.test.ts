@@ -5,6 +5,7 @@ import { Storage } from "@plasmohq/storage"
 import { SITE_TYPES } from "~/constants/siteType"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { SiteAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import { getSiteAnnouncementProvider } from "~/services/siteAnnouncements/providers"
 import {
   resolveSiteAnnouncementsCheckNowMessage,
   resolveSiteAnnouncementsGetStatusMessage,
@@ -64,8 +65,8 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
   onAlarm: onAlarmMock,
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: {
     getEnabledAccounts: getEnabledAccountsMock,
     getAccountById: getAccountByIdMock,
   },
@@ -92,7 +93,7 @@ vi.mock("~/services/siteAnnouncements/messaging", () => ({
 }))
 
 vi.mock("~/services/siteAnnouncements/providers", () => ({
-  getSiteAnnouncementProvider: (siteType: string) => ({
+  getSiteAnnouncementProvider: vi.fn((siteType: string) => ({
     id:
       siteType === "sub2api"
         ? SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api
@@ -102,8 +103,8 @@ vi.mock("~/services/siteAnnouncements/providers", () => ({
         ? `sub2api:${accountId}:${baseUrl}`
         : `notice:${siteType}:${baseUrl}`,
     fetch: providerFetchMock,
-    markRead: providerMarkReadMock,
-  }),
+    markRead: siteType === "sub2api" ? providerMarkReadMock : undefined,
+  })),
 }))
 
 function createAccount(overrides: Partial<any> = {}) {
@@ -980,6 +981,41 @@ describe("siteAnnouncementScheduler", () => {
     )
     expect(readResponse).toEqual({ success: true })
   })
+
+  it.each([true, false])(
+    "uses optional provider acknowledgement rather than a site-type check (registered: %s)",
+    async (registered) => {
+      const account = createAccount()
+      getEnabledAccountsMock.mockResolvedValue([account])
+      getAccountByIdMock.mockResolvedValue(account)
+      providerFetchMock.mockResolvedValue({
+        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        siteKey: "notice:new-api:https://example.com",
+        status: "success",
+        announcements: [
+          {
+            id: "provider-notice",
+            title: "Notice",
+            content: "Body",
+            fingerprint: "provider-notice",
+          },
+        ],
+      })
+      const response = await resolveSiteAnnouncementsCheckNowMessage({})
+      if (!response.success) expect.fail(response.error)
+      const recordId = response.data!.records[0]!.id
+      const provider = getSiteAnnouncementProvider(SITE_TYPES.NEW_API)
+      vi.mocked(getSiteAnnouncementProvider).mockReturnValueOnce({
+        ...provider,
+        markRead: registered ? providerMarkReadMock : undefined,
+      })
+
+      expect(
+        await resolveSiteAnnouncementsMarkReadMessage({ recordId }),
+      ).toEqual({ success: true })
+      expect(providerMarkReadMock).toHaveBeenCalledTimes(registered ? 1 : 0)
+    },
+  )
 
   it("stores notification errors without acknowledging upstream announcements when delivery fails", async () => {
     providerFetchMock.mockResolvedValue({

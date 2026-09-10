@@ -9,6 +9,7 @@ import { PermissionOnboardingDialog } from "~/features/OptionsOverview/component
 import { requestProductAnnouncementPopoverOpen } from "~/features/ProductAnnouncements/events"
 import { useProductAnnouncements } from "~/features/ProductAnnouncements/hooks/useProductAnnouncements"
 import { ProductAnnouncementBanner } from "~/features/ProductAnnouncements/ProductAnnouncementBanner"
+import { ProductTourInvitation } from "~/features/ProductTour"
 import { setLastSeenOptionalPermissions } from "~/services/permissions/optionalPermissionState"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -159,6 +160,8 @@ export default function OptionsOverview() {
         title={t("optionsOverview:title")}
         description={t("optionsOverview:description")}
       />
+
+      {!showPermissionsOnboarding ? <ProductTourInvitation /> : null}
 
       {isLoading && !viewModel ? (
         <div className="dark:text-dark-text-secondary flex min-h-64 items-center justify-center gap-3 text-sm text-gray-600">

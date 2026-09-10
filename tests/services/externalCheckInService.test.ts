@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { accountStorage } from "~/services/accounts/accountStorage"
 import { SITE_ROUTE_KINDS } from "~/services/accounts/utils/siteRouteResolver"
 import { ExternalCheckInMessageTypes } from "~/services/checkin/externalCheckInMessaging"
 import {
@@ -12,14 +11,20 @@ import {
   createWindow,
   hasWindowsAPI,
 } from "~/utils/browser/browserApi"
+import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 
 const { mockOnExternalCheckInMessage } = vi.hoisted(() => ({
   mockOnExternalCheckInMessage: vi.fn(() => vi.fn()),
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: {
     getAccountById: vi.fn(),
+  },
+}))
+
+vi.mock("~/services/accounts/accountStorage/accountCheckInState", () => ({
+  accountCheckInState: {
     markAccountAsCustomCheckedIn: vi.fn(),
   },
 }))
@@ -71,6 +76,34 @@ const getMockedRouteResolver = async () => {
 }
 
 describe("openExternalCheckInsAndMark", () => {
+  it("opens and marks custom check-in while skipping an unsupported redeem page", async () => {
+    mockedAccountStorage.getAccountById.mockResolvedValueOnce({
+      id: "no-redeem",
+      site_url: "https://example.com",
+      site_type: "sharedchat",
+      checkIn: {
+        customCheckIn: {
+          url: "https://example.com/check",
+          openRedeemWithCheckIn: true,
+        },
+      },
+    } as any)
+    const resolver = await getMockedRouteResolver()
+    resolver.mockResolvedValueOnce(null)
+    mockedCreateTab.mockResolvedValueOnce({ id: 42 } as any)
+    const response = await openExternalCheckInsAndMark({
+      accountIds: ["no-redeem"],
+    })
+    expect(mockedCreateTab).toHaveBeenCalledTimes(1)
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      "https://example.com/check",
+      true,
+    )
+    expect(response).toMatchObject({
+      success: true,
+      data: { results: [{ openedRedeem: null, openedCheckIn: true }] },
+    })
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     mockedHasWindowsAPI.mockReturnValue(false)

@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
 import {
   CREATED_TOKEN_SECRET_DECISION_KINDS,
@@ -39,6 +40,7 @@ const mocks = vi.hoisted(() => ({
   openAccountKeyCollectionMock: vi.fn(),
   listAccountKeyResourcesMock: vi.fn(),
   openKeysPageMock: vi.fn(),
+  loggerErrorMock: vi.fn(),
   userPreferencesContextMock: {
     claudeCodeRouterApiKey: "ccr-management-key",
     claudeCodeRouterBaseUrl: "https://router.example.invalid",
@@ -80,6 +82,7 @@ export const {
   openAccountKeyCollectionMock,
   listAccountKeyResourcesMock,
   openKeysPageMock,
+  loggerErrorMock,
   userPreferencesContextMock,
 } = mocks
 
@@ -157,7 +160,7 @@ const createSub2ApiTokenProvisioningMock = () => ({
   ),
 })
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: toastSuccessMock,
     error: toastErrorMock,
@@ -191,6 +194,10 @@ vi.mock("~/services/apiAdapters/registry", () => ({
     return {
       account: {
         keyManagement: {
+          createRuntimeSecret:
+            siteType === SITE_TYPES.AIHUBMIX
+              ? createAIHubMixCreatedRuntimeSecret
+              : undefined,
           fetchTokens: (...args: any[]) => fetchAccountTokensMock(...args),
           createToken: (...args: any[]) => createApiTokenMock(...args),
           resolveTokenKey: (...args: any[]) => resolveApiTokenKeyMock(...args),
@@ -219,6 +226,15 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
     openKeysPage: (...args: unknown[]) => openKeysPageMock(...args),
   }
 })
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: mocks.loggerErrorMock,
+  }),
+}))
 
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
@@ -299,6 +315,14 @@ vi.mock(
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   UserPreferencesProvider: ({ children }: { children: ReactNode }) => children,
   useUserPreferencesContext: () => userPreferencesContextMock,
+}))
+
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  FeatureGuidanceProvider: ({ children }: { children: ReactNode }) => children,
+  useFeatureGuidanceContext: () => ({
+    markGatewayGuidanceOnboardingCompleted:
+      userPreferencesContextMock.markGatewayGuidanceOnboardingCompleted,
+  }),
 }))
 
 vi.mock("~/services/integrations/cherryStudio", () => ({

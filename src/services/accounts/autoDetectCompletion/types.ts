@@ -3,6 +3,7 @@ import type {
   AutoDetectFailureReason,
 } from "~/constants/autoDetect"
 import type { AccountSiteType } from "~/constants/siteType"
+import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
 import type { ContentSessionTransientAuth } from "~/services/accountSiteOnboarding/contracts"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
@@ -25,10 +26,15 @@ export interface DetectedAccountIdentity {
 export interface AutoDetectCompletionRequest {
   url: string
   requestedAuthType: AuthTypeEnum
+  /** The current account or draft token, scoped to the detected site and identity. */
+  existingAccessToken?: string
+  /** Reads matching saved tokens only after known credentials are missing or invalid. */
+  loadSavedAccessTokens?: () => Promise<readonly string[]>
   cookieAuthSessionCookie?: string
   detected: DetectedAccountIdentity
   autoDetectContext?: AutoDetectAnalyticsContext
   protectionBypassExecution?: ProtectionBypassExecution
+  onRecoveryData?: (data: AccountAutoDetectRecoveryData) => void
 }
 
 export interface AutoDetectCompletionData {

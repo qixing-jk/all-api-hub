@@ -1,16 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { accountStorage } from "~/services/accounts/accountStorage"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { redeemService } from "~/services/redemption/redeemService"
+import {
+  redeemService,
+  REDEMPTION_RESULT_CODES,
+} from "~/services/redemption/redeemService"
+import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
-    getAccountById: vi.fn(),
-    getDisplayDataById: vi.fn(),
-    convertToDisplayData: vi.fn(),
-  },
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: { getAccountById: vi.fn() },
+}))
+vi.mock("~/services/accounts/accountStorage/accountReadModels", () => ({
+  accountReadModels: { getDisplayDataById: vi.fn() },
+}))
+vi.mock("~/services/accounts/accountStorage/accountPresentation", () => ({
+  accountPresentation: { convertToDisplayData: vi.fn() },
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
@@ -273,7 +278,8 @@ describe("redeemService.redeemCodeForAccount", () => {
 
     expect(result).toEqual({
       success: false,
-      message: "redemptionAssist:messages.redeemFailed",
+      code: REDEMPTION_RESULT_CODES.UnsupportedSiteType,
+      message: "redemptionAssist:messages.unsupportedSiteType",
     })
   })
 
@@ -305,7 +311,8 @@ describe("redeemService.redeemCodeForAccount", () => {
 
     expect(result).toEqual({
       success: false,
-      message: "redemptionAssist:messages.redeemFailed",
+      code: REDEMPTION_RESULT_CODES.UnsupportedSiteType,
+      message: "redemptionAssist:messages.unsupportedSiteType",
     })
   })
 })

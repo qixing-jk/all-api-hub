@@ -5,6 +5,11 @@ import { runBookmarkAccountImport } from "~/features/AccountManagement/bookmarkI
 import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
+import type { AccountAutoDetectResponse } from "~/types/serviceResponse"
+
+const createAutoDetectResponse = (
+  response: Omit<AccountAutoDetectResponse, "kind">,
+): AccountAutoDetectResponse => ({ kind: "detected", ...response })
 
 describe("runBookmarkAccountImport", () => {
   it("reuses one onboarding execution for every selected candidate", async () => {
@@ -14,10 +19,12 @@ describe("runBookmarkAccountImport", () => {
       command: "add_account",
       surface: "options",
     } as const
-    const autoDetectAccount = vi.fn().mockResolvedValue({
-      success: false,
-      message: "not detected",
-    })
+    const autoDetectAccount = vi.fn().mockResolvedValue(
+      createAutoDetectResponse({
+        success: false,
+        message: "not detected",
+      }),
+    )
 
     await runBookmarkAccountImport({
       candidates: [
@@ -68,20 +75,22 @@ describe("runBookmarkAccountImport", () => {
       resolveFirstSave = resolve
     })
     const draft = createEmptyAccountDialogDraft()
-    const autoDetectAccount = vi.fn().mockResolvedValue({
-      success: true,
-      message: "detected",
-      data: {
-        username: "user",
-        accessToken: "token",
-        userId: "id",
-        exchangeRate: null,
-        checkIn: draft.checkIn,
-        siteName: "Example",
-        siteType: SITE_TYPES.UNKNOWN,
-        authType: AuthTypeEnum.AccessToken,
-      },
-    })
+    const autoDetectAccount = vi.fn().mockResolvedValue(
+      createAutoDetectResponse({
+        success: true,
+        message: "detected",
+        data: {
+          username: "user",
+          accessToken: "token",
+          userId: "id",
+          exchangeRate: null,
+          checkIn: draft.checkIn,
+          siteName: "Example",
+          siteType: SITE_TYPES.UNKNOWN,
+          authType: AuthTypeEnum.AccessToken,
+        },
+      }),
+    )
     const validateAndSaveAccount = vi
       .fn()
       .mockReturnValueOnce(firstSave)
@@ -137,24 +146,28 @@ describe("runBookmarkAccountImport", () => {
     const draft = createEmptyAccountDialogDraft()
     const autoDetectAccount = vi
       .fn()
-      .mockResolvedValueOnce({
-        success: true,
-        message: "detected",
-        data: {
-          username: "alpha-user",
-          accessToken: "alpha-token",
-          userId: "alpha-id",
-          exchangeRate: 7,
-          checkIn: draft.checkIn,
-          siteName: "Alpha",
-          siteType: SITE_TYPES.NEW_API,
-          authType: AuthTypeEnum.AccessToken,
-        },
-      })
-      .mockResolvedValueOnce({
-        success: false,
-        message: "private backend detail",
-      })
+      .mockResolvedValueOnce(
+        createAutoDetectResponse({
+          success: true,
+          message: "detected",
+          data: {
+            username: "alpha-user",
+            accessToken: "alpha-token",
+            userId: "alpha-id",
+            exchangeRate: 7,
+            checkIn: draft.checkIn,
+            siteName: "Alpha",
+            siteType: SITE_TYPES.NEW_API,
+            authType: AuthTypeEnum.AccessToken,
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        createAutoDetectResponse({
+          success: false,
+          message: "private backend detail",
+        }),
+      )
     const validateAndSaveAccount = vi.fn().mockResolvedValue({
       success: true,
       message: "saved",
@@ -247,20 +260,22 @@ describe("runBookmarkAccountImport", () => {
 
   it("records save failures locally and continues with the next candidate", async () => {
     const draft = createEmptyAccountDialogDraft()
-    const autoDetectAccount = vi.fn().mockResolvedValue({
-      success: true,
-      message: "detected",
-      data: {
-        username: "user",
-        accessToken: "token",
-        userId: "id",
-        exchangeRate: null,
-        checkIn: draft.checkIn,
-        siteName: "Example",
-        siteType: SITE_TYPES.UNKNOWN,
-        authType: AuthTypeEnum.AccessToken,
-      },
-    })
+    const autoDetectAccount = vi.fn().mockResolvedValue(
+      createAutoDetectResponse({
+        success: true,
+        message: "detected",
+        data: {
+          username: "user",
+          accessToken: "token",
+          userId: "id",
+          exchangeRate: null,
+          checkIn: draft.checkIn,
+          siteName: "Example",
+          siteType: SITE_TYPES.UNKNOWN,
+          authType: AuthTypeEnum.AccessToken,
+        },
+      }),
+    )
     const validateAndSaveAccount = vi
       .fn()
       .mockResolvedValueOnce({
@@ -312,20 +327,23 @@ describe("runBookmarkAccountImport", () => {
     const autoDetectAccount = vi
       .fn()
       .mockRejectedValueOnce(new Error("private detection failure"))
-      .mockResolvedValueOnce({
-        success: true,
-        message: "detected",
-        data: {
-          username: "user",
-          accessToken: "token",
-          userId: "id",
-          exchangeRate: null,
-          checkIn: undefined,
-          siteName: "Example",
-          siteType: "unsupported-site-type",
-          authType: "unsupported-auth-type",
-        },
-      })
+      .mockResolvedValueOnce(
+        createAutoDetectResponse({
+          success: true,
+          message: "detected",
+          // Intentionally malformed to prove runtime import fallbacks.
+          data: {
+            username: "user",
+            accessToken: "token",
+            userId: "id",
+            exchangeRate: null,
+            checkIn: undefined,
+            siteName: "Example",
+            siteType: "unsupported-site-type",
+            authType: "unsupported-auth-type",
+          } as unknown as NonNullable<AccountAutoDetectResponse["data"]>,
+        }),
+      )
     const validateAndSaveAccount = vi.fn().mockResolvedValue({
       success: true,
       message: "saved",

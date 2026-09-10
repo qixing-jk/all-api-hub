@@ -2,9 +2,12 @@
   "accountSelect": {
     "confirm": "Einlösung bestätigen",
     "noResults": "Keine passenden Konten gefunden",
+    "noSupportedAccounts": "Keines deiner gespeicherten Konten unterstützt die automatische Einlösung. Löse den Code manuell auf der entsprechenden Website ein.",
+    "openSiteManual": "Website öffnen und manuell einlösen",
     "title": "Wählen Sie ein Konto aus, das für die Einlösung verwendet werden soll",
     "titleFallback": "Kein Konto stimmt mit dieser Website überein, bitte wählen Sie manuell eines aus",
-    "titleMultiple": "Mehrere Konten verfügbar, bitte wählen Sie eines zur Einlösung aus"
+    "titleMultiple": "Mehrere Konten verfügbar, bitte wählen Sie eines zur Einlösung aus",
+    "unsupported": "Die automatische Einlösung wird für diesen Website-Typ nicht unterstützt"
   },
   "actions": {
     "autoRedeem": "Automatisch einlösen"
@@ -26,7 +29,8 @@
     "selectAll": "Alles auswählen",
     "success": {
       "settingsSaved": "Die Einstellungen für die Einlösungshilfe wurden gespeichert"
-    }
+    },
+    "unsupportedSiteType": "Der Website-Typ dieses Kontos unterstützt keine automatische Einlösung. Wähle ein anderes Konto oder löse den Code manuell auf der Website ein."
   },
   "settings": {
     "contextMenu": {

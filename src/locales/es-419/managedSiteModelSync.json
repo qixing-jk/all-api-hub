@@ -79,6 +79,7 @@
       "finishedAt": "Finalizado a las",
       "manageChannel": "Administrar canal",
       "message": "Mensaje",
+      "resourceUnavailable": "Este registro no se puede vincular al sitio actual. Vuelve a seleccionar el canal en la lista de sincronización manual.",
       "selectAllChannels": "Seleccionar todos los canales",
       "selectChannel": "Seleccionar canal {{name}}",
       "status": "Estado",

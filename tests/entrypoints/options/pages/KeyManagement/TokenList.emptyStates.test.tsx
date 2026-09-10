@@ -5,6 +5,12 @@ import { TokenList } from "~/features/KeyManagement/components/TokenList"
 import { render, screen } from "~~/tests/test-utils/render"
 import { createAccount } from "~~/tests/utils/keyManagementFactories"
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    markGatewayGuidanceOnboardingCompleted: vi.fn(),
+  }),
+}))
+
 const { openSiteSupportRequestPageMock } = vi.hoisted(() => ({
   openSiteSupportRequestPageMock: vi.fn(),
 }))
@@ -305,7 +311,7 @@ describe("TokenList empty states", () => {
             rowKey: "native-row-1",
             accountId: account.id,
             accountName: account.name,
-            workspaceName: "Example workspace",
+            scopeName: "Example workspace",
             facts: {
               ref: {
                 accountId: account.id,
@@ -395,7 +401,7 @@ describe("TokenList empty states", () => {
       rowKey: "native-row-1",
       accountId: account.id,
       accountName: account.name,
-      workspaceName: "Workspace",
+      scopeName: "Workspace",
       facts: {
         ref: {
           accountId: account.id,

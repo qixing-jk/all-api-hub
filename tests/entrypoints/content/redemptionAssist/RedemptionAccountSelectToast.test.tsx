@@ -34,6 +34,7 @@ describe("RedemptionAccountSelectToast", () => {
             id: "account-a",
             name: "Private Account",
             baseUrl: "https://private.example",
+            automaticRedemptionSupport: { status: "supported" },
           } as any,
         ]}
         onSelect={vi.fn()}

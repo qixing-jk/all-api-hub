@@ -1,7 +1,13 @@
+import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import {
   apiCredentialProfilesStorage,
   mergeApiCredentialProfilesConfigs,
 } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import {
+  featureGuidanceState,
+  mergeFeatureGuidanceStates,
+  type FeatureGuidanceState,
+} from "~/services/featureGuidance/featureGuidanceState"
 import {
   BACKUP_VERSION,
   normalizeBackupForMerge,
@@ -60,7 +66,6 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
-import { accountStorage } from "../accounts/accountStorage"
 import { ACCOUNT_STORAGE_KEYS, STORAGE_LOCKS } from "../core/storageKeys"
 import { withExtensionStorageWriteLock } from "../core/storageWriteLock"
 import { channelConfigStorage } from "../managedSites/channelConfigStorage"
@@ -515,12 +520,14 @@ class WebdavAutoSyncService {
       localAccountsConfig,
       localTagStore,
       localPreferences,
+      localFeatureGuidance,
       localChannelConfigs,
       localApiCredentialProfiles,
     ] = await Promise.all([
-      accountStorage.exportData(),
+      accountDataTransfer.exportData(),
       tagStorage.exportTagStore(),
       userPreferences.exportPreferences(),
+      featureGuidanceState.getStateStrict(),
       channelConfigStorage.exportConfigs(),
       apiCredentialProfilesStorage.exportConfig(),
     ])
@@ -531,6 +538,7 @@ class WebdavAutoSyncService {
       localAccountsConfig,
       localTagStore,
       localPreferences,
+      localFeatureGuidance,
       localChannelConfigs,
       localApiCredentialProfiles,
     }
@@ -544,6 +552,7 @@ class WebdavAutoSyncService {
     deletedEntryRecords?: AccountStorageConfig["deletedEntryRecords"]
     tagStore: TagStore
     preferences: UserPreferences
+    featureGuidance: FeatureGuidanceState
     channelConfigs: ChannelConfigSnapshot
     apiCredentialProfiles: ApiCredentialProfilesConfig
   }): BackupFullV2 {
@@ -560,6 +569,7 @@ class WebdavAutoSyncService {
       },
       tagStore: input.tagStore,
       preferences: input.preferences,
+      featureGuidance: input.featureGuidance,
       channelConfigs: input.channelConfigs,
       apiCredentialProfiles: input.apiCredentialProfiles,
     }
@@ -589,6 +599,7 @@ class WebdavAutoSyncService {
       localAccountsConfig,
       localTagStore,
       localPreferences,
+      localFeatureGuidance,
       localChannelConfigs,
       localApiCredentialProfiles,
     } = await this.collectLocalSyncSnapshot()
@@ -615,6 +626,7 @@ class WebdavAutoSyncService {
       deletedEntryRecords: localAccountsConfig.deletedEntryRecords,
       tagStore: localTagStore,
       preferences: localPreferences,
+      featureGuidance: localFeatureGuidance,
       channelConfigs: localChannelConfigs,
       apiCredentialProfiles: localApiCredentialProfiles,
     })
@@ -655,6 +667,7 @@ class WebdavAutoSyncService {
       localAccountsConfig,
       localTagStore,
       localPreferences,
+      localFeatureGuidance,
       localChannelConfigs,
       localApiCredentialProfiles,
     } = await this.collectLocalSyncSnapshot()
@@ -690,6 +703,15 @@ class WebdavAutoSyncService {
     // 决定同步策略
     const strategy =
       preferences.webdav.syncStrategy || WEBDAV_SYNC_STRATEGIES.MERGE
+    const featureGuidanceToSave =
+      remoteData &&
+      syncDataSelection.preferences &&
+      strategy !== WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY
+        ? mergeFeatureGuidanceStates(
+            localFeatureGuidance,
+            normalizedRemote.featureGuidance,
+          )
+        : localFeatureGuidance
     const mergeChannelConfigsOnApply =
       strategy === WEBDAV_SYNC_STRATEGIES.MERGE ||
       normalizedRemote.channelConfigs === null
@@ -998,6 +1020,7 @@ class WebdavAutoSyncService {
         orderedAccountIdsToSave,
         tagStoreToSave,
         preferencesToSave,
+        featureGuidanceToSave,
         channelConfigsToSave,
         mergeChannelConfigsOnApply,
         apiCredentialProfilesToSave,
@@ -1017,6 +1040,7 @@ class WebdavAutoSyncService {
       deletedEntryRecords: deletedEntryRecordsToSave,
       tagStore: tagStoreToSave,
       preferences: preferencesToSave,
+      featureGuidance: featureGuidanceToSave,
       channelConfigs: channelConfigsToSave,
       apiCredentialProfiles: apiCredentialProfilesToSave,
     })
@@ -1054,6 +1078,7 @@ class WebdavAutoSyncService {
     orderedAccountIdsToSave: string[]
     tagStoreToSave: TagStore
     preferencesToSave: UserPreferences
+    featureGuidanceToSave: FeatureGuidanceState
     channelConfigsToSave: ChannelConfigSnapshot
     mergeChannelConfigsOnApply: boolean
     apiCredentialProfilesToSave: ApiCredentialProfilesConfig
@@ -1080,7 +1105,7 @@ class WebdavAutoSyncService {
               input.syncDataSelection.accounts ||
               input.syncDataSelection.bookmarks
             ) {
-              await accountStorage.importData({
+              await accountDataTransfer.importData({
                 accounts: input.accountsToSave,
                 pinnedAccountIds: input.pinnedAccountIdsToSave,
                 orderedAccountIds: input.orderedAccountIdsToSave,
@@ -1089,7 +1114,7 @@ class WebdavAutoSyncService {
               })
 
               rollbackSteps.push(async () => {
-                await accountStorage.importData({
+                await accountDataTransfer.importData({
                   accounts: input.localAccountsConfig.accounts,
                   bookmarks: input.localAccountsConfig.bookmarks || [],
                   pinnedAccountIds:
@@ -1136,14 +1161,27 @@ class WebdavAutoSyncService {
 
             // Apply channel configs last so a failure in another storage domain
             // never requires replacing concurrent channel edits during rollback.
-            if (input.mergeChannelConfigsOnApply) {
-              return await channelConfigStorage.mergeConfigs(
+            const applyChannelConfigs = async () => {
+              if (input.mergeChannelConfigsOnApply) {
+                return await channelConfigStorage.mergeConfigs(
+                  input.channelConfigsToSave,
+                )
+              }
+
+              await channelConfigStorage.importConfigs(
                 input.channelConfigsToSave,
+              )
+              return input.channelConfigsToSave
+            }
+
+            if (input.syncDataSelection.preferences) {
+              return await featureGuidanceState.withMergedStateTransaction(
+                input.featureGuidanceToSave,
+                applyChannelConfigs,
               )
             }
 
-            await channelConfigStorage.importConfigs(input.channelConfigsToSave)
-            return input.channelConfigsToSave
+            return await applyChannelConfigs()
           } catch (error) {
             for (const rollback of rollbackSteps.reverse()) {
               try {

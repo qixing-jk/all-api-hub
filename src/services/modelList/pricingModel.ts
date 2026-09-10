@@ -1,4 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import type { PricingPlan } from "~/services/modelPricing/pricingPlan"
 import type { ModelVendorEvidence } from "~/services/models/modelDescriptor"
 import type { ModelPresentation } from "~/services/models/modelDisplayFacts"
 
@@ -11,6 +12,8 @@ export interface ProductCanonicalModel {
   display_name?: string
   vendorEvidence?: ModelVendorEvidence
   model_description?: string
+  /** Provider-published descriptions; selected at render time, not cache time. */
+  model_descriptions?: Partial<Record<"zh" | "en", string>>
   presentation?: ModelPresentation
   quota_type: number // 0 = token billing, 1 = per-call billing
   model_ratio: number
@@ -30,6 +33,7 @@ export interface ProductCanonicalModel {
     cache_read?: number
     cache_write?: number
   }
+  pricingPlan?: PricingPlan
   price_metadata?: ModelPriceMetadata
   owner_by?: string
   completion_ratio: number
@@ -108,6 +112,8 @@ export interface ModelPriceMetadata {
   precision: ModelPricePrecisionKind
   unavailable_reason?: ModelUnavailablePriceReason
   source_date?: string
+  /** Public reference for the price evidence, separate from the account site. */
+  source_url?: string
   unmatched_model_count?: number
 }
 

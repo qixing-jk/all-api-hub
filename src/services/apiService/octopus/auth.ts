@@ -26,6 +26,14 @@ export const OCTOPUS_AUTH_MODES = {
   Cookie: "cookie",
 } as const
 
+export const OCTOPUS_COOKIE_API_VERSIONS = {
+  V012: "v0.12",
+  V013: "v0.13",
+} as const
+
+export type OctopusCookieApiVersion =
+  (typeof OCTOPUS_COOKIE_API_VERSIONS)[keyof typeof OCTOPUS_COOKIE_API_VERSIONS]
+
 export type OctopusAuthSession =
   | {
       mode: typeof OCTOPUS_AUTH_MODES.Bearer
@@ -37,6 +45,8 @@ export type OctopusAuthSession =
       expireAt: number
       /** Set after a harmless protected request proves the cookie is usable. */
       confirmed: boolean
+      /** Learned from the protected channel API without relying on version text. */
+      apiVersion?: OctopusCookieApiVersion
     }
 
 interface LegacyOctopusLoginResponse {

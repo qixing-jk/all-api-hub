@@ -22,6 +22,7 @@ import {
   fetchTokenById,
   fetchUserInfo,
   getOrCreateAccessToken,
+  invalidateAIHubMixPublicCatalogs,
   refreshAccountData,
   resolveApiTokenKey,
   searchApiTokens,
@@ -32,6 +33,14 @@ import { createDeferredAbortDeadline } from "~/services/apiTransport/abortableTa
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
 import { MODEL_LIST_SOURCE_KINDS } from "~/services/modelList/pricingModel"
+import {
+  PRICE_RATE_UNITS,
+  PRICING_METERS,
+  PRICING_PURPOSES,
+  PRICING_VIDEO_INPUTS,
+} from "~/services/modelPricing/pricingConstants"
+import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
+import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import { resolveModelVendorCandidate } from "~/services/models/modelVendor"
 import { calculateModelPrice } from "~/services/models/utils/modelPricing"
@@ -42,7 +51,13 @@ import {
 } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import { runMockSiteRequestTask } from "~~/tests/test-utils/siteRequestLease"
+
+import additionalMediaFixtures from "./additionalMediaFixtures.json"
+import diagnostic40 from "./diagnostic40Fixtures.json"
+import reportedCatalogFixtures from "./reportedCatalogFixtures.json"
+import taskBillingFixtures from "./taskBillingFixtures.json"
 
 const { mockWithSiteApiRequestLimit } = vi.hoisted(() => ({
   mockWithSiteApiRequestLimit: vi.fn(),
@@ -90,12 +105,610 @@ const tokenRequest: CreateTokenRequest = {
 
 describe("apiService AIHubMix", () => {
   beforeEach(() => {
+    invalidateAIHubMixPublicCatalogs()
     server.resetHandlers()
+    server.use(
+      http.get("https://aihubmix.com/call/mdl_info", () =>
+        HttpResponse.json({ success: true, data: [] }),
+      ),
+    )
     mockWithSiteApiRequestLimit.mockClear()
     mockWithSiteApiRequestLimit.mockImplementation(
       async (_key: string, task: () => any, _signal?: AbortSignal) =>
         await runMockSiteRequestTask(task),
     )
+  })
+
+  it("starts independent pricing sources before the public catalog completes", async () => {
+    const started = new Set<string>()
+    const catalogGate = createDeferred<void>()
+    server.use(
+      http.get("https://aihubmix.com/api/v1/models", async () => {
+        started.add("catalog")
+        await catalogGate.promise
+        return HttpResponse.json({ success: true, data: [] })
+      }),
+      http.get("https://aihubmix.com/call/mdl_info", () => {
+        started.add("website")
+        return HttpResponse.json({ success: true, data: [] })
+      }),
+      http.get("https://aihubmix.com/api/user/available_models", () => {
+        started.add("account")
+        return HttpResponse.json({ success: true, data: [] })
+      }),
+    )
+    const pending = fetchModelPricing(baseRequest)
+    try {
+      await vi.waitFor(() =>
+        expect(started).toEqual(new Set(["catalog", "website", "account"])),
+      )
+    } finally {
+      catalogGate.resolve()
+      await pending
+    }
+  })
+
+  it.each([true, false])(
+    "publishes display capabilities with confirmed account scope: %s",
+    async (hasAccountScope) => {
+      server.use(
+        http.get("https://aihubmix.com/api/v1/models", () =>
+          HttpResponse.json({ success: true, data: [] }),
+        ),
+        http.get("https://aihubmix.com/api/user/available_models", () =>
+          hasAccountScope
+            ? HttpResponse.json({ success: true, data: [] })
+            : HttpResponse.json({ success: false }, { status: 403 }),
+        ),
+        http.get("https://aihubmix.com/call/usr/avail_mdls", () =>
+          HttpResponse.json({ success: false }, { status: 403 }),
+        ),
+      )
+      const response = await fetchModelPricing(baseRequest)
+      expect(response.model_list_source).toMatchObject({
+        catalogScope: hasAccountScope ? "personalized" : "provider",
+        supportsPricing: true,
+        actionPolicy: {
+          supportsGroupFiltering: false,
+          supportsAccountSummary: hasAccountScope,
+          supportsTokenCompatibility: false,
+          supportsCredentialVerification: false,
+          supportsBatchCredentialVerification: false,
+          supportsCliVerification: false,
+        },
+      })
+    },
+  )
+
+  it("replays the forty-row diagnostic report with actual billing units", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/v1/models", () =>
+        HttpResponse.json({ success: true, data: diagnostic40.catalog }),
+      ),
+      http.get("https://aihubmix.com/call/mdl_info", () =>
+        HttpResponse.json({ success: true, data: diagnostic40.website }),
+      ),
+      http.get("https://aihubmix.com/api/user/available_models", () =>
+        HttpResponse.json({
+          success: true,
+          data: diagnostic40.catalog.map((row) => ({ model: row.model_id })),
+        }),
+      ),
+    )
+    const result = await fetchModelPricing(baseRequest)
+    expect(result.data).toHaveLength(40)
+    const images = new Set([
+      "imagen-4.0",
+      "imagen-4.0-ultra",
+      "V_1",
+      "V_1_TURBO",
+      "V_2",
+      "V_2_TURBO",
+      "V_2A",
+      "V_2A_TURBO",
+      "dall-e-2",
+      "dall-e-3",
+      "DESCRIBE",
+      "UPSCALE",
+      "Stable-Diffusion-3-5-Large",
+    ])
+    const video = new Set([
+      "sora-2",
+      "sora-2-pro",
+      "wan2.2-i2v-plus",
+      "veo-3.0-generate-preview",
+      "veo-3.1-generate-preview",
+      "veo-3.1-fast-generate-preview",
+      "veo-3.1-lite-generate-preview",
+    ])
+    const statuses: Record<string, number> = {}
+    for (const model of result.data) {
+      const quote = quoteCanonicalModelPrice(
+        model,
+        {
+          purpose: PRICING_PURPOSES.TOKEN_INDEX,
+          imageQuality: "Quality",
+          inputTokens: 32000,
+          outputTokens: 2000,
+          videoQuality:
+            model.model_name === "sora-2-pro" ? "720x1280" : "1080p",
+          usage: { input: 80, output: 20 },
+        },
+        {},
+      )
+      statuses[quote.status] = (statuses[quote.status] ?? 0) + 1
+      if (["paddleocr-vl-0.9b", "pp-structurev3"].includes(model.model_name))
+        expect(quote).toMatchObject({
+          status: "complete",
+          unit: "page",
+          amount: 0.025,
+        })
+      if (["flux-2-flex", "flux-2-pro"].includes(model.model_name))
+        expect(quote).toMatchObject({
+          status: "complete",
+          unit: "megapixel",
+          amount: model.model_name.endsWith("flex") ? 0.05 : 0.03,
+        })
+      if (model.model_name === "V3")
+        expect(quote).toMatchObject({
+          status: "complete",
+          unit: "image",
+          amount: 0.09,
+        })
+      if (model.model_name === "qwen3-vl-plus") {
+        expect(quote.status).toBe("complete")
+        expect(
+          quote.lines.find((line) => line.meter === PRICING_METERS.INPUT)?.rate
+            .amount,
+        ).toBeCloseTo(0.137)
+      }
+      if (
+        ["whisper-large-v3", "whisper-large-v3-turbo"].includes(
+          model.model_name,
+        )
+      ) {
+        expect(quote).toMatchObject({
+          status: "complete",
+          unit: "audio-second",
+        })
+        expect(quote.amount).toBeCloseTo(
+          (model.model_name.endsWith("turbo") ? 0.044 : 0.111) / 3600,
+        )
+      }
+      if (["glm-4.6", "glm-4.7", "doubao-seed-1-8"].includes(model.model_name))
+        expect(quote.status, model.model_name).toBe("complete")
+      if (images.has(model.model_name))
+        expect(quote, model.model_name).toMatchObject({
+          status: "complete",
+          unit: "image",
+        })
+      if (video.has(model.model_name))
+        expect(quote, model.model_name).toMatchObject({
+          status: "complete",
+          unit: "video-second",
+        })
+      if (["embed-v-4-0", "gemini-embedding-2"].includes(model.model_name)) {
+        expect(quote.status, model.model_name).toBe("partial")
+        expect(quote.issues).toContainEqual({
+          code: "price-missing",
+          meter: "output",
+        })
+        expect(
+          quoteCanonicalModelPrice(
+            model,
+            { purpose: PRICING_PURPOSES.TOKEN_INDEX, usage: { input: 1 } },
+            {},
+          ).status,
+        ).toBe("complete")
+      }
+    }
+    expect(statuses).toEqual({ complete: 31, partial: 2, unavailable: 7 })
+  })
+
+  it("quotes additional media and audio cache fields without legacy text fallbacks", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/v1/models", () =>
+        HttpResponse.json({
+          success: true,
+          data: additionalMediaFixtures.catalog,
+        }),
+      ),
+      http.get("https://aihubmix.com/call/mdl_info", () =>
+        HttpResponse.json({
+          success: true,
+          data: additionalMediaFixtures.website,
+        }),
+      ),
+      http.get("https://aihubmix.com/api/user/available_models", () =>
+        HttpResponse.json({
+          success: true,
+          data: additionalMediaFixtures.catalog.map((row) => ({
+            model: row.model_id,
+          })),
+        }),
+      ),
+    )
+    const response = await fetchModelPricing(baseRequest)
+    expect(response.data).toHaveLength(6)
+    for (const model of response.data) {
+      const quote = quoteCanonicalModelPrice(
+        model,
+        {
+          purpose: PRICING_PURPOSES.TOKEN_INDEX,
+          videoQuality: "720p",
+          videoInput: PRICING_VIDEO_INPUTS.WITHOUT_VIDEO,
+          usage: { input: 80, output: 20 },
+        },
+        {},
+      )
+      if (model.model_name.includes("-mini-")) {
+        expect(quote.issues).toContainEqual({ code: "source-conflict" })
+        expect(quote.status).toBe("unavailable")
+      } else {
+        expect(quote.status, model.model_name).toBe("complete")
+        if (model.model_name === "glm-image")
+          expect(quote).toMatchObject({ unit: "image", amount: 0.015 })
+        if (model.model_name.startsWith("doubao"))
+          expect(quote.unit).toBe("video-second")
+        if (model.model_name.startsWith("gemini")) {
+          const audio = quoteCanonicalModelPrice(
+            model,
+            { purpose: PRICING_PURPOSES.TOKEN_INDEX, usage: { audioCache: 1 } },
+            {},
+          )
+          expect(audio.status).toBe("complete")
+          expect(audio.amount).toBeCloseTo(0.1)
+        }
+      }
+    }
+  })
+
+  it("quotes reported public catalog rows through the console account path", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/v1/models", () =>
+        HttpResponse.json({
+          success: true,
+          data: reportedCatalogFixtures.catalog,
+        }),
+      ),
+      http.get("https://aihubmix.com/call/mdl_info", () =>
+        HttpResponse.json({
+          success: true,
+          data: reportedCatalogFixtures.website,
+        }),
+      ),
+      http.get("https://aihubmix.com/api/user/available_models", () =>
+        HttpResponse.json({
+          success: true,
+          data: reportedCatalogFixtures.catalog.map((row) => ({
+            model: row.model_id,
+          })),
+        }),
+      ),
+    )
+    const result = await fetchModelPricing({
+      ...baseRequest,
+      baseUrl: "https://console.aihubmix.com",
+    })
+    expect(result.data).toHaveLength(13)
+    for (const model of result.data) {
+      const quote = quoteCanonicalModelPrice(
+        model,
+        {
+          purpose: PRICING_PURPOSES.TOKEN_INDEX,
+          inputTokens: 32000,
+          outputTokens: 2000,
+          at: "2026-09-09T12:00:00Z",
+          usage: { input: 80, output: 20 },
+        },
+        {},
+      )
+      expect(quote.status, model.model_name).toBe(
+        model.model_name === "auto" ? "unavailable" : "complete",
+      )
+    }
+  })
+
+  it("enriches only account models with public website rules and bilingual descriptions", async () => {
+    let websiteRequests = 0
+    server.use(
+      http.get("https://aihubmix.com/api/v1/models", () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            {
+              model_id: "qwen-flash",
+              desc: "The model adopts tiered pricing.",
+              pricing: { input: 0.02, output: 0.2, cache_read: 0.02 },
+            },
+            { model_id: "unavailable-model", pricing: { input: 1, output: 2 } },
+          ],
+        }),
+      ),
+      http.get("https://aihubmix.com/api/user/available_models", () =>
+        HttpResponse.json({ success: true, data: [{ model: "qwen-flash" }] }),
+      ),
+      http.get("https://aihubmix.com/call/mdl_info", ({ request }) => {
+        websiteRequests++
+        expect(request.headers.has("Authorization")).toBe(false)
+        expect(request.credentials).toBe("omit")
+        return HttpResponse.json({
+          success: true,
+          data: [
+            {
+              model: "qwen-flash",
+              desc: "该模型采取阶梯计费。",
+              desc_en: "The model adopts tiered pricing.",
+              billing_config: JSON.stringify({
+                model_name: "qwen-flash",
+                default_tier: "tier1",
+                token_based_tier_configs: {
+                  tier1: {
+                    model_ratio: 0.010273,
+                    completion_tokens_ratio: 10,
+                    tier_condition: { min_tokens: 0, max_tokens: 128000 },
+                  },
+                  tier2: {
+                    model_ratio: 0.041096,
+                    completion_tokens_ratio: 10,
+                    tier_condition: { min_tokens: 128001, max_tokens: 256000 },
+                  },
+                },
+              }),
+            },
+          ],
+        })
+      }),
+    )
+    const result = await fetchModelPricing({
+      ...baseRequest,
+      baseUrl: "https://console.aihubmix.com",
+    })
+    expect(result.data.map((model) => model.model_name)).toEqual(["qwen-flash"])
+    expect(websiteRequests).toBe(1)
+    expect(result.data[0].model_descriptions).toEqual({
+      zh: "该模型采取阶梯计费。",
+      en: "The model adopts tiered pricing.",
+    })
+    const quote = quoteModelPrice(result.data[0].pricingPlan!, {
+      purpose: PRICING_PURPOSES.REQUEST,
+      inputTokens: 128001,
+      usage: {
+        input: 128001,
+        output: 1000,
+        cacheRead: 0,
+        cacheWrite: 0,
+        cacheWrite1h: 0,
+      },
+    })
+    expect(quote.amount).toBeCloseTo(
+      (128001 * 0.082192 + 1000 * 0.82192) / 1e6,
+      10,
+    )
+    expect(quote.source.url).toBe(
+      "https://aihubmix.com/model/qwen-flash#pricing",
+    )
+  })
+
+  it("keeps video billing descriptions without falling back to legacy text prices", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/v1/models", () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            {
+              model_id: "example-video",
+              pricing: { input: 2, output: 0, cache_read: 2 },
+            },
+          ],
+        }),
+      ),
+      http.get("https://aihubmix.com/api/user/available_models", () =>
+        HttpResponse.json({
+          success: true,
+          data: [{ model: "example-video" }],
+        }),
+      ),
+      http.get("https://aihubmix.com/call/mdl_info", () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            {
+              model: "example-video",
+              billing_config: JSON.stringify({
+                metered_price_config: {
+                  video_generation: {
+                    unit: PRICE_RATE_UNITS.TOKEN,
+                    fallback_unit_price: 10,
+                  },
+                },
+                reserve_price_config: {
+                  unit: PRICE_RATE_UNITS.REQUEST,
+                  unit_price: 5,
+                },
+              }),
+              display_input: "Input without video: $10.85 per million tokens",
+              display_output: "输入不含视频：10.85美元/百万token",
+            },
+          ],
+        }),
+      ),
+    )
+    const result = await fetchModelPricing(baseRequest)
+    const quote = quoteCanonicalModelPrice(
+      result.data[0],
+      { purpose: PRICING_PURPOSES.TOKEN_INDEX, usage: { input: 1, output: 1 } },
+      {},
+    )
+    expect(quote.unit).toBe("million-video-output-tokens")
+    expect(quote.amount).toBeNull()
+    expect(
+      quote.publishedSchedule?.every(
+        (rule) => Object.keys(rule.rates).length === 0,
+      ),
+    ).toBe(true)
+    expect(quote.source.pricingDescription?.zh).toContain("10.85")
+    expect(result.data[0].token_price_usd_per_million).toBeUndefined()
+  })
+
+  it("retains published rates but cannot certify them when website rules are unavailable", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/v1/models", () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            { model_id: "qwen-flash", pricing: { input: 0.02, output: 0.2 } },
+          ],
+        }),
+      ),
+      http.get("https://aihubmix.com/api/user/available_models", () =>
+        HttpResponse.json({ success: true, data: [{ model: "qwen-flash" }] }),
+      ),
+      http.get(
+        "https://aihubmix.com/call/mdl_info",
+        () => new HttpResponse(null, { status: 503 }),
+      ),
+    )
+    const result = await fetchModelPricing(baseRequest)
+    const quote = quoteModelPrice(result.data[0].pricingPlan!, {
+      purpose: PRICING_PURPOSES.TOKEN_INDEX,
+      usage: { input: 1, output: 1 },
+    })
+    expect(quote.amount).toBeNull()
+    expect(quote.source.rulesUnavailable).toBe(true)
+    expect(quote.issues).toContainEqual({ code: "source-unavailable" })
+    expect(quote.issues).not.toContainEqual({ code: "unsupported-rule" })
+    expect(quote.publishedSchedule?.[0].rates.input?.amount).toBe(0.02)
+    server.use(
+      http.get("https://aihubmix.com/call/mdl_info", () =>
+        HttpResponse.json({
+          success: true,
+          data: [{ model: "qwen-flash", billing_config: "" }],
+        }),
+      ),
+    )
+    const recovered = await fetchModelPricing(baseRequest)
+    expect(
+      quoteCanonicalModelPrice(
+        recovered.data[0],
+        {
+          purpose: PRICING_PURPOSES.TOKEN_INDEX,
+          usage: { input: 1, output: 1 },
+        },
+        {},
+      ).status,
+    ).toBe("complete")
+  })
+
+  it("uses cached public task rules ahead of misleading legacy token rates", async () => {
+    const fixtures = taskBillingFixtures.filter((row) =>
+      ["qwen-audio-3.0-tts-flash", "minimax-h3", "wan3.0-video"].includes(
+        row.model,
+      ),
+    )
+    let websiteRequests = 0
+    server.use(
+      http.get("https://aihubmix.com/api/v1/models", () =>
+        HttpResponse.json({
+          success: true,
+          data: fixtures.map((row) => ({
+            model_id: row.model,
+            pricing: { input: 2, output: 0 },
+          })),
+        }),
+      ),
+      http.get("https://aihubmix.com/api/user/available_models", () =>
+        HttpResponse.json({
+          success: true,
+          data: fixtures.map(({ model }) => ({ model })),
+        }),
+      ),
+      http.get("https://aihubmix.com/call/mdl_info", () => {
+        websiteRequests++
+        return HttpResponse.json({
+          success: true,
+          data: fixtures.map((row) => ({
+            model: row.model,
+            billing_config: row.billing,
+            img_price_config: row.legacy,
+            display_input: row.note,
+          })),
+        })
+      }),
+    )
+    const result = await fetchModelPricing(baseRequest)
+    const quotes = new Map(
+      result.data.map((model) => [
+        model.model_name,
+        quoteCanonicalModelPrice(
+          model,
+          {
+            purpose: PRICING_PURPOSES.TOKEN_INDEX,
+            videoQuality: "720P",
+            usage: { input: 1, output: 1 },
+          },
+          {},
+        ),
+      ]),
+    )
+    expect(quotes.get("qwen-audio-3.0-tts-flash")).toMatchObject({
+      unit: "thousand-characters",
+      amount: 0.0141,
+      status: "complete",
+    })
+    expect(quotes.get("wan3.0-video")).toMatchObject({
+      unit: "video-second",
+      amount: 0.0845,
+      status: "complete",
+    })
+    expect(quotes.get("minimax-h3")).toMatchObject({
+      status: "unavailable",
+      issues: [{ code: "source-conflict" }],
+    })
+    await fetchModelPricing(baseRequest)
+    expect(websiteRequests).toBe(1)
+  })
+
+  it("retains routing price notes when no executable website rule exists", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/v1/models", () =>
+        HttpResponse.json({
+          success: true,
+          data: [{ model_id: "router", pricing: { input: 2, output: 2 } }],
+        }),
+      ),
+      http.get("https://aihubmix.com/api/user/available_models", () =>
+        HttpResponse.json({ success: true, data: [{ model: "router" }] }),
+      ),
+      http.get("https://aihubmix.com/call/mdl_info", () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            {
+              model: "router",
+              billing_config: "",
+              display_input: "Charged by the routed model.",
+              display_output: "按实际命中模型计费。",
+            },
+          ],
+        }),
+      ),
+    )
+    const result = await fetchModelPricing(baseRequest)
+    const quote = quoteModelPrice(result.data[0].pricingPlan!, {
+      purpose: PRICING_PURPOSES.TOKEN_INDEX,
+      usage: { input: 1 },
+    })
+    expect(quote).toMatchObject({
+      status: "unavailable",
+      amount: null,
+      source: {
+        pricingDescription: {
+          en: "Charged by the routed model.",
+          zh: "按实际命中模型计费。",
+        },
+      },
+    })
   })
 
   it("uses the app default exchange rate because AIHubMix exposes no site rate field", () => {
@@ -649,6 +1262,52 @@ describe("apiService AIHubMix", () => {
       id: "aihubmix-user",
       username: "aihubmix-user",
       access_token: "existing-access-token",
+    })
+  })
+
+  it("uses AIHubMix's documented message for cookie-session failures", async () => {
+    server.use(
+      http.get("https://aihubmix.com/call/usr/self", () =>
+        HttpResponse.json(
+          {
+            success: false,
+            message: "AIHubMix rejected the account session",
+            data: null,
+          },
+          { status: 401 },
+        ),
+      ),
+    )
+
+    await expect(
+      fetchUserInfo({
+        baseUrl: "https://aihubmix.com",
+        auth: { authType: AuthTypeEnum.Cookie },
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 401,
+      message: "AIHubMix rejected the account session",
+    })
+  })
+
+  it("falls back to the shared msg heuristic for an unrecognized AIHubMix error", async () => {
+    server.use(
+      http.get("https://aihubmix.com/call/usr/self", () =>
+        HttpResponse.json(
+          { success: false, msg: "legacy guessed message", data: null },
+          { status: 400 },
+        ),
+      ),
+    )
+
+    await expect(
+      fetchUserInfo({
+        baseUrl: "https://aihubmix.com",
+        auth: { authType: AuthTypeEnum.Cookie },
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: "legacy guessed message",
     })
   })
 
@@ -1409,7 +2068,10 @@ describe("apiService AIHubMix", () => {
   it("uses a localized fallback message for HTTP errors without response messages", async () => {
     server.use(
       http.get("https://aihubmix.com/api/token/", () =>
-        HttpResponse.json({ error: "unauthorized" }, { status: 401 }),
+        HttpResponse.json(
+          { success: false, message: "   ", data: null },
+          { status: 401 },
+        ),
       ),
     )
 
@@ -1566,6 +2228,46 @@ describe("apiService AIHubMix", () => {
       "gpt-4o",
       "claude-3-5-sonnet",
     ])
+  })
+
+  it("quotes published promotion windows once, including full-day and weekly midnight ownership", async () => {
+    server.use(
+      http.get("https://aihubmix.com/call/mdl_info", () =>
+        HttpResponse.json({
+          success: true,
+          data: [{ model: "glm-5.2", billing_config: "" }],
+        }),
+      ),
+      http.get("https://aihubmix.com/api/v1/models", () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            {
+              model_id: "glm-5.2",
+              pricing: { input: 1.1268, output: 3.9438 },
+              promotion: {
+                off_percent: 36,
+                time_type: "weekly",
+                weekly: [{ weekdays: [1], ranges: ["22:00-02:00"] }],
+              },
+            },
+          ],
+        }),
+      ),
+      http.get("https://aihubmix.com/api/user/available_models", () =>
+        HttpResponse.json({ success: true, data: [{ model: "glm-5.2" }] }),
+      ),
+    )
+    const response = await fetchModelPricing(baseRequest)
+    const quote = (at: string) =>
+      quoteCanonicalModelPrice(
+        response.data[0],
+        { purpose: PRICING_PURPOSES.TOKEN_INDEX, at, usage: { input: 1 } },
+        { groupMultiplier: 1 },
+      )
+    expect(quote("2026-09-08T01:59:00Z").amount).toBeCloseTo(0.721152)
+    expect(quote("2026-09-08T02:00:00Z").amount).toBe(1.1268)
+    expect(quote("2026-09-07T01:00:00Z").amount).toBe(1.1268)
   })
 
   it("maps AIHubMix /api/v1/models catalog prices as direct USD per 1M token prices", async () => {
@@ -2281,4 +2983,34 @@ describe("apiService AIHubMix", () => {
       message: "messages:errors.api.invalidResponseFormat",
     })
   })
+
+  it.each([
+    { name: "an object", message: { token: "provider-secret-placeholder" } },
+    { name: "a number", message: 503 },
+  ])(
+    "falls back to invalid response copy for $name business message",
+    async ({ message }) => {
+      server.use(
+        http.get("https://aihubmix.com/api/token/", () =>
+          HttpResponse.json({
+            success: false,
+            message,
+            data: null,
+          }),
+        ),
+      )
+
+      const failure = await fetchAccountTokens(baseRequest).catch(
+        (error: unknown) => error,
+      )
+
+      expect(failure).toMatchObject({
+        code: API_ERROR_CODES.BUSINESS_ERROR,
+        message: "messages:errors.api.invalidResponseFormat",
+      })
+      expect((failure as Error).message).not.toContain(
+        "provider-secret-placeholder",
+      )
+    },
+  )
 })

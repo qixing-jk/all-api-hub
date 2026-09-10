@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { useManagedSiteChannelModelSync } from "~/features/ManagedSiteChannels/hooks/useManagedSiteChannelModelSync"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -11,6 +12,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 const {
   sendModelSyncMessageMock,
@@ -30,7 +32,7 @@ const {
   withProtectionBypassUserCommandMock: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: { error: toastErrorMock, success: toastSuccessMock },
 }))
 
@@ -55,6 +57,9 @@ vi.mock("~/services/protectionBypass/client", () => ({
     withProtectionBypassUserCommandMock(...args),
 }))
 
+const ref42 = modelResourceRef("provider/key:42")
+const refKey42 = getManagedResourceRefKey(ref42)
+
 const analyticsContext = {
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
   actionId: PRODUCT_ANALYTICS_ACTION_IDS.SyncManagedSiteChannel,
@@ -73,23 +78,30 @@ describe("useManagedSiteChannelModelSync", () => {
     )
   })
 
-  it("skips dispatch when no selected channel has a provider id", async () => {
+  it("skips dispatch when no selected resource belongs to the configured site", async () => {
     const onModelsChanged = vi.fn()
     const { result } = renderHook(() =>
       useManagedSiteChannelModelSync({
+        scopeKey: "https://example.com",
         siteType: SITE_TYPES.NEW_API,
         onModelsChanged,
       }),
     )
 
     await act(async () =>
-      result.current.syncChannels([0, -1], analyticsContext),
+      result.current.syncChannels(
+        [
+          modelResourceRef(""),
+          modelResourceRef(1, { scopeKey: "https://other.example" }),
+        ],
+        analyticsContext,
+      ),
     )
 
     expect(sendModelSyncMessageMock).not.toHaveBeenCalled()
     expect(withProtectionBypassUserCommandMock).not.toHaveBeenCalled()
     expect(onModelsChanged).not.toHaveBeenCalled()
-    expect(result.current.syncingChannelIds).toEqual(new Set())
+    expect(result.current.syncingResourceKeys).toEqual(new Set())
     expect(trackerCompleteMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Skipped,
       expect.objectContaining({
@@ -106,14 +118,17 @@ describe("useManagedSiteChannelModelSync", () => {
       }),
     )
     const { result } = renderHook(() =>
-      useManagedSiteChannelModelSync({ siteType: SITE_TYPES.NEW_API }),
+      useManagedSiteChannelModelSync({
+        scopeKey: "https://example.com",
+        siteType: SITE_TYPES.NEW_API,
+      }),
     )
 
     let syncPromise!: Promise<void>
     act(() => {
-      syncPromise = result.current.syncChannels([42], analyticsContext)
+      syncPromise = result.current.syncChannels([ref42], analyticsContext)
     })
-    expect(result.current.syncingChannelIds).toEqual(new Set([42]))
+    expect(result.current.syncingResourceKeys).toEqual(new Set([refKey42]))
 
     resolveSync({ success: false, error: "provider unavailable" })
     await act(async () => syncPromise)
@@ -128,7 +143,7 @@ describe("useManagedSiteChannelModelSync", () => {
         insights: expect.objectContaining({ itemCount: 1, selectedCount: 1 }),
       }),
     )
-    expect(result.current.syncingChannelIds).toEqual(new Set())
+    expect(result.current.syncingResourceKeys).toEqual(new Set())
   })
 
   it("uses localized fallback copy when model sync returns no error", async () => {
@@ -137,10 +152,15 @@ describe("useManagedSiteChannelModelSync", () => {
       key === "toasts.syncFailedFallback" ? "Localized sync fallback" : key,
     )
     const { result } = renderHook(() =>
-      useManagedSiteChannelModelSync({ siteType: SITE_TYPES.NEW_API }),
+      useManagedSiteChannelModelSync({
+        scopeKey: "https://example.com",
+        siteType: SITE_TYPES.NEW_API,
+      }),
     )
 
-    await act(async () => result.current.syncChannels([42], analyticsContext))
+    await act(async () =>
+      result.current.syncChannels([ref42], analyticsContext),
+    )
 
     expect(translationMock).toHaveBeenCalledWith("toasts.syncFailedFallback")
     expect(translationMock).toHaveBeenCalledWith("toasts.syncFailed", {
@@ -148,7 +168,7 @@ describe("useManagedSiteChannelModelSync", () => {
     })
   })
 
-  it("syncs eligible native channel ids and reports refreshed models", async () => {
+  it("syncs opaque resource references and reports refreshed models", async () => {
     let resolveSync!: (value: unknown) => void
     sendModelSyncMessageMock.mockReturnValue(
       new Promise((resolve) => {
@@ -158,6 +178,7 @@ describe("useManagedSiteChannelModelSync", () => {
     const onModelsChanged = vi.fn()
     const { result } = renderHook(() =>
       useManagedSiteChannelModelSync({
+        scopeKey: "https://example.com",
         siteType: SITE_TYPES.NEW_API,
         onModelsChanged,
       }),
@@ -165,15 +186,18 @@ describe("useManagedSiteChannelModelSync", () => {
 
     let syncPromise!: Promise<void>
     act(() => {
-      syncPromise = result.current.syncChannels([0, 42], analyticsContext)
+      syncPromise = result.current.syncChannels(
+        [modelResourceRef(""), ref42],
+        analyticsContext,
+      )
     })
-    expect(result.current.syncingChannelIds).toEqual(new Set([42]))
+    expect(result.current.syncingResourceKeys).toEqual(new Set([refKey42]))
 
     resolveSync({
       success: true,
       data: {
         statistics: { successCount: 1, failureCount: 0 },
-        items: [{ channelId: 42, ok: true, newModels: ["model-a"] }],
+        items: [{ resourceRef: ref42, ok: true, newModels: ["model-a"] }],
       },
     })
     await act(async () => syncPromise)
@@ -181,11 +205,13 @@ describe("useManagedSiteChannelModelSync", () => {
     expect(sendModelSyncMessageMock).toHaveBeenCalledWith(
       ModelSyncMessageTypes.TriggerSelected,
       {
-        channelIds: [42],
+        resourceRefs: [ref42],
         protectionBypassExecution: { kind: "user-command" },
       },
     )
-    expect(onModelsChanged).toHaveBeenCalledWith(new Map([[42, "model-a"]]))
+    expect(onModelsChanged).toHaveBeenCalledWith(
+      new Map([[refKey42, "model-a"]]),
+    )
     expect(translationMock).toHaveBeenCalledWith("toasts.syncCompleted", {
       success: 1,
       total: 1,
@@ -202,7 +228,7 @@ describe("useManagedSiteChannelModelSync", () => {
       }),
     )
     await waitFor(() =>
-      expect(result.current.syncingChannelIds).toEqual(new Set()),
+      expect(result.current.syncingResourceKeys).toEqual(new Set()),
     )
   })
 
@@ -221,24 +247,60 @@ describe("useManagedSiteChannelModelSync", () => {
         }),
       )
     const { result } = renderHook(() =>
-      useManagedSiteChannelModelSync({ siteType: SITE_TYPES.NEW_API }),
+      useManagedSiteChannelModelSync({
+        scopeKey: "https://example.com",
+        siteType: SITE_TYPES.NEW_API,
+      }),
     )
 
     let firstPromise!: Promise<void>
     let secondPromise!: Promise<void>
     act(() => {
-      firstPromise = result.current.syncChannels([42], analyticsContext)
-      secondPromise = result.current.syncChannels([42], analyticsContext)
+      firstPromise = result.current.syncChannels([ref42], analyticsContext)
+      secondPromise = result.current.syncChannels([ref42], analyticsContext)
     })
-    expect(result.current.syncingChannelIds).toEqual(new Set([42]))
+    expect(result.current.syncingResourceKeys).toEqual(new Set([refKey42]))
 
     resolveFirst({ success: true })
     await act(async () => firstPromise)
-    expect(result.current.syncingChannelIds).toEqual(new Set([42]))
+    expect(result.current.syncingResourceKeys).toEqual(new Set([refKey42]))
 
     resolveSecond({ success: true })
     await act(async () => secondPromise)
-    expect(result.current.syncingChannelIds).toEqual(new Set())
+    expect(result.current.syncingResourceKeys).toEqual(new Set())
+  })
+
+  it("does not merge a same-ID result from another deployment into refreshed models", async () => {
+    const onModelsChanged = vi.fn()
+    sendModelSyncMessageMock.mockResolvedValue({
+      success: true,
+      data: {
+        statistics: { successCount: 1, failureCount: 0 },
+        items: [
+          { resourceRef: ref42, ok: true, newModels: ["current-model"] },
+          {
+            resourceRef: { ...ref42, scopeKey: "https://other.example" },
+            ok: true,
+            newModels: ["other-model"],
+          },
+        ],
+      },
+    })
+    const { result } = renderHook(() =>
+      useManagedSiteChannelModelSync({
+        siteType: SITE_TYPES.NEW_API,
+        scopeKey: "https://example.com",
+        onModelsChanged,
+      }),
+    )
+
+    await act(async () =>
+      result.current.syncChannels([ref42], analyticsContext),
+    )
+
+    expect(onModelsChanged).toHaveBeenCalledWith(
+      new Map([[refKey42, "current-model"]]),
+    )
   })
 
   it("reports partial success when model sync succeeds but reconciliation fails", async () => {
@@ -246,7 +308,7 @@ describe("useManagedSiteChannelModelSync", () => {
       success: true,
       data: {
         statistics: { successCount: 1, failureCount: 0 },
-        items: [{ channelId: 42, ok: true, newModels: ["model-a"] }],
+        items: [{ resourceRef: ref42, ok: true, newModels: ["model-a"] }],
       },
     })
     const onModelsChanged = vi.fn().mockResolvedValue({
@@ -255,12 +317,15 @@ describe("useManagedSiteChannelModelSync", () => {
     })
     const { result } = renderHook(() =>
       useManagedSiteChannelModelSync({
+        scopeKey: "https://example.com",
         siteType: SITE_TYPES.NEW_API,
         onModelsChanged,
       }),
     )
 
-    await act(async () => result.current.syncChannels([42], analyticsContext))
+    await act(async () =>
+      result.current.syncChannels([ref42], analyticsContext),
+    )
 
     expect(toastErrorMock).toHaveBeenCalledWith(
       "toasts.syncCompletedRefreshFailed",
@@ -285,12 +350,15 @@ describe("useManagedSiteChannelModelSync", () => {
     })
     const { result } = renderHook(() =>
       useManagedSiteChannelModelSync({
+        scopeKey: "https://example.com",
         siteType: SITE_TYPES.NEW_API,
         onModelsChanged: vi.fn().mockRejectedValue(new Error("refresh failed")),
       }),
     )
 
-    await act(async () => result.current.syncChannels([42], analyticsContext))
+    await act(async () =>
+      result.current.syncChannels([ref42], analyticsContext),
+    )
 
     expect(toastErrorMock).toHaveBeenCalledWith(
       "toasts.syncCompletedRefreshFailed",
@@ -313,7 +381,11 @@ describe("useManagedSiteChannelModelSync", () => {
     const onModelsChanged = vi.fn()
     const { result, rerender } = renderHook(
       ({ siteType }: { siteType: ManagedSiteType }) =>
-        useManagedSiteChannelModelSync({ siteType, onModelsChanged }),
+        useManagedSiteChannelModelSync({
+          scopeKey: "https://example.com",
+          siteType,
+          onModelsChanged,
+        }),
       {
         initialProps: { siteType: SITE_TYPES.NEW_API } as {
           siteType: ManagedSiteType
@@ -323,18 +395,18 @@ describe("useManagedSiteChannelModelSync", () => {
 
     let syncPromise!: Promise<void>
     act(() => {
-      syncPromise = result.current.syncChannels([42], analyticsContext)
+      syncPromise = result.current.syncChannels([ref42], analyticsContext)
     })
-    expect(result.current.syncingChannelIds).toEqual(new Set([42]))
+    expect(result.current.syncingResourceKeys).toEqual(new Set([refKey42]))
 
     rerender({ siteType: SITE_TYPES.AXON_HUB } as { siteType: ManagedSiteType })
-    expect(result.current.syncingChannelIds).toEqual(new Set())
+    expect(result.current.syncingResourceKeys).toEqual(new Set())
 
     resolveSync({
       success: true,
       data: {
         statistics: { successCount: 1, failureCount: 0 },
-        items: [{ channelId: 42, ok: true, newModels: ["stale-model"] }],
+        items: [{ resourceRef: ref42, ok: true, newModels: ["stale-model"] }],
       },
     })
     await act(async () => syncPromise)
@@ -347,7 +419,7 @@ describe("useManagedSiteChannelModelSync", () => {
         insights: expect.objectContaining({ selectedCount: 1 }),
       }),
     )
-    expect(result.current.syncingChannelIds).toEqual(new Set())
+    expect(result.current.syncingResourceKeys).toEqual(new Set())
   })
 
   it("invalidates reconciliation during a managed-site type commit", async () => {
@@ -356,7 +428,7 @@ describe("useManagedSiteChannelModelSync", () => {
       success: true,
       data: {
         statistics: { successCount: 1, failureCount: 0 },
-        items: [{ channelId: 42, ok: true, newModels: ["model-a"] }],
+        items: [{ resourceRef: ref42, ok: true, newModels: ["model-a"] }],
       },
     })
     const onModelsChanged = vi.fn(
@@ -367,7 +439,11 @@ describe("useManagedSiteChannelModelSync", () => {
     )
     const { result, rerender } = renderHook(
       ({ siteType }: { siteType: ManagedSiteType }) =>
-        useManagedSiteChannelModelSync({ siteType, onModelsChanged }),
+        useManagedSiteChannelModelSync({
+          scopeKey: "https://example.com",
+          siteType,
+          onModelsChanged,
+        }),
       {
         initialProps: { siteType: SITE_TYPES.NEW_API } as {
           siteType: ManagedSiteType
@@ -377,7 +453,7 @@ describe("useManagedSiteChannelModelSync", () => {
 
     let syncPromise!: Promise<void>
     act(() => {
-      syncPromise = result.current.syncChannels([42], analyticsContext)
+      syncPromise = result.current.syncChannels([ref42], analyticsContext)
     })
     await waitFor(() => expect(onModelsChanged).toHaveBeenCalled())
 
@@ -405,6 +481,7 @@ describe("useManagedSiteChannelModelSync", () => {
     const onModelsChanged = vi.fn()
     const { result, unmount } = renderHook(() =>
       useManagedSiteChannelModelSync({
+        scopeKey: "https://example.com",
         siteType: SITE_TYPES.NEW_API,
         onModelsChanged,
       }),
@@ -412,14 +489,14 @@ describe("useManagedSiteChannelModelSync", () => {
 
     let syncPromise!: Promise<void>
     act(() => {
-      syncPromise = result.current.syncChannels([42], analyticsContext)
+      syncPromise = result.current.syncChannels([ref42], analyticsContext)
     })
     unmount()
     resolveSync({
       success: true,
       data: {
         statistics: { successCount: 1, failureCount: 0 },
-        items: [{ channelId: 42, ok: true, newModels: ["stale-model"] }],
+        items: [{ resourceRef: ref42, ok: true, newModels: ["stale-model"] }],
       },
     })
     await act(async () => syncPromise)

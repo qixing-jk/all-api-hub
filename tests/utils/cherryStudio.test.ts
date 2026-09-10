@@ -9,7 +9,7 @@ import {
 } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: vi.fn(),
     error: vi.fn(),
@@ -69,13 +69,13 @@ describe("cherryStudio", () => {
     })
 
     it("shows error for missing account", async () => {
-      const toast = (await import("react-hot-toast")).default
+      const toast = (await import("~/lib/notify")).default
       OpenInCherryStudio(null as any, mockToken)
       expect(toast.error).toHaveBeenCalled()
     })
 
     it("shows error for missing token", async () => {
-      const toast = (await import("react-hot-toast")).default
+      const toast = (await import("~/lib/notify")).default
       OpenInCherryStudio(mockAccount, null as any)
       expect(toast.error).toHaveBeenCalled()
     })

@@ -1,20 +1,23 @@
 import type { ManagedSiteType } from "~/constants/siteType"
 import {
   MANAGED_RESOURCE_KINDS,
-  MANAGED_RESOURCE_MODES,
   type ManagedResourceKind,
 } from "~/services/accountSiteDefinitions/contracts"
-import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import type {
   ManagedChannelImportCreateSeed,
   ResourceDisplayFacts,
   ResourceEditor,
   ResourceOperationOptions,
+  ResourceValidationResult,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import { MANAGED_RESOURCE_CREATE_SEED_KINDS } from "~/services/apiAdapters/contracts/managedResourceNative"
+import {
+  MANAGED_RESOURCE_CREATE_SEED_KINDS,
+  MANAGED_RESOURCE_FAILURE_CODES,
+  ManagedResourceError,
+} from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import type { ManagedSiteMutationResult } from "~/services/managedSites/mutations"
-import { CHANNEL_STATUS, type ChannelFormData } from "~/types/managedSite"
+import { type ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
 
 interface NativeManagedChannelImportEditor {
   siteType: ManagedSiteType
@@ -25,73 +28,79 @@ interface NativeManagedChannelImportEditor {
 interface NativeManagedChannelImportSession {
   siteType: ManagedSiteType
   kind: ManagedResourceKind
+  reconcile(options?: ResourceOperationOptions): Promise<void>
   openEditor(
-    draft: ChannelFormData,
+    draft: ManagedSiteChannelDraft,
     options?: ResourceOperationOptions,
   ): Promise<NativeManagedChannelImportEditor>
   submit(
-    draft: ChannelFormData,
+    draft: ManagedSiteChannelDraft,
     options?: ResourceOperationOptions,
   ): Promise<ManagedSiteMutationResult<ResourceDisplayFacts>>
 }
 
 const createManagedChannelImportSeed = (
-  draft: ChannelFormData,
+  draft: ManagedSiteChannelDraft,
 ): ManagedChannelImportCreateSeed => ({
   kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
   name: draft.name,
   channelType: String(draft.type),
   credential: draft.key,
   baseUrl: draft.base_url,
-  enabled: draft.status === CHANNEL_STATUS.Enable,
+  enabled: draft.enabled,
   models: [...draft.models],
   orderingWeight: draft.weight,
   priority: draft.priority,
   notes: draft.notes ?? "",
 })
 
+/** Uses native create rules to validate an import without opening a workspace. */
+export function validateNativeManagedChannelImportDraft(
+  siteType: ManagedSiteType,
+  draft: ManagedSiteChannelDraft,
+): ResourceValidationResult {
+  const registration = getManagedResourceRegistration(
+    siteType,
+    MANAGED_RESOURCE_KINDS.Channel,
+  )
+  if (!registration?.validateCreateSeed) {
+    throw new ManagedResourceError({
+      code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
+    })
+  }
+  return registration.validateCreateSeed(createManagedChannelImportSeed(draft))
+}
+
 /** Opens a provider-native create editor when that provider owns import binding. */
 export async function openNativeManagedChannelImportEditor(
   siteType: ManagedSiteType,
-  draft: ChannelFormData,
+  draft: ManagedSiteChannelDraft,
   options?: ResourceOperationOptions,
-): Promise<NativeManagedChannelImportEditor | null> {
+): Promise<NativeManagedChannelImportEditor> {
   const session = await openNativeManagedChannelImportSession(siteType, options)
-  return session ? await session.openEditor(draft, options) : null
+  return await session.openEditor(draft, options)
 }
 
 /** Opens one reusable native import session for interactive or batch creates. */
 export async function openNativeManagedChannelImportSession(
   siteType: ManagedSiteType,
   options?: ResourceOperationOptions,
-): Promise<NativeManagedChannelImportSession | null> {
+): Promise<NativeManagedChannelImportSession> {
   const kind = MANAGED_RESOURCE_KINDS.Channel
   const registration = getManagedResourceRegistration(siteType, kind)
-  const rejectMissingNativeCapability = () => {
-    const policy = getAccountSiteDefinition(siteType)?.managedResource
-    if (
-      policy?.mode === MANAGED_RESOURCE_MODES.NativeResource &&
-      policy.primaryKind === kind
-    ) {
-      throw new Error("native managed channel import capability missing")
-    }
-  }
-  if (!registration) {
-    rejectMissingNativeCapability()
-    return null
-  }
   if (
-    !registration.createSeedKinds?.includes(
+    !registration?.createSeedKinds?.includes(
       MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
     )
   ) {
-    rejectMissingNativeCapability()
-    return null
+    throw new ManagedResourceError({
+      code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
+    })
   }
 
   const workspace = await registration.open(options)
   const openEditor = async (
-    draft: ChannelFormData,
+    draft: ManagedSiteChannelDraft,
     editorOptions?: ResourceOperationOptions,
   ) => {
     const editor = await workspace.openCreateEditor({
@@ -109,6 +118,9 @@ export async function openNativeManagedChannelImportSession(
     siteType,
     kind,
     openEditor,
+    reconcile: async (reconcileOptions) => {
+      await workspace.list(undefined, reconcileOptions)
+    },
     submit: async (draft, submitOptions) => {
       const prepared = await openEditor(draft, submitOptions)
       return await prepared.editor.submit(

@@ -1,5 +1,4 @@
-import toast from "react-hot-toast"
-
+import toast from "~/lib/notify"
 import {
   API_TYPES,
   type ApiVerificationApiType,

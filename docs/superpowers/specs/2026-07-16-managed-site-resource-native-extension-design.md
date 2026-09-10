@@ -911,7 +911,7 @@ create call occurs for any blocked/unsupported row and no target create occurs
 when the target capability/configuration is unavailable.
 
 The shared view preserves the existing target selector, Modal,
-`DestructiveConfirmDialog`, `CollapsibleSection`, warning count and tooltip,
+`ConfirmDialog` with the general confirmation intent, `CollapsibleSection`, warning count and tooltip,
 base URL/type/models/groups/priority/weight/status comparison grid, blocked
 details, no-rollback guidance, per-item result rows, and post-execution refresh.
 Canonical `uncertain` is an explicit verify-and-refresh-required state. It is

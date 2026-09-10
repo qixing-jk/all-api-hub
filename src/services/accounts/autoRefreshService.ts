@@ -1,3 +1,4 @@
+import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import {
   AutoRefreshMessageTypes,
   onAutoRefreshMessage,
@@ -8,6 +9,7 @@ import {
   type AutoRefreshUpdateSettingsRequest,
 } from "~/services/accounts/autoRefreshMessaging"
 import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
 import {
   INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
@@ -25,9 +27,6 @@ import {
 } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-
-import { userPreferences } from "../preferences/userPreferences"
-import { accountStorage } from "./accountStorage"
 
 const logger = createLogger("AutoRefresh")
 
@@ -108,14 +107,13 @@ class AutoRefreshService {
    * Execute a background refresh cycle.
    * Catches errors and notifies frontend listeners.
    *
-   * Uses accountStorage.refreshAllAccounts with silent mode (no toast).
+   * Uses the account refresh workflow with silent mode (no toast).
    */
   private async performBackgroundRefresh() {
     try {
       logger.info("开始执行后台刷新")
 
-      // 直接调用accountStorage的刷新方法
-      const result = await accountStorage.refreshAllAccounts(false, {
+      const result = await accountRefresh.refreshAllAccounts(false, {
         protectionBypassExecution: createAutomaticProtectionBypassExecution(
           PROTECTION_BYPASS_FEATURES.AccountRefresh,
           PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
@@ -150,7 +148,7 @@ class AutoRefreshService {
   ): Promise<{ success: number; failed: number }> {
     try {
       logger.info("执行立即刷新")
-      const result = await accountStorage.refreshAllAccounts(true, {
+      const result = await accountRefresh.refreshAllAccounts(true, {
         protectionBypassExecution,
         ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
       })

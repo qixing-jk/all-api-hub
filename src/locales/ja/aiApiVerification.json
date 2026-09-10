@@ -32,11 +32,16 @@
     "meta": {
       "apiType": "API 種別",
       "apiTypePlaceholder": "API 種別を選択",
+      "mode": "テスト方式",
       "model": "モデル",
       "modelPlaceholder": "モデル ID を入力",
       "runtimeKey": "キー",
       "runtimeKeyIncompatible": "このモデルでは使用不可",
       "runtimeKeyPlaceholder": "キーを選択"
+    },
+    "modes": {
+      "nonStreaming": "非ストリーミング",
+      "streaming": "ストリーミング"
     },
     "noCompatibleRuntimeKeyHint": "このモデルのグループで使用できるキーがありません。キー管理で有効なグループのキーを作成するか選択してください。",
     "notRunYet": "未実行",

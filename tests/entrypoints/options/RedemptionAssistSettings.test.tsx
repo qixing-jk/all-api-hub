@@ -1,8 +1,8 @@
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import RedemptionAssistSettings from "~/features/BasicSettings/components/tabs/CheckinRedeem/RedemptionAssistSettings"
+import toast from "~/lib/notify"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -26,7 +26,7 @@ vi.mock("~/utils/core/logger", () => ({
   }),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     error: vi.fn(),
     success: vi.fn(),

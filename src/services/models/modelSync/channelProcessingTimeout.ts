@@ -1,4 +1,3 @@
-import type { ManagedSiteChannel } from "~/types/managedSite"
 import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
 import { t } from "~/utils/i18n/core"
 
@@ -28,34 +27,27 @@ function getChannelProcessingTimeoutMessage(timeoutSeconds: number) {
   })
 }
 
-/**
- * Read the channel's current model list for timeout failure metadata.
- */
-function getExistingChannelModels(channel: ManagedSiteChannel) {
-  return channel.models
-    ? channel.models
-        .split(",")
-        .map((model) => model.trim())
-        .filter(Boolean)
-    : []
-}
+type ChannelProcessingSnapshot = Pick<
+  ExecutionItemResult,
+  "resourceRef" | "channelName"
+> & { oldModels: string[] }
 
 /**
  * Create a channel-level failure result when processing exceeds the configured timeout.
  */
 function createChannelProcessingTimeoutResult(
-  channel: ManagedSiteChannel,
+  snapshot: ChannelProcessingSnapshot,
   maxRetries: number,
   timeoutSeconds: number,
 ): ExecutionItemResult {
   return {
-    channelId: channel.id,
-    channelName: channel.name,
+    resourceRef: snapshot.resourceRef,
+    channelName: snapshot.channelName,
     ok: false,
     message: getChannelProcessingTimeoutMessage(timeoutSeconds),
     attempts: maxRetries + 1,
     finishedAt: Date.now(),
-    oldModels: getExistingChannelModels(channel),
+    oldModels: snapshot.oldModels,
   }
 }
 
@@ -64,7 +56,7 @@ function createChannelProcessingTimeoutResult(
  */
 export async function runWithChannelProcessingTimeout(
   work: (abortSignal?: AbortSignal) => Promise<ExecutionItemResult>,
-  channel: ManagedSiteChannel,
+  snapshot: ChannelProcessingSnapshot,
   maxRetries: number,
   timeoutSeconds: number | null | undefined,
 ): Promise<ExecutionItemResult> {
@@ -83,7 +75,7 @@ export async function runWithChannelProcessingTimeout(
         timeoutId = setTimeout(() => {
           resolve(
             createChannelProcessingTimeoutResult(
-              channel,
+              snapshot,
               maxRetries,
               normalizedTimeout,
             ),

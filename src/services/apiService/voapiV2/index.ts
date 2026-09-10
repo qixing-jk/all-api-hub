@@ -39,6 +39,7 @@ import {
   quotaToAmountString,
   type VoApiV2EnvelopeOptions,
 } from "./parsing"
+import { decodeVoApiV2ResponseError } from "./responseError"
 import { resyncVoApiV2AuthToken } from "./tokenResync"
 import {
   VOAPI_V2_ENDPOINTS,
@@ -82,15 +83,12 @@ async function fetchVoApiV2Data<TData>(
   options: RequestInit = {},
   parseOptions?: VoApiV2EnvelopeOptions,
 ): Promise<TData> {
-  const body = await fetchApi<unknown>(
-    request,
-    {
-      endpoint,
-      options,
-      authTokenMode: API_AUTH_TOKEN_MODES.Raw,
-    },
-    true,
-  )
+  const body = await fetchApi<unknown>(request, {
+    endpoint,
+    options,
+    authTokenMode: API_AUTH_TOKEN_MODES.Raw,
+    errorResponseDecoder: decodeVoApiV2ResponseError,
+  })
 
   return parseVoApiV2Envelope<TData>(body, endpoint, parseOptions)
 }
@@ -1003,14 +1001,16 @@ export async function submitVoApiV2CheckIn(
       endpoint: VOAPI_V2_ENDPOINTS.CheckInSubmit,
       options: { method: "POST" },
       authTokenMode: API_AUTH_TOKEN_MODES.Raw,
+      errorResponseDecoder: decodeVoApiV2ResponseError,
     },
-    true,
   )
 
+  const envelope = body as unknown as VoApiV2Envelope<VoApiV2CheckInSubmitData>
+
   if (
-    body &&
-    typeof body === "object" &&
-    body.code === VOAPI_V2_PROTOCOL_CODES.AlreadySigned
+    envelope &&
+    typeof envelope === "object" &&
+    envelope.code === VOAPI_V2_PROTOCOL_CODES.AlreadySigned
   ) {
     // Code 1 is only a repeat candidate. The provider confirms the actual
     // same-day state through the read-only stats endpoint before reporting it.
@@ -1018,7 +1018,7 @@ export async function submitVoApiV2CheckIn(
   }
 
   return parseVoApiV2Envelope<VoApiV2CheckInSubmitData>(
-    body,
+    envelope,
     VOAPI_V2_ENDPOINTS.CheckInSubmit,
   )
 }

@@ -28,7 +28,7 @@ const {
   loggerErrorMock: vi.fn(),
 }))
 
-vi.mock("react-hot-toast/headless", () => ({
+vi.mock("~/lib/notify/content", () => ({
   default: {
     custom: toastCustomMock,
     dismiss: toastDismissMock,

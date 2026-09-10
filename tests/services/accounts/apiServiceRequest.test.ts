@@ -84,8 +84,8 @@ vi.mock("~/services/accounts/sub2apiAuthSession", () => ({
   },
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: {
     getAccountById: mockGetAccountById,
   },
 }))

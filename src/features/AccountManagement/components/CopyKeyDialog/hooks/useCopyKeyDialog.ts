@@ -1,11 +1,12 @@
+import type { TFunction } from "i18next"
 import { useCallback, useEffect, useRef, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import {
   KEY_MANAGEMENT_DISPLAY_ROW_KINDS,
   type NativeKeyManagementRow,
 } from "~/features/KeyManagement/types"
+import toast from "~/lib/notify"
 import { fetchDisplayAccountKeyResourceInventory } from "~/services/accounts/accountKeyResourceInventory"
 import {
   appendOrReplaceAccountRuntimeKey,
@@ -13,7 +14,10 @@ import {
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
-import { shouldShowOneTimeKeyDialogForCreatedToken } from "~/services/accounts/createdTokenSecretHandling"
+import {
+  createDisplayAccountTokenRuntimeSecret,
+  shouldShowOneTimeKeyDialogForCreatedToken,
+} from "~/services/accounts/createdTokenSecretHandling"
 import {
   canCreateAccountApiTokens,
   canListAccountKeyResources,
@@ -26,8 +30,6 @@ import {
   getRuntimeKeyInventoryErrorMessage,
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
-import { formatOptionalSkPrefixSiteToken } from "~/services/accountTokens/apiTokenKey"
-import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -52,6 +54,28 @@ const copyKeyAnalyticsContext = {
   entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
 }
 
+type PostCreateFailure =
+  | { kind: "unsupported" | "empty" }
+  | { kind: "failed"; message: string }
+
+/** Resolves persistent create feedback in the current UI language. */
+function presentPostCreateFailure(
+  failure: PostCreateFailure | null,
+  t: TFunction,
+) {
+  if (!failure) return null
+  switch (failure.kind) {
+    case "unsupported":
+      return t("ui:dialog.copyKey.createNotSupported")
+    case "empty":
+      return t("ui:dialog.copyKey.noKeyFoundAfterCreate")
+    case "failed":
+      return t("ui:dialog.copyKey.createFailed", {
+        error: failure.message || t("ui:dialog.copyKey.getFailed"),
+      })
+  }
+}
+
 /**
  * CopyKeyDialog 核心逻辑 hook，负责加载密钥清单、处理复制与展开状态。
  * @param isOpen 对话框是否打开
@@ -68,9 +92,9 @@ export function useCopyKeyDialog(
     [],
   )
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [postCreateError, setPostCreateError] = useState<string | null>(null)
-  const [oneTimeToken, setOneTimeToken] = useState<ApiToken | null>(null)
+  const [loadError, setError] = useState<string | null>(null)
+  const [postCreateFailure, setPostCreateError] =
+    useState<PostCreateFailure | null>(null)
   const [oneTimeSecret, setOneTimeSecret] =
     useState<CreatedRuntimeSecret | null>(null)
   const [copiedRuntimeKeyId, setCopiedRuntimeKeyId] = useState<string | null>(
@@ -98,7 +122,6 @@ export function useCopyKeyDialog(
     setNativeKeyRows([])
     setError(null)
     setPostCreateError(null)
-    setOneTimeToken(null)
     setOneTimeSecret(null)
     setCopiedRuntimeKeyId(null)
     setExpandedRuntimeKeys(new Set())
@@ -143,7 +166,7 @@ export function useCopyKeyDialog(
             rowKey: `copy-key-native-${requestId}-${index}`,
             accountId: account.id,
             accountName: account.name,
-            workspaceName: inventory.scope.displayName,
+            scopeName: inventory.scope.displayName,
             facts,
           })),
         )
@@ -167,11 +190,7 @@ export function useCopyKeyDialog(
         baseUrl: account.baseUrl,
         siteType: account.siteType,
       })
-      const errorMessage = getRuntimeKeyInventoryErrorMessage(
-        error,
-        t("ui:dialog.copyKey.getFailed"),
-      )
-      setError(t("ui:dialog.copyKey.loadFailed", { error: errorMessage }))
+      setError(getRuntimeKeyInventoryErrorMessage(error, ""))
     } finally {
       if (fetchRequestIdRef.current === requestId) {
         if (inventoryAbortControllerRef.current === controller) {
@@ -180,13 +199,7 @@ export function useCopyKeyDialog(
         setIsLoading(false)
       }
     }
-  }, [
-    account,
-    canLoadNativeKeys,
-    canLoadRuntimeKeys,
-    resetPresentationState,
-    t,
-  ])
+  }, [account, canLoadNativeKeys, canLoadRuntimeKeys, resetPresentationState])
 
   useEffect(() => {
     if (isOpen && account) {
@@ -262,7 +275,7 @@ export function useCopyKeyDialog(
       if (!account) return
 
       if (!canCreateDefaultKey) {
-        setPostCreateError(t("ui:dialog.copyKey.createNotSupported"))
+        setPostCreateError({ kind: "unsupported" })
         return
       }
 
@@ -284,11 +297,8 @@ export function useCopyKeyDialog(
               createdRuntimeKey,
             ),
           )
-          setOneTimeToken(
-            formatOptionalSkPrefixSiteToken(createdToken, account.siteType),
-          )
           setOneTimeSecret(
-            createAIHubMixCreatedRuntimeSecret({
+            createDisplayAccountTokenRuntimeSecret({
               account,
               token: createdToken,
             }),
@@ -302,7 +312,7 @@ export function useCopyKeyDialog(
         setRuntimeKeys(refreshedRuntimeKeys)
 
         if (refreshedRuntimeKeys.length === 0) {
-          setPostCreateError(t("ui:dialog.copyKey.noKeyFoundAfterCreate"))
+          setPostCreateError({ kind: "empty" })
           return
         }
 
@@ -322,13 +332,10 @@ export function useCopyKeyDialog(
           baseUrl: account.baseUrl,
           siteType: account.siteType,
         })
-        const errorMessage = getRuntimeKeyInventoryErrorMessage(
-          error,
-          t("ui:dialog.copyKey.getFailed"),
-        )
-        setPostCreateError(
-          t("ui:dialog.copyKey.createFailed", { error: errorMessage }),
-        )
+        setPostCreateError({
+          kind: "failed",
+          message: getRuntimeKeyInventoryErrorMessage(error, ""),
+        })
       }
     },
     [account, canCreateDefaultKey, copyKey, t],
@@ -350,9 +357,13 @@ export function useCopyKeyDialog(
     runtimeKeys,
     nativeKeyRows,
     isLoading,
-    error,
-    postCreateError,
-    oneTimeToken,
+    error:
+      loadError !== null
+        ? t("ui:dialog.copyKey.loadFailed", {
+            error: loadError || t("ui:dialog.copyKey.getFailed"),
+          })
+        : null,
+    postCreateError: presentPostCreateFailure(postCreateFailure, t),
     oneTimeSecret,
     copiedRuntimeKeyId,
     expandedRuntimeKeys,
@@ -362,8 +373,7 @@ export function useCopyKeyDialog(
     copyKey,
     refreshRuntimeKeysAfterCreate,
     toggleRuntimeKeyExpansion,
-    clearOneTimeToken: () => {
-      setOneTimeToken(null)
+    clearOneTimeSecret: () => {
       setOneTimeSecret(null)
     },
   }

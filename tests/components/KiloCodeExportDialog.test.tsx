@@ -74,7 +74,7 @@ vi.mock("~/components/ui", async (importOriginal) => {
   }
 })
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: (...args: unknown[]) => toastSuccessMock(...args),
     error: (...args: unknown[]) => toastErrorMock(...args),
@@ -143,7 +143,7 @@ vi.mock("~/services/apiAdapters/registry", () => ({
     mockgetSiteTypeCapabilities(...args),
 }))
 
-vi.mock("~/services/accounts/accountOperations", () => ({
+vi.mock("~/services/accounts/ensureAccountApiToken", () => ({
   ensureAccountApiToken: (...args: unknown[]) =>
     mockEnsureAccountApiToken(...args),
 }))

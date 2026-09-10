@@ -7,6 +7,10 @@ import {
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import {
+  buildManagedResourceMatchCandidate,
+  matchingResourceRef,
+} from "~~/tests/test-utils/managedResourceMatching"
 
 const { getPreferencesStrict, searchChannel } = vi.hoisted(() => ({
   getPreferencesStrict: vi.fn(),
@@ -27,8 +31,11 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/managedSites/managedSiteService", () => ({
-  getManagedSiteServiceForType: vi.fn(() => ({ searchChannel })),
+vi.mock("~/services/apiAdapters/registry", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/services/apiAdapters/registry")>()),
+  getManagedSiteCapabilities: vi.fn(() => ({
+    matching: { search: searchChannel },
+  })),
 }))
 
 const allowedPolicy = {
@@ -108,7 +115,13 @@ describe("default New API session-read resource validator", () => {
       },
     })
     searchChannel.mockResolvedValue({
-      items: [{ id: resource.channelId }],
+      items: [
+        buildManagedResourceMatchCandidate({
+          ref: matchingResourceRef(resource.channelId, {
+            scopeKey: resource.origin,
+          }),
+        }),
+      ],
     })
   })
 
@@ -143,7 +156,13 @@ describe("default New API session-read resource validator", () => {
   )
 
   it("fails closed when exact channel search does not return the requested ID", async () => {
-    searchChannel.mockResolvedValue({ items: [{ id: 112 }] })
+    searchChannel.mockResolvedValue({
+      items: [
+        buildManagedResourceMatchCandidate({
+          ref: matchingResourceRef(112, { scopeKey: resource.origin }),
+        }),
+      ],
+    })
 
     const response = await executeDefaultResourceValidation()
 

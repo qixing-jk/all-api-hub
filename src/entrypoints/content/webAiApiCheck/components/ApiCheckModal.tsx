@@ -22,10 +22,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "~/components/ui/collapsible"
-import { inputVariants } from "~/components/ui/input"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { cn } from "~/lib/utils"
-import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
+import {
+  API_VERIFICATION_MODES,
+  type ApiVerificationApiType,
+  type ApiVerificationMode,
+} from "~/services/verification/aiApiVerification"
+import { getApiVerificationModeLabel } from "~/services/verification/aiApiVerification/i18n"
 
 import { WEB_AI_API_CHECK_TEST_IDS } from "../testIds"
 import { ApiCheckBaseUrlHistoryPicker } from "./ApiCheckBaseUrlHistoryPicker"
@@ -215,26 +219,45 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                   >
                     {t("webAiApiCheck:modal.fields.apiType")}
                   </label>
-                  <select
+                  <SearchableSelect
                     id="api-check-api-type"
-                    className={cn(inputVariants({}), "dark:bg-input/30 h-9")}
+                    aria-label={t("webAiApiCheck:modal.fields.apiType")}
+                    options={view.apiTypeOptions}
                     value={view.apiType}
-                    onChange={(e) =>
-                      actions.setApiType(
-                        e.target.value as ApiVerificationApiType,
-                      )
+                    onChange={(value) =>
+                      actions.setApiType(value as ApiVerificationApiType)
                     }
-                    disabled={view.isRunningAll}
-                  >
-                    {view.apiTypeOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                    disabled={!view.canClose}
+                    portalContainer={view.popoverPortalContainer ?? undefined}
+                  />
                 </div>
 
                 <div className="space-y-1.5">
+                  <label
+                    htmlFor="api-check-verification-mode"
+                    className="text-muted-foreground block text-xs"
+                  >
+                    {t("aiApiVerification:verifyDialog.meta.mode")}
+                  </label>
+                  <SearchableSelect
+                    id="api-check-verification-mode"
+                    aria-label={t("aiApiVerification:verifyDialog.meta.mode")}
+                    options={Object.values(API_VERIFICATION_MODES).map(
+                      (mode) => ({
+                        value: mode,
+                        label: getApiVerificationModeLabel(t, mode),
+                      }),
+                    )}
+                    value={view.verificationMode}
+                    onChange={(value) =>
+                      actions.setVerificationMode(value as ApiVerificationMode)
+                    }
+                    disabled={!view.canClose}
+                    portalContainer={view.popoverPortalContainer ?? undefined}
+                  />
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2">
                   <label
                     htmlFor="api-check-model-id"
                     className="text-muted-foreground block text-xs"

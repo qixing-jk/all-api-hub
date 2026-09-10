@@ -34,16 +34,21 @@
     },
     "filters": {
       "all": "Todos",
+      "alreadyChecked": "Registro ya realizado",
       "clearAll": "Borrar filtros",
       "countFiltered": "Mostrando {{filtered}} de {{total}}",
       "countTotal": "{{total}} en total",
       "failed": "Fallidos",
-      "failedOrSkipped": "Fallidos u omitidos",
+      "needsAttention": "Requiere atención",
       "searchLabel": "Buscar resultados de ejecución",
       "searchPlaceholder": "Buscar por nombre de cuenta, ID o mensaje...",
-      "skipped": "Omitidos",
+      "selectedStatuses_one": "{{count}} estado seleccionado",
+      "selectedStatuses_many": "{{count}} estados seleccionados",
+      "selectedStatuses_other": "{{count}} estados seleccionados",
+      "skipped": "No ejecutados",
       "statusLabel": "Filtrar por estado de ejecución",
-      "success": "Correctos"
+      "success": "Registro en esta ejecución",
+      "uncertain": "Confirmación pendiente"
     },
     "hints": {
       "invalidAccessToken": "Solución: es posible que el Access Token haya vencido. Vuelve a iniciar sesión en el sitio y luego, en 'Administración de cuentas → Editar cuenta', vuelve a identificar/actualizar automáticamente el Access Token. Si el problema continúa después de la identificación automática, obtén y modifica manualmente el Access Token.",
@@ -68,8 +73,8 @@
     "status": {
       "alreadyChecked": "Ya hizo check-in",
       "failed": "Fallido",
-      "skipped": "Omitido",
-      "success": "Correcto",
+      "skipped": "No ejecutado",
+      "success": "Registro en esta ejecución",
       "uncertain": "Confirmación pendiente"
     },
     "table": {
@@ -253,12 +258,14 @@
     },
     "retryDisabled": "Reintento deshabilitado",
     "summary": {
+      "alreadyChecked": "Registro ya realizado",
       "eligible": "Elegibles",
       "executed": "Ejecutadas",
       "failed": "Fallidas",
-      "skipped": "Omitidas",
-      "success": "Correctas",
-      "title": "Resumen de ejecución"
+      "skipped": "No ejecutadas",
+      "success": "Registro en esta ejecución",
+      "title": "Resumen de ejecución",
+      "uncertain": "Confirmación pendiente"
     }
   },
   "uiOpenPretrigger": {

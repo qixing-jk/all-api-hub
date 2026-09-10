@@ -9,7 +9,6 @@ import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
-import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   AUTO_DETECT_FAILURE_REASONS,
   AutoDetectErrorType,
@@ -27,6 +26,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
+import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
@@ -57,7 +57,7 @@ const {
   mockCompletePopupCriticalFlow: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: mockToastSuccess,
     error: mockToastError,
@@ -76,10 +76,10 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
   }),
 }))
 
-vi.mock("~/services/accounts/accountOperations", async (importOriginal) => {
+vi.mock("~/services/accounts/accountAutoDetection", async (importOriginal) => {
   const actual =
     await importOriginal<
-      typeof import("~/services/accounts/accountOperations")
+      typeof import("~/services/accounts/accountAutoDetection")
     >()
 
   return {
@@ -177,6 +177,7 @@ describe("useAccountDialog analytics", () => {
 
   const expectStartedAction = (
     actionId:
+      | typeof PRODUCT_ANALYTICS_ACTION_IDS.CreateAccount
       | typeof PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect
       | typeof PRODUCT_ANALYTICS_ACTION_IDS.ImportAccountCookies
       | typeof PRODUCT_ANALYTICS_ACTION_IDS.ImportSub2apiSession,
@@ -366,6 +367,7 @@ describe("useAccountDialog analytics", () => {
   })
 
   it("tracks failed account auto-detect with safe context and a safe error category", async () => {
+    const recoverySecret = "private-recovery-secret"
     mockAutoDetectAccount.mockResolvedValueOnce({
       success: false,
       message: "backend leaked private host",
@@ -380,6 +382,19 @@ describe("useAccountDialog analytics", () => {
       detailedError: {
         type: AutoDetectErrorType.UNAUTHORIZED,
         message: "private backend text",
+      },
+      recoveryData: {
+        siteType: SITE_TYPES.NEW_API,
+        username: "private-recovery-user",
+        accessToken: recoverySecret,
+        cookieAuthSessionCookie: `session=${recoverySecret}`,
+        transientAuth: {
+          kind: "new-api-dashboard-bearer",
+          token: recoverySecret,
+          expiresAt: 4_102_444_800,
+          sessionId: "private-recovery-session",
+          origin: "https://private.example.com",
+        },
       },
     })
 
@@ -422,6 +437,12 @@ describe("useAccountDialog analytics", () => {
       },
     )
     expectNoSensitiveAnalyticsFields()
+    expect(
+      JSON.stringify(mockStartProductAnalyticsAction.mock.calls),
+    ).not.toContain(recoverySecret)
+    expect(
+      JSON.stringify(mockCompleteProductAnalyticsAction.mock.calls),
+    ).not.toContain(recoverySecret)
   })
 
   it("tracks completion failures with the final hinted site type", async () => {
@@ -628,7 +649,7 @@ describe("useAccountDialog analytics", () => {
     expectNoSensitiveAnalyticsFields()
   })
 
-  it("tracks duplicate-warning cancellation during account auto-detect as cancelled", async () => {
+  it("tracks duplicate-warning cancellation during account save as cancelled", async () => {
     await accountStorage.addAccount(
       buildSiteAccount({
         site_url: "https://private.example.com",
@@ -643,11 +664,19 @@ describe("useAccountDialog analytics", () => {
 
     await act(async () => {
       result.current.setters.setUrl("https://private.example.com")
+      result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+      result.current.setters.setUserId(buildSiteAccount().account_info.id)
+      result.current.setters.setSiteName("Draft")
+      result.current.setters.setUsername("same-user")
+      result.current.setters.setAccessToken("private-token")
+      result.current.setters.setExchangeRate("7")
     })
 
-    let autoDetectPromise!: Promise<void>
+    let savePromise: ReturnType<
+      typeof result.current.handlers.handleSaveAccount
+    >
     act(() => {
-      autoDetectPromise = result.current.handlers.handleAutoDetect()
+      savePromise = result.current.handlers.handleSaveAccount()
     })
 
     await waitFor(() => {
@@ -656,18 +685,12 @@ describe("useAccountDialog analytics", () => {
 
     await act(async () => {
       result.current.handlers.handleDuplicateAccountWarningCancel()
-      await autoDetectPromise
+      await savePromise
     })
 
-    expectStartedAction(PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect)
+    expectStartedAction(PRODUCT_ANALYTICS_ACTION_IDS.CreateAccount)
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Cancelled,
-      {
-        insights: {
-          fallbackUsed: false,
-          requestedAuthMode: AuthTypeEnum.AccessToken,
-        },
-      },
     )
     expect(mockAutoDetectAccount).not.toHaveBeenCalled()
     expectNoSensitiveAnalyticsFields()
@@ -698,51 +721,7 @@ describe("useAccountDialog analytics", () => {
     expectNoSensitiveAnalyticsFields()
   })
 
-  it("tracks duplicate-check persistence errors with requested auth mode", async () => {
-    const { result } = renderAddHook()
-
-    await waitFor(() => {
-      expect(result.current.state).toBeTruthy()
-    })
-
-    await setUrlAndWait(result, "https://private.example.com")
-
-    const storageGetSpy = vi
-      .spyOn(accountStorage, "getAllAccountsOrThrow")
-      .mockResolvedValueOnce({
-        get filter() {
-          throw new Error("private duplicate check failure")
-        },
-      } as any)
-
-    await act(async () => {
-      await result.current.handlers.handleAutoDetect()
-    })
-
-    expectStartedAction(PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect)
-    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Failure,
-      {
-        diagnostics: {
-          failure: {
-            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
-            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
-          },
-        },
-        insights: {
-          fallbackUsed: false,
-          requestedAuthMode: AuthTypeEnum.AccessToken,
-        },
-      },
-    )
-    expect(mockAutoDetectAccount).not.toHaveBeenCalled()
-    expectNoSensitiveAnalyticsFields()
-
-    storageGetSpy.mockRestore()
-  })
-
-  it("does not treat advisory duplicate-check errors as auto-detect failures", async () => {
+  it("does not run duplicate lookup before detecting the account identity", async () => {
     mockAutoDetectAccount.mockResolvedValueOnce({
       success: true,
       data: {
@@ -756,7 +735,7 @@ describe("useAccountDialog analytics", () => {
       },
     })
     const storageGetSpy = vi
-      .spyOn((accountStorage as any).storage, "get")
+      .spyOn(accountStorage, "getAllAccountsOrThrow")
       .mockRejectedValueOnce(new Error("private storage failure"))
 
     const { result } = renderAddHook()
@@ -772,6 +751,7 @@ describe("useAccountDialog analytics", () => {
     })
 
     expect(mockAutoDetectAccount).toHaveBeenCalled()
+    expect(storageGetSpy).not.toHaveBeenCalled()
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
       {

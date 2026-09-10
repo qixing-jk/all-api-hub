@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import VeloeraSettings from "~/features/BasicSettings/components/tabs/ManagedSite/VeloeraSettings"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 const { showUpdateToastMock } = vi.hoisted(() => ({
@@ -15,7 +15,7 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: vi.fn(),
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   runPreferenceUpdateWithToast: async ({
     expectedLastUpdated,
     setting,

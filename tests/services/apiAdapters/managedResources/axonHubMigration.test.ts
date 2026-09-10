@@ -4,7 +4,7 @@ import {
   AXON_HUB_CHANNEL_STATUS,
   AXON_HUB_CHANNEL_TYPE,
 } from "~/constants/axonHub"
-import { ChannelType } from "~/constants/managedSite"
+import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import * as axonHubNativeResources from "~/services/apiAdapters/managedResources/axonHub"
@@ -21,6 +21,7 @@ import {
 
 const mocks = vi.hoisted(() => ({
   hasUsableApiTokenKey: vi.fn(),
+  hasCompleteAxonHubAdvancedDetail: vi.fn(),
   openAxonHubNativeResourceOperations: vi.fn(),
 }))
 
@@ -42,6 +43,15 @@ vi.mock(
 vi.mock("~/services/accountTokens/apiTokenKey", () => ({
   hasUsableApiTokenKey: mocks.hasUsableApiTokenKey,
 }))
+
+vi.mock("~/services/apiService/axonHub", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/apiService/axonHub")>()
+  return {
+    ...actual,
+    hasCompleteAxonHubAdvancedDetail: mocks.hasCompleteAxonHubAdvancedDetail,
+  }
+})
 
 const selection: ManagedSiteMigrationSelection = {
   selectionId: "selection-safe-token",
@@ -74,7 +84,7 @@ const buildSource = (
 })
 
 const buildCommand = (
-  projectionType: ChannelType | string,
+  projectionType: string | number,
   sourceType: ChannelType = ChannelType.OpenAI,
 ): ManagedSiteMigrationExecutionCommand => ({
   source: buildSource(sourceType),
@@ -87,7 +97,7 @@ const buildCommand = (
     groups: ["default"],
     priority: 0,
     weight: 0,
-    status: 1,
+    enabled: true,
   },
   credential: "credential-placeholder",
 })
@@ -96,6 +106,7 @@ describe("AxonHub migration type boundary", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.hasUsableApiTokenKey.mockReturnValue(true)
+    mocks.hasCompleteAxonHubAdvancedDetail.mockReturnValue(true)
     vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
       axonHub: {
         baseUrl: "https://axon.example.invalid",
@@ -260,6 +271,7 @@ describe("AxonHub migration type boundary", () => {
 
   it.each([
     ["future-provider", ChannelType.OpenAI],
+    [ChannelType.OpenAI, ChannelType.OpenAI],
     [ChannelType.Midjourney, ChannelType.Midjourney],
   ] as const)(
     "rejects unsupported target type %s before opening or creating",
@@ -290,6 +302,35 @@ describe("AxonHub migration type boundary", () => {
       ),
     ).resolves.toMatchObject({
       projection: { type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC },
+    })
+  })
+
+  it("marks advanced migration loss conservatively when detail used the core fallback", async () => {
+    mocks.hasCompleteAxonHubAdvancedDetail.mockReturnValue(false)
+    const get = vi.fn().mockResolvedValue({
+      id: "resource-safe-token",
+      name: "Example channel",
+      type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+      baseURL: "https://source.example.invalid",
+      supportedModels: ["model-example"],
+      credentials: { apiKeys: ["credential-placeholder"] },
+    } as AxonHubChannel)
+    vi.spyOn(
+      axonHubNativeResources,
+      "openAxonHubNativeResourceOperations",
+    ).mockResolvedValue({ get } as never)
+
+    await expect(
+      axonHubManagedSiteMigrationCapability.source!.prepare(selection),
+    ).resolves.toMatchObject({
+      status: "ready",
+      source: {
+        lossSignals: {
+          hasModelMapping: true,
+          hasAdvancedSettings: true,
+        },
+      },
     })
   })
 
@@ -391,7 +432,7 @@ describe("AxonHub migration type boundary", () => {
 
       await expect(
         axonHubManagedSiteMigrationCapability.target!.create(
-          buildCommand(ChannelType.OpenAI),
+          buildCommand(AXON_HUB_CHANNEL_TYPE.OPENAI),
           options,
         ),
       ).resolves.toEqual(expected)
@@ -436,7 +477,7 @@ describe("AxonHub migration type boundary", () => {
 
     await expect(
       axonHubManagedSiteMigrationCapability.target!.create(
-        buildCommand(ChannelType.OpenAI),
+        buildCommand(AXON_HUB_CHANNEL_TYPE.OPENAI),
       ),
     ).rejects.toThrow(
       "AxonHub migration succeeded without a confirmed create effect.",
@@ -469,7 +510,7 @@ describe("AxonHub migration type boundary", () => {
       ).mockResolvedValue({ create, list } as never)
 
       const error = await axonHubManagedSiteMigrationCapability
-        .target!.create(buildCommand(ChannelType.OpenAI), { signal })
+        .target!.create(buildCommand(AXON_HUB_CHANNEL_TYPE.OPENAI), { signal })
         .catch((caught) => caught)
 
       if (reason) {
@@ -503,7 +544,7 @@ describe("AxonHub migration type boundary", () => {
     ).mockResolvedValue({ create, list } as never)
 
     const error = await axonHubManagedSiteMigrationCapability
-      .target!.create(buildCommand(ChannelType.OpenAI))
+      .target!.create(buildCommand(AXON_HUB_CHANNEL_TYPE.OPENAI))
       .catch((failure) => failure)
 
     expect(error).toMatchObject({ name: "AbortError" })
@@ -540,7 +581,7 @@ describe("AxonHub migration type boundary", () => {
       axonHubNativeResources,
       "openAxonHubNativeResourceOperations",
     ).mockResolvedValue({ create, list: vi.fn() } as never)
-    const command = buildCommand(ChannelType.OpenAI)
+    const command = buildCommand(AXON_HUB_CHANNEL_TYPE.OPENAI)
     command.projection.baseUrl = "   "
 
     await expect(

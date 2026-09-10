@@ -103,7 +103,6 @@ export type ResourceDisplayFacts = {
 }
 
 export type ManagedResourceChannelActionFacts = {
-  channelId: number
   channelType: string | number
   canSyncModels: boolean
   canOpenModelSync: boolean
@@ -206,5 +205,7 @@ export interface ManagedResourceRegistration {
   readonly siteType: ManagedSiteType
   readonly kind: ManagedResourceKind
   readonly createSeedKinds?: readonly ManagedResourceCreateSeedKind[]
+  /** Checks an import without opening a workspace; issue fields refer to the input seed. */
+  validateCreateSeed?(seed: ManagedResourceCreateSeed): ResourceValidationResult
   open(options?: ResourceOperationOptions): Promise<ManagedResourceWorkspace>
 }

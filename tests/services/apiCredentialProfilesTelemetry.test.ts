@@ -1274,7 +1274,7 @@ describe("api credential profile telemetry", () => {
     expect(customAttempt?.endpoint).toContain("REDACTED")
   })
 
-  it("redacts the dedicated bearer token from custom telemetry errors", async () => {
+  it("does not retain provider bodies in custom telemetry errors", async () => {
     const apiKey = "shared-telemetry-secret"
     const dedicatedBearerToken = `${apiKey}-private-tail`
     const profile = await apiCredentialProfilesStorage.createProfile({
@@ -1308,7 +1308,8 @@ describe("api credential profile telemetry", () => {
 
     expect(serializedSnapshot).not.toContain(dedicatedBearerToken)
     expect(serializedSnapshot).not.toContain("private-tail")
-    expect(serializedSnapshot).toContain("[REDACTED]")
+    expect(serializedSnapshot).not.toContain("Authorization")
+    expect(serializedSnapshot).toContain("请求失败: 401")
   })
 
   it("prefers the custom configuration error when malformed custom endpoints are dropped during coercion", async () => {
@@ -1349,7 +1350,7 @@ describe("api credential profile telemetry", () => {
     )
   })
 
-  it("prefers an absolute custom endpoint error when model discovery also fails", async () => {
+  it("prefers the fixed absolute custom endpoint error when model discovery also fails", async () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
       name: "Absolute Custom Error",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
@@ -1383,7 +1384,7 @@ describe("api credential profile telemetry", () => {
     expect(customAttempt).toEqual(
       expect.objectContaining({
         status: "error",
-        message: expect.stringContaining("custom failed"),
+        message: "请求失败: 500",
       }),
     )
     expect(snapshot.lastError).toBe(customAttempt?.message)

@@ -12,6 +12,8 @@ import { PRODUCT_ANALYTICS_ERROR_CATEGORIES } from "~/services/productAnalytics/
 import { tagStorage } from "~/services/tags/tagStorage"
 import {
   API_TYPES,
+  API_VERIFICATION_MODES,
+  API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
   runApiVerificationProbe,
   type ApiVerificationApiType,
@@ -408,12 +410,31 @@ export async function resolveWebAiApiCheckRunProbeMessage(
   request: ApiCheckRunProbeRequest,
 ): Promise<ApiCheckRunProbeResponse> {
   try {
-    const { runId, apiType, baseUrl, apiKey, modelId, probeId } = request
+    const {
+      runId,
+      apiType,
+      baseUrl,
+      apiKey,
+      modelId,
+      probeId,
+      mode = API_VERIFICATION_MODES.Streaming,
+    } = request
 
     if (!apiType || !baseUrl?.trim() || !apiKey?.trim() || !probeId) {
       return {
         success: false,
         error: "Missing apiType, baseUrl, apiKey, or probeId",
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+      }
+    }
+
+    if (
+      mode !== API_VERIFICATION_MODES.Streaming &&
+      mode !== API_VERIFICATION_MODES.NonStreaming
+    ) {
+      return {
+        success: false,
+        error: "Invalid verification mode",
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
       }
     }
@@ -439,6 +460,7 @@ export async function resolveWebAiApiCheckRunProbeMessage(
         apiType,
         modelId: modelId?.trim() || undefined,
         probeId: probeId as ApiVerificationProbeId,
+        mode,
         abortSignal: abortController?.signal,
       })
 
@@ -457,6 +479,7 @@ export async function resolveWebAiApiCheckRunProbeMessage(
 
       const result: ApiVerificationProbeResult = {
         id: probeId as ApiVerificationProbeId,
+        mode: probeId === API_VERIFICATION_PROBE_IDS.Models ? undefined : mode,
         status: API_VERIFICATION_PROBE_STATUSES.Fail,
         latencyMs: 0,
         summary: message,

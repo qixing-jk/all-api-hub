@@ -1,5 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react"
-import toast from "react-hot-toast"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
@@ -11,9 +17,16 @@ import {
   isAccountSiteType,
   SITE_TYPES,
   type AccountSiteType,
+  type ManagedSiteType,
 } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { startAccountDialogAnalyticsAction } from "~/features/AccountManagement/components/AccountDialog/analytics"
+import {
+  buildDraftFromAutoDetectResult,
+  mergeAutoDetectRecoveryIntoDraft,
+  normalizeDetectedCheckIn,
+  resolveAutoDetectRecovery,
+} from "~/features/AccountManagement/components/AccountDialog/autoDetectDraft"
 import { useAccountCheckInRedetection } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountCheckInRedetection"
 import {
   buildSub2ApiAuthFromAccountDialogDraft,
@@ -22,7 +35,6 @@ import {
   shouldAutoImportCookieAuthForAccountDialogSite,
   shouldDeferAccountSaveSuccessForAccountDialogSite,
   shouldOpenSub2ApiTokenDialogForAccountDialogSite,
-  type AccountDialogSitePolicy,
 } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
 import { normalizeAddAccountPrefill } from "~/features/AccountManagement/sponsors/pendingAddAccountIntent"
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
@@ -30,22 +42,26 @@ import {
   isAccountAuthType,
   resolveDefaultAccountAuthType,
 } from "~/features/AccountManagement/utils/accountAuthType"
+import toast from "~/lib/notify"
 import {
   ACCOUNT_BROWSER_SESSION_SOURCES,
   resolveAccountBrowserSession,
   type AccountBrowserSession,
   type ResolveAccountBrowserSessionOptions,
 } from "~/services/accountBrowserSession"
-import { findExactCredentialDuplicateAccountId } from "~/services/accounts/accountDedupe"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import { autoDetectAccount } from "~/services/accounts/accountAutoDetection"
+import { validateAndSaveAccount } from "~/services/accounts/accountCreation"
 import {
-  autoDetectAccount,
-  getSiteName,
+  findExactCredentialDuplicateAccountId,
+  usesAccountCredentialIdentity,
+} from "~/services/accounts/accountDedupe"
+import {
   isValidAccount,
   parseManualQuotaFromUsd,
-  validateAndSaveAccount,
-  validateAndUpdateAccount,
-} from "~/services/accounts/accountOperations"
+} from "~/services/accounts/accountFormValidation"
+import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import { findAccountsBySiteIdentity } from "~/services/accounts/accountMatching"
+import { ACCOUNT_SAVE_FEEDBACK_LEVELS } from "~/services/accounts/accountPersistence/constants"
 import {
   ACCOUNT_POST_SAVE_WORKFLOW_STEPS,
   ACCOUNT_TOKEN_INVENTORY_STATE_KINDS,
@@ -55,9 +71,17 @@ import {
   selectSingleNewApiTokenByIdDiff,
   type AccountPostSaveWorkflowStep,
 } from "~/services/accounts/accountPostSaveWorkflow"
-import { doAccountSiteIdentitiesMatch } from "~/services/accounts/accountSiteProfile"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { normalizeAccountSiteProfileUrlForDuplicateCheck } from "~/services/accounts/accountSiteProfile/urls"
+import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
+import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
+import { validateAndUpdateAccount } from "~/services/accounts/accountUpdate"
+import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+import { createDisplayAccountTokenRuntimeSecret } from "~/services/accounts/createdTokenSecretHandling"
+import { getSiteName } from "~/services/accounts/siteName"
 import {
   createDisplayAccountApiContext,
   requireDisplayAccountKeyManagement,
@@ -67,24 +91,19 @@ import {
   AutoDetectErrorType,
   type AutoDetectError,
 } from "~/services/accounts/utils/autoDetectUtils"
-import {
-  isSameAccountSiteOrigin,
-  normalizeAccountSiteUrlForDuplicateCheck,
-} from "~/services/accounts/utils/siteUrlNormalization"
+import type { ManagedSiteMessagesKey } from "~/services/accountSiteDefinitions/contracts"
 import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
-import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
+import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import {
   createCompatibilityCheckInConfig,
-  hasNewAccountCompatibilityRegistration,
   resolveNewAccountAutomaticExecutionEnabled,
 } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
-import { mergeUserOwnedCheckInDraft } from "~/services/checkin/autoCheckin/state"
-import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
 import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteLabel,
+  getManagedSiteMessagesKeyFromSiteType,
 } from "~/services/managedSites/utils/managedSite"
 import {
   ensurePermissionsDetailed,
@@ -127,6 +146,7 @@ import {
   type DisplaySiteData,
   type SiteAccount,
 } from "~/types"
+import { ACCOUNT_KEY_AUTO_PROVISION_MODES } from "~/types/accountKeyAutoProvisioning"
 import type { CheckInMethodSelection } from "~/types/checkIn"
 import type { AccountSaveResponse } from "~/types/serviceResponse"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
@@ -141,8 +161,8 @@ import {
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { showUpdateToast, showWarningToast } from "~/utils/core/toastHelpers"
 import { tryParseOrigin } from "~/utils/core/urlParsing"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { openSettingsTab } from "~/utils/navigation"
 
 import {
@@ -152,6 +172,7 @@ import {
   type AccountDialogDraft,
   type AccountDialogFormSource,
   type AccountDialogPhase,
+  type AccountDialogRecoveryState,
   type AddAccountPrefill,
 } from "../models"
 import { useOpenRouterAccountOnboarding } from "./useOpenRouterAccountOnboarding"
@@ -221,7 +242,7 @@ async function refreshPostSaveAccount(
   onPostSaveAccountRefresh?: (accountIds: string[]) => Promise<void>,
 ) {
   try {
-    const result = await accountStorage.refreshAccount(accountId, true, {
+    const result = await accountRefresh.refreshAccount(accountId, true, {
       tempWindowRequestSource,
       protectionBypassExecution,
     })
@@ -324,6 +345,7 @@ interface UseAccountDialogProps {
   mode: DialogMode
   account?: DisplaySiteData | null
   prefill?: AddAccountPrefill | null
+  recoveryState?: AccountDialogRecoveryState | null
   isOpen: boolean
   onClose: () => void
   onPostSaveAccountRefresh?: (accountIds: string[]) => Promise<void>
@@ -332,8 +354,8 @@ interface UseAccountDialogProps {
 
 interface ManagedSiteConfigPromptState {
   isOpen: boolean
-  managedSiteLabel: string
-  missingMessage: string
+  siteType: ManagedSiteType
+  messagesKey: ManagedSiteMessagesKey
 }
 
 interface AihubmixPostSaveKeyPromptState {
@@ -349,6 +371,7 @@ interface AihubmixPostSaveKeyPromptState {
  * @param props.mode Current dialog mode (add or edit).
  * @param props.account Account record to edit when in edit mode.
  * @param props.prefill Optional add-mode prefill.
+ * @param props.recoveryState Form carried from a popup for manual token recovery.
  * @param props.isOpen Whether the dialog is currently open.
  * @param props.onClose Handler invoked when dialog closes.
  * @param props.onPostSaveAccountRefresh Optional handler invoked after deferred account refresh completes.
@@ -359,17 +382,19 @@ export function useAccountDialog({
   mode,
   account,
   prefill,
+  recoveryState,
   isOpen,
   onClose,
   onPostSaveAccountRefresh,
   onSuccess,
 }: UseAccountDialogProps) {
-  const { t } = useTranslation(["accountDialog", "settings", "messages"])
+  const { t, i18n } = useTranslation(["accountDialog", "settings", "messages"])
   const {
     warnOnDuplicateAccountAdd,
     managedSiteType,
     autoFillCurrentSiteUrlOnAccountAdd,
     autoProvisionKeyOnAccountAdd,
+    autoProvisionKeyOnAccountAddMode,
     updateWarnOnDuplicateAccountAdd,
   } = useUserPreferencesContext()
 
@@ -416,8 +441,6 @@ export function useAccountDialog({
     useState(false)
   const [accountPostSaveWorkflowStep, setAccountPostSaveWorkflowStep] =
     useState<AccountPostSaveWorkflowStep>(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
-  const [postSaveOneTimeToken, setPostSaveOneTimeToken] =
-    useState<ApiToken | null>(null)
   const [postSaveOneTimeSecret, setPostSaveOneTimeSecret] =
     useState<CreatedRuntimeSecret | null>(null)
   const [postSaveSub2ApiAllowedGroups, setPostSaveSub2ApiAllowedGroups] =
@@ -440,12 +463,20 @@ export function useAccountDialog({
     existingUsername: null,
     existingUserId: null,
   })
-  const [managedSiteConfigPrompt, setManagedSiteConfigPrompt] =
-    useState<ManagedSiteConfigPromptState>({
-      isOpen: false,
-      managedSiteLabel: "",
-      missingMessage: "",
-    })
+  const [managedSiteConfigPromptState, setManagedSiteConfigPrompt] =
+    useState<ManagedSiteConfigPromptState | null>(null)
+  const managedSiteConfigPrompt = {
+    isOpen: managedSiteConfigPromptState?.isOpen ?? false,
+    managedSiteLabel: managedSiteConfigPromptState
+      ? getManagedSiteLabel(t, managedSiteConfigPromptState.siteType)
+      : "",
+    missingMessage: managedSiteConfigPromptState
+      ? getManagedSiteConfigMissingMessage(
+          t,
+          managedSiteConfigPromptState.messagesKey,
+        )
+      : "",
+  }
   const [aihubmixPostSaveKeyPrompt, setAihubmixPostSaveKeyPrompt] =
     useState<AihubmixPostSaveKeyPromptState>({
       isOpen: false,
@@ -456,10 +487,16 @@ export function useAccountDialog({
   const duplicateAccountWarningResolverRef = useRef<
     ((shouldContinue: boolean) => void) | null
   >(null)
-  const duplicateAccountWarningAcknowledgedSiteUrlRef = useRef<string | null>(
-    null,
-  )
+  const duplicateAccountWarningAcknowledgedIdentityRef = useRef<{
+    siteUrl: string
+    userId: string
+  } | null>(null)
   const selectedSiteUrlRef = useRef("")
+  const accountCredentialScopeRef = useRef<{
+    url: string
+    siteType: AccountSiteType
+  } | null>(null)
+  const hasAccountAccessTokenRef = useRef(false)
   const selectedSiteTypeRef = useRef<AccountSiteType>(SITE_TYPES.UNKNOWN)
   const isCloseTransitionStartedRef = useRef(false)
   const currentTabSiteNameRef = useRef("")
@@ -468,7 +505,10 @@ export function useAccountDialog({
   // Serializes ownership of analytics, detection UI, and popup lifecycle
   // across provider changes until the admitted workflow fully unwinds.
   const autoDetectInvocationLeaseRef = useRef<symbol | null>(null)
+  // Also invalidates stale results when a reset reuses the same URL.
+  const autoDetectRunGenerationRef = useRef(0)
   const automaticExecutionPreferenceChangedRef = useRef(false)
+  const sub2apiRefreshTokenPreferenceChangedRef = useRef(false)
 
   const siteName = draft.siteName
   const username = draft.username
@@ -496,6 +536,10 @@ export function useAccountDialog({
   const showManualForm =
     phase === ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM &&
     formSource !== ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
+
+  useLayoutEffect(() => {
+    hasAccountAccessTokenRef.current = Boolean(accessToken.trim())
+  }, [accessToken])
 
   useEffect(() => {
     notifyOpenRouterUrlChange(url)
@@ -532,6 +576,15 @@ export function useAccountDialog({
   })
   const setDialogUrl = useCallback(
     (value: string) => {
+      autoDetectRunGenerationRef.current += 1
+      if (value !== selectedSiteUrlRef.current) {
+        setDetectionError((current) =>
+          current?.type ===
+          AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED
+            ? null
+            : current,
+        )
+      }
       resetCheckInRedetection()
       notifyOpenRouterUrlChange(value)
       selectedSiteUrlRef.current = value
@@ -551,12 +604,27 @@ export function useAccountDialog({
     },
     [updateDraft],
   )
-  const setAccessToken = useCallback(
-    (value: string) => {
-      notifyOpenRouterCredentialChange(value)
+  const updateAccessToken = useCallback(
+    (
+      value: string,
+      scope = {
+        url: selectedSiteUrlRef.current,
+        siteType: selectedSiteTypeRef.current,
+      },
+    ) => {
+      const hasAccessToken = Boolean(value.trim())
+      hasAccountAccessTokenRef.current = hasAccessToken
+      accountCredentialScopeRef.current = hasAccessToken ? scope : null
       updateDraft((prev) => ({ ...prev, accessToken: value }))
     },
-    [notifyOpenRouterCredentialChange, updateDraft],
+    [updateDraft],
+  )
+  const setAccessToken = useCallback(
+    (value: string) => {
+      updateAccessToken(value)
+      notifyOpenRouterCredentialChange(value)
+    },
+    [notifyOpenRouterCredentialChange, updateAccessToken],
   )
   const setUserId = useCallback(
     (value: string) => {
@@ -640,10 +708,19 @@ export function useAccountDialog({
     (value: string) => {
       resetCheckInRedetection()
       const nextSiteType = isAccountSiteType(value) ? value : SITE_TYPES.UNKNOWN
+      if (nextSiteType !== selectedSiteTypeRef.current) {
+        setDetectionError((current) =>
+          current?.type ===
+          AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED
+            ? null
+            : current,
+        )
+      }
       const nextPolicy = getAccountDialogSitePolicy(nextSiteType)
       selectedSiteTypeRef.current = nextSiteType
       const { clearCreatedCredential } =
         notifyOpenRouterSiteChange(nextSiteType)
+      if (clearCreatedCredential) updateAccessToken("")
       updateDraft((prev) => {
         const previousPolicy = getAccountDialogSitePolicy(prev.siteType)
         const shouldRebuildCompatibilityConfig =
@@ -651,7 +728,7 @@ export function useAccountDialog({
         const checkIn = shouldRebuildCompatibilityConfig
           ? createCompatibilityCheckInConfig({
               siteType: nextSiteType,
-              supported: hasNewAccountCompatibilityRegistration(nextSiteType),
+              supported: false,
               automaticExecutionEnabled:
                 resolveNewAccountAutomaticExecutionEnabled({
                   siteType: nextSiteType,
@@ -666,16 +743,15 @@ export function useAccountDialog({
         const shouldApplyDefaultName =
           !prev.siteName.trim() ||
           prev.siteName.trim() === (previousPolicy.defaultSiteName ?? "")
-        const shouldClearOpenRouterIdentity =
+        const shouldClearCredentialIdentity =
           prev.siteType !== nextSiteType &&
-          prev.siteType === SITE_TYPES.OPENROUTER
+          usesAccountCredentialIdentity(prev.siteType)
         return normalizeAccountDialogDraftForSitePolicy({
           draft: {
             ...prev,
             siteType: nextSiteType,
             checkIn,
-            ...(shouldClearOpenRouterIdentity ? { userId: "" } : {}),
-            ...(clearCreatedCredential ? { accessToken: "" } : {}),
+            ...(shouldClearCredentialIdentity ? { userId: "" } : {}),
             ...(shouldApplyDefaultName
               ? { siteName: nextPolicy.defaultSiteName ?? "" }
               : {}),
@@ -692,6 +768,7 @@ export function useAccountDialog({
       setDialogUrl,
       notifyOpenRouterSiteChange,
       resetCheckInRedetection,
+      updateAccessToken,
       updateDraft,
     ],
   )
@@ -699,6 +776,14 @@ export function useAccountDialog({
     (value: AuthTypeEnum) => {
       if (!isAccountAuthType(value)) return
 
+      if (value !== AuthTypeEnum.AccessToken) {
+        setDetectionError((current) =>
+          current?.type ===
+          AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED
+            ? null
+            : current,
+        )
+      }
       hasExplicitAuthTypeRef.current = true
       updateDraft((prev) => ({ ...prev, authType: value }))
     },
@@ -770,7 +855,7 @@ export function useAccountDialog({
   const cancelPendingDuplicateAccountWarning = useCallback(() => {
     duplicateAccountWarningResolverRef.current?.(false)
     duplicateAccountWarningResolverRef.current = null
-    duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
+    duplicateAccountWarningAcknowledgedIdentityRef.current = null
   }, [])
 
   useEffect(() => {
@@ -831,7 +916,7 @@ export function useAccountDialog({
   const ensureExactCredentialDuplicateConfirmation = useCallback(async () => {
     if (
       !warnOnDuplicateAccountAdd ||
-      siteType !== SITE_TYPES.OPENROUTER ||
+      !usesAccountCredentialIdentity(siteType) ||
       !accessToken.trim()
     ) {
       return true
@@ -843,14 +928,14 @@ export function useAccountDialog({
       return true
     }
 
-    let accounts: Awaited<ReturnType<typeof accountStorage.getAllAccounts>>
+    let accounts: Awaited<ReturnType<typeof accountQueries.getAllAccounts>>
     try {
-      accounts = await accountStorage.getAllAccountsOrThrow()
+      accounts = await accountQueries.getAllAccountsOrThrow()
     } catch {
       logger.warn(
         "Exact-credential duplicate lookup failed; continuing without warning",
         {
-          siteType: SITE_TYPES.OPENROUTER,
+          siteType,
           status: "storage_lookup_failed",
           category: "duplicate_check",
         },
@@ -859,7 +944,7 @@ export function useAccountDialog({
     }
     const duplicateId = findExactCredentialDuplicateAccountId({
       accounts,
-      siteType: SITE_TYPES.OPENROUTER,
+      siteType,
       accessToken,
       excludeAccountId: mode === DIALOG_MODES.EDIT ? account?.id : undefined,
     })
@@ -885,7 +970,7 @@ export function useAccountDialog({
       return true
     }
 
-    if (siteType === SITE_TYPES.OPENROUTER) {
+    if (usesAccountCredentialIdentity(siteType)) {
       return true
     }
 
@@ -895,24 +980,23 @@ export function useAccountDialog({
       siteType,
     })
     const currentUserId = normalizeAccountIdentity(userId)
-    const currentUserRecord = currentUserId
-      ? { id: currentUserId, username: currentUserId }
-      : null
 
-    if (!baseUrl) {
+    if (!baseUrl || !currentUserId) {
       return true
     }
 
     if (
-      duplicateAccountWarningAcknowledgedSiteUrlRef.current ===
-      normalizedBaseUrl
+      duplicateAccountWarningAcknowledgedIdentityRef.current?.siteUrl ===
+        normalizedBaseUrl &&
+      duplicateAccountWarningAcknowledgedIdentityRef.current?.userId ===
+        currentUserId
     ) {
       return true
     }
 
-    let accounts: Awaited<ReturnType<typeof accountStorage.getAllAccounts>>
+    let accounts: Awaited<ReturnType<typeof accountQueries.getAllAccounts>>
     try {
-      accounts = await accountStorage.getAllAccountsOrThrow()
+      accounts = await accountQueries.getAllAccountsOrThrow()
     } catch (error) {
       logger.warn(
         "Duplicate-account lookup failed; continuing without warning",
@@ -923,53 +1007,36 @@ export function useAccountDialog({
       )
       return true
     }
-    const existingSiteAccounts = accounts.filter((acc) => {
-      return isSameAccountSiteOrigin(
-        {
-          url: acc.site_url,
-          siteType: acc.site_type,
-        },
-        {
-          url: baseUrl,
-        },
-      )
+    const matchingAccounts = findAccountsBySiteIdentity({
+      accounts,
+      siteUrl: baseUrl,
+      userId: currentUserId,
     })
-
-    if (existingSiteAccounts.length === 0) {
+    const exactMatch = matchingAccounts[0]
+    if (!exactMatch) {
       return true
     }
 
     const warningSiteUrl = normalizeSiteUrlForDuplicateCheck({
-      value: existingSiteAccounts[0].site_url,
-      siteType: existingSiteAccounts[0].site_type,
+      value: exactMatch.site_url,
+      siteType: exactMatch.site_type,
     })
-
-    const exactMatch = currentUserId
-      ? existingSiteAccounts.find((acc) =>
-          doAccountSiteIdentitiesMatch({
-            siteType: acc.site_type,
-            savedUser: acc.account_info,
-            currentUser: currentUserRecord,
-          }),
-        )
-      : undefined
 
     const shouldContinue = await requestDuplicateAccountAddConfirmation({
       siteUrl: warningSiteUrl,
-      existingAccountsCount: existingSiteAccounts.length,
-      ...(exactMatch
-        ? {
-            existingUserId: exactMatch.account_info.id,
-            existingUsername: exactMatch.account_info.username,
-          }
-        : {}),
+      existingAccountsCount: matchingAccounts.length,
+      existingUserId: exactMatch.account_info.id,
+      existingUsername: exactMatch.account_info.username,
     })
 
     if (!shouldContinue) {
       return false
     }
 
-    duplicateAccountWarningAcknowledgedSiteUrlRef.current = normalizedBaseUrl
+    duplicateAccountWarningAcknowledgedIdentityRef.current = {
+      siteUrl: normalizedBaseUrl,
+      userId: currentUserId,
+    }
     return true
   }, [
     mode,
@@ -1083,7 +1150,6 @@ export function useAccountDialog({
     invalidatePostSaveSub2ApiDialogSession()
     aihubmixPostSaveKeyRunRef.current += 1
     setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
-    setPostSaveOneTimeToken(null)
     setPostSaveOneTimeSecret(null)
     setPostSaveSub2ApiAllowedGroups(null)
     setPostSaveSub2ApiAccount(null)
@@ -1136,7 +1202,7 @@ export function useAccountDialog({
       }
 
       try {
-        const savedAccount = await accountStorage.getAccountById(savedAccountId)
+        const savedAccount = await accountQueries.getAccountById(savedAccountId)
         if (!isCurrentRun()) return
 
         if (!savedAccount) {
@@ -1145,8 +1211,8 @@ export function useAccountDialog({
         }
 
         const displaySiteData =
-          (await accountStorage.getDisplayDataById(savedAccountId)) ??
-          accountStorage.convertToDisplayData(savedAccount)
+          (await accountReadModels.getDisplayDataById(savedAccountId)) ??
+          accountPresentation.convertToDisplayData(savedAccount)
         if (!isCurrentRun()) return
 
         const inventoryState = await inspectAccountTokenInventory({
@@ -1171,12 +1237,13 @@ export function useAccountDialog({
 
   const resetForm = useCallback(
     (nextPrefill?: AddAccountPrefill | null) => {
+      autoDetectRunGenerationRef.current += 1
       newAccountRef.current = null
       isCloseTransitionStartedRef.current = false
       detectedCookieStoreIdRef.current = null
       currentTabCookieImportContextRef.current = null
       currentTabSiteNameRef.current = ""
-      duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
+      duplicateAccountWarningAcknowledgedIdentityRef.current = null
       hasConsumedAutoFillCurrentSiteUrlRef.current = Boolean(nextPrefill)
       const nextSiteType = nextPrefill?.siteType ?? SITE_TYPES.UNKNOWN
       selectedSiteTypeRef.current = nextSiteType
@@ -1184,6 +1251,7 @@ export function useAccountDialog({
       hasExplicitAuthTypeRef.current = Boolean(nextPrefill?.authType)
       const nextUrl = nextPrefill?.siteUrl ?? ""
       selectedSiteUrlRef.current = nextUrl
+      accountCredentialScopeRef.current = null
       resetOpenRouterOnboardingSession({
         url: nextUrl,
         siteType: nextSiteType,
@@ -1191,6 +1259,7 @@ export function useAccountDialog({
       })
       setUrl(nextUrl)
       automaticExecutionPreferenceChangedRef.current = false
+      sub2apiRefreshTokenPreferenceChangedRef.current = false
       const emptyDraft = createEmptyAccountDialogDraft(nextSiteType)
       const nextDraft = {
         ...emptyDraft,
@@ -1229,7 +1298,7 @@ export function useAccountDialog({
   const loadAccountData = useCallback(
     async (accountId: string) => {
       try {
-        const siteAccount = await accountStorage.getAccountById(accountId)
+        const siteAccount = await accountQueries.getAccountById(accountId)
         if (siteAccount) {
           setUrl(siteAccount.site_url)
           const refreshToken = siteAccount.sub2apiAuth?.refreshToken ?? ""
@@ -1237,6 +1306,10 @@ export function useAccountDialog({
             siteAccount.site_type,
             Boolean(siteAccount.sub2apiAuth),
           )
+          accountCredentialScopeRef.current = {
+            url: siteAccount.site_url,
+            siteType: normalizedSiteType,
+          }
           selectedSiteUrlRef.current = siteAccount.site_url
           selectedSiteTypeRef.current = normalizedSiteType
           const policy = getAccountDialogSitePolicy(normalizedSiteType)
@@ -1299,10 +1372,10 @@ export function useAccountDialog({
         }
       } catch (error) {
         logger.error("Failed to load account data", { error, accountId })
-        toast.error(t("messages.loadFailed"))
+        toast.error(i18n.t("accountDialog:messages.loadFailed"))
       }
     },
-    [enterForm, t],
+    [enterForm, i18n],
   )
 
   const checkCurrentTab = useCallback(async () => {
@@ -1368,7 +1441,39 @@ export function useAccountDialog({
       const nextPrefill =
         mode === DIALOG_MODES.ADD ? normalizeAddAccountPrefill(prefill) : null
       resetForm(nextPrefill)
-      if (mode === DIALOG_MODES.EDIT && account) {
+      if (recoveryState) {
+        const recoveredDraft = recoveryState.draft
+        selectedSiteUrlRef.current = recoveryState.url
+        selectedSiteTypeRef.current = recoveredDraft.siteType
+        hasConsumedAutoFillCurrentSiteUrlRef.current = true
+        hasExplicitAuthTypeRef.current = true
+        automaticExecutionPreferenceChangedRef.current = true
+        checkInSelectionChangedRef.current =
+          recoveryState.checkInSelectionChanged
+        checkInDiscoveryBaseSelectionRef.current =
+          recoveryState.checkInDiscoveryBaseSelection
+        setUrl(recoveryState.url)
+        accountCredentialScopeRef.current = {
+          url: recoveryState.url,
+          siteType: recoveredDraft.siteType,
+        }
+        setDraft(
+          normalizeAccountDialogDraftForSitePolicy({
+            draft: recoveredDraft,
+            policy: getAccountDialogSitePolicy(recoveredDraft.siteType),
+          }),
+        )
+        setPhase(ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM)
+        setFormSource(
+          mode === DIALOG_MODES.EDIT
+            ? ACCOUNT_DIALOG_FORM_SOURCES.EXISTING_ACCOUNT
+            : ACCOUNT_DIALOG_FORM_SOURCES.MANUAL,
+        )
+        setDetectionError({
+          type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+          message: i18n.t("accountDialog:accessTokenVerification.description"),
+        })
+      } else if (mode === DIALOG_MODES.EDIT && account) {
         loadAccountData(account.id)
       } else {
         // Get current tab URL for add mode
@@ -1380,10 +1485,23 @@ export function useAccountDialog({
     mode,
     account,
     prefill,
+    recoveryState,
     resetForm,
     loadAccountData,
     checkCurrentTab,
+    i18n,
   ])
+
+  useEffect(() => {
+    const message = t("accessTokenVerification.description")
+    setDetectionError((current) =>
+      current?.type ===
+        AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED &&
+      current.message !== message
+        ? { ...current, message }
+        : current,
+    )
+  }, [t])
 
   useEffect(() => {
     if (!isOpen || mode !== DIALOG_MODES.ADD) {
@@ -1464,7 +1582,7 @@ export function useAccountDialog({
     options: { applyAuthDefault?: boolean } = {},
   ) => {
     const shouldApplyAuthDefault = options.applyAuthDefault !== false
-    duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
+    duplicateAccountWarningAcknowledgedIdentityRef.current = null
     detectedCookieStoreIdRef.current = null
     hasConsumedAutoFillCurrentSiteUrlRef.current = true
     if (newUrl.trim()) {
@@ -1507,6 +1625,7 @@ export function useAccountDialog({
   const handleClose = useCallback(async () => {
     if (isCloseTransitionStartedRef.current) return
     isCloseTransitionStartedRef.current = true
+    autoDetectRunGenerationRef.current += 1
     try {
       await beforeOpenRouterOnboardingClose()
     } catch {
@@ -1521,7 +1640,7 @@ export function useAccountDialog({
     completePendingAihubmixPostSaveSuccess()
     clearPostSaveWorkflowState()
     setManagedSiteConfigPrompt((prev) =>
-      prev.isOpen ? { ...prev, isOpen: false } : prev,
+      prev?.isOpen ? { ...prev, isOpen: false } : prev,
     )
     targetAccountRef.current = null
     onClose()
@@ -1631,6 +1750,7 @@ export function useAccountDialog({
           policy,
           isAddMode: mode === DIALOG_MODES.ADD,
           autoProvisionKeyOnAccountAdd,
+          autoProvisionKeyOnAccountAddMode,
           skipAutoProvisionKeyOnAccountAdd: false,
         }) &&
         result.success === true &&
@@ -1638,7 +1758,12 @@ export function useAccountDialog({
         result.accountId.trim().length > 0
       )
     },
-    [autoProvisionKeyOnAccountAdd, mode, siteType],
+    [
+      autoProvisionKeyOnAccountAdd,
+      autoProvisionKeyOnAccountAddMode,
+      mode,
+      siteType,
+    ],
   )
 
   const handleImportCookieAuthSessionCookie = async () => {
@@ -1740,7 +1865,7 @@ export function useAccountDialog({
 
   const handleManagedSiteConfigPromptClose = useCallback(() => {
     setManagedSiteConfigPrompt((prev) =>
-      prev.isOpen ? { ...prev, isOpen: false } : prev,
+      prev?.isOpen ? { ...prev, isOpen: false } : prev,
     )
   }, [])
 
@@ -1763,8 +1888,8 @@ export function useAccountDialog({
   }, [handleManagedSiteConfigPromptClose, managedSiteType, t])
 
   const ensureManagedSiteAutoConfigReady = useCallback(async () => {
-    const service = getManagedSiteServiceForType(managedSiteType)
-    const managedConfig = await service.getConfig()
+    const managedSite = getManagedSiteCapabilities(managedSiteType)
+    const managedConfig = await managedSite.config.get()
 
     if (managedConfig) {
       return true
@@ -1772,15 +1897,12 @@ export function useAccountDialog({
 
     setManagedSiteConfigPrompt({
       isOpen: true,
-      managedSiteLabel: getManagedSiteLabel(t, managedSiteType),
-      missingMessage: getManagedSiteConfigMissingMessage(
-        t,
-        service.messagesKey,
-      ),
+      siteType: managedSiteType,
+      messagesKey: getManagedSiteMessagesKeyFromSiteType(managedSite.siteType),
     })
 
     return false
-  }, [managedSiteType, t])
+  }, [managedSiteType])
 
   /**
    * Import Sub2API dashboard session credentials (including refresh_token) into the form.
@@ -1858,6 +1980,12 @@ export function useAccountDialog({
         typeof imported?.user?.username === "string"
           ? imported.user.username.trim()
           : ""
+      if (importedAccessToken) {
+        updateAccessToken(importedAccessToken, {
+          url: baseUrl,
+          siteType: SITE_TYPES.SUB2API,
+        })
+      }
       updateDraft((prev) => ({
         ...prev,
         sub2apiRefreshToken: refreshToken,
@@ -1866,7 +1994,6 @@ export function useAccountDialog({
           Number.isFinite(tokenExpiresAtRaw)
             ? tokenExpiresAtRaw
             : null,
-        ...(importedAccessToken ? { accessToken: importedAccessToken } : {}),
         ...(importedUserId ? { userId: importedUserId } : {}),
         ...(importedUsername ? { username: importedUsername } : {}),
       }))
@@ -1906,6 +2033,10 @@ export function useAccountDialog({
     const nextSiteType = isAccountSiteType(resultData.siteType)
       ? resultData.siteType
       : siteType
+    accountCredentialScopeRef.current = {
+      url: url.trim(),
+      siteType: nextSiteType,
+    }
     const policy = getAccountDialogSitePolicy(nextSiteType)
 
     if (
@@ -1975,8 +2106,54 @@ export function useAccountDialog({
     }
   }
 
-  const runAutoDetectInvocation = async () => {
+  const applyAutoDetectRecoveryData = (
+    recoveryData: AccountAutoDetectRecoveryData | undefined,
+    contextSiteType: AccountSiteType | undefined,
+  ) => {
+    const recovery = resolveAutoDetectRecovery({
+      recoveryData,
+      contextSiteType,
+      currentSiteType: selectedSiteTypeRef.current,
+      canAdoptSiteType: mode === DIALOG_MODES.ADD,
+    })
+
+    if (recovery.shouldAdoptSiteType && recovery.recoveredSiteType) {
+      setSiteType(recovery.recoveredSiteType)
+    }
+
+    if (!recoveryData) return
+    if (!hasAccountAccessTokenRef.current && recoveryData.accessToken?.trim()) {
+      accountCredentialScopeRef.current = {
+        url: url.trim(),
+        siteType: recovery.recoveredSiteType ?? recovery.nextSiteType,
+      }
+    }
+
+    if (
+      recoveryData.fetchContext?.cookieStoreId &&
+      recoveryData.fetchContext.cookieStoreId.trim()
+    ) {
+      detectedCookieStoreIdRef.current =
+        recoveryData.fetchContext.cookieStoreId.trim()
+    }
+
+    updateDraft((prev) => {
+      return mergeAutoDetectRecoveryIntoDraft({
+        draft: prev,
+        recoveryData,
+        nextSiteType: recovery.nextSiteType,
+        hasExplicitAuthType: hasExplicitAuthTypeRef.current,
+        sub2apiRefreshTokenPreferenceChanged:
+          sub2apiRefreshTokenPreferenceChangedRef.current,
+      })
+    })
+  }
+
+  const runAutoDetectInvocation = async (runGeneration: number) => {
     const requestedUrl = url.trim()
+    const isCurrentAutoDetectRun = () =>
+      autoDetectRunGenerationRef.current === runGeneration &&
+      selectedSiteUrlRef.current.trim() === requestedUrl
     const isRequestedOpenRouterBootstrap =
       isCanonicalOpenRouterUrl(requestedUrl)
     const openRouterAdmission = isRequestedOpenRouterBootstrap
@@ -2073,42 +2250,6 @@ export function useAccountDialog({
       setAccessToken("")
     }
 
-    try {
-      const shouldContinue = await ensureDuplicateAccountAddConfirmation()
-      if (!shouldContinue) {
-        if (openRouterAdmission) {
-          releaseOpenRouterOnboardingPreparation(
-            openRouterAdmission.preparation,
-          )
-        }
-        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
-          insights: createAutoDetectAnalyticsInsights(),
-        })
-        return
-      }
-    } catch (error) {
-      if (openRouterAdmission) {
-        releaseOpenRouterOnboardingPreparation(openRouterAdmission.preparation)
-      }
-      toast.error(
-        t("messages.operationFailed", {
-          error: getErrorMessage(error),
-        }),
-      )
-      analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        diagnostics: {
-          failure: buildActionFailureDiagnostics({
-            error,
-            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
-          }),
-        },
-        insights: {
-          ...createAutoDetectAnalyticsInsights(),
-        },
-      })
-      return
-    }
-
     if (!isRequestedOpenRouterBootstrap) {
       const { clearCreatedCredential } =
         abandonOpenRouterOnboardingForOtherAutoDetect()
@@ -2163,7 +2304,10 @@ export function useAccountDialog({
               protectionBypassExecution,
               onStarted: () => setSiteType(SITE_TYPES.OPENROUTER),
               onCredentialCreated: (credential) => {
-                setDraft((prev) => ({ ...prev, accessToken: credential }))
+                updateAccessToken(credential, {
+                  url: requestedUrl,
+                  siteType: SITE_TYPES.OPENROUTER,
+                })
               },
               onManualFallback: (failure) => {
                 onboardingError = failure.error
@@ -2237,9 +2381,43 @@ export function useAccountDialog({
             authType,
             protectionBypassExecution,
             cookieAuthSessionCookie.trim() || undefined,
+            ...(userId.trim() &&
+            (mode === DIALOG_MODES.EDIT ||
+              accessToken.trim() ||
+              cookieAuthSessionCookie.trim() ||
+              sub2apiRefreshToken.trim())
+              ? [
+                  {
+                    existingAccount: {
+                      url:
+                        accountCredentialScopeRef.current?.url || requestedUrl,
+                      siteType:
+                        accountCredentialScopeRef.current?.siteType ?? siteType,
+                      userId: userId.trim(),
+                      accessToken,
+                    },
+                  },
+                ]
+              : []),
           ),
       )
+      if (!isCurrentAutoDetectRun()) {
+        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+          insights: createAutoDetectAnalyticsInsights(result, false),
+        })
+        return
+      }
       if (!result.success) {
+        applyAutoDetectRecoveryData(
+          result.recoveryData,
+          result.autoDetectContext?.siteType,
+        )
+        if (
+          result.detailedError?.type ===
+          AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED
+        ) {
+          setAuthType(AuthTypeEnum.AccessToken)
+        }
         enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
         setDetectionError(result.detailedError || null)
         analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -2281,6 +2459,12 @@ export function useAccountDialog({
         })
       }
     } catch (error) {
+      if (!isCurrentAutoDetectRun()) {
+        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+          insights: createAutoDetectAnalyticsInsights(undefined, false),
+        })
+        return
+      }
       logger.error("Auto-detect failed", { error, url: url.trim(), authType })
       const detectionError = analyzeAutoDetectError(error)
       setDetectionError(detectionError)
@@ -2313,9 +2497,11 @@ export function useAccountDialog({
     if (autoDetectInvocationLeaseRef.current) return
 
     const lease = Symbol("account-auto-detect-invocation")
+    const runGeneration = autoDetectRunGenerationRef.current + 1
+    autoDetectRunGenerationRef.current = runGeneration
     autoDetectInvocationLeaseRef.current = lease
     try {
-      await runAutoDetectInvocation()
+      await runAutoDetectInvocation(runGeneration)
     } finally {
       if (autoDetectInvocationLeaseRef.current === lease) {
         autoDetectInvocationLeaseRef.current = null
@@ -2364,17 +2550,20 @@ export function useAccountDialog({
       const policy = getAccountDialogSitePolicy(siteType)
       const saveAnalyticsAction = startSaveAnalyticsAction()
       const duplicateConfirmed =
-        await ensureExactCredentialDuplicateConfirmation()
+        (await ensureDuplicateAccountAddConfirmation()) &&
+        (await ensureExactCredentialDuplicateConfirmation())
       if (!duplicateConfirmed) {
         saveAnalyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
         isAnalyticsActionCompleted = true
-        return
+        // Let callers distinguish cancellation from a failed save.
+        return null
       }
       const shouldDeferSuccessForSitePolicy =
         shouldDeferAccountSaveSuccessForAccountDialogSite({
           policy,
           isAddMode: mode === DIALOG_MODES.ADD,
           autoProvisionKeyOnAccountAdd,
+          autoProvisionKeyOnAccountAddMode,
           skipAutoProvisionKeyOnAccountAdd:
             options?.skipAutoProvisionKeyOnAccountAdd === true,
         })
@@ -2501,13 +2690,13 @@ export function useAccountDialog({
                 name: siteName,
               })
 
-      if (result.feedbackLevel === "warning") {
+      if (result.feedbackLevel === ACCOUNT_SAVE_FEEDBACK_LEVELS.Warning) {
         const warningAccountId =
           typeof result.accountId === "string" && result.accountId.trim()
             ? result.accountId.trim()
             : null
 
-        showWarningToast(feedbackMessage, {
+        toast.warning(feedbackMessage, {
           action: warningAccountId
             ? {
                 label: t("common:actions.refresh"),
@@ -2531,7 +2720,7 @@ export function useAccountDialog({
                         : PROTECTION_BYPASS_USER_COMMANDS.ReauthenticateAccount,
                       tempWindowRequestSource,
                       (protectionBypassExecution) =>
-                        accountStorage.refreshAccount(warningAccountId, true, {
+                        accountRefresh.refreshAccount(warningAccountId, true, {
                           tempWindowRequestSource,
                           protectionBypassExecution,
                         }),
@@ -2576,11 +2765,20 @@ export function useAccountDialog({
       if (shouldDeferSuccessForSitePolicy && savedAccountId) {
         await handleAihubmixNormalSaveForegroundKeyFlow({
           accountId: savedAccountId,
-          accountName: siteName.trim() || SITE_TYPES.AIHUBMIX,
+          accountName: siteName.trim() || policy.defaultSiteName || siteType,
         })
       }
 
-      const skipSub2ApiKeyPrompt = options?.skipSub2ApiKeyPrompt === true
+      // Background group provisioning owns key creation for this add operation;
+      // a foreground default-key prompt could race it and create an extra key.
+      const autoProvisioningAllGroups =
+        mode === DIALOG_MODES.ADD &&
+        autoProvisionKeyOnAccountAdd &&
+        autoProvisionKeyOnAccountAddMode ===
+          ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups &&
+        options?.skipAutoProvisionKeyOnAccountAdd !== true
+      const skipSub2ApiKeyPrompt =
+        options?.skipSub2ApiKeyPrompt === true || autoProvisioningAllGroups
       if (
         savedAccountId &&
         policy.openSub2ApiTokenDialogPostSave &&
@@ -2588,7 +2786,7 @@ export function useAccountDialog({
       ) {
         try {
           const savedDisplaySiteData =
-            (await accountStorage.getDisplayDataById(savedAccountId)) ?? null
+            (await accountReadModels.getDisplayDataById(savedAccountId)) ?? null
 
           if (
             shouldOpenSub2ApiTokenDialogForAccountDialogSite({
@@ -2639,7 +2837,7 @@ export function useAccountDialog({
       isCreating: false,
     })
     completePendingAihubmixPostSaveSuccess()
-    toast(t("messages:aihubmix.oneTimeKeyPromptCancelled"))
+    toast.info(t("messages:aihubmix.oneTimeKeyPromptCancelled"))
   }, [completePendingAihubmixPostSaveSuccess, t])
 
   const handleAihubmixPostSaveKeyPromptConfirm = useCallback(async () => {
@@ -2656,7 +2854,7 @@ export function useAccountDialog({
     }))
 
     try {
-      const savedAccount = await accountStorage.getAccountById(accountId)
+      const savedAccount = await accountQueries.getAccountById(accountId)
       if (!isCurrentRun()) return
       if (!savedAccount) {
         toast.error(t("messages:toast.error.findAccountDetailsFailed"))
@@ -2671,8 +2869,8 @@ export function useAccountDialog({
       }
 
       const displaySiteData =
-        (await accountStorage.getDisplayDataById(accountId)) ??
-        accountStorage.convertToDisplayData(savedAccount)
+        (await accountReadModels.getDisplayDataById(accountId)) ??
+        accountPresentation.convertToDisplayData(savedAccount)
       if (!isCurrentRun()) return
 
       const ensureResult = await ensureAccountTokenForPostSaveWorkflow({
@@ -2691,9 +2889,8 @@ export function useAccountDialog({
           accountName: "",
           isCreating: false,
         })
-        setPostSaveOneTimeToken(ensureResult.token)
         setPostSaveOneTimeSecret(
-          createAIHubMixCreatedRuntimeSecret({
+          createDisplayAccountTokenRuntimeSecret({
             account: displaySiteData,
             token: ensureResult.token,
           }),
@@ -2749,7 +2946,7 @@ export function useAccountDialog({
       try {
         const openResult = await openChannelDialog(
           displaySiteData,
-          token,
+          buildDisplayAccountTokenRuntimeKey(displaySiteData, token),
           () => {
             if (onSuccess && targetAccount && isCurrentRun()) {
               onSuccess(targetAccount)
@@ -2792,9 +2989,8 @@ export function useAccountDialog({
     [onSuccess, openChannelDialog, t],
   )
 
-  const handlePostSaveOneTimeTokenClose = useCallback(async () => {
+  const handlePostSaveOneTimeSecretClose = useCallback(async () => {
     const runId = postSaveAutoConfigRunRef.current
-    setPostSaveOneTimeToken(null)
     setPostSaveOneTimeSecret(null)
     const pending = pendingPostSaveChannelRef.current
     pendingPostSaveChannelRef.current = null
@@ -2996,10 +3192,14 @@ export function useAccountDialog({
           skipSub2ApiKeyPrompt: true,
           skipAutoProvisionKeyOnAccountAdd: true,
         })
-        targetAccount = saveResult?.accountId
         if (!isCurrentRun()) {
           return
         }
+        if (saveResult === null) {
+          setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
+          return
+        }
+        targetAccount = saveResult?.accountId
         if (!targetAccount) {
           toast.error(t("messages.saveAccountFailed"))
           setAccountPostSaveWorkflowStep(
@@ -3024,7 +3224,7 @@ export function useAccountDialog({
           ACCOUNT_POST_SAVE_WORKFLOW_STEPS.LoadingSavedAccount,
         )
         // 获取账户详细信息
-        const siteAccount = await accountStorage.getAccountById(targetAccount)
+        const siteAccount = await accountQueries.getAccountById(targetAccount)
         if (!isCurrentRun()) {
           return
         }
@@ -3037,8 +3237,8 @@ export function useAccountDialog({
         }
         savedSiteAccount = siteAccount
         displaySiteData =
-          (await accountStorage.getDisplayDataById(siteAccount.id)) ??
-          accountStorage.convertToDisplayData(siteAccount)
+          (await accountReadModels.getDisplayDataById(siteAccount.id)) ??
+          accountPresentation.convertToDisplayData(siteAccount)
         if (!isCurrentRun()) {
           return
         }
@@ -3103,9 +3303,8 @@ export function useAccountDialog({
               displaySiteData,
               token: ensureResult.token,
             }
-            setPostSaveOneTimeToken(ensureResult.token)
             setPostSaveOneTimeSecret(
-              createAIHubMixCreatedRuntimeSecret({
+              createDisplayAccountTokenRuntimeSecret({
                 account: displaySiteData,
                 token: ensureResult.token,
               }),
@@ -3166,6 +3365,7 @@ export function useAccountDialog({
   }
 
   const handleSub2apiUseRefreshTokenChange = (enabled: boolean) => {
+    sub2apiRefreshTokenPreferenceChangedRef.current = true
     setSub2apiUseRefreshToken(enabled)
 
     // If the user explicitly disables refresh-token mode, clear any captured
@@ -3199,12 +3399,30 @@ export function useAccountDialog({
   const isAccountFormValid =
     isFormValid && isSub2ApiRefreshTokenValid && !isManualBalanceUsdInvalid
 
+  const tokenRecoveryState = useMemo<AccountDialogRecoveryState | null>(() => {
+    if (
+      detectionError?.type !==
+      AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED
+    )
+      return null
+    return {
+      url,
+      draft,
+      ...(mode === DIALOG_MODES.EDIT && account
+        ? { accountId: account.id }
+        : {}),
+      checkInSelectionChanged: checkInSelectionChangedRef.current,
+      checkInDiscoveryBaseSelection: checkInDiscoveryBaseSelectionRef.current,
+    }
+  }, [account, detectionError?.type, draft, mode, url])
+
   return {
     state: {
       url,
       phase,
       formSource,
       draft,
+      tokenRecoveryState,
       isDetecting,
       isDetectingSlow,
       isRedetectingCheckInMethods,
@@ -3242,7 +3460,6 @@ export function useAccountDialog({
       isRequestingCookieAuthPermissions: cookieAuthPermissionState.pending,
       isImportingSub2apiSession,
       accountPostSaveWorkflowStep,
-      postSaveOneTimeToken,
       postSaveOneTimeSecret,
       postSaveSub2ApiAllowedGroups,
       postSaveSub2ApiAccount,
@@ -3309,7 +3526,7 @@ export function useAccountDialog({
       handleAihubmixPostSaveKeyPromptCancel,
       handleAihubmixPostSaveKeyPromptConfirm,
       shouldDeferAccountSaveSuccess,
-      handlePostSaveOneTimeTokenClose,
+      handlePostSaveOneTimeSecretClose,
       handlePostSaveSub2ApiTokenDialogClose,
       handlePostSaveSub2ApiTokenCreated,
       getPostSaveSub2ApiDialogHandlers,
@@ -3325,7 +3542,7 @@ function normalizeSiteUrlForDuplicateCheck(params: {
   siteType?: AccountSiteType | string
 }): string {
   return (
-    normalizeAccountSiteUrlForDuplicateCheck({
+    normalizeAccountSiteProfileUrlForDuplicateCheck({
       url: params.value,
       siteType: params.siteType,
     }) ?? params.value.trim().toLowerCase()
@@ -3340,6 +3557,7 @@ function getAutoDetectAnalyticsErrorCategory(
   structuredError?: unknown,
 ): ProductAnalyticsErrorCategory {
   switch (errorType) {
+    case AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED:
     case AutoDetectErrorType.UNAUTHORIZED:
     case AutoDetectErrorType.FORBIDDEN:
       return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth
@@ -3405,99 +3623,6 @@ function resolvePrefillFormSource(
   }
 
   return ACCOUNT_DIALOG_FORM_SOURCES.SPONSOR
-}
-
-/** Normalizes detected check-in data for both live and recovered results. */
-function normalizeDetectedCheckIn(checkIn: CheckInConfig): CheckInConfig {
-  return {
-    ...checkIn,
-    customCheckIn: {
-      ...checkIn.customCheckIn,
-      url: checkIn.customCheckIn?.url ?? "",
-      redeemUrl: checkIn.customCheckIn?.redeemUrl ?? "",
-      openRedeemWithCheckIn:
-        checkIn.customCheckIn?.openRedeemWithCheckIn ?? true,
-      isCheckedInToday: checkIn.customCheckIn?.isCheckedInToday ?? false,
-    },
-  }
-}
-
-/**
- * Merges auto-detected account data into the current draft while preserving user-owned fields when requested.
- */
-function buildDraftFromAutoDetectResult(params: {
-  draft: AccountDialogDraft
-  resultData: NonNullable<Awaited<ReturnType<typeof autoDetectAccount>>["data"]>
-  nextSiteType: AccountSiteType
-  nextCheckIn: CheckInConfig
-  preserveExistingCheckIn: boolean
-  automaticExecutionPreferenceChanged: boolean
-  mode: DialogMode
-  policy: AccountDialogSitePolicy
-}): AccountDialogDraft {
-  const {
-    draft,
-    resultData,
-    nextSiteType,
-    nextCheckIn,
-    preserveExistingCheckIn,
-    automaticExecutionPreferenceChanged,
-    mode,
-    policy,
-  } = params
-
-  const mergedCheckIn = preserveExistingCheckIn
-    ? mergeUserOwnedCheckInDraft({
-        latest: nextCheckIn,
-        draft: draft.checkIn,
-        selectionChanged:
-          draft.checkIn.selection.mode === CHECK_IN_SELECTION_MODES.Manual,
-      })
-    : nextCheckIn
-  const checkIn = preserveExistingCheckIn
-    ? mergedCheckIn
-    : {
-        ...mergedCheckIn,
-        automaticExecutionEnabled: resolveNewAccountAutomaticExecutionEnabled({
-          siteType: nextSiteType,
-          currentAutomaticExecutionEnabled:
-            mergedCheckIn.automaticExecutionEnabled,
-          userPreferenceChanged: automaticExecutionPreferenceChanged,
-        }),
-      }
-  const nextDraft: AccountDialogDraft = {
-    ...draft,
-    username: resultData.username,
-    accessToken: resultData.accessToken,
-    userId: resultData.userId,
-    siteName: resultData.siteName,
-    exchangeRate: resultData.exchangeRate
-      ? resultData.exchangeRate.toString()
-      : mode === DIALOG_MODES.ADD
-        ? ""
-        : draft.exchangeRate,
-    siteType: nextSiteType,
-    authType:
-      resultData.authType ??
-      (policy.forceAccessTokenAuth ? AuthTypeEnum.AccessToken : draft.authType),
-    cookieAuthSessionCookie: policy.allowCookieAuthSession
-      ? draft.cookieAuthSessionCookie
-      : "",
-    checkIn,
-    sub2apiRefreshToken:
-      policy.allowSub2ApiRefreshTokenState && resultData.sub2apiAuth
-        ? resultData.sub2apiAuth.refreshToken
-        : draft.sub2apiRefreshToken,
-    sub2apiTokenExpiresAt:
-      policy.allowSub2ApiRefreshTokenState && resultData.sub2apiAuth
-        ? resultData.sub2apiAuth.tokenExpiresAt ?? null
-        : draft.sub2apiTokenExpiresAt,
-  }
-
-  return normalizeAccountDialogDraftForSitePolicy({
-    draft: nextDraft,
-    policy,
-  })
 }
 
 /**

@@ -1,6 +1,5 @@
 import type { TFunction } from "i18next"
 import { useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { OPTIONS_CAPABILITY_ICONS } from "~/components/icons/optionsPageIcons"
@@ -24,8 +23,10 @@ import {
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import toast from "~/lib/notify"
+import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -71,7 +72,7 @@ import {
   type WebDAVSyncDataSelection,
 } from "~/types/webdav"
 import { createLogger } from "~/utils/core/logger"
-import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
+import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
 import { applyPreferenceLanguage } from "~/utils/i18n/applyPreferenceLanguage"
 import { t as translate } from "~/utils/i18n/core"
 import { changePageLanguage } from "~/utils/i18n/pageLanguage"
@@ -403,12 +404,14 @@ export default function WebDAVSettings() {
         accountData,
         tagStore,
         preferencesData,
+        featureGuidance,
         channelConfigs,
         apiCredentialProfiles,
       ] = await Promise.all([
-        accountStorage.exportData(),
+        accountDataTransfer.exportData(),
         tagStorage.exportTagStore(),
         userPreferences.exportPreferences(),
+        featureGuidanceState.getState(),
         channelConfigStorage.exportConfigs(),
         apiCredentialProfilesStorage.exportConfig(),
       ])
@@ -418,6 +421,7 @@ export default function WebDAVSettings() {
         accounts: accountData,
         tagStore,
         preferences: preferencesData,
+        featureGuidance,
         channelConfigs,
         apiCredentialProfiles,
       }

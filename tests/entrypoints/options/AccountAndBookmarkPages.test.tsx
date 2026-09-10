@@ -22,6 +22,17 @@ import {
 import { openSettingsTab } from "~/utils/navigation"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    state: {
+      schemaVersion: 1,
+      productTour: {},
+      gatewayGuidance: { dismissedAtBySurface: {} },
+    },
+    dismissGatewayGuidanceSurface: vi.fn(),
+  }),
+}))
+
 const openAddAccountMock = vi.fn()
 const handleRefreshMock = vi.fn()
 const handleRefreshDisabledAccountsMock = vi.fn()
@@ -47,7 +58,7 @@ const accountDataContextState = vi.hoisted(() => ({
   },
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     promise: toastPromiseMock,
   },

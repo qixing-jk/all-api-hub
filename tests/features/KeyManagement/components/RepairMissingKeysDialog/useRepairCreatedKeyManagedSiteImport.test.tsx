@@ -1,8 +1,11 @@
 import { renderHook } from "@testing-library/react"
+import type { TFunction } from "i18next"
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useRepairCreatedKeyManagedSiteImport } from "~/features/KeyManagement/components/RepairMissingKeysDialog/useRepairCreatedKeyManagedSiteImport"
+import enKeyManagement from "~/locales/en/keyManagement.json"
+import zhKeyManagement from "~/locales/zh-CN/keyManagement.json"
 import { AccountKeyRepairMessageTypes } from "~/services/accounts/accountKeyAutoProvisioning/messaging"
 import {
   ACCOUNT_KEY_RECONCILIATION_INVENTORY_STATUSES,
@@ -28,7 +31,7 @@ import {
   MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS,
 } from "~/types/managedSiteTokenBatchExport"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
-import { testI18n } from "~~/tests/test-utils/i18n"
+import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
 import { act, waitFor } from "~~/tests/test-utils/render"
 
 const mocks = vi.hoisted(() => ({
@@ -143,7 +146,49 @@ const createProgress = (
   ],
 })
 
+const languageI18n = await createResourceTestI18n({
+  en: { keyManagement: enKeyManagement },
+  "zh-CN": { keyManagement: zhKeyManagement },
+})
+
 describe("useRepairCreatedKeyManagedSiteImport", () => {
+  it("retranslates configuration feedback without preparing or importing again", async () => {
+    mocks.getCurrentManagedSiteRuntimeConfig.mockResolvedValueOnce(null)
+    const account = createAccount()
+    const ref = {
+      accountId: account.id,
+      siteType: account.siteType,
+      scopeKey: "account",
+      resourceId: "created-key",
+    }
+    const options = {
+      accounts: [account],
+      isOpen: true,
+      isCurrentSessionResult: true,
+      managedSiteType: SITE_TYPES.NEW_API,
+      progress: createProgress(account, ref),
+      setProgress: vi.fn(),
+    }
+    const { result, rerender } = renderHook(
+      ({ t }: { t: TFunction }) =>
+        useRepairCreatedKeyManagedSiteImport({ ...options, t }),
+      { initialProps: { t: languageI18n.getFixedT("en") } },
+    )
+    const callsBefore =
+      mocks.getCurrentManagedSiteRuntimeConfig.mock.calls.length
+    await act(async () => result.current.openBatchImport())
+    rerender({ t: languageI18n.getFixedT("zh-CN") })
+    expect(result.current.importFeedback).toMatchObject({
+      action: "configure-managed-site",
+      description: languageI18n.getFixedT("zh-CN")(
+        "keyManagement:repairMissingKeys.managedSiteImport.configMissing",
+      ),
+    })
+    expect(result.current.isBatchImportOpen).toBe(false)
+    expect(mocks.getCurrentManagedSiteRuntimeConfig).toHaveBeenCalledTimes(
+      callsBefore + 1,
+    )
+  })
   it("counts an exact current-schema created ref as attemptable", () => {
     const account = createAccount()
     const ref: AccountKeyResourceRef = {

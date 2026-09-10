@@ -1,6 +1,6 @@
 echo "🧪 Running pre-push validation..."
 
-pnpm run validate:push || {
+pnpm run validate:push:changed || {
   echo "❌ Pre-push validation failed"
   exit 1
 }

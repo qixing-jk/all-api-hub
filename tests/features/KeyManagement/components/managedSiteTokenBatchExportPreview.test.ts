@@ -18,9 +18,10 @@ import {
   type ManagedSiteTokenBatchExportPreview,
   type ManagedSiteTokenBatchExportPreviewItem,
 } from "~/types/managedSiteTokenBatchExport"
+import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 
 const candidate = {
-  id: 12,
+  ref: matchingResourceRef(12),
   name: "Managed Channel 12",
 }
 
@@ -33,7 +34,6 @@ const manualPreviewTarget = {
   targetSummary: {
     siteType: SITE_TYPES.NEW_API,
     baseUrl: "https://target.example.invalid",
-    compatibleUserId: "1",
   },
 }
 
@@ -56,7 +56,7 @@ const buildPreviewItem = (
     groups: ["default"],
     priority: 0,
     weight: 0,
-    status: 1,
+    enabled: true,
   },
   ...fields,
 })

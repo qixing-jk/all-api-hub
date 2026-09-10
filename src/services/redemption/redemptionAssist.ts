@@ -1,4 +1,6 @@
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import {
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
@@ -35,6 +37,14 @@ import {
  */
 const logger = createLogger("RedemptionAssist")
 
+/** Loads picker-only support metadata outside the background startup path. */
+async function toRedemptionAccountCandidates(accounts: DisplaySiteData[]) {
+  const { toRedemptionAccountCandidate } = await import(
+    "~/services/redemption/accountCandidate"
+  )
+  return accounts.map(toRedemptionAccountCandidate)
+}
+
 /**
  * After a successful redeem, attempt to refresh the account data to reflect any changes.
  * @param accountId ID of the account that was redeemed against.
@@ -43,7 +53,7 @@ async function bestEffortRefreshAccountAfterSuccessfulRedeem(
   accountId: string,
 ) {
   try {
-    const result = await accountStorage.refreshAccount(accountId, true, {
+    const result = await accountRefresh.refreshAccount(accountId, true, {
       protectionBypassExecution: createAutomaticProtectionBypassExecution(
         PROTECTION_BYPASS_FEATURES.RedemptionAssist,
         PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
@@ -216,11 +226,9 @@ class RedemptionAssistService {
    * Fetch accounts and convert to display data used by search/filter utilities.
    */
   private async getDisplayAccounts(): Promise<DisplaySiteData[]> {
-    const siteAccounts = await accountStorage.getAllAccounts()
-    const displayAccounts = accountStorage.convertToDisplayData(
-      siteAccounts,
-      siteAccounts,
-    )
+    const siteAccounts = await accountQueries.getAllAccounts()
+    const displayAccounts =
+      accountPresentation.convertToDisplayData(siteAccounts)
     return displayAccounts.filter((account) => account.disabled !== true)
   }
 
@@ -303,10 +311,14 @@ class RedemptionAssistService {
             SITE_ROUTE_KINDS.Redeem,
           ))
 
-        const checkInPattern = buildOriginWhitelistPattern(resolvedCheckInUrl)
+        const checkInPattern = resolvedCheckInUrl
+          ? buildOriginWhitelistPattern(resolvedCheckInUrl)
+          : null
         if (checkInPattern) patterns.push(checkInPattern)
 
-        const redeemPattern = buildUrlPrefixWhitelistPattern(resolvedRedeemUrl)
+        const redeemPattern = resolvedRedeemUrl
+          ? buildUrlPrefixWhitelistPattern(resolvedRedeemUrl)
+          : null
         if (redeemPattern) patterns.push(redeemPattern)
       }
     }
@@ -502,7 +514,7 @@ class RedemptionAssistService {
       return {
         success: false,
         code: "MULTIPLE_ACCOUNTS",
-        candidates: sameDomainCandidates,
+        candidates: await toRedemptionAccountCandidates(sameDomainCandidates),
       }
     }
 
@@ -511,7 +523,7 @@ class RedemptionAssistService {
       success: false,
       code: "NO_ACCOUNTS",
       candidates: [],
-      allAccounts: displayAccounts,
+      allAccounts: await toRedemptionAccountCandidates(displayAccounts),
       message: t("redemptionAssist:messages.noAccountForUrl"),
     }
   }

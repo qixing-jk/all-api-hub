@@ -14,21 +14,9 @@ import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/account
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
-const {
-  addTokenDialogPropsMock,
-  channelDialogPropsMock,
-  nativeDialogPropsMock,
-} = vi.hoisted(() => ({
+const { addTokenDialogPropsMock, nativeDialogPropsMock } = vi.hoisted(() => ({
   addTokenDialogPropsMock: vi.fn(),
-  channelDialogPropsMock: vi.fn(),
   nativeDialogPropsMock: vi.fn(),
-}))
-
-vi.mock("~/components/dialogs/ChannelDialog/components/ChannelDialog", () => ({
-  ChannelDialog: (props: { isOpen: boolean }) => {
-    channelDialogPropsMock(props)
-    return <div data-testid="mock-channel-dialog" />
-  },
 }))
 
 vi.mock(
@@ -208,8 +196,7 @@ describe("ChannelDialogContainer", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("renders a native create dialog instead of opening the legacy channel dialog", async () => {
-    channelDialogPropsMock.mockReset()
+  it("renders the registered native create editor", async () => {
     nativeDialogPropsMock.mockReset()
 
     render(
@@ -221,9 +208,6 @@ describe("ChannelDialogContainer", () => {
 
     expect(await screen.findByTestId("mock-native-dialog")).toBeVisible()
     await waitFor(() => {
-      expect(channelDialogPropsMock).toHaveBeenLastCalledWith(
-        expect.objectContaining({ isOpen: false }),
-      )
       expect(nativeDialogPropsMock).toHaveBeenLastCalledWith(
         expect.objectContaining({
           isOpen: true,

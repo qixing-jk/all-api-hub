@@ -4,21 +4,20 @@ import {
   AXON_HUB_CHANNEL_FIELD_IDS,
   AXON_HUB_CHANNEL_STATUS,
   AXON_HUB_CHANNEL_TYPE,
+  AXON_HUB_CREATE_FIELD_IDS,
+  AXON_HUB_DETAIL_FIELD_IDS,
   AXON_HUB_EDITABLE_FIELD_IDS,
   AXON_HUB_TABLE_FIELD_IDS,
 } from "~/constants/axonHub"
-import { ChannelType } from "~/constants/managedSite"
-import { isManagedSiteType, SITE_TYPES } from "~/constants/siteType"
+import { ChannelType } from "~/constants/newApi"
+import { SITE_TYPES } from "~/constants/siteType"
+import { createManagedResourceRowMapper } from "~/features/ManagedSiteChannels/controllers/managedResourceRowMapper"
 import {
   getManagedResourceFieldPolicy,
   resolveManagedResourceFieldPolicy,
   type ManagedResourceEditorMode,
 } from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
-import { createManagedResourcePresentationMapper } from "~/features/ManagedSiteChannels/presentation/managedResourcePresentation"
-import {
-  MANAGED_RESOURCE_KINDS,
-  MANAGED_RESOURCE_MODES,
-} from "~/services/accountSiteDefinitions/contracts"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import * as accountSiteDefinitionRegistry from "~/services/accountSiteDefinitions/registry"
 import {
   MANAGED_RESOURCE_CREATE_SEED_KINDS,
@@ -31,6 +30,7 @@ import {
   type SecretEditIntent,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { RESOURCE_FIELD_TYPES } from "~/services/apiAdapters/contracts/resourceNative"
+import * as axonHubNativeResources from "~/services/apiAdapters/managedResources/axonHub"
 import {
   axonHubManagedResourceRegistration,
   AxonHubNativeError,
@@ -38,7 +38,6 @@ import {
   type AxonHubNativeFailure,
   type AxonHubNativeResourceOperations,
 } from "~/services/apiAdapters/managedResources/axonHub"
-import * as axonHubNativeResources from "~/services/apiAdapters/managedResources/axonHub"
 import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
@@ -87,6 +86,7 @@ const mocks = vi.hoisted(() => {
     updateChannel: vi.fn(),
     updateStatus: vi.fn(),
     deleteChannel: vi.fn(),
+    hasCompleteAdvancedDetail: vi.fn(),
     mutationSequenceStepCounts: [] as number[],
   }
 })
@@ -108,6 +108,7 @@ vi.mock("~/services/apiService/axonHub", () => ({
   updateAxonHubChannel: mocks.updateChannel,
   updateAxonHubChannelStatus: mocks.updateStatus,
   deleteAxonHubChannel: mocks.deleteChannel,
+  hasCompleteAxonHubAdvancedDetail: mocks.hasCompleteAdvancedDetail,
 }))
 
 vi.mock("~/services/managedSites/mutations", async (importOriginal) => {
@@ -185,9 +186,6 @@ const pinnedSettings = {
   },
   retryableStatusCodes: [429, 503],
   retryableErrorPatterns: [{ pattern: "retry", regex: false }],
-  providerQuota: {
-    opencodeGo: { workspaceId: "workspace-placeholder", authCookie: null },
-  },
 } satisfies NonNullable<AxonHubChannel["settings"]>
 
 const buildDetailChannel = (
@@ -279,13 +277,6 @@ const updateFieldCases: readonly {
     value: " Updated remark ",
     expectedInput: { remark: "Updated remark" },
   },
-  {
-    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
-    value: "",
-    expectedInput: {
-      settings: { ...pinnedSettings, extraModelPrefix: "" },
-    },
-  },
 ]
 
 const emptyFieldCases: readonly {
@@ -296,12 +287,12 @@ const emptyFieldCases: readonly {
   {
     fieldId: AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL,
     value: "",
-    expectedInput: { clearBaseURL: true },
+    expectedInput: { baseURL: "" },
   },
   {
     fieldId: AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS,
     value: [],
-    expectedInput: { clearManualModels: true },
+    expectedInput: { manualModels: [] },
   },
   {
     fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_MODEL_PATTERN,
@@ -407,7 +398,10 @@ const expectEditorMatchesFieldPolicy = (
     new Set(resolved.fields.map(({ presentation }) => presentation.fieldId)),
   ).toEqual(
     new Set(
-      AXON_HUB_EDITABLE_FIELD_IDS.filter(
+      (mode === "create"
+        ? AXON_HUB_CREATE_FIELD_IDS
+        : AXON_HUB_EDITABLE_FIELD_IDS
+      ).filter(
         (fieldId) => fieldId !== AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS,
       ),
     ),
@@ -500,6 +494,7 @@ describe("AxonHub native managed-resource Adapter", () => {
       status: AXON_HUB_CHANNEL_STATUS.ENABLED,
     })
     mocks.deleteChannel.mockResolvedValue(true)
+    mocks.hasCompleteAdvancedDetail.mockReturnValue(true)
   })
 
   it("opens AxonHub with validated saved configuration", async () => {
@@ -674,7 +669,7 @@ describe("AxonHub native managed-resource Adapter", () => {
       value: 2,
     })
 
-    const row = createManagedResourcePresentationMapper({
+    const row = createManagedResourceRowMapper({
       fieldIds: AXON_HUB_TABLE_FIELD_IDS,
     }).map(page.items[0]!)
     expect(row.searchText).toContain("manual-model")
@@ -783,7 +778,7 @@ describe("AxonHub native managed-resource Adapter", () => {
       },
     ])
     expect(detail.fields.map((field) => field.fieldId)).toEqual(
-      AXON_HUB_EDITABLE_FIELD_IDS,
+      AXON_HUB_DETAIL_FIELD_IDS,
     )
   })
 
@@ -1003,6 +998,8 @@ describe("AxonHub native managed-resource Adapter", () => {
           name: "Plain name",
           supportedModels: ["model-searchable"],
           tags: ["tag-searchable"],
+          credentials: { apiKey: "private-search-secret" },
+          settings: pinnedSettings,
         }),
       ],
     })
@@ -1010,7 +1007,7 @@ describe("AxonHub native managed-resource Adapter", () => {
 
     for (const term of [
       "opaque-search",
-      "plain name",
+      "  PLAIN NAME  ",
       "model-searchable",
       "tag-searchable",
       "gateway.example.invalid",
@@ -1022,6 +1019,12 @@ describe("AxonHub native managed-resource Adapter", () => {
     await expect(
       workspace.list({ search: "proxy-password" }),
     ).resolves.toMatchObject({ items: [] })
+    await expect(
+      workspace.list({ search: "private-search-secret" }),
+    ).resolves.toMatchObject({ items: [] })
+    await expect(workspace.list({ search: "   " })).resolves.toMatchObject({
+      items: [{ ref: { resourceId: "opaque-search-id" } }],
+    })
     expect(mocks.getChannel).not.toHaveBeenCalled()
   })
 
@@ -1030,7 +1033,7 @@ describe("AxonHub native managed-resource Adapter", () => {
     const editor = await workspace.openCreateEditor()
 
     expect(editor.fields.map((field) => field.fieldId)).toEqual(
-      AXON_HUB_EDITABLE_FIELD_IDS,
+      AXON_HUB_CREATE_FIELD_IDS,
     )
     expect(editor.initialValues.key).toEqual({ kind: "unchanged" })
     expect(JSON.stringify(editor.initialValues)).not.toContain("saved-password")
@@ -1467,9 +1470,6 @@ describe("AxonHub native managed-resource Adapter", () => {
 
       const updateInput = mocks.updateChannel.mock.calls.at(-1)?.[2]
       expect(updateInput).toEqual(expectedInput)
-      if (fieldId === AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX) {
-        expect(updateInput).not.toHaveProperty("clearSettings")
-      }
     },
   )
 
@@ -1644,98 +1644,22 @@ describe("AxonHub native managed-resource Adapter", () => {
 
     await editor.submit(editor.initialValues)
 
-    expect(mocks.updateChannel.mock.calls.at(-1)?.[2]).toEqual({})
+    expect(mocks.updateChannel).not.toHaveBeenCalled()
+    expect(mocks.updateStatus).not.toHaveBeenCalled()
   })
 
-  it("preserves every selected pinned setting while updating extraModelPrefix", async () => {
+  it("keeps replacement-only settings out of the edit surface", async () => {
     const detail = buildDetailChannel()
-    const original = structuredClone(detail)
     mocks.getChannel.mockResolvedValue(detail)
-    mocks.updateChannel.mockResolvedValue({
-      ...detail,
-      settings: { ...detail.settings, extraModelPrefix: "new-prefix" },
-    })
     const workspace = await openWorkspace()
     const editor = await workspace.openEditEditor(refFor(detail))
 
-    await editor.submit({
-      ...editor.initialValues,
-      extraModelPrefix: "new-prefix",
-    })
-
-    expect(mocks.updateChannel.mock.calls.at(-1)?.[2]).toEqual({
-      settings: { ...pinnedSettings, extraModelPrefix: "new-prefix" },
-    })
-    expect(mocks.updateChannel.mock.calls.at(-1)?.[2]).not.toHaveProperty(
-      "clearSettings",
+    expect(editor.fields.map((field) => field.fieldId)).not.toContain(
+      AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
     )
-    expect(detail).toEqual(original)
-  })
-
-  it("keeps nested settings secrets out of the editor and merges the update into a fresh detail", async () => {
-    const openingDetail = buildDetailChannel({
-      settings: {
-        ...structuredClone(pinnedSettings),
-        proxy: {
-          ...pinnedSettings.proxy,
-          password: "opening-proxy-secret",
-        },
-        providerQuota: {
-          opencodeGo: {
-            workspaceId: "opening-workspace",
-            authCookie: "opening-auth-cookie",
-          },
-        },
-      },
-    })
-    const latestDetail = buildDetailChannel({
-      settings: {
-        ...structuredClone(pinnedSettings),
-        hideOriginalModels: false,
-        proxy: {
-          ...pinnedSettings.proxy,
-          password: "latest-proxy-secret",
-        },
-        providerQuota: {
-          opencodeGo: {
-            workspaceId: "latest-workspace",
-            authCookie: "latest-auth-cookie",
-          },
-        },
-      },
-    })
-    mocks.getChannel
-      .mockResolvedValueOnce(openingDetail)
-      .mockResolvedValueOnce(latestDetail)
-    mocks.updateChannel.mockResolvedValue({
-      ...latestDetail,
-      settings: { ...latestDetail.settings, extraModelPrefix: "new-prefix" },
-    })
-    const workspace = await openWorkspace()
-    const editor = await workspace.openEditEditor(refFor(openingDetail))
-
-    const publicEditor = JSON.stringify({
-      fields: editor.fields,
-      initialValues: editor.initialValues,
-    })
-    expect(publicEditor).not.toContain("opening-proxy-secret")
-    expect(publicEditor).not.toContain("opening-auth-cookie")
-
-    await editor.submit({
-      ...editor.initialValues,
-      extraModelPrefix: "new-prefix",
-    })
-
-    expect(mocks.getChannel).toHaveBeenCalledTimes(2)
-    expect(mocks.updateChannel.mock.calls.at(-1)?.[2]).toEqual({
-      settings: { ...latestDetail.settings, extraModelPrefix: "new-prefix" },
-    })
-    expect(
-      JSON.stringify(mocks.updateChannel.mock.calls.at(-1)?.[2]),
-    ).not.toContain("opening-proxy-secret")
-    expect(
-      JSON.stringify(mocks.updateChannel.mock.calls.at(-1)?.[2]),
-    ).not.toContain("opening-auth-cookie")
+    expect(editor.initialValues).not.toHaveProperty(
+      AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
+    )
   })
 
   it("validates supported manual and default-model invariants", async () => {
@@ -2163,9 +2087,6 @@ describe("AxonHub native managed-resource Adapter", () => {
 
   it("returns a common succeeded result with exact create effect and options", async () => {
     const controller = new AbortController()
-    const created = buildDetailChannel({ id: "common-created-id" })
-    mocks.createChannel.mockResolvedValue(created)
-    const operations = await openAxonHubNativeResourceOperations()
     const input: AxonHubCreateChannelInput = {
       type: AXON_HUB_CHANNEL_TYPE.OPENAI,
       name: "Common create",
@@ -2176,6 +2097,15 @@ describe("AxonHub native managed-resource Adapter", () => {
       settings: {},
       orderingWeight: 0,
     }
+    const receipt = {
+      id: "common-created-id",
+      type: input.type,
+      name: input.name,
+      baseURL: null,
+      status: AXON_HUB_CHANNEL_STATUS.DISABLED,
+    }
+    mocks.createChannel.mockResolvedValue(receipt)
+    const operations = await openAxonHubNativeResourceOperations()
 
     const result = await operations.create(
       input,
@@ -2185,7 +2115,14 @@ describe("AxonHub native managed-resource Adapter", () => {
 
     expect(result).toEqual({
       outcome: "succeeded",
-      data: created,
+      data: {
+        ...receipt,
+        supportedModels: input.supportedModels,
+        manualModels: input.manualModels,
+        defaultTestModel: input.defaultTestModel,
+        settings: input.settings,
+        orderingWeight: input.orderingWeight,
+      },
       confirmedEffects: [
         {
           kind: "resource-created",
@@ -2194,10 +2131,42 @@ describe("AxonHub native managed-resource Adapter", () => {
         },
       ],
     })
+    expect(JSON.stringify(result)).not.toContain("credential-placeholder")
     expect(result).not.toHaveProperty("certainty")
     expect(mocks.createChannel).toHaveBeenCalledWith(config, input, {
       signal: controller.signal,
     })
+  })
+
+  it("applies a minimal update receipt without leaking clear controls", async () => {
+    const detail = buildDetailChannel({ remark: "Remove me" })
+    const receipt = {
+      id: detail.id,
+      type: detail.type,
+      name: "Renamed channel",
+      baseURL: detail.baseURL,
+      status: detail.status,
+    }
+    mocks.updateChannel.mockResolvedValue(receipt)
+    const operations = await openAxonHubNativeResourceOperations()
+
+    const result = await operations.update(detail, {
+      name: receipt.name,
+      clearRemark: true,
+    })
+
+    expect(result).toMatchObject({
+      outcome: "succeeded",
+      data: {
+        ...detail,
+        ...receipt,
+        remark: null,
+      },
+    })
+    if (result.outcome !== MANAGED_SITE_MUTATION_OUTCOMES.Succeeded) {
+      throw new Error(`Expected succeeded, received ${result.outcome}`)
+    }
+    expect(result.data).not.toHaveProperty("clearRemark")
   })
 
   it("rejects an already-aborted create before invoking the write", async () => {
@@ -2384,6 +2353,8 @@ describe("AxonHub native managed-resource Adapter", () => {
       status: AXON_HUB_CHANNEL_STATUS.DISABLED,
     })
     const statusError = new mocks.RequestError("unavailable", "dispatched")
+    const { credentials: createdCredentials, ...credentialFreeCreated } =
+      created
     mocks.createChannel.mockResolvedValue(created)
     mocks.updateStatus.mockRejectedValue(statusError)
     const operations = await openAxonHubNativeResourceOperations()
@@ -2405,7 +2376,7 @@ describe("AxonHub native managed-resource Adapter", () => {
 
     expect(result).toEqual({
       outcome: "partial",
-      data: created,
+      data: credentialFreeCreated,
       confirmedEffects: [
         {
           kind: "resource-created",
@@ -2420,6 +2391,8 @@ describe("AxonHub native managed-resource Adapter", () => {
         raw: statusError,
       },
     })
+    expect(createdCredentials).toBeDefined()
+    expect(JSON.stringify(result)).not.toContain("sk-placeholder-value")
     expect(result).not.toHaveProperty("certainty")
     expect(mocks.createChannel).toHaveBeenCalledOnce()
     expect(mocks.updateStatus).toHaveBeenCalledWith(
@@ -2439,6 +2412,8 @@ describe("AxonHub native managed-resource Adapter", () => {
       "upstream-rejected",
       "not-dispatched",
     )
+    const { credentials: createdCredentials, ...credentialFreeCreated } =
+      created
     mocks.createChannel.mockResolvedValue(created)
     mocks.updateStatus.mockRejectedValue(statusError)
     const operations = await openAxonHubNativeResourceOperations()
@@ -2459,7 +2434,7 @@ describe("AxonHub native managed-resource Adapter", () => {
       ),
     ).resolves.toEqual({
       outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
-      data: created,
+      data: credentialFreeCreated,
       confirmedEffects: [
         {
           kind: "resource-created",
@@ -2474,6 +2449,10 @@ describe("AxonHub native managed-resource Adapter", () => {
         raw: statusError,
       },
     })
+    expect(JSON.stringify(credentialFreeCreated)).not.toContain(
+      "sk-placeholder-value",
+    )
+    expect(createdCredentials).toBeDefined()
     expect(mocks.mutationSequenceStepCounts).toEqual([2])
   })
 
@@ -2763,41 +2742,13 @@ describe("AxonHub native managed-resource Adapter", () => {
     expect(newApiRegistration).not.toBe(registration)
   })
 
-  it("keeps registration presence and native rollout mode explicit", () => {
+  it("uses registration presence as the native resource discriminator", () => {
     expect(
       getManagedResourceRegistration(
         SITE_TYPES.AXON_HUB,
         MANAGED_RESOURCE_KINDS.Channel,
       ),
     ).not.toBeNull()
-    expect(
-      accountSiteDefinitionRegistry.getAccountSiteDefinition(
-        SITE_TYPES.AXON_HUB,
-      )?.managedResource?.mode,
-    ).toBe(MANAGED_RESOURCE_MODES.NativeResource)
-  })
-
-  it("has a registration for every definition currently marked native-resource", () => {
-    const nativeDefinitions = accountSiteDefinitionRegistry
-      .getAccountSiteDefinitions()
-      .filter(
-        (definition) =>
-          definition.managedResource?.mode ===
-          MANAGED_RESOURCE_MODES.NativeResource,
-      )
-
-    expect(
-      nativeDefinitions.every((definition) => {
-        const policy = definition.managedResource
-        if (!policy || !isManagedSiteType(definition.siteType)) return false
-        return Boolean(
-          getManagedResourceRegistration(
-            definition.siteType,
-            policy.primaryKind,
-          ),
-        )
-      }),
-    ).toBe(true)
   })
 
   it("maps native Axon detail to a secret-free canonical migration source", async () => {
@@ -2829,7 +2780,7 @@ describe("AxonHub native managed-resource Adapter", () => {
       status: "ready",
       source: {
         sourceSiteType: SITE_TYPES.AXON_HUB,
-        resourceType: ChannelType.Anthropic,
+        resourceType: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
         baseUrl: "https://native.example.invalid/v1",
         models: ["supported-model", "shared-model", "manual-model"],
         groups: [],
@@ -2987,10 +2938,10 @@ describe("AxonHub native managed-resource Adapter", () => {
         groups: ["default"],
         priority: 0,
         weight: 13,
-        status: 1,
+        enabled: true,
       },
       adjustments: {
-        remappedType: true,
+        remappedType: false,
         normalizedBaseUrl: false,
         forcedDefaultGroup: true,
         ignoredPriority: true,
@@ -3287,7 +3238,7 @@ describe("AxonHub native managed-resource Adapter", () => {
     await expect(
       axonHubManagedSiteMigrationCapability.target!.create({
         ...command,
-        projection: { ...command.projection, status: 1 },
+        projection: { ...command.projection, enabled: true },
       }),
     ).resolves.toEqual({ status: "uncertain" })
     expect(mocks.createChannel).toHaveBeenCalledTimes(3)

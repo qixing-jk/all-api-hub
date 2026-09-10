@@ -1067,8 +1067,10 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
             !knownWorkspaceIds.has(workspaceId)
           )
             throw new Error("invalid_workspace")
-          const members = await read(config, () =>
-            drainMembers(config, workspaceId, loadOptions),
+          const members = await read(
+            config,
+            () => drainMembers(config, workspaceId, loadOptions),
+            [workspaceId],
           )
           return members.map((member) => {
             const creatorKey = `${workspaceId}\u0000${member.id}`

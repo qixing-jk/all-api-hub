@@ -3,13 +3,21 @@ import type { ManagedResourceKind } from "~/services/accountSiteDefinitions/cont
 import type { ManagedResourceRegistration } from "~/services/apiAdapters/contracts/managedResourceNative"
 
 import { axonHubManagedResourceRegistration } from "./axonHub"
+import { claudeCodeHubManagedResourceRegistration } from "./claudeCodeHub"
+import { doneHubManagedResourceRegistration } from "./doneHub"
 import { newApiManagedResourceRegistration } from "./newApi"
+import { octopusManagedResourceRegistration } from "./octopus"
 import { sub2ApiManagedResourceRegistration } from "./sub2api"
+import { veloeraManagedResourceRegistration } from "./veloera"
 
 const MANAGED_RESOURCE_REGISTRATIONS = [
   newApiManagedResourceRegistration,
+  octopusManagedResourceRegistration,
   axonHubManagedResourceRegistration,
+  claudeCodeHubManagedResourceRegistration,
+  doneHubManagedResourceRegistration,
   sub2ApiManagedResourceRegistration,
+  veloeraManagedResourceRegistration,
 ] satisfies readonly ManagedResourceRegistration[]
 
 const managedResourceKey = (

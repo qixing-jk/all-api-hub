@@ -1,4 +1,10 @@
-import type { BrowserContext, Page, Worker } from "@playwright/test"
+import {
+  expect,
+  type BrowserContext,
+  type ConsoleMessage,
+  type Page,
+  type Worker,
+} from "@playwright/test"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
@@ -101,6 +107,7 @@ export const E2E_NEW_API_RC22_AUTH = {
 /** Scenario-specific console-error patterns that should not fail the test. */
 export type ExtensionPageGuardOptions = {
   ignoreConsoleErrorPatterns?: RegExp[]
+  ignoreConsoleError?: (message: ConsoleMessage) => boolean
 }
 
 const E2E_SPONSOR_CATALOG_PAYLOAD = {
@@ -138,6 +145,7 @@ function installExtensionPageGuardsWithOptions(
 
     const text = message.text()
     if (
+      options.ignoreConsoleError?.(message) ||
       options.ignoreConsoleErrorPatterns?.some((pattern) => pattern.test(text))
     ) {
       return
@@ -526,22 +534,29 @@ export async function waitForExtensionPage(
   context: BrowserContext,
   params: WaitForExtensionPageParams,
 ) {
-  if (params.reuseExistingPage !== false) {
-    const existingPage = context
+  const excludedPages = new Set(
+    params.reuseExistingPage === false ? context.pages() : [],
+  )
+  const findMatchingPage = () =>
+    context
       .pages()
-      .find((page) => isMatchingExtensionPage(page, params))
+      .find(
+        (page) =>
+          !excludedPages.has(page) && isMatchingExtensionPage(page, params),
+      )
 
-    if (existingPage) {
-      await existingPage.waitForLoadState("domcontentloaded")
-      return existingPage
-    }
-  }
+  // Chrome can emit the page event before its first navigation commits. Observe
+  // the destination as well as new pages, including navigation of reused tabs.
+  await expect
+    .poll(() => Boolean(findMatchingPage()), {
+      timeout: params.timeoutMs ?? 15_000,
+      message: `Waiting for extension page ${params.path}${params.hash ?? ""}`,
+    })
+    .toBe(true)
 
-  const page = await context.waitForEvent("page", {
-    timeout: params.timeoutMs ?? 15_000,
-    predicate: (candidate) => isMatchingExtensionPage(candidate, params),
-  })
-
+  const page = findMatchingPage()
+  if (!page)
+    throw new Error("Matching extension page closed before it was ready")
   await page.waitForLoadState("domcontentloaded")
   return page
 }

@@ -213,6 +213,43 @@ describe("content entrypoint", () => {
     expect(secondApiCheckCleanup).toHaveBeenCalledTimes(1)
   })
 
+  it("refreshes language after a preference update without reinstalling active content features", async () => {
+    const cleanupRedemption = vi.fn()
+    const cleanupApiCheck = vi.fn()
+    setupRedemptionAssistContentMock.mockReturnValue(cleanupRedemption)
+    setupWebAiApiCheckContentMock.mockReturnValue(cleanupApiCheck)
+    storageGetMock
+      .mockResolvedValueOnce({ language: "en" })
+      .mockResolvedValue({ language: "zh-CN" })
+    const module = await import("~/entrypoints/content/index")
+    const onInvalidated = vi.fn()
+    await module.default.main({ onInvalidated } as any)
+    await waitFor(() =>
+      expect(setupWebAiApiCheckContentMock).toHaveBeenCalledTimes(1),
+    )
+    const handleStorageChanged =
+      addStorageChangedListenerMock.mock.calls[0]?.[0]
+
+    handleStorageChanged(
+      {
+        [USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES]: {
+          oldValue: { language: "en" },
+          newValue: { language: "zh-CN" },
+        },
+      },
+      "local",
+    )
+
+    await waitFor(() =>
+      expect(ensureContentI18nReadyMock).toHaveBeenCalledTimes(2),
+    )
+    expect(setupRedemptionAssistContentMock).toHaveBeenCalledTimes(1)
+    expect(setupWebAiApiCheckContentMock).toHaveBeenCalledTimes(1)
+    expect(cleanupRedemption).not.toHaveBeenCalled()
+    expect(cleanupApiCheck).not.toHaveBeenCalled()
+    onInvalidated.mock.calls[0]?.[0]()
+  })
+
   it("cleans up message handlers when the content context is invalidated", async () => {
     const cleanupMessageHandlers = vi.fn()
     const cleanupRedemption = vi.fn()

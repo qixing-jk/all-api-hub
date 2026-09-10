@@ -24,7 +24,7 @@ const {
   toastErrorMock: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: toastSuccessMock,
     error: toastErrorMock,

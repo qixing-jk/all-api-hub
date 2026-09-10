@@ -23,6 +23,10 @@ import {
   tempWindowTurnstileFetch,
 } from "~/utils/browser/tempWindowFetch"
 
+const { DEFAULT_TEMP_WINDOW_SIZE } = await vi.hoisted(
+  () => import("~/services/preferences/tempWindowFallbackPreferences"),
+)
+
 const mocks = vi.hoisted(() => ({
   sendRuntimeMessageMock: vi.fn(),
   onRuntimeMessageMock: vi.fn(() => vi.fn()),
@@ -45,6 +49,7 @@ const mocks = vi.hoisted(() => ({
     error: vi.fn(),
   },
   defaultTempWindowFallback: {
+    ...DEFAULT_TEMP_WINDOW_SIZE,
     enabled: true,
     automaticFeatureBypass: {
       account_refresh: true,
@@ -201,6 +206,25 @@ function expectRuntimeTask(
 }
 
 describe("tempWindowFetch runtime helpers and fallback gating", () => {
+  it("forwards the original fallback status and code without its error message", async () => {
+    mocks.sendRuntimeMessageMock.mockResolvedValue({ success: true, data: {} })
+    await executeWithTempWindowFallback(buildContext(), async () => {
+      throw new ApiError(
+        "secret backend message",
+        403,
+        "/api/models?token=secret",
+        API_ERROR_CODES.CONTENT_TYPE_MISMATCH,
+      )
+    })
+
+    expectRuntimeTask(TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, {
+      fallbackDiagnostic: { statusCode: 403, code: "CONTENT_TYPE_MISMATCH" },
+    })
+    expect(
+      JSON.stringify(mocks.sendRuntimeMessageMock.mock.calls),
+    ).not.toContain("secret backend message")
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.unstubAllGlobals()

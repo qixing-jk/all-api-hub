@@ -303,6 +303,7 @@
       "inputPreparationFailed": "Die Verifizierung konnte keine vergleichbaren Kanaleingaben vorbereiten.",
       "newApiRetrieveKeyHint": "Für New API hängt der vollständige Schlüsselvergleich vom Kanalschlüssel ab und die Anzeige dieses Kanalschlüssels selbst erfordert eine 2FA-Verifizierung, sodass ein vollständiger Schlüsselvergleich derzeit nicht verfügbar ist."
     },
+    "nativeResourceUnsupported": "Der Abgleich mit verwalteten Websites unterstützt auf dieser Seite noch keine nativen Ressourcenschlüssel. Die Aktualisierung gilt nur für unterstützte Schlüssel.",
     "pageUnsupported": "Kanalprüfungen für verwaltete Websites sind auf dieser Seite nicht verfügbar, da die aktuell verwaltete Website die Suche nach Kanälen nach URL derzeit nicht unterstützt.",
     "recovery": {
       "configureLogin": "Fügen Sie zuerst in den Einstellungen die Felder für die New-API-Anmeldung und die 2FA-Unterstützung hinzu. Bis dahin kann der Kanalschlüssel nicht gelesen und kein vollständiger Schlüsselvergleich durchgeführt werden.",
@@ -363,6 +364,29 @@
     "verifyApiFailed": "Fehler beim Öffnen der API-Verifizierung",
     "verifyCliSupportFailed": "Fehler beim Öffnen der CLI-Kompatibilitätsüberprüfung"
   },
+  "native": {
+    "detailsLoadFailed": "Schlüsseldetails konnten nicht geladen werden.",
+    "heading": "API-Schlüssel",
+    "missing": "Nicht verfügbar",
+    "scope": {
+      "empty": "Keine Bereiche verfügbar",
+      "error": "Bereiche konnten nicht geladen werden",
+      "errorHelp": "Prüfe den Kontozugriff und versuche es erneut.",
+      "heading": "Bereich",
+      "label": "Bereich auswählen",
+      "loading": "Bereiche werden geladen…",
+      "partial": "Einige Bereiche konnten nicht geladen werden. Verfügbare Bereiche können weiterhin verwendet werden.",
+      "placeholder": "Bereich wählen",
+      "retry": "Bereiche erneut laden"
+    },
+    "status": {
+      "disabled": "Deaktiviert",
+      "enabled": "Aktiviert",
+      "expired": "Abgelaufen",
+      "unknown": "Unbekannt"
+    }
+  },
+  "noAccountsSupportKeyCreation": "Keines der Konten in dieser Ansicht unterstützt das Erstellen von API-Schlüsseln. Wählen Sie ein anderes Konto oder fügen Sie ein unterstütztes Konto hinzu.",
   "noKeys": "Noch keine Schlüsseldaten",
   "noMatchingKeys": "Keine passenden Schlüssel gefunden",
   "oneTimeKey": {
@@ -549,7 +573,6 @@
         "usageWeekly": "Wöchentliche Nutzung",
         "workspace": "Arbeitsbereich"
       },
-      "heading": "OpenRouter-Schlüssel",
       "status": {
         "all": "Alle",
         "disabled": "Deaktiviert",
@@ -598,7 +621,7 @@
       "title_one": "{{count}} ungültigen Schlüssel löschen?",
       "title_other": "{{count}} ungültige Schlüssel löschen?"
     },
-    "description": "Prüft, ob gespeicherte Konten verwendbare Schlüssel haben. Fehlende Schlüssel werden nach Möglichkeit automatisch erstellt; andere Probleme erscheinen unten.",
+    "description": "Alle verfügbaren Gruppen gespeicherter Konten prüfen und fehlende nutzbare Schlüssel automatisch erstellen, soweit unterstützt. Weitere Probleme werden unten aufgeführt.",
     "failureGuidance": {
       "aborted": "Der Vorgang wurde vor Abschluss abgebrochen. Starten Sie die Prüfung erneut, wenn Sie bereit sind.",
       "authenticationFailed": "Melden Sie sich erneut an oder aktualisieren Sie die Zugangsdaten dieses Kontos und versuchen Sie es erneut.",
@@ -613,7 +636,7 @@
       "validationFailed": "Prüfen Sie die erforderlichen Schlüsseleinstellungen, korrigieren Sie sie und versuchen Sie es erneut."
     },
     "historyNote": "Dies zeigt das vorherige Prüfergebnis. Derzeit wird kein Job ausgeführt und Sie können die Prüfung erneut ausführen.",
-    "initialNotice": "Gespeicherte Konten werden auf nutzbare Schlüssel geprüft. Fehlt bei einem unterstützten Konto ein Schlüssel, kann die Erweiterung einen neuen erstellen.",
+    "initialNotice": "Gespeicherte Konten Gruppe für Gruppe prüfen und fehlende Schlüssel erstellen, soweit unterstützt. Gruppen mit nutzbaren Schlüsseln werden übersprungen.",
     "invalidKeys": {
       "badge": "Ungültig",
       "deleteFailed": "Ungültige Schlüssel konnten nicht gelöscht werden",

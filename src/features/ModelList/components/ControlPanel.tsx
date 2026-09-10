@@ -7,7 +7,6 @@ import {
   TrendingDown,
 } from "lucide-react"
 import { useMemo } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
@@ -41,6 +40,7 @@ import {
   type ModelManagementSource,
   type ModelManagementSourceCapabilities,
 } from "~/features/ModelList/modelManagementSources"
+import type { ModelPricingScenarioSettings } from "~/features/ModelList/pricingScenario"
 import {
   isModelListPriceSortMode,
   MODEL_LIST_SORT_MODES,
@@ -51,6 +51,7 @@ import {
   DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS,
   type ModelListVerificationResultFilter,
 } from "~/features/ModelList/verificationResultFilters"
+import toast from "~/lib/notify"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -74,8 +75,11 @@ import {
   enableModelPriceComparison,
 } from "../priceComparisonActivation"
 import { PriceComparisonControls } from "./PriceComparisonControls"
+import { PricingScenarioControls } from "./PricingScenarioControls"
 
 interface ControlPanelProps {
+  pricingScenarioSettings?: ModelPricingScenarioSettings
+  setPricingScenarioSettings?: (settings: ModelPricingScenarioSettings) => void
   selectedSource: ModelManagementSource | null
   sourceCapabilities: ModelManagementSourceCapabilities
   selectedSourceValue?: string
@@ -132,6 +136,8 @@ interface ControlPanelProps {
  * @param props.setSearchTerm Setter to update search keyword.
  * @param props.sortMode Active sort mode.
  * @param props.setSortMode Setter for sort mode.
+ * @param props.pricingScenarioSettings Shared workload conditions for price comparison.
+ * @param props.setPricingScenarioSettings Commits shared comparison conditions.
  * @param props.priceComparisonPresetId Active workload preset for price sorting.
  * @param props.setPriceComparisonPresetId Setter for the workload preset.
  * @param props.priceComparisonWeights Editable token-bucket comparison weights.
@@ -159,6 +165,8 @@ interface ControlPanelProps {
  * @returns Card with filters, toggles, and actions.
  */
 export function ControlPanel({
+  pricingScenarioSettings,
+  setPricingScenarioSettings,
   selectedSource,
   sourceCapabilities,
   selectedSourceValue = selectedSource?.value ?? "",
@@ -630,14 +638,35 @@ export function ControlPanel({
             </div>
 
             {sourceCapabilities.supportsPricing &&
-              isModelListPriceSortMode(sortMode) && (
+              isModelListPriceSortMode(sortMode) &&
+              (pricingScenarioSettings && setPricingScenarioSettings ? (
+                <PricingScenarioControls
+                  plans={filteredModels.flatMap((item) =>
+                    item.model?.pricingPlan ? [item.model.pricingPlan] : [],
+                  )}
+                  settings={pricingScenarioSettings}
+                  onChange={setPricingScenarioSettings}
+                >
+                  {(conditions, summary) => (
+                    <PriceComparisonControls
+                      conditionFields={conditions}
+                      conditionSummary={summary}
+                      embedded
+                      presetId={priceComparisonPresetId}
+                      onPresetIdChange={setPriceComparisonPresetId}
+                      weights={priceComparisonWeights}
+                      onWeightsChange={setPriceComparisonWeights}
+                    />
+                  )}
+                </PricingScenarioControls>
+              ) : (
                 <PriceComparisonControls
                   presetId={priceComparisonPresetId}
                   onPresetIdChange={setPriceComparisonPresetId}
                   weights={priceComparisonWeights}
                   onWeightsChange={setPriceComparisonWeights}
                 />
-              )}
+              ))}
           </section>
         </div>
 

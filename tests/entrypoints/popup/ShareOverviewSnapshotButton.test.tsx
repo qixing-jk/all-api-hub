@@ -42,7 +42,7 @@ const {
   toastErrorMock: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     error: (...args: unknown[]) => toastErrorMock(...args),
   },

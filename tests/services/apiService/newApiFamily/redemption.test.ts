@@ -8,8 +8,10 @@ const { fetchApiDataMock, loggerErrorMock } = vi.hoisted(() => ({
   loggerErrorMock: vi.fn(),
 }))
 
-vi.mock("~/services/apiTransport/request", () => ({
-  fetchApiData: fetchApiDataMock,
+vi.mock("~/services/apiService/newApiFamily/request", () => ({
+  newApiFamilyRequests: {
+    data: fetchApiDataMock,
+  },
 }))
 
 vi.mock("~/utils/core/logger", () => ({

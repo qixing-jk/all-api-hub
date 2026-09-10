@@ -1,6 +1,6 @@
 ---
 name: sponsor-catalog
-description: Use when adding, updating, removing, reordering, or auditing sponsors, affiliate links, sponsor copy, logos, public sponsor-catalog JSON files, README sponsor sections, or documentation-site sponsor listings in all-api-hub.
+description: Maintain all-api-hub sponsor catalogs, affiliate content, assets, and coordinated README/docs listings. Use for sponsor changes or audits, not ordinary documentation edits.
 ---
 
 # Sponsor Catalog
@@ -11,11 +11,13 @@ Treat sponsor content as coordinated production configuration. Discover the curr
 
 ## Workflow
 
+For an audit or review, use discovery and relevant compatibility guidance to report findings and coverage without editing, staging, or committing. Read public documentation or check ordinary non-affiliate links when needed to establish the findings; affiliate probing follows the campaign-facts rule below. The update and delivery steps apply only to authorized changes.
+
 1. Inspect repository state and current ownership before editing.
    - Run `git status --porcelain` and preserve unrelated work.
-   - Inspect `src/features/AccountManagement/sponsors/`, every `public/sponsor-catalog*.json`, the existing catalog test, and nearby sponsor entries.
-   - Search the whole repository for the sponsor name, domain, asset name, and neighboring sponsors with `rg`.
-   - Inspect recent sponsor commits with `git log --all --oneline -- <paths>` and compare a complete recent rollout. Do not assume the first matching commit defines the full scope.
+   - Search for the sponsor name, domain, or asset to identify affected listings and catalogs. Read matching entries first; inspect runtime owners under `src/features/AccountManagement/sponsors/` and the catalog test when schema or behavior matters.
+   - Discover every served `public/sponsor-catalog*.json` when catalog content is in scope; inspect neighboring sponsors when ordering or established presentation matters.
+   - Consult recent sponsor commits when current surfaces leave scope or compatibility unclear. Read a relevant rollout only when the needed historical decision is not established by current files or commits.
 
 2. Load compatibility guidance when software or public JSON is in scope.
    - Read [references/catalog-compatibility.md](references/catalog-compatibility.md) before choosing schema coverage, support status, actions, or rank.
@@ -29,17 +31,17 @@ Treat sponsor content as coordinated production configuration. Discover the curr
 
 4. Update the complete discovered surface.
    - Treat root READMEs, the Chinese docs source, relevant docs pages, public catalogs, and `resources/partners/` as the starting checklist, then let repository search and history determine the final set.
-   - Follow the repository translation policy. Treat `docs/docs/` Chinese pages as source and avoid manual generated-locale edits unless explicitly requested or required by the established workflow.
+   - Follow the repository's Documentation policy for source-first editing and the final translation-sync decision; this does not defer required locale data in shipped public catalogs.
    - Inspect the supplied image format, pixel dimensions, aspect ratio, and existing presentation classes or attributes. Rename it to the established slug convention and align displayed dimensions without unnecessary re-encoding or new CSS.
    - Keep prose order, physical JSON order, and runtime rank as separate decisions. Implement each ordering request explicitly.
 
 5. Validate and hand off.
-   - For data, copy, and asset-only changes, do not add tests by default. Run the existing focused catalog test:
+   - For data, copy, and asset-only changes, do not add tests by default. When public catalog data changes, run the existing focused catalog test; prose or image-only changes need only relevant content/link/presentation checks:
      `pnpm vitest tests/features/AccountManagement/sponsors/publicCatalog.test.ts --run`
    - When docs surfaces change and dependencies are available, run `pnpm --dir docs run docs:check-links` and `pnpm --dir docs run docs:build` as risk warrants.
-   - Run `git diff --check`, inspect the task-scoped diff, stage only task files, and run `pnpm run validate:staged` before committing.
+   - Run `git diff --check` and inspect the task-scoped diff. When committing, stage only task files and let the pre-commit hook run `validate:staged` once; reuse valid focused checks instead of duplicating the hook gate.
    - Use `docs(sponsors): ...` for copy, catalog-data, and asset-only changes. Choose `feat` or `fix` only when the final diff changes executable behavior.
-   - Report every intentionally omitted catalog version with its concrete compatibility reason. For data-only changes, record that existing sponsor analytics are reused and browser E2E is unnecessary because no runtime flow changed.
+   - Report intentionally omitted catalog versions with concrete compatibility reasons when catalog updates are in scope. Explain analytics or browser-E2E decisions only when behavior or an unresolved risk makes them relevant.
 
 ## Common mistakes
 

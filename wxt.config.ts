@@ -47,6 +47,8 @@ const e2eBuildVariant = readE2eBuildVariant()
 // See https://wxt.dev/api/config.html
 export default defineConfig({
   srcDir: "src",
+  // Dependency caches are not source files; watching them is costly on Windows.
+  watchOptions: { ignored: ["**/.pnpm-store/**"] },
   publicDir: "src/public",
   // Locale changes restart dev so the local module can regenerate runtime assets.
   modulesDir: "src/locales",

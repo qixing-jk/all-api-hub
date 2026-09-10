@@ -4,8 +4,8 @@ import {
   normalizeChannelProcessingTimeout,
   runWithChannelProcessingTimeout,
 } from "~/services/models/modelSync/channelProcessingTimeout"
-import type { ManagedSiteChannel } from "~/types/managedSite"
 import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 vi.mock("~/utils/i18n/core", () => ({
   t: vi.fn((key: string, options?: { count?: number }) =>
@@ -14,10 +14,10 @@ vi.mock("~/utils/i18n/core", () => ({
 }))
 
 const channel = {
-  id: 42,
-  name: "Slow Channel",
-  models: " gpt-4o, , claude-3 ",
-} as ManagedSiteChannel
+  resourceRef: modelResourceRef(42),
+  channelName: "Slow Channel",
+  oldModels: ["gpt-4o", "claude-3"],
+}
 
 describe("normalizeChannelProcessingTimeout", () => {
   it("normalizes invalid and non-positive values to unlimited", () => {
@@ -39,8 +39,8 @@ describe("normalizeChannelProcessingTimeout", () => {
 describe("runWithChannelProcessingTimeout", () => {
   it("runs without an abort signal when timeout is unlimited", async () => {
     const result: ExecutionItemResult = {
-      channelId: channel.id,
-      channelName: channel.name,
+      resourceRef: channel.resourceRef,
+      channelName: channel.channelName,
       ok: true,
       attempts: 0,
       finishedAt: 1,
@@ -73,7 +73,7 @@ describe("runWithChannelProcessingTimeout", () => {
       expect(capturedSignal?.aborted).toBe(true)
       expect(result).toEqual(
         expect.objectContaining({
-          channelId: 42,
+          resourceRef: modelResourceRef(42),
           channelName: "Slow Channel",
           ok: false,
           attempts: 3,
@@ -91,7 +91,7 @@ describe("runWithChannelProcessingTimeout", () => {
     try {
       const resultPromise = runWithChannelProcessingTimeout(
         () => new Promise<ExecutionItemResult>(() => undefined),
-        { ...channel, models: "" },
+        { ...channel, oldModels: [] },
         0,
         1,
       )

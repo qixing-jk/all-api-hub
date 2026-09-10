@@ -32,6 +32,16 @@ export const sharedChatAccountCompletion: AccountCompletionCapability = {
       )
     })
 
+    const recoveredUsername = helpers.trimString(userInfo.username)
+    const recoveredAccessToken = helpers.trimString(userInfo.access_token)
+    const recoveredUserId = helpers.trimString(userInfo.id)
+    helpers.captureRecoveryData({
+      ...(recoveredUsername ? { username: recoveredUsername } : {}),
+      ...(recoveredAccessToken ? { accessToken: recoveredAccessToken } : {}),
+      ...(recoveredUserId ? { userId: recoveredUserId } : {}),
+      authType: AuthTypeEnum.Cookie,
+    })
+
     return {
       username: userInfo.username,
       siteName: await helpers.fetchSiteName(null),

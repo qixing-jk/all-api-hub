@@ -27,6 +27,23 @@ import type {
   UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import {
+  buildAIHubMixAudioDurationPlan,
+  buildAIHubMixCharacterPlan,
+  buildAIHubMixFixedImagePlan,
+  buildAIHubMixImageQualityPlan,
+  buildAIHubMixLegacyVideoPlan,
+  buildAIHubMixMeasuredOutputPlan,
+  buildAIHubMixReferenceVideoPlan,
+  checkAIHubMixVideoPriceEvidence,
+} from "~/services/apiService/aihubmix/meteredPricing"
+import { buildAIHubMixPricingPlan } from "~/services/apiService/aihubmix/pricingPlan"
+import { createAIHubMixPublicCatalogCache } from "~/services/apiService/aihubmix/publicCatalogCache"
+import { decodeAIHubMixResponseError } from "~/services/apiService/aihubmix/responseError"
+import {
+  buildAIHubMixWebsitePricingPlan,
+  getAIHubMixPricingSource,
+} from "~/services/apiService/aihubmix/websitePricing"
+import {
   composeAbortSignals,
   startAbortableTask,
 } from "~/services/apiTransport/abortableTask"
@@ -45,10 +62,15 @@ import {
   InviteLinkError,
 } from "~/services/inviteLinks/errors"
 import {
+  MODEL_CATALOG_SCOPES,
   MODEL_LIST_SOURCE_KINDS,
   type ModelPricing,
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
+import {
+  PRICING_GROUP_MULTIPLIERS,
+  PRICING_ISSUE_CODES,
+} from "~/services/modelPricing/pricingConstants"
 import {
   MODEL_VENDOR_EVIDENCE_KINDS,
   normalizeModelDescriptors,
@@ -62,6 +84,7 @@ import {
   type AccountTodayStatsAvailability,
   type ApiToken,
 } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { joinUrl } from "~/utils/core/url"
 import { t } from "~/utils/i18n/core"
@@ -135,6 +158,7 @@ type AIHubMixUserAvailableModel = {
 }
 
 type AIHubMixModelCatalogItem = {
+  promotion?: unknown
   model_id?: string
   id?: string
   name?: string
@@ -145,12 +169,24 @@ type AIHubMixModelCatalogItem = {
   developer?: string
   owner_by?: string
   type?: string
+  types?: string
   endpoints?: string[] | string
   pricing?: {
+    cache_write?: number | string
     cache_read?: number | string
     input?: number | string
     output?: number | string
   }
+}
+
+type AIHubMixWebsiteModel = {
+  model: string
+  desc?: unknown
+  desc_en?: unknown
+  billing_config?: unknown
+  display_input?: unknown
+  img_price_config?: unknown
+  display_output?: unknown
 }
 
 // AIHubMix create-key docs define the management payload as:
@@ -202,7 +238,10 @@ const extractAIHubMixData = <T>(body: unknown, endpoint: string): T => {
   const response = body as Partial<ApiResponse<T>>
   if (response.success === false) {
     throw new ApiError(
-      response.message || t("messages:errors.api.invalidResponseFormat"),
+      getErrorMessage(
+        typeof response.message === "string" ? response.message : undefined,
+        t("messages:errors.api.invalidResponseFormat"),
+      ),
       undefined,
       endpoint,
       API_ERROR_CODES.BUSINESS_ERROR,
@@ -252,13 +291,18 @@ const fetchAIHubMixData = async <T>(
   }
 
   if (!response.ok) {
-    const message =
-      body &&
-      typeof body === "object" &&
-      typeof (body as any).message === "string"
-        ? (body as any).message
-        : t("messages:errors.api.requestFailed", { status: response.status })
-    throw new ApiError(message, response.status, endpoint)
+    const providerError = decodeAIHubMixResponseError(
+      { ok: false, status: response.status, headers: {}, body },
+      { endpoint },
+    )
+    throw new ApiError(
+      getErrorMessage(
+        providerError?.message,
+        t("messages:errors.api.requestFailed", { status: response.status }),
+      ),
+      response.status,
+      endpoint,
+    )
   }
 
   return extractAIHubMixData<T>(body, endpoint)
@@ -470,15 +514,108 @@ const buildAIHubMixVendorEvidence = (
 const buildAIHubMixModelPricing = (
   modelId: string,
   catalogItem?: AIHubMixModelCatalogItem,
+  websiteModel?: AIHubMixWebsiteModel,
 ): ModelPricing => {
   const inputPrice = toFiniteNumber(catalogItem?.pricing?.input)
   const outputPrice = toFiniteNumber(catalogItem?.pricing?.output)
   const cacheReadPrice = toFiniteNumber(catalogItem?.pricing?.cache_read)
   const hasTokenPricing = inputPrice > 0 || outputPrice > 0
   const vendorEvidence = buildAIHubMixVendorEvidence(modelId, catalogItem)
+  let pricingPlan = buildAIHubMixPricingPlan(
+    catalogItem?.pricing,
+    catalogItem?.promotion,
+  )
+  const hasWebsiteRules =
+    websiteModel?.billing_config != null && websiteModel.billing_config !== ""
+  if (hasWebsiteRules) {
+    pricingPlan = buildAIHubMixWebsitePricingPlan(
+      modelId,
+      websiteModel.billing_config,
+      catalogItem?.promotion,
+    )
+  } else if (pricingPlan) {
+    pricingPlan.source = getAIHubMixPricingSource(modelId)
+    // The simplified API omits conditional billing. Missing website evidence
+    // must not certify its single rate as a complete quote.
+    if (
+      !websiteModel ||
+      websiteModel.display_input ||
+      websiteModel.display_output
+    ) {
+      pricingPlan.source.rulesUnavailable = true
+      pricingPlan.issues.push({ code: PRICING_ISSUE_CODES.UNSUPPORTED_RULE })
+    }
+  }
+  if (!hasWebsiteRules && catalogItem?.promotion == null) {
+    const characterPlan = buildAIHubMixCharacterPlan(
+      websiteModel?.display_input,
+      getAIHubMixPricingSource(modelId),
+    )
+    const videoPlan = buildAIHubMixLegacyVideoPlan(
+      websiteModel?.img_price_config,
+      websiteModel?.display_input,
+      getAIHubMixPricingSource(modelId),
+    )
+    const referenceVideoPlan = buildAIHubMixReferenceVideoPlan(
+      websiteModel?.img_price_config,
+      websiteModel?.display_input,
+      getAIHubMixPricingSource(modelId),
+    )
+    const fixedImagePlan = buildAIHubMixFixedImagePlan(
+      websiteModel?.img_price_config,
+      websiteModel?.display_input,
+      getAIHubMixPricingSource(modelId),
+    )
+    const audioPlan = normalizeStringList(catalogItem?.types).includes("stt")
+      ? buildAIHubMixAudioDurationPlan(
+          websiteModel?.display_input,
+          getAIHubMixPricingSource(modelId),
+        )
+      : undefined
+    const taskPlan =
+      characterPlan ??
+      videoPlan ??
+      referenceVideoPlan ??
+      fixedImagePlan ??
+      buildAIHubMixMeasuredOutputPlan(
+        websiteModel?.img_price_config,
+        websiteModel?.display_input,
+        getAIHubMixPricingSource(modelId),
+      ) ??
+      buildAIHubMixImageQualityPlan(
+        websiteModel?.img_price_config,
+        websiteModel?.display_input,
+        getAIHubMixPricingSource(modelId),
+      ) ??
+      audioPlan
+    if (taskPlan) pricingPlan = taskPlan
+  }
+  if (pricingPlan) {
+    pricingPlan = checkAIHubMixVideoPriceEvidence(
+      pricingPlan,
+      websiteModel?.display_input,
+    )
+    // Website display_output is Chinese; display_input is English (index-Cx6RE_vc.js).
+    if (pricingPlan.source.rulesUnavailable)
+      pricingPlan.source.pricingDescription = {
+        en: getNonEmptyCatalogString(websiteModel?.display_input),
+        zh: getNonEmptyCatalogString(websiteModel?.display_output),
+      }
+  }
+  const chineseDescription = getNonEmptyCatalogString(websiteModel?.desc)
+  const englishDescription = getNonEmptyCatalogString(websiteModel?.desc_en)
 
   return {
     model_name: modelId,
+    pricingPlan,
+    ...(chineseDescription || englishDescription
+      ? {
+          model_descriptions: {
+            zh: chineseDescription,
+            en: englishDescription,
+          },
+        }
+      : {}),
     ...(vendorEvidence === undefined ? {} : { vendorEvidence }),
     model_description:
       typeof catalogItem?.desc === "string"
@@ -491,13 +628,14 @@ const buildAIHubMixModelPricing = (
     model_price: 0,
     // AIHubMix /api/v1/models pricing fields are direct USD-per-1M-token prices.
     // Do not route them through the New API ratio formula where ratio 1 maps to $2/M.
-    token_price_usd_per_million: hasTokenPricing
-      ? {
-          cache_read: cacheReadPrice,
-          input: inputPrice,
-          output: outputPrice,
-        }
-      : undefined,
+    token_price_usd_per_million:
+      hasTokenPricing && !hasWebsiteRules
+        ? {
+            cache_read: cacheReadPrice,
+            input: inputPrice,
+            output: outputPrice,
+          }
+        : undefined,
     owner_by:
       typeof catalogItem?.developer_name === "string"
         ? catalogItem.developer_name
@@ -541,6 +679,7 @@ export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
             options: {
               cache: "no-store",
             },
+            errorResponseDecoder: decodeAIHubMixResponseError,
           },
         )
 
@@ -580,6 +719,7 @@ export async function createAccessToken(
       options: {
         cache: "no-store",
       },
+      errorResponseDecoder: decodeAIHubMixResponseError,
     },
   )
 
@@ -934,13 +1074,10 @@ export async function deleteApiToken(
   return true
 }
 
-const fetchAIHubMixModelCatalog = async (
-  request: ApiServiceRequest,
-): Promise<AIHubMixModelCatalogItem[]> => {
-  const payload = await fetchAIHubMixData<unknown>(
-    request,
-    AIHUBMIX_MODEL_CATALOG_ENDPOINT,
-  )
+const fetchAIHubMixModelCatalog = async (): Promise<
+  AIHubMixModelCatalogItem[]
+> => {
+  const payload = await fetchAIHubMixPublicData(AIHUBMIX_MODEL_CATALOG_ENDPOINT)
 
   if (Array.isArray(payload)) {
     return payload.filter(
@@ -964,6 +1101,19 @@ const fetchAIHubMixModelCatalog = async (
     undefined,
     AIHUBMIX_MODEL_CATALOG_ENDPOINT,
   )
+}
+
+const publicModelCatalog = createAIHubMixPublicCatalogCache(
+  fetchAIHubMixModelCatalog,
+)
+const publicWebsiteModels = createAIHubMixPublicCatalogCache(
+  fetchAIHubMixWebsiteModels,
+)
+
+/** Clear public snapshots once before a manual single/all-account refresh. */
+export function invalidateAIHubMixPublicCatalogs(): void {
+  publicModelCatalog.invalidate()
+  publicWebsiteModels.invalidate()
 }
 
 const fetchAIHubMixUserScopedModelIds = async (
@@ -1006,6 +1156,7 @@ const fetchAIHubMixUserScopedModelIds = async (
 const buildAIHubMixPricingResponse = (params: {
   catalog: AIHubMixModelCatalogItem[]
   userScopedModelIds: string[] | null
+  websiteModels: Map<string, AIHubMixWebsiteModel>
 }): PricingResponse => {
   const catalogByModelId = new Map<string, AIHubMixModelCatalogItem>()
 
@@ -1031,9 +1182,28 @@ const buildAIHubMixPricingResponse = (params: {
           ? MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK
           : MODEL_LIST_SOURCE_KINDS.USER_SCOPED,
       provider: SITE_TYPES.AIHUBMIX,
+      catalogScope:
+        params.userScopedModelIds === null
+          ? MODEL_CATALOG_SCOPES.PROVIDER
+          : MODEL_CATALOG_SCOPES.PERSONALIZED,
+      supportsPricing: true,
+      // Saved AIHubMix keys may be masked (https://docs.aihubmix.com/en/api/Cli).
+      // Publish this restriction here so display code never infers it from a site name.
+      actionPolicy: {
+        supportsGroupFiltering: false,
+        supportsAccountSummary: params.userScopedModelIds !== null,
+        supportsTokenCompatibility: false,
+        supportsCredentialVerification: false,
+        supportsBatchCredentialVerification: false,
+        supportsCliVerification: false,
+      },
     },
     data: modelIds.map((modelId) =>
-      buildAIHubMixModelPricing(modelId, catalogByModelId.get(modelId)),
+      buildAIHubMixModelPricing(
+        modelId,
+        catalogByModelId.get(modelId),
+        params.websiteModels.get(modelId),
+      ),
     ),
   }
 }
@@ -1044,13 +1214,85 @@ const buildAIHubMixPricingResponse = (params: {
 export async function fetchModelPricing(
   request: ApiServiceRequest,
 ): Promise<PricingResponse> {
-  const catalog = await fetchAIHubMixModelCatalog(request)
-  const userScopedModelIds = await fetchAIHubMixUserScopedModelIds(request)
+  const [catalog, userScopedModelIds, websiteModels] = await Promise.all([
+    publicModelCatalog.get(),
+    fetchAIHubMixUserScopedModelIds(request),
+    publicWebsiteModels.get().catch(() => undefined),
+  ])
 
-  return buildAIHubMixPricingResponse({
+  const response = buildAIHubMixPricingResponse({
     catalog,
     userScopedModelIds,
+    websiteModels: websiteModels ?? new Map(),
   })
+  if (!websiteModels) {
+    // Transport failure is distinct from an unsupported published rule. Preserve
+    // source prices for inspection without certifying an incomplete catalog.
+    for (const model of response.data) {
+      model.pricingPlan = {
+        rates: {},
+        rules: [],
+        groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
+        ...model.pricingPlan,
+        source: {
+          ...getAIHubMixPricingSource(model.model_name),
+          ...model.pricingPlan?.source,
+          rulesUnavailable: true,
+        },
+        issues: [{ code: PRICING_ISSUE_CODES.SOURCE_UNAVAILABLE }],
+      }
+    }
+  }
+  return response
+}
+
+/**
+ * Public website catalog supplies bilingual descriptions and billing_config.
+ * Verified /call/mdl_info against /model/qwen-flash on 2026-09-09. Fetch once
+ * for all rows; this enrichment never changes the account's available models.
+ */
+async function fetchAIHubMixWebsiteModels(): Promise<
+  Map<string, AIHubMixWebsiteModel>
+> {
+  const payload = await fetchAIHubMixPublicData("/call/mdl_info")
+  if (!Array.isArray(payload))
+    throw new ApiError(
+      t("messages:errors.api.invalidResponseFormat"),
+      undefined,
+      "/call/mdl_info",
+    )
+  return new Map(
+    payload
+      .filter(
+        (item): item is AIHubMixWebsiteModel =>
+          !!item &&
+          typeof item === "object" &&
+          typeof item.model === "string" &&
+          typeof item.billing_config === "string",
+      )
+      .map((item) => [item.model, item]),
+  )
+}
+
+/**
+ * Both public catalogs are anonymous, including accounts imported from console.
+ * Verified https://aihubmix.com/api/v1/models and /call/mdl_info on 2026-09-09.
+ * Never share an authenticated response as provider-wide data.
+ */
+async function fetchAIHubMixPublicData(endpoint: string): Promise<unknown> {
+  const response = await fetch(`${AIHUBMIX_API_ORIGIN}${endpoint}`, {
+    credentials: "omit",
+    redirect: "error",
+    cache: "no-cache",
+    signal: AbortSignal.timeout(12_000),
+  })
+  if (!response.ok)
+    throw new ApiError(
+      t("messages:errors.api.requestFailed", { status: response.status }),
+      response.status,
+      endpoint,
+    )
+  return extractAIHubMixData<unknown>(await response.json(), endpoint)
 }
 
 /**
@@ -1071,9 +1313,9 @@ export async function fetchAccountAvailableModels(
  * Fetch all AIHubMix model ids when a caller needs the global model catalog.
  */
 export async function fetchAllModels(
-  request: ApiServiceRequest,
+  _request: ApiServiceRequest,
 ): Promise<string[]> {
-  const catalog = await fetchAIHubMixModelCatalog(request)
+  const catalog = await publicModelCatalog.get()
   return Array.from(
     new Set(catalog.map(getAIHubMixCatalogModelId).filter(Boolean)),
   )

@@ -55,8 +55,8 @@ const {
   completeProductAnalyticsActionMock: vi.fn(),
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/bookmarkRepository", () => ({
+  bookmarkRepository: {
     deleteBookmark: mockDeleteBookmark,
   },
 }))
@@ -78,7 +78,7 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
   }
 })
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: toastSuccessMock,
     error: toastErrorMock,

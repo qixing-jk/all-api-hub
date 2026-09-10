@@ -1,14 +1,12 @@
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
 import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
-import {
-  autoDetectAccount as defaultAutoDetectAccount,
-  validateAndSaveAccount as defaultValidateAndSaveAccount,
-} from "~/services/accounts/accountOperations"
+import { autoDetectAccount as defaultAutoDetectAccount } from "~/services/accounts/accountAutoDetection"
+import { validateAndSaveAccount as defaultValidateAndSaveAccount } from "~/services/accounts/accountCreation"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 import type {
+  AccountAutoDetectResponse,
   AccountSaveResponse,
-  AccountValidationResponse,
 } from "~/types/serviceResponse"
 
 import type {
@@ -25,7 +23,7 @@ interface RunBookmarkAccountImportInput {
     url: string,
     authType: AuthTypeEnum,
     protectionBypassExecution?: ProtectionBypassExecution,
-  ) => Promise<AccountValidationResponse>
+  ) => Promise<AccountAutoDetectResponse>
   validateAndSaveAccount?: typeof defaultValidateAndSaveAccount
   onProgress?: (progress: BookmarkAccountImportProgress) => void
   protectionBypassExecution?: ProtectionBypassExecution

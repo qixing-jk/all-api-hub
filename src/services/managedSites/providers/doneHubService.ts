@@ -1,37 +1,20 @@
-import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
-import { SITE_TYPES } from "~/constants/siteType"
-import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
+import { DoneHubChannelType } from "~/constants/doneHub"
+import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
 import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { createNewApiKeyManagement } from "~/services/apiAdapters/newApi/keyManagement"
-import {
-  fetchChannel as fetchDoneHubChannel,
-  fetchSiteUserGroups,
-  searchChannel as searchDoneHubChannel,
-} from "~/services/apiService/doneHub"
-import {
-  MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
-  MatchResolutionUnresolvedError,
-} from "~/services/managedSites/channelMatch"
-import {
-  fetchManagedSiteAvailableModels,
-  type FetchManagedSiteAvailableModelsOptions,
-} from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
-import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
+import { fetchSiteUserGroups } from "~/services/apiService/doneHub"
+import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
 import {
   userPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
-import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
-import type { AccountToken } from "~/types"
+import { AuthTypeEnum } from "~/types"
+import type { DoneHubCreateChannelPayload } from "~/types/doneHub"
 import type { DoneHubConfig } from "~/types/doneHubConfig"
 import type {
-  ChannelFormData,
-  ChannelMode,
-  CreateChannelPayload,
-  ManagedSiteChannel,
-  ManagedSiteChannelListData,
-} from "~/types/managedSite"
-import { getErrorMessage } from "~/utils/core/error"
+  ManagedSiteChannelDraft,
+  ManagedSiteChannelDraftSource,
+} from "~/types/managedSiteChannelDraft"
+import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
 
@@ -42,106 +25,6 @@ import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
  * Unified logger scoped to the Done Hub integration and auto-config flows.
  */
 const logger = createLogger("DoneHubService")
-const keyManagement = createNewApiKeyManagement(SITE_TYPES.DONE_HUB)
-
-const toDoneHubRequestConfig = (config: DoneHubConfig) => ({
-  baseUrl: config.baseUrl,
-  auth: {
-    authType: AuthTypeEnum.AccessToken,
-    accessToken: config.adminToken,
-    userId: config.userId,
-  },
-})
-
-const toSafeDoneHubChannelDetailDiagnostic = (error: unknown): string => {
-  const message = getErrorMessage(error) || "Unknown error"
-
-  if (
-    error &&
-    typeof error === "object" &&
-    "code" in error &&
-    typeof error.code === "string" &&
-    error.code.trim() !== ""
-  ) {
-    return `${message} (${error.code})`
-  }
-
-  return message
-}
-
-/**
- * Searches channels matching the keyword.
- */
-export async function searchChannel(
-  config: DoneHubConfig,
-  keyword: string,
-): Promise<ManagedSiteChannelListData | null> {
-  return await searchDoneHubChannel(toDoneHubRequestConfig(config), keyword)
-}
-
-/**
- * Fetches the full secret key for a Done Hub channel from its detail payload.
- */
-export async function fetchChannelSecretKey(
-  config: DoneHubConfig,
-  channelId: number,
-): Promise<string> {
-  const channel = await fetchDoneHubChannel(
-    toDoneHubRequestConfig(config),
-    channelId,
-  )
-
-  const key = channel.key?.trim()
-  if (!key) {
-    throw new Error("done_hub_channel_key_missing")
-  }
-
-  return key
-}
-
-/**
- * Hydrates Done Hub channel keys from detail payloads for shared comparison.
- */
-export async function hydrateComparableChannelKeys(
-  config: DoneHubConfig,
-  candidates: ManagedSiteChannel[],
-): Promise<ManagedSiteChannel[]> {
-  const hydratedCandidates: ManagedSiteChannel[] = []
-
-  for (const candidate of candidates) {
-    if (candidate.key?.trim() || !candidate.id) {
-      hydratedCandidates.push(candidate)
-      continue
-    }
-
-    try {
-      const detail = await fetchDoneHubChannel(
-        toDoneHubRequestConfig(config),
-        candidate.id,
-      )
-      const key = detail.key?.trim()
-      if (!key) {
-        throw new Error("done_hub_channel_key_missing")
-      }
-
-      hydratedCandidates.push({
-        ...candidate,
-        key,
-      })
-    } catch (error) {
-      logger.warn("Failed to fetch Done Hub channel detail for key matching", {
-        channelId: candidate.id,
-        diagnostic: toSafeDoneHubChannelDetailDiagnostic(error),
-      })
-
-      throw new MatchResolutionUnresolvedError(
-        MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
-      )
-    }
-  }
-
-  return hydratedCandidates
-}
 
 /**
  * Checks whether the given user preferences contain a complete Done Hub config.
@@ -205,48 +88,14 @@ export async function getDoneHubConfig(): Promise<{
 }
 
 /**
- * Gets the models available for the given account.
- */
-export async function fetchAvailableModels(
-  account: DisplaySiteData,
-  token: ApiToken,
-  options?: FetchManagedSiteAvailableModelsOptions,
-): Promise<string[]> {
-  return await fetchManagedSiteAvailableModels(account, token, {
-    fetchAccountAvailableModels:
-      options?.fetchAccountAvailableModels ??
-      keyManagement.fetchAvailableModels,
-    ...options,
-  })
-}
-
-/**
- * Builds a default channel name.
- */
-export function buildChannelName(
-  account: DisplaySiteData,
-  token: ApiToken,
-): string {
-  let channelName = `${account.name} | ${token.name}`.trim()
-  if (!channelName.endsWith("(auto)")) {
-    channelName += " (auto)"
-  }
-  return channelName
-}
-
-/**
  * Builds channel form defaults.
  */
 export async function prepareChannelFormData(
-  account: DisplaySiteData,
-  token: ApiToken | AccountToken,
+  source: ManagedSiteChannelDraftSource,
   options?: ManagedSiteChannelDraftRequestOptions,
-): Promise<ChannelFormData> {
-  const upstreamAccount = normalizeAccountForManagedChannel(account)
-  const { models: availableModels, fetchFailed } = await fetchTokenScopedModels(
-    upstreamAccount,
-    token,
-  )
+): Promise<ManagedSiteChannelDraft> {
+  const { models: availableModels, fetchFailed } =
+    await fetchManagedSiteImportModels(source)
 
   const resolvedGroups = await resolveDefaultChannelGroups({
     getConfig: getDoneHubConfig,
@@ -266,16 +115,16 @@ export async function prepareChannelFormData(
   })
 
   return {
-    name: buildChannelName(account, token),
-    type: DEFAULT_CHANNEL_FIELDS.type,
-    key: token.key,
-    base_url: upstreamAccount.baseUrl,
+    name: source.name,
+    type: DoneHubChannelType.OpenAI,
+    key: source.apiKey,
+    base_url: source.baseUrl,
     models: normalizeList(availableModels),
     ...(fetchFailed ? { modelPrefillFetchFailed: true } : {}),
     groups: normalizeList(resolvedGroups),
     priority: DEFAULT_CHANNEL_FIELDS.priority,
     weight: DEFAULT_CHANNEL_FIELDS.weight,
-    status: DEFAULT_CHANNEL_FIELDS.status,
+    enabled: DEFAULT_CHANNEL_FIELDS.enabled,
   }
 }
 
@@ -283,9 +132,8 @@ export async function prepareChannelFormData(
  * Builds channel create payload.
  */
 export function buildChannelPayload(
-  formData: ChannelFormData,
-  mode: ChannelMode = DEFAULT_CHANNEL_FIELDS.mode,
-): CreateChannelPayload {
+  formData: NewApiFamilyChannelCommand,
+): DoneHubCreateChannelPayload {
   const trimmedBaseUrl = formData.base_url.trim()
   const groups = normalizeList(
     formData.groups && formData.groups.length > 0
@@ -295,17 +143,14 @@ export function buildChannelPayload(
   const models = normalizeList(formData.models ?? [])
 
   return {
-    mode,
-    channel: {
-      name: formData.name.trim(),
-      type: formData.type,
-      key: formData.key.trim(),
-      base_url: trimmedBaseUrl,
-      models: models.join(","),
-      groups,
-      priority: formData.priority,
-      weight: formData.weight,
-      status: formData.status,
-    },
+    name: formData.name.trim(),
+    type: Number(formData.type),
+    key: formData.key.trim(),
+    base_url: trimmedBaseUrl,
+    models: models.join(","),
+    group: groups.join(","),
+    priority: formData.priority,
+    weight: formData.weight,
+    status: formData.status,
   }
 }

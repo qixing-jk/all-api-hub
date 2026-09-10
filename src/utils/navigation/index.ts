@@ -3,10 +3,12 @@ import {
   MENU_ITEM_IDS,
   type OptionsMenuItemId,
 } from "~/constants/optionsMenuIds"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { DisplaySiteData } from "~/types"
 import { isExtensionPopup } from "~/utils/browser"
 import {
@@ -410,22 +412,21 @@ const navigateToBasicSettings = (
 }
 
 /**
- * Opens Managed Site channel management, optionally focusing a channel id or applying a search filter.
+ * Opens Managed Site channel management with a resource reference or search filter.
  */
 const _openManagedSiteChannelsPage = (params?: {
-  channelId?: number | string
+  resourceRef?: ManagedResourceRef
   search?: string
 }) => {
   const targetHash = getManagedSiteChannelsHash()
   const searchParams: Record<string, string | undefined> = {}
 
-  if (params?.channelId != null) {
-    searchParams.channelId = String(params.channelId)
-  }
-
   if (params?.search) {
     searchParams.search = params.search
   }
+
+  if (params?.resourceRef)
+    searchParams.resourceRef = JSON.stringify(params.resourceRef)
 
   const resolvedParams = Object.keys(searchParams).length ? searchParams : {}
 
@@ -443,14 +444,14 @@ type ManagedSiteModelSyncTab = "history" | "manual"
  * Opens Managed Site model sync dashboard, optionally focusing a channel and tab.
  */
 const _openManagedSiteModelSyncPage = (params?: {
-  channelId?: number | string
+  resourceRef?: ManagedResourceRef
   tab?: ManagedSiteModelSyncTab
 }) => {
   const targetHash = getManagedSiteModelSyncHash()
   const searchParams: Record<string, string | undefined> = {}
 
-  if (params?.channelId != null) {
-    searchParams.channelId = String(params.channelId)
+  if (params?.resourceRef) {
+    searchParams.resourceRef = JSON.stringify(params.resourceRef)
   }
 
   if (params?.tab) {
@@ -709,7 +710,7 @@ const _openUsagePage = async (account: DisplaySiteData) => {
     account,
     SITE_ROUTE_KINDS.Usage,
   )
-  await createActiveTab(logUrl)
+  if (logUrl) await createActiveTab(logUrl)
 }
 
 /**
@@ -797,7 +798,7 @@ const openUrlsBestEffort = async (
  */
 const _openCheckInPage = async (account: DisplaySiteData) => {
   const checkInUrl = await getCheckInPageUrl(account)
-  await createActiveTab(checkInUrl)
+  if (checkInUrl) await createActiveTab(checkInUrl)
 }
 
 /**
@@ -809,7 +810,7 @@ const _openCustomCheckInPage = async (account: DisplaySiteData) => {
   const customCheckInUrl =
     account.checkIn?.customCheckIn?.url ||
     (await resolveAccountSiteRouteUrl(account, SITE_ROUTE_KINDS.CheckIn))
-  await createActiveTab(customCheckInUrl)
+  if (customCheckInUrl) await createActiveTab(customCheckInUrl)
 }
 
 /**
@@ -820,7 +821,7 @@ const _openRedeemPage = async (account: DisplaySiteData) => {
   const redeemUrl =
     account.checkIn?.customCheckIn?.redeemUrl ||
     (await resolveAccountSiteRouteUrl(account, SITE_ROUTE_KINDS.Redeem))
-  await createActiveTab(redeemUrl)
+  if (redeemUrl) await createActiveTab(redeemUrl)
 }
 
 // 导出带自动关闭的版本
@@ -881,6 +882,14 @@ export const openPermissionsOnboardingPage = withPopupClose(
  */
 export const openSettingsTab = withPopupClose(_openSettingsTab)
 export const openSettingsTabInNewTab = withPopupClose(_openSettingsTabInNewTab)
+
+/** Opens local shield diagnostics, preserving the originating options workflow. */
+export const openProtectionBypassHistory = () =>
+  openSettingsTab("refresh", {
+    anchor: SETTINGS_ANCHORS.SHIELD_HISTORY,
+    preserveHistory: true,
+  })
+
 export const openAutoCheckinPage = withPopupClose(
   (searchParams?: Record<string, string | undefined>) =>
     openOrFocusOptionsMenuItem(MENU_ITEM_IDS.AUTO_CHECKIN, searchParams),
@@ -984,13 +993,6 @@ export const openManagedSiteChannelsPage = withPopupClose(
 )
 
 /**
- * Open Managed Site channel management focused on a single channel id.
- */
-export const openManagedSiteChannelsForChannel = withPopupClose(
-  (channelId: number) => _openManagedSiteChannelsPage({ channelId }),
-)
-
-/**
  * Open Managed Site model sync dashboard focused on a single channel.
  */
 export const openManagedSiteModelSyncPage = withPopupClose(
@@ -1001,8 +1003,8 @@ export const openManagedSiteModelSyncPage = withPopupClose(
  * Open Managed Site model sync dashboard focused on a single channel.
  */
 export const openManagedSiteModelSyncForChannel = withPopupClose(
-  (channelId: number) =>
-    _openManagedSiteModelSyncPage({ channelId, tab: "manual" }),
+  (resourceRef: ManagedResourceRef) =>
+    _openManagedSiteModelSyncPage({ resourceRef, tab: "manual" }),
 )
 
 /**
@@ -1031,9 +1033,13 @@ export const openCheckInPages = async (
   options?: { openInNewWindow?: boolean },
 ) => {
   const urls = await Promise.all(accounts.map(getCheckInPageUrl))
-  const result = await openUrlsBestEffort(urls, options)
+  const availableUrls = urls.filter((url): url is string => url !== null)
+  const result = await openUrlsBestEffort(availableUrls, options)
   closeIfPopup()
-  return result
+  return {
+    ...result,
+    failedCount: result.failedCount + urls.length - availableUrls.length,
+  }
 }
 
 /**

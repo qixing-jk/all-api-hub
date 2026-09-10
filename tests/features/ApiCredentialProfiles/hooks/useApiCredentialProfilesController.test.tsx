@@ -49,7 +49,7 @@ const {
   updateProfileMock: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     error: vi.fn(),
     promise: (...args: unknown[]) => toastPromiseMock(...args),
@@ -71,6 +71,13 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
     markGatewayGuidanceOnboardingCompleted:
       markGatewayGuidanceOnboardingCompletedMock,
     managedSiteType: "new-api",
+  }),
+}))
+
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    markGatewayGuidanceOnboardingCompleted:
+      markGatewayGuidanceOnboardingCompletedMock,
   }),
 }))
 

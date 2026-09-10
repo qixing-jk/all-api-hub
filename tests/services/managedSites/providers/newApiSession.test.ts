@@ -1169,7 +1169,7 @@ describe("newApiSession", () => {
     expect(verifyCalls).toBe(2)
   })
 
-  it("reports browser-session availability and propagates unexpected probe failures", async () => {
+  it("reports browser-session availability", async () => {
     server.use(
       http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
         jsonData({ enabled: false }),
@@ -1182,8 +1182,9 @@ describe("newApiSession", () => {
     await expect(
       hasNewApiAuthenticatedBrowserSession(BASE_CONFIG),
     ).resolves.toBe(true)
+  })
 
-    clearNewApiManagedSessionState()
+  it("propagates unexpected browser-session probe failures", async () => {
     server.use(
       http.get(
         `${BASE_CONFIG.baseUrl}/api/user/2fa/status`,
@@ -1197,7 +1198,7 @@ describe("newApiSession", () => {
     await expect(
       hasNewApiAuthenticatedBrowserSession(BASE_CONFIG),
     ).rejects.toMatchObject({
-      message: expect.stringContaining("500"),
+      message: "boom",
     })
   })
 

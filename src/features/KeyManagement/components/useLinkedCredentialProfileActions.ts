@@ -2,6 +2,7 @@ import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
+import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   createCliProxyExportPayload,
@@ -23,7 +24,7 @@ import {
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { showResultToast } from "~/utils/core/toastHelpers"
+import { showResultToast } from "~/utils/feedback/operationFeedback"
 
 type ActiveDialog =
   | "cc-switch"
@@ -55,8 +56,8 @@ export function useLinkedCredentialProfileActions(
     cliProxyBaseUrl,
     cliProxyManagementKey,
     managedSiteType,
-    markGatewayGuidanceOnboardingCompleted,
   } = useUserPreferencesContext()
+  const { markGatewayGuidanceOnboardingCompleted } = useFeatureGuidanceContext()
   const { openWithCredentials } = useChannelDialog()
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null)
   const exportAccount = useMemo(() => createExportAccount(profile), [profile])

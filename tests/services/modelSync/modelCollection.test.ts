@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { collectModelsFromExecution } from "~/services/models/modelSync/modelCollection"
 import type { ExecutionResult } from "~/types/managedSiteModelSync"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 describe("collectModelsFromExecution", () => {
   const baseResult = (items: ExecutionResult["items"]): ExecutionResult => ({
@@ -19,7 +20,7 @@ describe("collectModelsFromExecution", () => {
   it("collects sorted unique models from successful runs", () => {
     const result = baseResult([
       {
-        channelId: 1,
+        resourceRef: modelResourceRef(1),
         channelName: "Channel A",
         ok: true,
         attempts: 1,
@@ -28,7 +29,7 @@ describe("collectModelsFromExecution", () => {
         oldModels: [],
       },
       {
-        channelId: 2,
+        resourceRef: modelResourceRef(2),
         channelName: "Channel B",
         ok: true,
         attempts: 1,
@@ -44,7 +45,7 @@ describe("collectModelsFromExecution", () => {
   it("falls back to old models when newModels missing", () => {
     const result = baseResult([
       {
-        channelId: 3,
+        resourceRef: modelResourceRef(3),
         channelName: "Channel C",
         ok: false,
         attempts: 2,

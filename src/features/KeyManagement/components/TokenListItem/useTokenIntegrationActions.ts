@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
+import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   buildDisplayAccountTokenRuntimeKey,
@@ -27,7 +28,7 @@ import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerificati
 import type { AccountToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { showResultToast } from "~/utils/core/toastHelpers"
+import { showResultToast } from "~/utils/feedback/operationFeedback"
 
 const logger = createLogger("TokenIntegrationActions")
 
@@ -64,8 +65,8 @@ export function useTokenIntegrationActions({
     claudeCodeRouterApiKey,
     cliProxyBaseUrl,
     cliProxyManagementKey,
-    markGatewayGuidanceOnboardingCompleted,
   } = useUserPreferencesContext()
+  const { markGatewayGuidanceOnboardingCompleted } = useFeatureGuidanceContext()
   const { openWithAccount } = useChannelDialog()
 
   const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)
@@ -156,7 +157,7 @@ export function useTokenIntegrationActions({
     try {
       const result = await openWithAccount(
         account,
-        token,
+        buildDisplayAccountTokenRuntimeKey(account, token),
         (result) => {
           showResultToast(result)
 

@@ -1,6 +1,5 @@
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
@@ -14,6 +13,7 @@ import {
   type ModelPriceComparisonWeights,
 } from "~/features/ModelList/priceComparison"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
+import toast from "~/lib/notify"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -45,7 +45,7 @@ const {
   trackProductAnalyticsActionCompletedMock: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     error: toastErrorMock,
     success: toastSuccessMock,

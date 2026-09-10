@@ -10,7 +10,6 @@ import {
   type AutoCheckinRunSummary,
   type AutoCheckinStatus,
   type CheckinAccountResult,
-  type CheckinResultStatus,
 } from "~/types/autoCheckin"
 import { createLogger } from "~/utils/core/logger"
 import { isPlainObject } from "~/utils/core/object"
@@ -37,9 +36,9 @@ export const AUTO_CHECKIN_STATUS_STORAGE_LOCK =
  * @returns A normalized summary containing `totalEligible`, `executed`,
  * `successCount`, `failedCount`, `skippedCount`, and `needsRetry`.
  *
- * `successCount` includes both `CHECKIN_RESULT_STATUS.SUCCESS` and
- * `CHECKIN_RESULT_STATUS.ALREADY_CHECKED`. `executed` counts only successful and
- * failed executions, while `totalEligible` falls back to `executed + skipped`
+ * `successCount` retains all successful outcomes, while `alreadyCheckedCount`
+ * identifies the already-checked subset. `executed` counts all non-skipped outcomes, while
+ * `totalEligible` falls back to `executed + skipped`
  * when no prior eligible total is provided. `needsRetry` is true only when a
  * failed result remains eligible for the ordinary retry queue.
  */
@@ -48,12 +47,13 @@ function recalculateSummaryFromResults(
   previousSummary?: AutoCheckinRunSummary,
 ): AutoCheckinRunSummary {
   const values = Object.values(perAccount)
-  const successStatuses: CheckinResultStatus[] = [
-    CHECKIN_RESULT_STATUS.SUCCESS,
-    CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-  ]
-  const successCount = values.filter((value) =>
-    successStatuses.includes(value.status),
+  const successCount = values.filter(
+    (value) =>
+      value.status === CHECKIN_RESULT_STATUS.SUCCESS ||
+      value.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+  ).length
+  const alreadyCheckedCount = values.filter(
+    (value) => value.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
   ).length
   const failedCount = values.filter(
     (value) => value.status === CHECKIN_RESULT_STATUS.FAILED,
@@ -73,6 +73,7 @@ function recalculateSummaryFromResults(
     totalEligible,
     executed,
     successCount,
+    ...(alreadyCheckedCount > 0 ? { alreadyCheckedCount } : {}),
     failedCount,
     skippedCount,
     ...(uncertainCount > 0 ? { uncertainCount } : {}),

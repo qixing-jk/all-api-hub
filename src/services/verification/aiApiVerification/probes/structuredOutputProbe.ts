@@ -4,11 +4,13 @@ import { z } from "zod"
 import { nowMs, okLatency } from "../probeTiming"
 import { createModel } from "../providers"
 import {
+  API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
 } from "../types"
 import type {
   ApiVerificationApiType,
+  ApiVerificationMode,
   ApiVerificationProbeResult,
 } from "../types"
 import {
@@ -23,6 +25,7 @@ type RunStructuredOutputProbeParams = {
   apiKey: string
   apiType: ApiVerificationApiType
   modelId: string
+  mode?: ApiVerificationMode
   abortSignal?: AbortSignal
 }
 
@@ -35,6 +38,7 @@ export async function runStructuredOutputProbe(
   params: RunStructuredOutputProbeParams,
 ): Promise<ApiVerificationProbeResult> {
   const startedAt = nowMs()
+  const mode = params.mode ?? API_VERIFICATION_MODES.Streaming
   const secretsToRedact = [params.apiKey]
 
   try {
@@ -46,19 +50,23 @@ export async function runStructuredOutputProbe(
     })
 
     const prompt = STRUCTURED_OUTPUT_PROMPT
-    const { output } = await runProbeGeneration(params.apiType, {
-      model,
-      prompt,
-      output: Output.object({
-        schema: z.object({
-          ok: z.literal(true),
+    const { output } = await runProbeGeneration(
+      {
+        model,
+        prompt,
+        output: Output.object({
+          schema: z.object({
+            ok: z.literal(true),
+          }),
         }),
-      }),
-      abortSignal: params.abortSignal,
-    })
+        abortSignal: params.abortSignal,
+      },
+      mode,
+    )
 
     return {
       id: API_VERIFICATION_PROBE_IDS.StructuredOutput,
+      mode,
       status:
         output?.ok === true
           ? API_VERIFICATION_PROBE_STATUSES.Pass
@@ -90,6 +98,7 @@ export async function runStructuredOutputProbe(
     const diagnostics = buildSafeProbeFailureDiagnostics(error, summary)
     return {
       id: API_VERIFICATION_PROBE_IDS.StructuredOutput,
+      mode,
       status: API_VERIFICATION_PROBE_STATUSES.Fail,
       latencyMs: okLatency(startedAt),
       summary,

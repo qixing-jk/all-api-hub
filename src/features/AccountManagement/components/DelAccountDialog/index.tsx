@@ -1,10 +1,10 @@
 import { useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { DestructiveConfirmDialog } from "~/components/ui"
+import { ConfirmDialog } from "~/components/ui"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import toast from "~/lib/notify"
+import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -49,7 +49,7 @@ export default function DelAccountDialog({
     })
 
     setIsDeleting(true)
-    const deletePromise = accountStorage.deleteAccount(account.id)
+    const deletePromise = accountMutations.deleteAccount(account.id)
     try {
       await toast.promise(deletePromise, {
         loading: t("ui:dialog.delete.deleting", { name: account.name }),
@@ -91,7 +91,8 @@ export default function DelAccountDialog({
   }
 
   return (
-    <DestructiveConfirmDialog
+    <ConfirmDialog
+      intent="destructive"
       isOpen={isOpen}
       onClose={handleClose}
       title={t("ui:dialog.delete.title")}

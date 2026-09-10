@@ -2,9 +2,12 @@
   "accountSelect": {
     "confirm": "Xác nhận đổi mã",
     "noResults": "Không tìm thấy tài khoản phù hợp, vui lòng điều chỉnh điều kiện tìm kiếm",
+    "noSupportedAccounts": "Không có tài khoản đã lưu nào hỗ trợ đổi mã tự động. Hãy đổi mã thủ công trên trang tương ứng.",
+    "openSiteManual": "Mở trang để đổi mã thủ công",
     "title": "Chọn tài khoản để đổi mã",
     "titleFallback": "Không tìm thấy tài khoản khớp với trang web hiện tại, vui lòng chọn thủ công một tài khoản",
-    "titleMultiple": "Phát hiện nhiều tài khoản khả dụng, vui lòng chọn một tài khoản để đổi mã"
+    "titleMultiple": "Phát hiện nhiều tài khoản khả dụng, vui lòng chọn một tài khoản để đổi mã",
+    "unsupported": "Loại trang này không hỗ trợ đổi mã tự động"
   },
   "actions": {
     "autoRedeem": "Tự động đổi mã"
@@ -25,7 +28,8 @@
     "selectAll": "Chọn tất cả",
     "success": {
       "settingsSaved": "Đã lưu cài đặt Trợ lý đổi mã"
-    }
+    },
+    "unsupportedSiteType": "Loại trang của tài khoản này không hỗ trợ đổi mã tự động. Hãy chọn tài khoản khác hoặc đổi mã thủ công trên trang."
   },
   "settings": {
     "contextMenu": {

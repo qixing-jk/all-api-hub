@@ -1,53 +1,62 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import type { ManagedResourceModelSyncBatchOptions } from "~/services/apiAdapters/contracts/managedResourceModelSync"
+import { createOctopusModelSyncCapability } from "~/services/apiAdapters/managedResources/octopusModelSync"
 import { ApiError } from "~/services/apiTransport/errors"
-import { createOctopusModelSyncCapability } from "~/services/models/modelSync/octopusModelSync"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_FEATURES,
 } from "~/services/protectionBypass/contracts"
-import type { OctopusChannelWithData } from "~/types/managedSite"
 import {
   createManagedUpstreamResourceRef,
   getManagedUpstreamResourceRefKey,
 } from "~/types/managedUpstreamResource"
-import { OctopusAutoGroupType, OctopusOutboundType } from "~/types/octopus"
+import {
+  OctopusAutoGroupType,
+  OctopusOutboundType,
+  type OctopusChannel,
+} from "~/types/octopus"
 import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 const {
   apiListChannelsMock,
   fetchRemoteModelsMock,
   updateChannelMock,
   updateModelsMock,
-  listChannelsMock,
   loggerErrorMock,
+  runApiVerificationProbeMock,
 } = vi.hoisted(() => ({
   apiListChannelsMock: vi.fn(),
   fetchRemoteModelsMock: vi.fn(),
   updateChannelMock: vi.fn(),
   updateModelsMock: vi.fn(),
-  listChannelsMock: vi.fn(),
   loggerErrorMock: vi.fn(),
+  runApiVerificationProbeMock: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/octopus", () => ({
+vi.mock("~/services/apiService/octopus", async (original) => ({
+  ...(await original<typeof import("~/services/apiService/octopus")>()),
   listChannels: vi.fn((...args) => apiListChannelsMock(...args)),
   fetchRemoteModels: vi.fn((...args) => fetchRemoteModelsMock(...args)),
   updateChannel: vi.fn((...args) => updateChannelMock(...args)),
 }))
 
-vi.mock("~/services/apiAdapters/managedSites/octopus", () => {
-  const octopusManagedSiteChannels = {
+vi.mock("~/services/apiAdapters/managedResources/octopusOperations", () => {
+  const octopusManagedResourceModels = {
     updateModels: (...args: unknown[]) => updateModelsMock(...args),
-    list: (...args: unknown[]) => listChannelsMock(...args),
   }
   return {
-    octopusManagedSiteChannels,
-    octopusManagedSiteCapabilities: {
-      channels: octopusManagedSiteChannels,
-    },
+    octopusManagedResourceModels,
   }
 })
+
+vi.mock("~/services/verification/aiApiVerification", async (original) => ({
+  ...(await original<
+    typeof import("~/services/verification/aiApiVerification")
+  >()),
+  runApiVerificationProbe: runApiVerificationProbeMock,
+}))
 
 vi.mock("~/utils/core/logger", () => ({
   createLogger: vi.fn(() => ({
@@ -61,20 +70,15 @@ const config = {
   password: "secret",
 }
 
-type OctopusModelSyncCapability = ReturnType<
-  typeof createOctopusModelSyncCapability
->
-type OctopusModelSyncTestOptions = Parameters<
-  OctopusModelSyncCapability["runBatch"]
->[1] & {
+type OctopusModelSyncTestOptions = ManagedResourceModelSyncBatchOptions & {
   protectionBypassExecution?: Parameters<
     typeof createOctopusModelSyncCapability
   >[1]
 }
 
-const runOctopusBatch = (
+const runOctopusBatch = async (
   config: Parameters<typeof createOctopusModelSyncCapability>[0],
-  channels: Parameters<OctopusModelSyncCapability["runBatch"]>[0],
+  channels: OctopusChannel[],
   options: OctopusModelSyncTestOptions,
 ) => {
   const {
@@ -84,42 +88,127 @@ const runOctopusBatch = (
     ),
     ...batchOptions
   } = options
-  return createOctopusModelSyncCapability(
+  apiListChannelsMock.mockResolvedValueOnce(channels)
+  const batch = await createOctopusModelSyncCapability(
     config,
     protectionBypassExecution,
-  ).runBatch(channels, batchOptions)
+  ).prepareBatch()
+  return batch.run(batchOptions)
 }
 
 const createChannel = (
-  overrides: Record<string, unknown> = {},
-): OctopusChannelWithData =>
-  ({
-    id: 1,
-    name: "Alpha",
-    models: "model-a",
-    _octopusData: {
-      id: 1,
-      name: "Alpha",
-      type: OctopusOutboundType.OpenAIChat,
-      enabled: true,
-      base_urls: [{ url: "https://upstream.example.invalid" }],
-      keys: [{ enabled: true, channel_key: "key-1" }],
-      model: "model-a",
-      proxy: false,
-      auto_sync: true,
-      auto_group: OctopusAutoGroupType.None,
+  overrides: Partial<OctopusChannel> = {},
+): OctopusChannel => ({
+  id: 1,
+  name: "Alpha",
+  type: OctopusOutboundType.OpenAIChat,
+  enabled: true,
+  base_urls: [{ url: "https://upstream.example.invalid" }],
+  keys: [{ enabled: true, channel_key: "key-1" }],
+  model: "model-a",
+  proxy: false,
+  auto_sync: true,
+  auto_group: OctopusAutoGroupType.None,
+  ...overrides,
+})
+
+const createProbeChannelConfigs = () => {
+  const resourceRef = createManagedUpstreamResourceRef({
+    managedSiteType: "octopus",
+    scopeKey: config.baseUrl,
+    resourceId: 1,
+  })
+  return {
+    [getManagedUpstreamResourceRefKey(resourceRef)]: {
+      resourceRef,
+      channelId: 1,
+      modelFilterSettings: {
+        rules: [
+          {
+            id: "probe-rule",
+            kind: "probe" as const,
+            name: "Probe model",
+            probeIds: ["text-generation" as const],
+            match: "all" as const,
+            action: "include" as const,
+            enabled: true,
+            createdAt: 100,
+            updatedAt: 100,
+          },
+        ],
+        updatedAt: 100,
+      },
+      createdAt: 100,
+      updatedAt: 100,
     },
-    ...overrides,
-  }) as unknown as OctopusChannelWithData
+  }
+}
 
 describe("runOctopusBatch", () => {
+  it("keeps native credentials behind the prepared batch and executes only the selected reference", async () => {
+    const selected = createChannel({ id: 2, name: "Selected" })
+    apiListChannelsMock.mockResolvedValue([createChannel(), selected])
+    fetchRemoteModelsMock.mockResolvedValue(["model-b"])
+    const workflow = createOctopusModelSyncCapability(
+      config,
+      automaticExecution(
+        PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
+        PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+      ),
+    )
+    const selectedRef = modelResourceRef(2, {
+      siteType: "octopus",
+      scopeKey: config.baseUrl,
+    })
+    const batch = await workflow.prepareBatch([selectedRef])
+    expect(batch.resources).toEqual([{ ref: selectedRef, name: "Selected" }])
+    const result = await batch.run({ concurrency: 1, maxRetries: 0 })
+    expect(result.items).toEqual([
+      expect.objectContaining({ resourceRef: selectedRef, ok: true }),
+    ])
+    expect(fetchRemoteModelsMock).toHaveBeenCalledOnce()
+    expect(fetchRemoteModelsMock).toHaveBeenCalledWith(
+      config,
+      expect.objectContaining({ source: selected }),
+      expect.anything(),
+    )
+    expect(updateModelsMock).toHaveBeenCalledOnce()
+    expect(updateModelsMock).toHaveBeenCalledWith(
+      config,
+      selectedRef,
+      ["model-b"],
+      expect.anything(),
+    )
+  })
+
+  it("rejects empty and foreign selections before fetching native inventory", async () => {
+    const workflow = createOctopusModelSyncCapability(
+      config,
+      automaticExecution(
+        PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
+        PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+      ),
+    )
+    await expect(workflow.prepareBatch([])).rejects.toMatchObject({
+      failure: { code: "validation_failed" },
+    })
+    await expect(
+      workflow.prepareBatch([
+        modelResourceRef(1, { siteType: "octopus", scopeKey: config.baseUrl }),
+        modelResourceRef(2, {
+          siteType: "octopus",
+          scopeKey: "https://other.example",
+        }),
+      ]),
+    ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+    expect(apiListChannelsMock).not.toHaveBeenCalled()
+    expect(updateModelsMock).not.toHaveBeenCalled()
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
-    apiListChannelsMock.mockResolvedValue({
-      data: [],
-      message: "",
-      success: true,
-    })
+    apiListChannelsMock.mockResolvedValue([])
+    runApiVerificationProbeMock.mockResolvedValue({ status: "pass" })
     updateModelsMock.mockResolvedValue({
       outcome: "succeeded",
       data: undefined,
@@ -131,17 +220,70 @@ describe("runOctopusBatch", () => {
         },
       ],
     })
-    listChannelsMock.mockResolvedValue({ items: [], total: 0, type_counts: {} })
   })
 
   afterEach(() => {
     vi.useRealTimers()
   })
 
+  it("syncs a native Octopus channel without a converted carrier and preserves its probe settings", async () => {
+    const channel: OctopusChannel = {
+      id: 7,
+      name: "Native channel",
+      type: OctopusOutboundType.Anthropic,
+      enabled: true,
+      base_urls: [{ url: "http://upstream.lan", delay: 25 }],
+      keys: [{ enabled: true, channel_key: "native-key" }],
+      model: " model-a , model-b ",
+      custom_model: "custom-model",
+      proxy: true,
+      channel_proxy: "http://proxy.lan",
+      custom_header: [{ header_key: "x-provider", header_value: "native" }],
+      param_override: '{"max_tokens":1024}',
+      auto_sync: true,
+      auto_group: OctopusAutoGroupType.Exact,
+    }
+    fetchRemoteModelsMock.mockResolvedValueOnce(["model-c"])
+
+    const result = await runOctopusBatch(config, [channel], {
+      concurrency: 1,
+      maxRetries: 0,
+    })
+
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        resourceRef: modelResourceRef(7, {
+          siteType: "octopus",
+          scopeKey: config.baseUrl,
+        }),
+        ok: true,
+        oldModels: ["model-a", "model-b"],
+        newModels: ["model-c"],
+      }),
+    ])
+    expect(fetchRemoteModelsMock).toHaveBeenCalledWith(
+      config,
+      {
+        type: OctopusOutboundType.Anthropic,
+        baseUrl: "http://upstream.lan",
+        key: "native-key",
+        proxy: true,
+        source: channel,
+      },
+      expect.anything(),
+    )
+    expect(updateModelsMock).toHaveBeenCalledWith(
+      config,
+      modelResourceRef(7, { siteType: "octopus", scopeKey: config.baseUrl }),
+      ["model-c"],
+      expect.anything(),
+    )
+  })
+
   it("returns empty statistics without invoking progress when no channels are provided", async () => {
     const onProgress = vi.fn()
 
-    const result = await runOctopusBatch(config as any, [], {
+    const result = await runOctopusBatch(config, [], {
       concurrency: 0,
       maxRetries: 0,
       onProgress,
@@ -168,7 +310,7 @@ describe("runOctopusBatch", () => {
     ])
 
     const onProgress = vi.fn()
-    const result = await runOctopusBatch(config as any, [createChannel()], {
+    const result = await runOctopusBatch(config, [createChannel()], {
       concurrency: 4,
       maxRetries: 0,
       onProgress,
@@ -181,7 +323,7 @@ describe("runOctopusBatch", () => {
         baseUrl: "https://upstream.example.invalid",
         key: "key-1",
         proxy: false,
-        source: createChannel()._octopusData,
+        source: createChannel(),
       },
       expect.objectContaining({
         protectionBypassExecution: expect.objectContaining({
@@ -192,7 +334,7 @@ describe("runOctopusBatch", () => {
     )
     expect(updateModelsMock).toHaveBeenCalledWith(
       config,
-      1,
+      modelResourceRef(1, { siteType: "octopus", scopeKey: config.baseUrl }),
       ["beta", "gamma"],
       expect.objectContaining({
         protectionBypassExecution: expect.objectContaining({
@@ -204,7 +346,10 @@ describe("runOctopusBatch", () => {
     expect(result).toMatchObject({
       items: [
         {
-          channelId: 1,
+          resourceRef: modelResourceRef(1, {
+            siteType: "octopus",
+            scopeKey: config.baseUrl,
+          }),
           channelName: "Alpha",
           ok: true,
           attempts: 0,
@@ -223,7 +368,10 @@ describe("runOctopusBatch", () => {
       completed: 1,
       total: 1,
       lastResult: expect.objectContaining({
-        channelId: 1,
+        resourceRef: modelResourceRef(1, {
+          siteType: "octopus",
+          scopeKey: config.baseUrl,
+        }),
         ok: true,
         newModels: ["beta", "gamma"],
       }),
@@ -237,13 +385,11 @@ describe("runOctopusBatch", () => {
     )
     fetchRemoteModelsMock.mockResolvedValueOnce(["model-b"])
 
-    await createOctopusModelSyncCapability(config as any, execution).runBatch(
-      [createChannel()],
-      {
-        concurrency: 1,
-        maxRetries: 0,
-      },
-    )
+    await runOctopusBatch(config, [createChannel()], {
+      protectionBypassExecution: execution,
+      concurrency: 1,
+      maxRetries: 0,
+    })
 
     expect(fetchRemoteModelsMock).toHaveBeenCalledWith(
       config,
@@ -252,10 +398,67 @@ describe("runOctopusBatch", () => {
     )
     expect(updateModelsMock).toHaveBeenCalledWith(
       config,
-      1,
+      modelResourceRef(1, { siteType: "octopus", scopeKey: config.baseUrl }),
       ["model-b"],
       expect.objectContaining({ protectionBypassExecution: execution }),
     )
+  })
+
+  it.each([
+    { type: OctopusOutboundType.OpenAIChat, apiType: "openai-compatible" },
+    { type: OctopusOutboundType.OpenAIResponse, apiType: "openai" },
+    { type: OctopusOutboundType.Anthropic, apiType: "anthropic" },
+    { type: OctopusOutboundType.Gemini, apiType: "google" },
+  ])(
+    "uses the native $apiType protocol for Octopus probe filters",
+    async ({ type, apiType }) => {
+      fetchRemoteModelsMock.mockResolvedValueOnce(["model-b"])
+      const result = await runOctopusBatch(config, [createChannel({ type })], {
+        concurrency: 1,
+        maxRetries: 0,
+        channelConfigs: createProbeChannelConfigs(),
+      })
+
+      expect(result.items[0]).toMatchObject({
+        ok: true,
+        newModels: ["model-b"],
+      })
+      expect(runApiVerificationProbeMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          apiType,
+          baseUrl: "https://upstream.example.invalid",
+          apiKey: "key-1",
+          modelId: "model-b",
+        }),
+      )
+      expect(updateModelsMock).toHaveBeenCalledWith(
+        config,
+        modelResourceRef(1, { siteType: "octopus", scopeKey: config.baseUrl }),
+        ["model-b"],
+        expect.anything(),
+      )
+    },
+  )
+
+  it("keeps Octopus embedding model lists unchanged when chat probes are unsupported", async () => {
+    fetchRemoteModelsMock.mockResolvedValueOnce(["embedding-model"])
+    const result = await runOctopusBatch(
+      config,
+      [createChannel({ type: OctopusOutboundType.OpenAIEmbedding })],
+      {
+        concurrency: 1,
+        maxRetries: 0,
+        channelConfigs: createProbeChannelConfigs(),
+      },
+    )
+
+    expect(result.items[0]).toMatchObject({
+      ok: false,
+      oldModels: ["model-a"],
+      message: "Probe filtering is unsupported for this channel type.",
+    })
+    expect(runApiVerificationProbeMock).not.toHaveBeenCalled()
+    expect(updateModelsMock).not.toHaveBeenCalled()
   })
 
   it("preserves model-sync execution when listing Octopus channels", async () => {
@@ -264,10 +467,7 @@ describe("runOctopusBatch", () => {
       PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
     )
 
-    await createOctopusModelSyncCapability(
-      config as any,
-      execution,
-    ).listChannels()
+    await createOctopusModelSyncCapability(config, execution).listChannels()
 
     expect(apiListChannelsMock).toHaveBeenCalledWith(config, {
       protectionBypassExecution: execution,
@@ -284,7 +484,6 @@ describe("runOctopusBatch", () => {
     const channelConfigs = {
       [getManagedUpstreamResourceRefKey(resourceRef)]: {
         resourceRef,
-        channelId: 1,
         modelFilterSettings: {
           rules: [
             {
@@ -307,8 +506,8 @@ describe("runOctopusBatch", () => {
     }
 
     const result = await runOctopusBatch(
-      config as any,
-      [createChannel({ models: "legacy-model" })],
+      config,
+      [createChannel({ model: "legacy-model" })],
       {
         concurrency: 1,
         maxRetries: 0,
@@ -318,7 +517,7 @@ describe("runOctopusBatch", () => {
 
     expect(updateModelsMock).toHaveBeenCalledWith(
       config,
-      1,
+      modelResourceRef(1, { siteType: "octopus", scopeKey: config.baseUrl }),
       ["model-a"],
       expect.objectContaining({
         protectionBypassExecution: expect.objectContaining({
@@ -334,49 +533,25 @@ describe("runOctopusBatch", () => {
 
   it("returns a channel failure when a probe filter cannot resolve a channel key", async () => {
     fetchRemoteModelsMock.mockResolvedValueOnce(["model-a"])
-    const resourceRef = createManagedUpstreamResourceRef({
-      managedSiteType: "octopus",
-      scopeKey: config.baseUrl,
-      resourceId: 1,
-    })
-    const channelConfigs = {
-      [getManagedUpstreamResourceRefKey(resourceRef)]: {
-        resourceRef,
-        channelId: 1,
-        modelFilterSettings: {
-          rules: [
-            {
-              id: "probe-rule",
-              kind: "probe" as const,
-              name: "Probe model",
-              probeIds: ["text-generation" as const],
-              match: "all" as const,
-              action: "include" as const,
-              enabled: true,
-              createdAt: 100,
-              updatedAt: 100,
-            },
-          ],
-          updatedAt: 100,
-        },
-        createdAt: 100,
-        updatedAt: 100,
-      },
-    }
+    const channelConfigs = createProbeChannelConfigs()
 
     const result = await runOctopusBatch(
-      config as any,
-      [createChannel({ models: "legacy-model" })],
+      config,
+      [createChannel({ model: "legacy-model", keys: [] })],
       { concurrency: 1, maxRetries: 0, channelConfigs },
     )
 
     expect(updateModelsMock).not.toHaveBeenCalled()
     expect(result.items).toEqual([
       expect.objectContaining({
-        channelId: 1,
+        resourceRef: modelResourceRef(1, {
+          siteType: "octopus",
+          scopeKey: config.baseUrl,
+        }),
         ok: false,
         attempts: 1,
-        message: "Probe filtering is unsupported for this channel type.",
+        message:
+          "Probe filtering is unsupported because this managed-site provider cannot resolve hidden channel keys.",
       }),
     ])
   })
@@ -385,8 +560,8 @@ describe("runOctopusBatch", () => {
     fetchRemoteModelsMock.mockResolvedValueOnce([" model-b ", "model-a", " "])
 
     const result = await runOctopusBatch(
-      config as any,
-      [createChannel({ models: "model-a,model-b" })],
+      config,
+      [createChannel({ model: "model-a,model-b" })],
       {
         concurrency: 2,
         maxRetries: 0,
@@ -396,48 +571,15 @@ describe("runOctopusBatch", () => {
     expect(updateModelsMock).not.toHaveBeenCalled()
     expect(result.items).toEqual([
       expect.objectContaining({
-        channelId: 1,
+        resourceRef: modelResourceRef(1, {
+          siteType: "octopus",
+          scopeKey: config.baseUrl,
+        }),
         ok: true,
         oldModels: ["model-a", "model-b"],
         newModels: ["model-b", "model-a"],
       }),
     ])
-  })
-
-  it("returns a channel-level failure when octopus channel data is missing", async () => {
-    const onProgress = vi.fn()
-
-    const result = await runOctopusBatch(
-      config as any,
-      [createChannel({ models: "gpt-4o", _octopusData: undefined })],
-      {
-        concurrency: 1,
-        maxRetries: 0,
-        onProgress,
-      },
-    )
-
-    expect(fetchRemoteModelsMock).not.toHaveBeenCalled()
-    expect(result.items).toEqual([
-      expect.objectContaining({
-        channelId: 1,
-        channelName: "Alpha",
-        ok: false,
-        attempts: 1,
-        oldModels: ["gpt-4o"],
-        message: "Missing Octopus channel data",
-      }),
-    ])
-    expect(onProgress).toHaveBeenCalledWith({
-      completed: 1,
-      total: 1,
-      lastResult: expect.objectContaining({
-        channelId: 1,
-        ok: false,
-        message: "Missing Octopus channel data",
-      }),
-    })
-    expect(loggerErrorMock).toHaveBeenCalled()
   })
 
   it("retries ApiError failures, preserves http status, and returns terminal failure metadata", async () => {
@@ -446,7 +588,7 @@ describe("runOctopusBatch", () => {
       new ApiError("octopus upstream failed", 503),
     )
 
-    const resultPromise = runOctopusBatch(config as any, [createChannel()], {
+    const resultPromise = runOctopusBatch(config, [createChannel()], {
       concurrency: 1,
       maxRetries: 1,
     })
@@ -458,7 +600,10 @@ describe("runOctopusBatch", () => {
     expect(updateModelsMock).not.toHaveBeenCalled()
     expect(result.items).toEqual([
       expect.objectContaining({
-        channelId: 1,
+        resourceRef: modelResourceRef(1, {
+          siteType: "octopus",
+          scopeKey: config.baseUrl,
+        }),
         ok: false,
         httpStatus: 503,
         attempts: 2,
@@ -477,22 +622,17 @@ describe("runOctopusBatch", () => {
     fetchRemoteModelsMock.mockResolvedValueOnce(["model-b"])
 
     const explosiveChannel = {
+      ...createChannel(),
       id: 9,
       name: "Explosive",
-      get models() {
+      get model() {
         throw new Error("models getter exploded")
-      },
-      _octopusData: {
-        type: 10,
-        base_urls: ["https://upstream.example.com"],
-        keys: ["key-1"],
-        proxy: "http://proxy.example.com",
       },
     }
 
     const onProgress = vi.fn()
     const result = await runOctopusBatch(
-      config as any,
+      config,
       [explosiveChannel as any, createChannel({ id: 2, name: "Stable" })],
       {
         concurrency: 5,
@@ -508,14 +648,20 @@ describe("runOctopusBatch", () => {
     })
     expect(result.items).toEqual([
       expect.objectContaining({
-        channelId: 9,
+        resourceRef: modelResourceRef(9, {
+          siteType: "octopus",
+          scopeKey: config.baseUrl,
+        }),
         channelName: "Explosive",
         ok: false,
         attempts: 3,
         message: "models getter exploded",
       }),
       expect.objectContaining({
-        channelId: 2,
+        resourceRef: modelResourceRef(2, {
+          siteType: "octopus",
+          scopeKey: config.baseUrl,
+        }),
         channelName: "Stable",
         ok: true,
       }),
@@ -532,7 +678,7 @@ describe("runOctopusBatch", () => {
       )
 
       const onProgress = vi.fn()
-      const resultPromise = runOctopusBatch(config as any, [createChannel()], {
+      const resultPromise = runOctopusBatch(config, [createChannel()], {
         concurrency: 1,
         maxRetries: 2,
         channelProcessingTimeout: 1,
@@ -553,7 +699,10 @@ describe("runOctopusBatch", () => {
       expect(updateModelsMock).not.toHaveBeenCalled()
       expect(result.items).toEqual([
         expect.objectContaining({
-          channelId: 1,
+          resourceRef: modelResourceRef(1, {
+            siteType: "octopus",
+            scopeKey: config.baseUrl,
+          }),
           channelName: "Alpha",
           ok: false,
           attempts: 3,
@@ -565,7 +714,10 @@ describe("runOctopusBatch", () => {
         completed: 1,
         total: 1,
         lastResult: expect.objectContaining({
-          channelId: 1,
+          resourceRef: modelResourceRef(1, {
+            siteType: "octopus",
+            scopeKey: config.baseUrl,
+          }),
           ok: false,
         }),
       })
@@ -588,7 +740,7 @@ describe("runOctopusBatch", () => {
       ],
     })
 
-    await runOctopusBatch(config as any, [createChannel()], {
+    await runOctopusBatch(config, [createChannel()], {
       concurrency: 1,
       maxRetries: 0,
       channelProcessingTimeout: 30,
@@ -603,7 +755,7 @@ describe("runOctopusBatch", () => {
     )
     expect(updateModelsMock).toHaveBeenCalledWith(
       config,
-      1,
+      modelResourceRef(1, { siteType: "octopus", scopeKey: config.baseUrl }),
       ["model-b"],
       expect.objectContaining({
         signal: expect.any(AbortSignal),
@@ -620,7 +772,7 @@ describe("runOctopusBatch", () => {
       diagnostic: { message: "write rejected" },
     })
 
-    const resultPromise = runOctopusBatch(config as any, [createChannel()], {
+    const resultPromise = runOctopusBatch(config, [createChannel()], {
       concurrency: 1,
       maxRetries: 1,
     })
@@ -630,7 +782,10 @@ describe("runOctopusBatch", () => {
     expect(updateModelsMock).toHaveBeenCalledTimes(2)
     expect(result.items).toEqual([
       expect.objectContaining({
-        channelId: 1,
+        resourceRef: modelResourceRef(1, {
+          siteType: "octopus",
+          scopeKey: config.baseUrl,
+        }),
         ok: false,
         attempts: 2,
         message: "write rejected",
@@ -649,7 +804,7 @@ describe("runOctopusBatch", () => {
         updateModelsMock.mockResolvedValue(undefined)
       }
 
-      const execution = runOctopusBatch(config as any, [createChannel()], {
+      const execution = runOctopusBatch(config, [createChannel()], {
         concurrency: 1,
         maxRetries: 2,
       })
@@ -678,7 +833,7 @@ describe("runOctopusBatch", () => {
       fetchRemoteModelsMock.mockResolvedValue(["model-b"])
       updateModelsMock.mockRejectedValue(value)
 
-      const observed = runOctopusBatch(config as any, [createChannel()], {
+      const observed = runOctopusBatch(config, [createChannel()], {
         concurrency: 1,
         maxRetries: 2,
       }).then(
@@ -710,13 +865,13 @@ describe("runOctopusBatch", () => {
     updateModelsMock.mockRejectedValueOnce(reused)
 
     await expect(
-      runOctopusBatch(config as any, [createChannel()], {
+      runOctopusBatch(config, [createChannel()], {
         concurrency: 1,
         maxRetries: 0,
       }),
     ).rejects.toBe(reused)
 
-    const laterRead = runOctopusBatch(config as any, [createChannel()], {
+    const laterRead = runOctopusBatch(config, [createChannel()], {
       concurrency: 1,
       maxRetries: 1,
     }).then(
@@ -729,7 +884,14 @@ describe("runOctopusBatch", () => {
       status: "resolved",
       result: {
         items: [
-          expect.objectContaining({ channelId: 1, ok: true, attempts: 1 }),
+          expect.objectContaining({
+            resourceRef: modelResourceRef(1, {
+              siteType: "octopus",
+              scopeKey: config.baseUrl,
+            }),
+            ok: true,
+            attempts: 1,
+          }),
         ],
       },
     })
@@ -761,16 +923,19 @@ describe("runOctopusBatch", () => {
             },
       )
 
-      const result = await runOctopusBatch(config as any, [createChannel()], {
+      const result = await runOctopusBatch(config, [createChannel()], {
         concurrency: 1,
         maxRetries: 2,
       })
 
       expect(updateModelsMock).toHaveBeenCalledTimes(1)
-      expect(listChannelsMock).toHaveBeenCalledOnce()
+      expect(apiListChannelsMock).toHaveBeenCalledTimes(2)
       expect(result.items).toEqual([
         expect.objectContaining({
-          channelId: 1,
+          resourceRef: modelResourceRef(1, {
+            siteType: "octopus",
+            scopeKey: config.baseUrl,
+          }),
           ok: false,
           attempts: 1,
           message: `${outcome} write`,

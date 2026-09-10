@@ -224,6 +224,7 @@ describe("useAccountKeyResourceController", () => {
       secondaryLabel: "team",
       isDefault: false,
     }
+    const renamedScope = { ...defaultScope, displayName: "Renamed scope" }
     const facts = createFacts(defaultScope.scopeKey, "key-example")
     const list = vi.fn().mockResolvedValue({ items: [facts] })
     const session = {
@@ -237,7 +238,7 @@ describe("useAccountKeyResourceController", () => {
         },
       }),
       refreshScopeInventory: vi.fn().mockResolvedValue({
-        scopes: [defaultScope, teamScope],
+        scopes: [renamedScope, teamScope],
       }),
       openCollection: vi.fn().mockResolvedValue({ list }),
       openCreateEditor: vi.fn(),
@@ -261,13 +262,15 @@ describe("useAccountKeyResourceController", () => {
     })
     expect(result.current.failures).toEqual({})
     expect(result.current.scopes).toEqual([defaultScope])
+    expect(result.current.getResourceScope(facts.ref)).toEqual(defaultScope)
 
     await act(async () => {
       await (result.current as any).retryScopeInventory()
     })
 
     expect(session.refreshScopeInventory).toHaveBeenCalledOnce()
-    expect(result.current.scopes).toEqual([defaultScope, teamScope])
+    expect(result.current.scopes).toEqual([renamedScope, teamScope])
+    expect(result.current.getResourceScope(facts.ref)).toEqual(renamedScope)
     expect((result.current as any).scopeInventoryFailure).toBeNull()
     expect(result.current.rows).toEqual([facts])
     expect(list).toHaveBeenCalledOnce()
@@ -2079,6 +2082,51 @@ describe("useAccountKeyResourceController", () => {
       "account-one",
       "account-failed",
     ])
+  })
+
+  it("keeps identical scope IDs isolated by account in combined inventory", async () => {
+    const accounts = [createAccount("account-a"), createAccount("account-b")]
+    createDisplayAccountApiContextMock.mockImplementation((account: any) => ({
+      accountKeyResources: {
+        open: vi.fn().mockResolvedValue({
+          resolveDefaultScope: vi.fn().mockResolvedValue({
+            scopeKey: "shared-scope-id",
+            routeKey: "default",
+            displayName: `${account.id} scope`,
+            isDefault: true,
+          }),
+          openCollection: vi.fn().mockResolvedValue({
+            list: vi.fn().mockResolvedValue({
+              items: [
+                {
+                  ...createFacts("shared-scope-id", "same-resource-id"),
+                  ref: {
+                    ...createFacts("shared-scope-id", "same-resource-id").ref,
+                    accountId: account.id,
+                  },
+                },
+              ],
+            }),
+          }),
+        }),
+      },
+      request: {},
+    }))
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts,
+        selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+      }),
+    )
+    await waitFor(() => expect(result.current.allRows).toHaveLength(2))
+    for (const row of result.current.allRows) {
+      expect(result.current.getResourceScope(row.ref)?.displayName).toBe(
+        `${row.ref.accountId} scope`,
+      )
+      expect(
+        result.current.getResourceScope({ ...row.ref, siteType: "new-api" }),
+      ).toBeUndefined()
+    }
   })
 
   it("merges only native default scopes in all-account mode", async () => {

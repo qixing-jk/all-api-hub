@@ -1,5 +1,4 @@
 import { useMemo } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
@@ -15,6 +14,7 @@ import {
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useDeferredPreferenceField } from "~/hooks/useDeferredPreferenceField"
+import toast from "~/lib/notify"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
 import {
@@ -28,7 +28,7 @@ import {
   type AutoCheckinPreferences,
 } from "~/types/autoCheckin"
 import { createLogger } from "~/utils/core/logger"
-import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
+import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
 import { AUTO_CHECKIN_TARGET_IDS } from "./searchTargets"

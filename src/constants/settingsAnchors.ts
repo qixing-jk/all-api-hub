@@ -1,5 +1,10 @@
 export const SETTINGS_ANCHORS = {
+  AUTO_PROVISION_KEY: "auto-provision-key-on-account-add",
+  AUTO_PROVISION_KEY_ENABLED: "auto-provision-key-toggle",
+  AUTO_PROVISION_KEY_MODE: "auto-provision-key-mode",
   SHIELD_SETTINGS: "shield-settings",
+  SHIELD_HISTORY: "shield-history",
+  SHIELD_WINDOW_SIZE: "shield-window-size",
   TASK_NOTIFICATIONS: "task-notifications",
   TASK_NOTIFICATIONS_ENABLED: "task-notifications-enabled",
   TASK_NOTIFICATION_CHANNELS: "task-notification-channels",
@@ -46,6 +51,7 @@ export const SETTINGS_ANCHORS = {
   AXON_HUB: "axonhub",
   SUB2API: "sub2api-managed-site",
   SUB2API_BASE_URL: "sub2api-managed-site-base-url",
+  SUB2API_ADMIN_CREDENTIALS_LINK: "sub2api-managed-site-admin-credentials-link",
   SUB2API_ADMIN_API_KEY: "sub2api-managed-site-admin-api-key",
   SUB2API_VALIDATE: "sub2api-managed-site-validate",
   SUB2API_DEFAULT_SCOPE: "sub2api-managed-site-default-scope",

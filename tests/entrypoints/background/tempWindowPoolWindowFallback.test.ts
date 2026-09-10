@@ -250,8 +250,8 @@ describe("tempWindowPool window fallback", () => {
         createBrowserFocusObservation: createBrowserFocusObservationMock,
       }
     })
-    vi.doMock("~/services/accounts/accountStorage", () => ({
-      accountStorage: {
+    vi.doMock("~/services/accounts/accountStorage/accountQueries", () => ({
+      accountQueries: {
         getAccountById: getAccountByIdMock,
       },
     }))
@@ -315,7 +315,7 @@ describe("tempWindowPool window fallback", () => {
     ;(globalThis as any).browser = originalBrowser
 
     vi.useRealTimers()
-    vi.doUnmock("~/services/accounts/accountStorage")
+    vi.doUnmock("~/services/accounts/accountStorage/accountQueries")
     vi.doUnmock("~/utils/browser/cookieHelper")
     vi.doUnmock("~/utils/browser/dnrCookieInjector")
     vi.doUnmock("~/utils/browser/firefoxTempWindowDownloadBlocker")
@@ -632,6 +632,7 @@ describe("tempWindowPool window fallback", () => {
     )
     const authorizeAtAcquire = vi.fn()
     const sendResponse = vi.fn()
+    const reportOutcome = vi.fn()
 
     await executeAuthorizedTempContextTask(
       {
@@ -653,8 +654,13 @@ describe("tempWindowPool window fallback", () => {
       },
       authorizeAtAcquire,
       sendResponse,
+      reportOutcome,
     )
 
+    expect(reportOutcome).toHaveBeenCalledWith({
+      kind: "unavailable",
+      reason: "firefox_popup_unsupported",
+    })
     expect(sendResponse).toHaveBeenCalledWith({
       requestId: "request-openrouter-firefox-popup",
       operation: "create",
@@ -826,6 +832,8 @@ describe("tempWindowPool window fallback", () => {
       expect.objectContaining({
         type: "normal",
         url: "about:blank",
+        width: 600,
+        height: 720,
       }),
     )
     expect(createTabMock).not.toHaveBeenCalled()
@@ -893,6 +901,47 @@ describe("tempWindowPool window fallback", () => {
     )
     expect(createTabMock).not.toHaveBeenCalled()
   })
+
+  it.each(["composite", "window"] as const)(
+    "opens %s verification windows with persisted custom dimensions",
+    async (mode) => {
+      tempContextMode = mode
+      getPreferencesMock.mockResolvedValue({
+        tempWindowFallback: {
+          tempContextMode: mode,
+          windowWidth: 800,
+          windowHeight: 1000,
+        },
+      })
+      createWindowMock.mockResolvedValueOnce({ id: 105, tabs: [{ id: 106 }] })
+      tabsQueryMock.mockResolvedValueOnce([{ id: 106 }])
+      const { handleTempWindowFetch } = await import(
+        "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+      )
+      const sendResponse = vi.fn()
+      const request = handleTempWindowFetch(
+        {
+          originUrl: "https://example.invalid",
+          fetchUrl: "https://example.invalid/api/test",
+          fetchOptions: { method: "GET" },
+          requestId: "custom-size",
+        },
+        sendResponse,
+      )
+      await vi.advanceTimersByTimeAsync(500)
+      await request
+      expect(createWindowMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: mode === "composite" ? "normal" : "popup",
+          width: 800,
+          height: 1000,
+        }),
+      )
+      expect(sendResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true }),
+      )
+    },
+  )
 
   it("reuses a live composite window for automatic mode while unfocused", async () => {
     tempContextMode = "composite"
@@ -1234,6 +1283,7 @@ describe("tempWindowPool window fallback", () => {
     expect(reportOutcome).toHaveBeenCalledWith({
       kind: "allowed",
       adapter: "tab",
+      reused: false,
     })
     expect(recordShieldBypassFocusObservationMock).toHaveBeenCalledWith(
       expect.objectContaining({ adapter: TEMP_CONTEXT_MODES.Tab }),
@@ -1278,6 +1328,7 @@ describe("tempWindowPool window fallback", () => {
     expect(reportOutcome).toHaveBeenCalledWith({
       kind: "allowed",
       adapter: "tab",
+      reused: false,
     })
   })
 
@@ -1334,10 +1385,12 @@ describe("tempWindowPool window fallback", () => {
     expect(firstOutcome).toHaveBeenCalledWith({
       kind: "allowed",
       adapter: "tab",
+      reused: false,
     })
     expect(secondOutcome).toHaveBeenCalledWith({
       kind: "allowed",
       adapter: "tab",
+      reused: true,
     })
     expect(recordShieldBypassFocusObservationMock).toHaveBeenCalledTimes(2)
     expect(recordShieldBypassFocusObservationMock).toHaveBeenLastCalledWith(
@@ -2646,27 +2699,42 @@ describe("tempWindowPool window fallback", () => {
   it("rejects incognito auto-detect requests when incognito access is unavailable", async () => {
     isAllowedIncognitoAccessMock.mockResolvedValueOnce(false)
 
-    const { handleAutoDetectSite } = await import(
+    const { executeAuthorizedTempContextTask } = await import(
       "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
+    const authorizeAtAcquire = vi.fn()
+    const reportOutcome = vi.fn()
     const sendResponse = vi.fn()
-    await handleAutoDetectSite(
+    await executeAuthorizedTempContextTask(
       {
-        url: "https://example.com/account",
-        requestId: "req-auto-detect-incognito-denied",
-        siteType: "new-api",
-        useIncognito: true,
+        kind: "session_read",
+        params: {
+          url: "https://example.com/account",
+          requestId: "req-auto-detect-incognito-denied",
+          siteType: "new-api",
+          useIncognito: true,
+        },
       },
+      authorizeAtAcquire,
       sendResponse,
+      reportOutcome,
     )
 
     expect(createWindowMock).not.toHaveBeenCalled()
     expect(createTabMock).not.toHaveBeenCalled()
+    expect(authorizeAtAcquire).not.toHaveBeenCalled()
+    expect(reportOutcome).toHaveBeenCalledWith({
+      kind: "unavailable",
+      reason: "incognito_access_required",
+    })
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
       error: "messages:background.incognitoAccessRequired",
     })
+    expect(reportOutcome.mock.invocationCallOrder[0]).toBeLessThan(
+      sendResponse.mock.invocationCallOrder[0],
+    )
   })
 
   it("returns a safe null result when site detection succeeds but no user data can be read", async () => {

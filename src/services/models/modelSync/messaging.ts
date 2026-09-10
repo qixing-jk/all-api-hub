@@ -1,13 +1,15 @@
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { defineExtensionMessaging } from "~/services/runtimeMessaging/extensionMessaging"
 import { createRuntimeMessagingLogger } from "~/services/runtimeMessaging/logger"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { RuntimeMessageResponse } from "~/services/runtimeMessaging/result"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
-import type { ManagedSiteChannelListData } from "~/types/managedSite"
+import type { ManagedModelChannelSummaryListData } from "~/types/managedResourceModels"
 import type {
-  ExecutionProgress,
+  ExecutionHistoryResult,
   ExecutionResult,
+  ScopedExecutionProgress,
 } from "~/types/managedSiteModelSync"
 
 import type { managedSiteModelSyncStorage } from "./storage"
@@ -17,7 +19,7 @@ interface ModelSyncTriggerRequest {
 }
 
 interface ModelSyncTriggerSelectedRequest extends ModelSyncTriggerRequest {
-  channelIds: number[]
+  resourceRefs: ManagedResourceRef[]
 }
 
 export interface ModelSyncUpdateSettingsRequest {
@@ -64,14 +66,14 @@ interface ModelSyncProtocolMap {
   [ModelSyncMessageTypes.TriggerFailedOnly](
     data: ModelSyncTriggerRequest,
   ): RuntimeMessageResponse<ExecutionResult>
-  [ModelSyncMessageTypes.GetLastExecution](): RuntimeMessageResponse<ExecutionResult | null>
-  [ModelSyncMessageTypes.GetProgress](): RuntimeMessageResponse<ExecutionProgress | null>
+  [ModelSyncMessageTypes.GetLastExecution](): RuntimeMessageResponse<ExecutionHistoryResult | null>
+  [ModelSyncMessageTypes.GetProgress](): RuntimeMessageResponse<ScopedExecutionProgress | null>
   [ModelSyncMessageTypes.UpdateSettings](
     data: ModelSyncUpdateSettingsRequest,
   ): ModelSyncMutationResponse
   [ModelSyncMessageTypes.GetPreferences](): RuntimeMessageResponse<ModelSyncPreferences>
   [ModelSyncMessageTypes.GetChannelUpstreamModelOptions](): RuntimeMessageResponse<ModelSyncUpstreamModelOptions>
-  [ModelSyncMessageTypes.ListChannels](): RuntimeMessageResponse<ManagedSiteChannelListData>
+  [ModelSyncMessageTypes.ListChannels](): RuntimeMessageResponse<ManagedModelChannelSummaryListData>
 }
 
 export const {

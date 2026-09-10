@@ -16,6 +16,7 @@ import {
 import { ThemeAwareToaster } from "~/components/ThemeAwareToaster"
 import { ToasterPortalProvider } from "~/components/toast/ToasterPortal"
 import { DeviceProvider } from "~/contexts/DeviceContext"
+import { FeatureGuidanceProvider } from "~/contexts/FeatureGuidanceContext"
 import { ReleaseUpdateStatusProvider } from "~/contexts/ReleaseUpdateStatusContext"
 import { ThemeProvider } from "~/contexts/ThemeContext"
 import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
@@ -31,23 +32,25 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <DeviceProvider>
       <UserPreferencesProvider>
-        <ThemeProvider>
-          <ToasterPortalProvider>
-            <ReleaseUpdateStatusProvider>
-              <ChannelDialogProvider>
-                <UpdateLogDialogProvider>
-                  <ChangelogOnUpdateUiOpenHandler />
-                  <AutoCheckinUiOpenPretrigger />
-                  <UpdateLogDialogContainer />
-                  {children}
-                  <ChannelDialogContainer />
-                  <DuplicateChannelWarningDialogContainer />
-                </UpdateLogDialogProvider>
-              </ChannelDialogProvider>
-            </ReleaseUpdateStatusProvider>
-            <ThemeAwareToaster reverseOrder={false} />
-          </ToasterPortalProvider>
-        </ThemeProvider>
+        <FeatureGuidanceProvider>
+          <ThemeProvider>
+            <ToasterPortalProvider>
+              <ReleaseUpdateStatusProvider>
+                <ChannelDialogProvider>
+                  <UpdateLogDialogProvider>
+                    <ChangelogOnUpdateUiOpenHandler />
+                    <AutoCheckinUiOpenPretrigger />
+                    <UpdateLogDialogContainer />
+                    {children}
+                    <ChannelDialogContainer />
+                    <DuplicateChannelWarningDialogContainer />
+                  </UpdateLogDialogProvider>
+                </ChannelDialogProvider>
+              </ReleaseUpdateStatusProvider>
+              <ThemeAwareToaster reverseOrder={false} />
+            </ToasterPortalProvider>
+          </ThemeProvider>
+        </FeatureGuidanceProvider>
       </UserPreferencesProvider>
     </DeviceProvider>
   )

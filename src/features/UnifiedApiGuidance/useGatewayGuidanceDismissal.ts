@@ -1,10 +1,7 @@
 import { useCallback, useState } from "react"
 
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import {
-  type GatewayGuidanceSurface,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
+import type { GatewayGuidanceSurface } from "~/services/featureGuidance/featureGuidanceState"
 
 import { shouldShowGatewayGuidanceSurface } from "./model"
 
@@ -40,11 +37,8 @@ function writeSessionDismissal(surface: GatewayGuidanceSurface) {
 /**
  * Coordinates temporary and persisted dismissal for source-surface gateway guidance.
  */
-export function useGatewayGuidanceDismissal(
-  surface: GatewayGuidanceSurface,
-  preferences: UserPreferences | null | undefined,
-) {
-  const { dismissGatewayGuidanceSurface } = useUserPreferencesContext()
+export function useGatewayGuidanceDismissal(surface: GatewayGuidanceSurface) {
+  const { state, dismissGatewayGuidanceSurface } = useFeatureGuidanceContext()
   const [dismissedForSession, setDismissedForSession] = useState(() =>
     readSessionDismissal(surface),
   )
@@ -73,12 +67,8 @@ export function useGatewayGuidanceDismissal(
     setHasPermanentDismissError(false)
     setPermanentDismissSaving(true)
     try {
-      const result = await dismissGatewayGuidanceSurface(surface)
-      if (result.ok) {
-        setPermanentDismissDialogOpen(false)
-      } else {
-        setHasPermanentDismissError(true)
-      }
+      await dismissGatewayGuidanceSurface(surface)
+      setPermanentDismissDialogOpen(false)
     } catch {
       setHasPermanentDismissError(true)
     } finally {
@@ -88,7 +78,7 @@ export function useGatewayGuidanceDismissal(
 
   return {
     shouldShow: shouldShowGatewayGuidanceSurface(
-      preferences,
+      state,
       surface,
       dismissedForSession,
     ),

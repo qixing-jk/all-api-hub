@@ -1,4 +1,27 @@
 {
+  "accessTokenVerification": {
+    "apiyi": {
+      "generateStep": "Wenn du bereits ein gültiges, vollständiges Access Token hast, kannst du es verwenden. Öffne andernfalls „System token“ in deinem APIyi-Profil und gib auf der Website dein Passwort ein, um ein Token zu erstellen.",
+      "openProfile": "APIyi-Profil öffnen",
+      "openProfileFailed": "Die Seite konnte nicht geöffnet werden. Öffne „System token“ in deinem APIyi-Profil manuell, schließe die Verifizierung ab und kehre hierher zurück, um das Access Token einzufügen."
+    },
+    "continueFailed": "Weder Seitenleiste noch vollständige Seite konnten geöffnet werden. Dein Formular bleibt erhalten. Bitte versuche es erneut.",
+    "continueInFullPage": "Auf vollständiger Seite fortfahren",
+    "continueInSidePanel": "In der Seitenleiste fortfahren",
+    "continuing": "Formular wird vorbereitet…",
+    "description": "Diese Website verlangt vor dem Erstellen eines Access Tokens eine Sicherheitsprüfung. Das Token kann daher nicht automatisch abgerufen werden. Erkannte Kontodaten bleiben erhalten. Gib ein Access Token zur Kontoverwaltung ein.",
+    "destinationBusy": "Hier ist bereits ein Kontoformular geöffnet. Speichere oder schließe es, um mit dem Formular aus dem Popup fortzufahren.",
+    "fullPageHint": "Auf einer vollständigen Seite bleibt dieses Formular geöffnet, während du das Token auf der Website kopierst.",
+    "generateStep": "Verwende einen vorhandenen gültigen, vollständigen Access Token. Andernfalls öffne auf der Website Sicherheit → Access Token, schließe die Verifizierung ab und erstelle einen Token.",
+    "openSecurity": "Sicherheitseinstellungen der Website öffnen",
+    "openSecurityFailed": "Die Seite konnte nicht geöffnet werden. Öffne Sicherheit → Access Token auf der Website manuell und kehre zum Einfügen des Tokens hierher zurück.",
+    "pasteStep": "Kopiere das vollständige Access Token sofort, füge es unten im Feld „Access Token“ ein, prüfe die Kontodaten und speichere sie.",
+    "popupHint": "In der Seitenleiste bleibt dieses Formular erhalten, während du dich auf der Website verifizierst und das Token kopierst. Lässt sich die Seitenleiste nicht öffnen, wird das Formular auf einer vollständigen Seite geöffnet.",
+    "prepareFailed": "Das Formular konnte nicht zwischengespeichert werden. Kopiere benötigte Angaben, bevor du das Kontoformular in der Seitenleiste erneut öffnest.",
+    "restoreFailed": "Das unvollständige Formular konnte nicht wiederhergestellt werden. Es ist möglicherweise abgelaufen. Öffne das Kontoformular erneut.",
+    "rotationWarning": "Ein neues Access Token macht das alte ungültig. Aktualisiere auch andere Tools, die das alte Token verwenden.",
+    "title": "Access Token manuell eingeben"
+  },
   "actions": {
     "autoConfigAriaLabel": "Konto speichern und Kanaleinrichtung {{managedSite}} öffnen",
     "autoConfigRequiresValidAccount": "Füllen Sie zuerst das Kontoformular aus",
@@ -8,6 +31,7 @@
     "confirmAdd": "Hinzufügen bestätigen",
     "helpDocument": "Anleitung zur Fehlerbehebung",
     "openApiCredentialProfiles": "API-Anmeldeinformationen öffnen",
+    "openManualAddGuide": "Anleitung zum manuellen Hinzufügen dieser Website öffnen",
     "reloadCurrentPage": "Aktuelle Seite neu laden",
     "reloadExtensionAndRetry": "Erweiterung neu laden und erneut versuchen",
     "reportUnsupportedSite": "Website-Unterstützung anfordern",
@@ -55,6 +79,7 @@
     "automaticCheckInSelectionWithDetail": "Automatische Auswahl: {{detail}}",
     "checkInMethod": "Check-in-Methode",
     "checkInMethodNeedsChoice": "Mehrere Methoden erkannt; bitte auswählen",
+    "checkInMethodNeedsConfirmation": "{{method}} (unbestätigt)",
     "checkInMethodNotSelected": "Keine Methode ausgewählt",
     "checkInMethodPendingConfirmation": "Verfügbare Methode noch zu bestätigen",
     "checkInMethodUnavailable": "Keine verfügbare Methode",
@@ -64,6 +89,7 @@
     "checkInSelectionAutomaticUnavailable": "Es wurde keine verfügbare Methode erkannt. Der automatische Check-in wird nicht ausgeführt.",
     "checkInSelectionManual": "Sie haben {{method}} manuell ausgewählt. Das System ersetzt diese Methode nicht automatisch.",
     "checkInSelectionStale": "Erneut erkennen, um die Verfügbarkeit zu bestätigen.",
+    "checkInSelectionUnconfirmed": "Ihre Auswahl {{method}} wurde beibehalten, aber die Unterstützung auf dieser Website ist nicht bestätigt. Starten Sie die Erkennung erneut.",
     "checkInStatus": "Check-in-Status",
     "checkInStatusDesc": "Das System prüft und zeigt den heutigen Check-in-Status während der Kontoaktualisierung an. Dies dient nur der Statusanzeige und führt keinen Check-in durch.",
     "checkInStatusDisabled": "Diese Website hat den Check-in derzeit nicht aktiviert; der automatische Check-in ist pausiert.",
@@ -155,10 +181,15 @@
     "openrouterBootstrapInfo": "Diese Aktion erstellt einen neuen OpenRouter-Verwaltungsschlüssel und verwendet ihn dann zum Erkennen und Ausfüllen der Kontodetails.",
     "reDetectInfo": "Wenn sich die Website-Informationen ändern, wird empfohlen, auf die Schaltfläche „Erneut erkennen“ zu klicken (Sie müssen sich zuerst selbst bei der Ziel-Website anmelden)"
   },
+  "manualAddRecovery": {
+    "description": "Das passende Formular zum manuellen Hinzufügen ist unten geöffnet. Folgen Sie der Anleitung, ergänzen Sie die Pflichtfelder und speichern Sie das Konto.",
+    "title": "Kontodaten manuell vervollständigen"
+  },
   "messages": {
     "addSuccess": "Konto {{name}} erfolgreich hinzugefügt!",
     "autoDetectCookiePermissionReloadHint": "Wenn die erste Erkennung direkt nach der Gewährung von Cookie-Mehrfachkontoberechtigungen weiterhin wartet, laden Sie die Erweiterung neu und versuchen Sie es erneut.",
     "autoDetectFailed": "Automatische Erkennung fehlgeschlagen: {{error}}",
+    "autoDetectIdentityMismatch": "Das erkannte Konto stimmt nicht mit dem aktuellen Konto überein. Deine vorhandenen Daten wurden beibehalten. Prüfe die Website-URL, melde dich beim gewünschten Konto an und versuche es erneut.",
     "autoDetectSuccess": "Automatische Erkennung erfolgreich!",
     "autoDetectTakingTooLong": "Die automatische Erkennung dauert länger als erwartet. Anleitung zur Fehlerbehebung öffnen.",
     "checkInRedetectAmbiguous": "Mehrere Check-in-Methoden wurden erkannt. Wählen Sie unten eine aus.",
@@ -172,7 +203,7 @@
       "identity_mismatch": "Das von der Seite zurückgegebene Konto stimmt nicht mit diesem Konto überein. Prüfen Sie die Seiten-URL und die Kontozugangsdaten.",
       "invalid_response": "Die Seite hat eine Antwort zurückgegeben, die diese Erweiterung nicht erkennen konnte. Prüfen Sie die Seiten-URL und versuchen Sie es nach einer Aktualisierung der Erweiterung erneut.",
       "network": "Die Erkennung konnte die Zielseite nicht erreichen. Prüfen Sie Ihre Verbindung oder den Status der Seite und versuchen Sie es erneut.",
-      "permission_denied": "Die Zielseite hat die Erkennungsanfrage abgelehnt. Melden Sie sich erneut an und prüfen Sie die Kontoberechtigungen.",
+      "permission_denied": "Die Website hat die Anfrage zur Check-in-Erkennung abgelehnt. Die Unterstützung konnte daher nicht bestätigt werden. Prüfen Sie die Funktion und Ihre Kontoberechtigungen auf der Website.",
       "source_unavailable": "Die Zielseite ist vorübergehend nicht verfügbar. Versuchen Sie es später erneut.",
       "timeout": "Die Zielseite hat vor Ablauf des Erkennungszeitlimits nicht geantwortet. Versuchen Sie es später erneut."
     },
@@ -256,11 +287,11 @@
         "continue": "Weiter",
         "disableAndContinue": "Nicht mehr erinnern und fortfahren"
       },
-      "description_one": "Sie haben bereits {{count}} Konto für {{siteUrl}}. Durch das Hinzufügen eines weiteren können Duplikate entstehen. Möchten Sie fortfahren?",
-      "description_other": "Sie haben bereits {{count}} Konten für {{siteUrl}}. Durch das Hinzufügen eines weiteren können Duplikate entstehen. Möchten Sie fortfahren?",
-      "descriptionExact": "Ein Konto für {{siteUrl}} mit der Benutzer-ID {{userId}} existiert bereits ({{username}}). Durch das Hinzufügen eines weiteren können Duplikate entstehen. Möchten Sie fortfahren?",
+      "description_one": "Dieser Management Key für {{siteUrl}} ist bereits in {{count}} Konto gespeichert. Möchten Sie ihn erneut hinzufügen?",
+      "description_other": "Dieser Management Key für {{siteUrl}} ist bereits in {{count}} Konten gespeichert. Möchten Sie ihn erneut hinzufügen?",
+      "descriptionExact": "Ein Konto für {{siteUrl}} mit der Benutzer-ID {{userId}} ist bereits gespeichert ({{username}}). Möchten Sie es erneut hinzufügen?",
       "title": "Doppeltes Konto",
-      "warningTitle": "Diese Website hat bereits Konten"
+      "warningTitle": "Passendes gespeichertes Konto gefunden"
     },
     "managedSiteConfig": {
       "actions": {

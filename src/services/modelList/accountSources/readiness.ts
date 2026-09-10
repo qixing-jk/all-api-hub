@@ -1,8 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import {
-  ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING,
-  ACCOUNT_SITE_MODEL_LIST_PROVIDER_CATALOGS,
-  ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS,
   getAccountSiteModelListProfile,
   type AccountSiteModelListDashboardEstimateLoader,
   type AccountSiteModelListDisplayCapabilitySource,
@@ -22,10 +19,6 @@ export const MODEL_LIST_ACCOUNT_SOURCE_ROUTES = {
 } as const
 
 export const MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS = {
-  MissingModelPricingCapability: "missing_model_pricing_capability",
-  MissingModelCatalogCapability: "missing_model_catalog_capability",
-  MissingProviderModelCatalogCapability:
-    "missing_provider_model_catalog_capability",
   NoSupportedRoute: "no_supported_route",
 } as const
 
@@ -74,68 +67,29 @@ export function resolveModelListAccountSourceReadiness(account: {
     displayCapabilitiesSource: profile.displayCapabilitiesSource,
   }
 
-  if (
-    profile.directPricing === ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Supported
-  ) {
-    if (accountCapabilities?.modelPricing) {
-      return {
-        ...base,
-        route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing,
-        modelPricing: accountCapabilities.modelPricing,
-      }
-    }
-
-    if (
-      profile.tokenScopedCatalogFallback !==
-      ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.RuntimeKey
-    ) {
-      return {
-        ...base,
-        route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported,
-        reason:
-          MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS.MissingModelPricingCapability,
-      }
+  if (accountCapabilities?.modelPricing) {
+    return {
+      ...base,
+      route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing,
+      modelPricing: accountCapabilities.modelPricing,
     }
   }
 
-  if (
-    profile.providerCatalog === ACCOUNT_SITE_MODEL_LIST_PROVIDER_CATALOGS.Public
-  ) {
-    if (accountCapabilities?.providerModelCatalog) {
-      return {
-        ...base,
-        route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog,
-        providerModelCatalog: accountCapabilities.providerModelCatalog,
-      }
-    }
-
+  if (accountCapabilities?.providerModelCatalog) {
     return {
       ...base,
-      route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported,
-      reason:
-        MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS.MissingProviderModelCatalogCapability,
+      route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog,
+      providerModelCatalog: accountCapabilities.providerModelCatalog,
     }
   }
 
-  if (
-    profile.tokenScopedCatalogFallback ===
-    ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.RuntimeKey
-  ) {
-    if (accountCapabilities?.modelCatalog) {
-      return {
-        ...base,
-        route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog,
-        modelCatalog: accountCapabilities.modelCatalog,
-        requiresTokenKeyResolution: Boolean(accountCapabilities.keyManagement),
-        dashboardEstimateLoader: profile.dashboardEstimateLoader,
-      }
-    }
-
+  if (accountCapabilities?.modelCatalog) {
     return {
       ...base,
-      route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported,
-      reason:
-        MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS.MissingModelCatalogCapability,
+      route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog,
+      modelCatalog: accountCapabilities.modelCatalog,
+      requiresTokenKeyResolution: Boolean(accountCapabilities.keyManagement),
+      dashboardEstimateLoader: profile.dashboardEstimateLoader,
     }
   }
 

@@ -1,5 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
-import { normalizeAccountSiteUrlForDuplicateCheck } from "~/services/accounts/utils/siteUrlNormalization"
+import { normalizeAccountSiteProfileUrlForDuplicateCheck } from "~/services/accounts/accountSiteProfile/urls"
 import type { SiteAccount } from "~/types"
 
 import type {
@@ -73,7 +73,7 @@ function parseWebBookmarkUrl(value: unknown):
     return "non-web"
   }
 
-  const normalizedOrigin = normalizeAccountSiteUrlForDuplicateCheck({
+  const normalizedOrigin = normalizeAccountSiteProfileUrlForDuplicateCheck({
     siteType: SITE_TYPES.UNKNOWN,
     url: parsed.href,
   })
@@ -95,7 +95,7 @@ function buildExistingOriginCounts(accounts: SiteAccount[]) {
   const counts = new Map<string, number>()
 
   for (const account of accounts) {
-    const origin = normalizeAccountSiteUrlForDuplicateCheck({
+    const origin = normalizeAccountSiteProfileUrlForDuplicateCheck({
       siteType: account.site_type,
       url: account.site_url,
     })

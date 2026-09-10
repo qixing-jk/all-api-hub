@@ -1,5 +1,4 @@
 import type { CompactMultiSelectOption } from "~/components/ui"
-import type { ChannelGroup, ChannelModel } from "~/types/managedSite"
 
 export interface SelectOption {
   label: string
@@ -13,28 +12,6 @@ export interface SelectOption {
  */
 export function toSelectOptions(values: string[]): SelectOption[] {
   return values.map((value) => ({ label: value, value }))
-}
-
-/**
- * Maps channel group models to multi-select options.
- * @param groups Available channel groups.
- * @returns Options for multi-select inputs.
- */
-export function groupsToOptions(
-  groups: ChannelGroup[],
-): CompactMultiSelectOption[] {
-  return groups.map((group) => ({ label: group.name, value: group.id }))
-}
-
-/**
- * Maps channel model metadata to multi-select options.
- * @param models Channel models from upstream.
- * @returns Options for model selection.
- */
-export function modelsToOptions(
-  models: ChannelModel[],
-): CompactMultiSelectOption[] {
-  return models.map((model) => ({ label: model.name, value: model.id }))
 }
 
 /**

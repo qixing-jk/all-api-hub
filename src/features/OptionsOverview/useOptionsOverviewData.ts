@@ -2,10 +2,13 @@ import { useCallback, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { isManagedSiteType } from "~/constants/siteType"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { accountStatistics } from "~/services/accounts/accountStorage/accountStatistics"
 import { createEmptyAccountTodayStatsCoverage } from "~/services/accounts/accountTodayStats"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
+import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { siteAnnouncementStorage } from "~/services/siteAnnouncements/storage"
@@ -46,6 +49,7 @@ const OPTIONS_OVERVIEW_DATA_SOURCES = [
   "usageHistory",
   "apiCredentialProfiles",
   "preferences",
+  "featureGuidance",
   "autoCheckinStatus",
   "siteAnnouncementRecords",
   "siteAnnouncementStatuses",
@@ -72,7 +76,7 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
     null,
   )
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [hasLoadFailure, setHasLoadFailure] = useState(false)
   const [reloadVersion, setReloadVersion] = useState(0)
 
   const reload = useCallback(() => {
@@ -86,11 +90,12 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
       setIsLoading(true)
       try {
         const results = await Promise.allSettled([
-          accountStorage.getAllAccounts(),
-          accountStorage.getAccountStats(),
+          accountQueries.getAllAccounts(),
+          accountStatistics.getAccountStats(),
           usageHistoryStorage.getStore(),
           apiCredentialProfilesStorage.listProfiles(),
           userPreferences.getPreferences(),
+          featureGuidanceState.getState(),
           autoCheckinStorage.getStatus(),
           siteAnnouncementStorage.listRecords(),
           siteAnnouncementStorage.getStatus(),
@@ -102,6 +107,7 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
           usageStoreResult,
           apiCredentialProfilesResult,
           preferencesResult,
+          featureGuidanceResult,
           autoCheckinStatusResult,
           siteAnnouncementRecordsResult,
           siteAnnouncementStatusesResult,
@@ -120,9 +126,6 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
             : [],
         )
         const firstFailure = failures[0]
-        const loadErrorMessage = firstFailure
-          ? t("optionsOverview:states.loadDetailUnavailable")
-          : null
         if (firstFailure) {
           logger.error("Some options overview data failed to load", {
             failures,
@@ -130,7 +133,7 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
         }
 
         if (!results.some((result) => result.status === "fulfilled")) {
-          setError(loadErrorMessage)
+          setHasLoadFailure(Boolean(firstFailure))
           return
         }
 
@@ -145,6 +148,7 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
           [],
         )
         const preferences = settledValue(preferencesResult, null)
+        const guidanceState = settledValue(featureGuidanceResult, null)
         const autoCheckinStatus = settledValue(autoCheckinStatusResult, null)
         const siteAnnouncementRecords = settledValue(
           siteAnnouncementRecordsResult,
@@ -158,13 +162,14 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
           accountsResult,
           apiCredentialProfilesResult,
           preferencesResult,
+          featureGuidanceResult,
         ].every((result) => result.status === "fulfilled")
 
         const configuredManagedSiteType = preferences?.managedSiteType
         const managedSiteType = isManagedSiteType(configuredManagedSiteType)
           ? configuredManagedSiteType
           : undefined
-        const displayData = accountStorage.convertToDisplayData(accounts)
+        const displayData = accountPresentation.convertToDisplayData(accounts)
         setViewModel(
           buildOptionsOverviewViewModel({
             accounts,
@@ -173,6 +178,7 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
             apiCredentialProfiles,
             usageStore,
             preferences,
+            guidanceState,
             managedSiteType,
             autoCheckinStatus,
             siteAnnouncementRecords:
@@ -185,13 +191,13 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
               apiCredentialProfilesResult.status === "fulfilled",
           }),
         )
-        setError(loadErrorMessage)
+        setHasLoadFailure(Boolean(firstFailure))
       } catch {
         if (!isCurrent) return
         logger.error("Failed to load options overview data", {
           status: "rejected",
         })
-        setError(t("optionsOverview:states.loadDetailUnavailable"))
+        setHasLoadFailure(true)
       } finally {
         if (isCurrent) {
           setIsLoading(false)
@@ -204,11 +210,13 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
     return () => {
       isCurrent = false
     }
-  }, [reloadVersion, t])
+  }, [reloadVersion])
 
   return {
     isLoading,
-    error,
+    error: hasLoadFailure
+      ? t("optionsOverview:states.loadDetailUnavailable")
+      : null,
     viewModel,
     reload,
   }

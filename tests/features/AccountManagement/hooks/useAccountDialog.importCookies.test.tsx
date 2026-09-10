@@ -1,12 +1,12 @@
 import type { ReactNode } from "react"
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import toast from "~/lib/notify"
+import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
@@ -53,7 +53,7 @@ const { mockTrackProductAnalyticsEvent } = vi.hoisted(() => ({
   mockTrackProductAnalyticsEvent: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: vi.fn(),
     error: vi.fn(),
@@ -160,7 +160,7 @@ describe("useAccountDialog cookie import feedback", () => {
         return []
       }
     })
-    await accountStorage.clearAllData()
+    await accountDataTransfer.clearAllData()
   })
 
   it("shows the empty-cookie message when no cookies are available", async () => {

@@ -82,12 +82,18 @@ Click the verification icon on a model card:
 - **Verify API**: Send one probe to check whether the model or endpoint currently works and whether its response matches expectations.
 - **Verify CLI Compatibility**: Evaluate whether the model is suitable for CLI tools, such as support for streaming and text generation.
 
+In the **`Verify API`** dialog, choose **`Streaming`** (the default) or **`Non-streaming`** under **`Test mode`**. Generation tests use the selected mode, and their results and newly saved history show that mode. If the endpoint rejects a request, you can switch modes and test again; tests do not switch automatically. Fetching the model list is unaffected by this option.
+
+The **`Verify CLI Compatibility`** dialog also offers **`Streaming`** (the default) and **`Non-streaming`**. Each CLI keeps its corresponding API type for the tool-calling probe. Results show the selected mode, and failures do not trigger an automatic mode switch.
+
 > - Verification is a **one-time probe**. It does not guarantee long-term availability or permanent failure.
 > - CLI compatibility verification **does not launch a real external CLI**. It performs a protocol-level simulation only.
 
 ### 6. Bulk Test
 
 Click **`Bulk Test`** in the toolbar to open **`Bulk Test Models`**:
+
+**`Test mode`** defaults to **`Streaming`**; you can also choose **`Non-streaming`**. All selected generation tests in that run use the same mode, which is shown with each result.
 
 1. Select a **`Test Item`**, either automatically by endpoint type or explicitly, such as text generation, tool calling, or structured output.
 2. Under **`Models to Run`**, select or select all models to test.

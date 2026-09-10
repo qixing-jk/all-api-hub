@@ -111,7 +111,7 @@ const columns = [
     canHide: false,
     defaultVisible: true,
     visible: true,
-    extension: { kind: "legacy-common" as const },
+    extension: { kind: "common" as const },
   },
   {
     id: "id" as const,
@@ -128,7 +128,7 @@ const columns = [
       missing: "last" as const,
     },
     size: 40,
-    extension: { kind: "legacy-common" as const },
+    extension: { kind: "common" as const },
   },
   {
     id: "name" as const,
@@ -144,7 +144,7 @@ const columns = [
       missing: "last" as const,
     },
     size: 300,
-    extension: { kind: "legacy-common" as const },
+    extension: { kind: "common" as const },
   },
   ...(["type", "models", "group", "priority", "weight"] as const).map((id) => ({
     id,
@@ -159,7 +159,7 @@ const columns = [
       defaultDirection: "asc" as const,
       missing: "last" as const,
     },
-    extension: { kind: "legacy-common" as const },
+    extension: { kind: "common" as const },
   })),
   {
     id: "status" as const,
@@ -175,7 +175,7 @@ const columns = [
       missing: "last" as const,
     },
     facet: { kind: "status" as const },
-    extension: { kind: "legacy-common" as const },
+    extension: { kind: "common" as const },
   },
   {
     id: "actions" as const,
@@ -184,7 +184,7 @@ const columns = [
     canHide: false,
     defaultVisible: true,
     visible: true,
-    extension: { kind: "legacy-common" as const },
+    extension: { kind: "common" as const },
   },
 ]
 
@@ -402,6 +402,31 @@ describe("ManagedSiteChannelsView", () => {
 
     await user.click(cancelRefreshButton)
     expect(onRefresh).toHaveBeenCalledOnce()
+  })
+
+  it("keeps unsupported bulk model sync visible and explains why it is unavailable", () => {
+    const onSyncSelected = vi.fn()
+    render(
+      <ManagedSiteChannelsView
+        {...commonProps}
+        capabilities={{
+          ...commonProps.capabilities,
+          canSyncSelected: false,
+          modelSyncUnavailableReason:
+            "This site type does not support channel model sync.",
+        }}
+        state={createState()}
+        callbacks={createCallbacks({ onSyncSelected })}
+      />,
+    )
+
+    const syncButton = screen.getByRole("button", { name: "Sync selected" })
+    expect(syncButton).toBeDisabled()
+    expect(syncButton.parentElement).toHaveAttribute("tabindex", "0")
+    expect(syncButton.parentElement).toHaveAccessibleDescription(
+      "This site type does not support channel model sync.",
+    )
+    expect(onSyncSelected).not.toHaveBeenCalled()
   })
 
   it("keeps toolbar order and common columns while emitting opaque row keys", async () => {

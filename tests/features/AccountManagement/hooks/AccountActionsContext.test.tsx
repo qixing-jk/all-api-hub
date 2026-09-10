@@ -59,16 +59,22 @@ const {
   mockWithProtectionBypassUserCommand: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: mockToast,
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountMutations", () => ({
+  accountMutations: {
     deleteAccounts: mockDeleteAccounts,
-    refreshAccount: mockRefreshAccount,
     setAccountDisabled: mockSetAccountDisabled,
     setAccountsDisabled: mockSetAccountsDisabled,
+  },
+}))
+vi.mock("~/services/accounts/accountStorage/accountRefresh", () => ({
+  accountRefresh: { refreshAccount: mockRefreshAccount },
+}))
+vi.mock("~/services/accounts/accountStorage/accountCheckInState", () => ({
+  accountCheckInState: {
     markAccountAsCustomCheckedIn: mockMarkAccountAsCustomCheckedIn,
   },
 }))

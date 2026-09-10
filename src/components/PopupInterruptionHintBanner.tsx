@@ -10,7 +10,7 @@ import {
   getPopupInterruptionHint,
   type PopupInterruptionHint,
 } from "~/services/popupInterruptionHint"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { openSidePanelPage } from "~/utils/navigation"
 
 interface PopupInterruptionHintBannerProps {

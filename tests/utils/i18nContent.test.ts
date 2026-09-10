@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { createDeferred } from "~~/tests/test-utils/deferred"
+
 const {
   i18nCoreMock,
+  changeAppLanguageMock,
   getLanguageMock,
   loadAppLanguageResourcesMock,
   reactI18nextPlugin,
@@ -15,6 +18,7 @@ const {
     resolvedLanguage: "en" as string | undefined,
     language: "en",
   },
+  changeAppLanguageMock: vi.fn(),
   getLanguageMock: vi.fn(),
   loadAppLanguageResourcesMock: vi.fn(),
   reactI18nextPlugin: { type: "3rdParty" },
@@ -44,10 +48,7 @@ vi.mock("~/utils/i18n/language", () => ({
 }))
 
 vi.mock("~/utils/i18n/resources", () => ({
-  changeAppLanguage: (
-    instance: { changeLanguage: (language: string) => Promise<void> },
-    language: string,
-  ) => instance.changeLanguage(language),
+  changeAppLanguage: changeAppLanguageMock,
   loadAppLanguageResources: loadAppLanguageResourcesMock,
 }))
 
@@ -65,6 +66,11 @@ describe("content i18n initialization", () => {
     i18nCoreMock.on.mockReset()
     i18nCoreMock.resolvedLanguage = "en"
     i18nCoreMock.language = "en"
+    changeAppLanguageMock
+      .mockReset()
+      .mockImplementation((instance: typeof i18nCoreMock, language: string) =>
+        instance.changeLanguage(language),
+      )
     getLanguageMock.mockReset()
     loadAppLanguageResourcesMock.mockReset()
     loadAppLanguageResourcesMock.mockResolvedValue({
@@ -115,6 +121,87 @@ describe("content i18n initialization", () => {
 
     expect(getLanguageMock).toHaveBeenCalledTimes(2)
     expect(i18nCoreMock.changeLanguage).toHaveBeenLastCalledWith("en")
+  })
+
+  it("applies a preference refresh requested while initial language loading is pending", async () => {
+    const initialization = createDeferred<void>()
+    i18nCoreMock.init.mockReturnValueOnce(initialization.promise)
+    getLanguageMock.mockResolvedValueOnce("en").mockResolvedValueOnce("ja")
+    resolveInitialAppLanguageMock.mockReturnValue("en")
+    i18nCoreMock.changeLanguage.mockImplementation(async (language: string) => {
+      i18nCoreMock.resolvedLanguage = language
+      i18nCoreMock.language = language
+    })
+    const { ensureContentI18nReady } = await import("~/utils/i18n/content")
+    const firstReadiness = ensureContentI18nReady()
+    const preferenceRefresh = ensureContentI18nReady()
+    initialization.resolve()
+    await Promise.all([firstReadiness, preferenceRefresh])
+
+    expect(i18nCoreMock.init).toHaveBeenCalledTimes(1)
+    expect(i18nCoreMock.changeLanguage).toHaveBeenLastCalledWith("ja")
+  })
+
+  it("keeps the latest preference when an earlier language resource load is slower", async () => {
+    getLanguageMock
+      .mockResolvedValueOnce("en")
+      .mockResolvedValueOnce("ja")
+      .mockResolvedValueOnce("zh-CN")
+    resolveInitialAppLanguageMock.mockReturnValue("en")
+    i18nCoreMock.changeLanguage.mockImplementation(async (language: string) => {
+      i18nCoreMock.resolvedLanguage = language
+      i18nCoreMock.language = language
+    })
+    const { ensureContentI18nReady } = await import("~/utils/i18n/content")
+    await ensureContentI18nReady()
+
+    vi.useFakeTimers()
+    try {
+      changeAppLanguageMock.mockImplementation(
+        async (instance: typeof i18nCoreMock, language: string) => {
+          await new Promise((resolve) =>
+            setTimeout(resolve, language === "ja" ? 20 : 1),
+          )
+          await instance.changeLanguage(language)
+        },
+      )
+      const olderRefresh = ensureContentI18nReady()
+      const newerRefresh = ensureContentI18nReady()
+      await vi.runAllTimersAsync()
+      await Promise.all([olderRefresh, newerRefresh])
+
+      expect(i18nCoreMock.resolvedLanguage).toBe("zh-CN")
+      expect(i18nCoreMock.changeLanguage).toHaveBeenLastCalledWith("zh-CN")
+      expect(i18nCoreMock.init).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("applies a later queued preference even if the earlier refresh fails", async () => {
+    getLanguageMock
+      .mockResolvedValueOnce("en")
+      .mockResolvedValueOnce("ja")
+      .mockResolvedValueOnce("zh-CN")
+    resolveInitialAppLanguageMock.mockReturnValue("en")
+    i18nCoreMock.changeLanguage.mockImplementation(async (language: string) => {
+      i18nCoreMock.resolvedLanguage = language
+      i18nCoreMock.language = language
+    })
+    const { ensureContentI18nReady } = await import("~/utils/i18n/content")
+    await ensureContentI18nReady()
+    changeAppLanguageMock.mockRejectedValueOnce(
+      new Error("Resource load failed"),
+    )
+
+    const failedRefresh = expect(ensureContentI18nReady()).rejects.toThrow(
+      "Resource load failed",
+    )
+    const nextRefresh = ensureContentI18nReady()
+    await Promise.all([failedRefresh, nextRefresh])
+
+    expect(i18nCoreMock.resolvedLanguage).toBe("zh-CN")
+    expect(i18nCoreMock.init).toHaveBeenCalledTimes(1)
   })
 
   it("retries initialization after a failed attempt", async () => {

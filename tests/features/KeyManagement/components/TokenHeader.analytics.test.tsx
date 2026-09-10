@@ -79,6 +79,13 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => userPreferencesContextMock(),
 }))
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    markGatewayGuidanceOnboardingCompleted:
+      markGatewayGuidanceOnboardingCompletedMock,
+  }),
+}))
+
 vi.mock("~/components/KiloCodeExportDialog", () => ({
   KiloCodeExportDialog: (props: unknown) => {
     kiloCodeDialogRenderMock(props)
@@ -197,7 +204,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     startProductAnalyticsActionMock(...args),
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/operationFeedback", () => ({
   showResultToast: (...args: unknown[]) => showResultToastMock(...args),
 }))
 
@@ -205,7 +212,7 @@ vi.mock("~/utils/core/logger", () => ({
   createLogger: () => ({ error: loggerErrorMock }),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     dismiss: vi.fn(),
     error: vi.fn(),

@@ -196,7 +196,6 @@
     "site": {
       "checkedInToday": "今日已签到，点我查看",
       "checkInStatusOutdated": "签到状态不是今日检测（上次检测时间：{{time}}），点我刷新",
-      "checkInStatusUnavailable": "支持签到，但无法自动读取今日签到状态",
       "currentSite": "当前站点",
       "currentSiteExists": "与当前标签页站点相同",
       "disabled": "已禁用",

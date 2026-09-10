@@ -67,7 +67,7 @@ const { toast, getCurrentTempWindowRequestSourceMock } = vi.hoisted(() => ({
   getCurrentTempWindowRequestSourceMock: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: toast,
 }))
 
@@ -93,8 +93,8 @@ const {
   trackProductAnalyticsActionStartedMock: vi.fn(),
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountMutations", () => ({
+  accountMutations: {
     setAccountDisabled: (...args: any[]) => setAccountDisabledMock(...args),
     deleteAccount: (...args: any[]) => deleteAccountMock(...args),
   },
@@ -1312,7 +1312,7 @@ describe("AutoCheckin account actions", () => {
     )
   })
 
-  it("filters already-checked results as success and searches translated message keys", async () => {
+  it("filters already-checked results independently and combines multi-select with translated message search", async () => {
     const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")
 
@@ -1320,6 +1320,12 @@ describe("AutoCheckin account actions", () => {
       success: true,
       data: {
         perAccount: {
+          success: {
+            accountId: "success",
+            accountName: "Success Account",
+            status: CHECKIN_RESULT_STATUS.SUCCESS,
+            timestamp: 1700000000000,
+          },
           already: {
             accountId: "already",
             accountName: "Already Account",
@@ -1349,12 +1355,19 @@ describe("AutoCheckin account actions", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: /autoCheckin:execution\.filters\.success/i,
+        name: /autoCheckin:execution\.filters\.statusLabel/i,
       }),
     )
+    await user.click(
+      screen.getByRole("menuitemcheckbox", {
+        name: /autoCheckin:execution\.filters\.alreadyChecked/i,
+      }),
+    )
+    await user.keyboard("{Escape}")
 
     await waitFor(() => {
       expect(screen.getByText("Already Account")).toBeInTheDocument()
+      expect(screen.queryByText("Success Account")).not.toBeInTheDocument()
       expect(screen.queryByText("Skipped Account")).not.toBeInTheDocument()
       expect(screen.queryByText("Failed Account")).not.toBeInTheDocument()
     })
@@ -1366,9 +1379,15 @@ describe("AutoCheckin account actions", () => {
     await user.type(searchInput, "autoCheckin:skipReasons.no_provider")
     await user.click(
       screen.getByRole("button", {
+        name: /autoCheckin:execution\.filters\.statusLabel/i,
+      }),
+    )
+    await user.click(
+      screen.getByRole("menuitemcheckbox", {
         name: /autoCheckin:execution\.filters\.skipped/i,
       }),
     )
+    await user.keyboard("{Escape}")
 
     await waitFor(() => {
       expect(screen.getByText("Skipped Account")).toBeInTheDocument()
@@ -1391,6 +1410,7 @@ describe("AutoCheckin account actions", () => {
     )
 
     expect(await screen.findByText("Already Account")).toBeVisible()
+    expect(screen.getByText("Success Account")).toBeVisible()
     expect(screen.getByText("Skipped Account")).toBeVisible()
     expect(screen.getByText("Failed Account")).toBeVisible()
   })

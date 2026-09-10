@@ -7,7 +7,6 @@ import {
   useState,
   type MouseEvent,
 } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { AutoCheckinPretriggerCompletionDialog } from "~/components/AutoCheckinPretriggerCompletionDialog"
@@ -20,7 +19,9 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import DelAccountDialog from "~/features/AccountManagement/components/DelAccountDialog"
 import { openExternalCheckIns } from "~/features/AccountManagement/utils/openExternalCheckIns"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import toast from "~/lib/notify"
+import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/inspection"
 import {
   sendAutoCheckinMessage,
@@ -128,7 +129,7 @@ const getAutoCheckinStatusAnalyticsInsights = (
   ).length
 
   return {
-    itemCount: successCount + failureCount + skippedCount,
+    itemCount: results.length,
     successCount,
     failureCount,
     skippedCount,
@@ -175,7 +176,7 @@ async function resolveAutoCheckinAccountSetupState(): Promise<
   "ready" | "no_accounts" | "no_detection_accounts" | null
 > {
   try {
-    const accounts = await accountStorage.getAllAccounts()
+    const accounts = await accountQueries.getAllAccounts()
     const enabledAccounts = accounts.filter(
       (account) => account.disabled !== true,
     )
@@ -1048,7 +1049,7 @@ export default function AutoCheckin(props: {
       const displayData = await resolveAutoCheckinAccount(accountId, {
         includeDisabled: true,
       })
-      const success = await accountStorage.setAccountDisabled(accountId, true)
+      const success = await accountMutations.setAccountDisabled(accountId, true)
 
       if (!success) {
         toast.error(t("messages:toast.error.operationFailedGeneric"))

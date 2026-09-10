@@ -1,19 +1,19 @@
 import type { ManagedSitePaginatedChannelRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchAllItems } from "~/services/apiTransport/pagination"
-import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
 import type {
   ApiResponse,
   ApiServiceRequest,
 } from "~/services/apiTransport/type"
-import { CHANNEL_STATUS } from "~/types/managedSite"
 import type {
   CreateChannelPayload,
-  ManagedSiteChannel,
-  ManagedSiteChannelListData,
+  NewApiChannel,
+  NewApiChannelListData,
   UpdateChannelPayload,
-} from "~/types/managedSite"
+} from "~/types/newApi"
+import { CHANNEL_STATUS } from "~/types/newApi"
 import { createLogger } from "~/utils/core/logger"
 
 const CHANNEL_API_BASE = "/api/channel/"
@@ -42,22 +42,16 @@ const serializeChannelGroups = <T extends { groups?: string[] }>(
 
 const serializeUpdateChannelPayload = (payload: UpdateChannelPayload) => {
   const serializedPayload = serializeChannelGroups(payload)
-  const { status, ...payloadWithoutStatus } = serializedPayload
+  const { status: _status, ...payloadWithoutStatus } = serializedPayload
 
   // QuantumNous/new-api omits blank edit keys; sending an empty key can
   // overwrite or reject the secret.
   if (payloadWithoutStatus.key?.trim() !== "") {
-    return {
-      payload: payloadWithoutStatus,
-      status,
-    }
+    return payloadWithoutStatus
   }
 
   const { key: _key, ...payloadWithoutEmptyKey } = payloadWithoutStatus
-  return {
-    payload: payloadWithoutEmptyKey,
-    status,
-  }
+  return payloadWithoutEmptyKey
 }
 
 export const updateChannelStatus = async (
@@ -67,32 +61,17 @@ export const updateChannelStatus = async (
 ) => {
   // QuantumNous/new-api router/channel-router.go maps manual status changes to
   // POST /api/channel/:id/status and rejects `status` in PUT /api/channel/.
-  return await fetchApi<boolean>(
-    request,
-    {
-      endpoint: `${CHANNEL_API_BASE}${channelId}/status`,
-      options: {
-        method: "POST",
-        body: JSON.stringify({ status }),
-      },
+  return await newApiFamilyRequests.envelope<boolean>(request, {
+    endpoint: `${CHANNEL_API_BASE}${channelId}/status`,
+    options: {
+      method: "POST",
+      body: JSON.stringify({ status }),
     },
-    false,
-  )
+  })
 }
 
 export const isNewApiManualStatus = (status: number) =>
   status === CHANNEL_STATUS.Enable || status === CHANNEL_STATUS.ManuallyDisabled
-
-const buildPartialStatusUpdateFailureResponse = <T>(
-  updateResponse: ApiResponse<T>,
-  statusResponse: ApiResponse<unknown>,
-): ApiResponse<T> => ({
-  ...updateResponse,
-  success: false,
-  message: statusResponse.message
-    ? `Channel fields were updated, but status update failed: ${statusResponse.message}`
-    : "Channel fields were updated, but status update failed.",
-})
 
 /**
  * 搜索指定关键词的渠道。
@@ -102,9 +81,9 @@ const buildPartialStatusUpdateFailureResponse = <T>(
 export async function searchChannel(
   request: ApiServiceRequest,
   keyword: string,
-): Promise<ManagedSiteChannelListData | null> {
+): Promise<NewApiChannelListData | null> {
   try {
-    return await fetchApiData<ManagedSiteChannelListData>(request, {
+    return await newApiFamilyRequests.data<NewApiChannelListData>(request, {
       endpoint: `${CHANNEL_API_BASE}search?keyword=${encodeURIComponent(keyword)}`,
     })
   } catch (error) {
@@ -132,7 +111,7 @@ export async function createChannel(
       channel: serializeChannelGroups(channelData.channel),
     }
 
-    return await fetchApi<void>(request, {
+    return await newApiFamilyRequests.envelope<void>(request, {
       endpoint: CHANNEL_API_BASE,
       options: {
         method: "POST",
@@ -152,57 +131,14 @@ export async function createChannel(
   }
 }
 
-/**
- * 更新新渠道。
- * @param request ApiServiceRequest（包含 baseUrl + 认证信息）。
- * @param channelData 渠道数据。
- */
-export async function updateChannel(
-  request: ApiServiceRequest,
-  channelData: UpdateChannelPayload,
-) {
-  try {
-    const { status } = serializeUpdateChannelPayload(channelData)
-    const updateResponse = await updateChannelFields(request, channelData)
-
-    if (
-      !updateResponse.success ||
-      typeof status !== "number" ||
-      !isNewApiManualStatus(status)
-    ) {
-      return updateResponse
-    }
-
-    const statusResponse = await updateChannelStatus(
-      request,
-      channelData.id,
-      status,
-    )
-
-    return statusResponse.success
-      ? updateResponse
-      : buildPartialStatusUpdateFailureResponse(updateResponse, statusResponse)
-  } catch (error) {
-    logger.error("更新渠道失败")
-    throw new ApiError(
-      "更新渠道失败，请检查网络或 New API 配置。",
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      error,
-    )
-  }
-}
-
 /** Update only the editable channel fields in one New API request. */
 export async function updateChannelFields(
   request: ApiServiceRequest,
   channelData: UpdateChannelPayload,
   options?: Pick<RequestInit, "signal">,
 ) {
-  const { payload } = serializeUpdateChannelPayload(channelData)
-  return await fetchApi<void>(request, {
+  const payload = serializeUpdateChannelPayload(channelData)
+  return await newApiFamilyRequests.envelope<void>(request, {
     endpoint: CHANNEL_API_BASE,
     options: {
       method: "PUT",
@@ -222,7 +158,7 @@ export async function deleteChannel(
   channelId: number,
 ) {
   try {
-    return await fetchApi<void>(request, {
+    return await newApiFamilyRequests.envelope<void>(request, {
       endpoint: `${CHANNEL_API_BASE}${channelId}`,
       options: {
         method: "DELETE",
@@ -256,7 +192,7 @@ type ChannelListAllOptions = ManagedSitePaginatedChannelRequestOptions
 export async function listAllChannels(
   request: ApiServiceRequest,
   options?: ChannelListAllOptions,
-): Promise<ManagedSiteChannelListData> {
+): Promise<NewApiChannelListData> {
   const pageSize = options?.pageSize ?? REQUEST_CONFIG.DEFAULT_PAGE_SIZE
   const beforeRequest = options?.beforeRequest
   const endpoint = options?.endpoint ?? CHANNEL_API_BASE
@@ -265,7 +201,7 @@ export async function listAllChannels(
   let total = 0
   const typeCounts: Record<string, number> = {}
 
-  const items = await fetchAllItems<ManagedSiteChannel>(
+  const items = await fetchAllItems<NewApiChannel>(
     async (page) => {
       const params = new URLSearchParams({
         p: page.toString(),
@@ -274,14 +210,11 @@ export async function listAllChannels(
 
       await beforeRequest?.()
 
-      const response = await fetchApi<ManagedSiteChannelListData>(
-        request,
-        {
+      const response =
+        await newApiFamilyRequests.envelope<NewApiChannelListData>(request, {
           endpoint: `${endpoint}?${params.toString()}`,
           options: { signal: options?.signal },
-        },
-        false,
-      )
+        })
 
       if (!response.success || !response.data) {
         throw new ApiError(
@@ -317,7 +250,7 @@ export async function listAllChannels(
     items,
     total,
     type_counts: typeCounts,
-  } as ManagedSiteChannelListData
+  } as NewApiChannelListData
 }
 
 /**
@@ -329,8 +262,8 @@ export async function fetchChannel(
   request: ApiServiceRequest,
   channelId: number,
   options?: Pick<RequestInit, "signal">,
-): Promise<ManagedSiteChannel> {
-  return await fetchApiData<ManagedSiteChannel>(request, {
+): Promise<NewApiChannel> {
+  return await newApiFamilyRequests.data<NewApiChannel>(request, {
     endpoint: `${CHANNEL_API_BASE}${channelId}`,
     options: { signal: options?.signal },
   })
@@ -365,14 +298,10 @@ export async function fetchChannelModels(
   options?: Pick<RequestInit, "signal">,
 ): Promise<string[]> {
   const endpoint = `${CHANNEL_API_BASE}fetch_models/${channelId}`
-  const response = await fetchApi<string[]>(
-    request,
-    {
-      endpoint,
-      options,
-    },
-    false,
-  )
+  const response = await newApiFamilyRequests.envelope<string[]>(request, {
+    endpoint,
+    options,
+  })
 
   return readChannelModelResponse(response, endpoint)
 }
@@ -388,101 +317,18 @@ export async function fetchDraftChannelModels(
   options?: Pick<RequestInit, "signal">,
 ): Promise<string[]> {
   const endpoint = `${CHANNEL_API_BASE}fetch_models`
-  const response = await fetchApi<string[]>(
-    request,
-    {
-      endpoint,
-      options: {
-        method: "POST",
-        body: JSON.stringify({
-          type: draft.type,
-          base_url: draft.baseUrl,
-          key: draft.key,
-        }),
-        signal: options?.signal,
-      },
+  const response = await newApiFamilyRequests.envelope<string[]>(request, {
+    endpoint,
+    options: {
+      method: "POST",
+      body: JSON.stringify({
+        type: draft.type,
+        base_url: draft.baseUrl,
+        key: draft.key,
+      }),
+      signal: options?.signal,
     },
-    false,
-  )
+  })
 
   return readChannelModelResponse(response, endpoint)
-}
-
-/**
- * Update the `models` field for a channel.
- * @param request ApiServiceRequest（包含 baseUrl + 认证信息）。
- * @param channelId Channel id.
- * @param models Comma-separated model list.
- */
-export async function updateChannelModels(
-  request: ApiServiceRequest,
-  channelId: number,
-  models: string,
-  options?: Pick<RequestInit, "signal">,
-): Promise<void> {
-  const payload: UpdateChannelPayload = {
-    id: channelId,
-    models,
-  }
-
-  const response = await fetchApi<void>(
-    request,
-    {
-      endpoint: CHANNEL_API_BASE,
-      options: {
-        method: "PUT",
-        body: JSON.stringify(payload),
-        signal: options?.signal,
-      },
-    },
-    false,
-  )
-
-  if (!response.success) {
-    throw new ApiError(
-      response.message || "Failed to update channel",
-      undefined,
-    )
-  }
-}
-
-/**
- * Update the `models` and `model_mapping` fields for a channel.
- * @param request ApiServiceRequest（包含 baseUrl + 认证信息）。
- * @param channelId Channel id.
- * @param models Comma-separated model list.
- * @param modelMappingJson Stringified mapping JSON.
- */
-export async function updateChannelModelMapping(
-  request: ApiServiceRequest,
-  channelId: number,
-  models: string,
-  modelMappingJson: string,
-  options?: Pick<RequestInit, "signal">,
-): Promise<void> {
-  const payload: UpdateChannelPayload = {
-    id: channelId,
-    models,
-    model_mapping: modelMappingJson,
-  }
-
-  const response = await fetchApi<void>(
-    request,
-    {
-      endpoint: CHANNEL_API_BASE,
-      options: {
-        method: "PUT",
-        body: JSON.stringify(payload),
-        signal: options?.signal,
-      },
-    },
-    false,
-  )
-
-  if (!response.success) {
-    throw new ApiError(
-      response.message || "Failed to update channel mapping",
-      undefined,
-    )
-  }
 }

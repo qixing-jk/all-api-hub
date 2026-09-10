@@ -27,6 +27,12 @@ import {
   createToken,
 } from "~~/tests/utils/keyManagementFactories"
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    markGatewayGuidanceOnboardingCompleted: vi.fn(),
+  }),
+}))
+
 const { openApiCredentialProfilesPageMock } = vi.hoisted(() => ({
   openApiCredentialProfilesPageMock: vi.fn(),
 }))
@@ -91,7 +97,7 @@ const nativeRow = {
   rowKey: "native-row-1",
   accountId: "native-account",
   accountName: "Native",
-  workspaceName: "Workspace",
+  scopeName: "Workspace",
   facts: {
     ref: {
       accountId: "native-account",

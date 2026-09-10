@@ -2,7 +2,6 @@ import type { DragEndEvent } from "@dnd-kit/core"
 import type { TFunction } from "i18next"
 import { Inbox, Info, Plus } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
@@ -12,7 +11,7 @@ import {
   CardContent,
   CardList,
   Checkbox,
-  DestructiveConfirmDialog,
+  ConfirmDialog,
   EmptyState,
   TagFilter,
 } from "~/components/ui"
@@ -43,6 +42,7 @@ import {
 import { getHealthStatusDisplay } from "~/features/AccountManagement/utils/healthStatusUtils"
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
 import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
+import toast from "~/lib/notify"
 import { cn } from "~/lib/utils"
 import {
   startProductAnalyticsAction,
@@ -67,7 +67,6 @@ import {
   getTodayMetricPresentation,
 } from "~/utils/core/formatters"
 import { formatMoneyFixed } from "~/utils/core/money"
-import { showWarningToast } from "~/utils/core/toastHelpers"
 
 import CopyKeyDialog from "../CopyKeyDialog"
 import DelAccountDialog from "../DelAccountDialog"
@@ -1151,7 +1150,7 @@ export default function AccountList({
       .some((id) => pinnedAccountIdSet.has(id) !== activeIsPinned)
 
     if (crossedPinBoundary) {
-      showWarningToast(t("account:list.reorderPinnedBoundary"), {
+      toast.warning(t("account:list.reorderPinnedBoundary"), {
         id: ACCOUNT_REORDER_BOUNDARY_TOAST_ID,
       })
       return
@@ -1673,7 +1672,8 @@ export default function AccountList({
         onClose={() => setManualInviteLinkPayload(null)}
       />
 
-      <DestructiveConfirmDialog
+      <ConfirmDialog
+        intent="destructive"
         isOpen={isBulkDeleteConfirmOpen}
         onClose={() => {
           if (!isBulkDeleting) {

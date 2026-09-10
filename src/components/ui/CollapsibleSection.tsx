@@ -12,6 +12,8 @@ import {
 export type CollapsibleSectionProps = {
   title: ReactNode
   defaultOpen?: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
   className?: string
   buttonClassName?: string
   panelClassName?: string
@@ -24,15 +26,26 @@ export type CollapsibleSectionProps = {
 export function CollapsibleSection({
   title,
   defaultOpen = false,
+  open: controlledOpen,
+  onOpenChange,
   className,
   buttonClassName,
   panelClassName,
   children,
 }: CollapsibleSectionProps) {
-  const [open, setOpen] = useState(defaultOpen)
+  const [internalOpen, setInternalOpen] = useState(defaultOpen)
+  const open = controlledOpen ?? internalOpen
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (controlledOpen === undefined) setInternalOpen(nextOpen)
+    onOpenChange?.(nextOpen)
+  }
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className={className}>
+    <Collapsible
+      open={open}
+      onOpenChange={handleOpenChange}
+      className={className}
+    >
       <CollapsibleTrigger
         className={cn(
           "dark:hover:bg-dark-bg-tertiary dark:text-dark-text-secondary flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-xs text-gray-700 hover:bg-gray-50",

@@ -2,7 +2,10 @@ export * from "./auth"
 export * from "./authSession"
 export * from "./contentSessionHint"
 export * from "./contracts"
-export { getAccountSiteProductProfile } from "./registry"
+export {
+  getAccountSiteProductProfile,
+  isAccountAuthTypeAllowed,
+} from "./registry"
 export * from "./identity"
 export * from "./modelList"
 export * from "./supplementalAuth"

@@ -5,7 +5,10 @@ import {
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
 } from "~/constants/checkIn"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
-import type { CheckInMethodStatus } from "~/types/checkIn"
+import type {
+  CheckInMethodStatus,
+  CheckInMethodUnknownReason,
+} from "~/types/checkIn"
 
 import type {
   AutoCheckinProviderDetectResult,
@@ -27,6 +30,9 @@ const getHttpStatusCode = (error: unknown): number | undefined =>
 export async function detectWithStatusReadback(
   context: AutoCheckinProviderReadContext,
   readStatus: StatusReader,
+  classifyError: (
+    error: unknown,
+  ) => CheckInMethodUnknownReason = getCheckInMethodUnknownReason,
 ): Promise<AutoCheckinProviderDetectResult> {
   try {
     const status = await readStatus(context)
@@ -67,7 +73,7 @@ export async function detectWithStatusReadback(
     }
     return {
       outcome: CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown,
-      reason: getCheckInMethodUnknownReason(error),
+      reason: classifyError(error),
       attemptedAt: context.observedAt,
     }
   }

@@ -17,6 +17,7 @@ import {
   getAccountManagementListItemTestId,
   getCopyKeyDialogRuntimeKeyItemTestId,
 } from "~/features/AccountManagement/testIds"
+import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import enMessages from "~/locales/en/messages.json" with { type: "json" }
 import { buildAccountTokenRuntimeKeyId } from "~/services/accounts/accountRuntimeKeys"
@@ -819,12 +820,22 @@ test("OpenRouter auto-detect bootstrap shows manual fallback while logged out", 
   await expect.poll(openRouterFixture.getCreateCount).toBe(0)
 })
 
-test("enables default-key provisioning, adds an account, saves the created key as a reusable API profile, and verifies it from the popup", async ({
+test("enables all-group key provisioning, adds an account, saves a created key as a reusable API profile, and verifies it from the popup", async ({
   context,
   extensionId,
   page,
 }) => {
   const serviceWorker = await getServiceWorker(context)
+  const createdGroups: string[] = []
+  context.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      new URL(request.url()).pathname === "/api/token/"
+    ) {
+      const payload = request.postDataJSON() as { group: string }
+      createdGroups.push(payload.group)
+    }
+  })
   await seedUserPreferences(serviceWorker, {
     tempWindowFallback: {
       enabled: false,
@@ -837,12 +848,20 @@ test("enables default-key provisioning, adds an account, saves the created key a
   await waitForExtensionRoot(page)
   await expectPermissionOnboardingHidden(page)
 
-  const autoProvisionSwitch = page
-    .locator("#auto-provision-key-on-account-add")
-    .getByRole("switch")
+  const autoProvisionSwitch = page.getByTestId(
+    BASIC_SETTINGS_TEST_IDS.autoProvisionKeyEnabledSwitch,
+  )
   await expect(autoProvisionSwitch).toHaveAttribute("aria-checked", "false")
   await autoProvisionSwitch.click()
   await expect(autoProvisionSwitch).toHaveAttribute("aria-checked", "true")
+  const allGroups = page.getByTestId(
+    BASIC_SETTINGS_TEST_IDS.autoProvisionKeyAllGroupsButton,
+  )
+  await allGroups.click()
+  await expect(allGroups).toHaveAttribute("aria-pressed", "true")
+  await page.reload()
+  await waitForExtensionRoot(page)
+  await expect(allGroups).toHaveAttribute("aria-pressed", "true")
 
   const accountFixture = await runAccountAutoDetectScenario({
     extensionId,
@@ -872,7 +891,9 @@ test("enables default-key provisioning, adds an account, saves the created key a
   await expect(
     page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListView),
   ).toContainText("e2e-user")
-  await expect(page.getByText("Created a default API key for")).toBeVisible()
+  await expect(page.getByText("Created 2 group API keys for")).toBeVisible()
+  expect(createdGroups).toHaveLength(2)
+  expect(createdGroups).toEqual(expect.arrayContaining(["default", "vip"]))
 
   await page.goto(
     `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.KEYS}?accountId=${accountFixture.accountId}`,
@@ -883,7 +904,9 @@ test("enables default-key provisioning, adds an account, saves the created key a
   await expect(
     page.getByRole("heading", { name: DEFAULT_AUTO_PROVISION_TOKEN_NAME }),
   ).toBeVisible()
-  await expect(page.getByText("Group:")).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "vip group (auto)" }),
+  ).toBeVisible()
   await expect(page.getByText("default", { exact: true })).toBeVisible()
 
   const savedProfile = await saveExistingAccountTokenToApiProfileScenario({
@@ -1088,44 +1111,92 @@ test("adds an AIHubMix account, preserves its one-time key, and opens managed-si
   await sitePage.close()
 })
 
-test("requires duplicate-warning confirmation before the manual add flow continues", async ({
-  context,
-  extensionId,
-  page,
-}) => {
-  const serviceWorker = await getServiceWorker(context)
-  await seedStoredAccounts(serviceWorker, [
-    createStoredAccount({
-      id: "existing-account",
-      site_name: "Existing Example",
-      site_url: "https://example.com",
-      account_info: {
-        id: "99",
-        username: "existing-user",
-        access_token: "existing-token",
-      },
-    }),
-  ])
-  await seedUserPreferences(serviceWorker, {
-    warnOnDuplicateAccountAdd: true,
+for (const scenario of [
+  { userId: 99, duplicate: true },
+  { userId: 100, duplicate: false },
+]) {
+  test(`checks a manual addition by identity before saving: ${scenario.duplicate ? "same user" : "different user"}`, async ({
+    context,
+    extensionId,
+    page,
+  }) => {
+    const serviceWorker = await getServiceWorker(context)
+    await seedStoredAccounts(serviceWorker, [
+      createStoredAccount({
+        id: "existing-account",
+        site_name: "Existing Example",
+        site_url: "https://example.com",
+        account_info: {
+          id: "99",
+          username: "existing-user",
+          access_token: "existing-token",
+        },
+      }),
+    ])
+    await seedUserPreferences(serviceWorker, {
+      warnOnDuplicateAccountAdd: true,
+      autoProvisionKeyOnAccountAdd: false,
+    })
+    await stubNewApiSiteRoutes(context, {
+      userId: scenario.userId,
+      username: "added-user",
+      accessToken: "added-token",
+    })
+
+    await page.goto(
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
+    )
+    await waitForExtensionRoot(page)
+    await expectPermissionOnboardingHidden(page)
+
+    await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton).click()
+
+    await expect(page.locator("#site-url")).toBeVisible()
+    await page.locator("#site-url").fill("https://example.com")
+    await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.manualAddButton).click()
+
+    await expect(page.getByLabel("Site Type")).toBeVisible()
+    const duplicateHeading = page.getByRole("heading", {
+      name: "Duplicate account",
+      exact: true,
+    })
+    await expect(duplicateHeading).toBeHidden()
+    await page.getByLabel("Site Type").click()
+    await page
+      .getByRole("option", { name: SITE_TYPES.NEW_API, exact: true })
+      .click()
+    await page
+      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput)
+      .fill("Added Example")
+    await page
+      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.usernameInput)
+      .fill("added-user")
+    await page
+      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput)
+      .fill(String(scenario.userId))
+    await page
+      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput)
+      .fill("added-token")
+    await page.getByPlaceholder("Please enter exchange rate").fill("7")
+    await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton).click()
+
+    if (scenario.duplicate) {
+      await expect(duplicateHeading).toBeVisible()
+      await expect(
+        page.getByText(/user ID 99 is already saved \(existing-user\)/),
+      ).toBeVisible()
+      expect(await readStoredAccounts(serviceWorker)).toHaveLength(1)
+      await page
+        .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.duplicateWarningContinueButton)
+        .click()
+    }
+
+    await expect
+      .poll(async () => (await readStoredAccounts(serviceWorker)).length)
+      .toBe(2)
+    await expect(duplicateHeading).toBeHidden()
+    await expect(
+      page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog),
+    ).toBeHidden()
   })
-
-  await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
-  )
-  await waitForExtensionRoot(page)
-  await expectPermissionOnboardingHidden(page)
-
-  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton).click()
-
-  await expect(page.locator("#site-url")).toBeVisible()
-  await page.locator("#site-url").fill("https://example.com")
-  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.manualAddButton).click()
-
-  await expect(page.getByText("Duplicate account")).toBeVisible()
-  await page
-    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.duplicateWarningContinueButton)
-    .click()
-
-  await expect(page.getByLabel("Site Type")).toBeVisible()
-})
+}

@@ -1,17 +1,19 @@
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
   type ManagedSiteChannelKeyMatchReasonValue,
   type ManagedSiteChannelMatchInspection,
   type ManagedSiteChannelModelsMatchReasonValue,
 } from "~/services/managedSites/channelMatch"
+import { areManagedResourceRefsEqual } from "~/services/managedSites/managedResourceIdentity"
 import {
   getManagedSiteChannelKeyComparisonMode,
   inspectManagedSiteChannelKeyValueMatch,
 } from "~/services/managedSites/utils/channelMatching"
-import type { ManagedSiteChannel } from "~/types/managedSite"
+import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 
 export interface ManagedSiteAssessmentChannel {
-  id: number
+  ref: ManagedResourceRef
   name: string
 }
 
@@ -41,14 +43,14 @@ export interface ManagedSiteVerifiedKeyAssessment<
 }
 
 export const toManagedSiteAssessmentChannel = (
-  channel: ManagedSiteChannel,
+  channel: ManagedResourceMatchCandidate,
 ): ManagedSiteAssessmentChannel => ({
-  id: channel.id,
+  ref: channel.ref,
   name: channel.name,
 })
 
 const toOptionalManagedSiteAssessmentChannel = (
-  channel: ManagedSiteChannel | null,
+  channel: ManagedResourceMatchCandidate | null,
 ) => (channel ? toManagedSiteAssessmentChannel(channel) : undefined)
 
 export const toManagedSiteVerifiedKeyAssessment = (
@@ -113,7 +115,10 @@ export function applyVerifiedManagedSiteChannelKey<
     assessment.models.matched &&
     assessment.models.reason ===
       MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT &&
-    assessment.models.channel?.id === params.candidate.id
+    areManagedResourceRefsEqual(
+      assessment.models.channel?.ref,
+      params.candidate.ref,
+    )
 
   return {
     assessment,

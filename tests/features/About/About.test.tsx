@@ -15,6 +15,10 @@ vi.mock("~/contexts/ReleaseUpdateStatusContext", () => ({
   }),
 }))
 
+vi.mock("~/features/ProductTour", () => ({
+  ProductTourReplayCard: () => null,
+}))
+
 describe("About", () => {
   it("shows feedback and support links wired to the shared destinations", async () => {
     render(<About />, { withReleaseUpdateStatusProvider: false })

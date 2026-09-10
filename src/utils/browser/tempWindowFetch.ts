@@ -11,10 +11,7 @@ import {
   observeRemoteFetchLifecycle,
   type RemoteFetchLifecycleAssessment,
 } from "~/services/apiTransport/remoteLifecycle"
-import {
-  extractDataFromApiResponseBody,
-  isHttpUrl,
-} from "~/services/apiTransport/response"
+import { extractDataFromApiResponseBody } from "~/services/apiTransport/response"
 import {
   COOKIE_INTERCEPTOR_PERMISSIONS,
   hasCookieInterceptorPermissions,
@@ -55,6 +52,7 @@ import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
 import { normalizeRequestInitForMessage } from "~/utils/browser/requestInitMessage"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
+import { isHttpUrl } from "~/utils/core/urlParsing"
 
 /**
  * Unified logger scoped to temp window fetch helpers and fallback behavior.
@@ -447,7 +445,13 @@ export async function executeWithTempWindowFallback<TResult>(
     }
 
     try {
-      return await fetchViaTempWindow<TResult>(context, mapTempWindowResponse)
+      return await fetchViaTempWindow<TResult>(
+        context,
+        mapTempWindowResponse,
+        primaryError instanceof ApiError
+          ? { statusCode: primaryError.statusCode, code: primaryError.code }
+          : undefined,
+      )
     } catch (fallbackError) {
       if (
         primaryError instanceof ApiError &&
@@ -558,6 +562,7 @@ async function shouldUseTempWindowFallback(
 async function fetchViaTempWindow<TResult>(
   context: TempWindowFallbackContext,
   mapResponse?: (response: TempWindowFetch) => TResult | Promise<TResult>,
+  fallbackDiagnostic?: TempWindowFetchParams["fallbackDiagnostic"],
 ): Promise<TResult> {
   const { fetchOptions, responseType } = context
 
@@ -581,6 +586,7 @@ async function fetchViaTempWindow<TResult>(
     tempContextTaskKind: context.forceTempWindow
       ? TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch
       : TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
+    ...(fallbackDiagnostic ? { fallbackDiagnostic } : {}),
     accountId: context.accountId,
     authType: context.authType,
     cookieAuthSessionCookie: context.cookieAuthSessionCookie,

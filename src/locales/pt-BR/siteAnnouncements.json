@@ -42,6 +42,7 @@
   "loading": "Carregando anúncios...",
   "messages": {
     "checkCompleted": "Verificação do anúncio concluída",
+    "checkCompletedWithIssues": "Verificação concluída: {{failed}} falharam e {{unsupported}} não são compatíveis. Selecione um site para ver detalhes.",
     "checkFailed": "Falha na verificação do anúncio",
     "loadFailed": "Falha ao carregar anúncios",
     "markAllReadFailed": "Falha ao marcar anúncios como lidos",
@@ -54,6 +55,8 @@
     "title": "{{site}} tem novos anúncios"
   },
   "status": {
+    "aggregateIssues": "{{failed}} site(s) falharam e {{unsupported}} não oferecem verificação de anúncios. Selecione um site para ver detalhes e tentar novamente.",
+    "aggregateIssuesTitle": "Alguns sites precisam de atenção",
     "failed": "Falha na verificação do anúncio mais recente: {{error}}",
     "failedTitle": "Falha na verificação",
     "lastChecked": "Última verificação: {{time}}",

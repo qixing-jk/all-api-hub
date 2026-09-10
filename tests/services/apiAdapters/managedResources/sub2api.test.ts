@@ -1,16 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { ChannelType } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   SUB2API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
   SUB2API_MANAGED_RESOURCE_FIELD_IDS,
   SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/sub2api"
-import {
-  MANAGED_RESOURCE_KINDS,
-  MANAGED_RESOURCE_MODES,
-} from "~/services/accountSiteDefinitions/contracts"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import {
   MANAGED_RESOURCE_CREATE_SEED_KINDS,
@@ -122,7 +118,6 @@ describe("Sub2API native managed resource", () => {
       getAccountSiteDefinition(SITE_TYPES.SUB2API)?.managedResource,
     ).toEqual(
       expect.objectContaining({
-        mode: MANAGED_RESOURCE_MODES.NativeResource,
         primaryKind: MANAGED_RESOURCE_KINDS.Channel,
         tableFieldIds: SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
         detailFieldIds: SUB2API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
@@ -368,14 +363,14 @@ describe("Sub2API native managed resource", () => {
       SITE_TYPES.SUB2API,
       {
         name: "Imported account",
-        type: ChannelType.Anthropic,
+        type: "anthropic",
         key: "import-secret",
         base_url: "https://api.example.invalid/v1",
         models: [],
         groups: [],
         priority: 8,
         weight: 3,
-        status: 1,
+        enabled: true,
         notes: "Imported note",
       },
     )
@@ -399,14 +394,14 @@ describe("Sub2API native managed resource", () => {
       SITE_TYPES.SUB2API,
       {
         name: "Disabled import",
-        type: ChannelType.OpenAI,
+        type: "openai",
         key: "disabled-secret",
         base_url: "https://disabled.example.invalid/v1",
         models: [],
         groups: [],
         priority: 2,
         weight: 1,
-        status: 0,
+        enabled: false,
       },
     )
     expect(disabled?.editor.initialValues.status).toBe("inactive")
@@ -417,14 +412,14 @@ describe("Sub2API native managed resource", () => {
       SITE_TYPES.SUB2API,
       {
         name: "Masked import",
-        type: ChannelType.OpenAI,
+        type: "openai",
         key: "sk-********",
         base_url: "https://api.example.invalid/v1",
         models: [],
         groups: [],
         priority: 1,
         weight: 9,
-        status: 1,
+        enabled: true,
       },
     )
     const editor = opened!.editor
@@ -440,6 +435,37 @@ describe("Sub2API native managed resource", () => {
       ]),
     })
   })
+
+  it.each(["1", "future-platform"])(
+    "reports unsupported imported native platform %s before creating an account",
+    async (type) => {
+      const { editor } = await openNativeManagedChannelImportEditor(
+        SITE_TYPES.SUB2API,
+        {
+          name: "Unsupported import",
+          type,
+          key: "import-secret",
+          base_url: "https://api.example.invalid/v1",
+          models: [],
+          groups: [],
+          priority: 1,
+          weight: 1,
+          enabled: true,
+        },
+      )
+
+      expect(editor.validate(editor.initialValues)).toEqual({
+        valid: false,
+        issues: expect.arrayContaining([
+          {
+            fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Platform,
+            code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.UnsupportedOption,
+          },
+        ]),
+      })
+      expect(mocks.createAccount).not.toHaveBeenCalled()
+    },
+  )
 
   it("keeps platform read-only while editing notes, key, and routing fields", async () => {
     const workspace = await sub2ApiManagedResourceRegistration.open()

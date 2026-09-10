@@ -3,6 +3,13 @@
     "autoProvisionAlreadyHad": "{{accountName}} 已存在 API 密钥，已跳过自动创建。",
     "autoProvisionCreated": "已为 {{accountName}} 自动创建默认 API 密钥。",
     "autoProvisionFailed": "账号已保存，但自动创建 API 密钥失败。你可以在密钥管理中使用“{{actionLabel}}”重试。",
+    "autoProvisionGroupsCovered": "已确认 {{accountName}} 的所有可用分组都有可用密钥。",
+    "autoProvisionGroupsCreated": "已为 {{accountName}} 自动创建 {{count}} 个分组密钥。",
+    "autoProvisionGroupsIncomplete": "已为 {{accountName}} 创建 {{count}} 个分组密钥，但仍有分组未能补齐。请到“密钥管理 → {{actionLabel}}”查看并处理。",
+    "autoProvisionGroupsUnavailable": "未获取到 {{accountName}} 的可用分组，未创建密钥。请到“密钥管理 → {{actionLabel}}”检查。",
+    "autoProvisionGroupsUnsupported": "暂不支持为 {{accountName}} 自动补齐所有分组的密钥。请到“密钥管理”查看该账号可用的密钥操作。",
+    "autoProvisionNeedsManualAction": "{{accountName}} 已保存，但默认密钥需要手动选择或处理一次性密钥。请前往密钥管理使用“{{actionLabel}}”完成。",
+    "autoProvisionUnsupported": "{{accountName}} 已保存，但该站点类型暂不支持自动创建默认 API 密钥。",
     "checkingApiKeys": "正在检查 API 密钥...",
     "createTokenFailed": "创建 API 令牌失败",
     "tokenNotFound": "无法创建或找到 API 令牌"
@@ -25,7 +32,6 @@
   },
   "axonhub": {
     "configMissing": "请先在设置中配置 AxonHub 地址、管理员邮箱和密码",
-    "modelsMissing": "请至少填写一个模型",
     "noChannelsToSync": "没有可同步的渠道"
   },
   "background": {
@@ -52,9 +58,7 @@
   },
   "claudecodehub": {
     "configMissing": "请先在设置中配置 Claude Code Hub 地址和管理员令牌",
-    "modelsMissing": "请至少填写一个模型",
-    "noChannelsToSync": "没有可同步的提供商",
-    "realProviderKeyRequired": "Claude Code Hub 创建提供商需要真实上游密钥，空密钥或脱敏密钥不能用于创建。"
+    "noChannelsToSync": "没有可同步的提供商"
   },
   "claudeCodeRouter": {
     "configMissing": "请先在设置中配置 Claude Code Router 基础 URL",

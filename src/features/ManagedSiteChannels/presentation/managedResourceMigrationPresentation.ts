@@ -1,12 +1,14 @@
 import type { TFunction } from "i18next"
 
-import {
-  AxonHubChannelTypeNames,
-  isAxonHubChannelType,
-} from "~/constants/axonHub"
-import { ChannelTypeNames } from "~/constants/managedSite"
+import { AxonHubChannelTypeNames } from "~/constants/axonHub"
+import { ClaudeCodeHubProviderTypeNames } from "~/constants/claudeCodeHub"
+import { DoneHubChannelTypeNames } from "~/constants/doneHub"
+import { ChannelTypeNames } from "~/constants/newApi"
+import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { SITE_TYPES } from "~/constants/siteType"
+import { SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS } from "~/constants/sub2api"
+import { VeloeraChannelTypeNames } from "~/constants/veloera"
 import {
   MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES,
   MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES,
@@ -19,6 +21,7 @@ import type {
   ManagedSiteMigrationCanonicalExecutionResult,
   ManagedSiteMigrationCanonicalPreview,
   ManagedSiteMigrationCanonicalPreviewItem,
+  ManagedSiteMigrationPreviewProjection,
   ManagedSiteMigrationSource,
 } from "~/types/managedSiteMigrationCapability"
 
@@ -33,6 +36,160 @@ type ManagedResourceMigrationPresentationOptions = {
   getSiteLabel: (siteType: ManagedSiteType) => string
 }
 
+type MigrationSourceDisplayData = Pick<
+  ManagedSiteMigrationSource,
+  | "sourceSiteType"
+  | "resourceType"
+  | "baseUrl"
+  | "models"
+  | "groups"
+  | "priority"
+  | "weight"
+  | "status"
+>
+
+type MigrationTargetDisplayData = Omit<
+  ManagedSiteMigrationPreviewProjection,
+  "name"
+>
+
+type MigrationPreviewItemDisplayData = {
+  selection: Pick<
+    ManagedSiteMigrationCanonicalPreviewItem["selection"],
+    "selectionId" | "displayName"
+  >
+  warningCodes: ManagedSiteMigrationCanonicalPreviewItem["warningCodes"]
+} & (
+  | {
+      status: "ready"
+      source: MigrationSourceDisplayData
+      target: { projection: MigrationTargetDisplayData }
+      blockingReasonCode?: never
+    }
+  | {
+      status: "blocked"
+      source?: MigrationSourceDisplayData
+      target?: never
+      blockingReasonCode: ManagedSiteChannelMigrationBlockedReasonCode
+    }
+)
+
+/** Safe comparison facts; resource refs remain in the controller's execution preview. */
+export type ManagedResourceMigrationPreviewData = Omit<
+  ManagedSiteMigrationCanonicalPreview,
+  "items"
+> & {
+  items: readonly MigrationPreviewItemDisplayData[]
+}
+
+type MigrationExecutionItemDisplayData = Pick<
+  ManagedSiteMigrationCanonicalExecutionResult["items"][number],
+  "selectionId" | "displayName"
+> &
+  (
+    | { status: "created" | "failed" | "uncertain"; blockingReasonCode?: never }
+    | {
+        status: "skipped"
+        blockingReasonCode: ManagedSiteChannelMigrationBlockedReasonCode
+      }
+  )
+
+export type ManagedResourceMigrationExecutionData = Pick<
+  ManagedSiteMigrationCanonicalExecutionResult,
+  | "totalSelected"
+  | "createdCount"
+  | "failedCount"
+  | "skippedCount"
+  | "uncertainCount"
+> & { items: readonly MigrationExecutionItemDisplayData[] }
+
+const projectSource = (
+  source: ManagedSiteMigrationSource,
+): MigrationSourceDisplayData => ({
+  sourceSiteType: source.sourceSiteType,
+  resourceType: source.resourceType,
+  baseUrl: source.baseUrl,
+  models: [...source.models],
+  groups: [...source.groups],
+  priority: source.priority,
+  weight: source.weight,
+  status: source.status,
+})
+
+/** Retains only language-independent values that the migration view can display. */
+export function projectManagedResourceMigrationPreview(
+  preview: ManagedSiteMigrationCanonicalPreview,
+): ManagedResourceMigrationPreviewData {
+  return {
+    sourceSiteType: preview.sourceSiteType,
+    targetSiteType: preview.targetSiteType,
+    generalWarningCodes: [...preview.generalWarningCodes],
+    totalCount: preview.totalCount,
+    readyCount: preview.readyCount,
+    blockedCount: preview.blockedCount,
+    items: preview.items.map((item) => {
+      const shared = {
+        selection: {
+          selectionId: item.selection.selectionId,
+          displayName: item.selection.displayName,
+        },
+        warningCodes: [...item.warningCodes],
+      }
+      if (item.status === "blocked") {
+        return {
+          ...shared,
+          status: item.status,
+          blockingReasonCode: item.blockingReasonCode,
+          source: item.source ? projectSource(item.source) : undefined,
+        }
+      }
+      const target = item.target.projection
+      return {
+        ...shared,
+        status: item.status,
+        source: projectSource(item.source),
+        target: {
+          projection: {
+            type: target.type,
+            baseUrl: target.baseUrl,
+            models: [...target.models],
+            groups: [...target.groups],
+            priority: target.priority,
+            weight: target.weight,
+            enabled: target.enabled,
+          },
+        },
+      }
+    }),
+  }
+}
+
+/** Drops execution-only details while preserving outcome and recovery semantics. */
+export function projectManagedResourceMigrationExecutionResult(
+  result: ManagedSiteMigrationCanonicalExecutionResult,
+): ManagedResourceMigrationExecutionData {
+  return {
+    totalSelected: result.totalSelected,
+    createdCount: result.createdCount,
+    failedCount: result.failedCount,
+    skippedCount: result.skippedCount,
+    uncertainCount: result.uncertainCount,
+    items: result.items.map((item) => ({
+      selectionId: item.selectionId,
+      displayName: item.displayName,
+      ...(item.status === "skipped"
+        ? { status: item.status, blockingReasonCode: item.blockingReasonCode }
+        : { status: item.status }),
+    })),
+  }
+}
+
+/** Translate controlled migration failures without exposing service errors. */
+export const getMigrationPreviewErrorMessage = (t: TFunction) =>
+  t("managedSiteChannels:migration.preview.loadFailed", {
+    error: t("common:labels.unknown"),
+  })
+
 const resolveUnsupportedChannelTypeLabel = (t: TFunction) =>
   t("managedSiteChannels:editor.options.channelType.unsupported")
 
@@ -45,7 +202,7 @@ type ManagedSiteMigrationResultCounts = {
 }
 
 /** Composes independently pluralized migration metrics into one locale-owned summary. */
-export const formatManagedSiteMigrationResultSummary = (
+const formatManagedSiteMigrationResultSummary = (
   t: TFunction,
   counts: ManagedSiteMigrationResultCounts,
 ) =>
@@ -170,6 +327,10 @@ const getBlockedReasonText = (
   switch (code) {
     case MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING:
       return t("managedSiteChannels:migration.blockedReasons.sourceKeyMissing")
+    case MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_EXPORT_RESTRICTED:
+      return t(
+        "managedSiteChannels:migration.blockedReasons.sourceKeyExportRestricted",
+      )
     case MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_TYPE_UNSUPPORTED:
       return t(
         "managedSiteChannels:migration.blockedReasons.sourceTypeUnsupported",
@@ -189,31 +350,35 @@ const getBlockedReasonText = (
 const getTypeText = (
   t: TFunction,
   siteType: ManagedSiteType,
-  type: ManagedSiteMigrationSource["resourceType"] | string,
+  type: ManagedSiteMigrationSource["resourceType"],
 ): string => {
-  if (typeof type === "number" && hasOwn(ChannelTypeNames, type)) {
-    return ChannelTypeNames[type as keyof typeof ChannelTypeNames]
+  const catalogs: Partial<
+    Record<ManagedSiteType, Readonly<Record<string, string>>>
+  > = {
+    [SITE_TYPES.NEW_API]: ChannelTypeNames,
+    [SITE_TYPES.VELOERA]: VeloeraChannelTypeNames,
+    [SITE_TYPES.DONE_HUB]: DoneHubChannelTypeNames,
+    [SITE_TYPES.OCTOPUS]: OctopusOutboundTypeNames,
+    [SITE_TYPES.AXON_HUB]: AxonHubChannelTypeNames,
+    [SITE_TYPES.CLAUDE_CODE_HUB]: ClaudeCodeHubProviderTypeNames,
+    [SITE_TYPES.SUB2API]: SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS,
   }
-  if (
-    siteType === SITE_TYPES.AXON_HUB &&
-    typeof type === "string" &&
-    isAxonHubChannelType(type)
-  ) {
-    return AxonHubChannelTypeNames[type]
-  }
-  return resolveUnsupportedChannelTypeLabel(t)
+  const catalog = catalogs[siteType]
+  return catalog && hasOwn(catalog, type)
+    ? catalog[type]
+    : resolveUnsupportedChannelTypeLabel(t)
 }
 
 const getStatusText = (
   t: TFunction,
-  status: ManagedSiteMigrationSource["status"] | 1 | 2,
+  status: ManagedSiteMigrationSource["status"] | boolean,
 ): string => {
   switch (status) {
     case "enabled":
-    case 1:
+    case true:
       return t("managedSiteChannels:statusLabels.enabled")
     case "disabled":
-    case 2:
+    case false:
       return t("managedSiteChannels:statusLabels.manualPause")
     case "other":
     default:
@@ -257,8 +422,8 @@ const getExecutionStatusPresentation = (
 const formatList = (values: readonly string[]): string => values.join(", ")
 
 const getComparisonValues = (
-  item: ManagedSiteMigrationCanonicalPreviewItem,
-  preview: ManagedSiteMigrationCanonicalPreview,
+  item: MigrationPreviewItemDisplayData,
+  preview: ManagedResourceMigrationPreviewData,
   t: TFunction,
 ) => {
   const source = item.source
@@ -266,7 +431,7 @@ const getComparisonValues = (
   return {
     baseUrl: [source?.baseUrl ?? "", target?.baseUrl ?? ""],
     type: [
-      source ? getTypeText(t, preview.sourceSiteType, source.resourceType) : "",
+      source ? getTypeText(t, source.sourceSiteType, source.resourceType) : "",
       target ? getTypeText(t, preview.targetSiteType, target.type) : "",
     ],
     models: [
@@ -275,7 +440,11 @@ const getComparisonValues = (
     ],
     groups: [
       source ? formatList(source.groups) : "",
-      target ? formatList(target.groups) : "",
+      target
+        ? preview.targetSiteType === SITE_TYPES.SUB2API
+          ? t("managedSiteChannels:migration.sub2apiDefaultGroup")
+          : formatList(target.groups)
+        : "",
     ],
     priority: [
       source ? String(source.priority) : "",
@@ -287,7 +456,7 @@ const getComparisonValues = (
     ],
     status: [
       source ? getStatusText(t, source.status) : "",
-      target ? getStatusText(t, target.status) : "",
+      target ? getStatusText(t, target.enabled) : "",
     ],
   } satisfies Record<
     ManagedSiteMigrationComparison["id"],
@@ -297,7 +466,7 @@ const getComparisonValues = (
 
 /** Maps a secret-free canonical preview into the shared migration view. */
 export function mapManagedResourceMigrationPreview(
-  preview: ManagedSiteMigrationCanonicalPreview,
+  preview: ManagedResourceMigrationPreviewData,
   options: ManagedResourceMigrationPresentationOptions,
 ): ManagedSiteMigrationPreviewState {
   return {
@@ -328,7 +497,14 @@ export function mapManagedResourceMigrationPreview(
         status: item.status,
         comparisons,
         warningText: item.warningCodes.flatMap((code) => {
-          const text = getItemWarningText(options.t, code)
+          const text =
+            preview.targetSiteType === SITE_TYPES.SUB2API &&
+            code ===
+              MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP
+              ? options.t(
+                  "managedSiteChannels:migration.itemWarnings.sub2apiDefaultGroup",
+                )
+              : getItemWarningText(options.t, code)
           return text ? [text] : []
         }),
         blockedReason:
@@ -353,7 +529,7 @@ export function mapManagedResourceMigrationPreview(
 
 /** Maps canonical outcomes to controlled result copy and recovery controls. */
 export function mapManagedResourceMigrationExecutionResult(
-  result: ManagedSiteMigrationCanonicalExecutionResult,
+  result: ManagedResourceMigrationExecutionData,
   options: Pick<ManagedResourceMigrationPresentationOptions, "t">,
 ): ManagedSiteMigrationResult {
   return {

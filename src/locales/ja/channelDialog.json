@@ -12,8 +12,7 @@
   },
   "description": {
     "add": "管理対象サイト用の新しいチャネルを設定します",
-    "edit": "チャネル設定とルーティング情報を更新します",
-    "view": "現在のチャネル設定とルーティング情報を確認します"
+    "edit": "チャネル設定とルーティング情報を更新します"
   },
   "fields": {
     "baseUrl": {
@@ -23,7 +22,6 @@
     "groups": {
       "hint": "グループは管理対象サイトから取得されます",
       "label": "チャネルグループ",
-      "loading": "グループを読み込み中...",
       "placeholder": "グループを選択"
     },
     "key": {
@@ -42,12 +40,9 @@
       "placeholder": "説明しやすいチャネル名を入力"
     },
     "priority": {
-      "hint": "優先度の数値が大きいチャネルほど先に使用されます",
       "label": "優先度"
     },
     "status": {
-      "disabled": "無効",
-      "enabled": "有効",
       "label": "状態"
     },
     "type": {
@@ -56,28 +51,13 @@
       "placeholder": "チャネル種別を選択"
     },
     "weight": {
-      "hint": "同一優先度内の負荷分散を制御します（0 = 均等分散）",
       "label": "重み"
     }
-  },
-  "messages": {
-    "loadRealKeyFailed": "実際のチャネルキーの読み込みに失敗しました: {{error}}",
-    "missingChannelId": "既存チャネルの ID がありません",
-    "saveFailed": "チャネルの保存に失敗しました: {{error}}"
-  },
-  "sections": {
-    "advanced": "詳細設定"
   },
   "title": {
     "add": "チャネルを作成",
     "edit": "チャネルを編集",
     "view": "チャネルを表示"
-  },
-  "validation": {
-    "baseUrlRequired": "このチャネル種別では Base URL が必須です",
-    "keyRequired": "API キーは必須です",
-    "modelsRequired": "少なくとも 1 つのモデルを入力してください",
-    "nameRequired": "チャネル名は必須です"
   },
   "warnings": {
     "channelExists": {
@@ -101,9 +81,6 @@
       "title": "重複候補を確認してください"
     },
     "verificationRequired": {
-      "actions": {
-        "verifyNow": "今すぐ検証"
-      },
       "description": "候補チャネルは見つかりましたが、実際のチャネルキーを読む前に追加の検証が必要なため、現時点では重複を正確に確認できません。チャネル作成は続行できますが、正確に重複確認したい場合は先に検証を完了してください。",
       "title": "重複の確認には検証が必要です"
     }

@@ -102,6 +102,34 @@ describe("OpenRouter personalized model catalog transport", () => {
     },
   )
 
+  it("preserves documented provider details before catalog disclosure", async () => {
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/models/user`, () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: 403,
+              message: "Management key cannot access this catalog",
+            },
+          },
+          { status: 403 },
+        ),
+      ),
+    )
+
+    await expect(
+      fetchOpenRouterPersonalizedModelCatalog({
+        accountId: "account-example-a",
+        managementKey: "management-key-example",
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      code: API_ERROR_CODES.HTTP_403,
+      upstreamCode: "403",
+      message: "Management key cannot access this catalog",
+    })
+  })
+
   it.each([
     {
       name: "a malformed envelope",

@@ -13,6 +13,7 @@ export type Sub2ApiPersistAuthUpdate = {
   userId?: AccountIdentity
   refreshToken?: string
   tokenExpiresAt?: number
+  clearRefreshCredentials?: boolean
   expectedOrigin: string
   expectedUserId: AccountIdentity
 }

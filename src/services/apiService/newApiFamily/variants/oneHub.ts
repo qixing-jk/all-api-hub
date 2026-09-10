@@ -1,6 +1,7 @@
 import { normalizeApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import { syncResolvedApiTokenKeyCache } from "~/services/accountTokens/tokenKeyResolver"
 import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import {
   transformModelPricing,
   transformUserGroup,
@@ -15,7 +16,6 @@ import {
   fetchAllItems,
   inferHasMoreFromNumberedPage,
 } from "~/services/apiTransport/pagination"
-import { fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { PricingResponse } from "~/services/modelList/pricingModel"
 import type { ApiToken } from "~/types"
@@ -25,13 +25,13 @@ import { isRecord } from "~/utils/core/object"
 const logger = createLogger("NewApiFamily.OneHub")
 
 export const fetchAvailableModel = async (request: ApiServiceRequest) => {
-  return fetchApiData<OneHubModelPricing>(request, {
+  return newApiFamilyRequests.data<OneHubModelPricing>(request, {
     endpoint: "/api/available_model",
   })
 }
 
 export const fetchUserGroupMap = async (request: ApiServiceRequest) => {
-  return fetchApiData<OneHubUserGroupMap>(request, {
+  return newApiFamilyRequests.data<OneHubUserGroupMap>(request, {
     endpoint: "/api/user_group_map",
   })
 }
@@ -41,6 +41,7 @@ export const fetchUserGroupMap = async (request: ApiServiceRequest) => {
  */
 export const fetchModelPricing = async (
   request: ApiServiceRequest,
+  isDoneHub = false,
 ): Promise<PricingResponse> => {
   try {
     const [availableModel, userGroupMap] = await Promise.all([
@@ -48,7 +49,9 @@ export const fetchModelPricing = async (
       fetchUserGroupMap(request),
     ])
 
-    const result = transformModelPricing(availableModel, userGroupMap)
+    const result = isDoneHub
+      ? transformModelPricing(availableModel, userGroupMap, true)
+      : transformModelPricing(availableModel, userGroupMap)
     logger.debug("Fetched model pricing")
 
     return result
@@ -77,7 +80,7 @@ export const fetchAccountTokens = async (
         page: upstreamPage.toString(),
         size: REQUEST_CONFIG.DEFAULT_PAGE_SIZE.toString(),
       })
-      const tokensData = await fetchApiData<unknown>(request, {
+      const tokensData = await newApiFamilyRequests.data<unknown>(request, {
         endpoint: `/api/token/?${searchParams.toString()}`,
       })
 
@@ -120,12 +123,11 @@ export const fetchUserGroups = async (
   request: ApiServiceRequest,
 ): Promise<Record<string, UserGroupInfo>> => {
   try {
-    const response = await fetchApiData<OneHubUserGroupsResponse["data"]>(
-      request,
-      {
-        endpoint: "/api/user_group_map",
-      },
-    )
+    const response = await newApiFamilyRequests.data<
+      OneHubUserGroupsResponse["data"]
+    >(request, {
+      endpoint: "/api/user_group_map",
+    })
     return transformUserGroup(response)
   } catch (error) {
     logger.error("获取分组信息失败", error)

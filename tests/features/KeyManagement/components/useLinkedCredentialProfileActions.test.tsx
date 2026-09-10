@@ -40,6 +40,12 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => preferences,
 }))
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    markGatewayGuidanceOnboardingCompleted: markOnboardingCompletedMock,
+  }),
+}))
+
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
   useChannelDialog: () => ({ openWithCredentials: openWithCredentialsMock }),
 }))
@@ -61,7 +67,7 @@ vi.mock("~/utils/core/logger", () => ({
   createLogger: () => ({ warn: loggerWarnMock }),
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/operationFeedback", () => ({
   showResultToast: showResultToastMock,
 }))
 

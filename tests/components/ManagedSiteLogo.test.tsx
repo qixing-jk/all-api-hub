@@ -21,6 +21,12 @@ vi.mock("~/components/dialogs/ChannelDialog", () => {
 
 const mockedUseUserPreferencesContext = vi.fn()
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    markGatewayGuidanceOnboardingCompleted: vi.fn(),
+  }),
+}))
+
 vi.mock("~/contexts/UserPreferencesContext", async () => {
   const actual = await vi.importActual<
     typeof import("~/contexts/UserPreferencesContext")

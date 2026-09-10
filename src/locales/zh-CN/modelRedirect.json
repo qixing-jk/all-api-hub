@@ -60,6 +60,20 @@
     "updateFailed": "更新模型重定向设置失败",
     "updateSuccess": "模型重定向设置已更新"
   },
+  "modelDiscovery": {
+    "failed": {
+      "description": "无法从托管站点获取模型，当前改用预置模型列表。请检查连接或凭据后重试。",
+      "title": "模型获取失败"
+    },
+    "not-ready": {
+      "description": "请先完成托管站点地址和管理员凭据配置。当前暂用预置模型列表。",
+      "title": "尚未配置模型获取"
+    },
+    "unsupported": {
+      "description": "当前站点没有注册账户模型查询能力，因此这里使用预置模型列表。",
+      "title": "当前站点不支持自动获取模型"
+    }
+  },
   "pruneMissingTargetsOnModelSync": "同步后清理无效的重定向目标",
   "pruneMissingTargetsOnModelSyncDesc": "危险操作：在模型同步刷新后，将删除 model_mapping 中目标模型不在最新模型列表里的映射",
   "regenerateButton": "立即重新生成映射",
@@ -67,5 +81,9 @@
   "standardModels": "标准模型",
   "standardModelsDesc": "选择需要生成重定向映射的标准模型",
   "standardModelsPlaceholder": "请选择模型…",
-  "title": "模型重定向"
+  "title": "模型重定向",
+  "unsupported": {
+    "description": "当前托管站点未提供读取和更新模型映射所需的渠道能力。",
+    "title": "当前站点不支持模型重定向"
+  }
 }

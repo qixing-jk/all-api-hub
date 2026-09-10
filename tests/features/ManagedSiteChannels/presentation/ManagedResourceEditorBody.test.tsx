@@ -247,10 +247,6 @@ const createDescriptors = (
       options: [],
     },
     { fieldId: AXON_HUB_CHANNEL_FIELD_IDS.REMARK, type: "textarea" },
-    {
-      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
-      type: "text",
-    },
   ].reverse() as readonly ResourceFieldDescriptor[]
 
 const editPolicy =
@@ -798,12 +794,12 @@ describe("ManagedResourceEditorBody", () => {
       "Model sync",
       "Routing",
       "Metadata",
-      "Advanced",
     ]) {
       expect(
         screen.getAllByRole("group", { name: section }).at(0),
       ).toBeVisible()
     }
+    expect(screen.queryByRole("group", { name: "Advanced" })).toBeNull()
 
     const dialog = screen.getByRole("dialog", { name: "Edit native channel" })
     const closeButton = screen.getByRole("button", {

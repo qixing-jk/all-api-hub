@@ -21,7 +21,6 @@ import {
   tokenQuantitySchema,
   topProviderSchema,
   unknownArraySchema,
-  unknownRecordSchema,
 } from "~/services/apiAdapters/openrouter/modelPresentationContract"
 import type { OpenRouterPublicModel } from "~/services/apiService/openrouter/publicModelCatalogSchemas"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
@@ -32,7 +31,6 @@ import {
   type ModelDisplayFact,
   type ModelDisplayLabel,
   type ModelDisplayPrice,
-  type ModelDisplayPriceCondition,
   type ModelDisplayPriceUnit,
   type ModelDisplaySection,
   type ModelPresentation,
@@ -135,34 +133,14 @@ interface PriceFieldDefinition {
   label: ModelDisplayLabel
   unit: ModelDisplayPriceUnit
   normalize: (value: unknown) => number | undefined
-  includeInOverrides?: true
 }
 
 const BASE_PRICE_FIELDS: PriceFieldDefinition[] = [
-  {
-    key: "input_cache_write_1h",
-    label: OPENROUTER_FACT_LABELS.cacheWriteOneHourPrice,
-    unit: MODEL_DISPLAY_PRICE_UNITS.MillionCacheWriteOneHourTokens,
-    normalize: normalizeUsdPerMillionTokens,
-    includeInOverrides: true,
-  },
   {
     key: "internal_reasoning",
     label: OPENROUTER_FACT_LABELS.reasoningPrice,
     unit: MODEL_DISPLAY_PRICE_UNITS.MillionReasoningTokens,
     normalize: normalizeUsdPerMillionTokens,
-  },
-  {
-    key: "request",
-    label: OPENROUTER_FACT_LABELS.requestPrice,
-    unit: MODEL_DISPLAY_PRICE_UNITS.Request,
-    normalize: normalizeDirectUsd,
-  },
-  {
-    key: "image",
-    label: OPENROUTER_FACT_LABELS.imageInputPrice,
-    unit: MODEL_DISPLAY_PRICE_UNITS.InputImage,
-    normalize: normalizeDirectUsd,
   },
   {
     key: "image_output",
@@ -181,7 +159,6 @@ const BASE_PRICE_FIELDS: PriceFieldDefinition[] = [
     label: OPENROUTER_FACT_LABELS.audioInputPrice,
     unit: MODEL_DISPLAY_PRICE_UNITS.MillionAudioInputTokens,
     normalize: normalizeUsdPerMillionTokens,
-    includeInOverrides: true,
   },
   {
     key: "audio_output",
@@ -194,51 +171,8 @@ const BASE_PRICE_FIELDS: PriceFieldDefinition[] = [
     label: OPENROUTER_FACT_LABELS.cachedAudioInputPrice,
     unit: MODEL_DISPLAY_PRICE_UNITS.MillionCachedAudioInputTokens,
     normalize: normalizeUsdPerMillionTokens,
-    includeInOverrides: true,
-  },
-  {
-    key: "web_search",
-    label: OPENROUTER_FACT_LABELS.webSearchPrice,
-    unit: MODEL_DISPLAY_PRICE_UNITS.WebSearch,
-    normalize: normalizeDirectUsd,
   },
 ]
-
-const OVERRIDE_PRIMARY_PRICE_FIELDS: PriceFieldDefinition[] = [
-  {
-    key: "prompt",
-    label: OPENROUTER_FACT_LABELS.inputPrice,
-    unit: MODEL_DISPLAY_PRICE_UNITS.MillionInputTokens,
-    normalize: normalizeUsdPerMillionTokens,
-    includeInOverrides: true,
-  },
-  {
-    key: "completion",
-    label: OPENROUTER_FACT_LABELS.outputPrice,
-    unit: MODEL_DISPLAY_PRICE_UNITS.MillionOutputTokens,
-    normalize: normalizeUsdPerMillionTokens,
-    includeInOverrides: true,
-  },
-  {
-    key: "input_cache_read",
-    label: OPENROUTER_FACT_LABELS.cacheReadPrice,
-    unit: MODEL_DISPLAY_PRICE_UNITS.MillionCachedInputTokens,
-    normalize: normalizeUsdPerMillionTokens,
-    includeInOverrides: true,
-  },
-  {
-    key: "input_cache_write",
-    label: OPENROUTER_FACT_LABELS.cacheWritePrice,
-    unit: MODEL_DISPLAY_PRICE_UNITS.MillionCacheWriteTokens,
-    normalize: normalizeUsdPerMillionTokens,
-    includeInOverrides: true,
-  },
-]
-
-const OVERRIDE_PRICE_FIELDS = [
-  ...OVERRIDE_PRIMARY_PRICE_FIELDS,
-  ...BASE_PRICE_FIELDS,
-].filter((field) => field.includeInOverrides)
 
 /** Maps one documented price field into an explicit currency and meter. */
 function createPrice(
@@ -254,66 +188,6 @@ function createPrice(
         currency: "USD",
         unit: definition.unit,
       }
-}
-
-/** Checks OpenRouter's base-100 HHMM integer for a UTC pricing window. */
-function isValidUtcClock(value: number): boolean {
-  const hours = Math.floor(value / 100)
-  const minutes = value % 100
-  return hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59
-}
-
-/** Normalizes a complete conditional-pricing predicate set. */
-function normalizeOverrideConditions(
-  record: Record<string, unknown>,
-): ModelDisplayPriceCondition[] | undefined {
-  const conditions: ModelDisplayPriceCondition[] = []
-
-  if (record.min_prompt_tokens !== undefined) {
-    const value = normalizeTokenQuantity(record.min_prompt_tokens)
-    if (value === undefined) return undefined
-    conditions.push({ type: "minimum-prompt-tokens", value })
-  }
-
-  const hasUtcStart = record.utc_start !== undefined
-  const hasUtcEnd = record.utc_end !== undefined
-  if (hasUtcStart || hasUtcEnd) {
-    const start = normalizeTokenQuantity(record.utc_start)
-    const end = normalizeTokenQuantity(record.utc_end)
-    if (
-      start === undefined ||
-      end === undefined ||
-      !isValidUtcClock(start) ||
-      !isValidUtcClock(end)
-    ) {
-      return undefined
-    }
-    conditions.push({ type: "utc-window", start, end })
-  }
-
-  return conditions.length > 0 ? conditions : undefined
-}
-
-/** Normalizes independently valid conditional price entries. */
-function normalizePriceOverrides(value: unknown) {
-  const rawOverrides = parseOptional(unknownArraySchema, value)
-  if (!rawOverrides) return undefined
-
-  const overrides = rawOverrides.flatMap((rawOverride) => {
-    const record = parseOptional(unknownRecordSchema, rawOverride)
-    if (!record) return []
-
-    const conditions = normalizeOverrideConditions(record)
-    if (!conditions) return []
-
-    const prices = OVERRIDE_PRICE_FIELDS.map((definition) =>
-      createPrice(record, definition),
-    ).filter((price): price is ModelDisplayPrice => !!price)
-
-    return prices.length > 0 ? [{ conditions, prices }] : []
-  })
-
-  return overrides.length > 0 ? overrides : undefined
 }
 
 /** Normalizes native detail prices and canonical comparable token prices. */
@@ -349,15 +223,6 @@ function normalizePricing(value: unknown): {
         ]
       : []
   })
-  const overrides = normalizePriceOverrides(pricing.overrides)
-  if (overrides) {
-    facts.push({
-      type: MODEL_DISPLAY_FACT_TYPES.PriceOverrides,
-      label: OPENROUTER_FACT_LABELS.conditionalPrices,
-      overrides,
-    })
-  }
-
   const cacheReadPrice = normalizeUsdPerMillionTokens(pricing.input_cache_read)
   const cacheWritePrice = normalizeUsdPerMillionTokens(
     pricing.input_cache_write,

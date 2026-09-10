@@ -216,16 +216,6 @@ Thank you to all our sponsors for supporting the project's long-term feature dev
 
 <hr class="readme-sponsor-divider">
 
-<div class="readme-sponsor">
-  <div class="readme-sponsor-logo">
-    <a href="https://infistar.ai/register?aff=ALLAPIHUB&ref_source=link">
-      <img src="../../../resources/partners/infistar.png" alt="Infistar.ai">
-    </a>
-  </div>
-  <p class="readme-sponsor-copy">
-    Concerned about diluted models, reduced model intelligence, or opaque pricing? Every model offered by Infistar.ai is verified through real API calls. Supply comes from official APIs and official account pools, with load balancing across more than 10,000 supply routes to ensure low latency and peak-hour stability. It covers mainstream models including ChatGPT, Claude, Gemini, Grok, GLM, DeepSeek, Kimi, Qwen, and MiniMax, with full-modal capabilities spanning text, video, images, embeddings, reranking, and more. Pricing and usage are transparent and easy to review, with models available from 10% of official prices. All API Hub users can register and try it through <a href="https://infistar.ai/register?aff=ALLAPIHUB&ref_source=link">the dedicated link</a> (<a href="./service-guides/infistar.md">setup guide</a>).
-  </p>
-</div>
 
 <hr class="readme-sponsor-divider">
 

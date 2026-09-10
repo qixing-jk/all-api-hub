@@ -3,9 +3,13 @@ import type { ApiToken } from "~/types"
 import { resolveRequestedModelId } from "./modelResolver"
 import { apiVerificationProbeRegistry } from "./probeRegistry"
 import { runApiVerificationSuite } from "./suiteRunner"
-import { API_VERIFICATION_PROBE_STATUSES } from "./types"
+import {
+  API_VERIFICATION_MODES,
+  API_VERIFICATION_PROBE_STATUSES,
+} from "./types"
 import type {
   ApiVerificationApiType,
+  ApiVerificationMode,
   ApiVerificationProbeId,
   ApiVerificationProbeResult,
   ApiVerificationReport,
@@ -18,6 +22,7 @@ type RunApiVerificationParams = {
   baseUrl: string
   apiKey: string
   apiType: ApiVerificationApiType
+  mode?: ApiVerificationMode
   modelId?: string
   tokenMeta?: Pick<ApiToken, "models" | "model_limits" | "name" | "id">
   abortSignal?: AbortSignal
@@ -44,6 +49,7 @@ export async function runApiVerificationProbe(
   if (registryEntry.requiresModelId && !resolvedModelId?.trim()) {
     return {
       id: params.probeId,
+      mode: params.mode ?? API_VERIFICATION_MODES.Streaming,
       status: API_VERIFICATION_PROBE_STATUSES.Fail,
       latencyMs: 0,
       summary: "No model id provided",
@@ -60,6 +66,7 @@ export async function runApiVerificationProbe(
     apiKey: params.apiKey,
     apiType: params.apiType,
     modelId: resolvedModelId,
+    mode: params.mode,
     abortSignal: params.abortSignal,
   })
 }
@@ -78,6 +85,7 @@ export async function runApiVerification(
     apiKey: params.apiKey,
     apiType: params.apiType,
     requestedModelId,
+    mode: params.mode,
     abortSignal: params.abortSignal,
   })
 

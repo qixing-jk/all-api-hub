@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import * as managedSiteSupport from "~/services/managedSites/utils/managedSite"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -41,6 +42,37 @@ import {
 
 describe("AccountActionButtons", () => {
   setupAccountActionButtonsTest()
+
+  it.each([undefined, "https://example.com/custom-redeem"])(
+    "offers SharedChat redemption only when a custom page exists: %s",
+    async (redeemUrl) => {
+      const user = userEvent.setup()
+      render(
+        <AccountActionButtons
+          site={buildDisplaySiteData({
+            siteType: SITE_TYPES.SHAREDCHAT,
+            checkIn: {
+              ...buildDisplaySiteData().checkIn,
+              customCheckIn: { redeemUrl },
+            },
+          })}
+          onCopyKey={vi.fn()}
+          onDeleteAccount={vi.fn()}
+        />,
+      )
+      await user.click(
+        screen.getByRole("button", { name: "common:actions.more" }),
+      )
+      const redeemItem = screen.queryByRole("menuitem", {
+        name: "account:actions.redeemPage",
+      })
+      if (redeemUrl) expect(redeemItem).toBeInTheDocument()
+      else expect(redeemItem).not.toBeInTheDocument()
+      expect(
+        screen.getByRole("menuitem", { name: "account:actions.usageLog" }),
+      ).toBeInTheDocument()
+    },
+  )
 
   it("locks externally refreshed accounts without announcing local menu work", async () => {
     accountActionsContextValue.refreshingAccountId = "acc-external-refresh"
@@ -269,6 +301,10 @@ describe("AccountActionButtons", () => {
   )
 
   it("does not track analytics for disabled account action menu entries", async () => {
+    vi.spyOn(
+      managedSiteSupport,
+      "supportsManagedSiteBaseUrlChannelLookup",
+    ).mockReturnValue(false)
     userPreferencesContextValue.preferences = {
       managedSiteType: SITE_TYPES.VELOERA,
       veloera: {

@@ -40,6 +40,14 @@ export type ContentSessionExtractionResult = {
   }
 }
 
+/** Untrusted session payload context; probe permission never implies permission to persist auth. */
+export type ContentSessionTransientAuthContext = {
+  baseUrl: string
+  siteType: AccountSiteType
+  siteTypeHint?: AccountSiteType
+  allowNewApiAuthProbe?: boolean
+}
+
 export type ContentSessionExtractor = {
   id: string
   canExtract(context: ContentSessionExtractionContext): boolean
@@ -52,5 +60,16 @@ export type AccountSiteOnboardingMetadata = {
   siteType: AccountSiteType
   adapterFamily: AccountSiteBackendFamily
   detection?: AccountSiteDetectionMetadata
-  routes?: AccountSiteRouteConfig
+  routes: AccountSiteRouteConfig
+}
+
+/**
+ * A provider's trusted-URL policy for read-only account detection. Failure
+ * messages use local copy and logs contain only structured status diagnostics;
+ * this registration does not grant permission to create credentials.
+ */
+export type AccountDetectionPrivacyPolicy = {
+  siteType: AccountSiteType
+  matchesUrl(url: string): boolean
+  getFailureMessage(): string
 }

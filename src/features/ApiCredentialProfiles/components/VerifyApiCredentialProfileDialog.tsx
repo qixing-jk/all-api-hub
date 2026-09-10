@@ -10,6 +10,7 @@ import {
   safeJsonStringify,
 } from "~/components/dialogs/VerifyApiDialog/utils"
 import { VerificationHistorySummary } from "~/components/dialogs/VerifyApiDialog/VerificationHistorySummary"
+import { VerificationModeSelect } from "~/components/dialogs/VerifyApiDialog/VerificationMode"
 import {
   Alert,
   Badge,
@@ -38,11 +39,13 @@ import {
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
   API_TYPES,
+  API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
   getApiVerificationProbeDefinitions,
   runApiVerificationProbe,
   type ApiVerificationApiType,
+  type ApiVerificationMode,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
@@ -193,9 +196,19 @@ export function VerifyApiCredentialProfileDialog({
     profile?.apiType ?? API_TYPES.OPENAI_COMPATIBLE,
   )
   const [modelId, setModelId] = useState("")
+  const [verificationMode, setVerificationMode] = useState<ApiVerificationMode>(
+    API_VERIFICATION_MODES.Streaming,
+  )
   const [modelOptions, setModelOptions] = useState<string[]>([])
   const [isFetchingModels, setIsFetchingModels] = useState(false)
-  const [fetchModelsError, setFetchModelsError] = useState<string | null>(null)
+  const [fetchModelsDiagnostic, setFetchModelsDiagnostic] = useState<
+    string | null
+  >(null)
+  const fetchModelsError =
+    fetchModelsDiagnostic === null
+      ? null
+      : fetchModelsDiagnostic ||
+        t("apiCredentialProfiles:verify.modelsFetchFailed")
   const [isPersisting, setIsPersisting] = useState(false)
   const [activeProbeId, setActiveProbeId] =
     useState<ApiVerificationProbeId | null>(null)
@@ -297,7 +310,7 @@ export function VerifyApiCredentialProfileDialog({
       fetchModelsAbortControllerRef.current?.abort()
       const abortController = new AbortController()
       fetchModelsAbortControllerRef.current = abortController
-      setFetchModelsError(null)
+      setFetchModelsDiagnostic(null)
       setIsFetchingModels(true)
 
       try {
@@ -336,15 +349,16 @@ export function VerifyApiCredentialProfileDialog({
           return
         }
 
-        const message =
-          toSanitizedErrorSummary(error, [profile.apiKey, profile.baseUrl]) ||
-          t("apiCredentialProfiles:verify.modelsFetchFailed")
+        const message = toSanitizedErrorSummary(error, [
+          profile.apiKey,
+          profile.baseUrl,
+        ])
 
         logger.error("Failed to fetch models", { message })
 
         if (fetchModelsRequestIdRef.current !== requestId) return
 
-        setFetchModelsError(message)
+        setFetchModelsDiagnostic(message)
       } finally {
         if (fetchModelsAbortControllerRef.current === abortController) {
           fetchModelsAbortControllerRef.current = null
@@ -354,7 +368,7 @@ export function VerifyApiCredentialProfileDialog({
         }
       }
     },
-    [preserveCurrentProbeStateForModel, profile, probesRef, t],
+    [preserveCurrentProbeStateForModel, profile, probesRef],
   )
 
   useEffect(() => {
@@ -377,8 +391,9 @@ export function VerifyApiCredentialProfileDialog({
 
     setApiType(nextApiType)
     setModelId(nextModelId)
+    setVerificationMode(API_VERIFICATION_MODES.Streaming)
     setModelOptions([])
-    setFetchModelsError(null)
+    setFetchModelsDiagnostic(null)
     setPersistedSummary(null)
     replaceProbes(buildProbeState(nextApiType))
     void fetchModels(nextApiType)
@@ -508,6 +523,7 @@ export function VerifyApiCredentialProfileDialog({
         baseUrl: profile.baseUrl,
         apiKey: profile.apiKey,
         apiType,
+        mode: verificationMode,
         modelId: modelForProbe || undefined,
         probeId,
       })
@@ -565,6 +581,10 @@ export function VerifyApiCredentialProfileDialog({
 
       const fallback: ApiVerificationProbeResult = {
         id: probeId,
+        mode:
+          probeId === API_VERIFICATION_PROBE_IDS.Models
+            ? undefined
+            : verificationMode,
         status: API_VERIFICATION_PROBE_STATUSES.Fail,
         latencyMs: 0,
         summary: t("aiApiVerification:verifyDialog.errors.unexpected"),
@@ -764,7 +784,7 @@ export function VerifyApiCredentialProfileDialog({
             </div>
           ) : null}
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <div className="flex min-h-7 items-center gap-2">
                 <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
@@ -807,7 +827,7 @@ export function VerifyApiCredentialProfileDialog({
                   const nextApiType = value as ApiVerificationApiType
                   setApiType(nextApiType)
                   setModelOptions([])
-                  setFetchModelsError(null)
+                  setFetchModelsDiagnostic(null)
                   setPersistedSummary(null)
                   replaceProbes(buildProbeState(nextApiType))
                   void fetchModels(nextApiType)
@@ -815,6 +835,12 @@ export function VerifyApiCredentialProfileDialog({
                 disabled={!canClose}
               />
             </div>
+
+            <VerificationModeSelect
+              value={verificationMode}
+              onChange={setVerificationMode}
+              disabled={!canClose}
+            />
 
             <div className="space-y-1.5 sm:col-span-2">
               <div className="flex min-h-7 items-center">

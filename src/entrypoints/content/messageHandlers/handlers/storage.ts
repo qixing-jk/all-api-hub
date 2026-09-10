@@ -1,4 +1,5 @@
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
+import { verifyAccountBrowserIdentity } from "~/services/accountBrowserSession/identityVerification"
 import {
   SUB2API_LOGIN_REQUIRED_I18N_KEY,
   Sub2ApiContentSessionLoginRequiredError,
@@ -56,6 +57,22 @@ export function handleGetUserFromLocalStorage(
         ...(request?.allowNewApiAuthProbe === true
           ? { allowNewApiAuthProbe: true }
           : {}),
+      }
+
+      if (request?.verifyIdentity === true) {
+        const userId = await verifyAccountBrowserIdentity({
+          url: context.url,
+          siteType: context.siteTypeHint,
+          candidateUserIds: Array.isArray(request.candidateUserIds)
+            ? request.candidateUserIds
+            : undefined,
+        })
+        sendResponse(
+          userId
+            ? { success: true, data: { userId, identityVerified: true } }
+            : { success: false },
+        )
+        return
       }
 
       for (const extractor of getContentSessionExtractors()) {

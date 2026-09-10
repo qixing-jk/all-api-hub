@@ -4,26 +4,26 @@ import {
   CHECKIN_RESULT_STATUS,
   translateAutoCheckinSkipReason,
   type CheckinAccountResult,
+  type CheckinResultStatus,
 } from "~/types/autoCheckin"
 
-export const FILTER_STATUS = {
-  ALL: "all",
-  FAILED_OR_SKIPPED: "failed_or_skipped",
-  SUCCESS: "success",
-  FAILED: "failed",
-  SKIPPED: "skipped",
-} as const
-
-export type FilterStatus = (typeof FILTER_STATUS)[keyof typeof FILTER_STATUS]
+/** Atomic outcomes selected by the needs-attention filter preset. */
+export const NEEDS_ATTENTION_RESULT_STATUSES = [
+  CHECKIN_RESULT_STATUS.FAILED,
+  CHECKIN_RESULT_STATUS.UNCERTAIN,
+  CHECKIN_RESULT_STATUS.SKIPPED,
+] as const satisfies readonly CheckinResultStatus[]
 
 interface AutoCheckinResultCounts {
   total: number
   success: number
+  alreadyChecked: number
   failed: number
+  uncertain: number
   skipped: number
 }
 
-/** Counts execution outcomes while treating already-checked as successful. */
+/** Counts execution outcomes by their user-visible result category. */
 export function countAutoCheckinResults(
   results: readonly CheckinAccountResult[],
 ): AutoCheckinResultCounts {
@@ -32,12 +32,16 @@ export function countAutoCheckinResults(
       counts.total += 1
       switch (result.status) {
         case CHECKIN_RESULT_STATUS.SUCCESS:
-        case CHECKIN_RESULT_STATUS.ALREADY_CHECKED:
           counts.success += 1
           break
+        case CHECKIN_RESULT_STATUS.ALREADY_CHECKED:
+          counts.alreadyChecked += 1
+          break
         case CHECKIN_RESULT_STATUS.FAILED:
-        case CHECKIN_RESULT_STATUS.UNCERTAIN:
           counts.failed += 1
+          break
+        case CHECKIN_RESULT_STATUS.UNCERTAIN:
+          counts.uncertain += 1
           break
         case CHECKIN_RESULT_STATUS.SKIPPED:
           counts.skipped += 1
@@ -45,7 +49,14 @@ export function countAutoCheckinResults(
       }
       return counts
     },
-    { total: 0, success: 0, failed: 0, skipped: 0 },
+    {
+      total: 0,
+      success: 0,
+      alreadyChecked: 0,
+      failed: 0,
+      uncertain: 0,
+      skipped: 0,
+    },
   )
 }
 
@@ -54,30 +65,9 @@ export function countAutoCheckinResults(
  */
 function matchesAutoCheckinResultStatus(
   result: CheckinAccountResult,
-  status: FilterStatus,
+  selectedStatuses: ReadonlySet<CheckinResultStatus>,
 ): boolean {
-  switch (status) {
-    case FILTER_STATUS.FAILED_OR_SKIPPED:
-      return (
-        result.status === CHECKIN_RESULT_STATUS.FAILED ||
-        result.status === CHECKIN_RESULT_STATUS.UNCERTAIN ||
-        result.status === CHECKIN_RESULT_STATUS.SKIPPED
-      )
-    case FILTER_STATUS.SUCCESS:
-      return (
-        result.status === CHECKIN_RESULT_STATUS.SUCCESS ||
-        result.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
-      )
-    case FILTER_STATUS.FAILED:
-      return (
-        result.status === CHECKIN_RESULT_STATUS.FAILED ||
-        result.status === CHECKIN_RESULT_STATUS.UNCERTAIN
-      )
-    case FILTER_STATUS.SKIPPED:
-      return result.status === CHECKIN_RESULT_STATUS.SKIPPED
-    case FILTER_STATUS.ALL:
-      return true
-  }
+  return selectedStatuses.size === 0 || selectedStatuses.has(result.status)
 }
 
 /**
@@ -215,15 +205,16 @@ export function getAutoCheckinResultMessage(
  * Applies the result-table status and localized keyword filters.
  */
 export function filterAutoCheckinResults(
-  results: CheckinAccountResult[],
-  status: FilterStatus,
+  results: readonly CheckinAccountResult[],
+  selectedStatuses: readonly CheckinResultStatus[],
   keyword: string,
   t: TFunction,
 ): CheckinAccountResult[] {
   const normalizedKeyword = keyword.trim().toLowerCase()
+  const selectedStatusSet = new Set(selectedStatuses)
 
   return results.filter((result) => {
-    if (!matchesAutoCheckinResultStatus(result, status)) return false
+    if (!matchesAutoCheckinResultStatus(result, selectedStatusSet)) return false
     if (!normalizedKeyword) return true
 
     return (

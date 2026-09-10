@@ -1,21 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import {
-  AUTO_DETECT_FAILURE_REASONS,
-  type AutoDetectFailureReason,
-} from "~/constants/autoDetect"
+import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { AutoDetectCompletionError } from "~/services/accounts/autoDetectCompletion/types"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
-import type { AccountCompletionHelpers } from "~/services/apiAdapters/contracts/accountCompletion"
 import { createNewApiAccountCompletion } from "~/services/apiAdapters/newApi/accountCompletion"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 import {
-  createAccountCompletionCheckInConfigMock,
+  createAccountCompletionHelpersMock,
   createCheckInConfig,
 } from "../checkInFixtures"
 
@@ -49,51 +45,19 @@ const currentTabFetchContext = {
   origin: "https://new.example.com",
 }
 
-const createServiceRequest = vi.fn(
-  ({
-    baseUrl,
-    auth,
-    context,
-  }: Parameters<AccountCompletionHelpers["createServiceRequest"]>[0]) => ({
-    baseUrl,
-    auth,
-    ...(context.fetchContext ? { fetchContext: context.fetchContext } : {}),
-  }),
-)
-
-const fetchSiteName = vi.fn(async (siteStatus) =>
-  typeof siteStatus?.system_name === "string" && siteStatus.system_name.trim()
-    ? siteStatus.system_name.trim()
-    : "Example API",
-)
-
-const createCompletionError = vi.fn(
-  (reason: AutoDetectFailureReason, cause: unknown) =>
-    new AutoDetectCompletionError(reason, cause),
-)
-
-const trimString = vi.fn((value: unknown) =>
-  typeof value === "string" ? value.trim() : "",
-)
-
-const createInitialCheckInConfig = createAccountCompletionCheckInConfigMock(
-  SITE_TYPES.NEW_API,
-  {
-    automaticExecutionEnabled: true,
-    isCheckedInToday: false,
-  },
-)
-
-const handleCheckInSupportFetchFailure = vi.fn(() => false as const)
-
-const helpers = {
+const {
+  helpers,
   createServiceRequest,
   fetchSiteName,
   createCompletionError,
   trimString,
   createInitialCheckInConfig,
   handleCheckInSupportFetchFailure,
-} satisfies AccountCompletionHelpers
+  captureRecoveryData,
+} = createAccountCompletionHelpersMock(SITE_TYPES.NEW_API, {
+  automaticExecutionEnabled: true,
+  isCheckedInToday: false,
+})
 
 describe("newApiAccountCompletion", () => {
   beforeEach(() => {
@@ -109,6 +73,7 @@ describe("newApiAccountCompletion", () => {
     trimString.mockClear()
     createInitialCheckInConfig.mockClear()
     handleCheckInSupportFetchFailure.mockClear()
+    captureRecoveryData.mockClear()
     mockCreateNewApiAccountBootstrap.mockReturnValue({
       extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
       fetchCheckInSupport: mockFetchCheckInSupport,
@@ -230,10 +195,7 @@ describe("newApiAccountCompletion", () => {
     expect(mockCreateNewApiAccountBootstrap).toHaveBeenCalledWith(
       SITE_TYPES.NEW_API,
       {
-        accessTokenCreationPolicy: {
-          currentTabTransport: "disabled",
-          tempWindowFallback: { statusCodes: [], codes: [] },
-        },
+        expectedUserId: "42",
       },
     )
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
@@ -719,6 +681,43 @@ describe("newApiAccountCompletion", () => {
       siteStatusError,
     )
     expect(mockFetchCheckInSupport).not.toHaveBeenCalled()
+  })
+
+  it("preserves completed probes when site metadata resolution fails", async () => {
+    const siteNameError = new Error("site name unavailable")
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "token-user",
+      access_token: "generated-token",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "Fallback Portal",
+      checkin_enabled: false,
+      price: 7,
+    })
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(7)
+    fetchSiteName.mockRejectedValueOnce(siteNameError)
+
+    await expect(
+      newApiAccountCompletion.complete(
+        {
+          url: "https://metadata-failure.example.invalid",
+          requestedAuthType: AuthTypeEnum.AccessToken,
+          detected: {
+            userId: "12",
+            siteType: SITE_TYPES.NEW_API,
+          },
+          context: {},
+        },
+        helpers,
+      ),
+    ).rejects.toBe(siteNameError)
+
+    expect(captureRecoveryData).toHaveBeenCalledWith({
+      username: "token-user",
+      accessToken: "generated-token",
+      authType: AuthTypeEnum.AccessToken,
+    })
+    expect(captureRecoveryData).toHaveBeenCalledWith({ exchangeRate: 7 })
   })
 
   it("falls back to disabled check-in detection when support probing fails", async () => {

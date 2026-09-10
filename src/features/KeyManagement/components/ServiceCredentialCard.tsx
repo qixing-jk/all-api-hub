@@ -23,6 +23,7 @@ import {
   IconButton,
   WorkflowTransitionButton,
 } from "~/components/ui"
+import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { KiloCodeProfileExportDialog } from "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
@@ -68,7 +69,7 @@ import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { showResultToast } from "~/utils/core/toastHelpers"
+import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { openSettingsTab } from "~/utils/navigation"
 
 import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
@@ -125,9 +126,9 @@ export function ServiceCredentialCard({
     claudeCodeRouterApiKey,
     cliProxyBaseUrl,
     cliProxyManagementKey,
-    markGatewayGuidanceOnboardingCompleted,
   } = useUserPreferencesContext()
-  const { openWithCredentials } = useChannelDialog()
+  const { markGatewayGuidanceOnboardingCompleted } = useFeatureGuidanceContext()
+  const { openWithAccount } = useChannelDialog()
   const identityKey = `${account.id}:${credential.service}`
   const visibleKeys = new Set<string>()
   const apiType: ApiVerificationApiType = API_TYPES.OPENAI_COMPATIBLE
@@ -292,12 +293,9 @@ export function ServiceCredentialCard({
     })
 
     try {
-      const result = await openWithCredentials(
-        {
-          name: transientProfile.name,
-          baseUrl: transientProfile.baseUrl,
-          apiKey: transientProfile.apiKey,
-        },
+      const result = await openWithAccount(
+        account,
+        runtimeKey,
         (channelResult) => {
           showResultToast(channelResult)
           if (channelResult?.success) {

@@ -15,8 +15,6 @@ import {
   type AutoDetectErrorCode,
 } from "~/constants/autoDetect"
 import {
-  AIHUBMIX_API_ORIGIN,
-  AIHUBMIX_HOSTNAMES,
   isAccountSiteType,
   SITE_TYPES,
   type AccountSiteType,
@@ -25,9 +23,10 @@ import {
   ACCOUNT_BROWSER_SESSION_SOURCES,
   readAccountBrowserSessionFromTab,
 } from "~/services/accountBrowserSession"
-import { normalizeContentSessionTransientAuth } from "~/services/accountBrowserSession/transientAuth"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import { findAccountSiteProfileForHostname } from "~/services/accounts/accountSiteProfile/urls"
 import type { ContentSessionTransientAuth } from "~/services/accountSiteOnboarding/contracts"
+import { normalizeContentSessionTransientAuth } from "~/services/accountSiteOnboarding/transientAuth"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   API_SERVICE_FETCH_CONTEXT_KINDS,
@@ -54,7 +53,6 @@ import { getAccountSiteType } from "./detectSiteType"
  * Unified logger scoped to the account auto-detection service.
  */
 const logger = createLogger("AutoDetectService")
-const AIHUBMIX_HOSTNAME_SET: ReadonlySet<string> = new Set(AIHUBMIX_HOSTNAMES)
 
 /**
  * Normalizes optional site type hints received from content scripts.
@@ -118,15 +116,15 @@ function detectPlatformCapabilities() {
 }
 
 /**
- * Returns the canonical page origin that should back AIHubMix auto-detect reads.
+ * Resolves the detection origin only for profiles that opt into hostname inference.
  */
 function resolveAutoDetectUrl(url: string): string {
   try {
     const parsed = new URL(url)
-    if (AIHUBMIX_HOSTNAME_SET.has(parsed.hostname.toLowerCase())) {
-      return AIHUBMIX_API_ORIGIN
-    }
-    return url
+    return (
+      findAccountSiteProfileForHostname(parsed.hostname)?.urls
+        .autoDetectOrigin ?? url
+    )
   } catch {
     return url
   }

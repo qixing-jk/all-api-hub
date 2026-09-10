@@ -53,7 +53,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   trackProductAnalyticsActionStarted: trackActionStartedMock,
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   showUpdateToast: showUpdateToastMock,
 }))
 

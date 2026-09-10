@@ -1,25 +1,14 @@
-import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import {
-  isSub2ApiManagedResourceStatus,
   SUB2API_ADMIN_REQUEST_TIMEOUT_MS,
-  SUB2API_MANAGED_RESOURCE_STATUS,
-  sub2ApiChannelTypeToPlatform,
-  sub2ApiPlatformToChannelType,
+  SUB2API_DEFAULT_ACCOUNT_PLATFORM,
 } from "~/constants/sub2api"
-import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import type { ApiTransportRequestObserver } from "~/services/apiTransport/type"
-import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
-import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import type {
-  ChannelFormData,
-  ChannelMode,
-  CreateChannelPayload,
-  ManagedSiteChannel,
-  ManagedSiteChannelListData,
-} from "~/types/managedSite"
-import { CHANNEL_MODE, CHANNEL_STATUS } from "~/types/managedSite"
+  ManagedSiteChannelDraft,
+  ManagedSiteChannelDraftSource,
+} from "~/types/managedSiteChannelDraft"
 import {
   type Sub2ApiAdminAccountListData,
   type Sub2ApiAdminApiKeyAccount,
@@ -29,14 +18,12 @@ import {
   type Sub2ApiApiKeyAccountStatus,
 } from "~/types/sub2apiManagedSite"
 import type { Sub2ApiManagedSiteConfig } from "~/types/sub2apiManagedSiteConfig"
-import { normalizeList } from "~/utils/core/string"
 import { joinUrl, normalizeBaseUrl } from "~/utils/core/url"
 
 const SUB2API_ADMIN_ACCOUNTS_ENDPOINT = "/api/v1/admin/accounts"
 const SUB2API_ADMIN_ACCOUNTS_DATA_ENDPOINT = "/api/v1/admin/accounts/data"
 const PAGE_SIZE = 100
 const MAX_LIST_PAGES = 100
-const MASKED_API_KEY = "********"
 export const SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE =
   "STEP_UP_ADMIN_API_KEY_FORBIDDEN"
 const SUB2API_STEP_UP_UNSUPPORTED_MESSAGE =
@@ -180,6 +167,8 @@ async function sub2ApiAdminRequest<T>(
       const request: RequestInit = {
         method,
         headers,
+        // Keep admin and account keys on the configured API endpoint.
+        redirect: "error",
         ...(hasBody ? { body: JSON.stringify(options.body) } : {}),
         ...(signal ? { signal } : {}),
       }
@@ -525,138 +514,20 @@ export async function deleteSub2ApiApiKeyAccount(
   )
 }
 
-export { sub2ApiChannelTypeToPlatform, sub2ApiPlatformToChannelType }
-
-/** Projects a redacted Sub2API account into the legacy channel contract. */
-export function sub2ApiAccountToManagedSiteChannel(
-  account: Sub2ApiAdminApiKeyAccount,
-): ManagedSiteChannel {
-  const baseUrl = account.credentials?.base_url
-  return {
-    id: account.id,
-    type: sub2ApiPlatformToChannelType(account.platform),
-    key: account.credentials_status?.has_api_key ? MASKED_API_KEY : "",
-    name: account.name || `Sub2API Account ${account.id}`,
-    base_url: typeof baseUrl === "string" ? baseUrl : "",
-    models: "",
-    status:
-      isSub2ApiManagedResourceStatus(account.status) &&
-      account.status === SUB2API_MANAGED_RESOURCE_STATUS.Active
-        ? CHANNEL_STATUS.Enable
-        : CHANNEL_STATUS.ManuallyDisabled,
-    // Legacy compatibility only: shared `weight` round-trips Sub2API
-    // concurrency. Native resources own provider routing semantics.
-    weight: account.concurrency ?? DEFAULT_CHANNEL_FIELDS.weight,
-    priority: account.priority ?? DEFAULT_CHANNEL_FIELDS.priority,
-    openai_organization: null,
-    test_model: null,
-    created_time: 0,
-    test_time: 0,
-    response_time: 0,
-    other: "",
-    balance: 0,
-    balance_updated_time: 0,
-    group: "",
-    used_quota: 0,
-    model_mapping: "",
-    status_code_mapping: "",
-    auto_ban: 0,
-    other_info: "",
-    tag: null,
-    param_override: null,
-    header_override: null,
-    remark: account.notes ?? null,
-    channel_info: {
-      is_multi_key: false,
-      multi_key_size: 1,
-      multi_key_status_list: null,
-      multi_key_polling_index: 0,
-      multi_key_mode: "",
-    },
-    setting: "",
-    settings: "",
-  }
-}
-
-export const toSub2ApiManagedSiteChannelList = (data: {
-  items: Sub2ApiAdminApiKeyAccount[]
-  total: number
-}): ManagedSiteChannelListData => ({
-  items: data.items
-    .filter((item) => item.type === "apikey")
-    .map(sub2ApiAccountToManagedSiteChannel),
-  total: data.total,
-  type_counts: {},
-})
-
-/** Fetches token-scoped models for an imported URL + key draft. */
-export async function fetchAvailableModels(
-  account: DisplaySiteData,
-  token: ApiToken,
-): Promise<string[]> {
-  const upstream = normalizeSub2ApiManagedChannelAccount(account)
-  const { models } = await fetchTokenScopedModels(upstream, token)
-  return normalizeList(models)
-}
-
-/** Builds the default managed-channel name for an imported credential. */
-export function buildChannelName(
-  account: DisplaySiteData,
-  token: ApiToken,
-): string {
-  const baseName = `${account.name} | ${token.name}`.trim()
-  return baseName.endsWith("(auto)") ? baseName : `${baseName} (auto)`
-}
-
-/** Normalizes an imported account at the Sub2API adapter boundary. */
-function normalizeSub2ApiManagedChannelAccount<
-  TAccount extends DisplaySiteData,
->(account: TAccount): TAccount {
-  const upstream = normalizeAccountForManagedChannel(account)
-  return {
-    ...upstream,
-    baseUrl: normalizeBaseUrl(upstream.baseUrl),
-  }
-}
-
 /** Prepares the existing import editor draft for a Sub2API API-key account. */
 export async function prepareChannelFormData(
-  account: DisplaySiteData,
-  token: ApiToken | AccountToken,
-): Promise<ChannelFormData> {
-  const upstream = normalizeSub2ApiManagedChannelAccount(account)
+  source: ManagedSiteChannelDraftSource,
+): Promise<ManagedSiteChannelDraft> {
   return {
-    name: buildChannelName(account, token as ApiToken),
-    type: DEFAULT_CHANNEL_FIELDS.type,
-    key: token.key,
-    base_url: upstream.baseUrl,
+    name: source.name,
+    type: SUB2API_DEFAULT_ACCOUNT_PLATFORM,
+    key: source.apiKey,
+    base_url: normalizeBaseUrl(source.baseUrl),
     models: [],
     groups: [],
     priority: 1,
     weight: 1,
-    status: DEFAULT_CHANNEL_FIELDS.status,
+    enabled: true,
     notes: "",
-  }
-}
-
-/** Converts an import editor draft into the shared channel-create payload. */
-export function buildChannelPayload(
-  formData: ChannelFormData,
-  mode: ChannelMode = CHANNEL_MODE.SINGLE,
-): CreateChannelPayload {
-  return {
-    mode,
-    channel: {
-      name: formData.name.trim(),
-      type: formData.type,
-      key: formData.key.trim(),
-      base_url: formData.base_url.trim(),
-      models: normalizeList(formData.models).join(","),
-      groups: [],
-      priority: formData.priority,
-      weight: formData.weight,
-      status: formData.status,
-      remark: formData.notes ?? "",
-    },
   }
 }

@@ -3,6 +3,13 @@
     "autoProvisionAlreadyHad": "{{accountName}} đã có API Key, đã bỏ qua việc tạo tự động.",
     "autoProvisionCreated": "Đã tự động tạo API Key mặc định cho {{accountName}}.",
     "autoProvisionFailed": "Tài khoản đã được lưu, nhưng việc tự động tạo API Key thất bại. Bạn có thể sử dụng \"{{actionLabel}}\" trong phần quản lý khóa để thử lại.",
+    "autoProvisionGroupsCovered": "Tất cả nhóm khả dụng của {{accountName}} hiện đã có khóa API dùng được.",
+    "autoProvisionGroupsCreated_other": "Đã tự động tạo {{count}} khóa API nhóm cho {{accountName}}.",
+    "autoProvisionGroupsIncomplete_other": "Đã tạo {{count}} khóa API nhóm cho {{accountName}}, nhưng vẫn còn nhóm chưa hoàn tất. Mở Quản lý khóa → {{actionLabel}} để kiểm tra.",
+    "autoProvisionGroupsUnavailable": "Không lấy được nhóm khả dụng cho {{accountName}}, nên chưa tạo khóa. Kiểm tra tại Quản lý khóa → {{actionLabel}}.",
+    "autoProvisionGroupsUnsupported": "Chưa hỗ trợ tự động tạo khóa cho tất cả nhóm của {{accountName}}. Mở Quản lý khóa để xem các thao tác khả dụng cho tài khoản này.",
+    "autoProvisionNeedsManualAction": "Đã lưu {{accountName}}, nhưng khóa mặc định cần lựa chọn thủ công hoặc xử lý bí mật dùng một lần. Hãy dùng \"{{actionLabel}}\" trong phần quản lý khóa để hoàn tất.",
+    "autoProvisionUnsupported": "Đã lưu {{accountName}}, nhưng loại trang này không hỗ trợ tự động tạo API Key mặc định.",
     "checkingApiKeys": "Đang kiểm tra các API Key...",
     "createTokenFailed": "Tạo API token thất bại",
     "tokenNotFound": "Không thể tạo hoặc tìm thấy API token"
@@ -25,7 +32,6 @@
   },
   "axonhub": {
     "configMissing": "Vui lòng cấu hình địa chỉ AxonHub, email quản trị viên và mật khẩu trong phần Cài đặt trước",
-    "modelsMissing": "Vui lòng điền ít nhất một mô hình",
     "noChannelsToSync": "Không có kênh nào để đồng bộ"
   },
   "background": {
@@ -52,9 +58,7 @@
   },
   "claudecodehub": {
     "configMissing": "Vui lòng cấu hình địa chỉ Claude Code Hub và token quản trị viên trong phần Cài đặt trước",
-    "modelsMissing": "Vui lòng điền ít nhất một mô hình",
-    "noChannelsToSync": "Không có nhà cung cấp nào để đồng bộ",
-    "realProviderKeyRequired": "Tạo nhà cung cấp trong Claude Code Hub yêu cầu khóa gốc thực, không thể sử dụng khóa trống hoặc khóa đã bị che để tạo."
+    "noChannelsToSync": "Không có nhà cung cấp nào để đồng bộ"
   },
   "claudeCodeRouter": {
     "configMissing": "Vui lòng cấu hình URL cơ sở của Claude Code Router trong phần cài đặt trước",

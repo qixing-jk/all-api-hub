@@ -106,6 +106,7 @@ describe("auto-detect completion", () => {
       siteType: SITE_TYPES.NEW_API,
       fetchContext,
     }
+    const onRecoveryData = vi.fn()
 
     const result = await completeAutoDetectedAccount({
       url: "https://status.example.com",
@@ -113,6 +114,7 @@ describe("auto-detect completion", () => {
       autoDetectContext,
       protectionBypassExecution,
       detected,
+      onRecoveryData,
     })
 
     expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
@@ -130,16 +132,9 @@ describe("auto-detect completion", () => {
     expect(adapterRequest.context.protectionBypassExecution).toBe(
       protectionBypassExecution,
     )
-    expect(Object.keys(helpers).sort()).toEqual(
-      [
-        "createServiceRequest",
-        "fetchSiteName",
-        "createCompletionError",
-        "trimString",
-        "createInitialCheckInConfig",
-        "handleCheckInSupportFetchFailure",
-      ].sort(),
-    )
+    helpers.captureRecoveryData({ username: "partial-user" })
+    expect(onRecoveryData).toHaveBeenCalledWith(completedAccountData)
+    expect(onRecoveryData).toHaveBeenCalledWith({ username: "partial-user" })
     expect(
       helpers.createServiceRequest({
         baseUrl: "https://status.example.com",
@@ -243,7 +238,7 @@ describe("auto-detect completion", () => {
     )
   })
 
-  it("propagates the cookie-auth session into explicit discovery", async () => {
+  it("propagates the cookie-auth session when completion uses cookie requests", async () => {
     accountCompletionMock.complete.mockResolvedValueOnce({
       ...completedAccountData,
       authType: AuthTypeEnum.Cookie,
@@ -251,12 +246,29 @@ describe("auto-detect completion", () => {
 
     await completeAutoDetectedAccount({
       url: "https://cookie.example.invalid",
-      requestedAuthType: AuthTypeEnum.Cookie,
+      requestedAuthType: AuthTypeEnum.AccessToken,
       cookieAuthSessionCookie: "session=example",
       detected: {
         userId: "7",
         siteType: SITE_TYPES.NEW_API,
       },
+    })
+
+    const [adapterRequest, helpers] =
+      accountCompletionMock.complete.mock.calls[0]
+    expect(adapterRequest.context).toEqual({
+      cookieAuthSessionCookie: "session=example",
+    })
+    expect(
+      helpers.createServiceRequest({
+        baseUrl: "https://cookie.example.invalid",
+        auth: { authType: AuthTypeEnum.Cookie, userId: "7" },
+        context: adapterRequest.context,
+      }),
+    ).toEqual({
+      baseUrl: "https://cookie.example.invalid",
+      auth: { authType: AuthTypeEnum.Cookie, userId: "7" },
+      cookieAuthSessionCookie: "session=example",
     })
 
     expect(fetchCheckInStatusMock).toHaveBeenCalledWith(

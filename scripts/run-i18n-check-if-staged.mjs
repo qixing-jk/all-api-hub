@@ -1,13 +1,16 @@
 import { execFileSync } from "node:child_process"
 
+import { runPnpm } from "./utils/run-pnpm.mjs"
+
 const gitCommand = process.platform === "win32" ? "git.exe" : "git"
 
-const I18N_RELEVANT_PATH_PREFIXES = ["src/"]
+const I18N_RELEVANT_PATH_PREFIXES = ["src/locales/", "src/public/_locales/"]
 const I18N_RELEVANT_PATHS = new Set([
   "i18next.config.ts",
   "package.json",
   "pnpm-lock.yaml",
   "scripts/run-i18n-check-if-staged.mjs",
+  "scripts/utils/run-pnpm.mjs",
 ])
 
 /**
@@ -17,17 +20,15 @@ const I18N_RELEVANT_PATHS = new Set([
 function getStagedFiles() {
   const output = execFileSync(
     gitCommand,
-    ["diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+    ["diff", "--cached", "--name-only", "-z", "--no-renames"],
     {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "inherit"],
     },
   )
 
-  return output
-    .split(/\r?\n/)
-    .map((line) => line.trim().replaceAll("\\", "/"))
-    .filter(Boolean)
+  // No rename detection: both the removed input and its destination must count.
+  return output.split("\0").filter(Boolean)
 }
 
 /**
@@ -37,42 +38,11 @@ function getStagedFiles() {
  */
 function shouldRunI18nCheck(stagedFiles) {
   return stagedFiles.some((file) => {
-    if (I18N_RELEVANT_PATHS.has(file)) {
+    if (I18N_RELEVANT_PATHS.has(file) || /^src\/.*\.tsx?$/.test(file)) {
       return true
     }
 
     return I18N_RELEVANT_PATH_PREFIXES.some((prefix) => file.startsWith(prefix))
-  })
-}
-
-/**
- * Run pnpm subcommands in a cross-platform way.
- *
- * Prefer `npm_execpath` when available because this script itself runs under
- * `pnpm run ...`, which already exposes the resolved pnpm CLI entrypoint.
- * Falling back to a shell invocation keeps the script usable outside that context.
- * @param args pnpm arguments excluding the `pnpm` executable itself.
- */
-function runPnpm(args) {
-  if (
-    typeof process.env.npm_execpath === "string" &&
-    process.env.npm_execpath
-  ) {
-    execFileSync(process.execPath, [process.env.npm_execpath, ...args], {
-      stdio: "inherit",
-    })
-    return
-  }
-
-  if (process.platform === "win32") {
-    execFileSync("cmd.exe", ["/d", "/s", "/c", `pnpm ${args.join(" ")}`], {
-      stdio: "inherit",
-    })
-    return
-  }
-
-  execFileSync("pnpm", args, {
-    stdio: "inherit",
   })
 }
 

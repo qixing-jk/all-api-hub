@@ -4,14 +4,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   ClaudeCodeHubApiError,
   createProvider,
+  createProviderV1,
   deleteProvider,
+  deleteProviderV1,
+  getProvider,
   getUnmaskedProviderKey,
   listProviders,
   listProvidersFromAction,
   normalizeClaudeCodeHubBaseUrl,
-  redactClaudeCodeHubSecrets,
   searchProviders,
   updateProvider,
+  updateProviderV1,
   validateClaudeCodeHubConfig,
 } from "~/services/apiService/claudeCodeHub"
 import { server } from "~~/tests/msw/server"
@@ -308,6 +311,217 @@ describe("Claude Code Hub action API adapter", () => {
     expect(capturedAuthorization).toBe("Bearer admin-secret")
   })
 
+  it("uses the native v1 resource methods and strict request bodies", async () => {
+    const requests: Array<{ method: string; path: string; body?: unknown }> = []
+    const summary = {
+      id: 42,
+      name: "Native provider",
+      url: "https://api.example.invalid",
+      providerType: "openai-compatible",
+      allowedModels: [{ matchType: "exact", pattern: "model-example" }],
+    }
+
+    server.use(
+      http.get(`${PROVIDER_V1_BASE}/42`, ({ request }) => {
+        requests.push({
+          method: request.method,
+          path: new URL(request.url).pathname,
+        })
+        return HttpResponse.json(summary)
+      }),
+      http.post(PROVIDER_V1_BASE, async ({ request }) => {
+        requests.push({
+          method: request.method,
+          path: new URL(request.url).pathname,
+          body: await request.json(),
+        })
+        return HttpResponse.json(summary, { status: 201 })
+      }),
+      http.patch(`${PROVIDER_V1_BASE}/42`, async ({ request }) => {
+        requests.push({
+          method: request.method,
+          path: new URL(request.url).pathname,
+          body: await request.json(),
+        })
+        return HttpResponse.json({ ...summary, name: "Updated provider" })
+      }),
+      http.delete(`${PROVIDER_V1_BASE}/42`, ({ request }) => {
+        requests.push({
+          method: request.method,
+          path: new URL(request.url).pathname,
+        })
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+
+    await expect(getProvider(config, 42)).resolves.toEqual(summary)
+    await expect(
+      createProviderV1(config, {
+        name: "Native provider",
+        url: "https://api.example.invalid",
+        key: "credential-placeholder",
+        provider_type: "openai-compatible",
+        allowed_models: [{ matchType: "exact", pattern: "model-example" }],
+      }),
+    ).resolves.toEqual(summary)
+    await expect(
+      updateProviderV1(config, 42, {
+        name: "Updated provider",
+        is_enabled: false,
+      }),
+    ).resolves.toEqual({ ...summary, name: "Updated provider" })
+    await expect(deleteProviderV1(config, 42)).resolves.toBeUndefined()
+
+    expect(requests).toEqual([
+      { method: "GET", path: "/api/v1/providers/42" },
+      {
+        method: "POST",
+        path: "/api/v1/providers",
+        body: {
+          name: "Native provider",
+          url: "https://api.example.invalid",
+          key: "credential-placeholder",
+          provider_type: "openai-compatible",
+          allowed_models: [{ matchType: "exact", pattern: "model-example" }],
+        },
+      },
+      {
+        method: "PATCH",
+        path: "/api/v1/providers/42",
+        body: { name: "Updated provider", is_enabled: false },
+      },
+      { method: "DELETE", path: "/api/v1/providers/42" },
+    ])
+  })
+
+  it("marks deterministic v1 rejections as confirmed and uncertain failures as ambiguous", async () => {
+    server.use(
+      http.post(PROVIDER_V1_BASE, () =>
+        HttpResponse.json(
+          {
+            type: "about:blank",
+            title: "Provider rejected",
+            detail: "Provider input is invalid",
+          },
+          { status: 422 },
+        ),
+      ),
+    )
+    const invoke = () =>
+      createProviderV1(config, {
+        name: "Native provider",
+        url: "https://api.example.invalid",
+        key: "credential-placeholder",
+        provider_type: "openai-compatible",
+        allowed_models: [],
+      })
+
+    await expect(invoke()).rejects.toMatchObject({
+      name: "ClaudeCodeHubApiError",
+      status: 422,
+      dispatch: "dispatched",
+      responseReceived: true,
+      confirmedNonApplication: true,
+    })
+
+    server.use(
+      http.post(PROVIDER_V1_BASE, () =>
+        HttpResponse.json(
+          {
+            title: "Temporary upstream failure",
+            detail: "The response was lost after dispatch",
+          },
+          { status: 503 },
+        ),
+      ),
+    )
+    await expect(invoke()).rejects.toMatchObject({
+      name: "ClaudeCodeHubApiError",
+      status: 503,
+      dispatch: "dispatched",
+      responseReceived: true,
+      confirmedNonApplication: false,
+    })
+
+    server.use(http.post(PROVIDER_V1_BASE, () => HttpResponse.error()))
+    await expect(invoke()).rejects.toMatchObject({
+      name: "ClaudeCodeHubApiError",
+      dispatch: "dispatched",
+      responseReceived: false,
+      confirmedNonApplication: false,
+    })
+  })
+
+  it("uses a default AbortError when a pre-cancelled v1 mutation has no reason", async () => {
+    const any = vi
+      .spyOn(AbortSignal, "any")
+      .mockReturnValue({ aborted: true, reason: undefined } as AbortSignal)
+
+    try {
+      const failure = await createProviderV1(
+        config,
+        {
+          name: "Native provider",
+          url: "https://api.example.invalid",
+          key: "credential-placeholder",
+          provider_type: "openai-compatible",
+          allowed_models: [],
+        },
+        { signal: new AbortController().signal },
+      ).catch((error: unknown) => error)
+
+      expect(failure).toMatchObject({
+        name: "ClaudeCodeHubApiError",
+        message: "The operation was aborted",
+        dispatch: "not-dispatched",
+        responseReceived: false,
+        confirmedNonApplication: true,
+        raw: expect.objectContaining({ name: "AbortError" }),
+        code: DOMException.ABORT_ERR,
+      })
+    } finally {
+      any.mockRestore()
+    }
+  })
+
+  it("wraps evidence-less v1 parse errors with mutation evidence", async () => {
+    server.use(
+      http.post(
+        PROVIDER_V1_BASE,
+        () =>
+          new HttpResponse("not json", {
+            status: 502,
+            headers: { "Content-Type": "text/plain" },
+          }),
+      ),
+    )
+
+    const failure = await createProviderV1(config, {
+      name: "Native provider",
+      url: "https://api.example.invalid",
+      key: "credential-placeholder",
+      provider_type: "openai-compatible",
+      allowed_models: [],
+    }).catch((error: unknown) => error)
+
+    expect(failure).toMatchObject({
+      name: "ClaudeCodeHubApiError",
+      message: "Claude Code Hub returned a non-JSON response (502)",
+      status: 502,
+      dispatch: "dispatched",
+      responseReceived: true,
+      confirmedNonApplication: false,
+      code: undefined,
+    })
+    expect((failure as ClaudeCodeHubApiError).raw).toBeInstanceOf(
+      ClaudeCodeHubApiError,
+    )
+    expect(
+      ((failure as ClaudeCodeHubApiError).raw as ClaudeCodeHubApiError)
+        .evidence,
+    ).toBeUndefined()
+  })
+
   it("throws when the provider v1 reveal API omits a usable string key", async () => {
     server.use(
       http.get(`${PROVIDER_V1_BASE}/42/key:reveal`, () =>
@@ -322,7 +536,7 @@ describe("Claude Code Hub action API adapter", () => {
     )
   })
 
-  it("searches providers through the provider v1 list API", async () => {
+  it("preserves literal search text and trims whitespace in the provider v1 query", async () => {
     let capturedAuthorization: string | null = null
     let capturedQuery: string | null = null
 
@@ -343,7 +557,9 @@ describe("Claude Code Hub action API adapter", () => {
       }),
     )
 
-    await expect(searchProviders(config, "search match")).resolves.toEqual([
+    await expect(
+      searchProviders(config, "  Search & 渠道 + #1  "),
+    ).resolves.toEqual([
       {
         id: 9,
         name: "Search Match",
@@ -351,7 +567,9 @@ describe("Claude Code Hub action API adapter", () => {
       },
     ])
     expect(capturedAuthorization).toBe("Bearer admin-secret")
-    expect(capturedQuery).toBe("search match")
+    expect(capturedQuery).toBe("Search & 渠道 + #1")
+    await searchProviders(config, "   ")
+    expect(capturedQuery).toBeNull()
   })
 
   it("lists providers through the provider v1 list API without search query", async () => {
@@ -401,7 +619,70 @@ describe("Claude Code Hub action API adapter", () => {
     await expect(listProviders(config)).rejects.toThrow("non-JSON response")
   })
 
-  it("throws redacted errors for provider v1 search failures", async () => {
+  it("keeps canonical v1 problem details and error metadata internally", async () => {
+    const problem = {
+      type: "urn:claude-code-hub:problem:auth.forbidden",
+      title: "Forbidden",
+      status: 403,
+      detail: "bad token admin-secret",
+      instance: "/api/v1/providers",
+      errorCode: "auth.forbidden",
+      errorParams: { role: "admin" },
+    }
+    server.use(
+      http.get(PROVIDER_V1_BASE, () =>
+        HttpResponse.json(problem, { status: 403 }),
+      ),
+    )
+
+    await expect(listProviders(config)).rejects.toMatchObject({
+      message: "bad token admin-secret",
+      status: 403,
+      code: "auth.forbidden",
+      raw: problem,
+    })
+  })
+
+  it("ignores unverified v1 fields and response status text", async () => {
+    const failure = {
+      error: "legacy admin-secret",
+      message: "legacy message",
+      status: 403,
+    }
+    server.use(
+      http.get(PROVIDER_V1_BASE, () =>
+        HttpResponse.json(failure, {
+          status: 403,
+          statusText: "Forbidden",
+        }),
+      ),
+    )
+
+    await expect(listProviders(config)).rejects.toMatchObject({
+      message: "Claude Code Hub request failed (403)",
+      status: 403,
+      code: undefined,
+      raw: failure,
+    })
+  })
+
+  it("falls back from a blank v1 detail to the verified problem title", async () => {
+    server.use(
+      http.get(PROVIDER_V1_BASE, () =>
+        HttpResponse.json(
+          { detail: "   ", title: "Provider request rejected" },
+          { status: 400 },
+        ),
+      ),
+    )
+
+    await expect(listProviders(config)).rejects.toMatchObject({
+      message: "Provider request rejected",
+      status: 400,
+    })
+  })
+
+  it("preserves provider v1 search details until disclosure", async () => {
     server.use(
       http.get(PROVIDER_V1_BASE, () =>
         HttpResponse.json(
@@ -416,11 +697,11 @@ describe("Claude Code Hub action API adapter", () => {
     )
 
     await expect(searchProviders(config, "search match")).rejects.toThrow(
-      "bad token [REDACTED] while searching",
+      "bad token admin-secret while searching",
     )
   })
 
-  it("throws redacted errors for provider v1 list failures", async () => {
+  it("preserves provider v1 list details until disclosure", async () => {
     server.use(
       http.get(PROVIDER_V1_BASE, () =>
         HttpResponse.json(
@@ -435,7 +716,7 @@ describe("Claude Code Hub action API adapter", () => {
     )
 
     await expect(listProviders(config)).rejects.toThrow(
-      "bad token [REDACTED] while listing",
+      "bad token admin-secret while listing",
     )
   })
 
@@ -502,7 +783,7 @@ describe("Claude Code Hub action API adapter", () => {
     }
   })
 
-  it("throws redacted errors for provider v1 reveal failures", async () => {
+  it("preserves provider v1 reveal details until disclosure", async () => {
     server.use(
       http.get(`${PROVIDER_V1_BASE}/42/key:reveal`, () =>
         HttpResponse.json(
@@ -517,7 +798,7 @@ describe("Claude Code Hub action API adapter", () => {
     )
 
     await expect(getUnmaskedProviderKey(config, 42)).rejects.toThrow(
-      "bad token [REDACTED]",
+      "bad token admin-secret",
     )
   })
 
@@ -551,7 +832,64 @@ describe("Claude Code Hub action API adapter", () => {
     await expect(listProvidersFromAction(config)).resolves.toEqual([])
   })
 
-  it("throws redacted errors for action failures and malformed responses", async () => {
+  it("keeps a verified action error string and raw response internally", async () => {
+    const failure = {
+      ok: false,
+      error: "bad token admin-secret and key sk-real-key",
+      errorCode: "provider.invalid_key",
+      errorParams: { provider: "Provider" },
+    }
+    server.use(
+      http.post(`${PROVIDER_ACTION_BASE}/addProvider`, () =>
+        HttpResponse.json(failure, { status: 403 }),
+      ),
+    )
+
+    await expect(
+      createProvider(config, {
+        name: "Provider",
+        url: "https://api.example.com",
+        key: "sk-real-key",
+        provider_type: "openai-compatible",
+        allowed_models: [],
+      }),
+    ).rejects.toMatchObject({
+      message: "bad token admin-secret and key sk-real-key",
+      status: 403,
+      code: "provider.invalid_key",
+      raw: failure,
+    })
+  })
+
+  it("ignores unverified action error objects and uses the fixed fallback", async () => {
+    const failure = {
+      ok: false,
+      error: { detail: "unverified admin-secret" },
+    }
+    server.use(
+      http.post(`${PROVIDER_ACTION_BASE}/addProvider`, () =>
+        HttpResponse.json(failure, {
+          status: 403,
+          statusText: "Forbidden",
+        }),
+      ),
+    )
+
+    await expect(
+      createProvider(config, {
+        name: "Provider",
+        url: "https://api.example.com",
+        key: "sk-real-key",
+        provider_type: "openai-compatible",
+        allowed_models: [],
+      }),
+    ).rejects.toMatchObject({
+      message: "Claude Code Hub request failed (403)",
+      raw: failure,
+    })
+  })
+
+  it("preserves verified action strings and ignores unverified objects", async () => {
     server.use(
       http.post(`${PROVIDER_ACTION_BASE}/addProvider`, () =>
         HttpResponse.json(
@@ -572,7 +910,7 @@ describe("Claude Code Hub action API adapter", () => {
         provider_type: "openai-compatible",
         allowed_models: [],
       }),
-    ).rejects.toThrow("bad token [REDACTED] and key [REDACTED]")
+    ).rejects.toThrow("bad token admin-secret and key sk-real-key")
 
     server.use(
       http.post(`${PROVIDER_ACTION_BASE}/addProvider`, () =>
@@ -594,7 +932,7 @@ describe("Claude Code Hub action API adapter", () => {
         provider_type: "openai-compatible",
         allowed_models: [],
       }),
-    ).rejects.toThrow('{"detail":"bad token [REDACTED] and key [REDACTED]"}')
+    ).rejects.toThrow("Claude Code Hub request failed (403)")
 
     server.use(
       http.post(`${PROVIDER_ACTION_BASE}/getProviders`, () =>
@@ -604,17 +942,6 @@ describe("Claude Code Hub action API adapter", () => {
 
     await expect(listProvidersFromAction(config)).rejects.toThrow(
       "invalid action response",
-    )
-  })
-
-  it("redacts bearer tokens in arbitrary messages", () => {
-    expect(
-      redactClaudeCodeHubSecrets("Authorization Bearer admin-secret", [
-        "admin-secret",
-      ]),
-    ).toBe("Authorization Bearer [REDACTED]")
-    expect(redactClaudeCodeHubSecrets("adapter failure", ["ad"])).toBe(
-      "adapter failure",
     )
   })
 

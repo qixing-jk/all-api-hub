@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -7,13 +6,13 @@ import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
+import toast from "~/lib/notify"
 import { validateClaudeCodeHubConfig } from "~/services/apiService/claudeCodeHub"
-import { getErrorMessage } from "~/utils/core/error"
+import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import {
-  createVersionedPreferenceSaveOptions,
   getPreferenceWriteFailureMessage,
   runPreferenceUpdateWithToast,
-} from "~/utils/core/toastHelpers"
+} from "~/utils/feedback/preferenceFeedback"
 
 /**
  * Renders Claude Code Hub settings fields and a config validation action.
@@ -94,7 +93,7 @@ export default function ClaudeCodeHubSettings() {
           baseUrl: trimmedUrl,
           adminToken,
         },
-        createVersionedPreferenceSaveOptions(expectedLastUpdated),
+        { expectedLastUpdated },
       )
 
       if (saveResult.ok) {
@@ -109,9 +108,12 @@ export default function ClaudeCodeHubSettings() {
         )
       }
     } catch (error) {
+      const safeError =
+        toSanitizedErrorSummary(error, [adminToken]) ||
+        "Claude Code Hub request failed"
       toast.error(
         t("claudeCodeHub.validation.failed", {
-          error: getErrorMessage(error),
+          error: safeError,
         }),
       )
     } finally {

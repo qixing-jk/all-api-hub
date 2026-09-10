@@ -10,6 +10,10 @@ import { Heading5, IconButton } from "~/components/ui"
 import { VersionBadge } from "~/components/VersionBadge"
 import { Z_INDEX } from "~/constants/designTokens"
 import { ProductAnnouncementButton } from "~/features/ProductAnnouncements/ProductAnnouncementButton"
+import {
+  PRODUCT_TOUR_TARGET_ATTRIBUTE,
+  PRODUCT_TOUR_TARGETS,
+} from "~/features/ProductTour/constants"
 import { useIsMobile } from "~/hooks/useMediaQuery"
 import { cn } from "~/lib/utils"
 import { getRepository } from "~/utils/navigation/packageMeta"
@@ -30,6 +34,7 @@ interface SearchTriggerProps {
   ariaLabel: string
   placeholder: string
   className?: string
+  productTourTarget?: string
   showShortcutHint?: boolean
 }
 
@@ -41,6 +46,7 @@ function SearchTrigger({
   ariaLabel,
   placeholder,
   className,
+  productTourTarget,
   showShortcutHint = true,
 }: SearchTriggerProps) {
   return (
@@ -52,6 +58,9 @@ function SearchTrigger({
         className,
       )}
       aria-label={ariaLabel}
+      {...{
+        [PRODUCT_TOUR_TARGET_ATTRIBUTE]: productTourTarget,
+      }}
     >
       <span className="flex min-w-0 items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
         <Search className="h-4 w-4 shrink-0" />
@@ -131,6 +140,10 @@ function Header({
               size="default"
               className="tap-highlight-transparent touch-manipulation md:hidden"
               aria-label={t("navigation.toggleMenu")}
+              {...{
+                [PRODUCT_TOUR_TARGET_ATTRIBUTE]:
+                  PRODUCT_TOUR_TARGETS.MobileMenu,
+              }}
             >
               {isMobileSidebarOpen ? (
                 <X className="h-6 w-6" />
@@ -184,6 +197,7 @@ function Header({
               ariaLabel={t("optionsSearch.open")}
               placeholder={t("optionsSearch.placeholder")}
               className="max-w-md"
+              productTourTarget={PRODUCT_TOUR_TARGETS.Workspace}
             />
           </div>
 

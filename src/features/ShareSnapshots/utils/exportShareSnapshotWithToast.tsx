@@ -1,6 +1,5 @@
-import toast from "react-hot-toast"
-
 import { ShareSnapshotCaptionToast } from "~/features/ShareSnapshots/components/ShareSnapshotCaptionToast"
+import toast from "~/lib/notify"
 import { exportShareSnapshot } from "~/services/sharing/shareSnapshots"
 import type { ShareSnapshotPayload } from "~/services/sharing/shareSnapshots/types"
 import { getErrorMessage } from "~/utils/core/error"

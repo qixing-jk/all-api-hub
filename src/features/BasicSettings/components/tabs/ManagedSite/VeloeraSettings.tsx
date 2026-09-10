@@ -15,8 +15,8 @@ import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
 import { createTab } from "~/utils/browser/browserApi"
-import { runPreferenceUpdateWithToast } from "~/utils/core/toastHelpers"
 import { joinUrl } from "~/utils/core/url"
+import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
 /**
  * Settings panel for configuring Veloera connection credentials (base URL, admin token, user ID).
@@ -98,13 +98,14 @@ export default function VeloeraSettings() {
     !isManagedSiteAdminUserIdInputValid(localUserId)
       ? t("messages:errors.validation.userIdNumeric")
       : undefined
-  const shouldShowAdminCredentialsLink = Boolean(trimmedBaseUrl)
-  const adminCredentialsUrl = shouldShowAdminCredentialsLink
-    ? joinUrl(
-        trimmedBaseUrl,
-        getSiteRouteConfigForKey(SITE_TYPES.VELOERA).adminCredentialsPath,
-      )
-    : ""
+  const adminCredentialsPath = getSiteRouteConfigForKey(
+    SITE_TYPES.VELOERA,
+  ).adminCredentialsPath
+  const adminCredentialsUrl =
+    trimmedBaseUrl && adminCredentialsPath
+      ? joinUrl(trimmedBaseUrl, adminCredentialsPath)
+      : ""
+  const shouldShowAdminCredentialsLink = Boolean(adminCredentialsUrl)
 
   const handleOpenAdminCredentials = async () => {
     if (!adminCredentialsUrl) return

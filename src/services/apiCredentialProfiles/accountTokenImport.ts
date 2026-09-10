@@ -1,5 +1,5 @@
 import type { AccountRuntimeKeyLocator } from "~/services/accounts/accountRuntimeKeys"
-import { normalizeAccountSiteUrlForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
+import { normalizeAccountSiteProfileUrlForManagedChannel } from "~/services/accounts/accountSiteProfile/urls"
 import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
 import {
   apiCredentialProfileLinks,
@@ -45,7 +45,7 @@ export async function captureProfileFromAccountToken({
         tokenName: token.name ?? "",
       }),
       apiType,
-      baseUrl: normalizeAccountSiteUrlForManagedChannel({
+      baseUrl: normalizeAccountSiteProfileUrlForManagedChannel({
         siteType,
         url: baseUrl,
       }),

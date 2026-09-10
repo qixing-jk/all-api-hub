@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
-import { accountStorage } from "~/services/accounts/accountStorage"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import {
   getSelectedCheckInStatus,
@@ -30,6 +29,7 @@ import {
   updateAutoCheckinSettings,
 } from "~/services/checkin/autoCheckin/scheduler"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
+import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -73,6 +73,7 @@ import {
   automaticExecution,
   userCommandExecution,
 } from "~~/tests/services/protectionBypass/fixtures"
+import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const manualExecution = (
@@ -193,17 +194,33 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   },
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/notifications/taskNotificationService", () => ({
+  notifyTaskResult: vi.fn(),
+}))
+
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: {
     getAllAccounts: vi.fn(),
     getEnabledAccounts: vi.fn(),
+    getAccountById: vi.fn(),
+  },
+}))
+vi.mock("~/services/accounts/accountStorage/accountCheckInState", () => ({
+  accountCheckInState: {
     updateAccount: vi.fn(),
     markAccountAsSiteCheckedIn: vi.fn(),
-    refreshAccount: vi.fn(),
-    getAccountById: vi.fn(),
-    getDisplayDataById: vi.fn(),
-    convertToDisplayData: vi.fn(),
     prepareAccountForSelectedCheckIn: vi.fn(),
+  },
+}))
+vi.mock("~/services/accounts/accountStorage/accountRefresh", () => ({
+  accountRefresh: { refreshAccount: vi.fn() },
+}))
+vi.mock("~/services/accounts/accountStorage/accountReadModels", () => ({
+  accountReadModels: { getDisplayDataById: vi.fn() },
+}))
+vi.mock("~/services/accounts/accountStorage/accountPresentation", () => ({
+  accountPresentation: {
+    convertToDisplayData: vi.fn(),
   },
 }))
 
@@ -325,6 +342,8 @@ const mockedBrowserApi = {
   onAlarm: onAlarm as unknown as ReturnType<typeof vi.fn>,
   sendRuntimeMessage: sendRuntimeMessage as unknown as ReturnType<typeof vi.fn>,
 }
+
+const mockedNotifyTaskResult = vi.mocked(notifyTaskResult)
 
 const mockedProductAnalytics = {
   trackProductAnalyticsActionCompleted:
@@ -1640,6 +1659,58 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     vi.useRealTimers()
   })
 
+  it.each([
+    { reason: "network_error", retryable: true },
+    { reason: "account_unavailable", retryable: false },
+    { reason: "status_unavailable", retryable: false },
+  ])(
+    "persists blocked $reason as a failure with explicit retry policy",
+    async ({ reason, retryable }) => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date(2024, 0, 1, 9, 30, 0))
+      mockedUserPreferences.getPreferences.mockResolvedValue({
+        autoCheckin: {
+          ...DEFAULT_PREFERENCES.autoCheckin,
+          globalEnabled: true,
+          retryStrategy: {
+            enabled: true,
+            intervalMinutes: 30,
+            maxAttemptsPerDay: 3,
+          },
+        },
+      })
+      const account = {
+        id: "blocked-account",
+        disabled: false,
+        site_name: "Example Site",
+        site_type: SITE_TYPES.VELOERA,
+        account_info: { username: "example-user" },
+        checkIn: runnableCheckIn(),
+      }
+      mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+      resolveProviderForTest.mockReturnValue({
+        getReadiness: vi.fn(() => ({ ready: true })),
+        checkIn: vi.fn(),
+      })
+      mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+        kind: "blocked",
+        reason,
+        retryable,
+      })
+      await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+      expect(storedStatus.perAccount[account.id]).toMatchObject({
+        status: "failed",
+        reasonCode: reason,
+        retryable,
+        messageKey: `autoCheckin:skipReasons.${reason}`,
+      })
+      expect(storedStatus.retryState?.pendingAccountIds ?? []).toEqual(
+        retryable ? [account.id] : [],
+      )
+      vi.useRealTimers()
+    },
+  )
+
   it("keeps a bounded retry queued when authoritative status is temporarily unavailable", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2024, 0, 1, 9, 30, 0))
@@ -1692,7 +1763,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       checkIn: vi.fn(),
     })
     mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
-      kind: "skipped",
+      kind: "blocked",
       reason: "network_error",
       retryable: true,
     })
@@ -2530,6 +2601,72 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       { maxAttempts: 1 },
     )
 
+    vi.useRealTimers()
+  })
+
+  it("keeps already-checked and uncertain retry outcomes distinct in notifications", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 30, 0))
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...DEFAULT_PREFERENCES.autoCheckin!,
+        globalEnabled: true,
+        notifyUiOnCompletion: false,
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+    const accounts = ["already", "uncertain"].map((id) => ({
+      id,
+      site_name: id,
+      site_type: SITE_TYPES.VELOERA,
+      account_info: { username: id },
+      checkIn: runnableCheckIn(),
+    }))
+    storedStatus = {
+      lastDailyRunDay: "2024-01-01",
+      retryState: {
+        day: "2024-01-01",
+        pendingAccountIds: ["already", "uncertain"],
+        attemptsByAccount: { already: 1, uncertain: 1 },
+      },
+      perAccount: {},
+    } as any
+    mockedAccountStorage.getAllAccounts.mockResolvedValue(accounts)
+    mockedAccountStorage.getAccountById.mockImplementation(async (id: string) =>
+      accounts.find((account) => account.id === id),
+    )
+    resolveProviderForTest.mockReturnValue({
+      getReadiness: vi.fn(() => ({ ready: true })),
+      checkIn: vi.fn(async (account: any) =>
+        account.id === "already"
+          ? { status: "already_checked" }
+          : {
+              status: "uncertain",
+              reconciliation: "unknown",
+              retryable: false,
+            },
+      ),
+    })
+    await (autoCheckinScheduler as any).runRetryCheckins()
+    expect(mockedNotifyTaskResult).toHaveBeenCalledWith({
+      task: "autoCheckin",
+      status: "partial_success",
+      counts: {
+        total: 2,
+        success: 0,
+        alreadyChecked: 1,
+        failed: 0,
+        uncertain: 1,
+        skipped: 0,
+      },
+    })
+    expect(storedStatus.perAccount.already.status).toBe("already_checked")
+    expect(storedStatus.perAccount.uncertain.status).toBe("uncertain")
+    expect(storedStatus.retryState).toBeUndefined()
     vi.useRealTimers()
   })
 
@@ -6166,6 +6303,30 @@ describe("autoCheckinScheduler debug helpers", () => {
 })
 
 describe("autoCheckinScheduler private helpers", () => {
+  it("sends already-checked results as a distinct notification count", async () => {
+    await (autoCheckinScheduler as any).notifyScheduledRunResult({
+      successCount: 2,
+      alreadyCheckedCount: 1,
+      failedCount: 1,
+      uncertainCount: 1,
+      skippedCount: 0,
+      total: 4,
+    })
+
+    expect(mockedNotifyTaskResult).toHaveBeenCalledWith({
+      task: "autoCheckin",
+      status: "partial_success",
+      counts: {
+        total: 4,
+        success: 1,
+        alreadyChecked: 1,
+        failed: 1,
+        uncertain: 1,
+        skipped: 0,
+      },
+    })
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -6631,6 +6792,44 @@ describe("autoCheckinScheduler private helpers", () => {
     })
   })
 
+  it("revalidates the selected method through the account check-in owner", async () => {
+    const account = {
+      id: "revalidate-owner",
+      site_name: "Revalidate Owner",
+      site_type: SITE_TYPES.NEW_API,
+      disabled: false,
+      account_info: {},
+      checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+    } as any
+    const refreshedConfig = runnableCheckIn(true, SITE_TYPES.NEW_API)
+    const preparedAccount = { ...account, checkIn: refreshedConfig }
+    mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValueOnce(
+      preparedAccount,
+    )
+    mockedMethods.executeSelectedCheckIn.mockImplementationOnce(
+      async ({ revalidateAccount }: any) => {
+        await expect(revalidateAccount(refreshedConfig)).resolves.toBe(
+          preparedAccount,
+        )
+        return { kind: "skipped", reason: "account_unavailable" }
+      },
+    )
+
+    await expect(
+      (autoCheckinScheduler as any).runAccountCheckin(
+        account,
+        account.site_name,
+        TEMP_WINDOW_REQUEST_SOURCES.Background,
+        OPTIONS_MANUAL_EXECUTION,
+      ),
+    ).resolves.toMatchObject({
+      result: { status: "skipped", reasonCode: "account_unavailable" },
+    })
+    expect(
+      mockedAccountStorage.prepareAccountForSelectedCheckIn,
+    ).toHaveBeenCalledWith(account.id, refreshedConfig)
+  })
+
   it.each([
     {
       domainReason: "status_unavailable",
@@ -7025,8 +7224,9 @@ describe("autoCheckinScheduler private helpers", () => {
       (autoCheckinScheduler as any).recalculateSummaryFromResults(
         {
           a: { status: "success" },
-          b: { status: "failed" },
-          c: { status: "skipped" },
+          b: { status: "already_checked" },
+          c: { status: "failed" },
+          d: { status: "skipped" },
         },
         {
           totalEligible: 7,
@@ -7034,8 +7234,9 @@ describe("autoCheckinScheduler private helpers", () => {
       ),
     ).toEqual({
       totalEligible: 7,
-      executed: 2,
-      successCount: 1,
+      executed: 3,
+      successCount: 2,
+      alreadyCheckedCount: 1,
       failedCount: 1,
       skippedCount: 1,
       needsRetry: true,

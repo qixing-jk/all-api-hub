@@ -1,10 +1,12 @@
 import userEvent from "@testing-library/user-event"
+import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import SiteAnnouncementsPage from "~/entrypoints/options/pages/SiteAnnouncements"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import notify from "~/lib/notify"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -20,13 +22,15 @@ import {
 import { SiteAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { sendSiteAnnouncementsMessage } from "~/services/siteAnnouncements/messaging"
 import type {
+  SiteAnnouncementCheckResult,
   SiteAnnouncementRecord,
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
 import { deepOverride } from "~/utils"
-import { showResultToast } from "~/utils/core/toastHelpers"
+import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { openSettingsTab } from "~/utils/navigation"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
+import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
   sendSiteAnnouncementsMessageMock,
@@ -54,13 +58,13 @@ vi.mock("~/services/siteAnnouncements/messaging", () => ({
   sendSiteAnnouncementsMessage: sendSiteAnnouncementsMessageMock,
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: {
     getAllAccounts: vi.fn(),
   },
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/operationFeedback", () => ({
   showResultToast: vi.fn(),
 }))
 
@@ -143,7 +147,7 @@ describe("SiteAnnouncementsPage", () => {
     vi.spyOn(userPreferences, "getPreferences").mockResolvedValue(
       structuredClone(DEFAULT_PREFERENCES),
     )
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "account-1",
         disabled: false,
@@ -177,6 +181,39 @@ describe("SiteAnnouncementsPage", () => {
         }
       },
     )
+  })
+
+  it("retranslates load feedback without reloading announcements or repeating notifications", async () => {
+    sendSiteAnnouncementsMessageMock.mockRejectedValue(new Error("offline"))
+    const i18n = await createResourceTestI18n({
+      en: {
+        siteAnnouncements: (await import("~/locales/en/siteAnnouncements.json"))
+          .default,
+      },
+      "zh-CN": {
+        siteAnnouncements: (
+          await import("~/locales/zh-CN/siteAnnouncements.json")
+        ).default,
+      },
+    })
+    render(
+      <I18nextProvider i18n={i18n}>
+        <SiteAnnouncementsPage />
+      </I18nextProvider>,
+    )
+    expect(
+      await screen.findByText(i18n.t("siteAnnouncements:messages.loadFailed")),
+    ).toBeVisible()
+    const requests = sendSiteAnnouncementsMessageMock.mock.calls.length
+    const notifications = vi.mocked(showResultToast).mock.calls.length
+    await act(async () => {
+      await i18n.changeLanguage("zh-CN")
+    })
+    expect(
+      screen.getByText(i18n.t("siteAnnouncements:messages.loadFailed")),
+    ).toBeVisible()
+    expect(sendSiteAnnouncementsMessageMock).toHaveBeenCalledTimes(requests)
+    expect(showResultToast).toHaveBeenCalledTimes(notifications)
   })
 
   const expectCheckNowAnalyticsStarted = (surfaceId: string) => {
@@ -224,6 +261,23 @@ describe("SiteAnnouncementsPage", () => {
     })
   }
 
+  const mockManualCheckResult = (checkResult: SiteAnnouncementCheckResult) => {
+    sendSiteAnnouncementsMessageMock.mockImplementation(
+      async (type: string) => {
+        switch (type) {
+          case SiteAnnouncementsMessageTypes.ListRecords:
+            return { success: true, data: records }
+          case SiteAnnouncementsMessageTypes.GetStatus:
+            return { success: true, data: status }
+          case SiteAnnouncementsMessageTypes.CheckNow:
+            return { success: true, data: checkResult }
+          default:
+            return { success: true }
+        }
+      },
+    )
+  }
+
   it("renders overview, notification summary, and route-expanded announcement card", async () => {
     render(
       <SiteAnnouncementsPage routeParams={{ recordId: "announcement-1" }} />,
@@ -262,7 +316,7 @@ describe("SiteAnnouncementsPage", () => {
 
   it("routes the empty announcement setup state to account management when no account exists", async () => {
     const user = userEvent.setup()
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([] as any)
     sendSiteAnnouncementsMessageMock.mockImplementation(
       async (type: string) => {
         switch (type) {
@@ -294,7 +348,7 @@ describe("SiteAnnouncementsPage", () => {
   })
 
   it("does not block announcement records when account setup lookup fails", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockRejectedValue(
+    vi.mocked(accountQueries.getAllAccounts).mockRejectedValue(
       new Error("account storage unavailable"),
     )
 
@@ -608,7 +662,7 @@ describe("SiteAnnouncementsPage", () => {
     })
   })
 
-  it("shows success feedback and reloads after a manual check", async () => {
+  it("warns about unsupported sites and reloads after a manual check", async () => {
     const user = userEvent.setup()
 
     render(<SiteAnnouncementsPage />)
@@ -625,8 +679,9 @@ describe("SiteAnnouncementsPage", () => {
 
     await waitFor(() => {
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
-        PRODUCT_ANALYTICS_RESULTS.Success,
+        PRODUCT_ANALYTICS_RESULTS.Failure,
         {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
             itemCount: 3,
             successCount: 1,
@@ -634,17 +689,109 @@ describe("SiteAnnouncementsPage", () => {
           },
         },
       )
-      expect(showResultToast).toHaveBeenCalledWith({
-        success: true,
-        successFallback: "siteAnnouncements:messages.checkCompleted",
-        errorFallback: "siteAnnouncements:messages.checkFailed",
-      })
+      expect(notify.warning).toHaveBeenCalledWith(
+        "siteAnnouncements:messages.checkCompletedWithIssues",
+      )
+      expect(showResultToast).not.toHaveBeenCalled()
     })
     expect(
       sendSiteAnnouncementsMessageMock.mock.calls.filter(
         ([type]) => type === SiteAnnouncementsMessageTypes.ListRecords,
       ),
     ).toHaveLength(2)
+  })
+
+  it("shows success feedback when every manual announcement check succeeds", async () => {
+    const user = userEvent.setup()
+
+    mockManualCheckResult({
+      checked: 2,
+      created: 0,
+      notified: 0,
+      failed: 0,
+      unsupported: 0,
+      records: [],
+    })
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:title")
+    await user.click(
+      screen.getByRole("button", {
+        name: "siteAnnouncements:actions.checkNow",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(showResultToast).toHaveBeenCalledWith({
+        success: true,
+        message: undefined,
+        successFallback: "siteAnnouncements:messages.checkCompleted",
+        errorFallback: "siteAnnouncements:messages.checkFailed",
+      })
+    })
+    expect(notify.warning).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          itemCount: 2,
+          successCount: 2,
+          failureCount: 0,
+        },
+      },
+    )
+  })
+
+  it("classifies an unsupported-only manual check as an actionable partial result", async () => {
+    const user = userEvent.setup()
+
+    mockManualCheckResult({
+      checked: 2,
+      created: 0,
+      notified: 0,
+      failed: 0,
+      unsupported: 1,
+      records: [],
+    })
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:title")
+    await user.click(
+      screen.getByRole("button", {
+        name: "siteAnnouncements:actions.checkNow",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(notify.warning).toHaveBeenCalledWith(
+        "siteAnnouncements:messages.checkCompletedWithIssues",
+      )
+    })
+    expect(showResultToast).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+        insights: {
+          itemCount: 2,
+          successCount: 1,
+          failureCount: 0,
+        },
+      },
+    )
+  })
+
+  it("shows aggregate failure and unsupported status in the all-sites view", async () => {
+    render(<SiteAnnouncementsPage />)
+
+    expect(
+      await screen.findByText("siteAnnouncements:status.aggregateIssuesTitle"),
+    ).toBeVisible()
+    expect(
+      screen.getByText("siteAnnouncements:status.aggregateIssues"),
+    ).toBeVisible()
   })
 
   it("checks all visible site accounts when no filters are selected", async () => {
@@ -779,7 +926,7 @@ describe("SiteAnnouncementsPage", () => {
 
   it("keeps filtered empty copy when cached records exist without enabled accounts", async () => {
     const user = userEvent.setup()
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([] as any)
 
     sendSiteAnnouncementsMessageMock.mockImplementation(
       async (type: string) => {
@@ -1141,4 +1288,9 @@ describe("SiteAnnouncementsPage", () => {
       )
     })
   })
+})
+
+vi.mock("~/lib/notify", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/notify")>()
+  return { default: { ...actual.default, warning: vi.fn() } }
 })

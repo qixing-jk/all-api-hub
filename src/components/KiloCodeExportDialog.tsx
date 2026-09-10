@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -22,7 +21,8 @@ import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDial
 import { buildDefaultTokenCreatePrefill } from "~/features/TokenProvisioning/components/AddTokenDialog/defaultTokenCreatePrefill"
 import { useAccountData } from "~/hooks/useAccountData"
 import { useSafeExportAction } from "~/hooks/useSafeExportAction"
-import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
+import toast from "~/lib/notify"
+import { ensureAccountApiToken } from "~/services/accounts/ensureAccountApiToken"
 import {
   resolveDefaultTokenQuickCreateResolution,
   TOKEN_QUICK_CREATE_RESOLUTION_KINDS,

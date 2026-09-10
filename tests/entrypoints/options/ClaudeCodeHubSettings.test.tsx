@@ -5,11 +5,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ClaudeCodeHubSettings from "~/features/BasicSettings/components/tabs/ManagedSite/ClaudeCodeHubSettings"
 import { validateClaudeCodeHubConfig } from "~/services/apiService/claudeCodeHub"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
-import { testI18n } from "~~/tests/test-utils/i18n"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
+import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
 
-const { showUpdateToastMock } = vi.hoisted(() => ({
+const { showUpdateToastMock, toSanitizedErrorSummaryMock } = vi.hoisted(() => ({
   showUpdateToastMock: vi.fn(),
+  toSanitizedErrorSummaryMock: vi.fn(),
 }))
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
@@ -20,10 +21,11 @@ vi.mock("~/services/apiService/claudeCodeHub", () => ({
   validateClaudeCodeHubConfig: vi.fn(),
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
-  createVersionedPreferenceSaveOptions: (expectedLastUpdated: number) => ({
-    expectedLastUpdated,
-  }),
+vi.mock("~/services/verification/aiApiVerification/utils", () => ({
+  toSanitizedErrorSummary: toSanitizedErrorSummaryMock,
+}))
+
+vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   runPreferenceUpdateWithToast: async ({
     expectedLastUpdated,
     setting,
@@ -40,7 +42,7 @@ vi.mock("~/utils/core/toastHelpers", () => ({
   showUpdateToast: showUpdateToastMock,
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     error: vi.fn(),
     success: vi.fn(),
@@ -65,11 +67,12 @@ const createDeferred = <T,>() => {
 describe("ClaudeCodeHubSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    toSanitizedErrorSummaryMock.mockReturnValue("safe provider failure")
   })
 
-  const renderSubject = () =>
+  const renderSubject = (i18n = testI18n) =>
     render(
-      <I18nextProvider i18n={testI18n}>
+      <I18nextProvider i18n={i18n}>
         <ClaudeCodeHubSettings />
       </I18nextProvider>,
     )
@@ -168,7 +171,7 @@ describe("ClaudeCodeHubSettings", () => {
   })
 
   it("shows a missing-fields error when validation inputs are blank after trimming", async () => {
-    const toast = await import("react-hot-toast")
+    const toast = await import("~/lib/notify")
 
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: { lastUpdated: 3 },
@@ -222,7 +225,7 @@ describe("ClaudeCodeHubSettings", () => {
   })
 
   it("exposes only validation as busy, suppresses duplicate clicks, and restores on success", async () => {
-    const toast = await import("react-hot-toast")
+    const toast = await import("~/lib/notify")
     const deferredValidation = createDeferred<{ ok: boolean }>()
     const updateClaudeCodeHubConfig = vi
       .fn()
@@ -316,7 +319,7 @@ describe("ClaudeCodeHubSettings", () => {
   })
 
   it("shows a validation failure toast when Claude Code Hub rejects the config", async () => {
-    const toast = await import("react-hot-toast")
+    const toast = await import("~/lib/notify")
 
     mockedValidateClaudeCodeHubConfig.mockRejectedValueOnce(
       new Error("request failed"),
@@ -350,6 +353,77 @@ describe("ClaudeCodeHubSettings", () => {
     await waitFor(() => {
       expect(vi.mocked(toast.default.error)).toHaveBeenCalledWith(
         "settings:claudeCodeHub.validation.failed",
+      )
+    })
+  })
+
+  it("redacts the draft admin token at the validation toast boundary", async () => {
+    const toast = await import("~/lib/notify")
+    mockedValidateClaudeCodeHubConfig.mockRejectedValueOnce(
+      new Error("token admin-token rejected"),
+    )
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: { lastUpdated: 5 },
+      claudeCodeHubBaseUrl: "https://cch.example.com",
+      claudeCodeHubAdminToken: "admin-token",
+      updateClaudeCodeHubBaseUrl: vi.fn(),
+      updateClaudeCodeHubAdminToken: vi.fn(),
+      updateClaudeCodeHubConfig: vi.fn(),
+      resetClaudeCodeHubConfig: vi.fn(),
+    } as any)
+
+    renderSubject()
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings:claudeCodeHub.validation.validate",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.default.error)).toHaveBeenCalledWith(
+        "settings:claudeCodeHub.validation.failed",
+      )
+    })
+    expect(toSanitizedErrorSummaryMock).toHaveBeenCalledWith(
+      expect.any(Error),
+      ["admin-token"],
+    )
+  })
+
+  it("shows a fixed validation error when sanitization yields no message", async () => {
+    const toast = await import("~/lib/notify")
+    const i18n = await createResourceTestI18n({
+      en: {
+        settings: {
+          claudeCodeHub: {
+            validation: {
+              validate: "Validate configuration",
+              failed: "Validation failed: {{error}}",
+            },
+          },
+        },
+      },
+    })
+    toSanitizedErrorSummaryMock.mockReturnValueOnce("")
+    mockedValidateClaudeCodeHubConfig.mockRejectedValueOnce(undefined)
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: { lastUpdated: 5 },
+      claudeCodeHubBaseUrl: "https://cch.example.invalid",
+      claudeCodeHubAdminToken: "admin-token",
+      updateClaudeCodeHubBaseUrl: vi.fn(),
+      updateClaudeCodeHubAdminToken: vi.fn(),
+      updateClaudeCodeHubConfig: vi.fn(),
+      resetClaudeCodeHubConfig: vi.fn(),
+    } as any)
+
+    renderSubject(i18n)
+    fireEvent.click(
+      screen.getByRole("button", { name: "Validate configuration" }),
+    )
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.default.error)).toHaveBeenCalledWith(
+        "Validation failed: Claude Code Hub request failed",
       )
     })
   })

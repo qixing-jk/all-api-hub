@@ -1,6 +1,6 @@
 import { TelemetryEndpointError } from "~/services/apiCredentialProfiles/telemetryAttempts"
 import { ApiError } from "~/services/apiTransport/errors"
-import { fetchApi } from "~/services/apiTransport/request"
+import { fetchApiResponse } from "~/services/apiTransport/request"
 import type { ApiAuthTokenMode } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
@@ -25,7 +25,7 @@ export async function fetchTelemetryJson(params: {
   authTokenMode?: ApiAuthTokenMode
 }): Promise<TelemetryJsonFetchResult> {
   try {
-    const json = await fetchApi<unknown>(
+    const response = await fetchApiResponse<unknown>(
       {
         baseUrl: params.baseUrl,
         auth: {
@@ -49,14 +49,22 @@ export async function fetchTelemetryJson(params: {
           : {}),
       },
     )
-    // Raw response mode: provider envelopes (success/data) stay intact so
-    // envelope-style parsers such as parseGlmQuota see the full payload.
+    if (!response.ok) {
+      throw new TelemetryEndpointError(
+        `请求失败: ${response.status}`,
+        params.endpoint,
+        response.status === 404 || response.status === 405,
+      )
+    }
 
     return {
       endpoint: params.endpoint,
-      json,
+      // Provider envelopes stay intact for the protocol-specific parsers.
+      json: response.body,
     }
   } catch (error) {
+    if (error instanceof TelemetryEndpointError) throw error
+
     if (error instanceof ApiError) {
       throw new TelemetryEndpointError(
         error.message,

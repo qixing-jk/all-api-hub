@@ -16,6 +16,7 @@ import {
   loginToRealNewApiSite,
   resolveNewApiRealSiteConfig,
 } from "~~/e2e/utils/realSite/newApi"
+import { createNewApiAccountRecovery } from "~~/e2e/utils/realSite/newApiAccountRecovery"
 import {
   createReusedRealSiteAccountFixturePreparer,
   createSharedRealSiteAccountFixtureCache,
@@ -86,6 +87,7 @@ test.describe("real-site E2E: New API account add flow", () => {
                 extensionId,
                 serviceWorker,
                 config,
+                ...createNewApiAccountRecovery({ page, config }),
                 siteType: SITE_TYPES.NEW_API,
                 login: loginToRealNewApiSite,
               }),

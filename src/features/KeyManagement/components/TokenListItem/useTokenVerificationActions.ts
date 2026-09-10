@@ -2,8 +2,8 @@ import type { Dispatch, RefObject, SetStateAction } from "react"
 import { useLayoutEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { normalizeAccountSiteProfileUrlForManagedChannel } from "~/services/accounts/accountSiteProfile/urls"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
-import { normalizeAccountSiteUrlForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -20,7 +20,7 @@ import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerificati
 import type { AccountToken, DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/core/logger"
-import { showResultToast } from "~/utils/core/toastHelpers"
+import { showResultToast } from "~/utils/feedback/operationFeedback"
 
 const logger = createLogger("TokenVerificationActions")
 
@@ -54,7 +54,7 @@ function buildTransientVerificationProfile(
       tokenName: token.name,
     }),
     apiType: API_TYPES.OPENAI_COMPATIBLE,
-    baseUrl: normalizeAccountSiteUrlForManagedChannel({
+    baseUrl: normalizeAccountSiteProfileUrlForManagedChannel({
       siteType: account.siteType,
       url: account.baseUrl,
     }),

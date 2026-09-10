@@ -41,7 +41,9 @@ const logger = createLogger("TaskNotificationService")
 interface TaskNotificationCounts {
   total?: number
   success?: number
+  alreadyChecked?: number
   failed?: number
+  uncertain?: number
   skipped?: number
 }
 
@@ -165,12 +167,24 @@ function formatCounts(counts: TaskNotificationCounts | undefined) {
     return null
   }
 
-  return t("settings:taskNotifications.notification.counts", {
+  const values = {
     total: counts.total ?? 0,
     success: counts.success ?? 0,
     failed: counts.failed ?? 0,
     skipped: counts.skipped ?? 0,
-  })
+  }
+
+  return typeof counts.alreadyChecked === "number" ||
+    typeof counts.uncertain === "number"
+    ? t(
+        "settings:taskNotifications.notification.countsWithAutoCheckinCategories",
+        {
+          ...values,
+          alreadyChecked: counts.alreadyChecked ?? 0,
+          uncertain: counts.uncertain ?? 0,
+        },
+      )
+    : t("settings:taskNotifications.notification.counts", values)
 }
 
 /**

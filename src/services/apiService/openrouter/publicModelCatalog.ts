@@ -7,6 +7,7 @@ import {
   openRouterPublicModelCatalogPageSchema,
   type OpenRouterPublicModel,
 } from "./publicModelCatalogSchemas"
+import { createOpenRouterHttpError } from "./responseError"
 
 const OPENROUTER_PUBLIC_MODELS_ENDPOINT = "/models?output_modalities=all"
 
@@ -81,20 +82,10 @@ async function fetchOpenRouterPublicModelCatalogPage(
     },
   )
   if (!response.ok) {
-    const code =
-      response.status === 401
-        ? API_ERROR_CODES.HTTP_401
-        : response.status === 403
-          ? API_ERROR_CODES.HTTP_403
-          : response.status === 429
-            ? API_ERROR_CODES.HTTP_429
-            : API_ERROR_CODES.HTTP_OTHER
-
-    throw new ApiError(
+    throw createOpenRouterHttpError(
+      response,
+      endpoint,
       "OpenRouter public model catalog request failed",
-      response.status,
-      "/models",
-      code,
     )
   }
 

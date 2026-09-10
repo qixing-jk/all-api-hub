@@ -13,6 +13,17 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { act, fireEvent, render, screen } from "~~/tests/test-utils/render"
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    state: {
+      schemaVersion: 1,
+      productTour: {},
+      gatewayGuidance: { dismissedAtBySurface: {} },
+    },
+    dismissGatewayGuidanceSurface: vi.fn(),
+  }),
+}))
+
 const {
   openKeysPageMock,
   trackProductAnalyticsActionCompletedMock,

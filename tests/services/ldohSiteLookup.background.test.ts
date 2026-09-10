@@ -138,6 +138,32 @@ describe("ldohSiteLookup background refresh", () => {
     expect(vi.mocked(writeLdohSiteListCache)).not.toHaveBeenCalled()
   })
 
+  it("uses the shared heuristic message for an unowned HTTP error", async () => {
+    vi.resetModules()
+
+    const { writeLdohSiteListCache } = await import(
+      "~/services/integrations/ldohSiteLookup/cache"
+    )
+    const { repairLdohSiteListCache } = await import(
+      "~/services/integrations/ldohSiteLookup/background"
+    )
+
+    server.use(
+      http.get(ldohSitesUrl, () =>
+        HttpResponse.json(
+          { message: "provider detail may be surfaced" },
+          { status: 418 },
+        ),
+      ),
+    )
+
+    await expect(repairLdohSiteListCache()).resolves.toMatchObject({
+      success: false,
+      error: "provider detail may be surfaced",
+    })
+    expect(vi.mocked(writeLdohSiteListCache)).not.toHaveBeenCalled()
+  })
+
   it("invokes temp-window fallback for HTTP 403", async () => {
     vi.resetModules()
 

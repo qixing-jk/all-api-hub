@@ -17,6 +17,7 @@ import {
   fetchInviteLink,
   fetchSiteStatus,
   fetchSub2ApiAnnouncements,
+  fetchSub2ApiPricingCatalogs,
   fetchSub2ApiRuntimeModels,
   fetchSupportCheckIn,
   fetchTodayIncome,
@@ -30,6 +31,11 @@ import {
   updateApiToken,
 } from "~/services/apiService/sub2api"
 import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/authSession"
+import {
+  recoverSub2ApiBrowserAuth as resyncSub2ApiAuthToken,
+  SUB2API_SESSION_BINDING_MISMATCH_CODE,
+  Sub2ApiAuthIdentityMismatchError,
+} from "~/services/apiService/sub2api/browserAuth"
 import {
   buildSub2ApiUserGroups,
   convertExpirySecondsToSub2ApiDays,
@@ -46,10 +52,6 @@ import {
   SUB2API_TOKEN_REFRESH_FAILURE_REASONS,
   Sub2ApiTokenRefreshError,
 } from "~/services/apiService/sub2api/tokenRefresh"
-import {
-  resyncSub2ApiAuthToken,
-  Sub2ApiAuthIdentityMismatchError,
-} from "~/services/apiService/sub2api/tokenResync"
 import type {
   Sub2ApiAnnouncementListData,
   Sub2ApiEnvelope,
@@ -57,7 +59,16 @@ import type {
 import { createDeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApi } from "~/services/apiTransport/request"
+import {
+  API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES,
+  API_TRANSPORT_FETCH_CONTEXT_KINDS,
+} from "~/services/apiTransport/type"
 import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
+import {
+  PROTECTION_BYPASS_EXECUTION_KINDS,
+  PROTECTION_BYPASS_EXECUTION_VERSION,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -83,19 +94,24 @@ vi.mock("~/services/accounts/accountHealth", () => ({
   ) => statusInfo?.price ?? statusInfo?.stripe_unit_price ?? null,
 }))
 
-vi.mock("~/services/apiTransport/request", () => ({
-  fetchApi: vi.fn(),
-  notifyApiTransportObserver: vi.fn(),
-}))
+vi.mock("~/services/apiTransport/request", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/apiTransport/request")>()
+  return {
+    ...actual,
+    fetchApi: vi.fn(),
+    notifyApiTransportObserver: vi.fn(),
+  }
+})
 
-vi.mock("~/services/apiService/sub2api/tokenResync", async (importOriginal) => {
+vi.mock("~/services/apiService/sub2api/browserAuth", async (importOriginal) => {
   const actual =
     await importOriginal<
-      typeof import("~/services/apiService/sub2api/tokenResync")
+      typeof import("~/services/apiService/sub2api/browserAuth")
     >()
   return {
     ...actual,
-    resyncSub2ApiAuthToken: vi.fn(),
+    recoverSub2ApiBrowserAuth: vi.fn().mockResolvedValue(null),
   }
 })
 
@@ -282,12 +298,12 @@ describe("apiService sub2api parsing", () => {
       expect.anything(),
       expect.objectContaining({
         endpoint: expect.stringContaining("unread_only=1"),
+        errorResponseDecoder: expect.any(Function),
         options: expect.objectContaining({
           method: "GET",
           cache: "no-store",
         }),
       }),
-      true,
     )
   })
 
@@ -656,7 +672,7 @@ describe("apiService sub2api refreshAccountData", () => {
     vi.restoreAllMocks()
     vi.clearAllMocks()
     vi.mocked(fetchApi).mockReset()
-    vi.mocked(resyncSub2ApiAuthToken).mockReset()
+    vi.mocked(resyncSub2ApiAuthToken).mockReset().mockResolvedValue(null)
     mockGetLatestAuth.mockReset()
     mockPersistAuthUpdate.mockReset()
     mockGetLatestAuth.mockResolvedValue(null)
@@ -730,6 +746,250 @@ describe("apiService sub2api refreshAccountData", () => {
     expect((vi.mocked(fetchApi).mock.calls[1]?.[1] as any)?.endpoint).toBe(
       "/api/v1/usage/stats?period=today",
     )
+  })
+
+  it("recovers authentication when the today-usage request returns 401", async () => {
+    vi.mocked(fetchApi)
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { id: 1, username: "alice", balance: 2 },
+      } as any)
+      .mockRejectedValueOnce(
+        new ApiError("Unauthorized", 401, "/api/v1/usage/stats?period=today"),
+      )
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { id: 1, username: "alice", balance: 2 },
+      } as any)
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: {
+          total_requests: 4,
+          total_input_tokens: 120,
+          total_output_tokens: 45,
+          total_actual_cost: 1.25,
+        },
+      } as any)
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "browser-jwt",
+      userId: "1",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+    })
+
+    const result = await refreshAccountData(createRequest())
+
+    expect(result.success).toBe(true)
+    expect(result.data?.today_requests_count).toBe(4)
+    expect(resyncSub2ApiAuthToken).toHaveBeenCalledTimes(1)
+    expect(fetchApi).toHaveBeenCalledTimes(4)
+    expect(vi.mocked(fetchApi).mock.calls[2]?.[0].auth?.accessToken).toBe(
+      "browser-jwt",
+    )
+    expect(vi.mocked(fetchApi).mock.calls[3]?.[0].auth?.accessToken).toBe(
+      "browser-jwt",
+    )
+  })
+
+  it("keeps an ordinary first account request on the default transport", async () => {
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "old-jwt",
+      userId: "1",
+      fetchContext: {
+        kind: "current-tab",
+        tabId: 17,
+        origin: "https://sub2.example.com",
+      },
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+    })
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: { id: 1, username: "alice", balance: 2 },
+    } as any)
+
+    const result = await refreshAccountData(
+      createRequest({ includeTodayCashflow: false }),
+    )
+
+    expect(result.success).toBe(true)
+    expect(vi.mocked(fetchApi).mock.calls[0]?.[0]).not.toHaveProperty(
+      "fetchContext",
+    )
+    expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
+  })
+
+  it("recovers a session-binding mismatch without submitting the refresh token", async () => {
+    const rawFetch = vi.fn()
+    vi.stubGlobal("fetch", rawFetch)
+    vi.mocked(fetchApi)
+      .mockRejectedValueOnce(
+        new ApiError(
+          "Session network fingerprint changed",
+          401,
+          "/api/v1/auth/me",
+          API_ERROR_CODES.HTTP_401,
+          SUB2API_SESSION_BINDING_MISMATCH_CODE,
+        ),
+      )
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { id: 1, username: "alice", balance: 2 },
+      } as any)
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "browser-jwt",
+      userId: "1",
+      fetchContext: {
+        kind: "current-tab",
+        tabId: 17,
+        origin: "https://sub2.example.com",
+      },
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+    })
+
+    const result = await refreshAccountData(
+      createRequest({
+        accountId: "account-1",
+        includeTodayCashflow: false,
+        sub2apiAuthSession: {
+          getLatestAuth: (...args: any[]) => mockGetLatestAuth(...args),
+          persistAuthUpdate: (...args: any[]) => mockPersistAuthUpdate(...args),
+        },
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          userId: "1",
+          accessToken: "old-jwt",
+          refreshToken: "must-not-be-submitted",
+          tokenExpiresAt: Date.now() + 3_600_000,
+        },
+      }),
+    )
+
+    expect(result.success).toBe(true)
+    expect(rawFetch).not.toHaveBeenCalled()
+    expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith({
+      baseUrl: "https://sub2.example.com",
+      expectedUserId: "1",
+    })
+    expect(vi.mocked(fetchApi).mock.calls[1]?.[0]).toMatchObject({
+      auth: { accessToken: "browser-jwt" },
+      fetchContext: {
+        kind: "current-tab",
+        tabId: 17,
+        origin: "https://sub2.example.com",
+      },
+      currentTabFallback: API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES.Forbid,
+    })
+    expect(vi.mocked(fetchApi).mock.calls[1]?.[0].auth).not.toHaveProperty(
+      "refreshToken",
+    )
+    expect(vi.mocked(fetchApi).mock.calls[1]?.[0].auth).not.toHaveProperty(
+      "tokenExpiresAt",
+    )
+    expect(mockPersistAuthUpdate).toHaveBeenCalledWith("account-1", {
+      accessToken: "browser-jwt",
+      clearRefreshCredentials: true,
+      expectedOrigin: "https://sub2.example.com",
+      expectedUserId: "1",
+      userId: "1",
+    })
+  })
+
+  it("skips the public today-usage request when cashflow collection is disabled", async () => {
+    await expect(
+      fetchTodayUsage({
+        baseUrl: "https://sub2.example.invalid",
+        includeTodayCashflow: false,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "dashboard-jwt",
+        },
+      } as ApiServiceAccountRequest),
+    ).resolves.toMatchObject({
+      today_quota_consumption: 0,
+      todayStatsAvailability: {
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+        },
+      },
+    })
+
+    expect(fetchApi).not.toHaveBeenCalled()
+  })
+
+  it("keeps a temp-context auth recovery in the protected request context", async () => {
+    vi.mocked(fetchApi)
+      .mockRejectedValueOnce(
+        new ApiError(
+          "Session network fingerprint changed",
+          401,
+          "/api/v1/auth/me",
+          API_ERROR_CODES.HTTP_401,
+          SUB2API_SESSION_BINDING_MISMATCH_CODE,
+        ),
+      )
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { id: 1, username: "alice", balance: 2 },
+      } as any)
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "temp-context-jwt",
+      userId: "1",
+      fetchContext: {
+        kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+        cookieStoreId: "temporary-container",
+      },
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+    })
+
+    const result = await refreshAccountData(
+      createRequest({ includeTodayCashflow: false }),
+    )
+
+    expect(result.success).toBe(true)
+    expect(vi.mocked(fetchApi).mock.calls[1]?.[0]).toMatchObject({
+      auth: { accessToken: "temp-context-jwt" },
+      fetchContext: {
+        kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+        cookieStoreId: "temporary-container",
+      },
+      forceTempWindow: true,
+    })
+    expect(vi.mocked(fetchApi).mock.calls[1]?.[0]).not.toHaveProperty(
+      "currentTabFallback",
+    )
+  })
+
+  it("returns browser-recovered refresh credentials without inventing an expiry", async () => {
+    vi.mocked(fetchApi)
+      .mockRejectedValueOnce(
+        new ApiError("Unauthorized", 401, "/api/v1/auth/me"),
+      )
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { id: 1, username: "alice", balance: 2 },
+      } as any)
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "browser-jwt",
+      userId: "1",
+      sub2apiAuth: { refreshToken: "browser-refresh-token" },
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+    })
+
+    const result = await refreshAccountData(
+      createRequest({ includeTodayCashflow: false }),
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.authUpdate?.sub2apiAuth).toEqual({
+      refreshToken: "browser-refresh-token",
+    })
   })
 
   it("skips Sub2API today usage when includeTodayCashflow is false", async () => {
@@ -825,16 +1085,25 @@ describe("apiService sub2api refreshAccountData", () => {
       source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     })
 
+    const protectionBypassExecution = {
+      version: PROTECTION_BYPASS_EXECUTION_VERSION,
+      kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
+      command: PROTECTION_BYPASS_USER_COMMANDS.RefreshAccount,
+      surface: "popup",
+    } as const
     const request = createRequest({
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      protectionBypassExecution,
     })
     const result = await refreshAccountData(request)
 
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
-      request.baseUrl,
-      TEMP_WINDOW_REQUEST_SOURCES.Popup,
-      undefined,
-      "1",
+      expect.objectContaining({
+        baseUrl: request.baseUrl,
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution,
+        expectedUserId: "1",
+      }),
     )
     const retryRequest = vi.mocked(fetchApi).mock.calls[1]?.[0] as any
     expect(retryRequest?.auth?.accessToken).toBe("new-jwt")
@@ -861,6 +1130,29 @@ describe("apiService sub2api refreshAccountData", () => {
     expect(result.healthStatus.status).toBe(SiteHealthStatus.Warning)
     expect(result.healthStatus.message).toBe("messages:sub2api.loginRequired")
     expect(fetchApi).toHaveBeenCalledTimes(1)
+  })
+
+  it("classifies invalid refresh tokens by machine code instead of display message", async () => {
+    vi.mocked(fetchApi).mockRejectedValueOnce(
+      new ApiError("Unauthorized", 401, "/api/v1/auth/me"),
+    )
+    vi.mocked(resyncSub2ApiAuthToken).mockRejectedValueOnce(
+      new ApiError(
+        "Localized display copy changed",
+        401,
+        "/api/v1/auth/me",
+        API_ERROR_CODES.HTTP_401,
+        "sub2api_refresh_token_invalid",
+      ),
+    )
+
+    const result = await refreshAccountData(createRequest())
+
+    expect(result.success).toBe(false)
+    expect(result.healthStatus).toEqual({
+      status: SiteHealthStatus.Warning,
+      message: "messages:sub2api.refreshTokenInvalid",
+    })
   })
 
   it("returns login-required warning when retry still returns 401", async () => {
@@ -991,10 +1283,10 @@ describe("apiService sub2api refreshAccountData", () => {
     )
 
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
-      "https://sub2.example.com",
-      undefined,
-      undefined,
-      "1",
+      expect.objectContaining({
+        baseUrl: "https://sub2.example.com",
+        expectedUserId: "1",
+      }),
     )
     expect(
       (vi.mocked(fetchApi).mock.calls[1]?.[0] as any)?.auth.accessToken,
@@ -1669,10 +1961,10 @@ describe("apiService sub2api refreshAccountData", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
-      request.baseUrl,
-      undefined,
-      undefined,
-      "1",
+      expect.objectContaining({
+        baseUrl: request.baseUrl,
+        expectedUserId: "1",
+      }),
     )
     expect(
       (vi.mocked(fetchApi).mock.calls[1]?.[0] as any)?.auth?.accessToken,
@@ -1768,10 +2060,10 @@ describe("apiService sub2api refreshAccountData", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
-      "https://sub2.example.com",
-      undefined,
-      undefined,
-      "1",
+      expect.objectContaining({
+        baseUrl: "https://sub2.example.com",
+        expectedUserId: "1",
+      }),
     )
     expect(tokens).toHaveLength(1)
   })
@@ -1807,10 +2099,10 @@ describe("apiService sub2api refreshAccountData", () => {
     )
 
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
-      "https://sub2.example.com",
-      undefined,
-      undefined,
-      "1",
+      expect.objectContaining({
+        baseUrl: "https://sub2.example.com",
+        expectedUserId: "1",
+      }),
     )
     expect(fetchApi).toHaveBeenCalledTimes(1)
     expect(
@@ -2018,6 +2310,7 @@ describe("apiService sub2api refreshAccountData", () => {
     await expect(fetchAccountTokens(request)).rejects.toMatchObject({
       message: "messages:sub2api.refreshTokenInvalid",
       code: API_ERROR_CODES.HTTP_401,
+      upstreamCode: "sub2api_refresh_token_invalid",
     })
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -2081,10 +2374,10 @@ describe("apiService sub2api refreshAccountData", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
-      request.baseUrl,
-      undefined,
-      undefined,
-      "1",
+      expect.objectContaining({
+        baseUrl: request.baseUrl,
+        expectedUserId: "1",
+      }),
     )
     expect(
       (vi.mocked(fetchApi).mock.calls[1]?.[0] as any)?.auth?.accessToken,
@@ -2126,10 +2419,10 @@ describe("apiService sub2api refreshAccountData", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
-      request.baseUrl,
-      undefined,
-      undefined,
-      "1",
+      expect.objectContaining({
+        baseUrl: request.baseUrl,
+        expectedUserId: "1",
+      }),
     )
     expect(fetchApi).toHaveBeenCalledTimes(1)
     expect(result.success).toBe(false)
@@ -2253,6 +2546,35 @@ describe("apiService sub2api exported operations", () => {
     allow_ips: "",
     group: "default",
     ...overrides,
+  })
+
+  it("reads station prices with dashboard authentication and tolerates an unavailable optional endpoint", async () => {
+    vi.mocked(fetchApi).mockImplementation(async (_request, options) => {
+      if (options?.endpoint === "/api/v1/model-plaza")
+        return {
+          code: 0,
+          message: "ok",
+          data: { groups: [{ id: 9, models: [] }] },
+        }
+      throw new ApiError("not found", 404)
+    })
+    await expect(fetchSub2ApiPricingCatalogs(baseRequest)).resolves.toEqual({
+      plaza: { groups: [{ id: 9, models: [] }] },
+      channels: undefined,
+    })
+    expect(
+      vi
+        .mocked(fetchApi)
+        .mock.calls.map(([, options]) => options?.endpoint)
+        .sort(),
+    ).toEqual(["/api/v1/channels/available", "/api/v1/model-plaza"])
+    expect(
+      vi
+        .mocked(fetchApi)
+        .mock.calls.every(
+          ([request]) => request.auth?.accessToken === "jwt-token",
+        ),
+    ).toBe(true)
   })
 
   it("checks the public flag before fetching and encoding the affiliate code", async () => {
@@ -2595,12 +2917,12 @@ describe("apiService sub2api exported operations", () => {
       }),
       expect.objectContaining({
         endpoint: "/api/v1/auth/me",
+        errorResponseDecoder: expect.any(Function),
         options: expect.objectContaining({
           method: "GET",
           cache: "no-store",
         }),
       }),
-      true,
     )
   })
 
@@ -2669,7 +2991,7 @@ describe("apiService sub2api exported operations", () => {
         baseUrl: "https://sub2.example.com",
         auth: {
           authType: AuthTypeEnum.AccessToken,
-          accessToken: "expired-jwt",
+          accessToken: "",
           refreshToken: "stored-refresh",
           tokenExpiresAt: now - 1,
         },
@@ -2682,6 +3004,45 @@ describe("apiService sub2api exported operations", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
     nowSpy.mockRestore()
+  })
+
+  it("recovers through the browser when refresh-token restore fails without an access token", async () => {
+    const fetchMock = vi.fn().mockRejectedValueOnce(new Error("network down"))
+    vi.stubGlobal("fetch", fetchMock as any)
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "browser-recovered-jwt",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+    })
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: {
+        id: 12,
+        username: "alice",
+        email: "alice@example.invalid",
+        balance: "1.5",
+      },
+    } as any)
+
+    await expect(
+      getOrCreateAccessToken({
+        baseUrl: "https://sub2.example.invalid",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "",
+          refreshToken: "stored-refresh",
+        },
+      }),
+    ).resolves.toEqual({
+      username: "alice",
+      access_token: "browser-recovered-jwt",
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(resyncSub2ApiAuthToken).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(fetchApi).mock.calls[0]?.[0].auth).not.toHaveProperty(
+      "refreshToken",
+    )
   })
 
   it("getOrCreateAccessToken falls back to browser-session re-sync when proactive refresh fails", async () => {
@@ -2721,10 +3082,9 @@ describe("apiService sub2api exported operations", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
-      "https://sub2.example.com",
-      undefined,
-      undefined,
-      undefined,
+      expect.objectContaining({
+        baseUrl: "https://sub2.example.com",
+      }),
     )
     expect((vi.mocked(fetchApi).mock.calls[0]?.[0] as any)?.auth).toMatchObject(
       {
@@ -2832,10 +3192,9 @@ describe("apiService sub2api exported operations", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
-      "https://sub2.example.com",
-      undefined,
-      undefined,
-      undefined,
+      expect.objectContaining({
+        baseUrl: "https://sub2.example.com",
+      }),
     )
     expect(fetchApi).toHaveBeenCalledTimes(2)
     expect(
@@ -2874,10 +3233,9 @@ describe("apiService sub2api exported operations", () => {
     })
 
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
-      "https://sub2.example.com",
-      undefined,
-      undefined,
-      undefined,
+      expect.objectContaining({
+        baseUrl: "https://sub2.example.com",
+      }),
     )
   })
 
@@ -2898,10 +3256,9 @@ describe("apiService sub2api exported operations", () => {
     })
 
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
-      "https://sub2.example.com",
-      undefined,
-      undefined,
-      undefined,
+      expect.objectContaining({
+        baseUrl: "https://sub2.example.com",
+      }),
     )
   })
 
@@ -2991,8 +3348,8 @@ describe("apiService sub2api exported operations", () => {
       {
         endpoint: "/api/v1/settings/public",
         options: { method: "GET", cache: "no-store" },
+        errorResponseDecoder: expect.any(Function),
       },
-      true,
     )
   })
 
@@ -3472,6 +3829,48 @@ describe("apiService sub2api exported operations", () => {
     )
 
     nowSpy.mockRestore()
+  })
+
+  it("reuses newer stored auth instead of opening a browser recovery context", async () => {
+    mockGetLatestAuth
+      .mockResolvedValueOnce({
+        accessToken: "old-jwt",
+        origin: "https://sub2.example.com",
+        userId: "7",
+      })
+      .mockResolvedValueOnce({
+        accessToken: "newer-stored-jwt",
+        origin: "https://sub2.example.com",
+        userId: "7",
+      })
+    vi.mocked(fetchApi)
+      .mockRejectedValueOnce(new ApiError("Unauthorized", 401, "/api/v1/keys"))
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: [],
+      } as any)
+
+    await expect(
+      fetchAccountTokens({
+        ...baseRequest,
+        accountId: "account-1",
+        sub2apiAuthSession: {
+          getLatestAuth: (...args: any[]) => mockGetLatestAuth(...args),
+          persistAuthUpdate: (...args: any[]) => mockPersistAuthUpdate(...args),
+        },
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          userId: "7",
+          accessToken: "old-jwt",
+        },
+      } as any),
+    ).resolves.toEqual([])
+
+    expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
+    expect(vi.mocked(fetchApi).mock.calls[1]?.[0].auth?.accessToken).toBe(
+      "newer-stored-jwt",
+    )
   })
 
   it("returns login-required for key requests when a resynced JWT still gets 401", async () => {

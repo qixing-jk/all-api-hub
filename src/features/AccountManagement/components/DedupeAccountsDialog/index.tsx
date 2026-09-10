@@ -1,15 +1,15 @@
 import { Trash2 } from "lucide-react"
 import { useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { Button, DestructiveConfirmDialog, Modal } from "~/components/ui"
+import { Button, ConfirmDialog, Modal } from "~/components/ui"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import toast from "~/lib/notify"
 import {
   scanDuplicateAccounts,
   type AccountDedupeKeepStrategy,
 } from "~/services/accounts/accountDedupe"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -190,7 +190,7 @@ export default function DedupeAccountsDialog({
     setIsWorking(true)
     try {
       const { deletedCount } = await toast.promise(
-        accountStorage.deleteAccounts(idsToDelete),
+        accountMutations.deleteAccounts(idsToDelete),
         {
           loading: t("ui:dialog.dedupeAccounts.deleting"),
           success: (result) =>
@@ -297,7 +297,8 @@ export default function DedupeAccountsDialog({
         />
       </Modal>
 
-      <DestructiveConfirmDialog
+      <ConfirmDialog
+        intent="destructive"
         isOpen={isConfirmOpen}
         onClose={() => {
           if (!isWorking) setIsConfirmOpen(false)

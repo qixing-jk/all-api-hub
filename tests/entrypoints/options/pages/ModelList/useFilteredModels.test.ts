@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
@@ -28,6 +28,21 @@ import {
   MODEL_UNAVAILABLE_PRICE_REASONS,
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
+import {
+  CALCULATED_PRICE_KINDS,
+  PRICE_RATE_UNITS,
+  PRICING_CONDITION_KINDS,
+  PRICING_GROUP_MULTIPLIERS,
+  PRICING_IMAGE_SIZES,
+  PRICING_METERS,
+  PRICING_PURPOSES,
+  PRICING_RANGE_AXES,
+  PRICING_SOURCE_KINDS,
+  PRICING_USAGE_MODES,
+  TOKENS_PER_MILLION,
+} from "~/services/modelPricing/pricingConstants"
+import type { PricingPlan } from "~/services/modelPricing/pricingPlan"
+import * as pricingQuotes from "~/services/modelPricing/quoteCanonicalModelPrice"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import type { ModelMetadata } from "~/services/models/modelMetadata/types"
@@ -36,6 +51,7 @@ import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { buildAIHubMixModelListSource } from "~~/tests/test-utils/modelListSource"
 import { renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const createDisplayAccount = (
@@ -126,6 +142,152 @@ function renderUseFilteredModels(
 }
 
 describe("useFilteredModels", () => {
+  it("provides a model pricing destination on the originating account deployment", async () => {
+    const account = createDisplayAccount({
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://site.example/gateway/",
+    })
+    const { result } = renderUseFilteredModels({
+      selectedSource: createAccountSource(account),
+      pricingData: createPricingResponse(["vendor/model"]),
+    })
+    await waitFor(() =>
+      expect(
+        result.current.filteredModels[0].calculatedPrice.quote?.source.url,
+      ).toBe("https://site.example/gateway/pricing?search=vendor%2Fmodel"),
+    )
+  })
+  it("keeps account link enrichment out of shared pricing evidence", async () => {
+    const pricingPlan: PricingPlan = {
+      rates: {
+        input: {
+          amount: 1,
+          currency: "USD",
+          unit: PRICE_RATE_UNITS.TOKEN,
+          per: TOKENS_PER_MILLION,
+        },
+      },
+      rules: [],
+      groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
+      source: { kind: PRICING_SOURCE_KINDS.ACCOUNT },
+      issues: [],
+    }
+    const account = createDisplayAccount({
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://first.example",
+    })
+    const { result } = renderUseFilteredModels({
+      selectedSource: createAccountSource(account),
+      pricingData: createPricingResponse([{ pricingPlan }]),
+    })
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+    expect(
+      result.current.filteredModels[0].calculatedPrice.quote?.source.url,
+    ).toContain("https://first.example/pricing")
+    expect(pricingPlan.source.url).toBeUndefined()
+  })
+  it("quotes display rows once and previews filter counts without pricing again", async () => {
+    const quote = vi.spyOn(pricingQuotes, "quoteCanonicalModelPrice")
+    try {
+      const { result } = renderUseFilteredModels({
+        pricingData: createPricingResponse(["gpt-4o", "gpt-4o-mini"]),
+        selectedSource: createAccountSource(createDisplayAccount({})),
+      })
+      await waitFor(() => expect(result.current.filteredModels).toHaveLength(2))
+      expect(result.current.modelCapabilityMetadataCoverage.total).toBe(2)
+      expect(quote).toHaveBeenCalledTimes(2)
+      quote.mockClear()
+      expect(
+        result.current.getFilteredResultCount({ searchTerm: "mini" }),
+      ).toBe(1)
+      expect(
+        result.current
+          .getFilteredModels({ searchTerm: "mini" })
+          .map((item) => item.model.model_name),
+      ).toEqual(["gpt-4o-mini"])
+      expect(quote).not.toHaveBeenCalled()
+    } finally {
+      quote.mockRestore()
+    }
+  })
+
+  it("quotes length tiers under default sorting using the current reference conditions", async () => {
+    const pricingPlan: PricingPlan = {
+      rates: {},
+      groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
+      source: { kind: PRICING_SOURCE_KINDS.ACCOUNT },
+      issues: [],
+      requiresRuleMatch: true,
+      rules: [
+        {
+          id: "short",
+          conditions: [
+            {
+              kind: PRICING_CONDITION_KINDS.RANGE,
+              axis: PRICING_RANGE_AXES.INPUT_TOKENS,
+              maxExclusive: 200001,
+            },
+          ],
+          rates: {
+            input: {
+              amount: 2,
+              currency: "USD",
+              unit: PRICE_RATE_UNITS.TOKEN,
+              per: TOKENS_PER_MILLION,
+            },
+          },
+        },
+        {
+          id: "long",
+          conditions: [
+            {
+              kind: PRICING_CONDITION_KINDS.RANGE,
+              axis: PRICING_RANGE_AXES.INPUT_TOKENS,
+              min: 200001,
+            },
+          ],
+          rates: {
+            input: {
+              amount: 4,
+              currency: "USD",
+              unit: PRICE_RATE_UNITS.TOKEN,
+              per: TOKENS_PER_MILLION,
+            },
+          },
+        },
+      ],
+    }
+    const props = {
+      pricingData: createPricingResponse([
+        { model_name: "tiered", pricingPlan },
+      ]),
+      selectedSource: createAccountSource(createDisplayAccount({})),
+      pricingScenario: {
+        purpose: PRICING_PURPOSES.TOKEN_INDEX,
+        inputTokens: 32000,
+        usage: { input: 1 },
+      },
+      isPriceComparisonActive: false,
+    }
+    const { result, rerender } = renderUseFilteredModels(props)
+    await waitFor(() =>
+      expect(
+        result.current.filteredModels[0]?.calculatedPrice.quote,
+      ).toMatchObject({ status: "complete", amount: 2 }),
+    )
+    expect(
+      result.current.filteredModels[0].calculatedPrice.isComparisonActive,
+    ).toBe(false)
+    rerender({
+      ...props,
+      pricingScenario: { ...props.pricingScenario, inputTokens: 300000 },
+    })
+    await waitFor(() =>
+      expect(
+        result.current.filteredModels[0]?.calculatedPrice.quote,
+      ).toMatchObject({ status: "complete", amount: 4 }),
+    )
+  })
   it("reorders token-priced models when the workload weights change", async () => {
     const account = createDisplayAccount({
       id: "weighted-price-account",
@@ -1494,10 +1656,9 @@ describe("useFilteredModels", () => {
           },
         ],
         {
-          model_list_source: {
-            provider: SITE_TYPES.AIHUBMIX,
-            kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
-          },
+          model_list_source: buildAIHubMixModelListSource(
+            MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+          ),
         },
       ),
       selectedSource: createAccountSource(account),
@@ -1534,10 +1695,9 @@ describe("useFilteredModels", () => {
           },
         ],
         {
-          model_list_source: {
-            provider: SITE_TYPES.AIHUBMIX,
-            kind: MODEL_LIST_SOURCE_KINDS.USER_SCOPED,
-          },
+          model_list_source: buildAIHubMixModelListSource(
+            MODEL_LIST_SOURCE_KINDS.USER_SCOPED,
+          ),
         },
       ),
       selectedSource: createAccountSource(account),
@@ -1598,10 +1758,9 @@ describe("useFilteredModels", () => {
               },
             ],
             {
-              model_list_source: {
-                provider: SITE_TYPES.AIHUBMIX,
-                kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
-              },
+              model_list_source: buildAIHubMixModelListSource(
+                MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+              ),
             },
           ),
         },
@@ -1674,10 +1833,9 @@ describe("useFilteredModels", () => {
               },
             ],
             {
-              model_list_source: {
-                provider: SITE_TYPES.AIHUBMIX,
-                kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
-              },
+              model_list_source: buildAIHubMixModelListSource(
+                MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+              ),
             },
           ),
         },
@@ -1751,10 +1909,9 @@ describe("useFilteredModels", () => {
               },
             ],
             {
-              model_list_source: {
-                provider: SITE_TYPES.AIHUBMIX,
-                kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
-              },
+              model_list_source: buildAIHubMixModelListSource(
+                MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+              ),
             },
           ),
         },
@@ -1873,10 +2030,9 @@ describe("useFilteredModels", () => {
           },
         ],
         {
-          model_list_source: {
-            provider: SITE_TYPES.AIHUBMIX,
-            kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
-          },
+          model_list_source: buildAIHubMixModelListSource(
+            MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+          ),
         },
       ),
       selectedSource: createAccountSource(account),
@@ -2369,7 +2525,7 @@ describe("useFilteredModels", () => {
         result.current.filteredModels.map((item) => [
           item.source.kind === "account" ? item.source.account.id : "profile",
           item.effectiveGroup,
-          item.calculatedPrice.kind === "token"
+          item.calculatedPrice.kind === CALCULATED_PRICE_KINDS.TOKEN
             ? item.calculatedPrice.usdPerMillionTokens.input
             : undefined,
           item.isLowestPrice,
@@ -2398,7 +2554,7 @@ describe("useFilteredModels", () => {
         result.current.filteredModels.map((item) => [
           item.source.kind === "account" ? item.source.account.id : "profile",
           item.effectiveGroup,
-          item.calculatedPrice.kind === "token"
+          item.calculatedPrice.kind === CALCULATED_PRICE_KINDS.TOKEN
             ? item.calculatedPrice.usdPerMillionTokens.input
             : undefined,
           item.isLowestPrice,
@@ -2457,10 +2613,9 @@ describe("useFilteredModels", () => {
             ],
             {
               group_ratio: {},
-              model_list_source: {
-                provider: SITE_TYPES.AIHUBMIX,
-                kind: MODEL_LIST_SOURCE_KINDS.USER_SCOPED,
-              },
+              model_list_source: buildAIHubMixModelListSource(
+                MODEL_LIST_SOURCE_KINDS.USER_SCOPED,
+              ),
             },
           ),
         },
@@ -2474,10 +2629,10 @@ describe("useFilteredModels", () => {
         result.current.filteredModels.map((item) => [
           item.source.kind === "account" ? item.source.account.id : "profile",
           item.effectiveGroup,
-          item.calculatedPrice.kind === "token"
+          item.calculatedPrice.kind === CALCULATED_PRICE_KINDS.TOKEN
             ? item.calculatedPrice.usdPerMillionTokens.input
             : undefined,
-          item.calculatedPrice.kind === "token"
+          item.calculatedPrice.kind === CALCULATED_PRICE_KINDS.TOKEN
             ? item.calculatedPrice.usdPerMillionTokens.output
             : undefined,
           item.isLowestPrice,
@@ -2610,7 +2765,7 @@ describe("useFilteredModels", () => {
       expect(
         result.current.filteredModels.map((item) => [
           item.source.kind === "account" ? item.source.account.id : "profile",
-          item.calculatedPrice.kind === "token"
+          item.calculatedPrice.kind === CALCULATED_PRICE_KINDS.TOKEN
             ? item.calculatedPrice.usdPerMillionTokens.input
             : undefined,
           item.isLowestPrice,
@@ -2624,19 +2779,23 @@ describe("useFilteredModels", () => {
     expect(
       Array.from(result.current.accountSummaryCountsByAccountId.entries()),
     ).toEqual([[ordinaryAccount.id, 1]])
-    expect(result.current.filteredModels[0]?.source.capabilities).toMatchObject(
-      {
-        supportsGroupFiltering: false,
-        supportsAccountSummary: false,
-        supportsTokenCompatibility: false,
-        supportsCredentialVerification: false,
-        supportsBatchCredentialVerification: false,
-        supportsCliVerification: false,
-      },
-    )
+    expect(
+      result.current.filteredModels.find(
+        (item) =>
+          item.source.kind === "account" &&
+          item.source.account.id === providerAccount.id,
+      )?.source.capabilities,
+    ).toMatchObject({
+      supportsGroupFiltering: false,
+      supportsAccountSummary: false,
+      supportsTokenCompatibility: false,
+      supportsCredentialVerification: false,
+      supportsBatchCredentialVerification: false,
+      supportsCliVerification: false,
+    })
   })
 
-  it("compares Sub2API estimated token prices against ratio-based accounts in all-accounts mode", async () => {
+  it("compares complete Sub2API estimates with account prices in all-accounts mode", async () => {
     const sub2apiAccount = createDisplayAccount({
       id: "account-sub2api-estimated",
       name: "Sub2API",
@@ -2709,10 +2868,10 @@ describe("useFilteredModels", () => {
       expect(
         result.current.filteredModels.map((item) => [
           item.source.kind === "account" ? item.source.account.id : "profile",
-          item.calculatedPrice.kind === "token"
+          item.calculatedPrice.kind === CALCULATED_PRICE_KINDS.TOKEN
             ? item.calculatedPrice.usdPerMillionTokens.input
             : undefined,
-          item.calculatedPrice.kind === "token"
+          item.calculatedPrice.kind === CALCULATED_PRICE_KINDS.TOKEN
             ? item.calculatedPrice.usdPerMillionTokens.output
             : undefined,
           item.isLowestPrice,
@@ -2821,7 +2980,7 @@ describe("useFilteredModels", () => {
           item.sourceIdentity?.id,
           item.sourceIdentity?.kind,
           item.effectiveGroup,
-          item.calculatedPrice.kind === "token"
+          item.calculatedPrice.kind === CALCULATED_PRICE_KINDS.TOKEN
             ? item.calculatedPrice.usdPerMillionTokens.input
             : undefined,
           item.isLowestPrice,
@@ -3235,7 +3394,7 @@ describe("useFilteredModels", () => {
         result.current.filteredModels.map((item) => [
           item.source.kind === "account" ? item.source.account.id : "profile",
           item.isLowestPrice,
-          item.calculatedPrice.kind === "per-call"
+          item.calculatedPrice.kind === CALCULATED_PRICE_KINDS.PER_CALL
             ? item.calculatedPrice.usdPerCall
             : undefined,
         ]),
@@ -4211,3 +4370,428 @@ describe("useFilteredModels", () => {
     })
   })
 })
+
+it("reverses same-model rankings across context thresholds using one shared quote and preserves all available groups", async () => {
+  const rate = (amount: number) => ({
+    amount,
+    currency: "USD" as const,
+    unit: PRICE_RATE_UNITS.TOKEN,
+    per: TOKENS_PER_MILLION,
+  })
+  const shortPlan: PricingPlan = {
+    rates: {
+      input: rate(1),
+      output: rate(0),
+      request: {
+        amount: 0,
+        currency: "USD",
+        unit: PRICE_RATE_UNITS.REQUEST,
+        per: 1,
+      },
+    },
+    rules: [
+      {
+        id: "long",
+        conditions: [
+          {
+            kind: PRICING_CONDITION_KINDS.RANGE,
+            axis: PRICING_RANGE_AXES.INPUT_TOKENS,
+            min: 272001,
+          },
+        ],
+        rates: { input: rate(10) },
+      },
+    ],
+    source: { kind: PRICING_SOURCE_KINDS.ACCOUNT },
+    groupMultiplier: PRICING_GROUP_MULTIPLIERS.PENDING,
+    issues: [],
+  }
+  const a = createDisplayAccount({ id: "a", name: "A" })
+  const b = createDisplayAccount({ id: "b", name: "B" })
+  const props: Partial<Parameters<typeof useFilteredModels>[0]> = {
+    selectedSource: createAllAccountsSource(),
+    sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+    pricingContexts: [
+      {
+        account: a,
+        pricing: createPricingResponse(
+          [
+            {
+              pricingPlan: shortPlan,
+              enable_groups: ["default", "half", "third", "fourth"],
+            },
+          ],
+          { group_ratio: { default: 1, half: 0.5, third: 2, fourth: 3 } },
+        ),
+      },
+      {
+        account: b,
+        pricing: createPricingResponse([
+          {
+            pricingPlan: {
+              ...shortPlan,
+              rates: { ...shortPlan.rates, input: rate(2) },
+              rules: [],
+            },
+          },
+        ]),
+      },
+    ],
+    pricingScenario: {
+      purpose: PRICING_PURPOSES.REQUEST,
+      inputTokens: 272000,
+      outputTokens: 0,
+      usage: { input: 272000, output: 0, request: 1 },
+    },
+  }
+  const { result, rerender } = renderUseFilteredModels(props)
+  await waitFor(() =>
+    expect(result.current.filteredModels[0].effectiveGroup).toBe("half"),
+  )
+  expect(
+    result.current.filteredModels[0].groupContext.usableGroups,
+  ).toHaveLength(4)
+  expect(result.current.filteredModels[0].calculatedPrice.quote).toMatchObject({
+    amount: expect.closeTo(0.136, 10),
+    status: "complete",
+  })
+  rerender({
+    ...props,
+    pricingScenario: {
+      purpose: PRICING_PURPOSES.REQUEST,
+      inputTokens: 272001,
+      outputTokens: 0,
+      usage: { input: 272001, output: 0, request: 1 },
+    },
+  })
+  await waitFor(() =>
+    expect(result.current.filteredModels[0].source).toMatchObject({
+      account: { id: "b" },
+    }),
+  )
+  expect(
+    result.current.filteredModels[1].calculatedPrice.quote?.matchedRules.map(
+      (rule) => rule.id,
+    ),
+  ).toEqual(["long"])
+})
+
+it("keeps catalog quotes out of recharge-cost comparisons without a purchase conversion basis", async () => {
+  const account = createDisplayAccount({
+    id: "catalog-holder",
+    siteType: SITE_TYPES.OPENROUTER,
+    balance: { USD: 0, CNY: 0 },
+  })
+  const plan: PricingPlan = {
+    rates: {
+      input: {
+        amount: 1,
+        currency: "USD",
+        unit: PRICE_RATE_UNITS.TOKEN,
+        per: TOKENS_PER_MILLION,
+      },
+    },
+    rules: [],
+    source: { kind: PRICING_SOURCE_KINDS.CATALOG },
+    groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
+    issues: [],
+  }
+  const { result } = renderUseFilteredModels({
+    selectedSource: createAccountSource(account),
+    pricingData: createPricingResponse([{ pricingPlan: plan }]),
+    showRealPrice: true,
+    pricingScenario: {
+      purpose: PRICING_PURPOSES.TOKEN_INDEX,
+      usage: { input: 1 },
+    },
+  })
+  await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+  expect(result.current.filteredModels[0].isPriceComparable).toBe(false)
+})
+
+it.each([0, -2])(
+  "uses the configured account exchange rate for catalog pricing at balance %s",
+  async (balance) => {
+    const account = createDisplayAccount({
+      siteType: SITE_TYPES.AIHUBMIX,
+      exchangeRate: 6.5,
+      balance: { USD: balance, CNY: balance * 6.5 },
+    })
+    const plan: PricingPlan = {
+      rates: {
+        input: {
+          amount: 0.02,
+          currency: "USD",
+          unit: PRICE_RATE_UNITS.TOKEN,
+          per: TOKENS_PER_MILLION,
+        },
+      },
+      rules: [],
+      source: { kind: PRICING_SOURCE_KINDS.CATALOG },
+      groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
+      issues: [],
+    }
+    const { result } = renderUseFilteredModels({
+      selectedSource: createAccountSource(account),
+      pricingData: createPricingResponse([{ pricingPlan: plan }]),
+      showRealPrice: true,
+      pricingScenario: {
+        purpose: PRICING_PURPOSES.TOKEN_INDEX,
+        usage: { input: 1 },
+      },
+    })
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+    expect(
+      result.current.filteredModels[0].calculatedPrice.quote,
+    ).toMatchObject({
+      status: "complete",
+      currency: "CNY",
+      amount: expect.closeTo(0.13),
+      calculation: { cnyPerUsd: 6.5 },
+    })
+  },
+)
+
+it.each([
+  PRICING_SOURCE_KINDS.ACCOUNT,
+  PRICING_SOURCE_KINDS.CATALOG,
+  PRICING_SOURCE_KINDS.ESTIMATE,
+] as const)(
+  "compares complete catalog quotes with %s quotes regardless of provenance",
+  async (kind) => {
+    const plan: PricingPlan = {
+      rates: {
+        input: {
+          amount: 1,
+          currency: "USD",
+          unit: PRICE_RATE_UNITS.TOKEN,
+          per: TOKENS_PER_MILLION,
+        },
+      },
+      rules: [],
+      source: { kind: PRICING_SOURCE_KINDS.CATALOG },
+      groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
+      issues: [],
+    }
+    const { result } = renderUseFilteredModels({
+      selectedSource: createAllAccountsSource(),
+      sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+      pricingContexts: ["expensive", "cheap", "incomplete"].map((id) => ({
+        account: createDisplayAccount({ id }),
+        pricing: createPricingResponse([
+          {
+            pricingPlan: {
+              ...plan,
+              source: {
+                kind: id === "expensive" ? kind : PRICING_SOURCE_KINDS.CATALOG,
+              },
+              rates:
+                id === "incomplete"
+                  ? {}
+                  : {
+                      input: {
+                        ...plan.rates.input!,
+                        amount: id === "expensive" ? 2 : 1,
+                      },
+                    },
+            },
+          },
+        ]),
+      })),
+      pricingScenario: {
+        purpose: PRICING_PURPOSES.TOKEN_INDEX,
+        usage: { input: 1 },
+      },
+    })
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(3))
+    expect(
+      result.current.filteredModels.map((item) => ({
+        id:
+          item.source?.kind === "account" ? item.source.account.id : undefined,
+        comparable: item.isPriceComparable,
+        lowest: item.isLowestPrice,
+      })),
+    ).toEqual([
+      { id: "cheap", comparable: true, lowest: true },
+      { id: "expensive", comparable: true, lowest: false },
+      { id: "incomplete", comparable: false, lowest: false },
+    ])
+  },
+)
+
+it("awards lowest price only within matching text or video token units", async () => {
+  const { result } = renderUseFilteredModels({
+    selectedSource: createAllAccountsSource(),
+    pricingContexts: ["text", "video-cheap", "video-expensive"].map((id) => ({
+      account: createDisplayAccount({ id }),
+      pricing: createPricingResponse([
+        {
+          pricingPlan: {
+            usageMode:
+              id === "text"
+                ? PRICING_USAGE_MODES.TOKENS
+                : PRICING_USAGE_MODES.VIDEO,
+            rates: {
+              [id === "text" ? "input" : PRICING_METERS.VIDEO_OUTPUT]: {
+                amount: id === "video-expensive" ? 3 : 1,
+                currency: "USD",
+                unit: PRICE_RATE_UNITS.TOKEN,
+                per: TOKENS_PER_MILLION,
+              },
+            },
+            rules: [],
+            groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
+            source: { kind: PRICING_SOURCE_KINDS.ACCOUNT },
+            issues: [],
+          },
+        },
+      ]),
+    })),
+    pricingScenario: {
+      purpose: PRICING_PURPOSES.TOKEN_INDEX,
+      usage: { input: 1 },
+    },
+  })
+  await waitFor(() => expect(result.current.filteredModels).toHaveLength(3))
+  expect(
+    result.current.filteredModels
+      .filter((item) => item.isLowestPrice)
+      .map((item) =>
+        item.source.kind === "account" ? item.source.account.id : "",
+      ),
+  ).toEqual(["video-cheap"])
+})
+
+it("compares legacy and planned token prices in the same units during default browsing", async () => {
+  const { result } = renderUseFilteredModels({
+    selectedSource: createAllAccountsSource(),
+    priceComparisonWeights: {
+      input: 85,
+      output: 15,
+      cacheRead: 0,
+      cacheWrite: 0,
+    },
+    pricingContexts: [
+      {
+        account: createDisplayAccount({ id: "expensive" }),
+        pricing: createPricingResponse([
+          {
+            pricingPlan: {
+              rates: {
+                input: {
+                  amount: 10,
+                  currency: "USD",
+                  unit: PRICE_RATE_UNITS.TOKEN,
+                  per: TOKENS_PER_MILLION,
+                },
+                output: {
+                  amount: 10,
+                  currency: "USD",
+                  unit: PRICE_RATE_UNITS.TOKEN,
+                  per: TOKENS_PER_MILLION,
+                },
+              },
+              rules: [],
+              source: { kind: PRICING_SOURCE_KINDS.ACCOUNT },
+              groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
+              issues: [],
+            },
+          },
+        ]),
+      },
+      {
+        account: createDisplayAccount({ id: "cheap" }),
+        pricing: createPricingResponse([
+          {
+            token_price_usd_per_million: { input: 1, output: 1 },
+          },
+        ]),
+      },
+    ],
+  })
+  await waitFor(() => expect(result.current.filteredModels).toHaveLength(2))
+  expect(
+    result.current.filteredModels.find((item) => item.isLowestPrice)?.source,
+  ).toMatchObject({ account: { id: "cheap" } })
+})
+
+it("quotes image plans through the list even when their flat display price is unavailable", async () => {
+  const account = createDisplayAccount({ id: "images" })
+  const { result } = renderUseFilteredModels({
+    selectedSource: createAccountSource(account),
+    pricingData: createPricingResponse([
+      {
+        quota_type: 1,
+        pricingPlan: {
+          usageMode: PRICING_USAGE_MODES.IMAGE,
+          rates: {
+            image: {
+              amount: 0.2,
+              currency: "USD",
+              unit: PRICE_RATE_UNITS.IMAGE,
+              per: 1,
+            },
+          },
+          rules: [],
+          source: { kind: PRICING_SOURCE_KINDS.ACCOUNT },
+          groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
+          issues: [],
+        },
+      },
+    ]),
+    pricingScenario: {
+      purpose: PRICING_PURPOSES.REQUEST,
+      imageSize: PRICING_IMAGE_SIZES.K1,
+      usage: { image: 2, input: 32000, output: 2000 },
+    },
+  })
+  await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+  expect(result.current.filteredModels[0].calculatedPrice.quote).toMatchObject({
+    status: "complete",
+    amount: 0.4,
+  })
+  expect(result.current.filteredModels[0].isPriceComparable).toBe(true)
+})
+
+it.each([false, true])(
+  "preserves fixed per-request comparisons in token-price mode (plan: %s)",
+  async (withPlan) => {
+    const account = createDisplayAccount({ id: "fixed-request" })
+    const { result } = renderUseFilteredModels({
+      selectedSource: createAccountSource(account),
+      pricingData: createPricingResponse([
+        {
+          quota_type: 1,
+          model_price: 0.2,
+          ...(withPlan
+            ? {
+                pricingPlan: {
+                  rates: {
+                    request: {
+                      amount: 0.2,
+                      currency: "USD" as const,
+                      unit: PRICE_RATE_UNITS.REQUEST,
+                      per: 1,
+                    },
+                  },
+                  rules: [],
+                  issues: [],
+                  source: { kind: PRICING_SOURCE_KINDS.ACCOUNT },
+                  groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
+                },
+              }
+            : {}),
+        },
+      ]),
+      pricingScenario: {
+        purpose: PRICING_PURPOSES.TOKEN_INDEX,
+        usage: { input: 85, output: 15 },
+      },
+    })
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+    expect(
+      result.current.filteredModels[0].calculatedPrice.quote,
+    ).toMatchObject({ status: "complete", unit: "request", amount: 0.2 })
+    expect(result.current.filteredModels[0].isPriceComparable).toBe(true)
+  },
+)

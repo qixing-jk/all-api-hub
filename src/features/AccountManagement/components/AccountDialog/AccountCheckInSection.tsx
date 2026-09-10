@@ -95,10 +95,11 @@ export function AccountCheckInSection({
   const hasUnknownDetection =
     inspection.decision.outcome ===
       CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unknown &&
-    Object.values(checkIn.methodKnowledge.methods).some(
-      (method) =>
-        method.detection?.outcome ===
-        CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown,
+    inspection.choices.some(
+      (choice) =>
+        choice.detectionOutcome ===
+          CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown &&
+        checkIn.methodKnowledge.methods[choice.methodId]?.detection,
     )
   const isSelectedStatusUnavailable =
     selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown
@@ -136,7 +137,9 @@ export function AccountCheckInSection({
                   ? t("form.checkInStatusUnknown")
                   : hasSelectedMethod
                     ? t("form.checkInStatusDesc")
-                    : hasCandidates
+                    : hasCandidates &&
+                        inspection.decision.outcome !==
+                          CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported
                       ? t("form.checkInStatusPending")
                       : t("form.checkInStatusUnsupported")}
           </p>

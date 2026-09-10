@@ -7,6 +7,10 @@ import {
   type ModelPriceComparisonWeights,
 } from "~/features/ModelList/priceComparison"
 import {
+  createDefaultPricingScenario,
+  type ModelPricingScenarioSettings,
+} from "~/features/ModelList/pricingScenario"
+import {
   MODEL_LIST_SORT_MODES,
   type ModelListSortMode,
 } from "~/features/ModelList/sortModes"
@@ -31,6 +35,8 @@ import type { ModelCapabilitySelectionValue } from "../modelCapabilityFilters"
  * @returns State values and setters for model list controls.
  */
 export function useModelListState() {
+  const [pricingScenarioSettings, setPricingScenarioSettings] =
+    useState<ModelPricingScenarioSettings>(createDefaultPricingScenario)
   // 状态管理
   const [selectedSourceValue, setSelectedSourceValue] = useState("") // 当前选中的数据源
   const [searchTerm, setSearchTerm] = useState("") // 搜索关键词
@@ -69,6 +75,8 @@ export function useModelListState() {
   const [showEndpointTypes, setShowEndpointTypes] = useState(true) // 是否显示端点类型
 
   return {
+    pricingScenarioSettings,
+    setPricingScenarioSettings,
     selectedSourceValue,
     setSelectedSourceValue,
     searchTerm,

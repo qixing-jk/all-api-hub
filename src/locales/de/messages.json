@@ -3,6 +3,15 @@
     "autoProvisionAlreadyHad": "{{accountName}} hat bereits einen API-Schlüssel. Automatische Erstellung übersprungen.",
     "autoProvisionCreated": "Für {{accountName}} wurde ein Standardschlüssel erstellt.",
     "autoProvisionFailed": "Konto gespeichert, aber es konnte kein API-Schlüssel automatisch erstellt werden. Sie können „{{actionLabel}}“ in der Schlüsselverwaltung verwenden, um es erneut zu versuchen.",
+    "autoProvisionGroupsCovered": "Alle verfügbaren Gruppen von {{accountName}} haben jetzt nutzbare API-Schlüssel.",
+    "autoProvisionGroupsCreated_one": "{{count}} Gruppen-API-Schlüssel für {{accountName}} erstellt.",
+    "autoProvisionGroupsCreated_other": "{{count}} Gruppen-API-Schlüssel für {{accountName}} erstellt.",
+    "autoProvisionGroupsIncomplete_one": "{{count}} Gruppen-API-Schlüssel für {{accountName}} erstellt, aber einige Gruppen benötigen noch eine Aktion. Bitte unter Schlüsselverwaltung → {{actionLabel}} prüfen.",
+    "autoProvisionGroupsIncomplete_other": "{{count}} Gruppen-API-Schlüssel für {{accountName}} erstellt, aber einige Gruppen benötigen noch eine Aktion. Bitte unter Schlüsselverwaltung → {{actionLabel}} prüfen.",
+    "autoProvisionGroupsUnavailable": "Für {{accountName}} wurden keine verfügbaren Gruppen zurückgegeben. Es wurden keine Schlüssel erstellt. Bitte unter Schlüsselverwaltung → {{actionLabel}} prüfen.",
+    "autoProvisionGroupsUnsupported": "Die automatische Schlüsselerstellung für alle Gruppen ist für {{accountName}} nicht verfügbar. Die Schlüsselverwaltung zeigt die verfügbaren Schlüsselaktionen für dieses Konto.",
+    "autoProvisionNeedsManualAction": "{{accountName}} wurde gespeichert, aber der Standardschlüssel benötigt eine manuelle Auswahl oder die Verarbeitung eines einmaligen Geheimnisses. Schließen Sie den Vorgang mit „{{actionLabel}}“ in der Schlüsselverwaltung ab.",
+    "autoProvisionUnsupported": "{{accountName}} wurde gespeichert, aber dieser Website-Typ unterstützt das automatische Erstellen eines Standard-API-Schlüssels nicht.",
     "checkingApiKeys": "API-Schlüssel prüfen...",
     "createTokenFailed": "Fehler beim Erstellen des API-Tokens",
     "tokenNotFound": "Fehler beim Erstellen oder Finden eines API-Tokens"
@@ -25,7 +34,6 @@
   },
   "axonhub": {
     "configMissing": "Bitte konfigurieren Sie zuerst die Adresse AxonHub, die Administrator-E-Mail-Adresse und das Passwort in den Grundeinstellungen",
-    "modelsMissing": "Bitte geben Sie mindestens ein Modell an",
     "noChannelsToSync": "Keine Kanäle zum Synchronisieren"
   },
   "background": {
@@ -52,9 +60,7 @@
   },
   "claudecodehub": {
     "configMissing": "Bitte konfigurieren Sie zuerst die Claude Code Hub-Adresse und den Admin-Token in den Grundeinstellungen",
-    "modelsMissing": "Bitte geben Sie mindestens ein Modell an",
-    "noChannelsToSync": "Keine Anbieter zum Synchronisieren",
-    "realProviderKeyRequired": "Claude Code Hub erfordert einen echten Upstream-Provider-Schlüssel. Leere oder maskierte Schlüssel können nicht für die Anbietererstellung verwendet werden."
+    "noChannelsToSync": "Keine Anbieter zum Synchronisieren"
   },
   "claudeCodeRouter": {
     "configMissing": "Bitte konfigurieren Sie zuerst die Basis-URL des Code-Routers Claude in den Einstellungen",

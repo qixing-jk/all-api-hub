@@ -20,6 +20,10 @@ import {
 import type { OptionsOverviewUnifiedApiGuidanceDiagnostics } from "~/features/OptionsOverview/types"
 import { useOptionsOverviewData } from "~/features/OptionsOverview/useOptionsOverviewData"
 import {
+  createEmptyFeatureGuidanceState,
+  type FeatureGuidanceState,
+} from "~/services/featureGuidance/featureGuidanceState"
+import {
   DEFAULT_PREFERENCES,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
@@ -50,6 +54,7 @@ interface GuidancePreviewScenario {
 interface GuidancePreviewScenarioInput
   extends OptionsOverviewUnifiedApiGuidanceDiagnostics {
   preferences: UserPreferences
+  guidanceState: FeatureGuidanceState
 }
 
 interface PreviewScenarioModel {
@@ -77,9 +82,12 @@ const configuredGatewayPreferences: UserPreferences = {
   },
 }
 
-const completedGatewayGuidancePreferences: UserPreferences = {
-  ...configuredGatewayPreferences,
+const baseGuidanceState = createEmptyFeatureGuidanceState()
+
+const completedGatewayGuidanceState: FeatureGuidanceState = {
+  ...createEmptyFeatureGuidanceState(),
   gatewayGuidance: {
+    dismissedAtBySurface: {},
     onboardingCompletedAt: 1,
   },
 }
@@ -100,6 +108,7 @@ const previewScenarios: GuidancePreviewScenario[] = [
       profileCount: 0,
       gatewayConfigured: false,
       preferences: basePreferences,
+      guidanceState: baseGuidanceState,
     },
   },
   {
@@ -113,6 +122,7 @@ const previewScenarios: GuidancePreviewScenario[] = [
       profileCount: 0,
       gatewayConfigured: true,
       preferences: configuredGatewayPreferences,
+      guidanceState: baseGuidanceState,
     },
   },
   {
@@ -126,6 +136,7 @@ const previewScenarios: GuidancePreviewScenario[] = [
       profileCount: 1,
       gatewayConfigured: false,
       preferences: basePreferences,
+      guidanceState: baseGuidanceState,
     },
   },
   {
@@ -139,6 +150,7 @@ const previewScenarios: GuidancePreviewScenario[] = [
       profileCount: 0,
       gatewayConfigured: false,
       preferences: basePreferences,
+      guidanceState: baseGuidanceState,
     },
   },
   {
@@ -152,6 +164,7 @@ const previewScenarios: GuidancePreviewScenario[] = [
       profileCount: 0,
       gatewayConfigured: true,
       preferences: configuredGatewayPreferences,
+      guidanceState: baseGuidanceState,
     },
   },
   {
@@ -165,6 +178,7 @@ const previewScenarios: GuidancePreviewScenario[] = [
       profileCount: 1,
       gatewayConfigured: true,
       preferences: configuredGatewayPreferences,
+      guidanceState: baseGuidanceState,
     },
   },
   {
@@ -177,7 +191,8 @@ const previewScenarios: GuidancePreviewScenario[] = [
       keyAccessibleAccountCount: 1,
       profileCount: 0,
       gatewayConfigured: true,
-      preferences: completedGatewayGuidancePreferences,
+      preferences: configuredGatewayPreferences,
+      guidanceState: completedGatewayGuidanceState,
     },
   },
 ]
@@ -200,6 +215,7 @@ const buildApiCredentialScenarioModel = (scenario: GuidancePreviewScenario) =>
   buildApiCredentialGatewayGuidanceModel(
     scenario.input.profileCount,
     scenario.input.preferences,
+    scenario.input.guidanceState,
     SITE_TYPES.NEW_API,
   )
 

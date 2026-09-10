@@ -6,7 +6,7 @@ import {
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import {
   fetchVoApiV2CheckInStats,
   submitVoApiV2CheckIn,
@@ -62,7 +62,7 @@ const updateAccountAuthFromResync = async (
     username?: string
   },
 ) => {
-  await accountStorage.updateAccount(
+  await accountMutations.updateAccount(
     account.id,
     {
       account_info: {

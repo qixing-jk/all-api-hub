@@ -1,17 +1,22 @@
 import { http, HttpResponse } from "msw"
-import { beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   OPENROUTER_API_BASE_URL,
   SITE_TYPES,
 } from "~/services/accountSiteDefinitions/identifiers"
 import { openRouterProviderModelCatalog } from "~/services/apiAdapters/openrouter/providerModelCatalog"
+import * as personalizedModelCatalogService from "~/services/apiService/openrouter/personalizedModelCatalog"
+import * as publicModelCatalogService from "~/services/apiService/openrouter/publicModelCatalog"
+import { ApiError } from "~/services/apiTransport/errors"
 import {
   MODEL_CATALOG_SCOPES,
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
 } from "~/services/modelList/pricingModel"
+import { PRICING_PURPOSES } from "~/services/modelPricing/pricingConstants"
+import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import {
   MODEL_DISPLAY_FACT_LABELS,
@@ -32,6 +37,146 @@ function getSection(
   return section!
 }
 
+it("quotes published image and audio token rates in token units", async () => {
+  server.use(
+    http.get(`${OPENROUTER_API_BASE_URL}/models`, () =>
+      HttpResponse.json({
+        data: [
+          {
+            id: "test/media",
+            pricing: {
+              prompt: "0.000001",
+              completion: "0.000002",
+              image_token: "0.000003",
+              audio: "0.000004",
+              audio_output: "0.000005",
+              request: "0",
+            },
+          },
+        ],
+        total_count: 1,
+        links: { next: null },
+      }),
+    ),
+  )
+  const model = (await openRouterProviderModelCatalog.fetchPricing({})).data[0]
+  expect(model.pricingPlan?.source.url).toBe("https://openrouter.ai/test/media")
+  expect(
+    quoteCanonicalModelPrice(
+      model,
+      {
+        purpose: PRICING_PURPOSES.REQUEST,
+        usage: {
+          input: 1000,
+          output: 1000,
+          imageInput: 1000,
+          audioInput: 1000,
+          audioOutput: 1000,
+          request: 1,
+        },
+      },
+      {},
+    ).amount,
+  ).toBeCloseTo(0.015)
+})
+
+it("enforces the published 8192 total and 4096 output limits independently", async () => {
+  server.use(
+    http.get(`${OPENROUTER_API_BASE_URL}/models`, () =>
+      HttpResponse.json({
+        data: [
+          {
+            id: "tencent/hy-mt2-1.8b",
+            context_length: 8192,
+            top_provider: { context_length: 8192, max_completion_tokens: 4096 },
+            pricing: { prompt: "0.000000044", completion: "0.000000177" },
+          },
+        ],
+        total_count: 1,
+        links: { next: null },
+      }),
+    ),
+  )
+  const model = (await openRouterProviderModelCatalog.fetchPricing({})).data[0]
+  const quote = (inputTokens: number, outputTokens: number) =>
+    quoteCanonicalModelPrice(
+      model,
+      {
+        purpose: PRICING_PURPOSES.REQUEST,
+        inputTokens,
+        outputTokens,
+        usage: { input: 80, output: 20 },
+      },
+      {},
+    )
+  expect(quote(32000, 2000)).toMatchObject({
+    status: "unavailable",
+    requirementDetails: [
+      { axis: "totalTokens", value: 34000, ranges: [{ max: 8192 }] },
+    ],
+  })
+  expect(quote(6000, 2000).status).toBe("complete")
+  expect(quote(2000, 5000)).toMatchObject({
+    status: "unavailable",
+    requirementDetails: [
+      { axis: "outputTokens", value: 5000, ranges: [{ max: 4096 }] },
+    ],
+  })
+  const index = quoteCanonicalModelPrice(
+    model,
+    {
+      purpose: PRICING_PURPOSES.TOKEN_INDEX,
+      inputTokens: 32000,
+      outputTokens: 2000,
+      usage: { input: 80, output: 20 },
+    },
+    {},
+  )
+  expect(index.status).toBe("complete")
+  expect(index.amount).toBeCloseTo(0.044 * 0.8 + 0.177 * 0.2)
+  expect(index.issues).not.toContainEqual({ code: "model-limit-exceeded" })
+})
+
+it("keeps output-image counts and cached audio tokens as separate published meters", async () => {
+  server.use(
+    http.get(`${OPENROUTER_API_BASE_URL}/models`, () =>
+      HttpResponse.json({
+        data: [
+          {
+            id: "test/media-details",
+            pricing: {
+              prompt: "0.000001",
+              completion: "0.000002",
+              input_audio_cache: "0.000003",
+              image_output: "0.1",
+              request: "0",
+            },
+          },
+        ],
+        total_count: 1,
+        links: { next: null },
+      }),
+    ),
+  )
+  const model = (await openRouterProviderModelCatalog.fetchPricing({})).data[0]
+  const quote = quoteCanonicalModelPrice(
+    model,
+    {
+      purpose: PRICING_PURPOSES.REQUEST,
+      usage: {
+        input: 1000,
+        output: 1000,
+        audioCache: 1000,
+        outputImage: 2,
+        request: 1,
+      },
+    },
+    {},
+  )
+  expect(quote.status).toBe("complete")
+  expect(quote.amount).toBeCloseTo(0.206)
+})
+
 function getFact(
   section: ReturnType<typeof getSection>,
   fallbackLabel: string,
@@ -45,6 +190,7 @@ function getFact(
 
 describe("OpenRouter provider model catalog Adapter", () => {
   beforeEach(() => server.resetHandlers())
+  afterEach(() => vi.restoreAllMocks())
 
   it("normalizes the verified personalized catalog behind an account-authenticated capability", async () => {
     let publicRequestCount = 0
@@ -92,6 +238,100 @@ describe("OpenRouter provider model catalog Adapter", () => {
     )
     expect(publicRequestCount).toBe(0)
   })
+
+  it("redacts the Management Key when personalized provider errors are disclosed", async () => {
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/models/user`, () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: 403,
+              message:
+                "Management key management-key-example cannot access the catalog",
+            },
+          },
+          { status: 403 },
+        ),
+      ),
+    )
+
+    const error = await openRouterProviderModelCatalog
+      .personalized!.fetchPricing({
+        accountId: "account-example-a",
+        credential: "management-key-example",
+      })
+      .catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toBe(
+      "Management key [REDACTED] cannot access the catalog",
+    )
+    expect((error as Error).cause).toBeUndefined()
+  })
+
+  it("returns a safe abort error when cancellation races a provider rejection", async () => {
+    const credential = "management-key-example"
+    const controller = new AbortController()
+    controller.abort(new Error(`unsafe abort reason ${credential}`))
+    vi.spyOn(
+      personalizedModelCatalogService,
+      "fetchOpenRouterPersonalizedModelCatalog",
+    ).mockRejectedValue(
+      new ApiError(`Provider rejected ${credential}`, 403, "/models/user"),
+    )
+
+    const error = await openRouterProviderModelCatalog
+      .personalized!.fetchPricing({
+        accountId: "account-example-a",
+        credential,
+        abortSignal: controller.signal,
+      })
+      .catch((caught: unknown) => caught)
+
+    expect(error).toMatchObject({
+      name: "AbortError",
+      message: "The operation was aborted",
+    })
+    expect(JSON.stringify(error)).not.toContain(credential)
+    expect((error as Error).message).not.toContain("Provider rejected")
+    expect((error as Error).message).not.toContain("unsafe abort reason")
+    expect((error as Error).cause).toBeUndefined()
+  })
+
+  it("preserves a provider abort error", async () => {
+    const abortError = new DOMException("Cancelled", "AbortError")
+    vi.spyOn(
+      publicModelCatalogService,
+      "fetchOpenRouterPublicModelCatalog",
+    ).mockRejectedValue(abortError)
+
+    await expect(openRouterProviderModelCatalog.fetchPricing({})).rejects.toBe(
+      abortError,
+    )
+  })
+
+  it.each([
+    ["network", new TypeError("Network unavailable"), TypeError],
+    ["generic", new Error("Catalog unavailable"), Error],
+  ])(
+    "preserves the %s error category at the public catalog disclosure boundary",
+    async (_label, providerError, expectedType) => {
+      vi.spyOn(
+        publicModelCatalogService,
+        "fetchOpenRouterPublicModelCatalog",
+      ).mockRejectedValue(providerError)
+
+      const error = await openRouterProviderModelCatalog
+        .fetchPricing({})
+        .catch((caught: unknown) => caught)
+
+      expect(error).toBeInstanceOf(expectedType)
+      expect((error as Error).constructor).toBe(expectedType)
+      expect(error).not.toBe(providerError)
+      expect((error as Error).message).toBe(providerError.message)
+      expect((error as Error).cause).toBeUndefined()
+    },
+  )
 
   it("normalizes primary prices and core display facts into the product model", async () => {
     server.use(
@@ -432,45 +672,14 @@ describe("OpenRouter provider model catalog Adapter", () => {
           fact.unit,
         ]),
     ).toEqual([
-      [
-        "One-hour cache write price",
-        1.1,
-        "million-cache-write-one-hour-tokens",
-      ],
       ["Reasoning token price", 0.7, "million-reasoning-tokens"],
-      ["Request price", 0.005, "request"],
-      ["Image input price", 0.01, "input-image"],
       ["Image output price", 0.02, "output-image"],
       ["Image token price", 0.3, "million-image-tokens"],
       ["Audio input price", 0.4, "million-audio-input-tokens"],
       ["Audio output price", 0.5, "million-audio-output-tokens"],
       ["Cached audio input price", 0.8, "million-cached-audio-input-tokens"],
-      ["Web search price", 0.006, "web-search"],
     ])
-    expect(getFact(pricing, "Conditional prices")).toMatchObject({
-      type: "price-overrides",
-      overrides: [
-        {
-          conditions: [{ type: "minimum-prompt-tokens", value: 200_000 }],
-          prices: expect.arrayContaining([
-            expect.objectContaining({
-              label: expect.objectContaining({ fallback: "Input price" }),
-              amount: 3,
-              unit: "million-input-tokens",
-            }),
-          ]),
-        },
-        {
-          conditions: [{ type: "utc-window", start: 1630, end: 30 }],
-          prices: expect.arrayContaining([
-            expect.objectContaining({
-              label: expect.objectContaining({ fallback: "Cache read price" }),
-              amount: 0,
-            }),
-          ]),
-        },
-      ],
-    })
+    expect(model.pricingPlan?.rules).toHaveLength(2)
     expect(
       pricing.facts.some((fact) => fact.label.fallback === "Discount"),
     ).toBeFalsy()
@@ -609,18 +818,16 @@ describe("OpenRouter provider model catalog Adapter", () => {
         values: ["text"],
       }),
     ])
-    const pricing = getSection(model, "pricing")
-    expect(pricing.facts.map((fact) => fact.label.fallback)).toEqual([
-      "Conditional prices",
-    ])
-    expect(getFact(pricing, "Conditional prices")).toMatchObject({
-      overrides: [
-        {
-          conditions: [{ type: "minimum-prompt-tokens", value: 100 }],
-          prices: [expect.objectContaining({ amount: 0 })],
-        },
-      ],
-    })
+    expect(
+      model.presentation?.sections?.some((section) => section.id === "pricing"),
+    ).toBe(false)
+    expect(model.pricingPlan?.rules).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          conditions: [{ kind: "range", axis: "inputTokens", min: 101 }],
+        }),
+      ]),
+    )
     expect(
       getFact(getSection(model, "request-limits"), "Prompt token limit"),
     ).toMatchObject({ value: 0 })
@@ -667,4 +874,165 @@ describe("OpenRouter provider model catalog Adapter", () => {
 
     expect(response.data[0]?.vendorEvidence).toBeUndefined()
   })
+})
+
+it("quotes ordered conditional prices and fixed request fees through the provider catalog capability", async () => {
+  server.use(
+    http.get(`${OPENROUTER_API_BASE_URL}/models`, () =>
+      HttpResponse.json({
+        data: [
+          {
+            id: "test/conditional",
+            pricing: {
+              prompt: "0.000002",
+              completion: "0.000004",
+              request: "0.01",
+              overrides: [
+                {
+                  min_prompt_tokens: 200000,
+                  prompt: "0.000004",
+                  completion: "0.000008",
+                },
+                { min_prompt_tokens: 200000, prompt: "0.000003" },
+              ],
+            },
+          },
+        ],
+        total_count: 1,
+        links: { next: null },
+      }),
+    ),
+  )
+  const response = await openRouterProviderModelCatalog.fetchPricing({})
+  const scenario = {
+    purpose: PRICING_PURPOSES.REQUEST,
+    inputTokens: 200001,
+    outputTokens: 1000,
+    usage: { input: 200001, output: 1000, request: 1 },
+  }
+  expect(
+    quoteCanonicalModelPrice(response.data[0], scenario, {
+      groupMultiplier: 7,
+    }),
+  ).toMatchObject({
+    status: "complete",
+    amount: expect.closeTo(0.618003, 10),
+    source: { kind: "catalog" },
+  })
+  expect(
+    quoteCanonicalModelPrice(
+      response.data[0],
+      {
+        ...scenario,
+        purpose: PRICING_PURPOSES.TOKEN_INDEX,
+        usage: { input: 1, output: 1 },
+      },
+      {},
+    ).amount,
+  ).toBe(5.5)
+})
+
+it("does not reuse time-dependent top-level prices outside the supplied schedule or ignore unknown conditions", async () => {
+  server.use(
+    http.get(`${OPENROUTER_API_BASE_URL}/models`, () =>
+      HttpResponse.json({
+        data: [
+          {
+            id: "test/timed",
+            pricing: {
+              prompt: "0.000002",
+              completion: "0.000004",
+              overrides: [
+                {
+                  utc_start: 1630,
+                  utc_end: 30,
+                  utc_days: ["monday"],
+                  prompt: "0.000001",
+                },
+              ],
+            },
+          },
+          {
+            id: "test/unknown",
+            pricing: {
+              prompt: "0.000002",
+              completion: "0.000004",
+              overrides: [{ future_condition: true, prompt: "0" }],
+            },
+          },
+        ],
+        total_count: 2,
+        links: { next: null },
+      }),
+    ),
+  )
+  const response = await openRouterProviderModelCatalog.fetchPricing({})
+  const scenario = {
+    purpose: PRICING_PURPOSES.TOKEN_INDEX,
+    at: "2026-09-07T17:00:00Z",
+    usage: { input: 1 },
+  }
+  expect(quoteCanonicalModelPrice(response.data[0], scenario, {}).amount).toBe(
+    1,
+  )
+  expect(
+    quoteCanonicalModelPrice(
+      response.data[0],
+      { ...scenario, at: "2026-09-08T17:00:00Z" },
+      {},
+    ).status,
+  ).toBe("unavailable")
+  expect(
+    quoteCanonicalModelPrice(response.data[1], scenario, {}).status,
+  ).not.toBe("complete")
+})
+
+it("preserves router placeholders and distinct reasoning rates through catalog admission", async () => {
+  const routers = ["auto-beta", "fusion", "pareto-code", "bodybuilder", "auto"]
+  const data = [
+    ...routers.map((name) => ({
+      id: `openrouter/${name}`,
+      pricing: { prompt: "-1", completion: "-1" },
+    })),
+    {
+      id: "perplexity/sonar-deep-research",
+      pricing: {
+        prompt: "0.000002",
+        completion: "0.000008",
+        internal_reasoning: "0.000003",
+        web_search: "0.005",
+      },
+    },
+  ]
+  server.use(
+    http.get(`${OPENROUTER_API_BASE_URL}/models`, () =>
+      HttpResponse.json({
+        data,
+        total_count: data.length,
+        links: { next: null },
+      }),
+    ),
+  )
+  const models = (await openRouterProviderModelCatalog.fetchPricing({})).data
+  for (const model of models) {
+    const quote = quoteCanonicalModelPrice(
+      model,
+      {
+        purpose: PRICING_PURPOSES.TOKEN_INDEX,
+        usage: { input: 80, output: 20 },
+      },
+      {},
+    )
+    if (model.model_name.startsWith("openrouter/")) {
+      expect(quote.status).toBe("unavailable")
+      expect(quote.issues).toContainEqual({ code: "price-unavailable" })
+    } else {
+      expect(quote.status).toBe("partial")
+      expect(quote.issues).toContainEqual({
+        code: "output-token-mix",
+        meter: "output",
+      })
+    }
+    expect(quote.issues).not.toContainEqual({ code: "unsupported-rule" })
+  }
 })

@@ -182,6 +182,80 @@ describe("ShieldSettings", () => {
   const updateTempWindowFallback = vi.fn()
   let focusObservationController = createFocusObservationController()
 
+  it("saves custom window dimensions on submit and restores defaults", async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    const width = screen.getByRole("spinbutton", {
+      name: "settings:refresh.shieldWindowWidth",
+    })
+    const height = screen.getByRole("spinbutton", {
+      name: "settings:refresh.shieldWindowHeight",
+    })
+    expect(width).toHaveValue(600)
+    expect(height).toHaveValue(720)
+    await user.clear(width)
+    await user.type(width, "800")
+    await user.clear(height)
+    await user.type(height, "1000")
+    expect(updateTempWindowFallback).not.toHaveBeenCalled()
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.save" }),
+    )
+    expect(updateTempWindowFallback).toHaveBeenLastCalledWith({
+      windowWidth: 800,
+      windowHeight: 1000,
+    })
+    const context = useUserPreferencesContextMock.mock.results.at(-1)!.value
+    useUserPreferencesContextMock.mockReturnValue({
+      ...context,
+      tempWindowFallback: {
+        ...context.tempWindowFallback,
+        windowWidth: 800,
+        windowHeight: 1000,
+      },
+    })
+    rerender(<ShieldSettings />)
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings:refresh.shieldWindowSizeReset",
+      }),
+    )
+    expect(width).toHaveValue(600)
+    expect(height).toHaveValue(720)
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.save" }),
+    )
+    expect(updateTempWindowFallback).toHaveBeenLastCalledWith({
+      windowWidth: 600,
+      windowHeight: 720,
+    })
+  })
+
+  it("does not save empty or out-of-range window dimensions", async () => {
+    const user = userEvent.setup()
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    const height = screen.getByRole("spinbutton", {
+      name: "settings:refresh.shieldWindowHeight",
+    })
+    await user.clear(height)
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.save" }),
+    )
+    expect(height).toBeInvalid()
+    await user.type(height, "9999")
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.save" }),
+    )
+    expect(height).toBeInvalid()
+    expect(updateTempWindowFallback).not.toHaveBeenCalled()
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     focusObservationController = createFocusObservationController()
@@ -1153,7 +1227,7 @@ describe("ShieldSettings", () => {
     expect(focusObservationController.finish).toHaveBeenCalledTimes(1)
   })
 
-  it("uses localized fallback copy for a blank thrown error", async () => {
+  it("retranslates a blank trigger failure without executing or observing focus again", async () => {
     isDevelopmentModeMock.mockReturnValue(true)
     executeProtectionBypassTaskMock.mockRejectedValueOnce(new Error("   "))
     render(<ShieldSettings />, {
@@ -1187,6 +1261,33 @@ describe("ShieldSettings", () => {
       await screen.findByRole("group", { name: "This run" }),
     ).toBeInTheDocument()
     expect(focusObservationController.finish).toHaveBeenCalledTimes(1)
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "settings",
+      (await import("~/locales/zh-CN/settings.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(
+        screen.getByText(
+          testI18n.t("settings:refresh.shieldDevTriggerFailureFallback"),
+        ),
+      ).toHaveAttribute("role", "alert")
+      expect(executeProtectionBypassTaskMock).toHaveBeenCalledTimes(1)
+      expect(focusObservationController.finish).toHaveBeenCalledTimes(1)
+      expect(
+        screen.getByRole("spinbutton", {
+          name: testI18n.t("settings:refresh.shieldDevTriggerDelayLabel"),
+        }),
+      ).toHaveValue(0)
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "settings")
+    }
   })
 
   it("keeps the request result when focus observation is unavailable", async () => {

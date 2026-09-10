@@ -5,7 +5,7 @@ import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { AuthTypeEnum } from "~/types"
 import {
   buildCheckInConfig,
@@ -142,7 +142,7 @@ describe("useAccountDialog auth defaults", () => {
     })
   })
 
-  it("creates a compatibility check-in selection only for supported manual site types", async () => {
+  it("keeps manual site type candidates unselected until detection confirms support", async () => {
     const { result } = renderAccountDialogHook({
       mode: DIALOG_MODES.ADD,
       isOpen: true,
@@ -156,16 +156,8 @@ describe("useAccountDialog auth defaults", () => {
 
     expect(result.current.state.checkIn.selection).toEqual({
       mode: "automatic",
-      methodId: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
     })
-    expect(
-      result.current.state.checkIn.methodKnowledge.methods[
-        AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
-      ]?.detection,
-    ).toEqual({
-      outcome: "matched",
-      evidence: { source: "compatibility_registration" },
-    })
+    expect(result.current.state.checkIn.methodKnowledge.methods).toEqual({})
 
     const { result: unsupportedResult } = renderAccountDialogHook({
       mode: DIALOG_MODES.ADD,
@@ -237,10 +229,9 @@ describe("useAccountDialog auth defaults", () => {
       supported: {
         automaticExecutionEnabled: false,
         customCheckIn,
-        methodIds: [AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn],
+        methodIds: [],
         selection: {
           mode: "automatic",
-          methodId: AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
         },
       },
       discoveryRequired: {
@@ -277,7 +268,6 @@ describe("useAccountDialog auth defaults", () => {
       automaticExecutionEnabled: true,
       selection: {
         mode: "automatic",
-        methodId: AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
       },
     })
   })
@@ -301,7 +291,7 @@ describe("useAccountDialog auth defaults", () => {
       },
     })
     const getAccountSpy = vi
-      .spyOn(accountStorage, "getAccountById")
+      .spyOn(accountQueries, "getAccountById")
       .mockResolvedValue(
         buildSiteAccount({
           id: "edit-account",

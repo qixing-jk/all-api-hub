@@ -3,20 +3,17 @@ import {
   isAccountTokenRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
-import {
-  ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
-  ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
-} from "~/services/accounts/accountSiteProfile"
+import { ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS } from "~/services/accounts/accountSiteProfile"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import type { ModelCatalogRequest } from "~/services/apiAdapters/contracts/modelCatalog"
 import type { ModelPricingRequest } from "~/services/apiAdapters/contracts/modelPricing"
+import { MODEL_PRICING_RUNTIME_KEY_FALLBACKS } from "~/services/apiAdapters/contracts/modelPricing"
 import {
   buildApiCredentialProfilePricingResponse,
   fetchApiCredentialModelIds,
 } from "~/services/apiCredentialProfiles/modelCatalog"
 import {
   MODEL_LIST_ACCOUNT_SOURCE_ROUTES,
-  MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS,
   resolveModelListAccountSourceReadiness,
 } from "~/services/modelList/accountSources/readiness"
 import {
@@ -56,11 +53,8 @@ interface LoadAccountRuntimeKeyFallbackPricingParams {
 export const ACCOUNT_RUNTIME_KEY_FALLBACK_LOAD_FAILED =
   "ACCOUNT_RUNTIME_KEY_FALLBACK_LOAD_FAILED"
 
-const createMissingModelCatalogCapabilityError = (siteType: string) =>
-  new Error(`modelCatalog is not implemented for ${siteType}`)
-
-const createMissingModelPricingCapabilityError = (siteType: string) =>
-  new Error(`modelPricing is not implemented for ${siteType}`)
+const createUnsupportedModelListSourceError = (siteType: string) =>
+  new Error(`No model-list source capability is registered for ${siteType}`)
 
 const createAccountModelPricingRequest = (
   account: LoadAccountRuntimeKeyFallbackPricingParams["account"],
@@ -145,22 +139,16 @@ export async function loadAccountRuntimeKeyFallbackPricingResponse(
   try {
     if (
       readiness.route === MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing &&
-      readiness.displayCapabilitiesSource ===
-        ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile
+      readiness.modelPricing.runtimeKeyFallback ===
+        MODEL_PRICING_RUNTIME_KEY_FALLBACKS.ACCOUNT_PRICING
     ) {
       return await readiness.modelPricing.fetchPricing(
         createAccountModelPricingRequest(params.account, params.abortSignal),
       )
     }
 
-    if (
-      readiness.route === MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported &&
-      readiness.reason ===
-        MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS.MissingModelPricingCapability &&
-      readiness.displayCapabilitiesSource ===
-        ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile
-    ) {
-      throw createMissingModelPricingCapabilityError(params.account.siteType)
+    if (readiness.route === MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported) {
+      throw createUnsupportedModelListSourceError(params.account.siteType)
     }
 
     const resolvedRuntimeKey = await resolveFallbackRuntimeKeySecret(
@@ -209,14 +197,6 @@ export async function loadAccountRuntimeKeyFallbackPricingResponse(
         params.account,
         runtimeModels,
       )
-    }
-
-    if (
-      readiness.route === MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported &&
-      readiness.reason ===
-        MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS.MissingModelCatalogCapability
-    ) {
-      throw createMissingModelCatalogCapabilityError(params.account.siteType)
     }
 
     let upstreamModelIds: string[] = []

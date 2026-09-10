@@ -71,10 +71,17 @@
     "toggleLabel": "Füllen Sie beim Hinzufügen von Konten die URL der aktuellen Website vorab aus"
   },
   "autoProvisionKeyOnAccountAdd": {
-    "description": "Steuern Sie, ob All API Hub automatisch einen Standard-API-Schlüssel bereitstellt, nachdem Sie ein Konto hinzugefügt haben.",
+    "description": "Nach dem Hinzufügen eines Kontos API-Schlüssel vorbereiten: einen Standardschlüssel oder Schlüssel für alle verfügbaren Gruppen.",
+    "manualHint": "Für gespeicherte Konten können fehlende Schlüssel aller verfügbaren Gruppen unter Schlüsselverwaltung → {{actionLabel}} ergänzt werden.",
+    "modeDescription": "Standard erstellt nur dann einen Schlüssel, wenn das Konto noch keinen hat. Alle Gruppen erstellt einen Schlüssel für jede Gruppe ohne nutzbaren Schlüssel. Gruppen mit manuellem Handlungsbedarf werden gemeldet.",
+    "modeLabel": "Umfang der automatischen Erstellung",
+    "modes": {
+      "allGroups": "Alle verfügbaren Gruppen",
+      "default": "Nur Standardschlüssel"
+    },
     "title": "API-Schlüssel",
-    "toggleDesc": "Wenn aktiviert, überprüft All API Hub Ihren Token-Bestand nach dem Speichern eines Kontos und erstellt einen Standard-Token, falls keiner vorhanden ist.",
-    "toggleLabel": "Beim Hinzufügen eines Kontos automatisch einen Standardschlüssel erstellen"
+    "toggleDesc": "Nach dem Speichern des Kontos werden fehlende Schlüssel im ausgewählten Umfang geprüft und erstellt.",
+    "toggleLabel": "Nach dem Hinzufügen eines Kontos automatisch Schlüssel erstellen"
   },
   "axonHub": {
     "cors": {
@@ -215,9 +222,9 @@
     "userIdDesc": "Administrator-Benutzer-ID (nur numerisch). Der Root-Administrator ist normalerweise 1."
   },
   "duplicateAccountWarningOnAdd": {
-    "description": "Steuern Sie, ob All API Hub um Bestätigung bittet, wenn Sie ein Konto für eine bereits vorhandene Website hinzufügen.",
+    "description": "Gespeicherte Konten vor dem Hinzufügen prüfen, um Duplikate zu vermeiden.",
     "title": "Konten",
-    "toggleDesc": "Wenn aktiviert, zeigt All API Hub einen Bestätigungsdialog an, wenn Sie versuchen, ein weiteres Konto für dieselbe Website-URL hinzuzufügen.",
+    "toggleDesc": "Bestätigung anfordern, wenn dieselbe Benutzer-ID für diese Website bereits gespeichert ist. Bei OpenRouter wird nach einem identischen Management Key gesucht.",
     "toggleLabel": "Warnung vor dem Hinzufügen von Duplikaten"
   },
   "logging": {
@@ -500,6 +507,11 @@
     "shieldPermissionWarningTitle": "Berechtigungen für Cookies, Webanfragen und Blockierung von Webanfragen erforderlich",
     "shieldPopupFirefoxNote": "In Firefox würde das Starten dieser Funktion über das Erweiterungs-Popup das Popup schließen. Dieser Einstiegspunkt ist daher nicht verfügbar. Verwenden Sie stattdessen die Seitenleiste oder die Einstellungsseite.",
     "shieldTitle": "Unterstützung bei der Website-Verifizierung",
+    "shieldWindowHeight": "Höhe (px)",
+    "shieldWindowSizeDesc": "Breite und Höhe in Pixeln einstellen und speichern. Gilt für neu geöffnete Verifizierungsfenster; bestehende Fenster und Tabs behalten ihre Größe.",
+    "shieldWindowSizeReset": "Standardwerte wiederherstellen",
+    "shieldWindowSizeTitle": "Größe des Verifizierungsfensters",
+    "shieldWindowWidth": "Breite (px)",
     "title": "Aktualisierungseinstellungen"
   },
   "releaseUpdate": {
@@ -586,30 +598,36 @@
     "userCustomSort": "Benutzerspezifische Sortierung"
   },
   "sub2apiManagedSite": {
-    "defaultScope": {
-      "description": "Die erste Version unterstützt nur URL + Admin API Key, wenn step_up_enabled auf false steht. Admin-Anmeldung, JWT, TOTP und Step-up-Entsperrung werden noch nicht unterstützt.",
-      "title": "Nur Standardsicherheitseinstellungen"
+    "adminCredentialsLink": {
+      "description": "Melde dich als Administrator an und erstelle und kopiere unter Systemeinstellungen → Sicherheit und Authentifizierung einen Schlüssel. Der vollständige Schlüssel wird nur einmal angezeigt. Eine Neugenerierung macht den alten Schlüssel ungültig.",
+      "missingBaseUrl": "Gib zuerst eine gültige Website-URL ein, um das Dashboard zu öffnen und einen Admin API Key abzurufen.",
+      "open": "Systemeinstellungen öffnen",
+      "title": "Admin API Key abrufen"
     },
-    "description": "Sub2API-API-Key-Konten über die Admin-API verwalten.",
+    "defaultScope": {
+      "description": "Wenn deine Website für sensible Vorgänge eine zusätzliche Verifizierung verlangt, kann die Erweiterung Kanalschlüssel weder anzeigen noch exportieren. Führe diese Aktionen im Sub2API-Dashboard aus. Migrationen sind ebenfalls betroffen, wenn dafür ein Quellschlüssel gelesen werden muss.",
+      "title": "Einschränkungen bei Schlüsselanzeige und Export"
+    },
+    "description": "Verbinde deine Website, um vorhandene API-Schlüssel in Sub2API zu importieren und Kanäle in All API Hub anzuzeigen, zu bearbeiten und zu migrieren.",
     "fields": {
-      "adminApiKeyDesc": "Admin API Key für den x-api-key-Header",
+      "adminApiKeyDesc": "Verwende zur Kanalverwaltung einen im Dashboard erstellten Admin API Key. Ein gewöhnlicher API-Schlüssel für Modellaufrufe funktioniert hier nicht.",
       "adminApiKeyLabel": "Admin API Key",
-      "adminApiKeyPlaceholder": "Admin API Key eingeben",
-      "baseUrlDesc": "Basis-URL der Sub2API-Site festlegen",
-      "baseUrlLabel": "Basis-URL",
+      "adminApiKeyPlaceholder": "Admin API Key aus dem Dashboard einfügen",
+      "baseUrlDesc": "Gib die URL deines Sub2API-Dashboards einschließlich http:// oder https:// ein.",
+      "baseUrlLabel": "Website-URL",
       "baseUrlPlaceholder": "https://sub2api.example.com",
       "hideAdminApiKey": "Admin API Key ausblenden",
       "showAdminApiKey": "Admin API Key anzeigen"
     },
-    "title": "Sub2API-Integration",
+    "title": "Mit Sub2API verbinden",
     "validation": {
-      "description": "Prüfen, ob der Admin API Key API-Key-Konten auflisten kann",
-      "failed": "Sub2API-Prüfung fehlgeschlagen: {{error}}",
-      "missingFields": "Bitte Basis-URL und Admin API Key eingeben",
-      "success": "Sub2API-Konfiguration erfolgreich geprüft",
-      "title": "Konfiguration prüfen",
-      "validate": "Prüfen",
-      "validating": "Wird geprüft..."
+      "description": "Prüfe, ob Website-URL und Admin API Key funktionieren, bevor du die Kanalverwaltung öffnest.",
+      "failed": "Sub2API-Verbindungsprüfung fehlgeschlagen: {{error}}",
+      "missingFields": "Gib zuerst die Website-URL und den Admin API Key ein",
+      "success": "Verbunden. Du kannst jetzt Sub2API-Kanäle verwalten.",
+      "title": "Verbindung prüfen",
+      "validate": "Verbindung überprüfen",
+      "validating": "Wird überprüft…"
     }
   },
   "tabs": {
@@ -709,6 +727,7 @@
         "success": "{{task}} erfolgreich abgeschlossen."
       },
       "counts": "Gesamt {{total}}, Erfolg {{success}}, fehlgeschlagen {{failed}}, übersprungen {{skipped}}.",
+      "countsWithAutoCheckinCategories": "Gesamt {{total}}, in diesem Lauf eingecheckt {{success}}, bereits eingecheckt {{alreadyChecked}}, fehlgeschlagen {{failed}}, Bestätigung ausstehend {{uncertain}}, nicht ausgeführt {{skipped}}.",
       "title": {
         "failure": "{{task}} fehlgeschlagen",
         "partialSuccess": "{{task}} teilweise erfolgreich",

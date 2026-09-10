@@ -237,8 +237,9 @@ const boundariesMatch = (
   left.siteType === right.siteType &&
   left.scopeKey === right.scopeKey
 
-const boundaryIdentity = (boundary: ActiveResourceBoundary) =>
-  JSON.stringify([boundary.accountId, boundary.siteType, boundary.scopeKey])
+const boundaryIdentity = (
+  boundary: Pick<ActiveResourceBoundary, "accountId" | "siteType" | "scopeKey">,
+) => JSON.stringify([boundary.accountId, boundary.siteType, boundary.scopeKey])
 
 const boundaryFromResourceRef = (
   ref: AccountKeyResourceRef,
@@ -477,6 +478,9 @@ export function useAccountKeyResourceController({
   const [acceptedRows, setAcceptedRows] = useState<
     readonly AccountKeyResourceFacts[]
   >([])
+  const [resourceScopes, setResourceScopes] = useState<
+    ReadonlyMap<string, AccountKeyScope>
+  >(new Map())
   const acceptedRowsRef = useRef(acceptedRows)
   const [failures, setFailures] = useState<Record<string, ResourceFailure>>({})
   const [scopeInventoryFailure, setScopeInventoryFailure] =
@@ -620,6 +624,29 @@ export function useAccountKeyResourceController({
     editorOpeningRef.current = next
     setEditorOpening(next)
   }, [])
+
+  const getResourceScope = useCallback(
+    (ref: AccountKeyResourceRef) => resourceScopes.get(boundaryIdentity(ref)),
+    [resourceScopes],
+  )
+
+  const rememberResourceScopes = useCallback(
+    (
+      boundary: Pick<ActiveResourceBoundary, "accountId" | "siteType">,
+      availableScopes: readonly AccountKeyScope[],
+    ) => {
+      setResourceScopes((previous) => {
+        const next = new Map(previous)
+        for (const scope of availableScopes)
+          next.set(
+            boundaryIdentity({ ...boundary, scopeKey: scope.scopeKey }),
+            scope,
+          )
+        return next
+      })
+    },
+    [],
+  )
 
   const replaceAcceptedRows = useCallback(
     (next: readonly AccountKeyResourceFacts[]) => {
@@ -952,7 +979,10 @@ export function useAccountKeyResourceController({
       setScopes([])
       setSelectedScope(null)
       setLoadingResourceBoundary(null)
-      if (!options.preserveRows || mode === "idle") replaceAcceptedRows([])
+      if (!options.preserveRows || mode === "idle") {
+        setResourceScopes(new Map())
+        replaceAcceptedRows([])
+      }
       setFailures({})
       setScopeInventoryFailure(null)
       setSettledAccountIds([])
@@ -1054,6 +1084,10 @@ export function useAccountKeyResourceController({
               signal: controller.signal,
             })
             if (current === generation.current && !controller.signal.aborted) {
+              rememberResourceScopes(
+                { accountId: account.id, siteType: account.siteType },
+                [scope],
+              )
               acceptFreshRead({
                 accountId: account.id,
                 siteType: account.siteType,
@@ -1258,6 +1292,7 @@ export function useAccountKeyResourceController({
         setScopes(availableScopes)
         setSelectedScope(scope)
         setScopeInventoryFailure(scopeInventory.partialFailure ?? null)
+        rememberResourceScopes(activeBoundary, availableScopes)
         replaceAcceptedRows(rows)
         acceptProgress(true)
         setSettledAccountIds([account.id])
@@ -1292,6 +1327,7 @@ export function useAccountKeyResourceController({
       mode,
       openSession,
       replaceAcceptedRows,
+      rememberResourceScopes,
       search,
       selectedAccount,
       transitionCreatedSecret,
@@ -1346,6 +1382,7 @@ export function useAccountKeyResourceController({
         )
           ? [nextSelectedScope, ...inventory.scopes]
           : inventory.scopes
+      rememberResourceScopes(boundary, nextScopes)
       setScopes(nextScopes)
       setSelectedScope(nextSelectedScope)
       setScopeInventoryFailure(null)
@@ -1362,7 +1399,7 @@ export function useAccountKeyResourceController({
         setIsScopeInventoryLoading(false)
       }
     }
-  }, [mode])
+  }, [mode, rememberResourceScopes])
 
   useEffect(() => {
     const routeObservation = JSON.stringify([
@@ -2329,6 +2366,7 @@ export function useAccountKeyResourceController({
     selectedScope,
     rows,
     allRows: acceptedRows,
+    getResourceScope,
     failures,
     scopeInventoryFailure,
     isScopeInventoryLoading,

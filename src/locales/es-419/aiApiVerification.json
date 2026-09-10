@@ -32,11 +32,16 @@
     "meta": {
       "apiType": "Tipo de API",
       "apiTypePlaceholder": "Seleccionar tipo de API",
+      "mode": "Modo de prueba",
       "model": "Modelo",
       "modelPlaceholder": "Ingresa id de modelo",
       "runtimeKey": "Clave",
       "runtimeKeyIncompatible": "No disponible para este modelo",
       "runtimeKeyPlaceholder": "Seleccionar clave"
+    },
+    "modes": {
+      "nonStreaming": "Sin streaming",
+      "streaming": "Con streaming"
     },
     "noCompatibleRuntimeKeyHint": "No hay ninguna clave disponible para el grupo de este modelo. Crea o elige una clave para un grupo habilitado en Administración de claves.",
     "notRunYet": "Aún no ejecutado",

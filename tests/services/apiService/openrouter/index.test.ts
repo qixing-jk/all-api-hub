@@ -207,6 +207,29 @@ describe("apiService OpenRouter", () => {
     },
   )
 
+  it("preserves the documented provider message for a credits 403", async () => {
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/credits`, () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: 403,
+              message: "Only management keys can perform this operation",
+            },
+          },
+          { status: 403 },
+        ),
+      ),
+    )
+
+    await expect(fetchAccountData(baseRequest)).rejects.toMatchObject({
+      message: "Only management keys can perform this operation",
+      statusCode: 403,
+      code: API_ERROR_CODES.HTTP_403,
+      upstreamCode: "403",
+    })
+  })
+
   it.each([
     { data: null },
     { data: {} },

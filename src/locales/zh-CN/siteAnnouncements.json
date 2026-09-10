@@ -42,6 +42,7 @@
   "loading": "正在加载公告...",
   "messages": {
     "checkCompleted": "公告检查已完成",
+    "checkCompletedWithIssues": "检查已完成：{{failed}} 个站点失败，{{unsupported}} 个站点不支持。请选择站点查看详情。",
     "checkFailed": "公告检查失败",
     "loadFailed": "加载公告失败",
     "markAllReadFailed": "批量标记公告已读失败",
@@ -52,6 +53,8 @@
     "title": "{{site}} 有新公告"
   },
   "status": {
+    "aggregateIssues": "{{failed}} 个站点检查失败，{{unsupported}} 个站点不支持公告检查。请选择站点查看详情并重试失败项。",
+    "aggregateIssuesTitle": "部分站点需要处理",
     "failed": "该站点最近一次公告检查失败：{{error}}",
     "failedTitle": "检查失败",
     "lastChecked": "最近检查：{{time}}",

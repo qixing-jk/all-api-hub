@@ -3,10 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
-  ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING,
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
-  ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS,
 } from "~/services/accounts/accountSiteProfile"
 import {
   MODEL_LIST_SOURCE_KINDS,
@@ -76,9 +74,6 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken routing", () => 
     resolveDisplayAccountTokenForSecretMock.mockReset()
 
     getAccountSiteModelListProfileMock.mockReturnValue({
-      directPricing: ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
-      tokenScopedCatalogFallback:
-        ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.RuntimeKey,
       dashboardEstimateLoader:
         ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
       statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token,

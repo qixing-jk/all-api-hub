@@ -28,8 +28,13 @@ import type {
   ManagedSiteMigrationResult,
 } from "../presentation/contracts"
 import {
+  getMigrationPreviewErrorMessage,
   mapManagedResourceMigrationExecutionResult,
   mapManagedResourceMigrationPreview,
+  projectManagedResourceMigrationExecutionResult,
+  projectManagedResourceMigrationPreview,
+  type ManagedResourceMigrationExecutionData,
+  type ManagedResourceMigrationPreviewData,
 } from "../presentation/managedResourceMigrationPresentation"
 import {
   startManagedResourceControllerAction,
@@ -80,29 +85,33 @@ type UseManagedResourceMigrationControllerOptions = {
   executeMigration?: ExecuteMigration
 }
 
+type MigrationPreviewState = {
+  data: ManagedResourceMigrationPreviewData | null
+  totalCount: number
+  isLoading: boolean
+  isManualLoading: boolean
+  failed: boolean
+}
+
+type MigrationResultState = {
+  data: ManagedResourceMigrationExecutionData
+  refreshRequired: boolean
+}
+
 const createPreviewState = ({
-  sourceLabel,
-  targetLabel,
   totalCount,
   isLoading = false,
-  error = null,
+  failed = false,
 }: {
-  sourceLabel: string
-  targetLabel?: string
   totalCount: number
   isLoading?: boolean
-  error?: string | null
-}): ManagedSiteMigrationPreviewState => ({
-  sourceLabel,
-  targetLabel,
-  rows: [],
-  generalWarnings: [],
-  readyCount: 0,
-  blockedCount: 0,
+  failed?: boolean
+}): MigrationPreviewState => ({
+  data: null,
   totalCount,
   isLoading,
   isManualLoading: false,
-  error,
+  failed,
 })
 
 /** Owns the native migration lifecycle while keeping refs and commands out of UI state. */
@@ -126,9 +135,11 @@ export function useManagedResourceMigrationController({
   const [selectedTarget, setSelectedTarget] = useState<ManagedSiteType | "">(
     targets[0]?.value ?? "",
   )
-  const [preview, setPreview] =
-    useState<ManagedSiteMigrationPreviewState | null>(null)
-  const [result, setResult] = useState<ManagedSiteMigrationResult | null>(null)
+  const [previewState, setPreviewState] =
+    useState<MigrationPreviewState | null>(null)
+  const [resultState, setResultState] = useState<MigrationResultState | null>(
+    null,
+  )
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
   const [isRecoveryRunning, setIsRecoveryRunning] = useState(false)
@@ -146,35 +157,26 @@ export function useManagedResourceMigrationController({
   const targetSignature = JSON.stringify(
     [...new Set(targets.map(({ value }) => value))].sort(),
   )
-  const targetPresentationSignature = JSON.stringify(
-    targets
-      .map(({ value, label }) => [value, label] as const)
-      .sort(([left], [right]) => left.localeCompare(right)),
-  )
   const selectedRowKeysRef = useRef(selectedRowKeys)
   const targetsRef = useRef(targets)
   const analyticsRef = useRef(analytics)
   const analyticsSurfaceIdRef = useRef(analyticsSurfaceId)
   const executeMigrationRef = useRef(executeMigration)
-  const getSiteLabelRef = useRef(getSiteLabel)
   const onCloseRef = useRef(onClose)
   const prepareMigrationRef = useRef(prepareMigration)
   const refreshRef = useRef(refresh)
   const resolveDisplayNameRef = useRef(resolveDisplayName)
   const resolveRefRef = useRef(resolveRef)
-  const tRef = useRef(t)
   selectedRowKeysRef.current = selectedRowKeys
   targetsRef.current = targets
   analyticsRef.current = analytics
   analyticsSurfaceIdRef.current = analyticsSurfaceId
   executeMigrationRef.current = executeMigration
-  getSiteLabelRef.current = getSiteLabel
   onCloseRef.current = onClose
   prepareMigrationRef.current = prepareMigration
   refreshRef.current = refresh
   resolveDisplayNameRef.current = resolveDisplayName
   resolveRefRef.current = resolveRef
-  tRef.current = t
 
   const startAnalytics = useCallback(() => {
     if (analyticsSession.current.attempted) {
@@ -246,21 +248,10 @@ export function useManagedResourceMigrationController({
   }, [completeAnalytics, invalidate])
 
   useEffect(() => {
-    const targetLabel = targetsRef.current.find(
-      ({ value }) => value === selectedTarget,
-    )?.label
-    setPreview((currentPreview) =>
-      currentPreview && currentPreview.targetLabel !== targetLabel
-        ? { ...currentPreview, targetLabel }
-        : currentPreview,
-    )
-  }, [selectedTarget, targetPresentationSignature])
-
-  useEffect(() => {
     if (!isOpen) {
       invalidate(true)
-      setPreview(null)
-      setResult(null)
+      setPreviewState(null)
+      setResultState(null)
       setIsConfirmationOpen(false)
       setIsRunning(false)
       setIsRecoveryRunning(false)
@@ -274,26 +265,23 @@ export function useManagedResourceMigrationController({
     const controller = new AbortController()
     previewAbort.current = controller
     canonicalPreview.current = null
-    setResult(null)
+    setResultState(null)
     setIsConfirmationOpen(false)
     const currentTargets = targetsRef.current
     const currentSelectedRowKeys = selectedRowKeysRef.current
-    const sourceLabel = getSiteLabelRef.current(sourceSiteType)
     const targetOption = currentTargets.find(
       ({ value }) => value === selectedTarget,
     )
     const totalCount = currentSelectedRowKeys.length
     startAnalytics()
-    setPreview(
+    setPreviewState(
       createPreviewState({
-        sourceLabel,
-        targetLabel: targetOption?.label,
         totalCount,
         isLoading: true,
       }),
     )
     if (manualPreviewRefresh.current) {
-      setPreview((currentPreview) =>
+      setPreviewState((currentPreview) =>
         currentPreview
           ? { ...currentPreview, isManualLoading: true }
           : currentPreview,
@@ -303,15 +291,10 @@ export function useManagedResourceMigrationController({
 
     const failValidation = () => {
       if (current !== generation.current) return
-      setPreview(
+      setPreviewState(
         createPreviewState({
-          sourceLabel,
-          targetLabel: targetOption?.label,
           totalCount,
-          error: tRef.current(
-            "managedSiteChannels:migration.preview.loadFailed",
-            { error: tRef.current("common:labels.unknown") },
-          ),
+          failed: true,
         }),
       )
       completeAnalytics(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -361,30 +344,18 @@ export function useManagedResourceMigrationController({
       .then((canonical) => {
         if (current !== generation.current || controller.signal.aborted) return
         canonicalPreview.current = canonical
-        const mapped = mapManagedResourceMigrationPreview(canonical, {
-          t: tRef.current,
-          getSiteLabel: getSiteLabelRef.current,
-        })
-        const latestTargetLabel = targetsRef.current.find(
-          ({ value }) => value === canonical.targetSiteType,
-        )?.label
-        setPreview({
-          ...mapped,
-          targetLabel: latestTargetLabel ?? mapped.targetLabel,
+        setPreviewState({
+          ...createPreviewState({ totalCount: canonical.totalCount }),
+          data: projectManagedResourceMigrationPreview(canonical),
         })
       })
       .catch(() => {
         if (current !== generation.current || controller.signal.aborted) return
         canonicalPreview.current = null
-        setPreview(
+        setPreviewState(
           createPreviewState({
-            sourceLabel,
-            targetLabel: targetOption.label,
             totalCount,
-            error: tRef.current(
-              "managedSiteChannels:migration.preview.loadFailed",
-              { error: tRef.current("common:labels.unknown") },
-            ),
+            failed: true,
           }),
         )
         completeAnalytics(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -417,7 +388,7 @@ export function useManagedResourceMigrationController({
 
   const execute = useCallback(async () => {
     const executionPreview = canonicalPreview.current
-    if (!executionPreview || isRunning || result) return
+    if (!executionPreview || isRunning || resultState) return
 
     canonicalPreview.current = null
     const current = generation.current
@@ -446,15 +417,14 @@ export function useManagedResourceMigrationController({
       }
       if (current !== generation.current || controller.signal.aborted) return
 
-      const presentationResult = mapManagedResourceMigrationExecutionResult(
-        canonicalResult,
-        { t: tRef.current },
-      )
-      setResult(
-        refreshAccepted
-          ? presentationResult
-          : { ...presentationResult, refreshRequired: true },
-      )
+      const data =
+        projectManagedResourceMigrationExecutionResult(canonicalResult)
+      setResultState({
+        data,
+        refreshRequired:
+          !refreshAccepted ||
+          data.items.some((item) => item.status === "uncertain"),
+      })
       const sourceManagedSiteType = resolveProductAnalyticsManagedSiteType(
         executionPreview.sourceSiteType,
       )
@@ -490,16 +460,11 @@ export function useManagedResourceMigrationController({
       )
     } catch {
       if (current !== generation.current || controller.signal.aborted) return
-      setPreview((currentPreview) =>
+      setPreviewState((currentPreview) =>
         currentPreview
           ? {
               ...currentPreview,
-              error: tRef.current(
-                "managedSiteChannels:migration.preview.loadFailed",
-                {
-                  error: tRef.current("common:labels.unknown"),
-                },
-              ),
+              failed: true,
             }
           : currentPreview,
       )
@@ -517,14 +482,14 @@ export function useManagedResourceMigrationController({
         }
       }
     }
-  }, [completeAnalytics, isRunning, result])
+  }, [completeAnalytics, isRunning, resultState])
 
   const callbacks = useMemo<ManagedSiteMigrationCallbacks>(
     () => ({
       onTargetChange(targetValue) {
         if (
           !isRunning &&
-          !result &&
+          !resultState &&
           targetValue !== selectedTarget &&
           targetsRef.current.some(({ value }) => value === targetValue)
         ) {
@@ -533,7 +498,7 @@ export function useManagedResourceMigrationController({
         }
       },
       onRefreshPreview() {
-        if (isRunning || result || !selectedTarget) return
+        if (isRunning || resultState || !selectedTarget) return
         previewAbort.current?.abort()
         manualPreviewRefresh.current = true
         setPreviewRefreshKey((current) => current + 1)
@@ -543,7 +508,7 @@ export function useManagedResourceMigrationController({
           isRunning ||
           isRecoveryRunning ||
           activeRecovery.current ||
-          result?.refreshRequired !== true
+          resultState?.refreshRequired !== true
         )
           return
         const recovery = {
@@ -560,7 +525,7 @@ export function useManagedResourceMigrationController({
             recovery.generation === generation.current &&
             !recovery.controller.signal.aborted
           ) {
-            setResult((currentResult) =>
+            setResultState((currentResult) =>
               currentResult
                 ? { ...currentResult, refreshRequired: false }
                 : currentResult,
@@ -579,19 +544,20 @@ export function useManagedResourceMigrationController({
         return execute()
       },
       onClose() {
-        if (isRunning || isRecoveryRunning || result?.refreshRequired) return
+        if (isRunning || isRecoveryRunning || resultState?.refreshRequired)
+          return
         invalidate(true)
-        setPreview(null)
-        setResult(null)
+        setPreviewState(null)
+        setResultState(null)
         setIsConfirmationOpen(false)
         onCloseRef.current()
       },
       onOpenConfirmation() {
         if (
           !isRunning &&
-          !result &&
+          !resultState &&
           canonicalPreview.current &&
-          preview?.readyCount
+          previewState?.data?.readyCount
         ) {
           setIsConfirmationOpen(true)
         }
@@ -605,11 +571,39 @@ export function useManagedResourceMigrationController({
       invalidate,
       isRecoveryRunning,
       isRunning,
-      preview?.readyCount,
-      result,
+      previewState?.data?.readyCount,
+      resultState,
       selectedTarget,
     ],
   )
+
+  const mappedPreview = previewState?.data
+    ? mapManagedResourceMigrationPreview(previewState.data, { t, getSiteLabel })
+    : null
+  const preview: ManagedSiteMigrationPreviewState | null = previewState
+    ? {
+        ...(mappedPreview ?? {
+          sourceLabel: getSiteLabel(sourceSiteType),
+          rows: [],
+          generalWarnings: [],
+          readyCount: 0,
+          blockedCount: 0,
+          totalCount: previewState.totalCount,
+        }),
+        targetLabel:
+          targets.find(({ value }) => value === selectedTarget)?.label ??
+          mappedPreview?.targetLabel,
+        isLoading: previewState.isLoading,
+        isManualLoading: previewState.isManualLoading,
+        error: previewState.failed ? getMigrationPreviewErrorMessage(t) : null,
+      }
+    : null
+  const result: ManagedSiteMigrationResult | null = resultState
+    ? {
+        ...mapManagedResourceMigrationExecutionResult(resultState.data, { t }),
+        refreshRequired: resultState.refreshRequired,
+      }
+    : null
 
   return {
     selectedTarget,
@@ -619,7 +613,7 @@ export function useManagedResourceMigrationController({
     isConfirmationOpen,
     isRunning,
     isRecoveryRunning,
-    refreshRequired: result?.refreshRequired === true,
+    refreshRequired: resultState?.refreshRequired === true,
     callbacks,
   }
 }

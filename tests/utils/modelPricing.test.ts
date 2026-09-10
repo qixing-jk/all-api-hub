@@ -7,6 +7,12 @@ import {
   type ModelPricing,
 } from "~/services/modelList/pricingModel"
 import {
+  PRICE_RATE_UNITS,
+  PRICING_GROUP_MULTIPLIERS,
+  PRICING_SOURCE_KINDS,
+  TOKENS_PER_MILLION,
+} from "~/services/modelPricing/pricingConstants"
+import {
   calculateModelPrice,
   formatPrice,
   formatPriceCompact,
@@ -51,6 +57,50 @@ describe("modelPricing utils", () => {
       expect(calculateModelPrice(tokenModel, 2)).toEqual({
         kind: "token",
         usdPerMillionTokens: { input: 60, output: 120 },
+      })
+    })
+
+    it("displays independent plan rates and applies the group exactly once", () => {
+      const model: ModelPricing = {
+        ...tokenModel,
+        pricingPlan: {
+          rates: {
+            input: {
+              amount: 0,
+              currency: "USD",
+              unit: PRICE_RATE_UNITS.TOKEN,
+              per: 1,
+            },
+            output: {
+              amount: 25,
+              currency: "USD",
+              unit: PRICE_RATE_UNITS.TOKEN,
+              per: TOKENS_PER_MILLION,
+            },
+          },
+          rules: [],
+          issues: [],
+          source: { kind: PRICING_SOURCE_KINDS.ACCOUNT },
+          groupMultiplier: PRICING_GROUP_MULTIPLIERS.PENDING,
+        },
+      }
+      expect(calculateModelPrice(model, 0.5)).toEqual({
+        kind: "token",
+        usdPerMillionTokens: { input: 0, output: 12.5 },
+      })
+      model.pricingPlan!.groupMultiplier = PRICING_GROUP_MULTIPLIERS.INCLUDED
+      model.quota_type = 1
+      model.pricingPlan!.rates = {
+        request: {
+          amount: 0.02,
+          currency: "USD",
+          unit: PRICE_RATE_UNITS.REQUEST,
+          per: 1,
+        },
+      }
+      expect(calculateModelPrice(model, 0.5)).toEqual({
+        kind: "per-call",
+        usdPerCall: 0.02,
       })
     })
 

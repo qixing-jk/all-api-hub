@@ -2,6 +2,8 @@ import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { decodeNewApiResponseError } from "~/services/apiService/newApiFamily/responseError"
+import { decodeVoApiV2ResponseError } from "~/services/apiService/voapiV2/responseError"
 import { createDeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
 import {
   ApiError,
@@ -13,11 +15,8 @@ import {
   fetchApiResponse,
 } from "~/services/apiTransport/request"
 import {
-  extractDataFromApiResponseBody,
-  isHttpUrl,
-} from "~/services/apiTransport/response"
-import {
   API_AUTH_TOKEN_MODES,
+  API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES,
   API_TRANSPORT_FETCH_CONTEXT_KINDS,
 } from "~/services/apiTransport/type"
 import { DEFAULT_AUTOMATIC_FEATURE_BYPASS } from "~/services/preferences/tempWindowFallbackPreferences"
@@ -192,6 +191,7 @@ function mockTempWindowFallbackDisabledResponse() {
 
 async function expectTempWindowDisabledFallback(
   endpoint: string = ENDPOINT,
+  message: string = "请求失败: 403",
 ): Promise<void> {
   await expect(
     fetchApiData(
@@ -205,7 +205,7 @@ async function expectTempWindowDisabledFallback(
   ).rejects.toMatchObject({
     code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
     originalCode: "HTTP_403",
-    message: "请求失败: 403",
+    message,
   })
 }
 
@@ -1173,6 +1173,38 @@ describe("apiTransport request helpers", () => {
     expect(directRequestCount).toBe(1)
     expect(observer.onDispatch).toHaveBeenCalledTimes(1)
     expect(observer.onResponse).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not leave a required current-tab context after a pre-dispatch receiver failure", async () => {
+    const receiverUnavailable = new Error(
+      "Could not establish connection. Receiving end does not exist.",
+    )
+    let directRequestCount = 0
+    mockSendTabMessageWithRetry.mockRejectedValueOnce(receiverUnavailable)
+    server.use(
+      http.post(API_URL, () => {
+        directRequestCount += 1
+        return HttpResponse.json({ success: true, data: { ok: true } })
+      }),
+    )
+
+    await expect(
+      fetchApiData<{ ok: boolean }>(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+          fetchContext: {
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            tabId: 456,
+            origin: "https://example.com",
+          },
+          currentTabFallback: API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES.Forbid,
+        },
+        { endpoint: ENDPOINT, options: { method: "POST", body: "{}" } },
+      ),
+    ).rejects.toBe(receiverUnavailable)
+
+    expect(directRequestCount).toBe(0)
   })
 
   it("falls back after structured current-tab pre-dispatch failure evidence", async () => {
@@ -2226,6 +2258,101 @@ describe("apiTransport request helpers", () => {
     onResponse: vi.fn(),
   })
 
+  it("uses the temp-window route for an explicitly forced request", async () => {
+    forceTempWindowRoute()
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: {
+        success: true,
+        data: { ok: true },
+        message: "temp",
+      },
+    })
+
+    let normalFetchCount = 0
+    server.use(
+      http.post(API_URL, () => {
+        normalFetchCount += 1
+        return HttpResponse.json({
+          success: true,
+          data: { ok: false },
+          message: "normal",
+        })
+      }),
+    )
+
+    await expect(
+      fetchApiData<{ ok: boolean }>(
+        {
+          baseUrl: BASE_URL,
+          auth: {
+            authType: AuthTypeEnum.Cookie,
+            cookie: "session=abc123",
+          },
+          fetchContext: {
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            tabId: 456,
+            origin: "https://example.com",
+          },
+          forceTempWindow: true,
+          protectionBypassExecution: backgroundProtectionBypassExecution,
+        },
+        { endpoint: ENDPOINT, options: { method: "POST", body: "{}" } },
+      ),
+    ).resolves.toEqual({ ok: true })
+
+    expect(normalFetchCount).toBe(0)
+    expect(mockSendTabMessageWithRetry).not.toHaveBeenCalled()
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.ProtectionBypassExecuteTask,
+        task: {
+          kind: "profile_isolated_fetch",
+          params: expect.objectContaining({
+            originUrl: BASE_URL,
+            fetchUrl: API_URL,
+          }),
+        },
+      }),
+    )
+  })
+
+  it("applies the provider decoder to a forced temp-window error response", async () => {
+    forceTempWindowRoute()
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: false,
+      status: 403,
+      data: {
+        error: {
+          code: "group_forbidden",
+          message: "Access denied for test group",
+          type: "new_api_error",
+        },
+      },
+    })
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.Cookie },
+          forceTempWindow: true,
+          protectionBypassExecution: backgroundProtectionBypassExecution,
+        },
+        {
+          endpoint: ENDPOINT,
+          errorResponseDecoder: decodeNewApiResponseError,
+        },
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      code: ApiErrorCodes.BUSINESS_ERROR,
+      upstreamCode: "group_forbidden",
+      message: "Access denied for test group",
+    })
+  })
+
   it("keeps the observer local when a forced temp-window route is selected", async () => {
     const lifecycle: string[] = []
     let responseObserved = false
@@ -3173,7 +3300,7 @@ describe("apiTransport request helpers", () => {
     })
   })
 
-  it("preserves backend JSON error messages for non-2xx responses", async () => {
+  it("uses a top-level message as the HTTP error fallback", async () => {
     server.use(
       http.get(API_URL, () => {
         return HttpResponse.json(
@@ -3198,10 +3325,72 @@ describe("apiTransport request helpers", () => {
       statusCode: 400,
       message: "error: invalid user new-api",
       code: ApiErrorCodes.HTTP_OTHER,
+      upstreamCode: undefined,
     })
   })
 
-  it("preserves a safe top-level backend code for provider recovery logic", async () => {
+  it("prefers a provider decoder message over the fixed fallback", async () => {
+    server.use(
+      http.get(API_URL, () =>
+        HttpResponse.json(
+          { success: false, message: "Compatibility message" },
+          { status: 400 },
+        ),
+      ),
+    )
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.Cookie },
+        },
+        {
+          endpoint: ENDPOINT,
+          errorResponseDecoder: () => ({
+            kind: "business",
+            message: "Provider message",
+          }),
+        },
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: "Provider message",
+    })
+  })
+
+  it("uses a msg fallback when the provider decoder has no usable message", async () => {
+    server.use(
+      http.get(API_URL, () =>
+        HttpResponse.json(
+          { success: false, msg: "Heuristic message" },
+          { status: 400 },
+        ),
+      ),
+    )
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.Cookie },
+        },
+        {
+          endpoint: ENDPOINT,
+          errorResponseDecoder: () => ({
+            kind: "business",
+            message: "   ",
+          }),
+        },
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      code: ApiErrorCodes.HTTP_OTHER,
+      message: "Heuristic message",
+    })
+  })
+
+  it("does not infer a top-level provider code without a decoder", async () => {
     server.use(
       http.get(API_URL, () =>
         HttpResponse.json(
@@ -3226,12 +3415,12 @@ describe("apiTransport request helpers", () => {
     ).rejects.toMatchObject({
       statusCode: 409,
       code: ApiErrorCodes.HTTP_OTHER,
-      upstreamCode: "AUTH_SESSION_LIMIT",
+      upstreamCode: undefined,
       message: "Active session limit reached",
     })
   })
 
-  it("preserves a generic nested provider message and safe code", async () => {
+  it("uses a nested error message without exposing sibling metadata", async () => {
     server.use(
       http.get(API_URL, () =>
         HttpResponse.json(
@@ -3258,13 +3447,13 @@ describe("apiTransport request helpers", () => {
     ).rejects.toMatchObject({
       statusCode: 400,
       code: ApiErrorCodes.HTTP_OTHER,
-      upstreamCode: "invalid_limit",
+      upstreamCode: undefined,
       message: "Limit must be non-negative",
     })
   })
 
   it.each([undefined, null, {}, [], "bad code!", "x".repeat(65)])(
-    "preserves nested messages without exposing unsafe code %j",
+    "extracts a nested message without inferring code semantics for %j",
     async (code) => {
       server.use(
         http.get(API_URL, () =>
@@ -3296,7 +3485,7 @@ describe("apiTransport request helpers", () => {
     },
   )
 
-  it("does not special-case nested OpenRouter errors in shared compatibility APIs", async () => {
+  it("extracts an OpenRouter-like message without special-casing its code", async () => {
     const openRouterApiUrl = "https://openrouter.ai/api/v1/keys"
     server.use(
       http.get(openRouterApiUrl, () =>
@@ -3327,8 +3516,8 @@ describe("apiTransport request helpers", () => {
     ).rejects.toMatchObject({
       statusCode: 403,
       code: ApiErrorCodes.HTTP_403,
-      upstreamCode: "key_forbidden",
-      message: "请求失败: 403",
+      upstreamCode: undefined,
+      message: "Private management-key detail",
     })
   })
 
@@ -3602,6 +3791,82 @@ describe("apiTransport request helpers", () => {
     ).rejects.toMatchObject({ message: "bad request" } as any)
   })
 
+  it("uses invalid-response copy when a projected failure message is blank", async () => {
+    server.use(
+      http.get(API_URL, () =>
+        HttpResponse.json({ success: false, data: null, message: "   " }),
+      ),
+    )
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        { endpoint: ENDPOINT },
+      ),
+    ).rejects.toMatchObject({
+      code: ApiErrorCodes.BUSINESS_ERROR,
+      message: "messages:errors.api.invalidResponseFormat",
+    })
+  })
+
+  it("lets the provider decoder own HTTP 200 business error messages", async () => {
+    server.use(
+      http.get(API_URL, () =>
+        HttpResponse.json({
+          success: false,
+          data: null,
+          message: "Compatibility message",
+        }),
+      ),
+    )
+
+    const request = {
+      baseUrl: BASE_URL,
+      auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+    }
+    const options = {
+      endpoint: ENDPOINT,
+      errorResponseDecoder: () => ({
+        kind: "business" as const,
+        message: "Provider message",
+      }),
+    }
+
+    await expect(fetchApiData(request, options)).rejects.toMatchObject({
+      code: ApiErrorCodes.BUSINESS_ERROR,
+      message: "Provider message",
+    })
+    await expect(fetchApi(request, options, true)).rejects.toMatchObject({
+      code: ApiErrorCodes.BUSINESS_ERROR,
+      message: "Provider message",
+    })
+  })
+
+  it("keeps HTTP 200 error envelopes available to explicit response consumers", async () => {
+    const body = {
+      success: false,
+      data: null,
+      message: "Provider-owned response",
+    }
+    server.use(http.get(API_URL, () => HttpResponse.json(body)))
+
+    await expect(
+      fetchApi(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        {
+          endpoint: ENDPOINT,
+          errorResponseDecoder: decodeNewApiResponseError,
+        },
+      ),
+    ).resolves.toEqual(body)
+  })
+
   it("fetchApiData rejects successful JSON envelopes without data", async () => {
     server.use(
       http.get(API_URL, () => {
@@ -3651,13 +3916,57 @@ describe("apiTransport request helpers", () => {
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
-        { endpoint: modelsEndpoint },
+        {
+          endpoint: modelsEndpoint,
+          errorResponseDecoder: decodeNewApiResponseError,
+        },
       ),
     ).rejects.toMatchObject({
       endpoint: modelsEndpoint,
       statusCode: 403,
       code: ApiErrorCodes.BUSINESS_ERROR,
       message: "Access denied for test group",
+    })
+
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+  })
+
+  it("keeps provider business classification while heuristic surfaces its safe code", async () => {
+    const modelsEndpoint = "/v1/models"
+    const modelsUrl = "https://example.com/base/v1/models"
+
+    server.use(
+      http.get(modelsUrl, () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: "group_forbidden",
+              message: "   ",
+              type: "new_api_error",
+            },
+          },
+          { status: 403 },
+        ),
+      ),
+    )
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        {
+          endpoint: modelsEndpoint,
+          errorResponseDecoder: decodeNewApiResponseError,
+        },
+      ),
+    ).rejects.toMatchObject({
+      endpoint: modelsEndpoint,
+      statusCode: 403,
+      code: ApiErrorCodes.BUSINESS_ERROR,
+      message: "group_forbidden",
+      upstreamCode: "group_forbidden",
     })
 
     expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
@@ -3686,7 +3995,10 @@ describe("apiTransport request helpers", () => {
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
-        { endpoint: modelsEndpoint },
+        {
+          endpoint: modelsEndpoint,
+          errorResponseDecoder: decodeVoApiV2ResponseError,
+        },
       ),
     ).rejects.toMatchObject({
       endpoint: modelsEndpoint,
@@ -3715,7 +4027,10 @@ describe("apiTransport request helpers", () => {
       }),
     )
 
-    await expectTempWindowDisabledFallback()
+    await expectTempWindowDisabledFallback(
+      ENDPOINT,
+      "Gateway denied the request",
+    )
   })
 
   it("fetchApiData should keep primitive JSON 403 errors eligible for temp-window fallback", async () => {
@@ -3726,10 +4041,10 @@ describe("apiTransport request helpers", () => {
       }),
     )
 
-    await expectTempWindowDisabledFallback()
+    await expectTempWindowDisabledFallback(ENDPOINT, "gateway denied")
   })
 
-  it("fetchApiData should keep structured 403 errors without messages eligible for temp-window fallback", async () => {
+  it("fetchApiData should keep code-only structured 403 errors eligible for temp-window fallback", async () => {
     mockTempWindowFallbackDisabledResponse()
     server.use(
       http.get(API_URL, () => {
@@ -3745,7 +4060,7 @@ describe("apiTransport request helpers", () => {
       }),
     )
 
-    await expectTempWindowDisabledFallback()
+    await expectTempWindowDisabledFallback(ENDPOINT, "gateway_denied")
   })
 
   it("fetchApiData should tag eligible errors when temp-window fallback is disabled", async () => {
@@ -3910,31 +4225,5 @@ describe("apiTransport request helpers", () => {
     expect(Array.from(new Uint8Array(await result.arrayBuffer()))).toEqual([
       4, 5, 6,
     ])
-  })
-
-  it("isHttpUrl and extractDataFromApiResponseBody guard invalid input", () => {
-    expect(isHttpUrl("https://example.com")).toBe(true)
-    expect(isHttpUrl("http://example.com")).toBe(true)
-    expect(isHttpUrl("ftp://example.com")).toBe(false)
-    expect(isHttpUrl("not-a-url")).toBe(false)
-
-    expect(() =>
-      extractDataFromApiResponseBody(null, "/api/invalid"),
-    ).toThrowError(
-      expect.objectContaining({ code: ApiErrorCodes.JSON_PARSE_ERROR }),
-    )
-
-    let businessError: unknown
-    try {
-      extractDataFromApiResponseBody(
-        { success: false, data: null, message: "" },
-        "/api/invalid",
-      )
-    } catch (error) {
-      businessError = error
-    }
-    expect(businessError).toMatchObject({
-      code: ApiErrorCodes.BUSINESS_ERROR,
-    })
   })
 })

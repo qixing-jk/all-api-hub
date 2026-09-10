@@ -1,19 +1,17 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  ACCOUNT_SITE_AUTH_SESSION_REFRESH_LOCK_SCOPES,
   ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING,
   ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
-  ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING,
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
-  ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS,
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
   ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES,
-  doAccountSiteIdentitiesMatch,
+  findAccountSiteProfileForHostname,
   getAccountSiteModelListProfile,
   getAccountSiteProductProfile,
+  isAccountAuthTypeAllowed,
   isAccountSiteProfileUrl,
   normalizeAccountSiteProfileUrlForDuplicateCheck,
   normalizeAccountSiteProfileUrlForManagedChannel,
@@ -26,9 +24,9 @@ import {
   resolveAccountSiteTokenFormNetworkLimitPolicy,
   resolveAccountSiteUserIdentity,
   shouldDecorateAccountApiRequestWithAuthSession,
-  shouldUseAccountSiteRuntimeKeyCatalogFallback,
 } from "~/services/accounts/accountSiteProfile"
 import * as accountSiteProfileApi from "~/services/accounts/accountSiteProfile"
+import { resolveAccountSitePricingUrl } from "~/services/accounts/accountSiteProfile/urls"
 import {
   AIHUBMIX_API_ORIGIN,
   AIHUBMIX_WEB_ORIGIN,
@@ -42,6 +40,78 @@ import {
 } from "~/types/accountTodayStats"
 
 describe("accountSiteProfile", () => {
+  it("opens provider-owned pricing pages without leaking base URL credentials or queries", () => {
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.NEW_API,
+        baseUrl:
+          "https://user:secret@example.com/gateway/?token=secret#settings",
+        modelName: "vendor/model + pro",
+      }),
+    ).toBe("https://example.com/gateway/pricing?search=vendor%2Fmodel+%2B+pro")
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.ONE_HUB,
+        baseUrl: "https://example.com/",
+      }),
+    ).toBe("https://example.com/panel/model_price")
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.DONE_HUB,
+        baseUrl: "https://example.com",
+      }),
+    ).toBe("https://example.com/panel/model_price")
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.SUB2API,
+        baseUrl: "https://example.com",
+      }),
+    ).toBe("https://example.com/model-plaza")
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.APIYI,
+        baseUrl: "https://api.apiyi.com",
+      }),
+    ).toBe("https://api.apiyi.com/account/pricing")
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.UNKNOWN,
+        baseUrl: "https://example.com",
+      }),
+    ).toBeUndefined()
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.NEW_API,
+        baseUrl: "javascript:alert(1)",
+      }),
+    ).toBeUndefined()
+  })
+  it("only infers URL policy for registrations that explicitly opt in", () => {
+    expect(
+      findAccountSiteProfileForHostname("WWW.AIHUBMIX.COM")?.siteType,
+    ).toBe(SITE_TYPES.AIHUBMIX)
+    expect(findAccountSiteProfileForHostname("openrouter.ai")).toBeNull()
+    expect(
+      findAccountSiteProfileForHostname("aihubmix.com.example.invalid"),
+    ).toBeNull()
+    expect(findAccountSiteProfileForHostname("https://[invalid-url")).toBeNull()
+    expect(findAccountSiteProfileForHostname("ftp://aihubmix.com")).toBeNull()
+  })
+  it("derives auth support from the allowed authentication types", () => {
+    expect(
+      isAccountAuthTypeAllowed(SITE_TYPES.AIHUBMIX, AuthTypeEnum.AccessToken),
+    ).toBe(true)
+    expect(
+      isAccountAuthTypeAllowed(SITE_TYPES.AIHUBMIX, AuthTypeEnum.Cookie),
+    ).toBe(false)
+    expect(
+      isAccountAuthTypeAllowed(SITE_TYPES.SHAREDCHAT, AuthTypeEnum.Cookie),
+    ).toBe(true)
+    expect(
+      isAccountAuthTypeAllowed(SITE_TYPES.SHAREDCHAT, AuthTypeEnum.AccessToken),
+    ).toBe(false)
+  })
+
   it("returns independent deferred and legacy metric policies", () => {
     const profile = getAccountSiteProductProfile(SITE_TYPES.NEW_API)
 
@@ -65,21 +135,18 @@ describe("accountSiteProfile", () => {
       AuthTypeEnum.AccessToken,
       AuthTypeEnum.Cookie,
     ])
+    expect(profile.auth).not.toHaveProperty("supportsCookieAuth")
     expect(profile.auth.defaultAuthType).toBe(AuthTypeEnum.AccessToken)
     expect(profile.auth.defaultAuthHostnames).toEqual([])
-    expect(profile.auth.supportsCookieAuth).toBe(true)
-    expect(profile.supplementalAuth.kind).toBe(
-      ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.None,
-    )
-    expect(profile.authSession.decoratesAccountApiRequests).toBe(false)
+    expect(profile.authSession).toEqual({
+      kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.None,
+    })
+    expect(profile).not.toHaveProperty("supplementalAuth")
     expect(profile.createdToken.secretHandling).toBe(
       ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING.ResponseKey,
     )
     expect(profile.tokenForm.networkLimitPolicy).toBe(
       ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES.IpList,
-    )
-    expect(profile.modelList.directPricing).toBe(
-      ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Supported,
     )
     expect(profile.modelList.statusScope).toBe(
       ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
@@ -95,7 +162,6 @@ describe("accountSiteProfile", () => {
     expect(profile.siteType).toBe(SITE_TYPES.MODELFLARE)
     expect(profile.auth.defaultAuthType).toBe(AuthTypeEnum.Cookie)
     expect(profile.auth.defaultAuthHostnames).toEqual([MODELFLARE_HOSTNAME])
-    expect(profile.auth.supportsCookieAuth).toBe(true)
   })
 
   it("keeps OpenRouter identity as ordinary optional account metadata", () => {
@@ -103,6 +169,7 @@ describe("accountSiteProfile", () => {
       getAccountSiteProductProfile(SITE_TYPES.OPENROUTER).identity,
     ).toEqual({
       usernameRequired: false,
+      userIdRequired: false,
       storedUserIdentityFields: [],
     })
   })
@@ -112,21 +179,10 @@ describe("accountSiteProfile", () => {
 
     expect(profile.identity.usernameRequired).toBe(false)
     expect(profile.auth.allowedAuthTypes).toEqual([AuthTypeEnum.AccessToken])
-    expect(profile.auth.supportsCookieAuth).toBe(false)
-    expect(profile.supplementalAuth.kind).toBe(
-      ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
-    )
-    expect(profile.authSession).toMatchObject({
+    expect(profile.authSession).toEqual({
       kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
-      decoratesAccountApiRequests: true,
-      refreshLockScope: ACCOUNT_SITE_AUTH_SESSION_REFRESH_LOCK_SCOPES.Account,
     })
-    expect(profile.modelList.directPricing).toBe(
-      ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
-    )
-    expect(profile.modelList.tokenScopedCatalogFallback).toBe(
-      ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.RuntimeKey,
-    )
+    expect(profile).not.toHaveProperty("supplementalAuth")
     expect(profile.modelList.dashboardEstimateLoader).toBe(
       ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.Sub2Api,
     )
@@ -148,13 +204,6 @@ describe("accountSiteProfile", () => {
     ])
     expect(profile.auth.allowedAuthTypes).toEqual([AuthTypeEnum.AccessToken])
     expect(profile.auth.defaultAuthType).toBe(AuthTypeEnum.AccessToken)
-    expect(profile.auth.supportsCookieAuth).toBe(false)
-    expect(profile.modelList.directPricing).toBe(
-      ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
-    )
-    expect(profile.modelList.tokenScopedCatalogFallback).toBe(
-      ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.None,
-    )
     expect(profile.modelList.groupSemantics).toBe(
       ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
     )
@@ -168,34 +217,23 @@ describe("accountSiteProfile", () => {
     expect(
       getAccountSiteProductProfileOverride(SITE_TYPES.SUB2API),
     ).toMatchObject({
-      supplementalAuth: {
+      authSession: {
         kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
       },
     })
     expect(getAccountSiteProductProfile(SITE_TYPES.SUB2API)).toMatchObject({
-      supplementalAuth: {
+      authSession: {
         kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
       },
       modelList: {
-        tokenScopedCatalogFallback:
-          ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.RuntimeKey,
+        dashboardEstimateLoader:
+          ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.Sub2Api,
       },
     })
   })
 
-  it("resolves Model List source-account policy", () => {
-    expect(
-      shouldUseAccountSiteRuntimeKeyCatalogFallback({
-        siteType: SITE_TYPES.SUB2API,
-      }),
-    ).toBe(true)
-    expect(
-      shouldUseAccountSiteRuntimeKeyCatalogFallback({
-        siteType: SITE_TYPES.NEW_API,
-      }),
-    ).toBe(false)
+  it("resolves Model List presentation policy", () => {
     expect(getAccountSiteModelListProfile(SITE_TYPES.SUB2API)).toMatchObject({
-      directPricing: ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
       statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token,
     })
   })
@@ -219,9 +257,8 @@ describe("accountSiteProfile", () => {
       ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES.SubnetLimit,
     )
     expect(profile.auth.allowedAuthTypes).toEqual([AuthTypeEnum.AccessToken])
-    expect(profile.auth.supportsCookieAuth).toBe(false)
     expect(profile.modelList.displayCapabilitiesSource).toBe(
-      ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+      ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
     )
     expect(profile.modelList.groupSemantics).toBe(
       ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
@@ -335,43 +372,6 @@ describe("accountSiteProfile", () => {
         user: { id: 42 },
       }),
     ).toBeNull()
-  })
-
-  it("matches saved and current identities through the same profile rule", () => {
-    expect(
-      doAccountSiteIdentitiesMatch({
-        siteType: SITE_TYPES.NEW_API,
-        savedUser: null,
-        currentUser: { id: 42 },
-      }),
-    ).toBe(false)
-    expect(
-      doAccountSiteIdentitiesMatch({
-        siteType: SITE_TYPES.AIHUBMIX,
-        savedUser: {
-          id: "aihubmix-stable-id",
-          username: "Display Name",
-        },
-        currentUser: { username: "aihubmix-stable-id" },
-      }),
-    ).toBe(true)
-    expect(
-      doAccountSiteIdentitiesMatch({
-        siteType: SITE_TYPES.AIHUBMIX,
-        savedUser: {
-          id: "aihubmix-stable-id",
-          username: "Display Name",
-        },
-        currentUser: { username: "Display Name" },
-      }),
-    ).toBe(false)
-    expect(
-      doAccountSiteIdentitiesMatch({
-        siteType: SITE_TYPES.NEW_API,
-        savedUser: { id: "42" },
-        currentUser: { id: 42 },
-      }),
-    ).toBe(true)
   })
 
   it("keeps AnyRouter cookie auth default as profile data", () => {

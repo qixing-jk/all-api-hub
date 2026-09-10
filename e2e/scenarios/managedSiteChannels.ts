@@ -28,7 +28,12 @@ import {
 } from "~~/e2e/utils/accountLifecycle"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import {
+  assertManagedChannelPreserved,
+  captureManagedChannelSnapshot,
+} from "~~/e2e/utils/realSite/managedChannelPreservation"
+import {
   collectCleanupError,
+  runScenarioWithCleanup,
   throwScenarioError,
 } from "~~/e2e/utils/scenarioErrors"
 
@@ -44,6 +49,7 @@ type ManagedSiteChannelScenarioContext<TSiteType extends ManagedSiteType> = {
   tokenName?: string
   tokenCleanupPrefix?: string
   beforeDeleteConfirm?: () => void | Promise<void>
+  verifyRenamePreservation?: { baseUrl: string }
 }
 
 const CRUD_MODEL = "gpt-4o-mini"
@@ -131,83 +137,115 @@ async function cleanupManagedSiteChannelsByPrefix<
 export async function runManagedSiteChannelsCrudScenario<
   TSiteType extends ManagedSiteType,
 >(context: ManagedSiteChannelScenarioContext<TSiteType>) {
-  await cleanupManagedSiteChannelsByPrefix({
-    page: context.page,
-    extensionId: context.extensionId,
-    siteType: context.siteType,
-    prefix: context.cleanupPrefix ?? context.runPrefix,
+  await runScenarioWithCleanup({
+    run: async () => {
+      await cleanupManagedSiteChannelsByPrefix({
+        page: context.page,
+        extensionId: context.extensionId,
+        siteType: context.siteType,
+        prefix: context.cleanupPrefix ?? context.runPrefix,
+      })
+
+      const channelName = `${context.runPrefix} CRUD`
+      const editedChannelName = `${channelName} edited`
+
+      await context.page.goto(channelsUrl(context.extensionId))
+      await waitForExtensionRoot(context.page)
+      await expect(
+        context.page.getByTestId(
+          MANAGED_SITE_CHANNELS_TEST_IDS.addChannelButton,
+        ),
+      ).toBeVisible({ timeout: 30_000 })
+
+      await createManagedSiteChannelFromUi(context.page, {
+        name: channelName,
+        key: `sk-${slugify(context.runPrefix)}-crud`,
+        baseUrl: "https://upstream.example.invalid/v1",
+        model: shouldSeedModelsInManagedSiteCrudScenario(context.siteType)
+          ? CRUD_MODEL
+          : undefined,
+      })
+      await expectManagedSiteChannelVisibleAfterRefresh({
+        page: context.page,
+        channelName,
+      })
+
+      await context.page
+        .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.searchInput)
+        .fill(channelName)
+      await expect(channelRowByName(context.page, channelName)).toBeVisible({
+        timeout: 30_000,
+      })
+      await expectPaginationSummary(context.page, "1", "1", "1")
+
+      const captureSnapshot = (name: string) =>
+        captureManagedChannelSnapshot({
+          page: context.page,
+          siteType: context.siteType,
+          baseUrl: context.verifyRenamePreservation!.baseUrl,
+          name,
+          read: () => openSingleVisibleChannelEditDialog(context.page, name),
+        })
+      const before = context.verifyRenamePreservation
+        ? await captureSnapshot(channelName)
+        : undefined
+      if (!before)
+        await openSingleVisibleChannelEditDialog(context.page, channelName)
+      await context.page
+        .getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
+        .fill(editedChannelName)
+      if (
+        !context.verifyRenamePreservation &&
+        shouldEditModelsInManagedSiteCrudScenario(context.siteType)
+      ) {
+        await fillModelInput(context.page, CRUD_UPDATED_MODEL)
+      }
+      await submitChannelDialogAndWaitForClose(context.page)
+
+      if (before) {
+        const after = await captureSnapshot(editedChannelName)
+        await context.page
+          .getByTestId(CHANNEL_DIALOG_TEST_IDS.cancelButton)
+          .click()
+        assertManagedChannelPreserved(context.siteType, before, after)
+      }
+
+      await expect(
+        channelRowByName(context.page, editedChannelName),
+      ).toBeVisible({
+        timeout: 30_000,
+      })
+
+      await context.page
+        .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.searchInput)
+        .fill(editedChannelName)
+      await expect(
+        channelRowByName(context.page, editedChannelName),
+      ).toBeVisible({
+        timeout: 30_000,
+      })
+      await expect(channelRowByName(context.page, channelName)).toHaveCount(0)
+      await expectPaginationSummary(context.page, "1", "1", "1")
+
+      await deleteVisibleChannelByName(
+        context.page,
+        editedChannelName,
+        context.beforeDeleteConfirm,
+      )
+    },
+    finalizers: [
+      async () => {
+        await cleanupManagedSiteChannelsByPrefix({
+          page: context.page,
+          extensionId: context.extensionId,
+          siteType: context.siteType,
+          prefix: context.cleanupPrefix ?? context.runPrefix,
+        })
+      },
+    ],
+    cleanupMessage: "Managed-site channel CRUD cleanup failed",
+    failureMessage: "Managed-site channel CRUD scenario failed",
   })
-
-  const channelName = `${context.runPrefix} CRUD`
-  const editedChannelName = `${channelName} edited`
-
-  try {
-    await context.page.goto(channelsUrl(context.extensionId))
-    await waitForExtensionRoot(context.page)
-    await expect(
-      context.page.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.addChannelButton),
-    ).toBeVisible({ timeout: 30_000 })
-
-    await createManagedSiteChannelFromUi(context.page, {
-      name: channelName,
-      key: `sk-${slugify(context.runPrefix)}-crud`,
-      baseUrl: "https://upstream.example.invalid/v1",
-      model: shouldSeedModelsInManagedSiteCrudScenario(context.siteType)
-        ? CRUD_MODEL
-        : undefined,
-    })
-    await expectManagedSiteChannelVisibleAfterRefresh({
-      page: context.page,
-      channelName,
-    })
-
-    await context.page
-      .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.searchInput)
-      .fill(channelName)
-    await expect(channelRowByName(context.page, channelName)).toBeVisible({
-      timeout: 30_000,
-    })
-    await expectPaginationSummary(context.page, "1", "1", "1")
-
-    await openSingleVisibleChannelEditDialog(context.page, channelName)
-    await context.page
-      .getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
-      .fill(editedChannelName)
-    if (shouldEditModelsInManagedSiteCrudScenario(context.siteType)) {
-      await fillModelInput(context.page, CRUD_UPDATED_MODEL)
-    }
-    await submitChannelDialogAndWaitForClose(context.page)
-
-    await expect(channelRowByName(context.page, editedChannelName)).toBeVisible(
-      {
-        timeout: 30_000,
-      },
-    )
-
-    await context.page
-      .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.searchInput)
-      .fill(editedChannelName)
-    await expect(channelRowByName(context.page, editedChannelName)).toBeVisible(
-      {
-        timeout: 30_000,
-      },
-    )
-    await expect(channelRowByName(context.page, channelName)).toHaveCount(0)
-    await expectPaginationSummary(context.page, "1", "1", "1")
-
-    await deleteVisibleChannelByName(
-      context.page,
-      editedChannelName,
-      context.beforeDeleteConfirm,
-    )
-  } finally {
-    await cleanupManagedSiteChannelsByPrefix({
-      page: context.page,
-      extensionId: context.extensionId,
-      siteType: context.siteType,
-      prefix: context.cleanupPrefix ?? context.runPrefix,
-    })
-  }
 }
 
 export async function runManagedSiteTokenChannelStatusScenario<

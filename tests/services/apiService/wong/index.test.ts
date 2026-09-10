@@ -42,8 +42,14 @@ vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
   fetchTodayUsage: mockFetchTodayUsage,
 }))
 
+vi.mock("~/services/apiService/newApiFamily/request", () => ({
+  newApiFamilyRequests: {
+    data: mockFetchApiData,
+    envelope: mockFetchApi,
+  },
+}))
+
 vi.mock("~/services/apiTransport/request", () => ({
-  fetchApi: mockFetchApi,
   fetchApiData: mockFetchApiData,
 }))
 
@@ -138,7 +144,6 @@ describe("apiService wong", () => {
           cache: "no-store",
         }),
       }),
-      false,
     )
   })
 

@@ -1,6 +1,12 @@
 import { Storage } from "@plasmohq/storage"
 
-import { MANAGED_SITE_TYPES } from "~/constants/siteType"
+import { MANAGED_SITE_TYPES, SITE_TYPES } from "~/constants/siteType"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
+import {
+  isManagedResourceRefFor,
+  type ManagedResourceRef,
+} from "~/services/apiAdapters/contracts/managedResourceNative"
+import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import {
   CHANNEL_CONFIG_STORAGE_KEYS,
@@ -8,11 +14,6 @@ import {
 } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
-import {
-  getManagedSiteChannelResourceId,
-  getStableLegacyChannelId,
-} from "~/services/managedSites/managedSiteChannelResourceIdentity"
-import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
 import {
   hasManagedSiteRuntimeConfigInputForType,
   resolveManagedSiteRuntimeConfigForType,
@@ -240,37 +241,79 @@ class LegacyChannelConfigMigration {
 
       const inventoryResults = await Promise.allSettled(
         targets.map(async (target) => {
-          const service = getManagedSiteServiceForType(target.siteType)
-          const channels = await runAbortableTask(
-            async (signal) =>
-              await service.listChannels(target.config, {
-                signal,
-                requireCompleteInventory: true,
-              }),
+          // AxonHub uses opaque ids, never legacy numeric channel-config identities.
+          // Its availability must not block migration for numeric-id providers.
+          if (target.siteType === SITE_TYPES.AXON_HUB) return []
+          const refs = await runAbortableTask(
+            async (signal) => {
+              const registration = getManagedResourceRegistration(
+                target.siteType,
+                MANAGED_RESOURCE_KINDS.Channel,
+              )
+              if (!registration)
+                throw new Error(
+                  "Native managed-resource inventory is unavailable",
+                )
+              const workspace = await registration.open({ signal })
+              const refs: ManagedResourceRef[] = []
+              const seenIds = new Set<string>()
+              const seenCursors = new Set<string>()
+              let cursor: string | undefined
+              let expectedTotal = 0
+              do {
+                const page = await workspace.list(
+                  { cursor, limit: 100 },
+                  { signal },
+                )
+                expectedTotal = Math.max(expectedTotal, page.total ?? 0)
+                for (const item of page.items) {
+                  if (
+                    !isManagedResourceRefFor(item.ref, {
+                      siteType: target.siteType,
+                      kind: registration.kind,
+                      scopeKey: normalizeManagedUpstreamResourceScopeKey(
+                        target.config.baseUrl,
+                      ),
+                    }) ||
+                    seenIds.has(item.ref.resourceId)
+                  ) {
+                    throw new Error(
+                      "Managed-resource inventory identity mismatch",
+                    )
+                  }
+                  seenIds.add(item.ref.resourceId)
+                  refs.push(item.ref)
+                }
+                cursor = page.nextCursor
+                if (cursor && seenCursors.has(cursor))
+                  throw new Error("Managed-resource inventory cursor repeated")
+                if (cursor) seenCursors.add(cursor)
+              } while (cursor)
+              if (refs.length < expectedTotal)
+                throw new Error("Managed-resource inventory is incomplete")
+              return refs
+            },
             { timeoutMs: LEGACY_CHANNEL_INVENTORY_TIMEOUT_MS },
           )
 
-          if (channels.items.length < channels.total) {
-            throw new Error("Managed-site channel inventory is incomplete")
-          }
-
-          return channels.items.flatMap((channel) => {
-            const channelId = getStableLegacyChannelId(target.siteType, channel)
-            return channelId === null
-              ? []
-              : [
-                  {
-                    channelId,
-                    resourceRef: createManagedUpstreamResourceRef({
-                      managedSiteType: target.siteType,
-                      scopeKey: target.config.baseUrl,
-                      resourceId: getManagedSiteChannelResourceId(
-                        target.siteType,
-                        channel,
-                      ),
-                    }),
-                  },
-                ]
+          return refs.flatMap((ref) => {
+            const channelId = Number(ref.resourceId)
+            if (
+              !/^[1-9]\d*$/.test(ref.resourceId) ||
+              !Number.isSafeInteger(channelId)
+            ) {
+              throw new Error("Invalid numeric channel identity")
+            }
+            return [
+              {
+                channelId,
+                resourceRef: createManagedUpstreamResourceRef({
+                  managedSiteType: target.siteType,
+                  scopeKey: ref.scopeKey,
+                  resourceId: ref.resourceId,
+                }),
+              },
+            ]
           })
         }),
       )

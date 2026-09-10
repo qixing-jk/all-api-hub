@@ -5,8 +5,20 @@ import {
   AXON_HUB_CHANNEL_FIELD_IDS,
   AXON_HUB_CHANNEL_STATUS,
   AXON_HUB_CHANNEL_TYPE,
+  AXON_HUB_CREATE_FIELD_IDS,
   AXON_HUB_EDITABLE_FIELD_IDS,
 } from "~/constants/axonHub"
+import {
+  CLAUDE_CODE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
+  CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS,
+  CLAUDE_CODE_HUB_PROVIDER_TYPE,
+  ClaudeCodeHubProviderTypeNames,
+} from "~/constants/claudeCodeHub"
+import {
+  DONE_HUB_MANAGED_RESOURCE_FIELD_IDS,
+  DoneHubChannelType,
+  DoneHubChannelTypeNames,
+} from "~/constants/doneHub"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS,
@@ -15,6 +27,11 @@ import {
   SUB2API_MANAGED_RESOURCE_FIELD_IDS,
   SUB2API_MANAGED_RESOURCE_STATUS,
 } from "~/constants/sub2api"
+import {
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS,
+  VeloeraChannelType,
+  VeloeraChannelTypeNames,
+} from "~/constants/veloera"
 import {
   createManagedResourceFieldPolicyRegistry,
   defineManagedResourceFieldPolicy,
@@ -32,6 +49,34 @@ import zhCnManagedSiteChannels from "~/locales/zh-CN/managedSiteChannels.json"
 import zhTwManagedSiteChannels from "~/locales/zh-TW/managedSiteChannels.json"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/managedResourceNative"
+
+describe("Octopus native editor vocabulary", () => {
+  it("exposes native outbound types and only the supported channel controls", () => {
+    for (const mode of ["create", "edit"] as const) {
+      const policy = getManagedResourceFieldPolicy(
+        SITE_TYPES.OCTOPUS,
+        MANAGED_RESOURCE_KINDS.Channel,
+        mode,
+      )
+      expect(policy).toBeDefined()
+      const type = policy!.fields.find(
+        (field) => field.channelFieldRole === "type",
+      )!
+      expect(
+        type.optionLabelResolvers?.["0"]?.(((key: string) => key) as TFunction),
+      ).toBe("OpenAI Chat")
+      expect(
+        type.optionLabelResolvers?.["2"]?.(((key: string) => key) as TFunction),
+      ).toBe("Anthropic")
+      expect(
+        policy!.fields.some((field) => field.channelFieldRole === "secret"),
+      ).toBe(true)
+      expect(
+        policy!.fields.some((field) => field.channelFieldRole === "models"),
+      ).toBe(true)
+    }
+  })
+})
 
 const createDescriptors = (): readonly ResourceFieldDescriptor[] => [
   { fieldId: AXON_HUB_CHANNEL_FIELD_IDS.NAME, type: "text", required: true },
@@ -148,6 +193,50 @@ describe("managed resource field policy", () => {
     expect(tagsField.resolvePlaceholder?.(resolveKey)).toBe(
       "managedSiteChannels:editor.fields.tags.placeholder",
     )
+  })
+
+  it("resolves Veloera-owned type labels and edit-secret guidance", () => {
+    const policy = getManagedResourceFieldPolicy(
+      SITE_TYPES.VELOERA,
+      MANAGED_RESOURCE_KINDS.Channel,
+      "edit",
+    )!
+    const typeField = policy.fields.find(
+      ({ fieldId }) => fieldId === VELOERA_MANAGED_RESOURCE_FIELD_IDS.Type,
+    )!
+    const keyField = policy.fields.find(
+      ({ fieldId }) => fieldId === VELOERA_MANAGED_RESOURCE_FIELD_IDS.Key,
+    )!
+
+    expect(
+      getManagedResourceFieldOptionLabel(
+        typeField,
+        String(VeloeraChannelType.GitHubModels),
+        resolveKey,
+      ),
+    ).toBe(VeloeraChannelTypeNames[VeloeraChannelType.GitHubModels])
+    expect(keyField.resolveHelp?.(resolveKey)).toBe(
+      "managedSiteChannels:editor.secret.keepExistingHint",
+    )
+  })
+
+  it("resolves DoneHub-owned type labels without canonical id collisions", () => {
+    const policy = getManagedResourceFieldPolicy(
+      SITE_TYPES.DONE_HUB,
+      MANAGED_RESOURCE_KINDS.Channel,
+      "edit",
+    )!
+    const typeField = policy.fields.find(
+      ({ fieldId }) => fieldId === DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type,
+    )!
+
+    expect(
+      getManagedResourceFieldOptionLabel(
+        typeField,
+        String(DoneHubChannelType.GitHubModels),
+        resolveKey,
+      ),
+    ).toBe(DoneHubChannelTypeNames[DoneHubChannelType.GitHubModels])
   })
 
   it.each(["create", "edit"] as const)(
@@ -278,6 +367,82 @@ describe("managed resource field policy", () => {
   })
 
   it.each(["create", "edit"] as const)(
+    "covers every Claude Code Hub %s field and provider-owned option label",
+    (mode) => {
+      const policy = getManagedResourceFieldPolicy(
+        SITE_TYPES.CLAUDE_CODE_HUB,
+        MANAGED_RESOURCE_KINDS.Channel,
+        mode,
+      )!
+      const fieldIds = policy.fields.map(({ fieldId }) => fieldId)
+      const typeField = policy.fields.find(
+        ({ fieldId }) =>
+          fieldId === CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type,
+      )!
+      const statusField = policy.fields.find(
+        ({ fieldId }) =>
+          fieldId === CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Status,
+      )!
+      expect(new Set(fieldIds)).toEqual(
+        new Set(CLAUDE_CODE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS),
+      )
+      expect(policy.hiddenFields).toEqual([])
+      expect(
+        Object.fromEntries(
+          policy.fields.map((field) => [
+            field.fieldId,
+            field.resolveLabel(resolveKey),
+          ]),
+        ),
+      ).toEqual({
+        name: "channelDialog:fields.name.label",
+        type: "channelDialog:fields.type.label",
+        status: "channelDialog:fields.status.label",
+        baseURL: "channelDialog:fields.baseUrl.label",
+        key: "channelDialog:fields.key.label",
+        supportedModels: "channelDialog:fields.models.label",
+        groupTag: "channelDialog:fields.groups.label",
+        priority: "channelDialog:fields.priority.label",
+        orderingWeight: "channelDialog:fields.weight.label",
+      })
+      expect(
+        policy.fields
+          .find(
+            ({ fieldId }) =>
+              fieldId === CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Key,
+          )!
+          .resolveHelp?.(resolveKey),
+      ).toBe("managedSiteChannels:editor.secret.keepExistingHint")
+      expect(
+        policy.fields
+          .find(
+            ({ fieldId }) =>
+              fieldId === CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.GroupTag,
+          )!
+          .resolveHelp?.(resolveKey),
+      ).toBe("channelDialog:fields.groups.hint")
+      for (const type of Object.values(CLAUDE_CODE_HUB_PROVIDER_TYPE)) {
+        expect(
+          getManagedResourceFieldOptionLabel(typeField, type, resolveKey),
+        ).toBe(ClaudeCodeHubProviderTypeNames[type])
+      }
+      expect(
+        getManagedResourceFieldOptionLabel(statusField, "enabled", resolveKey),
+      ).toBe("common:status.enabled")
+      expect(
+        getManagedResourceFieldOptionLabel(statusField, "disabled", resolveKey),
+      ).toBe("common:status.disabled")
+      expect(
+        getManagedResourceFieldOptionLabel(
+          typeField,
+          "future-provider",
+          resolveKey,
+        ),
+      ).toBe(typeField.resolveOptionFallback?.(resolveKey))
+    },
+  )
+
+  it.each(["create", "edit"] as const)(
     "covers every AxonHub %s descriptor exactly once with compatible renderers",
     (mode) => {
       const policy = getManagedResourceFieldPolicy(
@@ -288,7 +453,11 @@ describe("managed resource field policy", () => {
 
       expect(policy).toBeDefined()
       const resolved = resolveManagedResourceFieldPolicy(
-        createDescriptors(),
+        createDescriptors().filter(
+          ({ fieldId }) =>
+            mode === "create" ||
+            fieldId !== AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
+        ),
         policy!,
       )
 
@@ -301,7 +470,10 @@ describe("managed resource field policy", () => {
         ),
       ).toEqual(
         new Set(
-          AXON_HUB_EDITABLE_FIELD_IDS.filter(
+          (mode === "create"
+            ? AXON_HUB_CREATE_FIELD_IDS
+            : AXON_HUB_EDITABLE_FIELD_IDS
+          ).filter(
             (fieldId) => fieldId !== AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS,
           ),
         ),
@@ -309,7 +481,12 @@ describe("managed resource field policy", () => {
       expect(
         new Set(resolved.fields.map(({ presentation }) => presentation.fieldId))
           .size,
-      ).toBe(AXON_HUB_EDITABLE_FIELD_IDS.length - 1)
+      ).toBe(
+        (mode === "create"
+          ? AXON_HUB_CREATE_FIELD_IDS
+          : AXON_HUB_EDITABLE_FIELD_IDS
+        ).length - 1,
+      )
       for (const { descriptor, presentation } of resolved.fields) {
         expect(presentation.renderer).toBe(descriptor.type)
       }
@@ -456,10 +633,6 @@ describe("managed resource field policy", () => {
     const expectedCopy = {
       tags: ["tags.help", "tags.placeholder"],
       remark: ["remark.help", "remark.placeholder"],
-      extraModelPrefix: [
-        "extraModelPrefix.help",
-        "extraModelPrefix.placeholder",
-      ],
     } as const
     for (const [fieldId, [helpKey, placeholderKey]] of Object.entries(
       expectedCopy,
@@ -474,6 +647,13 @@ describe("managed resource field policy", () => {
         `managedSiteChannels:editor.fields.${placeholderKey}`,
       )
     }
+
+    expect(
+      policy.fields.some(
+        ({ fieldId }) =>
+          fieldId === AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
+      ),
+    ).toBe(false)
   })
 
   it("maps approved options to controlled labels and unknown values to one fallback", () => {

@@ -1,11 +1,34 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SUB2API_SESSION_BINDING_MISMATCH_CODE } from "~/services/apiService/sub2api/browserAuth"
 import {
   refreshSub2ApiTokens,
   SUB2API_TOKEN_REFRESH_BUFFER_MS,
   SUB2API_TOKEN_REFRESH_FAILURE_REASONS,
   Sub2ApiTokenRefreshError,
 } from "~/services/apiService/sub2api/tokenRefresh"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { AuthTypeEnum } from "~/types"
+
+const { mockFetchApiResponse } = vi.hoisted(() => ({
+  mockFetchApiResponse: vi.fn(),
+}))
+
+vi.mock("~/services/apiTransport/request", () => ({
+  fetchApiResponse: mockFetchApiResponse,
+}))
+
+const createRequest = (
+  overrides: Partial<ApiServiceRequest> = {},
+): ApiServiceRequest => ({
+  baseUrl: "https://auth.example.invalid",
+  auth: {
+    authType: AuthTypeEnum.AccessToken,
+    userId: "42",
+    accessToken: "current-access",
+  },
+  ...overrides,
+})
 
 const captureRefreshError = async (
   params: Parameters<typeof refreshSub2ApiTokens>[0],
@@ -22,7 +45,6 @@ const captureRefreshError = async (
 describe("Sub2API token refresh", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.unstubAllGlobals()
   })
 
   it("exports the upstream refresh buffer constant", () => {
@@ -32,41 +54,59 @@ describe("Sub2API token refresh", () => {
   it("rejects when the refresh token is blank after normalization", async () => {
     await expect(
       refreshSub2ApiTokens({
-        baseUrl: "https://sub2.example.com",
+        request: createRequest(),
         refreshToken: "   ",
       }),
     ).rejects.toThrow("Sub2API refresh token missing")
   })
 
-  it("refreshes tokens, trims credentials, and carries the access token header when present", async () => {
+  it("dispatches token rotation through the request transport and preserves its browser context", async () => {
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000)
-    const fetchMock = vi.fn().mockResolvedValueOnce({
-      json: vi.fn().mockResolvedValue({
+    mockFetchApiResponse.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: {},
+      body: {
         code: 0,
         data: {
           access_token: " next-access ",
           refresh_token: " next-refresh ",
           expires_in: 1800,
         },
-      }),
+      },
     })
-    vi.stubGlobal("fetch", fetchMock)
+    const request = createRequest({
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: "42",
+        accessToken: " current-access ",
+      },
+      fetchContext: {
+        kind: "current-tab",
+        tabId: 17,
+        origin: "https://auth.example.invalid",
+      },
+    })
 
     const result = await refreshSub2ApiTokens({
-      baseUrl: "https://sub2.example.com/base",
-      accessToken: " current-access ",
+      request,
       refreshToken: " current-refresh ",
     })
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://sub2.example.com/api/v1/auth/refresh",
+    expect(mockFetchApiResponse).toHaveBeenCalledWith(
       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer current-access",
+        ...request,
+        auth: {
+          ...request.auth,
+          accessToken: "current-access",
         },
-        body: JSON.stringify({ refresh_token: "current-refresh" }),
+      },
+      {
+        endpoint: "/api/v1/auth/refresh",
+        options: {
+          method: "POST",
+          body: JSON.stringify({ refresh_token: "current-refresh" }),
+        },
       },
     )
     expect(result).toEqual({
@@ -78,44 +118,46 @@ describe("Sub2API token refresh", () => {
     nowSpy.mockRestore()
   })
 
-  it("omits the authorization header when the current access token is blank", async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce({
-      json: vi.fn().mockResolvedValue({
+  it("removes a blank current access token before dispatch", async () => {
+    mockFetchApiResponse.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: {},
+      body: {
         code: 0,
         data: {
           access_token: "fresh-access",
           refresh_token: "fresh-refresh",
           expires_in: 60,
         },
-      }),
+      },
     })
-    vi.stubGlobal("fetch", fetchMock)
 
     await refreshSub2ApiTokens({
-      baseUrl: "https://sub2.example.com",
-      accessToken: "  ",
+      request: createRequest({
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "  ",
+        },
+      }),
       refreshToken: " refresh-token ",
     })
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://sub2.example.com/api/v1/auth/refresh",
+    expect(mockFetchApiResponse).toHaveBeenCalledWith(
       expect.objectContaining({
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ refresh_token: "refresh-token" }),
+        auth: expect.objectContaining({ accessToken: undefined }),
       }),
+      expect.anything(),
     )
   })
 
   it("treats a lost refresh response as an uncertain rotation", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockRejectedValueOnce(new Error("raw upstream failure")),
+    mockFetchApiResponse.mockRejectedValueOnce(
+      new Error("raw upstream failure"),
     )
 
     const error = await captureRefreshError({
-      baseUrl: "https://sub2.example.com",
+      request: createRequest(),
       refreshToken: "refresh-token",
     })
 
@@ -125,19 +167,16 @@ describe("Sub2API token refresh", () => {
     })
   })
 
-  it("rejects envelopes whose code is not successful", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValueOnce(
-        new Response(JSON.stringify({ code: 401, message: "expired" }), {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        }),
-      ),
-    )
+  it("classifies a rejected refresh token as invalid", async () => {
+    mockFetchApiResponse.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      headers: {},
+      body: { code: 401, message: "expired" },
+    })
 
     const error = await captureRefreshError({
-      baseUrl: "https://sub2.example.com",
+      request: createRequest(),
       refreshToken: "refresh-token",
     })
 
@@ -147,132 +186,90 @@ describe("Sub2API token refresh", () => {
     })
   })
 
-  it("treats a server-side refresh failure as an uncertain rotation", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({ code: 503, message: "service unavailable" }),
-          {
-            status: 503,
-            headers: { "Content-Type": "application/json" },
-          },
-        ),
-      ),
-    )
+  it("keeps a session-binding rejection distinct from an invalid refresh token", async () => {
+    mockFetchApiResponse.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      headers: {},
+      body: {
+        code: SUB2API_SESSION_BINDING_MISMATCH_CODE,
+        message: "Session network fingerprint changed",
+      },
+    })
 
     const error = await captureRefreshError({
-      baseUrl: "https://sub2.example.com",
+      request: createRequest(),
       refreshToken: "refresh-token",
     })
 
-    expect(error).toBeInstanceOf(Sub2ApiTokenRefreshError)
     expect(error).toMatchObject({
-      reason: SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
+      reason: SUB2API_TOKEN_REFRESH_FAILURE_REASONS.SESSION_BINDING_MISMATCH,
     })
   })
 
-  it("treats an unreadable refresh response as an uncertain rotation", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValueOnce({
-        json: vi.fn().mockRejectedValueOnce(new Error("invalid json")),
-      }),
-    )
+  it("treats a server-side refresh failure as an uncertain rotation", async () => {
+    mockFetchApiResponse.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      headers: {},
+      body: { code: 503, message: "service unavailable" },
+    })
 
     const error = await captureRefreshError({
-      baseUrl: "https://sub2.example.com",
+      request: createRequest(),
       refreshToken: "refresh-token",
     })
 
-    expect(error).toBeInstanceOf(Sub2ApiTokenRefreshError)
     expect(error).toMatchObject({
       reason: SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
     })
   })
 
   it("treats a non-object refresh envelope as an uncertain rotation", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValueOnce({
-        status: 200,
-        json: vi.fn().mockResolvedValue(null),
-      }),
-    )
+    mockFetchApiResponse.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: {},
+      body: null,
+    })
 
     const error = await captureRefreshError({
-      baseUrl: "https://sub2.example.com",
+      request: createRequest(),
       refreshToken: "refresh-token",
     })
 
-    expect(error).toBeInstanceOf(Sub2ApiTokenRefreshError)
     expect(error).toMatchObject({
       reason: SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
     })
   })
 
-  it("rejects payloads with missing token fields or non-positive expiry", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce({
-          json: vi.fn().mockResolvedValue({
-            code: 0,
-            data: null,
-          }),
-        })
-        .mockResolvedValueOnce({
-          json: vi.fn().mockResolvedValue({
-            code: 0,
-            data: {
-              access_token: "next-access",
-              refresh_token: "next-refresh",
-              expires_in: 0,
-            },
-          }),
-        }),
-    )
-
-    const missingDataError = await captureRefreshError({
-      baseUrl: "https://sub2.example.com",
-      refreshToken: "refresh-token",
+  it.each([
+    ["missing data", null],
+    [
+      "non-positive expiry",
+      {
+        access_token: "next-access",
+        refresh_token: "next-refresh",
+        expires_in: 0,
+      },
+    ],
+    [
+      "missing rotated refresh token",
+      { access_token: "next-access", expires_in: 3600 },
+    ],
+  ])("treats %s as an uncertain rotation", async (_name, data) => {
+    mockFetchApiResponse.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: {},
+      body: { code: 0, data },
     })
-    expect(missingDataError).toBeInstanceOf(Sub2ApiTokenRefreshError)
-    expect(missingDataError).toMatchObject({
-      reason: SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
-    })
-
-    const invalidExpiryError = await captureRefreshError({
-      baseUrl: "https://sub2.example.com",
-      refreshToken: "refresh-token",
-    })
-    expect(invalidExpiryError).toBeInstanceOf(Sub2ApiTokenRefreshError)
-    expect(invalidExpiryError).toMatchObject({
-      reason: SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
-    })
-  })
-
-  it("classifies a response that loses the rotated refresh token as uncertain", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValueOnce({
-        json: vi.fn().mockResolvedValue({
-          code: 0,
-          data: {
-            access_token: "rotated-access-token",
-            expires_in: 3600,
-          },
-        }),
-      }),
-    )
 
     const error = await captureRefreshError({
-      baseUrl: "https://auth.example.invalid",
+      request: createRequest(),
       refreshToken: "single-use-refresh-token",
     })
 
-    expect(error).toBeInstanceOf(Sub2ApiTokenRefreshError)
     expect(error).toMatchObject({
       reason: SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
     })

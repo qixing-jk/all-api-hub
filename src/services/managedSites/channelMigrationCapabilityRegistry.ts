@@ -1,6 +1,11 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
+import { claudeCodeHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/claudeCodeHubMigration"
+import { doneHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/doneHubMigration"
 import { newApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/newApiMigration"
+import { octopusManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/octopusMigration"
+import { sub2ApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/sub2apiMigration"
+import { veloeraManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/veloeraMigration"
 import type { ManagedSiteMigrationCapability } from "~/types/managedSiteMigrationCapability"
 
 const registrations: readonly {
@@ -8,12 +13,32 @@ const registrations: readonly {
   capability: ManagedSiteMigrationCapability
 }[] = [
   {
+    siteType: SITE_TYPES.SUB2API,
+    capability: sub2ApiManagedSiteMigrationCapability,
+  },
+  {
+    siteType: SITE_TYPES.OCTOPUS,
+    capability: octopusManagedSiteMigrationCapability,
+  },
+  {
     siteType: SITE_TYPES.NEW_API,
     capability: newApiManagedSiteMigrationCapability,
   },
   {
+    siteType: SITE_TYPES.VELOERA,
+    capability: veloeraManagedSiteMigrationCapability,
+  },
+  {
+    siteType: SITE_TYPES.DONE_HUB,
+    capability: doneHubManagedSiteMigrationCapability,
+  },
+  {
     siteType: SITE_TYPES.AXON_HUB,
     capability: axonHubManagedSiteMigrationCapability,
+  },
+  {
+    siteType: SITE_TYPES.CLAUDE_CODE_HUB,
+    capability: claudeCodeHubManagedSiteMigrationCapability,
   },
 ]
 

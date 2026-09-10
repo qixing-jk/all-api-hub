@@ -2,7 +2,7 @@ import { SendToBack } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import ManagedSiteTypeSwitcher from "~/components/ManagedSiteTypeSwitcher"
-import { Button, DestructiveConfirmDialog, Modal } from "~/components/ui"
+import { Button, ConfirmDialog, Modal } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
@@ -190,7 +190,9 @@ export function ManagedSiteTokenBatchExportDialog({
         </div>
       </Modal>
 
-      <DestructiveConfirmDialog
+      <ConfirmDialog
+        intent="confirm"
+        icon={SendToBack}
         isOpen={isOpen && dialog.isConfirmOpen}
         onClose={dialog.actions.closeConfirm}
         onConfirm={dialog.actions.confirm}
@@ -205,8 +207,6 @@ export function ManagedSiteTokenBatchExportDialog({
         workingLabel={t("keyManagement:batchManagedSiteExport.actions.running")}
         cancelLabel={t("common:actions.cancel")}
         isWorking={dialog.isRunning}
-        icon={<SendToBack className="text-primary h-5 w-5" />}
-        confirmVariant="default"
       />
       <NewApiManagedVerificationDialog
         isOpen={isVerificationDialogVisible}

@@ -1,4 +1,27 @@
 {
+  "accessTokenVerification": {
+    "apiyi": {
+      "generateStep": "如已有有效且完整的 Access Token，可直接使用。否则打开 APIyi「个人资料」中的「System token」，在官网输入密码并生成令牌。",
+      "openProfile": "打开 APIyi 个人资料",
+      "openProfileFailed": "无法打开页面。请手动打开 APIyi「个人资料」中的「System token」，完成验证后回到这里粘贴 Access Token。"
+    },
+    "continueFailed": "暂时无法打开侧边栏或完整页面，当前表单已保留，请重试。",
+    "continueInFullPage": "在完整页面继续",
+    "continueInSidePanel": "转到侧边栏继续",
+    "continuing": "正在准备表单…",
+    "description": "该站点要求先完成安全验证，扩展暂时无法自动获取 Access Token。已识别的信息已保留，请手动填写账号管理令牌。",
+    "destinationBusy": "这里已有未完成的账号表单。保存或关闭后，将继续从弹窗带来的表单。",
+    "fullPageHint": "在完整页面继续可保留当前表单，切换到站点复制令牌时不会关闭。",
+    "generateStep": "已有有效的完整 Access Token 时可直接填写；否则，打开站点的「安全设置 → Access Token」，完成验证并生成令牌。",
+    "openSecurity": "打开站点安全设置",
+    "openSecurityFailed": "无法打开页面。请手动进入该站点的「安全设置 → Access Token」，复制令牌后回到这里填写。",
+    "pasteStep": "立即复制完整的 Access Token，粘贴到下方「访问令牌」字段，核对账号信息后保存。",
+    "popupHint": "转到侧边栏后，当前表单会保留；你可以在站点完成验证、复制令牌，同时继续填写。侧边栏无法打开时，会在完整页面继续。",
+    "prepareFailed": "无法暂存当前表单。请先复制需要保留的信息，再从侧边栏重新打开账号表单。",
+    "restoreFailed": "无法恢复未完成的表单，可能已过期。请重新打开账号表单。",
+    "rotationWarning": "重新生成会使旧 Access Token 失效，其他使用旧令牌的工具也需要更新。",
+    "title": "手动填写 Access Token"
+  },
   "actions": {
     "autoConfigAriaLabel": "保存账号并前往 {{managedSite}} 渠道配置",
     "autoConfigRequiresValidAccount": "请先补全当前账号信息",
@@ -8,6 +31,7 @@
     "confirmAdd": "确认添加",
     "helpDocument": "排查指南",
     "openApiCredentialProfiles": "前往 API 凭据库",
+    "openManualAddGuide": "查看该站点的手动添加指引",
     "reloadCurrentPage": "刷新当前页面",
     "reloadExtensionAndRetry": "重新加载扩展后重试",
     "reportUnsupportedSite": "申请站点适配",
@@ -55,6 +79,7 @@
     "automaticCheckInSelectionWithDetail": "自动选择：{{detail}}",
     "checkInMethod": "签到方式",
     "checkInMethodNeedsChoice": "检测到多个方式，请选择",
+    "checkInMethodNeedsConfirmation": "{{method}}（待确认）",
     "checkInMethodNotSelected": "尚未选择签到方式",
     "checkInMethodPendingConfirmation": "待确认可用方式",
     "checkInMethodUnavailable": "无可用方式",
@@ -64,6 +89,7 @@
     "checkInSelectionAutomaticUnavailable": "当前未检测到可用方式；自动签到不会执行。",
     "checkInSelectionManual": "当前已手动选择：{{method}}。系统不会自动替换此方式。",
     "checkInSelectionStale": "请重新检测以确认此方式是否仍可用。",
+    "checkInSelectionUnconfirmed": "已保留所选方式：{{method}}，但尚未确认当前站点是否支持。请重新检测。",
     "checkInStatus": "签到状态",
     "checkInStatusDesc": "系统会在账号刷新时检查并展示今日签到状态；这只是状态显示，不会主动执行签到。",
     "checkInStatusDisabled": "站点当前未启用签到功能，自动签到已暂停。",
@@ -154,10 +180,15 @@
     "openrouterBootstrapInfo": "此操作会在 OpenRouter 创建新的管理密钥，然后使用该密钥识别并补全账号信息。",
     "reDetectInfo": "如果站点信息有变化，建议点击\"重新识别\"按钮（需要在目标站点先自行登录）"
   },
+  "manualAddRecovery": {
+    "description": "下方已切换为对应站点的手动添加表单。请参照指引补全必填信息，然后保存账号。",
+    "title": "继续手动补全账号"
+  },
   "messages": {
     "addSuccess": "账号 {{name}} 添加成功!",
     "autoDetectCookiePermissionReloadHint": "如果刚授予 Cookie 多账号权限后首次识别一直无结果，可重新加载扩展后再试。",
     "autoDetectFailed": "自动识别失败: {{error}}",
+    "autoDetectIdentityMismatch": "识别到的账号与当前账号不一致，已保留原有数据。请检查站点地址，并登录对应账号后重试。",
     "autoDetectSuccess": "自动识别成功！",
     "autoDetectTakingTooLong": "自动识别耗时较长？点击打开排查文档",
     "checkInRedetectAmbiguous": "检测到多种签到方式，请在下方选择。",
@@ -171,7 +202,7 @@
       "identity_mismatch": "站点返回的账号身份与当前账号不一致，请检查站点地址和账号凭据。",
       "invalid_response": "目标站点返回了扩展无法识别的响应，请确认站点地址正确，并在更新扩展后重试。",
       "network": "检测时无法连接目标站点，请检查网络连接或站点状态后重试。",
-      "permission_denied": "目标站点拒绝了检测请求，请重新登录并检查账号权限。",
+      "permission_denied": "目标站点拒绝了签到检测请求，暂时无法确认是否支持签到。请在站点页面核实功能和账号权限。",
       "source_unavailable": "目标站点暂时不可用，请稍后重试。",
       "timeout": "目标站点在检测超时前未响应，请稍后重试。"
     },
@@ -255,10 +286,10 @@
         "continue": "继续",
         "disableAndContinue": "以后不再提醒，并继续"
       },
-      "description": "你已在 {{siteUrl}} 添加了 {{count}} 个账号。继续添加可能会造成重复，是否继续？",
-      "descriptionExact": "在 {{siteUrl}} 上，用户 ID {{userId}} 的账号已存在（{{username}}）。继续添加可能会造成重复，是否继续？",
+      "description": "{{siteUrl}} 的这个 Management Key 已保存在 {{count}} 个账号中，是否再次添加？",
+      "descriptionExact": "{{siteUrl}} 上用户 ID 为 {{userId}} 的账号已保存（{{username}}），是否再次添加？",
       "title": "重复账号",
-      "warningTitle": "该站点已存在账号"
+      "warningTitle": "检测到已保存的账号"
     },
     "managedSiteConfig": {
       "actions": {

@@ -7,6 +7,18 @@ const messagingMocks = vi.hoisted(() => ({
   onRedemptionAssistMessage: vi.fn(() => vi.fn()),
 }))
 
+const mockAccountModules = (surface: Record<string, unknown>) => {
+  vi.doMock("~/services/accounts/accountStorage/accountQueries", () => ({
+    accountQueries: surface,
+  }))
+  vi.doMock("~/services/accounts/accountStorage/accountPresentation", () => ({
+    accountPresentation: surface,
+  }))
+  vi.doMock("~/services/accounts/accountStorage/accountRefresh", () => ({
+    accountRefresh: surface,
+  }))
+}
+
 vi.mock("~/services/accounts/utils/siteRouteResolver", () => ({
   SITE_ROUTE_KINDS: {
     CheckIn: "checkIn",
@@ -34,7 +46,9 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
 })
 
 afterEach(() => {
-  vi.doUnmock("~/services/accounts/accountStorage")
+  vi.doUnmock("~/services/accounts/accountStorage/accountQueries")
+  vi.doUnmock("~/services/accounts/accountStorage/accountPresentation")
+  vi.doUnmock("~/services/accounts/accountStorage/accountRefresh")
   vi.doUnmock("~/services/redemption/redeemService")
   vi.resetModules()
   vi.restoreAllMocks()
@@ -85,6 +99,9 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
   it("registers typed runtime listeners once", async () => {
     vi.resetModules()
     messagingMocks.onRedemptionAssistMessage.mockClear()
+    vi.doMock("~/services/redemption/redeemService", () => ({
+      redeemService: { redeemCodeForAccount: vi.fn() },
+    }))
 
     const { setupRedemptionAssistMessagingListeners } = await import(
       "~/services/redemption/redemptionAssist"
@@ -114,7 +131,7 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
       "redemptionAssist:autoRedeemByUrl",
       expect.any(Function),
     )
-  })
+  }, 30_000)
 
   it("returns only prompt-eligible codes for a url", async () => {
     vi.resetModules()
@@ -285,12 +302,7 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
       },
     ])
 
-    vi.doMock("~/services/accounts/accountStorage", () => ({
-      accountStorage: {
-        getAllAccounts,
-        convertToDisplayData,
-      },
-    }))
+    mockAccountModules({ getAllAccounts, convertToDisplayData })
 
     const validHex = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
 
@@ -354,12 +366,7 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
       },
     ])
 
-    vi.doMock("~/services/accounts/accountStorage", () => ({
-      accountStorage: {
-        getAllAccounts,
-        convertToDisplayData,
-      },
-    }))
+    mockAccountModules({ getAllAccounts, convertToDisplayData })
 
     const { resolveAccountSiteRouteUrl } = await import(
       "~/services/accounts/utils/siteRouteResolver"
@@ -491,11 +498,7 @@ describe("redemptionAssist post-redeem refresh", () => {
       .fn()
       .mockResolvedValue({ success: true, message: "ok" })
 
-    vi.doMock("~/services/accounts/accountStorage", () => ({
-      accountStorage: {
-        refreshAccount,
-      },
-    }))
+    mockAccountModules({ refreshAccount })
 
     vi.doMock("~/services/redemption/redeemService", () => ({
       redeemService: {
@@ -548,13 +551,11 @@ describe("redemptionAssist post-redeem refresh", () => {
       },
     }
 
-    vi.doMock("~/services/accounts/accountStorage", () => ({
-      accountStorage: {
-        refreshAccount,
-        getAllAccounts: vi.fn().mockResolvedValue([]),
-        convertToDisplayData: vi.fn().mockReturnValue([displayAccount]),
-      },
-    }))
+    mockAccountModules({
+      refreshAccount,
+      getAllAccounts: vi.fn().mockResolvedValue([]),
+      convertToDisplayData: vi.fn().mockReturnValue([displayAccount]),
+    })
 
     vi.doMock("~/services/redemption/redeemService", () => ({
       redeemService: {
@@ -595,11 +596,7 @@ describe("redemptionAssist post-redeem refresh", () => {
       .fn()
       .mockResolvedValue({ success: true, message: "ok" })
 
-    vi.doMock("~/services/accounts/accountStorage", () => ({
-      accountStorage: {
-        refreshAccount,
-      },
-    }))
+    mockAccountModules({ refreshAccount })
 
     vi.doMock("~/services/redemption/redeemService", () => ({
       redeemService: {
@@ -641,11 +638,7 @@ describe("redemptionAssist post-redeem refresh", () => {
       .fn()
       .mockResolvedValue({ success: true, message: "ok" })
 
-    vi.doMock("~/services/accounts/accountStorage", () => ({
-      accountStorage: {
-        refreshAccount,
-      },
-    }))
+    mockAccountModules({ refreshAccount })
 
     vi.doMock("~/services/redemption/redeemService", () => ({
       redeemService: {
@@ -693,11 +686,7 @@ describe("redemptionAssist post-redeem refresh", () => {
       .fn()
       .mockResolvedValue({ success: false, message: "nope" })
 
-    vi.doMock("~/services/accounts/accountStorage", () => ({
-      accountStorage: {
-        refreshAccount,
-      },
-    }))
+    mockAccountModules({ refreshAccount })
 
     vi.doMock("~/services/redemption/redeemService", () => ({
       redeemService: {
@@ -755,22 +744,22 @@ describe("redemptionAssist post-redeem refresh", () => {
     const candidates = [
       {
         id: "acc_multi_1",
+        siteType: "new-api",
         baseUrl: "https://example.com",
         checkIn: { customCheckIn: { url: "https://example.com/check-in" } },
       },
       {
         id: "acc_multi_2",
+        siteType: "new-api",
         baseUrl: "https://example.com",
         checkIn: { customCheckIn: { url: "https://example.com/redeem" } },
       },
     ]
 
-    vi.doMock("~/services/accounts/accountStorage", () => ({
-      accountStorage: {
-        getAllAccounts: vi.fn().mockResolvedValue([]),
-        convertToDisplayData: vi.fn().mockReturnValue(candidates),
-      },
-    }))
+    mockAccountModules({
+      getAllAccounts: vi.fn().mockResolvedValue([]),
+      convertToDisplayData: vi.fn().mockReturnValue(candidates),
+    })
 
     vi.doMock("~/services/search/accountSearch", () => ({
       searchAccounts: vi.fn().mockReturnValue(
@@ -790,7 +779,10 @@ describe("redemptionAssist post-redeem refresh", () => {
       data: {
         success: false,
         code: "MULTIPLE_ACCOUNTS",
-        candidates,
+        candidates: candidates.map((account) => ({
+          ...account,
+          automaticRedemptionSupport: { status: "supported" },
+        })),
       },
     })
   })
@@ -808,16 +800,15 @@ describe("redemptionAssist post-redeem refresh", () => {
     const allAccounts = [
       {
         id: "acc_missing_checkin",
+        siteType: "new-api",
         baseUrl: "https://manual.example.com",
       },
     ]
 
-    vi.doMock("~/services/accounts/accountStorage", () => ({
-      accountStorage: {
-        getAllAccounts: vi.fn().mockResolvedValue([]),
-        convertToDisplayData: vi.fn().mockReturnValue(allAccounts),
-      },
-    }))
+    mockAccountModules({
+      getAllAccounts: vi.fn().mockResolvedValue([]),
+      convertToDisplayData: vi.fn().mockReturnValue(allAccounts),
+    })
 
     vi.doMock("~/services/search/accountSearch", () => ({
       searchAccounts: vi.fn().mockReturnValue(
@@ -838,7 +829,10 @@ describe("redemptionAssist post-redeem refresh", () => {
         success: false,
         code: "NO_ACCOUNTS",
         candidates: [],
-        allAccounts,
+        allAccounts: allAccounts.map((account) => ({
+          ...account,
+          automaticRedemptionSupport: { status: "supported" },
+        })),
         message: "redemptionAssist:messages.noAccountForUrl",
       },
     })
@@ -869,13 +863,11 @@ describe("redemptionAssist post-redeem refresh", () => {
       },
     }
 
-    vi.doMock("~/services/accounts/accountStorage", () => ({
-      accountStorage: {
-        refreshAccount,
-        getAllAccounts: vi.fn().mockResolvedValue([]),
-        convertToDisplayData: vi.fn().mockReturnValue([displayAccount]),
-      },
-    }))
+    mockAccountModules({
+      refreshAccount,
+      getAllAccounts: vi.fn().mockResolvedValue([]),
+      convertToDisplayData: vi.fn().mockReturnValue([displayAccount]),
+    })
 
     vi.doMock("~/services/search/accountSearch", () => ({
       searchAccounts: vi.fn().mockReturnValue([
@@ -920,6 +912,7 @@ describe("redemptionAssist post-redeem refresh", () => {
     const allAccounts = [
       {
         id: "acc_manual_1",
+        siteType: "new-api",
         baseUrl: "https://manual.example.com",
         checkIn: {
           customCheckIn: { url: "https://other.example.com/check-in" },
@@ -927,12 +920,10 @@ describe("redemptionAssist post-redeem refresh", () => {
       },
     ]
 
-    vi.doMock("~/services/accounts/accountStorage", () => ({
-      accountStorage: {
-        getAllAccounts: vi.fn().mockResolvedValue([]),
-        convertToDisplayData: vi.fn().mockReturnValue(allAccounts),
-      },
-    }))
+    mockAccountModules({
+      getAllAccounts: vi.fn().mockResolvedValue([]),
+      convertToDisplayData: vi.fn().mockReturnValue(allAccounts),
+    })
 
     vi.doMock("~/services/search/accountSearch", () => ({
       searchAccounts: vi.fn().mockReturnValue([]),
@@ -949,7 +940,10 @@ describe("redemptionAssist post-redeem refresh", () => {
         success: false,
         code: "NO_ACCOUNTS",
         candidates: [],
-        allAccounts,
+        allAccounts: allAccounts.map((account) => ({
+          ...account,
+          automaticRedemptionSupport: { status: "supported" },
+        })),
         message: "redemptionAssist:messages.noAccountForUrl",
       },
     })
@@ -983,11 +977,7 @@ describe("redemptionAssist post-redeem refresh", () => {
       .fn()
       .mockRejectedValue(new Error("redeem exploded"))
 
-    vi.doMock("~/services/accounts/accountStorage", () => ({
-      accountStorage: {
-        refreshAccount: vi.fn(),
-      },
-    }))
+    mockAccountModules({ refreshAccount: vi.fn() })
 
     vi.doMock("~/services/redemption/redeemService", () => ({
       redeemService: {

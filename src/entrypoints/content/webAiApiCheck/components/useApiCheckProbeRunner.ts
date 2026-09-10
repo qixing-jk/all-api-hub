@@ -15,9 +15,11 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
+  API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
   getApiVerificationProbeDefinitions,
   type ApiVerificationApiType,
+  type ApiVerificationMode,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
@@ -33,7 +35,10 @@ import {
   contentApiCheckAnalyticsScope,
   getProbeAnalyticsResult,
 } from "./apiCheckModalAnalytics"
-import type { ProbeItemState } from "./apiCheckModalTypes"
+import type {
+  ApiCheckValidationError,
+  ProbeItemState,
+} from "./apiCheckModalTypes"
 
 type ApiCheckProbeResultWithAnalyticsCategory = ApiVerificationProbeResult & {
   analyticsErrorCategory?: ProductAnalyticsErrorCategory
@@ -42,11 +47,12 @@ type ApiCheckProbeResultWithAnalyticsCategory = ApiVerificationProbeResult & {
 type UseApiCheckProbeRunnerOptions = {
   t: TFunction<["webAiApiCheck", "common", "aiApiVerification"]>
   apiType: ApiVerificationApiType
+  verificationMode: ApiVerificationMode
   trigger: ApiCheckOpenModalDetail["trigger"]
   baseUrl: string
   apiKey: string
   modelId: string
-  setValidationError: (message: string | null) => void
+  setValidationError: (error: ApiCheckValidationError | null) => void
   recordBaseUrlHistory: (baseUrl: string) => void
 }
 
@@ -130,9 +136,11 @@ function buildMissingModelResult(
   apiType: ApiVerificationApiType,
   baseUrl: string,
   probeId: ApiVerificationProbeId,
+  mode: ApiVerificationMode,
 ): ApiCheckProbeResultWithAnalyticsCategory {
   return {
     id: probeId,
+    mode,
     status: API_VERIFICATION_PROBE_STATUSES.Fail,
     latencyMs: 0,
     summary: "No model id provided",
@@ -151,6 +159,7 @@ function buildMissingModelResult(
 export function useApiCheckProbeRunner({
   t,
   apiType,
+  verificationMode,
   trigger,
   baseUrl,
   apiKey,
@@ -163,9 +172,15 @@ export function useApiCheckProbeRunner({
   )
   const [isRunningAll, setIsRunningAll] = useState(false)
   const [isStoppingRunAll, setIsStoppingRunAll] = useState(false)
-  const [testStoppedMessage, setTestStoppedMessage] = useState<string | null>(
-    null,
-  )
+  const [testStopPhase, setTestStopPhase] = useState<
+    "stopping" | "stopped" | null
+  >(null)
+  const testStoppedMessage =
+    testStopPhase === "stopping"
+      ? t("webAiApiCheck:modal.messages.stoppingTest")
+      : testStopPhase === "stopped"
+        ? t("webAiApiCheck:modal.messages.testStopped")
+        : null
   const shouldStopRunAllRef = useRef(false)
   const activeProbeRunIdsRef = useRef(new Map<ApiVerificationProbeId, string>())
   const activeProbeTrackersRef = useRef(
@@ -194,7 +209,7 @@ export function useApiCheckProbeRunner({
 
   const resetProbeState = useCallback((nextApiType: ApiVerificationApiType) => {
     setProbes(buildProbeState(nextApiType))
-    setTestStoppedMessage(null)
+    setTestStopPhase(null)
     probeResultContextKeysRef.current.clear()
   }, [])
 
@@ -263,7 +278,7 @@ export function useApiCheckProbeRunner({
       const trimmedApiKey = apiKey.trim()
 
       if (!trimmedBaseUrl || !trimmedApiKey) {
-        setValidationError(t("webAiApiCheck:modal.errors.missingBaseUrlOrKey"))
+        setValidationError("missing-credentials")
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
           insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
@@ -284,8 +299,9 @@ export function useApiCheckProbeRunner({
           apiType,
           trimmedBaseUrl,
           probeId,
+          verificationMode,
         )
-        setValidationError(t("aiApiVerification:verifyDialog.requiresModelId"))
+        setValidationError("missing-model")
         setProbes((prev) =>
           prev.map((probe) =>
             probe.id === probeId
@@ -330,6 +346,7 @@ export function useApiCheckProbeRunner({
           {
             runId,
             apiType,
+            mode: verificationMode,
             baseUrl: trimmedBaseUrl,
             apiKey: trimmedApiKey,
             modelId: modelId.trim() || undefined,
@@ -368,15 +385,20 @@ export function useApiCheckProbeRunner({
         }
 
         const failedResponse = response.success ? undefined : response
-        const message =
-          failedResponse?.error ||
-          t("webAiApiCheck:modal.errors.runProbeFailed")
+        const message = failedResponse?.error
 
         const fallback: ApiCheckProbeResultWithAnalyticsCategory = {
           id: probeId,
+          mode:
+            probeId === API_VERIFICATION_PROBE_IDS.Models
+              ? undefined
+              : verificationMode,
           status: API_VERIFICATION_PROBE_STATUSES.Fail,
           latencyMs: 0,
-          summary: message,
+          summary: message || "Probe failed.",
+          ...(message
+            ? {}
+            : { summaryKey: "webAiApiCheck:modal.errors.runProbeFailed" }),
           analyticsErrorCategory: failedResponse?.errorCategory,
           input: {
             apiType,
@@ -411,9 +433,14 @@ export function useApiCheckProbeRunner({
           resolveProductAnalyticsErrorCategoryFromError(error)
         const fallback: ApiCheckProbeResultWithAnalyticsCategory = {
           id: probeId,
+          mode:
+            probeId === API_VERIFICATION_PROBE_IDS.Models
+              ? undefined
+              : verificationMode,
           status: API_VERIFICATION_PROBE_STATUSES.Fail,
           latencyMs: 0,
-          summary: t("webAiApiCheck:modal.errors.runProbeFailed"),
+          summary: "Probe failed.",
+          summaryKey: "webAiApiCheck:modal.errors.runProbeFailed",
           analyticsErrorCategory: errorCategory,
           input: {
             apiType,
@@ -457,9 +484,9 @@ export function useApiCheckProbeRunner({
       probeDefinitions,
       recordBaseUrlHistory,
       setValidationError,
-      t,
       trigger,
       updateProbeResult,
+      verificationMode,
     ],
   )
 
@@ -492,7 +519,7 @@ export function useApiCheckProbeRunner({
     if (shouldStopRunAllRef.current) return
     shouldStopRunAllRef.current = true
     setIsStoppingRunAll(true)
-    setTestStoppedMessage(t("webAiApiCheck:modal.messages.stoppingTest"))
+    setTestStopPhase("stopping")
 
     const activeRunAllProbeId = activeRunAllProbeIdRef.current
     const activeRunId = activeRunAllProbeId
@@ -503,7 +530,7 @@ export function useApiCheckProbeRunner({
         runId: activeRunId,
       }).catch(() => {})
     }
-  }, [t])
+  }, [])
 
   const runAll = useCallback(async () => {
     const tracker = startProductAnalyticsAction({
@@ -514,7 +541,7 @@ export function useApiCheckProbeRunner({
     const trimmedBaseUrl = baseUrl.trim()
     const trimmedApiKey = apiKey.trim()
     if (!trimmedBaseUrl || !trimmedApiKey) {
-      setValidationError(t("webAiApiCheck:modal.errors.missingBaseUrlOrKey"))
+      setValidationError("missing-credentials")
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
         insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
@@ -531,7 +558,7 @@ export function useApiCheckProbeRunner({
 
     shouldStopRunAllRef.current = false
     setIsStoppingRunAll(false)
-    setTestStoppedMessage(null)
+    setTestStopPhase(null)
     setIsRunningAll(true)
     const results: ApiCheckProbeResultWithAnalyticsCategory[] = []
     try {
@@ -542,10 +569,9 @@ export function useApiCheckProbeRunner({
             apiType,
             trimmedBaseUrl,
             def.id,
+            verificationMode,
           )
-          setValidationError(
-            t("aiApiVerification:verifyDialog.requiresModelId"),
-          )
+          setValidationError("missing-model")
           setProbes((prev) =>
             prev.map((probe) =>
               probe.id === def.id
@@ -590,7 +616,7 @@ export function useApiCheckProbeRunner({
             probe.isRunning ? { ...probe, isRunning: false } : probe,
           ),
         )
-        setTestStoppedMessage(t("webAiApiCheck:modal.messages.testStopped"))
+        setTestStopPhase("stopped")
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
           insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
             mode: PRODUCT_ANALYTICS_MODE_IDS.All,
@@ -660,8 +686,8 @@ export function useApiCheckProbeRunner({
     recordBaseUrlHistory,
     runProbe,
     setValidationError,
-    t,
     trigger,
+    verificationMode,
   ])
 
   return {

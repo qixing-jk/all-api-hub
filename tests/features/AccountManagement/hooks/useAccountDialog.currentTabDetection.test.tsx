@@ -69,24 +69,28 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/accounts/accountOperations", async (importOriginal) => {
+vi.mock("~/services/accounts/accountAutoDetection", () => ({
+  autoDetectAccount: mockAutoDetectAccount,
+}))
+
+vi.mock("~/services/accounts/siteName", () => ({
+  getSiteName: mockGetSiteName,
+}))
+
+vi.mock("~/services/accounts/accountCreation", async (importOriginal) => {
   const actual =
-    await importOriginal<
-      typeof import("~/services/accounts/accountOperations")
-    >()
+    await importOriginal<typeof import("~/services/accounts/accountCreation")>()
   return {
     ...actual,
-    autoDetectAccount: mockAutoDetectAccount,
-    getSiteName: mockGetSiteName,
     validateAndSaveAccount: mockValidateAndSaveAccount,
   }
 })
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
-    getAllAccountsOrThrow: mockGetAllAccountsOrThrow,
-    refreshAccount: vi.fn(),
-  },
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: { getAllAccountsOrThrow: mockGetAllAccountsOrThrow },
+}))
+vi.mock("~/services/accounts/accountStorage/accountRefresh", () => ({
+  accountRefresh: { refreshAccount: vi.fn() },
 }))
 
 vi.mock("~/services/protectionBypass/client", async (importOriginal) => {

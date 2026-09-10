@@ -1,6 +1,5 @@
 import { act, screen, waitFor } from "@testing-library/react"
 import type userEvent from "@testing-library/user-event"
-import toast from "react-hot-toast/headless"
 import { beforeEach, expect, vi } from "vitest"
 
 import { ApiCheckModalHost } from "~/entrypoints/content/webAiApiCheck/components/ApiCheckModalHost"
@@ -10,6 +9,7 @@ import {
   type ApiCheckOpenModalDetail,
 } from "~/entrypoints/content/webAiApiCheck/events"
 import { WEB_AI_API_CHECK_TEST_IDS } from "~/entrypoints/content/webAiApiCheck/testIds"
+import toast from "~/lib/notify/content"
 import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,

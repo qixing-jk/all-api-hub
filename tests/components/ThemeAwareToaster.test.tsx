@@ -105,6 +105,7 @@ describe("ThemeAwareToaster", () => {
           },
         },
         loading: {
+          duration: Infinity,
           iconTheme: {
             primary: "#2563eb",
             secondary: "#fff",

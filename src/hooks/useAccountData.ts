@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
+import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import { createEmptyAccountStats } from "~/services/accounts/accountTodayStats"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
@@ -56,7 +57,7 @@ interface UseAccountDataResult {
 }
 
 /**
- * Build an aggregated account data view sourced from {@link accountStorage}.
+ * Build an aggregated account data view from one canonical account snapshot.
  * Exposes helper callbacks so UI layers can refresh or reload on demand.
  */
 export const useAccountData = (): UseAccountDataResult => {
@@ -70,7 +71,7 @@ export const useAccountData = (): UseAccountDataResult => {
   const [isInitialLoad, setIsInitialLoad] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const refreshCommandRef = useRef<ReturnType<
-    typeof accountStorage.refreshAllAccounts
+    typeof accountRefresh.refreshAllAccounts
   > | null>(null)
 
   // 动画相关状态
@@ -98,9 +99,11 @@ export const useAccountData = (): UseAccountDataResult => {
    */
   const loadAccountData = useCallback(async () => {
     try {
-      const allAccounts = await accountStorage.getAllAccounts()
-      const accountStats = await accountStorage.getAccountStats()
-      const displaySiteData = accountStorage.convertToDisplayData(allAccounts)
+      const {
+        accounts: allAccounts,
+        stats: accountStats,
+        displayAccounts: displaySiteData,
+      } = await accountReadModels.getAccountOverviewSnapshot()
 
       // 计算新的余额数据
       const newBalances: CurrencyAmountMap = {}
@@ -163,7 +166,7 @@ export const useAccountData = (): UseAccountDataResult => {
       async (protectionBypassExecution) => {
         setIsRefreshing(true)
         try {
-          const refreshResult = await accountStorage.refreshAllAccounts(false, {
+          const refreshResult = await accountRefresh.refreshAllAccounts(false, {
             tempWindowRequestSource: source,
             protectionBypassExecution,
           })

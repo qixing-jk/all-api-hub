@@ -1,7 +1,7 @@
-import toast from "react-hot-toast"
-
-import { accountStorage } from "~/services/accounts/accountStorage"
+import toast from "~/lib/notify"
+import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import {
   BACKUP_VERSION,
   ImportExportError,
@@ -97,12 +97,14 @@ export const handleExportAll = async (
       accountData,
       tagStore,
       preferencesData,
+      featureGuidance,
       channelConfigs,
       apiCredentialProfiles,
     ] = await Promise.all([
-      accountStorage.exportData(),
+      accountDataTransfer.exportData(),
       tagStorage.exportTagStore(),
       userPreferences.exportPreferences(),
+      featureGuidanceState.getState(),
       channelConfigStorage.exportConfigs(),
       apiCredentialProfilesStorage.exportConfig(),
     ])
@@ -113,6 +115,7 @@ export const handleExportAll = async (
       accounts: accountData,
       tagStore,
       preferences: preferencesData,
+      featureGuidance,
       channelConfigs,
       apiCredentialProfiles,
     }
@@ -152,7 +155,7 @@ export const handleExportAccounts = async (
     setIsExporting(true)
 
     const [accountData, tagStore] = await Promise.all([
-      accountStorage.exportData(),
+      accountDataTransfer.exportData(),
       tagStorage.exportTagStore(),
     ])
     const exportData: BackupAccountsPartialV2 = {
@@ -196,12 +199,16 @@ export const handleExportPreferences = async (
   try {
     setIsExporting(true)
 
-    const preferencesData = await userPreferences.exportPreferences()
+    const [preferencesData, featureGuidance] = await Promise.all([
+      userPreferences.exportPreferences(),
+      featureGuidanceState.getState(),
+    ])
     const exportData: BackupPreferencesPartialV2 = {
       version: BACKUP_VERSION,
       timestamp: Date.now(),
       type: "preferences",
       preferences: preferencesData,
+      featureGuidance,
     }
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {

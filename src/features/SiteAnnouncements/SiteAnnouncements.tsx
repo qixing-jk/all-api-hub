@@ -4,13 +4,14 @@ import { useTranslation } from "react-i18next"
 
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
-import { Button } from "~/components/ui"
+import { Button, Notice } from "~/components/ui"
 import { EmptyState } from "~/components/ui/EmptyState"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import notify from "~/lib/notify"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -32,9 +33,10 @@ import type {
   SiteAnnouncementRecord,
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
+import { SITE_ANNOUNCEMENT_STATUS } from "~/types/siteAnnouncements"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { showResultToast } from "~/utils/core/toastHelpers"
+import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
 
 import { SiteAnnouncementsFiltersCard } from "./components/SiteAnnouncementsFiltersCard"
@@ -64,7 +66,7 @@ const logger = createLogger("SiteAnnouncementsPage")
  */
 async function resolveEnabledAccountCount(): Promise<number | null> {
   try {
-    const accounts = await accountStorage.getAllAccounts()
+    const accounts = await accountQueries.getAllAccounts()
     return accounts.filter((account) => account.disabled !== true).length
   } catch (error) {
     logger.warn(
@@ -82,7 +84,7 @@ export default function SiteAnnouncementsPage({
   routeParams,
   refreshKey,
 }: SiteAnnouncementsPageProps) {
-  const { t } = useTranslation(["siteAnnouncements", "common"])
+  const { t, i18n } = useTranslation(["siteAnnouncements", "common"])
   const { siteAnnouncementNotifications } = useUserPreferencesContext()
   const [records, setRecords] = useState<SiteAnnouncementRecord[]>([])
   const [status, setStatus] = useState<SiteAnnouncementSiteState[]>([])
@@ -94,14 +96,17 @@ export default function SiteAnnouncementsPage({
   const [expandedIds, setExpandedIds] = useState<Set<string>>(
     () => new Set(routeParams?.recordId ? [routeParams.recordId] : []),
   )
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const [hasLoadError, setHasLoadError] = useState(false)
+  const loadError = hasLoadError
+    ? t("siteAnnouncements:messages.loadFailed")
+    : null
   const [enabledAccountCount, setEnabledAccountCount] = useState<number | null>(
     null,
   )
 
   const loadData = useCallback(async () => {
     setIsLoading(true)
-    setLoadError(null)
+    setHasLoadError(false)
     try {
       const [recordsResponse, statusResponse, nextEnabledAccountCount] =
         await Promise.all([
@@ -118,11 +123,11 @@ export default function SiteAnnouncementsPage({
           success: false,
           message: getRuntimeMessageFailureMessage(
             recordsResponse,
-            t("messages.loadFailed"),
+            i18n.t("siteAnnouncements:messages.loadFailed"),
           ),
-          errorFallback: t("messages.loadFailed"),
+          errorFallback: i18n.t("siteAnnouncements:messages.loadFailed"),
         })
-        setLoadError(t("messages.loadFailed"))
+        setHasLoadError(true)
         return
       }
 
@@ -131,27 +136,27 @@ export default function SiteAnnouncementsPage({
           success: false,
           message: getRuntimeMessageFailureMessage(
             statusResponse,
-            t("messages.loadFailed"),
+            i18n.t("siteAnnouncements:messages.loadFailed"),
           ),
-          errorFallback: t("messages.loadFailed"),
+          errorFallback: i18n.t("siteAnnouncements:messages.loadFailed"),
         })
-        setLoadError(t("messages.loadFailed"))
+        setHasLoadError(true)
         return
       }
 
       setRecords(recordsResponse.data)
       setStatus(statusResponse.data)
     } catch (error) {
-      setLoadError(t("messages.loadFailed"))
+      setHasLoadError(true)
       showResultToast({
         success: false,
         message: getErrorMessage(error),
-        errorFallback: t("messages.loadFailed"),
+        errorFallback: i18n.t("siteAnnouncements:messages.loadFailed"),
       })
     } finally {
       setIsLoading(false)
     }
-  }, [t])
+  }, [i18n])
 
   useEffect(() => {
     void loadData()
@@ -179,6 +184,14 @@ export default function SiteAnnouncementsPage({
   )
 
   const selectedStatus = status.find((item) => item.siteKey === siteKey)
+  const aggregateFailedSiteCount = status.filter(
+    (item) => item.status === SITE_ANNOUNCEMENT_STATUS.Error,
+  ).length
+  const aggregateUnsupportedSiteCount = status.filter(
+    (item) => item.status === SITE_ANNOUNCEMENT_STATUS.Unsupported,
+  ).length
+  const hasAggregateIssues =
+    aggregateFailedSiteCount + aggregateUnsupportedSiteCount > 0
   const manualCheckAccountIds = useMemo(
     () => [...new Set(filteredRecords.map((record) => record.accountId))],
     [filteredRecords],
@@ -258,11 +271,27 @@ export default function SiteAnnouncementsPage({
                 typeof checkResult.failed === "number" ? checkResult.failed : 0,
             }
           : undefined
+      const failedCount = checkResult?.failed ?? 0
+      const unsupportedCount = checkResult?.unsupported ?? 0
+      const hasPartialIssues = success && failedCount + unsupportedCount > 0
       if (success) {
         if (checkInsights) {
-          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-            insights: checkInsights,
-          })
+          tracker.complete(
+            hasPartialIssues
+              ? PRODUCT_ANALYTICS_RESULTS.Failure
+              : PRODUCT_ANALYTICS_RESULTS.Success,
+            {
+              ...(hasPartialIssues
+                ? {
+                    errorCategory:
+                      failedCount > 0
+                        ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+                        : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+                  }
+                : {}),
+              insights: checkInsights,
+            },
+          )
         } else {
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
         }
@@ -277,12 +306,21 @@ export default function SiteAnnouncementsPage({
             : { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
         )
       }
-      showResultToast({
-        success,
-        message: getRuntimeMessageToastMessage(response),
-        successFallback: t("messages.checkCompleted"),
-        errorFallback: t("messages.checkFailed"),
-      })
+      if (hasPartialIssues) {
+        notify.warning(
+          t("messages.checkCompletedWithIssues", {
+            failed: failedCount,
+            unsupported: unsupportedCount,
+          }),
+        )
+      } else {
+        showResultToast({
+          success,
+          message: getRuntimeMessageToastMessage(response),
+          successFallback: t("messages.checkCompleted"),
+          errorFallback: t("messages.checkFailed"),
+        })
+      }
       await loadData()
     } catch (error) {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -501,6 +539,17 @@ export default function SiteAnnouncementsPage({
         onSiteTypeChange={setSiteType}
         onUnreadFilterChange={setUnreadFilter}
       />
+
+      {siteKey === "all" && hasAggregateIssues ? (
+        <Notice
+          tone="warning"
+          title={t("status.aggregateIssuesTitle")}
+          description={t("status.aggregateIssues", {
+            failed: aggregateFailedSiteCount,
+            unsupported: aggregateUnsupportedSiteCount,
+          })}
+        />
+      ) : null}
 
       {selectedStatus && (
         <SiteAnnouncementsStatusAlert status={selectedStatus} />

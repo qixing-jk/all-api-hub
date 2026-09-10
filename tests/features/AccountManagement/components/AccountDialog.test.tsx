@@ -1,6 +1,5 @@
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
@@ -15,6 +14,7 @@ import { SPONSOR_CATALOG_SCHEMA_VERSION } from "~/features/AccountManagement/spo
 import type { SponsorRecommendation } from "~/features/AccountManagement/sponsors/types"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
+import toast from "~/lib/notify"
 import enAccountDialog from "~/locales/en/accountDialog.json"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { ACCOUNT_POST_SAVE_WORKFLOW_STEPS } from "~/services/accounts/accountPostSaveWorkflow"
@@ -138,7 +138,6 @@ const {
       accountName: "",
       isCreating: false,
     },
-    postSaveOneTimeToken: null,
     postSaveOneTimeSecret: null,
     postSaveSub2ApiAllowedGroups: null,
     postSaveSub2ApiAccount: null,
@@ -181,7 +180,7 @@ const {
     handleAihubmixPostSaveKeyPromptCancel: vi.fn(),
     handleAihubmixPostSaveKeyPromptConfirm: vi.fn(),
     shouldDeferAccountSaveSuccess: vi.fn(),
-    handlePostSaveOneTimeTokenClose: vi.fn(),
+    handlePostSaveOneTimeSecretClose: vi.fn(),
     handlePostSaveSub2ApiTokenDialogClose: vi.fn(),
     handlePostSaveSub2ApiTokenCreated: vi.fn(),
     getPostSaveSub2ApiDialogHandlers: vi.fn(),
@@ -250,7 +249,6 @@ function resetMockState() {
       isCreating: false,
     },
     accountPostSaveWorkflowStep: ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
-    postSaveOneTimeToken: null,
     postSaveOneTimeSecret: null,
     postSaveSub2ApiAllowedGroups: null,
     postSaveSub2ApiAccount: null,
@@ -306,8 +304,8 @@ vi.mock(
   },
 )
 
-vi.mock("react-hot-toast", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("react-hot-toast")>()
+vi.mock("~/lib/notify", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/notify")>()
 
   return {
     ...actual,
@@ -714,10 +712,77 @@ describe("AccountDialog", () => {
     expect(handleOpenBookmarkImport).toHaveBeenCalledTimes(1)
   })
 
-  it("opens API credential profiles and closes from auto-detect fallback guidance", async () => {
-    const user = userEvent.setup()
-    mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT
+  it.each([false, true])(
+    "prepares the access-token input when opening site security settings (collapsed: %s)",
+    async (collapsed) => {
+      const user = userEvent.setup()
+      const media = window.matchMedia("(max-width: 639px)")
+      vi.mocked(window.matchMedia).mockImplementation((query) => ({
+        ...media,
+        media: query,
+        matches: collapsed && query === "(max-width: 639px)",
+      }))
+      mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+      mockState.siteType = SITE_TYPES.NEW_API
+      mockState.draft.siteType = SITE_TYPES.NEW_API
+      mockState.draft.accessToken = ""
+      mockState.detectionError = {
+        type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+        message: "Complete security verification on the site",
+      }
+
+      render(
+        <AccountDialog
+          isOpen={true}
+          onClose={vi.fn()}
+          mode={DIALOG_MODES.ADD}
+          onSuccess={vi.fn()}
+          onError={vi.fn()}
+        />,
+      )
+
+      if (collapsed) {
+        await user.click(
+          await screen.findByRole("button", {
+            name: "accountDialog:sections.accountAuth.title",
+          }),
+        )
+        expect(
+          screen.queryByPlaceholderText("accountDialog:form.accessToken"),
+        ).not.toBeInTheDocument()
+      }
+
+      const openSecurityButton = screen.getByRole("button", {
+        name: "accountDialog:accessTokenVerification.openSecurity",
+      })
+      await user.click(openSecurityButton)
+
+      const accessTokenInput = await screen.findByPlaceholderText(
+        "accountDialog:form.accessToken",
+      )
+      await waitFor(() => expect(accessTokenInput).toHaveFocus())
+      expect(accessTokenInput).toHaveAttribute("type", "password")
+      await user.paste("manually-copied-access-token")
+      expect(mockSetters.setAccessToken).toHaveBeenLastCalledWith(
+        "manually-copied-access-token",
+      )
+      expect(
+        screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput),
+      ).toHaveValue("Example Site")
+
+      await user.click(
+        screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput),
+      )
+      await user.click(openSecurityButton)
+      await waitFor(() => expect(accessTokenInput).toHaveFocus())
+    },
+  )
+
+  it("exposes manual recovery guidance for a documented site type", () => {
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
     mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.MANUAL
+    mockState.siteType = SITE_TYPES.NEW_API
+    mockState.draft.siteType = SITE_TYPES.NEW_API
     mockState.detectionError = {
       type: AutoDetectErrorType.INVALID_RESPONSE,
       message: "Detection returned unexpected data",
@@ -736,6 +801,39 @@ describe("AccountDialog", () => {
     expect(
       screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage),
     ).toHaveTextContent("Detection returned unexpected data")
+    expect(
+      screen.getByText("accountDialog:manualAddRecovery.title"),
+    ).toBeVisible()
+    expect(
+      screen.getByText("accountDialog:manualAddRecovery.description"),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: "accountDialog:actions.openManualAddGuide",
+      }),
+    ).toBeVisible()
+  })
+
+  it("opens API credential profiles and closes from auto-detect fallback guidance", async () => {
+    const user = userEvent.setup()
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.MANUAL
+    mockState.siteType = SITE_TYPES.NEW_API
+    mockState.draft.siteType = SITE_TYPES.NEW_API
+    mockState.detectionError = {
+      type: AutoDetectErrorType.INVALID_RESPONSE,
+      message: "Detection returned unexpected data",
+    }
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
 
     await user.click(
       screen.getByRole("button", {
@@ -1064,10 +1162,22 @@ describe("AccountDialog", () => {
     )
   })
 
-  it("renders the post-save one-time key dialog only when a token is pending", async () => {
-    mockState.postSaveOneTimeToken = {
-      key: "sk-one-time",
-      name: "Default API Key",
+  it("renders the post-save one-time key dialog only when a created secret is pending", async () => {
+    mockState.postSaveOneTimeSecret = {
+      correlation: {
+        kind: "legacy-create",
+        accountId: "created-secret-fixture",
+      },
+      displayName: "Default API Key",
+      secret: "sk-one-time",
+      secretAvailability: "create-response-only",
+      credential: {
+        accountName: "AIHubMix",
+        apiType: "openai-compatible",
+        baseUrl: "https://aihubmix.com",
+        siteType: SITE_TYPES.AIHUBMIX,
+        tagIds: [],
+      },
     }
 
     render(
@@ -1095,19 +1205,6 @@ describe("AccountDialog", () => {
     const user = userEvent.setup()
     mockState.draft.siteName = "AIHubMix"
     mockState.draft.tagIds = ["tag-a"]
-    mockState.postSaveOneTimeToken = {
-      id: 10,
-      user_id: 13,
-      key: "sk-one-time-full",
-      name: "Default API Key",
-      status: 1,
-      created_time: 1,
-      accessed_time: 1,
-      expired_time: -1,
-      remain_quota: -1,
-      unlimited_quota: true,
-      used_quota: 0,
-    }
     mockState.postSaveOneTimeSecret = {
       correlation: {
         kind: "account-runtime-key",
@@ -1180,16 +1277,28 @@ describe("AccountDialog", () => {
     expect(toast.success).toHaveBeenCalledWith(
       "keyManagement:messages.savedToApiProfiles",
     )
-    expect(mockHandlers.handlePostSaveOneTimeTokenClose).not.toHaveBeenCalled()
+    expect(mockHandlers.handlePostSaveOneTimeSecretClose).not.toHaveBeenCalled()
     expect(mockOpenApiCredentialProfilesPage).not.toHaveBeenCalled()
   })
 
   it("keeps the AIHubMix one-time key dialog open when API profile save fails", async () => {
     const user = userEvent.setup()
     mockState.draft.siteName = "AIHubMix"
-    mockState.postSaveOneTimeToken = {
-      key: "sk-one-time-full",
-      name: "Default API Key",
+    mockState.postSaveOneTimeSecret = {
+      correlation: {
+        kind: "legacy-create",
+        accountId: "created-secret-fixture",
+      },
+      displayName: "Default API Key",
+      secret: "sk-one-time-full",
+      secretAvailability: "create-response-only",
+      credential: {
+        accountName: "AIHubMix",
+        apiType: "openai-compatible",
+        baseUrl: "https://aihubmix.com",
+        siteType: SITE_TYPES.AIHUBMIX,
+        tagIds: [],
+      },
     }
     mockCreateApiCredentialProfile.mockRejectedValueOnce(
       new Error("storage failed for sk-one-time-full"),
@@ -1222,7 +1331,7 @@ describe("AccountDialog", () => {
         message: "storage failed for [REDACTED]",
       },
     )
-    expect(mockHandlers.handlePostSaveOneTimeTokenClose).not.toHaveBeenCalled()
+    expect(mockHandlers.handlePostSaveOneTimeSecretClose).not.toHaveBeenCalled()
   })
 
   it("renders the AIHubMix post-save key confirmation dialog", async () => {

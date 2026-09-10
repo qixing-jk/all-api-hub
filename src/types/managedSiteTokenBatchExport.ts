@@ -6,8 +6,7 @@ import type {
   ManagedSiteVerifiedKeyAssessment,
 } from "~/services/managedSites/verifiedChannelKeyAssessment"
 import type { DisplaySiteData } from "~/types"
-
-import type { ChannelFormData } from "./managedSite"
+import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
 
 export const MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES = {
   MANUAL_SELECTION: "manual-selection",
@@ -123,7 +122,7 @@ export interface ManagedSiteTokenBatchExportPreviewItem {
   accountName: string
   runtimeKeyId: string
   runtimeKeyName: string
-  draft: ChannelFormData | null
+  draft: ManagedSiteChannelDraft | null
   status: ManagedSiteTokenBatchExportPreviewStatus
   warningCodes: ManagedSiteTokenBatchExportWarningCode[]
   blockingReasonCode?: ManagedSiteTokenBatchExportBlockedReasonCode
@@ -136,7 +135,7 @@ export interface ManagedSiteTokenBatchExportPreviewItem {
 
 export type ExecutableManagedSiteTokenBatchExportPreviewItem =
   ManagedSiteTokenBatchExportPreviewItem & {
-    draft: ChannelFormData
+    draft: ManagedSiteChannelDraft
   }
 
 export const isExecutableManagedSiteTokenBatchExportPreviewItem = (

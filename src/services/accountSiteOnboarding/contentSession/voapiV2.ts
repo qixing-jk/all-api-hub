@@ -52,14 +52,20 @@ const pickIdentityField = (
   return text || undefined
 }
 
+/** Reads the dashboard's own token, without generating or renewing credentials. */
+export function readVoApiV2BrowserToken() {
+  const auth = getRecord(
+    parseStorageObject(VOAPI_V2_USER_STORE_STORAGE_KEY)?.auth,
+  )
+  return getString(auth?.token) || null
+}
+
 export const voApiV2ContentSessionExtractor: ContentSessionExtractor = {
   id: "voapi-v2",
   canExtract: () =>
     localStorage.getItem(VOAPI_V2_USER_STORE_STORAGE_KEY) !== null,
   async extract() {
-    const userStore = parseStorageObject(VOAPI_V2_USER_STORE_STORAGE_KEY)
-    const auth = getRecord(userStore?.auth)
-    const accessToken = getString(auth?.token)
+    const accessToken = readVoApiV2BrowserToken()
     if (!accessToken) return null
 
     const user = parseStorageObject(COMPATIBLE_USER_STORAGE_KEY)

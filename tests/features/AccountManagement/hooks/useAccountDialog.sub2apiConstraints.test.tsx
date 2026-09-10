@@ -5,10 +5,10 @@ import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
-import { accountStorage } from "~/services/accounts/accountStorage"
 import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildCheckInConfig } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
@@ -28,7 +28,7 @@ const {
   mockToastSuccess: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: mockToastSuccess,
     error: mockToastError,

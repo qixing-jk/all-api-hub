@@ -44,9 +44,35 @@ import {
 } from "./protectionBypassDevTriggerRuntime"
 
 type TriggerFeedback =
-  | { kind: "error"; message: string }
-  | { kind: "success"; message: string }
+  | { kind: "error"; reason: "url" | "delay" }
+  | { kind: "error"; reason: "request"; diagnostic: string }
+  | { kind: "success"; status: number | undefined }
   | null
+
+/** Presents validation and request results using the current language. */
+function getTriggerFeedbackMessage(
+  t: TFunction,
+  feedback: NonNullable<TriggerFeedback>,
+): string {
+  if (feedback.kind === "success") {
+    return t("settings:refresh.shieldDevTriggerSuccess", {
+      status: feedback.status ?? "-",
+    })
+  }
+  switch (feedback.reason) {
+    case "url":
+      return t("settings:refresh.shieldDevTriggerInvalidUrl")
+    case "delay":
+      return t("settings:refresh.shieldDevTriggerInvalidDelay", {
+        maxSeconds: SHIELD_DEV_TRIGGER_DELAY_SECONDS.Max,
+      })
+    case "request":
+      return (
+        feedback.diagnostic ||
+        t("settings:refresh.shieldDevTriggerFailureFallback")
+      )
+  }
+}
 
 const UNKNOWN_BROWSER_FOCUS_OBSERVATION = {
   start: BROWSER_FOCUS_STATES.Unknown,
@@ -168,7 +194,6 @@ export function ProtectionBypassDevTrigger() {
       setRemainingSeconds(null)
       setIsRunning(true)
       setFeedback(null)
-      const failureFallback = t("refresh.shieldDevTriggerFailureFallback")
       let focusObservationController: BrowserFocusObservationController | null =
         null
 
@@ -194,21 +219,21 @@ export function ProtectionBypassDevTrigger() {
         if (response.success) {
           setFeedback({
             kind: "success",
-            message: t("refresh.shieldDevTriggerSuccess", {
-              status: response.status ?? "-",
-            }),
+            status: response.status,
           })
         } else {
           setFeedback({
             kind: "error",
-            message: response.error?.trim() || failureFallback,
+            reason: "request",
+            diagnostic: response.error?.trim() || "",
           })
         }
       } catch (error) {
         if (!isMountedRef.current) return
         setFeedback({
           kind: "error",
-          message: getErrorMessage(error, failureFallback),
+          reason: "request",
+          diagnostic: getErrorMessage(error),
         })
       } finally {
         let completedObservation: BrowserFocusObservation =
@@ -233,7 +258,7 @@ export function ProtectionBypassDevTrigger() {
         }
       }
     },
-    [clearTimers, presetId, t],
+    [clearTimers, presetId],
   )
 
   const handleStart = useCallback(() => {
@@ -241,7 +266,7 @@ export function ProtectionBypassDevTrigger() {
     if (!normalizedUrl) {
       setFeedback({
         kind: "error",
-        message: t("refresh.shieldDevTriggerInvalidUrl"),
+        reason: "url",
       })
       return
     }
@@ -250,9 +275,7 @@ export function ProtectionBypassDevTrigger() {
     if (delaySeconds === null) {
       setFeedback({
         kind: "error",
-        message: t("refresh.shieldDevTriggerInvalidDelay", {
-          maxSeconds: SHIELD_DEV_TRIGGER_DELAY_SECONDS.Max,
-        }),
+        reason: "delay",
       })
       return
     }
@@ -274,7 +297,7 @@ export function ProtectionBypassDevTrigger() {
     timeoutRef.current = setTimeout(() => {
       void execute(normalizedUrl)
     }, delaySeconds * 1_000)
-  }, [delay, execute, t, url])
+  }, [delay, execute, url])
 
   const handleCancel = useCallback(() => {
     clearTimers()
@@ -383,7 +406,7 @@ export function ProtectionBypassDevTrigger() {
                   : "text-green-700 dark:text-green-400"
               }
             >
-              {feedback.message}
+              {getTriggerFeedbackMessage(t, feedback)}
             </BodySmall>
           )}
           {focusObservation && (

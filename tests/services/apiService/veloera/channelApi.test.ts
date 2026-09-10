@@ -9,9 +9,9 @@ import {
   fetchChannel,
   fetchChannelModels,
   fetchCheckInStatus,
+  fetchDraftChannelModels,
   listAllChannels,
   refreshAccountData,
-  searchChannel,
   updateChannel,
   updateChannelModelMapping,
   updateChannelModels,
@@ -57,9 +57,18 @@ vi.mock("~/utils/core/logger", () => ({
   }),
 }))
 
-vi.mock("~/services/apiTransport/request", () => ({
-  fetchApiData: mockFetchApiData,
-  fetchApi: mockFetchApi,
+vi.mock("~/services/apiService/veloera/request", () => ({
+  veloeraRequests: {
+    data: mockFetchApiData,
+    envelope: mockFetchApi,
+  },
+}))
+
+vi.mock("~/services/apiService/newApiFamily/request", () => ({
+  newApiFamilyRequests: {
+    data: mockFetchApiData,
+    envelope: mockFetchApi,
+  },
 }))
 
 vi.mock(
@@ -86,8 +95,7 @@ vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
 /**
  * Veloera channel API adapters.
  *
- * These tests ensure Veloera responses are normalized to match the New API
- * `ManagedSiteChannelListData` structure.
+ * These tests preserve Veloera-native request and response fields.
  */
 describe("apiService veloera channel APIs", () => {
   beforeEach(() => {
@@ -107,7 +115,70 @@ describe("apiService veloera channel APIs", () => {
     })
   })
 
-  it("listAllChannels should paginate from p=0 and return New API compatible structure", async () => {
+  it("preserves Veloera-native fields when reading channel detail", async () => {
+    mockFetchApiData.mockResolvedValueOnce({
+      id: 42,
+      type: 1,
+      name: "Native channel",
+      provider_extension: { routing: "native" },
+      model_prefix: "prefix/",
+      system_prompt: "Custom prompt",
+    })
+
+    const result = await fetchChannel(
+      {
+        baseUrl: "http://managed.internal",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "test-key",
+          userId: "1",
+        },
+      },
+      42,
+    )
+
+    expect(result).toMatchObject({
+      id: 42,
+      provider_extension: { routing: "native" },
+      model_prefix: "prefix/",
+      system_prompt: "Custom prompt",
+    })
+    expect(result).not.toHaveProperty("channel_info")
+    expect(result).not.toHaveProperty("settings")
+  })
+
+  it("accepts a native Veloera create payload directly", async () => {
+    mockFetchApi.mockResolvedValueOnce({ success: true, data: null })
+    const payload = {
+      name: "Native channel",
+      type: 1,
+      key: "test-key",
+      base_url: "http://upstream.internal",
+      models: "model-a",
+      group: "default",
+      status: 1,
+      priority: 0,
+      weight: 0,
+    }
+
+    await createChannel(
+      {
+        baseUrl: "http://managed.internal",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "admin-key",
+          userId: "1",
+        },
+      },
+      payload as any,
+    )
+
+    expect(JSON.parse(mockFetchApi.mock.calls[0][1].options.body)).toEqual(
+      payload,
+    )
+  })
+
+  it("listAllChannels should paginate from p=0 and return the provider inventory", async () => {
     const baseUrl = "https://example.com"
     const token = "token"
     const userId = 1
@@ -151,41 +222,6 @@ describe("apiService veloera channel APIs", () => {
     expect(result.type_counts).toEqual({ "1": 2, "2": 1 })
   })
 
-  it("searchChannel should call search endpoint and normalize array payload", async () => {
-    const baseUrl = "https://example.com"
-    const token = "token"
-    const userId = 1
-    const request = {
-      baseUrl,
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-        accessToken: token,
-        userId,
-      },
-    }
-
-    mockFetchApiData.mockResolvedValueOnce([
-      { id: 1, type: 1, name: "c1" },
-      { id: 2, type: 2, name: "c2" },
-    ])
-
-    const result = await searchChannel(request as any, "k")
-
-    expect(mockFetchApiData).toHaveBeenCalledTimes(1)
-    const callRequest = mockFetchApiData.mock.calls[0][0]
-    const callOptions = mockFetchApiData.mock.calls[0][1]
-    expect(callRequest.baseUrl).toBe(baseUrl)
-    expect(callRequest.auth.userId).toBe(userId)
-    expect(callRequest.auth.accessToken).toBe(token)
-    expect(callOptions.endpoint).toContain("/api/channel/search")
-    expect(callOptions.endpoint).toContain("keyword=")
-
-    expect(result).not.toBeNull()
-    expect(result!.items).toHaveLength(2)
-    expect(result!.total).toBe(2)
-    expect(result!.type_counts).toEqual({ "1": 1, "2": 1 })
-  })
-
   it("fetchChannel should call the detail endpoint and normalize the payload", async () => {
     const request = {
       baseUrl: "https://example.com",
@@ -203,6 +239,8 @@ describe("apiService veloera channel APIs", () => {
       key: "sk-veloera-detail-key",
       base_url: "https://upstream.example.com",
       models: "gpt-4o",
+      model_prefix: "tenant-",
+      system_prompt: "Use the tenant policy.",
     })
 
     const result = await fetchChannel(request as any, 9)
@@ -216,10 +254,12 @@ describe("apiService veloera channel APIs", () => {
       key: "sk-veloera-detail-key",
       base_url: "https://upstream.example.com",
       models: "gpt-4o",
+      model_prefix: "tenant-",
+      system_prompt: "Use the tenant policy.",
     })
   })
 
-  it("fetchChannel should fill default channel_info and normalize numeric/string fallback fields", async () => {
+  it("normalizes consumed Veloera fields and preserves additional provider data", async () => {
     const request = {
       baseUrl: "https://example.com",
       auth: {
@@ -248,18 +288,12 @@ describe("apiService veloera channel APIs", () => {
       key: "",
       status: 0,
       priority: 7,
-      balance: 0,
-      tag: null,
+      balance: "bad",
+      tag: undefined,
       setting: "legacy-setting",
-      settings: "legacy-setting",
-      channel_info: {
-        is_multi_key: false,
-        multi_key_size: 0,
-        multi_key_status_list: null,
-        multi_key_polling_index: 0,
-        multi_key_mode: "",
-      },
     })
+    expect(result).not.toHaveProperty("settings")
+    expect(result).not.toHaveProperty("channel_info")
   })
 
   it("fetchChannelModels should call the Veloera fetch_models endpoint", async () => {
@@ -281,14 +315,77 @@ describe("apiService veloera channel APIs", () => {
     await expect(
       fetchChannelModels(request as any, 9, { signal }),
     ).resolves.toEqual(["gpt-4o", "claude-3"])
-    expect(mockFetchApi).toHaveBeenCalledWith(
-      request,
-      {
-        endpoint: "/api/channel/fetch_models/9",
-        options: { signal },
+    expect(mockFetchApi).toHaveBeenCalledWith(request, {
+      endpoint: "/api/channel/fetch_models/9",
+      options: { signal },
+    })
+  })
+
+  it("fetchDraftChannelModels should probe an unsaved Veloera channel", async () => {
+    const request = {
+      baseUrl: "https://example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "token",
+        userId: "1",
       },
-      false,
-    )
+    }
+    const signal = new AbortController().signal
+    mockFetchApi.mockResolvedValueOnce({
+      success: true,
+      data: ["model-example-a", "model-example-b"],
+    })
+
+    await expect(
+      fetchDraftChannelModels(
+        request as never,
+        {
+          type: 49,
+          baseUrl: "https://upstream.example.invalid",
+          key: "credential-placeholder",
+        },
+        { signal },
+      ),
+    ).resolves.toEqual(["model-example-a", "model-example-b"])
+    expect(mockFetchApi).toHaveBeenCalledWith(request, {
+      endpoint: "/api/channel/fetch_models",
+      options: {
+        method: "POST",
+        body: JSON.stringify({
+          type: 49,
+          base_url: "https://upstream.example.invalid",
+          key: "credential-placeholder",
+        }),
+        signal,
+      },
+    })
+  })
+
+  it("fetchDraftChannelModels should reject unsupported payloads", async () => {
+    const request = {
+      baseUrl: "https://example.invalid",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "token",
+        userId: "1",
+      },
+    }
+    mockFetchApi.mockResolvedValueOnce({
+      success: false,
+      data: { models: ["model-example"] },
+      message: "draft probe failed",
+    })
+
+    await expect(
+      fetchDraftChannelModels(request as never, {
+        type: 49,
+        baseUrl: "https://upstream.example.invalid",
+        key: "credential-placeholder",
+      }),
+    ).rejects.toMatchObject({
+      message: "draft probe failed",
+      endpoint: "/api/channel/fetch_models",
+    })
   })
 
   it("fetchChannelModels should reject unsupported payloads", async () => {
@@ -328,21 +425,17 @@ describe("apiService veloera channel APIs", () => {
       signal,
     })
 
-    expect(mockFetchApi).toHaveBeenCalledWith(
-      request,
-      {
-        endpoint: "/api/channel",
-        options: {
-          method: "PUT",
-          body: JSON.stringify({
-            id: 9,
-            models: "gpt-4o,claude-3",
-          }),
-          signal,
-        },
+    expect(mockFetchApi).toHaveBeenCalledWith(request, {
+      endpoint: "/api/channel",
+      options: {
+        method: "PUT",
+        body: JSON.stringify({
+          id: 9,
+          models: "gpt-4o,claude-3",
+        }),
+        signal,
       },
-      false,
-    )
+    })
   })
 
   it("updateChannelModels should reject failed Veloera responses", async () => {
@@ -387,21 +480,17 @@ describe("apiService veloera channel APIs", () => {
       JSON.stringify({ "gpt-4o": "gpt-4o" }),
     )
 
-    expect(mockFetchApi).toHaveBeenCalledWith(
-      request,
-      {
-        endpoint: "/api/channel",
-        options: {
-          method: "PUT",
-          body: JSON.stringify({
-            id: 9,
-            models: "gpt-4o,claude-3",
-            model_mapping: JSON.stringify({ "gpt-4o": "gpt-4o" }),
-          }),
-        },
+    expect(mockFetchApi).toHaveBeenCalledWith(request, {
+      endpoint: "/api/channel",
+      options: {
+        method: "PUT",
+        body: JSON.stringify({
+          id: 9,
+          models: "gpt-4o,claude-3",
+          model_mapping: JSON.stringify({ "gpt-4o": "gpt-4o" }),
+        }),
       },
-      false,
-    )
+    })
   })
 
   it("updateChannelModelMapping should reject failed Veloera responses", async () => {
@@ -443,18 +532,15 @@ describe("apiService veloera channel APIs", () => {
     mockFetchApi.mockResolvedValueOnce({ success: true, message: "ok" })
 
     await createChannel(request as any, {
-      mode: "none" as any,
-      channel: {
-        name: "n",
-        type: 1 as any,
-        key: "k",
-        base_url: "https://upstream.example.com",
-        models: "gpt-4",
-        groups: ["default"],
-        priority: 0,
-        weight: 0,
-        status: 1 as any,
-      },
+      name: "n",
+      type: 1 as any,
+      key: "k",
+      base_url: "https://upstream.example.com",
+      models: "gpt-4",
+      group: "default",
+      priority: 0,
+      weight: 0,
+      status: 1 as any,
     })
 
     expect(mockFetchApi).toHaveBeenCalledTimes(1)
@@ -502,7 +588,7 @@ describe("apiService veloera channel APIs", () => {
       key: "k",
       base_url: "https://upstream.example.com",
       models: "gpt-4",
-      groups: ["default"],
+      group: "default",
       priority: 0,
     })
 
@@ -563,7 +649,7 @@ describe("apiService veloera channel APIs", () => {
     mockFetchApi.mockRejectedValueOnce(new Error("delete failed"))
 
     await expect(deleteChannel(request as any, 9)).rejects.toThrow(
-      "删除渠道失败，请检查网络或 Veloera 配置",
+      "delete failed",
     )
   })
 
@@ -571,30 +657,20 @@ describe("apiService veloera channel APIs", () => {
     {
       operation: "create",
       invoke: (request: any) =>
-        createChannel(request, {
-          mode: "none" as any,
-          channel: { groups: ["default"] } as any,
-        }),
-      message: "创建渠道失败，请检查网络或 Veloera 配置",
+        createChannel(request, { groups: ["default"] } as any),
     },
     {
       operation: "update",
       invoke: (request: any) =>
-        updateChannel(request, {
-          id: 1,
-          name: "Updated",
-          groups: ["default"],
-        }),
-      message: "更新渠道失败，请检查网络或 Veloera 配置",
+        updateChannel(request, { id: 1, name: "Updated", group: "default" }),
     },
     {
       operation: "delete",
       invoke: (request: any) => deleteChannel(request, 1),
-      message: "删除渠道失败，请检查网络或 Veloera 配置",
     },
   ])(
     "$operation mutation preserves ApiError details as cause without logging it",
-    async ({ invoke, message }) => {
+    async ({ invoke }) => {
       const request = {
         baseUrl: "https://example.com",
         auth: {
@@ -608,16 +684,18 @@ describe("apiService veloera channel APIs", () => {
         502,
         "/api/channel",
         API_ERROR_CODES.HTTP_OTHER,
+        "provider_limit",
       )
       mockFetchApi.mockRejectedValueOnce(cause)
 
       const error = await invoke(request).catch((caught) => caught)
 
       expect(error).toMatchObject({
-        message,
+        message: "upstream denied",
         statusCode: 502,
         endpoint: "/api/channel",
         code: API_ERROR_CODES.HTTP_OTHER,
+        upstreamCode: "provider_limit",
         cause,
       })
       expect(mockLoggerError).toHaveBeenCalledWith(expect.any(String))
@@ -625,49 +703,40 @@ describe("apiService veloera channel APIs", () => {
     },
   )
 
-  it("searchChannel should accept object payloads with an items array and normalize them", async () => {
-    const request = {
-      baseUrl: "https://example.com",
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-        accessToken: "token",
-        userId: "1",
-      },
-    }
+  it.each([
+    {
+      operation: "create",
+      message: "创建渠道失败，请检查网络或 Veloera 配置",
+      invoke: (request: any) =>
+        createChannel(request, { groups: ["default"] } as any),
+    },
+    {
+      operation: "update",
+      message: "更新渠道失败，请检查网络或 Veloera 配置",
+      invoke: (request: any) =>
+        updateChannel(request, { id: 1, name: "Updated", group: "default" }),
+    },
+    {
+      operation: "delete",
+      message: "删除渠道失败，请检查网络或 Veloera 配置",
+      invoke: (request: any) => deleteChannel(request, 1),
+    },
+  ])(
+    "$operation mutation uses fixed copy when the thrown message is blank",
+    async ({ invoke, message }) => {
+      const request = {
+        baseUrl: "https://example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "token",
+          userId: "1",
+        },
+      }
+      mockFetchApi.mockRejectedValueOnce(new Error("   "))
 
-    mockFetchApiData.mockResolvedValueOnce({
-      items: [{ id: "3", type: 4, name: "wrapped" }],
-    })
-
-    const result = await searchChannel(request as any, "wrapped")
-
-    expect(result).toEqual({
-      items: [
-        expect.objectContaining({
-          id: 3,
-          type: 4,
-          name: "wrapped",
-        }),
-      ],
-      total: 1,
-      type_counts: { "4": 1 },
-    })
-  })
-
-  it("returns null when searchChannel receives an unsupported payload", async () => {
-    const request = {
-      baseUrl: "https://example.com",
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-        accessToken: "token",
-        userId: "1",
-      },
-    }
-
-    mockFetchApiData.mockResolvedValueOnce({ unexpected: true })
-
-    await expect(searchChannel(request as any, "wrapped")).resolves.toBeNull()
-  })
+      await expect(invoke(request)).rejects.toThrow(message)
+    },
+  )
 
   it("returns check-in availability only when the upstream value is explicitly boolean", async () => {
     const request = {

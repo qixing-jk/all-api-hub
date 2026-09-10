@@ -1,18 +1,17 @@
 import type { FormEvent, ReactNode } from "react"
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
+import toast from "~/lib/notify"
 import {
   ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES,
   ACCOUNT_POST_SAVE_WORKFLOW_STEPS,
   ACCOUNT_TOKEN_INVENTORY_STATE_KINDS,
   ENSURE_ACCOUNT_TOKEN_RESULT_KINDS,
 } from "~/services/accounts/accountPostSaveWorkflow"
-import { accountStorage } from "~/services/accounts/accountStorage"
 import * as apiServiceRequest from "~/services/accounts/utils/apiServiceRequest"
 import {
   DEFAULT_PREFERENCES,
@@ -39,10 +38,16 @@ import {
   type DisplaySiteData,
   type SiteAccount,
 } from "~/types"
+import {
+  ACCOUNT_KEY_AUTO_PROVISION_MODES,
+  type AccountKeyAutoProvisionMode,
+} from "~/types/accountKeyAutoProvisioning"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -77,12 +82,13 @@ const {
   mockWithProtectionBypassUserCommand: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => {
+vi.mock("~/lib/notify", () => {
   const toastMock = Object.assign(mockToast, {
     success: vi.fn(),
     error: vi.fn(),
     loading: vi.fn(),
-    custom: vi.fn(),
+    warning: vi.fn(),
+    info: vi.fn(),
     dismiss: vi.fn(),
   })
 
@@ -100,18 +106,13 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
   }),
 }))
 
-vi.mock("~/services/accounts/accountOperations", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/accounts/accountOperations")
-    >()
+vi.mock("~/services/accounts/accountCreation", () => ({
+  validateAndSaveAccount: mockValidateAndSaveAccount,
+}))
 
-  return {
-    ...actual,
-    validateAndSaveAccount: mockValidateAndSaveAccount,
-    validateAndUpdateAccount: mockValidateAndUpdateAccount,
-  }
-})
+vi.mock("~/services/accounts/accountUpdate", () => ({
+  validateAndUpdateAccount: mockValidateAndUpdateAccount,
+}))
 
 vi.mock(
   "~/services/accounts/accountPostSaveWorkflow",
@@ -130,24 +131,18 @@ vi.mock(
   },
 )
 
-vi.mock(
-  "~/services/managedSites/managedSiteService",
-  async (importOriginal) => {
-    const actual =
-      await importOriginal<
-        typeof import("~/services/managedSites/managedSiteService")
-      >()
+vi.mock("~/services/apiAdapters/registry", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/apiAdapters/registry")>()
 
-    return {
-      ...actual,
-      getManagedSiteServiceForType: vi.fn(() => ({
-        siteType: SITE_TYPES.NEW_API,
-        messagesKey: "newapi",
-        getConfig: mockGetManagedSiteConfig,
-      })),
-    }
-  },
-)
+  return {
+    ...actual,
+    getManagedSiteCapabilities: vi.fn(() => ({
+      siteType: SITE_TYPES.NEW_API,
+      config: { get: mockGetManagedSiteConfig },
+    })),
+  }
+})
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
@@ -268,10 +263,14 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
   }
 
-  const mockAutoProvisionKeyOnAccountAdd = (enabled: boolean) =>
+  const mockAutoProvisionKeyOnAccountAdd = (
+    enabled: boolean,
+    mode: AccountKeyAutoProvisionMode = ACCOUNT_KEY_AUTO_PROVISION_MODES.Default,
+  ) =>
     vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
       ...structuredClone(DEFAULT_PREFERENCES),
       autoProvisionKeyOnAccountAdd: enabled,
+      autoProvisionKeyOnAccountAddMode: mode,
     })
 
   const renderEditHook = (options?: {
@@ -488,24 +487,10 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    const warningRenderer = vi.mocked(toast.custom).mock.calls[0]?.[0] as
-      | ((toastInstance: any) => any)
-      | undefined
-    const warningElement = warningRenderer?.({
-      id: "warning-toast-id",
-      type: "custom",
-      visible: true,
-      dismissed: false,
-      height: 0,
-      ariaProps: { role: "status", "aria-live": "polite" },
-      message: "",
-      createdAt: Date.now(),
-      pauseDuration: 0,
-      position: "bottom-center",
-    } as any)
+    const warningAction = vi.mocked(toast.warning).mock.calls[0]?.[1]?.action
 
     await act(async () => {
-      await warningElement?.props.action.onClick()
+      await warningAction?.onClick()
     })
 
     expect(accountStorage.refreshAccount).toHaveBeenNthCalledWith(
@@ -530,7 +515,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(2)
   })
 
-  it("shows managed-site setup guidance before saving when auto-config prerequisites are missing", async () => {
+  it("retranslates managed-site setup guidance without checking configuration or saving again", async () => {
     mockGetManagedSiteConfig.mockResolvedValue(null)
 
     const { result } = renderAddHook()
@@ -550,6 +535,38 @@ describe("useAccountDialog save and auto-config flows", () => {
       managedSiteLabel: "settings:managedSite.newApi",
       missingMessage: "messages:newapi.configMissing",
     })
+    const configurationReads = mockGetManagedSiteConfig.mock.calls.length
+    const draftUrl = result.current.state.url
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "messages",
+      (await import("~/locales/zh-CN/messages.json")).default,
+    )
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "settings",
+      (await import("~/locales/zh-CN/settings.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(result.current.state.managedSiteConfigPrompt).toMatchObject({
+        isOpen: true,
+        managedSiteLabel: testI18n.t("settings:managedSite.newApi"),
+        missingMessage: testI18n.t("messages:newapi.configMissing"),
+      })
+      expect(result.current.state.url).toBe(draftUrl)
+      expect(mockGetManagedSiteConfig).toHaveBeenCalledTimes(configurationReads)
+      expect(mockValidateAndSaveAccount).not.toHaveBeenCalled()
+      expect(mockOpenWithAccount).not.toHaveBeenCalled()
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "messages")
+      testI18n.removeResourceBundle("zh-CN", "settings")
+    }
   })
 
   it("opens managed-site settings from the setup guidance dialog", async () => {
@@ -639,6 +656,109 @@ describe("useAccountDialog save and auto-config flows", () => {
     ).toHaveBeenCalledWith(savedDisplayData)
     expect(toast.success).toHaveBeenCalledWith("Saved successfully")
   })
+
+  it.each([
+    {
+      scenario: "all-group automatic creation owns a new account",
+      enabled: true,
+      provisioningMode: ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+      dialogMode: DIALOG_MODES.ADD,
+      skipAutoProvision: false,
+      expectPrompt: false,
+    },
+    {
+      scenario: "all-group automatic creation is disabled",
+      enabled: false,
+      provisioningMode: ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+      dialogMode: DIALOG_MODES.ADD,
+      skipAutoProvision: false,
+      expectPrompt: true,
+    },
+    {
+      scenario: "default-key mode still needs a group selection",
+      enabled: true,
+      provisioningMode: ACCOUNT_KEY_AUTO_PROVISION_MODES.Default,
+      dialogMode: DIALOG_MODES.ADD,
+      skipAutoProvision: false,
+      expectPrompt: true,
+    },
+    {
+      scenario: "automatic creation is skipped for this save",
+      enabled: true,
+      provisioningMode: ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+      dialogMode: DIALOG_MODES.ADD,
+      skipAutoProvision: true,
+      expectPrompt: true,
+    },
+    {
+      scenario: "an existing account is edited",
+      enabled: true,
+      provisioningMode: ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+      dialogMode: DIALOG_MODES.EDIT,
+      skipAutoProvision: false,
+      expectPrompt: true,
+    },
+  ])(
+    "coordinates the Sub2API post-save key prompt when $scenario",
+    async ({
+      enabled,
+      provisioningMode,
+      dialogMode,
+      skipAutoProvision,
+      expectPrompt,
+    }) => {
+      mockAutoProvisionKeyOnAccountAdd(enabled, provisioningMode)
+      const savedAccount = buildSiteAccount({
+        id: "saved-account-id",
+        site_type: SITE_TYPES.SUB2API,
+      })
+      const savedDisplayData = accountStorage.convertToDisplayData(savedAccount)
+      vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(savedAccount)
+      vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+        savedDisplayData,
+      )
+      mockValidateAndUpdateAccount.mockResolvedValue({
+        success: true,
+        accountId: savedAccount.id,
+      })
+
+      const { result } =
+        dialogMode === DIALOG_MODES.ADD
+          ? renderAddHook()
+          : renderEditHook({ account: savedDisplayData })
+
+      await waitFor(() => {
+        expect(result.current).toBeTruthy()
+      })
+      if (dialogMode === DIALOG_MODES.ADD) {
+        await fillStandardAddAccountDraft(result)
+        await act(async () => {
+          result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+        })
+      }
+      await waitFor(() => {
+        expect(result.current.state.siteType).toBe(SITE_TYPES.SUB2API)
+      })
+
+      await act(async () => {
+        const saved = await result.current.handlers.handleSaveAccount({
+          skipAutoProvisionKeyOnAccountAdd: skipAutoProvision,
+        })
+        expect(saved?.success).toBe(true)
+      })
+
+      expect(result.current.state.isSaving).toBe(false)
+      if (expectPrompt) {
+        expect(
+          mockOpenDefaultTokenQuickCreateDialogForAccount,
+        ).toHaveBeenCalledWith(savedDisplayData)
+      } else {
+        expect(
+          mockOpenDefaultTokenQuickCreateDialogForAccount,
+        ).not.toHaveBeenCalled()
+      }
+    },
+  )
 
   it("defers account data refresh after a successful manual save", async () => {
     const refreshSpy = vi
@@ -1006,31 +1126,15 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    expect(toast.custom).toHaveBeenCalledWith(
-      expect.any(Function),
+    expect(toast.warning).toHaveBeenCalledWith(
+      expect.any(String),
       expect.objectContaining({
-        duration: 5000,
+        action: expect.any(Object),
       }),
     )
-    const saveWarningRenderer = vi.mocked(toast.custom).mock.calls[0]?.[0] as
-      | ((toastInstance: any) => any)
-      | undefined
-    const saveWarningElement = saveWarningRenderer?.({
-      id: "warning-toast-id",
-      type: "custom",
-      visible: true,
-      dismissed: false,
-      height: 0,
-      ariaProps: {
-        role: "status",
-        "aria-live": "polite",
-      },
-      message: "",
-      createdAt: Date.now(),
-      pauseDuration: 0,
-      position: "bottom-center",
-    } as any)
-    expect(saveWarningElement?.props.action).toEqual(
+    const saveWarningAction = vi.mocked(toast.warning).mock.calls[0]?.[1]
+      ?.action
+    expect(saveWarningAction).toEqual(
       expect.objectContaining({
         label: "common:actions.refresh",
       }),
@@ -1070,31 +1174,15 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    expect(toast.custom).toHaveBeenCalledWith(
-      expect.any(Function),
+    expect(toast.warning).toHaveBeenCalledWith(
+      expect.any(String),
       expect.objectContaining({
-        duration: 5000,
+        action: expect.any(Object),
       }),
     )
-    const updateWarningRenderer = vi.mocked(toast.custom).mock.calls[0]?.[0] as
-      | ((toastInstance: any) => any)
-      | undefined
-    const updateWarningElement = updateWarningRenderer?.({
-      id: "warning-toast-id",
-      type: "custom",
-      visible: true,
-      dismissed: false,
-      height: 0,
-      ariaProps: {
-        role: "status",
-        "aria-live": "polite",
-      },
-      message: "",
-      createdAt: Date.now(),
-      pauseDuration: 0,
-      position: "bottom-center",
-    } as any)
-    expect(updateWarningElement?.props.action).toEqual(
+    const updateWarningAction = vi.mocked(toast.warning).mock.calls[0]?.[1]
+      ?.action
+    expect(updateWarningAction).toEqual(
       expect.objectContaining({
         label: "common:actions.refresh",
       }),
@@ -1130,34 +1218,17 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    expect(toast.custom).toHaveBeenCalledWith(
-      expect.any(Function),
+    expect(toast.warning).toHaveBeenCalledWith(
+      expect.any(String),
       expect.objectContaining({
-        duration: 5000,
+        action: expect.any(Object),
       }),
     )
-    const saveWarningRenderer = vi.mocked(toast.custom).mock.calls[0]?.[0] as
-      | ((toastInstance: any) => any)
-      | undefined
-    const saveWarningElement = saveWarningRenderer?.({
-      id: "warning-toast-id",
-      type: "custom",
-      visible: true,
-      dismissed: false,
-      height: 0,
-      ariaProps: {
-        role: "status",
-        "aria-live": "polite",
-      },
-      message: "",
-      createdAt: Date.now(),
-      pauseDuration: 0,
-      position: "bottom-center",
-    } as any)
-    expect(saveWarningElement?.props.message).toBe(
-      "accountDialog:messages.addSuccess",
-    )
-    expect(saveWarningElement?.props.action).toEqual(
+    const saveWarningMessage = vi.mocked(toast.warning).mock.calls[0]?.[0]
+    const saveWarningAction = vi.mocked(toast.warning).mock.calls[0]?.[1]
+      ?.action
+    expect(saveWarningMessage).toBe("accountDialog:messages.addSuccess")
+    expect(saveWarningAction).toEqual(
       expect.objectContaining({
         label: "common:actions.refresh",
       }),
@@ -1484,7 +1555,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       displaySiteData: savedDisplayData,
     })
     expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
-    expect(result.current.state.postSaveOneTimeToken).toBeNull()
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     expect(onSuccess).toHaveBeenCalledWith("saved-account-id")
   })
 
@@ -1729,7 +1800,10 @@ describe("useAccountDialog save and auto-config flows", () => {
       account: savedSiteAccount,
       displaySiteData: savedDisplayData,
     })
-    expect(result.current.state.postSaveOneTimeToken).toBe(oneTimeToken)
+    expect(result.current.state.postSaveOneTimeSecret).toMatchObject({
+      secret: oneTimeToken.key,
+      displayName: oneTimeToken.name,
+    })
     expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
     expect(mockOpenWithAccount).not.toHaveBeenCalled()
   })
@@ -1791,7 +1865,10 @@ describe("useAccountDialog save and auto-config flows", () => {
         siteType: SITE_TYPES.AIHUBMIX,
       }),
     })
-    expect(result.current.state.postSaveOneTimeToken).toBe(oneTimeToken)
+    expect(result.current.state.postSaveOneTimeSecret).toMatchObject({
+      secret: oneTimeToken.key,
+      displayName: oneTimeToken.name,
+    })
   })
 
   it("shows a fallback error instead of a fake AIHubMix key when creation cannot return a full secret", async () => {
@@ -1840,7 +1917,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleAihubmixPostSaveKeyPromptConfirm()
     })
 
-    expect(result.current.state.postSaveOneTimeToken).toBeNull()
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     expect(toast.error).toHaveBeenCalledWith(
       "messages:aihubmix.oneTimeKeyUnavailableAfterCreate",
     )
@@ -1895,10 +1972,10 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
 
     expect(mockEnsureAccountTokenForPostSaveWorkflow).not.toHaveBeenCalled()
-    expect(result.current.state.postSaveOneTimeToken).toBeNull()
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
     expect(toast.success).toHaveBeenCalledWith("Saved successfully")
-    expect(toast).toHaveBeenCalledWith(
+    expect(toast.info).toHaveBeenCalledWith(
       "messages:aihubmix.oneTimeKeyPromptCancelled",
     )
   })
@@ -2026,7 +2103,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       })
     })
 
-    expect(result.current.state.postSaveOneTimeToken).toBeNull()
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
@@ -2076,12 +2153,85 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
 
     expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
-    expect(result.current.state.postSaveOneTimeToken).toBeNull()
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     expect(toast.error).toHaveBeenCalledWith(
       "messages:aihubmix.oneTimeKeyUnavailableAfterCreate",
     )
     expect(onSuccess).toHaveBeenCalledWith("saved-account-id")
   })
+
+  it.each([
+    {
+      duplicate: "the same site and user ID",
+      siteType: SITE_TYPES.NEW_API,
+      siteUrl: "https://api.example.com",
+      savedUserId: "12345",
+      savedToken: "existing-token",
+    },
+    {
+      duplicate: "an exact OpenRouter management key",
+      siteType: SITE_TYPES.OPENROUTER,
+      siteUrl: "https://openrouter.ai",
+      savedUserId: "different-user-id",
+      savedToken: "sk-private-token",
+    },
+  ])(
+    "stops auto-config quietly when the user cancels adding $duplicate",
+    async ({ siteType, siteUrl, savedUserId, savedToken }) => {
+      await accountStorage.addAccount(
+        buildSiteAccount({
+          site_type: siteType,
+          site_url: siteUrl,
+          account_info: {
+            ...buildSiteAccount().account_info,
+            id: savedUserId,
+            access_token: savedToken,
+          },
+        }),
+      )
+      const onSuccess = vi.fn()
+      const { result } = renderAddHook({ onSuccess })
+      await waitFor(() => {
+        expect(result.current.state).toBeTruthy()
+      })
+      await fillStandardAddAccountDraft(result)
+      await act(async () => {
+        result.current.setters.setUrl(siteUrl)
+        result.current.setters.setSiteType(siteType)
+      })
+
+      let autoConfigPromise: ReturnType<
+        typeof result.current.handlers.handleAutoConfig
+      >
+      act(() => {
+        autoConfigPromise = result.current.handlers.handleAutoConfig()
+      })
+      await waitFor(() => {
+        expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true)
+      })
+
+      await act(async () => {
+        result.current.handlers.handleDuplicateAccountWarningCancel()
+        await autoConfigPromise
+      })
+
+      expect(mockValidateAndSaveAccount).not.toHaveBeenCalled()
+      expect(mockEnsureAccountTokenForPostSaveWorkflow).not.toHaveBeenCalled()
+      expect(mockOpenWithAccount).not.toHaveBeenCalled()
+      expect(onSuccess).not.toHaveBeenCalled()
+      expect(toast.error).not.toHaveBeenCalled()
+      expect(result.current.state).toMatchObject({
+        url: siteUrl,
+        isSaving: false,
+        isAutoConfiguring: false,
+        accountPostSaveWorkflowStep: ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
+        duplicateAccountWarning: { isOpen: false },
+      })
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      )
+    },
+  )
 
   it("stops auto-config after save when the saved account id is missing", async () => {
     mockValidateAndSaveAccount.mockResolvedValueOnce({
@@ -2198,7 +2348,11 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       savedDisplayData,
-      ensuredToken,
+      expect.objectContaining({
+        source: "account_token",
+        secret: ensuredToken.key,
+        token: expect.objectContaining(ensuredToken),
+      }),
       expect.any(Function),
       expect.objectContaining({
         shouldContinue: expect.any(Function),
@@ -2270,20 +2424,27 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleAutoConfig()
     })
 
-    expect(result.current.state.postSaveOneTimeToken).toBe(oneTimeToken)
+    expect(result.current.state.postSaveOneTimeSecret).toMatchObject({
+      secret: oneTimeToken.key,
+      displayName: oneTimeToken.name,
+    })
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
       ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForOneTimeKeyAcknowledgement,
     )
     expect(mockOpenWithAccount).not.toHaveBeenCalled()
 
     await act(async () => {
-      await result.current.handlers.handlePostSaveOneTimeTokenClose()
+      await result.current.handlers.handlePostSaveOneTimeSecretClose()
     })
 
-    expect(result.current.state.postSaveOneTimeToken).toBeNull()
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       savedDisplayData,
-      oneTimeToken,
+      expect.objectContaining({
+        source: "account_token",
+        secret: oneTimeToken.key,
+        token: expect.objectContaining(oneTimeToken),
+      }),
       expect.any(Function),
       expect.objectContaining({
         shouldContinue: expect.any(Function),
@@ -2355,7 +2516,10 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleAutoConfig()
     })
 
-    expect(result.current.state.postSaveOneTimeToken).toBe(oneTimeToken)
+    expect(result.current.state.postSaveOneTimeSecret).toMatchObject({
+      secret: oneTimeToken.key,
+      displayName: oneTimeToken.name,
+    })
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
       ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForOneTimeKeyAcknowledgement,
     )
@@ -2364,7 +2528,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       result.current.handlers.handleClose()
     })
 
-    expect(result.current.state.postSaveOneTimeToken).toBeNull()
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
       ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
     )
@@ -2470,7 +2634,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       expect(result.current.state.accountPostSaveWorkflowStep).toBe(
         ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
       )
-      expect(result.current.state.postSaveOneTimeToken).toBeNull()
+      expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     })
 
     await act(async () => {
@@ -2487,7 +2651,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       expect(result.current.state.accountPostSaveWorkflowStep).toBe(
         ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
       )
-      expect(result.current.state.postSaveOneTimeToken).toBeNull()
+      expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     })
   })
 
@@ -2561,12 +2725,12 @@ describe("useAccountDialog save and auto-config flows", () => {
 
     await expect(
       act(async () => {
-        await result.current.handlers.handlePostSaveOneTimeTokenClose()
+        await result.current.handlers.handlePostSaveOneTimeSecretClose()
       }),
     ).resolves.toBeUndefined()
 
     await waitFor(() => {
-      expect(result.current.state.postSaveOneTimeToken).toBeNull()
+      expect(result.current.state.postSaveOneTimeSecret).toBeNull()
       expect(result.current.state.accountPostSaveWorkflowStep).toBe(
         ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
       )
@@ -2654,7 +2818,11 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(result.current.state.postSaveSub2ApiAllowedGroups).toBeNull()
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       savedDisplayData,
-      createdToken,
+      expect.objectContaining({
+        source: "account_token",
+        secret: createdToken.key,
+        token: expect.objectContaining(createdToken),
+      }),
       expect.any(Function),
       expect.objectContaining({
         shouldContinue: expect.any(Function),
@@ -2772,7 +2940,11 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       savedDisplayData,
-      createdToken,
+      expect.objectContaining({
+        source: "account_token",
+        secret: createdToken.key,
+        token: expect.objectContaining(createdToken),
+      }),
       expect.any(Function),
       expect.objectContaining({
         shouldContinue: expect.any(Function),
@@ -3465,7 +3637,11 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(mockOpenWithAccount).toHaveBeenCalledTimes(1)
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       secondDisplayData,
-      currentToken,
+      expect.objectContaining({
+        source: "account_token",
+        secret: currentToken.key,
+        token: expect.objectContaining(currentToken),
+      }),
       expect.any(Function),
       expect.objectContaining({
         shouldContinue: expect.any(Function),
@@ -3643,7 +3819,11 @@ describe("useAccountDialog save and auto-config flows", () => {
 
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       fallbackDisplayData,
-      ensuredToken,
+      expect.objectContaining({
+        source: "account_token",
+        secret: ensuredToken.key,
+        token: expect.objectContaining(ensuredToken),
+      }),
       expect.any(Function),
       expect.objectContaining({
         shouldContinue: expect.any(Function),
@@ -3831,7 +4011,11 @@ describe("useAccountDialog save and auto-config flows", () => {
 
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       savedDisplayData,
-      ensuredToken,
+      expect.objectContaining({
+        source: "account_token",
+        secret: ensuredToken.key,
+        token: expect.objectContaining(ensuredToken),
+      }),
       expect.any(Function),
       expect.objectContaining({
         shouldContinue: expect.any(Function),
@@ -4138,7 +4322,11 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(getDisplayDataByIdSpy).toHaveBeenCalledWith("second-account-id")
     expect(mockOpenWithAccount).toHaveBeenLastCalledWith(
       accountStorage.convertToDisplayData(secondSavedSiteAccount),
-      secondEnsuredToken,
+      expect.objectContaining({
+        source: "account_token",
+        secret: secondEnsuredToken.key,
+        token: expect.objectContaining(secondEnsuredToken),
+      }),
       expect.any(Function),
       expect.objectContaining({
         shouldContinue: expect.any(Function),
@@ -4324,7 +4512,11 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(mockOpenWithAccount).toHaveBeenNthCalledWith(
       2,
       accountStorage.convertToDisplayData(secondSavedSiteAccount),
-      secondEnsuredToken,
+      expect.objectContaining({
+        source: "account_token",
+        secret: secondEnsuredToken.key,
+        token: expect.objectContaining(secondEnsuredToken),
+      }),
       expect.any(Function),
       expect.objectContaining({
         shouldContinue: expect.any(Function),

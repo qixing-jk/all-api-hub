@@ -50,14 +50,14 @@ const {
   trackProductAnalyticsActionStartedMock: vi.fn(),
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/bookmarkRepository", () => ({
+  bookmarkRepository: {
     addBookmark: addBookmarkMock,
     updateBookmark: updateBookmarkMock,
   },
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: toastSuccessMock,
     error: toastErrorMock,
@@ -73,7 +73,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/accounts/accountOperations", () => ({
+vi.mock("~/services/accounts/siteName", () => ({
   getSiteName: getSiteNameMock,
 }))
 

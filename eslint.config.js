@@ -105,6 +105,73 @@ function restrictedImports(...patterns) {
   ]
 }
 
+// Concrete site identities belong to these explicit owners. Shared business
+// code should consume metadata/capabilities; type imports stay unrestricted.
+const siteTypeImportOwners = [
+  "src/services/accountSiteDefinitions/**", // Site metadata and identifiers.
+  "src/services/apiAdapters/**", // Capability registration and provider protocols.
+  "src/services/apiService/**", // Provider transports and legacy dispatch.
+  "src/services/siteDetection/detectSiteType.ts", // Detection identifies providers.
+  "src/features/KeyManagement/presentation/accountKeyResourcePresentation.ts", // Provider terminology.
+  "src/services/accountSiteOnboarding/contentSession/**", // Provider session validation.
+  "src/services/checkin/autoCheckin/providers/**", // Provider check-in implementations.
+  "src/services/managedSites/providers/**", // Provider-specific managed-site workflows.
+  "src/services/managedSites/runtimeConfig.ts", // Decode provider configuration unions.
+  "src/services/preferences/userPreferences.ts", // Stored provider configuration selection.
+  "src/services/accounts/accountStorage/sub2ApiAuthPersistence.ts", // Check identity before credential writes.
+  "src/services/accounts/migrations/sub2apiAuthMigration.ts", // Historical authentication format.
+  "src/services/managedSites/legacyChannelConfigMigration.ts", // Historical numeric channel identities.
+  "src/services/models/modelSync/channelModelFilterEvaluator.ts", // Provider credential redaction.
+  "src/services/productAnalytics/settings.ts", // Fixed analytics event schema.
+  "src/services/siteAnnouncements/providers.ts", // Announcement provider dispatch.
+  "src/components/icons/ManagedSiteIcon.tsx", // Provider branding.
+  "src/features/AccountManagement/components/AccountDialog/AccessTokenVerificationGuide.tsx", // Provider authentication instructions.
+  "src/features/AccountManagement/components/AccountDialog/AccountForm.tsx", // OpenRouter management-key onboarding UI.
+  "src/features/AccountManagement/components/AccountDialog/hooks/useOpenRouterAccountOnboarding.ts", // Provider-owned onboarding lifecycle.
+  "src/features/BasicSettings/components/tabs/ManagedSite/ManagedSite*.search.ts", // Search entries for provider-specific settings.
+  "src/features/ManagedSiteChannels/presentation/managedResourceMigrationPresentation.ts", // Provider-specific migration labels.
+  "src/features/ModelList/aihubmixModelList.ts", // Provider catalog presentation.
+  "src/features/SiteAnnouncements/utils.ts", // Cached provider identity and source links.
+  "src/constants/siteType.ts", // Public compatibility re-export.
+  "src/contexts/UserPreferencesContext.tsx", // Default managed-site selection.
+  "src/entrypoints/content/messageHandlers/handlers/storage.ts", // Unknown-site input fallback.
+  "src/features/AccountManagement/bookmarkImport/candidates.ts", // Unknown detection result.
+  "src/features/AccountManagement/bookmarkImport/importAccounts.ts", // Unknown imported account identity.
+  "src/features/AccountManagement/components/AccountDialog/autoDetectDraft.ts", // Unknown draft identity.
+  "src/features/AccountManagement/components/AccountDialog/models.ts", // Initial draft identity.
+  "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog.ts", // Default identity and explicit provider onboarding results.
+  "src/features/AccountManagement/sponsors/catalogActions.ts", // Sponsor identity prefill.
+  "src/features/AccountManagement/sponsors/pendingAddAccountIntent.ts", // Sponsor intent validation.
+  "src/features/ApiCredentialProfiles/utils/exportShims.ts", // Synthetic account identity for export compatibility.
+  "src/features/BasicSettings/components/tabs/ManagedSite/DoneHubSettings.tsx", // Provider settings.
+  "src/features/BasicSettings/components/tabs/ManagedSite/ManagedSiteTab.tsx", // Provider settings dispatch.
+  "src/features/BasicSettings/components/tabs/ManagedSite/ModelRedirectSettings.tsx", // Default provider selection.
+  "src/features/BasicSettings/components/tabs/ManagedSite/NewApiSettings.tsx", // Provider settings.
+  "src/features/BasicSettings/components/tabs/ManagedSite/Sub2ApiSettings.tsx", // Provider settings.
+  "src/features/BasicSettings/components/tabs/ManagedSite/VeloeraSettings.tsx", // Provider settings.
+  "src/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy.ts", // Provider field presentation.
+  "src/features/ManagedSiteChannels/presentation/managedResourceTablePolicy.ts", // Provider table presentation.
+  "src/features/UnifiedApiGuidance/UnifiedApiGuidanceDevPreview.tsx", // Development fixture.
+  "src/services/accountSiteOnboarding/metadata.ts", // Unknown-site metadata fallback.
+  "src/services/accounts/accountCreation.ts", // Unknown account identity fallback.
+  "src/services/accounts/accountDefaults.ts", // Default account identity.
+  "src/services/accounts/accountFormValidation.ts", // Unknown account identity validation.
+  "src/services/accounts/accountSiteProfile/contentSessionHint.ts", // Unknown session identity validation.
+  "src/services/accounts/accountSiteProfile/profiles.ts", // Default profile.
+  "src/services/accounts/accountStorage/accountRefresh.ts", // Unknown identity detection recovery.
+  "src/services/accounts/accountUpdate.ts", // Unknown account identity fallback.
+  "src/services/accounts/autoDetect/recovery.ts", // Unknown detection recovery.
+  "src/services/accounts/siteName.ts", // Unknown site display name.
+  "src/services/accounts/utils/siteRouteResolver.ts", // Unknown route fallback.
+  "src/services/managedSites/channelMigrationCapabilityRegistry.ts", // Migration capability dispatch.
+  "src/services/managedSites/utils/managedSite.ts", // Synthetic account identity for managed-site compatibility.
+  "src/services/modelList/accountSources/sub2apiEstimates.ts", // Provider-owned catalog estimate.
+  "src/services/productAnalytics/contracts.ts", // Fixed event schema.
+  "src/services/productAnalytics/siteEcosystem.ts", // Fixed event schema projection.
+  "src/services/siteAnnouncements/storage.ts", // Unknown cached identity fallback.
+  "src/services/siteDetection/autoDetectService.ts", // Unknown identity fallback.
+]
+
 export default defineConfig([
   {
     ignores: [
@@ -321,6 +388,67 @@ export default defineConfig([
         },
       ),
     },
+  },
+  {
+    files: [srcJsFamilyFilePattern],
+    ignores: siteTypeImportOwners,
+    rules: {
+      // Keep this named-import policy separate from the core rule above so
+      // narrower legacy-import overrides cannot erase either boundary.
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex:
+                "(?:^|/)(?:constants/siteType|accountSiteDefinitions/(?:identifiers|siteTypes))(?:\\.ts)?$",
+              importNames: ["SITE_TYPES"],
+              allowTypeImports: true,
+              message:
+                "Do not import SITE_TYPES into shared business code. Use site metadata/capabilities; explicit provider owners belong in siteTypeImportOwners in eslint.config.js.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: [srcJsFamilyFilePattern],
+    ignores: [
+      "src/lib/notify/**",
+      "src/components/ThemeAwareToaster.tsx",
+      "src/entrypoints/content/redemptionAssist/components/RedemptionToaster.tsx",
+    ],
+    plugins: {
+      notifications: {
+        rules: {
+          "use-facade": {
+            meta: {
+              type: "problem",
+              schema: [],
+              messages: {
+                direct:
+                  "Use ~/lib/notify (or ~/lib/notify/content in content scripts) instead of react-hot-toast.",
+              },
+            },
+            create(context) {
+              const check = (node) => {
+                if (/^react-hot-toast(?:\/|$)/.test(node.source?.value ?? "")) {
+                  context.report({ node, messageId: "direct" })
+                }
+              }
+              return {
+                ImportDeclaration: check,
+                ImportExpression: check,
+                ExportNamedDeclaration: check,
+                ExportAllDeclaration: check,
+              }
+            },
+          },
+        },
+      },
+    },
+    rules: { "notifications/use-facade": "error" },
   },
   { rules },
   eslintConfigPrettier,

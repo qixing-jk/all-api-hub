@@ -114,16 +114,6 @@ If you are looking for stable, efficient, and highly compatible AI relay service
     </p>
   </section>
 
-  <hr>
-
-  <section class="sponsor-item">
-    <a class="sponsor-logo" href="https://infistar.ai/register?aff=ALLAPIHUB&ref_source=link">
-      <img src="../../../resources/partners/infistar.png" alt="Infistar.ai">
-    </a>
-    <p>
-      Are you concerned about diluted models, reduced model intelligence, or opaque pricing? Every model offered by <strong>Infistar.ai</strong> is verified through real API calls. Supply comes from official APIs and official account pools, with load balancing across more than 10,000 supply routes to ensure low latency and peak-hour stability. It covers mainstream models including ChatGPT, Claude, Gemini, Grok, GLM, DeepSeek, Kimi, Qwen, and MiniMax, with full-modal capabilities spanning text, video, images, embeddings, reranking, and more. Pricing and usage are transparent and easy to review, with models available from 10% of official prices. All API Hub users can register and try it through <a href="https://infistar.ai/register?aff=ALLAPIHUB&ref_source=link">the dedicated link</a> (<a href="./service-guides/infistar.md">setup guide</a>).
-    </p>
-  </section>
 
   <hr>
 

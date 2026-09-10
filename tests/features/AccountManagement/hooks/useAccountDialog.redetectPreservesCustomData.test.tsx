@@ -1,21 +1,34 @@
+import { http, HttpResponse } from "msw"
 import type { ReactNode } from "react"
-import toast from "react-hot-toast"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest"
 
 import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
+import { getCheckInRedetectionFeedbackPresentation } from "~/features/AccountManagement/components/AccountDialog/checkInPresentation"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
+import toast from "~/lib/notify"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
+import type { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery"
 import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
+import type { AccountAutoDetectResponse } from "~/types/serviceResponse"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
+import { server } from "~~/tests/msw/server"
+import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
-import { buildSiteAccount } from "~~/tests/test-utils/factories"
+import { createDeferred } from "~~/tests/test-utils/deferred"
+import {
+  buildDisplaySiteData,
+  buildSiteAccount,
+} from "~~/tests/test-utils/factories"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
+
+type CheckInDiscoveryResult = Awaited<ReturnType<typeof discoverCheckInMethods>>
 
 const {
   mockAutoDetectAccount,
@@ -29,7 +42,7 @@ const {
   mockOpenDefaultTokenQuickCreateDialogForAccount: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: Object.assign(vi.fn(), {
     success: vi.fn(),
     error: vi.fn(),
@@ -72,10 +85,10 @@ vi.mock("~/services/protectionBypass/client", () => ({
     }),
 }))
 
-vi.mock("~/services/accounts/accountOperations", async (importOriginal) => {
+vi.mock("~/services/accounts/accountAutoDetection", async (importOriginal) => {
   const actual =
     await importOriginal<
-      typeof import("~/services/accounts/accountOperations")
+      typeof import("~/services/accounts/accountAutoDetection")
     >()
   return {
     ...actual,
@@ -110,6 +123,397 @@ describe("useAccountDialog re-detect preservation", () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     await accountStorage.clearAllData()
+  })
+
+  it("keeps a draft credential bound to its source URL when redetecting", async () => {
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      kind: "detected",
+      success: false,
+      message: "Account identity changed",
+    })
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current.state).toBeTruthy())
+    act(() => {
+      result.current.setters.setUrl("https://original.example.invalid")
+      result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+      result.current.setters.setUserId("7")
+      result.current.setters.setAccessToken("draft-pat")
+    })
+    act(() => result.current.setters.setUrl("https://changed.example.invalid"))
+
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(mockAutoDetectAccount).toHaveBeenCalledWith(
+      "https://changed.example.invalid",
+      AuthTypeEnum.AccessToken,
+      expect.anything(),
+      undefined,
+      {
+        existingAccount: {
+          url: "https://original.example.invalid",
+          siteType: SITE_TYPES.NEW_API,
+          userId: "7",
+          accessToken: "draft-pat",
+        },
+      },
+    )
+    expect(result.current.state.accessToken).toBe("draft-pat")
+  })
+
+  it("keeps a draft credential bound to its source adapter family when the site type changes", async () => {
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      kind: "detected",
+      success: false,
+      message: "Account identity changed",
+    })
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current).toBeTruthy())
+    act(() => {
+      result.current.setters.setUrl("https://original.example.invalid")
+      result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+      result.current.setters.setUserId("7")
+      result.current.setters.setAccessToken("draft-pat")
+    })
+    act(() => result.current.setters.setSiteType(SITE_TYPES.SUB2API))
+
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(mockAutoDetectAccount).toHaveBeenCalledWith(
+      "https://original.example.invalid",
+      AuthTypeEnum.AccessToken,
+      expect.anything(),
+      undefined,
+      {
+        existingAccount: {
+          url: "https://original.example.invalid",
+          siteType: SITE_TYPES.NEW_API,
+          userId: "7",
+          accessToken: "draft-pat",
+        },
+      },
+    )
+    expect(result.current.state.accessToken).toBe("draft-pat")
+  })
+
+  it("preserves a credential entered while an earlier detection is returning recovery data", async () => {
+    const detection = createDeferred<AccountAutoDetectResponse>()
+    mockAutoDetectAccount
+      .mockReturnValueOnce(detection.promise)
+      .mockResolvedValueOnce({
+        kind: "detected",
+        success: false,
+        message: "Account identity changed",
+      })
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current).toBeTruthy())
+    act(() => {
+      result.current.setters.setUrl("https://original.example.invalid")
+      result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+      result.current.setters.setUserId("7")
+    })
+    let detecting: Promise<void>
+    act(() => {
+      detecting = result.current.handlers.handleAutoDetect()
+    })
+    await waitFor(() => expect(mockAutoDetectAccount).toHaveBeenCalledOnce())
+    act(() => {
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+      result.current.setters.setAccessToken("entered-jwt")
+    })
+    await act(async () => {
+      detection.resolve({
+        kind: "detected",
+        success: false,
+        message: "Detection incomplete",
+        recoveryData: {
+          siteType: SITE_TYPES.NEW_API,
+          userId: "7",
+          accessToken: "recovered-pat",
+        },
+      })
+      await detecting
+    })
+    act(() => result.current.setters.setSiteType(SITE_TYPES.NEW_API))
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(mockAutoDetectAccount).toHaveBeenLastCalledWith(
+      "https://original.example.invalid",
+      AuthTypeEnum.AccessToken,
+      expect.anything(),
+      undefined,
+      {
+        existingAccount: {
+          url: "https://original.example.invalid",
+          siteType: SITE_TYPES.SUB2API,
+          userId: "7",
+          accessToken: "entered-jwt",
+        },
+      },
+    )
+    expect(result.current.state.accessToken).toBe("entered-jwt")
+  })
+
+  it.each(["", " \t "])(
+    "uses the current site scope after clearing an access token to %j",
+    async (emptyToken) => {
+      mockAutoDetectAccount.mockResolvedValueOnce({
+        kind: "detected",
+        success: false,
+        message: "Detection incomplete",
+      })
+      const { result } = renderHook(() =>
+        useAccountDialog({
+          mode: DIALOG_MODES.ADD,
+          isOpen: true,
+          onClose: vi.fn(),
+        }),
+      )
+      await waitFor(() => expect(result.current).toBeTruthy())
+      act(() => {
+        result.current.setters.setUrl("https://original.example.invalid")
+        result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+        result.current.setters.setUserId("7")
+        result.current.setters.setAccessToken("old-jwt")
+      })
+      act(() => {
+        result.current.setters.setAccessToken(emptyToken)
+        result.current.setters.setUrl("https://changed.example.invalid")
+        result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+        result.current.setters.setAuthType(AuthTypeEnum.Cookie)
+        result.current.setters.setCookieAuthSessionCookie("session=current")
+      })
+
+      await act(async () => {
+        await result.current.handlers.handleAutoDetect()
+      })
+
+      expect(mockAutoDetectAccount).toHaveBeenCalledWith(
+        "https://changed.example.invalid",
+        AuthTypeEnum.Cookie,
+        expect.anything(),
+        "session=current",
+        {
+          existingAccount: {
+            url: "https://changed.example.invalid",
+            siteType: SITE_TYPES.NEW_API,
+            userId: "7",
+            accessToken: emptyToken,
+          },
+        },
+      )
+    },
+  )
+
+  it("binds an imported Sub2API token to its source instead of the replaced token", async () => {
+    const browserSessions = await import("~/services/accountBrowserSession")
+    const resolveSession = vi
+      .spyOn(browserSessions, "resolveAccountBrowserSession")
+      .mockResolvedValueOnce({
+        source: "existing_tab",
+        siteType: SITE_TYPES.SUB2API,
+        userId: "7",
+        user: { username: "alice" },
+        accessToken: "imported-jwt",
+        sub2apiAuth: { refreshToken: "imported-refresh" },
+      })
+    onTestFinished(() => resolveSession.mockRestore())
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      kind: "detected",
+      success: false,
+      message: "Account identity changed",
+    })
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current).toBeTruthy())
+    act(() => {
+      result.current.setters.setUrl("https://original.example.invalid")
+      result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+      result.current.setters.setUserId("7")
+      result.current.setters.setAccessToken("old-pat")
+    })
+    act(() => result.current.setters.setSiteType(SITE_TYPES.SUB2API))
+    await act(async () => {
+      await result.current.handlers.handleImportSub2apiSession()
+    })
+    act(() => result.current.setters.setSiteType(SITE_TYPES.NEW_API))
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(mockAutoDetectAccount).toHaveBeenCalledWith(
+      "https://original.example.invalid",
+      AuthTypeEnum.AccessToken,
+      expect.anything(),
+      undefined,
+      {
+        existingAccount: {
+          url: "https://original.example.invalid",
+          siteType: SITE_TYPES.SUB2API,
+          userId: "7",
+          accessToken: "imported-jwt",
+        },
+      },
+    )
+    expect(result.current.state.accessToken).toBe("imported-jwt")
+  })
+
+  it("preserves an imported credential when earlier detection recovery arrives before the next render", async () => {
+    const browserSessions = await import("~/services/accountBrowserSession")
+    const resolveSession = vi
+      .spyOn(browserSessions, "resolveAccountBrowserSession")
+      .mockResolvedValueOnce({
+        source: "existing_tab",
+        siteType: SITE_TYPES.SUB2API,
+        userId: "7",
+        user: { username: "alice" },
+        accessToken: "imported-jwt",
+        sub2apiAuth: { refreshToken: "imported-refresh" },
+      })
+    onTestFinished(() => resolveSession.mockRestore())
+    const detection = createDeferred<AccountAutoDetectResponse>()
+    mockAutoDetectAccount
+      .mockReturnValueOnce(detection.promise)
+      .mockResolvedValueOnce({
+        kind: "detected",
+        success: false,
+        message: "Account identity changed",
+      })
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current).toBeTruthy())
+    act(() => {
+      result.current.setters.setUrl("https://original.example.invalid")
+      result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+      result.current.setters.setUserId("7")
+    })
+    let detecting: Promise<void>
+    act(() => {
+      detecting = result.current.handlers.handleAutoDetect()
+    })
+    await waitFor(() => expect(mockAutoDetectAccount).toHaveBeenCalledOnce())
+    act(() => result.current.setters.setSiteType(SITE_TYPES.SUB2API))
+
+    await act(async () => {
+      await result.current.handlers.handleImportSub2apiSession()
+      detection.resolve({
+        kind: "detected",
+        success: false,
+        message: "Detection incomplete",
+        recoveryData: {
+          siteType: SITE_TYPES.NEW_API,
+          userId: "7",
+          accessToken: "recovered-pat",
+        },
+      })
+      await detecting
+    })
+    act(() => result.current.setters.setSiteType(SITE_TYPES.NEW_API))
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(mockAutoDetectAccount).toHaveBeenLastCalledWith(
+      "https://original.example.invalid",
+      AuthTypeEnum.AccessToken,
+      expect.anything(),
+      undefined,
+      {
+        existingAccount: {
+          url: "https://original.example.invalid",
+          siteType: SITE_TYPES.SUB2API,
+          userId: "7",
+          accessToken: "imported-jwt",
+        },
+      },
+    )
+    expect(result.current.state.accessToken).toBe("imported-jwt")
+  })
+
+  it("keeps a recovered credential bound to the site that returned it", async () => {
+    mockAutoDetectAccount
+      .mockResolvedValueOnce({
+        kind: "detected",
+        success: false,
+        message: "Detection incomplete",
+        recoveryData: {
+          siteType: SITE_TYPES.NEW_API,
+          userId: "7",
+          accessToken: "recovered-pat",
+        },
+      })
+      .mockResolvedValueOnce({
+        kind: "detected",
+        success: false,
+        message: "Account changed",
+      })
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current.state).toBeTruthy())
+    act(() => result.current.setters.setUrl("https://original.example.invalid"))
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+    act(() => {
+      result.current.setters.setUrl("https://changed.example.invalid")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(mockAutoDetectAccount).toHaveBeenLastCalledWith(
+      "https://changed.example.invalid",
+      AuthTypeEnum.AccessToken,
+      expect.anything(),
+      undefined,
+      {
+        existingAccount: {
+          url: "https://original.example.invalid",
+          siteType: SITE_TYPES.NEW_API,
+          userId: "7",
+          accessToken: "recovered-pat",
+        },
+      },
+    )
   })
 
   const runBasicAddModeRedetection = async () => {
@@ -150,18 +554,14 @@ describe("useAccountDialog re-detect preservation", () => {
 
     expect(result.current.state.checkInRedetectionFeedback).toEqual({
       kind: "failed",
-      message: "accountDialog:messages.urlRequired",
+      reason: "url-required",
     })
     expect(mockDiscoverCheckInMethods).not.toHaveBeenCalled()
   })
 
   it("ignores a redetection result after the requested URL changes", async () => {
-    let resolveDiscovery!: (value: unknown) => void
-    mockDiscoverCheckInMethods.mockReturnValueOnce(
-      new Promise((resolve) => {
-        resolveDiscovery = resolve
-      }),
-    )
+    const discoveryDeferred = createDeferred<CheckInDiscoveryResult>()
+    mockDiscoverCheckInMethods.mockReturnValueOnce(discoveryDeferred.promise)
     const { result } = renderHook(() =>
       useAccountDialog({
         mode: DIALOG_MODES.ADD,
@@ -184,7 +584,7 @@ describe("useAccountDialog re-detect preservation", () => {
     act(() => {
       result.current.setters.setUrl("https://second.example.invalid")
     })
-    resolveDiscovery({
+    discoveryDeferred.resolve({
       config: buildCheckInConfig({ automaticExecutionEnabled: true }),
       decision: { outcome: "resolved", methodId: "new-api:daily-checkin" },
       detections: {},
@@ -599,15 +999,45 @@ describe("useAccountDialog re-detect preservation", () => {
     })
   })
 
-  it("keeps redetection failures visible in dialog state", async () => {
+  it("retranslates redetection failures without changing the draft or detecting again", async () => {
     mockDiscoverCheckInMethods.mockRejectedValueOnce(new Error("network down"))
 
     const result = await runBasicAddModeRedetection()
 
-    expect(result.current.state.checkInRedetectionFeedback).toEqual({
-      kind: "failed",
-      message: "accountDialog:messages.operationFailed",
-    })
+    const checkIn = result.current.state.checkIn
+    expect(
+      getCheckInRedetectionFeedbackPresentation(
+        testI18n.getFixedT("en", "accountDialog"),
+        result.current.state.checkInRedetectionFeedback,
+      )?.title,
+    ).toBe("accountDialog:messages.operationFailed")
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "accountDialog",
+      (await import("~/locales/zh-CN/accountDialog.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(
+        getCheckInRedetectionFeedbackPresentation(
+          testI18n.getFixedT("zh-CN", "accountDialog"),
+          result.current.state.checkInRedetectionFeedback,
+        )?.title,
+      ).toBe(
+        testI18n.t("accountDialog:messages.operationFailed", {
+          error: "network down",
+        }),
+      )
+      expect(result.current.state.checkIn).toEqual(checkIn)
+      expect(mockDiscoverCheckInMethods).toHaveBeenCalledTimes(1)
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "accountDialog")
+    }
   })
 
   it("reports a redetection failure when no method is selected", async () => {
@@ -769,9 +1199,18 @@ describe("useAccountDialog re-detect preservation", () => {
       existingCheckIn.automaticExecutionEnabled,
     )
 
+    const refreshAccountSpy = vi
+      .spyOn(accountStorage, "refreshAccount")
+      .mockResolvedValue({
+        account: buildSiteAccount({ id: accountId }),
+        refreshed: false,
+      })
+
     await act(async () => {
       await result.current.handlers.handleSaveAccount()
     })
+    await waitFor(() => expect(refreshAccountSpy).toHaveBeenCalledOnce())
+    refreshAccountSpy.mockRestore()
 
     const saved = await accountStorage.getAccountById(accountId)
     expect(saved?.checkIn.methodKnowledge.lastFullDiscoveryAt).toBe(200)
@@ -809,12 +1248,8 @@ describe("useAccountDialog re-detect preservation", () => {
     vi.useFakeTimers()
 
     try {
-      let resolveDetect!: (value: any) => void
-      mockAutoDetectAccount.mockReturnValueOnce(
-        new Promise((resolve) => {
-          resolveDetect = resolve
-        }),
-      )
+      const detectDeferred = createDeferred<AccountAutoDetectResponse>()
+      mockAutoDetectAccount.mockReturnValueOnce(detectDeferred.promise)
 
       let detectPromise!: Promise<void>
       await act(async () => {
@@ -831,7 +1266,8 @@ describe("useAccountDialog re-detect preservation", () => {
 
       expect(result.current.state.isDetectingSlow).toBe(true)
 
-      resolveDetect({
+      detectDeferred.resolve({
+        kind: "detected",
         success: true,
         message: "ok",
         data: {
@@ -841,7 +1277,7 @@ describe("useAccountDialog re-detect preservation", () => {
           exchangeRate: 7,
           siteName: "Detected Site",
           siteType: "unknown",
-          checkIn: {},
+          checkIn: buildCheckInConfig(),
         },
       })
 
@@ -968,17 +1404,95 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(result.current.state.isDetected).toBe(true)
   })
 
-  it("stops auto-detect when the duplicate-account warning is canceled", async () => {
-    await accountStorage.addAccount(
-      buildSiteAccount({
-        site_name: "Existing",
-        site_url: "https://api.example.com",
-      }),
+  it.each([
+    {
+      name: "re-detects the current login before checking an obsolete draft identity for duplicates",
+      mode: DIALOG_MODES.ADD,
+      expected: {
+        userId: "8",
+        accessToken: "different-token",
+        isDetected: true,
+        detectionError: null,
+      },
+    },
+    {
+      name: "keeps a saved account identity during redetection even when its PAT is missing",
+      mode: DIALOG_MODES.EDIT,
+      expected: {
+        userId: "1",
+        accessToken: "",
+        isDetected: false,
+        detectionError: expect.objectContaining({
+          type: AutoDetectErrorType.INVALID_RESPONSE,
+        }),
+      },
+    },
+  ])("$name", async ({ mode, expected }) => {
+    const existingAccount = buildSiteAccount({
+      site_name: "Existing",
+      site_url: "https://api.example.com",
+      site_type: SITE_TYPES.NEW_API,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        access_token: "",
+      },
+    })
+    const accountId = await accountStorage.addAccount(existingAccount)
+    const { autoDetectAccount } = await vi.importActual<
+      typeof import("~/services/accounts/accountAutoDetection")
+    >("~/services/accounts/accountAutoDetection")
+    mockAutoDetectAccount.mockImplementationOnce(autoDetectAccount)
+    const { discoverCheckInMethods } = await vi.importActual<
+      typeof import("~/services/checkin/autoCheckin/discovery")
+    >("~/services/checkin/autoCheckin/discovery")
+    mockDiscoverCheckInMethods.mockImplementation(discoverCheckInMethods)
+    onTestFinished(() => {
+      mockDiscoverCheckInMethods.mockReset()
+    })
+    server.use(
+      http.get("https://api.example.com/", () =>
+        HttpResponse.html("<title>New API</title>"),
+      ),
+      http.get(
+        "https://api.example.com/api/user/info",
+        () => new HttpResponse(null, { status: 404 }),
+      ),
+      http.get(
+        "https://api.example.com/api/v1/auth/me",
+        () => new HttpResponse(null, { status: 404 }),
+      ),
+      http.get("https://api.example.com/api/user/self", () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            id: 8,
+            username: "different-user",
+            access_token: "different-token",
+          },
+        }),
+      ),
+      http.get("https://api.example.com/api/status", () =>
+        HttpResponse.json({
+          success: true,
+          data: { system_name: "Detected Site", checkin_enabled: false },
+        }),
+      ),
+      http.get("https://api.example.com/api/user/checkin", () =>
+        HttpResponse.json({ success: true, data: { enabled: false } }),
+      ),
     )
+    const account = buildDisplaySiteData({
+      id: accountId,
+      baseUrl: existingAccount.site_url,
+      siteType: SITE_TYPES.NEW_API,
+      userId: "1",
+      token: "",
+    })
 
     const { result } = renderHook(() =>
       useAccountDialog({
-        mode: DIALOG_MODES.ADD,
+        mode,
+        ...(mode === DIALOG_MODES.EDIT ? { account } : {}),
         isOpen: true,
         onClose: vi.fn(),
         onSuccess: vi.fn(),
@@ -989,9 +1503,14 @@ describe("useAccountDialog re-detect preservation", () => {
       expect(result.current.state).toBeTruthy()
     })
 
-    await act(async () => {
-      result.current.handlers.handleUrlChange("https://api.example.com/users")
-    })
+    if (mode === DIALOG_MODES.EDIT) {
+      await waitFor(() => expect(result.current.state.userId).toBe("1"))
+    } else {
+      await act(async () => {
+        result.current.handlers.handleUrlChange("https://api.example.com/users")
+        result.current.setters.setUserId(existingAccount.account_info.id)
+      })
+    }
 
     let detectPromise!: Promise<void>
     act(() => {
@@ -999,25 +1518,98 @@ describe("useAccountDialog re-detect preservation", () => {
     })
 
     await waitFor(() => {
-      expect(result.current.state.duplicateAccountWarning).toMatchObject({
-        isOpen: true,
-        siteUrl: "https://api.example.com",
-      })
+      expect(mockAutoDetectAccount).toHaveBeenCalled()
     })
 
     await act(async () => {
-      result.current.handlers.handleDuplicateAccountWarningCancel()
       await detectPromise
     })
 
-    expect(mockAutoDetectAccount).not.toHaveBeenCalled()
     expect(result.current.state.duplicateAccountWarning.isOpen).toBe(false)
     expect(result.current.state.isDetecting).toBe(false)
-    expect(result.current.state.isDetected).toBe(false)
-    expect(result.current.state.showManualForm).toBe(false)
+    expect(result.current.state).toMatchObject(expected)
   })
 
-  it("shows the manual form with the returned detailed error when auto-detect responds unsuccessfully", async () => {
+  it.each([
+    [SITE_TYPES.NEW_API, "url"],
+    [SITE_TYPES.NEW_API, "site type"],
+    [SITE_TYPES.NEW_API, "auth type"],
+    [SITE_TYPES.APIYI, "url"],
+    [SITE_TYPES.APIYI, "site type"],
+    [SITE_TYPES.APIYI, "auth type"],
+  ] as const)(
+    "keeps %s manual token recovery until the %s changes",
+    async (siteType, changedField) => {
+      const detailedError = {
+        type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+        message: "Security verification required",
+      }
+      mockAutoDetectAccount.mockResolvedValueOnce({
+        success: false,
+        detailedError,
+        autoDetectContext: { siteType },
+        recoveryData: {
+          siteType,
+          userId: "42",
+          username: "detected-user",
+          authType: AuthTypeEnum.AccessToken,
+        },
+      })
+      const { result } = renderHook(() =>
+        useAccountDialog({
+          mode: DIALOG_MODES.ADD,
+          isOpen: true,
+          onClose: vi.fn(),
+        }),
+      )
+      await waitFor(() => expect(result.current.state).toBeTruthy())
+      await act(async () => {
+        result.current.setters.setUrl("https://verification.example.invalid")
+        result.current.setters.setAuthType(AuthTypeEnum.Cookie)
+        result.current.setters.setNotes("Keep my notes")
+      })
+      expect(result.current.state.authType).toBe(AuthTypeEnum.Cookie)
+      await act(async () => {
+        await result.current.handlers.handleAutoDetect()
+      })
+
+      expect(result.current.state.authType).toBe(AuthTypeEnum.AccessToken)
+      expect(result.current.state.showManualForm).toBe(true)
+      expect(result.current.state.detectionError).toEqual(detailedError)
+      expect(result.current.state.tokenRecoveryState?.draft).toMatchObject({
+        siteType,
+        authType: AuthTypeEnum.AccessToken,
+        userId: "42",
+        username: "detected-user",
+        notes: "Keep my notes",
+      })
+
+      await act(async () => {
+        result.current.setters.setSiteType(siteType)
+      })
+      expect(result.current.state.detectionError).toEqual(detailedError)
+
+      await act(async () => {
+        if (changedField === "url") {
+          result.current.handlers.handleUrlChange(
+            "https://other.example.invalid",
+          )
+        } else if (changedField === "site type") {
+          result.current.setters.setSiteType(
+            siteType === SITE_TYPES.NEW_API
+              ? SITE_TYPES.APIYI
+              : SITE_TYPES.NEW_API,
+          )
+        } else {
+          result.current.setters.setAuthType(AuthTypeEnum.Cookie)
+        }
+      })
+      expect(result.current.state.detectionError).toBeNull()
+      expect(result.current.state.tokenRecoveryState).toBeNull()
+    },
+  )
+
+  it("uses a detected site type to prepare manual completion after auto-detect fails", async () => {
     const detailedError = {
       type: AutoDetectErrorType.UNAUTHORIZED,
       message: "Login required",
@@ -1028,6 +1620,31 @@ describe("useAccountDialog re-detect preservation", () => {
     mockAutoDetectAccount.mockResolvedValueOnce({
       success: false,
       detailedError,
+      autoDetectContext: {
+        siteType: SITE_TYPES.NEW_API,
+      },
+      recoveryData: {
+        siteType: SITE_TYPES.NEW_API,
+        siteName: "Detected portal",
+        username: "detected-user",
+        userId: "42",
+        accessToken: "detected-access-token",
+        authType: AuthTypeEnum.Cookie,
+        cookieAuthSessionCookie: "session=detected-cookie",
+        fetchContext: {
+          kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+          tabId: 101,
+          origin: "https://failing.example.com",
+          cookieStoreId: " recovered-store ",
+        },
+        transientAuth: {
+          kind: "new-api-dashboard-bearer",
+          token: "temporary-dashboard-token",
+          expiresAt: 4_102_444_800,
+          sessionId: "recovery-session",
+          origin: "https://failing.example.com",
+        },
+      },
     })
 
     const { result } = renderHook(() =>
@@ -1045,6 +1662,8 @@ describe("useAccountDialog re-detect preservation", () => {
 
     await act(async () => {
       result.current.setters.setUrl("https://failing.example.com")
+      result.current.setters.setSiteName("My relay")
+      result.current.setters.setUsername("my-user")
     })
 
     await waitFor(() => {
@@ -1057,8 +1676,335 @@ describe("useAccountDialog re-detect preservation", () => {
 
     expect(result.current.state.detectionError).toEqual(detailedError)
     expect(result.current.state.showManualForm).toBe(true)
+    expect(result.current.state.siteType).toBe(SITE_TYPES.NEW_API)
+    expect(result.current.state.siteName).toBe("My relay")
+    expect(result.current.state.username).toBe("my-user")
+    expect(result.current.state.userId).toBe("42")
+    expect(result.current.state.accessToken).toBe("detected-access-token")
+    expect(result.current.state.cookieAuthSessionCookie).toBe(
+      "session=detected-cookie",
+    )
+    expect(result.current.state.url).toBe("https://failing.example.com")
     expect(result.current.state.isDetected).toBe(false)
     expect(result.current.state.isDetecting).toBe(false)
+
+    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
+      success: true,
+      data: "session=manual-cookie",
+    })
+    await act(async () => {
+      await result.current.handlers.handleImportCookieAuthSessionCookie()
+    })
+    expect(sendRuntimeMessage).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+        cookieStoreId: "recovered-store",
+      }),
+    )
+  })
+
+  it("ignores recovery from an auto-detect request after the URL changes", async () => {
+    const detectDeferred = createDeferred<AccountAutoDetectResponse>()
+    mockAutoDetectAccount.mockReturnValueOnce(detectDeferred.promise)
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://first.example.invalid")
+    })
+
+    let detectPromise!: Promise<void>
+    await act(async () => {
+      detectPromise = result.current.handlers.handleAutoDetect()
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      expect(mockAutoDetectAccount).toHaveBeenCalledWith(
+        "https://first.example.invalid",
+        AuthTypeEnum.AccessToken,
+        expect.anything(),
+        undefined,
+      )
+    })
+
+    act(() => {
+      result.current.setters.setUrl("https://second.example.invalid")
+    })
+    detectDeferred.resolve({
+      kind: "detected",
+      success: false,
+      message: "Detection incomplete",
+      detailedError: {
+        type: AutoDetectErrorType.INVALID_RESPONSE,
+        message: "Detection incomplete",
+      },
+      recoveryData: {
+        siteType: SITE_TYPES.NEW_API,
+        userId: "42",
+        accessToken: "first-site-token",
+      },
+    })
+
+    await act(async () => {
+      await detectPromise
+    })
+
+    expect(result.current.state.url).toBe("https://second.example.invalid")
+    expect(result.current.state.showManualForm).toBe(false)
+    expect(result.current.state.detectionError).toBeNull()
+    expect(result.current.state.userId).toBe("")
+    expect(result.current.state.accessToken).toBe("")
+  })
+
+  it("ignores a rejected auto-detect request after the URL changes", async () => {
+    const detectDeferred = createDeferred<AccountAutoDetectResponse>()
+    mockAutoDetectAccount.mockReturnValueOnce(detectDeferred.promise)
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current.state).toBeTruthy())
+
+    await act(async () => {
+      result.current.setters.setUrl("https://first.example.invalid")
+    })
+    let detectPromise!: Promise<void>
+    await act(async () => {
+      detectPromise = result.current.handlers.handleAutoDetect()
+      await Promise.resolve()
+    })
+    act(() => {
+      result.current.setters.setUrl("https://second.example.invalid")
+    })
+    detectDeferred.reject(new Error("stale detection failed"))
+
+    await act(async () => {
+      await detectPromise
+    })
+
+    expect(result.current.state.url).toBe("https://second.example.invalid")
+    expect(result.current.state.showManualForm).toBe(false)
+    expect(result.current.state.detectionError).toBeNull()
+  })
+
+  it("ignores recovery from an auto-detect request after the dialog reopens", async () => {
+    const detectDeferred = createDeferred<AccountAutoDetectResponse>()
+    mockAutoDetectAccount.mockReturnValueOnce(detectDeferred.promise)
+
+    const prefill = {
+      source: BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
+      siteUrl: "https://first.example.invalid",
+      siteType: SITE_TYPES.UNKNOWN,
+    } as const
+    const { result, rerender } = renderHook(
+      ({ isOpen }: { isOpen: boolean }) =>
+        useAccountDialog({
+          mode: DIALOG_MODES.ADD,
+          isOpen,
+          prefill,
+          onClose: vi.fn(),
+          onSuccess: vi.fn(),
+        }),
+      { initialProps: { isOpen: true } },
+    )
+
+    await waitFor(() => {
+      expect(result.current.state.url).toBe("https://first.example.invalid")
+    })
+
+    let detectPromise!: Promise<void>
+    await act(async () => {
+      detectPromise = result.current.handlers.handleAutoDetect()
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      expect(mockAutoDetectAccount).toHaveBeenCalledOnce()
+    })
+
+    rerender({ isOpen: false })
+    rerender({ isOpen: true })
+    await waitFor(() => {
+      expect(result.current.state.url).toBe("https://first.example.invalid")
+    })
+    detectDeferred.resolve({
+      kind: "detected",
+      success: false,
+      message: "Detection incomplete",
+      detailedError: {
+        type: AutoDetectErrorType.INVALID_RESPONSE,
+        message: "Detection incomplete",
+      },
+      recoveryData: {
+        siteType: SITE_TYPES.NEW_API,
+        userId: "42",
+        accessToken: "first-session-token",
+      },
+    })
+
+    await act(async () => {
+      await detectPromise
+    })
+
+    expect(result.current.state.showManualForm).toBe(false)
+    expect(result.current.state.detectionError).toBeNull()
+    expect(result.current.state.userId).toBe("")
+    expect(result.current.state.accessToken).toBe("")
+  })
+
+  it("recovers Sub2API refresh credentials for manual completion after auto-detect fails", async () => {
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      success: false,
+      detailedError: {
+        type: AutoDetectErrorType.INVALID_RESPONSE,
+        message: "Detection incomplete",
+      },
+      recoveryData: {
+        siteType: SITE_TYPES.SUB2API,
+        username: "detected-sub-user",
+        userId: "9",
+        accessToken: "detected-jwt-token",
+        authType: AuthTypeEnum.AccessToken,
+        sub2apiAuth: {
+          refreshToken: "detected-refresh-token",
+          tokenExpiresAt: 123456789,
+        },
+      },
+    })
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.invalid")
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.url).toBe("https://sub2.example.invalid")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(result.current.state.showManualForm).toBe(true)
+    expect(result.current.state.siteType).toBe(SITE_TYPES.SUB2API)
+    expect(result.current.state.username).toBe("detected-sub-user")
+    expect(result.current.state.userId).toBe("9")
+    expect(result.current.state.accessToken).toBe("detected-jwt-token")
+    expect(result.current.state.sub2apiUseRefreshToken).toBe(true)
+    expect(result.current.state.sub2apiRefreshToken).toBe(
+      "detected-refresh-token",
+    )
+    expect(result.current.state.sub2apiTokenExpiresAt).toBe(123456789)
+  })
+
+  it("does not restore recovered Sub2API credentials after an explicit opt-out", async () => {
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      success: false,
+      detailedError: {
+        type: AutoDetectErrorType.INVALID_RESPONSE,
+        message: "Detection incomplete",
+      },
+      recoveryData: {
+        siteType: SITE_TYPES.SUB2API,
+        sub2apiAuth: {
+          refreshToken: "detected-refresh-token",
+          tokenExpiresAt: 123456789,
+        },
+      },
+    })
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current.state).toBeTruthy())
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.invalid")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+      result.current.setters.setSub2apiRefreshToken("user-refresh-token")
+      result.current.setters.setSub2apiTokenExpiresAt(456)
+      result.current.handlers.handleSub2apiUseRefreshTokenChange(false)
+    })
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(result.current.state.sub2apiUseRefreshToken).toBe(false)
+    expect(result.current.state.sub2apiRefreshToken).toBe("")
+    expect(result.current.state.sub2apiTokenExpiresAt).toBeNull()
+  })
+
+  it("does not replace an explicitly selected site type after auto-detect fails", async () => {
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      success: false,
+      detailedError: {
+        type: AutoDetectErrorType.INVALID_RESPONSE,
+        message: "Detection incomplete",
+      },
+      autoDetectContext: {
+        siteType: SITE_TYPES.NEW_API,
+      },
+    })
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://failing.example.com")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(result.current.state.siteType).toBe(SITE_TYPES.SUB2API)
+    expect(result.current.state.showManualForm).toBe(true)
   })
 
   it("auto-imports cookie auth headers after a successful cookie-based auto-detect", async () => {

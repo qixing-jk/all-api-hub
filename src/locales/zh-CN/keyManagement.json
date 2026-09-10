@@ -295,6 +295,7 @@
       "inputPreparationFailed": "无法准备可比对的渠道输入，暂时无法完成校验。",
       "newApiRetrieveKeyHint": "对于 New API，完整的 key 比对依赖渠道 key，而查看渠道 key 本身需要先完成 2FA 验证，因此当前暂无法完成完整 key 比对。"
     },
+    "nativeResourceUnsupported": "本页的托管站点匹配暂不支持原生资源密钥，刷新仅适用于已支持的密钥。",
     "pageUnsupported": "由于当前托管站点暂不支持使用 URL 搜索渠道，暂不提供管理站点渠道检查功能。",
     "recovery": {
       "configureLogin": "请先在设置中填写 New API 登录与两步验证辅助信息，否则当前无法读取渠道 key，也无法完成完整的 key 比对。",
@@ -354,6 +355,29 @@
     "verifyApiFailed": "打开接口验证失败",
     "verifyCliSupportFailed": "打开 CLI 兼容性验证失败"
   },
+  "native": {
+    "detailsLoadFailed": "无法加载密钥详情。",
+    "heading": "API 密钥",
+    "missing": "暂无数据",
+    "scope": {
+      "empty": "暂无可用作用域",
+      "error": "无法加载作用域",
+      "errorHelp": "请检查账户访问权限后重试。",
+      "heading": "作用域",
+      "label": "选择作用域",
+      "loading": "正在加载作用域…",
+      "partial": "部分作用域未能加载，已加载的作用域仍可使用。",
+      "placeholder": "请选择作用域",
+      "retry": "重新加载作用域"
+    },
+    "status": {
+      "disabled": "已停用",
+      "enabled": "已启用",
+      "expired": "已过期",
+      "unknown": "未知"
+    }
+  },
+  "noAccountsSupportKeyCreation": "当前视图中的账号都不支持创建 API 密钥。请选择其他账号或添加受支持的账号。",
   "noKeys": "暂无密钥数据",
   "noMatchingKeys": "没有找到匹配的密钥",
   "oneTimeKey": {
@@ -540,7 +564,6 @@
         "usageWeekly": "周用量",
         "workspace": "工作区"
       },
-      "heading": "OpenRouter 密钥",
       "status": {
         "all": "全部",
         "disabled": "已停用",
@@ -587,7 +610,7 @@
       "more": "以及另外 {{count}} 个",
       "title": "删除 {{count}} 个异常密钥？"
     },
-    "description": "检查已保存账号是否有可用密钥；缺少时会尽量自动创建，其他问题会列在下方。",
+    "description": "检查已保存账号的所有可用分组，为支持自动创建且缺少可用密钥的分组补齐密钥；其他问题会列在下方。",
     "failureGuidance": {
       "aborted": "操作在完成前已取消；准备好后可重新检查。",
       "authenticationFailed": "请重新登录或更新此账号的凭据，然后重试。",
@@ -602,7 +625,7 @@
       "validationFailed": "请检查并修正所需的密钥设置，然后重试。"
     },
     "historyNote": "这里显示上次检查结果；当前没有正在执行的任务，可重新检查。",
-    "initialNotice": "开始后会检查已保存账号是否缺少可用密钥；支持自动补齐的账号可能会创建新密钥。",
+    "initialNotice": "开始后会逐个检查已保存账号的分组，并为支持自动创建的缺失分组补齐密钥；已有可用密钥的分组会跳过。",
     "invalidKeys": {
       "badge": "异常",
       "deleteFailed": "删除异常密钥失败",

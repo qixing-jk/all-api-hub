@@ -12,12 +12,12 @@ import {
   useState,
   type MouseEvent,
 } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
 import { Button } from "~/components/ui"
+import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import AccountList from "~/features/AccountManagement/components/AccountList"
@@ -44,7 +44,8 @@ import {
   withGuidedAccountKeyImportTarget,
   type UnifiedApiGuidanceAction,
 } from "~/features/UnifiedApiGuidance"
-import { GATEWAY_GUIDANCE_SURFACES } from "~/services/preferences/userPreferences"
+import toast from "~/lib/notify"
+import { GATEWAY_GUIDANCE_SURFACES } from "~/services/featureGuidance/featureGuidanceState"
 import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/accountRefresh"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -101,10 +102,10 @@ function AccountManagementContent({
   } = useAccountDataContext()
   const { handleOpenExternalCheckIns } = useAccountActionsContext()
   const { preferences, managedSiteType } = useUserPreferencesContext()
+  const { state: guidanceState } = useFeatureGuidanceContext()
   const { profiles: apiCredentialProfiles } = useApiCredentialProfiles()
   const guidanceDismissal = useGatewayGuidanceDismissal(
     GATEWAY_GUIDANCE_SURFACES.Account,
-    preferences,
   )
   const [isDedupeDialogOpen, setIsDedupeDialogOpen] = useState(false)
   const disabledAccounts = displayData.filter((account) => account.disabled)
@@ -120,6 +121,7 @@ function AccountManagementContent({
     keyAccessibleAccountCount,
     profileCount: apiCredentialProfiles.length,
     preferences,
+    guidanceState,
     managedSiteType,
   })
 
@@ -522,6 +524,9 @@ function AccountManagement({
     <AccountManagementProvider
       refreshKey={refreshKey}
       onOpenBookmarkImport={openBookmarkImportDialog}
+      initialRecoveryId={
+        routeParams?.[ACCOUNT_MANAGEMENT_ROUTE_PARAMS.AccountDialogRecovery]
+      }
     >
       <AccountManagementContent
         searchQuery={routeParams?.search}

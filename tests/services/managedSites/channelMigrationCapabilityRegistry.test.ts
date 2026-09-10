@@ -9,11 +9,6 @@ const { resolveManagedUpstreamResourceFeatureCapabilitiesMock } = vi.hoisted(
   }),
 )
 
-vi.mock("~/services/managedSites/managedUpstreamResourceService", () => ({
-  resolveManagedUpstreamResourceFeatureCapabilities: (...args: unknown[]) =>
-    resolveManagedUpstreamResourceFeatureCapabilitiesMock(...args),
-}))
-
 describe("managed site migration capability registry", () => {
   beforeEach(() => {
     resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReset()
@@ -40,6 +35,42 @@ describe("managed site migration capability registry", () => {
   it("resolves AxonHub without falling back to the legacy feature gate", () => {
     expect(
       resolveManagedSiteMigrationCapability(SITE_TYPES.AXON_HUB),
+    ).toMatchObject({
+      source: {
+        prepare: expect.any(Function),
+        resolveCredential: expect.any(Function),
+      },
+      target: {
+        prepare: expect.any(Function),
+        create: expect.any(Function),
+      },
+    })
+    expect(
+      resolveManagedUpstreamResourceFeatureCapabilitiesMock,
+    ).not.toHaveBeenCalled()
+  })
+
+  it("resolves Veloera without falling back to the legacy feature gate", () => {
+    expect(
+      resolveManagedSiteMigrationCapability(SITE_TYPES.VELOERA),
+    ).toMatchObject({
+      source: {
+        prepare: expect.any(Function),
+        resolveCredential: expect.any(Function),
+      },
+      target: {
+        prepare: expect.any(Function),
+        create: expect.any(Function),
+      },
+    })
+    expect(
+      resolveManagedUpstreamResourceFeatureCapabilitiesMock,
+    ).not.toHaveBeenCalled()
+  })
+
+  it("resolves DoneHub without falling back to the legacy feature gate", () => {
+    expect(
+      resolveManagedSiteMigrationCapability(SITE_TYPES.DONE_HUB),
     ).toMatchObject({
       source: {
         prepare: expect.any(Function),

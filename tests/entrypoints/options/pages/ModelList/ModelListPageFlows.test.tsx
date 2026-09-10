@@ -10,12 +10,13 @@ import {
   createAccountSource,
   createAllAccountsSource,
   createProfileSource,
+  deriveModelListSourceCapabilities,
   EMPTY_MODEL_MANAGEMENT_CAPABILITIES,
   MODEL_LIST_GROUP_SEMANTICS,
-  toAihubmixCatalogFallbackCapabilities,
 } from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import { DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS } from "~/features/ModelList/verificationResultFilters"
+import { CALCULATED_PRICE_KINDS } from "~/services/modelPricing/pricingConstants"
 import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -26,6 +27,7 @@ import {
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { buildAIHubMixModelListSource } from "~~/tests/test-utils/modelListSource"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const mockUseModelListData = vi.fn()
@@ -156,7 +158,10 @@ vi.mock("~/features/ModelList/components/AccountSummaryBar", () => ({
         {activeAccountIds?.length ? activeAccountIds.join(",") : "none"}
       </div>
       {items.map((item: any) => (
-        <div key={`status-${item.accountId}`}>
+        <div
+          key={`status-${item.accountId}`}
+          data-has-data={String(item.hasData)}
+        >
           Summary Status {item.name}:
           {item.isLoading ? "loading" : item.errorType ?? item.count}
         </div>
@@ -371,6 +376,10 @@ function buildState(overrides: Record<string, any> = {}) {
       {
         model: { model_name: "gpt-4" },
         source: ACCOUNT_SOURCE,
+        calculatedPrice: {
+          kind: CALCULATED_PRICE_KINDS.TOKEN,
+          usdPerMillionTokens: { input: 1, output: 2 },
+        },
       },
     ],
     accountSummaryCountsByAccountId: new Map([[ACCOUNT.id, 1]]),
@@ -603,7 +612,7 @@ describe("ModelList page flows", () => {
     mockUseModelListData.mockReturnValue(
       buildState({
         isFallbackCatalogActive: false,
-        isAihubmixCatalogFallbackActive: true,
+        isProviderCatalogFallbackActive: true,
         pricingData: {
           success: true,
           data: [{ model_name: "gpt-aihubmix" }],
@@ -625,10 +634,10 @@ describe("ModelList page flows", () => {
     })
 
     expect(
-      await screen.findByText("modelList:aihubmixCatalogFallbackNotice.title"),
+      await screen.findByText("modelList:providerCatalogFallbackNotice.title"),
     ).toBeInTheDocument()
     expect(
-      screen.getByText("modelList:aihubmixCatalogFallbackNotice.description"),
+      screen.getByText("modelList:providerCatalogFallbackNotice.description"),
     ).toBeInTheDocument()
     expect(
       screen.queryByText("modelList:fallbackSourceNotice.title"),
@@ -790,7 +799,86 @@ describe("ModelList page flows", () => {
     expect(screen.queryByText("Summary Status Backup Account:0")).toBeNull()
   })
 
-  it("sorts the account selector and summary badges after all-account refreshes settle", async () => {
+  it("shows account progress before any data arrives and retains failure details with retry", async () => {
+    const state = buildState({
+      selectedSource: ALL_ACCOUNTS_SOURCE,
+      selectedSourceValue: ALL_ACCOUNTS_SOURCE.value,
+      currentAccount: null,
+      sourceCapabilities: ALL_ACCOUNTS_SOURCE.capabilities,
+      pricingData: null,
+      pricingContexts: [],
+      isLoading: true,
+      accountSummaryCountsByAccountId: new Map(),
+      accountQueryStates: [
+        { account: ACCOUNT, isLoading: true, hasData: false },
+        {
+          account: SECOND_ACCOUNT,
+          isLoading: false,
+          hasData: false,
+          errorType: "load-failed",
+        },
+      ],
+    })
+    mockUseModelListData.mockReturnValue(state)
+    const { rerender } = render(<ModelList />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    expect(
+      screen.getByText("Summary Status Primary Account:loading"),
+    ).toHaveAttribute("data-has-data", "false")
+    expect(
+      screen.getByText("Summary Status Backup Account:load-failed"),
+    ).toBeVisible()
+    mockUseModelListData.mockReturnValue({
+      ...state,
+      isLoading: false,
+      loadErrorMessage: "Denied",
+      accountQueryStates: state.accountQueryStates.map((item: any) => ({
+        ...item,
+        isLoading: false,
+        errorType: "load-failed",
+      })),
+    })
+    rerender(<ModelList />)
+    expect(
+      screen.getByText("Summary Status Primary Account:load-failed"),
+    ).toBeVisible()
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Retry load" }))
+    expect(state.loadPricingData).toHaveBeenCalled()
+  })
+
+  it("retains a selected account with data when search leaves no matching summary rows", () => {
+    mockUseModelListData.mockReturnValue(
+      buildState({
+        selectedSource: ALL_ACCOUNTS_SOURCE,
+        selectedSourceValue: ALL_ACCOUNTS_SOURCE.value,
+        currentAccount: null,
+        sourceCapabilities: ALL_ACCOUNTS_SOURCE.capabilities,
+        pricingData: null,
+        pricingContexts: [{ accountId: ACCOUNT.id }],
+        allAccountsFilterAccountIds: [ACCOUNT.id],
+        accountSummaryCountsByAccountId: new Map(),
+        accountQueryStates: [
+          { account: ACCOUNT, isLoading: false, hasData: true },
+        ],
+      }),
+    )
+    render(<ModelList />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    expect(
+      screen.getByRole("button", { name: "Summary Primary Account:0" }),
+    ).toBeVisible()
+    expect(
+      screen.getByText("Summary Status Primary Account:0"),
+    ).toHaveAttribute("data-has-data", "true")
+  })
+
+  it("keeps summary order stable while the selector sorts after loading settles", async () => {
     mockUseModelListData.mockReturnValue(
       buildState({
         selectedSource: ALL_ACCOUNTS_SOURCE,
@@ -849,7 +937,7 @@ describe("ModelList page flows", () => {
         .getAllByRole("button")
         .filter((button) => button.textContent?.startsWith("Summary "))
         .map((button) => button.textContent),
-    ).toEqual(["Summary Backup Account:2", "Summary Primary Account:1"])
+    ).toEqual(["Summary Primary Account:1", "Summary Backup Account:2"])
   })
 
   it("keeps the original account order while all-account refreshes are still loading", async () => {
@@ -1237,9 +1325,10 @@ describe("ModelList page flows", () => {
     })
     const disabledAihubmixSource = {
       ...aihubmixSource,
-      capabilities: toAihubmixCatalogFallbackCapabilities(
-        aihubmixSource.capabilities,
-      ),
+      capabilities: deriveModelListSourceCapabilities({
+        capabilities: aihubmixSource.capabilities,
+        modelListSource: buildAIHubMixModelListSource("catalog-fallback"),
+      }),
     }
 
     mockUseModelListData.mockReturnValue(
@@ -1292,9 +1381,10 @@ describe("ModelList page flows", () => {
     })
     const disabledAihubmixSource = {
       ...aihubmixSource,
-      capabilities: toAihubmixCatalogFallbackCapabilities(
-        aihubmixSource.capabilities,
-      ),
+      capabilities: deriveModelListSourceCapabilities({
+        capabilities: aihubmixSource.capabilities,
+        modelListSource: buildAIHubMixModelListSource("catalog-fallback"),
+      }),
     }
 
     mockUseModelListData.mockReturnValue(

@@ -1,7 +1,7 @@
 import { Storage } from "@plasmohq/storage"
 
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
-import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
+import { isAccountSiteType } from "~/constants/siteType"
 import {
   ACCOUNT_KEY_RECONCILIATION_INVENTORY_STATUSES,
   ACCOUNT_KEY_RECONCILIATION_OUTCOMES,
@@ -12,7 +12,8 @@ import {
   buildAccountKeyResourceRuntimeKeyId,
   buildTargetScopedAccountKeyResourceId,
 } from "~/services/accounts/accountRuntimeKeys"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
@@ -20,6 +21,10 @@ import {
   type AccountKeyResourceSession,
   type ResourceFailure,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  getInventorySecretAvailability,
+  INVENTORY_SECRET_AVAILABILITIES,
+} from "~/services/apiAdapters/contracts/keyManagement"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
@@ -349,13 +354,17 @@ function getSkipReason(
     return ACCOUNT_KEY_REPAIR_SKIP_REASONS.NoneAuth
   }
 
-  if (account.site_type === SITE_TYPES.AIHUBMIX) {
-    // AIHubMix create responses expose one-time secrets that background
-    // coverage cannot recover; remove this skip when native recovery exists.
+  const capabilities = getSiteTypeCapabilities(account.site_type).account
+  if (
+    capabilities?.keyManagement &&
+    getInventorySecretAvailability(capabilities.keyManagement) ===
+      INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly
+  ) {
+    // Keep the persisted skip code while deriving eligibility from secret availability.
     return ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey
   }
 
-  if (!getSiteTypeCapabilities(account.site_type).account?.keyResources) {
+  if (!capabilities?.keyResources) {
     return ACCOUNT_KEY_REPAIR_SKIP_REASONS.ProvisioningUnavailable
   }
 
@@ -529,7 +538,7 @@ class AccountKeyRepairRunner {
         return
       }
 
-      const allAccounts = await accountStorage.getAllAccounts()
+      const allAccounts = await accountQueries.getAllAccounts()
       if (this.isCurrentJobCancelled(jobId, abortSignal)) {
         return
       }
@@ -537,8 +546,8 @@ class AccountKeyRepairRunner {
         (account) => account.disabled !== true,
       )
       const displaySiteDataById = new Map(
-        accountStorage
-          .convertToDisplayData(allAccounts, allAccounts)
+        accountPresentation
+          .convertToDisplayData(allAccounts)
           .map((account) => [account.id, account] as const),
       )
 
@@ -888,7 +897,7 @@ class AccountKeyRepairRunner {
         ),
       ),
     )
-    const allAccounts = await accountStorage.getAllAccounts()
+    const allAccounts = await accountQueries.getAllAccounts()
     const accountById = new Map(
       allAccounts.map((account) => [account.id, account] as const),
     )

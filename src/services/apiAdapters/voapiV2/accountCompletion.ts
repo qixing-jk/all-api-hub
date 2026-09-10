@@ -46,6 +46,12 @@ export const voApiV2AccountCompletion: AccountCompletionCapability = {
       helpers.trimString(userInfo.username) ||
       helpers.trimString(userInfo.nickname) ||
       userId
+    helpers.captureRecoveryData({
+      username,
+      accessToken,
+      userId,
+      authType: AuthTypeEnum.AccessToken,
+    })
 
     return {
       username,

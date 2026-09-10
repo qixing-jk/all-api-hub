@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
@@ -14,26 +14,17 @@ import {
   findManagedSiteChannelsByBaseUrl,
   findManagedSiteChannelsByBaseUrlAndModels,
   getManagedSiteChannelKeyComparisonMode,
-  getManagedSiteDuplicateCandidateSource,
   inspectManagedSiteChannelKeyMatch,
   inspectManagedSiteChannelKeyValueMatch,
   inspectManagedSiteChannelModelsMatch,
   MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES,
-  MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES,
-  searchManagedUpstreamResourceChannelsForDuplicateMatching,
 } from "~/services/managedSites/utils/channelMatching"
-import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
+import {
+  buildManagedResourceMatchCandidate,
+  matchingResourceRef,
+} from "~~/tests/test-utils/managedResourceMatching"
 
 describe("channelMatching", () => {
-  it("inventories Sub2API candidates because its native search is name-only", () => {
-    expect(getManagedSiteDuplicateCandidateSource(SITE_TYPES.SUB2API)).toBe(
-      MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES.List,
-    )
-    expect(getManagedSiteDuplicateCandidateSource(SITE_TYPES.NEW_API)).toBe(
-      MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES.Search,
-    )
-  })
-
   it("uses optional sk- prefix comparison for One/New API compatible gateways", () => {
     expect(getManagedSiteChannelKeyComparisonMode(SITE_TYPES.ONE_API)).toBe(
       MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,
@@ -95,16 +86,16 @@ describe("channelMatching", () => {
   })
 
   it("normalizes OpenAI-family base URLs before filtering the URL bucket", () => {
-    const matchingChannel = buildManagedSiteChannel({
-      id: 0,
+    const matchingChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(0),
       base_url: "https://api.example.com/v1/",
     })
 
     const result = findManagedSiteChannelsByBaseUrl({
       channels: [
         matchingChannel,
-        buildManagedSiteChannel({
-          id: 101,
+        buildManagedResourceMatchCandidate({
+          ref: matchingResourceRef(101),
           base_url: "https://other.example.com",
         }),
       ],
@@ -116,8 +107,8 @@ describe("channelMatching", () => {
 
   it("dedupes stored channel models before comparing comparable inputs", () => {
     const channels = [
-      buildManagedSiteChannel({
-        id: 1,
+      buildManagedResourceMatchCandidate({
+        ref: matchingResourceRef(1),
         base_url: "https://api.example.com",
         models: "gpt-4,gpt-4",
       }),
@@ -133,14 +124,14 @@ describe("channelMatching", () => {
   })
 
   it("finds comparable channels by split key candidates and treats keyless lookups as URL+models matches", () => {
-    const firstComparableChannel = buildManagedSiteChannel({
-      id: 1_1,
+    const firstComparableChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(1_1),
       base_url: "https://api.example.com",
       models: "gpt-4",
       key: "",
     })
-    const keyedComparableChannel = buildManagedSiteChannel({
-      id: 1_2,
+    const keyedComparableChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(1_2),
       base_url: "https://api.example.com",
       models: "gpt-4",
       key: "first-key,\nsecond-key",
@@ -165,14 +156,14 @@ describe("channelMatching", () => {
   })
 
   it("compares channel keys exactly by default", () => {
-    const channelWithoutPrefix = buildManagedSiteChannel({
-      id: 1_21,
+    const channelWithoutPrefix = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(1_21),
       base_url: "https://api.example.com",
       models: "gpt-4",
       key: "stored-key",
     })
-    const channelWithPrefix = buildManagedSiteChannel({
-      id: 1_22,
+    const channelWithPrefix = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(1_22),
       base_url: "https://api.example.com",
       models: "gpt-4",
       key: "sk-stored-key",
@@ -198,14 +189,14 @@ describe("channelMatching", () => {
   })
 
   it("treats an optional sk- prefix as equivalent when that comparison mode is enabled", () => {
-    const channelWithoutPrefix = buildManagedSiteChannel({
-      id: 1_23,
+    const channelWithoutPrefix = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(1_23),
       base_url: "https://api.example.com",
       models: "gpt-4",
       key: "stored-key",
     })
-    const channelWithPrefix = buildManagedSiteChannel({
-      id: 1_24,
+    const channelWithPrefix = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(1_24),
       base_url: "https://api.example.com",
       models: "gpt-4",
       key: "sk-stored-key",
@@ -250,8 +241,8 @@ describe("channelMatching", () => {
   })
 
   it("reuses an exact channel shortcut for key and models assessments", () => {
-    const exactChannel = buildManagedSiteChannel({
-      id: 1_3,
+    const exactChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(1_3),
       base_url: "https://api.example.com",
       models: "gpt-4",
       key: "exact-key",
@@ -288,8 +279,8 @@ describe("channelMatching", () => {
   })
 
   it("matches managed-site channel keys exactly by default", () => {
-    const channel = buildManagedSiteChannel({
-      id: 1_31,
+    const channel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(1_31),
       base_url: "https://api.example.com",
       key: "stored-key",
     })
@@ -309,8 +300,8 @@ describe("channelMatching", () => {
   })
 
   it("matches managed-site channel keys regardless of optional sk- prefix when enabled", () => {
-    const channel = buildManagedSiteChannel({
-      id: 1_32,
+    const channel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(1_32),
       base_url: "https://api.example.com",
       key: "stored-key",
     })
@@ -369,14 +360,14 @@ describe("channelMatching", () => {
   })
 
   it("distinguishes missing comparable keys from comparable key mismatches", () => {
-    const urlOnlyChannel = buildManagedSiteChannel({
-      id: 1_4,
+    const urlOnlyChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(1_4),
       base_url: "https://api.example.com",
       models: "gpt-4",
       key: "",
     })
-    const keyedChannel = buildManagedSiteChannel({
-      id: 1_5,
+    const keyedChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(1_5),
       base_url: "https://api.example.com",
       models: "gpt-4",
       key: "existing-key",
@@ -426,8 +417,8 @@ describe("channelMatching", () => {
     expect(
       inspectManagedSiteChannelModelsMatch({
         channels: [
-          buildManagedSiteChannel({
-            id: 1_6,
+          buildManagedResourceMatchCandidate({
+            ref: matchingResourceRef(1_6),
             base_url: "https://different.example.com",
             models: "gpt-4",
           }),
@@ -446,8 +437,8 @@ describe("channelMatching", () => {
   it("reports URL-only fallback as a non-match for model assessment", () => {
     const result = inspectManagedSiteChannelModelsMatch({
       channels: [
-        buildManagedSiteChannel({
-          id: 1_7,
+        buildManagedResourceMatchCandidate({
+          ref: matchingResourceRef(1_7),
           base_url: "https://api.example.com",
           models: "",
         }),
@@ -465,13 +456,13 @@ describe("channelMatching", () => {
   })
 
   it("maps contained and similar URL model matches into model assessments", () => {
-    const containedChannel = buildManagedSiteChannel({
-      id: 1_8,
+    const containedChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(1_8),
       base_url: "https://api.example.com",
       models: "gpt-4,gpt-4o-mini",
     })
-    const similarChannel = buildManagedSiteChannel({
-      id: 1_9,
+    const similarChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(1_9),
       base_url: "https://similar.example.com",
       models: "gpt-4,gpt-4o,claude-3",
     })
@@ -503,8 +494,8 @@ describe("channelMatching", () => {
   })
 
   it("ranks an exact model-set match as secondary when the URL bucket matches", () => {
-    const channel = buildManagedSiteChannel({
-      id: 2,
+    const channel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(2),
       base_url: "https://api.example.com",
       models: "gpt-4,gpt-4o-mini",
     })
@@ -524,13 +515,13 @@ describe("channelMatching", () => {
   })
 
   it("prefers model containment over weaker similarity within the same URL bucket", () => {
-    const containedChannel = buildManagedSiteChannel({
-      id: 3,
+    const containedChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(3),
       base_url: "https://api.example.com",
       models: "gpt-4,gpt-4o-mini,gpt-4.1",
     })
-    const similarChannel = buildManagedSiteChannel({
-      id: 4,
+    const similarChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(4),
       base_url: "https://api.example.com",
       models: "gpt-4,gpt-4.1",
     })
@@ -545,12 +536,12 @@ describe("channelMatching", () => {
     expect(result.reason).toBe(
       MANAGED_SITE_CHANNEL_MATCH_REASONS.URL_MODELS_CONTAINED,
     )
-    expect(result.channel?.id).toBe(containedChannel.id)
+    expect(result.channel?.ref).toEqual(containedChannel.ref)
   })
 
   it("falls back to a similarity-based secondary match when equality and containment fail", () => {
-    const similarChannel = buildManagedSiteChannel({
-      id: 5,
+    const similarChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(5),
       base_url: "https://api.example.com",
       models: "gpt-4,gpt-4o,claude-3",
     })
@@ -565,13 +556,13 @@ describe("channelMatching", () => {
     expect(result.reason).toBe(
       MANAGED_SITE_CHANNEL_MATCH_REASONS.URL_MODELS_SIMILAR,
     )
-    expect(result.channel?.id).toBe(similarChannel.id)
+    expect(result.channel?.ref).toEqual(similarChannel.ref)
     expect(result.similarityScore).toBeCloseTo(0.5)
   })
 
   it("keeps a similarity score exactly at the configured threshold as a secondary match", () => {
-    const thresholdChannel = buildManagedSiteChannel({
-      id: 5_1,
+    const thresholdChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(5_1),
       base_url: "https://api.example.com",
       models: "gpt-4,gpt-4o,claude-3",
     })
@@ -586,15 +577,15 @@ describe("channelMatching", () => {
     expect(result.reason).toBe(
       MANAGED_SITE_CHANNEL_MATCH_REASONS.URL_MODELS_SIMILAR,
     )
-    expect(result.channel?.id).toBe(thresholdChannel.id)
+    expect(result.channel?.ref).toEqual(thresholdChannel.ref)
     expect(result.similarityScore).toBe(
       MANAGED_SITE_CHANNEL_MODEL_SIMILARITY_THRESHOLD,
     )
   })
 
   it("keeps similarity scores below the configured threshold in fuzzy URL-only fallback", () => {
-    const belowThresholdChannel = buildManagedSiteChannel({
-      id: 5_2,
+    const belowThresholdChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(5_2),
       base_url: "https://api.example.com",
       models: "gpt-4,gpt-4o,claude-3,deepseek-r1",
     })
@@ -607,17 +598,17 @@ describe("channelMatching", () => {
 
     expect(result.level).toBe(MANAGED_SITE_CHANNEL_MATCH_LEVELS.FUZZY)
     expect(result.reason).toBe(MANAGED_SITE_CHANNEL_MATCH_REASONS.URL_ONLY)
-    expect(result.channel?.id).toBe(belowThresholdChannel.id)
+    expect(result.channel?.ref).toEqual(belowThresholdChannel.ref)
   })
 
   it("breaks similar-match ties by choosing the closer model-count candidate", () => {
-    const closerSimilarChannel = buildManagedSiteChannel({
-      id: 5_3,
+    const closerSimilarChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(5_3),
       base_url: "https://api.example.com",
       models: "gpt-4,gpt-4o,claude-3",
     })
-    const widerSimilarChannel = buildManagedSiteChannel({
-      id: 5_4,
+    const widerSimilarChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(5_4),
       base_url: "https://api.example.com",
       models: "gpt-4,gpt-4o,claude-3,deepseek-r1,gemini-1.5",
     })
@@ -632,20 +623,20 @@ describe("channelMatching", () => {
     expect(result.reason).toBe(
       MANAGED_SITE_CHANNEL_MATCH_REASONS.URL_MODELS_SIMILAR,
     )
-    expect(result.channel?.id).toBe(closerSimilarChannel.id)
+    expect(result.channel?.ref).toEqual(closerSimilarChannel.ref)
     expect(result.similarityScore).toBe(
       MANAGED_SITE_CHANNEL_MODEL_SIMILARITY_THRESHOLD,
     )
   })
 
   it("keeps the first ranked candidate when similarity ties are otherwise identical", () => {
-    const firstChannel = buildManagedSiteChannel({
-      id: 5_5,
+    const firstChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(5_5),
       base_url: "https://api.example.com",
       models: "gpt-4,gpt-4o,claude-3",
     })
-    const secondChannel = buildManagedSiteChannel({
-      id: 5_6,
+    const secondChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(5_6),
       base_url: "https://api.example.com",
       models: "gpt-4,gpt-4o,claude-3",
     })
@@ -656,12 +647,12 @@ describe("channelMatching", () => {
       models: ["gpt-4", "gpt-4o", "gemini-2.0"],
     })
 
-    expect(result.channel?.id).toBe(firstChannel.id)
+    expect(result.channel?.ref).toEqual(firstChannel.ref)
   })
 
   it("falls back to a fuzzy URL-only match when no ranked model match exists", () => {
-    const fuzzyChannel = buildManagedSiteChannel({
-      id: 6,
+    const fuzzyChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(6),
       base_url: "https://api.example.com",
       models: "claude-3",
     })
@@ -682,8 +673,8 @@ describe("channelMatching", () => {
   it("returns unresolved when no normalized URL bucket exists", () => {
     const result = findBestManagedSiteChannelMatch({
       channels: [
-        buildManagedSiteChannel({
-          id: 7,
+        buildManagedResourceMatchCandidate({
+          ref: matchingResourceRef(7),
           base_url: "https://different.example.com",
           models: "gpt-4",
         }),
@@ -700,8 +691,8 @@ describe("channelMatching", () => {
   })
 
   it("skips URL bucket channels without comparable model inputs before falling back to URL-only", () => {
-    const blankModelChannel = buildManagedSiteChannel({
-      id: 8,
+    const blankModelChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(8),
       base_url: "https://api.example.com",
       models: "",
     })
@@ -717,175 +708,5 @@ describe("channelMatching", () => {
       reason: MANAGED_SITE_CHANNEL_MATCH_REASONS.URL_ONLY,
       channel: blankModelChannel,
     })
-  })
-
-  it("hydrates resource search results into channel-shaped duplicate candidates", async () => {
-    const channel = buildManagedSiteChannel({
-      id: 81,
-      name: "Resource-backed channel",
-      base_url: "https://api.example.com/v1",
-      models: "gpt-4o",
-      key: "sk-resource",
-    })
-    const resource = {
-      ref: {
-        managedSiteType: SITE_TYPES.NEW_API,
-        scopeKey: "https://managed.example.com",
-        resourceId: "81",
-      },
-      displayName: "Resource-backed channel",
-      nativeKind: "channel",
-      status: "enabled",
-      endpointLabel: "https://api.example.com/v1",
-      modelPreview: ["gpt-4o"],
-      secretState: "available",
-      capabilities: {},
-    } as const
-    const resources = {
-      items: {
-        search: vi.fn(async () => ({
-          items: [resource],
-          total: 1,
-        })),
-        getDetail: vi.fn(async () => ({
-          summary: resource,
-          native: channel,
-        })),
-      },
-    } as any
-
-    const result =
-      await searchManagedUpstreamResourceChannelsForDuplicateMatching({
-        resources,
-        config: {},
-        accountBaseUrl: "https://api.example.com",
-      })
-
-    expect(resources.items.search).toHaveBeenCalledWith(
-      {},
-      "https://api.example.com",
-    )
-    expect(resources.items.getDetail).toHaveBeenCalledWith({}, resource.ref)
-    expect(result).toEqual({
-      items: [channel],
-      total: 1,
-      type_counts: {},
-    })
-  })
-
-  it("falls back to summary-derived candidates when resource detail lookup fails", async () => {
-    const staleResource = {
-      ref: {
-        managedSiteType: SITE_TYPES.NEW_API,
-        scopeKey: "https://managed.example.com",
-        resourceId: "82",
-      },
-      displayName: "Summary fallback channel",
-      nativeKind: "channel",
-      status: "enabled",
-      endpointLabel: "https://api.example.com/v1",
-      modelPreview: ["gpt-4o"],
-      secretState: "masked",
-      capabilities: {},
-    } as const
-    const channel = buildManagedSiteChannel({
-      id: 83,
-      name: "Detailed channel",
-      base_url: "https://api.example.com/v1",
-      models: "gpt-4o-mini",
-      key: "sk-detail",
-    })
-    const detailedResource = {
-      ...staleResource,
-      ref: {
-        ...staleResource.ref,
-        resourceId: "83",
-      },
-      displayName: "Detailed channel",
-      modelPreview: ["gpt-4o-mini"],
-    } as const
-    const resources = {
-      items: {
-        search: vi.fn(async () => ({
-          items: [staleResource, detailedResource],
-          total: 2,
-        })),
-        getDetail: vi
-          .fn()
-          .mockRejectedValueOnce(new Error("detail missing"))
-          .mockResolvedValueOnce({
-            summary: detailedResource,
-            native: channel,
-          }),
-      },
-    } as any
-
-    const result =
-      await searchManagedUpstreamResourceChannelsForDuplicateMatching({
-        resources,
-        config: {},
-        accountBaseUrl: "https://api.example.com",
-      })
-
-    expect(result?.items).toEqual([
-      expect.objectContaining({
-        id: 82,
-        name: "Summary fallback channel",
-        base_url: "https://api.example.com/v1",
-        models: "gpt-4o",
-      }),
-      channel,
-    ])
-  })
-
-  it("preserves full models from channel-shaped raw details with numeric string ids", async () => {
-    const resource = {
-      ref: {
-        managedSiteType: SITE_TYPES.DONE_HUB,
-        scopeKey: "https://managed.example.com",
-        resourceId: "84",
-      },
-      displayName: "DoneHub raw channel",
-      nativeKind: "channel",
-      status: "enabled",
-      endpointLabel: "https://api.example.com/v1",
-      modelPreview: ["gpt-4o", "gpt-4o-mini", "claude-3"],
-      secretState: "available",
-      capabilities: {},
-    } as const
-    const resources = {
-      items: {
-        search: vi.fn(async () => ({
-          items: [resource],
-          total: 1,
-        })),
-        getDetail: vi.fn(async () => ({
-          summary: resource,
-          native: {
-            id: "84",
-            name: "DoneHub raw channel",
-            base_url: "https://api.example.com/v1",
-            models: "gpt-4o,gpt-4o-mini,claude-3,gemini-2.0",
-            key: "sk-donehub",
-          },
-        })),
-      },
-    } as any
-
-    const result =
-      await searchManagedUpstreamResourceChannelsForDuplicateMatching({
-        resources,
-        config: {},
-        accountBaseUrl: "https://api.example.com",
-      })
-
-    expect(result?.items[0]).toEqual(
-      expect.objectContaining({
-        id: 84,
-        name: "DoneHub raw channel",
-        models: "gpt-4o,gpt-4o-mini,claude-3,gemini-2.0",
-        key: "sk-donehub",
-      }),
-    )
   })
 })

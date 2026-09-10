@@ -46,7 +46,6 @@ API Key 会以完整值保存在扩展的本地 Storage。列表里的遮罩只�
 - [Atlas Cloud](https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub)：一个 AI API 访问 300+ 精选视频、图像和 LLM 模型，新 Coding Plan 提供更高性价比的 API 访问。[使用教程](./service-guides/atlascloud.md)
 - [AICodeMirror](https://www.aicodemirror.ai/register?invitecode=7IQNR8)：提供 Claude Code / Codex / Gemini CLI 官方高稳定中转服务，通过此链接注册可享首充 8 折，企业客户最高可享 7.5 折。
 - [随想AI中转站](https://sui-xiang.com/)：提供 Claude、Codex、Gemini 等 API 中继服务，按量付费，支持每日签到测试额度、多线路冗余和自动故障切换。[使用教程](./service-guides/suixiang.md)
-- [Infistar.ai](https://infistar.ai/register?aff=ALLAPIHUB&ref_source=link)：在售模型均经真实调用验真，通过超 10000 条官方 API 与官方号池供应链路负载均衡，覆盖文本、视频、图片、嵌入、重排等全模态能力，价格与用量透明，模型低至官方价的 10%。[使用教程](./service-guides/infistar.md)
 - [APIMart](https://go.apimart.ai/gh-all-api-hub)：专注 AI 图片/视频生成的低价 API 平台，GPT-Image-2 低至 $0.006/张，1 美元可出图 160+ 张；图片、视频一套异步 API 通吃，提交任务拿 ID、回调取结果，跑批万张不超时、换模型不改代码，按量付费、无月费。
 - [火山引擎方舟 Coding-Plan](https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html)：Lite 套餐 9.9 元/月起，并有邀请返利及首单优惠。
 :::
@@ -136,6 +135,8 @@ API Key 会以完整值保存在扩展的本地 Storage。列表里的遮罩只�
 
 适合在更换 Key、切换网络或排查“客户端连不上，但站点似乎还活着”的情况时使用。
 
+在 **`测试方式`** 中选择 **`流式`**（默认）或 **`非流式`**。生成类测试按所选方式执行，结果和新保存的历史记录会标明使用的方式；模型列表获取不受此选项影响。接口拒绝请求时，可以切换方式重测，测试不会自动切换。
+
 验证结果只代表这一次探测的情况，不代表 Key 永久有效或永久失效；换网络、换 Key 或发现异常后，可以随时再验证一次。
 
 ### 2. 验证 CLI 兼容性
@@ -147,6 +148,8 @@ API Key 会以完整值保存在扩展的本地 Storage。列表里的遮罩只�
 - 是否存在“网页能调，CLI 不能调”的兼容性差异
 
 这项检查不会真正启动 Claude Code、Codex、Gemini CLI 等程序，而是按这些 CLI 常用的协议和工具调用方式做一次模拟检查，帮你提前判断兼容性。
+
+在 **`测试方式`** 中选择 **`流式`**（默认）或 **`非流式`**。每个 CLI 仍使用其对应的接口类型执行工具调用探测，结果会标明测试方式，失败时不会自动切换。
 
 ### 3. 在模型列表中打开
 

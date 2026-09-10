@@ -9,10 +9,11 @@ import type {
   ResourceDisplayFacts,
   ResourceEditor,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import type { ManagedSiteChannelsCapability } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import type { ManagedUpstreamResourceItemsCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
-import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import {
+  getManagedSiteCapabilities,
+  getSiteTypeCapabilities,
+} from "~/services/apiAdapters/registry"
 import {
   type consumeManagedSiteMutationResult,
   type MANAGED_SITE_MUTATION_DISPATCH_STATES,
@@ -23,7 +24,6 @@ import {
   type ManagedSiteMutationRequestObserver,
   type ManagedSiteMutationResult,
   type ManagedSiteResourceMutationResult,
-  type ManagedSiteVoidMutationResult,
 } from "~/services/managedSites/mutations"
 import * as axonHubLegacyProvider from "~/services/managedSites/providers/axonHub"
 import * as claudeCodeHubLegacyProvider from "~/services/managedSites/providers/claudeCodeHub"
@@ -34,8 +34,7 @@ import * as veloeraLegacyProvider from "~/services/managedSites/providers/veloer
 import {
   type collectManagedResourceSecrets,
   type ManagedResourceSecretCollection,
-} from "~/services/managedSites/utils/managedSite"
-import type { ManagedUpstreamResourceSummary } from "~/types/managedUpstreamResource"
+} from "~/services/managedSites/utils/resourceSecrets"
 
 const expectedManagedSiteTypes = [
   SITE_TYPES.NEW_API,
@@ -71,88 +70,40 @@ describe("managed-site mutation conformance", () => {
     >().toEqualTypeOf<ManagedResourceSecretCollection>()
   })
 
-  it("keeps every registered managed-site channel write on the common result", () => {
-    type CreateResult = Awaited<
-      ReturnType<ManagedSiteChannelsCapability["create"]>
-    >
-    type UpdateResult = Awaited<
-      ReturnType<ManagedSiteChannelsCapability["update"]>
-    >
-    type DeleteResult = Awaited<
-      ReturnType<ManagedSiteChannelsCapability["delete"]>
-    >
-
-    expectTypeOf<CreateResult>().toEqualTypeOf<
-      ManagedSiteMutationResult<unknown>
-    >()
-    expectTypeOf<UpdateResult>().toEqualTypeOf<
-      ManagedSiteMutationResult<unknown>
-    >()
-    expectTypeOf<DeleteResult>().toEqualTypeOf<ManagedSiteVoidMutationResult>()
-
+  it("exposes managed channel writes through native workspaces only", () => {
     expect(new Set(MANAGED_SITE_TYPES)).toEqual(
       new Set(expectedManagedSiteTypes),
     )
     for (const siteType of MANAGED_SITE_TYPES) {
-      const channels = getSiteTypeCapabilities(siteType).managedSites?.channels
-
-      expect(channels, `${siteType} channels`).toMatchObject({
-        create: expect.any(Function),
-        update: expect.any(Function),
-        delete: expect.any(Function),
-      })
+      expect(getManagedSiteCapabilities(siteType).siteType).toBe(siteType)
+      expect(getSiteTypeCapabilities(siteType).managedSites).not.toHaveProperty(
+        "channels",
+      )
     }
   })
 
-  it("keeps every transitional-resource and native workspace write on the common result", () => {
-    type ResourceCreateResult = Awaited<
-      ReturnType<ManagedUpstreamResourceItemsCapability["create"]>
-    >
-    type ResourceUpdateResult = Awaited<
-      ReturnType<ManagedUpstreamResourceItemsCapability["update"]>
-    >
-    type ResourceDeleteResult = Awaited<
-      ReturnType<ManagedUpstreamResourceItemsCapability["delete"]>
-    >
-    type NativeSubmitResult = Awaited<ReturnType<ResourceEditor["submit"]>>
-    type NativeDeleteResult = Awaited<
-      ReturnType<ManagedResourceWorkspace["delete"]>
-    >
-
-    expectTypeOf<ResourceCreateResult>().toEqualTypeOf<
-      ManagedSiteMutationResult<ManagedUpstreamResourceSummary | null>
-    >()
-    expectTypeOf<ResourceUpdateResult>().toEqualTypeOf<
-      ManagedSiteMutationResult<ManagedUpstreamResourceSummary | null>
-    >()
-    expectTypeOf<ResourceDeleteResult>().toEqualTypeOf<ManagedSiteVoidMutationResult>()
-    expectTypeOf<NativeSubmitResult>().toEqualTypeOf<
+  it("keeps every native workspace write on the common mutation result", () => {
+    expectTypeOf<Awaited<ReturnType<ResourceEditor["submit"]>>>().toEqualTypeOf<
       ManagedSiteMutationResult<ResourceDisplayFacts>
     >()
-    expectTypeOf<NativeDeleteResult>().toEqualTypeOf<
-      ManagedSiteMutationResult<void>
-    >()
-
+    expectTypeOf<
+      Awaited<ReturnType<ManagedResourceWorkspace["delete"]>>
+    >().toEqualTypeOf<ManagedSiteMutationResult<void>>()
     for (const siteType of MANAGED_SITE_TYPES) {
       expect(
-        getSiteTypeCapabilities(siteType).managedSites?.resources?.items,
-        `${siteType} resources`,
+        getManagedResourceRegistration(
+          siteType,
+          MANAGED_RESOURCE_KINDS.Channel,
+        ),
       ).toMatchObject({
-        create: expect.any(Function),
-        update: expect.any(Function),
-        delete: expect.any(Function),
+        siteType,
+        kind: MANAGED_RESOURCE_KINDS.Channel,
+        open: expect.any(Function),
       })
+      expect(getSiteTypeCapabilities(siteType).managedSites).not.toHaveProperty(
+        "resources",
+      )
     }
-    expect(
-      getManagedResourceRegistration(
-        SITE_TYPES.AXON_HUB,
-        MANAGED_RESOURCE_KINDS.Channel,
-      ),
-    ).toMatchObject({
-      siteType: SITE_TYPES.AXON_HUB,
-      kind: MANAGED_RESOURCE_KINDS.Channel,
-      open: expect.any(Function),
-    })
   })
 
   it("removes the legacy mutation-certainty module", () => {

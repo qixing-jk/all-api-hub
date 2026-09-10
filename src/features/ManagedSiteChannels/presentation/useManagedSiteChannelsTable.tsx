@@ -174,12 +174,14 @@ export function useManagedSiteChannelsTable({
   labels,
   isDeleteReplayBlocked,
   isResourceInteractionBlocked,
+  modelSyncUnavailableReason,
 }: {
   state: ManagedChannelsPresentationState
   callbacks: ManagedChannelsCallbacks
   labels: ManagedChannelsLabels
   isDeleteReplayBlocked: boolean
   isResourceInteractionBlocked: boolean
+  modelSyncUnavailableReason?: string
 }) {
   const columns = useMemo<ColumnDef<ManagedChannelsRowViewModel, unknown>[]>(
     () =>
@@ -244,6 +246,7 @@ export function useManagedSiteChannelsTable({
                   onSync={callbacks.onSync}
                   onOpenSync={callbacks.onOpenSync}
                   onFilters={callbacks.onFilters}
+                  modelSyncUnavailableReason={modelSyncUnavailableReason}
                   showMigrationAction={state.migrationMode}
                   isSyncing={Boolean(row.original.isSyncing)}
                   labels={labels.rowActions}
@@ -356,6 +359,7 @@ export function useManagedSiteChannelsTable({
       isDeleteReplayBlocked,
       isResourceInteractionBlocked,
       labels,
+      modelSyncUnavailableReason,
       state.columns,
       state.migrationMode,
     ],

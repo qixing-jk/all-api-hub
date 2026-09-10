@@ -376,53 +376,6 @@
       }
     },
     {
-      "id": "infistar",
-      "enabled": true,
-      "rank": 115,
-      "supportStatus": "supported",
-      "urls": {
-        "primaryAffiliate": "https://infistar.ai/register?aff=ALLAPIHUB&ref_source=link",
-        "website": "https://infistar.ai"
-      },
-      "locales": {
-        "zh-CN": {
-          "name": "Infistar.ai",
-          "tagline": "在售模型均经真实调用验真，供给来自官方 API 与官方号池，并通过 10000+ 条供应链路负载均衡，保障时延与峰时稳定性，覆盖 ChatGPT、Claude、Gemini、Grok、GLM、DeepSeek、Kimi、Qwen、MiniMax 等文本、视频、图片、嵌入与重排能力。",
-          "postClickNote": "价格与用量透明可查，模型低至官方价 1 折；All API Hub 用户可通过专属入口注册体验。"
-        },
-        "zh-TW": {
-          "name": "Infistar.ai",
-          "tagline": "在售模型均經真實呼叫驗證，供給來自官方 API 與官方帳號池，並透過 10000+ 條供應鏈路進行負載平衡，保障延遲與尖峰時段穩定性，涵蓋 ChatGPT、Claude、Gemini、Grok、GLM、DeepSeek、Kimi、Qwen、MiniMax 等文字、影片、圖片、嵌入與重排能力。",
-          "postClickNote": "價格與用量透明可查，模型低至官方價格 1 折；All API Hub 使用者可透過專屬入口註冊體驗。"
-        },
-        "en": {
-          "name": "Infistar.ai",
-          "tagline": "Every listed model is verified through real calls, supplied through official APIs and official account pools, and load-balanced across 10,000+ routes for stable latency and peak-hour performance. It covers text, video, image, embedding, and reranking for ChatGPT, Claude, Gemini, Grok, GLM, DeepSeek, Kimi, Qwen, MiniMax, and more.",
-          "postClickNote": "Pricing and usage are transparent, with selected models from 10% of official pricing. All API Hub users can register through the dedicated link."
-        },
-        "pt-BR": {
-          "name": "Infistar.ai",
-          "tagline": "Todos os modelos anunciados são verificados por chamadas reais, fornecidos por APIs e pools de contas oficiais e distribuídos entre mais de 10.000 rotas para manter a latência e a estabilidade nos horários de pico. A plataforma oferece texto, vídeo, imagem, embeddings e reranqueamento para ChatGPT, Claude, Gemini, Grok, GLM, DeepSeek, Kimi, Qwen, MiniMax e outros.",
-          "postClickNote": "Preços e uso são transparentes, com modelos selecionados a partir de 10% do preço oficial. Usuários do All API Hub podem se cadastrar pelo link exclusivo."
-        },
-        "ja": {
-          "name": "Infistar.ai",
-          "tagline": "掲載モデルは実際の呼び出しで検証され、公式 API と公式アカウントプールから供給されています。10,000 以上の経路で負荷分散し、低遅延とピーク時の安定性を確保しながら、ChatGPT、Claude、Gemini、Grok、GLM、DeepSeek、Kimi、Qwen、MiniMax などのテキスト、動画、画像、埋め込み、リランキングに対応します。",
-          "postClickNote": "価格と使用量を明確に確認でき、一部モデルは公式価格の 10% から利用できます。All API Hub ユーザーは専用リンクから登録できます。"
-        },
-        "vi": {
-          "name": "Infistar.ai",
-          "tagline": "Moi mo hinh dang ban deu duoc xac minh bang lenh goi thuc, lay nguon tu API chinh thuc va nhom tai khoan chinh thuc, dong thoi can bang tai tren hon 10.000 tuyen de duy tri do tre va do on dinh trong gio cao diem. Nen tang ho tro van ban, video, hinh anh, embedding va reranking cho ChatGPT, Claude, Gemini, Grok, GLM, DeepSeek, Kimi, Qwen, MiniMax va nhieu mo hinh khac.",
-          "postClickNote": "Gia va muc su dung duoc hien thi minh bach, mot so mo hinh co gia tu 10% gia chinh thuc. Nguoi dung All API Hub co the dang ky qua lien ket rieng."
-        }
-      },
-      "accountPrefill": {
-        "siteType": "new-api",
-        "siteUrl": "https://infistar.ai",
-        "authType": "access_token"
-      }
-    },
-    {
       "id": "volcengine-coding-plan",
       "enabled": true,
       "rank": 120,

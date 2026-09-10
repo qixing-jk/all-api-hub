@@ -1,5 +1,56 @@
 # Changelog
 
+## [3.61.0](https://github.com/qixing-jk/all-api-hub/compare/v3.60.0...v3.61.0) (2026-09-08)
+
+
+### Features
+
+* **accounts:** add APIyi account compatibility ([#1413](https://github.com/qixing-jk/all-api-hub/issues/1413)) ([5c457f8](https://github.com/qixing-jk/all-api-hub/commit/5c457f86d750b750fb9de598012230e57eb3b063))
+* **accounts:** auto-provision keys for all available groups ([#1404](https://github.com/qixing-jk/all-api-hub/issues/1404)) ([1f697b7](https://github.com/qixing-jk/all-api-hub/commit/1f697b79f427d0cb70eda7f485d905b12db6fe9a))
+* **managed-sites:** support Sub2API channel migration ([#1415](https://github.com/qixing-jk/all-api-hub/issues/1415)) ([4161082](https://github.com/qixing-jk/all-api-hub/commit/41610825db20bcd3328a6a83d1b7f1e10ed36e45))
+* refine check-in result categories and simplify filters ([#1418](https://github.com/qixing-jk/all-api-hub/issues/1418)) ([cc52485](https://github.com/qixing-jk/all-api-hub/commit/cc524857dec35708c0b6ad2e9cfccea10db4c804))
+* **shield:** add local protection bypass history ([#1407](https://github.com/qixing-jk/all-api-hub/issues/1407)) ([0285615](https://github.com/qixing-jk/all-api-hub/commit/02856151364f3bef31fbeacbd4dd513105a35efb))
+* **verification:** add selectable streaming test modes ([#1406](https://github.com/qixing-jk/all-api-hub/issues/1406)) ([499a6f6](https://github.com/qixing-jk/all-api-hub/commit/499a6f6817a30e538f15bb3b932082c990970ca3))
+
+
+### Bug Fixes
+
+* **accounts:** preserve New API manual token recovery and focus the input ([#1408](https://github.com/qixing-jk/all-api-hub/issues/1408)) ([44221e7](https://github.com/qixing-jk/all-api-hub/commit/44221e7c245242b2a0592f31edfa9e257be6d870))
+* **accounts:** preserve valid credentials during New API detection ([#1414](https://github.com/qixing-jk/all-api-hub/issues/1414)) ([a904ddf](https://github.com/qixing-jk/all-api-hub/commit/a904ddf2e759495fa1d9a88722592610cf6793b9))
+* **accounts:** verify browser identity before matching saved accounts ([#1412](https://github.com/qixing-jk/all-api-hub/issues/1412)) ([0353a30](https://github.com/qixing-jk/all-api-hub/commit/0353a30ba3e9b06946fa4557c5948140f10e283e))
+* **e2e:** follow New API manual token recovery ([#1410](https://github.com/qixing-jk/all-api-hub/issues/1410)) ([abae4a9](https://github.com/qixing-jk/all-api-hub/commit/abae4a914bc52b951f6f0b2dfb1dff35a2402f0a))
+* **e2e:** handle recovery fallbacks and deferred tab navigation ([#1416](https://github.com/qixing-jk/all-api-hub/issues/1416)) ([b56218c](https://github.com/qixing-jk/all-api-hub/commit/b56218c75aa2c05e96212d0b84d65e2f16900906))
+* **managed-sites:** preserve upstream configuration during channel updates ([#1419](https://github.com/qixing-jk/all-api-hub/issues/1419)) ([07dc5e0](https://github.com/qixing-jk/all-api-hub/commit/07dc5e059a9663c476dd4b80c2cff450a0638c1d))
+* **ui:** enlarge update log dialog reading area ([fe7de1a](https://github.com/qixing-jk/all-api-hub/commit/fe7de1a2dfcf2b21f7abac399851b00650b03a97))
+
+## [3.60.0](https://github.com/qixing-jk/all-api-hub/compare/v3.59.0...v3.60.0) (2026-09-06)
+
+
+### Features
+
+* **account-onboarding:** improve recovery and manual guidance ([#1383](https://github.com/qixing-jk/all-api-hub/issues/1383)) ([5c40114](https://github.com/qixing-jk/all-api-hub/commit/5c40114e7f6316be126dc95d1c155dd6eabe6555))
+* **checkin:** support Denxio daily check-in ([#1391](https://github.com/qixing-jk/all-api-hub/issues/1391)) ([ae0a221](https://github.com/qixing-jk/all-api-hub/commit/ae0a221c4400407aca7f64d6d733d2cb98dc013e))
+* **managed-sites:** add DoneHub native channel resources ([#1397](https://github.com/qixing-jk/all-api-hub/issues/1397)) ([d02e60f](https://github.com/qixing-jk/all-api-hub/commit/d02e60f1d376730310d474e0713af83018fde87e))
+* **managed-sites:** migrate Claude Code Hub channels to native resources ([#1394](https://github.com/qixing-jk/all-api-hub/issues/1394)) ([fd4c27b](https://github.com/qixing-jk/all-api-hub/commit/fd4c27bee3244cfdd2b9a8c6ec7962a44fecfa7b))
+* **managed-sites:** migrate Octopus channels to native resources ([#1400](https://github.com/qixing-jk/all-api-hub/issues/1400)) ([6d18e8f](https://github.com/qixing-jk/all-api-hub/commit/6d18e8fc823aae2f38e5b978cfa183c3097f1df5))
+* **managed-sites:** migrate Veloera channels to native resources ([#1396](https://github.com/qixing-jk/all-api-hub/issues/1396)) ([26ca8ab](https://github.com/qixing-jk/all-api-hub/commit/26ca8aba318dc355995f28a3f56b4cdc879cf776))
+* **options:** add responsive product guidance ([#1393](https://github.com/qixing-jk/all-api-hub/issues/1393)) ([33e02e8](https://github.com/qixing-jk/all-api-hub/commit/33e02e83ffdd9ff8f0ab7aa5d5de305ddb5bdc70))
+
+
+### Bug Fixes
+
+* **axonhub:** make channel updates schema-resilient ([#1392](https://github.com/qixing-jk/all-api-hub/issues/1392)) ([48d2e23](https://github.com/qixing-jk/all-api-hub/commit/48d2e2311690772d8b6853595434ead58e4a9c2b))
+* **checkin:** persist capability loss and refine safe retries ([#1402](https://github.com/qixing-jk/all-api-hub/issues/1402)) ([30670db](https://github.com/qixing-jk/all-api-hub/commit/30670dbb1d4213c43862fc3f9f86904888856ac1))
+* **checkin:** route AnyRouter sign-in through protected context ([#1381](https://github.com/qixing-jk/all-api-hub/issues/1381)) ([0cdb4c8](https://github.com/qixing-jk/all-api-hub/commit/0cdb4c8064aeefd97e1dcdd3fe56e53fc1c495cf))
+* **managed-sites:** restore channel search and precise navigation ([#1401](https://github.com/qixing-jk/all-api-hub/issues/1401)) ([ced288d](https://github.com/qixing-jk/all-api-hub/commit/ced288d8974e8e93f1cb48b5b438cdb179e6f435))
+* **octopus:** support v0.13 channel management ([#1382](https://github.com/qixing-jk/all-api-hub/issues/1382)) ([9d14868](https://github.com/qixing-jk/all-api-hub/commit/9d14868669594d0fccfa0caee1b0053fd0a94a87))
+* **sub2api:** recover browser-bound auth sessions ([#1387](https://github.com/qixing-jk/all-api-hub/issues/1387)) ([d534133](https://github.com/qixing-jk/all-api-hub/commit/d534133257e32f30de08a1f0f6fd247445b41384))
+
+
+### Performance Improvements
+
+* **test:** reduce CI unit test wall time ([#1370](https://github.com/qixing-jk/all-api-hub/issues/1370)) ([7ee200d](https://github.com/qixing-jk/all-api-hub/commit/7ee200dbc030633cf777eb697558ef6cfede6755))
+
 ## [3.59.0](https://github.com/qixing-jk/all-api-hub/compare/v3.58.0...v3.59.0) (2026-08-27)
 
 

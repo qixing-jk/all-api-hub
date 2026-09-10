@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import { AccountSummaryBar } from "~/features/ModelList/components/AccountSummaryBar"
+import { MODEL_LIST_ACCOUNT_ERROR_TYPES } from "~/features/ModelList/modelDataStates"
 
 vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>()
@@ -44,25 +45,24 @@ describe("AccountSummaryBar", () => {
       />,
     )
 
-    const primaryBadge = screen
-      .getByText("Primary Account")
-      .closest("[data-slot='badge']")
-    const backupBadge = screen
-      .getByText("Backup Account")
-      .closest("[data-slot='badge']")
-    const dormantBadge = screen
-      .getByText("Dormant Account")
-      .closest("[data-slot='badge']")
+    const primaryBadge = screen.getByRole("button", {
+      name: /^Primary Account\s*accountSummary\.models$/,
+      pressed: true,
+    })
+    expect(
+      screen.getByRole("button", {
+        name: /^Backup Account\s*accountSummary\.models$/,
+        pressed: true,
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: /^Dormant Account\s*accountSummary\.models$/,
+        pressed: false,
+      }),
+    ).toBeVisible()
 
-    expect(primaryBadge).toHaveClass("bg-blue-100", "text-blue-700")
-    expect(backupBadge).toHaveClass("bg-blue-100", "text-blue-700")
-    expect(dormantBadge).toHaveClass("bg-secondary")
-    expect(screen.getAllByText("accountSummary.models")[0]).toHaveClass(
-      "text-emerald-600",
-      "dark:text-emerald-400",
-    )
-
-    await user.click(primaryBadge!)
+    await user.click(primaryBadge)
 
     expect(onAccountClick).toHaveBeenCalledWith("account-1")
     expect(onAccountClick).toHaveBeenCalledTimes(1)
@@ -98,7 +98,7 @@ describe("AccountSummaryBar", () => {
             accountId: "account-error",
             name: "Broken Account",
             count: 0,
-            errorType: "load-failed",
+            errorType: MODEL_LIST_ACCOUNT_ERROR_TYPES.LOAD_FAILED,
           },
         ]}
       />,
@@ -120,16 +120,16 @@ describe("AccountSummaryBar", () => {
             accountId: "account-partial",
             name: "Partial Account",
             count: 2,
-            errorType: "partial-load-failed",
+            errorType: MODEL_LIST_ACCOUNT_ERROR_TYPES.PARTIAL_LOAD_FAILED,
             errorMessage: "Some keys failed to load. First failure: denied",
           },
         ]}
       />,
     )
 
-    const partialBadge = screen
-      .getByText("Partial Account")
-      .closest("[data-slot='badge']")
+    const partialBadge = screen.getByRole("button", {
+      name: /^Partial Account/,
+    })
 
     expect(partialBadge).toHaveAttribute(
       "title",
@@ -152,16 +152,16 @@ describe("AccountSummaryBar", () => {
             accountId: "account-unsupported",
             name: "Unsupported Account",
             count: 0,
-            errorType: "unsupported-source",
+            errorType: MODEL_LIST_ACCOUNT_ERROR_TYPES.UNSUPPORTED_SOURCE,
             errorMessage: "Model list is not implemented yet.",
           },
         ]}
       />,
     )
 
-    const unsupportedBadge = screen
-      .getByText("Unsupported Account")
-      .closest("[data-slot='badge']")
+    const unsupportedBadge = screen.getByRole("button", {
+      name: /^Unsupported Account/,
+    })
 
     expect(unsupportedBadge).toHaveAttribute(
       "title",
@@ -172,5 +172,159 @@ describe("AccountSummaryBar", () => {
       "dark:text-blue-300",
     )
     expect(screen.queryByText("accountSummary.loadFailed")).toBeNull()
+  })
+  it("folds settled failures while another account is loading and exposes details on demand", async () => {
+    const user = userEvent.setup()
+    render(
+      <AccountSummaryBar
+        items={[
+          {
+            accountId: "slow",
+            name: "Slow",
+            count: 0,
+            hasData: false,
+            isLoading: true,
+          },
+          {
+            accountId: "failed",
+            name: "Failed",
+            count: 0,
+            hasData: false,
+            errorType: MODEL_LIST_ACCOUNT_ERROR_TYPES.LOAD_FAILED,
+            errorMessage: "Denied",
+          },
+        ]}
+      />,
+    )
+    expect(screen.getByText("Slow")).toBeVisible()
+    expect(screen.queryByText("Failed")).not.toBeInTheDocument()
+    const toggle = screen.getByRole("button", {
+      name: "accountSummary.unavailableAccounts",
+    })
+    expect(toggle).toHaveAttribute("aria-expanded", "false")
+    await user.click(toggle)
+    expect(screen.getByText("Failed")).toBeVisible()
+    expect(toggle).toHaveAttribute("aria-expanded", "true")
+    await user.click(toggle)
+    expect(screen.queryByText("Failed")).not.toBeInTheDocument()
+  })
+
+  it("keeps cached, partial, selected and filtered-zero accounts visible", () => {
+    render(
+      <AccountSummaryBar
+        activeAccountIds={["selected"]}
+        items={[
+          {
+            accountId: "cached",
+            name: "Cached",
+            count: 0,
+            hasData: true,
+            errorType: MODEL_LIST_ACCOUNT_ERROR_TYPES.LOAD_FAILED,
+          },
+          {
+            accountId: "partial",
+            name: "Partial",
+            count: 0,
+            hasData: true,
+            errorType: MODEL_LIST_ACCOUNT_ERROR_TYPES.PARTIAL_LOAD_FAILED,
+          },
+          {
+            accountId: "selected",
+            name: "Selected",
+            count: 0,
+            hasData: false,
+            errorType: MODEL_LIST_ACCOUNT_ERROR_TYPES.LOAD_FAILED,
+          },
+          { accountId: "filtered", name: "Filtered", count: 0, hasData: true },
+          {
+            accountId: "unsupported",
+            name: "Unsupported",
+            count: 0,
+            hasData: false,
+            errorType: MODEL_LIST_ACCOUNT_ERROR_TYPES.UNSUPPORTED_SOURCE,
+          },
+          {
+            accountId: "invalid",
+            name: "Invalid",
+            count: 0,
+            hasData: false,
+            errorType: MODEL_LIST_ACCOUNT_ERROR_TYPES.INVALID_FORMAT,
+          },
+        ]}
+      />,
+    )
+    for (const name of ["Cached", "Partial", "Selected", "Filtered"]) {
+      expect(screen.getByText(name)).toBeVisible()
+    }
+    expect(screen.queryByText("Unsupported")).not.toBeInTheDocument()
+    expect(screen.queryByText("Invalid")).not.toBeInTheDocument()
+  })
+
+  it("reveals all failures when no account has data or is loading", () => {
+    render(
+      <AccountSummaryBar
+        items={[
+          {
+            accountId: "a",
+            name: "Failed",
+            count: 0,
+            hasData: false,
+            errorType: MODEL_LIST_ACCOUNT_ERROR_TYPES.LOAD_FAILED,
+          },
+          {
+            accountId: "b",
+            name: "Unsupported",
+            count: 0,
+            hasData: false,
+            errorType: MODEL_LIST_ACCOUNT_ERROR_TYPES.UNSUPPORTED_SOURCE,
+          },
+        ]}
+      />,
+    )
+    expect(screen.getByText("Failed")).toBeVisible()
+    expect(screen.getByText("Unsupported")).toBeVisible()
+    expect(
+      screen.queryByRole("button", {
+        name: "accountSummary.unavailableAccounts",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("returns a retrying and recovered account to its original position", () => {
+    const failed = {
+      accountId: "a",
+      name: "First",
+      count: 0,
+      hasData: false,
+      errorType: MODEL_LIST_ACCOUNT_ERROR_TYPES.LOAD_FAILED,
+    }
+    const ready = { accountId: "b", name: "Second", count: 2, hasData: true }
+    const { rerender } = render(<AccountSummaryBar items={[failed, ready]} />)
+    expect(screen.queryByText("First")).not.toBeInTheDocument()
+    rerender(
+      <AccountSummaryBar items={[{ ...failed, isLoading: true }, ready]} />,
+    )
+    expect(screen.getByText("First")).toBeVisible()
+    rerender(
+      <AccountSummaryBar
+        items={[
+          { ...failed, hasData: true, errorType: undefined, count: 1 },
+          ready,
+        ]}
+      />,
+    )
+    const accountButtons = screen.getAllByRole("button")
+    expect(accountButtons).toHaveLength(2)
+    expect(accountButtons[0]).toHaveAccessibleName(
+      /^First\s*accountSummary\.models$/,
+    )
+    expect(accountButtons[1]).toHaveAccessibleName(
+      /^Second\s*accountSummary\.models$/,
+    )
+    expect(
+      screen.queryByRole("button", {
+        name: "accountSummary.unavailableAccounts",
+      }),
+    ).not.toBeInTheDocument()
   })
 })

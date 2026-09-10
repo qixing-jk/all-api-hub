@@ -1,42 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import {
   buildApiToken,
   buildDisplaySiteData,
 } from "~~/tests/test-utils/factories"
 
 const {
-  mockSearchChannel,
-  mockCreateChannel,
-  mockUpdateChannel,
-  mockDeleteChannel,
-  mockFetchVeloeraChannel,
-  mockFetchAccountAvailableModels,
   mockGetPreferences,
-  mockFetchManagedSiteAvailableModels,
-  mockFetchTokenScopedModels,
+  mockFetchManagedSiteImportModels,
   mockResolveDefaultChannelGroups,
 } = vi.hoisted(() => ({
-  mockSearchChannel: vi.fn(),
-  mockCreateChannel: vi.fn(),
-  mockUpdateChannel: vi.fn(),
-  mockDeleteChannel: vi.fn(),
-  mockFetchVeloeraChannel: vi.fn(),
-  mockFetchAccountAvailableModels: vi.fn(),
   mockGetPreferences: vi.fn(),
-  mockFetchManagedSiteAvailableModels: vi.fn(),
-  mockFetchTokenScopedModels: vi.fn(),
+  mockFetchManagedSiteImportModels: vi.fn(),
   mockResolveDefaultChannelGroups: vi.fn(),
-}))
-
-vi.mock("~/services/apiService/veloera", () => ({
-  searchChannel: (...args: unknown[]) => mockSearchChannel(...args),
-  createChannel: (...args: unknown[]) => mockCreateChannel(...args),
-  updateChannel: (...args: unknown[]) => mockUpdateChannel(...args),
-  deleteChannel: (...args: unknown[]) => mockDeleteChannel(...args),
-  fetchChannel: (...args: unknown[]) => mockFetchVeloeraChannel(...args),
-  fetchAccountAvailableModels: (...args: unknown[]) =>
-    mockFetchAccountAvailableModels(...args),
 }))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
@@ -45,20 +23,13 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   },
 }))
 
-vi.mock("~/services/managedSites/utils/fetchTokenScopedModels", () => ({
-  fetchTokenScopedModels: mockFetchTokenScopedModels,
+vi.mock("~/services/managedSites/utils/fetchManagedSiteImportModels", () => ({
+  fetchManagedSiteImportModels: mockFetchManagedSiteImportModels,
 }))
 
 vi.mock("~/services/managedSites/providers/defaultChannelGroups", () => ({
   resolveDefaultChannelGroups: mockResolveDefaultChannelGroups,
 }))
-
-vi.mock(
-  "~/services/managedSites/utils/fetchManagedSiteAvailableModels",
-  () => ({
-    fetchManagedSiteAvailableModels: mockFetchManagedSiteAvailableModels,
-  }),
-)
 
 describe("veloeraService additional flows", () => {
   beforeEach(() => {
@@ -72,21 +43,11 @@ describe("veloeraService additional flows", () => {
         userId: "200",
       },
     })
-    mockFetchTokenScopedModels.mockResolvedValue({
+    mockFetchManagedSiteImportModels.mockResolvedValue({
       models: ["gpt-4o"],
       fetchFailed: false,
     })
-    mockFetchManagedSiteAvailableModels.mockResolvedValue(["gpt-4o-mini"])
     mockResolveDefaultChannelGroups.mockResolvedValue(["ops"])
-    mockSearchChannel.mockResolvedValue({
-      items: [],
-      total: 0,
-      type_counts: {},
-    })
-    mockCreateChannel.mockResolvedValue({
-      success: true,
-      message: "created",
-    })
   })
 
   afterEach(() => {
@@ -131,7 +92,7 @@ describe("veloeraService additional flows", () => {
     const { prepareChannelFormData } = await import(
       "~/services/managedSites/providers/veloera"
     )
-    mockFetchTokenScopedModels.mockResolvedValueOnce({
+    mockFetchManagedSiteImportModels.mockResolvedValueOnce({
       models: [],
       fetchFailed: true,
     })
@@ -143,11 +104,15 @@ describe("veloeraService additional flows", () => {
     })
 
     const result = await prepareChannelFormData(
-      buildDisplaySiteData({
-        name: "Veloera Site",
-        baseUrl: "https://proxy.example.com",
-      }),
-      token,
+      buildManagedSiteChannelDraftSource(
+        buildDisplayAccountTokenRuntimeKey(
+          buildDisplaySiteData({
+            name: "Veloera Site",
+            baseUrl: "https://proxy.example.com",
+          }),
+          token,
+        ),
+      ),
     )
 
     expect(result).toMatchObject({
@@ -177,51 +142,14 @@ describe("veloeraService additional flows", () => {
       status: 1,
     } as any)
 
-    expect(payload).toEqual({
-      mode: "single",
-      channel: expect.objectContaining({
+    expect(payload).toEqual(
+      expect.objectContaining({
         name: "Imported Veloera Channel",
         key: "veloera-key",
         base_url: "https://proxy.example.com",
         models: "gpt-4o,claude-3",
-        groups: ["default"],
+        group: "default",
       }),
-    })
-  })
-
-  it("trims fetched Veloera channel keys and throws when the detail payload omits them", async () => {
-    const { fetchChannelSecretKey } = await import(
-      "~/services/managedSites/providers/veloera"
     )
-
-    mockFetchVeloeraChannel.mockResolvedValueOnce({
-      id: 42,
-      key: "  veloera-secret  ",
-    })
-    await expect(
-      fetchChannelSecretKey(
-        {
-          baseUrl: "https://veloera.example.com",
-          adminToken: "veloera-token",
-          userId: "200",
-        },
-        42,
-      ),
-    ).resolves.toBe("veloera-secret")
-
-    mockFetchVeloeraChannel.mockResolvedValueOnce({
-      id: 42,
-      key: "   ",
-    })
-    await expect(
-      fetchChannelSecretKey(
-        {
-          baseUrl: "https://veloera.example.com",
-          adminToken: "veloera-token",
-          userId: "200",
-        },
-        42,
-      ),
-    ).rejects.toThrow("veloera_channel_key_missing")
   })
 })

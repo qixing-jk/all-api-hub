@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -21,6 +20,7 @@ import {
   useProviderModelDiscovery,
 } from "~/hooks/useProviderModelDiscovery"
 import { useSafeExportAction } from "~/hooks/useSafeExportAction"
+import toast from "~/lib/notify"
 import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import {

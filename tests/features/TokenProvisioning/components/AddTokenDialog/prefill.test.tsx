@@ -6,6 +6,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/defaultTokenLifecycle"
+import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
 import { API_CREDENTIAL_PROFILE_CAPTURE_STATUSES } from "~/services/apiCredentialProfiles/apiCredentialProfileLinkContracts"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -48,7 +49,7 @@ const {
   createApiCredentialProfileMock: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: toastSuccessMock,
     error: toastErrorMock,
@@ -67,6 +68,10 @@ vi.mock("~/services/apiAdapters/registry", () => ({
           }
         : {
             keyManagement: {
+              createRuntimeSecret:
+                siteType === SITE_TYPES.AIHUBMIX
+                  ? createAIHubMixCreatedRuntimeSecret
+                  : undefined,
               fetchTokens: vi.fn(async () => []),
               createToken: (...args: any[]) => createApiTokenMock(...args),
               updateToken: (...args: any[]) => updateTokenMock(...args),

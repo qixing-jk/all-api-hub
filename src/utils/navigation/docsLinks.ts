@@ -40,6 +40,12 @@ export const getDocsAutoDetectUrl = (language?: string) =>
 export const getDocsGetStartedUrl = (language?: string) =>
   getDocsPageUrl("get-started", language)
 
+export const getDocsManualAddGuideUrl = (anchor: string, language?: string) => {
+  const url = new URL(getDocsPageUrl("add-account", language))
+  url.hash = anchor
+  return url.toString()
+}
+
 export const getDocsTaskNotificationsUrl = (language?: string) =>
   getDocsPageUrl("task-notifications", language)
 

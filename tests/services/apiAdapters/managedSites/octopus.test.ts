@@ -1,26 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
-import {
-  buildChannelName,
-  buildChannelPayload,
-  checkValidOctopusConfig,
-  fetchAvailableModels,
-  prepareChannelFormData,
-} from "~/services/managedSites/providers/octopus"
-import type { ChannelFormData } from "~/types/managedSite"
-import type { ManagedUpstreamResourceDetail } from "~/types/managedUpstreamResource"
-import {
-  OctopusAutoGroupType,
-  OctopusOutboundType,
-  type OctopusChannel,
-} from "~/types/octopus"
-import {
-  CHANNEL_MUTATION_SCENARIOS,
-  testManagedSiteChannelMutationContract,
-  type ChannelMutationScenario,
-} from "~~/tests/services/apiAdapters/managedSites/channelMutationContract"
-import { testManagedUpstreamResourceMutationContract } from "~~/tests/services/apiAdapters/managedSites/resourceMutationContract"
+import { octopusManagedResourceModels } from "~/services/apiAdapters/managedResources/octopusOperations"
+import { octopusManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/octopus"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
+import type { OctopusChannel } from "~/types/octopus"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 const octopusApi = vi.hoisted(() => {
   class OctopusMutationApiError extends Error {
@@ -62,6 +47,7 @@ const octopusApi = vi.hoisted(() => {
 
   return {
     OctopusMutationApiError,
+    getChannel: vi.fn(),
     listChannels: vi.fn(),
     searchChannels: vi.fn(),
     createChannel: vi.fn(),
@@ -90,34 +76,6 @@ describe("Octopus managed-site channel capability", () => {
     username: "admin",
     password: "password",
   }
-  const octopusChannel: OctopusChannel = {
-    id: 7,
-    name: "Octopus channel",
-    type: OctopusOutboundType.OpenAIChat,
-    enabled: true,
-    base_urls: [
-      { url: "https://upstream.example.invalid/v1", delay: 120 },
-      { url: "https://backup.example.invalid/v1", delay: 250 },
-    ],
-    keys: [
-      {
-        id: 1,
-        channel_id: 7,
-        enabled: true,
-        channel_key: "sk-test",
-        remark: "primary",
-      },
-    ],
-    model: "gpt-4o",
-    custom_model: "custom-a,custom-b",
-    proxy: false,
-    auto_sync: true,
-    auto_group: OctopusAutoGroupType.Regex,
-    custom_header: [{ header_key: "x-provider", header_value: "octopus" }],
-    channel_proxy: "http://proxy.example.invalid:8080",
-    param_override: '{"temperature":0.2}',
-    match_regex: "^gpt-",
-  }
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -126,518 +84,62 @@ describe("Octopus managed-site channel capability", () => {
     })
   })
 
-  const createPayload = {
-    mode: "single",
-    channel: { name: "channel", status: 1 },
-  } as const
-  const updatePayload = { id: 7, name: "updated" }
-  const postDispatchError = (raw: Error) =>
-    new octopusApi.OctopusMutationApiError(raw.message, {
-      dispatch: "dispatched",
-      responseReceived: false,
-      confirmedNonApplication: false,
-      raw,
-    })
+  const channel: OctopusChannel = {
+    id: 7,
+    name: "Native channel",
+    type: 0,
+    enabled: true,
+    base_urls: [{ url: "https://upstream.example" }],
+    keys: [
+      { channel_key: "first-key", enabled: true },
+      { channel_key: "", enabled: false },
+      { channel_key: "second-key", enabled: true },
+    ],
+    model: "model-a,model-b",
+    custom_model: "custom-model",
+    proxy: true,
+    auto_sync: true,
+    auto_group: 0,
+    custom_header: [{ header_key: "x-provider", header_value: "native" }],
+  }
 
-  const arrangeDirectMutation =
-    (mock: typeof octopusApi.createChannel, successData: unknown) =>
-    (scenario: ChannelMutationScenario) => {
-      const raw =
-        scenario === CHANNEL_MUTATION_SCENARIOS.PreflightCancellation
-          ? new DOMException("cancelled", "AbortError")
-          : new TypeError("Failed to fetch")
-      const rejectionResponse = {
-        success: false,
-        data: null,
-        message: "provider rejected",
-      }
-      mock.mockImplementation(async () => {
-        if (scenario === CHANNEL_MUTATION_SCENARIOS.Rejected) {
-          throw new octopusApi.OctopusMutationApiError("provider rejected", {
-            dispatch: "dispatched",
-            responseReceived: true,
-            confirmedNonApplication: true,
-            raw: rejectionResponse,
-          })
-        }
-        if (scenario === CHANNEL_MUTATION_SCENARIOS.PreflightCancellation) {
-          throw new octopusApi.OctopusMutationApiError("cancelled", {
-            dispatch: "not-dispatched",
-            responseReceived: false,
-            confirmedNonApplication: true,
-            raw,
-            code: raw instanceof DOMException ? raw.code : undefined,
-          })
-        }
-        if (scenario === CHANNEL_MUTATION_SCENARIOS.PostDispatchAmbiguity) {
-          throw new octopusApi.OctopusMutationApiError("Failed to fetch", {
-            dispatch: "dispatched",
-            responseReceived: false,
-            confirmedNonApplication: false,
-            raw,
-          })
-        }
-        return { success: true, data: successData, message: "success" }
-      })
-      return { raw, rejectionResponse }
-    }
-
-  it.each([
-    ["create", octopusApi.createChannel],
-    ["update", octopusApi.updateChannel],
-    ["delete", octopusApi.deleteChannel],
-  ] as const)("rethrows unknown %s programming errors", async (name, mock) => {
-    const programmingError = { name, invariant: "broken" }
-    mock.mockRejectedValueOnce(programmingError)
-    const { octopusManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
-    const mutation =
-      name === "create"
-        ? octopusManagedSiteChannels.create(config, createPayload)
-        : name === "update"
-          ? octopusManagedSiteChannels.update(config, updatePayload)
-          : octopusManagedSiteChannels.delete(config, 7)
-
-    await expect(mutation).rejects.toBe(programmingError)
-  })
-
-  it("uses a local fallback for an empty Octopus API error message", async () => {
-    const raw = { detail: "provider detail" }
-    octopusApi.createChannel.mockRejectedValueOnce(
-      new octopusApi.OctopusMutationApiError("", {
-        dispatch: "dispatched",
-        responseReceived: true,
-        confirmedNonApplication: true,
-        raw,
-        code: "UPSTREAM_REJECTED",
-      }),
-    )
-    const { octopusManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
+  it("includes every available Octopus key in matching evidence without native CRUD settings", async () => {
+    octopusApi.searchChannels.mockResolvedValue([
+      channel,
+      { ...channel, id: 8, base_urls: [], keys: [], model: "" },
+    ])
 
     await expect(
-      octopusManagedSiteChannels.create(config, createPayload),
+      octopusManagedSiteCapabilities.matching.search(config, "upstream"),
     ).resolves.toEqual({
-      outcome: "rejected",
-      diagnostic: {
-        message: "Octopus mutation failed",
-        code: "UPSTREAM_REJECTED",
-        raw,
-      },
-    })
-  })
-
-  it("rejects an Octopus success-false response with a local fallback", async () => {
-    const response = { success: false, data: null, message: "" }
-    octopusApi.createChannel.mockResolvedValueOnce(response)
-    const { octopusManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
-
-    await expect(
-      octopusManagedSiteChannels.create(config, createPayload),
-    ).resolves.toEqual({
-      outcome: "rejected",
-      diagnostic: {
-        message: "Provider rejected the mutation",
-        raw: response,
-      },
-    })
-  })
-
-  testManagedSiteChannelMutationContract([
-    {
-      name: "create",
-      effect: { kind: "resource-created", resourceKind: "channel" },
-      successData: { id: 17 },
-      arrange: arrangeDirectMutation(octopusApi.createChannel, { id: 17 }),
-      invoke: async () => {
-        const { octopusManagedSiteChannels } = await import(
-          "~/services/apiAdapters/managedSites/octopus"
-        )
-        return await octopusManagedSiteChannels.create(config, createPayload)
-      },
-      assertRequestPayload: () =>
-        expect(octopusApi.createChannel.mock.calls.at(-1)?.[1]).toEqual({
-          name: "channel",
-          type: OctopusOutboundType.OpenAIChat,
-          enabled: true,
-          baseUrl: "",
+      items: [
+        {
+          ref: modelResourceRef(7, {
+            siteType: "octopus",
+            scopeKey: config.baseUrl,
+          }),
+          name: "Native channel",
+          type: 0,
+          base_url: "https://upstream.example",
+          models: "model-a,model-b",
+          key: "first-key\nsecond-key",
+        },
+        {
+          ref: modelResourceRef(8, {
+            siteType: "octopus",
+            scopeKey: config.baseUrl,
+          }),
+          name: "Native channel",
+          type: 0,
+          base_url: "",
+          models: "",
           key: "",
-          model: undefined,
-          autoSync: true,
-        }),
-    },
-    {
-      name: "update",
-      effect: {
-        kind: "resource-updated",
-        resourceKind: "channel",
-        resourceId: 7,
-      },
-      successData: { id: 7 },
-      arrange: arrangeDirectMutation(octopusApi.updateChannel, { id: 7 }),
-      invoke: async () => {
-        const { octopusManagedSiteChannels } = await import(
-          "~/services/apiAdapters/managedSites/octopus"
-        )
-        return await octopusManagedSiteChannels.update(config, updatePayload)
-      },
-      assertRequestPayload: () =>
-        expect(octopusApi.updateChannel.mock.calls.at(-1)?.[1]).toEqual({
-          id: 7,
-          name: "updated",
-          type: undefined,
-          enabled: undefined,
-          baseUrl: undefined,
-          model: undefined,
-        }),
-    },
-    {
-      name: "delete",
-      effect: {
-        kind: "resource-deleted",
-        resourceKind: "channel",
-        resourceId: 7,
-      },
-      successData: undefined,
-      arrange: arrangeDirectMutation(octopusApi.deleteChannel, null),
-      invoke: async () => {
-        const { octopusManagedSiteChannels } = await import(
-          "~/services/apiAdapters/managedSites/octopus"
-        )
-        return await octopusManagedSiteChannels.delete(config, 7)
-      },
-      assertRequestPayload: () =>
-        expect(octopusApi.deleteChannel.mock.calls.at(-1)?.[1]).toBe(7),
-    },
-  ])
-
-  const resourceDraft: ChannelFormData = {
-    name: "Resource Octopus channel",
-    type: OctopusOutboundType.Gemini,
-    key: "sk-resource",
-    base_url: "https://resource.example.invalid/v1",
-    models: ["gemini-example"],
-    groups: ["default"],
-    priority: 0,
-    weight: 0,
-    status: 1,
-  }
-  const resourceDetail: ManagedUpstreamResourceDetail<OctopusChannel> = {
-    summary: {
-      ref: {
-        managedSiteType: SITE_TYPES.OCTOPUS,
-        scopeKey: "https://octopus.example.invalid",
-        resourceId: "7",
-      },
-      displayName: octopusChannel.name,
-      nativeKind: "outbound",
-      status: "enabled",
-      secretState: "available",
-      capabilities: { canUpdate: true },
-    },
-    native: octopusChannel,
-  }
-
-  testManagedUpstreamResourceMutationContract([
-    {
-      name: "create",
-      effect: { kind: "resource-created", resourceKind: "channel" },
-      successData: expect.objectContaining({
-        displayName: octopusChannel.name,
-        nativeKind: "outbound",
-      }),
-      arrange: arrangeDirectMutation(octopusApi.createChannel, octopusChannel),
-      invoke: async () => {
-        const { octopusManagedSiteCapabilities } = await import(
-          "~/services/apiAdapters/managedSites/octopus"
-        )
-        return await octopusManagedSiteCapabilities.resources!.items.create(
-          config,
-          resourceDraft,
-        )
-      },
-      assertRequestPayload: () =>
-        expect(octopusApi.createChannel.mock.calls.at(-1)?.[1]).toEqual(
-          expect.objectContaining({
-            name: resourceDraft.name,
-            baseUrl: resourceDraft.base_url,
-          }),
-        ),
-    },
-    {
-      name: "update",
-      effect: {
-        kind: "resource-updated",
-        resourceKind: "channel",
-        resourceId: 7,
-      },
-      successData: expect.objectContaining({
-        displayName: octopusChannel.name,
-        nativeKind: "outbound",
-      }),
-      arrange: arrangeDirectMutation(octopusApi.updateChannel, octopusChannel),
-      invoke: async () => {
-        const { octopusManagedSiteCapabilities } = await import(
-          "~/services/apiAdapters/managedSites/octopus"
-        )
-        return await octopusManagedSiteCapabilities.resources!.items.update(
-          config,
-          resourceDetail,
-          resourceDraft,
-        )
-      },
-      assertRequestPayload: () =>
-        expect(octopusApi.updateChannel.mock.calls.at(-1)?.[1]).toEqual(
-          expect.objectContaining({
-            id: 7,
-            customModel: octopusChannel.custom_model,
-            customHeaders: octopusChannel.custom_header,
-            paramOverride: octopusChannel.param_override,
-            source: resourceDetail.native,
-          }),
-        ),
-    },
-    {
-      name: "delete",
-      effect: {
-        kind: "resource-deleted",
-        resourceKind: "channel",
-        resourceId: 7,
-      },
-      successData: undefined,
-      arrange: arrangeDirectMutation(octopusApi.deleteChannel, null),
-      invoke: async () => {
-        const { octopusManagedSiteCapabilities } = await import(
-          "~/services/apiAdapters/managedSites/octopus"
-        )
-        return await octopusManagedSiteCapabilities.resources!.items.delete(
-          config,
-          resourceDetail.summary.ref,
-        )
-      },
-      assertRequestPayload: () =>
-        expect(octopusApi.deleteChannel.mock.calls.at(-1)?.[1]).toBe(7),
-    },
-  ])
-
-  it("normalizes direct Octopus search and list results to managed-site channel list data", async () => {
-    octopusApi.searchChannels.mockResolvedValue([octopusChannel])
-    octopusApi.listChannels.mockResolvedValue([octopusChannel])
-
-    const { octopusManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
-
-    await expect(
-      octopusManagedSiteChannels.search(config, "octopus"),
-    ).resolves.toMatchObject({
-      items: [
-        {
-          id: 7,
-          name: "Octopus channel",
-          base_url: "https://upstream.example.invalid/v1",
-          key: "sk-test",
-          models: "gpt-4o",
-          _octopusData: octopusChannel,
         },
       ],
-      total: 1,
-      type_counts: {
-        [String(OctopusOutboundType.OpenAIChat)]: 1,
-      },
+      total: 2,
+      type_counts: {},
     })
-    await expect(octopusManagedSiteChannels.list?.(config)).resolves.toEqual({
-      items: [
-        expect.objectContaining({
-          id: 7,
-          _octopusData: octopusChannel,
-        }),
-      ],
-      total: 1,
-      type_counts: {
-        [String(OctopusOutboundType.OpenAIChat)]: 1,
-      },
-    })
-  })
-
-  it("returns null when Octopus channel search fails", async () => {
-    octopusApi.searchChannels.mockRejectedValue(new Error("search failed"))
-    const { octopusManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
-
-    await expect(
-      octopusManagedSiteChannels.search(config, "octopus"),
-    ).resolves.toBeNull()
-  })
-
-  it("maps Octopus create payloads and preserves success messages", async () => {
-    octopusApi.createChannel.mockResolvedValue({
-      success: true,
-      data: { id: 8 },
-      message: "",
-    })
-    const { octopusManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
-
-    await expect(
-      octopusManagedSiteChannels.create(config, {
-        mode: "single",
-        channel: {
-          name: "",
-          type: 1,
-          status: 1,
-        },
-      }),
-    ).resolves.toEqual({
-      outcome: "succeeded",
-      confirmedEffects: [{ kind: "resource-created", resourceKind: "channel" }],
-      data: { id: 8 },
-    })
-
-    expect(octopusApi.createChannel).toHaveBeenCalledWith(config, {
-      name: "",
-      type: OctopusOutboundType.OpenAIResponse,
-      enabled: true,
-      baseUrl: "",
-      key: "",
-      model: undefined,
-      autoSync: true,
-    })
-  })
-
-  it("preserves ambiguous Octopus create failures as uncertain diagnostics", async () => {
-    const error = new Error("create failed")
-    octopusApi.createChannel.mockRejectedValue(postDispatchError(error))
-    const { octopusManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
-
-    await expect(
-      octopusManagedSiteChannels.create(config, {
-        mode: "single",
-        channel: { name: "broken", status: 1 },
-      }),
-    ).resolves.toEqual({
-      outcome: "uncertain",
-      diagnostic: { message: "create failed", raw: error },
-    })
-  })
-
-  it("exposes provider config and draft functions", async () => {
-    const { octopusManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
-
-    expect(octopusManagedSiteCapabilities.config.checkValid).toBe(
-      checkValidOctopusConfig,
-    )
-    await expect(octopusManagedSiteCapabilities.config.get()).resolves.toEqual(
-      config,
-    )
-    expect(octopusManagedSiteCapabilities.channelDrafts).toEqual({
-      fetchAvailableModels,
-      buildName: buildChannelName,
-      prepareFormData: prepareChannelFormData,
-      buildPayload: buildChannelPayload,
-    })
-    expect(octopusManagedSiteCapabilities.resources).toEqual({
-      items: {
-        list: expect.any(Function),
-        search: expect.any(Function),
-        getDetail: expect.any(Function),
-        create: expect.any(Function),
-        update: expect.any(Function),
-        delete: expect.any(Function),
-      },
-      drafts: {
-        prepareImportDraft: expect.any(Function),
-        prepareEditDraft: expect.any(Function),
-        describeFields: expect.any(Function),
-        validateDraft: expect.any(Function),
-      },
-    })
-    expect(octopusManagedSiteCapabilities).not.toHaveProperty("imports")
-  })
-
-  it("preserves an explicit empty base URL update", async () => {
-    octopusApi.updateChannel.mockResolvedValue({
-      success: true,
-      data: null,
-    })
-    const { octopusManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
-
-    await octopusManagedSiteChannels.update(config, {
-      id: 7,
-      base_url: "",
-    })
-
-    expect(octopusApi.updateChannel).toHaveBeenCalledWith(config, {
-      id: 7,
-      name: undefined,
-      type: undefined,
-      enabled: undefined,
-      baseUrl: "",
-      model: undefined,
-    })
-  })
-
-  it("maps Octopus update fields and returns safe failure responses", async () => {
-    octopusApi.updateChannel.mockResolvedValueOnce({
-      success: true,
-      data: { id: 7 },
-      message: "",
-    })
-    const { octopusManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
-
-    await expect(
-      octopusManagedSiteChannels.update(config, {
-        id: 7,
-        name: "Updated",
-        type: 1,
-        status: 0,
-        models: "gpt-4o",
-      } as Parameters<typeof octopusManagedSiteChannels.update>[1]),
-    ).resolves.toEqual({
-      outcome: "succeeded",
-      confirmedEffects: [
-        {
-          kind: "resource-updated",
-          resourceKind: "channel",
-          resourceId: 7,
-        },
-      ],
-      data: { id: 7 },
-    })
-
-    expect(octopusApi.updateChannel).toHaveBeenLastCalledWith(config, {
-      id: 7,
-      name: "Updated",
-      type: OctopusOutboundType.OpenAIResponse,
-      enabled: false,
-      baseUrl: undefined,
-      model: "gpt-4o",
-    })
-
-    const updateError = new Error("update failed")
-    octopusApi.updateChannel.mockRejectedValueOnce(
-      postDispatchError(updateError),
-    )
-    await expect(
-      octopusManagedSiteChannels.update(config, { id: 7 }),
-    ).resolves.toEqual({
-      outcome: "uncertain",
-      diagnostic: { message: "update failed", raw: updateError },
-    })
+    expect(octopusApi.searchChannels).toHaveBeenCalledWith(config, "upstream")
   })
 
   it("updates scheduled model lists through the common mutation boundary without changing the payload", async () => {
@@ -646,15 +148,13 @@ describe("Octopus managed-site channel capability", () => {
       data: { id: 7 },
       message: "",
     })
-    const { octopusManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
+
     const controller = new AbortController()
 
     await expect(
-      octopusManagedSiteChannels.updateModels?.(
+      octopusManagedResourceModels.updateModels?.(
         config,
-        7,
+        modelResourceRef(7, { siteType: "octopus", scopeKey: config.baseUrl }),
         ["model-a", "model-b"],
         {
           signal: controller.signal,
@@ -686,12 +186,13 @@ describe("Octopus managed-site channel capability", () => {
       data: { id: 7 },
       message: "",
     })
-    const { octopusManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
 
     await expect(
-      octopusManagedSiteChannels.updateModels?.(config, 7, ["model-a"]),
+      octopusManagedResourceModels.updateModels?.(
+        config,
+        modelResourceRef(7, { siteType: "octopus", scopeKey: config.baseUrl }),
+        ["model-a"],
+      ),
     ).resolves.toMatchObject({ outcome: "succeeded", data: undefined })
 
     expect(octopusApi.updateChannel).toHaveBeenCalledWith(config, {
@@ -700,536 +201,32 @@ describe("Octopus managed-site channel capability", () => {
     })
   })
 
-  it("maps Octopus delete responses and failures", async () => {
-    octopusApi.deleteChannel.mockResolvedValueOnce({
+  it("retains explicit user intent when updating an Octopus model list", async () => {
+    const protectionBypassExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.SyncManagedSiteModels,
+    )
+    const signal = new AbortController().signal
+    octopusApi.updateChannel.mockResolvedValueOnce({
       success: true,
-      data: null,
+      data: { id: 7 },
       message: "",
     })
-    const { octopusManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
-
-    await expect(octopusManagedSiteChannels.delete(config, 7)).resolves.toEqual(
-      {
-        outcome: "succeeded",
-        confirmedEffects: [
-          {
-            kind: "resource-deleted",
-            resourceKind: "channel",
-            resourceId: 7,
-          },
-        ],
-        data: undefined,
-      },
-    )
-    expect(octopusApi.deleteChannel).toHaveBeenCalledWith(config, 7)
-
-    const deleteError = new Error("delete failed")
-    octopusApi.deleteChannel.mockRejectedValueOnce(
-      postDispatchError(deleteError),
-    )
-    await expect(octopusManagedSiteChannels.delete(config, 7)).resolves.toEqual(
-      {
-        outcome: "uncertain",
-        diagnostic: { message: "delete failed", raw: deleteError },
-      },
-    )
-
-    octopusApi.deleteChannel.mockRejectedValueOnce(
-      postDispatchError(new TypeError("Failed to fetch")),
-    )
-    await expect(octopusManagedSiteChannels.delete(config, 7)).resolves.toEqual(
-      {
-        outcome: "uncertain",
-        diagnostic: {
-          message: "Failed to fetch",
-          raw: expect.any(TypeError),
-        },
-      },
-    )
-  })
-
-  it("maps native Octopus channels to core resource summaries", async () => {
-    octopusApi.listChannels.mockResolvedValue([octopusChannel])
-    octopusApi.searchChannels.mockResolvedValue([
-      {
-        ...octopusChannel,
-        id: 8,
-        name: "Disabled Octopus channel",
-        enabled: false,
-        keys: [{ enabled: true, channel_key: "sk-********" }],
-      },
-    ])
-    const { octopusManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
 
     await expect(
-      octopusManagedSiteCapabilities.resources.items.list(config),
-    ).resolves.toEqual({
-      total: 1,
-      items: [
-        expect.objectContaining({
-          displayName: "Octopus channel",
-          nativeKind: "outbound",
-          status: "enabled",
-          typeLabel: "OpenAI Chat",
-          endpointLabel: "https://upstream.example.invalid/v1",
-          modelCount: 1,
-          modelPreview: ["gpt-4o"],
-          secretState: "available",
-          ref: {
-            managedSiteType: SITE_TYPES.OCTOPUS,
-            scopeKey: "https://octopus.example.invalid",
-            resourceId: "7",
-          },
-        }),
-      ],
-    })
-
-    await expect(
-      octopusManagedSiteCapabilities.resources.items.search(config, "octopus"),
-    ).resolves.toEqual({
-      total: 1,
-      items: [
-        expect.objectContaining({
-          displayName: "Disabled Octopus channel",
-          nativeKind: "outbound",
-          status: "disabled",
-          secretState: "masked",
-          ref: {
-            managedSiteType: SITE_TYPES.OCTOPUS,
-            scopeKey: "https://octopus.example.invalid",
-            resourceId: "8",
-          },
-        }),
-      ],
-    })
-  })
-
-  it("maps Octopus resource summaries without usable keys and search failures", async () => {
-    octopusApi.listChannels.mockResolvedValue([
-      {
-        ...octopusChannel,
-        id: 10,
-        keys: [],
-      },
-    ])
-    octopusApi.searchChannels.mockRejectedValue(new Error("search failed"))
-    const { octopusManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
-
-    await expect(
-      octopusManagedSiteCapabilities.resources.items.list(config),
-    ).resolves.toEqual({
-      total: 1,
-      items: [
-        expect.objectContaining({
-          displayName: "Octopus channel",
-          secretState: "unavailable",
-          ref: expect.objectContaining({ resourceId: "10" }),
-        }),
-      ],
-    })
-    await expect(
-      octopusManagedSiteCapabilities.resources.items.search(config, "missing"),
-    ).resolves.toBeNull()
-  })
-
-  it("delegates Octopus resource create and delete through existing channel operations with normalized responses", async () => {
-    octopusApi.createChannel.mockResolvedValue({
-      success: true,
-      data: {
-        ...octopusChannel,
-        id: 9,
-        name: "Created Octopus channel",
-      },
-      message: "",
-    })
-    octopusApi.deleteChannel.mockResolvedValue({
-      success: true,
-      data: undefined,
-      message: "",
-    })
-    const { octopusManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
-
-    await expect(
-      octopusManagedSiteCapabilities.resources.items.create(config, {
-        name: "Created Octopus channel",
-        type: OctopusOutboundType.Gemini,
-        key: "sk-created",
-        base_url: "https://created.example.invalid/v1",
-        models: ["gemini-1.5-pro"],
-        groups: ["default"],
-        priority: 0,
-        weight: 0,
-        status: 1,
-      }),
-    ).resolves.toEqual({
-      outcome: "succeeded",
-      confirmedEffects: [{ kind: "resource-created", resourceKind: "channel" }],
-      data: expect.objectContaining({
-        displayName: "Created Octopus channel",
-        nativeKind: "outbound",
-        status: "enabled",
-        ref: {
-          managedSiteType: SITE_TYPES.OCTOPUS,
-          scopeKey: "https://octopus.example.invalid",
-          resourceId: "9",
-        },
-      }),
-    })
-    await expect(
-      octopusManagedSiteCapabilities.resources.items.delete(config, {
-        managedSiteType: SITE_TYPES.OCTOPUS,
-        scopeKey: "https://octopus.example.invalid",
-        resourceId: "9",
-      }),
-    ).resolves.toEqual({
-      outcome: "succeeded",
-      data: undefined,
-      confirmedEffects: [
+      octopusManagedResourceModels.updateModels(
+        config,
+        modelResourceRef(7, { siteType: "octopus", scopeKey: config.baseUrl }),
+        ["model-a"],
         {
-          kind: "resource-deleted",
-          resourceKind: "channel",
-          resourceId: 9,
+          signal,
+          protectionBypassExecution,
         },
-      ],
-    })
-
-    expect(octopusApi.createChannel).toHaveBeenCalledWith(config, {
-      name: "Created Octopus channel",
-      type: OctopusOutboundType.Gemini,
-      enabled: true,
-      baseUrl: "https://created.example.invalid/v1",
-      key: "sk-created",
-      model: "gemini-1.5-pro",
-      autoSync: true,
-    })
-    expect(octopusApi.deleteChannel).toHaveBeenCalledWith(config, 9)
-  })
-
-  it("loads Octopus detail from native channel data and prepares channel-worded edit drafts", async () => {
-    octopusApi.listChannels.mockResolvedValue([octopusChannel])
-    const { octopusManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
-
-    const detail =
-      await octopusManagedSiteCapabilities.resources.items.getDetail(config, {
-        managedSiteType: SITE_TYPES.OCTOPUS,
-        scopeKey: "https://octopus.example.invalid",
-        resourceId: "7",
-      })
-    const draft =
-      octopusManagedSiteCapabilities.resources.drafts.prepareEditDraft(detail)
-
-    expect(detail).toEqual({
-      summary: expect.objectContaining({
-        displayName: "Octopus channel",
-        nativeKind: "outbound",
-      }),
-      native: octopusChannel,
-    })
-    expect(
-      octopusManagedSiteCapabilities.resources.drafts.describeFields({
-        mode: "edit",
-        detail,
-      }),
-    ).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ name: "name", label: "Channel name" }),
-        expect.objectContaining({ name: "key", label: "API key" }),
-      ]),
-    )
-    expect(draft).toEqual({
-      name: "Octopus channel",
-      type: OctopusOutboundType.OpenAIChat,
-      key: "sk-test",
-      base_url: "https://upstream.example.invalid/v1",
-      models: ["gpt-4o"],
-      groups: ["default"],
-      priority: 0,
-      weight: 0,
-      status: 1,
-    })
-  })
-
-  it("rejects stale Octopus resource refs from a different site or scope before native access", async () => {
-    const { octopusManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
-
-    await expect(
-      octopusManagedSiteCapabilities.resources.items.getDetail(config, {
-        managedSiteType: SITE_TYPES.NEW_API,
-        scopeKey: "https://octopus.example.invalid",
-        resourceId: "7",
-      }),
-    ).rejects.toThrow("Resource reference does not match this managed site")
-    await expect(
-      octopusManagedSiteCapabilities.resources.items.delete(config, {
-        managedSiteType: SITE_TYPES.OCTOPUS,
-        scopeKey: "https://other.example.invalid",
-        resourceId: "7",
-      }),
-    ).rejects.toThrow("Resource reference does not match this managed site")
-
-    expect(octopusApi.listChannels).not.toHaveBeenCalled()
-    expect(octopusApi.deleteChannel).not.toHaveBeenCalled()
-  })
-
-  it("preserves native Octopus fields through resource edit updates while omitting masked keys", async () => {
-    octopusApi.updateChannel.mockResolvedValue({
-      success: true,
-      message: "ok",
-    })
-    const { octopusManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
-    const detail: ManagedUpstreamResourceDetail<OctopusChannel> = {
-      summary: {
-        ref: {
-          managedSiteType: SITE_TYPES.OCTOPUS,
-          scopeKey: "https://octopus.example.invalid",
-          resourceId: "7",
-        },
-        displayName: octopusChannel.name,
-        nativeKind: "outbound",
-        status: "enabled",
-        secretState: "masked",
-        capabilities: { canUpdate: true },
-      },
-      native: {
-        ...octopusChannel,
-        keys: [
-          {
-            id: 1,
-            channel_id: 7,
-            enabled: true,
-            channel_key: "sk-********",
-            remark: "primary",
-          },
-        ],
-      },
-    }
-
-    await octopusManagedSiteCapabilities.resources.items.update(
+      ),
+    ).resolves.toMatchObject({ outcome: "succeeded" })
+    expect(octopusApi.updateChannel).toHaveBeenCalledWith(
       config,
-      detail,
-      {
-        name: "Edited Octopus channel",
-        type: OctopusOutboundType.Anthropic,
-        key: "sk-********",
-        base_url: "https://edited.example.invalid/v1",
-        models: ["claude-3-5-sonnet"],
-        groups: ["default"],
-        priority: 0,
-        weight: 0,
-        status: 2,
-      },
+      { id: 7, model: "model-a" },
+      { signal, protectionBypassExecution },
     )
-
-    expect(octopusApi.updateChannel).toHaveBeenCalledWith(config, {
-      id: 7,
-      name: "Edited Octopus channel",
-      type: OctopusOutboundType.Anthropic,
-      enabled: false,
-      baseUrl: "https://edited.example.invalid/v1",
-      model: "claude-3-5-sonnet",
-      key: undefined,
-      customModel: "custom-a,custom-b",
-      proxy: false,
-      autoSync: true,
-      customHeaders: [{ header_key: "x-provider", header_value: "octopus" }],
-      channelProxy: "http://proxy.example.invalid:8080",
-      paramOverride: '{"temperature":0.2}',
-      matchRegex: "^gpt-",
-      source: detail.native,
-    })
-    const command = octopusApi.updateChannel.mock.calls.at(-1)?.[1]
-    expect(command.key).toBeUndefined()
-    expect(command.source).toBe(detail.native)
-  })
-
-  it("updates an Octopus key only when the draft contains a usable replacement key", async () => {
-    octopusApi.updateChannel.mockResolvedValue({
-      success: true,
-      message: "ok",
-    })
-    const { octopusManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
-
-    await octopusManagedSiteCapabilities.resources.items.update(
-      config,
-      {
-        summary: {
-          ref: {
-            managedSiteType: SITE_TYPES.OCTOPUS,
-            scopeKey: "https://octopus.example.invalid",
-            resourceId: "7",
-          },
-          displayName: octopusChannel.name,
-          nativeKind: "outbound",
-          status: "enabled",
-          secretState: "available",
-          capabilities: { canUpdate: true },
-        },
-        native: octopusChannel,
-      },
-      {
-        name: octopusChannel.name,
-        type: octopusChannel.type,
-        key: "  sk-replacement-key  ",
-        base_url: octopusChannel.base_urls[0].url,
-        models: ["gpt-4o"],
-        groups: ["default"],
-        priority: 0,
-        weight: 0,
-        status: 1,
-      },
-    )
-
-    expect(octopusApi.updateChannel.mock.calls.at(-1)?.[1]).toEqual(
-      expect.objectContaining({
-        key: "sk-replacement-key",
-        source: octopusChannel,
-      }),
-    )
-  })
-
-  it("adds an Octopus key only for usable drafts when no primary key exists", async () => {
-    octopusApi.updateChannel.mockResolvedValue({
-      success: true,
-      message: "ok",
-    })
-    const { octopusManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
-    const detail: ManagedUpstreamResourceDetail<OctopusChannel> = {
-      summary: {
-        ref: {
-          managedSiteType: SITE_TYPES.OCTOPUS,
-          scopeKey: "https://octopus.example.invalid",
-          resourceId: "7",
-        },
-        displayName: octopusChannel.name,
-        nativeKind: "outbound",
-        status: "enabled",
-        secretState: "unavailable",
-        capabilities: { canUpdate: true },
-      },
-      native: {
-        ...octopusChannel,
-        keys: [],
-      },
-    }
-    const draft: ChannelFormData = {
-      name: octopusChannel.name,
-      type: octopusChannel.type,
-      key: "  sk-added-key  ",
-      base_url: octopusChannel.base_urls[0].url,
-      models: ["gpt-4o"],
-      groups: ["default"],
-      priority: 0,
-      weight: 0,
-      status: 1,
-    }
-
-    await octopusManagedSiteCapabilities.resources.items.update(
-      config,
-      detail,
-      draft,
-    )
-
-    expect(octopusApi.updateChannel.mock.calls.at(-1)?.[1]).toEqual(
-      expect.objectContaining({
-        key: "sk-added-key",
-        source: detail.native,
-      }),
-    )
-
-    octopusApi.updateChannel.mockClear()
-    await octopusManagedSiteCapabilities.resources.items.update(
-      config,
-      detail,
-      {
-        ...draft,
-        key: "",
-      },
-    )
-
-    const emptyKeyCommand = octopusApi.updateChannel.mock.calls.at(-1)?.[1]
-    expect(emptyKeyCommand.key).toBeUndefined()
-    expect(emptyKeyCommand.source).toBe(detail.native)
-  })
-
-  it("prepares and validates Octopus resource import drafts", async () => {
-    const { octopusManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
-    const sourceDraft: ChannelFormData = {
-      name: "Source",
-      type: OctopusOutboundType.OpenAIChat,
-      key: "sk-source",
-      base_url: "https://source.example.invalid",
-      models: ["gpt-4o"],
-      groups: ["vip"],
-      priority: 1,
-      weight: 2,
-      status: 1,
-    }
-
-    await expect(
-      octopusManagedSiteCapabilities.resources.drafts.prepareImportDraft({
-        source: sourceDraft,
-      }),
-    ).resolves.toBe(sourceDraft)
-    await expect(
-      octopusManagedSiteCapabilities.resources.drafts.prepareImportDraft({
-        resource: {
-          ref: {
-            managedSiteType: SITE_TYPES.OCTOPUS,
-            scopeKey: "https://octopus.example.invalid",
-            resourceId: "11",
-          },
-          displayName: "Imported Octopus",
-          nativeKind: "outbound",
-          status: "enabled",
-          endpointLabel: "https://imported.example.invalid",
-          modelPreview: ["gpt-4o-mini"],
-          secretState: "masked",
-          capabilities: {},
-        },
-      }),
-    ).resolves.toEqual({
-      name: "Imported Octopus",
-      type: OctopusOutboundType.OpenAIChat,
-      key: "",
-      base_url: "https://imported.example.invalid",
-      models: ["gpt-4o-mini"],
-      groups: ["default"],
-      priority: 0,
-      weight: 0,
-      status: 1,
-    })
-    expect(
-      octopusManagedSiteCapabilities.resources.drafts.validateDraft({
-        ...sourceDraft,
-        name: "",
-        models: [],
-      }),
-    ).toEqual({
-      valid: false,
-      errors: [
-        { field: "name", message: "Channel name is required" },
-        { field: "models", message: "At least one model is required" },
-      ],
-    })
   })
 })

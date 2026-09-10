@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import toast from "react-hot-toast/headless"
 import { useTranslation } from "react-i18next"
 
 import { parseDatePickerTimestamp } from "~/components/ui/datePickerValue"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import toast from "~/lib/notify/content"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
@@ -15,7 +15,9 @@ import {
 } from "~/services/productAnalytics/contracts"
 import {
   API_TYPES,
+  API_VERIFICATION_MODES,
   type ApiVerificationApiType,
+  type ApiVerificationMode,
   type ApiVerificationProbeId,
 } from "~/services/verification/aiApiVerification"
 import {
@@ -48,7 +50,10 @@ import {
   getApiCheckActionSourceKind,
   getApiCheckSourceKind,
 } from "./apiCheckModalAnalytics"
-import type { ProbeItemState } from "./apiCheckModalTypes"
+import type {
+  ApiCheckValidationError,
+  ProbeItemState,
+} from "./apiCheckModalTypes"
 import { useApiCheckBaseUrlHistory } from "./useApiCheckBaseUrlHistory"
 import { useApiCheckModalShell } from "./useApiCheckModalShell"
 import { useApiCheckModelDiscovery } from "./useApiCheckModelDiscovery"
@@ -73,6 +78,7 @@ export interface ApiCheckModalViewModel {
   extractionMetadata: ApiCheckOpenModalDetail["extraction"]
   apiKeyVisible: boolean
   apiType: ApiVerificationApiType
+  verificationMode: ApiVerificationMode
   modelId: string
   modelIdsOptions: Array<{ value: string; label: string }>
   tags: Tag[]
@@ -111,6 +117,7 @@ export interface ApiCheckModalActions {
   setApiKey: (value: string) => void
   setApiKeyVisible: (isVisible: boolean) => void
   setApiType: (apiType: ApiVerificationApiType) => void
+  setVerificationMode: (mode: ApiVerificationMode) => void
   setModelId: (modelId: string) => void
   setSelectedTagIds: (tagIds: string[]) => void
   setNotes: (notes: string) => void
@@ -153,6 +160,9 @@ export function useApiCheckModalViewModel() {
   const [apiType, setApiType] = useState<ApiVerificationApiType>(
     API_TYPES.OPENAI_COMPATIBLE,
   )
+  const [verificationMode, setVerificationMode] = useState<ApiVerificationMode>(
+    API_VERIFICATION_MODES.Streaming,
+  )
   const [tags, setTags] = useState<Tag[]>([])
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [notes, setNotes] = useState("")
@@ -165,7 +175,14 @@ export function useApiCheckModalViewModel() {
   const skipNextSourceTextExtractionRef = useRef<string | null>(null)
 
   const [isSavingProfile, setIsSavingProfile] = useState(false)
-  const [validationError, setValidationError] = useState<string | null>(null)
+  const [validationFailure, setValidationError] =
+    useState<ApiCheckValidationError | null>(null)
+  const validationError =
+    validationFailure === "missing-credentials"
+      ? t("webAiApiCheck:modal.errors.missingBaseUrlOrKey")
+      : validationFailure === "missing-model"
+        ? t("aiApiVerification:verifyDialog.requiresModelId")
+        : null
   const hasInitializedApiTypeRef = useRef(false)
 
   const { popoverPortalContainer, refs: modalShellRefs } =
@@ -227,6 +244,7 @@ export function useApiCheckModalViewModel() {
   const probeRunner = useApiCheckProbeRunner({
     t,
     apiType,
+    verificationMode,
     trigger,
     baseUrl,
     apiKey,
@@ -343,6 +361,7 @@ export function useApiCheckModalViewModel() {
       clearHistoryPrefilledFetchKey()
       updateBaseUrl(nextBaseUrl)
       setApiKey(nextApiKey)
+      setVerificationMode(API_VERIFICATION_MODES.Streaming)
       setSelectedTagIds([])
       setNotes("")
       setExpiresAtInput("")
@@ -507,7 +526,7 @@ export function useApiCheckModalViewModel() {
     const trimmedApiKey = apiKey.trim()
 
     if (!trimmedBaseUrl || !trimmedApiKey) {
-      setValidationError(t("webAiApiCheck:modal.errors.missingBaseUrlOrKey"))
+      setValidationError("missing-credentials")
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
         insights: buildApiCheckAnalyticsInsights(apiType, trigger),
@@ -609,6 +628,7 @@ export function useApiCheckModalViewModel() {
       extractionMetadata,
       apiKeyVisible,
       apiType,
+      verificationMode,
       modelId,
       modelIdsOptions,
       tags,
@@ -646,6 +666,7 @@ export function useApiCheckModalViewModel() {
       setApiKey,
       setApiKeyVisible,
       setApiType,
+      setVerificationMode,
       setModelId,
       setSelectedTagIds,
       setNotes,

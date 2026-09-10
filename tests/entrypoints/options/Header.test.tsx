@@ -3,6 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
 import Header from "~/entrypoints/options/components/Header"
 import {
+  PRODUCT_TOUR_TARGET_ATTRIBUTE,
+  PRODUCT_TOUR_TARGETS,
+} from "~/features/ProductTour/constants"
+import {
   act,
   fireEvent,
   render,
@@ -101,6 +105,46 @@ describe("options Header", () => {
     expect(
       await screen.findByRole("button", { name: "Dev: Dialog debug menu" }),
     ).toBeInTheDocument()
+  })
+
+  it("attaches the workspace tour target to the search control", async () => {
+    const { container } = render(
+      <Header
+        onSearchOpen={vi.fn()}
+        onTitleClick={vi.fn()}
+        onMenuToggle={vi.fn()}
+        isMobileSidebarOpen={false}
+      />,
+    )
+
+    await screen.findByRole("link", { name: "ui:app.name" })
+
+    const target = container.querySelector(
+      `[${PRODUCT_TOUR_TARGET_ATTRIBUTE}="${PRODUCT_TOUR_TARGETS.Workspace}"]`,
+    )
+
+    expect(target).toBeInstanceOf(HTMLButtonElement)
+    expect(target).toHaveAccessibleName("ui:optionsSearch.open")
+  })
+
+  it("attaches the compact tour target to the mobile menu control", async () => {
+    render(
+      <Header
+        onSearchOpen={vi.fn()}
+        onTitleClick={vi.fn()}
+        onMenuToggle={vi.fn()}
+        isMobileSidebarOpen={false}
+      />,
+    )
+
+    const target = await screen.findByRole("button", {
+      name: "ui:navigation.toggleMenu",
+    })
+
+    expect(target).toHaveAttribute(
+      PRODUCT_TOUR_TARGET_ATTRIBUTE,
+      PRODUCT_TOUR_TARGETS.MobileMenu,
+    )
   })
 
   it("keeps the logo title visible before scrolling on mobile", async () => {

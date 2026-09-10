@@ -41,6 +41,18 @@ export const aihubmixAccountCompletion: AccountCompletionCapability = {
       }
     }
 
+    const tokenData =
+      tokenInfo && typeof tokenInfo === "object"
+        ? (tokenInfo as { username?: unknown; access_token?: unknown })
+        : {}
+    const username = helpers.trimString(tokenData.username)
+    const accessToken = helpers.trimString(tokenData.access_token)
+    helpers.captureRecoveryData({
+      ...(username ? { username } : {}),
+      ...(accessToken ? { accessToken } : {}),
+      authType: AuthTypeEnum.AccessToken,
+    })
+
     let siteStatus = null
     try {
       siteStatus = await aihubmixAccountBootstrap.fetchSiteStatus(
@@ -59,6 +71,11 @@ export const aihubmixAccountCompletion: AccountCompletionCapability = {
       )
     }
 
+    const exchangeRate =
+      aihubmixAccountBootstrap.extractDefaultExchangeRate(siteStatus) ??
+      UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+    helpers.captureRecoveryData({ exchangeRate })
+
     const checkSupport =
       typeof siteStatus?.checkin_enabled === "boolean"
         ? siteStatus.checkin_enabled
@@ -74,13 +91,6 @@ export const aihubmixAccountCompletion: AccountCompletionCapability = {
             )
             .catch(helpers.handleCheckInSupportFetchFailure)
 
-    const tokenData =
-      tokenInfo && typeof tokenInfo === "object"
-        ? (tokenInfo as { username?: unknown; access_token?: unknown })
-        : {}
-    const username = helpers.trimString(tokenData.username)
-    const accessToken = helpers.trimString(tokenData.access_token)
-
     if (!username || !accessToken) {
       throw helpers.createCompletionError(
         !accessToken
@@ -90,14 +100,15 @@ export const aihubmixAccountCompletion: AccountCompletionCapability = {
       )
     }
 
+    const siteName = await helpers.fetchSiteName(siteStatus)
+    helpers.captureRecoveryData({ siteName })
+
     return {
       username,
-      siteName: await helpers.fetchSiteName(siteStatus),
+      siteName,
       accessToken,
       userId: detected.userId.toString(),
-      exchangeRate:
-        aihubmixAccountBootstrap.extractDefaultExchangeRate(siteStatus) ??
-        UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+      exchangeRate,
       authType: AuthTypeEnum.AccessToken,
       checkIn: helpers.createInitialCheckInConfig({
         supported: checkSupport ?? false,

@@ -2,11 +2,13 @@ import { apiVerificationProbeRegistry } from "./probeRegistry"
 import { getApiVerificationProbeDefinitions } from "./probes"
 import { runModelsProbe } from "./probes/modelsProbe"
 import {
+  API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
 } from "./types"
 import type {
   ApiVerificationApiType,
+  ApiVerificationMode,
   ApiVerificationProbeResult,
 } from "./types"
 
@@ -14,6 +16,7 @@ type RunApiVerificationSuiteParams = {
   baseUrl: string
   apiKey: string
   apiType: ApiVerificationApiType
+  mode?: ApiVerificationMode
   requestedModelId?: string
   abortSignal?: AbortSignal
 }
@@ -47,6 +50,7 @@ export async function runApiVerificationSuite(
       if (definition.id === API_VERIFICATION_PROBE_IDS.WebSearch) {
         results.push({
           id: API_VERIFICATION_PROBE_IDS.WebSearch,
+          mode: params.mode ?? API_VERIFICATION_MODES.Streaming,
           status: API_VERIFICATION_PROBE_STATUSES.Unsupported,
           latencyMs: 0,
           summary: "Web search probe requires explicit API type support",
@@ -57,6 +61,7 @@ export async function runApiVerificationSuite(
 
       results.push({
         id: definition.id,
+        mode: params.mode ?? API_VERIFICATION_MODES.Streaming,
         status: API_VERIFICATION_PROBE_STATUSES.Fail,
         latencyMs: 0,
         summary: "No model available to run probes",
@@ -76,6 +81,7 @@ export async function runApiVerificationSuite(
         apiKey: params.apiKey,
         apiType: params.apiType,
         modelId: resolvedModelId,
+        mode: params.mode,
         abortSignal: params.abortSignal,
       }),
     )

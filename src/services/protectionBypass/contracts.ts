@@ -1,5 +1,6 @@
 import { OCTOPUS_LOGIN_PATH } from "~/constants/octopus"
 import { isAccountSiteType, type AccountSiteType } from "~/constants/siteType"
+import type { TempContextMode } from "~/constants/tempContextMode"
 import {
   OPENROUTER_MANAGEMENT_KEY_LABEL_MAX_LENGTH,
   type TempWindowOpenRouterManagementKeyActionParams,
@@ -50,6 +51,15 @@ export type ProtectionBypassDecisionKind = Exclude<
   ProtectionBypassDecisionResult,
   typeof PROTECTION_BYPASS_DECISION_RESULTS.Unavailable
 >
+
+/** Browser-context acquisition facts shared by execution and local diagnostics. */
+export type AuthorizedTempContextOutcome =
+  | { kind: "allowed"; adapter: TempContextMode; reused?: boolean }
+  | { kind: "denied" }
+  | {
+      kind: "unavailable"
+      reason?: "firefox_popup_unsupported" | "incognito_access_required"
+    }
 
 export const PROTECTION_BYPASS_CAPABILITY_KINDS = {
   Available: "available",
@@ -634,9 +644,20 @@ function isTempWindowNewApiSessionReadParams(
   )
 }
 
+// Octopus v0.13 reads channel inventory through stats and loads detail on demand.
+// Contract: https://github.com/bestruirui/octopus/blob/27aa40dc0f3b2902bce3e96ccdba019d17041606/web/src/api/channel.ts
+const OCTOPUS_V013_READ_ENDPOINT_METHODS = [
+  { pattern: /^\/api\/v1\/channel\/stats$/u, method: "GET" },
+  {
+    pattern: /^\/api\/v1\/channel\/detail\/[1-9]\d*$/u,
+    method: "GET",
+  },
+] as const
+
 const OCTOPUS_ENDPOINT_METHODS = [
   { pattern: new RegExp(`^${OCTOPUS_LOGIN_PATH}$`, "u"), method: "POST" },
   { pattern: /^\/api\/v1\/channel\/list$/u, method: "GET" },
+  ...OCTOPUS_V013_READ_ENDPOINT_METHODS,
   {
     pattern: /^\/api\/v1\/channel\/(?:create|update|fetch-model)$/u,
     method: "POST",
@@ -646,8 +667,9 @@ const OCTOPUS_ENDPOINT_METHODS = [
 ] as const
 
 const OCTOPUS_CONFIGURATION_TEST_ENDPOINT_METHODS = [
-  { pathname: OCTOPUS_LOGIN_PATH, method: "POST" },
-  { pathname: "/api/v1/channel/list", method: "GET" },
+  { pattern: new RegExp(`^${OCTOPUS_LOGIN_PATH}$`, "u"), method: "POST" },
+  { pattern: /^\/api\/v1\/channel\/list$/u, method: "GET" },
+  ...OCTOPUS_V013_READ_ENDPOINT_METHODS,
 ] as const
 
 /** Validates the narrow Octopus endpoint allow-list at the runtime boundary. */
@@ -690,7 +712,7 @@ function isTempWindowOctopusApiFetchParams(
     value.resourceBinding !== OCTOPUS_API_RESOURCE_BINDINGS.ConfigurationTest ||
     OCTOPUS_CONFIGURATION_TEST_ENDPOINT_METHODS.some(
       (endpoint) =>
-        endpoint.method === method && endpoint.pathname === fetchUrl.pathname,
+        endpoint.method === method && endpoint.pattern.test(fetchUrl.pathname),
     )
   return (
     fetchUrl.origin === value.originUrl &&

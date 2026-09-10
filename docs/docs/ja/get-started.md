@@ -51,7 +51,6 @@
 - [Atlas Cloud](https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub)：1 つの AI API で 300 以上の厳選された動画、画像、LLM モデルを利用でき、新しい Coding Plan プロモーションでより手頃に API へアクセスできます。[設定ガイド](./service-guides/atlascloud.md)
 - [AICodeMirror](https://www.aicodemirror.ai/register?invitecode=7IQNR8)：Claude Code / Codex / Gemini CLI 向けの公式高安定中継サービスです。このリンクから登録すると初回チャージが 20% オフになり、エンタープライズ顧客は最大 25% オフを受けられます。
 - [Suixiang AI Relay](https://sui-xiang.com/)：Claude、Codex、Gemini などの API 中継サービスを提供し、従量課金、毎日のチェックインによるテストクレジット、複数回線冗長、自動フェイルオーバーに対応します。[設定ガイド](./service-guides/suixiang.md)
-- [Infistar.ai](https://infistar.ai/register?aff=ALLAPIHUB&ref_source=link)：提供モデルはすべて実際の呼び出しで検証済みです。10,000 本を超える公式 API と公式アカウントプールの供給経路を負荷分散し、テキスト、動画、画像、埋め込み、リランキングなどのフルモーダル機能、透明な料金と利用量、公式価格の 10% からの価格を提供します。[設定ガイド](./service-guides/infistar.md)
 - [APIMart](https://go.apimart.ai/gh-all-api-hub)：AI 画像・動画生成に特化した低価格 API プラットフォーム。GPT-Image-2 は 1 枚 $0.006 から、1 ドルで 160 枚以上の画像を生成できます。画像と動画をひとつの非同期 API でカバーし、タスクを送信して ID を取得、ポーリングまたはコールバックで結果を取得できます。数万枚のバッチ処理もタイムアウトなしで実行でき、モデルを切り替えてもコードの変更は不要です。従量課金・月額料金なし。
 - [Dola Seed on BytePlus ModelArk](https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub)：BytePlus ModelArk から登録すると、各モデルにつき 500,000 トークン分の無料推論枠を受け取れます。
 :::

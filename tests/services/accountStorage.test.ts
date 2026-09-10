@@ -5,15 +5,18 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
-import { accountStorage } from "~/services/accounts/accountStorage"
 import { refreshAccountData as refreshVoApiV2AccountData } from "~/services/apiService/voapiV2"
 import {
   ACCOUNT_STORAGE_KEYS,
   STORAGE_KEYS,
   USER_PREFERENCES_STORAGE_KEYS,
 } from "~/services/core/storageKeys"
+import * as dailyBalanceCapture from "~/services/history/dailyBalanceHistory/capture"
 import { getDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import {
+  DEFAULT_PREFERENCES,
+  userPreferences,
+} from "~/services/preferences/userPreferences"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import {
   AuthTypeEnum,
@@ -30,6 +33,7 @@ import {
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { server } from "~~/tests/msw/server"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import {
   buildCompleteTodayStatsAvailability,
   buildTodayStatsAvailabilityReplacementCases,
@@ -305,6 +309,36 @@ describe("accountStorage core behaviors", () => {
           tokenExpiresAt: 1_800_000_000_000,
         },
       })
+    })
+
+    it("clears stale refresh credentials after access-token-only browser recovery", async () => {
+      seedStorage([
+        createAccount({
+          id: "sub2-account",
+          site_type: SITE_TYPES.SUB2API,
+          site_url: "https://auth.example.invalid",
+          account_info: { id: "user-1" } as SiteAccount["account_info"],
+          sub2apiAuth: {
+            refreshToken: "consumed-refresh-token",
+            tokenExpiresAt: 1_700_000_000_000,
+          },
+        }),
+      ])
+
+      await expect(
+        accountStorage.updateSub2ApiAuth("sub2-account", {
+          accessToken: "browser-recovered-access-token",
+          clearRefreshCredentials: true,
+          expectedOrigin: "https://auth.example.invalid",
+          expectedUserId: "user-1",
+        }),
+      ).resolves.toEqual({ status: "persisted" })
+
+      const account = await accountStorage.getAccountById("sub2-account")
+      expect(account?.account_info.access_token).toBe(
+        "browser-recovered-access-token",
+      )
+      expect(account).not.toHaveProperty("sub2apiAuth")
     })
 
     it("returns typed non-success outcomes for deletion, identity drift, and write failure", async () => {
@@ -603,6 +637,12 @@ describe("accountStorage core behaviors", () => {
   })
 
   it("convertToDisplayData should normalize currency values", () => {
+    const empty = createAccount({ exchange_rate: 6.5 })
+    empty.account_info.quota = 0
+    expect(accountStorage.convertToDisplayData(empty)).toMatchObject({
+      exchangeRate: 6.5,
+      balance: { USD: 0, CNY: 0 },
+    })
     const account = createAccount({
       created_at: 1_700_000_000_000,
       exchange_rate: 7,
@@ -947,6 +987,24 @@ describe("accountStorage core behaviors", () => {
     expect(await accountStorage.getPinnedList()).toEqual(["a-1", "a-3", "a-2"])
   })
 
+  it("pinAccount preserves every id across concurrent mutations", async () => {
+    const accounts = Array.from({ length: 8 }, (_, index) =>
+      createAccount({ id: `pin-${index + 1}` }),
+    )
+    seedStorage(accounts)
+
+    await Promise.all(
+      accounts.map((account) => accountStorage.pinAccount(account.id)),
+    )
+
+    const pinnedIds = await accountStorage.getPinnedList()
+
+    expect(pinnedIds).toHaveLength(accounts.length)
+    expect(new Set(pinnedIds)).toEqual(
+      new Set(accounts.map((account) => account.id)),
+    )
+  })
+
   it("setPinnedList should drop invalid ids and keep order", async () => {
     const accounts = [
       createAccount({ id: "valid-1" }),
@@ -1028,6 +1086,79 @@ describe("accountStorage core behaviors", () => {
     expect(await accountStorage.getOrderedList()).toEqual(["a-1"])
   })
 
+  it.each([
+    {
+      label: "ordered list",
+      run: () => accountStorage.setOrderedList(["a-2", "a-1"]),
+    },
+    {
+      label: "pin",
+      run: () => accountStorage.pinAccount("a-2"),
+    },
+    {
+      label: "unpin",
+      run: () => accountStorage.unpinAccount("a-1"),
+    },
+  ])("fails closed when an $label write fails", async ({ run }) => {
+    seedStorage(
+      [createAccount({ id: "a-1" }), createAccount({ id: "a-2" })],
+      ["a-1"],
+    )
+    const originalConfig = structuredClone(
+      storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS),
+    )
+    storageHooks.beforeSet = async (key) => {
+      if (key === ACCOUNT_STORAGE_KEYS.ACCOUNTS) {
+        throw new Error("layout write failed")
+      }
+    }
+
+    await expect(run()).resolves.toBe(false)
+    expect(storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)).toEqual(
+      originalConfig,
+    )
+  })
+
+  it.each([
+    {
+      label: "pinned account subset",
+      run: () =>
+        accountStorage.setPinnedListSubset({
+          entryType: "account",
+          ids: ["a-2"],
+        }),
+      message: "设置置顶列表失败",
+    },
+    {
+      label: "ordered bookmark subset",
+      run: () =>
+        accountStorage.setOrderedListSubset({
+          entryType: "bookmark",
+          ids: ["b-1"],
+        }),
+      message: "设置排序列表失败",
+    },
+  ])("fails closed when an $label write fails", async ({ run, message }) => {
+    storageData.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, {
+      accounts: [createAccount({ id: "a-1" }), createAccount({ id: "a-2" })],
+      bookmarks: [createBookmark({ id: "b-1" })],
+      pinnedAccountIds: ["a-1"],
+      orderedAccountIds: ["a-1"],
+      last_updated: Date.now(),
+    } satisfies AccountStorageConfig)
+    storageHooks.beforeSet = async (key) => {
+      if (key === ACCOUNT_STORAGE_KEYS.ACCOUNTS) {
+        throw new Error("subset write failed")
+      }
+    }
+
+    await expect(run()).resolves.toBe(false)
+    expect(mockLoggerError).toHaveBeenCalledWith(message, {
+      entryType: expect.any(String),
+      error: expect.any(Error),
+    })
+  })
+
   it("updateAccount should allow clearing tagIds array", async () => {
     const account = createAccount({
       id: "with-tags",
@@ -1048,6 +1179,42 @@ describe("accountStorage core behaviors", () => {
     const updated = accounts.find((acc) => acc.id === "with-tags")
 
     expect(updated?.tagIds).toEqual([])
+  })
+
+  it("addAccount preserves its rejection when the storage write fails", async () => {
+    const error = new Error("add write failed")
+    seedStorage([])
+    storageHooks.beforeSet = async (key) => {
+      if (key === ACCOUNT_STORAGE_KEYS.ACCOUNTS) throw error
+    }
+
+    await expect(accountStorage.addAccount(createAccount())).rejects.toBe(error)
+    expect(
+      (storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS) as AccountStorageConfig)
+        .accounts,
+    ).toEqual([])
+  })
+
+  it("updateAccount fails closed when the storage write fails", async () => {
+    const account = createAccount({ id: "update-write-failure", notes: "old" })
+    seedStorage([account])
+    storageHooks.beforeSet = async (key) => {
+      if (key === ACCOUNT_STORAGE_KEYS.ACCOUNTS) {
+        throw new Error("update write failed")
+      }
+    }
+
+    await expect(
+      accountStorage.updateAccount(
+        account.id,
+        { notes: "new" },
+        { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+      ),
+    ).resolves.toBe(false)
+    expect(
+      (storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS) as AccountStorageConfig)
+        .accounts[0]?.notes,
+    ).toBe("old")
   })
 
   it("updateAccount advances user timestamp while refreshAccount preserves it", async () => {
@@ -1285,6 +1452,138 @@ describe("accountStorage core behaviors", () => {
     )
   })
 
+  it.each([
+    [100, "matched", "unsupported"],
+    [300, "matched", "matched"],
+    [100, "unknown", "unsupported"],
+    [300, "unknown", "unknown"],
+  ] as const)(
+    "persists only newer unsupported evidence while retaining manual intent (latest %s, %s)",
+    async (observedAt, latestOutcome, expectedOutcome) => {
+      const methodId = "new-api:daily-checkin" as const
+      const account = createAccount({
+        id: "unsupported-execution",
+        checkIn: {
+          automaticExecutionEnabled: true,
+          selection: { mode: "manual", methodId },
+          customCheckIn: { url: "https://check-in.example.invalid" },
+          methodKnowledge: {
+            methods: {
+              [methodId]: {
+                detection:
+                  latestOutcome === "unknown"
+                    ? {
+                        outcome: "unknown",
+                        reason: "network",
+                        attemptedAt: observedAt,
+                      }
+                    : {
+                        outcome: "matched",
+                        evidence: { source: "probe", observedAt },
+                      },
+              },
+            },
+          },
+        },
+      })
+      seedStorage([account])
+      await accountStorage.prepareAccountForSelectedCheckIn(account.id, {
+        ...account.checkIn,
+        selection: { mode: "automatic" },
+        automaticExecutionEnabled: false,
+        customCheckIn: undefined,
+        methodKnowledge: {
+          methods: {
+            [methodId]: {
+              detection: {
+                outcome: "unsupported",
+                evidence: { source: "probe", observedAt: 200 },
+              },
+            },
+          },
+        },
+      })
+      const persisted = await accountStorage.getAccountById(account.id)
+      expect(persisted?.checkIn).toMatchObject({
+        selection: account.checkIn.selection,
+        automaticExecutionEnabled: true,
+        customCheckIn: account.checkIn.customCheckIn,
+        methodKnowledge: {
+          methods: {
+            [methodId]: {
+              detection: {
+                outcome: expectedOutcome,
+              },
+            },
+          },
+        },
+      })
+    },
+  )
+
+  it("prepares the current account without writing when no refreshed check-in is provided", async () => {
+    const account = createAccount({ id: "prepare-current" })
+    seedStorage([account])
+    let accountWrites = 0
+    storageHooks.beforeSet = async (key) => {
+      if (key === ACCOUNT_STORAGE_KEYS.ACCOUNTS) accountWrites += 1
+    }
+
+    const prepared = await accountStorage.prepareAccountForSelectedCheckIn(
+      account.id,
+    )
+
+    expect(prepared).toEqual(account)
+    expect(accountWrites).toBe(0)
+  })
+
+  it("returns null when preparing a selected check-in cannot read storage", async () => {
+    storageHooks.beforeGet = async (key) => {
+      if (key === ACCOUNT_STORAGE_KEYS.ACCOUNTS) {
+        throw new Error("prepare read failed")
+      }
+    }
+
+    await expect(
+      accountStorage.prepareAccountForSelectedCheckIn("missing"),
+    ).resolves.toBeNull()
+  })
+
+  it("clears stale custom check-in status merged from a refresh", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-09-04T12:00:00Z"))
+    const account = createAccount({
+      id: "stale-refreshed-check-in",
+      checkIn: {
+        ...createCanonicalCheckIn(),
+        customCheckIn: {
+          url: "https://example.invalid/check-in",
+          isCheckedInToday: true,
+          lastCheckInDate: "2026-09-03",
+        },
+      },
+    })
+    seedStorage([account])
+
+    try {
+      await expect(
+        accountStorage.updateAccountFromRefresh(
+          account.id,
+          {},
+          account.checkIn,
+        ),
+      ).resolves.toBe(true)
+
+      const updated = await accountStorage.getAccountById(account.id)
+      expect(updated?.checkIn.customCheckIn).toMatchObject({
+        url: "https://example.invalid/check-in",
+        isCheckedInToday: false,
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("markAccountAsCustomCheckedIn should persist today's custom check-in state", async () => {
     const account = createAccount({
       id: "custom-1",
@@ -1325,6 +1624,19 @@ describe("accountStorage core behaviors", () => {
     await expect(
       accountStorage.markAccountAsSiteCheckedIn("disabled-check-in"),
     ).resolves.toBe(false)
+  })
+
+  it("markAccountAsSiteCheckedIn returns false without a selected method", async () => {
+    const account = createAccount({
+      id: "no-selected-method",
+      checkIn: createCanonicalCheckIn(),
+    })
+    seedStorage([account])
+
+    await expect(
+      accountStorage.markAccountAsSiteCheckedIn(account.id),
+    ).resolves.toBe(false)
+    expect(await accountStorage.getAccountById(account.id)).toEqual(account)
   })
 
   it("markAccountAsCustomCheckedIn returns false for missing, disabled, or invalid custom URLs", async () => {
@@ -1830,6 +2142,34 @@ describe("accountStorage core behaviors", () => {
     })
   })
 
+  it("getAccountStats should exclude opted-out balances without excluding today metrics", async () => {
+    const includedAccount = createAccount({
+      id: "balance-included",
+      account_info: {
+        ...createAccount().account_info,
+        quota: 1_000_000,
+        today_quota_consumption: 25_000,
+      },
+    })
+    const excludedAccount = createAccount({
+      id: "balance-excluded",
+      excludeFromTotalBalance: true,
+      account_info: {
+        ...createAccount().account_info,
+        quota: 2_000_000,
+        today_quota_consumption: 75_000,
+      },
+    })
+
+    seedStorage([includedAccount, excludedAccount])
+
+    const stats = await accountStorage.getAccountStats()
+
+    expect(stats.total_quota).toBe(1_000_000)
+    expect(stats.today_total_consumption).toBe(100_000)
+    expect(stats.todayStatsCoverage.consumption.eligibleCount).toBe(2)
+  })
+
   it.each([
     {
       label: "prompt token count is non-finite",
@@ -2196,6 +2536,69 @@ describe("accountStorage core behaviors", () => {
     expect(found?.id).toBe("aihubmix-username-target")
   })
 
+  it("getAccountByBaseUrlAndUserId contains unexpected account-loader failures", async () => {
+    const error = new Error("account loader failed")
+    const getAllAccountsSpy = vi
+      .spyOn(accountStorage, "getAllAccounts")
+      .mockRejectedValue(error)
+
+    try {
+      await expect(
+        accountStorage.getAccountByBaseUrlAndUserId(
+          "https://example.invalid",
+          "user-1",
+        ),
+      ).resolves.toBeNull()
+      expect(mockLoggerError).toHaveBeenCalledWith(
+        "Failed to get account by baseUrl and userId",
+        expect.objectContaining({ error }),
+      )
+    } finally {
+      getAllAccountsSpy.mockRestore()
+    }
+  })
+
+  it("refreshAllAccounts defaults cashflow collection for incomplete preferences", async () => {
+    const account = createAccount({ id: "default-cashflow" })
+    seedStorage([account])
+    const getPreferencesSpy = vi
+      .spyOn(userPreferences, "getPreferences")
+      .mockResolvedValue({
+        ...DEFAULT_PREFERENCES,
+        showTodayCashflow: undefined,
+      } as any)
+    const refreshAccountSpy = vi
+      .spyOn(accountStorage, "refreshAccount")
+      .mockResolvedValue({ refreshed: false, account } as any)
+
+    try {
+      await accountStorage.refreshAllAccounts(true)
+
+      expect(refreshAccountSpy).toHaveBeenCalledWith(account.id, true, {
+        includeTodayCashflow: true,
+      })
+    } finally {
+      refreshAccountSpy.mockRestore()
+      getPreferencesSpy.mockRestore()
+    }
+  })
+
+  it("checkUrlExists skips malformed stored URLs and keeps searching", async () => {
+    const malformed = createAccount({
+      id: "malformed-stored-url",
+      site_url: "not a url",
+    })
+    const matching = createAccount({
+      id: "valid-stored-url",
+      site_url: "https://match.example.invalid/path",
+    })
+    seedStorage([malformed, matching])
+
+    await expect(
+      accountStorage.checkUrlExists("https://match.example.invalid/settings"),
+    ).resolves.toMatchObject({ id: matching.id })
+  })
+
   it("deleteAccount should remove account data and pinned references", async () => {
     vi.useFakeTimers()
     const deletedAt = new Date("2026-05-22T01:00:00Z")
@@ -2278,8 +2681,8 @@ describe("accountStorage core behaviors", () => {
     storageData.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, {
       accounts,
       bookmarks: [],
-      pinnedAccountIds: ["bulk-b", "bulk-c", "missing"],
-      orderedAccountIds: ["bulk-a", "bulk-b", "bulk-c", "missing"],
+      pinnedAccountIds: ["bulk-b", "bulk-c", "stale", "unrequested"],
+      orderedAccountIds: ["bulk-a", "bulk-b", "bulk-c", "stale", "unrequested"],
       last_updated: Date.now(),
     } satisfies AccountStorageConfig)
 
@@ -2287,6 +2690,7 @@ describe("accountStorage core behaviors", () => {
       "bulk-b",
       "bulk-c",
       "bulk-b",
+      "stale",
       "",
     ])
 
@@ -2299,8 +2703,8 @@ describe("accountStorage core behaviors", () => {
       ACCOUNT_STORAGE_KEYS.ACCOUNTS,
     ) as AccountStorageConfig
     expect(config.accounts.map((account) => account.id)).toEqual(["bulk-a"])
-    expect(config.pinnedAccountIds).toEqual(["missing"])
-    expect(config.orderedAccountIds).toEqual(["bulk-a", "missing"])
+    expect(config.pinnedAccountIds).toEqual(["unrequested"])
+    expect(config.orderedAccountIds).toEqual(["bulk-a", "unrequested"])
     expect(pruneStatusForAccountIdsMock).toHaveBeenCalledWith([
       "bulk-b",
       "bulk-c",
@@ -2483,6 +2887,43 @@ describe("accountStorage core behaviors", () => {
     expect(markAccountsDisabledInStatusMock).not.toHaveBeenCalled()
   })
 
+  it("setAccountsDisabled returns an empty result when the storage write fails", async () => {
+    const account = createAccount({ id: "bulk-disable-write-failure" })
+    seedStorage([account])
+    storageHooks.beforeSet = async (key) => {
+      if (key === ACCOUNT_STORAGE_KEYS.ACCOUNTS) {
+        throw new Error("bulk disable write failed")
+      }
+    }
+
+    await expect(
+      accountStorage.setAccountsDisabled([account.id], true),
+    ).resolves.toEqual({ updatedCount: 0, updatedIds: [] })
+    expect(markAccountsDisabledInStatusMock).not.toHaveBeenCalled()
+    expect(
+      (storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS) as AccountStorageConfig)
+        .accounts[0]?.disabled,
+    ).toBe(false)
+  })
+
+  it("deleteAccounts preserves its rejection when the storage write fails", async () => {
+    const error = new Error("bulk delete write failed")
+    const account = createAccount({ id: "bulk-delete-write-failure" })
+    seedStorage([account], [account.id])
+    storageHooks.beforeSet = async (key) => {
+      if (key === ACCOUNT_STORAGE_KEYS.ACCOUNTS) throw error
+    }
+
+    await expect(accountStorage.deleteAccounts([account.id])).rejects.toBe(
+      error,
+    )
+    expect(pruneStatusForAccountIdsMock).not.toHaveBeenCalled()
+    expect(
+      (storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS) as AccountStorageConfig)
+        .accounts,
+    ).toEqual([account])
+  })
+
   it("setAccountDisabled should fail closed for missing accounts", async () => {
     seedStorage([createAccount({ id: "present" })])
 
@@ -2614,6 +3055,29 @@ describe("accountStorage core behaviors", () => {
     )
   })
 
+  it("resetExpiredCheckIns contains storage read failures", async () => {
+    storageHooks.beforeGet = async (key) => {
+      if (key === ACCOUNT_STORAGE_KEYS.ACCOUNTS) {
+        throw new Error("reset read failed")
+      }
+    }
+
+    await expect(accountStorage.resetExpiredCheckIns()).resolves.toBeUndefined()
+    expect(mockLoggerError).toHaveBeenCalledWith(
+      "重置签到状态失败",
+      expect.any(Error),
+    )
+  })
+
+  it("refreshAccount returns null for a missing account without calling an adapter", async () => {
+    seedStorage([])
+
+    await expect(
+      accountStorage.refreshAccount("missing-refresh-account", true),
+    ).resolves.toBeNull()
+    expect(mockRefreshAccountData).not.toHaveBeenCalled()
+  })
+
   it("refreshAccount should re-detect unknown site type and pass canonical check-in context", async () => {
     const protectionBypassExecution = userCommandExecution(
       PROTECTION_BYPASS_USER_COMMANDS.RefreshAccount,
@@ -2657,6 +3121,33 @@ describe("accountStorage core behaviors", () => {
     expect(updatedAccount?.checkIn).not.toHaveProperty("enableDetection")
     expect(updatedAccount).not.toHaveProperty("protectionBypassExecution")
     expect(updatedAccount).not.toHaveProperty("tempWindowRequestSource")
+  })
+
+  it("continues a refresh with detected metadata when persistence fails", async () => {
+    const account = createAccount({
+      id: "detected-metadata-write-failure",
+      site_url: "https://detect.example.invalid/path",
+      site_type: SITE_TYPES.UNKNOWN,
+    })
+    seedStorage([account])
+    mockGetAccountSiteType.mockResolvedValue(SITE_TYPES.NEW_API)
+    const updateAccountSpy = vi
+      .spyOn(accountStorage, "updateAccount")
+      .mockResolvedValueOnce(false)
+
+    try {
+      const result = await accountStorage.refreshAccount(account.id, true)
+
+      expect(result).toMatchObject({ refreshed: true })
+      expect(mockgetSiteTypeCapabilities).toHaveBeenCalledWith(
+        SITE_TYPES.NEW_API,
+      )
+      expect(mockRefreshAccountData).toHaveBeenCalledWith(
+        expect.objectContaining({ siteType: SITE_TYPES.NEW_API }),
+      )
+    } finally {
+      updateAccountSpy.mockRestore()
+    }
   })
 
   it("refreshAccount should skip disabled accounts and avoid network calls", async () => {
@@ -3265,6 +3756,24 @@ describe("accountStorage core behaviors", () => {
     )
   })
 
+  it("refreshAccount preserves an invalid stored URL for the adapter boundary", async () => {
+    const account = createAccount({
+      id: "invalid-refresh-url",
+      site_url: "not a url",
+      site_type: SITE_TYPES.NEW_API,
+    })
+    seedStorage([account])
+
+    await accountStorage.refreshAccount(account.id, true)
+
+    expect(mockRefreshAccountData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "not a url",
+        siteType: SITE_TYPES.NEW_API,
+      }),
+    )
+  })
+
   it("refreshAccount preserves the temp window source for data refresh", async () => {
     const account = createAccount({
       id: "temp-window",
@@ -3812,6 +4321,33 @@ describe("accountStorage core behaviors", () => {
     }
   })
 
+  it("refreshAccount succeeds when daily balance snapshot persistence fails", async () => {
+    const account = createAccount({ id: "balance-history-write-failure" })
+    seedStorage([account])
+    storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+      ...DEFAULT_PREFERENCES,
+      balanceHistory: {
+        enabled: true,
+        endOfDayCapture: { enabled: false },
+        retentionDays: 365,
+      },
+    })
+    const captureSpy = vi
+      .spyOn(dailyBalanceCapture, "maybeCaptureDailyBalanceSnapshot")
+      .mockRejectedValueOnce(new Error("history write failed"))
+
+    try {
+      const result = await accountStorage.refreshAccount(account.id, true)
+
+      expect(result).toMatchObject({ refreshed: true })
+      expect(
+        (await accountStorage.getAccountById(account.id))?.last_sync_time,
+      ).toBe(result?.account?.last_sync_time)
+    } finally {
+      captureSpy.mockRestore()
+    }
+  })
+
   it("refreshAccount captures quota but leaves cashflow null when showTodayCashflow is disabled", async () => {
     vi.useFakeTimers()
     const fixedNow = new Date(Date.UTC(2026, 1, 7, 12, 0, 0))
@@ -3956,6 +4492,30 @@ describe("accountStorage core behaviors", () => {
       code: undefined,
     })
     expect(updated?.last_sync_time).toBeGreaterThan(originalSyncTime)
+  })
+
+  it("refreshAccount contains a health-state persistence rejection", async () => {
+    const account = createAccount({ id: "health-write-rejects" })
+    seedStorage([account])
+    mockRefreshAccountData.mockRejectedValueOnce(new Error("network down"))
+    const updateAccountSpy = vi
+      .spyOn(accountStorage, "updateAccount")
+      .mockRejectedValueOnce(new Error("health write failed"))
+
+    try {
+      await expect(
+        accountStorage.refreshAccount(account.id, true),
+      ).resolves.toBeNull()
+      expect(updateAccountSpy).toHaveBeenCalledWith(
+        account.id,
+        expect.objectContaining({
+          health: expect.objectContaining({ status: SiteHealthStatus.Unknown }),
+        }),
+        { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
+      )
+    } finally {
+      updateAccountSpy.mockRestore()
+    }
   })
 })
 
@@ -4621,6 +5181,79 @@ describe("accountStorage bookmarks", () => {
       expect(exported.bookmarks).toEqual([])
       expect(exported.pinnedAccountIds).toEqual([])
       expect(exported.orderedAccountIds).toEqual([])
+    })
+
+    it("importData migrates legacy accounts before persisting them", async () => {
+      const legacyAccount = createAccount({
+        id: "legacy-import",
+        configVersion: 6,
+        checkIn: {
+          enableDetection: true,
+          autoCheckInEnabled: true,
+          siteStatus: { isCheckedInToday: false },
+        } as any,
+      })
+      const bookmark = createBookmark({ id: "preserved-bookmark" })
+
+      const result = await accountStorage.importData({
+        accounts: [legacyAccount],
+        bookmarks: [bookmark],
+        pinnedAccountIds: [legacyAccount.id, bookmark.id],
+      })
+
+      expect(result).toEqual({ migratedCount: 1 })
+      const persisted = storageData.get(
+        ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+      ) as AccountStorageConfig
+      expect(persisted.accounts[0]).toMatchObject({
+        id: legacyAccount.id,
+        configVersion: 7,
+        checkIn: expect.objectContaining({
+          automaticExecutionEnabled: true,
+          selection: expect.objectContaining({ mode: "automatic" }),
+        }),
+      })
+      expect(persisted.bookmarks).toEqual([bookmark])
+      expect(persisted.pinnedAccountIds).toEqual([
+        legacyAccount.id,
+        bookmark.id,
+      ])
+    })
+
+    it("restores the backup through the JSON clone fallback", async () => {
+      const backupAccount = createAccount({ id: "json-backup" })
+      const backupBookmark = createBookmark({ id: "json-bookmark" })
+      storageData.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, {
+        accounts: [backupAccount],
+        bookmarks: [backupBookmark],
+        pinnedAccountIds: [backupAccount.id, backupBookmark.id],
+        orderedAccountIds: [backupBookmark.id, backupAccount.id],
+        last_updated: Date.now(),
+      } satisfies AccountStorageConfig)
+      let setCalls = 0
+      storageHooks.beforeSet = async (key) => {
+        if (key === ACCOUNT_STORAGE_KEYS.ACCOUNTS && ++setCalls === 1) {
+          throw new Error("primary JSON-fallback write failed")
+        }
+      }
+      vi.stubGlobal("structuredClone", undefined)
+
+      try {
+        await expect(
+          accountStorage.importData({
+            accounts: [createAccount({ id: "replacement" })],
+          }),
+        ).rejects.toThrow("primary JSON-fallback write failed")
+
+        expect(storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)).toMatchObject({
+          accounts: [{ id: backupAccount.id }],
+          bookmarks: [{ id: backupBookmark.id }],
+          pinnedAccountIds: [backupAccount.id, backupBookmark.id],
+          orderedAccountIds: [backupBookmark.id, backupAccount.id],
+        })
+      } finally {
+        vi.unstubAllGlobals()
+      }
     })
 
     it("importData restores the backup config when the migrated write fails", async () => {

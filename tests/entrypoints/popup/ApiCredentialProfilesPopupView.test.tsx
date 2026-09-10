@@ -11,6 +11,12 @@ import {
 } from "~~/tests/test-utils/factories"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    markGatewayGuidanceOnboardingCompleted: vi.fn(),
+  }),
+}))
+
 let store: ApiCredentialProfile[] = []
 
 const mockListProfiles = vi.fn(async () => store)

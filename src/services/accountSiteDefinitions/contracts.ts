@@ -2,13 +2,21 @@ import type { AccountSiteProductProfileOverride } from "~/services/accounts/acco
 
 import type { SiteType } from "./identifiers"
 
+type AccountSitePagePath = `/${string}`
+
+/** Every page is explicit. Null means this integration provides no page navigation. */
 export interface AccountSiteRouteConfig {
-  loginPath?: string
-  usagePath?: string
-  checkInPath?: string
-  adminCredentialsPath?: string
-  redeemPath?: string
-  siteAnnouncementsPath?: string
+  /** Verified human-readable pricing page; absent means no known destination. */
+  pricingPath?: AccountSitePagePath
+  /** Optional upstream search parameter; old versions may safely ignore it. */
+  pricingSearchParam?: string
+  loginPath: AccountSitePagePath
+  usagePath: AccountSitePagePath | null
+  checkInPath: AccountSitePagePath | null
+  adminCredentialsPath: AccountSitePagePath | null
+  accessTokenPath: AccountSitePagePath | null
+  redeemPath: AccountSitePagePath | null
+  siteAnnouncementsPath: AccountSitePagePath | null
 }
 
 export interface AccountSiteDetectionMetadata {
@@ -16,6 +24,15 @@ export interface AccountSiteDetectionMetadata {
   hostnames?: readonly string[]
   compatUserIdHeaderNames?: readonly string[]
 }
+
+export const ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS = {
+  NewApi: "manual-new-api",
+  Sub2Api: "manual-sub2api",
+  OpenRouter: "manual-openrouter",
+} as const
+
+export type AccountSiteManualAddGuideAnchor =
+  (typeof ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS)[keyof typeof ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS]
 
 export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   NewApiFamily: "newApiFamily",
@@ -38,14 +55,6 @@ export const ACCOUNT_SITE_DEFINITION_SCOPES = {
 export type AccountSiteDefinitionScope =
   (typeof ACCOUNT_SITE_DEFINITION_SCOPES)[keyof typeof ACCOUNT_SITE_DEFINITION_SCOPES]
 
-export const MANAGED_RESOURCE_MODES = {
-  LegacyChannel: "legacy-channel",
-  NativeResource: "native-resource",
-} as const
-
-export type ManagedResourceMode =
-  (typeof MANAGED_RESOURCE_MODES)[keyof typeof MANAGED_RESOURCE_MODES]
-
 export const MANAGED_RESOURCE_KINDS = {
   Channel: "channel",
 } as const
@@ -53,26 +62,35 @@ export const MANAGED_RESOURCE_KINDS = {
 export type ManagedResourceKind =
   (typeof MANAGED_RESOURCE_KINDS)[keyof typeof MANAGED_RESOURCE_KINDS]
 
-export const MANAGED_RESOURCE_PRODUCT_ACTIONS = {
-  Create: "create",
-  DeleteSelected: "delete-selected",
-  Migrate: "migrate",
-  SyncModels: "sync-models",
-  ConfigureModelSync: "configure-model-sync",
-  ConfigureModelFilters: "configure-model-filters",
-} as const
+export type ManagedSiteLabelKey =
+  | "settings:managedSite.newApi"
+  | "settings:managedSite.doneHub"
+  | "settings:managedSite.veloera"
+  | "settings:managedSite.octopus"
+  | "settings:managedSite.axonHub"
+  | "settings:managedSite.claudeCodeHub"
+  | "settings:managedSite.sub2api"
 
-export type ManagedResourceProductAction =
-  (typeof MANAGED_RESOURCE_PRODUCT_ACTIONS)[keyof typeof MANAGED_RESOURCE_PRODUCT_ACTIONS]
+export type ManagedSiteMessagesKey =
+  | "newapi"
+  | "donehub"
+  | "veloera"
+  | "octopus"
+  | "axonhub"
+  | "claudecodehub"
+  | "sub2api"
 
 export interface ManagedResourceProductPolicy {
-  mode: ManagedResourceMode
+  labelKey: ManagedSiteLabelKey
+  messagesKey: ManagedSiteMessagesKey
   primaryKind: ManagedResourceKind
-  titleKey: "managedSiteChannels:title"
   itemLabelKey: "managedSiteChannels:table.columns.name"
   tableFieldIds: readonly string[]
   detailFieldIds: readonly string[]
-  actions: readonly ManagedResourceProductAction[]
+  consoleRoutes: {
+    channels: AccountSitePagePath
+    tokens: AccountSitePagePath
+  }
   settingsTarget: {
     tabId: "managedSite"
     anchor?: string
@@ -80,32 +98,25 @@ export interface ManagedResourceProductPolicy {
 }
 
 export interface AccountSiteDefinitionOnboardingMetadata {
+  displayName?: string
+  accountForm?: { fixedSiteUrl?: string; defaultSiteName?: string }
   detection?: AccountSiteDetectionMetadata
-  routes?: AccountSiteRouteConfig
-}
-
-export const ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES = {
-  DirectPricing: "direct_pricing",
-  ProviderCatalog: "provider_catalog",
-  TokenScopedRuntimeCatalog: "token_scoped_runtime_catalog",
-  Unsupported: "unsupported",
-} as const
-
-export type AccountSiteModelListExpectedRoute =
-  (typeof ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES)[keyof typeof ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES]
-
-export interface AccountSiteDefinitionReadiness {
-  modelList?: {
-    expectedRoute: AccountSiteModelListExpectedRoute
-  }
+  routes: AccountSiteRouteConfig
+  manualAddGuideAnchor?: AccountSiteManualAddGuideAnchor
 }
 
 export interface AccountSiteDefinition {
   siteType: SiteType
   scopes: readonly AccountSiteDefinitionScope[]
   adapterFamily: AccountSiteBackendFamily
+  /** Token identity/auth formatting; absent means opaque keys with no prefix rewriting. */
+  tokenKey?: { optionalSkPrefix: boolean }
   managedResource?: ManagedResourceProductPolicy
   onboarding?: AccountSiteDefinitionOnboardingMetadata
   productProfile?: AccountSiteProductProfileOverride
-  readiness?: AccountSiteDefinitionReadiness
+}
+
+/** Account registrations must own a complete route declaration. Null means no supported page navigation. */
+export type RegisteredAccountSiteDefinition = AccountSiteDefinition & {
+  onboarding: AccountSiteDefinitionOnboardingMetadata
 }

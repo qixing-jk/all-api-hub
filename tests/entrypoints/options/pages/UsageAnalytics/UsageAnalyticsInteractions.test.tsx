@@ -2,7 +2,7 @@ import { fireEvent } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
   createEmptyUsageHistoryAccountStore,
   createEmptyUsageHistoryLatencyAggregate,
@@ -69,8 +69,8 @@ vi.mock("~/components/charts/EChart", () => ({
   ),
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: { getAllAccounts: vi.fn() },
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: { getAllAccounts: vi.fn() },
 }))
 
 vi.mock("~/services/history/usageHistory/storage", () => ({
@@ -108,7 +108,7 @@ describe("UsageAnalytics chart interactions", () => {
   }
 
   it("normalizes datazoom payloads into valid visible date ranges and ignores invalid payloads", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "a1",
         site_name: "Site A",
@@ -180,7 +180,7 @@ describe("UsageAnalytics chart interactions", () => {
   })
 
   it("ignores invalid model clicks and toggles focus for valid model names", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "a1",
         site_name: "Site A",

@@ -34,6 +34,7 @@ import {
   loginToRealNewApiSite,
   resolveNewApiRealSiteConfig,
 } from "~~/e2e/utils/realSite/newApi"
+import { createNewApiAccountRecovery } from "~~/e2e/utils/realSite/newApiAccountRecovery"
 import { readEnv } from "~~/e2e/utils/realSite/shared"
 import {
   getSub2ApiRealSiteSkipReason,
@@ -139,6 +140,11 @@ test.describe("real-site E2E: managed-site channel management", () => {
         { annotation: { type: "skip", description: skipReason } },
         async () => {},
       )
+      test.skip(
+        `${target.label} preserves unrelated fields after renaming`,
+        { annotation: { type: "skip", description: skipReason } },
+        async () => {},
+      )
       continue
     }
 
@@ -148,7 +154,7 @@ test.describe("real-site E2E: managed-site channel management", () => {
       page,
     }) => {
       const serviceWorker = await getServiceWorker(context)
-      const config = managedSite.config
+      const config = managedSite.config!
       const runId = buildRealSiteRunId()
       const runPrefix = buildManagedSiteE2ePrefix({
         label: target.label.replace(/\s+/g, ""),
@@ -173,6 +179,34 @@ test.describe("real-site E2E: managed-site channel management", () => {
         label: target.label,
         runPrefix,
         cleanupPrefix,
+      })
+    })
+
+    test(`${target.label} preserves unrelated fields after renaming`, async ({
+      context,
+      extensionId,
+      page,
+    }) => {
+      const config = managedSite.config!
+      const runPrefix = buildManagedSiteE2ePrefix({
+        label: `${target.label.replace(/\s+/g, "")} Preserve`,
+        runId: buildRealSiteRunId(),
+      })
+      await seedUserPreferences(await getServiceWorker(context), {
+        managedSiteType: target.siteType,
+        [target.preferenceKey]: config,
+        autoFillCurrentSiteUrlOnAccountAdd: false,
+        autoProvisionKeyOnAccountAdd: false,
+        openChangelogOnUpdate: false,
+      })
+      await runManagedSiteChannelsCrudScenario({
+        page,
+        extensionId,
+        siteType: target.siteType,
+        label: target.label,
+        runPrefix,
+        cleanupPrefix: runPrefix,
+        verifyRenamePreservation: { baseUrl: config.baseUrl },
       })
     })
 
@@ -326,6 +360,11 @@ async function prepareNewApiStatusSourceAccount(
     }
   }
 
+  const recovery = createNewApiAccountRecovery({
+    page: params.page,
+    config: realSite.config,
+  })
+
   return {
     sourceAccount: await runCompatibleRealSiteAccountSaveFlow({
       page: params.page,
@@ -334,7 +373,9 @@ async function prepareNewApiStatusSourceAccount(
       sitePage: params.sitePage,
       config: realSite.config,
       siteType: SITE_TYPES.NEW_API,
+      prepareDetectedDialog: recovery.prepareDetectedDialog,
       extensionPageGuardOptions: {
+        ...recovery.extensionPageGuardOptions,
         ignoreConsoleErrorPatterns: [
           /Failed to load resource: .*status of (401|429|500)/u,
         ],

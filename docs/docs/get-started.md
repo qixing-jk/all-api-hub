@@ -51,7 +51,6 @@
 - [Atlas Cloud](https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub)：一个 AI API 访问 300+ 精选视频、图像和 LLM 模型，新 Coding Plan 提供更高性价比的 API 访问。[使用教程](./service-guides/atlascloud.md)
 - [AICodeMirror](https://www.aicodemirror.ai/register?invitecode=7IQNR8)：提供 Claude Code / Codex / Gemini CLI 官方高稳定中转服务，通过此链接注册可享首充 8 折，企业客户最高可享 7.5 折。
 - [随想AI中转站](https://sui-xiang.com/)：提供 Claude、Codex、Gemini 等 API 中继服务，按量付费，支持每日签到测试额度、多线路冗余和自动故障切换。[使用教程](./service-guides/suixiang.md)
-- [Infistar.ai](https://infistar.ai/register?aff=ALLAPIHUB&ref_source=link)：在售模型均经真实调用验真，通过超 10000 条官方 API 与官方号池供应链路负载均衡，覆盖文本、视频、图片、嵌入、重排等全模态能力，价格与用量透明，模型低至官方价的 10%。[使用教程](./service-guides/infistar.md)
 - [APIMart](https://go.apimart.ai/gh-all-api-hub)：专注 AI 图片/视频生成的低价 API 平台，GPT-Image-2 低至 $0.006/张，1 美元可出图 160+ 张；图片、视频一套异步 API 通吃，提交任务拿 ID、回调取结果，跑批万张不超时、换模型不改代码，按量付费、无月费。
 - [火山引擎方舟 Coding-Plan](https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html)：Lite 套餐 9.9 元/月起，并有邀请返利及首单优惠。
 :::

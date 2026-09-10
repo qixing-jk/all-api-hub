@@ -52,8 +52,8 @@ vi.mock("~/services/apiService/voapiV2/tokenResync", () => ({
   resyncVoApiV2AuthToken: mockResyncVoApiV2AuthToken,
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountMutations", () => ({
+  accountMutations: {
     updateAccount: mockUpdateAccount,
   },
 }))

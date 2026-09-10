@@ -12,8 +12,7 @@
   },
   "description": {
     "add": "Configure um novo canal para o seu site gerenciado",
-    "edit": "Atualize as configurações do canal e as informações de roteamento",
-    "view": "Revise as configurações atuais do canal e as informações de roteamento"
+    "edit": "Atualize as configurações do canal e as informações de roteamento"
   },
   "fields": {
     "baseUrl": {
@@ -23,7 +22,6 @@
     "groups": {
       "hint": "Os grupos são obtidos do seu site gerenciado",
       "label": "Grupos do Canal",
-      "loading": "Carregando grupos...",
       "placeholder": "Selecionar grupos"
     },
     "key": {
@@ -42,12 +40,9 @@
       "placeholder": "Insira um nome descritivo para o canal"
     },
     "priority": {
-      "hint": "Canais com números de prioridade maiores são usados antes dos outros",
       "label": "Prioridade"
     },
     "status": {
-      "disabled": "Desativado",
-      "enabled": "Ativado",
       "label": "Status"
     },
     "type": {
@@ -56,28 +51,13 @@
       "placeholder": "Selecionar tipo de canal"
     },
     "weight": {
-      "hint": "Controla o balanceamento de carga dentro da mesma prioridade (0 = distribuição igual)",
       "label": "Peso"
     }
-  },
-  "messages": {
-    "loadRealKeyFailed": "Falha ao carregar a chave real do canal: {{error}}",
-    "missingChannelId": "ID do canal existente ausente",
-    "saveFailed": "Falha ao salvar o canal: {{error}}"
-  },
-  "sections": {
-    "advanced": "Configurações Avançadas"
   },
   "title": {
     "add": "Criar Canal",
     "edit": "Editar Canal",
     "view": "Visualizar Canal"
-  },
-  "validation": {
-    "baseUrlRequired": "A URL base é obrigatória para este tipo de canal",
-    "keyRequired": "A chave de API é obrigatória",
-    "modelsRequired": "Pelo menos um modelo é obrigatório",
-    "nameRequired": "O nome do canal é obrigatório"
   },
   "warnings": {
     "channelExists": {
@@ -101,9 +81,6 @@
       "title": "Revisar possíveis candidatos a duplicatas"
     },
     "verificationRequired": {
-      "actions": {
-        "verifyNow": "Verificar agora"
-      },
       "description": "Canais candidatos foram encontrados, mas é necessária uma etapa de verificação adicional antes que a chave real do canal possa ser lida, portanto a confirmação de duplicata exata está indisponível no momento. Você ainda pode continuar criando o canal; conclua a verificação primeiro se precisar de uma verificação de desduplicação exata.",
       "title": "Possível duplicata exige verificação"
     }

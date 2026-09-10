@@ -64,6 +64,20 @@
     "updateFailed": "Failed to update model redirect settings",
     "updateSuccess": "Model redirect settings updated"
   },
+  "modelDiscovery": {
+    "failed": {
+      "description": "Models could not be loaded from the managed site. Preset models are being used instead. Check the connection or credentials and try again.",
+      "title": "Model discovery failed"
+    },
+    "not-ready": {
+      "description": "Configure the managed-site URL and administrator credentials first. Preset models are being used for now.",
+      "title": "Model discovery is not configured"
+    },
+    "unsupported": {
+      "description": "This site has no registered account-model query capability, so preset models are used here.",
+      "title": "Automatic model discovery is unsupported"
+    }
+  },
   "pruneMissingTargetsOnModelSync": "Prune invalid redirect targets after sync",
   "pruneMissingTargetsOnModelSyncDesc": "Destructive: after a model sync refresh, deletes existing model_mapping entries whose target models are missing from the refreshed model list",
   "regenerateButton": "Regenerate Mapping Now",
@@ -71,5 +85,9 @@
   "standardModels": "Standard Models",
   "standardModelsDesc": "Select the standard models to generate redirect mappings for",
   "standardModelsPlaceholder": "Select models...",
-  "title": "Model Redirect"
+  "title": "Model Redirect",
+  "unsupported": {
+    "description": "This managed site does not register the channel operations required to read and update model mappings.",
+    "title": "Model redirect is not supported for this site"
+  }
 }

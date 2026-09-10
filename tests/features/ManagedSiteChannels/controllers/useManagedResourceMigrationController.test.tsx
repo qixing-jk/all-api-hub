@@ -3,9 +3,15 @@ import type { TFunction } from "i18next"
 import { StrictMode, type ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
 
-import { ChannelType } from "~/constants/managedSite"
+import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { useManagedResourceMigrationController } from "~/features/ManagedSiteChannels/controllers/useManagedResourceMigrationController"
+import enChannelDialog from "~/locales/en/channelDialog.json"
+import enCommon from "~/locales/en/common.json"
+import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
+import zhCnChannelDialog from "~/locales/zh-CN/channelDialog.json"
+import zhCnCommon from "~/locales/zh-CN/common.json"
+import zhCnManagedSiteChannels from "~/locales/zh-CN/managedSiteChannels.json"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
@@ -18,7 +24,11 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"
+import {
+  MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES,
+  MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES,
+  MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES,
+} from "~/types/managedSiteMigration"
 import type {
   ManagedSiteMigrationCanonicalExecutionResult,
   ManagedSiteMigrationCanonicalPreview,
@@ -27,6 +37,20 @@ import type {
   ManagedSiteMigrationTargetPreparation,
 } from "~/types/managedSiteMigrationCapability"
 import { MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES } from "~/types/managedSiteMigrationCapability"
+import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
+
+const resourceI18n = await createResourceTestI18n({
+  en: {
+    common: enCommon,
+    channelDialog: enChannelDialog,
+    managedSiteChannels: enManagedSiteChannels,
+  },
+  "zh-CN": {
+    common: zhCnCommon,
+    channelDialog: zhCnChannelDialog,
+    managedSiteChannels: zhCnManagedSiteChannels,
+  },
+})
 
 const t = ((key: string, options?: Record<string, unknown>) =>
   options ? `${key}:${JSON.stringify(options)}` : key) as TFunction
@@ -67,7 +91,7 @@ const target: ManagedSiteMigrationTargetPreparation = {
     groups: ["default"],
     priority: 0,
     weight: 0,
-    status: 1,
+    enabled: true,
   },
   adjustments: {
     remappedType: false,
@@ -161,12 +185,271 @@ const buildOptions = (overrides: Record<string, unknown> = {}) => {
     refresh: vi.fn(async () => true),
     onClose: vi.fn(),
     t,
-    getSiteLabel: (siteType: ManagedSiteType) => siteType,
+    getSiteLabel: (siteType: ManagedSiteType): string => siteType,
     ...overrides,
   }
 }
 
 describe("useManagedResourceMigrationController", () => {
+  it("retranslates an existing preview without preparing again or closing confirmation", async () => {
+    const prepareMigration = vi.fn(
+      async ({
+        selections,
+      }: {
+        selections: readonly ManagedSiteMigrationSelection[]
+      }): Promise<ManagedSiteMigrationCanonicalPreview> => ({
+        ...buildPreview(selections),
+        generalWarningCodes: [
+          MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES.CREATE_ONLY,
+        ],
+        items: [
+          {
+            selection: selections[0],
+            status: "ready",
+            source,
+            target,
+            warningCodes: [
+              MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.DROPS_MODEL_MAPPING,
+            ],
+          },
+          {
+            selection: selections[1],
+            status: "blocked",
+            warningCodes: [],
+            blockingReasonCode:
+              MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+          },
+        ],
+        readyCount: 1,
+        blockedCount: 1,
+      }),
+    )
+    const options = buildOptions({
+      prepareMigration,
+      t: resourceI18n.getFixedT("en"),
+    })
+    const { result, rerender } = renderHook(
+      (props: ReturnType<typeof buildOptions>) =>
+        useManagedResourceMigrationController(props),
+      { initialProps: options },
+    )
+    await waitFor(() => expect(result.current.preview?.readyCount).toBe(1))
+    act(() => result.current.callbacks.onOpenConfirmation())
+    const englishPreview = result.current.preview
+    const chineseT = resourceI18n.getFixedT("zh-CN")
+
+    rerender({
+      ...options,
+      t: chineseT,
+      getSiteLabel: () => "当前来源",
+      targets: [{ value: SITE_TYPES.NEW_API, label: "当前目标" }],
+    })
+
+    expect(result.current.preview?.sourceLabel).toBe("当前来源")
+    expect(result.current.preview?.targetLabel).toBe("当前目标")
+    expect(result.current.preview?.generalWarnings).toEqual([
+      chineseT("managedSiteChannels:migration.generalWarnings.createOnly"),
+    ])
+    expect(result.current.preview?.rows[0].warningText).toEqual([
+      chineseT("managedSiteChannels:migration.itemWarnings.dropsModelMapping"),
+    ])
+    expect(result.current.preview?.rows[1].blockedReason).toBe(
+      chineseT("managedSiteChannels:migration.blockedReasons.sourceKeyMissing"),
+    )
+    expect(
+      result.current.preview?.rows[0].comparisons.find(
+        ({ id }) => id === "status",
+      ),
+    ).toMatchObject({
+      label: chineseT("channelDialog:fields.status.label"),
+      source: chineseT("managedSiteChannels:statusLabels.enabled"),
+      target: chineseT("managedSiteChannels:statusLabels.enabled"),
+      status: "same",
+    })
+    expect(result.current.preview?.generalWarnings).not.toEqual(
+      englishPreview?.generalWarnings,
+    )
+    expect(result.current.isConfirmationOpen).toBe(true)
+    expect(prepareMigration).toHaveBeenCalledTimes(1)
+    expect(options.refresh).not.toHaveBeenCalled()
+  })
+
+  it("retranslates an uncertain result without replaying migration or losing recovery state", async () => {
+    const prepareMigration = vi.fn(
+      async ({
+        selections,
+      }: {
+        selections: readonly ManagedSiteMigrationSelection[]
+      }) => buildPreview(selections),
+    )
+    const executeMigration = vi.fn(async () =>
+      executionResult([
+        {
+          selectionId: "opaque::second",
+          displayName: "Second example",
+          status: "uncertain",
+          failureCode:
+            MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.MutationStateUncertain,
+        },
+      ]),
+    )
+    const options = buildOptions({
+      prepareMigration,
+      executeMigration,
+      selectedRowKeys: ["opaque::second"],
+      t: resourceI18n.getFixedT("en"),
+    })
+    const { result, rerender } = renderHook(
+      (props: ReturnType<typeof buildOptions>) =>
+        useManagedResourceMigrationController(props),
+      { initialProps: options },
+    )
+    await waitFor(() => expect(result.current.preview?.readyCount).toBe(1))
+    await act(async () => result.current.callbacks.onConfirm())
+    const englishSummary = result.current.result?.summary
+    const chineseT = resourceI18n.getFixedT("zh-CN")
+
+    rerender({ ...options, t: chineseT })
+
+    expect(result.current.result?.summary).not.toBe(englishSummary)
+    expect(result.current.result?.items[0]).toMatchObject({
+      rowKey: "opaque::second",
+      status: "uncertain",
+      statusLabel: chineseT(
+        "managedSiteChannels:migration.results.status.uncertain",
+      ),
+      message: chineseT(
+        "managedSiteChannels:migration.results.refreshRequired",
+      ),
+    })
+    expect(result.current.refreshRequired).toBe(true)
+    expect(result.current.result?.canReplay).toBe(false)
+    await act(async () => result.current.callbacks.onConfirm())
+    expect(prepareMigration).toHaveBeenCalledTimes(1)
+    expect(executeMigration).toHaveBeenCalledTimes(1)
+    expect(options.refresh).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(["validation", "preview", "execution"] as const)(
+    "retranslates an existing %s failure without retrying the operation",
+    async (failureStage) => {
+      const prepareMigration = vi.fn(
+        async ({
+          selections,
+        }: {
+          selections: readonly ManagedSiteMigrationSelection[]
+        }) => {
+          if (failureStage === "preview")
+            throw new Error("private-preview-error")
+          return buildPreview(selections)
+        },
+      )
+      const executeMigration = vi.fn(async () => {
+        throw new Error("private-execution-error")
+      })
+      const options = buildOptions({
+        prepareMigration,
+        executeMigration,
+        selectedRowKeys: [
+          failureStage === "validation" ? "missing-row" : "opaque::second",
+        ],
+        t: resourceI18n.getFixedT("en"),
+      })
+      const { result, rerender } = renderHook(
+        (props: ReturnType<typeof buildOptions>) =>
+          useManagedResourceMigrationController(props),
+        { initialProps: options },
+      )
+      if (failureStage === "execution") {
+        await waitFor(() => expect(result.current.preview?.readyCount).toBe(1))
+        await act(async () => result.current.callbacks.onConfirm())
+      }
+      await waitFor(() =>
+        expect(result.current.preview?.error).toBe(
+          "Failed to load migration preview: Unknown",
+        ),
+      )
+
+      rerender({ ...options, t: resourceI18n.getFixedT("zh-CN") })
+
+      expect(result.current.preview?.error).toBe("迁移预览加载失败：未知")
+      expect(prepareMigration).toHaveBeenCalledTimes(
+        failureStage === "validation" ? 0 : 1,
+      )
+      expect(executeMigration).toHaveBeenCalledTimes(
+        failureStage === "execution" ? 1 : 0,
+      )
+      expect(options.refresh).not.toHaveBeenCalled()
+      expect(JSON.stringify(result.current)).not.toContain("private-")
+    },
+  )
+
+  describe.each([
+    {
+      language: "en",
+      errorMessage: "Failed to load migration preview: Unknown",
+    },
+    { language: "zh-CN", errorMessage: "迁移预览加载失败：未知" },
+  ])(
+    "localized migration failures ($language)",
+    ({ language, errorMessage }) => {
+      it("localizes invalid selections with real locale resources", async () => {
+        const options = buildOptions({
+          t: resourceI18n.getFixedT(language),
+          selectedRowKeys: ["stale-row"],
+          prepareMigration: vi.fn(),
+        })
+        const { result } = renderHook(() =>
+          useManagedResourceMigrationController(options),
+        )
+
+        await waitFor(() =>
+          expect(result.current.preview?.error).toBe(errorMessage),
+        )
+      })
+
+      it("localizes preview failures with real locale resources", async () => {
+        const options = buildOptions({
+          t: resourceI18n.getFixedT(language),
+          prepareMigration: vi.fn(async () => {
+            throw new Error("preview-sensitive-error")
+          }),
+        })
+        const { result } = renderHook(() =>
+          useManagedResourceMigrationController(options),
+        )
+
+        await waitFor(() =>
+          expect(result.current.preview?.error).toBe(errorMessage),
+        )
+      })
+
+      it("localizes execution failures with real locale resources", async () => {
+        const options = buildOptions({
+          t: resourceI18n.getFixedT(language),
+          prepareMigration: vi.fn(
+            async ({
+              selections,
+            }: {
+              selections: readonly ManagedSiteMigrationSelection[]
+            }) => buildPreview(selections),
+          ),
+          executeMigration: vi.fn(async () => {
+            throw new Error("execution-sensitive-error")
+          }),
+        })
+        const { result } = renderHook(() =>
+          useManagedResourceMigrationController(options),
+        )
+
+        await waitFor(() => expect(result.current.preview?.readyCount).toBe(2))
+        await act(async () => result.current.callbacks.onConfirm())
+
+        expect(result.current.preview?.error).toBe(errorMessage)
+      })
+    },
+  )
+
   it("preserves opaque selection ids and order without publishing refs in UI state", async () => {
     const prepareMigration = vi.fn(
       async ({

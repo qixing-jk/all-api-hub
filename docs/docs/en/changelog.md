@@ -8,6 +8,37 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 3.61.0
+- **New Features:**
+  - **APIyi accounts**: Add APIyi accounts and view available models, key groups, and group multipliers. If an account management token is needed, follow the prompts to obtain it on the site and paste it into the extension. See [Account Management](./account-management.md).
+  - **Channel migration**: Copy supported API key channels between Sub2API and other configured self-hosted sites. Preview configuration differences before migrating; channels on the source site remain unchanged. Migrating out of Sub2API is currently restricted when additional verification is required to access keys. See [Self-Hosted Site Management](./self-hosted-site-management.md).
+  - **API verification**: Test streaming and non-streaming modes separately to investigate problems that affect one response mode. This option is also available in related CLI compatibility tests.
+  - **Protection bypass history**: See why actions such as refreshing accounts or checking in opened a temporary page, and whether they completed successfully. Search and filter records, copy diagnostic information, or clear the history. Records are stored only on your device.
+- **Experience Improvements:**
+  - **Key creation**: When adding an account, you can choose to automatically create missing keys for all available groups. Groups with usable keys are skipped. You can also fill in missing keys for saved accounts in Key Management, with prompts for groups that need manual attention. See [Key Management](./key-management.md).
+  - **Automatic check-in**: Results now distinguish successful check-ins in the current run, accounts already checked in, failures, unconfirmed results, and accounts not run. Combine multiple status filters or use “Needs attention” to focus on accounts that need follow-up. See [Automatic Check-in](./auto-checkin.md).
+  - **Adding and detecting New API accounts**: Supports the password verification required by newer New API versions when creating account management tokens. The extension guides you to the site to complete verification and copy the token, while keeping your form entries so you can return and continue adding the account. Re-detecting the same account on the same site reuses its existing valid management token, reducing the need to obtain another one. See [Auto-Detection Troubleshooting](./auto-detect.md).
+  - **Changelog**: A larger reading area lets you see more update details at once.
+- **Bug Fixes:**
+  - **Multiple-account detection**: Reduces cases where the previous account is still detected after switching logins. Adding a different account on the same site no longer triggers a duplicate warning just because the site address matches.
+  - **Channel editing**: Editing channels in Veloera and Octopus more reliably preserves untouched settings in the site’s admin panel, reducing accidental resets of other configuration when saving. See [Self-Hosted Site Management](./self-hosted-site-management.md).
+
+## 3.60.0
+- **New Features:**
+  - `Denxio` daily check-in: On `Sub2API` sites that offer Denxio check-in, the extension can now check in automatically each day and show the results. Add or re-detect the account, then enable automatic check-in once this method is detected as available. See [Automatic Check-in](./auto-checkin.md).
+  - Feature tour: Follow step-by-step prompts to find accounts, models, keys, automatic check-in, and other features and learn what each can do. The tour works on desktop and mobile and can be replayed from About.
+- **Experience Improvements:**
+  - Adding accounts: If automatic detection fails, you no longer need to start over. Detected information stays in the form so you can fill in the missing details without overwriting what you have already entered. When a guide is available for the site, you can open it directly for instructions. See [Auto-Detection Troubleshooting](./auto-detect.md) and [Getting Started](./get-started.md).
+  - Editing self-hosted site channels: When changing channel names, models, or other details in `DoneHub`, `Veloera`, `Claude Code Hub`, and `Octopus`, existing API keys and settings you have not changed are preserved more reliably, reducing the need to enter them again after saving. See [Self-Hosted Site Management](./self-hosted-site-management.md).
+  - Finding self-hosted site channels: Improved channel search and opening the matching channel from an account or key, reducing cases where a channel cannot be found or navigation leads to the wrong entry.
+  - Site announcements: After checking multiple sites, the extension now clearly shows how many checks failed and how many sites do not support announcements. Select a site to see details instead of relying on a generic "Check completed" message.
+- **Bug Fixes:**
+  - `AnyRouter` check-in: Check-in now uses the browser to handle site security verification, reducing failures caused by site protection blocking the request.
+  - Automatic Check-in: Once a site is confirmed to no longer support a check-in method, the extension stops attempting that method. When check-in status cannot be read, it more accurately determines whether a retry is appropriate, reducing repeated attempts caused by expired logins or insufficient permissions. See [Automatic Check-in](./auto-checkin.md).
+  - `Sub2API` accounts: Improved recovery on sites that require login credentials to be used in the original browser, reducing cases where the browser is logged in but the extension cannot read account data. If the browser is logged into another account, its login information will not be saved to the current account.
+  - `Octopus` self-hosted sites: After upgrading to `v0.13`, you can still view, create, and edit channels and sync channel models in the extension. Older site versions remain supported.
+  - `AxonHub` self-hosted sites: Improved channel loading and saving on affected server versions. Clearing the endpoint address (Base URL) or manual model list now takes effect correctly, and edits preserve advanced settings you have not changed. To change an existing channel's extra model prefix, use the AxonHub administration page.
+
 ## 3.59.0
 - **New Features:**
   - Automatic Check-in method detection: When adding or re-detecting an account, the extension can detect available check-in methods and let you choose one when needed. See [Automatic Check-in](./auto-checkin.md).

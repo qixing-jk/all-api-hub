@@ -215,16 +215,6 @@ GitHub Stable と Nightly は手動インストール用チャネルで、自動
   </p>
 </div>
 
-<hr>
-
-<div>
-  <a href="https://infistar.ai/register?aff=ALLAPIHUB&ref_source=link">
-    <img src="resources/partners/infistar.png" alt="Infistar" width="180" align="left" hspace="10" vspace="4">
-  </a>
-  <p>
-    モデルの品質低下や性能制限、不透明な料金が心配ですか？Infistar.ai で提供されるすべてのモデルは、実際の呼び出しによって動作と品質を検証しています。供給元は公式 API と公式アカウントプールで、10,000 を超える供給経路を負荷分散し、低遅延とピーク時の安定性を確保します。ChatGPT、Claude、Gemini、Grok、GLM、DeepSeek、Kimi、Qwen、MiniMax など、国内外の主要モデルに対応し、テキスト、動画、画像、埋め込み、リランキングなどのフルモーダル機能を提供します。料金と使用量は透明で明確に確認でき、モデルによっては公式価格の 10% から利用できます。All API Hub ユーザーは<a href="https://infistar.ai/register?aff=ALLAPIHUB&ref_source=link">専用リンク</a>から登録してお試しいただけます（<a href="https://all-api-hub.qixing1217.top/ja/service-guides/infistar.html">設定ガイド</a>）。
-  </p>
-</div>
 
 <hr>
 

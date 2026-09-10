@@ -10,7 +10,7 @@ import {
   openLoginTab,
   reloadCurrentTab,
 } from "~/services/accounts/utils/autoDetectUtils"
-import { clearSiteRouteThemeCacheForTests } from "~/services/accounts/utils/siteRouteResolver"
+import { clearSiteRouteThemeCacheForTests } from "~/services/apiAdapters/newApi/accountRoutes"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 
 const { tMock } = vi.hoisted(() => ({

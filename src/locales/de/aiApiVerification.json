@@ -32,11 +32,16 @@
     "meta": {
       "apiType": "API-Typ",
       "apiTypePlaceholder": "API-Typ auswählen",
+      "mode": "Testmodus",
       "model": "Modell",
       "modelPlaceholder": "Geben Sie die Modell-ID ein",
       "runtimeKey": "Schlüssel",
       "runtimeKeyIncompatible": "Für dieses Modell nicht verfügbar",
       "runtimeKeyPlaceholder": "Schlüssel auswählen"
+    },
+    "modes": {
+      "nonStreaming": "Ohne Streaming",
+      "streaming": "Streaming"
     },
     "noCompatibleRuntimeKeyHint": "Für die Gruppe dieses Modells ist kein Schlüssel verfügbar. Erstellen oder wählen Sie einen Schlüssel für eine aktivierte Gruppe in der Schlüsselverwaltung aus.",
     "notRunYet": "Noch nicht ausgeführt",

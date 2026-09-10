@@ -13,7 +13,6 @@
       "title": "Unable to save channel"
     },
     "loadError": {
-      "description": "{{error}}",
       "title": "Unable to load channels"
     },
     "partialMutation": {
@@ -287,13 +286,9 @@
       "running": "Migrating...",
       "start": "Start migration"
     },
-    "alerts": {
-      "noTargets": {
-        "description": "Configure another managed-site target in settings before channel migration can be used."
-      }
-    },
     "betaBadge": "Beta",
     "blockedReasons": {
+      "sourceKeyExportRestricted": "Exporting keys from the source site requires web verification that the configured Admin API Key cannot complete. Retrieve the key from the source dashboard and migrate this channel manually.",
       "sourceKeyMissing": "The source channel key is unavailable, so this channel cannot be migrated yet.",
       "sourceKeyResolutionFailed": "The source channel key could not be loaded. If you just completed verification, refresh the preview and try again.",
       "sourceTypeUnsupported": "This source channel type is not supported for migration. Choose a supported channel or migrate it manually.",
@@ -318,6 +313,7 @@
       "dropsModelMapping": "Model redirect mappings will not be copied.",
       "dropsMultiKeyState": "Multi-key runtime state will not be copied.",
       "dropsStatusCodeMapping": "Status-code mapping settings will not be copied.",
+      "sub2apiDefaultGroup": "Source groups are not copied. The target uses the platform's default group if it exists. Check group assignments after migration.",
       "targetForcesDefaultGroup": "The target site will replace the source groups with its default group.",
       "targetIgnoresPriority": "The target site will not preserve the source priority value.",
       "targetIgnoresWeight": "The target site will not preserve the source weight value.",
@@ -335,7 +331,6 @@
       },
       "loadFailed": "Failed to load migration preview: {{error}}",
       "loading": "Building migration preview...",
-      "selectedCount": "{{selectedCount}} channels selected",
       "status": {
         "blocked": "Blocked",
         "ready": "Ready"
@@ -365,6 +360,7 @@
       },
       "title": "Migration results"
     },
+    "sub2apiDefaultGroup": "Platform default group (if available)",
     "target": {
       "destinationLabel": "Destination site",
       "label": "Migration target",
@@ -415,17 +411,8 @@
   },
   "title": "Channels management",
   "toasts": {
-    "channelDeleted": "Channel deleted",
     "channelSaved": "Channel saved",
-    "channelsDeleted_one": "{{count}} channel deleted",
-    "channelsDeleted_other": "{{count}} channels deleted",
     "channelUpdated": "Channel updated",
-    "revealKeyFailed": "Failed to load the real channel key: {{error}}",
-    "revealKeyMasked": "The channel key is still masked",
-    "revealKeyUnavailable": "The channel key is unavailable",
-    "revealKeyUnsupported": "This managed site does not support revealing channel keys",
-    "someDeletesFailed_one": "Failed to delete {{count}} channel: {{error}}",
-    "someDeletesFailed_other": "Failed to delete {{count}} channels: {{error}}",
     "syncCompleted": "Model sync completed ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Models were synced ({{success}}/{{total}}), but the channel list could not be refreshed. Refresh and try again.",
     "syncFailed": "Model sync failed: {{error}}",

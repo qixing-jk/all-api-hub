@@ -2,9 +2,12 @@
   "accountSelect": {
     "confirm": "确认兑换",
     "noResults": "未找到匹配的账号，请调整搜索条件",
+    "noSupportedAccounts": "已保存的账号都暂不支持自动兑换，请前往对应站点手动兑换。",
+    "openSiteManual": "前往站点手动兑换",
     "title": "选择要用于兑换的账号",
     "titleFallback": "未找到与当前站点匹配的账号，请手动选择一个账号",
-    "titleMultiple": "检测到多个可用账号，请选择一个用于兑换"
+    "titleMultiple": "检测到多个可用账号，请选择一个用于兑换",
+    "unsupported": "此站点类型暂不支持自动兑换"
   },
   "actions": {
     "autoRedeem": "自动兑换"
@@ -25,7 +28,8 @@
     "selectAll": "全选",
     "success": {
       "settingsSaved": "兑换助手设置已保存"
-    }
+    },
+    "unsupportedSiteType": "此账号的站点类型暂不支持自动兑换，请选择其他账号或前往对应站点手动兑换。"
   },
   "settings": {
     "contextMenu": {

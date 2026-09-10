@@ -1,6 +1,5 @@
 import type { TFunction } from "i18next"
 import { useEffect, useMemo, useState, type FormEvent } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
@@ -16,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import toast from "~/lib/notify"
 import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
 import { discoverOpenAICompatibleModels } from "~/services/aiApi/openaiCompatible"
 import {

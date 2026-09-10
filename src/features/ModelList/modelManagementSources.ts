@@ -236,47 +236,6 @@ export function toCatalogOnlyCapabilities(
 }
 
 /**
- * Disables group filtering for sources whose model-list API has no group
- * semantics while preserving the rest of the source behavior.
- */
-function withoutGroupFilteringCapabilities(
-  capabilities: ModelManagementSourceCapabilities,
-): ModelManagementSourceCapabilities {
-  return {
-    ...capabilities,
-    supportsGroupFiltering: false,
-  }
-}
-
-/**
- * Downgrades AIHubMix model-list rows that can expose model and pricing
- * metadata but cannot provide a revealable API key for key/verification tools.
- */
-export function toAihubmixModelListCapabilities(
-  capabilities: ModelManagementSourceCapabilities,
-): ModelManagementSourceCapabilities {
-  return {
-    ...withoutGroupFilteringCapabilities(capabilities),
-    supportsTokenCompatibility: false,
-    supportsCredentialVerification: false,
-    supportsBatchCredentialVerification: false,
-    supportsCliVerification: false,
-  }
-}
-
-/**
- * Downgrades AIHubMix catalog fallback rows, which are not account-scoped.
- */
-export function toAihubmixCatalogFallbackCapabilities(
-  capabilities: ModelManagementSourceCapabilities,
-): ModelManagementSourceCapabilities {
-  return {
-    ...toAihubmixModelListCapabilities(capabilities),
-    supportsAccountSummary: false,
-  }
-}
-
-/**
  * Applies response-level model-list source capability overrides for display.
  */
 export function deriveModelListSourceCapabilities(params: {

@@ -12,7 +12,10 @@ import {
   updateApiToken,
 } from "~/services/apiService/aihubmix"
 
+import { createAIHubMixCreatedRuntimeSecret } from "./createdSecret"
+
 export const aihubmixKeyManagement: KeyManagementCapability = {
+  createRuntimeSecret: createAIHubMixCreatedRuntimeSecret,
   // AIHubMix lists saved keys as masked values with no reveal route; the full
   // secret is available only in the create response. https://docs.aihubmix.com/en/api/Cli
   inventorySecretAvailability:

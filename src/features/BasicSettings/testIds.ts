@@ -1,5 +1,7 @@
 export const BASIC_SETTINGS_TEST_IDS = {
   page: "basic-settings-page",
+  autoProvisionKeyEnabledSwitch: "auto-provision-key-enabled-switch",
+  autoProvisionKeyAllGroupsButton: "auto-provision-key-all-groups-button",
   actionClickBehaviorPopupButton: "action-click-behavior-popup-button",
   taskNotificationsBrowserTestButton: "task-notifications-browser-test-button",
   taskNotificationsPermissionGrantButton:

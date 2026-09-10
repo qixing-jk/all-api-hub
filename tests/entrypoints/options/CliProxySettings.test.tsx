@@ -5,7 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import CliProxySettings from "~/features/BasicSettings/components/tabs/CliProxy/CliProxySettings"
 import { verifyCliProxyManagementConnection } from "~/services/integrations/cliProxyService"
-import { showResultToast, showUpdateToast } from "~/utils/core/toastHelpers"
+import { showResultToast } from "~/utils/feedback/operationFeedback"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 const { showResultToastMock, showUpdateToastMock, toastErrorMock } = vi.hoisted(
@@ -31,7 +32,7 @@ vi.mock("~/services/integrations/cliProxyService", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   runPreferenceUpdateWithToast: async ({
     expectedLastUpdated,
     setting,
@@ -49,11 +50,13 @@ vi.mock("~/utils/core/toastHelpers", () => ({
     }
     return result
   },
-  showResultToast: showResultToastMock,
   showUpdateToast: showUpdateToastMock,
 }))
+vi.mock("~/utils/feedback/operationFeedback", () => ({
+  showResultToast: showResultToastMock,
+}))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     error: (...args: unknown[]) => toastErrorMock(...args),
   },

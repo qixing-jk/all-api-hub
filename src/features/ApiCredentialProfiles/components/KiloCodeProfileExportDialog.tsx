@@ -1,6 +1,5 @@
 import type { TFunction } from "i18next"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { KiloCodeIcon } from "~/components/icons/KiloCodeIcon"
@@ -20,6 +19,7 @@ import {
   SelectValue,
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import toast from "~/lib/notify"
 import {
   getKiloCodeApiConfigProfileNames,
   KILO_CODE_EXPORT_TARGET_OPTIONS,

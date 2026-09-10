@@ -32,11 +32,16 @@
     "meta": {
       "apiType": "API type",
       "apiTypePlaceholder": "Select API type",
+      "mode": "Test mode",
       "model": "Model",
       "modelPlaceholder": "Enter model id",
       "runtimeKey": "Key",
       "runtimeKeyIncompatible": "Not available for this model",
       "runtimeKeyPlaceholder": "Select key"
+    },
+    "modes": {
+      "nonStreaming": "Non-streaming",
+      "streaming": "Streaming"
     },
     "noCompatibleRuntimeKeyHint": "No key is available for this model's group. Create or choose a key for an enabled group in Key Management.",
     "notRunYet": "Not run yet",

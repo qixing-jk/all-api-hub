@@ -1,9 +1,11 @@
 import { fireEvent, render as rtlRender, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { useState } from "react"
 import { I18nextProvider } from "react-i18next"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import FilterBar from "~/features/AutoCheckin/components/FilterBar"
-import { FILTER_STATUS } from "~/features/AutoCheckin/utils/autoCheckin"
+import enAutoCheckin from "~/locales/en/autoCheckin.json"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -13,8 +15,12 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/contracts"
-import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
-import { testI18n } from "~~/tests/test-utils/i18n"
+import {
+  CHECKIN_RESULT_STATUS,
+  type CheckinAccountResult,
+  type CheckinResultStatus,
+} from "~/types/autoCheckin"
+import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
 
 const { trackProductAnalyticsActionCompletedMock } = vi.hoisted(() => ({
   trackProductAnalyticsActionCompletedMock: vi.fn(),
@@ -25,75 +31,189 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     trackProductAnalyticsActionCompletedMock(...args),
 }))
 
+const results: CheckinAccountResult[] = [
+  {
+    accountId: "failed",
+    accountName: "Private Failed",
+    status: CHECKIN_RESULT_STATUS.FAILED,
+    timestamp: 5,
+  },
+  {
+    accountId: "uncertain",
+    accountName: "Uncertain",
+    status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+    reconciliation: "unknown",
+    timestamp: 4,
+  },
+  {
+    accountId: "skipped",
+    accountName: "Skipped",
+    status: CHECKIN_RESULT_STATUS.SKIPPED,
+    timestamp: 3,
+  },
+  {
+    accountId: "success",
+    accountName: "Private Success",
+    status: CHECKIN_RESULT_STATUS.SUCCESS,
+    timestamp: 2,
+  },
+  {
+    accountId: "already-checked",
+    accountName: "Already checked",
+    status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+    timestamp: 1,
+  },
+]
+
+function StatefulFilterBar() {
+  const [selectedStatuses, setSelectedStatuses] = useState<
+    CheckinResultStatus[]
+  >([])
+
+  return (
+    <FilterBar
+      accountResults={results}
+      selectedStatuses={selectedStatuses}
+      keyword=""
+      onSelectedStatusesChange={setSelectedStatuses}
+      onKeywordChange={vi.fn()}
+    />
+  )
+}
+
 describe("AutoCheckin FilterBar", () => {
+  it("updates the attention preset label when deselecting a status and resets to all", async () => {
+    const user = userEvent.setup()
+    const i18n = await createResourceTestI18n({
+      en: { autoCheckin: enAutoCheckin },
+    })
+    rtlRender(
+      <I18nextProvider i18n={i18n}>
+        <StatefulFilterBar />
+      </I18nextProvider>,
+    )
+    const trigger = screen.getByRole("button", {
+      name: /Filter by execution status/,
+    })
+    await user.click(trigger)
+    await user.click(screen.getByRole("menuitem", { name: /Needs attention/ }))
+    expect(trigger).toHaveAccessibleName(
+      "Filter by execution status: Needs attention",
+    )
+    await user.click(trigger)
+    await user.click(screen.getByRole("menuitemcheckbox", { name: /Failed/ }))
+    expect(
+      screen.getByRole("menuitemcheckbox", { name: /Failed/ }),
+    ).toHaveAttribute("aria-checked", "false")
+    await user.keyboard("{Escape}")
+    expect(trigger).not.toHaveAccessibleName(
+      "Filter by execution status: Needs attention",
+    )
+    await user.click(trigger)
+    await user.click(screen.getByRole("menuitem", { name: /All/ }))
+    expect(trigger).toHaveAccessibleName("Filter by execution status: All")
+    expect(screen.getByText("5 total")).toBeVisible()
+  })
+
   afterEach(() => {
     trackProductAnalyticsActionCompletedMock.mockReset()
   })
 
-  it("clears the keyword search from the shared input clear button", () => {
-    const onKeywordChange = vi.fn()
-
+  it("uses one multi-select menu for the five result statuses", async () => {
+    const user = userEvent.setup()
     rtlRender(
       <I18nextProvider i18n={testI18n}>
-        <FilterBar
-          accountResults={[
-            {
-              accountId: "account-1",
-              accountName: "Alpha",
-              status: CHECKIN_RESULT_STATUS.SUCCESS,
-              timestamp: 1,
-            },
-          ]}
-          status={FILTER_STATUS.ALL}
-          keyword="Alpha"
-          onStatusChange={vi.fn()}
-          onKeywordChange={onKeywordChange}
-        />
+        <StatefulFilterBar />
       </I18nextProvider>,
     )
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "common:actions.clear" }),
+    expect(
+      screen.queryByRole("button", {
+        name: /autoCheckin:execution\.filters\.failed \(1\)/,
+      }),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /autoCheckin:execution\.filters\.statusLabel/,
+      }),
     )
 
-    expect(onKeywordChange).toHaveBeenCalledWith("")
+    expect(screen.getAllByRole("menuitemcheckbox")).toHaveLength(5)
+    expect(
+      screen.getByRole("menuitemcheckbox", {
+        name: /autoCheckin:execution\.filters\.failed.*1/,
+      }),
+    ).toBeVisible()
   })
 
-  it("tracks status filter selection with controlled result-filter metadata", () => {
-    const onStatusChange = vi.fn()
+  it("keeps multiple atomic statuses selected", async () => {
+    const user = userEvent.setup()
+    rtlRender(
+      <I18nextProvider i18n={testI18n}>
+        <StatefulFilterBar />
+      </I18nextProvider>,
+    )
 
+    await user.click(
+      screen.getByRole("button", {
+        name: /autoCheckin:execution\.filters\.statusLabel/,
+      }),
+    )
+    await user.click(
+      screen.getByRole("menuitemcheckbox", {
+        name: /autoCheckin:execution\.filters\.failed.*1/,
+      }),
+    )
+    await user.click(
+      screen.getByRole("menuitemcheckbox", {
+        name: /autoCheckin:execution\.filters\.uncertain.*1/,
+      }),
+    )
+
+    expect(
+      screen.getByRole("menuitemcheckbox", {
+        name: /autoCheckin:execution\.filters\.failed.*1/,
+      }),
+    ).toHaveAttribute("aria-checked", "true")
+    expect(
+      screen.getByRole("menuitemcheckbox", {
+        name: /autoCheckin:execution\.filters\.uncertain.*1/,
+      }),
+    ).toHaveAttribute("aria-checked", "true")
+  })
+
+  it("applies needs attention as a preset for three atomic statuses", async () => {
+    const user = userEvent.setup()
+    const onSelectedStatusesChange = vi.fn()
     rtlRender(
       <I18nextProvider i18n={testI18n}>
         <FilterBar
-          accountResults={[
-            {
-              accountId: "account-1",
-              accountName: "Alpha",
-              status: CHECKIN_RESULT_STATUS.FAILED,
-              timestamp: 1,
-            },
-            {
-              accountId: "account-2",
-              accountName: "Beta",
-              status: CHECKIN_RESULT_STATUS.SUCCESS,
-              timestamp: 2,
-            },
-          ]}
-          status={FILTER_STATUS.ALL}
+          accountResults={results}
+          selectedStatuses={[]}
           keyword=""
-          onStatusChange={onStatusChange}
+          onSelectedStatusesChange={onSelectedStatusesChange}
           onKeywordChange={vi.fn()}
         />
       </I18nextProvider>,
     )
 
-    fireEvent.click(
+    await user.click(
       screen.getByRole("button", {
-        name: /autoCheckin:execution\.filters\.failed \(\d+\)$/i,
+        name: /autoCheckin:execution\.filters\.statusLabel/,
+      }),
+    )
+    await user.click(
+      screen.getByRole("menuitem", {
+        name: /autoCheckin:execution\.filters\.needsAttention.*3/,
       }),
     )
 
-    expect(onStatusChange).toHaveBeenCalledWith(FILTER_STATUS.FAILED)
+    expect(onSelectedStatusesChange).toHaveBeenCalledWith([
+      CHECKIN_RESULT_STATUS.FAILED,
+      CHECKIN_RESULT_STATUS.UNCERTAIN,
+      CHECKIN_RESULT_STATUS.SKIPPED,
+    ])
     expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterAutoCheckinResults,
@@ -104,53 +224,68 @@ describe("AutoCheckin FilterBar", () => {
         targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ResultFilter,
         mode: PRODUCT_ANALYTICS_MODE_IDS.StatusFilter,
         filterCount: 1,
-        resultCount: 1,
+        resultCount: 3,
       },
     })
   })
 
-  it("exposes status filter pressed state", () => {
+  it("counts results after both multi-status and keyword filters", async () => {
+    const i18n = await createResourceTestI18n({
+      en: { autoCheckin: enAutoCheckin },
+    })
     rtlRender(
-      <I18nextProvider i18n={testI18n}>
+      <I18nextProvider i18n={i18n}>
         <FilterBar
-          accountResults={[]}
-          status={FILTER_STATUS.SKIPPED}
-          keyword=""
-          onStatusChange={vi.fn()}
+          accountResults={results}
+          selectedStatuses={[
+            CHECKIN_RESULT_STATUS.FAILED,
+            CHECKIN_RESULT_STATUS.SUCCESS,
+          ]}
+          keyword="private"
+          onSelectedStatusesChange={vi.fn()}
           onKeywordChange={vi.fn()}
         />
       </I18nextProvider>,
     )
 
-    expect(
-      screen.getByRole("button", {
-        name: /autoCheckin:execution\.filters\.all/i,
-      }),
-    ).toHaveAttribute("aria-pressed", "false")
-    expect(
-      screen.getByRole("button", {
-        name: /autoCheckin:execution\.filters\.skipped/i,
-      }),
-    ).toHaveAttribute("aria-pressed", "true")
+    expect(screen.getByText("Showing 2 of 5")).toBeVisible()
   })
 
-  it("tracks keyword clearing without exposing the raw keyword", () => {
+  it("clears status and keyword filters together", async () => {
+    const user = userEvent.setup()
+    const onSelectedStatusesChange = vi.fn()
     const onKeywordChange = vi.fn()
-
     rtlRender(
       <I18nextProvider i18n={testI18n}>
         <FilterBar
-          accountResults={[
-            {
-              accountId: "account-1",
-              accountName: "Private Account",
-              status: CHECKIN_RESULT_STATUS.FAILED,
-              timestamp: 1,
-            },
-          ]}
-          status={FILTER_STATUS.FAILED}
+          accountResults={results}
+          selectedStatuses={[CHECKIN_RESULT_STATUS.FAILED]}
+          keyword="Private"
+          onSelectedStatusesChange={onSelectedStatusesChange}
+          onKeywordChange={onKeywordChange}
+        />
+      </I18nextProvider>,
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "autoCheckin:execution.filters.clearAll",
+      }),
+    )
+
+    expect(onSelectedStatusesChange).toHaveBeenCalledWith([])
+    expect(onKeywordChange).toHaveBeenCalledWith("")
+  })
+
+  it("clears the keyword without exposing it to analytics", () => {
+    const onKeywordChange = vi.fn()
+    rtlRender(
+      <I18nextProvider i18n={testI18n}>
+        <FilterBar
+          accountResults={results}
+          selectedStatuses={[CHECKIN_RESULT_STATUS.FAILED]}
           keyword="private-keyword"
-          onStatusChange={vi.fn()}
+          onSelectedStatusesChange={vi.fn()}
           onKeywordChange={onKeywordChange}
         />
       </I18nextProvider>,
@@ -161,187 +296,8 @@ describe("AutoCheckin FilterBar", () => {
     )
 
     expect(onKeywordChange).toHaveBeenCalledWith("")
-    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterAutoCheckinResults,
-      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinFilterBar,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-      result: PRODUCT_ANALYTICS_RESULTS.Success,
-      insights: {
-        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ResultFilter,
-        mode: PRODUCT_ANALYTICS_MODE_IDS.SearchFilter,
-        filterCount: 1,
-        resultCount: 1,
-      },
-    })
     expect(
       JSON.stringify(trackProductAnalyticsActionCompletedMock.mock.calls),
     ).not.toContain("private-keyword")
-  })
-
-  it("counts results after both pending status and keyword filters", () => {
-    rtlRender(
-      <I18nextProvider i18n={testI18n}>
-        <FilterBar
-          accountResults={[
-            {
-              accountId: "account-1",
-              accountName: "Alpha",
-              status: CHECKIN_RESULT_STATUS.FAILED,
-              rawMessage: "needs private login",
-              timestamp: 1,
-            },
-            {
-              accountId: "account-2",
-              accountName: "Beta",
-              status: CHECKIN_RESULT_STATUS.FAILED,
-              rawMessage: "different failure",
-              timestamp: 2,
-            },
-            {
-              accountId: "account-3",
-              accountName: "Private Success",
-              status: CHECKIN_RESULT_STATUS.SUCCESS,
-              rawMessage: "ok",
-              timestamp: 3,
-            },
-          ]}
-          status={FILTER_STATUS.ALL}
-          keyword="private"
-          onStatusChange={vi.fn()}
-          onKeywordChange={vi.fn()}
-        />
-      </I18nextProvider>,
-    )
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: /autoCheckin:execution\.filters\.failed \(\d+\)$/i,
-      }),
-    )
-
-    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        insights: expect.objectContaining({
-          mode: PRODUCT_ANALYTICS_MODE_IDS.StatusFilter,
-          filterCount: 2,
-          resultCount: 1,
-        }),
-      }),
-    )
-  })
-
-  it("shows the matching count and clears status and keyword filters together", () => {
-    const onStatusChange = vi.fn()
-    const onKeywordChange = vi.fn()
-
-    rtlRender(
-      <I18nextProvider i18n={testI18n}>
-        <FilterBar
-          accountResults={[
-            {
-              accountId: "account-1",
-              accountName: "Alpha",
-              status: CHECKIN_RESULT_STATUS.FAILED,
-              timestamp: 1,
-            },
-            {
-              accountId: "account-2",
-              accountName: "Beta",
-              status: CHECKIN_RESULT_STATUS.SUCCESS,
-              timestamp: 2,
-            },
-          ]}
-          status={FILTER_STATUS.FAILED}
-          keyword="Alpha"
-          onStatusChange={onStatusChange}
-          onKeywordChange={onKeywordChange}
-        />
-      </I18nextProvider>,
-    )
-
-    expect(
-      screen.getByText("autoCheckin:execution.filters.countFiltered"),
-    ).toBeVisible()
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "autoCheckin:execution.filters.clearAll",
-      }),
-    )
-
-    expect(onStatusChange).toHaveBeenCalledWith(FILTER_STATUS.ALL)
-    expect(onKeywordChange).toHaveBeenCalledWith("")
-  })
-
-  it("filters failed and skipped outcomes together", () => {
-    const onStatusChange = vi.fn()
-
-    rtlRender(
-      <I18nextProvider i18n={testI18n}>
-        <FilterBar
-          accountResults={[
-            {
-              accountId: "failed",
-              accountName: "Failed",
-              status: CHECKIN_RESULT_STATUS.FAILED,
-              timestamp: 3,
-            },
-            {
-              accountId: "skipped",
-              accountName: "Skipped",
-              status: CHECKIN_RESULT_STATUS.SKIPPED,
-              timestamp: 2,
-            },
-            {
-              accountId: "success",
-              accountName: "Success",
-              status: CHECKIN_RESULT_STATUS.SUCCESS,
-              timestamp: 1,
-            },
-          ]}
-          status={FILTER_STATUS.ALL}
-          keyword=""
-          onStatusChange={onStatusChange}
-          onKeywordChange={vi.fn()}
-        />
-      </I18nextProvider>,
-    )
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: /autoCheckin:execution\.filters\.failedOrSkipped/i,
-      }),
-    )
-
-    expect(onStatusChange).toHaveBeenCalledWith(FILTER_STATUS.FAILED_OR_SKIPPED)
-    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        insights: expect.objectContaining({
-          filterCount: 1,
-          resultCount: 2,
-        }),
-      }),
-    )
-  })
-
-  it("leaves result sorting to the table column headers", () => {
-    rtlRender(
-      <I18nextProvider i18n={testI18n}>
-        <FilterBar
-          accountResults={[]}
-          status={FILTER_STATUS.ALL}
-          keyword=""
-          onStatusChange={vi.fn()}
-          onKeywordChange={vi.fn()}
-        />
-      </I18nextProvider>,
-    )
-
-    expect(
-      screen.queryByRole("combobox", {
-        name: "autoCheckin:execution.sort.label",
-      }),
-    ).not.toBeInTheDocument()
   })
 })

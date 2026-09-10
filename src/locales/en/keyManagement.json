@@ -303,6 +303,7 @@
       "inputPreparationFailed": "Verification could not prepare comparable channel inputs.",
       "newApiRetrieveKeyHint": "For New API, full key comparison depends on the channel key, and viewing that channel key itself requires 2FA verification, so full key comparison is currently unavailable."
     },
+    "nativeResourceUnsupported": "Managed-site matching does not yet support native resource keys on this page. Refresh applies only to supported keys.",
     "pageUnsupported": "Managed-site channel checks are unavailable on this page because the current managed site does not currently support searching channels by URL.",
     "recovery": {
       "configureLogin": "Add the New API login and 2FA-assist fields in Settings first. Until then, the channel key cannot be read and full key comparison cannot be completed.",
@@ -363,6 +364,29 @@
     "verifyApiFailed": "Failed to open API verification",
     "verifyCliSupportFailed": "Failed to open CLI compatibility verification"
   },
+  "native": {
+    "detailsLoadFailed": "Could not load key details.",
+    "heading": "API keys",
+    "missing": "Not available",
+    "scope": {
+      "empty": "No scopes available",
+      "error": "Could not load scopes",
+      "errorHelp": "Check account access and try again.",
+      "heading": "Scope",
+      "label": "Select a scope",
+      "loading": "Loading scopes…",
+      "partial": "Some scopes could not be loaded. Available scopes can still be used.",
+      "placeholder": "Choose a scope",
+      "retry": "Retry loading scopes"
+    },
+    "status": {
+      "disabled": "Disabled",
+      "enabled": "Enabled",
+      "expired": "Expired",
+      "unknown": "Unknown"
+    }
+  },
+  "noAccountsSupportKeyCreation": "None of the accounts in this view support creating API keys. Select another account or add a supported account.",
   "noKeys": "No key data yet",
   "noMatchingKeys": "No matching keys found",
   "oneTimeKey": {
@@ -549,7 +573,6 @@
         "usageWeekly": "Weekly usage",
         "workspace": "Workspace"
       },
-      "heading": "OpenRouter keys",
       "status": {
         "all": "All",
         "disabled": "Disabled",
@@ -598,7 +621,7 @@
       "title_one": "Delete {{count}} invalid key?",
       "title_other": "Delete {{count}} invalid keys?"
     },
-    "description": "Check whether saved accounts have usable keys. Missing keys are created automatically when possible; other issues appear below.",
+    "description": "Check all available groups of saved accounts and create missing usable keys where automatic creation is supported. Other issues are listed below.",
     "failureGuidance": {
       "aborted": "The operation was cancelled before it completed. Run the check again when ready.",
       "authenticationFailed": "Sign in again or update this account's credentials, then retry.",
@@ -613,7 +636,7 @@
       "validationFailed": "Review the required key settings, correct them, and retry."
     },
     "historyNote": "This shows the previous check result. No job is currently running, and you can rerun the check.",
-    "initialNotice": "Saved accounts will be checked for usable keys. When a supported account is missing one, the extension may create a new key.",
+    "initialNotice": "Check saved accounts group by group and create missing keys where supported. Groups that already have usable keys are skipped.",
     "invalidKeys": {
       "badge": "Invalid",
       "deleteFailed": "Failed to delete invalid keys",

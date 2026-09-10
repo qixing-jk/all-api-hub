@@ -1,10 +1,10 @@
 import userEvent from "@testing-library/user-event"
 import type { InputHTMLAttributes, ReactNode } from "react"
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import ManagedSiteModelSyncSettings from "~/features/BasicSettings/components/tabs/ManagedSite/managedSiteModelSyncSettings"
+import toast from "~/lib/notify"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"
 import {
@@ -88,7 +88,7 @@ vi.mock("~/utils/core/identifier", () => ({
   safeRandomUUID: vi.fn(() => "generated-filter-id"),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     error: vi.fn(),
     success: vi.fn(),

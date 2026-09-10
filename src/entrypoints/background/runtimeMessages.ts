@@ -2,6 +2,7 @@ import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { WEB_AI_API_CHECK_TARGET_IDS } from "~/features/BasicSettings/components/tabs/WebAiApiCheck/searchTargets"
+import { setupAccountBrowserIdentityRateLimitMessaging } from "~/services/accountBrowserSession/identityRateLimit"
 import { setupAccountKeyRepairMessagingListeners } from "~/services/accounts/accountKeyAutoProvisioning"
 import { setupAutoRefreshMessagingListeners } from "~/services/accounts/autoRefreshService"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
@@ -46,6 +47,7 @@ import { t } from "~/utils/i18n/core"
 import {
   openBugReportPage,
   openOrFocusOptionsMenuItem,
+  openProtectionBypassHistory,
 } from "~/utils/navigation"
 
 import { trackCookieInterceptorUrl } from "./cookieInterceptor"
@@ -101,6 +103,7 @@ async function resolveCookieStoreIdFromImportRequest(
  * Routes browser.runtime messages to feature-specific handlers based on action prefixes.
  */
 export function setupRuntimeMessageListeners() {
+  setupAccountBrowserIdentityRateLimitMessaging()
   setupReleaseUpdateMessagingListeners()
   setupLdohSiteLookupMessagingListeners()
   setupTaskNotificationMessagingListeners()
@@ -296,6 +299,15 @@ export function setupRuntimeMessageListeners() {
           anchor: "shield-settings",
         })
         sendResponse({ success: true })
+        return true
+      }
+
+      if (request.action === RuntimeActionIds.OpenSettingsShieldHistory) {
+        void openProtectionBypassHistory()
+          .then(() => sendResponse({ success: true }))
+          .catch((error) => {
+            sendResponse({ success: false, error: getErrorMessage(error) })
+          })
         return true
       }
 

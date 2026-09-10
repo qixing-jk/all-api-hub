@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
+import { doneHubManagedResourceModels } from "~/services/apiAdapters/managedResources/doneHubOperations"
+import { newApiManagedResourceModels } from "~/services/apiAdapters/managedResources/newApiOperations"
+import { hasValidManagedSiteConfig } from "~/services/managedSites/runtimeConfig"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { ModelRedirectService } from "~/services/models/modelRedirect/ModelRedirectService"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types/managedSiteModelRedirect"
-import { CHANNEL_STATUS } from "~/types/newApi"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 const {
   getSiteTypeCapabilitiesMock,
@@ -47,13 +49,11 @@ vi.mock("~/services/apiAdapters/registry", () => ({
     getSiteTypeCapabilitiesMock(...args),
 }))
 
-vi.mock("~/services/managedSites/managedSiteService", () => ({
+vi.mock("~/services/managedSites/runtimeConfig", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/managedSites/runtimeConfig")
+  >()),
   hasValidManagedSiteConfig: vi.fn(),
-}))
-
-vi.mock("~/services/managedSites/managedUpstreamResourceService", () => ({
-  resolveManagedUpstreamResourceFeatureCapabilities: (...args: unknown[]) =>
-    resolveManagedUpstreamResourceFeatureCapabilitiesMock(...args),
 }))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
@@ -78,7 +78,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
   })
 
   it("should do nothing when newMapping is empty", async () => {
-    const channel = { id: 1, model_mapping: "{}" } as any
+    const channel = { ref: modelResourceRef(1), modelMapping: "{}" } as any
     const service = {
       updateChannelModelMapping: vi.fn(),
     } as any
@@ -90,8 +90,8 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
 
   it("should merge existing mapping JSON with new mapping", async () => {
     const channel = {
-      id: 1,
-      model_mapping: '{"gpt-4o":"old","custom":"keep"}',
+      ref: modelResourceRef(1),
+      modelMapping: '{"gpt-4o":"old","custom":"keep"}',
     } as any
     const service = {
       updateChannelModelMapping: vi
@@ -119,8 +119,8 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
 
   it("should ignore invalid existing JSON and apply only new mapping", async () => {
     const channel = {
-      id: 1,
-      model_mapping: "invalid-json",
+      ref: modelResourceRef(1),
+      modelMapping: "invalid-json",
     } as any
     const service = {
       updateChannelModelMapping: vi
@@ -146,8 +146,8 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
 
   it("should prune entries whose targets are missing from available models", async () => {
     const channel = {
-      id: 1,
-      model_mapping: '{"missing":"nope","keep":"ok"}',
+      ref: modelResourceRef(1),
+      modelMapping: '{"missing":"nope","keep":"ok"}',
     } as any
     const service = {
       updateChannelModelMapping: vi
@@ -173,8 +173,8 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
 
   it("should preserve entries whose targets exist in available models", async () => {
     const channel = {
-      id: 1,
-      model_mapping: '{"keep":"ok"}',
+      ref: modelResourceRef(1),
+      modelMapping: '{"keep":"ok"}',
     } as any
     const service = {
       updateChannelModelMapping: vi
@@ -198,8 +198,8 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
 
   it("should preserve chained mapping targets on New API sites", async () => {
     const channel = {
-      id: 1,
-      model_mapping:
+      ref: modelResourceRef(1),
+      modelMapping:
         '{"gpt-4":"gpt-4o","gpt-4o":"gpt-4o-2024-05-13","keep":"gpt-4o-2024-05-13"}',
     } as any
     const service = {
@@ -215,7 +215,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
       {
         pruneMissingTargets: true,
         availableModels: ["gpt-4o-2024-05-13"],
-        siteType: SITE_TYPES.NEW_API,
+        modelMappingPolicy: newApiManagedResourceModels.modelMappingPolicy,
       },
     )
 
@@ -225,8 +225,8 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
 
   it("should prune New API cyclic targets when they cannot resolve to an available model", async () => {
     const channel = {
-      id: 1,
-      model_mapping: '{"a":"b","b":"a"}',
+      ref: modelResourceRef(1),
+      modelMapping: '{"a":"b","b":"a"}',
     } as any
     const service = {
       updateChannelModelMapping: vi
@@ -241,7 +241,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
       {
         pruneMissingTargets: true,
         availableModels: ["ok"],
-        siteType: SITE_TYPES.NEW_API,
+        modelMappingPolicy: newApiManagedResourceModels.modelMappingPolicy,
       },
     )
 
@@ -251,8 +251,8 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
 
   it("should treat '+target' as available on DoneHub sites", async () => {
     const channel = {
-      id: 1,
-      model_mapping: '{"gpt-4":"+gpt-4o"}',
+      ref: modelResourceRef(1),
+      modelMapping: '{"gpt-4":"+gpt-4o"}',
     } as any
     const service = {
       updateChannelModelMapping: vi
@@ -267,7 +267,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
       {
         pruneMissingTargets: true,
         availableModels: ["gpt-4o"],
-        siteType: SITE_TYPES.DONE_HUB,
+        modelMappingPolicy: doneHubManagedResourceModels.modelMappingPolicy,
       },
     )
 
@@ -277,8 +277,8 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
 
   it("should apply new mappings even when existing model_mapping is invalid JSON (no pruning)", async () => {
     const channel = {
-      id: 1,
-      model_mapping: "invalid-json",
+      ref: modelResourceRef(1),
+      modelMapping: "invalid-json",
     } as any
     const service = {
       updateChannelModelMapping: vi
@@ -309,8 +309,8 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
 
   it("should persist pruning updates even when newMapping is empty", async () => {
     const channel = {
-      id: 1,
-      model_mapping: '{"missing":"nope"}',
+      ref: modelResourceRef(1),
+      modelMapping: '{"missing":"nope"}',
     } as any
     const service = {
       updateChannelModelMapping: vi
@@ -335,7 +335,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
   it.each(["partial", "uncertain"] as const)(
     "refreshes the channel and rejects a non-replayable %s mapping write",
     async (outcome) => {
-      const channel = { id: 1, model_mapping: "{}" } as any
+      const channel = { ref: modelResourceRef(1), modelMapping: "{}" } as any
       const service = {
         knownSecrets: [],
         knownSecretsComplete: true,
@@ -375,7 +375,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
   )
 
   it("rejects an undefined mapping-writer result as an invalid mutation contract", async () => {
-    const channel = { id: 1, model_mapping: "{}" } as any
+    const channel = { ref: modelResourceRef(1), modelMapping: "{}" } as any
     const service = {
       updateChannelModelMapping: vi.fn().mockResolvedValue(undefined),
     } as any
@@ -402,7 +402,7 @@ describe("ModelRedirectService.applyModelRedirect", () => {
     })
     getSiteTypeCapabilitiesMock.mockReturnValue({
       managedSites: {
-        channels: {
+        models: {
           list: listChannelsMock,
           updateModelMapping: updateChannelModelMappingMock,
         },
@@ -462,22 +462,22 @@ describe("ModelRedirectService.applyModelRedirect", () => {
 
     const channels = [
       {
-        id: 1,
+        ref: modelResourceRef(1),
         name: "active-channel",
-        // no status field -> treated as enabled
-        models: "openai/gpt-4o",
+        disabled: false,
+        models: ["openai/gpt-4o"],
       },
       {
-        id: 2,
+        ref: modelResourceRef(2),
         name: "disabled-manual",
-        status: CHANNEL_STATUS.ManuallyDisabled,
-        models: "openai/gpt-4o",
+        disabled: true,
+        models: ["openai/gpt-4o"],
       },
       {
-        id: 3,
+        ref: modelResourceRef(3),
         name: "disabled-auto",
-        status: CHANNEL_STATUS.AutoDisabled,
-        models: "openai/gpt-4o",
+        disabled: true,
+        models: ["openai/gpt-4o"],
       },
     ]
 
@@ -498,7 +498,7 @@ describe("ModelRedirectService.applyModelRedirect", () => {
     })
     expect(updateChannelModelMappingMock).toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl: "https://example.com" }),
-      1,
+      modelResourceRef(1),
       ["openai/gpt-4o", "gpt-4o"],
       { "gpt-4o": "openai/gpt-4o" },
     )
@@ -521,10 +521,11 @@ describe("ModelRedirectService.applyModelRedirect", () => {
         },
       } as any)
       const channel = {
-        id: 1,
+        ref: modelResourceRef(1),
         name: "uncertain-channel",
-        models: "vendor/gpt-4o",
-        model_mapping: "{}",
+        disabled: false,
+        models: ["vendor/gpt-4o"],
+        modelMapping: "{}",
       }
       listChannelsMock.mockResolvedValue({ items: [channel] })
       vi.spyOn(
@@ -559,7 +560,9 @@ describe("ModelRedirectService.applyModelRedirect", () => {
         success: false,
         updatedChannels: 0,
       })
-      expect(result.errors.join(" ")).toContain(`${outcome} mapping write`)
+      expect(result.errors.join(" ")).toContain(
+        "Model mapping update requires reconciliation",
+      )
     },
   )
 
@@ -582,10 +585,11 @@ describe("ModelRedirectService.applyModelRedirect", () => {
     listChannelsMock.mockResolvedValue({
       items: [
         {
-          id: 1,
+          ref: modelResourceRef(1),
           name: "rejected-channel",
-          models: "vendor/gpt-4o",
-          model_mapping: "{}",
+          disabled: false,
+          models: ["vendor/gpt-4o"],
+          modelMapping: "{}",
         },
       ],
     })
@@ -610,11 +614,71 @@ describe("ModelRedirectService.applyModelRedirect", () => {
       success: false,
       updatedChannels: 0,
     })
-    expect(result.errors.join(" ")).toContain("mapping rejected")
+    expect(result.errors.join(" ")).toContain(
+      "Model mapping update was rejected",
+    )
     expect(result.errors.join(" ")).not.toContain(originalSecret)
     expect(mutableConfig.adminToken).toBe("")
     expect(updateChannelModelMappingMock).toHaveBeenCalledOnce()
   })
+
+  it.each([
+    { outcome: "rejected", credential: "channel-secret" },
+    { outcome: "rejected", credential: "********" },
+    { outcome: "uncertain", credential: undefined },
+    { outcome: "uncertain", credential: "channel-secret" },
+  ] as const)(
+    "does not expose provider diagnostics for a $outcome projected channel with credential $credential",
+    async ({ outcome, credential }) => {
+      mockedHasValidConfig.mockReturnValue(true)
+      mockedUserPreferences.getPreferences.mockResolvedValue({
+        newApi: {
+          baseUrl: "https://example.com",
+          adminToken: "admin-secret",
+          userId: "1",
+        },
+        modelRedirect: {
+          ...DEFAULT_MODEL_REDIRECT_PREFERENCES,
+          enabled: true,
+          standardModels: ["gpt-4o"],
+        },
+      } as any)
+      listChannelsMock.mockResolvedValue({
+        items: [
+          {
+            ref: modelResourceRef(1),
+            name: "channel",
+            disabled: false,
+            credential,
+            models: ["vendor/gpt-4o"],
+            modelMapping: "{}",
+          },
+        ],
+      })
+      vi.spyOn(
+        ModelRedirectService,
+        "generateModelMappingForChannel",
+      ).mockReturnValue({ "gpt-4o": "vendor/gpt-4o" })
+      updateChannelModelMappingMock.mockResolvedValue({
+        outcome,
+        diagnostic: {
+          message:
+            "provider failure admin-secret channel-secret hidden-header-secret",
+        },
+      })
+      const result = await ModelRedirectService.applyModelRedirect()
+      expect(result.success).toBe(false)
+      expect(result.errors.join(" ")).toContain(
+        outcome === "rejected"
+          ? "Model mapping update was rejected"
+          : "Model mapping update requires reconciliation",
+      )
+      expect(JSON.stringify(result)).not.toMatch(
+        /admin-secret|channel-secret|hidden-header-secret|provider failure/,
+      )
+      expect(updateChannelModelMappingMock).toHaveBeenCalledOnce()
+    },
+  )
 
   it("deduplicates normalized existing and appended models before direct writes", async () => {
     mockedUserPreferences.getPreferences.mockResolvedValue({
@@ -632,9 +696,10 @@ describe("ModelRedirectService.applyModelRedirect", () => {
     listChannelsMock.mockResolvedValue({
       items: [
         {
-          id: 1,
+          ref: modelResourceRef(1),
           name: "active-channel",
-          models: "alpha, alpha ,beta,alpha",
+          disabled: false,
+          models: ["alpha", "alpha", "beta", "alpha"],
         },
       ],
     })
@@ -647,7 +712,7 @@ describe("ModelRedirectService.applyModelRedirect", () => {
 
     expect(updateChannelModelMappingMock).toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl: "https://example.com" }),
-      1,
+      modelResourceRef(1),
       ["alpha", "beta", "gamma"],
       { " alpha ": "vendor/alpha", gamma: "vendor/gamma" },
     )
@@ -657,7 +722,7 @@ describe("ModelRedirectService.applyModelRedirect", () => {
     const searchChannelsMock = vi.fn().mockResolvedValue({ items: [] })
     getSiteTypeCapabilitiesMock.mockReturnValue({
       managedSites: {
-        channels: {
+        models: {
           search: searchChannelsMock,
           updateModelMapping: updateChannelModelMappingMock,
         },
@@ -693,446 +758,6 @@ describe("ModelRedirectService.applyModelRedirect", () => {
     expect(updateChannelModelMappingMock).not.toHaveBeenCalled()
   })
 
-  it("uses resource detail drafts for model redirect writes when the resource feature is supported", async () => {
-    mockedHasValidConfig.mockReturnValue(true)
-    mockedUserPreferences.getPreferences.mockResolvedValue({
-      managedSiteType: SITE_TYPES.NEW_API,
-      newApi: {
-        baseUrl: "https://example.com",
-        adminToken: "token",
-        userId: "1",
-      },
-      modelRedirect: {
-        ...DEFAULT_MODEL_REDIRECT_PREFERENCES,
-        enabled: true,
-        standardModels: ["gpt-4o"],
-      },
-    } as any)
-
-    const channel = {
-      id: 1,
-      name: "active-channel",
-      status: CHANNEL_STATUS.Enable,
-      models: "openai/gpt-4o",
-      model_mapping: "{}",
-    }
-    listChannelsMock.mockResolvedValue({ items: [channel] })
-
-    const detail = {
-      summary: {
-        ref: {
-          managedSiteType: SITE_TYPES.NEW_API,
-          scopeKey: "https://example.com",
-          resourceId: "1",
-        },
-      },
-      native: {
-        ...channel,
-        key: "sk-real-key",
-      },
-    }
-    const resources = {
-      items: {
-        list: vi.fn().mockResolvedValue({
-          items: [detail.summary],
-          total: 1,
-        }),
-        getDetail: vi.fn().mockResolvedValue(detail),
-        update: vi.fn().mockResolvedValue(succeededMappingResult),
-      },
-      drafts: {
-        prepareEditDraft: vi.fn().mockReturnValue({
-          name: "active-channel",
-          type: 1,
-          key: "sk-real-key",
-          base_url: "https://upstream.example.invalid",
-          models: ["openai/gpt-4o", " openai/gpt-4o "],
-          groups: [],
-          priority: 0,
-          weight: 1,
-          status: CHANNEL_STATUS.Enable,
-        }),
-      },
-    }
-    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReturnValue({
-      supported: true,
-      siteType: SITE_TYPES.NEW_API,
-      feature: "modelRedirect",
-      capabilities: resources,
-    })
-
-    const mappingSpy = vi.spyOn(
-      ModelRedirectService,
-      "generateModelMappingForChannel",
-    )
-    mappingSpy.mockReturnValue({ "gpt-4o": "openai/gpt-4o" })
-
-    const result = await ModelRedirectService.applyModelRedirect()
-
-    expect(result.success).toBe(true)
-    expect(result.updatedChannels).toBe(1)
-    expect(updateChannelModelMappingMock).not.toHaveBeenCalled()
-    expect(resources.items.update).toHaveBeenCalledWith(
-      expect.objectContaining({ baseUrl: "https://example.com" }),
-      expect.objectContaining({
-        native: expect.objectContaining({
-          model_mapping: JSON.stringify({ "gpt-4o": "openai/gpt-4o" }),
-          models: "openai/gpt-4o,gpt-4o",
-          key: "sk-real-key",
-        }),
-      }),
-      expect.objectContaining({
-        models: ["openai/gpt-4o", "gpt-4o"],
-        key: "sk-real-key",
-      }),
-    )
-  })
-
-  it("preserves per-mutation legacy secrets when a missing resource ref falls back and reconciles", async () => {
-    const originalSecret = "legacy-fallback-secret-placeholder"
-    const mutableConfig = {
-      baseUrl: "https://example.com",
-      adminToken: originalSecret,
-      userId: "1",
-    }
-    mockedHasValidConfig.mockReturnValue(true)
-    mockedUserPreferences.getPreferences.mockResolvedValue({
-      managedSiteType: SITE_TYPES.NEW_API,
-      newApi: mutableConfig,
-      modelRedirect: {
-        ...DEFAULT_MODEL_REDIRECT_PREFERENCES,
-        enabled: true,
-        standardModels: ["gpt-4o"],
-      },
-    } as any)
-    const channel = {
-      id: 1,
-      name: "legacy-fallback",
-      models: "vendor/gpt-4o",
-      model_mapping: "{}",
-    }
-    listChannelsMock.mockResolvedValue({ items: [channel] })
-    const resources = {
-      items: {
-        list: vi.fn().mockResolvedValue({ items: [], total: 0 }),
-        getDetail: vi.fn(),
-        update: vi.fn(),
-      },
-      drafts: {
-        prepareEditDraft: vi.fn(),
-      },
-    }
-    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReturnValue({
-      supported: true,
-      siteType: SITE_TYPES.NEW_API,
-      feature: "modelRedirect",
-      capabilities: resources,
-    })
-    updateChannelModelMappingMock.mockImplementation(async (config) => {
-      config.adminToken = ""
-      return {
-        outcome: "uncertain",
-        diagnostic: {
-          message: `write uncertain ${originalSecret}`,
-        },
-      }
-    })
-    vi.spyOn(
-      ModelRedirectService,
-      "generateModelMappingForChannel",
-    ).mockReturnValue({ "gpt-4o": "vendor/gpt-4o" })
-
-    const result = await ModelRedirectService.applyModelRedirect()
-
-    expect(result).toMatchObject({ success: false, updatedChannels: 0 })
-    expect(result.errors.join(" ")).toContain("write uncertain")
-    expect(result.errors.join(" ")).not.toContain(originalSecret)
-    expect(mutableConfig.adminToken).toBe("")
-    expect(updateChannelModelMappingMock).toHaveBeenCalledOnce()
-    expect(listChannelsMock).toHaveBeenCalledTimes(2)
-    expect(resources.items.getDetail).not.toHaveBeenCalled()
-  })
-
-  it("reconciles an uncertain resource-backed write through a fresh detail read", async () => {
-    mockedHasValidConfig.mockReturnValue(true)
-    mockedUserPreferences.getPreferences.mockResolvedValue({
-      managedSiteType: SITE_TYPES.NEW_API,
-      newApi: {
-        baseUrl: "https://example.com",
-        adminToken: "token",
-        userId: "1",
-      },
-      modelRedirect: {
-        ...DEFAULT_MODEL_REDIRECT_PREFERENCES,
-        enabled: true,
-        standardModels: ["gpt-4o"],
-      },
-    } as any)
-    const channel = {
-      id: 1,
-      name: "resource-backed",
-      models: "vendor/gpt-4o",
-      model_mapping: "{}",
-    }
-    const detail = {
-      summary: {
-        ref: {
-          managedSiteType: SITE_TYPES.NEW_API,
-          scopeKey: "https://example.com",
-          resourceId: "1",
-        },
-      },
-      native: { ...channel, key: "resource-secret-placeholder" },
-    }
-    listChannelsMock.mockResolvedValue({ items: [channel] })
-    const resources = {
-      items: {
-        list: vi.fn().mockResolvedValue({
-          items: [detail.summary],
-          total: 1,
-        }),
-        getDetail: vi.fn().mockResolvedValue(detail),
-        update: vi.fn().mockResolvedValue({
-          outcome: "uncertain",
-          diagnostic: { message: "resource write uncertain" },
-        }),
-      },
-      drafts: {
-        prepareEditDraft: vi.fn().mockReturnValue({
-          name: channel.name,
-          type: 1,
-          key: "resource-secret-placeholder",
-          base_url: "https://upstream.example.invalid",
-          models: ["vendor/gpt-4o"],
-          groups: [],
-          priority: 0,
-          weight: 1,
-          status: CHANNEL_STATUS.Enable,
-        }),
-      },
-    }
-    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReturnValue({
-      supported: true,
-      siteType: SITE_TYPES.NEW_API,
-      feature: "modelRedirect",
-      capabilities: resources,
-    })
-    vi.spyOn(
-      ModelRedirectService,
-      "generateModelMappingForChannel",
-    ).mockReturnValue({ "gpt-4o": "vendor/gpt-4o" })
-
-    const result = await ModelRedirectService.applyModelRedirect()
-
-    expect(result).toMatchObject({ success: false, updatedChannels: 0 })
-    expect(result.errors.join(" ")).toContain("resource write uncertain")
-    expect(resources.items.update).toHaveBeenCalledOnce()
-    expect(resources.items.getDetail).toHaveBeenCalledTimes(2)
-  })
-
-  it("uses the local fallback when preserved native secret inspection is incomplete", async () => {
-    const draftSecret = "MarbleCobaltFjord927"
-    const headerOverrideValue = "WillowAmberQuartz418"
-    const bodyOverrideValue = "CedarIndigoSummit563"
-    const hiddenSecret = "IndigoProxyHiddenSecret684"
-    const providerText = "Provider resource diagnostic must stay private"
-    mockedHasValidConfig.mockReturnValue(true)
-    mockedUserPreferences.getPreferences.mockResolvedValue({
-      managedSiteType: SITE_TYPES.AXON_HUB,
-      axonHub: {
-        baseUrl: "https://axon.example.invalid",
-        email: "admin@example.invalid",
-        password: "password-placeholder",
-      },
-      modelRedirect: {
-        ...DEFAULT_MODEL_REDIRECT_PREFERENCES,
-        enabled: true,
-        standardModels: ["gpt-4o"],
-      },
-    } as any)
-    const channel = {
-      id: 1,
-      name: "active-channel",
-      status: CHANNEL_STATUS.Enable,
-      models: "vendor/gpt-4o",
-      model_mapping: "{}",
-    }
-    listChannelsMock.mockResolvedValue({ items: [channel] })
-    const detail = {
-      summary: {
-        ref: {
-          managedSiteType: SITE_TYPES.AXON_HUB,
-          scopeKey: "https://axon.example.invalid",
-          resourceId: "1",
-        },
-      },
-      native: {
-        ...channel,
-        opaque: Object.defineProperty({}, "password", {
-          enumerable: true,
-          get() {
-            return hiddenSecret
-          },
-        }),
-        settings: {
-          headerOverrideOperations: [
-            {
-              op: "set",
-              path: "/X-Example-Key",
-              value: headerOverrideValue,
-            },
-          ],
-          bodyOverrideOperations: [
-            { op: "set", path: "/api_key", value: bodyOverrideValue },
-          ],
-        },
-      },
-    }
-    const resources = {
-      items: {
-        list: vi.fn().mockResolvedValue({
-          items: [detail.summary],
-          total: 1,
-        }),
-        getDetail: vi.fn().mockResolvedValue(detail),
-        update: vi.fn().mockResolvedValue({
-          outcome: "rejected",
-          diagnostic: {
-            message: `${providerText} ${draftSecret} ${headerOverrideValue} ${bodyOverrideValue} ${hiddenSecret}`,
-            code: "upstream_rejected",
-          },
-        }),
-      },
-      drafts: {
-        prepareEditDraft: vi.fn().mockReturnValue({
-          name: "active-channel",
-          type: 1,
-          key: draftSecret,
-          base_url: "https://upstream.example.invalid",
-          models: ["vendor/gpt-4o"],
-          groups: [],
-          priority: 0,
-          weight: 1,
-          status: CHANNEL_STATUS.Enable,
-        }),
-      },
-    }
-    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReturnValue({
-      supported: true,
-      siteType: SITE_TYPES.AXON_HUB,
-      feature: "modelRedirect",
-      capabilities: resources,
-    })
-    vi.spyOn(
-      ModelRedirectService,
-      "generateModelMappingForChannel",
-    ).mockReturnValue({ "gpt-4o": "vendor/gpt-4o" })
-
-    const result = await ModelRedirectService.applyModelRedirect()
-
-    expect(result.success).toBe(false)
-    expect(result.updatedChannels).toBe(0)
-    expect(result.errors.join(" ")).toContain(
-      "Model mapping update was rejected",
-    )
-    expect(result.errors.join(" ")).not.toContain(providerText)
-    expect(result.errors.join(" ")).not.toContain(draftSecret)
-    expect(result.errors.join(" ")).not.toContain(headerOverrideValue)
-    expect(result.errors.join(" ")).not.toContain(bodyOverrideValue)
-    expect(result.errors.join(" ")).not.toContain(hiddenSecret)
-  })
-
-  it("preserves masked resource keys through adapter-owned model redirect writes", async () => {
-    mockedHasValidConfig.mockReturnValue(true)
-    mockedUserPreferences.getPreferences.mockResolvedValue({
-      managedSiteType: SITE_TYPES.NEW_API,
-      newApi: {
-        baseUrl: "https://example.com",
-        adminToken: "token",
-        userId: "1",
-      },
-      modelRedirect: {
-        ...DEFAULT_MODEL_REDIRECT_PREFERENCES,
-        enabled: true,
-        standardModels: ["gpt-4o"],
-      },
-    } as any)
-
-    const channel = {
-      id: 1,
-      name: "active-channel",
-      status: CHANNEL_STATUS.Enable,
-      models: "openai/gpt-4o",
-      model_mapping: "{}",
-    }
-    listChannelsMock.mockResolvedValue({ items: [channel] })
-
-    const detail = {
-      summary: {
-        ref: {
-          managedSiteType: SITE_TYPES.NEW_API,
-          scopeKey: "https://example.com",
-          resourceId: "1",
-        },
-      },
-      native: {
-        ...channel,
-        key: "sk-***",
-      },
-    }
-    const resources = {
-      items: {
-        list: vi.fn().mockResolvedValue({
-          items: [detail.summary],
-          total: 1,
-        }),
-        getDetail: vi.fn().mockResolvedValue(detail),
-        update: vi.fn().mockResolvedValue(succeededMappingResult),
-      },
-      drafts: {
-        prepareEditDraft: vi.fn().mockReturnValue({
-          name: "active-channel",
-          type: 1,
-          key: "sk-***",
-          base_url: "https://upstream.example.invalid",
-          models: ["openai/gpt-4o"],
-          groups: [],
-          priority: 0,
-          weight: 1,
-          status: CHANNEL_STATUS.Enable,
-        }),
-      },
-    }
-    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReturnValue({
-      supported: true,
-      siteType: SITE_TYPES.NEW_API,
-      feature: "modelRedirect",
-      capabilities: resources,
-    })
-
-    vi.spyOn(
-      ModelRedirectService,
-      "generateModelMappingForChannel",
-    ).mockReturnValue({ "gpt-4o": "openai/gpt-4o" })
-
-    const result = await ModelRedirectService.applyModelRedirect()
-
-    expect(result.success).toBe(true)
-    expect(resources.items.update).toHaveBeenCalledWith(
-      expect.objectContaining({ baseUrl: "https://example.com" }),
-      expect.objectContaining({
-        native: expect.objectContaining({
-          key: "sk-***",
-          model_mapping: JSON.stringify({ "gpt-4o": "openai/gpt-4o" }),
-        }),
-      }),
-      expect.objectContaining({
-        key: "sk-***",
-      }),
-    )
-    expect(updateChannelModelMappingMock).not.toHaveBeenCalled()
-  })
-
   it("should collect errors when applying mapping fails for a channel", async () => {
     mockedHasValidConfig.mockReturnValue(true)
     mockedUserPreferences.getPreferences.mockResolvedValue({
@@ -1152,10 +777,10 @@ describe("ModelRedirectService.applyModelRedirect", () => {
 
     const channels = [
       {
-        id: 1,
+        ref: modelResourceRef(1),
         name: "active-channel",
-        // no status field -> treated as enabled
-        models: "openai/gpt-4o",
+        disabled: false,
+        models: ["openai/gpt-4o"],
       },
     ]
 

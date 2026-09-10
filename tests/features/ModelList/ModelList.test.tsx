@@ -362,7 +362,7 @@ function createModelListData() {
     accountFallback: null,
     personalizedCatalogFallback: null,
     isFallbackCatalogActive: false,
-    isAihubmixCatalogFallbackActive: false,
+    isProviderCatalogFallbackActive: false,
     filteredModels: [],
     unclassifiedVendorCount: 0,
     accountSummaryCountsByAccountId: new Map(),

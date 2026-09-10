@@ -160,17 +160,25 @@ export const commonSiteAnnouncementProvider: SiteAnnouncementProvider = {
     request: SiteAnnouncementProviderRequest,
   ): Promise<SiteAnnouncementProviderResult> {
     const siteKey = createCommonSiteAnnouncementKey(request)
-    try {
-      const siteCapabilities = getSiteTypeCapabilities(request.siteType).site
-      const structuredAnnouncementsCapability = siteCapabilities?.announcements
-      const noticeCapability = siteCapabilities?.notice
+    const siteCapabilities = getSiteTypeCapabilities(request.siteType).site
+    const structuredAnnouncementsCapability = siteCapabilities?.announcements
+    const noticeCapability = siteCapabilities?.notice
 
-      if (!structuredAnnouncementsCapability && !noticeCapability) {
-        throw createMissingCommonSiteAnnouncementCapabilitiesError(
-          request.siteType,
-        )
+    if (!structuredAnnouncementsCapability && !noticeCapability) {
+      return {
+        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        siteKey,
+        status: SITE_ANNOUNCEMENT_STATUS.Unsupported,
+        announcements: [],
+        error: getErrorMessage(
+          createMissingCommonSiteAnnouncementCapabilitiesError(
+            request.siteType,
+          ),
+        ),
       }
+    }
 
+    try {
       const structuredAnnouncements = structuredAnnouncementsCapability
         ? await structuredAnnouncementsCapability
             .fetch(request.apiRequest)
@@ -181,10 +189,12 @@ export const commonSiteAnnouncementProvider: SiteAnnouncementProvider = {
             )
         : []
       let notice: string | null = null
+      let noticeError: string | undefined
       if (noticeCapability && structuredAnnouncementsCapability) {
         try {
           notice = await noticeCapability.fetch(request.apiRequest)
         } catch (error) {
+          noticeError = getErrorMessage(error)
           logger.warn("Failed to fetch site notice", {
             siteType: request.siteType,
             baseUrl: request.baseUrl,
@@ -198,7 +208,9 @@ export const commonSiteAnnouncementProvider: SiteAnnouncementProvider = {
       return {
         providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
         siteKey,
-        status: SITE_ANNOUNCEMENT_STATUS.Success,
+        status: noticeError
+          ? SITE_ANNOUNCEMENT_STATUS.Error
+          : SITE_ANNOUNCEMENT_STATUS.Success,
         announcements: [
           ...structuredAnnouncements,
           ...(content
@@ -210,12 +222,13 @@ export const commonSiteAnnouncementProvider: SiteAnnouncementProvider = {
               ]
             : []),
         ],
+        ...(noticeError ? { error: noticeError } : {}),
       }
     } catch (error) {
       return {
         providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
         siteKey,
-        status: SITE_ANNOUNCEMENT_STATUS.Unsupported,
+        status: SITE_ANNOUNCEMENT_STATUS.Error,
         announcements: [],
         error: getErrorMessage(error),
       }
@@ -230,14 +243,21 @@ export const sub2ApiSiteAnnouncementProvider: SiteAnnouncementProvider = {
     request: SiteAnnouncementProviderRequest,
   ): Promise<SiteAnnouncementProviderResult> {
     const siteKey = createSub2ApiSiteAnnouncementKey(request)
-    try {
-      const announcementsCapability = getSiteTypeCapabilities(
-        SITE_TYPES.SUB2API,
-      ).account?.announcements
-      if (!announcementsCapability) {
-        throw createMissingSiteAnnouncementsCapabilityError(SITE_TYPES.SUB2API)
+    const announcementsCapability = getSiteTypeCapabilities(SITE_TYPES.SUB2API)
+      .account?.announcements
+    if (!announcementsCapability) {
+      return {
+        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api,
+        siteKey,
+        status: SITE_ANNOUNCEMENT_STATUS.Unsupported,
+        announcements: [],
+        error: getErrorMessage(
+          createMissingSiteAnnouncementsCapabilityError(SITE_TYPES.SUB2API),
+        ),
       }
+    }
 
+    try {
       const announcements = await announcementsCapability
         .fetch(request.apiRequest, { unreadOnly: true })
         .then((items) =>

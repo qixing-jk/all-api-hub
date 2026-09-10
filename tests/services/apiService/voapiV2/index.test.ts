@@ -147,6 +147,29 @@ describe("apiService VoAPI v2", () => {
     )
   })
 
+  it("owns unusable non-2xx responses at the VoAPI v2 request seam", async () => {
+    server.use(
+      http.get("https://example.invalid/api/user/invite-info", () =>
+        HttpResponse.json(
+          {
+            code: 0,
+            msg: "success text must not become an HTTP error",
+            error: "unrelated field",
+          },
+          { status: 503 },
+        ),
+      ),
+    )
+
+    await expect(fetchInviteLink(createVoApiV2Request())).rejects.toMatchObject(
+      {
+        message: "VoAPI v2 request failed: 503",
+        statusCode: 503,
+        code: API_ERROR_CODES.HTTP_OTHER,
+      },
+    )
+  })
+
   it("classifies an expired VoAPI v2 invite session", async () => {
     server.use(
       http.get("https://example.invalid/api/user/invite-info", () =>

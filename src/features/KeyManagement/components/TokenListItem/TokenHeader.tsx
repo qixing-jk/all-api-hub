@@ -378,10 +378,10 @@ export function TokenHeader({
       {matchedManagedSiteChannel ? (
         <ManagedSiteChannelLinkButton
           channelName={matchedManagedSiteChannel.name}
-          channelId={
+          resourceRef={
             managedSiteStatus?.status ===
             MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED
-              ? matchedManagedSiteChannel.id
+              ? matchedManagedSiteChannel.ref
               : undefined
           }
           search={

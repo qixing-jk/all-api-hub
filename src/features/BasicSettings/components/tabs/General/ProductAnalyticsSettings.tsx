@@ -16,7 +16,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
 import { productAnalyticsPreferences } from "~/services/productAnalytics/preferences"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 
 /**
  * Immediate opt-out control for anonymous product analytics.

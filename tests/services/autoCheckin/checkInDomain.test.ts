@@ -595,6 +595,31 @@ describe("mergeCheckInDiscoveryResults", () => {
     })
   })
 
+  it("clears the automatic selection when no candidate supports check-in", () => {
+    const config = createConfig({ [NEW_API_METHOD_ID]: matched })
+    config.selection = { mode: "automatic", methodId: NEW_API_METHOD_ID }
+    const merged = mergeCheckInDiscoveryResults({
+      config,
+      candidateMethodIds: [NEW_API_METHOD_ID],
+      detections: { [NEW_API_METHOD_ID]: unsupported },
+      completedAt: 400,
+    })
+    expect(merged.selection).toEqual({ mode: "automatic" })
+    expect(merged.automaticExecutionEnabled).toBe(
+      config.automaticExecutionEnabled,
+    )
+    expect(
+      inspectCheckInMethods({
+        config: merged,
+        candidateMethodIds: [NEW_API_METHOD_ID],
+      }),
+    ).toMatchObject({
+      decision: { outcome: "unsupported" },
+      selectionState: { status: "none" },
+      executionEligibility: { eligible: false },
+    })
+  })
+
   it("reselects a resolved automatic method when the persisted method is no longer a candidate", () => {
     const config = createConfig({
       [NEW_API_METHOD_ID]: matched,

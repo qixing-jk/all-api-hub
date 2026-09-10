@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { ACCOUNT_STORAGE_KEYS } from "~/services/accounts/accountStorage"
+import { ACCOUNT_STORAGE_KEYS } from "~/services/core/storageKeys"
 
 const {
   mockGetAllAccounts,
@@ -25,18 +25,9 @@ const {
   },
 }))
 
-vi.mock("~/services/accounts/accountStorage", async (importOriginal) => {
-  const actual =
-    (await importOriginal()) as typeof import("~/services/accounts/accountStorage")
-
-  return {
-    ...actual,
-    accountStorage: {
-      ...actual.accountStorage,
-      getAllAccounts: mockGetAllAccounts,
-    },
-  }
-})
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: { getAllAccounts: mockGetAllAccounts },
+}))
 
 vi.mock("~/utils/browser/cookieHelper", () => ({
   checkCookieInterceptorRequirement: mockCheckCookieInterceptorRequirement,

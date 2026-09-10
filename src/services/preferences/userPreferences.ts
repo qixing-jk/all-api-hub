@@ -7,6 +7,7 @@ import {
   USER_PREFERENCES_STORAGE_KEYS,
 } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
+import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import {
   DEFAULT_REDEMPTION_ASSIST_PREFERENCES,
   DEFAULT_WEB_AI_API_CHECK_PREFERENCES,
@@ -18,6 +19,7 @@ import {
 import {
   DEFAULT_AUTOMATIC_FEATURE_BYPASS,
   DEFAULT_TEMP_CONTEXT_PREFERENCE,
+  DEFAULT_TEMP_WINDOW_SIZE,
   normalizeTempWindowFallbackPreferences,
   type TempWindowFallbackPreferences,
 } from "~/services/preferences/tempWindowFallbackPreferences"
@@ -41,6 +43,10 @@ import {
   DEFAULT_ACCOUNT_AUTO_REFRESH,
   type AccountAutoRefresh,
 } from "~/types/accountAutoRefresh"
+import {
+  ACCOUNT_KEY_AUTO_PROVISION_MODES,
+  type AccountKeyAutoProvisionMode,
+} from "~/types/accountKeyAutoProvisioning"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
   type AutoCheckinPreferences,
@@ -217,26 +223,6 @@ export interface WebAiApiCheckPreferences {
   keyCleanup: WebAiApiCheckKeyCleanupPreferences
 }
 
-export const GATEWAY_GUIDANCE_SURFACES = {
-  Account: "account",
-  ApiCredentialProfiles: "apiCredentialProfiles",
-} as const
-
-export type GatewayGuidanceSurface =
-  (typeof GATEWAY_GUIDANCE_SURFACES)[keyof typeof GATEWAY_GUIDANCE_SURFACES]
-
-export interface GatewayGuidancePreferences {
-  /**
-   * One-way onboarding completion marker for self-hosted gateway guidance.
-   *
-   * Once a user has created or imported at least one managed-site channel, the
-   * account/API credential source-surface guidance should stay complete even if
-   * channels are later deleted or gateway config changes.
-   */
-  onboardingCompletedAt?: number
-  dismissedAtBySurface?: Partial<Record<GatewayGuidanceSurface, number>>
-}
-
 // 用户偏好设置类型定义
 export interface UserPreferences {
   themeMode: ThemeMode
@@ -262,13 +248,16 @@ export interface UserPreferences {
   openChangelogOnUpdate?: boolean
 
   /**
-   * Controls whether the extension automatically provisions a default API key
-   * (token) after successfully adding an account.
+   * Controls whether the extension automatically provisions API keys after
+   * successfully adding an account, using autoProvisionKeyOnAccountAddMode.
    *
    * Optional for backward compatibility with stored preferences created before
-   * this flag existed. Missing values MUST be treated as enabled via defaults.
+   * this flag existed. Missing values are treated as disabled via defaults.
    */
   autoProvisionKeyOnAccountAdd?: boolean
+
+  /** Creation scope after account add; legacy and invalid values normalize to Default. */
+  autoProvisionKeyOnAccountAddMode: AccountKeyAutoProvisionMode
 
   /**
    * Controls whether the add-account dialog automatically prefills the site URL
@@ -346,8 +335,6 @@ export interface UserPreferences {
 
   // 是否显示健康状态
   showHealthStatus: boolean
-
-  gatewayGuidance?: GatewayGuidancePreferences
 
   // WebDAV 备份/同步配置
   webdav: WebDAVSettings
@@ -590,13 +577,13 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   actionClickBehavior: TOOLBAR_ACTION_CLICK_BEHAVIORS.Popup,
   openChangelogOnUpdate: true,
   autoProvisionKeyOnAccountAdd: false, // 默认关闭，避免添加账号时无意创建密钥
+  autoProvisionKeyOnAccountAddMode: ACCOUNT_KEY_AUTO_PROVISION_MODES.Default,
   autoFillCurrentSiteUrlOnAccountAdd: false,
   warnOnDuplicateAccountAdd: true,
   accountAutoRefresh: DEFAULT_ACCOUNT_AUTO_REFRESH,
   usageHistory: DEFAULT_USAGE_HISTORY_PREFERENCES,
   balanceHistory: DEFAULT_BALANCE_HISTORY_PREFERENCES,
   showHealthStatus: true, // 默认显示健康状态
-  gatewayGuidance: {},
   webdav: DEFAULT_WEBDAV_SETTINGS,
   lastUpdated: 0,
   sharedPreferencesLastUpdated: 0,
@@ -646,6 +633,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   logging: getDefaultLoggingPreferences(),
   preferencesVersion: CURRENT_PREFERENCES_VERSION,
   tempWindowFallback: {
+    ...DEFAULT_TEMP_WINDOW_SIZE,
     enabled: true,
     automaticFeatureBypass: DEFAULT_AUTOMATIC_FEATURE_BYPASS,
     tempContextMode: DEFAULT_TEMP_CONTEXT_PREFERENCE,
@@ -685,11 +673,28 @@ function migrateAndNormalizePreferences(
   preferences: UserPreferences,
 ): UserPreferences {
   const migratedPreferences = migratePreferences(preferences)
+  const currentPreferences = {
+    ...migratedPreferences,
+  } as UserPreferences & {
+    gatewayGuidance?: unknown
+    productTour?: unknown
+  }
+
+  // Guidance progress has its own lifecycle and storage domain. Product Tour
+  // never shipped in preferences, while released gateway data is migrated by
+  // FeatureGuidanceStateService before these obsolete fields are removed.
+  delete currentPreferences.gatewayGuidance
+  delete currentPreferences.productTour
 
   return normalizeSharedPreferencesMetadata({
-    ...migratedPreferences,
+    ...currentPreferences,
+    autoProvisionKeyOnAccountAddMode:
+      currentPreferences.autoProvisionKeyOnAccountAddMode ===
+      ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups
+        ? ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups
+        : ACCOUNT_KEY_AUTO_PROVISION_MODES.Default,
     tempWindowFallback: normalizeTempWindowFallbackPreferences(
-      migratedPreferences.tempWindowFallback,
+      currentPreferences.tempWindowFallback,
     ),
   })
 }
@@ -722,6 +727,9 @@ class UserPreferencesService {
   }
 
   private async withStorageWriteLock<T>(work: () => Promise<T>): Promise<T> {
+    // A preference write normalizes away obsolete fields, so move released
+    // gateway progress first even when no UI guidance provider has mounted.
+    await featureGuidanceState.ensureLegacyPreferenceMigration()
     return withExtensionStorageWriteLock(STORAGE_LOCKS.USER_PREFERENCES, work)
   }
 
@@ -893,6 +901,13 @@ class UserPreferencesService {
     enabled: boolean,
   ): Promise<PreferenceWriteResult> {
     return this.savePreferences({ autoProvisionKeyOnAccountAdd: enabled })
+  }
+
+  /** Updates the creation scope without enabling automatic provisioning. */
+  async updateAutoProvisionKeyOnAccountAddMode(
+    mode: AccountKeyAutoProvisionMode,
+  ): Promise<PreferenceWriteResult> {
+    return this.savePreferences({ autoProvisionKeyOnAccountAddMode: mode })
   }
 
   /**

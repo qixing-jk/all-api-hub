@@ -34,16 +34,19 @@
     },
     "filters": {
       "all": "全部",
+      "alreadyChecked": "已簽到",
       "clearAll": "清除篩選",
       "countFiltered": "顯示 {{filtered}} / {{total}} 筆",
       "countTotal": "共 {{total}} 筆",
       "failed": "失敗",
-      "failedOrSkipped": "失敗或未執行",
+      "needsAttention": "需要處理",
       "searchLabel": "搜尋執行結果",
       "searchPlaceholder": "搜尋帳號名稱、ID 或結果訊息...",
-      "skipped": "已跳過",
+      "selectedStatuses_other": "已選 {{count}} 類",
+      "skipped": "未執行",
       "statusLabel": "依執行狀態篩選",
-      "success": "成功"
+      "success": "本次簽到成功",
+      "uncertain": "待確認"
     },
     "hints": {
       "invalidAccessToken": "解決方案：Access Token 可能已失效。請重新登入該站點，然後在「帳號管理 → 編輯帳號」中重新自動識別/重新整理 Access Token；如自動識別後仍出現此問題，請手動獲取並修改 Access Token。",
@@ -68,8 +71,8 @@
     "status": {
       "alreadyChecked": "已簽到",
       "failed": "失敗",
-      "skipped": "已跳過",
-      "success": "成功",
+      "skipped": "未執行",
+      "success": "本次簽到成功",
       "uncertain": "待確認"
     },
     "table": {
@@ -249,12 +252,14 @@
     },
     "retryDisabled": "重試未啟用",
     "summary": {
+      "alreadyChecked": "已簽到",
       "eligible": "可參與",
       "executed": "已執行",
       "failed": "失敗",
-      "skipped": "跳過",
-      "success": "成功",
-      "title": "執行統計"
+      "skipped": "未執行",
+      "success": "本次簽到成功",
+      "title": "執行統計",
+      "uncertain": "待確認"
     }
   },
   "uiOpenPretrigger": {

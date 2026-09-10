@@ -7,7 +7,6 @@ import {
   Settings,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { EChart } from "~/components/charts/EChart"
@@ -34,7 +33,8 @@ import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useTheme } from "~/contexts/ThemeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import toast from "~/lib/notify"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
   buildAccountDisplayNameMap,
   compareAccountDisplayNames,
@@ -230,7 +230,7 @@ export default function BalanceHistory() {
     try {
       setIsLoading(true)
       const [nextAccounts, nextStore, nextTagStore] = await Promise.all([
-        accountStorage.getEnabledAccounts(),
+        accountQueries.getEnabledAccounts(),
         dailyBalanceHistoryStorage.getStore(),
         tagStorage.getTagStore(),
       ])

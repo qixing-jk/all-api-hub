@@ -144,11 +144,11 @@ test.beforeEach(async ({ context, page }) => {
   })
 })
 
-test("shows the shield-bypass content prompt and opens its settings anchor", async ({
+test("shows the shield-bypass content prompt and opens settings and diagnostic history", async ({
   context,
   extensionId,
   page,
-}) => {
+}, testInfo) => {
   const serviceWorker = await getServiceWorker(context)
   await seedUserPreferences(serviceWorker, { language: "en" })
 
@@ -222,4 +222,35 @@ test("shows the shield-bypass content prompt and opens its settings anchor", asy
       )
       .getByRole("checkbox"),
   ).toBeVisible()
+
+  await page.bringToFront()
+  await page.setViewportSize({ width: 390, height: 844 })
+  const historyLink = contentHost.getByRole("button", {
+    name: "View shield bypass history",
+  })
+  await expect(historyLink).toBeInViewport({ ratio: 1 })
+  await page.screenshot({
+    path: testInfo.outputPath("shield-history-content-entry-mobile.png"),
+    animations: "disabled",
+  })
+
+  const historyPagePromise = waitForExtensionPage(context, {
+    extensionId,
+    path: OPTIONS_PAGE_PATH,
+    hash: `#${MENU_ITEM_IDS.BASIC}`,
+    searchParams: {
+      tab: "refresh",
+      anchor: SHIELD_SETTINGS_TARGET_IDS.history,
+    },
+  })
+  await historyLink.click()
+  const historyPage = await historyPagePromise
+  installExtensionPageGuards(historyPage)
+  await waitForExtensionRoot(historyPage)
+
+  await expect(
+    historyPage.getByRole("dialog", { name: "Shield bypass history" }),
+  ).toBeVisible()
+  expect(page.isClosed()).toBe(false)
+  await expect(historyLink).toBeVisible()
 })

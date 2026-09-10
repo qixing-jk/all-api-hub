@@ -5,6 +5,7 @@ import {
   TEMP_CONTEXT_MODES,
   TEMP_CONTEXT_PREFERENCE_MODES,
 } from "~/constants/tempContextMode"
+import { DEFAULT_TEMP_WINDOW_SIZE } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   createDefaultPreferences,
   type UserPreferences,
@@ -24,6 +25,7 @@ import {
   buildSettingsSnapshotEvents,
   trackSettingsSnapshotEvents,
 } from "~/services/productAnalytics/settings"
+import { ACCOUNT_KEY_AUTO_PROVISION_MODES } from "~/types/accountKeyAutoProvisioning"
 import { AUTO_CHECKIN_SCHEDULE_MODE } from "~/types/autoCheckin"
 import { SortingCriteriaType } from "~/types/sorting"
 import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
@@ -53,6 +55,34 @@ function createPreferences(
 }
 
 describe("settings product analytics snapshots", () => {
+  it("includes the creation mode in changed and aggregate account settings snapshots", () => {
+    const preferences = createPreferences({
+      autoProvisionKeyOnAccountAddMode:
+        ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+    })
+    const events = buildSettingsSnapshotEvents(
+      preferences,
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      {
+        autoProvisionKeyOnAccountAddMode:
+          ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+      },
+    )
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AccountBehaviorSnapshot,
+        auto_provision_key_on_account_add_mode: "all-groups",
+      }),
+    )
+    expect(
+      buildAggregateSettingsSnapshotEvent(
+        preferences,
+        PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      ),
+    ).toHaveProperty("auto_provision_key_on_account_add_mode", "all-groups")
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -236,6 +266,7 @@ describe("settings product analytics snapshots", () => {
         },
       },
       tempWindowFallback: {
+        ...DEFAULT_TEMP_WINDOW_SIZE,
         enabled: true,
         automaticFeatureBypass: {
           account_refresh: true,
@@ -337,6 +368,7 @@ describe("settings product analytics snapshots", () => {
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AccountBehaviorSnapshot,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         auto_provision_key_on_account_add_enabled: true,
+        auto_provision_key_on_account_add_mode: "default",
         auto_fill_current_site_url_on_account_add_enabled: true,
         warn_on_duplicate_account_add_enabled: false,
         show_today_cashflow_enabled: false,
@@ -837,6 +869,7 @@ describe("settings product analytics snapshots", () => {
         lastModified: 1,
       },
       tempWindowFallback: {
+        ...DEFAULT_TEMP_WINDOW_SIZE,
         enabled: true,
         automaticFeatureBypass: {
           account_refresh: false,

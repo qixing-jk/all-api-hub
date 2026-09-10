@@ -8,8 +8,10 @@ const { fetchApiMock, loggerWarnMock } = vi.hoisted(() => ({
   loggerWarnMock: vi.fn(),
 }))
 
-vi.mock("~/services/apiTransport/request", () => ({
-  fetchApi: fetchApiMock,
+vi.mock("~/services/apiService/newApiFamily/request", () => ({
+  newApiFamilyRequests: {
+    envelope: fetchApiMock,
+  },
 }))
 
 vi.mock("~/utils/core/logger", () => ({
@@ -41,7 +43,6 @@ describe("newApiFamily siteNotice", () => {
         auth: expect.objectContaining({ authType: AuthTypeEnum.None }),
       }),
       { endpoint: "/api/notice" },
-      false,
     )
   })
 

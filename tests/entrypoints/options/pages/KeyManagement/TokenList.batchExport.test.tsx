@@ -197,6 +197,7 @@ const renderTokenList = (props?: Partial<Parameters<typeof TokenList>[0]>) =>
       filteredTokens={[token1, token2] as any}
       {...props}
     />,
+    { withFeatureGuidanceProvider: true },
   )
 
 describe("TokenList batch export selection", () => {
@@ -1031,7 +1032,7 @@ describe("TokenList batch export selection", () => {
     )
   })
 
-  it("omits service credential entries when no copy handler can render them", () => {
+  it("omits service credential entries when no copy handler can render them", async () => {
     const sharedChatAccount = createAccount({
       id: "sharedchat-account",
       name: "SharedChat",
@@ -1059,6 +1060,11 @@ describe("TokenList batch export selection", () => {
       },
     })
 
+    expect(
+      await screen.findByTestId(
+        KEY_MANAGEMENT_TEST_IDS.emptyStateAddTokenButton,
+      ),
+    ).toBeVisible()
     expect(
       screen.queryByRole("button", {
         name: /keyManagement:batchCliProxyExport.actions.open/,

@@ -3,6 +3,7 @@ import {
   CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
+  CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
   CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
 import { TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS } from "~/constants/turnstile"
@@ -17,11 +18,12 @@ import type {
   NewApiCheckInStatus,
 } from "~/services/apiService/newApiFamily/checkInDto"
 import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/default/accountBootstrap"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { buildCompatUserIdHeaders } from "~/services/apiTransport/compatHeaders"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
-import { ApiError } from "~/services/apiTransport/errors"
-import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
 import type {
   AutoCheckinProvider,
   AutoCheckinProviderContext,
@@ -257,7 +259,7 @@ function shouldAttemptNativePageCheckinFallback(params: {
 /**
  * Resolve a user-openable URL for manual Turnstile verification.
  */
-function resolveCheckInUrl(account: SiteAccount): Promise<string> {
+function resolveCheckInUrl(account: SiteAccount): Promise<string | null> {
   return resolveAccountSiteRouteUrl(
     { baseUrl: account.site_url, siteType: account.site_type },
     SITE_ROUTE_KINDS.CheckIn,
@@ -339,10 +341,13 @@ async function fetchCheckedInTodayStatus(
   if (!request) return undefined
 
   try {
-    const checkInData = await fetchApiData<NewApiCheckInStatus>(request, {
-      endpoint: `${ENDPOINT}?month=${currentMonth}`,
-      ...(signal ? { options: { signal } } : {}),
-    })
+    const checkInData = await newApiFamilyRequests.data<NewApiCheckInStatus>(
+      request,
+      {
+        endpoint: `${ENDPOINT}?month=${currentMonth}`,
+        ...(signal ? { options: { signal } } : {}),
+      },
+    )
 
     if (
       typeof checkInData?.stats?.checked_in_today === "boolean" &&
@@ -587,6 +592,13 @@ async function resolveNativePageCheckinResult(params: {
   protectionBypassExecution: ProtectionBypassExecution
 }): Promise<CheckinResult> {
   const checkInUrl = await resolveCheckInUrl(params.account)
+  if (!checkInUrl) {
+    return {
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
+      rawMessage: params.responseMessage,
+    }
+  }
   const expectedUserId = normalizeAccountIdentity(
     params.account.account_info?.id,
   )
@@ -717,6 +729,13 @@ async function resolveTurnstileAssistedCheckinResult(params: {
   protectionBypassExecution: ProtectionBypassExecution
 }): Promise<CheckinResult> {
   const checkInUrl = await resolveCheckInUrl(params.account)
+  if (!checkInUrl) {
+    return {
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
+      rawMessage: params.responseMessage,
+    }
+  }
   const assistedParams = buildTurnstileAssistedParams(
     params.account,
     checkInUrl,
@@ -899,7 +918,7 @@ async function performCheckin(
   protectionBypassExecution: ProtectionBypassExecution,
   mutationLifecycle?: AutoCheckinProviderContext["mutationLifecycle"],
 ): Promise<NewApiCheckInResponse> {
-  return await fetchApi<NewApiCheckInRecord>(
+  return await newApiFamilyRequests.envelope<NewApiCheckInRecord>(
     createCheckInRequest(
       account,
       tempWindowRequestSource,
@@ -913,7 +932,6 @@ async function performCheckin(
         body: "{}",
       },
     },
-    false,
   )
 }
 
@@ -1126,9 +1144,30 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
     : undefined
 }
 
+/** Classifies legacy permission envelopes without treating them as support evidence. */
+function classifyStatusError(error: unknown) {
+  // New API's auth middleware uses AUTH_INSUFFICIENT_PRIVILEGE; older
+  // deployments (including AgentRouter) return only the localized message.
+  // https://github.com/QuantumNous/new-api/blob/2d8e50bf36e94200b809dfb39e73624ec48b1e23/middleware/auth.go
+  if (
+    error instanceof ApiError &&
+    error.code === API_ERROR_CODES.BUSINESS_ERROR &&
+    (error.statusCode === undefined || error.statusCode === 200) &&
+    (error.upstreamCode === "AUTH_INSUFFICIENT_PRIVILEGE" ||
+      error.message.trim() === "无权进行此操作，权限不足" ||
+      error.message.trim() === "Permission denied. Insufficient privileges.")
+  ) {
+    return CHECK_IN_METHOD_UNKNOWN_REASON_CODES.PermissionDenied
+  }
+  return getCheckInMethodUnknownReason(error)
+}
+
 export const newApiProvider: AutoCheckinProvider = {
+  requiresAuthoritativeStatusBeforeMutation: true,
+  classifyStatusError,
   getReadiness,
-  detect: (context) => detectWithStatusReadback(context, getStatus),
+  detect: (context) =>
+    detectWithStatusReadback(context, getStatus, classifyStatusError),
   getStatus,
   checkIn: checkinNewApi,
 }

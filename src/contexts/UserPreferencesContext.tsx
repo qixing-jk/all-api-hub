@@ -34,7 +34,6 @@ import {
   DEFAULT_PREFERENCES,
   TOOLBAR_ACTION_CLICK_BEHAVIORS,
   userPreferences,
-  type GatewayGuidanceSurface,
   type PreferenceWriteResult,
   type RedemptionAssistPreferences,
   type TempWindowFallbackPreferences,
@@ -66,6 +65,7 @@ import type {
   SortOrder,
 } from "~/types"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
+import type { AccountKeyAutoProvisionMode } from "~/types/accountKeyAutoProvisioning"
 import type { AutoCheckinPreferences } from "~/types/autoCheckin"
 import {
   DEFAULT_AXON_HUB_CONFIG,
@@ -246,10 +246,6 @@ function normalizeContextPreferenceSnapshot(
     siteAnnouncementNotifications: normalizeSiteAnnouncementPreferences(
       preferences.siteAnnouncementNotifications,
     ),
-    gatewayGuidance: deepOverride(
-      DEFAULT_PREFERENCES.gatewayGuidance ?? {},
-      preferences.gatewayGuidance ?? {},
-    ),
   }
 }
 
@@ -270,6 +266,7 @@ interface UserPreferencesContextType {
   actionClickBehavior: ToolbarActionClickBehavior
   openChangelogOnUpdate: boolean
   autoProvisionKeyOnAccountAdd: boolean
+  autoProvisionKeyOnAccountAddMode: AccountKeyAutoProvisionMode
   autoFillCurrentSiteUrlOnAccountAdd: boolean
   warnOnDuplicateAccountAdd: boolean
   newApiBaseUrl: string
@@ -328,6 +325,9 @@ interface UserPreferencesContextType {
   updateOpenChangelogOnUpdate: (enabled: boolean) => PreferenceWritePromise
   updateAutoProvisionKeyOnAccountAdd: (
     enabled: boolean,
+  ) => PreferenceWritePromise
+  updateAutoProvisionKeyOnAccountAddMode: (
+    mode: AccountKeyAutoProvisionMode,
   ) => PreferenceWritePromise
   updateAutoFillCurrentSiteUrlOnAccountAdd: (
     enabled: boolean,
@@ -498,10 +498,6 @@ interface UserPreferencesContextType {
   updateSiteAnnouncementNotifications: (
     updates: Partial<SiteAnnouncementPreferences>,
   ) => Promise<RuntimeMutationResponse>
-  markGatewayGuidanceOnboardingCompleted: () => PreferenceWritePromise
-  dismissGatewayGuidanceSurface: (
-    surface: GatewayGuidanceSurface,
-  ) => PreferenceWritePromise
   resetToDefaults: () => PreferenceWritePromise
   resetDisplaySettings: () => PreferenceWritePromise
   resetAutoRefreshConfig: () => PreferenceWritePromise
@@ -620,44 +616,6 @@ export const UserPreferencesProvider = ({
     [applySuccessfulPreferenceWrite],
   )
 
-  const markGatewayGuidanceOnboardingCompleted = useCallback(async () => {
-    if (preferences?.gatewayGuidance?.onboardingCompletedAt) {
-      return {
-        ok: true,
-        preferences,
-      } satisfies PreferenceWriteResult
-    }
-
-    return persistPreferenceUpdates({
-      gatewayGuidance: {
-        ...(preferences?.gatewayGuidance ?? {}),
-        onboardingCompletedAt: Date.now(),
-      },
-    })
-  }, [persistPreferenceUpdates, preferences])
-
-  const dismissGatewayGuidanceSurface = useCallback(
-    async (surface: GatewayGuidanceSurface) => {
-      if (preferences?.gatewayGuidance?.dismissedAtBySurface?.[surface]) {
-        return {
-          ok: true,
-          preferences,
-        } satisfies PreferenceWriteResult
-      }
-
-      return persistPreferenceUpdates({
-        gatewayGuidance: {
-          ...(preferences?.gatewayGuidance ?? {}),
-          dismissedAtBySurface: {
-            ...(preferences?.gatewayGuidance?.dismissedAtBySurface ?? {}),
-            [surface]: Date.now(),
-          },
-        },
-      })
-    },
-    [persistPreferenceUpdates, preferences],
-  )
-
   /**
    * Persist the currently visible balance tab and mirror it in React state.
    * @param activeTab - Consumption vs balance tab identifier.
@@ -727,6 +685,19 @@ export const UserPreferencesProvider = ({
         await userPreferences.updateAutoProvisionKeyOnAccountAdd(enabled)
       applySuccessfulPreferenceWrite(result, {
         autoProvisionKeyOnAccountAdd: enabled,
+      })
+      return result
+    },
+    [applySuccessfulPreferenceWrite],
+  )
+
+  /** Persists which key requirements should be filled after account creation. */
+  const updateAutoProvisionKeyOnAccountAddMode = useCallback(
+    async (mode: AccountKeyAutoProvisionMode) => {
+      const result =
+        await userPreferences.updateAutoProvisionKeyOnAccountAddMode(mode)
+      applySuccessfulPreferenceWrite(result, {
+        autoProvisionKeyOnAccountAddMode: mode,
       })
       return result
     },
@@ -1954,6 +1925,9 @@ export const UserPreferencesProvider = ({
       preferences?.autoProvisionKeyOnAccountAdd ??
       DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAdd ??
       false,
+    autoProvisionKeyOnAccountAddMode:
+      preferences?.autoProvisionKeyOnAccountAddMode ??
+      DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAddMode,
     autoFillCurrentSiteUrlOnAccountAdd:
       preferences?.autoFillCurrentSiteUrlOnAccountAdd ??
       DEFAULT_PREFERENCES.autoFillCurrentSiteUrlOnAccountAdd ??
@@ -2030,6 +2004,7 @@ export const UserPreferencesProvider = ({
     updateActionClickBehavior,
     updateOpenChangelogOnUpdate,
     updateAutoProvisionKeyOnAccountAdd,
+    updateAutoProvisionKeyOnAccountAddMode,
     updateAutoFillCurrentSiteUrlOnAccountAdd,
     updateWarnOnDuplicateAccountAdd,
     updateNewApiBaseUrl,
@@ -2078,8 +2053,6 @@ export const UserPreferencesProvider = ({
     updateTempWindowFallbackReminder,
     updateTaskNotifications,
     updateSiteAnnouncementNotifications,
-    markGatewayGuidanceOnboardingCompleted,
-    dismissGatewayGuidanceSurface,
     resetToDefaults,
     resetDisplaySettings,
     resetAutoRefreshConfig,

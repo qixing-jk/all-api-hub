@@ -2,7 +2,7 @@
  * Centralized configuration migration system
  * Handles version-based migrations for SiteAccount configurations
  *
- * This module is used by `accountStorage.getAllAccounts()` and on extension
+ * This module is used by account envelope reads and on extension
  * install/update to normalize persisted account data in storage.
  */
 

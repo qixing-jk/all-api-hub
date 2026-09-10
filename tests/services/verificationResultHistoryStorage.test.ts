@@ -17,6 +17,31 @@ describe("verificationResultHistoryStorage", () => {
     await verificationResultHistoryStorage.clearAllData()
   })
 
+  it.each(["streaming", "non-streaming"] as const)(
+    "preserves the tested %s mode when results are persisted and reloaded",
+    async (mode) => {
+      const target = createProfileVerificationHistoryTarget("p-mode")!
+      const summary = createVerificationHistorySummary({
+        target,
+        apiType: API_TYPES.OPENAI,
+        results: [
+          {
+            id: "text-generation",
+            status: "pass",
+            latencyMs: 1,
+            summary: "Text generation succeeded",
+            mode,
+          },
+        ],
+      })!
+
+      await verificationResultHistoryStorage.upsertLatestSummary(summary)
+      const stored =
+        await verificationResultHistoryStorage.getLatestSummary(target)
+      expect(stored?.probes[0]).toMatchObject({ mode })
+    },
+  )
+
   it("stores and returns the latest sanitized summary for a target", async () => {
     const target = createProfileVerificationHistoryTarget("p-1")
     if (!target) {
@@ -204,6 +229,7 @@ describe("verificationResultHistoryStorage", () => {
                 id: "models",
                 status: "pass",
                 latencyMs: 4.6,
+                mode: "unknown-mode",
                 summary: " ok ",
               },
             ],

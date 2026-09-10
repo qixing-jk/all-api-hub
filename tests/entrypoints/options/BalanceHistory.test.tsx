@@ -1,6 +1,5 @@
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { echarts } from "~/components/charts/echarts"
@@ -9,7 +8,8 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import BalanceHistory from "~/entrypoints/options/pages/BalanceHistory"
 import { BALANCE_HISTORY_TEST_IDS } from "~/features/BalanceHistory/testIds"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import toast from "~/lib/notify"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
   getDayKeyFromUnixSeconds,
   subtractDaysFromDayKey,
@@ -58,7 +58,7 @@ const {
   trackProductAnalyticsActionStartedMock: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     loading: vi.fn(() => "toast-id"),
     success: vi.fn(),
@@ -81,8 +81,8 @@ vi.mock("~/components/charts/echarts", async () => {
   }
 })
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: { getAllAccounts: vi.fn(), getEnabledAccounts: vi.fn() },
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: { getAllAccounts: vi.fn(), getEnabledAccounts: vi.fn() },
 }))
 
 vi.mock("~/services/history/dailyBalanceHistory/storage", () => ({
@@ -205,7 +205,7 @@ describe("BalanceHistory options page", () => {
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
-    vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([] as any)
+    vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([] as any)
     vi.mocked(tagStorage.getTagStore).mockResolvedValue({
       version: 1,
       tagsById: {},
@@ -284,7 +284,7 @@ describe("BalanceHistory options page", () => {
       `^${escapeRegExp(TAG_NAME_WORK)}\\D*${TAG_WORK_ACCOUNT_COUNT}$`,
     )
 
-    vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
       {
         id: ACCOUNT_ID_A,
         site_name: SITE_A_NAME,
@@ -371,7 +371,7 @@ describe("BalanceHistory options page", () => {
       const nowUnixSeconds = Math.floor(fixedNowMs / 1000)
       const todayKey = getDayKeyFromUnixSeconds(nowUnixSeconds)
 
-      vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
+      vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
         {
           id: "a1",
           site_name: "Site A",
@@ -471,7 +471,7 @@ describe("BalanceHistory options page", () => {
       try {
         const todayKey = getDayKeyFromUnixSeconds(Math.floor(fixedNowMs / 1000))
 
-        vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
+        vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
           {
             id: "a1",
             site_name: "Site A",
@@ -553,7 +553,7 @@ describe("BalanceHistory options page", () => {
       const nowUnixSeconds = Math.floor(fixedNowMs / 1000)
       const todayKey = getDayKeyFromUnixSeconds(nowUnixSeconds)
 
-      vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
+      vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
         {
           id: "a1",
           site_name: "Shared Site",
@@ -638,7 +638,7 @@ describe("BalanceHistory options page", () => {
     try {
       const todayKey = getDayKeyFromUnixSeconds(Math.floor(fixedNowMs / 1000))
 
-      vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
+      vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
         {
           id: "a1",
           site_name: "Site A",
@@ -743,7 +743,7 @@ describe("BalanceHistory options page", () => {
       const todayKey = getDayKeyFromUnixSeconds(Math.floor(fixedNowMs / 1000))
       const deferredStore = createDeferred<any>()
 
-      vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
+      vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
         {
           id: "a1",
           site_name: "Site A",
@@ -848,7 +848,7 @@ describe("BalanceHistory options page", () => {
     try {
       const todayKey = getDayKeyFromUnixSeconds(Math.floor(fixedNowMs / 1000))
 
-      vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
+      vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
         {
           id: "a1",
           site_name: "Site A",
@@ -1058,7 +1058,7 @@ describe("BalanceHistory options page", () => {
     try {
       const todayKey = getDayKeyFromUnixSeconds(Math.floor(fixedNowMs / 1000))
 
-      vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
+      vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
         {
           id: "a1",
           site_name: "Site A",
@@ -1172,7 +1172,7 @@ describe("BalanceHistory options page", () => {
         }),
         updateCurrencyType,
       } as any)
-      vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
+      vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
         {
           id: "a1",
           site_name: "Site A",
@@ -1255,7 +1255,7 @@ describe("BalanceHistory options page", () => {
           estimatedTodayIncomeEnabled: true,
         }),
       )
-      vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
+      vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
         {
           id: "a1",
           site_name: "Site A",

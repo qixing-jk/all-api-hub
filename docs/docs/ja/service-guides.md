@@ -16,7 +16,6 @@ All API Hub をまだインストールしていない場合は、先に[はじ�
 | XuanShu API | XuanShu API アカウントを追加し、モデル価格を確認して API 認証情報を保存・エクスポートします。 | [ガイドを見る](./service-guides/xuanshuapi.md) |
 | Atlas Cloud | Atlas Cloud の API 認証情報を追加し、モデル価格を確認して AI クライアントへエクスポートします。 | [ガイドを見る](./service-guides/atlascloud.md) |
 | Suixiang AI Relay | Suixiang AI Relay アカウントを追加し、モデル価格を確認して API 認証情報を保存・エクスポートします。 | [ガイドを見る](./service-guides/suixiang.md) |
-| Infistar.ai | Infistar.ai アカウントを追加し、モデル価格を確認して API 認証情報を保存・エクスポートします。 | [ガイドを見る](./service-guides/infistar.md) |
 | OpenRouter | OpenRouter アカウントを追加し、API Key の管理とモデル価格の確認を行います。 | [ガイドを見る](./service-guides/openrouter.md) |
 | AIHubMix | AIHubMix アカウントを追加し、一度だけ表示される完全な API キーを保存してモデル価格を確認します。 | [ガイドを見る](./service-guides/aihubmix.md) |
 

@@ -14,6 +14,10 @@ import {
   UNIFIED_API_GUIDANCE_STATUSES,
 } from "~/features/UnifiedApiGuidance"
 import {
+  createEmptyFeatureGuidanceState,
+  type FeatureGuidanceState,
+} from "~/services/featureGuidance/featureGuidanceState"
+import {
   DEFAULT_PREFERENCES,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
@@ -33,9 +37,10 @@ const configuredNewApiPreferences: UserPreferences = {
   },
 }
 
-const completedGatewayGuidancePreferences: UserPreferences = {
-  ...configuredNewApiPreferences,
+const completedGatewayGuidanceState: FeatureGuidanceState = {
+  ...createEmptyFeatureGuidanceState(),
   gatewayGuidance: {
+    dismissedAtBySurface: {},
     onboardingCompletedAt: 1,
   },
 }
@@ -126,7 +131,8 @@ describe("buildUnifiedApiGuidanceModel", () => {
       enabledAccountCount: 1,
       keyAccessibleAccountCount: 1,
       profileCount: 0,
-      preferences: completedGatewayGuidancePreferences,
+      preferences: configuredNewApiPreferences,
+      guidanceState: completedGatewayGuidanceState,
       managedSiteType: SITE_TYPES.NEW_API,
     })
 
@@ -148,17 +154,16 @@ describe("buildUnifiedApiGuidanceModel", () => {
       enabledAccountCount: 0,
       keyAccessibleAccountCount: 0,
       profileCount: 0,
-      preferences: completedGatewayGuidancePreferences,
+      preferences: configuredNewApiPreferences,
+      guidanceState: completedGatewayGuidanceState,
       managedSiteType: SITE_TYPES.NEW_API,
     })
     const missingGatewayModel = buildUnifiedApiGuidanceModel({
       enabledAccountCount: 1,
       keyAccessibleAccountCount: 1,
       profileCount: 0,
-      preferences: {
-        ...basePreferences,
-        gatewayGuidance: { onboardingCompletedAt: 1 },
-      },
+      preferences: basePreferences,
+      guidanceState: completedGatewayGuidanceState,
       managedSiteType: SITE_TYPES.NEW_API,
     })
 

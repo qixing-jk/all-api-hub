@@ -1,10 +1,11 @@
+import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import type {
   CreateTokenRequest,
   CreateTokenResult,
   UserGroupInfo,
 } from "~/services/accountTokens/tokenProvisioningModel"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { ApiToken } from "~/types"
+import type { ApiToken, DisplaySiteData } from "~/types"
 
 export type ResolveTokenSecretRequest<
   TToken extends Pick<ApiToken, "id" | "key"> = Pick<ApiToken, "id" | "key">,
@@ -90,6 +91,11 @@ export type KeyManagementCapability = {
   ): Promise<string>
   deleteToken(request: DeleteTokenRequest): Promise<boolean | void>
   fetchAvailableModels(request: ApiServiceRequest): Promise<string[]>
+  /** Projects response-only plaintext for its foreground acknowledgement lifecycle. */
+  createRuntimeSecret?(params: {
+    account: Pick<DisplaySiteData, "id" | "name" | "siteType" | "tagIds">
+    token: Pick<ApiToken, "id" | "name" | "key">
+  }): CreatedRuntimeSecret
   inventorySecretAvailability?: InventorySecretAvailability
   inventoryGroup?: InventoryGroupCapability
   userGroups?: UserGroupsCapability

@@ -17,6 +17,8 @@ import OverviewCard from "~/features/ManagedSiteModelSync/components/OverviewCar
 import ProgressCard from "~/features/ManagedSiteModelSync/components/ProgressCard"
 import ResultsTable from "~/features/ManagedSiteModelSync/components/ResultsTable"
 import StatisticsCard from "~/features/ManagedSiteModelSync/components/StatisticsCard"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -24,6 +26,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 const { trackStartedMock } = vi.hoisted(() => ({
   trackStartedMock: vi.fn(),
@@ -35,16 +38,16 @@ vi.mock("~/services/productAnalytics/actions", () => ({
 
 vi.mock("~/components/ManagedSiteChannelLinkButton", () => ({
   default: ({
-    channelId,
+    resourceRef,
     channelName,
     className,
   }: {
-    channelId: number
+    resourceRef?: ManagedResourceRef
     channelName: string
     className?: string
   }) => (
     <button className={className} type="button">
-      {channelName}#{channelId}
+      {channelName}#{resourceRef?.resourceId}
     </button>
   ),
 }))
@@ -397,7 +400,7 @@ describe("ManagedSiteModelSync components", () => {
       <ResultsTable
         items={[
           {
-            channelId: 11,
+            resourceRef: modelResourceRef(11),
             channelName: "Alpha",
             ok: false,
             message: "sync failed",
@@ -406,19 +409,19 @@ describe("ManagedSiteModelSync components", () => {
             finishedAt: 1_700_000_000_000,
           },
           {
-            channelId: 12,
+            resourceRef: modelResourceRef(12),
             channelName: "Beta",
             ok: true,
             attempts: 1,
             finishedAt: 0,
           },
         ]}
-        selectedIds={new Set([11])}
+        selectedKeys={new Set([getManagedResourceRefKey(modelResourceRef(11))])}
         onSelectAll={onSelectAll}
         onSelectItem={onSelectItem}
         onRunSingle={onRunSingle}
         isRunning={false}
-        runningChannelId={11}
+        runningResourceKey={getManagedResourceRefKey(modelResourceRef(11))}
       />,
     )
 
@@ -453,8 +456,11 @@ describe("ManagedSiteModelSync components", () => {
     expect(screen.getByText("HTTP: 500")).toBeInTheDocument()
     expect(screen.getByText("Alpha#11")).toBeInTheDocument()
     expect(onSelectAll).toHaveBeenCalledWith(true)
-    expect(onSelectItem).toHaveBeenCalledWith(11, false)
-    expect(onRunSingle).toHaveBeenCalledWith(12)
+    expect(onSelectItem).toHaveBeenCalledWith(
+      getManagedResourceRefKey(modelResourceRef(11)),
+      false,
+    )
+    expect(onRunSingle).toHaveBeenCalledWith(modelResourceRef(12))
     expect(trackStartedMock).not.toHaveBeenCalled()
 
     render(<EmptyResults hasHistory={false} />)

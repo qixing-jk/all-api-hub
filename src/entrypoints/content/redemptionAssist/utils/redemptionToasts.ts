@@ -1,5 +1,4 @@
-import toast from "react-hot-toast/headless"
-
+import toast from "~/lib/notify/content"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -8,7 +7,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import type { DisplaySiteData } from "~/types"
+import type { RedemptionAccountCandidate } from "~/services/redemption/accountCandidate"
 
 import { ensureRedemptionToastUi } from "../../shared/uiRoot"
 import type { RedemptionBatchResultItem } from "../components/RedemptionBatchResultToast"
@@ -92,9 +91,9 @@ export function dismissToast(toastId?: string) {
  * @returns Selected account or null when cancelled.
  */
 export async function showAccountSelectToast(
-  accounts: DisplaySiteData[],
+  accounts: RedemptionAccountCandidate[],
   options?: { title?: string; message?: string },
-): Promise<DisplaySiteData | null> {
+): Promise<RedemptionAccountCandidate | null> {
   await ensureRedemptionToastUi()
   const { createElement, RedemptionAccountSelectToast } =
     await loadRedemptionToastModules()
@@ -115,7 +114,7 @@ export async function showAccountSelectToast(
     let resolved = false
 
     const handleResolve = (
-      account: DisplaySiteData | null,
+      account: RedemptionAccountCandidate | null,
       toastId: string,
     ) => {
       if (resolved) return
@@ -131,7 +130,7 @@ export async function showAccountSelectToast(
           title: options?.title,
           message: options?.message,
           accounts,
-          onSelect: (account: DisplaySiteData | null) =>
+          onSelect: (account: RedemptionAccountCandidate | null) =>
             handleResolve(account, toastId),
         })
       },

@@ -206,6 +206,16 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     legacy: false,
     newAccountCompatibility: false,
   },
+  [AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "登仙公益站",
+    },
+    legacy: false,
+    newAccountCompatibility: false,
+  },
 } as const satisfies Record<CheckInMethodId, AutoCheckinMethodDefinition>
 
 /** Returns the product source used to present a registered method. */

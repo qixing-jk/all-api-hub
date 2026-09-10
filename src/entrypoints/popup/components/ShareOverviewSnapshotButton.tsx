@@ -1,6 +1,5 @@
 import { Share2 } from "lucide-react"
 import { useMemo } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
@@ -9,6 +8,7 @@ import { useProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContex
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
+import toast from "~/lib/notify"
 import { isAccountTodayMetricComplete } from "~/services/accounts/accountTodayStats"
 import { resolveProductAnalyticsActionContext } from "~/services/productAnalytics/actionConfig"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"

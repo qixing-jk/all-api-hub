@@ -1,4 +1,4 @@
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
@@ -29,7 +29,7 @@ export async function resolveLegacyAccountAwareRequest(
 
   if (!userId) return request
 
-  const accountInfo = await accountStorage.getAccountByBaseUrlAndUserId(
+  const accountInfo = await accountQueries.getAccountByBaseUrlAndUserId(
     request.baseUrl,
     userId,
   )

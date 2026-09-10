@@ -1,9 +1,9 @@
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import BalanceHistorySettings from "~/features/BasicSettings/components/tabs/BalanceHistory/BalanceHistorySettings"
+import toast from "~/lib/notify"
 import { hasAlarmsAPI } from "~/utils/browser/browserApi"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -27,7 +27,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
-vi.mock("react-hot-toast", () => {
+vi.mock("~/lib/notify", () => {
   const toast = Object.assign(vi.fn(), {
     dismiss: vi.fn(),
     error: vi.fn(),

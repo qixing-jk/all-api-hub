@@ -7,7 +7,6 @@ import {
   useRef,
   useState,
 } from "react"
-import toast from "react-hot-toast"
 
 import {
   PREVIEW_LOAD_ORIGINS,
@@ -19,6 +18,10 @@ import {
   NEW_API_MANAGED_VERIFICATION_CLOSE_MODES,
   useNewApiManagedVerification,
 } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
+import toast from "~/lib/notify"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
+import { getManagedSiteRuntimeConfigFingerprint } from "~/services/managedSites/runtimeConfig"
 import {
   DEFAULT_MANAGED_SITE_TOKEN_BATCH_IMPORT_INTENT,
   executeManagedSiteTokenBatchExport,
@@ -127,12 +130,17 @@ export function useManagedSiteTokenBatchExportDialog({
 }: UseManagedSiteTokenBatchExportDialogParams) {
   const {
     managedSiteType,
+    preferences,
     newApiBaseUrl,
     newApiUserId,
     newApiUsername,
     newApiPassword,
     newApiTotpSecret,
   } = useUserPreferencesContext()
+  const managedSiteConfigFingerprint = useMemo(
+    () => getManagedSiteRuntimeConfigFingerprint(preferences, managedSiteType),
+    [managedSiteType, preferences],
+  )
   const verification = useNewApiManagedVerification()
   const isVerificationDialogOpen = verification.dialogState.isOpen
   const closeVerificationDialog = verification.closeDialog
@@ -155,7 +163,11 @@ export function useManagedSiteTokenBatchExportDialog({
   const [previewLoadOrigin, setPreviewLoadOrigin] =
     useState<PreviewLoadOrigin>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
-  const [executionError, setExecutionError] = useState<string | null>(null)
+  const [executionFailure, setExecutionError] = useState<
+    | { kind: "target-changed" }
+    | { kind: "verification" | "upstream"; message: string }
+    | null
+  >(null)
   const [isTargetChanged, setIsTargetChanged] = useState(false)
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
@@ -167,7 +179,7 @@ export function useManagedSiteTokenBatchExportDialog({
   const workflowEpochCounterRef = useRef(0)
   const activeWorkflowEpochRef = useRef<number | null>(null)
   const resolvedChannelKeysByItemIdRef = useRef<
-    Record<string, Record<number, string>>
+    Record<string, Record<string, string>>
   >({})
   const previewRef = useRef<ManagedSiteTokenBatchExportPreview | null>(null)
   const selectedIdsRef = useRef<Set<string>>(new Set())
@@ -178,7 +190,7 @@ export function useManagedSiteTokenBatchExportDialog({
   const openedItemsRef = useRef(items)
   const wasOpenRef = useRef(false)
   const pendingPreviewLoadOriginRef = useRef<PreviewLoadOrigin>(null)
-  const managedSiteTypeRef = useRef(managedSiteType)
+  const managedSiteConfigFingerprintRef = useRef(managedSiteConfigFingerprint)
 
   useLayoutEffect(() => {
     previewRef.current = preview
@@ -193,30 +205,32 @@ export function useManagedSiteTokenBatchExportDialog({
     }
   }, [intent, isOpen])
 
-  useEffect(() => {
-    if (!isOpen) {
-      managedSiteTypeRef.current = managedSiteType
-      return
-    }
-    if (
-      managedSiteTypeRef.current === managedSiteType ||
-      isRunning ||
-      isLoadingPreview
-    ) {
-      return
-    }
-
-    managedSiteTypeRef.current = managedSiteType
-    pendingPreviewLoadOriginRef.current = PREVIEW_LOAD_ORIGINS.MANUAL
-    setPreviewLoadOrigin(PREVIEW_LOAD_ORIGINS.MANUAL)
-    setPreviewError(null)
-    setExecutionError(null)
-    setIsTargetChanged(false)
-    setIsLoadingPreview(true)
-    setRefreshKey((value) => value + 1)
-  }, [isLoadingPreview, isOpen, isRunning, managedSiteType])
-
   useLayoutEffect(() => {
+    if (
+      managedSiteConfigFingerprintRef.current !== managedSiteConfigFingerprint
+    ) {
+      managedSiteConfigFingerprintRef.current = managedSiteConfigFingerprint
+      resolvedChannelKeysByItemIdRef.current = {}
+      previewRef.current = null
+      selectedIdsRef.current = new Set()
+      editedModelsByItemIdRef.current = new Map()
+      retryBaselineRef.current = null
+      pendingPreviewLoadOriginRef.current = null
+      setPreview(null)
+      setSelectedIds(new Set())
+      setEditedModelsByItemId(new Map())
+      setPreviewError(null)
+      setExecutionError(null)
+      setIsTargetChanged(false)
+      setIsConfirmOpen(false)
+      setIsRunning(false)
+      setExecutionResult(null)
+      setRetryItemIds(new Set())
+      setVerifyingItemId(null)
+      setIsLoadingPreview(isOpen)
+      closeVerificationDialog()
+    }
+
     if (!isOpen) {
       activeWorkflowEpochRef.current = null
       return
@@ -231,7 +245,7 @@ export function useManagedSiteTokenBatchExportDialog({
         activeWorkflowEpochRef.current = null
       }
     }
-  }, [isOpen])
+  }, [closeVerificationDialog, isOpen, managedSiteConfigFingerprint])
 
   const isCurrentWorkflow = useCallback(
     (epoch: number | null) =>
@@ -340,7 +354,13 @@ export function useManagedSiteTokenBatchExportDialog({
     return () => {
       cancelled = true
     }
-  }, [activeIntent, isCurrentWorkflow, isOpen, refreshKey])
+  }, [
+    activeIntent,
+    isCurrentWorkflow,
+    isOpen,
+    managedSiteConfigFingerprint,
+    refreshKey,
+  ])
 
   const executableItems = useMemo(
     () => preview?.items.filter(isExecutablePreviewItem) ?? [],
@@ -467,14 +487,14 @@ export function useManagedSiteTokenBatchExportDialog({
 
   const mergeResolvedChannelKeyForItem = (
     itemId: string,
-    channelId: number,
+    resourceRef: ManagedResourceRef,
     key: string,
   ) => {
     resolvedChannelKeysByItemIdRef.current = {
       ...resolvedChannelKeysByItemIdRef.current,
       [itemId]: {
         ...(resolvedChannelKeysByItemIdRef.current[itemId] ?? {}),
-        [channelId]: key,
+        [getManagedResourceRefKey(resourceRef)]: key,
       },
     }
   }
@@ -559,6 +579,7 @@ export function useManagedSiteTokenBatchExportDialog({
         if (!isActive()) return
 
         const { item, candidate } = targets[index]
+        const resourceRef = candidate.ref
         let resolvedChannelKey = ""
         let shouldContinueAfterDeferredLoad = false
         let loadCompleted = false
@@ -572,7 +593,7 @@ export function useManagedSiteTokenBatchExportDialog({
           if (resolvedChannelKey) {
             mergeResolvedChannelKeyForItem(
               item.id,
-              candidate.id,
+              resourceRef,
               resolvedChannelKey,
             )
             applyResolvedChannelKeyForItem(item, candidate, resolvedChannelKey)
@@ -585,7 +606,7 @@ export function useManagedSiteTokenBatchExportDialog({
 
         try {
           const loadedImmediately = await loadNewApiChannelKeyWithVerification({
-            channelId: candidate.id,
+            resourceRef,
             command: PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
             label: candidate.name,
             requestKind: "channel",
@@ -628,14 +649,10 @@ export function useManagedSiteTokenBatchExportDialog({
       if (!isActive()) return
       setVerifyingItemId(null)
       if (failureMessages.length > 0) {
-        setExecutionError(
-          t(
-            "keyManagement:batchManagedSiteExport.messages.verificationFailed",
-            {
-              error: failureMessages.join("; "),
-            },
-          ),
-        )
+        setExecutionError({
+          kind: "verification",
+          message: failureMessages.join("; "),
+        })
       }
     }
 
@@ -644,11 +661,10 @@ export function useManagedSiteTokenBatchExportDialog({
     } catch (error) {
       if (!isActive()) return
       setVerifyingItemId(null)
-      setExecutionError(
-        t("keyManagement:batchManagedSiteExport.messages.verificationFailed", {
-          error: getErrorMessage(error),
-        }),
-      )
+      setExecutionError({
+        kind: "verification",
+        message: getErrorMessage(error),
+      })
     }
   }
 
@@ -803,8 +819,8 @@ export function useManagedSiteTokenBatchExportDialog({
       setIsTargetChanged(targetChanged)
       setExecutionError(
         targetChanged
-          ? t("keyManagement:batchManagedSiteExport.messages.targetChanged")
-          : getErrorMessage(error),
+          ? { kind: "target-changed" }
+          : { kind: "upstream", message: getErrorMessage(error) },
       )
       if (retryBaselineRef.current) {
         setExecutionResult(retryBaselineRef.current)
@@ -841,7 +857,15 @@ export function useManagedSiteTokenBatchExportDialog({
     selectedIds,
     modelOptions,
     previewError,
-    executionError,
+    executionError:
+      executionFailure?.kind === "target-changed"
+        ? t("keyManagement:batchManagedSiteExport.messages.targetChanged")
+        : executionFailure?.kind === "verification"
+          ? t(
+              "keyManagement:batchManagedSiteExport.messages.verificationFailed",
+              { error: executionFailure.message },
+            )
+          : executionFailure?.message ?? null,
     isTargetChanged,
     isLoadingPreview,
     isManualPreviewRefresh: previewLoadOrigin === PREVIEW_LOAD_ORIGINS.MANUAL,

@@ -10,8 +10,13 @@ import {
   type BackupV2,
   type RawBackupData,
 } from "~/features/ImportExport/utils"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import {
+  createEmptyFeatureGuidanceState,
+  featureGuidanceState,
+  PRODUCT_TOUR_OUTCOMES,
+} from "~/services/featureGuidance/featureGuidanceState"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import {
   ensureLegacyChannelConfigMigrationReady,
@@ -39,8 +44,8 @@ vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => {
   }
 })
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountDataTransfer", () => ({
+  accountDataTransfer: {
     importData: vi.fn(),
     exportData: vi.fn(),
   },
@@ -102,7 +107,7 @@ vi.mock(
   },
 )
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: vi.fn(),
     error: vi.fn(),
@@ -110,9 +115,9 @@ vi.mock("react-hot-toast", () => ({
 }))
 
 const mockAccountStorageImportData =
-  accountStorage.importData as unknown as ReturnType<typeof vi.fn>
+  accountDataTransfer.importData as unknown as ReturnType<typeof vi.fn>
 const mockAccountStorageExportData =
-  accountStorage.exportData as unknown as ReturnType<typeof vi.fn>
+  accountDataTransfer.exportData as unknown as ReturnType<typeof vi.fn>
 
 const mockUserPreferencesImport =
   userPreferences.importPreferences as unknown as ReturnType<typeof vi.fn>
@@ -1261,6 +1266,66 @@ describe("importFromBackupObject", () => {
     })
   })
 
+  it("merges guidance carried by an imported preferences backup", async () => {
+    const incomingGuidance = {
+      ...createEmptyFeatureGuidanceState(),
+      productTour: {
+        expanded: {
+          handledVersion: 2,
+          outcome: PRODUCT_TOUR_OUTCOMES.Completed,
+          handledAt: 200,
+        },
+      },
+    }
+    const mergeGuidance = vi
+      .spyOn(featureGuidanceState, "mergeState")
+      .mockResolvedValueOnce(incomingGuidance)
+
+    try {
+      await importFromBackupObject({
+        version: BACKUP_VERSION,
+        timestamp: Date.now(),
+        type: "preferences",
+        preferences: { themeMode: "light" } as any,
+        featureGuidance: incomingGuidance,
+      })
+
+      expect(mergeGuidance).toHaveBeenCalledWith(incomingGuidance)
+    } finally {
+      mergeGuidance.mockRestore()
+    }
+  })
+
+  it("merges guidance from a missing-version V1 preferences backup", async () => {
+    const incomingGuidance = {
+      ...createEmptyFeatureGuidanceState(),
+      gatewayGuidance: {
+        onboardingCompletedAt: 300,
+        dismissedAtBySurface: { account: 200 },
+      },
+    }
+    const mergeGuidance = vi
+      .spyOn(featureGuidanceState, "mergeState")
+      .mockResolvedValueOnce(incomingGuidance)
+
+    try {
+      const result = await importFromBackupObject({
+        timestamp: Date.now(),
+        type: "preferences",
+        preferences: { themeMode: "light" } as any,
+        featureGuidance: incomingGuidance,
+      })
+
+      expect(mockUserPreferencesImport).toHaveBeenCalledWith({
+        themeMode: "light",
+      })
+      expect(mergeGuidance).toHaveBeenCalledWith(incomingGuidance)
+      expect(result.sections.preferences).toBe(true)
+    } finally {
+      mergeGuidance.mockRestore()
+    }
+  })
+
   it("rejects backups created by a newer unsupported version", async () => {
     const payload: RawBackupData = {
       version: "5.0",
@@ -1609,6 +1674,7 @@ describe("normalizeBackupForMerge", () => {
       deletedEntryRecords: {},
       accountsTimestamp: 0,
       preferences: null,
+      featureGuidance: null,
       channelConfigs: null,
       tagStore: null,
       apiCredentialProfiles: null,

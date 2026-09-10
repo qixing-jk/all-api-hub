@@ -3,12 +3,10 @@ import {
   isMaskedApiTokenKey,
   normalizeApiTokenKeyValue,
 } from "~/services/accountTokens/apiTokenKey"
-import { fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ApiToken } from "~/types"
 
 type TokenKeyLike = Pick<ApiToken, "id" | "key">
-type TokenSecretResolutionMethod = "GET" | "POST"
 type TokenSecretKeyFetcher = (
   request: ApiServiceRequest,
   tokenId: number,
@@ -45,40 +43,6 @@ const deleteTokenResolutionScopeEntries = (
     if (predicate && !predicate(cacheKey)) continue
     resolvedTokenKeyPromises.delete(cacheKey)
   }
-}
-
-/**
- * Fetches the full secret key for a token from the explicit secret endpoint.
- */
-export async function fetchTokenSecretKeyByIdWithMethod(
-  request: ApiServiceRequest,
-  tokenId: number,
-  method: TokenSecretResolutionMethod,
-): Promise<string> {
-  const response = await fetchApiData<{ key?: string }>(request, {
-    endpoint: `/api/token/${tokenId}/key`,
-    options: {
-      method,
-    },
-  })
-
-  const normalizedKey = normalizeApiTokenKeyValue(response?.key ?? "")
-  if (!normalizedKey) {
-    throw new Error("token_secret_key_missing")
-  }
-
-  return normalizedKey
-}
-
-/**
- * Fetches the full secret key for a token using the default compatible
- * backend behavior.
- */
-export async function fetchTokenSecretKeyById(
-  request: ApiServiceRequest,
-  tokenId: number,
-): Promise<string> {
-  return fetchTokenSecretKeyByIdWithMethod(request, tokenId, "POST")
 }
 
 /**
@@ -124,17 +88,6 @@ export async function resolveApiTokenKeyWithFetcher(
 
   resolvedTokenKeyPromises.set(cacheKey, promise)
   return promise
-}
-
-/**
- * Resolves a usable token secret key while preserving pass-through behavior for
- * legacy backends that still return full keys in inventory APIs.
- */
-export async function resolveApiTokenKey(
-  request: ApiServiceRequest,
-  token: TokenKeyLike,
-): Promise<string> {
-  return resolveApiTokenKeyWithFetcher(request, token, fetchTokenSecretKeyById)
 }
 
 /**

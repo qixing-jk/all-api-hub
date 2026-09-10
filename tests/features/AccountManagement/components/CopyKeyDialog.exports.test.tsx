@@ -32,9 +32,9 @@ import {
   kelivoExportDialogMock,
   kiloCodeExportDialogMock,
   kiloCodeProfileExportDialogMock,
+  loggerErrorMock,
   openInCherryStudioMock,
   openWithAccountMock,
-  openWithCredentialsMock,
   resolveApiTokenKeyMock,
   startProductAnalyticsActionMock,
   toastErrorMock,
@@ -199,7 +199,7 @@ describe("CopyKeyDialog exports and service credentials", () => {
       })
       expect(openWithAccountMock).toHaveBeenCalledWith(
         expect.objectContaining({ id: "acc-1" }),
-        expect.objectContaining({ id: 1 }),
+        expect.objectContaining({ source: "account_token", tokenId: 1 }),
         expect.any(Function),
       )
       expect(toastErrorMock).toHaveBeenCalledWith("managed import failed")
@@ -249,6 +249,33 @@ describe("CopyKeyDialog exports and service credentials", () => {
       expect(
         userPreferencesContextMock.markGatewayGuidanceOnboardingCompleted,
       ).toHaveBeenCalledTimes(1)
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Skipped,
+      )
+    })
+  })
+
+  it("handles rejected guidance writes after a successful managed-site import", async () => {
+    const guidanceWriteError = new Error("guidance storage unavailable")
+    fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
+    userPreferencesContextMock.markGatewayGuidanceOnboardingCompleted.mockRejectedValueOnce(
+      guidanceWriteError,
+    )
+    openWithAccountMock.mockImplementationOnce(
+      async (_account, _token, onResult) => {
+        onResult({ success: true })
+        return { opened: false, deferred: false }
+      },
+    )
+    const user = await renderExpandedDetails()
+
+    await selectExportAction(user, "keyManagement:actions.importToManagedSite")
+
+    await waitFor(() => {
+      expect(loggerErrorMock).toHaveBeenCalledWith(
+        "Failed to mark gateway guidance onboarding complete",
+        guidanceWriteError,
+      )
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Skipped,
       )
@@ -348,8 +375,8 @@ describe("CopyKeyDialog exports and service credentials", () => {
   })
 
   it("exports service credentials with the credential API base URL", async () => {
-    openWithCredentialsMock.mockImplementationOnce(
-      async (_credential, onResult) => {
+    openWithAccountMock.mockImplementationOnce(
+      async (_account, _runtimeKey, onResult) => {
         onResult({ success: true, message: "credential import queued" })
         return { deferred: true }
       },
@@ -427,18 +454,16 @@ describe("CopyKeyDialog exports and service credentials", () => {
 
     await selectExportAction(user, "keyManagement:actions.importToManagedSite")
     await waitFor(() => {
-      expect(openWithCredentialsMock).toHaveBeenCalledWith(
-        {
-          name: "SharedChat - Codex service key",
+      expect(openWithAccountMock).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "SharedChat" }),
+        expect.objectContaining({
+          source: "service_credential",
+          label: "Codex service key",
           baseUrl: "https://api.example.invalid/v1",
-          apiKey: "sk-service-credential-secret",
-        },
+          secret: "sk-service-credential-secret",
+        }),
         expect.any(Function),
-        {
-          managedSiteStatus: undefined,
-        },
       )
-      expect(openWithAccountMock).not.toHaveBeenCalled()
       expect(toastSuccessMock).toHaveBeenCalledWith("credential import queued")
     })
   }, 30_000)

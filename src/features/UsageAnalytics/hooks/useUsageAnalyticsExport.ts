@@ -1,7 +1,7 @@
 import { useCallback } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import toast from "~/lib/notify"
 import { computeUsageHistoryExport } from "~/services/history/usageHistory/analytics"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {

@@ -9,6 +9,7 @@ import {
   MODEL_PRICE_SOURCE_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
 } from "~/services/modelList/pricingModel"
+import { CALCULATED_PRICE_KINDS } from "~/services/modelPricing/pricingConstants"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const { formatPriceMock, getEndpointTypesTextMock, isTokenBillingTypeMock } =
@@ -85,7 +86,7 @@ const baseProps: ComponentProps<typeof ModelItemDetails> = {
     quota_type: 1,
   } as any,
   calculatedPrice: {
-    kind: "token",
+    kind: CALCULATED_PRICE_KINDS.TOKEN,
     usdPerMillionTokens: { input: 1, output: 2 },
   } as any,
   exchangeRate: 7,
@@ -219,27 +220,34 @@ describe("ModelItemDetails", () => {
     expect(screen.queryByText("siteSupportedGroups")).not.toBeInTheDocument()
   })
 
-  it("renders endpoint fallback text without token pricing for per-call models", () => {
-    renderDetails({
-      model: {
-        ...baseProps.model,
-        supported_endpoint_types: undefined,
-        quota_type: 2,
-      } as any,
-      showGroupDetails: false,
-      showEndpointTypes: true,
-      showPricingDetails: true,
-    })
+  it.each([
+    { endpoints: undefined },
+    { endpoints: [] },
+    { endpoints: ["", " "] },
+  ])(
+    "hides an endpoint section without usable values: $endpoints",
+    ({ endpoints }) => {
+      renderDetails({
+        model: {
+          ...baseProps.model,
+          supported_endpoint_types: endpoints,
+          quota_type: 2,
+        } as any,
+        showGroupDetails: false,
+        showEndpointTypes: true,
+        showPricingDetails: true,
+      })
 
-    expect(screen.getByText("not-provided")).toBeInTheDocument()
-    expect(screen.queryByText("detailedPricing")).not.toBeInTheDocument()
-  })
+      expect(screen.queryByText("endpointType")).not.toBeInTheDocument()
+      expect(screen.queryByText("detailedPricing")).not.toBeInTheDocument()
+    },
+  )
 
   it("renders detailed token prices when available", () => {
     renderDetails({
       model: { ...baseProps.model, quota_type: 0 },
       calculatedPrice: {
-        kind: "token",
+        kind: CALCULATED_PRICE_KINDS.TOKEN,
         usdPerMillionTokens: { input: 1.25, output: 2.5 },
       } as any,
       showGroupDetails: false,
@@ -256,7 +264,7 @@ describe("ModelItemDetails", () => {
     renderDetails({
       model: { ...baseProps.model, quota_type: 0 },
       calculatedPrice: {
-        kind: "token",
+        kind: CALCULATED_PRICE_KINDS.TOKEN,
         usdPerMillionTokens: {
           input: 1,
           output: 2,
@@ -278,7 +286,7 @@ describe("ModelItemDetails", () => {
     renderDetails({
       model: { ...baseProps.model, quota_type: 0 },
       calculatedPrice: {
-        kind: "token",
+        kind: CALCULATED_PRICE_KINDS.TOKEN,
         usdPerMillionTokens: {
           input: 1,
           output: 2,
@@ -307,7 +315,7 @@ describe("ModelItemDetails", () => {
         },
       },
       calculatedPrice: {
-        kind: "unavailable",
+        kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
         billingMode: "token",
         reason: MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_MISSING,
       } as any,
@@ -334,7 +342,7 @@ describe("ModelItemDetails", () => {
         },
       },
       calculatedPrice: {
-        kind: "unavailable",
+        kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
         billingMode: "token",
         reason: MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_MISSING,
       } as any,

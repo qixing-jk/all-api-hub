@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  VerificationModeBadge,
+  VerificationModeSelect,
+} from "~/components/dialogs/VerifyApiDialog/VerificationMode"
+import {
   Alert,
   Badge,
   Button,
@@ -43,8 +47,10 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
+  API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_STATUSES,
   guessModelIdFromToken,
+  type ApiVerificationMode,
 } from "~/services/verification/aiApiVerification"
 import {
   inferHttpStatus,
@@ -91,10 +97,14 @@ function buildInitialToolState(): ToolItemState[] {
 /**
  * Builds a synthetic result so interrupted tool checks render as stopped, not failed.
  */
-function buildStoppedToolResult(toolId: (typeof CLI_TOOL_IDS)[number]) {
+function buildStoppedToolResult(
+  toolId: (typeof CLI_TOOL_IDS)[number],
+  mode?: ApiVerificationMode,
+) {
   return {
     id: toolId,
     probeId: "tool-calling" as const,
+    mode,
     status: API_VERIFICATION_PROBE_STATUSES.Unsupported,
     latencyMs: 0,
     summary: "Stopped",
@@ -134,6 +144,9 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   const sourceName = profile?.name ?? account?.name ?? ""
 
   const [modelId, setModelId] = useState<string>(initialModelId?.trim() ?? "")
+  const [verificationMode, setVerificationMode] = useState<ApiVerificationMode>(
+    API_VERIFICATION_MODES.Streaming,
+  )
   const [isRunning, setIsRunning] = useState(false)
   const [isLoadingRuntimeKeys, setIsLoadingRuntimeKeys] = useState(false)
   const [accountRuntimeKeys, setAccountRuntimeKeys] = useState<
@@ -142,7 +155,13 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   const [selectedRuntimeKeyId, setSelectedRuntimeKeyId] = useState<string>("")
   const [profileModelOptions, setProfileModelOptions] = useState<string[]>([])
   const [isLoadingModels, setIsLoadingModels] = useState(false)
-  const [fetchModelsError, setFetchModelsError] = useState<string | null>(null)
+  const [fetchModelsDiagnostic, setFetchModelsDiagnostic] = useState<
+    string | null
+  >(null)
+  const fetchModelsError =
+    fetchModelsDiagnostic === null
+      ? null
+      : fetchModelsDiagnostic || t("verifyDialog.modelsFetchFailed")
   const [tools, setTools] = useState<ToolItemState[]>([])
   const shouldStopRef = useRef(false)
   const activeAbortControllerRef = useRef<AbortController | null>(null)
@@ -251,7 +270,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   const loadProfileModels = useCallback(async () => {
     if (!profile) {
       setProfileModelOptions([])
-      setFetchModelsError(null)
+      setFetchModelsDiagnostic(null)
       setIsLoadingModels(false)
       return
     }
@@ -260,7 +279,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     fetchModelsAbortControllerRef.current?.abort()
     const abortController = new AbortController()
     fetchModelsAbortControllerRef.current = abortController
-    setFetchModelsError(null)
+    setFetchModelsDiagnostic(null)
     setIsLoadingModels(true)
 
     try {
@@ -283,15 +302,16 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         return
       }
 
-      const message =
-        toSanitizedErrorSummary(error, [profile.apiKey, profile.baseUrl]) ||
-        t("verifyDialog.modelsFetchFailed")
+      const message = toSanitizedErrorSummary(error, [
+        profile.apiKey,
+        profile.baseUrl,
+      ])
 
       logger.error("Failed to fetch profile models", { message })
 
       if (fetchModelsRequestIdRef.current !== requestId) return
       setProfileModelOptions([])
-      setFetchModelsError(message)
+      setFetchModelsDiagnostic(message)
     } finally {
       if (fetchModelsAbortControllerRef.current === abortController) {
         fetchModelsAbortControllerRef.current = null
@@ -300,7 +320,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         setIsLoadingModels(false)
       }
     }
-  }, [profile, t])
+  }, [profile])
 
   const runTool = async (
     toolId: (typeof CLI_TOOL_IDS)[number],
@@ -324,6 +344,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
 
     let resolvedApiKey = activeApiKey
     let resolvedBaseUrl = sourceBaseUrl
+    let executedMode: ApiVerificationMode | undefined
     const secretsToRedact = new Set<string>(
       filterRedactions([
         activeApiKey ?? undefined,
@@ -387,6 +408,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                   result: {
                     id: toolId,
                     probeId: "tool-calling",
+                    mode: verificationMode,
                     status: API_VERIFICATION_PROBE_STATUSES.Fail,
                     latencyMs: Math.max(0, finishedAt - startedAt),
                     summary: "No API key is available for this runtime key.",
@@ -407,8 +429,10 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         return null
       }
 
+      executedMode = verificationMode
       const result = await runCliSupportTool({
         toolId,
+        mode: executedMode,
         baseUrl: resolvedBaseUrl,
         apiKey: resolvedApiKey,
         modelId: resolvedModelId,
@@ -422,7 +446,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
               ? {
                   ...t,
                   isRunning: false,
-                  result: buildStoppedToolResult(toolId),
+                  result: buildStoppedToolResult(toolId, executedMode),
                 }
               : t,
           ),
@@ -444,7 +468,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
               ? {
                   ...t,
                   isRunning: false,
-                  result: buildStoppedToolResult(toolId),
+                  result: buildStoppedToolResult(toolId, executedMode),
                 }
               : t,
           ),
@@ -479,6 +503,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       const failureResult: CliSupportResult = {
         id: toolId,
         probeId: "tool-calling",
+        mode: verificationMode,
         status: API_VERIFICATION_PROBE_STATUSES.Fail,
         latencyMs: Math.max(0, finishedAt - startedAt),
         summary: sanitizedMessage || "Unknown error",
@@ -635,7 +660,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     if (!isOpen) return
     setTools(buildInitialToolState())
     setProfileModelOptions([])
-    setFetchModelsError(null)
+    setFetchModelsDiagnostic(null)
     if (isProfileSource) {
       setAccountRuntimeKeys([])
       setSelectedRuntimeKeyId("")
@@ -646,6 +671,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       void loadRuntimeKeys()
     }
     setModelId(initialModelId?.trim() ?? "")
+    setVerificationMode(API_VERIFICATION_MODES.Streaming)
   }, [
     initialModelId,
     isOpen,
@@ -686,11 +712,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       closeOnBackdropClick={canClose}
     >
       <div className="space-y-3">
-        <div
-          className={`grid grid-cols-1 gap-3 ${
-            isProfileSource ? "" : "sm:grid-cols-2"
-          }`}
-        >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {!isProfileSource && (
             <div className="space-y-1.5">
               <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
@@ -717,7 +739,17 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
             </div>
           )}
 
-          <div className="space-y-1.5">
+          <VerificationModeSelect
+            value={verificationMode}
+            onChange={setVerificationMode}
+            disabled={!canClose}
+          />
+
+          <div
+            className={
+              isProfileSource ? "space-y-1.5" : "space-y-1.5 sm:col-span-2"
+            }
+          >
             <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
               {t("verifyDialog.meta.model")}
             </div>
@@ -825,9 +857,12 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                         {getCliSupportToolLabel(t, tool.toolId)}
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         {result ? (
-                          <ToolStatusBadge result={result} />
+                          <>
+                            <ToolStatusBadge result={result} />
+                            <VerificationModeBadge mode={result.mode} />
+                          </>
                         ) : (
                           <Badge variant="outline" size="sm">
                             {t("verifyDialog.status.pending")}

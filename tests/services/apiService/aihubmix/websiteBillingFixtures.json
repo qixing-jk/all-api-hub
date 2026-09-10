@@ -1,0 +1,251 @@
+[
+  {
+    "model": "claude-fable-5-1",
+    "billing": {
+      "model_name": "claude-fable-5.1",
+      "default_tier": "tier1",
+      "token_based_tier_configs": {
+        "tier1": {
+          "tier_condition": {
+            "min_tokens": 0,
+            "max_tokens": -1
+          },
+          "model_ratio": 5.5,
+          "prompt_tokens_ratio": 1.0,
+          "completion_tokens_ratio": 5.0,
+          "cached_tokens_ratio": 0.025,
+          "cache_write_tokens_ratio": 1.25,
+          "cache_write_5_minutes_tokens_ratio": 1.25,
+          "cache_write_1_hour_tokens_ratio": 2
+        }
+      },
+      "per_unit_price_config": {
+        "web_search_price": 0.01
+      },
+      "enabled_billing_items": [
+        "prompt_tokens",
+        "completion_tokens",
+        "cached_tokens",
+        "web_search_requests",
+        "cache_write_tokens",
+        "cache_write_5_minutes_tokens",
+        "cache_write_1_hour_tokens"
+      ]
+    }
+  },
+  {
+    "model": "deepseek-v4-flash-vision-exp",
+    "billing": {
+      "model_name": "deep-deepseek-v4-flash",
+      "default_tier": "tier1",
+      "token_based_tier_configs": {
+        "tier1": {
+          "tier_condition": {
+            "min_tokens": 0,
+            "max_tokens": -1
+          },
+          "model_ratio": 0.1162,
+          "prompt_tokens_ratio": 1,
+          "completion_tokens_ratio": 3,
+          "cached_tokens_ratio": 0.03333
+        },
+        "peak": {
+          "time_condition": {
+            "timezone": "UTC",
+            "ranges": ["01:00-04:00", "06:00-10:00"]
+          },
+          "tier_condition": {
+            "min_tokens": 0,
+            "max_tokens": -1
+          },
+          "model_ratio": 0.2324,
+          "prompt_tokens_ratio": 1,
+          "completion_tokens_ratio": 3,
+          "cached_tokens_ratio": 0.03333
+        }
+      },
+      "enabled_billing_items": [
+        "prompt_tokens",
+        "completion_tokens",
+        "cached_tokens"
+      ]
+    }
+  },
+  {
+    "model": "deepseek-v4-pro-0813",
+    "billing": {
+      "model_name": "deep-deepseek-v4-pro",
+      "default_tier": "tier1",
+      "token_based_tier_configs": {
+        "tier1": {
+          "tier_condition": {
+            "min_tokens": 0,
+            "max_tokens": -1
+          },
+          "model_ratio": 0.3459,
+          "prompt_tokens_ratio": 1,
+          "completion_tokens_ratio": 3,
+          "cached_tokens_ratio": 0.03333
+        },
+        "peak": {
+          "time_condition": {
+            "timezone": "UTC",
+            "ranges": ["01:00-04:00", "06:00-10:00"]
+          },
+          "tier_condition": {
+            "min_tokens": 0,
+            "max_tokens": -1
+          },
+          "model_ratio": 0.6972,
+          "prompt_tokens_ratio": 1,
+          "completion_tokens_ratio": 3,
+          "cached_tokens_ratio": 0.03333
+        }
+      },
+      "enabled_billing_items": [
+        "prompt_tokens",
+        "completion_tokens",
+        "cached_tokens"
+      ]
+    }
+  },
+  {
+    "model": "gpt-image-2.5-flare",
+    "billing": {
+      "model_name": "gpt-image-2.5-flare",
+      "default_tier": "tier1",
+      "token_based_tier_configs": {
+        "tier1": {
+          "tier_condition": {
+            "min_tokens": 0,
+            "max_tokens": -1
+          },
+          "model_ratio": 2.5,
+          "prompt_tokens_ratio": 1.0,
+          "completion_tokens_ratio": 2.0,
+          "cached_tokens_ratio": 0.25,
+          "input_image_tokens_ratio": 1.6,
+          "output_image_tokens_ratio": 6.0
+        }
+      },
+      "per_unit_price_config": {},
+      "enabled_billing_items": [
+        "prompt_tokens",
+        "completion_tokens",
+        "input_image_tokens",
+        "cached_tokens",
+        "output_image_tokens"
+      ]
+    }
+  },
+  {
+    "model": "gpt-image-2.5-sunburst",
+    "billing": {
+      "model_name": "gpt-image-2.5-sunburst",
+      "default_tier": "tier1",
+      "token_based_tier_configs": {
+        "tier1": {
+          "tier_condition": {
+            "min_tokens": 0,
+            "max_tokens": -1
+          },
+          "model_ratio": 2.5,
+          "prompt_tokens_ratio": 1.0,
+          "completion_tokens_ratio": 2.0,
+          "cached_tokens_ratio": 0.25,
+          "input_image_tokens_ratio": 1.6,
+          "output_image_tokens_ratio": 6.0
+        }
+      },
+      "per_unit_price_config": {},
+      "enabled_billing_items": [
+        "prompt_tokens",
+        "completion_tokens",
+        "input_image_tokens",
+        "cached_tokens",
+        "output_image_tokens"
+      ]
+    }
+  },
+  {
+    "model": "mai-image-2.6",
+    "billing": {
+      "model_name": "mai-image-2.5",
+      "default_tier": "tier1",
+      "token_based_tier_configs": {
+        "tier1": {
+          "tier_condition": {
+            "min_tokens": 0,
+            "max_tokens": -1
+          },
+          "model_ratio": 2.5,
+          "prompt_tokens_ratio": 1.0,
+          "completion_tokens_ratio": 1.0,
+          "input_image_tokens_ratio": 1.6,
+          "output_image_tokens_ratio": 7.6
+        }
+      },
+      "per_unit_price_config": {},
+      "enabled_billing_items": [
+        "prompt_tokens",
+        "completion_tokens",
+        "input_image_tokens",
+        "output_image_tokens"
+      ]
+    }
+  },
+  {
+    "model": "mai-image-2.6-flash",
+    "billing": {
+      "model_name": "mai-image-2.5",
+      "default_tier": "tier1",
+      "token_based_tier_configs": {
+        "tier1": {
+          "tier_condition": {
+            "min_tokens": 0,
+            "max_tokens": -1
+          },
+          "model_ratio": 0.875,
+          "prompt_tokens_ratio": 1.0,
+          "completion_tokens_ratio": 1.0,
+          "input_image_tokens_ratio": 1.4286,
+          "output_image_tokens_ratio": 10.857
+        }
+      },
+      "per_unit_price_config": {},
+      "enabled_billing_items": [
+        "prompt_tokens",
+        "completion_tokens",
+        "input_image_tokens",
+        "output_image_tokens"
+      ]
+    }
+  },
+  {
+    "model": "minimax-h3-max",
+    "billing": {
+      "model_name": "MiniMax-H3",
+      "enabled_billing_items": ["video_generation", "image_input"],
+      "metered_price_config": {
+        "video_generation": {
+          "unit": "second",
+          "price_rules": [
+            {
+              "match": {
+                "quality": "480P"
+              },
+              "unit_price": 0.05112
+            },
+            {
+              "match": {
+                "quality": "768P"
+              },
+              "unit_price": 0.07744
+            }
+          ],
+          "fallback_unit_price": 0.07744
+        }
+      }
+    }
+  }
+]

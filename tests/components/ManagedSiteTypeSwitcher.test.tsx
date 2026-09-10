@@ -25,7 +25,7 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   showUpdateToast: (...args: unknown[]) => showUpdateToastMock(...args),
 }))
 

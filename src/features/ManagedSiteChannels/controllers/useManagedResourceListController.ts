@@ -1,4 +1,3 @@
-import type { TFunction } from "i18next"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import {
@@ -12,6 +11,7 @@ import {
   type ResourceFailure,
   type ResourceListQuery,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
@@ -19,18 +19,16 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 
-import type { ManagedChannelsRowViewModel } from "../presentation/contracts"
 import {
   MANAGED_RESOURCE_EDITOR_MODES,
   type ManagedResourceEditorMode,
 } from "../presentation/managedResourceFieldPolicy"
-import {
-  createManagedResourcePresentationMapper,
-  type ManagedResourcePresentationSemantics,
+import type {
+  ManagedResourcePresentationSemantics,
+  ManagedResourceRowData,
 } from "../presentation/managedResourcePresentation"
 import {
   EMPTY_MANAGED_RESOURCE_CAPABILITIES,
-  getManagedResourceRefKey,
   toSafeManagedResourceFailure,
 } from "../utils/managedResource"
 import {
@@ -38,6 +36,7 @@ import {
   type ManagedResourceAnalyticsCompletion,
   type ManagedResourceControllerAnalytics,
 } from "./managedResourceControllerAnalytics"
+import { createManagedResourceRowMapper } from "./managedResourceRowMapper"
 
 const MAX_COLLECTION_PAGES = 100
 const abortError = () =>
@@ -105,7 +104,6 @@ type Options = {
   refreshKey?: number
   pageSize?: number
   onUnsupportedSearch?: () => void
-  resolveLabel?: TFunction
   fieldIds?: readonly string[]
   semantics?: ManagedResourcePresentationSemantics
 }
@@ -124,26 +122,24 @@ export function useManagedResourceListController({
   refreshKey,
   pageSize = 20,
   onUnsupportedSearch,
-  resolveLabel,
   fieldIds,
   semantics,
 }: Options) {
   const mapper = useMemo(
     () =>
-      createManagedResourcePresentationMapper({
-        resolveLabel,
+      createManagedResourceRowMapper({
         fieldIds,
         semantics,
       }),
-    [fieldIds, resolveLabel, semantics],
+    [fieldIds, semantics],
   )
   const [workspace, setWorkspace] = useState<ManagedResourceWorkspace | null>(
     null,
   )
   const [acceptedRows, setAcceptedRows] = useState<
-    readonly ManagedChannelsRowViewModel[]
+    readonly ManagedResourceRowData[]
   >([])
-  const acceptedRowsRef = useRef<readonly ManagedChannelsRowViewModel[]>([])
+  const acceptedRowsRef = useRef<readonly ManagedResourceRowData[]>([])
   const [failure, setFailure] = useState<ResourceFailure | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<readonly string[]>([])
@@ -328,7 +324,7 @@ export function useManagedResourceListController({
         return false
       }
 
-      let nextRow: ManagedChannelsRowViewModel
+      let nextRow: ManagedResourceRowData
       try {
         nextRow = mapper.map(facts)
       } catch {

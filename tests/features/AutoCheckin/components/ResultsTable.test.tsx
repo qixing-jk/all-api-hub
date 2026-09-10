@@ -78,6 +78,52 @@ const failedResult: CheckinAccountResult = {
 }
 
 describe("AutoCheckin ResultsTable", () => {
+  it("offers an independent already-checked result filter", async () => {
+    const user = userEvent.setup()
+    render(
+      <ResultsTable
+        results={[
+          {
+            accountId: "checked-now",
+            accountName: "Checked Now",
+            status: CHECKIN_RESULT_STATUS.SUCCESS,
+            timestamp: 2,
+          },
+          {
+            accountId: "already-checked",
+            accountName: "Already Checked",
+            status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+            timestamp: 1,
+          },
+        ]}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /autoCheckin:execution\.filters\.statusLabel/,
+      }),
+    )
+    await user.click(
+      screen.getByRole("menuitemcheckbox", {
+        name: /autoCheckin:execution\.filters\.alreadyChecked.*1/,
+      }),
+    )
+    await user.keyboard("{Escape}")
+
+    expect(
+      screen.getByRole("button", { name: "Already Checked" }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "Checked Now" }),
+    ).not.toBeInTheDocument()
+  })
+
   it("sorts results from the account column header", async () => {
     const user = userEvent.setup()
     render(
@@ -149,6 +195,84 @@ describe("AutoCheckin ResultsTable", () => {
     expect(
       screen.getByText("autoCheckin:execution.pagination.summary"),
     ).toBeVisible()
+  })
+
+  it("hides pagination when every result fits on the current page", () => {
+    const results = Array.from({ length: 15 }, (_, index) => ({
+      accountId: `account-${index + 1}`,
+      accountName: `Account ${index + 1}`,
+      status: CHECKIN_RESULT_STATUS.SUCCESS,
+      timestamp: 1,
+    }))
+
+    render(<ResultsTable results={results} />, {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+
+    expect(
+      screen.queryByRole("combobox", {
+        name: "autoCheckin:execution.pagination.rowsPerPage",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("autoCheckin:execution.pagination.summary"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("prioritizes failed, uncertain, and not-executed results", () => {
+    render(
+      <ResultsTable
+        results={[
+          {
+            accountId: "success",
+            accountName: "Success Account",
+            status: CHECKIN_RESULT_STATUS.SUCCESS,
+            timestamp: 5,
+          },
+          {
+            accountId: "already-checked",
+            accountName: "Already Checked Account",
+            status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+            timestamp: 4,
+          },
+          {
+            accountId: "skipped",
+            accountName: "Skipped Account",
+            status: CHECKIN_RESULT_STATUS.SKIPPED,
+            timestamp: 3,
+          },
+          {
+            accountId: "uncertain",
+            accountName: "Uncertain Account",
+            status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+            reconciliation: "unknown",
+            timestamp: 2,
+          },
+          {
+            accountId: "failed",
+            accountName: "Failed Account",
+            status: CHECKIN_RESULT_STATUS.FAILED,
+            timestamp: 1,
+          },
+        ]}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    const rows = within(screen.getByRole("table")).getAllByRole("row")
+    expect(rows.slice(1).map((row) => row.textContent)).toEqual([
+      expect.stringContaining("Failed Account"),
+      expect.stringContaining("Uncertain Account"),
+      expect.stringContaining("Skipped Account"),
+      expect.stringContaining("Success Account"),
+      expect.stringContaining("Already Checked Account"),
+    ])
   })
 
   it("changes page size and clamps the current page when results shrink", () => {

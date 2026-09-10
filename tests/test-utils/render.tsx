@@ -9,6 +9,7 @@ import { I18nextProvider } from "react-i18next"
 
 import { ChannelDialogProvider } from "~/components/dialogs/ChannelDialog"
 import { DeviceProvider } from "~/contexts/DeviceContext"
+import { FeatureGuidanceProvider } from "~/contexts/FeatureGuidanceContext"
 import { ReleaseUpdateStatusProvider } from "~/contexts/ReleaseUpdateStatusContext"
 import { ThemeProvider } from "~/contexts/ThemeContext"
 import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
@@ -18,6 +19,7 @@ interface AppProvidersProps {
   children: ReactNode
   withReleaseUpdateStatusProvider?: boolean
   withUserPreferencesProvider?: boolean
+  withFeatureGuidanceProvider?: boolean
   withThemeProvider?: boolean
 }
 
@@ -29,6 +31,7 @@ const AppProviders = ({
   children,
   withReleaseUpdateStatusProvider = false,
   withUserPreferencesProvider = true,
+  withFeatureGuidanceProvider = false,
   withThemeProvider = true,
 }: AppProvidersProps) => {
   const PreferencesProvider = withUserPreferencesProvider
@@ -36,6 +39,9 @@ const AppProviders = ({
     : IdentityProvider
   const ActiveThemeProvider = withThemeProvider
     ? ThemeProvider
+    : IdentityProvider
+  const ActiveFeatureGuidanceProvider = withFeatureGuidanceProvider
+    ? FeatureGuidanceProvider
     : IdentityProvider
   const ActiveReleaseUpdateStatusProvider = withReleaseUpdateStatusProvider
     ? ReleaseUpdateStatusProvider
@@ -45,11 +51,13 @@ const AppProviders = ({
     <I18nextProvider i18n={testI18n}>
       <DeviceProvider>
         <PreferencesProvider>
-          <ActiveThemeProvider>
-            <ActiveReleaseUpdateStatusProvider>
-              <ChannelDialogProvider>{children}</ChannelDialogProvider>
-            </ActiveReleaseUpdateStatusProvider>
-          </ActiveThemeProvider>
+          <ActiveFeatureGuidanceProvider>
+            <ActiveThemeProvider>
+              <ActiveReleaseUpdateStatusProvider>
+                <ChannelDialogProvider>{children}</ChannelDialogProvider>
+              </ActiveReleaseUpdateStatusProvider>
+            </ActiveThemeProvider>
+          </ActiveFeatureGuidanceProvider>
         </PreferencesProvider>
       </DeviceProvider>
     </I18nextProvider>
@@ -59,6 +67,7 @@ const AppProviders = ({
 interface AppRenderOptions extends Omit<RenderOptions, "wrapper"> {
   withReleaseUpdateStatusProvider?: boolean
   withUserPreferencesProvider?: boolean
+  withFeatureGuidanceProvider?: boolean
   withThemeProvider?: boolean
 }
 
@@ -66,6 +75,7 @@ interface AppRenderHookOptions<Props>
   extends Omit<RenderHookOptions<Props>, "wrapper"> {
   withReleaseUpdateStatusProvider?: boolean
   withUserPreferencesProvider?: boolean
+  withFeatureGuidanceProvider?: boolean
   withThemeProvider?: boolean
 }
 
@@ -73,6 +83,7 @@ type ProviderToggleOptions = Pick<
   AppProvidersProps,
   | "withReleaseUpdateStatusProvider"
   | "withUserPreferencesProvider"
+  | "withFeatureGuidanceProvider"
   | "withThemeProvider"
 >
 
@@ -85,6 +96,7 @@ function normalizeProviderOptions<T extends ProviderToggleOptions>(
   const {
     withReleaseUpdateStatusProvider = false,
     withUserPreferencesProvider = true,
+    withFeatureGuidanceProvider = false,
     withThemeProvider = true,
     ...remainingOptions
   } = (options ?? {}) as T & ProviderToggleOptions
@@ -93,6 +105,7 @@ function normalizeProviderOptions<T extends ProviderToggleOptions>(
     providerOptions: {
       withReleaseUpdateStatusProvider,
       withUserPreferencesProvider,
+      withFeatureGuidanceProvider,
       withThemeProvider,
     },
     remainingOptions: remainingOptions as Omit<T, keyof ProviderToggleOptions>,
@@ -105,6 +118,7 @@ const customRender = (ui: ReactElement, options?: AppRenderOptions) => {
   const {
     withReleaseUpdateStatusProvider,
     withUserPreferencesProvider,
+    withFeatureGuidanceProvider,
     withThemeProvider,
   } = providerOptions
 
@@ -113,6 +127,7 @@ const customRender = (ui: ReactElement, options?: AppRenderOptions) => {
       <AppProviders
         withReleaseUpdateStatusProvider={withReleaseUpdateStatusProvider}
         withUserPreferencesProvider={withUserPreferencesProvider}
+        withFeatureGuidanceProvider={withFeatureGuidanceProvider}
         withThemeProvider={withThemeProvider}
       >
         {children}
@@ -131,6 +146,7 @@ const customRenderHook = <Result, Props>(
   const {
     withReleaseUpdateStatusProvider,
     withUserPreferencesProvider,
+    withFeatureGuidanceProvider,
     withThemeProvider,
   } = providerOptions
 
@@ -139,6 +155,7 @@ const customRenderHook = <Result, Props>(
       <AppProviders
         withReleaseUpdateStatusProvider={withReleaseUpdateStatusProvider}
         withUserPreferencesProvider={withUserPreferencesProvider}
+        withFeatureGuidanceProvider={withFeatureGuidanceProvider}
         withThemeProvider={withThemeProvider}
       >
         {children}

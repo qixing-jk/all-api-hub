@@ -139,23 +139,25 @@ describe("managed-site token batch import target", () => {
     )
     targets.forEach((target, index) => {
       const runtimeConfig = runtimeConfigs[index]!
-      expect(target.service.siteType).toBe(runtimeConfig.siteType)
+      expect(target.managedSite.siteType).toBe(runtimeConfig.siteType)
       expect(target.config).toBe(runtimeConfig.config)
       expect(target.targetSummary).toEqual({
         siteType: runtimeConfig.siteType,
         baseUrl: runtimeConfig.config.baseUrl.replace(/\/+$/, ""),
-        compatibleUserId:
-          runtimeConfig.siteType === SITE_TYPES.OCTOPUS
-            ? runtimeConfig.config.username
-            : runtimeConfig.siteType === SITE_TYPES.AXON_HUB
-              ? runtimeConfig.config.email
-              : runtimeConfig.siteType === SITE_TYPES.CLAUDE_CODE_HUB
-                ? "admin"
-                : runtimeConfig.siteType === SITE_TYPES.SUB2API
-                  ? "admin"
-                  : runtimeConfig.config.userId,
       })
       expect(target.targetFingerprint).toMatch(/^[a-f0-9]{64}$/)
+    })
+  })
+
+  it("preserves the stored repair-receipt fingerprint without exposing an admin-shaped summary", async () => {
+    const target = await getTarget(runtimeConfigs[0]!)
+
+    expect(target.targetFingerprint).toBe(
+      "bb8f5b1b4bb93fe30f45d29f61905188562845d8fb9be2d4a5b6d38845ab71b0",
+    )
+    expect(target.targetSummary).toEqual({
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://new-api.example.invalid",
     })
   })
 

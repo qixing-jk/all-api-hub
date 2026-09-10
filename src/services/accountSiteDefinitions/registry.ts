@@ -4,7 +4,6 @@ import {
   ACCOUNT_SITE_DEFINITION_SCOPES,
   type AccountSiteDefinition,
   type AccountSiteDefinitionOnboardingMetadata,
-  type AccountSiteDefinitionReadiness,
 } from "./contracts"
 import {
   ACCOUNT_SITE_TYPE_ORDER,
@@ -52,6 +51,7 @@ function cloneOnboarding(
   if (!onboarding) return undefined
 
   return {
+    ...onboarding,
     detection: onboarding.detection
       ? {
           titlePatterns: onboarding.detection.titlePatterns?.map(cloneRegExp),
@@ -61,7 +61,10 @@ function cloneOnboarding(
           ),
         }
       : undefined,
-    routes: onboarding.routes ? { ...onboarding.routes } : undefined,
+    routes: { ...onboarding.routes },
+    accountForm: onboarding.accountForm
+      ? { ...onboarding.accountForm }
+      : undefined,
   }
 }
 
@@ -111,9 +114,6 @@ function cloneProductProfile(
           ),
         }
       : undefined,
-    supplementalAuth: productProfile.supplementalAuth
-      ? { ...productProfile.supplementalAuth }
-      : undefined,
     tokenForm: productProfile.tokenForm
       ? { ...productProfile.tokenForm }
       : undefined,
@@ -129,19 +129,6 @@ function cloneProductProfile(
 }
 
 /**
- * Clones readiness expectation data before exposing definition copies.
- */
-function cloneReadiness(
-  readiness: AccountSiteDefinitionReadiness | undefined,
-): AccountSiteDefinitionReadiness | undefined {
-  if (!readiness) return undefined
-
-  return {
-    modelList: readiness.modelList ? { ...readiness.modelList } : undefined,
-  }
-}
-
-/**
  * Clones a complete account-site definition row for registry consumers.
  */
 function cloneDefinition(
@@ -150,18 +137,18 @@ function cloneDefinition(
   return {
     ...definition,
     scopes: [...definition.scopes],
+    tokenKey: definition.tokenKey ? { ...definition.tokenKey } : undefined,
     managedResource: definition.managedResource
       ? {
           ...definition.managedResource,
           tableFieldIds: [...definition.managedResource.tableFieldIds],
           detailFieldIds: [...definition.managedResource.detailFieldIds],
-          actions: [...definition.managedResource.actions],
+          consoleRoutes: { ...definition.managedResource.consoleRoutes },
           settingsTarget: { ...definition.managedResource.settingsTarget },
         }
       : undefined,
     onboarding: cloneOnboarding(definition.onboarding),
     productProfile: cloneProductProfile(definition.productProfile),
-    readiness: cloneReadiness(definition.readiness),
   }
 }
 
@@ -247,11 +234,18 @@ export function getAccountSiteOnboardingDefinitions() {
       hasScope(definition, ACCOUNT_SITE_DEFINITION_SCOPES.Account),
     ),
     ACCOUNT_SITE_TYPE_ORDER,
-  ).map((definition) => ({
-    siteType: definition.siteType,
-    adapterFamily: definition.adapterFamily,
-    ...cloneOnboarding(definition.onboarding),
-  }))
+  ).map((definition) => {
+    const onboarding = cloneOnboarding(definition.onboarding)
+    if (!onboarding)
+      throw new Error(
+        `Account site ${definition.siteType} is missing onboarding metadata`,
+      )
+    return {
+      siteType: definition.siteType,
+      adapterFamily: definition.adapterFamily,
+      ...onboarding,
+    }
+  })
 }
 
 /**

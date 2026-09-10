@@ -31,6 +31,7 @@ import {
   canEnableModelPriceComparison,
   enableModelPriceComparison,
 } from "~/features/ModelList/priceComparisonActivation"
+import { PricingScenarioNavigation } from "~/features/ModelList/pricingScenarioNavigation"
 import {
   canCreateAccountApiTokens,
   canListAccountRuntimeKeys,
@@ -65,11 +66,12 @@ import { ControlPanel } from "./components/ControlPanel"
 import { Footer } from "./components/Footer"
 import { ModelDisplay } from "./components/ModelDisplay"
 import ModelKeyDialog from "./components/ModelKeyDialog"
+import { PricingDiagnostics } from "./components/PricingDiagnostics"
 import { ProviderTabs } from "./components/ProviderTabs"
 import { StatusIndicator } from "./components/StatusIndicator"
 import { MODEL_LIST_GROUP_SELECTION_SCOPES } from "./groupSelectionScopes"
 import { useModelListData } from "./hooks/useModelListData"
-import { MODEL_LIST_SORT_MODES } from "./sortModes"
+import { isModelListPriceSortMode, MODEL_LIST_SORT_MODES } from "./sortModes"
 import { MODEL_LIST_TEST_IDS } from "./testIds"
 import {
   applyVerificationResultView,
@@ -117,6 +119,8 @@ export default function ModelList(props: {
     setSelectedProvider,
     sortMode,
     setSortMode,
+    pricingScenarioSettings,
+    setPricingScenarioSettings,
     priceComparisonPresetId,
     setPriceComparisonPresetId,
     priceComparisonWeights,
@@ -148,7 +152,7 @@ export default function ModelList(props: {
     accountFallback,
     personalizedCatalogFallback,
     isFallbackCatalogActive,
-    isAihubmixCatalogFallbackActive,
+    isProviderCatalogFallbackActive,
 
     filteredModels,
     accountSummaryCountsByAccountId,
@@ -292,13 +296,18 @@ export default function ModelList(props: {
       (accountQueryStates ?? []).map((state) => [state.account.id, state]),
     )
 
-    return sortedAccounts.flatMap((account) => {
+    return accounts.flatMap((account) => {
       const state = stateByAccountId.get(account.id)
       if (!state) {
         return []
       }
       const count = accountSummaryCountsByAccountId.get(state.account.id)
-      if (count === undefined && !state.isLoading && !state.errorType) {
+      if (
+        count === undefined &&
+        !state.isLoading &&
+        !state.errorType &&
+        !allAccountsFilterAccountIds.includes(account.id)
+      ) {
         return []
       }
 
@@ -307,13 +316,19 @@ export default function ModelList(props: {
           accountId: state.account.id,
           name: state.account.name,
           count: count ?? 0,
+          hasData: state.hasData,
           isLoading: state.isLoading,
           errorType: state.errorType,
           errorMessage: state.errorMessage,
         },
       ]
     })
-  }, [accountQueryStates, accountSummaryCountsByAccountId, sortedAccounts])
+  }, [
+    accountQueryStates,
+    accountSummaryCountsByAccountId,
+    accounts,
+    allAccountsFilterAccountIds,
+  ])
 
   const modelVerificationTargets = useMemo(() => {
     return filteredModels.reduce<ApiVerificationHistoryTarget[]>(
@@ -360,12 +375,11 @@ export default function ModelList(props: {
   )
   const getDisplayedResultCount = useCallback(
     (filters: ModelListDisplayedResultCountFilters = {}) => {
-      const baseCount = getFilteredResultCount(filters)
       if (
         !filters.selectedVerificationResults &&
         filters.sortMode !== MODEL_LIST_SORT_MODES.VERIFICATION_LATENCY_ASC
       ) {
-        return baseCount
+        return getFilteredResultCount(filters)
       }
 
       const selectedResults =
@@ -538,7 +552,7 @@ export default function ModelList(props: {
     />
   )
 
-  return (
+  const page = (
     <div className="p-6" data-testid={MODEL_LIST_TEST_IDS.page}>
       <PageHeader
         icon={Cpu}
@@ -672,6 +686,16 @@ export default function ModelList(props: {
         />
       ) : null}
 
+      {selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS &&
+        sourceCapabilities.supportsAccountSummary &&
+        accountSummaryItems.length > 0 && (
+          <AccountSummaryBar
+            items={accountSummaryItems}
+            activeAccountIds={allAccountsFilterAccountIds}
+            onAccountClick={handleAccountSummaryClick}
+          />
+        )}
+
       {selectedSource && !hasModelData && (
         <StatusIndicator
           selectedSource={selectedSource}
@@ -710,12 +734,12 @@ export default function ModelList(props: {
             />
           )}
 
-          {isAihubmixCatalogFallbackActive && (
+          {isProviderCatalogFallbackActive && (
             <Alert
               variant="warning"
               className="mb-6"
-              title={t("aihubmixCatalogFallbackNotice.title")}
-              description={t("aihubmixCatalogFallbackNotice.description")}
+              title={t("providerCatalogFallbackNotice.title")}
+              description={t("providerCatalogFallbackNotice.description")}
             />
           )}
 
@@ -778,16 +802,6 @@ export default function ModelList(props: {
             />
           )}
 
-          {selectedSource?.kind ===
-            MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS &&
-            sourceCapabilities.supportsAccountSummary &&
-            accountSummaryItems.length > 0 && (
-              <AccountSummaryBar
-                items={accountSummaryItems}
-                activeAccountIds={allAccountsFilterAccountIds}
-                onAccountClick={handleAccountSummaryClick}
-              />
-            )}
           <ControlPanel
             selectedSource={selectedSource}
             sourceCapabilities={sourceCapabilities}
@@ -799,6 +813,8 @@ export default function ModelList(props: {
             setSortMode={setSortMode}
             priceComparisonPresetId={priceComparisonPresetId}
             setPriceComparisonPresetId={setPriceComparisonPresetId}
+            pricingScenarioSettings={pricingScenarioSettings}
+            setPricingScenarioSettings={setPricingScenarioSettings}
             priceComparisonWeights={priceComparisonWeights}
             setPriceComparisonWeights={setPriceComparisonWeights}
             selectedBillingMode={selectedBillingMode}
@@ -823,6 +839,11 @@ export default function ModelList(props: {
             onBatchVerifyModels={
               canBatchVerifyModels ? handleOpenBatchVerify : undefined
             }
+          />
+
+          <PricingDiagnostics
+            models={displayedModels}
+            onLocate={setSearchTerm}
           />
 
           <ProviderTabs
@@ -851,5 +872,15 @@ export default function ModelList(props: {
         </>
       )}
     </div>
+  )
+  return (
+    <PricingScenarioNavigation
+      onConfigure={() => {
+        if (!isModelListPriceSortMode(sortMode))
+          setSortMode(MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST)
+      }}
+    >
+      {page}
+    </PricingScenarioNavigation>
   )
 }

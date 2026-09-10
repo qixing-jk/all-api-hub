@@ -98,7 +98,16 @@ export interface OctopusChannelStats {
 /**
  * Octopus 渠道完整对象
  */
+export const OCTOPUS_CHANNEL_DETAIL_AVAILABILITY = {
+  Summary: "summary",
+  Full: "full",
+} as const
+
 export interface OctopusChannel {
+  /** Migration cannot reproduce all native grants, dialect, or protocol paths. */
+  hasUnrepresentedProtocolSettings?: boolean
+  /** Stats-only inventories omit protocol, endpoints, and credential details. */
+  detailAvailability?: (typeof OCTOPUS_CHANNEL_DETAIL_AVAILABILITY)[keyof typeof OCTOPUS_CHANNEL_DETAIL_AVAILABILITY]
   /** 渠道唯一标识符 */
   id: number
   /** 渠道名称 */

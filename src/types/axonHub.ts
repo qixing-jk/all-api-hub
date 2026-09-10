@@ -57,15 +57,6 @@ export interface AxonHubRetryableErrorPattern {
   regex?: boolean | null
 }
 
-export interface AxonHubOpenCodeGoQuotaSettings {
-  workspaceId?: string | null
-  authCookie?: string | null
-}
-
-export interface AxonHubChannelProviderQuotaSettings {
-  opencodeGo?: AxonHubOpenCodeGoQuotaSettings | null
-}
-
 export interface AxonHubChannelSettings {
   extraModelPrefix?: string | null
   modelMappings?: AxonHubModelMapping[] | null
@@ -82,7 +73,6 @@ export interface AxonHubChannelSettings {
   rateLimit?: AxonHubChannelRateLimit | null
   retryableStatusCodes?: number[] | null
   retryableErrorPatterns?: AxonHubRetryableErrorPattern[] | null
-  providerQuota?: AxonHubChannelProviderQuotaSettings | null
 }
 
 export interface AxonHubOAuthCredentials {
@@ -164,6 +154,11 @@ export interface AxonHubChannel {
   allModelEntries?: AxonHubChannelModelEntry[] | null
   liveLimiterStats?: AxonHubChannelLimiterStats | null
 }
+
+export type AxonHubChannelMutationReceipt = Pick<
+  AxonHubChannel,
+  "id" | "type" | "baseURL" | "name" | "status"
+> & { __typename: "Channel" }
 
 export interface AxonHubCreateChannelInput {
   type: AxonHubChannelType | string

@@ -295,6 +295,7 @@
       "inputPreparationFailed": "Không thể chuẩn bị dữ liệu nhập kênh có thể so sánh, tạm thời không thể hoàn tất kiểm tra.",
       "newApiRetrieveKeyHint": "Đối với New API, việc so sánh toàn bộ key phụ thuộc vào key kênh, và việc xem key kênh yêu cầu phải hoàn tất xác minh 2FA trước, do đó hiện tại chưa thể hoàn tất so sánh toàn bộ key."
     },
+    "nativeResourceUnsupported": "Tính năng đối chiếu trang web được quản lý trên trang này chưa hỗ trợ khóa tài nguyên gốc. Việc làm mới chỉ áp dụng cho các khóa được hỗ trợ.",
     "pageUnsupported": "Do trang web lưu trữ hiện tại tạm thời không hỗ trợ tìm kiếm kênh bằng URL, chức năng kiểm tra kênh trang web quản lý không khả dụng.",
     "recovery": {
       "configureLogin": "Vui lòng điền thông tin đăng nhập New API và thông tin hỗ trợ xác minh hai bước trong cài đặt trước, nếu không hiện tại không thể đọc key kênh, cũng như không thể hoàn tất so sánh toàn bộ key.",
@@ -354,6 +355,29 @@
     "verifyApiFailed": "Không thể mở xác minh API",
     "verifyCliSupportFailed": "Không thể mở xác minh tính tương thích CLI"
   },
+  "native": {
+    "detailsLoadFailed": "Không thể tải chi tiết khóa.",
+    "heading": "Khóa API",
+    "missing": "Không khả dụng",
+    "scope": {
+      "empty": "Không có phạm vi khả dụng",
+      "error": "Không thể tải phạm vi",
+      "errorHelp": "Kiểm tra quyền truy cập tài khoản rồi thử lại.",
+      "heading": "Phạm vi",
+      "label": "Chọn phạm vi",
+      "loading": "Đang tải phạm vi…",
+      "partial": "Không thể tải một số phạm vi. Bạn vẫn có thể dùng các phạm vi đã tải.",
+      "placeholder": "Chọn một phạm vi",
+      "retry": "Tải lại phạm vi"
+    },
+    "status": {
+      "disabled": "Đã tắt",
+      "enabled": "Đang bật",
+      "expired": "Đã hết hạn",
+      "unknown": "Không rõ"
+    }
+  },
+  "noAccountsSupportKeyCreation": "Không có tài khoản nào trong chế độ xem này hỗ trợ tạo khóa API. Hãy chọn tài khoản khác hoặc thêm tài khoản được hỗ trợ.",
   "noKeys": "Chưa có dữ liệu khóa",
   "noMatchingKeys": "Không tìm thấy khóa khớp",
   "oneTimeKey": {
@@ -540,7 +564,6 @@
         "usageWeekly": "Sử dụng hàng tuần",
         "workspace": "Không gian làm việc"
       },
-      "heading": "Khóa OpenRouter",
       "status": {
         "all": "Tất cả",
         "disabled": "Đã tắt",
@@ -587,7 +610,7 @@
       "more_other": "Và {{count}} mục khác",
       "title_other": "Xóa {{count}} khóa bất thường?"
     },
-    "description": "Kiểm tra xem các tài khoản đã lưu có khóa dùng được hay không. Khóa còn thiếu sẽ được tự động tạo khi có thể; các vấn đề khác sẽ hiển thị bên dưới.",
+    "description": "Kiểm tra tất cả nhóm khả dụng của tài khoản đã lưu và tạo khóa dùng được còn thiếu khi có hỗ trợ tạo tự động. Các vấn đề khác được liệt kê bên dưới.",
     "failureGuidance": {
       "aborted": "Thao tác đã bị hủy trước khi hoàn tất. Hãy chạy lại kiểm tra khi bạn sẵn sàng.",
       "authenticationFailed": "Đăng nhập lại hoặc cập nhật thông tin xác thực của tài khoản này, rồi thử lại.",
@@ -602,7 +625,7 @@
       "validationFailed": "Kiểm tra và sửa các thiết lập khóa bắt buộc, rồi thử lại."
     },
     "historyNote": "Đây là kết quả kiểm tra trước đó. Hiện không có tác vụ nào đang chạy và bạn có thể kiểm tra lại.",
-    "initialNotice": "Các tài khoản đã lưu sẽ được kiểm tra xem có khóa dùng được hay không. Nếu tài khoản được hỗ trợ thiếu khóa, tiện ích có thể tạo khóa mới.",
+    "initialNotice": "Kiểm tra từng nhóm của tài khoản đã lưu và tạo khóa còn thiếu khi được hỗ trợ. Bỏ qua các nhóm đã có khóa dùng được.",
     "invalidKeys": {
       "badge": "Bất thường",
       "deleteFailed": "Xóa khóa bất thường thất bại",

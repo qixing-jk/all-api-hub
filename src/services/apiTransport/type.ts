@@ -21,6 +21,24 @@ export interface ApiTransportResponse<T = unknown> {
   body: T
 }
 
+export type ApiResponseErrorKind = "business" | "http"
+
+export interface DecodedApiResponseError {
+  kind: ApiResponseErrorKind
+  message?: string
+  upstreamCode?: string
+}
+
+/**
+ * Interprets one provider response without performing disclosure or redaction.
+ * Implementations must be total for unknown bodies and return null when the
+ * response does not match their protocol.
+ */
+export type ApiResponseErrorDecoder = (
+  response: ApiTransportResponse<unknown>,
+  context: { endpoint: string },
+) => DecodedApiResponseError | null
+
 export interface AuthConfig {
   /** 认证类型: cookie | access_token | none */
   authType: AuthTypeEnum
@@ -42,6 +60,14 @@ export const API_TRANSPORT_FETCH_CONTEXT_KINDS = {
 } as const
 
 export const API_SERVICE_FETCH_CONTEXT_KINDS = API_TRANSPORT_FETCH_CONTEXT_KINDS
+
+export const API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES = {
+  Allow: "allow",
+  Forbid: "forbid",
+} as const
+
+export type ApiTransportCurrentTabFallbackMode =
+  (typeof API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES)[keyof typeof API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES]
 
 export type ApiTransportFetchContextKind =
   (typeof API_TRANSPORT_FETCH_CONTEXT_KINDS)[keyof typeof API_TRANSPORT_FETCH_CONTEXT_KINDS]
@@ -117,10 +143,14 @@ export interface ApiTransportRequest {
   abortDeadline?: DeferredAbortDeadline
   cookieAuthSessionCookie?: string
   fetchContext?: ApiTransportFetchContext
+  /** Controls whether a failed current-tab dispatch may fall back to extension fetch. */
+  currentTabFallback?: ApiTransportCurrentTabFallbackMode
   /** Originating extension surface for temporary-window presentation policy. */
   tempWindowRequestSource?: TempWindowRequestSource
   /** Invocation intent for protected temporary-context work. */
   protectionBypassExecution?: ProtectionBypassExecution
+  /** Force the request through the protected temporary context from the start. */
+  forceTempWindow?: boolean
   /** Skip the generic per-site limiter when the caller already applies a narrower limiter. */
   bypassSiteRequestLimit?: boolean
   /** Process-local lifecycle evidence; callbacks must never cross extension messaging. */
@@ -136,6 +166,8 @@ export interface FetchApiOptions {
   tempWindowFallback?: TempWindowFallbackAllowlist
   currentTabTransport?: "prefer" | "disabled"
   authTokenMode?: ApiAuthTokenMode
+  /** Process-local provider decoder; it never crosses extension messaging. */
+  errorResponseDecoder?: ApiResponseErrorDecoder
 }
 
 export interface OpenAIAuthParams {

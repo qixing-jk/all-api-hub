@@ -11,6 +11,7 @@ import {
   rememberGoogleBearerAuth,
   type GoogleAuthMode,
 } from "./auth"
+import { decodeGoogleResponseError } from "./responseError"
 
 type GoogleAuthParams = {
   baseUrl: string
@@ -59,6 +60,7 @@ export async function fetchGoogleModelIds(
           request,
           {
             endpoint,
+            errorResponseDecoder: decodeGoogleResponseError,
             options: {
               signal: params.abortSignal,
               headers: createGoogleAuthHeaders(params.apiKey, mode),

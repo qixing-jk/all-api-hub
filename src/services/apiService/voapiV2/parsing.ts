@@ -1,6 +1,8 @@
 import { UI_CONSTANTS } from "~/constants/ui"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { getErrorMessage } from "~/utils/core/error"
 
+import { readVoApiV2EnvelopeMessage } from "./responseError"
 import { VOAPI_V2_PROTOCOL_CODES, type VoApiV2Envelope } from "./type"
 
 class VoApiV2AuthExpiredError extends ApiError {}
@@ -11,9 +13,7 @@ export type VoApiV2EnvelopeOptions = {
 }
 
 const getEnvelopeMessage = (body: VoApiV2Envelope<unknown>): string =>
-  (typeof body.msg === "string" && body.msg.trim()) ||
-  (typeof body.message === "string" && body.message.trim()) ||
-  "VoAPI v2 request failed"
+  getErrorMessage(readVoApiV2EnvelopeMessage(body), "VoAPI v2 request failed")
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)

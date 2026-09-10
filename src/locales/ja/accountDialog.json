@@ -1,4 +1,27 @@
 {
+  "accessTokenVerification": {
+    "apiyi": {
+      "generateStep": "有効な Access Token の全文をお持ちの場合は、そのまま使用できます。ない場合は、APIyi のプロフィールで「System token」を開き、サイト上でパスワードを入力して生成してください。",
+      "openProfile": "APIyi のプロフィールを開く",
+      "openProfileFailed": "ページを開けませんでした。APIyi のプロフィールで「System token」を手動で開いて認証を完了し、ここに戻って Access Token を貼り付けてください。"
+    },
+    "continueFailed": "サイドパネルも通常のページも開けませんでした。フォームは保持されています。もう一度お試しください。",
+    "continueInFullPage": "通常のページで続行",
+    "continueInSidePanel": "サイドパネルで続行",
+    "continuing": "フォームを準備中…",
+    "description": "このサイトでは Access Token の生成前にセキュリティ確認が必要なため、自動取得できません。検出済みのアカウント情報は保持されています。アカウント管理用の Access Token を入力してください。",
+    "destinationBusy": "ここには未完了のアカウントフォームがあります。保存または閉じると、ポップアップから引き継いだフォームに進みます。",
+    "fullPageHint": "通常のページで続行すると、サイトでトークンをコピーしている間もフォームを開いたままにできます。",
+    "generateStep": "有効な Access Token の全文を保存している場合は、そのまま入力できます。それ以外は、サイトの「セキュリティ → Access Token」を開き、認証を完了してトークンを生成してください。",
+    "openSecurity": "サイトのセキュリティ設定を開く",
+    "openSecurityFailed": "ページを開けませんでした。サイトの「セキュリティ → Access Token」を手動で開き、トークンをコピーしてここに貼り付けてください。",
+    "pasteStep": "完全な Access Token をすぐにコピーし、下の「アクセストークン」欄に貼り付けて、アカウント情報を確認して保存してください。",
+    "popupHint": "サイドパネルに移動すると、フォームを保持したままサイトで本人確認を行い、トークンをコピーできます。サイドパネルを開けない場合は、通常のページで続行します。",
+    "prepareFailed": "フォームを一時保存できませんでした。必要な情報をコピーしてから、サイドパネルでアカウントフォームを開き直してください。",
+    "restoreFailed": "未完了のフォームを復元できませんでした。有効期限が切れた可能性があります。アカウントフォームを開き直してください。",
+    "rotationWarning": "再生成すると古い Access Token は無効になります。古いトークンを使用する他のツールも更新してください。",
+    "title": "Access Token を手動で入力"
+  },
   "actions": {
     "autoConfigAriaLabel": "アカウントを保存して {{managedSite}} のチャネル設定を開く",
     "autoConfigRequiresValidAccount": "先にアカウント情報を入力してください",
@@ -8,6 +31,7 @@
     "confirmAdd": "追加を確認",
     "helpDocument": "トラブルシューティング",
     "openApiCredentialProfiles": "API 資格情報を開く",
+    "openManualAddGuide": "このサイトの手動追加ガイドを開く",
     "reloadCurrentPage": "現在のページを再読み込み",
     "reloadExtensionAndRetry": "拡張機能を再読み込みして再試行",
     "reportUnsupportedSite": "サイト対応を申請",
@@ -55,6 +79,7 @@
     "automaticCheckInSelectionWithDetail": "自動選択：{{detail}}",
     "checkInMethod": "チェックイン方法",
     "checkInMethodNeedsChoice": "複数の方法を検出しました。選択してください",
+    "checkInMethodNeedsConfirmation": "{{method}}（未確認）",
     "checkInMethodNotSelected": "方法が選択されていません",
     "checkInMethodPendingConfirmation": "利用可能な方法を確認中",
     "checkInMethodUnavailable": "利用可能な方法はありません",
@@ -64,6 +89,7 @@
     "checkInSelectionAutomaticUnavailable": "利用可能な方法が検出されませんでした。自動チェックインは実行されません。",
     "checkInSelectionManual": "{{method}} を手動で選択しました。システムが自動的に置き換えることはありません。",
     "checkInSelectionStale": "再検出して、引き続き利用できるか確認してください。",
+    "checkInSelectionUnconfirmed": "選択した方式「{{method}}」は保持されていますが、このサイトで対応しているかは未確認です。再検出してください。",
     "checkInStatus": "チェックイン状態",
     "checkInStatusDesc": "アカウント更新時に今日のチェックイン状態を確認して表示します。これは状態表示のみで、チェックイン自体は実行しません。",
     "checkInStatusDisabled": "サイト側でチェックインが有効になっていないため、自動チェックインは一時停止しています。",
@@ -154,10 +180,15 @@
     "openrouterBootstrapInfo": "この操作は OpenRouter に新しい管理キーを作成し、そのキーを使用してアカウント情報を検出・補完します。",
     "reDetectInfo": "サイト情報が変わった場合は「再検出」ボタンを押すことを推奨します（事前に対象サイトへ自分でログインしておく必要があります）"
   },
+  "manualAddRecovery": {
+    "description": "下に該当サイトの手動追加フォームを表示しました。ガイドを参照して必須項目を補完し、アカウントを保存してください。",
+    "title": "手動でアカウント情報を補完する"
+  },
   "messages": {
     "addSuccess": "アカウント {{name}} を正常に追加しました",
     "autoDetectCookiePermissionReloadHint": "Cookie 複数アカウント権限を許可した直後の初回検出が進まない場合は、拡張機能を再読み込みしてから再試行できます。",
     "autoDetectFailed": "自動検出に失敗しました: {{error}}",
+    "autoDetectIdentityMismatch": "検出されたアカウントが現在のアカウントと一致しません。既存のデータは保持されています。サイトの URL を確認し、対象のアカウントにログインしてから再試行してください。",
     "autoDetectSuccess": "自動検出に成功しました",
     "autoDetectTakingTooLong": "自動検出に想定より時間がかかっています。トラブルシューティングガイドを開いてください。",
     "checkInRedetectAmbiguous": "複数のチェックイン方法が検出されました。下から選択してください。",
@@ -171,7 +202,7 @@
       "identity_mismatch": "サイトから返されたアカウントが現在のアカウントと一致しません。サイト URL とアカウントの認証情報を確認してください。",
       "invalid_response": "サイトから拡張機能が認識できない応答が返されました。サイト URL を確認し、拡張機能を更新してからもう一度お試しください。",
       "network": "検出時に対象サイトへ接続できませんでした。ネットワーク接続またはサイトの状態を確認して、もう一度お試しください。",
-      "permission_denied": "対象サイトが検出リクエストを拒否しました。再ログインし、アカウントの権限を確認してください。",
+      "permission_denied": "サイトがチェックインの検出リクエストを拒否したため、対応状況を確認できませんでした。サイト上で機能とアカウントの権限を確認してください。",
       "source_unavailable": "対象サイトは一時的に利用できません。しばらくしてからもう一度お試しください。",
       "timeout": "検出がタイムアウトするまでに対象サイトから応答がありませんでした。しばらくしてからもう一度お試しください。"
     },
@@ -255,10 +286,10 @@
         "continue": "続行",
         "disableAndContinue": "今後表示せずに続行"
       },
-      "description_other": "{{siteUrl}} にはすでに {{count}} 件のアカウントがあります。さらに追加すると重複する可能性があります。続行しますか？",
-      "descriptionExact": "{{siteUrl}} に user ID {{userId}}（{{username}}）のアカウントがすでに存在します。さらに追加すると重複する可能性があります。続行しますか？",
+      "description_other": "{{siteUrl}} のこの Management Key は {{count}} 件のアカウントに保存されています。もう一度追加しますか？",
+      "descriptionExact": "{{siteUrl}} のユーザー ID {{userId}} のアカウントは保存済みです（{{username}}）。もう一度追加しますか？",
       "title": "重複アカウント",
-      "warningTitle": "このサイトにはすでにアカウントがあります"
+      "warningTitle": "一致する保存済みアカウントがあります"
     },
     "managedSiteConfig": {
       "actions": {

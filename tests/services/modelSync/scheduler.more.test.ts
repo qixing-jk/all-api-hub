@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
   ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
@@ -22,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   octopusFetchGroups: vi.fn(),
   octopusFetchAvailableModels: vi.fn(),
   runOctopusBatch: vi.fn(),
+  prepareOctopusBatch: vi.fn(),
   createOctopusModelSyncCapability: vi.fn(),
   saveLastExecution: vi.fn(),
   getLastExecution: vi.fn(),
@@ -105,7 +107,7 @@ vi.mock("~/services/apiService/octopus", () => ({
   fetchAvailableModels: mocks.octopusFetchAvailableModels,
 }))
 
-vi.mock("~/services/models/modelSync/octopusModelSync", () => ({
+vi.mock("~/services/apiAdapters/managedResources/octopusModelSync", () => ({
   createOctopusModelSyncCapability: mocks.createOctopusModelSyncCapability,
 }))
 
@@ -115,7 +117,7 @@ describe("modelSyncScheduler additional scheduler flows", () => {
     vi.clearAllMocks()
     mocks.createOctopusModelSyncCapability.mockReturnValue({
       listChannels: mocks.octopusListChannels,
-      runBatch: mocks.runOctopusBatch,
+      prepareBatch: mocks.prepareOctopusBatch,
     })
     mocks.hasAlarmsAPI.mockReturnValue(true)
     mocks.getPreferences.mockResolvedValue({
@@ -137,7 +139,7 @@ describe("modelSyncScheduler additional scheduler flows", () => {
       statistics: { total: 0, successCount: 0, failureCount: 0 },
     })
     mocks.listChannels.mockResolvedValue({
-      items: [{ id: 1, name: "Channel 1" }],
+      items: [{ ref: modelResourceRef(1), name: "Channel 1" }],
       total: 1,
       type_counts: {},
     })
@@ -185,6 +187,79 @@ describe("modelSyncScheduler additional scheduler flows", () => {
 
     expect(mocks.onAlarm).toHaveBeenCalledTimes(1)
   })
+
+  it("selects an opaque resource and keeps the captured deployment through service creation", async () => {
+    const ref = modelResourceRef("provider/key:alpha")
+    const selected = { ref, name: "Opaque" }
+    mocks.listChannels.mockResolvedValue({
+      items: [selected, { ref: modelResourceRef("other"), name: "Other" }],
+      total: 2,
+    })
+    const capturedPreferences = await mocks.getPreferences()
+    mocks.getPreferences
+      .mockClear()
+      .mockResolvedValueOnce(capturedPreferences)
+      .mockResolvedValue({
+        ...capturedPreferences,
+        newApi: {
+          ...capturedPreferences.newApi,
+          baseUrl: "https://other.example",
+        },
+      })
+    const { modelSyncScheduler } = await import(
+      "~/services/models/modelSync/scheduler"
+    )
+
+    await modelSyncScheduler.executeSync([ref])
+
+    expect(mocks.getPreferences).toHaveBeenCalledOnce()
+    expect(mocks.modelSyncServiceCtor).toHaveBeenCalledWith(
+      { siteType: "new-api", config: capturedPreferences.newApi },
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+    )
+    expect(mocks.runBatch).toHaveBeenCalledWith([selected], expect.anything())
+  })
+
+  it.each([
+    modelResourceRef(1, { scopeKey: "https://other.example" }),
+    modelResourceRef(1, { siteType: "Veloera" }),
+  ])(
+    "rejects a same-ID selection from another target before provider access",
+    async (foreignRef) => {
+      const { modelSyncScheduler } = await import(
+        "~/services/models/modelSync/scheduler"
+      )
+      await expect(
+        modelSyncScheduler.executeSync([foreignRef]),
+      ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+      expect(mocks.listChannels).not.toHaveBeenCalled()
+      expect(mocks.runBatch).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    { resourceRef: null, legacyResourceId: "1", ok: false },
+    {
+      resourceRef: modelResourceRef(1, { scopeKey: "https://other.example" }),
+      ok: false,
+    },
+  ])(
+    "never binds unscoped or foreign failed history to the current channel",
+    async (item) => {
+      mocks.getLastExecution.mockResolvedValue({ items: [item] })
+      const { modelSyncScheduler } = await import(
+        "~/services/models/modelSync/scheduler"
+      )
+
+      await expect(modelSyncScheduler.executeFailedOnly()).rejects.toThrow()
+      expect(mocks.listChannels).not.toHaveBeenCalled()
+      expect(mocks.runBatch).not.toHaveBeenCalled()
+    },
+  )
 
   it("sanitizes stored global channel filters before constructing the service", async () => {
     mocks.getPreferences.mockResolvedValue({
@@ -256,7 +331,7 @@ describe("model sync operation helpers additional actions", () => {
     mocks.getStoredPreferences.mockResolvedValue({ enabled: true })
     mocks.getChannelUpstreamModelOptions.mockResolvedValue(["gpt-4o"])
     mocks.getLastExecution.mockResolvedValue({
-      items: [{ channelId: 1, ok: false }],
+      items: [{ resourceRef: modelResourceRef(1), ok: false }],
       statistics: { total: 1, successCount: 0, failureCount: 1 },
     })
   })
@@ -290,7 +365,7 @@ describe("model sync operation helpers additional actions", () => {
     const listChannelsSpy = vi
       .spyOn(modelSyncScheduler, "listChannels")
       .mockResolvedValue({
-        items: [{ id: 1, name: "Channel 1" }],
+        items: [{ ref: modelResourceRef(1), name: "Channel 1" }],
         total: 1,
         type_counts: {},
       } as any)
@@ -299,7 +374,9 @@ describe("model sync operation helpers additional actions", () => {
       success: true,
       data: { items: [], statistics: { total: 0 } },
     })
-    await expect(triggerSelectedModelSync([1, 2])).resolves.toEqual({
+    await expect(
+      triggerSelectedModelSync([modelResourceRef(1), modelResourceRef(2)]),
+    ).resolves.toEqual({
       success: true,
       data: { items: [], statistics: { total: 0 } },
     })
@@ -310,7 +387,7 @@ describe("model sync operation helpers additional actions", () => {
     await expect(getModelSyncLastExecution()).resolves.toEqual({
       success: true,
       data: {
-        items: [{ channelId: 1, ok: false }],
+        items: [{ resourceRef: modelResourceRef(1), ok: false }],
         statistics: { total: 1, successCount: 0, failureCount: 1 },
       },
     })
@@ -332,14 +409,17 @@ describe("model sync operation helpers additional actions", () => {
     await expect(listModelSyncChannels()).resolves.toEqual({
       success: true,
       data: {
-        items: [{ id: 1, name: "Channel 1" }],
+        items: [{ ref: modelResourceRef(1), name: "Channel 1" }],
         total: 1,
         type_counts: {},
       },
     })
 
     expect(executeSyncSpy).toHaveBeenNthCalledWith(1)
-    expect(executeSyncSpy).toHaveBeenNthCalledWith(2, [1, 2])
+    expect(executeSyncSpy).toHaveBeenNthCalledWith(2, [
+      modelResourceRef(1),
+      modelResourceRef(2),
+    ])
     expect(executeFailedOnlySpy).toHaveBeenCalledTimes(1)
     expect(getProgressSpy).toHaveBeenCalledTimes(1)
     expect(updateSettingsSpy).toHaveBeenCalledWith({ enableSync: false })

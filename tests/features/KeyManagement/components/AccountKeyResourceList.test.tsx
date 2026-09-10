@@ -2,16 +2,11 @@ import { act } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AccountKeyResourceList as NativeAccountKeyResourceList } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceList"
-import { openRouterKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/openRouterKeyResourceCard"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const AccountKeyResourceList = (props: any) => (
-  <NativeAccountKeyResourceList
-    ariaLabel="Native account keys"
-    cardAdapter={openRouterKeyResourceCardAdapter}
-    {...props}
-  />
+  <NativeAccountKeyResourceList ariaLabel="Native account keys" {...props} />
 )
 
 const itemProps = new Map<string, any>()
@@ -42,7 +37,7 @@ const createRow = (
   rowKey,
   accountId,
   accountName: "Example account",
-  workspaceName: "Example workspace",
+  scopeName: "Example workspace",
   facts: {
     ref: {
       accountId,

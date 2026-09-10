@@ -10,9 +10,14 @@ import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/KeyManagement/constants"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { canResolveAccountRuntimeKeySecret } from "~/services/accounts/keyProductCapabilities"
-import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
+import { hasValidManagedSiteConfig } from "~/services/managedSites/runtimeConfig"
+import {
+  getManagedSiteUnsupportedModelSyncMessage,
+  supportsManagedSiteModelSync,
+} from "~/services/managedSites/utils/managedSite"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
 import AxonHubSettings from "./AxonHubSettings"
@@ -38,7 +43,7 @@ const ManagedSiteChannelsIcon =
  * model sync, and model redirect.
  */
 export default function ManagedSiteTab() {
-  const { t } = useTranslation("settings")
+  const { t } = useTranslation(["settings", "managedSiteModelSync"])
   const { preferences, managedSiteType } = useUserPreferencesContext()
   const [guidedImportAccountId, setGuidedImportAccountId] = useState<
     string | undefined
@@ -47,13 +52,14 @@ export default function ManagedSiteTab() {
     [KEY_MANAGEMENT_ROUTE_PARAMS.GuidedImport]:
       KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS.ManagedSite,
   }
+  const isModelSyncSupported = supportsManagedSiteModelSync(managedSiteType)
 
   useEffect(() => {
     let isCurrent = true
 
-    void accountStorage
+    void accountQueries
       .getAllAccounts()
-      .then((accounts) => accountStorage.convertToDisplayData(accounts))
+      .then((accounts) => accountPresentation.convertToDisplayData(accounts))
       .then((accounts) => {
         if (isCurrent) {
           setGuidedImportAccountId(
@@ -164,15 +170,21 @@ export default function ManagedSiteTab() {
         }
       />
 
-      {/* These providers do not expose New-API-style model sync or redirect controls. */}
-      {managedSiteType !== SITE_TYPES.AXON_HUB &&
-        managedSiteType !== SITE_TYPES.CLAUDE_CODE_HUB &&
-        managedSiteType !== SITE_TYPES.SUB2API && (
-          <>
-            <ManagedSiteModelSyncSettings />
-            <ModelRedirectSettings />
-          </>
-        )}
+      {isModelSyncSupported ? (
+        <ManagedSiteModelSyncSettings />
+      ) : (
+        <Notice
+          id="managed-site-model-sync"
+          tone="warning"
+          title={t("managedSiteModelSync:execution.unsupported.title")}
+          description={getManagedSiteUnsupportedModelSyncMessage(
+            t,
+            managedSiteType,
+          )}
+        />
+      )}
+
+      <ModelRedirectSettings />
     </div>
   )
 }

@@ -1,274 +1,34 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type {
+  ManagedSiteCapabilities,
   ManagedSiteChannelDraftsCapability,
-  ManagedSiteChannelsCapability,
   ManagedSiteConfigCapability,
   ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
+import {
+  toManagedResourceMatchCandidate,
+  toManagedResourceMatchList,
+  toNativeNumericMatchCandidates,
+} from "~/services/apiAdapters/managedResources/matchingInputs"
+import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/resourceIds"
 import { createNewApiKeyManagement } from "~/services/apiAdapters/newApi/keyManagement"
 import {
-  createChannel,
-  deleteChannel,
-  fetchChannel,
-  fetchChannelModels,
-  fetchChannelRaw,
   fetchSiteUserGroups,
-  listAllChannels,
-  normalizeDoneHubChannel,
   searchChannel,
-  updateChannel,
-  updateDoneHubChannelFields,
-  type DoneHubChannelRaw,
 } from "~/services/apiService/doneHub"
-import type {
-  ApiResponse,
-  ApiServiceRequest,
-} from "~/services/apiTransport/type"
 import {
-  createManagedSiteMutationSequence,
-  toManagedSiteMutationDiagnostic,
-  type ManagedSiteMutationConfirmedEffect,
-  type ManagedSiteMutationSequence,
-} from "~/services/managedSites/mutations"
-import {
-  buildChannelName,
-  buildChannelPayload,
   checkValidDoneHubConfig,
-  fetchAvailableModels,
   prepareChannelFormData,
 } from "~/services/managedSites/providers/doneHubService"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import type { DoneHubConfig } from "~/types/doneHubConfig"
-import type {
-  ChannelFormData,
-  ManagedSiteChannel,
-  UpdateChannelPayload,
-} from "~/types/managedSite"
-import {
-  assertManagedUpstreamResourceRefScope,
-  createManagedUpstreamResourceRef,
-  MANAGED_UPSTREAM_RESOURCE_FIELD_TYPES,
-  MANAGED_UPSTREAM_RESOURCE_NATIVE_KINDS,
-  MANAGED_UPSTREAM_RESOURCE_SECRET_STATES,
-  MANAGED_UPSTREAM_RESOURCE_STATUSES,
-  normalizeManagedUpstreamResourceScopeKey,
-  type ManagedUpstreamResourceDetail,
-  type ManagedUpstreamResourceFieldDescriptor,
-  type ManagedUpstreamResourceRef,
-  type ManagedUpstreamResourceSummary,
-} from "~/types/managedUpstreamResource"
-import { CHANNEL_STATUS } from "~/types/newApi"
 
+import {
+  doneHubChannelOperations,
+  doneHubManagedResourceModels,
+} from "../managedResources/doneHubOperations"
 import { createManagedSiteConfigCapability } from "./config"
-import {
-  createManagedSiteChannelEffect,
-  finishManagedSiteMutationStep,
-  runManagedSiteApiServiceMutationStep,
-  toManagedSiteApiServiceRequest,
-} from "./request"
-
-const toDoneHubMutationResponse = (response: ApiResponse<unknown>) =>
-  response.success
-    ? { outcome: "applied" as const, data: response.data }
-    : {
-        outcome: "rejected" as const,
-        diagnostic: {
-          message: response.message || "Provider rejected the mutation",
-          raw: response,
-        },
-      }
-
-const runDoneHubResponseStep = async (input: {
-  config: DoneHubConfig
-  options?: Pick<RequestInit, "signal"> & {
-    bypassSiteRequestLimit?: boolean
-  }
-  sequence: ManagedSiteMutationSequence<ManagedSiteMutationConfirmedEffect>
-  effect: ManagedSiteMutationConfirmedEffect
-  execute(request: ApiServiceRequest): Promise<ApiResponse<unknown>>
-}) =>
-  await runManagedSiteApiServiceMutationStep({
-    ...input,
-    classifyResponse: toDoneHubMutationResponse,
-    classifyResponseError: (error) => {
-      throw error
-    },
-  })
-
-const fetchDoneHubMutationPayload = async (
-  config: DoneHubConfig,
-  sequence: ManagedSiteMutationSequence<ManagedSiteMutationConfirmedEffect>,
-  channelId: number,
-  options?: Pick<RequestInit, "signal"> & {
-    bypassSiteRequestLimit?: boolean
-  },
-) => {
-  try {
-    return {
-      outcome: "applied" as const,
-      data: await fetchChannelRaw(
-        toManagedSiteApiServiceRequest(config, options),
-        channelId,
-        options,
-      ),
-    }
-  } catch (error) {
-    const attempt = sequence.beginStep()
-    attempt.complete()
-    return {
-      outcome: "rejected" as const,
-      result: sequence.finish({
-        finalState: "unconfirmed",
-        diagnostic: toManagedSiteMutationDiagnostic(error),
-      }),
-    }
-  }
-}
-
-const fetchSecretKey = async (config: DoneHubConfig, channelId: number) => {
-  const channel = await fetchChannel(
-    toManagedSiteApiServiceRequest(config),
-    channelId,
-  )
-  return channel.key
-}
-
-const hydrateComparableKeys = async (
-  config: DoneHubConfig,
-  candidates: ManagedSiteChannel[],
-) => {
-  const hydratedCandidates: ManagedSiteChannel[] = []
-
-  for (const candidate of candidates) {
-    if (hasUsableManagedSiteChannelKey(candidate.key)) {
-      hydratedCandidates.push(candidate)
-      continue
-    }
-
-    const key = await fetchSecretKey(config, candidate.id)
-    hydratedCandidates.push({ ...candidate, key })
-  }
-
-  return hydratedCandidates
-}
-
-export const doneHubManagedSiteChannels: ManagedSiteChannelsCapability<DoneHubConfig> =
-  {
-    search: async (config, keyword) =>
-      await searchChannel(toManagedSiteApiServiceRequest(config), keyword),
-    list: async (config, options) =>
-      await listAllChannels(
-        toManagedSiteApiServiceRequest(config, options),
-        options,
-      ),
-    create: async (config, channelData) => {
-      const sequence = createManagedSiteMutationSequence({ idempotent: false })
-      const step = await runDoneHubResponseStep({
-        config,
-        sequence,
-        effect: createManagedSiteChannelEffect("resource-created"),
-        execute: async (request) => await createChannel(request, channelData),
-      })
-      return finishManagedSiteMutationStep(sequence, step)
-    },
-    update: async (config, channelData) => {
-      const sequence = createManagedSiteMutationSequence({ idempotent: false })
-      const step = await runDoneHubResponseStep({
-        config,
-        sequence,
-        effect: createManagedSiteChannelEffect(
-          "resource-updated",
-          channelData.id,
-        ),
-        execute: async (request) => await updateChannel(request, channelData),
-      })
-      return finishManagedSiteMutationStep(sequence, step)
-    },
-    delete: async (config, channelId) => {
-      const sequence = createManagedSiteMutationSequence({ idempotent: false })
-      const step = await runDoneHubResponseStep({
-        config,
-        sequence,
-        effect: createManagedSiteChannelEffect("resource-deleted", channelId),
-        execute: async (request) => await deleteChannel(request, channelId),
-      })
-      return step.outcome === "applied"
-        ? sequence.finish({ finalState: "confirmed", data: undefined })
-        : finishManagedSiteMutationStep(sequence, step)
-    },
-    fetchSecretKey,
-    hydrateComparableKeys,
-    fetchModels: async (config, channelId, options) =>
-      await fetchChannelModels(
-        toManagedSiteApiServiceRequest(config, options),
-        channelId,
-        options,
-      ),
-    updateModels: async (config, channelId, models, options) => {
-      const sequence = createManagedSiteMutationSequence({ idempotent: false })
-      const preflight = await fetchDoneHubMutationPayload(
-        config,
-        sequence,
-        channelId,
-        options,
-      )
-      if (preflight.outcome === "rejected") return preflight.result
-      const step = await runDoneHubResponseStep({
-        config,
-        options,
-        sequence,
-        effect: createManagedSiteChannelEffect("models-updated", channelId),
-        execute: async (request) =>
-          await updateDoneHubChannelFields(
-            request,
-            { ...preflight.data, models: models.join(",") },
-            options,
-          ),
-      })
-      return step.outcome === "applied"
-        ? sequence.finish({ finalState: "confirmed", data: undefined })
-        : finishManagedSiteMutationStep(sequence, step)
-    },
-    updateModelMapping: async (
-      config,
-      channelId,
-      models,
-      modelMapping,
-      options,
-    ) => {
-      const sequence = createManagedSiteMutationSequence({ idempotent: false })
-      const preflight = await fetchDoneHubMutationPayload(
-        config,
-        sequence,
-        channelId,
-        options,
-      )
-      if (preflight.outcome === "rejected") return preflight.result
-      const step = await runDoneHubResponseStep({
-        config,
-        options,
-        sequence,
-        effect: createManagedSiteChannelEffect(
-          "model-mapping-updated",
-          channelId,
-        ),
-        execute: async (request) =>
-          await updateDoneHubChannelFields(
-            request,
-            {
-              ...preflight.data,
-              models: models.join(","),
-              model_mapping: JSON.stringify(modelMapping),
-            },
-            options,
-          ),
-      })
-      return step.outcome === "applied"
-        ? sequence.finish({ finalState: "confirmed", data: undefined })
-        : finishManagedSiteMutationStep(sequence, step)
-    },
-  }
+import { toManagedSiteApiServiceRequest } from "./request"
 
 const doneHubManagedSiteConfig: ManagedSiteConfigCapability<DoneHubConfig> =
   createManagedSiteConfigCapability(
@@ -279,331 +39,50 @@ const doneHubManagedSiteConfig: ManagedSiteConfigCapability<DoneHubConfig> =
 const doneHubKeyManagement = createNewApiKeyManagement(SITE_TYPES.DONE_HUB)
 
 const doneHubManagedSiteQueries: ManagedSiteQueriesCapability<DoneHubConfig> = {
-  fetchSiteUserGroups: async (config) =>
-    await fetchSiteUserGroups(toManagedSiteApiServiceRequest(config)),
-  fetchAccountAvailableModels: async (config) =>
-    await doneHubKeyManagement.fetchAvailableModels(
-      toManagedSiteApiServiceRequest(config),
+  siteUserGroups: {
+    fetch: async (config) =>
+      await fetchSiteUserGroups(toManagedSiteApiServiceRequest(config)),
+  },
+  accountAvailableModels: {
+    fetch: async (config) =>
+      await doneHubKeyManagement.fetchAvailableModels(
+        toManagedSiteApiServiceRequest(config),
+      ),
+  },
+}
+
+const doneHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
+  prepareFormData: prepareChannelFormData,
+}
+
+const matching: ManagedResourceMatchingCapability<DoneHubConfig> = {
+  fetchSecretKey: async (config, ref) =>
+    doneHubChannelOperations.fetchSecretKey(
+      config,
+      requireManagedResourceChannelId(SITE_TYPES.DONE_HUB, config, ref),
+    ),
+  hydrateComparableKeys: async (config, candidates) => {
+    const target = { siteType: SITE_TYPES.DONE_HUB, config }
+    const hydrated = await doneHubChannelOperations.hydrateComparableKeys(
+      config,
+      toNativeNumericMatchCandidates(candidates, target),
+    )
+    return hydrated.map((candidate) =>
+      toManagedResourceMatchCandidate(candidate, target),
+    )
+  },
+  search: async (config, keyword) =>
+    toManagedResourceMatchList(
+      await searchChannel(toManagedSiteApiServiceRequest(config), keyword),
+      { siteType: SITE_TYPES.DONE_HUB, config },
     ),
 }
 
-const fetchDoneHubManagedSiteAvailableModels: ManagedSiteChannelDraftsCapability["fetchAvailableModels"] =
-  async (account, token) =>
-    await fetchAvailableModels(account, token, {
-      fetchAccountAvailableModels: doneHubKeyManagement.fetchAvailableModels,
-    })
-
-const doneHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
-  fetchAvailableModels: fetchDoneHubManagedSiteAvailableModels,
-  buildName: buildChannelName,
-  prepareFormData: prepareChannelFormData,
-  buildPayload: buildChannelPayload,
-}
-
-const assertDoneHubResourceRef = (
-  config: DoneHubConfig,
-  ref: ManagedUpstreamResourceRef,
-) =>
-  assertManagedUpstreamResourceRefScope(ref, {
-    managedSiteType: SITE_TYPES.DONE_HUB,
-    scopeKey: config.baseUrl,
-  })
-
-const toResourceStatus = (status: ManagedSiteChannel["status"]) => {
-  switch (status) {
-    case CHANNEL_STATUS.Enable:
-      return MANAGED_UPSTREAM_RESOURCE_STATUSES.Enabled
-    case CHANNEL_STATUS.ManuallyDisabled:
-      return MANAGED_UPSTREAM_RESOURCE_STATUSES.Disabled
-    case CHANNEL_STATUS.AutoDisabled:
-      return MANAGED_UPSTREAM_RESOURCE_STATUSES.AutoDisabled
-    case CHANNEL_STATUS.Unknown:
-    default:
-      return MANAGED_UPSTREAM_RESOURCE_STATUSES.Unknown
-  }
-}
-
-const toSecretState = (key?: string | null) =>
-  hasUsableManagedSiteChannelKey(key)
-    ? MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Available
-    : MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Masked
-
-const splitDelimitedValues = (value?: string | null): string[] =>
-  value
-    ?.split(",")
-    .map((item) => item.trim())
-    .filter(Boolean) ?? []
-
-type DoneHubResourceDetailNative = DoneHubChannelRaw
-
-const toNormalizedDoneHubChannel = (
-  native: DoneHubResourceDetailNative,
-): ManagedSiteChannel => normalizeDoneHubChannel(native)
-
-const toDoneHubResourceSummary = (
-  config: DoneHubConfig,
-  channel: ManagedSiteChannel,
-): ManagedUpstreamResourceSummary => {
-  const models = splitDelimitedValues(channel.models)
-
-  return {
-    ref: createManagedUpstreamResourceRef({
-      managedSiteType: SITE_TYPES.DONE_HUB,
-      scopeKey: normalizeManagedUpstreamResourceScopeKey(config.baseUrl),
-      resourceId: channel.id,
-    }),
-    displayName: channel.name,
-    nativeKind: MANAGED_UPSTREAM_RESOURCE_NATIVE_KINDS.Channel,
-    status: toResourceStatus(channel.status),
-    typeLabel: String(channel.type),
-    endpointLabel: channel.base_url,
-    modelCount: models.length,
-    modelPreview: models.slice(0, 3),
-    secretState: toSecretState(channel.key),
-    capabilities: {
-      canCreate: true,
-      canUpdate: true,
-      canDelete: true,
-      canRevealSecret: true,
-    },
-  }
-}
-
-const toDoneHubResourceListData = (
-  config: DoneHubConfig,
-  channels: ManagedSiteChannel[],
-  total: number,
-) => ({
-  items: channels.map((channel) => toDoneHubResourceSummary(config, channel)),
-  total,
-})
-
-const fetchDoneHubChannelByRef = async (
-  config: DoneHubConfig,
-  ref: ManagedUpstreamResourceRef,
-): Promise<DoneHubResourceDetailNative> => {
-  assertDoneHubResourceRef(config, ref)
-  return await fetchChannelRaw(
-    toManagedSiteApiServiceRequest(config),
-    Number(ref.resourceId),
-  )
-}
-
-const prepareDoneHubEditDraft = (
-  detail: ManagedUpstreamResourceDetail<DoneHubResourceDetailNative>,
-): ChannelFormData => {
-  const channel = toNormalizedDoneHubChannel(detail.native)
-
-  return {
-    name: channel.name,
-    type: channel.type,
-    key: channel.key,
-    base_url: channel.base_url || "",
-    models: splitDelimitedValues(channel.models),
-    groups: splitDelimitedValues(channel.group),
-    priority: channel.priority,
-    weight: channel.weight,
-    status: channel.status,
-  }
-}
-
-const doneHubResourceFieldDescriptors: ManagedUpstreamResourceFieldDescriptor[] =
-  [
-    {
-      name: "name",
-      label: "Channel name",
-      type: MANAGED_UPSTREAM_RESOURCE_FIELD_TYPES.Text,
-      required: true,
-    },
-    {
-      name: "key",
-      label: "API key",
-      type: MANAGED_UPSTREAM_RESOURCE_FIELD_TYPES.Secret,
-      required: true,
-    },
-    {
-      name: "base_url",
-      label: "Base URL",
-      type: MANAGED_UPSTREAM_RESOURCE_FIELD_TYPES.Text,
-    },
-    {
-      name: "models",
-      label: "Models",
-      type: MANAGED_UPSTREAM_RESOURCE_FIELD_TYPES.MultiSelect,
-      required: true,
-    },
-    {
-      name: "groups",
-      label: "Groups",
-      type: MANAGED_UPSTREAM_RESOURCE_FIELD_TYPES.MultiSelect,
-    },
-  ]
-
-const toDoneHubUpdatePayload = (
-  detail: ManagedUpstreamResourceDetail<DoneHubResourceDetailNative>,
-  draft: ChannelFormData,
-): UpdateChannelPayload & Record<string, unknown> => {
-  const native = detail.native
-  const channel = toNormalizedDoneHubChannel(native)
-  const payload: UpdateChannelPayload & Record<string, unknown> = {
-    ...native,
-    id: channel.id,
-    name: draft.name,
-    type: draft.type,
-    base_url: draft.base_url,
-    models: draft.models.join(","),
-    groups: draft.groups,
-    group: draft.groups.join(","),
-    priority: draft.priority,
-    weight: draft.weight,
-    status: draft.status,
-  }
-
-  if (hasUsableManagedSiteChannelKey(draft.key)) {
-    payload.key = draft.key.trim()
-  } else {
-    delete payload.key
-  }
-
-  return payload
-}
-
-const doneHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
-  DoneHubConfig,
-  DoneHubResourceDetailNative,
-  ChannelFormData
-> = {
-  items: {
-    list: async (config, options) => {
-      const list = await listAllChannels(
-        toManagedSiteApiServiceRequest(config, options),
-        options,
-      )
-
-      return toDoneHubResourceListData(config, list.items ?? [], list.total)
-    },
-    search: async (config, keyword) => {
-      const list = await searchChannel(
-        toManagedSiteApiServiceRequest(config),
-        keyword,
-      )
-
-      if (!list) {
-        return null
-      }
-
-      return toDoneHubResourceListData(config, list.items ?? [], list.total)
-    },
-    getDetail: async (config, ref) => {
-      const native = await fetchDoneHubChannelByRef(config, ref)
-      const channel = toNormalizedDoneHubChannel(native)
-      return {
-        summary: toDoneHubResourceSummary(config, channel),
-        native,
-      }
-    },
-    create: async (config, draft) => {
-      const sequence = createManagedSiteMutationSequence({ idempotent: false })
-      const step = await runDoneHubResponseStep({
-        config,
-        sequence,
-        effect: createManagedSiteChannelEffect("resource-created"),
-        execute: async (request) =>
-          await createChannel(request, buildChannelPayload(draft)),
-      })
-      return step.outcome === "applied"
-        ? sequence.finish({ finalState: "confirmed", data: null })
-        : finishManagedSiteMutationStep(sequence, step)
-    },
-    update: async (config, detail, draft) => {
-      const payload = toDoneHubUpdatePayload(detail, draft)
-      const sequence = createManagedSiteMutationSequence({ idempotent: false })
-      const step = await runDoneHubResponseStep({
-        config,
-        sequence,
-        effect: createManagedSiteChannelEffect("resource-updated", payload.id),
-        execute: async (request) => await updateChannel(request, payload),
-      })
-      return step.outcome === "applied"
-        ? sequence.finish({ finalState: "confirmed", data: null })
-        : finishManagedSiteMutationStep(sequence, step)
-    },
-    delete: async (config, ref) => {
-      assertDoneHubResourceRef(config, ref)
-      const resourceId = Number(ref.resourceId)
-      const sequence = createManagedSiteMutationSequence({ idempotent: false })
-      const step = await runDoneHubResponseStep({
-        config,
-        sequence,
-        effect: createManagedSiteChannelEffect("resource-deleted", resourceId),
-        execute: async (request) => await deleteChannel(request, resourceId),
-      })
-      return step.outcome === "applied"
-        ? sequence.finish({ finalState: "confirmed", data: undefined })
-        : finishManagedSiteMutationStep(sequence, step)
-    },
-  },
-  drafts: {
-    prepareImportDraft: async (input) => {
-      if (input.source && typeof input.source === "object") {
-        return input.source as ChannelFormData
-      }
-
-      return {
-        name: input.resource?.displayName ?? "",
-        type: 1,
-        key: "",
-        base_url: input.resource?.endpointLabel ?? "",
-        models: input.resource?.modelPreview ?? [],
-        groups: [],
-        priority: 0,
-        weight: 0,
-        status: CHANNEL_STATUS.Enable,
-      }
-    },
-    prepareEditDraft: prepareDoneHubEditDraft,
-    describeFields: () => doneHubResourceFieldDescriptors,
-    validateDraft: (draft) => {
-      const errors = []
-      if (!draft.name.trim()) {
-        errors.push({ field: "name", message: "Channel name is required" })
-      }
-      if (draft.models.length === 0) {
-        errors.push({
-          field: "models",
-          message: "At least one model is required",
-        })
-      }
-
-      return {
-        valid: errors.length === 0,
-        errors,
-      }
-    },
-  },
-  secrets: {
-    revealSecret: async (config, ref) => {
-      const secret = await fetchSecretKey(config, Number(ref.resourceId))
-      if (hasUsableManagedSiteChannelKey(secret)) {
-        return {
-          status: MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Available,
-          secret: secret.trim(),
-        }
-      }
-
-      return {
-        status: secret?.trim()
-          ? MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Masked
-          : MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Unavailable,
-      }
-    },
-  },
-}
-
 export const doneHubManagedSiteCapabilities = {
-  channels: doneHubManagedSiteChannels,
-  resources: doneHubManagedUpstreamResources,
+  siteType: SITE_TYPES.DONE_HUB,
+  matching,
+  models: doneHubManagedResourceModels,
   config: doneHubManagedSiteConfig,
   queries: doneHubManagedSiteQueries,
   channelDrafts: doneHubManagedSiteChannelDrafts,
-}
+} satisfies ManagedSiteCapabilities<DoneHubConfig, typeof SITE_TYPES.DONE_HUB>

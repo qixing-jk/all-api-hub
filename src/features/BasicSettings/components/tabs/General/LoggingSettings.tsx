@@ -16,7 +16,7 @@ import {
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { LOG_LEVELS, type LogLevel } from "~/types/logging"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 
 /**
  * Resolve the localized label for a supported log level.

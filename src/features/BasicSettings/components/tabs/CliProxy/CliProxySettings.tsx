@@ -7,10 +7,8 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { verifyCliProxyManagementConnection } from "~/services/integrations/cliProxyService"
-import {
-  runPreferenceUpdateWithToast,
-  showResultToast,
-} from "~/utils/core/toastHelpers"
+import { showResultToast } from "~/utils/feedback/operationFeedback"
+import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
 const CLI_PROXY_MANAGEMENT_DOC_URL = "https://help.router-for.me/management/api"
 

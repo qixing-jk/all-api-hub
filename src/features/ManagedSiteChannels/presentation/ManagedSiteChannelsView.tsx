@@ -15,12 +15,7 @@ import { useRef, type ReactNode } from "react"
 import ManagedSiteConfigRequiredState from "~/components/ManagedSiteConfigRequiredState"
 import { PageHeader } from "~/components/PageHeader"
 import Tooltip from "~/components/Tooltip"
-import {
-  Badge,
-  DestructiveConfirmDialog,
-  IconButton,
-  Input,
-} from "~/components/ui"
+import { Badge, ConfirmDialog, IconButton, Input } from "~/components/ui"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/Alert"
 import { Button, BUTTON_LOADING_BEHAVIORS } from "~/components/ui/button"
 import { Checkbox } from "~/components/ui/checkbox"
@@ -81,7 +76,7 @@ type ManagedSiteChannelsViewProps = {
   filterDialog?: ReactNode
 }
 
-/** Renders the shared managed-channel page for legacy and native controllers. */
+/** Renders the shared managed-channel page from native resource controllers. */
 export function ManagedSiteChannelsView({
   state,
   capabilities,
@@ -116,6 +111,7 @@ export function ManagedSiteChannelsView({
     labels,
     isDeleteReplayBlocked,
     isResourceInteractionBlocked,
+    modelSyncUnavailableReason: capabilities.modelSyncUnavailableReason,
   })
   const emptyTableMessage =
     state.searchValue.trim() ||
@@ -269,6 +265,7 @@ export function ManagedSiteChannelsView({
                   callbacks.onReplaceRouteQuery({
                     ...state.routeQuery,
                     channelId: undefined,
+                    resourceRef: undefined,
                     search: value || undefined,
                   })
                 }}
@@ -277,7 +274,7 @@ export function ManagedSiteChannelsView({
                 data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.searchInput}
               />
               <ListFilter className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-              {state.searchValue ? (
+              {state.searchValue || state.channelIdFilterValue ? (
                 <button
                   type="button"
                   aria-label={labels.clearSearch}
@@ -287,6 +284,7 @@ export function ManagedSiteChannelsView({
                     callbacks.onReplaceRouteQuery({
                       ...state.routeQuery,
                       channelId: undefined,
+                      resourceRef: undefined,
                       search: undefined,
                     })
                     searchInputRef.current?.focus()
@@ -439,6 +437,23 @@ export function ManagedSiteChannelsView({
                   >
                     {labels.syncSelected}
                   </Button>
+                ) : !state.migrationMode &&
+                  capabilities.modelSyncUnavailableReason ? (
+                  <Tooltip
+                    content={capabilities.modelSyncUnavailableReason}
+                    anchorAsChild
+                  >
+                    <span className="inline-flex" tabIndex={0}>
+                      <Button
+                        variant="outline"
+                        disabled
+                        tabIndex={-1}
+                        leftIcon={<RefreshCcw className="h-4 w-4" />}
+                      >
+                        {labels.syncSelected}
+                      </Button>
+                    </span>
+                  </Tooltip>
                 ) : null}
                 {!state.migrationMode && capabilities.canCreate ? (
                   <Button
@@ -475,7 +490,8 @@ export function ManagedSiteChannelsView({
         </>
       )}
 
-      <DestructiveConfirmDialog
+      <ConfirmDialog
+        intent="destructive"
         isOpen={state.deleteState.isOpen && !isDeleteReplayBlocked}
         onClose={callbacks.onDeleteCancel}
         title={

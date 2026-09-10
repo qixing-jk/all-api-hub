@@ -8,6 +8,11 @@ import {
   MODEL_UNAVAILABLE_PRICE_REASONS,
 } from "~/services/modelList/pricingModel"
 import { isValidProviderModelCatalogPricing } from "~/services/modelList/providerCatalogAdmission"
+import {
+  PRICE_RATE_UNITS,
+  PRICING_GROUP_MULTIPLIERS,
+  TOKENS_PER_MILLION,
+} from "~/services/modelPricing/pricingConstants"
 
 const completeActionPolicy = {
   supportsGroupFiltering: false,
@@ -230,4 +235,55 @@ describe("provider model-catalog admission", () => {
       ),
     ).toBe(false)
   })
+})
+
+it("validates shared rule prices before admitting a provider response", () => {
+  const plan = {
+    rates: {
+      input: {
+        amount: 2,
+        currency: "USD",
+        unit: PRICE_RATE_UNITS.TOKEN,
+        per: TOKENS_PER_MILLION,
+      },
+    },
+    rules: [],
+    groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
+    source: { kind: "catalog" },
+    issues: [],
+  }
+  expect(
+    isValidProviderModelCatalogPricing(
+      createProviderResponse({ pricingPlan: plan }),
+      SITE_TYPES.OPENROUTER,
+    ),
+  ).toBe(true)
+  expect(
+    isValidProviderModelCatalogPricing(
+      createProviderResponse({
+        pricingPlan: {
+          ...plan,
+          rates: { input: { ...plan.rates.input, unit: "image" } },
+        },
+      }),
+      SITE_TYPES.OPENROUTER,
+    ),
+  ).toBe(false)
+  expect(
+    isValidProviderModelCatalogPricing(
+      createProviderResponse({
+        pricingPlan: {
+          ...plan,
+          rules: [
+            {
+              id: "untrusted",
+              conditions: [{ kind: "javascript", expression: "arbitrary()" }],
+              rates: plan.rates,
+            },
+          ],
+        },
+      }),
+      SITE_TYPES.OPENROUTER,
+    ),
+  ).toBe(false)
 })

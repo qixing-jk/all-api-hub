@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next"
 import { getThemeAwareToastStyles } from "~/components/toast/themeAwareToastStyles"
 import { useToasterPortalHost } from "~/components/toast/ToasterPortal"
 import { useTheme } from "~/contexts/ThemeContext"
+import { NOTIFICATION_DURATIONS } from "~/lib/notify/defaults"
 
 interface ThemeAwareToasterProps {
   reverseOrder?: boolean
@@ -40,23 +41,24 @@ export const ThemeAwareToaster = ({
       containerStyle={containerStyle}
       toastOptions={{
         className: "rounded-lg shadow-lg",
-        duration: 4000,
+        duration: NOTIFICATION_DURATIONS.info,
         style: getThemeAwareToastStyles(resolvedTheme),
         success: {
-          duration: 3000,
+          duration: NOTIFICATION_DURATIONS.success,
           iconTheme: {
             primary: resolvedTheme === "dark" ? "#10b981" : "#059669",
             secondary: resolvedTheme === "dark" ? "#1e293b" : "#fff",
           },
         },
         error: {
-          duration: 5000,
+          duration: NOTIFICATION_DURATIONS.error,
           iconTheme: {
             primary: resolvedTheme === "dark" ? "#ef4444" : "#dc2626",
             secondary: resolvedTheme === "dark" ? "#1e293b" : "#fff",
           },
         },
         loading: {
+          duration: NOTIFICATION_DURATIONS.loading,
           iconTheme: {
             primary: resolvedTheme === "dark" ? "#3b82f6" : "#2563eb",
             secondary: resolvedTheme === "dark" ? "#1e293b" : "#fff",

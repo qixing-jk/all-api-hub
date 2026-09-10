@@ -311,6 +311,7 @@
       "inputPreparationFailed": "A verificação não conseguiu preparar dados de canal comparáveis.",
       "newApiRetrieveKeyHint": "No New API, a comparação completa depende da chave do canal. Como visualizar essa chave exige verificação em duas etapas (2FA), a comparação completa não está disponível no momento."
     },
+    "nativeResourceUnsupported": "A correspondência com sites gerenciados ainda não oferece suporte a chaves de recursos nativos nesta página. A atualização se aplica apenas às chaves compatíveis.",
     "pageUnsupported": "As verificações dos canais do site gerenciado não estão disponíveis nesta página porque o site atual não permite buscar canais por URL.",
     "recovery": {
       "configureLogin": "Primeiro, adicione nas Configurações os campos de login e auxílio de 2FA do New API. Até lá, a chave do canal não poderá ser lida e a comparação completa não poderá ser concluída.",
@@ -372,6 +373,29 @@
     "verifyApiFailed": "Falha ao abrir a verificação da API",
     "verifyCliSupportFailed": "Falha ao abrir a verificação de compatibilidade com CLI"
   },
+  "native": {
+    "detailsLoadFailed": "Não foi possível carregar os detalhes da chave.",
+    "heading": "Chaves de API",
+    "missing": "Indisponível",
+    "scope": {
+      "empty": "Nenhum escopo disponível",
+      "error": "Não foi possível carregar os escopos",
+      "errorHelp": "Verifique o acesso à conta e tente novamente.",
+      "heading": "Escopo",
+      "label": "Selecionar um escopo",
+      "loading": "Carregando escopos…",
+      "partial": "Alguns escopos não puderam ser carregados. Os escopos disponíveis ainda podem ser usados.",
+      "placeholder": "Escolha um escopo",
+      "retry": "Recarregar escopos"
+    },
+    "status": {
+      "disabled": "Desativada",
+      "enabled": "Ativada",
+      "expired": "Expirada",
+      "unknown": "Desconhecida"
+    }
+  },
+  "noAccountsSupportKeyCreation": "Nenhuma conta nesta visualização permite criar chaves de API. Selecione outra conta ou adicione uma conta compatível.",
   "noKeys": "Ainda não há dados de chaves",
   "noMatchingKeys": "Nenhuma chave correspondente encontrada",
   "oneTimeKey": {
@@ -558,7 +582,6 @@
         "usageWeekly": "Uso semanal",
         "workspace": "Espaço de trabalho"
       },
-      "heading": "Chaves do OpenRouter",
       "status": {
         "all": "Todas",
         "disabled": "Desativada",
@@ -609,7 +632,7 @@
       "title_many": "Excluir {{count}} chaves inválidas?",
       "title_other": "Excluir {{count}} chaves inválidas?"
     },
-    "description": "Verifique se as contas salvas têm chaves utilizáveis. Quando possível, as chaves ausentes serão criadas automaticamente; outros problemas aparecerão abaixo.",
+    "description": "Verifique todos os grupos disponíveis das contas salvas e crie as chaves utilizáveis ausentes onde a criação automática for suportada. Outros problemas são listados abaixo.",
     "failureGuidance": {
       "aborted": "A operação foi cancelada antes de terminar. Execute a verificação novamente quando estiver pronto.",
       "authenticationFailed": "Entre novamente ou atualize as credenciais desta conta e tente outra vez.",
@@ -624,7 +647,7 @@
       "validationFailed": "Revise as configurações de chave obrigatórias, corrija-as e tente novamente."
     },
     "historyNote": "Este é o resultado da verificação anterior. Nenhuma tarefa está em execução no momento, e você pode iniciar a verificação novamente.",
-    "initialNotice": "As contas salvas serão verificadas em busca de chaves utilizáveis. Se faltar uma em uma conta compatível, a extensão poderá criá-la.",
+    "initialNotice": "Verifique as contas salvas grupo por grupo e crie as chaves ausentes onde houver suporte. Grupos que já têm chaves utilizáveis são ignorados.",
     "invalidKeys": {
       "badge": "Inválida",
       "deleteFailed": "Falha ao excluir as chaves inválidas",

@@ -14,6 +14,7 @@ import {
   SiteHealthStatus,
   TEMP_WINDOW_HEALTH_STATUS_CODES,
 } from "~/types"
+import type { CheckInMethodStatus } from "~/types/checkIn"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -78,6 +79,7 @@ const {
   mockOpenCheckInPage,
   mockOpenCustomCheckInPage,
   mockOpenSettingsTab,
+  mockOpenProtectionBypassHistory,
   createTabMock,
   getLdohSearchUrlForAccountUrlMock,
 } = vi.hoisted(() => ({
@@ -99,13 +101,14 @@ const {
   mockOpenCheckInPage: vi.fn(),
   mockOpenCustomCheckInPage: vi.fn(),
   mockOpenSettingsTab: vi.fn().mockResolvedValue(undefined),
+  mockOpenProtectionBypassHistory: vi.fn().mockResolvedValue(undefined),
   createTabMock: vi.fn(),
   getLdohSearchUrlForAccountUrlMock: vi.fn<
     (accountBaseUrl: string) => string | null
   >(() => null),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     error: toastErrorMock,
     success: toastSuccessMock,
@@ -175,6 +178,7 @@ vi.mock("~/utils/navigation", () => ({
   openCheckInPage: mockOpenCheckInPage,
   openCustomCheckInPage: mockOpenCustomCheckInPage,
   openSettingsTab: mockOpenSettingsTab,
+  openProtectionBypassHistory: mockOpenProtectionBypassHistory,
 }))
 
 const buildSite = (overrides: Partial<DisplaySiteData> = {}) =>
@@ -352,24 +356,103 @@ describe("SiteInfo", () => {
     }
   })
 
-  it("does not label a selected check-in method without readback status as unsupported", () => {
+  it.each<{
+    scenario: string
+    supported: boolean
+    status?: CheckInMethodStatus
+  }>([
+    { scenario: "unsupported site", supported: false },
+    { scenario: "selection without a status readback", supported: true },
+    {
+      scenario: "permission-denied status readback",
+      supported: true,
+      status: {
+        outcome: "unknown",
+        reason: "permission_denied",
+        attemptedAt: Date.now(),
+      },
+    },
+    {
+      scenario: "disabled check-in without today's status",
+      supported: true,
+      status: {
+        outcome: "known",
+        availability: "disabled",
+        evidence: { source: "probe", observedAt: Date.now() },
+      },
+    },
+    {
+      scenario: "disabled check-in with a not-checked status",
+      supported: true,
+      status: {
+        outcome: "known",
+        availability: "disabled",
+        today: "not_checked",
+        evidence: { source: "probe", observedAt: Date.now() },
+      },
+    },
+    {
+      scenario: "disabled check-in with an outdated status",
+      supported: true,
+      status: {
+        outcome: "known",
+        availability: "disabled",
+        today: "checked",
+        evidence: { source: "probe", observedAt: 1 },
+      },
+    },
+  ])(
+    "hides site check-in indicators for $scenario",
+    ({ supported, status }) => {
+      const checkIn = createCheckIn({ supported })
+      if (status) {
+        checkIn.methodKnowledge.methods[
+          AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+        ]!.status = status
+      }
+      render(
+        <SiteInfo
+          site={buildSite({
+            checkIn,
+          })}
+        />,
+      )
+
+      expect(
+        screen.queryAllByRole("img", {
+          name: /account:list\.site\.(checkIn|checkedInToday|notCheckedInToday)/,
+        }),
+      ).toHaveLength(0)
+      expect(
+        screen.queryAllByRole("button", {
+          name: /account:list\.site\.(checkIn|checkedInToday|notCheckedInToday)/,
+        }),
+      ).toHaveLength(0)
+    },
+  )
+
+  it("keeps custom check-in visible when the selected site method has no status", () => {
     render(
       <SiteInfo
         site={buildSite({
-          checkIn: createCheckIn({ supported: true }),
+          checkIn: createCheckIn({
+            supported: true,
+            customCheckIn: {
+              url: "https://example.com/checkin",
+              isCheckedInToday: false,
+            },
+          }),
         })}
       />,
     )
 
     expect(
-      screen.getByRole("img", {
-        name: "account:list.site.checkInStatusUnavailable",
+      screen.getByRole("button", {
+        name: "account:list.site.notCheckedInToday",
       }),
-    ).toBeInTheDocument()
+    ).toBeVisible()
     expect(
-      screen.queryByRole("img", {
-        name: "account:list.site.checkInUnsupported",
-      }),
+      screen.queryByRole("img", { name: /account:list.site.checkInStatus/ }),
     ).not.toBeInTheDocument()
   })
 
@@ -541,6 +624,46 @@ describe("SiteInfo", () => {
       anchor: "shield-settings",
       preserveHistory: true,
     })
+  })
+
+  it.each(Object.values(TEMP_WINDOW_HEALTH_STATUS_CODES))(
+    "opens history from the %s health warning without refreshing the account",
+    async (code) => {
+      const user = userEvent.setup()
+      render(
+        <SiteInfo
+          site={buildSite({
+            health: {
+              status: SiteHealthStatus.Warning,
+              code,
+              reason: "Temporary browser context could not be used",
+            },
+          })}
+        />,
+      )
+
+      await user.click(
+        screen.getByRole("button", { name: "shieldBypass:history.open" }),
+      )
+
+      expect(mockOpenProtectionBypassHistory).toHaveBeenCalledTimes(1)
+      expect(mockHandleRefreshAccount).not.toHaveBeenCalled()
+      expect(mockOpenSettingsTab).not.toHaveBeenCalled()
+    },
+  )
+
+  it("does not suggest shield history for an unrelated health warning", () => {
+    render(
+      <SiteInfo
+        site={buildSite({
+          health: { status: SiteHealthStatus.Warning, reason: "HTTP 500" },
+        })}
+      />,
+    )
+
+    expect(
+      screen.queryByRole("button", { name: "shieldBypass:history.open" }),
+    ).not.toBeInTheDocument()
   })
 
   it("shows a toast when opening the related settings tab fails", async () => {

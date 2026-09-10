@@ -7,12 +7,16 @@ import {
 } from "~/services/managedSites/channelMatch"
 import {
   applyVerifiedManagedSiteChannelKey,
+  toManagedSiteAssessmentChannel,
   toManagedSiteVerifiedKeyAssessment,
 } from "~/services/managedSites/verifiedChannelKeyAssessment"
-import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
+import {
+  buildManagedResourceMatchCandidate,
+  matchingResourceRef,
+} from "~~/tests/test-utils/managedResourceMatching"
 
 const candidate = {
-  id: 12,
+  ref: matchingResourceRef(12),
   name: "Managed Channel 12",
 }
 
@@ -40,6 +44,30 @@ const buildAssessment = () => ({
 })
 
 describe("applyVerifiedManagedSiteChannelKey", () => {
+  it.each([
+    { scopeKey: "https://other.example" },
+    { siteType: SITE_TYPES.DONE_HUB },
+  ])(
+    "does not combine model and key evidence for the same id with a different %o",
+    (overrides) => {
+      const otherCandidate = {
+        ...candidate,
+        ref: matchingResourceRef(12, overrides),
+      }
+      const result = applyVerifiedManagedSiteChannelKey({
+        assessment: buildAssessment(),
+        candidate: otherCandidate,
+        sourceKey: "sk-source-key",
+        verifiedChannelKey: "sk-source-key",
+        siteType: SITE_TYPES.NEW_API,
+      })
+
+      expect(result.assessment.key.channel).toEqual(otherCandidate)
+      expect(result.assessment.models.channel?.ref).toEqual(candidate.ref)
+      expect(result.exactMatch).toBe(false)
+    },
+  )
+
   it("marks an exact match when the verified channel key matches the source key", () => {
     const result = applyVerifiedManagedSiteChannelKey({
       assessment: buildAssessment(),
@@ -94,6 +122,19 @@ describe("applyVerifiedManagedSiteChannelKey", () => {
 })
 
 describe("toManagedSiteVerifiedKeyAssessment", () => {
+  it("retains the native route identity without exposing the provider payload or key", () => {
+    const channel = {
+      ...buildManagedResourceMatchCandidate({ name: "Example channel" }),
+      ref: matchingResourceRef("native/42+="),
+      key: "example-secret",
+    }
+
+    expect(toManagedSiteAssessmentChannel(channel)).toEqual({
+      ref: matchingResourceRef("native/42+="),
+      name: "Example channel",
+    })
+  })
+
   it("maps match inspection channels to lightweight channel summaries", () => {
     const assessment = toManagedSiteVerifiedKeyAssessment({
       searchBaseUrl: "https://api.example.invalid",
@@ -101,8 +142,8 @@ describe("toManagedSiteVerifiedKeyAssessment", () => {
       url: {
         matched: true,
         candidateCount: 1,
-        channel: buildManagedSiteChannel({
-          id: 12,
+        channel: buildManagedResourceMatchCandidate({
+          ref: matchingResourceRef(12),
           name: "Managed Channel 12",
           key: "hidden-key",
           base_url: "https://api.example.invalid",
@@ -119,8 +160,8 @@ describe("toManagedSiteVerifiedKeyAssessment", () => {
         comparable: true,
         matched: true,
         reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
-        channel: buildManagedSiteChannel({
-          id: 13,
+        channel: buildManagedResourceMatchCandidate({
+          ref: matchingResourceRef(13),
           name: "Managed Channel 13",
           key: "other-hidden-key",
           base_url: "https://api.example.invalid",
@@ -137,7 +178,7 @@ describe("toManagedSiteVerifiedKeyAssessment", () => {
         matched: true,
         candidateCount: 1,
         channel: {
-          id: 12,
+          ref: matchingResourceRef(12),
           name: "Managed Channel 12",
         },
       },
@@ -152,7 +193,7 @@ describe("toManagedSiteVerifiedKeyAssessment", () => {
         matched: true,
         reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
         channel: {
-          id: 13,
+          ref: matchingResourceRef(13),
           name: "Managed Channel 13",
         },
         similarityScore: 1,

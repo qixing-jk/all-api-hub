@@ -1,3 +1,4 @@
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   buildControlDefinition,
   buildSectionDefinition,
@@ -19,7 +20,7 @@ export const accountManagementSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:auto-provision-key",
     "accountManagement",
-    "auto-provision-key-on-account-add",
+    SETTINGS_ANCHORS.AUTO_PROVISION_KEY,
     "settings:autoProvisionKeyOnAccountAdd.title",
     221,
   ),
@@ -50,7 +51,7 @@ export const accountManagementSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:auto-provision-key",
     "accountManagement",
-    "auto-provision-key-toggle",
+    SETTINGS_ANCHORS.AUTO_PROVISION_KEY_ENABLED,
     "settings:autoProvisionKeyOnAccountAdd.toggleLabel",
     520,
     {
@@ -61,6 +62,26 @@ export const accountManagementSearchControls: OptionsSearchItemDefinition[] = [
         "settings:autoProvisionKeyOnAccountAdd.title",
       ],
       keywords: ["key", "token", "api key"],
+    },
+  ),
+  buildControlDefinition(
+    "control:auto-provision-key-mode",
+    "accountManagement",
+    SETTINGS_ANCHORS.AUTO_PROVISION_KEY_MODE,
+    "settings:autoProvisionKeyOnAccountAdd.modeLabel",
+    520.5,
+    {
+      descriptionKey: "settings:autoProvisionKeyOnAccountAdd.modeDescription",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.accountManagement",
+        "settings:autoProvisionKeyOnAccountAdd.title",
+      ],
+      keywordKeys: [
+        "settings:autoProvisionKeyOnAccountAdd.modes.allGroups",
+        "settings:autoProvisionKeyOnAccountAdd.modes.default",
+      ],
+      keywords: ["key", "token", "groups", "api key"],
     },
   ),
   buildControlDefinition(

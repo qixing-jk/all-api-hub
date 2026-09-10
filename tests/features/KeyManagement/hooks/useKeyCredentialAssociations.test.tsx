@@ -21,7 +21,7 @@ const { linkMock, relinkMock, toastErrorMock, toastSuccessMock, unlinkMock } =
     unlinkMock: vi.fn(),
   }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     error: toastErrorMock,
     success: toastSuccessMock,

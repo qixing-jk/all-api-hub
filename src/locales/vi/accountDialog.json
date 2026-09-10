@@ -1,4 +1,27 @@
 {
+  "accessTokenVerification": {
+    "apiyi": {
+      "generateStep": "Nếu đã có Access Token hợp lệ và đầy đủ, bạn có thể dùng ngay. Nếu chưa có, hãy mở “System token” trong hồ sơ APIyi và nhập mật khẩu trên trang web để tạo token.",
+      "openProfile": "Mở hồ sơ APIyi",
+      "openProfileFailed": "Không thể mở trang. Hãy tự mở “System token” trong hồ sơ APIyi, hoàn tất xác minh rồi quay lại đây để dán Access Token."
+    },
+    "continueFailed": "Không mở được thanh bên hoặc trang đầy đủ. Biểu mẫu của bạn đã được giữ lại. Vui lòng thử lại.",
+    "continueInFullPage": "Tiếp tục trong trang đầy đủ",
+    "continueInSidePanel": "Tiếp tục trong thanh bên",
+    "continuing": "Đang chuẩn bị biểu mẫu…",
+    "description": "Trang này yêu cầu xác minh bảo mật trước khi tạo Access Token nên tiện ích chưa thể tự động lấy mã. Thông tin tài khoản đã nhận diện được giữ lại. Hãy nhập Access Token quản lý tài khoản để tiếp tục.",
+    "destinationBusy": "Ở đây đã có biểu mẫu tài khoản chưa hoàn tất. Hãy lưu hoặc đóng biểu mẫu đó để tiếp tục với biểu mẫu từ cửa sổ bật lên.",
+    "fullPageHint": "Tiếp tục trong trang đầy đủ để giữ biểu mẫu mở trong khi sao chép mã trên trang web.",
+    "generateStep": "Nếu đã có Access Token đầy đủ và còn hiệu lực, bạn có thể dùng trực tiếp. Nếu chưa có, hãy mở Bảo mật → Access Token trên trang web, hoàn tất xác minh và tạo mã.",
+    "openSecurity": "Mở cài đặt bảo mật của trang",
+    "openSecurityFailed": "Không mở được trang. Hãy tự mở Bảo mật → Access Token trên trang web rồi quay lại đây để dán mã.",
+    "pasteStep": "Sao chép ngay toàn bộ Access Token, dán vào trường Access Token bên dưới, kiểm tra thông tin tài khoản rồi lưu.",
+    "popupHint": "Tiếp tục trong thanh bên để giữ biểu mẫu này trong khi xác minh danh tính và sao chép mã trên trang web. Nếu không mở được thanh bên, biểu mẫu sẽ mở trong trang đầy đủ.",
+    "prepareFailed": "Không thể giữ biểu mẫu này. Hãy sao chép thông tin cần giữ trước khi mở lại biểu mẫu tài khoản trong thanh bên.",
+    "restoreFailed": "Không khôi phục được biểu mẫu chưa hoàn tất. Biểu mẫu có thể đã hết hạn. Hãy mở lại biểu mẫu tài khoản.",
+    "rotationWarning": "Tạo Access Token mới sẽ làm mã cũ mất hiệu lực. Hãy cập nhật các công cụ khác đang sử dụng mã cũ.",
+    "title": "Nhập Access Token thủ công"
+  },
   "actions": {
     "autoConfigAriaLabel": "Lưu tài khoản và đi đến cấu hình kênh {{managedSite}}",
     "autoConfigRequiresValidAccount": "Vui lòng hoàn thành thông tin tài khoản hiện tại trước",
@@ -8,6 +31,7 @@
     "confirmAdd": "Xác nhận thêm",
     "helpDocument": "Hướng dẫn khắc phục",
     "openApiCredentialProfiles": "Mở API Credentials",
+    "openManualAddGuide": "Mở hướng dẫn thêm thủ công cho trang web này",
     "reloadCurrentPage": "Làm mới trang hiện tại",
     "reloadExtensionAndRetry": "Tải lại tiện ích rồi thử lại",
     "reportUnsupportedSite": "Yêu cầu hỗ trợ trang",
@@ -55,6 +79,7 @@
     "automaticCheckInSelectionWithDetail": "Lựa chọn tự động: {{detail}}",
     "checkInMethod": "Phương thức điểm danh",
     "checkInMethodNeedsChoice": "Đã phát hiện nhiều phương thức; hãy chọn một",
+    "checkInMethodNeedsConfirmation": "{{method}} (chưa xác nhận)",
     "checkInMethodNotSelected": "Chưa chọn phương thức",
     "checkInMethodPendingConfirmation": "Đang chờ xác nhận phương thức khả dụng",
     "checkInMethodUnavailable": "Không có phương thức khả dụng",
@@ -64,6 +89,7 @@
     "checkInSelectionAutomaticUnavailable": "Không phát hiện được phương thức khả dụng. Tự động điểm danh sẽ không chạy.",
     "checkInSelectionManual": "Bạn đã chọn thủ công {{method}}. Hệ thống sẽ không tự động thay thế phương thức này.",
     "checkInSelectionStale": "Hãy phát hiện lại để xác nhận phương thức vẫn khả dụng.",
+    "checkInSelectionUnconfirmed": "Lựa chọn {{method}} được giữ lại, nhưng chưa xác nhận trang web này có hỗ trợ hay không. Hãy dò lại để xác minh.",
     "checkInStatus": "Trạng thái điểm danh",
     "checkInStatusDesc": "Hệ thống kiểm tra và hiển thị trạng thái điểm danh hôm nay khi làm mới tài khoản; đây chỉ là hiển thị trạng thái và không tự thực hiện điểm danh.",
     "checkInStatusDisabled": "Trang web hiện chưa bật tính năng điểm danh nên tự động điểm danh đang tạm dừng.",
@@ -154,10 +180,15 @@
     "openrouterBootstrapInfo": "Thao tác này tạo một Management Key mới trên OpenRouter, sau đó dùng khóa đó để nhận dạng và điền thông tin tài khoản.",
     "reDetectInfo": "Nếu thông tin trang web thay đổi, bạn nên nhấp vào nút \"Nhận dạng lại\" (cần tự đăng nhập vào trang web đích trước)"
   },
+  "manualAddRecovery": {
+    "description": "Biểu mẫu thêm thủ công phù hợp đã mở bên dưới. Hãy làm theo hướng dẫn, điền các trường bắt buộc rồi lưu tài khoản.",
+    "title": "Hoàn tất tài khoản theo cách thủ công"
+  },
   "messages": {
     "addSuccess": "Thêm tài khoản {{name}} thành công!",
     "autoDetectCookiePermissionReloadHint": "Nếu lần nhận dạng đầu tiên cứ chờ mãi ngay sau khi cấp quyền Cookie nhiều tài khoản, hãy tải lại tiện ích rồi thử lại.",
     "autoDetectFailed": "Tự động nhận dạng thất bại: {{error}}",
+    "autoDetectIdentityMismatch": "Tài khoản được phát hiện không khớp với tài khoản hiện tại. Dữ liệu hiện có của bạn đã được giữ lại. Hãy kiểm tra URL trang web, đăng nhập vào đúng tài khoản rồi thử lại.",
     "autoDetectSuccess": "Tự động nhận dạng thành công!",
     "autoDetectTakingTooLong": "Tự động nhận dạng mất quá nhiều thời gian? Nhấp để mở tài liệu khắc phục sự cố",
     "checkInRedetectAmbiguous": "Đã phát hiện nhiều phương thức điểm danh. Hãy chọn một phương thức bên dưới.",
@@ -171,7 +202,7 @@
       "identity_mismatch": "Tài khoản do trang web trả về không khớp với tài khoản này. Hãy kiểm tra URL và thông tin xác thực của tài khoản.",
       "invalid_response": "Trang web trả về phản hồi mà tiện ích không thể nhận dạng. Hãy kiểm tra URL và thử lại sau khi cập nhật tiện ích.",
       "network": "Quá trình phát hiện không thể kết nối tới trang đích. Hãy kiểm tra mạng hoặc trạng thái trang rồi thử lại.",
-      "permission_denied": "Trang đích đã từ chối yêu cầu phát hiện. Hãy đăng nhập lại và kiểm tra quyền của tài khoản.",
+      "permission_denied": "Trang web từ chối yêu cầu dò điểm danh nên chưa thể xác nhận có hỗ trợ hay không. Hãy kiểm tra tính năng và quyền tài khoản trên trang web.",
       "source_unavailable": "Trang đích hiện tạm thời không khả dụng. Hãy thử lại sau.",
       "timeout": "Trang đích không phản hồi trước khi quá trình phát hiện hết thời gian chờ. Hãy thử lại sau."
     },
@@ -255,10 +286,10 @@
         "continue": "Tiếp tục",
         "disableAndContinue": "Không nhắc lại và tiếp tục"
       },
-      "description_other": "Bạn đã thêm {{count}} tài khoản vào {{siteUrl}}. Tiếp tục thêm có thể gây trùng lặp. Bạn có muốn tiếp tục không?",
-      "descriptionExact": "Trên {{siteUrl}}, tài khoản có User ID {{userId}} đã tồn tại ({{username}}). Việc tiếp tục thêm có thể gây ra trùng lặp, bạn có muốn tiếp tục không?",
+      "description_other": "Management Key này của {{siteUrl}} đã được lưu trong {{count}} tài khoản. Bạn có muốn thêm lại không?",
+      "descriptionExact": "Tài khoản của {{siteUrl}} với ID người dùng {{userId}} đã được lưu ({{username}}). Bạn có muốn thêm lại không?",
       "title": "Tài khoản trùng lặp",
-      "warningTitle": "Tài khoản đã tồn tại cho trang web này"
+      "warningTitle": "Tìm thấy tài khoản đã lưu trùng khớp"
     },
     "managedSiteConfig": {
       "actions": {

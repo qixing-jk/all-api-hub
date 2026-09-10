@@ -1,5 +1,26 @@
 import { OctopusOutboundType } from "~/types/octopus"
 
+/** Provider-owned fields shared by native resources and their presentation. */
+export const OCTOPUS_MANAGED_RESOURCE_FIELD_IDS = {
+  Name: "name",
+  Type: "type",
+  Status: "status",
+  BaseUrl: "baseURL",
+  Key: "key",
+  Models: "supportedModels",
+} as const
+export const OCTOPUS_MANAGED_RESOURCE_TABLE_FIELD_IDS = [
+  OCTOPUS_MANAGED_RESOURCE_FIELD_IDS.Name,
+  OCTOPUS_MANAGED_RESOURCE_FIELD_IDS.Type,
+  OCTOPUS_MANAGED_RESOURCE_FIELD_IDS.Status,
+  OCTOPUS_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+  OCTOPUS_MANAGED_RESOURCE_FIELD_IDS.Models,
+] as const
+export const OCTOPUS_MANAGED_RESOURCE_DETAIL_FIELD_IDS = [
+  ...OCTOPUS_MANAGED_RESOURCE_TABLE_FIELD_IDS,
+  OCTOPUS_MANAGED_RESOURCE_FIELD_IDS.Key,
+] as const
+
 /** Side-effect-free page used to host Octopus cookie-auth API requests. */
 export const OCTOPUS_COOKIE_SESSION_STATUS_PATH = "/api/v1/user/status"
 

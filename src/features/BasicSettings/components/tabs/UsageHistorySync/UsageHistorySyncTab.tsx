@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
 import { Card, CardContent, Input } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import toast from "~/lib/notify"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
 import { sendUsageHistoryMessage } from "~/services/history/usageHistory/messaging"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
@@ -20,7 +20,6 @@ import { hasAlarmsAPI } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
-import { showWarningToast } from "~/utils/core/toastHelpers"
 
 import UsageHistorySyncSettingsSection from "./UsageHistorySyncSettingsSection"
 import UsageHistorySyncStateTable, {
@@ -95,7 +94,7 @@ export default function UsageHistorySyncTab() {
     try {
       setIsLoading(true)
       const [nextAccounts, nextStore] = await Promise.all([
-        accountStorage.getEnabledAccounts(),
+        accountQueries.getEnabledAccounts(),
         usageHistoryStorage.getStore(),
       ])
       setAccounts(nextAccounts)
@@ -170,7 +169,7 @@ export default function UsageHistorySyncTab() {
       }
 
       if (response?.data?.warning) {
-        showWarningToast(
+        toast.warning(
           t("messages.warning.scheduleFallback", {
             warning: response.data.warning,
           }),
@@ -232,7 +231,7 @@ export default function UsageHistorySyncTab() {
         const totals = response?.data?.totals
         if (totals) {
           if (hasNonSuccessUsageHistoryTotals(totals)) {
-            showWarningToast(
+            toast.warning(
               t("messages.warning.syncCompletedWithIssues", {
                 success: totals.success ?? 0,
                 skipped: totals.skipped ?? 0,

@@ -1,17 +1,20 @@
-import { ChannelTypeNames, DEFAULT_CHANNEL_FIELDS } from "~/constants/newApi"
+import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
 import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
   isManagedResourceRefFor,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import {
+  isManagedSiteMigrationSourceType,
+  resolveManagedSiteMigrationType,
+} from "~/services/apiAdapters/managedResources/migrationTypeRoutes"
 import { openNewApiNativeResourceOperations } from "~/services/apiAdapters/managedResources/newApi"
 import {
   parseNewApiResourceList,
   throwIfNewApiResourceOperationAborted,
 } from "~/services/apiAdapters/managedResources/newApiResourceUtils"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
-import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"
 import {
   MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES,
@@ -19,6 +22,7 @@ import {
   type ManagedSiteMigrationSelection,
   type ManagedSiteMigrationSource,
 } from "~/types/managedSiteMigrationCapability"
+import type { NewApiChannel } from "~/types/newApi"
 import { CHANNEL_STATUS } from "~/types/newApi"
 
 const blockers = MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES
@@ -40,12 +44,13 @@ const hasMeaningfulAdvancedValue = (value: unknown): boolean => {
   return Boolean(value)
 }
 
-const resolveChannelType = (value: ManagedSiteChannel["type"]) => {
+const resolveChannelType = (value: NewApiChannel["type"]) => {
   const numeric = Number(value)
-  return Number.isInteger(numeric) && numeric in ChannelTypeNames
+  return Number.isInteger(numeric) &&
+    isManagedSiteMigrationSourceType(SITE_TYPES.NEW_API, numeric)
     ? {
         status: "mapped" as const,
-        value: numeric as ManagedSiteMigrationSource["resourceType"],
+        value: numeric,
       }
     : {
         status: "blocked" as const,
@@ -54,7 +59,7 @@ const resolveChannelType = (value: ManagedSiteChannel["type"]) => {
 }
 
 const toSource = (
-  channel: ManagedSiteChannel,
+  channel: NewApiChannel,
   resourceType: ManagedSiteMigrationSource["resourceType"],
 ): ManagedSiteMigrationSource => ({
   sourceSiteType: SITE_TYPES.NEW_API,
@@ -191,35 +196,40 @@ export const newApiManagedSiteMigrationCapability: ManagedSiteMigrationCapabilit
       },
     },
     target: {
-      prepare: async (source) => ({
-        projection: {
-          name: "",
-          type: source.resourceType,
-          baseUrl: source.baseUrl,
-          models: [...source.models],
-          groups:
-            source.groups.length > 0
-              ? [...source.groups]
-              : [...DEFAULT_CHANNEL_FIELDS.groups],
-          priority: source.priority,
-          weight: source.weight,
-          status:
-            source.status === "enabled"
-              ? CHANNEL_STATUS.Enable
-              : CHANNEL_STATUS.ManuallyDisabled,
-        },
-        adjustments: {
-          remappedType: false,
-          normalizedBaseUrl: false,
-          forcedDefaultGroup: source.groups.length === 0,
-          ignoredPriority: false,
-          ignoredWeight: false,
-          simplifiedStatus: source.status === "other",
-        },
-      }),
+      prepare: async (source) => {
+        const type = resolveManagedSiteMigrationType(source, SITE_TYPES.NEW_API)
+        if (type.status === "unsupported") {
+          throw new Error(
+            "New API does not support this migration channel type",
+          )
+        }
+        return {
+          projection: {
+            name: "",
+            type: type.value,
+            baseUrl: source.baseUrl,
+            models: [...source.models],
+            groups:
+              source.groups.length > 0
+                ? [...source.groups]
+                : [...DEFAULT_CHANNEL_FIELDS.groups],
+            priority: source.priority,
+            weight: source.weight,
+            enabled: source.status === "enabled",
+          },
+          adjustments: {
+            remappedType: type.remappedType,
+            normalizedBaseUrl: false,
+            forcedDefaultGroup: source.groups.length === 0,
+            ignoredPriority: false,
+            ignoredWeight: false,
+            simplifiedStatus: source.status === "other",
+          },
+        }
+      },
       create: async (command, options) => {
         const operations = await openNewApiNativeResourceOperations()
-        const draft: ChannelFormData = {
+        const commandFields = {
           name: command.projection.name,
           type: command.projection.type,
           key: command.credential,
@@ -228,9 +238,11 @@ export const newApiManagedSiteMigrationCapability: ManagedSiteMigrationCapabilit
           groups: [...command.projection.groups],
           priority: command.projection.priority,
           weight: command.projection.weight,
-          status: command.projection.status,
+          status: command.projection.enabled
+            ? CHANNEL_STATUS.Enable
+            : CHANNEL_STATUS.ManuallyDisabled,
         }
-        const result = await operations.create(draft, options)
+        const result = await operations.create(commandFields, options)
         switch (result.outcome) {
           case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
             return { status: "created" }

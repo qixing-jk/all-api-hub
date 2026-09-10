@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
-import { accountStorage } from "~/services/accounts/accountStorage"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { renderHook, waitFor } from "~~/tests/test-utils/render"
 

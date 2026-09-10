@@ -46,7 +46,6 @@ If you need stable and CLI-friendly API interfaces to fill your credential libra
 - [Atlas Cloud](https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub): One AI API for 300+ curated video, image, and LLM models, with a new coding plan promotion for more budget-friendly API access. [Setup guide](./service-guides/atlascloud.md)
 - [AICodeMirror](https://www.aicodemirror.ai/register?invitecode=7IQNR8): Official high-stability relay services for Claude Code / Codex / Gemini CLI. Register through this link to get 20% off your first top-up, and enterprise customers can get up to 25% off.
 - [Suixiang AI Relay](https://sui-xiang.com/): API relay services for Claude, Codex, Gemini, and more, with pay-as-you-go billing, daily check-in test credits, redundant routes, and automatic failover. [Setup guide](./service-guides/suixiang.md)
-- [Infistar.ai](https://infistar.ai/register?aff=ALLAPIHUB&ref_source=link): Every available model is verified through real calls, with load balancing across 10,000+ official API and account-pool supply routes, full-modal support for text, video, images, embeddings, and reranking, transparent pricing and usage, and prices from 10% of official rates. [Setup guide](./service-guides/infistar.md)
 - [APIMart](https://go.apimart.ai/gh-all-api-hub): A low-cost API platform for AI image & video generation — GPT-Image-2 from $0.006/image, 160+ images per dollar. One async API covers both image and video: submit a task, get an ID, fetch results via polling or callback. Batch tens of thousands of images without timeouts, switch models without changing code. Pay-as-you-go with no monthly fee.
 - [Dola Seed on BytePlus ModelArk](https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub): Register through BytePlus ModelArk to get 500,000 free inference tokens per model.
 :::
@@ -136,6 +135,8 @@ Click **`Verify Interface`** on the card to confirm:
 
 This is useful when changing keys, switching networks, or troubleshooting "client cannot connect, but the site seems alive."
 
+Under **`Test mode`**, choose **`Streaming`** (the default) or **`Non-streaming`**. Generation tests use the selected mode, and their results and newly saved history show that mode. Fetching the model list is unaffected. If the endpoint rejects a request, you can switch modes and test again; tests do not switch automatically.
+
 A verification result describes only that probe. It does not mean the key is permanently valid or invalid; verify again after changing networks or keys, or whenever you notice a problem.
 
 ### 2. Verify CLI Compatibility
@@ -147,6 +148,8 @@ Click **`Verify CLI Compatibility`** to separately test:
 - If there are compatibility differences such as "web can call, but CLI cannot."
 
 This check does not launch Claude Code, Codex, Gemini CLI, or another program. It simulates the protocols and tool-calling patterns commonly used by those CLIs to help you assess compatibility in advance.
+
+Under **`Test mode`**, choose **`Streaming`** (the default) or **`Non-streaming`**. Each CLI keeps its corresponding API type for the tool-calling probe. Results show the selected mode, and failures do not trigger an automatic mode switch.
 
 ### 3. Open in Model List
 

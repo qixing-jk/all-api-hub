@@ -5,7 +5,7 @@ import {
   ChevronUp,
   Inbox,
 } from "lucide-react"
-import { type KeyboardEvent, type MouseEvent } from "react"
+import { type ComponentProps, type KeyboardEvent, type MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
@@ -38,6 +38,42 @@ interface SiteAnnouncementCardProps {
 
 const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
 const cardSurfaceId = PRODUCT_ANALYTICS_SURFACE_IDS.OptionsSiteAnnouncementCard
+
+/** Shares source navigation and analytics across the card's responsive presentations. */
+function AnnouncementSourceLink({
+  sourceUrl,
+  label,
+  iconOnly = false,
+  ...buttonProps
+}: {
+  sourceUrl: string | null
+  label: string
+  iconOnly?: boolean
+} & Pick<
+  ComponentProps<typeof Button>,
+  "size" | "variant" | "className" | "leftIcon"
+>) {
+  if (!sourceUrl) return null
+
+  return (
+    <Button
+      {...buttonProps}
+      asChild
+      title={iconOnly ? label : undefined}
+      analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenAnnouncementSource}
+    >
+      <a
+        href={sourceUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={iconOnly ? label : undefined}
+        onClick={(event) => event.stopPropagation()}
+      >
+        {iconOnly ? <WorkflowTransitionIcon className="h-5 w-5" /> : label}
+      </a>
+    </Button>
+  )
+}
 
 /**
  * Renders a single cached announcement with expand/collapse and read actions.
@@ -129,26 +165,14 @@ export function SiteAnnouncementCard({
                 </div>
 
                 <div className="hidden shrink-0 lg:flex lg:items-center lg:gap-2">
-                  <Button
-                    asChild
+                  <AnnouncementSourceLink
+                    sourceUrl={sourceUrl}
+                    label={t("actions.viewSource")}
+                    iconOnly
                     size="icon-sm"
                     variant="ghost"
                     className="h-8 w-8 text-gray-400 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-400/10 dark:hover:text-blue-400"
-                    title={t("actions.viewSource")}
-                    analyticsAction={
-                      PRODUCT_ANALYTICS_ACTION_IDS.OpenAnnouncementSource
-                    }
-                  >
-                    <a
-                      href={sourceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={t("actions.viewSource")}
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      <WorkflowTransitionIcon className="h-5 w-5" />
-                    </a>
-                  </Button>
+                  />
                   {!expanded && !record.read && (
                     <Button
                       type="button"
@@ -219,24 +243,13 @@ export function SiteAnnouncementCard({
               </div>
 
               <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
-                <Button
-                  asChild
+                <AnnouncementSourceLink
+                  sourceUrl={sourceUrl}
+                  label={t("actions.viewSource")}
                   size="sm"
                   variant="outline"
                   leftIcon={<WorkflowTransitionIcon className="h-4 w-4" />}
-                  analyticsAction={
-                    PRODUCT_ANALYTICS_ACTION_IDS.OpenAnnouncementSource
-                  }
-                >
-                  <a
-                    href={sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    {t("actions.viewSource")}
-                  </a>
-                </Button>
+                />
                 {!record.read && (
                   <Button
                     type="button"
@@ -269,25 +282,14 @@ export function SiteAnnouncementCard({
 
           {!expanded && !record.read && (
             <div className="flex justify-end gap-2 px-4 pb-3 lg:hidden">
-              <Button
-                asChild
+              <AnnouncementSourceLink
+                sourceUrl={sourceUrl}
+                label={t("actions.viewSource")}
                 size="sm"
                 variant="ghost"
                 className="h-7 text-xs text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-400/10"
                 leftIcon={<WorkflowTransitionIcon className="h-3.5 w-3.5" />}
-                analyticsAction={
-                  PRODUCT_ANALYTICS_ACTION_IDS.OpenAnnouncementSource
-                }
-              >
-                <a
-                  href={sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  {t("actions.viewSource")}
-                </a>
-              </Button>
+              />
               <Button
                 type="button"
                 size="sm"

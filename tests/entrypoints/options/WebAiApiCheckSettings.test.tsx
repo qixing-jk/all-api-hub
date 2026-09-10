@@ -1,8 +1,8 @@
 import type { ReactNode } from "react"
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import WebAiApiCheckSettings from "~/features/BasicSettings/components/tabs/WebAiApiCheck/WebAiApiCheckSettings"
+import toast from "~/lib/notify"
 import {
   PREFERENCE_WRITE_FAILURE_TYPES,
   type PreferenceWriteResult,
@@ -40,7 +40,7 @@ vi.mock("~/utils/core/logger", () => ({
   }),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     error: vi.fn(),
     success: vi.fn(),

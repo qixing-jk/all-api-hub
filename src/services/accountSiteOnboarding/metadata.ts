@@ -3,10 +3,9 @@ import {
   getAccountSiteOnboardingDefinitions,
 } from "~/services/accountSiteDefinitions"
 import type { AccountSiteRouteConfig } from "~/services/accountSiteDefinitions/contracts"
+import { SITE_TYPES } from "~/services/accountSiteDefinitions/identifiers"
 import type { AccountSiteType } from "~/services/accountSiteDefinitions/siteTypes"
 import type { AccountSiteOnboardingMetadata } from "~/services/accountSiteOnboarding/contracts"
-
-type AccountSiteRouteOverrideMetadata = Partial<AccountSiteRouteConfig>
 
 type AccountSiteTitleRuleMetadata = {
   name: AccountSiteType
@@ -18,42 +17,6 @@ type AccountSiteDomainRuleMetadata = {
   hostnames: readonly string[]
 }
 
-/**
- * Clones detection metadata arrays before exposing registry projections.
- */
-function cloneDetectionMetadata(
-  detection: AccountSiteOnboardingMetadata["detection"],
-) {
-  if (!detection) return undefined
-
-  return {
-    ...detection,
-    titlePatterns: detection.titlePatterns
-      ? [...detection.titlePatterns]
-      : undefined,
-    hostnames: detection.hostnames ? [...detection.hostnames] : undefined,
-    compatUserIdHeaderNames: detection.compatUserIdHeaderNames
-      ? [...detection.compatUserIdHeaderNames]
-      : undefined,
-  }
-}
-
-const DEFAULT_LOGIN_PATH = "/login"
-const DEFAULT_USAGE_PATH = "/console/log"
-const DEFAULT_CHECKIN_PATH = "/console/personal"
-const DEFAULT_REDEEM_PATH = "/console/topup"
-const DEFAULT_ADMIN_CREDENTIALS_PATH = DEFAULT_CHECKIN_PATH
-const DEFAULT_SITE_ANNOUNCEMENTS_PATH = "/"
-
-export const DEFAULT_SITE_ROUTE_CONFIG = {
-  loginPath: DEFAULT_LOGIN_PATH,
-  usagePath: DEFAULT_USAGE_PATH,
-  checkInPath: DEFAULT_CHECKIN_PATH,
-  adminCredentialsPath: DEFAULT_ADMIN_CREDENTIALS_PATH,
-  redeemPath: DEFAULT_REDEEM_PATH,
-  siteAnnouncementsPath: DEFAULT_SITE_ANNOUNCEMENTS_PATH,
-} as const satisfies Required<AccountSiteRouteConfig>
-
 const getAccountSiteOnboardingMetadata =
   (): readonly AccountSiteOnboardingMetadata[] =>
     getAccountSiteOnboardingDefinitions().map((definition) => ({
@@ -62,23 +25,6 @@ const getAccountSiteOnboardingMetadata =
       detection: definition.detection,
       routes: definition.routes,
     }))
-
-/**
- * Returns the static onboarding metadata for an account site type.
- */
-function getAccountSiteMetadata(siteType: AccountSiteType) {
-  const metadata = getAccountSiteOnboardingMetadata().find(
-    (metadata) => metadata.siteType === siteType,
-  )
-
-  if (!metadata) return undefined
-
-  return {
-    ...metadata,
-    detection: cloneDetectionMetadata(metadata.detection),
-    routes: metadata.routes ? { ...metadata.routes } : undefined,
-  }
-}
 
 /**
  * Projects title-detection metadata into the legacy rule shape.
@@ -110,12 +56,21 @@ export function getAccountSiteDomainRuleMetadata(): readonly AccountSiteDomainRu
 }
 
 /**
- * Returns the route overrides defined by metadata for one account site type.
+ * Returns complete site-owned routes; only unregistered inputs use the unknown-site routes.
  */
-export function getAccountSiteRouteOverrideMetadata(
-  siteType: AccountSiteType,
-): AccountSiteRouteOverrideMetadata {
-  return { ...(getAccountSiteMetadata(siteType)?.routes ?? {}) }
+export function getAccountSiteRouteMetadata(
+  siteType: unknown,
+): AccountSiteRouteConfig {
+  // The registry already returns defensive copies, so resolve against one snapshot.
+  const definitions = getAccountSiteOnboardingDefinitions()
+  const metadata =
+    definitions.find((definition) => definition.siteType === siteType) ??
+    definitions.find((definition) => definition.siteType === SITE_TYPES.UNKNOWN)
+  if (!metadata?.routes)
+    throw new Error(
+      "Account site registration is missing its route declaration",
+    )
+  return metadata.routes
 }
 
 /**

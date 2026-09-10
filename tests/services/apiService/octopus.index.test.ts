@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { octopusManagedSiteChannels } from "~/services/apiAdapters/managedSites/octopus"
+import {
+  octopusChannelEffect,
+  runOctopusMutation,
+} from "~/services/apiAdapters/managedSites/octopusMutation"
 import {
   createChannel,
   deleteChannel,
@@ -9,13 +12,18 @@ import {
   fetchGroups,
   fetchRemoteModels,
   fetchSiteUserGroups,
+  getChannel,
   listChannels,
   OctopusMutationApiError,
   searchChannels,
   updateChannel,
+  usesChannelProtocolPaths,
   validateOctopusConfig,
 } from "~/services/apiService/octopus"
-import { OCTOPUS_AUTH_MODES } from "~/services/apiService/octopus/auth"
+import {
+  OCTOPUS_AUTH_MODES,
+  OCTOPUS_COOKIE_API_VERSIONS,
+} from "~/services/apiService/octopus/auth"
 import {
   createAutomaticProtectionBypassExecution,
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
@@ -87,6 +95,20 @@ describe("Octopus API service", () => {
     password: "secret",
   }
 
+  const currentCookieSession = () => ({
+    mode: OCTOPUS_AUTH_MODES.Cookie,
+    expireAt: 1_700_000_900_000,
+    confirmed: true,
+    apiVersion: OCTOPUS_COOKIE_API_VERSIONS.V012,
+  })
+
+  const v013CookieSession = () => ({
+    mode: OCTOPUS_AUTH_MODES.Cookie,
+    expireAt: 1_700_000_900_000,
+    confirmed: true,
+    apiVersion: OCTOPUS_COOKIE_API_VERSIONS.V013,
+  })
+
   const currentChannelResponse = (
     overrides: Record<string, unknown> = {},
   ): Record<string, unknown> => ({
@@ -99,6 +121,68 @@ describe("Octopus API service", () => {
     model: "model-a",
     proxy: false,
     auto_sync: true,
+    ...overrides,
+  })
+
+  const v013ChannelDetailResponse = (
+    overrides: Record<string, unknown> = {},
+  ): Record<string, unknown> => ({
+    id: 7,
+    name: "V0.13 channel",
+    dialect: "generic",
+    enabled: true,
+    base_url: "https://upstream.example.invalid",
+    openai_chat_completion_path: "/v1/chat/completions",
+    openai_response_path: "/v1/responses",
+    anthropic_message_path: "/v1/messages",
+    keys: [{ name: "default", key: "credential-placeholder", enabled: true }],
+    models: ["model-a"],
+    grants: [{ model_name: "model-a", key_name: "default", protocols: 2 }],
+    proxy: false,
+    custom_header: [],
+    param_override: "",
+    channel_proxy: "",
+    match_regex: "",
+    ...overrides,
+  })
+
+  const v013ChannelStatsResponse = (
+    overrides: Record<string, unknown> = {},
+  ): Record<string, unknown> => ({
+    channel_id: 7,
+    channel_name: "V0.13 channel",
+    enabled: true,
+    models: [
+      {
+        model_id: 11,
+        model_name: "model-a",
+        input_token: 6,
+        output_token: 3,
+        input_cost: 0.15,
+        output_cost: 0.3,
+        wait_time: 1,
+        request_success: 2,
+        request_failed: 0,
+      },
+      {
+        model_id: 12,
+        model_name: "model-b",
+        input_token: 4,
+        output_token: 1,
+        input_cost: 0.1,
+        output_cost: 0.2,
+        wait_time: 0.5,
+        request_success: 1,
+        request_failed: 1,
+      },
+    ],
+    input_token: 10,
+    output_token: 4,
+    input_cost: 0.25,
+    output_cost: 0.5,
+    wait_time: 1.5,
+    request_success: 3,
+    request_failed: 1,
     ...overrides,
   })
 
@@ -260,6 +344,498 @@ describe("Octopus API service", () => {
     )
   })
 
+  it("uses Octopus v0.13 stats as channel summaries without loading detail", async () => {
+    const session = {
+      mode: OCTOPUS_AUTH_MODES.Cookie,
+      expireAt: 1_700_000_900_000,
+      confirmed: false,
+    } as const
+    mockGetValidSession.mockResolvedValue(session)
+    mockTempWindowOctopusApiFetch
+      .mockResolvedValueOnce({
+        success: false,
+        status: 404,
+        error: "404 page not found",
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: [v013ChannelStatsResponse()] },
+      })
+
+    await expect(listChannels(config)).resolves.toEqual([
+      expect.objectContaining({
+        id: 7,
+        name: "V0.13 channel",
+        type: OctopusOutboundType.OpenAIChat,
+        base_urls: [],
+        keys: [],
+        model: "model-a,model-b",
+        auto_group: OctopusAutoGroupType.None,
+        stats: {
+          channel_id: 7,
+          input_token: 10,
+          output_token: 4,
+          input_cost: 0.25,
+          output_cost: 0.5,
+          wait_time: 1.5,
+          request_success: 3,
+          request_failed: 1,
+        },
+      }),
+    ])
+
+    expect(
+      mockTempWindowOctopusApiFetch.mock.calls.map(
+        ([request]) => new URL(request.fetchUrl).pathname,
+      ),
+    ).toEqual(["/api/v1/channel/list", "/api/v1/channel/stats"])
+  })
+
+  it("uses the stats endpoint directly for a known v0.13 session", async () => {
+    const session = v013CookieSession()
+    mockGetValidSession.mockResolvedValue(session)
+    mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: { code: 200, data: [v013ChannelStatsResponse()] },
+    })
+
+    await expect(listChannels(config)).resolves.toHaveLength(1)
+
+    expect(session.confirmed).toBe(true)
+    expect(
+      mockTempWindowOctopusApiFetch.mock.calls.map(
+        ([request]) => new URL(request.fetchUrl).pathname,
+      ),
+    ).toEqual(["/api/v1/channel/stats"])
+  })
+
+  it.each([
+    {
+      response: { success: false, status: 503 },
+      expected: "HTTP 503: Octopus request failed",
+    },
+    {
+      response: { success: false, error: "protected read unavailable" },
+      expected: "protected read unavailable",
+    },
+  ])(
+    "reports a v0.13 stats transport failure as $expected",
+    async ({ response, expected }) => {
+      const controller = new AbortController()
+      mockGetValidSession.mockResolvedValue(v013CookieSession())
+      mockTempWindowOctopusApiFetch.mockResolvedValueOnce(response)
+
+      await expect(
+        listChannels(config, { signal: controller.signal }),
+      ).rejects.toThrow(expected)
+    },
+  )
+
+  it("uses a local fallback for a rejected v0.13 response envelope", async () => {
+    mockGetValidSession.mockResolvedValue(v013CookieSession())
+    mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: { code: 500, message: "   " },
+    })
+
+    await expect(listChannels(config)).rejects.toThrow("API request failed")
+  })
+
+  it("loads one Octopus v0.13 channel detail only when explicitly requested", async () => {
+    mockGetValidSession.mockResolvedValue({
+      mode: OCTOPUS_AUTH_MODES.Cookie,
+      expireAt: 1_700_000_900_000,
+      confirmed: true,
+      apiVersion: OCTOPUS_COOKIE_API_VERSIONS.V013,
+    })
+    mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: { code: 200, data: v013ChannelDetailResponse() },
+    })
+
+    await expect(getChannel(config, 7)).resolves.toEqual(
+      expect.objectContaining({
+        id: 7,
+        name: "V0.13 channel",
+        base_urls: [{ url: "https://upstream.example.invalid" }],
+        keys: [{ enabled: true, channel_key: "credential-placeholder" }],
+        model: "model-a",
+      }),
+    )
+    expect(
+      mockTempWindowOctopusApiFetch.mock.calls.map(
+        ([request]) => new URL(request.fetchUrl).pathname,
+      ),
+    ).toEqual(["/api/v1/channel/detail/7"])
+  })
+
+  it.each([
+    {
+      response: { success: false, status: 503 },
+      expected: "HTTP 503: Octopus request failed",
+    },
+    {
+      response: { success: false, error: "detail bridge unavailable" },
+      expected: "detail bridge unavailable",
+    },
+  ])(
+    "reports a v0.13 detail transport failure as $expected",
+    async ({ response, expected }) => {
+      mockGetValidSession.mockResolvedValue(v013CookieSession())
+      mockTempWindowOctopusApiFetch.mockResolvedValueOnce(response)
+
+      await expect(getChannel(config, 7)).rejects.toThrow(expected)
+    },
+  )
+
+  it("loads v0.13 detail after list-based version discovery", async () => {
+    const session = {
+      mode: OCTOPUS_AUTH_MODES.Cookie,
+      expireAt: 1_700_000_900_000,
+      confirmed: false,
+    }
+    mockGetValidSession.mockResolvedValue(session)
+    mockTempWindowOctopusApiFetch
+      .mockResolvedValueOnce({ success: false, status: 404 })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: [v013ChannelStatsResponse()] },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: v013ChannelDetailResponse() },
+      })
+
+    await expect(getChannel(config, 7)).resolves.toMatchObject({
+      id: 7,
+      base_urls: [{ url: "https://upstream.example.invalid" }],
+    })
+    expect(
+      mockTempWindowOctopusApiFetch.mock.calls.map(
+        ([request]) => new URL(request.fetchUrl).pathname,
+      ),
+    ).toEqual([
+      "/api/v1/channel/list",
+      "/api/v1/channel/stats",
+      "/api/v1/channel/detail/7",
+    ])
+  })
+
+  it("reports a missing current channel after list fallback", async () => {
+    mockGetValidSession.mockResolvedValue(currentCookieSession())
+    mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: { code: 200, data: [] },
+    })
+
+    await expect(getChannel(config, 7)).rejects.toThrow(
+      "Channel 7 was not found",
+    )
+  })
+
+  it("returns a matching current channel after list fallback", async () => {
+    mockGetValidSession.mockResolvedValue(currentCookieSession())
+    mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: { code: 200, data: [currentChannelResponse({ id: 7 })] },
+    })
+
+    await expect(getChannel(config, 7)).resolves.toMatchObject({
+      id: 7,
+      name: "Current",
+    })
+  })
+
+  it("encodes Octopus v0.13 channel creation after a harmless contract probe", async () => {
+    const session = {
+      mode: OCTOPUS_AUTH_MODES.Cookie,
+      expireAt: 1_700_000_900_000,
+      confirmed: false,
+    }
+    mockGetValidSession.mockResolvedValue(session)
+    mockTempWindowOctopusApiFetch
+      .mockResolvedValueOnce({
+        success: false,
+        status: 404,
+        error: "404 page not found",
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: [] },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: v013ChannelDetailResponse() },
+      })
+
+    await expect(
+      createChannel(config, {
+        name: "V0.13 channel",
+        type: OctopusOutboundType.OpenAIChat,
+        enabled: true,
+        baseUrl: "https://upstream.example.invalid",
+        key: "credential-placeholder",
+        model: "model-a",
+      }),
+    ).resolves.toMatchObject({
+      success: true,
+      data: { id: 7, name: "V0.13 channel" },
+    })
+
+    expect(
+      mockTempWindowOctopusApiFetch.mock.calls.map(
+        ([request]) => new URL(request.fetchUrl).pathname,
+      ),
+    ).toEqual([
+      "/api/v1/channel/list",
+      "/api/v1/channel/stats",
+      "/api/v1/channel/create",
+    ])
+    expect(
+      JSON.parse(
+        mockTempWindowOctopusApiFetch.mock.calls[2][0].fetchOptions.body,
+      ),
+    ).toEqual({
+      id: 0,
+      name: "V0.13 channel",
+      dialect: "generic",
+      enabled: true,
+      base_url: "https://upstream.example.invalid",
+      openai_chat_completion_path: "/v1/chat/completions",
+      openai_response_path: "/v1/responses",
+      anthropic_message_path: "/v1/messages",
+      keys: [{ name: "default", key: "credential-placeholder", enabled: true }],
+      models: ["model-a"],
+      grants: [{ model_name: "model-a", key_name: "default", protocols: 2 }],
+      proxy: false,
+      custom_header: [],
+      param_override: "",
+      channel_proxy: "",
+      match_regex: "",
+    })
+  })
+
+  it("detects the cookie API version before mutation after a version-agnostic read", async () => {
+    const session = {
+      mode: OCTOPUS_AUTH_MODES.Cookie,
+      expireAt: 1_700_000_900_000,
+      confirmed: false,
+    }
+    mockGetValidSession.mockResolvedValue(session)
+    mockTempWindowOctopusApiFetch
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: [] },
+      })
+      .mockResolvedValueOnce({
+        success: false,
+        status: 404,
+        error: "404 page not found",
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: [] },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: v013ChannelDetailResponse() },
+      })
+
+    await expect(fetchAvailableModels(config)).resolves.toEqual([])
+    await expect(
+      createChannel(config, {
+        name: "V0.13 channel",
+        type: OctopusOutboundType.OpenAIChat,
+        enabled: true,
+        baseUrl: "https://upstream.example.invalid",
+        key: "credential-placeholder",
+        model: "model-a",
+      }),
+    ).resolves.toMatchObject({ success: true })
+
+    expect(
+      mockTempWindowOctopusApiFetch.mock.calls.map(
+        ([request]) => new URL(request.fetchUrl).pathname,
+      ),
+    ).toEqual([
+      "/api/v1/model/list",
+      "/api/v1/channel/list",
+      "/api/v1/channel/stats",
+      "/api/v1/channel/create",
+    ])
+    expect(
+      JSON.parse(
+        mockTempWindowOctopusApiFetch.mock.calls[3][0].fetchOptions.body,
+      ),
+    ).toMatchObject({ dialect: "generic", models: ["model-a"] })
+  })
+
+  it.each([
+    {
+      name: "a non-404 current probe failure",
+      responses: [{ success: false, status: 503 }],
+      expected: "HTTP 503: Octopus session confirmation failed",
+    },
+    {
+      name: "a current probe bridge failure",
+      responses: [{ success: false, error: "current probe unavailable" }],
+      expected: "current probe unavailable",
+    },
+    {
+      name: "a v0.13 stats probe failure",
+      responses: [
+        { success: false, status: 404 },
+        { success: false, error: "stats bridge unavailable" },
+      ],
+      expected: "stats bridge unavailable",
+    },
+    {
+      name: "an HTTP v0.13 stats probe failure",
+      responses: [
+        { success: false, status: 404 },
+        { success: false, status: 503 },
+      ],
+      expected: "HTTP 503: Octopus session confirmation failed",
+    },
+  ])(
+    "does not dispatch a mutation after $name",
+    async ({ responses, expected }) => {
+      mockGetValidSession.mockResolvedValue({
+        mode: OCTOPUS_AUTH_MODES.Cookie,
+        expireAt: 1_700_000_900_000,
+        confirmed: false,
+      })
+      for (const response of responses) {
+        mockTempWindowOctopusApiFetch.mockResolvedValueOnce(response)
+      }
+
+      await expect(
+        createChannel(config, {
+          name: "Example channel",
+          type: OctopusOutboundType.OpenAIChat,
+          baseUrl: "https://upstream.example.invalid",
+          key: "credential-placeholder",
+        }),
+      ).rejects.toMatchObject({
+        message: expected,
+        dispatch: "not-dispatched",
+        confirmedNonApplication: true,
+      })
+    },
+  )
+
+  it.each([
+    {
+      response: { success: false, status: 503 },
+      expected: "HTTP 503: Octopus request failed",
+    },
+    {
+      response: { success: false, error: "detail bridge unavailable" },
+      expected: "detail bridge unavailable",
+    },
+    {
+      response: { success: false },
+      expected: "Octopus request failed",
+    },
+  ])(
+    "stops a v0.13 update when detail loading fails as $expected",
+    async ({ response, expected }) => {
+      mockGetValidSession.mockResolvedValue(v013CookieSession())
+      mockTempWindowOctopusApiFetch.mockResolvedValueOnce(response)
+
+      await expect(
+        updateChannel(config, { id: 7, name: "Updated" }),
+      ).rejects.toMatchObject({
+        message: expected,
+        dispatch: "not-dispatched",
+        confirmedNonApplication: true,
+      })
+    },
+  )
+
+  it("preserves Octopus v0.13 detail fields while applying a partial update", async () => {
+    const existing = v013ChannelDetailResponse({
+      keys: [
+        { name: "default", key: "credential-placeholder", enabled: true },
+        { name: "backup", key: "credential-backup", enabled: false },
+      ],
+      custom_header: [{ header_key: "x-example", header_value: "preserve" }],
+      channel_proxy: "http://proxy.example.invalid:8080",
+    })
+    const updated = {
+      ...existing,
+      name: "Updated v0.13 channel",
+      models: ["model-a", "model-b"],
+      grants: [
+        { model_name: "model-a", key_name: "default", protocols: 2 },
+        { model_name: "model-b", key_name: "default", protocols: 2 },
+      ],
+    }
+    mockGetValidSession.mockResolvedValue({
+      mode: OCTOPUS_AUTH_MODES.Cookie,
+      expireAt: 1_700_000_900_000,
+      confirmed: false,
+    })
+    mockTempWindowOctopusApiFetch
+      .mockResolvedValueOnce({ success: false, status: 404 })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: [] },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: existing },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: updated },
+      })
+
+    await expect(
+      updateChannel(config, {
+        id: 7,
+        name: "Updated v0.13 channel",
+        type: OctopusOutboundType.OpenAIChat,
+        model: "model-a,model-b",
+      }),
+    ).resolves.toMatchObject({
+      success: true,
+      data: { id: 7, name: "Updated v0.13 channel", model: "model-a,model-b" },
+    })
+
+    expect(
+      mockTempWindowOctopusApiFetch.mock.calls.map(
+        ([request]) => new URL(request.fetchUrl).pathname,
+      ),
+    ).toEqual([
+      "/api/v1/channel/list",
+      "/api/v1/channel/stats",
+      "/api/v1/channel/detail/7",
+      "/api/v1/channel/update",
+    ])
+    expect(
+      JSON.parse(
+        mockTempWindowOctopusApiFetch.mock.calls[3][0].fetchOptions.body,
+      ),
+    ).toEqual(updated)
+  })
+
   it("validates cookie configurations through a protected channel read", async () => {
     mockGetValidSession.mockResolvedValueOnce({
       mode: OCTOPUS_AUTH_MODES.Cookie,
@@ -341,10 +917,7 @@ describe("Octopus API service", () => {
   })
 
   it("establishes a same-origin cookie session after 401 and retries the mutation", async () => {
-    mockGetValidSession.mockResolvedValueOnce({
-      mode: OCTOPUS_AUTH_MODES.Cookie,
-      expireAt: 1_700_000_900_000,
-    })
+    mockGetValidSession.mockResolvedValueOnce(currentCookieSession())
     mockTempWindowOctopusApiFetch
       .mockResolvedValueOnce({
         success: false,
@@ -474,10 +1047,7 @@ describe("Octopus API service", () => {
   ])(
     "fails closed after cookie 401 when login returns $name",
     async ({ login, expected }) => {
-      mockGetValidSession.mockResolvedValueOnce({
-        mode: OCTOPUS_AUTH_MODES.Cookie,
-        expireAt: 1_700_000_900_000,
-      })
+      mockGetValidSession.mockResolvedValueOnce(currentCookieSession())
       mockTempWindowOctopusApiFetch
         .mockResolvedValueOnce({
           success: false,
@@ -581,10 +1151,7 @@ describe("Octopus API service", () => {
   )
 
   it("selects explicit current update and model-probe payloads", async () => {
-    mockGetValidSession.mockResolvedValue({
-      mode: OCTOPUS_AUTH_MODES.Cookie,
-      expireAt: 1_700_000_900_000,
-    })
+    mockGetValidSession.mockResolvedValue(currentCookieSession())
     mockTempWindowOctopusApiFetch
       .mockResolvedValueOnce({
         success: true,
@@ -695,10 +1262,7 @@ describe("Octopus API service", () => {
   })
 
   it("includes current-only channel settings in a current model probe", async () => {
-    mockGetValidSession.mockResolvedValueOnce({
-      mode: OCTOPUS_AUTH_MODES.Cookie,
-      expireAt: 1_700_000_900_000,
-    })
+    mockGetValidSession.mockResolvedValueOnce(currentCookieSession())
     mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
       success: true,
       status: 200,
@@ -746,10 +1310,7 @@ describe("Octopus API service", () => {
   })
 
   it("rejects the removed embedding-only type before a cookie request is dispatched", async () => {
-    mockGetValidSession.mockResolvedValueOnce({
-      mode: OCTOPUS_AUTH_MODES.Cookie,
-      expireAt: 1_700_000_900_000,
-    })
+    mockGetValidSession.mockResolvedValueOnce(currentCookieSession())
 
     await expect(
       fetchRemoteModels(
@@ -766,10 +1327,7 @@ describe("Octopus API service", () => {
   })
 
   it("classifies an invalid cookie mutation type as not dispatched", async () => {
-    mockGetValidSession.mockResolvedValueOnce({
-      mode: OCTOPUS_AUTH_MODES.Cookie,
-      expireAt: 1_700_000_900_000,
-    })
+    mockGetValidSession.mockResolvedValueOnce(currentCookieSession())
 
     const failure = await createChannel(
       config,
@@ -794,10 +1352,7 @@ describe("Octopus API service", () => {
   })
 
   it("does not forward legacy-only update fields to the current contract", async () => {
-    mockGetValidSession.mockResolvedValueOnce({
-      mode: OCTOPUS_AUTH_MODES.Cookie,
-      expireAt: 1_700_000_900_000,
-    })
+    mockGetValidSession.mockResolvedValueOnce(currentCookieSession())
     mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
       success: true,
       status: 200,
@@ -814,6 +1369,54 @@ describe("Octopus API service", () => {
         mockTempWindowOctopusApiFetch.mock.calls[0][0].fetchOptions.body,
       ),
     ).toEqual({ id: 7 })
+  })
+
+  it("reuses the confirmed deployment generation when resolving protocol path behavior", async () => {
+    mockGetValidSession.mockResolvedValue(v013CookieSession())
+    await expect(usesChannelProtocolPaths(config)).resolves.toBe(true)
+    mockGetValidSession.mockResolvedValue(currentCookieSession())
+    await expect(usesChannelProtocolPaths(config)).resolves.toBe(false)
+    expect(mockTempWindowOctopusApiFetch).not.toHaveBeenCalled()
+    const controller = new AbortController()
+    controller.abort()
+    await expect(
+      usesChannelProtocolPaths(config, { signal: controller.signal }),
+    ).rejects.toMatchObject({ name: "AbortError" })
+    expect(mockGetValidSession).toHaveBeenCalledTimes(2)
+  })
+
+  it("passes the cancellation signal and protection execution into create and delete", async () => {
+    const execution = createAutomaticProtectionBypassExecution(
+      PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
+      PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+      PROTECTION_BYPASS_SURFACES.Background,
+    )
+    const signal = new AbortController().signal
+    mockGetValidSession.mockResolvedValue(currentCookieSession())
+    mockTempWindowOctopusApiFetch.mockResolvedValue({
+      success: true,
+      status: 200,
+      data: { code: 200, data: null },
+    })
+    await createChannel(
+      config,
+      {
+        name: "Example",
+        type: OctopusOutboundType.OpenAIChat,
+        baseUrl: "https://upstream.example.invalid",
+        key: "credential-placeholder",
+      },
+      { signal, protectionBypassExecution: execution },
+    )
+    await deleteChannel(config, 7, {
+      signal,
+      protectionBypassExecution: execution,
+    })
+    expect(mockTempWindowOctopusApiFetch).toHaveBeenCalledTimes(2)
+    for (const [request] of mockTempWindowOctopusApiFetch.mock.calls) {
+      expect(request.protectionBypassExecution).toBe(execution)
+      expect(request.fetchOptions.signal).toBe(signal)
+    }
   })
 
   it("preserves one model-sync execution across cookie login and retry", async () => {
@@ -887,10 +1490,7 @@ describe("Octopus API service", () => {
   })
 
   it("treats missing cookie transport lifecycle as possibly dispatched", async () => {
-    mockGetValidSession.mockResolvedValue({
-      mode: OCTOPUS_AUTH_MODES.Cookie,
-      expireAt: 1_700_000_900_000,
-    })
+    mockGetValidSession.mockResolvedValue(currentCookieSession())
     const transportError = new Error("temporary context failed")
     mockTempWindowOctopusApiFetch.mockRejectedValueOnce(transportError)
 
@@ -1071,10 +1671,7 @@ describe("Octopus API service", () => {
   })
 
   it("normalizes a current create response that omits model", async () => {
-    mockGetValidSession.mockResolvedValueOnce({
-      mode: OCTOPUS_AUTH_MODES.Cookie,
-      expireAt: 1_700_000_900_000,
-    })
+    mockGetValidSession.mockResolvedValueOnce(currentCookieSession())
     mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
       success: true,
       status: 200,
@@ -1165,10 +1762,7 @@ describe("Octopus API service", () => {
   })
 
   it("uses current model, group, and delete endpoints after cookie auth", async () => {
-    mockGetValidSession.mockResolvedValue({
-      mode: OCTOPUS_AUTH_MODES.Cookie,
-      expireAt: 1_700_000_900_000,
-    })
+    mockGetValidSession.mockResolvedValue(currentCookieSession())
     mockTempWindowOctopusApiFetch
       .mockResolvedValueOnce({
         success: true,
@@ -1268,7 +1862,7 @@ describe("Octopus API service", () => {
     expect(mockClearCache).toHaveBeenCalledTimes(1)
   })
 
-  it("filters searched channels by name and upstream URL", async () => {
+  it("filters searched channels by trimmed name and upstream URL without matching secrets", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockImplementation(() =>
@@ -1279,13 +1873,14 @@ describe("Octopus API service", () => {
               data: [
                 {
                   id: 1,
-                  name: "OpenAI Main",
-                  base_urls: [{ url: "https://api.openai.com/v1" }],
+                  name: "Primary channel",
+                  base_urls: [{ url: "https://primary.example.invalid/v1" }],
+                  keys: [{ channel_key: "private-search-secret" }],
                 },
                 {
                   id: 2,
-                  name: "Claude",
-                  base_urls: [{ url: "https://claude.example.com/v1" }],
+                  name: "Secondary channel",
+                  base_urls: [{ url: "https://secondary.example.invalid/v1" }],
                 },
               ],
             }),
@@ -1298,16 +1893,22 @@ describe("Octopus API service", () => {
       ),
     )
 
-    await expect(searchChannels(config, "openai")).resolves.toHaveLength(1)
-    await expect(searchChannels(config, "claude.example.com")).resolves.toEqual(
-      [
-        {
-          id: 2,
-          name: "Claude",
-          base_urls: [{ url: "https://claude.example.com/v1" }],
-        },
-      ],
-    )
+    await expect(
+      searchChannels(config, "  PRIMARY CHANNEL  "),
+    ).resolves.toMatchObject([{ id: 1 }])
+    await expect(
+      searchChannels(config, "SECONDARY.EXAMPLE.INVALID"),
+    ).resolves.toEqual([
+      {
+        id: 2,
+        name: "Secondary channel",
+        base_urls: [{ url: "https://secondary.example.invalid/v1" }],
+      },
+    ])
+    await expect(
+      searchChannels(config, "private-search-secret"),
+    ).resolves.toEqual([])
+    await expect(searchChannels(config, "   ")).resolves.toHaveLength(2)
   })
 
   it("returns all channels when the search keyword is blank", async () => {
@@ -1704,6 +2305,36 @@ describe("Octopus API service", () => {
     },
   )
 
+  it("uses a fixed mutation message for a blank Octopus failure envelope", async () => {
+    const envelope = { success: false, data: null, message: "   " }
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(JSON.stringify(envelope), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    )
+
+    await expect(
+      createChannel(
+        config,
+        createInput({
+          name: "Blank rejection",
+          type: OctopusOutboundType.OpenAIChat,
+          base_urls: [{ url: "https://api.example.invalid/v1" }],
+          keys: [{ enabled: true, channel_key: "sk-example" }],
+          auto_group: OctopusAutoGroupType.None,
+        }),
+      ),
+    ).rejects.toMatchObject({
+      name: "OctopusMutationApiError",
+      message: "API request failed",
+      raw: envelope,
+    })
+  })
+
   it.each(mutations)(
     "$name keeps generic HTTP client errors ambiguous after dispatch",
     async ({ log, invoke }) => {
@@ -1747,6 +2378,32 @@ describe("Octopus API service", () => {
       expect(mockLogger.error).toHaveBeenLastCalledWith(log)
     },
   )
+
+  it("uses a fixed mutation message when a dispatched failure is blank", async () => {
+    const networkError = new TypeError("   ")
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValueOnce(networkError))
+
+    await expect(mutations[0].invoke()).rejects.toMatchObject({
+      name: "OctopusMutationApiError",
+      message: "Octopus mutation failed",
+      dispatch: "dispatched",
+      responseReceived: false,
+      raw: networkError,
+    })
+  })
+
+  it("preserves a string message from a non-Error mutation failure", async () => {
+    const providerFailure = { message: "provider mutation failed" }
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValueOnce(providerFailure))
+
+    await expect(mutations[0].invoke()).rejects.toMatchObject({
+      name: "OctopusMutationApiError",
+      message: "provider mutation failed",
+      dispatch: "dispatched",
+      responseReceived: false,
+      raw: providerFailure,
+    })
+  })
 
   it.each(mutations)(
     "$name marks auth failure before mutation fetch as not dispatched",
@@ -1823,19 +2480,34 @@ describe("Octopus API service", () => {
     {
       name: "create",
       invoke: () =>
-        octopusManagedSiteChannels.create(config, {
-          mode: "single",
-          channel: { name: "Created", status: 1 },
+        runOctopusMutation({
+          effect: octopusChannelEffect("resource-created"),
+          execute: () =>
+            createChannel(config, {
+              name: "Created",
+              type: 1,
+              enabled: true,
+              baseUrl: "https://upstream.example",
+              key: "test-key",
+              model: "gpt-4o",
+            }),
         }),
     },
     {
       name: "update",
       invoke: () =>
-        octopusManagedSiteChannels.update(config, { id: 1, name: "Updated" }),
+        runOctopusMutation({
+          effect: octopusChannelEffect("resource-updated", 1),
+          execute: () => updateChannel(config, { id: 1, name: "Updated" }),
+        }),
     },
     {
       name: "delete",
-      invoke: () => octopusManagedSiteChannels.delete(config, 1),
+      invoke: () =>
+        runOctopusMutation({
+          effect: octopusChannelEffect("resource-deleted", 1),
+          execute: () => deleteChannel(config, 1),
+        }),
     },
   ] as const
 
@@ -2033,6 +2705,40 @@ describe("Octopus API service", () => {
 
     await expect(listChannels(config)).rejects.toThrow(
       "HTTP 500 Internal Server Error: {not-json",
+    )
+  })
+
+  it("uses a fixed HTTP error message when Octopus JSON candidates are blank", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: "   ", error: "  " }), {
+          status: 500,
+          statusText: "Internal Server Error",
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    )
+
+    await expect(listChannels(config)).rejects.toThrow(
+      "HTTP 500 Internal Server Error: Octopus request failed",
+    )
+  })
+
+  it("uses a fixed HTTP error message for a non-object JSON body", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(JSON.stringify([]), {
+          status: 500,
+          statusText: "Internal Server Error",
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    )
+
+    await expect(listChannels(config)).rejects.toThrow(
+      "HTTP 500 Internal Server Error: Octopus request failed",
     )
   })
 

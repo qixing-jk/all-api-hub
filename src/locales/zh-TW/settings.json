@@ -71,10 +71,17 @@
     "toggleLabel": "新增帳號時自動填入目前站點網址"
   },
   "autoProvisionKeyOnAccountAdd": {
-    "description": "控制新增帳號後是否自動建立預設 API 金鑰。",
+    "description": "新增帳號後自動準備 API 金鑰，可選擇預設金鑰或所有可用群組。",
+    "manualHint": "已儲存的帳號可在「金鑰管理 → {{actionLabel}}」中手動補齊所有可用群組的金鑰。",
+    "modeDescription": "預設模式僅在帳號沒有金鑰時建立一個；所有群組模式會為每個缺少可用金鑰的群組建立一個。需要手動處理的群組會顯示提示。",
+    "modeLabel": "自動建立範圍",
+    "modes": {
+      "allGroups": "所有可用群組",
+      "default": "僅預設金鑰"
+    },
     "title": "API 金鑰",
-    "toggleDesc": "開啟後，帳號儲存完成會檢查遠端金鑰列表；若沒有金鑰則自動建立一個預設金鑰。",
-    "toggleLabel": "新增帳號後自動建立預設金鑰"
+    "toggleDesc": "啟用後，帳號儲存完成會依下方建立範圍檢查並補齊缺少的金鑰。",
+    "toggleLabel": "新增帳號後自動建立金鑰"
   },
   "axonHub": {
     "cors": {
@@ -215,9 +222,9 @@
     "userIdDesc": "管理員使用者 ID (純數字)，root 管理員通常為 1"
   },
   "duplicateAccountWarningOnAdd": {
-    "description": "控制新增帳號時，如果該站點已存在帳號，是否需要彈窗確認。",
+    "description": "新增前辨識已儲存的帳號，減少重複新增。",
     "title": "帳號",
-    "toggleDesc": "開啟後，當你嘗試為同一站點 URL 再次新增帳號時，會彈出確認對話方塊。",
+    "toggleDesc": "同一站台的使用者 ID 已儲存時才提示確認。OpenRouter 依相同的 Management Key 判斷重複。",
     "toggleLabel": "新增重複帳號前提醒"
   },
   "logging": {
@@ -499,6 +506,11 @@
     "shieldPermissionWarningTitle": "需要 Cookies、Web Request 和 Web Request Blocking 權限",
     "shieldPopupFirefoxNote": "在 Firefox 中，從擴充套件彈出視窗啟動此功能會導致彈出視窗關閉，因此無法使用這個入口。請改用側邊欄或設定頁。",
     "shieldTitle": "網站驗證輔助",
+    "shieldWindowHeight": "高度（像素）",
+    "shieldWindowSizeDesc": "設定寬度和高度（像素）後儲存，下次建立驗證視窗時生效；現有視窗和分頁保持原尺寸。",
+    "shieldWindowSizeReset": "恢復預設值",
+    "shieldWindowSizeTitle": "驗證視窗尺寸",
+    "shieldWindowWidth": "寬度（像素）",
     "title": "重新整理設定"
   },
   "releaseUpdate": {
@@ -585,30 +597,36 @@
     "userCustomSort": "使用者自定義排序"
   },
   "sub2apiManagedSite": {
-    "defaultScope": {
-      "description": "首版僅支援 step_up_enabled 為 false 時的 URL + 管理員 API Key。暫不支援管理員登入、JWT、TOTP 或 step-up 解鎖。",
-      "title": "僅支援預設安全設定"
+    "adminCredentialsLink": {
+      "description": "以管理員身分登入後台，在「系統設定 → 安全與驗證」中建立並複製 Key。完整 Key 只顯示一次；重新產生會使舊 Key 失效。",
+      "missingBaseUrl": "請先填寫有效的站點網址，即可開啟後台取得管理員 API Key。",
+      "open": "開啟系統設定",
+      "title": "取得管理員 API Key"
     },
-    "description": "透過管理 API 管理 Sub2API 的 API Key 帳號。",
+    "defaultScope": {
+      "description": "若站點啟用了敏感操作二次驗證，擴充功能暫時無法查看或匯出渠道金鑰。請在 Sub2API 後台完成這些操作；遷移需要讀取來源金鑰時也會受限。",
+      "title": "金鑰查看與匯出的限制"
+    },
+    "description": "連線後，可將現有 API Key 匯入 Sub2API，並在 All API Hub 中查看、編輯和遷移渠道。",
     "fields": {
-      "adminApiKeyDesc": "透過 x-api-key 請求標頭傳送的管理員 API Key",
+      "adminApiKeyDesc": "請填寫後台產生的管理員 API Key，用於管理渠道。呼叫模型使用的一般 API Key 不能用於此處。",
       "adminApiKeyLabel": "管理員 API Key",
-      "adminApiKeyPlaceholder": "請輸入管理員 API Key",
-      "baseUrlDesc": "設定 Sub2API 站點的基礎 URL",
-      "baseUrlLabel": "基礎 URL",
+      "adminApiKeyPlaceholder": "貼上從後台取得的管理員 API Key",
+      "baseUrlDesc": "填寫 Sub2API 後台的網址，包含 http:// 或 https://。",
+      "baseUrlLabel": "站點網址",
       "baseUrlPlaceholder": "https://sub2api.example.com",
       "hideAdminApiKey": "隱藏管理員 API Key",
       "showAdminApiKey": "顯示管理員 API Key"
     },
-    "title": "Sub2API 整合設定",
+    "title": "Sub2API 連線設定",
     "validation": {
-      "description": "測試管理員 API Key 是否可以讀取 API Key 帳號清單",
-      "failed": "Sub2API 驗證失敗：{{error}}",
-      "missingFields": "請填寫基礎 URL 和管理員 API Key",
-      "success": "Sub2API 設定驗證成功",
-      "title": "驗證設定",
-      "validate": "驗證",
-      "validating": "正在驗證..."
+      "description": "檢查站點網址和管理員 Key 是否可用，成功後即可進入渠道管理。",
+      "failed": "Sub2API 連線驗證失敗：{{error}}",
+      "missingFields": "請先填寫站點網址和管理員 API Key",
+      "success": "連線成功，可以管理 Sub2API 渠道了",
+      "title": "檢查連線",
+      "validate": "驗證連線",
+      "validating": "正在驗證…"
     }
   },
   "tabs": {
@@ -708,6 +726,7 @@
         "success": "{{task}}已成功完成。"
       },
       "counts": "總計 {{total}}，成功 {{success}}，失敗 {{failed}}，跳過 {{skipped}}。",
+      "countsWithAutoCheckinCategories": "總計 {{total}}，本次簽到成功 {{success}}，已簽到 {{alreadyChecked}}，失敗 {{failed}}，待確認 {{uncertain}}，未執行 {{skipped}}。",
       "title": {
         "failure": "{{task}}失敗",
         "partialSuccess": "{{task}}部分成功",

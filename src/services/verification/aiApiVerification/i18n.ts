@@ -4,10 +4,27 @@ import { assertNever } from "~/utils/core/assert"
 
 import {
   API_TYPES,
+  API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_IDS,
   type ApiVerificationApiType,
+  type ApiVerificationMode,
   type ApiVerificationProbeId,
 } from "./types"
+
+/** Returns the localized label for the explicitly selected generation mode. */
+export function getApiVerificationModeLabel(
+  t: TFunction,
+  mode: ApiVerificationMode,
+): string {
+  switch (mode) {
+    case API_VERIFICATION_MODES.Streaming:
+      return t("aiApiVerification:verifyDialog.modes.streaming")
+    case API_VERIFICATION_MODES.NonStreaming:
+      return t("aiApiVerification:verifyDialog.modes.nonStreaming")
+    default:
+      return assertNever(mode, "Unexpected API verification mode")
+  }
+}
 
 /**
  * Returns the localized label for a supported API verification API type.
@@ -68,6 +85,13 @@ export function translateApiVerificationSummary(
   summaryParams?: Record<string, unknown>,
 ): string | undefined {
   switch (summaryKey) {
+    case "verifyDialog.errors.unexpected":
+      return t(
+        "aiApiVerification:verifyDialog.errors.unexpected",
+        summaryParams,
+      )
+    case "webAiApiCheck:modal.errors.runProbeFailed":
+      return t("webAiApiCheck:modal.errors.runProbeFailed", summaryParams)
     case "verifyDialog.requiresModelId":
       return t("aiApiVerification:verifyDialog.requiresModelId", summaryParams)
     case "verifyDialog.summaries.modelsFetched":

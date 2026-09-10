@@ -1,9 +1,13 @@
 import type { TFunction } from "i18next"
 
 import { AXON_HUB_CHANNEL_FIELD_IDS } from "~/constants/axonHub"
+import { CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/claudeCodeHub"
+import { DONE_HUB_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/doneHub"
 import { NEW_API_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/newApi"
+import { OCTOPUS_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/octopus"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { SUB2API_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/sub2api"
+import { VELOERA_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/veloera"
 import {
   MANAGED_RESOURCE_KINDS,
   type ManagedResourceProductPolicy,
@@ -35,16 +39,30 @@ type NativeTablePresentationPolicy = {
   semantics: ManagedResourcePresentationSemantics
   defaultSorting: ManagedChannelsSorting
   columnLayout: NativeTableColumnLayout
+  numericChannelFieldIds?: NumericChannelTableFieldIds
+  supportsNumericChannelDeepLink?: boolean
 }
 
 const NATIVE_TABLE_COLUMN_LAYOUTS = {
   Canonical: "canonical",
-  NewApi: "new-api",
+  NumericChannel: "numeric-channel",
   Sub2Api: "sub2api",
 } as const
 
 type NativeTableColumnLayout =
   (typeof NATIVE_TABLE_COLUMN_LAYOUTS)[keyof typeof NATIVE_TABLE_COLUMN_LAYOUTS]
+
+type NumericChannelTableFieldIds = {
+  readonly Id: string
+  readonly Name: string
+  readonly Type: string
+  readonly Status: string
+  readonly BaseUrl: string
+  readonly ModelCount: string
+  readonly Groups: string
+  readonly Priority: string
+  readonly Weight: string
+}
 
 const CANONICAL_NATIVE_CHANNEL_FIELD_IDS = {
   Type: "type",
@@ -77,6 +95,23 @@ const requireFieldValuePresentation = (
 const nativeTablePresentationPolicies: Partial<
   Record<ManagedSiteType, NativeTablePresentationPolicy>
 > = {
+  [SITE_TYPES.OCTOPUS]: {
+    semantics: {
+      baseUrlFieldId: OCTOPUS_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+      statusFieldId: OCTOPUS_MANAGED_RESOURCE_FIELD_IDS.Status,
+      fieldValuePresentations: {
+        [OCTOPUS_MANAGED_RESOURCE_FIELD_IDS.Type]:
+          requireFieldValuePresentation(
+            SITE_TYPES.OCTOPUS,
+            OCTOPUS_MANAGED_RESOURCE_FIELD_IDS.Type,
+          ),
+      },
+    },
+    defaultSorting: [
+      { id: MANAGED_CHANNELS_COLUMN_IDS.Identifier, desc: true },
+    ],
+    columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.Canonical,
+  },
   [SITE_TYPES.AXON_HUB]: {
     semantics: {
       baseUrlFieldId: AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL,
@@ -106,7 +141,44 @@ const nativeTablePresentationPolicies: Partial<
       },
     },
     defaultSorting: [{ id: NEW_API_MANAGED_RESOURCE_FIELD_IDS.Id, desc: true }],
-    columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.NewApi,
+    columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.NumericChannel,
+    numericChannelFieldIds: NEW_API_MANAGED_RESOURCE_FIELD_IDS,
+    supportsNumericChannelDeepLink: true,
+  },
+  [SITE_TYPES.VELOERA]: {
+    semantics: {
+      baseUrlFieldId: VELOERA_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+      statusFieldId: VELOERA_MANAGED_RESOURCE_FIELD_IDS.Status,
+      fieldValuePresentations: {
+        [VELOERA_MANAGED_RESOURCE_FIELD_IDS.Type]:
+          requireFieldValuePresentation(
+            SITE_TYPES.VELOERA,
+            VELOERA_MANAGED_RESOURCE_FIELD_IDS.Type,
+          ),
+      },
+    },
+    defaultSorting: [{ id: VELOERA_MANAGED_RESOURCE_FIELD_IDS.Id, desc: true }],
+    columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.NumericChannel,
+    numericChannelFieldIds: VELOERA_MANAGED_RESOURCE_FIELD_IDS,
+  },
+  [SITE_TYPES.DONE_HUB]: {
+    semantics: {
+      baseUrlFieldId: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+      statusFieldId: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Status,
+      fieldValuePresentations: {
+        [DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type]:
+          requireFieldValuePresentation(
+            SITE_TYPES.DONE_HUB,
+            DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type,
+          ),
+      },
+    },
+    defaultSorting: [
+      { id: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Id, desc: true },
+    ],
+    columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.NumericChannel,
+    numericChannelFieldIds: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS,
+    supportsNumericChannelDeepLink: true,
   },
   [SITE_TYPES.SUB2API]: {
     semantics: {
@@ -117,6 +189,23 @@ const nativeTablePresentationPolicies: Partial<
       { id: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Name, desc: true },
     ],
     columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.Sub2Api,
+  },
+  [SITE_TYPES.CLAUDE_CODE_HUB]: {
+    semantics: {
+      baseUrlFieldId: CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+      statusFieldId: CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Status,
+      fieldValuePresentations: {
+        [CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type]:
+          requireFieldValuePresentation(
+            SITE_TYPES.CLAUDE_CODE_HUB,
+            CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type,
+          ),
+      },
+    },
+    defaultSorting: [
+      { id: MANAGED_CHANNELS_COLUMN_IDS.Identifier, desc: true },
+    ],
+    columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.Canonical,
   },
 }
 
@@ -156,7 +245,7 @@ const createValueColumn = (
     defaultDirection: MANAGED_CHANNELS_SORT_DIRECTIONS.Ascending,
     missing: MANAGED_CHANNELS_SORT_MISSING_PLACEMENTS.Last,
   },
-  extension: { kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.LegacyCommon },
+  extension: { kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.Common },
   ...options,
 })
 
@@ -167,7 +256,7 @@ const selectionColumn = {
   canHide: false,
   defaultVisible: true,
   visible: true,
-  extension: { kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.LegacyCommon },
+  extension: { kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.Common },
 } as const satisfies ManagedChannelsColumn
 
 const createActionsColumn = (t: TFunction) =>
@@ -179,7 +268,7 @@ const createActionsColumn = (t: TFunction) =>
     defaultVisible: true,
     visible: true,
     size: 60,
-    extension: { kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.LegacyCommon },
+    extension: { kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.Common },
   }) as const satisfies ManagedChannelsColumn
 
 const createChannelColumn = (
@@ -200,7 +289,7 @@ const createChannelColumn = (
     missing: MANAGED_CHANNELS_SORT_MISSING_PLACEMENTS.Last,
   },
   size,
-  extension: { kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.LegacyCommon },
+  extension: { kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.Common },
 })
 
 type ColumnBuilderOptions = {
@@ -210,59 +299,46 @@ type ColumnBuilderOptions = {
   visibility: Readonly<Record<string, boolean>>
 }
 
-const createNewApiColumns = ({
-  t,
-  policy,
-  visibility,
-}: ColumnBuilderOptions): ManagedChannelsColumn[] => {
+const createNumericChannelColumns = (
+  { t, siteType, policy, visibility }: ColumnBuilderOptions,
+  fields: NumericChannelTableFieldIds,
+): ManagedChannelsColumn[] => {
   const fieldLabels: Readonly<Record<string, string>> = {
-    [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Id]: t(
-      "managedSiteChannels:table.columns.id",
-    ),
-    [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Type]: t(
-      "managedSiteChannels:table.columns.type",
-    ),
-    [NEW_API_MANAGED_RESOURCE_FIELD_IDS.ModelCount]: t(
-      "managedSiteChannels:table.columns.models",
-    ),
-    [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups]: t(
-      "managedSiteChannels:table.columns.group",
-    ),
-    [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Status]: t(
-      "managedSiteChannels:table.columns.status",
-    ),
-    [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Priority]: t(
-      "managedSiteChannels:table.columns.priority",
-    ),
-    [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Weight]: t(
-      "managedSiteChannels:table.columns.weight",
-    ),
+    [fields.Id]: t("managedSiteChannels:table.columns.id"),
+    [fields.Type]: t("managedSiteChannels:table.columns.type"),
+    [fields.ModelCount]: t("managedSiteChannels:table.columns.models"),
+    [fields.Groups]: t("managedSiteChannels:table.columns.group"),
+    [fields.Status]: t("managedSiteChannels:table.columns.status"),
+    [fields.Priority]: t("managedSiteChannels:table.columns.priority"),
+    [fields.Weight]: t("managedSiteChannels:table.columns.weight"),
   }
   return [
     selectionColumn,
     ...policy.tableFieldIds.flatMap((fieldId) => {
-      if (fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.Name) {
+      if (fieldId === fields.Name) {
         return [createChannelColumn(t, MANAGED_CHANNELS_COLUMN_IDS.Name, 300)]
       }
       // The channel cell already shows the Base URL below the name.
-      if (fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl) return []
+      if (fieldId === fields.BaseUrl) return []
       return [
         createValueColumn(
           visibility,
           fieldId,
           fieldLabels[fieldId] ?? fieldId,
-          fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.Status
+          fieldId === fields.Status
             ? MANAGED_CHANNELS_COLUMN_IDS.Status
             : fieldId,
           {
-            ...(fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.Status
+            ...(fieldId === fields.Status
               ? {
                   facet: {
                     kind: MANAGED_CHANNELS_COLUMN_FACET_KINDS.Status,
                   },
                 }
               : {}),
-            ...(fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.Id
+            ...(fieldId === fields.Id &&
+            getNativeTablePresentationPolicy(siteType)
+              .supportsNumericChannelDeepLink
               ? {
                   routeFilter: {
                     kind: MANAGED_CHANNELS_ROUTE_FILTER_KINDS.Exact,
@@ -270,7 +346,7 @@ const createNewApiColumns = ({
                   },
                 }
               : {}),
-            size: fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.Id ? 45 : 90,
+            size: fieldId === fields.Id ? 45 : 90,
           },
         ),
       ]
@@ -353,7 +429,7 @@ const createCanonicalColumns = ({
       },
       size: 40,
       extension: {
-        kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.LegacyCommon,
+        kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.Common,
       },
     },
     createChannelColumn(t, MANAGED_CHANNELS_COLUMN_IDS.Name, 300),
@@ -421,13 +497,20 @@ export const createManagedResourceColumns = (
   visibility: Readonly<Record<string, boolean>>,
 ): ManagedChannelsColumn[] => {
   const options = { t, siteType, policy, visibility }
-  switch (getNativeTablePresentationPolicy(siteType).columnLayout) {
-    case NATIVE_TABLE_COLUMN_LAYOUTS.NewApi:
-      return createNewApiColumns(options)
+  const presentationPolicy = getNativeTablePresentationPolicy(siteType)
+  switch (presentationPolicy.columnLayout) {
+    case NATIVE_TABLE_COLUMN_LAYOUTS.NumericChannel:
+      if (!presentationPolicy.numericChannelFieldIds) {
+        throw new Error("missing numeric channel table field ids")
+      }
+      return createNumericChannelColumns(
+        options,
+        presentationPolicy.numericChannelFieldIds,
+      )
     case NATIVE_TABLE_COLUMN_LAYOUTS.Sub2Api:
       return createSub2ApiColumns(options)
     default:
-      // Canonical compatibility registrations get neutral columns only.
+      // Providers using canonical fields share the neutral column layout.
       return createCanonicalColumns(options)
   }
 }

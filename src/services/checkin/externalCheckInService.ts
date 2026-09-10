@@ -1,4 +1,5 @@
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
@@ -118,7 +119,7 @@ export async function openExternalCheckInsAndMark(
       }
 
       try {
-        const account = await accountStorage.getAccountById(accountId)
+        const account = await accountQueries.getAccountById(accountId)
         if (!account) {
           results.push({
             accountId,
@@ -157,8 +158,8 @@ export async function openExternalCheckInsAndMark(
                 { baseUrl: account.site_url, siteType: account.site_type },
                 SITE_ROUTE_KINDS.Redeem,
               ))
-            openedRedeem = await openExternalPage(redeemUrl)
-            if (!openedRedeem) {
+            openedRedeem = redeemUrl ? await openExternalPage(redeemUrl) : null
+            if (openedRedeem === false) {
               redeemError = "Failed to open redeem tab"
             }
           } catch (error) {
@@ -182,7 +183,7 @@ export async function openExternalCheckInsAndMark(
 
         // Only mark the account after we are sure the check-in link was opened.
         const markedCheckedIn =
-          await accountStorage.markAccountAsCustomCheckedIn(accountId)
+          await accountCheckInState.markAccountAsCustomCheckedIn(accountId)
 
         results.push({
           accountId,

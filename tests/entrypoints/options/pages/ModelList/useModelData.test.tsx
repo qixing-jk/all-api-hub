@@ -62,7 +62,7 @@ const {
   mockLoadAccountRuntimeKeyFallbackPricingResponse: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: (...args: unknown[]) => toastSuccessMock(...args),
     error: (...args: unknown[]) => toastErrorMock(...args),
@@ -915,6 +915,54 @@ describe("useModelData all-accounts loading", () => {
       await modelPricingCache.invalidate(cacheKey)
     }
   })
+
+  it.each(["single", "all"])(
+    "invalidates shared direct-pricing data once before a %s refresh",
+    async (scope) => {
+      const events: string[] = []
+      const fetchPricing = vi.fn(async () => {
+        events.push("fetch")
+        return { data: [], group_ratio: {}, usable_group: {}, success: true }
+      })
+      const capabilities = createMockSiteTypeCapabilities(fetchPricing, {
+        siteType: SITE_TYPES.AIHUBMIX,
+      })
+      capabilities.account.modelPricing.invalidateCache = () => {
+        events.push("invalidate")
+      }
+      vi.mocked(getSiteTypeCapabilities).mockReturnValue(capabilities)
+      const accounts = ["a", "b"].map((id) =>
+        createDisplayAccount({
+          id: `shared-refresh-${scope}-${id}`,
+          siteType: SITE_TYPES.AIHUBMIX,
+        }),
+      )
+      const { result } = renderHook(
+        () =>
+          useModelData({
+            selectedSource:
+              scope === "single"
+                ? createAccountSource(accounts[0])
+                : createAllAccountsSource(),
+            accounts,
+          }),
+        { wrapper: createWrapper() },
+      )
+      const expectedFetches = scope === "single" ? 1 : 2
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+        expect(fetchPricing).toHaveBeenCalledTimes(expectedFetches)
+      })
+      events.length = 0
+      await act(async () => {
+        await result.current.loadPricingData()
+      })
+      expect(events).toEqual([
+        "invalidate",
+        ...Array(expectedFetches).fill("fetch"),
+      ])
+    },
+  )
 
   it("combines ordinary pricing with one provider-wide catalog for repeated provider accounts", async () => {
     const fetchOrdinaryPricing = vi.fn().mockResolvedValue({
@@ -2054,7 +2102,7 @@ describe("useModelData all-accounts loading", () => {
     expect(fetchPricing).not.toHaveBeenCalled()
   })
 
-  it("reports unsupported non-Sub2API accounts as direct pricing failures", async () => {
+  it("marks any account without a model-list source capability as unsupported", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
     const fetchPricing = vi
@@ -2085,12 +2133,11 @@ describe("useModelData all-accounts loading", () => {
 
     await waitFor(
       () => {
-        expect(result.current.loadErrorMessage).toBe(
-          "modelList:status.loadFailed",
-        )
+        expect(result.current.unsupportedSource).toBe(true)
       },
       { timeout: 3000 },
     )
+    expect(result.current.loadErrorMessage).toBeNull()
     expect(fetchPricing).not.toHaveBeenCalled()
     expect(mockFetchDisplayAccountTokens).not.toHaveBeenCalled()
   })
@@ -3752,10 +3799,9 @@ describe("useModelData all-accounts loading", () => {
       )
 
       await waitFor(() => {
-        expect(result.current.loadErrorMessage).toBe(
-          "modelList:status.loadFailed",
-        )
+        expect(result.current.unsupportedSource).toBe(true)
       })
+      expect(result.current.loadErrorMessage).toBeNull()
       expect(fetchPricing).not.toHaveBeenCalled()
       expect(mockFetchDisplayAccountTokens).not.toHaveBeenCalled()
       expect(result.current.pricingData).toBeNull()
@@ -5157,7 +5203,7 @@ describe("useModelData all-accounts loading", () => {
     expect(receivedSignal?.aborted).toBe(true)
   })
 
-  it("shows the fallback key-load error when token payload normalization fails", async () => {
+  it("retranslates fallback key-load errors without reloading or repeating notifications", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
@@ -5204,9 +5250,30 @@ describe("useModelData all-accounts loading", () => {
       { timeout: 3000 },
     )
     expect(result.current.accountFallback?.runtimeKeys).toEqual([])
+    const notifications = toastErrorMock.mock.calls.length
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "modelList",
+      (await import("~/locales/zh-CN/modelList.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(result.current.accountFallback?.runtimeKeyLoadErrorMessage).toBe(
+        testI18n.t("modelList:status.fallback.loadKeysFailedFallback"),
+      )
+      expect(mockFetchDisplayAccountTokens).toHaveBeenCalledTimes(1)
+      expect(toastErrorMock).toHaveBeenCalledTimes(notifications)
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "modelList")
+    }
   })
 
-  it("shows a generic fallback-model error when the fallback catalog load fails without details", async () => {
+  it("retranslates fallback-model errors without retrying the catalog or dropping the selected key", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
@@ -5279,6 +5346,34 @@ describe("useModelData all-accounts loading", () => {
     expect(toastErrorMock).toHaveBeenCalledWith(
       "modelList:status.fallback.loadModelsFailedFallback",
     )
+    const notifications = toastErrorMock.mock.calls.length
+    const catalogRequests =
+      mockLoadAccountRuntimeKeyFallbackPricingResponse.mock.calls.length
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "modelList",
+      (await import("~/locales/zh-CN/modelList.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(result.current.accountFallback?.catalogLoadErrorMessage).toBe(
+        testI18n.t("modelList:status.fallback.loadModelsFailedFallback"),
+      )
+      expect(result.current.accountFallback?.selectedRuntimeKeyId).toBe(
+        "account_token:catalog-error-account:5",
+      )
+      expect(
+        mockLoadAccountRuntimeKeyFallbackPricingResponse,
+      ).toHaveBeenCalledTimes(catalogRequests)
+      expect(toastErrorMock).toHaveBeenCalledTimes(notifications)
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "modelList")
+    }
   })
 
   it("classifies fallback catalog structured failures without leaking details", async () => {
@@ -5478,7 +5573,7 @@ describe("useModelData all-accounts loading", () => {
     expect(mockFetchDisplayAccountTokens).not.toHaveBeenCalled()
   })
 
-  it("sanitizes profile load failures into a user-visible profile error", async () => {
+  it("retranslates profile load failures without repeating notifications or requests", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
     mockFetchApiCredentialModelIds.mockRejectedValue(new Error(""))
@@ -5515,5 +5610,27 @@ describe("useModelData all-accounts loading", () => {
     expect(toastErrorMock).toHaveBeenCalledWith(
       "modelList:status.profileLoadFailed",
     )
+    const fetchCount = mockFetchApiCredentialModelIds.mock.calls.length
+    const toastCount = toastErrorMock.mock.calls.length
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "modelList",
+      (await import("~/locales/zh-CN/modelList.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(result.current.loadErrorMessage).toBe(
+        testI18n.t("modelList:status.loadFailed"),
+      )
+      expect(mockFetchApiCredentialModelIds).toHaveBeenCalledTimes(fetchCount)
+      expect(toastErrorMock).toHaveBeenCalledTimes(toastCount)
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "modelList")
+    }
   })
 })

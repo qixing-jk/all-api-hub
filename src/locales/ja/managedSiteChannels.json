@@ -13,7 +13,6 @@
       "title": "チャネルを保存できません"
     },
     "loadError": {
-      "description": "{{error}}",
       "title": "チャネルを読み込めません"
     },
     "partialMutation": {
@@ -287,13 +286,9 @@
       "running": "移行中...",
       "start": "移行を開始"
     },
-    "alerts": {
-      "noTargets": {
-        "description": "チャネル移行を使う前に、設定で別の管理対象サイトを移行先として構成してください。"
-      }
-    },
     "betaBadge": "Beta",
     "blockedReasons": {
+      "sourceKeyExportRestricted": "移行元からのキーのエクスポートには、設定済みの Admin API Key では完了できないウェブ認証が必要です。移行元の管理画面でキーを取得し、このチャネルを手動で移行してください。",
       "sourceKeyMissing": "元チャネルのキーが取得できないため、このチャネルはまだ移行できません。",
       "sourceKeyResolutionFailed": "元チャネルのキーを読み込めませんでした。確認が完了した直後であれば、プレビューを更新して再試行してください。",
       "sourceTypeUnsupported": "この移行では元チャネルの種類がサポートされていません。対応するチャネルを選ぶか、手動で移行してください。",
@@ -318,6 +313,7 @@
       "dropsModelMapping": "モデルマッピング設定はコピーされません。",
       "dropsMultiKeyState": "マルチキーの実行状態はコピーされません。",
       "dropsStatusCodeMapping": "ステータスコードマッピング設定はコピーされません。",
+      "sub2apiDefaultGroup": "移行元のグループはコピーされません。移行先ではプラットフォームのデフォルトグループが存在する場合に使用されます。移行後にグループの割り当てを確認してください。",
       "targetForcesDefaultGroup": "移行先サイトではデフォルトグループに置き換えられます。",
       "targetIgnoresPriority": "移行先サイトでは元チャネルの優先度を保持しません。",
       "targetIgnoresWeight": "移行先サイトでは元チャネルの重みを保持しません。",
@@ -335,7 +331,6 @@
       },
       "loadFailed": "移行プレビューの読み込みに失敗しました: {{error}}",
       "loading": "移行プレビューを構築中...",
-      "selectedCount": "{{selectedCount}} 件のチャネルを選択中",
       "status": {
         "blocked": "ブロック済み",
         "ready": "移行可能"
@@ -365,6 +360,7 @@
       },
       "title": "移行結果"
     },
+    "sub2apiDefaultGroup": "プラットフォームのデフォルトグループ（存在する場合）",
     "target": {
       "destinationLabel": "移行先サイト",
       "label": "移行先",
@@ -415,15 +411,8 @@
   },
   "title": "チャネル管理",
   "toasts": {
-    "channelDeleted": "チャネルを削除しました",
     "channelSaved": "チャネルを保存しました",
-    "channelsDeleted_other": "{{count}} 個のチャネルを削除しました",
     "channelUpdated": "チャネルを更新しました",
-    "revealKeyFailed": "実際のチャネルキーの読み込みに失敗しました: {{error}}",
-    "revealKeyMasked": "チャネルキーはまだマスクされています",
-    "revealKeyUnavailable": "チャネルキーを取得できません",
-    "revealKeyUnsupported": "この管理対象サイトではチャネルキーを表示できません",
-    "someDeletesFailed_other": "{{count}} 個のチャネル削除に失敗しました: {{error}}",
     "syncCompleted": "モデル同期が完了しました ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "モデルは同期されました（{{success}}/{{total}}）が、チャネル一覧を更新できませんでした。更新してもう一度お試しください。",
     "syncFailed": "モデル同期に失敗しました: {{error}}",

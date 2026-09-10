@@ -196,7 +196,6 @@
     "site": {
       "checkedInToday": "本日はチェックイン済み、クリックして表示",
       "checkInStatusOutdated": "本日のチェックイン状態はまだ検出されていません（前回確認時刻: {{time}}）。クリックして更新",
-      "checkInStatusUnavailable": "チェックインには対応していますが、本日の状態は自動取得できません",
       "currentSite": "現在のサイト",
       "currentSiteExists": "現在のタブと同じサイトです",
       "disabled": "無効",

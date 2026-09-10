@@ -1,4 +1,5 @@
 import React from "react"
+import { useTranslation } from "react-i18next"
 
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 
@@ -11,7 +12,11 @@ export const ModelItemDescription: React.FC<ModelItemDescriptionProps> = ({
   model,
   isAvailableForUser,
 }) => {
-  if (!model.model_description) {
+  const { t, i18n } = useTranslation("modelList")
+  const description =
+    model.model_descriptions?.[i18n.language.startsWith("zh") ? "zh" : "en"] ||
+    model.model_description
+  if (!description) {
     return null
   }
 
@@ -28,9 +33,10 @@ export const ModelItemDescription: React.FC<ModelItemDescriptionProps> = ({
           WebkitLineClamp: 2,
           WebkitBoxOrient: "vertical",
         }}
-        title={model.model_description}
+        title={description}
       >
-        {model.model_description}
+        <span className="text-muted-foreground">{t("siteDescription")} </span>
+        {description}
       </p>
     </div>
   )

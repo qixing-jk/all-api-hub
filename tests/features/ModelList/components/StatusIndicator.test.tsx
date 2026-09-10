@@ -2,7 +2,7 @@ import { render as rtlRender, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactElement } from "react"
 import { I18nextProvider } from "react-i18next"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { StatusIndicator } from "~/features/ModelList/components/StatusIndicator"
@@ -53,6 +53,39 @@ function render(ui: ReactElement) {
 }
 
 describe("StatusIndicator", () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it("opens the known account pricing page when the returned format is incompatible", async () => {
+    const user = userEvent.setup()
+    const open = vi.spyOn(window, "open").mockReturnValue(null)
+    const account = {
+      ...ACCOUNT,
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://example.invalid/subpath",
+    }
+    const retry = vi.fn()
+    render(
+      <StatusIndicator
+        selectedSource={{ ...ACCOUNT_SOURCE, account }}
+        currentAccount={account}
+        isLoading={false}
+        dataFormatError
+        loadErrorMessage={null}
+        loadPricingData={retry}
+        accountFallback={null}
+        unsupportedSource={false}
+      />,
+    )
+    await user.click(
+      screen.getByRole("button", { name: "modelList:status.goToSitePricing" }),
+    )
+    expect(open).toHaveBeenCalledWith(
+      "https://example.invalid/subpath/pricing",
+      "_blank",
+      "noopener,noreferrer",
+    )
+    expect(retry).not.toHaveBeenCalled()
+  })
   beforeEach(() => {
     openSiteSupportRequestPageMock.mockReset()
     openSiteSupportRequestPageMock.mockResolvedValue(undefined)

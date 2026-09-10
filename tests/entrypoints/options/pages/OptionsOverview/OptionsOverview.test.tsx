@@ -68,6 +68,10 @@ vi.mock(
   }),
 )
 
+vi.mock("~/features/ProductTour", () => ({
+  ProductTourInvitation: () => <div data-testid="product-tour-invitation" />,
+}))
+
 const completeCoverage = {
   status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
   completeCount: 1,
@@ -554,6 +558,7 @@ describe("OptionsOverview", () => {
     expect(
       screen.queryByTestId("permission-onboarding"),
     ).not.toBeInTheDocument()
+    expect(screen.getByTestId("product-tour-invitation")).toBeInTheDocument()
 
     act(() => {
       window.history.replaceState(
@@ -567,6 +572,9 @@ describe("OptionsOverview", () => {
     expect(
       await screen.findByTestId("permission-onboarding"),
     ).toHaveTextContent("debug")
+    expect(
+      screen.queryByTestId("product-tour-invitation"),
+    ).not.toBeInTheDocument()
   })
 
   it("ignores permissions onboarding URL state outside the Overview route", () => {

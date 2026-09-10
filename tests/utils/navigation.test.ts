@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { resolveAccountSiteRouteUrl } from "~/services/accounts/utils/siteRouteResolver"
 import { isExtensionPopup } from "~/utils/browser"
 import {
   createTab as createTabApi,
@@ -30,7 +31,6 @@ import {
   openFullBookmarkManagerPage,
   openKeysPage,
   openLanguageRequestPage,
-  openManagedSiteChannelsForChannel,
   openManagedSiteChannelsPage,
   openManagedSiteModelSyncForChannel,
   openManagedSiteModelSyncPage,
@@ -39,6 +39,7 @@ import {
   openOptionsPage,
   openOrFocusOptionsPage,
   openPermissionsOnboardingPage,
+  openProtectionBypassHistory,
   openRedeemPage,
   openSettingsPage,
   openSettingsTab,
@@ -51,6 +52,7 @@ import {
   replaceWithinOptionsPage,
 } from "~/utils/navigation"
 import { getSiteSupportRequestUrl } from "~/utils/navigation/feedbackLinks"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 const OPTIONS_PAGE_URL = "http://localhost:3000/options.html"
 
@@ -140,6 +142,40 @@ const getMockedRouteResolver = async () => {
 }
 
 describe("navigation utilities", () => {
+  it("counts unsupported check-in pages without opening empty tabs or blocking other accounts", async () => {
+    vi.mocked(resolveAccountSiteRouteUrl)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce("https://example.com/check")
+    mockedCreateTab.mockResolvedValueOnce({ id: 10 } as any)
+    const result = await openCheckInPages([
+      { baseUrl: "https://unsupported.example", siteType: "sharedchat" } as any,
+      { baseUrl: "https://example.com", siteType: "new-api" } as any,
+    ])
+    expect(result).toEqual({ openedCount: 1, failedCount: 1 })
+    expect(mockedCreateTab).toHaveBeenCalledTimes(1)
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      "https://example.com/check",
+      true,
+    )
+  })
+  it("does not open an unsupported redemption page, but honors a custom URL", async () => {
+    const account = {
+      baseUrl: "https://example.com",
+      siteType: "sharedchat",
+    } as any
+    vi.mocked(resolveAccountSiteRouteUrl).mockResolvedValueOnce(null)
+    await openRedeemPage(account)
+    expect(mockedCreateTab).not.toHaveBeenCalled()
+
+    await openRedeemPage({
+      ...account,
+      checkIn: { customCheckIn: { redeemUrl: "https://example.com/custom" } },
+    })
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      "https://example.com/custom",
+      true,
+    )
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     mockedHasWindowsAPI.mockReturnValue(false)
@@ -790,15 +826,17 @@ describe("navigation utilities", () => {
     await openPermissionsOnboardingPage({ reason: "debug" })
     await openApiCredentialProfilesPage()
     await openManagedSiteChannelsPage({
-      channelId: 42,
+      resourceRef: modelResourceRef(42),
       search: "relay",
     })
-    await openManagedSiteChannelsForChannel(77)
+    await openManagedSiteChannelsPage({ resourceRef: modelResourceRef(77) })
     await openManagedSiteModelSyncPage({
-      channelId: 99,
+      resourceRef: modelResourceRef(99),
       tab: "history",
     })
-    await openManagedSiteModelSyncForChannel(100)
+    await openManagedSiteModelSyncForChannel(
+      modelResourceRef("provider/key:100"),
+    )
 
     expect(mockedCreateTab).toHaveBeenCalledWith(
       `${OPTIONS_PAGE_URL}#account`,
@@ -840,19 +878,19 @@ describe("navigation utilities", () => {
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      `${OPTIONS_PAGE_URL}?channelId=42&search=relay#managedSiteChannels`,
+      `${OPTIONS_PAGE_URL}?${new URLSearchParams({ search: "relay", resourceRef: JSON.stringify(modelResourceRef(42)) })}#managedSiteChannels`,
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      `${OPTIONS_PAGE_URL}?channelId=77#managedSiteChannels`,
+      `${OPTIONS_PAGE_URL}?${new URLSearchParams({ resourceRef: JSON.stringify(modelResourceRef(77)) })}#managedSiteChannels`,
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      `${OPTIONS_PAGE_URL}?channelId=99&tab=history#managedSiteModelSync`,
+      `${OPTIONS_PAGE_URL}?${new URLSearchParams({ resourceRef: JSON.stringify(modelResourceRef(99)), tab: "history" })}#managedSiteModelSync`,
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      `${OPTIONS_PAGE_URL}?channelId=100&tab=manual#managedSiteModelSync`,
+      `${OPTIONS_PAGE_URL}?${new URLSearchParams({ resourceRef: JSON.stringify(modelResourceRef("provider/key:100")), tab: "manual" })}#managedSiteModelSync`,
       true,
     )
   })
@@ -912,13 +950,57 @@ describe("navigation utilities", () => {
     )
   })
 
+  it("preserves an opaque channel identity and clears stale filters in an existing options tab", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      `${OPTIONS_PAGE_URL}?search=old&channelId=8#managedSiteChannels`,
+    )
+
+    const resourceRef = modelResourceRef("native/42+=&中")
+    await openManagedSiteChannelsPage({ resourceRef })
+
+    const params = new URL(window.location.href).searchParams
+    expect(JSON.parse(params.get("resourceRef")!)).toEqual(resourceRef)
+    expect(params.has("channelId")).toBe(false)
+    expect(params.has("search")).toBe(false)
+    expect(window.location.hash).toBe("#managedSiteChannels")
+    expect(mockedCreateTab).not.toHaveBeenCalled()
+  })
+
+  it("keeps channels with the same id in different deployments as distinct deep links", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      `${OPTIONS_PAGE_URL}#managedSiteChannels`,
+    )
+    const firstRef = modelResourceRef(42, { scopeKey: "https://first.example" })
+    const secondRef = modelResourceRef(42, {
+      scopeKey: "https://second.example",
+    })
+
+    await openManagedSiteChannelsPage({ resourceRef: firstRef })
+    const firstUrl = new URL(window.location.href)
+    await openManagedSiteChannelsPage({ resourceRef: secondRef })
+    const secondUrl = new URL(window.location.href)
+
+    expect(JSON.parse(firstUrl.searchParams.get("resourceRef")!)).toEqual(
+      firstRef,
+    )
+    expect(JSON.parse(secondUrl.searchParams.get("resourceRef")!)).toEqual(
+      secondRef,
+    )
+    expect(firstUrl.href).not.toBe(secondUrl.href)
+    expect(secondUrl.searchParams.has("channelId")).toBe(false)
+  })
+
   it("preserves options-page history for account and managed-site drill-down navigation", async () => {
     window.history.replaceState(null, "", `${OPTIONS_PAGE_URL}#autoCheckin`)
     const pushStateSpy = vi.spyOn(window.history, "pushState")
     const replaceStateSpy = vi.spyOn(window.history, "replaceState")
 
     await openAccountManagerWithSearch("alpha")
-    await openManagedSiteChannelsForChannel(77)
+    await openManagedSiteChannelsPage({ resourceRef: modelResourceRef(77) })
 
     expect(mockedCreateTab).not.toHaveBeenCalled()
     expect(pushStateSpy).toHaveBeenNthCalledWith(
@@ -931,7 +1013,7 @@ describe("navigation utilities", () => {
       2,
       null,
       "",
-      `${OPTIONS_PAGE_URL}?channelId=77#managedSiteChannels`,
+      `${OPTIONS_PAGE_URL}?${new URLSearchParams({ resourceRef: JSON.stringify(modelResourceRef(77)) })}#managedSiteChannels`,
     )
     expect(replaceStateSpy).not.toHaveBeenCalled()
 
@@ -1023,6 +1105,54 @@ describe("navigation utilities", () => {
       true,
     )
     expect(window.location.href).toBe(`${OPTIONS_PAGE_URL}#keyManagement`)
+  })
+
+  it("opens shield history in the current options page and keeps a return path", async () => {
+    mockedIsExtensionPopup.mockReturnValue(false)
+    window.history.replaceState(null, "", `${OPTIONS_PAGE_URL}#autoCheckin`)
+    const pushStateSpy = vi.spyOn(window.history, "pushState")
+    const locationChanged = vi.fn()
+    window.addEventListener("hashchange", locationChanged)
+
+    try {
+      await openProtectionBypassHistory()
+
+      expect(window.location.href).toBe(
+        `${OPTIONS_PAGE_URL}?tab=refresh&anchor=shield-history#basic`,
+      )
+      expect(pushStateSpy).toHaveBeenCalledTimes(1)
+      expect(mockedCreateTab).not.toHaveBeenCalled()
+
+      await openProtectionBypassHistory()
+
+      expect(locationChanged).toHaveBeenCalledTimes(2)
+      expect(pushStateSpy).toHaveBeenCalledTimes(1)
+    } finally {
+      window.removeEventListener("hashchange", locationChanged)
+      pushStateSpy.mockRestore()
+    }
+  })
+
+  it.each([
+    { surface: "popup", closesPopup: true },
+    { surface: "sidepanel", closesPopup: false },
+  ])("opens shield history from $surface", async ({ surface, closesPopup }) => {
+    window.history.replaceState(null, "", `/${surface}.html`)
+    mockedIsExtensionPopup.mockReturnValue(closesPopup)
+    const closeSpy = vi.spyOn(window, "close").mockImplementation(() => {})
+
+    try {
+      await openProtectionBypassHistory()
+
+      expect(mockedCreateTab).toHaveBeenCalledWith(
+        `${OPTIONS_PAGE_URL}?tab=refresh&anchor=shield-history#basic`,
+        true,
+      )
+      expect(closeSpy).toHaveBeenCalledTimes(closesPopup ? 1 : 0)
+    } finally {
+      closeSpy.mockRestore()
+      mockedIsExtensionPopup.mockReturnValue(false)
+    }
   })
 
   it("opens permissions onboarding in-place when already on the options page", async () => {

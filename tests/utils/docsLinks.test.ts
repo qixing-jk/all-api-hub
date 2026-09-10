@@ -1,5 +1,8 @@
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 
+import { ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS } from "~/services/accountSiteDefinitions"
 import { getChangelogAnchorId } from "~/utils/navigation/changelogAnchor"
 import {
   getDocsAutoDetectUrl,
@@ -8,6 +11,7 @@ import {
   getDocsCommunityUrl,
   getDocsGetStartedUrl,
   getDocsHomepageUrl,
+  getDocsManualAddGuideUrl,
   getDocsPageUrl,
   getDocsTaskNotificationsDingtalkUrl,
   getDocsTaskNotificationsNtfyUrl,
@@ -88,5 +92,30 @@ describe("docsLinks", () => {
     expect(url.endsWith("#dingtalk")).toBe(true)
     expect(ntfyUrl).toContain("/en/task-notifications")
     expect(ntfyUrl.endsWith("#ntfy")).toBe(true)
+  })
+
+  it("builds locale-aware manual account guide urls", () => {
+    expect(getDocsManualAddGuideUrl("manual-new-api", "en")).toContain(
+      "/en/add-account#manual-new-api",
+    )
+    expect(getDocsManualAddGuideUrl("manual-openrouter", "zh-CN")).toContain(
+      "/add-account#manual-openrouter",
+    )
+  })
+
+  it("keeps every registered manual-add anchor in published docs sources", () => {
+    const docsSources = [
+      "docs/docs/add-account.md",
+      "docs/docs/en/add-account.md",
+      "docs/docs/ja/add-account.md",
+    ].map((relativePath) =>
+      readFileSync(resolve(process.cwd(), relativePath), "utf8"),
+    )
+
+    for (const anchor of Object.values(ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS)) {
+      for (const source of docsSources) {
+        expect(source).toContain(`<a id="${anchor}"></a>`)
+      }
+    }
   })
 })

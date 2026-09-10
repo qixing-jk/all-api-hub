@@ -8,8 +8,10 @@ const { fetchApiMock, loggerErrorMock } = vi.hoisted(() => ({
   loggerErrorMock: vi.fn(),
 }))
 
-vi.mock("~/services/apiTransport/request", () => ({
-  fetchApi: fetchApiMock,
+vi.mock("~/services/apiService/newApiFamily/request", () => ({
+  newApiFamilyRequests: {
+    payload: fetchApiMock,
+  },
 }))
 
 vi.mock("~/utils/core/logger", () => ({
@@ -61,11 +63,9 @@ describe("newApiFamily modelPricing", () => {
       nativePricingResponse,
     )
 
-    expect(fetchApiMock).toHaveBeenCalledWith(
-      request,
-      { endpoint: "/api/pricing" },
-      true,
-    )
+    expect(fetchApiMock).toHaveBeenCalledWith(request, {
+      endpoint: "/api/pricing",
+    })
   })
 
   it("rethrows pricing endpoint failures", async () => {

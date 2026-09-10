@@ -26,6 +26,7 @@ import {
   PROTECTION_BYPASS_EXECUTION_VERSION,
   PROTECTION_BYPASS_USER_COMMAND_FEATURES,
   TEMP_CONTEXT_TASK_KINDS,
+  type AuthorizedTempContextOutcome,
   type ProtectionBypassExecuteRequest,
   type ProtectionBypassExecutionResolutionFailure,
   type ProtectionBypassSurface,
@@ -33,6 +34,7 @@ import {
   type TempContextTask,
   type TempContextTaskResult,
 } from "~/services/protectionBypass/contracts"
+import { protectionBypassHistoryStorage } from "~/services/protectionBypass/historyStorage"
 import {
   evaluateProtectionBypassPolicy,
   type ProtectionBypassCapability,
@@ -49,7 +51,6 @@ import {
 } from "./protectionBypassResourceValidation"
 import {
   executeAuthorizedTempContextTask,
-  type AuthorizedTempContextOutcome,
   type AuthorizeTempContextAtAcquire,
 } from "./tempWindowPool"
 
@@ -199,6 +200,16 @@ export function createProtectionBypassCoordinator({
         ) as TempContextTaskResult<TTask>
       }
 
+      let historyId: string | undefined
+      try {
+        historyId = await protectionBypassHistoryStorage.start({
+          execution: { ...request.execution },
+          task: authorizedTask,
+        })
+      } catch {
+        // Local diagnostics must never prevent a protected operation.
+      }
+
       if (
         !isProtectionBypassTaskPermitted(
           resolvedExecution.feature,
@@ -223,16 +234,34 @@ export function createProtectionBypassCoordinator({
         } catch {
           // Dependency failures may also throw before returning a promise.
         }
-        return buildTaskFailure(
+        const response = buildTaskFailure(
           authorizedTask,
           API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
         ) as TempContextTaskResult<TTask>
+        if (historyId) {
+          try {
+            await protectionBypassHistoryStorage.finish(historyId, {
+              decision: {
+                kind: "denied",
+                reason: PROTECTION_BYPASS_DENIED_REASONS.TaskNotPermitted,
+                ...getTempContextTaskMetadata(authorizedTask),
+                feature: resolvedExecution.feature,
+                surface: resolvedExecution.surface,
+              },
+              response,
+            })
+          } catch {
+            // History failures cannot change a policy denial.
+          }
+        }
+        return response
       }
 
       let finalDecision:
         | ReturnType<typeof evaluateProtectionBypassPolicy>
         | undefined
       let hasRecordedDecision = false
+      let historyContext: AuthorizedTempContextOutcome | undefined
 
       const authorizeAtAcquire: AuthorizeTempContextAtAcquire = async () => {
         let policy: ProtectionBypassPolicyState
@@ -271,6 +300,7 @@ export function createProtectionBypassCoordinator({
       }
 
       const reportOutcome = (outcome: AuthorizedTempContextOutcome) => {
+        historyContext = outcome
         if (hasRecordedDecision || !finalDecision) return
         hasRecordedDecision = true
         const summary: ProtectionBypassDecisionSummary = {
@@ -309,34 +339,58 @@ export function createProtectionBypassCoordinator({
         }
       }
 
-      return await new Promise<TempContextTaskResult<TTask>>(
-        (resolve, reject) => {
-          let responded = false
-          const sendResponse = (response?: unknown) => {
-            if (responded) return
-            responded = true
-            if (response === undefined) {
-              reject(new Error("Protected task handler returned no response"))
-              return
+      let historyResponse: unknown
+      let hasExecutionError = false
+      try {
+        const response = await new Promise<TempContextTaskResult<TTask>>(
+          (resolve, reject) => {
+            let responded = false
+            const sendResponse = (response?: unknown) => {
+              if (responded) return
+              responded = true
+              if (response === undefined) {
+                reject(new Error("Protected task handler returned no response"))
+                return
+              }
+              resolve(response as TempContextTaskResult<TTask>)
             }
-            resolve(response as TempContextTaskResult<TTask>)
-          }
 
-          void executeAuthorizedTask(
-            authorizedTask,
-            resolvedExecution.surface,
-            authorizeAtAcquire,
-            sendResponse,
-            reportOutcome,
-          ).then(() => {
-            if (!responded) {
-              reject(
-                new Error("Protected task handler completed without response"),
-              )
-            }
-          }, reject)
-        },
-      )
+            void executeAuthorizedTask(
+              authorizedTask,
+              resolvedExecution.surface,
+              authorizeAtAcquire,
+              sendResponse,
+              reportOutcome,
+            ).then(() => {
+              if (!responded) {
+                reject(
+                  new Error(
+                    "Protected task handler completed without response",
+                  ),
+                )
+              }
+            }, reject)
+          },
+        )
+        historyResponse = response
+        return response
+      } catch (error) {
+        hasExecutionError = true
+        throw error
+      } finally {
+        if (historyId) {
+          try {
+            await protectionBypassHistoryStorage.finish(historyId, {
+              decision: finalDecision,
+              context: historyContext,
+              response: historyResponse,
+              hasError: hasExecutionError,
+            })
+          } catch {
+            // Persist before replying when possible, without changing the result.
+          }
+        }
+      }
     },
   }
 }
