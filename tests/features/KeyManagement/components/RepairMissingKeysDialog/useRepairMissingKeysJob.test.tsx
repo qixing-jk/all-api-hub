@@ -285,9 +285,81 @@ describe("useRepairMissingKeysJob", () => {
           {} as never,
           vi.fn(),
         )
+      })
+      await act(async () => {
         resolveLoad({ success: true, data: buildProgress({ updatedAt: 10 }) })
       })
       expect(result.current.progress).toEqual(completed)
+      if (messageType === AccountKeyRepairMessageTypes.Start) {
+        expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledTimes(
+          1,
+        )
+      }
+    },
+  )
+
+  it.each(["start", "reopen"])(
+    "accepts the current job after clock rollback on %s and ignores the old job afterwards",
+    async (source) => {
+      const previous = buildProgress({
+        jobId: "previous",
+        startedAt: 1000,
+        updatedAt: 1001,
+        state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
+      })
+      sendAccountKeyRepairMessageMock.mockResolvedValueOnce({
+        success: true,
+        data: previous,
+      })
+      const { result, rerender } = renderHook(
+        ({ isOpen }) =>
+          useRepairMissingKeysJob({
+            accounts: [buildAccount()],
+            isOpen,
+            startOnOpen: false,
+            t: testI18n.t,
+          }),
+        { initialProps: { isOpen: true } },
+      )
+      await waitFor(() => expect(result.current.progress).toEqual(previous))
+      const clock = vi.spyOn(Date, "now").mockReturnValue(500)
+      try {
+        const next = buildProgress({
+          jobId: "next",
+          startedAt: Date.now(),
+          updatedAt: Date.now(),
+        })
+        sendAccountKeyRepairMessageMock.mockResolvedValue({
+          success: true,
+          data: next,
+        })
+        if (source === "start") {
+          await act(async () => {
+            await result.current.handleStartAudit()
+          })
+        } else {
+          rerender({ isOpen: false })
+          await act(async () => {
+            rerender({ isOpen: true })
+          })
+        }
+        expect(result.current.progress).toEqual(next)
+        act(() => {
+          result.current.setProgress(previous)
+        })
+        expect(result.current.progress).toEqual(next)
+        const completed = {
+          ...next,
+          updatedAt: 501,
+          state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
+        }
+        act(() => {
+          result.current.setProgress(completed)
+        })
+        expect(result.current.progress).toEqual(completed)
+      } finally {
+        clock.mockRestore()
+      }
     },
   )
 

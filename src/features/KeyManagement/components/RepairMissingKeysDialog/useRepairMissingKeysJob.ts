@@ -136,7 +136,9 @@ export function useRepairMissingKeysJob({
   )
   const [isStarting, setIsStarting] = useState(false)
   const [isCancelling, setIsCancelling] = useState(false)
-  const startedAnalyticsJobIdRef = useRef<string | null>(null)
+  const [startedAnalyticsJobId, setStartedAnalyticsJobId] = useState<
+    string | null
+  >(null)
   const completedAnalyticsJobIdRef = useRef<string | null>(null)
   const cancelInFlightRef = useRef(false)
   const progressRef = useRef<AccountKeyRepairProgress | null>(null)
@@ -147,9 +149,13 @@ export function useRepairMissingKeysJob({
   const startRequestIdRef = useRef(0)
   const progressRevisionRef = useRef(0)
   const progressReadInFlightRef = useRef<object | null>(null)
+  const supersededJobIdsRef = useRef(new Set<string>())
 
-  const setProgress = useCallback(
-    (update: SetStateAction<AccountKeyRepairProgress | null>) => {
+  const applyProgress = useCallback(
+    (
+      update: SetStateAction<AccountKeyRepairProgress | null>,
+      authoritative = false,
+    ) => {
       const current = progressRef.current
       const next = typeof update === "function" ? update(current) : update
       if (next && current?.jobId === next.jobId) {
@@ -164,18 +170,32 @@ export function useRepairMissingKeysJob({
         ) {
           return
         }
-      } else if (
-        current?.startedAt !== undefined &&
-        next?.startedAt !== undefined &&
-        current.startedAt > next.startedAt
-      ) {
-        return
+      } else if (next && current) {
+        if (
+          !authoritative &&
+          (supersededJobIdsRef.current.has(next.jobId) ||
+            (current.startedAt !== undefined &&
+              next.startedAt !== undefined &&
+              current.startedAt > next.startedAt))
+        ) {
+          return
+        }
+        // A current response can establish a job despite clock rollback. Remember
+        // the replaced identity so delayed broadcasts cannot restore that job.
+        supersededJobIdsRef.current.add(current.jobId)
+        supersededJobIdsRef.current.delete(next.jobId)
       }
       progressRef.current = next
       progressRevisionRef.current += 1
       setProgressState(next)
     },
     [],
+  )
+
+  const setProgress = useCallback(
+    (update: SetStateAction<AccountKeyRepairProgress | null>) =>
+      applyProgress(update),
+    [applyProgress],
   )
 
   const readProgress = useCallback(
@@ -192,7 +212,7 @@ export function useRepairMissingKeysJob({
         )
         if (isStale()) return
         if (response?.success && response.data) {
-          setProgress(response.data)
+          applyProgress(response.data, true)
           setFailure((current) => (current === "load" ? null : current))
         } else {
           setFailure("load")
@@ -205,7 +225,7 @@ export function useRepairMissingKeysJob({
         }
       }
     },
-    [setProgress],
+    [applyProgress],
   )
 
   isDialogOpenRef.current = isOpen
@@ -251,7 +271,7 @@ export function useRepairMissingKeysJob({
         },
       )
       if (response?.success && response.data) {
-        startedAnalyticsJobIdRef.current = response.data.jobId
+        setStartedAnalyticsJobId(response.data.jobId)
         void trackProductAnalyticsActionStarted(
           repairMissingKeysAnalyticsContext,
         )
@@ -259,7 +279,7 @@ export function useRepairMissingKeysJob({
           isDialogOpenRef.current &&
           startRequestIdRef.current === requestId
         ) {
-          setProgress(response.data)
+          applyProgress(response.data, true)
         }
         return
       }
@@ -275,7 +295,7 @@ export function useRepairMissingKeysJob({
         }
       }
     }
-  }, [renameAutoTemplateTokens, setProgress])
+  }, [renameAutoTemplateTokens, applyProgress])
 
   const handleCancelAudit = useCallback(async () => {
     if (cancelInFlightRef.current) {
@@ -340,7 +360,7 @@ export function useRepairMissingKeysJob({
 
   useEffect(() => {
     if (!isOpen) {
-      startedAnalyticsJobIdRef.current = null
+      setStartedAnalyticsJobId(null)
       completedAnalyticsJobIdRef.current = null
     }
   }, [isOpen])
@@ -412,7 +432,7 @@ export function useRepairMissingKeysJob({
     ) {
       return
     }
-    if (startedAnalyticsJobIdRef.current !== progress.jobId) return
+    if (startedAnalyticsJobId !== progress.jobId) return
     if (completedAnalyticsJobIdRef.current === progress.jobId) return
 
     completedAnalyticsJobIdRef.current = progress.jobId
@@ -428,7 +448,7 @@ export function useRepairMissingKeysJob({
         statusKind: getRepairProgressStatusKind(progress),
       },
     })
-  }, [progress])
+  }, [progress, startedAnalyticsJobId])
 
   return {
     error:
