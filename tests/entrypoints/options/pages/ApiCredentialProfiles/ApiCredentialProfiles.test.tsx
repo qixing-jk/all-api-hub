@@ -167,8 +167,8 @@ type ApiCredentialProfilesContextValue = Pick<
   | "currencyType"
   | "claudeCodeRouterBaseUrl"
   | "claudeCodeRouterApiKey"
-  | "cliProxyBaseUrl"
-  | "cliProxyManagementKey"
+  | "cliProxyApiBaseUrl"
+  | "cliProxyApiManagementKey"
 >
 
 const createManagedSitePreferences = (
@@ -194,8 +194,8 @@ const createApiCredentialProfilesContextValue = (
     currencyType: preferences.currencyType,
     claudeCodeRouterBaseUrl: preferences.claudeCodeRouter?.baseUrl ?? "",
     claudeCodeRouterApiKey: preferences.claudeCodeRouter?.apiKey ?? "",
-    cliProxyBaseUrl: preferences.cliProxy?.baseUrl ?? "",
-    cliProxyManagementKey: preferences.cliProxy?.managementKey ?? "",
+    cliProxyApiBaseUrl: preferences.cliProxyApi?.baseUrl ?? "",
+    cliProxyApiManagementKey: preferences.cliProxyApi?.adminToken ?? "",
   }) satisfies ApiCredentialProfilesContextValue
 
 const seedActiveAssociation = () => {

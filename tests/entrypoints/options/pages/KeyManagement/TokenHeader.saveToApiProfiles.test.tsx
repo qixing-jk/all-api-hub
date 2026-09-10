@@ -225,8 +225,8 @@ describe("TokenHeader save to API profiles", () => {
       managedSiteType: "new-api",
       claudeCodeRouterBaseUrl: "",
       claudeCodeRouterApiKey: "",
-      cliProxyBaseUrl: "",
-      cliProxyManagementKey: "",
+      cliProxyApiBaseUrl: "",
+      cliProxyApiManagementKey: "",
     })
   })
 
@@ -535,8 +535,8 @@ describe("TokenHeader save to API profiles", () => {
       managedSiteType: "Veloera",
       claudeCodeRouterBaseUrl: "",
       claudeCodeRouterApiKey: "",
-      cliProxyBaseUrl: "",
-      cliProxyManagementKey: "",
+      cliProxyApiBaseUrl: "",
+      cliProxyApiManagementKey: "",
     })
 
     const account = createAccountStub()

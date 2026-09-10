@@ -128,6 +128,7 @@ const siteTypeImportOwners = [
   "src/features/AccountManagement/components/AccountDialog/AccessTokenVerificationGuide.tsx", // Provider authentication instructions.
   "src/features/AccountManagement/components/AccountDialog/AccountForm.tsx", // OpenRouter management-key onboarding UI.
   "src/features/AccountManagement/components/AccountDialog/hooks/useOpenRouterAccountOnboarding.ts", // Provider-owned onboarding lifecycle.
+  "src/features/BasicSettings/components/tabs/ManagedSite/CliProxyApi.search.ts", // CLIProxyAPI settings search.
   "src/features/BasicSettings/components/tabs/ManagedSite/ManagedSite*.search.ts", // Search entries for provider-specific settings.
   "src/features/ManagedSiteChannels/presentation/managedResourceMigrationPresentation.ts", // Provider-specific migration labels.
   "src/features/ModelList/aihubmixModelList.ts", // Provider catalog presentation.

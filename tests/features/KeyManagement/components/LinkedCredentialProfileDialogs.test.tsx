@@ -15,8 +15,8 @@ vi.mock("~/components/ClaudeCodeRouterImportDialog", () => ({
   ),
 }))
 
-vi.mock("~/components/CliProxyExportDialog", () => ({
-  CliProxyExportDialog: () => <div data-testid="cli-proxy-dialog" />,
+vi.mock("~/components/CliProxyApiExportDialog", () => ({
+  CliProxyApiExportDialog: () => <div data-testid="cli-proxy-dialog" />,
 }))
 
 vi.mock("~/components/CursorPlusExportDialog", () => ({
@@ -66,7 +66,7 @@ const buildController = (
     activeDialog,
     claudeCodeRouterApiKey: "",
     claudeCodeRouterBaseUrl: "",
-    cliProxyPayload: { account: {}, token: {} },
+    cliProxyApiPayload: { account: {}, token: {} },
     closeDialog: vi.fn(),
     exportAccount: {},
     exportRuntimeKey: {},
@@ -78,7 +78,6 @@ const activeDialogCases = [
   ["cursor-plus", "cursor-plus-dialog"],
   ["kilo-code", "kilo-code-dialog"],
   ["kelivo", "kelivo-dialog"],
-  ["cli-proxy", "cli-proxy-dialog"],
   ["claude-code-router", "claude-code-router-dialog"],
   ["verify-api", "verify-api-dialog"],
   ["verify-cli", "verify-cli-dialog"],

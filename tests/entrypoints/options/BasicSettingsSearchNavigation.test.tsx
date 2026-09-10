@@ -89,7 +89,7 @@ vi.mock(
 )
 
 vi.mock(
-  "~/features/BasicSettings/components/tabs/CliProxy/CliProxyTab",
+  "~/features/BasicSettings/components/tabs/CliProxyApi/CliProxyApiTab",
   () => ({
     default: () => <div>cli proxy</div>,
   }),

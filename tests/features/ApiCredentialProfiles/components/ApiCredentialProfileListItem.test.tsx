@@ -55,8 +55,8 @@ vi.mock("~/components/icons/ClaudeCodeRouterIcon", () => ({
   ClaudeCodeRouterIcon: () => <span data-testid="claude-code-router-icon" />,
 }))
 
-vi.mock("~/components/icons/CliProxyIcon", () => ({
-  CliProxyIcon: () => <span data-testid="cli-proxy-icon" />,
+vi.mock("~/components/icons/CliProxyApiIcon", () => ({
+  CliProxyApiIcon: () => <span data-testid="cli-proxy-icon" />,
 }))
 
 vi.mock("~/components/icons/KiloCodeIcon", () => ({
@@ -533,11 +533,6 @@ describe("ApiCredentialProfileListItem", () => {
     )
     await user.click(
       screen.getByRole("button", {
-        name: "keyManagement:actions.importToCliProxy",
-      }),
-    )
-    await user.click(
-      screen.getByRole("button", {
         name: "keyManagement:actions.importToClaudeCodeRouter",
       }),
     )
@@ -549,7 +544,6 @@ describe("ApiCredentialProfileListItem", () => {
 
     expect(onCopyBundle).toHaveBeenCalledWith(profile)
     expect(onExport).toHaveBeenCalledWith(profile, "cherryStudio")
-    expect(onExport).toHaveBeenCalledWith(profile, "cliProxy")
     expect(onExport).toHaveBeenCalledWith(profile, "claudeCodeRouter")
     expect(onVerify).toHaveBeenCalledWith(profile)
   })

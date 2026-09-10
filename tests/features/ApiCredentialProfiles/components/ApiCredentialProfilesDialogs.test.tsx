@@ -49,8 +49,8 @@ vi.mock("~/components/CCSwitchExportDialog", () => ({
 vi.mock("~/components/ClaudeCodeRouterImportDialog", () => ({
   ClaudeCodeRouterImportDialog: () => null,
 }))
-vi.mock("~/components/CliProxyExportDialog", () => ({
-  CliProxyExportDialog: () => null,
+vi.mock("~/components/CliProxyApiExportDialog", () => ({
+  CliProxyApiExportDialog: () => null,
 }))
 vi.mock("~/components/dialogs/VerifyCliSupportDialog", () => ({
   VerifyCliSupportDialog: () => null,
@@ -101,7 +101,7 @@ it("passes Kelivo profile analytics and clears the profile on close", async () =
     kiloCodeProfile: null,
     kelivoProfile,
     setKelivoProfile,
-    cliProxyProfile: null,
+    cliProxyApiProfile: null,
     claudeCodeRouterProfile: null,
     deletingProfile: null,
   } as unknown as ApiCredentialProfilesController
@@ -162,7 +162,7 @@ it("adapts a profile for Cursor++ export and clears it on close", async () => {
     setCursorPlusProfile,
     kiloCodeProfile: null,
     kelivoProfile: null,
-    cliProxyProfile: null,
+    cliProxyApiProfile: null,
     claudeCodeRouterProfile: null,
     deletingProfile: null,
   } as unknown as ApiCredentialProfilesController

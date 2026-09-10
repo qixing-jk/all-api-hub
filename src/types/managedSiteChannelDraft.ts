@@ -1,8 +1,11 @@
+import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
+
 /** Resolved credential values needed to prepare a managed-resource import. */
 export interface ManagedSiteChannelDraftSource {
   name: string
   baseUrl: string
   apiKey: string
+  apiType?: ApiVerificationApiType
   /** Existing source model hints; each destination decides whether to use them. */
   modelHints: readonly string[]
 }

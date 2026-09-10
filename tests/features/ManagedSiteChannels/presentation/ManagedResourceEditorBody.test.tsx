@@ -87,6 +87,48 @@ const resourceI18n = await createResourceTestI18n({
 })
 const t = resourceI18n.getFixedT("en")
 
+it.each(["create", "edit"] as const)(
+  "renders the CLIProxyAPI credential input in %s mode",
+  async (mode) => {
+    const policy = getManagedResourceFieldPolicy(
+      SITE_TYPES.CLI_PROXY_API,
+      MANAGED_RESOURCE_KINDS.Channel,
+      mode,
+    )!
+    const onValueChange = vi.fn()
+    render(
+      <ManagedResourceEditorBody
+        t={t}
+        mode={mode}
+        descriptors={[
+          {
+            fieldId: "key",
+            type: "secret",
+            required: true,
+            canReplace: true,
+            canLoadSecret: false,
+            allowClear: false,
+            secretState: "unavailable",
+          },
+        ]}
+        policy={{
+          fields: policy.fields.filter(({ fieldId }) => fieldId === "key"),
+          hiddenFields: [],
+        }}
+        values={{ key: { kind: "replace", value: "" } }}
+        onValueChange={onValueChange}
+      />,
+    )
+    const input = screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput)
+    expect(input).toBeVisible()
+    await userEvent.setup().type(input, "x")
+    expect(onValueChange).toHaveBeenCalledWith("key", {
+      kind: "replace",
+      value: "x",
+    })
+  },
+)
+
 describe("managed resource dynamic model options", () => {
   it("reuses the shared manual loader in the channel-specific models control", async () => {
     const user = userEvent.setup()

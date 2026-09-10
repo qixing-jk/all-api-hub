@@ -18,7 +18,6 @@
     "exportToKiloCode": "匯出 Kilo Code 設定",
     "hideKey": "隱藏金鑰",
     "importToClaudeCodeRouter": "匯入到 Claude Code Router",
-    "importToCliProxy": "匯入到 CLIProxyAPI",
     "importToManagedSite": "匯入到 {{site}}",
     "openApiProfiles": "開啟 API 憑據庫",
     "openSelectedAccountModels": "查看帳號模型",
@@ -45,22 +44,6 @@
     "actions": {
       "open": "儲存到 API 憑據庫（{{selectedCount}}）"
     }
-  },
-  "batchCliProxyExport": {
-    "actions": {
-      "open": "批次匯入到 CLIProxyAPI（{{selectedCount}}）",
-      "running": "正在匯入...",
-      "start": "開始匯入"
-    },
-    "description": "將 {{selectedCount}} 個已選金鑰依同一 Provider 規則匯入到 CLIProxyAPI。",
-    "results": {
-      "failed": "失敗",
-      "pending": "待匯入",
-      "running": "匯入中",
-      "success": "成功"
-    },
-    "summary": "共 {{total}} 個，成功 {{success}} 個，失敗 {{failed}} 個。",
-    "title": "批次匯入到 CLIProxyAPI"
   },
   "batchManagedSiteExport": {
     "actions": {

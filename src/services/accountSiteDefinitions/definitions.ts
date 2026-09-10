@@ -7,6 +7,10 @@ import {
   CLAUDE_CODE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/claudeCodeHubManagedResource"
 import {
+  CLI_PROXY_API_DETAIL_FIELDS,
+  CLI_PROXY_API_TABLE_FIELDS,
+} from "~/constants/cliProxyApi"
+import {
   DONE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
   DONE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/doneHub"
@@ -144,6 +148,7 @@ export const MANAGED_SITE_TYPE_ORDER = [
   SITE_TYPES.AXON_HUB,
   SITE_TYPES.CLAUDE_CODE_HUB,
   SITE_TYPES.SUB2API,
+  SITE_TYPES.CLI_PROXY_API,
 ] as const
 
 export type ManagedSiteDefinitionType = (typeof MANAGED_SITE_TYPE_ORDER)[number]
@@ -545,6 +550,22 @@ const ACCOUNT_SITE_DEFINITIONS = [
 ] as const satisfies readonly RegisteredAccountSiteDefinition[]
 
 const MANAGED_ONLY_SITE_DEFINITIONS = [
+  {
+    siteType: SITE_TYPES.CLI_PROXY_API,
+    scopes: MANAGED_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
+    managedResource: {
+      ...LEGACY_MANAGED_CHANNEL_POLICY,
+      consoleRoutes: {
+        channels: "/management.html",
+        tokens: "/management.html",
+      },
+      labelKey: "settings:managedSite.cliProxyApi",
+      messagesKey: "cliProxyApi",
+      tableFieldIds: CLI_PROXY_API_TABLE_FIELDS,
+      detailFieldIds: CLI_PROXY_API_DETAIL_FIELDS,
+    },
+  },
   {
     siteType: SITE_TYPES.OCTOPUS,
     scopes: MANAGED_SCOPE,

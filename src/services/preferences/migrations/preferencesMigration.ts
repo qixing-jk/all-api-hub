@@ -45,8 +45,7 @@ const AUTOMATIC_FEATURE_BYPASS_PREFERENCES_VERSION = 27
 /**
  * Current version of the preferences schema.
  */
-export const CURRENT_PREFERENCES_VERSION =
-  AUTOMATIC_FEATURE_BYPASS_PREFERENCES_VERSION
+export const CURRENT_PREFERENCES_VERSION = 28
 
 /**
  * Migration function type
@@ -70,6 +69,24 @@ function clampBalanceHistoryRetentionDays(value: unknown): number {
  * Value: migration function to upgrade to that version
  */
 const migrations: Record<number, PreferencesMigrationFunction> = {
+  // Preserve the released integration credentials without replacing a new configuration.
+  28: (prefs) => {
+    const { cliProxy, ...rest } = prefs
+    return {
+      ...rest,
+      ...(!prefs.cliProxyApi?.baseUrl &&
+      !prefs.cliProxyApi?.adminToken &&
+      cliProxy
+        ? {
+            cliProxyApi: {
+              baseUrl: cliProxy.baseUrl,
+              adminToken: cliProxy.managementKey,
+            },
+          }
+        : {}),
+      preferencesVersion: 28,
+    }
+  },
   // Version 0 -> 1: Migrate sorting priority configuration
   1: (prefs: UserPreferences): UserPreferences => {
     logger.debug(

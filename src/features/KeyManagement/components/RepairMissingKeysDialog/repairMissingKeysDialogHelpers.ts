@@ -131,6 +131,7 @@ export function getRepairFailureMessage(
         "keyManagement:repairMissingKeys.failureGuidance.unavailable",
       )
       break
+    case ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ResourceChanged:
     case ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected:
       guidance = t(
         "keyManagement:repairMissingKeys.failureGuidance.upstreamRejected",

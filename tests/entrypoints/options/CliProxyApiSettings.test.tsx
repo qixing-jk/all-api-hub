@@ -3,8 +3,8 @@ import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import CliProxySettings from "~/features/BasicSettings/components/tabs/CliProxy/CliProxySettings"
-import { verifyCliProxyManagementConnection } from "~/services/integrations/cliProxyService"
+import CliProxyApiSettings from "~/features/BasicSettings/components/tabs/ManagedSite/CliProxyApiSettings"
+import { listAllCliProxyApiProviders } from "~/services/apiService/cliProxyApi"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { testI18n } from "~~/tests/test-utils/i18n"
@@ -21,14 +21,12 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: vi.fn(),
 }))
 
-vi.mock("~/services/integrations/cliProxyService", async (importOriginal) => {
+vi.mock("~/services/apiService/cliProxyApi", async (importOriginal) => {
   const actual =
-    await importOriginal<
-      typeof import("~/services/integrations/cliProxyService")
-    >()
+    await importOriginal<typeof import("~/services/apiService/cliProxyApi")>()
   return {
     ...actual,
-    verifyCliProxyManagementConnection: vi.fn(),
+    listAllCliProxyApiProviders: vi.fn(),
   }
 })
 
@@ -62,51 +60,48 @@ vi.mock("~/lib/notify", () => ({
   },
 }))
 
-describe("CliProxySettings", () => {
+describe("CliProxyApiSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: { lastUpdated: 1 },
-      cliProxyBaseUrl: "http://localhost:8317/v0/management",
-      cliProxyManagementKey: "secret-key",
-      updateCliProxyBaseUrl: vi
+      cliProxyApiBaseUrl: "http://localhost:8317/v0/management",
+      cliProxyApiManagementKey: "secret-key",
+      updateCliProxyApiBaseUrl: vi
         .fn()
         .mockResolvedValue({ ok: true, preferences: {} }),
-      updateCliProxyManagementKey: vi
+      updateCliProxyApiManagementKey: vi
         .fn()
         .mockResolvedValue({ ok: true, preferences: {} }),
-      resetCliProxyConfig: vi
+      resetCliProxyApiConfig: vi
         .fn()
         .mockResolvedValue({ ok: true, preferences: {} }),
     } as any)
 
-    vi.mocked(verifyCliProxyManagementConnection).mockResolvedValue({
-      success: true,
-      message: "messages:cliproxy.managementApiConnectionSuccess",
-    })
+    vi.mocked(listAllCliProxyApiProviders).mockResolvedValue([])
   })
 
   const renderSubject = () =>
     render(
       <I18nextProvider i18n={testI18n}>
-        <CliProxySettings />
+        <CliProxyApiSettings />
       </I18nextProvider>,
     )
 
   it("saves a trimmed base URL on Enter and re-checks the connection", async () => {
-    const updateCliProxyBaseUrl = vi
+    const updateCliProxyApiBaseUrl = vi
       .fn()
       .mockResolvedValue({ ok: true, preferences: {} })
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: { lastUpdated: 1 },
-      cliProxyBaseUrl: "http://localhost:8317/v0/management",
-      cliProxyManagementKey: "secret-key",
-      updateCliProxyBaseUrl,
-      updateCliProxyManagementKey: vi
+      cliProxyApiBaseUrl: "http://localhost:8317/v0/management",
+      cliProxyApiManagementKey: "secret-key",
+      updateCliProxyApiBaseUrl,
+      updateCliProxyApiManagementKey: vi
         .fn()
         .mockResolvedValue({ ok: true, preferences: {} }),
-      resetCliProxyConfig: vi
+      resetCliProxyApiConfig: vi
         .fn()
         .mockResolvedValue({ ok: true, preferences: {} }),
     } as any)
@@ -124,7 +119,7 @@ describe("CliProxySettings", () => {
     fireEvent.keyDown(input, { key: "Enter" })
 
     await waitFor(() => {
-      expect(updateCliProxyBaseUrl).toHaveBeenCalledWith(
+      expect(updateCliProxyApiBaseUrl).toHaveBeenCalledWith(
         "http://localhost:9000/v0/management",
         expect.objectContaining({
           expectedLastUpdated: 1,
@@ -133,24 +128,24 @@ describe("CliProxySettings", () => {
     })
 
     await waitFor(() => {
-      expect(verifyCliProxyManagementConnection).toHaveBeenCalledWith({
+      expect(listAllCliProxyApiProviders).toHaveBeenCalledWith({
         baseUrl: "http://localhost:9000/v0/management",
-        managementKey: "secret-key",
+        adminToken: "secret-key",
       })
     })
 
     expect(vi.mocked(showUpdateToast)).toHaveBeenCalledWith(
       expect.objectContaining({ ok: true }),
-      "settings:cliProxy.baseUrlLabel",
+      "settings:cliProxyApi.baseUrlLabel",
     )
     expect(vi.mocked(showResultToast)).toHaveBeenCalledWith({
       success: true,
-      message: "messages:cliproxy.managementApiConnectionSuccess",
+      message: "messages:cliProxyApi.managementApiConnectionSuccess",
     })
   })
 
   it("shows stale preference guidance instead of a generic update failure", async () => {
-    const updateCliProxyBaseUrl = vi
+    const updateCliProxyApiBaseUrl = vi
       .fn()
       .mockImplementation(
         async (
@@ -169,13 +164,13 @@ describe("CliProxySettings", () => {
       )
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: { lastUpdated: 1 },
-      cliProxyBaseUrl: "http://localhost:8317/v0/management",
-      cliProxyManagementKey: "secret-key",
-      updateCliProxyBaseUrl,
-      updateCliProxyManagementKey: vi
+      cliProxyApiBaseUrl: "http://localhost:8317/v0/management",
+      cliProxyApiManagementKey: "secret-key",
+      updateCliProxyApiBaseUrl,
+      updateCliProxyApiManagementKey: vi
         .fn()
         .mockResolvedValue({ ok: true, preferences: {} }),
-      resetCliProxyConfig: vi
+      resetCliProxyApiConfig: vi
         .fn()
         .mockResolvedValue({ ok: true, preferences: {} }),
     } as any)
@@ -197,40 +192,41 @@ describe("CliProxySettings", () => {
       )
     })
 
-    expect(updateCliProxyBaseUrl).toHaveBeenCalledWith(
+    expect(updateCliProxyApiBaseUrl).toHaveBeenCalledWith(
       "http://localhost:9000/v0/management",
       expect.objectContaining({
         expectedLastUpdated: 1,
       }),
     )
     expect(vi.mocked(showUpdateToast)).not.toHaveBeenCalled()
-    expect(verifyCliProxyManagementConnection).not.toHaveBeenCalled()
+    expect(listAllCliProxyApiProviders).not.toHaveBeenCalled()
   })
 
   it("trims the management key before persisting and surfaces the connection-check result", async () => {
-    const updateCliProxyManagementKey = vi
+    const updateCliProxyApiManagementKey = vi
       .fn()
       .mockResolvedValue({ ok: true, preferences: {} })
-    vi.mocked(verifyCliProxyManagementConnection).mockResolvedValue({
-      success: false,
-      message: "messages:toast.error.operationFailedGeneric",
-    })
+    vi.mocked(listAllCliProxyApiProviders).mockRejectedValue(
+      new Error("connection failed"),
+    )
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: { lastUpdated: 1 },
-      cliProxyBaseUrl: "http://localhost:8317/v0/management",
-      cliProxyManagementKey: "secret-key",
-      updateCliProxyBaseUrl: vi
+      cliProxyApiBaseUrl: "http://localhost:8317/v0/management",
+      cliProxyApiManagementKey: "secret-key",
+      updateCliProxyApiBaseUrl: vi
         .fn()
         .mockResolvedValue({ ok: true, preferences: {} }),
-      updateCliProxyManagementKey,
-      resetCliProxyConfig: vi
+      updateCliProxyApiManagementKey,
+      resetCliProxyApiConfig: vi
         .fn()
         .mockResolvedValue({ ok: true, preferences: {} }),
     } as any)
 
     renderSubject()
 
-    const input = screen.getByLabelText("settings:cliProxy.managementKeyLabel")
+    const input = screen.getByLabelText(
+      "settings:cliProxyApi.managementKeyLabel",
+    )
 
     fireEvent.change(input, {
       target: { value: "  next-secret-key  " },
@@ -238,7 +234,7 @@ describe("CliProxySettings", () => {
     fireEvent.blur(input)
 
     await waitFor(() => {
-      expect(updateCliProxyManagementKey).toHaveBeenCalledWith(
+      expect(updateCliProxyApiManagementKey).toHaveBeenCalledWith(
         "next-secret-key",
         expect.objectContaining({
           expectedLastUpdated: 1,
@@ -247,60 +243,59 @@ describe("CliProxySettings", () => {
     })
 
     await waitFor(() => {
-      expect(verifyCliProxyManagementConnection).toHaveBeenCalledWith({
+      expect(listAllCliProxyApiProviders).toHaveBeenCalledWith({
         baseUrl: "http://localhost:8317/v0/management",
-        managementKey: "next-secret-key",
+        adminToken: "next-secret-key",
       })
     })
 
     expect(vi.mocked(showUpdateToast)).toHaveBeenCalledWith(
       expect.objectContaining({ ok: true }),
-      "settings:cliProxy.managementKeyLabel",
+      "settings:cliProxyApi.managementKeyLabel",
     )
     expect(vi.mocked(showResultToast)).toHaveBeenCalledWith({
       success: false,
-      message: "messages:toast.error.operationFailedGeneric",
+      message: "messages:cliProxyApi.managementApiUnreachable",
     })
   })
 
   it("persists and verifies the management key on Enter", async () => {
-    const updateCliProxyManagementKey = vi
+    const updateCliProxyApiManagementKey = vi
       .fn()
       .mockResolvedValue({ ok: true, preferences: {} })
-    vi.mocked(verifyCliProxyManagementConnection).mockResolvedValue({
-      success: true,
-      message: "messages:toast.success.operationSuccess",
-    })
+    vi.mocked(listAllCliProxyApiProviders).mockResolvedValue([])
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: { lastUpdated: 1 },
-      cliProxyBaseUrl: "http://localhost:8317/v0/management",
-      cliProxyManagementKey: "secret-key",
-      updateCliProxyBaseUrl: vi
+      cliProxyApiBaseUrl: "http://localhost:8317/v0/management",
+      cliProxyApiManagementKey: "secret-key",
+      updateCliProxyApiBaseUrl: vi
         .fn()
         .mockResolvedValue({ ok: true, preferences: {} }),
-      updateCliProxyManagementKey,
-      resetCliProxyConfig: vi
+      updateCliProxyApiManagementKey,
+      resetCliProxyApiConfig: vi
         .fn()
         .mockResolvedValue({ ok: true, preferences: {} }),
     } as any)
 
     renderSubject()
 
-    const input = screen.getByLabelText("settings:cliProxy.managementKeyLabel")
+    const input = screen.getByLabelText(
+      "settings:cliProxyApi.managementKeyLabel",
+    )
     fireEvent.change(input, { target: { value: "  enter-secret-key  " } })
     input.focus()
     fireEvent.keyDown(input, { key: "Enter" })
 
     await waitFor(() => {
-      expect(updateCliProxyManagementKey).toHaveBeenCalledWith(
+      expect(updateCliProxyApiManagementKey).toHaveBeenCalledWith(
         "enter-secret-key",
         expect.objectContaining({ expectedLastUpdated: 1 }),
       )
     })
     await waitFor(() => {
-      expect(verifyCliProxyManagementConnection).toHaveBeenCalledWith({
+      expect(listAllCliProxyApiProviders).toHaveBeenCalledWith({
         baseUrl: "http://localhost:8317/v0/management",
-        managementKey: "enter-secret-key",
+        adminToken: "enter-secret-key",
       })
     })
   })
@@ -309,59 +304,58 @@ describe("CliProxySettings", () => {
     renderSubject()
 
     const toggle = screen.getByRole("button", {
-      name: "settings:cliProxy.showKey",
+      name: "settings:cliProxyApi.showKey",
     })
 
     fireEvent.click(toggle)
 
     expect(
       screen.getByRole("button", {
-        name: "settings:cliProxy.hideKey",
+        name: "settings:cliProxyApi.hideKey",
       }),
     ).toBeInTheDocument()
   })
 
   it("shows the returned connection-check result via toast", async () => {
-    vi.mocked(verifyCliProxyManagementConnection).mockResolvedValue({
-      success: false,
-      message: "messages:cliproxy.managementApiRemoteAccessDisabled",
-    })
+    vi.mocked(listAllCliProxyApiProviders).mockRejectedValue(
+      new Error("connection failed"),
+    )
 
     renderSubject()
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "settings:cliProxy.checkConnectionAction",
+        name: "settings:cliProxyApi.checkConnectionAction",
       }),
     )
 
     await waitFor(() => {
       expect(showResultToast).toHaveBeenCalledWith({
         success: false,
-        message: "messages:cliproxy.managementApiRemoteAccessDisabled",
+        message: "messages:cliProxyApi.managementApiUnreachable",
       })
     })
 
-    expect(verifyCliProxyManagementConnection).toHaveBeenCalledWith({
+    expect(listAllCliProxyApiProviders).toHaveBeenCalledWith({
       baseUrl: "http://localhost:8317/v0/management",
-      managementKey: "secret-key",
+      adminToken: "secret-key",
     })
   })
 
   it("refreshes clean draft fields when the saved preferences snapshot changes", async () => {
-    const updateCliProxyBaseUrl = vi
+    const updateCliProxyApiBaseUrl = vi
       .fn()
       .mockResolvedValue({ ok: true, preferences: {} })
-    const updateCliProxyManagementKey = vi
+    const updateCliProxyApiManagementKey = vi
       .fn()
       .mockResolvedValue({ ok: true, preferences: {} })
     let contextValue = {
       preferences: { lastUpdated: 1 },
-      cliProxyBaseUrl: "http://localhost:8317/v0/management",
-      cliProxyManagementKey: "secret-key",
-      updateCliProxyBaseUrl,
-      updateCliProxyManagementKey,
-      resetCliProxyConfig: vi
+      cliProxyApiBaseUrl: "http://localhost:8317/v0/management",
+      cliProxyApiManagementKey: "secret-key",
+      updateCliProxyApiBaseUrl,
+      updateCliProxyApiManagementKey,
+      resetCliProxyApiConfig: vi
         .fn()
         .mockResolvedValue({ ok: true, preferences: {} }),
     }
@@ -374,13 +368,13 @@ describe("CliProxySettings", () => {
     contextValue = {
       ...contextValue,
       preferences: { lastUpdated: 2 },
-      cliProxyBaseUrl: "http://localhost:9000/v0/management",
-      cliProxyManagementKey: "next-secret-key",
+      cliProxyApiBaseUrl: "http://localhost:9000/v0/management",
+      cliProxyApiManagementKey: "next-secret-key",
     }
 
     rerender(
       <I18nextProvider i18n={testI18n}>
-        <CliProxySettings />
+        <CliProxyApiSettings />
       </I18nextProvider>,
     )
 
@@ -407,13 +401,13 @@ describe("CliProxySettings", () => {
     fireEvent.blur(managementKeyInput)
 
     await waitFor(() => {
-      expect(updateCliProxyBaseUrl).toHaveBeenLastCalledWith(
+      expect(updateCliProxyApiBaseUrl).toHaveBeenLastCalledWith(
         "http://localhost:9010/v0/management",
         expect.objectContaining({
           expectedLastUpdated: 2,
         }),
       )
-      expect(updateCliProxyManagementKey).toHaveBeenLastCalledWith(
+      expect(updateCliProxyApiManagementKey).toHaveBeenLastCalledWith(
         "post-refresh-secret",
         expect.objectContaining({
           expectedLastUpdated: 2,

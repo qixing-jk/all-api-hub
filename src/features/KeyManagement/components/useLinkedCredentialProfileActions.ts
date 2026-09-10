@@ -5,7 +5,6 @@ import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
-  createCliProxyExportPayload,
   createExportAccount,
   createExportRuntimeKey,
   createExportToken,
@@ -31,7 +30,6 @@ type ActiveDialog =
   | "cursor-plus"
   | "kilo-code"
   | "kelivo"
-  | "cli-proxy"
   | "claude-code-router"
   | "verify-api"
   | "verify-cli"
@@ -53,8 +51,7 @@ export function useLinkedCredentialProfileActions(
   const {
     claudeCodeRouterApiKey,
     claudeCodeRouterBaseUrl,
-    cliProxyBaseUrl,
-    cliProxyManagementKey,
+
     managedSiteType,
   } = useUserPreferencesContext()
   const { markGatewayGuidanceOnboardingCompleted } = useFeatureGuidanceContext()
@@ -64,10 +61,6 @@ export function useLinkedCredentialProfileActions(
   const exportToken = useMemo(() => createExportToken(profile), [profile])
   const exportRuntimeKey = useMemo(
     () => createExportRuntimeKey(profile),
-    [profile],
-  )
-  const cliProxyPayload = useMemo(
-    () => createCliProxyExportPayload(profile),
     [profile],
   )
 
@@ -98,17 +91,6 @@ export function useLinkedCredentialProfileActions(
     }
   }
 
-  const handleCliProxy = () => {
-    if (!cliProxyBaseUrl?.trim() || !cliProxyManagementKey?.trim()) {
-      showResultToast({
-        success: false,
-        message: t("messages:cliproxy.configMissing"),
-      })
-      return
-    }
-    openDialog("cli-proxy")
-  }
-
   const handleClaudeCodeRouter = () => {
     if (!claudeCodeRouterBaseUrl?.trim()) {
       showResultToast({
@@ -134,6 +116,7 @@ export function useLinkedCredentialProfileActions(
           name: profile.name,
           baseUrl: profile.baseUrl,
           apiKey: profile.apiKey,
+          apiType: profile.apiType,
         },
         (importResult) => {
           showResultToast(importResult)
@@ -171,14 +154,14 @@ export function useLinkedCredentialProfileActions(
     activeDialog,
     claudeCodeRouterApiKey,
     claudeCodeRouterBaseUrl,
-    cliProxyPayload,
+
     closeDialog,
     exportAccount,
     exportRuntimeKey,
     exportToken,
     handleCherryStudio,
     handleClaudeCodeRouter,
-    handleCliProxy,
+
     handleManagedSiteImport,
     managedSiteLabel: getManagedSiteLabel(t, managedSiteType),
     managedSiteType,

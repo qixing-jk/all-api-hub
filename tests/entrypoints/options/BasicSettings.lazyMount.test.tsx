@@ -145,7 +145,7 @@ vi.mock(
 )
 
 vi.mock(
-  "~/features/BasicSettings/components/tabs/CliProxy/CliProxyTab",
+  "~/features/BasicSettings/components/tabs/CliProxyApi/CliProxyApiTab",
   () => ({
     default: () => <div data-testid="cli-proxy-tab-content" />,
   }),
@@ -182,7 +182,7 @@ const TAB_LABEL_WIDTHS: Record<string, number> = {
   "settings:tabs.accountUsage": 80,
   "settings:tabs.webAiApiCheck": 80,
   "settings:tabs.managedSite": 220,
-  "settings:tabs.cliProxy": 80,
+  "settings:tabs.cliProxyApi": 80,
   "settings:tabs.claudeCodeRouter": 80,
   "settings:tabs.permissions": 80,
   "settings:tabs.dataBackup": 80,

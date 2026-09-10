@@ -18,13 +18,13 @@ import {
   claudeCodeRouterSearchSections,
 } from "~/features/BasicSettings/components/tabs/ClaudeCodeRouter/ClaudeCodeRouter.search"
 import {
-  cliProxySearchControls,
-  cliProxySearchSections,
-} from "~/features/BasicSettings/components/tabs/CliProxy/CliProxy.search"
-import {
   generalSearchControls,
   generalSearchSections,
 } from "~/features/BasicSettings/components/tabs/General/General.search"
+import {
+  cliProxyApiSearchControls,
+  cliProxyApiSearchSections,
+} from "~/features/BasicSettings/components/tabs/ManagedSite/CliProxyApi.search"
 import {
   managedSiteSearchControls,
   managedSiteSearchSections,
@@ -70,7 +70,7 @@ export const OPTIONS_SEARCH_REGISTRY = [
   ...usageHistorySyncSearchSections,
   ...webAiApiCheckSearchSections,
   ...managedSiteSearchSections,
-  ...cliProxySearchSections,
+  ...cliProxyApiSearchSections,
   ...claudeCodeRouterSearchSections,
   ...permissionsSearchSections,
   ...importExportSearchSections,
@@ -84,7 +84,7 @@ export const OPTIONS_SEARCH_REGISTRY = [
   ...usageHistorySyncSearchControls,
   ...webAiApiCheckSearchControls,
   ...managedSiteSearchControls,
-  ...cliProxySearchControls,
+  ...cliProxyApiSearchControls,
   ...claudeCodeRouterSearchControls,
   ...permissionsSearchControls,
   ...importExportSearchControls,

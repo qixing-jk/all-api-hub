@@ -23,6 +23,9 @@
       "description": "This {{site}} account cannot manage channels. Use an administrator account or update its permissions, then refresh.",
       "title": "{{site}} access denied"
     },
+    "resourceChanged": {
+      "description": "This channel changed while you were editing. Your changes were not saved. Close the editor, refresh the channel list, and edit again."
+    },
     "savedRefreshError": {
       "description": "The channel was saved, but the latest list could not be loaded. Refresh the channel list before making more changes.",
       "title": "Channel saved, refresh needed"
@@ -32,12 +35,20 @@
       "title": "{{site}} is unavailable"
     }
   },
+  "cliProxyApi": {
+    "credentialWeightHelp": "Leave blank for weight 1. Non-positive values exclude this key from weighted routing; maximum 1,000,000.",
+    "excludedModels": "Excluded models (one per line)",
+    "headers": "Request headers",
+    "headersHelp": "One header per line, in Name: value format.",
+    "prefix": "Model prefix",
+    "proxyUrl": "Proxy URL"
+  },
   "dialog": {
     "cancel": "Cancel",
     "confirm": "Delete",
     "deleteDescription": "This action cannot be undone. The selected channels will be removed permanently.",
     "deleteRefreshAction": "Refresh channels",
-    "deleteRefreshRequired": "Some delete results are uncertain. Refresh the channel list before deleting again.",
+    "deleteRefreshRequired": "Refresh the channel list to confirm its latest state before deleting again.",
     "deleteResultStatus": {
       "failed": "Failed",
       "success": "Deleted",
@@ -412,11 +423,14 @@
   "title": "Channels management",
   "toasts": {
     "channelSaved": "Channel saved",
+    "channelsDeleted_one": "Deleted {{count}} channel",
+    "channelsDeleted_other": "Deleted {{count}} channels",
     "channelUpdated": "Channel updated",
     "syncCompleted": "Model sync completed ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Models were synced ({{success}}/{{total}}), but the channel list could not be refreshed. Refresh and try again.",
     "syncFailed": "Model sync failed: {{error}}",
-    "syncFailedFallback": "The channels could not be synchronized"
+    "syncFailedFallback": "The channels could not be synchronized",
+    "syncIncomplete": "Model sync did not fully complete ({{success}}/{{total}} succeeded). Open model sync to review results and retry failed channels."
   },
   "toolbar": {
     "addChannel": "Add channel",

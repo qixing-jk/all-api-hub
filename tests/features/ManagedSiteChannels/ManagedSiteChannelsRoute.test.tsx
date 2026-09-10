@@ -45,6 +45,7 @@ import {
 
 const {
   toastSuccess,
+  toastError,
   useListController,
   useMigrationController,
   useMutationController,
@@ -63,13 +64,14 @@ const {
     () => [],
   ),
   toastSuccess: vi.fn(),
+  toastError: vi.fn(),
   openManagedSiteModelSyncForChannel: vi.fn(),
   syncChannels: vi.fn(async () => undefined),
   trackProductAnalyticsActionStarted: vi.fn(),
 }))
 
 vi.mock("~/lib/notify", () => ({
-  default: { success: toastSuccess },
+  default: { success: toastSuccess, error: toastError },
 }))
 
 vi.mock(
@@ -266,7 +268,7 @@ const installNativeControllers = (
     openCreate: vi.fn(),
     openEdit: vi.fn(),
     closeEditor: vi.fn(),
-    submit: vi.fn(),
+    submit: vi.fn(async () => undefined),
     openDelete: vi.fn(),
     confirmDelete: vi.fn(),
     cancelDelete: vi.fn(),
@@ -376,6 +378,7 @@ describe("ManagedSiteChannelsRoute", () => {
     getTargetOptions.mockReset()
     getTargetOptions.mockReturnValue([])
     toastSuccess.mockReset()
+    toastError.mockReset()
     openManagedSiteModelSyncForChannel.mockReset()
     syncChannels.mockReset()
     syncChannels.mockResolvedValue(undefined)
@@ -1075,61 +1078,63 @@ describe("ManagedSiteChannelsRoute", () => {
       />,
     )
 
-    const dialog = screen.getByRole("dialog")
-    expect(within(dialog).getByRole("alert")).toHaveTextContent(
-      "managedSiteChannels:alerts.editorSaveError.title",
-    )
-    expect(within(dialog).getByRole("alert")).toHaveTextContent(
-      "Provider maintenance window",
-    )
+    expect(screen.getAllByRole("dialog")).toHaveLength(1)
+    expect(toastError).toHaveBeenCalledWith("Provider maintenance window")
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
 
-  it("uses localized fallback copy for an open editor failure without a message", () => {
-    installNativeDefinition(SITE_TYPES.AXON_HUB)
-    const editor = createManagedResourceEditor({
-      fields: [{ fieldId: "name", type: "text", required: true }],
-      initialValues: { name: "Native example" } as EditableResourceProjection,
-    })
-    getFieldPolicy.mockReturnValue({
-      fields: [
-        {
-          fieldId: "name",
-          section: "basic",
-          order: 1,
-          resolveLabel: (t: TFunction) => t("channelDialog:fields.name.label"),
-          renderer: "text",
-          channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Name,
+  it.each([
+    MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
+    MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+  ])(
+    "shows a %s failure without field issues inside the open editor",
+    (code) => {
+      installNativeDefinition(SITE_TYPES.AXON_HUB)
+      const editor = createManagedResourceEditor({
+        fields: [{ fieldId: "name", type: "text", required: true }],
+        initialValues: { name: "Native example" } as EditableResourceProjection,
+      })
+      getFieldPolicy.mockReturnValue({
+        fields: [
+          {
+            fieldId: "name",
+            section: "basic",
+            order: 1,
+            resolveLabel: (t: TFunction) =>
+              t("channelDialog:fields.name.label"),
+            renderer: "text",
+            channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Name,
+          },
+        ],
+        hiddenFields: [],
+      })
+      installNativeControllers({
+        mutation: {
+          editor,
+          editorMode: "edit",
+          editorFeedback: {
+            kind: "save-failed",
+            failure: { code },
+          },
         },
-      ],
-      hiddenFields: [],
-    })
-    installNativeControllers({
-      mutation: {
-        editor,
-        editorMode: "edit",
-        editorFeedback: {
-          kind: "save-failed",
-          failure: { code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable },
-        },
-      },
-    })
-    configureNativePreferences(SITE_TYPES.AXON_HUB)
+      })
+      configureNativePreferences(SITE_TYPES.AXON_HUB)
 
-    render(
-      <ManagedSiteChannelsRoute
-        siteType={SITE_TYPES.AXON_HUB}
-        onReplaceRouteQuery={vi.fn()}
-      />,
-    )
+      render(
+        <ManagedSiteChannelsRoute
+          siteType={SITE_TYPES.AXON_HUB}
+          onReplaceRouteQuery={vi.fn()}
+        />,
+      )
 
-    expect(
-      within(screen.getByRole("dialog")).getByRole("alert"),
-    ).toHaveTextContent(
-      "managedSiteChannels:alerts.editorSaveError.description",
-    )
-  })
+      expect(screen.getAllByRole("dialog")).toHaveLength(1)
+      expect(toastError).toHaveBeenCalledWith(
+        "managedSiteChannels:alerts.editorSaveError.description",
+      )
+    },
+  )
 
-  it("keeps save failures visible on the page after the editor closes", () => {
+  it("uses a toast for save failures without a page banner", () => {
     installNativeDefinition(SITE_TYPES.AXON_HUB)
     installNativeControllers({
       mutation: {
@@ -1151,15 +1156,13 @@ describe("ManagedSiteChannelsRoute", () => {
     )
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "managedSiteChannels:alerts.editorSaveError.title",
-    )
-    expect(screen.getByRole("alert")).toHaveTextContent(
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(toastError).toHaveBeenCalledWith(
       "managedSiteChannels:alerts.editorSaveError.description",
     )
   })
 
-  it("keeps an uncertain editor mutation visible as a page alert after the editor closes", () => {
+  it("uses an error toast without opening a dialog for an uncertain mutation", () => {
     installNativeDefinition(SITE_TYPES.AXON_HUB)
     installNativeControllers({
       mutation: {
@@ -1184,12 +1187,8 @@ describe("ManagedSiteChannelsRoute", () => {
     )
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "managedSiteChannels:alerts.partialMutation.title",
-    )
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Provider response was lost",
-    )
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(toastError).toHaveBeenCalledWith("Provider response was lost")
   })
 
   it("uses localized fallback copy for an uncertain mutation without a message", () => {
@@ -1215,7 +1214,7 @@ describe("ManagedSiteChannelsRoute", () => {
       />,
     )
 
-    expect(screen.getByRole("alert")).toHaveTextContent(
+    expect(toastError).toHaveBeenCalledWith(
       "managedSiteChannels:alerts.partialMutation.description",
     )
   })
@@ -1274,6 +1273,51 @@ describe("ManagedSiteChannelsRoute", () => {
     expect(refresh).not.toHaveBeenCalled()
   })
 
+  it("toasts successful deletion once without leaving a result panel", () => {
+    installNativeDefinition(SITE_TYPES.AXON_HUB)
+    installNativeControllers({
+      mutation: {
+        deleteState: {
+          isOpen: false,
+          isExecuting: false,
+          rowKeys: [nativeRow.rowKey],
+          results: [
+            {
+              rowKey: nativeRow.rowKey,
+              status: "success",
+              resultKey: "delete_success",
+            },
+          ],
+          requiresRefresh: false,
+          requiresFreshRead: false,
+          failure: null,
+        },
+      },
+    })
+    configureNativePreferences(SITE_TYPES.AXON_HUB)
+    const { rerender } = render(
+      <ManagedSiteChannelsRoute
+        siteType={SITE_TYPES.AXON_HUB}
+        onReplaceRouteQuery={vi.fn()}
+      />,
+    )
+    expect(toastSuccess).toHaveBeenCalledExactlyOnceWith(
+      "managedSiteChannels:toasts.channelsDeleted",
+    )
+    expect(
+      screen.queryByRole("status", {
+        name: "managedSiteChannels:dialog.deleteResultsTitle",
+      }),
+    ).not.toBeInTheDocument()
+    rerender(
+      <ManagedSiteChannelsRoute
+        siteType={SITE_TYPES.AXON_HUB}
+        onReplaceRouteQuery={vi.fn()}
+      />,
+    )
+    expect(toastSuccess).toHaveBeenCalledTimes(1)
+  })
+
   it("snapshots native delete labels when confirmation starts", async () => {
     const user = userEvent.setup()
     const confirmDelete = vi.fn(async () => [])
@@ -1319,8 +1363,8 @@ describe("ManagedSiteChannelsRoute", () => {
           results: [
             {
               rowKey: nativeRow.rowKey,
-              status: "success",
-              resultKey: "delete_success",
+              status: "failed",
+              resultKey: "delete_failed",
             },
           ],
           requiresRefresh: false,
@@ -1389,8 +1433,8 @@ describe("ManagedSiteChannelsRoute", () => {
           results: [
             {
               rowKey: unknownRowKey,
-              status: "success",
-              resultKey: "delete_success",
+              status: "failed",
+              resultKey: "delete_failed",
             },
           ],
           requiresRefresh: false,
@@ -1586,7 +1630,7 @@ describe("ManagedSiteChannelsRoute", () => {
     ).toBeVisible()
     expect(
       screen.getByRole("columnheader", {
-        name: "managedSiteChannels:table.columns.models",
+        name: "channelDialog:fields.models.label",
       }),
     ).toBeVisible()
     expect(
@@ -2111,7 +2155,7 @@ describe("ManagedSiteChannelsRoute", () => {
 
   it("forwards native values to controller validation and submits final values", async () => {
     const user = userEvent.setup()
-    const submit = vi.fn()
+    const submit = vi.fn(async () => undefined)
     const validate = vi.fn((values: EditableResourceProjection) => {
       const key = values[AXON_HUB_CHANNEL_FIELD_IDS.KEY]
       const supportedModels =

@@ -61,6 +61,7 @@ import {
 } from "~/services/protectionBypass/contracts"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import { type ApiToken, type DisplaySiteData, type SiteAccount } from "~/types"
+import type { ManagedSiteChannelDraftSource } from "~/types/managedSiteChannelDraft"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -534,7 +535,10 @@ export function useChannelDialog() {
    * without requiring a SiteAccount entry in storage.
    */
   const openWithCredentials = async (
-    credentials: { name: string; baseUrl: string; apiKey: string },
+    credentials: Pick<
+      ManagedSiteChannelDraftSource,
+      "name" | "baseUrl" | "apiKey" | "apiType"
+    >,
     onSuccess?: (result: any) => void,
     options?: Pick<PrefilledChannelOpenOptions, "managedSiteStatus">,
   ): Promise<OpenWithAccountResult> => {

@@ -11,7 +11,6 @@ export type BasicSettingsTabId =
   | "accountUsage"
   | "dataBackup"
   | "managedSite"
-  | "cliProxy"
   | "claudeCodeRouter"
   | "permissions"
 
@@ -74,7 +73,10 @@ export const BASIC_SETTINGS_ANCHOR_TO_TAB: Record<string, BasicSettingsTabId> =
     [SETTINGS_ANCHORS.SUB2API_ADMIN_API_KEY]: "managedSite",
     [SETTINGS_ANCHORS.SUB2API_VALIDATE]: "managedSite",
     [SETTINGS_ANCHORS.SUB2API_DEFAULT_SCOPE]: "managedSite",
-    "cli-proxy": "cliProxy",
+    "cli-proxy": "managedSite",
+    "cli-proxy-base-url": "managedSite",
+    "cli-proxy-management-key": "managedSite",
+    "cli-proxy-check-connection": "managedSite",
     "claude-code-router": "claudeCodeRouter",
     "dangerous-zone": "general",
     permissions: "permissions",

@@ -129,61 +129,6 @@
       },
       "title": "Nhập vào Claude Code Router"
     },
-    "cliproxy": {
-      "actions": {
-        "addModel": "Thêm mô hình",
-        "removeModel": "Xóa mô hình",
-        "reorderModel": "Điều chỉnh thứ tự mô hình"
-      },
-      "description": "Tạo hoặc cập nhật một mục Provider trong CLIProxyAPI.",
-      "descriptions": {
-        "baseUrlClaudeApiKey": "Thường điền địa chỉ gốc của Anthropic API mà không có /v1/messages.",
-        "baseUrlCodexApiKey": "Thường điền địa chỉ gốc của Provider, giá trị mặc định phổ biến như https://api.openai.com.",
-        "baseUrlGeminiApiKey": "Thường điền địa chỉ gốc của Gemini API mà không có /v1/models/...",
-        "baseUrlOpenAICompatibility": "Thường điền địa chỉ cơ sở tương thích OpenAI kết thúc bằng /v1 của upstream.",
-        "models": "Ánh xạ tên mô hình upstream sang bí danh tùy chọn (name -> alias). Nếu khả dụng, các mô hình upstream có sẵn sẽ được tải để lựa chọn.",
-        "modelsManual": "Ánh xạ tên mô hình upstream sang bí danh tùy chọn (name -> alias). Trong phiên bản hiện tại, loại Provider này yêu cầu nhập thủ công mô hình upstream.",
-        "providerType": "Chọn loại Provider CLIProxyAPI để nhập vào.",
-        "proxyUrl": "Tùy chọn. URL proxy dùng cho mục API Key này."
-      },
-      "fields": {
-        "baseUrl": "URL cơ sở Provider",
-        "models": "Ánh xạ mô hình (tùy chọn)",
-        "name": "Tên Provider",
-        "providerType": "Loại Provider",
-        "proxyUrl": "URL proxy (tùy chọn)"
-      },
-      "placeholders": {
-        "baseUrlClaudeApiKey": "https://api.anthropic.com",
-        "baseUrlCodexApiKey": "https://api.openai.com",
-        "baseUrlGeminiApiKey": "https://generativelanguage.googleapis.com",
-        "baseUrlOpenAICompatibility": "https://example.com/v1",
-        "modelAlias": "Bí danh mô hình (tùy chọn)",
-        "modelName": "Tên mô hình, ví dụ claude",
-        "name": "Ví dụ: Acme Relay",
-        "providerType": "Chọn loại Provider",
-        "proxyUrl": "http://localhost:3000"
-      },
-      "providerTypes": {
-        "claudeApiKey": {
-          "description": "Áp dụng cho mục Provider API Key theo kiểu Anthropic Claude.",
-          "label": "Claude API Key"
-        },
-        "codexApiKey": {
-          "description": "Áp dụng cho mục Provider API Key theo kiểu Codex / OpenAI.",
-          "label": "Codex API Key"
-        },
-        "geminiApiKey": {
-          "description": "Áp dụng cho mục Provider API Key theo kiểu Google Gemini.",
-          "label": "Gemini API Key"
-        },
-        "openaiCompatibility": {
-          "description": "Áp dụng cho Provider tương thích OpenAI tiêu chuẩn, có thể tùy chỉnh tên Provider.",
-          "label": "Tương thích OpenAI"
-        }
-      },
-      "title": "Nhập vào CLIProxyAPI"
-    },
     "collapse": "Thu gọn",
     "copyKey": {
       "copied": "Đã sao chép",
@@ -596,11 +541,47 @@
       "reorder": "Kéo để sắp xếp"
     }
   },
+  "resourceEditor": {
+    "configured": "Đã cấu hình",
+    "items_other": "{{count}} mục",
+    "optional": "Tùy chọn"
+  },
   "searchableSelect": {
     "empty": "Không tìm thấy mục phù hợp",
     "noOptions": "Hiện không có tùy chọn nào",
     "noOptionsAllowCustom": "Hiện không có tùy chọn, bạn có thể nhập để tạo",
     "searchPlaceholder": "Tìm kiếm...",
     "useValue": "Sử dụng \"{{value}}\""
+  },
+  "secretList": {
+    "add": "Thêm khóa",
+    "collapse": "Thu gọn API Key {{number}}",
+    "configured": "Đã cấu hình",
+    "expand": "Mở rộng API Key {{number}}",
+    "hide": "Ẩn khóa",
+    "keepPlaceholder": "Để trống để giữ khóa đã lưu",
+    "loadFailed": "Không thể tải khóa này. Vui lòng thử lại.",
+    "newPlaceholder": "Nhập khóa API",
+    "newState": "Mới, chưa lưu",
+    "remove": "Xóa khóa",
+    "replacementState": "Khóa sẽ được thay thế",
+    "restore": "Giữ khóa đã lưu",
+    "retainedState": "Giữ khóa đã lưu",
+    "row": "Khóa API {{number}}",
+    "shortRow": "Khóa {{number}}",
+    "show": "Hiện khóa",
+    "title": "Khóa API"
+  },
+  "textEntries": {
+    "add": "Thêm dòng",
+    "editRows": "Chỉnh sửa từng dòng",
+    "editText": "Chỉnh sửa văn bản",
+    "headerName": "Tên tiêu đề",
+    "headerValue": "Giá trị",
+    "modelAlias": "Bí danh (tùy chọn)",
+    "modelAliasPlaceholder": "Dùng tên mô hình gốc",
+    "modelHelp": "Để trống bí danh để dùng tên mô hình gốc. Định dạng văn bản: mỗi dòng một mô hình = bí danh.",
+    "modelName": "Mô hình gốc",
+    "remove": "Xóa dòng {{number}}"
   }
 }

@@ -169,6 +169,23 @@ export function resolveClaudeCodeHubManagedSiteConfig(): ManagedSiteConfigResolu
   }
 }
 
+/** Resolve CLIProxyAPI's management connection independently from client API keys. */
+export function resolveCliProxyApiConfig(): ManagedSiteConfigResolution<
+  typeof SITE_TYPES.CLI_PROXY_API
+> {
+  const baseUrlKey = "AAH_E2E_CLI_PROXY_API_BASE_URL" as const
+  const adminTokenKey = "AAH_E2E_CLI_PROXY_API_ADMIN_TOKEN" as const
+  const baseUrl = readEnv(baseUrlKey)
+  const adminToken = readEnv(adminTokenKey)
+  return {
+    config: baseUrl && adminToken ? { baseUrl, adminToken } : null,
+    missingEnvKeys: [
+      ...(!baseUrl ? [baseUrlKey] : []),
+      ...(!adminToken ? [adminTokenKey] : []),
+    ],
+  }
+}
+
 export function getManagedSiteRealSiteSkipReason(params: {
   label: string
   missingEnvKeys: string[]

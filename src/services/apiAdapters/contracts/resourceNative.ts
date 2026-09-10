@@ -6,6 +6,7 @@ export const RESOURCE_FIELD_TYPES = {
   Select: "select",
   MultiSelect: "multi-select",
   Secret: "secret",
+  SecretList: "secret-list",
   DateTime: "date-time",
 } as const
 
@@ -41,6 +42,7 @@ export const RESOURCE_FAILURE_CODES = {
   AuthenticationFailed: "authentication_failed",
   PermissionDenied: "permission_denied",
   ValidationFailed: "validation_failed",
+  ResourceChanged: "resource_changed",
   NotFound: "not_found",
   MutationStateUncertain: "mutation_state_uncertain",
   Unavailable: "unavailable",
@@ -118,6 +120,37 @@ export type ResourceFieldValue =
   | boolean
   | readonly string[]
   | SecretEditIntent
+  | ResourceSecretListValue
+
+/** Editor-local row identities preserve saved credentials without exposing their values. */
+export type ResourceSecretListEntry = {
+  id: string
+  secret: SecretEditIntent
+  fields: Readonly<Record<string, string>>
+}
+
+export type ResourceSecretListValue = {
+  kind: "secret-list"
+  entries: readonly ResourceSecretListEntry[]
+}
+
+/** The adapter decides which saved rows can be revealed and which attributes are editable. */
+export type ResourceSecretListDescriptor = ResourceFieldDescriptorBase & {
+  type: "secret-list"
+  minEntries?: number
+  savedEntries: readonly {
+    id: string
+    secretState: ResourceSecretState
+    /** Opaque target accepted by the editor's existing loadSecret operation. */
+    loadFieldId?: string
+  }[]
+  entryFields: readonly {
+    fieldId: string
+    type: "text" | "number"
+    min?: number
+    max?: number
+  }[]
+}
 
 export type EditableResourceProjection = Readonly<
   Record<string, ResourceFieldValue>
@@ -161,6 +194,7 @@ type ResourceSelectFieldDescriptor = ResourceFieldDescriptorBase & {
 }
 
 export type ResourceFieldDescriptor =
+  | ResourceSecretListDescriptor
   | (ResourceFieldDescriptorBase & {
       type:
         | (typeof RESOURCE_FIELD_TYPES)["Text"]

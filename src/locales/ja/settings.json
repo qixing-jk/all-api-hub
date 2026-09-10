@@ -157,7 +157,7 @@
     "title": "Claude Code Router",
     "urlDesc": "Claude Code Router サーバーの Base URL。例: http://localhost:3000"
   },
-  "cliProxy": {
+  "cliProxyApi": {
     "baseUrlLabel": "Management API Base URL",
     "checkConnectionAction": "接続を確認",
     "checkConnectionDesc": "保存後に、現在の URL と管理キーで CLIProxyAPI Management API に接続できるか確認します。",
@@ -244,6 +244,7 @@
   "managedSite": {
     "axonHub": "AxonHub",
     "claudeCodeHub": "Claude Code Hub",
+    "cliProxyApi": "CLIProxyAPI",
     "description": "管理したい API 中継プラットフォームを選択します。この設定により、チャネル管理やモデル同期で使われる構成が決まります。",
     "doneHub": "Done Hub",
     "gatewayGuidance": {
@@ -635,7 +636,6 @@
     "balanceHistory": "残高履歴",
     "checkinRedeem": "チェックインと引き換え",
     "claudeCodeRouter": "Claude Code Router",
-    "cliProxy": "CLIProxyAPI",
     "dataBackup": "データとバックアップ",
     "general": "一般",
     "managedSite": "セルフホスト AI ゲートウェイ",

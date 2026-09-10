@@ -11,14 +11,12 @@ import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 const {
   handleCherryStudioMock,
   handleClaudeCodeRouterMock,
-  handleCliProxyMock,
   handleManagedSiteImportMock,
   openDialogMock,
   useLinkedCredentialProfileActionsMock,
 } = vi.hoisted(() => ({
   handleCherryStudioMock: vi.fn(),
   handleClaudeCodeRouterMock: vi.fn(),
-  handleCliProxyMock: vi.fn(),
   handleManagedSiteImportMock: vi.fn(),
   openDialogMock: vi.fn(),
   useLinkedCredentialProfileActionsMock: vi.fn(),
@@ -67,7 +65,6 @@ describe("LinkedCredentialProfileActions", () => {
       activeDialog: null,
       handleCherryStudio: handleCherryStudioMock,
       handleClaudeCodeRouter: handleClaudeCodeRouterMock,
-      handleCliProxy: handleCliProxyMock,
       handleManagedSiteImport: handleManagedSiteImportMock,
       managedSiteLabel: "Managed site",
       managedSiteType: "new-api",
@@ -93,7 +90,7 @@ describe("LinkedCredentialProfileActions", () => {
 
   it.each([
     ["keyManagement:actions.useInCherry", handleCherryStudioMock],
-    ["keyManagement:actions.importToCliProxy", handleCliProxyMock],
+
     [
       "keyManagement:actions.importToClaudeCodeRouter",
       handleClaudeCodeRouterMock,

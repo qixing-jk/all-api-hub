@@ -142,12 +142,23 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
             <p className="text-muted-foreground mb-6 text-sm">
               {t("filters.empty.description")}
             </p>
-            <div className="flex flex-wrap justify-center gap-2">
-              <Button onClick={() => onAddFilter("pattern")}>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <Button
+                type="button"
+                variant="dashed"
+                size="sm"
+                className="w-full"
+                leftIcon={<Plus className="h-4 w-4" />}
+                onClick={() => onAddFilter("pattern")}
+              >
                 {t("filters.addPatternRule")}
               </Button>
               <Button
-                variant="outline"
+                type="button"
+                variant="dashed"
+                size="sm"
+                className="w-full"
+                leftIcon={<Plus className="h-4 w-4" />}
                 onClick={() => onAddFilter("probe")}
                 disabled={!probeRulesSupported}
               >
@@ -368,18 +379,23 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
               </div>
             ))}
 
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Button
                 type="button"
-                variant="outline"
-                onClick={() => onAddFilter("pattern")}
+                variant="dashed"
+                size="sm"
+                className="w-full"
                 leftIcon={<Plus className="h-4 w-4" />}
+                onClick={() => onAddFilter("pattern")}
               >
                 {t("filters.addPatternRule")}
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="dashed"
+                size="sm"
+                className="w-full"
+                leftIcon={<Plus className="h-4 w-4" />}
                 onClick={() => onAddFilter("probe")}
                 disabled={!probeRulesSupported}
               >

@@ -136,61 +136,6 @@
       },
       "title": "Importar a Claude Code Router"
     },
-    "cliproxy": {
-      "actions": {
-        "addModel": "Agregar modelo",
-        "removeModel": "Quitar modelo",
-        "reorderModel": "Reordenar modelo"
-      },
-      "description": "Crea o actualiza una entrada de proveedor en CLIProxyAPI.",
-      "descriptions": {
-        "baseUrlClaudeApiKey": "Normalmente la URL raíz de Anthropic API sin /v1/messages.",
-        "baseUrlCodexApiKey": "Normalmente la URL raíz del proveedor. Un valor predeterminado común es https://api.openai.com.",
-        "baseUrlGeminiApiKey": "Normalmente la URL raíz de Gemini API sin /v1/models/....",
-        "baseUrlOpenAICompatibility": "Normalmente la Base URL compatible con OpenAI upstream que termina en /v1.",
-        "models": "Asigna nombres de modelos upstream a alias opcionales (nombre -> alias). Cuando están disponibles, los modelos upstream se cargan desde /v1/models para seleccionarlos.",
-        "modelsManual": "Asigna nombres de modelos upstream a alias opcionales (nombre -> alias). Ingresa valores manualmente para esta familia de proveedor en esta versión.",
-        "providerType": "Elige qué familia de proveedor de CLIProxyAPI importar.",
-        "proxyUrl": "URL de proxy opcional usada para esta entrada de API key."
-      },
-      "fields": {
-        "baseUrl": "Base URL del proveedor",
-        "models": "Mapeo de modelos (opcional)",
-        "name": "Nombre del proveedor",
-        "providerType": "Tipo de proveedor",
-        "proxyUrl": "URL de proxy (opcional)"
-      },
-      "placeholders": {
-        "baseUrlClaudeApiKey": "https://api.anthropic.com",
-        "baseUrlCodexApiKey": "https://api.openai.com",
-        "baseUrlGeminiApiKey": "https://generativelanguage.googleapis.com",
-        "baseUrlOpenAICompatibility": "https://example.com/v1",
-        "modelAlias": "Alias de modelo (opcional)",
-        "modelName": "Nombre del modelo, p. ej. claude",
-        "name": "p. ej. Acme Relay",
-        "providerType": "Selecciona una familia de proveedor",
-        "proxyUrl": "http://localhost:3000"
-      },
-      "providerTypes": {
-        "claudeApiKey": {
-          "description": "Usa una entrada de proveedor estilo Anthropic Claude API key.",
-          "label": "Claude API Key"
-        },
-        "codexApiKey": {
-          "description": "Usa una entrada de proveedor estilo Codex / OpenAI API key.",
-          "label": "Codex API Key"
-        },
-        "geminiApiKey": {
-          "description": "Usa una entrada de proveedor estilo Google Gemini API key.",
-          "label": "Gemini API Key"
-        },
-        "openaiCompatibility": {
-          "description": "Usa un proveedor estándar compatible con OpenAI con nombre de proveedor configurable.",
-          "label": "Compatibilidad OpenAI"
-        }
-      },
-      "title": "Importar a CLIProxyAPI"
-    },
     "collapse": "Contraer",
     "copyKey": {
       "copied": "Copiado",
@@ -616,11 +561,49 @@
       "reorder": "Arrastrar para reordenar"
     }
   },
+  "resourceEditor": {
+    "configured": "Configurado",
+    "items_one": "{{count}} elemento",
+    "items_many": "{{count}} elementos",
+    "items_other": "{{count}} elementos",
+    "optional": "Opcional"
+  },
   "searchableSelect": {
     "empty": "No se encontraron resultados",
     "noOptions": "No hay opciones disponibles",
     "noOptionsAllowCustom": "No hay opciones disponibles. Escribe para crear una",
     "searchPlaceholder": "Buscar...",
     "useValue": "Usar \"{{value}}\""
+  },
+  "secretList": {
+    "add": "Agregar clave",
+    "collapse": "Contraer API Key {{number}}",
+    "configured": "Configurado",
+    "expand": "Expandir API Key {{number}}",
+    "hide": "Ocultar clave",
+    "keepPlaceholder": "Deja en blanco para conservar la clave guardada",
+    "loadFailed": "No se pudo cargar esta clave. Inténtalo de nuevo.",
+    "newPlaceholder": "Ingresa la clave API",
+    "newState": "Nueva, sin guardar",
+    "remove": "Quitar clave",
+    "replacementState": "Se reemplazará la clave",
+    "restore": "Conservar clave guardada",
+    "retainedState": "Conservar clave guardada",
+    "row": "Clave API {{number}}",
+    "shortRow": "Clave {{number}}",
+    "show": "Mostrar clave",
+    "title": "Claves API"
+  },
+  "textEntries": {
+    "add": "Agregar fila",
+    "editRows": "Editar filas",
+    "editText": "Editar como texto",
+    "headerName": "Nombre del encabezado",
+    "headerValue": "Valor",
+    "modelAlias": "Alias (opcional)",
+    "modelAliasPlaceholder": "Usar el nombre original",
+    "modelHelp": "Deja el alias vacío para usar el nombre original. Formato de texto: un modelo = alias por línea.",
+    "modelName": "Modelo original",
+    "remove": "Eliminar fila {{number}}"
   }
 }

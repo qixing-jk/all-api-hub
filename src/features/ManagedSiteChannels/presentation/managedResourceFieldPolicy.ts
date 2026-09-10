@@ -52,6 +52,11 @@ import {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { CHANNEL_STATUS } from "~/types/newApi"
 
+import {
+  cliProxyApiFields,
+  cliProxyApiSections,
+} from "./cliProxyApiFieldPolicy"
+
 export const MANAGED_RESOURCE_EDITOR_MODES = {
   Create: "create",
   Edit: "edit",
@@ -874,6 +879,22 @@ export function createManagedResourceFieldPolicyRegistry(
 
 const managedResourceFieldPolicyRegistry =
   createManagedResourceFieldPolicyRegistry([
+    defineManagedResourceFieldPolicy({
+      siteType: SITE_TYPES.CLI_PROXY_API,
+      kind: MANAGED_RESOURCE_KINDS.Channel,
+      modes: {
+        create: {
+          fields: cliProxyApiFields,
+          hiddenFields: [],
+          sections: cliProxyApiSections,
+        },
+        edit: {
+          fields: cliProxyApiFields,
+          hiddenFields: [],
+          sections: cliProxyApiSections,
+        },
+      },
+    }),
     newApiManagedResourceFieldPolicy,
     veloeraManagedResourceFieldPolicy,
     doneHubManagedResourceFieldPolicy,

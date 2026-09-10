@@ -157,7 +157,7 @@
     "title": "Claude Code Router",
     "urlDesc": "URL cơ sở của dịch vụ Claude Code Router, ví dụ http://localhost:3000"
   },
-  "cliProxy": {
+  "cliProxyApi": {
     "baseUrlLabel": "URL cơ sở API quản trị",
     "checkConnectionAction": "Kiểm tra kết nối",
     "checkConnectionDesc": "Sau khi lưu, có thể chủ động kiểm tra URL hiện tại và key quản trị có truy cập được CLIProxyAPI Management API hay không.",
@@ -244,6 +244,7 @@
   "managedSite": {
     "axonHub": "AxonHub",
     "claudeCodeHub": "Claude Code Hub",
+    "cliProxyApi": "CLIProxyAPI",
     "description": "Chọn trang nền tảng tổng hợp API mà bạn muốn quản lý. Lựa chọn này quyết định cấu hình dùng cho quản lý kênh và đồng bộ mô hình.",
     "doneHub": "Done Hub",
     "gatewayGuidance": {
@@ -635,7 +636,6 @@
     "balanceHistory": "Lịch sử số dư",
     "checkinRedeem": "Điểm danh và đổi mã",
     "claudeCodeRouter": "Claude Code Router",
-    "cliProxy": "CLIProxyAPI",
     "dataBackup": "Dữ liệu và sao lưu",
     "general": "Chung",
     "managedSite": "AI gateway tự triển khai",

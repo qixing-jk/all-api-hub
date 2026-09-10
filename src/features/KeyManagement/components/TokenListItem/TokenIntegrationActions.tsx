@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next"
 
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
-import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
 import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
 import {
   EXPORT_ACTION_TARGETS,
@@ -92,12 +91,6 @@ export function TokenIntegrationDialogs({
         routerBaseUrl={dialogs.claudeCodeRouter.baseUrl}
         routerApiKey={dialogs.claudeCodeRouter.apiKey}
       />
-      <CliProxyExportDialog
-        isOpen={dialogs.cliProxy.isOpen}
-        onClose={dialogs.cliProxy.close}
-        account={account}
-        token={token}
-      />
     </>
   )
 }
@@ -156,9 +149,7 @@ export function TokenIntegrationActionGroup({
               [EXPORT_ACTION_TARGETS.KiloCode]: {
                 onSelect: exportActions.openKiloCode,
               },
-              [EXPORT_ACTION_TARGETS.CliProxy]: {
-                onSelect: exportActions.openCliProxy,
-              },
+
               [EXPORT_ACTION_TARGETS.ClaudeCodeRouter]: {
                 onSelect: exportActions.openClaudeCodeRouter,
               },

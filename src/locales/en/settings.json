@@ -157,7 +157,7 @@
     "title": "Claude Code Router",
     "urlDesc": "Claude Code Router server base URL, e.g. http://localhost:3000"
   },
-  "cliProxy": {
+  "cliProxyApi": {
     "baseUrlLabel": "Management API Base URL",
     "checkConnectionAction": "Check Connection",
     "checkConnectionDesc": "After saving, verify that the current URL and management key can reach the CLIProxyAPI Management API.",
@@ -244,6 +244,7 @@
   "managedSite": {
     "axonHub": "AxonHub",
     "claudeCodeHub": "Claude Code Hub",
+    "cliProxyApi": "CLIProxyAPI",
     "description": "Select which API aggregator platform you want to manage. This determines which configuration will be used for channel management and model syncing.",
     "doneHub": "Done Hub",
     "gatewayGuidance": {
@@ -636,7 +637,6 @@
     "balanceHistory": "Balance History",
     "checkinRedeem": "Check-in & Redeem",
     "claudeCodeRouter": "Claude Code Router",
-    "cliProxy": "CLIProxyAPI",
     "dataBackup": "Data & Backup",
     "general": "General",
     "managedSite": "Self-hosted AI gateway",

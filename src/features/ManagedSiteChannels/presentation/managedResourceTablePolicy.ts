@@ -95,6 +95,16 @@ const requireFieldValuePresentation = (
 const nativeTablePresentationPolicies: Partial<
   Record<ManagedSiteType, NativeTablePresentationPolicy>
 > = {
+  [SITE_TYPES.CLI_PROXY_API]: {
+    semantics: {
+      ...DEFAULT_MANAGED_RESOURCE_PRESENTATION_SEMANTICS,
+      fieldValuePresentations: {
+        type: requireFieldValuePresentation(SITE_TYPES.CLI_PROXY_API, "type"),
+      },
+    },
+    defaultSorting: [{ id: MANAGED_CHANNELS_COLUMN_IDS.Name, desc: false }],
+    columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.Canonical,
+  },
   [SITE_TYPES.OCTOPUS]: {
     semantics: {
       baseUrlFieldId: OCTOPUS_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
@@ -446,7 +456,7 @@ const createCanonicalColumns = ({
       ? [
           valueColumn(
             MANAGED_CHANNELS_COLUMN_IDS.Models,
-            t("managedSiteChannels:table.columns.models"),
+            t("channelDialog:fields.models.label"),
             CANONICAL_NATIVE_CHANNEL_FIELD_IDS.Models,
           ),
         ]

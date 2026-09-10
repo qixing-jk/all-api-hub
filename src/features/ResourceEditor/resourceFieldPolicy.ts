@@ -18,6 +18,25 @@ type ResourceFieldPresentationBase<TSection extends string = string> = {
   resolveHelp?: ResourceFieldTextResolver
   resolvePlaceholder?: ResourceFieldTextResolver
   rows?: number
+  /** Structured editing of an existing line-based projection; persistence stays adapter-owned. */
+  textEntries?: {
+    separator: "=" | ":"
+    omitEmptyValue?: boolean
+    resolveKeyLabel: ResourceFieldTextResolver
+    resolveValueLabel: ResourceFieldTextResolver
+    resolveValuePlaceholder?: ResourceFieldTextResolver
+  }
+  /** Saved credentials may start collapsed without loading their secrets. */
+  compactSecretRows?: boolean
+  /** Presentation of provider-declared, non-secret attributes on each credential row. */
+  entryFields?: readonly {
+    /** Responsive width within a credential row; defaults to a full row. */
+    width?: "wide" | "compact"
+    fieldId: string
+    resolveLabel: ResourceFieldTextResolver
+    resolvePlaceholder?: ResourceFieldTextResolver
+    resolveHelp?: ResourceFieldTextResolver
+  }[]
   optionLabelResolvers?: Readonly<Record<string, ResourceFieldTextResolver>>
   resolveOptionFallback?: ResourceFieldTextResolver
   optionSourceFieldIds?: readonly string[]
@@ -51,6 +70,18 @@ export type ResourceFieldHiddenField = {
 export type ResourceEditorFieldPolicy<TSection extends string = string> = {
   fields: readonly ResourceFieldPresentation<TSection>[]
   hiddenFields: readonly ResourceFieldHiddenField[]
+  sections?: Partial<
+    Record<
+      TSection,
+      {
+        defaultOpen?: boolean
+        resolveSummary?: (
+          t: TFunction,
+          values: EditableResourceProjection,
+        ) => string
+      }
+    >
+  >
 }
 
 export const RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS = {
@@ -86,6 +117,13 @@ const assertPolicy = <TSection extends string>(
     if (
       field.resolveNullableOptionLabel !== undefined &&
       field.renderer !== RESOURCE_FIELD_TYPES.Select
+    ) {
+      throw new Error("invalid resource field policy")
+    }
+    if (
+      (field.textEntries && field.renderer !== RESOURCE_FIELD_TYPES.Textarea) ||
+      (field.compactSecretRows &&
+        field.renderer !== RESOURCE_FIELD_TYPES.SecretList)
     ) {
       throw new Error("invalid resource field policy")
     }

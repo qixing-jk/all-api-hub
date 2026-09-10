@@ -83,9 +83,6 @@ const CheckinRedeemTab = createLazyTabComponent(
 const ClaudeCodeRouterTab = createLazyTabComponent(
   () => import("./components/tabs/ClaudeCodeRouter/ClaudeCodeRouterTab"),
 )
-const CliProxyTab = createLazyTabComponent(
-  () => import("./components/tabs/CliProxy/CliProxyTab"),
-)
 const DataBackupTab = createLazyTabComponent(
   () => import("./components/tabs/DataBackup/DataBackupTab"),
 )
@@ -123,7 +120,6 @@ const TAB_CONFIGS = [
   { id: "accountUsage", component: UsageHistorySyncTab },
   { id: "webAiApiCheck", component: WebAiApiCheckTab },
   { id: "managedSite", component: ManagedSiteTab },
-  { id: "cliProxy", component: CliProxyTab },
   { id: "claudeCodeRouter", component: ClaudeCodeRouterTab },
   ...(hasOptionalPermissions ? [PERMISSIONS_TAB_CONFIG] : []),
   { id: "dataBackup", component: DataBackupTab },
@@ -248,8 +244,6 @@ function getSettingsTabLabel(t: TFunction, tabId: TabId): string {
       return t("settings:tabs.dataBackup")
     case "managedSite":
       return t("settings:tabs.managedSite")
-    case "cliProxy":
-      return t("settings:tabs.cliProxy")
     case "claudeCodeRouter":
       return t("settings:tabs.claudeCodeRouter")
     case "permissions":

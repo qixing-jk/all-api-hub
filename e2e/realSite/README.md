@@ -159,6 +159,42 @@ does not support base-URL channel lookup for that managed-site type.
 
 ## Managed-Site Channel Matrix
 
+### CLIProxyAPI providers
+
+CLIProxyAPI uses `e2e/realSite/cliProxyApiProviders.spec.ts`, registered as
+`cli-proxy-api` in the local and GitHub Actions managed-site matrix.
+Set these values in the existing real-site environment file or CI secrets:
+
+```env
+AAH_E2E_CLI_PROXY_API_BASE_URL=http://localhost:8317
+AAH_E2E_CLI_PROXY_API_ADMIN_TOKEN=replace-with-management-key
+```
+
+The URL may include a reverse-proxy prefix or `/v0/management`. Use the management
+key, not a client API key. Run only this target with:
+
+```bash
+pnpm exec playwright test e2e/realSite/cliProxyApiProviders.spec.ts --project=chromium --workers=1
+```
+
+In the Real-Site E2E workflow, choose category `managed-site` and target
+`cli-proxy-api`. Missing credentials are reported as skips. Older servers
+may skip Vertex AI, xAI, or Gemini Interactions only when the corresponding
+endpoint returns 404; authentication errors fail the test.
+
+Seven serial scenarios exercise provider creation, search, model replacement,
+credential rotation, preservation of request headers and proxy settings, and
+deletion through the extension UI. Independent management API reads confirm the
+persisted results. No upstream model requests are made. Each run uses unique
+dummy credentials and an `.invalid` upstream URL, and cleans only its own provider
+in a finalizer, including after a failed UI assertion. Traces, screenshots, and
+videos are disabled for this spec.
+
+Use a dedicated test deployment without concurrent configuration writers:
+CLIProxyAPI collection PUTs do not offer compare-and-swap protection.
+
+### Other managed-site targets
+
 The shared managed-site channel spec can be scoped to one target with
 `AAH_E2E_MANAGED_SITE_TARGET`. CI runs it once per managed site so targets can
 execute independently and in parallel.

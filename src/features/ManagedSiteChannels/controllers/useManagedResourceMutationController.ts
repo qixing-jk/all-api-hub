@@ -561,6 +561,19 @@ export function useManagedResourceMutationController({
             }
           }
         })
+        .catch((error: unknown) => {
+          if (current !== generation.current) return undefined
+          // Public managed errors include authoritative-read failures before update dispatch.
+          if (!(error instanceof ManagedResourceError)) throw error
+          setEditorFeedback({
+            kind: "save-failed",
+            failure: toSafeManagedResourceFailure(error),
+          })
+          analyticsCompletion?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          })
+          return undefined
+        })
         .finally(() => {
           if (current === generation.current) {
             setIsSaving(false)

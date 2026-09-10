@@ -35,7 +35,6 @@ import {
 const {
   completeProductAnalyticsActionMock,
   kelivoExportDialogRenderMock,
-  cliProxyDialogRenderMock,
   claudeCodeRouterDialogRenderMock,
   createProfileMock,
   cursorPlusDialogRenderMock,
@@ -53,7 +52,6 @@ const {
 } = vi.hoisted(() => ({
   completeProductAnalyticsActionMock: vi.fn(),
   kelivoExportDialogRenderMock: vi.fn(),
-  cliProxyDialogRenderMock: vi.fn(),
   claudeCodeRouterDialogRenderMock: vi.fn(),
   createProfileMock: vi.fn(),
   cursorPlusDialogRenderMock: vi.fn(),
@@ -128,13 +126,6 @@ vi.mock("~/components/CursorPlusExportDialog", () => ({
 vi.mock("~/components/ClaudeCodeRouterImportDialog", () => ({
   ClaudeCodeRouterImportDialog: (props: unknown) => {
     claudeCodeRouterDialogRenderMock(props)
-    return null
-  },
-}))
-
-vi.mock("~/components/CliProxyExportDialog", () => ({
-  CliProxyExportDialog: (props: unknown) => {
-    cliProxyDialogRenderMock(props)
     return null
   },
 }))
@@ -249,7 +240,6 @@ describe("TokenHeader analytics", () => {
   beforeEach(() => {
     completeProductAnalyticsActionMock.mockReset()
     kelivoExportDialogRenderMock.mockReset()
-    cliProxyDialogRenderMock.mockReset()
     claudeCodeRouterDialogRenderMock.mockReset()
     createProfileMock.mockReset()
     cursorPlusDialogRenderMock.mockReset()
@@ -266,8 +256,8 @@ describe("TokenHeader analytics", () => {
     userPreferencesContextMock.mockReturnValue({
       claudeCodeRouterApiKey: "router-key",
       claudeCodeRouterBaseUrl: "https://router.example.invalid",
-      cliProxyBaseUrl: "https://cli-proxy.example.invalid",
-      cliProxyManagementKey: "cli-proxy-key",
+      cliProxyApiBaseUrl: "https://cli-proxy.example.invalid",
+      cliProxyApiManagementKey: "cli-proxy-key",
       markGatewayGuidanceOnboardingCompleted:
         markGatewayGuidanceOnboardingCompletedMock,
       managedSiteType: "new-api",
@@ -507,7 +497,6 @@ describe("TokenHeader analytics", () => {
       "keyManagement:actions.exportToCCSwitch",
       "keyManagement:actions.exportToCursorPlus",
       "keyManagement:actions.exportToKiloCode",
-      "keyManagement:actions.importToCliProxy",
       "keyManagement:actions.importToClaudeCodeRouter",
       "keyManagement:actions.importToManagedSite",
     ]
@@ -522,7 +511,6 @@ describe("TokenHeader analytics", () => {
     ).not.toBeInTheDocument()
     expect(kiloCodeDialogRenderMock).not.toHaveBeenCalled()
     expect(claudeCodeRouterDialogRenderMock).not.toHaveBeenCalled()
-    expect(cliProxyDialogRenderMock).not.toHaveBeenCalled()
     expect(verifyDialogRenderMock).not.toHaveBeenCalled()
     expect(verifyCliDialogRenderMock).not.toHaveBeenCalled()
     expect(openWithAccountMock).not.toHaveBeenCalled()
@@ -1327,7 +1315,6 @@ describe("TokenHeader analytics", () => {
 
     await selectExportAction(user, "keyManagement:actions.exportToKiloCode")
     await selectExportAction(user, "keyManagement:actions.exportToCursorPlus")
-    await selectExportAction(user, "keyManagement:actions.importToCliProxy")
     await selectExportAction(
       user,
       "keyManagement:actions.importToClaudeCodeRouter",
@@ -1338,9 +1325,6 @@ describe("TokenHeader analytics", () => {
     expect(
       screen.getByRole("dialog", { name: "Cursor++ export" }),
     ).toBeVisible()
-    expect(cliProxyDialogRenderMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ isOpen: true }),
-    )
     expect(claudeCodeRouterDialogRenderMock).toHaveBeenLastCalledWith(
       expect.objectContaining({ isOpen: true }),
     )
@@ -1350,7 +1334,6 @@ describe("TokenHeader analytics", () => {
       guidedManagedSiteImportRequest: "request-1",
     })
     kiloCodeDialogRenderMock.mockClear()
-    cliProxyDialogRenderMock.mockClear()
     claudeCodeRouterDialogRenderMock.mockClear()
 
     rerenderTokenHeader({ guidedManagedSiteImportRequest: "request-1" })
@@ -1358,9 +1341,6 @@ describe("TokenHeader analytics", () => {
       screen.queryByRole("dialog", { name: "Cursor++ export" }),
     ).not.toBeInTheDocument()
     expect(kiloCodeDialogRenderMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ isOpen: false }),
-    )
-    expect(cliProxyDialogRenderMock).toHaveBeenLastCalledWith(
       expect.objectContaining({ isOpen: false }),
     )
     expect(claudeCodeRouterDialogRenderMock).toHaveBeenLastCalledWith(

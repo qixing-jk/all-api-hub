@@ -86,6 +86,8 @@ export type NativeResourceKindDefinition<
   siteType: ManagedSiteType
   kind: ManagedResourceKind
   capabilities?: Partial<ManagedResourceWorkspace["capabilities"]>
+  /** Config-backed providers may derive identity from editable connection values. */
+  updateChangesIdentity?: boolean
   createSeedBindings?: readonly NativeResourceCreateSeedBinding[]
   openConfig(options?: ResourceOperationOptions): Promise<TConfig>
   scopeKey(config: TConfig): string
@@ -672,7 +674,9 @@ export function defineNativeResourceKind<
                       )
                     },
                     (updatedDetail) =>
-                      projectDetailAtRef(updatedDetail, canonicalRef),
+                      definition.updateChangesIdentity
+                        ? projectCreatedDetail(updatedDetail)
+                        : projectDetailAtRef(updatedDetail, canonicalRef),
                     { idempotent: true },
                   )
                 }, mapFailure),

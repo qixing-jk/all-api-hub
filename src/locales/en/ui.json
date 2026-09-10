@@ -131,61 +131,6 @@
       },
       "title": "Import to Claude Code Router"
     },
-    "cliproxy": {
-      "actions": {
-        "addModel": "Add Model",
-        "removeModel": "Remove model",
-        "reorderModel": "Reorder model"
-      },
-      "description": "Create or update a provider entry in CLIProxyAPI.",
-      "descriptions": {
-        "baseUrlClaudeApiKey": "Usually the Anthropic API root URL without /v1/messages.",
-        "baseUrlCodexApiKey": "Usually the provider root URL. A common default is https://api.openai.com.",
-        "baseUrlGeminiApiKey": "Usually the Gemini API root URL without /v1/models/....",
-        "baseUrlOpenAICompatibility": "Usually the upstream OpenAI-compatible base URL ending in /v1.",
-        "models": "Map upstream model names to optional aliases (name -> alias). When available, upstream models are loaded from /v1/models for selection.",
-        "modelsManual": "Map upstream model names to optional aliases (name -> alias). Enter values manually for this provider family in this release.",
-        "providerType": "Choose which CLIProxyAPI provider family to import into.",
-        "proxyUrl": "Optional proxy URL used for this API key entry."
-      },
-      "fields": {
-        "baseUrl": "Provider base URL",
-        "models": "Model mapping (optional)",
-        "name": "Provider name",
-        "providerType": "Provider type",
-        "proxyUrl": "Proxy URL (optional)"
-      },
-      "placeholders": {
-        "baseUrlClaudeApiKey": "https://api.anthropic.com",
-        "baseUrlCodexApiKey": "https://api.openai.com",
-        "baseUrlGeminiApiKey": "https://generativelanguage.googleapis.com",
-        "baseUrlOpenAICompatibility": "https://example.com/v1",
-        "modelAlias": "Model alias (optional)",
-        "modelName": "Model name, e.g. claude",
-        "name": "e.g. Acme Relay",
-        "providerType": "Select a provider family",
-        "proxyUrl": "http://localhost:3000"
-      },
-      "providerTypes": {
-        "claudeApiKey": {
-          "description": "Use an Anthropic Claude API key style provider entry.",
-          "label": "Claude API Key"
-        },
-        "codexApiKey": {
-          "description": "Use a Codex / OpenAI API key style provider entry.",
-          "label": "Codex API Key"
-        },
-        "geminiApiKey": {
-          "description": "Use a Google Gemini API key style provider entry.",
-          "label": "Gemini API Key"
-        },
-        "openaiCompatibility": {
-          "description": "Use a standard OpenAI-compatible provider with a configurable provider name.",
-          "label": "OpenAI Compatibility"
-        }
-      },
-      "title": "Import to CLIProxyAPI"
-    },
     "collapse": "Collapse",
     "copyKey": {
       "copied": "Copied",
@@ -603,11 +548,48 @@
       "reorder": "Drag to reorder"
     }
   },
+  "resourceEditor": {
+    "configured": "Configured",
+    "items_one": "{{count}} item",
+    "items_other": "{{count}} items",
+    "optional": "Optional"
+  },
   "searchableSelect": {
     "empty": "No results found",
     "noOptions": "No options available",
     "noOptionsAllowCustom": "No options available. Type to create one",
     "searchPlaceholder": "Search...",
     "useValue": "Use \"{{value}}\""
+  },
+  "secretList": {
+    "add": "Add key",
+    "collapse": "Collapse API Key {{number}}",
+    "configured": "Configured",
+    "expand": "Expand API Key {{number}}",
+    "hide": "Hide key",
+    "keepPlaceholder": "Leave blank to keep the saved key",
+    "loadFailed": "Could not load this key. Try again.",
+    "newPlaceholder": "Enter API key",
+    "newState": "New, not saved",
+    "remove": "Remove key",
+    "replacementState": "Key will be replaced",
+    "restore": "Keep saved key",
+    "retainedState": "Keep saved key",
+    "row": "API Key {{number}}",
+    "shortRow": "Key {{number}}",
+    "show": "Show key",
+    "title": "API Keys"
+  },
+  "textEntries": {
+    "add": "Add row",
+    "editRows": "Edit rows",
+    "editText": "Edit as text",
+    "headerName": "Header name",
+    "headerValue": "Value",
+    "modelAlias": "Alias (optional)",
+    "modelAliasPlaceholder": "Use original model name",
+    "modelHelp": "Leave the alias blank to keep the original model name. Bulk text: one model = alias per line.",
+    "modelName": "Original model",
+    "remove": "Remove row {{number}}"
   }
 }

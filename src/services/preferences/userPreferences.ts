@@ -65,9 +65,9 @@ import {
   type ClaudeCodeRouterConfig,
 } from "~/types/claudeCodeRouterConfig"
 import {
-  DEFAULT_CLI_PROXY_CONFIG,
-  type CliProxyConfig,
-} from "~/types/cliProxyConfig"
+  DEFAULT_CLI_PROXY_API_CONFIG,
+  type CliProxyApiConfig,
+} from "~/types/cliProxyApiConfig"
 import {
   DEFAULT_BALANCE_HISTORY_PREFERENCES,
   type BalanceHistoryPreferences,
@@ -76,6 +76,7 @@ import {
   DEFAULT_DONE_HUB_CONFIG,
   type DoneHubConfig,
 } from "~/types/doneHubConfig"
+import type { LegacyCliProxyApiConfig } from "~/types/legacyCliProxyApiConfig"
 import {
   getDefaultLoggingPreferences,
   type LoggingPreferences,
@@ -363,8 +364,9 @@ export interface UserPreferences {
   // 管理站点类型 (用户可以选择管理 New API / Done Hub / Veloera / Octopus / AxonHub / Claude Code Hub)
   managedSiteType: ManagedSiteType
 
-  // CLIProxyAPI 管理接口配置
-  cliProxy?: CliProxyConfig
+  // Released integration configuration: read only by the migration.
+  cliProxy?: LegacyCliProxyApiConfig
+  cliProxyApi?: CliProxyApiConfig
 
   // Claude Code Router 配置
   claudeCodeRouter?: ClaudeCodeRouterConfig
@@ -595,7 +597,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   claudeCodeHub: DEFAULT_CLAUDE_CODE_HUB_CONFIG,
   sub2apiManagedSite: DEFAULT_SUB2API_MANAGED_SITE_CONFIG,
   managedSiteType: SITE_TYPES.NEW_API,
-  cliProxy: DEFAULT_CLI_PROXY_CONFIG,
+  cliProxyApi: DEFAULT_CLI_PROXY_API_CONFIG,
   claudeCodeRouter: DEFAULT_CLAUDE_CODE_ROUTER_CONFIG,
   managedSiteModelSync: {
     enabled: false,
@@ -1351,6 +1353,7 @@ class UserPreferencesService {
       | OctopusConfig
       | AxonHubConfig
       | ClaudeCodeHubConfig
+      | CliProxyApiConfig
       | Sub2ApiManagedSiteConfig
   }> {
     const prefs = await this.getPreferences()
@@ -1362,8 +1365,11 @@ class UserPreferencesService {
       | OctopusConfig
       | AxonHubConfig
       | ClaudeCodeHubConfig
+      | CliProxyApiConfig
       | Sub2ApiManagedSiteConfig
-    if (siteType === SITE_TYPES.AXON_HUB) {
+    if (siteType === SITE_TYPES.CLI_PROXY_API) {
+      config = prefs.cliProxyApi ?? DEFAULT_CLI_PROXY_API_CONFIG
+    } else if (siteType === SITE_TYPES.AXON_HUB) {
       config = prefs.axonHub || DEFAULT_AXON_HUB_CONFIG
     } else if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
       config = prefs.claudeCodeHub || DEFAULT_CLAUDE_CODE_HUB_CONFIG
@@ -1394,9 +1400,9 @@ class UserPreferencesService {
     })
   }
 
-  async resetCliProxyConfig(): Promise<PreferenceWriteResult> {
+  async resetCliProxyApiConfig(): Promise<PreferenceWriteResult> {
     return this.savePreferences({
-      cliProxy: DEFAULT_PREFERENCES.cliProxy,
+      cliProxyApi: DEFAULT_PREFERENCES.cliProxyApi,
     })
   }
 

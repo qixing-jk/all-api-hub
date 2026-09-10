@@ -18,6 +18,7 @@ export const SITE_TYPES = {
   OCTOPUS: "octopus",
   AXON_HUB: "axonhub",
   CLAUDE_CODE_HUB: "claude-code-hub",
+  CLI_PROXY_API: "cli-proxy-api",
   AIHUBMIX: "AIHubMix",
   SHAREDCHAT: "sharedchat",
   OPENROUTER: "openrouter",

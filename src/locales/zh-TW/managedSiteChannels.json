@@ -23,6 +23,9 @@
       "description": "目前的 {{site}} 帳號無權管理渠道。請改用管理員帳號或調整權限，然後重新整理。",
       "title": "{{site}} 拒絕存取"
     },
+    "resourceChanged": {
+      "description": "此渠道已被其他操作修改，本次變更未儲存。請關閉編輯視窗，重新整理渠道列表後再編輯。"
+    },
     "savedRefreshError": {
       "description": "渠道已儲存，但無法載入最新列表。請先重新整理渠道列表，再進行其他變更。",
       "title": "渠道已儲存，需要重新整理"
@@ -32,12 +35,20 @@
       "title": "{{site}} 暫時無法使用"
     }
   },
+  "cliProxyApi": {
+    "credentialWeightHelp": "留空時權重為 1；非正數表示不參與加權路由，最大為 1,000,000。",
+    "excludedModels": "排除模型（每行一個）",
+    "headers": "請求標頭",
+    "headersHelp": "每行一個標頭，格式為 名稱: 值。",
+    "prefix": "模型前綴",
+    "proxyUrl": "代理位址"
+  },
   "dialog": {
     "cancel": "取消",
     "confirm": "刪除",
     "deleteDescription": "此操作無法撤銷，所選配置將被永久刪除。",
     "deleteRefreshAction": "重新整理渠道清單",
-    "deleteRefreshRequired": "部分刪除結果的狀態不確定。請先重新整理渠道清單，再繼續刪除。",
+    "deleteRefreshRequired": "請重新整理渠道清單以確認最新狀態，再繼續刪除。",
     "deleteResultStatus": {
       "failed": "失敗",
       "success": "已刪除",
@@ -412,11 +423,13 @@
   "title": "渠道管理",
   "toasts": {
     "channelSaved": "渠道已儲存",
+    "channelsDeleted_other": "已刪除 {{count}} 個渠道",
     "channelUpdated": "渠道已更新",
     "syncCompleted": "模型同步完成（{{success}}/{{total}}）",
     "syncCompletedRefreshFailed": "模型已同步（{{success}}/{{total}}），但渠道清單重新整理失敗。請重新整理後再試。",
     "syncFailed": "模型同步失敗：{{error}}",
-    "syncFailedFallback": "無法同步渠道"
+    "syncFailedFallback": "無法同步渠道",
+    "syncIncomplete": "模型同步未全部完成（成功 {{success}}/{{total}}）。請開啟模型同步介面查看結果，並重試失敗項目。"
   },
   "toolbar": {
     "addChannel": "新增渠道",

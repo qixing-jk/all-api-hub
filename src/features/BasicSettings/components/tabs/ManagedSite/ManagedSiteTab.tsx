@@ -22,6 +22,7 @@ import { pushWithinOptionsPage } from "~/utils/navigation"
 
 import AxonHubSettings from "./AxonHubSettings"
 import ClaudeCodeHubSettings from "./ClaudeCodeHubSettings"
+import CliProxyApiSettings from "./CliProxyApiSettings"
 import DoneHubSettings from "./DoneHubSettings"
 import ManagedSiteModelSyncSettings from "./managedSiteModelSyncSettings"
 import ManagedSiteSelector from "./ManagedSiteSelector"
@@ -88,6 +89,8 @@ export default function ManagedSiteTab() {
 
   const renderSiteSettings = () => {
     switch (managedSiteType) {
+      case SITE_TYPES.CLI_PROXY_API:
+        return <CliProxyApiSettings />
       case SITE_TYPES.OCTOPUS:
         return <OctopusSettings />
       case SITE_TYPES.DONE_HUB:

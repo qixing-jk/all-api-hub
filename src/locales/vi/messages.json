@@ -67,19 +67,13 @@
     "modelsMissing": "Vui lòng điền ít nhất một mô hình",
     "updateSuccess": "Đã cập nhật thành công nhà cung cấp Claude Code Router {{name}}"
   },
-  "cliproxy": {
-    "configMissing": "Vui lòng cấu hình địa chỉ quản lý và khóa của CLIProxyAPI trong phần cài đặt trước",
-    "importFailed": "Nhập vào CLIProxyAPI thất bại",
-    "importSuccess": "Đã nhập thành công nhà cung cấp {{name}} vào CLIProxyAPI",
+  "cliProxyApi": {
     "managementApiConnectionSuccess": "Kết nối CLIProxyAPI Management API bình thường",
     "managementApiForbidden": "CLIProxyAPI đã từ chối yêu cầu hiện tại. Vui lòng kiểm tra xem khóa quản lý có bị nhập sai nhiều lần hay không, hoặc truy cập hiện tại có bị máy chủ giới hạn hay không.",
     "managementApiHttpError": "CLIProxyAPI Management API trả về mã trạng thái bất thường (HTTP {{status}})",
     "managementApiInvalidKey": "Khóa quản lý (Management Key) của CLIProxyAPI không hợp lệ, vui lòng kiểm tra xem khóa quản lý trong phần cài đặt có chính xác không.",
     "managementApiNotFound": "Không tìm thấy CLIProxyAPI Management API. Vui lòng xác nhận URL cơ sở kết thúc bằng /v0/management và CLIProxyAPI đã được cấu hình khóa quản lý.",
-    "managementApiRemoteAccessDisabled": "CLIProxyAPI đã từ chối quyền truy cập quản lý từ xa. Vui lòng kiểm tra cấu hình remote-management.allow-remote: true trong cài đặt của CLIProxyAPI đã được bật chưa, hoặc đã bật quản lý từ xa qua MANAGEMENT_PASSWORD chưa, sau đó thử lại.",
-    "managementApiServerError": "CLIProxyAPI Management API trả về lỗi máy chủ (HTTP {{status}})",
-    "managementApiUnreachable": "Không thể kết nối với CLIProxyAPI Management API. Vui lòng kiểm tra URL cơ sở, trạng thái dịch vụ và kết nối mạng từ trình duyệt đến địa chỉ đó.",
-    "updateSuccess": "Đã cập nhật thành công nhà cung cấp CLIProxy {{name}}"
+    "managementApiUnreachable": "Không thể kết nối với CLIProxyAPI Management API. Vui lòng kiểm tra URL cơ sở, trạng thái dịch vụ và kết nối mạng từ trình duyệt đến địa chỉ đó."
   },
   "content": {
     "userInfoNotFound": "Không tìm thấy thông tin người dùng, vui lòng đảm bảo đã đăng nhập",

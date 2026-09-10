@@ -61,6 +61,16 @@ function selectedIds(matrix: ReturnType<typeof runMatrix>) {
 }
 
 describe("GitHub real-site E2E matrix selection", () => {
+  it("registers CLIProxyAPI as an independent managed-site target", () => {
+    expect(runMatrix("managed-site", "cli-proxy-api").include).toEqual([
+      expect.objectContaining({
+        id: "cli-proxy-api",
+        env_prefix: "CLI_PROXY_API",
+        managed_site_target: "cli-proxy-api",
+        spec: "e2e/realSite/cliProxyApiProviders.spec.ts",
+      }),
+    ])
+  })
   it("selects one concrete target without expanding the account category", () => {
     const matrix = runMatrix("all", "new-api-account")
 

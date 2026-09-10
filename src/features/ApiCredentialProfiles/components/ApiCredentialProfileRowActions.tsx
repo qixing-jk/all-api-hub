@@ -145,14 +145,7 @@ export function ApiCredentialProfileRowActions({
                   API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.KiloCode,
                 ),
             },
-            [API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CliProxy]: {
-              testId: API_CREDENTIAL_PROFILES_TEST_IDS.exportToCliProxyMenuItem,
-              onSelect: () =>
-                onExport(
-                  profile,
-                  API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CliProxy,
-                ),
-            },
+
             [API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.ClaudeCodeRouter]: {
               testId:
                 API_CREDENTIAL_PROFILES_TEST_IDS.exportToClaudeCodeRouterMenuItem,

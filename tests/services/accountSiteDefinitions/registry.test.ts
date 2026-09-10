@@ -87,6 +87,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.UNKNOWN
 
 type ExpectedManagedSiteType =
+  | typeof SITE_TYPES.CLI_PROXY_API
   | typeof SITE_TYPES.NEW_API
   | typeof SITE_TYPES.VELOERA
   | typeof SITE_TYPES.DONE_HUB
@@ -306,6 +307,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.AXON_HUB,
       SITE_TYPES.CLAUDE_CODE_HUB,
       SITE_TYPES.SUB2API,
+      SITE_TYPES.CLI_PROXY_API,
     ])
   })
 

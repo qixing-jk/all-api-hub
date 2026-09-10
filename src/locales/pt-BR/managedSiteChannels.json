@@ -23,6 +23,9 @@
       "description": "Esta conta do {{site}} não pode gerenciar canais. Use uma conta de administrador ou atualize as permissões e depois atualize a lista.",
       "title": "Acesso ao {{site}} negado"
     },
+    "resourceChanged": {
+      "description": "Este canal foi alterado durante a edição. Suas alterações não foram salvas. Feche o editor, atualize a lista de canais e edite novamente."
+    },
     "savedRefreshError": {
       "description": "O canal foi salvo, mas não foi possível carregar a lista mais recente. Atualize a lista de canais antes de fazer outras alterações.",
       "title": "Canal salvo; é necessário atualizar"
@@ -32,12 +35,20 @@
       "title": "O {{site}} está indisponível"
     }
   },
+  "cliProxyApi": {
+    "credentialWeightHelp": "Em branco equivale ao peso 1. Valores não positivos excluem esta chave do roteamento ponderado; máximo de 1.000.000.",
+    "excludedModels": "Modelos excluídos (um por linha)",
+    "headers": "Cabeçalhos da solicitação",
+    "headersHelp": "Um cabeçalho por linha, no formato Nome: valor.",
+    "prefix": "Prefixo do modelo",
+    "proxyUrl": "URL do proxy"
+  },
   "dialog": {
     "cancel": "Cancelar",
     "confirm": "Excluir",
     "deleteDescription": "Esta ação não pode ser desfeita. Os canais selecionados serão removidos permanentemente.",
     "deleteRefreshAction": "Atualizar canais",
-    "deleteRefreshRequired": "Alguns resultados da exclusão são incertos. Atualize a lista de canais antes de excluir novamente.",
+    "deleteRefreshRequired": "Atualize a lista de canais para confirmar o estado atual antes de excluir novamente.",
     "deleteResultStatus": {
       "failed": "Falhou",
       "success": "Excluído",
@@ -417,11 +428,15 @@
   "title": "Gerenciamento de canais",
   "toasts": {
     "channelSaved": "Canal salvo",
+    "channelsDeleted_one": "{{count}} canal excluído",
+    "channelsDeleted_many": "{{count}} canais excluídos",
+    "channelsDeleted_other": "{{count}} canais excluídos",
     "channelUpdated": "Canal atualizado",
     "syncCompleted": "Sincronização de modelos concluída ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Os modelos foram sincronizados ({{success}}/{{total}}), mas não foi possível atualizar a lista de canais. Atualize e tente novamente.",
     "syncFailed": "Falha na sincronização de modelos: {{error}}",
-    "syncFailedFallback": "Não foi possível sincronizar os canais"
+    "syncFailedFallback": "Não foi possível sincronizar os canais",
+    "syncIncomplete": "A sincronização de modelos não foi concluída totalmente ({{success}}/{{total}} com sucesso). Abra a sincronização de modelos para revisar os resultados e tentar novamente os canais com falha."
   },
   "toolbar": {
     "addChannel": "Adicionar canal",

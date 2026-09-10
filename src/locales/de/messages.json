@@ -69,19 +69,13 @@
     "modelsMissing": "Bitte geben Sie mindestens ein Modell an",
     "updateSuccess": "Claude-Code-Router-Anbieter {{name}} erfolgreich aktualisiert"
   },
-  "cliproxy": {
-    "configMissing": "Bitte konfigurieren Sie zuerst die CLIProxyAPI Management-API-Basis-URL und geben Sie die Einstellungen ein",
-    "importFailed": "Fehler beim Importieren des Anbieters nach CLIProxyAPI",
-    "importSuccess": "Der Anbieter {{name}} wurde erfolgreich in CLIProxyAPI importiert",
+  "cliProxyApi": {
     "managementApiConnectionSuccess": "CLIProxyAPI Management-API-Verbindung erfolgreich",
     "managementApiForbidden": "CLIProxyAPI hat die Anfrage abgelehnt. Überprüfen Sie, ob der Verwaltungsschlüssel zu oft falsch eingegeben wurde oder ob der Zugriff auf den Server eingeschränkt ist.",
     "managementApiHttpError": "Die CLIProxyAPI-Verwaltungs-API hat einen unerwarteten Statuscode zurückgegeben (HTTP {{status}})",
     "managementApiInvalidKey": "Der Verwaltungsschlüssel CLIProxyAPI ist ungültig. Bitte überprüfen Sie den Schlüssel in den Einstellungen.",
     "managementApiNotFound": "CLIProxyAPI Verwaltungs-API wurde nicht gefunden. Stellen Sie sicher, dass die Basis-URL mit /v0/management endet und dass für CLIProxyAPI ein Verwaltungsschlüssel konfiguriert ist.",
-    "managementApiRemoteAccessDisabled": "CLIProxyAPI hat den Fernverwaltungszugriff abgelehnt. Überprüfen Sie, ob remote-management.allow-remote: true in der Konfiguration CLIProxyAPI aktiviert ist oder ob die Remoteverwaltung über MANAGEMENT_PASSWORD aktiviert ist, und versuchen Sie es dann erneut.",
-    "managementApiServerError": "Die CLIProxyAPI-Verwaltungs-API hat einen Serverfehler zurückgegeben (HTTP {{status}})",
-    "managementApiUnreachable": "Die Verwaltungs-API CLIProxyAPI konnte nicht erreicht werden. Überprüfen Sie die Basis-URL, den Dienststatus und den Browser-Netzwerkzugriff auf diese Adresse.",
-    "updateSuccess": "CLIProxy-Anbieter {{name}} erfolgreich aktualisiert"
+    "managementApiUnreachable": "Die Verwaltungs-API CLIProxyAPI konnte nicht erreicht werden. Überprüfen Sie die Basis-URL, den Dienststatus und den Browser-Netzwerkzugriff auf diese Adresse."
   },
   "content": {
     "userInfoNotFound": "Benutzerinformationen nicht gefunden, bitte stellen Sie sicher, dass Sie angemeldet sind",

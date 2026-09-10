@@ -63,6 +63,7 @@ export type ManagedResourceKind =
   (typeof MANAGED_RESOURCE_KINDS)[keyof typeof MANAGED_RESOURCE_KINDS]
 
 export type ManagedSiteLabelKey =
+  | "settings:managedSite.cliProxyApi"
   | "settings:managedSite.newApi"
   | "settings:managedSite.doneHub"
   | "settings:managedSite.veloera"
@@ -72,6 +73,7 @@ export type ManagedSiteLabelKey =
   | "settings:managedSite.sub2api"
 
 export type ManagedSiteMessagesKey =
+  | "cliProxyApi"
   | "newapi"
   | "donehub"
   | "veloera"

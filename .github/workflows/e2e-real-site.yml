@@ -184,7 +184,7 @@ jobs:
                 [ -z "$MANAGED_SITE_EMAIL" ] && missing+=("AAH_E2E_${prefix}_EMAIL")
                 [ -z "$REAL_SITE_PASSWORD" ] && missing+=("AAH_E2E_${prefix}_PASSWORD")
                 ;;
-              CLAUDE_CODE_HUB)
+              CLAUDE_CODE_HUB|CLI_PROXY_API)
                 [ -z "$MANAGED_SITE_ADMIN_TOKEN" ] && missing+=("AAH_E2E_${prefix}_ADMIN_TOKEN")
                 ;;
               SUB2API)

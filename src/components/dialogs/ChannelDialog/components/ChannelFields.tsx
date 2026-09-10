@@ -274,7 +274,7 @@ export function ChannelSecretField({
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              variant="dashed"
               onClick={
                 isCancelableRealKeyLoad ? onCancelLoadRealKey : onLoadRealKey
               }
@@ -401,7 +401,7 @@ export function ChannelModelsField({
             {showBulkActions ? (
               <>
                 <Button
-                  variant="outline"
+                  variant="dashed"
                   size="sm"
                   onClick={onSelectAll}
                   disabled={disabled || isLoading || options.length === 0}
@@ -410,7 +410,7 @@ export function ChannelModelsField({
                   {t("channelDialog:actions.selectAll")}
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="dashed"
                   size="sm"
                   onClick={onInverse}
                   disabled={disabled || isLoading || options.length === 0}
@@ -419,7 +419,7 @@ export function ChannelModelsField({
                   {t("channelDialog:actions.inverse")}
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="dashed"
                   size="sm"
                   onClick={onDeselectAll}
                   disabled={disabled || isLoading || selected.length === 0}

@@ -133,6 +133,7 @@ export function ManagedResourceEditorBody({
       disabled={disabled}
       onValueChange={onValueChange}
       onLoadOptions={onLoadOptions}
+      onLoadSecret={onLoadSecret}
       renderFieldOverride={({
         descriptor,
         presentation,

@@ -62,6 +62,13 @@ const runtimeConfigs: ManagedSiteRuntimeConfig[] = [
       adminToken: "sub2api-admin-token",
     },
   },
+  {
+    siteType: SITE_TYPES.CLI_PROXY_API,
+    config: {
+      baseUrl: "http://cliproxy.example.invalid/",
+      adminToken: "cliproxy-management-key",
+    },
+  },
 ]
 
 const getTarget = async (runtimeConfig: ManagedSiteRuntimeConfig) =>
@@ -84,6 +91,7 @@ const getRawTargetValues = (
         runtimeConfig.config.password,
       ]
     case SITE_TYPES.CLAUDE_CODE_HUB:
+    case SITE_TYPES.CLI_PROXY_API:
     case SITE_TYPES.SUB2API:
       return [
         runtimeConfig.config.baseUrl,
@@ -121,6 +129,7 @@ const changeCompatibleIdentity = (
       }
     case SITE_TYPES.CLAUDE_CODE_HUB:
     case SITE_TYPES.SUB2API:
+    case SITE_TYPES.CLI_PROXY_API:
       return null
     default:
       return {

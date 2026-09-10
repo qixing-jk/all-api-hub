@@ -23,6 +23,9 @@
       "description": "Tài khoản {{site}} này không thể quản lý kênh. Dùng tài khoản quản trị viên hoặc cập nhật quyền rồi làm mới.",
       "title": "{{site}} đã từ chối truy cập"
     },
+    "resourceChanged": {
+      "description": "Kênh này đã thay đổi trong lúc bạn chỉnh sửa. Các thay đổi của bạn chưa được lưu. Hãy đóng trình chỉnh sửa, làm mới danh sách kênh rồi chỉnh sửa lại."
+    },
     "savedRefreshError": {
       "description": "Kênh đã được lưu nhưng không thể tải danh sách mới nhất. Hãy làm mới danh sách kênh trước khi thực hiện thêm thay đổi.",
       "title": "Đã lưu kênh, cần làm mới"
@@ -32,12 +35,20 @@
       "title": "{{site}} không khả dụng"
     }
   },
+  "cliProxyApi": {
+    "credentialWeightHelp": "Để trống tương đương trọng số 1. Giá trị không dương loại khóa khỏi định tuyến theo trọng số; tối đa 1.000.000.",
+    "excludedModels": "Mô hình bị loại trừ (mỗi dòng một mục)",
+    "headers": "Tiêu đề yêu cầu",
+    "headersHelp": "Mỗi dòng một tiêu đề, theo định dạng Tên: giá trị.",
+    "prefix": "Tiền tố mô hình",
+    "proxyUrl": "URL proxy"
+  },
   "dialog": {
     "cancel": "Hủy",
     "confirm": "Xóa",
     "deleteDescription": "Hành động này không thể hoàn tác, cấu hình đã chọn sẽ bị xóa vĩnh viễn.",
     "deleteRefreshAction": "Làm mới danh sách kênh",
-    "deleteRefreshRequired": "Một số kết quả xóa chưa xác định. Hãy làm mới danh sách kênh trước khi xóa lại.",
+    "deleteRefreshRequired": "Làm mới danh sách kênh để xác nhận trạng thái mới nhất trước khi tiếp tục xóa.",
     "deleteResultStatus": {
       "failed": "Thất bại",
       "success": "Đã xóa",
@@ -412,11 +423,13 @@
   "title": "Quản lý kênh",
   "toasts": {
     "channelSaved": "Đã lưu kênh",
+    "channelsDeleted_other": "Đã xóa {{count}} kênh",
     "channelUpdated": "Đã cập nhật kênh",
     "syncCompleted": "Đồng bộ mô hình hoàn tất ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Đã đồng bộ mô hình ({{success}}/{{total}}), nhưng không thể làm mới danh sách kênh. Hãy làm mới rồi thử lại.",
     "syncFailed": "Đồng bộ mô hình thất bại: {{error}}",
-    "syncFailedFallback": "Không thể đồng bộ các kênh"
+    "syncFailedFallback": "Không thể đồng bộ các kênh",
+    "syncIncomplete": "Đồng bộ mô hình chưa hoàn tất ({{success}}/{{total}} thành công). Mở trang đồng bộ mô hình để xem kết quả và thử lại các kênh bị lỗi."
   },
   "toolbar": {
     "addChannel": "Thêm kênh",

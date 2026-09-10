@@ -157,7 +157,7 @@
     "title": "Claude Code Router",
     "urlDesc": "Claude Code Router 服務基礎 URL，例如 http://localhost:3000"
   },
-  "cliProxy": {
+  "cliProxyApi": {
     "baseUrlLabel": "管理介面基礎 URL",
     "checkConnectionAction": "檢測連線",
     "checkConnectionDesc": "儲存後可主動檢測目前 URL 與管理金鑰是否能存取 CLIProxyAPI Management API。",
@@ -244,6 +244,7 @@
   "managedSite": {
     "axonHub": "AxonHub",
     "claudeCodeHub": "Claude Code Hub",
+    "cliProxyApi": "CLIProxyAPI",
     "description": "選擇您要管理的 API 聚合平台站點。這將決定用於渠道管理和模型同步的配置。",
     "doneHub": "Done Hub",
     "gatewayGuidance": {
@@ -635,7 +636,6 @@
     "balanceHistory": "餘額歷史",
     "checkinRedeem": "簽到與兌換",
     "claudeCodeRouter": "Claude Code Router",
-    "cliProxy": "CLIProxyAPI",
     "dataBackup": "資料與備份",
     "general": "通用",
     "managedSite": "自建 AI 閘道",

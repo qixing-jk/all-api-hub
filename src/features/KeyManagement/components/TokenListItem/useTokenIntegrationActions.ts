@@ -59,18 +59,13 @@ export function useTokenIntegrationActions({
   token,
 }: UseTokenIntegrationActionsParams) {
   const { t } = useTranslation(["keyManagement", "settings"])
-  const {
-    managedSiteType,
-    claudeCodeRouterBaseUrl,
-    claudeCodeRouterApiKey,
-    cliProxyBaseUrl,
-    cliProxyManagementKey,
-  } = useUserPreferencesContext()
+  const { managedSiteType, claudeCodeRouterBaseUrl, claudeCodeRouterApiKey } =
+    useUserPreferencesContext()
   const { markGatewayGuidanceOnboardingCompleted } = useFeatureGuidanceContext()
   const { openWithAccount } = useChannelDialog()
 
   const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)
-  const [isCliProxyDialogOpen, setIsCliProxyDialogOpen] = useState(false)
+
   const [isCursorPlusDialogOpen, setIsCursorPlusDialogOpen] = useState(false)
   const [isKiloCodeDialogOpen, setIsKiloCodeDialogOpen] = useState(false)
   const [kelivoExportInput, setKelivoExportInput] =
@@ -89,7 +84,7 @@ export function useTokenIntegrationActions({
     }
 
     setIsClaudeCodeRouterOpen(false)
-    setIsCliProxyDialogOpen(false)
+
     setIsCursorPlusDialogOpen(false)
     setIsKiloCodeDialogOpen(false)
     setKelivoExportInput(null)
@@ -213,17 +208,6 @@ export function useTokenIntegrationActions({
     }
   }
 
-  const handleOpenCliProxyDialog = () => {
-    if (!cliProxyBaseUrl?.trim() || !cliProxyManagementKey?.trim()) {
-      showResultToast({
-        success: false,
-        message: t("messages:cliproxy.configMissing"),
-      })
-      return
-    }
-    setIsCliProxyDialogOpen(true)
-  }
-
   const handleOpenClaudeCodeRouter = () => {
     if (!claudeCodeRouterBaseUrl?.trim()) {
       showResultToast({
@@ -315,10 +299,7 @@ export function useTokenIntegrationActions({
         close: () => setIsClaudeCodeRouterOpen(false),
         isOpen: isClaudeCodeRouterOpen,
       },
-      cliProxy: {
-        close: () => setIsCliProxyDialogOpen(false),
-        isOpen: isCliProxyDialogOpen,
-      },
+
       cursorPlus: {
         close: () => setIsCursorPlusDialogOpen(false),
         isOpen: isCursorPlusDialogOpen,
@@ -335,7 +316,7 @@ export function useTokenIntegrationActions({
     exportActions: {
       openCherryStudio: handleUseInCherry,
       openClaudeCodeRouter: handleOpenClaudeCodeRouter,
-      openCliProxy: handleOpenCliProxyDialog,
+
       openCursorPlus: () => setIsCursorPlusDialogOpen(true),
       openKelivo: handleOpenKelivoExportDialog,
       openKiloCode: () => setIsKiloCodeDialogOpen(true),

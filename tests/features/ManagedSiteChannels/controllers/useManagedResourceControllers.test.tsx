@@ -1501,6 +1501,30 @@ describe("useManagedResourceMutationController", () => {
     },
   )
 
+  it("presents a controlled submit read failure without losing the open editor", async () => {
+    const editor = createManagedResourceEditor({
+      submit: vi.fn(async () => {
+        throw new ManagedResourceError({
+          code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
+        })
+      }),
+    })
+    const workspace = createManagedResourceWorkspace({
+      openCreateEditor: vi.fn(async () => editor),
+    })
+    const { result } = renderHook(() =>
+      useManagedResourceMutationController({ workspace }),
+    )
+    await act(async () => result.current.openCreate())
+    await act(async () => result.current.submit({ name: "Changed" }))
+    expect(result.current.editor).toBe(editor)
+    expect(result.current.isSaving).toBe(false)
+    expect(result.current.editorFeedback).toEqual({
+      kind: "save-failed",
+      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable },
+    })
+  })
+
   it.each(["malformed", "thrown"] as const)(
     "lets a %s public submit failure escape without projecting or replaying it",
     async (mode) => {

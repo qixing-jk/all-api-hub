@@ -6,33 +6,37 @@ import { Button, Card, CardItem, CardList, Input, Link } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
-import { verifyCliProxyManagementConnection } from "~/services/integrations/cliProxyService"
+import {
+  CliProxyApiError,
+  listAllCliProxyApiProviders,
+} from "~/services/apiService/cliProxyApi"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
-const CLI_PROXY_MANAGEMENT_DOC_URL = "https://help.router-for.me/management/api"
+const CLI_PROXY_API_MANAGEMENT_DOC_URL =
+  "https://help.router-for.me/management/api"
 
 /**
- * Settings section for CLI Proxy base URL and management key entries.
+ * Settings section for CLIProxyAPI base URL and management key entries.
  * Handles local input state, visibility toggle, persistence, and reset hook.
  */
-export default function CliProxySettings() {
+export default function CliProxyApiSettings() {
   const { t } = useTranslation("settings")
   const {
     preferences,
-    cliProxyBaseUrl,
-    cliProxyManagementKey,
-    updateCliProxyBaseUrl,
-    updateCliProxyManagementKey,
-    resetCliProxyConfig,
+    cliProxyApiBaseUrl,
+    cliProxyApiManagementKey,
+    updateCliProxyApiBaseUrl,
+    updateCliProxyApiManagementKey,
+    resetCliProxyApiConfig,
   } = useUserPreferencesContext()
 
   const savedConfig = useMemo(
     () => ({
-      baseUrl: cliProxyBaseUrl,
-      managementKey: cliProxyManagementKey,
+      baseUrl: cliProxyApiBaseUrl,
+      managementKey: cliProxyApiManagementKey,
     }),
-    [cliProxyBaseUrl, cliProxyManagementKey],
+    [cliProxyApiBaseUrl, cliProxyApiManagementKey],
   )
   const {
     draft: localConfig,
@@ -55,11 +59,25 @@ export default function CliProxySettings() {
 
     setIsCheckingConnection(true)
     try {
-      const result = await verifyCliProxyManagementConnection({
-        baseUrl,
-        managementKey,
-      })
-      return result
+      await listAllCliProxyApiProviders({ baseUrl, adminToken: managementKey })
+      return {
+        success: true,
+        message: t("messages:cliProxyApi.managementApiConnectionSuccess"),
+      }
+    } catch (error) {
+      const status =
+        error instanceof CliProxyApiError ? error.status : undefined
+      const message =
+        status === 401
+          ? t("messages:cliProxyApi.managementApiInvalidKey")
+          : status === 403
+            ? t("messages:cliProxyApi.managementApiForbidden")
+            : status === 404
+              ? t("messages:cliProxyApi.managementApiNotFound")
+              : status
+                ? t("messages:cliProxyApi.managementApiHttpError", { status })
+                : t("messages:cliProxyApi.managementApiUnreachable")
+      return { success: false, message }
     } finally {
       setIsCheckingConnection(false)
     }
@@ -78,11 +96,11 @@ export default function CliProxySettings() {
     const trimmedUrl = url.trim()
     setLocalConfig((prev) => ({ ...prev, baseUrl: trimmedUrl }))
 
-    if (trimmedUrl === cliProxyBaseUrl.trim()) return
+    if (trimmedUrl === cliProxyApiBaseUrl.trim()) return
     const writeResult = await runPreferenceUpdateWithToast({
       expectedLastUpdated,
-      setting: t("cliProxy.baseUrlLabel"),
-      update: (options) => updateCliProxyBaseUrl(trimmedUrl, options),
+      setting: t("cliProxyApi.baseUrlLabel"),
+      update: (options) => updateCliProxyApiBaseUrl(trimmedUrl, options),
     })
 
     if (writeResult.ok && trimmedUrl && localKey.trim()) {
@@ -97,11 +115,11 @@ export default function CliProxySettings() {
     const trimmedKey = key.trim()
     setLocalConfig((prev) => ({ ...prev, managementKey: trimmedKey }))
 
-    if (trimmedKey === cliProxyManagementKey.trim()) return
+    if (trimmedKey === cliProxyApiManagementKey.trim()) return
     const writeResult = await runPreferenceUpdateWithToast({
       expectedLastUpdated,
-      setting: t("cliProxy.managementKeyLabel"),
-      update: (options) => updateCliProxyManagementKey(trimmedKey, options),
+      setting: t("cliProxyApi.managementKeyLabel"),
+      update: (options) => updateCliProxyApiManagementKey(trimmedKey, options),
     })
 
     if (writeResult.ok && localBaseUrl.trim() && trimmedKey) {
@@ -115,16 +133,16 @@ export default function CliProxySettings() {
   return (
     <SettingSection
       id="cli-proxy"
-      title={t("cliProxy.title")}
-      description={t("cliProxy.description")}
-      onReset={resetCliProxyConfig}
+      title={t("cliProxyApi.title")}
+      description={t("cliProxyApi.description")}
+      onReset={resetCliProxyApiConfig}
     >
       <Card padding="none">
         <CardList>
           <CardItem
             id="cli-proxy-base-url"
-            title={t("cliProxy.baseUrlLabel")}
-            description={t("cliProxy.urlDesc")}
+            title={t("cliProxyApi.baseUrlLabel")}
+            description={t("cliProxyApi.urlDesc")}
             rightContent={
               <Input
                 type="text"
@@ -138,23 +156,23 @@ export default function CliProxySettings() {
                 onBlur={(e) => handleBaseUrlChange(e.target.value)}
                 onKeyDown={blurInputOnEnter}
                 placeholder="http://localhost:8317/v0/management"
-                aria-label={t("cliProxy.baseUrlLabel")}
+                aria-label={t("cliProxyApi.baseUrlLabel")}
               />
             }
           />
 
           <CardItem
             id="cli-proxy-management-key"
-            title={t("cliProxy.managementKeyLabel")}
-            description={t("cliProxy.keyDesc")}
+            title={t("cliProxyApi.managementKeyLabel")}
+            description={t("cliProxyApi.keyDesc")}
             rightContent={
               <div className="relative">
                 <Input
                   type="password"
                   revealable
                   revealLabels={{
-                    show: t("cliProxy.showKey"),
-                    hide: t("cliProxy.hideKey"),
+                    show: t("cliProxyApi.showKey"),
+                    hide: t("cliProxyApi.hideKey"),
                   }}
                   value={localKey}
                   onChange={(e) =>
@@ -165,7 +183,7 @@ export default function CliProxySettings() {
                   }
                   onBlur={(e) => handleKeyChange(e.target.value)}
                   onKeyDown={blurInputOnEnter}
-                  aria-label={t("cliProxy.managementKeyLabel")}
+                  aria-label={t("cliProxyApi.managementKeyLabel")}
                 />
               </div>
             }
@@ -173,8 +191,8 @@ export default function CliProxySettings() {
 
           <CardItem
             id="cli-proxy-check-connection"
-            title={t("cliProxy.checkConnectionLabel")}
-            description={t("cliProxy.checkConnectionDesc")}
+            title={t("cliProxyApi.checkConnectionLabel")}
+            description={t("cliProxyApi.checkConnectionDesc")}
             rightContent={
               <div className="flex flex-col items-start gap-2 sm:items-end">
                 <Button
@@ -188,15 +206,15 @@ export default function CliProxySettings() {
                 >
                   {isCheckingConnection
                     ? t("common:status.checking")
-                    : t("cliProxy.checkConnectionAction")}
+                    : t("cliProxyApi.checkConnectionAction")}
                 </Button>
                 <Link
-                  href={CLI_PROXY_MANAGEMENT_DOC_URL}
+                  href={CLI_PROXY_API_MANAGEMENT_DOC_URL}
                   target="_blank"
                   rel="noreferrer noopener"
                   className="text-xs"
                 >
-                  {t("cliProxy.managementDocsLinkLabel")}
+                  {t("cliProxyApi.managementDocsLinkLabel")}
                 </Link>
               </div>
             }

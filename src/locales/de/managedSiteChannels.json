@@ -23,6 +23,9 @@
       "description": "Dieses {{site}}-Konto kann keine Kanäle verwalten. Verwenden Sie ein Administratorkonto oder aktualisieren Sie die Berechtigungen und anschließend die Kanalliste.",
       "title": "{{site}} Zugriff verweigert"
     },
+    "resourceChanged": {
+      "description": "Dieser Kanal wurde während der Bearbeitung geändert. Ihre Änderungen wurden nicht gespeichert. Schließen Sie den Editor, aktualisieren Sie die Kanalliste und bearbeiten Sie den Kanal erneut."
+    },
     "savedRefreshError": {
       "description": "Der Kanal wurde gespeichert, aber die neueste Liste konnte nicht geladen werden. Aktualisieren Sie die Kanalliste, bevor Sie weitere Änderungen vornehmen.",
       "title": "Kanal gespeichert, Aktualisierung erforderlich"
@@ -32,12 +35,20 @@
       "title": "{{site}} ist nicht verfügbar"
     }
   },
+  "cliProxyApi": {
+    "credentialWeightHelp": "Leer entspricht Gewicht 1. Nichtpositive Werte schließen diesen Schlüssel vom gewichteten Routing aus; maximal 1.000.000.",
+    "excludedModels": "Ausgeschlossene Modelle (eines pro Zeile)",
+    "headers": "Anfrage-Header",
+    "headersHelp": "Ein Header pro Zeile im Format Name: Wert.",
+    "prefix": "Modellpräfix",
+    "proxyUrl": "Proxy-URL"
+  },
   "dialog": {
     "cancel": "Abbrechen",
     "confirm": "Löschen",
     "deleteDescription": "Diese Aktion kann nicht rückgängig gemacht werden. Die ausgewählten Kanäle werden dauerhaft entfernt.",
     "deleteRefreshAction": "Kanäle aktualisieren",
-    "deleteRefreshRequired": "Einige Löschergebnisse sind unsicher. Aktualisieren Sie die Kanalliste, bevor Sie sie erneut löschen.",
+    "deleteRefreshRequired": "Aktualisiere die Kanalliste, um den aktuellen Stand zu bestätigen, bevor du erneut löschst.",
     "deleteResultStatus": {
       "failed": "Fehlgeschlagen",
       "success": "Gelöscht",
@@ -412,11 +423,14 @@
   "title": "Kanalverwaltung",
   "toasts": {
     "channelSaved": "Kanal gespeichert",
+    "channelsDeleted_one": "{{count}} Kanal gelöscht",
+    "channelsDeleted_other": "{{count}} Kanäle gelöscht",
     "channelUpdated": "Kanal aktualisiert",
     "syncCompleted": "Modellsynchronisierung abgeschlossen ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Die Modelle wurden synchronisiert ({{success}}/{{total}}), aber die Kanalliste konnte nicht aktualisiert werden. Aktualisieren Sie die Liste und versuchen Sie es erneut.",
     "syncFailed": "Modellsynchronisierung fehlgeschlagen: {{error}}",
-    "syncFailedFallback": "Die Kanäle konnten nicht synchronisiert werden"
+    "syncFailedFallback": "Die Kanäle konnten nicht synchronisiert werden",
+    "syncIncomplete": "Die Modellsynchronisierung wurde nicht vollständig abgeschlossen ({{success}}/{{total}} erfolgreich). Öffne die Modellsynchronisierung, prüfe die Ergebnisse und versuche fehlgeschlagene Kanäle erneut."
   },
   "toolbar": {
     "addChannel": "Kanal hinzufügen",
