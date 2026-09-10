@@ -419,10 +419,21 @@ export async function updateGithubGistBackup(params: {
   expectedRevision?: string
 }): Promise<GitHubGistRemote> {
   const { token, gistId } = getRequiredConfig(params.config)
-  const current = await readGithubGistRemote({ token, gistId })
+  let current: GitHubGistRemote | undefined
+  try {
+    current = await readGithubGistRemote({ token, gistId })
+  } catch (error) {
+    if (!isGithubGistWritableMissingError(error)) throw error
+    if (params.expectedRevision) {
+      throw new GitHubGistError(
+        "The GitHub Gist changed on another device",
+        CLOUD_SYNC_ERROR_CODES.CONFLICT,
+      )
+    }
+  }
   if (
     params.expectedRevision &&
-    current.revision &&
+    current?.revision &&
     params.expectedRevision !== current.revision
   ) {
     throw new GitHubGistError(
@@ -523,4 +534,14 @@ export function getGithubGistSyncConfig(
     ...(settings.githubGist ?? { token: "", gistId: "" }),
     encryptionPassword: settings.backupEncryptionPassword ?? "",
   }
+}
+
+/** Whether a configured Gist can be initialized or replaced by an upload. */
+export function isGithubGistWritableMissingError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false
+  const code = (error as { code?: unknown }).code
+  return (
+    code === CLOUD_SYNC_ERROR_CODES.UNINITIALIZED ||
+    code === CLOUD_SYNC_ERROR_CODES.REMOTE_EMPTY
+  )
 }

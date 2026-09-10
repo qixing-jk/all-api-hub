@@ -98,8 +98,10 @@ export function parseWebdavBackupJson<T = unknown>(
         nestedData &&
         typeof nestedData === "object" &&
         !Array.isArray(nestedData) &&
-        dataKeys.some((key) =>
-          Object.prototype.hasOwnProperty.call(nestedData, key),
+        dataKeys.some(
+          (key) =>
+            key !== "data" &&
+            Object.prototype.hasOwnProperty.call(nestedData, key),
         )
 
       if (!hasRootDataSection && !hasNestedDataSection) {

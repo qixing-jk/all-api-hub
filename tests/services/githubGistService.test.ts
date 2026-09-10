@@ -484,6 +484,44 @@ describe("githubGistService", () => {
     expect(conflictFetch).toHaveBeenCalledTimes(1)
   })
 
+  it.each([
+    ["uninitialized", { ...gistResponse(), files: {} }],
+    ["empty", gistResponse("")],
+  ])("initializes a %s Gist during an upload", async (_state, initial) => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(response(initial))
+      .mockResolvedValueOnce(response({}))
+      .mockResolvedValueOnce(response(gistResponse("encrypted", "rev-2")))
+    vi.stubGlobal("fetch", fetchMock)
+
+    await expect(
+      updateGithubGistBackup({
+        content: "encrypted",
+        config: { token: "token", gistId: "gist-1" },
+      }),
+    ).resolves.toMatchObject({ revision: "rev-2" })
+
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    const [, init] = fetchMock.mock.calls[1]
+    expect((init as RequestInit).method).toBe("PATCH")
+  })
+
+  it("treats a removed backup file as a conflict when a revision was expected", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response(gistResponse("")))
+    vi.stubGlobal("fetch", fetchMock)
+
+    await expect(
+      updateGithubGistBackup({
+        content: "encrypted",
+        config: { token: "token", gistId: "gist-1" },
+        expectedRevision: "rev-1",
+      }),
+    ).rejects.toMatchObject({ code: CLOUD_SYNC_ERROR_CODES.CONFLICT })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it("rejects empty updates and detects a failed readback verification", async () => {
     const emptyFetch = vi.fn().mockResolvedValue(response(gistResponse()))
     vi.stubGlobal("fetch", emptyFetch)

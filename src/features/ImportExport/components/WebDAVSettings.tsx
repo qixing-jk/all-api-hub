@@ -62,6 +62,7 @@ import {
   testCloudSyncConnection,
   uploadCloudSyncBackup,
 } from "~/services/webdav/cloudSyncService"
+import { isGithubGistWritableMissingError } from "~/services/webdav/githubGistService"
 import { sendWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncMessaging"
 import {
   decryptWebdavBackupEnvelope,
@@ -775,8 +776,12 @@ export default function WebDAVSettings({
           }
         } catch (error: any) {
           if (
-            provider !== CLOUD_SYNC_PROVIDERS.WEBDAV ||
-            !isWebdavFileNotFoundError(error)
+            (provider !== CLOUD_SYNC_PROVIDERS.WEBDAV ||
+              !isWebdavFileNotFoundError(error)) &&
+            !(
+              provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST &&
+              isGithubGistWritableMissingError(error)
+            )
           ) {
             if (error instanceof ExistingWebdavBackupMalformedError) {
               logger.warn(

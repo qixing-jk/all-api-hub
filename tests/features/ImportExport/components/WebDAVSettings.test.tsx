@@ -42,6 +42,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { WebdavAutoSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import { CLOUD_SYNC_ERROR_CODES } from "~/types/cloudSync"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import {
   createPersistedPreferencesFixture,
@@ -838,6 +839,22 @@ describe("WebDAVSettings", () => {
     expect(toast.success).toHaveBeenCalledWith(
       "importExport:webdav.gist.uploadSuccess",
     )
+
+    for (const code of [
+      CLOUD_SYNC_ERROR_CODES.UNINITIALIZED,
+      CLOUD_SYNC_ERROR_CODES.REMOTE_EMPTY,
+    ]) {
+      mockDownloadCloudSyncBackup.mockRejectedValueOnce({ code })
+      await clickWebdavAction("webdav-upload-backup")
+      await waitFor(() => {
+        expect(
+          mockMergeWebdavBackupPayloadBySelection,
+        ).toHaveBeenLastCalledWith(
+          expect.objectContaining({ remoteBackup: null }),
+        )
+        expect(mockUploadCloudSyncBackup).toHaveBeenCalled()
+      })
+    }
 
     mockUploadCloudSyncBackup.mockRejectedValueOnce(
       new Error("gist upload failed"),
