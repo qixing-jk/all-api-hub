@@ -201,13 +201,14 @@ const resolveCreatedReferenceState = (
 ): CreatedReferenceResolution => {
   if (
     progress.schemaVersion !== ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION ||
-    progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Completed
+    progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Idle
   ) {
     return {
       absenceReason: REPAIR_CREATED_KEY_BATCH_IMPORT_ABSENCE_REASONS.NOT_READY,
     }
   }
 
+  // Confirmed resource identities are usable independently of unfinished accounts.
   const references = getCreatedReferenceEntries(progress)
   if (references.length === 0) {
     return {

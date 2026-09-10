@@ -98,7 +98,7 @@ const countCreatedReferences = (
   if (
     !progress ||
     progress.schemaVersion !== ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION ||
-    progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Completed
+    progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Idle
   ) {
     return 0
   }
@@ -244,7 +244,7 @@ export function useRepairCreatedKeyManagedSiteImport({
         isResolving ||
         isBatchImportOpen ||
         !progress ||
-        progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Completed
+        createdReferenceCount === 0
       ) {
         return
       }
@@ -313,6 +313,7 @@ export function useRepairCreatedKeyManagedSiteImport({
       accounts,
       isBatchImportOpen,
       isCurrentSessionResult,
+      createdReferenceCount,
       isResolving,
       progress,
     ],

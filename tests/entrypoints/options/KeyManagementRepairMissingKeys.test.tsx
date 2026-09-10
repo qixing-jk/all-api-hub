@@ -799,7 +799,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     expect(screen.getByText("Another Site")).toBeInTheDocument()
   })
 
-  it("shows repair-created import only after completed progress has exact references", async () => {
+  it("shows confirmed repair-created keys before completion and retains import afterwards", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
       if (message === AccountKeyRepairMessageTypes.GetProgress) {
         return { success: true, data: idleProgress }
@@ -830,10 +830,10 @@ describe("KeyManagement repair missing keys entry point", () => {
       )
     })
     expect(
-      screen.queryByTestId(
+      await screen.findByTestId(
         KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportButton,
       ),
-    ).not.toBeInTheDocument()
+    ).toBeVisible()
 
     const completedWithReferences: AccountKeyRepairProgress = {
       ...startProgress,

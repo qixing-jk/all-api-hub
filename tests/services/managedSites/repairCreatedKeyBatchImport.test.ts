@@ -170,54 +170,65 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
     mocks.resolveRepairCreatedRuntimeSecret.mockResolvedValue(null)
   })
 
-  it("resolves an exact current-schema created ref through the current native session", async () => {
-    const account = createAccount()
-    const ref = createRef()
-    const resolve = vi.fn().mockResolvedValue({
-      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
-      secret: "resolved-runtime-secret",
-    })
-    const open = vi.fn().mockResolvedValue(createSession(resolve))
-    mocks.createDisplayAccountApiContext.mockReturnValue({
-      request: { baseUrl: account.baseUrl },
-      capabilities: {
-        account: { keyResources: { open } },
-      },
-    })
+  it.each([
+    ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
+    ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
+    ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled,
+    ACCOUNT_KEY_REPAIR_JOB_STATES.Failed,
+  ])(
+    "resolves exact created refs through the native session for %s jobs",
+    async (state) => {
+      const account = createAccount()
+      const ref = createRef()
+      const resolve = vi.fn().mockResolvedValue({
+        kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
+        secret: "resolved-runtime-secret",
+      })
+      const open = vi.fn().mockResolvedValue(createSession(resolve))
+      mocks.createDisplayAccountApiContext.mockReturnValue({
+        request: { baseUrl: account.baseUrl },
+        capabilities: {
+          account: { keyResources: { open } },
+        },
+      })
 
-    const candidate = await resolveRepairCreatedKeyBatchImportCandidate({
-      progress: createProgress(account, ref),
-      accounts: [account],
-      targetFingerprint: TARGET_A,
-      freshness: REPAIR_CREATED_KEY_BATCH_IMPORT_FRESHNESS.CURRENT_SESSION,
-    })
+      const progress = createProgress(account, ref)
+      progress.state = state
+      const candidate = await resolveRepairCreatedKeyBatchImportCandidate({
+        progress,
+        accounts: [account],
+        targetFingerprint: TARGET_A,
+        freshness: REPAIR_CREATED_KEY_BATCH_IMPORT_FRESHNESS.CURRENT_SESSION,
+      })
 
-    expect(candidate?.intent.verification).toBe(
-      MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.TRUSTED_NEW,
-    )
-    const resolvedItems =
-      candidate?.items.filter(isResolvedManagedSiteTokenBatchExportItemInput) ??
-      []
-    expect(resolvedItems).toHaveLength(1)
-    const runtimeKey = resolvedItems[0]
-      .runtimeKey as AccountKeyResourceRuntimeKey
-    expect(isAccountKeyResourceRuntimeKey(runtimeKey)).toBe(true)
-    expect(runtimeKey).toMatchObject({
-      accountId: account.id,
-      label: "Created key",
-      resourceRef: ref,
-      secret: "resolved-runtime-secret",
-    })
-    expect(open).toHaveBeenCalledWith({
-      account: {
-        id: account.id,
-        name: account.name,
-        siteType: account.siteType,
-      },
-      request: { baseUrl: account.baseUrl },
-    })
-    expect(resolve).toHaveBeenCalledWith(ref)
-  })
+      expect(candidate?.intent.verification).toBe(
+        MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.TRUSTED_NEW,
+      )
+      const resolvedItems =
+        candidate?.items.filter(
+          isResolvedManagedSiteTokenBatchExportItemInput,
+        ) ?? []
+      expect(resolvedItems).toHaveLength(1)
+      const runtimeKey = resolvedItems[0]
+        .runtimeKey as AccountKeyResourceRuntimeKey
+      expect(isAccountKeyResourceRuntimeKey(runtimeKey)).toBe(true)
+      expect(runtimeKey).toMatchObject({
+        accountId: account.id,
+        label: "Created key",
+        resourceRef: ref,
+        secret: "resolved-runtime-secret",
+      })
+      expect(open).toHaveBeenCalledWith({
+        account: {
+          id: account.id,
+          name: account.name,
+          siteType: account.siteType,
+        },
+        request: { baseUrl: account.baseUrl },
+      })
+      expect(resolve).toHaveBeenCalledWith(ref)
+    },
+  )
 
   it("uses the current repair job's transient created secret before opening a session", async () => {
     const account = createAccount()
@@ -861,11 +872,26 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
     )
   })
 
-  it("rejects non-completed progress and progress without exact created outcomes", () => {
+  it.each([
+    ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
+    ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled,
+    ACCOUNT_KEY_REPAIR_JOB_STATES.Failed,
+  ])("keeps confirmed created references available in %s jobs", (state) => {
+    const progress = createProgress(createAccount(), createRef())
+    progress.state = state
+    expect(
+      getRepairCreatedKeyBatchImportAbsenceReason({
+        progress,
+        targetFingerprint: TARGET_A,
+      }),
+    ).toBeNull()
+  })
+
+  it("rejects idle progress and progress without exact created outcomes", () => {
     const account = createAccount()
     const ref = createRef()
     const running = createProgress(account, ref)
-    running.state = ACCOUNT_KEY_REPAIR_JOB_STATES.Running
+    running.state = ACCOUNT_KEY_REPAIR_JOB_STATES.Idle
     expect(
       getRepairCreatedKeyBatchImportAbsenceReason({
         progress: running,

@@ -1,5 +1,11 @@
 import type { TFunction } from "i18next"
-import { useCallback, useEffect, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type SetStateAction,
+} from "react"
 
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import {
@@ -121,9 +127,8 @@ export function useRepairMissingKeysJob({
   startOnOpen,
   t,
 }: UseRepairMissingKeysJobOptions) {
-  const [progress, setProgress] = useState<AccountKeyRepairProgress | null>(
-    null,
-  )
+  const [progress, setProgressState] =
+    useState<AccountKeyRepairProgress | null>(null)
   const [failure, setFailure] = useState<"start" | "cancel" | "load" | null>(
     null,
   )
@@ -138,6 +143,40 @@ export function useRepairMissingKeysJob({
   const hasAutoStartedRef = useRef(false)
   const startInFlightRef = useRef(false)
   const startRequestIdRef = useRef(0)
+  const progressRevisionRef = useRef(0)
+
+  const setProgress = useCallback(
+    (update: SetStateAction<AccountKeyRepairProgress | null>) => {
+      const current = progressRef.current
+      const next = typeof update === "function" ? update(current) : update
+      if (!next) {
+        progressRef.current = null
+        progressRevisionRef.current += 1
+        setProgressState(null)
+        return
+      }
+      if (current?.jobId === next.jobId) {
+        if (
+          (current.updatedAt ?? 0) > (next.updatedAt ?? 0) ||
+          (current.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Running &&
+            current.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Idle &&
+            next.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Running)
+        ) {
+          return
+        }
+      } else if (
+        current?.startedAt !== undefined &&
+        next.startedAt !== undefined &&
+        current.startedAt > next.startedAt
+      ) {
+        return
+      }
+      progressRef.current = next
+      progressRevisionRef.current += 1
+      setProgressState(next)
+    },
+    [],
+  )
 
   isDialogOpenRef.current = isOpen
 
@@ -214,7 +253,7 @@ export function useRepairMissingKeysJob({
         }
       }
     }
-  }, [renameAutoTemplateTokens])
+  }, [renameAutoTemplateTokens, setProgress])
 
   const handleCancelAudit = useCallback(async () => {
     if (cancelInFlightRef.current) {
@@ -258,7 +297,7 @@ export function useRepairMissingKeysJob({
         setIsCancelling(false)
       }
     }
-  }, [invalidatePendingStart])
+  }, [invalidatePendingStart, setProgress])
 
   useEffect(() => {
     isDialogOpenRef.current = isOpen
@@ -285,10 +324,6 @@ export function useRepairMissingKeysJob({
   }, [isOpen])
 
   useEffect(() => {
-    progressRef.current = progress
-  }, [progress])
-
-  useEffect(() => {
     accountsRef.current = accounts
   }, [accounts])
 
@@ -301,12 +336,13 @@ export function useRepairMissingKeysJob({
       if (!payload) return
       setProgress(payload)
     })
-  }, [isOpen])
+  }, [isOpen, setProgress])
 
   useEffect(() => {
     if (!isOpen) return
 
     let cancelled = false
+    const revision = progressRevisionRef.current
     setFailure(null)
 
     void (async () => {
@@ -314,7 +350,7 @@ export function useRepairMissingKeysJob({
         const response = await sendAccountKeyRepairMessage(
           AccountKeyRepairMessageTypes.GetProgress,
         )
-        if (cancelled) return
+        if (cancelled || revision !== progressRevisionRef.current) return
         if (response?.success && response.data) {
           setProgress(response.data)
           return
@@ -322,7 +358,7 @@ export function useRepairMissingKeysJob({
 
         setFailure("load")
       } catch {
-        if (!cancelled) {
+        if (!cancelled && revision === progressRevisionRef.current) {
           setFailure("load")
         }
       }
@@ -331,7 +367,46 @@ export function useRepairMissingKeysJob({
     return () => {
       cancelled = true
     }
-  }, [isOpen])
+  }, [isOpen, setProgress])
+
+  useEffect(() => {
+    if (!isOpen || progress?.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Running) {
+      return
+    }
+
+    let cancelled = false
+    let inFlight = false
+    // Broadcasts are best-effort. Reconcile while visible so a missed terminal
+    // notification (including a restarted worker) cannot leave the UI running.
+    const timer = setInterval(async () => {
+      if (inFlight) return
+      inFlight = true
+      const revision = progressRevisionRef.current
+      try {
+        const response = await sendAccountKeyRepairMessage(
+          AccountKeyRepairMessageTypes.GetProgress,
+        )
+        if (cancelled || revision !== progressRevisionRef.current) return
+        if (response?.success && response.data) {
+          setProgress(response.data)
+          setFailure((current) => (current === "load" ? null : current))
+        } else {
+          setFailure("load")
+        }
+      } catch {
+        if (!cancelled && revision === progressRevisionRef.current) {
+          setFailure("load")
+        }
+      } finally {
+        inFlight = false
+      }
+    }, 3000)
+
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
+  }, [isOpen, progress?.jobId, progress?.state, setProgress])
 
   useEffect(() => {
     if (!isOpen) {
