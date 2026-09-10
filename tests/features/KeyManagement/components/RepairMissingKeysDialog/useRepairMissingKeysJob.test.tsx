@@ -229,6 +229,63 @@ describe("useRepairMissingKeysJob", () => {
     }
   })
 
+  it.each(["rejected", "unsuccessful"])(
+    "recovers from a %s progress query without losing the current result",
+    async (failureKind) => {
+      const running = buildProgress()
+      sendAccountKeyRepairMessageMock.mockResolvedValueOnce({
+        success: true,
+        data: running,
+      })
+      if (failureKind === "rejected") {
+        sendAccountKeyRepairMessageMock.mockRejectedValueOnce(
+          new Error("read failed"),
+        )
+      } else {
+        sendAccountKeyRepairMessageMock.mockResolvedValueOnce({
+          success: false,
+          error: "read failed",
+        })
+      }
+      sendAccountKeyRepairMessageMock.mockResolvedValue({
+        success: true,
+        data: running,
+      })
+      const { result, rerender, unmount } = renderHook(
+        ({ isOpen }) =>
+          useRepairMissingKeysJob({
+            accounts: [buildAccount()],
+            isOpen,
+            startOnOpen: false,
+            t: testI18n.t,
+          }),
+        { initialProps: { isOpen: false } },
+      )
+      await waitFor(() => expect(result.current).toBeTruthy())
+      vi.useFakeTimers()
+      try {
+        await act(async () => {
+          rerender({ isOpen: true })
+        })
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(3000)
+        })
+        expect(result.current.error).toBe(
+          testI18n.t("keyManagement:repairMissingKeys.messages.loadFailed"),
+        )
+        expect(result.current.progress).toEqual(running)
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(3000)
+        })
+        expect(result.current.error).toBe("")
+        expect(result.current.progress).toEqual(running)
+      } finally {
+        unmount()
+        vi.useRealTimers()
+      }
+    },
+  )
+
   it("recovers completion when the runtime notification is missed", async () => {
     const running = buildProgress()
     const completed = buildProgress({

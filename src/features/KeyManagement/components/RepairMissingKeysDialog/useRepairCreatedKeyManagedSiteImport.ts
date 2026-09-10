@@ -228,15 +228,19 @@ export function useRepairCreatedKeyManagedSiteImport({
     [accounts, progress],
   )
 
-  const closeBatchImport = useCallback(() => {
-    if (isResolving) return
+  const resetBatchImport = useCallback(() => {
     setIsBatchImportOpen(false)
     setBatchImportItems([])
     setBatchImportIntent(null)
     activeJobIdRef.current = null
     activeTargetFingerprintRef.current = null
     activeItemsRef.current = []
-  }, [isResolving])
+  }, [])
+
+  const closeBatchImport = useCallback(() => {
+    if (isResolving) return
+    resetBatchImport()
+  }, [isResolving, resetBatchImport])
 
   const prepareBatchImport = useCallback(
     async (includeCompletedReferences = false) => {
@@ -385,14 +389,9 @@ export function useRepairCreatedKeyManagedSiteImport({
 
   useEffect(() => {
     if (isOpen) return
-    setIsBatchImportOpen(false)
-    setBatchImportItems([])
-    setBatchImportIntent(null)
+    resetBatchImport()
     setImportFeedback(null)
-    activeJobIdRef.current = null
-    activeTargetFingerprintRef.current = null
-    activeItemsRef.current = []
-  }, [isOpen])
+  }, [isOpen, resetBatchImport])
 
   return {
     batchImportIntent,

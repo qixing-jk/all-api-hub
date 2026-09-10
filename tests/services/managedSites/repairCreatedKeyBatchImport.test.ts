@@ -890,11 +890,11 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
   it("rejects idle progress and progress without exact created outcomes", () => {
     const account = createAccount()
     const ref = createRef()
-    const running = createProgress(account, ref)
-    running.state = ACCOUNT_KEY_REPAIR_JOB_STATES.Idle
+    const idle = createProgress(account, ref)
+    idle.state = ACCOUNT_KEY_REPAIR_JOB_STATES.Idle
     expect(
       getRepairCreatedKeyBatchImportAbsenceReason({
-        progress: running,
+        progress: idle,
         targetFingerprint: TARGET_A,
       }),
     ).toBe(REPAIR_CREATED_KEY_BATCH_IMPORT_ABSENCE_REASONS.NOT_READY)

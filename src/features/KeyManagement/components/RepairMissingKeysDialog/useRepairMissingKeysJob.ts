@@ -32,6 +32,8 @@ import { onRuntimeMessage } from "~/utils/browser/browserApi"
 
 import { hasRepairAttentionOutcomes } from "./repairMissingKeysDialogHelpers"
 
+const REPAIR_PROGRESS_POLL_INTERVAL_MS = 3000
+
 const repairMissingKeysAnalyticsContext = {
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
   actionId: PRODUCT_ANALYTICS_ACTION_IDS.RepairMissingAccountKeys,
@@ -149,13 +151,7 @@ export function useRepairMissingKeysJob({
     (update: SetStateAction<AccountKeyRepairProgress | null>) => {
       const current = progressRef.current
       const next = typeof update === "function" ? update(current) : update
-      if (!next) {
-        progressRef.current = null
-        progressRevisionRef.current += 1
-        setProgressState(null)
-        return
-      }
-      if (current?.jobId === next.jobId) {
+      if (next && current?.jobId === next.jobId) {
         if (
           (current.updatedAt ?? 0) > (next.updatedAt ?? 0) ||
           (current.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Running &&
@@ -166,7 +162,7 @@ export function useRepairMissingKeysJob({
         }
       } else if (
         current?.startedAt !== undefined &&
-        next.startedAt !== undefined &&
+        next?.startedAt !== undefined &&
         current.startedAt > next.startedAt
       ) {
         return
@@ -176,6 +172,29 @@ export function useRepairMissingKeysJob({
       setProgressState(next)
     },
     [],
+  )
+
+  const readProgress = useCallback(
+    async (isCancelled: () => boolean, onSuccess?: () => void) => {
+      const revision = progressRevisionRef.current
+      const isStale = () =>
+        isCancelled() || revision !== progressRevisionRef.current
+      try {
+        const response = await sendAccountKeyRepairMessage(
+          AccountKeyRepairMessageTypes.GetProgress,
+        )
+        if (isStale()) return
+        if (response?.success && response.data) {
+          setProgress(response.data)
+          onSuccess?.()
+        } else {
+          setFailure("load")
+        }
+      } catch {
+        if (!isStale()) setFailure("load")
+      }
+    },
+    [setProgress],
   )
 
   isDialogOpenRef.current = isOpen
@@ -199,6 +218,20 @@ export function useRepairMissingKeysJob({
 
     setIsStarting(true)
     setFailure(null)
+    const reportStartFailure = () => {
+      void trackProductAnalyticsActionCompleted({
+        ...repairMissingKeysAnalyticsContext,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: getRepairStartFailureInsights(
+          progressRef.current,
+          accountsRef.current,
+        ),
+      })
+      if (isDialogOpenRef.current && startRequestIdRef.current === requestId) {
+        setFailure("start")
+      }
+    }
     try {
       const response = await sendAccountKeyRepairMessage(
         AccountKeyRepairMessageTypes.Start,
@@ -220,31 +253,9 @@ export function useRepairMissingKeysJob({
         return
       }
 
-      void trackProductAnalyticsActionCompleted({
-        ...repairMissingKeysAnalyticsContext,
-        result: PRODUCT_ANALYTICS_RESULTS.Failure,
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        insights: getRepairStartFailureInsights(
-          progressRef.current,
-          accountsRef.current,
-        ),
-      })
-      if (isDialogOpenRef.current && startRequestIdRef.current === requestId) {
-        setFailure("start")
-      }
+      reportStartFailure()
     } catch {
-      void trackProductAnalyticsActionCompleted({
-        ...repairMissingKeysAnalyticsContext,
-        result: PRODUCT_ANALYTICS_RESULTS.Failure,
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        insights: getRepairStartFailureInsights(
-          progressRef.current,
-          accountsRef.current,
-        ),
-      })
-      if (isDialogOpenRef.current && startRequestIdRef.current === requestId) {
-        setFailure("start")
-      }
+      reportStartFailure()
     } finally {
       if (startRequestIdRef.current === requestId) {
         startInFlightRef.current = false
@@ -342,32 +353,13 @@ export function useRepairMissingKeysJob({
     if (!isOpen) return
 
     let cancelled = false
-    const revision = progressRevisionRef.current
     setFailure(null)
-
-    void (async () => {
-      try {
-        const response = await sendAccountKeyRepairMessage(
-          AccountKeyRepairMessageTypes.GetProgress,
-        )
-        if (cancelled || revision !== progressRevisionRef.current) return
-        if (response?.success && response.data) {
-          setProgress(response.data)
-          return
-        }
-
-        setFailure("load")
-      } catch {
-        if (!cancelled && revision === progressRevisionRef.current) {
-          setFailure("load")
-        }
-      }
-    })()
+    void readProgress(() => cancelled)
 
     return () => {
       cancelled = true
     }
-  }, [isOpen, setProgress])
+  }, [isOpen, readProgress])
 
   useEffect(() => {
     if (!isOpen || progress?.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Running) {
@@ -381,32 +373,23 @@ export function useRepairMissingKeysJob({
     const timer = setInterval(async () => {
       if (inFlight) return
       inFlight = true
-      const revision = progressRevisionRef.current
       try {
-        const response = await sendAccountKeyRepairMessage(
-          AccountKeyRepairMessageTypes.GetProgress,
+        await readProgress(
+          () => cancelled,
+          () => {
+            setFailure((current) => (current === "load" ? null : current))
+          },
         )
-        if (cancelled || revision !== progressRevisionRef.current) return
-        if (response?.success && response.data) {
-          setProgress(response.data)
-          setFailure((current) => (current === "load" ? null : current))
-        } else {
-          setFailure("load")
-        }
-      } catch {
-        if (!cancelled && revision === progressRevisionRef.current) {
-          setFailure("load")
-        }
       } finally {
         inFlight = false
       }
-    }, 3000)
+    }, REPAIR_PROGRESS_POLL_INTERVAL_MS)
 
     return () => {
       cancelled = true
       clearInterval(timer)
     }
-  }, [isOpen, progress?.jobId, progress?.state, setProgress])
+  }, [isOpen, progress?.jobId, progress?.state, readProgress])
 
   useEffect(() => {
     if (!isOpen) {
