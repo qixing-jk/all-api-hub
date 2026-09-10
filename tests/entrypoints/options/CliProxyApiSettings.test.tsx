@@ -146,7 +146,6 @@ describe("CliProxyApiSettings", () => {
       target: { value: "  http://localhost:9000/v0/management  " },
     })
     input.focus()
-    input.focus()
     fireEvent.keyDown(input, { key: "Enter" })
 
     await waitFor(() => {
@@ -314,7 +313,6 @@ describe("CliProxyApiSettings", () => {
       "settings:cliProxyApi.managementKeyLabel",
     )
     fireEvent.change(input, { target: { value: "  enter-secret-key  " } })
-    input.focus()
     input.focus()
     fireEvent.keyDown(input, { key: "Enter" })
 

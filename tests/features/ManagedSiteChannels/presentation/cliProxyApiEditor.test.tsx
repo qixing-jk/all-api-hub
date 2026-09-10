@@ -77,11 +77,32 @@ describe("CLIProxyAPI native editor presentation", () => {
       if (type === "openai-compatibility") {
         expect(screen.getByRole("group", { name: "API Key 1" })).toBeVisible()
         expect(screen.getByLabelText(/Name/)).toBeVisible()
+        await user.type(
+          within(
+            screen.getByRole("group", { name: "API Key 1" }),
+          ).getByLabelText("API Key 1", { exact: true }),
+          "x",
+        )
+        expect(onValueChange).toHaveBeenCalledWith(
+          "credentials",
+          expect.objectContaining({
+            entries: [
+              expect.objectContaining({
+                secret: { kind: "replace", value: "keyx" },
+              }),
+            ],
+          }),
+        )
       } else {
         expect(
           screen.queryByRole("group", { name: "API Key 1" }),
         ).not.toBeInTheDocument()
         expect(screen.getByLabelText(/^API Key/)).toBeVisible()
+        await user.type(screen.getByLabelText(/^API Key/), "x")
+        expect(onValueChange).toHaveBeenCalledWith("key", {
+          kind: "replace",
+          value: "x",
+        })
       }
       for (const section of ["Models", "Routing", "Advanced"]) {
         await user.click(
