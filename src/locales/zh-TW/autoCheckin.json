@@ -262,8 +262,10 @@
   },
   "uiOpenPretrigger": {
     "close": "關閉",
+    "completedToast": "自動簽到完成：本次簽到 {{success}} · 已簽到 {{alreadyChecked}} · 未執行 {{skipped}}。",
     "dialogDescription": "開啟擴充套件介面時觸發了今日計劃的自動簽到。",
     "dialogTitle": "自動簽到已完成",
+    "uncertainToast": "自動簽到完成：本次簽到 {{success}} · 已簽到 {{alreadyChecked}} · 待確認 {{uncertain}} · 未執行 {{skipped}}。可前往自動簽到頁面查看。",
     "viewDetails": "檢視詳情"
   },
   "workspace": {

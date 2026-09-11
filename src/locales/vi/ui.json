@@ -212,7 +212,7 @@
       },
       "delete": "Xóa",
       "deleting": "Đang xóa tài khoản trùng lặp...",
-      "description": "Quét tài khoản trùng lặp theo URL gốc + ID người dùng, và xóa các mục trùng lặp sau khi xem trước và xác nhận.",
+      "description": "Tìm tài khoản trùng lặp chính xác và có thể trùng giữa các tên miền, rồi kiểm tra trước khi thay đổi.",
       "details": {
         "accountId": "ID tài khoản",
         "authType": "Phương thức xác thực",
@@ -238,7 +238,8 @@
         "show": "Thêm thông tin"
       },
       "duplicateCount_other": "{{count}} tài khoản",
-      "empty": "Không tìm thấy tài khoản trùng lặp.",
+      "empty": "Không tìm thấy tài khoản trùng lặp chính xác.",
+      "exactTitle": "Trùng lặp chính xác",
       "keep": "Giữ lại",
       "manualPickHint": "Bạn có thể chọn thủ công tài khoản muốn giữ lại trong mỗi nhóm (chọn thủ công sẽ ghi đè chính sách giữ lại).",
       "previewDelete": "Xem trước xóa",
@@ -251,7 +252,16 @@
       },
       "strategyLabel": "Chính sách giữ lại",
       "summary": "{{groups}} nhóm trùng lặp · chờ xóa {{deleteCount}} tài khoản",
-      "title": "Dọn dẹp tài khoản trùng lặp",
+      "suspected": {
+        "deleteAccount": "Xóa {{name}}",
+        "description": "Các tài khoản này có cùng ID người dùng và tên trang web hoặc tên miền gốc. Trang web có thể đã đổi tên miền. Kết quả nghi ngờ không được dọn dẹp hàng loạt; hãy kiểm tra từng tài khoản trước khi chỉnh sửa hoặc xóa.",
+        "review": "Xem và chỉnh sửa",
+        "reviewAccount": "Xem và chỉnh sửa {{name}}",
+        "sameDomain": "Cùng tên miền gốc: {{domain}}",
+        "sameName": "Cùng tên trang web: {{name}}",
+        "title": "Tài khoản có thể trùng lặp"
+      },
+      "title": "Phát hiện tài khoản trùng lặp",
       "unscannableHint_other": "{{count}} tài khoản không thể quét, đã bỏ qua.",
       "userId": "ID người dùng: {{userId}}"
     },

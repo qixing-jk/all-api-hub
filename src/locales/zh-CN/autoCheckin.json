@@ -262,8 +262,10 @@
   },
   "uiOpenPretrigger": {
     "close": "关闭",
+    "completedToast": "自动签到完成：本次签到 {{success}} · 已签到 {{alreadyChecked}} · 未执行 {{skipped}}。",
     "dialogDescription": "打开扩展界面时触发了今日计划的自动签到。",
     "dialogTitle": "自动签到已完成",
+    "uncertainToast": "自动签到完成：本次签到 {{success}} · 已签到 {{alreadyChecked}} · 待确认 {{uncertain}} · 未执行 {{skipped}}。可前往自动签到页面查看。",
     "viewDetails": "查看详情"
   },
   "workspace": {

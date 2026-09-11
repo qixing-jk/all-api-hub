@@ -216,7 +216,7 @@
       },
       "delete": "Delete",
       "deleting": "Deleting duplicate accounts...",
-      "description": "Scan duplicate accounts by origin + user id, then delete duplicates after preview.",
+      "description": "Find exact duplicates and possible matches across domains, then review before making changes.",
       "details": {
         "accountId": "Account ID",
         "authType": "Auth Type",
@@ -243,7 +243,8 @@
       },
       "duplicateCount_one": "{{count}} account",
       "duplicateCount_other": "{{count}} accounts",
-      "empty": "No duplicate accounts found.",
+      "empty": "No exact duplicate accounts found.",
+      "exactTitle": "Exact duplicates",
       "keep": "Keep",
       "manualPickHint": "You can manually choose which account to keep in each set. Manual choices override the keep strategy.",
       "previewDelete": "Preview deletion",
@@ -256,7 +257,16 @@
       },
       "strategyLabel": "Keep strategy",
       "summary": "{{groups}} duplicate set(s) · {{deleteCount}} account(s) to delete",
-      "title": "Duplicate account cleanup",
+      "suspected": {
+        "deleteAccount": "Delete {{name}}",
+        "description": "These accounts share a user ID and a site name or root domain. The site may have changed domains. Possible matches are excluded from bulk cleanup; review each account before editing or deleting it.",
+        "review": "View and edit",
+        "reviewAccount": "View and edit {{name}}",
+        "sameDomain": "Same root domain: {{domain}}",
+        "sameName": "Same site name: {{name}}",
+        "title": "Possible duplicate accounts"
+      },
+      "title": "Duplicate account detection",
       "unscannableHint_one": "{{count}} account could not be scanned and was skipped.",
       "unscannableHint_other": "{{count}} accounts could not be scanned and were skipped.",
       "userId": "User ID: {{userId}}"

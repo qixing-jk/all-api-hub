@@ -142,6 +142,95 @@ vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
 }))
 
 describe("DedupeAccountsDialog", () => {
+  it("shows cross-domain candidates without enabling deletion", async () => {
+    const user = userEvent.setup()
+    const onReviewAccount = vi.fn()
+    const onDeleteAccount = vi.fn()
+    const originalUrl = accounts[1].site_url
+    accounts[1].site_url = "https://migrated.example.net"
+    try {
+      render(
+        <DedupeAccountsDialog
+          isOpen={true}
+          onClose={onCloseMock}
+          onReviewAccount={onReviewAccount}
+          onDeleteAccount={onDeleteAccount}
+        />,
+      )
+      const candidates = await screen.findByRole("region", {
+        name: "ui:dialog.dedupeAccounts.suspected.title",
+      })
+      expect(
+        within(candidates).getByText("https://migrated.example.net"),
+      ).toBeVisible()
+      expect(within(candidates).getByText(accounts[0].site_url)).toBeVisible()
+      expect(
+        within(candidates).getByText(
+          "ui:dialog.dedupeAccounts.suspected.sameName",
+        ),
+      ).toBeVisible()
+      expect(
+        screen.queryByRole("button", {
+          name: "ui:dialog.dedupeAccounts.previewDelete",
+        }),
+      ).not.toBeInTheDocument()
+      expect(deleteAccountsMock).not.toHaveBeenCalled()
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+      expect(
+        screen.queryByText("ui:dialog.dedupeAccounts.empty"),
+      ).not.toBeInTheDocument()
+      await user.click(
+        within(candidates).getAllByRole("button", {
+          name: "ui:dialog.dedupeAccounts.suspected.reviewAccount",
+        })[0],
+      )
+      expect(onCloseMock).not.toHaveBeenCalled()
+      expect(onReviewAccount).toHaveBeenCalledWith("acc-keep")
+      await user.click(
+        within(candidates).getAllByRole("button", {
+          name: "ui:dialog.dedupeAccounts.suspected.deleteAccount",
+        })[1],
+      )
+      expect(onDeleteAccount).toHaveBeenCalledWith("acc-del")
+      expect(onCloseMock).not.toHaveBeenCalled()
+      expect(deleteAccountsMock).not.toHaveBeenCalled()
+    } finally {
+      accounts[1].site_url = originalUrl
+    }
+  })
+
+  it("keeps suspected matches out of exact-duplicate cleanup", async () => {
+    const user = userEvent.setup()
+    accounts.push({
+      ...accounts[0],
+      id: "suspected",
+      site_url: "https://migrated.example.net",
+    })
+    try {
+      render(<DedupeAccountsDialog isOpen={true} onClose={onCloseMock} />)
+      expect(
+        await screen.findByRole("region", {
+          name: "ui:dialog.dedupeAccounts.suspected.title",
+        }),
+      ).toBeVisible()
+      await user.click(
+        screen.getByRole("button", {
+          name: "ui:dialog.dedupeAccounts.previewDelete",
+        }),
+      )
+      await user.click(
+        await screen.findByRole("button", {
+          name: "ui:dialog.dedupeAccounts.confirm.confirmDelete",
+        }),
+      )
+      await waitFor(() =>
+        expect(deleteAccountsMock).toHaveBeenCalledWith(["acc-del"]),
+      )
+    } finally {
+      accounts.pop()
+    }
+  })
+
   beforeEach(() => {
     deleteAccountsMock.mockReset()
     loadAccountDataMock.mockReset()
@@ -227,6 +316,36 @@ describe("DedupeAccountsDialog", () => {
       expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
       expect(onCloseMock).toHaveBeenCalledTimes(1)
     })
+  })
+
+  it("updates the deletion recommendation when the keep strategy changes", async () => {
+    const user = userEvent.setup()
+    const originalDisabled = accounts[0].disabled
+    accounts[0].disabled = true
+    try {
+      render(<DedupeAccountsDialog isOpen onClose={onCloseMock} />)
+      await user.click(await screen.findByRole("combobox"))
+      await user.click(
+        screen.getByRole("option", {
+          name: "ui:dialog.dedupeAccounts.strategy.keepEnabled",
+        }),
+      )
+      await user.click(
+        screen.getByRole("button", {
+          name: "ui:dialog.dedupeAccounts.previewDelete",
+        }),
+      )
+      await user.click(
+        screen.getByRole("button", {
+          name: "ui:dialog.dedupeAccounts.confirm.confirmDelete",
+        }),
+      )
+      await waitFor(() =>
+        expect(deleteAccountsMock).toHaveBeenCalledWith(["acc-keep"]),
+      )
+    } finally {
+      accounts[0].disabled = originalDisabled
+    }
   })
 
   it("completes duplicate cleanup analytics after confirmed deletion succeeds", async () => {

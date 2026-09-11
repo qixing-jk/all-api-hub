@@ -23,7 +23,10 @@ import {
   PROTECTION_BYPASS_SURFACES,
 } from "~/services/protectionBypass/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
-import { AUTO_CHECKIN_RUN_RESULT } from "~/types/autoCheckin"
+import {
+  AUTO_CHECKIN_RUN_RESULT,
+  type AutoCheckinRunSummary,
+} from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { openAutoCheckinPage, pushWithinOptionsPage } from "~/utils/navigation"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -50,6 +53,7 @@ vi.mock("~/lib/notify", () => ({
     dismiss: vi.fn(),
     success: vi.fn(),
     error: vi.fn(),
+    warning: vi.fn(),
   },
 }))
 
@@ -101,6 +105,117 @@ vi.mock("~/services/checkin/autoCheckin/messaging", async (importOriginal) => {
 })
 
 describe("AutoCheckinUiOpenPretrigger", () => {
+  const emptySummary: AutoCheckinRunSummary = {
+    totalEligible: 0,
+    executed: 0,
+    successCount: 0,
+    failedCount: 0,
+    skippedCount: 0,
+    needsRetry: false,
+  }
+  it.each([
+    { name: "zero accounts", summary: emptySummary, toastKind: null },
+    {
+      name: "all skipped",
+      summary: { ...emptySummary, totalEligible: 2, skippedCount: 2 },
+      toastKind: null,
+    },
+    { name: "missing summary", summary: undefined, toastKind: null },
+    {
+      name: "successful execution",
+      summary: {
+        ...emptySummary,
+        totalEligible: 1,
+        executed: 1,
+        successCount: 1,
+      },
+      toastKind: "success",
+    },
+    {
+      name: "already checked in",
+      summary: {
+        ...emptySummary,
+        totalEligible: 1,
+        executed: 1,
+        successCount: 1,
+        alreadyCheckedCount: 1,
+      },
+      toastKind: "success",
+    },
+    {
+      name: "success and skipped",
+      summary: {
+        ...emptySummary,
+        totalEligible: 2,
+        executed: 1,
+        successCount: 1,
+        skippedCount: 1,
+      },
+      toastKind: "success",
+    },
+    {
+      name: "uncertain without failures",
+      summary: {
+        ...emptySummary,
+        totalEligible: 1,
+        executed: 1,
+        uncertainCount: 1,
+      },
+      toastKind: "warning",
+    },
+  ])(
+    "does not open a completion dialog for $name",
+    async ({ summary, toastKind }) => {
+      const toast = (await import("~/lib/notify")).default
+      vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
+        ...DEFAULT_PREFERENCES,
+        autoCheckin: {
+          ...DEFAULT_PREFERENCES.autoCheckin!,
+          globalEnabled: true,
+          pretriggerDailyOnUiOpen: true,
+        },
+      })
+      const browserApi = await import("~/utils/browser/browserApi")
+      vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
+        async (message: any, data?: any) => {
+          if (message !== AutoCheckinMessageTypes.PretriggerDailyOnUiOpen)
+            return { success: true }
+          await browser.runtime
+            .sendMessage({
+              action: RuntimeActionIds.AutoCheckinPretriggerStarted,
+              requestId: data?.requestId,
+            })
+            .catch(() => undefined)
+          return {
+            success: true,
+            started: true,
+            lastRunResult: summary?.uncertainCount ? "failed" : "success",
+            summary,
+          }
+        },
+      )
+      render(<AutoCheckinUiOpenPretrigger />)
+      await waitFor(() =>
+        expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalled(),
+      )
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+      expect(toast.success).toHaveBeenCalledTimes(
+        toastKind === "success" ? 1 : 0,
+      )
+      expect(toast.warning).toHaveBeenCalledTimes(
+        toastKind === "warning" ? 1 : 0,
+      )
+      if (toastKind === "success")
+        expect(toast.success).toHaveBeenCalledWith(
+          "autoCheckin:uiOpenPretrigger.completedToast",
+        )
+      if (toastKind === "warning")
+        expect(toast.warning).toHaveBeenCalledWith(
+          "autoCheckin:uiOpenPretrigger.uncertainToast",
+        )
+    },
+  )
+
   beforeEach(() => {
     vi.clearAllMocks()
     getCurrentTempWindowRequestSourceMock.mockReturnValue(
@@ -189,11 +304,7 @@ describe("AutoCheckinUiOpenPretrigger", () => {
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
 
-    await waitFor(() => {
-      expect(toast.success).toHaveBeenCalledWith(
-        "autoCheckin:messages.success.pretriggerStarted",
-      )
-    })
+    expect(toast.success).not.toHaveBeenCalled()
     await waitFor(() => {
       expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -259,13 +370,13 @@ describe("AutoCheckinUiOpenPretrigger", () => {
           return {
             success: true,
             started: true,
-            lastRunResult: "success",
+            lastRunResult: "failed",
             pendingRetry: false,
             summary: {
               totalEligible: 1,
               executed: 1,
-              successCount: 1,
-              failedCount: 0,
+              successCount: 0,
+              failedCount: 1,
               skippedCount: 0,
               needsRetry: false,
             },

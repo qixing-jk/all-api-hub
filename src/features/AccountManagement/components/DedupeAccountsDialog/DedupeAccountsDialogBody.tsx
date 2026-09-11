@@ -59,6 +59,7 @@ export interface DedupeAccountsDialogBodyProps {
   onKeepChange: (input: DedupeAccountsKeepChangeInput) => void
   onToggleDetails: (accountId: string) => void
   unscannableCount: number
+  hasSuspectedGroups?: boolean
   isWorking: boolean
   t: TFunction
 }
@@ -78,43 +79,51 @@ export function DedupeAccountsDialogBody({
   onKeepChange,
   onToggleDetails,
   unscannableCount,
+  hasSuspectedGroups = false,
   isWorking,
   t,
 }: DedupeAccountsDialogBodyProps) {
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <div className="dark:text-dark-text-primary text-sm font-medium text-gray-900">
-            {t("ui:dialog.dedupeAccounts.strategyLabel")}
-          </div>
-          <Select
-            value={strategy}
-            disabled={isWorking}
-            onValueChange={(value) =>
-              onStrategyChange(value as AccountDedupeKeepStrategy)
-            }
-          >
-            <SelectTrigger className="w-full sm:w-[320px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {STRATEGIES.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {getDedupeStrategyLabel(t, item.value)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      {groups.length > 0 && (
+        <>
+          <h3 className="dark:text-dark-text-primary text-sm font-semibold text-gray-900">
+            {t("ui:dialog.dedupeAccounts.exactTitle")}
+          </h3>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0 space-y-1">
+              <div className="dark:text-dark-text-primary text-sm font-medium text-gray-900">
+                {t("ui:dialog.dedupeAccounts.strategyLabel")}
+              </div>
+              <Select
+                value={strategy}
+                disabled={isWorking}
+                onValueChange={(value) =>
+                  onStrategyChange(value as AccountDedupeKeepStrategy)
+                }
+              >
+                <SelectTrigger className="w-full sm:w-[320px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STRATEGIES.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {getDedupeStrategyLabel(t, item.value)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="dark:text-dark-text-secondary text-sm text-gray-500">
-          {t("ui:dialog.dedupeAccounts.summary", {
-            groups: groups.length,
-            deleteCount,
-          })}
-        </div>
-      </div>
+            <div className="dark:text-dark-text-secondary text-sm text-gray-500">
+              {t("ui:dialog.dedupeAccounts.summary", {
+                groups: groups.length,
+                deleteCount,
+              })}
+            </div>
+          </div>
+        </>
+      )}
 
       {groups.length > 0 && (
         <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
@@ -123,9 +132,11 @@ export function DedupeAccountsDialogBody({
       )}
 
       {groups.length === 0 ? (
-        <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-tertiary/30 dark:text-dark-text-secondary rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
-          {t("ui:dialog.dedupeAccounts.empty")}
-        </div>
+        !hasSuspectedGroups && (
+          <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-tertiary/30 dark:text-dark-text-secondary rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+            {t("ui:dialog.dedupeAccounts.empty")}
+          </div>
+        )
       ) : (
         <DedupeAccountsGroupsList
           groups={groups}

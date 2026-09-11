@@ -22,6 +22,7 @@ import {
   forceExtensionLanguage,
   installExtensionPageGuards,
   seedStoredAccounts,
+  seedUserPreferences,
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
 import {
@@ -200,6 +201,9 @@ async function readAccountQuickCheckinRuntimeState(
 
 test.beforeEach(async ({ context, page }) => {
   installExtensionPageGuards(page)
+  await seedUserPreferences(await getServiceWorker(context), {
+    autoCheckin: { pretriggerDailyOnUiOpen: false },
+  })
   await forceExtensionLanguage(page, "en")
   await stubLlmMetadataIndex(context)
 })
@@ -870,15 +874,161 @@ test("shows the empty duplicate-cleanup state when no duplicate accounts are fou
 
   const dialog = page.getByRole("dialog")
   await expect(
-    dialog.getByRole("heading", { name: "Duplicate account cleanup" }),
+    dialog.getByRole("heading", { name: "Duplicate account detection" }),
   ).toBeVisible()
+  await expect(dialog.getByText("Exact duplicates · 0")).toBeVisible()
   await expect(
-    dialog.getByText("0 duplicate set(s) · 0 account(s) to delete"),
+    dialog.getByText("No exact duplicate accounts found."),
   ).toBeVisible()
-  await expect(dialog.getByText("No duplicate accounts found.")).toBeVisible()
   await expect(
     dialog.getByRole("button", { name: "Preview deletion" }),
-  ).toBeDisabled()
+  ).toHaveCount(0)
+})
+
+test("reviews suspected duplicate accounts across narrow and dark layouts", async ({
+  context,
+  extensionId,
+  page,
+}, testInfo) => {
+  const serviceWorker = await getServiceWorker(context)
+  const longId = "migration-user-" + "1234567890".repeat(12)
+  await seedStoredAccounts(serviceWorker, [
+    createStoredAccount({
+      id: "review-old",
+      site_name: "Migrated Site",
+      site_url: "https://old.example.com",
+      disabled: true,
+      account_info: { id: longId, username: "old-user" },
+    }),
+    createStoredAccount({
+      id: "review-new",
+      site_name: "Migrated Site",
+      site_url: "https://new.example.net",
+      disabled: true,
+      account_info: { id: longId, username: "new-user" },
+    }),
+  ])
+  await openAccountManagement(page, extensionId)
+  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.dedupeScanButton).click()
+  const dialog = page.getByRole("dialog", {
+    name: "Duplicate account detection",
+  })
+  const suspected = dialog.getByRole("region", {
+    name: "Possible duplicate accounts",
+  })
+  await expect(suspected).toBeVisible()
+  await expect(
+    dialog.getByText("Possible duplicate accounts · 1"),
+  ).toBeVisible()
+  await expect(dialog.getByRole("combobox")).toHaveCount(0)
+  await expect(
+    dialog.getByText("No exact duplicate accounts found."),
+  ).toHaveCount(0)
+  await expect(
+    dialog.getByRole("button", { name: "Preview deletion" }),
+  ).toHaveCount(0)
+  for (const [label, width, dark] of [
+    ["desktop", 1280, false],
+    ["narrow-dark", 320, true],
+  ] as const) {
+    await page.setViewportSize({ width, height: 800 })
+    await page.evaluate(
+      (dark) => document.documentElement.classList.toggle("dark", dark),
+      dark,
+    )
+    await expect(suspected.getByText("https://old.example.com")).toBeVisible()
+    await expect
+      .poll(() =>
+        dialog.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth,
+        ),
+      )
+      .toBe(true)
+    await expect
+      .poll(() =>
+        suspected.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth,
+        ),
+      )
+      .toBe(true)
+    await page.screenshot({
+      path: testInfo.outputPath(`suspected-${label}.png`),
+      fullPage: true,
+    })
+  }
+  await suspected
+    .getByRole("button", {
+      name: "View and edit Migrated Site · old-user",
+      exact: true,
+    })
+    .click()
+  const editor = page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog)
+  await expect(editor).toBeVisible()
+  await expect(
+    editor.getByRole("textbox", { name: "Site URL", exact: true }),
+  ).toHaveValue("https://old.example.com")
+  await page.keyboard.press("Escape")
+  await expect(editor).toHaveCount(0)
+  await expect(dialog).toBeVisible()
+  await expect(suspected.getByText("https://old.example.com")).toBeVisible()
+  await expect(
+    suspected.getByRole("button", {
+      name: "View and edit Migrated Site · old-user",
+      exact: true,
+    }),
+  ).toBeFocused()
+  expect(
+    (await readStoredAccountConfig(serviceWorker)).accounts
+      .map((account) => account.id)
+      .sort(),
+  ).toEqual(["review-new", "review-old"])
+  const deleteOld = suspected.getByRole("button", {
+    name: "Delete Migrated Site · old-user",
+    exact: true,
+  })
+  await deleteOld.click()
+  const confirmation = page.getByRole("dialog", {
+    name: "Delete Account",
+    exact: true,
+  })
+  await expect(
+    confirmation.getByText("https://old.example.com", { exact: true }),
+  ).toBeVisible()
+  await expect(
+    confirmation.getByText("old-user", { exact: true }),
+  ).toBeVisible()
+  await expect
+    .poll(() =>
+      confirmation.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    )
+    .toBe(true)
+  await confirmation
+    .getByRole("button", { name: "Cancel", exact: true })
+    .click()
+  await expect(dialog).toBeVisible()
+  await expect(deleteOld).toBeFocused()
+  expect((await readStoredAccountConfig(serviceWorker)).accounts).toHaveLength(
+    2,
+  )
+  await deleteOld.click()
+  await confirmation
+    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.deleteConfirmButton)
+    .click()
+  await expect(confirmation).toHaveCount(0)
+  await expect(dialog).toBeVisible()
+  await expect(
+    dialog.getByText("Possible duplicate accounts · 0"),
+  ).toBeVisible()
+  await expect(suspected).toHaveCount(0)
+  await expect
+    .poll(async () =>
+      (await readStoredAccountConfig(serviceWorker)).accounts.map(
+        (account) => account.id,
+      ),
+    )
+    .toEqual(["review-new"])
 })
 
 test("cleans duplicate accounts after preview confirmation and prunes stale references", async ({
@@ -934,7 +1084,7 @@ test("cleans duplicate accounts after preview confirmation and prunes stale refe
 
   const dialog = page.getByRole("dialog")
   await expect(
-    dialog.getByRole("heading", { name: "Duplicate account cleanup" }),
+    dialog.getByRole("heading", { name: "Duplicate account detection" }),
   ).toBeVisible()
   await expect(
     dialog.getByText("1 duplicate set(s) · 1 account(s) to delete"),

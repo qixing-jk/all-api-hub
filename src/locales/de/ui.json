@@ -216,7 +216,7 @@
       },
       "delete": "Löschen",
       "deleting": "Doppelte Konten löschen...",
-      "description": "Scannen Sie doppelte Konten nach Herkunft und Benutzer-ID und löschen Sie die Duplikate anschließend nach der Vorschau.",
+      "description": "Exakte Duplikate und mögliche Treffer über Domains hinweg finden und vor Änderungen prüfen.",
       "details": {
         "accountId": "Konto-ID",
         "authType": "Authentifizierungstyp",
@@ -243,7 +243,8 @@
       },
       "duplicateCount_one": "{{count}} Konto",
       "duplicateCount_other": "{{count}} Konten",
-      "empty": "Keine doppelten Konten gefunden.",
+      "empty": "Keine exakt doppelten Konten gefunden.",
+      "exactTitle": "Exakte Duplikate",
       "keep": "Beibehalten",
       "manualPickHint": "Sie können manuell auswählen, welches Konto Sie in jeder Gruppe behalten möchten. Manuelle Entscheidungen haben Vorrang vor der Beibehaltungsstrategie.",
       "previewDelete": "Vorschau der Löschung",
@@ -256,7 +257,16 @@
       },
       "strategyLabel": "Strategie beibehalten",
       "summary": "Duplikatgruppen: {{groups}} · Zu löschende Konten: {{deleteCount}}",
-      "title": "Bereinigung doppelter Konten",
+      "suspected": {
+        "deleteAccount": "{{name}} löschen",
+        "description": "Diese Konten teilen eine Benutzer-ID und einen Seitennamen oder eine Stammdomain. Die Domain könnte sich geändert haben. Mögliche Treffer werden nicht gesammelt gelöscht. Prüfen Sie jedes Konto, bevor Sie es einzeln bearbeiten oder löschen.",
+        "review": "Ansehen und bearbeiten",
+        "reviewAccount": "{{name}} ansehen und bearbeiten",
+        "sameDomain": "Gleiche Stammdomain: {{domain}}",
+        "sameName": "Gleicher Seitenname: {{name}}",
+        "title": "Möglicherweise doppelte Konten"
+      },
+      "title": "Doppelte Konten erkennen",
       "unscannableHint_one": "{{count}} Konto konnte nicht gescannt werden und wurde übersprungen.",
       "unscannableHint_other": "{{count}} Konten konnten nicht gescannt werden und wurden übersprungen.",
       "userId": "Benutzer-ID: {{userId}}"

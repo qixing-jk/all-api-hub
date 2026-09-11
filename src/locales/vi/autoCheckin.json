@@ -262,8 +262,10 @@
   },
   "uiOpenPretrigger": {
     "close": "Đóng",
+    "completedToast": "Điểm danh tự động: {{success}} vừa điểm danh · {{alreadyChecked}} đã điểm danh trước đó · {{skipped}} bỏ qua.",
     "dialogDescription": "Đã kích hoạt điểm danh tự động được lên lịch hôm nay khi mở giao diện tiện ích mở rộng.",
     "dialogTitle": "Điểm danh tự động đã hoàn tất",
+    "uncertainToast": "Điểm danh tự động: {{success}} vừa điểm danh · {{alreadyChecked}} đã điểm danh trước đó · {{uncertain}} chờ xác nhận · {{skipped}} bỏ qua. Xem chi tiết tại trang điểm danh tự động.",
     "viewDetails": "Xem chi tiết"
   },
   "workspace": {

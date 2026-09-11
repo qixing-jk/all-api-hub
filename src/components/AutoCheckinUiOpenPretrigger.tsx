@@ -3,7 +3,7 @@ import { useAutoCheckinUiOpenPretrigger } from "~/hooks/useAutoCheckinUiOpenPret
 
 /**
  * Global UI helper that pre-triggers today's scheduled daily auto check-in when
- * a UI surface opens, then shows a completion summary dialog.
+ * a UI surface opens, then shows outcome-appropriate completion feedback.
  */
 export function AutoCheckinUiOpenPretrigger() {
   const { dialog, setDialogOpen } = useAutoCheckinUiOpenPretrigger()
