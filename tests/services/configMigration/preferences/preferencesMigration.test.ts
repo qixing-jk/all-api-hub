@@ -246,7 +246,7 @@ describe("preferencesMigration", () => {
       expect(result.showTodayCashflow).toBe(true)
     })
 
-    it("defaults balanceHistory to disabled when missing", () => {
+    it("defaults balanceHistory to refresh-driven capture when missing", () => {
       const prefs = createV0Preferences({
         preferencesVersion: 11,
       })

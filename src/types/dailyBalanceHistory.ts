@@ -72,7 +72,7 @@ export interface BalanceHistoryEstimatedTodayIncomePreferences {
  * User preferences controlling daily balance history capture and retention.
  *
  * Notes:
- * - Feature is opt-in via `enabled` (default disabled).
+ * - Refresh-driven capture is enabled by default.
  * - End-of-day capture is a separate opt-in as it triggers background alarms.
  */
 export interface BalanceHistoryPreferences {
@@ -83,7 +83,7 @@ export interface BalanceHistoryPreferences {
 }
 
 export const DEFAULT_BALANCE_HISTORY_PREFERENCES: BalanceHistoryPreferences = {
-  enabled: false,
+  enabled: true,
   endOfDayCapture: { enabled: false },
   estimatedTodayIncome: { enabled: false },
   retentionDays: 365,

@@ -265,7 +265,7 @@ export interface UserPreferences {
    * field from the current browser tab's origin.
    *
    * Optional for backward compatibility with stored preferences created before
-   * this flag existed. Missing values MUST be treated as disabled via defaults.
+   * this flag existed. Missing values MUST be treated as enabled via defaults.
    */
   autoFillCurrentSiteUrlOnAccountAdd?: boolean
 
@@ -580,7 +580,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   openChangelogOnUpdate: true,
   autoProvisionKeyOnAccountAdd: false, // 默认关闭，避免添加账号时无意创建密钥
   autoProvisionKeyOnAccountAddMode: ACCOUNT_KEY_AUTO_PROVISION_MODES.Default,
-  autoFillCurrentSiteUrlOnAccountAdd: false,
+  autoFillCurrentSiteUrlOnAccountAdd: true,
   warnOnDuplicateAccountAdd: true,
   accountAutoRefresh: DEFAULT_ACCOUNT_AUTO_REFRESH,
   usageHistory: DEFAULT_USAGE_HISTORY_PREFERENCES,
@@ -614,14 +614,14 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   },
   autoCheckin: {
     globalEnabled: true,
-    pretriggerDailyOnUiOpen: false,
+    pretriggerDailyOnUiOpen: true,
     notifyUiOnCompletion: true,
     windowStart: "09:00",
     windowEnd: "23:00",
     scheduleMode: AUTO_CHECKIN_SCHEDULE_MODE.RANDOM,
     deterministicTime: "09:00",
     retryStrategy: {
-      enabled: false,
+      enabled: true,
       intervalMinutes: 30,
       maxAttemptsPerDay: 3,
     },

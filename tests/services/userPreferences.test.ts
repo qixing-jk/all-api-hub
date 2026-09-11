@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from "vitest"
 
+import { Storage } from "@plasmohq/storage"
+
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
 import {
   TEMP_CONTEXT_MODES,
   TEMP_CONTEXT_PREFERENCE_MODES,
 } from "~/constants/tempContextMode"
+import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   createDefaultPreferences,
@@ -25,8 +28,19 @@ describe("userPreferences", () => {
       expect(DEFAULT_PREFERENCES.showHealthStatus).toBe(true)
       expect(DEFAULT_PREFERENCES.themeMode).toBe("system")
       expect(DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAdd).toBe(false)
-      expect(DEFAULT_PREFERENCES.autoFillCurrentSiteUrlOnAccountAdd).toBe(false)
-      expect(DEFAULT_PREFERENCES.balanceHistory?.enabled).toBe(false)
+      expect(DEFAULT_PREFERENCES.autoFillCurrentSiteUrlOnAccountAdd).toBe(true)
+      expect(DEFAULT_PREFERENCES.autoCheckin?.pretriggerDailyOnUiOpen).toBe(
+        true,
+      )
+      expect(DEFAULT_PREFERENCES.autoCheckin?.retryStrategy).toEqual({
+        enabled: true,
+        intervalMinutes: 30,
+        maxAttemptsPerDay: 3,
+      })
+      expect(DEFAULT_PREFERENCES.balanceHistory?.enabled).toBe(true)
+      expect(
+        DEFAULT_PREFERENCES.balanceHistory?.estimatedTodayIncome.enabled,
+      ).toBe(false)
       expect(DEFAULT_PREFERENCES.balanceHistory?.endOfDayCapture.enabled).toBe(
         false,
       )
@@ -124,6 +138,64 @@ describe("userPreferences", () => {
       }
     })
   })
+
+  it.each([undefined, false])(
+    "backfills convenience defaults while preserving stored %s through unrelated writes",
+    async (enabled) => {
+      const storage = new Storage({ area: "local" })
+      const stored = {
+        ...createDefaultPreferences(1),
+        autoFillCurrentSiteUrlOnAccountAdd: enabled,
+        autoCheckin: {
+          ...DEFAULT_PREFERENCES.autoCheckin!,
+          pretriggerDailyOnUiOpen: enabled,
+          retryStrategy: {
+            ...DEFAULT_PREFERENCES.autoCheckin!.retryStrategy,
+            enabled,
+            intervalMinutes: 45,
+            maxAttemptsPerDay: 2,
+          },
+        },
+        balanceHistory: {
+          ...DEFAULT_PREFERENCES.balanceHistory!,
+          enabled,
+          retentionDays: 90,
+        },
+      }
+      await storage.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, stored)
+
+      const expected = {
+        autoFillCurrentSiteUrlOnAccountAdd: enabled ?? true,
+        autoCheckin: {
+          pretriggerDailyOnUiOpen: enabled ?? true,
+          retryStrategy: {
+            enabled: enabled ?? true,
+            intervalMinutes: 45,
+            maxAttemptsPerDay: 2,
+          },
+        },
+        balanceHistory: {
+          enabled: enabled ?? true,
+          retentionDays: 90,
+          endOfDayCapture: { enabled: false },
+          estimatedTodayIncome: { enabled: false },
+        },
+      }
+      await expect(userPreferences.getPreferences()).resolves.toMatchObject(
+        expected,
+      )
+      expect(
+        await storage.get(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES),
+      ).toEqual(stored)
+
+      await expect(
+        userPreferences.savePreferences({ themeMode: "dark" }),
+      ).resolves.toMatchObject({ ok: true })
+      await expect(userPreferences.getPreferences()).resolves.toMatchObject(
+        expected,
+      )
+    },
+  )
 
   describe("temporary window fallback preferences", () => {
     it("uses taller defaults for existing preferences and preserves custom dimensions", () => {

@@ -309,7 +309,7 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
     }
   },
 
-  // Version 11 -> 12: Introduce balance-history preferences (default disabled)
+  // Version 11 -> 12: Introduce balance-history preferences using current defaults
   12: (prefs: UserPreferences): UserPreferences => {
     logger.debug(
       "Migrating preferences from v11 to v12 (balance history preferences)",
