@@ -46,6 +46,10 @@ test.beforeEach(async ({ context, page }) => {
   installExtensionPageGuards(page)
   await forceExtensionLanguage(page, "en")
   await stubLlmMetadataIndex(context)
+  // Gateway settings load available models independently of guide navigation.
+  await context.route(`${gatewayUrl}/api/user/models`, (route) =>
+    route.fulfill({ json: { success: true, data: [] } }),
+  )
   await setPlasmoStorageValue(
     await getServiceWorker(context),
     STORAGE_KEYS.FEATURE_GUIDANCE_STATE,
