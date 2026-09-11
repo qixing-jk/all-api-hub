@@ -172,6 +172,7 @@ describe("UnifiedApiGuidanceCard", () => {
   })
 
   it("keeps retry focus while marking an in-progress setup check busy", async () => {
+    const user = userEvent.setup()
     const onRetry = vi.fn()
     const { rerender } = render(
       <UnifiedApiGuidanceUnavailableCard
@@ -195,6 +196,17 @@ describe("UnifiedApiGuidanceCard", () => {
     expect(retryButton).toHaveAttribute("aria-busy", "true")
     expect(retryButton).toHaveAttribute("aria-disabled", "true")
     expect(retryButton).not.toBeDisabled()
+    await user.keyboard("{Enter} ")
+    expect(onRetry).not.toHaveBeenCalled()
+    expect(retryButton).toHaveFocus()
+    rerender(
+      <UnifiedApiGuidanceUnavailableCard
+        isRetrying={false}
+        onRetry={onRetry}
+      />,
+    )
+    await user.keyboard("{Enter}")
+    expect(onRetry).toHaveBeenCalledOnce()
   })
 })
 

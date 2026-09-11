@@ -229,7 +229,7 @@
     },
     "boundaryNote": "All API Hub manages and imports configuration. It does not proxy model requests; external clients call your self-hosted AI gateway.",
     "description": {
-      "has_gateway_channels": "Gateway channels have been created or imported. Open channel management to check their current status.",
+      "has_gateway_channels": "Gateway setup guidance is complete. Open channel management to check the current status.",
       "needs_importable_source": "You have accounts, but their current account types cannot expose importable keys. Save an API key first, or add an account type that supports key access, then import it into your self-hosted AI gateway.",
       "needs_managed_site": "You have account keys or API keys. Configure your self-hosted AI gateway to import them as gateway channels, so multiple keys can be used through one AI API.",
       "needs_sources": "Add an account or save an API key, then import it into your self-hosted AI gateway to provide a unified AI API.",

@@ -229,7 +229,7 @@
     },
     "boundaryNote": "O All API Hub gerencia e importa configurações. Ele não atua como proxy para solicitações de modelos; os clientes externos chamam seu gateway de IA auto-hospedado.",
     "description": {
-      "has_gateway_channels": "Canais do gateway foram criados ou importados. Abra o gerenciamento de canais para verificar o estado atual.",
+      "has_gateway_channels": "O guia de configuração do gateway foi concluído. Abra o gerenciamento de canais para verificar o status atual.",
       "needs_importable_source": "Você possui contas, mas os tipos de conta atuais não podem expor chaves importáveis. Salve uma chave de API primeiro ou adicione um tipo de conta que suporte acesso a chaves e, em seguida, importe-a para o seu gateway de IA auto-hospedado.",
       "needs_managed_site": "Você possui chaves de conta ou chaves de API. Configure seu gateway de IA auto-hospedado para importá-las como canais do gateway, permitindo que várias chaves sejam usadas por meio de uma única API de IA.",
       "needs_sources": "Adicione uma conta ou salve uma chave de API e importe-a para seu gateway de IA auto-hospedado para oferecer uma API de IA unificada.",

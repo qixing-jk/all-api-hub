@@ -410,7 +410,18 @@ describe("ApiCredentialProfiles page", () => {
     await verificationResultHistoryStorage.clearAllData()
   })
 
+  it("keeps gateway guidance hidden before the user starts setup", async () => {
+    render(<ApiCredentialProfiles />)
+    expect(
+      await screen.findByText("apiCredentialProfiles:empty.title"),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("apiCredentialProfiles:unifiedApiGuidance.title"),
+    ).not.toBeInTheDocument()
+  })
+
   it("guides users to save an API credential before gateway import", async () => {
+    mockFeatureGuidanceState.gatewayGuidance.onboardingStartedAt = 1
     const user = userEvent.setup()
 
     render(<ApiCredentialProfiles />)
@@ -436,6 +447,7 @@ describe("ApiCredentialProfiles page", () => {
   })
 
   it("guides saved API credentials to managed-site setup when the gateway is incomplete", async () => {
+    mockFeatureGuidanceState.gatewayGuidance.onboardingStartedAt = 1
     const user = userEvent.setup()
     store = [
       {
@@ -477,6 +489,7 @@ describe("ApiCredentialProfiles page", () => {
   })
 
   it("keeps ready API credential gateway guidance on the credential workflow", async () => {
+    mockFeatureGuidanceState.gatewayGuidance.onboardingStartedAt = 1
     const user = userEvent.setup()
     store = [
       {
@@ -961,6 +974,7 @@ describe("ApiCredentialProfiles page", () => {
   })
 
   it("keeps managed-site setup recovery out of guidance for complete configuration", async () => {
+    mockFeatureGuidanceState.gatewayGuidance.onboardingStartedAt = 1
     store = [
       {
         id: "p-1",
@@ -1002,7 +1016,8 @@ describe("ApiCredentialProfiles page", () => {
       ...createEmptyFeatureGuidanceState(),
       gatewayGuidance: {
         dismissedAtBySurface: {},
-        onboardingCompletedAt: 1,
+        onboardingStartedAt: 1,
+        onboardingCompletedAt: 2,
       },
     }
 
@@ -1017,6 +1032,7 @@ describe("ApiCredentialProfiles page", () => {
   })
 
   it("temporarily hides API credential gateway guidance without writing preferences", async () => {
+    mockFeatureGuidanceState.gatewayGuidance.onboardingStartedAt = 1
     const user = userEvent.setup()
 
     render(<ApiCredentialProfiles />)
@@ -1038,6 +1054,7 @@ describe("ApiCredentialProfiles page", () => {
   })
 
   it("permanently dismisses API credential gateway guidance for the API credential surface", async () => {
+    mockFeatureGuidanceState.gatewayGuidance.onboardingStartedAt = 1
     const user = userEvent.setup()
     mockDismissGatewayGuidanceSurface.mockResolvedValueOnce(undefined)
 
@@ -1073,6 +1090,7 @@ describe("ApiCredentialProfiles page", () => {
   })
 
   it("shows a safe local error when permanent dismissal rejects", async () => {
+    mockFeatureGuidanceState.gatewayGuidance.onboardingStartedAt = 1
     const user = userEvent.setup()
     mockDismissGatewayGuidanceSurface.mockRejectedValueOnce(
       new Error("sensitive backend detail"),

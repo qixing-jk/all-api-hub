@@ -229,7 +229,7 @@
     },
     "boundaryNote": "All API Hub verwaltet und importiert die Konfiguration. Modellanfragen werden nicht weitergeleitet. Externe Clients rufen Ihr selbst gehostetes KI-Gateway an.",
     "description": {
-      "has_gateway_channels": "Gateway-Kanäle wurden erstellt oder importiert. Prüfe ihren aktuellen Status in der Kanalverwaltung.",
+      "has_gateway_channels": "Die Gateway-Einrichtungshilfe ist abgeschlossen. Öffnen Sie die Kanalverwaltung, um den aktuellen Status zu prüfen.",
       "needs_importable_source": "Sie haben Konten, aber die aktuellen Kontotypen können keine importierbaren Schlüssel bereitstellen. Speichern Sie zuerst einen API-Schlüssel oder fügen Sie einen Kontotyp hinzu, der den Schlüsselzugriff unterstützt, und importieren Sie ihn dann in Ihr selbst gehostetes KI-Gateway.",
       "needs_managed_site": "Sie haben Kontoschlüssel oder API-Schlüssel. Konfigurieren Sie Ihr selbstgehostetes KI-Gateway so, dass es diese als Gateway-Kanäle importiert, sodass mehrere Schlüssel über eine KI-API verwendet werden können.",
       "needs_sources": "Füge ein Konto hinzu oder speichere einen API-Schlüssel und importiere ihn in dein selbst gehostetes AI-Gateway, um eine einheitliche AI-API bereitzustellen.",

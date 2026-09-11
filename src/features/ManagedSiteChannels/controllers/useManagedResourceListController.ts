@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import {
   isManagedResourceRefFor,
@@ -128,7 +135,9 @@ export function useManagedResourceListController({
   semantics,
 }: Options) {
   const acceptedCallback = useRef(onResourcesAccepted)
-  acceptedCallback.current = onResourcesAccepted
+  useLayoutEffect(() => {
+    acceptedCallback.current = onResourcesAccepted
+  }, [onResourcesAccepted])
   const mapper = useMemo(
     () =>
       createManagedResourceRowMapper({

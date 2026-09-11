@@ -2,17 +2,23 @@ import { featureGuidanceState } from "~/services/featureGuidance/featureGuidance
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("GatewayGuidanceCompletion")
+let pendingCompletion: Promise<void> | undefined
 
 /** Records observed gateway setup without making guidance storage block the operation. */
 export function recordGatewayGuidanceCompletion() {
-  void featureGuidanceState
+  if (pendingCompletion) return pendingCompletion
+  pendingCompletion = featureGuidanceState
     .getStateStrict()
-    .then((state) => {
+    .then(async (state) => {
       if (!state.gatewayGuidance.onboardingCompletedAt) {
-        return featureGuidanceState.markGatewayGuidanceOnboardingCompleted()
+        await featureGuidanceState.markGatewayGuidanceOnboardingCompleted()
       }
     })
     .catch((error) => {
       logger.warn("Failed to record gateway guidance completion", error)
     })
+    .finally(() => {
+      pendingCompletion = undefined
+    })
+  return pendingCompletion
 }

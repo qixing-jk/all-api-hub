@@ -229,7 +229,7 @@
     },
     "boundaryNote": "All API Hub administra e importa la configuración; no hace proxy de las solicitudes de modelos. Los clientes externos llaman a tu AI gateway autohospedado.",
     "description": {
-      "has_gateway_channels": "Se crearon o importaron canales en la puerta de enlace. Abre la administración de canales para consultar su estado actual.",
+      "has_gateway_channels": "La guía de configuración del gateway está completa. Abre la administración de canales para consultar el estado actual.",
       "needs_importable_source": "Ya tienes cuentas, pero sus tipos actuales no pueden exponer claves importables. Primero guarda una API key o agrega un tipo de cuenta que permita acceder a claves, y luego impórtala en tu AI gateway autohospedado.",
       "needs_managed_site": "Ya tienes claves de cuenta o API keys. Después de configurar tu AI gateway autohospedado, puedes importarlas como canales del gateway para que varias claves usen una sola AI API.",
       "needs_sources": "Agrega una cuenta o guarda una clave API y luego impórtala a tu puerta de enlace de IA autoalojada para ofrecer una API de IA unificada.",

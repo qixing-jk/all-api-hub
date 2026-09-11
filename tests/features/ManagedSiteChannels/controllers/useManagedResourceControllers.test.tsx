@@ -1,4 +1,5 @@
-import { act, renderHook, waitFor } from "@testing-library/react"
+import { act, render, renderHook, waitFor } from "@testing-library/react"
+import { startTransition, Suspense, useState } from "react"
 import { describe, expect, expectTypeOf, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -138,6 +139,46 @@ const createAnalytics = () => {
 }
 
 describe("useManagedResourceListController", () => {
+  it("uses the committed callback while a concurrent render is suspended", async () => {
+    const pending = deferred<{ items: ResourceDisplayFacts[] }>()
+    const suspended = deferred<void>()
+    const workspace = createManagedResourceWorkspace()
+    vi.mocked(workspace.list).mockReturnValue(pending.promise)
+    const source = registration(vi.fn(async () => workspace))
+    const committedCallback = vi.fn()
+    const pendingCallback = vi.fn()
+    const didSuspend = vi.fn()
+    let beginPendingRender!: () => void
+    function Fixture() {
+      const [isPending, setPending] = useState(false)
+      beginPendingRender = () => setPending(true)
+      useManagedResourceListController({
+        registration: source,
+        onResourcesAccepted: isPending ? pendingCallback : committedCallback,
+      })
+      if (isPending) {
+        didSuspend()
+        throw suspended.promise
+      }
+      return null
+    }
+    render(
+      <Suspense fallback={null}>
+        <Fixture />
+      </Suspense>,
+    )
+    await waitFor(() => expect(workspace.list).toHaveBeenCalledOnce())
+    await act(async () => {
+      startTransition(beginPendingRender)
+    })
+    expect(didSuspend).toHaveBeenCalled()
+    await act(async () => {
+      pending.resolve({ items: [createManagedResourceFacts()] })
+    })
+    expect(committedCallback).toHaveBeenCalledExactlyOnceWith(1)
+    expect(pendingCallback).not.toHaveBeenCalled()
+  })
+
   it("reports accepted collections but excludes failed and superseded reads", async () => {
     const workspace = createManagedResourceWorkspace()
     const pending = deferred<{ items: ResourceDisplayFacts[] }>()

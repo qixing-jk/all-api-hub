@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
-import { render, screen, within } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
@@ -13,6 +13,12 @@ import type {
 import { ManagedSiteChannelsView } from "~/features/ManagedSiteChannels/presentation/ManagedSiteChannelsView"
 import { compareManagedSiteChannelStatusValues } from "~/features/ManagedSiteChannels/presentation/useManagedSiteChannelsTable"
 import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
+import { openSettingsTab } from "~/utils/navigation"
+
+vi.mock("~/utils/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/navigation")>()),
+  openSettingsTab: vi.fn(),
+}))
 
 const rows = [
   {
@@ -378,9 +384,17 @@ describe("ManagedSiteChannelsView", () => {
       screen.getByText("common:status.configurationRequired"),
     ).toBeVisible()
     await user.click(
-      screen.getByRole("button", { name: "common:actions.retry" }),
+      screen.getByRole("button", { name: "common:actions.goToSettings" }),
     )
-    expect(onRefresh).toHaveBeenCalledTimes(1)
+    await waitFor(() =>
+      expect(openSettingsTab).toHaveBeenCalledWith("managedSite", {
+        preserveHistory: true,
+      }),
+    )
+    expect(
+      screen.queryByRole("button", { name: "common:actions.retry" }),
+    ).not.toBeInTheDocument()
+    expect(onRefresh).not.toHaveBeenCalled()
   })
 
   it("keeps a refreshing toolbar action available for cancellation", async () => {

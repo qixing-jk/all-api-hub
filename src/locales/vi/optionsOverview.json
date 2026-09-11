@@ -229,7 +229,7 @@
     },
     "boundaryNote": "All API Hub quản lý và nhập cấu hình; ứng dụng không proxy yêu cầu model. Client bên ngoài sẽ gọi AI gateway tự triển khai của bạn.",
     "description": {
-      "has_gateway_channels": "Đã tạo hoặc nhập kênh vào cổng. Mở quản lý kênh để kiểm tra trạng thái hiện tại.",
+      "has_gateway_channels": "Hướng dẫn thiết lập cổng đã hoàn tất. Mở quản lý kênh để kiểm tra trạng thái hiện tại.",
       "needs_importable_source": "Bạn đã có tài khoản, nhưng loại tài khoản hiện tại không thể cung cấp key có thể nhập. Hãy lưu API key trước, hoặc thêm loại tài khoản hỗ trợ lấy key, rồi nhập vào AI gateway tự triển khai.",
       "needs_managed_site": "Bạn đã có key tài khoản hoặc API key. Sau khi cấu hình AI gateway tự triển khai, bạn có thể nhập chúng làm kênh gateway để nhiều key dùng chung một AI API.",
       "needs_sources": "Thêm tài khoản hoặc lưu khóa API rồi nhập vào cổng AI tự lưu trữ để cung cấp một API AI thống nhất.",

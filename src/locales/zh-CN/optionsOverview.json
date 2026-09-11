@@ -229,7 +229,7 @@
     },
     "boundaryNote": "All API Hub 负责管理和导入配置，不代理模型请求；外部客户端实际调用的是你的自建 AI 网关。",
     "description": {
-      "has_gateway_channels": "已完成过网关渠道创建或导入。前往渠道管理确认当前状态。",
+      "has_gateway_channels": "已完成网关设置引导。前往渠道管理确认当前状态。",
       "needs_importable_source": "已有账号，但当前账号类型无法读取可导入的 Key。请先保存 API Key，或添加支持 Key 获取的账号，再导入自建 AI 网关。",
       "needs_managed_site": "已有账号 Key 或 API Key。完成自建 AI 网关配置后，即可将它们导入为网关渠道，让多个 Key 通过同一个 AI API 使用。",
       "needs_sources": "先添加账号或保存 API Key，再导入自建 AI 网关，汇总成一个统一 AI API。",
