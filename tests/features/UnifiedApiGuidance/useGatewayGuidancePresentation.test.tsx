@@ -33,6 +33,18 @@ describe("useGatewayGuidancePresentation", () => {
     })
   })
 
+  it("falls back to optional discovery when saved presentation cannot be read", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("storage unavailable")
+    })
+    const { result } = renderHook(() =>
+      useGatewayGuidancePresentation(false, false),
+    )
+    expect(result.current).toMatchObject({ expanded: false, started: false })
+    act(() => result.current.toggle())
+    expect(result.current.expanded).toBe(true)
+  })
+
   it("keeps preview usable when presentation storage cannot be written", () => {
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new Error("storage unavailable")

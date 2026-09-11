@@ -397,6 +397,30 @@ describe("ManagedSiteChannelsView", () => {
     expect(onRefresh).not.toHaveBeenCalled()
   })
 
+  it("opens the provider-specific settings anchor for configuration recovery", async () => {
+    const user = userEvent.setup()
+    render(
+      <ManagedSiteChannelsView
+        {...commonProps}
+        configurationSettingsTarget={{
+          tabId: "managedSite",
+          anchor: "new-api",
+        }}
+        state={createState({ isConfigurationMissing: true })}
+        callbacks={createCallbacks()}
+      />,
+    )
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.goToSettings" }),
+    )
+    await waitFor(() =>
+      expect(openSettingsTab).toHaveBeenCalledWith("managedSite", {
+        anchor: "new-api",
+        preserveHistory: true,
+      }),
+    )
+  })
+
   it("keeps a refreshing toolbar action available for cancellation", async () => {
     const user = userEvent.setup()
     const onRefresh = vi.fn()

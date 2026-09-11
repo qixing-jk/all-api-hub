@@ -125,7 +125,9 @@ describe("UnifiedApiGuidanceCard", () => {
     )
   })
 
-  it("omits model-sync copy when no optional action is available", () => {
+  it("offers an API credential as an alternative data source", async () => {
+    const user = userEvent.setup()
+    const onAction = vi.fn()
     const model = buildUnifiedApiGuidanceModel({
       enabledAccountCount: 0,
       keyAccessibleAccountCount: 0,
@@ -134,7 +136,17 @@ describe("UnifiedApiGuidanceCard", () => {
       managedSiteType: SITE_TYPES.NEW_API,
     })
 
-    renderCard(model)
+    renderCard(model, onAction)
+    await user.click(
+      screen.getByRole("button", {
+        name: "optionsOverview:unifiedApiGuidance.actions.addApiCredential",
+      }),
+    )
+    expect(onAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: UNIFIED_API_GUIDANCE_ACTION_KINDS.AddApiCredential,
+      }),
+    )
 
     expect(
       screen.queryByText(

@@ -79,6 +79,14 @@ describe("managed-site channel page experience", () => {
       screen.getAllByRole("button").indexOf(accountImport),
     )
 
+    await user.click(accountImport)
+    await waitFor(() =>
+      expect(mocks.pushWithinOptionsPage).toHaveBeenCalledWith(
+        "#keys",
+        undefined,
+      ),
+    )
+
     await user.click(profileImport)
     expect(mocks.pushWithinOptionsPage).toHaveBeenCalledWith(
       "#apiCredentialProfiles",
