@@ -58,6 +58,10 @@ import {
   cliProxyApiFields,
   cliProxyApiSections,
 } from "./cliProxyApiFieldPolicy"
+import {
+  newApiAdvancedFields,
+  newApiSections,
+} from "./newApiAdvancedFieldPolicy"
 
 export const MANAGED_RESOURCE_EDITOR_MODES = {
   Create: "create",
@@ -73,6 +77,10 @@ export const MANAGED_RESOURCE_CHANNEL_FIELD_ROLES = {
   Status: "status",
   BaseUrl: "base-url",
   Secret: "secret",
+  SuggestedText: "suggested-text",
+  StringMapping: "string-mapping",
+  Timestamp: "timestamp",
+  ModelSummary: "model-summary",
   Models: "models",
 } as const
 
@@ -103,6 +111,12 @@ export type ManagedResourceFieldPresentation =
     advancedControl?: "string-map" | "json" | "model-input" | "model-list"
     suggestionSourceFieldId?: string
     mapKeysTargetFieldId?: string
+    resolveReadOnlyHelp?: ManagedResourceTextResolver
+    suggestionFieldId?: string
+    disableWithFieldIds?: readonly string[]
+    isConfigured?: (
+      values: import("~/services/apiAdapters/contracts/resourceNative").EditableResourceProjection,
+    ) => boolean
   }
 export type ManagedResourceTextResolver = ResourceFieldTextResolver
 export type ManagedResourceEditorFieldPolicy = Omit<
@@ -521,11 +535,29 @@ const createNewApiFamilyFields = (
     },
   ] satisfies readonly ManagedResourceFieldPresentation[]
 
-const newApiFields = createNewApiFamilyFields(
-  NEW_API_MANAGED_RESOURCE_FIELD_IDS,
-  newApiTypeOptionLabelResolvers,
-  createStatusOptionLabelResolvers(CHANNEL_STATUS),
-)
+const newApiFields = [
+  ...createNewApiFamilyFields(
+    NEW_API_MANAGED_RESOURCE_FIELD_IDS,
+    newApiTypeOptionLabelResolvers,
+    createStatusOptionLabelResolvers(CHANNEL_STATUS),
+  ).map((field) => ({
+    ...field,
+    ...(field.section === "connection"
+      ? { section: "basic" as const, order: field.order + 30 }
+      : {}),
+    ...((
+      [
+        NEW_API_MANAGED_RESOURCE_FIELD_IDS.Type,
+        NEW_API_MANAGED_RESOURCE_FIELD_IDS.Status,
+        NEW_API_MANAGED_RESOURCE_FIELD_IDS.Priority,
+        NEW_API_MANAGED_RESOURCE_FIELD_IDS.Weight,
+      ] as string[]
+    ).includes(field.fieldId)
+      ? { width: "half" as const }
+      : {}),
+  })),
+  ...newApiAdvancedFields,
+]
 
 const veloeraFields = createNewApiFamilyFields(
   VELOERA_MANAGED_RESOURCE_FIELD_IDS,
@@ -707,10 +739,12 @@ const newApiManagedResourceFieldPolicy = defineManagedResourceFieldPolicy({
   modes: {
     [MANAGED_RESOURCE_EDITOR_MODES.Create]: {
       fields: newApiFields,
+      sections: newApiSections,
       hiddenFields: [],
     },
     [MANAGED_RESOURCE_EDITOR_MODES.Edit]: {
       fields: newApiFields,
+      sections: newApiSections,
       hiddenFields: [],
     },
   },

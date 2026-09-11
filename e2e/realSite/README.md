@@ -101,6 +101,29 @@ AAH_E2E_NEW_API_ADMIN_TOKEN=replace-with-admin-access-token
 AAH_E2E_NEW_API_ADMIN_USER_ID=1
 ```
 
+The advanced-settings case uses those three required values (base URL, admin
+token, user ID) to create one uniquely named, manually disabled OpenAI channel.
+It edits all nine advanced fields through the extension, reads the real API to
+verify persistence, reopens and clears them, and verifies unrelated top-level
+fields and nested `setting`/`settings` values survive both saves. Cleanup deletes
+only this run's channel and verifies it is gone, including after a failed check.
+The case records the server version and channel type as test annotations and
+disables screenshots, video, and traces for authenticated channel workflows.
+
+Run only this case in PowerShell:
+
+```powershell
+$env:AAH_E2E_REAL_SITE_CATEGORY = 'managed-site'
+$env:AAH_E2E_MANAGED_SITE_TARGET = 'new-api'
+pnpm exec playwright test e2e/realSite/managedSiteChannels.spec.ts --project=chromium --workers=1 --grep 'saves and clears advanced'
+```
+
+This establishes real configuration persistence. It does not establish live
+upstream detection, automatic model synchronization, proxy routing, or model
+inference: the temporary channel has an invalid upstream URL and no usable key.
+The intercepted `e2e/newApiAdvancedEditor.spec.ts` separately checks grouped UI
+usability at desktop and narrow widths.
+
 ## OneHub
 
 ```env

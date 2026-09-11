@@ -46,11 +46,11 @@ export function ResourceEditorSection({
           aria-hidden
           className={`h-4 w-4 shrink-0 transition-transform ${open ? "" : "-rotate-90"}`}
         />
-        <span className="text-sm font-semibold">{label}</span>
+        <span className="min-w-0 flex-1 text-sm font-semibold">{label}</span>
         {summary && (
           <span
             id={summaryId}
-            className="text-muted-foreground ml-auto truncate text-xs"
+            className="text-muted-foreground ml-auto max-w-[40%] truncate text-xs"
           >
             {summary}
           </span>

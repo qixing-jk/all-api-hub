@@ -116,6 +116,8 @@ export function ManagedResourceAdvancedField({
             // must not clear text that was not selected from the inventory.
             if (
               details.reason === "input-change" ||
+              details.reason === "input-clear" ||
+              details.reason === "clear-press" ||
               details.reason === "item-press"
             )
               onValueChange(fieldId, next)

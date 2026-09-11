@@ -59,6 +59,61 @@
     "deleteTitlePlural": "Xóa các kênh này?"
   },
   "editor": {
+    "advanced": {
+      "autoBan": {
+        "help": "Cho phép New API vô hiệu hóa kênh khi đáp ứng các điều kiện lỗi đã cấu hình.",
+        "label": "Tự động vô hiệu hóa kênh"
+      },
+      "autoSync": {
+        "help": "Cần bật kiểm tra cập nhật. Khi phát hiện thay đổi, New API tự động cập nhật danh sách mô hình của kênh này.",
+        "label": "Tự động đồng bộ mô hình thượng nguồn"
+      },
+      "check": {
+        "help": "New API kiểm tra định kỳ trên máy chủ. Chức năng này hoạt động riêng với tính năng đồng bộ mô hình của tiện ích.",
+        "label": "Kiểm tra cập nhật mô hình thượng nguồn"
+      },
+      "detectedModels": "Mô hình có thể thêm",
+      "groups": {
+        "detection": "Phát hiện mô hình thượng nguồn",
+        "management": "Quản lý kênh",
+        "network": "Cài đặt mạng"
+      },
+      "ignored": {
+        "help": "Nhập tên chính xác của mô hình cần loại khỏi quá trình phát hiện và đồng bộ.",
+        "label": "Mô hình thượng nguồn bị bỏ qua"
+      },
+      "invalidExisting": "Không thể phân tích cấu hình đã lưu một cách an toàn. Hãy sửa trong trang quản trị trước khi chỉnh sửa trường này.",
+      "lastCheck": "Lần kiểm tra gần nhất",
+      "mapping": {
+        "add": "Thêm ánh xạ",
+        "help": "Ánh xạ tên mô hình trong yêu cầu sang tên gửi đến thượng nguồn. Tên mô hình yêu cầu ở mỗi hàng phải duy nhất.",
+        "invalid": "Điền cả hai tên trong mỗi hàng và xóa các mô hình yêu cầu trùng lặp.",
+        "label": "Ánh xạ tên mô hình",
+        "remove": "Xóa ánh xạ {{index}}",
+        "source": "Mô hình yêu cầu {{index}}",
+        "sourcePlaceholder": "Mô hình yêu cầu",
+        "target": "Mô hình thượng nguồn {{index}}",
+        "targetPlaceholder": "Mô hình thượng nguồn"
+      },
+      "neverChecked": "Chưa kiểm tra",
+      "noModels": "Không có",
+      "proxy": {
+        "help": "Proxy được máy chủ New API sử dụng để truy cập kênh này. Hỗ trợ HTTP, HTTPS, SOCKS5 và SOCKS5H. Để trống để xóa proxy của kênh.",
+        "invalid": "Nhập URL proxy HTTP, HTTPS, SOCKS5 hoặc SOCKS5H hợp lệ.",
+        "label": "Địa chỉ proxy"
+      },
+      "remark": {
+        "help": "Ghi lại mục đích hoặc hướng dẫn sử dụng kênh (tối đa 255 ký tự).",
+        "label": "Ghi chú"
+      },
+      "removedModels": "Mô hình được phát hiện đã bị xóa",
+      "tag": "Nhãn kênh",
+      "testModel": {
+        "help": "Chọn mô hình hoặc nhập tên. Để trống để dùng mô hình kiểm tra mặc định của New API.",
+        "label": "Mô hình kiểm tra"
+      },
+      "unsupportedDetection": "Trình chỉnh sửa này không hỗ trợ phát hiện thượng nguồn cho loại kênh này. Kênh tùy chỉnh nâng cao cần cấu hình tuyến danh sách mô hình trong trang quản trị."
+    },
     "doneHub": {
       "allowExtraBody": {
         "help": "Chuyển tiếp trường bổ sung trong yêu cầu của máy khách, như tham số extra_body, tới nhà cung cấp.",

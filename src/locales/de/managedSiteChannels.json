@@ -59,6 +59,61 @@
     "deleteTitlePlural": "Kanäle löschen?"
   },
   "editor": {
+    "advanced": {
+      "autoBan": {
+        "help": "New API darf diesen Kanal deaktivieren, wenn die konfigurierten Fehlerbedingungen erfüllt sind.",
+        "label": "Kanal automatisch deaktivieren"
+      },
+      "autoSync": {
+        "help": "Erfordert aktivierte Prüfungen. Bei Änderungen aktualisiert New API die Modellliste dieses Kanals automatisch.",
+        "label": "Vorgelagerte Modelle automatisch synchronisieren"
+      },
+      "check": {
+        "help": "New API prüft regelmäßig auf dem Server. Dies ist unabhängig von der Modellsynchronisierung der Erweiterung.",
+        "label": "Auf Modellaktualisierungen prüfen"
+      },
+      "detectedModels": "Hinzufügbare Modelle",
+      "groups": {
+        "detection": "Erkennung vorgelagerter Modelle",
+        "management": "Kanalverwaltung",
+        "network": "Netzwerkeinstellungen"
+      },
+      "ignored": {
+        "help": "Genaue Modellnamen eingeben, die von Erkennung und Synchronisierung ausgeschlossen werden sollen.",
+        "label": "Ignorierte vorgelagerte Modelle"
+      },
+      "invalidExisting": "Die gespeicherte Konfiguration kann nicht sicher gelesen werden. Vor der Bearbeitung in der Website-Verwaltung korrigieren.",
+      "lastCheck": "Zuletzt geprüft",
+      "mapping": {
+        "add": "Zuordnung hinzufügen",
+        "help": "Angefragte Modellnamen den an den Anbieter gesendeten Namen zuordnen. Jeder angefragte Modellname muss eindeutig sein.",
+        "invalid": "Beide Namen in jeder Zeile ausfüllen und doppelte angefragte Modelle entfernen.",
+        "label": "Modellnamen zuordnen",
+        "remove": "Zuordnung {{index}} entfernen",
+        "source": "Angefragtes Modell {{index}}",
+        "sourcePlaceholder": "Angefragtes Modell",
+        "target": "Vorgelagertes Modell {{index}}",
+        "targetPlaceholder": "Vorgelagertes Modell"
+      },
+      "neverChecked": "Noch nicht geprüft",
+      "noModels": "Keine",
+      "proxy": {
+        "help": "Proxy für Zugriffe des New API-Servers auf diesen Kanal. Unterstützt HTTP, HTTPS, SOCKS5 und SOCKS5H. Leer lassen, um den Kanal-Proxy zu entfernen.",
+        "invalid": "Eine gültige HTTP-, HTTPS-, SOCKS5- oder SOCKS5H-Proxy-URL eingeben.",
+        "label": "Proxy-Adresse"
+      },
+      "remark": {
+        "help": "Zweck oder Nutzungshinweise des Kanals festhalten (maximal 255 Zeichen).",
+        "label": "Notizen"
+      },
+      "removedModels": "Als entfernt erkannte Modelle",
+      "tag": "Kanal-Tag",
+      "testModel": {
+        "help": "Modell auswählen oder Namen eingeben. Leer lassen, um das Standard-Testmodell von New API zu verwenden.",
+        "label": "Testmodell"
+      },
+      "unsupportedDetection": "Dieser Editor unterstützt die Modellerkennung für diesen Kanaltyp nicht. Erweiterte benutzerdefinierte Kanäle benötigen eine Modelllisten-Route in der Website-Verwaltung."
+    },
     "doneHub": {
       "allowExtraBody": {
         "help": "Zusätzliche Felder der Clientanfrage, etwa extra_body-Parameter, an den Anbieter weiterleiten.",

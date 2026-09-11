@@ -229,13 +229,17 @@ export function NativeResourceEditorBody<TSection extends string>({
         }
       />
     ) : undefined
+    const fieldDisabled =
+      disabled ||
+      descriptor.readOnly ||
+      presentation.disabledWhen?.(values) === true
     const override = renderFieldOverride?.({
       descriptor,
       presentation,
       label,
       errorMessage,
       describedBy,
-      disabled,
+      disabled: fieldDisabled,
       options: resolvedOptions,
       optionControl,
     })
@@ -245,14 +249,15 @@ export function NativeResourceEditorBody<TSection extends string>({
     const help =
       presentation.resolveHelp && helpId ? (
         <p id={helpId} className="text-muted-foreground mt-1 text-xs">
-          {presentation.resolveHelp(t)}
+          {fieldDisabled && presentation.resolveDisabledHelp
+            ? presentation.resolveDisabledHelp(t)
+            : presentation.resolveHelp(t)}
         </p>
       ) : null
     const error =
       errorMessage && errorId ? (
         <FieldMessage id={errorId} message={errorMessage} />
       ) : null
-    const fieldDisabled = disabled || descriptor.readOnly
 
     if (descriptor.type === RESOURCE_FIELD_TYPES.SecretList) {
       return (
@@ -384,8 +389,11 @@ export function NativeResourceEditorBody<TSection extends string>({
     if (descriptor.type === RESOURCE_FIELD_TYPES.Boolean) {
       return (
         <div key={descriptor.fieldId}>
-          <Label htmlFor={id}>{label}</Label>
-          <div className="mt-2">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <Label htmlFor={id}>{label}</Label>
+              {help}
+            </div>
             <Switch
               id={id}
               checked={readResourceBoolean(values, descriptor.fieldId)}
@@ -395,7 +403,6 @@ export function NativeResourceEditorBody<TSection extends string>({
               aria-describedby={describedBy}
             />
           </div>
-          {help}
           {error}
         </div>
       )

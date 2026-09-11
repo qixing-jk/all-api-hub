@@ -59,6 +59,61 @@
     "deleteTitlePlural": "¿Eliminar canales?"
   },
   "editor": {
+    "advanced": {
+      "autoBan": {
+        "help": "Permite que New API desactive este canal cuando se cumplan las condiciones de fallo configuradas.",
+        "label": "Desactivar el canal automáticamente"
+      },
+      "autoSync": {
+        "help": "Requiere activar las revisiones. Al detectar cambios, New API actualiza automáticamente la lista de modelos de este canal.",
+        "label": "Sincronizar modelos automáticamente"
+      },
+      "check": {
+        "help": "New API revisa periódicamente desde el servidor. Es independiente de la sincronización de modelos de la extensión.",
+        "label": "Buscar actualizaciones de modelos"
+      },
+      "detectedModels": "Modelos disponibles para agregar",
+      "groups": {
+        "detection": "Detección de modelos del proveedor",
+        "management": "Administración del canal",
+        "network": "Configuración de red"
+      },
+      "ignored": {
+        "help": "Ingresa los nombres exactos de los modelos que quieres excluir de la detección y sincronización.",
+        "label": "Modelos ignorados del proveedor"
+      },
+      "invalidExisting": "No se puede interpretar de forma segura la configuración guardada. Corrígela en la administración del sitio antes de editar este campo.",
+      "lastCheck": "Última revisión",
+      "mapping": {
+        "add": "Agregar mapeo",
+        "help": "Relaciona el nombre solicitado con el nombre enviado al proveedor. Cada modelo solicitado debe ser único.",
+        "invalid": "Completa ambos nombres en cada fila y elimina los modelos solicitados duplicados.",
+        "label": "Mapeo de nombres de modelos",
+        "remove": "Eliminar mapeo {{index}}",
+        "source": "Modelo solicitado {{index}}",
+        "sourcePlaceholder": "Modelo solicitado",
+        "target": "Modelo del proveedor {{index}}",
+        "targetPlaceholder": "Modelo del proveedor"
+      },
+      "neverChecked": "Aún no se ha revisado",
+      "noModels": "Ninguno",
+      "proxy": {
+        "help": "Proxy que usa el servidor de New API para este canal. Admite HTTP, HTTPS, SOCKS5 y SOCKS5H. Déjalo vacío para quitar el proxy del canal.",
+        "invalid": "Ingresa una URL de proxy HTTP, HTTPS, SOCKS5 o SOCKS5H válida.",
+        "label": "Dirección del proxy"
+      },
+      "remark": {
+        "help": "Registra el propósito o las instrucciones de uso del canal (hasta 255 caracteres).",
+        "label": "Notas"
+      },
+      "removedModels": "Modelos detectados como eliminados",
+      "tag": "Etiqueta del canal",
+      "testModel": {
+        "help": "Selecciona un modelo o escribe su nombre. Déjalo vacío para usar el modelo de prueba predeterminado de New API.",
+        "label": "Modelo de prueba"
+      },
+      "unsupportedDetection": "Este editor no admite la detección para este tipo de canal. Los canales personalizados avanzados requieren configurar la ruta de la lista de modelos en la administración del sitio."
+    },
     "doneHub": {
       "allowExtraBody": {
         "help": "Reenvía al proveedor los campos adicionales del cliente, como los parámetros extra_body.",

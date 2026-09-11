@@ -59,6 +59,61 @@
     "deleteTitlePlural": "Delete channels?"
   },
   "editor": {
+    "advanced": {
+      "autoBan": {
+        "help": "Allow New API to disable this channel when its configured failure conditions are met.",
+        "label": "Automatically disable channel"
+      },
+      "autoSync": {
+        "help": "Requires update checks. New API automatically updates this channel's model list when changes are detected.",
+        "label": "Automatically sync upstream models"
+      },
+      "check": {
+        "help": "New API checks periodically on the server. This is separate from the extension's model sync.",
+        "label": "Check upstream model updates"
+      },
+      "detectedModels": "Models available to add",
+      "groups": {
+        "detection": "Upstream model detection",
+        "management": "Channel management",
+        "network": "Network settings"
+      },
+      "ignored": {
+        "help": "Enter exact model names to exclude from upstream detection and sync.",
+        "label": "Ignored upstream models"
+      },
+      "invalidExisting": "The saved configuration cannot be safely parsed. Fix it in the site's admin console before editing this field.",
+      "lastCheck": "Last checked",
+      "mapping": {
+        "add": "Add mapping",
+        "help": "Map a requested model name to the model sent upstream. Use a unique request model on each row.",
+        "invalid": "Complete both names on every row and remove duplicate request models.",
+        "label": "Model name mappings",
+        "remove": "Remove mapping {{index}}",
+        "source": "Request model {{index}}",
+        "sourcePlaceholder": "Request model",
+        "target": "Upstream model {{index}}",
+        "targetPlaceholder": "Upstream model"
+      },
+      "neverChecked": "Not checked yet",
+      "noModels": "None",
+      "proxy": {
+        "help": "Proxy used by the New API server for this channel. Supports HTTP, HTTPS, SOCKS5 and SOCKS5H. Leave empty to clear the channel proxy.",
+        "invalid": "Enter a valid HTTP, HTTPS, SOCKS5 or SOCKS5H proxy URL.",
+        "label": "Proxy address"
+      },
+      "remark": {
+        "help": "Record the channel's purpose or usage notes (up to 255 characters).",
+        "label": "Notes"
+      },
+      "removedModels": "Models detected as removed",
+      "tag": "Channel tag",
+      "testModel": {
+        "help": "Select a model or enter its name. Leave empty to use New API's default test model.",
+        "label": "Test model"
+      },
+      "unsupportedDetection": "Upstream detection is unavailable for this channel type in this editor. Advanced Custom channels require model-list route configuration in the site's admin console."
+    },
     "doneHub": {
       "allowExtraBody": {
         "help": "Forward extra fields in client requests, such as extra_body parameters, to the upstream.",

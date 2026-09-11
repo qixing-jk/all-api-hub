@@ -59,6 +59,61 @@
     "deleteTitlePlural": "删除这些渠道？"
   },
   "editor": {
+    "advanced": {
+      "autoBan": {
+        "help": "满足 New API 配置的故障条件时，允许自动禁用该渠道。",
+        "label": "自动禁用渠道"
+      },
+      "autoSync": {
+        "help": "需先开启检测。发现变化后，New API 会自动更新该渠道的模型列表。",
+        "label": "自动同步上游模型"
+      },
+      "check": {
+        "help": "由 New API 服务端定期检测，与扩展自身的模型同步功能分开运行。",
+        "label": "检测上游模型更新"
+      },
+      "detectedModels": "可加入的模型",
+      "groups": {
+        "detection": "上游模型检测",
+        "management": "日常管理",
+        "network": "网络设置"
+      },
+      "ignored": {
+        "help": "填写完整模型名称，将其排除在上游模型检测和同步之外。",
+        "label": "忽略的上游模型"
+      },
+      "invalidExisting": "已有配置无法安全解析，请先在站点管理后台修复，再编辑此字段。",
+      "lastCheck": "最近检测时间",
+      "mapping": {
+        "add": "添加映射",
+        "help": "将请求中的模型名称映射为发送给上游的模型名称；每行的请求模型必须唯一。",
+        "invalid": "请补全每行的两个模型名称，并移除重复的请求模型。",
+        "label": "模型名称映射",
+        "remove": "删除映射 {{index}}",
+        "source": "请求模型 {{index}}",
+        "sourcePlaceholder": "请求模型",
+        "target": "上游模型 {{index}}",
+        "targetPlaceholder": "上游模型"
+      },
+      "neverChecked": "尚未检测",
+      "noModels": "无",
+      "proxy": {
+        "help": "由 New API 服务端访问此渠道时使用，支持 HTTP、HTTPS、SOCKS5 和 SOCKS5H；留空清除此渠道的代理设置。",
+        "invalid": "请输入有效的 HTTP、HTTPS、SOCKS5 或 SOCKS5H 代理 URL。",
+        "label": "代理地址"
+      },
+      "remark": {
+        "help": "记录渠道用途或使用说明，最多 255 个字符。",
+        "label": "备注"
+      },
+      "removedModels": "检测到已移除的模型",
+      "tag": "渠道标签",
+      "testModel": {
+        "help": "选择模型或直接输入名称；留空使用 New API 默认测试模型。",
+        "label": "测试模型"
+      },
+      "unsupportedDetection": "当前编辑器不支持此渠道类型的上游检测；高级自定义渠道需在站点管理后台配置模型列表路由。"
+    },
     "doneHub": {
       "allowExtraBody": {
         "help": "将客户端请求中的额外字段（例如 extra_body 参数）转发给上游。",

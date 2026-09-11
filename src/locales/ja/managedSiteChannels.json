@@ -59,6 +59,61 @@
     "deleteTitlePlural": "チャネルを削除しますか？"
   },
   "editor": {
+    "advanced": {
+      "autoBan": {
+        "help": "New API に設定された障害条件を満たすと、このチャネルの自動無効化を許可します。",
+        "label": "チャネルを自動無効化"
+      },
+      "autoSync": {
+        "help": "更新の確認を有効にしてください。変更を検出すると、New API がこのチャネルのモデル一覧を自動更新します。",
+        "label": "上流モデルを自動同期"
+      },
+      "check": {
+        "help": "New API サーバーが定期的に確認します。拡張機能のモデル同期とは別に動作します。",
+        "label": "上流モデルの更新を確認"
+      },
+      "detectedModels": "追加可能なモデル",
+      "groups": {
+        "detection": "上流モデルの検出",
+        "management": "チャネル管理",
+        "network": "ネットワーク設定"
+      },
+      "ignored": {
+        "help": "検出と同期の対象から除外するモデルの完全な名前を入力します。",
+        "label": "無視する上流モデル"
+      },
+      "invalidExisting": "保存された設定を安全に解析できません。サイトの管理画面で修正してから編集してください。",
+      "lastCheck": "最終確認日時",
+      "mapping": {
+        "add": "マッピングを追加",
+        "help": "リクエストのモデル名を上流に送信するモデル名に変換します。リクエストモデルは各行で一意にしてください。",
+        "invalid": "各行の両方のモデル名を入力し、重複するリクエストモデルを削除してください。",
+        "label": "モデル名のマッピング",
+        "remove": "マッピング {{index}} を削除",
+        "source": "リクエストモデル {{index}}",
+        "sourcePlaceholder": "リクエストモデル",
+        "target": "上流モデル {{index}}",
+        "targetPlaceholder": "上流モデル"
+      },
+      "neverChecked": "未確認",
+      "noModels": "なし",
+      "proxy": {
+        "help": "New API サーバーがこのチャネルに接続する際に使用します。HTTP、HTTPS、SOCKS5、SOCKS5H に対応。空欄にするとチャネルのプロキシ設定を解除します。",
+        "invalid": "有効な HTTP、HTTPS、SOCKS5、SOCKS5H プロキシ URL を入力してください。",
+        "label": "プロキシアドレス"
+      },
+      "remark": {
+        "help": "チャネルの用途や注意事項を記録します（最大 255 文字）。",
+        "label": "備考"
+      },
+      "removedModels": "削除を検出したモデル",
+      "tag": "チャネルタグ",
+      "testModel": {
+        "help": "モデルを選択するか名前を入力します。空欄の場合、New API の既定のテストモデルを使用します。",
+        "label": "テストモデル"
+      },
+      "unsupportedDetection": "このエディターでは、このチャネルタイプの上流検出に対応していません。高度なカスタムチャネルはサイトの管理画面でモデル一覧のルート設定が必要です。"
+    },
     "doneHub": {
       "allowExtraBody": {
         "help": "extra_body など、クライアントの追加フィールドを上流へ転送します。",

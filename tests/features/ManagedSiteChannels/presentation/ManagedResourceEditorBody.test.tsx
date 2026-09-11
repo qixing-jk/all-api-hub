@@ -438,7 +438,7 @@ describe("ManagedResourceEditorBody", () => {
   })
 
   it("routes New API native fields through the shared channel controls", () => {
-    const policy = getManagedResourceFieldPolicy(
+    const fullPolicy = getManagedResourceFieldPolicy(
       SITE_TYPES.NEW_API,
       MANAGED_RESOURCE_KINDS.Channel,
       MANAGED_RESOURCE_EDITOR_MODES.Create,
@@ -509,6 +509,12 @@ describe("ManagedResourceEditorBody", () => {
       [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Weight]: 0,
     }
 
+    const policy = {
+      ...fullPolicy,
+      fields: fullPolicy.fields.filter((field) =>
+        descriptors.some((descriptor) => descriptor.fieldId === field.fieldId),
+      ),
+    }
     render(
       <ManagedResourceEditorBody
         t={t}

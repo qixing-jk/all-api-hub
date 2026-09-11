@@ -19,6 +19,8 @@ type ResourceFieldPresentationBase<TSection extends string = string> = {
   resolvePlaceholder?: ResourceFieldTextResolver
   /** Half-width controls share a row in a section with two columns. */
   width?: "half"
+  disabledWhen?: (values: EditableResourceProjection) => boolean
+  resolveDisabledHelp?: ResourceFieldTextResolver
   rows?: number
   /** Structured editing of an existing line-based projection; persistence stays adapter-owned. */
   textEntries?: {
