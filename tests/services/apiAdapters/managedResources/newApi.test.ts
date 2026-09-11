@@ -456,7 +456,8 @@ describe("New API native managed resource", () => {
       [F.Proxy, "invalid-url"],
       [F.AutoBan, "yes"],
       [F.Remark, 42],
-      [F.UpstreamIgnoredModels, [42]],
+      // Deliberately bypass the input type to verify runtime validation.
+      [F.UpstreamIgnoredModels, [42] as unknown as readonly string[]],
       [F.Remark, "x".repeat(256)],
       [F.UpstreamAutoSync, true],
     ] as const) {
