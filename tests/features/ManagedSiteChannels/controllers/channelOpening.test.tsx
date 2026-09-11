@@ -19,6 +19,33 @@ function deferred<T>() {
 }
 
 describe("channel opening lifecycle", () => {
+  it("clears a provider-cancelled opening and permits another attempt", async () => {
+    const editor = createManagedResourceEditor()
+    const workspace = createManagedResourceWorkspace({
+      openCreateEditor: vi
+        .fn()
+        .mockRejectedValueOnce(new ManagedResourceError({ code: "aborted" }))
+        .mockResolvedValueOnce(editor),
+    })
+    const mapper = createManagedResourceRowMapper()
+    const { result } = renderHook(() =>
+      useManagedResourceMutationController({
+        workspace,
+        resolveRef: mapper.resolveRef,
+        mapFacts: mapper.map,
+      }),
+    )
+    await act(async () => {
+      await result.current.openCreate()
+    })
+    expect(result.current.opening.status).toBe("idle")
+    expect(result.current.editorFailure).toBeNull()
+    await act(async () => {
+      await result.current.openCreate()
+    })
+    expect(result.current.editor).toBe(editor)
+  })
+
   it.each(["create", "edit", "view"] as const)(
     "exposes %s loading, cancels and ignores late completion",
     async (mode) => {

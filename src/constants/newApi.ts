@@ -161,12 +161,12 @@ export const NEW_API_MANAGED_RESOURCE_FIELD_IDS = {
   UpstreamRemovedModels: "newApi.upstreamRemovedModels",
 } as const
 
-// Upstream channel model-list support; Advanced Custom (60) additionally needs
+// Upstream channel model-list support; Advanced Custom (58) additionally needs
 // a route configuration that this editor does not yet own.
 // https://github.com/QuantumNous/new-api/blob/064ed943e1ac40e3eaca1b58ffb7fa5dacb3fde3/web/src/features/channels/constants.ts
 const NEW_API_MODEL_CHECK_TYPES = new Set([
-  1, 4, 14, 17, 20, 23, 24, 25, 26, 27, 31, 34, 35, 40, 42, 43, 47, 48, 57, 58,
-  59,
+  1, 4, 14, 17, 20, 23, 24, 25, 26, 27, 31, 34, 35, 40, 42, 43, 47, 48, 57, 59,
+  60,
 ])
 
 /** Whether the common channel editor can configure upstream model detection. */

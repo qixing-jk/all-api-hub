@@ -338,6 +338,111 @@ describe("New API native managed resource", () => {
     ).toMatchObject({ outcome: "partial", completion: "uncertain" })
   })
 
+  it("disables route-dependent Advanced Custom detection while supporting New API channels", async () => {
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openCreateEditor()
+    const F = NEW_API_MANAGED_RESOURCE_FIELD_IDS
+    const values = {
+      ...editor.initialValues,
+      [F.Name]: "Detection",
+      [F.BaseUrl]: "https://managed.example.invalid",
+      [F.Key]: { kind: "replace" as const, value: "sk-fixture" },
+      [F.Models]: ["model-a"],
+      [F.UpstreamCheck]: true,
+    }
+    expect(
+      editor.validate({
+        ...values,
+        [F.Type]: String(ChannelType.AdvancedCustom),
+      }),
+    ).toMatchObject({
+      valid: false,
+      issues: expect.arrayContaining([
+        expect.objectContaining({ fieldId: F.UpstreamCheck }),
+      ]),
+    })
+    expect(
+      editor.validate({ ...values, [F.Type]: String(ChannelType.NewAPI) }),
+    ).toEqual({ valid: true })
+  })
+
+  it("accepts normalized empty settings and confirms nonempty model mappings", async () => {
+    const F = NEW_API_MANAGED_RESOURCE_FIELD_IDS
+    mocks.get.mockResolvedValue({
+      ...channel,
+      setting: '{"proxy":"https://old.invalid"}',
+      settings: JSON.stringify({
+        upstream_model_update_check_enabled: true,
+        upstream_model_update_auto_sync_enabled: true,
+        upstream_model_update_ignored_models: ["old"],
+      }),
+    })
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    mocks.update.mockImplementation(async (_config, payload) => {
+      mocks.get.mockResolvedValue({
+        ...channel,
+        ...payload,
+        setting: "{}",
+        settings: "{}",
+      })
+      return {
+        outcome: "succeeded",
+        data: { id: channel.id },
+        confirmedEffects: [
+          {
+            kind: "resource-updated",
+            resourceKind: "channel",
+            resourceId: channel.id,
+          },
+        ],
+      }
+    })
+    expect(
+      (
+        await editor.submit({
+          ...editor.initialValues,
+          [F.Proxy]: "",
+          [F.UpstreamCheck]: false,
+          [F.UpstreamAutoSync]: false,
+          [F.UpstreamIgnoredModels]: [],
+          [F.ModelMapping]: ["alias", "model-a"],
+        })
+      ).outcome,
+    ).toBe("succeeded")
+  })
+
+  it("keeps an unconfirmed advanced write uncertain without inventing effects", async () => {
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    mocks.update.mockResolvedValue({
+      outcome: "succeeded",
+      data: { id: channel.id },
+      confirmedEffects: [],
+    })
+    expect(
+      await editor.submit({
+        ...editor.initialValues,
+        [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Tag]: "unsaved",
+      }),
+    ).toMatchObject({ outcome: "uncertain" })
+  })
+
+  it("rejects secret reads for unrelated fields without fetching a credential", async () => {
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    await expect(
+      editor.loadSecret!(NEW_API_MANAGED_RESOURCE_FIELD_IDS.Name),
+    ).rejects.toBeInstanceOf(ManagedResourceError)
+    expect(mocks.fetchSecretKey).not.toHaveBeenCalled()
+  })
+
   it("validates mappings, proxy URLs, notes and model detection dependencies", async () => {
     const workspace = await newApiManagedResourceRegistration.open()
     const editor = await workspace.openEditEditor(
@@ -348,6 +453,10 @@ describe("New API native managed resource", () => {
       [F.ModelMapping, ["alias", "model-a", "alias", "model-b"]],
       [F.ModelMapping, ["alias", ""]],
       [F.Proxy, "file:///tmp/proxy"],
+      [F.Proxy, "invalid-url"],
+      [F.AutoBan, "yes"],
+      [F.Remark, 42],
+      [F.UpstreamIgnoredModels, [42]],
       [F.Remark, "x".repeat(256)],
       [F.UpstreamAutoSync, true],
     ] as const) {

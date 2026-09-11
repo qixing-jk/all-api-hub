@@ -149,6 +149,43 @@ function NativeDialogLifecycleProbe() {
 }
 
 describe("ChannelDialogContainer", () => {
+  it("shows and cancels global channel preparation before an editor is ready", async () => {
+    const user = userEvent.setup()
+    let signal: AbortSignal | undefined
+    function StartPreparation() {
+      const { prepareNativeCreateDialog } = useChannelDialogContext()
+      return (
+        <button
+          onClick={() =>
+            void prepareNativeCreateDialog({
+              load: (value) => {
+                signal = value
+                return new Promise(() => {})
+              },
+            })
+          }
+        >
+          Prepare channel
+        </button>
+      )
+    }
+    render(
+      <ChannelDialogProvider>
+        <StartPreparation />
+        <ChannelDialogContainer />
+      </ChannelDialogProvider>,
+    )
+    await user.click(
+      await screen.findByRole("button", { name: "Prepare channel" }),
+    )
+    expect(await screen.findByRole("dialog")).toBeVisible()
+    await user.keyboard("{Escape}")
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    )
+    expect(signal?.aborted).toBe(true)
+  })
+
   it("renders AddTokenDialog with default-token prefill for non-empty allowed groups", async () => {
     addTokenDialogPropsMock.mockReset()
 

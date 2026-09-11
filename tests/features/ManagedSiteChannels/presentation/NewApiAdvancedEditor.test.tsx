@@ -202,6 +202,58 @@ describe("New API advanced channel editing", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("preserves malformed settings with disabled controls and clear guidance", async () => {
+    const { user, submit } = await setup({
+      setting: "broken",
+      settings: "[]",
+      model_mapping: '{"alias":5}',
+    })
+    await user.click(
+      screen.getByRole("button", { name: "Upstream model detection" }),
+    )
+    await user.click(screen.getByRole("button", { name: "Network settings" }))
+    expect(
+      screen.getByRole("switch", { name: "Check upstream model updates" }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole("switch", {
+        name: "Automatically sync upstream models",
+      }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole("combobox", { name: "Ignored upstream models" }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole("textbox", { name: "Proxy address" }),
+    ).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Add mapping" })).toBeDisabled()
+    expect(
+      screen.getAllByText(enManagedSiteChannels.editor.advanced.invalidExisting)
+        .length,
+    ).toBeGreaterThan(0)
+    await user.click(screen.getByRole("button", { name: "Save" }))
+    expect(submit).toHaveBeenCalledWith(
+      expect.not.objectContaining({ advanced: expect.anything() }),
+    )
+  })
+
+  it("reveals invalid proxy input in its collapsed section", async () => {
+    const { user, submit } = await setup()
+    const section = screen.getByRole("button", { name: "Network settings" })
+    await user.click(section)
+    await user.type(
+      screen.getByRole("textbox", { name: "Proxy address" }),
+      "not-a-url",
+    )
+    await user.click(section)
+    await user.click(screen.getByRole("button", { name: "Save" }))
+    expect(section).toHaveAttribute("aria-expanded", "true")
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      enManagedSiteChannels.editor.advanced.proxy.invalid,
+    )
+    expect(submit).not.toHaveBeenCalled()
+  })
+
   it("explains unsupported detection while allowing ordinary edits", async () => {
     const { user } = await setup({ type: 3 })
     await user.click(

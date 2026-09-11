@@ -58,8 +58,6 @@ export const newApiAdvancedFields: readonly ManagedResourceFieldPresentation[] =
       disabledWhen: (v) => !supportsNewApiUpstreamModelCheck(v[F.Type]),
     },
     {
-      resolveReadOnlyHelp: (t) =>
-        t("managedSiteChannels:editor.advanced.invalidExisting"),
       fieldId: F.UpstreamLastCheck,
       renderer: "number",
       section: "sync",
@@ -69,8 +67,6 @@ export const newApiAdvancedFields: readonly ManagedResourceFieldPresentation[] =
       isConfigured: () => false,
     },
     {
-      resolveReadOnlyHelp: (t) =>
-        t("managedSiteChannels:editor.advanced.invalidExisting"),
       fieldId: F.UpstreamDetectedModels,
       renderer: "multi-select",
       section: "sync",
@@ -81,8 +77,6 @@ export const newApiAdvancedFields: readonly ManagedResourceFieldPresentation[] =
       isConfigured: () => false,
     },
     {
-      resolveReadOnlyHelp: (t) =>
-        t("managedSiteChannels:editor.advanced.invalidExisting"),
       fieldId: F.UpstreamRemovedModels,
       renderer: "multi-select",
       section: "sync",
@@ -93,8 +87,6 @@ export const newApiAdvancedFields: readonly ManagedResourceFieldPresentation[] =
       isConfigured: () => false,
     },
     {
-      resolveReadOnlyHelp: (t) =>
-        t("managedSiteChannels:editor.advanced.invalidExisting"),
       fieldId: F.TestModel,
       renderer: "text",
       section: "models",
@@ -107,8 +99,6 @@ export const newApiAdvancedFields: readonly ManagedResourceFieldPresentation[] =
       suggestionSourceFieldId: F.Models,
     },
     {
-      resolveReadOnlyHelp: (t) =>
-        t("managedSiteChannels:editor.advanced.invalidExisting"),
       fieldId: F.AutoBan,
       renderer: "boolean",
       section: "routing",
@@ -116,11 +106,8 @@ export const newApiAdvancedFields: readonly ManagedResourceFieldPresentation[] =
       resolveLabel: (t) =>
         t("managedSiteChannels:editor.advanced.autoBan.label"),
       resolveHelp: (t) => t("managedSiteChannels:editor.advanced.autoBan.help"),
-      isConfigured: (v) => v[F.AutoBan] === false,
     },
     {
-      resolveReadOnlyHelp: (t) =>
-        t("managedSiteChannels:editor.advanced.invalidExisting"),
       fieldId: F.ModelMapping,
       renderer: "multi-select",
       section: "models",
@@ -136,8 +123,6 @@ export const newApiAdvancedFields: readonly ManagedResourceFieldPresentation[] =
       suggestionFieldId: F.Models,
     },
     {
-      resolveReadOnlyHelp: (t) =>
-        t("managedSiteChannels:editor.advanced.invalidExisting"),
       fieldId: F.Tag,
       renderer: "text",
       section: "metadata",
@@ -145,8 +130,6 @@ export const newApiAdvancedFields: readonly ManagedResourceFieldPresentation[] =
       resolveLabel: (t) => t("managedSiteChannels:editor.advanced.tag"),
     },
     {
-      resolveReadOnlyHelp: (t) =>
-        t("managedSiteChannels:editor.advanced.invalidExisting"),
       fieldId: F.Remark,
       renderer: "textarea",
       section: "metadata",

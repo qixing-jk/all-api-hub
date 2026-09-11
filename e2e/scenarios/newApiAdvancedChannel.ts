@@ -76,6 +76,7 @@ export async function runNewApiAdvancedChannelScenario(params: {
         `${config.baseUrl.replace(/\/$/, "")}${path}`,
         {
           method,
+          maxRedirects: 0,
           headers: {
             Authorization: `Bearer ${config.adminToken}`,
             "New-Api-User": config.userId,

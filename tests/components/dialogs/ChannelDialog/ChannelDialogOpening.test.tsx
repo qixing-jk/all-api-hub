@@ -121,6 +121,45 @@ describe("channel preparation", () => {
     expect(result.current.opening.status).toBe("idle")
   })
 
+  it("discards a preparation whose originating action is no longer current", async () => {
+    const { result } = renderHook(useChannelDialogContext, {
+      wrapper: ChannelDialogProvider,
+    })
+    await act(async () => {
+      expect(
+        await result.current.prepareNativeCreateDialog({
+          load: async () => configuration("expired"),
+          shouldContinue: () => false,
+        }),
+      ).toBe(false)
+    })
+    expect(result.current.opening.status).toBe("idle")
+    expect(result.current.state.isOpen).toBe(false)
+  })
+
+  it("ignores a failed request after the user closes preparation", async () => {
+    const gate = deferred<void>()
+    const { result } = renderHook(useChannelDialogContext, {
+      wrapper: ChannelDialogProvider,
+    })
+    let pending!: Promise<boolean>
+    act(() => {
+      pending = result.current.prepareNativeCreateDialog({
+        load: async () => {
+          await gate.promise
+          throw new Error("late failure")
+        },
+      })
+    })
+    act(() => result.current.closeDialog())
+    await act(async () => {
+      gate.resolve()
+      expect(await pending).toBe(false)
+    })
+    expect(result.current.opening.status).toBe("idle")
+    expect(result.current.state.isOpen).toBe(false)
+  })
+
   it("retries failed preparation without restarting credential acquisition", async () => {
     const load = vi
       .fn()
