@@ -212,7 +212,7 @@
       },
       "delete": "削除",
       "deleting": "重複アカウントを削除中...",
-      "description": "origin + user id で重複アカウントをスキャンし、プレビュー後に削除します。",
+      "description": "完全な重複とドメインをまたぐ重複候補を検出し、確認してから処理します。",
       "details": {
         "accountId": "アカウント ID",
         "authType": "認証方式",
@@ -238,7 +238,8 @@
         "show": "詳細情報"
       },
       "duplicateCount_other": "{{count}} アカウント",
-      "empty": "重複アカウントは見つかりませんでした。",
+      "empty": "完全に重複するアカウントは見つかりませんでした。",
+      "exactTitle": "完全な重複",
       "keep": "保持",
       "manualPickHint": "各セットで保持するアカウントを手動で選べます。手動選択は保持戦略より優先されます。",
       "previewDelete": "削除をプレビュー",
@@ -251,7 +252,16 @@
       },
       "strategyLabel": "保持戦略",
       "summary": "{{groups}} 組の重複セット · 削除対象 {{deleteCount}} アカウント",
-      "title": "重複アカウントの整理",
+      "suspected": {
+        "deleteAccount": "{{name}} を削除",
+        "description": "ユーザー ID とサイト名またはルートドメインが一致しています。ドメインが変更された可能性があります。候補は一括削除の対象外です。確認してから個別に編集または削除してください。",
+        "review": "確認・編集",
+        "reviewAccount": "{{name}} を確認・編集",
+        "sameDomain": "同じルートドメイン：{{domain}}",
+        "sameName": "同じサイト名：{{name}}",
+        "title": "重複の可能性があるアカウント"
+      },
+      "title": "重複アカウントの検出",
       "unscannableHint_other": "{{count}} 件のアカウントはスキャンできず、スキップされました。",
       "userId": "ユーザー ID: {{userId}}"
     },

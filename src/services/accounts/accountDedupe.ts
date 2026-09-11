@@ -2,6 +2,7 @@ import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { normalizeAccountSiteProfileUrlForDuplicateCheck } from "~/services/accounts/accountSiteProfile/urls"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { SiteAccount } from "~/types"
+import { getRegistrableDomain } from "~/utils/core/domain"
 
 export type AccountDedupeKeepStrategy =
   | "keepPinned"
@@ -45,7 +46,70 @@ export type DuplicateAccountGroup = {
 
 type DuplicateAccountsScanResult = {
   groups: DuplicateAccountGroup[]
+  suspectedGroups: SuspectedDuplicateAccountGroup[]
   unscannable: SiteAccount[]
+}
+
+export type SuspectedDuplicateAccountGroup = {
+  id: string
+  userId: string
+  accounts: SiteAccount[]
+  siteName?: string
+  rootDomain?: string
+}
+
+/** Finds cross-origin hints without turning them into deletion recommendations. */
+function findSuspectedDuplicates(
+  accounts: SiteAccount[],
+): SuspectedDuplicateAccountGroup[] {
+  const buckets = new Map<string, SuspectedDuplicateAccountGroup>()
+  const origins = new Map<string, string>()
+  for (const account of accounts) {
+    // Credential-owned providers do not identify users by their editable ID.
+    if (usesAccountCredentialIdentity(account.site_type)) continue
+    const userId = normalizeAccountIdentity(account.account_info?.id)
+    const origin = normalizeAccountSiteProfileUrlForDuplicateCheck({
+      url: account.site_url,
+      siteType: account.site_type,
+    })
+    if (userId === null || !origin) continue
+    origins.set(account.id, origin)
+    const siteName = account.site_name.trim().replace(/\s+/g, " ").toLowerCase()
+    const rootDomain = getRegistrableDomain(new URL(origin).hostname)
+    for (const [signal, value] of [
+      ["siteName", siteName],
+      ["rootDomain", rootDomain],
+    ] as const) {
+      if (!value) continue
+      const key = JSON.stringify([userId, signal, value])
+      const bucket = buckets.get(key)
+      if (bucket) bucket.accounts.push(account)
+      else
+        buckets.set(key, {
+          id: key,
+          userId,
+          accounts: [account],
+          [signal]: value,
+        })
+    }
+  }
+  const groups = new Map<string, SuspectedDuplicateAccountGroup>()
+  for (const bucket of buckets.values()) {
+    if (
+      new Set(bucket.accounts.map((account) => origins.get(account.id))).size <
+      2
+    )
+      continue
+    const id = JSON.stringify(
+      bucket.accounts.map((account) => account.id).sort(),
+    )
+    const existing = groups.get(id)
+    if (existing) {
+      if (bucket.siteName) existing.siteName = bucket.siteName
+      if (bucket.rootDomain) existing.rootDomain = bucket.rootDomain
+    } else groups.set(id, { ...bucket, id })
+  }
+  return [...groups.values()].sort((a, b) => a.id.localeCompare(b.id))
 }
 
 type AccountScoreInput = {
@@ -269,5 +333,9 @@ export function scanDuplicateAccounts(input: {
       )
     })
 
-  return { groups, unscannable }
+  return {
+    groups,
+    suspectedGroups: findSuspectedDuplicates(input.accounts),
+    unscannable,
+  }
 }

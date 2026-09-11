@@ -212,7 +212,7 @@
       },
       "delete": "刪除",
       "deleting": "正在刪除重複帳號...",
-      "description": "按 URL 源站 + 使用者 ID 掃描重複帳號，並在預覽確認後刪除重複項。",
+      "description": "辨識精確重複與跨網域疑似重複，核對後再處理。",
       "details": {
         "accountId": "帳號 ID",
         "authType": "認證方式",
@@ -238,7 +238,8 @@
         "show": "更多資訊"
       },
       "duplicateCount_other": "{{count}} 個帳號",
-      "empty": "未發現重複帳號。",
+      "empty": "未發現精確重複的帳號。",
+      "exactTitle": "精確重複",
       "keep": "保留",
       "manualPickHint": "你可以在每組中手動選擇要保留的帳號（手動選擇會覆蓋保留策略）。",
       "previewDelete": "預覽刪除",
@@ -251,7 +252,16 @@
       },
       "strategyLabel": "保留策略",
       "summary": "{{groups}} 組重複 · 待刪除 {{deleteCount}} 個帳號",
-      "title": "重複帳號清理",
+      "suspected": {
+        "deleteAccount": "刪除 {{name}}",
+        "description": "以下帳號的使用者 ID 相同，且站點名稱或根網域一致，可能是同一站點更換網域。疑似項不參與一鍵清理；請核對後逐一編輯或刪除。",
+        "review": "檢視並編輯",
+        "reviewAccount": "檢視並編輯 {{name}}",
+        "sameDomain": "根網域相同：{{domain}}",
+        "sameName": "站點名稱相同：{{name}}",
+        "title": "疑似重複帳號"
+      },
+      "title": "重複帳號檢測",
       "unscannableHint_other": "{{count}} 個帳號無法掃描，已跳過。",
       "userId": "使用者 ID：{{userId}}"
     },

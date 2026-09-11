@@ -208,7 +208,7 @@
       },
       "delete": "删除",
       "deleting": "正在删除重复账号...",
-      "description": "按 URL 源站 + 用户 ID 扫描重复账号，并在预览确认后删除重复项。",
+      "description": "识别精确重复与跨域名疑似重复，核对后再处理。",
       "details": {
         "accountId": "账号 ID",
         "authType": "认证方式",
@@ -234,7 +234,8 @@
         "show": "更多信息"
       },
       "duplicateCount": "{{count}} 个账号",
-      "empty": "未发现重复账号。",
+      "empty": "未发现精确重复的账号。",
+      "exactTitle": "精确重复",
       "keep": "保留",
       "manualPickHint": "你可以在每组中手动选择要保留的账号（手动选择会覆盖保留策略）。",
       "previewDelete": "预览删除",
@@ -247,7 +248,16 @@
       },
       "strategyLabel": "保留策略",
       "summary": "{{groups}} 组重复 · 待删除 {{deleteCount}} 个账号",
-      "title": "重复账号清理",
+      "suspected": {
+        "deleteAccount": "删除 {{name}}",
+        "description": "以下账号的用户 ID 相同，且站点名称或根域名一致，可能是同一站点更换域名。疑似项不参与一键清理；请核对后逐个编辑或删除。",
+        "review": "查看并编辑",
+        "reviewAccount": "查看并编辑 {{name}}",
+        "sameDomain": "根域名相同：{{domain}}",
+        "sameName": "站点名称相同：{{name}}",
+        "title": "疑似重复账号"
+      },
+      "title": "重复账号检测",
       "unscannableHint_other": "{{count}} 个账号无法扫描，已跳过。",
       "userId": "用户 ID：{{userId}}"
     },

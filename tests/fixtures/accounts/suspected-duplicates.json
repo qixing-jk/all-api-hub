@@ -1,0 +1,350 @@
+{
+  "version": "4.0",
+  "timestamp": 1789084800000,
+  "type": "accounts",
+  "accounts": {
+    "accounts": [
+      {
+        "id": "dedupe-demo-exact-old",
+        "site_name": "[重复检测测试] 精确重复",
+        "site_url": "https://exact.example.com/old",
+        "site_type": "new-api",
+        "exchange_rate": 7,
+        "notes": "疑似重复检测演示数据，测试后可删除。",
+        "tagIds": [],
+        "disabled": true,
+        "excludeFromTotalBalance": true,
+        "excludeFromTodayIncome": true,
+        "configVersion": 7,
+        "checkIn": {
+          "automaticExecutionEnabled": false,
+          "selection": {
+            "mode": "automatic"
+          },
+          "methodKnowledge": {
+            "methods": {}
+          }
+        },
+        "health": {
+          "status": "healthy"
+        },
+        "authType": "access_token",
+        "account_info": {
+          "id": "990001",
+          "access_token": "demo-not-a-real-token",
+          "username": "exact-old",
+          "quota": 0,
+          "today_prompt_tokens": 0,
+          "today_completion_tokens": 0,
+          "today_quota_consumption": 0,
+          "today_requests_count": 0,
+          "today_income": 0
+        },
+        "last_sync_time": 0,
+        "created_at": 1789084800000,
+        "updated_at": 1789084800000,
+        "user_updated_at": 1789084800000
+      },
+      {
+        "id": "dedupe-demo-exact-new",
+        "site_name": "[重复检测测试] 精确重复",
+        "site_url": "https://exact.example.com/new",
+        "site_type": "new-api",
+        "exchange_rate": 7,
+        "notes": "疑似重复检测演示数据，测试后可删除。",
+        "tagIds": [],
+        "disabled": true,
+        "excludeFromTotalBalance": true,
+        "excludeFromTodayIncome": true,
+        "configVersion": 7,
+        "checkIn": {
+          "automaticExecutionEnabled": false,
+          "selection": {
+            "mode": "automatic"
+          },
+          "methodKnowledge": {
+            "methods": {}
+          }
+        },
+        "health": {
+          "status": "healthy"
+        },
+        "authType": "access_token",
+        "account_info": {
+          "id": "990001",
+          "access_token": "demo-not-a-real-token",
+          "username": "exact-new",
+          "quota": 0,
+          "today_prompt_tokens": 0,
+          "today_completion_tokens": 0,
+          "today_quota_consumption": 0,
+          "today_requests_count": 0,
+          "today_income": 0
+        },
+        "last_sync_time": 0,
+        "created_at": 1789084800001,
+        "updated_at": 1789084800001,
+        "user_updated_at": 1789084800001
+      },
+      {
+        "id": "dedupe-demo-name-old",
+        "site_name": "[重复检测测试] 同名换域名",
+        "site_url": "https://old.example.com",
+        "site_type": "new-api",
+        "exchange_rate": 7,
+        "notes": "疑似重复检测演示数据，测试后可删除。",
+        "tagIds": [],
+        "disabled": true,
+        "excludeFromTotalBalance": true,
+        "excludeFromTodayIncome": true,
+        "configVersion": 7,
+        "checkIn": {
+          "automaticExecutionEnabled": false,
+          "selection": {
+            "mode": "automatic"
+          },
+          "methodKnowledge": {
+            "methods": {}
+          }
+        },
+        "health": {
+          "status": "healthy"
+        },
+        "authType": "access_token",
+        "account_info": {
+          "id": "990002",
+          "access_token": "demo-not-a-real-token",
+          "username": "name-old",
+          "quota": 0,
+          "today_prompt_tokens": 0,
+          "today_completion_tokens": 0,
+          "today_quota_consumption": 0,
+          "today_requests_count": 0,
+          "today_income": 0
+        },
+        "last_sync_time": 0,
+        "created_at": 1789084800002,
+        "updated_at": 1789084800002,
+        "user_updated_at": 1789084800002
+      },
+      {
+        "id": "dedupe-demo-name-new",
+        "site_name": "[重复检测测试] 同名换域名",
+        "site_url": "https://new.example.net",
+        "site_type": "new-api",
+        "exchange_rate": 7,
+        "notes": "疑似重复检测演示数据，测试后可删除。",
+        "tagIds": [],
+        "disabled": true,
+        "excludeFromTotalBalance": true,
+        "excludeFromTodayIncome": true,
+        "configVersion": 7,
+        "checkIn": {
+          "automaticExecutionEnabled": false,
+          "selection": {
+            "mode": "automatic"
+          },
+          "methodKnowledge": {
+            "methods": {}
+          }
+        },
+        "health": {
+          "status": "healthy"
+        },
+        "authType": "access_token",
+        "account_info": {
+          "id": "990002",
+          "access_token": "demo-not-a-real-token",
+          "username": "name-new",
+          "quota": 0,
+          "today_prompt_tokens": 0,
+          "today_completion_tokens": 0,
+          "today_quota_consumption": 0,
+          "today_requests_count": 0,
+          "today_income": 0
+        },
+        "last_sync_time": 0,
+        "created_at": 1789084800003,
+        "updated_at": 1789084800003,
+        "user_updated_at": 1789084800003
+      },
+      {
+        "id": "dedupe-demo-domain-old",
+        "site_name": "[重复检测测试] 同根域名旧站",
+        "site_url": "https://old.example.org",
+        "site_type": "new-api",
+        "exchange_rate": 7,
+        "notes": "疑似重复检测演示数据，测试后可删除。",
+        "tagIds": [],
+        "disabled": true,
+        "excludeFromTotalBalance": true,
+        "excludeFromTodayIncome": true,
+        "configVersion": 7,
+        "checkIn": {
+          "automaticExecutionEnabled": false,
+          "selection": {
+            "mode": "automatic"
+          },
+          "methodKnowledge": {
+            "methods": {}
+          }
+        },
+        "health": {
+          "status": "healthy"
+        },
+        "authType": "access_token",
+        "account_info": {
+          "id": "990003",
+          "access_token": "demo-not-a-real-token",
+          "username": "domain-old",
+          "quota": 0,
+          "today_prompt_tokens": 0,
+          "today_completion_tokens": 0,
+          "today_quota_consumption": 0,
+          "today_requests_count": 0,
+          "today_income": 0
+        },
+        "last_sync_time": 0,
+        "created_at": 1789084800004,
+        "updated_at": 1789084800004,
+        "user_updated_at": 1789084800004
+      },
+      {
+        "id": "dedupe-demo-domain-new",
+        "site_name": "[重复检测测试] 同根域名新站",
+        "site_url": "https://new.example.org",
+        "site_type": "new-api",
+        "exchange_rate": 7,
+        "notes": "疑似重复检测演示数据，测试后可删除。",
+        "tagIds": [],
+        "disabled": true,
+        "excludeFromTotalBalance": true,
+        "excludeFromTodayIncome": true,
+        "configVersion": 7,
+        "checkIn": {
+          "automaticExecutionEnabled": false,
+          "selection": {
+            "mode": "automatic"
+          },
+          "methodKnowledge": {
+            "methods": {}
+          }
+        },
+        "health": {
+          "status": "healthy"
+        },
+        "authType": "access_token",
+        "account_info": {
+          "id": "990003",
+          "access_token": "demo-not-a-real-token",
+          "username": "domain-new",
+          "quota": 0,
+          "today_prompt_tokens": 0,
+          "today_completion_tokens": 0,
+          "today_quota_consumption": 0,
+          "today_requests_count": 0,
+          "today_income": 0
+        },
+        "last_sync_time": 0,
+        "created_at": 1789084800005,
+        "updated_at": 1789084800005,
+        "user_updated_at": 1789084800005
+      },
+      {
+        "id": "dedupe-demo-different-id-a",
+        "site_name": "[重复检测测试] 不同ID不重复",
+        "site_url": "https://first.example.com",
+        "site_type": "new-api",
+        "exchange_rate": 7,
+        "notes": "疑似重复检测演示数据，测试后可删除。",
+        "tagIds": [],
+        "disabled": true,
+        "excludeFromTotalBalance": true,
+        "excludeFromTodayIncome": true,
+        "configVersion": 7,
+        "checkIn": {
+          "automaticExecutionEnabled": false,
+          "selection": {
+            "mode": "automatic"
+          },
+          "methodKnowledge": {
+            "methods": {}
+          }
+        },
+        "health": {
+          "status": "healthy"
+        },
+        "authType": "access_token",
+        "account_info": {
+          "id": "990004",
+          "access_token": "demo-not-a-real-token",
+          "username": "different-id-a",
+          "quota": 0,
+          "today_prompt_tokens": 0,
+          "today_completion_tokens": 0,
+          "today_quota_consumption": 0,
+          "today_requests_count": 0,
+          "today_income": 0
+        },
+        "last_sync_time": 0,
+        "created_at": 1789084800006,
+        "updated_at": 1789084800006,
+        "user_updated_at": 1789084800006
+      },
+      {
+        "id": "dedupe-demo-different-id-b",
+        "site_name": "[重复检测测试] 不同ID不重复",
+        "site_url": "https://second.example.net",
+        "site_type": "new-api",
+        "exchange_rate": 7,
+        "notes": "疑似重复检测演示数据，测试后可删除。",
+        "tagIds": [],
+        "disabled": true,
+        "excludeFromTotalBalance": true,
+        "excludeFromTodayIncome": true,
+        "configVersion": 7,
+        "checkIn": {
+          "automaticExecutionEnabled": false,
+          "selection": {
+            "mode": "automatic"
+          },
+          "methodKnowledge": {
+            "methods": {}
+          }
+        },
+        "health": {
+          "status": "healthy"
+        },
+        "authType": "access_token",
+        "account_info": {
+          "id": "990005",
+          "access_token": "demo-not-a-real-token",
+          "username": "different-id-b",
+          "quota": 0,
+          "today_prompt_tokens": 0,
+          "today_completion_tokens": 0,
+          "today_quota_consumption": 0,
+          "today_requests_count": 0,
+          "today_income": 0
+        },
+        "last_sync_time": 0,
+        "created_at": 1789084800007,
+        "updated_at": 1789084800007,
+        "user_updated_at": 1789084800007
+      }
+    ],
+    "bookmarks": [],
+    "pinnedAccountIds": [],
+    "orderedAccountIds": [
+      "dedupe-demo-exact-old",
+      "dedupe-demo-exact-new",
+      "dedupe-demo-name-old",
+      "dedupe-demo-name-new",
+      "dedupe-demo-domain-old",
+      "dedupe-demo-domain-new",
+      "dedupe-demo-different-id-a",
+      "dedupe-demo-different-id-b"
+    ],
+    "last_updated": 1789084800000
+  }
+}
