@@ -15,6 +15,7 @@ import {
 import type { ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { getEditedResourceFieldIssues } from "~/features/ResourceEditor/resourceEditorValidation"
+import { recordGatewayGuidanceCompletion } from "~/features/UnifiedApiGuidance/recordGatewayGuidanceCompletion"
 import toast from "~/lib/notify"
 import type { ManagedResourceProductPolicy } from "~/services/accountSiteDefinitions/contracts"
 import {
@@ -291,14 +292,13 @@ function NativeManagedSiteChannels({
     })
   }, [onReplaceRouteQuery])
   const onMutationSuccess = useCallback(
-    (mode: ManagedResourceEditorMode) =>
+    (mode: ManagedResourceEditorMode) => {
       toast.success(
-        t(
-          mode === MANAGED_RESOURCE_EDITOR_MODES.Create
-            ? "managedSiteChannels:toasts.channelSaved"
-            : "managedSiteChannels:toasts.channelUpdated",
-        ),
-      ),
+        mode === MANAGED_RESOURCE_EDITOR_MODES.Create
+          ? t("managedSiteChannels:toasts.channelSaved")
+          : t("managedSiteChannels:toasts.channelUpdated"),
+      )
+    },
     [t],
   )
   const routedResourceRef = parseManagedResourceRef(routeParams.resourceRef)
@@ -358,6 +358,9 @@ function NativeManagedSiteChannels({
     refreshKey,
     pageSize,
     onUnsupportedSearch,
+    onResourcesAccepted: (itemCount) => {
+      if (itemCount > 0) recordGatewayGuidanceCompletion()
+    },
     fieldIds: policy.tableFieldIds,
     semantics: presentationSemantics,
     analytics,
@@ -384,6 +387,10 @@ function NativeManagedSiteChannels({
     acceptMutationResult: list.acceptMutationResult,
     acceptDeletionResults: list.acceptDeletionResults,
     onMutationSuccess,
+    onMutationConfirmed: (mode) => {
+      if (mode === MANAGED_RESOURCE_EDITOR_MODES.Create)
+        recordGatewayGuidanceCompletion()
+    },
     analytics,
   })
   useEffect(() => {
@@ -913,8 +920,8 @@ function NativeManagedSiteChannels({
           t,
           getManagedSiteMessagesKeyFromSiteType(siteType),
         )}
-        configurationMissingNotice={pageExperience.configurationMissingNotice}
         emptyContent={pageExperience.emptyContent}
+        guidanceContent={pageExperience.guidanceContent}
         configurationSettingsTarget={policy.settingsTarget}
         siteTypeLabel={t("settings:managedSite.siteTypeLabel")}
         filterDialog={
@@ -940,16 +947,16 @@ function NativeManagedSiteChannels({
       {mutation.editor && mutation.editorMode && editorPolicy ? (
         <ChannelEditorShell
           isOpen
-          title={t(
+          title={
             mutation.editorMode === MANAGED_RESOURCE_EDITOR_MODES.Create
-              ? "channelDialog:title.add"
-              : "channelDialog:title.edit",
-          )}
-          description={t(
+              ? t("channelDialog:title.add")
+              : t("channelDialog:title.edit")
+          }
+          description={
             mutation.editorMode === MANAGED_RESOURCE_EDITOR_MODES.Create
-              ? "channelDialog:description.add"
-              : "channelDialog:description.edit",
-          )}
+              ? t("channelDialog:description.add")
+              : t("channelDialog:description.edit")
+          }
           onClose={mutation.closeEditor}
           onSubmit={(event) => {
             event.preventDefault()
@@ -961,11 +968,11 @@ function NativeManagedSiteChannels({
               )
             })
           }}
-          submitLabel={t(
+          submitLabel={
             mutation.editorMode === MANAGED_RESOURCE_EDITOR_MODES.Create
-              ? "channelDialog:actions.create"
-              : "channelDialog:actions.update",
-          )}
+              ? t("channelDialog:actions.create")
+              : t("channelDialog:actions.update")
+          }
           closeLabel={t("common:actions.cancel")}
           submitTestId={CHANNEL_DIALOG_TEST_IDS.submitButton}
           isSubmitting={mutation.isSaving}

@@ -26,6 +26,30 @@ describe("feature guidance state", () => {
     ])
   })
 
+  it("persists explicit gateway start independently and preserves it across completion and merges", async () => {
+    const service = new FeatureGuidanceStateService()
+    expect(
+      (await service.getState()).gatewayGuidance.onboardingStartedAt,
+    ).toBeUndefined()
+    await service.markGatewayGuidanceOnboardingStarted(100)
+    await service.markGatewayGuidanceOnboardingCompleted(200)
+    const saved = await new FeatureGuidanceStateService().getState()
+    expect(saved.gatewayGuidance).toMatchObject({
+      onboardingStartedAt: 100,
+      onboardingCompletedAt: 200,
+    })
+    expect(
+      mergeFeatureGuidanceStates(saved, createEmptyFeatureGuidanceState())
+        .gatewayGuidance.onboardingStartedAt,
+    ).toBe(100)
+    expect(
+      mergeFeatureGuidanceStates(
+        {},
+        { gatewayGuidance: { onboardingStartedAt: -1 } },
+      ).gatewayGuidance.onboardingStartedAt,
+    ).toBeUndefined()
+  })
+
   it("tracks product-tour versions independently for expanded and compact layouts", async () => {
     const service = new FeatureGuidanceStateService()
 

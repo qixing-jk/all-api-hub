@@ -12,6 +12,7 @@ interface ManagedSiteConfigRequiredStateProps {
     tabId: "managedSite"
     anchor?: string
   }
+  onConfigure?: () => void
   onRetry?: () => void
   isRetrying?: boolean
 }
@@ -24,6 +25,7 @@ export default function ManagedSiteConfigRequiredState({
   description,
   className,
   settingsTarget = { tabId: "managedSite" },
+  onConfigure,
   onRetry,
   isRetrying = false,
 }: ManagedSiteConfigRequiredStateProps) {
@@ -49,16 +51,18 @@ export default function ManagedSiteConfigRequiredState({
           : []),
         {
           label: t("actions.goToSettings"),
-          variant: "outline" as const,
+          variant: onConfigure ? ("default" as const) : ("outline" as const),
           rightIcon: <WorkflowTransitionIcon className="h-4 w-4" aria-hidden />,
-          onClick: () => {
-            void openSettingsTab(settingsTarget.tabId, {
-              ...(settingsTarget.anchor
-                ? { anchor: settingsTarget.anchor }
-                : {}),
-              preserveHistory: true,
-            })
-          },
+          onClick:
+            onConfigure ??
+            (() => {
+              void openSettingsTab(settingsTarget.tabId, {
+                ...(settingsTarget.anchor
+                  ? { anchor: settingsTarget.anchor }
+                  : {}),
+                preserveHistory: true,
+              })
+            }),
         },
       ]}
     />

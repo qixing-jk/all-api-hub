@@ -200,6 +200,9 @@ test("overview add-account guidance opens the account dialog", async ({
   )
   await expect(guidance).toBeVisible()
   await guidance
+    .getByRole("button", { name: "View steps", exact: true })
+    .click()
+  await guidance
     .getByTestId(UNIFIED_API_GUIDANCE_TEST_IDS.primaryAction)
     .click()
 
@@ -258,6 +261,9 @@ test("overview gateway CTA opens key management with guided account import highl
     OPTIONS_OVERVIEW_TEST_IDS.unifiedApiGuidance,
   )
   await expect(guidance).toBeVisible()
+  await guidance
+    .getByRole("button", { name: "View steps", exact: true })
+    .click()
   await guidance
     .getByTestId(UNIFIED_API_GUIDANCE_TEST_IDS.primaryAction)
     .click()

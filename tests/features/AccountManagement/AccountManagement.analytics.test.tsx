@@ -76,8 +76,9 @@ const featureGuidanceContextState = vi.hoisted(() => ({
   current: {
     schemaVersion: 1,
     productTour: {},
-    gatewayGuidance: { dismissedAtBySurface: {} } as {
+    gatewayGuidance: { onboardingStartedAt: 1, dismissedAtBySurface: {} } as {
       dismissedAtBySurface: Record<string, number>
+      onboardingStartedAt?: number
       onboardingCompletedAt?: number
     },
   },
@@ -216,7 +217,7 @@ beforeEach(() => {
   featureGuidanceContextState.current = {
     schemaVersion: 1,
     productTour: {},
-    gatewayGuidance: { dismissedAtBySurface: {} },
+    gatewayGuidance: { onboardingStartedAt: 1, dismissedAtBySurface: {} },
   }
   accountDataContextState.current = {
     displayData: [],

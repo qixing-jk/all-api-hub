@@ -104,6 +104,7 @@ type Options = {
   refreshKey?: number
   pageSize?: number
   onUnsupportedSearch?: () => void
+  onResourcesAccepted?: (itemCount: number) => void
   fieldIds?: readonly string[]
   semantics?: ManagedResourcePresentationSemantics
 }
@@ -122,9 +123,12 @@ export function useManagedResourceListController({
   refreshKey,
   pageSize = 20,
   onUnsupportedSearch,
+  onResourcesAccepted,
   fieldIds,
   semantics,
 }: Options) {
+  const acceptedCallback = useRef(onResourcesAccepted)
+  acceptedCallback.current = onResourcesAccepted
   const mapper = useMemo(
     () =>
       createManagedResourceRowMapper({
@@ -243,6 +247,7 @@ export function useManagedResourceListController({
         analyticsCompletion?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: { itemCount: nextRows.length },
         })
+        acceptedCallback.current?.(nextRows.length)
         return { outcome: "reconciled", itemCount: nextRows.length } as const
       } catch (error) {
         const failure = toSafeManagedResourceFailure(error)

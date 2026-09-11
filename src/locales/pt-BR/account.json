@@ -328,14 +328,13 @@
     },
     "boundaryNote": "O All API Hub gerencia chaves de contas. Ele não encaminha solicitações de modelos; clientes externos se conectam ao seu gateway de IA auto-hospedado.",
     "description": {
-      "has_gateway_channels": "Um canal de gateway foi criado ou importado antes. Abra o gerenciamento de canais para confirmar seu estado atual e continuar a configuração do cliente.",
+      "has_gateway_channels": "Canais do gateway foram criados ou importados. Abra o gerenciamento de canais para verificar o estado atual.",
       "needs_importable_source": "As contas atuais não podem fornecer chaves importáveis. Primeiro, salve uma chave de API ou adicione um tipo de conta que permita acessar a chave. Depois, importe-a para seu gateway de IA auto-hospedado.",
       "needs_managed_site": "Você tem chaves de contas. Configure seu gateway de IA auto-hospedado para importá-las como canais de gateway.",
-      "needs_sources": "Depois de adicionar contas, você poderá exportar as chaves diretamente para clientes ou importá-las para seu gateway de IA auto-hospedado, criando uma API de IA unificada.",
+      "needs_sources": "Adicione uma conta e importe suas chaves para seu gateway de IA auto-hospedado para oferecer uma API de IA unificada.",
       "ready_accounts": "Use o gerenciamento de chaves para importar chaves de contas selecionadas para canais de gateway de IA auto-hospedados.",
       "ready_profiles": "As chaves de API salvas podem ser reutilizadas diretamente da biblioteca de credenciais ou importadas individualmente como canais de gateway."
     },
-    "directToolExportNote": "Se ainda não precisar do gateway auto-hospedado, você poderá exportar uma única credencial diretamente para uma ferramenta cliente.",
     "dismissDialog": {
       "confirm": "Não mostrar novamente",
       "description": "A página da conta deixará de mostrar esta dica. Você ainda pode encontrar as orientações do gateway de IA auto-hospedado na página de visão geral.",

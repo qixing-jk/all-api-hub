@@ -256,8 +256,8 @@
         "viewChannels": "Ver canales importados"
       },
       "configComplete": {
-        "description": "La configuración básica solo conecta el backend de administración del gateway. Para que clientes externos llamen modelos mediante este AI gateway autohospedado como una AI API unificada, importa claves de cuenta o API keys como canales del gateway.",
-        "title": "Siguiente paso: importar claves utilizables"
+        "description": "Se guardó la configuración de la puerta de enlace. Importa claves de cuentas o credenciales API como canales. La conexión se comprueba durante la verificación o la importación.",
+        "title": "Siguiente: importar canales"
       },
       "unconfigured": {
         "description": "Primero configura el AI gateway autohospedado y luego importa claves de cuenta o API keys como canales del gateway. Así varias claves pueden ofrecer una AI API unificada.",

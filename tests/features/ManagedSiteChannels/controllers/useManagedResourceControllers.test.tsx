@@ -138,6 +138,47 @@ const createAnalytics = () => {
 }
 
 describe("useManagedResourceListController", () => {
+  it("reports accepted collections but excludes failed and superseded reads", async () => {
+    const workspace = createManagedResourceWorkspace()
+    const pending = deferred<{ items: ResourceDisplayFacts[] }>()
+    vi.mocked(workspace.list).mockImplementationOnce(() => pending.promise)
+    const onResourcesAccepted = vi.fn()
+    const firstRegistration = registration(vi.fn(async () => workspace))
+    const emptyWorkspace = createManagedResourceWorkspace()
+    vi.mocked(emptyWorkspace.list).mockResolvedValue({ items: [] })
+    const secondRegistration = registration(vi.fn(async () => emptyWorkspace))
+    const { result, rerender } = renderHook(
+      ({ source }) =>
+        useManagedResourceListController({
+          registration: source,
+          onResourcesAccepted,
+        }),
+      { initialProps: { source: firstRegistration } },
+    )
+    await waitFor(() => expect(workspace.list).toHaveBeenCalledOnce())
+    expect(onResourcesAccepted).not.toHaveBeenCalled()
+    rerender({ source: secondRegistration })
+    await waitFor(() => expect(onResourcesAccepted).toHaveBeenCalledWith(0))
+    await act(async () =>
+      pending.resolve({ items: [createManagedResourceFacts()] }),
+    )
+    expect(onResourcesAccepted).toHaveBeenCalledOnce()
+    vi.mocked(emptyWorkspace.list).mockRejectedValueOnce(
+      new Error("unavailable"),
+    )
+    await act(async () => {
+      await result.current.refresh()
+    })
+    expect(onResourcesAccepted).toHaveBeenCalledOnce()
+    vi.mocked(emptyWorkspace.list).mockResolvedValue({
+      items: [createManagedResourceFacts()],
+    })
+    await act(async () => {
+      await result.current.refresh()
+    })
+    expect(onResourcesAccepted.mock.calls).toEqual([[0], [1]])
+  })
+
   it("keeps OpenRouter outside the managed-resource registration boundary", () => {
     expectTypeOf(SITE_TYPES.OPENROUTER).not.toExtend<
       ManagedResourceRegistration["siteType"]
@@ -1725,17 +1766,19 @@ describe("useManagedResourceMutationController", () => {
     expect(onMutationSuccess).toHaveBeenCalledWith("create")
   })
 
-  it("does not notify the route when the saved refresh is rejected", async () => {
+  it("records a confirmed creation even when refresh fails without showing a success toast", async () => {
     const editor = createManagedResourceEditor()
     const workspace = createManagedResourceWorkspace({
       openCreateEditor: vi.fn(async () => editor),
     })
     const onMutationSuccess = vi.fn()
+    const onMutationConfirmed = vi.fn()
     const { result } = renderHook(() =>
       useManagedResourceMutationController({
         workspace,
         refresh: vi.fn(async () => false),
         onMutationSuccess,
+        onMutationConfirmed,
       }),
     )
 
@@ -1743,6 +1786,7 @@ describe("useManagedResourceMutationController", () => {
     await act(async () => result.current.submit({ name: "saved" }))
 
     expect(onMutationSuccess).not.toHaveBeenCalled()
+    expect(onMutationConfirmed).toHaveBeenCalledExactlyOnceWith("create")
   })
 
   it("keeps saved-refresh feedback until an accepted fresh-read recovery", async () => {

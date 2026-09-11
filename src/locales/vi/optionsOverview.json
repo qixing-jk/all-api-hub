@@ -229,17 +229,26 @@
     },
     "boundaryNote": "All API Hub quản lý và nhập cấu hình; ứng dụng không proxy yêu cầu model. Client bên ngoài sẽ gọi AI gateway tự triển khai của bạn.",
     "description": {
-      "has_gateway_channels": "Một kênh gateway đã từng được tạo hoặc nhập. Mở quản lý kênh để xác nhận trạng thái hiện tại, sau đó lấy địa chỉ API và access key mà client cần.",
+      "has_gateway_channels": "Đã tạo hoặc nhập kênh vào cổng. Mở quản lý kênh để kiểm tra trạng thái hiện tại.",
       "needs_importable_source": "Bạn đã có tài khoản, nhưng loại tài khoản hiện tại không thể cung cấp key có thể nhập. Hãy lưu API key trước, hoặc thêm loại tài khoản hỗ trợ lấy key, rồi nhập vào AI gateway tự triển khai.",
       "needs_managed_site": "Bạn đã có key tài khoản hoặc API key. Sau khi cấu hình AI gateway tự triển khai, bạn có thể nhập chúng làm kênh gateway để nhiều key dùng chung một AI API.",
-      "needs_sources": "Trước tiên hãy thêm tài khoản hoặc lưu API key. Sau đó bạn có thể xuất trực tiếp sang client, hoặc nhập nhanh vào AI gateway tự triển khai để tổng hợp thành một AI API thống nhất.",
+      "needs_sources": "Thêm tài khoản hoặc lưu khóa API rồi nhập vào cổng AI tự lưu trữ để cung cấp một API AI thống nhất.",
       "ready_accounts": "Đã hoàn tất cấu hình cơ bản cho AI gateway tự triển khai. Tiếp tục nhập key tài khoản hoặc API key; quy trình nhập sẽ xác minh kết nối và tạo kênh gateway.",
       "ready_profiles": "Đã hoàn tất cấu hình cơ bản cho AI gateway tự triển khai. Mở thư viện xác thực để xác minh và nhập API key đã lưu làm kênh gateway."
     },
-    "directToolExportNote": "Nếu tạm thời chưa cần gateway tự triển khai, bạn cũng có thể xuất trực tiếp từng thông tin xác thực sang công cụ client.",
     "headline": "Gộp nhiều key tài khoản hoặc API key thành một AI API thống nhất",
     "modelSyncOptional": "Đồng bộ model có thể tự động cập nhật danh sách model của gateway và giảm thao tác bảo trì thủ công; có thể bật khi cần sau khi đã tạo kênh.",
     "optionalLabel": "Bảo trì tùy chọn",
+    "overview": {
+      "collapse": "Thu gọn",
+      "completedDescription": "Đã hoàn tất hướng dẫn thiết lập. Bạn có thể xem lại các bước hoặc quản lý kênh gateway bất cứ lúc nào.",
+      "description": "Nhập khóa tài khoản hoặc thông tin xác thực API vào gateway của bạn để dùng chung một địa chỉ API.",
+      "progress": "Tiến độ {{completed}}/{{total}}",
+      "reopen": "Hướng dẫn thiết lập",
+      "resume": "Tiếp tục thiết lập",
+      "start": "Xem các bước",
+      "title": "API hợp nhất"
+    },
     "sources": {
       "account": "Nguồn tài khoản",
       "accountUnavailable": "Tài khoản chưa thể nhập",
@@ -255,10 +264,6 @@
         "upcoming": "Sau"
       },
       "steps": {
-        "clientAccess": {
-          "description": "Lấy địa chỉ API của gateway và access key cho client.",
-          "title": "Kết nối client"
-        },
         "gatewayChannel": {
           "description": "Nhập ít nhất một key tài khoản hoặc thông tin xác thực API đã lưu.",
           "title": "Tạo kênh gateway"
@@ -274,7 +279,6 @@
       }
     },
     "unavailable": {
-      "badge": "Chưa xác nhận trạng thái",
       "description": "Không thể tải tài khoản, thông tin xác thực hoặc cấu hình cổng. Hệ thống sẽ không kết luận rằng bạn chưa có nguồn.",
       "retry": "Kiểm tra lại thiết lập",
       "title": "Không thể xác nhận tiến độ thiết lập"

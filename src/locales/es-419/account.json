@@ -328,14 +328,13 @@
     },
     "boundaryNote": "All API Hub administra las fuentes de cuenta; tu AI gateway autohospedado es el servicio AI API que llaman los clientes externos.",
     "description": {
-      "has_gateway_channels": "Antes se creó o importó un canal del gateway. Abre la administración de canales para confirmar su estado actual y continuar la configuración del cliente.",
+      "has_gateway_channels": "Se crearon o importaron canales en la puerta de enlace. Abre la administración de canales para consultar su estado actual.",
       "needs_importable_source": "Las cuentas actuales no pueden exponer claves importables. Primero guarda una API key o agrega un tipo de cuenta que permita acceder a claves, y luego impórtala en tu AI gateway autohospedado.",
       "needs_managed_site": "Después de configurar la conexión de administración del AI gateway autohospedado, estas cuentas se pueden importar como canales del gateway.",
-      "needs_sources": "Agrega cuentas para crear fuentes de claves administrables. Luego puedes exportar claves individuales directamente o importarlas fácilmente al AI gateway autohospedado.",
+      "needs_sources": "Agrega una cuenta e importa sus claves a tu puerta de enlace de IA autoalojada para ofrecer una API de IA unificada.",
       "ready_accounts": "Abre Gestión de claves para importar las claves de cuenta seleccionadas al AI gateway autohospedado, de modo que varias claves ofrezcan una AI API unificada.",
       "ready_profiles": "Las API keys guardadas están en la biblioteca de credenciales y se pueden reutilizar directamente o importar como canales del gateway."
     },
-    "directToolExportNote": "La exportación directa a herramientas sigue disponible junto con la importación al AI gateway autohospedado.",
     "dismissDialog": {
       "confirm": "No volver a mostrar",
       "description": "La página de cuentas dejará de mostrar este consejo. Aún puedes consultar la guía del AI gateway autohospedado en la página de resumen.",

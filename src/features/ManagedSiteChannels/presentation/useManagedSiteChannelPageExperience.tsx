@@ -16,15 +16,14 @@ import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/KeyManagement/constants"
+import { GatewayGuidanceDescription } from "~/features/UnifiedApiGuidance/GatewayGuidanceDescription"
 import { buildGuidedAccountKeyImportTarget } from "~/features/UnifiedApiGuidance/navigation"
+import { runGatewayGuidanceAction } from "~/features/UnifiedApiGuidance/runGatewayGuidanceAction"
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { canResolveAccountRuntimeKeySecret } from "~/services/accounts/keyProductCapabilities"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
-import {
-  buildManagedSiteChannelConsoleUrl,
-  buildManagedSiteTokenConsoleUrl,
-} from "~/services/managedSites/managedSiteConsoleRoutes"
+import { buildManagedSiteChannelConsoleUrl } from "~/services/managedSites/managedSiteConsoleRoutes"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -40,8 +39,8 @@ const logger = createLogger("ManagedSiteChannelPageExperience")
 type ManagedSiteChannelPageExperience = {
   titleActions?: ReactNode
   description: ReactNode
-  configurationMissingNotice: ReactNode
   emptyContent?: ReactNode
+  guidanceContent: ReactNode
 }
 
 type Options = {
@@ -100,16 +99,19 @@ export function useManagedSiteChannelPageExperience({
   }, [canImportChannel, isInventoryLoaded])
 
   const channelConsoleUrl = buildManagedSiteChannelConsoleUrl(baseUrl, siteType)
-  const tokenConsoleUrl = buildManagedSiteTokenConsoleUrl(baseUrl, siteType)
   const openAccountImport = useCallback(() => {
     const target = buildGuidedAccountKeyImportTarget(importAccountId)
-    pushWithinOptionsPage(`#${target.menuItemId}`, target.params)
+    void runGatewayGuidanceAction(() =>
+      pushWithinOptionsPage(`#${target.menuItemId}`, target.params),
+    )
   }, [importAccountId])
   const openCredentialProfiles = useCallback(() => {
-    pushWithinOptionsPage(`#${MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}`, {
-      [KEY_MANAGEMENT_ROUTE_PARAMS.GuidedImport]:
-        KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS.ManagedSite,
-    })
+    void runGatewayGuidanceAction(() =>
+      pushWithinOptionsPage(`#${MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}`, {
+        [KEY_MANAGEMENT_ROUTE_PARAMS.GuidedImport]:
+          KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS.ManagedSite,
+      }),
+    )
   }, [])
   const importActions = useMemo(() => {
     if (!isInventoryLoaded) return []
@@ -156,30 +158,13 @@ export function useManagedSiteChannelPageExperience({
           </IconButton>
         </Tooltip>
       ) : undefined,
-    description: (
-      <>
-        {t("gatewayGuidance.headerDescription")}{" "}
-        {!isConfigurationMissing && tokenConsoleUrl ? (
-          <>
-            {t("gatewayGuidance.clientHint")}{" "}
-            <a
-              href={tokenConsoleUrl}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="font-medium text-blue-700 underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:text-blue-200"
-            >
-              {t("gatewayGuidance.openTokenConsole")}
-            </a>
-          </>
-        ) : null}
-      </>
-    ),
-    configurationMissingNotice: (
-      <Notice
-        tone="info"
-        className="mx-auto max-w-md text-left"
-        description={t("gatewayGuidance.unconfiguredValueDescription")}
-      />
+    description: t("gatewayGuidance.headerDescription"),
+    guidanceContent: (
+      <Notice tone="info" className="text-left">
+        <GatewayGuidanceDescription>
+          {t("gatewayGuidance.unconfiguredValueDescription")}
+        </GatewayGuidanceDescription>
+      </Notice>
     ),
     emptyContent:
       isLoadedEmpty && canImportChannel ? (

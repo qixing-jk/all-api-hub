@@ -256,8 +256,8 @@
         "viewChannels": "Importierte Kanäle ansehen"
       },
       "configComplete": {
-        "description": "Das Grundsetup verbindet nur das Gateway-Administrator-Backend. Um externen Clients den Aufruf von Modellen über dieses selbstgehostete KI-Gateway als eine einheitliche KI-API zu ermöglichen, importieren Sie Kontoschlüssel oder API-Schlüssel als Gateway-Kanäle.",
-        "title": "Weiter: Verwendbare Schlüssel importieren"
+        "description": "Die Gateway-Einstellungen sind gespeichert. Importiere Kontoschlüssel oder API-Zugangsdaten als Gateway-Kanäle. Die Verbindung wird bei der Überprüfung oder beim Import geprüft.",
+        "title": "Nächster Schritt: Kanäle importieren"
       },
       "unconfigured": {
         "description": "Konfigurieren Sie Ihr selbst gehostetes KI-Gateway und importieren Sie dann Kontoschlüssel oder API-Schlüssel als Gateway-Kanäle, damit mehrere Schlüssel über eine KI-API verwendet werden können.",

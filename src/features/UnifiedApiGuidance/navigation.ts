@@ -3,6 +3,7 @@ import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/KeyManagement/constants"
+import { pushWithinOptionsPage } from "~/utils/navigation"
 
 import {
   UNIFIED_API_GUIDANCE_ACTION_KINDS,
@@ -46,4 +47,14 @@ export function withGuidedAccountKeyImportTarget(
     ...action,
     target: buildGuidedAccountKeyImportTarget(accountId),
   }
+}
+
+export const GATEWAY_GUIDANCE_QUERY_PARAM = "gatewayGuide"
+export const GATEWAY_GUIDANCE_OVERVIEW_ID = "gateway-setup-guide"
+
+/** Opens the shared overview guide as a preview, independently from setup progress. */
+export function openGatewayGuidanceOverview() {
+  pushWithinOptionsPage(`#${MENU_ITEM_IDS.OVERVIEW}`, {
+    [GATEWAY_GUIDANCE_QUERY_PARAM]: "1",
+  })
 }

@@ -40,6 +40,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select"
+import { runGatewayGuidanceAction } from "~/features/UnifiedApiGuidance/runGatewayGuidanceAction"
+import { openSettingsTab } from "~/utils/navigation"
 
 import {
   MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
@@ -66,8 +68,8 @@ type ManagedSiteChannelsViewProps = {
   titleActions?: ReactNode
   description: ReactNode
   configurationMissingDescription: string
-  configurationMissingNotice?: ReactNode
   emptyContent?: ReactNode
+  guidanceContent?: ReactNode
   configurationSettingsTarget?: {
     tabId: "managedSite"
     anchor?: string
@@ -86,8 +88,8 @@ export function ManagedSiteChannelsView({
   titleActions,
   description,
   configurationMissingDescription,
-  configurationMissingNotice,
   emptyContent,
+  guidanceContent,
   configurationSettingsTarget,
   siteTypeLabel,
   filterDialog,
@@ -233,10 +235,21 @@ export function ManagedSiteChannelsView({
           <ManagedSiteConfigRequiredState
             description={configurationMissingDescription}
             settingsTarget={configurationSettingsTarget}
-            onRetry={callbacks.onRefresh}
-            isRetrying={state.isRefreshing}
+            onConfigure={() => {
+              void runGatewayGuidanceAction(() => {
+                void openSettingsTab(
+                  configurationSettingsTarget?.tabId ?? "managedSite",
+                  {
+                    ...(configurationSettingsTarget?.anchor
+                      ? { anchor: configurationSettingsTarget.anchor }
+                      : {}),
+                    preserveHistory: true,
+                  },
+                )
+              })
+            }}
           />
-          {configurationMissingNotice}
+          {guidanceContent}
         </div>
       ) : (
         <>

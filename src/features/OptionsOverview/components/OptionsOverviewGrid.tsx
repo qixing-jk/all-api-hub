@@ -3,12 +3,17 @@ import type { ReactNode } from "react"
 
 import {
   trackUnifiedApiGuidanceAction,
+  UNIFIED_API_GUIDANCE_STATUSES,
+  UNIFIED_API_GUIDANCE_STEP_STATES,
   UNIFIED_API_GUIDANCE_SURFACES,
   UnifiedApiGuidanceCard,
   UnifiedApiGuidanceUnavailableCard,
   withGuidedAccountKeyImportTarget,
   type UnifiedApiGuidanceAction,
 } from "~/features/UnifiedApiGuidance"
+import { GatewayGuidanceDiscovery } from "~/features/UnifiedApiGuidance/components/GatewayGuidanceDiscovery"
+import { GATEWAY_GUIDANCE_OVERVIEW_ID } from "~/features/UnifiedApiGuidance/navigation"
+import { runGatewayGuidanceAction } from "~/features/UnifiedApiGuidance/runGatewayGuidanceAction"
 import { PRODUCT_ANALYTICS_SURFACE_IDS } from "~/services/productAnalytics/contracts"
 
 import { OPTIONS_OVERVIEW_WIDGET_IDS } from "../ids"
@@ -30,6 +35,11 @@ import { OverviewUsageSnapshot } from "./OverviewUsageSnapshot"
 
 interface OptionsOverviewGridProps {
   viewModel: OptionsOverviewViewModel
+  gatewayGuidancePresentation: {
+    expanded: boolean
+    started: boolean
+    toggle: () => void
+  }
   t: TFunction
   onNavigate: (intent: OptionsOverviewNavigationIntent) => void
   onNavigateWithoutTracking: (target: OptionsOverviewNavigationTarget) => void
@@ -51,6 +61,7 @@ const columnSpanClass: Record<
  */
 export function OptionsOverviewGrid({
   viewModel,
+  gatewayGuidancePresentation,
   t,
   onNavigate,
   onNavigateWithoutTracking,
@@ -59,9 +70,16 @@ export function OptionsOverviewGrid({
 }: OptionsOverviewGridProps) {
   return (
     <div className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-3">
-      {OVERVIEW_WIDGET_LAYOUT.map((item) => (
+      {OVERVIEW_WIDGET_LAYOUT.filter(
+        (item) =>
+          item.id !== OPTIONS_OVERVIEW_WIDGET_IDS.unifiedApiGuidance ||
+          viewModel.unifiedApiGuidance?.status !==
+            UNIFIED_API_GUIDANCE_STATUSES.HasGatewayChannels ||
+          gatewayGuidancePresentation.expanded,
+      ).map((item) => (
         <section key={item.id} className={columnSpanClass[item.columnSpan]}>
-          {item.id === OPTIONS_OVERVIEW_WIDGET_IDS.statusSummary ? null : (
+          {item.id === OPTIONS_OVERVIEW_WIDGET_IDS.statusSummary ||
+          item.id === OPTIONS_OVERVIEW_WIDGET_IDS.unifiedApiGuidance ? null : (
             <h3 className="dark:text-dark-text-secondary mb-3 text-xs font-semibold text-gray-500 uppercase">
               {getOverviewSectionTitle(item.id, t)}
             </h3>
@@ -74,6 +92,7 @@ export function OptionsOverviewGrid({
             onNavigateWithoutTracking,
             isLoading,
             onRetry,
+            gatewayGuidancePresentation,
           )}
         </section>
       ))}
@@ -92,6 +111,7 @@ function renderWidget(
   onNavigateWithoutTracking: (target: OptionsOverviewNavigationTarget) => void,
   isLoading: boolean,
   onRetry: () => void,
+  gatewayGuidancePresentation: OptionsOverviewGridProps["gatewayGuidancePresentation"],
 ) {
   const navigateFromWidget = (target: OptionsOverviewNavigationTarget) => {
     onNavigate({ target, sourceWidgetId: id })
@@ -136,19 +156,38 @@ function renderWidget(
           surfaceId:
             PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewUnifiedApiGuidance,
         })
-        onNavigateWithoutTracking(navigationAction.target)
+        void runGatewayGuidanceAction(() =>
+          onNavigateWithoutTracking(navigationAction.target),
+        )
       }
 
       return (
         <div
-          className="flex min-h-0 flex-1 flex-col"
+          className="flex min-h-0 flex-1 scroll-mt-[calc(var(--options-header-height)+1rem)] flex-col"
           data-testid={OPTIONS_OVERVIEW_TEST_IDS.unifiedApiGuidance}
+          id={GATEWAY_GUIDANCE_OVERVIEW_ID}
+          tabIndex={-1}
         >
-          <UnifiedApiGuidanceCard
-            model={guidanceModel}
-            surface={UNIFIED_API_GUIDANCE_SURFACES.OptionsOverview}
-            onAction={handleUnifiedApiGuidanceAction}
-          />
+          {gatewayGuidancePresentation.expanded ? (
+            <UnifiedApiGuidanceCard
+              model={guidanceModel}
+              surface={UNIFIED_API_GUIDANCE_SURFACES.OptionsOverview}
+              onAction={handleUnifiedApiGuidanceAction}
+              onCollapse={gatewayGuidancePresentation.toggle}
+            />
+          ) : (
+            <GatewayGuidanceDiscovery
+              started={gatewayGuidancePresentation.started}
+              completedSteps={
+                guidanceModel.steps.filter(
+                  (step) =>
+                    step.state === UNIFIED_API_GUIDANCE_STEP_STATES.Completed,
+                ).length
+              }
+              totalSteps={guidanceModel.steps.length}
+              onExpand={gatewayGuidancePresentation.toggle}
+            />
+          )}
         </div>
       )
     }

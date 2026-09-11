@@ -256,8 +256,8 @@
         "viewChannels": "查看已导入渠道"
       },
       "configComplete": {
-        "description": "基础配置只完成了网关后台连接。要让外部客户端通过这个自建 AI 网关调用模型，还需要把账号 Key 或 API Key 导入为网关渠道，形成统一 AI API。",
-        "title": "下一步：导入可用 Key"
+        "description": "网关配置已保存。可将账号 Key 或 API 凭据导入为网关渠道；实际连接状态会在验证或导入时检查。",
+        "title": "下一步：导入渠道"
       },
       "unconfigured": {
         "description": "完成自建 AI 网关配置后，即可将账号 Key 或 API Key 导入为网关渠道，让多个 Key 通过同一个 AI API 使用。",

@@ -108,6 +108,7 @@ export function useManagedResourceMutationController({
   acceptDeletionResults,
   onMutationStart,
   onMutationSuccess,
+  onMutationConfirmed,
   analytics,
 }: {
   workspace: ManagedResourceWorkspace | null
@@ -123,6 +124,7 @@ export function useManagedResourceMutationController({
   ) => boolean
   onMutationStart?: () => void
   onMutationSuccess?: (mode: ManagedResourceEditorMode) => void
+  onMutationConfirmed?: (mode: ManagedResourceEditorMode) => void
   analytics?: ManagedResourceControllerAnalytics
 }) {
   const [opening, setOpening] = useState<ChannelDialogOpeningState>({
@@ -527,6 +529,7 @@ export function useManagedResourceMutationController({
           })
           switch (mutationResult.outcome) {
             case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded: {
+              onMutationConfirmed?.(submittedMode)
               let mutationAccepted = false
               try {
                 mutationAccepted =
@@ -636,6 +639,7 @@ export function useManagedResourceMutationController({
       endMutationSession,
       onMutationStart,
       onMutationSuccess,
+      onMutationConfirmed,
       requestFreshRead,
       requireFreshRead,
     ],

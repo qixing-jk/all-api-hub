@@ -395,7 +395,6 @@
     }
   },
   "gatewayGuidance": {
-    "clientHint": "Os clientes externos também precisam de uma chave de acesso emitida por este gateway.",
     "empty": {
       "description": "Este gateway de IA auto-hospedado ainda não tem canais. Importe primeiro chaves de contas ou chaves de API; depois, o gateway poderá oferecer uma única API de IA a clientes externos.",
       "importFromAccountKey": "Importar canal de uma chave de conta",
@@ -404,7 +403,6 @@
     },
     "headerDescription": "Gerencie os canais do seu gateway de IA auto-hospedado e reúna várias chaves de contas ou de API em uma única API de IA.",
     "openChannelConsole": "Abrir gerenciamento de canais do gateway",
-    "openTokenConsole": "Abrir gerenciamento de tokens",
     "unconfiguredValueDescription": "Após a configuração, você poderá importar chaves de contas e de API dispersas como canais do gateway e gerenciá-las diretamente no All API Hub."
   },
   "migration": {

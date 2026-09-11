@@ -395,7 +395,6 @@
     }
   },
   "gatewayGuidance": {
-    "clientHint": "Externe Clients benötigen ebenfalls einen von diesem Gateway ausgegebenen Zugriffsschlüssel.",
     "empty": {
       "description": "Dieses selbstgehostete KI-Gateway hat noch keine Kanäle. Importieren Sie zuerst Kontoschlüssel oder API-Schlüssel, dann kann dieses Gateway eine einheitliche KI-API für externe Clients bereitstellen.",
       "importFromAccountKey": "Kanal aus Kontoschlüssel importieren",
@@ -404,7 +403,6 @@
     },
     "headerDescription": "Verwalten Sie Kanäle in Ihrem selbst gehosteten KI-Gateway und kombinieren Sie mehrere Kontoschlüssel oder API-Schlüssel in einer einheitlichen KI-API.",
     "openChannelConsole": "Öffnen Sie die Gateway-Kanalverwaltung",
-    "openTokenConsole": "Öffnen Sie die Token-Verwaltung",
     "unconfiguredValueDescription": "Nach der Konfiguration können Sie verstreute Kontoschlüssel und API-Schlüssel als Gateway-Kanäle importieren und diese dann direkt in All API Hub anzeigen und verwalten."
   },
   "migration": {

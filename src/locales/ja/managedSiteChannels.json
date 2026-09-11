@@ -395,7 +395,6 @@
     }
   },
   "gatewayGuidance": {
-    "clientHint": "外部クライアントからの呼び出しには、このゲートウェイが発行するキーも必要です。",
     "empty": {
       "description": "このセルフホスト AI ゲートウェイにはまだチャネルがありません。アカウントキーまたは API キーを取り込むと、ゲートウェイを 1 つの AI API として外部クライアントから利用できます。",
       "importFromAccountKey": "アカウントキーからチャネルを取り込む",
@@ -404,7 +403,6 @@
     },
     "headerDescription": "セルフホスト AI ゲートウェイのチャネルを管理し、複数のアカウントキーや API キーを 1 つの AI API にまとめます。",
     "openChannelConsole": "ゲートウェイのチャネル管理を開く",
-    "openTokenConsole": "トークン管理を開く",
     "unconfiguredValueDescription": "設定後は、分散しているアカウントキーや API キーをゲートウェイチャネルとして取り込み、All API Hub で直接確認・管理できます。"
   },
   "migration": {

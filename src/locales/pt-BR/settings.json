@@ -256,8 +256,8 @@
         "viewChannels": "Ver canais importados"
       },
       "configComplete": {
-        "description": "A configuração básica conecta apenas o backend de administração do gateway. Para permitir que clientes externos chamem modelos por meio deste gateway de IA auto-hospedado como um AI API unificado, importe chaves de conta ou chaves API como canais de gateway.",
-        "title": "Próximo: importar chaves utilizáveis"
+        "description": "As configurações do gateway foram salvas. Importe chaves de contas ou credenciais de API como canais. A conexão é verificada durante a validação ou importação.",
+        "title": "Próximo passo: importar canais"
       },
       "unconfigured": {
         "description": "Configure seu gateway de IA auto-hospedado e, em seguida, importe chaves de conta ou chaves API como canais de gateway para que várias chaves possam ser usadas por meio de um AI API.",

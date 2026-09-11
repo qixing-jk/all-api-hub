@@ -22,6 +22,7 @@ import {
   getManagedSiteChannelRowTestId,
   MANAGED_SITE_CHANNELS_TEST_IDS,
 } from "~/features/ManagedSiteChannels/testIds"
+import { recordGatewayGuidanceCompletion } from "~/features/UnifiedApiGuidance/recordGatewayGuidanceCompletion"
 import enCommon from "~/locales/en/common.json"
 import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
 import zhCnCommon from "~/locales/zh-CN/common.json"
@@ -69,6 +70,13 @@ const {
   syncChannels: vi.fn(async () => undefined),
   trackProductAnalyticsActionStarted: vi.fn(),
 }))
+
+vi.mock(
+  "~/features/UnifiedApiGuidance/recordGatewayGuidanceCompletion",
+  () => ({
+    recordGatewayGuidanceCompletion: vi.fn(),
+  }),
+)
 
 vi.mock("~/lib/notify", () => ({
   default: { success: toastSuccess, error: toastError },
@@ -369,8 +377,26 @@ const configureNativePreferences = (siteType: NativePreferenceSiteType) => {
 }
 
 describe("ManagedSiteChannelsRoute", () => {
+  it("completes guidance only after a non-empty collection is accepted", () => {
+    installNativeControllers()
+    configureNativePreferences(SITE_TYPES.NEW_API)
+    render(
+      <ManagedSiteChannelsRoute
+        siteType={SITE_TYPES.NEW_API}
+        onReplaceRouteQuery={vi.fn()}
+      />,
+    )
+    expect(recordGatewayGuidanceCompletion).not.toHaveBeenCalled()
+    const options = useListController.mock.calls.at(-1)?.[0]
+    options.onResourcesAccepted(0)
+    expect(recordGatewayGuidanceCompletion).not.toHaveBeenCalled()
+    options.onResourcesAccepted(1)
+    expect(recordGatewayGuidanceCompletion).toHaveBeenCalledOnce()
+  })
+
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.mocked(recordGatewayGuidanceCompletion).mockClear()
     useListController.mockReset()
     useMutationController.mockReset()
     useMigrationController.mockReset()
@@ -408,11 +434,6 @@ describe("ManagedSiteChannelsRoute", () => {
         name: "managedSiteChannels:gatewayGuidance.openChannelConsole",
       }),
     ).toBeVisible()
-    expect(
-      screen.getByRole("link", {
-        name: "managedSiteChannels:gatewayGuidance.openTokenConsole",
-      }),
-    ).toHaveAttribute("href", "https://console.example.invalid/keys")
   })
 
   it.each([
@@ -950,8 +971,12 @@ describe("ManagedSiteChannelsRoute", () => {
     )
 
     const mutationOptions = useMutationController.mock.calls.at(-1)?.[0]
+    mutationOptions?.onMutationConfirmed("create")
     mutationOptions?.onMutationSuccess("create")
+    expect(recordGatewayGuidanceCompletion).toHaveBeenCalledOnce()
+    mutationOptions?.onMutationConfirmed("edit")
     mutationOptions?.onMutationSuccess("edit")
+    expect(recordGatewayGuidanceCompletion).toHaveBeenCalledOnce()
 
     expect(toastSuccess.mock.calls).toEqual([
       ["managedSiteChannels:toasts.channelSaved"],
@@ -2617,8 +2642,7 @@ describe("ManagedSiteChannelsRoute", () => {
     )
   })
 
-  it("uses the shared controlled configuration recovery state", async () => {
-    const user = userEvent.setup()
+  it("uses the shared controlled configuration recovery state", () => {
     const refresh = vi.fn(async () => true)
     installNativeDefinition(SITE_TYPES.AXON_HUB)
     installNativeControllers({
@@ -2648,14 +2672,14 @@ describe("ManagedSiteChannelsRoute", () => {
 
     expect(screen.getByText("messages:axonhub.configMissing")).toBeVisible()
     expect(
-      screen.getByText(
-        "managedSiteChannels:gatewayGuidance.unconfiguredValueDescription",
-      ),
+      screen.getByRole("button", { name: "common:actions.goToSettings" }),
     ).toBeVisible()
-    await user.click(
-      screen.getByRole("button", { name: "common:actions.retry" }),
-    )
-    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(
+      screen.getByRole("button", {
+        name: "optionsOverview:unifiedApiGuidance.overview.reopen",
+      }),
+    ).toBeVisible()
+    expect(refresh).not.toHaveBeenCalled()
   })
 
   it("does not show unrelated resources for a missing native identity and lets the user clear it", async () => {

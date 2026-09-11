@@ -9,6 +9,7 @@ import {
 } from "~/features/AccountManagement/routeParams"
 import {
   buildUnifiedApiGuidanceModel,
+  shouldShowGatewayGuidanceSurface,
   UNIFIED_API_GUIDANCE_ACTION_KINDS,
   UNIFIED_API_GUIDANCE_SOURCE_KINDS,
   UNIFIED_API_GUIDANCE_STATUSES,
@@ -46,6 +47,21 @@ const completedGatewayGuidanceState: FeatureGuidanceState = {
 }
 
 describe("buildUnifiedApiGuidanceModel", () => {
+  it("keeps source pages quiet until a concrete gateway action starts the journey", () => {
+    const state = createEmptyFeatureGuidanceState()
+    expect(shouldShowGatewayGuidanceSurface(state, "account")).toBe(false)
+    expect(
+      shouldShowGatewayGuidanceSurface(state, "apiCredentialProfiles"),
+    ).toBe(false)
+    state.gatewayGuidance.onboardingStartedAt = 1
+    expect(shouldShowGatewayGuidanceSurface(state, "account")).toBe(true)
+    expect(
+      shouldShowGatewayGuidanceSurface(state, "apiCredentialProfiles"),
+    ).toBe(true)
+    state.gatewayGuidance.onboardingCompletedAt = 2
+    expect(shouldShowGatewayGuidanceSurface(state, "account")).toBe(false)
+  })
+
   it("routes users with no sources to account and credential setup", () => {
     const model = buildUnifiedApiGuidanceModel({
       enabledAccountCount: 0,
@@ -122,7 +138,6 @@ describe("buildUnifiedApiGuidanceModel", () => {
       { id: "source", state: "completed" },
       { id: "gateway_settings", state: "completed" },
       { id: "gateway_channel", state: "current" },
-      { id: "client_access", state: "upcoming" },
     ])
   })
 
@@ -145,11 +160,10 @@ describe("buildUnifiedApiGuidanceModel", () => {
       { id: "source", state: "completed" },
       { id: "gateway_settings", state: "completed" },
       { id: "gateway_channel", state: "completed" },
-      { id: "client_access", state: "current" },
     ])
   })
 
-  it("keeps current prerequisites authoritative over historical channel completion", () => {
+  it("does not restart completed onboarding when local prerequisites change", () => {
     const missingSourceModel = buildUnifiedApiGuidanceModel({
       enabledAccountCount: 0,
       keyAccessibleAccountCount: 0,
@@ -168,10 +182,10 @@ describe("buildUnifiedApiGuidanceModel", () => {
     })
 
     expect(missingSourceModel.status).toBe(
-      UNIFIED_API_GUIDANCE_STATUSES.NeedsSources,
+      UNIFIED_API_GUIDANCE_STATUSES.HasGatewayChannels,
     )
     expect(missingGatewayModel.status).toBe(
-      UNIFIED_API_GUIDANCE_STATUSES.NeedsManagedSite,
+      UNIFIED_API_GUIDANCE_STATUSES.HasGatewayChannels,
     )
   })
 

@@ -256,8 +256,8 @@
         "viewChannels": "View imported channels"
       },
       "configComplete": {
-        "description": "The basic setup only connects the gateway admin backend. To let external clients call models through this self-hosted AI gateway as one unified AI API, import account keys or API keys as gateway channels.",
-        "title": "Next: import usable keys"
+        "description": "Gateway settings are saved. Import account keys or API credentials as gateway channels. Connectivity is checked during verification or import.",
+        "title": "Next: import channels"
       },
       "unconfigured": {
         "description": "Configure your self-hosted AI gateway, then import account keys or API keys as gateway channels so multiple keys can be used through one AI API.",

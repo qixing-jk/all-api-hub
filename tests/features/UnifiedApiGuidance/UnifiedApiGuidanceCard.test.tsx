@@ -34,6 +34,37 @@ const configuredNewApiPreferences: UserPreferences = {
 }
 
 describe("UnifiedApiGuidanceCard", () => {
+  it("shows completed steps when revisiting the setup guide", async () => {
+    const model = buildUnifiedApiGuidanceModel({
+      enabledAccountCount: 0,
+      keyAccessibleAccountCount: 0,
+      profileCount: 0,
+      preferences: configuredNewApiPreferences,
+      managedSiteType: SITE_TYPES.NEW_API,
+      guidanceState: {
+        schemaVersion: 1,
+        productTour: {},
+        gatewayGuidance: {
+          onboardingCompletedAt: 1,
+          dismissedAtBySurface: {},
+        },
+      },
+    })
+    renderCard(model)
+    expect(screen.getAllByRole("listitem")).toHaveLength(3)
+    expect(
+      screen.queryByText(
+        "optionsOverview:unifiedApiGuidance.stepper.states.current",
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "optionsOverview:unifiedApiGuidance.overview.completedDescription",
+      ),
+    ).toBeVisible()
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+
   it("renders guidance notes and dispatches the primary action", async () => {
     const user = userEvent.setup()
     const onAction = vi.fn()
@@ -48,14 +79,14 @@ describe("UnifiedApiGuidanceCard", () => {
     renderCard(model, onAction)
 
     expect(
-      screen.getByText("optionsOverview:unifiedApiGuidance.headline"),
+      screen.getByText("optionsOverview:unifiedApiGuidance.overview.title"),
     ).toBeVisible()
     expect(
       screen.getByRole("list", {
         name: "optionsOverview:unifiedApiGuidance.stepper.label",
       }),
     ).toBeVisible()
-    expect(screen.getAllByRole("listitem")).toHaveLength(4)
+    expect(screen.getAllByRole("listitem")).toHaveLength(3)
     expect(
       screen.getByText(
         "optionsOverview:unifiedApiGuidance.stepper.steps.gatewayChannel.title",
@@ -72,10 +103,10 @@ describe("UnifiedApiGuidanceCard", () => {
       ),
     ).toBeVisible()
     expect(
-      screen.getByText(
+      screen.queryByText(
         "optionsOverview:unifiedApiGuidance.stepper.states.upcoming",
       ),
-    ).toBeVisible()
+    ).not.toBeInTheDocument()
     expect(
       screen.getByTestId(UNIFIED_API_GUIDANCE_TEST_IDS.primaryAction),
     ).toHaveAccessibleName(
@@ -112,7 +143,7 @@ describe("UnifiedApiGuidanceCard", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("uses the requested surface for reusable guidance copy", () => {
+  it("uses the requested surface for reusable guidance copy", async () => {
     const model = buildUnifiedApiGuidanceModel({
       enabledAccountCount: 1,
       keyAccessibleAccountCount: 1,

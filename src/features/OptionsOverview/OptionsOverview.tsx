@@ -10,6 +10,8 @@ import { requestProductAnnouncementPopoverOpen } from "~/features/ProductAnnounc
 import { useProductAnnouncements } from "~/features/ProductAnnouncements/hooks/useProductAnnouncements"
 import { ProductAnnouncementBanner } from "~/features/ProductAnnouncements/ProductAnnouncementBanner"
 import { ProductTourInvitation } from "~/features/ProductTour"
+import { UNIFIED_API_GUIDANCE_STATUSES } from "~/features/UnifiedApiGuidance"
+import { useGatewayGuidancePresentation } from "~/features/UnifiedApiGuidance/useGatewayGuidancePresentation"
 import { setLastSeenOptionalPermissions } from "~/services/permissions/optionalPermissionState"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -64,6 +66,15 @@ export function getPermissionsOnboardingReasonFromUrl(): string | null {
 export default function OptionsOverview() {
   const { t } = useTranslation(["optionsOverview", "common"])
   const { isLoading, error, viewModel, reload } = useOptionsOverviewData()
+  const gatewayGuidanceComplete =
+    viewModel?.unifiedApiGuidance?.status ===
+    UNIFIED_API_GUIDANCE_STATUSES.HasGatewayChannels
+  const gatewayGuidance = useGatewayGuidancePresentation(
+    gatewayGuidanceComplete,
+    viewModel?.gatewayGuidanceStarted ?? false,
+    Boolean(viewModel?.unifiedApiGuidance),
+  )
+
   const {
     state: productAnnouncementState,
     dismiss: dismissProductAnnouncement,
@@ -159,6 +170,18 @@ export default function OptionsOverview() {
         icon={LayoutDashboard}
         title={t("optionsOverview:title")}
         description={t("optionsOverview:description")}
+        actions={
+          gatewayGuidanceComplete ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-expanded={gatewayGuidance.expanded}
+              onClick={gatewayGuidance.toggle}
+            >
+              {t("optionsOverview:unifiedApiGuidance.overview.reopen")}
+            </Button>
+          ) : undefined
+        }
       />
 
       {!showPermissionsOnboarding ? <ProductTourInvitation /> : null}
@@ -204,6 +227,7 @@ export default function OptionsOverview() {
           ) : null}
           <OptionsOverviewGrid
             viewModel={viewModel}
+            gatewayGuidancePresentation={gatewayGuidance}
             t={t}
             onNavigate={handleNavigate}
             onNavigateWithoutTracking={handleNavigateWithoutTracking}

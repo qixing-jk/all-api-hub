@@ -256,8 +256,8 @@
         "viewChannels": "Xem kênh đã nhập"
       },
       "configComplete": {
-        "description": "Cấu hình cơ bản mới chỉ kết nối backend quản trị gateway. Để client bên ngoài gọi model qua AI gateway tự triển khai này như một AI API thống nhất, hãy nhập key tài khoản hoặc API key làm kênh gateway.",
-        "title": "Bước tiếp theo: nhập key có thể dùng"
+        "description": "Đã lưu cấu hình cổng. Nhập khóa tài khoản hoặc thông tin xác thực API thành kênh. Kết nối được kiểm tra khi xác minh hoặc nhập.",
+        "title": "Tiếp theo: nhập kênh"
       },
       "unconfigured": {
         "description": "Trước tiên hãy cấu hình AI gateway tự triển khai, sau đó nhập key tài khoản hoặc API key làm kênh gateway. Như vậy nhiều key có thể cùng cung cấp một AI API thống nhất.",

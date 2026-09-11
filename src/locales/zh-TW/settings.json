@@ -256,8 +256,8 @@
         "viewChannels": "查看已匯入渠道"
       },
       "configComplete": {
-        "description": "基礎設定只完成了閘道後台連線。若要讓外部客戶端透過這個自建 AI 閘道呼叫模型，還需要把帳號 Key 或 API Key 匯入為閘道渠道，形成統一 AI API。",
-        "title": "下一步：匯入可用 Key"
+        "description": "閘道設定已儲存。可將帳號 Key 或 API 憑據匯入為閘道渠道；實際連線狀態會在驗證或匯入時檢查。",
+        "title": "下一步：匯入渠道"
       },
       "unconfigured": {
         "description": "完成自建 AI 閘道設定後，即可將帳號 Key 或 API Key 匯入為閘道渠道，讓多個 Key 透過同一個 AI API 使用。",
