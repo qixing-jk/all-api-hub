@@ -26,6 +26,8 @@ import {
   runPreferenceUpdateWithToast,
 } from "~/utils/feedback/preferenceFeedback"
 
+import { ManagedSiteDeploymentLink } from "./ManagedSiteDeploymentLink"
+
 /** Configures Sub2API management and guides administrators to key setup. */
 export default function Sub2ApiSettings() {
   const { t } = useTranslation("settings")
@@ -136,6 +138,7 @@ export default function Sub2ApiSettings() {
 
   return (
     <SettingSection
+      titleActions={<ManagedSiteDeploymentLink siteType={SITE_TYPES.SUB2API} />}
       id={SETTINGS_ANCHORS.SUB2API}
       title={t("sub2apiManagedSite.title")}
       description={t("sub2apiManagedSite.description")}

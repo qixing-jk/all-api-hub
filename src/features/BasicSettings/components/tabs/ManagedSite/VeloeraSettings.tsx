@@ -18,6 +18,8 @@ import { createTab } from "~/utils/browser/browserApi"
 import { joinUrl } from "~/utils/core/url"
 import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
+import { ManagedSiteDeploymentLink } from "./ManagedSiteDeploymentLink"
+
 /**
  * Settings panel for configuring Veloera connection credentials (base URL, admin token, user ID).
  * @returns Section containing inputs and reset handling for the Veloera config.
@@ -118,6 +120,7 @@ export default function VeloeraSettings() {
 
   return (
     <SettingSection
+      titleActions={<ManagedSiteDeploymentLink siteType={SITE_TYPES.VELOERA} />}
       id="veloera"
       title={t("veloera.title")}
       description={t("veloera.description")}

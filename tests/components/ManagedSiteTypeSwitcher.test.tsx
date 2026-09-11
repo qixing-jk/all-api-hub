@@ -147,6 +147,26 @@ describe("ManagedSiteTypeSwitcher", () => {
     ).toBeInTheDocument()
   })
 
+  it("lists managed sites in the shared popularity order", async () => {
+    const user = userEvent.setup()
+    render(<ManagedSiteTypeSwitcher />)
+    await user.click(await screen.findByRole("combobox"))
+    expect(
+      (await screen.findAllByRole("option")).map(
+        (option) => option.textContent,
+      ),
+    ).toEqual([
+      "settings:managedSite.cliProxyApi",
+      "settings:managedSite.newApi",
+      "settings:managedSite.sub2api",
+      "settings:managedSite.axonHub",
+      "settings:managedSite.claudeCodeHub",
+      "settings:managedSite.octopus",
+      "settings:managedSite.veloera",
+      "settings:managedSite.doneHub",
+    ])
+  })
+
   it("updates the managed site type and shows the shared update toast", async () => {
     const user = userEvent.setup()
     const updateManagedSiteType = vi.fn().mockResolvedValue(true)

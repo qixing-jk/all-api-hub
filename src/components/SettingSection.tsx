@@ -17,6 +17,8 @@ const logger = createLogger("SettingSection")
 interface SettingSectionProps {
   title: string
   description?: string
+  /** Contextual help displayed immediately after the section title. */
+  titleActions?: ReactNode
   actions?: ReactNode
   onReset?: () => Promise<PreferenceWriteResult>
   resetButtonLabel?: string
@@ -32,6 +34,7 @@ interface SettingSectionProps {
 export function SettingSection({
   title,
   description,
+  titleActions,
   actions,
   onReset,
   resetButtonLabel,
@@ -91,10 +94,13 @@ export function SettingSection({
   return (
     <>
       <section id={id} className={`space-y-6 ${className}`.trim()}>
-        {actions ? (
+        {actions || titleActions ? (
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-              <Heading3>{title}</Heading3>
+              <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+                <Heading3>{title}</Heading3>
+                {titleActions}
+              </div>
               <div className="flex max-w-full flex-wrap items-center gap-2">
                 {actions}
                 {resetButton}

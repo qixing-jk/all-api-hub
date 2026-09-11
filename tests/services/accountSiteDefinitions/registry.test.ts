@@ -300,14 +300,14 @@ describe("account site definition registry", () => {
   it("projects managed site types in the public order", () => {
     expect(getManagedSiteTypeValues()).toEqual(MANAGED_SITE_TYPES)
     expect(getManagedSiteTypeValues()).toEqual([
+      SITE_TYPES.CLI_PROXY_API,
       SITE_TYPES.NEW_API,
-      SITE_TYPES.VELOERA,
-      SITE_TYPES.DONE_HUB,
-      SITE_TYPES.OCTOPUS,
+      SITE_TYPES.SUB2API,
       SITE_TYPES.AXON_HUB,
       SITE_TYPES.CLAUDE_CODE_HUB,
-      SITE_TYPES.SUB2API,
-      SITE_TYPES.CLI_PROXY_API,
+      SITE_TYPES.OCTOPUS,
+      SITE_TYPES.VELOERA,
+      SITE_TYPES.DONE_HUB,
     ])
   })
 

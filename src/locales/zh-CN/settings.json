@@ -245,6 +245,8 @@
     "axonHub": "AxonHub",
     "claudeCodeHub": "Claude Code Hub",
     "cliProxyApi": "CLIProxyAPI",
+    "deploymentDocs": "官方部署文档",
+    "deploymentDocsLink": "{{site}} 官方部署文档",
     "description": "选择您要管理的 API 聚合平台站点。这将决定用于渠道管理和模型同步的配置。",
     "doneHub": "Done Hub",
     "gatewayGuidance": {
@@ -264,6 +266,7 @@
     },
     "newApi": "New API",
     "octopus": "Octopus",
+    "popularityHint": "按 GitHub Star 数快照排序。",
     "siteTypeDesc": "选择用于渠道管理和模型同步的平台",
     "siteTypeLabel": "网关类型",
     "sub2api": "Sub2API",

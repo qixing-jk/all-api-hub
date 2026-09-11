@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { SettingSection } from "~/components/SettingSection"
 import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
+import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
@@ -14,6 +15,8 @@ import {
   getPreferenceWriteFailureMessage,
   runPreferenceUpdateWithToast,
 } from "~/utils/feedback/preferenceFeedback"
+
+import { ManagedSiteDeploymentLink } from "./ManagedSiteDeploymentLink"
 
 const isLikelyCorsSetupError = (message: string) =>
   /cors|failed to fetch|network|http 403|forbidden/i.test(message)
@@ -137,6 +140,9 @@ export default function AxonHubSettings() {
 
   return (
     <SettingSection
+      titleActions={
+        <ManagedSiteDeploymentLink siteType={SITE_TYPES.AXON_HUB} />
+      }
       id={SETTINGS_ANCHORS.AXON_HUB}
       title={t("axonHub.title")}
       description={t("axonHub.description")}

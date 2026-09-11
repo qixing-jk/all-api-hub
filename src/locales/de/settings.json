@@ -245,6 +245,8 @@
     "axonHub": "AxonHub",
     "claudeCodeHub": "Claude Code Hub",
     "cliProxyApi": "CLIProxyAPI",
+    "deploymentDocs": "Offizielle Bereitstellungsdokumentation",
+    "deploymentDocsLink": "Offizielle Bereitstellungsdokumentation für {{site}}",
     "description": "Wählen Sie aus, welche API-Aggregator-Plattform Sie verwalten möchten. Dadurch wird bestimmt, welche Konfiguration für die Kanalverwaltung und Modellsynchronisierung verwendet wird.",
     "doneHub": "Done Hub",
     "gatewayGuidance": {
@@ -264,6 +266,7 @@
     },
     "newApi": "New API",
     "octopus": "Octopus",
+    "popularityHint": "Nach einer Momentaufnahme der GitHub-Sterne sortiert.",
     "siteTypeDesc": "Wählen Sie die Plattform aus, die für die Kanalverwaltung und Modellsynchronisierung verwendet wird",
     "siteTypeLabel": "Gateway-Typ",
     "sub2api": "Sub2API",

@@ -24,6 +24,8 @@ import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/util
 import { createTab } from "~/utils/browser/browserApi"
 import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
+import { ManagedSiteDeploymentLink } from "./ManagedSiteDeploymentLink"
+
 /**
  * Settings panel for configuring New API connection credentials (base URL, admin token, user ID).
  * @returns Section containing inputs and reset handling for the New API config.
@@ -179,6 +181,7 @@ export default function NewApiSettings() {
 
   return (
     <SettingSection
+      titleActions={<ManagedSiteDeploymentLink siteType={SITE_TYPES.NEW_API} />}
       id="new-api"
       title={t("newApi.title")}
       description={t("newApi.description")}

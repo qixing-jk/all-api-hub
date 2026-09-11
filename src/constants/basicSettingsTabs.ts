@@ -16,6 +16,7 @@ export type BasicSettingsTabId =
 
 export const BASIC_SETTINGS_ANCHOR_TO_TAB: Record<string, BasicSettingsTabId> =
   {
+    [SETTINGS_ANCHORS.MANAGED_SITE_DEPLOYMENT_DOCS]: "managedSite",
     [SETTINGS_ANCHORS.SHIELD_WINDOW_SIZE]: "refresh",
     "general-display": "general",
     display: "general",

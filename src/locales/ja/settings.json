@@ -245,6 +245,8 @@
     "axonHub": "AxonHub",
     "claudeCodeHub": "Claude Code Hub",
     "cliProxyApi": "CLIProxyAPI",
+    "deploymentDocs": "公式デプロイドキュメント",
+    "deploymentDocsLink": "{{site}} の公式デプロイドキュメント",
     "description": "管理したい API 中継プラットフォームを選択します。この設定により、チャネル管理やモデル同期で使われる構成が決まります。",
     "doneHub": "Done Hub",
     "gatewayGuidance": {
@@ -264,6 +266,7 @@
     },
     "newApi": "New API",
     "octopus": "Octopus",
+    "popularityHint": "GitHub スター数のスナップショット順。",
     "siteTypeDesc": "チャネル管理とモデル同期に使用するプラットフォームを選択します",
     "siteTypeLabel": "ゲートウェイ種別",
     "sub2api": "Sub2API",

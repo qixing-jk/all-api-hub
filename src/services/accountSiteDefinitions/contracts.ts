@@ -83,6 +83,8 @@ export type ManagedSiteMessagesKey =
   | "sub2api"
 
 export interface ManagedResourceProductPolicy {
+  /** Official upstream installation or quick-start guide. */
+  getStartedUrl: `https://${string}`
   labelKey: ManagedSiteLabelKey
   messagesKey: ManagedSiteMessagesKey
   primaryKind: ManagedResourceKind

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
 import { Button, Card, CardItem, CardList, Input, Link } from "~/components/ui"
+import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
@@ -12,6 +13,8 @@ import {
 } from "~/services/apiService/cliProxyApi"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
+
+import { ManagedSiteDeploymentLink } from "./ManagedSiteDeploymentLink"
 
 const CLI_PROXY_API_MANAGEMENT_DOC_URL =
   "https://help.router-for.me/management/api"
@@ -132,6 +135,9 @@ export default function CliProxyApiSettings() {
 
   return (
     <SettingSection
+      titleActions={
+        <ManagedSiteDeploymentLink siteType={SITE_TYPES.CLI_PROXY_API} />
+      }
       id="cli-proxy"
       title={t("cliProxyApi.title")}
       description={t("cliProxyApi.description")}

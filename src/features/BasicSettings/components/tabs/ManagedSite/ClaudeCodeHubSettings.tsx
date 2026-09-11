@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
 import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
+import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
@@ -13,6 +14,8 @@ import {
   getPreferenceWriteFailureMessage,
   runPreferenceUpdateWithToast,
 } from "~/utils/feedback/preferenceFeedback"
+
+import { ManagedSiteDeploymentLink } from "./ManagedSiteDeploymentLink"
 
 /**
  * Renders Claude Code Hub settings fields and a config validation action.
@@ -123,6 +126,9 @@ export default function ClaudeCodeHubSettings() {
 
   return (
     <SettingSection
+      titleActions={
+        <ManagedSiteDeploymentLink siteType={SITE_TYPES.CLAUDE_CODE_HUB} />
+      }
       id="claude-code-hub"
       title={t("claudeCodeHub.title")}
       description={t("claudeCodeHub.description")}
