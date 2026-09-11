@@ -49,7 +49,7 @@ export const BASIC_SETTINGS_ANCHOR_TO_TAB: Record<string, BasicSettingsTabId> =
     [SETTINGS_ANCHORS.AUTO_PROVISION_KEY]: "accountManagement",
     [SETTINGS_ANCHORS.AUTO_PROVISION_KEY_ENABLED]: "accountManagement",
     [SETTINGS_ANCHORS.AUTO_PROVISION_KEY_MODE]: "accountManagement",
-    "sorting-priority": "accountManagement",
+    [SETTINGS_ANCHORS.SORTING_PRIORITY]: "accountManagement",
     sorting: "accountManagement",
     "auto-refresh": "refresh",
     refresh: "refresh",

@@ -356,6 +356,9 @@ test("keeps account management controls reachable across constrained widths", as
         const sortControlsBox = await accountListSortControls.boundingBox()
         const utilitiesBox = await accountListUtilities.boundingBox()
         const clearSortActionBox = await clearSortAction.boundingBox()
+        const activeSortBox = await page
+          .getByTestId(getAccountManagementSortButtonTestId("balance"))
+          .boundingBox()
         const headerButtons = await readElementBounds(
           accountListHeader.getByRole("button"),
         )
@@ -390,16 +393,16 @@ test("keeps account management controls reachable across constrained widths", as
           ),
           clearSortPlacementMatches:
             clearSortStaysWithinSortTier &&
-            (layout === "inline" ||
-              Boolean(
-                sortControlsBox &&
-                  clearSortActionBox &&
-                  Math.abs(
-                    clearSortActionBox.x +
-                      clearSortActionBox.width -
-                      (sortControlsBox.x + sortControlsBox.width),
-                  ) <= 1,
-              )),
+            Boolean(
+              activeSortBox &&
+                clearSortActionBox &&
+                Math.abs(
+                  clearSortActionBox.x -
+                    (activeSortBox.x + activeSortBox.width),
+                ) <= 1 &&
+                Math.abs(clearSortActionBox.y - activeSortBox.y) <= 1 &&
+                Math.abs(clearSortActionBox.height - activeSortBox.height) <= 1,
+            ),
           buttonsContained: Boolean(
             listBox &&
               headerButtons.every((box) =>

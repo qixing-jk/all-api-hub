@@ -41,7 +41,7 @@ export const accountManagementSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:sorting-priority",
     "accountManagement",
-    "sorting-priority",
+    SETTINGS_ANCHORS.SORTING_PRIORITY,
     "settings:sorting.title",
     224,
   ),

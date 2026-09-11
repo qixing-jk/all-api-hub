@@ -54,9 +54,7 @@ export default function AccountManagementTab() {
       <AutoFillCurrentSiteUrlOnAccountAddSettings />
       <DuplicateAccountWarningOnAddSettings />
 
-      <section id="sorting-priority">
-        <SortingPrioritySettings />
-      </section>
+      <SortingPrioritySettings />
     </div>
   )
 }
