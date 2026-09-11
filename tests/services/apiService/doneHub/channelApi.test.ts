@@ -78,30 +78,33 @@ vi.mock("~/utils/i18n/core", () => ({
 }))
 
 describe("apiService doneHub channel APIs", () => {
-  it("keeps proxy and fixed headers in an unsaved model probe", async () => {
-    mockFetchApiData.mockResolvedValue(["model-a"])
-    const request = {
-      baseUrl: "https://donehub.example",
-      auth: { authType: AuthTypeEnum.AccessToken, accessToken: "admin" },
-    }
-    await fetchDoneHubProviderModels(request, {
-      type: 1,
-      base_url: "https://upstream.example",
-      key: "channel-key",
-      proxy: "socks5://proxy:1080",
-      model_headers: '{"X-Project":"draft"}',
-      models: "old-model",
-      model_mapping: '{"old-model":"mapped"}',
-    })
-    const options = mockFetchApiData.mock.calls[0][1]
-    expect(JSON.parse(options.options.body)).toMatchObject({
-      proxy: "socks5://proxy:1080",
-      model_headers: '{"X-Project":"draft"}',
-      models: "",
-      model_mapping: "",
-    })
-    expect(mockFetchApiData).toHaveBeenCalledTimes(1)
-  })
+  it.each(["http", "https"])(
+    "keeps proxy and fixed headers in an unsaved model probe over %s",
+    async (protocol) => {
+      mockFetchApiData.mockResolvedValue(["model-a"])
+      const request = {
+        baseUrl: `${protocol}://donehub.example`,
+        auth: { authType: AuthTypeEnum.AccessToken, accessToken: "admin" },
+      }
+      await fetchDoneHubProviderModels(request, {
+        type: 1,
+        base_url: "https://upstream.example",
+        key: "channel-key",
+        proxy: "socks5://proxy:1080",
+        model_headers: '{"X-Project":"draft"}',
+        models: "old-model",
+        model_mapping: '{"old-model":"mapped"}',
+      })
+      const options = mockFetchApiData.mock.calls[0][1]
+      expect(JSON.parse(options.options.body)).toMatchObject({
+        proxy: "socks5://proxy:1080",
+        model_headers: '{"X-Project":"draft"}',
+        models: "",
+        model_mapping: "",
+      })
+      expect(mockFetchApiData).toHaveBeenCalledTimes(1)
+    },
+  )
 
   beforeEach(() => {
     vi.clearAllMocks()

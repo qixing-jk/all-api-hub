@@ -3,6 +3,8 @@ import {
   isDoneHubAdvancedFieldApplicable,
 } from "~/constants/doneHub"
 import {
+  MANAGED_RESOURCE_FAILURE_CODES,
+  ManagedResourceError,
   MANAGED_RESOURCE_FIELD_TYPES as types,
   type EditableResourceProjection,
   type ResourceFieldDescriptor,
@@ -124,6 +126,32 @@ export function withDoneHubAdvancedEditor(
     ),
   })
 
+  const validateAdvanced = (
+    values: EditableResourceProjection,
+  ): ResourceFieldIssue[] => {
+    const issues: ResourceFieldIssue[] = []
+    for (const [id, , type] of advancedFields) {
+      // An unrelated edit must retain unknown/legacy settings without normalizing them.
+      if (!changed(values, id) || !applicable(values, id)) continue
+      const value = values[id]
+      const text = readText(value)
+      let valid =
+        type === types.Boolean
+          ? typeof value === "boolean"
+          : type === types.MultiSelect
+            ? Array.isArray(value) &&
+              value.every((item) => typeof item === "string" && item.trim())
+            : typeof value === "string"
+      if (id === fields.ModelMapping || id === fields.ModelHeaders)
+        valid &&= isJsonObject(text, true)
+      if (id === fields.CustomParameter) valid &&= isJsonObject(text, false)
+      if (id === fields.Proxy) valid &&= isProxyUrl(text)
+      if (id === fields.TestModel) valid &&= text.trim().length <= 50
+      if (!valid) issues.push({ fieldId: id, code: "invalid_value" })
+    }
+    return issues
+  }
+
   return {
     ...base,
     fields: [
@@ -156,33 +184,22 @@ export function withDoneHubAdvancedEditor(
     validate: (values) => {
       const basic = base.validate(values)
       const issues: ResourceFieldIssue[] = basic.valid ? [] : [...basic.issues]
-      for (const [id, , type] of advancedFields) {
-        // An unrelated edit must retain unknown/legacy settings without normalizing them.
-        if (!changed(values, id) || !applicable(values, id)) continue
-        const value = values[id]
-        const text = readText(value)
-        let valid =
-          type === types.Boolean
-            ? typeof value === "boolean"
-            : type === types.MultiSelect
-              ? Array.isArray(value) &&
-                value.every((item) => typeof item === "string" && item.trim())
-              : typeof value === "string"
-        if (id === fields.ModelMapping || id === fields.ModelHeaders)
-          valid &&= isJsonObject(text, true)
-        if (id === fields.CustomParameter) valid &&= isJsonObject(text, false)
-        if (id === fields.Proxy) valid &&= isProxyUrl(text)
-        if (id === fields.TestModel) valid &&= text.trim().length <= 50
-        if (!valid) issues.push({ fieldId: id, code: "invalid_value" })
-      }
+      issues.push(...validateAdvanced(values))
       return issues.length ? { valid: false, issues } : { valid: true }
     },
     buildCommand,
     loadOptions: async (fieldId, values, options) => {
-      if (fieldId === fields.Models && loadModels)
+      if (fieldId === fields.Models && loadModels) {
+        const issues = validateAdvanced(values)
+        if (issues.length)
+          throw new ManagedResourceError({
+            code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+            fieldIssues: issues,
+          })
         return (await loadModels(buildCommand(values), options)).map(
           (value) => ({ value }),
         )
+      }
       return await base.loadOptions!(fieldId, values, options)
     },
   }

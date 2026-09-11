@@ -142,6 +142,74 @@ describe("DoneHub native managed resource", () => {
     )
   })
 
+  it.each([
+    "doneHub.modelHeaders",
+    "doneHub.modelMapping",
+    "doneHub.customParameter",
+  ])(
+    "reports invalid %s as field validation during discovery and recovers after repair",
+    async (fieldId) => {
+      mocks.fetchEditorModels.mockResolvedValue(["recovered-model"])
+      const workspace = await doneHubManagedResourceRegistration.open()
+      const editor = await workspace.openEditEditor(
+        (await workspace.list()).items[0].ref,
+      )
+      await expect(
+        editor.loadOptions!("doneHub.models", {
+          ...editor.initialValues,
+          [fieldId]: "{broken",
+        }),
+      ).rejects.toMatchObject({
+        failure: {
+          code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+          fieldIssues: [{ fieldId, code: "invalid_value" }],
+        },
+      })
+      expect(mocks.fetchEditorModels).not.toHaveBeenCalled()
+      expect(
+        await editor.loadOptions!("doneHub.models", {
+          ...editor.initialValues,
+          [fieldId]: "{}",
+        }),
+      ).toEqual([{ value: "recovered-model" }])
+    },
+  )
+
+  it("discovers create-draft models with a supplied key and rejects missing credentials", async () => {
+    mocks.fetchEditorModels.mockResolvedValue(["draft-model"])
+    const workspace = await doneHubManagedResourceRegistration.open()
+    const editor = await workspace.openCreateEditor()
+    const values = {
+      ...editor.initialValues,
+      "doneHub.name": "Draft",
+      "doneHub.baseUrl": "http://upstream.example",
+      "doneHub.key": { kind: "replace" as const, value: "draft-key" },
+    }
+    expect(await editor.loadOptions!("doneHub.models", values)).toEqual([
+      { value: "draft-model" },
+    ])
+    expect(mocks.fetchEditorModels).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ key: "draft-key" }),
+      undefined,
+    )
+    mocks.fetchEditorModels.mockClear()
+    await expect(
+      editor.loadOptions!("doneHub.models", {
+        ...values,
+        "doneHub.key": { kind: "unchanged" },
+      }),
+    ).rejects.toMatchObject({
+      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
+    })
+    expect(mocks.fetchEditorModels).not.toHaveBeenCalled()
+    await expect(
+      editor.loadOptions!("unsupported", values),
+    ).rejects.toMatchObject({
+      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
+    })
+  })
+
   it("uses edited proxy and headers for model discovery without saving or exposing the credential", async () => {
     mocks.fetchEditorModels.mockResolvedValue(["discovered-model"])
     const workspace = await doneHubManagedResourceRegistration.open()
@@ -294,6 +362,7 @@ describe("DoneHub native managed resource", () => {
     ["doneHub.customParameter", "[1,2]"],
     ["doneHub.customParameter", "{broken"],
     ["doneHub.proxy", "ftp://proxy.example"],
+    ["doneHub.proxy", "not a URL"],
   ])(
     "rejects invalid advanced input in %s before any mutation",
     async (fieldId, value) => {

@@ -32,7 +32,9 @@ export function ResourceEditorSection({
   return (
     <Collapsible
       open={open}
-      onOpenChange={setExpanded}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen || !hasErrors) setExpanded(nextOpen)
+      }}
       className="border-border min-w-0 rounded-lg border"
     >
       <CollapsibleTrigger
