@@ -132,16 +132,6 @@ describe("managedSite", () => {
       }),
     ).toEqual([
       {
-        siteType: SITE_TYPES.DONE_HUB,
-        labelKey: "settings:managedSite.doneHub",
-        messagesKey: "donehub",
-        config: {
-          baseUrl: "https://donehub.example.com",
-          adminToken: "donehub-token",
-          userId: "7",
-        },
-      },
-      {
         siteType: SITE_TYPES.OCTOPUS,
         labelKey: "settings:managedSite.octopus",
         messagesKey: "octopus",
@@ -149,6 +139,16 @@ describe("managedSite", () => {
           baseUrl: "https://octopus.example.com",
           username: "admin",
           password: "secret",
+        },
+      },
+      {
+        siteType: SITE_TYPES.DONE_HUB,
+        labelKey: "settings:managedSite.doneHub",
+        messagesKey: "donehub",
+        config: {
+          baseUrl: "https://donehub.example.com",
+          adminToken: "donehub-token",
+          userId: "7",
         },
       },
     ])

@@ -143,9 +143,9 @@ describe("managed-site token batch import target", () => {
   it("covers every managed-site runtime config shape with one captured snapshot", async () => {
     const targets = await Promise.all(runtimeConfigs.map(getTarget))
 
-    expect(runtimeConfigs.map(({ siteType }) => siteType)).toEqual(
-      MANAGED_SITE_TYPES,
-    )
+    const coveredSiteTypes = runtimeConfigs.map(({ siteType }) => siteType)
+    expect(coveredSiteTypes).toHaveLength(MANAGED_SITE_TYPES.length)
+    expect(new Set(coveredSiteTypes)).toEqual(new Set(MANAGED_SITE_TYPES))
     targets.forEach((target, index) => {
       const runtimeConfig = runtimeConfigs[index]!
       expect(target.managedSite.siteType).toBe(runtimeConfig.siteType)

@@ -108,9 +108,9 @@ describe("managedSite utils", () => {
 
     expect(options.map((item) => item.siteType)).toEqual([
       SITE_TYPES.NEW_API,
-      SITE_TYPES.OCTOPUS,
       SITE_TYPES.AXON_HUB,
       SITE_TYPES.CLAUDE_CODE_HUB,
+      SITE_TYPES.OCTOPUS,
     ])
   })
 
