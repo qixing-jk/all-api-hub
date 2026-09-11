@@ -318,6 +318,36 @@ describe("DedupeAccountsDialog", () => {
     })
   })
 
+  it("updates the deletion recommendation when the keep strategy changes", async () => {
+    const user = userEvent.setup()
+    const originalDisabled = accounts[0].disabled
+    accounts[0].disabled = true
+    try {
+      render(<DedupeAccountsDialog isOpen onClose={onCloseMock} />)
+      await user.click(await screen.findByRole("combobox"))
+      await user.click(
+        screen.getByRole("option", {
+          name: "ui:dialog.dedupeAccounts.strategy.keepEnabled",
+        }),
+      )
+      await user.click(
+        screen.getByRole("button", {
+          name: "ui:dialog.dedupeAccounts.previewDelete",
+        }),
+      )
+      await user.click(
+        screen.getByRole("button", {
+          name: "ui:dialog.dedupeAccounts.confirm.confirmDelete",
+        }),
+      )
+      await waitFor(() =>
+        expect(deleteAccountsMock).toHaveBeenCalledWith(["acc-keep"]),
+      )
+    } finally {
+      accounts[0].disabled = originalDisabled
+    }
+  })
+
   it("completes duplicate cleanup analytics after confirmed deletion succeeds", async () => {
     const user = userEvent.setup()
 
