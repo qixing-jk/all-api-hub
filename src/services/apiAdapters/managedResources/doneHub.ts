@@ -28,6 +28,7 @@ import { doneHubManagedSiteCapabilities } from "~/services/apiAdapters/managedSi
 import { toManagedSiteApiServiceRequest } from "~/services/apiAdapters/managedSites/request"
 import {
   fetchChannelRaw,
+  fetchDoneHubProviderModels,
   normalizeDoneHubChannel,
 } from "~/services/apiService/doneHub"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
@@ -42,14 +43,18 @@ import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/ch
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type {
   DoneHubChannel,
+  DoneHubChannelCommand,
   DoneHubUpdateChannelPayload,
 } from "~/types/doneHub"
 import { type DoneHubChannelRaw } from "~/types/doneHub"
 import type { DoneHubConfig } from "~/types/doneHubConfig"
 import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"
-import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
 import { normalizeList } from "~/utils/core/string"
 
+import {
+  buildDoneHubAdvancedPayload,
+  withDoneHubAdvancedEditor,
+} from "./doneHubEditor"
 import {
   doneHubChannelOperations,
   doneHubManagedResourceModels,
@@ -78,12 +83,12 @@ type DoneHubNativeResourceOperations = {
     options?: ResourceOperationOptions,
   ): Promise<string>
   create(
-    draft: NewApiFamilyChannelCommand,
+    draft: DoneHubChannelCommand,
     options?: ResourceOperationOptions,
   ): Promise<ManagedSiteMutationResult<DoneHubNativeDetail>>
   update(
     detail: DoneHubNativeDetail,
-    command: NewApiFamilyChannelCommand,
+    command: DoneHubChannelCommand,
     options?: ResourceOperationOptions,
   ): Promise<ManagedSiteMutationResult<DoneHubNativeDetail>>
   delete(
@@ -101,6 +106,11 @@ type DoneHubNativeResourceOperations = {
   loadEditorGroups(
     options?: ResourceOperationOptions,
   ): Promise<readonly string[]>
+  fetchEditorModels(
+    draft: DoneHubChannelCommand,
+    locator?: number,
+    options?: ResourceOperationOptions,
+  ): Promise<string[]>
 }
 
 const channels = doneHubChannelOperations
@@ -252,7 +262,7 @@ const loadChannelSecret = async (
 
 const createChannel = async (
   nativeConfig: DoneHubNativeConfig,
-  draft: NewApiFamilyChannelCommand,
+  draft: DoneHubChannelCommand,
   options?: ResourceOperationOptions,
 ): Promise<ManagedSiteMutationResult<DoneHubNativeDetail>> =>
   await attributeCreatedNativeResource({
@@ -264,7 +274,10 @@ const createChannel = async (
     create: async () =>
       await channels.create(
         nativeConfig.config,
-        buildChannelPayload(draft),
+        {
+          ...buildChannelPayload(draft),
+          ...buildDoneHubAdvancedPayload(draft),
+        },
         options,
       ),
     identity: (item) => item.id,
@@ -276,7 +289,7 @@ const sameList = (left: string[], right: string[]) =>
 
 const planDoneHubUpdate = (
   detail: DoneHubNativeDetail,
-  draft: NewApiFamilyChannelCommand,
+  draft: DoneHubChannelCommand,
 ): DoneHubUpdateChannelPayload & Record<string, unknown> => {
   const current = normalizeDoneHubChannel(detail)
   const models = normalizeList(draft.models)
@@ -286,7 +299,16 @@ const planDoneHubUpdate = (
   const partial: DoneHubUpdateChannelPayload & Record<string, unknown> = {
     id: current.id,
   }
-  let requiresFullUpdate = false
+  const advanced = buildDoneHubAdvancedPayload(draft, detail)
+  Object.assign(partial, advanced)
+  // GORM struct updates omit false/zero values. Clearing advanced fields must
+  // use the existing latest-detail full-write path as well.
+  let requiresFullUpdate = Object.values(advanced).some(
+    (value) =>
+      value === false ||
+      value === "" ||
+      (Array.isArray(value) && value.length === 0),
+  )
 
   const addSelectiveString = (
     field: "name" | "base_url" | "group",
@@ -366,13 +388,14 @@ const planDoneHubUpdate = (
     priority: draft.priority,
     weight: draft.weight,
     status: draft.status,
+    ...advanced,
   }
 }
 
 const updateChannel = async (
   nativeConfig: DoneHubNativeConfig,
   detail: DoneHubNativeDetail,
-  draft: NewApiFamilyChannelCommand,
+  draft: DoneHubChannelCommand,
   options?: ResourceOperationOptions,
 ): Promise<ManagedSiteMutationResult<DoneHubNativeDetail>> => {
   const payload = planDoneHubUpdate(detail, draft)
@@ -424,6 +447,34 @@ export async function openDoneHubNativeResourceOperations(): Promise<DoneHubNati
       return await doneHubManagedResourceModels.fetchDraftModels(
         nativeConfig.config,
         probe,
+        options,
+      )
+    },
+    fetchEditorModels: async (draft, locator, options) => {
+      const detail =
+        locator === undefined
+          ? undefined
+          : await getChannel(nativeConfig, locator, options)
+      const key = draft.key || detail?.key
+      if (!hasUsableManagedSiteChannelKey(key))
+        throw new ManagedResourceError({
+          code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+          fieldIssues: [
+            {
+              fieldId: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Key,
+              code: "required",
+            },
+          ],
+        })
+      return await fetchDoneHubProviderModels(
+        toManagedSiteApiServiceRequest(nativeConfig.config, options),
+        {
+          ...detail,
+          ...buildDoneHubAdvancedPayload(draft, detail),
+          type: Number(draft.type),
+          base_url: draft.base_url,
+          key,
+        },
         options,
       )
     },
@@ -484,16 +535,30 @@ const doneHubNativeDefinition = {
     doneHubResourceFacts.toFacts(normalizeDoneHubChannel(detail), ref, {
       inventory: false,
     }),
-  createEditor: doneHubEditor.createEditor,
-  editEditor: (
+  createEditor: async (
+    operations: DoneHubNativeResourceOperations,
+    options?: ResourceOperationOptions,
+  ) =>
+    withDoneHubAdvancedEditor(
+      await doneHubEditor.createEditor(operations, options),
+      undefined,
+      (draft, options) =>
+        operations.fetchEditorModels(draft, undefined, options),
+    ),
+  editEditor: async (
     operations: DoneHubNativeResourceOperations,
     detail: DoneHubNativeDetail,
     options?: ResourceOperationOptions,
   ) =>
-    doneHubEditor.editEditor(
-      operations,
-      normalizeDoneHubChannel(detail),
-      options,
+    withDoneHubAdvancedEditor(
+      await doneHubEditor.editEditor(
+        operations,
+        normalizeDoneHubChannel(detail),
+        options,
+      ),
+      detail,
+      (draft, options) =>
+        operations.fetchEditorModels(draft, detail.id, options),
     ),
   sanitizeEditDetail: (detail: DoneHubNativeDetail) =>
     doneHubEditor.sanitizeEditDetail(
@@ -501,13 +566,13 @@ const doneHubNativeDefinition = {
     ) as DoneHubNativeDetail,
   create: (
     operations: DoneHubNativeResourceOperations,
-    draft: NewApiFamilyChannelCommand,
+    draft: DoneHubChannelCommand,
     options?: ResourceOperationOptions,
   ) => operations.create(draft, options),
   update: (
     operations: DoneHubNativeResourceOperations,
     detail: DoneHubNativeDetail,
-    draft: NewApiFamilyChannelCommand,
+    draft: DoneHubChannelCommand,
     options?: ResourceOperationOptions,
   ) => operations.update(detail, draft, options),
   delete: (

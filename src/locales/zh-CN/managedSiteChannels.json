@@ -59,6 +59,56 @@
     "deleteTitlePlural": "删除这些渠道？"
   },
   "editor": {
+    "doneHub": {
+      "allowExtraBody": {
+        "help": "将客户端请求中的额外字段（例如 extra_body 参数）转发给上游。",
+        "label": "允许额外字段透传"
+      },
+      "compatibleResponse": {
+        "help": "开启后，DoneHub 将 Responses 请求转换为 Chat Completions。关闭时优先使用上游原生 Responses，不支持时仍可能回退兼容模式。",
+        "label": "兼容 Responses API"
+      },
+      "customParameter": {
+        "help": "填写 JSON 对象，默认只补充缺失字段。overwrite: true 覆盖同名字段；per_model: true 按模型配置；pre_add: true 在请求入口应用。留空清除。",
+        "invalid": "请输入有效的 JSON 对象。",
+        "label": "额外请求参数",
+        "placeholder": "{\n  \"overwrite\": true,\n  \"temperature\": 0.7\n}"
+      },
+      "disabledStream": {
+        "help": "流式请求使用这些模型时会跳过此渠道，不会自动改为非流式。可选择已有模型或输入名称；清空后恢复正常路由。",
+        "label": "禁用流式的模型"
+      },
+      "modelHeaders": {
+        "help": "向上游添加固定请求头，值必须为文本。鉴权头由渠道自身处理；留空或删除所有行可清除配置。",
+        "invalid": "请输入 JSON 对象，键名须唯一且非空，值必须为文本。",
+        "label": "自定义请求头",
+        "placeholder": "{\"X-Project\": \"example\"}"
+      },
+      "modelMapping": {
+        "addModels": "将映射名称加入模型列表",
+        "help": "键为用户请求的模型名，值为上游模型名。请将键加入渠道模型列表；值以 + 开头时，按用户请求的模型计费。",
+        "invalid": "请输入 JSON 对象，键名须唯一且非空，值必须为文本。",
+        "label": "模型映射",
+        "placeholder": "{\"alias\": \"upstream-model\"}"
+      },
+      "proxy": {
+        "help": "由 DoneHub 服务器访问上游时使用，支持 HTTP 和 SOCKS5。%s 会按渠道密钥生成会话标识；留空移除渠道专用代理。",
+        "invalid": "请输入有效的 HTTP 或 SOCKS5 代理地址。",
+        "label": "代理地址",
+        "placeholder": "socks5://127.0.0.1:1080"
+      },
+      "responsesPath": {
+        "help": "仅用于自定义渠道的原生 Responses 请求。留空使用 /v1/responses，填写 disable 禁用该请求；开启兼容模式时不使用此路径。",
+        "label": "Responses 请求路径",
+        "placeholder": "/v1/responses"
+      },
+      "testModel": {
+        "help": "选择渠道中的聊天模型，也可输入模型名。留空时 DoneHub 无法为此渠道测速，最多 50 个字符。",
+        "invalid": "模型名称不能超过 50 个字符。",
+        "label": "测速模型",
+        "placeholder": "gpt-4o-mini"
+      }
+    },
     "fields": {
       "autoSyncModelPattern": {
         "help": "仅同步匹配此规则的模型；使用 (?i) 前缀可忽略大小写，留空则同步全部模型。",
@@ -119,6 +169,17 @@
         "placeholder": "添加标签..."
       }
     },
+    "json": {
+      "addRow": "添加一行",
+      "editJson": "编辑 JSON",
+      "editRows": "逐行编辑",
+      "format": "格式化 JSON",
+      "key": "键",
+      "keyAt": "{{field}}：第 {{index}} 行键",
+      "removeAt": "{{field}}：删除第 {{index}} 行",
+      "value": "值",
+      "valueAt": "{{field}}：第 {{index}} 行值"
+    },
     "options": {
       "channelType": {
         "anthropic": "Anthropic",
@@ -178,9 +239,12 @@
     "sections": {
       "advanced": "高级",
       "basic": "基础信息",
+      "basicConnection": "基础与连接",
+      "compatibility": "接口兼容",
       "connection": "连接与凭据",
       "metadata": "元数据",
       "models": "模型",
+      "requests": "网络与请求",
       "routing": "路由",
       "sync": "模型同步"
     },

@@ -595,10 +595,26 @@ export function NativeResourceEditorBody<TSection extends string>({
   return (
     <div className="space-y-5">
       {[...fieldsBySection.entries()].map(([section, sectionFields]) => {
-        const label = sectionLabelResolvers[section](t)
-        const content = sectionFields.map(renderField)
-        const override = renderSectionOverride?.(section, label, content)
         const sectionPolicy = policy.sections?.[section]
+        const label =
+          sectionPolicy?.resolveLabel?.(t) ?? sectionLabelResolvers[section](t)
+        const content = sectionFields.map((field) =>
+          sectionPolicy?.columns === 2 ? (
+            <div
+              key={field.descriptor.fieldId}
+              className={
+                field.presentation.width === "half"
+                  ? "min-w-0"
+                  : "min-w-0 sm:col-span-2"
+              }
+            >
+              {renderField(field)}
+            </div>
+          ) : (
+            renderField(field)
+          ),
+        )
+        const override = renderSectionOverride?.(section, label, content)
         return override !== undefined ? (
           <Fragment key={section}>{override}</Fragment>
         ) : sectionPolicy ? (
@@ -607,6 +623,7 @@ export function NativeResourceEditorBody<TSection extends string>({
             label={label}
             summary={sectionPolicy.resolveSummary?.(t, values)}
             defaultOpen={sectionPolicy.defaultOpen}
+            columns={sectionPolicy.columns}
             hasErrors={sectionFields.some(({ descriptor }) =>
               issuesByFieldId.has(descriptor.fieldId),
             )}

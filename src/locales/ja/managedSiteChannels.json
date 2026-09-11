@@ -59,6 +59,56 @@
     "deleteTitlePlural": "チャネルを削除しますか？"
   },
   "editor": {
+    "doneHub": {
+      "allowExtraBody": {
+        "help": "extra_body など、クライアントの追加フィールドを上流へ転送します。",
+        "label": "追加フィールドを転送"
+      },
+      "compatibleResponse": {
+        "help": "有効にすると、DoneHub は Responses リクエストを Chat Completions に変換します。無効時は上流のネイティブ Responses を優先しますが、非対応の場合は互換モードに切り替わることがあります。",
+        "label": "Responses API 互換モード"
+      },
+      "customParameter": {
+        "help": "JSON オブジェクトを入力してください。通常は不足フィールドのみ追加します。overwrite: true で上書き、per_model: true でモデル別設定、pre_add: true でリクエスト入口に適用します。空欄で解除します。",
+        "invalid": "有効な JSON オブジェクトを入力してください。",
+        "label": "追加リクエストパラメーター",
+        "placeholder": "{\n  \"overwrite\": true,\n  \"temperature\": 0.7\n}"
+      },
+      "disabledStream": {
+        "help": "これらのモデルのストリーミング要求では、このチャネルをスキップします。非ストリーミングには変換しません。モデルの選択または名前の入力が可能です。一覧を空にすると通常のルーティングに戻ります。",
+        "label": "ストリーミング対象外のモデル"
+      },
+      "modelHeaders": {
+        "help": "上流に固定ヘッダーを追加します。値は文字列にしてください。認証ヘッダーはチャネル側で処理します。空欄または全行削除で解除します。",
+        "invalid": "空でない一意のキーと文字列の値を持つ JSON オブジェクトを入力してください。",
+        "label": "カスタムリクエストヘッダー",
+        "placeholder": "{\"X-Project\": \"example\"}"
+      },
+      "modelMapping": {
+        "addModels": "マッピング名をモデル一覧に追加",
+        "help": "キーは要求されたモデル名、値は上流のモデル名です。キーをチャネルのモデル一覧に追加してください。値の先頭に + を付けると、要求されたモデルで課金します。",
+        "invalid": "空でない一意のキーと文字列の値を持つ JSON オブジェクトを入力してください。",
+        "label": "モデルマッピング",
+        "placeholder": "{\"alias\": \"upstream-model\"}"
+      },
+      "proxy": {
+        "help": "DoneHub サーバーから上流への接続に使用します。HTTP と SOCKS5 に対応し、%s はチャネルキーからセッション ID を生成します。空欄でチャネル専用プロキシを解除します。",
+        "invalid": "有効な HTTP または SOCKS5 プロキシ URL を入力してください。",
+        "label": "プロキシ URL",
+        "placeholder": "socks5://127.0.0.1:1080"
+      },
+      "responsesPath": {
+        "help": "カスタムチャネルのネイティブ Responses 専用です。空欄は /v1/responses、disable はこのリクエストを無効にします。互換モードでは使用しません。",
+        "label": "Responses リクエストパス",
+        "placeholder": "/v1/responses"
+      },
+      "testModel": {
+        "help": "チャネルのチャットモデルを選択するか、名前を入力してください。空欄では DoneHub の速度テストを実行できません。最大 50 文字です。",
+        "invalid": "モデル名は 50 文字以内にしてください。",
+        "label": "速度テスト用モデル",
+        "placeholder": "gpt-4o-mini"
+      }
+    },
     "fields": {
       "autoSyncModelPattern": {
         "help": "このパターンに一致するモデルだけを同期します。大文字と小文字を区別しない場合は先頭に (?i) を付け、すべて同期する場合は空欄にします。",
@@ -119,6 +169,17 @@
         "placeholder": "タグを追加..."
       }
     },
+    "json": {
+      "addRow": "行を追加",
+      "editJson": "JSON を編集",
+      "editRows": "行で編集",
+      "format": "JSON を整形",
+      "key": "キー",
+      "keyAt": "{{field}}：{{index}} 行目のキー",
+      "removeAt": "{{field}}：{{index}} 行目を削除",
+      "value": "値",
+      "valueAt": "{{field}}：{{index}} 行目の値"
+    },
     "options": {
       "channelType": {
         "anthropic": "Anthropic",
@@ -178,9 +239,12 @@
     "sections": {
       "advanced": "詳細設定",
       "basic": "基本情報",
+      "basicConnection": "基本設定と接続",
+      "compatibility": "API 互換性",
       "connection": "接続と認証情報",
       "metadata": "メタデータ",
       "models": "モデル",
+      "requests": "ネットワークとリクエスト",
       "routing": "ルーティング",
       "sync": "モデル同期"
     },

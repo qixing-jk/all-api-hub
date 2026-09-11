@@ -220,6 +220,41 @@ describe("managed resource field policy", () => {
     )
   })
 
+  it("summarizes visible DoneHub settings without exposing their values", () => {
+    const policy = getManagedResourceFieldPolicy(
+      SITE_TYPES.DONE_HUB,
+      MANAGED_RESOURCE_KINDS.Channel,
+      "edit",
+    )!
+    const fields = DONE_HUB_MANAGED_RESOURCE_FIELD_IDS
+    const requests = policy.sections!.requests!.resolveSummary!
+    expect(requests(resolveKey, {})).toBe("ui:resourceEditor.optional")
+    expect(
+      requests(resolveKey, {
+        [fields.Proxy]: "https://private-proxy.example",
+        [fields.ModelHeaders]: '{"Authorization":"private-token"}',
+        [fields.AllowExtraBody]: false,
+        [fields.CustomParameter]: "{}",
+      }),
+    ).toBe(
+      "managedSiteChannels:editor.doneHub.proxy.label · managedSiteChannels:editor.doneHub.modelHeaders.label",
+    )
+    const compatibility = policy.sections!.compatibility!.resolveSummary!
+    expect(
+      compatibility(resolveKey, {
+        [fields.Type]: String(DoneHubChannelType.OpenAI),
+        [fields.ResponsesPath]: "/preserved-hidden-path",
+        [fields.CompatibleResponse]: false,
+      }),
+    ).toBe("ui:resourceEditor.optional")
+    expect(
+      compatibility(resolveKey, {
+        [fields.Type]: String(DoneHubChannelType.Custom),
+        [fields.ResponsesPath]: "/preserved-hidden-path",
+      }),
+    ).toBe("managedSiteChannels:editor.doneHub.responsesPath.label")
+  })
+
   it("resolves DoneHub-owned type labels without canonical id collisions", () => {
     const policy = getManagedResourceFieldPolicy(
       SITE_TYPES.DONE_HUB,

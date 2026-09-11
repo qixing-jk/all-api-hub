@@ -14,6 +14,7 @@ import {
   DONE_HUB_MANAGED_RESOURCE_FIELD_IDS,
   DoneHubChannelStatus,
   DoneHubChannelTypeNames,
+  isDoneHubAdvancedFieldApplicable,
 } from "~/constants/doneHub"
 import {
   ChannelTypeNames,
@@ -48,6 +49,7 @@ import {
 import {
   MANAGED_RESOURCE_FIELD_TYPES,
   MANAGED_RESOURCE_STATUSES,
+  type EditableResourceProjection,
   type ResourceFieldDescriptor,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { CHANNEL_STATUS } from "~/types/newApi"
@@ -85,6 +87,8 @@ export const MANAGED_RESOURCE_SECTIONS = {
   Routing: "routing",
   Metadata: "metadata",
   Advanced: "advanced",
+  Compatibility: "compatibility",
+  Requests: "requests",
 } as const
 
 export type ManagedResourceSection =
@@ -96,6 +100,9 @@ export type ManagedResourceFieldPresentation =
   ResourceFieldPresentation<ManagedResourceSection> & {
     /** Selects an existing channel control without coupling it to a provider field ID. */
     channelFieldRole?: ManagedResourceChannelFieldRole
+    advancedControl?: "string-map" | "json" | "model-input" | "model-list"
+    suggestionSourceFieldId?: string
+    mapKeysTargetFieldId?: string
   }
 export type ManagedResourceTextResolver = ResourceFieldTextResolver
 export type ManagedResourceEditorFieldPolicy = Omit<
@@ -123,6 +130,8 @@ export const MANAGED_RESOURCE_SECTION_ORDER: Readonly<
   routing: 4,
   metadata: 5,
   advanced: 6,
+  compatibility: 7,
+  requests: 10,
 }
 
 /** Defines static frontend-owned presentation without accepting Adapter layout metadata. */
@@ -524,11 +533,173 @@ const veloeraFields = createNewApiFamilyFields(
   createStatusOptionLabelResolvers(VeloeraChannelStatus),
 )
 
-const doneHubFields = createNewApiFamilyFields(
-  DONE_HUB_MANAGED_RESOURCE_FIELD_IDS,
-  doneHubTypeOptionLabelResolvers,
-  createStatusOptionLabelResolvers(DoneHubChannelStatus),
-)
+const doneHubFields: readonly ManagedResourceFieldPresentation[] = [
+  ...createNewApiFamilyFields(
+    DONE_HUB_MANAGED_RESOURCE_FIELD_IDS,
+    doneHubTypeOptionLabelResolvers,
+    createStatusOptionLabelResolvers(DoneHubChannelStatus),
+  ).map((field) =>
+    field.section === MANAGED_RESOURCE_SECTIONS.Connection
+      ? {
+          ...field,
+          section: MANAGED_RESOURCE_SECTIONS.Basic,
+          order: field.order + 30,
+        }
+      : {
+          ...field,
+          ...((
+            [
+              DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type,
+              DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Status,
+              DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Priority,
+              DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Weight,
+            ] as string[]
+          ).includes(field.fieldId) && { width: "half" as const }),
+        },
+  ),
+  {
+    fieldId: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.CompatibleResponse,
+    section: MANAGED_RESOURCE_SECTIONS.Compatibility,
+    order: 10,
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Boolean,
+    resolveLabel: (t) =>
+      t("managedSiteChannels:editor.doneHub.compatibleResponse.label"),
+    resolveHelp: (t) =>
+      t("managedSiteChannels:editor.doneHub.compatibleResponse.help"),
+  },
+  {
+    fieldId: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.ResponsesPath,
+    section: MANAGED_RESOURCE_SECTIONS.Compatibility,
+    order: 20,
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Text,
+    resolveLabel: (t) =>
+      t("managedSiteChannels:editor.doneHub.responsesPath.label"),
+    resolveHelp: (t) =>
+      t("managedSiteChannels:editor.doneHub.responsesPath.help"),
+    resolvePlaceholder: (t) =>
+      t("managedSiteChannels:editor.doneHub.responsesPath.placeholder"),
+    visibleWhen: (values) =>
+      isDoneHubAdvancedFieldApplicable(
+        DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.ResponsesPath,
+        Number(values[DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type]),
+      ),
+  },
+  {
+    fieldId: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.ModelMapping,
+    section: MANAGED_RESOURCE_SECTIONS.Models,
+    order: 30,
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Textarea,
+    resolveLabel: (t) =>
+      t("managedSiteChannels:editor.doneHub.modelMapping.label"),
+    resolveHelp: (t) =>
+      t("managedSiteChannels:editor.doneHub.modelMapping.help"),
+    resolvePlaceholder: (t) =>
+      t("managedSiteChannels:editor.doneHub.modelMapping.placeholder"),
+    visibleWhen: (values) =>
+      isDoneHubAdvancedFieldApplicable(
+        DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.ModelMapping,
+        Number(values[DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type]),
+      ),
+    advancedControl: "string-map",
+    mapKeysTargetFieldId: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Models,
+    issueLabelResolvers: {
+      invalid_value: (t) =>
+        t("managedSiteChannels:editor.doneHub.modelMapping.invalid"),
+    },
+  },
+  {
+    fieldId: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.TestModel,
+    section: MANAGED_RESOURCE_SECTIONS.Models,
+    order: 40,
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Text,
+    resolveLabel: (t) =>
+      t("managedSiteChannels:editor.doneHub.testModel.label"),
+    resolveHelp: (t) => t("managedSiteChannels:editor.doneHub.testModel.help"),
+    resolvePlaceholder: (t) =>
+      t("managedSiteChannels:editor.doneHub.testModel.placeholder"),
+    visibleWhen: (values) =>
+      isDoneHubAdvancedFieldApplicable(
+        DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.TestModel,
+        Number(values[DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type]),
+      ),
+    advancedControl: "model-input",
+    suggestionSourceFieldId: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Models,
+    issueLabelResolvers: {
+      invalid_value: (t) =>
+        t("managedSiteChannels:editor.doneHub.testModel.invalid"),
+    },
+  },
+  {
+    fieldId: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.DisabledStream,
+    section: MANAGED_RESOURCE_SECTIONS.Models,
+    order: 50,
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.MultiSelect,
+    resolveLabel: (t) =>
+      t("managedSiteChannels:editor.doneHub.disabledStream.label"),
+    resolveHelp: (t) =>
+      t("managedSiteChannels:editor.doneHub.disabledStream.help"),
+    advancedControl: "model-list",
+    suggestionSourceFieldId: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Models,
+  },
+  {
+    fieldId: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Proxy,
+    section: MANAGED_RESOURCE_SECTIONS.Requests,
+    order: 60,
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Text,
+    resolveLabel: (t) => t("managedSiteChannels:editor.doneHub.proxy.label"),
+    resolveHelp: (t) => t("managedSiteChannels:editor.doneHub.proxy.help"),
+    resolvePlaceholder: (t) =>
+      t("managedSiteChannels:editor.doneHub.proxy.placeholder"),
+    issueLabelResolvers: {
+      invalid_value: (t) =>
+        t("managedSiteChannels:editor.doneHub.proxy.invalid"),
+    },
+  },
+  {
+    fieldId: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.ModelHeaders,
+    section: MANAGED_RESOURCE_SECTIONS.Requests,
+    order: 70,
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Textarea,
+    resolveLabel: (t) =>
+      t("managedSiteChannels:editor.doneHub.modelHeaders.label"),
+    resolveHelp: (t) =>
+      t("managedSiteChannels:editor.doneHub.modelHeaders.help"),
+    resolvePlaceholder: (t) =>
+      t("managedSiteChannels:editor.doneHub.modelHeaders.placeholder"),
+    advancedControl: "string-map",
+    issueLabelResolvers: {
+      invalid_value: (t) =>
+        t("managedSiteChannels:editor.doneHub.modelHeaders.invalid"),
+    },
+  },
+  {
+    fieldId: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.AllowExtraBody,
+    section: MANAGED_RESOURCE_SECTIONS.Requests,
+    order: 80,
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Boolean,
+    resolveLabel: (t) =>
+      t("managedSiteChannels:editor.doneHub.allowExtraBody.label"),
+    resolveHelp: (t) =>
+      t("managedSiteChannels:editor.doneHub.allowExtraBody.help"),
+  },
+  {
+    fieldId: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.CustomParameter,
+    section: MANAGED_RESOURCE_SECTIONS.Requests,
+    order: 90,
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Textarea,
+    resolveLabel: (t) =>
+      t("managedSiteChannels:editor.doneHub.customParameter.label"),
+    resolveHelp: (t) =>
+      t("managedSiteChannels:editor.doneHub.customParameter.help"),
+    resolvePlaceholder: (t) =>
+      t("managedSiteChannels:editor.doneHub.customParameter.placeholder"),
+    advancedControl: "json",
+    issueLabelResolvers: {
+      invalid_value: (t) =>
+        t("managedSiteChannels:editor.doneHub.customParameter.invalid"),
+    },
+  },
+]
 
 const newApiManagedResourceFieldPolicy = defineManagedResourceFieldPolicy({
   siteType: SITE_TYPES.NEW_API,
@@ -560,16 +731,59 @@ const veloeraManagedResourceFieldPolicy = defineManagedResourceFieldPolicy({
   },
 })
 
+/** Summarizes visible configured controls without exposing connection or request values. */
+const doneHubSectionSummary =
+  (section: ManagedResourceSection) =>
+  (t: TFunction, values: EditableResourceProjection) => {
+    const labels = doneHubFields
+      .filter((field) => {
+        if (field.section !== section || !(field.visibleWhen?.(values) ?? true))
+          return false
+        const value = values[field.fieldId]
+        return Array.isArray(value)
+          ? value.length > 0
+          : typeof value === "string"
+            ? !["", "{}"].includes(value.trim())
+            : value === true
+      })
+      .map((field) => field.resolveLabel(t))
+    return labels.length ? labels.join(" · ") : t("ui:resourceEditor.optional")
+  }
+
+const doneHubSections = {
+  basic: {
+    columns: 2,
+    defaultOpen: true,
+    resolveLabel: (t: TFunction) =>
+      t("managedSiteChannels:editor.sections.basicConnection"),
+  },
+  models: {
+    defaultOpen: true,
+    resolveSummary: doneHubSectionSummary(MANAGED_RESOURCE_SECTIONS.Models),
+  },
+  routing: { columns: 2 },
+  compatibility: {
+    resolveSummary: doneHubSectionSummary(
+      MANAGED_RESOURCE_SECTIONS.Compatibility,
+    ),
+  },
+  requests: {
+    resolveSummary: doneHubSectionSummary(MANAGED_RESOURCE_SECTIONS.Requests),
+  },
+} satisfies ManagedResourceEditorFieldPolicy["sections"]
+
 const doneHubManagedResourceFieldPolicy = defineManagedResourceFieldPolicy({
   siteType: SITE_TYPES.DONE_HUB,
   kind: MANAGED_RESOURCE_KINDS.Channel,
   modes: {
     [MANAGED_RESOURCE_EDITOR_MODES.Create]: {
       fields: doneHubFields,
+      sections: doneHubSections,
       hiddenFields: [],
     },
     [MANAGED_RESOURCE_EDITOR_MODES.Edit]: {
       fields: doneHubFields,
+      sections: doneHubSections,
       hiddenFields: [],
     },
   },

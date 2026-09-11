@@ -59,6 +59,56 @@
     "deleteTitlePlural": "Excluir canais?"
   },
   "editor": {
+    "doneHub": {
+      "allowExtraBody": {
+        "help": "Encaminha ao provedor campos extras das solicitações do cliente, como parâmetros extra_body.",
+        "label": "Encaminhar campos extras"
+      },
+      "compatibleResponse": {
+        "help": "Quando ativado, o DoneHub converte solicitações Responses em Chat Completions. Quando desativado, prioriza Responses nativo, mas ainda pode recorrer à compatibilidade se não houver suporte.",
+        "label": "Compatibilidade com a Responses API"
+      },
+      "customParameter": {
+        "help": "Insira um objeto JSON. Por padrão, apenas campos ausentes são adicionados. overwrite: true substitui campos; per_model: true configura por modelo; pre_add: true aplica na entrada da solicitação. Deixe em branco para limpar.",
+        "invalid": "Insira um objeto JSON válido.",
+        "label": "Parâmetros adicionais",
+        "placeholder": "{\n  \"overwrite\": true,\n  \"temperature\": 0.7\n}"
+      },
+      "disabledStream": {
+        "help": "Solicitações de streaming para esses modelos ignoram o canal; não são convertidas para solicitações sem streaming. Selecione modelos ou digite nomes. Limpe a lista para restaurar o roteamento normal.",
+        "label": "Modelos excluídos do streaming"
+      },
+      "modelHeaders": {
+        "help": "Adicione cabeçalhos fixos com valores de texto. O canal gerencia os cabeçalhos de autenticação. Deixe em branco ou remova todas as linhas para limpar.",
+        "invalid": "Insira um objeto JSON com chaves únicas, não vazias, e valores de texto.",
+        "label": "Cabeçalhos personalizados",
+        "placeholder": "{\"X-Project\": \"example\"}"
+      },
+      "modelMapping": {
+        "addModels": "Adicionar nomes mapeados à lista de modelos",
+        "help": "As chaves são os modelos solicitados e os valores são os nomes no provedor. Adicione as chaves à lista de modelos do canal. O prefixo + no valor usa o modelo solicitado para cobrança.",
+        "invalid": "Insira um objeto JSON com chaves únicas, não vazias, e valores de texto.",
+        "label": "Mapeamento de modelos",
+        "placeholder": "{\"alias\": \"upstream-model\"}"
+      },
+      "proxy": {
+        "help": "Usado pelo servidor DoneHub para acessar o provedor. Aceita HTTP e SOCKS5; %s gera um identificador de sessão a partir da chave do canal. Deixe em branco para remover o proxy do canal.",
+        "invalid": "Insira uma URL de proxy HTTP ou SOCKS5 válida.",
+        "label": "URL do proxy",
+        "placeholder": "socks5://127.0.0.1:1080"
+      },
+      "responsesPath": {
+        "help": "Apenas para solicitações Responses nativas em canais personalizados. Deixe em branco para /v1/responses ou digite disable para bloqueá-las. Não usado no modo de compatibilidade.",
+        "label": "Caminho de solicitações Responses",
+        "placeholder": "/v1/responses"
+      },
+      "testModel": {
+        "help": "Escolha um modelo de chat do canal ou digite um nome. Sem modelo, o DoneHub não consegue testar a velocidade do canal. Máximo de 50 caracteres.",
+        "invalid": "O nome do modelo deve ter no máximo 50 caracteres.",
+        "label": "Modelo de teste",
+        "placeholder": "gpt-4o-mini"
+      }
+    },
     "fields": {
       "autoSyncModelPattern": {
         "help": "Sincronize somente modelos correspondentes. Comece com (?i) para ignorar maiúsculas e minúsculas; deixe em branco para sincronizar todos os modelos.",
@@ -119,6 +169,17 @@
         "placeholder": "Adicionar tags..."
       }
     },
+    "json": {
+      "addRow": "Adicionar linha",
+      "editJson": "Editar JSON",
+      "editRows": "Editar linhas",
+      "format": "Formatar JSON",
+      "key": "Chave",
+      "keyAt": "{{field}}: chave da linha {{index}}",
+      "removeAt": "{{field}}: remover linha {{index}}",
+      "value": "Valor",
+      "valueAt": "{{field}}: valor da linha {{index}}"
+    },
     "options": {
       "channelType": {
         "anthropic": "Anthropic",
@@ -178,9 +239,12 @@
     "sections": {
       "advanced": "Avançado",
       "basic": "Básico",
+      "basicConnection": "Básico e conexão",
+      "compatibility": "Compatibilidade de API",
       "connection": "Conexão",
       "metadata": "Metadados",
       "models": "Modelos",
+      "requests": "Rede e requisições",
       "routing": "Roteamento",
       "sync": "Sincronização de modelos"
     },

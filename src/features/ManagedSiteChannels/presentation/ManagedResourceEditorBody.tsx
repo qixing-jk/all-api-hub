@@ -11,6 +11,7 @@ import type {
   ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 
+import { ManagedResourceAdvancedField } from "./ManagedResourceAdvancedField"
 import {
   canRenderManagedResourceChannelField,
   ManagedResourceChannelField,
@@ -62,6 +63,10 @@ const SECTION_LABEL_RESOLVERS = {
     t("managedSiteChannels:editor.sections.metadata"),
   [MANAGED_RESOURCE_SECTIONS.Advanced]: (t: TFunction) =>
     t("managedSiteChannels:editor.sections.advanced"),
+  [MANAGED_RESOURCE_SECTIONS.Compatibility]: (t: TFunction) =>
+    t("managedSiteChannels:editor.sections.compatibility"),
+  [MANAGED_RESOURCE_SECTIONS.Requests]: (t: TFunction) =>
+    t("managedSiteChannels:editor.sections.requests"),
 } as const satisfies Record<ManagedResourceSection, ManagedResourceTextResolver>
 
 const ISSUE_LABEL_RESOLVERS = {
@@ -142,6 +147,19 @@ export function ManagedResourceEditorBody({
         optionControl,
       }) => {
         const fieldId = descriptor.fieldId
+        const channelPresentation =
+          presentation as ManagedResourceFieldPresentation
+        if (channelPresentation.advancedControl)
+          return (
+            <ManagedResourceAdvancedField
+              t={t}
+              presentation={channelPresentation}
+              values={values}
+              disabled={disabled || Boolean(descriptor.readOnly)}
+              errorMessage={errorMessage}
+              onValueChange={onValueChange}
+            />
+          )
         const channelFieldRole = channelFieldRoles.get(fieldId)
         if (
           !channelFieldRole ||

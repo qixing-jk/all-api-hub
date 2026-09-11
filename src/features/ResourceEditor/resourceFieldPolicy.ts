@@ -17,6 +17,8 @@ type ResourceFieldPresentationBase<TSection extends string = string> = {
   resolveLabel: ResourceFieldTextResolver
   resolveHelp?: ResourceFieldTextResolver
   resolvePlaceholder?: ResourceFieldTextResolver
+  /** Half-width controls share a row in a section with two columns. */
+  width?: "half"
   rows?: number
   /** Structured editing of an existing line-based projection; persistence stays adapter-owned. */
   textEntries?: {
@@ -74,6 +76,8 @@ export type ResourceEditorFieldPolicy<TSection extends string = string> = {
     Record<
       TSection,
       {
+        columns?: 2
+        resolveLabel?: ResourceFieldTextResolver
         defaultOpen?: boolean
         resolveSummary?: (
           t: TFunction,

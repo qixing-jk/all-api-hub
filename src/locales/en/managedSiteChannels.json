@@ -59,6 +59,56 @@
     "deleteTitlePlural": "Delete channels?"
   },
   "editor": {
+    "doneHub": {
+      "allowExtraBody": {
+        "help": "Forward extra fields in client requests, such as extra_body parameters, to the upstream.",
+        "label": "Forward extra body fields"
+      },
+      "compatibleResponse": {
+        "help": "When enabled, DoneHub converts Responses requests to Chat Completions. When disabled, it prefers native Responses but may still fall back if unsupported.",
+        "label": "Responses API compatibility"
+      },
+      "customParameter": {
+        "help": "Enter a JSON object. By default, only missing fields are added. overwrite: true replaces fields; per_model: true configures by model; pre_add: true applies at request entry. Leave blank to clear.",
+        "invalid": "Enter a valid JSON object.",
+        "label": "Extra request parameters",
+        "placeholder": "{\n  \"overwrite\": true,\n  \"temperature\": 0.7\n}"
+      },
+      "disabledStream": {
+        "help": "Streaming requests for these models skip this channel; they are not converted to non-streaming. Select models or enter names. Clear the list to restore normal routing.",
+        "label": "Models excluded from streaming"
+      },
+      "modelHeaders": {
+        "help": "Add fixed upstream headers with text values. Authentication headers are handled by the channel. Leave blank or remove all rows to clear.",
+        "invalid": "Enter a JSON object with unique, non-empty keys and text values.",
+        "label": "Custom request headers",
+        "placeholder": "{\"X-Project\": \"example\"}"
+      },
+      "modelMapping": {
+        "addModels": "Add mapped names to model list",
+        "help": "Keys are requested model names; values are upstream names. Add the keys to the channel model list. Prefix a value with + to bill using the requested model.",
+        "invalid": "Enter a JSON object with unique, non-empty keys and text values.",
+        "label": "Model mapping",
+        "placeholder": "{\"alias\": \"upstream-model\"}"
+      },
+      "proxy": {
+        "help": "Used by the DoneHub server to reach the upstream. Supports HTTP and SOCKS5; %s generates a session identifier from the channel key. Leave blank to remove the channel proxy.",
+        "invalid": "Enter a valid HTTP or SOCKS5 proxy URL.",
+        "label": "Proxy URL",
+        "placeholder": "socks5://127.0.0.1:1080"
+      },
+      "responsesPath": {
+        "help": "For native Responses requests on Custom channels only. Leave blank for /v1/responses or enter disable to block this request. Not used in compatibility mode.",
+        "label": "Responses request path",
+        "placeholder": "/v1/responses"
+      },
+      "testModel": {
+        "help": "Choose a chat model from this channel or enter a name. DoneHub cannot test channel speed when blank. Maximum 50 characters.",
+        "invalid": "Model names must be at most 50 characters.",
+        "label": "Test model",
+        "placeholder": "gpt-4o-mini"
+      }
+    },
     "fields": {
       "autoSyncModelPattern": {
         "help": "Only sync matching models. Prefix with (?i) to ignore case; leave empty to sync all models.",
@@ -119,6 +169,17 @@
         "placeholder": "Add tags..."
       }
     },
+    "json": {
+      "addRow": "Add row",
+      "editJson": "Edit JSON",
+      "editRows": "Edit rows",
+      "format": "Format JSON",
+      "key": "Key",
+      "keyAt": "{{field}}: row {{index}} key",
+      "removeAt": "{{field}}: remove row {{index}}",
+      "value": "Value",
+      "valueAt": "{{field}}: row {{index}} value"
+    },
     "options": {
       "channelType": {
         "anthropic": "Anthropic",
@@ -178,9 +239,12 @@
     "sections": {
       "advanced": "Advanced",
       "basic": "Basic",
+      "basicConnection": "Basic & connection",
+      "compatibility": "API compatibility",
       "connection": "Connection",
       "metadata": "Metadata",
       "models": "Models",
+      "requests": "Network & requests",
       "routing": "Routing",
       "sync": "Model sync"
     },

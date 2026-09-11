@@ -59,6 +59,56 @@
     "deleteTitlePlural": "¿Eliminar canales?"
   },
   "editor": {
+    "doneHub": {
+      "allowExtraBody": {
+        "help": "Reenvía al proveedor los campos adicionales del cliente, como los parámetros extra_body.",
+        "label": "Reenviar campos adicionales"
+      },
+      "compatibleResponse": {
+        "help": "Al activarlo, DoneHub convierte solicitudes Responses a Chat Completions. Al desactivarlo, prioriza Responses nativo, pero puede usar compatibilidad si no está disponible.",
+        "label": "Compatibilidad con Responses API"
+      },
+      "customParameter": {
+        "help": "Ingresa un objeto JSON. Por defecto solo se agregan campos faltantes. overwrite: true reemplaza campos; per_model: true configura por modelo; pre_add: true aplica al inicio de la solicitud. Deja vacío para borrar.",
+        "invalid": "Ingresa un objeto JSON válido.",
+        "label": "Parámetros adicionales",
+        "placeholder": "{\n  \"overwrite\": true,\n  \"temperature\": 0.7\n}"
+      },
+      "disabledStream": {
+        "help": "Las solicitudes de streaming de estos modelos omiten este canal; no se convierten a solicitudes sin streaming. Selecciona modelos o escribe nombres. Vacía la lista para restaurar el enrutamiento normal.",
+        "label": "Modelos excluidos del streaming"
+      },
+      "modelHeaders": {
+        "help": "Agrega encabezados fijos con valores de texto. El canal gestiona los encabezados de autenticación. Deja vacío o elimina todas las filas para borrar la configuración.",
+        "invalid": "Ingresa un objeto JSON con claves únicas, no vacías, y valores de texto.",
+        "label": "Encabezados personalizados",
+        "placeholder": "{\"X-Project\": \"example\"}"
+      },
+      "modelMapping": {
+        "addModels": "Agregar nombres mapeados a la lista de modelos",
+        "help": "Las claves son los modelos solicitados y los valores, los modelos del proveedor. Agrega las claves a la lista de modelos del canal. El prefijo + en el valor permite cobrar según el modelo solicitado.",
+        "invalid": "Ingresa un objeto JSON con claves únicas, no vacías, y valores de texto.",
+        "label": "Mapeo de modelos",
+        "placeholder": "{\"alias\": \"upstream-model\"}"
+      },
+      "proxy": {
+        "help": "Lo usa el servidor DoneHub para conectarse al proveedor. Admite HTTP y SOCKS5; %s genera un identificador de sesión a partir de la clave del canal. Déjalo vacío para quitar el proxy del canal.",
+        "invalid": "Ingresa una URL de proxy HTTP o SOCKS5 válida.",
+        "label": "URL del proxy",
+        "placeholder": "socks5://127.0.0.1:1080"
+      },
+      "responsesPath": {
+        "help": "Solo para solicitudes Responses nativas en canales personalizados. Deja vacío para /v1/responses o escribe disable para bloquearlas. No se usa en modo de compatibilidad.",
+        "label": "Ruta de solicitudes Responses",
+        "placeholder": "/v1/responses"
+      },
+      "testModel": {
+        "help": "Elige un modelo de chat del canal o escribe un nombre. Sin modelo, DoneHub no puede medir la velocidad del canal. Máximo 50 caracteres.",
+        "invalid": "El nombre del modelo no debe superar los 50 caracteres.",
+        "label": "Modelo de prueba",
+        "placeholder": "gpt-4o-mini"
+      }
+    },
     "fields": {
       "autoSyncModelPattern": {
         "help": "Sincroniza solo los modelos que coincidan. Añade el prefijo (?i) para ignorar mayúsculas y minúsculas; déjalo vacío para sincronizar todos los modelos.",
@@ -119,6 +169,17 @@
         "placeholder": "Añadir etiquetas..."
       }
     },
+    "json": {
+      "addRow": "Agregar fila",
+      "editJson": "Editar JSON",
+      "editRows": "Editar filas",
+      "format": "Formatear JSON",
+      "key": "Clave",
+      "keyAt": "{{field}}: clave de fila {{index}}",
+      "removeAt": "{{field}}: eliminar fila {{index}}",
+      "value": "Valor",
+      "valueAt": "{{field}}: valor de fila {{index}}"
+    },
     "options": {
       "channelType": {
         "anthropic": "Anthropic",
@@ -178,9 +239,12 @@
     "sections": {
       "advanced": "Opciones avanzadas",
       "basic": "Información básica",
+      "basicConnection": "Datos básicos y conexión",
+      "compatibility": "Compatibilidad de API",
       "connection": "Conexión y credenciales",
       "metadata": "Metadatos",
       "models": "Modelos",
+      "requests": "Red y solicitudes",
       "routing": "Enrutamiento",
       "sync": "Sincronización de modelos"
     },

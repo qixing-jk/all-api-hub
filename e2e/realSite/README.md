@@ -135,6 +135,18 @@ AAH_E2E_DONE_HUB_ADMIN_TOKEN=replace-with-admin-access-token
 AAH_E2E_DONE_HUB_ADMIN_USER_ID=1
 ```
 
+With the DoneHub managed-site credentials above configured, run the advanced
+channel editor check directly (it is not part of the managed-site matrix):
+
+```bash
+pnpm exec playwright test e2e/realSite/doneHubAdvancedEditor.spec.ts --project=chromium --workers=1
+```
+
+The check creates a disabled temporary channel, edits advanced settings through
+the UI, rereads the server values, then clears the settings and verifies unrelated
+fields survived. Cleanup deletes the temporary channel. Its upstream URL and key
+are nonfunctional fixtures, so this checks persistence, not live model routing.
+
 ## Veloera
 
 ```env

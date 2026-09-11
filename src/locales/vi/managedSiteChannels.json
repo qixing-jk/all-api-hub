@@ -59,6 +59,56 @@
     "deleteTitlePlural": "Xóa các kênh này?"
   },
   "editor": {
+    "doneHub": {
+      "allowExtraBody": {
+        "help": "Chuyển tiếp trường bổ sung trong yêu cầu của máy khách, như tham số extra_body, tới nhà cung cấp.",
+        "label": "Chuyển tiếp trường bổ sung"
+      },
+      "compatibleResponse": {
+        "help": "Khi bật, DoneHub chuyển yêu cầu Responses thành Chat Completions. Khi tắt, ưu tiên Responses gốc nhưng vẫn có thể dùng chế độ tương thích nếu không được hỗ trợ.",
+        "label": "Tương thích Responses API"
+      },
+      "customParameter": {
+        "help": "Nhập đối tượng JSON. Mặc định chỉ bổ sung trường còn thiếu. overwrite: true ghi đè trường; per_model: true cấu hình theo mô hình; pre_add: true áp dụng khi nhận yêu cầu. Để trống để xóa.",
+        "invalid": "Nhập đối tượng JSON hợp lệ.",
+        "label": "Tham số yêu cầu bổ sung",
+        "placeholder": "{\n  \"overwrite\": true,\n  \"temperature\": 0.7\n}"
+      },
+      "disabledStream": {
+        "help": "Yêu cầu streaming cho các mô hình này sẽ bỏ qua kênh, không chuyển thành yêu cầu không streaming. Chọn mô hình hoặc nhập tên. Xóa danh sách để khôi phục định tuyến bình thường.",
+        "label": "Mô hình không dùng streaming"
+      },
+      "modelHeaders": {
+        "help": "Thêm header cố định với giá trị văn bản. Kênh tự xử lý header xác thực. Để trống hoặc xóa mọi dòng để xóa cấu hình.",
+        "invalid": "Nhập đối tượng JSON có khóa duy nhất, không rỗng và giá trị văn bản.",
+        "label": "Header yêu cầu tùy chỉnh",
+        "placeholder": "{\"X-Project\": \"example\"}"
+      },
+      "modelMapping": {
+        "addModels": "Thêm tên ánh xạ vào danh sách mô hình",
+        "help": "Khóa là tên mô hình được yêu cầu, giá trị là tên mô hình phía nhà cung cấp. Thêm các khóa vào danh sách mô hình của kênh. Thêm + trước giá trị để tính phí theo mô hình được yêu cầu.",
+        "invalid": "Nhập đối tượng JSON có khóa duy nhất, không rỗng và giá trị văn bản.",
+        "label": "Ánh xạ mô hình",
+        "placeholder": "{\"alias\": \"upstream-model\"}"
+      },
+      "proxy": {
+        "help": "Máy chủ DoneHub dùng proxy này để kết nối nhà cung cấp. Hỗ trợ HTTP và SOCKS5; %s tạo mã phiên từ khóa kênh. Để trống để bỏ proxy riêng của kênh.",
+        "invalid": "Nhập URL proxy HTTP hoặc SOCKS5 hợp lệ.",
+        "label": "URL proxy",
+        "placeholder": "socks5://127.0.0.1:1080"
+      },
+      "responsesPath": {
+        "help": "Chỉ dành cho yêu cầu Responses gốc trên kênh tùy chỉnh. Để trống để dùng /v1/responses hoặc nhập disable để chặn yêu cầu này. Không dùng trong chế độ tương thích.",
+        "label": "Đường dẫn yêu cầu Responses",
+        "placeholder": "/v1/responses"
+      },
+      "testModel": {
+        "help": "Chọn mô hình chat trong kênh hoặc nhập tên. DoneHub không thể đo tốc độ kênh khi để trống. Tối đa 50 ký tự.",
+        "invalid": "Tên mô hình không được quá 50 ký tự.",
+        "label": "Mô hình kiểm tra",
+        "placeholder": "gpt-4o-mini"
+      }
+    },
     "fields": {
       "autoSyncModelPattern": {
         "help": "Chỉ đồng bộ các mô hình khớp với mẫu này. Thêm tiền tố (?i) để không phân biệt chữ hoa chữ thường; để trống để đồng bộ tất cả mô hình.",
@@ -119,6 +169,17 @@
         "placeholder": "Thêm thẻ..."
       }
     },
+    "json": {
+      "addRow": "Thêm dòng",
+      "editJson": "Sửa JSON",
+      "editRows": "Sửa từng dòng",
+      "format": "Định dạng JSON",
+      "key": "Khóa",
+      "keyAt": "{{field}}: khóa dòng {{index}}",
+      "removeAt": "{{field}}: xóa dòng {{index}}",
+      "value": "Giá trị",
+      "valueAt": "{{field}}: giá trị dòng {{index}}"
+    },
     "options": {
       "channelType": {
         "anthropic": "Anthropic",
@@ -178,9 +239,12 @@
     "sections": {
       "advanced": "Nâng cao",
       "basic": "Thông tin cơ bản",
+      "basicConnection": "Cơ bản và kết nối",
+      "compatibility": "Tương thích API",
       "connection": "Kết nối và thông tin xác thực",
       "metadata": "Siêu dữ liệu",
       "models": "Mô hình",
+      "requests": "Mạng và yêu cầu",
       "routing": "Định tuyến",
       "sync": "Đồng bộ mô hình"
     },

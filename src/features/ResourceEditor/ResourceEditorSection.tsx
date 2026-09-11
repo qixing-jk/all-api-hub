@@ -12,12 +12,14 @@ export function ResourceEditorSection({
   label,
   summary,
   defaultOpen = false,
+  columns,
   hasErrors,
   children,
 }: {
   label: string
   summary?: string
   defaultOpen?: boolean
+  columns?: 2
   hasErrors: boolean
   children: ReactNode
 }) {
@@ -53,7 +55,13 @@ export function ResourceEditorSection({
         )}
       </CollapsibleTrigger>
       <CollapsibleContent forceMount hidden={!open}>
-        <fieldset className="min-w-0 space-y-4 px-3 pb-3">
+        <fieldset
+          className={
+            columns === 2
+              ? "grid min-w-0 grid-cols-1 gap-4 px-3 pb-3 sm:grid-cols-2"
+              : "min-w-0 space-y-4 px-3 pb-3"
+          }
+        >
           <legend className="sr-only">{label}</legend>
           {children}
         </fieldset>
