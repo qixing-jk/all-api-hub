@@ -122,7 +122,7 @@ const renderEditor = (
   })
 
 describe("DoneHub advanced editor interactions", () => {
-  it("repairs mappings, adds their names once, selects and retains a manual test model, and preserves collapsed drafts", async () => {
+  it("repairs mappings, adds their names once, and offers those names as test models", async () => {
     const user = userEvent.setup()
     renderEditor({ [fields.ModelMapping]: '{"alias":"upstream"}' })
     const mapping = screen.getByRole("group", {
@@ -155,6 +155,21 @@ describe("DoneHub advanced editor interactions", () => {
     await user.keyboard("{ArrowDown}")
     await user.click(await screen.findByRole("option", { name: "second" }))
     expect(testModel).toHaveValue("second")
+    const models = screen.getByRole("button", { name: "Models" })
+    await user.click(models)
+    await user.click(models)
+    await user.click(within(mapping).getByRole("button", { name: "Edit JSON" }))
+    expect(
+      within(mapping).getByRole("textbox", {
+        name: "Model mapping",
+      }),
+    ).toHaveValue('{"alias":"upstream","second":"model-b"}')
+  })
+
+  it("retains custom model drafts after collapsing and validates long test model names", async () => {
+    const user = userEvent.setup()
+    renderEditor()
+    const testModel = screen.getByRole("combobox", { name: "Test model" })
     await user.clear(testModel)
     await user.type(testModel, "manual-model")
     await user.tab()
@@ -172,14 +187,8 @@ describe("DoneHub advanced editor interactions", () => {
     expect(testModel).not.toBeVisible()
     await user.click(models)
     expect(testModel).toHaveValue("manual-model")
-    await user.click(within(mapping).getByRole("button", { name: "Edit JSON" }))
-    expect(
-      within(mapping).getByRole("textbox", {
-        name: "Model mapping",
-      }),
-    ).toHaveValue('{"alias":"upstream","second":"model-b"}')
     await user.clear(testModel)
-    await user.type(testModel, "x".repeat(51))
+    await user.paste("x".repeat(51))
     await user.tab()
     expect(screen.getByRole("alert")).toHaveTextContent(
       enManaged.editor.doneHub.testModel.invalid,
