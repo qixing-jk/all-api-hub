@@ -571,6 +571,15 @@ test("auto-checkin UI-open pretrigger runs once through the real MV3 scheduler b
   expect(checkinRequests).toBe(1)
 
   const statusAfterFirstOpen = await readAutoCheckinStatus(serviceWorker)
+  await expect(
+    page.getByText("Auto check-in finished", { exact: true }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByText(
+      "Auto check-in: 1 checked in · 0 already checked in · 0 skipped.",
+      { exact: true },
+    ),
+  ).toBeVisible()
   expect(statusAfterFirstOpen?.lastRunAt).toBeTruthy()
 
   const secondPage = await context.newPage()

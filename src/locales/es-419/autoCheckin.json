@@ -268,8 +268,10 @@
   },
   "uiOpenPretrigger": {
     "close": "Cerrar",
+    "completedToast": "Registro automático: {{success}} registrados · {{alreadyChecked}} ya registrados · {{skipped}} omitidos.",
     "dialogDescription": "La ejecución diaria programada de hoy se activó antes al abrir la UI.",
     "dialogTitle": "Check-in automático terminado",
+    "uncertainToast": "Registro automático: {{success}} registrados · {{alreadyChecked}} ya registrados · {{uncertain}} pendientes de confirmación · {{skipped}} omitidos. Consulta los detalles en la página de registro automático.",
     "viewDetails": "Ver detalles"
   },
   "workspace": {

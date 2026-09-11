@@ -265,8 +265,10 @@
   },
   "uiOpenPretrigger": {
     "close": "Close",
+    "completedToast": "Auto check-in: {{success}} checked in · {{alreadyChecked}} already checked in · {{skipped}} skipped.",
     "dialogDescription": "Today's scheduled daily run was triggered early when the UI opened.",
     "dialogTitle": "Auto check-in finished",
+    "uncertainToast": "Auto check-in: {{success}} checked in · {{alreadyChecked}} already checked in · {{uncertain}} pending confirmation · {{skipped}} skipped. See the Auto Check-in page for details.",
     "viewDetails": "View details"
   },
   "workspace": {

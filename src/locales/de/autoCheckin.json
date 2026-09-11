@@ -265,8 +265,10 @@
   },
   "uiOpenPretrigger": {
     "close": "Schließen",
+    "completedToast": "Automatischer Check-in: {{success}} eingecheckt · {{alreadyChecked}} bereits eingecheckt · {{skipped}} übersprungen.",
     "dialogDescription": "Der heute geplante tägliche Lauf wurde früh ausgelöst, als die Benutzeroberfläche geöffnet wurde.",
     "dialogTitle": "Automatischer Check-in abgeschlossen",
+    "uncertainToast": "Automatischer Check-in: {{success}} eingecheckt · {{alreadyChecked}} bereits eingecheckt · {{uncertain}} ausstehende Bestätigung · {{skipped}} übersprungen. Details finden Sie auf der Seite für den automatischen Check-in.",
     "viewDetails": "Details anzeigen"
   },
   "workspace": {

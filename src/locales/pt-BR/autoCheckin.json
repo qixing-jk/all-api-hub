@@ -268,8 +268,10 @@
   },
   "uiOpenPretrigger": {
     "close": "Fechar",
+    "completedToast": "Check-in automático: {{success}} realizados · {{alreadyChecked}} já realizados · {{skipped}} ignorados.",
     "dialogDescription": "A execução diária programada de hoje foi acionada antecipadamente quando a UI foi aberta.",
     "dialogTitle": "Check-in automático concluído",
+    "uncertainToast": "Check-in automático: {{success}} realizados · {{alreadyChecked}} já realizados · {{uncertain}} aguardando confirmação · {{skipped}} ignorados. Veja os detalhes na página de check-in automático.",
     "viewDetails": "Ver detalhes"
   },
   "workspace": {

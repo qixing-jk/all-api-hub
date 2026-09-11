@@ -262,8 +262,10 @@
   },
   "uiOpenPretrigger": {
     "close": "閉じる",
+    "completedToast": "自動チェックイン完了：今回 {{success}} · チェックイン済み {{alreadyChecked}} · 未実行 {{skipped}}。",
     "dialogDescription": "本日予定されていたデイリー実行が、UI を開いた際に前倒しで起動されました。",
     "dialogTitle": "自動チェックインが完了しました",
+    "uncertainToast": "自動チェックイン完了：今回 {{success}} · チェックイン済み {{alreadyChecked}} · 確認待ち {{uncertain}} · 未実行 {{skipped}}。詳細は自動チェックインページで確認できます。",
     "viewDetails": "詳細を見る"
   },
   "workspace": {
