@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
+import type { ChannelDialogOpeningState } from "~/components/dialogs/ChannelDialog/components/ChannelDialogOpening"
 import {
   MANAGED_CHANNELS_DELETE_RESULT_STATUSES,
   type ManagedChannelsDeleteResultStatus,
@@ -124,6 +125,11 @@ export function useManagedResourceMutationController({
   onMutationSuccess?: (mode: ManagedResourceEditorMode) => void
   analytics?: ManagedResourceControllerAnalytics
 }) {
+  const [opening, setOpening] = useState<ChannelDialogOpeningState>({
+    attemptId: 0,
+    status: "idle",
+  })
+  const retryOpeningRef = useRef<(() => void) | undefined>(undefined)
   const [detail, setDetail] = useState<ManagedResourceRowData | null>(null)
   const [detailFailure, setDetailFailure] = useState<ResourceFailure | null>(
     null,
@@ -202,6 +208,8 @@ export function useManagedResourceMutationController({
   }, [])
   useEffect(() => {
     invalidate()
+    setOpening({ attemptId: generation.current, status: "idle" })
+    retryOpeningRef.current = undefined
     setDetail(null)
     setEditor(null)
     setEditorMode(null)
@@ -213,6 +221,7 @@ export function useManagedResourceMutationController({
 
   const runSession = useCallback(
     async <T>(
+      mode: "create" | "edit" | "view",
       loadingPhase: "detail-loading" | "editor-loading",
       openPhase: "detail-open" | "editor-open",
       operation: (signal: AbortSignal) => Promise<T>,
@@ -224,12 +233,20 @@ export function useManagedResourceMutationController({
       const current = ++generation.current
       const controller = new AbortController()
       activeAbort.current = controller
+      setOpening({
+        attemptId: current,
+        status: "loading",
+        mode,
+        reveal: "delayed",
+      })
       try {
         const value = await operation(controller.signal)
         if (current === generation.current && isStillCurrent()) {
           accept(value)
+          setOpening({ attemptId: current, status: "idle" })
           sessionPhase.current = openPhase
         } else if (current === generation.current) {
+          setOpening({ attemptId: current, status: "idle" })
           sessionPhase.current = "idle"
         }
       } catch (error) {
@@ -237,8 +254,18 @@ export function useManagedResourceMutationController({
           current === generation.current &&
           toSafeManagedResourceFailure(error).code !==
             MANAGED_RESOURCE_FAILURE_CODES.Aborted
-        )
+        ) {
+          setOpening({
+            attemptId: current,
+            status: "failure",
+            mode,
+            failure: toSafeManagedResourceFailure(error),
+          })
+          sessionPhase.current = openPhase
           throw error
+        } else if (current === generation.current) {
+          setOpening({ attemptId: current, status: "idle" })
+        }
       } finally {
         if (
           current === generation.current &&
@@ -306,7 +333,11 @@ export function useManagedResourceMutationController({
         setDetailFailure(toSafeManagedResourceFailure(error))
         return Promise.resolve()
       }
+      retryOpeningRef.current = () => {
+        void openDetail(rowKey)
+      }
       return runSession(
+        "view",
         "detail-loading",
         "detail-open",
         (signal) => workspace.get(ref, { signal }),
@@ -347,7 +378,11 @@ export function useManagedResourceMutationController({
       PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
     )
     activeEditorAnalytics.current = analyticsCompletion
+    retryOpeningRef.current = () => {
+      void openCreate()
+    }
     return runSession(
+      "create",
       "editor-loading",
       "editor-open",
       (signal) => workspace.openCreateEditor({ signal }),
@@ -394,7 +429,11 @@ export function useManagedResourceMutationController({
         PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
       )
       activeEditorAnalytics.current = analyticsCompletion
+      retryOpeningRef.current = () => {
+        void openEdit(rowKey)
+      }
       return runSession(
+        "edit",
         "editor-loading",
         "editor-open",
         (signal) => workspace.openEditEditor(ref, { signal }),
@@ -1004,6 +1043,7 @@ export function useManagedResourceMutationController({
       sessionPhase.current !== "detail-open"
     )
       return
+    setOpening({ attemptId: generation.current + 1, status: "idle" })
     generation.current += 1
     activeAbort.current?.abort()
     activeAbort.current = undefined
@@ -1018,6 +1058,7 @@ export function useManagedResourceMutationController({
       sessionPhase.current !== "editor-open"
     )
       return
+    setOpening({ attemptId: generation.current + 1, status: "idle" })
     generation.current += 1
     activeAbort.current?.abort()
     activeAbort.current = undefined
@@ -1056,6 +1097,13 @@ export function useManagedResourceMutationController({
     return recovery
   }, [deleteState.requiresFreshRead, refresh])
 
+  const retryOpening = useCallback(() => {
+    if (opening.status !== "failure") return
+    if (opening.mode === "view") closeDetail()
+    else closeEditor()
+    retryOpeningRef.current?.()
+  }, [opening, closeDetail, closeEditor])
+
   const editorFailure =
     editorFeedback && "failure" in editorFeedback
       ? editorFeedback.failure
@@ -1063,6 +1111,8 @@ export function useManagedResourceMutationController({
 
   return {
     capabilities,
+    opening,
+    retryOpening,
     detail,
     detailFailure,
     editor,

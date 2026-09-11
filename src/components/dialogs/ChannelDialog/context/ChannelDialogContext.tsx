@@ -7,7 +7,9 @@ import React, {
   useState,
 } from "react"
 
+import type { ChannelDialogOpeningState } from "~/components/dialogs/ChannelDialog/components/ChannelDialogOpening"
 import type { ManagedSiteType } from "~/constants/siteType"
+import { toSafeManagedResourceFailure } from "~/features/ManagedSiteChannels/utils/managedResource"
 import type { ManagedResourceKind } from "~/services/accountSiteDefinitions/contracts"
 import type { ResourceEditor } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
@@ -53,7 +55,19 @@ interface DefaultTokenQuickCreateDialogState {
   onSuccessCallback?: ((createdToken?: ApiToken) => void | Promise<void>) | null
 }
 
+interface NativeChannelPreparation {
+  load: (signal: AbortSignal) => Promise<NativeChannelCreateDialogConfig>
+  onSuccess?: (result: any) => void
+  shouldContinue?: () => boolean
+}
+
 interface ChannelDialogContextValue {
+  opening: ChannelDialogOpeningState
+  prepareNativeCreateDialog: (
+    request: NativeChannelPreparation,
+  ) => Promise<boolean>
+  retryNativePreparation: () => void
+
   state: ChannelDialogState
   duplicateChannelWarning: DuplicateChannelWarningState
   defaultTokenQuickCreateDialog: DefaultTokenQuickCreateDialogState
@@ -117,12 +131,37 @@ export function ChannelDialogProvider({
     defaultTokenQuickCreateDialog.onSuccessCallback,
   )
   const nativeCreateSessionIdRef = useRef(0)
+  const [opening, setOpening] = useState<ChannelDialogOpeningState>({
+    attemptId: 0,
+    status: "idle",
+  })
+  const preparationGeneration = useRef(0)
+  const preparationAbort = useRef<AbortController | undefined>(undefined)
+  const preparationRequest = useRef<NativeChannelPreparation | undefined>(
+    undefined,
+  )
+  const cancelPreparation = useCallback(() => {
+    preparationGeneration.current += 1
+    preparationAbort.current?.abort()
+    preparationAbort.current = undefined
+    preparationRequest.current = undefined
+    setOpening({ attemptId: preparationGeneration.current, status: "idle" })
+  }, [])
+  useEffect(
+    () => () => {
+      preparationGeneration.current += 1
+      preparationAbort.current?.abort()
+      preparationRequest.current = undefined
+    },
+    [],
+  )
 
   const openNativeCreateDialog = useCallback(
     (config: {
       nativeCreate: NativeChannelCreateDialogConfig
       onSuccess?: (result: any) => void
     }) => {
+      cancelPreparation()
       const sessionId = nativeCreateSessionIdRef.current + 1
       nativeCreateSessionIdRef.current = sessionId
       setState({
@@ -131,12 +170,64 @@ export function ChannelDialogProvider({
         nativeCreate: { ...config.nativeCreate, sessionId },
       })
     },
-    [],
+    [cancelPreparation],
   )
 
   const closeDialog = useCallback(() => {
+    cancelPreparation()
     setState((prev) => ({ ...prev, isOpen: false }))
-  }, [])
+  }, [cancelPreparation])
+
+  const prepareNativeCreateDialog = useCallback(
+    async (request: NativeChannelPreparation): Promise<boolean> => {
+      cancelPreparation()
+      const attemptId = preparationGeneration.current
+      const controller = new AbortController()
+      preparationAbort.current = controller
+      preparationRequest.current = request
+      setState({ isOpen: false })
+      setOpening({
+        attemptId,
+        status: "loading",
+        mode: "create",
+        reveal: "delayed",
+      })
+      try {
+        const nativeCreate = await request.load(controller.signal)
+        if (
+          controller.signal.aborted ||
+          attemptId !== preparationGeneration.current
+        )
+          return false
+        if (request.shouldContinue && !request.shouldContinue()) {
+          cancelPreparation()
+          return false
+        }
+        preparationAbort.current = undefined
+        openNativeCreateDialog({ nativeCreate, onSuccess: request.onSuccess })
+        return true
+      } catch (error) {
+        if (
+          controller.signal.aborted ||
+          attemptId !== preparationGeneration.current
+        )
+          return false
+        setOpening({
+          attemptId,
+          status: "failure",
+          mode: "create",
+          failure: toSafeManagedResourceFailure(error),
+        })
+        return false
+      }
+    },
+    [cancelPreparation, openNativeCreateDialog],
+  )
+
+  const retryNativePreparation = useCallback(() => {
+    if (opening.status === "failure" && preparationRequest.current)
+      void prepareNativeCreateDialog(preparationRequest.current)
+  }, [opening, prepareNativeCreateDialog])
 
   const completeNativeDialogClose = useCallback((sessionId: number) => {
     setState((prev) => {
@@ -276,6 +367,9 @@ export function ChannelDialogProvider({
     <ChannelDialogContext.Provider
       value={{
         state,
+        opening,
+        prepareNativeCreateDialog,
+        retryNativePreparation,
         duplicateChannelWarning,
         defaultTokenQuickCreateDialog,
         openNativeCreateDialog,

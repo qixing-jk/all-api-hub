@@ -2,6 +2,7 @@ import type { TFunction } from "i18next"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { ChannelDialogOpening } from "~/components/dialogs/ChannelDialog/components/ChannelDialogOpening"
 import { ChannelEditorShell } from "~/components/dialogs/ChannelDialog/components/ChannelEditorShell"
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import {
@@ -614,6 +615,7 @@ function NativeManagedSiteChannels({
     )
   }, [mutation.editorFeedback, t])
   const editorPageFailure = (() => {
+    if (mutation.opening?.status === "failure") return null
     switch (mutation.editorFeedback?.kind) {
       case "open-failed":
         return presentManagedResourceFailure(mutation.editorFeedback.failure, {
@@ -635,12 +637,13 @@ function NativeManagedSiteChannels({
         return null
     }
   })()
-  const detailPageFailure = mutation.detailFailure
-    ? presentManagedResourceFailure(mutation.detailFailure, {
-        category: t("managedSiteChannels:alerts.loadError.title"),
-        message: t("common:rootErrorBoundary.genericDescription"),
-      })
-    : null
+  const detailPageFailure =
+    mutation.detailFailure && mutation.opening?.status !== "failure"
+      ? presentManagedResourceFailure(mutation.detailFailure, {
+          category: t("managedSiteChannels:alerts.loadError.title"),
+          message: t("common:rootErrorBoundary.genericDescription"),
+        })
+      : null
   const failure =
     editorPageFailure ??
     detailPageFailure ??
@@ -923,6 +926,17 @@ function NativeManagedSiteChannels({
         }
       />
 
+      {mutation.opening && mutation.opening.status !== "idle" && (
+        <ChannelDialogOpening
+          opening={mutation.opening}
+          onClose={
+            mutation.opening.mode === "view"
+              ? mutation.closeDetail
+              : mutation.closeEditor
+          }
+          onRetry={mutation.retryOpening}
+        />
+      )}
       {mutation.editor && mutation.editorMode && editorPolicy ? (
         <ChannelEditorShell
           isOpen

@@ -54,6 +54,9 @@
       "label": "Weight"
     }
   },
+  "opening": {
+    "loading": "Loading channel configuration…"
+  },
   "title": {
     "add": "Create Channel",
     "edit": "Edit Channel",

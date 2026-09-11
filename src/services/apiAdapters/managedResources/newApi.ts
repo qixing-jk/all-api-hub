@@ -393,9 +393,9 @@ export async function openNewApiNativeResourceOperations(): Promise<NewApiNative
         const groups = await fetchSiteUserGroups(nativeConfig.config, options)
         throwIfNewApiResourceOperationAborted(options)
         return normalizeList(groups)
-      } catch {
+      } catch (error) {
         throwIfNewApiResourceOperationAborted(options)
-        return []
+        throw error
       }
     },
   }

@@ -5,6 +5,8 @@ import { useManagedResourceInteraction } from "~/features/ManagedSiteChannels/pr
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { buildDefaultTokenCreatePrefill } from "~/features/TokenProvisioning/components/AddTokenDialog/defaultTokenCreatePrefill"
 
+import { ChannelDialogOpening } from "./ChannelDialogOpening"
+
 /**
  * Global ChannelDialog container that can be triggered from anywhere
  */
@@ -12,6 +14,8 @@ export function ChannelDialogContainer() {
   const { preferences, managedSiteType } = useUserPreferencesContext()
   const {
     state,
+    opening,
+    retryNativePreparation,
     defaultTokenQuickCreateDialog,
     closeDialog,
     completeNativeDialogClose,
@@ -33,6 +37,13 @@ export function ChannelDialogContainer() {
 
   return (
     <>
+      {opening && opening.status !== "idle" && (
+        <ChannelDialogOpening
+          opening={opening}
+          onClose={closeDialog}
+          onRetry={retryNativePreparation}
+        />
+      )}
       {nativeCreate ? (
         <ManagedResourceCreateDialog
           key={nativeCreate.sessionId}

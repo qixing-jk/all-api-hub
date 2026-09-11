@@ -67,6 +67,7 @@ export function ResourceManualOptionControl({
             size="sm"
             variant="dashed"
             disabled={disabled || isLoading}
+            loading={isLoading}
             aria-busy={isLoading || undefined}
             onClick={onLoad}
           >

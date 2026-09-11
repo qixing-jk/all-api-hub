@@ -486,9 +486,9 @@ export async function openDoneHubNativeResourceOperations(): Promise<DoneHubNati
         const groups = await fetchSiteUserGroups(nativeConfig.config, options)
         throwIfNewApiResourceOperationAborted(options)
         return normalizeList(groups)
-      } catch {
+      } catch (error) {
         throwIfNewApiResourceOperationAborted(options)
-        return []
+        throw error
       }
     },
   }

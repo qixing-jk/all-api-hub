@@ -813,6 +813,13 @@ describe("DoneHub native managed resource", () => {
     const editor = await workspace.openEditEditor(
       (await workspace.list()).items[0].ref,
     )
+    expect(mocks.fetchSiteUserGroups).not.toHaveBeenCalled()
+    await expect(
+      editor.loadOptions!(
+        DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Groups,
+        editor.initialValues,
+      ),
+    ).rejects.toBeInstanceOf(ManagedResourceError)
     expect(mocks.fetchSiteUserGroups).toHaveBeenCalledWith(config, undefined)
     expect(
       editor.fields.find(

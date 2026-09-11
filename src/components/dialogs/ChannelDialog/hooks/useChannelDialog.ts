@@ -111,7 +111,7 @@ function getApiTokenIds(tokens: ApiToken[]): number[] {
 export function useChannelDialog() {
   const { t } = useTranslation(["messages", "channelDialog"])
   const {
-    openNativeCreateDialog,
+    prepareNativeCreateDialog,
     openDefaultTokenQuickCreateDialog,
     requestDuplicateChannelWarning,
   } = useChannelDialogContext()
@@ -125,22 +125,20 @@ export function useChannelDialog() {
     onSuccess?: (result: any) => void
     shouldContinue?: () => boolean
   }): Promise<boolean> => {
-    const nativeCreate = await openNativeManagedChannelImportEditor(
-      params.managedSite.siteType,
-      params.formData,
-    )
-    if (params.shouldContinue && !params.shouldContinue()) return false
-
-    openNativeCreateDialog({
-      nativeCreate: {
-        ...nativeCreate,
+    return await prepareNativeCreateDialog({
+      load: async (signal) => ({
+        ...(await openNativeManagedChannelImportEditor(
+          params.managedSite.siteType,
+          params.formData,
+          { signal },
+        )),
         showModelPrefillWarning:
           params.formData.modelPrefillFetchFailed === true,
         advisoryWarning: params.advisoryWarning,
-      },
+      }),
+      shouldContinue: params.shouldContinue,
       onSuccess: params.onSuccess,
     })
-    return true
   }
 
   const openDefaultTokenQuickCreateDialogForAccount = async (

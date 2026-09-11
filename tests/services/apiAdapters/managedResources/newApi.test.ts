@@ -656,13 +656,17 @@ describe("New API native managed resource", () => {
 
     const editor = await workspace.openEditEditor(ref)
 
-    expect(
-      editor.fields.find(
-        (field) => field.fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups,
+    expect(mocks.fetchSiteUserGroups).not.toHaveBeenCalled()
+    await expect(
+      editor.loadOptions!(
+        NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups,
+        editor.initialValues,
       ),
-    ).toMatchObject({
-      options: [{ value: "default" }, { value: "vip" }, { value: "research" }],
-    })
+    ).resolves.toEqual([
+      { value: "default" },
+      { value: "vip" },
+      { value: "research" },
+    ])
   })
 
   it("preserves an unknown future channel type while editing other fields", async () => {
@@ -1078,13 +1082,25 @@ describe("New API native managed resource", () => {
         (field) => field.fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups,
       ),
     ).toMatchObject({
-      options: [{ value: "default" }, { value: "vip" }],
+      options: [],
+      optionLoader: {
+        dependsOn: [],
+        trigger: RESOURCE_FIELD_OPTION_LOAD_TRIGGERS.Automatic,
+      },
     })
+    expect(mocks.fetchSiteUserGroups).not.toHaveBeenCalled()
+    await expect(
+      editor.loadOptions!(
+        NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups,
+        editor.initialValues,
+        { signal },
+      ),
+    ).resolves.toEqual([{ value: "default" }, { value: "vip" }])
     expect(mocks.fetchAccountAvailableModels).not.toHaveBeenCalled()
     expect(mocks.fetchSiteUserGroups).toHaveBeenCalledWith(config, { signal })
   })
 
-  it("keeps optional group suggestions empty when their provider query fails", async () => {
+  it("opens without optional groups and exposes lookup failure for retry", async () => {
     mocks.fetchSiteUserGroups.mockRejectedValueOnce(
       new ApiError("group inventory unavailable", 503),
     )
@@ -1097,6 +1113,18 @@ describe("New API native managed resource", () => {
     )
 
     expect(groupsField).toMatchObject({ options: [] })
+    await expect(
+      editor.loadOptions!(
+        NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups,
+        editor.initialValues,
+      ),
+    ).rejects.toBeInstanceOf(ManagedResourceError)
+    await expect(
+      editor.loadOptions!(
+        NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups,
+        editor.initialValues,
+      ),
+    ).resolves.toEqual([{ value: "default" }, { value: "vip" }])
   })
 
   it("discards group suggestions that arrive after cancellation", async () => {
@@ -1108,8 +1136,13 @@ describe("New API native managed resource", () => {
     })
 
     const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openCreateEditor()
     await expectFailureCode(
-      workspace.openCreateEditor({ signal: controller.signal }),
+      editor.loadOptions!(
+        NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups,
+        editor.initialValues,
+        { signal: controller.signal },
+      ),
       MANAGED_RESOURCE_FAILURE_CODES.Aborted,
     )
     expect(mocks.fetchSiteUserGroups).toHaveBeenCalledWith(config, {

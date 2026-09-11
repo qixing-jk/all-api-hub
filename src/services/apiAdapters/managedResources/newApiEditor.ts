@@ -243,7 +243,6 @@ const requiresNonEmptyGroups = (
 const fieldDescriptors = (
   policy: NewApiFamilyEditorPolicy,
   detail?: NewApiFamilyChannelFields,
-  groupSuggestions: readonly string[] = [],
   canLoadSecret = false,
 ): readonly ResourceFieldDescriptor[] => {
   const editorFields = policy.fields
@@ -293,12 +292,15 @@ const fieldDescriptors = (
     },
     {
       fieldId: editorFields.Groups,
+      optionLoader: {
+        dependsOn: [],
+        trigger: MANAGED_RESOURCE_FIELD_OPTION_LOAD_TRIGGERS.Automatic,
+      },
       type: MANAGED_RESOURCE_FIELD_TYPES.MultiSelect,
       ...(requiresNonEmptyGroups(policy, detail) ? { required: true } : {}),
-      options: normalizeList([
-        ...parseNewApiResourceList(detail?.group),
-        ...groupSuggestions,
-      ]).map((value) => ({ value })),
+      options: normalizeList([...parseNewApiResourceList(detail?.group)]).map(
+        (value) => ({ value }),
+      ),
     },
     {
       fieldId: editorFields.Priority,
@@ -533,7 +535,7 @@ const loadModelOptions = async (
   return normalizeList(models).map((value) => ({ value }))
 }
 
-const createModelOptionLoader =
+const createEditorOptionLoader =
   (
     operations: NewApiEditorOperations,
     existing?: NewApiFamilyChannelFields,
@@ -542,6 +544,15 @@ const createModelOptionLoader =
     NativeResourceEditorDefinition<NewApiFamilyChannelCommand>["loadOptions"]
   > =>
   async (fieldId, values, options) => {
+    if (fieldId === editorFields.Groups) {
+      throwIfNewApiResourceOperationAborted(options)
+      const groups = await operations.loadEditorGroups(options)
+      throwIfNewApiResourceOperationAborted(options)
+      return normalizeList([
+        ...readList(values, editorFields.Groups),
+        ...groups,
+      ]).map((value) => ({ value }))
+    }
     if (fieldId !== editorFields.Models) throw invalidOptionField()
     return await loadModelOptions(
       operations,
@@ -556,44 +567,41 @@ export const createNewApiCreateEditor = async (
   operations: NewApiEditorOperations,
   options?: ResourceOperationOptions,
   policy: NewApiFamilyEditorPolicy = newApiEditorPolicy,
-): Promise<NativeResourceEditorDefinition<NewApiFamilyChannelCommand>> => ({
-  fields: fieldDescriptors(
-    policy,
-    undefined,
-    await operations.loadEditorGroups(options),
-  ),
-  initialValues: createInitialValues(policy),
-  validate: (values) => validateValues(values, undefined, policy),
-  buildCommand: (values) => toDraft(values, policy.fields),
-  loadOptions: createModelOptionLoader(operations, undefined, policy.fields),
-})
+): Promise<NativeResourceEditorDefinition<NewApiFamilyChannelCommand>> => {
+  throwIfNewApiResourceOperationAborted(options)
+  return {
+    fields: fieldDescriptors(policy, undefined),
+    initialValues: createInitialValues(policy),
+    validate: (values) => validateValues(values, undefined, policy),
+    buildCommand: (values) => toDraft(values, policy.fields),
+    loadOptions: createEditorOptionLoader(operations, undefined, policy.fields),
+  }
+}
 
 export const createNewApiEditEditor = async (
   operations: NewApiEditorOperations,
   detail: NewApiFamilyChannelFields,
   options?: ResourceOperationOptions,
   policy: NewApiFamilyEditorPolicy = newApiEditorPolicy,
-): Promise<NativeResourceEditorDefinition<NewApiFamilyChannelCommand>> => ({
-  fields: fieldDescriptors(
-    policy,
-    detail,
-    await operations.loadEditorGroups(options),
-    operations.canLoadSecret,
-  ),
-  initialValues: editInitialValues(detail, policy.fields),
-  // Preserve an unchanged future upstream enum while still rejecting a newly
-  // entered unsupported value. This keeps edits forward-compatible.
-  validate: (values) => validateValues(values, detail, policy),
-  buildCommand: (values) => toDraft(values, policy.fields),
-  loadOptions: createModelOptionLoader(operations, detail, policy.fields),
-  loadSecret: async (fieldId, loadOptions) => {
-    throwIfNewApiResourceOperationAborted(loadOptions)
-    if (fieldId !== policy.fields.Key || !operations.canLoadSecret) {
-      throw invalidOptionField()
-    }
-    return await operations.loadSecret(detail.id, loadOptions)
-  },
-})
+): Promise<NativeResourceEditorDefinition<NewApiFamilyChannelCommand>> => {
+  throwIfNewApiResourceOperationAborted(options)
+  return {
+    fields: fieldDescriptors(policy, detail, operations.canLoadSecret),
+    initialValues: editInitialValues(detail, policy.fields),
+    // Preserve an unchanged future upstream enum while still rejecting a newly
+    // entered unsupported value. This keeps edits forward-compatible.
+    validate: (values) => validateValues(values, detail, policy),
+    buildCommand: (values) => toDraft(values, policy.fields),
+    loadOptions: createEditorOptionLoader(operations, detail, policy.fields),
+    loadSecret: async (fieldId, loadOptions) => {
+      throwIfNewApiResourceOperationAborted(loadOptions)
+      if (fieldId !== policy.fields.Key || !operations.canLoadSecret) {
+        throw invalidOptionField()
+      }
+      return await operations.loadSecret(detail.id, loadOptions)
+    },
+  }
+}
 
 /** Binds the shared New API-family editor mechanics to provider-owned fields and types. */
 const createImportSeedBinding = (
