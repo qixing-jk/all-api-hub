@@ -329,8 +329,8 @@ export interface UserPreferences {
    * Balance history (daily snapshot) capture + retention preferences.
    *
    * Optional for backward compatibility with stored preferences created before
-   * this capability existed. Missing values MUST be treated as disabled via
-   * defaults and migration.
+   * this capability existed. Missing values use the shared balance-history
+   * defaults and migration, enabling refresh-driven capture.
    */
   balanceHistory?: BalanceHistoryPreferences
 

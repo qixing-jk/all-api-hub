@@ -848,7 +848,7 @@ describe("settings product analytics snapshots", () => {
     expect(events).toEqual([
       expect.objectContaining({
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.BalanceHistoryConfigSnapshot,
-        enabled: false,
+        enabled: true,
       }),
       expect.objectContaining({
         setting_id:
