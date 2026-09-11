@@ -210,8 +210,7 @@ export default function AutoCheckin(props: {
   const { preferences: userPrefs } = useUserPreferencesContext()
   const autoCheckinPreferences =
     userPrefs?.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
-  const autoCheckinGlobalEnabled =
-    autoCheckinPreferences.globalEnabled !== false
+  const autoCheckinEnabled = autoCheckinPreferences.globalEnabled !== false
   const routeParams = props.routeParams
   const QUICK_RUN_PARAM = "runNow" as const
   const QUICK_RUN_VALUE = "true" as const
@@ -1434,20 +1433,18 @@ export default function AutoCheckin(props: {
     <div className="p-6">
       <PageHeader
         icon={CalendarCheck2}
-        title={t(
-          autoCheckinGlobalEnabled
-            ? "execution.title"
-            : "execution.manualTitle",
-        )}
+        title={
+          autoCheckinEnabled ? t("execution.title") : t("execution.manualTitle")
+        }
         titleActions={
           <OptionsPageSettingsTitleAction
             tabId="checkinRedeem"
             anchor="auto-checkin"
           />
         }
-        description={t(
-          autoCheckinGlobalEnabled ? "description" : "manualDescription",
-        )}
+        description={
+          autoCheckinEnabled ? t("description") : t("manualDescription")
+        }
         spacing="compact"
       />
 

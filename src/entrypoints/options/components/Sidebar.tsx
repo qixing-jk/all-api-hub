@@ -226,7 +226,7 @@ function Sidebar({
                       const Icon = item.icon
                       const isActive = activeMenuItem === item.id
                       const label = getMenuItemLabel(t, item.id, {
-                        autoCheckinGlobalEnabled:
+                        autoCheckinEnabled:
                           preferences?.autoCheckin?.globalEnabled ?? true,
                       })
 

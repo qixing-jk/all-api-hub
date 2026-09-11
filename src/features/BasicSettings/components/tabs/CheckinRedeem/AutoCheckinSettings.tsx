@@ -58,7 +58,6 @@ export default function AutoCheckinSettings() {
     resetAutoCheckinConfig,
   } = useUserPreferencesContext()
   const preferences = userPrefs?.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
-  const autoCheckinGlobalEnabled = preferences.globalEnabled !== false
   const savedVersion = userPrefs?.lastUpdated ?? 0
   const retryPreferences = preferences.retryStrategy ?? {
     enabled: false,
@@ -265,16 +264,8 @@ export default function AutoCheckinSettings() {
   return (
     <SettingSection
       id={AUTO_CHECKIN_TARGET_IDS.section}
-      title={t(
-        autoCheckinGlobalEnabled
-          ? "autoCheckin:settings.title"
-          : "autoCheckin:execution.manualTitle",
-      )}
-      description={t(
-        autoCheckinGlobalEnabled
-          ? "autoCheckin:description"
-          : "autoCheckin:manualDescription",
-      )}
+      title={t("autoCheckin:settings.title")}
+      description={t("autoCheckin:settings.enableDesc")}
       onReset={async () => {
         return resetAutoCheckinConfig()
       }}

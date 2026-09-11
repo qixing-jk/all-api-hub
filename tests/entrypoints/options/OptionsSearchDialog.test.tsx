@@ -7,6 +7,7 @@ import type { OptionsSearchContext } from "~/entrypoints/options/search/types"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const baseContext: OptionsSearchContext = {
+  autoCheckinEnabled: true,
   hasOptionalPermissions: true,
   managedSiteType: "new-api",
   modelRedirectEnabled: true,

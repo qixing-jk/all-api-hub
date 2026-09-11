@@ -123,7 +123,7 @@ describe("AutoCheckinSettings", () => {
     })
   })
 
-  it("uses the batch-check-in title and description when automatic runs are disabled", () => {
+  it("keeps the automatic settings title and explains manual availability when disabled", () => {
     useUserPreferencesContextMock.mockReturnValue({
       preferences: {
         autoCheckin: createPreferences({ globalEnabled: false }),
@@ -138,10 +138,10 @@ describe("AutoCheckinSettings", () => {
     })
 
     expect(
-      screen.getByText("autoCheckin:execution.manualTitle"),
+      screen.getByRole("heading", { name: "autoCheckin:settings.title" }),
     ).toBeInTheDocument()
     expect(
-      screen.getByText("autoCheckin:manualDescription"),
+      screen.getAllByText("autoCheckin:settings.enableDesc")[0],
     ).toBeInTheDocument()
   })
 

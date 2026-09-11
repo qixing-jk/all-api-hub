@@ -10,6 +10,7 @@ import * as browserApi from "~/utils/browser/browserApi"
 import { renderHook } from "~~/tests/test-utils/render"
 
 const context: OptionsSearchContext = {
+  autoCheckinEnabled: true,
   hasOptionalPermissions: true,
   managedSiteType: "new-api",
   modelRedirectEnabled: true,
@@ -68,7 +69,7 @@ describe("useOptionsSearch", () => {
     const { result } = renderHook(
       () =>
         useOptionsSearch(
-          { ...context, autoCheckinGlobalEnabled: false },
+          { ...context, autoCheckinEnabled: false },
           "ui:navigation.batchCheckin",
         ),
       {
@@ -178,6 +179,7 @@ describe("useOptionsSearchContext", () => {
     const { result } = renderHook(
       () =>
         useOptionsSearchContext({
+          autoCheckinEnabled: true,
           hasOptionalPermissions: true,
           managedSiteType: "new-api",
           modelRedirectEnabled: false,
@@ -192,6 +194,7 @@ describe("useOptionsSearchContext", () => {
     )
 
     expect(result.current).toEqual({
+      autoCheckinEnabled: true,
       hasOptionalPermissions: true,
       managedSiteType: "new-api",
       modelRedirectEnabled: false,

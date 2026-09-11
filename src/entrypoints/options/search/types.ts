@@ -6,7 +6,7 @@ export type { BasicSettingsTabId } from "~/constants/basicSettingsTabs"
 export type OptionsSearchItemKind = "page" | "tab" | "section" | "control"
 
 export interface OptionsSearchContext {
-  autoCheckinGlobalEnabled?: boolean
+  autoCheckinEnabled: boolean
   hasOptionalPermissions: boolean
   managedSiteType: ManagedSiteType
   modelRedirectEnabled: boolean

@@ -10,7 +10,7 @@ import {
 import { assertNever } from "~/utils/core/assert"
 
 interface MenuItemLabelOptions {
-  autoCheckinGlobalEnabled?: boolean
+  autoCheckinEnabled?: boolean
 }
 
 /**
@@ -31,11 +31,9 @@ export function getMenuItemLabel(
     case MENU_ITEM_IDS.BOOKMARK:
       return t("ui:navigation.bookmark")
     case MENU_ITEM_IDS.AUTO_CHECKIN:
-      return t(
-        options?.autoCheckinGlobalEnabled === false
-          ? "ui:navigation.batchCheckin"
-          : "ui:navigation.autoCheckin",
-      )
+      return options?.autoCheckinEnabled === false
+        ? t("ui:navigation.batchCheckin")
+        : t("ui:navigation.autoCheckin")
     case MENU_ITEM_IDS.USAGE_ANALYTICS:
       return t("ui:navigation.usageAnalytics")
     case MENU_ITEM_IDS.BALANCE_HISTORY:

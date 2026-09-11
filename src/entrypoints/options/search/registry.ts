@@ -96,7 +96,7 @@ export const OPTIONS_SEARCH_REGISTRY = [
 export function resolveSyntheticPageTitle(
   titleKey: string,
   t: TFunction,
-  options?: { autoCheckinGlobalEnabled?: boolean },
+  options?: { autoCheckinEnabled?: boolean },
 ) {
   if (!titleKey.startsWith("__page:")) {
     return t(titleKey)
