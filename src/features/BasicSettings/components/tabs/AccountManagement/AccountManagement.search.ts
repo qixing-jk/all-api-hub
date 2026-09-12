@@ -117,54 +117,6 @@ export const accountManagementSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildControlDefinition(
-    "control:sorting-disabled-account",
-    "accountManagement",
-    getSortingCriteriaTargetId(SortingCriteriaType.DISABLED_ACCOUNT),
-    "settings:sorting.disabledAccount",
-    523,
-    {
-      descriptionKey: "settings:sorting.disabledAccountDesc",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.accountManagement",
-        "settings:sorting.title",
-      ],
-      keywords: ["sorting", "priority", "disabled account"],
-    },
-  ),
-  buildControlDefinition(
-    "control:sorting-pinned",
-    "accountManagement",
-    getSortingCriteriaTargetId(SortingCriteriaType.PINNED),
-    "settings:sorting.pinnedPriority",
-    524,
-    {
-      descriptionKey: "settings:sorting.pinnedDesc",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.accountManagement",
-        "settings:sorting.title",
-      ],
-      keywords: ["sorting", "priority", "pinned"],
-    },
-  ),
-  buildControlDefinition(
-    "control:sorting-manual-order",
-    "accountManagement",
-    getSortingCriteriaTargetId(SortingCriteriaType.MANUAL_ORDER),
-    "settings:sorting.manualOrder",
-    525,
-    {
-      descriptionKey: "settings:sorting.manualOrderDesc",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.accountManagement",
-        "settings:sorting.title",
-      ],
-      keywords: ["sorting", "priority", "manual order"],
-    },
-  ),
-  buildControlDefinition(
     "control:sorting-current-site",
     "accountManagement",
     getSortingCriteriaTargetId(SortingCriteriaType.CURRENT_SITE),
@@ -178,54 +130,6 @@ export const accountManagementSearchControls: OptionsSearchItemDefinition[] = [
         "settings:sorting.title",
       ],
       keywords: ["sorting", "priority", "current site", "site match"],
-    },
-  ),
-  buildControlDefinition(
-    "control:sorting-health-status",
-    "accountManagement",
-    getSortingCriteriaTargetId(SortingCriteriaType.HEALTH_STATUS),
-    "settings:sorting.healthStatus",
-    527,
-    {
-      descriptionKey: "settings:sorting.healthDesc",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.accountManagement",
-        "settings:sorting.title",
-      ],
-      keywords: ["sorting", "priority", "health", "status"],
-    },
-  ),
-  buildControlDefinition(
-    "control:sorting-checkin-requirement",
-    "accountManagement",
-    getSortingCriteriaTargetId(SortingCriteriaType.CHECK_IN_REQUIREMENT),
-    "settings:sorting.checkInRequirement",
-    528,
-    {
-      descriptionKey: "settings:sorting.checkInDesc",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.accountManagement",
-        "settings:sorting.title",
-      ],
-      keywords: ["sorting", "priority", "checkin", "check-in"],
-    },
-  ),
-  buildControlDefinition(
-    "control:sorting-user-custom-sort",
-    "accountManagement",
-    getSortingCriteriaTargetId(SortingCriteriaType.USER_SORT_FIELD),
-    "settings:sorting.userCustomSort",
-    529,
-    {
-      descriptionKey: "settings:sorting.customSortDesc",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.accountManagement",
-        "settings:sorting.title",
-      ],
-      keywords: ["sorting", "priority", "custom sort", "user sort"],
     },
   ),
   buildControlDefinition(

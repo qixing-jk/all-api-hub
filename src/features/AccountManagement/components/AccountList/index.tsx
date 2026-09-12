@@ -45,6 +45,10 @@ import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
 import toast from "~/lib/notify"
 import { cn } from "~/lib/utils"
 import {
+  getAccountSortGroup,
+  type AccountSortGroup,
+} from "~/services/preferences/utils/sortingPriority"
+import {
   startProductAnalyticsAction,
   trackProductAnalyticsActionStarted,
 } from "~/services/productAnalytics/actions"
@@ -86,6 +90,7 @@ import { VirtualizedAccountList } from "./VirtualizedAccountList"
 
 interface AccountListProps {
   initialSearchQuery?: string
+  onAddAccount?: () => void
   reorderUnavailableReason?: string
   virtualScrollParent?: HTMLElement | null
 }
@@ -94,6 +99,16 @@ type AccountListResultItem = {
   account: DisplaySiteData
   highlights?: SearchResultWithHighlight["highlights"]
 }
+
+type AccountListDisplayItem = {
+  result: AccountListResultItem
+  group: AccountSortGroup
+  isFirstInGroup: boolean
+  isLastInGroup: boolean
+  startsNewGroup: boolean
+}
+
+const ACCOUNT_GROUP_ORDER: AccountSortGroup[] = ["pinned", "normal", "disabled"]
 
 type AccountDisabledFilterValue = "enabled" | "disabled"
 type AccountRefreshFilterValue =
@@ -425,6 +440,7 @@ function FilteredTodayMetric({
  */
 export default function AccountList({
   initialSearchQuery,
+  onAddAccount,
   reorderUnavailableReason,
   virtualScrollParent,
 }: AccountListProps) {
@@ -554,6 +570,35 @@ export default function AccountList({
     [baseResults, filterState],
   )
   const displayedResults = filterAggregation.displayedResults
+  const groupedDisplayItems = useMemo<AccountListDisplayItem[]>(() => {
+    const resultsByGroup: Record<AccountSortGroup, AccountListResultItem[]> = {
+      pinned: [],
+      normal: [],
+      disabled: [],
+    }
+
+    for (const result of displayedResults) {
+      resultsByGroup[
+        getAccountSortGroup(result.account, pinnedAccountIdSet)
+      ].push(result)
+    }
+
+    let hasRenderedGroup = false
+    return ACCOUNT_GROUP_ORDER.flatMap((group) => {
+      const results = resultsByGroup[group]
+      if (results.length === 0) return []
+
+      const startsNewGroup = hasRenderedGroup
+      hasRenderedGroup = true
+      return results.map((result, index) => ({
+        result,
+        group,
+        isFirstInGroup: index === 0,
+        isLastInGroup: index === results.length - 1,
+        startsNewGroup: startsNewGroup && index === 0,
+      }))
+    })
+  }, [displayedResults, pinnedAccountIdSet])
 
   const allAccountIdSet = useMemo(
     () => new Set(displayData.map((account) => account.id)),
@@ -757,10 +802,13 @@ export default function AccountList({
     siteTypeFilter !== null ||
     refreshStatusFilter !== null ||
     disabledFilter !== null
-  const showPinnedReorderHint =
+  const showGroupReorderHint =
     isReorderMode &&
-    filteredSites.some((account) => pinnedAccountIdSet.has(account.id)) &&
-    filteredSites.some((account) => !pinnedAccountIdSet.has(account.id))
+    new Set(
+      filteredSites.map((account) =>
+        getAccountSortGroup(account, pinnedAccountIdSet),
+      ),
+    ).size > 1
   const dragDisabled =
     !isReorderMode ||
     inSearchMode ||
@@ -809,7 +857,8 @@ export default function AccountList({
       ...accountListAnalyticsBaseContext,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateAccountDialog,
     })
-    handleAddAccountClick()
+    const addAccount = onAddAccount ?? handleAddAccountClick
+    addAccount()
   }
 
   const handleBulkModeEnter = () => {
@@ -1144,13 +1193,16 @@ export default function AccountList({
     const newIndex = sortedIds.indexOf(over.id as string)
     if (oldIndex === -1 || newIndex === -1) return
 
-    const activeIsPinned = pinnedAccountIdSet.has(active.id as string)
-    const crossedPinBoundary = sortedIds
-      .slice(Math.min(oldIndex, newIndex), Math.max(oldIndex, newIndex) + 1)
-      .some((id) => pinnedAccountIdSet.has(id) !== activeIsPinned)
+    const activeAccount = displayedResults[oldIndex]?.account
+    const overAccount = displayedResults[newIndex]?.account
+    const crossedGroupBoundary =
+      activeAccount !== undefined &&
+      overAccount !== undefined &&
+      getAccountSortGroup(activeAccount, pinnedAccountIdSet) !==
+        getAccountSortGroup(overAccount, pinnedAccountIdSet)
 
-    if (crossedPinBoundary) {
-      toast.warning(t("account:list.reorderPinnedBoundary"), {
+    if (crossedGroupBoundary) {
+      toast.warning(t("account:list.reorderGroupBoundary"), {
         id: ACCOUNT_REORDER_BOUNDARY_TOAST_ID,
       })
       return
@@ -1335,36 +1387,46 @@ export default function AccountList({
     )
   }
 
-  const renderAccountListItem = (item: AccountListResultItem) => {
+  const renderAccountListItem = (item: AccountListDisplayItem) => {
+    const result = item.result
     const selectionControl = isBulkMode ? (
       <Checkbox
         data-testid={getAccountManagementSelectionCheckboxTestId(
-          item.account.id,
+          result.account.id,
         )}
-        checked={selectedIdSet.has(item.account.id)}
+        checked={selectedIdSet.has(result.account.id)}
         onCheckedChange={(checked) =>
-          handleToggleAccountSelection(item.account.id, Boolean(checked))
+          handleToggleAccountSelection(result.account.id, Boolean(checked))
         }
         aria-label={t("account:bulk.selectAccount", {
-          accountName: item.account.name,
+          accountName: result.account.name,
         })}
         disabled={isBulkBusy}
       />
     ) : undefined
-
+    const rowClassName = cn(
+      "relative transition-colors hover:bg-gray-50/80 focus-within:bg-gray-50/80 dark:hover:bg-white/[0.035] dark:focus-within:bg-white/[0.035]",
+      !item.isLastInGroup &&
+        "after:absolute after:right-4 after:bottom-0 after:left-4 after:h-px after:bg-gray-100 after:content-[''] dark:after:bg-white/[0.06]",
+      item.startsNewGroup &&
+        "border-t-4 border-gray-100 dark:border-gray-950/45",
+      item.group === "pinned" &&
+        "bg-slate-50 hover:bg-slate-100/80 dark:bg-slate-700/45 dark:hover:bg-slate-700/55",
+      item.group === "disabled" &&
+        "bg-gray-50/50 opacity-40 hover:opacity-80 focus-within:opacity-80 dark:bg-black/10",
+      detectedAccount?.id === result.account.id &&
+        "border-l-4 border-l-blue-500 bg-blue-50/70 dark:border-l-blue-400 dark:bg-blue-900/30",
+    )
     if (shouldRenderSortableList && dndRuntimeRef.current !== null) {
       const { SortableAccountListItem } = dndRuntimeRef.current
 
       return (
         <SortableAccountListItem
-          key={item.account.id}
-          site={item.account}
+          key={result.account.id}
+          site={result.account}
           showCreatedAt={sortField === DATA_TYPE_CREATED_AT}
-          className={cn(
-            detectedAccount?.id === item.account.id &&
-              "rounded-lg border-l-4 border-l-blue-500 bg-blue-50 dark:border-l-blue-400 dark:bg-blue-900/50",
-          )}
-          highlights={item.highlights}
+          className={rowClassName}
+          highlights={result.highlights}
           onDeleteWithDialog={handleDeleteWithDialog}
           onCopyKey={handleCopyKeyWithDialog}
           isDragDisabled={dragDisabled}
@@ -1377,14 +1439,11 @@ export default function AccountList({
 
     return (
       <NonSortableAccountListItem
-        key={item.account.id}
-        site={item.account}
+        key={result.account.id}
+        site={result.account}
         showCreatedAt={sortField === DATA_TYPE_CREATED_AT}
-        className={cn(
-          detectedAccount?.id === item.account.id &&
-            "rounded-lg border-l-4 border-l-blue-500 bg-blue-50 dark:border-l-blue-400 dark:bg-blue-900/50",
-        )}
-        highlights={item.highlights}
+        className={rowClassName}
+        highlights={result.highlights}
         onDeleteWithDialog={handleDeleteWithDialog}
         onCopyKey={handleCopyKeyWithDialog}
         isDragDisabled
@@ -1394,23 +1453,26 @@ export default function AccountList({
       />
     )
   }
+
   const renderUnvirtualizedList = () => (
-    <CardList>{displayedResults.map(renderAccountListItem)}</CardList>
+    <CardList dividers={false} className="space-y-0">
+      {groupedDisplayItems.map(renderAccountListItem)}
+    </CardList>
   )
   const DndWrapper = dndRuntimeRef.current?.AccountListDndWrapper
 
   return (
     <Card
       padding="none"
-      className="flex flex-col overflow-hidden"
+      className="flex flex-col overflow-hidden rounded-xl border-gray-200/80 shadow-xs dark:border-white/10"
       data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListView}
     >
       <CardContent padding={"none"} spacing={"none"}>
         {/* Search + Filters */}
-        <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary border-b border-gray-200 bg-white px-2 py-2 sm:px-5 sm:py-3">
+        <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary [container-type:inline-size] border-b border-gray-200 bg-white px-2 py-2 sm:px-5 sm:py-3">
           <div className="flex flex-col gap-1.5 sm:gap-2">
-            <div className="flex flex-col gap-1.5 sm:gap-2 lg:flex-row lg:items-center lg:gap-3">
-              <div className="min-w-0 lg:w-72 lg:shrink-0 xl:w-80">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 xl:gap-3">
+              <div className="w-full min-w-0 flex-none [@container(min-width:68rem)]:w-80">
                 <AccountSearchInput
                   disabled={isReorderMode}
                   value={query}
@@ -1418,7 +1480,7 @@ export default function AccountList({
                   onClear={clearSearch}
                 />
               </div>
-              <div className="min-w-0 flex-1">
+              <div className="w-full min-w-0 flex-none [@container(min-width:48rem)]:w-auto [@container(min-width:48rem)]:min-w-[36rem] [@container(min-width:48rem)]:flex-1">
                 <AccountFilterBar
                   disabledValue={disabledFilter ?? "all"}
                   siteTypeValue={siteTypeFilter ?? "all"}
@@ -1456,15 +1518,41 @@ export default function AccountList({
                   }
                 />
               </div>
+              <div className="ml-auto w-full min-w-0 flex-none sm:w-auto">
+                <AccountListHeader
+                  displayedResultCount={displayedResults.length}
+                  inSearchMode={inSearchMode}
+                  isBulkBusy={isBulkBusy}
+                  isBulkMode={isBulkMode}
+                  isReorderLoading={
+                    isReorderMode &&
+                    (dndLoadState === "loading" || isReorderSaving)
+                  }
+                  isReorderMode={isReorderMode}
+                  onAddAccount={handleEmptyStateAddAccountClick}
+                  onBulkModeEnter={handleBulkModeEnter}
+                  onBulkModeExit={handleBulkModeExit}
+                  onClearSort={clearSortConfig}
+                  onReorderModeEnter={handleReorderModeEnter}
+                  onReorderModeExit={handleReorderModeExit}
+                  onSort={handleListSort}
+                  reorderDisabledReason={resolvedReorderDisabledReason}
+                  showTodayCashflow={showTodayCashflow}
+                  sortField={sortField}
+                  sortOrder={sortOrder}
+                />
+              </div>
             </div>
-            <TagFilter
-              options={tagFilterOptions}
-              value={selectedTagIds}
-              onChange={setSelectedTagIds}
-              maxVisibleLines={maxTagFilterLines}
-              allLabel={t("account:filter.tagsAllLabel")}
-              allCount={displayData.length}
-            />
+            {tagFilterOptions.length > 0 ? (
+              <TagFilter
+                options={tagFilterOptions}
+                value={selectedTagIds}
+                onChange={setSelectedTagIds}
+                maxVisibleLines={maxTagFilterLines}
+                allLabel={t("account:filter.tagsAllLabel")}
+                allCount={displayData.length}
+              />
+            ) : null}
             {isBulkMode ? (
               <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary/40 flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
                 <div className="flex flex-col gap-1 text-sm">
@@ -1594,28 +1682,7 @@ export default function AccountList({
           </div>
         </div>
 
-        <AccountListHeader
-          displayedResultCount={displayedResults.length}
-          inSearchMode={inSearchMode}
-          isBulkBusy={isBulkBusy}
-          isBulkMode={isBulkMode}
-          isReorderLoading={
-            isReorderMode && (dndLoadState === "loading" || isReorderSaving)
-          }
-          isReorderMode={isReorderMode}
-          onBulkModeEnter={handleBulkModeEnter}
-          onBulkModeExit={handleBulkModeExit}
-          onClearSort={clearSortConfig}
-          onReorderModeEnter={handleReorderModeEnter}
-          onReorderModeExit={handleReorderModeExit}
-          onSort={handleListSort}
-          reorderDisabledReason={resolvedReorderDisabledReason}
-          showTodayCashflow={showTodayCashflow}
-          sortField={sortField}
-          sortOrder={sortOrder}
-        />
-
-        {showPinnedReorderHint ? (
+        {showGroupReorderHint ? (
           <div
             className="dark:border-dark-bg-tertiary flex items-center gap-2 border-b border-blue-100 bg-blue-50/80 px-3 py-1.5 text-xs leading-5 text-blue-800 dark:bg-blue-950/40 dark:text-blue-200"
             role="note"
@@ -1624,7 +1691,7 @@ export default function AccountList({
               aria-hidden="true"
               className="size-3.5 shrink-0 text-blue-600 dark:text-blue-400"
             />
-            <span>{t("account:list.reorderPinnedHint")}</span>
+            <span>{t("account:list.reorderGroupHint")}</span>
           </div>
         ) : null}
 
@@ -1642,8 +1709,8 @@ export default function AccountList({
           renderUnvirtualizedList()
         ) : (
           <VirtualizedAccountList
-            getItemKey={(item) => item.account.id}
-            items={displayedResults}
+            getItemKey={(item) => item.result.account.id}
+            items={groupedDisplayItems}
             renderItem={renderAccountListItem}
             scrollParent={virtualScrollParent}
           />

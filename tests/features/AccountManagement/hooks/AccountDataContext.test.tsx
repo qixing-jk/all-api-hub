@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   DATA_TYPE_BALANCE,
+  DATA_TYPE_CHECK_IN_REQUIREMENT,
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_CREATED_AT,
 } from "~/constants"
@@ -30,7 +31,7 @@ import type {
 } from "~/services/protectionBypass/contracts"
 import type { SearchResult } from "~/services/search/accountSearch"
 import { TAG_STORE_VERSION } from "~/services/tags/tagStoreUtils"
-import type { DisplaySiteData } from "~/types"
+import type { ActiveSortField, DisplaySiteData } from "~/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import type { CheckInConfig } from "~/types/checkIn"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
@@ -211,7 +212,7 @@ const {
 const mockUserPreferencesContext = vi.hoisted(() => ({
   current: {
     currencyType: "USD",
-    sortField: "name",
+    sortField: "name" as ActiveSortField,
     sortOrder: "asc",
     updateSortConfig: mockUpdateSortConfig,
     refreshOnOpen: false,
@@ -2497,10 +2498,28 @@ describe("AccountDataContext sorting behavior", () => {
     )
   })
 
+  it("initializes check-in-requirement sorting to required first", async () => {
+    const getLatestCtx = await renderAccountDataProvider()
+
+    act(() => {
+      getLatestCtx().handleSort(DATA_TYPE_CHECK_IN_REQUIREMENT)
+    })
+
+    await waitFor(() => {
+      expect(getLatestCtx().sortField).toBe(DATA_TYPE_CHECK_IN_REQUIREMENT)
+      expect(getLatestCtx().sortOrder).toBe("desc")
+    })
+
+    expect(mockUpdateSortConfig).toHaveBeenCalledWith(
+      DATA_TYPE_CHECK_IN_REQUIREMENT,
+      "desc",
+    )
+  })
+
   it("prioritizes accounts matched by open tabs when that sorting criterion is enabled", async () => {
     mockUserPreferencesContext.current = {
       ...mockUserPreferencesContext.current,
-      sortField: "name",
+      sortField: null,
       sortOrder: "asc",
       sortingPriorityConfig: {
         lastModified: Date.now(),
@@ -2509,11 +2528,6 @@ describe("AccountDataContext sorting behavior", () => {
             id: SortingCriteriaType.MATCHED_OPEN_TABS,
             enabled: true,
             priority: 0,
-          },
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 1,
           },
         ],
       },

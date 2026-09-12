@@ -87,7 +87,7 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => ({
     currencyType: "USD",
     showTodayCashflow: true,
-    sortField: "name",
+    sortField: null,
     sortOrder: "asc",
     updateSortConfig: vi.fn(),
     refreshOnOpen: false,

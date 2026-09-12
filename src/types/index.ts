@@ -1,8 +1,10 @@
 import {
   DATA_TYPE_BALANCE,
   DATA_TYPE_CASHFLOW,
+  DATA_TYPE_CHECK_IN_REQUIREMENT,
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_CREATED_AT,
+  DATA_TYPE_HEALTH_STATUS,
   DATA_TYPE_INCOME,
 } from "~/constants"
 import type { AccountSiteType } from "~/constants/siteType"
@@ -350,6 +352,8 @@ export interface ApiResponse<T = any> {
 // 用于排序的字段类型
 export const SORT_FIELDS = [
   "name",
+  DATA_TYPE_CHECK_IN_REQUIREMENT,
+  DATA_TYPE_HEALTH_STATUS,
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_INCOME,
   DATA_TYPE_BALANCE,

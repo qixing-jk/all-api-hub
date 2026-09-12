@@ -575,30 +575,18 @@
     "title": "網站公告"
   },
   "sorting": {
-    "checkInDesc": "將需要簽到的站點排在前面",
-    "checkInRequirement": "簽到需求",
     "currentSiteDesc": "將目前瀏覽器中已登入的帳號置於列表頂部",
     "currentSitePriority": "目前登入帳號優先",
     "customCheckInDesc": "將使用外部簽到連結的站點排在前面",
     "customCheckInUrl": "外部簽到連結",
     "customRedeemDesc": "將使用自定義兌換連結的站點排在前面",
     "customRedeemUrl": "自定義兌換連結",
-    "customSortDesc": "根據使用者在列表檢視中選擇的欄位（如餘額）進行排序",
-    "description": "定義帳戶列表的排序優先順序，以組織帳戶的顯示方式。",
-    "disabledAccount": "禁用帳號沉底",
-    "disabledAccountDesc": "將被禁用的帳號統一放到列表底部",
-    "healthDesc": "按站點的健康狀況排序（錯誤 > 警告 > 未知 > 健康）",
-    "healthStatus": "健康狀態",
-    "manualOrder": "手動排序",
-    "manualOrderDesc": "按照您在帳號列表中手動調整的順序進行排序",
+    "description": "未選擇帳戶列表欄位排序時，依以下優先順序自動排列各分區內的帳戶。",
     "matchedOpenTabs": "匹配的開啟標籤頁",
     "matchedOpenTabsDesc": "將與目前開啟標籤頁（標題或 URL）匹配的相關帳號排在前面",
-    "pinnedDesc": "將已置頂的帳號按置頂順序排在列表頂部",
-    "pinnedPriority": "置頂優先",
     "priority": "優先順序",
     "title": "排序優先順序設定",
-    "unknownSortRule": "未知排序規則",
-    "userCustomSort": "使用者自定義排序"
+    "unknownSortRule": "未知排序規則"
   },
   "sub2apiManagedSite": {
     "adminCredentialsLink": {

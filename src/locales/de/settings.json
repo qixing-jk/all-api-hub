@@ -576,30 +576,18 @@
     "title": "Website-Ankündigungen"
   },
   "sorting": {
-    "checkInDesc": "Websites, bei denen ein Check-in erforderlich ist, nach vorne verschieben",
-    "checkInRequirement": "Check-in-Anforderung",
     "currentSiteDesc": "Platzieren Sie das aktuell im Browser angemeldete Konto oben in der Liste",
     "currentSitePriority": "Priorisieren Sie das aktuell angemeldete Konto",
     "customCheckInDesc": "Platzieren Sie Websites mit externen Check-in-Links im Vordergrund",
     "customCheckInUrl": "Externe Check-in-URL",
     "customRedeemDesc": "Platzieren Sie Websites mit benutzerdefinierten Einlöselinks im Vordergrund",
     "customRedeemUrl": "Benutzerdefinierte Einlöse-URL",
-    "customSortDesc": "Sortieren nach dem vom Benutzer in der Listenansicht ausgewählten Feld (z. B. Saldo)",
-    "description": "Definieren Sie die Sortierpriorität der Konten in der Liste, um die Anzeige der Konten zu organisieren",
-    "disabledAccount": "Deaktivierte Konten nach unten verschieben",
-    "disabledAccountDesc": "Deaktivierte Konten werden einheitlich an das Ende der Liste verschoben",
-    "healthDesc": "Sortieren nach Website-Gesundheitsstatus (Fehler > Warnung > Unbekannt > Gesund)",
-    "healthStatus": "Gesundheitsstatus",
-    "manualOrder": "Manuelle Reihenfolge",
-    "manualOrderDesc": "Sortieren Sie Konten gemäß Ihrer manuell definierten Listenreihenfolge",
+    "description": "Wenn keine Feldsortierung ausgewählt ist, werden Konten innerhalb jedes Bereichs automatisch nach diesen Prioritäten sortiert.",
     "matchedOpenTabs": "Passende offene Tabs",
     "matchedOpenTabsDesc": "Platzieren Sie verwandte Konten, die den aktuell geöffneten Tabs entsprechen (nach Titel oder URL), vorne",
-    "pinnedDesc": "Platzieren Sie angeheftete Konten oben in der Liste in der Reihenfolge, in der sie angeheftet wurden",
-    "pinnedPriority": "Angeheftete Priorität",
     "priority": "Priorität",
     "title": "Sortierprioritätseinstellungen",
-    "unknownSortRule": "Unbekannte Sortierregel",
-    "userCustomSort": "Benutzerspezifische Sortierung"
+    "unknownSortRule": "Unbekannte Sortierregel"
   },
   "sub2apiManagedSite": {
     "adminCredentialsLink": {

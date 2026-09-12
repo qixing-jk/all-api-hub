@@ -3,7 +3,12 @@ import userEvent from "@testing-library/user-event"
 import React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { DATA_TYPE_BALANCE } from "~/constants"
+import {
+  DATA_TYPE_BALANCE,
+  DATA_TYPE_CHECK_IN_REQUIREMENT,
+  DATA_TYPE_CREATED_AT,
+  DATA_TYPE_HEALTH_STATUS,
+} from "~/constants"
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import AccountList from "~/features/AccountManagement/components/AccountList"
 import * as accountListDndRuntimeLoader from "~/features/AccountManagement/components/AccountList/loadAccountListDndRuntime"
@@ -285,7 +290,9 @@ vi.mock("~/components/ui", () => {
     ),
     Card: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     CardContent: ({ children }: any) => <div>{children}</div>,
-    CardList: ({ children }: any) => <div>{children}</div>,
+    CardList: ({ children, dividers: _dividers, ...props }: any) => (
+      <div {...props}>{children}</div>
+    ),
     Checkbox: ({ checked, onCheckedChange, ...props }: any) => (
       <input
         type="checkbox"
@@ -769,13 +776,83 @@ describe("AccountList", () => {
     expect(handleAddAccountClickMock).toHaveBeenCalledTimes(1)
   })
 
-  it("renders the created-time sort control", () => {
+  it("renders the created-time sort option in the unified menu", async () => {
+    const user = userEvent.setup()
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListSortMenuButton),
+    )
+    expect(
+      screen.getByTestId(
+        getAccountManagementSortButtonTestId(DATA_TYPE_CREATED_AT),
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it("renders one continuous list in pinned, normal, disabled order", () => {
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        pinnedAccountIds: ["enabled-alpha"],
+      }),
+    )
+
+    render(<AccountList />)
+
+    expect(screen.queryAllByRole("heading", { level: 2 })).toHaveLength(0)
+    const rows = screen.getAllByTestId(TEST_IDS.accountRow)
+    expect(rows.map((row) => row.textContent)).toEqual([
+      "Enabled Alpha",
+      "Enabled Gamma",
+      "Unsynced Delta",
+      "Disabled Beta",
+    ])
+    expect(rows[0].closest(".relative")).toHaveClass("bg-slate-50")
+    expect(rows[1].closest(".relative")).toHaveClass("border-t-4")
+    expect(rows[3].closest(".relative")).toHaveClass("opacity-40")
+    expect(document.querySelector(".space-y-0")).toBeInTheDocument()
+  })
+
+  it("hides the all-tags chip when no account tags exist", () => {
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        tags: [],
+        tagCountsById: {},
+      }),
+    )
+
     render(<AccountList />)
 
     expect(
-      screen.getByRole("button", {
-        name: "account:list.sort account:list.header.createdAt",
-      }),
+      screen.queryByTestId(TEST_IDS.multiTagFilter),
+    ).not.toBeInTheDocument()
+  })
+
+  it("replaces account-name sorting with check-in and health sorting", async () => {
+    const user = userEvent.setup()
+    render(<AccountList />)
+
+    expect(
+      screen
+        .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListSortMenuButton)
+        .querySelector("svg"),
+    ).toBeNull()
+
+    await user.click(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListSortMenuButton),
+    )
+    expect(
+      screen.queryByTestId(getAccountManagementSortButtonTestId("name")),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByTestId(
+        getAccountManagementSortButtonTestId(DATA_TYPE_CHECK_IN_REQUIREMENT),
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId(
+        getAccountManagementSortButtonTestId(DATA_TYPE_HEALTH_STATUS),
+      ),
     ).toBeInTheDocument()
   })
 
@@ -786,20 +863,26 @@ describe("AccountList", () => {
     mockUseAccountDataContext.mockReturnValue(
       createAccountDataContextValue({
         handleSort,
-        sortField: "name",
+        sortField: DATA_TYPE_BALANCE,
         sortOrder: "desc",
       }),
     )
 
     render(<AccountList />)
 
+    expect(
+      screen
+        .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListSortMenuButton)
+        .querySelector("svg"),
+    ).toBeNull()
+
     await user.click(
-      screen.getByRole("button", {
-        name: "account:list.sort account:list.header.account",
-      }),
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.accountListSortDirectionButton,
+      ),
     )
 
-    expect(handleSort).toHaveBeenCalledWith("name")
+    expect(handleSort).toHaveBeenCalledWith(DATA_TYPE_BALANCE)
   })
 
   it("opens sorting priority settings from the account list", async () => {
@@ -831,7 +914,12 @@ describe("AccountList", () => {
     render(<AccountList />)
 
     await user.click(
-      screen.getByRole("button", { name: "account:list.clearSort" }),
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListSortMenuButton),
+    )
+    await user.click(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.accountListClearSortButton,
+      ),
     )
 
     expect(clearSortConfig).toHaveBeenCalledTimes(1)
@@ -1054,11 +1142,18 @@ describe("AccountList", () => {
 
     const rows = await screen.findAllByTestId(TEST_IDS.accountRow)
     expect(rows.map((row) => row.textContent)).toEqual(orderBeforeReorder)
+    await user.click(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListSortMenuButton),
+    )
     expect(
-      screen.getByTestId(getAccountManagementSortButtonTestId("name")),
+      screen.getByTestId(
+        getAccountManagementSortButtonTestId(DATA_TYPE_CHECK_IN_REQUIREMENT),
+      ),
     ).toBeEnabled()
     expect(
-      screen.getByRole("button", { name: "account:list.clearSort" }),
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.accountListClearSortButton,
+      ),
     ).toBeInTheDocument()
 
     await user.click(
@@ -1134,10 +1229,10 @@ describe("AccountList", () => {
     expect(
       screen.getAllByTestId(TEST_IDS.accountRow).map((row) => row.textContent),
     ).toEqual([
-      "Disabled Beta",
       "Enabled Gamma",
       "Enabled Alpha",
       "Unsynced Delta",
+      "Disabled Beta",
     ])
     await waitFor(() => {
       expect(clearSortConfig).toHaveBeenCalledOnce()
@@ -1148,7 +1243,7 @@ describe("AccountList", () => {
     })
   })
 
-  it("keeps pinned and unpinned accounts in separate reorder groups", async () => {
+  it("keeps fixed account sections in separate reorder groups", async () => {
     const user = userEvent.setup()
     const clearSortConfig = vi.fn()
     const handleReorder = vi.fn().mockResolvedValue(undefined)
@@ -1172,13 +1267,13 @@ describe("AccountList", () => {
     )
     expect(await screen.findByTestId(TEST_IDS.dndContext)).toBeInTheDocument()
     expect(screen.getByRole("note")).toHaveTextContent(
-      "account:list.reorderPinnedHint",
+      "account:list.reorderGroupHint",
     )
 
     act(() => {
       dndState.onDragEnd?.({
         active: { id: "enabled-alpha" },
-        over: { id: "enabled-gamma" },
+        over: { id: "unsynced-delta" },
       })
     })
 
@@ -1188,7 +1283,7 @@ describe("AccountList", () => {
       screen.getAllByTestId(TEST_IDS.accountRow).map((row) => row.textContent),
     ).toEqual(previousOrder)
     expect(toastDefaultMock).toHaveBeenCalledWith(
-      "account:list.reorderPinnedBoundary",
+      "account:list.reorderGroupBoundary",
       {
         id: "account-reorder-boundary",
       },

@@ -575,30 +575,18 @@
     "title": "网站公告"
   },
   "sorting": {
-    "checkInDesc": "将需要签到的站点排在前面",
-    "checkInRequirement": "签到需求",
     "currentSiteDesc": "将当前浏览器中已登录的账号置于列表顶部",
     "currentSitePriority": "当前登录账号优先",
     "customCheckInDesc": "将使用外部签到链接的站点排在前面",
     "customCheckInUrl": "外部签到链接",
     "customRedeemDesc": "将使用自定义兑换链接的站点排在前面",
     "customRedeemUrl": "自定义兑换链接",
-    "customSortDesc": "根据用户在列表视图中选择的字段（如余额）进行排序",
-    "description": "定义账户列表的排序优先级，以组织账户的显示方式。",
-    "disabledAccount": "禁用账号沉底",
-    "disabledAccountDesc": "将被禁用的账号统一放到列表底部",
-    "healthDesc": "按站点的健康状况排序（错误 > 警告 > 未知 > 健康）",
-    "healthStatus": "健康状态",
-    "manualOrder": "手动排序",
-    "manualOrderDesc": "按照您在账号列表中手动调整的顺序进行排序",
+    "description": "未选择账户列表字段排序时，按以下优先级自动排列各分区内的账号。",
     "matchedOpenTabs": "匹配的打开标签页",
     "matchedOpenTabsDesc": "将与当前打开标签页（标题或 URL）匹配的相关账号排在前面",
-    "pinnedDesc": "将已置顶的账号按置顶顺序排在列表顶部",
-    "pinnedPriority": "置顶优先",
     "priority": "优先级",
     "title": "排序优先级设置",
-    "unknownSortRule": "未知排序规则",
-    "userCustomSort": "用户自定义排序"
+    "unknownSortRule": "未知排序规则"
   },
   "sub2apiManagedSite": {
     "adminCredentialsLink": {

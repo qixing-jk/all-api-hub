@@ -21,13 +21,27 @@ describe("account management settings search definitions", () => {
     ).toBe("accountManagement")
   })
   it("registers individual sorting priority rules as searchable controls", () => {
-    expect(
-      accountManagementSearchControls
-        .filter((control) => control.id.startsWith("control:sorting-"))
-        .map((control) => [control.id, control.targetId]),
-    ).toContainEqual([
-      "control:sorting-pinned",
-      getSortingCriteriaTargetId(SortingCriteriaType.PINNED),
+    const sortingControls = accountManagementSearchControls
+      .filter((control) => control.id.startsWith("control:sorting-"))
+      .map((control) => [control.id, control.targetId])
+
+    expect(sortingControls).toEqual([
+      [
+        "control:sorting-current-site",
+        getSortingCriteriaTargetId(SortingCriteriaType.CURRENT_SITE),
+      ],
+      [
+        "control:sorting-custom-checkin-url",
+        getSortingCriteriaTargetId(SortingCriteriaType.CUSTOM_CHECK_IN_URL),
+      ],
+      [
+        "control:sorting-custom-redeem-url",
+        getSortingCriteriaTargetId(SortingCriteriaType.CUSTOM_REDEEM_URL),
+      ],
+      [
+        "control:sorting-matched-open-tabs",
+        getSortingCriteriaTargetId(SortingCriteriaType.MATCHED_OPEN_TABS),
+      ],
     ])
   })
 })

@@ -45,7 +45,7 @@ const AUTOMATIC_FEATURE_BYPASS_PREFERENCES_VERSION = 27
 /**
  * Current version of the preferences schema.
  */
-export const CURRENT_PREFERENCES_VERSION = 28
+export const CURRENT_PREFERENCES_VERSION = 29
 
 /**
  * Migration function type
@@ -69,6 +69,12 @@ function clampBalanceHistoryRetentionDays(value: unknown): number {
  * Value: migration function to upgrade to that version
  */
 const migrations: Record<number, PreferencesMigrationFunction> = {
+  // Version 28 -> 29: keep only user-configurable automatic sorting criteria.
+  29: (prefs) => ({
+    ...prefs,
+    sortingPriorityConfig: migrateSortingConfig(prefs.sortingPriorityConfig),
+    preferencesVersion: 29,
+  }),
   // Preserve the released integration credentials without replacing a new configuration.
   28: (prefs) => {
     const { cliProxy, ...rest } = prefs

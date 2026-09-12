@@ -172,27 +172,28 @@
       "refreshCashflow": "點擊重新整理今日消費",
       "refreshIncome": "點擊重新整理今日收入"
     },
-    "clearSort": "清除排序",
     "dragHandle": "拖動排序",
     "header": {
-      "account": "帳號",
       "balance": "餘額",
+      "checkInRequirement": "簽到需求",
       "createdAt": "建立時間",
+      "healthStatus": "健康狀態",
       "todayConsumption": "今日消費",
       "todayIncome": "今日收入"
     },
     "reorder": "調整順序",
     "reorderDone": "完成排序",
     "reorderFailed": "無法儲存帳號順序，已還原先前的順序，請重試。",
+    "reorderGroupBoundary": "帳號只能在同一分區內調整順序。如需移動到其他分區，請先變更帳號的置頂或停用狀態。",
+    "reorderGroupHint": "置頂、一般和停用帳號僅在各自分區內調整順序。",
     "reorderLoadFailed": "無法啟動排序，請重試。",
-    "reorderPinnedBoundary": "置頂帳號和一般帳號需分別排序。如需跨組移動，請先變更帳號的置頂狀態。",
-    "reorderPinnedHint": "置頂帳號和一般帳號僅能在各自群組內調整順序。",
     "reorderSuccess": "帳號順序已儲存。",
     "reorderSuccessFieldSortCleared": "帳號順序已儲存。為使手動順序生效，已清除目前的欄位排序。",
     "reorderUnavailableInPopup": "彈出視窗暫不支援拖曳排序。請在側邊欄或帳號管理頁面中調整順序。",
     "reorderUnavailableInSettings": "請先在排序優先順序中啟用手動排序。",
     "reorderUnavailableWhileBulk": "請先退出批次操作，再調整帳號順序。",
     "reorderUnavailableWhileSearch": "請先清除搜尋，再調整帳號順序。",
+    "resetSort": "重設預設排序",
     "site": {
       "checkedInToday": "今日已簽到，點我檢視",
       "checkInStatusOutdated": "簽到狀態不是今日檢測（上次檢測時間：{{time}}），點我重新整理",
@@ -208,7 +209,8 @@
       "status": "狀態",
       "unknown": "未知"
     },
-    "sort": "排序"
+    "sortMenu": "排序方式",
+    "toggleSortOrder": "切換正序/倒序"
   },
   "refresh": {
     "refreshComplete": "重新整理完成: {{success}} 成功, {{failed}} 失敗",

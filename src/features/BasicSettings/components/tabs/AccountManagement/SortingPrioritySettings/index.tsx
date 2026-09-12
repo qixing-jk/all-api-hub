@@ -8,6 +8,7 @@ import { SettingSection } from "~/components/SettingSection"
 import { Card, CardContent } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { CONFIGURABLE_SORTING_CRITERIA } from "~/services/preferences/utils/sortingPriority"
 import { SortingCriteriaType, type SortingFieldConfig } from "~/types/sorting"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 
@@ -17,34 +18,12 @@ import { SortingPriorityDragList } from "./SortingPriorityDragList"
 // This keeps UI concerns separate from the data-only sorting configuration.
 const getSortingCriteriaUiText = (
   t: TFunction,
-): Record<SortingCriteriaType, { label: string; description?: string }> => ({
-  [SortingCriteriaType.DISABLED_ACCOUNT]: {
-    label: t("settings:sorting.disabledAccount"),
-    description: t("settings:sorting.disabledAccountDesc"),
-  },
-  [SortingCriteriaType.PINNED]: {
-    label: t("settings:sorting.pinnedPriority"),
-    description: t("settings:sorting.pinnedDesc"),
-  },
-  [SortingCriteriaType.MANUAL_ORDER]: {
-    label: t("settings:sorting.manualOrder"),
-    description: t("settings:sorting.manualOrderDesc"),
-  },
+): Partial<
+  Record<SortingCriteriaType, { label: string; description?: string }>
+> => ({
   [SortingCriteriaType.CURRENT_SITE]: {
     label: t("settings:sorting.currentSitePriority"),
     description: t("settings:sorting.currentSiteDesc"),
-  },
-  [SortingCriteriaType.HEALTH_STATUS]: {
-    label: t("settings:sorting.healthStatus"),
-    description: t("settings:sorting.healthDesc"),
-  },
-  [SortingCriteriaType.CHECK_IN_REQUIREMENT]: {
-    label: t("settings:sorting.checkInRequirement"),
-    description: t("settings:sorting.checkInDesc"),
-  },
-  [SortingCriteriaType.USER_SORT_FIELD]: {
-    label: t("settings:sorting.userCustomSort"),
-    description: t("settings:sorting.customSortDesc"),
   },
   [SortingCriteriaType.CUSTOM_CHECK_IN_URL]: {
     label: t("settings:sorting.customCheckInUrl"),
@@ -59,6 +38,17 @@ const getSortingCriteriaUiText = (
     description: t("settings:sorting.matchedOpenTabsDesc"),
   },
 })
+
+const CONFIGURABLE_SORTING_CRITERIA_SET = new Set<SortingCriteriaType>(
+  CONFIGURABLE_SORTING_CRITERIA,
+)
+
+/** Keeps only automatic criteria that remain configurable in settings. */
+function getConfigurableCriteria(criteria: SortingFieldConfig[]) {
+  return criteria
+    .filter((item) => CONFIGURABLE_SORTING_CRITERIA_SET.has(item.id))
+    .sort((a, b) => a.priority - b.priority)
+}
 
 /**
  * Settings section that lets users reorder and toggle sorting criteria priorities.
@@ -76,17 +66,14 @@ export default function SortingPrioritySettings() {
   const resetItemsFromInitialConfig = () => {
     setItems(
       initialConfig?.criteria
-        ? [...initialConfig.criteria].sort((a, b) => a.priority - b.priority)
+        ? getConfigurableCriteria(initialConfig.criteria)
         : [],
     )
   }
 
   useEffect(() => {
     if (initialConfig?.criteria) {
-      // Sort items based on priority for consistent display
-      setItems(
-        [...initialConfig.criteria].sort((a, b) => a.priority - b.priority),
-      )
+      setItems(getConfigurableCriteria(initialConfig.criteria))
     }
   }, [initialConfig])
 
