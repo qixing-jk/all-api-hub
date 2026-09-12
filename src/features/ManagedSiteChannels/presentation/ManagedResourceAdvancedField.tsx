@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next"
 import { useId } from "react"
 
-import { Button, CompactMultiSelect, Label } from "~/components/ui"
+import { Button, CompactMultiSelect } from "~/components/ui"
 import {
   Combobox,
   ComboboxContent,
@@ -13,6 +13,7 @@ import {
   readResourceList,
   readResourceString,
 } from "~/features/ResourceEditor/resourceEditorProjection"
+import { ResourceFieldLabel } from "~/features/ResourceEditor/ResourceFieldLabel"
 import { ResourceJsonField } from "~/features/ResourceEditor/ResourceJsonField"
 import type {
   EditableResourceProjection,
@@ -104,8 +105,8 @@ export function ManagedResourceAdvancedField({
     )
   }
   return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
+    <div className="min-w-0">
+      <ResourceFieldLabel htmlFor={id}>{label}</ResourceFieldLabel>
       {presentation.advancedControl === "model-input" ? (
         <Combobox
           items={[...new Set([...suggestions, ...(value ? [value] : [])])]}
@@ -164,7 +165,7 @@ export function ManagedResourceAdvancedField({
       )}
       <p
         id={`${id}-help`}
-        className="text-muted-foreground text-xs leading-relaxed"
+        className="text-muted-foreground mt-1 text-xs leading-relaxed"
       >
         {help}
       </p>
@@ -172,7 +173,7 @@ export function ManagedResourceAdvancedField({
         <p
           id={`${id}-error`}
           role="alert"
-          className="text-xs text-red-600 dark:text-red-400"
+          className="mt-1 text-xs text-red-600 dark:text-red-400"
         >
           {errorMessage}
         </p>

@@ -235,6 +235,11 @@
       "value": "值",
       "valueAt": "{{field}}：第 {{index}} 列值"
     },
+    "multiKeyMode": {
+      "label": "Key 選擇策略",
+      "polling": "輪詢",
+      "random": "隨機"
+    },
     "options": {
       "channelType": {
         "anthropic": "Anthropic",
@@ -278,6 +283,7 @@
       "loadableHint": "已儲存的 API 金鑰未在此處顯示；留空將保持不變。",
       "loadError": "無法載入已儲存的 API 金鑰。",
       "loading": "正在載入已儲存的 API 金鑰…",
+      "partialReplacementHint": "替換部分 Key 預設會移至清單末尾。如需保留原順序，請先查看已儲存的 Key（需驗證）。",
       "placeholder": "輸入上游 API 金鑰",
       "replacementBlocked": {
         "multipleCredentials": "此渠道有多個 API 金鑰。請在 AxonHub 中管理這些金鑰。"

@@ -235,6 +235,11 @@
       "value": "Valor",
       "valueAt": "{{field}}: valor da linha {{index}}"
     },
+    "multiKeyMode": {
+      "label": "Seleção de chaves",
+      "polling": "Alternada",
+      "random": "Aleatória"
+    },
     "options": {
       "channelType": {
         "anthropic": "Anthropic",
@@ -278,6 +283,7 @@
       "loadableHint": "A chave de API salva não é exibida aqui. Deixe em branco para mantê-la sem alterações.",
       "loadError": "Não foi possível carregar a chave de API salva.",
       "loading": "Carregando a chave de API salva...",
+      "partialReplacementHint": "Ao substituir algumas chaves, elas são movidas para o fim da lista por padrão. Para manter a ordem original, revele primeiro uma chave salva (requer verificação).",
       "placeholder": "Insira a chave de API do provedor",
       "replacementBlocked": {
         "multipleCredentials": "Este canal tem várias chaves de API. Gerencie-as no AxonHub."

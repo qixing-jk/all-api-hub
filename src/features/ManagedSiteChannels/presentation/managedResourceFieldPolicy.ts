@@ -106,6 +106,7 @@ const MANAGED_RESOURCE_FIELD_RENDERERS = MANAGED_RESOURCE_FIELD_TYPES
 
 export type ManagedResourceFieldPresentation =
   ResourceFieldPresentation<ManagedResourceSection> & {
+    resolveCredentialListHelp?: ManagedResourceTextResolver
     /** Selects an existing channel control without coupling it to a provider field ID. */
     channelFieldRole?: ManagedResourceChannelFieldRole
     advancedControl?: "string-map" | "json" | "model-input" | "model-list"
@@ -542,6 +543,12 @@ const newApiFields = [
     createStatusOptionLabelResolvers(CHANNEL_STATUS),
   ).map((field) => ({
     ...field,
+    ...(field.fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key
+      ? {
+          resolveCredentialListHelp: (t: TFunction) =>
+            t("managedSiteChannels:editor.secret.partialReplacementHint"),
+        }
+      : {}),
     ...(field.section === "connection"
       ? { section: "basic" as const, order: field.order + 30 }
       : {}),
@@ -556,6 +563,20 @@ const newApiFields = [
       ? { width: "half" as const }
       : {}),
   })),
+  {
+    fieldId: "multiKeyMode",
+    section: "basic" as const,
+    order: 55,
+    renderer: "select" as const,
+    resolveLabel: (t: TFunction) =>
+      t("managedSiteChannels:editor.multiKeyMode.label"),
+    optionLabelResolvers: {
+      random: (t: TFunction) =>
+        t("managedSiteChannels:editor.multiKeyMode.random"),
+      polling: (t: TFunction) =>
+        t("managedSiteChannels:editor.multiKeyMode.polling"),
+    },
+  },
   ...newApiAdvancedFields,
 ]
 
@@ -1188,7 +1209,7 @@ export function resolveManagedResourceFieldPolicy(
   try {
     return resolveResourceFieldPolicy(
       descriptors,
-      policy,
+      adaptManagedCredentialPolicy(descriptors, policy),
       MANAGED_RESOURCE_SECTION_ORDER,
     )
   } catch (error) {
@@ -1218,4 +1239,78 @@ export const getManagedResourceFieldOptionLabel = (
   return resolver
     ? resolver(t)
     : MANAGED_RESOURCE_UNKNOWN_OPTION_LABEL_RESOLVER(t)
+}
+
+/** The same semantic credential field can use a scalar or collection editor per native capability. */
+export function adaptManagedCredentialPolicy(
+  descriptors: readonly ResourceFieldDescriptor[],
+  policy: ManagedResourceEditorFieldPolicy,
+): ManagedResourceEditorFieldPolicy {
+  return {
+    ...policy,
+    fields: policy.fields
+      .filter(
+        (field) =>
+          field.fieldId !== "multiKeyMode" ||
+          descriptors.some(
+            (descriptor) => descriptor.fieldId === field.fieldId,
+          ),
+      )
+      .map((field) =>
+        descriptors.some(
+          (descriptor) =>
+            descriptor.fieldId === field.fieldId &&
+            descriptor.type === "secret-list",
+        ) && field.channelFieldRole === "secret"
+          ? {
+              ...field,
+              renderer: "secret-list",
+              resolveHelp: descriptors.some(
+                (descriptor) =>
+                  descriptor.fieldId === field.fieldId &&
+                  descriptor.type === "secret-list" &&
+                  descriptor.savedEntries.length > 0,
+              )
+                ? field.resolveCredentialListHelp ?? field.resolveHelp
+                : field.resolveHelp,
+              resolveNullableOptionLabel: undefined,
+              compactSecretRows: true,
+              resolveEntrySummary: (t, fields) =>
+                !descriptors.some(
+                  (descriptor) =>
+                    descriptor.fieldId === field.fieldId &&
+                    descriptor.type === "secret-list" &&
+                    descriptor.entryFields.some(
+                      (attribute) => attribute.fieldId === "enabled",
+                    ),
+                )
+                  ? ""
+                  : fields.enabled === "false"
+                    ? t("common:status.disabled")
+                    : t("common:status.enabled"),
+              resolveEntryDescription: (t, fields) =>
+                fields.enabled === "false" && fields.reason
+                  ? t("ui:secretList.previousDisableReason", {
+                      reason: fields.reason,
+                    })
+                  : "",
+              entryFields: [
+                {
+                  fieldId: "enabled",
+                  resolveLabel: (t) => t("ui:secretList.enableKey"),
+                },
+                {
+                  fieldId: "remark",
+                  resolveLabel: (t) =>
+                    t("managedSiteChannels:editor.fields.remark.label"),
+                },
+                {
+                  fieldId: "name",
+                  resolveLabel: (t) => t("channelDialog:fields.name.label"),
+                },
+              ],
+            }
+          : field,
+      ),
+  }
 }

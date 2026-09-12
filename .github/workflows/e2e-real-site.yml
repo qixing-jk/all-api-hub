@@ -123,6 +123,9 @@ jobs:
           MANAGED_SITE_TARGET: ${{ matrix.managed_site_target }}
           MANAGED_SITE_ADMIN_TOKEN: ${{ secrets[format('AAH_E2E_{0}_ADMIN_TOKEN', matrix.env_prefix)] }}
           MANAGED_SITE_ADMIN_USER_ID: ${{ secrets[format('AAH_E2E_{0}_ADMIN_USER_ID', matrix.env_prefix)] }}
+          MANAGED_SITE_ADMIN_USERNAME: ${{ secrets[format('AAH_E2E_{0}_ADMIN_USERNAME', matrix.env_prefix)] }}
+          MANAGED_SITE_ADMIN_PASSWORD: ${{ secrets[format('AAH_E2E_{0}_ADMIN_PASSWORD', matrix.env_prefix)] }}
+          MANAGED_SITE_ADMIN_TOTP_SECRET: ${{ secrets[format('AAH_E2E_{0}_ADMIN_TOTP_SECRET', matrix.env_prefix)] }}
           MANAGED_SITE_EMAIL: ${{ secrets[format('AAH_E2E_{0}_EMAIL', matrix.env_prefix)] }}
           WEBDAV_PROVIDER_NAME: ${{ matrix.provider_name }}
           WEBDAV_PROVIDER_ACCOUNT_PREFIX: ${{ matrix.provider_account_prefix }}
@@ -169,6 +172,9 @@ jobs:
             write_env "AAH_E2E_${prefix}_AGREE_SELECTOR" "$REAL_SITE_AGREE_SELECTOR"
             write_env "AAH_E2E_${prefix}_ADMIN_TOKEN" "$MANAGED_SITE_ADMIN_TOKEN"
             write_env "AAH_E2E_${prefix}_ADMIN_USER_ID" "$MANAGED_SITE_ADMIN_USER_ID"
+            write_env "AAH_E2E_${prefix}_ADMIN_USERNAME" "$MANAGED_SITE_ADMIN_USERNAME"
+            write_env "AAH_E2E_${prefix}_ADMIN_PASSWORD" "$MANAGED_SITE_ADMIN_PASSWORD"
+            write_env "AAH_E2E_${prefix}_ADMIN_TOTP_SECRET" "$MANAGED_SITE_ADMIN_TOTP_SECRET"
             write_env "AAH_E2E_${prefix}_EMAIL" "$MANAGED_SITE_EMAIL"
             [ -z "$REAL_SITE_BASE_URL" ] && missing+=("AAH_E2E_${prefix}_BASE_URL")
             case "$prefix" in

@@ -42,7 +42,7 @@ export function ResourceManualOptionControl({
       : RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.loadField(t, label)
 
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       {state?.status === RESOURCE_OPTION_LOAD_STATUSES.Error ? (
         <>
           <p role="alert" className="text-xs text-red-600">

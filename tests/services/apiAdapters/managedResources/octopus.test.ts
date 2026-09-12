@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => ({
   deleteChannel: vi.fn(),
   fetchRemoteModels: vi.fn(),
   usesChannelProtocolPaths: vi.fn(),
+  getChannelKeyManagement: vi.fn().mockResolvedValue("legacy"),
 }))
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: { getPreferences: mocks.getPreferences },
@@ -54,6 +55,73 @@ const channel: OctopusChannel = {
   param_override: "{}",
 }
 describe("Octopus native resource", () => {
+  it.each(["confirmed", "rejected", "drift", "still-enabled"])(
+    "reconciles a newly disabled named key once: %s",
+    async (outcome) => {
+      const requested = [
+        { name: "added", channel_key: "test-secret", enabled: false },
+      ]
+      const stored: OctopusChannel = {
+        ...channel,
+        keyManagement: "named",
+        keys: [{ ...requested[0], enabled: true }],
+      }
+      const fixed = { ...stored, keys: requested }
+      mocks.updateChannel
+        .mockResolvedValueOnce({ success: true, data: stored })
+        .mockResolvedValue({ success: outcome !== "rejected", data: fixed })
+      mocks.getChannel
+        .mockResolvedValueOnce(
+          outcome === "drift"
+            ? {
+                ...stored,
+                keys: [{ ...stored.keys[0], channel_key: "another-secret" }],
+              }
+            : stored,
+        )
+        .mockResolvedValue(outcome === "still-enabled" ? stored : fixed)
+      const operations = await openOctopusNativeResourceOperations()
+      const result = await operations.update(stored, { keys: requested })
+      expect(result.outcome).toBe(
+        outcome === "confirmed" ? "succeeded" : "partial",
+      )
+      expect(mocks.updateChannel).toHaveBeenCalledTimes(
+        outcome === "drift" ? 1 : 2,
+      )
+      if (outcome !== "drift")
+        expect(mocks.updateChannel.mock.calls[1][1]).toMatchObject({
+          id: channel.id,
+          keys: [{ name: "added", originalName: "added", enabled: false }],
+        })
+      expect(result).toHaveProperty("confirmedEffects")
+    },
+  )
+  it("reconciles disabled named keys after creation without creating twice", async () => {
+    const requested = [
+      { name: "added", channel_key: "test-secret", enabled: false },
+    ]
+    const stored: OctopusChannel = {
+      ...channel,
+      keyManagement: "named",
+      keys: [{ ...requested[0], enabled: true }],
+    }
+    const fixed = { ...stored, keys: requested }
+    mocks.createChannel.mockResolvedValue({ success: true, data: stored })
+    mocks.getChannel.mockResolvedValueOnce(stored).mockResolvedValue(fixed)
+    mocks.updateChannel.mockResolvedValue({ success: true, data: fixed })
+    const operations = await openOctopusNativeResourceOperations()
+    const result = await operations.create({
+      name: "test",
+      type: 1,
+      baseUrl: "https://example.invalid",
+      key: "test-secret",
+      model: "test",
+      keys: requested,
+    })
+    expect(result.outcome).toBe("succeeded")
+    expect(mocks.createChannel).toHaveBeenCalledTimes(1)
+    expect(mocks.updateChannel).toHaveBeenCalledTimes(1)
+  })
   it.each([
     [new ApiError("Sign in again", 401), "authentication_failed"],
     [new ApiError("Access denied", 403), "permission_denied"],
@@ -498,6 +566,7 @@ describe("Octopus native resource", () => {
   )
   beforeEach(() => {
     vi.resetAllMocks()
+    mocks.getChannelKeyManagement.mockResolvedValue("legacy")
     mocks.getPreferences.mockResolvedValue({
       octopus: {
         baseUrl: "http://hub.example.invalid",
@@ -512,6 +581,68 @@ describe("Octopus native resource", () => {
       data: { ...channel, name: "Renamed" },
     })
   })
+
+  it("edits every legacy key, preserves IDs, and supports enablement and remarks", async () => {
+    const detail = {
+      ...channel,
+      keys: [
+        { id: 9, enabled: false, channel_key: "first-secret", remark: "keep" },
+        { id: 10, enabled: true, channel_key: "second-secret" },
+      ],
+    }
+    mocks.getChannel.mockResolvedValue(detail)
+    const workspace = await octopusManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    await expect(editor.loadSecret!("key:10")).resolves.toBe("second-secret")
+    await editor.submit({
+      ...editor.initialValues,
+      key: {
+        kind: "secret-list",
+        entries: [
+          {
+            id: "9",
+            secret: { kind: "replace", value: "rotated-first" },
+            fields: { enabled: "true", remark: "updated" },
+          },
+          {
+            id: "new",
+            secret: { kind: "replace", value: "third-secret" },
+            fields: { enabled: "false", remark: "backup" },
+          },
+        ],
+      },
+    })
+    expect(mocks.updateChannel.mock.calls.at(-1)?.[1].keys).toEqual([
+      expect.objectContaining({
+        id: 9,
+        channel_key: "rotated-first",
+        enabled: true,
+        remark: "updated",
+      }),
+      expect.objectContaining({
+        channel_key: "third-secret",
+        enabled: false,
+        remark: "backup",
+      }),
+    ])
+  })
+
+  it("keeps the scalar editor for the single-key protocol", async () => {
+    mocks.getChannelKeyManagement.mockResolvedValue("single")
+    mocks.getChannel.mockResolvedValue({ ...channel, keyManagement: "single" })
+    const workspace = await octopusManagedResourceRegistration.open()
+    const create = await workspace.openCreateEditor()
+    const edit = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    for (const editor of [create, edit])
+      expect(
+        editor.fields.find((field) => field.fieldId === fields.Key)?.type,
+      ).toBe("secret")
+  })
+
   it("exposes native type and never exposes keys in facts", async () => {
     const workspace = await octopusManagedResourceRegistration.open()
     const page = await workspace.list()

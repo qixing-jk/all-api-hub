@@ -101,6 +101,7 @@ let interceptedNewApiFetchModelsRequestCount = 0
 let interceptedNewApiSecretRequestCount = 0
 let interceptedNewApiDeleteRequestCount = 0
 let interceptedDoneHubChannels: DoneHubChannelRaw[] = []
+let interceptedAxonHubPrimaryKeys = ["sk-axonhub-fixture"]
 let interceptedAxonHubPrimaryName = "Example primary"
 let interceptedAxonHubPrimaryTags = ["fixture-tag"]
 let interceptedAxonHubUpdateVariables: Record<string, unknown> | null = null
@@ -180,6 +181,7 @@ const axonHubDetail = (params: {
   tags: readonly string[]
   baseURL: string
   supportedModels: readonly string[]
+  apiKeys?: readonly string[]
 }) => ({
   __typename: "Channel",
   id: params.id,
@@ -192,7 +194,7 @@ const axonHubDetail = (params: {
   policies: { stream: null },
   credentials: {
     apiKey: null,
-    apiKeys: ["sk-axonhub-fixture"],
+    apiKeys: [...(params.apiKeys ?? ["sk-axonhub-fixture"])],
     gcp: null,
     oauth: null,
   },
@@ -242,6 +244,7 @@ function getAxonHubCreatedSummary() {
 function getAxonHubPrimaryDetail() {
   return axonHubDetail({
     id: AXON_HUB_PRIMARY_ID,
+    apiKeys: interceptedAxonHubPrimaryKeys,
     name: interceptedAxonHubPrimaryName,
     tags: interceptedAxonHubPrimaryTags,
     baseURL: "https://upstream.example.invalid/v1",
@@ -385,13 +388,62 @@ async function installNewApiManagedSiteChannelsIntercepts(
         await fulfill(route, { success: false, message: "unknown channel" })
         return
       }
+      const nextKeys =
+        payload.key_mode === "append"
+          ? [
+              ...new Set([
+                ...existing.key.split("\n"),
+                ...String(payload.key ?? "")
+                  .split("\n")
+                  .filter(Boolean),
+              ]),
+            ].join("\n")
+          : String(payload.key ?? existing.key)
       const updated = newApiChannel({
         ...existing,
         ...(payload as Partial<NewApiChannel>),
         id: existing.id,
-        key: existing.key,
+        key: existing.channel_info?.is_multi_key ? nextKeys : existing.key,
+        ...(existing.channel_info?.is_multi_key
+          ? {
+              channel_info: {
+                ...existing.channel_info,
+                multi_key_mode: String(
+                  payload.multi_key_mode ??
+                    existing.channel_info.multi_key_mode,
+                ),
+                multi_key_size: nextKeys.split("\n").length,
+              },
+            }
+          : {}),
       })
       replaceInterceptedNewApiChannel(updated)
+      await fulfill(route, { success: true, message: "ok" })
+      return
+    }
+
+    if (path === "/api/channel/multi_key/manage" && method === "POST") {
+      const body = JSON.parse(request.postData() ?? "{}")
+      const existing = channels.find(
+        (channel) => channel.id === body.channel_id,
+      )!
+      const keys = existing.key.split("\n")
+      const statuses = keys.map(
+        (_, index) => existing.channel_info.multi_key_status_list?.[index] ?? 1,
+      )
+      if (body.action === "delete_key") {
+        keys.splice(body.key_index, 1)
+        statuses.splice(body.key_index, 1)
+      } else statuses[body.key_index] = body.action === "enable_key" ? 1 : 2
+      replaceInterceptedNewApiChannel({
+        ...existing,
+        key: keys.join("\n"),
+        channel_info: {
+          ...existing.channel_info,
+          multi_key_size: keys.length,
+          multi_key_status_list: statuses,
+        },
+      })
       await fulfill(route, { success: true, message: "ok" })
       return
     }
@@ -415,7 +467,13 @@ async function installNewApiManagedSiteChannelsIntercepts(
       await fulfill(route, {
         success: true,
         message: "ok",
-        data: { key: "sk-fixture-revealed" },
+        data: {
+          key: channels.find((channel) => channel.id === Number(secretMatch[1]))
+            ?.channel_info?.is_multi_key
+            ? channels.find((channel) => channel.id === Number(secretMatch[1]))!
+                .key
+            : "sk-fixture-revealed",
+        },
       })
       return
     }
@@ -483,6 +541,19 @@ async function installNewApiManagedSiteChannelsIntercepts(
         message: "ok",
         data: { items, total: items.length, type_counts: {} },
       })
+      return
+    }
+
+    if (path === "/api/verify" && method === "POST") {
+      await fulfill(route, {
+        success: true,
+        data: { expires_at: Math.floor(Date.now() / 1000) + 600 },
+      })
+      return
+    }
+
+    if (path === "/api/user/2fa/status" || path === "/api/user/passkey") {
+      await fulfill(route, { success: true, data: { enabled: false } })
       return
     }
 
@@ -583,7 +654,11 @@ async function installDoneHubManagedSiteChannelsIntercepts(
   )
 }
 
-async function installAxonHubIntercepts(context: BrowserContext) {
+async function installAxonHubIntercepts(
+  context: BrowserContext,
+  apiKeys?: string[],
+) {
+  interceptedAxonHubPrimaryKeys = apiKeys ?? ["sk-axonhub-fixture"]
   interceptedAxonHubPrimaryName = "Example primary"
   interceptedAxonHubPrimaryTags = ["fixture-tag"]
   interceptedAxonHubUpdateVariables = null
@@ -713,6 +788,7 @@ async function installAxonHubIntercepts(context: BrowserContext) {
       const input = (body.variables?.input ?? {}) as {
         name?: string
         tags?: string[]
+        credentials?: { apiKeys?: string[] }
       }
       if (id === AXON_HUB_CREATED_ID && interceptedAxonHubCreatedChannel) {
         if (typeof input.name === "string") {
@@ -722,6 +798,8 @@ async function installAxonHubIntercepts(context: BrowserContext) {
           interceptedAxonHubCreatedChannel.tags = input.tags
         }
       } else {
+        if (input.credentials?.apiKeys)
+          interceptedAxonHubPrimaryKeys = input.credentials.apiKeys
         if (typeof input.name === "string") {
           interceptedAxonHubPrimaryName = input.name
         }
@@ -890,6 +968,16 @@ async function installOctopusCookieAuthIntercepts(
     if (path === "/api/v1/channel/update" && request.method() === "POST") {
       const payload = request.postDataJSON()
       if (nativeDetail) {
+        // New rows inherit the native GORM default:true even when false was sent.
+        // Existing names honor explicit disabled state on the next update.
+        const existingNames = new Set(
+          (nativeDetail.keys as Array<{ name: string }>).map((key) => key.name),
+        )
+        payload.keys = (
+          payload.keys as Array<{ name: string; enabled: boolean }>
+        ).map((key) =>
+          existingNames.has(key.name) ? key : { ...key, enabled: true },
+        )
         // Whole-body replacement makes missing upstream members observable.
         nativeDetail = payload
         await fulfill(route, { code: 200, data: nativeDetail })
@@ -982,9 +1070,10 @@ export async function openInterceptedAxonHubManagedSiteChannels(params: {
   context: BrowserContext
   page: Page
   extensionId: string
+  apiKeys?: string[]
 }) {
   await forceExtensionLanguage(params.page, "en")
-  await installAxonHubIntercepts(params.context)
+  await installAxonHubIntercepts(params.context, params.apiKeys)
   await seedUserPreferences(await getServiceWorker(params.context), {
     managedSiteType: SITE_TYPES.AXON_HUB,
     axonHub: {

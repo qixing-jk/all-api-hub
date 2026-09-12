@@ -76,7 +76,10 @@ function Harness({
             loadFieldId: "load-second",
           },
         ],
-        entryFields: [{ fieldId: "proxy", type: "text" }],
+        entryFields: [
+          { fieldId: "proxy", type: "text" },
+          { fieldId: "enabled", type: "boolean" },
+        ],
       }}
       presentation={{
         fieldId: "credentials",
@@ -85,7 +88,10 @@ function Harness({
         renderer: "secret-list",
         compactSecretRows: compact,
         resolveLabel: () => "API Keys",
-        entryFields: [{ fieldId: "proxy", resolveLabel: () => "Proxy" }],
+        entryFields: [
+          { fieldId: "proxy", resolveLabel: () => "Proxy" },
+          { fieldId: "enabled", resolveLabel: () => "Enabled" },
+        ],
       }}
       value={value}
       onLoadSecret={load}
@@ -101,6 +107,21 @@ const row = (number: number) =>
   within(screen.getByRole("group", { name: `API Key ${number}` }))
 
 describe("ResourceSecretListField", () => {
+  it("changes one key's enabled state without revealing or replacing either key", async () => {
+    const user = userEvent.setup()
+    const load = vi.fn()
+    const onChange = vi.fn()
+    render(<Harness load={load} onChange={onChange} />)
+    await user.click(row(2).getByRole("switch", { name: "Enabled" }))
+    expect(onChange.mock.calls.at(-1)?.[0].entries).toEqual([
+      initial.entries[0],
+      {
+        ...initial.entries[1],
+        fields: { ...initial.entries[1].fields, enabled: "false" },
+      },
+    ])
+    expect(load).not.toHaveBeenCalled()
+  })
   it("toggles from the title, summary and keyboard while keeping row actions independent", async () => {
     const user = userEvent.setup()
     const load = vi.fn()

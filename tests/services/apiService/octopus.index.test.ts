@@ -462,7 +462,13 @@ describe("Octopus API service", () => {
         id: 7,
         name: "V0.13 channel",
         base_urls: [{ url: "https://upstream.example.invalid" }],
-        keys: [{ enabled: true, channel_key: "credential-placeholder" }],
+        keys: [
+          {
+            enabled: true,
+            channel_key: "credential-placeholder",
+            name: "default",
+          },
+        ],
         model: "model-a",
       }),
     )

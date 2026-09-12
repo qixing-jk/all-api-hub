@@ -34,6 +34,7 @@ import {
   readResourceString,
 } from "./resourceEditorProjection"
 import { ResourceEditorSection } from "./ResourceEditorSection"
+import { ResourceFieldLabel } from "./ResourceFieldLabel"
 import {
   getResourceFieldOptionLabel,
   resolveResourceFieldPolicy,
@@ -261,7 +262,7 @@ export function NativeResourceEditorBody<TSection extends string>({
 
     if (descriptor.type === RESOURCE_FIELD_TYPES.SecretList) {
       return (
-        <Fragment key={descriptor.fieldId}>
+        <div key={descriptor.fieldId}>
           <ResourceSecretListField
             t={t}
             label={label}
@@ -275,7 +276,7 @@ export function NativeResourceEditorBody<TSection extends string>({
           />
           {help}
           {error}
-        </Fragment>
+        </div>
       )
     }
 
@@ -285,9 +286,9 @@ export function NativeResourceEditorBody<TSection extends string>({
     ) {
       return (
         <div key={descriptor.fieldId}>
-          <Label htmlFor={id} required={descriptor.required}>
+          <ResourceFieldLabel htmlFor={id} required={descriptor.required}>
             {label}
-          </Label>
+          </ResourceFieldLabel>
           <Input
             id={id}
             type={
@@ -332,9 +333,9 @@ export function NativeResourceEditorBody<TSection extends string>({
       }
       return (
         <div key={descriptor.fieldId}>
-          <Label htmlFor={id} required={descriptor.required}>
+          <ResourceFieldLabel htmlFor={id} required={descriptor.required}>
             {label}
-          </Label>
+          </ResourceFieldLabel>
           <Textarea
             id={id}
             value={readResourceString(values, descriptor.fieldId)}
@@ -357,9 +358,9 @@ export function NativeResourceEditorBody<TSection extends string>({
     if (descriptor.type === RESOURCE_FIELD_TYPES.Number) {
       return (
         <div key={descriptor.fieldId}>
-          <Label htmlFor={id} required={descriptor.required}>
+          <ResourceFieldLabel htmlFor={id} required={descriptor.required}>
             {label}
-          </Label>
+          </ResourceFieldLabel>
           <Input
             id={id}
             type="number"
@@ -484,9 +485,9 @@ export function NativeResourceEditorBody<TSection extends string>({
             : tokenRegistry.tokenByResourceValue.get(selectedValue)
         return (
           <div key={descriptor.fieldId}>
-            <Label htmlFor={id} required={descriptor.required}>
+            <ResourceFieldLabel htmlFor={id} required={descriptor.required}>
               {label}
-            </Label>
+            </ResourceFieldLabel>
             <Select
               value={selectedUiValue ?? ""}
               onValueChange={(nextUiValue) => {
@@ -548,7 +549,7 @@ export function NativeResourceEditorBody<TSection extends string>({
                   : retry(descriptor.fieldId)
               }
             />
-            {optionControl}
+            {optionControl && <div className="mt-2">{optionControl}</div>}
             {help}
             {error}
           </div>
@@ -556,7 +557,9 @@ export function NativeResourceEditorBody<TSection extends string>({
       }
       return (
         <div key={descriptor.fieldId}>
-          <Label required={descriptor.required}>{label}</Label>
+          <ResourceFieldLabel required={descriptor.required}>
+            {label}
+          </ResourceFieldLabel>
           <CompactMultiSelect
             options={loadedOptions.map((option) => ({
               value: option.value,
@@ -590,7 +593,7 @@ export function NativeResourceEditorBody<TSection extends string>({
                 : retry(descriptor.fieldId)
             }
           />
-          {optionControl}
+          {optionControl && <div className="mt-2">{optionControl}</div>}
           {help}
           {error}
         </div>
@@ -600,13 +603,42 @@ export function NativeResourceEditorBody<TSection extends string>({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {[...fieldsBySection.entries()].map(([section, sectionFields]) => {
         const sectionPolicy = policy.sections?.[section]
         const label =
           sectionPolicy?.resolveLabel?.(t) ?? sectionLabelResolvers[section](t)
-        const content = sectionFields.map((field) =>
-          sectionPolicy?.columns === 2 ? (
+        const groups: (typeof sectionFields)[] = []
+        for (const field of sectionFields) {
+          const previous = groups.at(-1)
+          if (
+            field.presentation.inlineGroup &&
+            previous?.[0].presentation.inlineGroup ===
+              field.presentation.inlineGroup
+          )
+            previous.push(field)
+          else groups.push([field])
+        }
+        const content = groups.map((group) => {
+          const field = group[0]
+          if (field.presentation.inlineGroup) {
+            return (
+              <div
+                key={field.descriptor.fieldId}
+                className={`flex min-w-0 flex-wrap gap-x-4 gap-y-2 ${sectionPolicy?.columns === 2 ? "sm:col-span-2" : ""}`}
+              >
+                {group.map((item) => (
+                  <div
+                    key={item.descriptor.fieldId}
+                    className="max-w-full min-w-0"
+                  >
+                    {renderField(item)}
+                  </div>
+                ))}
+              </div>
+            )
+          }
+          return sectionPolicy?.columns === 2 ? (
             <div
               key={field.descriptor.fieldId}
               className={
@@ -619,8 +651,8 @@ export function NativeResourceEditorBody<TSection extends string>({
             </div>
           ) : (
             renderField(field)
-          ),
-        )
+          )
+        })
         const override = renderSectionOverride?.(section, label, content)
         return override !== undefined ? (
           <Fragment key={section}>{override}</Fragment>
@@ -638,11 +670,11 @@ export function NativeResourceEditorBody<TSection extends string>({
             {content}
           </ResourceEditorSection>
         ) : (
-          <fieldset key={section} className="space-y-4">
+          <fieldset key={section} className="min-w-0">
             <legend className="text-foreground mb-3 text-sm font-semibold">
               {label}
             </legend>
-            {content}
+            <div className="space-y-4">{content}</div>
           </fieldset>
         )
       })}

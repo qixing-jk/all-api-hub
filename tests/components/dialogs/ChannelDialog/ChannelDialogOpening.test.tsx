@@ -95,6 +95,33 @@ describe("channel preparation", () => {
     expect(retry).toHaveBeenCalledOnce()
   })
 
+  it("keeps recovery guidance alongside provider diagnostics when editing fails", async () => {
+    const user = userEvent.setup()
+    const retry = vi.fn()
+    const message = "Invalid Octopus v0.13 channel response: custom_header"
+    renderOpening(
+      <ChannelDialogOpening
+        opening={{
+          attemptId: 1,
+          status: "failure",
+          mode: "edit",
+          failure: { code: "unexpected", message },
+        }}
+        onClose={vi.fn()}
+        onRetry={retry}
+      />,
+    )
+    const alert = await screen.findByRole("alert")
+    expect(alert).toHaveTextContent(enManaged.alerts.editorLoadError.title)
+    expect(alert).toHaveTextContent(
+      enManaged.alerts.editorLoadError.description,
+    )
+    expect(alert).toHaveTextContent(message)
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Retry" }))
+    expect(retry).toHaveBeenCalledOnce()
+  })
+
   it("cancels a global preparation and suppresses its late result", async () => {
     const gate = deferred<NativeChannelCreateDialogConfig>()
     let signal!: AbortSignal

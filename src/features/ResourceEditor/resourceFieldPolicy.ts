@@ -19,6 +19,8 @@ type ResourceFieldPresentationBase<TSection extends string = string> = {
   resolvePlaceholder?: ResourceFieldTextResolver
   /** Half-width controls share a row in a section with two columns. */
   width?: "half"
+  /** Consecutive fields in the same group share a wrapping summary row. */
+  inlineGroup?: string
   disabledWhen?: (values: EditableResourceProjection) => boolean
   resolveDisabledHelp?: ResourceFieldTextResolver
   rows?: number
@@ -32,6 +34,15 @@ type ResourceFieldPresentationBase<TSection extends string = string> = {
   }
   /** Saved credentials may start collapsed without loading their secrets. */
   compactSecretRows?: boolean
+  resolveEntrySummary?: (
+    t: TFunction,
+    fields: Readonly<Record<string, string>>,
+  ) => string
+  /** Historical non-secret details, separate from the current editable state. */
+  resolveEntryDescription?: (
+    t: TFunction,
+    fields: Readonly<Record<string, string>>,
+  ) => string
   /** Presentation of provider-declared, non-secret attributes on each credential row. */
   entryFields?: readonly {
     /** Responsive width within a credential row; defaults to a full row. */

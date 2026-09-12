@@ -800,6 +800,7 @@ describe("useNewApiManagedVerification", () => {
     act(() => {
       result.current.openNewApiManagedVerification({
         ...BASE_REQUEST,
+        config: { ...BASE_REQUEST.config, channelId: 17 },
         initialSessionResult: {
           status: NEW_API_MANAGED_SESSION_STATUSES.SECURE_VERIFICATION_REQUIRED,
           errorMessage: "check your inbox",
@@ -831,6 +832,7 @@ describe("useNewApiManagedVerification", () => {
       expect(submitNewApiSecureVerificationCodeMock).toHaveBeenCalledWith(
         expect.objectContaining({
           baseUrl: "https://managed.example",
+          channelId: 17,
         }),
         "654321",
       )

@@ -13,7 +13,6 @@ import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
   MANAGED_RESOURCE_CREATE_SEED_KINDS,
   MANAGED_RESOURCE_DISPLAY_FACT_KINDS,
-  MANAGED_RESOURCE_FAILURE_CODES,
   MANAGED_RESOURCE_FIELD_ISSUE_CODES,
   MANAGED_RESOURCE_FIELD_TYPES,
   MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS,
@@ -69,6 +68,12 @@ import type {
   AxonHubUpdateChannelInput,
 } from "~/types/axonHub"
 import type { AxonHubConfig } from "~/types/axonHubConfig"
+
+import {
+  resolveCredentialPatch,
+  withCredentialListEditor,
+  type CredentialListPatch,
+} from "./credentialListEditor"
 
 export type AxonHubNativeFailure = {
   code:
@@ -130,6 +135,7 @@ export interface AxonHubNativeResourceOperations {
 }
 
 type AxonHubCreateCommand = {
+  credentialPatch?: CredentialListPatch
   input: AxonHubCreateChannelInput
   desiredStatus: AxonHubChannelStatus
 }
@@ -138,7 +144,9 @@ type AxonHubCreateCommand = {
 // UpdateChannelInput. Aggregate replacements such as settings, policies, and
 // endpoints are intentionally absent because an older client cannot preserve
 // members added by a newer server.
-type AxonHubNativeChannelPatch = Pick<
+type AxonHubNativeChannelPatch = {
+  credentialPatch?: CredentialListPatch
+} & Pick<
   AxonHubUpdateChannelInput,
   | "type"
   | "baseURL"
@@ -789,6 +797,12 @@ const getCredentialState = (channel: AxonHubChannel): ResourceSecretState => {
 const sanitizeAxonHubEditorDetail = (
   detail: AxonHubChannel,
 ): AxonHubChannel => {
+  if (
+    isRegularAxonHubChannelType(String(detail.type)) &&
+    detail.credentials != null &&
+    getAxonHubCredentialCandidates(detail).every(hasUsableApiTokenKey)
+  )
+    return detail
   const credentialState = getCredentialState(detail)
   const credentialReplacementBlockReason =
     getCredentialReplacementBlockReason(detail)
@@ -1751,7 +1765,13 @@ const axonHubNativeDefinition = {
   toDetailFacts: (detail: AxonHubChannel, ref: ManagedResourceRef) =>
     toFacts(detail, ref, detailFacts(detail)),
   toMutationFacts: toListFacts,
-  createEditor: async () => createEditor(),
+  createEditor: async () =>
+    withCredentialListEditor(
+      createEditor(),
+      AXON_HUB_CHANNEL_FIELD_IDS.KEY,
+      [],
+      false,
+    ),
   editEditor: (
     operations: AxonHubNativeResourceOperations,
     detail: AxonHubChannel,
@@ -1775,39 +1795,77 @@ const axonHubNativeDefinition = {
             )
           }
         : undefined
-    return editEditor(detail, loadSecret)
+    const base = editEditor(detail, loadSecret)
+    if (
+      !isRegularAxonHubChannelType(String(detail.type)) ||
+      detail.credentials == null
+    )
+      return base
+    return withCredentialListEditor(
+      base,
+      AXON_HUB_CHANNEL_FIELD_IDS.KEY,
+      axonCredentialRecords(detail),
+      true,
+      async (loadOptions) =>
+        axonCredentialRecords(
+          await operations.get(
+            {
+              siteType: SITE_TYPES.AXON_HUB,
+              kind: MANAGED_RESOURCE_KINDS.Channel,
+              scopeKey: operations.scopeKey,
+              resourceId,
+            },
+            loadOptions,
+          ),
+        ),
+    )
   },
   sanitizeEditDetail: sanitizeAxonHubEditorDetail,
-  create: (
+  create: async (
     operations: AxonHubNativeResourceOperations,
     command: AxonHubCreateCommand,
     options?: ResourceOperationOptions,
-  ) => operations.create(command.input, command.desiredStatus, options),
-  update: (
+  ) => {
+    if (command.credentialPatch)
+      command.input.credentials = {
+        apiKeys: (
+          await resolveCredentialPatch(command.credentialPatch, [])
+        ).map(({ key }) => key),
+      }
+    return operations.create(command.input, command.desiredStatus, options)
+  },
+  update: async (
     operations: AxonHubNativeResourceOperations,
     detail: AxonHubChannel,
     command: AxonHubNativeChannelPatch,
     options?: ResourceOperationOptions,
   ) => {
-    // UpdateChannelInput.credentials.apiKeys is replacement data, so a scalar
-    // editor must not overwrite multiple keys in the authoritative detail.
-    // Source: https://github.com/looplj/axonhub/blob/d061ac7df6aef0c5ec6cdfa9dc5002546a1c5a57/internal/server/gql/ent.graphql#L5993
-    if (
-      command.credentials !== undefined &&
-      getCredentialReplacementBlockReason(detail) ===
-        MANAGED_RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS.MultipleCredentials
+    const { credentialPatch, ...patch } = command
+    // AxonHub replaces apiKeys as a whole; reject stale membership before writing.
+    // https://github.com/looplj/axonhub/blob/d061ac7df6aef0c5ec6cdfa9dc5002546a1c5a57/internal/server/gql/ent.graphql
+    if (credentialPatch) {
+      if (
+        !isRegularAxonHubChannelType(String(detail.type)) ||
+        detail.credentials == null
+      )
+        throw new ManagedResourceError({ code: "permission_denied" })
+      patch.credentials = {
+        ...detail.credentials,
+        apiKey: undefined,
+        apiKeys: (
+          await resolveCredentialPatch(
+            credentialPatch,
+            axonCredentialRecords(detail),
+          )
+        ).map(({ key }) => key),
+      }
+    } else if (
+      patch.credentials &&
+      getAxonHubCredentialCandidates(detail).length > 1
     ) {
-      throw new ManagedResourceError({
-        code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
-        fieldIssues: [
-          {
-            fieldId: AXON_HUB_CHANNEL_FIELD_IDS.KEY,
-            code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.UnsupportedOption,
-          },
-        ],
-      })
+      throw new ManagedResourceError({ code: "resource_changed" })
     }
-    return operations.update(detail, command, options)
+    return operations.update(detail, patch, options)
   },
   delete: (
     operations: AxonHubNativeResourceOperations,
@@ -1829,3 +1887,12 @@ const axonHubNativeDefinition = {
 export const axonHubManagedResourceRegistration = defineNativeResourceKind(
   axonHubNativeDefinition,
 )
+
+/** Preserve credential order, including duplicate native entries. */
+function axonCredentialRecords(detail: AxonHubChannel) {
+  return getAxonHubCredentialCandidates(detail).map((key, index) => ({
+    id: String(index),
+    key,
+    fields: {},
+  }))
+}

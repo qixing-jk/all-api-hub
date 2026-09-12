@@ -13,6 +13,7 @@ import {
 import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 const channelManagement = vi.hoisted(() => ({
+  manageChannelKey: vi.fn(),
   listAllChannels: vi.fn(),
   fetchChannel: vi.fn(),
   createChannel: vi.fn(),
@@ -335,6 +336,123 @@ describe("newApi managed-site channel capability", () => {
       ],
     })
     expect(channelManagement.createChannel.mock.calls.at(-1)?.[1]).toBe(payload)
+  })
+
+  it("retains confirmed key writes and stops when a later key operation fails", async () => {
+    channelManagement.updateChannelFields.mockImplementation(
+      async (request) => {
+        request.observer?.onDispatch()
+        request.observer?.onResponse()
+        return { success: true, data: null }
+      },
+    )
+    channelManagement.manageChannelKey.mockImplementation(async (request) => {
+      request.observer?.onDispatch()
+      request.observer?.onResponse()
+      return { success: false, message: "key action rejected", data: null }
+    })
+    const { newApiChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/newApiOperations"
+    )
+    const result = await newApiChannelOperations.update(
+      config,
+      { id: 7, key: "first\nsecond" },
+      undefined,
+      [
+        { action: "delete_key", index: 0 },
+        { action: "disable_key", index: 0 },
+      ],
+    )
+    expect(result).toMatchObject({
+      outcome: "partial",
+      completion: "rejected",
+      confirmedEffects: [expect.objectContaining({ kind: "resource-updated" })],
+    })
+    expect(channelManagement.manageChannelKey).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(["deduplicated", "read-failed", "changed", "timeout"])(
+    "keeps old keys when append is %s",
+    async (scenario) => {
+      channelManagement.manageChannelKey.mockClear()
+      channelManagement.updateChannelFields.mockImplementation(
+        async (request) => {
+          request.observer?.onDispatch()
+          if (scenario === "timeout") throw new TypeError("Failed to fetch")
+          request.observer?.onResponse()
+          return { success: true, data: null }
+        },
+      )
+      channelManagement.fetchChannel.mockImplementation(async () => {
+        if (scenario === "read-failed") throw new Error("read failed")
+        return {
+          channel_info: {
+            is_multi_key: true,
+            multi_key_size: scenario === "deduplicated" ? 2 : 3,
+            multi_key_status_list: scenario === "changed" ? [2, 1, 1] : [1, 1],
+          },
+        }
+      })
+      const { newApiChannelOperations } = await import(
+        "~/services/apiAdapters/managedResources/newApiOperations"
+      )
+      const result = await newApiChannelOperations.update(
+        config,
+        { id: 7, key: "replacement", key_mode: "append" },
+        undefined,
+        [{ action: "delete_key", index: 0 }],
+        [1, 1, 1],
+      )
+      expect(result).toMatchObject({
+        outcome: scenario === "timeout" ? "uncertain" : "partial",
+      })
+      expect(channelManagement.manageChannelKey).not.toHaveBeenCalled()
+    },
+  )
+
+  it("confirms appended key state before deleting and stops after an unconfirmed indexed action", async () => {
+    channelManagement.manageChannelKey.mockClear()
+    channelManagement.updateChannelFields.mockImplementation(
+      async (request) => {
+        request.observer?.onDispatch()
+        request.observer?.onResponse()
+        return { success: true, data: null }
+      },
+    )
+    channelManagement.fetchChannel.mockResolvedValue({
+      channel_info: {
+        is_multi_key: true,
+        multi_key_size: 3,
+        multi_key_status_list: [1, 1, 1],
+      },
+    })
+    channelManagement.manageChannelKey.mockImplementation(async (request) => {
+      request.observer?.onDispatch()
+      request.observer?.onResponse()
+      // Simulate an older server acknowledging but ignoring disable_key.
+      return { success: true, data: null }
+    })
+    const { newApiChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/newApiOperations"
+    )
+    const result = await newApiChannelOperations.update(
+      config,
+      { id: 7, key: "replacement", key_mode: "append" },
+      undefined,
+      [
+        { action: "disable_key", index: 2 },
+        { action: "delete_key", index: 0 },
+      ],
+      [1, 1, 1],
+    )
+    expect(result).toMatchObject({
+      outcome: "partial",
+      completion: "uncertain",
+    })
+    expect(channelManagement.manageChannelKey).toHaveBeenCalledTimes(1)
+    expect(channelManagement.manageChannelKey.mock.calls[0][2]).toBe(
+      "disable_key",
+    )
   })
 
   it("returns partial/rejected when fields apply and the status response rejects", async () => {

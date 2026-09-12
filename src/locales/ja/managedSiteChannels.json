@@ -235,6 +235,11 @@
       "value": "値",
       "valueAt": "{{field}}：{{index}} 行目の値"
     },
+    "multiKeyMode": {
+      "label": "キーの選択方式",
+      "polling": "ラウンドロビン",
+      "random": "ランダム"
+    },
     "options": {
       "channelType": {
         "anthropic": "Anthropic",
@@ -278,6 +283,7 @@
       "loadableHint": "保存済み API キーはここには表示されません。変更しない場合は空欄のままにしてください。",
       "loadError": "保存済み API キーを読み込めませんでした。",
       "loading": "保存済み API キーを読み込んでいます…",
+      "partialReplacementHint": "一部のキーを置き換えると、既定ではリストの末尾に移動します。元の順序を保つには、先に保存済みキーを表示してください（認証が必要です）。",
       "placeholder": "アップストリーム API キーを入力",
       "replacementBlocked": {
         "multipleCredentials": "このチャネルには複数の API キーがあります。キーは AxonHub で管理してください。"

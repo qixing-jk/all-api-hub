@@ -1059,3 +1059,13 @@ export async function fetchAccountAvailableModels(
     return []
   }
 }
+
+/** Resolve credential editing from the probed protocol, never from version labels. */
+export async function getChannelKeyManagement(
+  config: OctopusConfig,
+  options?: Pick<RequestInit, "signal">,
+): Promise<"single" | "legacy" | "named"> {
+  const session = await octopusAuthManager.getValidSession(config, options)
+  if (session.mode === OCTOPUS_AUTH_MODES.Bearer) return "legacy"
+  return (await usesChannelProtocolPaths(config, options)) ? "named" : "single"
+}

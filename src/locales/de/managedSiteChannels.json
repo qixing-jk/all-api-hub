@@ -235,6 +235,11 @@
       "value": "Wert",
       "valueAt": "{{field}}: Wert in Zeile {{index}}"
     },
+    "multiKeyMode": {
+      "label": "Schlüsselauswahl",
+      "polling": "Reihum",
+      "random": "Zufällig"
+    },
     "options": {
       "channelType": {
         "anthropic": "Anthropic",
@@ -278,6 +283,7 @@
       "loadableHint": "Der gespeicherte API-Schlüssel wird hier nicht angezeigt. Leer lassen, um ihn unverändert beizubehalten.",
       "loadError": "Der gespeicherte API-Schlüssel konnte nicht geladen werden.",
       "loading": "Gespeicherter API-Schlüssel wird geladen...",
+      "partialReplacementHint": "Ersetzte einzelne Schlüssel werden standardmäßig ans Listenende verschoben. Um die Reihenfolge beizubehalten, zuerst einen gespeicherten Schlüssel anzeigen (Verifizierung erforderlich).",
       "placeholder": "Upstream-API-Schlüssel eingeben",
       "replacementBlocked": {
         "multipleCredentials": "Dieser Kanal hat mehrere API-Schlüssel. Verwalten Sie seine Schlüssel in AxonHub."

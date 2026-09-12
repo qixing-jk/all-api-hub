@@ -54,7 +54,7 @@ export interface OpenNewApiManagedVerificationParams {
   config: Pick<
     NewApiConfig,
     "baseUrl" | "userId" | "username" | "password" | "totpSecret"
-  >
+  > & { channelId?: number }
   label?: string
   onVerified?: () => Promise<void> | void
   closeMode?: NewApiManagedVerificationCloseMode
@@ -149,8 +149,9 @@ const normalizeConfig = (
   config: Pick<
     NewApiConfig,
     "baseUrl" | "userId" | "username" | "password" | "totpSecret"
-  >,
+  > & { channelId?: number },
 ) => ({
+  ...(config.channelId ? { channelId: config.channelId } : {}),
   baseUrl: config.baseUrl.trim(),
   userId: config.userId?.trim() ?? "",
   username: config.username?.trim() ?? "",

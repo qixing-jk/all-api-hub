@@ -235,6 +235,11 @@
       "value": "Giá trị",
       "valueAt": "{{field}}: giá trị dòng {{index}}"
     },
+    "multiKeyMode": {
+      "label": "Cách chọn khóa",
+      "polling": "Luân phiên",
+      "random": "Ngẫu nhiên"
+    },
     "options": {
       "channelType": {
         "anthropic": "Anthropic",
@@ -278,6 +283,7 @@
       "loadableHint": "Khóa API đã lưu không hiển thị tại đây. Để trống để giữ nguyên khóa.",
       "loadError": "Không thể tải khóa API đã lưu.",
       "loading": "Đang tải khóa API đã lưu...",
+      "partialReplacementHint": "Theo mặc định, các khóa được thay thế sẽ chuyển xuống cuối danh sách. Để giữ nguyên thứ tự, hãy hiển thị một khóa đã lưu trước (cần xác minh).",
       "placeholder": "Nhập khóa API của nhà cung cấp",
       "replacementBlocked": {
         "multipleCredentials": "Kênh này có nhiều khóa API. Hãy quản lý các khóa của kênh trong AxonHub."

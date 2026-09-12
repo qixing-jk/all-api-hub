@@ -32,6 +32,7 @@ import {
   deleteChannel,
   fetchRemoteModels,
   getChannel,
+  getChannelKeyManagement,
   listChannels,
   updateChannel,
   usesChannelProtocolPaths,
@@ -57,6 +58,11 @@ import {
 import { sanitizeSensitiveErrorText } from "~/utils/core/sanitizeSensitiveErrorText"
 
 import {
+  resolveCredentialPatch,
+  withCredentialListEditor,
+  type CredentialListPatch,
+} from "./credentialListEditor"
+import {
   buildOctopusCreateCommand,
   buildOctopusUpdateCommand,
   isOctopusHttpUrl,
@@ -69,7 +75,9 @@ import {
   validateOctopusValues,
 } from "./octopusEditor"
 
-type UpdateCommand = Omit<OctopusUpdateChannelInput, "id" | "source">
+type UpdateCommand = Omit<OctopusUpdateChannelInput, "id" | "source"> & {
+  credentialPatch?: CredentialListPatch
+}
 const aborted = (options?: ResourceOperationOptions) => {
   if (options?.signal?.aborted)
     throw new ManagedResourceError({ code: failures.Aborted })
@@ -270,6 +278,104 @@ export async function openOctopusNativeResourceOperations(
       return detail
     })
   }
+  // New named keys use GORM default:true, which can override an explicit false.
+  // Reconcile once against fresh detail; never replay creation or unknown writes.
+  // Source: github.com/bestruirui/octopus/blob/master/internal/op/channel.go (syncChannelKeys)
+  const reconcileDisabledKeys = async (
+    result: ManagedSiteMutationResult<OctopusChannel>,
+    requested: OctopusCreateChannelInput["keys"],
+    operationOptions?: ResourceOperationOptions,
+  ): Promise<ManagedSiteMutationResult<OctopusChannel>> => {
+    if (
+      result.outcome !== outcomes.Succeeded ||
+      !isDetail(result.data) ||
+      result.data.keyManagement !== "named" ||
+      !requested?.some((key) => !key.enabled)
+    )
+      return result
+    const partial = (): ManagedSiteMutationResult<OctopusChannel> => ({
+      outcome: outcomes.Partial,
+      completion: "uncertain",
+      data: result.data,
+      confirmedEffects: [
+        result.confirmedEffects[0] ??
+          octopusChannelEffect("resource-updated", result.data.id),
+        ...result.confirmedEffects.slice(1),
+      ],
+      diagnostic: {
+        code: failures.MutationStateUncertain,
+        message: failures.MutationStateUncertain,
+      },
+    })
+    try {
+      const latest = await get(result.data.id, operationOptions)
+      if (
+        latest.keys.length !== requested.length ||
+        requested.some(
+          (key) =>
+            !latest.keys.some(
+              (saved) =>
+                saved.name === key.name &&
+                saved.channel_key === key.channel_key,
+            ),
+        )
+      )
+        return partial()
+      const disabled = requested.filter((key) => !key.enabled)
+      if (
+        disabled.every(
+          (key) =>
+            latest.keys.find((saved) => saved.name === key.name)?.enabled ===
+            false,
+        )
+      )
+        return { ...result, data: latest }
+      const correction = await runOctopusMutation({
+        effect: octopusChannelEffect("resource-updated", latest.id),
+        execute: () =>
+          updateChannel(
+            config,
+            {
+              id: latest.id,
+              source: latest,
+              keys: latest.keys.map((key) => ({
+                ...key,
+                originalName: key.name,
+                enabled: disabled.some((wanted) => wanted.name === key.name)
+                  ? false
+                  : key.enabled,
+              })),
+            },
+            operationOptions,
+          ),
+      })
+      if (correction.outcome !== outcomes.Succeeded) return partial()
+      const confirmed = await get(latest.id, operationOptions)
+      if (
+        confirmed.keys.length !== requested.length ||
+        requested.some(
+          (key) =>
+            !confirmed.keys.some(
+              (saved) =>
+                saved.name === key.name &&
+                saved.channel_key === key.channel_key &&
+                saved.enabled === key.enabled,
+            ),
+        )
+      )
+        return partial()
+      return {
+        ...result,
+        data: confirmed,
+        confirmedEffects: [
+          ...result.confirmedEffects,
+          ...correction.confirmedEffects,
+        ],
+      }
+    } catch {
+      return partial()
+    }
+  }
   const loadSecret = async (
     id: number,
     operationOptions?: ResourceOperationOptions,
@@ -282,6 +388,7 @@ export async function openOctopusNativeResourceOperations(
   }
   return {
     scopeKey,
+    keyManagement: () => getChannelKeyManagement(config),
     get,
     loadSecret,
     prepareMigrationBaseUrl: (
@@ -337,15 +444,24 @@ export async function openOctopusNativeResourceOperations(
       operationOptions?: ResourceOperationOptions,
     ): Promise<ManagedSiteMutationResult<OctopusChannel>> => {
       aborted(operationOptions)
-      const result = await runOctopusMutation({
+      const created = await runOctopusMutation({
         effect: octopusChannelEffect("resource-created"),
         execute: () => createChannel(config, command, operationOptions),
       })
+      const result = await reconcileDisabledKeys(
+        created,
+        command.keys,
+        operationOptions,
+      )
       // A success envelope without an identity cannot safely attribute creation.
       // Never replay a create merely because its response lacks channel data.
       return result.outcome === outcomes.Succeeded && !isDetail(result.data)
         ? uncertain()
-        : sanitizeMutation(result, [config.password, command.key])
+        : sanitizeMutation(result, [
+            config.password,
+            command.key,
+            ...(command.keys?.map((key) => key.channel_key) ?? []),
+          ])
     },
     update: async (
       detail: OctopusChannel,
@@ -370,11 +486,17 @@ export async function openOctopusNativeResourceOperations(
         return sanitizeMutation(result, [
           config.password,
           command.key,
+          ...(command.keys?.map((key) => key.channel_key) ?? []),
           ...detail.keys.map((key) => key.channel_key),
         ])
-      if (isDetail(result.data) && result.data.id === detail.id) return result
+      if (isDetail(result.data) && result.data.id === detail.id)
+        return reconcileDisabledKeys(result, command.keys, operationOptions)
       try {
-        return { ...result, data: await get(detail.id, operationOptions) }
+        return reconcileDisabledKeys(
+          { ...result, data: await get(detail.id, operationOptions) },
+          command.keys,
+          operationOptions,
+        )
       } catch {
         return uncertain()
       }
@@ -493,15 +615,27 @@ export const octopusManagedResourceRegistration = defineNativeResourceKind({
       }),
     },
   ],
-  createEditor: async (operations: Operations) =>
-    editor(operations, {
+  createEditor: async (operations: Operations) => {
+    const base = editor(operations, {
       fields: octopusFieldDescriptors(),
       initialValues: octopusInitialValues(),
-      validate: (values) => validateOctopusValues(values),
+      validate: validateOctopusValues,
       buildCommand: buildOctopusCreateCommand,
-    }),
-  editEditor: (operations: Operations, detail) =>
-    editor(
+    })
+    const mode = await operations.keyManagement()
+    return mode === "single"
+      ? base
+      : withCredentialListEditor(
+          base,
+          fields.Key,
+          [],
+          false,
+          undefined,
+          octopusCredentialFields(mode),
+        )
+  },
+  editEditor: async (operations: Operations, detail: OctopusChannel) => {
+    const base = editor(
       operations,
       {
         fields: octopusFieldDescriptors(detail),
@@ -510,15 +644,92 @@ export const octopusManagedResourceRegistration = defineNativeResourceKind({
         buildCommand: (values) => buildOctopusUpdateCommand(detail, values),
       },
       detail,
-    ),
-  create: (
+    )
+    if (detail.keyManagement === "single" || detail.keys.length === 0)
+      return base
+    return withCredentialListEditor(
+      base,
+      fields.Key,
+      octopusCredentialRecords(detail),
+      true,
+      async (loadOptions) =>
+        octopusCredentialRecords(await operations.get(detail.id, loadOptions)),
+      octopusCredentialFields(detail.keyManagement ?? "legacy"),
+    )
+  },
+  create: async (
     operations: Operations,
-    command: OctopusCreateChannelInput,
+    command: OctopusCreateChannelInput & {
+      credentialPatch?: CredentialListPatch
+    },
     options,
-  ) => operations.create(command, options),
-  update: (operations: Operations, detail, command: UpdateCommand, options) =>
-    operations.update(detail, command, options),
+  ) => {
+    const { credentialPatch, ...input } = command
+    if (credentialPatch)
+      input.keys = await resolveOctopusCredentials(credentialPatch)
+    return operations.create(input, options)
+  },
+  update: async (
+    operations: Operations,
+    detail: OctopusChannel,
+    command: UpdateCommand,
+    options,
+  ) => {
+    const { credentialPatch, ...input } = command
+    if (credentialPatch) {
+      if (detail.keyManagement === "single")
+        throw new ManagedResourceError({ code: "resource_changed" })
+      input.keys = await resolveOctopusCredentials(credentialPatch, detail)
+    }
+    return operations.update(detail, input, options)
+  },
   delete: (operations: Operations, id, options) =>
     operations.delete(id, options),
   mapFailure,
 })
+
+/** Native IDs/names survive edits; ordinary metadata never includes secret values. */
+function octopusCredentialRecords(detail: OctopusChannel) {
+  return detail.keys.map((key, index) => ({
+    id: key.name ?? String(key.id ?? index),
+    key: key.channel_key,
+    fields: {
+      enabled: String(key.enabled),
+      remark: key.remark ?? "",
+      name: key.name ?? "",
+    },
+  }))
+}
+/** Select metadata supported by the native key protocol. */
+function octopusCredentialFields(mode: "legacy" | "named") {
+  return [
+    { fieldId: "enabled", type: "boolean" as const },
+    { fieldId: mode === "named" ? "name" : "remark", type: "text" as const },
+  ]
+}
+/** Resolve edited credentials while preserving native key identities. */
+async function resolveOctopusCredentials(
+  patch: CredentialListPatch,
+  detail?: OctopusChannel,
+) {
+  const records = await resolveCredentialPatch(
+    patch,
+    detail ? octopusCredentialRecords(detail) : [],
+  )
+  const keys = records.map((record) => {
+    const saved = detail?.keys.find(
+      (key, index) => (key.name ?? String(key.id ?? index)) === record.id,
+    )
+    return {
+      ...saved,
+      originalName: saved?.name,
+      channel_key: record.key,
+      enabled: record.fields.enabled !== "false",
+      remark: record.fields.remark ?? "",
+      name: record.fields.name || saved?.name || `key-${record.id}`,
+    }
+  })
+  if (new Set(keys.map((key) => key.name)).size !== keys.length)
+    throw new ManagedResourceError({ code: "validation_failed" })
+  return keys
+}

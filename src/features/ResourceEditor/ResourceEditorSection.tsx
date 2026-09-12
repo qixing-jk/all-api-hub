@@ -60,8 +60,8 @@ export function ResourceEditorSection({
         <fieldset
           className={
             columns === 2
-              ? "grid min-w-0 grid-cols-1 gap-4 px-3 pb-3 sm:grid-cols-2"
-              : "min-w-0 space-y-4 px-3 pb-3"
+              ? "grid min-w-0 grid-cols-1 gap-4 px-3 pt-1 pb-4 sm:grid-cols-2"
+              : "min-w-0 space-y-4 px-3 pt-1 pb-4"
           }
         >
           <legend className="sr-only">{label}</legend>

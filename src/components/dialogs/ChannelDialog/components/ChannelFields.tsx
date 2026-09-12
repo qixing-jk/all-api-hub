@@ -1,20 +1,21 @@
 import type { TFunction } from "i18next"
+import { Eye, LoaderCircle, RotateCw } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import {
   Alert,
   Button,
-  BUTTON_LOADING_BEHAVIORS,
   CompactMultiSelect,
+  IconButton,
   Input,
-  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import { ResourceFieldLabel } from "~/features/ResourceEditor/ResourceFieldLabel"
 
 export type ChannelCommonFieldsOption = {
   value: string
@@ -74,9 +75,9 @@ export function ChannelNameField({
   const errorId = errorMessage ? "channel-name-error" : undefined
   return (
     <div>
-      <Label htmlFor="channel-name" required={required}>
+      <ResourceFieldLabel htmlFor="channel-name" required={required}>
         {t("channelDialog:fields.name.label")}
-      </Label>
+      </ResourceFieldLabel>
       <Input
         id="channel-name"
         data-testid={CHANNEL_DIALOG_TEST_IDS.nameInput}
@@ -123,9 +124,9 @@ export function ChannelTypeField({
   const errorId = errorMessage ? "channel-type-error" : undefined
   return (
     <div>
-      <Label htmlFor="channel-type" required={required}>
+      <ResourceFieldLabel htmlFor="channel-type" required={required}>
         {t("channelDialog:fields.type.label")}
-      </Label>
+      </ResourceFieldLabel>
       <Select
         value={value}
         onValueChange={onChange}
@@ -186,6 +187,7 @@ export function ChannelSecretField({
   loadingRealKeyLabel,
   cancelLoadRealKeyLabel,
   realKeyHint,
+  realKeyLoadError,
   realKeyUnavailableMessage,
   actions,
 }: {
@@ -208,6 +210,7 @@ export function ChannelSecretField({
   loadingRealKeyLabel?: string
   cancelLoadRealKeyLabel?: string
   realKeyHint?: string
+  realKeyLoadError?: string
   realKeyUnavailableMessage?: string
   actions?: ReactNode
 }) {
@@ -223,14 +226,49 @@ export function ChannelSecretField({
   const errorId = errorMessage ? "channel-key-error" : undefined
   return (
     <div>
-      <Label htmlFor="channel-key" required={required}>
+      <ResourceFieldLabel htmlFor="channel-key" required={required}>
         {t("channelDialog:fields.key.label")}
-      </Label>
+      </ResourceFieldLabel>
       <Input
         id="channel-key"
         data-testid={CHANNEL_DIALOG_TEST_IDS.keyInput}
         type="password"
-        revealable
+        revealable={!canLoadRealKey}
+        rightIcon={
+          canLoadRealKey ? (
+            <IconButton
+              type="button"
+              size="sm"
+              variant="ghost"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={
+                isCancelableRealKeyLoad ? onCancelLoadRealKey : onLoadRealKey
+              }
+              disabled={
+                disabled || (isLoadingRealKey && !isCancelableRealKeyLoad)
+              }
+              aria-busy={isLoadingRealKey}
+              aria-live={isLoadingRealKey ? "polite" : undefined}
+              aria-describedby={realKeyHintId}
+              aria-label={
+                isCancelableRealKeyLoad
+                  ? cancelLoadRealKeyLabel ?? t("common:actions.cancel")
+                  : isLoadingRealKey
+                    ? loadingRealKeyLabel ??
+                      t("channelDialog:actions.loadingRealKey")
+                    : loadRealKeyLabel ?? t("channelDialog:actions.loadRealKey")
+              }
+            >
+              {isLoadingRealKey ? (
+                <LoaderCircle aria-hidden className="h-4 w-4 animate-spin" />
+              ) : realKeyLoadError ? (
+                <RotateCw aria-hidden className="h-4 w-4" />
+              ) : (
+                <Eye aria-hidden className="h-4 w-4" />
+              )}
+            </IconButton>
+          ) : undefined
+        }
         revealed={revealed}
         onRevealedChange={onRevealedChange}
         revealLabels={{
@@ -263,38 +301,20 @@ export function ChannelSecretField({
         </ChannelFieldMessage>
       ) : null}
       {canLoadRealKey ? (
-        <div className="mt-2 flex items-center justify-between gap-2">
+        <div className="mt-1">
           <p
             id={realKeyHintId}
-            className="dark:text-dark-text-secondary text-xs text-gray-500"
+            role={realKeyLoadError ? "alert" : "status"}
+            className={
+              realKeyLoadError
+                ? "min-w-0 text-xs text-red-600 dark:text-red-400"
+                : "text-muted-foreground min-w-0 text-xs"
+            }
           >
-            {realKeyHint ?? t("channelDialog:fields.key.realKeyHint")}
+            {realKeyLoadError ??
+              realKeyHint ??
+              t("channelDialog:fields.key.realKeyHint")}
           </p>
-          <div className="flex shrink-0 items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="dashed"
-              onClick={
-                isCancelableRealKeyLoad ? onCancelLoadRealKey : onLoadRealKey
-              }
-              disabled={disabled}
-              loading={isLoadingRealKey}
-              loadingBehavior={
-                isCancelableRealKeyLoad
-                  ? BUTTON_LOADING_BEHAVIORS.Interactive
-                  : undefined
-              }
-              aria-live={isLoadingRealKey ? "polite" : undefined}
-            >
-              {isCancelableRealKeyLoad
-                ? cancelLoadRealKeyLabel ?? t("common:actions.cancel")
-                : isLoadingRealKey
-                  ? loadingRealKeyLabel ??
-                    t("channelDialog:actions.loadingRealKey")
-                  : loadRealKeyLabel ?? t("channelDialog:actions.loadRealKey")}
-            </Button>
-          </div>
         </div>
       ) : null}
       {realKeyUnavailableMessageId ? (
@@ -330,9 +350,9 @@ export function ChannelBaseUrlField({
   const errorId = errorMessage ? "channel-base-url-error" : undefined
   return (
     <div>
-      <Label htmlFor="channel-base-url" required={required}>
+      <ResourceFieldLabel htmlFor="channel-base-url" required={required}>
         {t("channelDialog:fields.baseUrl.label")}
-      </Label>
+      </ResourceFieldLabel>
       <Input
         id="channel-base-url"
         data-testid={CHANNEL_DIALOG_TEST_IDS.baseUrlInput}
@@ -392,12 +412,12 @@ export function ChannelModelsField({
   const errorId = errorMessage ? "channel-models-error" : undefined
   return (
     <div role="group" aria-label={t("channelDialog:fields.models.label")}>
-      <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <Label className="mb-0" required={required}>
+      <div className="mb-1.5 flex items-center justify-between gap-3">
+        <ResourceFieldLabel className="mb-0 min-w-0" required={required}>
           {t("channelDialog:fields.models.label")}
-        </Label>
+        </ResourceFieldLabel>
         {showBulkActions || actions ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="ml-auto flex max-w-[65%] shrink-0 flex-wrap items-center justify-end gap-2">
             {showBulkActions ? (
               <>
                 <Button
@@ -497,9 +517,9 @@ export function ChannelStatusField({
   const errorId = errorMessage ? "channel-status-error" : undefined
   return (
     <div>
-      <Label htmlFor="channel-status" required={required}>
+      <ResourceFieldLabel htmlFor="channel-status" required={required}>
         {t("channelDialog:fields.status.label")}
-      </Label>
+      </ResourceFieldLabel>
       <Select
         value={value}
         onValueChange={onChange}

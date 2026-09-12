@@ -15,6 +15,7 @@ import {
   fetchDraftChannelModels,
   isNewApiManualStatus,
   listAllChannels,
+  manageChannelKey,
   searchChannel,
   updateChannelFields,
   updateChannelStatus,
@@ -128,6 +129,11 @@ const runNewApiChannelUpdateMutation = async (
   config: NewApiConfig,
   channelData: UpdateChannelPayload,
   options?: NewApiMutationOptions,
+  keyActions: readonly {
+    action: "delete_key" | "enable_key" | "disable_key"
+    index: number
+  }[] = [],
+  expectedKeyStates?: readonly number[],
 ) => {
   const sequence = createManagedSiteMutationSequence({ idempotent: false })
   const fieldsStep = await runNewApiMutationStep<void>({
@@ -144,6 +150,58 @@ const runNewApiChannelUpdateMutation = async (
     return finishManagedSiteMutationStep(sequence, fieldsStep)
   }
 
+  const keyStates = expectedKeyStates ? [...expectedKeyStates] : undefined
+  const confirmKeyStates = async () => {
+    if (!keyStates) return true
+    try {
+      const saved = await fetchChannel(
+        toManagedSiteApiServiceRequest(config, options),
+        channelData.id,
+        options,
+      )
+      return (
+        saved.channel_info?.is_multi_key === true &&
+        saved.channel_info.multi_key_size === keyStates.length &&
+        keyStates.every(
+          (status, index) =>
+            (saved.channel_info?.multi_key_status_list?.[index] ?? 1) ===
+            status,
+        )
+      )
+    } catch {
+      return false
+    }
+  }
+  const unconfirmedKeys = () =>
+    sequence.finish({
+      finalState: MANAGED_SITE_MUTATION_FINAL_STATES.Unconfirmed,
+      diagnostic: {
+        code: "mutation_state_uncertain",
+        message: "mutation_state_uncertain",
+      },
+    })
+  if (!(await confirmKeyStates())) return unconfirmedKeys()
+
+  for (const action of keyActions) {
+    const step = await runNewApiMutationStep<void>({
+      config,
+      options,
+      sequence,
+      effect: createManagedSiteChannelEffect(
+        MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated,
+        channelData.id,
+      ),
+      execute: (request) =>
+        manageChannelKey(request, channelData.id, action.action, action.index),
+    })
+    if (step.outcome !== NEW_API_MUTATION_STEP_OUTCOMES.Applied)
+      return finishManagedSiteMutationStep(sequence, step)
+    if (keyStates) {
+      if (action.action === "delete_key") keyStates.splice(action.index, 1)
+      else keyStates[action.index] = action.action === "enable_key" ? 1 : 2
+      if (!(await confirmKeyStates())) return unconfirmedKeys()
+    }
+  }
   const status = channelData.status
   if (typeof status === "number" && isNewApiManualStatus(status)) {
     const statusStep = await runNewApiMutationStep<boolean>({

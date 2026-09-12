@@ -18,6 +18,7 @@ import {
   ManagedResourceChannelField,
 } from "./ManagedResourceChannelField"
 import {
+  adaptManagedCredentialPolicy,
   MANAGED_RESOURCE_SECTION_ORDER,
   MANAGED_RESOURCE_SECTIONS,
   type ManagedResourceEditorFieldPolicy,
@@ -109,26 +110,34 @@ export function ManagedResourceEditorBody({
   const nativePolicy = useMemo(
     () => ({
       ...policy,
-      fields: policy.fields.map((field) => ({
-        ...field,
-        ...(field.resolveReadOnlyHelp &&
-        !["timestamp", "model-summary"].includes(
-          field.channelFieldRole ?? "",
-        ) &&
-        descriptors.some(
-          (descriptor) =>
-            descriptor.fieldId === field.fieldId && descriptor.readOnly,
-        )
-          ? {
-              resolveHelp: field.resolveReadOnlyHelp,
-              resolveDisabledHelp: field.resolveReadOnlyHelp,
-            }
-          : {}),
-        issueLabelResolvers: {
-          ...ISSUE_LABEL_RESOLVERS,
-          ...field.issueLabelResolvers,
-        },
-      })),
+      sections: Object.fromEntries(
+        Object.values(MANAGED_RESOURCE_SECTIONS).map((section) => [
+          section,
+          policy.sections?.[section] ?? { defaultOpen: true },
+        ]),
+      ),
+      fields: adaptManagedCredentialPolicy(descriptors, policy).fields.map(
+        (field) => ({
+          ...field,
+          ...(field.resolveReadOnlyHelp &&
+          !["timestamp", "model-summary"].includes(
+            field.channelFieldRole ?? "",
+          ) &&
+          descriptors.some(
+            (descriptor) =>
+              descriptor.fieldId === field.fieldId && descriptor.readOnly,
+          )
+            ? {
+                resolveHelp: field.resolveReadOnlyHelp,
+                resolveDisabledHelp: field.resolveReadOnlyHelp,
+              }
+            : {}),
+          issueLabelResolvers: {
+            ...ISSUE_LABEL_RESOLVERS,
+            ...field.issueLabelResolvers,
+          },
+        }),
+      ),
     }),
     [policy, descriptors],
   )

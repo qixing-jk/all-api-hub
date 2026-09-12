@@ -10,6 +10,8 @@ import {
   runManagedSiteTokenChannelStatusScenario,
 } from "~~/e2e/scenarios/managedSiteChannels"
 import { runNewApiAdvancedChannelScenario } from "~~/e2e/scenarios/newApiAdvancedChannel"
+import { runNewApiMultiKeyRealSiteScenario } from "~~/e2e/scenarios/newApiMultiKeyRealSite"
+import { runRealSiteMultiKeyEditorScenario } from "~~/e2e/scenarios/realSiteMultiKeyEditor"
 import {
   forceExtensionLanguage,
   seedUserPreferences,
@@ -129,6 +131,28 @@ test.describe("real-site E2E: managed-site channel management", () => {
     const managedSite = target.resolveConfig()
 
     if (target.siteType === SITE_TYPES.NEW_API) {
+      test("New API persists multi-key edits and cleans temporary channels", async ({
+        context,
+        page,
+        extensionId,
+      }) => {
+        test.setTimeout(180_000)
+        const resolved = resolveNewApiManagedSiteConfig()
+        test.skip(!resolved.config, "New API real-site environment is missing")
+        if (!resolved.config) return
+        await seedUserPreferences(await getServiceWorker(context), {
+          managedSiteType: SITE_TYPES.NEW_API,
+          newApi: resolved.config,
+          autoCheckin: { globalEnabled: false, pretriggerDailyOnUiOpen: false },
+          openChangelogOnUpdate: false,
+        })
+        await runNewApiMultiKeyRealSiteScenario({
+          context,
+          page,
+          extensionId,
+          config: resolved.config,
+        })
+      })
       test.describe("New API advanced persistence", () => {
         test("saves and clears advanced fields without losing unrelated settings", async ({
           context,
@@ -165,6 +189,16 @@ test.describe("real-site E2E: managed-site channel management", () => {
         missingEnvKeys: managedSite.missingEnvKeys,
       })
 
+      if (
+        target.siteType === SITE_TYPES.AXON_HUB ||
+        target.siteType === SITE_TYPES.OCTOPUS
+      ) {
+        test.skip(
+          `${target.label} persists multi-key edits and cleans temporary channels`,
+          { annotation: { type: "skip", description: skipReason } },
+          async () => {},
+        )
+      }
       test.skip(
         `${target.label} covers channel CRUD/search`,
         { annotation: { type: "skip", description: skipReason } },
@@ -181,6 +215,38 @@ test.describe("real-site E2E: managed-site channel management", () => {
         async () => {},
       )
       continue
+    }
+
+    if (
+      target.siteType === SITE_TYPES.AXON_HUB ||
+      target.siteType === SITE_TYPES.OCTOPUS
+    ) {
+      test(`${target.label} persists multi-key edits and cleans temporary channels`, async ({
+        context,
+        page,
+        extensionId,
+      }) => {
+        test.setTimeout(180_000)
+        const config = managedSite.config!
+        await seedUserPreferences(await getServiceWorker(context), {
+          managedSiteType: target.siteType,
+          [target.preferenceKey]: config,
+          autoCheckin: { globalEnabled: false, pretriggerDailyOnUiOpen: false },
+          openChangelogOnUpdate: false,
+        })
+        const supported = await runRealSiteMultiKeyEditorScenario({
+          page,
+          extensionId,
+          siteType: target.siteType as
+            | typeof SITE_TYPES.AXON_HUB
+            | typeof SITE_TYPES.OCTOPUS,
+          baseUrl: config.baseUrl,
+        })
+        test.skip(
+          !supported,
+          "This Octopus deployment exposes the single-key protocol",
+        )
+      })
     }
 
     test(`${target.label} covers channel CRUD/search`, async ({

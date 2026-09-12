@@ -111,6 +111,7 @@ export class NewApiChannelKeyRequirementError extends Error {
   constructor(
     public kind: NewApiChannelKeyErrorKind,
     public sessionResult?: NewApiChannelKeyRequirementSessionResult,
+    public channelId?: number,
   ) {
     super(kind)
     this.name = "NewApiChannelKeyRequirementError"
@@ -119,6 +120,8 @@ export class NewApiChannelKeyRequirementError extends Error {
 
 interface NewApiLoginResponse {
   require_2fa?: boolean
+  require_verification?: boolean
+  methods?: Array<{ method: string; available: boolean }>
   flow_token?: string
   expires_at?: number
 }
@@ -143,6 +146,7 @@ interface NewApiSessionState {
   hasLoggedInSession: boolean
   verifiedUntil?: number
   pendingLoginFlow?: {
+    unified?: boolean
     token: string
     expiresAt?: number
   }
@@ -156,10 +160,13 @@ interface NewApiSessionState {
     token: string
     /** Epoch milliseconds, matching the normalized verified-until timestamp. */
     expiresAt: number
+    channelId?: number
   }
+  channelKeyReadPromise?: Promise<unknown>
   loginPromise?: Promise<EnsureNewApiLoginResult>
   refreshPromise?: Promise<NewApiDashboardRefreshResult>
   methodsPromise?: Promise<NewApiVerificationMethods | null>
+  verificationChannelId?: number
   verificationPromise?: Promise<VerifyNewApiSessionResult>
 }
 
@@ -359,9 +366,11 @@ const storePendingLoginFlow = (
   baseUrl: string,
   token: string,
   expiresAt: unknown,
+  unified = false,
 ) => {
   const state = getSessionState(baseUrl)
   state.pendingLoginFlow = {
+    unified,
     token,
     expiresAt: toOptionalExpiryTimestamp(expiresAt),
   }
@@ -401,8 +410,15 @@ const getTransientSessionSecrets = (baseUrl: string) => {
 }
 
 /** Redacts transient session credentials while retaining error categories. */
-const sanitizeNewApiErrorForOrigin = (error: unknown, baseUrl: string) => {
-  const secrets = getTransientSessionSecrets(baseUrl).filter(Boolean)
+const sanitizeNewApiErrorForOrigin = (
+  error: unknown,
+  baseUrl: string,
+  extraSecrets: string[] = [],
+) => {
+  const secrets = [
+    ...getTransientSessionSecrets(baseUrl),
+    ...extraSecrets,
+  ].filter(Boolean)
   if (!secrets.length) return error
 
   const message = sanitizeNewApiSessionError(error, secrets)
@@ -430,7 +446,7 @@ const sanitizeNewApiErrorForOrigin = (error: unknown, baseUrl: string) => {
 const markVerified = (
   baseUrl: string,
   verifiedUntil?: number,
-  securityProof?: { token: string; expiresAt: number },
+  securityProof?: { token: string; expiresAt: number; channelId?: number },
 ) => {
   const state = getSessionState(baseUrl)
   state.hasLoggedInSession = true
@@ -677,9 +693,13 @@ async function ensureNewApiChannelKeyAccess(
   config: Pick<
     NewApiConfig,
     "baseUrl" | "userId" | "username" | "password" | "totpSecret"
-  >,
+  > & { channelId?: number },
 ): Promise<void> {
-  if (isNewApiVerifiedSessionActive(config.baseUrl)) {
+  if (
+    isNewApiVerifiedSessionActive(config.baseUrl) &&
+    (!getActiveSecurityProof(config.baseUrl)?.channelId ||
+      getActiveSecurityProof(config.baseUrl)?.channelId === config.channelId)
+  ) {
     return
   }
 
@@ -889,12 +909,34 @@ async function postNewApiLogin(
     ? (response.data as NewApiLoginResponse)
     : undefined
 
-  if (authBundleKind !== "valid" && responseData?.require_2fa) {
+  if (
+    authBundleKind !== "valid" &&
+    (responseData?.require_2fa || responseData?.require_verification)
+  ) {
+    // Unified login challenges use /login/verify with the advertised method.
+    // https://github.com/QuantumNous/new-api/blob/main/controller/login_verification.go
+    const unified = responseData.require_verification === true
+    if (
+      unified &&
+      (!trimToNull(responseData.flow_token) ||
+        !responseData.methods?.some(
+          (method) => method.method === "2fa" && method.available,
+        ))
+    ) {
+      throw new Error(
+        "New API login requires an available TOTP verification method and flow token",
+      )
+    }
     // Modern New API returns a flow token; its absence is the legacy contract.
     // https://github.com/QuantumNous/new-api/commit/31d70fca393ff2e09bbae012af2e3ccefdd389a1
     const flowToken = trimToNull(responseData.flow_token)
     if (flowToken) {
-      storePendingLoginFlow(config.baseUrl, flowToken, responseData.expires_at)
+      storePendingLoginFlow(
+        config.baseUrl,
+        flowToken,
+        responseData.expires_at,
+        unified,
+      )
     } else {
       clearPendingLoginFlow(config.baseUrl)
     }
@@ -945,7 +987,7 @@ async function ensureNewApiLoginSession(
  * Runs the secure-verification request that unlocks hidden channel-key reads.
  */
 async function verifyNewApiSession(
-  config: Pick<NewApiConfig, "baseUrl" | "userId">,
+  config: Pick<NewApiConfig, "baseUrl" | "userId"> & { channelId?: number },
   params: {
     method: "2fa"
     code: string
@@ -953,9 +995,13 @@ async function verifyNewApiSession(
 ): Promise<VerifyNewApiSessionResult> {
   const state = getSessionState(config.baseUrl)
   if (state.verificationPromise) {
-    return state.verificationPromise
+    if (state.verificationChannelId === config.channelId)
+      return state.verificationPromise
+    await state.verificationPromise.catch(() => undefined)
+    return await verifyNewApiSession(config, params)
   }
 
+  state.verificationChannelId = config.channelId
   state.verificationPromise = (async () => {
     const request = createManagedSessionRequest(config.baseUrl, config.userId)
     const usesDashboardAuth = request.auth.authType === AuthTypeEnum.AccessToken
@@ -966,6 +1012,9 @@ async function verifyNewApiSession(
           // sensitive channel-key read. Older Cookie-auth deployments do not
           // receive this field, preserving their original request contract.
           scope: NEW_API_SECURITY_PROOF_SCOPES.CHANNEL_KEY_READ,
+          ...(config.channelId
+            ? { context: { channel_id: config.channelId } }
+            : {}),
         }
       : params
     let response: NewApiVerifyResponse
@@ -993,6 +1042,7 @@ async function verifyNewApiSession(
         ? {
             token: proofToken,
             expiresAt: verifiedUntil,
+            ...(config.channelId ? { channelId: config.channelId } : {}),
           }
         : undefined,
     )
@@ -1021,10 +1071,16 @@ async function verifyNewApiSession(
  * applies automatic TOTP verification when the user has opted into it.
  */
 async function continueFromLoggedInSession(
-  config: Pick<NewApiConfig, "baseUrl" | "userId" | "totpSecret">,
+  config: Pick<NewApiConfig, "baseUrl" | "userId" | "totpSecret"> & {
+    channelId?: number
+  },
   methods: NewApiVerificationMethods,
 ): Promise<EnsureNewApiManagedSessionResult> {
-  if (isNewApiVerifiedSessionActive(config.baseUrl)) {
+  if (
+    isNewApiVerifiedSessionActive(config.baseUrl) &&
+    (!getActiveSecurityProof(config.baseUrl)?.channelId ||
+      getActiveSecurityProof(config.baseUrl)?.channelId === config.channelId)
+  ) {
     return {
       status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,
       methods,
@@ -1090,7 +1146,7 @@ export async function ensureNewApiManagedSession(
   config: Pick<
     NewApiConfig,
     "baseUrl" | "userId" | "username" | "password" | "totpSecret"
-  >,
+  > & { channelId?: number },
 ): Promise<EnsureNewApiManagedSessionResult> {
   let loginResult: EnsureNewApiLoginResult
   try {
@@ -1150,7 +1206,9 @@ export async function ensureNewApiManagedSession(
  * stage, because upstream New API treats those as two separate steps.
  */
 export async function submitNewApiLoginTwoFactorCode(
-  config: Pick<NewApiConfig, "baseUrl" | "userId" | "totpSecret">,
+  config: Pick<NewApiConfig, "baseUrl" | "userId" | "totpSecret"> & {
+    channelId?: number
+  },
   code: string,
   options?: {
     automaticAttempted?: boolean
@@ -1163,11 +1221,14 @@ export async function submitNewApiLoginTwoFactorCode(
   let response
   try {
     response = await newApiFamilyRequests.envelope<unknown>(request, {
-      endpoint: "/api/user/login/2fa",
+      endpoint: pendingLoginFlow?.unified
+        ? "/api/user/login/verify"
+        : "/api/user/login/2fa",
       options: {
         method: "POST",
         body: JSON.stringify({
           code: trimmedCode,
+          ...(pendingLoginFlow?.unified ? { method: "2fa" } : {}),
           ...(pendingLoginFlow ? { flow_token: pendingLoginFlow.token } : {}),
         }),
       },
@@ -1251,7 +1312,7 @@ export async function submitNewApiLoginTwoFactorCode(
  * reads and other sensitive managed-site actions.
  */
 export async function submitNewApiSecureVerificationCode(
-  config: Pick<NewApiConfig, "baseUrl" | "userId">,
+  config: Pick<NewApiConfig, "baseUrl" | "userId"> & { channelId?: number },
   code: string,
 ): Promise<EnsureNewApiManagedSessionResult> {
   const trimmedCode = code.trim()
@@ -1267,11 +1328,7 @@ export async function submitNewApiSecureVerificationCode(
   }
 }
 
-/**
- * Fetches a hidden New API channel key through the response-detected auth path
- * and classifies missing login or verification state for passive callers.
- */
-export async function fetchNewApiChannelKey(params: {
+type NewApiChannelKeyParams = {
   baseUrl: string
   userId?: number | string
   channelId: number
@@ -1280,12 +1337,51 @@ export async function fetchNewApiChannelKey(params: {
   totpSecret?: string
   protectionBypassExecution?: ProtectionBypassExecution
   signal?: AbortSignal
-}): Promise<string> {
+}
+
+/** Serializes proof issuance and consumption within an origin, including failed reads. */
+export async function fetchNewApiChannelKey(
+  params: NewApiChannelKeyParams,
+): Promise<string> {
+  const state = getSessionState(params.baseUrl)
+  const previous = state.channelKeyReadPromise
+  const pending = (async () => {
+    await previous?.catch(() => undefined)
+    try {
+      return await readNewApiChannelKey(params)
+    } catch (error) {
+      if (error instanceof NewApiChannelKeyRequirementError)
+        error.channelId = params.channelId
+      throw error
+    }
+  })()
+  state.channelKeyReadPromise = pending
+  try {
+    return await runAbortableTask(() => pending, { signals: [params.signal] })
+  } finally {
+    if (state.channelKeyReadPromise === pending) {
+      // Keep the queue locked until the underlying operation settles, even if
+      // its caller stops waiting after cancellation.
+      void pending
+        .finally(() => {
+          if (state.channelKeyReadPromise === pending)
+            state.channelKeyReadPromise = undefined
+        })
+        .catch(() => undefined)
+    }
+  }
+}
+
+/** Acquires verification and consumes the proof for one queued channel-key read. */
+async function readNewApiChannelKey(
+  params: NewApiChannelKeyParams,
+): Promise<string> {
   throwIfNewApiSessionReadAborted(params.signal)
   await runAbortableTask(
     async () =>
       await ensureNewApiChannelKeyAccess({
         baseUrl: params.baseUrl,
+        channelId: params.channelId,
         userId: params.userId?.toString() ?? "",
         username: params.username?.trim() ?? "",
         password: params.password ?? "",
@@ -1295,6 +1391,7 @@ export async function fetchNewApiChannelKey(params: {
   )
   throwIfNewApiSessionReadAborted(params.signal)
 
+  let consumedProofToken = ""
   try {
     const endpoint = `/api/channel/${params.channelId}/key`
     const sessionRequest = createManagedSessionRequest(
@@ -1307,6 +1404,18 @@ export async function fetchNewApiChannelKey(params: {
     const securityProof = usesDashboardAuth
       ? getActiveSecurityProof(params.baseUrl)
       : undefined
+    // Current upstream binds proofs to a channel and consumes them at most once.
+    // Clear before sending: a failed or aborted response may already have consumed it.
+    // https://github.com/QuantumNous/new-api/blob/main/service/security_verification.go
+    if (securityProof?.channelId) {
+      consumedProofToken = securityProof.token
+      clearVerifiedState(params.baseUrl)
+      if (securityProof.channelId !== params.channelId) {
+        throw new NewApiChannelKeyRequirementError(
+          NEW_API_CHANNEL_KEY_ERROR_KINDS.SECURE_VERIFICATION_REQUIRED,
+        )
+      }
+    }
     let response: { key?: string } | string
     try {
       response = await newApiFamilyRequests.data<{ key?: string } | string>(
@@ -1392,7 +1501,7 @@ export async function fetchNewApiChannelKey(params: {
       throw new Error("new_api_channel_key_missing")
     }
 
-    markVerified(params.baseUrl)
+    if (!securityProof?.channelId) markVerified(params.baseUrl)
     await runAbortableTask(
       async () =>
         await touchNewApiOwnedSession(
@@ -1405,7 +1514,9 @@ export async function fetchNewApiChannelKey(params: {
     return key
   } catch (rawError) {
     throwIfNewApiSessionReadAborted(params.signal)
-    const error = sanitizeNewApiErrorForOrigin(rawError, params.baseUrl)
+    const error = sanitizeNewApiErrorForOrigin(rawError, params.baseUrl, [
+      consumedProofToken,
+    ])
     if (isUnauthorizedError(error)) {
       clearLoggedInState(params.baseUrl)
       throw new NewApiChannelKeyRequirementError(

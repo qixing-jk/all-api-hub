@@ -235,6 +235,11 @@
       "value": "Value",
       "valueAt": "{{field}}: row {{index}} value"
     },
+    "multiKeyMode": {
+      "label": "Key selection",
+      "polling": "Round robin",
+      "random": "Random"
+    },
     "options": {
       "channelType": {
         "anthropic": "Anthropic",
@@ -278,6 +283,7 @@
       "loadableHint": "The saved API key is not shown here. Leave blank to keep it unchanged.",
       "loadError": "The saved API key could not be loaded.",
       "loading": "Loading the saved API key...",
+      "partialReplacementHint": "Replacing some keys moves them to the end by default. To keep their original order, reveal a saved key first (verification required).",
       "placeholder": "Enter an upstream API key",
       "replacementBlocked": {
         "multipleCredentials": "This channel has multiple API keys. Manage its keys in AxonHub."

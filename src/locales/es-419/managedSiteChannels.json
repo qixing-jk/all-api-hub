@@ -235,6 +235,11 @@
       "value": "Valor",
       "valueAt": "{{field}}: valor de fila {{index}}"
     },
+    "multiKeyMode": {
+      "label": "Selección de claves",
+      "polling": "Por turnos",
+      "random": "Aleatoria"
+    },
     "options": {
       "channelType": {
         "anthropic": "Anthropic",
@@ -278,6 +283,7 @@
       "loadableHint": "La clave de API guardada no se muestra aquí. Déjala en blanco para conservarla sin cambios.",
       "loadError": "No se pudo cargar la clave de API guardada.",
       "loading": "Cargando la clave de API guardada...",
+      "partialReplacementHint": "Al reemplazar algunas claves, se mueven al final de la lista de forma predeterminada. Para conservar su orden, muestra primero una clave guardada (requiere verificación).",
       "placeholder": "Ingresa la clave de API del proveedor",
       "replacementBlocked": {
         "multipleCredentials": "Este canal tiene varias claves de API. Administra sus claves en AxonHub."

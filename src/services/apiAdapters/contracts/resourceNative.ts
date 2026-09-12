@@ -146,7 +146,7 @@ export type ResourceSecretListDescriptor = ResourceFieldDescriptorBase & {
   }[]
   entryFields: readonly {
     fieldId: string
-    type: "text" | "number"
+    type: "text" | "number" | "boolean"
     min?: number
     max?: number
   }[]
@@ -224,6 +224,8 @@ export type ResourceFieldDescriptor =
 export type ResourceFailure = {
   code: (typeof RESOURCE_FAILURE_CODES)[keyof typeof RESOURCE_FAILURE_CODES]
   recoveryHint?: (typeof RESOURCE_FAILURE_RECOVERY_HINTS)[keyof typeof RESOURCE_FAILURE_RECOVERY_HINTS]
+  /** Resource identity required to resume an interactive verification. */
+  recoveryResourceId?: string
   /** Adapter-sanitized diagnostic safe for the affected user's private UI. */
   message?: string
   /** Adapter-sanitized upstream identifier safe for the affected user's private UI. */

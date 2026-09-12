@@ -51,8 +51,9 @@ const permissionFailure = () =>
     code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
   })
 
-const verificationRequiredFailure = () =>
+const verificationRequiredFailure = (resourceId?: string) =>
   new ManagedResourceError({
+    recoveryResourceId: resourceId,
     code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
     recoveryHint:
       MANAGED_RESOURCE_FAILURE_RECOVERY_HINTS.InteractiveVerification,
@@ -68,35 +69,41 @@ describe("useNewApiNativeSecretVerification", () => {
     vi.clearAllMocks()
   })
 
-  it("retries a provider secret read after interactive verification", async () => {
-    const read = vi
-      .fn<() => Promise<string>>()
-      .mockRejectedValueOnce(verificationRequiredFailure())
-      .mockResolvedValueOnce("saved-secret")
-    const { result } = renderHook(
-      () => useNewApiNativeSecretVerification({ enabled: true, config }),
-      renderOptions,
-    )
+  it.each([undefined, "17"])(
+    "retries a provider secret read with verification context %s",
+    async (resourceId) => {
+      const read = vi
+        .fn<() => Promise<string>>()
+        .mockRejectedValueOnce(verificationRequiredFailure(resourceId))
+        .mockResolvedValueOnce("saved-secret")
+      const { result } = renderHook(
+        () => useNewApiNativeSecretVerification({ enabled: true, config }),
+        renderOptions,
+      )
 
-    const pending = result.current.runVerifiedRead(read, "Example channel")
-    await waitFor(() =>
-      expect(mocks.openNewApiManagedVerification).toHaveBeenCalledOnce(),
-    )
-    const request = mocks.openNewApiManagedVerification.mock.calls[0][0]
+      const pending = result.current.runVerifiedRead(read, "Example channel")
+      await waitFor(() =>
+        expect(mocks.openNewApiManagedVerification).toHaveBeenCalledOnce(),
+      )
+      const request = mocks.openNewApiManagedVerification.mock.calls[0][0]
 
-    await act(async () => {
-      await request.onVerified()
-    })
+      await act(async () => {
+        await request.onVerified()
+      })
 
-    await expect(pending).resolves.toBe("saved-secret")
-    expect(read).toHaveBeenCalledTimes(2)
-    expect(request).toMatchObject({
-      kind: "channel",
-      label: "Example channel",
-      config,
-      closeMode: "close-after-callback",
-    })
-  })
+      await expect(pending).resolves.toBe("saved-secret")
+      expect(read).toHaveBeenCalledTimes(2)
+      expect(request).toMatchObject({
+        kind: "channel",
+        label: "Example channel",
+        config: {
+          ...config,
+          ...(resourceId ? { channelId: Number(resourceId) } : {}),
+        },
+        closeMode: "close-after-callback",
+      })
+    },
+  )
 
   it("does not open provider verification for unrelated failures", async () => {
     const failure = new Error("upstream unavailable")

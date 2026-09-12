@@ -56,6 +56,19 @@ for (const width of [1280, 420]) {
       release()
       await expect(dialog.getByRole("alert")).toBeVisible()
       await expect(dialog.getByRole("textbox")).toHaveCount(0)
+      await expect(
+        dialog
+          .getByTestId(CHANNEL_DIALOG_TEST_IDS.footer)
+          .getByRole("button", { name: "Retry", exact: true }),
+      ).toBeVisible()
+      expect(
+        await dialog.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth + 1,
+        ),
+      ).toBe(true)
+      await page.screenshot({
+        path: testInfo.outputPath("channel-opening-error.png"),
+      })
       fail = false
       await dialog.getByRole("button", { name: "Retry", exact: true }).click()
       await expect(
@@ -163,7 +176,11 @@ test("optional group loading and retry preserve an editable channel", async ({
     fail = false
     await retry.click()
     await expect(retry).toBeHidden()
-    await expect(dialog.getByRole("status")).toHaveCount(0)
+    await expect(
+      dialog
+        .getByRole("group", { name: "Models", exact: true })
+        .getByRole("status"),
+    ).toHaveCount(0)
     await expect(name).toHaveValue("Draft kept while groups load")
   } finally {
     release()

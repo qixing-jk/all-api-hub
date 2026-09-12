@@ -4,6 +4,8 @@ import { useId, useState, type ReactNode } from "react"
 
 import { Button, Input, Label, Textarea } from "~/components/ui"
 
+import { ResourceFieldLabel } from "./ResourceFieldLabel"
+
 const parseRows = (value: string): [string, string][] | undefined => {
   try {
     const parsed: unknown = JSON.parse(value.trim() || "{}")
@@ -85,9 +87,9 @@ export function ResourceJsonField({
     /* No formatting action for invalid JSON. */
   }
   return (
-    <fieldset className="min-w-0 space-y-2">
+    <fieldset className="min-w-0">
       <legend className="sr-only">{label}</legend>
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+      <div className="mb-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <span className="text-sm font-medium">{label}</span>
         <div className="flex flex-wrap items-center gap-1">
           {actions}
@@ -128,13 +130,13 @@ export function ResourceJsonField({
               key={index}
               className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
             >
-              <div className="col-span-2 min-w-0 space-y-1 sm:col-span-1">
-                <Label
+              <div className="col-span-2 min-w-0 sm:col-span-1">
+                <ResourceFieldLabel
                   htmlFor={`${id}-${index}-key`}
                   className="text-muted-foreground text-xs"
                 >
                   {t("managedSiteChannels:editor.json.key")}
-                </Label>
+                </ResourceFieldLabel>
                 <Input
                   id={`${id}-${index}-key`}
                   aria-label={t("managedSiteChannels:editor.json.keyAt", {
@@ -155,13 +157,13 @@ export function ResourceJsonField({
                   }
                 />
               </div>
-              <div className="min-w-0 space-y-1">
-                <Label
+              <div className="min-w-0">
+                <ResourceFieldLabel
                   htmlFor={`${id}-${index}-value`}
                   className="text-muted-foreground text-xs"
                 >
                   {t("managedSiteChannels:editor.json.value")}
-                </Label>
+                </ResourceFieldLabel>
                 <Input
                   id={`${id}-${index}-value`}
                   aria-label={t("managedSiteChannels:editor.json.valueAt", {
@@ -230,7 +232,7 @@ export function ResourceJsonField({
       )}
       <p
         id={`${id}-help`}
-        className="text-muted-foreground text-xs leading-relaxed"
+        className="text-muted-foreground mt-1 text-xs leading-relaxed"
       >
         {help}
       </p>
@@ -238,7 +240,7 @@ export function ResourceJsonField({
         <p
           id={`${id}-error`}
           role="alert"
-          className="text-xs text-red-600 dark:text-red-400"
+          className="mt-1 text-xs text-red-600 dark:text-red-400"
         >
           {errorMessage}
         </p>

@@ -35,6 +35,8 @@ export enum OctopusAutoGroupType {
  * Octopus 渠道密钥
  */
 export interface OctopusChannelKey {
+  originalName?: string
+  name?: string
   /** 密钥唯一标识符 */
   id?: number
   /** 所属渠道 ID */
@@ -104,6 +106,7 @@ export const OCTOPUS_CHANNEL_DETAIL_AVAILABILITY = {
 } as const
 
 export interface OctopusChannel {
+  keyManagement?: "single" | "legacy" | "named"
   /** Migration cannot reproduce all native grants, dialect, or protocol paths. */
   hasUnrepresentedProtocolSettings?: boolean
   /** Stats-only inventories omit protocol, endpoints, and credential details. */
@@ -258,6 +261,7 @@ export interface OctopusFetchModelRequest {
 
 /** Product-owned create command shared by current and legacy codecs. */
 export interface OctopusCreateChannelInput {
+  keys?: OctopusChannelKey[]
   name: string
   type: OctopusOutboundType
   enabled?: boolean
@@ -275,6 +279,7 @@ export interface OctopusCreateChannelInput {
 
 /** Product-owned update command shared by current and legacy codecs. */
 export interface OctopusUpdateChannelInput {
+  keys?: OctopusChannelKey[]
   id: number
   name?: string
   type?: OctopusOutboundType

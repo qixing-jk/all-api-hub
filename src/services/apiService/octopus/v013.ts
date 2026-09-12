@@ -186,7 +186,13 @@ const parseChannelDetail = (value: unknown): OctopusV013ChannelDetailDto => {
     }),
     grants: requireArray(value, "grants").map(parseChannelGrant),
     proxy: requireBoolean(value, "proxy"),
-    custom_header: requireArray(value, "custom_header").map(parseCustomHeader),
+    // v0.13 reads ChannelConfig directly from storage; older rows can retain a
+    // nil header slice even though new writes normalize it to an empty array.
+    // https://github.com/bestruirui/octopus/blob/v0.13.0/internal/op/channel.go#L427
+    custom_header:
+      value.custom_header === null
+        ? []
+        : requireArray(value, "custom_header").map(parseCustomHeader),
     param_override: requireString(value, "param_override"),
     channel_proxy: requireString(value, "channel_proxy"),
     match_regex: requireString(value, "match_regex"),
@@ -289,9 +295,17 @@ const encodeCreate = (
     enabled: input.enabled ?? true,
     base_url: input.baseUrl,
     ...protocolPathsForOutboundType(input.type),
-    keys: [{ name: keyName, key: input.key, enabled: true }],
+    keys: input.keys?.map((key, index) => ({
+      name: key.name || `key-${index + 1}`,
+      key: key.channel_key,
+      enabled: key.enabled,
+    })) ?? [{ name: keyName, key: input.key, enabled: true }],
     models,
-    grants: createGrants(models, keyName, protocols),
+    grants: input.keys
+      ? input.keys.flatMap((key, index) =>
+          createGrants(models, key.name || `key-${index + 1}`, protocols),
+        )
+      : createGrants(models, keyName, protocols),
     proxy: input.proxy ?? false,
     custom_header: input.customHeaders ?? [],
     param_override: input.paramOverride ?? "",
@@ -307,7 +321,14 @@ const encodeUpdate = (
   const existingType = inferOutboundType(existing.grants)
   const typeChanged = input.type !== undefined && input.type !== existingType
   const targetType = input.type ?? existingType
-  const keys = existing.keys.map((key) => ({ ...key }))
+  const keys = input.keys
+    ? input.keys.map((key, index) => ({
+        ...existing.keys.find((saved) => saved.name === key.originalName),
+        name: key.name || `key-${index + 1}`,
+        key: key.channel_key,
+        enabled: key.enabled,
+      }))
+    : existing.keys.map((key) => ({ ...key }))
   if (input.key !== undefined) {
     if (keys[0]) keys[0].key = input.key
     else keys.push({ name: "default", key: input.key, enabled: true })
@@ -321,17 +342,57 @@ const encodeUpdate = (
   const modelNames = new Set(models)
   const keyNames = new Set(keys.map((key) => key.name))
   const protocols = protocolForOutboundType(targetType)
+  if (
+    input.keys &&
+    input.source &&
+    JSON.stringify(existing.keys.map((key) => [key.name, key.key])) !==
+      JSON.stringify(
+        input.source.keys.map((key) => [key.name, key.channel_key]),
+      )
+  )
+    throw new Error("Channel credentials changed; reopen the editor")
+  const renames = new Map(
+    input.keys
+      ?.filter((key) => key.originalName)
+      .map((key) => [key.originalName!, key.name!]) ?? [],
+  )
+  const retainedNames = new Set(
+    input.keys?.flatMap((key) => (key.originalName ? [key.originalName] : [])),
+  )
+  const removedNames = new Set(
+    existing.keys
+      .filter((key) => !retainedNames.has(key.name))
+      .map((key) => key.name),
+  )
   let grants = existing.grants
+    .filter((grant) => !input.keys || !removedNames.has(grant.key_name))
+    .map((grant) => ({
+      ...grant,
+      key_name: renames.get(grant.key_name) ?? grant.key_name,
+    }))
     .filter(
       (grant) =>
-        !replacesModels ||
-        (modelNames.has(grant.model_name) && keyNames.has(grant.key_name)),
+        (!input.keys && !replacesModels) ||
+        (keyNames.has(grant.key_name) &&
+          (!replacesModels || modelNames.has(grant.model_name))),
     )
     .map((grant) => ({
       ...grant,
       ...(typeChanged ? { protocols } : {}),
     }))
 
+  if (input.keys) {
+    const existingNames = new Set(
+      existing.keys
+        .filter((key) => retainedNames.has(key.name))
+        .map((key) => renames.get(key.name) ?? key.name),
+    )
+    grants.push(
+      ...keys
+        .filter((key) => !existingNames.has(key.name))
+        .flatMap((key) => createGrants(models, key.name, protocols)),
+    )
+  }
   if (replacesModels) {
     const grantedModels = new Set(grants.map((grant) => grant.model_name))
     grants = [
@@ -435,6 +496,7 @@ export const octopusV013Contract = {
     }
 
     return {
+      keyManagement: "named",
       id: detail.id,
       name: detail.name,
       type: inferOutboundType(detail.grants),
@@ -443,6 +505,7 @@ export const octopusV013Contract = {
       enabled: detail.enabled,
       base_urls: [{ url: detail.base_url }],
       keys: detail.keys.map((key) => ({
+        name: key.name,
         enabled: key.enabled,
         channel_key: key.key,
       })),

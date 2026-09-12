@@ -35,6 +35,31 @@ scenario helpers. Real-site specs compose them by saving an account from a live
 site, passing the returned account fixture into reusable usage scenarios, then
 cleaning up through the fixture owner.
 
+Managed-site coverage includes New API, AxonHub, and Octopus multi-key persistence in
+`managedSiteChannels.spec.ts`, so the existing managed-site matrix runs it.
+The tests create a uniquely named temporary channel with nonfunctional keys and
+an `.invalid` upstream, edit keys through the UI, reopen and inspect native
+responses, verify preserved metadata and Octopus model grants, then delete the
+run-owned channel and query again to confirm cleanup. Cleanup errors remain test
+failures. A deployment exposing Octopus's single-key protocol is explicitly
+skipped before creating a channel. Authenticated screenshots, traces, and videos
+are disabled; assertions do not print native credentials.
+The New API multi-key scenario verifies append-before-delete replacement without
+reading saved keys, including selection mode, per-key status, unchanged channel
+fields, and cleanup. Its additional secret-disclosure and in-place editing checks require
+`AAH_E2E_NEW_API_ADMIN_USERNAME`, `AAH_E2E_NEW_API_ADMIN_PASSWORD`, and
+`AAH_E2E_NEW_API_ADMIN_TOTP_SECRET` for its secure key-read verification. These
+must belong to `AAH_E2E_NEW_API_ADMIN_USER_ID`; ordinary account-test login
+credentials are not reused. When those login credentials are absent, native
+save/readback still runs and the untested disclosure checks are recorded in a
+`disclosure-not-tested` annotation.
+
+Run only these persistence checks with the existing `.env.local` configuration:
+
+```bash
+pnpm exec playwright test e2e/realSite/managedSiteChannels.spec.ts --grep "persists multi-key" --workers=1
+```
+
 Run all real-site specs:
 
 ```bash

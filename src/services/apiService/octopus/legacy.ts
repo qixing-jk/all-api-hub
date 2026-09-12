@@ -51,6 +51,7 @@ interface LegacyOctopusUpdateChannelDto {
   match_regex?: string
   keys_to_add?: OctopusKeyAddRequest[]
   keys_to_update?: OctopusKeyUpdateRequest[]
+  keys_to_delete?: number[]
 }
 
 interface LegacyOctopusFetchModelDto {
@@ -147,7 +148,7 @@ const encodeCreate = (
   type: input.type,
   enabled: input.enabled,
   base_urls: [{ url: input.baseUrl }],
-  keys: [{ enabled: true, channel_key: input.key }],
+  keys: input.keys ?? [{ enabled: true, channel_key: input.key }],
   model: input.model,
   custom_model: input.customModel,
   proxy: input.proxy,
@@ -180,7 +181,32 @@ const encodeUpdate = (
   param_override: input.paramOverride,
   channel_proxy: input.channelProxy,
   match_regex: input.matchRegex,
-  ...encodeKeyMutation(input.source, input.key),
+  ...(input.keys
+    ? {
+        keys_to_add: input.keys
+          .filter((key) => key.id === undefined)
+          .map(({ channel_key, enabled, remark }) => ({
+            channel_key,
+            enabled,
+            remark,
+          })),
+        keys_to_update: input.keys
+          .filter((key) => key.id !== undefined)
+          .map(({ id, channel_key, enabled, remark }) => ({
+            id: id!,
+            channel_key,
+            enabled,
+            remark,
+          })),
+        keys_to_delete: (input.source?.keys ?? [])
+          .filter(
+            (key) =>
+              key.id !== undefined &&
+              !input.keys!.some((next) => next.id === key.id),
+          )
+          .map((key) => key.id!),
+      }
+    : encodeKeyMutation(input.source, input.key)),
 })
 
 const encodeFetchModel = (
