@@ -68,7 +68,7 @@
     "updateSuccess": "已成功更新 Claude Code Router 提供商 {{name}}"
   },
   "cliProxyApi": {
-    "managementApiConnectionSuccess": "CLIProxyAPI Management API 连接正常",
+    "managementApiConnectionSuccess": "连接成功",
     "managementApiForbidden": "CLIProxyAPI 拒绝了当前请求。请检查管理密钥是否多次填写错误，或当前访问是否被服务端限制。",
     "managementApiHttpError": "CLIProxyAPI Management API 返回了异常状态码（HTTP {{status}}）",
     "managementApiInvalidKey": "CLIProxyAPI Management Key 无效，请检查设置中的管理密钥是否正确。",

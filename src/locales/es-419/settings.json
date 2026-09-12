@@ -105,13 +105,13 @@
     "title": "Ajustes de integración de AxonHub",
     "validation": {
       "corsFailed": "La validación de AxonHub falló: {{error}}. Esto normalmente significa que la instancia de AxonHub aún no ha permitido el origen del navegador de la extensión. Actualiza AXONHUB_SERVER_CORS_ALLOWED_ORIGINS para permitir el origen confiable del navegador / extensión y usa \"*\" solo como alternativa temporal de desarrollo local; luego reintenta.",
-      "description": "Valida las credenciales de administración de AxonHub. La configuración se guarda solo cuando el inicio de sesión se completa correctamente.",
+      "description": "Comprueba si la configuración actual permite conectarse al sitio y administrarlo.",
       "failed": "La validación de AxonHub falló: {{error}}",
       "missingFields": "Completa todos los campos obligatorios",
-      "success": "Configuración de AxonHub validada y guardada correctamente",
-      "title": "Validar y guardar configuración",
-      "validate": "Validar y guardar",
-      "validating": "Validando..."
+      "success": "Conexión exitosa",
+      "title": "Verificar conexión",
+      "validate": "Verificar conexión",
+      "validating": "Verificando…"
     }
   },
   "changelogOnUpdate": {
@@ -138,13 +138,13 @@
       "title": "Acciones de canal no compatibles"
     },
     "validation": {
-      "description": "Prueba si el token puede leer proveedores de Claude Code Hub mediante la API de acciones",
+      "description": "Comprueba si la configuración actual permite conectarse al sitio y administrarlo.",
       "failed": "La validación de Claude Code Hub falló: {{error}}",
       "missingFields": "Completa todos los campos obligatorios",
-      "success": "Configuración de Claude Code Hub validada correctamente",
-      "title": "Validar configuración",
-      "validate": "Validar",
-      "validating": "Validando..."
+      "success": "Conexión exitosa",
+      "title": "Verificar conexión",
+      "validate": "Verificar conexión",
+      "validating": "Verificando…"
     }
   },
   "claudeCodeRouter": {
@@ -159,9 +159,9 @@
   },
   "cliProxyApi": {
     "baseUrlLabel": "Base URL de Management API",
-    "checkConnectionAction": "Comprobar conexión",
-    "checkConnectionDesc": "Después de guardar, verifica que la URL actual y la clave de gestión puedan acceder a CLIProxyAPI Management API.",
-    "checkConnectionLabel": "Comprobación de conexión",
+    "checkConnectionAction": "Verificar conexión",
+    "checkConnectionDesc": "Comprueba si la configuración actual permite conectarse al sitio y administrarlo.",
+    "checkConnectionLabel": "Verificar conexión",
     "description": "Configura la conexión a CLIProxyAPI Management API",
     "hideKey": "Ocultar clave",
     "keyDesc": "Clave de gestión para autenticación de acceso a la interfaz",
@@ -340,14 +340,14 @@
     },
     "title": "Ajustes de integración de Octopus",
     "validation": {
-      "description": "Prueba si el usuario y la contraseña son correctos",
+      "description": "Comprueba si la configuración actual permite conectarse al sitio y administrarlo.",
       "error": "Ocurrió un error durante la validación",
       "failed": "La validación de configuración falló; revisa el usuario y la contraseña",
       "missingFields": "Completa todos los campos obligatorios",
-      "success": "Configuración validada correctamente, la conexión funciona",
-      "title": "Validar configuración",
-      "validate": "Validar",
-      "validating": "Validando..."
+      "success": "Conexión exitosa",
+      "title": "Verificar conexión",
+      "validate": "Verificar conexión",
+      "validating": "Verificando…"
     }
   },
   "permissions": {
@@ -626,11 +626,11 @@
     },
     "title": "Conectar con Sub2API",
     "validation": {
-      "description": "Comprueba que la URL del sitio y la Admin API Key funcionen antes de abrir la administración de canales.",
+      "description": "Comprueba si la configuración actual permite conectarse al sitio y administrarlo.",
       "failed": "Falló la verificación de conexión con Sub2API: {{error}}",
       "missingFields": "Primero ingresa la URL del sitio y la Admin API Key",
-      "success": "Conexión establecida. Ya puedes administrar canales de Sub2API.",
-      "title": "Comprobar conexión",
+      "success": "Conexión exitosa",
+      "title": "Verificar conexión",
       "validate": "Verificar conexión",
       "validating": "Verificando…"
     }

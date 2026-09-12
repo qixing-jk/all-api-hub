@@ -11,10 +11,7 @@ import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import toast from "~/lib/notify"
 import { signIn } from "~/services/apiService/axonHub"
 import { getErrorMessage } from "~/utils/core/error"
-import {
-  getPreferenceWriteFailureMessage,
-  runPreferenceUpdateWithToast,
-} from "~/utils/feedback/preferenceFeedback"
+import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
 import { ManagedSiteDeploymentLink } from "./ManagedSiteDeploymentLink"
 
@@ -34,7 +31,6 @@ export default function AxonHubSettings() {
     updateAxonHubBaseUrl,
     updateAxonHubEmail,
     updateAxonHubPassword,
-    updateAxonHubConfig,
     resetAxonHubConfig,
   } = useUserPreferencesContext()
 
@@ -108,24 +104,7 @@ export default function AxonHubSettings() {
         password: localConfig.password,
       })
 
-      const saveResult = await updateAxonHubConfig(
-        {
-          baseUrl: trimmedUrl,
-          email: trimmedEmail,
-          password: localConfig.password,
-        },
-        { expectedLastUpdated },
-      )
-
-      if (saveResult.ok) {
-        toast.success(t("axonHub.validation.success"))
-      } else {
-        toast.error(
-          getPreferenceWriteFailureMessage(saveResult.reason, {
-            fallback: t("messages.updateFailed", { name: t("axonHub.title") }),
-          }),
-        )
-      }
+      toast.success(t("axonHub.validation.success"))
     } catch (error) {
       const errorMessage = getErrorMessage(error)
       toast.error(

@@ -105,13 +105,13 @@
     "title": "Cài đặt tích hợp AxonHub",
     "validation": {
       "corsFailed": "Xác minh cấu hình AxonHub thất bại: {{error}}. Điều này thường có nghĩa là phiên bản AxonHub mới chưa cho phép nguồn trình duyệt của tiện ích. Hãy điều chỉnh cấu hình CORS phía máy chủ AxonHub, đặt AXONHUB_SERVER_CORS_ALLOWED_ORIGINS thành \"*\", hoặc cho phép nguồn tiện ích / trình duyệt rồi thử lại.",
-      "description": "Xác minh thông tin đăng nhập quản trị AxonHub. Cấu hình chỉ được lưu sau khi đăng nhập thành công.",
+      "description": "Kiểm tra xem cấu hình hiện tại có thể kết nối và quản lý trang web hay không.",
       "failed": "Xác minh cấu hình AxonHub thất bại: {{error}}",
       "missingFields": "Vui lòng điền tất cả trường bắt buộc",
-      "success": "Đã xác minh và lưu cấu hình AxonHub thành công",
-      "title": "Xác minh và lưu cấu hình",
-      "validate": "Xác minh và lưu",
-      "validating": "Đang xác minh..."
+      "success": "Kết nối thành công",
+      "title": "Xác minh kết nối",
+      "validate": "Xác minh kết nối",
+      "validating": "Đang xác minh…"
     }
   },
   "changelogOnUpdate": {
@@ -138,13 +138,13 @@
       "title": "Thao tác kênh chưa được hỗ trợ"
     },
     "validation": {
-      "description": "Kiểm tra token này có thể đọc danh sách provider do Claude Code Hub cung cấp qua action API hay không",
+      "description": "Kiểm tra xem cấu hình hiện tại có thể kết nối và quản lý trang web hay không.",
       "failed": "Xác minh cấu hình Claude Code Hub thất bại: {{error}}",
       "missingFields": "Vui lòng điền tất cả trường bắt buộc",
-      "success": "Xác minh cấu hình Claude Code Hub thành công",
-      "title": "Xác minh cấu hình",
-      "validate": "Xác minh cấu hình",
-      "validating": "Đang xác minh..."
+      "success": "Kết nối thành công",
+      "title": "Xác minh kết nối",
+      "validate": "Xác minh kết nối",
+      "validating": "Đang xác minh…"
     }
   },
   "claudeCodeRouter": {
@@ -159,9 +159,9 @@
   },
   "cliProxyApi": {
     "baseUrlLabel": "URL cơ sở API quản trị",
-    "checkConnectionAction": "Kiểm tra kết nối",
-    "checkConnectionDesc": "Sau khi lưu, có thể chủ động kiểm tra URL hiện tại và key quản trị có truy cập được CLIProxyAPI Management API hay không.",
-    "checkConnectionLabel": "Kiểm tra kết nối",
+    "checkConnectionAction": "Xác minh kết nối",
+    "checkConnectionDesc": "Kiểm tra xem cấu hình hiện tại có thể kết nối và quản lý trang web hay không.",
+    "checkConnectionLabel": "Xác minh kết nối",
     "description": "Cấu hình thông tin kết nối tới API quản trị CLIProxyAPI.",
     "hideKey": "Ẩn key quản trị",
     "keyDesc": "Key quản trị dùng để xác thực truy cập API quản trị",
@@ -340,14 +340,14 @@
     },
     "title": "Cài đặt tích hợp Octopus",
     "validation": {
-      "description": "Kiểm tra tên người dùng và mật khẩu có chính xác hay không",
+      "description": "Kiểm tra xem cấu hình hiện tại có thể kết nối và quản lý trang web hay không.",
       "error": "Đã xảy ra lỗi trong quá trình xác minh",
       "failed": "Xác minh cấu hình thất bại, vui lòng kiểm tra tên người dùng và mật khẩu",
       "missingFields": "Vui lòng điền tất cả trường bắt buộc",
-      "success": "Xác minh cấu hình thành công, kết nối bình thường",
-      "title": "Xác minh cấu hình",
-      "validate": "Xác minh cấu hình",
-      "validating": "Đang xác minh..."
+      "success": "Kết nối thành công",
+      "title": "Xác minh kết nối",
+      "validate": "Xác minh kết nối",
+      "validating": "Đang xác minh…"
     }
   },
   "permissions": {
@@ -624,11 +624,11 @@
     },
     "title": "Kết nối với Sub2API",
     "validation": {
-      "description": "Kiểm tra URL trang web và Admin API Key trước khi mở phần quản lý kênh.",
+      "description": "Kiểm tra xem cấu hình hiện tại có thể kết nối và quản lý trang web hay không.",
       "failed": "Kiểm tra kết nối Sub2API thất bại: {{error}}",
       "missingFields": "Vui lòng nhập URL trang web và Admin API Key trước",
-      "success": "Đã kết nối. Bạn có thể quản lý kênh Sub2API.",
-      "title": "Kiểm tra kết nối",
+      "success": "Kết nối thành công",
+      "title": "Xác minh kết nối",
       "validate": "Xác minh kết nối",
       "validating": "Đang xác minh…"
     }

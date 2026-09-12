@@ -21,10 +21,7 @@ import { createTab } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { joinUrl } from "~/utils/core/url"
 import { tryParseHttpUrl } from "~/utils/core/urlParsing"
-import {
-  getPreferenceWriteFailureMessage,
-  runPreferenceUpdateWithToast,
-} from "~/utils/feedback/preferenceFeedback"
+import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
 import { ManagedSiteDeploymentLink } from "./ManagedSiteDeploymentLink"
 
@@ -37,7 +34,6 @@ export default function Sub2ApiSettings() {
     sub2ApiManagedSiteAdminToken,
     updateSub2ApiManagedSiteBaseUrl,
     updateSub2ApiManagedSiteAdminToken,
-    updateSub2ApiManagedSiteConfig,
     resetSub2ApiManagedSiteConfig,
   } = useUserPreferencesContext()
   const savedConfig = useMemo(
@@ -110,21 +106,7 @@ export default function Sub2ApiSettings() {
     setIsValidating(true)
     try {
       await validateSub2ApiManagedSiteConfig({ baseUrl, adminToken })
-      const saveResult = await updateSub2ApiManagedSiteConfig(
-        { baseUrl, adminToken },
-        { expectedLastUpdated },
-      )
-      if (saveResult.ok) {
-        toast.success(t("sub2apiManagedSite.validation.success"))
-      } else {
-        toast.error(
-          getPreferenceWriteFailureMessage(saveResult.reason, {
-            fallback: t("messages.updateFailed", {
-              name: t("sub2apiManagedSite.title"),
-            }),
-          }),
-        )
-      }
+      toast.success(t("sub2apiManagedSite.validation.success"))
     } catch (error) {
       toast.error(
         t("sub2apiManagedSite.validation.failed", {

@@ -10,10 +10,7 @@ import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import toast from "~/lib/notify"
 import { validateOctopusConfig } from "~/services/apiService/octopus"
 import { PROTECTION_BYPASS_SURFACES } from "~/services/protectionBypass/contracts"
-import {
-  getPreferenceWriteFailureMessage,
-  runPreferenceUpdateWithToast,
-} from "~/utils/feedback/preferenceFeedback"
+import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
 import { ManagedSiteDeploymentLink } from "./ManagedSiteDeploymentLink"
 
@@ -29,7 +26,6 @@ export default function OctopusSettings() {
     octopusUsername,
     octopusPassword,
     updateOctopusBaseUrl,
-    updateOctopusConfig,
     updateOctopusUsername,
     updateOctopusPassword,
     resetOctopusConfig,
@@ -115,24 +111,7 @@ export default function OctopusSettings() {
       )
 
       if (result.success) {
-        const saveResult = await updateOctopusConfig(
-          {
-            baseUrl: trimmedUrl,
-            username: trimmedUsername,
-            password: trimmedPassword,
-          },
-          { expectedLastUpdated },
-        )
-
-        if (saveResult.ok) {
-          toast.success(t("octopus.validation.success"))
-        } else {
-          toast.error(
-            getPreferenceWriteFailureMessage(saveResult.reason, {
-              fallback: t("octopus.validation.failed"),
-            }),
-          )
-        }
+        toast.success(t("octopus.validation.success"))
       } else {
         toast.error(result.error || t("octopus.validation.failed"))
       }

@@ -105,13 +105,13 @@
     "title": "AxonHub Integration Settings",
     "validation": {
       "corsFailed": "AxonHub validation failed: {{error}}. This usually means the AxonHub instance has not allowed the extension's browser origin yet. Update AXONHUB_SERVER_CORS_ALLOWED_ORIGINS to allow the trusted browser / extension origin, and use \"*\" only as a short-lived local development fallback, then retry.",
-      "description": "Validate the AxonHub admin credentials. This configuration is saved only after sign-in succeeds.",
+      "description": "Check whether the current configuration can connect to and manage the site.",
       "failed": "AxonHub validation failed: {{error}}",
       "missingFields": "Please fill in all required fields",
-      "success": "AxonHub configuration validated and saved successfully",
-      "title": "Validate and save configuration",
-      "validate": "Validate and save",
-      "validating": "Validating..."
+      "success": "Connection successful",
+      "title": "Verify connection",
+      "validate": "Verify connection",
+      "validating": "Verifying…"
     }
   },
   "changelogOnUpdate": {
@@ -138,13 +138,13 @@
       "title": "Unsupported channel actions"
     },
     "validation": {
-      "description": "Test whether the token can read Claude Code Hub providers through the action API",
+      "description": "Check whether the current configuration can connect to and manage the site.",
       "failed": "Claude Code Hub validation failed: {{error}}",
       "missingFields": "Please fill in all required fields",
-      "success": "Claude Code Hub configuration validated successfully",
-      "title": "Validate Configuration",
-      "validate": "Validate",
-      "validating": "Validating..."
+      "success": "Connection successful",
+      "title": "Verify connection",
+      "validate": "Verify connection",
+      "validating": "Verifying…"
     }
   },
   "claudeCodeRouter": {
@@ -159,9 +159,9 @@
   },
   "cliProxyApi": {
     "baseUrlLabel": "Management API Base URL",
-    "checkConnectionAction": "Check Connection",
-    "checkConnectionDesc": "After saving, verify that the current URL and management key can reach the CLIProxyAPI Management API.",
-    "checkConnectionLabel": "Connection Check",
+    "checkConnectionAction": "Verify connection",
+    "checkConnectionDesc": "Check whether the current configuration can connect to and manage the site.",
+    "checkConnectionLabel": "Verify connection",
     "description": "Configure connection to CLIProxyAPI Management API",
     "hideKey": "Hide key",
     "keyDesc": "Management key for interface access authentication",
@@ -340,14 +340,14 @@
     },
     "title": "Octopus Integration Settings",
     "validation": {
-      "description": "Test if username and password are correct",
+      "description": "Check whether the current configuration can connect to and manage the site.",
       "error": "An error occurred during validation",
       "failed": "Configuration validation failed, please check username and password",
       "missingFields": "Please fill in all required fields",
-      "success": "Configuration validated successfully, connection is working",
-      "title": "Validate Configuration",
-      "validate": "Validate",
-      "validating": "Validating..."
+      "success": "Connection successful",
+      "title": "Verify connection",
+      "validate": "Verify connection",
+      "validating": "Verifying…"
     }
   },
   "permissions": {
@@ -625,11 +625,11 @@
     },
     "title": "Connect to Sub2API",
     "validation": {
-      "description": "Check that the site URL and Admin API Key work before opening channel management.",
+      "description": "Check whether the current configuration can connect to and manage the site.",
       "failed": "Sub2API connection check failed: {{error}}",
       "missingFields": "Enter the site URL and Admin API Key first",
-      "success": "Connected. You can now manage Sub2API channels.",
-      "title": "Check connection",
+      "success": "Connection successful",
+      "title": "Verify connection",
       "validate": "Verify connection",
       "validating": "Verifying…"
     }

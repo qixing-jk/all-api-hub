@@ -105,13 +105,13 @@
     "title": "Configurações de integração AxonHub",
     "validation": {
       "corsFailed": "Falha na validação de AxonHub: {{error}}. Isso geralmente significa que a instância AxonHub ainda não permitiu a origem do navegador da extensão. Atualize AXONHUB_SERVER_CORS_ALLOWED_ORIGINS para permitir a origem confiável do navegador/extensão e use \"*\" apenas como um substituto de desenvolvimento local de curta duração e tente novamente.",
-      "description": "Valide as credenciais de administrador do AxonHub. Essa configuração é salva somente após o login ser bem-sucedido.",
+      "description": "Verifique se a configuração atual permite conectar e gerenciar o site.",
       "failed": "Falha na validação de AxonHub: {{error}}",
       "missingFields": "Preencha todos os campos obrigatórios",
-      "success": "Configuração AxonHub validada e salva com sucesso",
-      "title": "Validar e salvar configuração",
-      "validate": "Validar e salvar",
-      "validating": "Validando..."
+      "success": "Conexão bem-sucedida",
+      "title": "Verificar conexão",
+      "validate": "Verificar conexão",
+      "validating": "Verificando…"
     }
   },
   "changelogOnUpdate": {
@@ -138,13 +138,13 @@
       "title": "Ações de canal não suportadas"
     },
     "validation": {
-      "description": "Testar se o token consegue ler os provedores do Claude Code Hub por meio da API de ações",
+      "description": "Verifique se a configuração atual permite conectar e gerenciar o site.",
       "failed": "Falha na validação do Claude Code Hub: {{error}}",
       "missingFields": "Preencha todos os campos obrigatórios",
-      "success": "Configuração do Claude Code Hub validada com sucesso",
-      "title": "Validar configuração",
-      "validate": "Validar",
-      "validating": "Validando..."
+      "success": "Conexão bem-sucedida",
+      "title": "Verificar conexão",
+      "validate": "Verificar conexão",
+      "validating": "Verificando…"
     }
   },
   "claudeCodeRouter": {
@@ -160,8 +160,8 @@
   "cliProxyApi": {
     "baseUrlLabel": "URL base da API de gerenciamento",
     "checkConnectionAction": "Verificar conexão",
-    "checkConnectionDesc": "Após salvar, verifique se a URL atual e a chave de gerenciamento conseguem acessar a API de gerenciamento do CLIProxyAPI.",
-    "checkConnectionLabel": "Verificação de conexão",
+    "checkConnectionDesc": "Verifique se a configuração atual permite conectar e gerenciar o site.",
+    "checkConnectionLabel": "Verificar conexão",
     "description": "Configurar a conexão com a API de gerenciamento do CLIProxyAPI",
     "hideKey": "Ocultar chave",
     "keyDesc": "Chave de gerenciamento para autenticação de acesso à interface",
@@ -340,14 +340,14 @@
     },
     "title": "Configurações de integração Octopus",
     "validation": {
-      "description": "Teste se nome de usuário e senha estão corretos",
+      "description": "Verifique se a configuração atual permite conectar e gerenciar o site.",
       "error": "Ocorreu um erro durante a validação",
       "failed": "Falha na validação da configuração, verifique nome de usuário e senha",
       "missingFields": "Preencha todos os campos obrigatórios",
-      "success": "Configuração validada com sucesso, conexão funcionando",
-      "title": "Validar configuração",
-      "validate": "Validar",
-      "validating": "Validando..."
+      "success": "Conexão bem-sucedida",
+      "title": "Verificar conexão",
+      "validate": "Verificar conexão",
+      "validating": "Verificando…"
     }
   },
   "permissions": {
@@ -626,11 +626,11 @@
     },
     "title": "Conectar ao Sub2API",
     "validation": {
-      "description": "Verifique se a URL do site e a Admin API Key funcionam antes de abrir o gerenciamento de canais.",
+      "description": "Verifique se a configuração atual permite conectar e gerenciar o site.",
       "failed": "Falha na verificação da conexão com o Sub2API: {{error}}",
       "missingFields": "Primeiro informe a URL do site e a Admin API Key",
-      "success": "Conectado. Agora você pode gerenciar canais do Sub2API.",
-      "title": "Testar conexão",
+      "success": "Conexão bem-sucedida",
+      "title": "Verificar conexão",
       "validate": "Verificar conexão",
       "validating": "Verificando…"
     }

@@ -105,13 +105,13 @@
     "title": "AxonHub 整合設定",
     "validation": {
       "corsFailed": "AxonHub 配置驗證失敗：{{error}}。這通常表示新的 AxonHub 實例尚未允許擴充套件的瀏覽器來源。請調整 AxonHub 服務端 CORS 配置，將 AXONHUB_SERVER_CORS_ALLOWED_ORIGINS 設為 \"*\"，或允許擴充套件 / 瀏覽器來源後重試。",
-      "description": "驗證 AxonHub 管理員憑據；僅在登入成功後儲存此配置。",
+      "description": "檢查目前設定能否正常連線並管理站台。",
       "failed": "AxonHub 配置驗證失敗：{{error}}",
       "missingFields": "請填寫所有必填欄位",
-      "success": "AxonHub 配置已驗證並儲存",
-      "title": "驗證並儲存配置",
-      "validate": "驗證並儲存",
-      "validating": "驗證中..."
+      "success": "連線成功",
+      "title": "驗證連線",
+      "validate": "驗證連線",
+      "validating": "正在驗證…"
     }
   },
   "changelogOnUpdate": {
@@ -138,13 +138,13 @@
       "title": "不支援的渠道操作"
     },
     "validation": {
-      "description": "測試該權杖是否可透過 action API 讀取 Claude Code Hub 提供商列表",
+      "description": "檢查目前設定能否正常連線並管理站台。",
       "failed": "Claude Code Hub 設定驗證失敗：{{error}}",
       "missingFields": "請填寫所有必填欄位",
-      "success": "Claude Code Hub 設定驗證成功",
-      "title": "驗證設定",
-      "validate": "驗證設定",
-      "validating": "驗證中..."
+      "success": "連線成功",
+      "title": "驗證連線",
+      "validate": "驗證連線",
+      "validating": "正在驗證…"
     }
   },
   "claudeCodeRouter": {
@@ -159,9 +159,9 @@
   },
   "cliProxyApi": {
     "baseUrlLabel": "管理介面基礎 URL",
-    "checkConnectionAction": "檢測連線",
-    "checkConnectionDesc": "儲存後可主動檢測目前 URL 與管理金鑰是否能存取 CLIProxyAPI Management API。",
-    "checkConnectionLabel": "連線檢測",
+    "checkConnectionAction": "驗證連線",
+    "checkConnectionDesc": "檢查目前設定能否正常連線並管理站台。",
+    "checkConnectionLabel": "驗證連線",
     "description": "配置到 CLIProxyAPI 管理介面的連線資訊。",
     "hideKey": "隱藏管理金鑰",
     "keyDesc": "用於管理介面訪問認證的管理金鑰",
@@ -340,14 +340,14 @@
     },
     "title": "Octopus 整合設定",
     "validation": {
-      "description": "測試使用者名稱和密碼是否正確",
+      "description": "檢查目前設定能否正常連線並管理站台。",
       "error": "驗證過程中發生錯誤",
       "failed": "配置驗證失敗，請檢查使用者名稱和密碼",
       "missingFields": "請填寫所有必填欄位",
-      "success": "配置驗證成功，連線正常",
-      "title": "驗證配置",
-      "validate": "驗證配置",
-      "validating": "驗證中..."
+      "success": "連線成功",
+      "title": "驗證連線",
+      "validate": "驗證連線",
+      "validating": "正在驗證…"
     }
   },
   "permissions": {
@@ -624,11 +624,11 @@
     },
     "title": "Sub2API 連線設定",
     "validation": {
-      "description": "檢查站點網址和管理員 Key 是否可用，成功後即可進入渠道管理。",
+      "description": "檢查目前設定能否正常連線並管理站台。",
       "failed": "Sub2API 連線驗證失敗：{{error}}",
       "missingFields": "請先填寫站點網址和管理員 API Key",
-      "success": "連線成功，可以管理 Sub2API 渠道了",
-      "title": "檢查連線",
+      "success": "連線成功",
+      "title": "驗證連線",
       "validate": "驗證連線",
       "validating": "正在驗證…"
     }

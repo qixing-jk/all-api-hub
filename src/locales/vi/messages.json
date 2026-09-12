@@ -68,7 +68,7 @@
     "updateSuccess": "Đã cập nhật thành công nhà cung cấp Claude Code Router {{name}}"
   },
   "cliProxyApi": {
-    "managementApiConnectionSuccess": "Kết nối CLIProxyAPI Management API bình thường",
+    "managementApiConnectionSuccess": "Kết nối thành công",
     "managementApiForbidden": "CLIProxyAPI đã từ chối yêu cầu hiện tại. Vui lòng kiểm tra xem khóa quản lý có bị nhập sai nhiều lần hay không, hoặc truy cập hiện tại có bị máy chủ giới hạn hay không.",
     "managementApiHttpError": "CLIProxyAPI Management API trả về mã trạng thái bất thường (HTTP {{status}})",
     "managementApiInvalidKey": "Khóa quản lý (Management Key) của CLIProxyAPI không hợp lệ, vui lòng kiểm tra xem khóa quản lý trong phần cài đặt có chính xác không.",

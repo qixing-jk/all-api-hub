@@ -134,7 +134,7 @@ describe("Sub2ApiSettings", () => {
     })
   })
 
-  it("validates the trimmed URL and Admin API Key before saving them", async () => {
+  it("validates the trimmed URL and Admin API Key without saving again", async () => {
     const toast = await import("~/lib/notify")
     const context = arrange()
     vi.mocked(validateSub2ApiManagedSiteConfig).mockResolvedValue()
@@ -163,13 +163,7 @@ describe("Sub2ApiSettings", () => {
         adminToken: "next-admin-key",
       })
     })
-    expect(context.updateSub2ApiManagedSiteConfig).toHaveBeenCalledWith(
-      {
-        baseUrl: "https://managed.example.invalid/",
-        adminToken: "next-admin-key",
-      },
-      { expectedLastUpdated: 7 },
-    )
+    expect(context.updateSub2ApiManagedSiteConfig).not.toHaveBeenCalled()
     await waitFor(() => {
       expect(vi.mocked(toast.default.success)).toHaveBeenCalledWith(
         "settings:sub2apiManagedSite.validation.success",
@@ -210,7 +204,7 @@ describe("Sub2ApiSettings", () => {
     })
   })
 
-  it("reports save conflicts and validation errors", async () => {
+  it("keeps connection validation independent of preference writes and reports connection errors", async () => {
     const toast = await import("~/lib/notify")
     const failedWrite = {
       ok: false,
@@ -229,12 +223,12 @@ describe("Sub2ApiSettings", () => {
       }),
     )
     await waitFor(() => {
-      expect(context.updateSub2ApiManagedSiteConfig).toHaveBeenCalled()
-      expect(vi.mocked(toast.default.error)).toHaveBeenCalledWith(
-        "settings:messages.preferencesChangedExternally",
+      expect(vi.mocked(toast.default.success)).toHaveBeenCalledWith(
+        "settings:sub2apiManagedSite.validation.success",
       )
     })
 
+    expect(context.updateSub2ApiManagedSiteConfig).not.toHaveBeenCalled()
     vi.mocked(toast.default.error).mockClear()
     vi.mocked(validateSub2ApiManagedSiteConfig).mockRejectedValueOnce(
       new Error("provider unavailable"),

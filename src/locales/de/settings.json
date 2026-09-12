@@ -105,13 +105,13 @@
     "title": "AxonHub Integrationseinstellungen",
     "validation": {
       "corsFailed": "AxonHub Validierung fehlgeschlagen: {{error}}. Dies bedeutet normalerweise, dass die AxonHub-Instanz den Browserursprung der Erweiterung noch nicht zugelassen hat. Aktualisieren Sie AXONHUB_SERVER_CORS_ALLOWED_ORIGINS, um den vertrauenswürdigen Browser-/Erweiterungsursprung zuzulassen, und verwenden Sie „*“ nur als kurzlebigen Fallback für die lokale Entwicklung. Versuchen Sie es dann erneut.",
-      "description": "Überprüfen Sie die Administratoranmeldeinformationen von AxonHub. Diese Konfiguration wird erst nach erfolgreicher Anmeldung gespeichert.",
+      "description": "Prüfen, ob die aktuelle Konfiguration die Verbindung und Verwaltung der Website ermöglicht.",
       "failed": "AxonHub Validierung fehlgeschlagen: {{error}}",
       "missingFields": "Bitte füllen Sie alle erforderlichen Felder aus",
-      "success": "AxonHub Konfiguration validiert und erfolgreich gespeichert",
-      "title": "Konfiguration validieren und speichern",
-      "validate": "Validieren und speichern",
-      "validating": "Validierung..."
+      "success": "Verbindung erfolgreich",
+      "title": "Verbindung prüfen",
+      "validate": "Verbindung prüfen",
+      "validating": "Wird geprüft…"
     }
   },
   "changelogOnUpdate": {
@@ -138,13 +138,13 @@
       "title": "Nicht unterstützte Kanalaktionen"
     },
     "validation": {
-      "description": "Testen Sie, ob das Token Claude Code Hub-Anbieter über die Aktions-API lesen kann",
+      "description": "Prüfen, ob die aktuelle Konfiguration die Verbindung und Verwaltung der Website ermöglicht.",
       "failed": "Claude Code Hub Validierung fehlgeschlagen: {{error}}",
       "missingFields": "Bitte füllen Sie alle erforderlichen Felder aus",
-      "success": "Claude Code Hub Konfiguration erfolgreich validiert",
-      "title": "Konfiguration validieren",
-      "validate": "Validieren",
-      "validating": "Validierung..."
+      "success": "Verbindung erfolgreich",
+      "title": "Verbindung prüfen",
+      "validate": "Verbindung prüfen",
+      "validating": "Wird geprüft…"
     }
   },
   "claudeCodeRouter": {
@@ -160,8 +160,8 @@
   "cliProxyApi": {
     "baseUrlLabel": "Management-API-Basis-URL",
     "checkConnectionAction": "Verbindung prüfen",
-    "checkConnectionDesc": "Überprüfen Sie nach dem Speichern, ob die aktuelle URL und der Verwaltungsschlüssel die Verwaltungs-API CLIProxyAPI erreichen können.",
-    "checkConnectionLabel": "Verbindungsprüfung",
+    "checkConnectionDesc": "Prüfen, ob die aktuelle Konfiguration die Verbindung und Verwaltung der Website ermöglicht.",
+    "checkConnectionLabel": "Verbindung prüfen",
     "description": "Verbindung zur CLIProxyAPI Management API konfigurieren",
     "hideKey": "Schlüssel ausblenden",
     "keyDesc": "Verwaltungsschlüssel für die Authentifizierung des Schnittstellenzugriffs",
@@ -340,14 +340,14 @@
     },
     "title": "Octopus-Integrationseinstellungen",
     "validation": {
-      "description": "Testen Sie, ob Benutzername und Passwort korrekt sind",
+      "description": "Prüfen, ob die aktuelle Konfiguration die Verbindung und Verwaltung der Website ermöglicht.",
       "error": "Bei der Validierung ist ein Fehler aufgetreten",
       "failed": "Konfigurationsvalidierung fehlgeschlagen, bitte überprüfen Sie Benutzernamen und Passwort",
       "missingFields": "Bitte füllen Sie alle erforderlichen Felder aus",
-      "success": "Konfiguration erfolgreich validiert, Verbindung funktioniert",
-      "title": "Konfiguration validieren",
-      "validate": "Validieren",
-      "validating": "Validierung..."
+      "success": "Verbindung erfolgreich",
+      "title": "Verbindung prüfen",
+      "validate": "Verbindung prüfen",
+      "validating": "Wird geprüft…"
     }
   },
   "permissions": {
@@ -625,13 +625,13 @@
     },
     "title": "Mit Sub2API verbinden",
     "validation": {
-      "description": "Prüfe, ob Website-URL und Admin API Key funktionieren, bevor du die Kanalverwaltung öffnest.",
+      "description": "Prüfen, ob die aktuelle Konfiguration die Verbindung und Verwaltung der Website ermöglicht.",
       "failed": "Sub2API-Verbindungsprüfung fehlgeschlagen: {{error}}",
       "missingFields": "Gib zuerst die Website-URL und den Admin API Key ein",
-      "success": "Verbunden. Du kannst jetzt Sub2API-Kanäle verwalten.",
+      "success": "Verbindung erfolgreich",
       "title": "Verbindung prüfen",
-      "validate": "Verbindung überprüfen",
-      "validating": "Wird überprüft…"
+      "validate": "Verbindung prüfen",
+      "validating": "Wird geprüft…"
     }
   },
   "tabs": {

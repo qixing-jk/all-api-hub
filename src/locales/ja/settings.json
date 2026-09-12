@@ -105,13 +105,13 @@
     "title": "AxonHub 統合設定",
     "validation": {
       "corsFailed": "AxonHub 検証に失敗しました: {{error}}。通常、新しい AxonHub インスタンスで拡張機能のブラウザー origin が許可されていない場合に発生します。AxonHub サーバーの CORS 設定を調整し、AXONHUB_SERVER_CORS_ALLOWED_ORIGINS を \"*\" に設定するか、拡張機能 / ブラウザー origin を許可してから再試行してください。",
-      "description": "AxonHub 管理者認証情報を検証します。サインインに成功した場合のみ、この設定を保存します。",
+      "description": "現在の設定でサイトに接続し、管理できるかを確認します。",
       "failed": "AxonHub 検証に失敗しました: {{error}}",
       "missingFields": "必須項目をすべて入力してください",
-      "success": "AxonHub 設定を検証して保存しました",
-      "title": "設定を検証して保存",
-      "validate": "検証して保存",
-      "validating": "検証中..."
+      "success": "接続に成功しました",
+      "title": "接続を確認",
+      "validate": "接続を確認",
+      "validating": "確認中…"
     }
   },
   "changelogOnUpdate": {
@@ -138,13 +138,13 @@
       "title": "未対応のチャネル操作"
     },
     "validation": {
-      "description": "action API 経由で Claude Code Hub のプロバイダー一覧を読み取れるか確認します",
+      "description": "現在の設定でサイトに接続し、管理できるかを確認します。",
       "failed": "Claude Code Hub 検証に失敗しました: {{error}}",
       "missingFields": "必須項目をすべて入力してください",
-      "success": "Claude Code Hub 設定の検証に成功しました",
-      "title": "設定を検証",
-      "validate": "検証",
-      "validating": "検証中..."
+      "success": "接続に成功しました",
+      "title": "接続を確認",
+      "validate": "接続を確認",
+      "validating": "確認中…"
     }
   },
   "claudeCodeRouter": {
@@ -160,8 +160,8 @@
   "cliProxyApi": {
     "baseUrlLabel": "Management API Base URL",
     "checkConnectionAction": "接続を確認",
-    "checkConnectionDesc": "保存後に、現在の URL と管理キーで CLIProxyAPI Management API に接続できるか確認します。",
-    "checkConnectionLabel": "接続確認",
+    "checkConnectionDesc": "現在の設定でサイトに接続し、管理できるかを確認します。",
+    "checkConnectionLabel": "接続を確認",
     "description": "CLIProxyAPI Management API への接続を設定します",
     "hideKey": "管理キーを隠す",
     "keyDesc": "インターフェースアクセス認証用の管理キー",
@@ -340,14 +340,14 @@
     },
     "title": "Octopus 統合設定",
     "validation": {
-      "description": "ユーザー名とパスワードが正しいかテストします",
+      "description": "現在の設定でサイトに接続し、管理できるかを確認します。",
       "error": "検証中にエラーが発生しました",
       "failed": "設定検証に失敗しました。ユーザー名とパスワードを確認してください",
       "missingFields": "必須項目をすべて入力してください",
-      "success": "設定検証に成功しました。接続は正常です",
-      "title": "設定を検証",
-      "validate": "検証",
-      "validating": "検証中..."
+      "success": "接続に成功しました",
+      "title": "接続を確認",
+      "validate": "接続を確認",
+      "validating": "確認中…"
     }
   },
   "permissions": {
@@ -624,12 +624,12 @@
     },
     "title": "Sub2API の接続設定",
     "validation": {
-      "description": "チャネル管理を開く前に、サイト URL と管理者 API キーが使用できるか確認します。",
+      "description": "現在の設定でサイトに接続し、管理できるかを確認します。",
       "failed": "Sub2API の接続確認に失敗しました：{{error}}",
       "missingFields": "先にサイト URL と管理者 API キーを入力してください",
-      "success": "接続できました。Sub2API のチャネルを管理できます。",
+      "success": "接続に成功しました",
       "title": "接続を確認",
-      "validate": "接続を検証",
+      "validate": "接続を確認",
       "validating": "確認中…"
     }
   },
