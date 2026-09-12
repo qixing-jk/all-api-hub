@@ -3,6 +3,7 @@ import { useEffect } from "react"
 import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "~/components/PageHeader"
+import { Heading3 } from "~/components/ui"
 import {
   clearHighlightSearchParam,
   highlightSearchTarget,
@@ -87,13 +88,13 @@ export default function ImportExport() {
 
       <section id="local-backup-migration" className="space-y-4">
         <div className="space-y-1">
-          <h2 className="flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-gray-100">
+          <Heading3 as="h2" className="flex items-center gap-2">
             <HardDrive
               className="size-5 shrink-0 text-sky-600 dark:text-sky-400"
               aria-hidden="true"
             />
             {t("localBackup.title")}
-          </h2>
+          </Heading3>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             {t("localBackup.description")}
           </p>

@@ -428,6 +428,14 @@ describe("WebdavAutoSyncService local apply phase", () => {
 
   it("rolls back earlier writes when a later local import fails", async () => {
     const service = createService()
+    const deletedEntryRecords = {
+      deleted: { kind: "account", deletedAt: 200, entryUpdatedAt: 100 },
+    }
+    const localSnapshot = await mockAccountStorageExportData()
+    mockAccountStorageExportData.mockResolvedValue({
+      ...localSnapshot,
+      deletedEntryRecords,
+    })
 
     mockAccountStorageImportData.mockResolvedValue({ migratedCount: 0 })
     mockTagStoreImport.mockResolvedValue(undefined)
@@ -437,6 +445,7 @@ describe("WebdavAutoSyncService local apply phase", () => {
     await expect(service.syncWithWebdav()).rejects.toThrow("channel failed")
 
     expect(mockAccountStorageImportData).toHaveBeenNthCalledWith(1, {
+      deletedEntryRecords,
       accounts: [{ id: "remote-account", created_at: 3, updated_at: 30 }],
       pinnedAccountIds: ["remote-account"],
       orderedAccountIds: ["remote-account", "remote-bookmark"],
@@ -445,6 +454,7 @@ describe("WebdavAutoSyncService local apply phase", () => {
     expect(mockTagStoreImport).toHaveBeenCalledTimes(2)
     expect(mockImportPreferences).toHaveBeenCalledTimes(2)
     expect(mockAccountStorageImportData).toHaveBeenNthCalledWith(2, {
+      deletedEntryRecords,
       accounts: [{ id: "local-account", created_at: 1, updated_at: 10 }],
       bookmarks: [{ id: "local-bookmark", created_at: 2, updated_at: 20 }],
       pinnedAccountIds: ["local-account"],

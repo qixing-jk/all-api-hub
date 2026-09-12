@@ -22,6 +22,7 @@ import {
   mockHasAlarmsAPI,
   mockImportPreferences,
   mockOnAlarm,
+  mockParseWebdavBackupJson,
   mockSavePreferences,
   mockTagStoreExport,
   mockTagStoreImport,
@@ -57,6 +58,9 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockParseWebdavBackupJson.mockImplementation((content: string) =>
+      JSON.parse(content),
+    )
 
     mockHasAlarmsAPI.mockReturnValue(true)
     mockClearAlarm.mockResolvedValue(true)
@@ -336,8 +340,15 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
     expect(uploadSpy).toHaveBeenCalledTimes(1)
   })
 
-  it("uploads a complete local snapshot through the active cloud provider", async () => {
+  it("uploads selected local data while preserving unselected remote preferences", async () => {
     const service = createService() as any
+    mockGetPreferences.mockResolvedValue({
+      ...basePreferences,
+      webdav: {
+        ...basePreferences.webdav,
+        syncData: { ...basePreferences.webdav.syncData, preferences: false },
+      },
+    })
 
     mockAccountStorageExportData.mockResolvedValue({
       accounts: [{ id: "local-account", updated_at: 10 }],
@@ -357,6 +368,7 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
       JSON.stringify({
         version: BACKUP_VERSION,
         accounts: { accounts: [], bookmarks: [] },
+        preferences: { themeMode: "light", lastUpdated: 50 },
       }),
     )
 
@@ -365,6 +377,7 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
     expect(mockUploadBackup).toHaveBeenCalledTimes(1)
     expect(JSON.parse(mockUploadBackup.mock.calls[0][0])).toMatchObject({
       version: BACKUP_VERSION,
+      preferences: { themeMode: "light", lastUpdated: 50 },
       accounts: {
         accounts: [{ id: "local-account", updated_at: 10 }],
         bookmarks: [{ id: "local-bookmark", updated_at: 20 }],

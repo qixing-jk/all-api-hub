@@ -44,6 +44,7 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.unstubAllGlobals()
 
     mockTestConnection.mockResolvedValue(true)
     mockUploadBackup.mockResolvedValue(true)

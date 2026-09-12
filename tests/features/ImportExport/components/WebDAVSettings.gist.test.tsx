@@ -208,6 +208,8 @@ describe("WebDAVSettings Gist", () => {
 
     fireEvent.focus(help)
     expect(await screen.findByText(description)).toBeInTheDocument()
+    expect(help).toHaveAccessibleDescription(description)
+    expect(help).toHaveAttribute("aria-controls", screen.getByRole("dialog").id)
     fireEvent.blur(help, { relatedTarget: document.body })
     await waitFor(() => {
       expect(screen.queryByText(description)).not.toBeInTheDocument()

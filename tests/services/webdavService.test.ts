@@ -108,13 +108,13 @@ describe("webdavService", () => {
 
   describe("parseWebdavBackupJson", () => {
     it.each([
-      null,
-      [],
-      {},
-      { profiles: "broken" },
-      { profiles: [null] },
-      { profiles: [], links: {} },
-      { profiles: [], linkTombstones: "broken" },
+      [null],
+      [[]],
+      [{}],
+      [{ profiles: "broken" }],
+      [{ profiles: [null] }],
+      [{ profiles: [], links: {} }],
+      [{ profiles: [], linkTombstones: "broken" }],
     ])(
       "rejects corrupt credential snapshots before normalization: %j",
       (apiCredentialProfiles) => {

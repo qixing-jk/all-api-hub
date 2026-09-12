@@ -1,9 +1,10 @@
 import { fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { OptionsSearchDialog } from "~/features/OptionsSearch/OptionsSearchDialog"
 import type { OptionsSearchContext } from "~/features/OptionsSearch/types"
+import * as search from "~/features/OptionsSearch/useOptionsSearch"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const baseContext: OptionsSearchContext = {
@@ -23,6 +24,46 @@ function setSearchQuery(query: string) {
 }
 
 describe("OptionsSearchDialog", () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it("selects the intended result by keyboard when localized labels are identical", async () => {
+    const user = userEvent.setup()
+    const onPageNavigate = vi.fn()
+    const items = ["first", "second"].map((id, order) => ({
+      id,
+      order,
+      kind: "page" as const,
+      pageId: id,
+      titleKey: "same",
+      title: "Same label",
+      breadcrumbsKeys: [],
+      breadcrumbs: [],
+      keywords: [],
+    }))
+    vi.spyOn(search, "useOptionsSearch").mockReturnValue({
+      items,
+      results: items,
+    })
+    render(
+      <OptionsSearchDialog
+        open
+        onOpenChange={vi.fn()}
+        onPageNavigate={onPageNavigate}
+        context={baseContext}
+      />,
+    )
+    await user.type(await screen.findByRole("combobox"), "same")
+    const options = screen.getAllByRole("option")
+    await waitFor(() =>
+      expect(options[0]).toHaveAttribute("aria-selected", "true"),
+    )
+    await user.keyboard("{ArrowDown}")
+    expect(options[0]).toHaveAttribute("aria-selected", "false")
+    expect(options[1]).toHaveAttribute("aria-selected", "true")
+    await user.keyboard("{Enter}")
+    expect(onPageNavigate).toHaveBeenCalledWith("second")
+  })
+
   beforeEach(() => {
     window.localStorage.clear()
   })

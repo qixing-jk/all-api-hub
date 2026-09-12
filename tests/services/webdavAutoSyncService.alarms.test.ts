@@ -143,6 +143,29 @@ describe("WebdavAutoSyncService scheduling (alarms)", () => {
     expect(service.getStatus().isRunning).toBe(true)
   })
 
+  it.each([
+    { githubGist: { token: "token", gistId: "" } },
+    { githubGist: { token: "", gistId: "gist-1" } },
+    { backupEncryptionPassword: "" },
+  ])(
+    "does not schedule Gist with incomplete credentials %j",
+    async (overrides) => {
+      const service = createService()
+      mockGetPreferences.mockResolvedValueOnce({
+        webdav: {
+          ...basePreferences.webdav,
+          provider: "github_gist",
+          backupEncryptionPassword: "encryption-password",
+          githubGist: { token: "token", gistId: "gist-1" },
+          ...overrides,
+        },
+      })
+      await service.setupAutoSync()
+      expect(mockCreateAlarm).not.toHaveBeenCalled()
+      expect(service.getStatus().isRunning).toBe(false)
+    },
+  )
+
   it("schedules GitHub Gist auto-sync with a five-minute minimum interval", async () => {
     const service = createService()
 

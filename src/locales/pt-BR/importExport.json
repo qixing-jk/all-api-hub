@@ -101,7 +101,7 @@
   "title": "Importar/exportar",
   "webdav": {
     "autoSync": {
-      "autosaveDescription": "A estratégia e o botão de sincronização são salvos automaticamente. O intervalo é salvo ao sair do campo.",
+      "autosaveDescription": "A estratégia e o interruptor de sincronização automática são salvos automaticamente. O intervalo é salvo ao sair do campo.",
       "currentProvider": "Serviço de sincronização: {{provider}}",
       "enable": "Ativar sincronização automática",
       "enableDesc": "Quando ativada, os dados compartilhados serão sincronizados com o WebDAV nos intervalos definidos.",
@@ -141,7 +141,7 @@
     },
     "gist": {
       "autoSyncEnableDesc": "Quando ativada, os dados compartilhados serão sincronizados com o Secret Gist no intervalo escolhido.",
-      "configDesc": "Sincronize dados compartilhados por um GitHub Secret Gist criptografado. Um Secret Gist é um link não listado, não um limite de controle de acesso.",
+      "configDesc": "Sincronize dados compartilhados por um GitHub Secret Gist criptografado. Um Secret Gist é um link não listado, não um mecanismo de controle de acesso.",
       "downloadImport": "Importar do Secret Gist",
       "encryptionDescription": "A sincronização com GitHub Gist exige uma senha de criptografia. Ela nunca é enviada ao GitHub nem incluída nos backups. Se você perdê-la, não será possível descriptografar o backup.",
       "encryptionPasswordRequired": "Informe uma senha de criptografia antes de salvar ou sincronizar este Gist.",

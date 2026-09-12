@@ -1,5 +1,12 @@
 import { CircleHelp } from "lucide-react"
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react"
 
 import { Popover, PopoverAnchor, PopoverContent } from "~/components/ui/popover"
 
@@ -14,6 +21,7 @@ export function FieldHelpPopover({
   label: string
   content: ReactNode
 }) {
+  const contentId = useId()
   const [open, setOpen] = useState(false)
   const pinnedRef = useRef(false)
   const pointerInsideRef = useRef(false)
@@ -62,6 +70,8 @@ export function FieldHelpPopover({
           type="button"
           aria-label={label}
           aria-expanded={open}
+          aria-controls={open ? contentId : undefined}
+          aria-describedby={open ? contentId : undefined}
           aria-haspopup="dialog"
           className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex size-5 shrink-0 items-center justify-center rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
           onPointerEnter={keepOpen}
@@ -85,6 +95,7 @@ export function FieldHelpPopover({
         </button>
       </PopoverAnchor>
       <PopoverContent
+        id={contentId}
         side="top"
         align="start"
         className="w-80 max-w-[calc(100vw-2rem)] text-sm leading-5"

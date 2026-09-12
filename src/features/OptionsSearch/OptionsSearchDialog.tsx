@@ -67,7 +67,7 @@ function SearchResultItem({
 }) {
   return (
     <CommandItem
-      value={`${item.title} ${item.description ?? ""} ${item.breadcrumbs.join(" ")} ${item.keywords.join(" ")}`}
+      value={item.id}
       onSelect={onSelect}
       className="items-start gap-3"
     >

@@ -82,7 +82,11 @@ export function useWebdavConfig({
   const immediateSave = useCloudSyncSaveQueue()
   const { enqueue } = immediateSave
   const latestVersion = useRef(preferences.lastUpdated)
-  latestVersion.current = preferences.lastUpdated
+  // Queue state can render before context publishes a successful write.
+  // Accept changed snapshots, including timestamps after a clock correction.
+  useEffect(() => {
+    latestVersion.current = preferences.lastUpdated
+  }, [preferences.lastUpdated])
   const persistedWebdavSettings = preferences.webdav
 
   const savedConfig = useMemo(
@@ -185,6 +189,7 @@ export function useWebdavConfig({
     [t],
   )
 
+  /** Serialize a field patch and retain its persisted version until context catches up. */
   const saveImmediateSettings = useCallback(
     (patch: DeepPartial<WebDAVSettings>) => {
       const tracker = startProductAnalyticsAction(
@@ -228,6 +233,7 @@ export function useWebdavConfig({
     [enqueue, updateWebdavSettings, t],
   )
 
+  /** Save only the changed selection while updating its local checkbox immediately. */
   const updateSyncDataSelection = (
     key: WebDAVSyncDataKey,
     checked: boolean | "indeterminate",
@@ -298,6 +304,7 @@ export function useWebdavConfig({
           syncData: syncDataSelection,
         }
 
+  /** Reveal provider controls without changing the saved provider during search navigation. */
   const previewProvider = useCallback(
     (nextProvider: CloudSyncProvider) => {
       setGistEncryptionPasswordError(undefined)
@@ -309,6 +316,7 @@ export function useWebdavConfig({
     [setGistEncryptionPasswordError, setLocalConfig],
   )
 
+  /** Persist an explicit provider choice after immediately revealing its controls. */
   const handleProviderChange = (nextProvider: CloudSyncProvider) => {
     previewProvider(nextProvider)
     saveImmediateSettings({
@@ -333,6 +341,7 @@ export function useWebdavConfig({
     }
   }, [previewProvider])
 
+  /** Wait for queued field retries before saving a draft with optimistic version checking. */
   const persistWebdavConfig = async (
     updates: Partial<WebDAVSettings> = webdavConfigForSave,
     options?: {
@@ -383,6 +392,7 @@ export function useWebdavConfig({
     return result
   }
 
+  /** Persist only the blurred field, including clears, while retrying prior failed writes. */
   const saveConnectionField = (
     field:
       | "url"
@@ -415,6 +425,7 @@ export function useWebdavConfig({
     saveImmediateSettings({ backupEncryptionEnabled: enabled })
   }
 
+  /** Retry failed field patches and keep localized feedback when another attempt fails. */
   const retrySave = () =>
     immediateSave.retry().catch((error) => {
       toast.error(
@@ -427,6 +438,7 @@ export function useWebdavConfig({
       )
     })
 
+  /** Flush the current configuration before testing the selected remote provider. */
   const handleTestConnection = async () => {
     const tracker = startProductAnalyticsAction(
       webDavAnalyticsContext(

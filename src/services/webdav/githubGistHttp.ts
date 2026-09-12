@@ -22,6 +22,27 @@ export class GitHubGistError extends Error {
   }
 }
 
+/** Bound the full request, including response-body reads, and release its timer. */
+async function withGithubGistTimeout<T>(
+  request: (signal: AbortSignal) => Promise<T>,
+): Promise<T> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 30_000)
+  try {
+    return await request(controller.signal)
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new GitHubGistError(
+        "GitHub request timed out",
+        CLOUD_SYNC_ERROR_CODES.NETWORK,
+      )
+    }
+    throw error
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 /** Convert GitHub rate-limit headers into a retry timestamp when available. */
 function readRetryAt(response: Response): number | undefined {
   const retryAfter = Number(response.headers.get("retry-after"))
@@ -72,39 +93,42 @@ export async function requestGithubGistJson<T>(params: {
   method?: "GET" | "POST" | "PATCH"
   body?: unknown
 }): Promise<T> {
-  let response: Response
-  try {
-    response = await fetch(`${GITHUB_GIST_API_ORIGIN}${params.path}`, {
-      method: params.method ?? "GET",
-      headers: {
-        Accept: "application/vnd.github+json",
-        Authorization: `Bearer ${params.token}`,
-        "X-GitHub-Api-Version": GITHUB_GIST_API_VERSION,
-        ...(params.body ? { "Content-Type": "application/json" } : {}),
-      },
-      body: params.body ? JSON.stringify(params.body) : undefined,
-    })
-  } catch {
-    throw new GitHubGistError(
-      "Unable to reach GitHub",
-      CLOUD_SYNC_ERROR_CODES.NETWORK,
-    )
-  }
+  return withGithubGistTimeout(async (signal) => {
+    let response: Response
+    try {
+      response = await fetch(`${GITHUB_GIST_API_ORIGIN}${params.path}`, {
+        signal,
+        method: params.method ?? "GET",
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${params.token}`,
+          "X-GitHub-Api-Version": GITHUB_GIST_API_VERSION,
+          ...(params.body ? { "Content-Type": "application/json" } : {}),
+        },
+        body: params.body ? JSON.stringify(params.body) : undefined,
+      })
+    } catch {
+      throw new GitHubGistError(
+        "Unable to reach GitHub",
+        CLOUD_SYNC_ERROR_CODES.NETWORK,
+      )
+    }
 
-  const requestId = response.headers.get("x-github-request-id") ?? undefined
-  if (!response.ok) throw await readHttpError(response, params.token)
+    const requestId = response.headers.get("x-github-request-id") ?? undefined
+    if (!response.ok) throw await readHttpError(response, params.token)
 
-  try {
-    return (await response.json()) as T
-  } catch {
-    throw new GitHubGistError(
-      "GitHub returned an invalid response",
-      CLOUD_SYNC_ERROR_CODES.REMOTE_UNAVAILABLE,
-      response.status,
-      undefined,
-      requestId,
-    )
-  }
+    try {
+      return (await response.json()) as T
+    } catch {
+      throw new GitHubGistError(
+        "GitHub returned an invalid response",
+        CLOUD_SYNC_ERROR_CODES.REMOTE_UNAVAILABLE,
+        response.status,
+        undefined,
+        requestId,
+      )
+    }
+  })
 }
 
 /** Read a truncated Gist file only from GitHub's raw-content host. */
@@ -131,27 +155,30 @@ export async function readGithubGistRawFile(
     )
   }
 
-  let response: Response
-  try {
-    response = await fetch(url.toString(), {
-      headers: {
-        Accept: "text/plain",
-        Authorization: `Bearer ${token}`,
-      },
-    })
-  } catch {
-    throw new GitHubGistError(
-      "Unable to download the GitHub Gist file",
-      CLOUD_SYNC_ERROR_CODES.NETWORK,
-    )
-  }
-  if (!response.ok) throw await readHttpError(response, token)
-  const content = await response.text()
-  if (!content.trim()) {
-    throw new GitHubGistError(
-      "The GitHub Gist file is empty",
-      CLOUD_SYNC_ERROR_CODES.REMOTE_EMPTY,
-    )
-  }
-  return content
+  return withGithubGistTimeout(async (signal) => {
+    let response: Response
+    try {
+      response = await fetch(url.toString(), {
+        signal,
+        headers: {
+          Accept: "text/plain",
+          Authorization: `Bearer ${token}`,
+        },
+      })
+    } catch {
+      throw new GitHubGistError(
+        "Unable to download the GitHub Gist file",
+        CLOUD_SYNC_ERROR_CODES.NETWORK,
+      )
+    }
+    if (!response.ok) throw await readHttpError(response, token)
+    const content = await response.text()
+    if (!content.trim()) {
+      throw new GitHubGistError(
+        "The GitHub Gist file is empty",
+        CLOUD_SYNC_ERROR_CODES.REMOTE_EMPTY,
+      )
+    }
+    return content
+  })
 }

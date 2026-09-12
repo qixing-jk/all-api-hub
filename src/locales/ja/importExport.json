@@ -141,7 +141,7 @@
     },
     "gist": {
       "autoSyncEnableDesc": "有効にすると、選択した間隔で共有データを Secret Gist と同期します。",
-      "configDesc": "暗号化した共有データを GitHub Secret Gist で同期します。Secret Gist は非公開一覧のリンクであり、アクセス制御そのものではありません。",
+      "configDesc": "暗号化した共有データを GitHub Secret Gist で同期します。Secret Gist は一覧に表示されないリンクであり、アクセス制御そのものではありません。",
       "downloadImport": "Secret Gist からインポート",
       "encryptionDescription": "GitHub Gist 同期には暗号化パスワードが必要です。パスワードは GitHub やバックアップに含まれません。紛失すると、暗号化されたバックアップを復号できません。",
       "encryptionPasswordRequired": "この Gist を保存または同期する前に暗号化パスワードを入力してください。",
