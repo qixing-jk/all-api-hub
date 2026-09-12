@@ -235,6 +235,17 @@ describe("New API native managed resource", () => {
     expect(mocks.update).not.toHaveBeenCalled()
     expect(mocks.remove).not.toHaveBeenCalled()
   })
+  it("treats a non-multi-key credential as one scalar value", async () => {
+    mocks.get.mockResolvedValue({
+      ...channel,
+      channel_info: { ...channel.channel_info, is_multi_key: false },
+    })
+    mocks.fetchSecretKey.mockResolvedValue("  single-key  ")
+    const api = await newApiManagedResourceRegistration.open()
+    const cleanup = await api.openKeyCleanup!((await api.list()).items[0].ref)
+    expect(cleanup.keys).toEqual(["single-key"])
+    expect(mocks.deleteKey).not.toHaveBeenCalled()
+  })
 
   it("stops native key deletion when credential positions change", async () => {
     mocks.get.mockResolvedValue({

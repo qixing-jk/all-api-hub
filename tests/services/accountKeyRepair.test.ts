@@ -1256,7 +1256,7 @@ describe("accountKeyRepair", () => {
     },
   )
 
-  it.each(["delete", "resolve"])(
+  it.each(["delete", "resolve", "unavailable", "unsupported"])(
     "bounds stalled invalid-resource %s operations",
     async (stage) => {
       vi.useFakeTimers()
@@ -1281,7 +1281,15 @@ describe("accountKeyRepair", () => {
         const deleteResource = stage === "delete" ? stalled : vi.fn()
         mocks.sessionsByAccountId.set(account.id, {
           ...createSession(),
-          ...(stage === "resolve" ? { runtimeKey: { resolve: stalled } } : {}),
+          ...(stage === "resolve"
+            ? { runtimeKey: { resolve: stalled } }
+            : stage === "unavailable"
+              ? {
+                  runtimeKey: {
+                    resolve: vi.fn().mockResolvedValue({ kind: "unavailable" }),
+                  },
+                }
+              : {}),
           openCollection: vi.fn(async () => ({ delete: deleteResource })),
         })
         mocks.getAllAccounts.mockResolvedValue([account])
@@ -1311,8 +1319,19 @@ describe("accountKeyRepair", () => {
 
         const responsePromise = deleteInvalidAccountKeyResources({
           resources: [resource],
-          cleanupLinkedChannels: stage === "resolve",
+          cleanupLinkedChannels: stage !== "delete",
         })
+        if (stage === "unavailable" || stage === "unsupported") {
+          await expect(responsePromise).resolves.toMatchObject({
+            data: {
+              results: [
+                { outcome: "rejected", failure: { code: "unavailable" } },
+              ],
+            },
+          })
+          expect(deleteResource).not.toHaveBeenCalled()
+          return
+        }
         await vi.advanceTimersByTimeAsync(0)
         expect(stalled).toHaveBeenCalledOnce()
         expect(stalled).toHaveBeenCalledWith(resource.ref, {
