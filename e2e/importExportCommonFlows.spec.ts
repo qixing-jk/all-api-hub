@@ -605,11 +605,17 @@ test("round-trips a full backup through export download and file import", async 
   })
 
   await expect(page.getByText("Data format is correct")).toBeVisible()
-  await expect(page.getByText("Contains account data")).toBeVisible()
-  await expect(page.getByText("Contains user settings")).toBeVisible()
-  await expect(page.getByText("Contains channel configuration")).toBeVisible()
   await expect(
-    page.getByTestId(IMPORT_EXPORT_TEST_IDS.containsApiCredentialProfiles),
+    page.getByText("Accounts and bookmarks", { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("group", { name: "User settings", exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("group", { name: "Channel configuration", exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("group", { name: "API credential library", exact: true }),
   ).toBeVisible()
 
   await chooseFullReplaceImport(page)
@@ -720,7 +726,9 @@ test("imports account backup JSON from the preview field and appends by default"
   await page.locator("#import-data-preview").fill(JSON.stringify(backup))
 
   await expect(page.getByText("Data format is correct")).toBeVisible()
-  await expect(page.getByText("Contains account data")).toBeVisible()
+  await expect(
+    page.getByText("Accounts and bookmarks", { exact: true }),
+  ).toBeVisible()
 
   await page.getByTestId(IMPORT_EXPORT_TEST_IDS.importBackupButton).click()
 
@@ -780,11 +788,15 @@ test("imports account backup JSON from a selected file and restores popup accoun
     buffer: Buffer.from(JSON.stringify(backup), "utf8"),
   })
 
+  await expect(page.locator("#import-data-preview")).not.toBeVisible()
+  await page.getByRole("button", { name: "View or paste JSON" }).click()
   await expect(page.locator("#import-data-preview")).toHaveValue(
     JSON.stringify(backup),
   )
   await expect(page.getByText("Data format is correct")).toBeVisible()
-  await expect(page.getByText("Contains account data")).toBeVisible()
+  await expect(
+    page.getByText("Accounts and bookmarks", { exact: true }),
+  ).toBeVisible()
 
   await page.getByTestId(IMPORT_EXPORT_TEST_IDS.importBackupButton).click()
 
@@ -839,7 +851,7 @@ test("imports API credential profiles from backup JSON and restores the popup ta
 
   await expect(page.getByText("Data format is correct")).toBeVisible()
   await expect(
-    page.getByTestId(IMPORT_EXPORT_TEST_IDS.containsApiCredentialProfiles),
+    page.getByRole("group", { name: "API credential library", exact: true }),
   ).toBeVisible()
 
   await page
@@ -927,7 +939,7 @@ test("refreshes an already-open popup API credentials tab after backup import", 
 
   await expect(page.getByText("Data format is correct")).toBeVisible()
   await expect(
-    page.getByTestId(IMPORT_EXPORT_TEST_IDS.containsApiCredentialProfiles),
+    page.getByRole("group", { name: "API credential library", exact: true }),
   ).toBeVisible()
 
   await page
@@ -1032,10 +1044,14 @@ test("restores a full backup and keeps common popup workflows available", async 
   await page.locator("#import-data-preview").fill(JSON.stringify(backup))
 
   await expect(page.getByText("Data format is correct")).toBeVisible()
-  await expect(page.getByText("Contains account data")).toBeVisible()
-  await expect(page.getByText("Contains user settings")).toBeVisible()
   await expect(
-    page.getByTestId(IMPORT_EXPORT_TEST_IDS.containsApiCredentialProfiles),
+    page.getByText("Accounts and bookmarks", { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("group", { name: "User settings", exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("group", { name: "API credential library", exact: true }),
   ).toBeVisible()
 
   await chooseFullReplaceImport(page)
@@ -1188,10 +1204,14 @@ test("restores a full backup and keeps the sidepanel model workflow available", 
 
   await page.locator("#import-data-preview").fill(JSON.stringify(backup))
   await expect(page.getByText("Data format is correct")).toBeVisible()
-  await expect(page.getByText("Contains account data")).toBeVisible()
-  await expect(page.getByText("Contains user settings")).toBeVisible()
   await expect(
-    page.getByTestId(IMPORT_EXPORT_TEST_IDS.containsApiCredentialProfiles),
+    page.getByText("Accounts and bookmarks", { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("group", { name: "User settings", exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("group", { name: "API credential library", exact: true }),
   ).toBeVisible()
 
   await chooseFullReplaceImport(page)
@@ -1281,7 +1301,9 @@ test("imports preference backup JSON and applies settings after reload", async (
   await page.locator("#import-data-preview").fill(JSON.stringify(backup))
 
   await expect(page.getByText("Data format is correct")).toBeVisible()
-  await expect(page.getByText("Contains user settings")).toBeVisible()
+  await expect(
+    page.getByRole("group", { name: "User settings", exact: true }),
+  ).toBeVisible()
 
   await page
     .getByTestId(IMPORT_EXPORT_TEST_IDS.importPreferencesReplaceOption)

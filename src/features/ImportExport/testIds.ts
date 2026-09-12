@@ -1,6 +1,4 @@
 export const IMPORT_EXPORT_TEST_IDS = {
-  containsApiCredentialProfiles:
-    "import-export-contains-api-credential-profiles",
   exportFullBackupButton: "import-export-export-full-backup-button",
   exportAccountDataButton: "import-export-export-account-data-button",
   exportUserSettingsButton: "import-export-export-user-settings-button",

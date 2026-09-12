@@ -65,12 +65,11 @@ describe("ImportExport section components", () => {
     mockHandleExportPreferences.mockResolvedValue(undefined)
   })
 
-  it("describes plaintext manual account and full exports in every app locale", () => {
+  it("keeps plaintext export guidance in one shared notice across locales", () => {
     const resources = [
       {
         locale: "en",
         resource: enImportExport,
-        credentials: /saved (?:account )?credentials/i,
         guidance: /store (?:the |exported )?files? securely/i,
         providerSpecificForbidden: /OpenRouter|Management Key/i,
         plaintext: /plaintext/i,
@@ -78,7 +77,6 @@ describe("ImportExport section components", () => {
       {
         locale: "es-419",
         resource: es419ImportExport,
-        credentials: /credenciales guardadas/i,
         guidance: /guarda (?:el archivo|los archivos) de forma segura/i,
         providerSpecificForbidden:
           /OpenRouter|Management Key|clave de administración/i,
@@ -87,7 +85,6 @@ describe("ImportExport section components", () => {
       {
         locale: "ja",
         resource: jaImportExport,
-        credentials: /保存済み.*認証情報/,
         guidance: /ファイルは安全に保管/,
         providerSpecificForbidden: /OpenRouter|Management Key|管理キー/i,
         plaintext: /平文/,
@@ -95,7 +92,6 @@ describe("ImportExport section components", () => {
       {
         locale: "vi",
         resource: viImportExport,
-        credentials: /thông tin xác thực.*đã lưu/i,
         guidance: /lưu tệp an toàn/i,
         providerSpecificForbidden: /OpenRouter|Management Key|khóa quản lý/i,
         plaintext: /văn bản thuần túy/i,
@@ -103,16 +99,14 @@ describe("ImportExport section components", () => {
       {
         locale: "zh-CN",
         resource: zhCnImportExport,
-        credentials: /已保存的.*凭据/,
-        guidance: /妥善保管(?:导出)?文件/,
+        guidance: /妥善保管/,
         providerSpecificForbidden: /OpenRouter|Management Key|管理密钥/i,
         plaintext: /明文/,
       },
       {
         locale: "zh-TW",
         resource: zhTwImportExport,
-        credentials: /已儲存的.*憑證/,
-        guidance: /妥善保管(?:匯出)?檔案/,
+        guidance: /妥善保管/,
         providerSpecificForbidden: /OpenRouter|Management Key|管理金鑰/i,
         plaintext: /明文/,
       },
@@ -121,22 +115,21 @@ describe("ImportExport section components", () => {
       ({
         locale,
         resource,
-        credentials,
         guidance,
         providerSpecificForbidden,
         plaintext,
       }) => {
-        const descriptions = [
-          resource.export.accountDataDescription,
-          resource.export.fullBackupDescription,
-        ]
-        descriptions.forEach((description) => {
-          expect(description.length, locale).toBeGreaterThan(20)
-          expect(description, locale).toMatch(credentials)
-          expect(description, locale).toMatch(guidance)
-          expect(description, locale).not.toMatch(providerSpecificForbidden)
-          expect(description, locale).toMatch(plaintext)
-        })
+        const description = resource.export.sensitiveDataNotice
+        expect(description.length, locale).toBeGreaterThan(20)
+        expect(resource.export.accountDataDescription, locale).not.toMatch(
+          plaintext,
+        )
+        expect(resource.export.fullBackupDescription, locale).not.toMatch(
+          plaintext,
+        )
+        expect(description, locale).toMatch(guidance)
+        expect(description, locale).not.toMatch(providerSpecificForbidden)
+        expect(description, locale).toMatch(plaintext)
       },
     )
   })
@@ -255,6 +248,11 @@ describe("ImportExport section components", () => {
     fireEvent.click(
       screen.getByTestId(IMPORT_EXPORT_TEST_IDS.importPreferencesReplaceOption),
     )
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole("button", { name: "importExport:import.dataPreview" }),
+    )
+    expect(screen.getByDisplayValue('{"version":2}')).toBeInTheDocument()
     fireEvent.click(
       screen.getByRole("button", { name: "common:actions.clear" }),
     )
@@ -263,7 +261,7 @@ describe("ImportExport section components", () => {
       screen.getByText("importExport:import.dataValid"),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(/importExport:import\.containsAccountData/),
+      screen.getByText("importExport:import.sections.accounts.title"),
     ).toBeInTheDocument()
     expect(setImportData).toHaveBeenCalledWith('{"version":3}')
     expect(setImportData).toHaveBeenCalledWith("")
@@ -320,6 +318,10 @@ describe("ImportExport section components", () => {
     expect(handleFileImport).toHaveBeenCalledTimes(1)
     expect(handleImport).toHaveBeenCalledTimes(1)
     expect(mockTrackProductAnalyticsActionStarted).not.toHaveBeenCalled()
+    fireEvent.click(
+      screen.getByRole("button", { name: "importExport:import.dataPreview" }),
+    )
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument()
 
     rerender(
       <I18nextProvider i18n={testI18n}>
@@ -341,6 +343,7 @@ describe("ImportExport section components", () => {
       </I18nextProvider>,
     )
 
+    expect(screen.getByRole("textbox")).toBeVisible()
     expect(
       screen.getByText("importExport:import.dataInvalid"),
     ).toBeInTheDocument()

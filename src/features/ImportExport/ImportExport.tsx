@@ -99,7 +99,7 @@ export default function ImportExport() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           <ExportSection
             isExporting={isExporting}
             setIsExporting={setIsExporting}

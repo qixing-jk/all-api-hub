@@ -1,4 +1,5 @@
-import { Download, File } from "lucide-react"
+import { CheckCircle2, Download } from "lucide-react"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -11,6 +12,7 @@ import {
   CardItem,
   CardList,
   CardTitle,
+  CollapsibleSection,
   FormField,
   ResponsiveButtonGroup,
   Textarea,
@@ -63,6 +65,7 @@ const ImportSection = ({
   validation,
 }: ImportSectionProps) => {
   const { t } = useTranslation("importExport")
+  const [showJson, setShowJson] = useState(true)
   type ImportStrategy = ManualImportPlan[keyof ManualImportPlan]
   const importSections: Array<{
     key: keyof ManualImportPlan
@@ -197,7 +200,11 @@ const ImportSection = ({
           <CardDescription>{t("import.description")}</CardDescription>
         </CardHeader>
 
-        <CardContent padding="md" className="flex flex-1 flex-col space-y-4">
+        <CardContent
+          padding="md"
+          spacing="none"
+          className="flex flex-1 flex-col gap-5"
+        >
           {/* 文件选择 */}
           <FormField
             label={t("import.selectBackupFile")}
@@ -208,29 +215,58 @@ const ImportSection = ({
                 id="import-backup-file"
                 type="file"
                 accept=".json"
-                onChange={handleFileImport}
+                onChange={(event) => {
+                  if (!event.target.files?.length) return
+                  handleFileImport(event)
+                  setShowJson(false)
+                }}
                 className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100 dark:text-gray-400 dark:file:bg-blue-900/30 dark:file:text-blue-300 dark:hover:file:bg-blue-900/50"
               />
-              <File className="h-5 w-5 text-gray-400 dark:text-gray-500" />
             </div>
           </FormField>
 
-          {/* 数据预览 */}
-          <FormField
-            label={t("import.dataPreview")}
-            htmlFor="import-data-preview"
-            className="flex flex-1 flex-col [&>div]:flex [&>div]:flex-1 [&>div]:flex-col"
+          <CollapsibleSection
+            title={t("import.dataPreview")}
+            open={showJson || validation?.valid === false}
+            onOpenChange={setShowJson}
+            buttonClassName="px-0 text-sm"
+            panelClassName="border-0 p-0"
           >
             <Textarea
               id="import-data-preview"
+              aria-label={t("import.dataPreview")}
               value={importData}
               onChange={(e) => setImportData(e.target.value)}
               placeholder={t("import.pasteJsonData")}
-              className="h-16 w-full flex-1 resize-none font-mono"
+              className="h-40 w-full resize-y font-mono text-xs leading-5"
+              spellCheck={false}
               onClear={() => setImportData("")}
               clearButtonLabel={t("common:actions.clear")}
             />
-          </FormField>
+          </CollapsibleSection>
+
+          {validation &&
+            (validation.valid ? (
+              <div
+                role="status"
+                className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm"
+              >
+                <span className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                  <CheckCircle2
+                    className="size-4 shrink-0"
+                    aria-hidden="true"
+                  />
+                  {t("import.dataValid")}
+                </span>
+                {validation.timestamp && (
+                  <span className="text-muted-foreground text-xs">
+                    {t("import.backupTime")}: {validation.timestamp}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <Alert variant="destructive">{t("import.dataInvalid")}</Alert>
+            ))}
 
           {visibleImportSections.length > 0 && (
             <div id={IMPORT_EXPORT_TARGET_IDS.importMode}>
@@ -238,15 +274,17 @@ const ImportSection = ({
                 <CardList className="overflow-hidden">
                   {visibleImportSections.map(
                     ({ key, title, description, strategies }) => (
-                      <CardItem
-                        key={key}
-                        padding="sm"
-                        title={title}
-                        description={description}
-                        rightContent={
+                      <CardItem key={key} padding="none" className="py-3">
+                        <div className="flex w-full flex-wrap items-center justify-between gap-3">
+                          <div className="min-w-0 flex-1 basis-56">
+                            <p className="text-sm font-medium">{title}</p>
+                            <p className="text-muted-foreground mt-1 text-sm">
+                              {description}
+                            </p>
+                          </div>
                           <ResponsiveButtonGroup
                             aria-label={title}
-                            className="max-w-full"
+                            className="w-fit max-w-full shrink-0"
                           >
                             {strategies.map(
                               ({ strategy, label, help, testId }) => {
@@ -266,7 +304,7 @@ const ImportSection = ({
                                         updateImportPlan(key, strategy)
                                       }
                                       data-testid={testId}
-                                      className="min-w-fit flex-1 sm:flex-none"
+                                      className="min-w-fit flex-1"
                                     >
                                       {label}
                                     </ToggleButton>
@@ -278,8 +316,8 @@ const ImportSection = ({
                               },
                             )}
                           </ResponsiveButtonGroup>
-                        }
-                      />
+                        </div>
+                      </CardItem>
                     ),
                   )}
                 </CardList>
@@ -292,44 +330,6 @@ const ImportSection = ({
             </div>
           )}
 
-          {/* 数据验证结果 */}
-          {validation && (
-            <Alert variant={validation.valid ? "success" : "destructive"}>
-              <div>
-                {validation.valid ? (
-                  <>
-                    <p className="mb-1 font-medium">{t("import.dataValid")}</p>
-                    <div className="space-y-1 text-sm">
-                      {validation.hasAccounts && (
-                        <p>• {t("import.containsAccountData")}</p>
-                      )}
-                      {validation.hasPreferences && (
-                        <p>• {t("import.containsUserSettings")}</p>
-                      )}
-                      {validation.hasChannelConfigs && (
-                        <p>• {t("import.containsChannelConfigs")}</p>
-                      )}
-                      {validation.hasApiCredentialProfiles && (
-                        <p
-                          data-testid={
-                            IMPORT_EXPORT_TEST_IDS.containsApiCredentialProfiles
-                          }
-                        >
-                          • {t("import.containsApiCredentialProfiles")}
-                        </p>
-                      )}
-                      <p>
-                        • {t("import.backupTime")}: {validation.timestamp}
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <p>{t("import.dataInvalid")}</p>
-                )}
-              </div>
-            </Alert>
-          )}
-
           <ProductAnalyticsScope
             entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
             featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport}
@@ -340,6 +340,7 @@ const ImportSection = ({
             {/* 导入按钮 */}
             <Button
               id="import-backup-action"
+              className="mt-auto"
               onClick={handleImport}
               disabled={!validation?.valid || !hasSelectedImportSection}
               loading={isImporting}

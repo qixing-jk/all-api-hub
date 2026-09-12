@@ -186,7 +186,7 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
             }
           />
         </CardList>
-        <p className="text-muted-foreground flex items-start gap-2 px-6 pb-4 text-xs">
+        <p className="text-muted-foreground dark:border-dark-bg-tertiary flex items-start gap-2 border-t border-gray-200 px-6 py-4 text-xs leading-5">
           <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <span>{t("export.sensitiveDataNotice")}</span>
         </p>
