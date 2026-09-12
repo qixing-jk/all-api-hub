@@ -476,6 +476,7 @@ describe("AccountActionButtons", () => {
     expect(managedService.matching.search).toHaveBeenCalledWith(
       expect.any(Object),
       "https://api.example.com",
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
     )
     expect(openManagedSiteChannelsPageMock).toHaveBeenCalledTimes(1)
   })
@@ -577,6 +578,7 @@ describe("AccountActionButtons", () => {
     expect(managedService.matching.search).toHaveBeenCalledWith(
       expect.any(Object),
       "https://runtime.example.invalid",
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
     )
     expect(openManagedSiteChannelsPageMock).toHaveBeenCalledTimes(1)
   })
@@ -749,6 +751,7 @@ describe("AccountActionButtons", () => {
     expect(managedService.matching.search).toHaveBeenCalledWith(
       expect.any(Object),
       "https://api.example.com",
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
     )
     expect(openManagedSiteChannelsPageMock).toHaveBeenCalledTimes(1)
   })

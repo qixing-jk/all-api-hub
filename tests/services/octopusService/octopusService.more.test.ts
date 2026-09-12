@@ -181,6 +181,7 @@ describe("octopus additional flows", () => {
         baseUrl: "https://aihubmix.com",
         apiKey: token.key,
       }),
+      undefined,
     )
     expect(result.base_url).toBe("https://aihubmix.com/v1")
   })
