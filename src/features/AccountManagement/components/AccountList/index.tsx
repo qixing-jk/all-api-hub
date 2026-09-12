@@ -1375,6 +1375,7 @@ export default function AccountList({
           </div>
           <Button
             className="w-full shrink-0 sm:w-auto"
+            data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton}
             leftIcon={<Plus className="h-4 w-4" />}
             onClick={handleEmptyStateAddAccountClick}
             size="sm"
