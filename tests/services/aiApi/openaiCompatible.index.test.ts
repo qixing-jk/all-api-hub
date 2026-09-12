@@ -104,6 +104,30 @@ describe("OpenAI-compatible model fetchers", () => {
     expect(mockFetchApiData).toHaveBeenCalledTimes(1)
   })
 
+  it("preserves live scheduling intent across model route fallback", async () => {
+    const requestScheduling = {
+      priority: "background" as "background" | "foreground",
+    }
+    mockFetchApiData
+      .mockImplementationOnce(async (request) => {
+        expect(request.requestScheduling).toBe(requestScheduling)
+        requestScheduling.priority = "foreground"
+        throw new ApiError("canonical route unavailable", 404)
+      })
+      .mockImplementationOnce(async (request) => {
+        expect(request.requestScheduling).toBe(requestScheduling)
+        expect(request.requestScheduling.priority).toBe("foreground")
+        return [{ id: "custom-model" }]
+      })
+
+    await expect(
+      discoverOpenAICompatibleModels({ ...params, requestScheduling }),
+    ).resolves.toMatchObject({
+      models: [{ id: "custom-model" }],
+    })
+    expect(mockFetchApiData).toHaveBeenCalledTimes(2)
+  })
+
   it.each([404, 405])(
     "falls back to /models when the canonical route returns %s",
     async (statusCode) => {

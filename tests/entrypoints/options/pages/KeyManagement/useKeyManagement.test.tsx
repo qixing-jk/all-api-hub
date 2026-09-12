@@ -4441,6 +4441,83 @@ describe("useKeyManagement enabled account filtering", () => {
     unmount()
   })
 
+  it("skips superseded queued targets and permits retry after unexpected setup failures", async () => {
+    const account = createDisplayAccount({ id: "queued-status-account" })
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+    mockedUseUserPreferencesContext.mockReturnValue({
+      managedSiteType: "new-api",
+      preferences: buildUserPreferences({
+        newApi: {
+          baseUrl: "https://managed.example",
+          adminToken: "admin-token",
+          userId: "1",
+        },
+      }),
+    })
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: vi
+          .fn()
+          .mockResolvedValue(
+            Array.from({ length: 6 }, (_, index) =>
+              createToken({ id: 800 + index, key: `key-${index}` }),
+            ),
+          ),
+      }) as any,
+    )
+    const pending = new Map<
+      number,
+      { resolve: (value: any) => void; reject: (error: Error) => void }
+    >()
+    getManagedSiteTokenChannelStatusMock.mockImplementation(
+      ({ runtimeKey }: { runtimeKey: { tokenId: number } }) =>
+        new Promise((resolve, reject) =>
+          pending.set(runtimeKey.tokenId, { resolve, reject }),
+        ),
+    )
+    const { result, unmount } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+    act(() => result.current.setSelectedAccount(account.id))
+    await waitFor(() => expect(pending.size).toBe(4))
+    const status = { status: managedSiteTokenChannelStatuses.NOT_ADDED }
+    getManagedSiteTokenChannelStatusMock.mockResolvedValueOnce(status)
+    await act(async () => {
+      await result.current.refreshManagedSiteTokenStatusForToken(
+        result.current.tokens.find((token) => token.id === 804)!,
+      )
+      pending.get(800)!.resolve(status)
+      pending.get(801)!.reject(new Error("configuration read failed"))
+    })
+    await waitFor(() => expect(pending.has(805)).toBe(true))
+    expect(
+      getManagedSiteTokenChannelStatusMock.mock.calls.filter(
+        ([params]) => params.runtimeKey.tokenId === 804,
+      ),
+    ).toHaveLength(1)
+    getManagedSiteTokenChannelStatusMock.mockResolvedValueOnce(status)
+    await act(async () => {
+      await result.current.refreshManagedSiteTokenStatusForToken(
+        result.current.tokens.find((token) => token.id === 801)!,
+      )
+      for (const entry of pending.values()) entry.resolve(status)
+    })
+    await waitFor(() =>
+      expect(
+        result.current.managedSiteTokenStatuses[`${account.id}:801`]?.result
+          ?.status,
+      ).toBe(status.status),
+    )
+    expect(
+      getManagedSiteTokenChannelStatusMock.mock.calls.filter(
+        ([params]) => params.runtimeKey.tokenId === 801,
+      ),
+    ).toHaveLength(2)
+    unmount()
+  })
+
   it("cancels previous account checks and refreshes its inventory when returning", async () => {
     const firstAccount = createDisplayAccount({ id: "first-status-account" })
     const secondAccount = createDisplayAccount({ id: "second-status-account" })

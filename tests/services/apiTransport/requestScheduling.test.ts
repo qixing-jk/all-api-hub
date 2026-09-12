@@ -7,6 +7,22 @@ describe("shared scheduled reads", () => {
   beforeEach(() => vi.useFakeTimers())
   afterEach(() => vi.useRealTimers())
 
+  it("shares synchronous executor failures and detaches rejected consumers", async () => {
+    const error = new Error("request setup failed")
+    const execute = vi.fn(() => {
+      throw error
+    })
+    const read = new SharedRead(execute)
+    const controller = new AbortController()
+    await Promise.all([
+      expect(read.read({ signal: controller.signal })).rejects.toBe(error),
+      expect(read.read()).rejects.toBe(error),
+    ])
+    expect(execute).toHaveBeenCalledTimes(1)
+    controller.abort()
+    expect(read.signal.aborted).toBe(false)
+  })
+
   it("promotes a queued list lookup for export and keeps it when the list unmounts", async () => {
     const limit = createSiteRequestLimiter({
       maxConcurrentPerSite: 1,
