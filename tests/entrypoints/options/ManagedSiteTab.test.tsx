@@ -9,7 +9,6 @@ import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/KeyManagement/constants"
-import zhCNSettings from "~/locales/zh-CN/settings.json"
 import { render, screen, within } from "~~/tests/test-utils/render"
 
 const {
@@ -124,18 +123,13 @@ describe("ManagedSiteTab", () => {
     mockedUseUserPreferencesContext.mockReturnValue(createContextValue())
   })
 
-  it("explains the external gateway role before the managed site is configured", () => {
+  it("offers an actionable overview guide before configuration", () => {
     render(<ManagedSiteTab />)
 
     expect(
-      screen.getByText(
-        "settings:managedSite.gatewayGuidance.unconfigured.title",
-      ),
-    ).toBeVisible()
-    expect(
-      screen.getByText(
-        "settings:managedSite.gatewayGuidance.unconfigured.description",
-      ),
+      screen.getByRole("button", {
+        name: "optionsOverview:unifiedApiGuidance.overview.reopen",
+      }),
     ).toBeVisible()
     expect(
       screen.queryByRole("button", {
@@ -208,23 +202,6 @@ describe("ManagedSiteTab", () => {
         "settings:managedSite.gatewayGuidance.actionDescriptions.viewChannels",
       ),
     ).not.toBeInTheDocument()
-  })
-
-  it("keeps the zh-CN guidance explicit about channel prerequisites", () => {
-    const { configComplete, unconfigured } =
-      zhCNSettings.managedSite.gatewayGuidance
-
-    expect(configComplete.title).toBe("下一步：导入可用 Key")
-    expect(configComplete.description).toContain("基础配置只完成了网关后台连接")
-    expect(configComplete.description).toContain("导入为网关渠道")
-    expect(configComplete.description).toContain("统一 AI API")
-    expect(configComplete.description).toContain("外部客户端")
-    expect(`${configComplete.title}${configComplete.description}`).not.toMatch(
-      /网关已就绪|连接已就绪/,
-    )
-    expect(unconfigured.description).toContain("完成自建 AI 网关配置")
-    expect(unconfigured.description).toContain("导入为网关渠道")
-    expect(unconfigured.description).toContain("同一个 AI API")
   })
 
   it("opens guided account-key import for an eligible account", async () => {

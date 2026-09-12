@@ -31,19 +31,19 @@
 
 Under **Settings → Check-in & Redemption → Automatic Check-in**:
 
-| Option | Default | Description |
-|------|--------|------|
-| **Enable Automatic Check-in** | On | Controls the global daily schedule, automatic retries, and bulk "Run Now" on the Automatic Check-in page. When off, no related schedule is created and bulk check-in does not run. Per-account "Quick Check-in" can still run. |
-| **Trigger Today's Check-in Early When Opening the Interface** | Off | When the popup, side panel, or settings page opens within the window and today's schedule has not run, starts the daily run early. |
-| **Refresh Data and Interface after Automatic Check-in** | On | Refreshes account data and the interface after successful check-in. This is not a system or third-party notification switch. |
-| **Window Start / End** | 09:00 / 23:00 | Allowed local-time range for the daily schedule. It can cross midnight. |
-| **Schedule Mode** | Random | Selects a random time within the window, or choose Fixed Time. |
-| **Fixed Time** | 09:00 | Used only in Fixed Time mode. |
-| **Retry Strategy** | Off | Retries only accounts that failed the daily scheduled run on the same day. Manual "Run Now" does not create an automatic retry queue. |
-| **Retry Interval (minutes)** | 30 | Used only when retries are enabled. |
-| **Maximum Daily Attempts** | 3 | **Includes the initial daily run**; it does not mean three additional retries. |
-| **View Check-in History / Open Records** | Button | Opens the Automatic Check-in results page. It stores latest status, not a multi-day archive. |
-| **Restore Defaults** | Button | Restores: enabled, 09:00–23:00, random, retries off. |
+| Option | Description |
+|------|------|
+| **Enable Automatic Check-in** | Controls the global daily schedule, automatic retries, and bulk "Run Now" on the Automatic Check-in page. When off, no related schedule is created and bulk check-in does not run. Per-account "Quick Check-in" can still run. |
+| **Trigger Today's Check-in Early When Opening the Interface** | When the popup, side panel, or settings page opens within the window and today's schedule has not run, starts the daily run early. |
+| **Refresh Data and Interface after Automatic Check-in** | Refreshes account data and the interface after successful check-in. This is not a system or third-party notification switch. |
+| **Window Start / End** | Allowed local-time range for the daily schedule. It can cross midnight. |
+| **Schedule Mode** | Selects a random time within the window, or choose Fixed Time. |
+| **Fixed Time** | Used only in Fixed Time mode. |
+| **Retry Strategy** | Retries only accounts that failed the daily scheduled run on the same day. Manual "Run Now" does not create an automatic retry queue. |
+| **Retry Interval (minutes)** | Used only when retries are enabled. |
+| **Maximum Daily Attempts** | **Includes the initial daily run**, rather than counting only additional retries. |
+| **View Check-in History / Open Records** | Opens the Automatic Check-in results page. It stores latest status, not a multi-day archive. |
+| **Restore Defaults** | Restores the automatic check-in settings to the defaults provided by the extension. |
 
 Saved settings take effect immediately and reschedule the task without restarting the extension.
 

@@ -14,6 +14,7 @@ import type {
 } from "./contracts/siteTypeCapabilities"
 import { axonHubManagedSiteCapabilities } from "./managedSites/axonHub"
 import { claudeCodeHubManagedSiteCapabilities } from "./managedSites/claudeCodeHub"
+import { cliProxyApiCapabilities } from "./managedSites/cliProxyApi"
 import { doneHubManagedSiteCapabilities } from "./managedSites/doneHub"
 import { newApiManagedSiteCapabilities } from "./managedSites/newApi"
 import { octopusManagedSiteCapabilities } from "./managedSites/octopus"
@@ -26,6 +27,7 @@ import { sub2ApiCapabilities } from "./sub2api"
 import { voApiV2Capabilities } from "./voapiV2"
 
 const managedSitesBySiteType = {
+  [SITE_TYPES.CLI_PROXY_API]: cliProxyApiCapabilities,
   [SITE_TYPES.NEW_API]: newApiManagedSiteCapabilities,
   [SITE_TYPES.VELOERA]: veloeraManagedSiteCapabilities,
   [SITE_TYPES.DONE_HUB]: doneHubManagedSiteCapabilities,

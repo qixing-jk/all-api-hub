@@ -27,7 +27,6 @@ import {
 const {
   mockCCSwitchDialog,
   mockClaudeCodeRouterDialog,
-  mockCliProxyDialog,
   mockCursorPlusDialog,
   mockKiloCodeDialog,
   mockOpenInCherryStudio,
@@ -42,7 +41,6 @@ const {
 } = vi.hoisted(() => ({
   mockCCSwitchDialog: vi.fn(),
   mockClaudeCodeRouterDialog: vi.fn(),
-  mockCliProxyDialog: vi.fn(),
   mockCursorPlusDialog: vi.fn(),
   mockKiloCodeDialog: vi.fn(),
   mockOpenInCherryStudio: vi.fn(),
@@ -54,8 +52,6 @@ const {
   mockUserPreferences: {
     claudeCodeRouterApiKey: "ccr-management-key",
     claudeCodeRouterBaseUrl: "https://router.example.invalid",
-    cliProxyBaseUrl: "https://cliproxy.example.invalid",
-    cliProxyManagementKey: "cliproxy-management-key",
     markGatewayGuidanceOnboardingCompleted: vi.fn(),
     managedSiteType: "new-api",
   },
@@ -73,13 +69,6 @@ vi.mock("~/components/CCSwitchExportDialog", () => ({
 vi.mock("~/components/ClaudeCodeRouterImportDialog", () => ({
   ClaudeCodeRouterImportDialog: (props: unknown) => {
     mockClaudeCodeRouterDialog(props)
-    return null
-  },
-}))
-
-vi.mock("~/components/CliProxyExportDialog", () => ({
-  CliProxyExportDialog: (props: unknown) => {
-    mockCliProxyDialog(props)
     return null
   },
 }))
@@ -208,8 +197,6 @@ describe("ServiceCredentialCard", () => {
     mockUserPreferences.claudeCodeRouterApiKey = "ccr-management-key"
     mockUserPreferences.claudeCodeRouterBaseUrl =
       "https://router.example.invalid"
-    mockUserPreferences.cliProxyBaseUrl = "https://cliproxy.example.invalid"
-    mockUserPreferences.cliProxyManagementKey = "cliproxy-management-key"
     mockUserPreferences.managedSiteType = "new-api"
     mockOpenWithAccount.mockResolvedValue({ opened: true })
     mockSaveApiCredentialProfiles.mockResolvedValue({ savedCount: 1 })
@@ -728,17 +715,6 @@ describe("ServiceCredentialCard", () => {
       screen.queryByRole("dialog", { name: "Cursor++ export" }),
     ).not.toBeInTheDocument()
 
-    await selectExportAction(user, "keyManagement:actions.importToCliProxy")
-    expect(mockCliProxyDialog).toHaveBeenCalledWith(
-      expect.objectContaining({
-        isOpen: true,
-        account: expect.objectContaining({
-          baseUrl: "https://sharedchat.example.invalid/v1",
-        }),
-        token: expect.objectContaining({ key: "sk-service-credential" }),
-      }),
-    )
-
     await selectExportAction(
       user,
       "keyManagement:actions.importToClaudeCodeRouter",
@@ -895,8 +871,7 @@ describe("ServiceCredentialCard", () => {
   it("keeps configuration-dependent exports closed when required settings are missing", async () => {
     const user = userEvent.setup()
     mockUserPreferences.claudeCodeRouterBaseUrl = ""
-    mockUserPreferences.cliProxyBaseUrl = ""
-    mockUserPreferences.cliProxyManagementKey = ""
+
     const account = buildDisplaySiteData({
       id: "sharedchat-account",
       name: "SharedChat",
@@ -922,22 +897,15 @@ describe("ServiceCredentialCard", () => {
       },
     )
 
-    await selectExportAction(user, "keyManagement:actions.importToCliProxy")
     await selectExportAction(
       user,
       "keyManagement:actions.importToClaudeCodeRouter",
     )
 
-    expect(mockCliProxyDialog).not.toHaveBeenCalledWith(
-      expect.objectContaining({ isOpen: true }),
-    )
     expect(mockClaudeCodeRouterDialog).not.toHaveBeenCalledWith(
       expect.objectContaining({ isOpen: true }),
     )
-    expect(mockShowResultToast).toHaveBeenCalledWith({
-      success: false,
-      message: "messages:cliproxy.configMissing",
-    })
+
     expect(mockShowResultToast).toHaveBeenCalledWith({
       success: false,
       message: "messages:claudeCodeRouter.configMissing",

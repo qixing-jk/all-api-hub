@@ -71,19 +71,13 @@
     "modelsMissing": "Forneça pelo menos um modelo",
     "updateSuccess": "Provedor {{name}} do Claude Code Router atualizado com sucesso"
   },
-  "cliproxy": {
-    "configMissing": "Configure a URL base da Management API do CLIProxyAPI e a chave nas configurações primeiro",
-    "importFailed": "Falha ao importar provedor para o CLIProxyAPI",
-    "importSuccess": "Provedor {{name}} importado com sucesso para o CLIProxyAPI",
+  "cliProxyApi": {
     "managementApiConnectionSuccess": "Conexão com a Management API do CLIProxyAPI bem-sucedida",
     "managementApiForbidden": "CLIProxyAPI rejeitou a requisição. Verifique se a chave de gerenciamento foi digitada incorretamente muitas vezes ou se o acesso está restrito no servidor.",
     "managementApiHttpError": "A Management API do CLIProxyAPI retornou um código de status inesperado (HTTP {{status}})",
     "managementApiInvalidKey": "A Management Key do CLIProxyAPI é inválida. Verifique a chave nas configurações.",
     "managementApiNotFound": "A Management API do CLIProxyAPI não foi encontrada. Certifique-se de que a URL base termine com /v0/management e que o CLIProxyAPI tenha uma chave de gerenciamento configurada.",
-    "managementApiRemoteAccessDisabled": "O CLIProxyAPI rejeitou o acesso remoto de gerenciamento. Verifique se remote-management.allow-remote: true está ativado na configuração do CLIProxyAPI, ou se o gerenciamento remoto está ativado via MANAGEMENT_PASSWORD, e tente novamente.",
-    "managementApiServerError": "A Management API do CLIProxyAPI retornou um erro de servidor (HTTP {{status}})",
-    "managementApiUnreachable": "Não foi possível alcançar a Management API do CLIProxyAPI. Verifique a URL base, o status do serviço e o acesso de rede do navegador a esse endereço.",
-    "updateSuccess": "Provedor {{name}} do CLIProxy atualizado com sucesso"
+    "managementApiUnreachable": "Não foi possível alcançar a Management API do CLIProxyAPI. Verifique a URL base, o status do serviço e o acesso de rede do navegador a esse endereço."
   },
   "content": {
     "userInfoNotFound": "Informações do usuário não encontradas. Certifique-se de estar logado",

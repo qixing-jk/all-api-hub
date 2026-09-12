@@ -1,3 +1,4 @@
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import type { ManagedSiteType } from "~/constants/siteType"
 import {
   buildControlDefinition,
@@ -65,6 +66,14 @@ export const managedSiteCoreSearchSections: OptionsSearchItemDefinition[] = [
 
 export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
+    "control:managed-site-deployment-docs",
+    "managedSite",
+    SETTINGS_ANCHORS.MANAGED_SITE_DEPLOYMENT_DOCS,
+    "settings:managedSite.deploymentDocs",
+    641,
+    { keywords: ["deploy", "deployment", "install", "部署", "安装"] },
+  ),
+  buildControlDefinition(
     "control:managed-site-type",
     "managedSite",
     "managed-site-type",
@@ -79,6 +88,7 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
       ],
       keywords: [
         "managed site",
+        "cli-proxy-api",
         "new-api",
         "done-hub",
         "veloera",

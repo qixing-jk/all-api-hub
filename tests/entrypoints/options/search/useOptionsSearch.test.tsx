@@ -65,6 +65,28 @@ describe("useOptionsSearch", () => {
     })
   })
 
+  it("keeps the auto-checkin page searchable when automatic runs are disabled", () => {
+    const { result } = renderHook(
+      () =>
+        useOptionsSearch(
+          { ...context, autoCheckinEnabled: false },
+          "ui:navigation.batchCheckin",
+        ),
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    expect(result.current.results[0]).toMatchObject({
+      id: "page:autoCheckin",
+      pageId: MENU_ITEM_IDS.AUTO_CHECKIN,
+      kind: "page",
+      title: "ui:navigation.batchCheckin",
+    })
+  })
+
   it("matches breadcrumb-only queries", () => {
     const { result } = renderHook(
       () => useOptionsSearch(context, "settings:tabs.permissions"),

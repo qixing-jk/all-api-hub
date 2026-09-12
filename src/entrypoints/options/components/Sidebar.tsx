@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next"
 
 import { Button, Heading3, IconButton, Separator } from "~/components/ui"
 import { Z_INDEX } from "~/constants/designTokens"
-import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   getMenuCategoryLabel,
@@ -56,16 +55,7 @@ function Sidebar({
   const { preferences } = useUserPreferencesContext()
   const shouldShowCollapsedState = isCollapsed && !isMobileOpen
 
-  const visibleMenuItems = menuItems.filter((item) => {
-    if (
-      item.id === MENU_ITEM_IDS.AUTO_CHECKIN &&
-      !preferences?.autoCheckin?.globalEnabled
-    ) {
-      return false
-    }
-    return true
-  })
-  const menuGroups = visibleMenuItems.reduce<
+  const menuGroups = menuItems.reduce<
     Array<{
       category: (typeof menuItems)[number]["category"]
       items: typeof menuItems
@@ -235,7 +225,10 @@ function Sidebar({
                     {group.items.map((item) => {
                       const Icon = item.icon
                       const isActive = activeMenuItem === item.id
-                      const label = getMenuItemLabel(t, item.id)
+                      const label = getMenuItemLabel(t, item.id, {
+                        autoCheckinEnabled:
+                          preferences?.autoCheckin?.globalEnabled ?? true,
+                      })
 
                       return (
                         <li key={item.id}>

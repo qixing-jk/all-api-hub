@@ -32,7 +32,6 @@ export interface UnifiedApiGuidanceCopy {
   description: (model: UnifiedApiGuidanceModel) => string
   sourceSummary: (sourceKind: UnifiedApiGuidanceSourceKind) => string
   boundaryNote: () => string
-  directToolExportNote: () => string
   modelSyncOptionalNote: () => string
   optionalLabel: () => string
   actionLabel: (actionKind: UnifiedApiGuidanceCtaActionKind) => string
@@ -85,8 +84,6 @@ function getAccountUnifiedApiGuidanceCopy(
     description: (model) => getAccountDescription(t, model),
     sourceSummary: (sourceKind) => getAccountSourceSummary(t, sourceKind),
     boundaryNote: () => t("account:unifiedApiGuidance.boundaryNote"),
-    directToolExportNote: () =>
-      t("account:unifiedApiGuidance.directToolExportNote"),
     modelSyncOptionalNote: () =>
       t("account:unifiedApiGuidance.modelSyncOptional"),
     optionalLabel: () => t("account:unifiedApiGuidance.optionalLabel"),
@@ -106,8 +103,6 @@ function getOptionsOverviewUnifiedApiGuidanceCopy(
     sourceSummary: (sourceKind) =>
       getOptionsOverviewSourceSummary(t, sourceKind),
     boundaryNote: () => t("optionsOverview:unifiedApiGuidance.boundaryNote"),
-    directToolExportNote: () =>
-      t("optionsOverview:unifiedApiGuidance.directToolExportNote"),
     modelSyncOptionalNote: () =>
       t("optionsOverview:unifiedApiGuidance.modelSyncOptional"),
     optionalLabel: () => t("optionsOverview:unifiedApiGuidance.optionalLabel"),
@@ -191,10 +186,6 @@ function getStepTitle(t: TFunction, stepId: UnifiedApiGuidanceStepId): string {
       return t(
         "optionsOverview:unifiedApiGuidance.stepper.steps.gatewayChannel.title",
       )
-    case UNIFIED_API_GUIDANCE_STEP_IDS.ClientAccess:
-      return t(
-        "optionsOverview:unifiedApiGuidance.stepper.steps.clientAccess.title",
-      )
     default:
       return assertNever(stepId, `Unexpected guidance step: ${stepId}`)
   }
@@ -219,10 +210,6 @@ function getStepDescription(
     case UNIFIED_API_GUIDANCE_STEP_IDS.GatewayChannel:
       return t(
         "optionsOverview:unifiedApiGuidance.stepper.steps.gatewayChannel.description",
-      )
-    case UNIFIED_API_GUIDANCE_STEP_IDS.ClientAccess:
-      return t(
-        "optionsOverview:unifiedApiGuidance.stepper.steps.clientAccess.description",
       )
     default:
       return assertNever(stepId, `Unexpected guidance step: ${stepId}`)

@@ -323,13 +323,8 @@ export function useApiCredentialProfilesController() {
     "messages",
     "settings",
   ])
-  const {
-    managedSiteType,
-    claudeCodeRouterBaseUrl,
-    claudeCodeRouterApiKey,
-    cliProxyBaseUrl,
-    cliProxyManagementKey,
-  } = useUserPreferencesContext()
+  const { managedSiteType, claudeCodeRouterBaseUrl, claudeCodeRouterApiKey } =
+    useUserPreferencesContext()
   const { markGatewayGuidanceOnboardingCompleted } = useFeatureGuidanceContext()
   const analyticsScope = useProductAnalyticsScope()
   const { openWithCredentials } = useChannelDialog()
@@ -570,8 +565,7 @@ export function useApiCredentialProfilesController() {
     useState<ApiCredentialProfile | null>(null)
   const [kelivoProfile, setKelivoProfile] =
     useState<ApiCredentialProfile | null>(null)
-  const [cliProxyProfile, setCliProxyProfile] =
-    useState<ApiCredentialProfile | null>(null)
+
   const [claudeCodeRouterProfile, setClaudeCodeRouterProfile] =
     useState<ApiCredentialProfile | null>(null)
 
@@ -624,18 +618,6 @@ export function useApiCredentialProfilesController() {
         return
       }
 
-      if (action === API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CliProxy) {
-        if (!cliProxyBaseUrl?.trim() || !cliProxyManagementKey?.trim()) {
-          showResultToast({
-            success: false,
-            message: t("messages:cliproxy.configMissing"),
-          })
-          return
-        }
-        setCliProxyProfile(profile)
-        return
-      }
-
       if (action === API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.ClaudeCodeRouter) {
         if (!claudeCodeRouterBaseUrl?.trim()) {
           showResultToast({
@@ -661,6 +643,7 @@ export function useApiCredentialProfilesController() {
             name: profile.name,
             baseUrl: profile.baseUrl,
             apiKey: profile.apiKey,
+            apiType: profile.apiType,
           },
           (result) => {
             showResultToast(result)
@@ -705,8 +688,7 @@ export function useApiCredentialProfilesController() {
     },
     [
       claudeCodeRouterBaseUrl,
-      cliProxyBaseUrl,
-      cliProxyManagementKey,
+
       markGatewayGuidanceOnboardingCompleted,
       openWithCredentials,
       t,
@@ -867,8 +849,7 @@ export function useApiCredentialProfilesController() {
     setKiloCodeProfile,
     kelivoProfile,
     setKelivoProfile,
-    cliProxyProfile,
-    setCliProxyProfile,
+
     claudeCodeRouterProfile,
     setClaudeCodeRouterProfile,
     claudeCodeRouterBaseUrl,

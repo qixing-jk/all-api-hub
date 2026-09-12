@@ -170,21 +170,28 @@ export function useManagedSiteChannelModelSync({
           success: successCount,
           total: eligibleResourceKeys.length,
         }
-        if (reconciliation?.outcome === "failed") {
+        if (failureCount > 0) {
+          toast.error(t("toasts.syncIncomplete", completionValues))
+        } else if (reconciliation?.outcome === "failed") {
           toast.error(t("toasts.syncCompletedRefreshFailed", completionValues))
         } else {
           toast.success(t("toasts.syncCompleted", completionValues))
         }
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-          insights: {
-            itemCount: eligibleResourceKeys.length,
-            selectedCount: resourceRefs.length,
-            successCount,
-            failureCount,
-            warningCount: reconciliation?.outcome === "failed" ? 1 : 0,
-            managedSiteType: managedSiteAnalyticsType,
+        tracker.complete(
+          failureCount > 0
+            ? PRODUCT_ANALYTICS_RESULTS.Failure
+            : PRODUCT_ANALYTICS_RESULTS.Success,
+          {
+            insights: {
+              itemCount: eligibleResourceKeys.length,
+              selectedCount: resourceRefs.length,
+              successCount,
+              failureCount,
+              warningCount: reconciliation?.outcome === "failed" ? 1 : 0,
+              managedSiteType: managedSiteAnalyticsType,
+            },
           },
-        })
+        )
       } catch (error) {
         if (requestGeneration !== syncGenerationRef.current) {
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {

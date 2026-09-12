@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
@@ -85,6 +86,38 @@ const createEditor = (
 })
 
 describe("ManagedResourceCreateDialog", () => {
+  it("explains invalid edited fields immediately while saving is disabled", async () => {
+    const user = userEvent.setup()
+    const submit = vi.fn()
+    render(
+      <ManagedResourceCreateDialog
+        isOpen
+        siteType={SITE_TYPES.DONE_HUB}
+        kind={MANAGED_RESOURCE_KINDS.Channel}
+        editor={createEditor(submit, {
+          validate: (values) =>
+            values.name === "Imported channel"
+              ? { valid: true }
+              : {
+                  valid: false,
+                  issues: [{ fieldId: "name", code: "invalid_value" }],
+                },
+        })}
+        onClose={vi.fn()}
+        onCloseComplete={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    )
+    await user.click(screen.getByRole("button", { name: "Edit native name" }))
+    expect(
+      screen.getByTestId("native-resource-editor-issues"),
+    ).toHaveTextContent("name:invalid_value")
+    expect(
+      screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton),
+    ).toBeDisabled()
+    expect(submit).not.toHaveBeenCalled()
+  })
+
   beforeEach(() => {
     getManagedResourceFieldPolicyMock.mockReset()
     getManagedResourceFieldPolicyMock.mockReturnValue({
@@ -311,6 +344,84 @@ describe("ManagedResourceCreateDialog", () => {
         screen.getByTestId("native-resource-editor-issues"),
       ).toHaveTextContent("name:required")
     })
+    expect(submit).not.toHaveBeenCalled()
+  })
+
+  it("explains invalid edited fields before submit without flagging untouched required fields", async () => {
+    const user = userEvent.setup()
+    const submit = vi.fn()
+    render(
+      <ManagedResourceCreateDialog
+        isOpen
+        siteType={SITE_TYPES.AXON_HUB}
+        kind={MANAGED_RESOURCE_KINDS.Channel}
+        editor={createEditor(submit, {
+          validate: () => ({
+            valid: false,
+            issues: [
+              {
+                fieldId: "name",
+                code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.InvalidValue,
+              },
+              {
+                fieldId: "key",
+                code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
+              },
+            ],
+          }),
+        })}
+        onClose={vi.fn()}
+        onCloseComplete={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    )
+    expect(
+      screen.getByTestId("native-resource-editor-issues"),
+    ).toBeEmptyDOMElement()
+    await user.click(screen.getByRole("button", { name: "Edit native name" }))
+    expect(
+      screen.getByTestId("native-resource-editor-issues"),
+    ).toHaveTextContent(/^name:invalid_value$/)
+    expect(
+      screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton),
+    ).toBeDisabled()
+    expect(submit).not.toHaveBeenCalled()
+  })
+
+  it("shows new validation errors on unchanged dependent fields before submit", async () => {
+    const user = userEvent.setup()
+    const submit = vi.fn()
+    render(
+      <ManagedResourceCreateDialog
+        isOpen
+        siteType={SITE_TYPES.AXON_HUB}
+        kind={MANAGED_RESOURCE_KINDS.Channel}
+        editor={createEditor(submit, {
+          validate: (values) =>
+            values.name === "Imported channel"
+              ? { valid: true }
+              : {
+                  valid: false,
+                  issues: [
+                    {
+                      fieldId: "defaultTestModel",
+                      code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.InvalidValue,
+                    },
+                  ],
+                },
+        })}
+        onClose={vi.fn()}
+        onCloseComplete={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    )
+    await user.click(screen.getByRole("button", { name: "Edit native name" }))
+    expect(
+      screen.getByTestId("native-resource-editor-issues"),
+    ).toHaveTextContent("defaultTestModel:invalid_value")
+    expect(
+      screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton),
+    ).toBeDisabled()
     expect(submit).not.toHaveBeenCalled()
   })
 

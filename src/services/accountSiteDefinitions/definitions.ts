@@ -7,6 +7,10 @@ import {
   CLAUDE_CODE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/claudeCodeHubManagedResource"
 import {
+  CLI_PROXY_API_DETAIL_FIELDS,
+  CLI_PROXY_API_TABLE_FIELDS,
+} from "~/constants/cliProxyApi"
+import {
   DONE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
   DONE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/doneHub"
@@ -103,6 +107,7 @@ const ACCOUNT_AND_MANAGED_SCOPES = [
 // Claude Code Hub: github.com/ding113/claude-code-hub/tree/HEAD/src/app
 const LEGACY_MANAGED_CHANNEL_POLICY = {
   labelKey: "settings:managedSite.newApi",
+  getStartedUrl: "https://docs.newapi.ai/en/docs/installation",
   messagesKey: "newapi",
   primaryKind: MANAGED_RESOURCE_KINDS.Channel,
   itemLabelKey: "managedSiteChannels:table.columns.name",
@@ -136,14 +141,19 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
 
 export type AccountSiteDefinitionType = (typeof ACCOUNT_SITE_TYPE_ORDER)[number]
 
+// GitHub stars snapshot (2026-09-11), descending; refresh deliberately rather
+// than fetching popularity during UI rendering. Counts from each upstream repo:
+// CLIProxyAPI 51356, new-api 47873, sub2api 41221, axonhub 5203,
+// claude-code-hub 3365, octopus 2619, Veloera 1638, done-hub 805.
 export const MANAGED_SITE_TYPE_ORDER = [
+  SITE_TYPES.CLI_PROXY_API,
   SITE_TYPES.NEW_API,
-  SITE_TYPES.VELOERA,
-  SITE_TYPES.DONE_HUB,
-  SITE_TYPES.OCTOPUS,
+  SITE_TYPES.SUB2API,
   SITE_TYPES.AXON_HUB,
   SITE_TYPES.CLAUDE_CODE_HUB,
-  SITE_TYPES.SUB2API,
+  SITE_TYPES.OCTOPUS,
+  SITE_TYPES.VELOERA,
+  SITE_TYPES.DONE_HUB,
 ] as const
 
 export type ManagedSiteDefinitionType = (typeof MANAGED_SITE_TYPE_ORDER)[number]
@@ -283,6 +293,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
       ...LEGACY_MANAGED_CHANNEL_POLICY,
       consoleRoutes: { channels: "/admin/accounts", tokens: "/keys" },
       labelKey: "settings:managedSite.sub2api",
+      getStartedUrl: "https://github.com/Wei-Shaw/sub2api#deployment",
       messagesKey: "sub2api",
       tableFieldIds: SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: SUB2API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
@@ -546,6 +557,23 @@ const ACCOUNT_SITE_DEFINITIONS = [
 
 const MANAGED_ONLY_SITE_DEFINITIONS = [
   {
+    siteType: SITE_TYPES.CLI_PROXY_API,
+    scopes: MANAGED_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
+    managedResource: {
+      ...LEGACY_MANAGED_CHANNEL_POLICY,
+      consoleRoutes: {
+        channels: "/management.html",
+        tokens: "/management.html",
+      },
+      labelKey: "settings:managedSite.cliProxyApi",
+      getStartedUrl: "https://help.router-for.me/introduction/quick-start.html",
+      messagesKey: "cliProxyApi",
+      tableFieldIds: CLI_PROXY_API_TABLE_FIELDS,
+      detailFieldIds: CLI_PROXY_API_DETAIL_FIELDS,
+    },
+  },
+  {
     siteType: SITE_TYPES.OCTOPUS,
     scopes: MANAGED_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
@@ -553,6 +581,7 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
       ...LEGACY_MANAGED_CHANNEL_POLICY,
       consoleRoutes: { channels: "/model", tokens: "/keys" },
       labelKey: "settings:managedSite.octopus",
+      getStartedUrl: "https://github.com/bestruirui/octopus#-quick-start",
       messagesKey: "octopus",
       tableFieldIds: OCTOPUS_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: OCTOPUS_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
@@ -566,6 +595,8 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
       ...LEGACY_MANAGED_CHANNEL_POLICY,
       consoleRoutes: { channels: "/channels", tokens: "/api-keys" },
       labelKey: "settings:managedSite.axonHub",
+      getStartedUrl:
+        "https://github.com/looplj/axonhub#-部署指南--deployment-guide",
       messagesKey: "axonhub",
       tableFieldIds: AXON_HUB_TABLE_FIELD_IDS,
       detailFieldIds: AXON_HUB_DETAIL_FIELD_IDS,
@@ -586,6 +617,8 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
         tokens: "/dashboard/users",
       },
       labelKey: "settings:managedSite.claudeCodeHub",
+      getStartedUrl:
+        "https://github.com/ding113/claude-code-hub#-快速开始-quick-start",
       messagesKey: "claudecodehub",
       tableFieldIds: CLAUDE_CODE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: CLAUDE_CODE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
@@ -603,6 +636,7 @@ const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
       ...LEGACY_MANAGED_CHANNEL_POLICY,
       consoleRoutes: { channels: "/admin/channels", tokens: "/app/tokens" },
       labelKey: "settings:managedSite.veloera",
+      getStartedUrl: "https://github.com/Veloera/Veloera#部署",
       messagesKey: "veloera",
       tableFieldIds: VELOERA_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: VELOERA_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
@@ -632,6 +666,7 @@ const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
       ...LEGACY_MANAGED_CHANNEL_POLICY,
       consoleRoutes: { channels: "/panel/channel", tokens: "/panel/token" },
       labelKey: "settings:managedSite.doneHub",
+      getStartedUrl: "https://github.com/deanxv/done-hub#部署",
       messagesKey: "donehub",
       tableFieldIds: DONE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: DONE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS,

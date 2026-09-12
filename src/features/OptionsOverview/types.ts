@@ -170,6 +170,7 @@ export interface OptionsOverviewViewModel {
   statusCards: OptionsOverviewStatusCard[]
   unifiedApiGuidance: UnifiedApiGuidanceModel | null
   unifiedApiGuidanceDiagnostics: OptionsOverviewUnifiedApiGuidanceDiagnostics
+  gatewayGuidanceStarted?: boolean
   gatewayGuidanceImportAccountId?: string
   attentionItems: OptionsOverviewAttentionItem[]
   autoCheckinPanel: OptionsOverviewAutoCheckinPanel

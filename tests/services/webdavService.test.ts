@@ -107,6 +107,45 @@ describe("webdavService", () => {
   })
 
   describe("parseWebdavBackupJson", () => {
+    it.each([
+      null,
+      [],
+      {},
+      { profiles: "broken" },
+      { profiles: [null] },
+      { profiles: [], links: {} },
+      { profiles: [], linkTombstones: "broken" },
+    ])(
+      "rejects corrupt credential snapshots before normalization: %j",
+      (apiCredentialProfiles) => {
+        for (const backup of [
+          { version: "4.0", apiCredentialProfiles },
+          { version: "1.0", data: { apiCredentialProfiles } },
+        ]) {
+          expect(() =>
+            parseWebdavBackupJson(JSON.stringify(backup), {
+              requireBackupShape: true,
+            }),
+          ).toThrow("messages:webdav.invalidBackupJson")
+        }
+      },
+    )
+
+    it.each([
+      { version: 1, profiles: [] },
+      { version: 2, profiles: [], links: [], linkTombstones: [] },
+    ])(
+      "accepts intentional empty credential snapshots: %j",
+      (apiCredentialProfiles) => {
+        const backup = { version: "4.0", apiCredentialProfiles }
+        expect(
+          parseWebdavBackupJson(JSON.stringify(backup), {
+            requireBackupShape: true,
+          }),
+        ).toEqual(backup)
+      },
+    )
+
     it("parses valid backup JSON", () => {
       expect(parseWebdavBackupJson('{"version":"2.0"}')).toEqual({
         version: "2.0",

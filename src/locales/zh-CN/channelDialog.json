@@ -54,6 +54,9 @@
       "label": "权重"
     }
   },
+  "opening": {
+    "loading": "正在加载渠道配置…"
+  },
   "title": {
     "add": "创建渠道",
     "edit": "编辑渠道",

@@ -337,17 +337,19 @@ export async function fetchChannelModels(
   return await fetchDoneHubProviderModels(request, channel, options)
 }
 
-const fetchDoneHubProviderModels = async (
+/** Probes native channel settings, including unsaved proxy and fixed headers. */
+export const fetchDoneHubProviderModels = async (
   request: ApiServiceRequest,
   channel: DoneHubChannelRaw,
   options?: Pick<RequestInit, "signal">,
 ): Promise<string[]> => {
   const requestData = {
     ...channel,
-    // Keep request payload minimal and aligned with DoneHub's admin UI call.
+    // Catalog probing does not need model selection or mappings. Retain
+    // connection settings so drafts work before saving the channel.
     models: "",
     model_mapping: "",
-    model_headers: "",
+    model_headers: channel.model_headers ?? "",
   }
 
   const models = await doneHubRequests.data<unknown>(request, {

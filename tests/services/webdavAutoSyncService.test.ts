@@ -7,6 +7,7 @@ import {
   ACCOUNT_STORAGE_KEYS,
   USER_PREFERENCES_STORAGE_KEYS,
 } from "~/services/core/storageKeys"
+import { CURRENT_PREFERENCES_VERSION } from "~/services/preferences/migrations/preferencesMigration"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -1018,38 +1019,6 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
     expect(uploaded.preferences).toBeUndefined()
   })
 
-  it("falls back to the legacy preference export when the backup helper is unavailable", async () => {
-    const service = createService()
-    const originalExportPreferencesForBackup = (userPreferences as any)
-      .exportPreferencesForBackup
-    ;(userPreferences as any).exportPreferencesForBackup = undefined
-
-    mockGetPreferences.mockResolvedValue({
-      webdav: {
-        syncStrategy: "upload_only",
-        syncData: {
-          accounts: false,
-          bookmarks: false,
-          apiCredentialProfiles: false,
-          preferences: true,
-        },
-      },
-    } as any)
-    mockExportPreferences.mockResolvedValue({ lastUpdated: 2 } as any)
-    mockDownloadBackup.mockRejectedValue({
-      code: "WEBDAV_FILE_NOT_FOUND",
-      message: "messages:webdav.fileNotFound",
-    })
-
-    try {
-      await expect(service.syncWithWebdav()).resolves.toBeUndefined()
-      expect(mockExportPreferences).toHaveBeenCalled()
-    } finally {
-      ;(userPreferences as any).exportPreferencesForBackup =
-        originalExportPreferencesForBackup
-    }
-  })
-
   it("surfaces safe commit failure during upload-only first upload", async () => {
     const service = createService()
 
@@ -1254,6 +1223,7 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
       last_updated: 100,
     })
     mockChannelConfigExport.mockResolvedValue(localChannelConfigs)
+    mockChannelConfigMerge.mockResolvedValue(localChannelConfigs)
     mockDownloadBackup.mockResolvedValue(
       JSON.stringify({
         version: "2.0",
@@ -1269,9 +1239,101 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
 
     await service.syncWithWebdav()
 
-    expect(mockChannelConfigMerge).toHaveBeenCalledWith(localChannelConfigs)
+    expect(mockChannelConfigMerge).toHaveBeenCalledWith({
+      schemaVersion: 1,
+      configs: {},
+    })
     const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
     expect(uploaded.channelConfigs).toEqual(localChannelConfigs)
+  })
+
+  it.each(["merge", "download_only"])(
+    "%s preserves channel edits made while downloading a backup without channel configs",
+    async (syncStrategy) => {
+      const { channelConfigStorage: storage } = await vi.importActual<
+        typeof import("~/services/managedSites/channelConfigStorage")
+      >("~/services/managedSites/channelConfigStorage")
+      const oldSnapshot = channelConfigSnapshot([
+        { resourceId: "removed", updatedAt: 100 },
+      ])
+      const latestSnapshot = channelConfigSnapshot([
+        { resourceId: "new", updatedAt: 200 },
+      ])
+      await storage.importConfigs(oldSnapshot)
+      mockChannelConfigExport.mockImplementation(() => storage.exportConfigs())
+      mockChannelConfigMerge.mockImplementation((incoming) =>
+        storage.mergeConfigs(incoming),
+      )
+      mockGetPreferences.mockResolvedValue({
+        webdav: {
+          syncStrategy,
+          syncData: {
+            accounts: true,
+            bookmarks: false,
+            apiCredentialProfiles: false,
+            preferences: false,
+          },
+        },
+      })
+      mockAccountStorageExportData.mockResolvedValue({
+        accounts: [],
+        bookmarks: [],
+        pinnedAccountIds: [],
+        orderedAccountIds: [],
+        last_updated: 100,
+      })
+      mockDownloadBackup.mockImplementation(async () => {
+        // A local replacement finishes after the sync captured its snapshot.
+        await storage.importConfigs(latestSnapshot)
+        return JSON.stringify({
+          version: BACKUP_VERSION,
+          accounts: { accounts: [], last_updated: 200 },
+        })
+      })
+
+      await createService().syncWithWebdav()
+
+      expect(await storage.exportConfigs()).toEqual(latestSnapshot)
+      expect(
+        JSON.parse(mockUploadBackup.mock.calls[0][0]).channelConfigs,
+      ).toEqual(latestSnapshot)
+    },
+  )
+
+  it("aborts download-only before any writes when remote credentials are malformed", async () => {
+    const { parseWebdavBackupJson } = await vi.importActual<
+      typeof import("~/services/webdav/webdavService")
+    >("~/services/webdav/webdavService")
+    mockParseWebdavBackupJson.mockImplementation(parseWebdavBackupJson)
+    mockGetPreferences.mockResolvedValue({
+      webdav: {
+        syncStrategy: "download_only",
+        syncData: {
+          accounts: false,
+          bookmarks: false,
+          apiCredentialProfiles: true,
+          preferences: false,
+        },
+      },
+    })
+    mockAccountStorageExportData.mockResolvedValue({
+      accounts: [],
+      last_updated: 100,
+    })
+    mockDownloadBackup.mockResolvedValue(
+      JSON.stringify({
+        version: BACKUP_VERSION,
+        apiCredentialProfiles: { profiles: "broken" },
+      }),
+    )
+
+    await expect(createService().syncWithWebdav()).rejects.toThrow()
+
+    expect(mockApiCredentialProfilesImport).not.toHaveBeenCalled()
+    expect(mockAccountStorageImportData).not.toHaveBeenCalled()
+    expect(mockImportPreferences).not.toHaveBeenCalled()
+    expect(mockChannelConfigMerge).not.toHaveBeenCalled()
+    expect(mockUploadBackup).not.toHaveBeenCalled()
   })
 
   it("bookmarks-only import preserves local accounts", async () => {
@@ -1485,7 +1547,7 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
     expect(uploaded.preferences.webdav).toBeUndefined()
   })
 
-  it("converges legacy WebDAV preferences to a canonical v27 snapshot before the next upload", async () => {
+  it("converges legacy WebDAV preferences to the current canonical snapshot before the next upload", async () => {
     const storage = new Storage({ area: "local" })
     const service = createService()
     const userPreferencesPrototype = Object.getPrototypeOf(userPreferences)
@@ -1537,7 +1599,9 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
       const storedAfterImport = (await storage.get(
         USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
       )) as any
-      expect(storedAfterImport.preferencesVersion).toBe(27)
+      expect(storedAfterImport.preferencesVersion).toBe(
+        CURRENT_PREFERENCES_VERSION,
+      )
       expect(storedAfterImport.tempWindowFallback).toMatchObject({
         automaticFeatureBypass: { account_refresh: false },
       })
@@ -1565,7 +1629,9 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
       await service.syncWithWebdav()
 
       const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
-      expect(uploaded.preferences.preferencesVersion).toBe(27)
+      expect(uploaded.preferences.preferencesVersion).toBe(
+        CURRENT_PREFERENCES_VERSION,
+      )
       expect(uploaded.preferences.tempWindowFallback).toMatchObject({
         automaticFeatureBypass: { account_refresh: false },
       })

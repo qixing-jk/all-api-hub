@@ -34,7 +34,6 @@ describe("ExportActionsMenu", () => {
       "keyManagement:actions.exportToCCSwitch",
       "keyManagement:actions.exportToKiloCode",
       "keyManagement:actions.exportToCursorPlus",
-      "keyManagement:actions.importToCliProxy",
       "keyManagement:actions.importToClaudeCodeRouter",
     ]
     const menuItems = screen.getAllByRole("menuitem")

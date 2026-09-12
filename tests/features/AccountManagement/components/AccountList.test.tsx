@@ -35,6 +35,7 @@ import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
 } from "~/types/accountTodayStats"
+import { openSettingsTab } from "~/utils/navigation"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildDisplaySiteData, buildTag } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
@@ -120,6 +121,11 @@ const {
   },
   useSensorMock: vi.fn(),
   useSortableMock: vi.fn(),
+}))
+
+vi.mock("~/utils/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/navigation")>()),
+  openSettingsTab: vi.fn(),
 }))
 
 vi.mock("@dnd-kit/core", () => ({
@@ -794,6 +800,20 @@ describe("AccountList", () => {
     )
 
     expect(handleSort).toHaveBeenCalledWith("name")
+  })
+
+  it("opens sorting priority settings from the account list", async () => {
+    const user = userEvent.setup()
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "settings:sorting.title" }),
+    )
+
+    expect(openSettingsTab).toHaveBeenCalledWith("accountManagement", {
+      anchor: "sorting-priority",
+      preserveHistory: true,
+    })
   })
 
   it("shows a clear sort action when field sorting is active", async () => {

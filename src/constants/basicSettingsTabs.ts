@@ -11,12 +11,12 @@ export type BasicSettingsTabId =
   | "accountUsage"
   | "dataBackup"
   | "managedSite"
-  | "cliProxy"
   | "claudeCodeRouter"
   | "permissions"
 
 export const BASIC_SETTINGS_ANCHOR_TO_TAB: Record<string, BasicSettingsTabId> =
   {
+    [SETTINGS_ANCHORS.MANAGED_SITE_DEPLOYMENT_DOCS]: "managedSite",
     [SETTINGS_ANCHORS.SHIELD_WINDOW_SIZE]: "refresh",
     "general-display": "general",
     display: "general",
@@ -49,7 +49,7 @@ export const BASIC_SETTINGS_ANCHOR_TO_TAB: Record<string, BasicSettingsTabId> =
     [SETTINGS_ANCHORS.AUTO_PROVISION_KEY]: "accountManagement",
     [SETTINGS_ANCHORS.AUTO_PROVISION_KEY_ENABLED]: "accountManagement",
     [SETTINGS_ANCHORS.AUTO_PROVISION_KEY_MODE]: "accountManagement",
-    "sorting-priority": "accountManagement",
+    [SETTINGS_ANCHORS.SORTING_PRIORITY]: "accountManagement",
     sorting: "accountManagement",
     "auto-refresh": "refresh",
     refresh: "refresh",
@@ -74,7 +74,10 @@ export const BASIC_SETTINGS_ANCHOR_TO_TAB: Record<string, BasicSettingsTabId> =
     [SETTINGS_ANCHORS.SUB2API_ADMIN_API_KEY]: "managedSite",
     [SETTINGS_ANCHORS.SUB2API_VALIDATE]: "managedSite",
     [SETTINGS_ANCHORS.SUB2API_DEFAULT_SCOPE]: "managedSite",
-    "cli-proxy": "cliProxy",
+    "cli-proxy": "managedSite",
+    "cli-proxy-base-url": "managedSite",
+    "cli-proxy-management-key": "managedSite",
+    "cli-proxy-check-connection": "managedSite",
     "claude-code-router": "claudeCodeRouter",
     "dangerous-zone": "general",
     permissions: "permissions",

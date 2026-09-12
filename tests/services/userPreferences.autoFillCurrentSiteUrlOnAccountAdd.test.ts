@@ -9,7 +9,7 @@ import {
 } from "~/services/preferences/userPreferences"
 
 describe("userPreferences autoFillCurrentSiteUrlOnAccountAdd", () => {
-  it("treats missing autoFillCurrentSiteUrlOnAccountAdd as disabled without saving back", async () => {
+  it("treats missing autoFillCurrentSiteUrlOnAccountAdd as enabled without saving back", async () => {
     const storage = new Storage({ area: "local" })
     const storedWithoutFlag: any = { ...DEFAULT_PREFERENCES }
     delete storedWithoutFlag.autoFillCurrentSiteUrlOnAccountAdd
@@ -20,7 +20,7 @@ describe("userPreferences autoFillCurrentSiteUrlOnAccountAdd", () => {
     )
 
     const prefs = await userPreferences.getPreferences()
-    expect(prefs.autoFillCurrentSiteUrlOnAccountAdd).toBe(false)
+    expect(prefs.autoFillCurrentSiteUrlOnAccountAdd).toBe(true)
 
     const storedAfter = await storage.get(
       USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,

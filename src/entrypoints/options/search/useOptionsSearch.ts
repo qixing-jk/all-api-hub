@@ -67,13 +67,14 @@ function scoreMatch(query: string, item: OptionsSearchItem) {
 function localizeSearchItem(
   item: OptionsSearchItemDefinition,
   t: TFunction,
+  context: OptionsSearchContext,
 ): OptionsSearchItem {
   return {
     ...item,
-    title: resolveSyntheticPageTitle(item.titleKey, t),
+    title: resolveSyntheticPageTitle(item.titleKey, t, context),
     description: item.descriptionKey ? t(item.descriptionKey) : undefined,
     breadcrumbs: item.breadcrumbsKeys.map((key) =>
-      resolveSyntheticPageTitle(key, t),
+      resolveSyntheticPageTitle(key, t, context),
     ),
     keywords: [
       ...item.keywords,
@@ -120,7 +121,7 @@ export function useOptionsSearch(context: OptionsSearchContext, query: string) {
     () =>
       OPTIONS_SEARCH_REGISTRY.filter(
         (item) => item.isVisible?.(context) ?? true,
-      ).map((item) => localizeSearchItem(item, t)),
+      ).map((item) => localizeSearchItem(item, t, context)),
     [context, t],
   )
 

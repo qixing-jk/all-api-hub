@@ -23,7 +23,7 @@ API Key 会以完整值保存在扩展的本地 Storage。列表里的遮罩只�
 - **健康与用量概览**：可查看余额、今日用量、今日请求数、可用模型数量、最近刷新时间和健康状态（具体取决于接口是否提供相应数据）。
 - **接口验证**：支持验证 API 是否可用，也支持单独验证 CLI 兼容性。
 - **模型联动**：可直接在模型列表中打开当前凭证，查看模型目录和验证结果。
-- **快捷导出**：优先提供当前自建托管站点的直达入口；其他目标按聊天客户端、编程 Agents、网关与路由工具分组，支持 Cherry Studio、Kelivo、CC Switch、Kilo Code / Roo Code、Cursor++、CLIProxyAPI 和 Claude Code Router。
+- **快捷导出**：优先提供当前自建托管站点的直达入口；其他目标按聊天客户端、编程 Agents、网关与路由工具分组，支持 Cherry Studio、Kelivo、CC Switch、Kilo Code / Roo Code、Cursor++、Claude Code Router。
 
 ![API 凭据库列表](./static/image/api-credential-profile-list.png)
 
@@ -164,9 +164,9 @@ API Key 会以完整值保存在扩展的本地 Storage。列表里的遮罩只�
 - **自建托管站点**：操作区会直接显示当前托管站点图标，点击后进入预填的新增渠道流程；检查并提交后才会写入目标站点。即使检测到相同渠道，也只会提示重复风险，不会更新或覆盖原渠道。不同托管站点的字段和失败结果可能不同，写入失败时不会自动回滚。
 - **聊天客户端**：Cherry Studio、Kelivo
 - **编程 Agents**：CC Switch、Kilo Code / Roo Code、Cursor++
-- **网关与路由工具**：CLIProxyAPI、Claude Code Router
+- **网关与路由工具**：Claude Code Router
 
-除自建托管站点外，其余目标统一收在 **`导出`** 菜单中。不同工具的传递方式不一样：有的用 deeplink，有的用剪贴板或配置内容，CLIProxyAPI 和 Claude Code Router 还会调用远程管理 API，所以它们不是统一的“安全配置文件导出”。
+除自建托管站点外，其余目标统一收在 **`导出`** 菜单中。不同工具的传递方式不一样：有的用 deeplink，有的用剪贴板或配置内容，Claude Code Router 还会调用远程管理 API，所以它们不是统一的“安全配置文件导出”。
 
 导出的内容可能包含完整 API Key。部分 deeplink 或导入码会用到 Base64，但 Base64 只是编码，不是加密，请注意保护。
 
@@ -207,6 +207,6 @@ WebDAV 加密需要你主动开启并设置、保管加密密码。它不代表�
 
 - [快速导出站点配置](./quick-export.md)
 - [支持的导出工具与集成目标](./supported-export-tools.md)
-- [CLIProxyAPI 集成](./cliproxyapi-integration.md)
+- [CLIProxyAPI 管理](./cliproxyapi-integration.md)
 - [数据导入导出](./data-management.md)
 - [WebDAV 备份与自动同步](./webdav-sync.md)

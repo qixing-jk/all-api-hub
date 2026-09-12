@@ -273,6 +273,28 @@ describe("accountKeyRepair", () => {
     )
   })
 
+  it("orders progress snapshots even when the clock does not advance", async () => {
+    const { startAccountKeyRepair } = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+    const dateNow = vi.spyOn(Date, "now").mockReturnValue(1000)
+    try {
+      await startAccountKeyRepair()
+      await waitForStoredState(ACCOUNT_KEY_REPAIR_JOB_STATES.Completed)
+      const snapshots = mocks.sendRuntimeMessage.mock.calls.map(
+        ([message]) => message.payload as AccountKeyRepairProgress,
+      )
+      expect(snapshots.length).toBeGreaterThan(1)
+      for (let index = 1; index < snapshots.length; index++) {
+        expect(snapshots[index].updatedAt).toBeGreaterThan(
+          snapshots[index - 1].updatedAt!,
+        )
+      }
+    } finally {
+      dateNow.mockRestore()
+    }
+  })
+
   it("returns the required current-schema idle progress", async () => {
     const { accountKeyRepairRunner } = await import(
       "~/services/accounts/accountKeyAutoProvisioning/repair"

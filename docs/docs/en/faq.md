@@ -190,7 +190,7 @@ The quick export feature allows you to import site configurations into other pla
 When exporting to New API, the plugin will automatically detect if a similar channel already exists to avoid duplicate additions.
 :::
 
-For more comprehensive export and integration instructions, please refer to [Quick Export Site Configuration](./quick-export.md); for integrating with the CLIProxyAPI management interface, please refer to [CLIProxyAPI Integration](./cliproxyapi-integration.md).
+For more comprehensive export and integration instructions, please refer to [Quick Export Site Configuration](./quick-export.md); for integrating with the CLIProxyAPI management interface, please refer to [CLIProxyAPI Management](./cliproxyapi-integration.md).
 
 ### How to use the site check-in feature?
 

@@ -123,6 +123,28 @@ describe("AutoCheckinSettings", () => {
     })
   })
 
+  it("keeps the automatic settings title and explains manual availability when disabled", () => {
+    useUserPreferencesContextMock.mockReturnValue({
+      preferences: {
+        autoCheckin: createPreferences({ globalEnabled: false }),
+      },
+      updateAutoCheckin,
+      resetAutoCheckinConfig,
+    })
+
+    render(<AutoCheckinSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    expect(
+      screen.getByRole("heading", { name: "autoCheckin:settings.title" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getAllByText("autoCheckin:settings.enableDesc")[0],
+    ).toBeInTheDocument()
+  })
+
   it("validates time inputs before saving and reports invalid values", async () => {
     render(<AutoCheckinSettings />, {
       withUserPreferencesProvider: false,

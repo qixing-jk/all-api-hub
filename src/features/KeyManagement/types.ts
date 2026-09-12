@@ -33,8 +33,6 @@ export type KeyManagementEntry = {
 
 export type ApiCredentialProfileSaveEntry = KeyManagementEntry
 
-export type CliProxyExportEntry = ApiCredentialProfileSaveEntry
-
 export const KEY_MANAGEMENT_DISPLAY_ROW_KINDS = {
   RuntimeKey: "runtime-key",
   AccountKeyResource: "account-key-resource",

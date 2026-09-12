@@ -157,7 +157,7 @@
     "title": "Claude Code Router",
     "urlDesc": "URL base do servidor Claude Code Router, por exemplo, http://localhost:3000"
   },
-  "cliProxy": {
+  "cliProxyApi": {
     "baseUrlLabel": "URL base da API de gerenciamento",
     "checkConnectionAction": "Verificar conexão",
     "checkConnectionDesc": "Após salvar, verifique se a URL atual e a chave de gerenciamento conseguem acessar a API de gerenciamento do CLIProxyAPI.",
@@ -244,6 +244,9 @@
   "managedSite": {
     "axonHub": "AxonHub",
     "claudeCodeHub": "Claude Code Hub",
+    "cliProxyApi": "CLIProxyAPI",
+    "deploymentDocs": "Documentação oficial de implantação",
+    "deploymentDocsLink": "Documentação oficial de implantação do {{site}}",
     "description": "Selecione a plataforma agregadora de APIs que deseja gerenciar. Isso determina qual configuração será usada no gerenciamento de canais e na sincronização de modelos.",
     "doneHub": "Done Hub",
     "gatewayGuidance": {
@@ -253,8 +256,8 @@
         "viewChannels": "Ver canais importados"
       },
       "configComplete": {
-        "description": "A configuração básica conecta apenas o backend de administração do gateway. Para permitir que clientes externos chamem modelos por meio deste gateway de IA auto-hospedado como um AI API unificado, importe chaves de conta ou chaves API como canais de gateway.",
-        "title": "Próximo: importar chaves utilizáveis"
+        "description": "As configurações do gateway foram salvas. Importe chaves de contas ou credenciais de API como canais. A conexão é verificada durante a validação ou importação.",
+        "title": "Próximo passo: importar canais"
       },
       "unconfigured": {
         "description": "Configure seu gateway de IA auto-hospedado e, em seguida, importe chaves de conta ou chaves API como canais de gateway para que várias chaves possam ser usadas por meio de um AI API.",
@@ -263,6 +266,7 @@
     },
     "newApi": "New API",
     "octopus": "Octopus",
+    "popularityHint": "Ordenados por um retrato da contagem de estrelas do GitHub.",
     "siteTypeDesc": "Escolha a plataforma usada para gerenciamento de canais e sincronização de modelos",
     "siteTypeLabel": "Tipo de gateway",
     "sub2api": "Sub2API",
@@ -637,7 +641,6 @@
     "balanceHistory": "Histórico de saldo",
     "checkinRedeem": "Check-in e resgate",
     "claudeCodeRouter": "Claude Code Router",
-    "cliProxy": "CLIProxyAPI",
     "dataBackup": "Dados e backup",
     "general": "Geral",
     "managedSite": "Gateway de IA auto-hospedado",

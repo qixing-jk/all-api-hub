@@ -4,6 +4,7 @@ import {
   type GitHubGistSettings,
 } from "~/types/cloudSync"
 import type { WebDAVSettings } from "~/types/webdav"
+import { sanitizeSensitiveErrorText } from "~/utils/core/sanitizeSensitiveErrorText"
 
 import {
   decryptWebdavBackupEnvelope,
@@ -101,67 +102,34 @@ function readRetryAt(response: Response): number | undefined {
   return undefined
 }
 
-/** Map GitHub HTTP failures to actionable provider error categories. */
-function mapHttpError(response: Response, requestId?: string): GitHubGistError {
-  const retryAt = readRetryAt(response)
-  const remaining = response.headers.get("x-ratelimit-remaining")
-  const hasRetryAfter = response.headers.get("retry-after") !== null
-  const isRateLimited =
-    response.status === 429 ||
-    (response.status === 403 &&
-      ((remaining !== null && remaining === "0") || hasRetryAfter))
-
-  if (isRateLimited) {
-    return new GitHubGistError(
-      "GitHub API rate limit reached",
-      CLOUD_SYNC_ERROR_CODES.RATE_LIMITED,
-      response.status,
-      retryAt,
-      requestId,
-    )
-  }
-  if (response.status === 401) {
-    return new GitHubGistError(
-      "GitHub Token is invalid or expired",
-      CLOUD_SYNC_ERROR_CODES.INVALID_TOKEN,
-      response.status,
-      undefined,
-      requestId,
-    )
-  }
-  if (response.status === 403) {
-    return new GitHubGistError(
-      "GitHub Token does not have permission to access this Gist",
-      CLOUD_SYNC_ERROR_CODES.PERMISSION_DENIED,
-      response.status,
-      undefined,
-      requestId,
-    )
-  }
-  if (response.status === 404) {
-    return new GitHubGistError(
-      "GitHub Gist was not found or is not accessible",
-      CLOUD_SYNC_ERROR_CODES.NOT_FOUND,
-      response.status,
-      undefined,
-      requestId,
-    )
-  }
-  if (response.status >= 500) {
-    return new GitHubGistError(
-      "GitHub is temporarily unavailable",
-      CLOUD_SYNC_ERROR_CODES.REMOTE_UNAVAILABLE,
-      response.status,
-      undefined,
-      requestId,
-    )
+/** Preserve GitHub's error message and transport metadata without status mapping. */
+async function readHttpError(
+  response: Response,
+  token: string,
+): Promise<GitHubGistError> {
+  let message = `GitHub request failed (HTTP ${response.status})`
+  try {
+    const body: unknown = await response.json()
+    if (
+      body &&
+      typeof body === "object" &&
+      "message" in body &&
+      typeof body.message === "string" &&
+      body.message.trim()
+    ) {
+      message = body.message.trim()
+    }
+  } catch {
+    // Raw-file hosts and proxies may return non-JSON errors.
   }
   return new GitHubGistError(
-    "GitHub Gist request was rejected",
+    sanitizeSensitiveErrorText(
+      token ? message.replaceAll(token, "[REDACTED]") : message,
+    ),
     CLOUD_SYNC_ERROR_CODES.REMOTE_UNAVAILABLE,
     response.status,
-    undefined,
-    requestId,
+    readRetryAt(response),
+    response.headers.get("x-github-request-id") ?? undefined,
   )
 }
 
@@ -192,7 +160,7 @@ async function requestJson<T>(params: {
   }
 
   const requestId = response.headers.get("x-github-request-id") ?? undefined
-  if (!response.ok) throw mapHttpError(response, requestId)
+  if (!response.ok) throw await readHttpError(response, params.token)
 
   try {
     return (await response.json()) as T
@@ -242,7 +210,7 @@ async function readRawUrl(rawUrl: string, token: string): Promise<string> {
       CLOUD_SYNC_ERROR_CODES.NETWORK,
     )
   }
-  if (!response.ok) throw mapHttpError(response)
+  if (!response.ok) throw await readHttpError(response, token)
   const content = await response.text()
   if (!content.trim()) {
     throw new GitHubGistError(

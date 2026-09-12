@@ -229,17 +229,26 @@
     },
     "boundaryNote": "All API Hub 負責管理和匯入設定，不代理模型請求；外部客戶端實際呼叫的是你的自建 AI 閘道。",
     "description": {
-      "has_gateway_channels": "先前已建立或匯入過閘道渠道。前往渠道管理確認目前狀態，並取得外部客戶端需要的 API 位址和呼叫金鑰。",
+      "has_gateway_channels": "已完成閘道設定引導。前往渠道管理確認目前狀態。",
       "needs_importable_source": "已有帳號，但目前帳號類型無法讀取可匯入的 Key。請先儲存 API Key，或新增支援 Key 取得的帳號，再匯入自建 AI 閘道。",
       "needs_managed_site": "已有帳號 Key 或 API Key。完成自建 AI 閘道設定後，即可將它們匯入為閘道渠道，讓多個 Key 透過同一個 AI API 使用。",
-      "needs_sources": "先新增帳號或儲存 API Key。之後可以直接匯出到客戶端，也可以一鍵匯入自建 AI 閘道，彙整成一個統一 AI API。",
+      "needs_sources": "先新增帳號或儲存 API Key，再匯入自建 AI 閘道，彙整成一個統一 AI API。",
       "ready_accounts": "自建 AI 閘道基礎設定已完成。繼續匯入帳號 Key 或 API Key；匯入流程會驗證連線並建立閘道渠道。",
       "ready_profiles": "自建 AI 閘道基礎設定已完成。前往憑據庫驗證已儲存的 API Key，並將它匯入為閘道渠道。"
     },
-    "directToolExportNote": "如果暫時不需要自建閘道，也可以直接把單個憑據匯出到客戶端工具。",
     "headline": "將多個帳號 Key 或 API Key 彙整成一個統一 AI API",
     "modelSyncOptional": "模型同步可自動更新閘道模型列表，減少手動維護；渠道建立後可按需開啟。",
     "optionalLabel": "可選維護",
+    "overview": {
+      "collapse": "收起",
+      "completedDescription": "設定引導已完成。你可以隨時查看步驟或管理閘道渠道。",
+      "description": "將帳號 Key 或 API 憑證匯入自建閘道，透過同一個 API 位址呼叫。",
+      "progress": "設定進度 {{completed}}/{{total}}",
+      "reopen": "設定指南",
+      "resume": "繼續設定",
+      "start": "查看步驟",
+      "title": "統一 API"
+    },
     "sources": {
       "account": "帳戶來源",
       "accountUnavailable": "帳戶暫不可匯入",
@@ -255,10 +264,6 @@
         "upcoming": "稍後"
       },
       "steps": {
-        "clientAccess": {
-          "description": "取得閘道 API 位址和客戶端呼叫金鑰。",
-          "title": "連接客戶端"
-        },
         "gatewayChannel": {
           "description": "匯入至少一個帳號 Key 或已儲存的 API 憑據。",
           "title": "建立閘道渠道"
@@ -274,7 +279,6 @@
       }
     },
     "unavailable": {
-      "badge": "狀態未確認",
       "description": "帳號、憑證或閘道設定未能載入，目前不會因此判定為「沒有來源」。",
       "retry": "重新檢查設定狀態",
       "title": "暫時無法確認設定進度"

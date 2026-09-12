@@ -54,6 +54,9 @@
       "label": "Trọng số"
     }
   },
+  "opening": {
+    "loading": "Đang tải cấu hình kênh…"
+  },
   "title": {
     "add": "Tạo kênh",
     "edit": "Chỉnh sửa kênh",

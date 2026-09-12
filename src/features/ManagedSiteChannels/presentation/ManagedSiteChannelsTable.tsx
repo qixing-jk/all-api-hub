@@ -58,9 +58,9 @@ export function ManagedSiteChannelsTable({
   emptyContent?: ReactNode
 }) {
   return (
-    <div className="border-border bg-background overflow-hidden rounded-lg border">
+    <div className="bg-background overflow-hidden">
       <Table>
-        <TableHeader>
+        <TableHeader className="bg-table-header">
           {table
             .getHeaderGroups()
             .map((headerGroup: HeaderGroup<ManagedChannelsRowViewModel>) => (
@@ -81,7 +81,7 @@ export function ManagedSiteChannelsTable({
                         meta.renderer ===
                           MANAGED_CHANNELS_COLUMN_RENDERERS.Actions &&
                           cn(
-                            "bg-background sticky right-0 border-l",
+                            "border-border bg-table-header sticky right-0 border-l",
                             Z_INDEX.tableStickyHeader,
                           ),
                       )}
@@ -139,7 +139,7 @@ export function ManagedSiteChannelsTable({
                     row.original.testToken,
                   )}
                   data-channel-name={row.original.name}
-                  className="group align-middle"
+                  className="hover:bg-muted group align-middle"
                 >
                   {row
                     .getVisibleCells()
@@ -167,7 +167,7 @@ export function ManagedSiteChannelsTable({
                             meta.renderer ===
                               MANAGED_CHANNELS_COLUMN_RENDERERS.Actions &&
                               cn(
-                                "bg-background group-hover:bg-muted/50 data-[state=selected]:bg-muted sticky right-0 border-l",
+                                "bg-background group-hover:bg-muted data-[state=selected]:bg-muted border-border sticky right-0 border-l",
                                 Z_INDEX.tableStickyCell,
                               ),
                           )}

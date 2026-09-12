@@ -14,7 +14,6 @@ export const BASIC_SETTINGS_TAB_ORDER: BasicSettingsTabId[] = [
   "accountUsage",
   "webAiApiCheck",
   "managedSite",
-  "cliProxy",
   "claudeCodeRouter",
   ...(hasOptionalPermissions ? (["permissions"] as const) : []),
   "dataBackup",

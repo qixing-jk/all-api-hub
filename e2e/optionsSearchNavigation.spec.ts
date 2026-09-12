@@ -2,6 +2,7 @@ import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
+import { OPTIONS_TEST_IDS } from "~/entrypoints/options/testIds"
 import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { WEBDAV_TARGET_IDS } from "~/features/ImportExport/searchTargets"
@@ -27,6 +28,33 @@ test.beforeEach(async ({ context, page }) => {
   installExtensionPageGuards(page)
   await forceExtensionLanguage(page, "en")
   await stubLlmMetadataIndex(context)
+})
+
+test("shares the page palette with portaled dialogs before visiting feature pages", async ({
+  extensionId,
+  page,
+}) => {
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BASIC}`,
+  )
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+
+  for (const mode of ["light", "dark"] as const) {
+    await page.evaluate(
+      (dark) => document.documentElement.classList.toggle("dark", dark),
+      mode === "dark",
+    )
+    const surface = page.getByTestId(OPTIONS_TEST_IDS.contentCard)
+    const background = mode === "dark" ? "rgb(30, 41, 59)" : "oklch(1 0 0)"
+    await expect(surface).toHaveCSS("background-color", background)
+    await page.getByRole("button", { name: "Open settings search" }).click()
+    const dialog = page.getByRole("dialog", { name: "Search settings" })
+    await expect(dialog).toBeVisible()
+    await expect(dialog).toHaveCSS("background-color", background)
+    await page.keyboard.press("Escape")
+    await expect(dialog).toBeHidden()
+  }
 })
 
 async function readRecentSearchItemIds(
@@ -391,6 +419,56 @@ test("opens an import export WebDAV control from settings search", async ({
 
   await expect(page.locator(`#${WEBDAV_TARGET_IDS.url}`)).toBeInViewport()
 })
+
+for (const surface of ["Import/Export", "Data & Backup"]) {
+  test(`reveals cloud provider search targets without saving on ${surface}`, async ({
+    context,
+    extensionId,
+    page,
+  }) => {
+    const serviceWorker = await getServiceWorker(context)
+    await seedUserPreferences(serviceWorker, {
+      webdav: { ...DEFAULT_PREFERENCES.webdav, provider: "webdav" },
+    })
+    await page.goto(
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BASIC}`,
+    )
+    await waitForExtensionRoot(page)
+    await expectPermissionOnboardingHidden(page)
+
+    for (const { query, label, target } of [
+      {
+        query: "github token",
+        label: /GitHub Token/,
+        target: WEBDAV_TARGET_IDS.gistToken,
+      },
+      {
+        query: "webdav url",
+        label: /Webdav URL/,
+        target: WEBDAV_TARGET_IDS.url,
+      },
+    ]) {
+      await page.getByRole("button", { name: "Open settings search" }).click()
+      const dialog = page.getByRole("dialog", { name: "Search settings" })
+      await dialog.getByPlaceholder("Search settings...").fill(query)
+      await dialog
+        .getByRole("option", { name: label })
+        .filter({ hasText: surface })
+        .click()
+      await expect(dialog).toHaveCount(0)
+      await expect(page.locator(`#${target}`)).toBeVisible()
+      await expect(page.locator(`#${target}`)).toBeInViewport()
+      await expect
+        .poll(() => new URL(page.url()).searchParams.get("highlight"))
+        .toBeNull()
+    }
+
+    const stored = await getPlasmoStorageJsonValue<{
+      webdav: { provider: string }
+    }>(serviceWorker, STORAGE_KEYS.USER_PREFERENCES)
+    expect(stored?.webdav.provider).toBe("webdav")
+  })
+}
 
 test("persists selected settings search results as recent items across page reloads", async ({
   context,

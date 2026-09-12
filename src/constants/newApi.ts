@@ -147,7 +147,31 @@ export const NEW_API_MANAGED_RESOURCE_FIELD_IDS = {
   Groups: "newApi.groups",
   Priority: "newApi.priority",
   Weight: "newApi.weight",
+  TestModel: "newApi.testModel",
+  AutoBan: "newApi.autoBan",
+  ModelMapping: "newApi.modelMapping",
+  Tag: "newApi.tag",
+  Remark: "newApi.remark",
+  Proxy: "newApi.proxy",
+  UpstreamCheck: "newApi.upstreamCheck",
+  UpstreamAutoSync: "newApi.upstreamAutoSync",
+  UpstreamIgnoredModels: "newApi.upstreamIgnoredModels",
+  UpstreamLastCheck: "newApi.upstreamLastCheck",
+  UpstreamDetectedModels: "newApi.upstreamDetectedModels",
+  UpstreamRemovedModels: "newApi.upstreamRemovedModels",
 } as const
+
+// Upstream channel model-list support; Advanced Custom (58) additionally needs
+// a route configuration that this editor does not yet own.
+// https://github.com/QuantumNous/new-api/blob/064ed943e1ac40e3eaca1b58ffb7fa5dacb3fde3/web/src/features/channels/constants.ts
+const NEW_API_MODEL_CHECK_TYPES = new Set([
+  1, 4, 14, 17, 20, 23, 24, 25, 26, 27, 31, 34, 35, 40, 42, 43, 47, 48, 57, 59,
+  60,
+])
+
+/** Whether the common channel editor can configure upstream model detection. */
+export const supportsNewApiUpstreamModelCheck = (type: unknown) =>
+  NEW_API_MODEL_CHECK_TYPES.has(Number(type))
 
 export const NEW_API_MANAGED_RESOURCE_TABLE_FIELD_IDS = [
   NEW_API_MANAGED_RESOURCE_FIELD_IDS.Id,

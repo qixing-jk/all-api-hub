@@ -33,8 +33,8 @@ const {
 const preferences = {
   claudeCodeRouterApiKey: "router-key",
   claudeCodeRouterBaseUrl: "",
-  cliProxyBaseUrl: "",
-  cliProxyManagementKey: "",
+  cliProxyApiBaseUrl: "",
+  cliProxyApiManagementKey: "",
   managedSiteType: SITE_TYPES.NEW_API,
   markGatewayGuidanceOnboardingCompleted: markOnboardingCompletedMock,
 }
@@ -128,8 +128,8 @@ describe("useTokenIntegrationActions", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     preferences.claudeCodeRouterBaseUrl = ""
-    preferences.cliProxyBaseUrl = ""
-    preferences.cliProxyManagementKey = ""
+    preferences.cliProxyApiBaseUrl = ""
+    preferences.cliProxyApiManagementKey = ""
     markOnboardingCompletedMock.mockResolvedValue(undefined)
     startActionMock.mockReturnValue({ complete: completeActionMock })
     toSanitizedErrorSummaryMock.mockReturnValue("")
@@ -138,35 +138,25 @@ describe("useTokenIntegrationActions", () => {
   it("explains missing gateway settings and closes opened dialogs", () => {
     const { result, rerender } = renderActions()
 
-    act(() => result.current.exportActions.openCliProxy())
     act(() => result.current.exportActions.openClaudeCodeRouter())
-    expect(showResultToastMock).toHaveBeenCalledWith({
-      success: false,
-      message: "messages:cliproxy.configMissing",
-    })
     expect(showResultToastMock).toHaveBeenCalledWith({
       success: false,
       message: "messages:claudeCodeRouter.configMissing",
     })
-    expect(result.current.dialogs.cliProxy.isOpen).toBe(false)
     expect(result.current.dialogs.claudeCodeRouter.isOpen).toBe(false)
 
-    preferences.cliProxyBaseUrl = "https://cli.example.invalid"
-    preferences.cliProxyManagementKey = "cli-key"
+    preferences.cliProxyApiBaseUrl = "https://cli.example.invalid"
+    preferences.cliProxyApiManagementKey = "cli-key"
     preferences.claudeCodeRouterBaseUrl = "https://router.example.invalid"
     rerender()
 
-    act(() => result.current.exportActions.openCliProxy())
     act(() => result.current.exportActions.openClaudeCodeRouter())
     act(() => result.current.exportActions.openKiloCode())
-    expect(result.current.dialogs.cliProxy.isOpen).toBe(true)
     expect(result.current.dialogs.claudeCodeRouter.isOpen).toBe(true)
     expect(result.current.dialogs.kiloCode.isOpen).toBe(true)
 
-    act(() => result.current.dialogs.cliProxy.close())
     act(() => result.current.dialogs.claudeCodeRouter.close())
     act(() => result.current.dialogs.kiloCode.close())
-    expect(result.current.dialogs.cliProxy.isOpen).toBe(false)
     expect(result.current.dialogs.claudeCodeRouter.isOpen).toBe(false)
     expect(result.current.dialogs.kiloCode.isOpen).toBe(false)
   })

@@ -98,7 +98,7 @@ const countCreatedReferences = (
   if (
     !progress ||
     progress.schemaVersion !== ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION ||
-    progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Completed
+    progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Idle
   ) {
     return 0
   }
@@ -222,37 +222,51 @@ export function useRepairCreatedKeyManagedSiteImport({
   const activeJobIdRef = useRef<string | null>(null)
   const activeTargetFingerprintRef = useRef<string | null>(null)
   const activeItemsRef = useRef<ManagedSiteTokenBatchExportItemInput[]>([])
+  const preparationGenerationRef = useRef(0)
+  const preparationInFlightRef = useRef(false)
 
   const createdReferenceCount = useMemo(
     () => countCreatedReferences(progress, accounts),
     [accounts, progress],
   )
 
-  const closeBatchImport = useCallback(() => {
-    if (isResolving) return
+  const resetBatchImport = useCallback(() => {
+    preparationGenerationRef.current += 1
+    preparationInFlightRef.current = false
+    setIsResolving(false)
     setIsBatchImportOpen(false)
     setBatchImportItems([])
     setBatchImportIntent(null)
     activeJobIdRef.current = null
     activeTargetFingerprintRef.current = null
     activeItemsRef.current = []
-  }, [isResolving])
+  }, [])
+
+  const closeBatchImport = useCallback(() => {
+    if (isResolving) return
+    resetBatchImport()
+  }, [isResolving, resetBatchImport])
 
   const prepareBatchImport = useCallback(
     async (includeCompletedReferences = false) => {
       if (
-        isResolving ||
+        !isOpen ||
+        preparationInFlightRef.current ||
         isBatchImportOpen ||
         !progress ||
-        progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Completed
+        createdReferenceCount === 0
       ) {
         return
       }
 
       setIsResolving(true)
       setImportFeedback(null)
+      preparationInFlightRef.current = true
+      const generation = ++preparationGenerationRef.current
+      const isStale = () => generation !== preparationGenerationRef.current
       try {
         const runtimeConfig = await getCurrentManagedSiteRuntimeConfig()
+        if (isStale()) return
         if (!runtimeConfig) {
           setImportFeedback({
             action: "configure-managed-site",
@@ -264,6 +278,7 @@ export function useRepairCreatedKeyManagedSiteImport({
 
         const target =
           await createManagedSiteTokenBatchImportTarget(runtimeConfig)
+        if (isStale()) return
         const visibleProgress = getVisibleProgress(progress, accounts)
         const candidate = await resolveRepairCreatedKeyBatchImportCandidate({
           progress: visibleProgress,
@@ -275,6 +290,7 @@ export function useRepairCreatedKeyManagedSiteImport({
           forceCompleteVerification: includeCompletedReferences,
           includeCompletedReferences,
         })
+        if (isStale()) return
         if (!candidate) {
           const absenceReason = getRepairCreatedKeyBatchImportAbsenceReason({
             progress: visibleProgress,
@@ -301,19 +317,24 @@ export function useRepairCreatedKeyManagedSiteImport({
         setBatchImportIntent(candidate.intent)
         setIsBatchImportOpen(true)
       } catch {
+        if (isStale()) return
         setImportFeedback({
           reason: "failed",
           variant: "destructive",
         })
       } finally {
-        setIsResolving(false)
+        if (!isStale()) {
+          preparationInFlightRef.current = false
+          setIsResolving(false)
+        }
       }
     },
     [
       accounts,
       isBatchImportOpen,
       isCurrentSessionResult,
-      isResolving,
+      createdReferenceCount,
+      isOpen,
       progress,
     ],
   )
@@ -382,16 +403,19 @@ export function useRepairCreatedKeyManagedSiteImport({
     setImportFeedback(null)
   }, [managedSiteType])
 
+  useEffect(
+    () => () => {
+      preparationGenerationRef.current += 1
+      preparationInFlightRef.current = false
+    },
+    [],
+  )
+
   useEffect(() => {
     if (isOpen) return
-    setIsBatchImportOpen(false)
-    setBatchImportItems([])
-    setBatchImportIntent(null)
+    resetBatchImport()
     setImportFeedback(null)
-    activeJobIdRef.current = null
-    activeTargetFingerprintRef.current = null
-    activeItemsRef.current = []
-  }, [isOpen])
+  }, [isOpen, resetBatchImport])
 
   return {
     batchImportIntent,

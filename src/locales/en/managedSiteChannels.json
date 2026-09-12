@@ -23,6 +23,9 @@
       "description": "This {{site}} account cannot manage channels. Use an administrator account or update its permissions, then refresh.",
       "title": "{{site}} access denied"
     },
+    "resourceChanged": {
+      "description": "This channel changed while you were editing. Your changes were not saved. Close the editor, refresh the channel list, and edit again."
+    },
     "savedRefreshError": {
       "description": "The channel was saved, but the latest list could not be loaded. Refresh the channel list before making more changes.",
       "title": "Channel saved, refresh needed"
@@ -32,12 +35,20 @@
       "title": "{{site}} is unavailable"
     }
   },
+  "cliProxyApi": {
+    "credentialWeightHelp": "Leave blank for weight 1. Non-positive values exclude this key from weighted routing; maximum 1,000,000.",
+    "excludedModels": "Excluded models (one per line)",
+    "headers": "Request headers",
+    "headersHelp": "One header per line, in Name: value format.",
+    "prefix": "Model prefix",
+    "proxyUrl": "Proxy URL"
+  },
   "dialog": {
     "cancel": "Cancel",
     "confirm": "Delete",
     "deleteDescription": "This action cannot be undone. The selected channels will be removed permanently.",
     "deleteRefreshAction": "Refresh channels",
-    "deleteRefreshRequired": "Some delete results are uncertain. Refresh the channel list before deleting again.",
+    "deleteRefreshRequired": "Refresh the channel list to confirm its latest state before deleting again.",
     "deleteResultStatus": {
       "failed": "Failed",
       "success": "Deleted",
@@ -48,6 +59,111 @@
     "deleteTitlePlural": "Delete channels?"
   },
   "editor": {
+    "advanced": {
+      "autoBan": {
+        "help": "Allow New API to disable this channel when its configured failure conditions are met.",
+        "label": "Automatically disable channel"
+      },
+      "autoSync": {
+        "help": "Requires update checks. New API automatically updates this channel's model list when changes are detected.",
+        "label": "Automatically sync upstream models"
+      },
+      "check": {
+        "help": "New API checks periodically on the server. This is separate from the extension's model sync.",
+        "label": "Check upstream model updates"
+      },
+      "detectedModels": "Models available to add",
+      "groups": {
+        "detection": "Upstream model detection",
+        "management": "Channel management",
+        "network": "Network settings"
+      },
+      "ignored": {
+        "help": "Enter exact model names to exclude from upstream detection and sync.",
+        "label": "Ignored upstream models"
+      },
+      "invalidExisting": "The saved configuration cannot be safely parsed. Fix it in the site's admin console before editing this field.",
+      "lastCheck": "Last checked",
+      "mapping": {
+        "add": "Add mapping",
+        "help": "Map a requested model name to the model sent upstream. Use a unique request model on each row.",
+        "invalid": "Complete both names on every row and remove duplicate request models.",
+        "label": "Model name mappings",
+        "remove": "Remove mapping {{index}}",
+        "source": "Request model {{index}}",
+        "sourcePlaceholder": "Request model",
+        "target": "Upstream model {{index}}",
+        "targetPlaceholder": "Upstream model"
+      },
+      "neverChecked": "Not checked yet",
+      "noModels": "None",
+      "proxy": {
+        "help": "Proxy used by the New API server for this channel. Supports HTTP, HTTPS, SOCKS5 and SOCKS5H. Leave empty to clear the channel proxy.",
+        "invalid": "Enter a valid HTTP, HTTPS, SOCKS5 or SOCKS5H proxy URL.",
+        "label": "Proxy address"
+      },
+      "remark": {
+        "help": "Record the channel's purpose or usage notes (up to 255 characters).",
+        "label": "Notes"
+      },
+      "removedModels": "Models detected as removed",
+      "tag": "Channel tag",
+      "testModel": {
+        "help": "Select a model or enter its name. Leave empty to use New API's default test model.",
+        "label": "Test model"
+      },
+      "unsupportedDetection": "Upstream detection is unavailable for this channel type in this editor. Advanced Custom channels require model-list route configuration in the site's admin console."
+    },
+    "doneHub": {
+      "allowExtraBody": {
+        "help": "Forward extra fields in client requests, such as extra_body parameters, to the upstream.",
+        "label": "Forward extra body fields"
+      },
+      "compatibleResponse": {
+        "help": "When enabled, DoneHub converts Responses requests to Chat Completions. When disabled, it prefers native Responses but may still fall back if unsupported.",
+        "label": "Responses API compatibility"
+      },
+      "customParameter": {
+        "help": "Enter a JSON object. By default, only missing fields are added. overwrite: true replaces fields; per_model: true configures by model; pre_add: true applies at request entry. Leave blank to clear.",
+        "invalid": "Enter a valid JSON object.",
+        "label": "Extra request parameters",
+        "placeholder": "{\n  \"overwrite\": true,\n  \"temperature\": 0.7\n}"
+      },
+      "disabledStream": {
+        "help": "Streaming requests for these models skip this channel; they are not converted to non-streaming. Select models or enter names. Clear the list to restore normal routing.",
+        "label": "Models excluded from streaming"
+      },
+      "modelHeaders": {
+        "help": "Add fixed upstream headers with text values. Authentication headers are handled by the channel. Leave blank or remove all rows to clear.",
+        "invalid": "Enter a JSON object with unique, non-empty keys and text values.",
+        "label": "Custom request headers",
+        "placeholder": "{\"X-Project\": \"example\"}"
+      },
+      "modelMapping": {
+        "addModels": "Add mapped names to model list",
+        "help": "Keys are requested model names; values are upstream names. Add the keys to the channel model list. Prefix a value with + to bill using the requested model.",
+        "invalid": "Enter a JSON object with unique, non-empty keys and text values.",
+        "label": "Model mapping",
+        "placeholder": "{\"alias\": \"upstream-model\"}"
+      },
+      "proxy": {
+        "help": "Used by the DoneHub server to reach the upstream. Supports HTTP and SOCKS5; %s generates a session identifier from the channel key. Leave blank to remove the channel proxy.",
+        "invalid": "Enter a valid HTTP or SOCKS5 proxy URL.",
+        "label": "Proxy URL",
+        "placeholder": "socks5://127.0.0.1:1080"
+      },
+      "responsesPath": {
+        "help": "For native Responses requests on Custom channels only. Leave blank for /v1/responses or enter disable to block this request. Not used in compatibility mode.",
+        "label": "Responses request path",
+        "placeholder": "/v1/responses"
+      },
+      "testModel": {
+        "help": "Choose a chat model from this channel or enter a name. DoneHub cannot test channel speed when blank. Maximum 50 characters.",
+        "invalid": "Model names must be at most 50 characters.",
+        "label": "Test model",
+        "placeholder": "gpt-4o-mini"
+      }
+    },
     "fields": {
       "autoSyncModelPattern": {
         "help": "Only sync matching models. Prefix with (?i) to ignore case; leave empty to sync all models.",
@@ -108,6 +224,17 @@
         "placeholder": "Add tags..."
       }
     },
+    "json": {
+      "addRow": "Add row",
+      "editJson": "Edit JSON",
+      "editRows": "Edit rows",
+      "format": "Format JSON",
+      "key": "Key",
+      "keyAt": "{{field}}: row {{index}} key",
+      "removeAt": "{{field}}: remove row {{index}}",
+      "value": "Value",
+      "valueAt": "{{field}}: row {{index}} value"
+    },
     "options": {
       "channelType": {
         "anthropic": "Anthropic",
@@ -167,9 +294,12 @@
     "sections": {
       "advanced": "Advanced",
       "basic": "Basic",
+      "basicConnection": "Basic & connection",
+      "compatibility": "API compatibility",
       "connection": "Connection",
       "metadata": "Metadata",
       "models": "Models",
+      "requests": "Network & requests",
       "routing": "Routing",
       "sync": "Model sync"
     },
@@ -265,7 +395,6 @@
     }
   },
   "gatewayGuidance": {
-    "clientHint": "External clients also need a calling key issued by this gateway.",
     "empty": {
       "description": "This self-hosted AI gateway has no channels yet. Import account keys or API keys first, then this gateway can provide one unified AI API to external clients.",
       "importFromAccountKey": "Import channel from account Key",
@@ -274,7 +403,6 @@
     },
     "headerDescription": "Manage channels in your self-hosted AI gateway and combine multiple account keys or API keys into one unified AI API.",
     "openChannelConsole": "Open gateway channel management",
-    "openTokenConsole": "Open token management",
     "unconfiguredValueDescription": "After configuration, you can import scattered account keys and API keys as gateway channels, then view and manage them directly in All API Hub."
   },
   "migration": {
@@ -412,11 +540,14 @@
   "title": "Channels management",
   "toasts": {
     "channelSaved": "Channel saved",
+    "channelsDeleted_one": "Deleted {{count}} channel",
+    "channelsDeleted_other": "Deleted {{count}} channels",
     "channelUpdated": "Channel updated",
     "syncCompleted": "Model sync completed ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Models were synced ({{success}}/{{total}}), but the channel list could not be refreshed. Refresh and try again.",
     "syncFailed": "Model sync failed: {{error}}",
-    "syncFailedFallback": "The channels could not be synchronized"
+    "syncFailedFallback": "The channels could not be synchronized",
+    "syncIncomplete": "Model sync did not fully complete ({{success}}/{{total}} succeeded). Open model sync to review results and retry failed channels."
   },
   "toolbar": {
     "addChannel": "Add channel",

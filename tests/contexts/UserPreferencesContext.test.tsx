@@ -164,7 +164,7 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
       resetClaudeCodeHubConfig: vi.fn(),
       resetSub2ApiManagedSiteConfig: vi.fn(),
       resetNewApiModelSyncConfig: vi.fn(),
-      resetCliProxyConfig: vi.fn(),
+      resetCliProxyApiConfig: vi.fn(),
       resetClaudeCodeRouterConfig: vi.fn(),
       resetAutoCheckinConfig: vi.fn(),
       resetRedemptionAssist: vi.fn(),
@@ -395,9 +395,9 @@ describe("UserPreferencesContext", () => {
           managedSiteModelSync: DEFAULT_PREFERENCES.managedSiteModelSync,
         }),
     )
-    mockedUserPreferences.resetCliProxyConfig.mockImplementation(async () =>
+    mockedUserPreferences.resetCliProxyApiConfig.mockImplementation(async () =>
       applyPersistedUpdate({
-        cliProxy: DEFAULT_PREFERENCES.cliProxy,
+        cliProxyApi: DEFAULT_PREFERENCES.cliProxyApi,
       }),
     )
     mockedUserPreferences.resetClaudeCodeRouterConfig.mockImplementation(
@@ -661,8 +661,8 @@ describe("UserPreferencesContext", () => {
           autoCheckin: false,
         },
       })
-      await context.updateCliProxyBaseUrl("https://cli.example")
-      await context.updateCliProxyManagementKey("cli-key")
+      await context.updateCliProxyApiBaseUrl("https://cli.example")
+      await context.updateCliProxyApiManagementKey("cli-key")
       await context.updateClaudeCodeRouterBaseUrl("https://ccr.example")
       await context.updateClaudeCodeRouterApiKey("ccr-key")
     })
@@ -786,7 +786,7 @@ describe("UserPreferencesContext", () => {
       baseUrl: "https://managed-sub2api.example.invalid",
       adminToken: "managed-sub2api-token",
     })
-    expect((latestContext as any)?.preferences.cliProxy.baseUrl).toBe(
+    expect((latestContext as any)?.preferences.cliProxyApi.baseUrl).toBe(
       "https://cli.example",
     )
     expect((latestContext as any)?.preferences.claudeCodeRouter.apiKey).toBe(
@@ -1230,10 +1230,10 @@ describe("UserPreferencesContext", () => {
       baseUrl: "https://sub2api.example.invalid",
       adminToken: "sub2api-admin-token",
     }
-    preferences.cliProxy = {
-      ...preferences.cliProxy,
+    preferences.cliProxyApi = {
+      ...preferences.cliProxyApi,
       baseUrl: "https://cli.example",
-      managementKey: "cli-key",
+      adminToken: "cli-key",
     }
     preferences.claudeCodeRouter = {
       ...preferences.claudeCodeRouter,
@@ -1287,7 +1287,7 @@ describe("UserPreferencesContext", () => {
       await context.resetClaudeCodeHubConfig()
       await context.resetSub2ApiManagedSiteConfig()
       await context.resetNewApiModelSyncConfig()
-      await context.resetCliProxyConfig()
+      await context.resetCliProxyApiConfig()
       await context.resetClaudeCodeRouterConfig()
       await context.resetAutoCheckinConfig()
       await context.resetRedemptionAssistConfig()
@@ -1329,8 +1329,8 @@ describe("UserPreferencesContext", () => {
     expect((latestContext as any)?.preferences.sub2apiManagedSite).toEqual(
       DEFAULT_SUB2API_MANAGED_SITE_CONFIG,
     )
-    expect((latestContext as any)?.preferences.cliProxy).toEqual(
-      DEFAULT_PREFERENCES.cliProxy,
+    expect((latestContext as any)?.preferences.cliProxyApi).toEqual(
+      DEFAULT_PREFERENCES.cliProxyApi,
     )
     expect((latestContext as any)?.preferences.claudeCodeRouter).toEqual(
       DEFAULT_PREFERENCES.claudeCodeRouter,
@@ -1610,9 +1610,9 @@ describe("UserPreferencesContext", () => {
         await context.updateTempWindowFallbackReminder({ dismissed: true }),
       )
       expectFailedWrite(
-        await context.updateCliProxyBaseUrl("https://cli.example"),
+        await context.updateCliProxyApiBaseUrl("https://cli.example"),
       )
-      expectFailedWrite(await context.updateCliProxyManagementKey("cli-key"))
+      expectFailedWrite(await context.updateCliProxyApiManagementKey("cli-key"))
       expectFailedWrite(
         await context.updateClaudeCodeRouterBaseUrl("https://ccr.example"),
       )
@@ -1652,7 +1652,7 @@ describe("UserPreferencesContext", () => {
 
     await act(async () => {
       expect(
-        await context.updateCliProxyBaseUrl("https://cli.example.invalid", {
+        await context.updateCliProxyApiBaseUrl("https://cli.example.invalid", {
           expectedLastUpdated: preferences.lastUpdated,
         }),
       ).toEqual({
@@ -1826,7 +1826,7 @@ describe("UserPreferencesContext", () => {
     mockedUserPreferences.resetNewApiModelSyncConfig.mockResolvedValue(
       preferenceWriteFailure,
     )
-    mockedUserPreferences.resetCliProxyConfig.mockResolvedValue(
+    mockedUserPreferences.resetCliProxyApiConfig.mockResolvedValue(
       preferenceWriteFailure,
     )
     mockedUserPreferences.resetClaudeCodeRouterConfig.mockResolvedValue(
@@ -1870,7 +1870,7 @@ describe("UserPreferencesContext", () => {
       expectFailedWrite(await context.resetClaudeCodeHubConfig())
       expectFailedWrite(await context.resetSub2ApiManagedSiteConfig())
       expectFailedWrite(await context.resetNewApiModelSyncConfig())
-      expectFailedWrite(await context.resetCliProxyConfig())
+      expectFailedWrite(await context.resetCliProxyApiConfig())
       expectFailedWrite(await context.resetClaudeCodeRouterConfig())
       expectFailedWrite(await context.resetAutoCheckinConfig())
       expectFailedWrite(await context.resetRedemptionAssistConfig())

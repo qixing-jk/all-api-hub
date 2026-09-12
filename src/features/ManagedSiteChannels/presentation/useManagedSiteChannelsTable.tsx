@@ -290,7 +290,7 @@ export function useManagedSiteChannelsTable({
             ) {
               return (
                 <span className="font-mono text-sm">
-                  {row.original.displayIdentifier}
+                  {row.original.displayIdentifier || "—"}
                 </span>
               )
             }

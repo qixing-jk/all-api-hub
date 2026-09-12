@@ -70,17 +70,19 @@ Four key numeric cards provide an instant snapshot of the current overall status
 > 💡 **What is this for?**
 > If you’ve purchased keys from multiple AI platforms, you’d normally have to manually enter each key into every chat client (e.g., Cherry Studio, ChatBox). This section guides you step-by-step to import your scattered keys into your **self-hosted AI gateway** (e.g., New API / One API). Then, you only need **one API endpoint and key**—configure it once in your chat client, and all models become accessible!
 
-### 4-Step Progress Guide:
+### 3-Step Progress Guide:
 
 1. **Prepare Data Sources**: Add accounts with readable keys, or manually save API keys in the Credential Library.
 2. **Save Gateway Settings**: Enter the admin connection details for your self-hosted AI gateway.
 3. **Create Gateway Channels**: One-click import of existing account keys or API credentials as gateway channels.
-4. **Connect Client**: Obtain the gateway’s API endpoint and invocation key to configure in your client software.
 
-### Status and Buttons:
-- The top-right corner of the card displays a **data source badge** (e.g., `No Source`, `Account Source`, `Credential Source`, `Account + Credential`, `Account Temporarily Unimportable`).
-- Steps are marked with progress indicators: ✅ Completed / 🔵 Current Step / ⚪ Later.
-- The button at the bottom dynamically changes based on your progress (e.g., "Add Account," "Configure Self-Hosted AI Gateway," "Add First Gateway Channel").
+### Viewing, starting, and completing setup:
+
+- The overview initially shows a short introduction. Click “View steps” to expand it. Viewing, expanding, or arriving through “Setup guide” does not start onboarding.
+- Choosing a concrete action to add an account, save a credential, configure a gateway, or import channels records that setup has started. Related account and credential pages then show the next step.
+- You can collapse the guide at any time, and your choice is remembered. After starting, use “Continue setup” to see your progress.
+- Setup is complete after successfully creating or importing a channel, or successfully loading existing channels in channel management. The overview hides completed guidance by default; “Setup guide” lets you revisit it.
+- The gateway settings explanation and the unconfigured channel page also offer “Setup guide”, which opens the overview at the full guidance card.
 
 > 💡 **No need for a self-hosted gateway?**
 > If you don’t need a self-hosted gateway, you can ignore this section. Simply copy or export individual keys from the **API Credential Library** for use in your software.

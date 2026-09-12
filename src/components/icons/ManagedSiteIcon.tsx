@@ -1,7 +1,9 @@
 import NewAPIColor from "@lobehub/icons/es/NewAPI/components/Color"
+import { ServerIcon } from "lucide-react"
 
 import { AxonHubIcon } from "~/components/icons/AxonHubIcon"
 import { ClaudeCodeHubIcon } from "~/components/icons/ClaudeCodeHubIcon"
+import { CliProxyApiIcon } from "~/components/icons/CliProxyApiIcon"
 import { DoneHubIcon } from "~/components/icons/DoneHubIcon"
 import {
   ICON_SIZE_CLASSNAME,
@@ -49,5 +51,13 @@ export function ManagedSiteIcon({
     return <Sub2ApiIcon size={size} />
   }
 
-  return <NewAPIColor className={cn(ICON_SIZE_CLASSNAME[size])} />
+  if (siteType === SITE_TYPES.CLI_PROXY_API) {
+    return <CliProxyApiIcon size={size} />
+  }
+
+  if (siteType === SITE_TYPES.NEW_API) {
+    return <NewAPIColor className={cn(ICON_SIZE_CLASSNAME[size])} />
+  }
+
+  return <ServerIcon className={cn(ICON_SIZE_CLASSNAME[size])} aria-hidden />
 }

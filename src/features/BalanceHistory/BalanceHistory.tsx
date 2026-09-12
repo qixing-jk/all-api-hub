@@ -953,7 +953,9 @@ export default function BalanceHistory() {
     }))
   }, [accountDisplayLabelById, rangeSummaries.summaries])
 
-  const enabled = preferences.balanceHistory?.enabled ?? false
+  const enabled =
+    preferences.balanceHistory?.enabled ??
+    DEFAULT_BALANCE_HISTORY_PREFERENCES.enabled
   const endOfDayCaptureEnabled =
     preferences.balanceHistory?.endOfDayCapture?.enabled ?? false
 

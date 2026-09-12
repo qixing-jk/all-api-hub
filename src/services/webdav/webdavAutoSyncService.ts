@@ -37,7 +37,10 @@ import {
   API_CREDENTIAL_PROFILES_CONFIG_VERSION,
   type ApiCredentialProfilesConfig,
 } from "~/types/apiCredentialProfiles"
-import { type ChannelConfigSnapshot } from "~/types/channelConfig"
+import {
+  CHANNEL_CONFIG_SNAPSHOT_VERSION,
+  type ChannelConfigSnapshot,
+} from "~/types/channelConfig"
 import {
   TASK_NOTIFICATION_STATUSES,
   TASK_NOTIFICATION_TASKS,
@@ -103,14 +106,6 @@ import {
 } from "./webdavService"
 
 const logger = createLogger("WebdavAutoSync")
-
-/** Keep background sync compatible with older preference test doubles/builds. */
-async function exportPreferencesForBackup() {
-  if (typeof userPreferences.exportPreferencesForBackup === "function") {
-    return userPreferences.exportPreferencesForBackup()
-  }
-  return userPreferences.exportPreferences()
-}
 
 type UpdateWebdavAutoSyncSettingsResult =
   | {
@@ -541,7 +536,7 @@ class WebdavAutoSyncService {
     ] = await Promise.all([
       accountDataTransfer.exportData(),
       tagStorage.exportTagStore(),
-      exportPreferencesForBackup(),
+      userPreferences.exportPreferencesForBackup(),
       featureGuidanceState.getStateStrict(),
       channelConfigStorage.exportConfigs(),
       apiCredentialProfilesStorage.exportConfig(),
@@ -819,13 +814,12 @@ class WebdavAutoSyncService {
       preferencesToSave = mergeResult.preferences
       // Atomic merge must receive only remote incoming data. Including the
       // startup-time local snapshot could resurrect entries deleted meanwhile.
-      // A legacy/partial remote backup may omit channel configs. Keep the
-      // local snapshot in that case instead of treating the omission as an
-      // empty replacement.
+      // An absent remote section contributes no incoming configs. The atomic
+      // merge reads the latest local state, including concurrent deletions.
       channelConfigsToSave =
         remotePresence.hasChannelConfigs && normalizedRemote.channelConfigs
           ? normalizedRemote.channelConfigs
-          : localChannelConfigs
+          : { schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION, configs: {} }
       apiCredentialProfilesToSave = mergeResult.apiCredentialProfiles
       deletedEntryRecordsToSave = mergeResult.deletedEntryRecords
 
@@ -947,13 +941,12 @@ class WebdavAutoSyncService {
           ? remotePreferences
           : localPreferences
 
-      // A legacy/partial remote backup may omit channel configs. Keep the
-      // local snapshot in that case instead of treating the omission as an
-      // empty replacement.
+      // An absent remote section contributes no incoming configs. The atomic
+      // merge reads the latest local state, including concurrent deletions.
       channelConfigsToSave =
         remotePresence.hasChannelConfigs && normalizedRemote.channelConfigs
           ? normalizedRemote.channelConfigs
-          : localChannelConfigs
+          : { schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION, configs: {} }
 
       apiCredentialProfilesToSave =
         syncDataSelection.apiCredentialProfiles &&

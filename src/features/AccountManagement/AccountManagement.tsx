@@ -23,6 +23,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import AccountList from "~/features/AccountManagement/components/AccountList"
 import BookmarkAccountImportDialog from "~/features/AccountManagement/components/BookmarkAccountImportDialog"
 import DedupeAccountsDialog from "~/features/AccountManagement/components/DedupeAccountsDialog"
+import DelAccountDialog from "~/features/AccountManagement/components/DelAccountDialog"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { AccountManagementProvider } from "~/features/AccountManagement/hooks/AccountManagementProvider"
@@ -62,6 +63,7 @@ import {
   PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/contracts"
 import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
+import type { DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { getExternalCheckInOpenOptions } from "~/utils/core/shortcutKeys"
 import { pushWithinOptionsPage } from "~/utils/navigation"
@@ -91,10 +93,11 @@ function AccountManagementContent({
   onCloseBookmarkImport,
 }: AccountManagementContentProps) {
   const { t } = useTranslation(["account", "common", "messages"])
-  const { openAddAccount } = useDialogStateContext()
+  const { openAddAccount, openEditAccount } = useDialogStateContext()
   const consumedAddRouteActionRef = useRef(false)
   const {
     displayData,
+    loadAccountData,
     handleRefresh,
     handleRefreshDisabledAccounts,
     isRefreshing,
@@ -108,6 +111,8 @@ function AccountManagementContent({
     GATEWAY_GUIDANCE_SURFACES.Account,
   )
   const [isDedupeDialogOpen, setIsDedupeDialogOpen] = useState(false)
+  const [suspectedAccountToDelete, setSuspectedAccountToDelete] =
+    useState<DisplaySiteData | null>(null)
   const disabledAccounts = displayData.filter((account) => account.disabled)
   const enabledAccountCount = displayData.filter(
     (account) => !account.disabled,
@@ -491,6 +496,24 @@ function AccountManagementContent({
       <DedupeAccountsDialog
         isOpen={isDedupeDialogOpen}
         onClose={() => setIsDedupeDialogOpen(false)}
+        onReviewAccount={(accountId) => {
+          const account = displayData.find(
+            (account) => account.id === accountId,
+          )
+          if (account) openEditAccount(account)
+        }}
+        onDeleteAccount={(accountId) => {
+          const account = displayData.find(
+            (account) => account.id === accountId,
+          )
+          if (account) setSuspectedAccountToDelete(account)
+        }}
+      />
+      <DelAccountDialog
+        isOpen={suspectedAccountToDelete !== null}
+        account={suspectedAccountToDelete}
+        onClose={() => setSuspectedAccountToDelete(null)}
+        onDeleted={() => void loadAccountData()}
       />
       {isBookmarkImportDialogOpen && (
         <BookmarkAccountImportDialog isOpen onClose={onCloseBookmarkImport} />

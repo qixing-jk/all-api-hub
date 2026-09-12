@@ -25,8 +25,8 @@ const {
     managedSiteType: "new-api",
     claudeCodeRouterBaseUrl: "https://router.example.invalid",
     claudeCodeRouterApiKey: "ccr-management-key",
-    cliProxyBaseUrl: "https://cliproxy.example.invalid",
-    cliProxyManagementKey: "cliproxy-management-key",
+    cliProxyApiBaseUrl: "https://cliproxy.example.invalid",
+    cliProxyApiManagementKey: "cliproxy-management-key",
     markGatewayGuidanceOnboardingCompleted: vi.fn(),
   },
 }))
@@ -70,8 +70,8 @@ vi.mock("~/components/ExportActionsMenu", async (importOriginal) => {
 vi.mock("~/components/ClaudeCodeRouterImportDialog", () => ({
   ClaudeCodeRouterImportDialog: () => null,
 }))
-vi.mock("~/components/CliProxyExportDialog", () => ({
-  CliProxyExportDialog: () => null,
+vi.mock("~/components/CliProxyApiExportDialog", () => ({
+  CliProxyApiExportDialog: () => null,
 }))
 vi.mock("~/components/CursorPlusExportDialog", () => ({
   CursorPlusExportDialog: () => null,

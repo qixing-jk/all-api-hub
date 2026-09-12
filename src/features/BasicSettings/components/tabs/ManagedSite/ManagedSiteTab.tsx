@@ -10,6 +10,8 @@ import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/KeyManagement/constants"
+import { GatewayGuidanceDescription } from "~/features/UnifiedApiGuidance/GatewayGuidanceDescription"
+import { runGatewayGuidanceAction } from "~/features/UnifiedApiGuidance/runGatewayGuidanceAction"
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { canResolveAccountRuntimeKeySecret } from "~/services/accounts/keyProductCapabilities"
@@ -22,6 +24,7 @@ import { pushWithinOptionsPage } from "~/utils/navigation"
 
 import AxonHubSettings from "./AxonHubSettings"
 import ClaudeCodeHubSettings from "./ClaudeCodeHubSettings"
+import CliProxyApiSettings from "./CliProxyApiSettings"
 import DoneHubSettings from "./DoneHubSettings"
 import ManagedSiteModelSyncSettings from "./managedSiteModelSyncSettings"
 import ManagedSiteSelector from "./ManagedSiteSelector"
@@ -88,6 +91,8 @@ export default function ManagedSiteTab() {
 
   const renderSiteSettings = () => {
     switch (managedSiteType) {
+      case SITE_TYPES.CLI_PROXY_API:
+        return <CliProxyApiSettings />
       case SITE_TYPES.OCTOPUS:
         return <OctopusSettings />
       case SITE_TYPES.DONE_HUB:
@@ -113,8 +118,6 @@ export default function ManagedSiteTab() {
       {renderSiteSettings()}
 
       <Notice
-        title={gatewayTitle}
-        description={gatewayDescription}
         actions={
           isManagedSiteConfigComplete ? (
             <>
@@ -124,12 +127,14 @@ export default function ManagedSiteTab() {
                 className={gatewayActionClassName}
                 leftIcon={<AccountKeysIcon className="h-4 w-4" aria-hidden />}
                 onClick={() =>
-                  pushWithinOptionsPage(`#${MENU_ITEM_IDS.KEYS}`, {
-                    ...(guidedImportAccountId
-                      ? { accountId: guidedImportAccountId }
-                      : {}),
-                    ...guidedImportParams,
-                  })
+                  void runGatewayGuidanceAction(() =>
+                    pushWithinOptionsPage(`#${MENU_ITEM_IDS.KEYS}`, {
+                      ...(guidedImportAccountId
+                        ? { accountId: guidedImportAccountId }
+                        : {}),
+                      ...guidedImportParams,
+                    }),
+                  )
                 }
               >
                 {t("managedSite.gatewayGuidance.actions.importAccountKeys")}
@@ -141,9 +146,11 @@ export default function ManagedSiteTab() {
                 className={gatewayActionClassName}
                 leftIcon={<ApiKeysIcon className="h-4 w-4" aria-hidden />}
                 onClick={() =>
-                  pushWithinOptionsPage(
-                    `#${MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}`,
-                    guidedImportParams,
+                  void runGatewayGuidanceAction(() =>
+                    pushWithinOptionsPage(
+                      `#${MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}`,
+                      guidedImportParams,
+                    ),
                   )
                 }
               >
@@ -168,7 +175,11 @@ export default function ManagedSiteTab() {
             </>
           ) : undefined
         }
-      />
+      >
+        <GatewayGuidanceDescription title={gatewayTitle}>
+          {gatewayDescription}
+        </GatewayGuidanceDescription>
+      </Notice>
 
       {isModelSyncSupported ? (
         <ManagedSiteModelSyncSettings />

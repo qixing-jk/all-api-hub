@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
 import { Card, CardContent } from "~/components/ui"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { SortingCriteriaType, type SortingFieldConfig } from "~/types/sorting"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
@@ -157,7 +158,7 @@ export default function SortingPrioritySettings() {
 
   return (
     <SettingSection
-      id="sorting-priority"
+      id={SETTINGS_ANCHORS.SORTING_PRIORITY}
       title={t("sorting.title")}
       description={t("sorting.description")}
       onReset={resetSortingPriorityConfig}

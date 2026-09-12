@@ -46,7 +46,6 @@ function Fixture({ isLoadedEmpty = true }: { isLoadedEmpty?: boolean }) {
     <>
       {experience.titleActions}
       {experience.description}
-      {experience.configurationMissingNotice}
       {experience.emptyContent}
     </>
   )
@@ -61,11 +60,6 @@ describe("managed-site channel page experience", () => {
     const user = userEvent.setup()
     render(<Fixture />)
 
-    expect(
-      screen.getByRole("link", {
-        name: "managedSiteChannels:gatewayGuidance.openTokenConsole",
-      }),
-    ).toHaveAttribute("href", "https://gateway.example.invalid/keys")
     await user.click(
       screen.getByRole("button", {
         name: "managedSiteChannels:gatewayGuidance.openChannelConsole",
@@ -83,6 +77,14 @@ describe("managed-site channel page experience", () => {
     })
     expect(screen.getAllByRole("button").indexOf(profileImport)).toBeLessThan(
       screen.getAllByRole("button").indexOf(accountImport),
+    )
+
+    await user.click(accountImport)
+    await waitFor(() =>
+      expect(mocks.pushWithinOptionsPage).toHaveBeenCalledWith(
+        "#keys",
+        undefined,
+      ),
     )
 
     await user.click(profileImport)

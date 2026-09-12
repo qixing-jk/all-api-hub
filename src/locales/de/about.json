@@ -30,7 +30,7 @@
   "homepage": "Projekt-Homepage",
   "homepageDesc": "Detaillierte Dokumentation, Benutzerhandbücher und weitere Informationen anzeigen",
   "implementedFeatures": "Implementierte Funktionen",
-  "intro": "All API Hub ist eine Browsererweiterung zur Verwaltung von New-API-kompatiblen Relay-Websites von Drittanbietern und Ihrer eigenen New-API-Instanz. Sie bündelt Konto- und Kontostandüberwachung, intelligente Sortierung und Website-Erkennung und bietet Automatisierungen wie automatische Aktualisierung und die Umgehung von Firewall-Prüfungen in temporären Fenstern. Für selbst gehostete New API bietet sie außerdem Kanalverwaltung und Modelllistensynchronisierung und integriert CLIProxyAPI, WebDAV-Sicherungen sowie Import-/Export-Werkzeuge.",
+  "intro": "All API Hub bündelt Relay-Konten, Guthaben und API-Zugangsdaten und bietet automatische Aktualisierung, Check-ins und Modellprüfung. Verwalten Sie Kanäle oder Anbieter auf selbst gehosteten Websites wie CLIProxyAPI, New API und Sub2API, mit Modellsynchronisierung auf unterstützten Websites. WebDAV-Sicherungen sowie Datenimport und -export sind ebenfalls verfügbar.",
   "privacyText": "Sensible Daten wie Konten, API-Schlüssel, Cookies, Kontostände, Anfrageinhalte und Benutzereingaben bleiben standardmäßig lokal. Optionale anonyme Produktanalysen dienen ausschließlich dazu, Fehler bei häufigen Problemen zu priorisieren, zentrale Abläufe und die Kompatibilität zu verbessern und unnötige Reibung zu verringern; diese sensiblen Daten werden dabei nicht erfasst.",
   "privacyTitle": "Datenschutz",
   "projectLinks": "Projektlinks",

@@ -23,7 +23,7 @@ The complete API key is stored in the extension's local storage. Masking in the 
 - **Health and Usage Overview**: View balance, today's usage, today's requests, available models, last refresh time, and health status when the endpoint provides that data.
 - **Interface Verification**: Supports verifying API availability and separately testing CLI compatibility.
 - **Model Integration**: Directly open the current credentials in the model list to view the model catalog and verification results.
-- **Quick Export**: Prioritizes a direct action for the currently configured self-hosted site. Other targets are grouped as chat clients, coding agents, and gateways and routing tools: Cherry Studio, Kelivo, CC Switch, Kilo Code / Roo Code, Cursor++, CLIProxyAPI, and Claude Code Router.
+- **Quick Export**: Prioritizes a direct action for the currently configured self-hosted site. Other targets are grouped as chat clients, coding agents, and gateways and routing tools: Cherry Studio, Kelivo, CC Switch, Kilo Code / Roo Code, Cursor++, and Claude Code Router.
 
 ![API Credential Library list](../static/image/api-credential-profile-list.png)
 
@@ -164,9 +164,9 @@ Supports direct export from a single credential to:
 - **Self-hosted site**: The actions area shows the currently configured self-hosted site icon. Selecting it opens a prefilled new-channel flow; nothing is written until you review and submit it. Even when a matching channel is detected, the extension only warns about the duplicate risk and does not update or overwrite the existing channel. Fields and failure results vary by managed site, and a failed write is not rolled back automatically.
 - **Chat clients**: Cherry Studio, Kelivo
 - **Coding agents**: CC Switch, Kilo Code / Roo Code, Cursor++
-- **Gateways and routing tools**: CLIProxyAPI, Claude Code Router
+- **Gateways and routing tools**: Claude Code Router
 
-Except for the direct self-hosted-site action, all targets are grouped under the **`Export`** menu. Different tools receive credentials in different ways: some use deep links, some use the clipboard or generated configuration, and CLIProxyAPI and Claude Code Router call remote management APIs. These are not one uniform “secure configuration export.”
+Except for the direct self-hosted-site action, all targets are grouped under the **`Export`** menu. Different tools receive credentials in different ways: some use deep links, some use the clipboard or generated configuration, and Claude Code Router calls remote management APIs. These are not one uniform “secure configuration export.”
 
 Exports may contain the complete API key. Some deep links or import codes use Base64, but Base64 is encoding rather than encryption, so protect that content.
 
@@ -207,6 +207,6 @@ Copying an API key places the complete secret on the system clipboard. When expo
 
 - [Quick Export Site Configuration](./quick-export.md)
 - [Supported Export Tools and Integration Targets](./supported-export-tools.md)
-- [CLIProxyAPI Integration](./cliproxyapi-integration.md)
+- [CLIProxyAPI Management](./cliproxyapi-integration.md)
 - [Data Import and Export](./data-management.md)
 - [WebDAV Backup and Automatic Synchronization](./webdav-sync.md)

@@ -12,6 +12,7 @@ import {
   getManagedResourceFieldPolicy,
   MANAGED_RESOURCE_EDITOR_MODES,
 } from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
+import { getEditedResourceFieldIssues } from "~/features/ResourceEditor/resourceEditorValidation"
 import type { ManagedResourceKind } from "~/services/accountSiteDefinitions/contracts"
 import {
   MANAGED_RESOURCE_FAILURE_CODES,
@@ -81,10 +82,19 @@ export function ManagedResourceCreateDialog({
     MANAGED_RESOURCE_EDITOR_MODES.Create,
   )
   const validation = useMemo(() => editor.validate(values), [editor, values])
+  const initialValidation = useMemo(
+    () => editor.validate(editor.initialValues),
+    [editor],
+  )
   const fieldIssues =
     feedback?.kind === "failed" && feedback.fieldIssues
       ? feedback.fieldIssues
-      : []
+      : getEditedResourceFieldIssues(
+          validation,
+          values,
+          editor.initialValues,
+          initialValidation,
+        )
   const loadOptions = useMemo(() => {
     if (!editor.loadOptions) return undefined
     const editorOptionLoader = editor.loadOptions

@@ -28,8 +28,6 @@ export const API_CREDENTIAL_PROFILES_TEST_IDS = {
     "api-credential-profile-import-to-managed-site-button",
   exportToKiloCodeMenuItem:
     "api-credential-profile-export-to-kilo-code-menu-item",
-  exportToCliProxyMenuItem:
-    "api-credential-profile-export-to-cli-proxy-menu-item",
   exportToClaudeCodeRouterMenuItem:
     "api-credential-profile-export-to-claude-code-router-menu-item",
   openModelManagementButton:

@@ -19,6 +19,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import DelAccountDialog from "~/features/AccountManagement/components/DelAccountDialog"
 import { openExternalCheckIns } from "~/features/AccountManagement/utils/openExternalCheckIns"
+import { presentUiOpenPretriggerCompletion } from "~/features/AutoCheckin/utils/pretriggerFeedback"
 import toast from "~/lib/notify"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
@@ -210,6 +211,7 @@ export default function AutoCheckin(props: {
   const { preferences: userPrefs } = useUserPreferencesContext()
   const autoCheckinPreferences =
     userPrefs?.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
+  const autoCheckinEnabled = autoCheckinPreferences.globalEnabled !== false
   const routeParams = props.routeParams
   const QUICK_RUN_PARAM = "runNow" as const
   const QUICK_RUN_VALUE = "true" as const
@@ -546,7 +548,7 @@ export default function AutoCheckin(props: {
     }
   }, [t])
 
-  // Dev-only: trigger the same UI-open pre-trigger entry point on demand and show the completion dialog.
+  // Dev-only: trigger the same UI-open pre-trigger entry point with outcome-appropriate feedback.
   const handleDebugTriggerUiOpenPretrigger = useCallback(async () => {
     const requestId = safeRandomUUID()
     let unsubscribe = () => {}
@@ -607,7 +609,7 @@ export default function AutoCheckin(props: {
       }
 
       setUiOpenPretriggerCompletion({
-        isOpen: true,
+        isOpen: presentUiOpenPretriggerCompletion(response.summary, t),
         summary: response.summary ?? null,
         pendingRetry: Boolean(response.pendingRetry),
       })
@@ -1432,14 +1434,18 @@ export default function AutoCheckin(props: {
     <div className="p-6">
       <PageHeader
         icon={CalendarCheck2}
-        title={t("execution.title")}
+        title={
+          autoCheckinEnabled ? t("execution.title") : t("execution.manualTitle")
+        }
         titleActions={
           <OptionsPageSettingsTitleAction
             tabId="checkinRedeem"
             anchor="auto-checkin"
           />
         }
-        description={t("description")}
+        description={
+          autoCheckinEnabled ? t("description") : t("manualDescription")
+        }
         spacing="compact"
       />
 

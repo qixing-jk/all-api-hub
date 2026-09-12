@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
 import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
+import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
@@ -13,6 +14,8 @@ import {
   getPreferenceWriteFailureMessage,
   runPreferenceUpdateWithToast,
 } from "~/utils/feedback/preferenceFeedback"
+
+import { ManagedSiteDeploymentLink } from "./ManagedSiteDeploymentLink"
 
 /**
  * Settings panel for configuring Octopus connection credentials (base URL, username, password).
@@ -142,6 +145,7 @@ export default function OctopusSettings() {
 
   return (
     <SettingSection
+      titleActions={<ManagedSiteDeploymentLink siteType={SITE_TYPES.OCTOPUS} />}
       id="octopus"
       title={t("octopus.title")}
       description={t("octopus.description")}

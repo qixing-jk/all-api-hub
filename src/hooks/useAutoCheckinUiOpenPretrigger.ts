@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import toast from "~/lib/notify"
+import { presentUiOpenPretriggerCompletion } from "~/features/AutoCheckin/utils/pretriggerFeedback"
 import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
@@ -29,7 +28,6 @@ import type {
   AutoCheckinRunSummary,
 } from "~/types/autoCheckin"
 import { AUTO_CHECKIN_RUN_RESULT } from "~/types/autoCheckin"
-import { onRuntimeMessage } from "~/utils/browser/browserApi"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
@@ -84,8 +82,8 @@ interface UiOpenPretriggerDialogState {
  * Behavior:
  * - If the pretrigger preference is enabled, sends a background message to conditionally
  *   start today's daily run early.
- * - Shows a toast when background reports the run started.
- * - Shows a completion dialog once the background run finishes and returns a summary.
+ * - Stays silent for runs without execution, uses toasts for resolved or uncertain
+ *   outcomes, and opens completion details only when accounts failed.
  */
 export function useAutoCheckinUiOpenPretrigger(): {
   dialog: UiOpenPretriggerDialogState
@@ -133,15 +131,6 @@ export function useAutoCheckinUiOpenPretrigger(): {
       PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     )
 
-    const unsubscribe = onRuntimeMessage((message) => {
-      if (
-        message?.action === RuntimeActionIds.AutoCheckinPretriggerStarted &&
-        message?.requestId === requestId
-      ) {
-        toast.success(t("messages.success.pretriggerStarted"))
-      }
-    })
-
     void (async () => {
       try {
         const tempWindowRequestSource = getCurrentTempWindowRequestSource()
@@ -179,7 +168,7 @@ export function useAutoCheckinUiOpenPretrigger(): {
         }
 
         setDialog({
-          isOpen: true,
+          isOpen: presentUiOpenPretriggerCompletion(response.summary, t),
           summary: response?.summary ?? null,
           lastRunResult: response?.lastRunResult ?? null,
           pendingRetry: Boolean(response?.pendingRetry),
@@ -190,14 +179,8 @@ export function useAutoCheckinUiOpenPretrigger(): {
           ...UI_OPEN_PRETRIGGER_ANALYTICS_CONTEXT,
           result: PRODUCT_ANALYTICS_RESULTS.Failure,
         })
-      } finally {
-        unsubscribe()
       }
     })()
-
-    return () => {
-      unsubscribe()
-    }
   }, [autoCheckinPreferences, shouldAttemptPretrigger, t])
 
   return {

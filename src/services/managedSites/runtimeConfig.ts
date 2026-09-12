@@ -6,6 +6,10 @@ import {
 } from "~/services/preferences/userPreferences"
 import type { AxonHubConfig } from "~/types/axonHubConfig"
 import type { ClaudeCodeHubConfig } from "~/types/claudeCodeHubConfig"
+import {
+  normalizeCliProxyApiDeploymentUrl,
+  type CliProxyApiConfig,
+} from "~/types/cliProxyApiConfig"
 import type { DoneHubConfig } from "~/types/doneHubConfig"
 import type { NewApiConfig } from "~/types/newApiConfig"
 import type { OctopusConfig } from "~/types/octopusConfig"
@@ -13,6 +17,7 @@ import type { Sub2ApiManagedSiteConfig } from "~/types/sub2apiManagedSiteConfig"
 import type { VeloeraConfig } from "~/types/veloeraConfig"
 
 export type ManagedSiteRuntimeConfig =
+  | { siteType: typeof SITE_TYPES.CLI_PROXY_API; config: CliProxyApiConfig }
   | { siteType: typeof SITE_TYPES.NEW_API; config: NewApiConfig }
   | { siteType: typeof SITE_TYPES.DONE_HUB; config: DoneHubConfig }
   | { siteType: typeof SITE_TYPES.VELOERA; config: VeloeraConfig }
@@ -41,6 +46,7 @@ export function getManagedSiteRuntimePrincipal(
     case SITE_TYPES.AXON_HUB:
       return runtimeConfig.config.email.trim()
     case SITE_TYPES.CLAUDE_CODE_HUB:
+    case SITE_TYPES.CLI_PROXY_API:
     case SITE_TYPES.SUB2API:
       return "admin"
     default:
@@ -56,6 +62,10 @@ export function hasManagedSiteRuntimeConfigInputForType(
   preferences: UserPreferences,
   siteType: ManagedSiteType,
 ): boolean {
+  if (siteType === SITE_TYPES.CLI_PROXY_API) {
+    const config = preferences.cliProxyApi
+    return Boolean(config && [config.baseUrl, config.adminToken].some(hasText))
+  }
   if (siteType === SITE_TYPES.OCTOPUS) {
     const config = preferences.octopus
     return Boolean(
@@ -124,6 +134,18 @@ export function resolveManagedSiteRuntimeConfigForType<
   preferences: UserPreferences,
   siteType: TSiteType,
 ): ManagedSiteRuntimeConfigForType<TSiteType> | null {
+  if (siteType === SITE_TYPES.CLI_PROXY_API) {
+    const config = preferences.cliProxyApi
+    if (!config || !hasText(config.baseUrl) || !hasText(config.adminToken))
+      return null
+    return {
+      siteType,
+      config: {
+        ...config,
+        baseUrl: normalizeCliProxyApiDeploymentUrl(config.baseUrl),
+      },
+    } as ManagedSiteRuntimeConfigForType<TSiteType>
+  }
   if (siteType === SITE_TYPES.OCTOPUS) {
     const config = preferences.octopus
     if (

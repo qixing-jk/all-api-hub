@@ -96,7 +96,10 @@ import { applyPreferenceLanguage } from "~/utils/i18n/applyPreferenceLanguage"
 import { t as translate } from "~/utils/i18n/core"
 import { changePageLanguage } from "~/utils/i18n/pageLanguage"
 
-import { WEBDAV_TARGET_IDS } from "../searchTargets"
+import {
+  getCloudSyncProviderForTarget,
+  WEBDAV_TARGET_IDS,
+} from "../searchTargets"
 import { IMPORT_EXPORT_TEST_IDS } from "../testIds"
 import {
   BACKUP_VERSION,
@@ -212,14 +215,6 @@ function FieldHelpPopover({
       </PopoverContent>
     </Popover>
   )
-}
-
-/** Keep manual UI flows compatible with older preference test doubles. */
-async function exportPreferencesForBackup() {
-  if (typeof userPreferences.exportPreferencesForBackup === "function") {
-    return userPreferences.exportPreferencesForBackup()
-  }
-  return userPreferences.exportPreferences()
 }
 
 const WEBDAV_SYNC_DATA_INPUT_IDS: Record<WebDAVSyncDataKey, string> = {
@@ -484,16 +479,36 @@ export default function WebDAVSettings({
           syncData: syncDataSelection,
         }
 
-  const handleProviderChange = (nextProvider: CloudSyncProvider) => {
-    setGistEncryptionPasswordError(undefined)
-    setLocalConfig((previousConfig) => ({
-      ...previousConfig,
-      provider: nextProvider,
-      ...(nextProvider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
-        ? { backupEncryptionEnabled: true }
-        : {}),
-    }))
-  }
+  const handleProviderChange = useCallback(
+    (nextProvider: CloudSyncProvider) => {
+      setGistEncryptionPasswordError(undefined)
+      setLocalConfig((previousConfig) => ({
+        ...previousConfig,
+        provider: nextProvider,
+        ...(nextProvider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+          ? { backupEncryptionEnabled: true }
+          : {}),
+      }))
+    },
+    [setGistEncryptionPasswordError, setLocalConfig],
+  )
+
+  useEffect(() => {
+    const revealSearchTarget = () => {
+      const params = new URLSearchParams(window.location.search)
+      const targetProvider = getCloudSyncProviderForTarget(
+        params.get("highlight") ?? params.get("anchor"),
+      )
+      if (targetProvider) handleProviderChange(targetProvider)
+    }
+    revealSearchTarget()
+    window.addEventListener("popstate", revealSearchTarget)
+    window.addEventListener("hashchange", revealSearchTarget)
+    return () => {
+      window.removeEventListener("popstate", revealSearchTarget)
+      window.removeEventListener("hashchange", revealSearchTarget)
+    }
+  }, [handleProviderChange])
 
   const persistWebdavConfig = async (
     updates: Partial<WebDAVSettings> = webdavConfigForSave,
@@ -727,7 +742,7 @@ export default function WebDAVSettings({
       ] = await Promise.all([
         accountDataTransfer.exportData(),
         tagStorage.exportTagStore(),
-        exportPreferencesForBackup(),
+        userPreferences.exportPreferencesForBackup(),
         featureGuidanceState.getState(),
         channelConfigStorage.exportConfigs(),
         apiCredentialProfilesStorage.exportConfig(),

@@ -183,6 +183,341 @@ describe("New API native managed resource", () => {
     )
   })
 
+  it("saves advanced edits against fresh settings and verifies persisted values", async () => {
+    const initial = {
+      ...channel,
+      test_model: "old-test",
+      auto_ban: 1,
+      tag: "old-tag",
+      remark: "old-note",
+      model_mapping: '{"alias":"model-a"}',
+      setting: '{"proxy":"https://old.invalid","force_format":true}',
+      settings: JSON.stringify({
+        upstream_model_update_check_enabled: true,
+        upstream_model_update_auto_sync_enabled: true,
+        upstream_model_update_ignored_models: ["ignored"],
+        upstream_model_update_last_check_time: 100,
+        future: "old",
+      }),
+    }
+    const fresh = {
+      ...initial,
+      setting:
+        '{"proxy":"https://old.invalid","force_format":false,"future":42}',
+      settings: JSON.stringify({
+        ...JSON.parse(initial.settings),
+        future: "fresh",
+        upstream_model_update_last_check_time: 200,
+      }),
+    }
+    mocks.get.mockResolvedValue(initial)
+    const workspace = await newApiManagedResourceRegistration.open()
+    const ref = (await workspace.list()).items[0].ref
+    const editor = await workspace.openEditEditor(ref)
+    const F = NEW_API_MANAGED_RESOURCE_FIELD_IDS
+    expect(editor.initialValues[F.ModelMapping]).toEqual(["alias", "model-a"])
+    const values = {
+      ...editor.initialValues,
+      [F.TestModel]: "",
+      [F.AutoBan]: false,
+      [F.Tag]: "",
+      [F.Remark]: "",
+      [F.ModelMapping]: [],
+      [F.Proxy]: "",
+      [F.UpstreamCheck]: false,
+      [F.UpstreamAutoSync]: false,
+      [F.UpstreamIgnoredModels]: [],
+    }
+    expect(editor.validate(values)).toEqual({ valid: true })
+    mocks.get.mockResolvedValue(fresh)
+    mocks.update.mockImplementation(async (_config, payload) => {
+      mocks.get.mockResolvedValue({ ...fresh, ...payload })
+      return {
+        outcome: "succeeded",
+        data: { id: channel.id },
+        confirmedEffects: [
+          {
+            kind: "resource-updated",
+            resourceKind: "channel",
+            resourceId: channel.id,
+          },
+        ],
+      }
+    })
+    expect((await editor.submit(values)).outcome).toBe("succeeded")
+    const payload = mocks.update.mock.calls[0][1]
+    expect(payload).toMatchObject({
+      test_model: "",
+      auto_ban: 0,
+      tag: "",
+      remark: "",
+      model_mapping: "",
+    })
+    expect(JSON.parse(payload.setting)).toEqual({
+      proxy: "",
+      force_format: false,
+      future: 42,
+    })
+    expect(JSON.parse(payload.settings)).toEqual({
+      upstream_model_update_check_enabled: false,
+      upstream_model_update_auto_sync_enabled: false,
+      upstream_model_update_ignored_models: [],
+      upstream_model_update_last_check_time: 200,
+      future: "fresh",
+    })
+    expect(mocks.fetchSecretKey).not.toHaveBeenCalled()
+  })
+
+  it("does not report success when an older server ignores advanced settings", async () => {
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    const result = await editor.submit({
+      ...editor.initialValues,
+      [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Remark]: "new note",
+    })
+    expect(result).toMatchObject({
+      outcome: "partial",
+      completion: "uncertain",
+    })
+    expect(mocks.update).toHaveBeenCalledOnce()
+  })
+
+  it("creates channels with advanced settings and confirms the created detail", async () => {
+    mocks.list
+      .mockResolvedValueOnce({ items: [channel], total: 1 })
+      .mockResolvedValue({ items: [channel, createdChannel], total: 2 })
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openCreateEditor()
+    const F = NEW_API_MANAGED_RESOURCE_FIELD_IDS
+    mocks.get.mockResolvedValue({
+      ...createdChannel,
+      remark: "creation note",
+      auto_ban: 0,
+    })
+    const values = {
+      ...editor.initialValues,
+      [F.Name]: "Imported channel",
+      [F.Key]: { kind: "replace" as const, value: "sk-fixture" },
+      [F.Models]: ["model-a"],
+      [F.Remark]: "creation note",
+      [F.AutoBan]: false,
+    }
+    expect((await editor.submit(values)).outcome).toBe("succeeded")
+    expect(mocks.create.mock.calls[0][1].channel).toMatchObject({
+      remark: "creation note",
+      auto_ban: 0,
+    })
+  })
+
+  it("keeps a successful write uncertain if its confirmation read fails", async () => {
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    mocks.update.mockImplementation(async () => {
+      mocks.get.mockRejectedValue(new Error("read unavailable"))
+      return {
+        outcome: "succeeded",
+        data: {},
+        confirmedEffects: [
+          {
+            kind: "resource-updated",
+            resourceKind: "channel",
+            resourceId: channel.id,
+          },
+        ],
+      }
+    })
+    expect(
+      await editor.submit({
+        ...editor.initialValues,
+        [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Tag]: "changed",
+      }),
+    ).toMatchObject({ outcome: "partial", completion: "uncertain" })
+  })
+
+  it("disables route-dependent Advanced Custom detection while supporting New API channels", async () => {
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openCreateEditor()
+    const F = NEW_API_MANAGED_RESOURCE_FIELD_IDS
+    const values = {
+      ...editor.initialValues,
+      [F.Name]: "Detection",
+      [F.BaseUrl]: "https://managed.example.invalid",
+      [F.Key]: { kind: "replace" as const, value: "sk-fixture" },
+      [F.Models]: ["model-a"],
+      [F.UpstreamCheck]: true,
+    }
+    expect(
+      editor.validate({
+        ...values,
+        [F.Type]: String(ChannelType.AdvancedCustom),
+      }),
+    ).toMatchObject({
+      valid: false,
+      issues: expect.arrayContaining([
+        expect.objectContaining({ fieldId: F.UpstreamCheck }),
+      ]),
+    })
+    expect(
+      editor.validate({ ...values, [F.Type]: String(ChannelType.NewAPI) }),
+    ).toEqual({ valid: true })
+  })
+
+  it("accepts normalized empty settings and confirms nonempty model mappings", async () => {
+    const F = NEW_API_MANAGED_RESOURCE_FIELD_IDS
+    mocks.get.mockResolvedValue({
+      ...channel,
+      setting: '{"proxy":"https://old.invalid"}',
+      settings: JSON.stringify({
+        upstream_model_update_check_enabled: true,
+        upstream_model_update_auto_sync_enabled: true,
+        upstream_model_update_ignored_models: ["old"],
+      }),
+    })
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    mocks.update.mockImplementation(async (_config, payload) => {
+      mocks.get.mockResolvedValue({
+        ...channel,
+        ...payload,
+        setting: "{}",
+        settings: "{}",
+      })
+      return {
+        outcome: "succeeded",
+        data: { id: channel.id },
+        confirmedEffects: [
+          {
+            kind: "resource-updated",
+            resourceKind: "channel",
+            resourceId: channel.id,
+          },
+        ],
+      }
+    })
+    expect(
+      (
+        await editor.submit({
+          ...editor.initialValues,
+          [F.Proxy]: "",
+          [F.UpstreamCheck]: false,
+          [F.UpstreamAutoSync]: false,
+          [F.UpstreamIgnoredModels]: [],
+          [F.ModelMapping]: ["alias", "model-a"],
+        })
+      ).outcome,
+    ).toBe("succeeded")
+  })
+
+  it("keeps an unconfirmed advanced write uncertain without inventing effects", async () => {
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    mocks.update.mockResolvedValue({
+      outcome: "succeeded",
+      data: { id: channel.id },
+      confirmedEffects: [],
+    })
+    expect(
+      await editor.submit({
+        ...editor.initialValues,
+        [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Tag]: "unsaved",
+      }),
+    ).toMatchObject({ outcome: "uncertain" })
+  })
+
+  it("rejects secret reads for unrelated fields without fetching a credential", async () => {
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    await expect(
+      editor.loadSecret!(NEW_API_MANAGED_RESOURCE_FIELD_IDS.Name),
+    ).rejects.toBeInstanceOf(ManagedResourceError)
+    expect(mocks.fetchSecretKey).not.toHaveBeenCalled()
+  })
+
+  it("validates mappings, proxy URLs, notes and model detection dependencies", async () => {
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    const F = NEW_API_MANAGED_RESOURCE_FIELD_IDS
+    for (const [id, value] of [
+      [F.ModelMapping, ["alias", "model-a", "alias", "model-b"]],
+      [F.ModelMapping, ["alias", ""]],
+      [F.Proxy, "file:///tmp/proxy"],
+      [F.Proxy, "invalid-url"],
+      [F.AutoBan, "yes"],
+      [F.Remark, 42],
+      // Deliberately bypass the input type to verify runtime validation.
+      [F.UpstreamIgnoredModels, [42] as unknown as readonly string[]],
+      [F.Remark, "x".repeat(256)],
+      [F.UpstreamAutoSync, true],
+    ] as const) {
+      expect(
+        editor.validate({ ...editor.initialValues, [id]: value }),
+      ).toMatchObject({
+        valid: false,
+        issues: expect.arrayContaining([
+          expect.objectContaining({ fieldId: id }),
+        ]),
+      })
+    }
+    expect(
+      editor.validate({
+        ...editor.initialValues,
+        [F.Proxy]: "socks5h://127.0.0.1:1080",
+        [F.ModelMapping]: ["alias", "upstream"],
+      }),
+    ).toEqual({ valid: true })
+    expect(
+      editor.validate({
+        ...editor.initialValues,
+        [F.Type]: String(ChannelType.Azure),
+        [F.UpstreamCheck]: true,
+      }),
+    ).toMatchObject({ valid: false })
+  })
+
+  it("preserves malformed advanced JSON on unrelated edits and blocks overwriting it", async () => {
+    mocks.get.mockResolvedValue({
+      ...channel,
+      setting: "broken-json",
+      settings: "[]",
+      model_mapping: '{"alias":5}',
+    })
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    const F = NEW_API_MANAGED_RESOURCE_FIELD_IDS
+    expect(
+      editor.validate({ ...editor.initialValues, [F.Name]: "rename" }),
+    ).toEqual({ valid: true })
+    expect(
+      editor.validate({
+        ...editor.initialValues,
+        [F.Proxy]: "https://proxy.invalid",
+      }),
+    ).toMatchObject({ valid: false })
+    expect(
+      (await editor.submit({ ...editor.initialValues, [F.Name]: "rename" }))
+        .outcome,
+    ).toBe("succeeded")
+    expect(mocks.update.mock.calls[0][1]).toMatchObject({
+      setting: "broken-json",
+      settings: "[]",
+      model_mapping: '{"alias":5}',
+    })
+  })
+
   it("registers New API with native channel presentation policy", () => {
     expect(
       getAccountSiteDefinition(SITE_TYPES.NEW_API)?.managedResource,
@@ -431,13 +766,17 @@ describe("New API native managed resource", () => {
 
     const editor = await workspace.openEditEditor(ref)
 
-    expect(
-      editor.fields.find(
-        (field) => field.fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups,
+    expect(mocks.fetchSiteUserGroups).not.toHaveBeenCalled()
+    await expect(
+      editor.loadOptions!(
+        NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups,
+        editor.initialValues,
       ),
-    ).toMatchObject({
-      options: [{ value: "default" }, { value: "vip" }, { value: "research" }],
-    })
+    ).resolves.toEqual([
+      { value: "default" },
+      { value: "vip" },
+      { value: "research" },
+    ])
   })
 
   it("preserves an unknown future channel type while editing other fields", async () => {
@@ -853,13 +1192,25 @@ describe("New API native managed resource", () => {
         (field) => field.fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups,
       ),
     ).toMatchObject({
-      options: [{ value: "default" }, { value: "vip" }],
+      options: [],
+      optionLoader: {
+        dependsOn: [],
+        trigger: RESOURCE_FIELD_OPTION_LOAD_TRIGGERS.Automatic,
+      },
     })
+    expect(mocks.fetchSiteUserGroups).not.toHaveBeenCalled()
+    await expect(
+      editor.loadOptions!(
+        NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups,
+        editor.initialValues,
+        { signal },
+      ),
+    ).resolves.toEqual([{ value: "default" }, { value: "vip" }])
     expect(mocks.fetchAccountAvailableModels).not.toHaveBeenCalled()
     expect(mocks.fetchSiteUserGroups).toHaveBeenCalledWith(config, { signal })
   })
 
-  it("keeps optional group suggestions empty when their provider query fails", async () => {
+  it("opens without optional groups and exposes lookup failure for retry", async () => {
     mocks.fetchSiteUserGroups.mockRejectedValueOnce(
       new ApiError("group inventory unavailable", 503),
     )
@@ -872,6 +1223,18 @@ describe("New API native managed resource", () => {
     )
 
     expect(groupsField).toMatchObject({ options: [] })
+    await expect(
+      editor.loadOptions!(
+        NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups,
+        editor.initialValues,
+      ),
+    ).rejects.toBeInstanceOf(ManagedResourceError)
+    await expect(
+      editor.loadOptions!(
+        NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups,
+        editor.initialValues,
+      ),
+    ).resolves.toEqual([{ value: "default" }, { value: "vip" }])
   })
 
   it("discards group suggestions that arrive after cancellation", async () => {
@@ -883,8 +1246,13 @@ describe("New API native managed resource", () => {
     })
 
     const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openCreateEditor()
     await expectFailureCode(
-      workspace.openCreateEditor({ signal: controller.signal }),
+      editor.loadOptions!(
+        NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups,
+        editor.initialValues,
+        { signal: controller.signal },
+      ),
       MANAGED_RESOURCE_FAILURE_CODES.Aborted,
     )
     expect(mocks.fetchSiteUserGroups).toHaveBeenCalledWith(config, {

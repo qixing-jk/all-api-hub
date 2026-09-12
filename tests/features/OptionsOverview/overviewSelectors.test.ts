@@ -540,11 +540,11 @@ describe("Options overview selectors", () => {
       ],
       [
         "balanceHistory",
-        "disabled",
-        MENU_ITEM_IDS.BASIC,
-        "balanceHistory",
-        SETTINGS_ANCHORS.BALANCE_HISTORY,
-        SETTINGS_ANCHORS.BALANCE_HISTORY,
+        "needs_setup",
+        MENU_ITEM_IDS.ACCOUNT,
+        undefined,
+        undefined,
+        undefined,
       ],
     ])
     expect(

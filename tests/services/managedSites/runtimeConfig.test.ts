@@ -30,6 +30,28 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
 })
 
 describe("managed-site runtime config resolver", () => {
+  it.each([
+    [{ baseUrl: "", adminToken: "" }, false],
+    [{ baseUrl: "http://localhost:8317", adminToken: "" }, true],
+    [{ baseUrl: "", adminToken: "saved-key" }, true],
+  ] as const)(
+    "detects partially configured CLIProxyAPI input without treating it as ready",
+    (cliProxyApi, expected) => {
+      const preferences = buildUserPreferences({ cliProxyApi })
+      expect(
+        hasManagedSiteRuntimeConfigInputForType(
+          preferences,
+          SITE_TYPES.CLI_PROXY_API,
+        ),
+      ).toBe(expected)
+      expect(
+        resolveManagedSiteRuntimeConfigForType(
+          preferences,
+          SITE_TYPES.CLI_PROXY_API,
+        ),
+      ).toBeNull()
+    },
+  )
   beforeEach(() => {
     mockGetPreferences.mockReset()
   })

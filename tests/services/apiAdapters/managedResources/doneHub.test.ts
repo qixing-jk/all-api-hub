@@ -33,6 +33,7 @@ const mocks = vi.hoisted(() => ({
   fetchModels: vi.fn(),
   fetchDraftModels: vi.fn(),
   fetchSiteUserGroups: vi.fn(),
+  fetchEditorModels: vi.fn(),
 }))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
@@ -62,6 +63,7 @@ vi.mock("~/services/apiAdapters/managedSites/doneHub", () => ({
 vi.mock("~/services/apiService/doneHub", async (original) => ({
   ...(await original<typeof import("~/services/apiService/doneHub")>()),
   fetchChannelRaw: mocks.fetchChannelRaw,
+  fetchDoneHubProviderModels: mocks.fetchEditorModels,
 }))
 
 const config = {
@@ -106,6 +108,278 @@ const expectFailureCode = async (promise: Promise<unknown>, code: string) => {
 }
 
 describe("DoneHub native managed resource", () => {
+  it("creates native advanced settings from an editor draft", async () => {
+    mocks.list
+      .mockResolvedValueOnce({ items: [], total: 0 })
+      .mockResolvedValue({ items: [channel], total: 1 })
+    const workspace = await doneHubManagedResourceRegistration.open()
+    const editor = await workspace.openCreateEditor()
+    const values = {
+      ...editor.initialValues,
+      "doneHub.name": "Advanced created",
+      "doneHub.type": String(DoneHubChannelType.Custom),
+      "doneHub.baseUrl": "https://upstream.example",
+      "doneHub.key": { kind: "replace" as const, value: "create-key" },
+      "doneHub.models": ["model-a"],
+      "doneHub.compatibleResponse": true,
+      "doneHub.responsesPath": "/native/responses",
+      "doneHub.proxy": "socks5://localhost:1080",
+      "doneHub.modelHeaders": '{"X-Project":"fixture"}',
+      "doneHub.customParameter": '{"overwrite":true,"temperature":0.5}',
+    }
+    expect(editor.validate(values)).toEqual({ valid: true })
+    await editor.submit(values)
+    expect(mocks.create).toHaveBeenCalledWith(
+      config,
+      expect.objectContaining({
+        compatible_response: true,
+        proxy: "socks5://localhost:1080",
+        model_headers: '{"X-Project":"fixture"}',
+        custom_parameter: '{"overwrite":true,"temperature":0.5}',
+        plugin: { customize: { "16": "/native/responses" } },
+      }),
+      undefined,
+    )
+  })
+
+  it.each([
+    "doneHub.modelHeaders",
+    "doneHub.modelMapping",
+    "doneHub.customParameter",
+  ])(
+    "reports invalid %s as field validation during discovery and recovers after repair",
+    async (fieldId) => {
+      mocks.fetchEditorModels.mockResolvedValue(["recovered-model"])
+      const workspace = await doneHubManagedResourceRegistration.open()
+      const editor = await workspace.openEditEditor(
+        (await workspace.list()).items[0].ref,
+      )
+      await expect(
+        editor.loadOptions!("doneHub.models", {
+          ...editor.initialValues,
+          [fieldId]: "{broken",
+        }),
+      ).rejects.toMatchObject({
+        failure: {
+          code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+          fieldIssues: [{ fieldId, code: "invalid_value" }],
+        },
+      })
+      expect(mocks.fetchEditorModels).not.toHaveBeenCalled()
+      expect(
+        await editor.loadOptions!("doneHub.models", {
+          ...editor.initialValues,
+          [fieldId]: "{}",
+        }),
+      ).toEqual([{ value: "recovered-model" }])
+    },
+  )
+
+  it("discovers create-draft models with a supplied key and rejects missing credentials", async () => {
+    mocks.fetchEditorModels.mockResolvedValue(["draft-model"])
+    const workspace = await doneHubManagedResourceRegistration.open()
+    const editor = await workspace.openCreateEditor()
+    const values = {
+      ...editor.initialValues,
+      "doneHub.name": "Draft",
+      "doneHub.baseUrl": "http://upstream.example",
+      "doneHub.key": { kind: "replace" as const, value: "draft-key" },
+    }
+    expect(await editor.loadOptions!("doneHub.models", values)).toEqual([
+      { value: "draft-model" },
+    ])
+    expect(mocks.fetchEditorModels).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ key: "draft-key" }),
+      undefined,
+    )
+    mocks.fetchEditorModels.mockClear()
+    await expect(
+      editor.loadOptions!("doneHub.models", {
+        ...values,
+        "doneHub.key": { kind: "unchanged" },
+      }),
+    ).rejects.toMatchObject({
+      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
+    })
+    expect(mocks.fetchEditorModels).not.toHaveBeenCalled()
+    await expect(
+      editor.loadOptions!("unsupported", values),
+    ).rejects.toMatchObject({
+      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
+    })
+  })
+
+  it("uses edited proxy and headers for model discovery without saving or exposing the credential", async () => {
+    mocks.fetchEditorModels.mockResolvedValue(["discovered-model"])
+    const workspace = await doneHubManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    const result = await editor.loadOptions!("doneHub.models", {
+      ...editor.initialValues,
+      "doneHub.proxy": "socks5://new-proxy:1080",
+      "doneHub.modelHeaders": '{"X-Project":"changed"}',
+    })
+    expect(result).toEqual([{ value: "discovered-model" }])
+    expect(mocks.fetchEditorModels).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        proxy: "socks5://new-proxy:1080",
+        model_headers: '{"X-Project":"changed"}',
+        key: "credential-placeholder",
+      }),
+      undefined,
+    )
+    expect(mocks.update).not.toHaveBeenCalled()
+    expect(JSON.stringify(editor.initialValues)).not.toContain(
+      "credential-placeholder",
+    )
+  })
+
+  it("does not submit hidden Responses or model settings after switching to an incompatible channel type", async () => {
+    const saved = {
+      ...channel,
+      type: DoneHubChannelType.Custom,
+      plugin: { customize: { "16": "/keep/responses" } },
+      test_model: "old-chat",
+    }
+    mocks.fetchChannelRaw.mockResolvedValue({ ...saved, key: "saved-key" })
+    const workspace = await doneHubManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    await editor.submit({
+      ...editor.initialValues,
+      "doneHub.type": String(DoneHubChannelType.Midjourney),
+      "doneHub.baseUrl": "https://midjourney.example",
+      "doneHub.responsesPath": "/changed/responses",
+      "doneHub.modelMapping": "{unfinished",
+      "doneHub.testModel": "changed-chat",
+    })
+    const payload = mocks.update.mock.calls[0][1]
+    expect(payload).not.toHaveProperty("plugin")
+    expect(payload).not.toHaveProperty("test_model")
+    expect(payload).not.toHaveProperty("model_mapping")
+  })
+
+  it("round-trips advanced values and preserves fresh fields when switches and lists are cleared", async () => {
+    const saved = {
+      ...channel,
+      key: "saved-key",
+      compatible_response: true,
+      allow_extra_body: true,
+      test_model: "model-a",
+      model_mapping: '{"alias":"model-a"}',
+      model_headers: '{"X-Project":"example"}',
+      custom_parameter: '{"temperature":0.7}',
+      disabled_stream: ["model-a"],
+    }
+    mocks.fetchChannelRaw.mockResolvedValueOnce(saved).mockResolvedValue({
+      ...saved,
+      key: "fresh-key",
+      proxy: "socks5://fresh.example:1080",
+      future_field: { fresh: true },
+    })
+    const workspace = await doneHubManagedResourceRegistration.open()
+    const ref = (await workspace.list()).items[0].ref
+    const editor = await workspace.openEditEditor(ref)
+    expect(editor.initialValues["doneHub.compatibleResponse"]).toBe(true)
+    expect(editor.initialValues["doneHub.testModel"]).toBe("model-a")
+    expect(editor.initialValues["doneHub.disabledStream"]).toEqual(["model-a"])
+    const values = {
+      ...editor.initialValues,
+      "doneHub.compatibleResponse": false,
+      "doneHub.allowExtraBody": false,
+      "doneHub.testModel": "",
+      "doneHub.modelMapping": "{}",
+      "doneHub.modelHeaders": "{}",
+      "doneHub.customParameter": "",
+      "doneHub.disabledStream": [],
+    }
+    expect(editor.validate(values)).toEqual({ valid: true })
+    await editor.submit(values)
+    expect(mocks.update).toHaveBeenCalledWith(
+      config,
+      expect.objectContaining({
+        compatible_response: false,
+        allow_extra_body: false,
+        test_model: "",
+        model_mapping: "{}",
+        model_headers: "{}",
+        custom_parameter: "",
+        disabled_stream: [],
+        proxy: "socks5://fresh.example:1080",
+        key: "fresh-key",
+        future_field: { fresh: true },
+      }),
+      undefined,
+    )
+  })
+
+  it("merges an edited Responses path with fresh plugin settings", async () => {
+    const saved = {
+      ...channel,
+      type: DoneHubChannelType.Custom,
+      key: "saved-key",
+      base_url: "https://upstream.example",
+      plugin: {
+        customize: { "16": "/old/responses", "1": "/old/chat" },
+        extra: { enabled: true },
+      },
+    }
+    mocks.fetchChannelRaw.mockResolvedValueOnce(saved).mockResolvedValue({
+      ...saved,
+      plugin: {
+        ...saved.plugin,
+        customize: { "16": "/old/responses", "1": "/fresh/chat" },
+      },
+    })
+    const workspace = await doneHubManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    expect(editor.initialValues["doneHub.responsesPath"]).toBe("/old/responses")
+    await editor.submit({
+      ...editor.initialValues,
+      "doneHub.responsesPath": "",
+    })
+    expect(mocks.update).toHaveBeenCalledWith(
+      config,
+      expect.objectContaining({
+        plugin: {
+          customize: { "16": "", "1": "/fresh/chat" },
+          extra: { enabled: true },
+        },
+      }),
+      undefined,
+    )
+  })
+
+  it.each([
+    ["doneHub.modelMapping", '[ ["alias", "one"], ["alias", "two"] ]'],
+    ["doneHub.modelHeaders", '{"X-Project":5}'],
+    ["doneHub.customParameter", "[1,2]"],
+    ["doneHub.customParameter", "{broken"],
+    ["doneHub.proxy", "ftp://proxy.example"],
+    ["doneHub.proxy", "not a URL"],
+  ])(
+    "rejects invalid advanced input in %s before any mutation",
+    async (fieldId, value) => {
+      const workspace = await doneHubManagedResourceRegistration.open()
+      const editor = await workspace.openEditEditor(
+        (await workspace.list()).items[0].ref,
+      )
+      const values = { ...editor.initialValues, [fieldId]: value }
+      expect(editor.validate(values)).toEqual({
+        valid: false,
+        issues: expect.arrayContaining([{ fieldId, code: "invalid_value" }]),
+      })
+      await editor.submit(values)
+      expect(mocks.update).not.toHaveBeenCalled()
+    },
+  )
+
   beforeEach(() => {
     vi.resetAllMocks()
     mocks.getPreferences.mockResolvedValue({ doneHub: config })
@@ -539,6 +813,13 @@ describe("DoneHub native managed resource", () => {
     const editor = await workspace.openEditEditor(
       (await workspace.list()).items[0].ref,
     )
+    expect(mocks.fetchSiteUserGroups).not.toHaveBeenCalled()
+    await expect(
+      editor.loadOptions!(
+        DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Groups,
+        editor.initialValues,
+      ),
+    ).rejects.toBeInstanceOf(ManagedResourceError)
     expect(mocks.fetchSiteUserGroups).toHaveBeenCalledWith(config, undefined)
     expect(
       editor.fields.find(

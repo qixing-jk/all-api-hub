@@ -34,7 +34,6 @@ const { optionsOverviewDataState } = vi.hoisted(() => ({
           { id: "source", state: "completed" },
           { id: "gateway_settings", state: "completed" },
           { id: "gateway_channel", state: "current" },
-          { id: "client_access", state: "upcoming" },
         ],
         primaryAction: {
           kind: "open_api_credential_profiles",
@@ -95,7 +94,8 @@ vi.mock("~/components/PageHeader", () => ({
   ),
 }))
 
-vi.mock("~/components/ui", () => ({
+vi.mock("~/components/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/components/ui")>()),
   Badge: ({ children }: { children: ReactNode }) => <span>{children}</span>,
   Button: ({
     children,
@@ -286,10 +286,10 @@ describe("UnifiedApiGuidanceDevPreview", () => {
       ),
     ).toBeInTheDocument()
     expect(
-      scenarioQueries.getAllByText(
+      scenarioQueries.queryByText(
         "optionsOverview:unifiedApiGuidance.stepper.states.current",
-      ).length,
-    ).toBeGreaterThan(0)
+      ),
+    ).not.toBeInTheDocument()
   })
 
   it("shows a neutral unavailable state when current guidance cannot be computed", () => {

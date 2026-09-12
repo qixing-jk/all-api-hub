@@ -18,13 +18,13 @@ import {
   claudeCodeRouterSearchSections,
 } from "~/features/BasicSettings/components/tabs/ClaudeCodeRouter/ClaudeCodeRouter.search"
 import {
-  cliProxySearchControls,
-  cliProxySearchSections,
-} from "~/features/BasicSettings/components/tabs/CliProxy/CliProxy.search"
-import {
   generalSearchControls,
   generalSearchSections,
 } from "~/features/BasicSettings/components/tabs/General/General.search"
+import {
+  cliProxyApiSearchControls,
+  cliProxyApiSearchSections,
+} from "~/features/BasicSettings/components/tabs/ManagedSite/CliProxyApi.search"
 import {
   managedSiteSearchControls,
   managedSiteSearchSections,
@@ -70,7 +70,7 @@ export const OPTIONS_SEARCH_REGISTRY = [
   ...usageHistorySyncSearchSections,
   ...webAiApiCheckSearchSections,
   ...managedSiteSearchSections,
-  ...cliProxySearchSections,
+  ...cliProxyApiSearchSections,
   ...claudeCodeRouterSearchSections,
   ...permissionsSearchSections,
   ...importExportSearchSections,
@@ -84,7 +84,7 @@ export const OPTIONS_SEARCH_REGISTRY = [
   ...usageHistorySyncSearchControls,
   ...webAiApiCheckSearchControls,
   ...managedSiteSearchControls,
-  ...cliProxySearchControls,
+  ...cliProxyApiSearchControls,
   ...claudeCodeRouterSearchControls,
   ...permissionsSearchControls,
   ...importExportSearchControls,
@@ -93,11 +93,15 @@ export const OPTIONS_SEARCH_REGISTRY = [
 /**
  * Resolves synthetic page title tokens into translated menu labels.
  */
-export function resolveSyntheticPageTitle(titleKey: string, t: TFunction) {
+export function resolveSyntheticPageTitle(
+  titleKey: string,
+  t: TFunction,
+  options?: { autoCheckinEnabled?: boolean },
+) {
   if (!titleKey.startsWith("__page:")) {
     return t(titleKey)
   }
 
   const pageId = titleKey.slice("__page:".length)
-  return getMenuItemLabel(t, pageId as OptionsPageMenuItemId)
+  return getMenuItemLabel(t, pageId as OptionsPageMenuItemId, options)
 }

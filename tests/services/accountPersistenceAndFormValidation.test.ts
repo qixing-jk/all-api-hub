@@ -604,6 +604,17 @@ describe("account persistence and form validation", () => {
   })
 
   describe("extractDomainPrefix", () => {
+    it.each([
+      ["api.alice.github.io", "Alice"],
+      ["bob.github.io", "Bob"],
+      ["school.k12.ak.us", "School"],
+      ["www.city.kawasaki.jp", "City"],
+      ["127.0.0.1", "127.0.0.1"],
+      ["[::1]", "[::1]"],
+    ])("uses the registrable name or full host for %s", (hostname, name) => {
+      expect(extractDomainPrefix(hostname)).toBe(name)
+    })
+
     it("extracts simple domain", () => {
       expect(extractDomainPrefix("example.com")).toBe("Example")
     })

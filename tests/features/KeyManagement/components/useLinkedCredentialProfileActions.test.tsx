@@ -30,8 +30,8 @@ const {
 const preferences = {
   claudeCodeRouterApiKey: "router-key",
   claudeCodeRouterBaseUrl: "https://router.example.invalid",
-  cliProxyBaseUrl: "https://cli.example.invalid",
-  cliProxyManagementKey: "cli-key",
+  cliProxyApiBaseUrl: "https://cli.example.invalid",
+  cliProxyApiManagementKey: "cli-key",
   managedSiteType: "new-api",
   markGatewayGuidanceOnboardingCompleted: markOnboardingCompletedMock,
 }
@@ -88,8 +88,8 @@ describe("useLinkedCredentialProfileActions", () => {
     vi.clearAllMocks()
     preferences.claudeCodeRouterApiKey = "router-key"
     preferences.claudeCodeRouterBaseUrl = "https://router.example.invalid"
-    preferences.cliProxyBaseUrl = "https://cli.example.invalid"
-    preferences.cliProxyManagementKey = "cli-key"
+    preferences.cliProxyApiBaseUrl = "https://cli.example.invalid"
+    preferences.cliProxyApiManagementKey = "cli-key"
     preferences.managedSiteType = "new-api"
     markOnboardingCompletedMock.mockResolvedValue(undefined)
     startActionMock.mockReturnValue({ complete: completeActionMock })
@@ -106,7 +106,6 @@ describe("useLinkedCredentialProfileActions", () => {
     })
     expect(result.current.exportToken).toMatchObject({ key: profile.apiKey })
     expect(result.current.exportRuntimeKey).toBeDefined()
-    expect(result.current.cliProxyPayload).toBeDefined()
     expect(result.current.managedSiteLabel).toBe("managed-site:new-api")
 
     act(() => result.current.openDialog("verify-api"))
@@ -116,27 +115,24 @@ describe("useLinkedCredentialProfileActions", () => {
   })
 
   it("requires configured CLI integrations before opening their dialogs", () => {
-    preferences.cliProxyBaseUrl = " "
-    preferences.cliProxyManagementKey = " "
+    preferences.cliProxyApiBaseUrl = " "
+    preferences.cliProxyApiManagementKey = " "
     preferences.claudeCodeRouterBaseUrl = " "
     const { result } = renderHook(() =>
       useLinkedCredentialProfileActions(profile),
     )
 
-    act(() => result.current.handleCliProxy())
     act(() => result.current.handleClaudeCodeRouter())
-    expect(showResultToastMock).toHaveBeenCalledTimes(2)
+    expect(showResultToastMock).toHaveBeenCalledTimes(1)
     expect(result.current.activeDialog).toBeNull()
 
-    preferences.cliProxyBaseUrl = "https://cli.example.invalid"
-    preferences.cliProxyManagementKey = "cli-key"
+    preferences.cliProxyApiBaseUrl = "https://cli.example.invalid"
+    preferences.cliProxyApiManagementKey = "cli-key"
     preferences.claudeCodeRouterBaseUrl = "https://router.example.invalid"
     const configured = renderHook(() =>
       useLinkedCredentialProfileActions(profile),
     )
 
-    act(() => configured.result.current.handleCliProxy())
-    expect(configured.result.current.activeDialog).toBe("cli-proxy")
     act(() => configured.result.current.handleClaudeCodeRouter())
     expect(configured.result.current.activeDialog).toBe("claude-code-router")
   })
@@ -186,6 +182,7 @@ describe("useLinkedCredentialProfileActions", () => {
         name: profile.name,
         baseUrl: profile.baseUrl,
         apiKey: profile.apiKey,
+        apiType: profile.apiType,
       },
       expect.any(Function),
     )

@@ -11,6 +11,8 @@ import type {
   ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 
+import { ManagedResourceAdvancedField } from "./ManagedResourceAdvancedField"
+import { ManagedResourceAdvancedProjectionField } from "./ManagedResourceAdvancedProjectionField"
 import {
   canRenderManagedResourceChannelField,
   ManagedResourceChannelField,
@@ -62,6 +64,10 @@ const SECTION_LABEL_RESOLVERS = {
     t("managedSiteChannels:editor.sections.metadata"),
   [MANAGED_RESOURCE_SECTIONS.Advanced]: (t: TFunction) =>
     t("managedSiteChannels:editor.sections.advanced"),
+  [MANAGED_RESOURCE_SECTIONS.Compatibility]: (t: TFunction) =>
+    t("managedSiteChannels:editor.sections.compatibility"),
+  [MANAGED_RESOURCE_SECTIONS.Requests]: (t: TFunction) =>
+    t("managedSiteChannels:editor.sections.requests"),
 } as const satisfies Record<ManagedResourceSection, ManagedResourceTextResolver>
 
 const ISSUE_LABEL_RESOLVERS = {
@@ -105,13 +111,26 @@ export function ManagedResourceEditorBody({
       ...policy,
       fields: policy.fields.map((field) => ({
         ...field,
+        ...(field.resolveReadOnlyHelp &&
+        !["timestamp", "model-summary"].includes(
+          field.channelFieldRole ?? "",
+        ) &&
+        descriptors.some(
+          (descriptor) =>
+            descriptor.fieldId === field.fieldId && descriptor.readOnly,
+        )
+          ? {
+              resolveHelp: field.resolveReadOnlyHelp,
+              resolveDisabledHelp: field.resolveReadOnlyHelp,
+            }
+          : {}),
         issueLabelResolvers: {
           ...ISSUE_LABEL_RESOLVERS,
           ...field.issueLabelResolvers,
         },
       })),
     }),
-    [policy],
+    [policy, descriptors],
   )
   const channelFieldRoles = useMemo(
     () =>
@@ -121,6 +140,15 @@ export function ManagedResourceEditorBody({
     [policy],
   )
 
+  const handleValueChange = (fieldId: string, value: ResourceFieldValue) => {
+    onValueChange(fieldId, value)
+    if (value === false) {
+      for (const dependentId of policy.fields.find(
+        (field) => field.fieldId === fieldId,
+      )?.disableWithFieldIds ?? [])
+        onValueChange(dependentId, false)
+    }
+  }
   return (
     <NativeResourceEditorBody
       t={t}
@@ -131,17 +159,50 @@ export function ManagedResourceEditorBody({
       values={values}
       fieldIssues={fieldIssues}
       disabled={disabled}
-      onValueChange={onValueChange}
+      onValueChange={handleValueChange}
       onLoadOptions={onLoadOptions}
+      onLoadSecret={onLoadSecret}
       renderFieldOverride={({
         descriptor,
         presentation,
         errorMessage,
         options,
         optionControl,
+        disabled: fieldDisabled,
       }) => {
         const fieldId = descriptor.fieldId
+        const channelPresentation =
+          presentation as ManagedResourceFieldPresentation
+        if (channelPresentation.advancedControl)
+          return (
+            <ManagedResourceAdvancedField
+              t={t}
+              presentation={channelPresentation}
+              values={values}
+              disabled={fieldDisabled}
+              errorMessage={errorMessage}
+              onValueChange={handleValueChange}
+            />
+          )
         const channelFieldRole = channelFieldRoles.get(fieldId)
+        if (
+          ["string-mapping", "timestamp", "model-summary"].includes(
+            channelFieldRole ?? "",
+          )
+        )
+          return (
+            <ManagedResourceAdvancedProjectionField
+              t={t}
+              descriptor={descriptor}
+              presentation={
+                policy.fields.find((field) => field.fieldId === fieldId)!
+              }
+              values={values}
+              disabled={fieldDisabled}
+              errorMessage={errorMessage}
+              onValueChange={handleValueChange}
+            />
+          )
         if (
           !channelFieldRole ||
           !canRenderManagedResourceChannelField(channelFieldRole, descriptor)
@@ -158,9 +219,9 @@ export function ManagedResourceEditorBody({
             errorMessage={errorMessage}
             options={options}
             optionControl={optionControl}
-            disabled={disabled}
+            disabled={fieldDisabled}
             showModelPrefillWarning={showModelPrefillWarning}
-            onValueChange={onValueChange}
+            onValueChange={handleValueChange}
             loadedSecret={secretLoad.loadedSecret}
             isSecretRevealed={secretLoad.isSecretRevealed}
             isSecretLoading={secretLoad.isSecretLoading}

@@ -306,14 +306,13 @@
     },
     "boundaryNote": "All API Hub manages account keys. It does not proxy model requests; external clients call your self-hosted AI gateway.",
     "description": {
-      "has_gateway_channels": "A gateway channel was created or imported before. Open channel management to confirm its current state and continue client setup.",
+      "has_gateway_channels": "Gateway channels have been created or imported. Open channel management to check their current status.",
       "needs_importable_source": "The current accounts cannot expose importable keys. Save an API key first, or add an account type that supports key access, then import it into your self-hosted AI gateway.",
       "needs_managed_site": "You have account keys. Configure your self-hosted AI gateway to import them as gateway channels.",
-      "needs_sources": "After you add accounts, their keys can be exported directly to clients or imported into your self-hosted AI gateway as one unified AI API.",
+      "needs_sources": "Add an account, then import its keys into your self-hosted AI gateway to provide a unified AI API.",
       "ready_accounts": "Use Key Management to import selected account keys into self-hosted AI gateway channels.",
       "ready_profiles": "Saved API keys can be reused directly from the credential library or imported individually as gateway channels."
     },
-    "directToolExportNote": "If you do not need the self-hosted gateway yet, you can export a single credential directly to a client tool.",
     "dismissDialog": {
       "confirm": "Do not show again",
       "description": "The account page will stop showing this tip. You can still find the self-hosted AI gateway guidance on the overview page.",

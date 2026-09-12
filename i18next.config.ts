@@ -19,6 +19,8 @@ export default defineConfig({
     transComponents: ["Trans"],
     useTranslationNames: ["useTranslation"],
     preservePatterns: [
+      // Search-only title; the provider link uses a separate interpolated label.
+      "settings:managedSite.deploymentDocs",
       "settings:refresh.shieldAutomaticFeature*",
       "modelList:displayFacts.*",
       "productTour:search.keywords.*",

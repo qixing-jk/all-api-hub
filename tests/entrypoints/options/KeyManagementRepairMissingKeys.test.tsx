@@ -294,6 +294,7 @@ const startProgress: AccountKeyRepairProgress = {
 
 const completedProgress: AccountKeyRepairProgress = {
   ...startProgress,
+  updatedAt: 2,
   state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
   finishedAt: 2,
   summary: { ...emptySummary(), complete: 2 },
@@ -331,6 +332,7 @@ const multiOutcomeProgress: AccountKeyRepairProgress = {
 
 const failedProgress: AccountKeyRepairProgress = {
   ...multiOutcomeProgress,
+  updatedAt: 2,
   jobId: "job-1",
   state: ACCOUNT_KEY_REPAIR_JOB_STATES.Failed,
   finishedAt: 2,
@@ -776,6 +778,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     // Progress subscription updates the UI.
     const updated: AccountKeyRepairProgress = {
       ...startProgress,
+      updatedAt: 2,
       totals: { ...startProgress.totals, processedAccounts: 3 },
       summary: { ...startProgress.summary, complete: 2 },
       results: [
@@ -799,7 +802,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     expect(screen.getByText("Another Site")).toBeInTheDocument()
   })
 
-  it("shows repair-created import only after completed progress has exact references", async () => {
+  it("shows confirmed repair-created keys before completion and retains import afterwards", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
       if (message === AccountKeyRepairMessageTypes.GetProgress) {
         return { success: true, data: idleProgress }
@@ -830,13 +833,14 @@ describe("KeyManagement repair missing keys entry point", () => {
       )
     })
     expect(
-      screen.queryByTestId(
+      await screen.findByTestId(
         KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportButton,
       ),
-    ).not.toBeInTheDocument()
+    ).toBeVisible()
 
     const completedWithReferences: AccountKeyRepairProgress = {
       ...startProgress,
+      updatedAt: 2,
       state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
       finishedAt: 2,
       results: startProgress.results.map((result) =>
@@ -1640,6 +1644,7 @@ describe("KeyManagement repair missing keys entry point", () => {
         type: RuntimeMessageTypes.AccountKeyRepairProgress,
         payload: {
           ...runningCoverageProgress,
+          updatedAt: 3,
           summary: {
             ...runningCoverageProgress.summary,
             invalidResources: 0,

@@ -6,13 +6,14 @@
 
 All API Hub is deeply adapted to the following open-source/self-hosted AI distribution systems:
 
-| System Type | Core Management Object | Features |
-|----------|------------|------|
-| **New API / DoneHub / Veloera** | Channel | Classic channel management, supporting 55+ upstream types, with group, priority, and weight systems. |
-| **Sub2API** | Account | Unified access and shared management for Claude, OpenAI, Gemini, Antigravity, and other subscriptions. |
-| **AxonHub** | Channel | High-performance AI gateway, supporting 15+ channel types, with a simple interface and efficient configuration. |
-| **Claude Code Hub** | Provider | Focused on multi-vendor access and elastic scheduling, with clear provider management logic and adaptation to multiple response protocols. |
-| **Octopus** | Channel | Lightweight aggregation service for individuals, supporting 6 mainstream channel types. |
+| System Type                     | Core Management Object | Features                                                                                                                                   |
+| ------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **[CLIProxyAPI](./cliproxyapi-integration.md)**                 | Providers              | Manage upstream providers, credentials, and model mappings.                                                                                |
+| **New API / Veloera / DoneHub** | Channel                | Classic channel management, supporting 55+ upstream types, with group, priority, and weight systems.                                       |
+| **Sub2API**                     | Account                | Unified access and shared management for Claude, OpenAI, Gemini, Antigravity, and other subscriptions.                                     |
+| **AxonHub**                     | Channel                | High-performance AI gateway, supporting 15+ channel types, with a simple interface and efficient configuration.                            |
+| **Claude Code Hub**             | Provider               | Focused on multi-vendor access and elastic scheduling, with clear provider management logic and adaptation to multiple response protocols. |
+| **Octopus**                     | Channel                | Lightweight aggregation service for individuals, supporting 6 mainstream channel types.                                                    |
 
 ## Features at a Glance
 
@@ -28,21 +29,24 @@ What you can do depends on the site you select. Check the available actions and 
 Before using the management features, you need to complete the connection configuration for the corresponding backend in the extension.
 
 ### 1. Access the Configuration Page
+
 Open the extension settings page, go to **"Basic Settings"** in the left menu, and find **"Self-Hosted Site Management"**.
 
 ### 2. Fill in Connection Information
 
-| Option | Description |
-|------|------|
-| **Base URL** | Your self-hosted system's backend address (usually the web access address). |
-| **Authentication Credentials** | **New API Series**: Requires `Admin Token` and User ID.<br>**Sub2API**: Admin API Key (if key access requires additional web verification, the extension cannot view or export keys or migrate channels out).<br>**AxonHub**: Admin email and password.<br>**Claude Code Hub**: Admin email and password.<br>**Octopus**: Username and password. |
+| Option                         | Description                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Base URL**                   | Your self-hosted system's backend address (usually the web access address).                                                                                                                                                                                                                                                                      |
+| **Authentication Credentials** | **CLIProxyAPI**: Management key.<br>**New API Series**: Requires `Admin Token` and User ID.<br>**Sub2API**: Admin API Key (if key access requires additional web verification, the extension cannot view or export keys or migrate channels out).<br>**AxonHub**: Admin email and password.<br>**Claude Code Hub**: Admin email and password.<br>**Octopus**: Username and password. |
 
 ### 3. Verify Connection
+
 Click **"Verify Configuration"**. After successful verification, the management entrance for the corresponding system will be automatically unlocked.
 
 ## Channel Management Operating Guide
 
 ### 1. List Operations
+
 Select **"Self-Hosted Site Management"** at the top of the settings page (or click the **"Manage Channels"** button in basic settings):
 
 - **Search and Filter**: Supports real-time search by name, type, and status.
@@ -50,6 +54,7 @@ Select **"Self-Hosted Site Management"** at the top of the settings page (or cli
 - **Custom Columns**: For systems that do not support "Priority" or "Weight" (such as Octopus), the corresponding columns will be automatically hidden.
 
 ### 2. Create or Edit Channels
+
 1. Click **"Add Channel"** at the top right.
 2. The form will automatically adjust according to the current system type:
    - **New API**: Provides rich channel types and group configurations.
@@ -58,7 +63,9 @@ Select **"Self-Hosted Site Management"** at the top of the settings page (or cli
 3. After saving, the system will directly call the backend API to complete synchronization.
 
 ### 3. Security Verification (2FA / OTP)
+
 When performing sensitive operations (e.g., viewing a channel's real key), if the system has secondary verification enabled, the extension will pop up a verification window.
+
 - For details, see: [New API Security Verification](./new-api-security-verification.md)
 
 ### 4. Channel Migration (Beta)
@@ -78,12 +85,12 @@ If prompted to complete verification before reading a source key, do so and retr
 
 ## FAQ
 
-| Question | Solution |
-|------|----------|
+| Question                          | Solution                                                                                                                                                                                                       |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Configuration verification failed | Please confirm if the Base URL is entered correctly (including `https://`) and if the administrator permissions are valid. Some systems require disabling two-step verification or using a specific API token. |
-| List loads slowly | When the number of channels is large (>100), loading may take a few seconds due to backend API performance limitations; please be patient. |
-| Unable to sync models | Please confirm if the backend network of the self-hosted site can normally access the upstream addresses (such as OpenAI / Claude official sites). |
-| Some fields show Unknown | This is usually because the version of the self-hosted site is too new or too old, returning a type ID that the extension hasn't yet adapted to. |
+| List loads slowly                 | When the number of channels is large (>100), loading may take a few seconds due to backend API performance limitations; please be patient.                                                                     |
+| Unable to sync models             | Please confirm if the backend network of the self-hosted site can normally access the upstream addresses (such as OpenAI / Claude official sites).                                                             |
+| Some fields show Unknown          | This is usually because the version of the self-hosted site is too new or too old, returning a type ID that the extension hasn't yet adapted to.                                                               |
 
 ## Related Docs
 

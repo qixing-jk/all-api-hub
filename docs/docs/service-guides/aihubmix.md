@@ -16,7 +16,7 @@
 *   **余额查看**：无需频繁打开控制台，即可在扩展面板内查看 AIHubMix 账户余额。
 *   **密钥安全管家**：AIHubMix 的密钥为安全起见仅显示一次，All API Hub 能在创建时为你自动保存至“API 凭据库”。
 *   **模型价格查询**：查看 AIHubMix 模型列表和输入、输出价格，便于在调用前做成本比较。
-*   **快捷导出**：保存的密钥可继续导出至 Cherry Studio、CC Switch、Kilo Code、CLIProxyAPI、Claude Code Router 等工具。
+*   **快捷导出**：保存的密钥可继续导出至 Cherry Studio、CC Switch、Kilo Code、Claude Code Router 等工具。
 
 如果你已经在多个 AI 工具中使用 AIHubMix，All API Hub 可以把“账号余额”“密钥保存”“模型价格”“下游工具配置”这些日常操作连起来：先把 AIHubMix 账号添加进扩展，再把新创建的密钥保存到凭据库，后续需要配置到其他客户端时直接从凭据库导出即可。
 
@@ -98,7 +98,7 @@ All API Hub 主要解决这两类日常问题：
 如果你需要将 AIHubMix 接入其他工具，无需手动复制 Key：
 1.  在 **“API 凭据库”** 找到已保存的 AIHubMix 密钥。
 2.  选择需要的导出入口。
-3.  选择目标工具，例如 **Cherry Studio**、**CC Switch**、**Kilo Code**、**CLIProxyAPI**、**Claude Code Router**，或导入到当前已配置的自建托管站点渠道。
+3.  选择目标工具，例如 **Cherry Studio**、**CC Switch**、**Kilo Code**、**Claude Code Router**，或导入到当前已配置的自建托管站点渠道。
 
 ![从 API 凭据库导出 AIHubMix 密钥](../static/image/sponsor-guides/aihubmix/aihubmix-credential-export-menu.png)
 
@@ -107,7 +107,7 @@ All API Hub 主要解决这两类日常问题：
 *   验证接口是否可用，也可以测试 CLI 工具兼容性。
 *   在模型列表中查看该凭据可使用的模型列表。
 *   将同一份凭据导出到多个常用客户端，减少重复录入。
-*   将凭据导入到已配置的自建托管站点，作为新的渠道配置使用。
+*   将凭据导入到已配置的 CLIProxyAPI、New API、Sub2API 等自建网关，作为新的渠道或提供商配置使用。
 *   随数据导入导出或 WebDAV 同步一起迁移，便于多设备使用。
 
 ---

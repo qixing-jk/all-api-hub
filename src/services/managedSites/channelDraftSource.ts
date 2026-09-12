@@ -33,13 +33,14 @@ export function buildManagedSiteChannelDraftSource(
 export function buildManagedSiteCredentialDraftSource(
   credentials: Pick<
     ManagedSiteChannelDraftSource,
-    "name" | "baseUrl" | "apiKey"
+    "name" | "baseUrl" | "apiKey" | "apiType"
   >,
 ): ManagedSiteChannelDraftSource {
   return {
     name: buildDraftName(credentials.name, credentials.name),
     baseUrl: credentials.baseUrl.trim(),
     apiKey: credentials.apiKey,
+    ...(credentials.apiType ? { apiType: credentials.apiType } : {}),
     modelHints: [],
   }
 }

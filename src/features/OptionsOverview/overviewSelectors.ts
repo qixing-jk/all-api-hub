@@ -111,6 +111,9 @@ export function buildOptionsOverviewViewModel(
           }),
     unifiedApiGuidanceDiagnostics,
     gatewayGuidanceImportAccountId,
+    gatewayGuidanceStarted: Boolean(
+      input.guidanceState?.gatewayGuidance.onboardingStartedAt,
+    ),
     attentionItems,
     autoCheckinPanel,
     automationOverview: buildAutomationOverview({

@@ -4,7 +4,7 @@
 
 Atlas Cloud is a multimodal AI inference platform that provides video generation, image generation, and LLM APIs through one API, with more than 300 selected models. If you use multiple Atlas Cloud accounts, several AI API platforms, or different clients, **All API Hub** gives you one local place to manage and reuse those credentials.
 
-After adding an Atlas Cloud credential, you can check model pricing and export it to Cherry Studio, CC Switch, Kilo Code, CLIProxyAPI, Claude Code Router, or your own self-hosted backend.
+After adding an Atlas Cloud credential, you can check model pricing and export it to Cherry Studio, CC Switch, Kilo Code, Claude Code Router, or a self-hosted gateway such as CLIProxyAPI, New API, or Sub2API.
 
 ![All API Hub home preview](../../static/image/sponsor-guides/atlascloud/all-api-hub-home-preview.png)
 
@@ -73,7 +73,7 @@ After the credential is saved, the extension uses the imported API key to read t
 
 1. Find the Atlas Cloud key in **API Credential Profiles**.
 2. Click the export button.
-3. Select **Cherry Studio**, **CC Switch**, **Kilo Code**, **CLIProxyAPI**, **Claude Code Router**, or a configured self-hosted channel.
+3. Select **Cherry Studio**, **CC Switch**, **Kilo Code**, **Claude Code Router**, or a configured self-hosted channel.
 
 ![Export an Atlas Cloud key from API Credential Profiles](../../static/image/sponsor-guides/atlascloud/atlascloud-credential-export-menu.png)
 
@@ -85,7 +85,7 @@ Browser local storage is only the default save location. Exporting to clients, i
 
 ### 4.2 Import into a self-hosted channel
 
-If you maintain an AI distribution backend, use Atlas Cloud as an upstream provider. Configure it under **Basic Settings -> Self-hosted Site Management**, then return to **API Credential Profiles** and import the Atlas Cloud credential into the current site. Multiple credentials can be imported in bulk.
+If you maintain a self-hosted gateway such as CLIProxyAPI, New API, or Sub2API, use Atlas Cloud as an upstream provider. Configure it under **Basic Settings -> Self-hosted Site Management**, then return to **API Credential Profiles** and import the Atlas Cloud credential into the current site. Multiple credentials can be imported in bulk.
 
 ### 4.3 Move between devices and back up
 

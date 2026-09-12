@@ -179,7 +179,8 @@ function isManagedSiteType(
     value === SITE_TYPES.DONE_HUB ||
     value === SITE_TYPES.OCTOPUS ||
     value === SITE_TYPES.AXON_HUB ||
-    value === SITE_TYPES.CLAUDE_CODE_HUB
+    value === SITE_TYPES.CLAUDE_CODE_HUB ||
+    value === SITE_TYPES.CLI_PROXY_API
   )
 }
 
@@ -217,9 +218,11 @@ function isClaudeCodeHubConfigured(
   )
 }
 
-function isCliProxyConfigured(config: UserPreferences["cliProxy"]): boolean {
+function isCliProxyApiConfigured(
+  config: UserPreferences["cliProxyApi"],
+): boolean {
   return Boolean(
-    config && hasText(config.baseUrl) && hasText(config.managementKey),
+    config && hasText(config.baseUrl) && hasText(config.adminToken),
   )
 }
 
@@ -444,7 +447,7 @@ function buildManagedSiteSnapshot(
     claude_code_hub_configured: isClaudeCodeHubConfigured(
       preferences.claudeCodeHub,
     ),
-    cli_proxy_configured: isCliProxyConfigured(preferences.cliProxy),
+    cli_proxy_configured: isCliProxyApiConfigured(preferences.cliProxyApi),
     claude_code_router_configured: isClaudeCodeRouterConfigured(
       preferences.claudeCodeRouter,
     ),
@@ -743,7 +746,7 @@ function resolveSnapshotKeysForPatch(patch?: PreferencePatch) {
     "octopus" in patch ||
     "axonHub" in patch ||
     "claudeCodeHub" in patch ||
-    "cliProxy" in patch ||
+    "cliProxyApi" in patch ||
     "claudeCodeRouter" in patch
   ) {
     keys.add("managedSite")

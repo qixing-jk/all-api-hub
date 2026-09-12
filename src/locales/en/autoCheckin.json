@@ -57,6 +57,7 @@
       "openFailedManualNewWindow": "Open the site check-in page for every account whose latest auto check-in failed. Shift-click to open them in a new window.",
       "siteTypeCheckinUnsupported": "Solution: In 'Account Management → Edit Account', first verify that the selected site type matches the real site. If the type was auto-detected before, log back into the target site and run detection again. If the site type is correct but this message still appears, the site likely does not support automatic check-in yet, so use 'Open site' or 'Manual sign-in' instead."
     },
+    "manualTitle": "Batch Check-in",
     "pagination": {
       "next": "Next page",
       "previous": "Previous page",
@@ -84,6 +85,7 @@
     },
     "title": "Auto Check-in"
   },
+  "manualDescription": "Run a batch check-in for eligible accounts. The result list below shows completed run records, not a pending queue.",
   "messages": {
     "error": {
       "accountDisabled": "Account is disabled",
@@ -156,7 +158,7 @@
     "deterministicTimeDesc": "Pick the exact time (HH:mm) to start check-in when deterministic mode is enabled.",
     "deterministicTimeTitle": "Deterministic time",
     "enable": "Enable auto check-in",
-    "enableDesc": "Toggle the global auto check-in feature. When disabled, no check-in tasks will run.",
+    "enableDesc": "Controls global automatic check-ins. When disabled, scheduled and other automatic tasks stop, but manual check-in actions remain available.",
     "notifyUiOnCompletion": "Refresh data and interface upon auto check-in completion",
     "notifyUiOnCompletionDesc": "When automatic check-in is completed, immediately refresh the check-in account's data and relevant interfaces.",
     "pretriggerDailyOnUiOpen": "Pre-trigger daily run when UI opens",
@@ -265,8 +267,10 @@
   },
   "uiOpenPretrigger": {
     "close": "Close",
+    "completedToast": "Auto check-in: {{success}} checked in · {{alreadyChecked}} already checked in · {{skipped}} skipped.",
     "dialogDescription": "Today's scheduled daily run was triggered early when the UI opened.",
     "dialogTitle": "Auto check-in finished",
+    "uncertainToast": "Auto check-in: {{success}} checked in · {{alreadyChecked}} already checked in · {{uncertain}} pending confirmation · {{skipped}} skipped. See the Auto Check-in page for details.",
     "viewDetails": "View details"
   },
   "workspace": {

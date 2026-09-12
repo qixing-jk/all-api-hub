@@ -968,6 +968,7 @@ export async function openInterceptedDoneHubManagedSiteChannels(params: {
   )
   await seedUserPreferences(await getServiceWorker(params.context), {
     managedSiteType: SITE_TYPES.DONE_HUB,
+    autoCheckin: { globalEnabled: false, pretriggerDailyOnUiOpen: false },
     doneHub: {
       baseUrl: INTERCEPTED_DONE_HUB_TARGET_ORIGIN,
       adminToken: "fixture-target-admin-token",

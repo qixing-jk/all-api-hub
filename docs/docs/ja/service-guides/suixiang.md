@@ -4,7 +4,7 @@
 
 随想AI中转站 は Claude、Codex、Gemini などの API 中継サービスを提供し、従量課金、毎日のサインインテスト枠、複数ルート、自動フェイルオーバーに対応しています。複数のアカウントや AI API プラットフォーム、クライアントを使う場合、All API Hub で情報を 1 つのローカル管理画面にまとめられます。
 
-アカウントを追加すると、残高確認、API キー管理、モデル価格確認、Cherry Studio、CC Switch、Kilo Code、CLIProxyAPI、Claude Code Router、セルフホスト型バックエンドへのエクスポートができます。
+アカウントを追加すると、残高確認、API キー管理、モデル価格確認、Cherry Studio、CC Switch、Kilo Code、Claude Code Router、または CLIProxyAPI、New API、Sub2API などのセルフホスト型ゲートウェイへのエクスポートができます。
 
 ![All API Hub ホーム画面のプレビュー](../../static/image/sponsor-guides/suixiang/all-api-hub-home-preview.png)
 
@@ -73,7 +73,7 @@ All API Hub のダッシュボードでは、随想AI中转站 と他の AI API 
 
 1. **キー管理** でキーを見つけます。
 2. エクスポート操作を選びます。
-3. **Cherry Studio**、**CC Switch**、**Kilo Code**、**CLIProxyAPI**、**Claude Code Router**、または設定済みのセルフホスト型チャネルを選びます。
+3. **Cherry Studio**、**CC Switch**、**Kilo Code**、**Claude Code Router**、または設定済みのセルフホスト型チャネルを選びます。
 
 ![キー管理から随想AI中转站 のキーをエクスポート](../../static/image/sponsor-guides/suixiang/suixiang-credential-export-menu.png)
 
@@ -85,7 +85,7 @@ All API Hub のダッシュボードでは、随想AI中转站 と他の AI API 
 
 ### 4.4 セルフホスト型チャネルへインポートする
 
-**基本設定 → セルフホスト型サイト管理** でバックエンドを設定し、**キー管理** から随想AI中转站 のキーを現在のサイトへインポートします。複数キーの一括インポートも可能です。
+CLIProxyAPI、New API、Sub2API などのセルフホスト型ゲートウェイを運用している場合、随想AI中转站を上流プロバイダーとして利用できます。**基本設定 → セルフホスト型サイト管理** でバックエンドを設定し、**キー管理** から随想AI中转站 のキーを現在のサイトへインポートします。複数キーの一括インポートも可能です。
 
 ### 4.5 バックアップと端末移行
 

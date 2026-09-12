@@ -122,31 +122,6 @@ vi.mock("~/components/CCSwitchExportDialog", () => ({
     ) : null,
 }))
 
-vi.mock(
-  "~/features/KeyManagement/components/BatchCliProxyExportDialog",
-  () => ({
-    BatchCliProxyExportDialog: ({
-      isOpen,
-      items,
-      onClose,
-    }: {
-      isOpen: boolean
-      items: Array<Record<string, unknown>>
-      onClose: () => void
-    }) =>
-      isOpen ? (
-        <div data-testid="batch-cli-proxy-export-dialog">
-          <div data-testid="batch-cli-proxy-export-item-count">
-            {items.length}
-          </div>
-          <button type="button" onClick={onClose}>
-            Close batch CLIProxy import
-          </button>
-        </div>
-      ) : null,
-  }),
-)
-
 vi.mock("~/services/managedSites/tokenBatchExport", () => ({
   executeManagedSiteTokenBatchExport: (...args: unknown[]) =>
     mockExecuteManagedSiteTokenBatchExport(...args),
@@ -773,78 +748,6 @@ describe("TokenList batch export selection", () => {
     })
   })
 
-  it("opens the batch CLIProxyAPI dialog with the frozen selected tokens", async () => {
-    const user = userEvent.setup()
-    const { rerender } = renderTokenList()
-
-    await user.click(await screen.findByRole("checkbox", { name: "Token 1" }))
-    await user.click(await screen.findByRole("checkbox", { name: "Token 2" }))
-    await user.click(
-      screen.getByRole("button", {
-        name: /keyManagement:batchCliProxyExport.actions.open/,
-      }),
-    )
-
-    expect(
-      screen.getByTestId("batch-cli-proxy-export-item-count"),
-    ).toHaveTextContent("2")
-
-    rerender(
-      <TokenList
-        {...(defaultProps as any)}
-        tokens={[token1, token2] as any}
-        filteredTokens={[token2] as any}
-      />,
-    )
-
-    expect(
-      screen.getByTestId("batch-cli-proxy-export-item-count"),
-    ).toHaveTextContent("2")
-
-    await user.click(
-      screen.getByRole("button", { name: "Close batch CLIProxy import" }),
-    )
-
-    expect(
-      screen.queryByTestId("batch-cli-proxy-export-dialog"),
-    ).not.toBeInTheDocument()
-  })
-
-  it("closes an open CLIProxy batch export when eligibility is revoked", async () => {
-    const user = userEvent.setup()
-    const { rerender } = renderTokenList()
-
-    await user.click(await screen.findByRole("checkbox", { name: "Token 1" }))
-    await user.click(
-      screen.getByRole("button", {
-        name: /keyManagement:batchCliProxyExport.actions.open/,
-      }),
-    )
-    expect(
-      screen.getByTestId("batch-cli-proxy-export-dialog"),
-    ).toBeInTheDocument()
-
-    const createResponseOnlyAccount = createAccount({
-      id: account.id,
-      name: account.name,
-      siteType: SITE_TYPES.AIHUBMIX,
-    })
-    rerender(
-      <TokenList
-        {...(defaultProps as any)}
-        displayData={[createResponseOnlyAccount] as any}
-        tokens={[token1, token2] as any}
-        filteredTokens={[token1, token2] as any}
-      />,
-    )
-
-    await waitFor(() => {
-      expect(
-        screen.queryByTestId("batch-cli-proxy-export-dialog"),
-      ).not.toBeInTheDocument()
-    })
-  })
-
   it("saves the selected tokens to API credential profiles and clears selection", async () => {
     const user = userEvent.setup()
     renderTokenList()
@@ -930,7 +833,7 @@ describe("TokenList batch export selection", () => {
     ).not.toHaveAttribute("aria-busy")
   })
 
-  it("includes selected service credentials in API profile, CLIProxy, and managed-site export actions", async () => {
+  it("includes selected service credentials in API profile and managed-site export actions", async () => {
     const user = userEvent.setup()
     const sharedChatAccount = createAccount({
       id: "sharedchat-account",
@@ -977,20 +880,6 @@ describe("TokenList batch export selection", () => {
     )
     await user.click(
       await screen.findByRole("checkbox", { name: "Codex API Key" }),
-    )
-
-    await user.click(
-      screen.getByRole("button", {
-        name: /keyManagement:batchCliProxyExport.actions.open/,
-      }),
-    )
-
-    expect(
-      screen.getByTestId("batch-cli-proxy-export-item-count"),
-    ).toHaveTextContent("1")
-
-    await user.click(
-      screen.getByRole("button", { name: "Close batch CLIProxy import" }),
     )
 
     const managedSiteExportButton = screen.getByRole("button", {
@@ -1067,7 +956,7 @@ describe("TokenList batch export selection", () => {
     ).toBeVisible()
     expect(
       screen.queryByRole("button", {
-        name: /keyManagement:batchCliProxyExport.actions.open/,
+        name: /keyManagement:batchCliProxyApiExport.actions.open/,
       }),
     ).not.toBeInTheDocument()
     expect(screen.queryByText("Codex API Key")).not.toBeInTheDocument()

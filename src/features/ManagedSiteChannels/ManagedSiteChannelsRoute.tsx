@@ -2,6 +2,7 @@ import type { TFunction } from "i18next"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { ChannelDialogOpening } from "~/components/dialogs/ChannelDialog/components/ChannelDialogOpening"
 import { ChannelEditorShell } from "~/components/dialogs/ChannelDialog/components/ChannelEditorShell"
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import {
@@ -13,6 +14,8 @@ import {
 } from "~/components/ui"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { getEditedResourceFieldIssues } from "~/features/ResourceEditor/resourceEditorValidation"
+import { recordGatewayGuidanceCompletion } from "~/features/UnifiedApiGuidance/recordGatewayGuidanceCompletion"
 import toast from "~/lib/notify"
 import type { ManagedResourceProductPolicy } from "~/services/accountSiteDefinitions/contracts"
 import {
@@ -289,14 +292,13 @@ function NativeManagedSiteChannels({
     })
   }, [onReplaceRouteQuery])
   const onMutationSuccess = useCallback(
-    (mode: ManagedResourceEditorMode) =>
+    (mode: ManagedResourceEditorMode) => {
       toast.success(
-        t(
-          mode === MANAGED_RESOURCE_EDITOR_MODES.Create
-            ? "managedSiteChannels:toasts.channelSaved"
-            : "managedSiteChannels:toasts.channelUpdated",
-        ),
-      ),
+        mode === MANAGED_RESOURCE_EDITOR_MODES.Create
+          ? t("managedSiteChannels:toasts.channelSaved")
+          : t("managedSiteChannels:toasts.channelUpdated"),
+      )
+    },
     [t],
   )
   const routedResourceRef = parseManagedResourceRef(routeParams.resourceRef)
@@ -356,6 +358,9 @@ function NativeManagedSiteChannels({
     refreshKey,
     pageSize,
     onUnsupportedSearch,
+    onResourcesAccepted: (itemCount) => {
+      if (itemCount > 0) recordGatewayGuidanceCompletion()
+    },
     fieldIds: policy.tableFieldIds,
     semantics: presentationSemantics,
     analytics,
@@ -382,6 +387,10 @@ function NativeManagedSiteChannels({
     acceptMutationResult: list.acceptMutationResult,
     acceptDeletionResults: list.acceptDeletionResults,
     onMutationSuccess,
+    onMutationConfirmed: (mode) => {
+      if (mode === MANAGED_RESOURCE_EDITOR_MODES.Create)
+        recordGatewayGuidanceCompletion()
+    },
     analytics,
   })
   useEffect(() => {
@@ -458,6 +467,10 @@ function NativeManagedSiteChannels({
         )
       : undefined
   const editorValidation = mutation.editor?.validate(editorValues) ?? null
+  const initialEditorValidation = useMemo(
+    () => mutation.editor?.validate(mutation.editor.initialValues) ?? null,
+    [mutation.editor],
+  )
   const liveEditorValidation =
     mutation.editorFailure?.code ===
     MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed
@@ -467,7 +480,13 @@ function NativeManagedSiteChannels({
     ? liveEditorValidation.valid
       ? []
       : liveEditorValidation.issues
-    : mutation.editorFailure?.fieldIssues
+    : mutation.editorFailure?.fieldIssues ??
+      getEditedResourceFieldIssues(
+        editorValidation,
+        editorValues,
+        mutation.editor?.initialValues ?? {},
+        initialEditorValidation,
+      )
   const columns = useMemo(
     () => createManagedResourceColumns(t, siteType, policy, columnVisibility),
     [columnVisibility, policy, siteType, t],
@@ -554,7 +573,56 @@ function NativeManagedSiteChannels({
     [nativeRows],
   )
   const confirmedDeleteLabels = useRef(new Map<string, string>())
+  const notifiedDeleteResults = useRef<
+    typeof mutation.deleteState.results | null
+  >(null)
+  useEffect(() => {
+    const { results, isExecuting } = mutation.deleteState
+    if (isExecuting || results === notifiedDeleteResults.current) return
+    notifiedDeleteResults.current = results
+    if (
+      results.length > 0 &&
+      results.every(({ status }) => status === "success")
+    ) {
+      toast.success(
+        t("managedSiteChannels:toasts.channelsDeleted", {
+          count: results.length,
+        }),
+      )
+    }
+  }, [mutation.deleteState, t])
+
+  const notifiedEditorFeedback = useRef<typeof mutation.editorFeedback>(null)
+  useEffect(() => {
+    const feedback = mutation.editorFeedback
+    if (feedback === notifiedEditorFeedback.current) return
+    notifiedEditorFeedback.current = feedback
+    if (
+      !feedback ||
+      (feedback.kind !== "save-failed" && feedback.kind !== "save-uncertain")
+    )
+      return
+    const failure = feedback.failure
+    if (
+      failure.code === MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed &&
+      failure.fieldIssues?.length
+    )
+      return
+    const fallbackMessage =
+      feedback.kind === "save-uncertain"
+        ? t("managedSiteChannels:alerts.partialMutation.description")
+        : failure.code === MANAGED_RESOURCE_FAILURE_CODES.ResourceChanged
+          ? t("managedSiteChannels:alerts.resourceChanged.description")
+          : t("managedSiteChannels:alerts.editorSaveError.description")
+    toast.error(
+      presentManagedResourceFailure(failure, {
+        category: "",
+        message: fallbackMessage,
+      }).message,
+    )
+  }, [mutation.editorFeedback, t])
   const editorPageFailure = (() => {
+    if (mutation.opening?.status === "failure") return null
     switch (mutation.editorFeedback?.kind) {
       case "open-failed":
         return presentManagedResourceFailure(mutation.editorFeedback.failure, {
@@ -562,19 +630,8 @@ function NativeManagedSiteChannels({
           message: t("managedSiteChannels:alerts.editorLoadError.description"),
         })
       case "save-failed":
-        return mutation.editor === null
-          ? presentManagedResourceFailure(mutation.editorFeedback.failure, {
-              category: t("managedSiteChannels:alerts.editorSaveError.title"),
-              message: t(
-                "managedSiteChannels:alerts.editorSaveError.description",
-              ),
-            })
-          : null
       case "save-uncertain":
-        return presentManagedResourceFailure(mutation.editorFeedback.failure, {
-          category: t("managedSiteChannels:alerts.partialMutation.title"),
-          message: t("managedSiteChannels:alerts.partialMutation.description"),
-        })
+        return null
       case "saved-refresh-failed":
         return {
           category: t("managedSiteChannels:alerts.savedRefreshError.title"),
@@ -587,12 +644,13 @@ function NativeManagedSiteChannels({
         return null
     }
   })()
-  const detailPageFailure = mutation.detailFailure
-    ? presentManagedResourceFailure(mutation.detailFailure, {
-        category: t("managedSiteChannels:alerts.loadError.title"),
-        message: t("common:rootErrorBoundary.genericDescription"),
-      })
-    : null
+  const detailPageFailure =
+    mutation.detailFailure && mutation.opening?.status !== "failure"
+      ? presentManagedResourceFailure(mutation.detailFailure, {
+          category: t("managedSiteChannels:alerts.loadError.title"),
+          message: t("common:rootErrorBoundary.genericDescription"),
+        })
+      : null
   const failure =
     editorPageFailure ??
     detailPageFailure ??
@@ -862,8 +920,8 @@ function NativeManagedSiteChannels({
           t,
           getManagedSiteMessagesKeyFromSiteType(siteType),
         )}
-        configurationMissingNotice={pageExperience.configurationMissingNotice}
         emptyContent={pageExperience.emptyContent}
+        guidanceContent={pageExperience.guidanceContent}
         configurationSettingsTarget={policy.settingsTarget}
         siteTypeLabel={t("settings:managedSite.siteTypeLabel")}
         filterDialog={
@@ -875,57 +933,52 @@ function NativeManagedSiteChannels({
         }
       />
 
+      {mutation.opening && mutation.opening.status !== "idle" && (
+        <ChannelDialogOpening
+          opening={mutation.opening}
+          onClose={
+            mutation.opening.mode === "view"
+              ? mutation.closeDetail
+              : mutation.closeEditor
+          }
+          onRetry={mutation.retryOpening}
+        />
+      )}
       {mutation.editor && mutation.editorMode && editorPolicy ? (
         <ChannelEditorShell
           isOpen
-          title={t(
+          title={
             mutation.editorMode === MANAGED_RESOURCE_EDITOR_MODES.Create
-              ? "channelDialog:title.add"
-              : "channelDialog:title.edit",
-          )}
-          description={t(
+              ? t("channelDialog:title.add")
+              : t("channelDialog:title.edit")
+          }
+          description={
             mutation.editorMode === MANAGED_RESOURCE_EDITOR_MODES.Create
-              ? "channelDialog:description.add"
-              : "channelDialog:description.edit",
-          )}
+              ? t("channelDialog:description.add")
+              : t("channelDialog:description.edit")
+          }
           onClose={mutation.closeEditor}
           onSubmit={(event) => {
             event.preventDefault()
-            void mutation.submit(editorValues)
+            void mutation.submit(editorValues).catch(() => {
+              // A broken public mutation contract carries no reliable write certainty.
+              mutation.closeEditor()
+              toast.error(
+                t("managedSiteChannels:alerts.partialMutation.description"),
+              )
+            })
           }}
-          submitLabel={t(
+          submitLabel={
             mutation.editorMode === MANAGED_RESOURCE_EDITOR_MODES.Create
-              ? "channelDialog:actions.create"
-              : "channelDialog:actions.update",
-          )}
+              ? t("channelDialog:actions.create")
+              : t("channelDialog:actions.update")
+          }
           closeLabel={t("common:actions.cancel")}
           submitTestId={CHANNEL_DIALOG_TEST_IDS.submitButton}
           isSubmitting={mutation.isSaving}
           isSubmitDisabled={editorValidation?.valid === false}
           noValidate
         >
-          {mutation.editorFeedback?.kind === "save-failed" &&
-          mutation.editorFeedback.failure.code !==
-            MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed ? (
-            <Alert variant="destructive" role="alert">
-              <AlertTitle>
-                {t("managedSiteChannels:alerts.editorSaveError.title")}
-              </AlertTitle>
-              <AlertDescription className="whitespace-pre-line">
-                {
-                  presentManagedResourceFailure(
-                    mutation.editorFeedback.failure,
-                    {
-                      category: "",
-                      message: t(
-                        "managedSiteChannels:alerts.editorSaveError.description",
-                      ),
-                    },
-                  ).message
-                }
-              </AlertDescription>
-            </Alert>
-          ) : null}
           <ManagedResourceEditorBody
             t={t}
             mode={mutation.editorMode}

@@ -157,9 +157,9 @@ describe("userPreferences settings helpers", () => {
         enabled: true,
         allowedModels: ["gpt-4o"],
       },
-      cliProxy: {
+      cliProxyApi: {
         baseUrl: "http://localhost:8317/v0/management",
-        managementKey: "management-key",
+        adminToken: "management-key",
       },
       claudeCodeRouter: {
         baseUrl: "http://router.local",
@@ -229,7 +229,7 @@ describe("userPreferences settings helpers", () => {
     await expectSuccessfulWrite(
       userPreferences.resetManagedSiteModelSyncConfig(),
     )
-    await expectSuccessfulWrite(userPreferences.resetCliProxyConfig())
+    await expectSuccessfulWrite(userPreferences.resetCliProxyApiConfig())
     await expectSuccessfulWrite(userPreferences.resetClaudeCodeRouterConfig())
     await expectSuccessfulWrite(userPreferences.resetAutoCheckinConfig())
     await expectSuccessfulWrite(userPreferences.resetModelRedirectConfig())
@@ -251,7 +251,7 @@ describe("userPreferences settings helpers", () => {
     expect(preferences.managedSiteModelSync).toEqual(
       DEFAULT_PREFERENCES.managedSiteModelSync,
     )
-    expect(preferences.cliProxy).toEqual(DEFAULT_PREFERENCES.cliProxy)
+    expect(preferences.cliProxyApi).toEqual(DEFAULT_PREFERENCES.cliProxyApi)
     expect(preferences.claudeCodeRouter).toEqual(
       DEFAULT_PREFERENCES.claudeCodeRouter,
     )

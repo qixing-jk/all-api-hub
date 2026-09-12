@@ -684,7 +684,7 @@ describe("Veloera native managed resource", () => {
     expect(mocks.create).toHaveBeenCalledTimes(2)
   })
 
-  it("forwards native auxiliary operations and degrades optional group lookup failures", async () => {
+  it("forwards native auxiliary operations and exposes optional group lookup failures", async () => {
     const signal = new AbortController().signal
     mocks.fetchModels.mockResolvedValueOnce(["saved-model"])
     mocks.fetchDraftModels.mockResolvedValueOnce(["draft-model"])
@@ -712,7 +712,9 @@ describe("Veloera native managed resource", () => {
       ),
     ).resolves.toEqual(["draft-model"])
     await operations.delete(channel.id, { signal })
-    await expect(operations.loadEditorGroups({ signal })).resolves.toEqual([])
+    await expect(
+      operations.loadEditorGroups({ signal }),
+    ).rejects.toBeInstanceOf(ApiError)
 
     expect(mocks.fetchModels).toHaveBeenCalledWith(
       config,

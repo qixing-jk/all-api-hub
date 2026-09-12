@@ -284,14 +284,13 @@
     },
     "boundaryNote": "All API Hub 负责管理账号 Key，不代理模型请求；外部客户端实际调用的是你的自建 AI 网关。",
     "description": {
-      "has_gateway_channels": "已完成过网关渠道创建或导入。前往渠道管理确认当前状态，再继续配置外部客户端。",
+      "has_gateway_channels": "已完成过网关渠道创建或导入。前往渠道管理确认当前状态。",
       "needs_importable_source": "当前账号无法读取可导入的 Key。请先保存 API Key，或添加支持 Key 获取的账号，再导入自建 AI 网关。",
       "needs_managed_site": "已有账号 Key。完成自建 AI 网关配置后，即可将它们导入为网关渠道。",
-      "needs_sources": "添加账号后，账号中的 Key 可以直接导出到客户端，也可以导入自建 AI 网关，汇总成一个统一 AI API。",
+      "needs_sources": "添加账号后，可将账号 Key 导入自建 AI 网关，汇总成一个统一 AI API。",
       "ready_accounts": "使用密钥管理将选中的账号 Key 一键导入为自建 AI 网关渠道。",
       "ready_profiles": "已保存的 API Key 可在凭据库中直接复用，也可以单独导入为网关渠道。"
     },
-    "directToolExportNote": "如果暂时不需要自建网关，也可以直接把单个凭据导出到客户端工具。",
     "dismissDialog": {
       "confirm": "不再显示",
       "description": "账号页将不再显示这个提示；你仍然可以在总览页查看如何把账号 Key 接入自建 AI 网关。",

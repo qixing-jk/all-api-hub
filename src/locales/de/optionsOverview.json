@@ -229,17 +229,26 @@
     },
     "boundaryNote": "All API Hub verwaltet und importiert die Konfiguration. Modellanfragen werden nicht weitergeleitet. Externe Clients rufen Ihr selbst gehostetes KI-Gateway an.",
     "description": {
-      "has_gateway_channels": "Ein Gateway-Kanal wurde zuvor erstellt oder importiert. Öffnen Sie die Kanalverwaltung, um den aktuellen Status zu bestätigen, und rufen Sie dann die API-Adresse und den Zugriffsschlüssel ab, die Ihr Kunde benötigt.",
+      "has_gateway_channels": "Die Gateway-Einrichtungshilfe ist abgeschlossen. Öffnen Sie die Kanalverwaltung, um den aktuellen Status zu prüfen.",
       "needs_importable_source": "Sie haben Konten, aber die aktuellen Kontotypen können keine importierbaren Schlüssel bereitstellen. Speichern Sie zuerst einen API-Schlüssel oder fügen Sie einen Kontotyp hinzu, der den Schlüsselzugriff unterstützt, und importieren Sie ihn dann in Ihr selbst gehostetes KI-Gateway.",
       "needs_managed_site": "Sie haben Kontoschlüssel oder API-Schlüssel. Konfigurieren Sie Ihr selbstgehostetes KI-Gateway so, dass es diese als Gateway-Kanäle importiert, sodass mehrere Schlüssel über eine KI-API verwendet werden können.",
-      "needs_sources": "Fügen Sie zuerst ein Konto hinzu oder speichern Sie einen API-Schlüssel. Anschließend können Sie die Anmeldeinformationen direkt an einen Client exportieren oder als einheitliche KI-API in Ihr selbstgehostetes KI-Gateway importieren.",
+      "needs_sources": "Füge ein Konto hinzu oder speichere einen API-Schlüssel und importiere ihn in dein selbst gehostetes AI-Gateway, um eine einheitliche AI-API bereitzustellen.",
       "ready_accounts": "Die Grundkonfiguration Ihres selbstgehosteten KI-Gateways ist abgeschlossen. Fahren Sie fort, indem Sie einen Kontoschlüssel oder API-Schlüssel importieren. Der Importfluss validiert die Verbindung und erstellt einen Gateway-Kanal.",
       "ready_profiles": "Die Grundkonfiguration Ihres selbstgehosteten KI-Gateways ist abgeschlossen. Öffnen Sie die Anmeldeinformationsbibliothek, um einen gespeicherten API-Schlüssel zu validieren und als Gateway-Kanal zu importieren."
     },
-    "directToolExportNote": "Wenn Sie das selbstgehostete Gateway noch nicht benötigen, können Sie einzelne Anmeldeinformationen direkt in ein Client-Tool exportieren.",
     "headline": "Kombinieren Sie Kontoschlüssel oder API-Schlüssel in einer einheitlichen KI-API",
     "modelSyncOptional": "Durch die Modellsynchronisierung können Gateway-Modelllisten automatisch aktualisiert und die manuelle Wartung reduziert werden. Aktivieren Sie sie bei Bedarf, nachdem Kanäle vorhanden sind.",
     "optionalLabel": "Optionale Wartung",
+    "overview": {
+      "collapse": "Einklappen",
+      "completedDescription": "Die Einrichtungsanleitung ist abgeschlossen. Du kannst die Schritte jederzeit ansehen oder Gateway-Kanäle verwalten.",
+      "description": "Importiere Kontoschlüssel oder API-Zugangsdaten in dein Gateway, um eine gemeinsame API-Adresse zu nutzen.",
+      "progress": "Einrichtungsfortschritt {{completed}}/{{total}}",
+      "reopen": "Einrichtungsanleitung",
+      "resume": "Einrichtung fortsetzen",
+      "start": "Schritte ansehen",
+      "title": "Einheitliche API"
+    },
     "sources": {
       "account": "Kontoquellen",
       "accountUnavailable": "Konten nicht importierbar",
@@ -255,10 +264,6 @@
         "upcoming": "Später"
       },
       "steps": {
-        "clientAccess": {
-          "description": "Holen Sie sich die Gateway-API-Adresse und einen Zugriffsschlüssel für Ihren Client.",
-          "title": "Einen Client verbinden"
-        },
         "gatewayChannel": {
           "description": "Importieren Sie mindestens einen Kontoschlüssel oder gespeicherte API-Anmeldeinformationen.",
           "title": "Erstellen Sie einen Gateway-Kanal"
@@ -274,7 +279,6 @@
       }
     },
     "unavailable": {
-      "badge": "Status unbestätigt",
       "description": "Konten, Anmeldeinformationen oder Gateway-Einstellungen konnten nicht geladen werden. Es wurde keine Schlussfolgerung aufgrund fehlender Quellen gezogen.",
       "retry": "Wiederholen Sie die Einrichtungsprüfung",
       "title": "Setup-Status nicht verfügbar"

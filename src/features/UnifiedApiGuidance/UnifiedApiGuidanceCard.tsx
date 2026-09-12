@@ -1,5 +1,7 @@
-import type { TFunction } from "i18next"
+import { ChevronUp } from "lucide-react"
 import { useTranslation } from "react-i18next"
+
+import { Button, Notice } from "~/components/ui"
 
 import {
   GuidanceCardActionButton,
@@ -25,6 +27,7 @@ interface UnifiedApiGuidanceCardProps {
   model: UnifiedApiGuidanceModel
   surface: UnifiedApiGuidanceSurface
   onAction: (action: UnifiedApiGuidanceAction) => void
+  onCollapse?: () => void
   onDismissForSession?: () => void
   onRequestPermanentDismiss?: () => void
 }
@@ -49,6 +52,7 @@ export function UnifiedApiGuidanceCard({
   model,
   surface,
   onAction,
+  onCollapse,
   onDismissForSession,
   onRequestPermanentDismiss,
 }: UnifiedApiGuidanceCardProps) {
@@ -59,6 +63,60 @@ export function UnifiedApiGuidanceCard({
   const copy = getUnifiedApiGuidanceCopy(t, surface)
   const isOptionsOverview =
     surface === UNIFIED_API_GUIDANCE_SURFACES.OptionsOverview
+  if (isOptionsOverview) {
+    return (
+      <div className="space-y-5 rounded-xl border border-slate-200/80 p-4 sm:p-5 dark:border-white/10">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-1.5">
+            <h3 className="text-base font-semibold">
+              {t("optionsOverview:unifiedApiGuidance.overview.title")}
+            </h3>
+            <p className="text-muted-foreground max-w-3xl text-sm leading-6">
+              {model.status === UNIFIED_API_GUIDANCE_STATUSES.HasGatewayChannels
+                ? t(
+                    "optionsOverview:unifiedApiGuidance.overview.completedDescription",
+                  )
+                : copy.description(model)}
+            </p>
+          </div>
+          {onCollapse ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onCollapse}
+              aria-expanded={true}
+            >
+              <ChevronUp className="h-4 w-4" aria-hidden />
+              {t("optionsOverview:unifiedApiGuidance.overview.collapse")}
+            </Button>
+          ) : null}
+        </div>
+        <UnifiedApiGuidanceStepper
+          copy={getUnifiedApiGuidanceStepperCopy(t)}
+          steps={model.steps}
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            data-testid={UNIFIED_API_GUIDANCE_TEST_IDS.primaryAction}
+            onClick={() => onAction(model.primaryAction)}
+          >
+            {copy.actionLabel(model.primaryAction.kind)}
+          </Button>
+          {model.secondaryActions.map((action) => (
+            <Button
+              key={action.kind}
+              size="sm"
+              variant="outline"
+              onClick={() => onAction(action)}
+            >
+              {copy.actionLabel(action.kind)}
+            </Button>
+          ))}
+        </div>
+      </div>
+    )
+  }
   const dismissControls =
     surface === UNIFIED_API_GUIDANCE_SURFACES.Account &&
     onDismissForSession &&
@@ -81,13 +139,7 @@ export function UnifiedApiGuidanceCard({
       badgeVariant={statusBadgeVariants[model.status]}
       title={copy.headline()}
       description={copy.description(model)}
-      notes={
-        isOptionsOverview ? (
-          <OverviewGuidanceContent copy={copy} model={model} t={t} />
-        ) : (
-          <GuidanceNotes copy={copy} model={model} />
-        )
-      }
+      notes={<GuidanceNotes copy={copy} model={model} />}
       dismissControls={dismissControls}
       actions={
         <>
@@ -140,48 +192,24 @@ export function UnifiedApiGuidanceUnavailableCard({
   const { t } = useTranslation(UNIFIED_API_GUIDANCE_SURFACES.OptionsOverview)
 
   return (
-    <GuidanceCardLayout
-      badge={t("unifiedApiGuidance.unavailable.badge")}
-      badgeVariant="info"
+    <Notice
+      tone="info"
       title={t("unifiedApiGuidance.unavailable.title")}
       description={t("unifiedApiGuidance.unavailable.description")}
-      notes={null}
-      actionPanelJustify="start"
       actions={
-        <GuidanceCardActionButton primary onClick={onRetry} busy={isRetrying}>
+        <Button
+          size="sm"
+          variant="outline"
+          aria-busy={isRetrying || undefined}
+          aria-disabled={isRetrying || undefined}
+          onClick={() => {
+            if (!isRetrying) onRetry()
+          }}
+        >
           {t("unifiedApiGuidance.unavailable.retry")}
-        </GuidanceCardActionButton>
+        </Button>
       }
     />
-  )
-}
-
-/**
- * Renders the compact Overview progress and boundary notes.
- */
-function OverviewGuidanceContent({
-  copy,
-  model,
-  t,
-}: {
-  copy: UnifiedApiGuidanceCopy
-  model: UnifiedApiGuidanceModel
-  t: TFunction
-}) {
-  return (
-    <div className="space-y-2.5">
-      <UnifiedApiGuidanceStepper
-        copy={getUnifiedApiGuidanceStepperCopy(t)}
-        steps={model.steps}
-      />
-      <div className="space-y-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-        <p>{copy.boundaryNote()}</p>
-        <p>{copy.directToolExportNote()}</p>
-        {model.modelSyncSupported && model.optionalActions.length > 0 ? (
-          <p>{copy.modelSyncOptionalNote()}</p>
-        ) : null}
-      </div>
-    </div>
   )
 }
 
@@ -196,19 +224,14 @@ function GuidanceNotes({
   model: UnifiedApiGuidanceModel
 }) {
   return (
-    <div className="grid gap-2 md:grid-cols-2">
+    <div className="grid gap-2">
       <GuidanceCardNote icon="managedSite">
         {copy.boundaryNote()}
       </GuidanceCardNote>
-      <GuidanceCardNote icon="key">
-        {copy.directToolExportNote()}
-      </GuidanceCardNote>
       {model.modelSyncSupported && model.optionalActions.length > 0 ? (
-        <div className="md:col-span-2">
-          <GuidanceCardNote icon="managedSite">
-            {copy.modelSyncOptionalNote()}
-          </GuidanceCardNote>
-        </div>
+        <GuidanceCardNote icon="managedSite">
+          {copy.modelSyncOptionalNote()}
+        </GuidanceCardNote>
       ) : null}
     </div>
   )

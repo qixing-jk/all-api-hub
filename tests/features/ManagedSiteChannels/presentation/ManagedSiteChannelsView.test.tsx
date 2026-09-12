@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
-import { render, screen, within } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
@@ -13,6 +13,12 @@ import type {
 import { ManagedSiteChannelsView } from "~/features/ManagedSiteChannels/presentation/ManagedSiteChannelsView"
 import { compareManagedSiteChannelStatusValues } from "~/features/ManagedSiteChannels/presentation/useManagedSiteChannelsTable"
 import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
+import { openSettingsTab } from "~/utils/navigation"
+
+vi.mock("~/utils/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/navigation")>()),
+  openSettingsTab: vi.fn(),
+}))
 
 const rows = [
   {
@@ -378,9 +384,41 @@ describe("ManagedSiteChannelsView", () => {
       screen.getByText("common:status.configurationRequired"),
     ).toBeVisible()
     await user.click(
-      screen.getByRole("button", { name: "common:actions.retry" }),
+      screen.getByRole("button", { name: "common:actions.goToSettings" }),
     )
-    expect(onRefresh).toHaveBeenCalledTimes(1)
+    await waitFor(() =>
+      expect(openSettingsTab).toHaveBeenCalledWith("managedSite", {
+        preserveHistory: true,
+      }),
+    )
+    expect(
+      screen.queryByRole("button", { name: "common:actions.retry" }),
+    ).not.toBeInTheDocument()
+    expect(onRefresh).not.toHaveBeenCalled()
+  })
+
+  it("opens the provider-specific settings anchor for configuration recovery", async () => {
+    const user = userEvent.setup()
+    render(
+      <ManagedSiteChannelsView
+        {...commonProps}
+        configurationSettingsTarget={{
+          tabId: "managedSite",
+          anchor: "new-api",
+        }}
+        state={createState({ isConfigurationMissing: true })}
+        callbacks={createCallbacks()}
+      />,
+    )
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.goToSettings" }),
+    )
+    await waitFor(() =>
+      expect(openSettingsTab).toHaveBeenCalledWith("managedSite", {
+        anchor: "new-api",
+        preserveHistory: true,
+      }),
+    )
   })
 
   it("keeps a refreshing toolbar action available for cancellation", async () => {
@@ -402,6 +440,39 @@ describe("ManagedSiteChannelsView", () => {
 
     await user.click(cancelRefreshButton)
     expect(onRefresh).toHaveBeenCalledOnce()
+  })
+
+  it("shows selected sync as busy and prevents resubmission until it finishes", async () => {
+    const user = userEvent.setup()
+    const onSyncSelected = vi.fn()
+    const state = createState({
+      rows: [{ ...rows[0], isSyncing: true }],
+      selectedRowKeys: { "opaque:first": true },
+    })
+    const view = render(
+      <ManagedSiteChannelsView
+        {...commonProps}
+        state={state}
+        callbacks={createCallbacks({ onSyncSelected })}
+      />,
+    )
+    const button = screen.getByRole("button", {
+      name: labels.rowActions.syncing,
+    })
+    expect(button).toBeDisabled()
+    expect(button).toHaveAttribute("aria-busy", "true")
+    await user.click(button)
+    expect(onSyncSelected).not.toHaveBeenCalled()
+    view.rerender(
+      <ManagedSiteChannelsView
+        {...commonProps}
+        state={{ ...state, rows }}
+        callbacks={createCallbacks({ onSyncSelected })}
+      />,
+    )
+    expect(
+      screen.getByRole("button", { name: labels.syncSelected }),
+    ).toBeEnabled()
   })
 
   it("keeps unsupported bulk model sync visible and explains why it is unavailable", () => {

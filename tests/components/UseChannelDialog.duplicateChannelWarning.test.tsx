@@ -498,6 +498,7 @@ describe("useChannelDialog", () => {
     )
     expect(openRegistration).toHaveBeenCalledOnce()
     expect(openCreateEditor).toHaveBeenCalledWith({
+      signal: expect.any(AbortSignal),
       seed: {
         kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
         name: "Auto channel",
@@ -608,7 +609,8 @@ describe("useChannelDialog", () => {
     expect(openResult!).toEqual({ opened: false })
     expect(result.current.context.state.isOpen).toBe(false)
     expect(result.current.context.state.nativeCreate).toBeUndefined()
-    expect(mockToastError).toHaveBeenCalled()
+    expect(result.current.context.opening).toMatchObject({ status: "failure" })
+    expect(mockToastError).not.toHaveBeenCalled()
   })
 
   it("shows duplicate channel warning from migrated resource candidates", async () => {
@@ -840,6 +842,7 @@ describe("useChannelDialog", () => {
       })
 
       expect(nativeOpenCreateEditorMock).toHaveBeenCalledWith({
+        signal: expect.any(AbortSignal),
         seed: expect.objectContaining({
           name: "Account | Selected key (auto)",
           baseUrl,
@@ -1510,6 +1513,7 @@ describe("useChannelDialog", () => {
       },
     })
     expect(nativeOpenCreateEditorMock).toHaveBeenLastCalledWith({
+      signal: expect.any(AbortSignal),
       seed: expect.objectContaining({ credential: createdToken.key }),
     })
     expect(mockToastError).not.toHaveBeenCalled()
@@ -1571,6 +1575,7 @@ describe("useChannelDialog", () => {
       },
     })
     expect(nativeOpenCreateEditorMock).toHaveBeenLastCalledWith({
+      signal: expect.any(AbortSignal),
       seed: expect.objectContaining({ credential: createdToken.key }),
     })
     expect(mockToastError).not.toHaveBeenCalled()
@@ -2445,6 +2450,7 @@ describe("useChannelDialog", () => {
       },
     })
     expect(nativeOpenCreateEditorMock).toHaveBeenLastCalledWith({
+      signal: expect.any(AbortSignal),
       seed: expect.objectContaining({ credential: "sk-ensured-token" }),
     })
 
@@ -2630,6 +2636,7 @@ describe("useChannelDialog", () => {
       },
     })
     expect(nativeOpenCreateEditorMock).toHaveBeenLastCalledWith({
+      signal: expect.any(AbortSignal),
       seed: expect.objectContaining({
         credential: "sk-credential",
         baseUrl: "https://upstream.example.com",

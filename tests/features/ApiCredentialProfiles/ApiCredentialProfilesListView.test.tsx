@@ -18,7 +18,7 @@ vi.mock("~/contexts/FeatureGuidanceContext", () => ({
     state: {
       schemaVersion: 1,
       productTour: {},
-      gatewayGuidance: { dismissedAtBySurface: {} },
+      gatewayGuidance: { onboardingStartedAt: 1, dismissedAtBySurface: {} },
     },
     dismissGatewayGuidanceSurface: vi.fn(),
   }),

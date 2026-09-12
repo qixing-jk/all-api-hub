@@ -65,8 +65,9 @@ export function ResourceManualOptionControl({
           <Button
             type="button"
             size="sm"
-            variant="outline"
+            variant="dashed"
             disabled={disabled || isLoading}
+            loading={isLoading}
             aria-busy={isLoading || undefined}
             onClick={onLoad}
           >

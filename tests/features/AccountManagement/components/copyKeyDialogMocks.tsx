@@ -29,7 +29,7 @@ const mocks = vi.hoisted(() => ({
   captureApiCredentialProfileMock: vi.fn(),
   fetchServiceCredentialMock: vi.fn(),
   ccSwitchDialogMock: vi.fn(),
-  cliProxyDialogMock: vi.fn(),
+  cliProxyApiDialogMock: vi.fn(),
   claudeCodeRouterDialogMock: vi.fn(),
   kiloCodeExportDialogMock: vi.fn(),
   kiloCodeProfileExportDialogMock: vi.fn(),
@@ -44,8 +44,8 @@ const mocks = vi.hoisted(() => ({
   userPreferencesContextMock: {
     claudeCodeRouterApiKey: "ccr-management-key",
     claudeCodeRouterBaseUrl: "https://router.example.invalid",
-    cliProxyBaseUrl: "https://cliproxy.example.invalid",
-    cliProxyManagementKey: "cliproxy-management-key",
+    cliProxyApiBaseUrl: "https://cliproxy.example.invalid",
+    cliProxyApiManagementKey: "cliproxy-management-key",
     markGatewayGuidanceOnboardingCompleted: vi.fn(),
     // vi.hoisted runs before imported constants are initialized.
     managedSiteType: "new-api",
@@ -71,7 +71,7 @@ export const {
   captureApiCredentialProfileMock,
   fetchServiceCredentialMock,
   ccSwitchDialogMock,
-  cliProxyDialogMock,
+  cliProxyApiDialogMock,
   claudeCodeRouterDialogMock,
   kiloCodeExportDialogMock,
   kiloCodeProfileExportDialogMock,
@@ -258,9 +258,9 @@ vi.mock("~/components/ClaudeCodeRouterImportDialog", () => ({
   },
 }))
 
-vi.mock("~/components/CliProxyExportDialog", () => ({
-  CliProxyExportDialog: (props: unknown) => {
-    cliProxyDialogMock(props)
+vi.mock("~/components/CliProxyApiExportDialog", () => ({
+  CliProxyApiExportDialog: (props: unknown) => {
+    cliProxyApiDialogMock(props)
     return null
   },
 }))

@@ -107,7 +107,6 @@ export default defineUserConfig({
               '/ldoh-site-lookup',
               '/supported-export-tools',
               '/quick-export',
-              '/cliproxyapi-integration',
             ]
           },
           {
@@ -116,6 +115,7 @@ export default defineUserConfig({
             children: [
               '/managed-site-model-sync',
               '/self-hosted-site-management',
+              '/cliproxyapi-integration',
               '/model-redirect',
               '/new-api-security-verification',
             ]
@@ -205,7 +205,6 @@ export default defineUserConfig({
               '/en/ldoh-site-lookup',
               '/en/supported-export-tools',
               '/en/quick-export',
-              '/en/cliproxyapi-integration',
             ]
           },
           {
@@ -214,6 +213,7 @@ export default defineUserConfig({
             children: [
               '/en/managed-site-model-sync',
               '/en/self-hosted-site-management',
+              '/en/cliproxyapi-integration',
               '/en/model-redirect',
               '/en/new-api-security-verification',
             ]
@@ -303,7 +303,6 @@ export default defineUserConfig({
               '/ja/ldoh-site-lookup',
               '/ja/supported-export-tools',
               '/ja/quick-export',
-              '/ja/cliproxyapi-integration',
             ]
           },
           {
@@ -312,6 +311,7 @@ export default defineUserConfig({
             children: [
               '/ja/managed-site-model-sync',
               '/ja/self-hosted-site-management',
+              '/ja/cliproxyapi-integration',
               '/ja/model-redirect',
               '/ja/new-api-security-verification',
             ]

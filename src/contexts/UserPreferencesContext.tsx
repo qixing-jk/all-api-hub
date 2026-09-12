@@ -292,8 +292,8 @@ interface UserPreferencesContextType {
   sub2ApiManagedSiteBaseUrl: string
   sub2ApiManagedSiteAdminToken: string
   managedSiteType: ManagedSiteType
-  cliProxyBaseUrl: string
-  cliProxyManagementKey: string
+  cliProxyApiBaseUrl: string
+  cliProxyApiManagementKey: string
   claudeCodeRouterBaseUrl: string
   claudeCodeRouterApiKey: string
   themeMode: ThemeMode
@@ -438,11 +438,11 @@ interface UserPreferencesContextType {
     options?: PreferenceSaveOptions,
   ) => PreferenceWritePromise
   updateManagedSiteType: (siteType: ManagedSiteType) => PreferenceWritePromise
-  updateCliProxyBaseUrl: (
+  updateCliProxyApiBaseUrl: (
     url: string,
     options?: PreferenceSaveOptions,
   ) => PreferenceWritePromise
-  updateCliProxyManagementKey: (
+  updateCliProxyApiManagementKey: (
     key: string,
     options?: PreferenceSaveOptions,
   ) => PreferenceWritePromise
@@ -509,7 +509,7 @@ interface UserPreferencesContextType {
   resetClaudeCodeHubConfig: () => PreferenceWritePromise
   resetSub2ApiManagedSiteConfig: () => PreferenceWritePromise
   resetNewApiModelSyncConfig: () => PreferenceWritePromise
-  resetCliProxyConfig: () => PreferenceWritePromise
+  resetCliProxyApiConfig: () => PreferenceWritePromise
   resetClaudeCodeRouterConfig: () => PreferenceWritePromise
   resetAutoCheckinConfig: () => PreferenceWritePromise
   resetRedemptionAssistConfig: () => PreferenceWritePromise
@@ -749,11 +749,11 @@ export const UserPreferencesProvider = ({
    * Update the CLI proxy base URL and merge it into the preference tree so
    * dependent features read the latest endpoint.
    */
-  const updateCliProxyBaseUrl = useCallback(
+  const updateCliProxyApiBaseUrl = useCallback(
     async (baseUrl: string, options?: PreferenceSaveOptions) => {
       return persistPreferenceUpdates(
         {
-          cliProxy: { baseUrl },
+          cliProxyApi: { baseUrl },
         },
         options,
       )
@@ -765,11 +765,11 @@ export const UserPreferencesProvider = ({
    * Persist the CLI proxy management key token used for authenticated calls.
    * @param managementKey - User-provided secret for the CLI proxy service.
    */
-  const updateCliProxyManagementKey = useCallback(
+  const updateCliProxyApiManagementKey = useCallback(
     async (managementKey: string, options?: PreferenceSaveOptions) => {
       return persistPreferenceUpdates(
         {
-          cliProxy: { managementKey },
+          cliProxyApi: { adminToken: managementKey },
         },
         options,
       )
@@ -1766,11 +1766,11 @@ export const UserPreferencesProvider = ({
     return result
   }, [applySuccessfulPreferenceWrite])
 
-  const resetCliProxyConfig = useCallback(async () => {
-    const result = await userPreferences.resetCliProxyConfig()
+  const resetCliProxyApiConfig = useCallback(async () => {
+    const result = await userPreferences.resetCliProxyApiConfig()
     if (result.ok) {
       await reloadPreferencesAndTrackSnapshots({
-        cliProxy: DEFAULT_PREFERENCES.cliProxy,
+        cliProxyApi: DEFAULT_PREFERENCES.cliProxyApi,
       })
     }
     return result
@@ -1969,8 +1969,8 @@ export const UserPreferencesProvider = ({
       preferences?.sub2apiManagedSite?.adminToken ||
       DEFAULT_SUB2API_MANAGED_SITE_CONFIG.adminToken,
     managedSiteType: preferences?.managedSiteType || SITE_TYPES.NEW_API,
-    cliProxyBaseUrl: preferences?.cliProxy?.baseUrl || "",
-    cliProxyManagementKey: preferences?.cliProxy?.managementKey || "",
+    cliProxyApiBaseUrl: preferences?.cliProxyApi?.baseUrl || "",
+    cliProxyApiManagementKey: preferences?.cliProxyApi?.adminToken || "",
     claudeCodeRouterBaseUrl: preferences?.claudeCodeRouter?.baseUrl || "",
     claudeCodeRouterApiKey: preferences?.claudeCodeRouter?.apiKey || "",
     themeMode: preferences?.themeMode || "system",
@@ -2034,8 +2034,8 @@ export const UserPreferencesProvider = ({
     updateSub2ApiManagedSiteAdminToken,
     updateSub2ApiManagedSiteConfig,
     updateManagedSiteType,
-    updateCliProxyBaseUrl,
-    updateCliProxyManagementKey,
+    updateCliProxyApiBaseUrl,
+    updateCliProxyApiManagementKey,
     updateClaudeCodeRouterBaseUrl,
     updateClaudeCodeRouterApiKey,
     updateThemeMode,
@@ -2064,7 +2064,7 @@ export const UserPreferencesProvider = ({
     resetClaudeCodeHubConfig,
     resetSub2ApiManagedSiteConfig,
     resetNewApiModelSyncConfig,
-    resetCliProxyConfig,
+    resetCliProxyApiConfig,
     resetClaudeCodeRouterConfig,
     resetAutoCheckinConfig,
     resetRedemptionAssistConfig,

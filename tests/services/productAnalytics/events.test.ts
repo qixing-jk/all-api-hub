@@ -92,8 +92,8 @@ describe("product analytics event enums", () => {
       CopyAccountTokenKelivoImportCode: "copy_account_token_kelivo_import_code",
       CopyServiceCredentialKelivoImportCode:
         "copy_service_credential_kelivo_import_code",
-      ExportAccountTokenToCliProxy: "export_account_token_to_cli_proxy",
-      ExportAccountTokensToCliProxy: "export_account_tokens_to_cli_proxy",
+      ExportAccountTokenToCliProxyApi: "export_account_token_to_cli_proxy",
+      ExportAccountTokensToCliProxyApi: "export_account_tokens_to_cli_proxy",
       ExportAccountTokenToClaudeCodeRouter:
         "export_account_token_to_claude_code_router",
       CopyKiloCodeAccountExportConfig: "copy_kilo_code_account_export_config",
@@ -107,7 +107,7 @@ describe("product analytics event enums", () => {
         "copy_api_credential_profile_kelivo_import_code",
       CopyApiCredentialProfileCursorPlusProviderConfig:
         "copy_api_credential_profile_cursor_plus_provider_config",
-      ImportApiCredentialProfileToCliProxy:
+      ImportApiCredentialProfileToCliProxyApi:
         "import_api_credential_profile_to_cli_proxy",
       ImportApiCredentialProfileToClaudeCodeRouter:
         "import_api_credential_profile_to_claude_code_router",

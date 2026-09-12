@@ -157,7 +157,7 @@
     "title": "Claude Code Router",
     "urlDesc": "Claude Code Router server base URL, e.g. http://localhost:3000"
   },
-  "cliProxy": {
+  "cliProxyApi": {
     "baseUrlLabel": "Management API Base URL",
     "checkConnectionAction": "Check Connection",
     "checkConnectionDesc": "After saving, verify that the current URL and management key can reach the CLIProxyAPI Management API.",
@@ -244,6 +244,9 @@
   "managedSite": {
     "axonHub": "AxonHub",
     "claudeCodeHub": "Claude Code Hub",
+    "cliProxyApi": "CLIProxyAPI",
+    "deploymentDocs": "Official deployment documentation",
+    "deploymentDocsLink": "{{site}} official deployment documentation",
     "description": "Select which API aggregator platform you want to manage. This determines which configuration will be used for channel management and model syncing.",
     "doneHub": "Done Hub",
     "gatewayGuidance": {
@@ -253,8 +256,8 @@
         "viewChannels": "View imported channels"
       },
       "configComplete": {
-        "description": "The basic setup only connects the gateway admin backend. To let external clients call models through this self-hosted AI gateway as one unified AI API, import account keys or API keys as gateway channels.",
-        "title": "Next: import usable keys"
+        "description": "Gateway settings are saved. Import account keys or API credentials as gateway channels. Connectivity is checked during verification or import.",
+        "title": "Next: import channels"
       },
       "unconfigured": {
         "description": "Configure your self-hosted AI gateway, then import account keys or API keys as gateway channels so multiple keys can be used through one AI API.",
@@ -263,6 +266,7 @@
     },
     "newApi": "New API",
     "octopus": "Octopus",
+    "popularityHint": "Ordered by a snapshot of GitHub star counts.",
     "siteTypeDesc": "Choose the platform used for channel management and model sync",
     "siteTypeLabel": "Gateway type",
     "sub2api": "Sub2API",
@@ -636,7 +640,6 @@
     "balanceHistory": "Balance History",
     "checkinRedeem": "Check-in & Redeem",
     "claudeCodeRouter": "Claude Code Router",
-    "cliProxy": "CLIProxyAPI",
     "dataBackup": "Data & Backup",
     "general": "General",
     "managedSite": "Self-hosted AI gateway",

@@ -74,9 +74,7 @@ export function LinkedCredentialProfileActions({
               [EXPORT_ACTION_TARGETS.KiloCode]: {
                 onSelect: () => controller.openDialog("kilo-code"),
               },
-              [EXPORT_ACTION_TARGETS.CliProxy]: {
-                onSelect: controller.handleCliProxy,
-              },
+
               [EXPORT_ACTION_TARGETS.ClaudeCodeRouter]: {
                 onSelect: controller.handleClaudeCodeRouter,
               },

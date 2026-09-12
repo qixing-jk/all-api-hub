@@ -17,7 +17,7 @@ For AIHubMix users, it helps with:
 - **Balance view**: check AIHubMix balance from the extension panel.
 - **API key protection**: AIHubMix full keys are shown only once; All API Hub can save the full key to **API Credential Profiles** when it is created.
 - **Model pricing lookup**: view AIHubMix model lists and input/output prices.
-- **Credential export**: export saved keys to Cherry Studio, CC Switch, Kilo Code, CLIProxyAPI, Claude Code Router, and other tools.
+- **Credential export**: export saved keys to Cherry Studio, CC Switch, Kilo Code, Claude Code Router, and other tools.
 
 ---
 
@@ -100,11 +100,11 @@ To use AIHubMix in another tool:
 
 1. Find the saved AIHubMix key in **API Credential Profiles**.
 2. Choose an export action.
-3. Select the target tool, such as **Cherry Studio**, **CC Switch**, **Kilo Code**, **CLIProxyAPI**, **Claude Code Router**, or a configured self-hosted site.
+3. Select the target tool, such as **Cherry Studio**, **CC Switch**, **Kilo Code**, **Claude Code Router**, or a configured self-hosted site.
 
 ![Export an AIHubMix key from API Credential Profiles](../../static/image/sponsor-guides/aihubmix/aihubmix-credential-export-menu.png)
 
-After saving a key to API Credential Profiles, you can also copy `Base URL + API Key`, verify availability, view available models, export to multiple clients, import into a configured self-hosted site, or move it with import/export and WebDAV sync.
+After saving a key to API Credential Profiles, you can also copy `Base URL + API Key`, verify availability, view available models, export to multiple clients, import into a configured self-hosted gateway such as CLIProxyAPI, New API, or Sub2API, or move it with import/export and WebDAV sync.
 
 ---
 

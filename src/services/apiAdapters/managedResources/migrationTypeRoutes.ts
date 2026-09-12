@@ -421,7 +421,8 @@ const findSourceRoute = (
   resourceType: string | number,
 ) =>
   routes.find((route) => {
-    const entry = route[siteType]
+    const entry =
+      siteType in route ? route[siteType as keyof TypeRoute] : undefined
     return typeof entry === "object"
       ? entry.sourceTypes?.some((type) => type === resourceType) === true
       : entry !== undefined && entry === resourceType

@@ -18,6 +18,8 @@ import { createTab } from "~/utils/browser/browserApi"
 import { joinUrl } from "~/utils/core/url"
 import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
+import { ManagedSiteDeploymentLink } from "./ManagedSiteDeploymentLink"
+
 /**
  * Settings panel for configuring Done Hub connection credentials (base URL, admin token, user ID).
  * @returns Section containing inputs and reset handling for the Done Hub config.
@@ -113,6 +115,9 @@ export default function DoneHubSettings() {
 
   return (
     <SettingSection
+      titleActions={
+        <ManagedSiteDeploymentLink siteType={SITE_TYPES.DONE_HUB} />
+      }
       id="done-hub"
       title={t("doneHub.title")}
       description={t("doneHub.description")}

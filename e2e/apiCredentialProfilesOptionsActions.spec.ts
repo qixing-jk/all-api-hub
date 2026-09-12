@@ -5,6 +5,11 @@ import { KILO_CODE_EXPORT_TEST_IDS } from "~/components/kiloCodeExportTestIds"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
+import {
+  getManagedSiteChannelRowDeleteActionTestId,
+  getManagedSiteChannelRowEditActionTestId,
+  MANAGED_SITE_CHANNELS_TEST_IDS,
+} from "~/features/ManagedSiteChannels/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   API_TYPES,
@@ -17,6 +22,10 @@ import {
 } from "~/services/verification/verificationResultHistory/utils"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { verifyApiCredentialProfileCcSwitchModelPickerScenario } from "~~/e2e/scenarios/apiCredentialProfileVerification"
+import {
+  channelRowByName,
+  openManagedSiteChannelRowActions,
+} from "~~/e2e/scenarios/managedSiteChannels"
 import {
   createStoredApiCredentialProfile,
   forceExtensionLanguage,
@@ -655,13 +664,15 @@ test("downloads Kilo Code settings for an API credential profile", async ({
   ).toEqual(expect.any(String))
 })
 
-test("imports an API credential profile into CLI Proxy", async ({
+test("imports an API credential profile into CLIProxyAPI using migrated managed-site credentials", async ({
   context,
   extensionId,
   page,
 }) => {
   const serviceWorker = await getServiceWorker(context)
   await seedUserPreferences(serviceWorker, {
+    preferencesVersion: 27,
+    managedSiteType: "cli-proxy-api",
     cliProxy: {
       baseUrl: "https://cli-proxy.example.com/v0/management",
       managementKey: "mgmt-cli-proxy",
@@ -670,83 +681,107 @@ test("imports an API credential profile into CLI Proxy", async ({
   await seedApiCredentialProfiles(serviceWorker, [
     createStoredApiCredentialProfile({
       id: "profile-cli-proxy",
-      name: "CLI Proxy Profile",
+      name: "CLIProxyAPI Profile",
       baseUrl: "https://cli-source.example.com",
       apiKey: "sk-cli-proxy-profile",
     }),
   ])
-
   await installOpenAiCompatibleModelsRoute(context, {
     baseUrl: "https://cli-source.example.com",
     modelId: "gpt-cli-proxy",
   })
+  let providers: Record<string, unknown>[] = []
   await context.route(
-    "https://cli-proxy.example.com/v0/management/openai-compatibility",
+    "https://cli-proxy.example.com/v0/management/*",
     async (route) => {
-      if (route.request().method() === "GET") {
+      const request = route.request()
+      expect(request.headers()["authorization"]).toBe("Bearer mgmt-cli-proxy")
+      const kind = new URL(request.url()).pathname.split("/").at(-1)!
+      if (request.method() === "GET") {
         await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({ "openai-compatibility": [] }),
+          json: { [kind]: kind === "openai-compatibility" ? providers : [] },
         })
-        return
+      } else {
+        expect(kind).toBe("openai-compatibility")
+        if (request.method() === "PUT") providers = request.postDataJSON()
+        else if (request.method() === "PATCH") {
+          const { index, value } = request.postDataJSON()
+          providers[index] = { ...providers[index], ...value }
+        } else {
+          expect(request.method()).toBe("DELETE")
+          providers.splice(
+            Number(new URL(request.url()).searchParams.get("index")),
+            1,
+          )
+        }
+        await route.fulfill({ json: { status: "ok" } })
       }
-
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ ok: true }),
-      })
     },
   )
-
   await openProfilesPage(page, extensionId)
-
   await page
-    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.exportMenuButton)
+    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.importToManagedSiteButton)
     .click()
-  await page
-    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.exportToCliProxyMenuItem)
-    .click()
-
   const dialog = page.getByRole("dialog")
-  await expect(dialog.getByText("Import to CLIProxyAPI")).toBeVisible()
-  await expect(page.getByLabel("Provider name")).toHaveValue(
-    "CLI Proxy Profile",
-  )
-  await expect(page.getByLabel("Provider base URL")).toHaveValue(
+  await expect(dialog.getByLabel("Base URL", { exact: true })).toHaveValue(
     "https://cli-source.example.com/v1",
   )
-
-  const importRequestPromise = page.waitForRequest((request) => {
-    return (
-      request.method() === "PUT" &&
-      request.url() ===
-        "https://cli-proxy.example.com/v0/management/openai-compatibility"
-    )
-  })
-  await dialog.getByRole("button", { name: "Import", exact: true }).click()
-  const importRequest = await importRequestPromise
-
-  expect(importRequest.headers()["authorization"]).toBe("Bearer mgmt-cli-proxy")
-  expect(JSON.parse(importRequest.postData() ?? "[]")).toEqual([
-    {
-      name: "CLI Proxy Profile",
+  await expect(dialog.getByLabel("Channel Name", { exact: true })).toHaveValue(
+    "CLIProxyAPI Profile | CLIProxyAPI Profile (auto)",
+  )
+  await dialog
+    .getByRole("button", { name: "Create Channel", exact: true })
+    .click()
+  await expect(dialog).toBeHidden()
+  expect(providers).toEqual([
+    expect.objectContaining({
+      name: "CLIProxyAPI Profile | CLIProxyAPI Profile (auto)",
       "base-url": "https://cli-source.example.com/v1",
       "api-key-entries": [
-        {
-          "api-key": "sk-cli-proxy-profile",
-          "proxy-url": "",
-        },
+        { "api-key": "sk-cli-proxy-profile", "proxy-url": "" },
       ],
-      headers: {},
-    },
+      models: [{ name: "gpt-cli-proxy", alias: "gpt-cli-proxy" }],
+    }),
   ])
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.MANAGED_SITE_CHANNELS}`,
+  )
+  await waitForExtensionRoot(page)
+  const originalName = "CLIProxyAPI Profile | CLIProxyAPI Profile (auto)"
+  const { rowTestToken } = await openManagedSiteChannelRowActions(
+    page,
+    originalName,
+  )
+  await page
+    .getByTestId(getManagedSiteChannelRowEditActionTestId(rowTestToken))
+    .click()
+  await dialog
+    .getByLabel("Channel Name", { exact: true })
+    .fill("Renamed CLIProxyAPI provider")
+  await dialog
+    .getByRole("button", { name: "Save Changes", exact: true })
+    .click()
+  await expect(dialog).toBeHidden()
   await expect(
-    page.getByText(
-      "Successfully imported provider CLI Proxy Profile to CLIProxyAPI",
-    ),
-  ).toBeVisible()
+    channelRowByName(page, "Renamed CLIProxyAPI provider"),
+  ).toHaveCount(1)
+  await expect(channelRowByName(page, originalName)).toHaveCount(0)
+  const renamed = await openManagedSiteChannelRowActions(
+    page,
+    "Renamed CLIProxyAPI provider",
+  )
+  await page
+    .getByTestId(
+      getManagedSiteChannelRowDeleteActionTestId(renamed.rowTestToken),
+    )
+    .click()
+  await page
+    .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.deleteChannelConfirmButton)
+    .click()
+  await expect(
+    channelRowByName(page, "Renamed CLIProxyAPI provider"),
+  ).toHaveCount(0)
+  expect(providers).toEqual([])
 })
 
 test("imports an API credential profile into Claude Code Router", async ({

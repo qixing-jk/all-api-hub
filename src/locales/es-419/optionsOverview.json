@@ -229,17 +229,26 @@
     },
     "boundaryNote": "All API Hub administra e importa la configuración; no hace proxy de las solicitudes de modelos. Los clientes externos llaman a tu AI gateway autohospedado.",
     "description": {
-      "has_gateway_channels": "Antes se creó o importó un canal del gateway. Abre la administración de canales para confirmar su estado actual y obtener la dirección de API y la clave de acceso que necesita tu cliente.",
+      "has_gateway_channels": "La guía de configuración del gateway está completa. Abre la administración de canales para consultar el estado actual.",
       "needs_importable_source": "Ya tienes cuentas, pero sus tipos actuales no pueden exponer claves importables. Primero guarda una API key o agrega un tipo de cuenta que permita acceder a claves, y luego impórtala en tu AI gateway autohospedado.",
       "needs_managed_site": "Ya tienes claves de cuenta o API keys. Después de configurar tu AI gateway autohospedado, puedes importarlas como canales del gateway para que varias claves usen una sola AI API.",
-      "needs_sources": "Primero agrega cuentas o guarda API keys. Luego puedes exportarlas directamente a clientes o importarlas fácilmente a tu AI gateway autohospedado para reunirlas en una AI API unificada.",
+      "needs_sources": "Agrega una cuenta o guarda una clave API y luego impórtala a tu puerta de enlace de IA autoalojada para ofrecer una API de IA unificada.",
       "ready_accounts": "La configuración básica del AI gateway autohospedado está completa. Continúa importando una clave de cuenta o API key; el flujo de importación validará la conexión y creará un canal.",
       "ready_profiles": "La configuración básica del AI gateway autohospedado está completa. Abre la biblioteca de credenciales para validar e importar una API key guardada como canal del gateway."
     },
-    "directToolExportNote": "Si aún no necesitas un gateway autohospedado, también puedes exportar una credencial individual directamente a herramientas cliente.",
     "headline": "Reúne varias claves de cuenta o API keys en una AI API unificada",
     "modelSyncOptional": "La sincronización de modelos puede actualizar automáticamente la lista de modelos del gateway y reducir mantenimiento manual; puedes activarla cuando haga falta después de crear canales.",
     "optionalLabel": "Mantenimiento opcional",
+    "overview": {
+      "collapse": "Contraer",
+      "completedDescription": "La guía de configuración está completa. Puedes revisar los pasos o administrar los canales del gateway cuando quieras.",
+      "description": "Importa claves de cuentas o credenciales de API a tu gateway para usar una sola dirección de API.",
+      "progress": "Progreso {{completed}}/{{total}}",
+      "reopen": "Guía de configuración",
+      "resume": "Continuar configuración",
+      "start": "Ver pasos",
+      "title": "API unificada"
+    },
     "sources": {
       "account": "Fuentes de cuentas",
       "accountUnavailable": "Cuentas no importables",
@@ -255,10 +264,6 @@
         "upcoming": "Más adelante"
       },
       "steps": {
-        "clientAccess": {
-          "description": "Obtén la dirección de API del gateway y una clave de acceso para tu cliente.",
-          "title": "Conectar un cliente"
-        },
         "gatewayChannel": {
           "description": "Importa al menos una clave de cuenta o credencial de API guardada.",
           "title": "Crear un canal del gateway"
@@ -274,7 +279,6 @@
       }
     },
     "unavailable": {
-      "badge": "Estado sin confirmar",
       "description": "No se pudieron cargar las cuentas, las credenciales o la configuración del gateway. No se asumirá que faltan fuentes.",
       "retry": "Volver a comprobar",
       "title": "No se pudo confirmar la configuración"

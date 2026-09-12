@@ -91,7 +91,6 @@ type CreatedReferenceResolution =
   | { absenceReason: RepairCreatedKeyBatchImportAbsenceReason }
   | {
       absenceReason: null
-      references: CreatedResourceReferenceEntry[]
       candidateReferences: CreatedResourceReferenceEntry[]
       targetReceipts: Map<string, AccountKeyRepairManagedSiteImportStatus>
     }
@@ -108,19 +107,20 @@ const getOriginKey = (siteUrl: string) =>
     stripTrailingSlashes: false,
   })
 
-const buildBlockedReference = (params: {
-  ref: AccountKeyResourceRef
-  accountLabel: string
-  label: string
-  detailCode: ManagedSiteTokenBatchExportBlockedDetailCode
-}): ManagedSiteTokenBatchExportItemInput => ({
+const buildBlockedReference = (
+  reference: Pick<
+    CreatedResourceReferenceEntry,
+    "ref" | "accountLabel" | "label"
+  >,
+  detailCode: ManagedSiteTokenBatchExportBlockedDetailCode,
+): ManagedSiteTokenBatchExportItemInput => ({
   kind: MANAGED_SITE_TOKEN_BATCH_EXPORT_INPUT_KINDS.BLOCKED_REFERENCE,
-  id: buildAccountKeyResourceRuntimeKeyId(params.ref),
-  accountLabel: params.accountLabel,
-  keyLabel: params.label,
+  id: buildAccountKeyResourceRuntimeKeyId(reference.ref),
+  accountLabel: reference.accountLabel,
+  keyLabel: reference.label,
   blockingReasonCode:
     MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.INPUT_PREPARATION_FAILED,
-  blockingDetailCode: params.detailCode,
+  blockingDetailCode: detailCode,
 })
 
 const buildResolvedReference = (params: {
@@ -201,13 +201,14 @@ const resolveCreatedReferenceState = (
 ): CreatedReferenceResolution => {
   if (
     progress.schemaVersion !== ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION ||
-    progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Completed
+    progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Idle
   ) {
     return {
       absenceReason: REPAIR_CREATED_KEY_BATCH_IMPORT_ABSENCE_REASONS.NOT_READY,
     }
   }
 
+  // Confirmed resource identities are usable independently of unfinished accounts.
   const references = getCreatedReferenceEntries(progress)
   if (references.length === 0) {
     return {
@@ -239,7 +240,6 @@ const resolveCreatedReferenceState = (
 
   return {
     absenceReason: null,
-    references,
     candidateReferences,
     targetReceipts,
   }
@@ -303,13 +303,10 @@ export async function resolveRepairCreatedKeyBatchImportCandidate(
         reference.ref.accountId !== reference.accountId ||
         reference.ref.siteType !== reference.resultSiteType
       ) {
-        return buildBlockedReference({
-          ref: reference.ref,
-          accountLabel: reference.accountLabel,
-          label: reference.label,
-          detailCode:
-            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_ACCOUNT_UNAVAILABLE,
-        })
+        return buildBlockedReference(
+          reference,
+          MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_ACCOUNT_UNAVAILABLE,
+        )
       }
 
       const createdSecret =
@@ -332,13 +329,10 @@ export async function resolveRepairCreatedKeyBatchImportCandidate(
       try {
         const session = await getAccountKeyResourceSession(account)
         if (!session?.runtimeKey) {
-          return buildBlockedReference({
-            ref: reference.ref,
-            accountLabel: reference.accountLabel,
-            label: reference.label,
-            detailCode:
-              MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_KEY_INVENTORY_UNAVAILABLE,
-          })
+          return buildBlockedReference(
+            reference,
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_KEY_INVENTORY_UNAVAILABLE,
+          )
         }
 
         const runtimeResolution = await session.runtimeKey.resolve(
@@ -349,13 +343,10 @@ export async function resolveRepairCreatedKeyBatchImportCandidate(
             ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved ||
           runtimeResolution.secret.trim().length === 0
         ) {
-          return buildBlockedReference({
-            ref: reference.ref,
-            accountLabel: reference.accountLabel,
-            label: reference.label,
-            detailCode:
-              MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.CREATED_KEY_UNAVAILABLE,
-          })
+          return buildBlockedReference(
+            reference,
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.CREATED_KEY_UNAVAILABLE,
+          )
         }
 
         return buildResolvedReference({
@@ -368,13 +359,10 @@ export async function resolveRepairCreatedKeyBatchImportCandidate(
         logger.warn("Failed to resolve a repair-created runtime key", {
           error: sanitizeSensitiveErrorText(getErrorMessage(error)),
         })
-        return buildBlockedReference({
-          ref: reference.ref,
-          accountLabel: reference.accountLabel,
-          label: reference.label,
-          detailCode:
-            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_KEY_INVENTORY_UNAVAILABLE,
-        })
+        return buildBlockedReference(
+          reference,
+          MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_KEY_INVENTORY_UNAVAILABLE,
+        )
       }
     },
   )
@@ -385,13 +373,10 @@ export async function resolveRepairCreatedKeyBatchImportCandidate(
       error: sanitizeSensitiveErrorText(getErrorMessage(result.reason)),
     })
     const reference = resolution.candidateReferences[index]!
-    return buildBlockedReference({
-      ref: reference.ref,
-      accountLabel: reference.accountLabel,
-      label: reference.label,
-      detailCode:
-        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_KEY_INVENTORY_UNAVAILABLE,
-    })
+    return buildBlockedReference(
+      reference,
+      MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_KEY_INVENTORY_UNAVAILABLE,
+    )
   })
 
   const hasReconciliationReceipt = resolution.candidateReferences.some(

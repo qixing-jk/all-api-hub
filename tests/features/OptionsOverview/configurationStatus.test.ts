@@ -180,6 +180,18 @@ describe("configuration status helpers", () => {
         enabledAccountCount: 1,
         preferences: DEFAULT_PREFERENCES,
       }),
+    ).toBe("configured")
+    expect(
+      resolveBalanceHistoryConfigurationStatus({
+        enabledAccountCount: 1,
+        preferences: {
+          ...DEFAULT_PREFERENCES,
+          balanceHistory: {
+            ...DEFAULT_PREFERENCES.balanceHistory!,
+            enabled: false,
+          },
+        },
+      }),
     ).toBe("disabled")
   })
 

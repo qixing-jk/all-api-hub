@@ -32,7 +32,8 @@ export default function BalanceHistorySettings() {
   const { preferences, updateBalanceHistory } = useUserPreferencesContext()
 
   const [enabled, setEnabled] = useState<boolean>(
-    preferences.balanceHistory?.enabled ?? false,
+    preferences.balanceHistory?.enabled ??
+      DEFAULT_BALANCE_HISTORY_PREFERENCES.enabled,
   )
   const [endOfDayCaptureEnabled, setEndOfDayCaptureEnabled] = useState<boolean>(
     preferences.balanceHistory?.endOfDayCapture?.enabled ?? false,
@@ -47,7 +48,10 @@ export default function BalanceHistorySettings() {
   )
 
   useEffect(() => {
-    setEnabled(preferences.balanceHistory?.enabled ?? false)
+    setEnabled(
+      preferences.balanceHistory?.enabled ??
+        DEFAULT_BALANCE_HISTORY_PREFERENCES.enabled,
+    )
     setEndOfDayCaptureEnabled(
       preferences.balanceHistory?.endOfDayCapture?.enabled ?? false,
     )

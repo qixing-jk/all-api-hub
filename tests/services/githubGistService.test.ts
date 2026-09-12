@@ -140,48 +140,56 @@ describe("githubGistService", () => {
     ).rejects.toMatchObject({ code: CLOUD_SYNC_ERROR_CODES.REMOTE_EMPTY })
   })
 
-  it("maps invalid token, rate limit, not found, and network errors to safe codes", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(response({}, 401))
-      .mockResolvedValueOnce(
-        response({}, 429, {
-          "retry-after": "30",
-        }),
+  it.each([401, 403, 404, 429, 500, 422])(
+    "preserves the GitHub message and HTTP metadata for status %s",
+    async (status) => {
+      const message = "GitHub supplied diagnostic"
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          response({ message }, status, {
+            "x-github-request-id": "request-1",
+            "x-ratelimit-reset": "123",
+          }),
+        ),
       )
-      .mockResolvedValueOnce(
-        response({}, 403, {
-          "retry-after": "30",
-        }),
-      )
-      .mockResolvedValueOnce(response({}, 404))
-      .mockRejectedValueOnce(new Error("socket failed"))
-    vi.stubGlobal("fetch", fetchMock)
-
-    for (const code of [
-      CLOUD_SYNC_ERROR_CODES.INVALID_TOKEN,
-      CLOUD_SYNC_ERROR_CODES.RATE_LIMITED,
-      CLOUD_SYNC_ERROR_CODES.RATE_LIMITED,
-      CLOUD_SYNC_ERROR_CODES.NOT_FOUND,
-    ]) {
       await expect(
-        readGithubGistRemote({ token: "token", gistId: "gist-1" }),
-      ).rejects.toMatchObject({ code })
-    }
-    await expect(
-      readGithubGistRemote({ token: "token", gistId: "gist-1" }),
-    ).rejects.toMatchObject({ code: CLOUD_SYNC_ERROR_CODES.NETWORK })
+        readGithubGistRemote({ token: "ghp-test-token", gistId: "gist-1" }),
+      ).rejects.toMatchObject({
+        message,
+        statusCode: status,
+        requestId: "request-1",
+        retryAt: 123_000,
+      })
+    },
+  )
 
+  it("preserves upstream errors from the truncated raw-file request", async () => {
     vi.stubGlobal(
       "fetch",
       vi
         .fn()
         .mockResolvedValueOnce(response(truncatedGistResponse()))
-        .mockResolvedValueOnce(response({}, 503)),
+        .mockResolvedValueOnce(
+          response({ message: "Raw file is unavailable" }, 503),
+        ),
     )
     await expect(
       readGithubGistRemote({ token: "token", gistId: "gist-1" }),
-    ).rejects.toMatchObject({ code: CLOUD_SYNC_ERROR_CODES.REMOTE_UNAVAILABLE })
+    ).rejects.toMatchObject({
+      message: "Raw file is unavailable",
+      statusCode: 503,
+    })
+  })
+
+  it("reports network failures without an HTTP response", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("socket failed")),
+    )
+    await expect(
+      readGithubGistRemote({ token: "token", gistId: "gist-1" }),
+    ).rejects.toMatchObject({ code: CLOUD_SYNC_ERROR_CODES.NETWORK })
   })
 
   it("validates token and accepts only safe Gist identifiers", async () => {
@@ -204,35 +212,50 @@ describe("githubGistService", () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it("maps permission, reset-header, server, and generic HTTP failures", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(response({}, 403))
-      .mockResolvedValueOnce(
-        response({}, 403, {
-          "x-ratelimit-remaining": "0",
-          "x-ratelimit-reset": "123",
-        }),
-      )
-      .mockResolvedValueOnce(response({}, 500))
-      .mockResolvedValueOnce(response({}, 400))
-    vi.stubGlobal("fetch", fetchMock)
+  it.each([null, {}, { message: " " }, { message: 123 }, "Bad gateway"])(
+    "uses an HTTP fallback when GitHub has no usable message: %j",
+    async (body) => {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response(body, 502)))
+      await expect(
+        readGithubGistRemote({ token: "token", gistId: "gist-1" }),
+      ).rejects.toMatchObject({
+        message: "GitHub request failed (HTTP 502)",
+        statusCode: 502,
+      })
+    },
+  )
 
+  it("keeps the HTTP failure when the error body cannot be parsed", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ...response({}, 503),
+        json: async () => {
+          throw new Error("invalid JSON")
+        },
+      }),
+    )
     await expect(
       readGithubGistRemote({ token: "token", gistId: "gist-1" }),
-    ).rejects.toMatchObject({ code: CLOUD_SYNC_ERROR_CODES.PERMISSION_DENIED })
-    await expect(
-      readGithubGistRemote({ token: "token", gistId: "gist-1" }),
-    ).rejects.toMatchObject({
-      code: CLOUD_SYNC_ERROR_CODES.RATE_LIMITED,
-      retryAt: 123_000,
-    })
-    await expect(
-      readGithubGistRemote({ token: "token", gistId: "gist-1" }),
-    ).rejects.toMatchObject({ code: CLOUD_SYNC_ERROR_CODES.REMOTE_UNAVAILABLE })
-    await expect(
-      readGithubGistRemote({ token: "token", gistId: "gist-1" }),
-    ).rejects.toMatchObject({ code: CLOUD_SYNC_ERROR_CODES.REMOTE_UNAVAILABLE })
+    ).rejects.toThrow("GitHub request failed (HTTP 503)")
+  })
+
+  it("redacts a reflected token while preserving the rest of the GitHub message", async () => {
+    const token = "ghp-private-token"
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        response({ message: `Rejected ${token}` }, 401, {
+          "retry-after": "30",
+        }),
+      ),
+    )
+    const startedAt = Date.now()
+    const error = await readGithubGistRemote({ token, gistId: "gist-1" }).catch(
+      (error) => error,
+    )
+    expect(error.message).toBe("Rejected [REDACTED]")
+    expect(error.retryAt).toBeGreaterThanOrEqual(startedAt + 30_000)
   })
 
   it("rejects malformed successful API responses as remote corruption", async () => {

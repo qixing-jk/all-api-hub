@@ -22,7 +22,7 @@ export default function ManagedSiteSelector() {
           <CardItem
             id="managed-site-type"
             title={t("managedSite.siteTypeLabel")}
-            description={t("managedSite.siteTypeDesc")}
+            description={`${t("managedSite.siteTypeDesc")} ${t("managedSite.popularityHint")}`}
             rightContent={
               <ManagedSiteTypeSwitcher
                 ariaLabel={t("managedSite.siteTypeLabel")}

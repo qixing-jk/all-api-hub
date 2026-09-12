@@ -232,12 +232,22 @@ describe("BalanceHistory options page", () => {
     expect(screen.queryByText(EMPTY_TITLE)).toBeNull()
   })
 
-  it("renders the empty state when no snapshots exist", async () => {
-    render(<BalanceHistory />)
+  it.each(["stored", "missing"])(
+    "renders the empty state with %s capture preferences when no snapshots exist",
+    async (preferenceState) => {
+      const context = createMockUserPreferencesContext({ enabled: true })
+      if (preferenceState === "missing") {
+        delete context.preferences.balanceHistory
+      }
+      vi.mocked(useUserPreferencesContext).mockReturnValue(context)
 
-    expect(await screen.findByText(PAGE_TITLE)).toBeInTheDocument()
-    expect(await screen.findByText(EMPTY_TITLE)).toBeInTheDocument()
-  })
+      render(<BalanceHistory />)
+
+      expect(await screen.findByText(PAGE_TITLE)).toBeInTheDocument()
+      expect(await screen.findByText(EMPTY_TITLE)).toBeInTheDocument()
+      expect(screen.queryByText(DISABLED_HINT_TITLE)).not.toBeInTheDocument()
+    },
+  )
 
   it("shows a cashflow warning when showTodayCashflow is disabled and end-of-day capture is disabled", async () => {
     vi.mocked(useUserPreferencesContext).mockReturnValue(

@@ -57,7 +57,6 @@ describe("trackUnifiedApiGuidanceAction", () => {
           { id: "source", state: "completed" },
           { id: "gateway_settings", state: "current" },
           { id: "gateway_channel", state: "upcoming" },
-          { id: "client_access", state: "upcoming" },
         ],
         primaryAction: {
           kind: UNIFIED_API_GUIDANCE_ACTION_KINDS.ConfigureManagedSite,

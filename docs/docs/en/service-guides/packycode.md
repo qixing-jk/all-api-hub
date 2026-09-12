@@ -4,7 +4,7 @@
 
 PackyCode offers relay services for Claude Code, Codex, Gemini, and more. If you use multiple PackyCode accounts, work across several AI API platforms, or often configure PackyCode in different clients, **All API Hub** can keep those accounts and credentials in one local management entry point.
 
-After adding a PackyCode account, you can view balances, manage API keys, check model pricing, and export credentials to Cherry Studio, CC Switch, Kilo Code, CLIProxyAPI, Claude Code Router, or your own self-hosted backend.
+After adding a PackyCode account, you can view balances, manage API keys, check model pricing, and export credentials to Cherry Studio, CC Switch, Kilo Code, Claude Code Router, or a self-hosted gateway such as CLIProxyAPI, New API, or Sub2API.
 
 ![All API Hub home preview](../../static/image/sponsor-guides/packycode/all-api-hub-home-preview.png)
 
@@ -102,7 +102,7 @@ To use PackyCode in another tool:
 
 1. Find your PackyCode key in **Key Management**.
 2. Choose an export action.
-3. Select the target tool, such as **Cherry Studio**, **CC Switch**, **Kilo Code**, **CLIProxyAPI**, **Claude Code Router**, or a configured self-hosted site.
+3. Select the target tool, such as **Cherry Studio**, **CC Switch**, **Kilo Code**, **Claude Code Router**, or a configured self-hosted site.
 
 ![Export a PackyCode key from Key Management](../../static/image/sponsor-guides/packycode/packycode-credential-export-menu.png)
 
@@ -117,7 +117,7 @@ You can also:
 
 ### 4.4 Import into a Self-Hosted Channel
 
-If you maintain an AI distribution backend, you can use PackyCode as an upstream provider. Configure your backend under **Basic Settings -> Self-hosted Site Management**, then return to **Key Management** and import the PackyCode key into the current self-hosted site. You can also select multiple keys and import them in bulk.
+If you maintain a self-hosted gateway such as CLIProxyAPI, New API, or Sub2API, you can use PackyCode as an upstream provider. Configure your backend under **Basic Settings -> Self-hosted Site Management**, then return to **Key Management** and import the PackyCode key into the current self-hosted site. You can also select multiple keys and import them in bulk.
 
 ### 4.5 Back Up and Move Between Devices
 

@@ -36,7 +36,6 @@ export const UNIFIED_API_GUIDANCE_STEP_IDS = {
   Source: "source",
   GatewaySettings: "gateway_settings",
   GatewayChannel: "gateway_channel",
-  ClientAccess: "client_access",
 } as const
 
 export const UNIFIED_API_GUIDANCE_STEP_STATES = {
@@ -109,28 +108,24 @@ const buildGuidanceSteps = (
         { id: UNIFIED_API_GUIDANCE_STEP_IDS.Source, state: Current },
         { id: UNIFIED_API_GUIDANCE_STEP_IDS.GatewaySettings, state: Upcoming },
         { id: UNIFIED_API_GUIDANCE_STEP_IDS.GatewayChannel, state: Upcoming },
-        { id: UNIFIED_API_GUIDANCE_STEP_IDS.ClientAccess, state: Upcoming },
       ]
     case UNIFIED_API_GUIDANCE_STATUSES.NeedsManagedSite:
       return [
         { id: UNIFIED_API_GUIDANCE_STEP_IDS.Source, state: Completed },
         { id: UNIFIED_API_GUIDANCE_STEP_IDS.GatewaySettings, state: Current },
         { id: UNIFIED_API_GUIDANCE_STEP_IDS.GatewayChannel, state: Upcoming },
-        { id: UNIFIED_API_GUIDANCE_STEP_IDS.ClientAccess, state: Upcoming },
       ]
     case UNIFIED_API_GUIDANCE_STATUSES.ReadyToImport:
       return [
         { id: UNIFIED_API_GUIDANCE_STEP_IDS.Source, state: Completed },
         { id: UNIFIED_API_GUIDANCE_STEP_IDS.GatewaySettings, state: Completed },
         { id: UNIFIED_API_GUIDANCE_STEP_IDS.GatewayChannel, state: Current },
-        { id: UNIFIED_API_GUIDANCE_STEP_IDS.ClientAccess, state: Upcoming },
       ]
     case UNIFIED_API_GUIDANCE_STATUSES.HasGatewayChannels:
       return [
         { id: UNIFIED_API_GUIDANCE_STEP_IDS.Source, state: Completed },
         { id: UNIFIED_API_GUIDANCE_STEP_IDS.GatewaySettings, state: Completed },
         { id: UNIFIED_API_GUIDANCE_STEP_IDS.GatewayChannel, state: Completed },
-        { id: UNIFIED_API_GUIDANCE_STEP_IDS.ClientAccess, state: Current },
       ]
   }
 }
@@ -165,6 +160,7 @@ export function shouldShowGatewayGuidanceSurface(
   dismissedForSession = false,
 ): boolean {
   return (
+    Boolean(guidanceState?.gatewayGuidance.onboardingStartedAt) &&
     !dismissedForSession &&
     !hasCompletedGatewayGuidanceOnboarding(guidanceState) &&
     !hasDismissedGatewayGuidanceSurface(guidanceState, surface)
@@ -270,6 +266,26 @@ export function buildUnifiedApiGuidanceModel(
     !!input.managedSiteType &&
     supportsManagedSiteModelSync(input.managedSiteType)
 
+  if (hasCompletedGatewayGuidanceOnboarding(input.guidanceState)) {
+    return {
+      status: UNIFIED_API_GUIDANCE_STATUSES.HasGatewayChannels,
+      sourceKind,
+      managedSiteType: input.managedSiteType,
+      modelSyncSupported,
+      steps: buildGuidanceSteps(
+        UNIFIED_API_GUIDANCE_STATUSES.HasGatewayChannels,
+      ),
+      primaryAction: managedSiteConfigured
+        ? manageChannelsAction()
+        : configureManagedSiteAction(),
+      secondaryActions: [],
+      optionalActions:
+        modelSyncSupported && managedSiteConfigured
+          ? [openModelSyncAction()]
+          : [],
+    }
+  }
+
   if (!hasSources) {
     if (sourceKind === UNIFIED_API_GUIDANCE_SOURCE_KINDS.AccountUnavailable) {
       return {
@@ -317,21 +333,6 @@ export function buildUnifiedApiGuidanceModel(
   const usesAccountPrimary =
     sourceKind === UNIFIED_API_GUIDANCE_SOURCE_KINDS.Account ||
     sourceKind === UNIFIED_API_GUIDANCE_SOURCE_KINDS.Both
-
-  if (hasCompletedGatewayGuidanceOnboarding(input.guidanceState)) {
-    return {
-      status: UNIFIED_API_GUIDANCE_STATUSES.HasGatewayChannels,
-      sourceKind,
-      managedSiteType: input.managedSiteType,
-      modelSyncSupported,
-      steps: buildGuidanceSteps(
-        UNIFIED_API_GUIDANCE_STATUSES.HasGatewayChannels,
-      ),
-      primaryAction: manageChannelsAction(),
-      secondaryActions: [],
-      optionalActions: modelSyncSupported ? [openModelSyncAction()] : [],
-    }
-  }
 
   return {
     status: UNIFIED_API_GUIDANCE_STATUSES.ReadyToImport,

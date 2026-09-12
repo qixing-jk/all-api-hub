@@ -88,15 +88,8 @@ describe("overview configuration model", () => {
       ],
       [
         "balanceHistory",
-        "disabled",
-        {
-          menuItemId: MENU_ITEM_IDS.BASIC,
-          params: {
-            tab: "balanceHistory",
-            anchor: SETTINGS_ANCHORS.BALANCE_HISTORY,
-            highlight: SETTINGS_ANCHORS.BALANCE_HISTORY,
-          },
-        },
+        "needs_setup",
+        { menuItemId: MENU_ITEM_IDS.ACCOUNT, params: undefined },
       ],
     ])
   })

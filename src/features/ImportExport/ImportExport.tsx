@@ -35,30 +35,39 @@ export default function ImportExport() {
   } = useImportExport()
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search)
-    const pendingAnchor = searchParams.get(OPTIONS_SEARCH_ANCHOR_PARAM)
-    const pendingHighlight = searchParams.get(OPTIONS_SEARCH_HIGHLIGHT_PARAM)
     let anchorTimer: number | undefined
     let highlightTimer: number | undefined
+    const applyUrlState = () => {
+      window.clearTimeout(anchorTimer)
+      window.clearTimeout(highlightTimer)
+      const searchParams = new URLSearchParams(window.location.search)
+      const pendingAnchor = searchParams.get(OPTIONS_SEARCH_ANCHOR_PARAM)
+      const pendingHighlight = searchParams.get(OPTIONS_SEARCH_HIGHLIGHT_PARAM)
 
-    if (pendingAnchor) {
-      anchorTimer = window.setTimeout(() => {
-        navigateToAnchor(pendingAnchor)
-      }, 120)
-    }
+      if (pendingAnchor) {
+        anchorTimer = window.setTimeout(() => {
+          navigateToAnchor(pendingAnchor)
+        }, 120)
+      }
 
-    if (pendingHighlight) {
-      highlightTimer = window.setTimeout(() => {
-        if (!highlightSearchTarget(pendingHighlight)) {
+      if (pendingHighlight) {
+        highlightTimer = window.setTimeout(() => {
+          if (!highlightSearchTarget(pendingHighlight)) {
+            clearHighlightSearchParam()
+            return
+          }
+
           clearHighlightSearchParam()
-          return
-        }
-
-        clearHighlightSearchParam()
-      }, 220)
+        }, 220)
+      }
     }
+    applyUrlState()
+    window.addEventListener("popstate", applyUrlState)
+    window.addEventListener("hashchange", applyUrlState)
 
     return () => {
+      window.removeEventListener("popstate", applyUrlState)
+      window.removeEventListener("hashchange", applyUrlState)
       if (anchorTimer !== undefined) {
         window.clearTimeout(anchorTimer)
       }

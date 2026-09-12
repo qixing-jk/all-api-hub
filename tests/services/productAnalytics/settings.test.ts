@@ -55,6 +55,27 @@ function createPreferences(
 }
 
 describe("settings product analytics snapshots", () => {
+  it("identifies CLIProxyAPI without including its connection secrets", () => {
+    const events = buildSettingsSnapshotEvents(
+      createPreferences({
+        managedSiteType: SITE_TYPES.CLI_PROXY_API,
+        cliProxyApi: {
+          baseUrl: "https://private.example",
+          adminToken: "private-secret",
+        },
+      }),
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      { managedSiteType: SITE_TYPES.CLI_PROXY_API },
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteConfigSnapshot,
+        managed_site_type: SITE_TYPES.CLI_PROXY_API,
+        cli_proxy_configured: true,
+      }),
+    )
+    expect(JSON.stringify(events)).not.toContain("private")
+  })
   it("includes the creation mode in changed and aggregate account settings snapshots", () => {
     const preferences = createPreferences({
       autoProvisionKeyOnAccountAddMode:
@@ -859,7 +880,7 @@ describe("settings product analytics snapshots", () => {
     expect(events).toEqual([
       expect.objectContaining({
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.BalanceHistoryConfigSnapshot,
-        enabled: false,
+        enabled: true,
       }),
       expect.objectContaining({
         setting_id:

@@ -119,8 +119,8 @@ function createV0Preferences(
 }
 
 describe("preferencesMigration", () => {
-  it("keeps the preferences schema at v27", () => {
-    expect(CURRENT_PREFERENCES_VERSION).toBe(27)
+  it("tracks the current preferences schema version", () => {
+    expect(CURRENT_PREFERENCES_VERSION).toBe(28)
   })
 
   describe("getPreferencesVersion", () => {
@@ -246,7 +246,7 @@ describe("preferencesMigration", () => {
       expect(result.showTodayCashflow).toBe(true)
     })
 
-    it("defaults balanceHistory to disabled when missing", () => {
+    it("defaults balanceHistory to refresh-driven capture when missing", () => {
       const prefs = createV0Preferences({
         preferencesVersion: 11,
       })
@@ -1447,7 +1447,7 @@ describe("preferencesMigration", () => {
 
       const migrated = migratePreferences(legacy)
 
-      expect(migrated.preferencesVersion).toBe(27)
+      expect(migrated.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
       expect(migrated.tempWindowFallback).toEqual({
         windowWidth: 600,
         windowHeight: 720,
@@ -1542,7 +1542,7 @@ describe("preferencesMigration", () => {
         migrated.tempWindowFallback,
       )
 
-      expect(migrated.preferencesVersion).toBe(27)
+      expect(migrated.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
       expect(normalized.tempContextMode).toBe(
         TEMP_CONTEXT_PREFERENCE_MODES.Auto,
       )

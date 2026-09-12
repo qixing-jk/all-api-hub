@@ -66,8 +66,8 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => ({
     claudeCodeRouterApiKey: "",
     claudeCodeRouterBaseUrl: "",
-    cliProxyBaseUrl: "",
-    cliProxyManagementKey: "",
+    cliProxyApiBaseUrl: "",
+    cliProxyApiManagementKey: "",
     markGatewayGuidanceOnboardingCompleted:
       markGatewayGuidanceOnboardingCompletedMock,
     managedSiteType: "new-api",
@@ -597,6 +597,7 @@ describe("useApiCredentialProfilesController", () => {
         name: "Profile",
         baseUrl: "https://api.example.com",
         apiKey: "sk-profile",
+        apiType: "openai-compatible",
       },
       expect.any(Function),
     )

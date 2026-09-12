@@ -322,9 +322,9 @@ export async function openVeloeraNativeResourceOperations(): Promise<VeloeraNati
         const groups = await fetchSiteUserGroups(nativeConfig.config, options)
         throwIfNewApiResourceOperationAborted(options)
         return normalizeList(groups)
-      } catch {
+      } catch (error) {
         throwIfNewApiResourceOperationAborted(options)
-        return []
+        throw error
       }
     },
   }

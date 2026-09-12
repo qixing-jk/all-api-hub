@@ -7,7 +7,7 @@ export const API_CREDENTIAL_PROFILE_EXPORT_ACTIONS = {
   CCSwitch: "ccSwitch",
   CursorPlus: "cursorPlus",
   KiloCode: "kiloCode",
-  CliProxy: "cliProxy",
+
   ClaudeCodeRouter: "claudeCodeRouter",
   ManagedSite: "managedSite",
 } as const

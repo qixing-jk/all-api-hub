@@ -8,7 +8,7 @@ import {
 import userEvent from "@testing-library/user-event"
 import { cloneElement, isValidElement, type ReactNode } from "react"
 import { I18nextProvider } from "react-i18next"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
@@ -465,6 +465,7 @@ describe("WebDAVSettings", () => {
   })
   beforeEach(() => {
     vi.clearAllMocks()
+    window.history.replaceState({}, "", "/")
     const preferencePersistence = setupMockPreferencePersistence(
       mockUserPreferences,
       createPersistedPreferencesFixture({
@@ -695,6 +696,51 @@ describe("WebDAVSettings", () => {
       expect(screen.queryByText(description)).not.toBeInTheDocument()
     })
   })
+
+  afterEach(() => {
+    window.history.replaceState({}, "", "/")
+  })
+
+  it.each(["basic", "import-export"])(
+    "reveals provider controls on initial search and same-page navigation on %s",
+    async (page) => {
+      window.history.replaceState(
+        {},
+        "",
+        `/?anchor=${WEBDAV_TARGET_IDS.gistToken}&highlight=${WEBDAV_TARGET_IDS.gistToken}#${page}`,
+      )
+      render(<WebDAVSettings />)
+      const tokenInput = await screen.findByPlaceholderText(
+        "importExport:webdav.gist.tokenPlaceholder",
+      )
+      fireEvent.change(tokenInput, { target: { value: "unsaved-token" } })
+      expect(tokenInput).toHaveAttribute("id", WEBDAV_TARGET_IDS.gistToken)
+
+      window.history.replaceState(
+        {},
+        "",
+        `/?anchor=${WEBDAV_TARGET_IDS.username}&highlight=${WEBDAV_TARGET_IDS.username}#${page}`,
+      )
+      fireEvent.popState(window)
+      expect(await screen.findByDisplayValue("alice")).toHaveAttribute(
+        "id",
+        WEBDAV_TARGET_IDS.username,
+      )
+
+      window.history.replaceState(
+        {},
+        "",
+        `/?anchor=${WEBDAV_TARGET_IDS.gistToken}#${page}`,
+      )
+      fireEvent(window, new Event("hashchange"))
+      expect(
+        await screen.findByDisplayValue("unsaved-token"),
+      ).toBeInTheDocument()
+      expect(
+        mockUserPreferences.savePreferencesWithResult,
+      ).not.toHaveBeenCalled()
+    },
+  )
 
   it("switches the provider draft in both directions", async () => {
     render(<WebDAVSettings />)

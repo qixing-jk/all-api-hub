@@ -611,8 +611,8 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   DownloadImportWebDavBackup: "download_import_webdav_backup",
   ExportAccountTokenToClaudeCodeRouter:
     "export_account_token_to_claude_code_router",
-  ExportAccountTokenToCliProxy: "export_account_token_to_cli_proxy",
-  ExportAccountTokensToCliProxy: "export_account_tokens_to_cli_proxy",
+  ExportAccountTokenToCliProxyApi: "export_account_token_to_cli_proxy",
+  ExportAccountTokensToCliProxyApi: "export_account_tokens_to_cli_proxy",
   ExportKiloCodeAccountSettingsFile: "export_kilo_code_account_settings_file",
   CancelRedemptionAccountSelection: "cancel_redemption_account_selection",
   CancelRedemptionPrompt: "cancel_redemption_prompt",
@@ -637,7 +637,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   ImportAccountsFromBookmarks: "import_accounts_from_bookmarks",
   ImportApiCredentialProfileToClaudeCodeRouter:
     "import_api_credential_profile_to_claude_code_router",
-  ImportApiCredentialProfileToCliProxy:
+  ImportApiCredentialProfileToCliProxyApi:
     "import_api_credential_profile_to_cli_proxy",
   ImportManagedSiteSingleToken: "import_managed_site_single_token",
   ImportSub2apiSession: "import_sub2api_session",
@@ -1177,6 +1177,7 @@ export const PRODUCT_ANALYTICS_MANAGED_SITE_TYPES = {
   Octopus: SITE_TYPES.OCTOPUS,
   AxonHub: SITE_TYPES.AXON_HUB,
   ClaudeCodeHub: SITE_TYPES.CLAUDE_CODE_HUB,
+  CliProxyApi: SITE_TYPES.CLI_PROXY_API,
   Sub2Api: SITE_TYPES.SUB2API,
 } as const
 

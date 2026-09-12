@@ -1,3 +1,5 @@
+import { CLOUD_SYNC_PROVIDERS, type CloudSyncProvider } from "~/types/cloudSync"
+
 export const WEBDAV_TARGET_IDS = {
   root: "webdav",
   provider: "webdav-provider",
@@ -35,3 +37,23 @@ export const WEBDAV_AUTO_SYNC_TARGET_IDS = {
 export const IMPORT_EXPORT_TARGET_IDS = {
   importMode: "import-mode",
 } as const
+
+/** Resolve the provider whose controls must be revealed for a deep link. */
+export function getCloudSyncProviderForTarget(
+  targetId: string | null,
+): CloudSyncProvider | undefined {
+  switch (targetId) {
+    case WEBDAV_TARGET_IDS.gistToken:
+    case WEBDAV_TARGET_IDS.gistId:
+    case WEBDAV_TARGET_IDS.gistUrl:
+    case WEBDAV_TARGET_IDS.createGist:
+      return CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+    case WEBDAV_TARGET_IDS.url:
+    case WEBDAV_TARGET_IDS.username:
+    case WEBDAV_TARGET_IDS.password:
+    case WEBDAV_TARGET_IDS.encryptionEnable:
+      return CLOUD_SYNC_PROVIDERS.WEBDAV
+    default:
+      return undefined
+  }
+}

@@ -23,6 +23,9 @@
       "description": "Tài khoản {{site}} này không thể quản lý kênh. Dùng tài khoản quản trị viên hoặc cập nhật quyền rồi làm mới.",
       "title": "{{site}} đã từ chối truy cập"
     },
+    "resourceChanged": {
+      "description": "Kênh này đã thay đổi trong lúc bạn chỉnh sửa. Các thay đổi của bạn chưa được lưu. Hãy đóng trình chỉnh sửa, làm mới danh sách kênh rồi chỉnh sửa lại."
+    },
     "savedRefreshError": {
       "description": "Kênh đã được lưu nhưng không thể tải danh sách mới nhất. Hãy làm mới danh sách kênh trước khi thực hiện thêm thay đổi.",
       "title": "Đã lưu kênh, cần làm mới"
@@ -32,12 +35,20 @@
       "title": "{{site}} không khả dụng"
     }
   },
+  "cliProxyApi": {
+    "credentialWeightHelp": "Để trống tương đương trọng số 1. Giá trị không dương loại khóa khỏi định tuyến theo trọng số; tối đa 1.000.000.",
+    "excludedModels": "Mô hình bị loại trừ (mỗi dòng một mục)",
+    "headers": "Tiêu đề yêu cầu",
+    "headersHelp": "Mỗi dòng một tiêu đề, theo định dạng Tên: giá trị.",
+    "prefix": "Tiền tố mô hình",
+    "proxyUrl": "URL proxy"
+  },
   "dialog": {
     "cancel": "Hủy",
     "confirm": "Xóa",
     "deleteDescription": "Hành động này không thể hoàn tác, cấu hình đã chọn sẽ bị xóa vĩnh viễn.",
     "deleteRefreshAction": "Làm mới danh sách kênh",
-    "deleteRefreshRequired": "Một số kết quả xóa chưa xác định. Hãy làm mới danh sách kênh trước khi xóa lại.",
+    "deleteRefreshRequired": "Làm mới danh sách kênh để xác nhận trạng thái mới nhất trước khi tiếp tục xóa.",
     "deleteResultStatus": {
       "failed": "Thất bại",
       "success": "Đã xóa",
@@ -48,6 +59,111 @@
     "deleteTitlePlural": "Xóa các kênh này?"
   },
   "editor": {
+    "advanced": {
+      "autoBan": {
+        "help": "Cho phép New API vô hiệu hóa kênh khi đáp ứng các điều kiện lỗi đã cấu hình.",
+        "label": "Tự động vô hiệu hóa kênh"
+      },
+      "autoSync": {
+        "help": "Cần bật kiểm tra cập nhật. Khi phát hiện thay đổi, New API tự động cập nhật danh sách mô hình của kênh này.",
+        "label": "Tự động đồng bộ mô hình thượng nguồn"
+      },
+      "check": {
+        "help": "New API kiểm tra định kỳ trên máy chủ. Chức năng này hoạt động riêng với tính năng đồng bộ mô hình của tiện ích.",
+        "label": "Kiểm tra cập nhật mô hình thượng nguồn"
+      },
+      "detectedModels": "Mô hình có thể thêm",
+      "groups": {
+        "detection": "Phát hiện mô hình thượng nguồn",
+        "management": "Quản lý kênh",
+        "network": "Cài đặt mạng"
+      },
+      "ignored": {
+        "help": "Nhập tên chính xác của mô hình cần loại khỏi quá trình phát hiện và đồng bộ.",
+        "label": "Mô hình thượng nguồn bị bỏ qua"
+      },
+      "invalidExisting": "Không thể phân tích cấu hình đã lưu một cách an toàn. Hãy sửa trong trang quản trị trước khi chỉnh sửa trường này.",
+      "lastCheck": "Lần kiểm tra gần nhất",
+      "mapping": {
+        "add": "Thêm ánh xạ",
+        "help": "Ánh xạ tên mô hình trong yêu cầu sang tên gửi đến thượng nguồn. Tên mô hình yêu cầu ở mỗi hàng phải duy nhất.",
+        "invalid": "Điền cả hai tên trong mỗi hàng và xóa các mô hình yêu cầu trùng lặp.",
+        "label": "Ánh xạ tên mô hình",
+        "remove": "Xóa ánh xạ {{index}}",
+        "source": "Mô hình yêu cầu {{index}}",
+        "sourcePlaceholder": "Mô hình yêu cầu",
+        "target": "Mô hình thượng nguồn {{index}}",
+        "targetPlaceholder": "Mô hình thượng nguồn"
+      },
+      "neverChecked": "Chưa kiểm tra",
+      "noModels": "Không có",
+      "proxy": {
+        "help": "Proxy được máy chủ New API sử dụng để truy cập kênh này. Hỗ trợ HTTP, HTTPS, SOCKS5 và SOCKS5H. Để trống để xóa proxy của kênh.",
+        "invalid": "Nhập URL proxy HTTP, HTTPS, SOCKS5 hoặc SOCKS5H hợp lệ.",
+        "label": "Địa chỉ proxy"
+      },
+      "remark": {
+        "help": "Ghi lại mục đích hoặc hướng dẫn sử dụng kênh (tối đa 255 ký tự).",
+        "label": "Ghi chú"
+      },
+      "removedModels": "Mô hình được phát hiện đã bị xóa",
+      "tag": "Nhãn kênh",
+      "testModel": {
+        "help": "Chọn mô hình hoặc nhập tên. Để trống để dùng mô hình kiểm tra mặc định của New API.",
+        "label": "Mô hình kiểm tra"
+      },
+      "unsupportedDetection": "Trình chỉnh sửa này không hỗ trợ phát hiện thượng nguồn cho loại kênh này. Kênh tùy chỉnh nâng cao cần cấu hình tuyến danh sách mô hình trong trang quản trị."
+    },
+    "doneHub": {
+      "allowExtraBody": {
+        "help": "Chuyển tiếp trường bổ sung trong yêu cầu của máy khách, như tham số extra_body, tới nhà cung cấp.",
+        "label": "Chuyển tiếp trường bổ sung"
+      },
+      "compatibleResponse": {
+        "help": "Khi bật, DoneHub chuyển yêu cầu Responses thành Chat Completions. Khi tắt, ưu tiên Responses gốc nhưng vẫn có thể dùng chế độ tương thích nếu không được hỗ trợ.",
+        "label": "Tương thích Responses API"
+      },
+      "customParameter": {
+        "help": "Nhập đối tượng JSON. Mặc định chỉ bổ sung trường còn thiếu. overwrite: true ghi đè trường; per_model: true cấu hình theo mô hình; pre_add: true áp dụng khi nhận yêu cầu. Để trống để xóa.",
+        "invalid": "Nhập đối tượng JSON hợp lệ.",
+        "label": "Tham số yêu cầu bổ sung",
+        "placeholder": "{\n  \"overwrite\": true,\n  \"temperature\": 0.7\n}"
+      },
+      "disabledStream": {
+        "help": "Yêu cầu streaming cho các mô hình này sẽ bỏ qua kênh, không chuyển thành yêu cầu không streaming. Chọn mô hình hoặc nhập tên. Xóa danh sách để khôi phục định tuyến bình thường.",
+        "label": "Mô hình không dùng streaming"
+      },
+      "modelHeaders": {
+        "help": "Thêm header cố định với giá trị văn bản. Kênh tự xử lý header xác thực. Để trống hoặc xóa mọi dòng để xóa cấu hình.",
+        "invalid": "Nhập đối tượng JSON có khóa duy nhất, không rỗng và giá trị văn bản.",
+        "label": "Header yêu cầu tùy chỉnh",
+        "placeholder": "{\"X-Project\": \"example\"}"
+      },
+      "modelMapping": {
+        "addModels": "Thêm tên ánh xạ vào danh sách mô hình",
+        "help": "Khóa là tên mô hình được yêu cầu, giá trị là tên mô hình phía nhà cung cấp. Thêm các khóa vào danh sách mô hình của kênh. Thêm + trước giá trị để tính phí theo mô hình được yêu cầu.",
+        "invalid": "Nhập đối tượng JSON có khóa duy nhất, không rỗng và giá trị văn bản.",
+        "label": "Ánh xạ mô hình",
+        "placeholder": "{\"alias\": \"upstream-model\"}"
+      },
+      "proxy": {
+        "help": "Máy chủ DoneHub dùng proxy này để kết nối nhà cung cấp. Hỗ trợ HTTP và SOCKS5; %s tạo mã phiên từ khóa kênh. Để trống để bỏ proxy riêng của kênh.",
+        "invalid": "Nhập URL proxy HTTP hoặc SOCKS5 hợp lệ.",
+        "label": "URL proxy",
+        "placeholder": "socks5://127.0.0.1:1080"
+      },
+      "responsesPath": {
+        "help": "Chỉ dành cho yêu cầu Responses gốc trên kênh tùy chỉnh. Để trống để dùng /v1/responses hoặc nhập disable để chặn yêu cầu này. Không dùng trong chế độ tương thích.",
+        "label": "Đường dẫn yêu cầu Responses",
+        "placeholder": "/v1/responses"
+      },
+      "testModel": {
+        "help": "Chọn mô hình chat trong kênh hoặc nhập tên. DoneHub không thể đo tốc độ kênh khi để trống. Tối đa 50 ký tự.",
+        "invalid": "Tên mô hình không được quá 50 ký tự.",
+        "label": "Mô hình kiểm tra",
+        "placeholder": "gpt-4o-mini"
+      }
+    },
     "fields": {
       "autoSyncModelPattern": {
         "help": "Chỉ đồng bộ các mô hình khớp với mẫu này. Thêm tiền tố (?i) để không phân biệt chữ hoa chữ thường; để trống để đồng bộ tất cả mô hình.",
@@ -108,6 +224,17 @@
         "placeholder": "Thêm thẻ..."
       }
     },
+    "json": {
+      "addRow": "Thêm dòng",
+      "editJson": "Sửa JSON",
+      "editRows": "Sửa từng dòng",
+      "format": "Định dạng JSON",
+      "key": "Khóa",
+      "keyAt": "{{field}}: khóa dòng {{index}}",
+      "removeAt": "{{field}}: xóa dòng {{index}}",
+      "value": "Giá trị",
+      "valueAt": "{{field}}: giá trị dòng {{index}}"
+    },
     "options": {
       "channelType": {
         "anthropic": "Anthropic",
@@ -167,9 +294,12 @@
     "sections": {
       "advanced": "Nâng cao",
       "basic": "Thông tin cơ bản",
+      "basicConnection": "Cơ bản và kết nối",
+      "compatibility": "Tương thích API",
       "connection": "Kết nối và thông tin xác thực",
       "metadata": "Siêu dữ liệu",
       "models": "Mô hình",
+      "requests": "Mạng và yêu cầu",
       "routing": "Định tuyến",
       "sync": "Đồng bộ mô hình"
     },
@@ -265,7 +395,6 @@
     }
   },
   "gatewayGuidance": {
-    "clientHint": "Ứng dụng bên ngoài cũng cần key truy cập do gateway này cấp.",
     "empty": {
       "description": "AI gateway tự triển khai này chưa có kênh. Sau khi nhập key tài khoản hoặc API key, gateway có thể được client bên ngoài sử dụng như một AI API.",
       "importFromAccountKey": "Nhập kênh từ key tài khoản",
@@ -274,7 +403,6 @@
     },
     "headerDescription": "Quản lý kênh của AI gateway tự triển khai và gộp nhiều key tài khoản hoặc API key thành một AI API.",
     "openChannelConsole": "Mở trang quản lý kênh gateway",
-    "openTokenConsole": "Mở trang quản lý token",
     "unconfiguredValueDescription": "Sau khi cấu hình, bạn có thể nhập các key tài khoản và API key rời rạc làm kênh gateway, rồi xem và quản lý trực tiếp trong All API Hub."
   },
   "migration": {
@@ -412,11 +540,13 @@
   "title": "Quản lý kênh",
   "toasts": {
     "channelSaved": "Đã lưu kênh",
+    "channelsDeleted_other": "Đã xóa {{count}} kênh",
     "channelUpdated": "Đã cập nhật kênh",
     "syncCompleted": "Đồng bộ mô hình hoàn tất ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Đã đồng bộ mô hình ({{success}}/{{total}}), nhưng không thể làm mới danh sách kênh. Hãy làm mới rồi thử lại.",
     "syncFailed": "Đồng bộ mô hình thất bại: {{error}}",
-    "syncFailedFallback": "Không thể đồng bộ các kênh"
+    "syncFailedFallback": "Không thể đồng bộ các kênh",
+    "syncIncomplete": "Đồng bộ mô hình chưa hoàn tất ({{success}}/{{total}} thành công). Mở trang đồng bộ mô hình để xem kết quả và thử lại các kênh bị lỗi."
   },
   "toolbar": {
     "addChannel": "Thêm kênh",

@@ -136,61 +136,6 @@
       },
       "title": "Importar para o Claude Code Router"
     },
-    "cliproxy": {
-      "actions": {
-        "addModel": "Adicionar modelo",
-        "removeModel": "Remover modelo",
-        "reorderModel": "Reordenar modelo"
-      },
-      "description": "Crie ou atualize uma entrada de provedor no CLIProxyAPI.",
-      "descriptions": {
-        "baseUrlClaudeApiKey": "Geralmente, a URL raiz da API Anthropic, sem /v1/messages.",
-        "baseUrlCodexApiKey": "Geralmente, a URL raiz do provedor. Um padrão comum é https://api.openai.com.",
-        "baseUrlGeminiApiKey": "Geralmente, a URL raiz da API Gemini, sem /v1/models/....",
-        "baseUrlOpenAICompatibility": "Normalmente, a URL base compatível com o upstream OpenAI, terminando em /v1.",
-        "models": "Mapeie nomes de modelos upstream para aliases opcionais (nome -> alias). Quando disponíveis, os modelos upstream são carregados em /v1/models para seleção.",
-        "modelsManual": "Mapeie nomes de modelos upstream para aliases opcionais (nome -> alias). Insira valores manualmente para esta família de provedores nesta versão.",
-        "providerType": "Escolha para qual família de provedores CLIProxyAPI importar.",
-        "proxyUrl": "URL de proxy opcional usada para esta entrada de chave de API."
-      },
-      "fields": {
-        "baseUrl": "URL base do provedor",
-        "models": "Mapeamento de modelo (opcional)",
-        "name": "Nome do provedor",
-        "providerType": "Tipo de provedor",
-        "proxyUrl": "URL do proxy (opcional)"
-      },
-      "placeholders": {
-        "baseUrlClaudeApiKey": "https://api.anthropic.com",
-        "baseUrlCodexApiKey": "https://api.openai.com",
-        "baseUrlGeminiApiKey": "https://generativelanguage.googleapis.com",
-        "baseUrlOpenAICompatibility": "https://example.com/v1",
-        "modelAlias": "Alias do modelo (opcional)",
-        "modelName": "Nome do modelo, por exemplo, claude",
-        "name": "por exemplo Relé Acme",
-        "providerType": "Selecione uma família de provedores",
-        "proxyUrl": "http://localhost:3000"
-      },
-      "providerTypes": {
-        "claudeApiKey": {
-          "description": "Use uma entrada de provedor no formato de chave da API Anthropic Claude.",
-          "label": "Chave Claude API"
-        },
-        "codexApiKey": {
-          "description": "Use uma entrada de provedor de estilo de chave Codex / OpenAI API.",
-          "label": "Chave da API do Codex"
-        },
-        "geminiApiKey": {
-          "description": "Use uma entrada de provedor de estilo de chave Google Gemini API.",
-          "label": "Chave Gemini API"
-        },
-        "openaiCompatibility": {
-          "description": "Use um provedor padrão compatível com OpenAI com um nome de provedor configurável.",
-          "label": "Compatibilidade OpenAI"
-        }
-      },
-      "title": "Importar para CLIProxyAPI"
-    },
     "collapse": "Recolher",
     "copyKey": {
       "copied": "Copiado",
@@ -279,7 +224,7 @@
       },
       "delete": "Excluir",
       "deleting": "Excluindo contas duplicadas...",
-      "description": "Verifique contas duplicadas por origem + ID de usuário e exclua-as após conferir a prévia.",
+      "description": "Encontre duplicatas exatas e possíveis correspondências entre domínios e revise antes de alterar.",
       "details": {
         "accountId": "ID da conta",
         "authType": "Tipo de autenticação",
@@ -307,7 +252,8 @@
       "duplicateCount_one": "{{count}} conta",
       "duplicateCount_many": "{{count}} contas",
       "duplicateCount_other": "{{count}} contas",
-      "empty": "Nenhuma conta duplicada encontrada.",
+      "empty": "Nenhuma conta exatamente duplicada encontrada.",
+      "exactTitle": "Duplicatas exatas",
       "keep": "Manter",
       "manualPickHint": "Você pode escolher manualmente qual conta manter em cada conjunto. As escolhas manuais substituem a estratégia de manutenção.",
       "previewDelete": "Visualizar exclusão",
@@ -320,7 +266,16 @@
       },
       "strategyLabel": "Estratégia de manutenção",
       "summary": "Conjuntos de duplicatas: {{groups}} · contas a excluir: {{deleteCount}}",
-      "title": "Limpeza de contas duplicadas",
+      "suspected": {
+        "deleteAccount": "Excluir {{name}}",
+        "description": "Estas contas compartilham um ID de usuário e um nome de site ou domínio raiz. O site pode ter mudado de domínio. Possíveis correspondências não participam da limpeza em massa; revise cada conta antes de editar ou excluir.",
+        "review": "Ver e editar",
+        "reviewAccount": "Ver e editar {{name}}",
+        "sameDomain": "Mesmo domínio raiz: {{domain}}",
+        "sameName": "Mesmo nome de site: {{name}}",
+        "title": "Possíveis contas duplicadas"
+      },
+      "title": "Detectar contas duplicadas",
       "unscannableHint_one": "{{count}} conta não pôde ser verificada e foi ignorada.",
       "unscannableHint_many": "{{count}} contas não puderam ser verificadas e foram ignoradas.",
       "unscannableHint_other": "{{count}} contas não puderam ser verificadas e foram ignoradas.",
@@ -548,6 +503,7 @@
     "autoCheckinRunNow": "Check-in rápido",
     "balanceHistory": "Histórico de saldo",
     "basic": "Configurações",
+    "batchCheckin": "Check-in em lote",
     "bookmark": "Gerenciamento de favoritos",
     "categories": {
       "api": "API",
@@ -616,11 +572,49 @@
       "reorder": "Arraste para reordenar"
     }
   },
+  "resourceEditor": {
+    "configured": "Configurado",
+    "items_one": "{{count}} item",
+    "items_many": "{{count}} itens",
+    "items_other": "{{count}} itens",
+    "optional": "Opcional"
+  },
   "searchableSelect": {
     "empty": "Nenhum resultado encontrado",
     "noOptions": "Nenhuma opção disponível",
     "noOptionsAllowCustom": "Nenhuma opção disponível. Digite para criar uma opção",
     "searchPlaceholder": "Pesquisar...",
     "useValue": "Usar \"{{value}}\""
+  },
+  "secretList": {
+    "add": "Adicionar chave",
+    "collapse": "Recolher API Key {{number}}",
+    "configured": "Configurado",
+    "expand": "Expandir API Key {{number}}",
+    "hide": "Ocultar chave",
+    "keepPlaceholder": "Deixe em branco para manter a chave salva",
+    "loadFailed": "Não foi possível carregar esta chave. Tente novamente.",
+    "newPlaceholder": "Insira a chave de API",
+    "newState": "Nova, ainda não salva",
+    "remove": "Remover chave",
+    "replacementState": "A chave será substituída",
+    "restore": "Manter chave salva",
+    "retainedState": "Manter chave salva",
+    "row": "Chave de API {{number}}",
+    "shortRow": "Chave {{number}}",
+    "show": "Mostrar chave",
+    "title": "Chaves de API"
+  },
+  "textEntries": {
+    "add": "Adicionar linha",
+    "editRows": "Editar linhas",
+    "editText": "Editar como texto",
+    "headerName": "Nome do cabeçalho",
+    "headerValue": "Valor",
+    "modelAlias": "Alias (opcional)",
+    "modelAliasPlaceholder": "Usar nome original",
+    "modelHelp": "Deixe o alias vazio para usar o nome original. Formato de texto: um modelo = alias por linha.",
+    "modelName": "Modelo original",
+    "remove": "Remover linha {{number}}"
   }
 }

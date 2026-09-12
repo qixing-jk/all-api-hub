@@ -1,4 +1,6 @@
 export const SETTINGS_ANCHORS = {
+  MANAGED_SITE_DEPLOYMENT_DOCS: "managed-site-deployment-docs",
+  SORTING_PRIORITY: "sorting-priority",
   AUTO_PROVISION_KEY: "auto-provision-key-on-account-add",
   AUTO_PROVISION_KEY_ENABLED: "auto-provision-key-toggle",
   AUTO_PROVISION_KEY_MODE: "auto-provision-key-mode",

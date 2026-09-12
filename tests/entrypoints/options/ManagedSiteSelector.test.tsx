@@ -74,6 +74,11 @@ describe("ManagedSiteSelector", () => {
     mockedUseUserPreferencesContext.mockReturnValue(createContextValue())
   })
 
+  it("keeps deployment help out of the gateway type selector", () => {
+    render(<ManagedSiteSelector />)
+    expect(screen.queryByRole("link")).not.toBeInTheDocument()
+  })
+
   it("includes Done Hub as a selectable managed site type", async () => {
     const user = userEvent.setup()
     render(<ManagedSiteSelector />)

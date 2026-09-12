@@ -125,6 +125,29 @@ AAH_E2E_NEW_API_ADMIN_TOKEN=replace-with-admin-access-token
 AAH_E2E_NEW_API_ADMIN_USER_ID=1
 ```
 
+The advanced-settings case uses those three required values (base URL, admin
+token, user ID) to create one uniquely named, manually disabled OpenAI channel.
+It edits all nine advanced fields through the extension, reads the real API to
+verify persistence, reopens and clears them, and verifies unrelated top-level
+fields and nested `setting`/`settings` values survive both saves. Cleanup deletes
+only this run's channel and verifies it is gone, including after a failed check.
+The case records the server version and channel type as test annotations and
+disables screenshots, video, and traces for authenticated channel workflows.
+
+Run only this case in PowerShell:
+
+```powershell
+$env:AAH_E2E_REAL_SITE_CATEGORY = 'managed-site'
+$env:AAH_E2E_MANAGED_SITE_TARGET = 'new-api'
+pnpm exec playwright test e2e/realSite/managedSiteChannels.spec.ts --project=chromium --workers=1 --grep 'saves and clears advanced'
+```
+
+This establishes real configuration persistence. It does not establish live
+upstream detection, automatic model synchronization, proxy routing, or model
+inference: the temporary channel has an invalid upstream URL and no usable key.
+The intercepted `e2e/newApiAdvancedEditor.spec.ts` separately checks grouped UI
+usability at desktop and narrow widths.
+
 ## OneHub
 
 ```env
@@ -159,6 +182,18 @@ AAH_E2E_DONE_HUB_ADMIN_TOKEN=replace-with-admin-access-token
 AAH_E2E_DONE_HUB_ADMIN_USER_ID=1
 ```
 
+With the DoneHub managed-site credentials above configured, run the advanced
+channel editor check directly (it is not part of the managed-site matrix):
+
+```bash
+pnpm exec playwright test e2e/realSite/doneHubAdvancedEditor.spec.ts --project=chromium --workers=1
+```
+
+The check creates a disabled temporary channel, edits advanced settings through
+the UI, rereads the server values, then clears the settings and verifies unrelated
+fields survived. Cleanup deletes the temporary channel. Its upstream URL and key
+are nonfunctional fixtures, so this checks persistence, not live model routing.
+
 ## Veloera
 
 ```env
@@ -182,6 +217,42 @@ channel-status assertions are skipped for Veloera because the product currently
 does not support base-URL channel lookup for that managed-site type.
 
 ## Managed-Site Channel Matrix
+
+### CLIProxyAPI providers
+
+CLIProxyAPI uses `e2e/realSite/cliProxyApiProviders.spec.ts`, registered as
+`cli-proxy-api` in the local and GitHub Actions managed-site matrix.
+Set these values in the existing real-site environment file or CI secrets:
+
+```env
+AAH_E2E_CLI_PROXY_API_BASE_URL=http://localhost:8317
+AAH_E2E_CLI_PROXY_API_ADMIN_TOKEN=replace-with-management-key
+```
+
+The URL may include a reverse-proxy prefix or `/v0/management`. Use the management
+key, not a client API key. Run only this target with:
+
+```bash
+pnpm exec playwright test e2e/realSite/cliProxyApiProviders.spec.ts --project=chromium --workers=1
+```
+
+In the Real-Site E2E workflow, choose category `managed-site` and target
+`cli-proxy-api`. Missing credentials are reported as skips. Older servers
+may skip Vertex AI, xAI, or Gemini Interactions only when the corresponding
+endpoint returns 404; authentication errors fail the test.
+
+Seven serial scenarios exercise provider creation, search, model replacement,
+credential rotation, preservation of request headers and proxy settings, and
+deletion through the extension UI. Independent management API reads confirm the
+persisted results. No upstream model requests are made. Each run uses unique
+dummy credentials and an `.invalid` upstream URL, and cleans only its own provider
+in a finalizer, including after a failed UI assertion. Traces, screenshots, and
+videos are disabled for this spec.
+
+Use a dedicated test deployment without concurrent configuration writers:
+CLIProxyAPI collection PUTs do not offer compare-and-swap protection.
+
+### Other managed-site targets
 
 The shared managed-site channel spec can be scoped to one target with
 `AAH_E2E_MANAGED_SITE_TARGET`. CI runs it once per managed site so targets can

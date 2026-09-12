@@ -1,6 +1,5 @@
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
-import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
 import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { KelivoExportDialog } from "~/components/KelivoExportDialog"
@@ -28,7 +27,7 @@ export function LinkedCredentialProfileDialogs({
     activeDialog,
     claudeCodeRouterApiKey,
     claudeCodeRouterBaseUrl,
-    cliProxyPayload,
+
     closeDialog,
     exportAccount,
     exportRuntimeKey,
@@ -82,21 +81,6 @@ export function LinkedCredentialProfileDialogs({
             ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
             actionId:
               PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialProfileKelivoImportCode,
-          }}
-        />
-      )
-    case "cli-proxy":
-      return (
-        <CliProxyExportDialog
-          isOpen
-          onClose={closeDialog}
-          account={cliProxyPayload.account}
-          token={cliProxyPayload.token}
-          apiTypeHint={cliProxyPayload.apiTypeHint}
-          analyticsContext={{
-            ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
-            actionId:
-              PRODUCT_ANALYTICS_ACTION_IDS.ImportApiCredentialProfileToCliProxy,
           }}
         />
       )

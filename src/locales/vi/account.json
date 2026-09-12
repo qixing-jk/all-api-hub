@@ -284,14 +284,13 @@
     },
     "boundaryNote": "All API Hub quản lý nguồn tài khoản; AI gateway tự triển khai của bạn mới là dịch vụ AI API được client bên ngoài gọi.",
     "description": {
-      "has_gateway_channels": "Một kênh gateway đã từng được tạo hoặc nhập. Mở quản lý kênh để xác nhận trạng thái hiện tại và tiếp tục thiết lập client.",
+      "has_gateway_channels": "Đã tạo hoặc nhập kênh vào cổng. Mở quản lý kênh để kiểm tra trạng thái hiện tại.",
       "needs_importable_source": "Các tài khoản hiện tại không thể cung cấp key có thể nhập. Hãy lưu API key trước, hoặc thêm loại tài khoản hỗ trợ lấy key, rồi nhập vào AI gateway tự triển khai.",
       "needs_managed_site": "Sau khi cấu hình kết nối quản trị của AI gateway tự triển khai, các tài khoản này có thể được nhập làm kênh gateway.",
-      "needs_sources": "Thêm tài khoản để tạo nguồn key có thể quản lý. Sau đó có thể xuất trực tiếp từng key hoặc nhập nhanh vào AI gateway tự triển khai.",
+      "needs_sources": "Thêm tài khoản rồi nhập các khóa của tài khoản vào cổng AI tự lưu trữ để cung cấp một API AI thống nhất.",
       "ready_accounts": "Mở quản lý key để nhập các key tài khoản đã chọn vào AI gateway tự triển khai, giúp nhiều key cùng cung cấp một AI API thống nhất.",
       "ready_profiles": "API key đã lưu nằm trong thư viện thông tin xác thực, có thể tái sử dụng trực tiếp hoặc nhập làm kênh gateway."
     },
-    "directToolExportNote": "Xuất trực tiếp sang công cụ vẫn có thể dùng song song với việc nhập vào AI gateway tự triển khai.",
     "dismissDialog": {
       "confirm": "Không hiển thị nữa",
       "description": "Trang tài khoản sẽ không hiển thị gợi ý này nữa. Bạn vẫn có thể xem hướng dẫn kết nối AI gateway tự triển khai trên trang tổng quan.",

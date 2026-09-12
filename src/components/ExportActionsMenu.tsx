@@ -8,7 +8,6 @@ import type { ProductAnalyticsScopedActionConfig } from "~/services/productAnaly
 import { CCSwitchIcon } from "./icons/CCSwitchIcon"
 import { CherryIcon } from "./icons/CherryIcon"
 import { ClaudeCodeRouterIcon } from "./icons/ClaudeCodeRouterIcon"
-import { CliProxyIcon } from "./icons/CliProxyIcon"
 import { CursorPlusIcon } from "./icons/CursorPlusIcon"
 import { KelivoIcon } from "./icons/KelivoIcon"
 import { KiloCodeIcon } from "./icons/KiloCodeIcon"
@@ -29,7 +28,7 @@ export const EXPORT_ACTION_TARGETS = {
   CCSwitch: "ccSwitch",
   KiloCode: "kiloCode",
   CursorPlus: "cursorPlus",
-  CliProxy: "cliProxy",
+
   ClaudeCodeRouter: "claudeCodeRouter",
 } as const
 
@@ -61,10 +60,7 @@ const CODING_AGENT_TARGETS = [
   EXPORT_ACTION_TARGETS.CursorPlus,
 ] as const
 
-const GATEWAY_TARGETS = [
-  EXPORT_ACTION_TARGETS.CliProxy,
-  EXPORT_ACTION_TARGETS.ClaudeCodeRouter,
-] as const
+const GATEWAY_TARGETS = [EXPORT_ACTION_TARGETS.ClaudeCodeRouter] as const
 
 /** Renders the shared, grouped export menu used by account and credential rows. */
 export function ExportActionsMenu({
@@ -89,8 +85,7 @@ export function ExportActionsMenu({
         return t("keyManagement:actions.exportToCursorPlus")
       case EXPORT_ACTION_TARGETS.KiloCode:
         return t("keyManagement:actions.exportToKiloCode")
-      case EXPORT_ACTION_TARGETS.CliProxy:
-        return t("keyManagement:actions.importToCliProxy")
+
       case EXPORT_ACTION_TARGETS.ClaudeCodeRouter:
         return t("keyManagement:actions.importToClaudeCodeRouter")
     }
@@ -108,8 +103,7 @@ export function ExportActionsMenu({
         return <CursorPlusIcon />
       case EXPORT_ACTION_TARGETS.KiloCode:
         return <KiloCodeIcon size="sm" />
-      case EXPORT_ACTION_TARGETS.CliProxy:
-        return <CliProxyIcon size="sm" />
+
       case EXPORT_ACTION_TARGETS.ClaudeCodeRouter:
         return <ClaudeCodeRouterIcon size="sm" />
     }

@@ -23,6 +23,9 @@
       "description": "Dieses {{site}}-Konto kann keine Kanäle verwalten. Verwenden Sie ein Administratorkonto oder aktualisieren Sie die Berechtigungen und anschließend die Kanalliste.",
       "title": "{{site}} Zugriff verweigert"
     },
+    "resourceChanged": {
+      "description": "Dieser Kanal wurde während der Bearbeitung geändert. Ihre Änderungen wurden nicht gespeichert. Schließen Sie den Editor, aktualisieren Sie die Kanalliste und bearbeiten Sie den Kanal erneut."
+    },
     "savedRefreshError": {
       "description": "Der Kanal wurde gespeichert, aber die neueste Liste konnte nicht geladen werden. Aktualisieren Sie die Kanalliste, bevor Sie weitere Änderungen vornehmen.",
       "title": "Kanal gespeichert, Aktualisierung erforderlich"
@@ -32,12 +35,20 @@
       "title": "{{site}} ist nicht verfügbar"
     }
   },
+  "cliProxyApi": {
+    "credentialWeightHelp": "Leer entspricht Gewicht 1. Nichtpositive Werte schließen diesen Schlüssel vom gewichteten Routing aus; maximal 1.000.000.",
+    "excludedModels": "Ausgeschlossene Modelle (eines pro Zeile)",
+    "headers": "Anfrage-Header",
+    "headersHelp": "Ein Header pro Zeile im Format Name: Wert.",
+    "prefix": "Modellpräfix",
+    "proxyUrl": "Proxy-URL"
+  },
   "dialog": {
     "cancel": "Abbrechen",
     "confirm": "Löschen",
     "deleteDescription": "Diese Aktion kann nicht rückgängig gemacht werden. Die ausgewählten Kanäle werden dauerhaft entfernt.",
     "deleteRefreshAction": "Kanäle aktualisieren",
-    "deleteRefreshRequired": "Einige Löschergebnisse sind unsicher. Aktualisieren Sie die Kanalliste, bevor Sie sie erneut löschen.",
+    "deleteRefreshRequired": "Aktualisiere die Kanalliste, um den aktuellen Stand zu bestätigen, bevor du erneut löschst.",
     "deleteResultStatus": {
       "failed": "Fehlgeschlagen",
       "success": "Gelöscht",
@@ -48,6 +59,111 @@
     "deleteTitlePlural": "Kanäle löschen?"
   },
   "editor": {
+    "advanced": {
+      "autoBan": {
+        "help": "New API darf diesen Kanal deaktivieren, wenn die konfigurierten Fehlerbedingungen erfüllt sind.",
+        "label": "Kanal automatisch deaktivieren"
+      },
+      "autoSync": {
+        "help": "Erfordert aktivierte Prüfungen. Bei Änderungen aktualisiert New API die Modellliste dieses Kanals automatisch.",
+        "label": "Vorgelagerte Modelle automatisch synchronisieren"
+      },
+      "check": {
+        "help": "New API prüft regelmäßig auf dem Server. Dies ist unabhängig von der Modellsynchronisierung der Erweiterung.",
+        "label": "Auf Modellaktualisierungen prüfen"
+      },
+      "detectedModels": "Hinzufügbare Modelle",
+      "groups": {
+        "detection": "Erkennung vorgelagerter Modelle",
+        "management": "Kanalverwaltung",
+        "network": "Netzwerkeinstellungen"
+      },
+      "ignored": {
+        "help": "Genaue Modellnamen eingeben, die von Erkennung und Synchronisierung ausgeschlossen werden sollen.",
+        "label": "Ignorierte vorgelagerte Modelle"
+      },
+      "invalidExisting": "Die gespeicherte Konfiguration kann nicht sicher gelesen werden. Vor der Bearbeitung in der Website-Verwaltung korrigieren.",
+      "lastCheck": "Zuletzt geprüft",
+      "mapping": {
+        "add": "Zuordnung hinzufügen",
+        "help": "Angefragte Modellnamen den an den Anbieter gesendeten Namen zuordnen. Jeder angefragte Modellname muss eindeutig sein.",
+        "invalid": "Beide Namen in jeder Zeile ausfüllen und doppelte angefragte Modelle entfernen.",
+        "label": "Modellnamen zuordnen",
+        "remove": "Zuordnung {{index}} entfernen",
+        "source": "Angefragtes Modell {{index}}",
+        "sourcePlaceholder": "Angefragtes Modell",
+        "target": "Vorgelagertes Modell {{index}}",
+        "targetPlaceholder": "Vorgelagertes Modell"
+      },
+      "neverChecked": "Noch nicht geprüft",
+      "noModels": "Keine",
+      "proxy": {
+        "help": "Proxy für Zugriffe des New API-Servers auf diesen Kanal. Unterstützt HTTP, HTTPS, SOCKS5 und SOCKS5H. Leer lassen, um den Kanal-Proxy zu entfernen.",
+        "invalid": "Eine gültige HTTP-, HTTPS-, SOCKS5- oder SOCKS5H-Proxy-URL eingeben.",
+        "label": "Proxy-Adresse"
+      },
+      "remark": {
+        "help": "Zweck oder Nutzungshinweise des Kanals festhalten (maximal 255 Zeichen).",
+        "label": "Notizen"
+      },
+      "removedModels": "Als entfernt erkannte Modelle",
+      "tag": "Kanal-Tag",
+      "testModel": {
+        "help": "Modell auswählen oder Namen eingeben. Leer lassen, um das Standard-Testmodell von New API zu verwenden.",
+        "label": "Testmodell"
+      },
+      "unsupportedDetection": "Dieser Editor unterstützt die Modellerkennung für diesen Kanaltyp nicht. Erweiterte benutzerdefinierte Kanäle benötigen eine Modelllisten-Route in der Website-Verwaltung."
+    },
+    "doneHub": {
+      "allowExtraBody": {
+        "help": "Zusätzliche Felder der Clientanfrage, etwa extra_body-Parameter, an den Anbieter weiterleiten.",
+        "label": "Zusätzliche Felder weiterleiten"
+      },
+      "compatibleResponse": {
+        "help": "Aktiviert: DoneHub wandelt Responses-Anfragen in Chat Completions um. Deaktiviert: Native Responses werden bevorzugt; bei fehlender Unterstützung ist weiterhin ein Rückfall möglich.",
+        "label": "Responses-API-Kompatibilität"
+      },
+      "customParameter": {
+        "help": "JSON-Objekt eingeben. Standardmäßig werden nur fehlende Felder ergänzt. overwrite: true überschreibt Felder; per_model: true konfiguriert pro Modell; pre_add: true wendet die Werte am Anfrageeingang an. Leer löscht die Konfiguration.",
+        "invalid": "Gültiges JSON-Objekt eingeben.",
+        "label": "Zusätzliche Anfrageparameter",
+        "placeholder": "{\n  \"overwrite\": true,\n  \"temperature\": 0.7\n}"
+      },
+      "disabledStream": {
+        "help": "Streaming-Anfragen für diese Modelle überspringen den Kanal; sie werden nicht in nicht-streamende Anfragen umgewandelt. Modelle auswählen oder Namen eingeben. Eine leere Liste stellt das normale Routing wieder her.",
+        "label": "Vom Streaming ausgeschlossene Modelle"
+      },
+      "modelHeaders": {
+        "help": "Feste Anfrageheader mit Textwerten hinzufügen. Authentifizierungsheader verwaltet der Kanal. Leer lassen oder alle Zeilen entfernen, um die Konfiguration zu löschen.",
+        "invalid": "JSON-Objekt mit eindeutigen, nicht leeren Schlüsseln und Textwerten eingeben.",
+        "label": "Benutzerdefinierte Anfrageheader",
+        "placeholder": "{\"X-Project\": \"example\"}"
+      },
+      "modelMapping": {
+        "addModels": "Zugeordnete Namen zur Modellliste hinzufügen",
+        "help": "Schlüssel sind angefragte Modellnamen, Werte die Namen beim Anbieter. Fügen Sie die Schlüssel zur Modellliste hinzu. Ein + vor dem Wert rechnet nach dem angefragten Modell ab.",
+        "invalid": "JSON-Objekt mit eindeutigen, nicht leeren Schlüsseln und Textwerten eingeben.",
+        "label": "Modellzuordnung",
+        "placeholder": "{\"alias\": \"upstream-model\"}"
+      },
+      "proxy": {
+        "help": "Für Verbindungen vom DoneHub-Server zum Anbieter. Unterstützt HTTP und SOCKS5; %s erzeugt eine Sitzungskennung aus dem Kanalschlüssel. Leer entfernt den Kanalproxy.",
+        "invalid": "Gültige HTTP- oder SOCKS5-Proxy-URL eingeben.",
+        "label": "Proxy-URL",
+        "placeholder": "socks5://127.0.0.1:1080"
+      },
+      "responsesPath": {
+        "help": "Nur für native Responses-Anfragen bei benutzerdefinierten Kanälen. Leer nutzt /v1/responses; disable sperrt diese Anfrage. Im Kompatibilitätsmodus nicht verwendet.",
+        "label": "Responses-Anfragepfad",
+        "placeholder": "/v1/responses"
+      },
+      "testModel": {
+        "help": "Chatmodell dieses Kanals auswählen oder Namen eingeben. Ohne Modell kann DoneHub die Kanalgeschwindigkeit nicht testen. Maximal 50 Zeichen.",
+        "invalid": "Modellnamen dürfen höchstens 50 Zeichen enthalten.",
+        "label": "Testmodell",
+        "placeholder": "gpt-4o-mini"
+      }
+    },
     "fields": {
       "autoSyncModelPattern": {
         "help": "Nur passende Modelle synchronisieren. Präfix mit (?i), um Groß- und Kleinschreibung zu ignorieren; Lassen Sie das Feld leer, um alle Modelle zu synchronisieren.",
@@ -108,6 +224,17 @@
         "placeholder": "Tags hinzufügen..."
       }
     },
+    "json": {
+      "addRow": "Zeile hinzufügen",
+      "editJson": "JSON bearbeiten",
+      "editRows": "Zeilen bearbeiten",
+      "format": "JSON formatieren",
+      "key": "Schlüssel",
+      "keyAt": "{{field}}: Schlüssel in Zeile {{index}}",
+      "removeAt": "{{field}}: Zeile {{index}} entfernen",
+      "value": "Wert",
+      "valueAt": "{{field}}: Wert in Zeile {{index}}"
+    },
     "options": {
       "channelType": {
         "anthropic": "Anthropic",
@@ -167,9 +294,12 @@
     "sections": {
       "advanced": "Erweitert",
       "basic": "Grundlagen",
+      "basicConnection": "Grundlagen & Verbindung",
+      "compatibility": "API-Kompatibilität",
       "connection": "Verbindung",
       "metadata": "Metadaten",
       "models": "Modelle",
+      "requests": "Netzwerk & Anfragen",
       "routing": "Routing",
       "sync": "Modellsynchronisierung"
     },
@@ -265,7 +395,6 @@
     }
   },
   "gatewayGuidance": {
-    "clientHint": "Externe Clients benötigen ebenfalls einen von diesem Gateway ausgegebenen Zugriffsschlüssel.",
     "empty": {
       "description": "Dieses selbstgehostete KI-Gateway hat noch keine Kanäle. Importieren Sie zuerst Kontoschlüssel oder API-Schlüssel, dann kann dieses Gateway eine einheitliche KI-API für externe Clients bereitstellen.",
       "importFromAccountKey": "Kanal aus Kontoschlüssel importieren",
@@ -274,7 +403,6 @@
     },
     "headerDescription": "Verwalten Sie Kanäle in Ihrem selbst gehosteten KI-Gateway und kombinieren Sie mehrere Kontoschlüssel oder API-Schlüssel in einer einheitlichen KI-API.",
     "openChannelConsole": "Öffnen Sie die Gateway-Kanalverwaltung",
-    "openTokenConsole": "Öffnen Sie die Token-Verwaltung",
     "unconfiguredValueDescription": "Nach der Konfiguration können Sie verstreute Kontoschlüssel und API-Schlüssel als Gateway-Kanäle importieren und diese dann direkt in All API Hub anzeigen und verwalten."
   },
   "migration": {
@@ -412,11 +540,14 @@
   "title": "Kanalverwaltung",
   "toasts": {
     "channelSaved": "Kanal gespeichert",
+    "channelsDeleted_one": "{{count}} Kanal gelöscht",
+    "channelsDeleted_other": "{{count}} Kanäle gelöscht",
     "channelUpdated": "Kanal aktualisiert",
     "syncCompleted": "Modellsynchronisierung abgeschlossen ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Die Modelle wurden synchronisiert ({{success}}/{{total}}), aber die Kanalliste konnte nicht aktualisiert werden. Aktualisieren Sie die Liste und versuchen Sie es erneut.",
     "syncFailed": "Modellsynchronisierung fehlgeschlagen: {{error}}",
-    "syncFailedFallback": "Die Kanäle konnten nicht synchronisiert werden"
+    "syncFailedFallback": "Die Kanäle konnten nicht synchronisiert werden",
+    "syncIncomplete": "Die Modellsynchronisierung wurde nicht vollständig abgeschlossen ({{success}}/{{total}} erfolgreich). Öffne die Modellsynchronisierung, prüfe die Ergebnisse und versuche fehlgeschlagene Kanäle erneut."
   },
   "toolbar": {
     "addChannel": "Kanal hinzufügen",

@@ -40,6 +40,7 @@ export interface ProductTourHandledState {
 }
 
 export interface GatewayGuidanceState {
+  onboardingStartedAt?: number
   onboardingCompletedAt?: number
   dismissedAtBySurface: Partial<Record<GatewayGuidanceSurface, number>>
 }
@@ -95,6 +96,11 @@ function sanitizeProductTourHandledState(
 function sanitizeGatewayGuidanceState(value: unknown): GatewayGuidanceState {
   const state: GatewayGuidanceState = { dismissedAtBySurface: {} }
   if (!isPlainObject(value)) return state
+
+  const onboardingStartedAt = readFinitePositiveNumber(
+    value.onboardingStartedAt,
+  )
+  if (onboardingStartedAt) state.onboardingStartedAt = onboardingStartedAt
 
   const onboardingCompletedAt = readFinitePositiveNumber(
     value.onboardingCompletedAt,
@@ -181,6 +187,10 @@ export function mergeFeatureGuidanceStates(
     if (handled) merged.productTour[variant] = handled
   }
 
+  merged.gatewayGuidance.onboardingStartedAt = mergeOptionalTimestamp(
+    left.gatewayGuidance.onboardingStartedAt,
+    right.gatewayGuidance.onboardingStartedAt,
+  )
   merged.gatewayGuidance.onboardingCompletedAt = mergeOptionalTimestamp(
     left.gatewayGuidance.onboardingCompletedAt,
     right.gatewayGuidance.onboardingCompletedAt,
@@ -335,6 +345,15 @@ export class FeatureGuidanceStateService {
           handledAt,
         },
       },
+    })
+  }
+
+  /** Records explicit setup intent independently from previewing the guide. */
+  async markGatewayGuidanceOnboardingStarted(
+    startedAt = Date.now(),
+  ): Promise<FeatureGuidanceState> {
+    return this.mergeState({
+      gatewayGuidance: { onboardingStartedAt: startedAt },
     })
   }
 

@@ -117,7 +117,7 @@ describe("Options Sidebar", () => {
     expect(onCollapseToggle).toHaveBeenCalledTimes(1)
   })
 
-  it("uses collapsed desktop labels and keeps managed-site pages visible when config is missing", () => {
+  it("uses collapsed desktop labels and keeps all pages visible when global automatic check-in is disabled", () => {
     useUserPreferencesContextMock.mockReturnValue({
       preferences: {
         autoCheckin: {
@@ -145,8 +145,10 @@ describe("Options Sidebar", () => {
     expect(basicButton).toHaveAttribute("title", "ui:navigation.basic")
 
     expect(
-      within(nav).queryByRole("button", { name: "ui:navigation.autoCheckin" }),
-    ).toBeNull()
+      within(nav).queryByRole("button", {
+        name: "ui:navigation.batchCheckin",
+      }),
+    ).toBeInTheDocument()
     expect(
       within(nav).queryByText("ui:navigation.categories.general"),
     ).toBeNull()

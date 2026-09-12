@@ -14,7 +14,7 @@ When you use multiple OpenRouter workspaces, AI API services, or clients, balanc
 - **Manage workspace API Keys**: view, create, edit, disable, or delete keys in one place.
 - **Compare models and pricing**: search OpenRouter models and compare them with models from other accounts.
 - **Keep the full API Key**: save a new key to the API Credential Library while its full value is still visible.
-- **Set up your usual tools faster**: export to Cherry Studio, CC Switch, Kilo Code, CLIProxyAPI, Claude Code Router, and other supported tools.
+- **Set up your usual tools faster**: export to Cherry Studio, CC Switch, Kilo Code, Claude Code Router, and other supported tools.
 
 A practical workflow is to add OpenRouter automatically, use All API Hub for balances, API Keys, and model comparison, then copy or export a saved configuration when an AI tool needs it.
 

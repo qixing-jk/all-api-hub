@@ -155,6 +155,7 @@
 
 | バックエンドシステム | 公式説明 | 公式リンク |
 |--------------------|----------|----------|
+| [CLIProxyAPI](./cliproxyapi-integration.md) | Gemini CLI、Antigravity、ChatGPT Codex、Claude Code、Qwen Code、iFlow を OpenAI / Gemini / Claude / Codex と互換性のある API サービスにラップします。  | [ドキュメント](https://help.router-for.me/) / [GitHub](https://github.com/router-for-me/CLIProxyAPI)                        |
 | New API | 統一された AI モデル集約および配布センター。 | [公式サイト](https://www.newapi.ai/) / [GitHub](https://github.com/QuantumNous/new-api) |
 | Sub2API | Sub2API-CRS2 ワンストップオープンソースプロキシサービス。Claude、OpenAI、Gemini、Antigravity のサブスクリプションを統一的に接続し、共同利用とネイティブツールに対応します。 | [GitHub](https://github.com/Wei-Shaw/sub2api) |
 | AxonHub | オープンソース AI Gateway。任意の SDK を通じて 100 以上の LLM を呼び出すことができ、フェイルオーバー、ロードバランシング、コスト管理、およびエンドツーエンドの追跡が組み込まれています。 | [公式サイト](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |

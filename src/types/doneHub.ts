@@ -1,3 +1,20 @@
+import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
+
+/** Only edited advanced fields are carried to the latest-detail update planner. */
+export type DoneHubChannelCommand = NewApiFamilyChannelCommand & {
+  advanced?: Partial<{
+    compatible_response: boolean
+    responses_path: string
+    model_mapping: string
+    proxy: string
+    test_model: string
+    model_headers: string
+    custom_parameter: string
+    allow_extra_body: boolean
+    disabled_stream: string[]
+  }>
+}
+
 /** Fields consumed from DoneHub's native channel inventory. */
 type DoneHubChannelFields = {
   id: number

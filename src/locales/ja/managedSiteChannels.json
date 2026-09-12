@@ -23,6 +23,9 @@
       "description": "この {{site}} アカウントではチャネルを管理できません。管理者アカウントを使用するか権限を更新してから、再読み込みしてください。",
       "title": "{{site}} へのアクセスが拒否されました"
     },
+    "resourceChanged": {
+      "description": "編集中にこのチャネルが変更されました。今回の変更は保存されていません。編集画面を閉じ、一覧を更新してから再編集してください。"
+    },
     "savedRefreshError": {
       "description": "チャネルは保存されましたが、最新の一覧を読み込めませんでした。さらに変更する前にチャネル一覧を更新してください。",
       "title": "チャネルを保存しました。更新が必要です"
@@ -32,12 +35,20 @@
       "title": "{{site}} を利用できません"
     }
   },
+  "cliProxyApi": {
+    "credentialWeightHelp": "空欄の場合の重みは 1 です。0 以下は重み付きルーティングの対象外となります。上限は 1,000,000 です。",
+    "excludedModels": "除外モデル（1 行に 1 つ）",
+    "headers": "リクエストヘッダー",
+    "headersHelp": "1 行に 1 ヘッダー。名前: 値 の形式で入力します。",
+    "prefix": "モデル接頭辞",
+    "proxyUrl": "プロキシ URL"
+  },
   "dialog": {
     "cancel": "キャンセル",
     "confirm": "削除",
     "deleteDescription": "この操作は元に戻せません。選択したチャネルは完全に削除されます。",
     "deleteRefreshAction": "チャネル一覧を更新",
-    "deleteRefreshRequired": "削除結果が不明な項目があります。再度削除する前にチャネル一覧を更新してください。",
+    "deleteRefreshRequired": "再度削除する前に、チャネル一覧を更新して最新の状態を確認してください。",
     "deleteResultStatus": {
       "failed": "失敗",
       "success": "削除済み",
@@ -48,6 +59,111 @@
     "deleteTitlePlural": "チャネルを削除しますか？"
   },
   "editor": {
+    "advanced": {
+      "autoBan": {
+        "help": "New API に設定された障害条件を満たすと、このチャネルの自動無効化を許可します。",
+        "label": "チャネルを自動無効化"
+      },
+      "autoSync": {
+        "help": "更新の確認を有効にしてください。変更を検出すると、New API がこのチャネルのモデル一覧を自動更新します。",
+        "label": "上流モデルを自動同期"
+      },
+      "check": {
+        "help": "New API サーバーが定期的に確認します。拡張機能のモデル同期とは別に動作します。",
+        "label": "上流モデルの更新を確認"
+      },
+      "detectedModels": "追加可能なモデル",
+      "groups": {
+        "detection": "上流モデルの検出",
+        "management": "チャネル管理",
+        "network": "ネットワーク設定"
+      },
+      "ignored": {
+        "help": "検出と同期の対象から除外するモデルの完全な名前を入力します。",
+        "label": "無視する上流モデル"
+      },
+      "invalidExisting": "保存された設定を安全に解析できません。サイトの管理画面で修正してから編集してください。",
+      "lastCheck": "最終確認日時",
+      "mapping": {
+        "add": "マッピングを追加",
+        "help": "リクエストのモデル名を上流に送信するモデル名に変換します。リクエストモデルは各行で一意にしてください。",
+        "invalid": "各行の両方のモデル名を入力し、重複するリクエストモデルを削除してください。",
+        "label": "モデル名のマッピング",
+        "remove": "マッピング {{index}} を削除",
+        "source": "リクエストモデル {{index}}",
+        "sourcePlaceholder": "リクエストモデル",
+        "target": "上流モデル {{index}}",
+        "targetPlaceholder": "上流モデル"
+      },
+      "neverChecked": "未確認",
+      "noModels": "なし",
+      "proxy": {
+        "help": "New API サーバーがこのチャネルに接続する際に使用します。HTTP、HTTPS、SOCKS5、SOCKS5H に対応。空欄にするとチャネルのプロキシ設定を解除します。",
+        "invalid": "有効な HTTP、HTTPS、SOCKS5、SOCKS5H プロキシ URL を入力してください。",
+        "label": "プロキシアドレス"
+      },
+      "remark": {
+        "help": "チャネルの用途や注意事項を記録します（最大 255 文字）。",
+        "label": "備考"
+      },
+      "removedModels": "削除を検出したモデル",
+      "tag": "チャネルタグ",
+      "testModel": {
+        "help": "モデルを選択するか名前を入力します。空欄の場合、New API の既定のテストモデルを使用します。",
+        "label": "テストモデル"
+      },
+      "unsupportedDetection": "このエディターでは、このチャネルタイプの上流検出に対応していません。高度なカスタムチャネルはサイトの管理画面でモデル一覧のルート設定が必要です。"
+    },
+    "doneHub": {
+      "allowExtraBody": {
+        "help": "extra_body など、クライアントの追加フィールドを上流へ転送します。",
+        "label": "追加フィールドを転送"
+      },
+      "compatibleResponse": {
+        "help": "有効にすると、DoneHub は Responses リクエストを Chat Completions に変換します。無効時は上流のネイティブ Responses を優先しますが、非対応の場合は互換モードに切り替わることがあります。",
+        "label": "Responses API 互換モード"
+      },
+      "customParameter": {
+        "help": "JSON オブジェクトを入力してください。通常は不足フィールドのみ追加します。overwrite: true で上書き、per_model: true でモデル別設定、pre_add: true でリクエスト入口に適用します。空欄で解除します。",
+        "invalid": "有効な JSON オブジェクトを入力してください。",
+        "label": "追加リクエストパラメーター",
+        "placeholder": "{\n  \"overwrite\": true,\n  \"temperature\": 0.7\n}"
+      },
+      "disabledStream": {
+        "help": "これらのモデルのストリーミング要求では、このチャネルをスキップします。非ストリーミングには変換しません。モデルの選択または名前の入力が可能です。一覧を空にすると通常のルーティングに戻ります。",
+        "label": "ストリーミング対象外のモデル"
+      },
+      "modelHeaders": {
+        "help": "上流に固定ヘッダーを追加します。値は文字列にしてください。認証ヘッダーはチャネル側で処理します。空欄または全行削除で解除します。",
+        "invalid": "空でない一意のキーと文字列の値を持つ JSON オブジェクトを入力してください。",
+        "label": "カスタムリクエストヘッダー",
+        "placeholder": "{\"X-Project\": \"example\"}"
+      },
+      "modelMapping": {
+        "addModels": "マッピング名をモデル一覧に追加",
+        "help": "キーは要求されたモデル名、値は上流のモデル名です。キーをチャネルのモデル一覧に追加してください。値の先頭に + を付けると、要求されたモデルで課金します。",
+        "invalid": "空でない一意のキーと文字列の値を持つ JSON オブジェクトを入力してください。",
+        "label": "モデルマッピング",
+        "placeholder": "{\"alias\": \"upstream-model\"}"
+      },
+      "proxy": {
+        "help": "DoneHub サーバーから上流への接続に使用します。HTTP と SOCKS5 に対応し、%s はチャネルキーからセッション ID を生成します。空欄でチャネル専用プロキシを解除します。",
+        "invalid": "有効な HTTP または SOCKS5 プロキシ URL を入力してください。",
+        "label": "プロキシ URL",
+        "placeholder": "socks5://127.0.0.1:1080"
+      },
+      "responsesPath": {
+        "help": "カスタムチャネルのネイティブ Responses 専用です。空欄は /v1/responses、disable はこのリクエストを無効にします。互換モードでは使用しません。",
+        "label": "Responses リクエストパス",
+        "placeholder": "/v1/responses"
+      },
+      "testModel": {
+        "help": "チャネルのチャットモデルを選択するか、名前を入力してください。空欄では DoneHub の速度テストを実行できません。最大 50 文字です。",
+        "invalid": "モデル名は 50 文字以内にしてください。",
+        "label": "速度テスト用モデル",
+        "placeholder": "gpt-4o-mini"
+      }
+    },
     "fields": {
       "autoSyncModelPattern": {
         "help": "このパターンに一致するモデルだけを同期します。大文字と小文字を区別しない場合は先頭に (?i) を付け、すべて同期する場合は空欄にします。",
@@ -108,6 +224,17 @@
         "placeholder": "タグを追加..."
       }
     },
+    "json": {
+      "addRow": "行を追加",
+      "editJson": "JSON を編集",
+      "editRows": "行で編集",
+      "format": "JSON を整形",
+      "key": "キー",
+      "keyAt": "{{field}}：{{index}} 行目のキー",
+      "removeAt": "{{field}}：{{index}} 行目を削除",
+      "value": "値",
+      "valueAt": "{{field}}：{{index}} 行目の値"
+    },
     "options": {
       "channelType": {
         "anthropic": "Anthropic",
@@ -167,9 +294,12 @@
     "sections": {
       "advanced": "詳細設定",
       "basic": "基本情報",
+      "basicConnection": "基本設定と接続",
+      "compatibility": "API 互換性",
       "connection": "接続と認証情報",
       "metadata": "メタデータ",
       "models": "モデル",
+      "requests": "ネットワークとリクエスト",
       "routing": "ルーティング",
       "sync": "モデル同期"
     },
@@ -265,7 +395,6 @@
     }
   },
   "gatewayGuidance": {
-    "clientHint": "外部クライアントからの呼び出しには、このゲートウェイが発行するキーも必要です。",
     "empty": {
       "description": "このセルフホスト AI ゲートウェイにはまだチャネルがありません。アカウントキーまたは API キーを取り込むと、ゲートウェイを 1 つの AI API として外部クライアントから利用できます。",
       "importFromAccountKey": "アカウントキーからチャネルを取り込む",
@@ -274,7 +403,6 @@
     },
     "headerDescription": "セルフホスト AI ゲートウェイのチャネルを管理し、複数のアカウントキーや API キーを 1 つの AI API にまとめます。",
     "openChannelConsole": "ゲートウェイのチャネル管理を開く",
-    "openTokenConsole": "トークン管理を開く",
     "unconfiguredValueDescription": "設定後は、分散しているアカウントキーや API キーをゲートウェイチャネルとして取り込み、All API Hub で直接確認・管理できます。"
   },
   "migration": {
@@ -412,11 +540,13 @@
   "title": "チャネル管理",
   "toasts": {
     "channelSaved": "チャネルを保存しました",
+    "channelsDeleted_other": "{{count}} 件のチャネルを削除しました",
     "channelUpdated": "チャネルを更新しました",
     "syncCompleted": "モデル同期が完了しました ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "モデルは同期されました（{{success}}/{{total}}）が、チャネル一覧を更新できませんでした。更新してもう一度お試しください。",
     "syncFailed": "モデル同期に失敗しました: {{error}}",
-    "syncFailedFallback": "チャネルを同期できませんでした"
+    "syncFailedFallback": "チャネルを同期できませんでした",
+    "syncIncomplete": "モデル同期は一部またはすべて失敗しました（成功 {{success}}/{{total}}）。モデル同期画面で結果を確認し、失敗したチャネルを再試行してください。"
   },
   "toolbar": {
     "addChannel": "チャネルを追加",

@@ -62,6 +62,13 @@ const runtimeConfigs: ManagedSiteRuntimeConfig[] = [
       adminToken: "sub2api-admin-token",
     },
   },
+  {
+    siteType: SITE_TYPES.CLI_PROXY_API,
+    config: {
+      baseUrl: "http://cliproxy.example.invalid/",
+      adminToken: "cliproxy-management-key",
+    },
+  },
 ]
 
 const getTarget = async (runtimeConfig: ManagedSiteRuntimeConfig) =>
@@ -84,6 +91,7 @@ const getRawTargetValues = (
         runtimeConfig.config.password,
       ]
     case SITE_TYPES.CLAUDE_CODE_HUB:
+    case SITE_TYPES.CLI_PROXY_API:
     case SITE_TYPES.SUB2API:
       return [
         runtimeConfig.config.baseUrl,
@@ -121,6 +129,7 @@ const changeCompatibleIdentity = (
       }
     case SITE_TYPES.CLAUDE_CODE_HUB:
     case SITE_TYPES.SUB2API:
+    case SITE_TYPES.CLI_PROXY_API:
       return null
     default:
       return {
@@ -134,9 +143,9 @@ describe("managed-site token batch import target", () => {
   it("covers every managed-site runtime config shape with one captured snapshot", async () => {
     const targets = await Promise.all(runtimeConfigs.map(getTarget))
 
-    expect(runtimeConfigs.map(({ siteType }) => siteType)).toEqual(
-      MANAGED_SITE_TYPES,
-    )
+    const coveredSiteTypes = runtimeConfigs.map(({ siteType }) => siteType)
+    expect(coveredSiteTypes).toHaveLength(MANAGED_SITE_TYPES.length)
+    expect(new Set(coveredSiteTypes)).toEqual(new Set(MANAGED_SITE_TYPES))
     targets.forEach((target, index) => {
       const runtimeConfig = runtimeConfigs[index]!
       expect(target.managedSite.siteType).toBe(runtimeConfig.siteType)

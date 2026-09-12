@@ -9,6 +9,7 @@ import {
   runManagedSiteChannelsCrudScenario,
   runManagedSiteTokenChannelStatusScenario,
 } from "~~/e2e/scenarios/managedSiteChannels"
+import { runNewApiAdvancedChannelScenario } from "~~/e2e/scenarios/newApiAdvancedChannel"
 import {
   forceExtensionLanguage,
   seedUserPreferences,
@@ -43,6 +44,9 @@ import {
 import { runSub2ApiRealSiteAccountSaveFlow } from "~~/e2e/utils/realSite/sub2apiAccountSaveFlow"
 
 type ServiceWorker = Awaited<ReturnType<typeof getServiceWorker>>
+
+// Authenticated channel details must not enter diagnostic artifacts.
+test.use({ trace: "off", video: "off", screenshot: "off" })
 
 type ManagedSiteE2eTarget = {
   label: string
@@ -123,6 +127,37 @@ test.describe("real-site E2E: managed-site channel management", () => {
 
   for (const target of selectedManagedSiteTargets) {
     const managedSite = target.resolveConfig()
+
+    if (target.siteType === SITE_TYPES.NEW_API) {
+      test.describe("New API advanced persistence", () => {
+        test("saves and clears advanced fields without losing unrelated settings", async ({
+          context,
+          page,
+          extensionId,
+        }) => {
+          test.setTimeout(120_000)
+          const resolved = resolveNewApiManagedSiteConfig()
+          test.skip(
+            !resolved.config,
+            "New API real-site environment is missing",
+          )
+          if (!resolved.config) return
+          await seedUserPreferences(await getServiceWorker(context), {
+            managedSiteType: SITE_TYPES.NEW_API,
+            newApi: resolved.config,
+            autoFillCurrentSiteUrlOnAccountAdd: false,
+            autoProvisionKeyOnAccountAdd: false,
+            openChangelogOnUpdate: false,
+          })
+          await runNewApiAdvancedChannelScenario({
+            context,
+            page,
+            extensionId,
+            config: resolved.config,
+          })
+        })
+      })
+    }
 
     if (!managedSite.config) {
       const skipReason = getManagedSiteRealSiteSkipReason({

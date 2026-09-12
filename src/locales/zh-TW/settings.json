@@ -157,7 +157,7 @@
     "title": "Claude Code Router",
     "urlDesc": "Claude Code Router 服務基礎 URL，例如 http://localhost:3000"
   },
-  "cliProxy": {
+  "cliProxyApi": {
     "baseUrlLabel": "管理介面基礎 URL",
     "checkConnectionAction": "檢測連線",
     "checkConnectionDesc": "儲存後可主動檢測目前 URL 與管理金鑰是否能存取 CLIProxyAPI Management API。",
@@ -244,6 +244,9 @@
   "managedSite": {
     "axonHub": "AxonHub",
     "claudeCodeHub": "Claude Code Hub",
+    "cliProxyApi": "CLIProxyAPI",
+    "deploymentDocs": "官方部署文件",
+    "deploymentDocsLink": "{{site}} 官方部署文件",
     "description": "選擇您要管理的 API 聚合平台站點。這將決定用於渠道管理和模型同步的配置。",
     "doneHub": "Done Hub",
     "gatewayGuidance": {
@@ -253,8 +256,8 @@
         "viewChannels": "查看已匯入渠道"
       },
       "configComplete": {
-        "description": "基礎設定只完成了閘道後台連線。若要讓外部客戶端透過這個自建 AI 閘道呼叫模型，還需要把帳號 Key 或 API Key 匯入為閘道渠道，形成統一 AI API。",
-        "title": "下一步：匯入可用 Key"
+        "description": "閘道設定已儲存。可將帳號 Key 或 API 憑據匯入為閘道渠道；實際連線狀態會在驗證或匯入時檢查。",
+        "title": "下一步：匯入渠道"
       },
       "unconfigured": {
         "description": "完成自建 AI 閘道設定後，即可將帳號 Key 或 API Key 匯入為閘道渠道，讓多個 Key 透過同一個 AI API 使用。",
@@ -263,6 +266,7 @@
     },
     "newApi": "New API",
     "octopus": "Octopus",
+    "popularityHint": "依 GitHub Star 數快照排序。",
     "siteTypeDesc": "選擇用於渠道管理和模型同步的平台",
     "siteTypeLabel": "閘道型別",
     "sub2api": "Sub2API",
@@ -635,7 +639,6 @@
     "balanceHistory": "餘額歷史",
     "checkinRedeem": "簽到與兌換",
     "claudeCodeRouter": "Claude Code Router",
-    "cliProxy": "CLIProxyAPI",
     "dataBackup": "資料與備份",
     "general": "通用",
     "managedSite": "自建 AI 閘道",

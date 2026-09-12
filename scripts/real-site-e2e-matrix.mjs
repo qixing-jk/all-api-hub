@@ -119,6 +119,15 @@ const REAL_SITE_E2E_MATRIX = [
     spec: "e2e/realSite/managedSiteChannels.spec.ts",
   },
   {
+    id: "cli-proxy-api",
+    category: REAL_SITE_E2E_CATEGORIES.managedSite,
+    label: "Managed Site / CLIProxyAPI Providers",
+    env_prefix: "CLI_PROXY_API",
+    kind: "managed-site",
+    managed_site_target: "cli-proxy-api",
+    spec: "e2e/realSite/cliProxyApiProviders.spec.ts",
+  },
+  {
     id: "nutstore-webdav",
     category: REAL_SITE_E2E_CATEGORIES.webdav,
     label: "WebDAV / Nutstore",

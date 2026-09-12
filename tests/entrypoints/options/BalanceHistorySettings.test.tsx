@@ -82,7 +82,7 @@ describe("BalanceHistorySettings", () => {
     })
   })
 
-  it("falls back to default retention days when preferences omit balance history", async () => {
+  it("defaults to refresh-driven capture and default retention when preferences omit balance history", async () => {
     const updateBalanceHistory = vi.fn().mockResolvedValue(true)
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: {},
@@ -99,7 +99,7 @@ describe("BalanceHistorySettings", () => {
 
     await waitFor(() => {
       expect(updateBalanceHistory).toHaveBeenCalledWith({
-        enabled: false,
+        enabled: true,
         endOfDayCapture: { enabled: false },
         estimatedTodayIncome: { enabled: false },
         retentionDays: 365,

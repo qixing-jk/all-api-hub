@@ -3,7 +3,7 @@ home: true
 title: "ホーム"
 heroImage: "/512.png"
 heroText: "All API Hub - あなたの万能 AI 資産マネージャー"
-tagline: "オープンソースのブラウザ拡張機能。サードパーティ製AI集約中継ステーションと自社構築のNew APIを一元管理。アカウントの自動認識、モデル価格の比較、API/CLI互換性の検証、モデルとチャネルの同期をサポートし、クロスプラットフォームと暗号化されたWebDAVバックアップに対応。"
+tagline: "AI 中継サイトのアカウントと API 認証情報をまとめて管理するオープンソースのブラウザー拡張機能。CLIProxyAPI、New API、Sub2API などのセルフホスト型ゲートウェイの管理、残高確認、モデル価格比較、API 検証、暗号化 WebDAV バックアップに対応しています。"
 actions:
   - text: "利用開始"
     link: "./get-started.html"
@@ -41,7 +41,7 @@ features:
   - title: "🚀 Web ページからの取り込みとワンクリックエクスポート"
     details: "Web ページから Base URL や API Key をすばやく検出し、よく使う AI クライアントへワンクリックでエクスポートできます。"
   - title: "🛠️ 主要 AI ゲートウェイ対応"
-    details: "New API、Sub2API、AxonHub、Claude Code Hub、Octopus、Veloera、DoneHub を一元管理し、保存済みのアカウントや API 認証情報からサイト設定をすばやく追加できます。モデル同期やリダイレクトにも対応しています。"
+    details: "CLIProxyAPI、New API、Sub2API、AxonHub、Claude Code Hub、Octopus、Veloera、DoneHub を一元管理し、保存済みのアカウントや API 認証情報からサイト設定をすばやく追加できます。対応サイトではモデル同期やリダイレクトも利用できます。"
   - title: "🔐 ローカル優先と自動同期"
     details: "データはデフォルトでブラウザ内に保存されます。暗号化 WebDAV 自動同期を有効にすると、複数デバイス間で安全に同期し、パソコンを替えてもそのまま使い続けられます。"
 
@@ -80,7 +80,7 @@ AI の時代には、節約したり別のモデルを試したりするため�
 
 - **アカウントサイト互換アーキテクチャ**：New API, One API, Sub2API, One-Hub, Veloera, Done-Hub など。
 - **特色あるアカウントプラットフォームと互換実装**：[OpenRouter](https://openrouter.ai/)、[AnyRouter](https://anyrouter.top/register?aff=tDKX)、[AgentRouter](https://agentrouter.org/register?aff=TUX6)、[AIHubMix](https://aihubmix.com/?aff=W3DN)、Super-API、v-api、Neo-API など。
-- **セルフホスト型管理バックエンド**：New API, Sub2API, AxonHub, Claude Code Hub, [Octopus](https://github.com/bestruirui/octopus), Veloera, Done-Hub など。バックエンド管理、移行、一部のモデル同期に利用できます。
+- **セルフホスト型管理バックエンド**：CLIProxyAPI、New API、Sub2API、AxonHub、Claude Code Hub、Octopus、Veloera、DoneHub など。バックエンド管理に利用でき、対応サイトでは移行とモデル同期も行えます。
 
 > macOS で Safari を使う場合は、先に [Safari インストールガイド](./safari-install.md) を確認してください。
 > QQ / 360 / Brave / Vivaldi / Opera などのブラウザを使う場合は、[その他のブラウザへのインストールガイド](./other-browser-install.md) を確認してください。

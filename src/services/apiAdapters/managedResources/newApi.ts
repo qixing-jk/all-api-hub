@@ -30,12 +30,17 @@ import {
 } from "~/services/apiTransport/errors"
 import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
 import {
+  MANAGED_SITE_MUTATION_COMPLETIONS,
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationResult,
 } from "~/services/managedSites/mutations"
 import { buildChannelPayload } from "~/services/managedSites/providers/newApi"
-import { buildNewApiUpdatePayload } from "~/services/managedSites/providers/newApiChannelPayload"
+import {
+  buildNewApiAdvancedPayload,
+  buildNewApiUpdatePayload,
+  hasNewApiAdvancedValues,
+} from "~/services/managedSites/providers/newApiChannelPayload"
 import { NewApiChannelKeyRequirementError } from "~/services/managedSites/providers/newApiSession"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -46,10 +51,11 @@ import {
 } from "~/services/protectionBypass/contracts"
 import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"
 import type { NewApiChannel, UpdateChannelPayload } from "~/types/newApi"
+import type { NewApiChannelCommand } from "~/types/newApiChannelEditor"
 import type { NewApiConfig } from "~/types/newApiConfig"
-import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
 import { normalizeList } from "~/utils/core/string"
 
+import { withNewApiAdvancedEditor } from "./newApiAdvancedEditor"
 import {
   newApiChannelOperations,
   newApiManagedResourceModels,
@@ -76,12 +82,12 @@ type NewApiNativeResourceOperations = {
     options?: ResourceOperationOptions,
   ): Promise<string>
   create(
-    draft: NewApiFamilyChannelCommand,
+    draft: NewApiChannelCommand,
     options?: ResourceOperationOptions,
   ): Promise<ManagedSiteMutationResult<NewApiChannel>>
   update(
     detail: NewApiChannel,
-    command: NewApiFamilyChannelCommand,
+    command: NewApiChannelCommand,
     options?: ResourceOperationOptions,
   ): Promise<ManagedSiteMutationResult<NewApiChannel>>
   delete(
@@ -216,21 +222,30 @@ const getChannel = async (
 
 const createChannel = async (
   nativeConfig: NewApiNativeConfig,
-  draft: NewApiFamilyChannelCommand,
+  draft: NewApiChannelCommand,
   options?: ResourceOperationOptions,
-): Promise<ManagedSiteMutationResult<NewApiChannel>> =>
-  await attributeCreatedNativeResource({
+): Promise<ManagedSiteMutationResult<NewApiChannel>> => {
+  const basePayload = buildChannelPayload(draft)
+  const result = await attributeCreatedNativeResource({
     attributionKey: `${SITE_TYPES.NEW_API}:${nativeConfig.scopeKey}`,
     listInventory: async () =>
       (await listCompleteChannelInventory(nativeConfig, options)).items,
     create: async () =>
       await channels.create(
         nativeConfig.config,
-        buildChannelPayload(draft),
+        {
+          ...basePayload,
+          channel: {
+            ...basePayload.channel,
+            ...buildNewApiAdvancedPayload({}, draft.advanced),
+          },
+        },
         options,
       ),
     identity: (item) => item.id,
   })
+  return await verifyAdvancedSave(nativeConfig, draft, result, options)
+}
 
 const applyUpdate = (
   detail: NewApiChannel,
@@ -252,19 +267,65 @@ const applyUpdate = (
   } as NewApiChannel
 }
 
+// Settings and model-detection fields can be ignored by older servers. Reread
+// edits before reporting success; never suggest retrying a confirmed creation.
+const verifyAdvancedSave = async (
+  nativeConfig: NewApiNativeConfig,
+  command: NewApiChannelCommand,
+  result: ManagedSiteMutationResult<NewApiChannel>,
+  options?: ResourceOperationOptions,
+): Promise<ManagedSiteMutationResult<NewApiChannel>> => {
+  if (
+    !command.advanced ||
+    result.outcome !== MANAGED_SITE_MUTATION_OUTCOMES.Succeeded
+  )
+    return result
+  try {
+    const saved = await channels.get(
+      nativeConfig.config,
+      result.data.id,
+      options,
+    )
+    if (hasNewApiAdvancedValues(saved, command.advanced))
+      return { ...result, data: saved }
+  } catch {
+    /* The write was dispatched; preserve uncertainty and confirmed effects. */
+  }
+  const diagnostic = {
+    code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+    message: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+  }
+  if (!result.confirmedEffects.length)
+    return { outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain, diagnostic }
+  return {
+    outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
+    completion: MANAGED_SITE_MUTATION_COMPLETIONS.Uncertain,
+    confirmedEffects: [
+      result.confirmedEffects[0],
+      ...result.confirmedEffects.slice(1),
+    ],
+    diagnostic,
+  }
+}
+
 const updateChannel = async (
   nativeConfig: NewApiNativeConfig,
   detail: NewApiChannel,
-  command: NewApiFamilyChannelCommand,
+  command: NewApiChannelCommand,
   options?: ResourceOperationOptions,
 ): Promise<ManagedSiteMutationResult<NewApiChannel>> => {
   const payload = buildNewApiUpdatePayload(detail, command)
   const result = await channels.update(nativeConfig.config, payload, options)
   if (result.outcome === MANAGED_SITE_MUTATION_OUTCOMES.Succeeded) {
-    return {
-      ...result,
-      data: applyUpdate(detail, payload, result.confirmedEffects),
-    }
+    return await verifyAdvancedSave(
+      nativeConfig,
+      command,
+      {
+        ...result,
+        data: applyUpdate(detail, payload, result.confirmedEffects),
+      },
+      options,
+    )
   }
   if (result.outcome === MANAGED_SITE_MUTATION_OUTCOMES.Partial) {
     const { data: _data, ...rest } = result
@@ -332,9 +393,9 @@ export async function openNewApiNativeResourceOperations(): Promise<NewApiNative
         const groups = await fetchSiteUserGroups(nativeConfig.config, options)
         throwIfNewApiResourceOperationAborted(options)
         return normalizeList(groups)
-      } catch {
+      } catch (error) {
         throwIfNewApiResourceOperationAborted(options)
-        return []
+        throw error
       }
     },
   }
@@ -382,18 +443,29 @@ const newApiNativeDefinition = {
   createEditor: async (
     operations: NewApiNativeResourceOperations,
     options?: ResourceOperationOptions,
-  ) => await createNewApiCreateEditor(operations, options),
-  editEditor: createNewApiEditEditor,
+  ) =>
+    withNewApiAdvancedEditor(
+      await createNewApiCreateEditor(operations, options),
+    ),
+  editEditor: async (
+    operations: NewApiNativeResourceOperations,
+    detail: NewApiChannel,
+    options?: ResourceOperationOptions,
+  ) =>
+    withNewApiAdvancedEditor(
+      await createNewApiEditEditor(operations, detail, options),
+      detail,
+    ),
   sanitizeEditDetail: sanitizeNewApiEditorDetail,
   create: (
     operations: NewApiNativeResourceOperations,
-    draft: NewApiFamilyChannelCommand,
+    draft: NewApiChannelCommand,
     options?: ResourceOperationOptions,
   ) => operations.create(draft, options),
   update: (
     operations: NewApiNativeResourceOperations,
     detail: NewApiChannel,
-    command: NewApiFamilyChannelCommand,
+    command: NewApiChannelCommand,
     options?: ResourceOperationOptions,
   ) => operations.update(detail, command, options),
   delete: (

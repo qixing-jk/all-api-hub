@@ -59,11 +59,8 @@ export default function AutoCheckinSettings() {
   } = useUserPreferencesContext()
   const preferences = userPrefs?.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
   const savedVersion = userPrefs?.lastUpdated ?? 0
-  const retryPreferences = preferences.retryStrategy ?? {
-    enabled: false,
-    intervalMinutes: 30,
-    maxAttemptsPerDay: 3,
-  }
+  const retryPreferences =
+    preferences.retryStrategy ?? DEFAULT_PREFERENCES.autoCheckin!.retryStrategy
   const scheduleModes = useMemo(
     () => [
       {
@@ -265,7 +262,7 @@ export default function AutoCheckinSettings() {
     <SettingSection
       id={AUTO_CHECKIN_TARGET_IDS.section}
       title={t("autoCheckin:settings.title")}
-      description={t("autoCheckin:description")}
+      description={t("autoCheckin:settings.enableDesc")}
       onReset={async () => {
         return resetAutoCheckinConfig()
       }}

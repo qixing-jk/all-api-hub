@@ -17,7 +17,7 @@ AIHubMix ユーザーには、次の用途があります。
 - **残高確認**：拡張機能パネルから AIHubMix の残高を確認できます。
 - **API キー保護**：AIHubMix の完全なキーは一度だけ表示されます。All API Hub は作成時に完全なキーを **API 認証情報プロファイル** に保存できます。
 - **モデル価格確認**：AIHubMix のモデル一覧と入力 / 出力価格を確認できます。
-- **認証情報エクスポート**：保存済みのキーを Cherry Studio、CC Switch、Kilo Code、CLIProxyAPI、Claude Code Router などへエクスポートできます。
+- **認証情報エクスポート**：保存済みのキーを Cherry Studio、CC Switch、Kilo Code、Claude Code Router などへエクスポートできます。
 
 ---
 
@@ -100,11 +100,11 @@ AIHubMix を他のツールで使う場合は、次の流れでエクスポー�
 
 1. **API 認証情報プロファイル** で保存済みの AIHubMix キーを見つけます。
 2. 必要なエクスポート操作を選択します。
-3. **Cherry Studio**、**CC Switch**、**Kilo Code**、**CLIProxyAPI**、**Claude Code Router**、または設定済みのセルフホスト型サイトを選びます。
+3. **Cherry Studio**、**CC Switch**、**Kilo Code**、**Claude Code Router**、または設定済みのセルフホスト型サイトを選びます。
 
 ![API 認証情報プロファイルから AIHubMix キーをエクスポート](../../static/image/sponsor-guides/aihubmix/aihubmix-credential-export-menu.png)
 
-API 認証情報プロファイルに保存した後は、`Base URL + API Key` のコピー、疎通確認、利用可能モデル一覧の確認、複数クライアントへのエクスポート、セルフホスト型サイトへのインポート、インポート / エクスポートや WebDAV 同期による移行もできます。
+API 認証情報プロファイルに保存した後は、`Base URL + API Key` のコピー、疎通確認、利用可能モデル一覧の確認、複数クライアントへのエクスポート、CLIProxyAPI、New API、Sub2API などの設定済みセルフホスト型ゲートウェイへのインポート、インポート / エクスポートや WebDAV 同期による移行もできます。
 
 ---
 

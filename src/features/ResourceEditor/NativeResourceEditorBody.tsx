@@ -33,6 +33,7 @@ import {
   readResourceNumber,
   readResourceString,
 } from "./resourceEditorProjection"
+import { ResourceEditorSection } from "./ResourceEditorSection"
 import {
   getResourceFieldOptionLabel,
   resolveResourceFieldPolicy,
@@ -44,6 +45,8 @@ import {
   ResourceAutomaticOptionFeedback,
   ResourceManualOptionControl,
 } from "./ResourceOptionLoadFeedback"
+import { ResourceSecretListField } from "./ResourceSecretListField"
+import { ResourceTextEntriesField } from "./ResourceTextEntriesField"
 import {
   isDynamicOptionField,
   RESOURCE_OPTION_LOAD_STATUSES,
@@ -87,6 +90,10 @@ export type NativeResourceEditorBodyProps<TSection extends string> = {
   fieldIssues?: readonly ResourceFieldIssue[]
   disabled?: boolean
   onValueChange: (fieldId: string, value: ResourceFieldValue) => void
+  onLoadSecret?: (
+    fieldId: string,
+    options?: ResourceOperationOptions,
+  ) => Promise<string>
   onLoadOptions?: (
     fieldId: string,
     values: EditableResourceProjection,
@@ -127,6 +134,7 @@ export function NativeResourceEditorBody<TSection extends string>({
   fieldIssues = [],
   disabled = false,
   onValueChange,
+  onLoadSecret,
   onLoadOptions,
   controlledOptionStates,
   onRetryControlledOptions,
@@ -221,13 +229,17 @@ export function NativeResourceEditorBody<TSection extends string>({
         }
       />
     ) : undefined
+    const fieldDisabled =
+      disabled ||
+      descriptor.readOnly ||
+      presentation.disabledWhen?.(values) === true
     const override = renderFieldOverride?.({
       descriptor,
       presentation,
       label,
       errorMessage,
       describedBy,
-      disabled,
+      disabled: fieldDisabled,
       options: resolvedOptions,
       optionControl,
     })
@@ -237,14 +249,35 @@ export function NativeResourceEditorBody<TSection extends string>({
     const help =
       presentation.resolveHelp && helpId ? (
         <p id={helpId} className="text-muted-foreground mt-1 text-xs">
-          {presentation.resolveHelp(t)}
+          {fieldDisabled && presentation.resolveDisabledHelp
+            ? presentation.resolveDisabledHelp(t)
+            : presentation.resolveHelp(t)}
         </p>
       ) : null
     const error =
       errorMessage && errorId ? (
         <FieldMessage id={errorId} message={errorMessage} />
       ) : null
-    const fieldDisabled = disabled || descriptor.readOnly
+
+    if (descriptor.type === RESOURCE_FIELD_TYPES.SecretList) {
+      return (
+        <Fragment key={descriptor.fieldId}>
+          <ResourceSecretListField
+            t={t}
+            label={label}
+            descriptor={descriptor}
+            presentation={presentation}
+            value={values[descriptor.fieldId]}
+            disabled={fieldDisabled}
+            hasErrors={Boolean(errorMessage)}
+            onLoadSecret={onLoadSecret}
+            onChange={(value) => onValueChange(descriptor.fieldId, value)}
+          />
+          {help}
+          {error}
+        </Fragment>
+      )
+    }
 
     if (
       descriptor.type === RESOURCE_FIELD_TYPES.Text ||
@@ -279,6 +312,24 @@ export function NativeResourceEditorBody<TSection extends string>({
       )
     }
     if (descriptor.type === RESOURCE_FIELD_TYPES.Textarea) {
+      if (presentation.textEntries) {
+        return (
+          <div key={descriptor.fieldId}>
+            <ResourceTextEntriesField
+              t={t}
+              label={label}
+              value={readResourceString(values, descriptor.fieldId)}
+              configuration={presentation.textEntries}
+              disabled={fieldDisabled}
+              invalid={Boolean(errorMessage)}
+              describedBy={describedBy}
+              onChange={(value) => onValueChange(descriptor.fieldId, value)}
+            />
+            {help}
+            {error}
+          </div>
+        )
+      }
       return (
         <div key={descriptor.fieldId}>
           <Label htmlFor={id} required={descriptor.required}>
@@ -338,8 +389,11 @@ export function NativeResourceEditorBody<TSection extends string>({
     if (descriptor.type === RESOURCE_FIELD_TYPES.Boolean) {
       return (
         <div key={descriptor.fieldId}>
-          <Label htmlFor={id}>{label}</Label>
-          <div className="mt-2">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <Label htmlFor={id}>{label}</Label>
+              {help}
+            </div>
             <Switch
               id={id}
               checked={readResourceBoolean(values, descriptor.fieldId)}
@@ -349,7 +403,6 @@ export function NativeResourceEditorBody<TSection extends string>({
               aria-describedby={describedBy}
             />
           </div>
-          {help}
           {error}
         </div>
       )
@@ -549,11 +602,41 @@ export function NativeResourceEditorBody<TSection extends string>({
   return (
     <div className="space-y-5">
       {[...fieldsBySection.entries()].map(([section, sectionFields]) => {
-        const label = sectionLabelResolvers[section](t)
-        const content = sectionFields.map(renderField)
+        const sectionPolicy = policy.sections?.[section]
+        const label =
+          sectionPolicy?.resolveLabel?.(t) ?? sectionLabelResolvers[section](t)
+        const content = sectionFields.map((field) =>
+          sectionPolicy?.columns === 2 ? (
+            <div
+              key={field.descriptor.fieldId}
+              className={
+                field.presentation.width === "half"
+                  ? "min-w-0"
+                  : "min-w-0 sm:col-span-2"
+              }
+            >
+              {renderField(field)}
+            </div>
+          ) : (
+            renderField(field)
+          ),
+        )
         const override = renderSectionOverride?.(section, label, content)
         return override !== undefined ? (
           <Fragment key={section}>{override}</Fragment>
+        ) : sectionPolicy ? (
+          <ResourceEditorSection
+            key={section}
+            label={label}
+            summary={sectionPolicy.resolveSummary?.(t, values)}
+            defaultOpen={sectionPolicy.defaultOpen}
+            columns={sectionPolicy.columns}
+            hasErrors={sectionFields.some(({ descriptor }) =>
+              issuesByFieldId.has(descriptor.fieldId),
+            )}
+          >
+            {content}
+          </ResourceEditorSection>
         ) : (
           <fieldset key={section} className="space-y-4">
             <legend className="text-foreground mb-3 text-sm font-semibold">

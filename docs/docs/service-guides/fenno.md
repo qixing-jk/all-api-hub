@@ -4,7 +4,7 @@
 
 FennoAI 提供 Claude Code、Codex、Gemini 等多种中转服务。如果你同时使用多个 FennoAI 账号、多个 AI API 平台，或经常把 FennoAI 配置到不同客户端里，**All API Hub** 可以作为一个本地管理助手，帮你把这些信息放到同一个入口里查看和复用。
 
-添加 FennoAI 账号后，你可以在 All API Hub 中查看余额、管理 API 密钥、查询模型价格，并快速导出到 Cherry Studio、CC Switch、Kilo Code、CLIProxyAPI、Claude Code Router 或自己的自建后台。这样，FennoAI 可以自然接入你的多账号、多工具 API 使用流程。
+添加 FennoAI 账号后，你可以在 All API Hub 中查看余额、管理 API 密钥、查询模型价格，并快速导出到 Cherry Studio、CC Switch、Kilo Code、Claude Code Router 或 CLIProxyAPI、New API、Sub2API 等自建网关。这样，FennoAI 可以自然接入你的多账号、多工具 API 使用流程。
 
 ![All API Hub 首页预览](../static/image/sponsor-guides/fenno/all-api-hub-home-preview.png)
 
@@ -106,7 +106,7 @@ FennoAI 适合接入多种模型和客户端。加入 All API Hub 后，你可�
 
 1.  在 **“密钥管理”** 中找到你的 FennoAI 密钥。
 2.  选择需要的导出入口。
-3.  选择目标工具，例如 **Cherry Studio**、**CC Switch**、**Kilo Code**、**CLIProxyAPI**、**Claude Code Router**，或导入到当前已配置的自建托管站点渠道。
+3.  选择目标工具，例如 **Cherry Studio**、**CC Switch**、**Kilo Code**、**Claude Code Router**，或导入到当前已配置的自建托管站点渠道。
 
 ![从密钥管理导出 FennoAI 密钥](../static/image/sponsor-guides/fenno/fenno-credential-export-menu.png)
 
@@ -124,7 +124,7 @@ FennoAI 适合接入多种模型和客户端。加入 All API Hub 后，你可�
 :::
 
 ### 4.4 导入到自建站点渠道
-如果你自己有 AI 分发后台，可以把 FennoAI 作为其中一个上游供应商。All API Hub 可以把 FennoAI 密钥作为上游渠道直接导入进去，减少手动创建渠道、填写地址和复制 Key 的步骤。
+如果你维护着 CLIProxyAPI、New API、Sub2API 等自建网关，可以把 FennoAI 作为其中一个上游供应商。All API Hub 可以把 FennoAI 密钥作为上游渠道直接导入进去，减少手动创建渠道、填写地址和复制 Key 的步骤。
 
 使用时只需要先在 **“基础设置” → “自建站点管理”** 完成后台配置，然后回到 **“密钥管理”**，在 FennoAI 密钥管理中选择导入到当前自建站点；如果要一次处理多个密钥，也可以先勾选后批量导入。
 
@@ -161,7 +161,7 @@ A: 可以。添加 FennoAI 账号后，就可以使用余额查看、密钥管�
 
 **Q: 导出到客户端后，客户端还能正常独立使用吗？**
 
-A: 可以。All API Hub 只是帮你生成或填入配置；真正的模型调用仍由 Cherry Studio、CC Switch、Kilo Code、CLIProxyAPI、Claude Code Router 等目标工具完成。
+A: 可以。All API Hub 只是帮你生成或填入配置；真正的模型调用仍由 Cherry Studio、CC Switch、Kilo Code、Claude Code Router 等目标工具完成。
 
 **Q: All API Hub 和 FennoAI 控制台是什么关系？**
 

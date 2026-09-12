@@ -163,7 +163,6 @@ const setupViewModel: OptionsOverviewViewModel = {
       { id: "source", state: "current" },
       { id: "gateway_settings", state: "upcoming" },
       { id: "gateway_channel", state: "upcoming" },
-      { id: "client_access", state: "upcoming" },
     ],
     primaryAction: {
       kind: UNIFIED_API_GUIDANCE_ACTION_KINDS.AddAccount,
@@ -432,7 +431,58 @@ const riskNotice = {
 } satisfies ProductAnnouncement
 
 describe("OptionsOverview", () => {
+  it("removes the completed guide section and supports reopening it", async () => {
+    const user = userEvent.setup()
+    useOptionsOverviewDataMock.mockReturnValue({
+      isLoading: false,
+      error: null,
+      reload: vi.fn(),
+      viewModel: {
+        ...setupViewModel,
+        configurationOverviewItems: [
+          {
+            id: "managedSite",
+            status: "configured",
+            isVisible: true,
+            subItems: [],
+          },
+        ],
+        unifiedApiGuidance: {
+          ...setupViewModel.unifiedApiGuidance,
+          status: UNIFIED_API_GUIDANCE_STATUSES.HasGatewayChannels,
+        },
+      } as OptionsOverviewViewModel,
+    })
+    renderOverview()
+    expect(
+      screen.queryByTestId(OPTIONS_OVERVIEW_TEST_IDS.unifiedApiGuidance),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("optionsOverview:sections.unifiedApiGuidance"),
+    ).not.toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "optionsOverview:unifiedApiGuidance.overview.reopen",
+      }),
+    )
+    expect(
+      screen.getByText(
+        "optionsOverview:unifiedApiGuidance.overview.completedDescription",
+      ),
+    ).toBeVisible()
+    await user.click(
+      screen.getByRole("button", {
+        name: "optionsOverview:unifiedApiGuidance.overview.collapse",
+      }),
+    )
+    expect(
+      screen.queryByTestId(OPTIONS_OVERVIEW_TEST_IDS.unifiedApiGuidance),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+
   beforeEach(() => {
+    localStorage.removeItem("gatewayGuidance.overview.presentation")
     vi.clearAllMocks()
     setLastSeenOptionalPermissionsMock.mockResolvedValue(undefined)
     trackProductAnalyticsEventMock.mockResolvedValue(true)
@@ -1152,7 +1202,12 @@ describe("OptionsOverview", () => {
 
     expect(
       screen.getByTestId(OPTIONS_OVERVIEW_TEST_IDS.unifiedApiGuidance),
-    ).toHaveTextContent("optionsOverview:unifiedApiGuidance.headline")
+    ).toHaveTextContent("optionsOverview:unifiedApiGuidance.overview.title")
+    await user.click(
+      screen.getByRole("button", {
+        name: "optionsOverview:unifiedApiGuidance.overview.start",
+      }),
+    )
 
     await user.click(
       screen.getByRole("button", {
@@ -1215,7 +1270,7 @@ describe("OptionsOverview", () => {
     ).not.toBeInTheDocument()
     expect(
       screen.getByRole("button", {
-        name: "optionsOverview:unifiedApiGuidance.actions.addAccount",
+        name: "optionsOverview:unifiedApiGuidance.overview.start",
       }),
     ).toBeEnabled()
   })
@@ -1266,6 +1321,11 @@ describe("OptionsOverview", () => {
       viewModel: {
         ...setupViewModel,
         gatewayGuidanceImportAccountId: "account-1",
+        gatewayGuidanceStarted: true,
+        unifiedApiGuidanceDiagnostics: {
+          ...setupViewModel.unifiedApiGuidanceDiagnostics,
+          gatewayConfigured: true,
+        },
         unifiedApiGuidance: {
           ...setupViewModel.unifiedApiGuidance,
           status: UNIFIED_API_GUIDANCE_STATUSES.ReadyToImport,

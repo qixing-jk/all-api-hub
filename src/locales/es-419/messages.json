@@ -71,19 +71,13 @@
     "modelsMissing": "Proporciona al menos un modelo",
     "updateSuccess": "Se actualizó correctamente el proveedor {{name}} de Claude Code Router"
   },
-  "cliproxy": {
-    "configMissing": "Primero configura la URL base y la clave de la API de administración de CLIProxyAPI en la configuración",
-    "importFailed": "No se pudo importar el proveedor a CLIProxyAPI",
-    "importSuccess": "Se importó correctamente el proveedor {{name}} a CLIProxyAPI",
+  "cliProxyApi": {
     "managementApiConnectionSuccess": "La conexión con la API de administración de CLIProxyAPI se realizó correctamente",
     "managementApiForbidden": "CLIProxyAPI rechazó la solicitud. Revisa si la clave de administración se ingresó incorrectamente demasiadas veces o si el acceso está restringido en el servidor.",
     "managementApiHttpError": "La API de administración de CLIProxyAPI devolvió un código de estado inesperado (HTTP {{status}})",
     "managementApiInvalidKey": "La clave de administración de CLIProxyAPI no es válida. Verifica la clave en la configuración.",
     "managementApiNotFound": "No se encontró la API de administración de CLIProxyAPI. Asegúrate de que la URL base termine en /v0/management y de que CLIProxyAPI tenga configurada una clave de administración.",
-    "managementApiRemoteAccessDisabled": "CLIProxyAPI rechazó el acceso de administración remota. Revisa si remote-management.allow-remote: true está habilitado en la configuración de CLIProxyAPI, o si la administración remota está habilitada mediante MANAGEMENT_PASSWORD, y vuelve a intentarlo.",
-    "managementApiServerError": "La API de administración de CLIProxyAPI devolvió un error del servidor (HTTP {{status}})",
-    "managementApiUnreachable": "No se pudo acceder a la API de administración de CLIProxyAPI. Revisa la URL base, el estado del servicio y el acceso de red del navegador a esa dirección.",
-    "updateSuccess": "Se actualizó correctamente el proveedor de CLIProxy {{name}}"
+    "managementApiUnreachable": "No se pudo acceder a la API de administración de CLIProxyAPI. Revisa la URL base, el estado del servicio y el acceso de red del navegador a esa dirección."
   },
   "content": {
     "userInfoNotFound": "No se encontró información del usuario; asegúrate de haber iniciado sesión",

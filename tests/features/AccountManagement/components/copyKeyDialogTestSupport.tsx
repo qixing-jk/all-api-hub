@@ -14,7 +14,7 @@ import {
   captureApiCredentialProfileMock,
   ccSwitchDialogMock,
   claudeCodeRouterDialogMock,
-  cliProxyDialogMock,
+  cliProxyApiDialogMock,
   completeProductAnalyticsActionMock,
   createApiCredentialProfileMock,
   createApiTokenMock,
@@ -199,7 +199,7 @@ export function setupCopyKeyDialogTestDefaults() {
   fetchUserGroupsMock.mockReset()
   fetchServiceCredentialMock.mockReset()
   ccSwitchDialogMock.mockReset()
-  cliProxyDialogMock.mockReset()
+  cliProxyApiDialogMock.mockReset()
   claudeCodeRouterDialogMock.mockReset()
   kiloCodeExportDialogMock.mockReset()
   kiloCodeProfileExportDialogMock.mockReset()
@@ -261,8 +261,9 @@ export function setupCopyKeyDialogTestDefaults() {
   userPreferencesContextMock.claudeCodeRouterApiKey = "ccr-management-key"
   userPreferencesContextMock.claudeCodeRouterBaseUrl =
     "https://router.example.invalid"
-  userPreferencesContextMock.cliProxyBaseUrl =
+  userPreferencesContextMock.cliProxyApiBaseUrl =
     "https://cliproxy.example.invalid"
-  userPreferencesContextMock.cliProxyManagementKey = "cliproxy-management-key"
+  userPreferencesContextMock.cliProxyApiManagementKey =
+    "cliproxy-management-key"
   userPreferencesContextMock.managedSiteType = SITE_TYPES.NEW_API
 }

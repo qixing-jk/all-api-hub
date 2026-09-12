@@ -2,7 +2,6 @@ import { useTranslation } from "react-i18next"
 
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
-import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
 import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { KelivoExportDialog } from "~/components/KelivoExportDialog"
@@ -18,7 +17,6 @@ import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVer
 import type { ApiCredentialProfilesController } from "../hooks/useApiCredentialProfilesController"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "../testIds"
 import {
-  createCliProxyExportPayload,
   createExportAccount,
   createExportRuntimeKey,
   createExportToken,
@@ -49,9 +47,6 @@ export function ApiCredentialProfilesDialogs({
     "aiApiVerification",
     "common",
   ])
-  const cliProxyPayload = controller.cliProxyProfile
-    ? createCliProxyExportPayload(controller.cliProxyProfile)
-    : null
 
   return (
     <>
@@ -127,21 +122,6 @@ export function ApiCredentialProfilesDialogs({
             ...apiCredentialProfileThirdPartyExportContext,
             actionId:
               PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialProfileKelivoImportCode,
-          }}
-        />
-      ) : null}
-
-      {cliProxyPayload ? (
-        <CliProxyExportDialog
-          isOpen={true}
-          onClose={() => controller.setCliProxyProfile(null)}
-          account={cliProxyPayload.account}
-          token={cliProxyPayload.token}
-          apiTypeHint={cliProxyPayload.apiTypeHint}
-          analyticsContext={{
-            ...apiCredentialProfileThirdPartyExportContext,
-            actionId:
-              PRODUCT_ANALYTICS_ACTION_IDS.ImportApiCredentialProfileToCliProxy,
           }}
         />
       ) : null}

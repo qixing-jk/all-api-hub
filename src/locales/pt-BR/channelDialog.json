@@ -54,6 +54,9 @@
       "label": "Peso"
     }
   },
+  "opening": {
+    "loading": "Carregando a configuração do canal…"
+  },
   "title": {
     "add": "Criar Canal",
     "edit": "Editar Canal",

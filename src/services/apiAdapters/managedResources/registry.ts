@@ -4,6 +4,7 @@ import type { ManagedResourceRegistration } from "~/services/apiAdapters/contrac
 
 import { axonHubManagedResourceRegistration } from "./axonHub"
 import { claudeCodeHubManagedResourceRegistration } from "./claudeCodeHub"
+import { cliProxyApiManagedResourceRegistration } from "./cliProxyApi"
 import { doneHubManagedResourceRegistration } from "./doneHub"
 import { newApiManagedResourceRegistration } from "./newApi"
 import { octopusManagedResourceRegistration } from "./octopus"
@@ -11,6 +12,7 @@ import { sub2ApiManagedResourceRegistration } from "./sub2api"
 import { veloeraManagedResourceRegistration } from "./veloera"
 
 const MANAGED_RESOURCE_REGISTRATIONS = [
+  cliProxyApiManagedResourceRegistration,
   newApiManagedResourceRegistration,
   octopusManagedResourceRegistration,
   axonHubManagedResourceRegistration,

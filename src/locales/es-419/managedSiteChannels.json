@@ -23,6 +23,9 @@
       "description": "Esta cuenta de {{site}} no puede administrar canales. Usa una cuenta de administrador o actualiza sus permisos y luego vuelve a actualizar.",
       "title": "Acceso a {{site}} denegado"
     },
+    "resourceChanged": {
+      "description": "Este canal cambió mientras lo editabas. Tus cambios no se guardaron. Cierra el editor, actualiza la lista de canales y vuelve a editarlo."
+    },
     "savedRefreshError": {
       "description": "El canal se guardó, pero no se pudo cargar la lista más reciente. Actualiza la lista de canales antes de hacer más cambios.",
       "title": "Canal guardado; es necesario actualizar"
@@ -32,12 +35,20 @@
       "title": "{{site}} no está disponible"
     }
   },
+  "cliProxyApi": {
+    "credentialWeightHelp": "En blanco equivale a un peso de 1. Los valores no positivos excluyen esta clave del enrutamiento ponderado; máximo 1,000,000.",
+    "excludedModels": "Modelos excluidos (uno por línea)",
+    "headers": "Encabezados de solicitud",
+    "headersHelp": "Un encabezado por línea, en formato Nombre: valor.",
+    "prefix": "Prefijo del modelo",
+    "proxyUrl": "URL del proxy"
+  },
   "dialog": {
     "cancel": "Cancelar",
     "confirm": "Eliminar",
     "deleteDescription": "Esta acción no se puede deshacer. Los canales seleccionados se eliminarán permanentemente.",
     "deleteRefreshAction": "Actualizar canales",
-    "deleteRefreshRequired": "Algunos resultados de eliminación son inciertos. Actualiza la lista de canales antes de volver a eliminar.",
+    "deleteRefreshRequired": "Actualiza la lista de canales para confirmar su estado actual antes de volver a eliminar.",
     "deleteResultStatus": {
       "failed": "Falló",
       "success": "Eliminado",
@@ -48,6 +59,111 @@
     "deleteTitlePlural": "¿Eliminar canales?"
   },
   "editor": {
+    "advanced": {
+      "autoBan": {
+        "help": "Permite que New API desactive este canal cuando se cumplan las condiciones de fallo configuradas.",
+        "label": "Desactivar el canal automáticamente"
+      },
+      "autoSync": {
+        "help": "Requiere activar las revisiones. Al detectar cambios, New API actualiza automáticamente la lista de modelos de este canal.",
+        "label": "Sincronizar modelos automáticamente"
+      },
+      "check": {
+        "help": "New API revisa periódicamente desde el servidor. Es independiente de la sincronización de modelos de la extensión.",
+        "label": "Buscar actualizaciones de modelos"
+      },
+      "detectedModels": "Modelos disponibles para agregar",
+      "groups": {
+        "detection": "Detección de modelos del proveedor",
+        "management": "Administración del canal",
+        "network": "Configuración de red"
+      },
+      "ignored": {
+        "help": "Ingresa los nombres exactos de los modelos que quieres excluir de la detección y sincronización.",
+        "label": "Modelos ignorados del proveedor"
+      },
+      "invalidExisting": "No se puede interpretar de forma segura la configuración guardada. Corrígela en la administración del sitio antes de editar este campo.",
+      "lastCheck": "Última revisión",
+      "mapping": {
+        "add": "Agregar mapeo",
+        "help": "Relaciona el nombre solicitado con el nombre enviado al proveedor. Cada modelo solicitado debe ser único.",
+        "invalid": "Completa ambos nombres en cada fila y elimina los modelos solicitados duplicados.",
+        "label": "Mapeo de nombres de modelos",
+        "remove": "Eliminar mapeo {{index}}",
+        "source": "Modelo solicitado {{index}}",
+        "sourcePlaceholder": "Modelo solicitado",
+        "target": "Modelo del proveedor {{index}}",
+        "targetPlaceholder": "Modelo del proveedor"
+      },
+      "neverChecked": "Aún no se ha revisado",
+      "noModels": "Ninguno",
+      "proxy": {
+        "help": "Proxy que usa el servidor de New API para este canal. Admite HTTP, HTTPS, SOCKS5 y SOCKS5H. Déjalo vacío para quitar el proxy del canal.",
+        "invalid": "Ingresa una URL de proxy HTTP, HTTPS, SOCKS5 o SOCKS5H válida.",
+        "label": "Dirección del proxy"
+      },
+      "remark": {
+        "help": "Registra el propósito o las instrucciones de uso del canal (hasta 255 caracteres).",
+        "label": "Notas"
+      },
+      "removedModels": "Modelos detectados como eliminados",
+      "tag": "Etiqueta del canal",
+      "testModel": {
+        "help": "Selecciona un modelo o escribe su nombre. Déjalo vacío para usar el modelo de prueba predeterminado de New API.",
+        "label": "Modelo de prueba"
+      },
+      "unsupportedDetection": "Este editor no admite la detección para este tipo de canal. Los canales personalizados avanzados requieren configurar la ruta de la lista de modelos en la administración del sitio."
+    },
+    "doneHub": {
+      "allowExtraBody": {
+        "help": "Reenvía al proveedor los campos adicionales del cliente, como los parámetros extra_body.",
+        "label": "Reenviar campos adicionales"
+      },
+      "compatibleResponse": {
+        "help": "Al activarlo, DoneHub convierte solicitudes Responses a Chat Completions. Al desactivarlo, prioriza Responses nativo, pero puede usar compatibilidad si no está disponible.",
+        "label": "Compatibilidad con Responses API"
+      },
+      "customParameter": {
+        "help": "Ingresa un objeto JSON. Por defecto solo se agregan campos faltantes. overwrite: true reemplaza campos; per_model: true configura por modelo; pre_add: true aplica al inicio de la solicitud. Deja vacío para borrar.",
+        "invalid": "Ingresa un objeto JSON válido.",
+        "label": "Parámetros adicionales",
+        "placeholder": "{\n  \"overwrite\": true,\n  \"temperature\": 0.7\n}"
+      },
+      "disabledStream": {
+        "help": "Las solicitudes de streaming de estos modelos omiten este canal; no se convierten a solicitudes sin streaming. Selecciona modelos o escribe nombres. Vacía la lista para restaurar el enrutamiento normal.",
+        "label": "Modelos excluidos del streaming"
+      },
+      "modelHeaders": {
+        "help": "Agrega encabezados fijos con valores de texto. El canal gestiona los encabezados de autenticación. Deja vacío o elimina todas las filas para borrar la configuración.",
+        "invalid": "Ingresa un objeto JSON con claves únicas, no vacías, y valores de texto.",
+        "label": "Encabezados personalizados",
+        "placeholder": "{\"X-Project\": \"example\"}"
+      },
+      "modelMapping": {
+        "addModels": "Agregar nombres mapeados a la lista de modelos",
+        "help": "Las claves son los modelos solicitados y los valores, los modelos del proveedor. Agrega las claves a la lista de modelos del canal. El prefijo + en el valor permite cobrar según el modelo solicitado.",
+        "invalid": "Ingresa un objeto JSON con claves únicas, no vacías, y valores de texto.",
+        "label": "Mapeo de modelos",
+        "placeholder": "{\"alias\": \"upstream-model\"}"
+      },
+      "proxy": {
+        "help": "Lo usa el servidor DoneHub para conectarse al proveedor. Admite HTTP y SOCKS5; %s genera un identificador de sesión a partir de la clave del canal. Déjalo vacío para quitar el proxy del canal.",
+        "invalid": "Ingresa una URL de proxy HTTP o SOCKS5 válida.",
+        "label": "URL del proxy",
+        "placeholder": "socks5://127.0.0.1:1080"
+      },
+      "responsesPath": {
+        "help": "Solo para solicitudes Responses nativas en canales personalizados. Deja vacío para /v1/responses o escribe disable para bloquearlas. No se usa en modo de compatibilidad.",
+        "label": "Ruta de solicitudes Responses",
+        "placeholder": "/v1/responses"
+      },
+      "testModel": {
+        "help": "Elige un modelo de chat del canal o escribe un nombre. Sin modelo, DoneHub no puede medir la velocidad del canal. Máximo 50 caracteres.",
+        "invalid": "El nombre del modelo no debe superar los 50 caracteres.",
+        "label": "Modelo de prueba",
+        "placeholder": "gpt-4o-mini"
+      }
+    },
     "fields": {
       "autoSyncModelPattern": {
         "help": "Sincroniza solo los modelos que coincidan. Añade el prefijo (?i) para ignorar mayúsculas y minúsculas; déjalo vacío para sincronizar todos los modelos.",
@@ -108,6 +224,17 @@
         "placeholder": "Añadir etiquetas..."
       }
     },
+    "json": {
+      "addRow": "Agregar fila",
+      "editJson": "Editar JSON",
+      "editRows": "Editar filas",
+      "format": "Formatear JSON",
+      "key": "Clave",
+      "keyAt": "{{field}}: clave de fila {{index}}",
+      "removeAt": "{{field}}: eliminar fila {{index}}",
+      "value": "Valor",
+      "valueAt": "{{field}}: valor de fila {{index}}"
+    },
     "options": {
       "channelType": {
         "anthropic": "Anthropic",
@@ -167,9 +294,12 @@
     "sections": {
       "advanced": "Opciones avanzadas",
       "basic": "Información básica",
+      "basicConnection": "Datos básicos y conexión",
+      "compatibility": "Compatibilidad de API",
       "connection": "Conexión y credenciales",
       "metadata": "Metadatos",
       "models": "Modelos",
+      "requests": "Red y solicitudes",
       "routing": "Enrutamiento",
       "sync": "Sincronización de modelos"
     },
@@ -265,7 +395,6 @@
     }
   },
   "gatewayGuidance": {
-    "clientHint": "Los clientes externos también necesitan una clave de acceso emitida por este gateway.",
     "empty": {
       "description": "Este AI gateway autohospedado aún no tiene canales. Después de importar claves de cuenta o API keys, el gateway podrá usarse desde clientes externos como una AI API.",
       "importFromAccountKey": "Importar canal desde una clave de cuenta",
@@ -274,7 +403,6 @@
     },
     "headerDescription": "Administra los canales del AI gateway autohospedado y reúne varias claves de cuenta o API keys en una AI API.",
     "openChannelConsole": "Abrir la administración de canales del gateway",
-    "openTokenConsole": "Abrir la administración de tokens",
     "unconfiguredValueDescription": "Después de configurarlo, podrás importar claves de cuenta y API keys dispersas como canales del gateway, y verlas y administrarlas directamente en All API Hub."
   },
   "migration": {
@@ -417,11 +545,15 @@
   "title": "Administración de canales",
   "toasts": {
     "channelSaved": "Canal guardado",
+    "channelsDeleted_one": "Se eliminó {{count}} canal",
+    "channelsDeleted_many": "Se eliminaron {{count}} canales",
+    "channelsDeleted_other": "Se eliminaron {{count}} canales",
     "channelUpdated": "Canal actualizado",
     "syncCompleted": "Sincronización de modelos completada ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Los modelos se sincronizaron ({{success}}/{{total}}), pero no se pudo actualizar la lista de canales. Actualízala y vuelve a intentarlo.",
     "syncFailed": "Falló la sincronización de modelos: {{error}}",
-    "syncFailedFallback": "No se pudieron sincronizar los canales"
+    "syncFailedFallback": "No se pudieron sincronizar los canales",
+    "syncIncomplete": "La sincronización de modelos no se completó totalmente ({{success}}/{{total}} correctos). Abre la sincronización de modelos para revisar los resultados y reintentar los canales fallidos."
   },
   "toolbar": {
     "addChannel": "Agregar canal",

@@ -72,9 +72,10 @@ export default function RowActions({
 }: RowActionsProps) {
   const [isActionPending, setIsActionPending] = useState(false)
   const isActionPendingRef = useRef(false)
+  const isBusy = isSyncing || isActionPending
 
   const handleSync = async () => {
-    if (!onSync || isActionPendingRef.current) return
+    if (!onSync || isSyncing || isActionPendingRef.current) return
 
     isActionPendingRef.current = true
     setIsActionPending(true)
@@ -96,106 +97,120 @@ export default function RowActions({
   const showUnavailableSync = !canSync && Boolean(modelSyncUnavailableReason)
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <IconButton
-          size="default"
-          variant="ghost"
-          className="h-8 w-8"
-          aria-label={labels.trigger}
-          disableAutoTooltip
-          disableAutoTitle
-          data-testid={testIds.trigger}
-          disabled={isSyncing}
-          loading={isActionPending}
+    <div className="inline-flex flex-col items-center gap-1">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <IconButton
+            size="default"
+            variant="ghost"
+            className="h-8 w-8"
+            aria-label={labels.trigger}
+            disableAutoTooltip
+            disableAutoTitle
+            data-testid={testIds.trigger}
+            disabled={isBusy}
+            loading={isBusy}
+          >
+            <Ellipsis className="h-4 w-4" />
+          </IconButton>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="end"
+          className="w-60 max-w-[calc(100vw-2rem)] rounded-xl shadow-lg [&_[data-slot=dropdown-menu-item]]:rounded-lg"
         >
-          <Ellipsis className="h-4 w-4" />
-        </IconButton>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {showMigrationAction ? (
-          <>
-            {canView ? (
-              <DropdownMenuItem onClick={() => onView(rowKey)}>
-                {labels.view}
-              </DropdownMenuItem>
-            ) : null}
-            {canView && canMigrate ? <DropdownMenuSeparator /> : null}
-            {canMigrate ? (
-              <DropdownMenuItem onClick={() => onMigrate(rowKey)}>
-                {labels.migrate}
-              </DropdownMenuItem>
-            ) : null}
-          </>
-        ) : (
-          <>
-            {canEdit ? (
-              <DropdownMenuItem
-                data-testid={testIds.edit}
-                onClick={() => onEdit(rowKey)}
-              >
-                {labels.edit}
-              </DropdownMenuItem>
-            ) : null}
-            {(canFilter || canOpenSync || canSync || showUnavailableSync) &&
-            canEdit ? (
-              <DropdownMenuSeparator />
-            ) : null}
-            {canFilter ? (
-              <DropdownMenuItem
-                data-testid={testIds.filters}
-                onClick={() => onFilters(rowKey)}
-              >
-                {labels.filters}
-              </DropdownMenuItem>
-            ) : null}
-            {canOpenSync ? (
-              <DropdownMenuItem onClick={() => void onOpenSync(rowKey)}>
-                {labels.openSync}
-              </DropdownMenuItem>
-            ) : null}
-            {canSync ? (
-              <DropdownMenuItem
-                data-testid={testIds.sync}
-                onClick={() => void handleSync()}
-                disabled={isSyncing}
-              >
-                {isSyncing ? labels.syncing : labels.sync}
-              </DropdownMenuItem>
-            ) : showUnavailableSync ? (
-              <DropdownMenuItem
-                data-testid={testIds.sync}
-                aria-disabled="true"
-                onSelect={(event) => event.preventDefault()}
-              >
-                <span className="flex flex-col items-start gap-0.5">
-                  <span>{labels.sync}</span>
-                  <span className="text-muted-foreground text-xs font-normal whitespace-normal">
-                    {modelSyncUnavailableReason}
+          {showMigrationAction ? (
+            <>
+              {canView ? (
+                <DropdownMenuItem onClick={() => onView(rowKey)}>
+                  {labels.view}
+                </DropdownMenuItem>
+              ) : null}
+              {canView && canMigrate ? <DropdownMenuSeparator /> : null}
+              {canMigrate ? (
+                <DropdownMenuItem onClick={() => onMigrate(rowKey)}>
+                  {labels.migrate}
+                </DropdownMenuItem>
+              ) : null}
+            </>
+          ) : (
+            <>
+              {canEdit ? (
+                <DropdownMenuItem
+                  data-testid={testIds.edit}
+                  onClick={() => onEdit(rowKey)}
+                >
+                  {labels.edit}
+                </DropdownMenuItem>
+              ) : null}
+              {(canFilter || canOpenSync || canSync || showUnavailableSync) &&
+              canEdit ? (
+                <DropdownMenuSeparator />
+              ) : null}
+              {canFilter ? (
+                <DropdownMenuItem
+                  data-testid={testIds.filters}
+                  onClick={() => onFilters(rowKey)}
+                >
+                  {labels.filters}
+                </DropdownMenuItem>
+              ) : null}
+              {canOpenSync ? (
+                <DropdownMenuItem onClick={() => void onOpenSync(rowKey)}>
+                  {labels.openSync}
+                </DropdownMenuItem>
+              ) : null}
+              {canSync ? (
+                <DropdownMenuItem
+                  data-testid={testIds.sync}
+                  onClick={() => void handleSync()}
+                  disabled={isBusy}
+                >
+                  {isBusy ? labels.syncing : labels.sync}
+                </DropdownMenuItem>
+              ) : showUnavailableSync ? (
+                <DropdownMenuItem
+                  data-testid={testIds.sync}
+                  aria-disabled="true"
+                  className="text-muted-foreground focus:text-muted-foreground focus-visible:bg-muted/50 cursor-not-allowed focus:bg-transparent"
+                  onSelect={(event) => event.preventDefault()}
+                >
+                  <span className="flex min-w-0 flex-col items-start gap-1">
+                    <span className="font-medium">{labels.sync}</span>
+                    <span className="text-muted-foreground text-xs font-normal whitespace-normal">
+                      {modelSyncUnavailableReason}
+                    </span>
                   </span>
-                </span>
-              </DropdownMenuItem>
-            ) : null}
-            {canDelete &&
-            (canEdit ||
-              canFilter ||
-              canOpenSync ||
-              canSync ||
-              showUnavailableSync) ? (
-              <DropdownMenuSeparator />
-            ) : null}
-            {canDelete ? (
-              <DropdownMenuItem
-                data-testid={testIds.delete}
-                className="text-destructive focus:text-destructive"
-                onClick={() => onDelete(rowKey)}
-              >
-                {labels.delete}
-              </DropdownMenuItem>
-            ) : null}
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+                </DropdownMenuItem>
+              ) : null}
+              {canDelete &&
+              (canEdit ||
+                canFilter ||
+                canOpenSync ||
+                canSync ||
+                showUnavailableSync) ? (
+                <DropdownMenuSeparator />
+              ) : null}
+              {canDelete ? (
+                <DropdownMenuItem
+                  data-testid={testIds.delete}
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => onDelete(rowKey)}
+                >
+                  {labels.delete}
+                </DropdownMenuItem>
+              ) : null}
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {isBusy && (
+        <span
+          role="status"
+          className="text-muted-foreground text-xs whitespace-nowrap"
+        >
+          {labels.syncing}
+        </span>
+      )}
+    </div>
   )
 }

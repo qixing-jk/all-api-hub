@@ -122,7 +122,40 @@ export const DONE_HUB_MANAGED_RESOURCE_FIELD_IDS = {
   Groups: "doneHub.groups",
   Priority: "doneHub.priority",
   Weight: "doneHub.weight",
+  CompatibleResponse: "doneHub.compatibleResponse",
+  ResponsesPath: "doneHub.responsesPath",
+  ModelMapping: "doneHub.modelMapping",
+  Proxy: "doneHub.proxy",
+  TestModel: "doneHub.testModel",
+  ModelHeaders: "doneHub.modelHeaders",
+  CustomParameter: "doneHub.customParameter",
+  AllowExtraBody: "doneHub.allowExtraBody",
+  DisabledStream: "doneHub.disabledStream",
 } as const
+
+/** Mirrors the upstream editor's type-specific field availability, retaining hidden values. */
+export function isDoneHubAdvancedFieldApplicable(
+  fieldId: string,
+  type: number,
+): boolean {
+  // https://github.com/deanxv/done-hub/blob/b99c6a9661fde5198504795354762f2ee2fd0189/web/src/views/Channel/type/Config.js
+  if (fieldId === DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.ResponsesPath)
+    return type === DoneHubChannelType.Custom
+  if (fieldId === DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.ModelMapping)
+    return !new Set<number>([
+      DoneHubChannelType.Midjourney,
+      DoneHubChannelType.Suno,
+    ]).has(type)
+  if (fieldId === DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.TestModel)
+    return !new Set<number>([
+      DoneHubChannelType.AzureSpeech,
+      DoneHubChannelType.Midjourney,
+      DoneHubChannelType.StabilityAI,
+      DoneHubChannelType.Suno,
+      DoneHubChannelType.Jina,
+    ]).has(type)
+  return true
+}
 
 export const DONE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS = [
   DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Id,

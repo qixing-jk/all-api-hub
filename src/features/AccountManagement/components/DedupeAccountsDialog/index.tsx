@@ -1,8 +1,8 @@
-import { Trash2 } from "lucide-react"
+import { ScanSearch } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Button, ConfirmDialog, Modal } from "~/components/ui"
+import { Badge, Button, ConfirmDialog, Modal } from "~/components/ui"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import toast from "~/lib/notify"
 import {
@@ -26,6 +26,7 @@ import { createLogger } from "~/utils/core/logger"
 import { useAccountDataContext } from "../../hooks/AccountDataContext"
 import { DedupeAccountsConfirmDetails } from "./DedupeAccountsConfirmDetails"
 import { DedupeAccountsDialogBody } from "./DedupeAccountsDialogBody"
+import { SuspectedDuplicatesList } from "./SuspectedDuplicatesList"
 import type {
   DedupeAccountsDialogGroup,
   DedupeAccountsKeepChangeInput,
@@ -35,6 +36,8 @@ import { buildDedupeAccountLabelMap } from "./utils"
 interface DedupeAccountsDialogProps {
   isOpen: boolean
   onClose: () => void
+  onReviewAccount?: (accountId: string) => void
+  onDeleteAccount?: (accountId: string) => void
 }
 
 const EMPTY_ACCOUNTS: SiteAccount[] = []
@@ -51,6 +54,8 @@ const logger = createLogger("DedupeAccountsDialog")
 export default function DedupeAccountsDialog({
   isOpen,
   onClose,
+  onReviewAccount,
+  onDeleteAccount,
 }: DedupeAccountsDialogProps) {
   const { t } = useTranslation(["ui", "account", "common", "messages"])
   const accountData = useAccountDataContext()
@@ -246,7 +251,7 @@ export default function DedupeAccountsDialog({
         header={
           <div className="flex min-w-0 flex-col gap-1 pr-8">
             <div className="flex items-center gap-2">
-              <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
+              <ScanSearch className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
               <h2 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
                 {t("ui:dialog.dedupeAccounts.title")}
               </h2>
@@ -254,6 +259,17 @@ export default function DedupeAccountsDialog({
             <p className="dark:text-dark-text-secondary text-sm text-gray-500">
               {t("ui:dialog.dedupeAccounts.description")}
             </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Badge variant="secondary">
+                {t("ui:dialog.dedupeAccounts.exactTitle")} · {groups.length}
+              </Badge>
+              <Badge
+                variant={scan.suspectedGroups.length ? "warning" : "secondary"}
+              >
+                {t("ui:dialog.dedupeAccounts.suspected.title")} ·{" "}
+                {scan.suspectedGroups.length}
+              </Badge>
+            </div>
           </div>
         }
         footer={
@@ -266,33 +282,62 @@ export default function DedupeAccountsDialog({
             >
               {t("common:actions.close")}
             </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={() => setIsConfirmOpen(true)}
-              disabled={isWorking || idsToDelete.length === 0}
-              data-testid={
-                ACCOUNT_MANAGEMENT_TEST_IDS.dedupePreviewDeleteButton
-              }
-            >
-              {t("ui:dialog.dedupeAccounts.previewDelete")}
-            </Button>
+            {groups.length > 0 && (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setIsConfirmOpen(true)}
+                disabled={isWorking || idsToDelete.length === 0}
+                data-testid={
+                  ACCOUNT_MANAGEMENT_TEST_IDS.dedupePreviewDeleteButton
+                }
+              >
+                {t("ui:dialog.dedupeAccounts.previewDelete")}
+              </Button>
+            )}
           </div>
         }
       >
-        <DedupeAccountsDialogBody
-          strategy={strategy}
-          onStrategyChange={setStrategy}
-          groups={groups}
+        {(groups.length > 0 ||
+          scan.unscannable.length > 0 ||
+          scan.suspectedGroups.length === 0) && (
+          <DedupeAccountsDialogBody
+            strategy={strategy}
+            onStrategyChange={setStrategy}
+            groups={groups}
+            accountLabelById={accountLabelById}
+            deleteCount={idsToDelete.length}
+            pinnedAccountIds={pinnedAccountIds}
+            orderedIndexByAccountId={orderedIndexByAccountId}
+            detailsOpenByAccountId={detailsOpenByAccountId}
+            onKeepChange={handleKeepChange}
+            onToggleDetails={toggleAccountDetails}
+            unscannableCount={scan.unscannable.length}
+            hasSuspectedGroups={scan.suspectedGroups.length > 0}
+            isWorking={isWorking}
+            t={t}
+          />
+        )}
+        <SuspectedDuplicatesList
+          onDeleteAccount={
+            onDeleteAccount
+              ? (accountId) => {
+                  if (!isWorking) onDeleteAccount(accountId)
+                }
+              : undefined
+          }
+          separated={groups.length > 0 || scan.unscannable.length > 0}
+          groups={scan.suspectedGroups}
           accountLabelById={accountLabelById}
-          deleteCount={idsToDelete.length}
-          pinnedAccountIds={pinnedAccountIds}
-          orderedIndexByAccountId={orderedIndexByAccountId}
-          detailsOpenByAccountId={detailsOpenByAccountId}
-          onKeepChange={handleKeepChange}
-          onToggleDetails={toggleAccountDetails}
-          unscannableCount={scan.unscannable.length}
           isWorking={isWorking}
+          onReviewAccount={
+            onReviewAccount
+              ? (accountId) => {
+                  if (isWorking) return
+                  onReviewAccount(accountId)
+                }
+              : undefined
+          }
           t={t}
         />
       </Modal>

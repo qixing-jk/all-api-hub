@@ -20,7 +20,6 @@
     "exportToKiloCode": "Exportar configuração do Kilo Code",
     "hideKey": "Ocultar chave",
     "importToClaudeCodeRouter": "Importar para o Claude Code Router",
-    "importToCliProxy": "Importar para o CLIProxyAPI",
     "importToManagedSite": "Importar para {{site}}",
     "openApiProfiles": "Abrir biblioteca de credenciais de API",
     "openSelectedAccountModels": "Ver modelos da conta",
@@ -51,22 +50,6 @@
     "actions": {
       "open": "Salvar na biblioteca de credenciais de API ({{selectedCount}})"
     }
-  },
-  "batchCliProxyExport": {
-    "actions": {
-      "open": "Importar em lote para o CLIProxyAPI ({{selectedCount}})",
-      "running": "Importando...",
-      "start": "Iniciar importação"
-    },
-    "description": "Chaves selecionadas para importar no CLIProxyAPI: {{selectedCount}}. Será usada uma única política de provedor.",
-    "results": {
-      "failed": "Falhou",
-      "pending": "Pendente",
-      "running": "Importando",
-      "success": "Concluído"
-    },
-    "summary": "Importações — total: {{total}}; sucessos: {{success}}; falhas: {{failed}}.",
-    "title": "Importação em lote para o CLIProxyAPI"
   },
   "batchManagedSiteExport": {
     "actions": {

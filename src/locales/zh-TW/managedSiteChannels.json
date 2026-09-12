@@ -23,6 +23,9 @@
       "description": "目前的 {{site}} 帳號無權管理渠道。請改用管理員帳號或調整權限，然後重新整理。",
       "title": "{{site}} 拒絕存取"
     },
+    "resourceChanged": {
+      "description": "此渠道已被其他操作修改，本次變更未儲存。請關閉編輯視窗，重新整理渠道列表後再編輯。"
+    },
     "savedRefreshError": {
       "description": "渠道已儲存，但無法載入最新列表。請先重新整理渠道列表，再進行其他變更。",
       "title": "渠道已儲存，需要重新整理"
@@ -32,12 +35,20 @@
       "title": "{{site}} 暫時無法使用"
     }
   },
+  "cliProxyApi": {
+    "credentialWeightHelp": "留空時權重為 1；非正數表示不參與加權路由，最大為 1,000,000。",
+    "excludedModels": "排除模型（每行一個）",
+    "headers": "請求標頭",
+    "headersHelp": "每行一個標頭，格式為 名稱: 值。",
+    "prefix": "模型前綴",
+    "proxyUrl": "代理位址"
+  },
   "dialog": {
     "cancel": "取消",
     "confirm": "刪除",
     "deleteDescription": "此操作無法撤銷，所選配置將被永久刪除。",
     "deleteRefreshAction": "重新整理渠道清單",
-    "deleteRefreshRequired": "部分刪除結果的狀態不確定。請先重新整理渠道清單，再繼續刪除。",
+    "deleteRefreshRequired": "請重新整理渠道清單以確認最新狀態，再繼續刪除。",
     "deleteResultStatus": {
       "failed": "失敗",
       "success": "已刪除",
@@ -48,6 +59,111 @@
     "deleteTitlePlural": "刪除這些渠道？"
   },
   "editor": {
+    "advanced": {
+      "autoBan": {
+        "help": "符合 New API 設定的故障條件時，允許自動停用此渠道。",
+        "label": "自動停用渠道"
+      },
+      "autoSync": {
+        "help": "須先啟用偵測。發現變更後，New API 會自動更新此渠道的模型清單。",
+        "label": "自動同步上游模型"
+      },
+      "check": {
+        "help": "由 New API 伺服器定期偵測，與擴充功能本身的模型同步分開執行。",
+        "label": "偵測上游模型更新"
+      },
+      "detectedModels": "可加入的模型",
+      "groups": {
+        "detection": "上游模型偵測",
+        "management": "日常管理",
+        "network": "網路設定"
+      },
+      "ignored": {
+        "help": "填寫完整模型名稱，將其排除在上游模型偵測和同步之外。",
+        "label": "忽略的上游模型"
+      },
+      "invalidExisting": "既有設定無法安全解析，請先在站點管理後台修復，再編輯此欄位。",
+      "lastCheck": "最近偵測時間",
+      "mapping": {
+        "add": "新增對應",
+        "help": "將請求中的模型名稱對應至傳送給上游的模型名稱；每列的請求模型必須唯一。",
+        "invalid": "請補齊每列的兩個模型名稱，並移除重複的請求模型。",
+        "label": "模型名稱對應",
+        "remove": "刪除對應 {{index}}",
+        "source": "請求模型 {{index}}",
+        "sourcePlaceholder": "請求模型",
+        "target": "上游模型 {{index}}",
+        "targetPlaceholder": "上游模型"
+      },
+      "neverChecked": "尚未偵測",
+      "noModels": "無",
+      "proxy": {
+        "help": "供 New API 伺服器存取此渠道時使用，支援 HTTP、HTTPS、SOCKS5 和 SOCKS5H；留空清除此渠道的代理設定。",
+        "invalid": "請輸入有效的 HTTP、HTTPS、SOCKS5 或 SOCKS5H 代理 URL。",
+        "label": "代理位址"
+      },
+      "remark": {
+        "help": "記錄渠道用途或使用說明，最多 255 個字元。",
+        "label": "備註"
+      },
+      "removedModels": "偵測到已移除的模型",
+      "tag": "渠道標籤",
+      "testModel": {
+        "help": "選擇模型或直接輸入名稱；留空使用 New API 預設測試模型。",
+        "label": "測試模型"
+      },
+      "unsupportedDetection": "目前編輯器不支援此渠道類型的上游偵測；進階自訂渠道須在站點管理後台設定模型清單路由。"
+    },
+    "doneHub": {
+      "allowExtraBody": {
+        "help": "將用戶端請求中的額外欄位（例如 extra_body 參數）轉送給上游。",
+        "label": "允許額外欄位透傳"
+      },
+      "compatibleResponse": {
+        "help": "開啟後，DoneHub 將 Responses 請求轉換為 Chat Completions。關閉時優先使用上游原生 Responses，不支援時仍可能回退相容模式。",
+        "label": "相容 Responses API"
+      },
+      "customParameter": {
+        "help": "填入 JSON 物件，預設只補充缺少的欄位。overwrite: true 覆蓋同名欄位；per_model: true 依模型設定；pre_add: true 在請求入口套用。留空清除。",
+        "invalid": "請輸入有效的 JSON 物件。",
+        "label": "額外請求參數",
+        "placeholder": "{\n  \"overwrite\": true,\n  \"temperature\": 0.7\n}"
+      },
+      "disabledStream": {
+        "help": "串流請求使用這些模型時會略過此渠道，不會自動改為非串流。可選擇現有模型或輸入名稱；清空後恢復正常路由。",
+        "label": "停用串流的模型"
+      },
+      "modelHeaders": {
+        "help": "向上游加入固定請求標頭，值必須為文字。驗證標頭由渠道自行處理；留空或刪除所有列可清除設定。",
+        "invalid": "請輸入 JSON 物件，鍵名須唯一且非空，值必須為文字。",
+        "label": "自訂請求標頭",
+        "placeholder": "{\"X-Project\": \"example\"}"
+      },
+      "modelMapping": {
+        "addModels": "將對應名稱加入模型清單",
+        "help": "鍵為使用者請求的模型名稱，值為上游模型名稱。請將鍵加入渠道模型清單；值以 + 開頭時，按使用者請求的模型計費。",
+        "invalid": "請輸入 JSON 物件，鍵名須唯一且非空，值必須為文字。",
+        "label": "模型對應",
+        "placeholder": "{\"alias\": \"upstream-model\"}"
+      },
+      "proxy": {
+        "help": "由 DoneHub 伺服器存取上游時使用，支援 HTTP 和 SOCKS5。%s 會依渠道金鑰產生工作階段識別碼；留空移除渠道專用代理。",
+        "invalid": "請輸入有效的 HTTP 或 SOCKS5 代理位址。",
+        "label": "代理位址",
+        "placeholder": "socks5://127.0.0.1:1080"
+      },
+      "responsesPath": {
+        "help": "僅用於自訂渠道的原生 Responses 請求。留空使用 /v1/responses，填入 disable 停用此請求；開啟相容模式時不使用此路徑。",
+        "label": "Responses 請求路徑",
+        "placeholder": "/v1/responses"
+      },
+      "testModel": {
+        "help": "選擇渠道中的聊天模型，也可輸入模型名稱。留空時 DoneHub 無法為此渠道測速，最多 50 個字元。",
+        "invalid": "模型名稱不能超過 50 個字元。",
+        "label": "測速模型",
+        "placeholder": "gpt-4o-mini"
+      }
+    },
     "fields": {
       "autoSyncModelPattern": {
         "help": "僅同步符合此規則的模型；使用 (?i) 前綴可忽略大小寫，留空則同步所有模型。",
@@ -108,6 +224,17 @@
         "placeholder": "新增標籤..."
       }
     },
+    "json": {
+      "addRow": "新增一列",
+      "editJson": "編輯 JSON",
+      "editRows": "逐列編輯",
+      "format": "格式化 JSON",
+      "key": "鍵",
+      "keyAt": "{{field}}：第 {{index}} 列鍵",
+      "removeAt": "{{field}}：刪除第 {{index}} 列",
+      "value": "值",
+      "valueAt": "{{field}}：第 {{index}} 列值"
+    },
     "options": {
       "channelType": {
         "anthropic": "Anthropic",
@@ -167,9 +294,12 @@
     "sections": {
       "advanced": "進階",
       "basic": "基本資訊",
+      "basicConnection": "基本與連線",
+      "compatibility": "介面相容",
       "connection": "連線與憑據",
       "metadata": "中繼資料",
       "models": "模型",
+      "requests": "網路與請求",
       "routing": "路由",
       "sync": "模型同步"
     },
@@ -265,7 +395,6 @@
     }
   },
   "gatewayGuidance": {
-    "clientHint": "外部用戶端還需要使用此閘道簽發的呼叫 Key。",
     "empty": {
       "description": "目前自建 AI 閘道還沒有渠道。請先匯入帳號 Key 或 API Key，之後這個閘道即可作為統一 AI API 提供給外部客戶端使用。",
       "importFromAccountKey": "從帳號 Key 匯入渠道",
@@ -274,7 +403,6 @@
     },
     "headerDescription": "管理自建 AI 閘道中的渠道，把多個帳號 Key 或 API Key 彙整成一個統一 AI API。",
     "openChannelConsole": "開啟閘道渠道管理",
-    "openTokenConsole": "開啟權杖管理",
     "unconfiguredValueDescription": "設定後，可以把分散的帳號 Key 和 API Key 匯入為閘道渠道，並直接在 All API Hub 中統一查看和管理。"
   },
   "migration": {
@@ -412,11 +540,13 @@
   "title": "渠道管理",
   "toasts": {
     "channelSaved": "渠道已儲存",
+    "channelsDeleted_other": "已刪除 {{count}} 個渠道",
     "channelUpdated": "渠道已更新",
     "syncCompleted": "模型同步完成（{{success}}/{{total}}）",
     "syncCompletedRefreshFailed": "模型已同步（{{success}}/{{total}}），但渠道清單重新整理失敗。請重新整理後再試。",
     "syncFailed": "模型同步失敗：{{error}}",
-    "syncFailedFallback": "無法同步渠道"
+    "syncFailedFallback": "無法同步渠道",
+    "syncIncomplete": "模型同步未全部完成（成功 {{success}}/{{total}}）。請開啟模型同步介面查看結果，並重試失敗項目。"
   },
   "toolbar": {
     "addChannel": "新增渠道",

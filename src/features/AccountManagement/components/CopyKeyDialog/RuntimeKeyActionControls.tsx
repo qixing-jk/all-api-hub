@@ -10,7 +10,6 @@ import {
 import { useTranslation } from "react-i18next"
 
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
-import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
 import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import {
@@ -24,7 +23,6 @@ import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import {
-  createCliProxyExportPayload,
   createExportAccount,
   createExportToken,
 } from "~/features/ApiCredentialProfiles/utils/exportShims"
@@ -117,18 +115,13 @@ export function RuntimeKeyActionControls({
   onOpenCCSwitchDialog,
 }: RuntimeKeyActionControlsProps) {
   const { t } = useTranslation(["ui", "keyManagement", "settings"])
-  const {
-    managedSiteType,
-    claudeCodeRouterBaseUrl,
-    claudeCodeRouterApiKey,
-    cliProxyBaseUrl,
-    cliProxyManagementKey,
-  } = useUserPreferencesContext()
+  const { managedSiteType, claudeCodeRouterBaseUrl, claudeCodeRouterApiKey } =
+    useUserPreferencesContext()
   const { markGatewayGuidanceOnboardingCompleted } = useFeatureGuidanceContext()
   const { openWithAccount } = useChannelDialog()
 
   const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)
-  const [isCliProxyDialogOpen, setIsCliProxyDialogOpen] = useState(false)
+
   const [isKiloCodeDialogOpen, setIsKiloCodeDialogOpen] = useState(false)
   const [isCursorPlusDialogOpen, setIsCursorPlusDialogOpen] = useState(false)
   const [kelivoExportInput, setKelivoExportInput] =
@@ -311,17 +304,6 @@ export function RuntimeKeyActionControls({
     }
   }
 
-  const handleOpenCliProxyDialog = () => {
-    if (!cliProxyBaseUrl?.trim() || !cliProxyManagementKey?.trim()) {
-      showResultToast({
-        success: false,
-        message: t("messages:cliproxy.configMissing"),
-      })
-      return
-    }
-    setIsCliProxyDialogOpen(true)
-  }
-
   const handleOpenClaudeCodeRouter = () => {
     if (!claudeCodeRouterBaseUrl) {
       showResultToast({
@@ -394,37 +376,6 @@ export function RuntimeKeyActionControls({
     )
   }
 
-  const renderCliProxyExportDialog = () => {
-    if (!isCliProxyDialogOpen) return null
-
-    if (serviceCredentialProfile) {
-      const cliProxyPayload = createCliProxyExportPayload(
-        serviceCredentialProfile,
-      )
-
-      return (
-        <CliProxyExportDialog
-          isOpen={true}
-          onClose={() => setIsCliProxyDialogOpen(false)}
-          account={cliProxyPayload.account}
-          token={cliProxyPayload.token}
-          apiTypeHint={cliProxyPayload.apiTypeHint}
-        />
-      )
-    }
-
-    const legacyToken = accountRuntimeKeyToLegacyAccountToken(runtimeKey)
-
-    return (
-      <CliProxyExportDialog
-        isOpen={true}
-        onClose={() => setIsCliProxyDialogOpen(false)}
-        account={account}
-        token={legacyToken}
-      />
-    )
-  }
-
   if (!actionPolicy.copySecret && !actionPolicy.exportSecret) return null
 
   return (
@@ -453,7 +404,7 @@ export function RuntimeKeyActionControls({
         />
       ) : null}
       {renderClaudeCodeRouterImportDialog()}
-      {renderCliProxyExportDialog()}
+
       <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
         {actionPolicy.copySecret ? (
           <IconButton
@@ -511,9 +462,7 @@ export function RuntimeKeyActionControls({
                 [EXPORT_ACTION_TARGETS.KiloCode]: {
                   onSelect: () => setIsKiloCodeDialogOpen(true),
                 },
-                [EXPORT_ACTION_TARGETS.CliProxy]: {
-                  onSelect: handleOpenCliProxyDialog,
-                },
+
                 [EXPORT_ACTION_TARGETS.ClaudeCodeRouter]: {
                   onSelect: handleOpenClaudeCodeRouter,
                 },

@@ -1,5 +1,6 @@
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type { WebDAVConfig } from "~/types/webdav"
+import { isPlainObject } from "~/utils/core/object"
 import { t } from "~/utils/i18n/core"
 
 import {
@@ -110,6 +111,22 @@ export function parseWebdavBackupJson<T = unknown>(
     }
 
     const validateSections = (container: Record<string, unknown>) => {
+      if ("apiCredentialProfiles" in container) {
+        const config = container.apiCredentialProfiles
+        if (!isPlainObject(config) || !Array.isArray(config.profiles)) {
+          throw new Error("API credential profiles section is invalid")
+        }
+        // Missing optional arrays are valid in older profile snapshots. Present
+        // malformed arrays must not be coerced into empty replacement data.
+        for (const key of ["profiles", "links", "linkTombstones"]) {
+          if (
+            key in config &&
+            (!Array.isArray(config[key]) || !config[key].every(isPlainObject))
+          ) {
+            throw new Error(`API credential ${key} section is invalid`)
+          }
+        }
+      }
       if ("accounts" in container) {
         if (Array.isArray(container.accounts)) {
           // Legacy V1 backups may put the account list directly in a data container.

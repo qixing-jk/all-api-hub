@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next"
 
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
-import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
 import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
@@ -28,7 +27,6 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { KiloCodeProfileExportDialog } from "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
 import {
-  createCliProxyExportPayload,
   createExportAccount,
   createExportToken,
 } from "~/features/ApiCredentialProfiles/utils/exportShims"
@@ -120,13 +118,8 @@ export function ServiceCredentialCard({
   isNavigationTarget = false,
 }: ServiceCredentialCardProps) {
   const { t } = useTranslation(["keyManagement", "messages"])
-  const {
-    managedSiteType,
-    claudeCodeRouterBaseUrl,
-    claudeCodeRouterApiKey,
-    cliProxyBaseUrl,
-    cliProxyManagementKey,
-  } = useUserPreferencesContext()
+  const { managedSiteType, claudeCodeRouterBaseUrl, claudeCodeRouterApiKey } =
+    useUserPreferencesContext()
   const { markGatewayGuidanceOnboardingCompleted } = useFeatureGuidanceContext()
   const { openWithAccount } = useChannelDialog()
   const identityKey = `${account.id}:${credential.service}`
@@ -139,8 +132,7 @@ export function ServiceCredentialCard({
   const [kelivoProfile, setKelivoProfile] =
     useState<ApiCredentialProfile | null>(null)
   const [isCursorPlusDialogOpen, setIsCursorPlusDialogOpen] = useState(false)
-  const [cliProxyProfile, setCliProxyProfile] =
-    useState<ApiCredentialProfile | null>(null)
+
   const [claudeCodeRouterProfile, setClaudeCodeRouterProfile] =
     useState<ApiCredentialProfile | null>(null)
   const [verifyingProfile, setVerifyingProfile] =
@@ -225,9 +217,7 @@ export function ServiceCredentialCard({
       ? t("actions.saveToApiProfiles")
       : undefined,
   }
-  const cliProxyPayload = cliProxyProfile
-    ? createCliProxyExportPayload(cliProxyProfile)
-    : null
+
   const apiCredentialProfileExportContext = {
     featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
     surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
@@ -258,18 +248,6 @@ export function ServiceCredentialCard({
         }),
       })
     }
-  }
-
-  const handleOpenCliProxyDialog = () => {
-    if (!cliProxyBaseUrl?.trim() || !cliProxyManagementKey?.trim()) {
-      showResultToast({
-        success: false,
-        message: t("messages:cliproxy.configMissing"),
-      })
-      return
-    }
-
-    setCliProxyProfile(transientProfile)
   }
 
   const handleOpenClaudeCodeRouter = () => {
@@ -383,20 +361,7 @@ export function ServiceCredentialCard({
           runtimeKey={runtimeKey}
         />
       ) : null}
-      {cliProxyPayload ? (
-        <CliProxyExportDialog
-          isOpen={true}
-          onClose={() => setCliProxyProfile(null)}
-          account={cliProxyPayload.account}
-          token={cliProxyPayload.token}
-          apiTypeHint={cliProxyPayload.apiTypeHint}
-          analyticsContext={{
-            ...apiCredentialProfileExportContext,
-            actionId:
-              PRODUCT_ANALYTICS_ACTION_IDS.ImportApiCredentialProfileToCliProxy,
-          }}
-        />
-      ) : null}
+
       {claudeCodeRouterProfile ? (
         <ClaudeCodeRouterImportDialog
           isOpen={true}
@@ -506,9 +471,7 @@ export function ServiceCredentialCard({
                       [EXPORT_ACTION_TARGETS.KiloCode]: {
                         onSelect: () => setKiloCodeProfile(transientProfile),
                       },
-                      [EXPORT_ACTION_TARGETS.CliProxy]: {
-                        onSelect: handleOpenCliProxyDialog,
-                      },
+
                       [EXPORT_ACTION_TARGETS.ClaudeCodeRouter]: {
                         onSelect: handleOpenClaudeCodeRouter,
                       },

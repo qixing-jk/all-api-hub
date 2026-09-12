@@ -386,7 +386,7 @@ describe("RepairMissingKeysDialog", () => {
     }))
   })
 
-  it("ignores a stale import action before repair completion", async () => {
+  it("ignores an import action without confirmed created keys", async () => {
     const account = buildAccount()
     const progress = buildRepairProgress(ACCOUNT_KEY_REPAIR_JOB_STATES.Running)
     const { result } = renderHook(() =>
@@ -812,98 +812,110 @@ describe("RepairMissingKeysDialog", () => {
     )
   })
 
-  it("resolves current-session created keys lazily and opens the shared trusted review", async () => {
-    const user = userEvent.setup()
-    const account = buildAccount()
-    mockProgress = buildRepairProgress(ACCOUNT_KEY_REPAIR_JOB_STATES.Running, {
-      jobId: "repair-job",
-    })
-    mockResolveRepairCreatedKeyBatchImportCandidate.mockResolvedValue(
-      buildRepairImportCandidate(account),
-    )
+  it.each([
+    ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
+    ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
+    ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled,
+    ACCOUNT_KEY_REPAIR_JOB_STATES.Failed,
+  ])(
+    "opens confirmed created keys for review while the job is %s",
+    async (state) => {
+      const user = userEvent.setup()
+      const account = buildAccount()
+      mockProgress = buildRepairProgress(
+        ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
+        {
+          jobId: "repair-job",
+        },
+      )
+      mockResolveRepairCreatedKeyBatchImportCandidate.mockResolvedValue(
+        buildRepairImportCandidate(account),
+      )
 
-    const view = render(
-      <RepairMissingKeysDialog
-        isOpen
-        onClose={vi.fn()}
-        accounts={[account]}
-        startOnOpen={false}
-      />,
-    )
+      const view = render(
+        <RepairMissingKeysDialog
+          isOpen
+          onClose={vi.fn()}
+          accounts={[account]}
+          startOnOpen={false}
+        />,
+      )
 
-    await screen.findByRole("progressbar", {
-      name: "keyManagement:repairMissingKeys.progressLabel",
-    })
-    mockProgress = buildCreatedProgress(account)
-    view.rerender(
-      <RepairMissingKeysDialog
-        isOpen
-        onClose={vi.fn()}
-        accounts={[account]}
-        startOnOpen={false}
-      />,
-    )
+      await screen.findByRole("progressbar", {
+        name: "keyManagement:repairMissingKeys.progressLabel",
+      })
+      mockProgress = buildCreatedProgress(account)
+      mockProgress.state = state
+      view.rerender(
+        <RepairMissingKeysDialog
+          isOpen
+          onClose={vi.fn()}
+          accounts={[account]}
+          startOnOpen={false}
+        />,
+      )
 
-    const openButton = await screen.findByTestId(
-      KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportButton,
-    )
-    const importCard = screen.getByTestId(
-      KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportCard,
-    )
-    expect(importCard).toBeVisible()
-    expect(importCard).toHaveTextContent(
-      "keyManagement:repairMissingKeys.managedSiteImport.target",
-    )
-    expect(
-      screen.getByTestId(
-        KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportTargetSwitcher,
-      ),
-    ).toHaveAttribute("role", "combobox")
-    expect(
-      mockResolveRepairCreatedKeyBatchImportCandidate,
-    ).not.toHaveBeenCalled()
-
-    await user.click(openButton)
-
-    await waitFor(() => {
+      const openButton = await screen.findByTestId(
+        KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportButton,
+      )
+      const importCard = screen.getByTestId(
+        KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportCard,
+      )
+      expect(importCard).toBeVisible()
+      expect(importCard).toHaveTextContent(
+        "keyManagement:repairMissingKeys.managedSiteImport.target",
+      )
+      expect(
+        screen.getByTestId(
+          KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportTargetSwitcher,
+        ),
+      ).toHaveAttribute("role", "combobox")
       expect(
         mockResolveRepairCreatedKeyBatchImportCandidate,
-      ).toHaveBeenCalledWith(
+      ).not.toHaveBeenCalled()
+
+      await user.click(openButton)
+
+      await waitFor(() => {
+        expect(
+          mockResolveRepairCreatedKeyBatchImportCandidate,
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            progress: mockProgress,
+            accounts: [account],
+            targetFingerprint: "a".repeat(64),
+            freshness: "current-session",
+          }),
+        )
+      })
+      expect(
+        mockManagedSiteTokenBatchExportDialog.mock.calls.at(-1)?.[0],
+      ).toEqual(
         expect.objectContaining({
-          progress: mockProgress,
-          accounts: [account],
-          targetFingerprint: "a".repeat(64),
-          freshness: "current-session",
+          isOpen: true,
+          intent: {
+            source: MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES.REPAIR_CREATED,
+            verification:
+              MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.TRUSTED_NEW,
+          },
         }),
       )
-    })
-    expect(
-      mockManagedSiteTokenBatchExportDialog.mock.calls.at(-1)?.[0],
-    ).toEqual(
-      expect.objectContaining({
-        isOpen: true,
-        intent: {
-          source: MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES.REPAIR_CREATED,
-          verification:
-            MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.TRUSTED_NEW,
-        },
-      }),
-    )
-    expect(screen.getByTestId("repair-created-batch-dialog")).toBeVisible()
+      expect(screen.getByTestId("repair-created-batch-dialog")).toBeVisible()
 
-    await user.click(
-      screen.getByRole("button", { name: "Close repair import" }),
-    )
+      await user.click(
+        screen.getByRole("button", { name: "Close repair import" }),
+      )
 
-    expect(
-      await screen.findByTestId(
-        KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportButton,
-      ),
-    ).toBeVisible()
-    expect(mockUseRepairMissingKeysJob).toHaveBeenLastCalledWith(
-      expect.objectContaining({ isOpen: true }),
-    )
-  })
+      expect(
+        await screen.findByTestId(
+          KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportButton,
+        ),
+      ).toBeVisible()
+      expect(mockUseRepairMissingKeysJob).toHaveBeenLastCalledWith(
+        expect.objectContaining({ isOpen: true }),
+      )
+    },
+  )
 
   it("opens a stored current-version result with complete verification", async () => {
     const user = userEvent.setup()

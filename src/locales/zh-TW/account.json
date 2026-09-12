@@ -284,14 +284,13 @@
     },
     "boundaryNote": "All API Hub 負責管理帳號 Key，不代理模型請求；外部客戶端實際呼叫的是你的自建 AI 閘道。",
     "description": {
-      "has_gateway_channels": "先前已建立或匯入過閘道渠道。前往渠道管理確認目前狀態，再繼續設定外部客戶端。",
+      "has_gateway_channels": "已完成過閘道渠道建立或匯入。前往渠道管理確認目前狀態。",
       "needs_importable_source": "目前帳號無法讀取可匯入的 Key。請先儲存 API Key，或新增支援 Key 取得的帳號，再匯入自建 AI 閘道。",
       "needs_managed_site": "已有帳號 Key。完成自建 AI 閘道設定後，即可將它們匯入為閘道渠道。",
-      "needs_sources": "新增帳號後，帳號中的 Key 可以直接匯出到客戶端，也可以匯入自建 AI 閘道，彙整成一個統一 AI API。",
+      "needs_sources": "新增帳號後，可將帳號 Key 匯入自建 AI 閘道，彙整成一個統一 AI API。",
       "ready_accounts": "使用金鑰管理將選取的帳號 Key 一鍵匯入為自建 AI 閘道渠道。",
       "ready_profiles": "已儲存的 API Key 可在憑據庫中直接重複使用，也可以單獨匯入為閘道渠道。"
     },
-    "directToolExportNote": "如果暫時不需要自建閘道，也可以直接把單個憑據匯出到客戶端工具。",
     "dismissDialog": {
       "confirm": "不再顯示",
       "description": "帳戶頁將不再顯示這個提示；你仍然可以在總覽頁查看如何把帳號 Key 接入自建 AI 閘道。",

@@ -8,19 +8,19 @@ const AccountInfoDetail: FC<{
   value: string
   isUrl?: boolean
 }> = ({ label, value, isUrl }) => (
-  <div className="flex items-center justify-between">
-    <span className="dark:text-dark-text-secondary text-gray-500">
+  <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+    <span className="dark:text-dark-text-secondary shrink-0 text-gray-500">
       {label}：
     </span>
     {isUrl ? (
       <span
-        className="dark:text-dark-text-primary ml-2 max-w-48 truncate font-medium text-gray-900"
+        className="dark:text-dark-text-primary min-w-0 font-medium break-all text-gray-900"
         title={value}
       >
         {value}
       </span>
     ) : (
-      <span className="dark:text-dark-text-primary font-medium text-gray-900">
+      <span className="dark:text-dark-text-primary min-w-0 font-medium [overflow-wrap:anywhere] text-gray-900">
         {value}
       </span>
     )}

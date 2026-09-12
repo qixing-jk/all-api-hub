@@ -4,6 +4,7 @@ import {
   ChevronUp,
   ListChecks,
   ListOrdered,
+  Settings2,
   XIcon,
 } from "lucide-react"
 import { useTranslation } from "react-i18next"
@@ -16,12 +17,14 @@ import {
   DATA_TYPE_CREATED_AT,
   DATA_TYPE_INCOME,
 } from "~/constants"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementSortButtonTestId,
 } from "~/features/AccountManagement/testIds"
 import { cn } from "~/lib/utils"
 import type { ActiveSortField, SortField, SortOrder } from "~/types"
+import { openSettingsTab } from "~/utils/navigation"
 
 interface AccountListHeaderProps {
   displayedResultCount: number
@@ -45,6 +48,7 @@ interface AccountListHeaderProps {
 interface AccountListSortButtonProps {
   activeSortField: ActiveSortField
   disabled: boolean
+  onClearSort: () => void
   field: SortField
   label: string
   onSort: (field: SortField) => void
@@ -56,36 +60,58 @@ interface AccountListSortButtonProps {
 function AccountListSortButton({
   activeSortField,
   disabled,
+  onClearSort,
   field,
   label,
   onSort,
   sortLabel,
   sortOrder,
 }: AccountListSortButtonProps) {
+  const { t } = useTranslation("account")
   const isActive = activeSortField === field
 
   return (
-    <IconButton
-      onClick={() => onSort(field)}
-      variant="ghost"
-      size="none"
-      disabled={disabled}
-      aria-label={`${sortLabel} ${label}`}
-      data-testid={getAccountManagementSortButtonTestId(field)}
+    <div
       className={cn(
-        "min-h-6 space-x-0.5 rounded-md px-1.5 text-xs font-medium sm:space-x-1",
-        isActive &&
-          "bg-blue-100/80 font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950/60 dark:text-blue-300 dark:hover:bg-blue-950/80",
+        "inline-flex h-7 shrink-0 items-center rounded-md",
+        isActive && "bg-blue-100/80 dark:bg-blue-950/60",
       )}
     >
-      <span>{label}</span>
-      {isActive &&
-        (sortOrder === "asc" ? (
-          <ChevronUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-        ) : (
-          <ChevronDown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-        ))}
-    </IconButton>
+      <IconButton
+        onClick={() => onSort(field)}
+        variant="ghost"
+        size="none"
+        disabled={disabled}
+        aria-label={`${sortLabel} ${label}`}
+        data-testid={getAccountManagementSortButtonTestId(field)}
+        className={cn(
+          "h-7 space-x-0.5 rounded-md px-1.5 text-xs font-medium focus-visible:relative focus-visible:z-10 sm:space-x-1",
+          isActive &&
+            "font-semibold text-blue-700 hover:bg-blue-100 dark:text-blue-300 dark:hover:bg-blue-950/80",
+          isActive && !disabled && "rounded-r-none",
+        )}
+      >
+        <span>{label}</span>
+        {isActive &&
+          (sortOrder === "asc" ? (
+            <ChevronUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+          ) : (
+            <ChevronDown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+          ))}
+      </IconButton>
+      {isActive && !disabled && (
+        <IconButton
+          variant="ghost"
+          size="none"
+          className="size-7 rounded-l-none rounded-r-md border-l border-blue-200/70 text-blue-700 hover:bg-blue-100 focus-visible:relative focus-visible:z-10 dark:border-blue-800/60 dark:text-blue-300 dark:hover:bg-blue-950/80"
+          onClick={onClearSort}
+          aria-label={t("account:list.clearSort")}
+          data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListClearSortButton}
+        >
+          <XIcon aria-hidden="true" className="size-3" />
+        </IconButton>
+      )}
+    </div>
   )
 }
 
@@ -108,7 +134,7 @@ export function AccountListHeader({
   sortField,
   sortOrder,
 }: AccountListHeaderProps) {
-  const { t } = useTranslation(["account", "common"])
+  const { t } = useTranslation(["account", "common", "settings"])
   const reorderLabel = isReorderMode
     ? t("account:list.reorderDone")
     : t("account:list.reorder")
@@ -119,6 +145,7 @@ export function AccountListHeader({
     <AccountListSortButton
       activeSortField={sortField}
       disabled={inSearchMode}
+      onClearSort={onClearSort}
       field={field}
       label={label}
       onSort={onSort}
@@ -202,22 +229,22 @@ export function AccountListHeader({
               )}
             </div>
           </div>
-          {sortField !== null && !inSearchMode ? (
-            <Button
-              type="button"
+          <Tooltip content={t("settings:sorting.title")}>
+            <IconButton
               variant="ghost"
-              size="sm"
-              className="h-7 shrink-0 px-2 text-xs font-normal text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-              leftIcon={<XIcon aria-hidden="true" className="size-3" />}
-              onClick={onClearSort}
-              aria-label={t("account:list.clearSort")}
-              data-testid={
-                ACCOUNT_MANAGEMENT_TEST_IDS.accountListClearSortButton
+              size="none"
+              className="size-7 shrink-0 rounded-md"
+              aria-label={t("settings:sorting.title")}
+              onClick={() =>
+                void openSettingsTab("accountManagement", {
+                  anchor: SETTINGS_ANCHORS.SORTING_PRIORITY,
+                  preserveHistory: true,
+                })
               }
             >
-              {t("account:list.clearSort")}
-            </Button>
-          ) : null}
+              <Settings2 aria-hidden="true" className="size-3.5" />
+            </IconButton>
+          </Tooltip>
         </div>
 
         <div

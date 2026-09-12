@@ -22,7 +22,6 @@ import {
   captureApiCredentialProfileMock,
   ccSwitchDialogMock,
   claudeCodeRouterDialogMock,
-  cliProxyDialogMock,
   completeProductAnalyticsActionMock,
   createApiCredentialProfileMock,
   createApiTokenMock,
@@ -284,24 +283,19 @@ describe("CopyKeyDialog exports and service credentials", () => {
 
   it("explains missing external-tool configuration before opening imports", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
-    userPreferencesContextMock.cliProxyBaseUrl = ""
-    userPreferencesContextMock.cliProxyManagementKey = ""
+
     userPreferencesContextMock.claudeCodeRouterBaseUrl = ""
     const user = await renderExpandedDetails()
 
-    await selectExportAction(user, "keyManagement:actions.importToCliProxy")
     await selectExportAction(
       user,
       "keyManagement:actions.importToClaudeCodeRouter",
     )
 
     expect(toastErrorMock).toHaveBeenCalledWith(
-      "messages:cliproxy.configMissing",
-    )
-    expect(toastErrorMock).toHaveBeenCalledWith(
       "messages:claudeCodeRouter.configMissing",
     )
-    expect(cliProxyDialogMock).not.toHaveBeenCalled()
+
     expect(claudeCodeRouterDialogMock).not.toHaveBeenCalled()
   })
 
@@ -410,24 +404,6 @@ describe("CopyKeyDialog exports and service credentials", () => {
           }),
         }),
       )
-    })
-
-    await selectExportAction(user, "keyManagement:actions.importToCliProxy")
-    await waitFor(() => {
-      expect(cliProxyDialogMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          account: expect.objectContaining({
-            baseUrl: "https://api.example.invalid/v1",
-          }),
-          token: expect.objectContaining({
-            key: "sk-service-credential-secret",
-          }),
-          apiTypeHint: API_TYPES.OPENAI_COMPATIBLE,
-        }),
-      )
-    })
-    act(() => {
-      cliProxyDialogMock.mock.calls[0]?.[0].onClose()
     })
 
     await selectExportAction(
@@ -585,17 +561,6 @@ describe("CopyKeyDialog exports and service credentials", () => {
     })
     act(() => {
       kiloCodeExportDialogMock.mock.calls[0]?.[0].onClose()
-    })
-
-    await selectExportAction(user, "keyManagement:actions.importToCliProxy")
-    expect(cliProxyDialogMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        account: expect.objectContaining({ id: "acc-1" }),
-        token: expect.objectContaining({ id: 1, key: "sk-test" }),
-      }),
-    )
-    act(() => {
-      cliProxyDialogMock.mock.calls[0]?.[0].onClose()
     })
 
     await selectExportAction(

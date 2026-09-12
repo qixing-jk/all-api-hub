@@ -54,6 +54,9 @@
       "label": "Gewicht"
     }
   },
+  "opening": {
+    "loading": "Kanalkonfiguration wird geladen…"
+  },
   "title": {
     "add": "Kanal erstellen",
     "edit": "Kanal bearbeiten",

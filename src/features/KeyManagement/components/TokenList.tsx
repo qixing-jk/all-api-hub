@@ -4,7 +4,6 @@ import {
   Globe2,
   KeyRound,
   Library,
-  Network,
   Plus,
   RefreshCw,
   SendToBack,
@@ -77,7 +76,6 @@ import {
   KEY_MANAGEMENT_DISPLAY_ROW_KINDS,
   KEY_MANAGEMENT_LOAD_STATUSES,
   type ApiCredentialProfileSaveEntry,
-  type CliProxyExportEntry,
   type KeyManagementDisplayRow,
   type KeyManagementEntry,
   type NativeKeyManagementRow,
@@ -90,7 +88,6 @@ import {
   toLegacyAccountTokenForKeyManagementEntry,
 } from "../utils"
 import { AccountKeyResourceList } from "./AccountKeyResource/AccountKeyResourceList"
-import { BatchCliProxyExportDialog } from "./BatchCliProxyExportDialog"
 import { BatchSelectionControl } from "./BatchSelectionControl"
 import { ManagedSiteTokenBatchExportDialog } from "./ManagedSiteTokenBatchExportDialog"
 import { ServiceCredentialCard } from "./ServiceCredentialCard"
@@ -489,10 +486,7 @@ export function TokenList(props: TokenListProps) {
   const [batchExportItems, setBatchExportItems] = useState<
     ManagedSiteTokenBatchExportItemInput[]
   >([])
-  const [batchCliProxyExportOpen, setBatchCliProxyExportOpen] = useState(false)
-  const [batchCliProxyExportItems, setBatchCliProxyExportItems] = useState<
-    CliProxyExportEntry[]
-  >([])
+
   const [isBatchApiProfilesSaving, setIsBatchApiProfilesSaving] =
     useState(false)
   const [selectedEntryIds, setSelectedEntryIds] = useState<Set<string>>(
@@ -837,10 +831,6 @@ export function TokenList(props: TokenListProps) {
     (): ApiCredentialProfileSaveEntry[] => selectedEntries,
     [selectedEntries],
   )
-  const selectedCliProxyItems = useMemo(
-    (): CliProxyExportEntry[] => selectedEntries,
-    [selectedEntries],
-  )
 
   const currentBatchEligibilityByRuntimeKeyId = useMemo(() => {
     const eligibility = new Map<string, boolean>()
@@ -879,14 +869,6 @@ export function TokenList(props: TokenListProps) {
       ),
     [batchExportItems, currentBatchEligibilityByRuntimeKeyId],
   )
-  const isBatchCliProxySnapshotEligible = useMemo(
-    () =>
-      isBatchSnapshotEligible(
-        batchCliProxyExportItems,
-        currentBatchEligibilityByRuntimeKeyId,
-      ),
-    [batchCliProxyExportItems, currentBatchEligibilityByRuntimeKeyId],
-  )
 
   useEffect(() => {
     setSelectedEntryIds((prev) => {
@@ -902,16 +884,7 @@ export function TokenList(props: TokenListProps) {
       setBatchExportOpen(false)
       setBatchExportItems([])
     }
-    if (batchCliProxyExportOpen && !isBatchCliProxySnapshotEligible) {
-      setBatchCliProxyExportOpen(false)
-      setBatchCliProxyExportItems([])
-    }
-  }, [
-    batchCliProxyExportOpen,
-    batchExportOpen,
-    isBatchCliProxySnapshotEligible,
-    isBatchExportSnapshotEligible,
-  ])
+  }, [batchExportOpen, isBatchExportSnapshotEligible])
 
   const collapseAll = useCallback(() => {
     if (!groupedRows) return
@@ -1008,16 +981,6 @@ export function TokenList(props: TokenListProps) {
   const closeBatchExportDialog = () => {
     setBatchExportOpen(false)
     setBatchExportItems([])
-  }
-
-  const openBatchCliProxyExportDialog = () => {
-    setBatchCliProxyExportItems(selectedCliProxyItems)
-    setBatchCliProxyExportOpen(true)
-  }
-
-  const closeBatchCliProxyExportDialog = () => {
-    setBatchCliProxyExportOpen(false)
-    setBatchCliProxyExportItems([])
   }
 
   const handleBatchSaveToApiProfiles = async () => {
@@ -1208,18 +1171,7 @@ export function TokenList(props: TokenListProps) {
             >
               {t("batchManagedSiteExport.actions.clearSelection")}
             </Button>
-            <Button
-              size="sm"
-              type="button"
-              disabled={selectedCliProxyItems.length === 0}
-              variant="outline"
-              onClick={openBatchCliProxyExportDialog}
-              leftIcon={<Network className="h-4 w-4" />}
-            >
-              {t("batchCliProxyExport.actions.open", {
-                selectedCount: selectedCliProxyItems.length,
-              })}
-            </Button>
+
             <Button
               size="sm"
               type="button"
@@ -1525,12 +1477,6 @@ export function TokenList(props: TokenListProps) {
           token={currentCCSwitchTarget.token}
         />
       )}
-
-      <BatchCliProxyExportDialog
-        isOpen={batchCliProxyExportOpen && isBatchCliProxySnapshotEligible}
-        onClose={closeBatchCliProxyExportDialog}
-        items={batchCliProxyExportItems}
-      />
 
       <ManagedSiteTokenBatchExportDialog
         isOpen={batchExportOpen && isBatchExportSnapshotEligible}
