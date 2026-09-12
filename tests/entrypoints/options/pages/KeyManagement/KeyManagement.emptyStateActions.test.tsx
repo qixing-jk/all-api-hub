@@ -840,7 +840,7 @@ describe("KeyManagement empty-state actions", () => {
       await screen.findByRole("button", { name: "common:actions.delete" }),
     )
 
-    expect(handleDeleteToken).toHaveBeenCalledWith(token)
+    expect(handleDeleteToken).toHaveBeenCalledWith(token, false)
   })
 
   it("preselects the filtered account in the add-token dialog while viewing all accounts", async () => {
