@@ -13,6 +13,7 @@ import {
 } from "~/services/accounts/accountDefaults"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { AccountStorageConfig, SiteAccount } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
@@ -21,6 +22,7 @@ import {
   forceExtensionLanguage,
   installExtensionPageGuards,
   seedStoredAccounts,
+  seedUserPreferences,
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
 import {
@@ -782,6 +784,13 @@ test("runs quick check-in for the selected eligible account from account managem
   )
 
   const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    autoCheckin: {
+      ...DEFAULT_PREFERENCES.autoCheckin!,
+      globalEnabled: false,
+      pretriggerDailyOnUiOpen: false,
+    },
+  })
   await seedStoredAccounts(serviceWorker, [
     createStoredAccount({
       id: "quick-checkin-account",
