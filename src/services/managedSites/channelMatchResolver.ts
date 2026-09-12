@@ -5,6 +5,10 @@ import {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
+  SharedRead,
+  type ScheduledReadOptions,
+} from "~/services/apiTransport/requestScheduling"
+import {
   getRecoverableManagedSiteChannelCandidate,
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
@@ -45,6 +49,51 @@ export interface ManagedSiteChannelMatchRequestCache {
   resolvedChannelKeysByResourceKey: Record<string, string>
 }
 
+// Only pending searches cross operation boundaries: a later import must see
+// resources created or edited since the previous check completed.
+const pendingSearches = new WeakMap<
+  ManagedSiteChannelMatchContext["matching"],
+  Map<string, SharedRead<ManagedResourceMatchList | null>>
+>()
+
+/** Shares a pending read only for the same adapter, config and search target. */
+function getPendingSearch(
+  managedSite: ManagedSiteChannelMatchContext,
+  managedConfig: ManagedSiteRuntimeConfigValue,
+  searchBaseUrl: string,
+  options: ScheduledReadOptions,
+): Promise<ManagedResourceMatchList | null> {
+  let searches = pendingSearches.get(managedSite.matching)
+  if (!searches) {
+    searches = new Map()
+    pendingSearches.set(managedSite.matching, searches)
+  }
+  const key = JSON.stringify([
+    managedSite.siteType,
+    Object.entries(managedConfig).sort(([left], [right]) =>
+      left.localeCompare(right),
+    ),
+    searchBaseUrl,
+  ])
+  const existing = searches.get(key)
+  if (existing && !existing.signal.aborted) return existing.read(options)
+  const read = new SharedRead<ManagedResourceMatchList | null>(
+    async (sharedOptions) => {
+      try {
+        return await managedSite.matching.search(
+          managedConfig,
+          searchBaseUrl,
+          sharedOptions,
+        )
+      } finally {
+        if (searches.get(key) === read) searches.delete(key)
+      }
+    },
+  )
+  searches.set(key, read)
+  return read.read(options)
+}
+
 export const createManagedSiteChannelMatchRequestCache =
   (): ManagedSiteChannelMatchRequestCache => ({
     searchResultsByTargetKey: new Map(),
@@ -52,7 +101,7 @@ export const createManagedSiteChannelMatchRequestCache =
     resolvedChannelKeysByResourceKey: {},
   })
 
-interface ResolveManagedSiteChannelMatchParams {
+interface ResolveManagedSiteChannelMatchParams extends ScheduledReadOptions {
   managedSite: ManagedSiteChannelMatchContext
   managedConfig: ManagedSiteRuntimeConfigValue
   accountBaseUrl: string
@@ -99,13 +148,15 @@ const applyResolvedChannelKeys = <
   })
 }
 
-const fetchRecoverableCandidateSecretKey = async (params: {
-  managedSite: ManagedSiteChannelMatchContext
-  managedConfig: ManagedSiteRuntimeConfigValue
-  resourceRef: ManagedResourceRef
-  requestCache?: ManagedSiteChannelMatchRequestCache
-  protectionBypassExecution: ProtectionBypassExecution
-}) => {
+const fetchRecoverableCandidateSecretKey = async (
+  params: ScheduledReadOptions & {
+    managedSite: ManagedSiteChannelMatchContext
+    managedConfig: ManagedSiteRuntimeConfigValue
+    resourceRef: ManagedResourceRef
+    requestCache?: ManagedSiteChannelMatchRequestCache
+    protectionBypassExecution: ProtectionBypassExecution
+  },
+) => {
   assertManagedResourceRefForSite(params.resourceRef, {
     siteType: params.managedSite.siteType,
     config: params.managedConfig,
@@ -124,6 +175,8 @@ const fetchRecoverableCandidateSecretKey = async (params: {
       params.resourceRef,
       {
         protectionBypassExecution: params.protectionBypassExecution,
+        signal: params.signal,
+        requestScheduling: params.requestScheduling,
       },
     )
     params.requestCache?.channelSecretKeysByResourceKey.set(
@@ -158,6 +211,7 @@ const fetchRecoverableCandidateSecretKey = async (params: {
 export async function resolveManagedSiteChannelMatch(
   params: ResolveManagedSiteChannelMatchParams,
 ): Promise<ManagedSiteChannelMatchResolution> {
+  params.signal?.throwIfAborted()
   const {
     managedSite,
     managedConfig,
@@ -189,9 +243,11 @@ export async function resolveManagedSiteChannelMatch(
 
   if (!searchResultsPromise) {
     const cache = requestCache
-    searchResultsPromise = managedSite.matching.search(
+    searchResultsPromise = getPendingSearch(
+      managedSite,
       managedConfig,
       searchBaseUrl,
+      params,
     )
     cache?.searchResultsByTargetKey.set(searchCacheKey, searchResultsPromise)
     searchResultsPromise.catch(() => {
@@ -205,7 +261,9 @@ export async function resolveManagedSiteChannelMatch(
     })
   }
 
+  params.signal?.throwIfAborted()
   const searchResults = await searchResultsPromise
+  params.signal?.throwIfAborted()
 
   if (!searchResults) {
     return {
@@ -410,6 +468,7 @@ export async function resolveManagedSiteChannelMatch(
     )
 
     for (const recoverableCandidate of recoverableCandidates) {
+      params.signal?.throwIfAborted()
       try {
         mergedResolvedChannelKeysByResourceKey[
           getManagedResourceRefKey(recoverableCandidate.ref)
@@ -419,6 +478,8 @@ export async function resolveManagedSiteChannelMatch(
           resourceRef: recoverableCandidate.ref,
           requestCache,
           protectionBypassExecution: params.protectionBypassExecution,
+          signal: params.signal,
+          requestScheduling: params.requestScheduling,
         })
         if (requestCache) {
           requestCache.resolvedChannelKeysByResourceKey[
@@ -429,6 +490,7 @@ export async function resolveManagedSiteChannelMatch(
             ]
         }
       } catch (error) {
+        params.signal?.throwIfAborted()
         if (!(error instanceof MatchResolutionUnresolvedError)) {
           throw error
         }
@@ -506,7 +568,11 @@ export async function resolveManagedSiteChannelMatch(
           await managedSite.matching.hydrateComparableKeys(
             managedConfig,
             recoverableCandidates,
-            { protectionBypassExecution: params.protectionBypassExecution },
+            {
+              protectionBypassExecution: params.protectionBypassExecution,
+              signal: params.signal,
+              requestScheduling: params.requestScheduling,
+            },
           )
 
         const requestedKeys = new Set(
@@ -541,6 +607,7 @@ export async function resolveManagedSiteChannelMatch(
 
         refreshAssessmentsWithResolvedKeys()
       } catch (error) {
+        params.signal?.throwIfAborted()
         if (!(error instanceof MatchResolutionUnresolvedError)) {
           throw error
         }

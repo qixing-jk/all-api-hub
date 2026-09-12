@@ -489,6 +489,14 @@ describe("DoneHub managed-site channel capability", () => {
     )
 
     expect(doneHubApi.fetchSiteUserGroups).toHaveBeenCalledWith(request)
+    const controller = new AbortController()
+    await doneHubManagedSiteCapabilities.queries.siteUserGroups!.fetch(config, {
+      signal: controller.signal,
+    })
+    expect(doneHubApi.fetchSiteUserGroups).toHaveBeenLastCalledWith({
+      ...request,
+      abortSignal: controller.signal,
+    })
     expect(
       newApiKeyManagement.doneHubKeyManagement.fetchAvailableModels,
     ).toHaveBeenCalledWith(request)

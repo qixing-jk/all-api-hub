@@ -197,6 +197,7 @@ describe("Claude Code Hub managed-site provider", () => {
         baseUrl: "https://aihubmix.com",
         apiKey: token.key,
       }),
+      undefined,
     )
   })
 
@@ -291,6 +292,7 @@ describe("Claude Code Hub managed-site provider", () => {
     expect(mockGetUnmaskedProviderKey).toHaveBeenCalledWith(
       passedClaudeCodeHubConfig,
       42,
+      undefined,
     )
   })
 
@@ -314,6 +316,7 @@ describe("Claude Code Hub managed-site provider", () => {
     const failure = await fetchChannelSecretKey(
       passedClaudeCodeHubConfig,
       42,
+      undefined,
     ).catch((error: unknown) => error)
 
     expect(failure).toBeInstanceOf(Error)
@@ -378,6 +381,7 @@ describe("Claude Code Hub managed-site provider", () => {
     expect(mockGetUnmaskedProviderKey).toHaveBeenCalledWith(
       passedClaudeCodeHubConfig,
       31,
+      undefined,
     )
   })
 

@@ -17,6 +17,7 @@ import {
   fetchSiteUserGroups,
 } from "~/services/apiService/newApiFamily/default/keyManagement"
 import { listAllChannels } from "~/services/apiService/veloera"
+import { sharePendingConfigRead } from "~/services/apiTransport/requestScheduling"
 import {
   checkValidVeloeraConfig,
   prepareChannelFormData,
@@ -35,8 +36,10 @@ const veloeraManagedSiteConfig: ManagedSiteConfigCapability<VeloeraConfig> =
 
 const veloeraManagedSiteQueries: ManagedSiteQueriesCapability<VeloeraConfig> = {
   siteUserGroups: {
-    fetch: async (config) =>
-      await fetchSiteUserGroups(toManagedSiteApiServiceRequest(config)),
+    fetch: async (config, options) =>
+      await fetchSiteUserGroups(
+        toManagedSiteApiServiceRequest(config, options),
+      ),
   },
   accountAvailableModels: {
     fetch: async (config) =>
@@ -47,6 +50,14 @@ const veloeraManagedSiteQueries: ManagedSiteQueriesCapability<VeloeraConfig> = {
 const veloeraManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
   prepareFormData: prepareChannelFormData,
 }
+
+const readMatchingInventory = sharePendingConfigRead(
+  (config: VeloeraConfig, options) =>
+    listAllChannels(toManagedSiteApiServiceRequest(config, options), {
+      signal: options.signal,
+      requireCompleteInventory: true,
+    }),
+)
 
 const matching: ManagedResourceMatchingCapability<VeloeraConfig> = {
   fetchSecretKey: async (config, ref, options) =>
@@ -66,13 +77,11 @@ const matching: ManagedResourceMatchingCapability<VeloeraConfig> = {
       toManagedResourceMatchCandidate(candidate, target),
     )
   },
-  search: async (config) =>
-    toManagedResourceMatchList(
-      await listAllChannels(toManagedSiteApiServiceRequest(config), {
-        requireCompleteInventory: true,
-      }),
-      { siteType: SITE_TYPES.VELOERA, config },
-    ),
+  search: async (config, _keyword, options) =>
+    toManagedResourceMatchList(await readMatchingInventory(config, options), {
+      siteType: SITE_TYPES.VELOERA,
+      config,
+    }),
 }
 
 export const veloeraManagedSiteCapabilities = {

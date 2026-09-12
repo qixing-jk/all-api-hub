@@ -471,6 +471,7 @@ export function useChannelDialog() {
       )
       const formData = await managedSite.channelDrafts.prepareFormData(
         buildManagedSiteChannelDraftSource(resolvedRuntimeKey),
+        { purpose: "native-editor" },
       )
       if (!shouldContinue()) {
         return cancelOpen()
@@ -569,6 +570,7 @@ export function useChannelDialog() {
       ].filter(Boolean) as string[]
       const formData = await managedSite.channelDrafts.prepareFormData(
         buildManagedSiteCredentialDraftSource(credentials),
+        { purpose: "native-editor" },
       )
 
       const duplicateState = await resolvePrefilledDialogDuplicateState({

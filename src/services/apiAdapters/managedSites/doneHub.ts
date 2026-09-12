@@ -40,8 +40,10 @@ const doneHubKeyManagement = createNewApiKeyManagement(SITE_TYPES.DONE_HUB)
 
 const doneHubManagedSiteQueries: ManagedSiteQueriesCapability<DoneHubConfig> = {
   siteUserGroups: {
-    fetch: async (config) =>
-      await fetchSiteUserGroups(toManagedSiteApiServiceRequest(config)),
+    fetch: async (config, options) =>
+      await fetchSiteUserGroups(
+        toManagedSiteApiServiceRequest(config, options),
+      ),
   },
   accountAvailableModels: {
     fetch: async (config) =>
@@ -71,9 +73,12 @@ const matching: ManagedResourceMatchingCapability<DoneHubConfig> = {
       toManagedResourceMatchCandidate(candidate, target),
     )
   },
-  search: async (config, keyword) =>
+  search: async (config, keyword, options) =>
     toManagedResourceMatchList(
-      await searchChannel(toManagedSiteApiServiceRequest(config), keyword),
+      await searchChannel(
+        toManagedSiteApiServiceRequest(config, options),
+        keyword,
+      ),
       { siteType: SITE_TYPES.DONE_HUB, config },
     ),
 }

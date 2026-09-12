@@ -1,4 +1,5 @@
 import type { DeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
+import type { RequestScheduling } from "~/services/apiTransport/requestScheduling"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { type AuthTypeEnum } from "~/types"
 import type {
@@ -132,6 +133,7 @@ export interface ApiTransportRequestObserver {
 }
 
 export interface ApiTransportRequest {
+  requestScheduling?: RequestScheduling
   auth: AuthConfig
   baseUrl: string
   data?: Record<string, any>
@@ -171,6 +173,7 @@ export interface FetchApiOptions {
 }
 
 export interface OpenAIAuthParams {
+  requestScheduling?: RequestScheduling
   baseUrl: string
   apiKey: string
   abortSignal?: AbortSignal

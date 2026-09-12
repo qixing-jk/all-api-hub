@@ -4,6 +4,10 @@
  */
 import { OCTOPUS_LOGIN_PATH } from "~/constants/octopus"
 import { ApiError } from "~/services/apiTransport/errors"
+import {
+  sharePendingConfigRead,
+  type ScheduledReadOptions,
+} from "~/services/apiTransport/requestScheduling"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { createUserCommandProtectionBypassExecution } from "~/services/protectionBypass/client"
@@ -806,14 +810,32 @@ export async function validateOctopusConfig(
   }
 }
 
-/**
- * 搜索渠道（按名称过滤）
- */
+// Search fetches the full inventory before filtering. Keep protection intent in
+// its identity so interactive and automatic execution never borrow each other's policy.
+const readSearchInventory = sharePendingConfigRead(
+  (
+    {
+      protectionBypassExecution,
+      ...config
+    }: OctopusConfig & Pick<OctopusRequestInit, "protectionBypassExecution">,
+    options,
+  ) => listChannels(config, { ...options, protectionBypassExecution }),
+)
+
+/** 搜索渠道（按名称或上游 URL 过滤）。 */
 export async function searchChannels(
   config: OctopusConfig,
   keyword: string,
+  options?: ScheduledReadOptions &
+    Pick<OctopusRequestInit, "protectionBypassExecution">,
 ): Promise<OctopusChannel[]> {
-  const channels = await listChannels(config)
+  const channels = await readSearchInventory(
+    {
+      ...config,
+      protectionBypassExecution: options?.protectionBypassExecution,
+    },
+    options,
+  )
   const lowerKeyword = keyword.trim().toLowerCase()
   if (!lowerKeyword) return channels
   return channels.filter(

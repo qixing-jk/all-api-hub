@@ -510,7 +510,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
       })
       expect(managedSite.channelDrafts.prepareFormData).toHaveBeenCalledWith(
         expect.objectContaining({ baseUrl, apiKey: secret }),
-        expect.anything(),
+        expect.objectContaining({ purpose: "matching" }),
       )
       expect(resolveDisplayAccountRuntimeKeySecretMock).not.toHaveBeenCalled()
     },

@@ -42,6 +42,7 @@ import {
   type OctopusUpdateChannelInput,
   type OctopusUpdateChannelRequest,
 } from "~/types/octopus"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 
 const {
   mockGetValidSession,
@@ -1888,6 +1889,67 @@ describe("Octopus API service", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(mockGetValidSession).toHaveBeenCalledTimes(2)
     expect(mockClearCache).toHaveBeenCalledTimes(1)
+  })
+
+  it("shares pending search inventories while filtering each keyword independently", async () => {
+    const response = createDeferred<Response>()
+    const fetchMock = vi.fn().mockReturnValue(response.promise)
+    vi.stubGlobal("fetch", fetchMock)
+    const first = searchChannels(config, "first.example")
+    const second = searchChannels({ ...config }, "SECONDARY.EXAMPLE")
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    response.resolve(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: [
+            {
+              id: 1,
+              name: "First",
+              base_urls: [{ url: "https://first.example" }],
+            },
+            {
+              id: 2,
+              name: "Second",
+              base_urls: [
+                { url: "https://other.example" },
+                { url: "https://secondary.example" },
+              ],
+            },
+          ],
+        }),
+        { headers: { "Content-Type": "application/json" } },
+      ),
+    )
+    await expect(first).resolves.toMatchObject([{ id: 1 }])
+    await expect(second).resolves.toMatchObject([{ id: 2 }])
+  })
+
+  it("keeps search inventories separate for different protection execution intents", async () => {
+    const gate = createDeferred<void>()
+    const fetchMock = vi.fn().mockImplementation(async () => {
+      await gate.promise
+      return new Response(JSON.stringify({ success: true, data: [] }), {
+        headers: { "Content-Type": "application/json" },
+      })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+    const searches = [
+      PROTECTION_BYPASS_SURFACES.Options,
+      PROTECTION_BYPASS_SURFACES.Background,
+    ].map((surface) =>
+      searchChannels(config, "", {
+        protectionBypassExecution: createAutomaticProtectionBypassExecution(
+          PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
+          PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+          surface,
+        ),
+      }),
+    )
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    gate.resolve()
+    await expect(Promise.all(searches)).resolves.toEqual([[], []])
   })
 
   it("filters searched channels by trimmed name and upstream URL without matching secrets", async () => {

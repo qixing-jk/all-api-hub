@@ -384,6 +384,13 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   const selectionEpochRef = useRef(0)
   const accountRequestEpochRef = useRef<Record<string, number>>({})
   const managedSiteStatusRunIdRef = useRef(0)
+  const managedSiteStatusControllersRef = useRef(new Set<AbortController>())
+  const cancelManagedSiteStatusChecks = useCallback(() => {
+    for (const controller of managedSiteStatusControllersRef.current)
+      controller.abort()
+    managedSiteStatusControllersRef.current.clear()
+    managedSiteStatusRunIdRef.current += 1
+  }, [])
   const isMountedRef = useRef(true)
   const tokenLoadErrorCategoriesRef = useRef<
     Record<string, ProductAnalyticsErrorCategory>
@@ -423,6 +430,16 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
   const invalidateManagedSiteStatuses = useCallback(
     (shouldRemove: (identityKey: string) => boolean) => {
+      // Replacement checks need a new run id even for an account reload, so
+      // a late response cannot restore invalidated status or secret evidence.
+      managedSiteStatusRunIdRef.current += 1
+      for (const identityKey of Object.keys(
+        resolvedChannelKeysByIdentityKeyRef.current,
+      )) {
+        if (shouldRemove(identityKey)) {
+          delete resolvedChannelKeysByIdentityKeyRef.current[identityKey]
+        }
+      }
       updateManagedSiteTokenStatuses((prev) => {
         let didChange = false
         const next: Record<string, ManagedSiteTokenStatusState> = {}
@@ -572,6 +589,21 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         return resultsByIdentityKey
       }
 
+      if (force) {
+        for (const target of targets) {
+          // A refresh must not use keys resolved before a backend credential
+          // change. Keep only evidence explicitly supplied by this operation.
+          delete resolvedChannelKeysByIdentityKeyRef.current[target.identityKey]
+          target.resolvedChannelKeysByResourceKey =
+            resolvedChannelKeysByIdentityKey[target.identityKey]
+        }
+      }
+
+      const controller = new AbortController()
+      managedSiteStatusControllersRef.current.add(controller)
+      const requestScheduling = {
+        priority: force ? ("foreground" as const) : ("background" as const),
+      }
       const operationContext = createManagedSiteOperationContext()
       const runId = force
         ? managedSiteStatusRunIdRef.current + 1
@@ -604,13 +636,21 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       await Promise.allSettled(
         Array.from({ length: workerCount }, async () => {
           while (queue.length > 0) {
+            if (controller.signal.aborted || !isMountedRef.current) return
             const target = queue.shift()
 
             if (!target) {
               return
             }
 
+            if (
+              managedSiteTokenStatusesRef.current[target.identityKey]?.runId !==
+              runId
+            )
+              continue
             const result = await getManagedSiteTokenChannelStatus({
+              signal: controller.signal,
+              requestScheduling,
               runtimeKey: target.runtimeKey,
               resolvedChannelKeysByResourceKey:
                 target.resolvedChannelKeysByResourceKey,
@@ -673,6 +713,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         }),
       )
 
+      managedSiteStatusControllersRef.current.delete(controller)
       return resultsByIdentityKey
     },
     [
@@ -1780,15 +1821,34 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
     return () => {
       isMountedRef.current = false
-      managedSiteStatusRunIdRef.current += 1
+      cancelManagedSiteStatusChecks()
     }
-  }, [])
+  }, [cancelManagedSiteStatusChecks])
 
   useEffect(() => {
-    managedSiteStatusRunIdRef.current += 1
+    cancelManagedSiteStatusChecks()
     resolvedChannelKeysByIdentityKeyRef.current = {}
     updateManagedSiteTokenStatuses(() => ({}))
-  }, [managedSiteConfigFingerprint, updateManagedSiteTokenStatuses])
+  }, [
+    cancelManagedSiteStatusChecks,
+    managedSiteConfigFingerprint,
+    updateManagedSiteTokenStatuses,
+  ])
+
+  useEffect(() => {
+    cancelManagedSiteStatusChecks()
+    // Keep completed results until an inventory refresh invalidates them, but
+    // remove canceled entries so their keys can be checked again.
+    updateManagedSiteTokenStatuses((prev) =>
+      Object.fromEntries(
+        Object.entries(prev).filter(([, entry]) => !entry.isChecking),
+      ),
+    )
+  }, [
+    selectedAccount,
+    cancelManagedSiteStatusChecks,
+    updateManagedSiteTokenStatuses,
+  ])
 
   useEffect(() => {
     if (

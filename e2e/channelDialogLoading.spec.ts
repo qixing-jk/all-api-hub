@@ -1,10 +1,99 @@
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
+import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
-import { openInterceptedNewApiManagedSiteChannels } from "~~/e2e/fixtures/managedSiteChannelsIntercepted"
+import {
+  openInterceptedDoneHubManagedSiteChannels,
+  openInterceptedNewApiManagedSiteChannels,
+} from "~~/e2e/fixtures/managedSiteChannelsIntercepted"
 import { openManagedSiteChannelRowActions } from "~~/e2e/scenarios/managedSiteChannels"
+import {
+  createStoredApiCredentialProfile,
+  seedApiCredentialProfiles,
+} from "~~/e2e/utils/commonUserFlows"
+import { getServiceWorker } from "~~/e2e/utils/extensionState"
 
 const primaryDetail =
   /^https:\/\/managed\.example\.invalid\/api\/channel\/101(?:\?.*)?$/
+
+for (const provider of ["new-api", "done-hub"] as const) {
+  test(`${provider} loads channel groups once when opening an editor`, async ({
+    context,
+    page,
+    extensionId,
+  }) => {
+    await (
+      provider === "new-api"
+        ? openInterceptedNewApiManagedSiteChannels
+        : openInterceptedDoneHubManagedSiteChannels
+    )({ context, page, extensionId })
+    const requests: string[] = []
+    context.on("request", (request) => {
+      if (/\/api\/group\/?$/.test(new URL(request.url()).pathname)) {
+        requests.push(request.url())
+      }
+    })
+    const channelName =
+      provider === "new-api" ? "Example primary" : "DoneHub primary"
+    await openManagedSiteChannelRowActions(page, channelName)
+    await page.getByRole("menuitem", { name: "Edit", exact: true }).click()
+    const dialog = page.getByRole("dialog")
+    await expect(
+      dialog.getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput),
+    ).toHaveValue(channelName)
+    await expect.poll(() => requests.length).toBeGreaterThan(0)
+    await expect(
+      dialog
+        .getByRole("group", { name: "Models", exact: true })
+        .getByRole("status"),
+    ).toHaveCount(0)
+    await dialog
+      .getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
+      .fill("Unchanged groups")
+    await expect(
+      dialog.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton),
+    ).toBeEnabled()
+    expect(requests).toHaveLength(1)
+    await dialog.getByTestId(CHANNEL_DIALOG_TEST_IDS.cancelButton).click()
+    await expect(dialog).toBeHidden()
+    await seedApiCredentialProfiles(await getServiceWorker(context), [
+      createStoredApiCredentialProfile({
+        id: "group-request-source",
+        name: "Group request source",
+        baseUrl: "https://group-source.example.invalid",
+        apiKey: "sk-group-source",
+      }),
+    ])
+    await context.route(
+      "https://group-source.example.invalid/v1/models",
+      (route) => route.fulfill({ json: { data: [{ id: "model-a" }] } }),
+    )
+    requests.length = 0
+    await page.goto(
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}`,
+    )
+    await page
+      .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.importToManagedSiteButton)
+      .click()
+    await expect(
+      dialog.getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput),
+    ).toBeVisible()
+    await expect.poll(() => requests.length).toBeGreaterThan(0)
+    await expect(
+      dialog
+        .getByRole("group", { name: "Models", exact: true })
+        .getByRole("status"),
+    ).toHaveCount(0)
+    await dialog
+      .getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
+      .fill("Imported groups")
+    await expect(
+      dialog.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton),
+    ).toBeEnabled()
+    expect(requests).toHaveLength(1)
+  })
+}
 
 for (const width of [1280, 420]) {
   test(`channel loading and inline retry remain usable at ${width}px`, async ({

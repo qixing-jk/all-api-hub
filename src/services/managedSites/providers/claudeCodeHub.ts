@@ -1,6 +1,8 @@
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
+import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { requireNumericManagedResourceId } from "~/services/apiAdapters/managedResources/resourceIds"
 import * as claudeCodeHubApi from "~/services/apiService/claudeCodeHub"
+import type { ScheduledReadOptions } from "~/services/apiTransport/requestScheduling"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
@@ -84,7 +86,11 @@ export async function checkValidClaudeCodeHubConfig(): Promise<boolean> {
  */
 async function hydrateComparableChannelKey<
   T extends { id: number; key?: string },
->(config: ClaudeCodeHubConfig, channel: T): Promise<T | null> {
+>(
+  config: ClaudeCodeHubConfig,
+  channel: T,
+  options?: ScheduledReadOptions,
+): Promise<T | null> {
   if (hasUsableManagedSiteChannelKey(channel.key)) {
     return channel
   }
@@ -93,6 +99,7 @@ async function hydrateComparableChannelKey<
     const key = await claudeCodeHubApi.getUnmaskedProviderKey(
       config,
       requireNumericManagedResourceId(channel.id),
+      options,
     )
     if (!hasUsableManagedSiteChannelKey(key)) {
       throw new Error("Claude Code Hub returned an unusable provider key")
@@ -102,6 +109,7 @@ async function hydrateComparableChannelKey<
       key: key.trim(),
     }
   } catch (error) {
+    options?.signal?.throwIfAborted()
     const disclosed = toClaudeCodeHubDisclosureError(error, config)
     logger.warn("Failed to hydrate Claude Code Hub provider key", {
       channelId: channel.id,
@@ -116,16 +124,25 @@ async function hydrateComparableChannelKey<
  */
 export async function hydrateComparableChannelKeys<
   T extends { id: number; key?: string },
->(config: ClaudeCodeHubConfig, candidates: T[]): Promise<T[]> {
+>(
+  config: ClaudeCodeHubConfig,
+  candidates: T[],
+  options?: ScheduledReadOptions,
+): Promise<T[]> {
   const hydratedCandidates: T[] = []
 
   for (const candidate of candidates) {
+    options?.signal?.throwIfAborted()
     if (hasUsableManagedSiteChannelKey(candidate.key)) {
       hydratedCandidates.push(candidate)
       continue
     }
 
-    const hydratedChannel = await hydrateComparableChannelKey(config, candidate)
+    const hydratedChannel = await hydrateComparableChannelKey(
+      config,
+      candidate,
+      options,
+    )
     if (hydratedChannel) {
       hydratedCandidates.push(hydratedChannel)
       continue
@@ -145,11 +162,12 @@ export async function hydrateComparableChannelKeys<
 export async function fetchChannelSecretKey(
   config: ClaudeCodeHubConfig,
   channelId: number,
+  options?: ScheduledReadOptions,
 ): Promise<string> {
   return await runClaudeCodeHubRead(
     config,
     async () =>
-      await claudeCodeHubApi.getUnmaskedProviderKey(config, channelId),
+      await claudeCodeHubApi.getUnmaskedProviderKey(config, channelId, options),
   )
 }
 
@@ -158,9 +176,10 @@ export async function fetchChannelSecretKey(
  */
 export async function prepareChannelFormData(
   source: ManagedSiteChannelDraftSource,
+  options?: ManagedSiteChannelDraftRequestOptions,
 ): Promise<ManagedSiteChannelDraft> {
   const { models: availableModels, fetchFailed } =
-    await fetchManagedSiteImportModels(source)
+    await fetchManagedSiteImportModels(source, options)
 
   return {
     name: source.name,

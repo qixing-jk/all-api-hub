@@ -92,7 +92,7 @@ export async function prepareChannelFormData(
   options?: ManagedSiteChannelDraftRequestOptions,
 ): Promise<ManagedSiteChannelDraft> {
   const { models: availableModels, fetchFailed } =
-    await fetchManagedSiteImportModels(source)
+    await fetchManagedSiteImportModels(source, options)
   const resolvedModels =
     availableModels.length > 0 ? availableModels : source.modelHints
 
@@ -108,6 +108,7 @@ export async function prepareChannelFormData(
         },
       }),
     operationContext: options?.operationContext,
+    purpose: options?.purpose,
     onError: (error) => {
       logger.warn("Failed to resolve Veloera default groups", error)
     },

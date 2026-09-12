@@ -10,6 +10,7 @@ import {
   getAxonHubChannelSecretKey,
   listAxonHubChannelPage,
 } from "~/services/apiService/axonHub"
+import { sharePendingConfigRead } from "~/services/apiTransport/requestScheduling"
 import {
   assertManagedResourceRefForSite,
   createManagedChannelResourceRef,
@@ -35,13 +36,17 @@ const axonHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
   prepareFormData: prepareChannelFormData,
 }
 
-const matching: ManagedResourceMatchingCapability<AxonHubConfig> = {
-  search: async (config) => {
+const readMatchingInventory = sharePendingConfigRead(
+  async (config: AxonHubConfig, options) => {
     const items: ManagedResourceMatchCandidate[] = []
     const cursors = new Set<string>()
     let cursor: string | undefined
     do {
-      const page = await listAxonHubChannelPage(config, { cursor, limit: 100 })
+      const page = await listAxonHubChannelPage(
+        config,
+        { cursor, limit: 100 },
+        options,
+      )
       items.push(
         ...page.items.map((channel) => ({
           ref: createManagedChannelResourceRef(
@@ -66,6 +71,10 @@ const matching: ManagedResourceMatchingCapability<AxonHubConfig> = {
     } while (cursor)
     return { items, total: items.length, type_counts: {} }
   },
+)
+
+const matching: ManagedResourceMatchingCapability<AxonHubConfig> = {
+  search: (config, _keyword, options) => readMatchingInventory(config, options),
   fetchSecretKey,
   hydrateComparableKeys: async (config, candidates, options) => {
     for (const candidate of candidates) {

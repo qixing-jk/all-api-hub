@@ -112,12 +112,13 @@ export async function prepareChannelFormData(
   // Channel import prefill must reflect only the selected key's live upstream
   // model list; on failure we keep the dialog editable and require manual input.
   const { models: availableModels, fetchFailed } =
-    await fetchManagedSiteImportModels(source)
+    await fetchManagedSiteImportModels(source, options)
 
   const resolvedGroups = await resolveDefaultChannelGroups({
     getConfig: getNewApiConfig,
     fetchSiteUserGroups: fetchNewApiConfigUserGroups,
     operationContext: options?.operationContext,
+    purpose: options?.purpose,
     onError: (error) => {
       logger.warn("Failed to resolve New API default groups", error)
     },

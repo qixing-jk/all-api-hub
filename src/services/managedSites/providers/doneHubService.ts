@@ -95,7 +95,7 @@ export async function prepareChannelFormData(
   options?: ManagedSiteChannelDraftRequestOptions,
 ): Promise<ManagedSiteChannelDraft> {
   const { models: availableModels, fetchFailed } =
-    await fetchManagedSiteImportModels(source)
+    await fetchManagedSiteImportModels(source, options)
 
   const resolvedGroups = await resolveDefaultChannelGroups({
     getConfig: getDoneHubConfig,
@@ -109,6 +109,7 @@ export async function prepareChannelFormData(
         },
       }),
     operationContext: options?.operationContext,
+    purpose: options?.purpose,
     onError: (error) => {
       logger.warn("Failed to resolve Done Hub default groups", error)
     },

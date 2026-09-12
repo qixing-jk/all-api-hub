@@ -117,7 +117,10 @@ describe("AxonHub managed-site provider", () => {
       }),
     )
 
-    expect(mockFetchManagedSiteImportModels).toHaveBeenCalledWith(source)
+    expect(mockFetchManagedSiteImportModels).toHaveBeenCalledWith(
+      source,
+      undefined,
+    )
   })
 
   it("uses the AIHubMix API origin for managed-site channel imports", async () => {
@@ -149,6 +152,7 @@ describe("AxonHub managed-site provider", () => {
         baseUrl: "https://aihubmix.com",
         apiKey: token.key,
       }),
+      undefined,
     )
   })
 

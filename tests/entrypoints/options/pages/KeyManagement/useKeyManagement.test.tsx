@@ -3247,10 +3247,7 @@ describe("useKeyManagement enabled account filtering", () => {
     expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(2)
     expect(getManagedSiteTokenChannelStatusMock).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        resolvedChannelKeysByResourceKey: {
-          [getManagedResourceRefKey(matchingResourceRef(77))]:
-            "verified-channel-key",
-        },
+        resolvedChannelKeysByResourceKey: undefined,
         protectionBypassExecution: userCommandExecution(
           PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
         ),
@@ -3702,171 +3699,196 @@ describe("useKeyManagement enabled account filtering", () => {
     expect(firstRefreshResult).toBeUndefined()
   })
 
-  it("reuses resolved channel keys from previous managed-site status checks", async () => {
-    const mockedUseAccountData = vi.mocked(useAccountData)
-    const account = createDisplayAccount({
-      id: "resolved-cache-acc",
-      name: "Resolved Cache Account",
-    })
-
-    mockedUseAccountData.mockReturnValue({
-      enabledDisplayData: [account],
-    } as any)
-
-    const fetchAccountTokens = vi.fn().mockResolvedValue([
-      createToken({
-        id: 604,
-        key: "token-604",
-        name: "Token 604",
-        expired_time: 0,
-      }),
-    ])
-    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
-      createAdapterWithKeyManagement({
-        fetchTokens: fetchAccountTokens,
-      }) as any,
-    )
-    getManagedSiteTokenChannelStatusMock
-      .mockResolvedValueOnce({
-        status: managedSiteTokenChannelStatuses.ADDED,
-        matchedChannel: {
-          ref: matchingResourceRef(56),
-          name: "Managed Channel 56",
-        },
-        resolvedChannelKeysByResourceKey: {
-          [getManagedResourceRefKey(matchingResourceRef(56))]:
-            "resolved-channel-key",
-        },
-      })
-      .mockResolvedValueOnce({
-        status: managedSiteTokenChannelStatuses.ADDED,
-        matchedChannel: {
-          ref: matchingResourceRef(56),
-          name: "Managed Channel 56",
-        },
+  it.each(["single", "all", "account"])(
+    "discards previous channel keys on %s refresh",
+    async (refresh) => {
+      const mockedUseAccountData = vi.mocked(useAccountData)
+      const account = createDisplayAccount({
+        id: "resolved-cache-acc",
+        name: "Resolved Cache Account",
       })
 
-    const { result } = renderHook(() => useKeyManagement(), {
-      wrapper: createWrapper(),
-    })
+      mockedUseAccountData.mockReturnValue({
+        enabledDisplayData: [account],
+      } as any)
 
-    act(() => {
-      result.current.setSelectedAccount(account.id)
-    })
-
-    await waitFor(() =>
-      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
-    )
-
-    await act(async () => {
-      await result.current.refreshManagedSiteTokenStatusForToken(
-        result.current.tokens[0]!,
+      const fetchAccountTokens = vi.fn().mockResolvedValue([
+        createToken({
+          id: 604,
+          key: "token-604",
+          name: "Token 604",
+          expired_time: 0,
+        }),
+      ])
+      vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+        createAdapterWithKeyManagement({
+          fetchTokens: fetchAccountTokens,
+        }) as any,
       )
-    })
+      getManagedSiteTokenChannelStatusMock
+        .mockResolvedValueOnce({
+          status: managedSiteTokenChannelStatuses.ADDED,
+          matchedChannel: {
+            ref: matchingResourceRef(56),
+            name: "Managed Channel 56",
+          },
+          resolvedChannelKeysByResourceKey: {
+            [getManagedResourceRefKey(matchingResourceRef(56))]:
+              "resolved-channel-key",
+          },
+        })
+        .mockResolvedValueOnce({
+          status: managedSiteTokenChannelStatuses.ADDED,
+          matchedChannel: {
+            ref: matchingResourceRef(56),
+            name: "Managed Channel 56",
+          },
+        })
 
-    await waitFor(() =>
-      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(2),
-    )
-    expect(getManagedSiteTokenChannelStatusMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        resolvedChannelKeysByResourceKey: {
-          [getManagedResourceRefKey(matchingResourceRef(56))]:
-            "resolved-channel-key",
-        },
-      }),
-    )
-  })
-
-  it("does not cache resolved channel keys from stale managed-site status checks", async () => {
-    const mockedUseAccountData = vi.mocked(useAccountData)
-    const account = createDisplayAccount({
-      id: "stale-resolved-cache-acc",
-      name: "Stale Resolved Cache Account",
-    })
-
-    mockedUseAccountData.mockReturnValue({
-      enabledDisplayData: [account],
-    } as any)
-
-    let resolveInitialStatus: (
-      value: Awaited<ReturnType<typeof getManagedSiteTokenChannelStatusMock>>,
-    ) => void = () => {}
-    const initialStatus = new Promise<
-      Awaited<ReturnType<typeof getManagedSiteTokenChannelStatusMock>>
-    >((resolve) => {
-      resolveInitialStatus = resolve
-    })
-
-    const fetchAccountTokens = vi.fn().mockResolvedValue([
-      createToken({
-        id: 605,
-        key: "token-605",
-        name: "Token 605",
-        expired_time: 0,
-      }),
-    ])
-    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
-      createAdapterWithKeyManagement({
-        fetchTokens: fetchAccountTokens,
-      }) as any,
-    )
-    getManagedSiteTokenChannelStatusMock
-      .mockReturnValueOnce(initialStatus)
-      .mockResolvedValueOnce({
-        status: managedSiteTokenChannelStatuses.NOT_ADDED,
-      })
-      .mockResolvedValueOnce({
-        status: managedSiteTokenChannelStatuses.NOT_ADDED,
+      const { result } = renderHook(() => useKeyManagement(), {
+        wrapper: createWrapper(),
       })
 
-    const { result } = renderHook(() => useKeyManagement(), {
-      wrapper: createWrapper(),
-    })
+      act(() => {
+        result.current.setSelectedAccount(account.id)
+      })
 
-    act(() => {
-      result.current.setSelectedAccount(account.id)
-    })
-
-    await waitFor(() =>
-      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
-    )
-
-    await act(async () => {
-      await result.current.refreshManagedSiteTokenStatusForToken(
-        result.current.tokens[0]!,
+      await waitFor(() =>
+        expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
       )
-    })
 
-    await act(async () => {
-      resolveInitialStatus({
-        status: managedSiteTokenChannelStatuses.ADDED,
-        matchedChannel: {
-          ref: matchingResourceRef(57),
-          name: "Managed Channel 57",
-        },
-        resolvedChannelKeysByResourceKey: {
-          [getManagedResourceRefKey(matchingResourceRef(57))]:
-            "stale-resolved-channel-key",
-        },
+      await act(async () => {
+        if (refresh === "single") {
+          await result.current.refreshManagedSiteTokenStatusForToken(
+            result.current.tokens[0]!,
+          )
+        } else if (refresh === "all") {
+          await result.current.refreshManagedSiteTokenStatuses()
+        } else {
+          await result.current.loadTokens()
+        }
       })
-      await initialStatus
-    })
 
-    await act(async () => {
-      await result.current.refreshManagedSiteTokenStatusForToken(
-        result.current.tokens[0]!,
+      await waitFor(() =>
+        expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(2),
       )
-    })
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          resolvedChannelKeysByResourceKey: undefined,
+        }),
+      )
+    },
+  )
 
-    await waitFor(() =>
-      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(3),
-    )
-    expect(getManagedSiteTokenChannelStatusMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        resolvedChannelKeysByResourceKey: undefined,
-      }),
-    )
-  })
+  it.each(["single", "account"])(
+    "ignores old status results after %s refresh",
+    async (refresh) => {
+      const mockedUseAccountData = vi.mocked(useAccountData)
+      const account = createDisplayAccount({
+        id: "stale-resolved-cache-acc",
+        name: "Stale Resolved Cache Account",
+      })
+
+      mockedUseAccountData.mockReturnValue({
+        enabledDisplayData: [account],
+      } as any)
+
+      let resolveInitialStatus: (
+        value: Awaited<ReturnType<typeof getManagedSiteTokenChannelStatusMock>>,
+      ) => void = () => {}
+      const initialStatus = new Promise<
+        Awaited<ReturnType<typeof getManagedSiteTokenChannelStatusMock>>
+      >((resolve) => {
+        resolveInitialStatus = resolve
+      })
+
+      const fetchAccountTokens = vi.fn().mockResolvedValue([
+        createToken({
+          id: 605,
+          key: "token-605",
+          name: "Token 605",
+          expired_time: 0,
+        }),
+      ])
+      vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+        createAdapterWithKeyManagement({
+          fetchTokens: fetchAccountTokens,
+        }) as any,
+      )
+      getManagedSiteTokenChannelStatusMock
+        .mockReturnValueOnce(initialStatus)
+        .mockResolvedValueOnce({
+          status: managedSiteTokenChannelStatuses.NOT_ADDED,
+        })
+        .mockResolvedValueOnce({
+          status: managedSiteTokenChannelStatuses.NOT_ADDED,
+        })
+
+      const { result } = renderHook(() => useKeyManagement(), {
+        wrapper: createWrapper(),
+      })
+
+      act(() => {
+        result.current.setSelectedAccount(account.id)
+      })
+
+      await waitFor(() =>
+        expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
+      )
+
+      await act(async () => {
+        if (refresh === "single") {
+          await result.current.refreshManagedSiteTokenStatusForToken(
+            result.current.tokens[0]!,
+          )
+        } else {
+          await result.current.loadTokens()
+        }
+      })
+      await waitFor(() =>
+        expect(
+          result.current.managedSiteTokenStatuses[
+            "stale-resolved-cache-acc:605"
+          ]?.result?.status,
+        ).toBe(managedSiteTokenChannelStatuses.NOT_ADDED),
+      )
+
+      await act(async () => {
+        resolveInitialStatus({
+          status: managedSiteTokenChannelStatuses.ADDED,
+          matchedChannel: {
+            ref: matchingResourceRef(57),
+            name: "Managed Channel 57",
+          },
+          resolvedChannelKeysByResourceKey: {
+            [getManagedResourceRefKey(matchingResourceRef(57))]:
+              "stale-resolved-channel-key",
+          },
+        })
+        await initialStatus
+      })
+
+      expect(
+        result.current.managedSiteTokenStatuses["stale-resolved-cache-acc:605"]
+          ?.result?.status,
+      ).toBe(managedSiteTokenChannelStatuses.NOT_ADDED)
+
+      await act(async () => {
+        await result.current.refreshManagedSiteTokenStatusForToken(
+          result.current.tokens[0]!,
+        )
+      })
+
+      await waitFor(() =>
+        expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(3),
+      )
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          resolvedChannelKeysByResourceKey: undefined,
+        }),
+      )
+    },
+  )
 
   it("invalidates managed-site status when a token is deleted", async () => {
     const mockedUseAccountData = vi.mocked(useAccountData)
@@ -4349,6 +4371,155 @@ describe("useKeyManagement enabled account filtering", () => {
     ).toEqual(originalStatus)
     expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1)
   })
+
+  it("cancels checks for the previous account and checks unfinished keys when returning", async () => {
+    const firstAccount = createDisplayAccount({ id: "first-status-account" })
+    const secondAccount = createDisplayAccount({ id: "second-status-account" })
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [firstAccount, secondAccount],
+    } as any)
+    mockedUseUserPreferencesContext.mockReturnValue({
+      managedSiteType: "new-api",
+      preferences: buildUserPreferences({
+        newApi: {
+          baseUrl: "https://managed.example",
+          adminToken: "admin-token",
+          userId: "1",
+        },
+      }),
+    })
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: vi
+          .fn()
+          .mockResolvedValue(
+            Array.from({ length: 6 }, (_, index) =>
+              createToken({ id: 800 + index, key: `key-${index}` }),
+            ),
+          ),
+      }) as any,
+    )
+    const signals: AbortSignal[] = []
+    getManagedSiteTokenChannelStatusMock.mockImplementation(
+      ({ signal }: { signal: AbortSignal }) => {
+        signals.push(signal)
+        return new Promise((_, reject) =>
+          signal.addEventListener("abort", () => reject(signal.reason), {
+            once: true,
+          }),
+        )
+      },
+    )
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+    getManagedSiteTokenChannelStatusMock.mockResolvedValueOnce({
+      status: managedSiteTokenChannelStatuses.ADDED,
+    })
+    act(() => result.current.setSelectedAccount(firstAccount.id))
+    await waitFor(() => expect(signals).toHaveLength(4))
+    const firstSignals = [...signals]
+
+    act(() => result.current.setSelectedAccount(secondAccount.id))
+    await waitFor(() => expect(signals).toHaveLength(8))
+    expect(firstSignals.every((signal) => signal.aborted)).toBe(true)
+    expect(
+      result.current.managedSiteTokenStatuses[`${firstAccount.id}:800`]?.result
+        ?.status,
+    ).toBe(managedSiteTokenChannelStatuses.ADDED)
+
+    getManagedSiteTokenChannelStatusMock.mockResolvedValue({
+      status: managedSiteTokenChannelStatuses.NOT_ADDED,
+    })
+    act(() => result.current.setSelectedAccount(firstAccount.id))
+    await waitFor(() =>
+      expect(
+        result.current.managedSiteTokenStatuses[`${firstAccount.id}:805`]
+          ?.result?.status,
+      ).toBe(managedSiteTokenChannelStatuses.NOT_ADDED),
+    )
+    expect(signals.every((signal) => signal.aborted)).toBe(true)
+    expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(15)
+  })
+
+  it.each(["unmount", "config"])(
+    "cancels obsolete automatic checks on %s and does not start remaining tokens",
+    async (reason) => {
+      const account = createDisplayAccount({ id: "cancel-status-acc" })
+      vi.mocked(useAccountData).mockReturnValue({
+        enabledDisplayData: [account],
+      } as any)
+      const context = {
+        managedSiteType: "new-api",
+        preferences: buildUserPreferences({
+          newApi: {
+            baseUrl: "https://managed.example",
+            adminToken: "admin-token",
+            userId: "1",
+          },
+        }),
+      }
+      mockedUseUserPreferencesContext.mockImplementation(() => context)
+      vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+        createAdapterWithKeyManagement({
+          fetchTokens: vi.fn().mockResolvedValue(
+            Array.from({ length: 6 }, (_, i) =>
+              createToken({
+                id: 800 + i,
+                key: `token-${i}`,
+                expired_time: 0,
+              }),
+            ),
+          ),
+        }) as any,
+      )
+      const signals: AbortSignal[] = []
+      getManagedSiteTokenChannelStatusMock.mockImplementation(
+        ({
+          signal,
+          requestScheduling,
+        }: {
+          signal: AbortSignal
+          requestScheduling: { priority: string }
+        }) => {
+          expect(requestScheduling.priority).toBe("background")
+          signals.push(signal)
+          return new Promise((_, reject) =>
+            signal.addEventListener("abort", () => reject(signal.reason), {
+              once: true,
+            }),
+          )
+        },
+      )
+      const { result, rerender, unmount } = renderHook(
+        () => useKeyManagement(),
+        { wrapper: createWrapper() },
+      )
+      act(() => result.current.setSelectedAccount(account.id))
+      await waitFor(() => expect(signals).toHaveLength(4))
+      const oldSignals = [...signals]
+      if (reason === "unmount") unmount()
+      else {
+        context.preferences = {
+          ...context.preferences,
+          newApi: {
+            ...context.preferences.newApi,
+            baseUrl: "https://managed-2.example",
+          },
+        }
+        rerender()
+        await waitFor(() => expect(signals).toHaveLength(8))
+        unmount()
+      }
+      expect(oldSignals.every((signal) => signal.aborted)).toBe(true)
+      await act(async () => {
+        await Promise.resolve()
+      })
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(
+        reason === "unmount" ? 4 : 8,
+      )
+    },
+  )
 
   it("invalidates cached managed-site status when managed-site preferences change", async () => {
     const mockedUseAccountData = vi.mocked(useAccountData)

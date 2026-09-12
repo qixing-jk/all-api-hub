@@ -139,7 +139,11 @@ describe("Octopus managed-site channel capability", () => {
       total: 2,
       type_counts: {},
     })
-    expect(octopusApi.searchChannels).toHaveBeenCalledWith(config, "upstream")
+    expect(octopusApi.searchChannels).toHaveBeenCalledWith(
+      config,
+      "upstream",
+      undefined,
+    )
   })
 
   it("updates scheduled model lists through the common mutation boundary without changing the payload", async () => {

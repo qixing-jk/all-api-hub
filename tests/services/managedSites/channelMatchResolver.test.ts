@@ -14,7 +14,10 @@ import {
   resolveManagedSiteChannelMatch as resolveManagedSiteChannelMatchImpl,
 } from "~/services/managedSites/channelMatchResolver"
 import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
-import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
+import type {
+  ManagedResourceMatchCandidate,
+  ManagedResourceMatchList,
+} from "~/types/managedResourceMatching"
 import {
   buildManagedResourceMatchCandidate,
   matchingResourceRef,
@@ -154,6 +157,7 @@ describe("resolveManagedSiteChannelMatch", () => {
     expect(searchChannel).toHaveBeenCalledWith(
       managedConfig,
       "https://api.example.com",
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
     )
     expect(getManagedSiteChannelExactMatch(result)?.ref).toEqual(
       matchingResourceRef(65),
@@ -1040,6 +1044,74 @@ describe("resolveManagedSiteChannelMatch", () => {
     },
   )
 
+  it("shares pending searches across list and export contexts but refreshes completed searches", async () => {
+    let finish!: (value: ManagedResourceMatchList) => void
+    const search = vi.fn(
+      () =>
+        new Promise<ManagedResourceMatchList>((resolve) => {
+          finish = resolve
+        }),
+    )
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: { search },
+    })
+    const params = {
+      managedSite,
+      managedConfig,
+      accountBaseUrl: "https://api.example.com",
+      models: [],
+    }
+    const first = resolveManagedSiteChannelMatch({
+      ...params,
+      requestCache: createManagedSiteChannelMatchRequestCache(),
+    })
+    const second = resolveManagedSiteChannelMatch({
+      ...params,
+      requestCache: createManagedSiteChannelMatchRequestCache(),
+    })
+    expect(search).toHaveBeenCalledTimes(1)
+    finish({ items: [], total: 0, type_counts: {} })
+    await Promise.all([first, second])
+    const fresh = resolveManagedSiteChannelMatch(params)
+    expect(search).toHaveBeenCalledTimes(2)
+    finish({ items: [], total: 0, type_counts: {} })
+    await fresh
+  })
+
+  it("isolates pending searches by credentials and discards rejected searches", async () => {
+    let reject!: (error: Error) => void
+    const search = vi.fn(
+      () =>
+        new Promise<null>((_, fail) => {
+          reject = fail
+        }),
+    )
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: { search },
+    })
+    const params = {
+      managedSite,
+      managedConfig,
+      accountBaseUrl: "https://api.example.com",
+      models: [],
+    }
+    const first = resolveManagedSiteChannelMatch(params)
+    const firstFailure = expect(first).rejects.toThrow("offline")
+    const rejectFirst = reject
+    const isolated = resolveManagedSiteChannelMatch({
+      ...params,
+      managedConfig: { ...managedConfig, adminToken: "changed-token" },
+    })
+    const isolatedFailure = expect(isolated).rejects.toThrow("offline")
+    expect(search).toHaveBeenCalledTimes(2)
+    rejectFirst(new Error("offline"))
+    reject(new Error("offline"))
+    await Promise.all([firstFailure, isolatedFailure])
+    search.mockResolvedValueOnce(null)
+    await resolveManagedSiteChannelMatch(params)
+    expect(search).toHaveBeenCalledTimes(3)
+  })
+
   it("reuses cached channel searches and hidden-key resolutions across concurrent match checks", async () => {
     const maskedCandidate = buildManagedResourceMatchCandidate({
       ref: matchingResourceRef(72),
@@ -1104,8 +1176,9 @@ describe("resolveManagedSiteChannelMatch", () => {
       total: 1,
       type_counts: {},
     })
-    await Promise.resolve()
-    expect(fetchChannelSecretKey).toHaveBeenCalledTimes(1)
+    await vi.waitFor(() =>
+      expect(fetchChannelSecretKey).toHaveBeenCalledTimes(1),
+    )
 
     resolveSecret("sk-match")
     const results = await Promise.all([firstResultPromise, secondResultPromise])

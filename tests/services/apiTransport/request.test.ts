@@ -416,6 +416,26 @@ describe("apiTransport request helpers", () => {
     expect(capturedAuthorization).toBe("manual-header")
   })
 
+  it("preserves live scheduling intent through transport admission", async () => {
+    server.use(
+      http.get("https://priority.example/api/user/self", () =>
+        HttpResponse.json({ success: true, data: {} }),
+      ),
+    )
+    const requestScheduling = {
+      priority: "background" as "background" | "foreground",
+    }
+    await fetchApiData(
+      {
+        baseUrl: "https://priority.example",
+        auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        requestScheduling,
+      },
+      { endpoint: "/api/user/self" },
+    )
+    expect(mockWithSiteApiRequestLimit.mock.calls[0][3]).toBe(requestScheduling)
+  })
+
   it("fetchApiData applies the site API limiter with a normalized origin key", async () => {
     server.use(
       http.get(/^https:\/\/example\.com\/base\//, () => {
@@ -441,6 +461,7 @@ describe("apiTransport request helpers", () => {
     expect(mockWithSiteApiRequestLimit).toHaveBeenCalledWith(
       "https://example.com",
       expect.any(Function),
+      undefined,
       undefined,
     )
   })
@@ -499,6 +520,7 @@ describe("apiTransport request helpers", () => {
         "https://example.invalid",
         expect.any(Function),
         expectedSignal,
+        undefined,
       )
     },
   )
@@ -724,6 +746,7 @@ describe("apiTransport request helpers", () => {
         "https://example.invalid",
         expect.any(Function),
         abortDeadline.signal,
+        undefined,
       )
 
       await vi.advanceTimersByTimeAsync(1_000)
@@ -4126,6 +4149,7 @@ describe("apiTransport request helpers", () => {
       expect(mockWithSiteApiRequestLimit).toHaveBeenCalledWith(
         "https://example.com",
         expect.any(Function),
+        undefined,
         undefined,
       )
 

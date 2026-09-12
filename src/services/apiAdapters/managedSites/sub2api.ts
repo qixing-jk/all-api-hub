@@ -11,6 +11,7 @@ import {
   toNativeNumericMatchCandidates,
 } from "~/services/apiAdapters/managedResources/matchingInputs"
 import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/resourceIds"
+import { sharePendingConfigRead } from "~/services/apiTransport/requestScheduling"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
@@ -202,12 +203,14 @@ const channelDrafts: ManagedSiteChannelDraftsCapability = {
   prepareFormData: prepareChannelFormData,
 }
 
+const readMatchingInventory = sharePendingConfigRead(listSub2ApiApiKeyAccounts)
+
 const matching: ManagedResourceMatchingCapability<Sub2ApiManagedSiteConfig> = {
   // Native API-key accounts have URL/key identity; no channel model inventory.
   exactMatchBasis: "url-key",
   // The upstream search is name-only; inspect the URL bucket from a full API-key inventory.
-  search: async (config) => {
-    const data = await listSub2ApiApiKeyAccounts(config)
+  search: async (config, _keyword, options) => {
+    const data = await readMatchingInventory(config, options)
     const items = data.items
       .filter((account) => account.type === "apikey")
       .map((account) => ({
