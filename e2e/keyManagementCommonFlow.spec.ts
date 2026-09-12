@@ -100,6 +100,23 @@ async function stubManagedSiteImportTargetRoutes(
 
       if (
         method === "GET" &&
+        createdChannel &&
+        url.pathname === `/api/channel/${createdChannel.id}`
+      ) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            message: "ok",
+            data: createdChannel,
+          }),
+        })
+        return
+      }
+
+      if (
+        method === "GET" &&
         (url.pathname === "/api/channel/" ||
           url.pathname === "/api/channel/search")
       ) {

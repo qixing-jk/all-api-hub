@@ -1447,6 +1447,7 @@ describe("useManagedResourceMutationController", () => {
       gate.resolve()
       await pending!
     })
+    expect(interactionSignal).toBeDefined()
     expect(submit).toHaveBeenCalledExactlyOnceWith(
       { name: "Created" },
       { signal: interactionSignal },

@@ -140,6 +140,34 @@ const createDashboardAuthBundle = (
 })
 
 describe("newApiSession", () => {
+  it.each([
+    {},
+    [null],
+    [{ method: "2fa", available: "yes" }],
+    [{ available: true }],
+  ])(
+    "rejects malformed verification method declarations: %j",
+    async (methods) => {
+      server.use(
+        http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+          unauthorizedResponse(),
+        ),
+        http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+          unauthorizedResponse(),
+        ),
+        http.post(`${BASE_CONFIG.baseUrl}/api/user/login`, () =>
+          jsonData({
+            require_verification: true,
+            flow_token: "test-flow",
+            methods,
+          }),
+        ),
+      )
+      await expect(ensureNewApiManagedSession(BASE_CONFIG)).rejects.toThrow(
+        "New API dashboard session response is invalid",
+      )
+    },
+  )
   it.each(["missing-flow", "no-available-method"])(
     "rejects an incomplete unified login challenge: %s",
     async (scenario) => {
@@ -2046,6 +2074,12 @@ describe("newApiSession", () => {
           },
         ),
       )
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await expect(
+          ensureNewApiManagedSession({ ...BASE_CONFIG, channelId: 12 }),
+        ).resolves.toMatchObject({ status: "verified" })
+      }
+      expect(verifiedChannels).toEqual([12])
       if (failFirst) {
         const error = await fetchNewApiChannelKey({
           ...BASE_CONFIG,

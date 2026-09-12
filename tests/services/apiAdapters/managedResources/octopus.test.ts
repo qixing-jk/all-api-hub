@@ -55,6 +55,28 @@ const channel: OctopusChannel = {
   param_override: "{}",
 }
 describe("Octopus native resource", () => {
+  it("keeps an enabled peer unchanged while correcting a newly disabled named key", async () => {
+    const keys = [
+      { name: "first", channel_key: "first-secret", enabled: false },
+      { name: "peer", channel_key: "peer-secret", enabled: true },
+    ]
+    const latest = {
+      ...channel,
+      keyManagement: "named" as const,
+      keys: keys.map((key) => ({ ...key, enabled: true })),
+    }
+    const corrected = { ...latest, keys }
+    mocks.updateChannel
+      .mockResolvedValueOnce({ success: true, data: latest })
+      .mockResolvedValue({ success: true, data: corrected })
+    mocks.getChannel.mockResolvedValueOnce(latest).mockResolvedValue(corrected)
+    await expect(
+      (await openOctopusNativeResourceOperations()).update(latest, { keys }),
+    ).resolves.toMatchObject({ outcome: "succeeded" })
+    expect(mocks.updateChannel.mock.calls[1][1].keys).toEqual(
+      keys.map((key) => ({ ...key, originalName: key.name })),
+    )
+  })
   it("passes editor cancellation through credential capability detection", async () => {
     const controller = new AbortController()
     const workspace = await octopusManagedResourceRegistration.open()

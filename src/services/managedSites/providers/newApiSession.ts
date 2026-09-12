@@ -923,14 +923,25 @@ async function postNewApiLogin(
     if (unified) {
       if (!trimToNull(responseData.flow_token))
         throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
+      const verificationMethods = responseData.methods
       if (
-        !responseData.methods?.some(
+        !Array.isArray(verificationMethods) ||
+        !verificationMethods.every(
+          (method) =>
+            isRecord(method) &&
+            typeof method.method === "string" &&
+            typeof method.available === "boolean",
+        )
+      )
+        throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
+      if (
+        !verificationMethods.some(
           (method) => method.method === "2fa" && method.available,
         )
       ) {
         clearPendingLoginFlow(config.baseUrl)
         if (
-          responseData.methods?.some(
+          verificationMethods.some(
             (method) => method.method === "passkey" && method.available,
           )
         )
