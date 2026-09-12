@@ -1,28 +1,16 @@
-/** Maps every item with a bounded worker pool and preserves original input order. */
+import PQueue from "p-queue"
+
+/** Maps every item with bounded concurrency and preserves original input order. */
 export async function mapSettledWithConcurrency<TItem, TResult>(
   items: readonly TItem[],
   limit: number,
   mapper: (item: TItem, index: number) => Promise<TResult>,
 ): Promise<PromiseSettledResult<TResult>[]> {
-  const results = new Array<PromiseSettledResult<TResult>>(items.length)
-  let nextIndex = 0
-
-  const runWorker = async () => {
-    while (nextIndex < items.length) {
-      const index = nextIndex
-      nextIndex += 1
-      try {
-        results[index] = {
-          status: "fulfilled",
-          value: await mapper(items[index], index),
-        }
-      } catch (reason) {
-        results[index] = { status: "rejected", reason }
-      }
-    }
-  }
-
-  const workerCount = Math.min(items.length, Math.max(1, Math.floor(limit)))
-  await Promise.all(Array.from({ length: workerCount }, runWorker))
-  return results
+  if (items.length === 0) return []
+  const queue = new PQueue({
+    concurrency: Math.min(items.length, Math.max(1, Math.floor(limit))),
+  })
+  return await Promise.allSettled(
+    items.map((item, index) => queue.add(() => mapper(item, index))),
+  )
 }

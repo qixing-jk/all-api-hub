@@ -28,6 +28,7 @@ import {
   ProbeFilterUnavailableError,
 } from "~/services/models/modelSync/channelModelFilterEvaluator"
 import { runWithChannelProcessingTimeout } from "~/services/models/modelSync/channelProcessingTimeout"
+import { runModelSyncBatch } from "~/services/models/modelSync/runModelSyncBatch"
 import {
   createModelSyncWriteFailureBoundary,
   type ModelSyncWriteFailureBoundary,
@@ -37,7 +38,6 @@ import type { ChannelResourceConfigMap } from "~/types/channelConfig"
 import {
   type ExecutionItemResult,
   type ExecutionResult,
-  type ExecutionStatistics,
 } from "~/types/managedSiteModelSync"
 import type { OctopusChannel, OctopusFetchModelInput } from "~/types/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"
@@ -349,22 +349,10 @@ async function runOctopusBatchWithClient(
     channelConfigs,
     onProgress,
   } = options
-  const startedAt = Date.now()
-  const total = channels.length
-  const results: (ExecutionItemResult | undefined)[] = new Array(total)
-
-  let completed = 0
-  let nextIndex = 0
-
-  const worker = async () => {
-    while (true) {
-      const currentIndex = nextIndex
-      if (currentIndex >= total) {
-        return
-      }
-      nextIndex++
-
-      const channel = channels[currentIndex]
+  return await runModelSyncBatch(
+    channels,
+    { concurrency, onProgress },
+    async (channel) => {
       let result: ExecutionItemResult
       const writeFailureBoundary = createModelSyncWriteFailureBoundary()
 
@@ -415,42 +403,9 @@ async function runOctopusBatchWithClient(
           finishedAt: Date.now(),
         }
       }
-
-      results[currentIndex] = result
-      completed++
-
-      await onProgress?.({
-        completed,
-        total,
-        lastResult: result,
-      })
-    }
-  }
-
-  // Cap workers to total channels to avoid spinning idle workers
-  const workerCount = Math.max(1, Math.min(concurrency, total))
-  const workers = Array.from({ length: workerCount }, () => worker())
-  await Promise.all(workers)
-
-  const items = results.filter((item): item is ExecutionItemResult => !!item)
-
-  const endedAt = Date.now()
-  const successCount = items.filter((item) => item.ok).length
-  const failureCount = total - successCount
-
-  const statistics: ExecutionStatistics = {
-    total,
-    successCount,
-    failureCount,
-    durationMs: endedAt - startedAt,
-    startedAt,
-    endedAt,
-  }
-
-  return {
-    items,
-    statistics,
-  }
+      return result
+    },
+  )
 }
 
 /** Binds one Octopus config and protection intent to the complete sync workflow. */

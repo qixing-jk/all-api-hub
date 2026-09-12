@@ -15,6 +15,7 @@ import {
 } from "~/services/managedSites/mutations"
 import { type ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import { collectManagedConfigSecrets } from "~/services/managedSites/utils/resourceSecrets"
+import { runModelSyncBatch } from "~/services/models/modelSync/runModelSyncBatch"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { ChannelResourceConfigMap } from "~/types/channelConfig"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
@@ -26,7 +27,6 @@ import {
   type BatchExecutionOptions,
   type ExecutionItemResult,
   type ExecutionResult,
-  type ExecutionStatistics,
 } from "~/types/managedSiteModelSync"
 import { createLogger } from "~/utils/core/logger"
 
@@ -534,22 +534,10 @@ export class ModelSyncService {
     }
     const { concurrency, maxRetries, channelProcessingTimeout, onProgress } =
       options
-    const startedAt = Date.now()
-    const total = channels.length
-    const results: (ExecutionItemResult | undefined)[] = new Array(total)
-
-    let completed = 0
-    let nextIndex = 0
-
-    const worker = async () => {
-      while (true) {
-        const currentIndex = nextIndex
-        if (currentIndex >= total) {
-          return
-        }
-        nextIndex++ // single shared index for lightweight work stealing
-
-        const channel = channels[currentIndex]
+    return await runModelSyncBatch(
+      channels,
+      { concurrency, onProgress },
+      async (channel) => {
         let result: ExecutionItemResult
         const writeFailureBoundary = createModelSyncWriteFailureBoundary()
 
@@ -585,42 +573,9 @@ export class ModelSyncService {
             finishedAt: Date.now(),
           }
         }
-
-        results[currentIndex] = result
-        completed++
-
-        await onProgress?.({
-          completed,
-          total,
-          lastResult: result,
-        })
-      }
-    }
-
-    // Cap workers to total channels to avoid spinning idle workers
-    const workerCount = Math.max(1, Math.min(concurrency, total))
-    const workers = Array.from({ length: workerCount }, () => worker())
-    await Promise.all(workers)
-
-    const items = results.filter((item): item is ExecutionItemResult => !!item)
-
-    const endedAt = Date.now()
-    const successCount = items.filter((item) => item.ok).length
-    const failureCount = total - successCount
-
-    const statistics: ExecutionStatistics = {
-      total,
-      successCount,
-      failureCount,
-      durationMs: endedAt - startedAt,
-      startedAt,
-      endedAt,
-    }
-
-    return {
-      items,
-      statistics,
-    }
+        return result
+      },
+    )
   }
 
   /**
