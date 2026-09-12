@@ -8,8 +8,8 @@ import {
   highlightSearchTarget,
   navigateFromSearchItem,
   OPTIONS_SEARCH_HIGHLIGHT_PARAM,
-} from "~/entrypoints/options/search/navigation"
-import type { OptionsSearchItem } from "~/entrypoints/options/search/types"
+} from "~/features/OptionsSearch/navigation"
+import type { OptionsSearchItem } from "~/features/OptionsSearch/types"
 import { replaceWithinOptionsPage } from "~/utils/navigation"
 
 vi.mock("~/utils/navigation", async (importOriginal) => {

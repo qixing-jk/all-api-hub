@@ -64,6 +64,27 @@ const gistSettings = {
 }
 
 describe("cloudSyncService", () => {
+  it.each([
+    { url: "", username: "", password: "" },
+    { url: "https://dav.example/", username: "", password: "" },
+    { url: "", username: "user", password: "" },
+    { url: "", username: "", password: "password" },
+  ])("preserves WebDAV configuration fallback for %j", async (config) => {
+    const settings = { ...webdavSettings, ...config }
+    const expectedConfig =
+      config.url || config.username || config.password ? config : undefined
+
+    await testCloudSyncConnection(settings)
+    await downloadCloudSyncBackup(settings, { prepareForWrite: true })
+    await uploadCloudSyncBackup("backup", settings)
+
+    expect(mockTestWebdavConnection).toHaveBeenLastCalledWith(expectedConfig)
+    expect(mockDownloadBackup).toHaveBeenLastCalledWith(expectedConfig, {
+      prepareForWrite: true,
+    })
+    expect(mockUploadBackup).toHaveBeenLastCalledWith("backup", expectedConfig)
+  })
+
   it("defaults old settings to WebDAV and routes WebDAV operations", async () => {
     expect(
       getCloudSyncProvider({ ...webdavSettings, provider: undefined }),

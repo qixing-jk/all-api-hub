@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render as rtlRender,
   screen,
@@ -18,8 +19,6 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
-  PRODUCT_ANALYTICS_FAILURE_REASONS,
-  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
@@ -27,7 +26,6 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { WebdavAutoSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
-import { sendWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncMessaging"
 import { WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
@@ -171,224 +169,124 @@ describe("WebDAVAutoSyncSettings", () => {
     })
   })
 
-  it("does not declare button analytics metadata for auto-sync settings save with a manual async span", async () => {
-    render(<WebDAVAutoSyncSettings />)
-
-    expect(
-      await screen.findByRole("button", {
-        name: "importExport:webdav.autoSync.saveSettings",
-      }),
-    ).not.toHaveAttribute("data-analytics-action")
-  })
-
-  it("previews a provider switch and blocks auto-sync actions until it is saved", async () => {
-    render(<WebDAVAutoSyncSettings providerPreview="github_gist" />)
-
-    expect(
-      await screen.findByText(
-        "importExport:webdav.autoSync.providerSwitchPendingTitle",
-      ),
-    ).toBeInTheDocument()
-    expect(screen.getByRole("switch")).toBeDisabled()
-    expect(screen.getByDisplayValue("1800")).toHaveAttribute("min", "300")
-    expect(
-      screen.getByRole("button", {
-        name: "importExport:webdav.autoSync.saveSettings",
-      }),
-    ).toBeDisabled()
-    expect(
-      screen.getByRole("button", {
-        name: "importExport:webdav.autoSync.syncNow",
-      }),
-    ).toBeDisabled()
-  })
-
-  it("completes WebDAV auto-sync settings save analytics as success", async () => {
-    render(<WebDAVAutoSyncSettings />)
-
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "importExport:webdav.autoSync.saveSettings",
-      }),
-    )
-
-    await waitFor(() => {
-      expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
-        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebDavSync,
-        actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateWebDavAutoSyncSettings,
-        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsWebDavAutoSyncSettings,
-        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-      })
-      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
-        PRODUCT_ANALYTICS_RESULTS.Success,
-      )
-    })
-  })
-
-  it("completes WebDAV auto-sync settings save analytics as unknown failure when persistence rejects the update", async () => {
-    mockSendWebdavAutoSyncMessage.mockImplementation(async (type: string) => {
-      switch (type) {
-        case WebdavAutoSyncMessageTypes.GetStatus:
-          return { success: true, data: null }
-        case WebdavAutoSyncMessageTypes.UpdateSettings:
-          return { success: false, error: "save failed" }
-        default:
+  it("saves switches immediately and waits for the write before syncing", async () => {
+    let finishSave!: () => void
+    const original = mockSendWebdavAutoSyncMessage.getMockImplementation()!
+    mockSendWebdavAutoSyncMessage.mockImplementation(
+      async (type: string, ...args: unknown[]) => {
+        if (type === WebdavAutoSyncMessageTypes.UpdateSettings) {
+          await new Promise<void>((resolve) => {
+            finishSave = resolve
+          })
           return { success: true }
-      }
-    })
-
-    render(<WebDAVAutoSyncSettings />)
-
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "importExport:webdav.autoSync.saveSettings",
-      }),
-    )
-
-    await waitFor(() => {
-      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
-        PRODUCT_ANALYTICS_RESULTS.Failure,
-        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
-      )
-    })
-  })
-
-  it("loads settings, saves updates, and syncs immediately", async () => {
-    render(<WebDAVAutoSyncSettings />)
-
-    expect(
-      await screen.findByText("importExport:webdav.syncError"),
-    ).toBeInTheDocument()
-    expect(screen.getByText("sync boom")).toBeInTheDocument()
-    expect(screen.getByDisplayValue("1800")).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole("switch"))
-    await waitFor(() => {
-      expect(screen.queryByDisplayValue("1800")).not.toBeInTheDocument()
-    })
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "importExport:webdav.autoSync.saveSettings",
-      }),
-    )
-
-    await waitFor(() => {
-      expect(sendWebdavAutoSyncMessage).toHaveBeenCalledWith(
-        WebdavAutoSyncMessageTypes.UpdateSettings,
-        {
-          expectedLastUpdated: 1,
-          settings: {
-            autoSync: false,
-            syncInterval: 1800,
-            syncStrategy: WEBDAV_SYNC_STRATEGIES.DOWNLOAD_ONLY,
-          },
-        },
-      )
-    })
-    expect(toast.success).toHaveBeenCalledWith(
-      "settings:messages.updateSuccess",
-    )
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "importExport:webdav.autoSync.syncNow",
-      }),
-    )
-
-    await waitFor(() => {
-      expect(sendWebdavAutoSyncMessage).toHaveBeenCalledWith(
-        WebdavAutoSyncMessageTypes.SyncNow,
-      )
-    })
-    expect(toast.success).toHaveBeenCalledWith(
-      "importExport:webdav.syncSuccess",
-    )
-    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebDavSync,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.SyncWebDavNow,
-      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsWebDavAutoSyncSettings,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
-    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Success,
-      {
-        diagnostics: {
-          context: {
-            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
-            mode: PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly,
-          },
-          outcome: {
-            itemCount: 1,
-            successCount: 1,
-            failureCount: 0,
-            skippedCount: 0,
-          },
-        },
+        }
+        return original(type, ...args)
       },
     )
-  })
-
-  it("surfaces status, save, and sync errors", async () => {
-    mockSendWebdavAutoSyncMessage.mockImplementation(async (type: string) => {
-      switch (type) {
-        case WebdavAutoSyncMessageTypes.GetStatus:
-          throw new Error("status failed")
-        case WebdavAutoSyncMessageTypes.UpdateSettings:
-          return { success: false, error: "save failed" }
-        case WebdavAutoSyncMessageTypes.SyncNow:
-          throw new Error("sync failed")
-        default:
-          return { success: true }
-      }
-    })
-
+    const user = userEvent.setup()
     render(<WebDAVAutoSyncSettings />)
-
-    await waitFor(() => {
-      expect(loggerMocks.error).toHaveBeenCalled()
-    })
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "importExport:webdav.autoSync.saveSettings",
-      }),
+    await screen.findByDisplayValue("1800")
+    await user.click(screen.getByRole("switch"))
+    await waitFor(() =>
+      expect(mockSendWebdavAutoSyncMessage).toHaveBeenCalledWith(
+        WebdavAutoSyncMessageTypes.UpdateSettings,
+        { settings: { autoSync: false } },
+      ),
     )
-    await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("save failed")
-    })
-
-    fireEvent.click(
+    await user.click(
       screen.getByRole("button", {
         name: "importExport:webdav.autoSync.syncNow",
       }),
     )
-    await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("sync failed")
-      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
-        PRODUCT_ANALYTICS_RESULTS.Failure,
-        {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-          diagnostics: {
-            context: {
-              sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
-              mode: PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly,
-            },
-            outcome: {
-              itemCount: 1,
-              successCount: 0,
-              failureCount: 1,
-              skippedCount: 0,
-            },
-            failure: {
-              category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
-              reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
-            },
-          },
-        },
-      )
-    })
+    expect(mockSendWebdavAutoSyncMessage).not.toHaveBeenCalledWith(
+      WebdavAutoSyncMessageTypes.SyncNow,
+    )
+    await act(async () => finishSave())
+    await waitFor(() =>
+      expect(mockSendWebdavAutoSyncMessage).toHaveBeenCalledWith(
+        WebdavAutoSyncMessageTypes.SyncNow,
+      ),
+    )
+    expect(toast.success).not.toHaveBeenCalledWith(
+      "settings:messages.updateSuccess",
+    )
+  })
+
+  it("saves an interval on blur and clamps it to the provider minimum", async () => {
+    const user = userEvent.setup()
+    render(<WebDAVAutoSyncSettings />)
+    const interval = await screen.findByDisplayValue("1800")
+    await user.clear(interval)
+    await user.type(interval, "10")
+    expect(
+      mockSendWebdavAutoSyncMessage.mock.calls.filter(
+        ([type]) => type === WebdavAutoSyncMessageTypes.UpdateSettings,
+      ),
+    ).toHaveLength(0)
+    await user.tab()
+    await waitFor(() =>
+      expect(mockSendWebdavAutoSyncMessage).toHaveBeenCalledWith(
+        WebdavAutoSyncMessageTypes.UpdateSettings,
+        { settings: { syncInterval: 60 } },
+      ),
+    )
+    expect(interval).toHaveValue(60)
+  })
+
+  it("blocks immediate sync after a failed automatic save", async () => {
+    const original = mockSendWebdavAutoSyncMessage.getMockImplementation()!
+    mockSendWebdavAutoSyncMessage.mockImplementation(
+      async (type: string, ...args: unknown[]) =>
+        type === WebdavAutoSyncMessageTypes.UpdateSettings
+          ? { success: false, error: "save failed" }
+          : original(type, ...args),
+    )
+    const user = userEvent.setup()
+    render(<WebDAVAutoSyncSettings />)
+    await screen.findByDisplayValue("1800")
+    await user.click(screen.getByRole("switch"))
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("save failed"))
+    await user.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.autoSync.syncNow",
+      }),
+    )
+    expect(mockSendWebdavAutoSyncMessage).not.toHaveBeenCalledWith(
+      WebdavAutoSyncMessageTypes.SyncNow,
+    )
+  })
+
+  it("keeps a rapid interval change back to the saved value while a write is pending", async () => {
+    const original = mockSendWebdavAutoSyncMessage.getMockImplementation()!
+    let finishSave!: () => void
+    let writes = 0
+    mockSendWebdavAutoSyncMessage.mockImplementation(
+      async (type: string, ...args: unknown[]) => {
+        if (
+          type === WebdavAutoSyncMessageTypes.UpdateSettings &&
+          ++writes === 1
+        ) {
+          await new Promise<void>((resolve) => {
+            finishSave = resolve
+          })
+        }
+        return original(type, ...args)
+      },
+    )
+    render(<WebDAVAutoSyncSettings />)
+    const interval = await screen.findByDisplayValue("1800")
+    fireEvent.change(interval, { target: { value: "900" } })
+    fireEvent.blur(interval)
+    await waitFor(() => expect(finishSave).toBeTypeOf("function"))
+    fireEvent.change(interval, { target: { value: "1800" } })
+    fireEvent.blur(interval)
+    await act(async () => finishSave())
+    await waitFor(() =>
+      expect(mockSendWebdavAutoSyncMessage).toHaveBeenCalledWith(
+        WebdavAutoSyncMessageTypes.UpdateSettings,
+        { settings: { syncInterval: 1800 } },
+      ),
+    )
   })
 
   it("uses the saved WebDAV strategy as sync-now diagnostics mode", async () => {
@@ -420,84 +318,6 @@ describe("WebDAVAutoSyncSettings", () => {
             },
           }),
         }),
-      )
-    })
-  })
-
-  it("falls back to the local update-failed copy when the runtime omits an error", async () => {
-    mockSendWebdavAutoSyncMessage.mockImplementation(async (type: string) => {
-      switch (type) {
-        case WebdavAutoSyncMessageTypes.GetStatus:
-          return { success: true, data: null }
-        case WebdavAutoSyncMessageTypes.UpdateSettings:
-          return { success: false }
-        default:
-          return { success: true }
-      }
-    })
-
-    render(<WebDAVAutoSyncSettings />)
-
-    expect(
-      await screen.findByRole("button", {
-        name: "importExport:webdav.autoSync.saveSettings",
-      }),
-    ).toBeInTheDocument()
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "importExport:webdav.autoSync.saveSettings",
-      }),
-    )
-
-    await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("settings:messages.updateFailed")
-    })
-  })
-
-  it("surfaces thrown save failures and unsuccessful sync responses", async () => {
-    mockSendWebdavAutoSyncMessage.mockImplementation(async (type: string) => {
-      switch (type) {
-        case WebdavAutoSyncMessageTypes.GetStatus:
-          return { success: true, data: null }
-        case WebdavAutoSyncMessageTypes.UpdateSettings:
-          throw new Error("save exploded")
-        case WebdavAutoSyncMessageTypes.SyncNow:
-          return { success: false, error: "sync rejected" }
-        default:
-          return { success: true }
-      }
-    })
-
-    render(<WebDAVAutoSyncSettings />)
-
-    expect(
-      await screen.findByRole("button", {
-        name: "importExport:webdav.autoSync.saveSettings",
-      }),
-    ).toBeInTheDocument()
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "importExport:webdav.autoSync.saveSettings",
-      }),
-    )
-
-    await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("save exploded")
-    })
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "importExport:webdav.autoSync.syncNow",
-      }),
-    )
-
-    await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("sync rejected")
-      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
-        PRODUCT_ANALYTICS_RESULTS.Failure,
-        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
       )
     })
   })
@@ -556,46 +376,105 @@ describe("WebDAVAutoSyncSettings", () => {
     })
   })
 
-  it("saves edited interval and strategy values from the local draft", async () => {
-    const user = userEvent.setup()
-
-    render(<WebDAVAutoSyncSettings />)
-
-    const syncIntervalInput = await screen.findByDisplayValue("1800")
-    expect(syncIntervalInput).toBeInTheDocument()
-
-    await user.clear(syncIntervalInput)
-    await user.type(syncIntervalInput, "900")
-
-    await user.click(screen.getByRole("combobox"))
-    await user.click(
-      screen.getByRole("option", {
-        name: "importExport:webdav.autoSync.strategyMerge",
-      }),
+  it("tracks automatic settings-save outcomes and exposes retry only after failure", async () => {
+    const original = mockSendWebdavAutoSyncMessage.getMockImplementation()!
+    mockSendWebdavAutoSyncMessage.mockImplementation(
+      async (type: string, ...args: unknown[]) =>
+        type === WebdavAutoSyncMessageTypes.UpdateSettings
+          ? { success: false, error: "save failed" }
+          : original(type, ...args),
     )
-
-    await user.click(
-      screen.getByRole("button", {
+    const user = userEvent.setup()
+    render(<WebDAVAutoSyncSettings />)
+    await screen.findByDisplayValue("1800")
+    expect(
+      screen.queryByRole("button", {
         name: "importExport:webdav.autoSync.saveSettings",
       }),
-    )
-
-    await waitFor(() => {
-      expect(sendWebdavAutoSyncMessage).toHaveBeenCalledWith(
-        WebdavAutoSyncMessageTypes.UpdateSettings,
-        {
-          expectedLastUpdated: 1,
-          settings: {
-            autoSync: true,
-            syncInterval: 900,
-            syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
-          },
-        },
-      )
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "importExport:webdav.retrySave" }),
+    ).not.toBeInTheDocument()
+    await user.click(screen.getByRole("switch"))
+    const retry = await screen.findByRole("button", {
+      name: "importExport:webdav.retrySave",
     })
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebDavSync,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateWebDavAutoSyncSettings,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsWebDavAutoSyncSettings,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+    )
+    mockSendWebdavAutoSyncMessage.mockImplementation(original)
+    await user.click(retry)
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "importExport:webdav.retrySave" }),
+      ).not.toBeInTheDocument(),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.autoSync.syncNow",
+      }),
+    )
+    await waitFor(() =>
+      expect(mockSendWebdavAutoSyncMessage).toHaveBeenCalledWith(
+        WebdavAutoSyncMessageTypes.SyncNow,
+      ),
+    )
   })
 
-  it("explains that sync now uses saved auto-sync settings when the draft is dirty", async () => {
+  it.each([undefined, "runtime rejected"])(
+    "reports a failed immediate sync with error %s",
+    async (error) => {
+      const original = mockSendWebdavAutoSyncMessage.getMockImplementation()!
+      mockSendWebdavAutoSyncMessage.mockImplementation(
+        async (type: string, ...args: unknown[]) =>
+          type === WebdavAutoSyncMessageTypes.SyncNow
+            ? { success: false, error }
+            : original(type, ...args),
+      )
+      render(<WebDAVAutoSyncSettings />)
+      await userEvent
+        .setup()
+        .click(
+          await screen.findByRole("button", {
+            name: "importExport:webdav.autoSync.syncNow",
+          }),
+        )
+      await waitFor(() =>
+        expect(toast.error).toHaveBeenCalledWith(
+          error || "importExport:webdav.syncFailed",
+        ),
+      )
+    },
+  )
+
+  it("reports a thrown runtime error while syncing", async () => {
+    const original = mockSendWebdavAutoSyncMessage.getMockImplementation()!
+    mockSendWebdavAutoSyncMessage.mockImplementation(
+      async (type: string, ...args: unknown[]) => {
+        if (type === WebdavAutoSyncMessageTypes.SyncNow)
+          throw new Error("sync failed")
+        return original(type, ...args)
+      },
+    )
+    render(<WebDAVAutoSyncSettings />)
+    await userEvent
+      .setup()
+      .click(
+        await screen.findByRole("button", {
+          name: "importExport:webdav.autoSync.syncNow",
+        }),
+      )
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("sync failed"))
+  })
+
+  it("explains automatic saving without an unsaved warning", async () => {
     const user = userEvent.setup()
 
     render(<WebDAVAutoSyncSettings />)
@@ -609,105 +488,13 @@ describe("WebDAVAutoSyncSettings", () => {
     await user.clear(syncIntervalInput)
     await user.type(syncIntervalInput, "900")
 
-    expect(
-      (
-        await screen.findByText(
-          "importExport:webdav.autoSync.actionState.unsaved",
-        )
-      ).closest('[role="alert"]'),
-    ).toBeInTheDocument()
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "importExport:webdav.autoSync.autosaveDescription",
+    )
     expect(
       screen.getByRole("button", {
         name: "importExport:webdav.autoSync.syncNow",
       }),
     ).toBeInTheDocument()
-  })
-
-  it("requires a Gist encryption password before saving or running auto-sync", async () => {
-    const gistPreferences = {
-      lastUpdated: 1,
-      webdav: {
-        provider: "github_gist",
-        autoSync: true,
-        syncInterval: 3600,
-        syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
-        backupEncryptionPassword: "",
-        githubGist: { token: "saved-token", gistId: "gist-1" },
-      },
-    }
-    const onGistEncryptionPasswordErrorChange = vi.fn()
-    mockUserPreferences.getPreferences.mockResolvedValue(gistPreferences)
-
-    render(
-      <WebDAVAutoSyncSettings
-        onGistEncryptionPasswordErrorChange={
-          onGistEncryptionPasswordErrorChange
-        }
-      />,
-    )
-
-    const requiredMessage =
-      "importExport:webdav.gist.encryptionPasswordRequired"
-    const saveButton = await screen.findByRole("button", {
-      name: "importExport:webdav.autoSync.saveSettings",
-    })
-    fireEvent.click(saveButton)
-    await waitFor(() => {
-      expect(onGistEncryptionPasswordErrorChange).toHaveBeenCalledWith(
-        requiredMessage,
-      )
-    })
-    expect(mockSendWebdavAutoSyncMessage).not.toHaveBeenCalledWith(
-      WebdavAutoSyncMessageTypes.UpdateSettings,
-      expect.anything(),
-    )
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "importExport:webdav.autoSync.syncNow",
-      }),
-    )
-    await waitFor(() => {
-      expect(onGistEncryptionPasswordErrorChange).toHaveBeenCalledTimes(2)
-    })
-    expect(mockSendWebdavAutoSyncMessage).not.toHaveBeenCalledWith(
-      WebdavAutoSyncMessageTypes.SyncNow,
-    )
-  })
-
-  it("uses the provider minimum when the interval draft is not a number", async () => {
-    const gistPreferences = {
-      lastUpdated: 1,
-      webdav: {
-        provider: "github_gist",
-        autoSync: true,
-        syncInterval: 3600,
-        syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
-        backupEncryptionPassword: "stored-secret",
-        githubGist: { token: "saved-token", gistId: "gist-1" },
-      },
-    }
-    mockUserPreferences.getPreferences.mockResolvedValue(gistPreferences)
-
-    render(<WebDAVAutoSyncSettings />)
-
-    const intervalInput = (await screen.findByDisplayValue(
-      "3600",
-    )) as HTMLInputElement
-    fireEvent.change(intervalInput, { target: { value: "not-a-number" } })
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "importExport:webdav.autoSync.saveSettings",
-      }),
-    )
-
-    await waitFor(() => {
-      expect(mockSendWebdavAutoSyncMessage).toHaveBeenCalledWith(
-        WebdavAutoSyncMessageTypes.UpdateSettings,
-        expect.objectContaining({
-          settings: expect.objectContaining({ syncInterval: 300 }),
-        }),
-      )
-    })
   })
 })

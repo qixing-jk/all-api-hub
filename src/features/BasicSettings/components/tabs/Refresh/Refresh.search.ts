@@ -1,11 +1,11 @@
+import { SHIELD_AUTOMATIC_FEATURE_ITEMS } from "~/features/BasicSettings/components/tabs/Refresh/automaticFeatureSettings"
+import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
 import {
   buildControlDefinition,
   buildSectionDefinition,
   DEFAULT_BREADCRUMBS,
-} from "~/entrypoints/options/search/registryHelpers"
-import type { OptionsSearchItemDefinition } from "~/entrypoints/options/search/types"
-import { SHIELD_AUTOMATIC_FEATURE_ITEMS } from "~/features/BasicSettings/components/tabs/Refresh/automaticFeatureSettings"
-import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
+} from "~/features/OptionsSearch/registryHelpers"
+import type { OptionsSearchItemDefinition } from "~/features/OptionsSearch/types"
 
 const shieldBreadcrumbs = [
   ...DEFAULT_BREADCRUMBS,

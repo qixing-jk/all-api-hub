@@ -185,17 +185,19 @@ const ImportSection = ({
   }
 
   return (
-    <section id="import-section" className="flex h-full">
+    <section id="import-section" className="flex min-w-0 flex-col">
       <Card padding="none" className="flex flex-1 flex-col">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Download className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            <CardTitle className="mb-0">{t("import.title")}</CardTitle>
+            <CardTitle className="mb-0 text-base">
+              {t("import.title")}
+            </CardTitle>
           </div>
           <CardDescription>{t("import.description")}</CardDescription>
         </CardHeader>
 
-        <CardContent padding="md" className="space-y-4">
+        <CardContent padding="md" className="flex flex-1 flex-col space-y-4">
           {/* 文件选择 */}
           <FormField
             label={t("import.selectBackupFile")}
@@ -217,13 +219,14 @@ const ImportSection = ({
           <FormField
             label={t("import.dataPreview")}
             htmlFor="import-data-preview"
+            className="flex flex-1 flex-col [&>div]:flex [&>div]:flex-1 [&>div]:flex-col"
           >
             <Textarea
               id="import-data-preview"
               value={importData}
               onChange={(e) => setImportData(e.target.value)}
               placeholder={t("import.pasteJsonData")}
-              className="h-16 w-full resize-none font-mono"
+              className="h-16 w-full flex-1 resize-none font-mono"
               onClear={() => setImportData("")}
               clearButtonLabel={t("common:actions.clear")}
             />
@@ -232,7 +235,7 @@ const ImportSection = ({
           {visibleImportSections.length > 0 && (
             <div id={IMPORT_EXPORT_TARGET_IDS.importMode}>
               <FormField label={t("import.sections.label")}>
-                <CardList className="overflow-hidden rounded-md border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
+                <CardList className="overflow-hidden">
                   {visibleImportSections.map(
                     ({ key, title, description, strategies }) => (
                       <CardItem

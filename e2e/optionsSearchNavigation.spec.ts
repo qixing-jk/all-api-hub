@@ -395,7 +395,7 @@ test("opens an import export WebDAV control from settings search", async ({
   await expect(dialog).toBeVisible()
   await dialog.getByPlaceholder("Search settings...").fill("webdav url")
   await dialog
-    .getByRole("option", { name: /Webdav URL/ })
+    .getByRole("option", { name: /WebDAV URL/ })
     .filter({ hasText: "Import/Export" })
     .click()
 
@@ -444,7 +444,7 @@ for (const surface of ["Import/Export", "Data & Backup"]) {
       },
       {
         query: "webdav url",
-        label: /Webdav URL/,
+        label: /WebDAV URL/,
         target: WEBDAV_TARGET_IDS.url,
       },
     ]) {

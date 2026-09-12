@@ -2,8 +2,8 @@ import { fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { OptionsSearchDialog } from "~/entrypoints/options/search/OptionsSearchDialog"
-import type { OptionsSearchContext } from "~/entrypoints/options/search/types"
+import { OptionsSearchDialog } from "~/features/OptionsSearch/OptionsSearchDialog"
+import type { OptionsSearchContext } from "~/features/OptionsSearch/types"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const baseContext: OptionsSearchContext = {

@@ -1,9 +1,11 @@
+import { Cloud } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { BodySmall, Heading3 } from "~/components/ui"
 import type { CloudSyncProvider } from "~/types/webdav"
 
+import { CloudSyncSaveProvider } from "../hooks/useCloudSyncSaveQueue"
 import WebDAVAutoSyncSettings from "./WebDAVAutoSyncSettings"
 import WebDAVSettings from "./WebDAVSettings"
 
@@ -17,27 +19,31 @@ export default function CloudSyncSettings() {
   return (
     <section
       id="cloud-sync"
-      className="dark:bg-dark-bg-secondary space-y-4 rounded-xl border border-gray-200 bg-white p-4 sm:p-5 dark:border-gray-700"
+      className="space-y-4 border-t border-gray-200 pt-6 dark:border-gray-700"
     >
       <div className="space-y-1">
-        <Heading3 className="m-0">{t("webdav.title")}</Heading3>
+        <Heading3 as="h2" className="m-0 flex items-center gap-2 text-xl">
+          <Cloud
+            className="size-5 shrink-0 text-sky-600 dark:text-sky-400"
+            aria-hidden="true"
+          />
+          {t("webdav.title")}
+        </Heading3>
         <BodySmall className="m-0">{t("webdav.configDesc")}</BodySmall>
       </div>
-      <div className="space-y-4">
-        <WebDAVSettings
-          onProviderDraftChange={setProviderPreview}
-          gistEncryptionPasswordError={gistEncryptionPasswordError}
-          onGistEncryptionPasswordErrorChange={setGistEncryptionPasswordError}
-          autoSyncContent={
-            <WebDAVAutoSyncSettings
-              providerPreview={providerPreview}
-              onGistEncryptionPasswordErrorChange={
-                setGistEncryptionPasswordError
-              }
-            />
-          }
-        />
-      </div>
+      <CloudSyncSaveProvider>
+        <div className="space-y-6">
+          <WebDAVSettings
+            onProviderDraftChange={setProviderPreview}
+            gistEncryptionPasswordError={gistEncryptionPasswordError}
+            onGistEncryptionPasswordErrorChange={setGistEncryptionPasswordError}
+          />
+          <WebDAVAutoSyncSettings
+            providerPreview={providerPreview}
+            onGistEncryptionPasswordErrorChange={setGistEncryptionPasswordError}
+          />
+        </div>
+      </CloudSyncSaveProvider>
     </section>
   )
 }

@@ -104,13 +104,8 @@
   },
   "title": "インポート / エクスポート",
   "webdav": {
-    "actionState": {
-      "unsaved": "設定に未保存の変更があります。接続テスト、WebDAV へのアップロード、WebDAV からのインポートでは、先にこれらの変更を保存します。"
-    },
     "autoSync": {
-      "actionState": {
-        "unsaved": "自動同期設定に未保存の変更があります。今すぐ同期ではこれらの変更は使用されません。先に自動同期設定を保存してください。"
-      },
+      "autosaveDescription": "同期方式とスイッチは自動保存されます。同期間隔は入力欄を離れると保存されます。",
       "currentProvider": "同期サービス：{{provider}}",
       "enable": "自動同期を有効化",
       "enableDesc": "有効にすると、共有データが設定した間隔で WebDAV に同期されます。",
@@ -118,9 +113,6 @@
       "intervalDesc": "自動同期の実行間隔を設定します",
       "intervalHint": "約 {{minutes}} 分",
       "lastSync": "前回同期",
-      "providerSwitchPending": "自動同期を {{from}} から {{to}} に切り替えるには、上のサービス設定を保存してください。",
-      "providerSwitchPendingTitle": "先に同期サービスの変更を保存してください",
-      "saveSettings": "設定を保存",
       "strategy": "同期戦略",
       "strategyDesc": "データの同期方法を選択します",
       "strategyLocalFirst": "ローカル優先 - ローカルデータでリモートを上書き",
@@ -135,8 +127,8 @@
       "webdavDescription": "この端末で使用する WebDAV アドレスと認証情報を入力します。"
     },
     "downloadImport": "WebDAV からインポート",
-    "downloadImportWithSave": "保存して WebDAV からインポート",
     "encryption": {
+      "alwaysEncrypted": "常に暗号化",
       "decryptAction": "復号してインポート",
       "decryptDialogDesc": "この WebDAV 同期データは暗号化されています。パスワードを入力してインポートを試してください。",
       "decryptDialogTitle": "WebDAV データを復号",
@@ -145,37 +137,31 @@
       "decryptPrompt": "自動復号できません。パスワードを入力してください。",
       "enableDesc": "任意で WebDAV バックアップをパスワードで暗号化できます。暗号化を無効にすると、アップロードされる WebDAV バックアップには保存済み認証情報が平文で含まれます。暗号化するか、安全に保管してください。",
       "password": "暗号化パスワード",
-      "passwordDesc": "WebDAV にアップロードするデータの暗号化と、WebDAV からダウンロードしたデータの復号に使用します。",
+      "passwordDesc": "アップロードするクラウドバックアップの暗号化と、ダウンロードしたバックアップの復号に使用します。",
       "passwordPlaceholder": "パスワードを入力",
       "savePassword": "今後の復号用にパスワードを保存",
-      "title": "WebDAV データ暗号化"
+      "sharedPasswordDescription": "WebDAV と GitHub Gist はこの暗号化パスワードを共有します。サービスを切り替えてもパスワードは変わりません。",
+      "title": "データ暗号化"
     },
     "gist": {
-      "actionStateUnsaved": "設定に未保存の変更があります。Gist 操作の前に変更を保存します。",
       "autoSyncEnableDesc": "有効にすると、選択した間隔で共有データを Secret Gist と同期します。",
       "configDesc": "暗号化した共有データを GitHub Secret Gist で同期します。Secret Gist は非公開一覧のリンクであり、アクセス制御そのものではありません。",
-      "create": "Secret Gist を作成してアップロード",
       "downloadImport": "Secret Gist からインポート",
-      "downloadImportWithSave": "保存して Secret Gist からインポート",
       "encryptionDescription": "GitHub Gist 同期には暗号化パスワードが必要です。パスワードは GitHub やバックアップに含まれません。紛失すると、暗号化されたバックアップを復号できません。",
-      "encryptionPassword": "Gist 暗号化パスワード",
-      "encryptionPasswordPlaceholder": "暗号化パスワードを入力",
       "encryptionPasswordRequired": "この Gist を保存または同期する前に暗号化パスワードを入力してください。",
       "id": "Gist ID または URL",
-      "idDesc": "既存の Secret Gist を入力するか、空欄のまま新規作成します。",
+      "idDesc": "任意。空欄の場合、初回アップロード時に自動作成します。",
       "idPlaceholder": "例: a1b2c3d4 または https://gist.github.com/...",
       "openLink": "GitHub でこの Gist を開く",
       "restorePolicyDescription": "現在のクラウドサービスは共有データを同期しますが、端末全体のバックアップではありません。クラウド認証情報、暗号化パスワード、同期対象、アカウント自動更新の設定はこの端末に残ります。端末ローカル設定の移行には手動エクスポート / インポートを使用してください。",
       "testFailed": "Secret Gist の接続に失敗しました",
       "testSuccess": "Secret Gist の接続に成功しました",
-      "title": "GitHub Gist 同期",
       "token": "GitHub トークン",
       "tokenDesc": "このブラウザーだけに保存され、バックアップや All API Hub には送信されません。Gists の読み書きだけを許可した fine-grained トークン、または gist スコープだけの classic トークンを使用してください。",
       "tokenPlaceholder": "GitHub トークンを貼り付け",
       "upload": "Secret Gist にアップロード",
       "uploadFailed": "GitHub Secret Gist へのアップロードに失敗しました",
-      "uploadSuccess": "GitHub Secret Gist にアップロードしました",
-      "uploadWithSave": "保存して Secret Gist にアップロード"
+      "uploadSuccess": "GitHub Secret Gist にアップロードしました"
     },
     "hidePassword": "パスワードを隠す",
     "manual": {
@@ -185,12 +171,10 @@
       "confirmDownloadTitle": "選択したデータを復元しますか？",
       "confirmUploadDescription": "選択したローカルデータをアクティブなクラウドバックアップに書き込みます。対象セクションの既存クラウドデータは置き換えられる場合があります。この操作ではスマートマージを使用しません。",
       "confirmUploadTitle": "選択したデータをアップロードしますか？",
-      "description": "明確な方向で、選択した同期データをアップロードまたは復元します。",
-      "directionWarning": "これらは方向指定の操作です。アップロードは選択したローカルデータをクラウドに書き込み、復元は選択したクラウドデータをこの端末に書き込みます。スマートマージは使用しません。",
-      "title": "手動データ操作"
+      "directionWarning": "これらは方向指定の操作です。アップロードは選択したローカルデータをクラウドに書き込み、復元は選択したクラウドデータをこの端末に書き込みます。スマートマージは使用しません。"
     },
     "notSynced": "未同期",
-    "password": "パスワード",
+    "password": "WebDAV パスワード",
     "provider": {
       "description": "この選択は手動同期と自動同期の両方に適用されます。同時に有効になるサービスは1つだけです。",
       "githubGist": "GitHub Secret Gist",
@@ -207,10 +191,9 @@
       "warningTitle": "この端末のデータが完全であることを確認してください"
     },
     "restorePolicy": {
-      "description": "WebDAV は完全な端末バックアップではなく、共有データ同期を目的としています。現在の端末の WebDAV 接続 / 暗号化設定、同期対象選択、アカウント自動更新設定はローカルに保持され、WebDAV へアップロードも上書きもされません。これらの端末ローカル設定を移行する場合は、手動のエクスポート / インポートを使用してください。",
-      "title": "同期対象に関する注意"
+      "description": "WebDAV は完全な端末バックアップではなく、共有データ同期を目的としています。現在の端末の WebDAV 接続 / 暗号化設定、同期対象選択、アカウント自動更新設定はローカルに保持され、WebDAV へアップロードも上書きもされません。これらの端末ローカル設定を移行する場合は、手動のエクスポート / インポートを使用してください。"
     },
-    "saveConfig": "設定を保存",
+    "retrySave": "保存に失敗しました。再試行",
     "showPassword": "パスワードを表示",
     "syncData": {
       "accounts": "アカウント",
@@ -224,20 +207,17 @@
     "syncFailed": "同期に失敗しました",
     "syncing": "同期中",
     "syncSettings": {
-      "description": "現在のサービスで同期するデータ、戦略、自動スケジュールを選択します。",
       "title": "同期設定"
     },
     "syncSuccess": "同期に成功しました",
     "testConnection": "接続テスト",
-    "testConnectionWithSave": "保存して接続テスト",
     "testFailed": "接続テストに失敗しました",
     "testSuccess": "接続テストに成功しました",
     "title": "クラウド同期",
     "uploadBackup": "WebDAV にアップロード",
-    "uploadBackupWithSave": "保存して WebDAV にアップロード",
     "uploadFailed": "WebDAV へのアップロードに失敗しました",
     "uploadSuccess": "WebDAV にアップロードしました",
-    "username": "ユーザー名",
+    "username": "WebDAV ユーザー名",
     "webdavUrl": "WebDAV URL",
     "webdavUrlExample": "例: https://dav.example.com/{{filename}} の完全ファイル URL、または WebDAV ルートディレクトリ URL"
   }

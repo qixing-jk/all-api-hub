@@ -104,13 +104,8 @@
   },
   "title": "Nhập/Xuất",
   "webdav": {
-    "actionState": {
-      "unsaved": "Cấu hình có những thay đổi chưa được lưu. Việc kiểm tra kết nối, tải lên WebDAV và nhập từ WebDAV sẽ lưu các thay đổi này trước."
-    },
     "autoSync": {
-      "actionState": {
-        "unsaved": "Cài đặt tự động đồng bộ hóa có những thay đổi chưa được lưu. Đồng bộ hóa ngay sẽ không sử dụng các thay đổi này, vui lòng lưu cài đặt tự động đồng bộ hóa trước."
-      },
+      "autosaveDescription": "Chiến lược và công tắc đồng bộ được lưu tự động. Khoảng thời gian được lưu khi rời khỏi ô nhập.",
       "currentProvider": "Dịch vụ đồng bộ: {{provider}}",
       "enable": "Bật tự động đồng bộ hóa",
       "enableDesc": "Sau khi bật, dữ liệu được chia sẻ sẽ tự động đồng bộ hóa với WebDAV theo khoảng thời gian đã đặt.",
@@ -118,9 +113,6 @@
       "intervalDesc": "Thiết lập khoảng thời gian để tự động đồng bộ hóa",
       "intervalHint": "Khoảng {{minutes}} phút",
       "lastSync": "Đồng bộ hóa lần cuối",
-      "providerSwitchPending": "Hãy lưu cấu hình dịch vụ ở trên để chuyển tự động đồng bộ từ {{from}} sang {{to}}.",
-      "providerSwitchPendingTitle": "Hãy lưu thay đổi dịch vụ đồng bộ trước",
-      "saveSettings": "Lưu cài đặt",
       "strategy": "Chiến lược đồng bộ hóa",
       "strategyDesc": "Chọn phương thức đồng bộ hóa dữ liệu",
       "strategyLocalFirst": "Ưu tiên cục bộ - Dữ liệu cục bộ ghi đè dữ liệu từ xa",
@@ -135,8 +127,8 @@
       "webdavDescription": "Nhập địa chỉ WebDAV và thông tin xác thực mà thiết bị này sử dụng."
     },
     "downloadImport": "Nhập từ WebDAV",
-    "downloadImportWithSave": "Lưu và nhập từ WebDAV",
     "encryption": {
+      "alwaysEncrypted": "Luôn mã hóa",
       "decryptAction": "Giải mã và nhập",
       "decryptDialogDesc": "Dữ liệu đồng bộ hóa WebDAV này đã được mã hóa, vui lòng thử nhập mật khẩu để nhập.",
       "decryptDialogTitle": "Giải mã dữ liệu WebDAV",
@@ -145,37 +137,31 @@
       "decryptPrompt": "Không thể tự động giải mã, vui lòng nhập mật khẩu",
       "enableDesc": "Tùy chọn: mã hóa bản sao lưu WebDAV bằng mật khẩu. Khi tắt mã hóa, bản sao tải lên chứa thông tin xác thực đã lưu ở dạng văn bản thuần túy. Hãy mã hóa hoặc lưu trữ an toàn.",
       "password": "Mật khẩu mã hóa",
-      "passwordDesc": "Được sử dụng để mã hóa dữ liệu đồng bộ tải lên WebDAV và giải mã dữ liệu tải xuống từ WebDAV.",
+      "passwordDesc": "Dùng để mã hóa bản sao lưu tải lên đám mây và giải mã bản sao lưu tải xuống.",
       "passwordPlaceholder": "Vui lòng nhập mật khẩu",
       "savePassword": "Lưu mật khẩu để tự động giải mã lần sau",
-      "title": "Mã hóa dữ liệu WebDAV"
+      "sharedPasswordDescription": "WebDAV và GitHub Gist dùng chung mật khẩu mã hóa này. Chuyển dịch vụ không thay đổi mật khẩu.",
+      "title": "Mã hóa dữ liệu"
     },
     "gist": {
-      "actionStateUnsaved": "Cấu hình có thay đổi chưa lưu. Các thao tác Gist sẽ lưu thay đổi trước.",
       "autoSyncEnableDesc": "Khi bật, dữ liệu được chia sẻ sẽ được đồng bộ với Secret Gist theo khoảng thời gian đã chọn.",
       "configDesc": "Đồng bộ dữ liệu dùng chung qua GitHub Secret Gist đã mã hóa. Secret Gist là liên kết không được liệt kê, không phải ranh giới kiểm soát truy cập.",
-      "create": "Tạo và tải lên Secret Gist",
       "downloadImport": "Nhập từ Secret Gist",
-      "downloadImportWithSave": "Lưu và nhập từ Secret Gist",
       "encryptionDescription": "Đồng bộ GitHub Gist yêu cầu mật khẩu mã hóa. Mật khẩu không được tải lên GitHub hoặc đưa vào bản sao lưu. Nếu mất mật khẩu, bạn không thể giải mã bản sao lưu.",
-      "encryptionPassword": "Mật khẩu mã hóa Gist",
-      "encryptionPasswordPlaceholder": "Nhập mật khẩu mã hóa",
       "encryptionPasswordRequired": "Nhập mật khẩu mã hóa trước khi lưu hoặc đồng bộ Gist này.",
       "id": "ID hoặc URL Gist",
-      "idDesc": "Nhập Secret Gist hiện có hoặc để trống để tạo mới.",
+      "idDesc": "Không bắt buộc. Để trống để tự động tạo Gist trong lần tải lên đầu tiên.",
       "idPlaceholder": "Ví dụ: a1b2c3d4 hoặc https://gist.github.com/...",
       "openLink": "Mở Gist này trên GitHub",
       "restorePolicyDescription": "Nhà cung cấp đám mây hiện tại đồng bộ dữ liệu được chia sẻ, không phải bản sao lưu toàn bộ thiết bị. Thông tin xác thực đám mây, mật khẩu mã hóa, lựa chọn đồng bộ và tự động làm mới tài khoản vẫn ở thiết bị này. Hãy dùng xuất/nhập thủ công để chuyển cài đặt cục bộ.",
       "testFailed": "Kết nối Secret Gist thất bại",
       "testSuccess": "Kết nối Secret Gist thành công",
-      "title": "Đồng bộ GitHub Gist",
       "token": "Token GitHub",
       "tokenDesc": "Chỉ lưu trong trình duyệt này; không bao giờ ghi vào bản sao lưu hoặc gửi đến All API Hub. Hãy dùng fine-grained token chỉ có quyền đọc/ghi Gists hoặc classic token với phạm vi gist.",
       "tokenPlaceholder": "Dán token GitHub",
       "upload": "Tải lên Secret Gist",
       "uploadFailed": "Tải lên GitHub Secret Gist thất bại",
-      "uploadSuccess": "Đã tải lên GitHub Secret Gist",
-      "uploadWithSave": "Lưu và tải lên Secret Gist"
+      "uploadSuccess": "Đã tải lên GitHub Secret Gist"
     },
     "hidePassword": "Ẩn mật khẩu",
     "manual": {
@@ -185,12 +171,10 @@
       "confirmDownloadTitle": "Khôi phục dữ liệu đã chọn?",
       "confirmUploadDescription": "Dữ liệu cục bộ đã chọn sẽ được ghi vào bản sao lưu đám mây đang dùng. Dữ liệu đám mây hiện có trong các phần đó có thể bị thay thế; thao tác này không dùng Hợp nhất thông minh.",
       "confirmUploadTitle": "Tải lên dữ liệu đã chọn?",
-      "description": "Tải lên hoặc khôi phục dữ liệu đồng bộ đã chọn theo một hướng rõ ràng.",
-      "directionWarning": "Đây là các thao tác một chiều: tải lên ghi dữ liệu cục bộ đã chọn lên đám mây; khôi phục ghi dữ liệu đám mây đã chọn vào thiết bị này. Không dùng Hợp nhất thông minh.",
-      "title": "Thao tác dữ liệu thủ công"
+      "directionWarning": "Đây là các thao tác một chiều: tải lên ghi dữ liệu cục bộ đã chọn lên đám mây; khôi phục ghi dữ liệu đám mây đã chọn vào thiết bị này. Không dùng Hợp nhất thông minh."
     },
     "notSynced": "Chưa đồng bộ hóa",
-    "password": "Mật khẩu",
+    "password": "Mật khẩu WebDAV",
     "provider": {
       "description": "Lựa chọn này áp dụng cho cả đồng bộ thủ công và tự động. Mỗi lần chỉ có một dịch vụ hoạt động.",
       "githubGist": "GitHub Secret Gist",
@@ -207,10 +191,9 @@
       "warningTitle": "Hãy chắc chắn thiết bị này có dữ liệu đầy đủ"
     },
     "restorePolicy": {
-      "description": "WebDAV chủ yếu được sử dụng để đồng bộ hóa dữ liệu được chia sẻ, không tương đương với việc sao lưu toàn bộ thiết bị. Cài đặt kết nối/mã hóa WebDAV của thiết bị hiện tại, lựa chọn dữ liệu đồng bộ hóa và các cài đặt cục bộ như tự động làm mới tài khoản sẽ không được tải lên qua WebDAV và cũng không bị ghi đè bởi máy chủ từ xa. Nếu bạn cần di chuyển các cài đặt cục bộ này, vui lòng sử dụng xuất/nhập thủ công.",
-      "title": "Giải thích phạm vi đồng bộ hóa"
+      "description": "WebDAV chủ yếu được sử dụng để đồng bộ hóa dữ liệu được chia sẻ, không tương đương với việc sao lưu toàn bộ thiết bị. Cài đặt kết nối/mã hóa WebDAV của thiết bị hiện tại, lựa chọn dữ liệu đồng bộ hóa và các cài đặt cục bộ như tự động làm mới tài khoản sẽ không được tải lên qua WebDAV và cũng không bị ghi đè bởi máy chủ từ xa. Nếu bạn cần di chuyển các cài đặt cục bộ này, vui lòng sử dụng xuất/nhập thủ công."
     },
-    "saveConfig": "Lưu cấu hình",
+    "retrySave": "Lưu thất bại. Thử lại",
     "showPassword": "Hiển thị mật khẩu",
     "syncData": {
       "accounts": "Tài khoản",
@@ -224,21 +207,18 @@
     "syncFailed": "Đồng bộ hóa thất bại",
     "syncing": "Đang đồng bộ hóa",
     "syncSettings": {
-      "description": "Chọn dữ liệu dùng chung, chiến lược và lịch tự động cho dịch vụ đang hoạt động.",
       "title": "Cài đặt đồng bộ hóa"
     },
     "syncSuccess": "Đồng bộ hóa thành công",
     "testConnection": "Kiểm tra kết nối",
-    "testConnectionWithSave": "Lưu và kiểm tra kết nối",
     "testFailed": "Kiểm tra kết nối thất bại",
     "testSuccess": "Kiểm tra kết nối thành công",
     "title": "Đồng bộ hóa đám mây",
     "uploadBackup": "Tải lên WebDAV",
-    "uploadBackupWithSave": "Lưu và tải lên WebDAV",
     "uploadFailed": "Tải lên WebDAV thất bại",
     "uploadSuccess": "Đã tải lên WebDAV",
-    "username": "Tên người dùng",
-    "webdavUrl": "Địa chỉ WebDAV",
+    "username": "Tên người dùng WebDAV",
+    "webdavUrl": "URL WebDAV",
     "webdavUrlExample": "Ví dụ: https://dav.example.com/{{filename}} URL tệp đầy đủ hoặc URL thư mục gốc của WebDAV"
   }
 }

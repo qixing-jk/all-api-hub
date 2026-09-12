@@ -1377,9 +1377,9 @@ test("uploads a WebDAV backup and restores it through the WebDAV download flow",
   )
   await waitForExtensionRoot(page)
 
-  await page.locator("#webdav-url").fill(webdavFileUrl)
-  await page.locator("#webdav-username").fill("webdav-user")
-  await page.locator("#webdav-password").fill("webdav-password")
+  await page.locator(`#${WEBDAV_TARGET_IDS.url}`).fill(webdavFileUrl)
+  await page.locator(`#${WEBDAV_TARGET_IDS.username}`).fill("webdav-user")
+  await page.locator(`#${WEBDAV_TARGET_IDS.password}`).fill("webdav-password")
 
   await page.locator(`#${WEBDAV_TARGET_IDS.testConnection}`).click()
   await expect(page.getByText("Connection test successful")).toBeVisible()
@@ -1471,9 +1471,13 @@ test("uploads a WebDAV backup and restores it through the WebDAV download flow",
   )
   await waitForExtensionRoot(restorePage)
 
-  await restorePage.locator("#webdav-url").fill(webdavFileUrl)
-  await restorePage.locator("#webdav-username").fill("webdav-user")
-  await restorePage.locator("#webdav-password").fill("webdav-password")
+  await restorePage.locator(`#${WEBDAV_TARGET_IDS.url}`).fill(webdavFileUrl)
+  await restorePage
+    .locator(`#${WEBDAV_TARGET_IDS.username}`)
+    .fill("webdav-user")
+  await restorePage
+    .locator(`#${WEBDAV_TARGET_IDS.password}`)
+    .fill("webdav-password")
   await restorePage
     .getByTestId(IMPORT_EXPORT_TEST_IDS.webdavDownloadImportButton)
     .click()
@@ -1606,30 +1610,28 @@ test("runs WebDAV auto-sync from settings and uploads the local snapshot", async
     page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.root}`),
   ).toBeVisible()
 
-  const providerSelector = page.locator("#webdav-provider")
+  const providerSelector = page.locator(`#${WEBDAV_TARGET_IDS.provider}`)
   await providerSelector
     .getByRole("button", { name: "GitHub Secret Gist", exact: true })
     .click()
-  await expect(page.locator("#github-gist-token")).toBeVisible()
+  await expect(page.locator(`#${WEBDAV_TARGET_IDS.gistToken}`)).toBeVisible()
   await expect(
     page.getByText("Save the sync service change first", { exact: true }),
-  ).toBeVisible()
+  ).toHaveCount(0)
   await expect(
     page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.syncNow}`),
-  ).toBeDisabled()
+  ).toBeEnabled()
 
   await providerSelector
     .getByRole("button", { name: "WebDAV", exact: true })
     .click()
-  await expect(page.locator("#webdav-url")).toBeVisible()
+  await expect(page.locator(`#${WEBDAV_TARGET_IDS.url}`)).toBeVisible()
   await expect(
     page.getByText("Save the sync service change first", { exact: true }),
   ).toHaveCount(0)
 
   await page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.enable} button`).click()
   await page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.interval}`).fill("120")
-  await page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.saveSettings}`).click()
-  await expect(page.getByText("Automatic sync Update successful")).toBeVisible()
 
   await page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.syncNow}`).click()
   await expect(

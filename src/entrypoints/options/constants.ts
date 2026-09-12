@@ -5,9 +5,9 @@ import {
   OPTIONS_MENU_ITEM_ICONS,
 } from "~/components/icons/optionsPageIcons"
 import { DEV_MENU_ITEM_IDS } from "~/constants/devOptionsMenuIds"
+import { BASE_OPTIONS_MENU_DEFINITIONS } from "~/constants/optionsMenuDefinitions"
 import {
   MENU_ITEM_IDS,
-  OPTIONS_MENU_CATEGORY_IDS,
   type OptionsMenuCategoryId,
   type OptionsPageMenuItemId,
 } from "~/constants/optionsMenuIds"
@@ -70,98 +70,31 @@ interface MenuItem {
 }
 
 // 菜单配置
-const BASE_MENU_ITEMS: MenuItem[] = [
-  {
-    id: MENU_ITEM_IDS.OVERVIEW,
-    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.OVERVIEW],
-    component: OptionsOverview,
-    category: OPTIONS_MENU_CATEGORY_IDS.GENERAL,
-  },
-  {
-    id: MENU_ITEM_IDS.ACCOUNT,
-    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.ACCOUNT],
-    component: AccountManagement,
-    category: OPTIONS_MENU_CATEGORY_IDS.GENERAL,
-  },
-  {
-    id: MENU_ITEM_IDS.API_CREDENTIAL_PROFILES,
-    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.API_CREDENTIAL_PROFILES],
-    component: ApiCredentialProfiles,
-    category: OPTIONS_MENU_CATEGORY_IDS.GENERAL,
-  },
-  {
-    id: MENU_ITEM_IDS.BOOKMARK,
-    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.BOOKMARK],
-    component: BookmarkManagement,
-    category: OPTIONS_MENU_CATEGORY_IDS.GENERAL,
-  },
-  {
-    id: MENU_ITEM_IDS.MODELS,
-    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.MODELS],
-    component: ModelList,
-    category: OPTIONS_MENU_CATEGORY_IDS.API,
-  },
-  {
-    id: MENU_ITEM_IDS.KEYS,
-    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.KEYS],
-    component: KeyManagement,
-    category: OPTIONS_MENU_CATEGORY_IDS.API,
-  },
-  {
-    id: MENU_ITEM_IDS.AUTO_CHECKIN,
-    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.AUTO_CHECKIN],
-    component: AutoCheckin,
-    category: OPTIONS_MENU_CATEGORY_IDS.AUTOMATION,
-  },
-  {
-    id: MENU_ITEM_IDS.SITE_ANNOUNCEMENTS,
-    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.SITE_ANNOUNCEMENTS],
-    component: SiteAnnouncements,
-    category: OPTIONS_MENU_CATEGORY_IDS.AUTOMATION,
-  },
-  {
-    id: MENU_ITEM_IDS.BALANCE_HISTORY,
-    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.BALANCE_HISTORY],
-    component: BalanceHistory,
-    category: OPTIONS_MENU_CATEGORY_IDS.INSIGHTS,
-  },
-  {
-    id: MENU_ITEM_IDS.USAGE_ANALYTICS,
-    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.USAGE_ANALYTICS],
-    component: UsageAnalytics,
-    category: OPTIONS_MENU_CATEGORY_IDS.INSIGHTS,
-  },
-  {
-    id: MENU_ITEM_IDS.MANAGED_SITE_CHANNELS,
-    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.MANAGED_SITE_CHANNELS],
-    component: ManagedSiteChannels,
-    category: OPTIONS_MENU_CATEGORY_IDS.SITE_MANAGEMENT,
-  },
-  {
-    id: MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC,
-    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC],
-    component: ManagedSiteModelSync,
-    category: OPTIONS_MENU_CATEGORY_IDS.SITE_MANAGEMENT,
-  },
-  {
-    id: MENU_ITEM_IDS.BASIC,
-    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.BASIC],
-    component: BasicSettings,
-    category: OPTIONS_MENU_CATEGORY_IDS.SYSTEM,
-  },
-  {
-    id: MENU_ITEM_IDS.IMPORT_EXPORT,
-    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.IMPORT_EXPORT],
-    component: ImportExport,
-    category: OPTIONS_MENU_CATEGORY_IDS.SYSTEM,
-  },
-  {
-    id: MENU_ITEM_IDS.ABOUT,
-    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.ABOUT],
-    component: About,
-    category: OPTIONS_MENU_CATEGORY_IDS.SYSTEM,
-  },
-]
+const BASE_MENU_COMPONENTS = {
+  [MENU_ITEM_IDS.OVERVIEW]: OptionsOverview,
+  [MENU_ITEM_IDS.ACCOUNT]: AccountManagement,
+  [MENU_ITEM_IDS.API_CREDENTIAL_PROFILES]: ApiCredentialProfiles,
+  [MENU_ITEM_IDS.BOOKMARK]: BookmarkManagement,
+  [MENU_ITEM_IDS.MODELS]: ModelList,
+  [MENU_ITEM_IDS.KEYS]: KeyManagement,
+  [MENU_ITEM_IDS.AUTO_CHECKIN]: AutoCheckin,
+  [MENU_ITEM_IDS.SITE_ANNOUNCEMENTS]: SiteAnnouncements,
+  [MENU_ITEM_IDS.BALANCE_HISTORY]: BalanceHistory,
+  [MENU_ITEM_IDS.USAGE_ANALYTICS]: UsageAnalytics,
+  [MENU_ITEM_IDS.MANAGED_SITE_CHANNELS]: ManagedSiteChannels,
+  [MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC]: ManagedSiteModelSync,
+  [MENU_ITEM_IDS.BASIC]: BasicSettings,
+  [MENU_ITEM_IDS.IMPORT_EXPORT]: ImportExport,
+  [MENU_ITEM_IDS.ABOUT]: About,
+}
+
+const BASE_MENU_ITEMS: MenuItem[] = BASE_OPTIONS_MENU_DEFINITIONS.map(
+  (item) => ({
+    ...item,
+    icon: OPTIONS_MENU_ITEM_ICONS[item.id],
+    component: BASE_MENU_COMPONENTS[item.id],
+  }),
+)
 
 const DEV_MENU_ITEMS: MenuItem[] = []
 

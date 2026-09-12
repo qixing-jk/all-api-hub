@@ -104,13 +104,8 @@
   },
   "title": "Importar/exportar",
   "webdav": {
-    "actionState": {
-      "unsaved": "Há alterações não salvas na configuração. O teste de conexão, o envio ao WebDAV e a importação do WebDAV salvarão essas alterações primeiro."
-    },
     "autoSync": {
-      "actionState": {
-        "unsaved": "Há alterações não salvas nas configurações de sincronização automática. Sincronizar agora não as utilizará; salve primeiro essas configurações."
-      },
+      "autosaveDescription": "A estratégia e o botão de sincronização são salvos automaticamente. O intervalo é salvo ao sair do campo.",
       "currentProvider": "Serviço de sincronização: {{provider}}",
       "enable": "Ativar sincronização automática",
       "enableDesc": "Quando ativada, os dados compartilhados serão sincronizados com o WebDAV nos intervalos definidos.",
@@ -118,9 +113,6 @@
       "intervalDesc": "Defina a frequência da sincronização automática",
       "intervalHint": "Tempo aproximado: {{minutes}} min",
       "lastSync": "Última sincronização",
-      "providerSwitchPending": "Salve a configuração do serviço acima para mudar a sincronização automática de {{from}} para {{to}}.",
-      "providerSwitchPendingTitle": "Salve primeiro a mudança do serviço",
-      "saveSettings": "Salvar configurações",
       "strategy": "Estratégia de sincronização",
       "strategyDesc": "Escolha como os dados devem ser sincronizados",
       "strategyLocalFirst": "Local primeiro: os dados locais substituem os remotos",
@@ -135,8 +127,8 @@
       "webdavDescription": "Informe o endereço WebDAV e as credenciais usadas por este dispositivo."
     },
     "downloadImport": "Importar do WebDAV",
-    "downloadImportWithSave": "Salvar e importar do WebDAV",
     "encryption": {
+      "alwaysEncrypted": "Sempre criptografado",
       "decryptAction": "Descriptografar e importar",
       "decryptDialogDesc": "Estes dados de sincronização do WebDAV estão criptografados. Tente usar uma senha para importá-los.",
       "decryptDialogTitle": "Descriptografar dados do WebDAV",
@@ -145,37 +137,31 @@
       "decryptPrompt": "Não foi possível descriptografar automaticamente. Insira sua senha.",
       "enableDesc": "Opcional: criptografe os backups do WebDAV com uma senha. Se a criptografia estiver desativada, os backups enviados conterão as credenciais salvas em texto simples. Use criptografia ou armazene-os com segurança.",
       "password": "Senha de criptografia",
-      "passwordDesc": "Usada para criptografar os dados enviados ao WebDAV e descriptografar os dados baixados do WebDAV.",
+      "passwordDesc": "Usada para criptografar os backups enviados à nuvem e descriptografar os backups baixados.",
       "passwordPlaceholder": "Insira a senha",
       "savePassword": "Salvar senha para descriptografar futuramente",
-      "title": "Criptografia de dados do WebDAV"
+      "sharedPasswordDescription": "WebDAV e GitHub Gist compartilham esta senha de criptografia. Trocar de serviço não altera a senha.",
+      "title": "Criptografia de dados"
     },
     "gist": {
-      "actionStateUnsaved": "Há alterações não salvas na configuração. As ações do Gist salvarão essas alterações primeiro.",
       "autoSyncEnableDesc": "Quando ativada, os dados compartilhados serão sincronizados com o Secret Gist no intervalo escolhido.",
       "configDesc": "Sincronize dados compartilhados por um GitHub Secret Gist criptografado. Um Secret Gist é um link não listado, não um limite de controle de acesso.",
-      "create": "Criar e enviar Secret Gist",
       "downloadImport": "Importar do Secret Gist",
-      "downloadImportWithSave": "Salvar e importar do Secret Gist",
       "encryptionDescription": "A sincronização com GitHub Gist exige uma senha de criptografia. Ela nunca é enviada ao GitHub nem incluída nos backups. Se você perdê-la, não será possível descriptografar o backup.",
-      "encryptionPassword": "Senha de criptografia do Gist",
-      "encryptionPasswordPlaceholder": "Digite uma senha de criptografia",
       "encryptionPasswordRequired": "Informe uma senha de criptografia antes de salvar ou sincronizar este Gist.",
       "id": "ID ou URL do Gist",
-      "idDesc": "Informe um Secret Gist existente ou deixe vazio para criar um.",
+      "idDesc": "Opcional. Deixe em branco para criar um Gist automaticamente no primeiro envio.",
       "idPlaceholder": "Por exemplo: a1b2c3d4 ou https://gist.github.com/...",
       "openLink": "Abrir este Gist no GitHub",
       "restorePolicyDescription": "O provedor de nuvem ativo sincroniza dados compartilhados, mas não é um backup completo do dispositivo. Credenciais da nuvem, senhas de criptografia, seleção de sincronização e atualização automática de contas permanecem neste dispositivo. Use a exportação/importação manual para migrar configurações locais.",
       "testFailed": "Falha na conexão com o Secret Gist",
       "testSuccess": "Conexão com o Secret Gist concluída",
-      "title": "Sincronização com GitHub Gist",
       "token": "Token do GitHub",
       "tokenDesc": "Armazenado somente neste navegador; nunca é gravado em backups nem enviado ao All API Hub. Use um token fine-grained apenas com leitura/escrita de Gists ou um token clássico com o escopo gist.",
       "tokenPlaceholder": "Cole um token do GitHub",
       "upload": "Enviar ao Secret Gist",
       "uploadFailed": "Falha ao enviar para o GitHub Secret Gist",
-      "uploadSuccess": "Enviado para o GitHub Secret Gist",
-      "uploadWithSave": "Salvar e enviar ao Secret Gist"
+      "uploadSuccess": "Enviado para o GitHub Secret Gist"
     },
     "hidePassword": "Ocultar senha",
     "manual": {
@@ -185,12 +171,10 @@
       "confirmDownloadTitle": "Restaurar os dados selecionados?",
       "confirmUploadDescription": "Os dados locais selecionados serão gravados no backup ativo da nuvem. Os dados existentes nessas seções podem ser substituídos; esta ação não usa a mesclagem inteligente.",
       "confirmUploadTitle": "Enviar os dados selecionados?",
-      "description": "Envie ou restaure os dados de sincronização selecionados em uma direção explícita.",
-      "directionWarning": "Estas ações têm direção definida: enviar grava os dados locais selecionados na nuvem; restaurar grava os dados selecionados da nuvem neste dispositivo. Elas não usam a mesclagem inteligente.",
-      "title": "Ações manuais de dados"
+      "directionWarning": "Estas ações têm direção definida: enviar grava os dados locais selecionados na nuvem; restaurar grava os dados selecionados da nuvem neste dispositivo. Elas não usam a mesclagem inteligente."
     },
     "notSynced": "Não sincronizado",
-    "password": "Senha",
+    "password": "Senha do WebDAV",
     "provider": {
       "description": "Esta seleção controla a sincronização manual e automática. Apenas um serviço fica ativo por vez.",
       "githubGist": "GitHub Secret Gist",
@@ -207,10 +191,9 @@
       "warningTitle": "Verifique se este dispositivo tem todos os dados"
     },
     "restorePolicy": {
-      "description": "O WebDAV serve para sincronizar dados compartilhados, não para fazer um backup completo do dispositivo. As configurações de conexão/criptografia do WebDAV, a seleção de sincronização e as configurações de atualização automática das contas deste dispositivo permanecem locais e não serão enviadas ao WebDAV nem substituídas por ele. Use a exportação/importação manual para migrar essas configurações locais do dispositivo.",
-      "title": "Aviso sobre o escopo da sincronização"
+      "description": "O WebDAV serve para sincronizar dados compartilhados, não para fazer um backup completo do dispositivo. As configurações de conexão/criptografia do WebDAV, a seleção de sincronização e as configurações de atualização automática das contas deste dispositivo permanecem locais e não serão enviadas ao WebDAV nem substituídas por ele. Use a exportação/importação manual para migrar essas configurações locais do dispositivo."
     },
-    "saveConfig": "Salvar configuração",
+    "retrySave": "Falha ao salvar. Tentar novamente",
     "showPassword": "Mostrar senha",
     "syncData": {
       "accounts": "Contas",
@@ -224,20 +207,17 @@
     "syncFailed": "Falha na sincronização",
     "syncing": "Sincronizando",
     "syncSettings": {
-      "description": "Escolha os dados compartilhados, a estratégia e o agendamento automático do serviço ativo.",
       "title": "Configurações de sincronização"
     },
     "syncSuccess": "Sincronização concluída",
     "testConnection": "Testar conexão",
-    "testConnectionWithSave": "Salvar e testar conexão",
     "testFailed": "Falha no teste de conexão",
     "testSuccess": "Teste de conexão concluído",
     "title": "Sincronização na nuvem",
     "uploadBackup": "Enviar ao WebDAV",
-    "uploadBackupWithSave": "Salvar e enviar ao WebDAV",
     "uploadFailed": "Falha ao enviar ao WebDAV",
     "uploadSuccess": "Enviado ao WebDAV",
-    "username": "Nome de usuário",
+    "username": "Nome de usuário do WebDAV",
     "webdavUrl": "URL do WebDAV",
     "webdavUrlExample": "Por exemplo: a URL completa do arquivo https://dav.example.com/{{filename}} ou a URL do diretório raiz do WebDAV"
   }

@@ -2,8 +2,8 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import {
   buildPageControlDefinition,
   buildPageSectionDefinition,
-} from "~/entrypoints/options/search/registryHelpers"
-import type { OptionsSearchItemDefinition } from "~/entrypoints/options/search/types"
+} from "~/features/OptionsSearch/registryHelpers"
+import type { OptionsSearchItemDefinition } from "~/features/OptionsSearch/types"
 
 import {
   IMPORT_EXPORT_TARGET_IDS,
@@ -52,7 +52,6 @@ export const importExportPageSearchSections: OptionsSearchItemDefinition[] = [
     "importExport:webdav.syncSettings.title",
     433,
     {
-      descriptionKey: "importExport:webdav.syncSettings.description",
       keywords: ["cloud", "webdav", "gist", "github", "auto sync", "schedule"],
     },
   ),
@@ -95,8 +94,8 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
   buildPageControlDefinition(
     "control:import-export-github-gist-create",
     MENU_ITEM_IDS.IMPORT_EXPORT,
-    WEBDAV_TARGET_IDS.createGist,
-    "importExport:webdav.gist.create",
+    WEBDAV_TARGET_IDS.gistUpload,
+    "importExport:webdav.gist.upload",
     739.3,
     {
       descriptionKey: "importExport:webdav.gist.configDesc",
@@ -301,12 +300,13 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
   buildPageControlDefinition(
     "control:webdav-encryption-enable",
     MENU_ITEM_IDS.IMPORT_EXPORT,
-    WEBDAV_TARGET_IDS.encryptionEnable,
+    WEBDAV_TARGET_IDS.encryption,
     "importExport:webdav.encryption.title",
     746.5,
     {
-      descriptionKey: "importExport:webdav.encryption.enableDesc",
-      keywords: ["webdav", "encryption", "backup encryption"],
+      descriptionKey:
+        "importExport:webdav.encryption.sharedPasswordDescription",
+      keywords: ["webdav", "gist", "github", "encryption", "backup encryption"],
     },
   ),
   buildPageControlDefinition(
@@ -317,18 +317,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
     747,
     {
       descriptionKey: "importExport:webdav.encryption.passwordDesc",
-      keywords: ["webdav", "encryption", "password"],
-    },
-  ),
-  buildPageControlDefinition(
-    "control:webdav-save-config",
-    MENU_ITEM_IDS.IMPORT_EXPORT,
-    WEBDAV_TARGET_IDS.saveConfig,
-    "importExport:webdav.saveConfig",
-    748,
-    {
-      descriptionKey: "importExport:webdav.configDesc",
-      keywords: ["webdav", "save"],
+      keywords: ["webdav", "gist", "github", "encryption", "password"],
     },
   ),
   buildPageControlDefinition(
@@ -388,24 +377,12 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildPageControlDefinition(
-    "control:webdav-auto-sync-save-settings",
-    MENU_ITEM_IDS.IMPORT_EXPORT,
-    WEBDAV_AUTO_SYNC_TARGET_IDS.saveSettings,
-    "importExport:webdav.autoSync.saveSettings",
-    754,
-    {
-      descriptionKey: "importExport:webdav.syncSettings.description",
-      keywords: ["webdav", "auto sync", "save"],
-    },
-  ),
-  buildPageControlDefinition(
     "control:webdav-auto-sync-sync-now",
     MENU_ITEM_IDS.IMPORT_EXPORT,
     WEBDAV_AUTO_SYNC_TARGET_IDS.syncNow,
     "importExport:webdav.autoSync.syncNow",
     755,
     {
-      descriptionKey: "importExport:webdav.syncSettings.description",
       keywords: ["webdav", "auto sync", "sync now"],
     },
   ),

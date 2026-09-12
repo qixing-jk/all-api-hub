@@ -1,5 +1,5 @@
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { buildPageSectionDefinition } from "~/entrypoints/options/search/registryHelpers"
+import { buildPageSectionDefinition } from "~/features/OptionsSearch/registryHelpers"
 
 import { PRODUCT_TOUR_REPLAY_TARGET_ID } from "./constants"
 

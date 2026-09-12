@@ -104,13 +104,8 @@
   },
   "title": "Importar/Exportar",
   "webdav": {
-    "actionState": {
-      "unsaved": "La configuración tiene cambios sin guardar. Probar conexión, subir a WebDAV e importar desde WebDAV guardarán estos cambios primero."
-    },
     "autoSync": {
-      "actionState": {
-        "unsaved": "La configuración de sincronización automática tiene cambios sin guardar. Sincronizar ahora no los usará; guarda primero la configuración de sincronización automática."
-      },
+      "autosaveDescription": "La estrategia y el interruptor se guardan automáticamente. El intervalo se guarda al salir del campo.",
       "currentProvider": "Servicio de sincronización: {{provider}}",
       "enable": "Habilitar sincronización automática",
       "enableDesc": "Cuando está habilitada, los datos compartidos se sincronizarán con WebDAV en intervalos definidos.",
@@ -118,9 +113,6 @@
       "intervalDesc": "Define cada cuánto se ejecuta la sincronización automática",
       "intervalHint": "Aproximadamente {{minutes}} minutos",
       "lastSync": "Última sincronización",
-      "providerSwitchPending": "Guarda la configuración del servicio de arriba para cambiar la sincronización automática de {{from}} a {{to}}.",
-      "providerSwitchPendingTitle": "Primero guarda el cambio de servicio",
-      "saveSettings": "Guardar configuración",
       "strategy": "Estrategia de sincronización",
       "strategyDesc": "Elige cómo se deben sincronizar los datos",
       "strategyLocalFirst": "Local primero - los datos locales reemplazan los datos remotos",
@@ -135,8 +127,8 @@
       "webdavDescription": "Ingresa la dirección WebDAV y las credenciales que usa este dispositivo."
     },
     "downloadImport": "Importar desde WebDAV",
-    "downloadImportWithSave": "Guardar e importar desde WebDAV",
     "encryption": {
+      "alwaysEncrypted": "Siempre cifrado",
       "decryptAction": "Descifrar e importar",
       "decryptDialogDesc": "Estos datos de sincronización WebDAV están cifrados. Prueba una contraseña para importarlos.",
       "decryptDialogTitle": "Descifrar datos de WebDAV",
@@ -145,37 +137,31 @@
       "decryptPrompt": "No se puede descifrar automáticamente. Ingresa tu contraseña.",
       "enableDesc": "Opcional: cifra las copias de WebDAV con una contraseña. Si el cifrado está desactivado, las copias subidas contienen las credenciales guardadas en texto sin formato. Usa el cifrado o guárdalas de forma segura.",
       "password": "Contraseña de cifrado",
-      "passwordDesc": "Se usa para cifrar los datos subidos a WebDAV y descifrar los datos descargados de WebDAV.",
+      "passwordDesc": "Se usa para cifrar las copias de seguridad que se suben a la nube y descifrar las que se descargan.",
       "passwordPlaceholder": "Ingresa la contraseña",
       "savePassword": "Guardar contraseña para descifrar en el futuro",
-      "title": "Cifrado de datos WebDAV"
+      "sharedPasswordDescription": "WebDAV y GitHub Gist comparten esta contraseña de cifrado. Cambiar de servicio no cambia la contraseña.",
+      "title": "Cifrado de datos"
     },
     "gist": {
-      "actionStateUnsaved": "La configuración tiene cambios sin guardar. Las acciones del Gist guardarán primero esos cambios.",
       "autoSyncEnableDesc": "Al activarla, los datos compartidos se sincronizarán con el Secret Gist en el intervalo elegido.",
       "configDesc": "Sincroniza datos compartidos mediante un GitHub Secret Gist cifrado. Un Secret Gist es un enlace no listado, no un límite de control de acceso.",
-      "create": "Crear y subir Secret Gist",
       "downloadImport": "Importar desde Secret Gist",
-      "downloadImportWithSave": "Guardar e importar desde Secret Gist",
       "encryptionDescription": "La sincronización con GitHub Gist requiere una contraseña de cifrado. Nunca se sube a GitHub ni se incluye en las copias. Si la pierdes, no podrás descifrar la copia cifrada.",
-      "encryptionPassword": "Contraseña de cifrado del Gist",
-      "encryptionPasswordPlaceholder": "Introduce una contraseña de cifrado",
       "encryptionPasswordRequired": "Introduce una contraseña de cifrado antes de guardar o sincronizar este Gist.",
       "id": "ID o URL del Gist",
-      "idDesc": "Introduce un Secret Gist existente o déjalo vacío para crear uno.",
+      "idDesc": "Opcional. Déjalo vacío para crear un Gist automáticamente en la primera subida.",
       "idPlaceholder": "Por ejemplo: a1b2c3d4 o https://gist.github.com/...",
       "openLink": "Abrir este Gist en GitHub",
       "restorePolicyDescription": "El proveedor de nube activo sincroniza datos compartidos, no una copia completa del dispositivo. Las credenciales de nube, contraseñas de cifrado, selección de sincronización y actualización automática de cuentas permanecen en este dispositivo. Usa la exportación/importación manual para migrar la configuración local.",
       "testFailed": "No se pudo conectar al Secret Gist",
       "testSuccess": "Conexión al Secret Gist correcta",
-      "title": "Sincronización con GitHub Gist",
       "token": "Token de GitHub",
       "tokenDesc": "Solo se guarda en este navegador; nunca se escribe en copias de seguridad ni se envía a All API Hub. Usa un token fine-grained con solo permisos de lectura/escritura de Gists o un token clásico con el alcance gist.",
       "tokenPlaceholder": "Pega un token de GitHub",
       "upload": "Subir al Secret Gist",
       "uploadFailed": "No se pudo subir a GitHub Secret Gist",
-      "uploadSuccess": "Subido a GitHub Secret Gist",
-      "uploadWithSave": "Guardar y subir al Secret Gist"
+      "uploadSuccess": "Subido a GitHub Secret Gist"
     },
     "hidePassword": "Ocultar contraseña",
     "manual": {
@@ -185,12 +171,10 @@
       "confirmDownloadTitle": "¿Restaurar los datos seleccionados?",
       "confirmUploadDescription": "Los datos locales seleccionados se escribirán en el respaldo activo de la nube. Los datos existentes de esas secciones pueden reemplazarse; esta acción no usa la combinación inteligente.",
       "confirmUploadTitle": "¿Subir los datos seleccionados?",
-      "description": "Sube o restaura los datos de sincronización seleccionados con una dirección explícita.",
-      "directionWarning": "Estas acciones son direccionales: subir escribe los datos locales seleccionados en la nube; restaurar escribe los datos seleccionados de la nube en este dispositivo. No usan la combinación inteligente.",
-      "title": "Acciones manuales de datos"
+      "directionWarning": "Estas acciones son direccionales: subir escribe los datos locales seleccionados en la nube; restaurar escribe los datos seleccionados de la nube en este dispositivo. No usan la combinación inteligente."
     },
     "notSynced": "Sin sincronizar",
-    "password": "Contraseña",
+    "password": "Contraseña de WebDAV",
     "provider": {
       "description": "Esta selección controla la sincronización manual y automática. Solo un servicio está activo a la vez.",
       "githubGist": "GitHub Secret Gist",
@@ -207,10 +191,9 @@
       "warningTitle": "Asegúrate de que este dispositivo tenga datos completos"
     },
     "restorePolicy": {
-      "description": "WebDAV está pensado para sincronización de datos compartidos, no para un respaldo completo del dispositivo. La configuración de conexión/cifrado WebDAV, la selección de sincronización y la configuración de actualización automática de cuentas del dispositivo actual permanecen locales y no se subirán ni sobrescribirán desde WebDAV. Usa exportación/importación manual cuando necesites migrar esas configuraciones locales del dispositivo.",
-      "title": "Aviso de alcance de sincronización"
+      "description": "WebDAV está pensado para sincronización de datos compartidos, no para un respaldo completo del dispositivo. La configuración de conexión/cifrado WebDAV, la selección de sincronización y la configuración de actualización automática de cuentas del dispositivo actual permanecen locales y no se subirán ni sobrescribirán desde WebDAV. Usa exportación/importación manual cuando necesites migrar esas configuraciones locales del dispositivo."
     },
-    "saveConfig": "Guardar configuración",
+    "retrySave": "Error al guardar. Reintentar",
     "showPassword": "Mostrar contraseña",
     "syncData": {
       "accounts": "Cuentas",
@@ -224,20 +207,17 @@
     "syncFailed": "Falló la sincronización",
     "syncing": "Sincronizando",
     "syncSettings": {
-      "description": "Elige los datos compartidos, la estrategia y el intervalo del servicio activo.",
       "title": "Configuración de sincronización"
     },
     "syncSuccess": "Sincronización correcta",
     "testConnection": "Probar conexión",
-    "testConnectionWithSave": "Guardar y probar conexión",
     "testFailed": "Falló la prueba de conexión",
     "testSuccess": "Prueba de conexión correcta",
     "title": "Sincronización en la nube",
     "uploadBackup": "Subir a WebDAV",
-    "uploadBackupWithSave": "Guardar y subir a WebDAV",
     "uploadFailed": "Falló la subida a WebDAV",
     "uploadSuccess": "Subido a WebDAV",
-    "username": "Nombre de usuario",
+    "username": "Nombre de usuario de WebDAV",
     "webdavUrl": "URL de WebDAV",
     "webdavUrlExample": "Por ejemplo: https://dav.example.com/{{filename}} URL completa del archivo o URL del directorio raíz de WebDAV"
   }

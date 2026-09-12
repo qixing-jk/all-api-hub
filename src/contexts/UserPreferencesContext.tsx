@@ -476,7 +476,7 @@ interface UserPreferencesContextType {
     updates: DeepPartial<WebAiApiCheckPreferences>,
   ) => PreferenceWritePromise
   updateWebdavSettings: (
-    updates: Partial<WebDAVSettings>,
+    updates: DeepPartial<WebDAVSettings>,
     options?: PreferenceSaveOptions,
   ) => PreferenceWritePromise
   updateWebdavAutoSyncSettings: (
@@ -1458,7 +1458,7 @@ export const UserPreferencesProvider = ({
 
   const updateWebdavSettings = useCallback(
     async (
-      updates: Partial<WebDAVSettings>,
+      updates: DeepPartial<WebDAVSettings>,
       options?: PreferenceSaveOptions,
     ) => {
       return persistPreferenceUpdates(

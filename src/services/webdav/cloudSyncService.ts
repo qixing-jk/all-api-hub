@@ -32,19 +32,33 @@ export function getCloudSyncProvider(
     : CLOUD_SYNC_PROVIDERS.WEBDAV
 }
 
-/** Test the currently selected cloud provider connection. */
-export async function testCloudSyncConnection(settings: WebDAVSettings) {
-  if (getCloudSyncProvider(settings) === CLOUD_SYNC_PROVIDERS.GITHUB_GIST) {
-    return testGithubGistConnection(getGithubGistSyncConfig(settings))
-  }
+/** Preserve persisted-config fallback only when every WebDAV field is empty. */
+function getWebdavConfigOverride(settings: WebDAVSettings) {
   const config = {
     url: settings.url,
     username: settings.username,
     password: settings.password,
   }
-  return testWebdavConnection(
-    config.url || config.username || config.password ? config : undefined,
-  )
+  return config.url || config.username || config.password ? config : undefined
+}
+
+/** Keep provider-specific metadata out of the shared sync contract. */
+function toCloudSyncRemote(remote: GitHubGistRemote): CloudSyncRemote {
+  return {
+    provider: CLOUD_SYNC_PROVIDERS.GITHUB_GIST,
+    gistId: remote.gistId,
+    revision: remote.revision,
+    htmlUrl: remote.htmlUrl,
+    rawContent: remote.rawContent,
+  } satisfies CloudSyncRemote
+}
+
+/** Test the currently selected cloud provider connection. */
+export async function testCloudSyncConnection(settings: WebDAVSettings) {
+  if (getCloudSyncProvider(settings) === CLOUD_SYNC_PROVIDERS.GITHUB_GIST) {
+    return testGithubGistConnection(getGithubGistSyncConfig(settings))
+  }
+  return testWebdavConnection(getWebdavConfigOverride(settings))
 }
 
 /** Download and normalize provider metadata for a sync operation. */
@@ -58,26 +72,12 @@ export async function downloadCloudSyncBackup(
     )
     return {
       content: result.content,
-      remote: {
-        provider: CLOUD_SYNC_PROVIDERS.GITHUB_GIST,
-        gistId: result.remote.gistId,
-        revision: result.remote.revision,
-        htmlUrl: result.remote.htmlUrl,
-        rawContent: result.remote.rawContent,
-      } satisfies CloudSyncRemote,
+      remote: toCloudSyncRemote(result.remote),
     }
   }
 
-  const config = {
-    url: settings.url,
-    username: settings.username,
-    password: settings.password,
-  }
   return {
-    content: await downloadBackup(
-      config.url || config.username || config.password ? config : undefined,
-      options,
-    ),
+    content: await downloadBackup(getWebdavConfigOverride(settings), options),
     remote: { provider: CLOUD_SYNC_PROVIDERS.WEBDAV } satisfies CloudSyncRemote,
   }
 }
@@ -94,24 +94,10 @@ export async function uploadCloudSyncBackup(
       getGithubGistSyncConfig(settings),
       expectedRevision,
     )
-    return {
-      provider: CLOUD_SYNC_PROVIDERS.GITHUB_GIST,
-      gistId: remote.gistId,
-      revision: remote.revision,
-      htmlUrl: remote.htmlUrl,
-      rawContent: remote.rawContent,
-    } satisfies CloudSyncRemote
+    return toCloudSyncRemote(remote)
   }
 
-  const config = {
-    url: settings.url,
-    username: settings.username,
-    password: settings.password,
-  }
-  await uploadBackup(
-    content,
-    config.url || config.username || config.password ? config : undefined,
-  )
+  await uploadBackup(content, getWebdavConfigOverride(settings))
   return { provider: CLOUD_SYNC_PROVIDERS.WEBDAV } satisfies CloudSyncRemote
 }
 
@@ -127,11 +113,5 @@ export async function createCloudSyncBackup(
     content,
     getGithubGistSyncConfig(settings),
   )
-  return {
-    provider: CLOUD_SYNC_PROVIDERS.GITHUB_GIST,
-    gistId: remote.gistId,
-    revision: remote.revision,
-    htmlUrl: remote.htmlUrl,
-    rawContent: remote.rawContent,
-  }
+  return toCloudSyncRemote(remote)
 }

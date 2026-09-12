@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { useSearchHotkeys } from "~/entrypoints/options/search/useSearchHotkeys"
+import { useSearchHotkeys } from "~/features/OptionsSearch/useSearchHotkeys"
 import { renderHook } from "~~/tests/test-utils/render"
 
 describe("useSearchHotkeys", () => {

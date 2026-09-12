@@ -1,8 +1,5 @@
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
-import {
-  apiCredentialProfilesStorage,
-  mergeApiCredentialProfilesConfigs,
-} from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import {
   featureGuidanceState,
   mergeFeatureGuidanceStates,
@@ -26,9 +23,7 @@ import {
   sanitizeTagStore,
 } from "~/services/tags/tagStoreUtils"
 import {
-  DELETED_ENTRY_KIND,
   type AccountStorageConfig,
-  type DeletedEntryKind,
   type SiteAccount,
   type SiteBookmark,
   type TagStore,
@@ -52,7 +47,6 @@ import {
   WEBDAV_SYNC_STRATEGIES,
   type CloudSyncProvider,
   type WebDAVSettings,
-  type WebDAVSyncDataSelection,
 } from "~/types/webdav"
 import {
   clearAlarm,
@@ -68,8 +62,7 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
-import { ACCOUNT_STORAGE_KEYS, STORAGE_LOCKS } from "../core/storageKeys"
-import { withExtensionStorageWriteLock } from "../core/storageWriteLock"
+import { ACCOUNT_STORAGE_KEYS } from "../core/storageKeys"
 import { channelConfigStorage } from "../managedSites/channelConfigStorage"
 import {
   userPreferences,
@@ -104,6 +97,8 @@ import {
   isWebdavFileNotFoundError,
   parseWebdavBackupJson,
 } from "./webdavService"
+import { applyWebdavSyncResult } from "./webdavSyncApply"
+import { mergeWebdavSyncData } from "./webdavSyncMerge"
 
 const logger = createLogger("WebdavAutoSync")
 
@@ -680,7 +675,7 @@ class WebdavAutoSyncService {
    *    - 如果远程备份是加密封套（envelope），downloadBackup 会尝试用
    *      当前 WebDAV 加密密码自动解密；缺失/错误密码会导致本次同步失败。
    * 3. 根据 syncStrategy 决定合并方式：
-   *    - "merge": 调用 mergeData 基于时间戳双向合并本地 / 远程账号与偏好设置。
+   *    - "merge": 调用 mergeWebdavSyncData 基于时间戳双向合并本地 / 远程账号与偏好设置。
    *    - "upload_only" 或远程无数据：使用本地数据覆盖远程。
    *    - 默认：优先使用远程数据，否则回退到本地。
    * 4. 将合并后的账号和偏好设置写回本地存储，并上传新的备份（始终使用
@@ -749,6 +744,12 @@ class WebdavAutoSyncService {
             normalizedRemote.featureGuidance,
           )
         : localFeatureGuidance
+    // An absent remote section contributes no incoming configs. The atomic
+    // merge reads the latest local state, including concurrent deletions.
+    const incomingChannelConfigs =
+      remotePresence.hasChannelConfigs && normalizedRemote.channelConfigs
+        ? normalizedRemote.channelConfigs
+        : { schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION, configs: {} }
     const mergeChannelConfigsOnApply =
       strategy === WEBDAV_SYNC_STRATEGIES.MERGE ||
       !remotePresence.hasChannelConfigs
@@ -778,7 +779,7 @@ class WebdavAutoSyncService {
         ? getSharedPreferencesLastUpdated(normalizedRemote.preferences as any)
         : 0
 
-      const mergeResult = this.mergeData(
+      const mergeResult = mergeWebdavSyncData(
         {
           accounts: localAccountsConfig.accounts,
           bookmarks: localBookmarks,
@@ -814,12 +815,7 @@ class WebdavAutoSyncService {
       preferencesToSave = mergeResult.preferences
       // Atomic merge must receive only remote incoming data. Including the
       // startup-time local snapshot could resurrect entries deleted meanwhile.
-      // An absent remote section contributes no incoming configs. The atomic
-      // merge reads the latest local state, including concurrent deletions.
-      channelConfigsToSave =
-        remotePresence.hasChannelConfigs && normalizedRemote.channelConfigs
-          ? normalizedRemote.channelConfigs
-          : { schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION, configs: {} }
+      channelConfigsToSave = incomingChannelConfigs
       apiCredentialProfilesToSave = mergeResult.apiCredentialProfiles
       deletedEntryRecordsToSave = mergeResult.deletedEntryRecords
 
@@ -941,12 +937,7 @@ class WebdavAutoSyncService {
           ? remotePreferences
           : localPreferences
 
-      // An absent remote section contributes no incoming configs. The atomic
-      // merge reads the latest local state, including concurrent deletions.
-      channelConfigsToSave =
-        remotePresence.hasChannelConfigs && normalizedRemote.channelConfigs
-          ? normalizedRemote.channelConfigs
-          : { schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION, configs: {} }
+      channelConfigsToSave = incomingChannelConfigs
 
       apiCredentialProfilesToSave =
         syncDataSelection.apiCredentialProfiles &&
@@ -1100,471 +1091,15 @@ class WebdavAutoSyncService {
     logger.info("数据已上传到云端同步服务")
   }
 
-  private async importPreferencesOrThrow(preferences: UserPreferences) {
-    const writeResult = await userPreferences.importPreferences(preferences, {
-      preserveWebdav: true,
-    })
-
-    if (!writeResult.ok) {
-      throw new Error(
-        writeResult.reason.type === "storage-error"
-          ? getErrorMessage(writeResult.reason.error)
-          : "Failed to import WebDAV preferences",
-      )
-    }
-  }
-
-  private async applyLocalSyncResult(input: {
-    syncDataSelection: WebDAVSyncDataSelection
-    accountsToSave: SiteAccount[]
-    bookmarksToSave: SiteBookmark[]
-    deletedEntryRecordsToSave?: AccountStorageConfig["deletedEntryRecords"]
-    pinnedAccountIdsToSave: string[]
-    orderedAccountIdsToSave: string[]
-    tagStoreToSave: TagStore
-    preferencesToSave: UserPreferences
-    featureGuidanceToSave: FeatureGuidanceState
-    channelConfigsToSave: ChannelConfigSnapshot
-    mergeChannelConfigsOnApply: boolean
-    apiCredentialProfilesToSave: ApiCredentialProfilesConfig
-    localAccountsConfig: {
-      accounts: SiteAccount[]
-      bookmarks?: SiteBookmark[]
-      pinnedAccountIds?: string[]
-      orderedAccountIds?: string[]
-      deletedEntryRecords?: AccountStorageConfig["deletedEntryRecords"]
-    }
-    localTagStore: TagStore
-    localPreferences: UserPreferences
-    localApiCredentialProfiles: ApiCredentialProfilesConfig
-  }) {
-    const rollbackSteps: Array<() => Promise<void>> = []
-
+  private async applyLocalSyncResult(
+    input: Parameters<typeof applyWebdavSyncResult>[0],
+  ) {
     this.suppressAccountStorageChangeHandling = true
     try {
-      return await withExtensionStorageWriteLock(
-        STORAGE_LOCKS.WEBDAV_SYNC_APPLY,
-        async () => {
-          try {
-            if (
-              input.syncDataSelection.accounts ||
-              input.syncDataSelection.bookmarks
-            ) {
-              await accountDataTransfer.importData({
-                accounts: input.accountsToSave,
-                pinnedAccountIds: input.pinnedAccountIdsToSave,
-                orderedAccountIds: input.orderedAccountIdsToSave,
-                bookmarks: input.bookmarksToSave,
-                deletedEntryRecords: input.deletedEntryRecordsToSave,
-              })
-
-              rollbackSteps.push(async () => {
-                await accountDataTransfer.importData({
-                  accounts: input.localAccountsConfig.accounts,
-                  bookmarks: input.localAccountsConfig.bookmarks || [],
-                  pinnedAccountIds:
-                    input.localAccountsConfig.pinnedAccountIds || [],
-                  orderedAccountIds:
-                    input.localAccountsConfig.orderedAccountIds || [],
-                  deletedEntryRecords:
-                    input.localAccountsConfig.deletedEntryRecords,
-                })
-              })
-            }
-
-            if (
-              input.syncDataSelection.accounts ||
-              input.syncDataSelection.bookmarks ||
-              input.syncDataSelection.apiCredentialProfiles
-            ) {
-              await tagStorage.importTagStore(input.tagStoreToSave)
-
-              rollbackSteps.push(async () => {
-                await tagStorage.importTagStore(input.localTagStore)
-              })
-            }
-
-            if (input.syncDataSelection.preferences) {
-              await this.importPreferencesOrThrow(input.preferencesToSave)
-
-              rollbackSteps.push(async () => {
-                await this.importPreferencesOrThrow(input.localPreferences)
-              })
-            }
-
-            if (input.syncDataSelection.apiCredentialProfiles) {
-              await apiCredentialProfilesStorage.importConfig(
-                input.apiCredentialProfilesToSave,
-              )
-
-              rollbackSteps.push(async () => {
-                await apiCredentialProfilesStorage.importConfig(
-                  input.localApiCredentialProfiles,
-                )
-              })
-            }
-
-            // Apply channel configs last so a failure in another storage domain
-            // never requires replacing concurrent channel edits during rollback.
-            const applyChannelConfigs = async () => {
-              if (input.mergeChannelConfigsOnApply) {
-                return await channelConfigStorage.mergeConfigs(
-                  input.channelConfigsToSave,
-                )
-              }
-
-              await channelConfigStorage.importConfigs(
-                input.channelConfigsToSave,
-              )
-              return input.channelConfigsToSave
-            }
-
-            if (input.syncDataSelection.preferences) {
-              return await featureGuidanceState.withMergedStateTransaction(
-                input.featureGuidanceToSave,
-                applyChannelConfigs,
-              )
-            }
-
-            return await applyChannelConfigs()
-          } catch (error) {
-            for (const rollback of rollbackSteps.reverse()) {
-              try {
-                await rollback()
-              } catch (rollbackError) {
-                logger.error(
-                  "Failed to rollback partially applied WebDAV sync writes",
-                  rollbackError,
-                )
-              }
-            }
-
-            throw error
-          }
-        },
-      )
+      return await applyWebdavSyncResult(input)
     } finally {
       this.suppressAccountStorageChangeHandling = false
     }
-  }
-
-  /**
-   * Merge local and remote data based on timestamps (latest wins).
-   * Channel configs are intentionally merged later at their locked storage seam.
-   * @returns Merged accounts, preferences, profiles, tags, and deletion metadata.
-   */
-  private mergeData(
-    local: {
-      accounts: SiteAccount[]
-      bookmarks: SiteBookmark[]
-      deletedEntryRecords?: AccountStorageConfig["deletedEntryRecords"]
-      accountsTimestamp: number
-      tagStore: TagStore
-      preferences: UserPreferences
-      preferencesTimestamp: number
-      apiCredentialProfiles: ApiCredentialProfilesConfig
-    },
-    remote: {
-      accounts: SiteAccount[]
-      bookmarks: SiteBookmark[]
-      deletedEntryRecords?: AccountStorageConfig["deletedEntryRecords"]
-      accountsTimestamp: number
-      tagStore: TagStore
-      preferences: UserPreferences
-      preferencesTimestamp: number
-      apiCredentialProfiles: ApiCredentialProfilesConfig
-    },
-    selection: WebDAVSyncDataSelection = resolveWebdavSyncDataSelection(null),
-  ): {
-    accounts: SiteAccount[]
-    bookmarks: SiteBookmark[]
-    tagStore: TagStore
-    preferences: UserPreferences
-    apiCredentialProfiles: ApiCredentialProfilesConfig
-    deletedEntryRecords: NonNullable<
-      AccountStorageConfig["deletedEntryRecords"]
-    >
-  } {
-    logger.debug("开始合并数据", {
-      localAccountCount: local.accounts.length,
-      remoteAccountCount: remote.accounts.length,
-      localBookmarkCount: local.bookmarks.length,
-      remoteBookmarkCount: remote.bookmarks.length,
-    })
-
-    // Migrate legacy string tags (if any) into tag ids on both sides.
-    const localTagStore = sanitizeTagStore(
-      local.tagStore ?? createDefaultTagStore(),
-    )
-    const remoteTagStore = sanitizeTagStore(
-      remote.tagStore ?? createDefaultTagStore(),
-    )
-    const migratedLocal = migrateAccountTagsData({
-      accounts: local.accounts,
-      tagStore: localTagStore,
-    })
-    const migratedRemote = migrateAccountTagsData({
-      accounts: remote.accounts,
-      tagStore: remoteTagStore,
-    })
-
-    // Merge tag stores and remap accounts so tag ids always resolve.
-    const tagMerge = tagStorage.mergeTagStoresForSync({
-      localTagStore: migratedLocal.tagStore,
-      remoteTagStore: migratedRemote.tagStore,
-      localAccounts: migratedLocal.accounts,
-      remoteAccounts: migratedRemote.accounts,
-      localBookmarks: local.bookmarks,
-      remoteBookmarks: remote.bookmarks,
-      localTaggables: local.apiCredentialProfiles.profiles,
-      remoteTaggables: remote.apiCredentialProfiles.profiles,
-    })
-
-    // 合并账号数据
-    const accountMap = new Map<string, SiteAccount>()
-    const deletedEntryRecords = WebdavAutoSyncService.mergeDeletedEntryRecords({
-      localRecords: local.deletedEntryRecords,
-      remoteRecords: remote.deletedEntryRecords,
-      includeRemoteAccounts: selection.accounts,
-      includeRemoteBookmarks: selection.bookmarks,
-    })
-
-    // 首先添加本地账号
-    tagMerge.localAccounts.forEach((account) => {
-      if (
-        WebdavAutoSyncService.isEntrySuppressedByDeletionRecord({
-          id: account.id,
-          kind: DELETED_ENTRY_KIND.ACCOUNT,
-          entryUpdatedAt: account.updated_at,
-          entryUserUpdatedAt: account.user_updated_at,
-          deletedEntryRecords,
-        })
-      ) {
-        return
-      }
-
-      accountMap.set(account.id, account)
-    })
-
-    // 然后处理远程账号（按 updated_at 选择较新版本）
-    if (selection.accounts) {
-      tagMerge.remoteAccounts.forEach((remoteAccount) => {
-        const localAccount = accountMap.get(remoteAccount.id)
-
-        if (!localAccount) {
-          if (
-            WebdavAutoSyncService.isEntrySuppressedByDeletionRecord({
-              id: remoteAccount.id,
-              kind: DELETED_ENTRY_KIND.ACCOUNT,
-              entryUpdatedAt: remoteAccount.updated_at,
-              entryUserUpdatedAt: remoteAccount.user_updated_at,
-              deletedEntryRecords,
-            })
-          ) {
-            logger.debug("忽略已删除账号的旧远程副本", {
-              accountId: remoteAccount.id,
-              siteName: remoteAccount.site_name,
-            })
-            return
-          }
-
-          // 远程账号在本地不存在，直接添加
-          accountMap.set(remoteAccount.id, remoteAccount)
-          logger.debug("添加远程账号", {
-            accountId: remoteAccount.id,
-            siteName: remoteAccount.site_name,
-          })
-        } else {
-          // 账号在两边都存在，比较时间戳
-          const localUpdatedAt = localAccount.updated_at || 0
-          const remoteUpdatedAt = remoteAccount.updated_at || 0
-
-          if (remoteUpdatedAt > localUpdatedAt) {
-            // 远程更新，使用远程数据
-            accountMap.set(remoteAccount.id, remoteAccount)
-            logger.debug("使用远程账号（远程更新）", {
-              accountId: remoteAccount.id,
-              siteName: remoteAccount.site_name,
-            })
-          } else {
-            logger.debug("保留本地账号（本地更新）", {
-              accountId: localAccount.id,
-              siteName: localAccount.site_name,
-            })
-          }
-        }
-      })
-    }
-
-    const mergedAccounts = Array.from(accountMap.values())
-
-    const bookmarkMap = new Map<string, SiteBookmark>()
-    tagMerge.localBookmarks.forEach((bookmark) => {
-      if (
-        WebdavAutoSyncService.isEntrySuppressedByDeletionRecord({
-          id: bookmark.id,
-          kind: DELETED_ENTRY_KIND.BOOKMARK,
-          entryUpdatedAt: bookmark.updated_at,
-          deletedEntryRecords,
-        })
-      ) {
-        return
-      }
-
-      bookmarkMap.set(bookmark.id, bookmark)
-    })
-
-    if (selection.bookmarks) {
-      tagMerge.remoteBookmarks.forEach((remoteBookmark) => {
-        const localBookmark = bookmarkMap.get(remoteBookmark.id)
-        if (!localBookmark) {
-          if (
-            WebdavAutoSyncService.isEntrySuppressedByDeletionRecord({
-              id: remoteBookmark.id,
-              kind: DELETED_ENTRY_KIND.BOOKMARK,
-              entryUpdatedAt: remoteBookmark.updated_at,
-              deletedEntryRecords,
-            })
-          ) {
-            return
-          }
-
-          bookmarkMap.set(remoteBookmark.id, remoteBookmark)
-          return
-        }
-
-        const localUpdatedAt = localBookmark.updated_at || 0
-        const remoteUpdatedAt = remoteBookmark.updated_at || 0
-        if (remoteUpdatedAt > localUpdatedAt) {
-          bookmarkMap.set(remoteBookmark.id, remoteBookmark)
-        }
-      })
-    }
-
-    const mergedBookmarks = Array.from(bookmarkMap.values())
-
-    const deletedEntryRecordsToKeep =
-      WebdavAutoSyncService.pruneResolvedDeletedEntryRecords({
-        records: deletedEntryRecords,
-        accounts: mergedAccounts,
-        bookmarks: mergedBookmarks,
-      })
-
-    const apiCredentialProfiles = selection.apiCredentialProfiles
-      ? mergeApiCredentialProfilesConfigs({
-          local: {
-            ...local.apiCredentialProfiles,
-            profiles: tagMerge.localTaggables,
-          },
-          incoming: {
-            ...remote.apiCredentialProfiles,
-            profiles: tagMerge.remoteTaggables,
-          },
-        })
-      : {
-          ...local.apiCredentialProfiles,
-          profiles: tagMerge.localTaggables,
-        }
-
-    // Compare shared-preference timestamps so device-local WebDAV/refresh edits do
-    // not change merge arbitration.
-    const preferences = selection.preferences
-      ? remote.preferencesTimestamp > local.preferencesTimestamp
-        ? remote.preferences
-        : local.preferences
-      : local.preferences
-
-    logger.info("合并完成", {
-      accountCount: mergedAccounts.length,
-      preferencesSource:
-        selection.preferences &&
-        remote.preferencesTimestamp > local.preferencesTimestamp
-          ? "remote"
-          : "local",
-    })
-
-    return {
-      accounts: mergedAccounts,
-      bookmarks: mergedBookmarks,
-      tagStore:
-        selection.accounts ||
-        selection.bookmarks ||
-        selection.apiCredentialProfiles
-          ? tagMerge.tagStore
-          : localTagStore,
-      preferences,
-      apiCredentialProfiles,
-      deletedEntryRecords: deletedEntryRecordsToKeep,
-    }
-  }
-
-  private static mergeDeletedEntryRecords(input: {
-    localRecords?: AccountStorageConfig["deletedEntryRecords"]
-    remoteRecords?: AccountStorageConfig["deletedEntryRecords"]
-    includeRemoteAccounts?: boolean
-    includeRemoteBookmarks?: boolean
-  }): NonNullable<AccountStorageConfig["deletedEntryRecords"]> {
-    const records: NonNullable<AccountStorageConfig["deletedEntryRecords"]> = {}
-
-    for (const [id, record] of Object.entries(input.remoteRecords || {})) {
-      const includeRemoteRecord =
-        (record.kind === DELETED_ENTRY_KIND.ACCOUNT &&
-          input.includeRemoteAccounts !== false) ||
-        (record.kind === DELETED_ENTRY_KIND.BOOKMARK &&
-          input.includeRemoteBookmarks !== false)
-
-      if (!includeRemoteRecord) {
-        continue
-      }
-
-      records[id] = record
-    }
-
-    for (const [id, record] of Object.entries(input.localRecords || {})) {
-      const current = records[id]
-      if (!current || record.deletedAt > current.deletedAt) {
-        records[id] = record
-      }
-    }
-
-    return records
-  }
-
-  private static isEntrySuppressedByDeletionRecord(input: {
-    id: string
-    kind: DeletedEntryKind
-    entryUpdatedAt?: number
-    entryUserUpdatedAt?: number
-    deletedEntryRecords: AccountStorageConfig["deletedEntryRecords"]
-  }) {
-    const record = input.deletedEntryRecords?.[input.id]
-    if (!record || record.kind !== input.kind) {
-      return false
-    }
-
-    const entryUpdatedAt =
-      typeof input.entryUpdatedAt === "number" ? input.entryUpdatedAt : 0
-    const entryUserUpdatedAt =
-      typeof input.entryUserUpdatedAt === "number"
-        ? input.entryUserUpdatedAt
-        : entryUpdatedAt
-    const deletionBoundary = Math.max(record.deletedAt, record.entryUpdatedAt)
-    return entryUserUpdatedAt <= deletionBoundary
-  }
-
-  private static pruneResolvedDeletedEntryRecords(input: {
-    records: NonNullable<AccountStorageConfig["deletedEntryRecords"]>
-    accounts: SiteAccount[]
-    bookmarks: SiteBookmark[]
-  }) {
-    const records = { ...input.records }
-    for (const account of input.accounts) {
-      delete records[account.id]
-    }
-    for (const bookmark of input.bookmarks) {
-      delete records[bookmark.id]
-    }
-    return records
   }
 
   /**

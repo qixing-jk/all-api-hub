@@ -107,18 +107,18 @@ vi.mock("~/entrypoints/options/pages/BasicSettings", () => ({
   default: () => <div>basic settings fallback</div>,
 }))
 
-vi.mock("~/entrypoints/options/search/useOptionsSearch", () => ({
+vi.mock("~/features/OptionsSearch/useOptionsSearch", () => ({
   useOptionsSearchContext: (context: Record<string, unknown>) => ({
     ...context,
     sidePanelSupported: true,
   }),
 }))
 
-vi.mock("~/entrypoints/options/search/useSearchHotkeys", () => ({
+vi.mock("~/features/OptionsSearch/useSearchHotkeys", () => ({
   useSearchHotkeys: mockedUseSearchHotkeys,
 }))
 
-vi.mock("~/entrypoints/options/search/OptionsSearchDialog", () => ({
+vi.mock("~/features/OptionsSearch/OptionsSearchDialog", () => ({
   OptionsSearchDialog: (props: Record<string, unknown>) => {
     mockedOptionsSearchDialog(props)
 

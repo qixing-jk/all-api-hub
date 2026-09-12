@@ -42,7 +42,7 @@ import {
   clearHighlightSearchParam,
   highlightSearchTarget,
   OPTIONS_SEARCH_HIGHLIGHT_PARAM,
-} from "~/entrypoints/options/search/navigation"
+} from "~/features/OptionsSearch/navigation"
 import { OPTIONAL_PERMISSIONS } from "~/services/permissions/permissionManager"
 import { assertNever } from "~/utils/core/assert"
 import {

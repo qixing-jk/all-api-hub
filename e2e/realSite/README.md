@@ -80,7 +80,14 @@ accounts.
 
 The cloud-sync spec uses a dedicated GitHub token to create one encrypted,
 unlisted (Secret) Gist, verify the file through the GitHub API, restore the data
-through the extension, and delete only the Gist it created. It skips when the
+through the extension, and delete only the Gist it created. Creation IDs are
+captured from API responses before UI assertions, so persistence or UI failures
+still trigger cleanup. A teardown fixture has its own 90-second timeout budget,
+including when the test body times out. Cleanup verifies that the Gist returns
+404, retries transient failures up to three times, and reports cleanup failures
+alongside the original test failure. If a creation response has no usable ID,
+cleanup reports the capture failure rather than deleting an unknown resource.
+The test skips when the
 token is not configured. The token is supplied only through the process/CI
 environment and is never written to the backup, logs, or repository.
 

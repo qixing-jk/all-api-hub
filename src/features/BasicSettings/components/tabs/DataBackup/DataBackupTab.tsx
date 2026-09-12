@@ -5,7 +5,7 @@ import {
   Alert,
   Card,
   CardContent,
-  Heading4,
+  Heading3,
   WorkflowTransitionButton,
 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
@@ -26,9 +26,13 @@ export default function DataBackupTab() {
     <div className="space-y-6">
       {/* Import/Export Entry Section */}
       <section id="import-export-entry">
-        <Heading4 className="mb-2">
+        <Heading3 as="h2" className="mb-2 flex items-center gap-2 text-xl">
+          <ArrowRightLeft
+            className="size-5 shrink-0 text-sky-600 dark:text-sky-400"
+            aria-hidden="true"
+          />
           {t("dataBackup.importExport.title")}
-        </Heading4>
+        </Heading3>
         <Card>
           <CardContent className="space-y-4">
             <p className="text-sm text-gray-700 dark:text-gray-300">

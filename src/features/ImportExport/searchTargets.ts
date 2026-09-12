@@ -18,8 +18,10 @@ export const WEBDAV_TARGET_IDS = {
   encryption: "webdav-encryption",
   encryptionEnable: "webdav-encryption-enable",
   encryptionPassword: "webdav-encryption-password",
+  // Keep the legacy save anchor on the connection settings.
   saveConfig: "webdav-save-config",
-  createGist: "github-gist-create",
+  // Preserve existing Gist creation links as an alias for the unified upload action.
+  gistUpload: "github-gist-create",
   testConnection: "webdav-test-connection",
   uploadBackup: "webdav-upload-backup",
   downloadImport: "webdav-download-import",
@@ -30,6 +32,7 @@ export const WEBDAV_AUTO_SYNC_TARGET_IDS = {
   enable: "webdav-auto-sync-enable",
   interval: "webdav-auto-sync-interval",
   strategy: "webdav-auto-sync-strategy",
+  // Keep existing deep links usable after removing the save button.
   saveSettings: "webdav-auto-sync-save-settings",
   syncNow: "webdav-auto-sync-sync-now",
 } as const
@@ -46,7 +49,7 @@ export function getCloudSyncProviderForTarget(
     case WEBDAV_TARGET_IDS.gistToken:
     case WEBDAV_TARGET_IDS.gistId:
     case WEBDAV_TARGET_IDS.gistUrl:
-    case WEBDAV_TARGET_IDS.createGist:
+    case WEBDAV_TARGET_IDS.gistUpload:
       return CLOUD_SYNC_PROVIDERS.GITHUB_GIST
     case WEBDAV_TARGET_IDS.url:
     case WEBDAV_TARGET_IDS.username:

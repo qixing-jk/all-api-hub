@@ -6,6 +6,10 @@ import PopupInterruptionHintBanner from "~/components/PopupInterruptionHintBanne
 import { Spinner } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { hasOptionalPermissions } from "~/features/OptionsSearch/basicSettingsMeta"
+import { OptionsSearchDialog } from "~/features/OptionsSearch/OptionsSearchDialog"
+import { useOptionsSearchContext } from "~/features/OptionsSearch/useOptionsSearch"
+import { useSearchHotkeys } from "~/features/OptionsSearch/useSearchHotkeys"
 import { ProductTourProvider } from "~/features/ProductTour"
 import {
   PRODUCT_TOUR_FOCUS_RETURN_ATTRIBUTE,
@@ -24,10 +28,6 @@ import Sidebar from "./components/Sidebar"
 import { menuItems } from "./constants"
 import { useHashNavigation } from "./hooks/useHashNavigation"
 import BasicSettings from "./pages/BasicSettings"
-import { hasOptionalPermissions } from "./search/basicSettingsMeta"
-import { OptionsSearchDialog } from "./search/OptionsSearchDialog"
-import { useOptionsSearchContext } from "./search/useOptionsSearch"
-import { useSearchHotkeys } from "./search/useSearchHotkeys"
 import { OPTIONS_TEST_IDS } from "./testIds"
 
 /**

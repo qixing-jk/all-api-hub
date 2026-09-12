@@ -104,13 +104,8 @@
   },
   "title": "匯入/匯出",
   "webdav": {
-    "actionState": {
-      "unsaved": "配置有未儲存變更。測試連線、上傳到 WebDAV 和從 WebDAV 匯入會先儲存這些變更。"
-    },
     "autoSync": {
-      "actionState": {
-        "unsaved": "自動同步設定有未儲存變更。立即同步不會使用這些變更，請先儲存自動同步設定。"
-      },
+      "autosaveDescription": "同步策略和開關自動儲存；同步間隔在結束輸入後儲存。",
       "currentProvider": "同步服務：{{provider}}",
       "enable": "啟用自動同步",
       "enableDesc": "開啟後將按設定間隔自動與 WebDAV 同步共享資料。",
@@ -118,9 +113,6 @@
       "intervalDesc": "設定自動同步的時間間隔",
       "intervalHint": "約 {{minutes}} 分鐘",
       "lastSync": "上次同步",
-      "providerSwitchPending": "請先儲存上方服務設定，自動同步才會從 {{from}} 切換為 {{to}}。",
-      "providerSwitchPendingTitle": "請先儲存同步服務變更",
-      "saveSettings": "儲存設定",
       "strategy": "同步策略",
       "strategyDesc": "選擇資料同步方式",
       "strategyLocalFirst": "本地優先 - 本地資料覆蓋遠端資料",
@@ -135,8 +127,8 @@
       "webdavDescription": "填寫目前裝置用於連線 WebDAV 的位址和憑證。"
     },
     "downloadImport": "從 WebDAV 匯入",
-    "downloadImportWithSave": "儲存並從 WebDAV 匯入",
     "encryption": {
+      "alwaysEncrypted": "一律加密",
       "decryptAction": "解密並匯入",
       "decryptDialogDesc": "該 WebDAV 同步資料已加密，請嘗試輸入密碼進行匯入。",
       "decryptDialogTitle": "解密 WebDAV 資料",
@@ -145,37 +137,31 @@
       "decryptPrompt": "無法自動解密，請輸入密碼",
       "enableDesc": "可選：使用密碼加密 WebDAV 備份。關閉加密後，上傳的備份會以明文包含已儲存的憑證。請加密或妥善保管備份。",
       "password": "加密密碼",
-      "passwordDesc": "用於加密上傳到 WebDAV 的同步資料，以及解密從 WebDAV 下載的資料。",
+      "passwordDesc": "用於加密上傳的雲端備份，以及解密下載的備份。",
       "passwordPlaceholder": "請輸入密碼",
       "savePassword": "儲存密碼以便下次自動解密",
-      "title": "WebDAV 資料加密"
+      "sharedPasswordDescription": "WebDAV 與 GitHub Gist 共用此加密密碼；切換服務不會切換密碼。",
+      "title": "資料加密"
     },
     "gist": {
-      "actionStateUnsaved": "配置有未儲存變更。Gist 操作會先儲存這些變更。",
       "autoSyncEnableDesc": "開啟後將按設定間隔自動與 Secret Gist 同步共享資料。",
       "configDesc": "透過加密的 GitHub Secret Gist 同步共用資料。Secret Gist 是未列出的連結，不是存取控制邊界。",
-      "create": "建立並上傳 Secret Gist",
       "downloadImport": "從 Secret Gist 匯入",
-      "downloadImportWithSave": "儲存並從 Secret Gist 匯入",
       "encryptionDescription": "GitHub Gist 同步需要加密密碼。密碼不會上傳至 GitHub，也不會包含在備份檔案中。遺失密碼後，將無法解密加密備份。",
-      "encryptionPassword": "Gist 加密密碼",
-      "encryptionPasswordPlaceholder": "輸入 Gist 加密密碼",
       "encryptionPasswordRequired": "儲存或同步此 Gist 前，請先輸入加密密碼。",
       "id": "Gist ID 或網址",
-      "idDesc": "輸入現有的 Secret Gist，或留白以建立新的 Gist。",
+      "idDesc": "選填，留空時會在首次上傳時自動建立。",
       "idPlaceholder": "例如：a1b2c3d4 或 https://gist.github.com/...",
       "openLink": "在 GitHub 開啟此 Gist",
       "restorePolicyDescription": "目前雲端服務用於同步共享資料，不等同於完整裝置備份。雲端憑據、加密密碼、同步資料選擇和帳號自動重新整理等設定會保留在本機。如需遷移本機設定，請使用手動匯出/匯入。",
       "testFailed": "Secret Gist 連線失敗",
       "testSuccess": "Secret Gist 連線成功",
-      "title": "GitHub Gist 同步",
       "token": "GitHub Token",
       "tokenDesc": "只儲存在此瀏覽器，不會寫入備份或傳送至 All API Hub。建議使用只授予 Gists 讀寫權限的 fine-grained Token，或只帶 gist scope 的 classic Token。",
       "tokenPlaceholder": "貼上 GitHub Token",
       "upload": "上傳到 Secret Gist",
       "uploadFailed": "上傳至 GitHub Secret Gist 失敗",
-      "uploadSuccess": "已上傳至 GitHub Secret Gist",
-      "uploadWithSave": "儲存並上傳到 Secret Gist"
+      "uploadSuccess": "已上傳至 GitHub Secret Gist"
     },
     "hidePassword": "隱藏密碼",
     "manual": {
@@ -185,12 +171,10 @@
       "confirmDownloadTitle": "要恢復選取的資料嗎？",
       "confirmUploadDescription": "選取的本機資料將寫入目前的雲端備份，對應範圍內的現有雲端資料可能會被取代；此操作不會使用智慧合併。",
       "confirmUploadTitle": "要上傳選取的資料嗎？",
-      "description": "依照明確方向上傳或恢復選取的同步資料。",
-      "directionWarning": "這是有明確方向的操作：上傳會將選取的本機資料寫入雲端，恢復會將選取的雲端資料寫回此裝置；兩者都不會使用智慧合併。",
-      "title": "手動資料操作"
+      "directionWarning": "這是有明確方向的操作：上傳會將選取的本機資料寫入雲端，恢復會將選取的雲端資料寫回此裝置；兩者都不會使用智慧合併。"
     },
     "notSynced": "未同步",
-    "password": "密碼",
+    "password": "WebDAV 密碼",
     "provider": {
       "description": "此選擇同時用於手動同步和自動同步，同一時間只會啟用一個服務。",
       "githubGist": "GitHub Secret Gist",
@@ -207,10 +191,9 @@
       "warningTitle": "請確認這台裝置的資料是完整的"
     },
     "restorePolicy": {
-      "description": "WebDAV 主要用於同步共享資料，不等同於完整裝置備份。當前裝置的 WebDAV 連線/加密設定、同步資料選擇，以及帳號自動重新整理等本地化設定不會透過 WebDAV 上傳，也不會被遠端覆蓋。如需遷移這些本地設定，請使用手動匯出/匯入。",
-      "title": "同步範圍說明"
+      "description": "WebDAV 主要用於同步共享資料，不等同於完整裝置備份。當前裝置的 WebDAV 連線/加密設定、同步資料選擇，以及帳號自動重新整理等本地化設定不會透過 WebDAV 上傳，也不會被遠端覆蓋。如需遷移這些本地設定，請使用手動匯出/匯入。"
     },
-    "saveConfig": "儲存配置",
+    "retrySave": "儲存失敗，重試",
     "showPassword": "顯示密碼",
     "syncData": {
       "accounts": "帳號",
@@ -224,21 +207,18 @@
     "syncFailed": "同步失敗",
     "syncing": "同步中",
     "syncSettings": {
-      "description": "為目前服務選擇共享資料、同步策略和自動同步排程。",
       "title": "同步設定"
     },
     "syncSuccess": "同步成功",
     "testConnection": "測試連線",
-    "testConnectionWithSave": "儲存並測試連線",
     "testFailed": "測試連線失敗",
     "testSuccess": "測試連線成功",
     "title": "雲端同步",
     "uploadBackup": "上傳到 WebDAV",
-    "uploadBackupWithSave": "儲存並上傳到 WebDAV",
     "uploadFailed": "上傳到 WebDAV 失敗",
     "uploadSuccess": "已上傳到 WebDAV",
-    "username": "使用者名稱",
-    "webdavUrl": "Webdav 地址",
+    "username": "WebDAV 使用者名稱",
+    "webdavUrl": "WebDAV 位址",
     "webdavUrlExample": "例如：https://dav.example.com/{{filename}} 完整檔案 URL或Webdav 根目錄 URL"
   }
 }
