@@ -243,6 +243,32 @@ describe("channelConfigStorage", () => {
     })
   })
 
+  it("recovers an interrupted replacement before checking selected legacy rules", async () => {
+    const config = createConfig({
+      scopeKey: "https://admin.example.invalid",
+      channelId: 9,
+    })
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, { 9: config })
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_REPLACEMENT_STATE, {
+      phase: "prepared",
+      snapshot: snapshotOf(config),
+    })
+    expect(
+      await channelConfigStorage.hasPendingLegacyConfigsForResources([
+        config.resourceRef,
+      ]),
+    ).toBe(false)
+    expect(storageData.has(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS)).toBe(
+      false,
+    )
+    expect(
+      storageData.has(CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_REPLACEMENT_STATE),
+    ).toBe(false)
+    expect(await channelConfigStorage.exportConfigs()).toEqual(
+      snapshotOf(config),
+    )
+  })
+
   it("only requires migration for selected resources whose legacy settings can still win", async () => {
     const ref = createRef("https://admin.example.invalid", 9)
     const legacy = createConfig({

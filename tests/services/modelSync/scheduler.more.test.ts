@@ -162,6 +162,20 @@ describe("modelSyncScheduler additional scheduler flows", () => {
     mocks.collectModelsFromExecution.mockReturnValue([])
   })
 
+  it("rejects an unconfigured shared provider before migration or model writes", async () => {
+    mocks.getPreferences.mockResolvedValue({
+      managedSiteType: "new-api",
+      managedSiteModelSync: DEFAULT_PREFERENCES.managedSiteModelSync,
+    })
+    const { modelSyncScheduler } = await import(
+      "~/services/models/modelSync/scheduler"
+    )
+    await expect(modelSyncScheduler.executeSync()).rejects.toThrow()
+    expect(mocks.ensureMigration).not.toHaveBeenCalled()
+    expect(mocks.runBatch).not.toHaveBeenCalled()
+    expect(mocks.modelSyncServiceCtor).not.toHaveBeenCalled()
+  })
+
   it.each(["new-api", "Veloera", "octopus"] as const)(
     "retries migration for explicit %s sync while automatic sync respects backoff",
     async (siteType) => {

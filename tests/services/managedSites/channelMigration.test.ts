@@ -1282,6 +1282,55 @@ describe("channelMigration", () => {
     expect(create).not.toHaveBeenCalled()
   })
 
+  it("rechecks grouped-key support before creating a previewed target", async () => {
+    const { executeManagedSiteMigration, prepareManagedSiteMigrationPreview } =
+      await import("~/services/managedSites/channelMigration")
+    const metadata = [{ enabled: true }, { enabled: true }]
+    const supportsMultipleCredentials = vi.fn().mockReturnValue(true)
+    const create = vi.fn(async () => ({ status: "created" as const }))
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.NEW_API
+        ? {
+            source: {
+              prepare: async () => ({
+                status: "ready",
+                source: buildMigrationSource({ credentialMetadata: metadata }),
+              }),
+              resolveCredential: async () => ({
+                status: "ready",
+                credential: "first-placeholder",
+                credentials: metadata.map((key, index) => ({
+                  ...key,
+                  value: index ? "second-placeholder" : "first-placeholder",
+                })),
+              }),
+            },
+          }
+        : {
+            target: {
+              prepare: async () => buildMigrationTarget(),
+              supportsMultipleCredentials,
+              create,
+            },
+          },
+    )
+    const preview = await prepareManagedSiteMigrationPreview({
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.DONE_HUB,
+      selections: [buildMigrationSelection("grouped")],
+    })
+    expect(preview).toMatchObject({
+      readyCount: 1,
+      items: [{ target: { projection: { keyCount: 2 } } }],
+    })
+    supportsMultipleCredentials.mockReturnValue(false)
+    expect(await executeManagedSiteMigration({ preview })).toMatchObject({
+      failedCount: 1,
+      createdCount: 0,
+    })
+    expect(create).not.toHaveBeenCalled()
+  })
+
   it("blocks unsupported AxonHub targets and executes ready rows in selection order", async () => {
     const { executeManagedSiteMigration, prepareManagedSiteMigrationPreview } =
       await import("~/services/managedSites/channelMigration")

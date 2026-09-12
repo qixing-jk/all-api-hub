@@ -239,6 +239,39 @@ describe("New API managed-site migration capability", () => {
     },
   )
 
+  it("does not reconcile or recreate when saved key slots differ", async () => {
+    mocks.create.mockResolvedValue({ outcome: "succeeded", data: channel })
+    const prepared =
+      await newApiManagedSiteMigrationCapability.target!.prepare(source)
+    expect(
+      newApiManagedSiteMigrationCapability.target!.supportsMultipleCredentials!(
+        {
+          ...source,
+          credentialMetadata: [{ enabled: true }, { enabled: false }],
+        },
+      ),
+    ).toBe(true)
+    expect(
+      newApiManagedSiteMigrationCapability.target!.supportsMultipleCredentials!(
+        source,
+      ),
+    ).toBe(false)
+    expect(
+      await newApiManagedSiteMigrationCapability.target!.create({
+        source,
+        targetSiteType: SITE_TYPES.NEW_API,
+        projection: prepared.projection,
+        credential: "first-placeholder",
+        credentials: [
+          { value: "first-placeholder", enabled: true },
+          { value: "second-placeholder", enabled: false },
+        ],
+      }),
+    ).toEqual({ status: "uncertain" })
+    expect(mocks.update).not.toHaveBeenCalled()
+    expect(mocks.create).toHaveBeenCalledOnce()
+  })
+
   it.each(["signal-result", "signal-throw", "abort-error", "abort-code"])(
     "propagates reconciliation cancellation: %s",
     async (mode) => {

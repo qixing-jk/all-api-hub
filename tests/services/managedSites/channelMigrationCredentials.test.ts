@@ -96,6 +96,44 @@ const execute = (
   })
 
 describe("multi-key migration planning and execution", () => {
+  it("preserves a single disabled key without a split warning", async () => {
+    const input = preview()
+    const item = input.items[0]
+    if (item.status !== "ready") throw new Error("fixture")
+    item.source.credentialMetadata = [{ enabled: false }]
+    const planned = planMigrationCredentials(input, () => false)
+    expect(planned.items[0]).toMatchObject({
+      warningCodes: [],
+      target: { projection: { enabled: false, keyCount: 1 } },
+    })
+    const create = vi.fn(async () => ({ status: "created" as const }))
+    expect(
+      await execute(planned, {
+        create,
+        resolveCredential: async () => ({
+          status: "ready",
+          credential: "placeholder",
+          credentials: [{ value: "placeholder", enabled: false }],
+        }),
+      }),
+    ).toMatchObject({ createdCount: 1 })
+    expect(create).toHaveBeenCalledOnce()
+  })
+
+  it.each([-1, 0.5, 2])(
+    "blocks invalid selected key index %s before mutation",
+    async (credentialIndex) => {
+      const planned = planMigrationCredentials(preview(), () => true)
+      planned.items[0].selection.credentialIndex = credentialIndex
+      const create = vi.fn()
+      expect(await execute(planned, { create })).toMatchObject({
+        skippedCount: 1,
+        items: [{ blockingReasonCode: blockers.SOURCE_KEYS_CHANGED }],
+      })
+      expect(create).not.toHaveBeenCalled()
+    },
+  )
+
   it("keeps all keys in one resource when the target supports their states", async () => {
     const planned = planMigrationCredentials(preview(), () => true)
     const create = vi.fn(

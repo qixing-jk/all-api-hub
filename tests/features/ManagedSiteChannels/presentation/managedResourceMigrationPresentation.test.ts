@@ -193,6 +193,54 @@ const preview: ManagedSiteMigrationCanonicalPreview = {
 }
 
 describe("managedResourceMigrationPresentation", () => {
+  it("explains split keys, unknown counts, and key-change blockers", () => {
+    const ready = preview.items[0]
+    if (ready.status !== "ready") throw new Error("fixture")
+    const localT = ((key: string) => key) as TFunction
+    const mapped = mapManagedResourceMigrationPreview(
+      projectManagedResourceMigrationPreview({
+        ...preview,
+        items: [
+          {
+            ...ready,
+            source: {
+              ...ready.source,
+              lossSignals: {
+                ...ready.source.lossSignals,
+                hasMultiKeyState: true,
+              },
+            },
+            warningCodes: [
+              MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.SPLITS_KEYS,
+            ],
+          },
+          ...[
+            MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEYS_CHANGED,
+            MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_MULTI_KEY_UNSUPPORTED,
+          ].map((blockingReasonCode) => ({
+            selection: ready.selection,
+            status: "blocked" as const,
+            warningCodes: [],
+            blockingReasonCode,
+          })),
+        ],
+      }),
+      { t: localT, getSiteLabel: String },
+    )
+    expect(mapped.rows[0].warningText).toContain(
+      "managedSiteChannels:migration.itemWarnings.splitsKeys",
+    )
+    expect(
+      mapped.rows[0].comparisons.find(({ id }) => id === "keyCount")?.source,
+    ).toBe("common:labels.unknown")
+    expect(JSON.stringify(mapped.rows[1])).toContain(
+      "managedSiteChannels:migration.blockedReasons.sourceKeysChanged",
+    )
+    expect(JSON.stringify(mapped.rows[2])).toContain(
+      "managedSiteChannels:migration.blockedReasons.sourceMultiKeyUnsupported",
+    )
+  })
+
   it("retains safe comparison and outcome data without native refs or extra execution fields", () => {
     const unsafePreview = {
       ...preview,

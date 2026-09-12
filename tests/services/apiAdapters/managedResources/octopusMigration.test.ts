@@ -94,6 +94,31 @@ describe("Octopus native migration", () => {
     )
   })
 
+  it("creates every key with its enabled state in one native channel", async () => {
+    expect(capability.target!.supportsMultipleCredentials!(source)).toBe(true)
+    mocks.create.mockResolvedValue({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+    })
+    const { projection } = await capability.target!.prepare(source)
+    expect(
+      await capability.target!.create({
+        source,
+        targetSiteType: SITE_TYPES.OCTOPUS,
+        projection: { ...projection, name: "Migrated" },
+        credential: "first-placeholder",
+        credentials: [
+          { value: "first-placeholder", enabled: true },
+          { value: "second-placeholder", enabled: false },
+        ],
+      }),
+    ).toEqual({ status: "created" })
+    expect(mocks.create.mock.calls[0][0].keys).toEqual([
+      { name: "key-1", channel_key: "first-placeholder", enabled: true },
+      { name: "key-2", channel_key: "second-placeholder", enabled: false },
+    ])
+    expect(mocks.create).toHaveBeenCalledOnce()
+  })
+
   it("registers Octopus canonical source and target migration", () => {
     expect(resolveManagedSiteMigrationCapability(SITE_TYPES.OCTOPUS)).toBe(
       capability,

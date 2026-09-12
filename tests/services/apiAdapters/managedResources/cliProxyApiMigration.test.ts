@@ -87,6 +87,117 @@ beforeEach(() => {
   mocks.create.mockResolvedValue({ outcome: "succeeded" })
 })
 describe("CLIProxyAPI native migration", () => {
+  it("requires a configured management endpoint before accessing credentials", async () => {
+    mocks.config.mockResolvedValue(null)
+    await expect(
+      capability.source!.resolveCredential(selection),
+    ).rejects.toThrow("configuration required")
+    expect(mocks.get).not.toHaveBeenCalled()
+  })
+
+  it("validates a selection context and rejects stale credential reads", async () => {
+    const context = await capability.source!.createSelectionValidationContext!()
+    expect(context.isValid(selection)).toBe(true)
+    const stale = {
+      ...selection,
+      ref: { ...selection.ref, scopeKey: "https://stale.invalid" },
+    }
+    expect(context.isValid(stale)).toBe(false)
+    expect(await capability.source!.resolveCredential(stale)).toMatchObject({
+      status: "blocked",
+    })
+    expect(mocks.get).not.toHaveBeenCalled()
+  })
+
+  it.each([false, true])(
+    "preserves a single provider's priority and excluded status: %s",
+    async (excluded) => {
+      mocks.get.mockResolvedValue({
+        ...resource,
+        kind: "claude-api-key",
+        value: {
+          "api-key": "placeholder",
+          priority: 7,
+          "excluded-models": excluded ? ["*"] : [],
+        },
+      })
+      const prepared = await capability.source!.prepare(selection)
+      expect(prepared).toMatchObject({
+        source: { priority: 7, status: excluded ? "disabled" : "enabled" },
+      })
+      if (prepared.status !== "ready") throw new Error("Expected source")
+      expect(prepared.source.credentialMetadata).toBeUndefined()
+      expect(await capability.source!.resolveCredential(selection)).toEqual({
+        status: "ready",
+        credential: "placeholder",
+      })
+    },
+  )
+
+  it("blocks missing credentials at execution", async () => {
+    mocks.get.mockResolvedValue({
+      ...resource,
+      value: { "api-key-entries": [] },
+    })
+    expect(await capability.source!.resolveCredential(selection)).toMatchObject(
+      { status: "blocked", reasonCode: "source-key-missing" },
+    )
+  })
+
+  it.each([
+    { resourceType: 9999 },
+    { baseUrl: "ftp://example.invalid" },
+    { models: [] },
+  ])("rejects unsupported target drafts: %j", async (override) => {
+    await expect(
+      capability.target!.prepare({ ...source, ...override }),
+    ).rejects.toThrow()
+    expect(mocks.create).not.toHaveBeenCalled()
+  })
+
+  it.each(["route", "masked", "disabled"])(
+    "rejects invalid commands before mutation: %s",
+    async (mode) => {
+      const prepared = await capability.target!.prepare(source)
+      expect(
+        await capability.target!.create({
+          source,
+          targetSiteType: SITE_TYPES.CLI_PROXY_API,
+          projection: {
+            ...prepared.projection,
+            ...(mode === "route" ? { type: "wrong" } : {}),
+          },
+          credential: "placeholder",
+          credentials: [
+            {
+              value: mode === "masked" ? "sk-********" : "placeholder",
+              enabled: mode !== "disabled",
+            },
+          ],
+        }),
+      ).toMatchObject({ status: "failed" })
+      expect(mocks.create).not.toHaveBeenCalled()
+    },
+  )
+
+  it("keeps an enabled standalone provider enabled and surfaces target rejection", async () => {
+    const input = { ...source, resourceType: 14, status: "enabled" as const }
+    const prepared = await capability.target!.prepare(input)
+    mocks.create.mockResolvedValue({ outcome: "rejected" })
+    expect(
+      await capability.target!.create({
+        source: input,
+        targetSiteType: SITE_TYPES.CLI_PROXY_API,
+        projection: prepared.projection,
+        credential: "placeholder",
+      }),
+    ).toMatchObject({ status: "failed" })
+    expect(mocks.create.mock.calls[0][1].value).not.toHaveProperty(
+      "excluded-models",
+    )
+    expect(mocks.create).toHaveBeenCalledOnce()
+  })
+
   it.each([{ weights: [undefined, 0, -1, 2] }, { weights: [0] }])(
     "preserves excluded key weights through split target creation: $weights",
     async ({ weights }) => {
