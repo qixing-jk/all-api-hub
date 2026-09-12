@@ -40,6 +40,7 @@ import { createLogger } from "~/utils/core/logger"
 import { openSettingsTab } from "~/utils/navigation"
 
 import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"
+import { ManagedSiteStatusDisclosure } from "../ManagedSiteStatusDisclosure"
 import {
   TokenActionButtons,
   type TokenActionButtonsProps,
@@ -315,24 +316,26 @@ export function TokenHeader({
   }
 
   const providerBadges = shouldRenderManagedSiteStatus ? (
-    <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-      {/* managed site status badge with optional description and signal badges - only show if the managed site supports base URL channel lookup and there's a status to show (either checking or a known status) */}
-      <Badge
-        variant={getManagedSiteStatusBadgeVariant({
-          isChecking: isManagedSiteStatusChecking,
-          managedSiteStatus,
-        })}
-        size="sm"
-        data-testid={KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge}
-      >
-        {isManagedSiteStatusChecking ? (
-          <RefreshCw className="h-3 w-3 animate-spin" />
-        ) : null}
-        {getManagedSiteStatusLabel(t, {
-          isChecking: isManagedSiteStatusChecking,
-          managedSiteStatus,
-        })}
-      </Badge>
+    <ManagedSiteStatusDisclosure
+      status={
+        <Badge
+          variant={getManagedSiteStatusBadgeVariant({
+            isChecking: isManagedSiteStatusChecking,
+            managedSiteStatus,
+          })}
+          size="sm"
+          data-testid={KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge}
+        >
+          {isManagedSiteStatusChecking ? (
+            <RefreshCw className="h-3 w-3 animate-spin" />
+          ) : null}
+          {getManagedSiteStatusLabel(t, {
+            isChecking: isManagedSiteStatusChecking,
+            managedSiteStatus,
+          })}
+        </Badge>
+      }
+    >
       {managedSiteStatusDescription ? (
         <span
           className="break-words whitespace-normal"
@@ -437,7 +440,7 @@ export function TokenHeader({
           })}
         </WorkflowTransitionButton>
       ) : null}
-    </div>
+    </ManagedSiteStatusDisclosure>
   ) : undefined
 
   return (

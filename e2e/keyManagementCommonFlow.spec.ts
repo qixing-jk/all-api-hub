@@ -1341,6 +1341,33 @@ test("cleans linked channels and retries persisted multi-key cleanup after reloa
   await expect(
     page.getByRole("heading", { name: "Existing Key" }),
   ).toBeVisible()
+  const statusDetails = page.getByTestId("managed-site-status-details")
+  await expect(statusDetails).toContainText("Managed site")
+  await expect(page.getByRole("dialog", { name: "Managed site" })).toHaveCount(
+    0,
+  )
+  await statusDetails.focus()
+  await page.keyboard.press("Enter")
+  await expect(page.getByRole("dialog", { name: "Managed site" })).toBeVisible()
+  await page.keyboard.press("Escape")
+  await expect(statusDetails).toBeFocused()
+  await page.screenshot({
+    path: ".scratch/status-ui-desktop.png",
+    animations: "disabled",
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await statusDetails.click()
+  const detailsBounds = await page
+    .getByRole("dialog", { name: "Managed site" })
+    .boundingBox()
+  expect(detailsBounds!.x).toBeGreaterThanOrEqual(0)
+  expect(detailsBounds!.x + detailsBounds!.width).toBeLessThanOrEqual(390)
+  await page.screenshot({
+    path: ".scratch/status-ui-mobile.png",
+    animations: "disabled",
+  })
+  await page.keyboard.press("Escape")
+  await page.setViewportSize({ width: 1280, height: 900 })
   await page.getByRole("button", { name: "Delete Key", exact: true }).click()
   await expect(
     page.getByRole("checkbox", {

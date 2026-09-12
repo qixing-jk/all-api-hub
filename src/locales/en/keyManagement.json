@@ -294,6 +294,7 @@
       "inputPreparationFailed": "Verification could not prepare comparable channel inputs.",
       "newApiRetrieveKeyHint": "For New API, full key comparison depends on the channel key, and viewing that channel key itself requires 2FA verification, so full key comparison is currently unavailable."
     },
+    "label": "Managed site",
     "nativeResourceUnsupported": "Managed-site matching does not yet support native resource keys on this page. Refresh applies only to supported keys.",
     "pageUnsupported": "Managed-site channel checks are unavailable on this page because the current managed site does not currently support searching channels by URL.",
     "recovery": {

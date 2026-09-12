@@ -998,6 +998,10 @@ describe("TokenHeader analytics", () => {
       },
     })
 
+    await userEvent
+      .setup()
+      .click(screen.getByTestId("managed-site-status-details"))
+
     await user.click(
       screen.getByRole("button", {
         name: "keyManagement:managedSiteStatus.actions.verifyNow",
@@ -1047,6 +1051,10 @@ describe("TokenHeader analytics", () => {
         },
       },
     })
+
+    await userEvent
+      .setup()
+      .click(screen.getByTestId("managed-site-status-details"))
 
     await user.click(
       screen.getByRole("button", {

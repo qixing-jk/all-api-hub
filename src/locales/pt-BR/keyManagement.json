@@ -303,6 +303,7 @@
       "inputPreparationFailed": "A verificação não conseguiu preparar dados de canal comparáveis.",
       "newApiRetrieveKeyHint": "No New API, a comparação completa depende da chave do canal. Como visualizar essa chave exige verificação em duas etapas (2FA), a comparação completa não está disponível no momento."
     },
+    "label": "Site gerenciado",
     "nativeResourceUnsupported": "A correspondência com sites gerenciados ainda não oferece suporte a chaves de recursos nativos nesta página. A atualização se aplica apenas às chaves compatíveis.",
     "pageUnsupported": "As verificações dos canais do site gerenciado não estão disponíveis nesta página porque o site atual não permite buscar canais por URL.",
     "recovery": {

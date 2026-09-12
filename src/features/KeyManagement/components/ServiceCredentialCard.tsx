@@ -72,6 +72,7 @@ import { openSettingsTab } from "~/utils/navigation"
 
 import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
 import { formatKey } from "../utils"
+import { ManagedSiteStatusDisclosure } from "./ManagedSiteStatusDisclosure"
 import {
   getManagedSiteSettingsActionLabel,
   getManagedSiteStatusBadgeVariant,
@@ -425,6 +426,51 @@ export function ServiceCredentialCard({
                 <Badge variant="outline" size="sm">
                   {t("serviceCredential.singleton")}
                 </Badge>
+                {isManagedSiteStatusChecking || managedSiteStatus ? (
+                  <ManagedSiteStatusDisclosure
+                    status={
+                      <Badge
+                        variant={getManagedSiteStatusBadgeVariant({
+                          isChecking: isManagedSiteStatusChecking,
+                          managedSiteStatus,
+                        })}
+                        size="sm"
+                        data-testid={
+                          KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge
+                        }
+                      >
+                        {isManagedSiteStatusChecking ? (
+                          <RefreshCw className="h-3 w-3 animate-spin" />
+                        ) : null}
+                        {getManagedSiteStatusLabel(t, {
+                          isChecking: isManagedSiteStatusChecking,
+                          managedSiteStatus,
+                        })}
+                      </Badge>
+                    }
+                  >
+                    {managedSiteStatusDescription ? (
+                      <span
+                        className="break-words whitespace-normal"
+                        title={managedSiteStatusDescription}
+                      >
+                        {managedSiteStatusDescription}
+                      </span>
+                    ) : null}
+                    {isManagedSiteConfigMissing ? (
+                      <WorkflowTransitionButton
+                        size="sm"
+                        variant="outline"
+                        className="h-auto px-2 py-0.5 text-xs"
+                        onClick={handleOpenManagedSiteSettings}
+                      >
+                        {getManagedSiteSettingsActionLabel(t, {
+                          isConfigMissing: true,
+                        })}
+                      </WorkflowTransitionButton>
+                    ) : null}
+                  </ManagedSiteStatusDisclosure>
+                ) : null}
               </div>
               <KeyResourceActionToolbar label={t("actionToolbar.label")}>
                 <KeyResourceActionGroup label={t("actionToolbar.quickActions")}>
@@ -524,46 +570,6 @@ export function ServiceCredentialCard({
               </KeyResourceActionToolbar>
             </div>
             <div className="dark:text-dark-text-secondary space-y-2 text-xs text-gray-600 sm:text-sm">
-              {isManagedSiteStatusChecking || managedSiteStatus ? (
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <Badge
-                    variant={getManagedSiteStatusBadgeVariant({
-                      isChecking: isManagedSiteStatusChecking,
-                      managedSiteStatus,
-                    })}
-                    size="sm"
-                    data-testid={KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge}
-                  >
-                    {isManagedSiteStatusChecking ? (
-                      <RefreshCw className="h-3 w-3 animate-spin" />
-                    ) : null}
-                    {getManagedSiteStatusLabel(t, {
-                      isChecking: isManagedSiteStatusChecking,
-                      managedSiteStatus,
-                    })}
-                  </Badge>
-                  {managedSiteStatusDescription ? (
-                    <span
-                      className="break-words whitespace-normal"
-                      title={managedSiteStatusDescription}
-                    >
-                      {managedSiteStatusDescription}
-                    </span>
-                  ) : null}
-                  {isManagedSiteConfigMissing ? (
-                    <WorkflowTransitionButton
-                      size="sm"
-                      variant="outline"
-                      className="h-auto px-2 py-0.5 text-xs"
-                      onClick={handleOpenManagedSiteSettings}
-                    >
-                      {getManagedSiteSettingsActionLabel(t, {
-                        isConfigMissing: true,
-                      })}
-                    </WorkflowTransitionButton>
-                  ) : null}
-                </div>
-              ) : null}
               <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 break-words">
                 <span className="dark:text-dark-text-tertiary shrink-0 text-gray-500">
                   {t("keyDetails.key")}

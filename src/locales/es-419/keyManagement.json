@@ -303,6 +303,7 @@
       "inputPreparationFailed": "La verificación no pudo preparar entradas de canal comparables.",
       "newApiRetrieveKeyHint": "En New API, la comparación completa de claves depende de la clave del canal, y ver esa clave del canal requiere verificación 2FA, por lo que la comparación completa de claves no está disponible actualmente."
     },
+    "label": "Sitio administrado",
     "nativeResourceUnsupported": "La coincidencia con sitios administrados aún no admite claves de recursos nativos en esta página. La actualización solo se aplica a las claves compatibles.",
     "pageUnsupported": "Las comprobaciones de canales del sitio administrado no están disponibles en esta página porque el sitio administrado actual no admite buscar canales por URL.",
     "recovery": {

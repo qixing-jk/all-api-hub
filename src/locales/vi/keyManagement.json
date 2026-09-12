@@ -285,6 +285,7 @@
       "inputPreparationFailed": "Không thể chuẩn bị dữ liệu nhập kênh có thể so sánh, tạm thời không thể hoàn tất kiểm tra.",
       "newApiRetrieveKeyHint": "Đối với New API, việc so sánh toàn bộ key phụ thuộc vào key kênh, và việc xem key kênh yêu cầu phải hoàn tất xác minh 2FA trước, do đó hiện tại chưa thể hoàn tất so sánh toàn bộ key."
     },
+    "label": "Trang được quản lý",
     "nativeResourceUnsupported": "Tính năng đối chiếu trang web được quản lý trên trang này chưa hỗ trợ khóa tài nguyên gốc. Việc làm mới chỉ áp dụng cho các khóa được hỗ trợ.",
     "pageUnsupported": "Do trang web lưu trữ hiện tại tạm thời không hỗ trợ tìm kiếm kênh bằng URL, chức năng kiểm tra kênh trang web quản lý không khả dụng.",
     "recovery": {

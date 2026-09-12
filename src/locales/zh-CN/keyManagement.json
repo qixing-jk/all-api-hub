@@ -285,6 +285,7 @@
       "inputPreparationFailed": "无法准备可比对的渠道输入，暂时无法完成校验。",
       "newApiRetrieveKeyHint": "对于 New API，完整的 key 比对依赖渠道 key，而查看渠道 key 本身需要先完成 2FA 验证，因此当前暂无法完成完整 key 比对。"
     },
+    "label": "管理站点",
     "nativeResourceUnsupported": "本页的托管站点匹配暂不支持原生资源密钥，刷新仅适用于已支持的密钥。",
     "pageUnsupported": "由于当前托管站点暂不支持使用 URL 搜索渠道，暂不提供管理站点渠道检查功能。",
     "recovery": {
