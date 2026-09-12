@@ -2874,6 +2874,7 @@ describe("AxonHub native managed-resource Adapter", () => {
         sourceSiteType: SITE_TYPES.AXON_HUB,
         resourceType: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
         baseUrl: "https://native.example.invalid/v1",
+        credentialMetadata: [{ enabled: true }, { enabled: true }],
         models: ["supported-model", "shared-model", "manual-model"],
         groups: [],
         priority: 0,
@@ -2883,11 +2884,12 @@ describe("AxonHub native managed-resource Adapter", () => {
           hasModelMapping: true,
           hasStatusCodeMapping: false,
           hasAdvancedSettings: true,
-          hasMultiKeyState: true,
+          hasMultiKeyState: false,
         },
       },
     })
     expect(JSON.stringify(result)).not.toContain("sk-preview-placeholder")
+    expect(JSON.stringify(result)).not.toContain("sk-second-placeholder")
     expect(JSON.stringify(result)).not.toContain("credentials")
   })
 
