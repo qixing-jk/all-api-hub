@@ -220,20 +220,54 @@ describe("New API native managed resource", () => {
       ...channel,
       channel_info: { ...channel.channel_info, is_multi_key: true },
     })
-    mocks.fetchSecretKey.mockResolvedValue("remove-me\nkeep-me\nalso-keep")
+    mocks.fetchSecretKey.mockResolvedValue("keep-me\nremove-me\nalso-keep")
     mocks.deleteKey.mockResolvedValue(success())
     const api = await newApiManagedResourceRegistration.open()
     const cleanup = await api.openKeyCleanup!((await api.list()).items[0].ref)
-    expect(cleanup.keys).toEqual(["remove-me", "keep-me", "also-keep"])
-    await cleanup.remove([0])
+    expect(cleanup.keys).toEqual(["keep-me", "remove-me", "also-keep"])
+    await cleanup.remove([1])
     expect(mocks.deleteKey).toHaveBeenCalledWith(
       config,
       channel.id,
-      0,
+      1,
       undefined,
     )
     expect(mocks.update).not.toHaveBeenCalled()
     expect(mocks.remove).not.toHaveBeenCalled()
+  })
+
+  it("stops native key deletion when credential positions change", async () => {
+    mocks.get.mockResolvedValue({
+      ...channel,
+      channel_info: { ...channel.channel_info, is_multi_key: true },
+    })
+    mocks.fetchSecretKey
+      .mockResolvedValueOnce("first\nsecond")
+      .mockResolvedValueOnce("new\nfirst\nsecond")
+    const api = await newApiManagedResourceRegistration.open()
+    const cleanup = await api.openKeyCleanup!((await api.list()).items[0].ref)
+    await expect(cleanup.remove([1])).rejects.toMatchObject({
+      failure: { code: "resource_changed" },
+    })
+    expect(mocks.deleteKey).not.toHaveBeenCalled()
+  })
+
+  it("stops after an uncertain native key deletion and rejects an empty removal", async () => {
+    mocks.get.mockResolvedValue({
+      ...channel,
+      channel_info: { ...channel.channel_info, is_multi_key: true },
+    })
+    mocks.fetchSecretKey.mockResolvedValue("first\nsecond\nthird")
+    mocks.deleteKey.mockResolvedValue({ outcome: "uncertain" })
+    const api = await newApiManagedResourceRegistration.open()
+    const cleanup = await api.openKeyCleanup!((await api.list()).items[0].ref)
+    await expect(cleanup.remove([0, 1])).resolves.toMatchObject({
+      outcome: "uncertain",
+    })
+    expect(mocks.deleteKey).toHaveBeenCalledOnce()
+    await expect(cleanup.remove([])).rejects.toMatchObject({
+      failure: { code: "validation_failed" },
+    })
   })
 
   it("creates one multi-key channel with the selected rotation mode", async () => {

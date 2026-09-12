@@ -1154,19 +1154,25 @@ describe("accountKeyRepair", () => {
           reason: "orphaned-placement",
         }),
       )
-      const deleteResource = vi
-        .fn()
-        .mockResolvedValueOnce(undefined)
-        .mockRejectedValueOnce(
-          new AccountKeyResourceError({
-            code: RESOURCE_FAILURE_CODES.UpstreamRejected,
-          }),
-        )
-        .mockRejectedValueOnce(
-          new AccountKeyResourceError({
-            code: RESOURCE_FAILURE_CODES.MutationStateUncertain,
-          }),
-        )
+      let activeDeletions = 0
+      let maxActiveDeletions = 0
+      const deleteResource = vi.fn(async (ref: AccountKeyResourceRef) => {
+        activeDeletions++
+        maxActiveDeletions = Math.max(maxActiveDeletions, activeDeletions)
+        try {
+          await new Promise<void>((resolve) => setTimeout(resolve, 0))
+          if (ref.resourceId === "rejected")
+            throw new AccountKeyResourceError({
+              code: RESOURCE_FAILURE_CODES.UpstreamRejected,
+            })
+          if (ref.resourceId === "uncertain")
+            throw new AccountKeyResourceError({
+              code: RESOURCE_FAILURE_CODES.MutationStateUncertain,
+            })
+        } finally {
+          activeDeletions--
+        }
+      })
       const openCollection = vi.fn(async () => ({ delete: deleteResource }))
       mocks.sessionsByAccountId.set(account.id, {
         ...createSession(),
@@ -1213,11 +1219,8 @@ describe("accountKeyRepair", () => {
         "rejected",
         "uncertain",
       ])
-      expect(deleteResource.mock.invocationCallOrder).toEqual(
-        [...deleteResource.mock.invocationCallOrder].sort(
-          (left, right) => left - right,
-        ),
-      )
+      expect(maxActiveDeletions).toBe(1)
+      expect(activeDeletions).toBe(0)
       expect(mocks.prepareCleanup).toHaveBeenCalledTimes(
         cleanupLinkedChannels ? 3 : 0,
       )
@@ -1253,75 +1256,89 @@ describe("accountKeyRepair", () => {
     },
   )
 
-  it("keeps a timed-out invalid-resource deletion visible as uncertain", async () => {
-    vi.useFakeTimers()
-    try {
-      const account = buildRepairAccount("account-1", SITE_TYPES.NEW_API, {
-        site_url: "https://account.example.invalid/path",
-      })
-      const resource = {
-        accountId: "account-1",
-        accountName: "Example Account",
-        siteType: SITE_TYPES.NEW_API,
-        siteUrlOrigin: "https://account.example.invalid",
-        ref: createRef("account-1", "timed-out"),
-        displayLabel: "Timed-out key",
-        groupLabel: "Retired",
-        reason: "orphaned-placement",
-      }
-      const deleteResource = vi.fn(() => new Promise<void>(() => {}))
-      mocks.sessionsByAccountId.set(account.id, {
-        ...createSession(),
-        openCollection: vi.fn(async () => ({ delete: deleteResource })),
-      })
-      mocks.getAllAccounts.mockResolvedValue([account])
-      mocks.storageMap.set(
-        REPAIR_PROGRESS_STORAGE_KEY,
-        createProgress({
-          results: [
-            {
-              accountId: account.id,
-              accountName: "Example Account",
-              siteType: account.site_type,
-              siteUrlOrigin: "https://account.example.invalid",
-              outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Covered,
-              requirementResults: [],
-              createdRefs: [],
-              invalidResources: [resource],
-              renameResults: [],
-              finishedAt: 1,
-            },
-          ],
-          summary: { ...createEmptySummary(), invalidResources: 1 },
-        }),
-      )
-      const { deleteInvalidAccountKeyResources } = await import(
-        "~/services/accounts/accountKeyAutoProvisioning/repair"
-      )
-
-      const responsePromise = deleteInvalidAccountKeyResources({
-        resources: [resource],
-      })
-      await vi.advanceTimersByTimeAsync(0)
-      expect(deleteResource).toHaveBeenCalledOnce()
-      await vi.advanceTimersByTimeAsync(30_000)
-
-      await expect(responsePromise).resolves.toMatchObject({
-        data: {
-          results: [
-            {
-              outcome: ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Uncertain,
-              failure: {
-                code: RESOURCE_FAILURE_CODES.MutationStateUncertain,
+  it.each(["delete", "resolve"])(
+    "bounds stalled invalid-resource %s operations",
+    async (stage) => {
+      vi.useFakeTimers()
+      try {
+        const account = buildRepairAccount("account-1", SITE_TYPES.NEW_API, {
+          site_url: "https://account.example.invalid/path",
+        })
+        const resource = {
+          accountId: "account-1",
+          accountName: "Example Account",
+          siteType: SITE_TYPES.NEW_API,
+          siteUrlOrigin: "https://account.example.invalid",
+          ref: createRef("account-1", "timed-out"),
+          displayLabel: "Timed-out key",
+          groupLabel: "Retired",
+          reason: "orphaned-placement",
+        }
+        const stalled = vi.fn(
+          (_ref: AccountKeyResourceRef, _options: { signal: AbortSignal }) =>
+            new Promise<void>(() => {}),
+        )
+        const deleteResource = stage === "delete" ? stalled : vi.fn()
+        mocks.sessionsByAccountId.set(account.id, {
+          ...createSession(),
+          ...(stage === "resolve" ? { runtimeKey: { resolve: stalled } } : {}),
+          openCollection: vi.fn(async () => ({ delete: deleteResource })),
+        })
+        mocks.getAllAccounts.mockResolvedValue([account])
+        mocks.storageMap.set(
+          REPAIR_PROGRESS_STORAGE_KEY,
+          createProgress({
+            results: [
+              {
+                accountId: account.id,
+                accountName: "Example Account",
+                siteType: account.site_type,
+                siteUrlOrigin: "https://account.example.invalid",
+                outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Covered,
+                requirementResults: [],
+                createdRefs: [],
+                invalidResources: [resource],
+                renameResults: [],
+                finishedAt: 1,
               },
-            },
-          ],
-        },
-      })
-    } finally {
-      vi.useRealTimers()
-    }
-  })
+            ],
+            summary: { ...createEmptySummary(), invalidResources: 1 },
+          }),
+        )
+        const { deleteInvalidAccountKeyResources } = await import(
+          "~/services/accounts/accountKeyAutoProvisioning/repair"
+        )
+
+        const responsePromise = deleteInvalidAccountKeyResources({
+          resources: [resource],
+          cleanupLinkedChannels: stage === "resolve",
+        })
+        await vi.advanceTimersByTimeAsync(0)
+        expect(stalled).toHaveBeenCalledOnce()
+        expect(stalled).toHaveBeenCalledWith(resource.ref, {
+          signal: expect.any(AbortSignal),
+        })
+        await vi.advanceTimersByTimeAsync(30_000)
+        expect(stalled.mock.calls[0][1].signal.aborted).toBe(true)
+        if (stage === "resolve") expect(deleteResource).not.toHaveBeenCalled()
+
+        await expect(responsePromise).resolves.toMatchObject({
+          data: {
+            results: [
+              {
+                outcome: ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Uncertain,
+                failure: {
+                  code: RESOURCE_FAILURE_CODES.MutationStateUncertain,
+                },
+              },
+            ],
+          },
+        })
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
 
   it("rejects duplicate invalid refs before any destructive mutation", async () => {
     const resource = {

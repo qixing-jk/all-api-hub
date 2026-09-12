@@ -2306,7 +2306,7 @@ describe("useAccountKeyResourceController", () => {
     )
   })
 
-  it.each([false, true])(
+  it.each([false, true, "unavailable"] as const)(
     "deletes a native key from all-account mode (linked cleanup: %s)",
     async (cleanupLinkedChannels) => {
       cleanupMocks.prepare.mockReset().mockResolvedValue({ id: "pending" })
@@ -2328,7 +2328,11 @@ describe("useAccountKeyResourceController", () => {
         runtimeKey: {
           resolve: vi
             .fn()
-            .mockResolvedValue({ kind: "resolved", secret: "source-key" }),
+            .mockResolvedValue(
+              cleanupLinkedChannels === "unavailable"
+                ? { kind: "unavailable" }
+                : { kind: "resolved", secret: "source-key" },
+            ),
         },
         resolveDefaultScope: vi.fn().mockResolvedValue({
           scopeKey: "scope-native",
@@ -2353,12 +2357,29 @@ describe("useAccountKeyResourceController", () => {
       })
       expect(opened).toBe(true)
       await waitFor(() => expect(result.current.deleteState.isOpen).toBe(true))
-      await act(async () => result.current.confirmDelete(cleanupLinkedChannels))
+      await act(async () =>
+        result.current.confirmDelete(Boolean(cleanupLinkedChannels)),
+      )
 
+      if (cleanupLinkedChannels === "unavailable") {
+        expect(collection.delete).not.toHaveBeenCalled()
+        expect(cleanupMocks.prepare).not.toHaveBeenCalled()
+        expect(result.current.deleteState.failure?.code).toBe("unavailable")
+        return
+      }
       expect(cleanupMocks.prepare).toHaveBeenCalledTimes(
         cleanupLinkedChannels ? 1 : 0,
       )
       if (cleanupLinkedChannels) {
+        expect(cleanupMocks.prepare).toHaveBeenCalledWith({
+          source: { accountId: "account-native", ref: facts.ref },
+          baseUrl: "https://example.invalid",
+          key: "source-key",
+        })
+        const session = await openNativeResources.mock.results[0].value
+        expect(session.runtimeKey.resolve).toHaveBeenCalledWith(facts.ref, {
+          signal: expect.any(AbortSignal),
+        })
         expect(cleanupMocks.prepare.mock.invocationCallOrder[0]).toBeLessThan(
           collection.delete.mock.invocationCallOrder[0],
         )

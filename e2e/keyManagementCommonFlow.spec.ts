@@ -1401,7 +1401,7 @@ test("cleans linked channels and retries persisted multi-key cleanup after reloa
 })
 
 for (const siteType of [SITE_TYPES.DONE_HUB, SITE_TYPES.VELOERA]) {
-  test(`reads each ${siteType} cleanup target once per phase`, async ({
+  test(`validates ${siteType} cleanup replacements without redundant secret reads`, async ({
     context,
     extensionId,
     page,
@@ -1508,7 +1508,7 @@ for (const siteType of [SITE_TYPES.DONE_HUB, SITE_TYPES.VELOERA]) {
       page.getByRole("heading", { name: "Existing Key" }),
     ).toHaveCount(0)
     // The source deletion separates discovery from the fresh pre-mutation read.
-    // Any duplicate detail/secret GET inside either phase adds an unexpected event.
+    // Multi-key replacement needs one additional snapshot check; secret loading reuses each detail.
     expect(requests).toEqual([
       "read-1",
       "read-2",
@@ -1516,6 +1516,7 @@ for (const siteType of [SITE_TYPES.DONE_HUB, SITE_TYPES.VELOERA]) {
       "read-1",
       "delete-1",
       "read-2",
+      "read-2", // Whole-list replacement validates the captured credentials before writing.
       "update-2",
     ])
     expect(channels).toMatchObject([

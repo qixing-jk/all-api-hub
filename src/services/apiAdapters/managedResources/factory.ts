@@ -579,13 +579,31 @@ export function defineNativeResourceKind<
                     if (!key || !baseUrl) throw invalidPublicInput()
                     return scalarKeyCleanup(
                       await definition.editEditor(config, detail, options),
-                      (command, updateOptions) =>
-                        definition.update(
+                      async (command, updateOptions) => {
+                        if (definition.scalarKeyCleanup === "delimited") {
+                          // A whole-list replacement must not overwrite credentials added after inspection.
+                          const { detail: latest } = await readDetail(
+                            ref,
+                            updateOptions,
+                          )
+                          const latestSecret =
+                            definition.scalarKeyCleanupSecret?.(latest)
+                          if (
+                            typeof latestSecret !== "string" ||
+                            latestSecret !==
+                              definition.scalarKeyCleanupSecret?.(detail)
+                          )
+                            throw new ManagedResourceError({
+                              code: "resource_changed",
+                            })
+                        }
+                        return definition.update(
                           config,
                           detail,
                           command,
                           updateOptions,
-                        ),
+                        )
+                      },
                       options,
                       definition.scalarKeyCleanup === "delimited",
                       { key, baseUrl },

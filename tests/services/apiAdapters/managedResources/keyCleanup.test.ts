@@ -24,6 +24,51 @@ function editor(
 }
 
 describe("shared scalar cleanup secret reads", () => {
+  it.each(["", "sk-****"])(
+    "rejects an unreadable secret (%s)",
+    async (secret) => {
+      await expect(
+        scalarKeyCleanup(
+          editor(async () => secret),
+          vi.fn(),
+        ),
+      ).rejects.toThrow()
+    },
+  )
+
+  it("rejects missing secret capability", async () => {
+    const definition = editor(async () => "key")
+    definition.loadSecret = undefined
+    await expect(scalarKeyCleanup(definition, vi.fn())).rejects.toThrow()
+  })
+
+  it.each(["readonly", "empty", "invalid"])(
+    "never submits a destructive invalid replacement (%s)",
+    async (kind) => {
+      const definition = editor(async () => "first\nsecond")
+      if (kind === "readonly")
+        definition.fields = [
+          {
+            ...definition.fields[0],
+            canReplace: false,
+          } as (typeof definition.fields)[number],
+        ]
+      if (kind === "invalid")
+        definition.validate = () => ({ valid: false, issues: [] })
+      const submit = vi.fn()
+      const cleanup = await scalarKeyCleanup(
+        definition,
+        submit,
+        undefined,
+        true,
+      )
+      await expect(
+        cleanup.remove(kind === "empty" ? [0, 1] : [1]),
+      ).rejects.toThrow()
+      expect(submit).not.toHaveBeenCalled()
+    },
+  )
+
   it.each([undefined, "", "sk-****"])(
     "loads the secret once when detail contains %s",
     async (detailSecret) => {

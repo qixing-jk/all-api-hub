@@ -2232,7 +2232,9 @@ export function useAccountKeyResourceController({
           sessionRef.current = actionContext.session
           collectionRef.current = actionContext.collection
           activeResourceBoundaryRef.current = actionContext.boundary
-          let cleanupInput = null
+          let cleanupInput: Parameters<
+            typeof deleteWithLinkedChannelCleanup
+          >[0] = null
           if (cleanup) {
             const resolution = await actionContext.session.runtimeKey?.resolve(
               ref,

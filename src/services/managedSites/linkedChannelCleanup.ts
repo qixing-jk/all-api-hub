@@ -360,10 +360,13 @@ export async function runLinkedChannelCleanup(
           return
         task.sourceDeleted = true
         await saveTask(task)
-        const workspace = await getManagedResourceRegistration(
+        const registration = getManagedResourceRegistration(
           task.siteType,
           "channel",
-        )?.open()
+        )
+        const workspace = registration
+          ? await bounded((options) => registration.open(options))
+          : null
         if (!workspace?.openKeyCleanup) return
         for (const target of [...task.targets]) {
           try {

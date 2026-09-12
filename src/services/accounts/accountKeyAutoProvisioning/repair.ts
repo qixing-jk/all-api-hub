@@ -966,9 +966,15 @@ class AccountKeyRepairRunner {
             ),
           { timeoutMs: INVALID_RESOURCE_DELETE_OPERATION_TIMEOUT_MS },
         )
-        let cleanupInput = null
+        let cleanupInput: Parameters<typeof deleteWithLinkedChannelCleanup>[0] =
+          null
         if (request.cleanupLinkedChannels) {
-          const resolution = await session.runtimeKey?.resolve(resource.ref)
+          const resolution = await runAbortableTask(
+            (signal) =>
+              session.runtimeKey?.resolve(resource.ref, { signal }) ??
+              Promise.resolve(undefined),
+            { timeoutMs: INVALID_RESOURCE_DELETE_OPERATION_TIMEOUT_MS },
+          )
           if (resolution?.kind !== "resolved")
             throw new AccountKeyResourceError({
               code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,

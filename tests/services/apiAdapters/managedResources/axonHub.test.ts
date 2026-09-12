@@ -423,6 +423,42 @@ const buildMigrationCreateCommand = async (source = buildMigrationSource()) => {
 }
 
 describe("AxonHub native managed-resource Adapter", () => {
+  it("rejects cleanup if credentials change before list replacement", async () => {
+    const detail = buildDetailChannel({
+      credentials: { apiKeys: ["keep", "remove"] },
+    })
+    mocks.getChannel.mockResolvedValueOnce(detail).mockResolvedValue({
+      ...detail,
+      credentials: { apiKeys: ["keep", "remove", "new"] },
+    })
+    const api = await axonHubManagedResourceRegistration.open()
+    const cleanup = await api.openKeyCleanup!(refFor(detail))
+    await expect(cleanup.remove([1])).rejects.toMatchObject({
+      failure: { code: "resource_changed" },
+    })
+    expect(mocks.updateChannel).not.toHaveBeenCalled()
+  })
+
+  it("rejects cleanup when a channel has no readable API keys", async () => {
+    const detail = buildDetailChannel({ credentials: null })
+    mocks.getChannel.mockResolvedValue(detail)
+    const api = await axonHubManagedResourceRegistration.open()
+    await expect(api.openKeyCleanup!(refFor(detail))).rejects.toMatchObject({
+      failure: { code: "unavailable" },
+    })
+  })
+  it("does not treat OAuth credentials as removable API keys", async () => {
+    const detail = buildDetailChannel({
+      type: "codex",
+      credentials: { apiKeys: ["token"] },
+    })
+    mocks.getChannel.mockResolvedValue(detail)
+    const api = await axonHubManagedResourceRegistration.open()
+    await expect(api.openKeyCleanup!(refFor(detail))).rejects.toMatchObject({
+      failure: { code: "unavailable" },
+    })
+    expect(mocks.deleteChannel).not.toHaveBeenCalled()
+  })
   it("cleans one of several API keys without overwriting other credential fields", async () => {
     const detail = buildDetailChannel({
       credentials: { apiKeys: ["remove-me", "keep-me"] },

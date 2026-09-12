@@ -70,6 +70,15 @@ const {
   trackerCompleteMock: vi.fn(),
 }))
 
+const cleanupDelete = vi.hoisted(() =>
+  vi.fn(async (_input: unknown, deleteSource: () => Promise<void>) =>
+    deleteSource(),
+  ),
+)
+vi.mock("~/services/managedSites/linkedChannelCleanup", () => ({
+  deleteWithLinkedChannelCleanup: cleanupDelete,
+}))
+
 vi.mock("~/hooks/useAccountData", () => ({
   useAccountData: vi.fn(),
 }))
@@ -5909,61 +5918,74 @@ describe("useKeyManagement enabled account filtering", () => {
     confirmSpy.mockRestore()
   })
 
-  it("deletes a token without using native browser confirmation", async () => {
-    const account = createDisplayAccount({
-      id: "cancel-delete-acc",
-      name: "Cancel Delete Account",
-    })
-    const token = createToken({
-      id: 908,
-      key: "token-908",
-      name: "Cancel Delete Token",
-      accountId: account.id,
-      accountName: account.name,
-      expired_time: 0,
-    })
+  it.each([false, true])(
+    "deletes a token without browser confirmation (linked cleanup: %s)",
+    async (cleanup) => {
+      const account = createDisplayAccount({
+        id: "cancel-delete-acc",
+        name: "Cancel Delete Account",
+      })
+      const token = createToken({
+        id: 908,
+        key: "token-908",
+        name: "Cancel Delete Token",
+        accountId: account.id,
+        accountName: account.name,
+        expired_time: 0,
+      })
 
-    vi.mocked(useAccountData).mockReturnValue({
-      enabledDisplayData: [account],
-    } as any)
+      vi.mocked(useAccountData).mockReturnValue({
+        enabledDisplayData: [account],
+      } as any)
 
-    const fetchAccountTokens = vi.fn().mockResolvedValue([token])
-    const deleteToken = vi.fn()
-    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
-      createAdapterWithKeyManagement({
-        fetchTokens: fetchAccountTokens,
-        deleteToken,
-      }) as any,
-    )
+      const fetchAccountTokens = vi.fn().mockResolvedValue([token])
+      const deleteToken = vi.fn()
+      vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+        createAdapterWithKeyManagement({
+          fetchTokens: fetchAccountTokens,
+          deleteToken,
+        }) as any,
+      )
 
-    const confirmSpy = vi.spyOn(window, "confirm")
+      const confirmSpy = vi.spyOn(window, "confirm")
 
-    const { result } = renderHook(() => useKeyManagement(), {
-      wrapper: createWrapper(),
-    })
+      const { result } = renderHook(() => useKeyManagement(), {
+        wrapper: createWrapper(),
+      })
 
-    act(() => {
-      result.current.setSelectedAccount(account.id)
-    })
+      act(() => {
+        result.current.setSelectedAccount(account.id)
+      })
 
-    await waitFor(() => expect(result.current.tokens).toHaveLength(1))
+      await waitFor(() => expect(result.current.tokens).toHaveLength(1))
 
-    await act(async () => {
-      await result.current.handleDeleteToken(token)
-    })
+      await act(async () => {
+        await result.current.handleDeleteToken(token, cleanup)
+      })
 
-    expect(confirmSpy).not.toHaveBeenCalled()
-    expect(deleteToken).toHaveBeenCalledWith({
-      request: expect.anything(),
-      tokenId: token.id,
-    })
-    expect(vi.mocked(toast.success)).toHaveBeenCalledWith(
-      "keyManagement:messages.deleteSuccess",
-    )
-    expect(vi.mocked(toast.error)).not.toHaveBeenCalled()
+      expect(cleanupDelete).toHaveBeenLastCalledWith(
+        cleanup
+          ? {
+              source: { accountId: account.id, tokenId: token.id },
+              baseUrl: account.baseUrl,
+              key: token.key,
+            }
+          : null,
+        expect.any(Function),
+      )
+      expect(confirmSpy).not.toHaveBeenCalled()
+      expect(deleteToken).toHaveBeenCalledWith({
+        request: expect.anything(),
+        tokenId: token.id,
+      })
+      expect(vi.mocked(toast.success)).toHaveBeenCalledWith(
+        "keyManagement:messages.deleteSuccess",
+      )
+      expect(vi.mocked(toast.error)).not.toHaveBeenCalled()
 
-    confirmSpy.mockRestore()
-  })
+      confirmSpy.mockRestore()
+    },
+  )
 
   it("deletes a token when the account inventory has not been loaded", async () => {
     const account = createDisplayAccount({

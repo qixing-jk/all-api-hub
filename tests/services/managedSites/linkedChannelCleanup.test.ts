@@ -2,6 +2,7 @@ import { webcrypto } from "node:crypto"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   ManagedResourceError,
   type ManagedResourceRef,
@@ -23,6 +24,8 @@ const mocks = vi.hoisted(() => ({
   accounts: vi.fn(),
   tokens: vi.fn(),
   config: vi.fn(),
+  open: vi.fn(),
+  sourceGet: vi.fn(),
 }))
 vi.mock("@plasmohq/storage", () => ({
   Storage: class {
@@ -43,7 +46,14 @@ vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
 vi.mock("~/services/apiAdapters/registry", () => ({
   getManagedSiteCapabilities: () => ({ config: { get: mocks.config } }),
   getSiteTypeCapabilities: () => ({
-    account: { keyManagement: { fetchTokens: mocks.tokens } },
+    account: {
+      keyManagement: { fetchTokens: mocks.tokens },
+      keyResources: {
+        open: async () => ({
+          openCollection: async () => ({ get: mocks.sourceGet }),
+        }),
+      },
+    },
   }),
 }))
 vi.mock("~/services/managedSites/runtimeConfig", () => ({
@@ -51,11 +61,7 @@ vi.mock("~/services/managedSites/runtimeConfig", () => ({
 }))
 vi.mock("~/services/apiAdapters/managedResources/registry", () => ({
   getManagedResourceRegistration: () => ({
-    open: async () => ({
-      list: mocks.list,
-      openKeyCleanup: mocks.openKeys,
-      delete: mocks.removeChannel,
-    }),
+    open: mocks.open,
   }),
 }))
 
@@ -84,6 +90,11 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.stubGlobal("crypto", webcrypto)
   mocks.stored.clear()
+  mocks.open.mockResolvedValue({
+    list: mocks.list,
+    openKeyCleanup: mocks.openKeys,
+    delete: mocks.removeChannel,
+  })
   channels = new Map([
     ["single", { keys: ["target-secret"], url: sourceUrl }],
     [
@@ -136,6 +147,153 @@ beforeEach(() => {
 })
 
 describe("linked channel cleanup", () => {
+  it("retains pending work when source identity no longer matches its account", async () => {
+    const task = await prepare()
+    task!.source = {
+      accountId: "account",
+      ref: {
+        accountId: "account",
+        siteType: SITE_TYPES.SUB2API,
+        scopeKey: "keys",
+        resourceId: "7",
+      },
+    }
+    mocks.stored.forEach((_value, key) => mocks.stored.set(key, [task]))
+    await runLinkedChannelCleanup(task!)
+    expect(mocks.sourceGet).not.toHaveBeenCalled()
+    expect(mocks.removeChannel).not.toHaveBeenCalled()
+    task!.source = { accountId: "account" }
+    mocks.stored.forEach((_value, key) => mocks.stored.set(key, [task]))
+    await runLinkedChannelCleanup(task!)
+    expect(mocks.tokens).not.toHaveBeenCalled()
+    expect(await getLinkedChannelCleanupTasks()).toHaveLength(1)
+  })
+
+  it("keeps an ambiguous replacement pending if readback lost an unrelated key", async () => {
+    channels = new Map([
+      ["multi", { keys: ["target-secret", "retained"], url: sourceUrl }],
+    ])
+    const task = await prepare()
+    const read = mocks.openKeys.getMockImplementation()!
+    mocks.openKeys.mockImplementationOnce(async (ref: ManagedResourceRef) => ({
+      ...(await read(ref)),
+      remove: async () => {
+        channels.get("multi")!.keys = ["different"]
+        return { outcome: "uncertain" }
+      },
+    }))
+    await finishLinkedChannelCleanup(task)
+    expect(await getLinkedChannelCleanupTasks()).toHaveLength(1)
+  })
+
+  it.each(["present", "not_found", "unavailable"] as const)(
+    "confirms native source absence only from not_found (%s)",
+    async (state) => {
+      const task = await prepareLinkedChannelCleanup({
+        ...input,
+        source: {
+          accountId: "account",
+          ref: {
+            accountId: "account",
+            siteType: SITE_TYPES.NEW_API,
+            scopeKey: "keys",
+            resourceId: "7",
+          },
+        },
+      })
+      if (state === "present") mocks.sourceGet.mockResolvedValue({})
+      else
+        mocks.sourceGet.mockRejectedValue(
+          new AccountKeyResourceError({ code: state }),
+        )
+      if (state === "unavailable")
+        await expect(runLinkedChannelCleanup(task!)).rejects.toThrow()
+      else await runLinkedChannelCleanup(task!)
+      expect(await getLinkedChannelCleanupTasks()).toHaveLength(
+        state === "not_found" ? 0 : 1,
+      )
+      if (state !== "not_found")
+        expect(mocks.removeChannel).not.toHaveBeenCalled()
+    },
+  )
+
+  it("rejects unreadable source keys and unsupported cleanup workspaces before deletion", async () => {
+    await expect(
+      prepareLinkedChannelCleanup({ ...input, key: "sk-****" }),
+    ).rejects.toThrow()
+    mocks.open.mockResolvedValue({ list: mocks.list })
+    await expect(prepare()).rejects.toThrow()
+    expect(await getLinkedChannelCleanupTasks()).toEqual([])
+  })
+
+  it("retains an ambiguous delete until readback confirms the intended key disappeared", async () => {
+    channels = new Map([
+      ["single", { keys: ["target-secret"], url: sourceUrl }],
+    ])
+    const task = await prepare()
+    mocks.removeChannel.mockResolvedValueOnce({ outcome: "uncertain" })
+    await finishLinkedChannelCleanup(task)
+    expect(await getLinkedChannelCleanupTasks()).toHaveLength(1)
+    const read = mocks.openKeys.getMockImplementation()!
+    mocks.openKeys
+      .mockImplementationOnce(read)
+      .mockRejectedValueOnce(new Error("readback offline"))
+    mocks.removeChannel.mockResolvedValueOnce({ outcome: "uncertain" })
+    await runLinkedChannelCleanup(task!)
+    expect(await getLinkedChannelCleanupTasks()).toHaveLength(1)
+  })
+
+  it("accumulates matching channels across inventory pages", async () => {
+    const page = await mocks.list()
+    mocks.list.mockClear()
+    mocks.list
+      .mockResolvedValueOnce({
+        items: page.items.slice(0, 1),
+        total: 3,
+        nextCursor: "next",
+      })
+      .mockResolvedValueOnce({ items: page.items.slice(1), total: 3 })
+    const task = await prepare()
+    expect(task?.targets.map(({ name }) => name)).toEqual(["single", "multi"])
+    expect(mocks.list).toHaveBeenCalledTimes(2)
+    expect(mocks.list.mock.calls[1][0]).toEqual({ cursor: "next" })
+  })
+
+  it("rejects a repeated inventory cursor without saving incomplete work", async () => {
+    mocks.list.mockResolvedValue({ items: [], nextCursor: "repeated" })
+    await expect(prepare()).rejects.toMatchObject({
+      failure: { code: "unavailable" },
+    })
+    expect(mocks.list).toHaveBeenCalledTimes(2)
+    expect(await getLinkedChannelCleanupTasks()).toEqual([])
+  })
+
+  it("does not equate removing a local account with deleting its upstream key", async () => {
+    const task = await prepare()
+    mocks.accounts.mockResolvedValue([])
+    await runLinkedChannelCleanup(task!)
+    expect(mocks.removeChannel).not.toHaveBeenCalled()
+    expect(await getLinkedChannelCleanupTasks()).toHaveLength(1)
+  })
+
+  it("releases stalled workspace opens so pending cleanup can be retried", async () => {
+    const task = await prepare()
+    vi.useFakeTimers()
+    try {
+      mocks.open.mockImplementationOnce(() => new Promise(() => {}))
+      const pending = runLinkedChannelCleanup(task!, true)
+      const rejection = expect(pending).rejects.toThrow()
+      await vi.advanceTimersByTimeAsync(30_000)
+      await rejection
+      expect(await getLinkedChannelCleanupTasks()).toHaveLength(1)
+      expect(mocks.open.mock.calls[1][0].signal.aborted).toBe(true)
+      await runLinkedChannelCleanup(task!)
+      expect(await getLinkedChannelCleanupTasks()).toEqual([])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it.each([false, true])(
     "accepts confirmed cleanup without a redundant read (multi-key: %s)",
     async (multiKey) => {

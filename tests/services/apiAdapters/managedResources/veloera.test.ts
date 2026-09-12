@@ -132,18 +132,29 @@ describe("Veloera native managed resource", () => {
   it("retains every other key while cleaning a multi-key channel", async () => {
     mocks.get.mockResolvedValue({
       ...channel,
-      key: "remove-me\nkeep-me\nalso-keep",
+      key: "keep-me\nremove-me\nalso-keep",
     })
     const api = await veloeraManagedResourceRegistration.open()
     const cleanup = await api.openKeyCleanup!((await api.list()).items[0].ref)
-    expect(cleanup.keys).toEqual(["remove-me", "keep-me", "also-keep"])
+    expect(cleanup.keys).toEqual(["keep-me", "remove-me", "also-keep"])
     expect(mocks.get).toHaveBeenCalledTimes(1)
-    await cleanup.remove([0])
+    await cleanup.remove([1])
     expect(mocks.update.mock.calls[0][1]).toEqual({
       id: channel.id,
       key: "keep-me\nalso-keep",
     })
     expect(mocks.remove).not.toHaveBeenCalled()
+  })
+  it("rejects cleanup if another administrator adds a credential before replacement", async () => {
+    mocks.get
+      .mockResolvedValueOnce({ ...channel, key: "first\nremove" })
+      .mockResolvedValue({ ...channel, key: "first\nremove\nnew" })
+    const api = await veloeraManagedResourceRegistration.open()
+    const cleanup = await api.openKeyCleanup!((await api.list()).items[0].ref)
+    await expect(cleanup.remove([1])).rejects.toMatchObject({
+      failure: { code: "resource_changed" },
+    })
+    expect(mocks.update).not.toHaveBeenCalled()
   })
   beforeEach(() => {
     vi.resetAllMocks()

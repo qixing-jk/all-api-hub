@@ -199,6 +199,26 @@ describe("newApi managed-site channel capability", () => {
         ).toBe(updatePayload),
     },
     {
+      name: "deleteKey",
+      effect: {
+        kind: "resource-updated",
+        resourceKind: "channel",
+        resourceId: 7,
+      },
+      successData: null,
+      arrange: arrangeRestMutation(channelManagement.manageChannelKey, null),
+      invoke: async () => {
+        const { newApiChannelOperations } = await import(
+          "~/services/apiAdapters/managedResources/newApiOperations"
+        )
+        return await newApiChannelOperations.deleteKey(config, 7, 1)
+      },
+      assertRequestPayload: () =>
+        expect(
+          channelManagement.manageChannelKey.mock.calls.at(-1)?.slice(1),
+        ).toEqual([7, "delete_key", 1]),
+    },
+    {
       name: "delete",
       effect: {
         kind: "resource-deleted",
