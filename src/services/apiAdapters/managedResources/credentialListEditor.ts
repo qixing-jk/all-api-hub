@@ -90,10 +90,6 @@ export async function withCredentialListEditor<T extends object>(
     const value = values[fieldId]
     if (value && typeof value === "object" && "kind" in value) {
       if (value.kind === "secret-list") return value.entries
-      // Import seeds and existing scalar callers still represent one explicit key.
-      if (value.kind === "replace")
-        return [{ id: records[0]?.id ?? "new", fields: {}, secret: value }]
-      if (value.kind === "unchanged") return initial.entries
     }
     throw invalid()
   }

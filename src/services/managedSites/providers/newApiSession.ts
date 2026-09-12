@@ -193,6 +193,10 @@ type EnsureNewApiLoginResult =
   | {
       status: "credentials-missing"
     }
+  | {
+      status: "passkey-manual-required"
+      methods: NewApiVerificationMethods
+    }
 
 interface VerifyNewApiSessionResult {
   methods: NewApiVerificationMethods
@@ -916,16 +920,26 @@ async function postNewApiLogin(
     // Unified login challenges use /login/verify with the advertised method.
     // https://github.com/QuantumNous/new-api/blob/main/controller/login_verification.go
     const unified = responseData.require_verification === true
-    if (
-      unified &&
-      (!trimToNull(responseData.flow_token) ||
+    if (unified) {
+      if (!trimToNull(responseData.flow_token))
+        throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
+      if (
         !responseData.methods?.some(
           (method) => method.method === "2fa" && method.available,
-        ))
-    ) {
-      throw new Error(
-        "New API login requires an available TOTP verification method and flow token",
-      )
+        )
+      ) {
+        clearPendingLoginFlow(config.baseUrl)
+        if (
+          responseData.methods?.some(
+            (method) => method.method === "passkey" && method.available,
+          )
+        )
+          return {
+            status: "passkey-manual-required",
+            methods: { twoFactorEnabled: false, passkeyEnabled: true },
+          }
+        throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
+      }
     }
     // Modern New API returns a flow token; its absence is the legacy contract.
     // https://github.com/QuantumNous/new-api/commit/31d70fca393ff2e09bbae012af2e3ccefdd389a1
@@ -1162,6 +1176,8 @@ export async function ensureNewApiManagedSession(
       status: NEW_API_MANAGED_SESSION_STATUSES.CREDENTIALS_MISSING,
     }
   }
+
+  if (loginResult.status === "passkey-manual-required") return loginResult
 
   if (loginResult.status === "login-2fa-required") {
     if (!hasNewApiTotpSecret(config.totpSecret)) {

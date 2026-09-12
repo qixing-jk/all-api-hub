@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { NEW_API_MANAGED_RESOURCE_FIELD_IDS as fields } from "~/constants/newApi"
-import { withNewApiMultiKeyEditor } from "~/services/apiAdapters/managedResources/newApiMultiKeyEditor"
+import {
+  newApiCredentialRecords,
+  withNewApiMultiKeyEditor,
+} from "~/services/apiAdapters/managedResources/newApiMultiKeyEditor"
 import type { NewApiChannel } from "~/types/newApi"
 import type { NewApiChannelCommand } from "~/types/newApiChannelEditor"
 
@@ -29,6 +32,33 @@ const base = {
 }
 
 describe("New API lazy multi-key editor", () => {
+  it("rejects a rotation mode the provider did not advertise", async () => {
+    const editor = await withNewApiMultiKeyEditor(base, detail)
+    expect(
+      editor.validate({ ...editor.initialValues, multiKeyMode: "unsupported" }),
+    ).toEqual({
+      valid: false,
+      issues: [{ fieldId: "multiKeyMode", code: "unsupported_option" }],
+    })
+  })
+  it("parses string and structured credential arrays without changing their values", () => {
+    expect(
+      newApiCredentialRecords('["first",{"token":"second"}]').map(
+        ({ key }) => key,
+      ),
+    ).toEqual(["first", '{"token":"second"}'])
+  })
+
+  it("reports malformed credential JSON as validation failure without exposing it", async () => {
+    const editor = await withNewApiMultiKeyEditor(
+      base,
+      detail,
+      vi.fn().mockResolvedValue('["private-credential"'),
+    )
+    await expect(editor.loadSecret!(fields.Key + ":0")).rejects.toMatchObject({
+      failure: { code: "validation_failed" },
+    })
+  })
   it("reads once per editor and keeps disclosure out of public projections", async () => {
     const read = vi.fn().mockResolvedValue("first-secret\nsecond-secret")
     const editor = await withNewApiMultiKeyEditor(base, detail, read)

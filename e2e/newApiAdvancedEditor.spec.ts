@@ -24,7 +24,7 @@ async function expectReadableLabelGap(control: Locator) {
     .toBe(true)
 }
 
-/** Title actions stay on the same visual line without inheriting body margins. */
+/** Title actions align on one line or wrap below without overlapping the title. */
 async function expectTitleActionAlignment(title: Locator, action: Locator) {
   await expect(title).toBeVisible()
   await expect(action).toBeVisible()
@@ -34,8 +34,11 @@ async function expectTitleActionAlignment(title: Locator, action: Locator) {
       const button = await action.boundingBox()
       if (!label || !button) return false
       return (
-        button.x > label.x + label.width &&
-        Math.abs(label.y + label.height / 2 - button.y - button.height / 2) <= 1
+        (button.x >= label.x + label.width &&
+          Math.abs(label.y + label.height / 2 - button.y - button.height / 2) <=
+            1) ||
+        (button.y >= label.y + label.height &&
+          button.y - label.y - label.height <= 12)
       )
     })
     .toBe(true)
@@ -148,15 +151,19 @@ for (const width of [1280, 420]) {
       exact: true,
     })
     await removedSummary.scrollIntoViewIfNeeded()
-    if (width >= 640) {
-      await expect
-        .poll(async () => {
-          const added = await addedSummary.boundingBox()
-          const removed = await removedSummary.boundingBox()
-          return added && removed ? Math.abs(added.y - removed.y) : Infinity
-        })
-        .toBeLessThanOrEqual(1)
-    }
+    await expect
+      .poll(async () => {
+        const added = await addedSummary.boundingBox()
+        const removed = await removedSummary.boundingBox()
+        if (!added || !removed) return false
+        return (
+          (removed.x >= added.x + added.width &&
+            Math.abs(added.y - removed.y) <= 1) ||
+          (removed.y >= added.y + added.height &&
+            removed.y - added.y - added.height <= 12)
+        )
+      })
+      .toBe(true)
     await page.screenshot({
       path: testInfo.outputPath("detection-summary.png"),
     })

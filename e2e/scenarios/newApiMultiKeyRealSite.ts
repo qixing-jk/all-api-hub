@@ -166,11 +166,15 @@ export async function runNewApiMultiKeyRealSiteScenario(params: {
             (index) => after.channel_info.multi_key_status_list?.[index] ?? 1,
           ),
         ).toEqual([1, 1, 2])
-        const changed = Object.keys(before).filter(
+        const changed = [
+          ...new Set([...Object.keys(before), ...Object.keys(after)]),
+        ].filter(
           (field) =>
             !["key", "channel_info", "updated_at", "updatedAt"].includes(
               field,
-            ) && !isDeepStrictEqual(before[field], after[field]),
+            ) &&
+            (Object.hasOwn(before, field) !== Object.hasOwn(after, field) ||
+              !isDeepStrictEqual(before[field], after[field])),
         )
         expect(changed, "Unedited channel fields preserved").toEqual([])
         if (!config.username || !config.password || !config.totpSecret) {

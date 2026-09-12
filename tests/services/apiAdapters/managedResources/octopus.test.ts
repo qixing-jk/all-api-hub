@@ -55,47 +55,66 @@ const channel: OctopusChannel = {
   param_override: "{}",
 }
 describe("Octopus native resource", () => {
-  it.each(["confirmed", "rejected", "drift", "still-enabled"])(
-    "reconciles a newly disabled named key once: %s",
-    async (outcome) => {
-      const requested = [
-        { name: "added", channel_key: "test-secret", enabled: false },
-      ]
-      const stored: OctopusChannel = {
-        ...channel,
-        keyManagement: "named",
-        keys: [{ ...requested[0], enabled: true }],
-      }
-      const fixed = { ...stored, keys: requested }
-      mocks.updateChannel
-        .mockResolvedValueOnce({ success: true, data: stored })
-        .mockResolvedValue({ success: outcome !== "rejected", data: fixed })
-      mocks.getChannel
-        .mockResolvedValueOnce(
-          outcome === "drift"
-            ? {
-                ...stored,
-                keys: [{ ...stored.keys[0], channel_key: "another-secret" }],
-              }
-            : stored,
-        )
-        .mockResolvedValue(outcome === "still-enabled" ? stored : fixed)
-      const operations = await openOctopusNativeResourceOperations()
-      const result = await operations.update(stored, { keys: requested })
-      expect(result.outcome).toBe(
-        outcome === "confirmed" ? "succeeded" : "partial",
+  it("passes editor cancellation through credential capability detection", async () => {
+    const controller = new AbortController()
+    const workspace = await octopusManagedResourceRegistration.open()
+    await workspace.openCreateEditor({ signal: controller.signal })
+    expect(mocks.getChannelKeyManagement).toHaveBeenCalledWith(
+      expect.anything(),
+      { signal: controller.signal },
+    )
+  })
+  it.each([
+    "confirmed",
+    "rejected",
+    "drift",
+    "still-enabled",
+    "already-disabled",
+    "read-failed",
+  ])("reconciles a newly disabled named key once: %s", async (outcome) => {
+    const requested = [
+      { name: "added", channel_key: "test-secret", enabled: false },
+    ]
+    const stored: OctopusChannel = {
+      ...channel,
+      keyManagement: "named",
+      keys: [{ ...requested[0], enabled: true }],
+    }
+    const fixed = { ...stored, keys: requested }
+    mocks.updateChannel
+      .mockResolvedValueOnce({ success: true, data: stored })
+      .mockResolvedValue({ success: outcome !== "rejected", data: fixed })
+    mocks.getChannel
+      .mockResolvedValueOnce(
+        outcome === "drift"
+          ? {
+              ...stored,
+              keys: [{ ...stored.keys[0], channel_key: "another-secret" }],
+            }
+          : stored,
       )
-      expect(mocks.updateChannel).toHaveBeenCalledTimes(
-        outcome === "drift" ? 1 : 2,
-      )
-      if (outcome !== "drift")
-        expect(mocks.updateChannel.mock.calls[1][1]).toMatchObject({
-          id: channel.id,
-          keys: [{ name: "added", originalName: "added", enabled: false }],
-        })
-      expect(result).toHaveProperty("confirmedEffects")
-    },
-  )
+      .mockResolvedValue(outcome === "still-enabled" ? stored : fixed)
+    const operations = await openOctopusNativeResourceOperations()
+    if (outcome === "already-disabled")
+      mocks.getChannel.mockReset().mockResolvedValue(fixed)
+    if (outcome === "read-failed")
+      mocks.getChannel.mockReset().mockRejectedValue(new Error("read failed"))
+    const result = await operations.update(stored, { keys: requested })
+    expect(result.outcome).toBe(
+      outcome === "confirmed" || outcome === "already-disabled"
+        ? "succeeded"
+        : "partial",
+    )
+    expect(mocks.updateChannel).toHaveBeenCalledTimes(
+      ["drift", "already-disabled", "read-failed"].includes(outcome) ? 1 : 2,
+    )
+    if (!["drift", "already-disabled", "read-failed"].includes(outcome))
+      expect(mocks.updateChannel.mock.calls[1][1]).toMatchObject({
+        id: channel.id,
+        keys: [{ name: "added", originalName: "added", enabled: false }],
+      })
+    expect(result).toHaveProperty("confirmedEffects")
+  })
   it("reconciles disabled named keys after creation without creating twice", async () => {
     const requested = [
       { name: "added", channel_key: "test-secret", enabled: false },
@@ -479,6 +498,12 @@ describe("Octopus native resource", () => {
       type: 0,
       enabled: false,
       key: "secret-placeholder",
+      keys: [
+        expect.objectContaining({
+          channel_key: "secret-placeholder",
+          enabled: true,
+        }),
+      ],
       model: "",
     })
   })
@@ -628,6 +653,46 @@ describe("Octopus native resource", () => {
       }),
     ])
   })
+
+  it.each(["single", "duplicate-name"])(
+    "rejects unsafe credential changes before mutation: %s",
+    async (scenario) => {
+      const detail = {
+        ...channel,
+        keys: [
+          { id: 9, enabled: true, channel_key: "first" },
+          { id: 10, enabled: true, channel_key: "second" },
+        ],
+      }
+      mocks.getChannel.mockResolvedValue(detail)
+      const workspace = await octopusManagedResourceRegistration.open()
+      const editor = await workspace.openEditEditor(
+        (await workspace.list()).items[0].ref,
+      )
+      if (scenario === "single")
+        mocks.getChannel.mockResolvedValue({
+          ...detail,
+          keyManagement: "single",
+        })
+      const entries = [9, 10].map((id) => ({
+        id: String(id),
+        fields: { name: "same-name" },
+        secret: { kind: "unchanged" as const },
+      }))
+      await expect(
+        editor.submit({
+          ...editor.initialValues,
+          [fields.Key]: { kind: "secret-list", entries },
+        }),
+      ).rejects.toMatchObject({
+        failure: {
+          code:
+            scenario === "single" ? "resource_changed" : "validation_failed",
+        },
+      })
+      expect(mocks.updateChannel).not.toHaveBeenCalled()
+    },
+  )
 
   it("keeps the scalar editor for the single-key protocol", async () => {
     mocks.getChannelKeyManagement.mockResolvedValue("single")

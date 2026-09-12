@@ -13,6 +13,7 @@ import {
   fetchRemoteModels,
   fetchSiteUserGroups,
   getChannel,
+  getChannelKeyManagement,
   listChannels,
   OctopusMutationApiError,
   searchChannels,
@@ -1389,6 +1390,27 @@ describe("Octopus API service", () => {
       usesChannelProtocolPaths(config, { signal: controller.signal }),
     ).rejects.toMatchObject({ name: "AbortError" })
     expect(mockGetValidSession).toHaveBeenCalledTimes(2)
+  })
+
+  it("selects credential editing from the authenticated protocol and forwards cancellation", async () => {
+    const signal = new AbortController().signal
+    mockGetValidSession.mockResolvedValue(v013CookieSession())
+    await expect(getChannelKeyManagement(config, { signal })).resolves.toBe(
+      "named",
+    )
+    mockGetValidSession.mockResolvedValue(currentCookieSession())
+    await expect(getChannelKeyManagement(config, { signal })).resolves.toBe(
+      "single",
+    )
+    mockGetValidSession.mockResolvedValue({
+      mode: OCTOPUS_AUTH_MODES.Bearer,
+      token: "test-token",
+    })
+    await expect(getChannelKeyManagement(config, { signal })).resolves.toBe(
+      "legacy",
+    )
+    expect(mockGetValidSession).toHaveBeenLastCalledWith(config, { signal })
+    expect(mockTempWindowOctopusApiFetch).not.toHaveBeenCalled()
   })
 
   it("passes the cancellation signal and protection execution into create and delete", async () => {

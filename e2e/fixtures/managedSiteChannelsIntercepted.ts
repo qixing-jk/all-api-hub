@@ -392,7 +392,7 @@ async function installNewApiManagedSiteChannelsIntercepts(
         payload.key_mode === "append"
           ? [
               ...new Set([
-                ...existing.key.split("\n"),
+                ...existing.key.split("\n").filter(Boolean),
                 ...String(payload.key ?? "")
                   .split("\n")
                   .filter(Boolean),
@@ -403,7 +403,7 @@ async function installNewApiManagedSiteChannelsIntercepts(
         ...existing,
         ...(payload as Partial<NewApiChannel>),
         id: existing.id,
-        key: existing.channel_info?.is_multi_key ? nextKeys : existing.key,
+        key: nextKeys,
         ...(existing.channel_info?.is_multi_key
           ? {
               channel_info: {
@@ -412,7 +412,7 @@ async function installNewApiManagedSiteChannelsIntercepts(
                   payload.multi_key_mode ??
                     existing.channel_info.multi_key_mode,
                 ),
-                multi_key_size: nextKeys.split("\n").length,
+                multi_key_size: nextKeys.split("\n").filter(Boolean).length,
               },
             }
           : {}),

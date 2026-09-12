@@ -1801,6 +1801,13 @@ describe("ManagedResourceEditorBody", () => {
         AXON_HUB_CHANNEL_FIELD_IDS.KEY,
         { kind: "clear" },
       )
+      await user.click(
+        screen.getByRole("button", { name: "Keep saved API key" }),
+      )
+      expect(onValueChange).toHaveBeenLastCalledWith(
+        AXON_HUB_CHANNEL_FIELD_IDS.KEY,
+        { kind: "unchanged" },
+      )
     },
   )
 })

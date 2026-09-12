@@ -19,7 +19,12 @@ export function newApiCredentialRecords(
 ) {
   let keys: string[]
   if (secret.trim().startsWith("[")) {
-    const value: unknown = JSON.parse(secret)
+    let value: unknown
+    try {
+      value = JSON.parse(secret)
+    } catch {
+      throw new ManagedResourceError({ code: "validation_failed" })
+    }
     if (!Array.isArray(value))
       throw new ManagedResourceError({ code: "validation_failed" })
     keys = value.map((key) =>

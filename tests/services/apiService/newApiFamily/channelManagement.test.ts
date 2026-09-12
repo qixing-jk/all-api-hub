@@ -8,6 +8,7 @@ import {
   fetchChannelModels,
   fetchDraftChannelModels,
   listAllChannels,
+  manageChannelKey,
   searchChannel,
   updateChannelFields,
   updateChannelStatus,
@@ -51,6 +52,23 @@ const baseRequest = {
 }
 
 describe("newApiFamily channel management APIs", () => {
+  it.each(["delete_key", "enable_key", "disable_key"] as const)(
+    "sends native indexed action %s and preserves the response",
+    async (action) => {
+      const response = { success: false, message: "rejected" }
+      mockFetchApi.mockResolvedValueOnce(response)
+      await expect(manageChannelKey(baseRequest, 17, action, 2)).resolves.toBe(
+        response,
+      )
+      expect(mockFetchApi).toHaveBeenCalledWith(baseRequest, {
+        endpoint: "/api/channel/multi_key/manage",
+        options: {
+          method: "POST",
+          body: JSON.stringify({ channel_id: 17, action, key_index: 2 }),
+        },
+      })
+    },
+  )
   beforeEach(() => {
     vi.clearAllMocks()
   })

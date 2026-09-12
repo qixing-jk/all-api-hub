@@ -459,12 +459,32 @@ describe("AxonHub native managed-resource Adapter", () => {
       type: "openai",
       baseURL: "https://upstream.example.invalid",
       status: AXON_HUB_CHANNEL_STATUS.ENABLED,
-      key: { kind: "replace", value: "credential-placeholder" },
+      key: {
+        kind: "secret-list",
+        entries: [
+          {
+            id: "new",
+            fields: {},
+            secret: { kind: "replace", value: "credential-placeholder" },
+          },
+        ],
+      },
       supportedModels: ["model-a", "model-a", "model-b"],
       manualModels: ["model-a", "model-a", "model-b"],
       defaultTestModel: "model-a",
       orderingWeight: 7,
     })
+    const values = {
+      ...editor.initialValues,
+      supportedModels: ["model-a", "model-b"],
+      manualModels: ["model-a", "model-b"],
+    }
+    expect(await editor.submit(values)).toMatchObject({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+    })
+    expect(
+      mocks.createChannel.mock.calls.at(-1)?.[1].credentials.apiKeys,
+    ).toEqual(["credential-placeholder"])
   })
 
   beforeEach(() => {
@@ -1309,6 +1329,26 @@ describe("AxonHub native managed-resource Adapter", () => {
         },
       }),
     ).rejects.toMatchObject({ failure: { code: "resource_changed" } })
+    expect(mocks.updateChannel).not.toHaveBeenCalled()
+  })
+
+  it("rejects credential edits if fresh detail hides credentials", async () => {
+    const detail = buildDetailChannel({
+      credentials: { apiKeys: ["first", "second"] },
+    })
+    mocks.getChannel
+      .mockResolvedValueOnce(detail)
+      .mockResolvedValue({ ...detail, credentials: null })
+    const editor = await (await openWorkspace()).openEditEditor(refFor(detail))
+    await expect(
+      editor.submit({
+        ...editor.initialValues,
+        key: {
+          kind: "secret-list",
+          entries: [{ id: "1", fields: {}, secret: { kind: "unchanged" } }],
+        },
+      }),
+    ).rejects.toMatchObject({ failure: { code: "permission_denied" } })
     expect(mocks.updateChannel).not.toHaveBeenCalled()
   })
 

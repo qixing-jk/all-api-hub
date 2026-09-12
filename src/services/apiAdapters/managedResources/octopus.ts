@@ -388,7 +388,8 @@ export async function openOctopusNativeResourceOperations(
   }
   return {
     scopeKey,
-    keyManagement: () => getChannelKeyManagement(config),
+    keyManagement: (operationOptions?: ResourceOperationOptions) =>
+      getChannelKeyManagement(config, operationOptions),
     get,
     loadSecret,
     prepareMigrationBaseUrl: (
@@ -615,14 +616,17 @@ export const octopusManagedResourceRegistration = defineNativeResourceKind({
       }),
     },
   ],
-  createEditor: async (operations: Operations) => {
+  createEditor: async (
+    operations: Operations,
+    options?: ResourceOperationOptions,
+  ) => {
     const base = editor(operations, {
       fields: octopusFieldDescriptors(),
       initialValues: octopusInitialValues(),
       validate: validateOctopusValues,
       buildCommand: buildOctopusCreateCommand,
     })
-    const mode = await operations.keyManagement()
+    const mode = await operations.keyManagement(options)
     return mode === "single"
       ? base
       : withCredentialListEditor(

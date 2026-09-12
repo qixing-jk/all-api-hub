@@ -30,6 +30,91 @@ const base = {
 }
 
 describe("credential list editor", () => {
+  it("rejects invalid row metadata and boolean values before command construction", async () => {
+    const editor = await withCredentialListEditor(
+      base,
+      "key",
+      records,
+      true,
+      undefined,
+      [{ fieldId: "enabled", type: "boolean" }],
+    )
+    for (const fields of [{ enabled: "maybe" }, { remark: 7 }]) {
+      const values = {
+        key: {
+          kind: "secret-list" as const,
+          entries: [
+            {
+              id: "a",
+              fields: fields as unknown as Record<string, string>,
+              secret: { kind: "unchanged" as const },
+            },
+          ],
+        },
+      }
+      expect(editor.validate(values).valid).toBe(false)
+      expect(() => editor.buildCommand(values)).toThrow()
+    }
+  })
+
+  it("allows the singleton loader alias and rejects unavailable or cancelled disclosures", async () => {
+    const loader = vi.fn().mockResolvedValue([records[0]])
+    const editor = await withCredentialListEditor(
+      base,
+      "key",
+      [records[0]],
+      true,
+      loader,
+    )
+    await expect(editor.loadSecret!("key")).resolves.toBe("first-secret")
+    await expect(editor.loadSecret!("other")).rejects.toMatchObject({
+      failure: { code: "validation_failed" },
+    })
+    await expect(editor.loadSecret!("key:missing")).rejects.toMatchObject({
+      failure: { code: "unavailable" },
+    })
+    const controller = new AbortController()
+    controller.abort()
+    loader.mockClear()
+    await expect(
+      editor.loadSecret!("key:a", { signal: controller.signal }),
+    ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+    expect(loader).not.toHaveBeenCalled()
+    const unavailable = await withCredentialListEditor(
+      base,
+      "key",
+      [{ id: "empty", key: "", fields: {} }],
+      true,
+      vi.fn().mockResolvedValue([{ id: "empty", key: "", fields: {} }]),
+    )
+    expect(unavailable.fields[0]).toMatchObject({
+      savedEntries: [{ id: "empty", secretState: "unavailable" }],
+    })
+    await expect(unavailable.loadSecret!("key:empty")).rejects.toMatchObject({
+      failure: { code: "unavailable" },
+    })
+  })
+
+  it("refuses unusable authoritative secrets during patch resolution", async () => {
+    const editor = await withCredentialListEditor(base, "key", records, true)
+    const command = editor.buildCommand({
+      key: {
+        kind: "secret-list",
+        entries: [
+          { id: "a", fields: {}, secret: { kind: "replace", value: "valid" } },
+        ],
+      },
+    })
+    await expect(
+      resolveCredentialPatch(
+        {
+          ...command.credentialPatch!,
+          entries: [{ id: "a", fields: {}, secret: { kind: "clear" } }],
+        },
+        records,
+      ),
+    ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+  })
   it("keeps saved secrets out of projections and omits an untouched list", async () => {
     const editor = await withCredentialListEditor(base, "key", records, true)
     expect(JSON.stringify(editor.initialValues)).not.toContain("first-secret")

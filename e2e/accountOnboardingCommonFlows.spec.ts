@@ -1090,9 +1090,11 @@ test("adds an AIHubMix account, preserves its one-time key, and opens managed-si
   await expect(page.locator("#channel-name")).toHaveValue(
     /Aihubmix \| user group \(auto\)/,
   )
-  await expect(page.locator("#channel-key")).toHaveValue(
-    "sk-aihubmix-created-one-time-key",
-  )
+  await expect(
+    page
+      .getByRole("group", { name: "API Key 1", exact: true })
+      .getByLabel("API Key 1", { exact: true }),
+  ).toHaveValue("sk-aihubmix-created-one-time-key")
   await expect(page.locator("#channel-base-url")).toHaveValue(
     "https://aihubmix.com",
   )

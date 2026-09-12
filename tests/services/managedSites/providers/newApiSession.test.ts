@@ -140,6 +140,104 @@ const createDashboardAuthBundle = (
 })
 
 describe("newApiSession", () => {
+  it.each(["missing-flow", "no-available-method"])(
+    "rejects an incomplete unified login challenge: %s",
+    async (scenario) => {
+      server.use(
+        http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+          unauthorizedResponse(),
+        ),
+        http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+          unauthorizedResponse(),
+        ),
+        http.post(`${BASE_CONFIG.baseUrl}/api/user/login`, () =>
+          jsonData({
+            require_verification: true,
+            ...(scenario === "missing-flow" ? {} : { flow_token: "test-flow" }),
+            methods: [
+              { method: "2fa", available: scenario === "missing-flow" },
+            ],
+          }),
+        ),
+      )
+      await expect(ensureNewApiManagedSession(BASE_CONFIG)).rejects.toThrow(
+        "New API dashboard session response is invalid",
+      )
+    },
+  )
+
+  it("serializes simultaneous verification requests for distinct channels", async () => {
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let entered!: () => void
+    const started = new Promise<void>((resolve) => {
+      entered = resolve
+    })
+    let calls = 0
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+        jsonData({ enabled: true }),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+        jsonData({ enabled: false }),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/verify`, async () => {
+        calls++
+        if (calls === 1) {
+          entered()
+          await gate
+        }
+        return jsonData({ verified: true })
+      }),
+    )
+    const first = submitNewApiSecureVerificationCode(
+      { ...BASE_CONFIG, channelId: 17 },
+      "111111",
+    )
+    await started
+    const second = submitNewApiSecureVerificationCode(
+      { ...BASE_CONFIG, channelId: 18 },
+      "222222",
+    )
+    expect(calls).toBe(1)
+    release()
+    const results = await Promise.all([first, second])
+    expect(results.map((result) => result.status)).toEqual([
+      "verified",
+      "verified",
+    ])
+    expect(calls).toBe(2)
+  })
+  it("returns manual passkey guidance for a unified login without TOTP", async () => {
+    const verify = vi.fn()
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+        unauthorizedResponse(),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+        unauthorizedResponse(),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/user/login`, () =>
+        jsonData({
+          require_verification: true,
+          flow_token: "test-passkey-flow",
+          methods: [{ method: "passkey", available: true }],
+        }),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/user/login/verify`, () => {
+        verify()
+        return jsonData({})
+      }),
+    )
+    await expect(ensureNewApiManagedSession(BASE_CONFIG)).resolves.toEqual({
+      status: NEW_API_MANAGED_SESSION_STATUSES.PASSKEY_MANUAL_REQUIRED,
+      methods: { twoFactorEnabled: false, passkeyEnabled: true },
+    })
+    expect(verify).not.toHaveBeenCalled()
+    expect(generateNewApiTotpCodeMock).not.toHaveBeenCalled()
+  })
   beforeEach(() => {
     clearNewApiManagedSessionState()
     generateNewApiTotpCodeMock.mockReset()

@@ -623,7 +623,33 @@ export function defineNativeResourceKind<
                           ...editorDefinition,
                           initialValues: {
                             ...editorDefinition.initialValues,
-                            ...seedProjection,
+                            ...Object.fromEntries(
+                              Object.entries(seedProjection).map(
+                                ([fieldId, value]) => [
+                                  fieldId,
+                                  editorDefinition.fields.some(
+                                    (field) =>
+                                      field.fieldId === fieldId &&
+                                      field.type === "secret-list",
+                                  ) &&
+                                  value &&
+                                  typeof value === "object" &&
+                                  "kind" in value &&
+                                  value.kind === "replace"
+                                    ? {
+                                        kind: "secret-list",
+                                        entries: [
+                                          {
+                                            id: "new",
+                                            fields: {},
+                                            secret: value,
+                                          },
+                                        ],
+                                      }
+                                    : value,
+                                ],
+                              ),
+                            ),
                           },
                         }
                       : editorDefinition,
