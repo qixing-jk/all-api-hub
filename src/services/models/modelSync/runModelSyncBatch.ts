@@ -19,6 +19,7 @@ export async function runModelSyncBatch<T>(
   const results = new Array<ExecutionItemResult>(total)
   let completed = 0
   let nextIndex = 0
+  let progressTail = Promise.resolve()
 
   const worker = async () => {
     while (nextIndex < total) {
@@ -26,7 +27,15 @@ export async function runModelSyncBatch<T>(
       const result = await execute(channels[index])
       results[index] = result
       completed++
-      await options.onProgress?.({ completed, total, lastResult: result })
+      const progress = { completed, total, lastResult: result }
+      const persisted = progressTail.then(() => options.onProgress?.(progress))
+      // Preserve completion order without letting one failed callback suppress
+      // progress from other workers that are still finishing their items.
+      progressTail = persisted.then(
+        () => {},
+        () => {},
+      )
+      await persisted
     }
   }
 

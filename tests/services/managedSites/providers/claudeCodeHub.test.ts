@@ -296,6 +296,20 @@ describe("Claude Code Hub managed-site provider", () => {
     )
   })
 
+  it("preserves cancellation when a provider key read rejects", async () => {
+    const controller = new AbortController()
+    const reason = new DOMException("Canceled key read", "AbortError")
+    mockGetUnmaskedProviderKey.mockImplementationOnce(async () => {
+      controller.abort(reason)
+      throw reason
+    })
+    await expect(
+      fetchChannelSecretKey(passedClaudeCodeHubConfig, 42, {
+        signal: controller.signal,
+      }),
+    ).rejects.toBe(reason)
+  })
+
   it("surfaces provider key reveal failures from edit flows", async () => {
     mockGetPreferences.mockResolvedValue({
       claudeCodeHub: storedClaudeCodeHubConfig,

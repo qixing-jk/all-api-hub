@@ -58,16 +58,18 @@ const doneHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
 }
 
 const matching: ManagedResourceMatchingCapability<DoneHubConfig> = {
-  fetchSecretKey: async (config, ref) =>
+  fetchSecretKey: async (config, ref, options) =>
     doneHubChannelOperations.fetchSecretKey(
       config,
       requireManagedResourceChannelId(SITE_TYPES.DONE_HUB, config, ref),
+      options,
     ),
-  hydrateComparableKeys: async (config, candidates) => {
+  hydrateComparableKeys: async (config, candidates, options) => {
     const target = { siteType: SITE_TYPES.DONE_HUB, config }
     const hydrated = await doneHubChannelOperations.hydrateComparableKeys(
       config,
       toNativeNumericMatchCandidates(candidates, target),
+      options,
     )
     return hydrated.map((candidate) =>
       toManagedResourceMatchCandidate(candidate, target),

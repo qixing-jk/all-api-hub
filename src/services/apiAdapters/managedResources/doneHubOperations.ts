@@ -110,21 +110,29 @@ const fetchDoneHubMutationPayload = async (
   }
 }
 
-const fetchSecretKey = async (config: DoneHubConfig, channelId: number) => {
+const fetchSecretKey = async (
+  config: DoneHubConfig,
+  channelId: number,
+  options?: ManagedSiteChannelRequestOptions,
+) => {
+  options?.signal?.throwIfAborted()
   const channel = await fetchChannelRaw(
-    toManagedSiteApiServiceRequest(config),
+    toManagedSiteApiServiceRequest(config, options),
     channelId,
   )
+  options?.signal?.throwIfAborted()
   return channel.key ?? ""
 }
 
 const hydrateComparableKeys = async <T extends { id: number; key?: string }>(
   config: DoneHubConfig,
   candidates: T[],
+  options?: ManagedSiteChannelRequestOptions,
 ) => {
   const hydratedCandidates: T[] = []
 
   for (const candidate of candidates) {
+    options?.signal?.throwIfAborted()
     if (hasUsableManagedSiteChannelKey(candidate.key)) {
       hydratedCandidates.push(candidate)
       continue
@@ -133,6 +141,7 @@ const hydrateComparableKeys = async <T extends { id: number; key?: string }>(
     const key = await fetchSecretKey(
       config,
       requireNumericManagedResourceId(candidate.id),
+      options,
     )
     hydratedCandidates.push({ ...candidate, key })
   }

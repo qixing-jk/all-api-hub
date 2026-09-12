@@ -18,6 +18,32 @@ const resultFor = (id: number): ExecutionItemResult => ({
 })
 
 describe("runModelSyncBatch", () => {
+  it("serializes delayed progress persistence in completion order", async () => {
+    const gate = createDeferred<void>()
+    const firstStarted = createDeferred<void>()
+    const persisted: number[] = []
+    const onProgress = vi.fn(async ({ completed }: { completed: number }) => {
+      if (completed === 1) {
+        firstStarted.resolve()
+        await gate.promise
+      }
+      persisted.push(completed)
+    })
+    const batch = runModelSyncBatch(
+      [1, 2],
+      { concurrency: 2, onProgress },
+      async (id) => resultFor(id),
+    )
+    await firstStarted.promise
+    try {
+      expect(onProgress).toHaveBeenCalledTimes(1)
+    } finally {
+      gate.resolve()
+      await batch
+    }
+    expect(persisted).toEqual([1, 2])
+  })
+
   it("does not dispatch the next channel until progress persistence finishes", async () => {
     const gate = createDeferred<void>()
     const progressStarted = createDeferred<void>()
@@ -56,7 +82,8 @@ describe("runModelSyncBatch", () => {
         return resultFor(id)
       },
     )
-    await vi.waitFor(() => expect(started).toEqual([1, 2, 3]))
+    await vi.waitFor(() => expect(onProgress).toHaveBeenCalledTimes(1))
+    expect(started).toEqual([1, 2])
     const settled = vi.fn()
     void batch.then(settled)
     expect(settled).not.toHaveBeenCalled()

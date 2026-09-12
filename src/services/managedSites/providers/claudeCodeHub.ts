@@ -41,10 +41,15 @@ export function toClaudeCodeHubDisclosureError(
 const runClaudeCodeHubRead = async <T>(
   config: ClaudeCodeHubConfig,
   operation: () => Promise<T>,
+  options?: ScheduledReadOptions,
 ): Promise<T> => {
+  options?.signal?.throwIfAborted()
   try {
-    return await operation()
+    const result = await operation()
+    options?.signal?.throwIfAborted()
+    return result
   } catch (error) {
+    options?.signal?.throwIfAborted()
     throw toClaudeCodeHubDisclosureError(error, config)
   }
 }
@@ -168,6 +173,7 @@ export async function fetchChannelSecretKey(
     config,
     async () =>
       await claudeCodeHubApi.getUnmaskedProviderKey(config, channelId, options),
+    options,
   )
 }
 

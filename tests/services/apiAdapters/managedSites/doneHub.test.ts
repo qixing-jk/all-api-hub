@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { doneHubManagedResourceModels } from "~/services/apiAdapters/managedResources/doneHubOperations"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import {
   CHANNEL_MUTATION_SCENARIOS,
   testManagedSiteChannelMutationContract,
   type ChannelMutationScenario,
 } from "~~/tests/services/apiAdapters/managedSites/channelMutationContract"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 import {
   buildManagedResourceMatchCandidate,
@@ -501,6 +503,52 @@ describe("DoneHub managed-site channel capability", () => {
       newApiKeyManagement.doneHubKeyManagement.fetchAvailableModels,
     ).toHaveBeenCalledWith(request)
   })
+
+  it.each(["fetch", "hydrate"])(
+    "cancels DoneHub matching %s reads without reading more keys",
+    async (mode) => {
+      const { doneHubManagedSiteCapabilities } = await import(
+        "~/services/apiAdapters/managedSites/doneHub"
+      )
+      const controller = new AbortController()
+      const options = {
+        signal: controller.signal,
+        requestScheduling: { priority: "background" as const },
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
+        ),
+      }
+      const candidates = [7, 8].map((id) =>
+        buildManagedResourceMatchCandidate({
+          ref: matchingResourceRef(id, {
+            siteType: "done-hub",
+            scopeKey: config.baseUrl,
+          }),
+          key: "sk-***",
+        }),
+      )
+      doneHubApi.fetchChannelRaw.mockImplementationOnce(async (request) => {
+        expect(request.abortSignal).toBe(controller.signal)
+        expect(request.requestScheduling).toBe(options.requestScheduling)
+        controller.abort()
+        return { id: 7, key: "sk-canceled" }
+      })
+      const result =
+        mode === "fetch"
+          ? doneHubManagedSiteCapabilities.matching.fetchSecretKey!(
+              config,
+              candidates[0].ref,
+              options,
+            )
+          : doneHubManagedSiteCapabilities.matching.hydrateComparableKeys!(
+              config,
+              candidates,
+              options,
+            )
+      await expect(result).rejects.toMatchObject({ name: "AbortError" })
+      expect(doneHubApi.fetchChannelRaw).toHaveBeenCalledOnce()
+    },
+  )
 
   it("preserves complete DoneHub matching references when hydrating native channel secrets", async () => {
     const { doneHubManagedSiteCapabilities } = await import(

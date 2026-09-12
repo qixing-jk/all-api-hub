@@ -2242,7 +2242,7 @@ describe("useKeyManagement enabled account filtering", () => {
     )
   })
 
-  it("shares a managed-site match request cache across status checks in the same batch", async () => {
+  it("isolates operation caches for independently cancellable status targets", async () => {
     const mockedUseAccountData = vi.mocked(useAccountData)
     const account = createDisplayAccount({
       id: "managed-cache-acc",
@@ -2294,7 +2294,9 @@ describe("useKeyManagement enabled account filtering", () => {
       | { operationContext?: unknown }
       | undefined
     expect(firstParams).toHaveProperty("operationContext")
-    expect(firstParams?.operationContext).toBe(secondParams?.operationContext)
+    expect(firstParams?.operationContext).not.toBe(
+      secondParams?.operationContext,
+    )
   })
 
   it("reveals the resolved full key when the inventory value is masked", async () => {
@@ -4372,7 +4374,74 @@ describe("useKeyManagement enabled account filtering", () => {
     expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1)
   })
 
-  it("cancels checks for the previous account and checks unfinished keys when returning", async () => {
+  it("cancels only superseded target reads while other checks and queued keys continue", async () => {
+    const account = createDisplayAccount({ id: "superseded-status-account" })
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+    mockedUseUserPreferencesContext.mockReturnValue({
+      managedSiteType: "new-api",
+      preferences: buildUserPreferences({
+        newApi: {
+          baseUrl: "https://managed.example",
+          adminToken: "admin-token",
+          userId: "1",
+        },
+      }),
+    })
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: vi
+          .fn()
+          .mockResolvedValue(
+            Array.from({ length: 6 }, (_, index) =>
+              createToken({ id: 800 + index, key: `key-${index}` }),
+            ),
+          ),
+      }) as any,
+    )
+    const active = new Map<number, AbortSignal>()
+    getManagedSiteTokenChannelStatusMock.mockImplementation(
+      ({
+        signal,
+        runtimeKey,
+      }: {
+        signal: AbortSignal
+        runtimeKey: { tokenId: number }
+      }) => {
+        active.set(runtimeKey.tokenId, signal)
+        return new Promise((_, reject) =>
+          signal.addEventListener("abort", () => reject(signal.reason), {
+            once: true,
+          }),
+        )
+      },
+    )
+    const { result, unmount } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+    act(() => result.current.setSelectedAccount(account.id))
+    await waitFor(() => expect(active.size).toBe(4))
+    const superseded = active.get(800)!
+    getManagedSiteTokenChannelStatusMock.mockResolvedValueOnce({
+      status: managedSiteTokenChannelStatuses.NOT_ADDED,
+    })
+    await act(async () => {
+      await result.current.refreshManagedSiteTokenStatusForToken(
+        result.current.tokens.find((token) => token.id === 800)!,
+      )
+    })
+    expect(superseded.aborted).toBe(true)
+    expect([801, 802, 803].every((id) => !active.get(id)!.aborted)).toBe(true)
+    await waitFor(() => expect(active.has(804)).toBe(true))
+    expect(
+      result.current.managedSiteTokenStatuses[`${account.id}:800`]?.result
+        ?.status,
+    ).toBe(managedSiteTokenChannelStatuses.NOT_ADDED)
+    unmount()
+  })
+
+  it("cancels previous account checks and refreshes its inventory when returning", async () => {
     const firstAccount = createDisplayAccount({ id: "first-status-account" })
     const secondAccount = createDisplayAccount({ id: "second-status-account" })
     vi.mocked(useAccountData).mockReturnValue({
@@ -4431,6 +4500,8 @@ describe("useKeyManagement enabled account filtering", () => {
     getManagedSiteTokenChannelStatusMock.mockResolvedValue({
       status: managedSiteTokenChannelStatuses.NOT_ADDED,
     })
+    const callsBeforeReturn =
+      getManagedSiteTokenChannelStatusMock.mock.calls.length
     act(() => result.current.setSelectedAccount(firstAccount.id))
     await waitFor(() =>
       expect(
@@ -4440,6 +4511,13 @@ describe("useKeyManagement enabled account filtering", () => {
     )
     expect(signals.every((signal) => signal.aborted)).toBe(true)
     expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(15)
+    // Returning reloads the account inventory and invalidates even completed
+    // evidence, so all six keys must be checked against the current backend.
+    expect(
+      getManagedSiteTokenChannelStatusMock.mock.calls
+        .slice(callsBeforeReturn)
+        .map(([params]) => params.runtimeKey.tokenId),
+    ).toEqual([800, 801, 802, 803, 804, 805])
   })
 
   it.each(["unmount", "config"])(
