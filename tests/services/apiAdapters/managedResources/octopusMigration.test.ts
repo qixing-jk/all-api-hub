@@ -224,34 +224,43 @@ describe("Octopus native migration", () => {
     },
   )
 
-  it("discloses multiple keys and resolves the execution secret independently", async () => {
+  it("resolves every key with its disabled state without using the single-key loader", async () => {
     mocks.get.mockResolvedValue({
       ...channel,
       keys: [
-        ...channel.keys,
-        { enabled: false, channel_key: "other-placeholder" },
+        { channel_key: "first-placeholder", enabled: true },
+        { channel_key: "second-placeholder", enabled: false },
       ],
     })
     await expect(capability.source!.prepare(selection)).resolves.toMatchObject({
-      source: { lossSignals: { hasMultiKeyState: true } },
+      source: {
+        credentialMetadata: [{ enabled: true }, { enabled: false }],
+        lossSignals: { hasMultiKeyState: false },
+      },
     })
-    mocks.loadSecret.mockResolvedValue(" resolved-placeholder ")
     await expect(
       capability.source!.resolveCredential(selection),
-    ).resolves.toEqual({ status: "ready", credential: "resolved-placeholder" })
-    mocks.loadSecret.mockResolvedValue("sk-********")
+    ).resolves.toEqual({
+      status: "ready",
+      credential: "first-placeholder",
+      credentials: [
+        { value: "first-placeholder", enabled: true },
+        { value: "second-placeholder", enabled: false },
+      ],
+    })
+    expect(mocks.loadSecret).not.toHaveBeenCalled()
+    mocks.get.mockResolvedValue({
+      ...channel,
+      keys: [
+        { channel_key: "first-placeholder", enabled: true },
+        { channel_key: "sk-********", enabled: false },
+      ],
+    })
     await expect(
       capability.source!.resolveCredential(selection),
     ).resolves.toEqual({
       status: "blocked",
       reasonCode: blockers.SOURCE_KEY_MISSING,
-    })
-    mocks.loadSecret.mockRejectedValue(new Error("unavailable"))
-    await expect(
-      capability.source!.resolveCredential(selection),
-    ).resolves.toEqual({
-      status: "blocked",
-      reasonCode: blockers.SOURCE_KEY_RESOLUTION_FAILED,
     })
   })
 

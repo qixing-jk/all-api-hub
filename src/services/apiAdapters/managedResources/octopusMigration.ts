@@ -112,6 +112,14 @@ export const octopusManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
         return {
           status: "ready",
           source: {
+            ...(detail.keys.length !== 1 ||
+            detail.keys.some((key) => !key.enabled)
+              ? {
+                  credentialMetadata: detail.keys.map((key) => ({
+                    enabled: key.enabled,
+                  })),
+                }
+              : {}),
             sourceSiteType: SITE_TYPES.OCTOPUS,
             resourceType: detail.type,
             baseUrl: detail.base_urls[0]?.url.trim() ?? "",
@@ -123,9 +131,7 @@ export const octopusManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
             lossSignals: {
               hasModelMapping: false,
               hasStatusCodeMapping: false,
-              hasMultiKeyState:
-                detail.keys.length > 1 ||
-                detail.keys.some((key) => !key.enabled),
+              hasMultiKeyState: false,
               hasAdvancedSettings: Boolean(
                 // v0.13 grants and per-protocol settings are not carried by
                 // the migration fields: github.com/bestruirui/octopus/blob/27aa40dc0f3b2902bce3e96ccdba019d17041606/internal/model/channel.go
@@ -152,6 +158,30 @@ export const octopusManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
               status: "blocked",
               reasonCode: blockers.SOURCE_KEY_RESOLUTION_FAILED,
             }
+          if (
+            resolved.detail.keys.length !== 1 ||
+            resolved.detail.keys.some((key) => !key.enabled)
+          ) {
+            const credentials = resolved.detail.keys.map((key) => ({
+              value: key.channel_key.trim(),
+              enabled: key.enabled,
+            }))
+            if (
+              !credentials.length ||
+              credentials.some(
+                (key) => !hasUsableManagedSiteChannelKey(key.value),
+              )
+            )
+              return {
+                status: "blocked",
+                reasonCode: blockers.SOURCE_KEY_MISSING,
+              }
+            return {
+              status: "ready",
+              credential: credentials[0].value,
+              credentials,
+            }
+          }
           const credential = (
             await withCancellation(
               () => resolved.operations.loadSecret(resolved.id, options),
@@ -172,6 +202,7 @@ export const octopusManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
       },
     },
     target: {
+      supportsMultipleCredentials: () => true,
       prepare: async (source, options) => {
         throwIfAborted(options)
         const type = resolveManagedSiteMigrationType(source, SITE_TYPES.OCTOPUS)
@@ -244,6 +275,15 @@ export const octopusManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
                 type,
                 baseUrl: command.projection.baseUrl.trim(),
                 key: command.credential.trim(),
+                ...(command.credentials
+                  ? {
+                      keys: command.credentials.map((key, index) => ({
+                        name: `key-${index + 1}`,
+                        channel_key: key.value,
+                        enabled: key.enabled,
+                      })),
+                    }
+                  : {}),
                 model: models.join(","),
                 enabled: command.projection.enabled,
               },

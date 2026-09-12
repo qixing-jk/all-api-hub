@@ -1,0 +1,209 @@
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import { SITE_TYPES } from "~/constants/siteType"
+import { cliProxyApiManagedSiteMigrationCapability as capability } from "~/services/apiAdapters/managedResources/cliProxyApiMigration"
+import type { CliProxyApiResource } from "~/services/apiService/cliProxyApi"
+import type {
+  ManagedSiteMigrationSelection,
+  ManagedSiteMigrationSource,
+} from "~/types/managedSiteMigrationCapability"
+
+const mocks = vi.hoisted(() => ({
+  get: vi.fn(),
+  create: vi.fn(),
+  config: vi.fn(),
+}))
+vi.mock(
+  "~/services/apiAdapters/managedResources/cliProxyApi",
+  async (original) => ({
+    ...(await original<
+      typeof import("~/services/apiAdapters/managedResources/cliProxyApi")
+    >()),
+    getCliProxyApiResource: mocks.get,
+    createCliProxyApiResource: mocks.create,
+  }),
+)
+vi.mock("~/services/managedSites/runtimeConfig", async (original) => ({
+  ...(await original<typeof import("~/services/managedSites/runtimeConfig")>()),
+  getManagedSiteRuntimeConfigForType: mocks.config,
+}))
+const selection: ManagedSiteMigrationSelection = {
+  selectionId: "provider",
+  displayName: "Example",
+  ref: {
+    siteType: SITE_TYPES.CLI_PROXY_API,
+    kind: "channel",
+    scopeKey: "https://cli.example.invalid/v0/management",
+    resourceId: "opaque",
+  },
+}
+const resource: CliProxyApiResource = {
+  id: "opaque",
+  kind: "openai-compatibility",
+  value: {
+    name: "Example",
+    "base-url": "https://upstream.example.invalid/v1",
+    "api-key-entries": [
+      { "api-key": "first-placeholder" },
+      {
+        "api-key": "second-placeholder",
+        "proxy-url": "http://proxy.example.invalid",
+      },
+    ],
+    models: [{ name: "upstream-model", alias: "local-model" }],
+    disabled: true,
+  },
+}
+const source: ManagedSiteMigrationSource = {
+  sourceSiteType: SITE_TYPES.NEW_API,
+  resourceType: 1,
+  baseUrl: "https://upstream.example.invalid/v1",
+  models: ["upstream-model"],
+  groups: ["default"],
+  priority: 2,
+  weight: 3,
+  status: "disabled",
+  credentialMetadata: [{ enabled: true }, { enabled: true }],
+  lossSignals: {
+    hasModelMapping: false,
+    hasStatusCodeMapping: false,
+    hasAdvancedSettings: false,
+    hasMultiKeyState: false,
+  },
+}
+beforeEach(() => {
+  vi.resetAllMocks()
+  mocks.config.mockResolvedValue({
+    config: {
+      baseUrl: "https://cli.example.invalid",
+      adminToken: "placeholder-admin",
+    },
+  })
+  mocks.get.mockResolvedValue(resource)
+  mocks.create.mockResolvedValue({ outcome: "succeeded" })
+})
+describe("CLIProxyAPI native migration", () => {
+  it("previews all key slots without secrets and discloses per-key options and aliases", async () => {
+    const result = await capability.source!.prepare(selection)
+    expect(result).toMatchObject({
+      status: "ready",
+      source: {
+        models: ["upstream-model"],
+        status: "disabled",
+        credentialMetadata: [{ enabled: true }, { enabled: true }],
+        lossSignals: { hasModelMapping: true, hasAdvancedSettings: true },
+      },
+    })
+    expect(JSON.stringify(result)).not.toContain("placeholder")
+    expect(await capability.source!.resolveCredential(selection)).toMatchObject(
+      {
+        status: "ready",
+        credentials: [
+          { value: "first-placeholder", enabled: true },
+          { value: "second-placeholder", enabled: true },
+        ],
+      },
+    )
+  })
+  it("validates the configured source scope before reading", async () => {
+    expect(
+      await capability.source!.prepare({
+        ...selection,
+        ref: { ...selection.ref, scopeKey: "https://stale.example.invalid" },
+      }),
+    ).toMatchObject({ status: "blocked" })
+    expect(mocks.get).not.toHaveBeenCalled()
+  })
+  it("blocks structured provider credentials and masked key lists", async () => {
+    mocks.get.mockResolvedValue({ ...resource, kind: "vertex-api-key" })
+    expect(await capability.source!.prepare(selection)).toMatchObject({
+      status: "blocked",
+      reasonCode: "source-type-unsupported",
+    })
+    mocks.get.mockResolvedValue({
+      ...resource,
+      value: {
+        ...resource.value,
+        "api-key-entries": [
+          { "api-key": "first-placeholder" },
+          { "api-key": "sk-********" },
+        ],
+      },
+    })
+    expect(await capability.source!.prepare(selection)).toMatchObject({
+      status: "blocked",
+      reasonCode: "source-key-missing",
+    })
+  })
+  it("uses native grouped keys and disabled state for OpenAI-compatible targets", async () => {
+    expect(capability.target!.supportsMultipleCredentials!(source)).toBe(true)
+    const prepared = await capability.target!.prepare(source)
+    expect(
+      await capability.target!.create({
+        source,
+        targetSiteType: SITE_TYPES.CLI_PROXY_API,
+        projection: { ...prepared.projection, name: "Migrated" },
+        credential: "first-placeholder",
+        credentials: [
+          { value: "first-placeholder", enabled: true },
+          { value: "second-placeholder", enabled: true },
+        ],
+      }),
+    ).toEqual({ status: "created" })
+    expect(mocks.create.mock.calls[0][1]).toMatchObject({
+      kind: "openai-compatibility",
+      value: {
+        disabled: true,
+        "api-key-entries": [
+          { "api-key": "first-placeholder" },
+          { "api-key": "second-placeholder" },
+        ],
+      },
+    })
+    expect(mocks.create.mock.calls[0][1].value).not.toHaveProperty(
+      "excluded-models",
+    )
+  })
+  it.each([
+    [14, "claude-api-key"],
+    [24, "gemini-api-key"],
+    [48, "xai-api-key"],
+    [57, "codex-api-key"],
+  ] as const)(
+    "uses one native provider per key for type %s",
+    async (resourceType, expected) => {
+      const input = { ...source, resourceType }
+      expect(capability.target!.supportsMultipleCredentials!(input)).toBe(false)
+      const prepared = await capability.target!.prepare(input)
+      await capability.target!.create({
+        source: input,
+        targetSiteType: SITE_TYPES.CLI_PROXY_API,
+        projection: prepared.projection,
+        credential: "placeholder",
+      })
+      expect(mocks.create.mock.calls[0][1]).toMatchObject({
+        kind: expected,
+        value: { "api-key": "placeholder", "excluded-models": ["*"] },
+      })
+    },
+  )
+  it("splits mixed enabled states and never replays an uncertain create", async () => {
+    expect(
+      capability.target!.supportsMultipleCredentials!({
+        ...source,
+        credentialMetadata: [{ enabled: true }, { enabled: false }],
+      }),
+    ).toBe(false)
+    mocks.create.mockResolvedValue({ outcome: "partial" })
+    const prepared = await capability.target!.prepare(source)
+    expect(
+      await capability.target!.create({
+        source,
+        targetSiteType: SITE_TYPES.CLI_PROXY_API,
+        projection: prepared.projection,
+        credential: "placeholder",
+      }),
+    ).toEqual({ status: "uncertain" })
+    expect(mocks.create).toHaveBeenCalledOnce()
+  })
+})

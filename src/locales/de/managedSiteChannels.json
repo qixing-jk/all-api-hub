@@ -425,12 +425,14 @@
       "sourceKeyExportRestricted": "Der Schlüsselexport erfordert eine Bestätigung im Web, die mit dem konfigurierten Admin API Key nicht möglich ist. Rufe den Schlüssel im Dashboard der Quellsite ab und migriere diesen Kanal manuell.",
       "sourceKeyMissing": "Der Quellkanalschlüssel ist nicht verfügbar, daher kann dieser Kanal noch nicht migriert werden.",
       "sourceKeyResolutionFailed": "Der Quellkanalschlüssel konnte nicht geladen werden. Wenn Sie die Überprüfung gerade abgeschlossen haben, aktualisieren Sie die Vorschau und versuchen Sie es erneut.",
+      "sourceKeysChanged": "Die Anzahl oder der Aktivierungsstatus der Quell-Keys hat sich geändert. Aktualisieren Sie vor einer erneuten Migration die Vorschau.",
+      "sourceMultiKeyUnsupported": "Diese Quelle kann noch keine vollständige Liste mehrerer Keys exportieren. Prüfen Sie die Quelle und migrieren Sie manuell, damit keine Keys fehlen.",
       "sourceTypeUnsupported": "Dieser Quellkanaltyp wird für die Migration nicht unterstützt. Wählen Sie einen unterstützten Kanal oder migrieren Sie ihn manuell.",
       "targetDraftPreparationFailed": "Der Zielkanalentwurf konnte nicht vorbereitet werden. Überprüfen Sie die Kanaldetails, aktualisieren Sie die Vorschau und versuchen Sie es erneut."
     },
     "confirm": {
       "confirm": "Migration bestätigen",
-      "description": "Dadurch werden neue Zielkanäle erstellt: {{ready}} bereit, {{total}} ausgewählt.",
+      "description": "Für die bereiten Migrationseinträge ({{ready}} von {{total}}) werden Zielkanäle erstellt. Kanäle mit mehreren Keys können in mehrere Einträge aufgeteilt worden sein.",
       "title": "Kanalmigration starten?",
       "warningTitle": "Dieser Flow erstellt nur neue Kanäle. Es erfolgt keine Synchronisierung, Deduplizierung oder Rollback."
     },
@@ -445,8 +447,9 @@
     "itemWarnings": {
       "dropsAdvancedSettings": "Erweiterte anbieterspezifische Kanaleinstellungen können nicht direkt kopiert werden und werden gelöscht.",
       "dropsModelMapping": "Modellumleitungszuordnungen werden nicht kopiert.",
-      "dropsMultiKeyState": "Der Multi-Key-Laufzeitstatus wird nicht kopiert.",
+      "dropsMultiKeyState": "Der Aktivierungsstatus der Keys bleibt erhalten; Rotationsregeln, Deaktivierungsgründe und Laufzeitverlauf werden nicht kopiert.",
       "dropsStatusCodeMapping": "Statuscode-Zuordnungseinstellungen werden nicht kopiert.",
+      "splitsKeys": "Das Ziel kann diese Keys und ihre Zustände nicht in einem Kanal beibehalten. Für jeden Key wird ein eigener Kanal erstellt; die Lastverteilung kann sich ändern.",
       "sub2apiDefaultGroup": "Quellgruppen werden nicht kopiert. Das Ziel verwendet die Standardgruppe der Plattform, falls vorhanden. Prüfe die Gruppenzuordnung nach der Migration.",
       "targetForcesDefaultGroup": "Die Zielsite ersetzt die Quellgruppen durch ihre Standardgruppe.",
       "targetIgnoresPriority": "Die Zielsite behält den Quellprioritätswert nicht bei.",
@@ -455,6 +458,7 @@
       "targetRemapsChannelType": "Die Ziel-Website ordnet den Kanaltyp dem nächstgelegenen unterstützten Typ zu.",
       "targetSimplifiesStatus": "Die Zielseite vereinfacht den Quellstatus auf „Aktiviert“ oder „Deaktiviert“."
     },
+    "keyCount": "Anzahl der Keys",
     "preview": {
       "badges": {
         "limitsLabel": "Grenzwerte",
@@ -469,7 +473,7 @@
         "blocked": "Blockiert",
         "ready": "Bereit"
       },
-      "summary": "Vorschau: {{ready}} bereit, {{blocked}} blockiert, {{total}} ausgewählt."
+      "summary": "Vorschau: {{ready}} bereit, {{blocked}} blockiert, {{total}} Migrationseinträge."
     },
     "results": {
       "refreshRequired": "Einige Erstellungsergebnisse sind ungewiss. Aktualisieren Sie die Kanalliste vor dem Schließen.",

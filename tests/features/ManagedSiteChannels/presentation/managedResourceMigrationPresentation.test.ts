@@ -499,7 +499,7 @@ describe("managedResourceMigrationPresentation", () => {
     )
   })
 
-  it("preserves opaque row order and all seven canonical comparison values", () => {
+  it("preserves opaque row order and all eight canonical comparison values", () => {
     const mapped = mapManagedResourceMigrationPreview(preview, {
       t,
       getSiteLabel: (siteType) => `Site ${siteType}`,
@@ -514,6 +514,7 @@ describe("managedResourceMigrationPresentation", () => {
       "opaque:row/alpha",
     ])
     expect(mapped.rows[0].comparisons.map((field) => field.id)).toEqual([
+      "keyCount",
       "baseUrl",
       "type",
       "models",
@@ -525,6 +526,7 @@ describe("managedResourceMigrationPresentation", () => {
     expect(
       mapped.rows[0].comparisons.map(({ source, target }) => [source, target]),
     ).toEqual([
+      ["1", "1"],
       [
         "https://source.example.invalid/v1",
         "https://target.example.invalid/v2",
@@ -565,7 +567,7 @@ describe("managedResourceMigrationPresentation", () => {
       blockedReason: "Source type unsupported",
       blockedMessage: undefined,
     })
-    expect(mapped.rows[1].comparisons).toHaveLength(7)
+    expect(mapped.rows[1].comparisons).toHaveLength(8)
     expect(
       mapped.rows[1].comparisons.every(
         ({ source, target, status }) =>

@@ -433,7 +433,7 @@ export function useManagedResourceMigrationController({
       )
       const insights = {
         itemCount: canonicalResult.totalSelected,
-        selectedCount: canonicalResult.totalSelected,
+        selectedCount: selectedRowKeysRef.current.length,
         successCount: canonicalResult.createdCount,
         failureCount:
           canonicalResult.failedCount + canonicalResult.uncertainCount,

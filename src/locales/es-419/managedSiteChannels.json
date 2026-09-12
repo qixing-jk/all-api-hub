@@ -425,12 +425,14 @@
       "sourceKeyExportRestricted": "Exportar claves del sitio de origen requiere una verificación web que la Admin API Key configurada no puede completar. Obtén la clave desde el panel de origen y migra este canal manualmente.",
       "sourceKeyMissing": "La clave del canal de origen no está disponible, por lo que este canal aún no se puede migrar.",
       "sourceKeyResolutionFailed": "No se pudo cargar la clave del canal de origen. Si acabas de completar la verificación, actualiza la vista previa e inténtalo de nuevo.",
+      "sourceKeysChanged": "Cambió la cantidad de Keys o su estado de activación en el origen. Actualiza la vista previa antes de volver a migrar.",
+      "sourceMultiKeyUnsupported": "Este origen aún no permite exportar la lista completa de múltiples Keys. Revisa el sitio de origen y migra manualmente para evitar omisiones.",
       "sourceTypeUnsupported": "Este tipo de canal de origen no es compatible con la migración. Elige un canal compatible o migra el canal manualmente.",
       "targetDraftPreparationFailed": "No se pudo preparar el borrador del canal de destino. Revisa los detalles del canal, actualiza la vista previa e inténtalo de nuevo."
     },
     "confirm": {
       "confirm": "Confirmar migración",
-      "description": "Esto creará nuevos canales de destino para {{ready}} canales listos de {{total}} canales seleccionados.",
+      "description": "Se crearán canales de destino para los elementos listos ({{ready}} de {{total}}). Los canales con varios Keys pueden haberse dividido en varios elementos.",
       "title": "¿Iniciar migración de canales?",
       "warningTitle": "Este flujo solo crea canales nuevos. No sincroniza, deduplica ni revierte."
     },
@@ -445,8 +447,9 @@
     "itemWarnings": {
       "dropsAdvancedSettings": "La configuración avanzada específica del proveedor no se puede copiar directamente y se descartará.",
       "dropsModelMapping": "Las asignaciones de redirección de modelos no se copiarán.",
-      "dropsMultiKeyState": "El estado de ejecución con múltiples claves no se copiará.",
+      "dropsMultiKeyState": "Se conserva el estado de activación de los Keys; no se copian las políticas de rotación, los motivos de desactivación ni el historial de ejecución.",
       "dropsStatusCodeMapping": "Las configuraciones de asignación de códigos de estado no se copiarán.",
+      "splitsKeys": "El destino no puede conservar estos Keys y sus estados en un solo canal. Se creará un canal por Key; la distribución del tráfico puede cambiar.",
       "sub2apiDefaultGroup": "Los grupos de origen no se copian. El destino usa el grupo predeterminado de la plataforma si existe. Revisa la asignación de grupos después de la migración.",
       "targetForcesDefaultGroup": "El sitio de destino reemplazará los grupos de origen con su grupo predeterminado.",
       "targetIgnoresPriority": "El sitio de destino no conservará el valor de prioridad de origen.",
@@ -455,6 +458,7 @@
       "targetRemapsChannelType": "El sitio de destino reasignará el tipo de canal al tipo compatible más cercano.",
       "targetSimplifiesStatus": "El sitio de destino simplificará el estado de origen a habilitado o deshabilitado."
     },
+    "keyCount": "Cantidad de Keys",
     "preview": {
       "badges": {
         "limitsLabel": "límites",
@@ -469,7 +473,7 @@
         "blocked": "Bloqueado",
         "ready": "Listo"
       },
-      "summary": "Vista previa: {{ready}} listos, {{blocked}} bloqueados, {{total}} seleccionados."
+      "summary": "Vista previa: {{ready}} listos, {{blocked}} bloqueados, {{total}} elementos de migración."
     },
     "results": {
       "refreshRequired": "Algunos resultados de creación son inciertos. Actualiza la lista de canales antes de cerrar.",

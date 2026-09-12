@@ -425,12 +425,14 @@
       "sourceKeyExportRestricted": "Exporting keys from the source site requires web verification that the configured Admin API Key cannot complete. Retrieve the key from the source dashboard and migrate this channel manually.",
       "sourceKeyMissing": "The source channel key is unavailable, so this channel cannot be migrated yet.",
       "sourceKeyResolutionFailed": "The source channel key could not be loaded. If you just completed verification, refresh the preview and try again.",
+      "sourceKeysChanged": "The source key count or enabled states changed. Refresh the preview before migrating again.",
+      "sourceMultiKeyUnsupported": "This source cannot export its complete multi-key list yet. Check the source site and migrate manually to avoid missing keys.",
       "sourceTypeUnsupported": "This source channel type is not supported for migration. Choose a supported channel or migrate it manually.",
       "targetDraftPreparationFailed": "The target channel draft could not be prepared. Review the channel details, refresh the preview, and try again."
     },
     "confirm": {
       "confirm": "Confirm migration",
-      "description": "This will create new target channels for {{ready}} ready channels out of {{total}} selected channels.",
+      "description": "New target channels will be created for ready migration items ({{ready}} of {{total}}). Multi-key channels may have been split into several items.",
       "title": "Start channel migration?",
       "warningTitle": "This flow only creates new channels. It does not sync, deduplicate, or roll back."
     },
@@ -445,8 +447,9 @@
     "itemWarnings": {
       "dropsAdvancedSettings": "Advanced provider-specific channel settings cannot be copied directly and will be dropped.",
       "dropsModelMapping": "Model redirect mappings will not be copied.",
-      "dropsMultiKeyState": "Multi-key runtime state will not be copied.",
+      "dropsMultiKeyState": "Key enabled states are preserved; rotation policies, disable reasons and runtime history are not copied.",
       "dropsStatusCodeMapping": "Status-code mapping settings will not be copied.",
+      "splitsKeys": "The target cannot preserve these keys and their states in one channel. A separate channel will be created for each key; traffic distribution may change.",
       "sub2apiDefaultGroup": "Source groups are not copied. The target uses the platform's default group if it exists. Check group assignments after migration.",
       "targetForcesDefaultGroup": "The target site will replace the source groups with its default group.",
       "targetIgnoresPriority": "The target site will not preserve the source priority value.",
@@ -455,6 +458,7 @@
       "targetRemapsChannelType": "The target site will remap the channel type to the closest supported type.",
       "targetSimplifiesStatus": "The target site will simplify the source status to enabled or disabled."
     },
+    "keyCount": "Key count",
     "preview": {
       "badges": {
         "limitsLabel": "limits",
@@ -469,7 +473,7 @@
         "blocked": "Blocked",
         "ready": "Ready"
       },
-      "summary": "Preview: {{ready}} ready, {{blocked}} blocked, {{total}} selected."
+      "summary": "Preview: {{ready}} ready, {{blocked}} blocked, {{total}} migration items."
     },
     "results": {
       "refreshRequired": "Some creation results are uncertain. Refresh the channel list before closing.",

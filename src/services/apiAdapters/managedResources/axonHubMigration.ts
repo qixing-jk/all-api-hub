@@ -59,7 +59,10 @@ const inspectCredential = (channel: AxonHubChannel) => {
     return { state: MANAGED_RESOURCE_SECRET_STATES.Unavailable }
   }
   const candidates = getAxonHubCredentialCandidates(channel)
-  const credential = candidates.find(hasUsableApiTokenKey)
+  const credential =
+    candidates.length > 0 && candidates.every(hasUsableApiTokenKey)
+      ? candidates[0]
+      : undefined
   if (credential)
     return { state: MANAGED_RESOURCE_SECRET_STATES.Available, credential }
   return candidates.length > 0
@@ -104,6 +107,13 @@ const toCanonicalSource = (
   const advancedDetailComplete = hasCompleteAxonHubAdvancedDetail(channel)
   return {
     sourceSiteType: SITE_TYPES.AXON_HUB,
+    ...(getAxonHubCredentialCandidates(channel).length > 1
+      ? {
+          credentialMetadata: getAxonHubCredentialCandidates(channel).map(
+            () => ({ enabled: true }),
+          ),
+        }
+      : {}),
     resourceType,
     baseUrl: channel.baseURL?.trim() ?? "",
     models: normalizeList([
@@ -128,7 +138,7 @@ const toCanonicalSource = (
       hasStatusCodeMapping: false,
       hasAdvancedSettings:
         !advancedDetailComplete || hasAdvancedSettings(channel),
-      hasMultiKeyState: getAxonHubCredentialCandidates(channel).length > 1,
+      hasMultiKeyState: false,
     },
   }
 }
@@ -276,10 +286,24 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
             reasonCode: credentialBlocker(credential.state),
           }
         }
-        return { status: "ready", credential: credential.credential }
+        const candidates = getAxonHubCredentialCandidates(detail)
+        return {
+          status: "ready",
+          credential: credential.credential,
+          ...(candidates.length > 1
+            ? {
+                credentials: candidates.map((value) => ({
+                  value,
+                  enabled: true,
+                })),
+              }
+            : {}),
+        }
       },
     },
     target: {
+      supportsMultipleCredentials: (source) =>
+        source.credentialMetadata?.every((key) => key.enabled) === true,
       prepare: async (source) => {
         const models = normalizeList(source.models)
         if (models.length === 0) {
@@ -331,7 +355,11 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
           type: nativeType,
           name: command.projection.name.trim(),
           ...(baseURL ? { baseURL } : {}),
-          credentials: { apiKeys: [command.credential.trim()] },
+          credentials: {
+            apiKeys: command.credentials?.map((key) => key.value.trim()) ?? [
+              command.credential.trim(),
+            ],
+          },
           supportedModels: [...command.projection.models],
           manualModels: [...command.projection.models],
           defaultTestModel: command.projection.models[0] ?? "",

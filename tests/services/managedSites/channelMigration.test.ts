@@ -915,7 +915,7 @@ describe("channelMigration", () => {
     },
   )
 
-  it("propagates an unexpected create failure unchanged and stops later rows", async () => {
+  it("records unexpected create failures as uncertain without dropping later rows", async () => {
     const selections = [
       buildMigrationSelection("failing"),
       buildMigrationSelection("not-attempted"),
@@ -937,9 +937,9 @@ describe("channelMigration", () => {
         }),
         create,
       }),
-    ).rejects.toBe(thrown)
+    ).resolves.toMatchObject({ uncertainCount: 2 })
 
-    expect(create).toHaveBeenCalledOnce()
+    expect(create).toHaveBeenCalledTimes(2)
   })
 
   it("preserves completed progress when a later create throws structured cancellation", async () => {
@@ -1676,7 +1676,7 @@ describe("channelMigration", () => {
     })
   })
 
-  it("propagates managed-resource mutation errors unchanged", async () => {
+  it("records managed-resource mutation errors as uncertain", async () => {
     const { executeManagedSiteMigration } = await import(
       "~/services/managedSites/channelMigration"
     )
@@ -1710,7 +1710,7 @@ describe("channelMigration", () => {
           buildMigrationSelection("uncertain-mutation-error"),
         ]),
       }),
-    ).rejects.toBe(mutationError)
+    ).resolves.toMatchObject({ uncertainCount: 1 })
 
     expect(create).toHaveBeenCalledOnce()
   })

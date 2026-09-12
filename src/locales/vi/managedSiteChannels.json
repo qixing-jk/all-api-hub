@@ -425,12 +425,14 @@
       "sourceKeyExportRestricted": "Xuất khóa từ trang nguồn yêu cầu xác minh trên web mà Admin API Key đã cấu hình không thể thực hiện. Hãy lấy khóa từ trang quản trị nguồn rồi di chuyển kênh này theo cách thủ công.",
       "sourceKeyMissing": "Thiếu khóa kênh nguồn, hiện không thể di chuyển.",
       "sourceKeyResolutionFailed": "Không thể lấy khóa kênh nguồn. Nếu bạn vừa hoàn tất xác thực, hãy làm mới bản xem trước và thử lại.",
+      "sourceKeysChanged": "Số lượng Key hoặc trạng thái bật ở nguồn đã thay đổi. Hãy làm mới bản xem trước trước khi di chuyển lại.",
+      "sourceMultiKeyUnsupported": "Nguồn này chưa hỗ trợ xuất đầy đủ danh sách nhiều Key. Hãy kiểm tra trang nguồn và di chuyển thủ công để tránh bỏ sót.",
       "sourceTypeUnsupported": "Loại kênh nguồn này không được hỗ trợ để di chuyển. Hãy chọn kênh được hỗ trợ hoặc di chuyển thủ công.",
       "targetDraftPreparationFailed": "Không thể chuẩn bị bản nháp kênh đích. Hãy kiểm tra thông tin kênh, làm mới bản xem trước rồi thử lại."
     },
     "confirm": {
       "confirm": "Xác nhận di chuyển",
-      "description": "Sẽ tạo kênh mới trên trang web mục tiêu cho {{ready}} kênh có thể di chuyển; đã chọn tổng cộng {{total}} kênh.",
+      "description": "Kênh đích sẽ được tạo cho các mục sẵn sàng ({{ready}} trong {{total}}). Kênh có nhiều Key có thể đã được chia thành nhiều mục.",
       "title": "Bắt đầu di chuyển kênh?",
       "warningTitle": "Quá trình này sẽ chỉ tạo các kênh mới và sẽ không đồng bộ, loại bỏ trùng lặp hoặc hoàn tác."
     },
@@ -445,8 +447,9 @@
     "itemWarnings": {
       "dropsAdvancedSettings": "Cài đặt kênh nâng cao không thể di chuyển trực tiếp đến trang web mục tiêu và sẽ bị bỏ qua.",
       "dropsModelMapping": "Cấu hình ánh xạ mô hình sẽ không được di chuyển cùng.",
-      "dropsMultiKeyState": "Thông tin vòng lặp hoặc trạng thái nhiều khóa sẽ không được di chuyển cùng.",
+      "dropsMultiKeyState": "Trạng thái bật của Key được giữ lại; chính sách luân phiên, lý do tắt và lịch sử hoạt động không được sao chép.",
       "dropsStatusCodeMapping": "Cấu hình ánh xạ mã trạng thái sẽ không được di chuyển cùng.",
+      "splitsKeys": "Đích không thể giữ các Key và trạng thái của chúng trong cùng một kênh. Mỗi Key sẽ được tạo thành một kênh riêng; cách phân phối lưu lượng có thể thay đổi.",
       "sub2apiDefaultGroup": "Các nhóm nguồn không được sao chép. Đích sẽ sử dụng nhóm mặc định của nền tảng nếu có. Hãy kiểm tra việc gán nhóm sau khi di chuyển.",
       "targetForcesDefaultGroup": "Trang web mục tiêu sẽ chuyển sang sử dụng nhóm mặc định.",
       "targetIgnoresPriority": "Trang web mục tiêu không giữ lại mức độ ưu tiên của kênh nguồn.",
@@ -455,6 +458,7 @@
       "targetRemapsChannelType": "Trang web mục tiêu sẽ ánh xạ loại kênh sang loại tương thích gần nhất.",
       "targetSimplifiesStatus": "Trang web mục tiêu sẽ đơn giản hóa trạng thái kênh nguồn thành bật hoặc tắt."
     },
+    "keyCount": "Số lượng Key",
     "preview": {
       "badges": {
         "limitsLabel": "hạn chế",
@@ -469,7 +473,7 @@
         "blocked": "Đã chặn",
         "ready": "Sẵn sàng"
       },
-      "summary": "Kết quả xem trước: {{ready}} kênh sẵn sàng, {{blocked}} kênh bị chặn, tổng cộng {{total}} kênh."
+      "summary": "Xem trước: {{ready}} sẵn sàng, {{blocked}} bị chặn, tổng cộng {{total}} mục di chuyển."
     },
     "results": {
       "refreshRequired": "Một số kết quả tạo chưa xác định. Hãy làm mới danh sách kênh trước khi đóng.",

@@ -425,12 +425,14 @@
       "sourceKeyExportRestricted": "源站点导出密钥需要网页二次验证，当前 Admin API Key 无法完成。请从源站点后台获取密钥后手动迁移该渠道。",
       "sourceKeyMissing": "缺少源渠道密钥，当前无法迁移。",
       "sourceKeyResolutionFailed": "无法获取源渠道密钥。若刚完成验证，请刷新预览后重试。",
+      "sourceKeysChanged": "源 Key 数量或启用状态已变化，请刷新预览后重新迁移。",
+      "sourceMultiKeyUnsupported": "此来源暂不支持完整导出多 Key，请在源站检查并手动迁移，避免遗漏。",
       "sourceTypeUnsupported": "该源渠道类型暂不支持迁移。请选择受支持的渠道，或手动迁移。",
       "targetDraftPreparationFailed": "无法准备目标渠道草稿。请检查渠道信息并刷新预览后重试。"
     },
     "confirm": {
       "confirm": "确认迁移",
-      "description": "将为 {{ready}} 个可迁移渠道在目标站点创建新渠道；共选中 {{total}} 个渠道。",
+      "description": "将为 {{total}} 个迁移项中的 {{ready}} 个可迁移项创建目标渠道。多 Key 渠道可能已拆分为多个迁移项。",
       "title": "开始渠道迁移？",
       "warningTitle": "该流程只会创建新渠道，不会同步、去重或回滚。"
     },
@@ -445,8 +447,9 @@
     "itemWarnings": {
       "dropsAdvancedSettings": "高级渠道设置无法直接迁移到目标站点，将被忽略。",
       "dropsModelMapping": "模型映射配置不会一并迁移。",
-      "dropsMultiKeyState": "多密钥轮询或状态信息不会一并迁移。",
+      "dropsMultiKeyState": "Key 的启用状态会保留；轮询策略、停用原因和运行历史不会复制。",
       "dropsStatusCodeMapping": "状态码映射配置不会一并迁移。",
+      "splitsKeys": "目标无法在同一渠道中保留这些 Key 的状态，将按 Key 拆分创建渠道；负载分配可能变化。",
       "sub2apiDefaultGroup": "不会迁移源分组。目标站点会绑定该平台的默认分组（如有），请在迁移后检查分组。",
       "targetForcesDefaultGroup": "目标站点会改用默认分组。",
       "targetIgnoresPriority": "目标站点不保留源渠道的优先级。",
@@ -455,6 +458,7 @@
       "targetRemapsChannelType": "目标站点会将渠道类型映射为最接近的兼容类型。",
       "targetSimplifiesStatus": "目标站点会将源渠道状态简化为启用或停用。"
     },
+    "keyCount": "Key 数量",
     "preview": {
       "badges": {
         "limitsLabel": "项限制",
@@ -469,7 +473,7 @@
         "blocked": "已阻止",
         "ready": "可迁移"
       },
-      "summary": "预览结果：{{ready}} 个可迁移，{{blocked}} 个已阻止，共 {{total}} 个渠道。"
+      "summary": "预览：{{ready}} 项可迁移，{{blocked}} 项受阻，共 {{total}} 项。"
     },
     "results": {
       "refreshRequired": "部分创建结果的状态不确定。请刷新渠道列表后再关闭。",

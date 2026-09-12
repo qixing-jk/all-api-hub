@@ -48,7 +48,8 @@ The standalone CLIProxyAPI action in the Export menu has been replaced by this m
 - **HTTP 401 or 403?** Check the management key and the server's remote access policy. A client API key cannot replace the management key.
 - **HTTP 404 for a provider type?** Check the deployment URL, whether management is enabled, and whether your backend version supports that type.
 - **Refresh required or uncertain result after saving?** Refresh the list and inspect the actual server state before retrying. An outdated edit may be rejected when another client changes the configuration.
-- **Does this manage OAuth accounts or all server settings?** This integration manages API key providers. Use CLIProxyAPI's interface for OAuth sign-in, authentication files, and global settings. Cross-site channel migration and automatic model synchronization are not yet integrated.
+- **Can I migrate to another site?** Enable Channel Migration in the channel list. Supported routes include OpenAI Compatibility, Claude, Gemini, xAI, and Codex API-key providers; check the preview for compatibility. OpenAI Compatibility keys can migrate together, or split into separate channels when the target cannot preserve them. Model aliases and per-key proxy or weight settings are not copied directly. See [channel migration](./self-hosted-site-management.md#channel-migration).
+- **Does this manage OAuth accounts or all server settings?** This integration manages API-key providers. Use CLIProxyAPI's interface for OAuth sign-in, authentication files, and global settings. Migration of OAuth, structured Vertex credentials, and Interactions providers, as well as automatic model synchronization, is not supported.
 
 ## Related documentation
 

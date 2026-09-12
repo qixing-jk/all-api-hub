@@ -743,6 +743,16 @@ function importProjection(
   }
 }
 
+/** Reuse the native create lock and persistence readback for migrations. */
+export const createCliProxyApiResource = async (
+  config: CliProxyApiConfig,
+  command: Command,
+  options?: ResourceOperationOptions,
+) =>
+  mutate(config, "create", command, undefined, options) as Promise<
+    ManagedSiteMutationResult<CliProxyApiResource>
+  >
+
 export const cliProxyApiManagedResourceRegistration = defineNativeResourceKind({
   updateChangesIdentity: true,
   siteType: SITE_TYPES.CLI_PROXY_API,
@@ -790,10 +800,7 @@ export const cliProxyApiManagedResourceRegistration = defineNativeResourceKind({
   toDetailFacts: toFacts,
   createEditor: async () => editor(),
   editEditor: (_config, detail) => editor(detail),
-  create: async (config, command: Command, options) =>
-    mutate(config, "create", command, undefined, options) as Promise<
-      ManagedSiteMutationResult<CliProxyApiResource>
-    >,
+  create: createCliProxyApiResource,
   update: async (config, detail, command: Command, options) =>
     mutate(config, "update", command, detail, options) as Promise<
       ManagedSiteMutationResult<CliProxyApiResource>

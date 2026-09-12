@@ -425,12 +425,14 @@
       "sourceKeyExportRestricted": "移行元からのキーのエクスポートには、設定済みの Admin API Key では完了できないウェブ認証が必要です。移行元の管理画面でキーを取得し、このチャネルを手動で移行してください。",
       "sourceKeyMissing": "元チャネルのキーが取得できないため、このチャネルはまだ移行できません。",
       "sourceKeyResolutionFailed": "元チャネルのキーを読み込めませんでした。確認が完了した直後であれば、プレビューを更新して再試行してください。",
+      "sourceKeysChanged": "移行元の Key 数または有効状態が変わりました。プレビューを更新してから再度移行してください。",
+      "sourceMultiKeyUnsupported": "この移行元では複数 Key の完全なエクスポートにまだ対応していません。移行元を確認し、手動で移行してください。",
       "sourceTypeUnsupported": "この移行では元チャネルの種類がサポートされていません。対応するチャネルを選ぶか、手動で移行してください。",
       "targetDraftPreparationFailed": "移行先チャネルの下書きを準備できませんでした。チャネル情報を確認し、プレビューを更新して再試行してください。"
     },
     "confirm": {
       "confirm": "移行を確認",
-      "description": "{{total}} 件中、移行可能な {{ready}} 件のチャネルについて移行先に新しいチャネルを作成します。",
+      "description": "移行可能な項目（全 {{total}} 件中 {{ready}} 件）のチャネルを作成します。複数 Key のチャネルは複数の移行項目に分割される場合があります。",
       "title": "チャネル移行を開始しますか？",
       "warningTitle": "このフローは新しいチャネルを作成するだけで、同期・重複解消・ロールバックは行いません。"
     },
@@ -445,8 +447,9 @@
     "itemWarnings": {
       "dropsAdvancedSettings": "高度なプロバイダー固有設定はそのまま移行できないため破棄されます。",
       "dropsModelMapping": "モデルマッピング設定はコピーされません。",
-      "dropsMultiKeyState": "マルチキーの実行状態はコピーされません。",
+      "dropsMultiKeyState": "Key の有効状態は保持されますが、ローテーション設定、無効化の理由、実行履歴はコピーされません。",
       "dropsStatusCodeMapping": "ステータスコードマッピング設定はコピーされません。",
+      "splitsKeys": "移行先では複数の Key とその状態を同じチャネルに保持できないため、Key ごとにチャネルを作成します。負荷分散が変わる場合があります。",
       "sub2apiDefaultGroup": "移行元のグループはコピーされません。移行先ではプラットフォームのデフォルトグループが存在する場合に使用されます。移行後にグループの割り当てを確認してください。",
       "targetForcesDefaultGroup": "移行先サイトではデフォルトグループに置き換えられます。",
       "targetIgnoresPriority": "移行先サイトでは元チャネルの優先度を保持しません。",
@@ -455,6 +458,7 @@
       "targetRemapsChannelType": "移行先サイトはチャネル種別を最も近い対応種別へ再マッピングします。",
       "targetSimplifiesStatus": "移行先サイトは元チャネルの状態を有効/無効へ単純化します。"
     },
+    "keyCount": "Key 数",
     "preview": {
       "badges": {
         "limitsLabel": "件の制限",
@@ -469,7 +473,7 @@
         "blocked": "ブロック済み",
         "ready": "移行可能"
       },
-      "summary": "プレビュー: 移行可能 {{ready}} 件、ブロック {{blocked}} 件、合計 {{total}} 件。"
+      "summary": "プレビュー：移行可能 {{ready}} 件、移行不可 {{blocked}} 件、移行項目は合計 {{total}} 件。"
     },
     "results": {
       "refreshRequired": "作成結果が不明な項目があります。閉じる前にチャネル一覧を更新してください。",
