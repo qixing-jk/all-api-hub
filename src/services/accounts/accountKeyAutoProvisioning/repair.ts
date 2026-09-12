@@ -28,6 +28,7 @@ import {
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
+import { deleteWithLinkedChannelCleanup } from "~/services/managedSites/linkedChannelCleanup"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import type {
@@ -127,7 +128,9 @@ const isControlledInvalidResourceDeleteRequest = (
 ): request is AccountKeyRepairDeleteInvalidResourcesRequest => {
   if (
     !isRecord(request) ||
-    !hasOnlyKeys(request, ["resources"]) ||
+    !hasOnlyKeys(request, ["resources", "cleanupLinkedChannels"]) ||
+    (request.cleanupLinkedChannels !== undefined &&
+      typeof request.cleanupLinkedChannels !== "boolean") ||
     !Array.isArray(request.resources) ||
     request.resources.length === 0 ||
     request.resources.length > ACCOUNT_KEY_REPAIR_INVALID_RESOURCE_DELETE_LIMIT
@@ -963,11 +966,26 @@ class AccountKeyRepairRunner {
             ),
           { timeoutMs: INVALID_RESOURCE_DELETE_OPERATION_TIMEOUT_MS },
         )
-        await runAbortableTask(
-          (signal) =>
-            collection.delete(resource.ref, signal ? { signal } : undefined),
-          { timeoutMs: INVALID_RESOURCE_DELETE_OPERATION_TIMEOUT_MS },
-        )
+        let cleanupInput = null
+        if (request.cleanupLinkedChannels) {
+          const resolution = await session.runtimeKey?.resolve(resource.ref)
+          if (resolution?.kind !== "resolved")
+            throw new AccountKeyResourceError({
+              code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+            })
+          cleanupInput = {
+            source: { accountId: account.id, ref: resource.ref },
+            baseUrl: account.site_url,
+            key: resolution.secret,
+          }
+        }
+        await deleteWithLinkedChannelCleanup(cleanupInput, async () => {
+          await runAbortableTask(
+            (signal) =>
+              collection.delete(resource.ref, signal ? { signal } : undefined),
+            { timeoutMs: INVALID_RESOURCE_DELETE_OPERATION_TIMEOUT_MS },
+          )
+        })
         results.push({
           resource,
           outcome: ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Applied,

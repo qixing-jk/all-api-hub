@@ -251,6 +251,26 @@ const runNewApiChannelDeleteMutation = async (
 }
 
 export const newApiChannelOperations = {
+  deleteKey: async (
+    config: NewApiConfig,
+    channelId: number,
+    keyIndex: number,
+    options?: NewApiMutationOptions,
+  ) => {
+    const sequence = createManagedSiteMutationSequence({ idempotent: false })
+    const step = await runNewApiMutationStep({
+      config,
+      options,
+      sequence,
+      effect: createManagedSiteChannelEffect(
+        MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated,
+        channelId,
+      ),
+      execute: (request) =>
+        manageChannelKey(request, channelId, "delete_key", keyIndex),
+    })
+    return finishManagedSiteMutationStep(sequence, step)
+  },
   search: async (
     config: NewApiConfig,
     keyword: string,

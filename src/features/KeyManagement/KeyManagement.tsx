@@ -74,6 +74,10 @@ import { AccountSummaryBar } from "./components/AccountSummaryBar"
 import { AssociateApiCredentialProfileDialog } from "./components/AssociateApiCredentialProfileDialog"
 import { Footer } from "./components/Footer"
 import { Header } from "./components/Header"
+import {
+  LinkedChannelCleanupOption,
+  LinkedChannelCleanupPending,
+} from "./components/LinkedChannelCleanup"
 import { RepairMissingKeysDialog } from "./components/RepairMissingKeysDialog"
 import { TokenList } from "./components/TokenList"
 import { TokenSearchBar } from "./components/TokenSearchBar"
@@ -243,6 +247,10 @@ export default function KeyManagement(props: {
   const [isRepairOpen, setIsRepairOpen] = useState(false)
   const [repairStartOnOpen, setRepairStartOnOpen] = useState(false)
   const [isAccountSelectorOpen, setIsAccountSelectorOpen] = useState(false)
+  const [cleanupLinkedChannels, setCleanupLinkedChannels] = useState(false)
+  const [nativeCleanupLinkedChannels, setNativeCleanupLinkedChannels] =
+    useState(false)
+  const [deletingToken, setDeletingToken] = useState(false)
   const [deleteTokenTarget, setDeleteTokenTarget] =
     useState<AccountToken | null>(null)
   const accountSelectorTriggerRef = useRef<HTMLButtonElement>(null)
@@ -493,14 +501,20 @@ export default function KeyManagement(props: {
     setDeleteTokenTarget(token)
   }
 
-  const handleConfirmDeleteToken = () => {
+  const handleConfirmDeleteToken = async () => {
     if (!deleteTokenTarget) {
       return
     }
 
     const token = deleteTokenTarget
-    setDeleteTokenTarget(null)
-    void handleDeleteToken(token)
+    if (deletingToken) return
+    setDeletingToken(true)
+    try {
+      await handleDeleteToken(token, cleanupLinkedChannels)
+      setDeleteTokenTarget(null)
+    } finally {
+      setDeletingToken(false)
+    }
   }
 
   const handleAccountSummaryClick = (accountId: string) => {
@@ -1122,6 +1136,7 @@ export default function KeyManagement(props: {
         }
       />
 
+      <LinkedChannelCleanupPending />
       {routeAssociationId ? (
         <div className="sr-only" role="status" aria-live="polite">
           {associationTargetStatusMessage}
@@ -1374,6 +1389,14 @@ export default function KeyManagement(props: {
 
       <ConfirmDialog
         intent="destructive"
+        isWorking={deletingToken}
+        details={
+          <LinkedChannelCleanupOption
+            checked={cleanupLinkedChannels}
+            onCheckedChange={setCleanupLinkedChannels}
+            disabled={deletingToken}
+          />
+        }
         isOpen={Boolean(deleteTokenTarget)}
         onClose={() => setDeleteTokenTarget(null)}
         title={t("keyManagement:actions.deleteKey")}
@@ -1420,21 +1443,28 @@ export default function KeyManagement(props: {
         onConfirm={() =>
           nativeDeleteIsUncertain
             ? void nativeKeys.refresh()
-            : void nativeKeys.confirmDelete()
+            : void nativeKeys.confirmDelete(nativeCleanupLinkedChannels)
         }
         details={
-          nativeKeys.deleteState.failure ? (
-            <Alert
-              variant="warning"
-              role="alert"
-              title={nativeDeleteFailureMessage(
-                nativeKeys.deleteState.failure.code,
-                t,
-              )}
-            >
-              {nativeKeys.deleteState.failure.message}
-            </Alert>
-          ) : undefined
+          <>
+            <LinkedChannelCleanupOption
+              checked={nativeCleanupLinkedChannels}
+              onCheckedChange={setNativeCleanupLinkedChannels}
+              disabled={nativeKeys.deleteState.isExecuting}
+            />
+            {nativeKeys.deleteState.failure ? (
+              <Alert
+                variant="warning"
+                role="alert"
+                title={nativeDeleteFailureMessage(
+                  nativeKeys.deleteState.failure.code,
+                  t,
+                )}
+              >
+                {nativeKeys.deleteState.failure.message}
+              </Alert>
+            ) : undefined}
+          </>
         }
       />
 

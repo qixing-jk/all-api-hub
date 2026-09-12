@@ -7,6 +7,7 @@ import {
   type EditableResourceProjection,
   type ManagedResourceCreateSeed,
   type ManagedResourceCreateSeedKind,
+  type ManagedResourceKeyCleanup,
   type ManagedResourceRef,
   type ManagedResourceRegistration,
   type ManagedResourceWorkspace,
@@ -19,6 +20,7 @@ import {
   type ResourceOperationOptions,
   type ResourceValidationResult,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { scalarKeyCleanup } from "~/services/apiAdapters/managedResources/keyCleanup"
 import {
   assertNativeResourceFacts,
   createNativeResourceRefBoundary,
@@ -141,6 +143,14 @@ export type NativeResourceKindDefinition<
     options?: ResourceOperationOptions,
   ): Promise<ManagedSiteMutationResult<void>>
   mapFailure(error: unknown): ResourceFailure
+  keyCleanup?(
+    config: TConfig,
+    detail: TDetail,
+    options?: ResourceOperationOptions,
+  ): Promise<ManagedResourceKeyCleanup>
+  scalarKeyCleanup?: "single" | "delimited"
+  /** Reuse a secret already returned by this cleanup detail read. */
+  scalarKeyCleanupSecret?: (detail: TDetail) => string | undefined
 }
 
 const invalidPublicInput = (fieldIssues?: ResourceFailure["fieldIssues"]) =>
@@ -546,6 +556,44 @@ export function defineNativeResourceKind<
         }
         const rejectUnsupported = () => Promise.reject(invalidPublicInput())
         const workspace: ManagedResourceWorkspace = {
+          ...(definition.keyCleanup || definition.scalarKeyCleanup
+            ? {
+                openKeyCleanup: (
+                  ref: ManagedResourceRef,
+                  options?: ResourceOperationOptions,
+                ) =>
+                  mapOperationFailure(async () => {
+                    const { detail } = await readDetail(ref, options)
+                    if (definition.keyCleanup)
+                      return definition.keyCleanup(config, detail, options)
+                    const fields =
+                      definition.createSeedBindings?.find(
+                        (binding) => binding.kind === "managed-channel-import",
+                      )?.sourceFieldIds ?? {}
+                    const key = Object.keys(fields).find(
+                      (id) => fields[id] === "credential",
+                    )
+                    const baseUrl = Object.keys(fields).find(
+                      (id) => fields[id] === "baseUrl",
+                    )
+                    if (!key || !baseUrl) throw invalidPublicInput()
+                    return scalarKeyCleanup(
+                      await definition.editEditor(config, detail, options),
+                      (command, updateOptions) =>
+                        definition.update(
+                          config,
+                          detail,
+                          command,
+                          updateOptions,
+                        ),
+                      options,
+                      definition.scalarKeyCleanup === "delimited",
+                      { key, baseUrl },
+                      definition.scalarKeyCleanupSecret?.(detail),
+                    )
+                  }, mapFailure),
+              }
+            : {}),
           capabilities,
           list: (query, listOptions) =>
             query?.search && !capabilities.canSearch

@@ -5,9 +5,12 @@ import { ConfirmDialog } from "~/components/ui"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import type { AccountKeyRepairInvalidResource } from "~/types/accountKeyAutoProvisioning"
 
+import { LinkedChannelCleanupOption } from "../LinkedChannelCleanup"
 import { getInvalidResourceKey } from "./repairMissingKeysDialogHelpers"
 
 interface RepairInvalidKeysDeleteConfirmProps {
+  cleanupLinkedChannels: boolean
+  setCleanupLinkedChannels: (checked: boolean) => void
   isOpen: boolean
   isWorking: boolean
   selectedInvalidResources: AccountKeyRepairInvalidResource[]
@@ -18,6 +21,8 @@ interface RepairInvalidKeysDeleteConfirmProps {
 
 /** Shows the destructive confirmation dialog for selected invalid resources. */
 export function RepairInvalidKeysDeleteConfirm({
+  cleanupLinkedChannels,
+  setCleanupLinkedChannels,
   isOpen,
   isWorking,
   selectedInvalidResources,
@@ -76,7 +81,16 @@ export function RepairInvalidKeysDeleteConfirm({
       confirmLabel={t("keyManagement:repairMissingKeys.deleteConfirm.confirm")}
       workingLabel={t("common:status.deleting")}
       cancelLabel={t("common:actions.cancel")}
-      details={details}
+      details={
+        <div className="space-y-3">
+          {details}
+          <LinkedChannelCleanupOption
+            checked={cleanupLinkedChannels}
+            onCheckedChange={setCleanupLinkedChannels}
+            disabled={isWorking}
+          />
+        </div>
+      }
       isWorking={isWorking}
       size="md"
       confirmButtonTestId={

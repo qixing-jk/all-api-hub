@@ -328,7 +328,9 @@ const encodeUpdate = (
         key: key.channel_key,
         enabled: key.enabled,
       }))
-    : existing.keys.map((key) => ({ ...key }))
+    : existing.keys
+        .filter((key) => !input.removeKeys?.includes(key.key))
+        .map((key) => ({ ...key }))
   if (input.key !== undefined) {
     if (keys[0]) keys[0].key = input.key
     else keys.push({ name: "default", key: input.key, enabled: true })
@@ -341,6 +343,11 @@ const encodeUpdate = (
     : [...existing.models]
   const modelNames = new Set(models)
   const keyNames = new Set(keys.map((key) => key.name))
+  const removedKeyNames = new Set(
+    existing.keys
+      .filter((key) => input.removeKeys?.includes(key.key))
+      .map((key) => key.name),
+  )
   const protocols = protocolForOutboundType(targetType)
   if (
     input.keys &&
@@ -372,9 +379,10 @@ const encodeUpdate = (
     }))
     .filter(
       (grant) =>
-        (!input.keys && !replacesModels) ||
-        (keyNames.has(grant.key_name) &&
-          (!replacesModels || modelNames.has(grant.model_name))),
+        !removedKeyNames.has(grant.key_name) &&
+        ((!input.keys && !replacesModels) ||
+          (keyNames.has(grant.key_name) &&
+            (!replacesModels || modelNames.has(grant.model_name)))),
     )
     .map((grant) => ({
       ...grant,

@@ -244,6 +244,13 @@
     "usedQuota": "Hạn ngạch đã dùng:"
   },
   "knownTotalKeys_other": "Đã đọc {{count}} khóa",
+  "linkedCleanup": {
+    "description": "Kiểm tra mọi kênh dùng khóa này. Chỉ xóa thông tin xác thực tương ứng; chỉ xóa kênh khi không còn khóa. Nếu kiểm tra thất bại, giữ lại khóa nguồn.",
+    "option": "Dọn cả các kênh liên quan trên trang quản lý hiện tại",
+    "pending_other": "{{count}} kênh đang chờ dọn",
+    "retry": "Thử dọn lại",
+    "retryDescription": "Các tác vụ chưa hoàn tất được lưu. Chỉ tiếp tục dọn sau khi xác nhận khóa nguồn đã bị xóa."
+  },
   "loadError": {
     "description": "Không thể đọc danh sách khóa của tài khoản hiện tại. Có thể phiên đăng nhập đã hết hạn, không đủ quyền hoặc trang web tạm thời không thể truy cập. Vui lòng đăng nhập lại vào trang web trước khi thử lại.\n\nThông báo lỗi: {{error}}",
     "openSite": "Mở trang web",

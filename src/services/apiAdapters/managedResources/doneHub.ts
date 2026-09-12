@@ -19,6 +19,7 @@ import type { ManagedSiteChannelModelProbe } from "~/services/apiAdapters/contra
 import { attributeCreatedNativeResource } from "~/services/apiAdapters/managedResources/createAttribution"
 import { defineNativeResourceKind } from "~/services/apiAdapters/managedResources/factory"
 import { createNewApiFamilyEditorBindings } from "~/services/apiAdapters/managedResources/newApiEditor"
+import { rethrowNewApiFamilyChannelReadError } from "~/services/apiAdapters/managedResources/newApiFamilyChannelErrors"
 import { createNewApiFamilyResourceFacts } from "~/services/apiAdapters/managedResources/newApiFamilyResourceFacts"
 import {
   parseNewApiResourceList,
@@ -235,7 +236,7 @@ const getChannel = async (
     toManagedSiteApiServiceRequest(nativeConfig.config, options),
     locator,
     options,
-  )
+  ).catch(rethrowNewApiFamilyChannelReadError)
   throwIfNewApiResourceOperationAborted(options)
   const normalized = normalizeDoneHubChannel(raw)
   if (!Number.isSafeInteger(normalized.id) || normalized.id <= 0) {
@@ -580,6 +581,8 @@ const doneHubNativeDefinition = {
     locator: number,
     options?: ResourceOperationOptions,
   ) => operations.delete(locator, options),
+  scalarKeyCleanup: "delimited" as const,
+  scalarKeyCleanupSecret: (detail: DoneHubNativeDetail) => detail.key,
   mapFailure,
 }
 

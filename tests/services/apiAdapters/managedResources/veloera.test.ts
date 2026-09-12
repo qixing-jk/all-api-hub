@@ -99,6 +99,52 @@ const expectFailureCode = async (promise: Promise<unknown>, code: string) => {
 }
 
 describe("Veloera native managed resource", () => {
+  it.each([
+    {
+      message: "record not found",
+      errorCode: API_ERROR_CODES.BUSINESS_ERROR,
+      expected: "not_found",
+    },
+    {
+      message: "record not found",
+      errorCode: API_ERROR_CODES.HTTP_403,
+      expected: "permission_denied",
+    },
+    {
+      message: "database unavailable",
+      errorCode: API_ERROR_CODES.BUSINESS_ERROR,
+      expected: "upstream_rejected",
+    },
+  ])(
+    "classifies channel cleanup reads as $expected for $errorCode: $message",
+    async ({ message, errorCode, expected }) => {
+      const workspace = await veloeraManagedResourceRegistration.open()
+      const ref = (await workspace.list()).items[0].ref
+      mocks.get.mockRejectedValueOnce(
+        new ApiError(message, undefined, "/api/channel/17", errorCode),
+      )
+      await expect(workspace.openKeyCleanup!(ref)).rejects.toMatchObject({
+        failure: { code: expected },
+      })
+    },
+  )
+
+  it("retains every other key while cleaning a multi-key channel", async () => {
+    mocks.get.mockResolvedValue({
+      ...channel,
+      key: "remove-me\nkeep-me\nalso-keep",
+    })
+    const api = await veloeraManagedResourceRegistration.open()
+    const cleanup = await api.openKeyCleanup!((await api.list()).items[0].ref)
+    expect(cleanup.keys).toEqual(["remove-me", "keep-me", "also-keep"])
+    expect(mocks.get).toHaveBeenCalledTimes(1)
+    await cleanup.remove([0])
+    expect(mocks.update.mock.calls[0][1]).toEqual({
+      id: channel.id,
+      key: "keep-me\nalso-keep",
+    })
+    expect(mocks.remove).not.toHaveBeenCalled()
+  })
   beforeEach(() => {
     vi.resetAllMocks()
     mocks.getPreferences.mockResolvedValue({ veloera: config })

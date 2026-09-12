@@ -283,13 +283,16 @@ const fetchOctopusV013ChannelDetail = async (params: {
     resourceBinding: params.resourceBinding,
   })
   if (!remote.success) {
-    throw new Error(
+    // Preserve HTTP identity so native consumers can distinguish absence from failed reads.
+    throw new ApiError(
       remote.status
         ? "HTTP " +
           remote.status +
           ": " +
           (remote.error || "Octopus request failed")
         : remote.error || "Octopus request failed",
+      remote.status,
+      endpoint,
     )
   }
   return octopusV013Contract.normalizeChannel(

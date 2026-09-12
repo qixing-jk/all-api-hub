@@ -91,6 +91,7 @@ describe("reconcileAccountKeyInventory", () => {
       })),
     })
     expect(provision).not.toHaveBeenCalled()
+    expect(session.provisioning!.inspect).toHaveBeenCalledOnce()
   })
 
   it("blocks input-required requirements without dispatching a mutation", async () => {
@@ -166,6 +167,7 @@ describe("reconcileAccountKeyInventory", () => {
     })
     expect(provision).toHaveBeenCalledOnce()
     expect(provision).toHaveBeenCalledWith("opaque:requirement-b", undefined)
+    expect(session.provisioning!.inspect).toHaveBeenCalledOnce()
   })
 
   it("does not provision missing requirements from a partial inventory", async () => {

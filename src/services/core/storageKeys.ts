@@ -9,6 +9,7 @@
  * localStorage key used by i18next-browser-languagedetector.
  */
 export const I18NEXT_LANGUAGE_STORAGE_KEY = "all-api-hub-i18nextLng"
+export const LINKED_CHANNEL_CLEANUP_STORAGE_KEY = "linkedChannelCleanupTasks"
 
 export const STORAGE_LOCKS = {
   /** Serializes the shared cooldown for passive browser identity requests. */

@@ -47,6 +47,37 @@ const parseRequestBody = (
 ) => JSON.parse(request.init.body as string) as Record<string, unknown>
 
 describe("Octopus v0.13 contract", () => {
+  it("removes only matching native keys and grants, preserving retained metadata", () => {
+    const original = detailResponse({
+      keys: [
+        { name: "old", key: "remove-me", enabled: true },
+        { name: "retained", key: "keep-me", enabled: false, custom: 9 },
+      ],
+      grants: [
+        { model_name: "model-a", key_name: "old", protocols: 2 },
+        {
+          model_name: "model-a",
+          key_name: "retained",
+          protocols: 2,
+          custom: "keep",
+        },
+      ],
+    })
+    const body = parseRequestBody(
+      octopusV013Contract.createRequest(
+        {
+          kind: OCTOPUS_API_OPERATIONS.UpdateChannel,
+          input: { id: 7, removeKeys: ["remove-me"] },
+        },
+        {},
+        octopusV013Contract.parseDetail(original),
+      ),
+    )
+    expect(body.keys).toEqual([original.keys[1]])
+    expect(body.grants).toEqual([original.grants[1]])
+    expect(body.models).toEqual(original.models)
+    expect(original.keys).toHaveLength(2)
+  })
   it("creates grants for both explicit and generated key names", () => {
     const body = parseRequestBody(
       octopusV013Contract.createRequest(

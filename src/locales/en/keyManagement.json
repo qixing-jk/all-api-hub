@@ -252,6 +252,14 @@
   },
   "knownTotalKeys_one": "{{count}} key read",
   "knownTotalKeys_other": "{{count}} keys read",
+  "linkedCleanup": {
+    "description": "Checks every channel using this key. Only matching credentials are removed from channels with multiple keys; channels with no remaining keys are deleted. If checking fails, the source key is kept.",
+    "option": "Also clean up matching channels on the current managed site",
+    "pending_one": "{{count}} channel cleanup task pending",
+    "pending_other": "{{count}} channel cleanup tasks pending",
+    "retry": "Retry cleanup",
+    "retryDescription": "Unfinished cleanup is saved for retry. Cleanup only continues after the source key is confirmed deleted."
+  },
   "loadError": {
     "description": "The extension could not load keys for this account. The session may have expired, permissions may be insufficient, or the site may be temporarily unavailable. Sign in to the site again, then retry.\n\nError: {{error}}",
     "openSite": "Open site",

@@ -107,6 +107,8 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
   )
 
   const {
+    cleanupLinkedChannels,
+    setCleanupLinkedChannels,
     deleteResultMessage,
     handleDeleteInvalidResources,
     isDeleteConfirmOpen,
@@ -403,6 +405,8 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
         ) : null}
 
         <RepairInvalidKeysDeleteConfirm
+          cleanupLinkedChannels={cleanupLinkedChannels}
+          setCleanupLinkedChannels={setCleanupLinkedChannels}
           isOpen={isDeleteConfirmOpen}
           isWorking={isDeletingInvalidResources}
           selectedInvalidResources={selectedInvalidResources}

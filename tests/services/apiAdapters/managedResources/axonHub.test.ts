@@ -423,6 +423,23 @@ const buildMigrationCreateCommand = async (source = buildMigrationSource()) => {
 }
 
 describe("AxonHub native managed-resource Adapter", () => {
+  it("cleans one of several API keys without overwriting other credential fields", async () => {
+    const detail = buildDetailChannel({
+      credentials: { apiKeys: ["remove-me", "keep-me"] },
+    })
+    mocks.getChannel.mockResolvedValue(detail)
+    const api = await axonHubManagedResourceRegistration.open()
+    const cleanup = await api.openKeyCleanup!(refFor(detail))
+    expect(cleanup.keys).toEqual(["remove-me", "keep-me"])
+    await cleanup.remove([0])
+    expect(mocks.updateChannel).toHaveBeenCalledWith(
+      expect.anything(),
+      detail.id,
+      { credentials: { apiKeys: ["keep-me"], apiKey: undefined } },
+      undefined,
+    )
+    expect(mocks.deleteChannel).not.toHaveBeenCalled()
+  })
   it("keeps existing AxonHub editor descriptors compatible with neutral field types", async () => {
     const workspace = await axonHubManagedResourceRegistration.open()
     const editor = await workspace.openCreateEditor()

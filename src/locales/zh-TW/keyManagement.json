@@ -244,6 +244,13 @@
     "usedQuota": "已用額度："
   },
   "knownTotalKeys_other": "已讀取 {{count}} 個金鑰",
+  "linkedCleanup": {
+    "description": "檢查所有使用此金鑰的渠道。多金鑰渠道僅移除對應憑證，沒有剩餘金鑰時才刪除渠道；檢查失敗時保留來源金鑰。",
+    "option": "同時清理目前管理站點中的關聯渠道",
+    "pending_other": "{{count}} 個渠道待清理",
+    "retry": "重試清理",
+    "retryDescription": "未完成的清理會保留以供重試。只有確認來源金鑰已刪除後，才會繼續清理。"
+  },
   "loadError": {
     "description": "無法讀取目前帳號的金鑰列表。可能是登入已失效、權限不足，或站點暫時無法連線。請先重新登入站點後再重試。\n\n錯誤資訊：{{error}}",
     "openSite": "開啟站點",

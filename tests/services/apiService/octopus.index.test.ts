@@ -500,6 +500,23 @@ describe("Octopus API service", () => {
     },
   )
 
+  it.each([403, 404, 503])(
+    "preserves v0.13 detail HTTP %s for native cleanup classification",
+    async (status) => {
+      mockGetValidSession.mockResolvedValue(v013CookieSession())
+      mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
+        success: false,
+        status,
+        error: "detail unavailable",
+      })
+      await expect(getChannel(config, 7)).rejects.toMatchObject({
+        name: "ApiError",
+        statusCode: status,
+        endpoint: "/api/v1/channel/detail/7",
+      })
+    },
+  )
+
   it("loads v0.13 detail after list-based version discovery", async () => {
     const session = {
       mode: OCTOPUS_AUTH_MODES.Cookie,

@@ -260,6 +260,15 @@
   "knownTotalKeys_one": "{{count}} clave leída",
   "knownTotalKeys_many": "{{count}} claves leídas",
   "knownTotalKeys_other": "{{count}} claves leídas",
+  "linkedCleanup": {
+    "description": "Comprueba todos los canales con esta clave. Solo elimina las credenciales coincidentes; elimina el canal si no quedan claves. Si falla la comprobación, conserva la clave de origen.",
+    "option": "Limpiar también los canales asociados del sitio administrado actual",
+    "pending_one": "{{count}} limpieza de canal pendiente",
+    "pending_many": "{{count}} limpiezas de canales pendientes",
+    "pending_other": "{{count}} limpiezas de canales pendientes",
+    "retry": "Reintentar limpieza",
+    "retryDescription": "Las limpiezas incompletas se guardan. Solo se continúa tras confirmar que la clave de origen fue eliminada."
+  },
   "loadError": {
     "description": "La extensión no pudo cargar las claves de esta cuenta. Es posible que la sesión haya expirado, que los permisos sean insuficientes o que el sitio no esté disponible temporalmente. Inicia sesión de nuevo en el sitio y vuelve a intentar.\n\nError: {{error}}",
     "openSite": "Abrir sitio",

@@ -406,6 +406,9 @@ export const currentOctopusContract = {
           },
         }
       case OCTOPUS_API_OPERATIONS.UpdateChannel:
+        // This protocol represents a single credential; never silently ignore a multi-key mutation.
+        if (operation.input.removeKeys?.length)
+          throw new Error("This Octopus protocol has no multi-key collection")
         return {
           endpoint: "/api/v1/channel/update",
           init: {

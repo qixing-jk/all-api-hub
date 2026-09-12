@@ -207,6 +207,18 @@ const encodeUpdate = (
           .map((key) => key.id!),
       }
     : encodeKeyMutation(input.source, input.key)),
+  // https://github.com/bestruirui/octopus/blob/v0.9.11/internal/model/channel.go
+  ...(input.removeKeys
+    ? {
+        keys_to_delete: (input.source?.keys ?? [])
+          .filter((entry) => input.removeKeys!.includes(entry.channel_key))
+          .map((entry) => {
+            if (!Number.isSafeInteger(entry.id) || entry.id! <= 0)
+              throw new Error("Missing native key identity")
+            return entry.id!
+          }),
+      }
+    : {}),
 })
 
 const encodeFetchModel = (

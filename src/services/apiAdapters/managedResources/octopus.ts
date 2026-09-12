@@ -162,6 +162,7 @@ const toFacts = (
   return {
     ref,
     displayName: detail.name,
+    keyCleanupBaseUrls: detail.base_urls.map((entry) => entry.url),
     status,
     fields: [
       { fieldId: fields.Name, kind: facts.Text, value: detail.name },
@@ -589,6 +590,20 @@ export const octopusManagedResourceRegistration = defineNativeResourceKind({
   get: (operations: Operations, id, options) => operations.get(id, options),
   toListFacts: toFacts,
   toDetailFacts: toFacts,
+  keyCleanup: async (operations: Operations, detail) => ({
+    baseUrls: detail.base_urls.map((entry) => entry.url),
+    keys: detail.keys.map((entry) => entry.channel_key),
+    remove: (indices, options) =>
+      operations.update(
+        detail,
+        {
+          removeKeys: detail.keys
+            .filter((_, index) => indices.includes(index))
+            .map((entry) => entry.channel_key),
+        },
+        options,
+      ),
+  }),
   createSeedBindings: [
     {
       kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,

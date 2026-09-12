@@ -18,6 +18,7 @@ import {
   sanitizeNewApiEditorDetail,
   toNewApiResourceFacts,
 } from "~/services/apiAdapters/managedResources/newApiEditor"
+import { rethrowNewApiFamilyChannelReadError } from "~/services/apiAdapters/managedResources/newApiFamilyChannelErrors"
 import {
   getNewApiResourceSearchData,
   throwIfNewApiResourceOperationAborted,
@@ -74,6 +75,11 @@ type NewApiNativeConfig = {
 }
 
 type NewApiNativeResourceOperations = {
+  deleteKey(
+    locator: number,
+    keyIndex: number,
+    options?: ResourceOperationOptions,
+  ): ReturnType<typeof channels.deleteKey>
   scopeKey: string
   canLoadSecret: boolean
   list(
@@ -227,7 +233,9 @@ const getChannel = async (
   locator: number,
   options?: ResourceOperationOptions,
 ) => {
-  return await channels.get(nativeConfig.config, locator, options)
+  return await channels
+    .get(nativeConfig.config, locator, options)
+    .catch(rethrowNewApiFamilyChannelReadError)
 }
 
 const createChannel = async (
@@ -529,6 +537,8 @@ export async function openNewApiNativeResourceOperations(): Promise<NewApiNative
   const nativeConfig = await openConfig()
   return {
     scopeKey: nativeConfig.scopeKey,
+    deleteKey: (locator, keyIndex, options) =>
+      channels.deleteKey(nativeConfig.config, locator, keyIndex, options),
     canLoadSecret: true,
     list: (query, options) => listChannels(nativeConfig, query, options),
     get: (locator, options) => getChannel(nativeConfig, locator, options),
@@ -654,6 +664,49 @@ const newApiNativeDefinition = {
     locator: number,
     options?: ResourceOperationOptions,
   ) => operations.delete(locator, options),
+  keyCleanup: async (
+    operations: NewApiNativeResourceOperations,
+    detail: NewApiChannel,
+    options?: ResourceOperationOptions,
+  ) => {
+    const key = await operations.loadSecret(detail.id, options)
+    // GetKeys preserves internal empty entries; filtering them would change native deletion indices.
+    // https://github.com/QuantumNous/new-api/blob/main/model/channel.go
+    const parseKeys = (value: string) =>
+      detail.channel_info?.is_multi_key
+        ? value
+            .replace(/^\n+|\n+$/g, "")
+            .split("\n")
+            .map((entry) => entry.trim())
+        : [value.trim()]
+    const keys = parseKeys(key)
+    return {
+      baseUrls: [detail.base_url ?? ""],
+      keys,
+      remove: async (
+        indices: readonly number[],
+        removeOptions?: ResourceOperationOptions,
+      ) => {
+        // Descending native indices preserve the location of earlier entries.
+        // Re-read before each deletion so a partial/uncertain run is never replayed by index.
+        const expected = [...keys]
+        let result: Awaited<ReturnType<typeof operations.deleteKey>> | undefined
+        for (const index of [...indices].sort((a, b) => b - a)) {
+          const current = parseKeys(
+            await operations.loadSecret(detail.id, removeOptions),
+          )
+          if (JSON.stringify(current) !== JSON.stringify(expected))
+            throw new ManagedResourceError({ code: "resource_changed" })
+          result = await operations.deleteKey(detail.id, index, removeOptions)
+          if (result.outcome !== "succeeded") return result
+          expected.splice(index, 1)
+        }
+        if (!result)
+          throw new ManagedResourceError({ code: "validation_failed" })
+        return result
+      },
+    }
+  },
   mapFailure,
 }
 

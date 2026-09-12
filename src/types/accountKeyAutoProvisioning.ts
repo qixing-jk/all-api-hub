@@ -106,6 +106,7 @@ export type AccountKeyRepairInvalidResourceMutationResult =
 
 export interface AccountKeyRepairDeleteInvalidResourcesRequest {
   resources: AccountKeyRepairInvalidResource[]
+  cleanupLinkedChannels?: boolean
 }
 
 export interface AccountKeyRepairDeleteInvalidResourcesResult {

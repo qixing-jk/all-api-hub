@@ -175,7 +175,7 @@ const axonHubSettings = () => ({
   providerQuota: { opencodeGo: { workspaceId: null, authCookie: null } },
 })
 
-const axonHubDetail = (params: {
+export const axonHubDetail = (params: {
   id: string
   name: string
   tags: readonly string[]

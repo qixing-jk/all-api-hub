@@ -281,6 +281,8 @@ export interface OctopusCreateChannelInput {
 export interface OctopusUpdateChannelInput {
   keys?: OctopusChannelKey[]
   id: number
+  /** Explicit credential removal, preserving retained keys and their metadata. */
+  removeKeys?: string[]
   name?: string
   type?: OctopusOutboundType
   enabled?: boolean

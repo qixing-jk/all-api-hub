@@ -41,6 +41,7 @@ const mocks = vi.hoisted(() => ({
   create: vi.fn(),
   update: vi.fn(),
   remove: vi.fn(),
+  deleteKey: vi.fn(),
   fetchSecretKey: vi.fn(),
   fetchModels: vi.fn(),
   fetchDraftModels: vi.fn(),
@@ -61,6 +62,7 @@ vi.mock("~/services/apiAdapters/managedResources/newApiOperations", () => ({
     create: mocks.create,
     update: mocks.update,
     delete: mocks.remove,
+    deleteKey: mocks.deleteKey,
     fetchSecretKey: mocks.fetchSecretKey,
     fetchModels: mocks.fetchModels,
     fetchDraftModels: mocks.fetchDraftModels,
@@ -181,6 +183,57 @@ describe("New API native managed resource", () => {
       async (_command, _surface, operation) =>
         await operation({ commandId: "command-1" }),
     )
+  })
+
+  it.each([
+    {
+      message: "record not found",
+      errorCode: API_ERROR_CODES.BUSINESS_ERROR,
+      expected: "not_found",
+    },
+    {
+      message: "record not found",
+      errorCode: API_ERROR_CODES.HTTP_403,
+      expected: "permission_denied",
+    },
+    {
+      message: "database unavailable",
+      errorCode: API_ERROR_CODES.BUSINESS_ERROR,
+      expected: "upstream_rejected",
+    },
+  ])(
+    "classifies channel cleanup reads as $expected for $errorCode: $message",
+    async ({ message, errorCode, expected }) => {
+      const workspace = await newApiManagedResourceRegistration.open()
+      const ref = (await workspace.list()).items[0].ref
+      mocks.get.mockRejectedValueOnce(
+        new ApiError(message, undefined, "/api/channel/17", errorCode),
+      )
+      await expect(workspace.openKeyCleanup!(ref)).rejects.toMatchObject({
+        failure: { code: expected },
+      })
+    },
+  )
+
+  it("uses native multi-key deletion to preserve the remaining credential statuses", async () => {
+    mocks.get.mockResolvedValue({
+      ...channel,
+      channel_info: { ...channel.channel_info, is_multi_key: true },
+    })
+    mocks.fetchSecretKey.mockResolvedValue("remove-me\nkeep-me\nalso-keep")
+    mocks.deleteKey.mockResolvedValue(success())
+    const api = await newApiManagedResourceRegistration.open()
+    const cleanup = await api.openKeyCleanup!((await api.list()).items[0].ref)
+    expect(cleanup.keys).toEqual(["remove-me", "keep-me", "also-keep"])
+    await cleanup.remove([0])
+    expect(mocks.deleteKey).toHaveBeenCalledWith(
+      config,
+      channel.id,
+      0,
+      undefined,
+    )
+    expect(mocks.update).not.toHaveBeenCalled()
+    expect(mocks.remove).not.toHaveBeenCalled()
   })
 
   it("creates one multi-key channel with the selected rotation mode", async () => {

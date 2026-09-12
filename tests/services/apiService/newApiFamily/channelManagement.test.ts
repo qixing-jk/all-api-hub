@@ -52,6 +52,21 @@ const baseRequest = {
 }
 
 describe("newApiFamily channel management APIs", () => {
+  it("requests native single-key removal without replacing channel configuration", async () => {
+    mockFetchApi.mockResolvedValue({ success: true })
+    await manageChannelKey(baseRequest, 17, "delete_key", 2)
+    expect(mockFetchApi).toHaveBeenCalledWith(baseRequest, {
+      endpoint: "/api/channel/multi_key/manage",
+      options: {
+        method: "POST",
+        body: JSON.stringify({
+          channel_id: 17,
+          action: "delete_key",
+          key_index: 2,
+        }),
+      },
+    })
+  })
   it.each(["delete_key", "enable_key", "disable_key"] as const)(
     "sends native indexed action %s and preserves the response",
     async (action) => {

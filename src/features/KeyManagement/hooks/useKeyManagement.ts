@@ -28,6 +28,7 @@ import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/manage
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { subscribeToApiCredentialProfilesChanges } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { deleteWithLinkedChannelCleanup } from "~/services/managedSites/linkedChannelCleanup"
 import { createManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import { getManagedSiteRuntimeConfigFingerprint } from "~/services/managedSites/runtimeConfig"
 import {
@@ -2230,7 +2231,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     setIsAddTokenOpen(true)
   }
 
-  const handleDeleteToken = async (token: AccountToken) => {
+  const handleDeleteToken = async (
+    token: AccountToken,
+    cleanupLinkedChannels = false,
+  ) => {
     const tracker = startProductAnalyticsAction(
       keyManagementAnalyticsContext(
         PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccountToken,
@@ -2255,15 +2259,29 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
           const { keyManagement, request: baseRequest } =
             createDisplayAccountApiContext(account)
-          await requireDisplayAccountKeyManagement(
-            account,
-            keyManagement,
-          ).deleteToken({
-            request: {
-              ...baseRequest,
-              protectionBypassExecution,
-            },
-            tokenId: token.id,
+          const cleanupInput = cleanupLinkedChannels
+            ? {
+                source: { accountId: account.id, tokenId: token.id },
+                baseUrl: account.baseUrl,
+                key: (await resolveDisplayAccountTokenForSecret(account, token))
+                  .key,
+              }
+            : null
+          await deleteWithLinkedChannelCleanup(cleanupInput, async () => {
+            const deleted = await requireDisplayAccountKeyManagement(
+              account,
+              keyManagement,
+            ).deleteToken({
+              request: {
+                ...baseRequest,
+                protectionBypassExecution,
+              },
+              tokenId: token.id,
+            })
+            if (deleted === false)
+              throw new Error(
+                t("keyManagement:openRouter.delete.feedback.error"),
+              )
           })
           clearTokenVisibilityState(token)
           removeTokenFromInventory(token)

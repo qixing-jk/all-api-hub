@@ -55,6 +55,34 @@ const channel: OctopusChannel = {
   param_override: "{}",
 }
 describe("Octopus native resource", () => {
+  it("removes a selected secondary key through the native removal command", async () => {
+    const detail = {
+      ...channel,
+      keys: [
+        { id: 9, enabled: false, channel_key: "retained", remark: "keep" },
+        { id: 10, enabled: true, channel_key: "remove-me" },
+      ],
+    }
+    mocks.getChannel.mockResolvedValue(detail)
+    const api = await octopusManagedResourceRegistration.open()
+    const item = (await api.list()).items[0]
+    expect(item.keyCleanupBaseUrls).toEqual(
+      channel.base_urls.map((entry) => entry.url),
+    )
+    const cleanup = await api.openKeyCleanup!(item.ref)
+    expect(cleanup.keys).toEqual(["retained", "remove-me"])
+    await cleanup.remove([1])
+    expect(mocks.updateChannel).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        id: channel.id,
+        source: detail,
+        removeKeys: ["remove-me"],
+      }),
+      undefined,
+    )
+    expect(mocks.deleteChannel).not.toHaveBeenCalled()
+  })
   it("keeps an enabled peer unchanged while correcting a newly disabled named key", async () => {
     const keys = [
       { name: "first", channel_key: "first-secret", enabled: false },

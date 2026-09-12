@@ -66,6 +66,8 @@ const mocks = vi.hoisted(() => {
     sessionsByAccountId,
     StorageMock,
     getAllAccounts: vi.fn(),
+    prepareCleanup: vi.fn(),
+    finishCleanup: vi.fn(),
     convertToDisplayData: vi.fn(),
     getSiteTypeCapabilities: vi.fn(),
     openKeyResources: vi.fn(),
@@ -85,6 +87,19 @@ const mocks = vi.hoisted(() => {
     },
   }
 })
+
+vi.mock("~/services/managedSites/linkedChannelCleanup", () => ({
+  deleteWithLinkedChannelCleanup: async (
+    input: unknown,
+    deleteSource: () => Promise<void>,
+  ) => {
+    const task = input ? await mocks.prepareCleanup(input) : null
+    await deleteSource()
+    await mocks.finishCleanup(task)
+  },
+  prepareLinkedChannelCleanup: mocks.prepareCleanup,
+  finishLinkedChannelCleanup: mocks.finishCleanup,
+}))
 
 vi.mock("@plasmohq/storage", () => ({
   Storage: mocks.StorageMock,
@@ -1119,105 +1134,124 @@ describe("accountKeyRepair", () => {
     )
   })
 
-  it("deletes exact invalid refs serially and keeps rejected or uncertain rows visible", async () => {
-    const account = buildRepairAccount("account-1", SITE_TYPES.NEW_API, {
-      site_url: "https://account.example.invalid/path",
-    })
-    const resources = ["applied", "rejected", "uncertain"].map(
-      (resourceId) => ({
-        accountId: "account-1",
-        accountName: "Example Account",
-        siteType: SITE_TYPES.NEW_API,
-        siteUrlOrigin: "https://account.example.invalid",
-        ref: createRef("account-1", resourceId),
-        displayLabel: `Key ${resourceId}`,
-        groupLabel: "Retired",
-        reason: "orphaned-placement",
-      }),
-    )
-    const deleteResource = vi
-      .fn()
-      .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(
-        new AccountKeyResourceError({
-          code: RESOURCE_FAILURE_CODES.UpstreamRejected,
+  it.each([false, true])(
+    "deletes exact invalid refs serially and preserves failures (linked cleanup: %s)",
+    async (cleanupLinkedChannels) => {
+      mocks.prepareCleanup.mockResolvedValue({ id: "pending-task" })
+      mocks.finishCleanup.mockResolvedValue(undefined)
+      const account = buildRepairAccount("account-1", SITE_TYPES.NEW_API, {
+        site_url: "https://account.example.invalid/path",
+      })
+      const resources = ["applied", "rejected", "uncertain"].map(
+        (resourceId) => ({
+          accountId: "account-1",
+          accountName: "Example Account",
+          siteType: SITE_TYPES.NEW_API,
+          siteUrlOrigin: "https://account.example.invalid",
+          ref: createRef("account-1", resourceId),
+          displayLabel: `Key ${resourceId}`,
+          groupLabel: "Retired",
+          reason: "orphaned-placement",
         }),
       )
-      .mockRejectedValueOnce(
-        new AccountKeyResourceError({
-          code: RESOURCE_FAILURE_CODES.MutationStateUncertain,
+      const deleteResource = vi
+        .fn()
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(
+          new AccountKeyResourceError({
+            code: RESOURCE_FAILURE_CODES.UpstreamRejected,
+          }),
+        )
+        .mockRejectedValueOnce(
+          new AccountKeyResourceError({
+            code: RESOURCE_FAILURE_CODES.MutationStateUncertain,
+          }),
+        )
+      const openCollection = vi.fn(async () => ({ delete: deleteResource }))
+      mocks.sessionsByAccountId.set(account.id, {
+        ...createSession(),
+        openCollection,
+        runtimeKey: {
+          resolve: vi.fn(async () => ({
+            kind: "resolved",
+            secret: "source-key",
+          })),
+        },
+      })
+      mocks.getAllAccounts.mockResolvedValue([account])
+      mocks.storageMap.set(
+        REPAIR_PROGRESS_STORAGE_KEY,
+        createProgress({
+          results: [
+            {
+              accountId: account.id,
+              accountName: "Example Account",
+              siteType: account.site_type,
+              siteUrlOrigin: "https://account.example.invalid",
+              outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Covered,
+              requirementResults: [],
+              createdRefs: [],
+              invalidResources: resources,
+              renameResults: [],
+              finishedAt: 1,
+            },
+          ],
+          summary: { ...createEmptySummary(), invalidResources: 3 },
         }),
       )
-    const openCollection = vi.fn(async () => ({ delete: deleteResource }))
-    mocks.sessionsByAccountId.set(account.id, {
-      ...createSession(),
-      openCollection,
-    })
-    mocks.getAllAccounts.mockResolvedValue([account])
-    mocks.storageMap.set(
-      REPAIR_PROGRESS_STORAGE_KEY,
-      createProgress({
-        results: [
-          {
-            accountId: account.id,
-            accountName: "Example Account",
-            siteType: account.site_type,
-            siteUrlOrigin: "https://account.example.invalid",
-            outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Covered,
-            requirementResults: [],
-            createdRefs: [],
-            invalidResources: resources,
-            renameResults: [],
-            finishedAt: 1,
-          },
-        ],
-        summary: { ...createEmptySummary(), invalidResources: 3 },
-      }),
-    )
-    const { deleteInvalidAccountKeyResources } = await import(
-      "~/services/accounts/accountKeyAutoProvisioning/repair"
-    )
+      const { deleteInvalidAccountKeyResources } = await import(
+        "~/services/accounts/accountKeyAutoProvisioning/repair"
+      )
 
-    const response = await deleteInvalidAccountKeyResources({ resources })
+      const response = await deleteInvalidAccountKeyResources({
+        resources,
+        cleanupLinkedChannels,
+      })
 
-    expect(response.data.results.map(({ outcome }) => outcome)).toEqual([
-      "applied",
-      "rejected",
-      "uncertain",
-    ])
-    expect(deleteResource.mock.invocationCallOrder).toEqual(
-      [...deleteResource.mock.invocationCallOrder].sort(
-        (left, right) => left - right,
-      ),
-    )
-    expect(deleteResource).toHaveBeenNthCalledWith(1, resources[0].ref, {
-      signal: expect.any(AbortSignal),
-    })
-    expect(deleteResource).toHaveBeenNthCalledWith(2, resources[1].ref, {
-      signal: expect.any(AbortSignal),
-    })
-    expect(deleteResource).toHaveBeenNthCalledWith(3, resources[2].ref, {
-      signal: expect.any(AbortSignal),
-    })
-    expect(openCollection).toHaveBeenCalledTimes(3)
-    expect(openCollection).toHaveBeenCalledWith("default", {
-      signal: expect.any(AbortSignal),
-    })
-    expect(mocks.openKeyResources).toHaveBeenCalledWith(expect.any(Object), {
-      signal: expect.any(AbortSignal),
-    })
+      expect(response.data.results.map(({ outcome }) => outcome)).toEqual([
+        "applied",
+        "rejected",
+        "uncertain",
+      ])
+      expect(deleteResource.mock.invocationCallOrder).toEqual(
+        [...deleteResource.mock.invocationCallOrder].sort(
+          (left, right) => left - right,
+        ),
+      )
+      expect(mocks.prepareCleanup).toHaveBeenCalledTimes(
+        cleanupLinkedChannels ? 3 : 0,
+      )
+      if (cleanupLinkedChannels)
+        expect(mocks.finishCleanup).toHaveBeenCalledWith({ id: "pending-task" })
+      expect(deleteResource).toHaveBeenNthCalledWith(1, resources[0].ref, {
+        signal: expect.any(AbortSignal),
+      })
+      expect(deleteResource).toHaveBeenNthCalledWith(2, resources[1].ref, {
+        signal: expect.any(AbortSignal),
+      })
+      expect(deleteResource).toHaveBeenNthCalledWith(3, resources[2].ref, {
+        signal: expect.any(AbortSignal),
+      })
+      expect(openCollection).toHaveBeenCalledTimes(3)
+      expect(openCollection).toHaveBeenCalledWith("default", {
+        signal: expect.any(AbortSignal),
+      })
+      expect(mocks.openKeyResources).toHaveBeenCalledWith(expect.any(Object), {
+        signal: expect.any(AbortSignal),
+      })
 
-    const progress = mocks.storageMap.get(
-      REPAIR_PROGRESS_STORAGE_KEY,
-    ) as AccountKeyRepairProgress
-    expect(progress.results[0].invalidResources).toEqual(resources.slice(1))
-    expect(progress.summary).toMatchObject({
-      invalidResources: 2,
-      deleteApplied: 1,
-      deleteRejected: 1,
-      deleteUncertain: 1,
-    })
-  })
+      const progress = mocks.storageMap.get(
+        REPAIR_PROGRESS_STORAGE_KEY,
+      ) as AccountKeyRepairProgress
+      expect(progress.results[0].invalidResources).toEqual(resources.slice(1))
+      expect(progress.summary).toMatchObject({
+        invalidResources: 2,
+        deleteApplied: 1,
+        deleteRejected: 1,
+        deleteUncertain: 1,
+      })
+    },
+  )
 
   it("keeps a timed-out invalid-resource deletion visible as uncertain", async () => {
     vi.useFakeTimers()
