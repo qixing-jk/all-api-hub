@@ -8,6 +8,7 @@ const storageData = new Map<string, unknown>()
 
 const {
   hasLegacyNumericConfigsMock,
+  hasPendingLegacyConfigsForResourcesMock,
   migrateLegacyNumericConfigsMock,
   getPreferencesStrictMock,
   hasRuntimeConfigInputMock,
@@ -15,6 +16,7 @@ const {
   getManagedResourceRegistrationMock,
 } = vi.hoisted(() => ({
   hasLegacyNumericConfigsMock: vi.fn(),
+  hasPendingLegacyConfigsForResourcesMock: vi.fn(),
   migrateLegacyNumericConfigsMock: vi.fn(),
   getPreferencesStrictMock: vi.fn(),
   hasRuntimeConfigInputMock: vi.fn(),
@@ -43,6 +45,8 @@ vi.mock("@plasmohq/storage", () => {
 vi.mock("~/services/managedSites/channelConfigStorage", () => ({
   channelConfigStorage: {
     hasLegacyNumericConfigs: hasLegacyNumericConfigsMock,
+    hasPendingLegacyConfigsForResources:
+      hasPendingLegacyConfigsForResourcesMock,
     migrateLegacyNumericConfigs: migrateLegacyNumericConfigsMock,
   },
 }))
@@ -75,11 +79,20 @@ const loadMigration = async () => {
   return await import("~/services/managedSites/legacyChannelConfigMigration")
 }
 
+const selectedResourceRefs = [
+  {
+    managedSiteType: "Veloera" as const,
+    scopeKey: "https://veloera.example.invalid",
+    resourceId: "9",
+  },
+]
+
 describe("legacyChannelConfigMigration", () => {
   beforeEach(() => {
     storageData.clear()
     vi.restoreAllMocks()
     vi.clearAllMocks()
+    hasPendingLegacyConfigsForResourcesMock.mockReset()
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-03-28T05:30:00.000Z"))
     getPreferencesStrictMock.mockResolvedValue({})
@@ -563,6 +576,42 @@ describe("legacyChannelConfigMigration", () => {
     expect(getManagedResourceRegistrationMock).not.toHaveBeenCalled()
     expect(migrateLegacyNumericConfigsMock).not.toHaveBeenCalled()
   })
+
+  it("does not query other sites for selections without pending legacy settings", async () => {
+    hasPendingLegacyConfigsForResourcesMock.mockResolvedValue(false)
+    const { ensureLegacyChannelConfigMigrationReady } = await loadMigration()
+    await expect(
+      ensureLegacyChannelConfigMigrationReady({
+        resourceRefs: selectedResourceRefs,
+      }),
+    ).resolves.toBeUndefined()
+    expect(hasPendingLegacyConfigsForResourcesMock).toHaveBeenCalledWith(
+      selectedResourceRefs,
+    )
+    expect(hasLegacyNumericConfigsMock).not.toHaveBeenCalled()
+    expect(getPreferencesStrictMock).not.toHaveBeenCalled()
+  })
+
+  it.each([true, false])(
+    "rechecks selected settings after a globally deferred migration (pending=%s)",
+    async (pending) => {
+      hasPendingLegacyConfigsForResourcesMock
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(pending)
+      hasLegacyNumericConfigsMock.mockResolvedValue(true)
+      resolveRuntimeConfigMock.mockReturnValue(null)
+      const { ensureLegacyChannelConfigMigrationReady } = await loadMigration()
+      const result = ensureLegacyChannelConfigMigrationReady({
+        resourceRefs: selectedResourceRefs,
+      })
+      if (pending)
+        await expect(result).rejects.toMatchObject({
+          reason: "no-configured-sites",
+        })
+      else await expect(result).resolves.toBeUndefined()
+      expect(hasPendingLegacyConfigsForResourcesMock).toHaveBeenCalledTimes(2)
+    },
+  )
 
   it("blocks scoped-only consumers while migration is deferred", async () => {
     hasLegacyNumericConfigsMock.mockResolvedValue(true)

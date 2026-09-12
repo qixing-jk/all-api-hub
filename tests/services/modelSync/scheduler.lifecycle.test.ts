@@ -106,6 +106,7 @@ vi.mock("~/services/models/modelSync/modelSyncService", () => {
   class ModelSyncServiceMock {
     listChannels = mocks.listChannels
     runBatch = mocks.runBatch
+    setChannelConfigs = vi.fn()
   }
 
   return {

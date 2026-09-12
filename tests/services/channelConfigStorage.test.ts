@@ -243,6 +243,52 @@ describe("channelConfigStorage", () => {
     })
   })
 
+  it("only requires migration for selected resources whose legacy settings can still win", async () => {
+    const ref = createRef("https://admin.example.invalid", 9)
+    const legacy = createConfig({
+      scopeKey: "https://legacy.example.invalid",
+      channelId: 9,
+      updatedAt: 200,
+    })
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, { 9: legacy })
+    await expect(
+      channelConfigStorage.hasPendingLegacyConfigsForResources([
+        createRef(ref.scopeKey, 10),
+      ]),
+    ).resolves.toBe(false)
+    await expect(
+      channelConfigStorage.hasPendingLegacyConfigsForResources([ref]),
+    ).resolves.toBe(true)
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS, {
+      [getManagedUpstreamResourceRefKey(ref)]: createConfig({
+        scopeKey: ref.scopeKey,
+        channelId: 9,
+        updatedAt: 200,
+      }),
+    })
+    await expect(
+      channelConfigStorage.hasPendingLegacyConfigsForResources([ref]),
+    ).resolves.toBe(false)
+    await expect(
+      channelConfigStorage.hasPendingLegacyConfigsForResources([
+        createRef("https://other.example.invalid", 9),
+      ]),
+    ).resolves.toBe(true)
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS, {
+      [getManagedUpstreamResourceRefKey(ref)]: createConfig({
+        scopeKey: ref.scopeKey,
+        channelId: 9,
+        updatedAt: 100,
+      }),
+    })
+    await expect(
+      channelConfigStorage.hasPendingLegacyConfigsForResources([ref]),
+    ).resolves.toBe(true)
+    expect(
+      storageData.get(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS),
+    ).toEqual({ 9: legacy })
+  })
+
   it("ignores legacy numeric configs without deleting them before migration", async () => {
     const resourceRef = createRef("https://admin.example.invalid", 9)
     storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, {
