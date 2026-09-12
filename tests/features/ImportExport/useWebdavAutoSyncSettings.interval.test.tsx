@@ -32,7 +32,7 @@ describe("invalid stored cloud sync intervals", () => {
         },
       }
       context.updateWebdavAutoSyncSettings.mockResolvedValue({
-        ok: true,
+        success: true,
         preferences: context.preferences,
       })
       const { result } = renderHook(() => useWebdavAutoSyncSettings({}))
@@ -40,6 +40,7 @@ describe("invalid stored cloud sync intervals", () => {
       expect(context.updateWebdavAutoSyncSettings).toHaveBeenLastCalledWith({
         syncInterval: minimum,
       })
+      expect(result.current.saveFailed).toBe(false)
     },
   )
 })
