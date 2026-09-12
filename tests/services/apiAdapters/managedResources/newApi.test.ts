@@ -1020,6 +1020,11 @@ describe("New API native managed resource", () => {
       [F.ModelMapping, ["alias", ""]],
       [F.Proxy, "file:///tmp/proxy"],
       [F.Proxy, "invalid-url"],
+      [F.Proxy, "socks5h://"],
+      [F.Proxy, "socks5h:///missing-host"],
+      [F.Proxy, "socks5h://proxy.example:invalid"],
+      [F.Proxy, "socks5h://proxy.example:65536"],
+      [F.Proxy, "socks5h://proxy.example\\path"],
       [F.AutoBan, "yes"],
       [F.Remark, 42],
       // Deliberately bypass the input type to verify runtime validation.
@@ -1050,6 +1055,36 @@ describe("New API native managed resource", () => {
         [F.UpstreamCheck]: true,
       }),
     ).toMatchObject({ valid: false })
+  })
+
+  it("accepts SOCKS proxies when the browser cannot parse non-special URL hosts", async () => {
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    const NativeURL = URL
+    class LegacyURL extends NativeURL {
+      override get hostname() {
+        return this.protocol.startsWith("socks5") ? "" : super.hostname
+      }
+    }
+    vi.stubGlobal("URL", LegacyURL)
+    try {
+      for (const proxy of [
+        "socks5://127.0.0.1:1080",
+        "socks5h://user:password@proxy.example:1080",
+        "SOCKS5H://[::1]:1080",
+      ]) {
+        expect(
+          editor.validate({
+            ...editor.initialValues,
+            [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Proxy]: proxy,
+          }),
+        ).toEqual({ valid: true })
+      }
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 
   it("preserves malformed advanced JSON on unrelated edits and blocks overwriting it", async () => {

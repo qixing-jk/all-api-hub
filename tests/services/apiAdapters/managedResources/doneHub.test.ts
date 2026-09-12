@@ -139,7 +139,7 @@ describe("DoneHub native managed resource", () => {
       "doneHub.models": ["model-a"],
       "doneHub.compatibleResponse": true,
       "doneHub.responsesPath": "/native/responses",
-      "doneHub.proxy": "socks5://localhost:1080",
+      "doneHub.proxy": "socks5h://session-%s:password@localhost:1080",
       "doneHub.modelHeaders": '{"X-Project":"fixture"}',
       "doneHub.customParameter": '{"overwrite":true,"temperature":0.5}',
     }
@@ -149,7 +149,7 @@ describe("DoneHub native managed resource", () => {
       config,
       expect.objectContaining({
         compatible_response: true,
-        proxy: "socks5://localhost:1080",
+        proxy: "socks5h://session-%s:password@localhost:1080",
         model_headers: '{"X-Project":"fixture"}',
         custom_parameter: '{"overwrite":true,"temperature":0.5}',
         plugin: { customize: { "16": "/native/responses" } },

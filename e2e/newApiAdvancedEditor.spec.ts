@@ -177,6 +177,12 @@ for (const width of [1280, 420]) {
       await dialog.evaluate((node) => node.scrollWidth <= node.clientWidth + 1),
     ).toBe(true)
     await page.screenshot({ path: testInfo.outputPath("advanced-groups.png") })
+    await expect(
+      dialog.getByRole("textbox", { name: "Proxy address" }),
+    ).not.toHaveAttribute("aria-invalid", "true")
+    await expect(
+      dialog.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton),
+    ).toBeEnabled()
     await dialog.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton).click()
     await expect(dialog).toBeHidden()
     await openManagedSiteChannelRowActions(page, "Example primary")

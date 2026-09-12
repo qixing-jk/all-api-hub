@@ -124,6 +124,8 @@ describe("CLIProxyAPI native managed resources", () => {
     ["baseURL", ""],
     ["baseURL", "invalid-url"],
     ["baseURL", "file:///tmp/model"],
+    ["proxy_url", "socks5h:///missing-host"],
+    ["proxy_url", "socks5h://localhost:65536"],
     ["supportedModels", "model=alias=duplicate"],
     ["headers", "missing-colon"],
     ["credentials", "invalid-list"],
@@ -134,6 +136,12 @@ describe("CLIProxyAPI native managed resources", () => {
       name: "Provider",
       baseURL: "https://upstream.example",
       credentials: { kind: "secret-list" as const, entries: [] },
+      ...(field === "proxy_url"
+        ? {
+            type: "gemini-api-key",
+            key: { kind: "replace" as const, value: "key" },
+          }
+        : {}),
       [field]: value,
     }
     expect(editor.validate(values)).toMatchObject({
@@ -560,6 +568,8 @@ describe("CLIProxyAPI multiple credentials", () => {
     "empty-key",
     "invalid-proxy",
     "malformed-proxy",
+    "missing-proxy-host",
+    "invalid-proxy-port",
     "cleared-key",
     "fractional-weight",
     "excess-weight",
@@ -576,6 +586,10 @@ describe("CLIProxyAPI multiple credentials", () => {
       row.secret = { kind: "replace", value: " " }
     if (invalidCase === "invalid-proxy") row.fields.proxy_url = "file:///tmp"
     if (invalidCase === "malformed-proxy") row.fields.proxy_url = "not a URL"
+    if (invalidCase === "missing-proxy-host")
+      row.fields.proxy_url = "socks5h:///missing-host"
+    if (invalidCase === "invalid-proxy-port")
+      row.fields.proxy_url = "socks5h://localhost:65536"
     if (invalidCase === "cleared-key") row.secret = { kind: "clear" }
     if (invalidCase === "fractional-weight") row.fields.weight = "1.5"
     if (invalidCase === "excess-weight") row.fields.weight = "1000001"

@@ -33,6 +33,7 @@ import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import type { ManagedSiteMutationResult } from "~/services/managedSites/mutations"
 import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import type { CliProxyApiConfig } from "~/types/cliProxyApiConfig"
+import { isValidProxyUrl } from "~/utils/core/proxyUrl"
 
 const invalid = () => new ManagedResourceError({ code: "validation_failed" })
 export const cliProxyApiScope = (config: CliProxyApiConfig) =>
@@ -204,13 +205,13 @@ function validate(
         add(field)
       continue
     }
+    if (field === "proxy_url") {
+      if (!isValidProxyUrl(value)) add(field)
+      continue
+    }
     try {
       const url = new URL(value)
-      const protocols =
-        field === "proxy_url"
-          ? ["http:", "https:", "socks5:", "socks5h:"]
-          : ["http:", "https:"]
-      if (!protocols.includes(url.protocol)) add(field)
+      if (!["http:", "https:"].includes(url.protocol)) add(field)
     } catch {
       add(field)
     }
@@ -321,16 +322,7 @@ function buildCredentials(
       "api-key": secret,
     }
     const proxy = (row.fields.proxy_url ?? "").trim()
-    if (proxy) {
-      let url: URL
-      try {
-        url = new URL(proxy)
-      } catch {
-        throw invalid()
-      }
-      if (!["http:", "https:", "socks5:", "socks5h:"].includes(url.protocol))
-        throw invalid()
-    }
+    if (proxy && !isValidProxyUrl(proxy)) throw invalid()
     if (!existing || proxy !== String(existing["proxy-url"] ?? ""))
       entry["proxy-url"] = proxy
     const weight = (row.fields.weight ?? "").trim()
