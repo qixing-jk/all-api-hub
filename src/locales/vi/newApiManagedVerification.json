@@ -3,6 +3,7 @@
     "actions": {
       "cleanupOwnedSessionAndRetry": "Dọn phiên của tiện ích và thử lại",
       "close": "Đóng",
+      "configureTotp": "Thiết lập xác minh tự động",
       "openSite": "Mở trang web",
       "retry": "Thử lại",
       "retryAfterPasskey": "Thử lại sau khi hoàn thành Passkey",
@@ -28,7 +29,8 @@
       "codeLabel": "Mã xác minh"
     },
     "hints": {
-      "manualFallback": "Ngay cả khi TOTP tự động đã được định cấu hình, bạn vẫn có thể nhập mã xác minh theo cách thủ công.",
+      "configureTotp": "Thường xuyên cần xác minh? Thêm khóa bí mật TOTP trong Cài đặt → {{section}} → {{provider}} để tiện ích tự động tạo và gửi mã xác minh.",
+      "manualFallback": "Nhập mã thủ công để hoàn tất lần xác minh này.",
       "openSettingsShortcut": "Bạn có thể hoàn thành cấu hình cần thiết trực tiếp tại đây và sau đó tiếp tục xác minh.",
       "passkey": "Vui lòng mở trang web, hoàn thành lời nhắc Passkey ở đó, sau đó quay lại đây và thử lại."
     },

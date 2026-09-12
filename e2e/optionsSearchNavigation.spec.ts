@@ -464,3 +464,45 @@ test("persists selected settings search results as recent items across page relo
     reopenedDialog.getByRole("option", { name: /Full Export/ }),
   ).toBeVisible()
 })
+
+for (const width of [1280, 420]) {
+  test(`keeps anchored settings below the sticky header at ${width}px`, async ({
+    context,
+    extensionId,
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 800 })
+    await seedUserPreferences(await getServiceWorker(context), {
+      managedSiteType: "new-api",
+    })
+    // Disable scroll animation so assertions measure the final landing position.
+    await page.addInitScript(() => {
+      const scrollIntoView = Element.prototype.scrollIntoView
+      Element.prototype.scrollIntoView = function (options) {
+        scrollIntoView.call(
+          this,
+          typeof options === "object"
+            ? { ...options, behavior: "instant" }
+            : options,
+        )
+      }
+    })
+    await page.goto(
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}?tab=managedSite&anchor=${SETTINGS_ANCHORS.NEW_API_TOTP_SECRET}#${MENU_ITEM_IDS.BASIC}`,
+    )
+    await waitForExtensionRoot(page)
+    await expectPermissionOnboardingHidden(page)
+    const target = page.locator(`#${SETTINGS_ANCHORS.NEW_API_TOTP_SECRET}`)
+    await expect
+      .poll(() =>
+        target.evaluate((element) => {
+          const top = element.getBoundingClientRect().top
+          const headerBottom = document
+            .querySelector("header")!
+            .getBoundingClientRect().bottom
+          return top >= headerBottom + 8 && top <= headerBottom + 24
+        }),
+      )
+      .toBe(true)
+  })
+}

@@ -13,6 +13,7 @@ import {
   Modal,
   WorkflowTransitionButton,
 } from "~/components/ui"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   NEW_API_MANAGED_VERIFICATION_STEPS,
@@ -22,6 +23,7 @@ import {
 } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import { PREFERENCE_WRITE_FAILURE_TYPES } from "~/services/preferences/userPreferences"
 import { getErrorMessage } from "~/utils/core/error"
+import { openSettingsTabInNewTab } from "~/utils/navigation"
 
 const NEW_API_VERIFICATION_CODE_LENGTH = 6
 
@@ -500,8 +502,28 @@ export function NewApiManagedVerificationDialog(
               id="new-api-verification-code-hint"
               className="text-xs text-gray-500 dark:text-gray-400"
             >
-              {t("dialog.hints.manualFallback")}
+              {props.request?.config.totpSecret?.trim()
+                ? t("dialog.hints.manualFallback")
+                : t("dialog.hints.configureTotp", {
+                    section: t("settings:tabs.managedSite"),
+                    provider: t("settings:newApi.title"),
+                  })}
             </p>
+            {!props.request?.config.totpSecret?.trim() ? (
+              <WorkflowTransitionButton
+                variant="link"
+                size="sm"
+                className="h-auto p-0"
+                disabled={props.isBusy}
+                onClick={() =>
+                  void openSettingsTabInNewTab("managedSite", {
+                    anchor: SETTINGS_ANCHORS.NEW_API_TOTP_SECRET,
+                  })
+                }
+              >
+                {t("dialog.actions.configureTotp")}
+              </WorkflowTransitionButton>
+            ) : null}
           </div>
         ) : null}
 

@@ -1,3 +1,4 @@
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   buildControlDefinition,
@@ -109,7 +110,7 @@ export const managedSiteNewApiSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:new-api-totp-secret",
     "managedSite",
-    "new-api-totp-secret",
+    SETTINGS_ANCHORS.NEW_API_TOTP_SECRET,
     "settings:newApi.fields.totpSecretLabel",
     646,
     {

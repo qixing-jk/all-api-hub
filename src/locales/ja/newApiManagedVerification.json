@@ -3,6 +3,7 @@
     "actions": {
       "cleanupOwnedSessionAndRetry": "拡張機能のセッションを削除して再試行",
       "close": "閉じる",
+      "configureTotp": "自動認証を設定",
       "openSite": "サイトを開く",
       "retry": "再試行",
       "retryAfterPasskey": "パスキー完了後に再試行",
@@ -28,7 +29,8 @@
       "codeLabel": "認証コード"
     },
     "hints": {
-      "manualFallback": "自動 TOTP が設定されていても、手動入力は引き続き利用できます。",
+      "configureTotp": "認証が頻繁に必要ですか？設定 → {{section}} → {{provider}} で TOTP シークレットを登録すると、拡張機能が確認コードを自動生成して送信します。",
+      "manualFallback": "確認コードを手動で入力して、今回の認証を完了してください。",
       "openSettingsShortcut": "不足している設定をここで直接補完して、そのまま検証を続けられます。",
       "passkey": "サイトを開いてパスキー認証を完了した後、ここに戻って再試行してください。"
     },

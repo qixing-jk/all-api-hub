@@ -10,6 +10,7 @@ import {
   Input,
   WorkflowTransitionButton,
 } from "~/components/ui"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
@@ -328,7 +329,7 @@ export default function NewApiSettings() {
           />
 
           <CardItem
-            id="new-api-totp-secret"
+            id={SETTINGS_ANCHORS.NEW_API_TOTP_SECRET}
             title={t("newApi.fields.totpSecretLabel")}
             description={t("newApi.fields.totpSecretDesc")}
             rightContent={

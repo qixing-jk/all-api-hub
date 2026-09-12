@@ -3,6 +3,7 @@
     "actions": {
       "cleanupOwnedSessionAndRetry": "Limpar sessões da extensão e tentar novamente",
       "close": "Fechar",
+      "configureTotp": "Configurar verificação automática",
       "openSite": "Abrir site",
       "retry": "Tentar novamente",
       "retryAfterPasskey": "Tentar novamente após a chave de acesso",
@@ -28,7 +29,8 @@
       "codeLabel": "Código de verificação"
     },
     "hints": {
-      "manualFallback": "A inserção manual do código continua disponível mesmo quando o TOTP automático está configurado.",
+      "configureTotp": "Precisa verificar com frequência? Adicione seu segredo TOTP em Configurações → {{section}} → {{provider}} para que a extensão gere e envie os códigos automaticamente.",
+      "manualFallback": "Digite um código manualmente para concluir esta verificação.",
       "openSettingsShortcut": "Você pode preencher aqui a configuração que falta e continuar a verificação imediatamente.",
       "passkey": "Abra o site, conclua a solicitação da chave de acesso, volte aqui e tente novamente."
     },

@@ -65,6 +65,7 @@ export const BASIC_SETTINGS_ANCHOR_TO_TAB: Record<string, BasicSettingsTabId> =
     "webdav-auto-sync": "dataBackup",
     "import-export-entry": "dataBackup",
     "new-api": "managedSite",
+    [SETTINGS_ANCHORS.NEW_API_TOTP_SECRET]: "managedSite",
     "new-api-model-sync": "managedSite",
     [SETTINGS_ANCHORS.MANAGED_SITE_MODEL_SYNC]: "managedSite",
     [SETTINGS_ANCHORS.MANAGED_SITE_SELECTOR]: "managedSite",
