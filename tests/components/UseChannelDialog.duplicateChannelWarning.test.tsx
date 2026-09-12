@@ -308,6 +308,7 @@ describe("useChannelDialog", () => {
       .mockImplementation((siteType, kind) => {
         if (
           siteType !== SITE_TYPES.NEW_API &&
+          siteType !== SITE_TYPES.DONE_HUB &&
           siteType !== SITE_TYPES.SUB2API
         ) {
           return null
@@ -921,6 +922,97 @@ describe("useChannelDialog", () => {
       expect(mockResolveApiTokenKey).not.toHaveBeenCalled()
       expect(mockFetchAccountTokens).not.toHaveBeenCalled()
       expect(ensureAccountApiTokenSpy).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    { entrypoint: "account", secret: "sk-other\nsk-test", matched: true },
+    { entrypoint: "credentials", secret: "sk-other\nsk-test", matched: true },
+    { entrypoint: "account", secret: "sk-other\nsk-another", matched: false },
+    {
+      entrypoint: "credentials",
+      secret: "sk-other\nsk-another",
+      matched: false,
+    },
+    {
+      entrypoint: "account",
+      secret: "sk-other\nsk-****",
+      matched: false,
+      comparable: false,
+    },
+  ])(
+    "compares retrievable DoneHub keys despite different models when importing from $entrypoint (matched: $matched)",
+    async ({ entrypoint, secret, matched, comparable = true }) => {
+      const candidate = buildManagedResourceMatchCandidate({
+        ref: matchingResourceRef(22, {
+          siteType: SITE_TYPES.DONE_HUB,
+          scopeKey: "https://managed.example.com",
+        }),
+        key: "",
+        models: "other-model",
+      })
+      const fetchSecretKey = vi.fn(async () => secret)
+      const service = buildManagedSiteCapabilitiesMock({
+        siteType: SITE_TYPES.DONE_HUB,
+        matching: {
+          search: vi.fn(async () => ({
+            items: [candidate],
+            total: 1,
+            type_counts: {},
+          })),
+          fetchSecretKey,
+          hydrateComparableKeys: vi.fn(
+            async (
+              _config: unknown,
+              candidates: readonly ManagedResourceMatchCandidate[],
+            ) => candidates.map((item) => ({ ...item, key: secret })),
+          ),
+        },
+      })
+      getManagedSiteCapabilitiesSpy.mockReturnValue(service)
+      const { result } = await renderChannelDialogHook()
+      await act(async () => {
+        if (entrypoint === "account") {
+          await result.current.dialog.openWithAccount(
+            buildDisplaySiteData(),
+            buildDisplayAccountTokenRuntimeKey(
+              buildDisplaySiteData(),
+              buildApiToken(),
+            ),
+          )
+        } else {
+          await result.current.dialog.openWithCredentials({
+            name: "Saved key",
+            baseUrl: "https://upstream.example.com",
+            apiKey: "sk-test",
+          })
+        }
+      })
+      expect(result.current.context.state.isOpen).toBe(true)
+      if (matched) {
+        expect(
+          result.current.context.state.nativeCreate?.advisoryWarning
+            ?.assessment,
+        ).toMatchObject({
+          url: { matched: true },
+          key: { comparable: true, matched: true },
+          models: { matched: false },
+        })
+      } else if (comparable) {
+        expect(
+          result.current.context.state.nativeCreate?.advisoryWarning,
+        ).toBeNull()
+        expect(result.current.context.duplicateChannelWarning.isOpen).toBe(
+          false,
+        )
+      }
+      if (!comparable) {
+        expect(
+          result.current.context.state.nativeCreate?.advisoryWarning?.assessment
+            ?.key,
+        ).toMatchObject({ comparable: false, matched: false })
+      }
+      expect(fetchSecretKey).toHaveBeenCalledTimes(1)
     },
   )
 
@@ -2351,7 +2443,7 @@ describe("useChannelDialog", () => {
     expect(result.current.context.state.isOpen).toBe(false)
   })
 
-  it("refreshes a cached review advisory before opening", async () => {
+  it("clears a cached review advisory when all candidate keys differ despite matching models", async () => {
     const searchChannelMock = vi.fn(async () => ({
       items: [buildManagedResourceMatchCandidate({ key: "different-key" })],
       total: 1,
@@ -2390,11 +2482,7 @@ describe("useChannelDialog", () => {
     expect(result.current.context.state.isOpen).toBe(true)
     expect(result.current.context.state.nativeCreate).toMatchObject({
       siteType: SITE_TYPES.NEW_API,
-      advisoryWarning: {
-        kind: "reviewSuggested",
-        title: "channelDialog:warnings.reviewSuggested.title",
-        description: "channelDialog:warnings.reviewSuggested.description",
-      },
+      advisoryWarning: null,
     })
   })
 

@@ -234,7 +234,7 @@ describe("resolveManagedSiteTokenChannelStatusWithVerifiedKey", () => {
     })
   })
 
-  it("keeps the status as requiring confirmation when the verified key does not match", () => {
+  it("marks the token as not added when the sole verified key does not match", () => {
     const result = resolveManagedSiteTokenChannelStatusWithVerifiedKey({
       status: buildRecoverableVerificationUnavailableStatus() as any,
       tokenKey: "sk-token-secret",
@@ -244,9 +244,7 @@ describe("resolveManagedSiteTokenChannelStatusWithVerifiedKey", () => {
     })
 
     expect(result).toEqual({
-      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
-      reason:
-        MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION,
+      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED,
       resolvedChannelKeysByResourceKey: {
         [getManagedResourceRefKey(matchingResourceRef(12))]: "sk-other-secret",
       },
@@ -616,7 +614,68 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
   })
 
-  it("returns unknown assessment metadata when only base URL and models match", async () => {
+  it.each([
+    {
+      keys: ["different-key"],
+      expected: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED,
+    },
+    {
+      keys: ["first-key\nsecond-key", "third-key"],
+      expected: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED,
+    },
+    {
+      keys: ["different-key", ""],
+      expected: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+    },
+    {
+      keys: ["different-key\nsk-****"],
+      expected: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+    },
+  ])(
+    "uses complete DoneHub key evidence for URL-only candidates: $keys",
+    async ({ keys, expected }) => {
+      const account = buildDisplaySiteData({
+        baseUrl: "https://api.example.com",
+      })
+      const token = buildApiToken({ key: "test-token-key" })
+      const managedSite = createManagedSiteCapabilitiesStub({
+        siteType: SITE_TYPES.DONE_HUB,
+        matching: {
+          search: vi.fn().mockResolvedValue({
+            items: keys.map((key, index) =>
+              buildManagedResourceMatchCandidate({
+                ref: matchingResourceRef(index + 100, {
+                  siteType: SITE_TYPES.DONE_HUB,
+                }),
+                base_url: account.baseUrl,
+                models: "unrelated-model",
+                key,
+              }),
+            ),
+            total: keys.length,
+          }),
+        },
+      })
+      const result = await getManagedSiteTokenChannelStatus({
+        runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
+        managedSite,
+      })
+      expect(result.status).toBe(expected)
+      expect(result).toMatchObject({
+        assessment: {
+          url: { matched: true },
+          key: {
+            matched: false,
+            comparable:
+              expected === MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED,
+          },
+          models: { matched: false },
+        },
+      })
+    },
+  )
+
+  it("returns not added when base URL and models match but the key does not", async () => {
     const account = buildDisplaySiteData({ baseUrl: "https://api.example.com" })
     const token = buildApiToken({ key: "test-token-key" })
     const managedSite = createManagedSiteCapabilitiesStub({
@@ -643,9 +702,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
 
     expect(result).toEqual({
-      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
-      reason:
-        MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION,
+      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED,
       assessment: {
         searchBaseUrl: "https://api.example.com",
         searchCompleted: true,

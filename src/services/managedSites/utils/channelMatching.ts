@@ -16,6 +16,7 @@ import {
   type ManagedSiteChannelMatchResult,
   type ManagedSiteChannelModelsAssessment,
 } from "~/services/managedSites/channelMatch"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { normalizeOpenAiFamilyBaseUrl } from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
 import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 import { isArraysEqual } from "~/utils"
@@ -337,9 +338,11 @@ export function inspectManagedSiteChannelKeyMatch(
     }
   }
 
-  const hasComparableChannelKey = urlBucket.some(
-    (channel) => toChannelKeyCandidates(channel, keyComparisonMode).length > 0,
-  )
+  // A negative result requires readable keys for every candidate, including multi-key entries.
+  const hasComparableChannelKey = urlBucket.every((channel) => {
+    const keys = toChannelKeyCandidates(channel, keyComparisonMode)
+    return keys.length > 0 && keys.every(hasUsableManagedSiteChannelKey)
+  })
 
   if (!hasComparableChannelKey) {
     return {

@@ -411,6 +411,8 @@ export async function resolveManagedSiteChannelMatch(
     refreshAssessmentsWithResolvedKeys()
   }
 
+  const attemptedSecretReads = new Set<string>()
+
   if (
     resolveHiddenKeys &&
     params.protectionBypassExecution &&
@@ -469,6 +471,9 @@ export async function resolveManagedSiteChannelMatch(
 
     for (const recoverableCandidate of recoverableCandidates) {
       params.signal?.throwIfAborted()
+      attemptedSecretReads.add(
+        getManagedResourceRefKey(recoverableCandidate.ref),
+      )
       try {
         mergedResolvedChannelKeysByResourceKey[
           getManagedResourceRefKey(recoverableCandidate.ref)
@@ -556,10 +561,14 @@ export async function resolveManagedSiteChannelMatch(
         : []),
     ].filter(
       (channel) =>
-        !params.hiddenKeyResourceRefs ||
-        params.hiddenKeyResourceRefs.some((ref) =>
-          areManagedResourceRefsEqual(ref, channel.ref),
-        ),
+        !attemptedSecretReads.has(getManagedResourceRefKey(channel.ref)) &&
+        typeof mergedResolvedChannelKeysByResourceKey[
+          getManagedResourceRefKey(channel.ref)
+        ] !== "string" &&
+        (!params.hiddenKeyResourceRefs ||
+          params.hiddenKeyResourceRefs.some((ref) =>
+            areManagedResourceRefsEqual(ref, channel.ref),
+          )),
     )
 
     if (recoverableCandidates.length > 0) {

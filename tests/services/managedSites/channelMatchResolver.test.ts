@@ -1337,3 +1337,52 @@ describe("resolveManagedSiteChannelMatch", () => {
     expect(fetchChannelSecretKey).toHaveBeenCalledTimes(2)
   })
 })
+
+describe("single-attempt candidate key reads", () => {
+  it.each(["failure", "empty", "masked"])(
+    "does not repeat a %s secret read through hydration in the same check",
+    async (outcome) => {
+      const candidate = buildManagedResourceMatchCandidate({
+        key: "",
+        base_url: "https://upstream.example",
+        models: "gpt-4",
+      })
+      const fetchSecretKey = vi.fn(async () => {
+        if (outcome === "failure")
+          throw new MatchResolutionUnresolvedError(
+            MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
+          )
+        return outcome === "empty" ? "" : "sk-****"
+      })
+      const hydrateComparableKeys = vi.fn(async () => {
+        await fetchSecretKey()
+        return [candidate]
+      })
+      const managedSite = createManagedSiteCapabilitiesStub({
+        matching: {
+          search: vi.fn(async () => ({
+            items: [candidate],
+            total: 1,
+            type_counts: {},
+          })),
+          fetchSecretKey,
+          hydrateComparableKeys,
+        },
+      })
+      const params = {
+        managedSite,
+        managedConfig,
+        accountBaseUrl: candidate.base_url,
+        key: "sk-source",
+        models: ["gpt-4"],
+        resolveHiddenKeys: true,
+      }
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        const result = await resolveManagedSiteChannelMatch(params)
+        expect(result.key.comparable).toBe(false)
+        expect(fetchSecretKey).toHaveBeenCalledTimes(attempt)
+        expect(hydrateComparableKeys).not.toHaveBeenCalled()
+      }
+    },
+  )
+})

@@ -185,7 +185,11 @@ export function resolveManagedSiteTokenChannelStatusWithVerifiedKey(
     }
   }
 
-  if (applied.hasAnyMatch) {
+  const soleCandidateKeyMismatch =
+    applied.assessment.url.candidateCount <= 1 &&
+    applied.assessment.key.comparable &&
+    !applied.assessment.key.matched
+  if (applied.hasAnyMatch && !soleCandidateKeyMismatch) {
     return {
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
       reason:
@@ -381,6 +385,14 @@ export async function getManagedSiteTokenChannelStatus(
           MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
         assessment,
         ...(recovery ? { recovery } : {}),
+        ...resolvedChannelKeys,
+      }
+    }
+
+    if (resolution.key.comparable && !resolution.key.matched) {
+      return {
+        status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED,
+        assessment,
         ...resolvedChannelKeys,
       }
     }
