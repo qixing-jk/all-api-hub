@@ -353,6 +353,7 @@ describe("AccountActionButtons", () => {
   it("shows Enable and Delete actions when account is disabled", async () => {
     const user = userEvent.setup()
     const onDeleteAccount = vi.fn()
+    mockHandleSetAccountDisabled.mockResolvedValueOnce(true)
 
     render(
       <AccountActionButtons
@@ -480,6 +481,7 @@ describe("AccountActionButtons", () => {
 
   it("closes the menu after clicking Disable to avoid showing Enable immediately", async () => {
     const user = userEvent.setup()
+    mockHandleSetAccountDisabled.mockResolvedValueOnce(true)
 
     render(
       <AccountActionButtons
