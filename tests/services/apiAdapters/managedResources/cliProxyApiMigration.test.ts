@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { cliProxyApiManagedSiteMigrationCapability as capability } from "~/services/apiAdapters/managedResources/cliProxyApiMigration"
 import type { CliProxyApiResource } from "~/services/apiService/cliProxyApi"
+import {
+  planMigrationCredentials,
+  resolveMigrationCredentials,
+} from "~/services/managedSites/channelMigrationCredentials"
 import type {
   ManagedSiteMigrationSelection,
   ManagedSiteMigrationSource,
@@ -83,6 +87,72 @@ beforeEach(() => {
   mocks.create.mockResolvedValue({ outcome: "succeeded" })
 })
 describe("CLIProxyAPI native migration", () => {
+  it.each([{ weights: [undefined, 0, -1, 2] }, { weights: [0] }])(
+    "preserves excluded key weights through split target creation: $weights",
+    async ({ weights }) => {
+      const entries = weights.map((weight, index) => ({
+        "api-key": `placeholder-${index}`,
+        ...(weight === undefined ? {} : { weight }),
+      }))
+      mocks.get.mockResolvedValue({
+        ...resource,
+        value: {
+          ...resource.value,
+          disabled: false,
+          "api-key-entries": entries,
+        },
+      })
+      const preparedSource = await capability.source!.prepare(selection)
+      const resolved = await capability.source!.resolveCredential(selection)
+      if (preparedSource.status !== "ready" || resolved.status !== "ready")
+        throw new Error("Expected ready source")
+      const enabled = weights.map(
+        (weight) => weight === undefined || weight > 0,
+      )
+      expect(preparedSource.source.credentialMetadata).toEqual(
+        enabled.map((enabled) => ({ enabled })),
+      )
+      expect(resolved.credentials?.map((key) => key.enabled)).toEqual(enabled)
+      const target = await capability.target!.prepare(preparedSource.source)
+      const preview = planMigrationCredentials(
+        {
+          sourceSiteType: SITE_TYPES.CLI_PROXY_API,
+          targetSiteType: SITE_TYPES.CLI_PROXY_API,
+          generalWarningCodes: [],
+          totalCount: 1,
+          readyCount: 1,
+          blockedCount: 0,
+          items: [
+            {
+              status: "ready",
+              selection,
+              source: preparedSource.source,
+              target,
+              warningCodes: [],
+            },
+          ],
+        },
+        capability.target!.supportsMultipleCredentials!,
+      )
+      expect(preview.items).toHaveLength(weights.length)
+      for (const item of preview.items) {
+        if (item.status !== "ready") throw new Error("Expected ready item")
+        const credential = resolveMigrationCredentials(item, resolved)
+        if (credential.status !== "ready")
+          throw new Error("Expected ready credential")
+        await capability.target!.create({
+          source: item.source,
+          targetSiteType: SITE_TYPES.CLI_PROXY_API,
+          projection: item.target.projection,
+          credential: credential.credential,
+        })
+      }
+      expect(
+        mocks.create.mock.calls.map(([, command]) => command.value.disabled),
+      ).toEqual(enabled.map((value) => !value))
+    },
+  )
+
   it("previews all key slots without secrets and discloses per-key options and aliases", async () => {
     const result = await capability.source!.prepare(selection)
     expect(result).toMatchObject({
@@ -105,6 +175,24 @@ describe("CLIProxyAPI native migration", () => {
       },
     )
   })
+  it("preserves a standalone provider key excluded by its weight", async () => {
+    mocks.get.mockResolvedValue({
+      ...resource,
+      kind: "claude-api-key",
+      value: { "api-key": "placeholder", weight: 0 },
+    })
+    expect(await capability.source!.prepare(selection)).toMatchObject({
+      status: "ready",
+      source: { credentialMetadata: [{ enabled: false }] },
+    })
+    expect(await capability.source!.resolveCredential(selection)).toMatchObject(
+      {
+        status: "ready",
+        credentials: [{ value: "placeholder", enabled: false }],
+      },
+    )
+  })
+
   it("validates the configured source scope before reading", async () => {
     expect(
       await capability.source!.prepare({

@@ -319,10 +319,19 @@ export const newApiManagedSiteMigrationCapability: ManagedSiteMigrationCapabilit
               },
               options,
             )
+            throwIfNewApiResourceOperationAborted(options)
             return updated.outcome === MANAGED_SITE_MUTATION_OUTCOMES.Succeeded
               ? { status: "created" }
               : { status: "uncertain" }
-          } catch {
+          } catch (error) {
+            throwIfNewApiResourceOperationAborted(options)
+            if (
+              typeof error === "object" &&
+              error !== null &&
+              (("name" in error && error.name === "AbortError") ||
+                ("code" in error && error.code === "ABORT_ERR"))
+            )
+              throw error
             return { status: "uncertain" }
           }
         }

@@ -239,6 +239,52 @@ describe("New API managed-site migration capability", () => {
     },
   )
 
+  it.each(["signal-result", "signal-throw", "abort-error", "abort-code"])(
+    "propagates reconciliation cancellation: %s",
+    async (mode) => {
+      const controller = new AbortController()
+      const cancellation =
+        mode === "abort-code"
+          ? { code: "ABORT_ERR" }
+          : new DOMException("Stopped", "AbortError")
+      mocks.create.mockResolvedValue({
+        outcome: "succeeded",
+        data: {
+          ...channel,
+          channel_info: {
+            is_multi_key: true,
+            multi_key_size: 2,
+            multi_key_status_list: {},
+          },
+        },
+      })
+      mocks.update.mockImplementation(async () => {
+        if (mode.startsWith("signal")) controller.abort(cancellation)
+        if (mode !== "signal-result") throw cancellation
+        return { outcome: "uncertain" }
+      })
+      const prepared =
+        await newApiManagedSiteMigrationCapability.target!.prepare(source)
+      await expect(
+        newApiManagedSiteMigrationCapability.target!.create(
+          {
+            source,
+            targetSiteType: SITE_TYPES.NEW_API,
+            projection: prepared.projection,
+            credential: "first-placeholder",
+            credentials: [
+              { value: "first-placeholder", enabled: true },
+              { value: "second-placeholder", enabled: false },
+            ],
+          },
+          { signal: controller.signal },
+        ),
+      ).rejects.toBe(cancellation)
+      expect(mocks.create).toHaveBeenCalledOnce()
+      expect(mocks.update).toHaveBeenCalledOnce()
+    },
+  )
+
   it("validates native selections against the current scope and numeric locator", async () => {
     const context =
       await newApiManagedSiteMigrationCapability.source!

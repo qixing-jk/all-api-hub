@@ -14,6 +14,7 @@ import {
   isManagedSiteMigrationSourceType,
   resolveManagedSiteMigrationType,
 } from "~/services/apiAdapters/managedResources/migrationTypeRoutes"
+import type { CliProxyApiResource } from "~/services/apiService/cliProxyApi"
 import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES as blockers } from "~/types/managedSiteMigration"
@@ -24,6 +25,20 @@ import {
 } from "~/types/managedSiteMigrationCapability"
 
 const siteType = SITE_TYPES.CLI_PROXY_API
+/**
+ * Preserve excluded credentials; weight magnitude itself remains a disclosed loss.
+ * github.com/router-for-me/CLIProxyAPI/internal/config/config_types.go:
+ * omitted weights default to 1, while non-positive weights exclude the key.
+ */
+const credentialStates = (resource: CliProxyApiResource) =>
+  cliProxyApiKeys(resource).map((_, index) => {
+    const weight =
+      resource.kind === "openai-compatibility"
+        ? resource.value["api-key-entries"]?.[index]?.weight
+        : resource.value.weight
+    return { enabled: typeof weight !== "number" || weight > 0 }
+  })
+
 const open = async (options?: ResourceOperationOptions) => {
   options?.signal?.throwIfAborted()
   const runtime = await getManagedSiteRuntimeConfigForType(siteType)
@@ -81,6 +96,7 @@ export const cliProxyApiManagedSiteMigrationCapability: ManagedSiteMigrationCapa
         )
           return { status: "blocked", reasonCode: blockers.SOURCE_KEY_MISSING }
         const value = resource.value
+        const states = credentialStates(resource)
         return {
           status: "ready",
           source: {
@@ -100,8 +116,8 @@ export const cliProxyApiManagedSiteMigrationCapability: ManagedSiteMigrationCapa
                 value["excluded-models"].includes("*"))
                 ? "disabled"
                 : "enabled",
-            ...(keys.length > 1
-              ? { credentialMetadata: keys.map(() => ({ enabled: true })) }
+            ...(keys.length > 1 || states.some((key) => !key.enabled)
+              ? { credentialMetadata: states }
               : {}),
             lossSignals: {
               hasModelMapping: (value.models ?? []).some(
@@ -142,11 +158,17 @@ export const cliProxyApiManagedSiteMigrationCapability: ManagedSiteMigrationCapa
           keys.some((key) => !hasUsableManagedSiteChannelKey(key))
         )
           return { status: "blocked", reasonCode: blockers.SOURCE_KEY_MISSING }
+        const states = credentialStates(resource)
         return {
           status: "ready",
           credential: keys[0],
-          ...(keys.length > 1
-            ? { credentials: keys.map((value) => ({ value, enabled: true })) }
+          ...(keys.length > 1 || states.some((key) => !key.enabled)
+            ? {
+                credentials: keys.map((value, index) => ({
+                  value,
+                  ...states[index],
+                })),
+              }
             : {}),
         }
       },

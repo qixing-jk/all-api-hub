@@ -1261,6 +1261,47 @@ describe("useManagedResourceMigrationController", () => {
     )
   })
 
+  it("retains the execution selection count when refresh clears the selection", async () => {
+    const analytics = createAnalytics()
+    const selectedRowKeys = ["opaque::second"]
+    const options = buildOptions({
+      analytics: analytics.analytics,
+      selectedRowKeys,
+      prepareMigration: async ({
+        selections,
+      }: {
+        selections: readonly ManagedSiteMigrationSelection[]
+      }) => buildPreview(selections),
+      executeMigration: async () =>
+        executionResult([
+          {
+            selectionId: "opaque::second",
+            displayName: "Second example",
+            status: "created",
+          },
+        ]),
+      refresh: async () => {
+        selectedRowKeys.splice(0)
+        return true
+      },
+    })
+    const { result } = renderHook(() =>
+      useManagedResourceMigrationController(options),
+    )
+    await waitFor(() => expect(result.current.preview?.readyCount).toBe(1))
+    act(() => result.current.callbacks.onOpenConfirmation())
+    await act(async () => result.current.callbacks.onConfirm())
+    expect(analytics.complete).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      expect.objectContaining({
+        insights: expect.objectContaining({
+          selectedCount: 1,
+          successCount: 1,
+        }),
+      }),
+    )
+  })
+
   it("publishes uncertain execution as verify-required and consumes the preview without replay", async () => {
     const analytics = createAnalytics()
     const refresh = vi.fn(async () => true)
