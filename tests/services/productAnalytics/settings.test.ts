@@ -137,6 +137,9 @@ describe("settings product analytics snapshots", () => {
     )
     expect(JSON.stringify(snapshot)).not.toContain("ghp-sensitive")
     expect(JSON.stringify(snapshot)).not.toContain("gist-sensitive")
+    expect(JSON.stringify(snapshot)).not.toContain(
+      "https://gist.github.com/sensitive",
+    )
     expect(JSON.stringify(snapshot)).not.toContain("encryption-sensitive")
   })
 

@@ -286,7 +286,13 @@ const ENCRYPTED_BACKUP_ENVELOPE = {
   ciphertext: "cipher",
 } as const
 
-async function clickWebdavAction(actionId: string) {
+/** Activate a supported backup action and confirm its direction when required. */
+async function clickWebdavAction(
+  actionId:
+    | typeof WEBDAV_TARGET_IDS.testConnection
+    | typeof WEBDAV_TARGET_IDS.uploadBackup
+    | typeof WEBDAV_TARGET_IDS.downloadImport,
+) {
   const user = userEvent.setup()
   const action = await waitFor(() => {
     const element = document.getElementById(actionId)

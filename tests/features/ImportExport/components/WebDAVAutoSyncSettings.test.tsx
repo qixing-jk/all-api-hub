@@ -26,7 +26,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { WebdavAutoSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
-import { WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
+import { CLOUD_SYNC_PROVIDERS, WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 const {
@@ -168,6 +168,50 @@ describe("WebDAVAutoSyncSettings", () => {
       complete: mockCompleteProductAnalyticsAction,
     })
   })
+
+  it.each(["", "   "])(
+    "blocks immediate Gist sync without an encryption password: %j",
+    async (backupEncryptionPassword) => {
+      mockUserPreferences.getPreferences.mockResolvedValue({
+        lastUpdated: 1,
+        webdav: {
+          provider: CLOUD_SYNC_PROVIDERS.GITHUB_GIST,
+          githubGist: { token: "test-token", gistId: "test-gist" },
+          backupEncryptionPassword,
+          autoSync: false,
+          syncInterval: 1800,
+          syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
+        },
+      })
+      const onPasswordError = vi.fn()
+      const user = userEvent.setup()
+      render(
+        <WebDAVAutoSyncSettings
+          onGistEncryptionPasswordErrorChange={onPasswordError}
+        />,
+      )
+      await screen.findByText("importExport:webdav.gist.autoSyncEnableDesc")
+      expect(onPasswordError).not.toHaveBeenCalled()
+
+      await user.click(
+        screen.getByRole("button", {
+          name: "importExport:webdav.autoSync.syncNow",
+        }),
+      )
+
+      const requiredMessage =
+        "importExport:webdav.gist.encryptionPasswordRequired"
+      await waitFor(() =>
+        expect(onPasswordError).toHaveBeenCalledExactlyOnceWith(
+          requiredMessage,
+        ),
+      )
+      expect(toast.error).toHaveBeenLastCalledWith(requiredMessage)
+      expect(mockSendWebdavAutoSyncMessage).not.toHaveBeenCalledWith(
+        WebdavAutoSyncMessageTypes.SyncNow,
+      )
+    },
+  )
 
   it("saves switches immediately and waits for the write before syncing", async () => {
     let finishSave!: () => void
@@ -439,13 +483,11 @@ describe("WebDAVAutoSyncSettings", () => {
             : original(type, ...args),
       )
       render(<WebDAVAutoSyncSettings />)
-      await userEvent
-        .setup()
-        .click(
-          await screen.findByRole("button", {
-            name: "importExport:webdav.autoSync.syncNow",
-          }),
-        )
+      await userEvent.setup().click(
+        await screen.findByRole("button", {
+          name: "importExport:webdav.autoSync.syncNow",
+        }),
+      )
       await waitFor(() =>
         expect(toast.error).toHaveBeenCalledWith(
           error || "importExport:webdav.syncFailed",
@@ -464,13 +506,11 @@ describe("WebDAVAutoSyncSettings", () => {
       },
     )
     render(<WebDAVAutoSyncSettings />)
-    await userEvent
-      .setup()
-      .click(
-        await screen.findByRole("button", {
-          name: "importExport:webdav.autoSync.syncNow",
-        }),
-      )
+    await userEvent.setup().click(
+      await screen.findByRole("button", {
+        name: "importExport:webdav.autoSync.syncNow",
+      }),
+    )
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("sync failed"))
   })
 
