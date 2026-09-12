@@ -537,4 +537,73 @@ describe("WebDAVAutoSyncSettings", () => {
       }),
     ).toBeInTheDocument()
   })
+
+  it("keeps settings usable when loading sync status fails", async () => {
+    mockSendWebdavAutoSyncMessage.mockRejectedValue(new Error("status offline"))
+    render(<WebDAVAutoSyncSettings />)
+    await waitFor(() =>
+      expect(loggerMocks.error).toHaveBeenCalledWith(
+        "Failed to load sync status",
+        expect.any(Error),
+      ),
+    )
+    expect(
+      screen.getByRole("button", {
+        name: "importExport:webdav.autoSync.syncNow",
+      }),
+    ).toBeEnabled()
+  })
+
+  it.each(["rejected", "empty exception"])(
+    "keeps a failed schedule retry visible with fallback feedback: %s",
+    async (failure) => {
+      const original = mockSendWebdavAutoSyncMessage.getMockImplementation()!
+      mockSendWebdavAutoSyncMessage.mockImplementation(async (type: string) => {
+        if (type === WebdavAutoSyncMessageTypes.UpdateSettings) {
+          if (failure === "empty exception") throw undefined
+          return { success: false }
+        }
+        return original(type)
+      })
+      const user = userEvent.setup()
+      render(<WebDAVAutoSyncSettings />)
+      await screen.findByDisplayValue("1800")
+      await user.click(screen.getByRole("switch"))
+      const retry = await screen.findByRole("button", {
+        name: "importExport:webdav.retrySave",
+      })
+      vi.mocked(toast.error).mockClear()
+      await user.click(retry)
+      await waitFor(() =>
+        expect(toast.error).toHaveBeenCalledWith(
+          "settings:messages.updateFailed",
+        ),
+      )
+      expect(retry).toBeVisible()
+    },
+  )
+
+  it("saves the selected strategy without rewriting an unchanged interval", async () => {
+    const user = userEvent.setup()
+    render(<WebDAVAutoSyncSettings />)
+    const interval = await screen.findByDisplayValue("1800")
+    await user.click(interval)
+    await user.tab()
+    expect(mockSendWebdavAutoSyncMessage).not.toHaveBeenCalledWith(
+      WebdavAutoSyncMessageTypes.UpdateSettings,
+      expect.anything(),
+    )
+    await user.click(screen.getByRole("combobox"))
+    await user.click(
+      await screen.findByRole("option", {
+        name: "importExport:webdav.autoSync.strategyLocalFirst",
+      }),
+    )
+    await waitFor(() =>
+      expect(mockSendWebdavAutoSyncMessage).toHaveBeenCalledWith(
+        WebdavAutoSyncMessageTypes.UpdateSettings,
+        { settings: { syncStrategy: WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY } },
+      ),
+    )
+  })
 })

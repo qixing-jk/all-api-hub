@@ -10,6 +10,7 @@ import { WebdavAutoSyncMessageTypes } from "~/services/runtimeMessaging/messageT
 
 import {
   mockSendWebdavAutoSyncMessage,
+  mockTestCloudSyncConnection,
   mockUserPreferences,
   render,
   setupWebdavSettingsTestHarness,
@@ -75,13 +76,11 @@ describe("Cloud settings autosave", () => {
 
   it("saves only the Gist field that lost focus", async () => {
     render(<WebDAVSettings />)
-    await userEvent
-      .setup()
-      .click(
-        await screen.findByRole("button", {
-          name: "importExport:webdav.provider.githubGist",
-        }),
-      )
+    await userEvent.setup().click(
+      await screen.findByRole("button", {
+        name: "importExport:webdav.provider.githubGist",
+      }),
+    )
     const token = document.getElementById(
       WEBDAV_TARGET_IDS.gistToken,
     ) as HTMLInputElement
@@ -185,15 +184,23 @@ describe("Cloud settings autosave", () => {
     const user = userEvent.setup()
     render(<WebDAVSettings />)
     const username = await screen.findByDisplayValue("alice")
-    mockUserPreferences.savePreferencesWithResult.mockRejectedValueOnce(
-      new Error("storage unavailable"),
-    )
+    mockUserPreferences.savePreferencesWithResult
+      .mockRejectedValueOnce(new Error("storage unavailable"))
+      .mockRejectedValueOnce(new Error("storage still unavailable"))
     await user.clear(username)
     await user.type(username, "bob")
     await user.tab()
     const retry = await screen.findByRole("button", {
       name: "importExport:webdav.retrySave",
     })
+    expect(username).toHaveValue("bob")
+    vi.mocked(toast.error).mockClear()
+    await user.click(retry)
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledExactlyOnceWith(
+        "settings:messages.saveSettingsFailed",
+      ),
+    )
     expect(username).toHaveValue("bob")
     await user.click(retry)
     await waitFor(async () =>
@@ -204,5 +211,48 @@ describe("Cloud settings autosave", () => {
     expect(
       screen.queryByRole("button", { name: "importExport:webdav.retrySave" }),
     ).not.toBeInTheDocument()
+  })
+
+  it("retains retry feedback when schedule refresh fails after a saved field", async () => {
+    const user = userEvent.setup()
+    render(<WebDAVSettings />)
+    const username = await screen.findByDisplayValue("alice")
+    mockSendWebdavAutoSyncMessage.mockRejectedValue(
+      new Error("schedule offline"),
+    )
+    await user.clear(username)
+    await user.type(username, "bob")
+    await user.tab()
+    const retry = await screen.findByRole("button", {
+      name: "importExport:webdav.retrySave",
+    })
+    vi.mocked(toast.error).mockClear()
+    await user.click(retry)
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledExactlyOnceWith(
+        "settings:messages.saveSettingsFailed",
+      ),
+    )
+    expect((await mockUserPreferences.getPreferences()).webdav.username).toBe(
+      "bob",
+    )
+    expect(retry).toBeVisible()
+  })
+
+  it("shows connection failure guidance when WebDAV returns no error message", async () => {
+    const user = userEvent.setup()
+    render(<WebDAVSettings />)
+    await screen.findByDisplayValue("alice")
+    mockTestCloudSyncConnection.mockRejectedValueOnce(undefined)
+    await user.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.testConnection",
+      }),
+    )
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "importExport:webdav.testFailed",
+      ),
+    )
   })
 })

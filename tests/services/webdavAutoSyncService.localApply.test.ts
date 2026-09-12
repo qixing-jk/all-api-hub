@@ -455,6 +455,26 @@ describe("WebdavAutoSyncService local apply phase", () => {
     expect(mockUploadBackup).not.toHaveBeenCalled()
   })
 
+  it("continues rolling back other domains when restoring preferences fails", async () => {
+    mockChannelConfigImport.mockRejectedValueOnce(new Error("channel failed"))
+    mockImportPreferences
+      .mockResolvedValueOnce(preferenceWriteSuccess())
+      .mockRejectedValueOnce(new Error("preference rollback failed"))
+
+    await expect(createService().syncWithWebdav()).rejects.toThrow(
+      "channel failed",
+    )
+
+    expect(mockTagStoreImport).toHaveBeenCalledTimes(2)
+    expect(mockAccountStorageImportData).toHaveBeenCalledTimes(2)
+    expect(mockAccountStorageImportData).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        accounts: [{ id: "local-account", created_at: 1, updated_at: 10 }],
+      }),
+    )
+    expect(mockUploadBackup).not.toHaveBeenCalled()
+  })
+
   it("rolls preferences back when feature guidance cannot be committed", async () => {
     const service = createService()
     const remoteFeatureGuidance = {
