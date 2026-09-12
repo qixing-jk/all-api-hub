@@ -7,6 +7,9 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
   headerActions: "account-management-header-actions",
   accountListHeader: "account-management-account-list-header",
   accountListSortControls: "account-management-account-list-sort-controls",
+  accountListSortMenuButton: "account-management-account-list-sort-menu-button",
+  accountListSortDirectionButton:
+    "account-management-account-list-sort-direction-button",
   accountListUtilities: "account-management-account-list-utilities",
   accountListClearSortButton:
     "account-management-account-list-clear-sort-button",

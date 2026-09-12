@@ -2,149 +2,247 @@ import { describe, expect, it } from "vitest"
 
 import {
   DATA_TYPE_BALANCE,
+  DATA_TYPE_CHECK_IN_REQUIREMENT,
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_CREATED_AT,
+  DATA_TYPE_HEALTH_STATUS,
   DATA_TYPE_INCOME,
 } from "~/constants"
-import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
-import { SITE_TYPES } from "~/constants/siteType"
 import {
   createDynamicSortComparator,
   DEFAULT_SORTING_PRIORITY_CONFIG,
+  getAccountSortGroup,
 } from "~/services/preferences/utils/sortingPriority"
-import type { CheckInConfig, DisplaySiteData, SiteAccount } from "~/types"
-import { AuthTypeEnum, SiteHealthStatus } from "~/types"
-import {
-  ACCOUNT_TODAY_METRIC_REASONS,
-  ACCOUNT_TODAY_METRIC_STATUSES,
-} from "~/types/accountTodayStats"
+import { SiteHealthStatus } from "~/types"
 import {
   SortingCriteriaType,
   type SortingPriorityConfig,
 } from "~/types/sorting"
-import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
-import { buildSiteAccount } from "~~/tests/test-utils/factories"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+
+function config(
+  criteria: SortingPriorityConfig["criteria"] = [],
+): SortingPriorityConfig {
+  return { criteria, lastModified: 1 }
+}
 
 describe("createDynamicSortComparator", () => {
-  const methodId = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
-  const createCheckIn = (input?: {
-    checked?: boolean
-    selected?: boolean
-    customCheckIn?: CheckInConfig["customCheckIn"]
-  }): CheckInConfig => {
-    const selected = input?.selected !== false
-    const hasStatus = typeof input?.checked === "boolean"
-    return {
-      automaticExecutionEnabled: true,
-      methodKnowledge: {
-        methods: selected
-          ? {
-              [methodId]: {
-                detection: {
-                  outcome: "matched",
-                  evidence: { source: "compatibility_registration" },
-                },
-                ...(hasStatus
-                  ? {
-                      status: {
-                        outcome: "known" as const,
-                        today: input.checked
-                          ? ("checked" as const)
-                          : ("not_checked" as const),
-                        evidence: {
-                          source: "probe" as const,
-                          observedAt: Date.now(),
-                        },
-                      },
-                    }
-                  : {}),
-              },
-            }
-          : {},
-      },
-      selection: {
-        mode: "automatic",
-        ...(selected ? { methodId } : {}),
-      },
-      ...(input?.customCheckIn ? { customCheckIn: input.customCheckIn } : {}),
-    }
-  }
+  it("always groups pinned, normal, and disabled accounts in that order", () => {
+    const accounts = [
+      buildDisplaySiteData({
+        id: "disabled-pinned",
+        name: "A",
+        disabled: true,
+      }),
+      buildDisplaySiteData({ id: "normal", name: "B" }),
+      buildDisplaySiteData({ id: "pinned", name: "C" }),
+    ]
 
-  // Helper to create a minimal DisplaySiteData fixture
-  const createDisplaySiteData = (
-    overrides: Partial<DisplaySiteData> = {},
-  ): DisplaySiteData => ({
-    id: "account-1",
-    icon: "🧪",
-    name: "Test Account",
-    username: "test-user",
-    balance: { USD: 100, CNY: 700 },
-    todayConsumption: { USD: 10, CNY: 70 },
-    todayIncome: { USD: 5, CNY: 35 },
-    todayTokens: { upload: 0, download: 0 },
-    todayStatsAvailability: buildCompleteTodayStatsAvailability(),
-    health: { status: SiteHealthStatus.Healthy },
-    siteType: SITE_TYPES.NEW_API,
-    baseUrl: "https://test.com",
-    token: "test-token",
-    userId: "1",
-    authType: AuthTypeEnum.AccessToken,
-    checkIn: createCheckIn({ selected: false }),
-    ...overrides,
+    accounts.sort(
+      createDynamicSortComparator(
+        config(),
+        null,
+        DATA_TYPE_BALANCE,
+        "USD",
+        "asc",
+        {},
+        ["pinned", "disabled-pinned"],
+      ),
+    )
+
+    expect(accounts.map(({ id }) => id)).toEqual([
+      "pinned",
+      "normal",
+      "disabled-pinned",
+    ])
   })
 
-  describe("MANUAL_ORDER criterion", () => {
-    it("should prioritize manual order before user sort field", () => {
-      const accountA = createDisplaySiteData({
-        id: "account-1",
-        name: "Zeta",
-        balance: { USD: 10, CNY: 70 },
-      })
-      const accountB = createDisplaySiteData({
-        id: "account-2",
-        name: "Alpha",
-        balance: { USD: 20, CNY: 140 },
-      })
+  it("treats a disabled pinned account as disabled", () => {
+    const pinnedIds = new Set(["account"])
+    expect(
+      getAccountSortGroup(
+        buildDisplaySiteData({ id: "account", disabled: true }),
+        pinnedIds,
+      ),
+    ).toBe("disabled")
+  })
 
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          { id: SortingCriteriaType.MANUAL_ORDER, enabled: true, priority: 0 },
+  it("applies the active user sort only inside each fixed group", () => {
+    const accounts = [
+      buildDisplaySiteData({ id: "normal-high", balance: { USD: 9, CNY: 9 } }),
+      buildDisplaySiteData({ id: "pinned-low", balance: { USD: 1, CNY: 1 } }),
+      buildDisplaySiteData({ id: "normal-low", balance: { USD: 2, CNY: 2 } }),
+    ]
+
+    accounts.sort(
+      createDynamicSortComparator(
+        DEFAULT_SORTING_PRIORITY_CONFIG,
+        null,
+        DATA_TYPE_BALANCE,
+        "USD",
+        "asc",
+        {},
+        ["pinned-low"],
+      ),
+    )
+
+    expect(accounts.map(({ id }) => id)).toEqual([
+      "pinned-low",
+      "normal-low",
+      "normal-high",
+    ])
+  })
+
+  it("lets an active user sort outrank automatic and manual ordering", () => {
+    const accounts = [
+      buildDisplaySiteData({
+        id: "manual-first",
+        balance: { USD: 9, CNY: 9 },
+        checkIn: buildCheckInConfig({
+          customCheckIn: { url: "https://example.com/checkin" },
+        }),
+      }),
+      buildDisplaySiteData({
+        id: "balance-first",
+        balance: { USD: 1, CNY: 1 },
+      }),
+    ]
+
+    accounts.sort(
+      createDynamicSortComparator(
+        config([
           {
-            id: SortingCriteriaType.USER_SORT_FIELD,
+            id: SortingCriteriaType.CUSTOM_CHECK_IN_URL,
             enabled: true,
-            priority: 1,
+            priority: 0,
           },
-        ],
-      }
-
-      const manualOrderIndices = { "account-1": 1, "account-2": 0 }
-      const comparator = createDynamicSortComparator(
-        config,
+        ]),
         null,
         DATA_TYPE_BALANCE,
         "USD",
         "asc",
         {},
         [],
-        manualOrderIndices,
-      )
+        { "manual-first": 0, "balance-first": 1 },
+      ),
+    )
 
-      // Even though accountB has higher balance, manual order puts it first
-      expect(comparator(accountB, accountA)).toBeLessThan(0)
-      expect(comparator(accountA, accountB)).toBeGreaterThan(0)
-    })
+    expect(accounts.map(({ id }) => id)).toEqual([
+      "balance-first",
+      "manual-first",
+    ])
+  })
 
-    it("should apply manual order within non-pinned after pinned come first", () => {
-      const pinnedAccount = createDisplaySiteData({ id: "pinned-1" })
-      const manualFirst = createDisplaySiteData({ id: "manual-1" })
-      const manualSecond = createDisplaySiteData({ id: "manual-2" })
+  it("uses configurable automatic criteria when no user sort is active", () => {
+    const accounts = [
+      buildDisplaySiteData({ id: "alpha", name: "Alpha" }),
+      buildDisplaySiteData({
+        id: "zulu-checkin",
+        name: "Zulu",
+        checkIn: buildCheckInConfig({
+          customCheckIn: { url: "https://example.com/checkin" },
+        }),
+      }),
+    ]
 
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
+    accounts.sort(
+      createDynamicSortComparator(
+        config([
           {
-            id: SortingCriteriaType.PINNED,
+            id: SortingCriteriaType.CUSTOM_CHECK_IN_URL,
+            enabled: true,
+            priority: 0,
+          },
+        ]),
+        null,
+        null,
+        "USD",
+        "asc",
+      ),
+    )
+
+    expect(accounts.map(({ id }) => id)).toEqual(["zulu-checkin", "alpha"])
+  })
+
+  it("respects automatic criterion order and disabled criteria", () => {
+    const accounts = [
+      buildDisplaySiteData({
+        id: "healthy",
+        health: { status: SiteHealthStatus.Healthy },
+      }),
+      buildDisplaySiteData({
+        id: "error",
+        health: { status: SiteHealthStatus.Error },
+      }),
+    ]
+
+    accounts.sort(
+      createDynamicSortComparator(
+        config([
+          {
+            id: SortingCriteriaType.CUSTOM_CHECK_IN_URL,
+            enabled: false,
+            priority: 0,
+          },
+        ]),
+        null,
+        null,
+        "USD",
+        "asc",
+        {},
+        [],
+        { healthy: 0, error: 1 },
+      ),
+    )
+
+    expect(accounts.map(({ id }) => id)).toEqual(["healthy", "error"])
+  })
+
+  it("supports health status as an active user sort", () => {
+    const accounts = [
+      buildDisplaySiteData({
+        id: "healthy",
+        health: { status: SiteHealthStatus.Healthy },
+      }),
+      buildDisplaySiteData({
+        id: "warning",
+        health: { status: SiteHealthStatus.Warning },
+      }),
+      buildDisplaySiteData({
+        id: "error",
+        health: { status: SiteHealthStatus.Error },
+      }),
+    ]
+
+    accounts.sort(
+      createDynamicSortComparator(
+        DEFAULT_SORTING_PRIORITY_CONFIG,
+        null,
+        DATA_TYPE_HEALTH_STATUS,
+        "USD",
+        "asc",
+      ),
+    )
+
+    expect(accounts.map(({ id }) => id)).toEqual([
+      "error",
+      "warning",
+      "healthy",
+    ])
+  })
+
+  it("ignores removed legacy criteria from persisted settings", () => {
+    const accounts = [
+      buildDisplaySiteData({ id: "beta", name: "Beta" }),
+      buildDisplaySiteData({ id: "alpha", name: "Alpha" }),
+    ]
+
+    accounts.sort(
+      createDynamicSortComparator(
+        config([
+          {
+            id: SortingCriteriaType.USER_SORT_FIELD,
             enabled: true,
             priority: 0,
           },
@@ -153,1823 +251,138 @@ describe("createDynamicSortComparator", () => {
             enabled: true,
             priority: 1,
           },
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 2,
-          },
-        ],
-      }
-      const pinnedAccountIds = ["pinned-1"]
-      const manualOrderIndices = { "manual-2": 0, "manual-1": 1 }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-        {},
-        pinnedAccountIds,
-        manualOrderIndices,
-      )
-
-      // pinned always above non-pinned
-      expect(comparator(pinnedAccount, manualFirst)).toBeLessThan(0)
-      // manual ordering respected between non-pinned
-      expect(comparator(manualSecond, manualFirst)).toBeLessThan(0)
-    })
-  })
-
-  describe("DISABLED_ACCOUNT criterion", () => {
-    it("should place disabled accounts at the bottom even if pinned", () => {
-      const enabledAccount = createDisplaySiteData({
-        id: "enabled-1",
-        name: "Enabled",
-        disabled: false,
-      })
-      const disabledPinnedAccount = createDisplaySiteData({
-        id: "disabled-1",
-        name: "Disabled (Pinned)",
-        disabled: true,
-      })
-
-      const comparator = createDynamicSortComparator(
-        DEFAULT_SORTING_PRIORITY_CONFIG,
-        null,
-        "name",
-        "USD",
-        "asc",
-        {},
-        ["disabled-1"],
-        {},
-      )
-
-      expect(comparator(enabledAccount, disabledPinnedAccount)).toBeLessThan(0)
-      expect(comparator(disabledPinnedAccount, enabledAccount)).toBeGreaterThan(
-        0,
-      )
-    })
-  })
-
-  // Helper to create a SiteAccount for detectedAccount parameter
-  const createSiteAccount = (
-    overrides: Partial<SiteAccount> = {},
-  ): SiteAccount =>
-    buildSiteAccount({
-      id: "detected-account",
-      site_name: "Detected Site",
-      site_url: "https://detected.com",
-      site_type: SITE_TYPES.UNKNOWN,
-      exchange_rate: 7.0,
-      checkIn: createCheckIn({ selected: false }),
-      ...overrides,
-    })
-
-  describe("PINNED criterion", () => {
-    it("should pin accounts that are in the pinnedAccountIds list", () => {
-      const account1 = createDisplaySiteData({ id: "account-1" })
-      const account2 = createDisplaySiteData({ id: "account-2" })
-
-      const config = DEFAULT_SORTING_PRIORITY_CONFIG
-      const pinnedAccountIds = ["account-2"]
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-        {},
-        pinnedAccountIds,
-      )
-
-      // Pinned account should come before non-pinned accounts
-      expect(comparator(account2, account1)).toBeLessThan(0)
-      expect(comparator(account1, account2)).toBeGreaterThan(0)
-    })
-
-    it("should maintain order based on pinnedAccountIds index", () => {
-      const account1 = createDisplaySiteData({ id: "account-1" })
-      const account2 = createDisplaySiteData({ id: "account-2" })
-      const account3 = createDisplaySiteData({ id: "account-3" })
-
-      const config = DEFAULT_SORTING_PRIORITY_CONFIG
-      const pinnedAccountIds = ["account-2", "account-3"]
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-        {},
-        pinnedAccountIds,
-      )
-
-      // account-2 is at index 0, account-3 is at index 1
-      expect(comparator(account2, account3)).toBeLessThan(0)
-      expect(comparator(account3, account2)).toBeGreaterThan(0)
-      expect(comparator(account1, account2)).toBeGreaterThan(0)
-      expect(comparator(account1, account3)).toBeGreaterThan(0)
-    })
-
-    it("should preserve the first duplicate pinned index when persisted ids repeat", () => {
-      const account1 = createDisplaySiteData({ id: "account-1" })
-      const account2 = createDisplaySiteData({ id: "account-2" })
-      const account3 = createDisplaySiteData({ id: "account-3" })
-
-      const comparator = createDynamicSortComparator(
-        DEFAULT_SORTING_PRIORITY_CONFIG,
-        null,
-        "name",
-        "USD",
-        "asc",
-        {},
-        ["account-3", "account-2", "account-3"],
-      )
-
-      expect(comparator(account3, account2)).toBeLessThan(0)
-      expect(comparator(account2, account3)).toBeGreaterThan(0)
-      expect(comparator(account1, account3)).toBeGreaterThan(0)
-    })
-
-    it("should return 0 when both accounts are not pinned", () => {
-      const account1 = createDisplaySiteData({ id: "account-1" })
-      const account2 = createDisplaySiteData({ id: "account-2" })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.PINNED,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-        {},
-        [],
-      )
-
-      expect(comparator(account1, account2)).toBe(0)
-    })
-  })
-
-  describe("CURRENT_SITE criterion", () => {
-    it("should prioritize the detected account", () => {
-      const detectedAccount = createSiteAccount({ id: "detected-account" })
-      const account1 = createDisplaySiteData({ id: "account-1" })
-      const account2 = createDisplaySiteData({ id: "detected-account" })
-
-      const config = DEFAULT_SORTING_PRIORITY_CONFIG
-      const comparator = createDynamicSortComparator(
-        config,
-        detectedAccount,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      expect(comparator(account2, account1)).toBeLessThan(0)
-      expect(comparator(account1, account2)).toBeGreaterThan(0)
-    })
-
-    it("should return 0 when neither account is detected", () => {
-      const account1 = createDisplaySiteData({ id: "account-1" })
-      const account2 = createDisplaySiteData({ id: "account-2" })
-      const detectedAccount = createSiteAccount({ id: "detected-account" })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.CURRENT_SITE,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        detectedAccount,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      expect(comparator(account1, account2)).toBe(0)
-    })
-
-    it("should return 0 when detectedAccount is null", () => {
-      const account1 = createDisplaySiteData({ id: "account-1" })
-      const account2 = createDisplaySiteData({ id: "account-2" })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.CURRENT_SITE,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      expect(comparator(account1, account2)).toBe(0)
-    })
-  })
-
-  describe("HEALTH_STATUS criterion", () => {
-    it("should prioritize error > warning > unknown > healthy", () => {
-      const errorAccount = createDisplaySiteData({
-        id: "error",
-        health: { status: SiteHealthStatus.Error },
-      })
-      const warningAccount = createDisplaySiteData({
-        id: "warning",
-        health: { status: SiteHealthStatus.Warning },
-      })
-      const unknownAccount = createDisplaySiteData({
-        id: "unknown",
-        health: { status: SiteHealthStatus.Unknown },
-      })
-      const healthyAccount = createDisplaySiteData({
-        id: "healthy",
-        health: { status: SiteHealthStatus.Healthy },
-      })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.HEALTH_STATUS,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      // error should come before warning, warning before unknown, unknown before healthy
-      expect(comparator(errorAccount, warningAccount)).toBeLessThan(0)
-      expect(comparator(warningAccount, unknownAccount)).toBeLessThan(0)
-      expect(comparator(unknownAccount, healthyAccount)).toBeLessThan(0)
-
-      // reverse should give opposite results
-      expect(comparator(healthyAccount, unknownAccount)).toBeGreaterThan(0)
-      expect(comparator(unknownAccount, warningAccount)).toBeGreaterThan(0)
-      expect(comparator(warningAccount, errorAccount)).toBeGreaterThan(0)
-    })
-
-    it("should treat missing health status as healthy", () => {
-      const warningAccount = createDisplaySiteData({
-        id: "warning",
-        health: { status: SiteHealthStatus.Warning },
-      })
-      const healthyAccount = createDisplaySiteData({
-        id: "healthy",
-        health: { status: SiteHealthStatus.Healthy },
-      })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.HEALTH_STATUS,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      // Warning (2) should come before healthy (4)
-      expect(comparator(warningAccount, healthyAccount)).toBeLessThan(0)
-    })
-  })
-
-  describe("CHECK_IN_REQUIREMENT criterion", () => {
-    it("should prioritize accounts that need check-in (isCheckedInToday=false)", () => {
-      const needsCheckIn = createDisplaySiteData({
-        id: "needs-checkin",
-        checkIn: createCheckIn({ checked: false }),
-      })
-      const alreadyCheckedIn = createDisplaySiteData({
-        id: "checked-in",
-        checkIn: createCheckIn({ checked: true }),
-      })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      // Accounts needing check-in should come first
-      expect(comparator(needsCheckIn, alreadyCheckedIn)).toBeLessThan(0)
-      expect(comparator(alreadyCheckedIn, needsCheckIn)).toBeGreaterThan(0)
-    })
-
-    it("should return 0 when both have same check-in status", () => {
-      const account1 = createDisplaySiteData({
-        id: "account-1",
-        checkIn: createCheckIn({ checked: false }),
-      })
-      const account2 = createDisplaySiteData({
-        id: "account-2",
-        checkIn: createCheckIn({ checked: false }),
-      })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      expect(comparator(account1, account2)).toBe(0)
-    })
-
-    it("should handle accounts with undefined isCheckedInToday", () => {
-      const account1 = createDisplaySiteData({
-        id: "account-1",
-        checkIn: createCheckIn(),
-      })
-      const account2 = createDisplaySiteData({
-        id: "account-2",
-        checkIn: createCheckIn({ checked: false }),
-      })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      // When isCheckedInToday is undefined, it should be treated as 1 (not needing check-in)
-      expect(comparator(account2, account1)).toBeLessThan(0)
-    })
-
-    it("treats a nonblank custom check-in URL without status as needing check-in", () => {
-      const customCheckIn = createDisplaySiteData({
-        id: "custom-check-in",
-        checkIn: createCheckIn({
-          selected: false,
-          customCheckIn: { url: " https://checkin.example.invalid " },
-        }),
-      })
-      const whitespaceUrl = createDisplaySiteData({
-        id: "whitespace-url",
-        checkIn: createCheckIn({
-          selected: false,
-          customCheckIn: { url: "   " },
-        }),
-      })
-      const comparator = createDynamicSortComparator(
-        {
-          ...DEFAULT_SORTING_PRIORITY_CONFIG,
-          criteria: [
-            {
-              id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
-              enabled: true,
-              priority: 0,
-            },
-          ],
-        },
-        null,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      expect(comparator(customCheckIn, whitespaceUrl)).toBeLessThan(0)
-      expect(comparator(whitespaceUrl, customCheckIn)).toBeGreaterThan(0)
-    })
-  })
-
-  describe("CUSTOM_CHECK_IN_URL criterion", () => {
-    it("should prioritize accounts with custom check-in URLs", () => {
-      const withCustomUrl = createDisplaySiteData({
-        id: "with-custom",
-        checkIn: createCheckIn({
-          customCheckIn: {
-            url: "https://custom.com",
-          },
-        }),
-      })
-      const withoutCustomUrl = createDisplaySiteData({
-        id: "without-custom",
-        checkIn: createCheckIn(),
-      })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.CUSTOM_CHECK_IN_URL,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      expect(comparator(withCustomUrl, withoutCustomUrl)).toBeLessThan(0)
-      expect(comparator(withoutCustomUrl, withCustomUrl)).toBeGreaterThan(0)
-    })
-
-    it("should return 0 when both have same custom check-in URL status", () => {
-      const account1 = createDisplaySiteData({
-        id: "account-1",
-        checkIn: createCheckIn({
-          customCheckIn: {
-            url: "https://custom1.com",
-          },
-        }),
-      })
-      const account2 = createDisplaySiteData({
-        id: "account-2",
-        checkIn: createCheckIn({
-          customCheckIn: {
-            url: "https://custom2.com",
-          },
-        }),
-      })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.CUSTOM_CHECK_IN_URL,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      expect(comparator(account1, account2)).toBe(0)
-    })
-  })
-
-  describe("CUSTOM_REDEEM_URL criterion", () => {
-    it("should prioritize accounts with custom redeem URLs", () => {
-      const withCustomUrl = createDisplaySiteData({
-        id: "with-custom",
-        checkIn: createCheckIn({
-          customCheckIn: {
-            redeemUrl: "https://custom.com",
-          },
-        }),
-      })
-      const withoutCustomUrl = createDisplaySiteData({
-        id: "without-custom",
-        checkIn: createCheckIn(),
-      })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.CUSTOM_REDEEM_URL,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      expect(comparator(withCustomUrl, withoutCustomUrl)).toBeLessThan(0)
-      expect(comparator(withoutCustomUrl, withCustomUrl)).toBeGreaterThan(0)
-    })
-
-    it("should return 0 when both have same custom redeem URL status", () => {
-      const account1 = createDisplaySiteData({
-        id: "account-1",
-        checkIn: createCheckIn({
-          customCheckIn: {
-            redeemUrl: "https://custom1.com",
-          },
-        }),
-      })
-      const account2 = createDisplaySiteData({
-        id: "account-2",
-        checkIn: createCheckIn({
-          customCheckIn: {
-            redeemUrl: "https://custom2.com",
-          },
-        }),
-      })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.CUSTOM_REDEEM_URL,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      expect(comparator(account1, account2)).toBe(0)
-    })
-  })
-
-  describe("MATCHED_OPEN_TABS criterion", () => {
-    it("should prioritize accounts with higher matched open tab scores", () => {
-      const account1 = createDisplaySiteData({ id: "account-1" })
-      const account2 = createDisplaySiteData({ id: "account-2" })
-      const account3 = createDisplaySiteData({ id: "account-3" })
-
-      const matchedAccountScores = {
-        "account-1": 5,
-        "account-2": 10,
-        "account-3": 0,
-      }
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.MATCHED_OPEN_TABS,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-        matchedAccountScores,
-      )
-
-      // Higher scores come first
-      expect(comparator(account2, account1)).toBeLessThan(0)
-      expect(comparator(account1, account3)).toBeLessThan(0)
-      expect(comparator(account3, account1)).toBeGreaterThan(0)
-    })
-
-    it("should treat missing scores as 0", () => {
-      const account1 = createDisplaySiteData({ id: "account-1" })
-      const account2 = createDisplaySiteData({ id: "account-2" })
-
-      const matchedAccountScores = {
-        "account-1": 5,
-      }
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.MATCHED_OPEN_TABS,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-        matchedAccountScores,
-      )
-
-      // account-1 has score 5, account-2 is not in map (default 0)
-      expect(comparator(account1, account2)).toBeLessThan(0)
-    })
-
-    it("should return 0 when both have same score", () => {
-      const account1 = createDisplaySiteData({ id: "account-1" })
-      const account2 = createDisplaySiteData({ id: "account-2" })
-
-      const matchedAccountScores = {
-        "account-1": 5,
-        "account-2": 5,
-      }
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.MATCHED_OPEN_TABS,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-        matchedAccountScores,
-      )
-
-      expect(comparator(account1, account2)).toBe(0)
-    })
-  })
-
-  describe("USER_SORT_FIELD criterion - name", () => {
-    it("should skip user field sorting when no sort field is active", () => {
-      const matchedAccount = createDisplaySiteData({
-        id: "matched",
-        name: "Zulu",
-        balance: { USD: 1, CNY: 7 },
-      })
-      const unmatchedAccount = createDisplaySiteData({
-        id: "unmatched",
-        name: "Alpha",
-        balance: { USD: 100, CNY: 700 },
-      })
-
-      const config: SortingPriorityConfig = {
-        criteria: [
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 0,
-          },
-          {
-            id: SortingCriteriaType.MATCHED_OPEN_TABS,
-            enabled: true,
-            priority: 1,
-          },
-        ],
-        lastModified: Date.now(),
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
+        ]),
         null,
         null,
-        "USD",
-        "asc",
-        { matched: 5 },
-      )
-
-      expect(comparator(matchedAccount, unmatchedAccount)).toBeLessThan(0)
-      expect(comparator(unmatchedAccount, matchedAccount)).toBeGreaterThan(0)
-    })
-
-    it("should sort by name in ascending order", () => {
-      const accountA = createDisplaySiteData({ id: "a", name: "Alpha" })
-      const accountB = createDisplaySiteData({ id: "b", name: "Beta" })
-      const accountC = createDisplaySiteData({ id: "c", name: "Gamma" })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      expect(comparator(accountA, accountB)).toBeLessThan(0)
-      expect(comparator(accountB, accountC)).toBeLessThan(0)
-      expect(comparator(accountC, accountA)).toBeGreaterThan(0)
-    })
-
-    it("should sort by name in descending order", () => {
-      const accountA = createDisplaySiteData({ id: "a", name: "Alpha" })
-      const accountB = createDisplaySiteData({ id: "b", name: "Beta" })
-      const accountC = createDisplaySiteData({ id: "c", name: "Gamma" })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
         "USD",
         "desc",
-      )
-
-      expect(comparator(accountC, accountB)).toBeLessThan(0)
-      expect(comparator(accountB, accountA)).toBeLessThan(0)
-      expect(comparator(accountA, accountC)).toBeGreaterThan(0)
-    })
-
-    it("should sort duplicate display names by appended username case-insensitively", () => {
-      const accountA = createDisplaySiteData({
-        id: "a",
-        name: "My Site · Bob",
-      })
-      const accountB = createDisplaySiteData({
-        id: "b",
-        name: "my   site · alice",
-      })
-      const accountC = createDisplaySiteData({
-        id: "c",
-        name: "Other Site",
-      })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      const sorted = [accountA, accountB, accountC].sort(comparator)
-      expect(sorted.map((account) => account.id)).toEqual(["b", "a", "c"])
-    })
-  })
-
-  describe("USER_SORT_FIELD criterion - balance", () => {
-    it("should sort by balance in ascending order", () => {
-      const lowBalance = createDisplaySiteData({
-        id: "low",
-        balance: { USD: 10, CNY: 70 },
-      })
-      const midBalance = createDisplaySiteData({
-        id: "mid",
-        balance: { USD: 50, CNY: 350 },
-      })
-      const highBalance = createDisplaySiteData({
-        id: "high",
-        balance: { USD: 100, CNY: 700 },
-      })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        DATA_TYPE_BALANCE,
-        "USD",
-        "asc",
-      )
-
-      expect(comparator(lowBalance, midBalance)).toBeLessThan(0)
-      expect(comparator(midBalance, highBalance)).toBeLessThan(0)
-      expect(comparator(highBalance, lowBalance)).toBeGreaterThan(0)
-    })
-
-    it("should sort by balance in descending order", () => {
-      const lowBalance = createDisplaySiteData({
-        id: "low",
-        balance: { USD: 10, CNY: 70 },
-      })
-      const midBalance = createDisplaySiteData({
-        id: "mid",
-        balance: { USD: 50, CNY: 350 },
-      })
-      const highBalance = createDisplaySiteData({
-        id: "high",
-        balance: { USD: 100, CNY: 700 },
-      })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        DATA_TYPE_BALANCE,
-        "USD",
-        "desc",
-      )
-
-      expect(comparator(highBalance, midBalance)).toBeLessThan(0)
-      expect(comparator(midBalance, lowBalance)).toBeLessThan(0)
-      expect(comparator(lowBalance, highBalance)).toBeGreaterThan(0)
-    })
-
-    it("should use correct currency for comparison", () => {
-      const accountLowUSD = createDisplaySiteData({
-        id: "low-usd",
-        balance: { USD: 50, CNY: 1000 },
-      })
-      const accountHighUSD = createDisplaySiteData({
-        id: "high-usd",
-        balance: { USD: 100, CNY: 100 },
-      })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      // When comparing USD in ascending order, lower USD value should come first
-      const comparatorUSD = createDynamicSortComparator(
-        config,
-        null,
-        DATA_TYPE_BALANCE,
-        "USD",
-        "asc",
-      )
-      expect(comparatorUSD(accountLowUSD, accountHighUSD)).toBeLessThan(0)
-
-      // When comparing CNY in ascending order, lower CNY value should come first
-      const accountLowCNY = createDisplaySiteData({
-        id: "low-cny",
-        balance: { USD: 100, CNY: 100 },
-      })
-      const accountHighCNY = createDisplaySiteData({
-        id: "high-cny",
-        balance: { USD: 50, CNY: 1000 },
-      })
-
-      const comparatorCNY = createDynamicSortComparator(
-        config,
-        null,
-        DATA_TYPE_BALANCE,
-        "CNY",
-        "asc",
-      )
-      expect(comparatorCNY(accountLowCNY, accountHighCNY)).toBeLessThan(0)
-    })
-  })
-
-  describe("USER_SORT_FIELD criterion - consumption", () => {
-    it.each(["asc", "desc"] as const)(
-      "keeps unavailable consumption last in %s order and prefers complete values on numeric ties",
-      (sortOrder) => {
-        const complete = createDisplaySiteData({
-          id: "complete",
-          todayConsumption: { USD: 5, CNY: 35 },
-        })
-        const partial = createDisplaySiteData({
-          id: "partial",
-          todayConsumption: { USD: 5, CNY: 35 },
-          todayStatsAvailability: buildCompleteTodayStatsAvailability({
-            consumption: {
-              status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
-              reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
-            },
-          }),
-        })
-        const unavailable = createDisplaySiteData({
-          id: "unavailable",
-          todayConsumption: { USD: 999, CNY: 6993 },
-          todayStatsAvailability: buildCompleteTodayStatsAvailability({
-            consumption: {
-              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-              reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
-            },
-          }),
-        })
-        const anotherUnavailable = createDisplaySiteData({
-          id: "another-unavailable",
-          todayConsumption: { USD: 123, CNY: 861 },
-          todayStatsAvailability: buildCompleteTodayStatsAvailability({
-            consumption: {
-              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-              reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
-            },
-          }),
-        })
-        const matchingPartial = createDisplaySiteData({
-          ...partial,
-          id: "matching-partial",
-        })
-        const comparator = createDynamicSortComparator(
-          {
-            ...DEFAULT_SORTING_PRIORITY_CONFIG,
-            criteria: [
-              {
-                id: SortingCriteriaType.USER_SORT_FIELD,
-                enabled: true,
-                priority: 0,
-              },
-            ],
-          },
-          null,
-          DATA_TYPE_CONSUMPTION,
-          "USD",
-          sortOrder,
-        )
-
-        expect(comparator(complete, partial)).toBeLessThan(0)
-        expect(comparator(partial, complete)).toBeGreaterThan(0)
-        expect(comparator(complete, unavailable)).toBeLessThan(0)
-        expect(comparator(unavailable, complete)).toBeGreaterThan(0)
-        expect(comparator(unavailable, anotherUnavailable)).toBe(0)
-        expect(comparator(partial, matchingPartial)).toBe(0)
-      },
+      ),
     )
 
-    it("should sort by consumption in ascending order", () => {
-      const lowConsumption = createDisplaySiteData({
-        id: "low",
-        todayConsumption: { USD: 1, CNY: 7 },
-      })
-      const midConsumption = createDisplaySiteData({
-        id: "mid",
-        todayConsumption: { USD: 5, CNY: 35 },
-      })
-      const highConsumption = createDisplaySiteData({
-        id: "high",
-        todayConsumption: { USD: 10, CNY: 70 },
-      })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        DATA_TYPE_CONSUMPTION,
-        "USD",
-        "asc",
-      )
-
-      expect(comparator(lowConsumption, midConsumption)).toBeLessThan(0)
-      expect(comparator(midConsumption, highConsumption)).toBeLessThan(0)
-      expect(comparator(highConsumption, lowConsumption)).toBeGreaterThan(0)
-    })
-
-    it("should sort by consumption in descending order", () => {
-      const lowConsumption = createDisplaySiteData({
-        id: "low",
-        todayConsumption: { USD: 1, CNY: 7 },
-      })
-      const midConsumption = createDisplaySiteData({
-        id: "mid",
-        todayConsumption: { USD: 5, CNY: 35 },
-      })
-      const highConsumption = createDisplaySiteData({
-        id: "high",
-        todayConsumption: { USD: 10, CNY: 70 },
-      })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        DATA_TYPE_CONSUMPTION,
-        "USD",
-        "desc",
-      )
-
-      expect(comparator(highConsumption, midConsumption)).toBeLessThan(0)
-      expect(comparator(midConsumption, lowConsumption)).toBeLessThan(0)
-      expect(comparator(lowConsumption, highConsumption)).toBeGreaterThan(0)
-    })
+    expect(accounts.map(({ id }) => id)).toEqual(["alpha", "beta"])
   })
 
-  describe("USER_SORT_FIELD criterion - income", () => {
-    it.each(["asc", "desc"] as const)(
-      "keeps unavailable income last in %s order and prefers complete values on numeric ties",
-      (sortOrder) => {
-        const complete = createDisplaySiteData({
-          id: "complete",
-          todayIncome: { USD: 5, CNY: 35 },
-        })
-        const partial = createDisplaySiteData({
-          id: "partial",
-          todayIncome: { USD: 5, CNY: 35 },
-          todayStatsAvailability: buildCompleteTodayStatsAvailability({
-            income: {
-              status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
-              reason: ACCOUNT_TODAY_METRIC_REASONS.RequestFailed,
-            },
-          }),
-        })
-        const unavailable = createDisplaySiteData({
-          id: "unavailable",
-          todayIncome: { USD: 999, CNY: 6993 },
-          todayStatsAvailability: buildCompleteTodayStatsAvailability({
-            income: {
-              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-              reason: ACCOUNT_TODAY_METRIC_REASONS.RequestFailed,
-            },
-          }),
-        })
-        const matchingComplete = createDisplaySiteData({
-          ...complete,
-          id: "matching-complete",
-        })
-        const comparator = createDynamicSortComparator(
-          {
-            ...DEFAULT_SORTING_PRIORITY_CONFIG,
-            criteria: [
-              {
-                id: SortingCriteriaType.USER_SORT_FIELD,
-                enabled: true,
-                priority: 0,
-              },
-            ],
+  it("supports check-in requirement as an active descending sort", () => {
+    const accounts = [
+      buildDisplaySiteData({
+        id: "done",
+        checkIn: buildCheckInConfig({
+          customCheckIn: {
+            url: "https://example.com/checkin",
+            isCheckedInToday: true,
           },
-          null,
-          DATA_TYPE_INCOME,
-          "USD",
-          sortOrder,
-        )
+        }),
+      }),
+      buildDisplaySiteData({
+        id: "required",
+        checkIn: buildCheckInConfig({
+          customCheckIn: {
+            url: "https://example.com/checkin",
+            isCheckedInToday: false,
+          },
+        }),
+      }),
+    ]
 
-        expect(comparator(complete, partial)).toBeLessThan(0)
-        expect(comparator(partial, complete)).toBeGreaterThan(0)
-        expect(comparator(partial, unavailable)).toBeLessThan(0)
-        expect(comparator(unavailable, partial)).toBeGreaterThan(0)
-        expect(comparator(complete, matchingComplete)).toBe(0)
-      },
+    accounts.sort(
+      createDynamicSortComparator(
+        config(),
+        null,
+        DATA_TYPE_CHECK_IN_REQUIREMENT,
+        "USD",
+        "desc",
+      ),
     )
 
-    it("should sort by income in ascending order", () => {
-      const lowIncome = createDisplaySiteData({
-        id: "low",
-        todayIncome: { USD: 1, CNY: 7 },
-      })
-      const midIncome = createDisplaySiteData({
-        id: "mid",
-        todayIncome: { USD: 5, CNY: 35 },
-      })
-      const highIncome = createDisplaySiteData({
-        id: "high",
-        todayIncome: { USD: 10, CNY: 70 },
-      })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        DATA_TYPE_INCOME,
-        "USD",
-        "asc",
-      )
-
-      expect(comparator(lowIncome, midIncome)).toBeLessThan(0)
-      expect(comparator(midIncome, highIncome)).toBeLessThan(0)
-      expect(comparator(highIncome, lowIncome)).toBeGreaterThan(0)
-    })
-
-    it("should sort by income in descending order", () => {
-      const lowIncome = createDisplaySiteData({
-        id: "low",
-        todayIncome: { USD: 1, CNY: 7 },
-      })
-      const midIncome = createDisplaySiteData({
-        id: "mid",
-        todayIncome: { USD: 5, CNY: 35 },
-      })
-      const highIncome = createDisplaySiteData({
-        id: "high",
-        todayIncome: { USD: 10, CNY: 70 },
-      })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        DATA_TYPE_INCOME,
-        "USD",
-        "desc",
-      )
-
-      expect(comparator(highIncome, midIncome)).toBeLessThan(0)
-      expect(comparator(midIncome, lowIncome)).toBeLessThan(0)
-      expect(comparator(lowIncome, highIncome)).toBeGreaterThan(0)
-    })
+    expect(accounts.map(({ id }) => id)).toEqual(["required", "done"])
   })
 
-  describe("Multiple criteria with priority ordering", () => {
-    it("should short-circuit when first criterion produces a difference", () => {
-      const pinnedAccount = createDisplaySiteData({
-        id: "pinned",
-        name: "Zebra",
-        balance: { USD: 10, CNY: 70 },
-      })
-      const unpinnedAccount = createDisplaySiteData({
-        id: "unpinned",
-        name: "Apple",
-        balance: { USD: 100, CNY: 700 },
-      })
+  it("sorts created time and uses account name as the stable final fallback", () => {
+    const accounts = [
+      buildDisplaySiteData({ id: "beta", name: "Beta", created_at: 1 }),
+      buildDisplaySiteData({ id: "alpha", name: "Alpha", created_at: 1 }),
+      buildDisplaySiteData({ id: "newest", name: "Newest", created_at: 2 }),
+    ]
 
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.PINNED,
-            enabled: true,
-            priority: 0,
-          },
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 1,
-          },
-        ],
-      }
-
-      const pinnedAccountIds = ["pinned"]
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-        {},
-        pinnedAccountIds,
-      )
-
-      // Even though unpinnedAccount has a higher balance, pinnedAccount should come first
-      expect(comparator(pinnedAccount, unpinnedAccount)).toBeLessThan(0)
-    })
-
-    it("should evaluate second criterion when first produces 0", () => {
-      const healthyWithLowBalance = createDisplaySiteData({
-        id: "healthy-low",
-        health: { status: SiteHealthStatus.Healthy },
-        balance: { USD: 10, CNY: 70 },
-        name: "Account1",
-      })
-      const healthyWithHighBalance = createDisplaySiteData({
-        id: "healthy-high",
-        health: { status: SiteHealthStatus.Healthy },
-        balance: { USD: 100, CNY: 700 },
-        name: "Account2",
-      })
-
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.HEALTH_STATUS,
-            enabled: true,
-            priority: 0,
-          },
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 1,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        DATA_TYPE_BALANCE,
-        "USD",
-        "desc",
-      )
-
-      // Both have same health, so second criterion (balance desc) applies
-      expect(
-        comparator(healthyWithHighBalance, healthyWithLowBalance),
-      ).toBeLessThan(0)
-    })
-
-    it("should respect priority order", () => {
-      const account1 = createDisplaySiteData({
-        id: "account-1",
-        name: "Zebra",
-        checkIn: createCheckIn({ checked: false }),
-      })
-      const account2 = createDisplaySiteData({
-        id: "account-2",
-        name: "Apple",
-        checkIn: createCheckIn({ checked: true }),
-      })
-
-      // Priority: check-in (priority 0) > name (priority 1)
-      const config = {
-        ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: [
-          {
-            id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
-            enabled: true,
-            priority: 0,
-          },
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 1,
-          },
-        ],
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      // account1 needs check-in, so it should come first despite having name "Zebra" > "Apple"
-      expect(comparator(account1, account2)).toBeLessThan(0)
-    })
-  })
-
-  describe("Disabled criteria", () => {
-    it("should skip disabled criteria", () => {
-      const account1 = createDisplaySiteData({
-        id: "account-1",
-        name: "Zebra",
-        balance: { USD: 10, CNY: 70 },
-      })
-      const account2 = createDisplaySiteData({
-        id: "account-2",
-        name: "Apple",
-        balance: { USD: 100, CNY: 700 },
-      })
-
-      const config: SortingPriorityConfig = {
-        criteria: [
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: false, // Disabled
-            priority: 0,
-          },
-          {
-            id: SortingCriteriaType.HEALTH_STATUS,
-            enabled: true,
-            priority: 1,
-          },
-        ],
-        lastModified: Date.now(),
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      // USER_SORT_FIELD is disabled, so both have same health (should return 0)
-      expect(comparator(account1, account2)).toBe(0)
-    })
-
-    it("should return 0 when all criteria are disabled", () => {
-      const account1 = createDisplaySiteData({ id: "account-1" })
-      const account2 = createDisplaySiteData({ id: "account-2" })
-
-      const config: SortingPriorityConfig = {
-        criteria: [
-          {
-            id: SortingCriteriaType.PINNED,
-            enabled: false,
-            priority: 0,
-          },
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: false,
-            priority: 1,
-          },
-        ],
-        lastModified: Date.now(),
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      expect(comparator(account1, account2)).toBe(0)
-    })
-  })
-
-  describe("Complex sorting scenarios", () => {
-    it("should let matched open tabs outrank the user sort field by default", () => {
-      const matchedAccount = createDisplaySiteData({
-        id: "matched",
-        name: "Zulu",
-        balance: { USD: 1, CNY: 7 },
-      })
-      const unmatchedAccount = createDisplaySiteData({
-        id: "unmatched",
-        name: "Alpha",
-        balance: { USD: 100, CNY: 700 },
-      })
-
-      const comparator = createDynamicSortComparator(
-        DEFAULT_SORTING_PRIORITY_CONFIG,
-        null,
-        "name",
-        "USD",
-        "asc",
-        { matched: 5 },
-      )
-
-      expect(comparator(matchedAccount, unmatchedAccount)).toBeLessThan(0)
-      expect(comparator(unmatchedAccount, matchedAccount)).toBeGreaterThan(0)
-    })
-
-    it("should apply default sorting priority correctly", () => {
-      const account1 = createDisplaySiteData({
-        id: "account-1",
-        name: "Account1",
-        health: { status: SiteHealthStatus.Error },
-        checkIn: createCheckIn({
-          checked: false,
-          customCheckIn: { url: "https://custom.com" },
-        }),
-      })
-      const account2 = createDisplaySiteData({
-        id: "account-2",
-        name: "Account2",
-        health: { status: SiteHealthStatus.Healthy },
-        checkIn: createCheckIn({ checked: true }),
-      })
-
-      const config = DEFAULT_SORTING_PRIORITY_CONFIG
-      const pinnedAccountIds = ["account-1"]
-      const detectedAccount = createSiteAccount({ id: "account-2" })
-
-      const comparator = createDynamicSortComparator(
-        config,
-        detectedAccount,
-        "name",
-        "USD",
-        "asc",
-        {},
-        pinnedAccountIds,
-      )
-
-      // CURRENT_SITE is evaluated before PINNED in the default config, so the detected account wins.
-      expect(comparator(account1, account2)).toBeGreaterThan(0)
-    })
-
-    it("should handle array.sort() correctly", () => {
-      const accounts = [
-        createDisplaySiteData({
-          id: "account-3",
-          name: "Charlie",
-          balance: { USD: 300, CNY: 2100 },
-        }),
-        createDisplaySiteData({
-          id: "account-1",
-          name: "Alpha",
-          balance: { USD: 100, CNY: 700 },
-        }),
-        createDisplaySiteData({
-          id: "account-2",
-          name: "Beta",
-          balance: { USD: 200, CNY: 1400 },
-        }),
-      ]
-
-      const config: SortingPriorityConfig = {
-        criteria: [
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-        lastModified: Date.now(),
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      const sorted = accounts.sort(comparator)
-      expect(sorted.map((a) => a.id)).toEqual([
-        "account-1",
-        "account-2",
-        "account-3",
-      ])
-    })
-
-    it("should handle array.sort() with multiple criteria", () => {
-      const accounts = [
-        createDisplaySiteData({
-          id: "account-3",
-          name: "Charlie",
-          health: { status: SiteHealthStatus.Healthy },
-          balance: { USD: 300, CNY: 2100 },
-        }),
-        createDisplaySiteData({
-          id: "account-1",
-          name: "Alpha",
-          health: { status: SiteHealthStatus.Error },
-          balance: { USD: 100, CNY: 700 },
-        }),
-        createDisplaySiteData({
-          id: "account-2",
-          name: "Beta",
-          health: { status: SiteHealthStatus.Healthy },
-          balance: { USD: 200, CNY: 1400 },
-        }),
-      ]
-
-      const config: SortingPriorityConfig = {
-        criteria: [
-          {
-            id: SortingCriteriaType.HEALTH_STATUS,
-            enabled: true,
-            priority: 0,
-          },
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 1,
-          },
-        ],
-        lastModified: Date.now(),
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      const sorted = accounts.sort(comparator)
-      // account-1 has error (highest priority), then alphabetical order for healthy accounts
-      expect(sorted.map((a) => a.id)).toEqual([
-        "account-1",
-        "account-2",
-        "account-3",
-      ])
-    })
-  })
-
-  describe("Edge cases", () => {
-    it("should handle comparing identical accounts", () => {
-      const account = createDisplaySiteData({ id: "account-1" })
-
-      const config = DEFAULT_SORTING_PRIORITY_CONFIG
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      expect(comparator(account, account)).toBe(0)
-    })
-
-    it("should handle empty pinned accounts list", () => {
-      const account1 = createDisplaySiteData({ id: "account-1" })
-      const account2 = createDisplaySiteData({ id: "account-2" })
-
-      const config = DEFAULT_SORTING_PRIORITY_CONFIG
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-        {},
-        [],
-      )
-
-      expect(() => comparator(account1, account2)).not.toThrow()
-    })
-
-    it("should handle empty matched account scores", () => {
-      const account1 = createDisplaySiteData({ id: "account-1" })
-      const account2 = createDisplaySiteData({ id: "account-2" })
-
-      const config = DEFAULT_SORTING_PRIORITY_CONFIG
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-        {},
-      )
-
-      expect(() => comparator(account1, account2)).not.toThrow()
-    })
-
-    it("should handle accounts with equal balance", () => {
-      const account1 = createDisplaySiteData({
-        id: "account-1",
-        balance: { USD: 100, CNY: 700 },
-        name: "Zebra",
-      })
-      const account2 = createDisplaySiteData({
-        id: "account-2",
-        balance: { USD: 100, CNY: 700 },
-        name: "Apple",
-      })
-
-      const config: SortingPriorityConfig = {
-        criteria: [
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-        lastModified: Date.now(),
-      }
-
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        DATA_TYPE_BALANCE,
-        "USD",
-        "asc",
-      )
-
-      // Balances are equal, so comparison should be 0
-      expect(comparator(account1, account2)).toBe(0)
-    })
-
-    it("should sort by created_at in both directions", () => {
-      const older = createDisplaySiteData({
-        id: "account-1",
-        created_at: 100,
-      })
-      const newer = createDisplaySiteData({
-        id: "account-2",
-        created_at: 200,
-      })
-      const config: SortingPriorityConfig = {
-        criteria: [
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-        lastModified: Date.now(),
-      }
-
-      const descComparator = createDynamicSortComparator(
-        config,
+    accounts.sort(
+      createDynamicSortComparator(
+        config(),
         null,
         DATA_TYPE_CREATED_AT,
         "USD",
         "desc",
-      )
-      const ascComparator = createDynamicSortComparator(
-        config,
-        null,
-        DATA_TYPE_CREATED_AT,
-        "USD",
-        "asc",
-      )
+      ),
+    )
 
-      expect(
-        [older, newer].sort(descComparator).map((item) => item.id),
-      ).toEqual(["account-2", "account-1"])
-      expect([older, newer].sort(ascComparator).map((item) => item.id)).toEqual(
-        ["account-1", "account-2"],
-      )
+    expect(accounts.map(({ id }) => id)).toEqual(["newest", "alpha", "beta"])
+  })
+
+  it("keeps name ordering stable for records without a display name", () => {
+    const accounts = [
+      buildDisplaySiteData({ id: "beta", name: undefined as never }),
+      buildDisplaySiteData({ id: "alpha", name: undefined as never }),
+    ]
+
+    accounts.sort(
+      createDynamicSortComparator(config(), null, "name", "USD", "asc"),
+    )
+
+    expect(accounts.map(({ id }) => id)).toEqual(["alpha", "beta"])
+  })
+
+  it("sorts today's consumption and income numerically", () => {
+    const low = buildDisplaySiteData({
+      id: "low",
+      todayConsumption: { USD: 1, CNY: 1 },
+      todayIncome: { USD: 1, CNY: 1 },
+    })
+    const high = buildDisplaySiteData({
+      id: "high",
+      todayConsumption: { USD: 9, CNY: 9 },
+      todayIncome: { USD: 9, CNY: 9 },
     })
 
-    it("should treat missing created_at as 0 when sorting by created time", () => {
-      const missingTimestamp = createDisplaySiteData({
-        id: "account-1",
-        created_at: undefined,
-      })
-      const validTimestamp = createDisplaySiteData({
-        id: "account-2",
-        created_at: 50,
-      })
-      const config: SortingPriorityConfig = {
-        criteria: [
-          {
-            id: SortingCriteriaType.USER_SORT_FIELD,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-        lastModified: Date.now(),
-      }
+    expect(
+      [high, low]
+        .sort(
+          createDynamicSortComparator(
+            config(),
+            null,
+            DATA_TYPE_CONSUMPTION,
+            "USD",
+            "asc",
+          ),
+        )
+        .map(({ id }) => id),
+    ).toEqual(["low", "high"])
+    expect(
+      [low, high]
+        .sort(
+          createDynamicSortComparator(
+            config(),
+            null,
+            DATA_TYPE_INCOME,
+            "USD",
+            "desc",
+          ),
+        )
+        .map(({ id }) => id),
+    ).toEqual(["high", "low"])
+  })
 
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        DATA_TYPE_CREATED_AT,
-        "USD",
-        "desc",
-      )
+  it("uses manual order before the name fallback", () => {
+    const accounts = [
+      buildDisplaySiteData({ id: "alpha", name: "Alpha" }),
+      buildDisplaySiteData({ id: "beta", name: "Beta" }),
+    ]
 
-      expect(() => comparator(missingTimestamp, validTimestamp)).not.toThrow()
-      expect(
-        [missingTimestamp, validTimestamp]
-          .sort(comparator)
-          .map((item) => item.id),
-      ).toEqual(["account-2", "account-1"])
-    })
+    accounts.sort(
+      createDynamicSortComparator(config(), null, null, "USD", "asc", {}, [], {
+        beta: 0,
+        alpha: 1,
+      }),
+    )
 
-    it("should handle default parameters", () => {
-      const account1 = createDisplaySiteData({ id: "account-1" })
-      const account2 = createDisplaySiteData({ id: "account-2" })
-
-      const config = DEFAULT_SORTING_PRIORITY_CONFIG
-
-      // Call with minimal parameters
-      const comparator = createDynamicSortComparator(
-        config,
-        null,
-        "name",
-        "USD",
-        "asc",
-      )
-
-      expect(() => comparator(account1, account2)).not.toThrow()
-    })
+    expect(accounts.map(({ id }) => id)).toEqual(["beta", "alpha"])
   })
 })

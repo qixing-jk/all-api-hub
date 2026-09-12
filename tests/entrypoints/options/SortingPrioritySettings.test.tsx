@@ -107,18 +107,18 @@ vi.mock(
         <button
           onClick={() =>
             onDragEnd({
-              active: { id: SortingCriteriaType.USER_SORT_FIELD },
-              over: { id: SortingCriteriaType.PINNED },
+              active: { id: SortingCriteriaType.CURRENT_SITE },
+              over: { id: SortingCriteriaType.CUSTOM_REDEEM_URL },
             })
           }
         >
-          reorder-user-before-pinned
+          reorder-current-before-redeem
         </button>
         <button
           onClick={() =>
             onDragEnd({
-              active: { id: SortingCriteriaType.PINNED },
-              over: { id: SortingCriteriaType.PINNED },
+              active: { id: SortingCriteriaType.CURRENT_SITE },
+              over: { id: SortingCriteriaType.CURRENT_SITE },
             })
           }
         >
@@ -136,20 +136,20 @@ const createConfig = (
 ): SortingPriorityConfig => ({
   criteria: criteria ?? [
     {
-      id: SortingCriteriaType.PINNED,
+      id: SortingCriteriaType.CURRENT_SITE,
       enabled: true,
       priority: 1,
     },
     {
-      id: SortingCriteriaType.USER_SORT_FIELD,
+      id: SortingCriteriaType.CUSTOM_REDEEM_URL,
       enabled: false,
       priority: 0,
     },
     {
-      id: "custom-unknown-rule",
+      id: SortingCriteriaType.PINNED,
       enabled: true,
       priority: 2,
-    } as any,
+    },
   ],
   lastModified: 123,
 })
@@ -196,8 +196,13 @@ describe("SortingPrioritySettings", () => {
     const { rerender } = render(<SortingPrioritySettings />)
 
     expect(
-      await screen.findByTestId(`sorting-item-${SortingCriteriaType.PINNED}`),
+      await screen.findByTestId(
+        `sorting-item-${SortingCriteriaType.CURRENT_SITE}`,
+      ),
     ).toBeInTheDocument()
+    expect(
+      screen.queryByTestId(`sorting-item-${SortingCriteriaType.PINNED}`),
+    ).not.toBeInTheDocument()
 
     mockedUseUserPreferencesContext.mockReturnValue(
       createContextValue({
@@ -208,27 +213,30 @@ describe("SortingPrioritySettings", () => {
     rerender(<SortingPrioritySettings />)
 
     expect(
-      screen.getByTestId(`sorting-item-${SortingCriteriaType.PINNED}`),
+      screen.getByTestId(`sorting-item-${SortingCriteriaType.CURRENT_SITE}`),
     ).toBeInTheDocument()
     expect(screen.queryByText("common:status.loading")).toBeNull()
   })
 
-  it("sorts initial criteria by priority and falls back to unknown-rule copy", async () => {
+  it("sorts configurable criteria by priority and hides fixed rules", async () => {
     render(<SortingPrioritySettings />)
 
     const itemLabels = await screen.findAllByTestId(/sorting-item-/)
-    expect(itemLabels).toHaveLength(3)
-    expect(itemLabels[0]).toHaveTextContent("settings:sorting.userCustomSort")
-    expect(itemLabels[1]).toHaveTextContent("settings:sorting.pinnedPriority")
-    expect(itemLabels[2]).toHaveTextContent("custom-unknown-rule")
-    expect(itemLabels[2]).toHaveTextContent("settings:sorting.unknownSortRule")
+    expect(itemLabels).toHaveLength(2)
+    expect(itemLabels[0]).toHaveTextContent("settings:sorting.customRedeemUrl")
+    expect(itemLabels[1]).toHaveTextContent(
+      "settings:sorting.currentSitePriority",
+    )
+    expect(
+      screen.queryByTestId(`sorting-item-${SortingCriteriaType.PINNED}`),
+    ).not.toBeInTheDocument()
   })
 
   it("reorders criteria, persists updated priorities, and shows a toast on success", async () => {
     render(<SortingPrioritySettings />)
 
     fireEvent.click(
-      screen.getByRole("button", { name: "reorder-user-before-pinned" }),
+      screen.getByRole("button", { name: "reorder-current-before-redeem" }),
     )
 
     await waitFor(() => {
@@ -236,19 +244,14 @@ describe("SortingPrioritySettings", () => {
         ...createConfig(),
         criteria: [
           {
-            id: SortingCriteriaType.PINNED,
+            id: SortingCriteriaType.CURRENT_SITE,
             enabled: true,
             priority: 0,
           },
           {
-            id: SortingCriteriaType.USER_SORT_FIELD,
+            id: SortingCriteriaType.CUSTOM_REDEEM_URL,
             enabled: false,
             priority: 1,
-          },
-          {
-            id: "custom-unknown-rule",
-            enabled: true,
-            priority: 2,
           },
         ],
         lastModified: new Date("2026-03-30T07:10:00.000Z").getTime(),
@@ -260,7 +263,7 @@ describe("SortingPrioritySettings", () => {
       "settings:sorting.title",
     )
     expect(
-      screen.getByTestId(`sorting-item-${SortingCriteriaType.PINNED}`),
+      screen.getByTestId(`sorting-item-${SortingCriteriaType.CURRENT_SITE}`),
     ).toHaveTextContent("priority:0")
   })
 
@@ -279,7 +282,7 @@ describe("SortingPrioritySettings", () => {
     render(<SortingPrioritySettings />)
 
     fireEvent.click(
-      screen.getByRole("button", { name: "reorder-user-before-pinned" }),
+      screen.getByRole("button", { name: "reorder-current-before-redeem" }),
     )
 
     await waitFor(() => {
@@ -289,10 +292,12 @@ describe("SortingPrioritySettings", () => {
       )
     })
     expect(
-      screen.getByTestId(`sorting-item-${SortingCriteriaType.USER_SORT_FIELD}`),
+      screen.getByTestId(
+        `sorting-item-${SortingCriteriaType.CUSTOM_REDEEM_URL}`,
+      ),
     ).toHaveTextContent("priority:0")
     expect(
-      screen.getByTestId(`sorting-item-${SortingCriteriaType.PINNED}`),
+      screen.getByTestId(`sorting-item-${SortingCriteriaType.CURRENT_SITE}`),
     ).toHaveTextContent("priority:1")
   })
 
@@ -303,7 +308,7 @@ describe("SortingPrioritySettings", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: `toggle-${SortingCriteriaType.USER_SORT_FIELD}`,
+        name: `toggle-${SortingCriteriaType.CUSTOM_REDEEM_URL}`,
       }),
     )
 
@@ -312,19 +317,14 @@ describe("SortingPrioritySettings", () => {
         ...createConfig(),
         criteria: [
           {
-            id: SortingCriteriaType.USER_SORT_FIELD,
+            id: SortingCriteriaType.CUSTOM_REDEEM_URL,
             enabled: true,
             priority: 0,
           },
           {
-            id: SortingCriteriaType.PINNED,
+            id: SortingCriteriaType.CURRENT_SITE,
             enabled: true,
             priority: 1,
-          },
-          {
-            id: "custom-unknown-rule",
-            enabled: true,
-            priority: 2,
           },
         ],
         lastModified: new Date("2026-03-30T07:10:00.000Z").getTime(),
@@ -332,7 +332,9 @@ describe("SortingPrioritySettings", () => {
     })
 
     expect(
-      screen.getByTestId(`sorting-item-${SortingCriteriaType.USER_SORT_FIELD}`),
+      screen.getByTestId(
+        `sorting-item-${SortingCriteriaType.CUSTOM_REDEEM_URL}`,
+      ),
     ).toHaveTextContent("enabled:false")
     expect(mockedShowUpdateToast).toHaveBeenCalledWith(
       expect.objectContaining({ ok: false }),

@@ -575,30 +575,18 @@
     "title": "Thông báo website"
   },
   "sorting": {
-    "checkInDesc": "Đưa các trang cần điểm danh lên trước",
-    "checkInRequirement": "Nhu cầu điểm danh",
     "currentSiteDesc": "Đưa tài khoản đã đăng nhập trong trình duyệt hiện tại lên đầu danh sách",
     "currentSitePriority": "Ưu tiên tài khoản đang đăng nhập",
     "customCheckInDesc": "Đưa các trang dùng liên kết điểm danh bên ngoài lên trước",
     "customCheckInUrl": "Liên kết điểm danh bên ngoài",
     "customRedeemDesc": "Đưa các trang dùng liên kết đổi mã tùy chỉnh lên trước",
     "customRedeemUrl": "Liên kết đổi mã tùy chỉnh",
-    "customSortDesc": "Sắp xếp theo trường người dùng chọn trong chế độ xem danh sách (ví dụ số dư)",
-    "description": "Định nghĩa thứ tự ưu tiên sắp xếp danh sách tài khoản để tổ chức cách hiển thị tài khoản.",
-    "disabledAccount": "Đưa tài khoản bị tắt xuống cuối",
-    "disabledAccountDesc": "Đưa tất cả tài khoản bị tắt xuống cuối danh sách",
-    "healthDesc": "Sắp xếp theo trạng thái sức khỏe của trang (lỗi > cảnh báo > không rõ > khỏe mạnh)",
-    "healthStatus": "Trạng thái sức khỏe",
-    "manualOrder": "Sắp xếp thủ công",
-    "manualOrderDesc": "Sắp xếp theo thứ tự bạn đã điều chỉnh thủ công trong danh sách tài khoản",
+    "description": "Khi chưa chọn trường sắp xếp, tự động sắp xếp tài khoản trong từng nhóm theo các mức ưu tiên này.",
     "matchedOpenTabs": "Tab đang mở khớp",
     "matchedOpenTabsDesc": "Đưa các tài khoản liên quan khớp với tab đang mở hiện tại (tiêu đề hoặc URL) lên trước",
-    "pinnedDesc": "Đưa tài khoản đã ghim lên đầu danh sách theo thứ tự ghim",
-    "pinnedPriority": "Ưu tiên ghim",
     "priority": "Ưu tiên",
     "title": "Cài đặt ưu tiên sắp xếp",
-    "unknownSortRule": "Quy tắc sắp xếp không xác định",
-    "userCustomSort": "Sắp xếp tùy chỉnh của người dùng"
+    "unknownSortRule": "Quy tắc sắp xếp không xác định"
   },
   "sub2apiManagedSite": {
     "adminCredentialsLink": {

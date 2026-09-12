@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next" // 1. 定义 Context 的值类型
 
 import {
   DATA_TYPE_BALANCE,
+  DATA_TYPE_CHECK_IN_REQUIREMENT,
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_CREATED_AT,
   DATA_TYPE_INCOME,
@@ -69,7 +70,6 @@ import type {
   TagStore,
 } from "~/types"
 import { TODAY_INCOME_ESTIMATE_STATUS } from "~/types/dailyBalanceHistory"
-import { SortingCriteriaType } from "~/types/sorting"
 import {
   getActiveTabs,
   getAllTabs,
@@ -243,23 +243,8 @@ export const AccountDataProvider = ({
   })
   const [tags, setTags] = useState<Tag[]>([])
 
-  const isPinFeatureEnabled = useMemo(
-    () =>
-      sortingPriorityConfig.criteria.some(
-        (item) =>
-          item.id === SortingCriteriaType.PINNED && item.enabled === true,
-      ),
-    [sortingPriorityConfig],
-  )
-
-  const isManualSortFeatureEnabled = useMemo(
-    () =>
-      sortingPriorityConfig.criteria.some(
-        (item) =>
-          item.id === SortingCriteriaType.MANUAL_ORDER && item.enabled === true,
-      ),
-    [sortingPriorityConfig],
-  )
+  const isPinFeatureEnabled = true
+  const isManualSortFeatureEnabled = true
 
   const buildDisplayDataWithResolvedTags = useCallback(
     (nextAccounts: SiteAccount[], currentTagStore: TagStore) =>
@@ -1016,7 +1001,11 @@ export const AccountDataProvider = ({
         newOrder = sortOrder === "asc" ? "desc" : "asc"
         setSortOrder(newOrder)
       } else {
-        newOrder = field === DATA_TYPE_CREATED_AT ? "desc" : "asc"
+        newOrder =
+          field === DATA_TYPE_CREATED_AT ||
+          field === DATA_TYPE_CHECK_IN_REQUIREMENT
+            ? "desc"
+            : "asc"
         setSortField(field)
         setSortOrder(newOrder)
       }
@@ -1044,7 +1033,7 @@ export const AccountDataProvider = ({
 
   const handleReorder = useCallback(
     async (ids: string[]) => {
-      // Ensure pinned accounts stay at top but allow pinned relative order to follow ids
+      // Preserve the fixed pinned segment while saving the visible manual order.
       const pinnedSet = new Set(pinnedAccountIds)
       const visibleAccountIdSet = new Set(ids)
       const allAccountIdSet = new Set(displayData.map((account) => account.id))

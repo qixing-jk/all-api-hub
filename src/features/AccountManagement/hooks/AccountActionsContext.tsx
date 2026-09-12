@@ -87,7 +87,7 @@ export const AccountActionsProvider = ({
 }: {
   children: ReactNode
 }) => {
-  const { loadAccountData } = useAccountDataContext()
+  const { loadAccountData, reloadAccountsById } = useAccountDataContext()
   const [refreshingAccountId, setRefreshingAccountId] = useState<string | null>(
     null,
   )
@@ -229,7 +229,7 @@ export const AccountActionsProvider = ({
         return false
       }
 
-      await loadAccountData()
+      await reloadAccountsById([account.id])
 
       toast.success(
         disabled
@@ -242,7 +242,7 @@ export const AccountActionsProvider = ({
       )
       return true
     },
-    [loadAccountData],
+    [reloadAccountsById],
   )
 
   const handleSetAccountsDisabled = useCallback(
@@ -270,7 +270,7 @@ export const AccountActionsProvider = ({
         return result
       }
 
-      await loadAccountData()
+      await reloadAccountsById(result.updatedIds)
 
       toast.success(
         disabled
@@ -284,7 +284,7 @@ export const AccountActionsProvider = ({
 
       return result
     },
-    [loadAccountData],
+    [reloadAccountsById],
   )
 
   const handleDeleteAccounts = useCallback(

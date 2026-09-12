@@ -446,15 +446,6 @@ function AccountManagementContent({
               >
                 {t("account:actions.scanDuplicates")}
               </Button>
-              <Button
-                onClick={openAddAccount}
-                data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton}
-                analyticsAction={
-                  PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateAccountDialog
-                }
-              >
-                {t("account:addAccount")}
-              </Button>
             </div>
           </ProductAnalyticsScope>
         }
@@ -490,7 +481,10 @@ function AccountManagementContent({
       />
 
       <div className="dark:bg-dark-bg-secondary flex flex-col bg-white">
-        <AccountList initialSearchQuery={searchQuery} />
+        <AccountList
+          initialSearchQuery={searchQuery}
+          onAddAccount={openAddAccount}
+        />
       </div>
 
       <DedupeAccountsDialog

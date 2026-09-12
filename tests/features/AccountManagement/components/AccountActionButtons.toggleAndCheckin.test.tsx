@@ -20,7 +20,7 @@ import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/con
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
-import { render } from "~~/tests/test-utils/render"
+import { act, render } from "~~/tests/test-utils/render"
 
 import {
   accountDataContextValue,
@@ -75,7 +75,8 @@ describe("AccountActionButtons", () => {
     ).closest("button")
     expect(disableButton).not.toBeNull()
 
-    await user.click(disableButton!)
+    act(() => disableButton!.focus())
+    await user.keyboard("{Enter}")
 
     await waitFor(() => {
       expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
@@ -95,6 +96,8 @@ describe("AccountActionButtons", () => {
         },
       )
     })
+    expect(screen.getByRole("menu")).toBeInTheDocument()
+    expect(disableButton).toHaveFocus()
   })
 
   it("tracks failure when toggling account disabled is rejected by storage", async () => {
@@ -124,7 +127,8 @@ describe("AccountActionButtons", () => {
     ).closest("button")
     expect(disableButton).not.toBeNull()
 
-    await user.click(disableButton!)
+    act(() => disableButton!.focus())
+    await user.keyboard("{Enter}")
 
     await waitFor(() => {
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
@@ -137,6 +141,8 @@ describe("AccountActionButtons", () => {
         },
       )
     })
+    expect(screen.getByRole("menu")).toBeInTheDocument()
+    expect(disableButton).toHaveFocus()
   })
 
   it("tracks completion when toggling account pin succeeds", async () => {

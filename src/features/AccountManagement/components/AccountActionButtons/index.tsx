@@ -308,6 +308,8 @@ export default function AccountActionButtons({
   >(null)
   const inviteLinkAbortControllerRef = useRef<AbortController | null>(null)
   const quickCheckinInFlightRef = useRef(false)
+  const disableToggleInFlightRef = useRef(false)
+  const suppressMoreActionsFocusRestoreRef = useRef(false)
   const isMountedRef = useRef(true)
 
   const isAccountDisabled = site.disabled === true
@@ -684,6 +686,8 @@ export default function AccountActionButtons({
   }
 
   const handleDisableToggle = async () => {
+    if (disableToggleInFlightRef.current) return
+    disableToggleInFlightRef.current = true
     const targetState = isAccountDisabled
       ? PRODUCT_ANALYTICS_TARGET_STATES.Enabled
       : PRODUCT_ANALYTICS_TARGET_STATES.Disabled
@@ -697,6 +701,10 @@ export default function AccountActionButtons({
     try {
       const success = await handleSetAccountDisabled(site, !isAccountDisabled)
       if (success) {
+        // The row moves between account groups after this action. Restoring focus
+        // to the old trigger would scroll the page to the row's new position.
+        suppressMoreActionsFocusRestoreRef.current = true
+        setIsMoreActionsOpen(false)
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
             targetState,
@@ -722,6 +730,8 @@ export default function AccountActionButtons({
           targetState,
         },
       })
+    } finally {
+      disableToggleInFlightRef.current = false
     }
   }
 
@@ -1071,6 +1081,12 @@ export default function AccountActionButtons({
 
           <DropdownMenuContent
             align="end"
+            onCloseAutoFocus={(event) => {
+              if (suppressMoreActionsFocusRestoreRef.current) {
+                event.preventDefault()
+                suppressMoreActionsFocusRestoreRef.current = false
+              }
+            }}
             className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary z-50 rounded-lg border border-gray-200 bg-white py-1 shadow-lg focus:outline-none"
           >
             {isAccountDisabled ? (
@@ -1080,6 +1096,7 @@ export default function AccountActionButtons({
                   icon={CircleCheck}
                   label={t("actions.enableAccount")}
                   tone="success"
+                  closeOnSelect={false}
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowDisableToggleMenuItem}
                 />
 
@@ -1258,6 +1275,7 @@ export default function AccountActionButtons({
                   icon={Ban}
                   label={t("actions.disableAccount")}
                   tone="warning"
+                  closeOnSelect={false}
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowDisableToggleMenuItem}
                 />
 

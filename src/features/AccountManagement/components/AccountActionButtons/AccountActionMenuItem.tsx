@@ -34,6 +34,8 @@ interface AccountActionMenuItemProps {
   analyticsAction?: ProductAnalyticsScopedActionConfig
   /** Optional stable selector for E2E action targeting. */
   testId?: string
+  /** Whether selecting the item should close its dropdown menu. */
+  closeOnSelect?: boolean
 }
 
 const menuItemClassName =
@@ -60,6 +62,7 @@ export const AccountActionMenuItem: React.FC<AccountActionMenuItemProps> = ({
   loadingLabel,
   analyticsAction,
   testId,
+  closeOnSelect = true,
 }) => {
   const descriptionId = React.useId()
   const isMenuItemDisabled = disabled || loading
@@ -74,6 +77,9 @@ export const AccountActionMenuItem: React.FC<AccountActionMenuItemProps> = ({
     <DropdownMenuItem
       asChild
       disabled={isMenuItemDisabled}
+      onSelect={(event) => {
+        if (!closeOnSelect) event.preventDefault()
+      }}
       className={
         isMenuItemDisabled
           ? disabledMenuItemClassName

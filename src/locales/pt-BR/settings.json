@@ -577,30 +577,18 @@
     "title": "Anúncios do site"
   },
   "sorting": {
-    "checkInDesc": "Coloque os sites que precisam de check-in na frente",
-    "checkInRequirement": "Requisito de check-in",
     "currentSiteDesc": "Coloque a conta atualmente logada no navegador no topo da lista",
     "currentSitePriority": "Priorizar conta com login atual",
     "customCheckInDesc": "Colocar sites usando links de check-in externo na frente",
     "customCheckInUrl": "URL de check-in externo",
     "customRedeemDesc": "Coloque sites usando links de resgate personalizados na frente",
     "customRedeemUrl": "URL de resgate personalizada",
-    "customSortDesc": "Classificar de acordo com o campo (como saldo) selecionado pelo usuário na visualização de lista",
-    "description": "Definir a prioridade de ordenação das contas na lista para organizar a exibição das contas",
-    "disabledAccount": "Mover contas desativadas para o final",
-    "disabledAccountDesc": "As contas desativadas serão movidas uniformemente para o final da lista",
-    "healthDesc": "Classificar por status de integridade do site (Erro > Aviso > Desconhecido > Saudável)",
-    "healthStatus": "Status de integridade",
-    "manualOrder": "Ordem manual",
-    "manualOrderDesc": "Classifique as contas de acordo com a ordem da lista definida manualmente",
+    "description": "Quando nenhum campo de ordenação estiver selecionado, ordene automaticamente as contas de cada seção por estas prioridades.",
     "matchedOpenTabs": "Guias abertas correspondentes",
     "matchedOpenTabsDesc": "Coloque contas relacionadas que correspondam às guias abertas atualmente (por título ou URL) na frente",
-    "pinnedDesc": "Coloque as contas fixadas no topo da lista na ordem em que foram fixadas",
-    "pinnedPriority": "Prioridade de fixação",
     "priority": "Prioridade",
     "title": "Configurações de prioridade de classificação",
-    "unknownSortRule": "Regra de classificação desconhecida",
-    "userCustomSort": "Classificação personalizada do usuário"
+    "unknownSortRule": "Regra de classificação desconhecida"
   },
   "sub2apiManagedSite": {
     "adminCredentialsLink": {

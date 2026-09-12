@@ -577,30 +577,18 @@
     "title": "Anuncios del sitio"
   },
   "sorting": {
-    "checkInDesc": "Coloca al frente los sitios que necesitan check-in",
-    "checkInRequirement": "Requisito de check-in",
     "currentSiteDesc": "Coloca arriba en la lista la cuenta actualmente iniciada en el navegador",
     "currentSitePriority": "Priorizar cuenta actualmente iniciada",
     "customCheckInDesc": "Coloca al frente los sitios que usan enlaces externos de check-in",
     "customCheckInUrl": "URL externa de check-in",
     "customRedeemDesc": "Coloca al frente los sitios que usan enlaces de canje personalizados",
     "customRedeemUrl": "URL de canje personalizada",
-    "customSortDesc": "Ordena según el campo (como saldo) seleccionado por el usuario en la vista de lista",
-    "description": "Define la prioridad de ordenamiento de cuentas en la lista para organizar su visualización",
-    "disabledAccount": "Mover cuentas deshabilitadas al final",
-    "disabledAccountDesc": "Las cuentas deshabilitadas se moverán uniformemente al final de la lista",
-    "healthDesc": "Ordenar por estado de salud del sitio (Error > Advertencia > Desconocido > Saludable)",
-    "healthStatus": "Estado de salud",
-    "manualOrder": "Orden manual",
-    "manualOrderDesc": "Ordena cuentas según tu orden de lista definido manualmente",
+    "description": "Cuando no se selecciona un campo de ordenamiento, ordena automáticamente las cuentas de cada sección según estas prioridades.",
     "matchedOpenTabs": "Pestañas abiertas coincidentes",
     "matchedOpenTabsDesc": "Coloca al frente cuentas relacionadas que coincidan con las pestañas abiertas actuales (por título o URL)",
-    "pinnedDesc": "Coloca cuentas fijadas arriba de la lista en el orden en que fueron fijadas",
-    "pinnedPriority": "Prioridad fijada",
     "priority": "Prioridad",
     "title": "Ajustes de prioridad de ordenamiento",
-    "unknownSortRule": "Regla de ordenamiento desconocida",
-    "userCustomSort": "Orden personalizado del usuario"
+    "unknownSortRule": "Regla de ordenamiento desconocida"
   },
   "sub2apiManagedSite": {
     "adminCredentialsLink": {

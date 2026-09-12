@@ -13,7 +13,7 @@ interface VirtualizedAccountListProps<Item> {
 const VirtualizedCardList = forwardRef<HTMLDivElement, ListProps>(
   function VirtualizedCardList({ children, ...props }, ref) {
     return (
-      <CardList ref={ref} {...props}>
+      <CardList ref={ref} dividers={false} {...props} className="space-y-0">
         {children}
       </CardList>
     )

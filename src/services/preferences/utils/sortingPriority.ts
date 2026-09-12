@@ -1,7 +1,9 @@
 import {
   DATA_TYPE_BALANCE,
+  DATA_TYPE_CHECK_IN_REQUIREMENT,
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_CREATED_AT,
+  DATA_TYPE_HEALTH_STATUS,
   DATA_TYPE_INCOME,
 } from "~/constants"
 import {
@@ -34,17 +36,17 @@ import {
 export const DEFAULT_SORTING_PRIORITY_CONFIG: SortingPriorityConfig = {
   criteria: [
     {
-      id: SortingCriteriaType.DISABLED_ACCOUNT,
+      id: SortingCriteriaType.CUSTOM_CHECK_IN_URL,
       enabled: true,
       priority: 0,
     },
     {
-      id: SortingCriteriaType.CURRENT_SITE,
+      id: SortingCriteriaType.CUSTOM_REDEEM_URL,
       enabled: true,
       priority: 1,
     },
     {
-      id: SortingCriteriaType.PINNED,
+      id: SortingCriteriaType.CURRENT_SITE,
       enabled: true,
       priority: 2,
     },
@@ -53,38 +55,32 @@ export const DEFAULT_SORTING_PRIORITY_CONFIG: SortingPriorityConfig = {
       enabled: true,
       priority: 3,
     },
-    {
-      id: SortingCriteriaType.USER_SORT_FIELD,
-      enabled: true,
-      priority: 4,
-    },
-    {
-      id: SortingCriteriaType.MANUAL_ORDER,
-      enabled: true,
-      priority: 5,
-    },
-    {
-      id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
-      enabled: true,
-      priority: 6,
-    },
-    {
-      id: SortingCriteriaType.HEALTH_STATUS,
-      enabled: true,
-      priority: 7,
-    },
-    {
-      id: SortingCriteriaType.CUSTOM_CHECK_IN_URL,
-      enabled: true,
-      priority: 8,
-    },
-    {
-      id: SortingCriteriaType.CUSTOM_REDEEM_URL,
-      enabled: true,
-      priority: 9,
-    },
   ],
   lastModified: Date.now(),
+}
+
+/** Criteria that remain user-configurable for automatic account ordering. */
+export const CONFIGURABLE_SORTING_CRITERIA = [
+  SortingCriteriaType.CUSTOM_CHECK_IN_URL,
+  SortingCriteriaType.CUSTOM_REDEEM_URL,
+  SortingCriteriaType.CURRENT_SITE,
+  SortingCriteriaType.MATCHED_OPEN_TABS,
+] as const
+
+const CONFIGURABLE_SORTING_CRITERIA_SET = new Set<SortingCriteriaType>(
+  CONFIGURABLE_SORTING_CRITERIA,
+)
+
+export type AccountSortGroup = "pinned" | "normal" | "disabled"
+
+/** Resolves the fixed account section before any within-section ordering. */
+export function getAccountSortGroup(
+  account: DisplaySiteData,
+  pinnedAccountIds: ReadonlySet<string>,
+): AccountSortGroup {
+  if (account.disabled === true) return "disabled"
+  if (pinnedAccountIds.has(account.id)) return "pinned"
+  return "normal"
 }
 
 /**
@@ -119,6 +115,29 @@ function isNotCheckedIn(item: DisplaySiteData): boolean {
   return siteNotCheckedIn || customNotCheckedIn
 }
 
+/** Compares health using the established error-to-healthy severity order. */
+function compareHealthStatus(a: DisplaySiteData, b: DisplaySiteData): number {
+  const healthPriority = { error: 1, warning: 2, unknown: 3, healthy: 4 }
+  const healthA = healthPriority[a.health?.status] || 4
+  const healthB = healthPriority[b.health?.status] || 4
+  return healthA - healthB
+}
+
+/** Keeps name ordering deterministic for stale or partially migrated records. */
+function compareAccountNames(
+  a: DisplaySiteData,
+  b: DisplaySiteData,
+  sortOrder: "asc" | "desc",
+): number {
+  if (typeof a.name === "string" && typeof b.name === "string") {
+    return compareAccountDisplayNames(a, b, sortOrder)
+  }
+
+  const direction = sortOrder === "asc" ? 1 : -1
+  const nameComparison = (a.name ?? "").localeCompare(b.name ?? "")
+  return (nameComparison || a.id.localeCompare(b.id)) * direction
+}
+
 /**
  * Compare two display records using the user-selected sort field.
  * Keeps currency-aware ordering logic in a single place so every criteria can
@@ -138,7 +157,18 @@ function compareByUserSortField(
 ) {
   switch (sortField) {
     case "name":
-      return compareAccountDisplayNames(a, b, sortOrder)
+      return compareAccountNames(a, b, sortOrder)
+    case DATA_TYPE_CHECK_IN_REQUIREMENT: {
+      const aNotCheckedIn = isNotCheckedIn(a) ? 1 : 0
+      const bNotCheckedIn = isNotCheckedIn(b) ? 1 : 0
+      return sortOrder === "asc"
+        ? aNotCheckedIn - bNotCheckedIn
+        : bNotCheckedIn - aNotCheckedIn
+    }
+    case DATA_TYPE_HEALTH_STATUS: {
+      const comparison = compareHealthStatus(a, b)
+      return sortOrder === "asc" ? comparison : -comparison
+    }
     case DATA_TYPE_BALANCE:
       return sortOrder === "asc"
         ? a.balance[currencyType] - b.balance[currencyType]
@@ -215,11 +245,7 @@ function compareTodayMetric(
  * @param b Second display entry for comparison.
  * @param criteriaId Sorting criteria identifier.
  * @param detectedAccount Account currently detected in browser context.
- * @param userSortField Field selected by user for tie-breaking, or null when field sorting is cleared.
- * @param currencyType Currency type referenced by balance/consumption fields.
- * @param sortOrder Sort direction (`asc` or `desc`).
  * @param matchedAccountScores Map of account IDs to open-tab match scores.
- * @param pinnedAccountIndices Map of pinned account IDs to their priority index.
  * @param manualOrderIndices Optional map of manual order positions by account ID.
  */
 function applySortingCriteria(
@@ -227,54 +253,14 @@ function applySortingCriteria(
   b: DisplaySiteData,
   criteriaId: SortingCriteriaType,
   detectedAccount: SiteAccount | null,
-  userSortField: ActiveSortField,
-  currencyType: CurrencyType,
-  sortOrder: "asc" | "desc",
   matchedAccountScores: Record<string, number>,
-  pinnedAccountIndices: Record<string, number>,
   manualOrderIndices?: Record<string, number>,
 ): number {
   switch (criteriaId) {
-    case SortingCriteriaType.DISABLED_ACCOUNT: {
-      const aDisabled = a.disabled === true ? 1 : 0
-      const bDisabled = b.disabled === true ? 1 : 0
-      // Disabled accounts should be pushed to the bottom.
-      return aDisabled - bDisabled
-    }
-
-    case SortingCriteriaType.PINNED: {
-      const indexA = pinnedAccountIndices[a.id]
-      const indexB = pinnedAccountIndices[b.id]
-      const isPinnedA = typeof indexA === "number"
-      const isPinnedB = typeof indexB === "number"
-
-      if (isPinnedA && isPinnedB) {
-        return indexA - indexB
-      }
-      if (isPinnedA) return -1
-      if (isPinnedB) return 1
-      return 0
-    }
-
     case SortingCriteriaType.CURRENT_SITE:
       if (a.id === detectedAccount?.id) return -1
       if (b.id === detectedAccount?.id) return 1
       return 0
-
-    case SortingCriteriaType.HEALTH_STATUS: {
-      const healthPriority = { error: 1, warning: 2, unknown: 3, healthy: 4 }
-      const healthA = healthPriority[a.health?.status] || 4
-      const healthB = healthPriority[b.health?.status] || 4
-      return healthA - healthB
-    }
-
-    case SortingCriteriaType.CHECK_IN_REQUIREMENT: {
-      const aNotCheckedIn = isNotCheckedIn(a) ? 1 : 0
-      const bNotCheckedIn = isNotCheckedIn(b) ? 1 : 0
-
-      // 未签到的排前面
-      return bNotCheckedIn - aNotCheckedIn
-    }
 
     case SortingCriteriaType.CUSTOM_CHECK_IN_URL: {
       const customCheckInA = a?.checkIn?.customCheckIn?.url ? 1 : 0
@@ -293,16 +279,6 @@ function applySortingCriteria(
       const scoreB = matchedAccountScores[b.id] || 0
       return scoreB - scoreA
     } // Higher score = higher priority
-
-    case SortingCriteriaType.USER_SORT_FIELD:
-      if (userSortField === null) return 0
-      return compareByUserSortField(
-        a,
-        b,
-        userSortField,
-        currencyType,
-        sortOrder,
-      )
 
     case SortingCriteriaType.MANUAL_ORDER: {
       const manualIndexA = manualOrderIndices?.[a.id]
@@ -343,35 +319,59 @@ export function createDynamicSortComparator(
   pinnedAccountIds: string[] = [],
   manualOrderIndices: Record<string, number> = {},
 ) {
-  const enabledCriteria = config.criteria
-    .filter((c) => c.enabled)
+  const enabledAutomaticCriteria = config.criteria
+    .filter(
+      (criterion) =>
+        criterion.enabled &&
+        CONFIGURABLE_SORTING_CRITERIA_SET.has(criterion.id),
+    )
     .sort((c1, c2) => c1.priority - c2.priority)
-  const pinnedAccountIndices = pinnedAccountIds.reduce<Record<string, number>>(
-    (indices, id, index) => {
-      if (typeof indices[id] !== "number") {
-        indices[id] = index
-      }
-      return indices
-    },
-    {},
-  )
+  const pinnedAccountIdSet = new Set(pinnedAccountIds)
+  const groupRank: Record<AccountSortGroup, number> = {
+    pinned: 0,
+    normal: 1,
+    disabled: 2,
+  }
 
   return (a: DisplaySiteData, b: DisplaySiteData): number => {
-    for (const criteria of enabledCriteria) {
-      const comparison = applySortingCriteria(
+    const groupComparison =
+      groupRank[getAccountSortGroup(a, pinnedAccountIdSet)] -
+      groupRank[getAccountSortGroup(b, pinnedAccountIdSet)]
+    if (groupComparison !== 0) return groupComparison
+
+    if (userSortField !== null) {
+      const userComparison = compareByUserSortField(
         a,
         b,
-        criteria.id,
-        detectedAccount,
         userSortField,
         currencyType,
         sortOrder,
-        matchedAccountScores,
-        pinnedAccountIndices,
-        manualOrderIndices,
       )
-      if (comparison !== 0) return comparison
+      if (userComparison !== 0) return userComparison
+    } else {
+      for (const criteria of enabledAutomaticCriteria) {
+        const comparison = applySortingCriteria(
+          a,
+          b,
+          criteria.id,
+          detectedAccount,
+          matchedAccountScores,
+          manualOrderIndices,
+        )
+        if (comparison !== 0) return comparison
+      }
     }
-    return 0
+
+    const manualComparison = applySortingCriteria(
+      a,
+      b,
+      SortingCriteriaType.MANUAL_ORDER,
+      detectedAccount,
+      matchedAccountScores,
+      manualOrderIndices,
+    )
+    if (manualComparison !== 0) return manualComparison
+
+    return compareAccountNames(a, b, "asc")
   }
 }

@@ -194,27 +194,28 @@
       "refreshCashflow": "Click to refresh today's consumption",
       "refreshIncome": "Click to refresh today's income"
     },
-    "clearSort": "Clear sort",
     "dragHandle": "Drag to reorder",
     "header": {
-      "account": "Account",
       "balance": "Balance",
+      "checkInRequirement": "Check-in Requirement",
       "createdAt": "Created At",
+      "healthStatus": "Health Status",
       "todayConsumption": "Today's Consumption",
       "todayIncome": "Today's Income"
     },
     "reorder": "Reorder",
     "reorderDone": "Done reordering",
     "reorderFailed": "Couldn't save the account order. The previous order was restored. Try again.",
+    "reorderGroupBoundary": "Accounts can only be reordered within the same group. Change the account's pinned or disabled status before moving it to another group.",
+    "reorderGroupHint": "Pinned, regular, and disabled accounts reorder within their own groups.",
     "reorderLoadFailed": "Reordering could not be started. Please try again.",
-    "reorderPinnedBoundary": "Pinned and unpinned accounts are reordered separately. Change the account's pinned status before moving it between groups.",
-    "reorderPinnedHint": "Pinned and unpinned accounts reorder within their own groups.",
     "reorderSuccess": "Account order saved.",
     "reorderSuccessFieldSortCleared": "Account order saved. The active field sort was cleared so your manual order can take effect.",
     "reorderUnavailableInPopup": "Reordering is unavailable in the popup. Open the side panel or account management page to reorder accounts.",
     "reorderUnavailableInSettings": "Enable manual ordering in sorting priorities to reorder accounts.",
     "reorderUnavailableWhileBulk": "Exit bulk mode before reordering accounts.",
     "reorderUnavailableWhileSearch": "Clear the search before reordering accounts.",
+    "resetSort": "Reset to default order",
     "site": {
       "checkedInToday": "Checked in today, click to view",
       "checkInStatusOutdated": "Check-in status wasn't detected today (last check time: {{time}}). Click to refresh",
@@ -230,7 +231,8 @@
       "status": "Status",
       "unknown": "Unknown"
     },
-    "sort": "Sort"
+    "sortMenu": "Sort by",
+    "toggleSortOrder": "Toggle sort order"
   },
   "refresh": {
     "refreshComplete": "Refresh complete: {{success}} success, {{failed}} failed",

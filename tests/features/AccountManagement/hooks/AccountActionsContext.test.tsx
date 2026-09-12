@@ -27,6 +27,7 @@ import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 // check-in feedback.
 const {
   mockLoadAccountData,
+  mockReloadAccountsById,
   mockSendExternalCheckInMessage,
   mockToast,
   mockDeleteAccounts,
@@ -41,6 +42,7 @@ const {
   mockWithProtectionBypassUserCommand,
 } = vi.hoisted(() => ({
   mockLoadAccountData: vi.fn(),
+  mockReloadAccountsById: vi.fn(),
   mockSendExternalCheckInMessage: vi.fn(),
   mockToast: {
     success: vi.fn(),
@@ -96,6 +98,7 @@ vi.mock(
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => ({
     loadAccountData: mockLoadAccountData,
+    reloadAccountsById: mockReloadAccountsById,
   }),
 }))
 
@@ -700,7 +703,9 @@ describe("AccountActionsContext", () => {
     expect(mockSetAccountDisabled).toHaveBeenNthCalledWith(2, "toggle-1", false)
     expect(disableResult).toBe(true)
     expect(enableResult).toBe(true)
-    expect(mockLoadAccountData).toHaveBeenCalledTimes(2)
+    expect(mockReloadAccountsById).toHaveBeenNthCalledWith(1, ["toggle-1"])
+    expect(mockReloadAccountsById).toHaveBeenNthCalledWith(2, ["toggle-1"])
+    expect(mockLoadAccountData).not.toHaveBeenCalled()
     expect(mockToast.success).toHaveBeenNthCalledWith(
       1,
       "messages:toast.success.accountDisabled",
@@ -725,6 +730,7 @@ describe("AccountActionsContext", () => {
     })
 
     expect(result).toBe(false)
+    expect(mockReloadAccountsById).not.toHaveBeenCalled()
     expect(mockLoadAccountData).not.toHaveBeenCalled()
     expect(mockToast.error).toHaveBeenCalledWith(
       "messages:toast.error.operationFailed",
@@ -755,7 +761,8 @@ describe("AccountActionsContext", () => {
       ["bulk-a", "bulk-c"],
       true,
     )
-    expect(mockLoadAccountData).toHaveBeenCalledTimes(1)
+    expect(mockReloadAccountsById).toHaveBeenCalledWith(["bulk-a", "bulk-c"])
+    expect(mockLoadAccountData).not.toHaveBeenCalled()
     expect(mockToast.success).toHaveBeenCalledWith(
       "messages:toast.success.accountsDisabled",
     )
@@ -785,7 +792,11 @@ describe("AccountActionsContext", () => {
       ["enable-a", "enable-c"],
       false,
     )
-    expect(mockLoadAccountData).toHaveBeenCalledTimes(1)
+    expect(mockReloadAccountsById).toHaveBeenCalledWith([
+      "enable-a",
+      "enable-c",
+    ])
+    expect(mockLoadAccountData).not.toHaveBeenCalled()
     expect(mockToast.success).toHaveBeenCalledWith(
       "messages:toast.success.accountsEnabled",
     )
@@ -807,6 +818,7 @@ describe("AccountActionsContext", () => {
     })
 
     expect(mockLoadAccountData).not.toHaveBeenCalled()
+    expect(mockReloadAccountsById).not.toHaveBeenCalled()
     expect(mockToast.error).toHaveBeenCalledWith(
       "messages:toast.error.operationFailedGeneric",
     )

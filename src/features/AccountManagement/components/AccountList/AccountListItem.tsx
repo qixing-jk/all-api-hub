@@ -5,7 +5,6 @@ import { useDevice } from "~/contexts/DeviceContext"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
 import type { SearchResultWithHighlight } from "~/features/AccountManagement/hooks/useAccountSearch"
 import { getAccountManagementListItemTestId } from "~/features/AccountManagement/testIds"
-import { cn } from "~/lib/utils"
 import type { DisplaySiteData } from "~/types"
 
 import BalanceDisplay from "./BalanceDisplay"
@@ -31,9 +30,7 @@ const AccountListItem: React.FC<AccountListItemProps> = React.memo(
     return (
       <CardItem
         padding="none"
-        className={cn("group touch-manipulation transition-all", {
-          "opacity-60": site.disabled,
-        })}
+        className="group touch-manipulation transition-all"
         data-testid={getAccountManagementListItemTestId(site.id)}
         data-site-url={site.baseUrl}
         data-site-type={site.siteType}

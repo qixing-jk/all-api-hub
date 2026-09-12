@@ -120,7 +120,7 @@ function createV0Preferences(
 
 describe("preferencesMigration", () => {
   it("tracks the current preferences schema version", () => {
-    expect(CURRENT_PREFERENCES_VERSION).toBe(28)
+    expect(CURRENT_PREFERENCES_VERSION).toBe(29)
   })
 
   describe("getPreferencesVersion", () => {
@@ -442,7 +442,7 @@ describe("preferencesMigration", () => {
       })
     })
 
-    it("processes v1 preferences with sorting config migration", () => {
+    it("processes v1 preferences into the configurable sorting rules", () => {
       const prefs = createV0Preferences({
         preferencesVersion: 1,
         sortingPriorityConfig: {
@@ -460,11 +460,14 @@ describe("preferencesMigration", () => {
       const result = migratePreferences(prefs)
 
       expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
-      // PINNED should be added during migration
-      const hasPinned = result.sortingPriorityConfig?.criteria.some(
-        (c) => c.id === SortingCriteriaType.PINNED,
-      )
-      expect(hasPinned).toBe(true)
+      expect(
+        result.sortingPriorityConfig?.criteria.map(({ id }) => id),
+      ).toEqual([
+        SortingCriteriaType.CURRENT_SITE,
+        SortingCriteriaType.CUSTOM_CHECK_IN_URL,
+        SortingCriteriaType.CUSTOM_REDEEM_URL,
+        SortingCriteriaType.MATCHED_OPEN_TABS,
+      ])
     })
 
     it("handles v2 preferences with WebDAV config migration", () => {
@@ -882,7 +885,7 @@ describe("preferencesMigration", () => {
       expect(result).not.toHaveProperty("webdavUrl")
     })
 
-    it("adds PINNED criterion during v0->v1 and v1->v2 migrations", () => {
+    it("removes fixed criteria after all sorting migrations", () => {
       const prefs = createV0Preferences({
         sortingPriorityConfig: {
           criteria: [
@@ -898,12 +901,11 @@ describe("preferencesMigration", () => {
 
       const result = migratePreferences(prefs)
 
-      const pinnedCriterion = result.sortingPriorityConfig?.criteria.find(
-        (c) => c.id === SortingCriteriaType.PINNED,
+      expect(result.sortingPriorityConfig?.criteria).toEqual(
+        expect.not.arrayContaining([
+          expect.objectContaining({ id: SortingCriteriaType.PINNED }),
+        ]),
       )
-
-      expect(pinnedCriterion).toBeDefined()
-      expect(pinnedCriterion?.enabled).toBe(true)
     })
 
     it("normalizes sorting priorities after migrations", () => {
@@ -1010,7 +1012,7 @@ describe("preferencesMigration", () => {
       expect(result).toEqual(prefs)
     })
 
-    it("reorders legacy MANUAL_ORDER priority during v17->v18 migration", () => {
+    it("removes fixed sorting rules from a legacy v17 config", () => {
       const prefs = createV0Preferences({
         preferencesVersion: 17,
         sortingPriorityConfig: {
@@ -1076,13 +1078,12 @@ describe("preferencesMigration", () => {
       )
 
       expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
-      expect(ids?.indexOf(SortingCriteriaType.MATCHED_OPEN_TABS)).toBe(3)
-      expect(ids?.indexOf(SortingCriteriaType.USER_SORT_FIELD)).toBe(4)
-      expect(ids?.indexOf(SortingCriteriaType.MANUAL_ORDER)).toBe(5)
-      expect(ids?.indexOf(SortingCriteriaType.CHECK_IN_REQUIREMENT)).toBe(6)
-      expect(ids?.indexOf(SortingCriteriaType.HEALTH_STATUS)).toBe(7)
-      expect(ids?.indexOf(SortingCriteriaType.CUSTOM_CHECK_IN_URL)).toBe(8)
-      expect(ids?.indexOf(SortingCriteriaType.CUSTOM_REDEEM_URL)).toBe(9)
+      expect(ids).toEqual([
+        SortingCriteriaType.CURRENT_SITE,
+        SortingCriteriaType.MATCHED_OPEN_TABS,
+        SortingCriteriaType.CUSTOM_CHECK_IN_URL,
+        SortingCriteriaType.CUSTOM_REDEEM_URL,
+      ])
     })
 
     it("initializes task notification preferences during v18 to v19 migration", () => {
