@@ -836,8 +836,8 @@ export default function AccountList({
             : null)
 
   const sortedIds = useMemo(
-    () => displayedResults.map((item) => item.account.id),
-    [displayedResults],
+    () => groupedDisplayItems.map((item) => item.result.account.id),
+    [groupedDisplayItems],
   )
 
   const accountListAnalyticsBaseContext = {
@@ -1193,8 +1193,8 @@ export default function AccountList({
     const newIndex = sortedIds.indexOf(over.id as string)
     if (oldIndex === -1 || newIndex === -1) return
 
-    const activeAccount = displayedResults[oldIndex]?.account
-    const overAccount = displayedResults[newIndex]?.account
+    const activeAccount = groupedDisplayItems[oldIndex]?.result.account
+    const overAccount = groupedDisplayItems[newIndex]?.result.account
     const crossedGroupBoundary =
       activeAccount !== undefined &&
       overAccount !== undefined &&

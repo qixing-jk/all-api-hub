@@ -1221,10 +1221,10 @@ describe("AccountList", () => {
     })
 
     expect(handleReorder).toHaveBeenCalledWith([
-      "disabled-beta",
       "enabled-gamma",
       "enabled-alpha",
       "unsynced-delta",
+      "disabled-beta",
     ])
     expect(
       screen.getAllByTestId(TEST_IDS.accountRow).map((row) => row.textContent),
@@ -1321,10 +1321,46 @@ describe("AccountList", () => {
     expect(handleReorder).toHaveBeenCalledWith([
       "enabled-gamma",
       "enabled-alpha",
-      "disabled-beta",
       "unsynced-delta",
+      "disabled-beta",
     ])
     expect(toastDefaultMock).not.toHaveBeenCalled()
+  })
+
+  it("uses the rendered group order when source accounts are interleaved", async () => {
+    const user = userEvent.setup()
+    const handleReorder = vi.fn().mockResolvedValue(undefined)
+    const contextValue = createAccountDataContextValue({
+      handleReorder,
+      isManualSortFeatureEnabled: true,
+      pinnedAccountIds: ["enabled-alpha", "enabled-gamma"],
+      sortField: null,
+    })
+    const [alpha, beta, gamma, delta] = contextValue.sortedData
+    contextValue.sortedData = [delta, alpha, beta, gamma]
+    mockUseAccountDataContext.mockReturnValue(contextValue)
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:list.reorder" }),
+    )
+    expect(await screen.findByTestId(TEST_IDS.dndContext)).toBeInTheDocument()
+
+    await act(async () => {
+      dndState.onDragEnd?.({
+        active: { id: "enabled-alpha" },
+        over: { id: "enabled-gamma" },
+      })
+      await Promise.resolve()
+    })
+
+    expect(handleReorder).toHaveBeenCalledWith([
+      "enabled-gamma",
+      "enabled-alpha",
+      "unsynced-delta",
+      "disabled-beta",
+    ])
   })
 
   it("restores the previous order and explains a failed reorder save", async () => {

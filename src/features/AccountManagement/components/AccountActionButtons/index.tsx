@@ -308,6 +308,7 @@ export default function AccountActionButtons({
   >(null)
   const inviteLinkAbortControllerRef = useRef<AbortController | null>(null)
   const quickCheckinInFlightRef = useRef(false)
+  const disableToggleInFlightRef = useRef(false)
   const suppressMoreActionsFocusRestoreRef = useRef(false)
   const isMountedRef = useRef(true)
 
@@ -685,9 +686,8 @@ export default function AccountActionButtons({
   }
 
   const handleDisableToggle = async () => {
-    // The row moves between account groups after this action. Restoring focus to
-    // the old menu trigger would make the browser scroll to its new position.
-    suppressMoreActionsFocusRestoreRef.current = true
+    if (disableToggleInFlightRef.current) return
+    disableToggleInFlightRef.current = true
     const targetState = isAccountDisabled
       ? PRODUCT_ANALYTICS_TARGET_STATES.Enabled
       : PRODUCT_ANALYTICS_TARGET_STATES.Disabled
@@ -701,6 +701,10 @@ export default function AccountActionButtons({
     try {
       const success = await handleSetAccountDisabled(site, !isAccountDisabled)
       if (success) {
+        // The row moves between account groups after this action. Restoring focus
+        // to the old trigger would scroll the page to the row's new position.
+        suppressMoreActionsFocusRestoreRef.current = true
+        setIsMoreActionsOpen(false)
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
             targetState,
@@ -726,6 +730,8 @@ export default function AccountActionButtons({
           targetState,
         },
       })
+    } finally {
+      disableToggleInFlightRef.current = false
     }
   }
 
@@ -1090,6 +1096,7 @@ export default function AccountActionButtons({
                   icon={CircleCheck}
                   label={t("actions.enableAccount")}
                   tone="success"
+                  closeOnSelect={false}
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowDisableToggleMenuItem}
                 />
 
@@ -1268,6 +1275,7 @@ export default function AccountActionButtons({
                   icon={Ban}
                   label={t("actions.disableAccount")}
                   tone="warning"
+                  closeOnSelect={false}
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowDisableToggleMenuItem}
                 />
 
