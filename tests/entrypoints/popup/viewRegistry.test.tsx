@@ -195,6 +195,7 @@ describe("usePopupViewRegistry", () => {
     expect(accountListPropsMock).toHaveBeenLastCalledWith(
       expect.objectContaining({
         reorderUnavailableReason: "account:list.reorderUnavailableInPopup",
+        showAddAccountAction: false,
         virtualScrollParent: scrollParent,
       }),
     )

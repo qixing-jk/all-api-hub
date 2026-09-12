@@ -139,6 +139,7 @@ export function usePopupViewRegistry({
       content: (
         <AccountList
           reorderUnavailableReason={reorderUnavailableReason}
+          showAddAccountAction={false}
           virtualScrollParent={scrollParent}
         />
       ),

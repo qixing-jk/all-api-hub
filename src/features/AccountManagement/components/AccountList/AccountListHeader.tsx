@@ -57,6 +57,7 @@ interface AccountListHeaderProps {
   showTodayCashflow: boolean
   sortField: ActiveSortField
   sortOrder: SortOrder
+  showAddAccountAction: boolean
 }
 
 /** Compact account-list actions with a single unified sort control. */
@@ -78,6 +79,7 @@ export function AccountListHeader({
   showTodayCashflow,
   sortField,
   sortOrder,
+  showAddAccountAction,
 }: AccountListHeaderProps) {
   const { t } = useTranslation(["account", "common"])
   const sortOptions: Array<{ field: SortField; label: string }> = [
@@ -298,16 +300,18 @@ export function AccountListHeader({
         >
           <span className="hidden lg:inline">{bulkModeLabel}</span>
         </Button>
-        <Button
-          type="button"
-          size="sm"
-          className="h-9 max-w-none shrink-0 px-3 text-xs whitespace-nowrap"
-          leftIcon={<Plus aria-hidden="true" className="size-4" />}
-          onClick={onAddAccount}
-          data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton}
-        >
-          {t("account:addAccount")}
-        </Button>
+        {showAddAccountAction && (
+          <Button
+            type="button"
+            size="sm"
+            className="h-9 max-w-none shrink-0 px-3 text-xs whitespace-nowrap"
+            leftIcon={<Plus aria-hidden="true" className="size-4" />}
+            onClick={onAddAccount}
+            data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton}
+          >
+            {t("account:addAccount")}
+          </Button>
+        )}
       </div>
     </div>
   )

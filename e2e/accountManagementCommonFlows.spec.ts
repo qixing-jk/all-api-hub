@@ -946,15 +946,18 @@ test("shows the empty duplicate-cleanup state when no duplicate accounts are fou
 
   const dialog = page.getByRole("dialog")
   await expect(
-    dialog.getByRole("heading", { name: "Duplicate account cleanup" }),
+    dialog.getByRole("heading", { name: "Duplicate account detection" }),
+  ).toBeVisible()
+  await expect(dialog.getByText("Exact duplicates · 0")).toBeVisible()
+  await expect(
+    dialog.getByText("Possible duplicate accounts · 0"),
   ).toBeVisible()
   await expect(
-    dialog.getByText("0 duplicate set(s) · 0 account(s) to delete"),
+    dialog.getByText("No exact duplicate accounts found."),
   ).toBeVisible()
-  await expect(dialog.getByText("No duplicate accounts found.")).toBeVisible()
   await expect(
     dialog.getByRole("button", { name: "Preview deletion" }),
-  ).toBeDisabled()
+  ).toHaveCount(0)
 })
 
 test("cleans duplicate accounts after preview confirmation and prunes stale references", async ({
@@ -1010,7 +1013,7 @@ test("cleans duplicate accounts after preview confirmation and prunes stale refe
 
   const dialog = page.getByRole("dialog")
   await expect(
-    dialog.getByRole("heading", { name: "Duplicate account cleanup" }),
+    dialog.getByRole("heading", { name: "Duplicate account detection" }),
   ).toBeVisible()
   await expect(
     dialog.getByText("1 duplicate set(s) · 1 account(s) to delete"),

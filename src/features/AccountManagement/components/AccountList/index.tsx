@@ -92,6 +92,7 @@ interface AccountListProps {
   initialSearchQuery?: string
   onAddAccount?: () => void
   reorderUnavailableReason?: string
+  showAddAccountAction?: boolean
   virtualScrollParent?: HTMLElement | null
 }
 
@@ -442,6 +443,7 @@ export default function AccountList({
   initialSearchQuery,
   onAddAccount,
   reorderUnavailableReason,
+  showAddAccountAction = true,
   virtualScrollParent,
 }: AccountListProps) {
   const { t } = useTranslation(["account", "common"])
@@ -1373,15 +1375,17 @@ export default function AccountList({
               </p>
             </div>
           </div>
-          <Button
-            className="w-full shrink-0 sm:w-auto"
-            data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton}
-            leftIcon={<Plus className="h-4 w-4" />}
-            onClick={handleEmptyStateAddAccountClick}
-            size="sm"
-          >
-            {t("account:addFirstAccount")}
-          </Button>
+          {showAddAccountAction && (
+            <Button
+              className="w-full shrink-0 sm:w-auto"
+              data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton}
+              leftIcon={<Plus className="h-4 w-4" />}
+              onClick={handleEmptyStateAddAccountClick}
+              size="sm"
+            >
+              {t("account:addFirstAccount")}
+            </Button>
+          )}
         </div>
         <NewcomerSponsorRecommendationsSection />
       </Card>
@@ -1541,6 +1545,7 @@ export default function AccountList({
                   showTodayCashflow={showTodayCashflow}
                   sortField={sortField}
                   sortOrder={sortOrder}
+                  showAddAccountAction={showAddAccountAction}
                 />
               </div>
             </div>
