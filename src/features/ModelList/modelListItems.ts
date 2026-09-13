@@ -7,7 +7,9 @@ import {
   type ModelListSourceIdentity,
   type ModelManagementItemSource,
 } from "~/features/ModelList/modelManagementSources"
+import type { PreparedModelListItem } from "~/features/ModelList/sourcePreparation"
 import type { PricingResponse } from "~/services/modelList/pricingModel"
+import { isModelPriceUnavailable } from "~/services/modelList/pricingModel"
 import type { ComparableModelIdentity } from "~/services/models/modelMetadata/modelIdentityIndex"
 import type {
   ModelMetadata,
@@ -60,4 +62,24 @@ export function getModelItemKey(
   })
 
   return `${item.source.kind}:${sourceId}:${item.model.model_name}`
+}
+
+export interface ModelListItem extends PreparedModelListItem {
+  modelMetadata?: ModelMetadata
+  comparableModelIdentity: ComparableModelIdentity
+  resolvedVendor: ResolvedModelVendor
+}
+
+/** Returns true when row pricing metadata should affect filters and sorting. */
+export function supportsPricingDerivedBehavior(
+  item: Pick<CalculatedModelItem, "model" | "source">,
+) {
+  if (isModelPriceUnavailable(item.model)) {
+    return false
+  }
+
+  return (
+    item.source.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT ||
+    item.source.capabilities.supportsPricing
+  )
 }
