@@ -14,6 +14,7 @@ import {
   seedStoredAccounts,
   seedUserPreferences,
   stubLlmMetadataIndex,
+  stubNewApiSiteRoutes,
 } from "~~/e2e/utils/commonUserFlows"
 import {
   expectPermissionOnboardingHidden,
@@ -33,6 +34,9 @@ for (const width of [390, 1100]) {
       installExtensionPageGuards(page)
       await forceExtensionLanguage(page, language)
       await stubLlmMetadataIndex(context)
+      await stubNewApiSiteRoutes(context, {
+        baseUrl: "https://menu.example.invalid",
+      })
       await seedStoredAccounts(await getServiceWorker(context), [
         createStoredAccount({
           id: "menu-account",
@@ -104,10 +108,12 @@ for (const width of [390, 1100]) {
           exact: true,
         }),
       ).toBeVisible()
-      const box = await submenu.boundingBox()
-      expect(box).not.toBeNull()
-      expect(box!.x).toBeGreaterThanOrEqual(0)
-      expect(box!.x + box!.width).toBeLessThanOrEqual(width)
+      await expect(async () => {
+        const box = await submenu.boundingBox()
+        expect(box).not.toBeNull()
+        expect(box!.x).toBeGreaterThanOrEqual(0)
+        expect(box!.x + box!.width).toBeLessThanOrEqual(width)
+      }).toPass()
       await page.screenshot({
         path: testInfo.outputPath("related-pages.png"),
         animations: "disabled",
@@ -134,12 +140,21 @@ for (const width of [390, 1100]) {
       await page.keyboard.press("ArrowLeft")
       await page.keyboard.press("Escape")
       await expect(page.getByRole("menu")).toHaveCount(0)
+      await expect(more).toHaveAttribute("aria-expanded", "false")
       await row.hover()
       await more.click()
+      const tokenResponse = page.waitForResponse(
+        (response) =>
+          new URL(response.url()).origin === "https://menu.example.invalid" &&
+          new URL(response.url()).pathname === "/api/token/",
+      )
       await page
         .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowKeyManagementMenuItem)
         .click()
-      await expect(more).toHaveAttribute("aria-expanded", "false")
+      expect((await tokenResponse).ok()).toBe(true)
+      await expect(page).toHaveURL(
+        /options\.html\?accountId=menu-account#keys$/,
+      )
       await expect(page.getByRole("menu")).toHaveCount(0)
     })
   }
