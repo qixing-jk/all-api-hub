@@ -2,7 +2,7 @@
 name: Check-in support / 签到适配
 about: Request site check-in support or share check-in clues / 申请站点签到支持或补充线索
 title: "[Check-in] "
-labels: "site-support"
+labels: "site-support, check-in"
 assignees: ""
 ---
 
