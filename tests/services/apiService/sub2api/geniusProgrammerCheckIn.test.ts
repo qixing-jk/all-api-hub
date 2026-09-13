@@ -122,9 +122,20 @@ describe("Genius Programmer check-in protocol", () => {
     },
   )
 
+  it("recognizes an already-checked response without reward details", () => {
+    expect(
+      parseGeniusProgrammerDailyCheckInMutationResponse(
+        response({ new_reward: false }),
+      ),
+    ).toEqual({
+      kind: GENIUS_PROGRAMMER_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked,
+    })
+  })
+
   it.each([
     {},
     { new_reward: 1, reward_amount: 0.05 },
+    { new_reward: true },
     { new_reward: true, reward_amount: "0.05" },
     { new_reward: true, reward_amount: -1 },
     { new_reward: true, reward_amount: Infinity },

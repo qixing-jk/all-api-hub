@@ -98,20 +98,25 @@ export function parseGeniusProgrammerDailyCheckInMutationResponse(
   response: ApiTransportResponse<unknown>,
 ) {
   const data = parseData(response, GENIUS_PROGRAMMER_DAILY_CHECK_IN_ENDPOINT)
+  if (typeof data.new_reward !== "boolean") {
+    throw invalidResponse(GENIUS_PROGRAMMER_DAILY_CHECK_IN_ENDPOINT)
+  }
+  if (!data.new_reward) {
+    return {
+      kind: GENIUS_PROGRAMMER_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked,
+    }
+  }
   if (
-    typeof data.new_reward !== "boolean" ||
     typeof data.reward_amount !== "number" ||
     !Number.isFinite(data.reward_amount) ||
     data.reward_amount < 0
   ) {
     throw invalidResponse(GENIUS_PROGRAMMER_DAILY_CHECK_IN_ENDPOINT)
   }
-  return data.new_reward
-    ? {
-        kind: GENIUS_PROGRAMMER_DAILY_CHECK_IN_RESULT_KINDS.Applied,
-        data: { rewardAmount: data.reward_amount },
-      }
-    : { kind: GENIUS_PROGRAMMER_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked }
+  return {
+    kind: GENIUS_PROGRAMMER_DAILY_CHECK_IN_RESULT_KINDS.Applied,
+    data: { rewardAmount: data.reward_amount },
+  }
 }
 
 /** Reads deployment status with the same timezone query as its dashboard. */
