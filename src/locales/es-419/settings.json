@@ -577,16 +577,15 @@
     "title": "Anuncios del sitio"
   },
   "sorting": {
-    "currentSiteDesc": "Coloca arriba en la lista la cuenta actualmente iniciada en el navegador",
-    "currentSitePriority": "Priorizar cuenta actualmente iniciada",
-    "customCheckInDesc": "Coloca al frente los sitios que usan enlaces externos de check-in",
+    "contextBoostDescription": "Mostrar primero la cuenta del sitio actual y luego las cuentas con páginas relacionadas abiertas, antes que otras cuentas fijadas. En cada nivel, las fijadas van primero y luego se aplica el campo de orden elegido. Las deshabilitadas permanecen al final. Estas reglas no se aplican al buscar ni al reordenar manualmente.",
+    "contextBoostTitle": "Priorizar sitios en uso",
+    "currentSiteDesc": "Mostrar primero la cuenta del usuario que inició sesión en el sitio actual.",
+    "currentSitePriority": "Priorizar la cuenta del sitio actual",
     "customCheckInUrl": "URL externa de check-in",
-    "customRedeemDesc": "Coloca al frente los sitios que usan enlaces de canje personalizados",
     "customRedeemUrl": "URL de canje personalizada",
-    "description": "Cuando no se selecciona un campo de ordenamiento, ordena automáticamente las cuentas de cada sección según estas prioridades.",
-    "matchedOpenTabs": "Pestañas abiertas coincidentes",
-    "matchedOpenTabsDesc": "Coloca al frente cuentas relacionadas que coincidan con las pestañas abiertas actuales (por título o URL)",
-    "priority": "Prioridad",
+    "description": "El contexto de navegación tiene prioridad sobre las cuentas fijadas. Las demás mantienen el orden: fijadas, normales y deshabilitadas.",
+    "matchedOpenTabs": "Priorizar cuentas de otras pestañas abiertas",
+    "matchedOpenTabsDesc": "Priorizar las cuentas cuyo sitio o página configurada de registro diario o canje esté abierto y marcarlas como «Página relacionada abierta».",
     "title": "Ajustes de prioridad de ordenamiento",
     "unknownSortRule": "Regla de ordenamiento desconocida"
   },

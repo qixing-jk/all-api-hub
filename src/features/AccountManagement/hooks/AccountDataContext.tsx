@@ -15,10 +15,13 @@ import {
   DATA_TYPE_CHECK_IN_REQUIREMENT,
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_CREATED_AT,
+  DATA_TYPE_CUSTOM_CHECK_IN_URL,
+  DATA_TYPE_CUSTOM_REDEEM_URL,
   DATA_TYPE_INCOME,
 } from "~/constants"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { isAccountRelatedTab } from "~/features/AccountManagement/utils/accountOpenTabMatch"
 import toast from "~/lib/notify"
 import { readAccountBrowserIdentityFromTab } from "~/services/accountBrowserSession/identityReader"
 import { replaceIdListSubset } from "~/services/accounts/accountEntryLayoutPolicy"
@@ -40,7 +43,11 @@ import {
   convertQuotaToMoney,
   estimateTodayIncomeForAccount,
 } from "~/services/history/dailyBalanceHistory/todayIncomeEstimate"
-import { createDynamicSortComparator } from "~/services/preferences/utils/sortingPriority"
+import {
+  createAccountContextBoostResolver,
+  createDynamicSortComparator,
+  type AccountContextBoost,
+} from "~/services/preferences/utils/sortingPriority"
 import {
   createAutomaticProtectionBypassExecution,
   withProtectionBypassUserCommand,
@@ -51,10 +58,6 @@ import {
   PROTECTION_BYPASS_USER_COMMANDS,
   type ProtectionBypassExecution,
 } from "~/services/protectionBypass/contracts"
-import {
-  buildAccountSearchIndex,
-  searchAccountSearchIndex,
-} from "~/services/search/accountSearch"
 import { tagStorage } from "~/services/tags/tagStorage"
 import type {
   AccountStats,
@@ -134,6 +137,7 @@ interface AccountDataContextType {
    * This is stricter than {@link detectedSiteAccounts} and requires verifying the website user ID.
    */
   detectedAccount: SiteAccount | null
+  getAccountContextBoost: (id: string) => AccountContextBoost | undefined
   isDetecting: boolean
   pinnedAccountIds: string[]
   tagStore: TagStore
@@ -1003,7 +1007,9 @@ export const AccountDataProvider = ({
       } else {
         newOrder =
           field === DATA_TYPE_CREATED_AT ||
-          field === DATA_TYPE_CHECK_IN_REQUIREMENT
+          field === DATA_TYPE_CHECK_IN_REQUIREMENT ||
+          field === DATA_TYPE_CUSTOM_CHECK_IN_URL ||
+          field === DATA_TYPE_CUSTOM_REDEEM_URL
             ? "desc"
             : "asc"
         setSortField(field)
@@ -1184,41 +1190,21 @@ export const AccountDataProvider = ({
   const [matchedAccountScores, setMatchedAccountScores] = useState<
     Record<string, number>
   >({})
-  const indexedDisplayData = useMemo(
-    () => buildAccountSearchIndex(displayData),
-    [displayData],
-  )
-
   // Check and match open tabs with accounts
   const checkOpenTabs = useCallback(async () => {
     try {
       const tabs = await getAllTabs()
-      if (!tabs || tabs.length === 0 || indexedDisplayData.length === 0) {
+      if (!tabs || tabs.length === 0 || displayData.length === 0) {
         setMatchedAccountScores({})
         return
       }
 
       const scores: Record<string, number> = {}
 
-      // For each tab, try to match with accounts
-      for (const tab of tabs) {
-        if (!tab.url && !tab.title) continue
-
-        // Combine URL and title for search query
-        for (const searchQuery of [tab.url, tab.title]) {
-          if (!searchQuery) continue
-
-          // Search accounts using the combined query
-          const results = searchAccountSearchIndex(
-            indexedDisplayData,
-            searchQuery,
-          )
-
-          // Accumulate scores for matched accounts
-          results.forEach((result) => {
-            const accountId = result.account.id
-            scores[accountId] = (scores[accountId] || 0) + result.score
-          })
+      // Only recognized sites and explicitly configured pages establish a relation.
+      for (const account of displayData) {
+        if (tabs.some((tab) => isAccountRelatedTab(account, tab.url))) {
+          scores[account.id] = 1
         }
       }
 
@@ -1231,7 +1217,7 @@ export const AccountDataProvider = ({
         setHasResolvedInitialOpenTabs(true)
       }
     }
-  }, [indexedDisplayData])
+  }, [displayData])
 
   // Update matched scores when displayData changes or tabs change
   useEffect(() => {
@@ -1304,6 +1290,16 @@ export const AccountDataProvider = ({
     [isAccountPinned, pinAccount, unpinAccount],
   )
 
+  const getAccountContextBoost = useMemo(
+    () =>
+      createAccountContextBoostResolver(
+        sortingPriorityConfig,
+        detectedAccount?.id,
+        matchedAccountScores,
+      ),
+    [sortingPriorityConfig, detectedAccount?.id, matchedAccountScores],
+  )
+
   const sortedData = useMemo(() => {
     const manualOrderIndices: Record<string, number> = {}
     orderedAccountIds.forEach((id, index) => {
@@ -1363,6 +1359,7 @@ export const AccountDataProvider = ({
       prevBalances,
       detectedSiteAccounts,
       detectedAccount,
+      getAccountContextBoost,
       isDetecting,
       pinnedAccountIds,
       tagStore,
@@ -1404,6 +1401,7 @@ export const AccountDataProvider = ({
       prevBalances,
       detectedSiteAccounts,
       detectedAccount,
+      getAccountContextBoost,
       isDetecting,
       pinnedAccountIds,
       tagStore,

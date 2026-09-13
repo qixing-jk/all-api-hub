@@ -33,7 +33,7 @@ describe("sortingConfigMigration", () => {
     ).toBe(true)
   })
 
-  it("does not migrate the current four-criterion config", () => {
+  it("does not migrate the current two-criterion config", () => {
     expect(needsSortingConfigMigration(DEFAULT_SORTING_PRIORITY_CONFIG)).toBe(
       false,
     )
@@ -98,26 +98,24 @@ describe("sortingConfigMigration", () => {
 
     expect(migrated.criteria.map(({ id }) => id)).toEqual([
       SortingCriteriaType.MATCHED_OPEN_TABS,
-      SortingCriteriaType.CUSTOM_REDEEM_URL,
-      SortingCriteriaType.CUSTOM_CHECK_IN_URL,
       SortingCriteriaType.CURRENT_SITE,
     ])
     expect(migrated.criteria[0].enabled).toBe(false)
-    expect(migrated.criteria.map(({ priority }) => priority)).toEqual([
-      0, 1, 2, 3,
-    ])
+    expect(migrateSortingConfig(migrated)).toBe(migrated)
+    expect(needsSortingConfigMigration(migrated)).toBe(false)
+    expect(migrated.criteria.map(({ priority }) => priority)).toEqual([0, 1])
   })
 
   it("appends missing automatic criteria and removes duplicates", () => {
     const migrated = migrateSortingConfig(
       config([
         {
-          id: SortingCriteriaType.CUSTOM_REDEEM_URL,
+          id: SortingCriteriaType.CURRENT_SITE,
           enabled: false,
           priority: 2,
         },
         {
-          id: SortingCriteriaType.CUSTOM_REDEEM_URL,
+          id: SortingCriteriaType.CURRENT_SITE,
           enabled: true,
           priority: 0,
         },
@@ -125,8 +123,6 @@ describe("sortingConfigMigration", () => {
     )
 
     expect(migrated.criteria.map(({ id }) => id)).toEqual([
-      SortingCriteriaType.CUSTOM_REDEEM_URL,
-      SortingCriteriaType.CUSTOM_CHECK_IN_URL,
       SortingCriteriaType.CURRENT_SITE,
       SortingCriteriaType.MATCHED_OPEN_TABS,
     ])

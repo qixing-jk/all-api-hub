@@ -575,16 +575,15 @@
     "title": "网站公告"
   },
   "sorting": {
-    "currentSiteDesc": "将当前浏览器中已登录的账号置于列表顶部",
-    "currentSitePriority": "当前登录账号优先",
-    "customCheckInDesc": "将使用外部签到链接的站点排在前面",
+    "contextBoostDescription": "先显示当前站点，再显示相关页面已打开的账号，均可排在其他置顶账号之前。同一提升层级内置顶优先，再按所选字段排序；已禁用账号始终在末尾。搜索和手动排序模式不应用此规则。",
+    "contextBoostTitle": "浏览站点优先",
+    "currentSiteDesc": "优先显示与当前站点登录用户匹配的账号。",
+    "currentSitePriority": "优先显示当前站点账号",
     "customCheckInUrl": "外部签到链接",
-    "customRedeemDesc": "将使用自定义兑换链接的站点排在前面",
     "customRedeemUrl": "自定义兑换链接",
-    "description": "未选择账户列表字段排序时，按以下优先级自动排列各分区内的账号。",
-    "matchedOpenTabs": "匹配的打开标签页",
-    "matchedOpenTabsDesc": "将与当前打开标签页（标题或 URL）匹配的相关账号排在前面",
-    "priority": "优先级",
+    "description": "浏览站点提升优先于置顶；未命中提升规则的账号仍按置顶、普通、禁用排序。",
+    "matchedOpenTabs": "优先显示其他已打开标签页的账号",
+    "matchedOpenTabsDesc": "账号站点或已配置的签到、兑换页面打开时，优先显示对应账号，并标注「相关页面已打开」。",
     "title": "排序优先级设置",
     "unknownSortRule": "未知排序规则"
   },

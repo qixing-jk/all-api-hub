@@ -61,17 +61,19 @@ type ElementBounds = {
 
 async function readElementBounds(locator: Locator): Promise<ElementBounds[]> {
   return locator.evaluateAll((elements) =>
-    elements.map((element) => {
-      const box = element.getBoundingClientRect()
-      return {
-        bottom: box.bottom,
-        height: box.height,
-        right: box.right,
-        width: box.width,
-        x: box.x,
-        y: box.y,
-      }
-    }),
+    elements
+      .filter((element) => element.getClientRects().length > 0)
+      .map((element) => {
+        const box = element.getBoundingClientRect()
+        return {
+          bottom: box.bottom,
+          height: box.height,
+          right: box.right,
+          width: box.width,
+          x: box.x,
+          y: box.y,
+        }
+      }),
   )
 }
 
@@ -336,6 +338,7 @@ test("keeps account management controls reachable across constrained widths", as
     page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListBulkManageButton),
     page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton),
   ]
+  await page.setViewportSize(DESKTOP_VIEWPORT_SIZE)
   for (const action of requiredAccountListHeaderActions) {
     await expect(action).toHaveCount(1)
     await expect(action).toBeVisible()
@@ -399,10 +402,8 @@ test("keeps account management controls reachable across constrained widths", as
   await expect
     .poll(async () => {
       const [searchBox] = await readElementBounds(accountSearchInput)
-      const listBox = await accountList.boundingBox()
-      return Boolean(
-        searchBox && listBox && searchBox.width >= listBox.width - 48,
-      )
+      const headerBox = await accountListHeader.boundingBox()
+      return Boolean(searchBox && headerBox && searchBox.bottom <= headerBox.y)
     })
     .toBe(true)
 
@@ -1075,4 +1076,84 @@ test("cleans duplicate accounts after preview confirmation and prunes stale refe
       pinnedAccountIds: [],
       orderedAccountIds: ["dup-delete", "unique-account"],
     })
+})
+
+test("explains open-tab priority and restores field order when disabled", async ({
+  context,
+  extensionId,
+  page,
+}, testInfo) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    sortField: "name",
+    sortOrder: "asc",
+  })
+  await seedStoredAccounts(serviceWorker, [
+    createStoredAccount({
+      id: "context-normal",
+      site_name: "Alpha Account",
+      site_url: "https://alpha-account.example.com",
+    }),
+    createStoredAccount({
+      id: "context-open",
+      site_name: "Zulu Browsing Match",
+      site_url: "https://zulu-browsing.example.com",
+    }),
+  ])
+  await context.route("https://zulu-browsing.example.com/**", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: "<title>Zulu Browsing Match</title><p>Example site</p>",
+    }),
+  )
+  const siteTab = await context.newPage()
+  await siteTab.goto("https://zulu-browsing.example.com/")
+  await openAccountManagement(page, extensionId)
+  const openRow = page.getByTestId(
+    getAccountManagementListItemTestId("context-open"),
+  )
+  const badge = openRow.getByText("Related page open", { exact: true })
+  await expect(badge).toBeVisible()
+  await expect(badge).toHaveAccessibleDescription(
+    /site or configured check-in or redeem page is open/,
+  )
+  await badge.focus()
+  await expect(page.getByRole("tooltip")).toContainText(
+    "before unrelated pinned accounts",
+  )
+  const rows = page.getByTestId(/^account-management-account-list-item-/)
+  await expect(rows.first()).toHaveAttribute(
+    "data-testid",
+    getAccountManagementListItemTestId("context-open"),
+  )
+  await page.screenshot({
+    path: testInfo.outputPath("context-priority-desktop.png"),
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(badge).toBeVisible()
+  await page.screenshot({
+    path: testInfo.outputPath("context-priority-narrow.png"),
+  })
+  await page.setViewportSize(DESKTOP_VIEWPORT_SIZE)
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}?tab=accountManagement&anchor=sorting-priority#basic`,
+  )
+  const openTabsSwitch = page.getByRole("switch", {
+    name: "Prioritize accounts matching other open tabs",
+    exact: true,
+  })
+  await expect(openTabsSwitch).toBeChecked()
+  await openTabsSwitch.click()
+  await expect(openTabsSwitch).not.toBeChecked()
+  await page.screenshot({
+    path: testInfo.outputPath("context-priority-settings.png"),
+    fullPage: true,
+  })
+  await openAccountManagement(page, extensionId)
+  await expect(badge).toHaveCount(0)
+  await expect(rows.first()).toHaveAttribute(
+    "data-testid",
+    getAccountManagementListItemTestId("context-normal"),
+  )
+  await siteTab.close()
 })

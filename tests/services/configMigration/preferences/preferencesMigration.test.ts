@@ -442,6 +442,38 @@ describe("preferencesMigration", () => {
       })
     })
 
+    it("migrates released sorting directly to v29 and does not rewrite it on later reads", () => {
+      const prefs = createV0Preferences({
+        preferencesVersion: 28,
+        sortField: DATA_TYPE_CONSUMPTION,
+        sortOrder: "asc",
+        sortingPriorityConfig: {
+          criteria: Object.values(SortingCriteriaType).map((id, priority) => ({
+            id,
+            priority,
+            enabled: id !== SortingCriteriaType.CURRENT_SITE,
+          })),
+          lastModified: 1,
+        },
+      })
+      const migrated = migratePreferences(prefs)
+      expect(migrated.preferencesVersion).toBe(29)
+      expect(migrated.sortField).toBe(DATA_TYPE_CONSUMPTION)
+      expect(migrated.sortOrder).toBe("asc")
+      expect(migrated.sortingPriorityConfig?.criteria).toEqual([
+        { id: SortingCriteriaType.CURRENT_SITE, enabled: false, priority: 0 },
+        {
+          id: SortingCriteriaType.MATCHED_OPEN_TABS,
+          enabled: true,
+          priority: 1,
+        },
+      ])
+      expect(needsPreferencesMigration(migrated)).toBe(false)
+      expect(migratePreferences(migrated).sortingPriorityConfig).toBe(
+        migrated.sortingPriorityConfig,
+      )
+    })
+
     it("processes v1 preferences into the configurable sorting rules", () => {
       const prefs = createV0Preferences({
         preferencesVersion: 1,
@@ -464,8 +496,6 @@ describe("preferencesMigration", () => {
         result.sortingPriorityConfig?.criteria.map(({ id }) => id),
       ).toEqual([
         SortingCriteriaType.CURRENT_SITE,
-        SortingCriteriaType.CUSTOM_CHECK_IN_URL,
-        SortingCriteriaType.CUSTOM_REDEEM_URL,
         SortingCriteriaType.MATCHED_OPEN_TABS,
       ])
     })
@@ -1081,8 +1111,6 @@ describe("preferencesMigration", () => {
       expect(ids).toEqual([
         SortingCriteriaType.CURRENT_SITE,
         SortingCriteriaType.MATCHED_OPEN_TABS,
-        SortingCriteriaType.CUSTOM_CHECK_IN_URL,
-        SortingCriteriaType.CUSTOM_REDEEM_URL,
       ])
     })
 

@@ -36,15 +36,15 @@ As your account list grows, use the following features to keep it organized.
 - Open the **"…"** menu on an account and select **"Pin Account"**.
 - For a pinned account, select **"Unpin Account"** from the same menu.
 - Pinned accounts display a pin indicator in their row.
-- Pinned accounts always stay at the top of the list.
+- Pins come first within each browsing-context tier. Current-site accounts and accounts with related pages open can appear before unrelated pins; disabled accounts always stay last.
 
 ### 2.3 Sorting Priority
 
-- Under **Settings → Sorting Priority**, customize the global sorting rules. See [Sorting Priority Settings](./sorting-priority.md).
-- There are 10 sorting priorities.
-- Confirmed sortable column headers include **Balance, Today's Usage, Today's Income, and Creation Time**.
-- Manual sorting can be enabled in Settings. When enabled, drag handles appear in the list, and a dragged order is saved immediately and persists after refresh. Disabling manual sorting restores normal list sorting.
-- Pinned accounts remain at the top regardless of the selected sorting method.
+- In **Settings → Account Management → Sorting Priority Settings**, independently control current-site and related-open-page priority. Changes save automatically.
+- Use **Sort by** to select balance, today's consumption or income, check-in requirement, health status, custom check-in or redeem links, or creation time, then toggle the direction.
+- **Reset to default order** clears the field sort while retaining browsing-context switches and saved manual positions.
+- Click **Reorder** in the full settings page to drag accounts. Changes save automatically, and accounts move only within their pinned, normal, or disabled group.
+- Search and manual ordering do not apply browsing-context boosts. See [Sorting Priority Settings](./sorting-priority.md).
 
 ### 2.4 Balance and Today's Income Totals
 

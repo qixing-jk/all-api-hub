@@ -575,16 +575,15 @@
     "title": "Thông báo website"
   },
   "sorting": {
-    "currentSiteDesc": "Đưa tài khoản đã đăng nhập trong trình duyệt hiện tại lên đầu danh sách",
-    "currentSitePriority": "Ưu tiên tài khoản đang đăng nhập",
-    "customCheckInDesc": "Đưa các trang dùng liên kết điểm danh bên ngoài lên trước",
+    "contextBoostDescription": "Hiển thị tài khoản của trang hiện tại trước, rồi đến tài khoản có trang liên quan đang mở, trước các tài khoản ghim khác. Trong mỗi mức ưu tiên, tài khoản ghim đứng trước, sau đó sắp xếp theo trường đã chọn. Tài khoản bị vô hiệu hóa luôn ở cuối. Không áp dụng khi tìm kiếm hoặc sắp xếp thủ công.",
+    "contextBoostTitle": "Ưu tiên trang đang duyệt",
+    "currentSiteDesc": "Hiển thị trước tài khoản khớp với người dùng đang đăng nhập trên trang hiện tại.",
+    "currentSitePriority": "Ưu tiên tài khoản của trang hiện tại",
     "customCheckInUrl": "Liên kết điểm danh bên ngoài",
-    "customRedeemDesc": "Đưa các trang dùng liên kết đổi mã tùy chỉnh lên trước",
     "customRedeemUrl": "Liên kết đổi mã tùy chỉnh",
-    "description": "Khi chưa chọn trường sắp xếp, tự động sắp xếp tài khoản trong từng nhóm theo các mức ưu tiên này.",
-    "matchedOpenTabs": "Tab đang mở khớp",
-    "matchedOpenTabsDesc": "Đưa các tài khoản liên quan khớp với tab đang mở hiện tại (tiêu đề hoặc URL) lên trước",
-    "priority": "Ưu tiên",
+    "description": "Ngữ cảnh duyệt web được ưu tiên hơn ghim. Các tài khoản khác vẫn theo thứ tự ghim, thông thường và bị vô hiệu hóa.",
+    "matchedOpenTabs": "Ưu tiên tài khoản khớp với các tab khác đang mở",
+    "matchedOpenTabsDesc": "Ưu tiên tài khoản có trang web hoặc trang điểm danh hay đổi mã đã cấu hình đang mở và gắn nhãn “Trang liên quan đang mở”.",
     "title": "Cài đặt ưu tiên sắp xếp",
     "unknownSortRule": "Quy tắc sắp xếp không xác định"
   },

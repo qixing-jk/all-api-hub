@@ -134,7 +134,8 @@
     "summary_one": "{{count}} cuenta",
     "summary_many": "{{count}} cuentas",
     "summary_other": "{{count}} cuentas",
-    "tagsAllLabel": "Todas"
+    "tagsAllLabel": "Todas",
+    "toggle": "Filtros"
   },
   "filteredTotals": {
     "balance": "Saldo",
@@ -242,11 +243,14 @@
       "checkedInToday": "Check-in realizado hoy, haz clic para ver",
       "checkInStatusOutdated": "El estado de check-in no se detectó hoy (última comprobación: {{time}}). Haz clic para actualizar",
       "currentSite": "Sitio actual",
+      "currentSiteBoostHint": "Coincide con la cuenta con sesión iniciada en el sitio actual y aparece antes que las demás. Las cuentas deshabilitadas permanecen al final.",
       "currentSiteExists": "Mismo sitio que la pestaña actual",
       "disabled": "Deshabilitada",
       "lastSync": "Última sincronización",
       "notAvailable": "N/D",
       "notCheckedInToday": "Sin check-in hoy, haz clic para ir",
+      "openTabsBoost": "Página relacionada abierta",
+      "openTabsBoostHint": "El sitio de esta cuenta o su página configurada de registro diario o canje está abierto, por lo que aparece antes que las cuentas fijadas no relacionadas, después de la cuenta del sitio actual. Las cuentas deshabilitadas permanecen al final.",
       "reason": "Motivo",
       "refreshHealthStatus": "Haz clic para actualizar el estado de salud",
       "siteType": "Tipo de sitio",

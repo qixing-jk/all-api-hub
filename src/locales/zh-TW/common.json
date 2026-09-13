@@ -87,6 +87,12 @@
     "updating": "更新中...",
     "uploading": "上傳中..."
   },
+  "tagFilter": {
+    "allTags": "所有標籤",
+    "noResults": "沒有符合的標籤",
+    "search": "搜尋標籤",
+    "selected": "已選"
+  },
   "time": {
     "neverExpires": "永不過期",
     "seconds": "秒",

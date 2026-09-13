@@ -88,6 +88,9 @@ const {
   },
   accountDataScenario: {
     detectedSiteAccounts: [] as Array<{ id: string }>,
+    getAccountContextBoost: vi.fn<
+      () => "current-site" | "open-tabs" | undefined
+    >(() => undefined),
     isPinFeatureEnabled: false,
     isAccountPinned: vi.fn(() => false),
     togglePinAccount: vi.fn(),
@@ -123,19 +126,26 @@ vi.mock("~/components/Tooltip", async (importOriginal) => {
     default: ({
       children,
       content,
+      anchorAsChild,
     }: {
       children: ReactNode
       content: ReactNode
-    }) => (
-      <div
-        role={typeof content === "string" ? "img" : undefined}
-        aria-label={typeof content === "string" ? content : undefined}
-        data-tooltip-content={typeof content === "string" ? content : ""}
-      >
-        {children}
-        {typeof content === "string" ? null : content}
-      </div>
-    ),
+      anchorAsChild?: boolean
+    }) =>
+      anchorAsChild ? (
+        <actual.default content={content} anchorAsChild>
+          {children as React.ReactElement}
+        </actual.default>
+      ) : (
+        <div
+          role={typeof content === "string" ? "img" : undefined}
+          aria-label={typeof content === "string" ? content : undefined}
+          data-tooltip-content={typeof content === "string" ? content : ""}
+        >
+          {children}
+          {typeof content === "string" ? null : content}
+        </div>
+      ),
   }
 })
 
@@ -143,6 +153,7 @@ vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => ({
     detectedAccount: null,
     detectedSiteAccounts: accountDataScenario.detectedSiteAccounts,
+    getAccountContextBoost: accountDataScenario.getAccountContextBoost,
     isAccountPinned: accountDataScenario.isAccountPinned,
     togglePinAccount: accountDataScenario.togglePinAccount,
     isPinFeatureEnabled: accountDataScenario.isPinFeatureEnabled,
@@ -205,6 +216,7 @@ describe("SiteInfo", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     accountDataScenario.detectedSiteAccounts = []
+    accountDataScenario.getAccountContextBoost.mockReturnValue(undefined)
     accountDataScenario.isPinFeatureEnabled = false
     accountDataScenario.isAccountPinned.mockReset()
     accountDataScenario.isAccountPinned.mockReturnValue(false)
@@ -213,6 +225,32 @@ describe("SiteInfo", () => {
     getLdohSearchUrlForAccountUrlMock.mockReturnValue(null)
     mockHandleRefreshAccount.mockReset()
     mockHandleRefreshAccount.mockResolvedValue(undefined)
+  })
+
+  it("shows an accessible open-tab boost hint and hides it outside sorted browsing", () => {
+    accountDataScenario.getAccountContextBoost.mockReturnValue("open-tabs")
+    const site = buildDisplaySiteData({ id: "open" })
+    const { rerender } = render(<SiteInfo site={site} />)
+    const badge = screen.getByText("account:list.site.openTabsBoost")
+    expect(badge).toHaveAttribute("tabindex", "0")
+    expect(badge).toHaveAccessibleDescription(
+      "account:list.site.openTabsBoostHint",
+    )
+    rerender(<SiteInfo site={site} showContextBoost={false} />)
+    expect(
+      screen.queryByText("account:list.site.openTabsBoost"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows only the current-site hint when it is the winning boost", () => {
+    accountDataScenario.getAccountContextBoost.mockReturnValue("current-site")
+    render(<SiteInfo site={buildDisplaySiteData()} />)
+    expect(
+      screen.getByText("account:list.site.currentSite"),
+    ).toHaveAccessibleDescription("account:list.site.currentSiteBoostHint")
+    expect(
+      screen.queryByText("account:list.site.openTabsBoost"),
+    ).not.toBeInTheDocument()
   })
 
   it("shows a disabled badge and still opens the site URL", async () => {

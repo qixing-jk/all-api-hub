@@ -29,9 +29,8 @@ import type {
   ProtectionBypassSurface,
   ProtectionBypassUserCommand,
 } from "~/services/protectionBypass/contracts"
-import type { SearchResult } from "~/services/search/accountSearch"
 import { TAG_STORE_VERSION } from "~/services/tags/tagStoreUtils"
-import type { ActiveSortField, DisplaySiteData } from "~/types"
+import type { ActiveSortField } from "~/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import type { CheckInConfig } from "~/types/checkIn"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
@@ -64,20 +63,6 @@ function readCheckInToday(config: CheckInConfig | undefined) {
   return status?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
     ? status.today
     : undefined
-}
-
-type MockIndexedAccountSearchEntry = {
-  __indexed: true
-  account: DisplaySiteData
-}
-
-function createMockIndexedAccountSearchEntries(
-  accounts: DisplaySiteData[],
-): MockIndexedAccountSearchEntry[] {
-  return accounts.map((account) => ({
-    __indexed: true,
-    account,
-  }))
 }
 
 const {
@@ -113,8 +98,6 @@ const {
   mockOnTabActivated,
   mockOnTabRemoved,
   mockOnTabUpdated,
-  mockBuildAccountSearchIndex,
-  mockSearchAccountSearchIndex,
   mockUpdateSortConfig,
   mockGetCurrentTempWindowRequestSource,
   mockWithProtectionBypassUserCommand,
@@ -197,13 +180,6 @@ const {
       ) => void | Promise<void>,
     ) => () => void
   >((_listener) => () => {}),
-  mockBuildAccountSearchIndex: vi.fn(
-    (accounts: DisplaySiteData[]): MockIndexedAccountSearchEntry[] =>
-      createMockIndexedAccountSearchEntries(accounts),
-  ),
-  mockSearchAccountSearchIndex: vi.fn<
-    (accounts: MockIndexedAccountSearchEntry[], query: string) => SearchResult[]
-  >(() => []),
   mockUpdateSortConfig: vi.fn(),
   mockGetCurrentTempWindowRequestSource: vi.fn(),
   mockWithProtectionBypassUserCommand: vi.fn(),
@@ -348,11 +324,6 @@ vi.mock("~/services/accountBrowserSession/identityReader", () => ({
   readAccountBrowserIdentityFromTab: mockReadAccountBrowserIdentityFromTab,
 }))
 
-vi.mock("~/services/search/accountSearch", () => ({
-  buildAccountSearchIndex: mockBuildAccountSearchIndex,
-  searchAccountSearchIndex: mockSearchAccountSearchIndex,
-}))
-
 afterEach(() => {
   /**
    * Prevent leaked runtime listeners between tests.
@@ -452,11 +423,6 @@ beforeEach(() => {
   mockOnTabUpdated.mockImplementation(() => () => {})
   mockPinAccount.mockResolvedValue(true)
   mockUnpinAccount.mockResolvedValue(true)
-  mockBuildAccountSearchIndex.mockImplementation(
-    (accounts: DisplaySiteData[]) =>
-      createMockIndexedAccountSearchEntries(accounts),
-  )
-  mockSearchAccountSearchIndex.mockReturnValue([])
   mockUpdateSortConfig.mockResolvedValue(true)
   ;(globalThis as any).browser = {
     ...(globalThis as any).browser,
@@ -2498,125 +2464,173 @@ describe("AccountDataContext sorting behavior", () => {
     )
   })
 
-  it("initializes check-in-requirement sorting to required first", async () => {
-    const getLatestCtx = await renderAccountDataProvider()
+  it.each([
+    DATA_TYPE_CHECK_IN_REQUIREMENT,
+    "custom_check_in_url",
+    "custom_redeem_url",
+  ] as const)(
+    "initializes %s sorting with matching accounts first and persists direction changes",
+    async (field) => {
+      const getLatestCtx = await renderAccountDataProvider()
+      act(() => {
+        getLatestCtx().handleSort(field)
+      })
+      await waitFor(() => {
+        expect(getLatestCtx().sortField).toBe(field)
+        expect(getLatestCtx().sortOrder).toBe("desc")
+      })
+      expect(mockUpdateSortConfig).toHaveBeenCalledWith(field, "desc")
+      act(() => {
+        getLatestCtx().handleSort(field)
+      })
+      await waitFor(() => expect(getLatestCtx().sortOrder).toBe("asc"))
+      expect(mockUpdateSortConfig).toHaveBeenLastCalledWith(field, "asc")
+    },
+  )
 
-    act(() => {
-      getLatestCtx().handleSort(DATA_TYPE_CHECK_IN_REQUIREMENT)
-    })
-
-    await waitFor(() => {
-      expect(getLatestCtx().sortField).toBe(DATA_TYPE_CHECK_IN_REQUIREMENT)
-      expect(getLatestCtx().sortOrder).toBe("desc")
-    })
-
-    expect(mockUpdateSortConfig).toHaveBeenCalledWith(
-      DATA_TYPE_CHECK_IN_REQUIREMENT,
-      "desc",
-    )
-  })
-
-  it("prioritizes accounts matched by open tabs when that sorting criterion is enabled", async () => {
-    mockUserPreferencesContext.current = {
-      ...mockUserPreferencesContext.current,
-      sortField: null,
-      sortOrder: "asc",
-      sortingPriorityConfig: {
-        lastModified: Date.now(),
-        criteria: [
-          {
-            id: SortingCriteriaType.MATCHED_OPEN_TABS,
-            enabled: true,
-            priority: 0,
-          },
-        ],
-      },
-    }
-
-    mockGetAllAccounts.mockResolvedValue([
-      {
-        id: "acc-a",
-        site_url: "https://a.example.com",
-        account_info: { id: 1 },
-        last_sync_time: 0,
-      },
-      {
-        id: "acc-b",
-        site_url: "https://b.example.com",
-        account_info: { id: 2 },
-        last_sync_time: 0,
-      },
-    ])
-    mockConvertToDisplayData.mockReturnValue([
-      {
-        id: "acc-a",
-        name: "Alpha",
-        balance: { USD: 0, CNY: 0 },
-        todayConsumption: { USD: 0, CNY: 0 },
-        todayIncome: { USD: 0, CNY: 0 },
-      },
-      {
-        id: "acc-b",
-        name: "Beta",
-        balance: { USD: 0, CNY: 0 },
-        todayConsumption: { USD: 0, CNY: 0 },
-        todayIncome: { USD: 0, CNY: 0 },
-      },
-    ])
-    mockGetAllTabs.mockResolvedValue([
-      createBrowserTab({
-        id: 10,
-        url: "https://b.example.com/dashboard",
-        title: "Beta workspace",
-      }),
-    ])
-    const builtIndex = createMockIndexedAccountSearchEntries([
-      { id: "acc-a" } as DisplaySiteData,
-      { id: "acc-b" } as DisplaySiteData,
-    ])
-    mockBuildAccountSearchIndex.mockReturnValue(builtIndex)
-    mockSearchAccountSearchIndex.mockImplementation(
-      (_indexedAccounts, query: string) => {
-        if (query === "https://b.example.com/dashboard") {
-          return [
+  it.each([
+    ["matching site", "https://b.example.com/dashboard", "Beta", true],
+    ["unrelated title", "https://unrelated.test", "Beta", false],
+    ["domain suffix", "https://b.example.com.evil.test", "Unrelated", false],
+    ["shared path", "https://unrelated.test/api", "Unrelated", false],
+    ["different port", "https://b.example.com:8443/api", "Unrelated", false],
+    ["different scheme", "http://b.example.com/api", "Unrelated", false],
+    [
+      "normalized origin",
+      "https://B.EXAMPLE.COM:443/other?q=1#section",
+      "Unrelated",
+      true,
+    ],
+    ["non-web tab", "chrome://b.example.com", "Beta", false],
+    ["missing URL", undefined, "Beta", false],
+    [
+      "custom check-in page",
+      "https://checkin.example.test/beta/checkin",
+      "Unrelated",
+      true,
+    ],
+    [
+      "custom check-in trailing slash",
+      "https://checkin.example.test/beta/checkin/?from=tab#top",
+      "Unrelated",
+      true,
+    ],
+    [
+      "other page on check-in host",
+      "https://checkin.example.test/other",
+      "Unrelated",
+      false,
+    ],
+    ["check-in host root", "https://checkin.example.test", "Unrelated", false],
+    [
+      "check-in path prefix",
+      "https://checkin.example.test/beta/checkin-extra",
+      "Unrelated",
+      false,
+    ],
+    [
+      "custom redeem page",
+      "https://redeem.example.test/redeem?site=beta#/claim",
+      "Unrelated",
+      true,
+    ],
+    [
+      "redeem extra query",
+      "https://redeem.example.test/redeem?from=tab&site=beta#/claim",
+      "Unrelated",
+      true,
+    ],
+    [
+      "other redeem tenant",
+      "https://redeem.example.test/redeem?site=alpha#/claim",
+      "Unrelated",
+      false,
+    ],
+    [
+      "missing redeem tenant",
+      "https://redeem.example.test/redeem#/claim",
+      "Unrelated",
+      false,
+    ],
+    [
+      "other redeem hash route",
+      "https://redeem.example.test/redeem?site=beta#/other",
+      "Unrelated",
+      false,
+    ],
+  ])(
+    "boosts only an opened account site or configured related page: %s",
+    async (_label, url, title, matches) => {
+      mockUserPreferencesContext.current = {
+        ...mockUserPreferencesContext.current,
+        sortField: null,
+        sortOrder: "asc",
+        sortingPriorityConfig: {
+          lastModified: 1,
+          criteria: [
             {
-              account: { id: "acc-b" } as DisplaySiteData,
-              score: 4,
-              matchedFields: [],
+              id: SortingCriteriaType.MATCHED_OPEN_TABS,
+              enabled: true,
+              priority: 0,
             },
-          ]
-        }
-        if (query === "Beta workspace") {
-          return [
-            {
-              account: { id: "acc-b" } as DisplaySiteData,
-              score: 2,
-              matchedFields: [],
-            },
-          ]
-        }
-        return []
-      },
-    )
-
-    const getLatestCtx = await renderAccountDataProvider()
-
-    await waitFor(() => {
-      expect(getLatestCtx().sortedData.map((item) => item.id)).toEqual([
-        "acc-b",
-        "acc-a",
+          ],
+        },
+      }
+      mockGetAllAccounts.mockResolvedValue([
+        {
+          id: "acc-a",
+          site_url: "https://a.example.com",
+          account_info: { id: 1 },
+          last_sync_time: 0,
+        },
+        {
+          id: "acc-b",
+          site_url: "https://b.example.com/api",
+          account_info: { id: 2 },
+          last_sync_time: 0,
+        },
       ])
-    })
-
-    expect(mockSearchAccountSearchIndex).toHaveBeenCalledWith(
-      builtIndex,
-      "https://b.example.com/dashboard",
-    )
-    expect(mockSearchAccountSearchIndex).toHaveBeenCalledWith(
-      builtIndex,
-      "Beta workspace",
-    )
-  })
+      mockConvertToDisplayData.mockReturnValue([
+        {
+          id: "acc-a",
+          name: "Alpha",
+          username: "alice",
+          token: "",
+          baseUrl: "https://a.example.com",
+          balance: { USD: 0, CNY: 0 },
+          todayConsumption: { USD: 0, CNY: 0 },
+          todayIncome: { USD: 0, CNY: 0 },
+        },
+        {
+          id: "acc-b",
+          name: "Beta",
+          username: "bob",
+          token: "",
+          baseUrl: "https://b.example.com/api",
+          checkIn: buildCheckInConfig({
+            customCheckIn: {
+              url: "https://checkin.example.test/beta/checkin",
+              redeemUrl: "https://redeem.example.test/redeem?site=beta#/claim",
+            },
+          }),
+          balance: { USD: 0, CNY: 0 },
+          todayConsumption: { USD: 0, CNY: 0 },
+          todayIncome: { USD: 0, CNY: 0 },
+        },
+      ])
+      mockGetAllTabs.mockResolvedValue([
+        createBrowserTab({ id: 10, url, title }),
+      ])
+      const getLatestCtx = await renderAccountDataProvider()
+      await waitFor(() => expect(getLatestCtx().isInitialLoad).toBe(false))
+      expect(getLatestCtx().getAccountContextBoost("acc-b")).toBe(
+        matches ? "open-tabs" : undefined,
+      )
+      expect(getLatestCtx().sortedData.map(({ id }) => id)).toEqual(
+        matches ? ["acc-b", "acc-a"] : ["acc-a", "acc-b"],
+      )
+    },
+  )
 })
 
 describe("AccountDataContext auto-checkin runCompleted handling", () => {

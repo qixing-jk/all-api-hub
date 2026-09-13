@@ -12,6 +12,7 @@ export interface AccountListHandleItemProps {
   highlights?: SearchResultWithHighlight["highlights"]
   onCopyKey: (site: DisplaySiteData) => void
   onDeleteWithDialog: (site: DisplaySiteData) => void
+  showContextBoost?: boolean
   showCreatedAt?: boolean
   isDragDisabled: boolean
   handleLabel: string
@@ -25,6 +26,7 @@ interface AccountListItemRowLayoutProps {
   highlights?: SearchResultWithHighlight["highlights"]
   onCopyKey: (site: DisplaySiteData) => void
   onDeleteWithDialog: (site: DisplaySiteData) => void
+  showContextBoost?: boolean
   showCreatedAt?: boolean
   className?: string
   selectionControl?: React.ReactNode
@@ -39,6 +41,7 @@ export function AccountListItemRowLayout({
   highlights,
   onCopyKey,
   onDeleteWithDialog,
+  showContextBoost,
   showCreatedAt,
   className,
   selectionControl,
@@ -60,6 +63,7 @@ export function AccountListItemRowLayout({
           onDeleteWithDialog={onDeleteWithDialog}
           onCopyKey={onCopyKey}
           showCreatedAt={showCreatedAt}
+          showContextBoost={showContextBoost}
         />
       </div>
     </div>
@@ -78,6 +82,7 @@ export function NonSortableAccountListItem({
   highlights,
   onCopyKey,
   onDeleteWithDialog,
+  showContextBoost,
   showCreatedAt,
   isDragDisabled,
   handleLabel,
@@ -101,6 +106,7 @@ export function NonSortableAccountListItem({
       onDeleteWithDialog={onDeleteWithDialog}
       onCopyKey={onCopyKey}
       showCreatedAt={showCreatedAt}
+      showContextBoost={showContextBoost}
       className={className}
       selectionControl={selectionControl}
       handle={

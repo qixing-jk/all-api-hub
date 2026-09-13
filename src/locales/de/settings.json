@@ -576,16 +576,15 @@
     "title": "Website-Ankündigungen"
   },
   "sorting": {
-    "currentSiteDesc": "Platzieren Sie das aktuell im Browser angemeldete Konto oben in der Liste",
-    "currentSitePriority": "Priorisieren Sie das aktuell angemeldete Konto",
-    "customCheckInDesc": "Platzieren Sie Websites mit externen Check-in-Links im Vordergrund",
+    "contextBoostDescription": "Zuerst erscheint das Konto der aktuellen Website, dann Konten mit geöffneten zugehörigen Seiten, vor anderen angehefteten Konten. Innerhalb jeder Stufe kommen angeheftete Konten zuerst, danach gilt das gewählte Sortierfeld. Deaktivierte Konten bleiben am Ende. Bei Suche und manueller Sortierung gelten diese Regeln nicht.",
+    "contextBoostTitle": "Besuchte Websites bevorzugen",
+    "currentSiteDesc": "Das Konto des auf der aktuellen Website angemeldeten Benutzers zuerst anzeigen.",
+    "currentSitePriority": "Konto der aktuellen Website bevorzugen",
     "customCheckInUrl": "Externe Check-in-URL",
-    "customRedeemDesc": "Platzieren Sie Websites mit benutzerdefinierten Einlöselinks im Vordergrund",
     "customRedeemUrl": "Benutzerdefinierte Einlöse-URL",
-    "description": "Wenn keine Feldsortierung ausgewählt ist, werden Konten innerhalb jedes Bereichs automatisch nach diesen Prioritäten sortiert.",
-    "matchedOpenTabs": "Passende offene Tabs",
-    "matchedOpenTabsDesc": "Platzieren Sie verwandte Konten, die den aktuell geöffneten Tabs entsprechen (nach Titel oder URL), vorne",
-    "priority": "Priorität",
+    "description": "Der Browserkontext hat Vorrang vor angehefteten Konten. Andere Konten bleiben nach angeheftet, normal und deaktiviert sortiert.",
+    "matchedOpenTabs": "Konten anderer geöffneter Tabs bevorzugen",
+    "matchedOpenTabsDesc": "Konten bevorzugen, deren Website oder konfigurierte Check-in- oder Einlöseseite geöffnet ist, und mit „Zugehörige Seite geöffnet“ kennzeichnen.",
     "title": "Sortierprioritätseinstellungen",
     "unknownSortRule": "Unbekannte Sortierregel"
   },

@@ -446,6 +446,15 @@ function AccountManagementContent({
               >
                 {t("account:actions.scanDuplicates")}
               </Button>
+              <Button
+                onClick={openAddAccount}
+                data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton}
+                analyticsAction={
+                  PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateAccountDialog
+                }
+              >
+                {t("account:addAccount")}
+              </Button>
             </div>
           </ProductAnalyticsScope>
         }
@@ -484,6 +493,7 @@ function AccountManagementContent({
         <AccountList
           initialSearchQuery={searchQuery}
           onAddAccount={openAddAccount}
+          showAddAccountAction={false}
         />
       </div>
 

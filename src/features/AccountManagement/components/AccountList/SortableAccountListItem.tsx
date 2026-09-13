@@ -17,6 +17,7 @@ function SortableAccountListItem({
   highlights,
   onCopyKey,
   onDeleteWithDialog,
+  showContextBoost,
   showCreatedAt,
   isDragDisabled,
   handleLabel,
@@ -54,6 +55,7 @@ function SortableAccountListItem({
         onDeleteWithDialog={onDeleteWithDialog}
         onCopyKey={onCopyKey}
         showCreatedAt={showCreatedAt}
+        showContextBoost={showContextBoost}
         className={className}
         selectionControl={selectionControl}
         handle={

@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import { cn } from "~/lib/utils"
 
 export interface AccountFilterSelectOption {
   value: string
@@ -60,46 +61,58 @@ export default function AccountFilterBar({
     onChange: (value: string) => void,
     testId: string,
     Icon: FilterIcon,
-  ) => (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger
-        size="sm"
-        className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary/70 h-9 w-full min-w-0 rounded-lg border border-gray-200 bg-white pr-1.5 pl-2 shadow-xs transition-colors hover:border-gray-300 hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-blue-500/50 sm:h-10 sm:pr-2 sm:pl-2.5 md:min-w-[140px] xl:min-w-[160px] [&_[data-slot='select-value']]:min-w-0 [&_[data-slot='select-value']]:flex-1 [&_[data-slot='select-value']]:overflow-hidden [&_[data-slot='select-value']>div]:w-full [&_[data-slot='select-value']>div]:min-w-0"
-        data-testid={testId}
-      >
-        <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2.5">
-          <span className="dark:text-dark-text-tertiary flex h-4 w-4 shrink-0 items-center justify-center text-gray-500 sm:h-5 sm:w-5">
-            <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-          </span>
-          <SelectValue
-            placeholder={placeholder}
-            className="min-w-0 flex-1 truncate text-xs font-medium text-gray-700 sm:text-[13px] dark:text-gray-200"
-          />
-        </div>
-      </SelectTrigger>
-      <SelectContent className="min-w-[220px]">
-        {options.map((option) => (
-          <SelectItem
-            key={option.value}
-            value={option.value}
-            data-count={option.count}
-          >
-            <div className="flex w-full min-w-0 items-center gap-3">
-              <span className="min-w-0 flex-1 truncate">{option.label}</span>
-              {typeof option.count === "number" && (
-                <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">
-                  {option.count}
-                </span>
-              )}
-            </div>
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  )
+  ) => {
+    const selectedLabel = options.find(
+      (option) => option.value === value,
+    )?.label
+    return (
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger
+          size="sm"
+          className={cn(
+            "h-10 w-full min-w-0 gap-1.5 rounded-md border-gray-200 bg-transparent px-2 shadow-none hover:bg-gray-50 data-[size=sm]:h-10 dark:bg-transparent [&_[data-slot='select-value']]:min-w-0 [&_[data-slot='select-value']]:flex-1 [&_[data-slot='select-value']]:overflow-hidden [&_[data-slot='select-value']>div]:min-w-0 [@container(min-width:40rem)]:data-[size=sm]:h-9",
+            value !== "all" &&
+              "border-blue-200 bg-blue-50/60 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300",
+          )}
+          title={selectedLabel}
+          data-testid={testId}
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            <span className="dark:text-dark-text-tertiary flex size-4 shrink-0 items-center justify-center text-gray-500">
+              <Icon className="size-3.5" />
+            </span>
+            <SelectValue
+              placeholder={placeholder}
+              className="min-w-0 flex-1 truncate text-xs text-gray-700 dark:text-gray-200"
+            >
+              {selectedLabel}
+            </SelectValue>
+          </div>
+        </SelectTrigger>
+        <SelectContent className="max-w-[calc(100vw-2rem)] min-w-[220px]">
+          {options.map((option) => (
+            <SelectItem
+              key={option.value}
+              value={option.value}
+              data-count={option.count}
+            >
+              <div className="flex w-full min-w-0 items-center gap-3">
+                <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                {typeof option.count === "number" && (
+                  <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">
+                    {option.count}
+                  </span>
+                )}
+              </div>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    )
+  }
 
   return (
-    <div className="grid grid-cols-2 gap-1.5 sm:gap-2 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 [@container(min-width:40rem)]:grid-cols-4">
       {renderSelect(
         siteTypeValue,
         t("filter.siteType.placeholder"),

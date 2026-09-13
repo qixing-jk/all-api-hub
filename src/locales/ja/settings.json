@@ -575,16 +575,15 @@
     "title": "サイト公告"
   },
   "sorting": {
-    "currentSiteDesc": "現在ブラウザでログイン中のアカウントをリストの先頭に表示します",
-    "currentSitePriority": "現在ログイン中のアカウントを優先",
-    "customCheckInDesc": "外部チェックインリンクを使うサイトを先頭に表示します",
+    "contextBoostDescription": "現在のサイトのアカウント、関連ページが開いているアカウントの順で、他の固定アカウントより先に表示します。各優先段階では固定を優先し、その後は選択した項目で並べます。無効なアカウントは常に末尾です。検索と手動並べ替えでは適用されません。",
+    "contextBoostTitle": "閲覧中のサイトを優先",
+    "currentSiteDesc": "現在のサイトでログイン中のユーザーに一致するアカウントを優先します。",
+    "currentSitePriority": "現在のサイトのアカウントを優先",
     "customCheckInUrl": "外部チェックイン URL",
-    "customRedeemDesc": "カスタム引き換えリンクを使うサイトを先頭に表示します",
     "customRedeemUrl": "カスタム引き換え URL",
-    "description": "一覧の項目による並べ替えが未選択の場合、各セクション内のアカウントをこの優先度で自動的に並べます。",
-    "matchedOpenTabs": "一致するタブ",
-    "matchedOpenTabsDesc": "現在開いているタブのタイトルまたは URL に一致する関連アカウントを先頭に表示します",
-    "priority": "優先度",
+    "description": "閲覧中のサイトに基づく優先表示は固定より優先されます。その他は固定、通常、無効の順に並びます。",
+    "matchedOpenTabs": "その他の開いているタブに一致するアカウントを優先",
+    "matchedOpenTabsDesc": "サイト、または設定済みのチェックイン・引き換えページが開かれているアカウントを優先し、「関連ページを表示中」と示します。",
     "title": "並び順の優先設定",
     "unknownSortRule": "不明な並び替えルール"
   },

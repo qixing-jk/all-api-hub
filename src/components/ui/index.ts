@@ -160,3 +160,5 @@ export {
   LAYOUT,
   Z_INDEX,
 } from "~/constants/designTokens"
+
+export { CompactTagFilter } from "./CompactTagFilter"

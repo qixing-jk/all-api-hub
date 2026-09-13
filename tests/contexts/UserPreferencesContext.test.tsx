@@ -1036,24 +1036,10 @@ describe("UserPreferencesContext", () => {
     const context = await renderProvider()
     const updatedConfig = structuredClone(DEFAULT_SORTING_PRIORITY_CONFIG)
 
-    updatedConfig.criteria = updatedConfig.criteria.map((criterion) => {
-      if (criterion.id === SortingCriteriaType.DISABLED_ACCOUNT) {
-        return {
-          ...criterion,
-          enabled: false,
-          priority: 9,
-        }
-      }
-
-      if (criterion.id === SortingCriteriaType.CUSTOM_REDEEM_URL) {
-        return {
-          ...criterion,
-          priority: 0,
-        }
-      }
-
-      return criterion
-    })
+    updatedConfig.criteria = updatedConfig.criteria.map((criterion) => ({
+      ...criterion,
+      enabled: criterion.id !== SortingCriteriaType.MATCHED_OPEN_TABS,
+    }))
     updatedConfig.lastModified = 1_700_000_000_000
 
     await act(async () => {

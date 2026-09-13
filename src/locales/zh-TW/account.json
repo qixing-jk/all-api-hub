@@ -114,7 +114,8 @@
       "placeholder": "站點類型"
     },
     "summary_other": "共 {{count}} 個帳號",
-    "tagsAllLabel": "全部"
+    "tagsAllLabel": "全部",
+    "toggle": "篩選"
   },
   "filteredTotals": {
     "balance": "餘額",
@@ -198,11 +199,14 @@
       "checkedInToday": "今日已簽到，點我檢視",
       "checkInStatusOutdated": "簽到狀態不是今日檢測（上次檢測時間：{{time}}），點我重新整理",
       "currentSite": "當前站點",
+      "currentSiteBoostHint": "符合目前站點的登入帳號，優先於其他帳號顯示；已停用帳號仍排在末尾。",
       "currentSiteExists": "與當前標籤頁站點相同",
       "disabled": "已禁用",
       "lastSync": "上次同步",
       "notAvailable": "不可用",
       "notCheckedInToday": "今日未簽到，點我去簽到",
+      "openTabsBoost": "相關頁面已開啟",
+      "openTabsBoostHint": "帳號站點或已設定的簽到、兌換頁面已開啟，優先於未符合規則的置頂帳號顯示；目前站點帳號更優先，已停用帳號仍排在末尾。",
       "reason": "原因",
       "refreshHealthStatus": "點擊重新整理健康狀態",
       "siteType": "站點類型",

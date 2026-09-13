@@ -87,6 +87,12 @@
     "updating": "Wird aktualisiert...",
     "uploading": "Wird hochgeladen..."
   },
+  "tagFilter": {
+    "allTags": "Alle Tags",
+    "noResults": "Keine passenden Tags",
+    "search": "Tags suchen",
+    "selected": "Ausgewählt"
+  },
   "time": {
     "neverExpires": "Läuft nie ab",
     "seconds": "Sekunden",

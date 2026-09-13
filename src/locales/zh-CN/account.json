@@ -114,7 +114,8 @@
       "placeholder": "站点类型"
     },
     "summary": "共 {{count}} 个账号",
-    "tagsAllLabel": "全部"
+    "tagsAllLabel": "全部",
+    "toggle": "筛选"
   },
   "filteredTotals": {
     "balance": "余额",
@@ -198,11 +199,14 @@
       "checkedInToday": "今日已签到，点我查看",
       "checkInStatusOutdated": "签到状态不是今日检测（上次检测时间：{{time}}），点我刷新",
       "currentSite": "当前站点",
+      "currentSiteBoostHint": "匹配当前站点的登录账号，优先于其他账号显示；已禁用账号仍排在末尾。",
       "currentSiteExists": "与当前标签页站点相同",
       "disabled": "已禁用",
       "lastSync": "上次同步",
       "notAvailable": "不可用",
       "notCheckedInToday": "今日未签到，点我去签到",
+      "openTabsBoost": "相关页面已打开",
+      "openTabsBoostHint": "账号站点或已配置的签到、兑换页面已打开，优先于未命中的置顶账号显示；当前站点账号更优先，已禁用账号仍排在末尾。",
       "reason": "原因",
       "refreshHealthStatus": "点击刷新健康状态",
       "siteType": "站点类型",

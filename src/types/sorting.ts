@@ -22,7 +22,8 @@ export enum SortingCriteriaType {
 export interface SortingFieldConfig {
   id: SortingCriteriaType
   enabled: boolean
-  priority: number // 0-3, lower = higher priority
+  // Retained for storage compatibility; browsing-context rules use fixed tiers.
+  priority: number // normalized storage position; context tiers are fixed
 }
 
 // Complete sorting configuration

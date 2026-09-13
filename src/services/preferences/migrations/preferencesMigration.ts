@@ -69,7 +69,8 @@ function clampBalanceHistoryRetentionDays(value: unknown): number {
  * Value: migration function to upgrade to that version
  */
 const migrations: Record<number, PreferencesMigrationFunction> = {
-  // Version 28 -> 29: keep only user-configurable automatic sorting criteria.
+  // Version 28 -> 29: migrate directly to the final grouped sorting schema.
+  // This unreleased migration also removes link rules moved to user-selected sorting.
   29: (prefs) => ({
     ...prefs,
     sortingPriorityConfig: migrateSortingConfig(prefs.sortingPriorityConfig),

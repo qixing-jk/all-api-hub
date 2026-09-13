@@ -940,6 +940,21 @@ describe("product analytics privacy filtering", () => {
     })
   })
 
+  it.each(["custom_check_in_url", "custom_redeem_url"])(
+    "allows the controlled %s sort field without link values",
+    (field) => {
+      const sanitized = sanitizeProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+        {
+          sort_field: field,
+          url: "https://private.example.com/checkin",
+        },
+      )
+      expect(sanitized).toMatchObject({ sort_field: field })
+      expect(sanitized).not.toHaveProperty("url")
+    },
+  )
+
   it("keeps task notification settings snapshot fields and strips configured secrets", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.SettingChanged,

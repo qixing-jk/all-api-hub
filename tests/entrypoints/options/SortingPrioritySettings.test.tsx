@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -66,68 +67,11 @@ vi.mock("~/components/SettingSection", () => ({
   ),
 }))
 
-vi.mock("~/components/ui", () => ({
+vi.mock("~/components/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/components/ui")>()),
   Card: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   CardContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }))
-
-vi.mock(
-  "~/features/BasicSettings/components/tabs/AccountManagement/SortingPrioritySettings/SortingPriorityDragList",
-  () => ({
-    SortingPriorityDragList: ({
-      items,
-      onDragEnd,
-      onToggleEnabled,
-    }: {
-      items: Array<{
-        id: string
-        enabled: boolean
-        priority: number
-        label: string
-        description?: string
-      }>
-      onDragEnd: (event: {
-        active: { id: string }
-        over: { id: string } | null
-      }) => void
-      onToggleEnabled?: (id: string, enabled: boolean) => void
-    }) => (
-      <div>
-        {items.map((item) => (
-          <div key={item.id} data-testid={`sorting-item-${item.id}`}>
-            <span>{item.label}</span>
-            <span>{item.description}</span>
-            <span>{`enabled:${item.enabled}`}</span>
-            <span>{`priority:${item.priority}`}</span>
-            <button
-              onClick={() => onToggleEnabled?.(item.id, !item.enabled)}
-            >{`toggle-${item.id}`}</button>
-          </div>
-        ))}
-        <button
-          onClick={() =>
-            onDragEnd({
-              active: { id: SortingCriteriaType.CURRENT_SITE },
-              over: { id: SortingCriteriaType.CUSTOM_REDEEM_URL },
-            })
-          }
-        >
-          reorder-current-before-redeem
-        </button>
-        <button
-          onClick={() =>
-            onDragEnd({
-              active: { id: SortingCriteriaType.CURRENT_SITE },
-              over: { id: SortingCriteriaType.CURRENT_SITE },
-            })
-          }
-        >
-          reorder-noop
-        </button>
-      </div>
-    ),
-  }),
-)
 
 const mockedShowUpdateToast = showUpdateToast as ReturnType<typeof vi.fn>
 
@@ -141,7 +85,7 @@ const createConfig = (
       priority: 1,
     },
     {
-      id: SortingCriteriaType.CUSTOM_REDEEM_URL,
+      id: SortingCriteriaType.MATCHED_OPEN_TABS,
       enabled: false,
       priority: 0,
     },
@@ -192,155 +136,74 @@ describe("SortingPrioritySettings", () => {
     expect(screen.queryByText("settings:sorting.title")).not.toBeInTheDocument()
   })
 
-  it("keeps rendered criteria visible during later preference reloads", async () => {
+  it("shows only independent browsing-context switches and keeps them visible during reloads", () => {
     const { rerender } = render(<SortingPrioritySettings />)
-
+    expect(screen.getAllByRole("switch")).toHaveLength(2)
     expect(
-      await screen.findByTestId(
-        `sorting-item-${SortingCriteriaType.CURRENT_SITE}`,
-      ),
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByTestId(`sorting-item-${SortingCriteriaType.PINNED}`),
+      screen.queryByText("settings:sorting.customCheckInUrl"),
     ).not.toBeInTheDocument()
-
+    expect(
+      screen.queryByText("settings:sorting.customRedeemUrl"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("settings:sorting.automaticTitle"),
+    ).not.toBeInTheDocument()
     mockedUseUserPreferencesContext.mockReturnValue(
-      createContextValue({
-        isLoading: true,
-      }),
+      createContextValue({ isLoading: true }),
     )
-
     rerender(<SortingPrioritySettings />)
-
-    expect(
-      screen.getByTestId(`sorting-item-${SortingCriteriaType.CURRENT_SITE}`),
-    ).toBeInTheDocument()
-    expect(screen.queryByText("common:status.loading")).toBeNull()
+    expect(screen.getAllByRole("switch")).toHaveLength(2)
+    expect(screen.queryByText("common:status.loading")).not.toBeInTheDocument()
   })
 
-  it("sorts configurable criteria by priority and hides fixed rules", async () => {
-    render(<SortingPrioritySettings />)
-
-    const itemLabels = await screen.findAllByTestId(/sorting-item-/)
-    expect(itemLabels).toHaveLength(2)
-    expect(itemLabels[0]).toHaveTextContent("settings:sorting.customRedeemUrl")
-    expect(itemLabels[1]).toHaveTextContent(
-      "settings:sorting.currentSitePriority",
-    )
-    expect(
-      screen.queryByTestId(`sorting-item-${SortingCriteriaType.PINNED}`),
-    ).not.toBeInTheDocument()
-  })
-
-  it("reorders criteria, persists updated priorities, and shows a toast on success", async () => {
-    render(<SortingPrioritySettings />)
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "reorder-current-before-redeem" }),
-    )
-
-    await waitFor(() => {
-      expect(mockUpdateSortingPriorityConfig).toHaveBeenCalledWith({
-        ...createConfig(),
-        criteria: [
-          {
-            id: SortingCriteriaType.CURRENT_SITE,
-            enabled: true,
-            priority: 0,
-          },
-          {
-            id: SortingCriteriaType.CUSTOM_REDEEM_URL,
-            enabled: false,
-            priority: 1,
-          },
-        ],
-        lastModified: new Date("2026-03-30T07:10:00.000Z").getTime(),
+  it.each([true, false])(
+    "saves a context toggle independently and rolls back a failed write (success: %s)",
+    async (success) => {
+      const user = userEvent.setup()
+      mockUpdateSortingPriorityConfig.mockResolvedValue(
+        success ? preferenceWriteSuccess() : preferenceWriteFailure(),
+      )
+      render(<SortingPrioritySettings />)
+      const openTabs = screen.getByRole("switch", {
+        name: "settings:sorting.matchedOpenTabs",
       })
-    })
-
-    expect(mockedShowUpdateToast).toHaveBeenCalledWith(
-      expect.objectContaining({ ok: true }),
-      "settings:sorting.title",
-    )
-    expect(
-      screen.getByTestId(`sorting-item-${SortingCriteriaType.CURRENT_SITE}`),
-    ).toHaveTextContent("priority:0")
-  })
-
-  it("ignores drag events that do not change the target position", async () => {
-    render(<SortingPrioritySettings />)
-
-    fireEvent.click(screen.getByRole("button", { name: "reorder-noop" }))
-
-    expect(mockUpdateSortingPriorityConfig).not.toHaveBeenCalled()
-    expect(mockedShowUpdateToast).not.toHaveBeenCalled()
-  })
-
-  it("reports failed reorder saves and restores persisted order", async () => {
-    mockUpdateSortingPriorityConfig.mockResolvedValue(preferenceWriteFailure())
-
-    render(<SortingPrioritySettings />)
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "reorder-current-before-redeem" }),
-    )
-
-    await waitFor(() => {
+      expect(openTabs).not.toBeChecked()
+      expect(openTabs).toHaveAccessibleDescription(
+        "settings:sorting.matchedOpenTabsDesc",
+      )
+      await user.click(openTabs)
+      await waitFor(() =>
+        expect(mockUpdateSortingPriorityConfig).toHaveBeenCalledWith(
+          expect.objectContaining({
+            criteria: [
+              {
+                id: SortingCriteriaType.MATCHED_OPEN_TABS,
+                enabled: true,
+                priority: 0,
+              },
+              {
+                id: SortingCriteriaType.CURRENT_SITE,
+                enabled: true,
+                priority: 1,
+              },
+            ],
+          }),
+        ),
+      )
+      await waitFor(() =>
+        expect(openTabs).toHaveAttribute("aria-checked", String(success)),
+      )
+      expect(
+        screen.getByRole("switch", {
+          name: "settings:sorting.currentSitePriority",
+        }),
+      ).toBeChecked()
       expect(mockedShowUpdateToast).toHaveBeenCalledWith(
-        expect.objectContaining({ ok: false }),
+        expect.objectContaining({ ok: success }),
         "settings:sorting.title",
       )
-    })
-    expect(
-      screen.getByTestId(
-        `sorting-item-${SortingCriteriaType.CUSTOM_REDEEM_URL}`,
-      ),
-    ).toHaveTextContent("priority:0")
-    expect(
-      screen.getByTestId(`sorting-item-${SortingCriteriaType.CURRENT_SITE}`),
-    ).toHaveTextContent("priority:1")
-  })
-
-  it("toggles a criterion, reports failed saves, and restores persisted order", async () => {
-    mockUpdateSortingPriorityConfig.mockResolvedValue(preferenceWriteFailure())
-
-    render(<SortingPrioritySettings />)
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: `toggle-${SortingCriteriaType.CUSTOM_REDEEM_URL}`,
-      }),
-    )
-
-    await waitFor(() => {
-      expect(mockUpdateSortingPriorityConfig).toHaveBeenCalledWith({
-        ...createConfig(),
-        criteria: [
-          {
-            id: SortingCriteriaType.CUSTOM_REDEEM_URL,
-            enabled: true,
-            priority: 0,
-          },
-          {
-            id: SortingCriteriaType.CURRENT_SITE,
-            enabled: true,
-            priority: 1,
-          },
-        ],
-        lastModified: new Date("2026-03-30T07:10:00.000Z").getTime(),
-      })
-    })
-
-    expect(
-      screen.getByTestId(
-        `sorting-item-${SortingCriteriaType.CUSTOM_REDEEM_URL}`,
-      ),
-    ).toHaveTextContent("enabled:false")
-    expect(mockedShowUpdateToast).toHaveBeenCalledWith(
-      expect.objectContaining({ ok: false }),
-      "settings:sorting.title",
-    )
-  })
+    },
+  )
 
   it("resets through SettingSection", async () => {
     render(<SortingPrioritySettings />)

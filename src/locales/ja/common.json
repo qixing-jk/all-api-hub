@@ -87,6 +87,12 @@
     "updating": "更新中...",
     "uploading": "アップロード中..."
   },
+  "tagFilter": {
+    "allTags": "すべてのタグ",
+    "noResults": "一致するタグがありません",
+    "search": "タグを検索",
+    "selected": "選択済み"
+  },
   "time": {
     "neverExpires": "期限なし",
     "seconds": "秒",

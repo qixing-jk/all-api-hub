@@ -1,6 +1,6 @@
 /**
  * Sorting configuration migration system
- * Handles version-based migrations for sorting priority configurations
+ * Normalizes legacy sorting rules directly to the current context-only schema
  */
 
 import {
@@ -44,8 +44,8 @@ export function needsSortingConfigMigration(
 }
 
 /**
- * Keeps only automatic criteria, preserves the user's relative order and
- * enabled choices, and fills any newly introduced automatic criteria.
+ * Keeps browsing-context switches and their enabled choices, removes legacy
+ * priorities, and fills missing switches in one idempotent migration.
  */
 export function migrateSortingConfig(
   config: SortingPriorityConfig | undefined,

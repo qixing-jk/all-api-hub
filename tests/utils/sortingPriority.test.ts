@@ -9,6 +9,7 @@ import {
   DATA_TYPE_INCOME,
 } from "~/constants"
 import {
+  createAccountContextBoostResolver,
   createDynamicSortComparator,
   DEFAULT_SORTING_PRIORITY_CONFIG,
   getAccountSortGroup,
@@ -19,7 +20,10 @@ import {
   type SortingPriorityConfig,
 } from "~/types/sorting"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
-import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+import {
+  buildDisplaySiteData,
+  buildSiteAccount,
+} from "~~/tests/test-utils/factories"
 
 function config(
   criteria: SortingPriorityConfig["criteria"] = [],
@@ -28,7 +32,7 @@ function config(
 }
 
 describe("createDynamicSortComparator", () => {
-  it("always groups pinned, normal, and disabled accounts in that order", () => {
+  it("groups pinned, normal, and disabled accounts when no context boost applies", () => {
     const accounts = [
       buildDisplaySiteData({
         id: "disabled-pinned",
@@ -94,7 +98,7 @@ describe("createDynamicSortComparator", () => {
     ])
   })
 
-  it("lets an active user sort outrank automatic and manual ordering", () => {
+  it("lets an active user sort outrank removed link criteria and manual ordering", () => {
     const accounts = [
       buildDisplaySiteData({
         id: "manual-first",
@@ -134,7 +138,7 @@ describe("createDynamicSortComparator", () => {
     ])
   })
 
-  it("uses configurable automatic criteria when no user sort is active", () => {
+  it("ignores removed link priorities when user sorting is cleared", () => {
     const accounts = [
       buildDisplaySiteData({ id: "alpha", name: "Alpha" }),
       buildDisplaySiteData({
@@ -162,10 +166,10 @@ describe("createDynamicSortComparator", () => {
       ),
     )
 
-    expect(accounts.map(({ id }) => id)).toEqual(["zulu-checkin", "alpha"])
+    expect(accounts.map(({ id }) => id)).toEqual(["alpha", "zulu-checkin"])
   })
 
-  it("respects automatic criterion order and disabled criteria", () => {
+  it("keeps manual order when user sorting is cleared and a legacy link criterion is disabled", () => {
     const accounts = [
       buildDisplaySiteData({
         id: "healthy",
@@ -198,6 +202,58 @@ describe("createDynamicSortComparator", () => {
 
     expect(accounts.map(({ id }) => id)).toEqual(["healthy", "error"])
   })
+
+  it.each(["custom_check_in_url", "custom_redeem_url"] as const)(
+    "sorts %s by link presence in either direction and uses manual order for ties",
+    (field) => {
+      const key = field === "custom_check_in_url" ? "url" : "redeemUrl"
+      const accounts = [
+        buildDisplaySiteData({ id: "absent", name: "A" }),
+        buildDisplaySiteData({
+          id: "blank",
+          name: "B",
+          checkIn: buildCheckInConfig({ customCheckIn: { [key]: "  " } }),
+        }),
+        buildDisplaySiteData({
+          id: "linked",
+          name: "Z",
+          checkIn: buildCheckInConfig({
+            customCheckIn: { [key]: "https://example.com" },
+          }),
+        }),
+        buildDisplaySiteData({
+          id: "linked-first",
+          name: "Y",
+          checkIn: buildCheckInConfig({
+            customCheckIn: { [key]: "https://other.example.com" },
+          }),
+        }),
+      ]
+      const compare = (order: "asc" | "desc") =>
+        createDynamicSortComparator(
+          config(),
+          null,
+          field,
+          "USD",
+          order,
+          {},
+          [],
+          { "linked-first": 0, linked: 1, absent: 2, blank: 3 },
+        )
+      expect([...accounts].sort(compare("desc")).map(({ id }) => id)).toEqual([
+        "linked-first",
+        "linked",
+        "absent",
+        "blank",
+      ])
+      expect([...accounts].sort(compare("asc")).map(({ id }) => id)).toEqual([
+        "absent",
+        "blank",
+        "linked-first",
+        "linked",
+      ])
+    },
+  )
 
   it("supports health status as an active user sort", () => {
     const accounts = [
@@ -384,5 +440,93 @@ describe("createDynamicSortComparator", () => {
     )
 
     expect(accounts.map(({ id }) => id)).toEqual(["beta", "alpha"])
+  })
+})
+
+describe("browsing context priority", () => {
+  it.each(["asc", "desc"] as const)(
+    "promotes context above pinned accounts and sorts each tier by balance (%s)",
+    (direction) => {
+      const accounts = [
+        buildDisplaySiteData({ id: "normal", balance: { USD: 100, CNY: 100 } }),
+        buildDisplaySiteData({ id: "open-low", balance: { USD: 1, CNY: 1 } }),
+        buildDisplaySiteData({ id: "open-high", balance: { USD: 9, CNY: 9 } }),
+        buildDisplaySiteData({ id: "current", balance: { USD: 5, CNY: 5 } }),
+        buildDisplaySiteData({ id: "pinned" }),
+        buildDisplaySiteData({
+          id: "open-pinned",
+          balance: { USD: 0, CNY: 0 },
+        }),
+        buildDisplaySiteData({ id: "disabled", disabled: true }),
+      ]
+      const scores = {
+        "open-low": 100,
+        "open-pinned": 1,
+        "open-high": 1,
+        current: 2,
+        disabled: 999,
+      }
+      const comparator = createDynamicSortComparator(
+        DEFAULT_SORTING_PRIORITY_CONFIG,
+        buildSiteAccount({ id: "current" }),
+        DATA_TYPE_BALANCE,
+        "USD",
+        direction,
+        scores,
+        ["pinned", "open-pinned", "disabled"],
+      )
+      expect(accounts.sort(comparator).map(({ id }) => id)).toEqual([
+        "current",
+        "open-pinned",
+        ...(direction === "asc"
+          ? ["open-low", "open-high"]
+          : ["open-high", "open-low"]),
+        "pinned",
+        "normal",
+        "disabled",
+      ])
+      expect(comparator(accounts[1], accounts[1])).toBe(0)
+    },
+  )
+
+  it("preserves disabled choices and uses current-site priority regardless of legacy priority numbers", () => {
+    const settings = config([
+      { id: SortingCriteriaType.MATCHED_OPEN_TABS, enabled: true, priority: 0 },
+      { id: SortingCriteriaType.CURRENT_SITE, enabled: true, priority: 9 },
+    ])
+    expect(
+      createAccountContextBoostResolver(settings, "current", { current: 1 })(
+        "current",
+      ),
+    ).toBe("current-site")
+    settings.criteria[1].enabled = false
+    expect(
+      createAccountContextBoostResolver(settings, "current", { current: 1 })(
+        "current",
+      ),
+    ).toBe("open-tabs")
+    settings.criteria[0].enabled = false
+    const resolve = createAccountContextBoostResolver(settings, "current", {
+      current: 1,
+    })
+    expect(resolve("current")).toBeUndefined()
+    const accounts = [
+      buildDisplaySiteData({ id: "current", name: "Z" }),
+      buildDisplaySiteData({ id: "other", name: "A" }),
+    ]
+    expect(
+      accounts
+        .sort(
+          createDynamicSortComparator(
+            settings,
+            buildSiteAccount({ id: "current" }),
+            "name",
+            "USD",
+            "asc",
+            { current: 1 },
+          ),
+        )
+        .map(({ id }) => id),
+    ).toEqual(["other", "current"])
   })
 })

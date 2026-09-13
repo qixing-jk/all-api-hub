@@ -577,16 +577,15 @@
     "title": "Anúncios do site"
   },
   "sorting": {
-    "currentSiteDesc": "Coloque a conta atualmente logada no navegador no topo da lista",
-    "currentSitePriority": "Priorizar conta com login atual",
-    "customCheckInDesc": "Colocar sites usando links de check-in externo na frente",
+    "contextBoostDescription": "Mostrar primeiro a conta do site atual e depois contas com páginas relacionadas abertas, antes de outras contas fixadas. Em cada nível, contas fixadas vêm primeiro, seguidas pela ordenação do campo escolhido. Contas desativadas ficam no final. Essas regras não se aplicam à busca nem à reordenação manual.",
+    "contextBoostTitle": "Priorizar sites em uso",
+    "currentSiteDesc": "Mostrar primeiro a conta do usuário conectado ao site atual.",
+    "currentSitePriority": "Priorizar a conta do site atual",
     "customCheckInUrl": "URL de check-in externo",
-    "customRedeemDesc": "Coloque sites usando links de resgate personalizados na frente",
     "customRedeemUrl": "URL de resgate personalizada",
-    "description": "Quando nenhum campo de ordenação estiver selecionado, ordene automaticamente as contas de cada seção por estas prioridades.",
-    "matchedOpenTabs": "Guias abertas correspondentes",
-    "matchedOpenTabsDesc": "Coloque contas relacionadas que correspondam às guias abertas atualmente (por título ou URL) na frente",
-    "priority": "Prioridade",
+    "description": "O contexto de navegação tem prioridade sobre contas fixadas. As demais mantêm a ordem: fixadas, normais e desativadas.",
+    "matchedOpenTabs": "Priorizar contas de outras abas abertas",
+    "matchedOpenTabsDesc": "Priorizar contas cujo site ou página configurada de check-in ou resgate esteja aberto e marcá-las como “Página relacionada aberta”.",
     "title": "Configurações de prioridade de classificação",
     "unknownSortRule": "Regra de classificação desconhecida"
   },

@@ -575,16 +575,15 @@
     "title": "網站公告"
   },
   "sorting": {
-    "currentSiteDesc": "將目前瀏覽器中已登入的帳號置於列表頂部",
-    "currentSitePriority": "目前登入帳號優先",
-    "customCheckInDesc": "將使用外部簽到連結的站點排在前面",
+    "contextBoostDescription": "先顯示目前站點，再顯示相關頁面已開啟的帳號，皆可排在其他置頂帳號之前。同一提升層級內置頂優先，再按所選欄位排序；已停用帳號始終在末尾。搜尋和手動排序模式不套用此規則。",
+    "contextBoostTitle": "瀏覽站點優先",
+    "currentSiteDesc": "優先顯示與目前站點登入使用者相符的帳號。",
+    "currentSitePriority": "優先顯示目前站點帳號",
     "customCheckInUrl": "外部簽到連結",
-    "customRedeemDesc": "將使用自定義兌換連結的站點排在前面",
     "customRedeemUrl": "自定義兌換連結",
-    "description": "未選擇帳戶列表欄位排序時，依以下優先順序自動排列各分區內的帳戶。",
-    "matchedOpenTabs": "匹配的開啟標籤頁",
-    "matchedOpenTabsDesc": "將與目前開啟標籤頁（標題或 URL）匹配的相關帳號排在前面",
-    "priority": "優先順序",
+    "description": "瀏覽站點提升優先於置頂；未符合提升規則的帳號仍按置頂、普通、停用排序。",
+    "matchedOpenTabs": "優先顯示其他已開啟分頁的帳號",
+    "matchedOpenTabsDesc": "帳號站點或已設定的簽到、兌換頁面開啟時，優先顯示對應帳號，並標示「相關頁面已開啟」。",
     "title": "排序優先順序設定",
     "unknownSortRule": "未知排序規則"
   },

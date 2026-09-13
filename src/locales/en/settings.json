@@ -576,16 +576,15 @@
     "title": "Site announcements"
   },
   "sorting": {
-    "currentSiteDesc": "Place the account currently logged in within the browser at the top of the list",
-    "currentSitePriority": "Prioritize Current Logged-in Account",
-    "customCheckInDesc": "Place sites using external check-in links at the front",
+    "contextBoostDescription": "Show the current site account first, then accounts with related pages open, ahead of other pinned accounts. Within each tier, pins come first, followed by the selected field sort. Disabled accounts stay last. Search and manual reorder do not apply these rules.",
+    "contextBoostTitle": "Prioritize browsing context",
+    "currentSiteDesc": "Show the account matching the current site’s signed-in user first.",
+    "currentSitePriority": "Prioritize the current site account",
     "customCheckInUrl": "External check-in URL",
-    "customRedeemDesc": "Place sites using custom redeem links at the front",
     "customRedeemUrl": "Custom Redeem URL",
-    "description": "When no list field sort is selected, automatically order accounts within each section by these priorities.",
-    "matchedOpenTabs": "Matched Open Tabs",
-    "matchedOpenTabsDesc": "Place related accounts that match the current open tabs (by title or URL) at the front",
-    "priority": "Priority",
+    "description": "Browsing context takes priority over pins. Other accounts remain ordered as pinned, normal, and disabled.",
+    "matchedOpenTabs": "Prioritize accounts matching other open tabs",
+    "matchedOpenTabsDesc": "Prioritize accounts whose site or configured check-in or redeem page is open, and label them “Related page open”.",
     "title": "Sorting Priority Settings",
     "unknownSortRule": "Unknown sorting rule"
   },

@@ -15,11 +15,19 @@ interface AccountListItemProps {
   highlights?: SearchResultWithHighlight["highlights"]
   onCopyKey: (site: DisplaySiteData) => void
   onDeleteWithDialog: (site: DisplaySiteData) => void
+  showContextBoost?: boolean
   showCreatedAt?: boolean
 }
 
 const AccountListItem: React.FC<AccountListItemProps> = React.memo(
-  ({ site, highlights, onCopyKey, onDeleteWithDialog, showCreatedAt }) => {
+  ({
+    site,
+    highlights,
+    onCopyKey,
+    onDeleteWithDialog,
+    showCreatedAt,
+    showContextBoost,
+  }) => {
     const { isTouchDevice } = useDevice()
 
     // 触摸设备始终显示按钮，PC端根据hover状态显示
@@ -44,6 +52,7 @@ const AccountListItem: React.FC<AccountListItemProps> = React.memo(
               site={site}
               highlights={highlights}
               showCreatedAt={showCreatedAt}
+              showContextBoost={showContextBoost}
             />
           </div>
 

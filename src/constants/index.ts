@@ -11,6 +11,8 @@ export const DATA_TYPE_INCOME = "income"
 export const DATA_TYPE_BALANCE = "balance"
 export const DATA_TYPE_CREATED_AT = "created_at"
 export const DATA_TYPE_CHECK_IN_REQUIREMENT = "check_in_requirement"
+export const DATA_TYPE_CUSTOM_CHECK_IN_URL = "custom_check_in_url"
+export const DATA_TYPE_CUSTOM_REDEEM_URL = "custom_redeem_url"
 export const DATA_TYPE_HEALTH_STATUS = "health_status"
 
 export * from "./branding"

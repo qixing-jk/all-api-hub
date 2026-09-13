@@ -124,7 +124,8 @@
     },
     "summary_one": "{{count}} account",
     "summary_other": "{{count}} accounts",
-    "tagsAllLabel": "All"
+    "tagsAllLabel": "All",
+    "toggle": "Filters"
   },
   "filteredTotals": {
     "balance": "Balance",
@@ -220,11 +221,14 @@
       "checkedInToday": "Checked in today, click to view",
       "checkInStatusOutdated": "Check-in status wasn't detected today (last check time: {{time}}). Click to refresh",
       "currentSite": "Current Site",
+      "currentSiteBoostHint": "Matches the signed-in account on the current site and appears before other accounts. Disabled accounts stay last.",
       "currentSiteExists": "Same site as the current tab",
       "disabled": "Disabled",
       "lastSync": "Last Sync",
       "notAvailable": "N/A",
       "notCheckedInToday": "Not checked in today, click to go",
+      "openTabsBoost": "Related page open",
+      "openTabsBoostHint": "This account’s site or configured check-in or redeem page is open, so it appears before unrelated pinned accounts, after the current site account. Disabled accounts stay last.",
       "reason": "Reason",
       "refreshHealthStatus": "Click to refresh health status",
       "siteType": "Site type",

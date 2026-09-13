@@ -124,7 +124,8 @@
     },
     "summary_one": "{{count}} Konto",
     "summary_other": "{{count}} Konten",
-    "tagsAllLabel": "Alle"
+    "tagsAllLabel": "Alle",
+    "toggle": "Filter"
   },
   "filteredTotals": {
     "balance": "Kontostand",
@@ -220,11 +221,14 @@
       "checkedInToday": "Heute eingecheckt, zum Ansehen klicken",
       "checkInStatusOutdated": "Der Check-in-Status wurde heute nicht erkannt (letzte Überprüfungszeit: {{time}}). Zum Aktualisieren klicken",
       "currentSite": "Aktuelle Website",
+      "currentSiteBoostHint": "Entspricht dem angemeldeten Konto der aktuellen Website und erscheint vor anderen Konten. Deaktivierte Konten bleiben am Ende.",
       "currentSiteExists": "Dieselbe Website wie im aktuellen Tab",
       "disabled": "Deaktiviert",
       "lastSync": "Letzte Synchronisierung",
       "notAvailable": "N/A",
       "notCheckedInToday": "Heute nicht eingecheckt; zum Öffnen klicken",
+      "openTabsBoost": "Zugehörige Seite geöffnet",
+      "openTabsBoostHint": "Die Website dieses Kontos oder eine konfigurierte Check-in- oder Einlöseseite ist geöffnet. Das Konto erscheint vor anderen angehefteten Konten, nach dem Konto der aktuellen Website. Deaktivierte Konten bleiben am Ende.",
       "reason": "Grund",
       "refreshHealthStatus": "Klicken Sie hier, um den Gesundheitsstatus zu aktualisieren",
       "siteType": "Website-Typ",

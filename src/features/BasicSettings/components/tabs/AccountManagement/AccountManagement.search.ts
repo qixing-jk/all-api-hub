@@ -133,38 +133,6 @@ export const accountManagementSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildControlDefinition(
-    "control:sorting-custom-checkin-url",
-    "accountManagement",
-    getSortingCriteriaTargetId(SortingCriteriaType.CUSTOM_CHECK_IN_URL),
-    "settings:sorting.customCheckInUrl",
-    530,
-    {
-      descriptionKey: "settings:sorting.customCheckInDesc",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.accountManagement",
-        "settings:sorting.title",
-      ],
-      keywords: ["sorting", "priority", "custom checkin url", "check-in url"],
-    },
-  ),
-  buildControlDefinition(
-    "control:sorting-custom-redeem-url",
-    "accountManagement",
-    getSortingCriteriaTargetId(SortingCriteriaType.CUSTOM_REDEEM_URL),
-    "settings:sorting.customRedeemUrl",
-    531,
-    {
-      descriptionKey: "settings:sorting.customRedeemDesc",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.accountManagement",
-        "settings:sorting.title",
-      ],
-      keywords: ["sorting", "priority", "custom redeem url", "redeem url"],
-    },
-  ),
-  buildControlDefinition(
     "control:sorting-matched-open-tabs",
     "accountManagement",
     getSortingCriteriaTargetId(SortingCriteriaType.MATCHED_OPEN_TABS),

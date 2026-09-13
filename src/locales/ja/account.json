@@ -114,7 +114,8 @@
       "placeholder": "サイト種別"
     },
     "summary_other": "{{count}} アカウント",
-    "tagsAllLabel": "すべて"
+    "tagsAllLabel": "すべて",
+    "toggle": "絞り込み"
   },
   "filteredTotals": {
     "balance": "残高",
@@ -198,11 +199,14 @@
       "checkedInToday": "本日はチェックイン済み、クリックして表示",
       "checkInStatusOutdated": "本日のチェックイン状態はまだ検出されていません（前回確認時刻: {{time}}）。クリックして更新",
       "currentSite": "現在のサイト",
+      "currentSiteBoostHint": "現在のサイトでログイン中のアカウントに一致するため、他のアカウントより先に表示されます。無効なアカウントは末尾に残ります。",
       "currentSiteExists": "現在のタブと同じサイトです",
       "disabled": "無効",
       "lastSync": "前回同期",
       "notAvailable": "N/A",
       "notCheckedInToday": "本日は未チェックイン、クリックして移動",
+      "openTabsBoost": "関連ページを表示中",
+      "openTabsBoostHint": "サイト、または設定済みのチェックイン・引き換えページが開かれているため、他の固定アカウントより先に表示されます。現在のサイトのアカウントが最優先で、無効なアカウントは末尾に残ります。",
       "reason": "理由",
       "refreshHealthStatus": "クリックして健全性を更新",
       "siteType": "サイトタイプ",

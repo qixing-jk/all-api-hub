@@ -87,6 +87,12 @@
     "updating": "更新中...",
     "uploading": "上传中..."
   },
+  "tagFilter": {
+    "allTags": "全部标签",
+    "noResults": "没有匹配的标签",
+    "search": "搜索标签",
+    "selected": "已选"
+  },
   "time": {
     "neverExpires": "永不过期",
     "seconds": "秒",

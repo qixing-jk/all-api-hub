@@ -79,6 +79,7 @@ import {
 interface SiteInfoProps {
   site: DisplaySiteData
   highlights?: SearchResultWithHighlight["highlights"]
+  showContextBoost?: boolean
   showCreatedAt?: boolean
 }
 
@@ -171,10 +172,12 @@ export default function SiteInfo({
   site,
   highlights,
   showCreatedAt = false,
+  showContextBoost = true,
 }: SiteInfoProps) {
   const { t } = useTranslation(["account", "messages", "common"])
   const {
     detectedSiteAccounts,
+    getAccountContextBoost,
     isAccountPinned,
     togglePinAccount,
     isPinFeatureEnabled,
@@ -190,6 +193,16 @@ export default function SiteInfo({
   const isDetectedAccount = detectedSiteAccounts.some(
     (account) => account.id === site.id,
   )
+
+  const contextBoost = showContextBoost
+    ? getAccountContextBoost?.(site.id)
+    : undefined
+  const contextHint =
+    contextBoost === "current-site"
+      ? t("list.site.currentSiteBoostHint")
+      : contextBoost === "open-tabs"
+        ? t("list.site.openTabsBoostHint")
+        : t("list.site.currentSiteExists")
 
   const isPinned = isAccountPinned(site.id)
   const pinTooltipLabel = isPinned ? t("actions.unpin") : t("actions.pin")
@@ -562,17 +575,17 @@ export default function SiteInfo({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            {isDetectedAccount && (
-              <Tooltip
-                content={t("list.site.currentSiteExists")}
-                position="top"
-              >
+            {(contextBoost || isDetectedAccount) && (
+              <Tooltip content={contextHint} anchorAsChild position="top">
                 <Badge
+                  tabIndex={0}
                   variant="warning"
                   size="sm"
                   className="whitespace-nowrap"
                 >
-                  {t("list.site.currentSite")}
+                  {contextBoost === "open-tabs"
+                    ? t("list.site.openTabsBoost")
+                    : t("list.site.currentSite")}
                 </Badge>
               </Tooltip>
             )}

@@ -87,6 +87,12 @@
     "updating": "Đang cập nhật...",
     "uploading": "Đang tải lên..."
   },
+  "tagFilter": {
+    "allTags": "Tất cả thẻ",
+    "noResults": "Không có thẻ phù hợp",
+    "search": "Tìm thẻ",
+    "selected": "Đã chọn"
+  },
   "time": {
     "neverExpires": "Không bao giờ hết hạn",
     "seconds": "giây",

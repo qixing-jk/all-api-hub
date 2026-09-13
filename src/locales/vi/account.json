@@ -114,7 +114,8 @@
       "placeholder": "Loại trang web"
     },
     "summary_other": "Tổng cộng {{count}} tài khoản",
-    "tagsAllLabel": "Tất cả"
+    "tagsAllLabel": "Tất cả",
+    "toggle": "Bộ lọc"
   },
   "filteredTotals": {
     "balance": "Số dư",
@@ -198,11 +199,14 @@
       "checkedInToday": "Hôm nay đã điểm danh, nhấp vào tôi để xem",
       "checkInStatusOutdated": "Trạng thái điểm danh không phải là kiểm tra hôm nay (lần kiểm tra cuối: {{time}}), nhấp vào tôi để làm mới",
       "currentSite": "Trang web hiện tại",
+      "currentSiteBoostHint": "Khớp với tài khoản đang đăng nhập trên trang hiện tại và hiển thị trước các tài khoản khác. Tài khoản bị vô hiệu hóa vẫn ở cuối.",
       "currentSiteExists": "Giống với trang web ở tab hiện tại",
       "disabled": "Đã vô hiệu hóa",
       "lastSync": "Đồng bộ lần cuối",
       "notAvailable": "Không khả dụng",
       "notCheckedInToday": "Hôm nay chưa điểm danh, nhấp vào tôi để điểm danh",
+      "openTabsBoost": "Trang liên quan đang mở",
+      "openTabsBoostHint": "Trang web hoặc trang điểm danh hay đổi mã đã cấu hình đang mở, nên tài khoản xuất hiện trước các tài khoản ghim không liên quan, sau tài khoản của trang hiện tại. Tài khoản bị vô hiệu hóa vẫn ở cuối.",
       "reason": "Lý do",
       "refreshHealthStatus": "Nhấp để làm mới trạng thái sức khỏe",
       "siteType": "Loại trang",

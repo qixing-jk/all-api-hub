@@ -31,14 +31,6 @@ describe("account management settings search definitions", () => {
         getSortingCriteriaTargetId(SortingCriteriaType.CURRENT_SITE),
       ],
       [
-        "control:sorting-custom-checkin-url",
-        getSortingCriteriaTargetId(SortingCriteriaType.CUSTOM_CHECK_IN_URL),
-      ],
-      [
-        "control:sorting-custom-redeem-url",
-        getSortingCriteriaTargetId(SortingCriteriaType.CUSTOM_REDEEM_URL),
-      ],
-      [
         "control:sorting-matched-open-tabs",
         getSortingCriteriaTargetId(SortingCriteriaType.MATCHED_OPEN_TABS),
       ],
