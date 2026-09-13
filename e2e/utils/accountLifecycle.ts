@@ -474,6 +474,7 @@ export async function deleteTokensMatchingNameFromKeyManagementPage(params: {
 async function deleteTokenRowFromKeyManagementPage(params: {
   page: Page
   row: Locator
+  cleanupLinkedChannels?: boolean
 }) {
   await expect(params.row).toBeVisible({ timeout: 30_000 })
   const rowTestId = await params.row.getAttribute("data-testid")
@@ -485,6 +486,14 @@ async function deleteTokenRowFromKeyManagementPage(params: {
   await params.row
     .getByRole("button", { name: "Delete Key", exact: true })
     .click()
+  if (params.cleanupLinkedChannels !== undefined) {
+    await params.page
+      .getByRole("checkbox", {
+        name: "Also clean up matching channels on the current managed site",
+        exact: true,
+      })
+      .setChecked(params.cleanupLinkedChannels)
+  }
   await params.page
     .getByTestId(KEY_MANAGEMENT_TEST_IDS.deleteTokenConfirmButton)
     .click()
@@ -501,6 +510,7 @@ async function deleteTokenRowFromKeyManagementPage(params: {
 export async function deleteTokenFromKeyManagementPage(params: {
   page: Page
   token: AccountTokenIdentity | string
+  cleanupLinkedChannels?: boolean
 }) {
   await closeTokenCreationDialogsIfPresent(params.page)
 
@@ -514,6 +524,7 @@ export async function deleteTokenFromKeyManagementPage(params: {
   await deleteTokenRowFromKeyManagementPage({
     page: params.page,
     row,
+    cleanupLinkedChannels: params.cleanupLinkedChannels,
   })
 }
 

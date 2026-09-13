@@ -399,6 +399,7 @@ export async function runManagedSiteTokenChannelStatusScenario<
       await deleteTokenFromKeyManagementPage({
         page: keyManagementPage,
         token: createdTokenName,
+        cleanupLinkedChannels: false,
       })
     })
   }
@@ -496,23 +497,27 @@ async function expectManagedSiteChannelVisibleAfterRefresh(params: {
 }
 
 async function expectManagedSiteImportStatusAfterChannelCreate(row: Locator) {
-  const channelLinkButton = row.getByTestId(
+  const detailsTrigger = row.getByTestId("managed-site-status-details")
+  await detailsTrigger.click()
+  await expect(detailsTrigger).toHaveAttribute("aria-expanded", "true")
+  // Status actions are rendered in a portalled popover, outside the key row.
+  const details = row.page().getByRole("dialog", {
+    name: "Managed site",
+    exact: true,
+  })
+  const channelLinkButton = details.getByTestId(
     KEY_MANAGEMENT_TEST_IDS.managedSiteChannelLinkButton,
   )
-  const verificationRetryButton = row.getByTestId(
+  const verificationRetryButton = details.getByTestId(
     KEY_MANAGEMENT_TEST_IDS.managedSiteVerificationRetryButton,
   )
 
-  await expect(async () => {
-    if (await channelLinkButton.isVisible()) {
-      return
-    }
-
-    await expect(verificationRetryButton).toBeVisible({ timeout: 10_000 })
-  }).toPass({
-    intervals: [1_000, 3_000, 5_000],
+  await expect(
+    channelLinkButton.or(verificationRetryButton).first(),
+  ).toBeVisible({
     timeout: 30_000,
   })
+  await details.press("Escape")
 }
 
 async function cleanupKeyManagementTokensByPrefix(params: {
@@ -539,6 +544,8 @@ async function cleanupKeyManagementTokensByPrefix(params: {
     await deleteTokenFromKeyManagementPage({
       page: params.page,
       token: tokenName,
+      // This scenario owns channel cleanup separately below.
+      cleanupLinkedChannels: false,
     })
   }
 

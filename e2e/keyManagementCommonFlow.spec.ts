@@ -1266,6 +1266,47 @@ test("links an existing API credential to an existing key and preserves the asso
   ).toBeVisible()
 })
 
+test("lets scenario cleanup delete only the source key", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const worker = await getServiceWorker(context)
+  await seedStoredAccounts(worker, [createStoredAccount()])
+  await stubNewApiSiteRoutes(context, { initialTokens: [createStubApiToken()] })
+  await seedUserPreferences(worker, {
+    managedSiteType: SITE_TYPES.CLI_PROXY_API,
+    cliProxyApi: {
+      baseUrl: "https://managed-cleanup.example.invalid",
+      adminToken: "test-management-key",
+    },
+  })
+  const mutations: string[] = []
+  await context.route(
+    "https://managed-cleanup.example.invalid/**",
+    async (route) => {
+      const kind = new URL(route.request().url()).pathname.split("/").at(-1)!
+      if (route.request().method() !== "GET")
+        mutations.push(route.request().method())
+      await route.fulfill({ json: { [kind]: [] } })
+    },
+  )
+  await openKeyManagementForAccount({
+    page,
+    extensionId,
+    accountId: "e2e-account-1",
+  })
+  await deleteTokenFromKeyManagementPage({
+    page,
+    token: "Existing Key",
+    cleanupLinkedChannels: false,
+  })
+  await expect(page.getByRole("heading", { name: "Existing Key" })).toHaveCount(
+    0,
+  )
+  expect(mutations).toEqual([])
+})
+
 test("cleans linked channels and retries persisted multi-key cleanup after reloading", async ({
   context,
   extensionId,
