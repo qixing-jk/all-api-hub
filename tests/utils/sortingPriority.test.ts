@@ -325,40 +325,45 @@ describe("createDynamicSortComparator", () => {
     expect(accounts.map(({ id }) => id)).toEqual(["alpha", "beta"])
   })
 
-  it("supports check-in requirement as an active descending sort", () => {
-    const accounts = [
-      buildDisplaySiteData({
-        id: "done",
-        checkIn: buildCheckInConfig({
-          customCheckIn: {
-            url: "https://example.com/checkin",
-            isCheckedInToday: true,
-          },
+  it.each(["asc", "desc"] as const)(
+    "supports check-in requirement as an active %s sort",
+    (sortOrder) => {
+      const accounts = [
+        buildDisplaySiteData({
+          id: "done",
+          checkIn: buildCheckInConfig({
+            customCheckIn: {
+              url: "https://example.com/checkin",
+              isCheckedInToday: true,
+            },
+          }),
         }),
-      }),
-      buildDisplaySiteData({
-        id: "required",
-        checkIn: buildCheckInConfig({
-          customCheckIn: {
-            url: "https://example.com/checkin",
-            isCheckedInToday: false,
-          },
+        buildDisplaySiteData({
+          id: "required",
+          checkIn: buildCheckInConfig({
+            customCheckIn: {
+              url: "https://example.com/checkin",
+              isCheckedInToday: false,
+            },
+          }),
         }),
-      }),
-    ]
+      ]
 
-    accounts.sort(
-      createDynamicSortComparator(
-        config(),
-        null,
-        DATA_TYPE_CHECK_IN_REQUIREMENT,
-        "USD",
-        "desc",
-      ),
-    )
+      accounts.sort(
+        createDynamicSortComparator(
+          config(),
+          null,
+          DATA_TYPE_CHECK_IN_REQUIREMENT,
+          "USD",
+          sortOrder,
+        ),
+      )
 
-    expect(accounts.map(({ id }) => id)).toEqual(["required", "done"])
-  })
+      expect(accounts.map(({ id }) => id)).toEqual(
+        sortOrder === "asc" ? ["done", "required"] : ["required", "done"],
+      )
+    },
+  )
 
   it("sorts created time and uses account name as the stable final fallback", () => {
     const accounts = [

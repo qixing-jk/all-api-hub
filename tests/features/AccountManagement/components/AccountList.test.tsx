@@ -936,32 +936,37 @@ describe("AccountList", () => {
     expect(handleSort).toHaveBeenCalledWith(field)
   })
 
-  it("keeps the active descending sort control actionable", async () => {
-    const user = userEvent.setup()
-    const handleSort = vi.fn()
+  it.each(["asc", "desc"] as const)(
+    "keeps the active %s sort control actionable",
+    async (sortOrder) => {
+      const user = userEvent.setup()
+      const handleSort = vi.fn()
 
-    mockUseAccountDataContext.mockReturnValue(
-      createAccountDataContextValue({
-        handleSort,
-        sortField: DATA_TYPE_BALANCE,
-        sortOrder: "desc",
-      }),
-    )
+      mockUseAccountDataContext.mockReturnValue(
+        createAccountDataContextValue({
+          handleSort,
+          sortField: DATA_TYPE_BALANCE,
+          sortOrder,
+        }),
+      )
 
-    render(<AccountList />)
+      render(<AccountList />)
 
-    expect(
-      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListSortMenuButton),
-    ).toHaveAttribute("aria-haspopup", "menu")
+      expect(
+        screen.getByTestId(
+          ACCOUNT_MANAGEMENT_TEST_IDS.accountListSortMenuButton,
+        ),
+      ).toHaveAttribute("aria-haspopup", "menu")
 
-    await user.click(
-      screen.getByTestId(
-        ACCOUNT_MANAGEMENT_TEST_IDS.accountListSortDirectionButton,
-      ),
-    )
+      await user.click(
+        screen.getByTestId(
+          ACCOUNT_MANAGEMENT_TEST_IDS.accountListSortDirectionButton,
+        ),
+      )
 
-    expect(handleSort).toHaveBeenCalledWith(DATA_TYPE_BALANCE)
-  })
+      expect(handleSort).toHaveBeenCalledWith(DATA_TYPE_BALANCE)
+    },
+  )
 
   it("opens sorting priority settings from the account list", async () => {
     const user = userEvent.setup()
@@ -1756,6 +1761,61 @@ describe("AccountList", () => {
       screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListHeader),
     ).toHaveTextContent("common:total: 1")
   })
+
+  it("toggles the compact filter panel without changing the displayed accounts", async () => {
+    const user = userEvent.setup()
+    render(<AccountList />)
+    const toggle = screen.getByRole("button", { name: "account:filter.toggle" })
+    const panel = document.getElementById(toggle.getAttribute("aria-controls")!)
+    const initialRows = screen
+      .getAllByTestId(TEST_IDS.accountRow)
+      .map((row) => row.textContent)
+    expect(toggle).toHaveAttribute("aria-expanded", "false")
+    expect(panel).toHaveClass("hidden")
+    await user.click(toggle)
+    expect(toggle).toHaveAttribute("aria-expanded", "true")
+    expect(panel).not.toHaveClass("hidden")
+    await user.click(toggle)
+    expect(toggle).toHaveAttribute("aria-expanded", "false")
+    expect(panel).toHaveClass("hidden")
+    expect(
+      screen.getAllByTestId(TEST_IDS.accountRow).map((row) => row.textContent),
+    ).toEqual(initialRows)
+  })
+
+  it.each([SiteHealthStatus.Error, SiteHealthStatus.Unknown])(
+    "filters synced accounts with %s health independently from healthy accounts",
+    async (status) => {
+      const accounts = [
+        buildDisplaySiteData({
+          id: "selected",
+          name: "Selected status",
+          last_sync_time: 1,
+          health: { status },
+        }),
+        buildDisplaySiteData({
+          id: "healthy",
+          name: "Healthy status",
+          last_sync_time: 1,
+          health: { status: SiteHealthStatus.Healthy },
+        }),
+      ]
+      mockUseAccountDataContext.mockReturnValue(
+        createAccountDataContextValue({
+          sortedData: accounts,
+          displayData: accounts,
+        }),
+      )
+      render(<AccountList />)
+      const option = screen.getByRole("button", {
+        name: `account:healthStatus.${status}`,
+      })
+      expect(option).toHaveAttribute("data-count", "1")
+      await userEvent.setup().click(option)
+      expect(screen.getByText("Selected status")).toBeInTheDocument()
+      expect(screen.queryByText("Healthy status")).not.toBeInTheDocument()
+    },
+  )
 
   it("uses the generic bulk deletion confirmation for OpenRouter", async () => {
     const user = userEvent.setup()

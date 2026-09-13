@@ -1,8 +1,8 @@
-import { render, screen, within } from "@testing-library/react"
+import { act, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 import { I18nextProvider } from "react-i18next"
-import { beforeAll, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
 import { CompactTagFilter } from "~/components/ui/CompactTagFilter"
 import common from "~/locales/en/common.json"
@@ -30,6 +30,10 @@ function Example() {
 }
 
 describe("CompactTagFilter", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
   beforeAll(async () => {
     translator = await createResourceTestI18n({ en: { common } })
   })
@@ -101,6 +105,92 @@ describe("CompactTagFilter", () => {
       />,
     )
     expect(screen.queryByRole("button")).not.toBeInTheDocument()
+  })
+
+  it("fits shortcuts to available width and retains selections when they become hidden", async () => {
+    let availableWidth = 220
+    let notifyResize = () => {}
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(
+      () => availableWidth,
+    )
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      top: 0,
+      left: 0,
+      right: 50,
+      bottom: 30,
+      width: 50,
+      height: 30,
+      toJSON: () => ({}),
+    })
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(callback: () => void) {
+          notifyResize = callback
+        }
+        observe() {}
+        disconnect() {}
+      },
+    )
+    const shortcutOptions = [
+      { value: "a", label: "Alpha" },
+      { value: "b", label: "Beta", disabled: true },
+      { value: "c", label: "Gamma", disabled: true },
+    ]
+    function Shortcuts() {
+      const [value, setValue] = useState(["b"])
+      return (
+        <CompactTagFilter
+          options={shortcutOptions}
+          value={value}
+          onChange={setValue}
+          allLabel="All"
+        />
+      )
+    }
+    const user = userEvent.setup()
+    render(
+      <I18nextProvider i18n={translator}>
+        <Shortcuts />
+      </I18nextProvider>,
+    )
+    expect(screen.getByRole("button", { name: "Beta" })).toBeEnabled()
+    expect(screen.getByRole("button", { name: "Gamma" })).toBeDisabled()
+    await user.click(screen.getByRole("button", { name: "Beta" }))
+    expect(screen.getByRole("button", { name: "Beta" })).toBeDisabled()
+    await user.click(screen.getByRole("button", { name: "Alpha" }))
+    expect(screen.getByRole("button", { name: "Alpha" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    )
+    act(() => {
+      availableWidth = 60
+      notifyResize()
+    })
+    expect(
+      screen.queryByRole("button", { name: "Alpha" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Selected 1" }),
+    ).toBeInTheDocument()
+    act(() => {
+      availableWidth = 160
+      notifyResize()
+    })
+    expect(screen.getByRole("button", { name: "Alpha" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    )
+    expect(
+      screen.queryByRole("button", { name: "Gamma" }),
+    ).not.toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "All" }))
+    expect(screen.getByRole("button", { name: "Alpha" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    )
   })
 
   it("preserves focus on an outside action when dismissing the panel", async () => {
