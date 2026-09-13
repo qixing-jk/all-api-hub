@@ -310,55 +310,66 @@ describe("optional check-in clue scan", () => {
     ).toEqual([])
   })
 
-  it("uses only fixed GETs and public same-origin scripts; never follows discovered routes", async () => {
-    const fetch = vi.fn(async (url: string) => {
-      if (url === baseUrl + "/")
+  it.each(["http://example.com", "https://example.com"])(
+    "honors the configured origin %s with fixed authenticated GETs and public same-origin scripts",
+    async (baseUrl) => {
+      const fetch = vi.fn(async (url: string) => {
+        if (url === baseUrl + "/")
+          return response(
+            '<script src="/app.js"></script><script src="https://other.example/leak.js"></script>',
+            "text/html",
+          )
+        if (url.endsWith("app.js"))
+          return response(
+            `'/new/checkin?token=secret'; '/api/redeem#private'`,
+            "text/javascript",
+          )
         return response(
-          '<script src="/app.js"></script><script src="https://other.example/leak.js"></script>',
-          "text/html",
+          '{"success":true,"data":{"token":"hidden"},"token":"hidden"}',
         )
-      if (url.endsWith("app.js"))
-        return response(
-          `'/new/checkin?token=secret'; '/api/redeem#private'`,
-          "text/javascript",
-        )
-      return response(
-        '{"success":true,"data":{"token":"hidden"},"token":"hidden"}',
-      )
-    })
-    vi.stubGlobal("fetch", fetch)
-    const clues = await collectCheckInFeedbackClues(
-      {
-        baseUrl,
-        siteType: SITE_TYPES.NEW_API,
-        auth: {
-          authType: AuthTypeEnum.AccessToken,
-          accessToken: "account-secret",
-          userId: "42",
+      })
+      vi.stubGlobal("fetch", fetch)
+      const clues = await collectCheckInFeedbackClues(
+        {
+          baseUrl,
+          siteType: SITE_TYPES.NEW_API,
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: "account-secret",
+            userId: "42",
+          },
         },
-      },
-      new AbortController().signal,
-    )
-    expect(clues.status).toBe("completed")
-    expect(clues.routes).toEqual(["/new/checkin", "/api/redeem"])
-    expect(clues.statusQueries[0].keys).toEqual(["success", "data"])
-    for (const [url, init] of fetch.mock.calls as unknown as Array<
-      [string, RequestInit]
-    >) {
-      expect(new URL(url).origin).toBe(baseUrl)
-      expect(init.method).toBe("GET")
-      expect(init.redirect).toBe("error")
-      expect(init.credentials).toBe("omit")
-      if (url.endsWith("app.js") || url === baseUrl + "/")
-        expect(init.headers).toBeUndefined()
-    }
-    expect(fetch.mock.calls.map(([url]) => url)).not.toContain(
-      baseUrl + "/new/checkin",
-    )
-    expect(formatCheckInFeedbackClues(clues)).not.toMatch(
-      /hidden|secret|other.example/,
-    )
-  })
+        new AbortController().signal,
+      )
+      expect(clues.status).toBe("completed")
+      expect(clues.routes).toEqual(["/new/checkin", "/api/redeem"])
+      expect(clues.statusQueries[0].keys).toEqual(["success", "data"])
+      for (const [url, init] of fetch.mock.calls as unknown as Array<
+        [string, RequestInit]
+      >) {
+        expect(new URL(url).origin).toBe(baseUrl)
+        expect(init.method).toBe("GET")
+        expect(init.redirect).toBe("error")
+        expect(init.credentials).toBe("omit")
+        if (
+          url.endsWith("app.js") ||
+          url === baseUrl + "/" ||
+          url === baseUrl + "/api/status"
+        )
+          expect(init.headers).toBeUndefined()
+        else
+          expect(new Headers(init.headers).get("Authorization")).toBe(
+            "Bearer account-secret",
+          )
+      }
+      expect(fetch.mock.calls.map(([url]) => url)).not.toContain(
+        baseUrl + "/new/checkin",
+      )
+      expect(formatCheckInFeedbackClues(clues)).not.toMatch(
+        /hidden|secret|other.example/,
+      )
+    },
+  )
 
   it("keeps HTTP exclusion clues when public resources fail", async () => {
     vi.stubGlobal(
