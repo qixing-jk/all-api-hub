@@ -18,6 +18,12 @@ test("channel header actions share a compact height", async ({
     MANAGED_SITE_CHANNELS_TEST_IDS.addChannelButton,
   )
   await expect(addChannel).toBeVisible()
+  // Give the single-line probe its own width; neighboring actions and platform
+  // font metrics can otherwise legitimately wrap this label before the probe.
+  await addChannel.evaluate((button) => {
+    button.style.flex = "none"
+    button.style.width = "240px"
+  })
   expect(
     await addChannel.evaluate(
       (button) => button.getBoundingClientRect().height,
@@ -39,6 +45,7 @@ test("channel header actions share a compact height", async ({
   ).toBe(true)
   await addChannel.evaluate((button) => {
     button.style.removeProperty("width")
+    button.style.removeProperty("flex")
   })
   for (const width of [1440, 768, 390]) {
     await page.setViewportSize({ width, height: 1000 })
