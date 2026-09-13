@@ -71,6 +71,7 @@ export interface AccountFormHandle {
 interface AccountFormProps {
   ref?: Ref<AccountFormHandle>
   draft: AccountDialogDraft
+  siteUrl?: string
   sitePolicy: AccountFormPresentationSitePolicy
   isDetected: boolean
   isManualBalanceUsdInvalid: boolean
@@ -157,6 +158,7 @@ export default function AccountForm({
   onRedetectCheckInMethods,
   isRedetectingCheckInMethods,
   checkInRedetectionFeedback,
+  siteUrl,
 }: AccountFormProps) {
   const { t } = useTranslation(["accountDialog", "common"])
   const {
@@ -570,6 +572,7 @@ export default function AccountForm({
       <AccountCheckInSection
         checkIn={checkIn}
         siteType={siteType}
+        siteUrl={siteUrl}
         onCheckInChange={onCheckInChange}
         onCheckInSelectionChange={onCheckInSelectionChange}
         onRedetectCheckInMethods={onRedetectCheckInMethods}

@@ -354,10 +354,12 @@ export default function SiteInfo({
     const checkInInspection = inspectAccountCheckIn({
       config: site.checkIn,
       siteType: site.siteType,
+      siteUrl: site.baseUrl,
     })
     const selectedStatus = getSelectedCheckInStatus({
       config: site.checkIn,
       siteType: site.siteType,
+      siteUrl: site.baseUrl,
     })
     const siteCheckedIn =
       selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known

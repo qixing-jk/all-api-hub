@@ -71,6 +71,8 @@
   },
   "form": {
     "accessToken": "Access Token",
+    "agentRouterLoginCheckInMethod": "再ログインしてチェックイン",
+    "agentRouterLoginCheckInMethodDesc": "Agent Router にログインしてチェックイン結果を確認します。",
     "autoCheckInEnabled": "毎日の自動チェックインを有効化",
     "autoCheckInEnabledDesc": "グローバル自動チェックインが有効なとき、このアカウントを日次チェックイン対象にするかどうか",
     "autoCheckInPausedBySiteDesc": "この設定は保持され、サイト側でチェックインが有効になると自動チェックインを再開します。",
@@ -118,6 +120,8 @@
     "hideAccessToken": "Access Token を非表示",
     "hideRefreshToken": "Refresh Token を非表示",
     "importCookieAuthSessionCookie": "現在のログインから取り込む",
+    "loginCheckInProvider": "チェックインのログイン方法",
+    "loginCheckInProviderDesc": "ブラウザーでログインしてチェックインします。ログイン、CAPTCHA、二要素認証の画面では操作が必要になる場合があります。",
     "manualBalanceUsd": "手動残高（USD）",
     "manualBalanceUsdDesc": "サイトで残高 / クォータを自動取得できない場合に使用します",
     "manualBalanceUsdError": "有効な金額（0 以上）を入力してください",

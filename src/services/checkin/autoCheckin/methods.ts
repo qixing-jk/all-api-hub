@@ -92,6 +92,7 @@ const resolveSelectedCheckInRegistration = (input: {
   const state = inspectAccountCheckIn({
     config: input.account.checkIn,
     siteType: input.account.site_type,
+    siteUrl: input.account.site_url,
     accountDisabled: input.account.disabled,
     globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
   })
@@ -302,6 +303,7 @@ const createRecoveredMutationGuard = (input: {
     const latestState = inspectAccountCheckIn({
       config: latestAccount.checkIn,
       siteType: latestAccount.site_type,
+      siteUrl: latestAccount.site_url,
       accountDisabled: latestAccount.disabled,
       globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
     })
@@ -411,6 +413,7 @@ export async function executeSelectedCheckIn(input: {
   const initialState = inspectAccountCheckIn({
     config: input.account.checkIn,
     siteType: input.account.site_type,
+    siteUrl: input.account.site_url,
     accountDisabled: input.account.disabled,
     globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
   })
@@ -430,6 +433,7 @@ export async function executeSelectedCheckIn(input: {
   const selectedMethodId = resolveSelectedCheckInMethod({
     config: input.account.checkIn,
     siteType: input.account.site_type,
+    siteUrl: input.account.site_url,
   })
   const registration = selectedMethodId
     ? autoCheckinMethodRegistry.resolveById(selectedMethodId)
@@ -545,6 +549,7 @@ export async function executeSelectedCheckIn(input: {
   const currentState = inspectAccountCheckIn({
     config: currentAccount.checkIn,
     siteType: currentAccount.site_type,
+    siteUrl: currentAccount.site_url,
     accountDisabled: currentAccount.disabled,
     globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
   })

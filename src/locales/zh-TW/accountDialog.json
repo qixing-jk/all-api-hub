@@ -71,6 +71,8 @@
   },
   "form": {
     "accessToken": "訪問令牌",
+    "agentRouterLoginCheckInMethod": "重新登入並簽到",
+    "agentRouterLoginCheckInMethodDesc": "登入 Agent Router 並確認本次簽到結果。",
     "autoCheckInEnabled": "啟用每日自動簽到",
     "autoCheckInEnabledDesc": "在全域性自動簽到功能啟用時，此帳號是否參與每日簽到",
     "autoCheckInPausedBySiteDesc": "此設定會保留；站點啟用簽到後將自動恢復。",
@@ -118,6 +120,8 @@
     "hideAccessToken": "隱藏訪問令牌",
     "hideRefreshToken": "隱藏 Refresh Token",
     "importCookieAuthSessionCookie": "從當前登入匯入",
+    "loginCheckInProvider": "簽到登入方式",
+    "loginCheckInProviderDesc": "透過瀏覽器登入完成簽到。遇到登入、驗證碼或二次驗證提示時，需要你完成操作。",
     "manualBalanceUsd": "手動餘額 (USD)",
     "manualBalanceUsdDesc": "當站點無法自動獲取餘額/額度時，可手動填寫",
     "manualBalanceUsdError": "請輸入有效的金額（>= 0）",

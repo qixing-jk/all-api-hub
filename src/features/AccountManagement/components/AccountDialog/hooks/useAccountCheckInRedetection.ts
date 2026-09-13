@@ -89,8 +89,10 @@ export function useAccountCheckInRedetection({
 
     const requestedUrl = url.trim()
     const requestedSiteType = draft.siteType
-    const candidateMethodIds =
-      getAutoCheckinCandidateMethodIds(requestedSiteType)
+    const candidateMethodIds = getAutoCheckinCandidateMethodIds(
+      requestedSiteType,
+      requestedUrl,
+    )
     const candidateCount = candidateMethodIds.length
     if (!requestedUrl) {
       setCheckInRedetectionFeedback({
@@ -166,6 +168,7 @@ export function useAccountCheckInRedetection({
       const selectedStatus = getSelectedCheckInStatus({
         config: discovery.config,
         siteType: requestedSiteType,
+        siteUrl: requestedUrl,
       })
       const selectedMethodDisabled =
         discovery.decision.outcome ===

@@ -683,9 +683,10 @@ export function useAccountDialog({
     (value: CheckInConfig) => {
       checkInSelectionChangedRef.current = true
       setCheckIn(value)
-      const candidateMethodIds = getAutoCheckinCandidateMethodIds(siteType)
+      const candidateMethodIds = getAutoCheckinCandidateMethodIds(siteType, url)
       const inspection = inspectAccountCheckIn({
         config: value,
+        siteUrl: url,
         siteType,
       })
       startAccountDialogAnalyticsAction(
@@ -702,7 +703,7 @@ export function useAccountDialog({
         },
       })
     },
-    [setCheckIn, siteType],
+    [setCheckIn, siteType, url],
   )
   const setSiteType = useCallback(
     (value: string) => {
@@ -732,6 +733,7 @@ export function useAccountDialog({
               automaticExecutionEnabled:
                 resolveNewAccountAutomaticExecutionEnabled({
                   siteType: nextSiteType,
+                  siteUrl: url,
                   currentAutomaticExecutionEnabled:
                     prev.checkIn.automaticExecutionEnabled,
                   userPreferenceChanged:
@@ -770,6 +772,7 @@ export function useAccountDialog({
       resetCheckInRedetection,
       updateAccessToken,
       updateDraft,
+      url,
     ],
   )
   const setAuthType = useCallback(
@@ -2049,6 +2052,7 @@ export function useAccountDialog({
     setDraft((prev) => {
       return buildDraftFromAutoDetectResult({
         draft: prev,
+        siteUrl: url,
         resultData,
         nextSiteType,
         nextCheckIn: detectedCheckIn,
@@ -2193,13 +2197,14 @@ export function useAccountDialog({
           ? candidateSiteType
           : undefined
       const candidateMethodIds = checkInSiteType
-        ? getAutoCheckinCandidateMethodIds(checkInSiteType)
+        ? getAutoCheckinCandidateMethodIds(checkInSiteType, url)
         : []
       const checkInInspection =
         resultData && checkInSiteType
           ? inspectAccountCheckIn({
               config: resultData.checkIn,
               siteType: checkInSiteType,
+              siteUrl: url,
             })
           : undefined
 

@@ -61,6 +61,7 @@ export function DedupeAccountCard({
   const checkInInspection = inspectAccountCheckIn({
     config: account.checkIn,
     siteType: account.site_type,
+    siteUrl: account.site_url,
     accountDisabled: account.disabled,
   })
   const builtInCheckInSelected =

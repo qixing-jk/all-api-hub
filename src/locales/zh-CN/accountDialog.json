@@ -71,6 +71,8 @@
   },
   "form": {
     "accessToken": "访问令牌",
+    "agentRouterLoginCheckInMethod": "重新登录并签到",
+    "agentRouterLoginCheckInMethodDesc": "登录 Agent Router 并确认本次签到结果。",
     "autoCheckInEnabled": "启用每日自动签到",
     "autoCheckInEnabledDesc": "在全局自动签到功能启用时，此账号是否参与每日签到",
     "autoCheckInPausedBySiteDesc": "此设置会保留；站点启用签到后将自动恢复。",
@@ -118,6 +120,8 @@
     "hideAccessToken": "隐藏访问令牌",
     "hideRefreshToken": "隐藏 Refresh Token",
     "importCookieAuthSessionCookie": "从当前登录导入",
+    "loginCheckInProvider": "签到登录方式",
+    "loginCheckInProviderDesc": "使用浏览器登录完成签到。遇到登录、验证码或二次验证提示时，需要你完成操作。",
     "manualBalanceUsd": "手动余额 (USD)",
     "manualBalanceUsdDesc": "当站点无法自动获取余额/额度时，可手动填写",
     "manualBalanceUsdError": "请输入有效的金额（>= 0）",

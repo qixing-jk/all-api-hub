@@ -13,7 +13,9 @@ import {
   SelectValue,
   Switch,
 } from "~/components/ui"
+import { ACCOUNT_LOGIN_PROVIDERS } from "~/constants/accountLogin"
 import {
+  AUTO_CHECKIN_METHOD_IDS,
   CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
   CHECK_IN_METHOD_AVAILABILITIES,
   CHECK_IN_METHOD_DETECTION_OUTCOMES,
@@ -33,6 +35,7 @@ import type { AccountCheckInRedetectionFeedback } from "~/features/AccountManage
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import { setCheckInSelection } from "~/services/checkin/autoCheckin/methods"
+import { getLoginCheckInProvider } from "~/services/checkin/autoCheckin/providers/agentrouter/config"
 import type { CheckInConfig } from "~/types"
 
 const AUTOMATIC_CHECK_IN_SELECTION_VALUE = "automatic"
@@ -51,6 +54,7 @@ export const ACCOUNT_CHECK_IN_TARGET_IDS = {
 interface AccountCheckInSectionProps {
   checkIn: CheckInConfig
   siteType: AccountSiteType
+  siteUrl?: string
   onCheckInChange: (value: CheckInConfig) => void
   onCheckInSelectionChange: (value: CheckInConfig) => void
   onRedetectCheckInMethods: () => void
@@ -62,6 +66,7 @@ interface AccountCheckInSectionProps {
 export function AccountCheckInSection({
   checkIn,
   siteType,
+  siteUrl,
   onCheckInChange,
   onCheckInSelectionChange,
   onRedetectCheckInMethods,
@@ -69,7 +74,11 @@ export function AccountCheckInSection({
   checkInRedetectionFeedback,
 }: AccountCheckInSectionProps) {
   const { t } = useTranslation("accountDialog")
-  const inspection = inspectAccountCheckIn({ config: checkIn, siteType })
+  const inspection = inspectAccountCheckIn({
+    config: checkIn,
+    siteType,
+    siteUrl,
+  })
   const candidateMethodIds = inspection.choices.map((choice) => choice.methodId)
   const hasCandidates = candidateMethodIds.length > 0
   const shouldOfferRedetect =
@@ -111,6 +120,7 @@ export function AccountCheckInSection({
       setCheckInSelection({
         config: checkIn,
         siteType,
+        siteUrl,
         mode: CHECK_IN_SELECTION_MODES.Automatic,
       }),
     )
@@ -200,6 +210,7 @@ export function AccountCheckInSection({
                   setCheckInSelection({
                     config: checkIn,
                     siteType,
+                    siteUrl,
                     mode: CHECK_IN_SELECTION_MODES.Manual,
                     methodId: candidateMethodId,
                   }),
@@ -249,6 +260,39 @@ export function AccountCheckInSection({
               {t("form.restoreAutomaticCheckInSelection")}
             </Button>
           )}
+          {inspection.selectionState.status ===
+            CHECK_IN_SELECTION_STATUSES.Selected &&
+            inspection.selectionState.methodId ===
+              AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn && (
+              <FormField
+                label={t("form.loginCheckInProvider")}
+                description={t("form.loginCheckInProviderDesc")}
+              >
+                <Select
+                  value={getLoginCheckInProvider(checkIn)}
+                  onValueChange={(provider) => {
+                    if (
+                      provider !== ACCOUNT_LOGIN_PROVIDERS.Github &&
+                      provider !== ACCOUNT_LOGIN_PROVIDERS.LinuxDo
+                    )
+                      return
+                    onCheckInChange({ ...checkIn, loginCheckIn: { provider } })
+                  }}
+                >
+                  <SelectTrigger aria-label={t("form.loginCheckInProvider")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ACCOUNT_LOGIN_PROVIDERS.Github}>
+                      GitHub
+                    </SelectItem>
+                    <SelectItem value={ACCOUNT_LOGIN_PROVIDERS.LinuxDo}>
+                      Linux DO
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormField>
+            )}
         </div>
       )}
 

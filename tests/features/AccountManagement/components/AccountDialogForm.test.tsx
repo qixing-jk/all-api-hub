@@ -148,6 +148,60 @@ describe("AccountDialog AccountForm", () => {
     ),
   })
 
+  it("configures login check-in without changing access-token authentication", async () => {
+    const props = createProps()
+    props.siteUrl = "https://agentrouter.org"
+    props.draft.siteType = SITE_TYPES.NEW_API
+    props.draft.authType = AuthTypeEnum.AccessToken
+    props.draft.accessToken = "existing-access-token"
+    props.draft.checkIn = {
+      automaticExecutionEnabled: true,
+      selection: {
+        mode: "automatic",
+        methodId: AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
+      },
+      methodKnowledge: {
+        methods: {
+          [AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn]: {
+            detection: {
+              outcome: "matched",
+              evidence: { source: "probe", observedAt: 123 },
+            },
+          },
+        },
+      },
+    }
+    render(<AccountForm {...withSitePolicy(props)} />)
+    const user = userEvent.setup()
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "accountDialog:form.loginCheckInProvider",
+      }),
+    )
+    await user.click(screen.getByRole("option", { name: "Linux DO" }))
+    expect(props.onCheckInChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ loginCheckIn: { provider: "linuxdo" } }),
+    )
+    expect(props.onAuthTypeChange).not.toHaveBeenCalled()
+    expect(props.onAccessTokenChange).not.toHaveBeenCalled()
+    expect(props.onCookieAuthSessionCookieChange).not.toHaveBeenCalled()
+  })
+
+  it("does not offer login check-in on other New API sites", async () => {
+    const props = createProps()
+    props.siteUrl = "https://other.example"
+    props.draft.siteType = SITE_TYPES.NEW_API
+    render(<AccountForm {...withSitePolicy(props)} />)
+    await screen.findByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionAuth,
+    )
+    expect(
+      screen.queryByRole("combobox", {
+        name: "accountDialog:form.loginCheckInProvider",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
   it("presents optional editable identity with the protected OpenRouter management key", async () => {
     const props = createProps()
     props.draft.siteType = SITE_TYPES.OPENROUTER

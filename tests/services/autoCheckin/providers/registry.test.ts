@@ -52,7 +52,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(7)
+    expect(registrationContracts).toHaveLength(8)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -114,6 +114,25 @@ describe("autoCheckinMethodRegistry", () => {
     expect(sub2apiProProvider.detect).toBeTypeOf("function")
     expect(denxioProvider.getStatus).toBeTypeOf("function")
     expect(denxioProvider.detect).toBeTypeOf("function")
+  })
+
+  it("offers login check-in only on Agent Router without adding a site type", () => {
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.NEW_API, "https://agentrouter.org")
+        .map(({ id }) => id),
+    ).toEqual([AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn])
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.NEW_API, "https://normal.example")
+        .map(({ id }) => id),
+    ).toEqual([AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn])
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.UNKNOWN, "https://agentrouter.org")
+        .map(({ id }) => id),
+    ).toEqual([AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn])
+    expect(getNewAccountCompatibilityMethodIds(SITE_TYPES.UNKNOWN)).toEqual([])
   })
 
   it("distinguishes official methods from third-party protocol methods", () => {

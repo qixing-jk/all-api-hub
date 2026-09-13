@@ -7,6 +7,7 @@ export const AUTO_CHECKIN_METHOD_IDS = {
   VeloeraDailyCheckIn: "veloera:daily-checkin",
   WongGongyiDailyCheckIn: "wong-gongyi:daily-checkin",
   AnyrouterDailyCheckIn: "anyrouter:daily-checkin",
+  AgentRouterLoginCheckIn: "agentrouter:login-checkin",
   VoApiV2DailyCheckIn: "voapi-v2:daily-checkin",
   Sub2ApiProDailyCheckIn: "sub2api-pro:daily-checkin",
   DenxioDailyCheckIn: "denxio:daily-checkin",

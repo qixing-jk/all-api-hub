@@ -7,6 +7,28 @@ import {
 } from "~/services/checkin/autoCheckin/compatibilityConfig"
 
 describe("new-account check-in defaults", () => {
+  it("enables the canonical login-check-in candidate without changing other unknown sites", () => {
+    expect(
+      getNewAccountAutomaticExecutionDefault(
+        SITE_TYPES.UNKNOWN,
+        "https://agentrouter.org",
+      ),
+    ).toBe(true)
+    expect(
+      getNewAccountAutomaticExecutionDefault(
+        SITE_TYPES.UNKNOWN,
+        "https://other.example",
+      ),
+    ).toBe(false)
+    expect(
+      resolveNewAccountAutomaticExecutionEnabled({
+        siteType: SITE_TYPES.UNKNOWN,
+        siteUrl: "https://agentrouter.org",
+        currentAutomaticExecutionEnabled: false,
+        userPreferenceChanged: true,
+      }),
+    ).toBe(false)
+  })
   it("derives automatic intent from candidate method metadata", () => {
     expect(getNewAccountAutomaticExecutionDefault(SITE_TYPES.ANYROUTER)).toBe(
       true,

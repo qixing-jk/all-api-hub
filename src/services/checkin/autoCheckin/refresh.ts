@@ -34,7 +34,10 @@ export async function refreshSelectedStatus(input: {
   observedAt?: number
   onOutcome?: (outcome: CheckInStatusRefreshOutcome) => void
 }): Promise<CheckInConfig> {
-  const methodId = resolveSelectedCheckInMethod(input)
+  const methodId = resolveSelectedCheckInMethod({
+    ...input,
+    siteUrl: input.account?.site_url ?? input.request?.baseUrl,
+  })
   if (!methodId) {
     input.onOutcome?.(CHECK_IN_STATUS_REFRESH_OUTCOMES.NoSelection)
     return input.config

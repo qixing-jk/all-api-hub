@@ -48,6 +48,7 @@ export function resolveAutoCheckinConfigurationStatus(input: {
     isAutomaticCheckInConfiguredForAccount({
       config: account.checkIn,
       siteType: account.site_type,
+      siteUrl: account.site_url,
       accountDisabled: account.disabled,
     }),
   )

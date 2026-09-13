@@ -71,6 +71,8 @@
   },
   "form": {
     "accessToken": "Access Token",
+    "agentRouterLoginCheckInMethod": "Log in again and check in",
+    "agentRouterLoginCheckInMethodDesc": "Sign in to Agent Router and verify the check-in result.",
     "autoCheckInEnabled": "Enable daily automatic check-in",
     "autoCheckInEnabledDesc": "Whether this account participates in daily check-in when global auto check-in is enabled",
     "autoCheckInPausedBySiteDesc": "This setting is preserved, and automatic check-in will resume when the site enables check-in.",
@@ -118,6 +120,8 @@
     "hideAccessToken": "Hide Access Token",
     "hideRefreshToken": "Hide Refresh Token",
     "importCookieAuthSessionCookie": "Import from current login",
+    "loginCheckInProvider": "Check-in login method",
+    "loginCheckInProviderDesc": "Signs in through your browser to check in. Login, CAPTCHA, or two-factor prompts may require your action.",
     "manualBalanceUsd": "Manual Balance (USD)",
     "manualBalanceUsdDesc": "Use this when the site cannot fetch balance/quota automatically",
     "manualBalanceUsdError": "Please enter a valid amount (>= 0)",

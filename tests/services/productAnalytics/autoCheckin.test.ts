@@ -372,6 +372,7 @@ describe("auto-checkin product analytics", () => {
   })
 
   it.each([
+    AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
     AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn,
   ])(

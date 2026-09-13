@@ -1,4 +1,5 @@
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
+import { agentRouterProvider } from "~/services/checkin/autoCheckin/providers/agentrouter"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import { sub2apiProProvider } from "~/services/checkin/autoCheckin/providers/sub2apiPro"
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
@@ -15,6 +16,7 @@ import { veloeraProvider } from "./veloera"
 import { wongGongyiProvider } from "./wong"
 
 const PROVIDER_BY_METHOD_ID = {
+  [AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn]: agentRouterProvider,
   [AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn]: anyrouterProvider,
   [AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn]: veloeraProvider,
   [AUTO_CHECKIN_METHOD_IDS.WongGongyiDailyCheckIn]: wongGongyiProvider,
@@ -25,12 +27,14 @@ const PROVIDER_BY_METHOD_ID = {
 } as const satisfies Record<CheckInMethodId, AutoCheckinProvider>
 
 export const autoCheckinMethodRegistry = createAutoCheckinMethodRegistry(
-  Object.values(AUTO_CHECKIN_METHOD_DEFINITIONS).map(({ id, siteTypes }) => ({
-    id,
-    siteTypes,
-    provider: PROVIDER_BY_METHOD_ID[id],
-    compatibilityRegistration:
-      AUTO_CHECKIN_METHOD_DEFINITIONS[id].legacy &&
-      AUTO_CHECKIN_METHOD_DEFINITIONS[id].newAccountCompatibility,
+  Object.values(AUTO_CHECKIN_METHOD_DEFINITIONS).map((definition) => ({
+    id: definition.id,
+    siteTypes: definition.siteTypes,
+    ...("origins" in definition ? { origins: definition.origins } : {}),
+    ...("excludedOrigins" in definition
+      ? { excludedOrigins: definition.excludedOrigins }
+      : {}),
+    provider: PROVIDER_BY_METHOD_ID[definition.id],
+    compatibilityRegistration: definition.newAccountCompatibility,
   })),
 )

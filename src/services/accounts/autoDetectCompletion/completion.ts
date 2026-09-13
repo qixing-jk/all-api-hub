@@ -115,12 +115,14 @@ function trimString(value: unknown): string {
 function createInitialCheckInConfig(input: {
   supported: boolean
   siteType: AccountSiteType
+  siteUrl: string
 }) {
   return createCompatibilityCheckInConfig({
     siteType: input.siteType,
     supported: input.supported,
     automaticExecutionEnabled: getNewAccountAutomaticExecutionDefault(
       input.siteType,
+      input.siteUrl,
     ),
     customCheckIn: {
       url: "",
@@ -163,7 +165,11 @@ const createAccountCompletionHelpers = (params: {
   createCompletionError,
   trimString,
   createInitialCheckInConfig(input) {
-    return createInitialCheckInConfig({ ...input, siteType: params.siteType })
+    return createInitialCheckInConfig({
+      ...input,
+      siteType: params.siteType,
+      siteUrl: params.url,
+    })
   },
   handleCheckInSupportFetchFailure(error: unknown) {
     logger.warn("Auto-detect check-in support probe failed", {

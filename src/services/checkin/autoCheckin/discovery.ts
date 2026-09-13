@@ -163,7 +163,9 @@ export async function discoverCheckInMethods(
   input: CheckInDiscoveryInput,
 ): Promise<CheckInDiscoveryResult> {
   const registry = input.registry ?? autoCheckinMethodRegistry
-  const registrations = [...registry.getCandidates(input.account.site_type)]
+  const registrations = [
+    ...registry.getCandidates(input.account.site_type, input.account.site_url),
+  ]
   const observedAt = input.observedAt ?? Date.now()
   const perAdapterTimeoutMs =
     input.perAdapterTimeoutMs ?? DEFAULT_PER_ADAPTER_TIMEOUT_MS
@@ -246,13 +248,14 @@ export async function discoverCheckInMethods(
 export function setCheckInSelection(input: {
   config: CheckInConfig
   siteType: SiteAccount["site_type"]
+  siteUrl?: string
   mode: (typeof CHECK_IN_SELECTION_MODES)[keyof typeof CHECK_IN_SELECTION_MODES]
   methodId?: CheckInConfig["selection"]["methodId"]
   registry?: AutoCheckinMethodRegistry
 }): CheckInConfig {
   const registry = input.registry ?? autoCheckinMethodRegistry
   const candidateMethodIds = registry
-    .getCandidates(input.siteType)
+    .getCandidates(input.siteType, input.siteUrl)
     .map(({ id }) => id)
   if (
     input.mode === CHECK_IN_SELECTION_MODES.Manual &&

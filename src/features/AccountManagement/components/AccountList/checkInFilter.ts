@@ -31,11 +31,13 @@ export const ACCOUNT_CHECK_IN_FILTER_OPTION_ORDER: AccountCheckInFilterValue[] =
 
 /** Returns whether the selected method status was observed for the current day. */
 export function isSelectedCheckInStatusCurrent(
-  account: Pick<DisplaySiteData, "checkIn" | "siteType">,
+  account: Pick<DisplaySiteData, "checkIn" | "siteType"> &
+    Partial<Pick<DisplaySiteData, "baseUrl">>,
 ): boolean {
   const status = getSelectedCheckInStatus({
     config: account.checkIn,
     siteType: account.siteType,
+    siteUrl: account.baseUrl,
   })
   if (!status || status.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known) {
     return false
@@ -68,6 +70,7 @@ export function getAccountCheckInFilterValue(
   const selectedStatus = getSelectedCheckInStatus({
     config: account.checkIn,
     siteType: account.siteType,
+    siteUrl: account.baseUrl,
   })
   const siteCheckedInToday =
     selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
@@ -91,6 +94,7 @@ export function getAccountCheckInFilterValue(
     const selectionState = inspectAccountCheckIn({
       config: account.checkIn,
       siteType: account.siteType,
+      siteUrl: account.baseUrl,
     }).selectionState
 
     if (selectionState.status === CHECK_IN_SELECTION_STATUSES.Selected) {

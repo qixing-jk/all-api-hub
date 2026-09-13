@@ -166,6 +166,7 @@ export function buildDraftFromAutoDetectResult(params: {
   draft: AccountDialogDraft
   resultData: AutoDetectedAccountData
   nextSiteType: AccountSiteType
+  siteUrl?: string
   nextCheckIn: CheckInConfig
   preserveExistingCheckIn: boolean
   automaticExecutionPreferenceChanged: boolean
@@ -197,6 +198,7 @@ export function buildDraftFromAutoDetectResult(params: {
         ...mergedCheckIn,
         automaticExecutionEnabled: resolveNewAccountAutomaticExecutionEnabled({
           siteType: nextSiteType,
+          siteUrl: params.siteUrl,
           currentAutomaticExecutionEnabled:
             mergedCheckIn.automaticExecutionEnabled,
           userPreferenceChanged: automaticExecutionPreferenceChanged,

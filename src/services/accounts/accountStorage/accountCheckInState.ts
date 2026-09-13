@@ -46,8 +46,10 @@ class AccountCheckInState {
           ? mergeDiscoveredCheckInDraft({
               latest: account.checkIn,
               draft,
-              candidateMethodIds:
-                getAutoCheckinCandidateMethodIds(effectiveSiteType),
+              candidateMethodIds: getAutoCheckinCandidateMethodIds(
+                effectiveSiteType,
+                updates.site_url ?? account.site_url,
+              ),
               discoveryBaseSelection: options.discoveryBaseSelection,
               selectionChanged: options.selectionChanged,
             })

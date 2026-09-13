@@ -43,6 +43,8 @@ export function isCheckInMethodId(value: unknown): value is CheckInMethodId {
 interface AutoCheckinMethodDefinitionBase {
   readonly id: CheckInMethodId
   readonly siteTypes: readonly AccountSiteType[]
+  readonly origins?: readonly string[]
+  readonly excludedOrigins?: readonly string[]
   readonly source: AutoCheckinMethodSource
 }
 
@@ -161,6 +163,14 @@ export function createAutoCheckinMethodMetadata(
 
 /** All method definitions, including post-registry discovery candidates. */
 export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
+  [AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
+    siteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.ONE_API, SITE_TYPES.UNKNOWN],
+    origins: ["https://agentrouter.org"],
+    source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
+    legacy: false,
+    newAccountCompatibility: false,
+  },
   [AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn,
     siteTypes: [SITE_TYPES.ANYROUTER],
@@ -185,6 +195,8 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
   [AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
     siteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.MODELFLARE],
+    // Agent Router uses login check-in instead of this deployment's protocol.
+    excludedOrigins: ["https://agentrouter.org"],
     source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
     legacy: true,
     newAccountCompatibility: true,
@@ -257,8 +269,35 @@ const getMethodIdsForSiteType = (
 /** Resolves candidate method IDs without importing executable provider modules. */
 export function getAutoCheckinCandidateMethodIds(
   siteType: AccountSiteType,
+  siteUrl?: string,
 ): CheckInMethodId[] {
-  return getMethodIdsForSiteType(CHECK_IN_METHOD_SITE_TYPES, siteType)
+  return getMethodIdsForSiteType(CHECK_IN_METHOD_SITE_TYPES, siteType).filter(
+    (id) => {
+      const definition: AutoCheckinMethodDefinition =
+        AUTO_CHECKIN_METHOD_DEFINITIONS[id]
+      return matchesMethodOrigin(definition, siteUrl)
+    },
+  )
+}
+
+/** Deployment-specific protocols require a known matching origin. */
+function matchesMethodOrigin(
+  {
+    origins,
+    excludedOrigins,
+  }: Pick<AutoCheckinMethodDefinitionBase, "origins" | "excludedOrigins">,
+  siteUrl?: string,
+): boolean {
+  if (!siteUrl) return !origins
+  try {
+    const origin = new URL(siteUrl).origin
+    return (
+      (!origins || origins.includes(origin)) &&
+      !excludedOrigins?.includes(origin)
+    )
+  } catch {
+    return !origins
+  }
 }
 
 /** Resolves the pre-registry method IDs used by the V6 migration. */
@@ -307,6 +346,8 @@ export interface AutoCheckinMethodRegistration {
   readonly id: CheckInMethodId
   /** Static candidate filter only; never proof that a deployment supports the method. */
   readonly siteTypes: readonly AccountSiteType[]
+  readonly origins?: readonly string[]
+  readonly excludedOrigins?: readonly string[]
   readonly provider: AutoCheckinProvider
   /** Existing-provider bridge used until a strict read-only probe is ready. */
   readonly compatibilityRegistration?: boolean
@@ -316,6 +357,7 @@ export interface AutoCheckinMethodRegistry {
   readonly registrations: readonly AutoCheckinMethodRegistration[]
   getCandidates(
     siteType: AccountSiteType,
+    siteUrl?: string,
   ): readonly AutoCheckinMethodRegistration[]
   /** Resolve executable code only when the ID is registered by this build. */
   resolveById(
@@ -350,9 +392,11 @@ export function createAutoCheckinMethodRegistry(
 
   return {
     registrations,
-    getCandidates: (siteType) =>
-      registrations.filter((registration) =>
-        registration.siteTypes.includes(siteType),
+    getCandidates: (siteType, siteUrl) =>
+      registrations.filter(
+        (registration) =>
+          registration.siteTypes.includes(siteType) &&
+          matchesMethodOrigin(registration, siteUrl),
       ),
     resolveById: (id) =>
       registrations.find((registration) => registration.id === id) ?? null,

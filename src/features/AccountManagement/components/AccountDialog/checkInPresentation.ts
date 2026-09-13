@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next"
 
 import {
+  AUTO_CHECKIN_METHOD_IDS,
   CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
   CHECK_IN_METHOD_DETECTION_OUTCOMES,
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
@@ -24,6 +25,13 @@ export function getCheckInMethodPresentation(
   t: TFunction<"accountDialog">,
   methodId: CheckInMethodId,
 ) {
+  if (methodId === AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn) {
+    return {
+      label: t("form.agentRouterLoginCheckInMethod"),
+      disclosure: t("form.agentRouterLoginCheckInMethodDesc"),
+    }
+  }
+
   const source = getAutoCheckinMethodSource(methodId)
   return source.kind === AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty
     ? {

@@ -131,6 +131,7 @@ function isNotCheckedIn(item: DisplaySiteData): boolean {
   const selectedStatus = getSelectedCheckInStatus({
     config: checkIn,
     siteType: item.siteType,
+    siteUrl: item.baseUrl,
   })
   const siteNotCheckedIn =
     selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&

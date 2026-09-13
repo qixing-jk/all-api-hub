@@ -71,6 +71,8 @@
   },
   "form": {
     "accessToken": "Token de acesso",
+    "agentRouterLoginCheckInMethod": "Entrar novamente e fazer check-in",
+    "agentRouterLoginCheckInMethodDesc": "Entre no Agent Router e confirme o resultado do check-in.",
     "autoCheckInEnabled": "Habilitar check-in automático diário",
     "autoCheckInEnabledDesc": "Se esta conta participa do check-in diário quando o check-in automático global está ativado",
     "autoCheckInPausedBySiteDesc": "Esta configuração será mantida; o check-in automático será retomado quando o site habilitar o check-in.",
@@ -118,6 +120,8 @@
     "hideAccessToken": "Ocultar token de acesso",
     "hideRefreshToken": "Ocultar token de atualização",
     "importCookieAuthSessionCookie": "Importar do login atual",
+    "loginCheckInProvider": "Método de login para o check-in",
+    "loginCheckInProviderDesc": "Faz login pelo navegador para realizar o check-in. Você pode precisar concluir o login, um CAPTCHA ou a autenticação em duas etapas.",
     "manualBalanceUsd": "Saldo Manual (USD)",
     "manualBalanceUsdDesc": "Use esta opção quando o site não puder consultar o saldo ou a cota automaticamente",
     "manualBalanceUsdError": "Insira um valor válido (>= 0)",

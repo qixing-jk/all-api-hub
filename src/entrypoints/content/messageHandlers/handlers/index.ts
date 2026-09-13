@@ -1,4 +1,10 @@
 export { handleCheckCapGuard } from "./capGuard"
+export {
+  handleApproveLinuxDoOAuth,
+  handleClearAgentRouterOAuthEvidence,
+  handleCompleteAgentRouterOAuth,
+  handlePrepareAgentRouterOAuth,
+} from "./agentRouterOAuth"
 export { handleCheckCloudflareGuard } from "./cloudflareGuard"
 export { handlePerformTempWindowFetch } from "./tempWindowFetch"
 export {

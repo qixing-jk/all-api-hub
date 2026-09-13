@@ -403,6 +403,7 @@ export default function AccountDialog({
 
             {state.phase === ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM && (
               <AccountForm
+                siteUrl={state.url}
                 ref={accountFormRef}
                 draft={state.draft}
                 sitePolicy={currentSitePolicy}

@@ -162,6 +162,18 @@ describe("check-in presentation", () => {
     })
   })
 
+  it("explains the visible login and browser-session effects of AgentRouter check-in", () => {
+    expect(
+      getCheckInMethodPresentation(
+        t,
+        AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
+      ),
+    ).toEqual({
+      label: "form.agentRouterLoginCheckInMethod",
+      disclosure: "form.agentRouterLoginCheckInMethodDesc",
+    })
+  })
+
   it("keeps an ambiguous automatic selection actionable", () => {
     expect(
       getCheckInSelectionPresentation(t, createAmbiguousState(), {

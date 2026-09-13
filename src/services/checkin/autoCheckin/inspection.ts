@@ -12,12 +12,16 @@ import type {
 export function inspectAccountCheckIn(input: {
   config: CheckInConfig
   siteType: AccountSiteType
+  siteUrl?: string
   accountDisabled?: boolean
   globalAutomaticExecutionEnabled?: boolean
 }): CheckInAccountState {
   return inspectCheckInMethods({
     config: input.config,
-    candidateMethodIds: getAutoCheckinCandidateMethodIds(input.siteType),
+    candidateMethodIds: getAutoCheckinCandidateMethodIds(
+      input.siteType,
+      input.siteUrl,
+    ),
     accountDisabled: input.accountDisabled,
     globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
   })
@@ -31,6 +35,7 @@ export function inspectAccountCheckIn(input: {
 export function isAutomaticCheckInConfiguredForAccount(input: {
   config: CheckInConfig
   siteType: AccountSiteType
+  siteUrl?: string
   accountDisabled?: boolean
 }): boolean {
   const selectionState = inspectAccountCheckIn(input).selectionState
@@ -45,6 +50,7 @@ export function isAutomaticCheckInConfiguredForAccount(input: {
 export function resolveSelectedCheckInMethod(input: {
   config: CheckInConfig
   siteType: AccountSiteType
+  siteUrl?: string
 }): CheckInMethodId | null {
   const selection = inspectAccountCheckIn(input).selectionState
   return selection.status === CHECK_IN_SELECTION_STATUSES.Selected
@@ -56,6 +62,7 @@ export function resolveSelectedCheckInMethod(input: {
 export function getSelectedCheckInStatus(input: {
   config: CheckInConfig
   siteType: AccountSiteType
+  siteUrl?: string
 }) {
   const methodId = resolveSelectedCheckInMethod(input)
   return methodId

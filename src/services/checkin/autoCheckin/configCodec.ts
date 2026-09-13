@@ -1,3 +1,4 @@
+import { ACCOUNT_LOGIN_PROVIDERS } from "~/constants/accountLogin"
 import {
   CHECK_IN_METHOD_AVAILABILITIES,
   CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
@@ -370,6 +371,14 @@ export function normalizeCheckInConfigV7(value: unknown): CheckInConfig {
     rawMethodKnowledge.lastFullDiscoveryAt,
   )
   const customCheckIn = normalizeCustomCheckIn(raw.customCheckIn)
+  const provider = isRecord(raw.loginCheckIn)
+    ? raw.loginCheckIn.provider
+    : undefined
+  const loginCheckIn =
+    provider === ACCOUNT_LOGIN_PROVIDERS.Github ||
+    provider === ACCOUNT_LOGIN_PROVIDERS.LinuxDo
+      ? { provider }
+      : undefined
 
   return {
     automaticExecutionEnabled: raw.automaticExecutionEnabled !== false,
@@ -379,5 +388,6 @@ export function normalizeCheckInConfigV7(value: unknown): CheckInConfig {
     },
     selection,
     ...(customCheckIn ? { customCheckIn } : {}),
+    ...(loginCheckIn ? { loginCheckIn } : {}),
   }
 }

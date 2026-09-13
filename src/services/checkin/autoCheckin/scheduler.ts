@@ -1015,6 +1015,7 @@ class AutoCheckinScheduler {
     const selectedStatus = getSelectedCheckInStatus({
       config: account.checkIn,
       siteType: account.site_type,
+      siteUrl: account.site_url,
     })
 
     const executionEligibility = compatibility.state.executionEligibility

@@ -71,6 +71,8 @@
   },
   "form": {
     "accessToken": "Access Token",
+    "agentRouterLoginCheckInMethod": "Đăng nhập lại và điểm danh",
+    "agentRouterLoginCheckInMethodDesc": "Đăng nhập Agent Router và xác nhận kết quả điểm danh.",
     "autoCheckInEnabled": "Bật tự động điểm danh hàng ngày",
     "autoCheckInEnabledDesc": "Khi tính năng tự động điểm danh toàn cầu được bật, tài khoản này có tham gia điểm danh hàng ngày hay không",
     "autoCheckInPausedBySiteDesc": "Cài đặt này vẫn được giữ; tự động điểm danh sẽ tiếp tục khi trang web bật tính năng điểm danh.",
@@ -118,6 +120,8 @@
     "hideAccessToken": "Ẩn Access Token",
     "hideRefreshToken": "Ẩn Refresh Token",
     "importCookieAuthSessionCookie": "Nhập từ phiên đăng nhập hiện tại",
+    "loginCheckInProvider": "Phương thức đăng nhập để điểm danh",
+    "loginCheckInProviderDesc": "Đăng nhập qua trình duyệt để điểm danh. Bạn có thể cần hoàn tất đăng nhập, CAPTCHA hoặc xác thực hai yếu tố.",
     "manualBalanceUsd": "Số dư thủ công (USD)",
     "manualBalanceUsdDesc": "Khi trang web không thể tự động lấy số dư/hạn mức, bạn có thể điền thủ công",
     "manualBalanceUsdError": "Vui lòng nhập số tiền hợp lệ (>= 0)",

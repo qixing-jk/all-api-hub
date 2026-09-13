@@ -71,6 +71,8 @@
   },
   "form": {
     "accessToken": "Zugriffstoken",
+    "agentRouterLoginCheckInMethod": "Erneut anmelden und einchecken",
+    "agentRouterLoginCheckInMethodDesc": "Bei Agent Router anmelden und das Check-in-Ergebnis prüfen.",
     "autoCheckInEnabled": "Aktivieren Sie den täglichen automatischen Check-in",
     "autoCheckInEnabledDesc": "Ob dieses Konto am täglichen Check-in teilnimmt, wenn der globale automatische Check-in aktiviert ist",
     "autoCheckInPausedBySiteDesc": "Diese Einstellung bleibt erhalten; der automatische Check-in wird fortgesetzt, sobald die Website den Check-in aktiviert.",
@@ -118,6 +120,8 @@
     "hideAccessToken": "Zugriffstoken ausblenden",
     "hideRefreshToken": "Aktualisierungstoken ausblenden",
     "importCookieAuthSessionCookie": "Aus aktueller Anmeldung importieren",
+    "loginCheckInProvider": "Anmeldemethode für den Check-in",
+    "loginCheckInProviderDesc": "Meldet dich im Browser an, um den Check-in durchzuführen. Anmelde-, CAPTCHA- oder Zwei-Faktor-Abfragen können deine Eingabe erfordern.",
     "manualBalanceUsd": "Manueller Kontostand (USD)",
     "manualBalanceUsdDesc": "Verwenden Sie dies, wenn die Website das Guthaben/Kontingent nicht automatisch abrufen kann",
     "manualBalanceUsdError": "Bitte geben Sie einen gültigen Betrag ein (>= 0)",

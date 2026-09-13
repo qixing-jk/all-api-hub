@@ -1,12 +1,16 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
+  handleApproveLinuxDoOAuth,
   handleCheckCapGuard,
   handleCheckCloudflareGuard,
+  handleClearAgentRouterOAuthEvidence,
+  handleCompleteAgentRouterOAuth,
   handleGetLocalStorage,
   handleGetRenderedTitle,
   handleGetUserFromLocalStorage,
   handleOpenRouterManagementKeyAction,
   handlePerformTempWindowFetch,
+  handlePrepareAgentRouterOAuth,
   handleShowShieldBypassUi,
   handleTriggerCheckinPageAction,
   handleWaitAndGetUserInfo,
@@ -21,6 +25,24 @@ import { onRuntimeMessage } from "~/utils/browser/browserApi"
  */
 export function setupContentMessageHandlers() {
   return onRuntimeMessage((request, _sender, sendResponse) => {
+    if (request.action === RuntimeActionIds.ContentPrepareAgentRouterOAuth) {
+      return handlePrepareAgentRouterOAuth(request, sendResponse)
+    }
+
+    if (request.action === RuntimeActionIds.ContentCompleteAgentRouterOAuth) {
+      return handleCompleteAgentRouterOAuth(sendResponse)
+    }
+
+    if (
+      request.action === RuntimeActionIds.ContentClearAgentRouterOAuthEvidence
+    ) {
+      return handleClearAgentRouterOAuthEvidence(sendResponse)
+    }
+
+    if (request.action === RuntimeActionIds.ContentApproveLinuxDoOAuth) {
+      return handleApproveLinuxDoOAuth(request, sendResponse)
+    }
+
     if (request.action === RuntimeActionIds.ContentGetLocalStorage) {
       return handleGetLocalStorage(request, sendResponse)
     }

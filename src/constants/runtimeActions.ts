@@ -133,6 +133,10 @@ export const RuntimeActionIds = {
   ),
 
   ContentGetLocalStorage: "getLocalStorage",
+  ContentCompleteAgentRouterOAuth: "completeAgentRouterOAuth",
+  ContentPrepareAgentRouterOAuth: "prepareAgentRouterOAuth",
+  ContentClearAgentRouterOAuthEvidence: "clearAgentRouterOAuthEvidence",
+  ContentApproveLinuxDoOAuth: "approveLinuxDoOAuth",
   ContentGetUserFromLocalStorage: "getUserFromLocalStorage",
   // Content-side protection guard checks used by temp-window fallback readiness gating.
   ContentCheckCapGuard: "checkCapGuard",

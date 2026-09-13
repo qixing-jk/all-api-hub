@@ -1,3 +1,4 @@
+import type { AccountLoginProvider } from "~/constants/accountLogin"
 import type {
   AUTO_CHECKIN_METHOD_IDS,
   CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
@@ -118,6 +119,10 @@ export type CheckInMethodSelection =
     }
 
 export interface CheckInConfig {
+  /** Configuration for login-based check-in; never contains credentials. */
+  loginCheckIn?: {
+    provider: AccountLoginProvider
+  }
   automaticExecutionEnabled: boolean
   methodKnowledge: {
     methods: Partial<Record<CheckInMethodId, CheckInMethodKnowledge>>

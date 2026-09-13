@@ -17,8 +17,9 @@ import type { CheckInConfig, CustomCheckInConfig } from "~/types/checkIn"
  */
 export function getNewAccountAutomaticExecutionDefault(
   siteType: AccountSiteType,
+  siteUrl?: string,
 ): boolean {
-  return getAutoCheckinCandidateMethodIds(siteType).length > 0
+  return getAutoCheckinCandidateMethodIds(siteType, siteUrl).length > 0
 }
 
 /**
@@ -27,10 +28,14 @@ export function getNewAccountAutomaticExecutionDefault(
  */
 export function resolveNewAccountAutomaticExecutionEnabled(input: {
   siteType: AccountSiteType
+  siteUrl?: string
   currentAutomaticExecutionEnabled: boolean
   userPreferenceChanged: boolean
 }): boolean {
-  const defaultEnabled = getNewAccountAutomaticExecutionDefault(input.siteType)
+  const defaultEnabled = getNewAccountAutomaticExecutionDefault(
+    input.siteType,
+    input.siteUrl,
+  )
   return input.userPreferenceChanged && defaultEnabled
     ? input.currentAutomaticExecutionEnabled
     : defaultEnabled
