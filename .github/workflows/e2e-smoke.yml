@@ -10,6 +10,9 @@ on:
       - "public/**"
       - "plugins/**"
       - "e2e/**"
+      - ".github/workflows/release-pr-check.yml"
+      - "scripts/release-pr-check.mjs"
+      - "tests/scripts/release-pr-check.test.mjs"
       - "package.json"
       - "pnpm-lock.yaml"
       - "tsconfig.json"
@@ -24,6 +27,9 @@ on:
       - "public/**"
       - "plugins/**"
       - "e2e/**"
+      - ".github/workflows/release-pr-check.yml"
+      - "scripts/release-pr-check.mjs"
+      - "tests/scripts/release-pr-check.test.mjs"
       - "package.json"
       - "pnpm-lock.yaml"
       - "tsconfig.json"
@@ -42,11 +48,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  release-changes:
+    uses: ./.github/workflows/release-pr-check.yml
+
   e2e-build:
+    needs: release-changes
     name: E2E build (${{ matrix.name }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    if: ${{ github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'skip-e2e') }}
+    if: ${{ needs.release-changes.outputs.release-only != 'true' && (github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'skip-e2e')) }}
     continue-on-error: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'e2e-optional') }}
     strategy:
       fail-fast: false

@@ -18,7 +18,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check whether a preview was built
+        id: preview
+        uses: actions/github-script@v9
+        with:
+          script: |
+            // A release-only PR completes successfully with build-artifact skipped.
+            // Only completed builds have metadata to download and announce.
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.payload.workflow_run.id,
+              filter: "latest",
+              per_page: 100,
+            });
+            core.setOutput("built", jobs.some((job) => job.name === "build-artifact" && job.conclusion === "success"));
+
       - name: Download PR build metadata
+        if: steps.preview.outputs.built == 'true'
         # This workflow runs in the base repository context, so it can comment on PRs even for fork builds.
         uses: actions/download-artifact@v7
         with:
@@ -28,6 +45,7 @@ jobs:
           path: pr-build-metadata
 
       - name: Comment build info on PR
+        if: steps.preview.outputs.built == 'true'
         uses: actions/github-script@v9
         with:
           script: |

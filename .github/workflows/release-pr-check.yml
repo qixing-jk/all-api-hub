@@ -1,0 +1,29 @@
+name: Release PR change check
+
+on:
+  workflow_call:
+    outputs:
+      release-only:
+        description: Whether the PR changes only release metadata
+        value: ${{ jobs.changes.outputs.release-only }}
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    # No dependency installation: verify the diff before scheduling heavy jobs.
+    # Push and manual events always retain their normal checks.
+    runs-on: ubuntu-latest
+    outputs:
+      release-only: ${{ steps.check.outputs.release-only }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test release change detection
+        run: node --test tests/scripts/release-pr-check.test.mjs
+      - name: Check release PR changes
+        id: check
+        run: node scripts/release-pr-check.mjs
