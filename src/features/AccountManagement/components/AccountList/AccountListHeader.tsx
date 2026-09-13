@@ -59,7 +59,6 @@ interface AccountListHeaderProps {
   isReorderLoading: boolean
   isReorderMode: boolean
   onBulkModeEnter: () => void
-  onBulkModeExit: () => void
   onClearSort: () => void
   onReorderModeEnter: () => void
   onReorderModeExit: () => void
@@ -79,7 +78,6 @@ export function AccountListHeader({
   isReorderLoading,
   isReorderMode,
   onBulkModeEnter,
-  onBulkModeExit,
   onClearSort,
   onReorderModeEnter,
   onReorderModeExit,
@@ -149,9 +147,7 @@ export function AccountListHeader({
   const reorderLabel = isReorderMode
     ? t("account:list.reorderDone")
     : t("account:list.reorder")
-  const bulkModeLabel = isBulkMode
-    ? t("account:bulk.exit")
-    : t("account:bulk.manage")
+  const bulkModeLabel = t("account:bulk.manage")
   const openSortingSettings = () =>
     void openSettingsTab("accountManagement", {
       anchor: SETTINGS_ANCHORS.SORTING_PRIORITY,
@@ -357,29 +353,26 @@ export function AccountListHeader({
             </Tooltip>
           )}
         </div>
-        <Button
-          type="button"
-          variant={isBulkMode ? "secondary" : "ghost"}
-          size="sm"
-          className="h-7 w-7 max-w-none shrink-0 px-0 py-0 text-xs whitespace-nowrap [@container(min-width:24rem)]:w-auto [@container(min-width:24rem)]:px-2"
-          leftIcon={
-            isBulkMode ? (
-              <Check aria-hidden="true" className="size-3.5" />
-            ) : (
-              <ListChecks aria-hidden="true" className="size-3.5" />
-            )
-          }
-          onClick={isBulkMode ? onBulkModeExit : onBulkModeEnter}
-          disabled={isBulkBusy || isReorderMode}
-          aria-label={bulkModeLabel}
-          title={bulkModeLabel}
-          aria-pressed={isBulkMode}
-          data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListBulkManageButton}
-        >
-          <span className="hidden [@container(min-width:24rem)]:inline">
-            {bulkModeLabel}
-          </span>
-        </Button>
+        {!isBulkMode && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 max-w-none shrink-0 px-0 py-0 text-xs whitespace-nowrap [@container(min-width:24rem)]:w-auto [@container(min-width:24rem)]:px-2"
+            leftIcon={<ListChecks aria-hidden="true" className="size-3.5" />}
+            onClick={onBulkModeEnter}
+            disabled={isBulkBusy || isReorderMode}
+            aria-label={bulkModeLabel}
+            title={bulkModeLabel}
+            data-testid={
+              ACCOUNT_MANAGEMENT_TEST_IDS.accountListBulkManageButton
+            }
+          >
+            <span className="hidden [@container(min-width:24rem)]:inline">
+              {bulkModeLabel}
+            </span>
+          </Button>
+        )}
         <div className="[@container(min-width:40rem)]:hidden">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

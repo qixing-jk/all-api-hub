@@ -64,6 +64,7 @@ import { formatMoneyFixed } from "~/utils/core/money"
 import CopyKeyDialog from "../CopyKeyDialog"
 import DelAccountDialog from "../DelAccountDialog"
 import { InviteLinkManualCopyDialog } from "../InviteLinkManualCopyDialog"
+import { AccountBulkToolbar } from "./AccountBulkToolbar"
 import AccountFilterBar from "./AccountFilterBar"
 import { NonSortableAccountListItem } from "./AccountListBaseItem"
 import {
@@ -1085,6 +1086,9 @@ export default function AccountList({
         "bg-slate-50 hover:bg-slate-100/80 dark:bg-slate-700/45 dark:hover:bg-slate-700/55",
       item.group === "disabled" &&
         "bg-gray-50/50 opacity-40 hover:opacity-80 focus-within:opacity-80 dark:bg-black/10",
+      isBulkMode &&
+        selectedIdSet.has(result.account.id) &&
+        "bg-blue-50/80 opacity-100 hover:bg-blue-100/60 focus-within:bg-blue-100/60 dark:bg-blue-950/35 dark:hover:bg-blue-900/30 dark:focus-within:bg-blue-900/30",
       detectedAccount?.id === result.account.id &&
         "border-l-4 border-l-blue-500 bg-blue-50/70 dark:border-l-blue-400 dark:bg-blue-900/30",
     )
@@ -1223,101 +1227,6 @@ export default function AccountList({
                 allLabel={t("account:filter.tagsAllLabel")}
               />
             )}
-            {isBulkMode ? (
-              <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary/40 flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                <div className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium text-gray-800 dark:text-gray-100">
-                    {t("account:bulk.selectedSummary", {
-                      count: selectedAccountIds.length,
-                      selected: selectedAccountIds.length,
-                      visibleSelected: selectedVisibleCount,
-                    })}
-                  </span>
-                  {hiddenSelectedCount > 0 ? (
-                    <span className="text-xs text-gray-600 dark:text-gray-300">
-                      {t("account:bulk.hiddenSelectedHint", {
-                        count: hiddenSelectedCount,
-                      })}
-                    </span>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSelectVisibleAccounts}
-                    disabled={visibleAccountIds.length === 0 || isBulkBusy}
-                  >
-                    {t("account:bulk.selectVisible")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleClearVisibleSelection}
-                    disabled={selectedVisibleCount === 0 || isBulkBusy}
-                  >
-                    {t("account:bulk.clearVisible")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleClearAllSelection}
-                    disabled={selectedAccountIds.length === 0 || isBulkBusy}
-                  >
-                    {t("account:bulk.clearAll")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="warning"
-                    size="sm"
-                    onClick={() => void handleBulkDisable()}
-                    disabled={
-                      selectedEnabledAccounts.length === 0 || isBulkBusy
-                    }
-                    loading={isBulkDisabling}
-                  >
-                    {isBulkDisabling
-                      ? t("common:status.disabling")
-                      : t("account:bulk.disableSelected")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void handleBulkCopyInviteLinks()}
-                    disabled={
-                      selectedEnabledAccounts.length === 0 || isBulkBusy
-                    }
-                    loading={isBulkCopyingInviteLinks}
-                  >
-                    {isBulkCopyingInviteLinks
-                      ? t("common:status.copying")
-                      : t("account:bulk.copyInviteLinks")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setIsBulkDeleteConfirmOpen(true)}
-                    disabled={selectedAccountIds.length === 0 || isBulkBusy}
-                  >
-                    {t("account:bulk.deleteSelected")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleBulkModeExit}
-                    disabled={isBulkBusy}
-                  >
-                    {t("account:bulk.exit")}
-                  </Button>
-                </div>
-              </div>
-            ) : null}
             {showFilteredSummary && (
               <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600 dark:text-gray-300">
                 <span>
@@ -1362,7 +1271,6 @@ export default function AccountList({
           }
           isReorderMode={isReorderMode}
           onBulkModeEnter={handleBulkModeEnter}
-          onBulkModeExit={handleBulkModeExit}
           onClearSort={clearSortConfig}
           onReorderModeEnter={handleReorderModeEnter}
           onReorderModeExit={handleReorderModeExit}
@@ -1372,6 +1280,24 @@ export default function AccountList({
           sortField={sortField}
           sortOrder={sortOrder}
         />
+
+        {isBulkMode && (
+          <AccountBulkToolbar
+            selectedAccounts={selectedAccounts}
+            visibleAccountIds={visibleAccountIdSet}
+            isBusy={isBulkBusy}
+            isDisabling={isBulkDisabling}
+            isCopying={isBulkCopyingInviteLinks}
+            onSelectVisible={handleSelectVisibleAccounts}
+            onClearVisible={handleClearVisibleSelection}
+            onClearAll={handleClearAllSelection}
+            onDeselect={(id) => handleToggleAccountSelection(id, false)}
+            onDisable={() => void handleBulkDisable()}
+            onCopy={() => void handleBulkCopyInviteLinks()}
+            onDelete={() => setIsBulkDeleteConfirmOpen(true)}
+            onExit={handleBulkModeExit}
+          />
+        )}
 
         {showGroupReorderHint ? (
           <div

@@ -30,6 +30,137 @@ test.beforeEach(async ({ page, context }) => {
   ])
 })
 
+test("keeps bulk selection review and actions usable across widths and themes", async ({
+  page,
+  context,
+  extensionId,
+}, testInfo) => {
+  const worker = await getServiceWorker(context)
+  await seedStoredAccounts(worker, [
+    createStoredAccount({ id: "bulk-alpha", site_name: "Alpha account" }),
+    createStoredAccount({ id: "bulk-beta", site_name: "Beta account" }),
+    createStoredAccount({
+      id: "bulk-disabled",
+      site_name: "Disabled account",
+      disabled: true,
+    }),
+  ])
+  await page.goto(`chrome-extension://${extensionId}/options.html#account`)
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+  await page.getByTestId(ids.accountListBulkManageButton).click()
+  const toolbar = page.getByTestId("account-bulk-toolbar")
+  await toolbar
+    .getByRole("button", { name: "Select visible results", exact: true })
+    .click()
+  await expect(toolbar.getByRole("button", { name: "Disable 2" })).toBeVisible()
+  await page
+    .getByPlaceholder("Enter site information or account information to search")
+    .fill("Beta")
+  await expect(toolbar).toContainText("2 hidden accounts also included.")
+  for (const theme of ["light", "dark"]) {
+    await page.evaluate(
+      (dark) => document.documentElement.classList.toggle("dark", dark),
+      theme === "dark",
+    )
+    for (const width of [1280, 960, 480, 320]) {
+      await page.setViewportSize({ width, height: 900 })
+      await expect(toolbar).toBeVisible()
+      await page.mouse.move(0, 0)
+      const directCopy = toolbar.getByRole("button", {
+        name: "Copy invite links",
+        exact: true,
+      })
+      const directSelect = toolbar.getByRole("button", {
+        name: "Select visible results",
+        exact: true,
+      })
+      await expect(directCopy).toBeVisible()
+      await expect(
+        toolbar.getByRole("button", { name: "Delete selected 3" }),
+      ).toBeVisible()
+      await expect(
+        toolbar.getByRole("button", { name: "More", exact: true }),
+      ).toHaveCount(0)
+      const selectionGroup = toolbar.getByTestId("account-bulk-selection-group")
+      await expect(
+        selectionGroup.getByRole("button", { name: "Review selection" }),
+      ).toBeVisible()
+      await expect(
+        selectionGroup.getByRole("button", { name: "Clear selection" }),
+      ).toBeVisible()
+      if (width >= 960) {
+        await expect(directSelect).toBeVisible()
+        await expect(
+          toolbar.getByRole("button", { name: "Selection", exact: true }),
+        ).toBeHidden()
+      } else if (width === 320) {
+        await expect(directSelect).toBeHidden()
+      }
+      expect(
+        await toolbar.evaluate((node) => node.scrollWidth <= node.clientWidth),
+      ).toBe(true)
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      ).toBe(true)
+      await toolbar.screenshot({
+        path: testInfo.outputPath(`bulk-${theme}-${width}.png`),
+      })
+    }
+  }
+  await toolbar.getByRole("button", { name: "Review selection" }).click()
+  const review = page.getByRole("dialog", { name: "Review selection" })
+  await expect(review.getByText("Alpha account", { exact: true })).toBeVisible()
+  await review.getByRole("checkbox", { name: "Select Alpha account" }).click()
+  await expect(review.getByText("Alpha account", { exact: true })).toHaveCount(
+    0,
+  )
+  await review.screenshot({
+    path: testInfo.outputPath("bulk-review-dark-320.png"),
+  })
+  await page.keyboard.press("Escape")
+  await expect(
+    toolbar.getByRole("button", { name: "Review selection" }),
+  ).toBeFocused()
+  await expect(toolbar).toContainText("2 selected")
+  await expect(toolbar.getByRole("button", { name: "Disable 1" })).toBeVisible()
+  await expect(
+    toolbar.getByRole("button", { name: "Delete selected 2" }),
+  ).toBeVisible()
+  await toolbar.getByRole("button", { name: "Clear selection" }).click()
+  await expect(
+    toolbar.getByRole("button", { name: "Disable 0" }),
+  ).toBeDisabled()
+  await expect(
+    page.getByPlaceholder(
+      "Enter site information or account information to search",
+    ),
+  ).toHaveValue("Beta")
+  await forceExtensionLanguage(page, "zh-CN")
+  await page.reload()
+  await waitForExtensionRoot(page)
+  await page.getByTestId(ids.accountListBulkManageButton).click()
+  await toolbar.getByRole("button", { name: "选择范围" }).click()
+  await page.getByRole("menuitem", { name: "选择当前结果" }).click()
+  for (const width of [1280, 960, 480, 320]) {
+    await page.setViewportSize({ width, height: 900 })
+    if (width >= 960) {
+      await expect(
+        toolbar.getByRole("button", { name: "复制邀请链接", exact: true }),
+      ).toBeVisible()
+      await expect(
+        toolbar.getByRole("button", { name: "选择当前结果", exact: true }),
+      ).toBeVisible()
+    }
+    await page.mouse.move(0, 0)
+    await page
+      .getByTestId(ids.accountListView)
+      .screenshot({ path: testInfo.outputPath(`bulk-zh-${width}.png`) })
+  }
+})
+
 test("bounds tag shortcuts across sizes and keeps hidden selections accessible", async ({
   page,
   context,

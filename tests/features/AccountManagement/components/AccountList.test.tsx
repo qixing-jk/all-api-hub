@@ -207,7 +207,8 @@ vi.mock("@dnd-kit/sortable", () => ({
   },
 }))
 
-vi.mock("~/components/ui", () => {
+vi.mock("~/components/ui", async () => {
+  const { Modal } = await import("~/components/ui/Dialog/Modal")
   interface MockInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     clearButtonLabel?: string
     leftIcon?: React.ReactNode
@@ -281,6 +282,7 @@ vi.mock("~/components/ui", () => {
   }
 
   return {
+    Modal,
     Button: ({ children, loading, leftIcon, rightIcon, ...props }: any) => (
       <button type="button" {...props}>
         {!loading && leftIcon}
@@ -640,13 +642,27 @@ async function renderBulkInviteLinkSelection(
   return {
     ...renderResult,
     copyInviteLinks: async () =>
-      user.click(
-        screen.getByRole("button", {
-          name: "account:bulk.copyInviteLinks",
-        }),
-      ),
+      user.click(await getBulkAction(user, "copyInviteLinks")),
     user,
   }
+}
+
+/** Finds direct bulk actions or opens the compact selection menu. */
+async function getBulkAction(
+  user: ReturnType<typeof userEvent.setup>,
+  key: string,
+) {
+  const toolbar = within(screen.getByTestId("account-bulk-toolbar"))
+  const directAction = toolbar.queryByRole("button", {
+    name: new RegExp(`account:bulk.${key}`),
+  })
+  if (directAction) return directAction
+  await user.click(
+    toolbar.getByRole("button", { name: "account:bulk.selectionScope" }),
+  )
+  return screen.getByRole("menuitem", {
+    name: new RegExp(`account:bulk.${key}`),
+  })
 }
 
 describe("AccountList", () => {
@@ -1068,7 +1084,7 @@ describe("AccountList", () => {
       screen.getByTestId(
         ACCOUNT_MANAGEMENT_TEST_IDS.accountListBulkManageButton,
       ),
-    ).toHaveAttribute("aria-pressed", "false")
+    ).toBeEnabled()
   })
 
   it("enters an explicit unvirtualized reorder mode next to bulk management", async () => {
@@ -1639,11 +1655,7 @@ describe("AccountList", () => {
     await user.click(
       screen.getByRole("button", { name: "account:bulk.manage" }),
     )
-    expect(
-      screen.getByTestId(
-        ACCOUNT_MANAGEMENT_TEST_IDS.accountListBulkManageButton,
-      ),
-    ).toHaveAttribute("aria-pressed", "true")
+    expect(screen.getByTestId("account-bulk-toolbar")).toBeVisible()
 
     const bulkReorderButton = screen.getByRole("button", {
       name: "account:list.reorder",
@@ -1853,9 +1865,7 @@ describe("AccountList", () => {
         getAccountManagementSelectionCheckboxTestId(openRouter.id),
       ),
     )
-    await user.click(
-      screen.getByRole("button", { name: "account:bulk.deleteSelected" }),
-    )
+    await user.click(await getBulkAction(user, "deleteSelected"))
 
     expect(
       screen.getByText(
@@ -1874,9 +1884,7 @@ describe("AccountList", () => {
         getAccountManagementSelectionCheckboxTestId(compatible.id),
       ),
     )
-    await user.click(
-      screen.getByRole("button", { name: "account:bulk.deleteSelected" }),
-    )
+    await user.click(await getBulkAction(user, "deleteSelected"))
     expect(
       screen.getByText(
         enAccount.bulk.deleteConfirmDescription_one.replace("{{count}}", "1"),
@@ -2309,7 +2317,7 @@ describe("AccountList", () => {
     expect(await screen.findByText("Enabled Gamma")).toBeInTheDocument()
     await user.click(screen.getAllByRole("checkbox")[0])
     await user.click(
-      screen.getByRole("button", { name: "account:bulk.disableSelected" }),
+      screen.getByRole("button", { name: /account:bulk.disableSelected/ }),
     )
 
     expect(handleSetAccountsDisabledMock).toHaveBeenCalledWith(
@@ -2344,17 +2352,92 @@ describe("AccountList", () => {
 
     expect(await screen.findByText("Enabled Gamma")).toBeInTheDocument()
     await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(await getBulkAction(user, "clearVisible"))
     await user.click(
-      screen.getByRole("button", { name: "account:bulk.clearVisible" }),
-    )
-    await user.click(
-      screen.getByRole("button", { name: "account:bulk.disableSelected" }),
+      screen.getByRole("button", { name: /account:bulk.disableSelected/ }),
     )
 
     expect(handleSetAccountsDisabledMock).toHaveBeenCalledWith(
       [expect.objectContaining({ id: "enabled-alpha" })],
       true,
     )
+  })
+
+  it("reviews and removes hidden selections without changing the search", async () => {
+    const user = userEvent.setup()
+    render(<AccountList />)
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    )
+    await user.click(
+      screen.getByTestId(
+        getAccountManagementSelectionCheckboxTestId("enabled-alpha"),
+      ),
+    )
+    const search = screen.getByPlaceholderText("account:search.placeholder")
+    await user.type(search, "Gamma")
+    await user.click(
+      await screen.findByTestId(
+        getAccountManagementSelectionCheckboxTestId("enabled-gamma"),
+      ),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.reviewSelection" }),
+    )
+    const review = screen.getByRole("dialog", {
+      name: "account:bulk.reviewSelection",
+    })
+    expect(within(review).getByText("Enabled Alpha")).toBeVisible()
+    expect(within(review).getByText("account:bulk.hiddenAccount")).toBeVisible()
+    await user.click(within(review).getAllByRole("checkbox")[0])
+    expect(within(review).queryByText("Enabled Alpha")).not.toBeInTheDocument()
+    expect(search).toHaveValue("Gamma")
+    await user.keyboard("{Escape}")
+    expect(
+      screen.getByRole("button", { name: "account:bulk.reviewSelection" }),
+    ).toHaveFocus()
+    await user.click(
+      screen.getByRole("button", { name: /account:bulk.disableSelected/ }),
+    )
+    expect(handleSetAccountsDisabledMock).toHaveBeenCalledWith(
+      [expect.objectContaining({ id: "enabled-gamma" })],
+      true,
+    )
+  })
+
+  it("clears all selection from the review and keeps the empty panel operable", async () => {
+    const user = userEvent.setup()
+    render(<AccountList />)
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    )
+    await user.click(await getBulkAction(user, "selectVisible"))
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.reviewSelection" }),
+    )
+    const review = screen.getByRole("dialog", {
+      name: "account:bulk.reviewSelection",
+    })
+    await user.click(
+      within(review).getByRole("button", { name: "account:bulk.clearAll" }),
+    )
+    expect(
+      within(review).getByText("account:bulk.selectionEmpty"),
+    ).toBeVisible()
+    await user.keyboard("{Escape}")
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "account:bulk.exit" }),
+      ).toHaveFocus(),
+    )
+    expect(
+      screen.getByRole("button", { name: /account:bulk.disableSelected/ }),
+    ).toBeDisabled()
+    expect(
+      screen
+        .getAllByRole("checkbox")
+        .every((checkbox) => !(checkbox as HTMLInputElement).checked),
+    ).toBe(true)
   })
 
   it("keeps remaining selection when bulk disable only partially succeeds", async () => {
@@ -2386,10 +2469,10 @@ describe("AccountList", () => {
     expect(await screen.findByText("Enabled Gamma")).toBeInTheDocument()
     await user.click(screen.getAllByRole("checkbox")[0])
     await user.click(
-      screen.getByRole("button", { name: "account:bulk.disableSelected" }),
+      screen.getByRole("button", { name: /account:bulk.disableSelected/ }),
     )
     await user.click(
-      screen.getByRole("button", { name: "account:bulk.disableSelected" }),
+      screen.getByRole("button", { name: /account:bulk.disableSelected/ }),
     )
 
     expect(handleSetAccountsDisabledMock).toHaveBeenNthCalledWith(
@@ -2430,9 +2513,7 @@ describe("AccountList", () => {
 
     expect(await screen.findByText("Enabled Gamma")).toBeInTheDocument()
     await user.click(screen.getAllByRole("checkbox")[0])
-    await user.click(
-      screen.getByRole("button", { name: "account:bulk.deleteSelected" }),
-    )
+    await user.click(await getBulkAction(user, "deleteSelected"))
 
     expect(
       screen.getByText("account:bulk.deleteConfirmTitle"),
@@ -2481,15 +2562,11 @@ describe("AccountList", () => {
 
     expect(await screen.findByText("Enabled Gamma")).toBeInTheDocument()
     await user.click(screen.getAllByRole("checkbox")[0])
-    await user.click(
-      screen.getByRole("button", { name: "account:bulk.deleteSelected" }),
-    )
+    await user.click(await getBulkAction(user, "deleteSelected"))
     await user.click(
       screen.getByRole("button", { name: "account:bulk.deleteConfirmAction" }),
     )
-    await user.click(
-      screen.getByRole("button", { name: "account:bulk.deleteSelected" }),
-    )
+    await user.click(await getBulkAction(user, "deleteSelected"))
     await user.click(
       screen.getByRole("button", { name: "account:bulk.deleteConfirmAction" }),
     )
@@ -2526,9 +2603,7 @@ describe("AccountList", () => {
     await user.clear(searchInput)
     await user.type(searchInput, "Gamma")
     await user.click(await screen.findByRole("checkbox"))
-    await user.click(
-      screen.getByRole("button", { name: "account:bulk.deleteSelected" }),
-    )
+    await user.click(await getBulkAction(user, "deleteSelected"))
     await user.click(
       screen.getByRole("button", { name: "account:bulk.deleteConfirmAction" }),
     )
@@ -2582,7 +2657,7 @@ describe("AccountList", () => {
     await user.type(searchInput, "Gamma")
     await user.click(await screen.findByRole("checkbox"))
     await user.click(
-      screen.getByRole("button", { name: "account:bulk.disableSelected" }),
+      screen.getByRole("button", { name: /account:bulk.disableSelected/ }),
     )
 
     const expectedContext = {
@@ -2623,12 +2698,9 @@ describe("AccountList", () => {
     )
     await user.click(screen.getAllByRole("checkbox")[0])
 
-    expect(
-      screen.getByRole("button", { name: "account:bulk.copyInviteLinks" }),
-    ).toBeEnabled()
-    await user.click(
-      screen.getByRole("button", { name: "account:bulk.copyInviteLinks" }),
-    )
+    const copyAction = await getBulkAction(user, "copyInviteLinks")
+    expect(copyAction).toBeEnabled()
+    await user.click(copyAction)
 
     await waitFor(() => {
       expect(fetchDisplayAccountInviteLinkMock).not.toHaveBeenCalled()
@@ -2699,9 +2771,7 @@ describe("AccountList", () => {
         getAccountManagementSelectionCheckboxTestId("invite-b"),
       ),
     )
-    await user.click(
-      screen.getByRole("button", { name: "account:bulk.copyInviteLinks" }),
-    )
+    await user.click(await getBulkAction(user, "copyInviteLinks"))
 
     await waitFor(() => {
       expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledTimes(2)
@@ -2779,9 +2849,7 @@ describe("AccountList", () => {
         getAccountManagementSelectionCheckboxTestId("invite-reentry"),
       ),
     )
-    const bulkCopyButton = screen.getByRole("button", {
-      name: "account:bulk.copyInviteLinks",
-    })
+    const bulkCopyButton = await getBulkAction(user, "copyInviteLinks")
     fetchDisplayAccountInviteLinkMock.mockImplementationOnce(() => {
       bulkCopyButton.click()
       return pendingInviteLink
@@ -2842,13 +2910,13 @@ describe("AccountList", () => {
         getAccountManagementSelectionCheckboxTestId("invite-pending"),
       ),
     )
-    await user.click(
-      screen.getByRole("button", { name: "account:bulk.copyInviteLinks" }),
-    )
+    await user.click(await getBulkAction(user, "copyInviteLinks"))
 
-    expect(
-      screen.getByRole("button", { name: "common:status.copying" }),
-    ).toBeDisabled()
+    for (const button of screen.getAllByRole("button", {
+      name: "common:status.copying",
+    })) {
+      expect(button).toBeDisabled()
+    }
 
     await act(async () => {
       resolveInviteLink?.(
@@ -2858,7 +2926,9 @@ describe("AccountList", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: "account:bulk.copyInviteLinks" }),
+        within(screen.getByTestId("account-bulk-toolbar")).getByRole("button", {
+          name: "account:bulk.copyInviteLinks",
+        }),
       ).toBeEnabled()
     })
   })
@@ -2956,9 +3026,7 @@ describe("AccountList", () => {
         getAccountManagementSelectionCheckboxTestId("invite-unsupported"),
       ),
     )
-    await user.click(
-      screen.getByRole("button", { name: "account:bulk.copyInviteLinks" }),
-    )
+    await user.click(await getBulkAction(user, "copyInviteLinks"))
 
     expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledTimes(1)
     expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledWith(
@@ -3084,9 +3152,7 @@ describe("AccountList", () => {
         getAccountManagementSelectionCheckboxTestId("invite-fail-b"),
       ),
     )
-    await user.click(
-      screen.getByRole("button", { name: "account:bulk.copyInviteLinks" }),
-    )
+    await user.click(await getBulkAction(user, "copyInviteLinks"))
 
     await waitFor(() => {
       expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledTimes(2)
@@ -3186,12 +3252,8 @@ describe("AccountList", () => {
     await user.click(
       screen.getByRole("button", { name: "account:bulk.manage" }),
     )
-    await user.click(
-      screen.getByRole("button", { name: "account:bulk.selectVisible" }),
-    )
-    const copyInviteLinksButton = screen.getByRole("button", {
-      name: "account:bulk.copyInviteLinks",
-    })
+    await user.click(await getBulkAction(user, "selectVisible"))
+    const copyInviteLinksButton = await getBulkAction(user, "copyInviteLinks")
     await waitFor(() => {
       expect(copyInviteLinksButton).toBeEnabled()
     })
