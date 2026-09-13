@@ -207,6 +207,38 @@ describe("useFilteredModels", () => {
     }
   })
 
+  it("reuses evaluated prices when only the vendor selection changes", async () => {
+    const quote = vi.spyOn(pricingQuotes, "quoteCanonicalModelPrice")
+    try {
+      const inputs = {
+        pricingData: createPricingResponse(["gpt-4o", "claude-3-5-sonnet"]),
+        selectedSource: createAccountSource(createDisplayAccount({})),
+        pricingContexts: [],
+        selectedGroups: [],
+        selectedModelCapabilities: [],
+        modelMetadata: [],
+        priceComparisonWeights: {
+          input: 1,
+          output: 0,
+          cacheRead: 0,
+          cacheWrite: 0,
+        },
+      }
+      const { result, rerender } = renderUseFilteredModels(inputs)
+      await waitFor(() => expect(result.current.filteredModels).toHaveLength(2))
+      quote.mockClear()
+      rerender({ ...inputs, selectedProvider: "known:openai" })
+      await waitFor(() =>
+        expect(
+          result.current.filteredModels.map((item) => item.model.model_name),
+        ).toEqual(["gpt-4o"]),
+      )
+      expect(quote).not.toHaveBeenCalled()
+    } finally {
+      quote.mockRestore()
+    }
+  })
+
   it("quotes length tiers under default sorting using the current reference conditions", async () => {
     const pricingPlan: PricingPlan = {
       rates: {},

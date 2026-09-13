@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 import { Button } from "~/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { ANIMATIONS, COLORS, CORNERS } from "~/constants/designTokens"
-import type { CountedModelVendorCatalogEntry } from "~/features/ModelList/hooks/useFilteredModels"
+import type { CountedModelVendorCatalogEntry } from "~/features/ModelList/modelFiltering"
 import { useHorizontalScrollControls } from "~/hooks/useHorizontalScrollControls"
 import {
   MODEL_VENDOR_FILTER_VALUES,
