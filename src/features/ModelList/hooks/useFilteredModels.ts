@@ -7,11 +7,8 @@ import {
 import { deriveGroupAvailability } from "~/features/ModelList/groupAvailability"
 import {
   MODEL_GROUP_ACCESS_STATES,
-  normalizeGroupRatios,
   resolveActiveModelGroupContext,
-  resolveModelGroupContext,
   type ActiveModelGroupContext,
-  type ModelGroupContext,
 } from "~/features/ModelList/groupContext"
 import { normalizeGroupNames } from "~/features/ModelList/groupNormalization"
 import {
@@ -27,13 +24,8 @@ import {
   type CalculatedModelItem,
 } from "~/features/ModelList/modelListItems"
 import {
-  createAccountSource,
-  deriveModelListSourceCapabilities,
-  MODEL_LIST_GROUP_SEMANTICS,
   MODEL_MANAGEMENT_SOURCE_KINDS,
-  type ModelListSourceIdentity,
   type ModelManagementAccountSource,
-  type ModelManagementItemSource,
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
 import {
@@ -41,6 +33,10 @@ import {
   MODEL_LIST_SORT_MODES,
   type ModelListSortMode,
 } from "~/features/ModelList/sortModes"
+import {
+  prepareModelListSources,
+  type PreparedModelListItem,
+} from "~/features/ModelList/sourcePreparation"
 import { resolveAccountSitePricingUrl } from "~/services/accounts/accountSiteProfile/urls"
 import {
   isModelPriceUnavailable,
@@ -123,13 +119,7 @@ interface ComparablePriceKey {
   secondary: number | null
 }
 
-interface RawModelItem {
-  model: PricingResponse["data"][number]
-  source: ModelManagementItemSource
-  sourceIdentity?: ModelListSourceIdentity
-  groupRatios: Record<string, number>
-  groupContext: ModelGroupContext
-  exchangeRate: number
+interface RawModelItem extends PreparedModelListItem {
   modelMetadata?: ModelMetadata
   comparableModelIdentity: ComparableModelIdentity
   resolvedVendor: ResolvedModelVendor
@@ -252,31 +242,6 @@ function haveEqualGroupRatios(
     leftEntries.length === Object.keys(right).length &&
     leftEntries.every(([group, ratio]) => right[group] === ratio)
   )
-}
-
-/** Resolves whether one adapted pricing response can safely repair group state. */
-function isPricingGroupAccessAuthoritative(params: {
-  groupSemantics: ModelManagementSource["groupSemantics"]
-  pricing: PricingResponse
-  groupContexts: readonly ModelGroupContext[]
-}) {
-  if (params.groupSemantics === MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE) {
-    return true
-  }
-
-  if (
-    params.groupContexts.some(
-      (context) => context.accessState === MODEL_GROUP_ACCESS_STATES.UNKNOWN,
-    )
-  ) {
-    return false
-  }
-
-  if (params.groupContexts.length === 0) {
-    return params.pricing.model_list_source?.supportsPricing !== false
-  }
-
-  return true
 }
 
 /** Resolves the exchange rate for account-backed prices. */
@@ -759,6 +724,12 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     [modelMetadata],
   )
 
+  const preparedSources = useMemo(
+    () =>
+      prepareModelListSources({ pricingContexts, pricingData, selectedSource }),
+    [pricingContexts, pricingData, selectedSource],
+  )
+
   const rawModelState = useMemo(() => {
     let isGroupAccessAuthoritative = false
     let singleSourceGroupRatios: Record<string, number> = {}
@@ -828,138 +799,25 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         ),
       }
     }
-    const createPricingSourceItems = (params: {
-      pricing: PricingResponse
-      source: RawModelItem["source"]
-      sourceIdentity?: ModelListSourceIdentity
-      usableGroup: PricingResponse["usable_group"]
-      exchangeRate: number
-    }) => {
-      const groupRatios = normalizeGroupRatios(params.pricing.group_ratio ?? {})
-      const sourceItems = params.pricing.data.map((model) => {
-        const groupContext = resolveModelGroupContext({
-          groupSemantics: params.source.groupSemantics,
-          model,
-          usableGroup: params.usableGroup,
-          groupRatios,
-          modelListSource: params.pricing.model_list_source,
+    const candidateItems = preparedSources.flatMap((prepared) => {
+      const isAuthoritative = prepared.groupAccessEvidence === "authoritative"
+      if (
+        pricingContexts?.length &&
+        prepared.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+      ) {
+        const accountId = prepared.source.account.id
+        recordAccountGroupAccessAuthority(accountId, isAuthoritative)
+        projectSingleAccountContextFacts({
+          accountId,
+          isAuthoritative,
+          groupRatios: prepared.groupRatios,
         })
-
-        return attachVendorCandidate({
-          model,
-          source: params.source,
-          sourceIdentity: params.sourceIdentity,
-          groupRatios,
-          groupContext,
-          exchangeRate: params.exchangeRate,
-        })
-      })
-
-      return { groupRatios, sourceItems }
-    }
-
-    const candidateItems = (() => {
-      if (pricingContexts && pricingContexts.length > 0) {
-        return pricingContexts.flatMap(
-          ({ account, pricing, sourceIdentity }) => {
-            if (!pricing || !Array.isArray(pricing.data)) {
-              recordAccountGroupAccessAuthority(account.id, false)
-              projectSingleAccountContextFacts({
-                accountId: account.id,
-                isAuthoritative: false,
-                groupRatios: {},
-              })
-              return []
-            }
-
-            const exchangeRate = resolveAccountExchangeRate(account)
-
-            const accountSource = createAccountSource(account)
-            const allAccountsRowSource = {
-              ...accountSource,
-              capabilities: {
-                ...accountSource.capabilities,
-                supportsAccountSummary: true,
-              },
-            }
-            const source = {
-              ...allAccountsRowSource,
-              capabilities: deriveModelListSourceCapabilities({
-                capabilities: allAccountsRowSource.capabilities,
-                modelListSource: pricing.model_list_source,
-              }),
-            }
-            const { groupRatios, sourceItems } = createPricingSourceItems({
-              pricing,
-              source,
-              sourceIdentity,
-              usableGroup: pricing.usable_group ?? {},
-              exchangeRate,
-            })
-            const isAuthoritative = isPricingGroupAccessAuthoritative({
-              groupSemantics: source.groupSemantics,
-              pricing,
-              groupContexts: sourceItems.map((item) => item.groupContext),
-            })
-            recordAccountGroupAccessAuthority(account.id, isAuthoritative)
-            projectSingleAccountContextFacts({
-              accountId: account.id,
-              isAuthoritative,
-              groupRatios,
-            })
-
-            return sourceItems
-          },
-        )
+      } else {
+        singleSourceGroupRatios = prepared.groupRatios
+        isGroupAccessAuthoritative = isAuthoritative
       }
-
-      if (!pricingData || !selectedSource || !Array.isArray(pricingData.data)) {
-        return []
-      }
-
-      if (selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE) {
-        const { groupRatios, sourceItems } = createPricingSourceItems({
-          pricing: pricingData,
-          source: selectedSource,
-          usableGroup: {},
-          exchangeRate: 1,
-        })
-        singleSourceGroupRatios = groupRatios
-        isGroupAccessAuthoritative = isPricingGroupAccessAuthoritative({
-          groupSemantics: selectedSource.groupSemantics,
-          pricing: pricingData,
-          groupContexts: sourceItems.map((item) => item.groupContext),
-        })
-        return sourceItems
-      }
-
-      if (selectedSource.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT) {
-        return []
-      }
-
-      const exchangeRate = resolveAccountExchangeRate(selectedSource.account)
-
-      const source = {
-        ...selectedSource,
-        capabilities: deriveModelListSourceCapabilities({
-          capabilities: selectedSource.capabilities,
-          modelListSource: pricingData.model_list_source,
-        }),
-      }
-      const { groupRatios, sourceItems } = createPricingSourceItems({
-        pricing: pricingData,
-        source,
-        usableGroup: pricingData.usable_group ?? {},
-        exchangeRate,
-      })
-      singleSourceGroupRatios = groupRatios
-      isGroupAccessAuthoritative = isPricingGroupAccessAuthoritative({
-        groupSemantics: source.groupSemantics,
-        pricing: pricingData,
-        groupContexts: sourceItems.map((item) => item.groupContext),
-      })
-      return sourceItems
-    })()
+      return prepared.items.map(attachVendorCandidate)
+    })
 
     const { resolved } = aggregateModelVendors(
       candidateItems.map((item) => item.vendorCandidate),
@@ -978,7 +836,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         groupAccessAuthorityByAccountId,
       ) as Record<string, boolean>,
     }
-  }, [modelMetadataIndex, pricingContexts, pricingData, selectedSource])
+  }, [modelMetadataIndex, preparedSources, pricingContexts, selectedSource])
   const {
     rawModelItems,
     isGroupAccessAuthoritative,
