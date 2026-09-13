@@ -9,8 +9,8 @@ import {
   type ActiveModelGroupContext,
   type ModelGroupContext,
 } from "~/features/ModelList/groupContext"
-import type { CalculatedModelItem } from "~/features/ModelList/hooks/useFilteredModels"
 import ModelList from "~/features/ModelList/ModelList"
+import type { CalculatedModelItem } from "~/features/ModelList/modelListItems"
 import {
   ALL_ACCOUNTS_SOURCE_VALUE,
   MODEL_MANAGEMENT_SOURCE_KINDS,

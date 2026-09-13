@@ -5,7 +5,7 @@ import { Tabs } from "~/components/ui"
 import ModelList from "~/entrypoints/options/pages/ModelList"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
 import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
-import type { CalculatedModelItem } from "~/features/ModelList/hooks/useFilteredModels"
+import type { CalculatedModelItem } from "~/features/ModelList/modelListItems"
 import {
   createAccountSource,
   createAllAccountsSource,

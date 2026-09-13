@@ -17,10 +17,7 @@ import {
 } from "~/services/verification/aiApiVerification"
 import type { ApiToken } from "~/types"
 
-import {
-  getModelItemKey,
-  type CalculatedModelItem,
-} from "./hooks/useFilteredModels"
+import { getModelItemKey, type CalculatedModelItem } from "./modelListItems"
 
 export const MODEL_LIST_BATCH_VERIFY_CONCURRENCY = 5
 export const MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES = {

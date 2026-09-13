@@ -3,7 +3,7 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Heading3, SearchableSelect } from "~/components/ui"
-import type { AccountGroupOption } from "~/features/ModelList/hooks/useFilteredModels"
+import type { AccountGroupOption } from "~/features/ModelList/modelListItems"
 import {
   ALL_ACCOUNTS_SOURCE_VALUE,
   toAccountSourceValue,

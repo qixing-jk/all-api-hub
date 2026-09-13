@@ -21,6 +21,12 @@ import {
   type ModelCapabilitySelectionValue,
 } from "~/features/ModelList/modelCapabilityFilters"
 import {
+  getModelItemKey,
+  getModelListSourceIdentityKey,
+  type AccountGroupOption,
+  type CalculatedModelItem,
+} from "~/features/ModelList/modelListItems"
+import {
   createAccountSource,
   deriveModelListSourceCapabilities,
   MODEL_LIST_GROUP_SEMANTICS,
@@ -135,28 +141,6 @@ type CandidateRawModelItem = Omit<RawModelItem, "resolvedVendor"> & {
 
 export type CountedModelVendorCatalogEntry = ModelVendorCatalogEntry & {
   count: number
-}
-
-export interface AccountGroupOption {
-  name: string
-  ratio?: number
-}
-
-export type CalculatedModelItem = {
-  model: PricingResponse["data"][number]
-  calculatedPrice: ReturnType<typeof calculateModelPrice>
-  source: ModelManagementItemSource
-  sourceIdentity?: ModelListSourceIdentity
-  groupRatios: Record<string, number>
-  groupContext: ModelGroupContext
-  activeGroupContext: ActiveModelGroupContext
-  effectiveGroup?: string
-  modelMetadata?: ModelMetadata
-  comparableModelIdentity: ComparableModelIdentity
-  resolvedVendor: ResolvedModelVendor
-  hasUniquelyOptimalGroup?: boolean
-  isLowestPrice?: boolean
-  isPriceComparable?: boolean
 }
 
 const BILLING_MODE_ORDER: Record<PricingBillingMode, number> = {
@@ -483,41 +467,6 @@ function comparePriceKeys(
 /** Returns true when a price key has at least one finite comparable value. */
 function hasComparablePriceValue(priceKey: ComparablePriceKey) {
   return isFiniteNumber(priceKey.primary) || isFiniteNumber(priceKey.secondary)
-}
-
-/** Resolves the row identity used for source-scoped model-list comparisons. */
-function getModelListSourceIdentityKey(params: {
-  source: ModelManagementItemSource
-  sourceIdentity?: ModelListSourceIdentity
-}) {
-  return (
-    params.sourceIdentity?.id ??
-    (params.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
-      ? params.source.account.id
-      : params.source.profile.id)
-  )
-}
-
-/** Resolves the source-level group/filter key for a raw model item. */
-function getRawItemSourceIdentityKey(
-  item: Pick<RawModelItem, "source" | "sourceIdentity">,
-) {
-  return getModelListSourceIdentityKey({
-    source: item.source,
-    sourceIdentity: item.sourceIdentity,
-  })
-}
-
-/** Creates a stable identifier for a calculated model item. */
-export function getModelItemKey(
-  item: Pick<CalculatedModelItem, "model" | "source" | "sourceIdentity">,
-) {
-  const sourceId = getModelListSourceIdentityKey({
-    source: item.source,
-    sourceIdentity: item.sourceIdentity,
-  })
-
-  return `${item.source.kind}:${sourceId}:${item.model.model_name}`
 }
 
 /** Returns the source label used for deterministic sorting. */
@@ -1081,7 +1030,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         return
       }
 
-      const sourceId = getRawItemSourceIdentityKey(item)
+      const sourceId = getModelListSourceIdentityKey(item)
       const sourceGroups = groupsBySourceId.get(sourceId) ?? new Set<string>()
 
       item.groupContext.usableGroups.forEach((group) => sourceGroups.add(group))
@@ -1209,7 +1158,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
           return []
         }
 
-        const sourceId = getRawItemSourceIdentityKey(item)
+        const sourceId = getModelListSourceIdentityKey(item)
         const groups = availableGroupsBySourceId[sourceId] ?? []
         const excludedGroups = new Set(
           normalizeGroupNames(
@@ -1248,7 +1197,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
 
         return (
           includedAllAccountsGroupsBySourceId[
-            getRawItemSourceIdentityKey(item)
+            getModelListSourceIdentityKey(item)
           ] ?? []
         )
       }

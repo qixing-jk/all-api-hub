@@ -1,7 +1,7 @@
 import {
   getModelItemKey,
   type CalculatedModelItem,
-} from "~/features/ModelList/hooks/useFilteredModels"
+} from "~/features/ModelList/modelListItems"
 import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
 import {
   createAccountModelVerificationHistoryTarget,

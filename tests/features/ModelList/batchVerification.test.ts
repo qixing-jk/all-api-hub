@@ -13,7 +13,7 @@ import {
   type ActiveModelGroupContext,
   type ModelGroupContext,
 } from "~/features/ModelList/groupContext"
-import type { CalculatedModelItem } from "~/features/ModelList/hooks/useFilteredModels"
+import type { CalculatedModelItem } from "~/features/ModelList/modelListItems"
 import {
   createAccountSource,
   MODEL_LIST_SOURCE_IDENTITY_KINDS,

@@ -14,7 +14,7 @@ import {
 import {
   getModelItemKey,
   type CalculatedModelItem,
-} from "~/features/ModelList/hooks/useFilteredModels"
+} from "~/features/ModelList/modelListItems"
 import type {
   ModelManagementItemSource,
   ModelManagementSourceCapabilities,

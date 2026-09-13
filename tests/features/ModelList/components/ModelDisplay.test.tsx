@@ -11,7 +11,7 @@ import {
   resolveActiveModelGroupContext,
   resolveModelGroupContext,
 } from "~/features/ModelList/groupContext"
-import type { CalculatedModelItem } from "~/features/ModelList/hooks/useFilteredModels"
+import type { CalculatedModelItem } from "~/features/ModelList/modelListItems"
 import {
   createAccountSource,
   createProfileSource,

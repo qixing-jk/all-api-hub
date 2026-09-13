@@ -1,4 +1,4 @@
-import type { CalculatedModelItem } from "~/features/ModelList/hooks/useFilteredModels"
+import type { CalculatedModelItem } from "~/features/ModelList/modelListItems"
 import {
   CALCULATED_PRICE_KINDS,
   PRICE_RATE_UNITS,

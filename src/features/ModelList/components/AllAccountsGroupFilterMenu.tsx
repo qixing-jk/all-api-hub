@@ -9,7 +9,7 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover"
 import { formatGroupLabel } from "~/features/ModelList/groupLabels"
-import type { AccountGroupOption } from "~/features/ModelList/hooks/useFilteredModels"
+import type { AccountGroupOption } from "~/features/ModelList/modelListItems"
 import { cn } from "~/lib/utils"
 import type { DisplaySiteData } from "~/types"
 
