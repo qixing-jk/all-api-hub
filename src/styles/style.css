@@ -446,10 +446,16 @@
   /* Include var()/inherit values, not just literal lengths, for nested shells. */
   /* prettier-ignore */
   --corner-radius: --value(--radius-*, [*]);
+  @supports (corner-shape: superellipse(1.5)) {
+    corner-shape: superellipse(1.5);
+  }
 }
 
 @utility rounded {
   --corner-radius: var(--radius);
+  @supports (corner-shape: superellipse(1.5)) {
+    corner-shape: superellipse(1.5);
+  }
 }
 
 @utility rounded-full {

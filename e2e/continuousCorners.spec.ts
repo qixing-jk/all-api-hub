@@ -20,6 +20,29 @@ test.beforeEach(async ({ context, page }) => {
   })
 })
 
+test("responsive finite radii restore continuous shaping after rounded-full", async ({
+  page,
+  extensionId,
+}) => {
+  await page.goto(`chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}`)
+  // Exercise the shared stylesheet independently of a particular component.
+  // Both utilities are used by production controls and included in the build.
+  await page.evaluate(() => {
+    const button = document.createElement("button")
+    button.textContent = "Responsive corner probe"
+    button.className = "rounded-full sm:rounded-sm"
+    document.body.append(button)
+  })
+  const button = page.getByRole("button", { name: "Responsive corner probe" })
+  await page.setViewportSize({ width: 390, height: 900 })
+  await expect(button).toHaveCSS("corner-shape", "round")
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await expect(button).toHaveCSS("border-top-left-radius", "10px")
+  await expect(button).toHaveCSS("corner-shape", "superellipse(1.5)")
+  await page.setViewportSize({ width: 390, height: 900 })
+  await expect(button).toHaveCSS("corner-shape", "round")
+})
+
 test("overview edge focus rings follow the responsive card perimeter", async ({
   page,
   extensionId,

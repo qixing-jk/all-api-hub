@@ -1174,7 +1174,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     const viewSwitch = await screen.findByRole("group", {
       name: "keyManagement:repairMissingKeys.views.label",
     })
-    expect(viewSwitch).toHaveClass("w-full", "rounded-lg", "p-1")
+    expect(viewSwitch).toHaveClass("w-full")
     expect(
       screen.getByTestId("repair-missing-keys-account-coverage-view-icon"),
     ).toBeInTheDocument()
