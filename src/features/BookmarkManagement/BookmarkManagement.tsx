@@ -66,6 +66,7 @@ function BookmarkManagementContent({
           description={t("bookmark:description")}
           actions={
             <Button
+              size="sm"
               onClick={() => openAddBookmark()}
               data-testid={SITE_BOOKMARKS_TEST_IDS.addButton}
               analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.CreateBookmark}

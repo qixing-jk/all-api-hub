@@ -383,6 +383,7 @@ function AccountManagementContent({
               data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.headerActions}
             >
               <Button
+                size="sm"
                 onClick={() => void handleGlobalRefresh()}
                 variant="secondary"
                 leftIcon={<RefreshCw className="h-4 w-4" />}
@@ -395,6 +396,7 @@ function AccountManagementContent({
               </Button>
               {canRefreshDisabledAccounts && (
                 <Button
+                  size="sm"
                   onClick={() => void handleDisabledRefresh()}
                   variant="secondary"
                   leftIcon={<RefreshCw className="h-4 w-4" />}
@@ -411,6 +413,7 @@ function AccountManagementContent({
                   featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin}
                 >
                   <Button
+                    size="sm"
                     onClick={handleOpenExternalCheckInsClick}
                     leftIcon={<CalendarCheck2 className="h-4 w-4" />}
                     title={t("account:actions.openAllExternalCheckInHint")}
@@ -423,6 +426,7 @@ function AccountManagementContent({
                 </ProductAnalyticsScope>
               )}
               <Button
+                size="sm"
                 onClick={onOpenBookmarkImport}
                 variant="secondary"
                 leftIcon={<BookmarkPlus className="h-4 w-4" />}
@@ -435,6 +439,7 @@ function AccountManagementContent({
                 {t("account:actions.importFromBookmarks")}
               </Button>
               <Button
+                size="sm"
                 onClick={() => setIsDedupeDialogOpen(true)}
                 variant="secondary"
                 leftIcon={<Search className="h-4 w-4" />}
@@ -447,6 +452,7 @@ function AccountManagementContent({
                 {t("account:actions.scanDuplicates")}
               </Button>
               <Button
+                size="sm"
                 onClick={openAddAccount}
                 data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton}
                 analyticsAction={

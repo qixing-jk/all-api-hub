@@ -499,6 +499,7 @@ export default function SiteAnnouncementsPage({
             }
           >
             <Button
+              size="sm"
               type="button"
               variant="outline"
               onClick={() => void handleMarkAllRead()}
@@ -508,6 +509,7 @@ export default function SiteAnnouncementsPage({
               {t("actions.markAllRead")}
             </Button>
             <Button
+              size="sm"
               type="button"
               loading={isChecking}
               disabled={!canRunManualCheck}

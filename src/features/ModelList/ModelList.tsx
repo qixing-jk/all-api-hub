@@ -597,6 +597,7 @@ export default function ModelList(props: {
             >
               {shouldShowRefreshAction && (
                 <Button
+                  size="sm"
                   onClick={loadPricingData}
                   variant="secondary"
                   leftIcon={<RefreshCw className="h-4 w-4" />}
@@ -614,6 +615,7 @@ export default function ModelList(props: {
                   wrapperClassName="contents"
                 >
                   <Button
+                    size="sm"
                     type="button"
                     variant="default"
                     data-testid={

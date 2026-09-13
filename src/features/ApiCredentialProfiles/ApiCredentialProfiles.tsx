@@ -245,6 +245,7 @@ export default function ApiCredentialProfiles({
           description={t("description")}
           actions={
             <Button
+              size="sm"
               onClick={() => openAddDialog()}
               data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.addButton}
               analyticsAction={

@@ -81,7 +81,7 @@ describe("Button", () => {
 
     for (const button of textButtons) {
       expect(button).toHaveClass(
-        "h-auto",
+        "min-h-fit",
         "min-w-0",
         "max-w-full",
         "shrink",
@@ -93,9 +93,9 @@ describe("Button", () => {
       expect(button).not.toHaveClass("whitespace-nowrap")
     }
 
-    expect(textButtons[0]).not.toHaveClass("min-h-9")
-    expect(textButtons[1]).not.toHaveClass("min-h-8")
-    expect(textButtons[2]).not.toHaveClass("min-h-10")
+    expect(textButtons[0]).toHaveClass("h-9")
+    expect(textButtons[1]).toHaveClass("h-8")
+    expect(textButtons[2]).toHaveClass("h-10")
   })
 
   it("keeps icon-only button sizes fixed", async () => {

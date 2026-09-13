@@ -168,6 +168,7 @@ export function ManagedSiteChannelsView({
             {!state.isConfigurationMissing && capabilities.canRefresh ? (
               <Button
                 variant="outline"
+                size="sm"
                 loading={state.isRefreshing}
                 loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}
                 data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton}
@@ -187,6 +188,7 @@ export function ManagedSiteChannelsView({
             capabilities.canToggleMigration ? (
               <Button
                 variant={state.migrationMode ? "default" : "outline"}
+                size="sm"
                 onClick={callbacks.onToggleMigrationMode}
                 data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.migrationModeButton}
                 leftIcon={<ArrowRightLeft className="h-4 w-4" />}
