@@ -92,20 +92,16 @@ const createPricingResponse = (
   models: Array<string | Partial<PricingResponse["data"][number]>>,
   overrides: Partial<PricingResponse> = {},
 ): PricingResponse => {
-  const groupRatio = overrides.group_ratio ?? { default: 1 }
-  const usableGroup =
-    overrides.usable_group ??
-    Object.fromEntries(Object.keys(groupRatio).map((group) => [group, group]))
-
   return {
     data: models.map((model) =>
       typeof model === "string"
         ? createPricingModel({ model_name: model })
         : createPricingModel(model),
     ),
-    group_ratio: groupRatio,
+    group_ratio: { default: 1 },
     success: true,
-    usable_group: usableGroup,
+    // Access and pricing are independent facts; scenarios override each explicitly.
+    usable_group: { default: "default" },
     ...overrides,
   }
 }
@@ -1033,7 +1029,10 @@ describe("useFilteredModels", () => {
                 quota_type: 1,
               },
             ],
-            { group_ratio: { default: 1, vip: 1 } },
+            {
+              usable_group: { default: "default", vip: "vip" },
+              group_ratio: { default: 1, vip: 1 },
+            },
           ),
         },
       ],
@@ -2121,6 +2120,7 @@ describe("useFilteredModels", () => {
           },
         ],
         {
+          usable_group: { alpha: "alpha", beta: "beta" },
           group_ratio: { alpha: 1, beta: 1 },
         },
       ),
@@ -2154,6 +2154,7 @@ describe("useFilteredModels", () => {
           },
         ],
         {
+          usable_group: { a: "a", B: "B" },
           group_ratio: { a: 1, B: 1 },
         },
       ),
@@ -2488,6 +2489,7 @@ describe("useFilteredModels", () => {
             },
           ],
           {
+            usable_group: { default: "default", vip: "vip" },
             group_ratio: { default: 1, vip: 0.5 },
           },
         ),
@@ -2612,6 +2614,7 @@ describe("useFilteredModels", () => {
               },
             ],
             {
+              usable_group: {},
               group_ratio: {},
               model_list_source: buildAIHubMixModelListSource(
                 MODEL_LIST_SOURCE_KINDS.USER_SCOPED,
@@ -2958,6 +2961,7 @@ describe("useFilteredModels", () => {
               },
             ],
             {
+              usable_group: { vip: "vip" },
               group_ratio: { vip: 0.5 },
               model_list_source: {
                 kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
@@ -3032,6 +3036,7 @@ describe("useFilteredModels", () => {
               },
             ],
             {
+              usable_group: { vip: "vip" },
               group_ratio: { vip: 0.5 },
             },
           ),
@@ -3048,6 +3053,7 @@ describe("useFilteredModels", () => {
               },
             ],
             {
+              usable_group: { vip: "vip" },
               group_ratio: { vip: 0.8 },
             },
           ),
@@ -3127,6 +3133,7 @@ describe("useFilteredModels", () => {
               },
             ],
             {
+              usable_group: { vip: "vip" },
               group_ratio: { vip: 0.5 },
             },
           ),
@@ -3181,6 +3188,7 @@ describe("useFilteredModels", () => {
           },
         ],
         {
+          usable_group: { default: "default", vip: "vip" },
           group_ratio: { default: 1, vip: 2 },
         },
       ),
@@ -4421,7 +4429,15 @@ it("reverses same-model rankings across context thresholds using one shared quot
               enable_groups: ["default", "half", "third", "fourth"],
             },
           ],
-          { group_ratio: { default: 1, half: 0.5, third: 2, fourth: 3 } },
+          {
+            usable_group: {
+              default: "default",
+              half: "half",
+              third: "third",
+              fourth: "fourth",
+            },
+            group_ratio: { default: 1, half: 0.5, third: 2, fourth: 3 },
+          },
         ),
       },
       {
