@@ -151,6 +151,10 @@
   "providerWong": {
     "checkinDisabled": "Trang web này chưa bật chức năng điểm danh"
   },
+  "riskNotice": {
+    "description": "Hãy tuân thủ quy định của từng trang web và tự đánh giá rủi ro khi tự động điểm danh. Bạn tự chịu trách nhiệm nếu tài khoản bị khóa, hạn chế hoặc phát sinh tổn thất khác do sử dụng tính năng này. All API Hub không chịu trách nhiệm.",
+    "label": "Lưu ý rủi ro khi tự động điểm danh"
+  },
   "settings": {
     "deterministicTimeDesc": "Khi bật chế độ cố định, hãy chọn thời gian cụ thể (HH:mm) để bắt đầu điểm danh.",
     "deterministicTimeTitle": "Thời gian cố định",

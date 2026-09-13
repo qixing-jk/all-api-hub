@@ -154,6 +154,10 @@
   "providerWong": {
     "checkinDisabled": "Check-in feature is disabled"
   },
+  "riskNotice": {
+    "description": "Follow each site’s rules and assess the risks of automatic check-in. You are responsible for any account bans, restrictions, or other losses resulting from this feature. All API Hub accepts no liability.",
+    "label": "Automatic check-in risk notice"
+  },
   "settings": {
     "deterministicTimeDesc": "Pick the exact time (HH:mm) to start check-in when deterministic mode is enabled.",
     "deterministicTimeTitle": "Deterministic time",

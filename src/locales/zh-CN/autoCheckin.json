@@ -151,6 +151,10 @@
   "providerWong": {
     "checkinDisabled": "该站点未开启签到功能"
   },
+  "riskNotice": {
+    "description": "请遵守各站点规则，自行评估自动签到风险。因使用本功能导致的账号封禁、限制或其他损失，由使用者自行承担，All API Hub 不承担责任。",
+    "label": "自动签到风险提示"
+  },
   "settings": {
     "deterministicTimeDesc": "启用固定模式时，选择开始签到的具体时间（HH:mm）。",
     "deterministicTimeTitle": "固定时间",

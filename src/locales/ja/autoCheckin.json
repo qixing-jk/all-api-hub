@@ -151,6 +151,10 @@
   "providerWong": {
     "checkinDisabled": "チェックイン機能は無効です"
   },
+  "riskNotice": {
+    "description": "各サイトのルールを守り、自動チェックインのリスクをご自身で判断してください。本機能の利用によるアカウントの凍結、制限、その他の損失は利用者の自己責任となり、All API Hub は責任を負いません。",
+    "label": "自動チェックインのリスクについて"
+  },
   "settings": {
     "deterministicTimeDesc": "固定モード有効時にチェックインを開始する正確な時刻（HH:mm）を指定します。",
     "deterministicTimeTitle": "固定時刻",

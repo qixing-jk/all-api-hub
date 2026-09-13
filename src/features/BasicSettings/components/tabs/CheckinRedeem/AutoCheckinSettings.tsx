@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
+import { AutoCheckinRiskHint } from "~/components/AutoCheckinRiskHint"
 import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
 import { SettingSection } from "~/components/SettingSection"
 import {
@@ -262,6 +263,7 @@ export default function AutoCheckinSettings() {
     <SettingSection
       id={AUTO_CHECKIN_TARGET_IDS.section}
       title={t("autoCheckin:settings.title")}
+      titleActions={<AutoCheckinRiskHint />}
       description={t("autoCheckin:settings.enableDesc")}
       onReset={async () => {
         return resetAutoCheckinConfig()

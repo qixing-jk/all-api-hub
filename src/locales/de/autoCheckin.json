@@ -154,6 +154,10 @@
   "providerWong": {
     "checkinDisabled": "Die Check-in-Funktion ist deaktiviert"
   },
+  "riskNotice": {
+    "description": "Beachte die Regeln der jeweiligen Website und prüfe die Risiken des automatischen Check-ins. Für Kontosperrungen, Einschränkungen oder andere Schäden durch diese Funktion bist du selbst verantwortlich. All API Hub übernimmt keine Haftung.",
+    "label": "Risikohinweis zum automatischen Check-in"
+  },
   "settings": {
     "deterministicTimeDesc": "Wählen Sie den genauen Zeitpunkt (HH:mm), um mit dem Check-in zu beginnen, wenn der deterministische Modus aktiviert ist.",
     "deterministicTimeTitle": "Deterministische Zeit",

@@ -157,6 +157,10 @@
   "providerWong": {
     "checkinDisabled": "O recurso de check-in está desativado"
   },
+  "riskNotice": {
+    "description": "Respeite as regras de cada site e avalie os riscos do check-in automático. Você é responsável por bloqueios de conta, restrições ou outras perdas decorrentes desta função. O All API Hub não assume responsabilidade.",
+    "label": "Aviso de riscos do check-in automático"
+  },
   "settings": {
     "deterministicTimeDesc": "Escolha o horário exato (HH:mm) para iniciar o check-in quando o modo determinístico estiver habilitado.",
     "deterministicTimeTitle": "Horário fixo",

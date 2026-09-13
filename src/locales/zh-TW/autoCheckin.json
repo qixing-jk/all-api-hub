@@ -151,6 +151,10 @@
   "providerWong": {
     "checkinDisabled": "該站點未開啟簽到功能"
   },
+  "riskNotice": {
+    "description": "請遵守各站點規則，自行評估自動簽到風險。因使用本功能導致的帳號封禁、限制或其他損失，由使用者自行承擔，All API Hub 不承擔責任。",
+    "label": "自動簽到風險提示"
+  },
   "settings": {
     "deterministicTimeDesc": "啟用固定模式時，選擇開始簽到的具體時間（HH:mm）。",
     "deterministicTimeTitle": "固定時間",

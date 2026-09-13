@@ -1,6 +1,7 @@
 import { CalendarDays, RefreshCw, Ticket } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { AutoCheckinRiskHint } from "~/components/AutoCheckinRiskHint"
 import {
   Button,
   FormField,
@@ -299,12 +300,15 @@ export function AccountCheckInSection({
       {hasCandidates && (
         <div className="flex w-full items-center justify-between gap-4">
           <div className="flex-1">
-            <label
-              htmlFor={ACCOUNT_CHECK_IN_TARGET_IDS.automaticExecution}
-              className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
-            >
-              {t("form.autoCheckInEnabled")}
-            </label>
+            <div className="flex items-center gap-1">
+              <label
+                htmlFor={ACCOUNT_CHECK_IN_TARGET_IDS.automaticExecution}
+                className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
+              >
+                {t("form.autoCheckInEnabled")}
+              </label>
+              <AutoCheckinRiskHint />
+            </div>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {isSelectedMethodDisabled
                 ? t("form.autoCheckInPausedBySiteDesc")
