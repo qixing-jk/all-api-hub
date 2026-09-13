@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react"
-import type { ReactNode } from "react"
+import { useRef, useState, type ReactNode } from "react"
 
 import {
   DropdownMenuPortal,
@@ -18,14 +18,32 @@ export function AccountActionSubmenu({
   label: string
   children: ReactNode
 }) {
+  const triggerRef = useRef<HTMLDivElement>(null)
+  const [sideOffset, setSideOffset] = useState(0)
+
   return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger className="gap-2 px-3 py-2">
+    <DropdownMenuSub
+      onOpenChange={(open) => {
+        if (!open || !triggerRef.current) return
+        const bounds = triggerRef.current.getBoundingClientRect()
+        const available = Math.max(
+          bounds.left,
+          window.innerWidth - bounds.right,
+        )
+        // Overlap the parent only when neither side has room for readable labels.
+        setSideOffset(Math.min(0, available - 192 - 8))
+      }}
+    >
+      <DropdownMenuSubTrigger ref={triggerRef} className="gap-2 px-3 py-2">
         <Icon className="h-4 w-4" />
         {label}
       </DropdownMenuSubTrigger>
       <DropdownMenuPortal>
-        <DropdownMenuSubContent className="max-h-(--radix-dropdown-menu-content-available-height) max-w-[calc(100vw-1rem)] overflow-y-auto">
+        <DropdownMenuSubContent
+          collisionPadding={8}
+          sideOffset={sideOffset}
+          className="max-h-(--radix-dropdown-menu-content-available-height) max-w-(--radix-dropdown-menu-content-available-width) min-w-48 overflow-y-auto"
+        >
           {children}
         </DropdownMenuSubContent>
       </DropdownMenuPortal>

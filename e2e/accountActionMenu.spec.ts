@@ -22,7 +22,7 @@ import {
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
-for (const width of [390, 1100]) {
+for (const width of [320, 390, 1100]) {
   for (const language of ["en", "zh-CN"]) {
     test(`account menu groups remain reachable at ${width}px (${language})`, async ({
       context,
@@ -111,6 +111,7 @@ for (const width of [390, 1100]) {
       await expect(async () => {
         const box = await submenu.boundingBox()
         expect(box).not.toBeNull()
+        expect(box!.width).toBeGreaterThanOrEqual(192)
         expect(box!.x).toBeGreaterThanOrEqual(0)
         expect(box!.x + box!.width).toBeLessThanOrEqual(width)
       }).toPass()
@@ -133,6 +134,13 @@ for (const width of [390, 1100]) {
           exact: true,
         }),
       ).toBeVisible()
+      await expect(async () => {
+        const box = await shareMenu.boundingBox()
+        expect(box).not.toBeNull()
+        expect(box!.width).toBeGreaterThanOrEqual(192)
+        expect(box!.x).toBeGreaterThanOrEqual(0)
+        expect(box!.x + box!.width).toBeLessThanOrEqual(width)
+      }).toPass()
       await page.screenshot({
         path: testInfo.outputPath("share.png"),
         animations: "disabled",

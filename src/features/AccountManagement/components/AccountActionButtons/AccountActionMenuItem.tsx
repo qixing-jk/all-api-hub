@@ -114,7 +114,9 @@ export const AccountActionMenuItem: React.FC<AccountActionMenuItemProps> = ({
         )}
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-center gap-2">
-            <span className="truncate">{resolvedLabel}</span>
+            <span className="min-w-0 break-words whitespace-normal">
+              {resolvedLabel}
+            </span>
             {hint ? (
               <span
                 className="dark:border-dark-bg-quaternary dark:text-dark-text-tertiary shrink-0 rounded-full border border-gray-300 px-1.5 py-0.5 text-[11px] leading-none font-medium text-gray-500"
