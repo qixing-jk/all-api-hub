@@ -282,6 +282,69 @@ test("grants cookie-auth optional permissions and saves two cookie accounts on t
   )
 })
 
+test("cookie bridge stops authenticating removed rules and isolates tab replacements", async ({
+  context,
+  page,
+  extensionId,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await page.goto(`chrome-extension://${extensionId}/options.html`)
+  await requestAndExpectOptionalPermissions(
+    page,
+    getCookieAuthOptionalPermissions(
+      await getManifestOptionalPermissions(page),
+    ),
+  )
+  await installMockedTempWindowCookieAuthBridge(serviceWorker)
+  const responses = await serviceWorker.evaluate(async () => {
+    const chromeApi = (globalThis as any).chrome
+    const rule = (id: number, tabId: number, value: string) => ({
+      id,
+      condition: { tabIds: [tabId] },
+      action: {
+        requestHeaders: [{ header: "Cookie", operation: "set", value }],
+      },
+    })
+    const fetchFromTab = (tabId: number) =>
+      chromeApi.tabs.sendMessage(tabId, { action: "performTempWindowFetch" })
+    try {
+      await chromeApi.declarativeNetRequest.updateSessionRules({
+        addRules: [
+          rule(101, 11, "session=user-a"),
+          rule(102, 12, "session=user-b"),
+        ],
+      })
+      const before = await fetchFromTab(11)
+      await chromeApi.declarativeNetRequest.updateSessionRules({
+        removeRuleIds: [101, 999],
+      })
+      const removed = await fetchFromTab(11)
+      const otherTab = await fetchFromTab(12)
+      await chromeApi.declarativeNetRequest.updateSessionRules({
+        removeRuleIds: [102],
+        addRules: [rule(102, 12, "session=user-a")],
+      })
+      const replaced = await fetchFromTab(12)
+      // A non-cookie rule replacing the same ID must not retain its old Cookie.
+      await chromeApi.declarativeNetRequest.updateSessionRules({
+        removeRuleIds: [102],
+        addRules: [
+          { id: 102, condition: { tabIds: [12] }, action: { type: "block" } },
+        ],
+      })
+      const cleared = await fetchFromTab(12)
+      return { before, removed, otherTab, replaced, cleared }
+    } finally {
+      ;(globalThis as any).__aahRestoreMockedTempWindowCookieAuthBridge()
+    }
+  })
+  expect(responses.before.data.data.id).toBe("201")
+  expect(responses.removed).toMatchObject({ success: false, status: 401 })
+  expect(responses.otherTab.data.data.id).toBe("202")
+  expect(responses.replaced.data.data.id).toBe("201")
+  expect(responses.cleared).toMatchObject({ success: false, status: 401 })
+})
+
 function getCookieAuthOptionalPermissions(optionalPermissions: string[]) {
   return optionalPermissions.filter((permission) =>
     COOKIE_AUTH_OPTIONAL_PERMISSION_IDS.has(permission),
@@ -295,7 +358,10 @@ async function installMockedTempWindowCookieAuthBridge(serviceWorker: Worker) {
       throw new Error("Chrome DNR/tabs APIs are unavailable")
     }
 
-    const cookieHeaderByTabId = new Map<number, string>()
+    const cookieRulesById = new Map<
+      number,
+      { tabId: number; cookieHeader: string }
+    >()
     const originalUpdateSessionRules =
       chromeApi.declarativeNetRequest.updateSessionRules?.bind(
         chromeApi.declarativeNetRequest,
@@ -304,7 +370,9 @@ async function installMockedTempWindowCookieAuthBridge(serviceWorker: Worker) {
 
     chromeApi.declarativeNetRequest.updateSessionRules = (
       update: {
+        removeRuleIds?: number[]
         addRules?: Array<{
+          id: number
           condition?: { tabIds?: number[] }
           action?: {
             requestHeaders?: Array<{
@@ -317,6 +385,10 @@ async function installMockedTempWindowCookieAuthBridge(serviceWorker: Worker) {
       },
       callback?: () => void,
     ) => {
+      // Session-rule updates remove IDs before adding their replacements.
+      for (const ruleId of update.removeRuleIds ?? []) {
+        cookieRulesById.delete(ruleId)
+      }
       for (const rule of update.addRules ?? []) {
         const tabId = rule.condition?.tabIds?.[0]
         const cookieHeader = rule.action?.requestHeaders?.find(
@@ -327,7 +399,7 @@ async function installMockedTempWindowCookieAuthBridge(serviceWorker: Worker) {
         )?.value
 
         if (typeof tabId === "number" && cookieHeader) {
-          cookieHeaderByTabId.set(tabId, cookieHeader)
+          cookieRulesById.set(rule.id, { tabId, cookieHeader })
         }
       }
 
@@ -367,7 +439,9 @@ async function installMockedTempWindowCookieAuthBridge(serviceWorker: Worker) {
       }
 
       if (message?.action === "performTempWindowFetch") {
-        const cookieHeader = cookieHeaderByTabId.get(tabId) ?? ""
+        const cookieHeader =
+          [...cookieRulesById.values()].find((rule) => rule.tabId === tabId)
+            ?.cookieHeader ?? ""
         const sessionCookie =
           cookieHeader.match(/(?:^|;\s*)(session=[^;]+)/iu)?.[1] ?? ""
         const account =
@@ -418,7 +492,7 @@ async function installMockedTempWindowCookieAuthBridge(serviceWorker: Worker) {
       if (originalSendMessage) {
         chromeApi.tabs.sendMessage = originalSendMessage
       }
-      cookieHeaderByTabId.clear()
+      cookieRulesById.clear()
     }
   }, MOCKED_ACCOUNT_BY_SESSION_COOKIE)
 }
