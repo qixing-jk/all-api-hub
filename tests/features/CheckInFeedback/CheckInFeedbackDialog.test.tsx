@@ -513,70 +513,76 @@ describe("check-in feedback workflow", () => {
     )
   })
 
-  it("opens from an unsupported account editor with automatic collection without saving or losing edits", async () => {
-    const user = userEvent.setup()
-    const onChange = vi.fn()
-    const redetect = vi.fn()
-    render(
-      wrap(
-        <AccountCheckInSection
-          checkIn={checkIn}
-          siteType={SITE_TYPES.UNKNOWN}
-          onCheckInChange={onChange}
-          onCheckInSelectionChange={onChange}
-          onRedetectCheckInMethods={redetect}
-          isRedetectingCheckInMethods={false}
-          checkInRedetectionFeedback={null}
-          feedbackSource={{ snapshot }}
-        />,
-      ),
-    )
-    await user.click(
-      screen.getByRole("button", { name: "Request check-in support" }),
-    )
-    await screen.findByLabelText("What happened? (optional)")
-    expect(accountQueries.getAccountById).not.toHaveBeenCalled()
-    expect(collectFeedbackCluesInBrowser).toHaveBeenCalledOnce()
-    expect(autoCheckinStorage.getStatus).not.toHaveBeenCalled()
-    expect(redetect).not.toHaveBeenCalled()
-    await user.type(
-      screen.getByLabelText("What happened? (optional)"),
-      "Website works",
-    )
-    await user.click(screen.getByText("Review and edit submission"))
-    await user.click(screen.getByText("Edit diagnostic details"))
-    await user.clear(screen.getByLabelText("Extension and check-in status"))
-    await user.type(
-      screen.getByLabelText("Extension and check-in status"),
-      "My edited details",
-    )
-    await user.click(
-      screen.getByRole("switch", { name: "Include site address" }),
-    )
-    const preview = screen.getByLabelText(
-      "Full submission (select to copy)",
-    ) as HTMLTextAreaElement
-    expect(preview.value).toContain("## What happened\n\nWebsite works")
-    expect(preview.value).toContain('<td colspan="2">My edited details</td>')
-    expect(preview.value).not.toContain("https://example.com")
-    await user.click(screen.getByRole("button", { name: "Copy content" }))
-    expect(await navigator.clipboard.readText()).toBe(preview.value)
-    await user.click(screen.getByRole("button", { name: "Continue to GitHub" }))
-    expect(
-      new URL(vi.mocked(createTab).mock.calls[0][0]).searchParams.get("body"),
-    ).toBe(preview.value)
-    expect(screen.getByLabelText("What happened? (optional)")).toHaveValue(
-      "Website works",
-    )
-    expect(onChange).not.toHaveBeenCalled()
-    await user.keyboard("{Escape}")
-    await user.click(
-      screen.getByRole("button", { name: "Request check-in support" }),
-    )
-    expect(
-      await screen.findByLabelText("What happened? (optional)"),
-    ).toHaveValue("")
-  })
+  it.each([true, false])(
+    "opens from an unsupported account editor without losing edits (explicit feedback source: %s)",
+    async (hasFeedbackSource) => {
+      const user = userEvent.setup()
+      const onChange = vi.fn()
+      const redetect = vi.fn()
+      render(
+        wrap(
+          <AccountCheckInSection
+            checkIn={checkIn}
+            siteType={SITE_TYPES.UNKNOWN}
+            siteUrl={snapshot.baseUrl}
+            onCheckInChange={onChange}
+            onCheckInSelectionChange={onChange}
+            onRedetectCheckInMethods={redetect}
+            isRedetectingCheckInMethods={false}
+            checkInRedetectionFeedback={null}
+            feedbackSource={hasFeedbackSource ? { snapshot } : undefined}
+          />,
+        ),
+      )
+      await user.click(
+        screen.getByRole("button", { name: "Request check-in support" }),
+      )
+      await screen.findByLabelText("What happened? (optional)")
+      expect(accountQueries.getAccountById).not.toHaveBeenCalled()
+      expect(collectFeedbackCluesInBrowser).toHaveBeenCalledOnce()
+      expect(autoCheckinStorage.getStatus).not.toHaveBeenCalled()
+      expect(redetect).not.toHaveBeenCalled()
+      await user.type(
+        screen.getByLabelText("What happened? (optional)"),
+        "Website works",
+      )
+      await user.click(screen.getByText("Review and edit submission"))
+      await user.click(screen.getByText("Edit diagnostic details"))
+      await user.clear(screen.getByLabelText("Extension and check-in status"))
+      await user.type(
+        screen.getByLabelText("Extension and check-in status"),
+        "My edited details",
+      )
+      await user.click(
+        screen.getByRole("switch", { name: "Include site address" }),
+      )
+      const preview = screen.getByLabelText(
+        "Full submission (select to copy)",
+      ) as HTMLTextAreaElement
+      expect(preview.value).toContain("## What happened\n\nWebsite works")
+      expect(preview.value).toContain('<td colspan="2">My edited details</td>')
+      expect(preview.value).not.toContain("https://example.com")
+      await user.click(screen.getByRole("button", { name: "Copy content" }))
+      expect(await navigator.clipboard.readText()).toBe(preview.value)
+      await user.click(
+        screen.getByRole("button", { name: "Continue to GitHub" }),
+      )
+      expect(
+        new URL(vi.mocked(createTab).mock.calls[0][0]).searchParams.get("body"),
+      ).toBe(preview.value)
+      expect(screen.getByLabelText("What happened? (optional)")).toHaveValue(
+        "Website works",
+      )
+      expect(onChange).not.toHaveBeenCalled()
+      await user.keyboard("{Escape}")
+      await user.click(
+        screen.getByRole("button", { name: "Request check-in support" }),
+      )
+      expect(
+        await screen.findByLabelText("What happened? (optional)"),
+      ).toHaveValue("")
+    },
+  )
 
   it("lets manual copying recover a long report when clipboard access stays denied", async () => {
     const user = userEvent.setup()

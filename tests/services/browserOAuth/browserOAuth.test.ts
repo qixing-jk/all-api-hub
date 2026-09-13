@@ -318,6 +318,14 @@ describe("browser OAuth context", () => {
     expect(browserApi.removeWindow).toHaveBeenCalledWith(7)
   })
 
+  it("fails without querying unrelated tabs when the popup has no identifiers", async () => {
+    browserApi.createWindow.mockResolvedValue({})
+    await expect(authenticate()).resolves.toMatchObject({ status: "failed" })
+    expect(browserApi.queryTabs).not.toHaveBeenCalled()
+    expect(browserApi.removeWindow).not.toHaveBeenCalled()
+    expect(browserApi.removeTab).not.toHaveBeenCalled()
+  })
+
   it("closes by tab ID when the window ID is unavailable", async () => {
     browserApi.createWindow.mockResolvedValue({ tabs: [loginTab] })
     await expect(authenticate()).resolves.toMatchObject({

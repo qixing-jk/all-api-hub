@@ -74,7 +74,7 @@ export async function collectCheckInFeedbackClues(
       input.auth?.authType === AuthTypeEnum.AccessToken &&
       Boolean(input.auth.accessToken?.trim())
     result.authenticatedQueriesUnavailable =
-      paths.length > 0 && !canAuthenticate
+      paths.some((route) => !route.public) && !canAuthenticate
     partial ||= result.authenticatedQueriesUnavailable
     // A slow protocol probe must not delay loading the page and its scripts.
     const statusQueries = (async () => {

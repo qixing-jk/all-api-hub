@@ -21,6 +21,29 @@ afterEach(() => {
 })
 
 describe("optional check-in clue scan", () => {
+  it("completes public-only Agent Router scans without account credentials", async () => {
+    const fetch = vi.fn(async (url: string) =>
+      url.endsWith("/api/status")
+        ? response('{"success":true,"data":{}}')
+        : response("<html></html>", "text/html"),
+    )
+    const clues = await collectCheckInFeedbackClues(
+      { baseUrl: "https://agentrouter.org", siteType: SITE_TYPES.NEW_API },
+      new AbortController().signal,
+      { fetch: fetch as typeof globalThis.fetch },
+    )
+    expect(clues.status).toBe("completed")
+    expect(clues.authenticatedQueriesUnavailable).toBe(false)
+    expect(clues.statusQueries).toEqual([
+      { path: "/api/status", status: 200, keys: ["success", "data"] },
+    ])
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(fetch).toHaveBeenCalledWith(
+      "https://agentrouter.org/api/status",
+      expect.objectContaining({ headers: undefined, credentials: "omit" }),
+    )
+  })
+
   it("uses only public login availability for Agent Router feedback", () => {
     expect(
       getCheckInFeedbackStatusRoutes(

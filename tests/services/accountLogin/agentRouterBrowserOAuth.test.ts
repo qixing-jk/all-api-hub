@@ -67,6 +67,17 @@ describe("AgentRouter GitHub OAuth adapter", () => {
     })
   })
 
+  it.each([
+    ["https://github.com/login/oauth/authorize?client_id=client", true],
+    ["https://github.com/login", false],
+    ["http://github.com/login/oauth/authorize", false],
+    ["https://example.invalid/login/oauth/authorize", false],
+  ])("checks the GitHub authorization location %s", (url, accepted) => {
+    expect(agentRouterGithubOAuthFlow.isAuthorizationUrl(new URL(url))).toBe(
+      accepted,
+    )
+  })
+
   it("rejects other authorization and callback origins", () => {
     expect(
       agentRouterGithubOAuthFlow.isAuthorizationUrl(
