@@ -26,7 +26,7 @@ export interface PreparedModelListItem {
   exchangeRate: number
 }
 
-interface PreparedModelListSource {
+export interface PreparedModelListSource {
   source: ModelManagementItemSource
   sourceIdentity?: ModelListSourceIdentity
   items: PreparedModelListItem[]

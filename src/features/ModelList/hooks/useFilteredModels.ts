@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react"
 
 import { getModelBillingMode } from "~/features/ModelList/billingModes"
+import { summarizeModelListGroupAccess } from "~/features/ModelList/groupAccessSummary"
 import { deriveGroupAvailability } from "~/features/ModelList/groupAvailability"
 import { resolveActiveModelGroupContext } from "~/features/ModelList/groupContext"
 import { normalizeGroupNames } from "~/features/ModelList/groupNormalization"
@@ -21,6 +22,7 @@ import {
   type ModelManagementAccountSource,
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
+import { projectModelListMetadata } from "~/features/ModelList/modelMetadataProjection"
 import {
   calculateModelListPrices,
   rankModelListPrices,
@@ -29,19 +31,12 @@ import { type ModelListSortMode } from "~/features/ModelList/sortModes"
 import { prepareModelListSources } from "~/features/ModelList/sourcePreparation"
 import { type PricingResponse } from "~/services/modelList/pricingModel"
 import type { PricingScenario } from "~/services/modelPricing/pricingPlan"
-import {
-  resolveComparableModelIdentity,
-  resolveModelIdentity,
-} from "~/services/models/modelMetadata/modelIdentityIndex"
 import type {
   ModelMetadata,
-  ModelVendorCandidate,
   ModelVendorCatalogEntry,
 } from "~/services/models/modelMetadata/types"
 import {
-  aggregateModelVendors,
   MODEL_VENDOR_FILTER_VALUES,
-  resolveModelVendorCandidate,
   type ModelVendorFilterValue,
 } from "~/services/models/modelVendor"
 
@@ -69,10 +64,6 @@ interface UseFilteredModelsProps {
   isPriceComparisonActive?: boolean
   showRealPrice: boolean
   accountFilterAccountIds?: string[]
-}
-
-type CandidateModelListItem = Omit<ModelListItem, "resolvedVendor"> & {
-  vendorCandidate: ModelVendorCandidate
 }
 
 export type CountedModelVendorCatalogEntry = ModelVendorCatalogEntry & {
@@ -168,18 +159,6 @@ function filterModelsByVendor<T extends Pick<ModelListItem, "resolvedVendor">>(
   )
 }
 
-/** Compares normalized ratio maps without relying on object identity. */
-function haveEqualGroupRatios(
-  left: Readonly<Record<string, number>>,
-  right: Readonly<Record<string, number>>,
-) {
-  const leftEntries = Object.entries(left)
-  return (
-    leftEntries.length === Object.keys(right).length &&
-    leftEntries.every(([group, ratio]) => right[group] === ratio)
-  )
-}
-
 type FilterOverrides = Partial<
   Pick<
     UseFilteredModelsProps,
@@ -240,119 +219,32 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     [pricingContexts, pricingData, selectedSource],
   )
 
-  const rawModelState = useMemo(() => {
-    let isGroupAccessAuthoritative = false
-    let singleSourceGroupRatios: Record<string, number> = {}
-    let matchingSingleAccountContextCount = 0
-    const groupAccessAuthorityByAccountId = new Map<string, boolean>()
-    const recordAccountGroupAccessAuthority = (
-      accountId: string,
-      isAuthoritative: boolean,
-    ) => {
-      const previous = groupAccessAuthorityByAccountId.get(accountId)
-      groupAccessAuthorityByAccountId.set(
-        accountId,
-        previous === undefined ? isAuthoritative : previous && isAuthoritative,
-      )
-    }
-    const projectSingleAccountContextFacts = (params: {
-      accountId: string
-      isAuthoritative: boolean
-      groupRatios: Record<string, number>
-    }) => {
-      if (
-        selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT ||
-        selectedSource.account.id !== params.accountId
-      ) {
-        return
-      }
-
-      if (matchingSingleAccountContextCount === 0) {
-        isGroupAccessAuthoritative = params.isAuthoritative
-        singleSourceGroupRatios = params.groupRatios
-      } else {
-        isGroupAccessAuthoritative &&= params.isAuthoritative
-        if (
-          !haveEqualGroupRatios(singleSourceGroupRatios, params.groupRatios)
-        ) {
-          singleSourceGroupRatios = {}
-        }
-      }
-      matchingSingleAccountContextCount += 1
-    }
-
-    const attachVendorCandidate = (
-      item: Omit<
-        ModelListItem,
-        "resolvedVendor" | "modelMetadata" | "comparableModelIdentity"
-      >,
-    ): CandidateModelListItem => {
-      const lookupResult = resolveModelIdentity(
-        modelMetadataIndex,
-        item.model.model_name,
-      )
-
-      return {
-        ...item,
-        modelMetadata:
-          lookupResult.state === "resolved" ? lookupResult.metadata : undefined,
-        comparableModelIdentity: resolveComparableModelIdentity(
-          modelMetadataIndex,
-          item.model.model_name,
-        ),
-        vendorCandidate: resolveModelVendorCandidate(
-          {
-            id: item.model.model_name,
-            vendorEvidence: item.model.vendorEvidence,
-          },
-          lookupResult,
-        ),
-      }
-    }
-    const candidateItems = preparedSources.flatMap((prepared) => {
-      const isAuthoritative = prepared.groupAccessEvidence === "authoritative"
-      if (
-        pricingContexts?.length &&
-        prepared.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
-      ) {
-        const accountId = prepared.source.account.id
-        recordAccountGroupAccessAuthority(accountId, isAuthoritative)
-        projectSingleAccountContextFacts({
-          accountId,
-          isAuthoritative,
-          groupRatios: prepared.groupRatios,
-        })
-      } else {
-        singleSourceGroupRatios = prepared.groupRatios
-        isGroupAccessAuthoritative = isAuthoritative
-      }
-      return prepared.items.map(attachVendorCandidate)
-    })
-
-    const { resolved } = aggregateModelVendors(
-      candidateItems.map((item) => item.vendorCandidate),
-    )
-
-    return {
-      rawModelItems: candidateItems.map(
-        ({ vendorCandidate: _candidate, ...item }, index) => ({
-          ...item,
-          resolvedVendor: resolved[index],
-        }),
-      ),
-      isGroupAccessAuthoritative,
-      singleSourceGroupRatios,
-      authoritativeGroupAccessByAccountId: Object.fromEntries(
-        groupAccessAuthorityByAccountId,
-      ) as Record<string, boolean>,
-    }
-  }, [modelMetadataIndex, preparedSources, pricingContexts, selectedSource])
+  const usesAccountContexts = pricingContexts.length > 0
+  const selectedAccountId =
+    selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+      ? selectedSource.account.id
+      : undefined
   const {
-    rawModelItems,
     isGroupAccessAuthoritative,
     singleSourceGroupRatios,
     authoritativeGroupAccessByAccountId,
-  } = rawModelState
+  } = useMemo(
+    () =>
+      summarizeModelListGroupAccess({
+        sources: preparedSources,
+        usesAccountContexts,
+        selectedAccountId,
+      }),
+    [preparedSources, usesAccountContexts, selectedAccountId],
+  )
+  const rawModelItems = useMemo(
+    () =>
+      projectModelListMetadata(
+        preparedSources.flatMap((source) => source.items),
+        modelMetadataIndex,
+      ),
+    [preparedSources, modelMetadataIndex],
+  )
 
   const availableGroups = useMemo(() => {
     if (
