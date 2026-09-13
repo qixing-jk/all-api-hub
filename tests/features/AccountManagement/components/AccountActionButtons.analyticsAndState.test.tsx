@@ -63,6 +63,11 @@ describe("AccountActionButtons", () => {
       await user.click(
         screen.getByRole("button", { name: "common:actions.more" }),
       )
+      await user.click(
+        screen.getByRole("menuitem", {
+          name: "account:actions.relatedPages",
+        }),
+      )
       const redeemItem = screen.queryByRole("menuitem", {
         name: "account:actions.redeemPage",
       })
@@ -196,6 +201,12 @@ describe("AccountActionButtons", () => {
     )
 
     let menu = await screen.findByRole("menu")
+    await user.click(
+      screen.getByRole("menuitem", { name: "account:actions.relatedPages" }),
+    )
+    menu = await screen.findByRole("menu", {
+      name: "account:actions.relatedPages",
+    })
     const redeemButton = await within(menu).findByRole("menuitem", {
       name: "account:actions.redeemPage",
     })
@@ -205,7 +216,14 @@ describe("AccountActionButtons", () => {
     await user.click(
       screen.getByRole("button", { name: "common:actions.more" }),
     )
-    menu = await screen.findByRole("menu")
+    await user.click(
+      screen.getByRole("menuitem", {
+        name: "account:actions.relatedPages",
+      }),
+    )
+    menu = await screen.findByRole("menu", {
+      name: "account:actions.relatedPages",
+    })
     const usageButton = await within(menu).findByRole("menuitem", {
       name: "account:actions.usageLog",
     })

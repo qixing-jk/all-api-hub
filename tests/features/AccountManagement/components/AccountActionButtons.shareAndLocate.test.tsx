@@ -118,8 +118,13 @@ describe("AccountActionButtons", () => {
     await user.click(
       screen.getByRole("button", { name: "common:actions.more" }),
     )
+    await user.click(
+      screen.getByRole("menuitem", { name: "account:actions.share" }),
+    )
 
-    const menu = await screen.findByRole("menu")
+    const menu = await screen.findByRole("menu", {
+      name: "account:actions.share",
+    })
     const button = await within(menu).findByRole("menuitem", {
       name: "shareSnapshots:actions.shareAccountSnapshot",
     })
@@ -180,7 +185,12 @@ describe("AccountActionButtons", () => {
     await user.click(
       screen.getByRole("button", { name: "common:actions.more" }),
     )
-    const menu = await screen.findByRole("menu")
+    await user.click(
+      screen.getByRole("menuitem", { name: "account:actions.share" }),
+    )
+    const menu = await screen.findByRole("menu", {
+      name: "account:actions.share",
+    })
     await user.click(
       within(menu).getByRole("menuitem", {
         name: "shareSnapshots:actions.shareAccountSnapshot",
@@ -242,7 +252,12 @@ describe("AccountActionButtons", () => {
       await user.click(
         screen.getByRole("button", { name: "common:actions.more" }),
       )
-      const menu = await screen.findByRole("menu")
+      await user.click(
+        screen.getByRole("menuitem", { name: "account:actions.share" }),
+      )
+      const menu = await screen.findByRole("menu", {
+        name: "account:actions.share",
+      })
       await user.click(
         within(menu).getByRole("menuitem", {
           name: "shareSnapshots:actions.shareAccountSnapshot",
@@ -281,8 +296,13 @@ describe("AccountActionButtons", () => {
     await user.click(
       screen.getByRole("button", { name: "common:actions.more" }),
     )
+    await user.click(
+      screen.getByRole("menuitem", { name: "account:actions.share" }),
+    )
 
-    const menu = await screen.findByRole("menu")
+    const menu = await screen.findByRole("menu", {
+      name: "account:actions.share",
+    })
     const button = await within(menu).findByRole("menuitem", {
       name: "shareSnapshots:actions.shareAccountSnapshot",
     })

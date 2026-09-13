@@ -12,6 +12,7 @@ import {
   Link,
   List,
   MessageSquarePlus,
+  PanelsTopLeft,
   Pencil,
   Pin,
   PinOff,
@@ -131,6 +132,7 @@ import {
 
 import { InviteLinkManualCopyDialog } from "../InviteLinkManualCopyDialog"
 import { AccountActionMenuItem } from "./AccountActionMenuItem"
+import { AccountActionSubmenu } from "./AccountActionSubmenu"
 import { resolveLocateManagedSiteChannelToastMessage } from "./locateManagedSiteChannelToast"
 
 /**
@@ -1119,7 +1121,6 @@ export default function AccountActionButtons({
               </>
             ) : (
               <>
-                {/* Secondary Menu Items */}
                 <AccountActionMenuItem
                   onClick={handleOpenKeyList}
                   icon={List}
@@ -1183,46 +1184,6 @@ export default function AccountActionButtons({
 
                 <DropdownMenuSeparator className="dark:bg-dark-bg-tertiary my-1 bg-gray-200" />
 
-                <ProductAnalyticsScope
-                  featureId={PRODUCT_ANALYTICS_FEATURE_IDS.UsageAnalytics}
-                >
-                  {pageRoutes.usagePath && (
-                    <AccountActionMenuItem
-                      onClick={handleNavigateToUsageManagement}
-                      icon={ChartPie}
-                      label={t("actions.usageLog")}
-                      testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowUsageLogMenuItem}
-                      analyticsAction={
-                        PRODUCT_ANALYTICS_ACTION_IDS.OpenAccountUsageLog
-                      }
-                    />
-                  )}
-                </ProductAnalyticsScope>
-
-                {canOpenRedeemPage && (
-                  <AccountActionMenuItem
-                    onClick={handleNavigateToRedeemPage}
-                    icon={Banknote}
-                    label={t("actions.redeemPage")}
-                    testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowRedeemMenuItem}
-                    analyticsAction={
-                      PRODUCT_ANALYTICS_ACTION_IDS.OpenRedeemPage
-                    }
-                  />
-                )}
-
-                <DropdownMenuSeparator className="dark:bg-dark-bg-tertiary my-1 bg-gray-200" />
-
-                {/* Pin/Unpin */}
-                {isPinFeatureEnabled && (
-                  <AccountActionMenuItem
-                    onClick={handleTogglePin}
-                    icon={PinToggleIcon}
-                    label={pinLabel}
-                    testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowPinToggleMenuItem}
-                  />
-                )}
-
                 <AccountActionMenuItem
                   onClick={handleRefreshLocal}
                   icon={RefreshCw}
@@ -1231,20 +1192,6 @@ export default function AccountActionButtons({
                   loadingLabel={t("common:status.refreshing")}
                   disabled={refreshingAccountId === site.id}
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowRefreshMenuItem}
-                />
-
-                <AccountActionMenuItem
-                  onClick={() => openFeedback({ accountId: site.id })}
-                  icon={MessageSquarePlus}
-                  label={
-                    inspectAccountCheckIn({
-                      config: site.checkIn,
-                      siteType: site.siteType,
-                    }).decision.outcome ===
-                    CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported
-                      ? t("accountDialog:checkInFeedback.request")
-                      : t("accountDialog:checkInFeedback.feedback")
-                  }
                 />
 
                 {isQuickCheckinEligible && (
@@ -1262,33 +1209,99 @@ export default function AccountActionButtons({
                   </ProductAnalyticsScope>
                 )}
 
-                <AccountActionMenuItem
-                  onClick={handleCopyInviteLink}
-                  icon={Link}
-                  label={t("actions.copyInviteLink")}
-                  hint={
-                    !canCopyInviteLink
-                      ? t("actions.copyInviteLinkUnsupportedHint")
-                      : undefined
-                  }
-                  description={
-                    !canCopyInviteLink
-                      ? t("actions.copyInviteLinkUnsupported")
-                      : undefined
-                  }
-                  disabled={!canCopyInviteLink}
-                  loading={isCopyingInviteLink}
-                  loadingLabel={t("actions.copyingInviteLink")}
-                  testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowCopyInviteLinkMenuItem}
-                />
+                <DropdownMenuSeparator className="dark:bg-dark-bg-tertiary my-1 bg-gray-200" />
+
+                {(pageRoutes.usagePath || canOpenRedeemPage) && (
+                  <AccountActionSubmenu
+                    icon={PanelsTopLeft}
+                    label={t("actions.relatedPages")}
+                  >
+                    <ProductAnalyticsScope
+                      featureId={PRODUCT_ANALYTICS_FEATURE_IDS.UsageAnalytics}
+                    >
+                      {pageRoutes.usagePath && (
+                        <AccountActionMenuItem
+                          onClick={handleNavigateToUsageManagement}
+                          icon={ChartPie}
+                          label={t("actions.usageLog")}
+                          testId={
+                            ACCOUNT_MANAGEMENT_TEST_IDS.rowUsageLogMenuItem
+                          }
+                          analyticsAction={
+                            PRODUCT_ANALYTICS_ACTION_IDS.OpenAccountUsageLog
+                          }
+                        />
+                      )}
+                    </ProductAnalyticsScope>
+                    {canOpenRedeemPage && (
+                      <AccountActionMenuItem
+                        onClick={handleNavigateToRedeemPage}
+                        icon={Banknote}
+                        label={t("actions.redeemPage")}
+                        testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowRedeemMenuItem}
+                        analyticsAction={
+                          PRODUCT_ANALYTICS_ACTION_IDS.OpenRedeemPage
+                        }
+                      />
+                    )}
+                  </AccountActionSubmenu>
+                )}
+
+                <AccountActionSubmenu icon={Share2} label={t("actions.share")}>
+                  <AccountActionMenuItem
+                    onClick={handleCopyInviteLink}
+                    icon={Link}
+                    label={t("actions.copyInviteLink")}
+                    hint={
+                      !canCopyInviteLink
+                        ? t("actions.copyInviteLinkUnsupportedHint")
+                        : undefined
+                    }
+                    description={
+                      !canCopyInviteLink
+                        ? t("actions.copyInviteLinkUnsupported")
+                        : undefined
+                    }
+                    disabled={!canCopyInviteLink}
+                    loading={isCopyingInviteLink}
+                    loadingLabel={t("actions.copyingInviteLink")}
+                    testId={
+                      ACCOUNT_MANAGEMENT_TEST_IDS.rowCopyInviteLinkMenuItem
+                    }
+                  />
+
+                  <AccountActionMenuItem
+                    onClick={handleShareSnapshot}
+                    icon={Share2}
+                    label={t("shareSnapshots:actions.shareAccountSnapshot")}
+                  />
+                </AccountActionSubmenu>
 
                 <AccountActionMenuItem
-                  onClick={handleShareSnapshot}
-                  icon={Share2}
-                  label={t("shareSnapshots:actions.shareAccountSnapshot")}
+                  onClick={() => openFeedback({ accountId: site.id })}
+                  icon={MessageSquarePlus}
+                  label={
+                    inspectAccountCheckIn({
+                      config: site.checkIn,
+                      siteType: site.siteType,
+                    }).decision.outcome ===
+                    CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported
+                      ? t("accountDialog:checkInFeedback.request")
+                      : t("accountDialog:checkInFeedback.feedback")
+                  }
                 />
 
                 <DropdownMenuSeparator className="dark:bg-dark-bg-tertiary my-1 bg-gray-200" />
+
+                {/* Pin/Unpin */}
+                {isPinFeatureEnabled && (
+                  <AccountActionMenuItem
+                    onClick={handleTogglePin}
+                    icon={PinToggleIcon}
+                    label={pinLabel}
+                    testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowPinToggleMenuItem}
+                  />
+                )}
 
                 {/* Place Disable immediately above Delete for clarity and consistency. */}
                 <AccountActionMenuItem

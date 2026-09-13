@@ -115,6 +115,9 @@ describe("AccountActionButtons", () => {
     await user.click(
       screen.getByRole("button", { name: "common:actions.more" }),
     )
+    await user.click(
+      screen.getByRole("menuitem", { name: "account:actions.share" }),
+    )
     const copyInviteLinkItem = await screen.findByRole("menuitem", {
       name: "account:actions.copyInviteLink",
     })
@@ -308,6 +311,9 @@ describe("AccountActionButtons", () => {
     await user.click(
       screen.getByRole("button", { name: "common:actions.more" }),
     )
+    await user.click(
+      screen.getByRole("menuitem", { name: "account:actions.share" }),
+    )
     const copyInviteLinkItem = await screen.findByRole("menuitem", {
       name: "account:actions.copyInviteLink",
     })
@@ -348,6 +354,9 @@ describe("AccountActionButtons", () => {
 
     await user.click(
       screen.getByRole("button", { name: "common:actions.more" }),
+    )
+    await user.click(
+      screen.getByRole("menuitem", { name: "account:actions.share" }),
     )
 
     const copyInviteLinkItem = await screen.findByRole("menuitem", {
