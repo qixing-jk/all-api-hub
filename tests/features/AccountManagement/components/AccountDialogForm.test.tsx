@@ -148,7 +148,7 @@ describe("AccountDialog AccountForm", () => {
     ),
   })
 
-  it("configures login check-in without changing access-token authentication", async () => {
+  function createAgentRouterProps() {
     const props = createProps()
     props.siteUrl = "https://agentrouter.org"
     props.draft.siteType = SITE_TYPES.NEW_API
@@ -171,6 +171,11 @@ describe("AccountDialog AccountForm", () => {
         },
       },
     }
+    return props
+  }
+
+  it("configures login check-in without changing access-token authentication", async () => {
+    const props = createAgentRouterProps()
     render(<AccountForm {...withSitePolicy(props)} />)
     const user = userEvent.setup()
     await user.click(
@@ -188,7 +193,7 @@ describe("AccountDialog AccountForm", () => {
   })
 
   it("does not offer login check-in on other New API sites", async () => {
-    const props = createProps()
+    const props = createAgentRouterProps()
     props.siteUrl = "https://other.example"
     props.draft.siteType = SITE_TYPES.NEW_API
     render(<AccountForm {...withSitePolicy(props)} />)

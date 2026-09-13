@@ -1,12 +1,23 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { createAgentRouterProvider } from "~/services/checkin/autoCheckin/providers/agentrouter"
+import {
+  agentRouterProvider,
+  createAgentRouterProvider,
+} from "~/services/checkin/autoCheckin/providers/agentrouter"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
+
+const liveDependencies = vi.hoisted(() => ({ login: vi.fn(), status: vi.fn() }))
+vi.mock("~/services/accountLogin", () => ({
+  loginAccount: liveDependencies.login,
+}))
+vi.mock("~/services/apiService/agentrouter/status", () => ({
+  fetchAgentRouterPublicStatus: liveDependencies.status,
+}))
 
 const context = {
   tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
@@ -140,5 +151,35 @@ describe("AgentRouter login check-in", () => {
       status: "failed",
     })
     expect(authenticate).not.toHaveBeenCalled()
+  })
+  it("wires public discovery and login without forwarding saved credentials", async () => {
+    const saved = account()
+    liveDependencies.status.mockResolvedValue({
+      success: true,
+      data: { system_name: "Agent Router", github_oauth: true },
+    })
+    expect(agentRouterProvider.getReadiness(saved)).toEqual({ ready: true })
+    await expect(
+      agentRouterProvider.detect!({ account: saved, observedAt: 123 }),
+    ).resolves.toMatchObject({ outcome: "matched" })
+    expect(liveDependencies.status).toHaveBeenCalledWith(
+      { baseUrl: saved.site_url, auth: { authType: AuthTypeEnum.None } },
+      undefined,
+    )
+    liveDependencies.login.mockResolvedValue({
+      status: "authenticated",
+      identity: saved.account_info.id,
+      evidence: { checkedIn: true },
+    })
+    await expect(
+      agentRouterProvider.checkIn(saved, context),
+    ).resolves.toMatchObject({ status: "success" })
+    expect(liveDependencies.login).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: saved,
+        provider: "github",
+        requestId: expect.any(String),
+      }),
+    )
   })
 })

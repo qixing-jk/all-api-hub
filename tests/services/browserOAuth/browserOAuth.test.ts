@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   createBrowserOAuthContext,
@@ -8,16 +8,26 @@ import {
 const tabUpdatedListeners = vi.hoisted(
   () => [] as Array<(tabId: number, changeInfo: unknown, tab: any) => void>,
 )
+const removalListeners = vi.hoisted(() => ({
+  tab: undefined as ((id: number) => void) | undefined,
+  window: undefined as ((id: number) => void) | undefined,
+}))
 const browserApi = vi.hoisted(() => ({
   createWindow: vi.fn(),
   getBrowserCookie: vi.fn(),
   getTab: vi.fn(),
-  onTabRemoved: vi.fn(() => vi.fn()),
+  onTabRemoved: vi.fn((listener: (id: number) => void) => {
+    removalListeners.tab = listener
+    return vi.fn()
+  }),
   onTabUpdated: vi.fn((listener) => {
     tabUpdatedListeners.push(listener)
     return vi.fn()
   }),
-  onWindowRemoved: vi.fn(() => vi.fn()),
+  onWindowRemoved: vi.fn((listener: (id: number) => void) => {
+    removalListeners.window = listener
+    return vi.fn()
+  }),
   queryTabs: vi.fn(),
   removeBrowserCookie: vi.fn(),
   removeTab: vi.fn(),
@@ -100,6 +110,8 @@ const completedTab = {
 describe("browser OAuth context", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    browserApi.removeWindow.mockReset()
+    browserApi.queryTabs.mockReset()
     tabUpdatedListeners.length = 0
     hasCookieReadPermissionForUrl.mockResolvedValue(false)
     browserApi.createWindow.mockReset()
@@ -267,5 +279,183 @@ describe("browser OAuth context", () => {
 
     resolveWindow?.(null)
     await expect(first).resolves.toMatchObject({ status: "failed" })
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const authenticate = () =>
+    browserOAuthContext.authenticate({
+      origin,
+      expectedIdentity: "user-1",
+      requestId: "edge-case",
+    })
+
+  it("rejects a login path outside the account origin before opening a popup", async () => {
+    const context = createBrowserOAuthContext({
+      ...testFlow,
+      loginPath: "https://other.invalid/login",
+    })
+    await expect(
+      context.authenticate({ origin, requestId: "invalid-path" }),
+    ).resolves.toMatchObject({ status: "failed" })
+    expect(browserApi.createWindow).not.toHaveBeenCalled()
+  })
+
+  it("finds the popup tab when createWindow omits tabs", async () => {
+    browserApi.createWindow.mockResolvedValue({ id: 7 })
+    browserApi.queryTabs.mockResolvedValue([loginTab])
+    await expect(authenticate()).resolves.toMatchObject({
+      status: "authenticated",
+    })
+    expect(browserApi.queryTabs).toHaveBeenCalledWith({ windowId: 7 })
+  })
+
+  it("cleans up a popup that has no usable tab", async () => {
+    browserApi.createWindow.mockResolvedValue({ id: 7 })
+    browserApi.queryTabs.mockResolvedValue([])
+    await expect(authenticate()).resolves.toMatchObject({ status: "failed" })
+    expect(browserApi.removeWindow).toHaveBeenCalledWith(7)
+  })
+
+  it("closes by tab ID when the window ID is unavailable", async () => {
+    browserApi.createWindow.mockResolvedValue({ tabs: [loginTab] })
+    await expect(authenticate()).resolves.toMatchObject({
+      status: "authenticated",
+    })
+    expect(browserApi.removeTab).toHaveBeenCalledWith(11)
+  })
+
+  it("keeps verified success when the popup was already closed during cleanup", async () => {
+    browserApi.removeWindow.mockRejectedValue(new Error("Already closed"))
+    await expect(authenticate()).resolves.toMatchObject({
+      status: "authenticated",
+    })
+  })
+
+  it.each([
+    [null, "failed"],
+    [{ success: false }, "failed"],
+    [
+      { success: true, authorizationUrl: "https://untrusted.invalid" },
+      "failed",
+    ],
+  ])("rejects invalid preparation %#", async (preparation, status) => {
+    browserApi.sendTabMessageWithRetry
+      .mockReset()
+      .mockResolvedValueOnce(preparation)
+    await expect(authenticate()).resolves.toMatchObject({ status })
+    expect(browserApi.updateTab).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    [{ reason: "identity_mismatch" }, "identity_mismatch"],
+    [{ success: false }, "failed"],
+  ])("rejects unverified callback %#", async (completion, status) => {
+    browserApi.sendTabMessageWithRetry
+      .mockReset()
+      .mockResolvedValueOnce({ success: true, authorizationUrl })
+      .mockResolvedValueOnce(completion)
+    await expect(authenticate()).resolves.toMatchObject({ status })
+  })
+
+  it("rejects navigation away before asking the content script for credentials", async () => {
+    browserApi.getTab
+      .mockResolvedValueOnce(loginTab)
+      .mockResolvedValue({ ...loginTab, url: "https://other.invalid" })
+    await expect(authenticate()).resolves.toMatchObject({ status: "failed" })
+    expect(browserApi.sendTabMessageWithRetry).not.toHaveBeenCalled()
+  })
+
+  it.each(["tab", "window"] as const)(
+    "handles user cancellation by closing the %s",
+    async (kind) => {
+      browserApi.getTab.mockResolvedValue({ ...loginTab, status: "loading" })
+      const result = authenticate()
+      await vi.waitFor(() => expect(browserApi.onTabRemoved).toHaveBeenCalled())
+      removalListeners[kind]?.(kind === "tab" ? 11 : 7)
+      await expect(result).resolves.toMatchObject({ status: "cancelled" })
+    },
+  )
+
+  it("handles a vanished initial tab", async () => {
+    browserApi.getTab.mockRejectedValue(new Error("No tab"))
+    await expect(authenticate()).resolves.toMatchObject({ status: "cancelled" })
+  })
+
+  it("times out without treating an incomplete initial page as a login", async () => {
+    vi.useFakeTimers()
+    browserApi.getTab.mockResolvedValue({ ...loginTab, status: "loading" })
+    const result = authenticate()
+    await vi.advanceTimersByTimeAsync(30_000)
+    await expect(result).resolves.toMatchObject({
+      status: "interaction_required",
+    })
+    expect(browserApi.updateTab).not.toHaveBeenCalled()
+  })
+
+  it("observes callback completion through the keepalive poll", async () => {
+    vi.useFakeTimers()
+    browserApi.getTab.mockImplementation(async () =>
+      browserApi.updateTab.mock.calls.length
+        ? { ...loginTab, url: authorizationUrl }
+        : loginTab,
+    )
+    const result = authenticate()
+    await vi.advanceTimersByTimeAsync(1)
+    browserApi.getTab.mockResolvedValue(completedTab)
+    await vi.advanceTimersByTimeAsync(20_000)
+    await expect(result).resolves.toMatchObject({ status: "authenticated" })
+  })
+
+  it("cancels if the tab disappears during callback polling", async () => {
+    vi.useFakeTimers()
+    browserApi.getTab.mockResolvedValue({ ...loginTab, status: "loading" })
+    const result = authenticate()
+    await vi.advanceTimersByTimeAsync(1)
+    browserApi.getTab.mockRejectedValue(new Error("No tab"))
+    await vi.advanceTimersByTimeAsync(20_000)
+    await expect(result).resolves.toMatchObject({ status: "cancelled" })
+  })
+
+  it("retries failed authorization delivery while ignoring intermediate URLs", async () => {
+    vi.useFakeTimers()
+    const flow = {
+      ...testFlow,
+      authorizationInteraction: {
+        action: actions.authorize,
+        isInteractionUrl: (current: URL, requested: URL) =>
+          current.href === requested.href,
+      },
+    }
+    const context = createBrowserOAuthContext(flow)
+    browserApi.getTab.mockImplementation(async () =>
+      browserApi.updateTab.mock.calls.length
+        ? { ...loginTab, url: "invalid URL" }
+        : loginTab,
+    )
+    browserApi.sendTabMessageWithRetry
+      .mockReset()
+      .mockResolvedValueOnce({ success: true, authorizationUrl })
+      .mockRejectedValueOnce(new Error("Content script not ready"))
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({
+        success: true,
+        identity: "user-1",
+        completed: true,
+      })
+    const result = context.authenticate({
+      origin,
+      requestId: "retry-interaction",
+    })
+    await vi.advanceTimersByTimeAsync(1)
+    browserApi.getTab.mockResolvedValue({ ...loginTab, url: authorizationUrl })
+    await vi.advanceTimersByTimeAsync(20_000)
+    await vi.advanceTimersByTimeAsync(20_000)
+    await vi.advanceTimersByTimeAsync(20_000)
+    expect(browserApi.sendTabMessageWithRetry).toHaveBeenCalledTimes(3)
+    browserApi.getTab.mockResolvedValue(completedTab)
+    await vi.advanceTimersByTimeAsync(20_000)
+    await expect(result).resolves.toMatchObject({ status: "authenticated" })
   })
 })

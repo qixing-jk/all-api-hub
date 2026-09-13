@@ -121,4 +121,60 @@ describe("AgentRouter GitHub OAuth adapter", () => {
       ),
     ).toBe(false)
   })
+  it.each([agentRouterGithubOAuthFlow, agentRouterLinuxDoOAuthFlow])(
+    "rejects malformed preparation and callback data for $id",
+    (flow) => {
+      for (const response of [
+        null,
+        [],
+        { success: false },
+        { success: true, clientId: "invalid/id", state: "state" },
+        { success: true, clientId: "client", state: " " },
+      ]) {
+        expect(flow.parsePreparation(response)).toBeNull()
+      }
+      expect(flow.parseCompletion({ reason: "identity_mismatch" })).toEqual({
+        status: "identity_mismatch",
+      })
+      expect(
+        flow.parseCompletion({ success: false, message: "Expired login" }),
+      ).toEqual({ status: "invalid", message: "Expired login" })
+      expect(flow.parseCompletion({ success: true, userId: " " })).toEqual({
+        status: "invalid",
+      })
+    },
+  )
+
+  it.each([
+    { clientId: "", state: "state" },
+    { clientId: "client", state: "" },
+    { clientId: "invalid/id", state: "state" },
+  ])("rejects invalid Linux DO authorize parameters %#", (input) =>
+    expect(() => buildAgentRouterLinuxDoAuthorizeUrl(input)).toThrow(),
+  )
+
+  it("restricts Linux DO authorization and completion to the fixed provider and account", () => {
+    expect(
+      agentRouterLinuxDoOAuthFlow.isAuthorizationUrl(
+        new URL("https://connect.linux.do/oauth2/authorize"),
+      ),
+    ).toBe(true)
+    expect(
+      agentRouterLinuxDoOAuthFlow.isAuthorizationUrl(
+        new URL("https://other.invalid/oauth2/authorize"),
+      ),
+    ).toBe(false)
+    expect(
+      agentRouterLinuxDoOAuthFlow.isCompletionUrl(
+        new URL("https://agentrouter.org/console/token"),
+        "https://agentrouter.org",
+      ),
+    ).toBe(true)
+    expect(
+      agentRouterLinuxDoOAuthFlow.isCompletionUrl(
+        new URL("https://other.invalid/console/token"),
+        "https://agentrouter.org",
+      ),
+    ).toBe(false)
+  })
 })

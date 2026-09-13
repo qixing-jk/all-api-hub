@@ -51,6 +51,7 @@ describe("account login", () => {
 
   it.each([
     "https://example.com",
+    "not a URL",
     "https://agentrouter.org.evil.test",
     "http://agentrouter.org",
     "https://agentrouter.org:444",

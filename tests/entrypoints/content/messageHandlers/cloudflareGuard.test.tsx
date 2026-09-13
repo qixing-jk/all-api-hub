@@ -9,6 +9,7 @@ import {
 } from "~/entrypoints/content/messageHandlers/utils/cloudflareGuard"
 
 const {
+  oauthHandlers,
   addListenerMock,
   capHandlerMock,
   cloudflareHandlerMock,
@@ -24,6 +25,12 @@ const {
   turnstileHandlerMock,
   waitUserInfoHandlerMock,
 } = vi.hoisted(() => ({
+  oauthHandlers: {
+    prepare: vi.fn(() => true),
+    complete: vi.fn(() => true),
+    clear: vi.fn(() => true),
+    approve: vi.fn(() => true),
+  },
   addListenerMock: vi.fn(),
   capHandlerMock: vi.fn(() => "cap"),
   cloudflareHandlerMock: vi.fn(() => "cloudflare"),
@@ -60,6 +67,10 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 })
 
 vi.mock("~/entrypoints/content/messageHandlers/handlers", () => ({
+  handlePrepareAgentRouterOAuth: oauthHandlers.prepare,
+  handleCompleteAgentRouterOAuth: oauthHandlers.complete,
+  handleClearAgentRouterOAuthEvidence: oauthHandlers.clear,
+  handleApproveLinuxDoOAuth: oauthHandlers.approve,
   handleCheckCapGuard: capHandlerMock,
   handleCheckCloudflareGuard: cloudflareHandlerMock,
   handleGetLocalStorage: getLocalStorageHandlerMock,
@@ -297,6 +308,34 @@ describe("cloudflare guard utilities and handlers", () => {
     ) => unknown
 
     const sendResponse = vi.fn()
+    for (const [action, handler, takesRequest] of [
+      [
+        RuntimeActionIds.ContentPrepareAgentRouterOAuth,
+        oauthHandlers.prepare,
+        true,
+      ],
+      [
+        RuntimeActionIds.ContentCompleteAgentRouterOAuth,
+        oauthHandlers.complete,
+        false,
+      ],
+      [
+        RuntimeActionIds.ContentClearAgentRouterOAuthEvidence,
+        oauthHandlers.clear,
+        false,
+      ],
+      [
+        RuntimeActionIds.ContentApproveLinuxDoOAuth,
+        oauthHandlers.approve,
+        true,
+      ],
+    ] as const) {
+      const request = { action }
+      expect(listener(request, null, sendResponse)).toBe(true)
+      expect(handler).toHaveBeenCalledWith(
+        ...(takesRequest ? [request, sendResponse] : [sendResponse]),
+      )
+    }
 
     expect(
       listener(

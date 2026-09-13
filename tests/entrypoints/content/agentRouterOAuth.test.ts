@@ -46,6 +46,7 @@ describe("AgentRouter OAuth content seam", () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.unstubAllGlobals()
   })
 
@@ -333,5 +334,183 @@ describe("AgentRouter OAuth content seam", () => {
       }),
     ).resolves.toEqual({ success: true })
     expect(click).toHaveBeenCalledOnce()
+  })
+  it.each(["disabled", "hidden", "aria-disabled", "aria-hidden"])(
+    "authorizes when an existing control becomes available (%s)",
+    async (attribute) => {
+      vi.useFakeTimers()
+      const authorizationUrl =
+        "https://connect.linux.do/oauth2/authorize?response_type=code&client_id=client&state=signed"
+      vi.stubGlobal("location", new URL(authorizationUrl))
+      const control = document.createElement("button")
+      control.textContent = "允许"
+      control.setAttribute(attribute, "true")
+      document.body.append(control)
+      const click = vi.spyOn(control, "click")
+      const result = runRequestHandler(handleApproveLinuxDoOAuth, {
+        authorizationUrl,
+      })
+      control.removeAttribute(attribute)
+      await vi.advanceTimersByTimeAsync(12_000)
+      await expect(result).resolves.toEqual({ success: true })
+      expect(click).toHaveBeenCalledOnce()
+    },
+  )
+
+  it.each([
+    handleClearAgentRouterOAuthEvidence,
+    (send: (value: unknown) => void) =>
+      handlePrepareAgentRouterOAuth({ loginProvider: "github" }, send),
+  ])(
+    "refuses preparation and cleanup on a foreign origin %#",
+    async (handler) => {
+      vi.stubGlobal("location", new URL("https://other.invalid/login"))
+      const fetchMock = vi.spyOn(globalThis, "fetch")
+      localStorage.setItem("user", "keep")
+      await expect(runHandler(handler)).resolves.toEqual({
+        success: false,
+        reason: "unexpected_origin",
+      })
+      expect(fetchMock).not.toHaveBeenCalled()
+      expect(localStorage.getItem("user")).toBe("keep")
+    },
+  )
+
+  it("rejects completion before the callback page", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+    await expect(runHandler(handleCompleteAgentRouterOAuth)).resolves.toEqual({
+      success: false,
+      reason: "unexpected_page",
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it.each([undefined, "github", "linuxdo", "unknown"])(
+    "rejects unavailable login providers before logout (%s)",
+    async (loginProvider) => {
+      const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        jsonResponse({
+          success: true,
+          data: {
+            system_name: "Agent Router",
+            github_oauth: false,
+            linuxdo_oauth: false,
+          },
+        }),
+      )
+      await expect(
+        runRequestHandler(handlePrepareAgentRouterOAuth, { loginProvider }),
+      ).resolves.toMatchObject({ success: false, reason: "request_failed" })
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it("rejects an empty server-signed OAuth state", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse({
+          success: true,
+          data: {
+            system_name: "Agent Router",
+            github_oauth: true,
+            github_client_id: "client",
+          },
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ success: true }))
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: " " }))
+    await expect(
+      runRequestHandler(handlePrepareAgentRouterOAuth, {
+        loginProvider: "github",
+      }),
+    ).resolves.toMatchObject({
+      success: false,
+      message: "AgentRouter returned an invalid OAuth state.",
+    })
+  })
+
+  it("reports HTTP failure even when the response claims success", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ success: true }), { status: 503 }),
+    )
+    await expect(
+      runRequestHandler(handlePrepareAgentRouterOAuth, {
+        loginProvider: "github",
+      }),
+    ).resolves.toMatchObject({
+      success: false,
+      message: "AgentRouter request failed (503)",
+    })
+  })
+
+  it.each([undefined, "not a URL"])(
+    "rejects malformed Linux DO authorization URLs (%s)",
+    async (authorizationUrl) => {
+      await expect(
+        runRequestHandler(handleApproveLinuxDoOAuth, { authorizationUrl }),
+      ).resolves.toEqual({ success: false, reason: "unexpected_page" })
+    },
+  )
+
+  it("times out when authorization stays ambiguous", async () => {
+    vi.useFakeTimers()
+    const authorizationUrl =
+      "https://connect.linux.do/oauth2/authorize?response_type=code&client_id=client&state=signed"
+    vi.stubGlobal("location", new URL(authorizationUrl))
+    document.body.innerHTML =
+      '<button>Allow</button><input type="submit" value="Allow">'
+    const clicks = Array.from(
+      document.querySelectorAll<HTMLElement>("button,input"),
+    ).map((control) => vi.spyOn(control, "click"))
+    const result = runRequestHandler(handleApproveLinuxDoOAuth, {
+      authorizationUrl,
+    })
+    await vi.advanceTimersByTimeAsync(12_000)
+    await expect(result).resolves.toEqual({
+      success: false,
+      reason: "authorization_control_unavailable",
+    })
+    for (const click of clicks) expect(click).not.toHaveBeenCalled()
+  })
+
+  it("recognizes an authorization label updated in an existing text node", async () => {
+    const authorizationUrl =
+      "https://connect.linux.do/oauth2/authorize?response_type=code&client_id=client&state=signed"
+    vi.stubGlobal("location", new URL(authorizationUrl))
+    const button = document.createElement("button")
+    const label = document.createTextNode("Loading")
+    button.append(label)
+    document.body.append(button)
+    const click = vi.spyOn(button, "click")
+    const result = runRequestHandler(handleApproveLinuxDoOAuth, {
+      authorizationUrl,
+    })
+    label.data = "Allow"
+    await expect(result).resolves.toEqual({ success: true })
+    expect(click).toHaveBeenCalledOnce()
+  })
+
+  it("stops an unavailable selected GitHub login instead of switching to Linux DO", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      jsonResponse({
+        success: true,
+        data: {
+          system_name: "Agent Router",
+          github_oauth: false,
+          linuxdo_oauth: true,
+          linuxdo_client_id: "linuxdo-client",
+        },
+      }),
+    )
+    await expect(
+      runRequestHandler(handlePrepareAgentRouterOAuth, {
+        loginProvider: "github",
+      }),
+    ).resolves.toMatchObject({
+      success: false,
+      message: "AgentRouter GitHub login is unavailable.",
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledWith("/api/status", expect.any(Object))
   })
 })

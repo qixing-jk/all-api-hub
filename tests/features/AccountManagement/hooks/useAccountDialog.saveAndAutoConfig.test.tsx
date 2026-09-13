@@ -249,6 +249,22 @@ describe("useAccountDialog save and auto-config flows", () => {
       }),
     )
 
+  it("keeps origin-scoped check-in selection in the account draft", async () => {
+    const { result } = renderAddHook()
+    await waitFor(() => expect(result.current).not.toBeNull())
+    await act(async () => {
+      result.current.setters.setUrl("https://agentrouter.org")
+    })
+    await act(async () => {
+      result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+    })
+    const checkIn = buildSiteAccount().checkIn
+    await act(async () => {
+      result.current.setters.setCheckInSelection(checkIn)
+    })
+    expect(result.current.state.checkIn).toEqual(checkIn)
+  })
+
   const fillAihubmixAccountDraft = async (
     result: ReturnType<typeof renderAddHook>["result"],
   ) => {

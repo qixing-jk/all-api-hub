@@ -11,6 +11,7 @@ import {
   createAutoCheckinMethodMetadata,
   createAutoCheckinMethodRegistry,
   decodePersistedCheckInMethodId,
+  getAutoCheckinCandidateMethodIds,
   getAutoCheckinMethodSource,
   getLegacyAutoCheckinMethodIds,
   getNewAccountCompatibilityMethodIds,
@@ -366,5 +367,13 @@ describe("autoCheckinMethodRegistry", () => {
     expect(
       decodePersistedCheckInMethodId(`future:${"a".repeat(122)}`),
     ).toBeNull()
+  })
+  it("does not offer origin-scoped login for a malformed site URL", () => {
+    expect(
+      getAutoCheckinCandidateMethodIds(SITE_TYPES.UNKNOWN, "not a URL"),
+    ).toEqual([])
+    expect(
+      getAutoCheckinCandidateMethodIds(SITE_TYPES.NEW_API, "not a URL"),
+    ).toEqual([AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn])
   })
 })

@@ -292,6 +292,19 @@ async function waitForLinuxDoAuthorizationControl(): Promise<HTMLElement | null>
     observer.observe(document.documentElement, {
       childList: true,
       subtree: true,
+      attributes: true,
+      attributeFilter: [
+        "disabled",
+        "hidden",
+        "aria-disabled",
+        "aria-hidden",
+        "aria-label",
+        "type",
+        "value",
+        "href",
+        "role",
+      ],
+      characterData: true,
     })
   })
 }
