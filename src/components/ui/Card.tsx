@@ -5,8 +5,15 @@ import { cn } from "~/lib/utils"
 
 import { BodySmall, Heading3 } from "./Typography"
 
+const cardEdgePaddingClasses = {
+  none: "",
+  sm: "px-4 py-3",
+  default: "px-6 py-4",
+  lg: "px-8 py-6",
+} as const
+
 const cardVariants = cva(
-  "rounded-lg border bg-white dark:bg-dark-bg-secondary text-gray-900 dark:text-dark-text-primary",
+  "rounded-lg corners-concentric [--corner-inset:1px] border bg-white dark:bg-dark-bg-secondary text-gray-900 dark:text-dark-text-primary",
   {
     variants: {
       variant: {
@@ -20,9 +27,9 @@ const cardVariants = cva(
       padding: {
         none: "p-0",
         default: "p-0",
-        sm: "p-2 sm:p-3",
-        md: "p-4 sm:p-6",
-        lg: "p-6 sm:p-8",
+        sm: "p-2 [--corner-inset:calc(--spacing(2)+1px)] sm:p-3 sm:[--corner-inset:calc(--spacing(3)+1px)]",
+        md: "p-4 [--corner-inset:calc(--spacing(4)+1px)] sm:p-6 sm:[--corner-inset:calc(--spacing(6)+1px)]",
+        lg: "p-6 [--corner-inset:calc(--spacing(6)+1px)] sm:p-8 sm:[--corner-inset:calc(--spacing(8)+1px)]",
       },
     },
     defaultVariants: {
@@ -40,6 +47,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant, padding, ...props }, ref) => (
     <div
       ref={ref}
+      data-slot="card"
       className={cn(cardVariants({ variant, padding, className }))}
       {...props}
     />
@@ -51,25 +59,18 @@ export interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Whether to show a bottom border. Defaults to true */
   bordered?: boolean
   /** Padding size. Defaults to "default" (px-6 py-4) */
-  padding?: "none" | "sm" | "default" | "lg"
+  padding?: keyof typeof cardEdgePaddingClasses
 }
 
 const CardHeader = React.forwardRef<HTMLDivElement, CardHeaderProps>(
   ({ className, bordered = true, padding = "default", ...props }, ref) => {
-    const paddingClasses = {
-      none: "",
-      sm: "px-4 py-3",
-      default: "px-6 py-4",
-      lg: "px-8 py-6",
-    }
-
     return (
       <div
         ref={ref}
         className={cn(
-          "flex flex-col space-y-1.5",
+          "flex flex-col space-y-1.5 rounded-t-[var(--corner-inner-radius,0px)]",
           bordered && "dark:border-dark-bg-tertiary border-b border-gray-200",
-          paddingClasses[padding],
+          cardEdgePaddingClasses[padding],
           className,
         )}
         {...props}
@@ -152,25 +153,18 @@ export interface CardFooterProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Whether to show a top border. Defaults to true */
   bordered?: boolean
   /** Padding size. Defaults to "default" (px-6 py-4) */
-  padding?: "none" | "sm" | "default" | "lg"
+  padding?: keyof typeof cardEdgePaddingClasses
 }
 
 const CardFooter = React.forwardRef<HTMLDivElement, CardFooterProps>(
   ({ className, bordered = true, padding = "default", ...props }, ref) => {
-    const paddingClasses = {
-      none: "",
-      sm: "px-4 py-3",
-      default: "px-6 py-4",
-      lg: "px-8 py-6",
-    }
-
     return (
       <div
         ref={ref}
         className={cn(
-          "flex items-center justify-end space-x-3",
+          "flex items-center justify-end space-x-3 rounded-b-[var(--corner-inner-radius,0px)]",
           bordered && "dark:border-dark-bg-tertiary border-t border-gray-200",
-          paddingClasses[padding],
+          cardEdgePaddingClasses[padding],
           className,
         )}
         {...props}

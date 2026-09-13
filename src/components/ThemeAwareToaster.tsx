@@ -42,7 +42,11 @@ export const ThemeAwareToaster = ({
       toastOptions={{
         className: "rounded-lg shadow-lg",
         duration: NOTIFICATION_DURATIONS.info,
-        style: getThemeAwareToastStyles(resolvedTheme),
+        style: {
+          ...getThemeAwareToastStyles(resolvedTheme),
+          // Override the toast library's unlayered 8px default with our token.
+          borderRadius: "var(--radius-lg)",
+        },
         success: {
           duration: NOTIFICATION_DURATIONS.success,
           iconTheme: {
@@ -76,6 +80,7 @@ export const ThemeAwareToaster = ({
                 {toastInstance.type !== "loading" && (
                   <button
                     type="button"
+                    className="rounded-xs focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none"
                     aria-label={translate("actions.close")}
                     onClick={() => toast.dismiss(toastInstance.id)}
                   >

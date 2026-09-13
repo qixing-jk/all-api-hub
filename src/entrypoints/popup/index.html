@@ -37,7 +37,8 @@
           }
         }
         .popup-skeleton__bar {
-          border-radius: 8px;
+          border-radius: var(--radius-xs, 8px);
+          corner-shape: superellipse(1.5);
           background: #f3f4f6;
           animation: popup-skeleton-pulse 1.5s ease-in-out infinite;
         }
@@ -46,10 +47,12 @@
           width: 60%;
         }
         .popup-skeleton__tabs {
+          border-radius: var(--radius-md, 12px);
           height: 56px;
           width: 100%;
         }
         .popup-skeleton__row {
+          border-radius: var(--radius-lg, 16px);
           height: 64px;
           width: 100%;
         }

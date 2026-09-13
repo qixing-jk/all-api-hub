@@ -54,7 +54,7 @@ function SearchTrigger({
       type="button"
       onClick={onClick}
       className={cn(
-        "dark:border-dark-bg-tertiary dark:bg-dark-bg-primary dark:hover:bg-dark-bg-tertiary flex h-10 w-full items-center justify-between rounded-full border border-gray-200 bg-gray-50 px-4 text-left transition-colors hover:bg-gray-100",
+        "dark:border-dark-bg-tertiary dark:bg-dark-bg-primary dark:hover:bg-dark-bg-tertiary flex h-10 w-full items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-4 text-left transition-colors hover:bg-gray-100",
         className,
       )}
       aria-label={ariaLabel}

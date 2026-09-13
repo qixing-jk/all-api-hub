@@ -91,7 +91,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
           aria-modal="true"
           aria-labelledby="api-check-modal-title"
           tabIndex={-1}
-          className="border-border bg-background pointer-events-auto max-h-[90vh] w-full max-w-[860px] overflow-hidden rounded-lg border shadow-xl"
+          className="border-border bg-background pointer-events-auto max-h-[90vh] w-full max-w-[860px] overflow-hidden rounded-2xl border shadow-xl"
           onKeyDown={stopHostPageKeyboardShortcuts}
           onKeyUp={stopHostPageKeyboardShortcuts}
         >

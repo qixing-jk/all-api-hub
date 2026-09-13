@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 import { Button, IconButton } from "~/components/ui"
 import { PopoverContent } from "~/components/ui/popover"
 import { SheetDescription, SheetTitle } from "~/components/ui/sheet"
+import { CORNERS } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
 import type { ProductAnnouncementRuntimeState } from "~/services/productAnnouncements/service"
 import type { ProductAnnouncement } from "~/services/productAnnouncements/types"
@@ -93,7 +94,9 @@ function ProductAnnouncementPanel({
           <X className="h-3.5 w-3.5" aria-hidden="true" />
         </IconButton>
       </div>
-      <div className="dark:bg-dark-bg-tertiary grid grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1">
+      <div
+        className={`dark:bg-dark-bg-tertiary corners-concentric grid grid-cols-2 gap-1 rounded-md bg-gray-100 p-1 [--corner-inset:--spacing(1)] ${CORNERS.buttonItems}`}
+      >
         <Button
           type="button"
           variant={filter === "active" ? "secondary" : "ghost"}

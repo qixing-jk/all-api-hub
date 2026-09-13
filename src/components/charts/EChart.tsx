@@ -58,7 +58,18 @@ export function EChart(props: EChartProps) {
     const container = containerRef.current
     if (!container) return
 
-    const instance = echarts.init(container, undefined, { renderer })
+    // ECharts creates HTML tooltips with inline styles outside React. Theme
+    // defaults keep their surface and shadow on the shared corner scale.
+    const instance = echarts.init(
+      container,
+      {
+        tooltip: {
+          className: "rounded-sm",
+          extraCssText: "border-radius:var(--radius-sm);",
+        },
+      },
+      { renderer },
+    )
     instanceRef.current = instance
 
     return () => {
@@ -98,12 +109,12 @@ export function EChart(props: EChartProps) {
 
     const entries = Object.entries(onEvents)
     for (const [eventName, handler] of entries) {
-      instance.on(eventName, handler as any)
+      instance.on(eventName, handler)
     }
 
     return () => {
       for (const [eventName, handler] of entries) {
-        instance.off(eventName, handler as any)
+        instance.off(eventName, handler)
       }
     }
   }, [onEvents, renderer])

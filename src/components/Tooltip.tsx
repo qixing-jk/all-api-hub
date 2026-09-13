@@ -180,7 +180,7 @@ export default function Tooltip({
     </div>
   )
 
-  const defaultClassName = `${Z_INDEX.tooltip} max-w-[90vw] rounded-lg bg-gray-900 px-3 py-2 text-xs text-white shadow-lg dark:bg-dark-bg-tertiary dark:text-dark-text-primary ${className}`
+  const defaultClassName = `${Z_INDEX.tooltip} max-w-[90vw] rounded-sm bg-gray-900 px-3 py-2 text-xs text-white shadow-lg dark:bg-dark-bg-tertiary dark:text-dark-text-primary ${className}`
   return (
     <TooltipContext.Provider value={anchorId}>
       {anchor}

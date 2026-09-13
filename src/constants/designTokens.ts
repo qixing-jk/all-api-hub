@@ -138,6 +138,17 @@ export const RADIUS = {
   full: "rounded-full",
 } as const
 
+/**
+ * Close-fitting items use their container's resolved inner radius, with the
+ * compact radius as a fallback outside a concentric container. Keep complete
+ * Tailwind candidates here so both direct items and button groups are scanned.
+ */
+export const CORNERS = {
+  item: "rounded-[var(--corner-inner-radius,var(--radius-sm))]",
+  buttonItems:
+    "[&>button]:rounded-[var(--corner-inner-radius,var(--radius-sm))]",
+} as const
+
 // Shadow tokens
 export const SHADOWS = {
   none: "shadow-none",

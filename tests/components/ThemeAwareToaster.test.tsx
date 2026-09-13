@@ -89,6 +89,7 @@ describe("ThemeAwareToaster", () => {
           background: "#fff",
           color: "#363636",
           border: "1px solid #e5e7eb",
+          borderRadius: "var(--radius-lg)",
         },
         success: {
           duration: 3000,

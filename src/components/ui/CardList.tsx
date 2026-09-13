@@ -12,6 +12,7 @@ const CardList = React.forwardRef<HTMLDivElement, CardListProps>(
     return (
       <div
         ref={ref}
+        data-slot="card-list"
         className={cn(
           dividers
             ? "dark:divide-dark-bg-tertiary divide-y divide-gray-200"

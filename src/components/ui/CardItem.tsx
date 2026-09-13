@@ -86,7 +86,7 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
           >
             <div className="flex w-full min-w-0 flex-1 items-center gap-3 [@container(min-width:42rem)]:w-auto">
               {icon && (
-                <div className="dark:bg-dark-bg-tertiary shrink-0 rounded-lg bg-gray-100 p-1 transition-colors sm:p-2">
+                <div className="dark:bg-dark-bg-tertiary shrink-0 rounded-sm bg-gray-100 p-1 transition-colors sm:p-2">
                   {icon}
                 </div>
               )}

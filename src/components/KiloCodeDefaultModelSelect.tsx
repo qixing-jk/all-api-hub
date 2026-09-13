@@ -197,7 +197,7 @@ export const KiloCodeDefaultModelSelect = React.forwardRef<
         <Command
           shouldFilter={false}
           label={resolvedSearchPlaceholder}
-          className="min-h-0 flex-1 [&_[data-slot='command-input-wrapper']]:shrink-0"
+          className="min-h-0 flex-1 rounded-(--popover-inner-radius) [&_[data-slot='command-input-wrapper']]:shrink-0"
         >
           <CommandInput
             aria-label={resolvedSearchPlaceholder}

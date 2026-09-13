@@ -16,6 +16,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "~/components/ui"
+import { CORNERS } from "~/constants/designTokens"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import toast from "~/lib/notify"
@@ -1432,7 +1433,9 @@ export default function ManagedSiteModelSync({
         )
       }}
     >
-      <TabsList className="mb-4 flex space-x-2 rounded-xl bg-gray-100 p-1 dark:bg-gray-800">
+      <TabsList
+        className={`corners-concentric mb-4 flex space-x-2 rounded-lg bg-gray-100 p-1 [--corner-inset:--spacing(1)] dark:bg-gray-800 ${CORNERS.buttonItems}`}
+      >
         <TabsTrigger
           value={TAB_VALUE.history}
           className="flex-1 rounded-lg px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow dark:text-gray-300 dark:data-[state=active]:bg-gray-900 dark:data-[state=active]:text-blue-400"

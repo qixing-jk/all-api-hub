@@ -82,7 +82,7 @@ const ToggleButton = React.forwardRef<HTMLButtonElement, ToggleButtonProps>(
         {rightIcon && <span className="ml-2">{rightIcon}</span>}
         {isActive && showActiveIndicator && (
           <span
-            className={`absolute inset-x-0 bottom-0 h-0.5 ${activeIndicatorColor} rounded-t-sm`}
+            className={`absolute inset-x-2 bottom-0 h-0.5 ${activeIndicatorColor} rounded-full`}
           />
         )}
       </button>

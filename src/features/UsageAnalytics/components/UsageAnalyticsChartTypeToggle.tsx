@@ -1,4 +1,5 @@
 import { ToggleButton } from "~/components/ui"
+import { CORNERS } from "~/constants/designTokens"
 
 import type { UsageAnalyticsChartDisplayType } from "../types"
 
@@ -25,7 +26,7 @@ export default function UsageAnalyticsChartTypeToggle({
 }: UsageAnalyticsChartTypeToggleProps) {
   return (
     <div
-      className="dark:bg-dark-bg-secondary inline-flex items-center gap-1 rounded-lg bg-gray-100 p-1"
+      className={`dark:bg-dark-bg-secondary corners-concentric inline-flex items-center gap-1 rounded-md bg-gray-100 p-1 [--corner-inset:--spacing(1)] ${CORNERS.buttonItems}`}
       role="group"
       aria-label={ariaLabel}
     >

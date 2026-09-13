@@ -12,6 +12,7 @@ import {
   Switch,
   ToggleButton,
 } from "~/components/ui"
+import { CORNERS } from "~/constants/designTokens"
 import {
   MESH_GRADIENT_LAYOUT_COUNT,
   MESH_GRADIENT_PALETTES,
@@ -210,7 +211,9 @@ export default function MeshGradientLab() {
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <div className="flex items-center gap-2">
                   <Label size="sm">{t("meshGradientLab:labels.view")}</Label>
-                  <div className="dark:bg-dark-bg-tertiary inline-flex rounded-lg bg-gray-50 p-1">
+                  <div
+                    className={`dark:bg-dark-bg-tertiary corners-concentric inline-flex rounded-md bg-gray-50 p-1 [--corner-inset:--spacing(1)] ${CORNERS.buttonItems}`}
+                  >
                     <ToggleButton
                       size="sm"
                       isActive={viewMode === "palettes"}

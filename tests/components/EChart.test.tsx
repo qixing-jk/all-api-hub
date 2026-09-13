@@ -64,7 +64,7 @@ describe("EChart", () => {
     render(
       <EChart
         option={{ series: [{ type: "line", data: [1, 2, 3] }] }}
-        setOptionOpts={{ lazyUpdate: false, silent: true } as any}
+        setOptionOpts={{ lazyUpdate: false, silent: true }}
         style={{ height: 240 }}
       />,
     )
@@ -72,7 +72,7 @@ describe("EChart", () => {
     await waitFor(() => {
       expect(echartsInitMock).toHaveBeenCalledWith(
         expect.any(HTMLDivElement),
-        undefined,
+        expect.objectContaining({ tooltip: expect.any(Object) }),
         { renderer: "canvas" },
       )
       expect(instance.setOption).toHaveBeenCalledWith(
@@ -116,7 +116,7 @@ describe("EChart", () => {
       expect(firstInstance.dispose).toHaveBeenCalledTimes(1)
       expect(echartsInitMock).toHaveBeenLastCalledWith(
         expect.any(HTMLDivElement),
-        undefined,
+        expect.objectContaining({ tooltip: expect.any(Object) }),
         { renderer: "svg" },
       )
       expect(secondInstance.on).toHaveBeenCalledWith(

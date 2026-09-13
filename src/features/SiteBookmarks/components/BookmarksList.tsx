@@ -426,7 +426,7 @@ export default function BookmarksList({
     <div data-testid={SITE_BOOKMARKS_TEST_IDS.listView}>
       <Card>
         <CardContent padding={"none"} spacing={"none"}>
-          <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary border-b border-gray-200 bg-white px-3 py-2 sm:px-5 sm:py-3">
+          <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary rounded-t-[var(--corner-inner-radius)] border-b border-gray-200 bg-white px-3 py-2 sm:px-5 sm:py-3">
             <BookmarkSearchInput
               value={query}
               onChange={setQuery}

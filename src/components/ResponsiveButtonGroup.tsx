@@ -4,7 +4,7 @@ import {
   ToggleButton,
   type ToggleButtonProps,
 } from "~/components/ui/ToggleButton"
-import { ANIMATIONS, COLORS } from "~/constants/designTokens"
+import { ANIMATIONS, COLORS, CORNERS } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
 
 type ResponsiveButtonGroupVariant = "segmented" | "plain"
@@ -32,7 +32,7 @@ export function ResponsiveButtonGroup({
       className={cn(
         "flex w-full flex-wrap [@container(min-width:42rem)]:w-auto",
         variant === "segmented"
-          ? `${COLORS.background.tertiary} rounded-lg p-1 shadow-sm ${ANIMATIONS.transition.base}`
+          ? `${COLORS.background.tertiary} corners-concentric rounded-md p-1 shadow-sm [--corner-inset:4px] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`
           : "gap-2",
         className,
       )}

@@ -218,7 +218,7 @@ export const SearchableSelect = React.forwardRef<
         className="max-h-(--radix-popover-content-available-height) w-(--radix-popper-anchor-width) overflow-hidden p-0"
         collisionPadding={8}
       >
-        <Command>
+        <Command className="rounded-(--popover-inner-radius)">
           <CommandInput
             placeholder={resolvedSearchPlaceholder}
             value={searchTerm}

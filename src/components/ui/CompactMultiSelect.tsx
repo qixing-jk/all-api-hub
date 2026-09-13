@@ -825,7 +825,7 @@ export function CompactMultiSelect({
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-(--radix-popper-anchor-width) p-0">
-            <Command>
+            <Command className="rounded-(--popover-inner-radius)">
               <CommandInput
                 placeholder={resolvedSearchPlaceholder}
                 value={searchTerm}

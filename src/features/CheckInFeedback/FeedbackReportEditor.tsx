@@ -36,9 +36,9 @@ export function FeedbackReportEditor({
     <details
       open={previewOpen}
       onToggle={(event) => setPreviewOpen(event.currentTarget.open)}
-      className="group rounded-lg border border-gray-200 dark:border-gray-700"
+      className="group corners-concentric rounded-lg border border-gray-200 [--corner-inset:1px] dark:border-gray-700"
     >
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-lg px-4 py-3 text-sm font-medium hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:hover:bg-gray-800/50 [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-[var(--corner-inner-radius)] px-4 py-3 text-sm font-medium group-open:rounded-b-none hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:hover:bg-gray-800/50 [&::-webkit-details-marker]:hidden">
         {t("checkInFeedback.preview")}
         <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
       </summary>

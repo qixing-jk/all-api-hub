@@ -3,6 +3,7 @@ import { useState, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui"
+import { CORNERS } from "~/constants/designTokens"
 import { countAutoCheckinResults } from "~/features/AutoCheckin/utils/autoCheckin"
 import {
   getAutoCheckinSnapshotReadinessCategory,
@@ -124,7 +125,9 @@ export default function AutoCheckinDataWorkspace({
   return (
     <section aria-label={t("workspace.label")} className="space-y-3">
       <Tabs value={activeView} onValueChange={handleViewChange}>
-        <TabsList className="grid w-full grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1 sm:inline-flex sm:w-auto dark:bg-gray-900">
+        <TabsList
+          className={`corners-concentric grid w-full grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1 [--corner-inset:4px] sm:inline-flex sm:w-auto dark:bg-gray-900 ${CORNERS.buttonItems}`}
+        >
           <TabsTrigger
             value={AUTO_CHECKIN_DATA_VIEW.Results}
             className={DATA_VIEW_TRIGGER_CLASS_NAME}

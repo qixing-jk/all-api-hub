@@ -257,13 +257,13 @@ export function SponsorRecommendationCard({
 
   return (
     <div
-      className="group dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary/40 flex min-w-0 items-center gap-2 rounded-lg border border-gray-200 bg-white p-1.5 shadow-xs transition-colors hover:border-blue-200 hover:bg-blue-50/50 dark:hover:border-blue-800/70 dark:hover:bg-blue-950/20"
+      className="group dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary/40 corners-concentric flex min-w-0 items-center gap-2 rounded-lg border border-gray-200 bg-white p-1.5 shadow-xs transition-colors [--corner-inset:calc(--spacing(1.5)+1px)] hover:border-blue-200 hover:bg-blue-50/50 dark:hover:border-blue-800/70 dark:hover:bg-blue-950/20"
       data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.sponsorRecommendationCard}
     >
       <button
         type="button"
         className={cn(
-          "focus-visible:ring-ring/50 flex min-h-9 min-w-0 flex-1 items-center gap-2 rounded-md px-2.5 py-1.5 text-left transition-colors outline-none focus-visible:ring-[3px]",
+          "focus-visible:ring-ring/50 flex min-h-9 min-w-0 flex-1 items-center gap-2 rounded-[var(--corner-inner-radius)] px-2.5 py-1.5 text-left transition-colors outline-none focus-visible:ring-[3px]",
           isIntegratedMainAction
             ? "text-blue-700 hover:bg-blue-100/70 dark:text-blue-300 dark:hover:bg-blue-900/30"
             : "dark:text-dark-text-primary dark:hover:bg-dark-bg-tertiary/70 text-gray-800 hover:bg-gray-100",
@@ -274,7 +274,7 @@ export function SponsorRecommendationCard({
       >
         <span
           className={cn(
-            "flex h-6 w-6 shrink-0 items-center justify-center rounded-md",
+            "flex h-6 w-6 shrink-0 items-center justify-center rounded-xs",
             isIntegratedMainAction
               ? "bg-blue-600 text-white shadow-sm dark:bg-blue-500"
               : "dark:bg-dark-bg-tertiary dark:text-dark-text-secondary bg-gray-100 text-gray-600",

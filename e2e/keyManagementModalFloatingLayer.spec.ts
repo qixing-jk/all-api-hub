@@ -13,6 +13,7 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { setVisualDarkMode } from "~~/e2e/utils/visualTheme"
 
 test.beforeEach(async ({ context, page }) => {
   installExtensionPageGuards(page)
@@ -31,7 +32,7 @@ test("modal-hosted group selector stays visible and clickable above the add-toke
   context,
   extensionId,
   page,
-}) => {
+}, testInfo) => {
   const serviceWorker = await getServiceWorker(context)
   await seedStoredAccounts(serviceWorker, [createStoredAccount()])
 
@@ -49,6 +50,29 @@ test("modal-hosted group selector stays visible and clickable above the add-toke
   const nameInput = page.locator("#tokenName")
   await expect(nameInput).toBeVisible()
   await nameInput.fill("e2e layered token")
+
+  // The search surface sits inside an unpadded popover with a 1px border.
+  const accountTrigger = page
+    .locator('[data-slot="modal-panel"]')
+    .getByRole("combobox")
+    .first()
+  for (const dark of [false, true]) {
+    await setVisualDarkMode(page, dark)
+    await accountTrigger.click()
+    const popover = page.locator('[data-slot="popover-content"]')
+    const command = popover.locator('[data-slot="command"]')
+    await expect(popover).toHaveCSS("border-top-left-radius", "16px")
+    await expect(command).toHaveCSS("border-top-left-radius", "15px")
+    const item = command.getByRole("option").first()
+    await item.hover()
+    await expect(item).toHaveCSS("border-top-left-radius", "11px")
+    await page.screenshot({
+      animations: "disabled",
+      path: testInfo.outputPath(`account-search-${dark}.png`),
+    })
+    await page.keyboard.press("Escape")
+    await expect(accountTrigger).toBeFocused()
+  }
 
   const groupTrigger = page.getByRole("combobox").last()
   await expect(groupTrigger).toBeVisible()

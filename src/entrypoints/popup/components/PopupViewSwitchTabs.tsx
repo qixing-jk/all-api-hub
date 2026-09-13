@@ -1,5 +1,5 @@
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs"
-import { ANIMATIONS, COLORS } from "~/constants/designTokens"
+import { ANIMATIONS, COLORS, CORNERS } from "~/constants/designTokens"
 import { useProductAnalyticsActionTracking } from "~/hooks/useProductAnalyticsActionTracking"
 import { cn } from "~/lib/utils"
 import type { ProductAnalyticsScopedActionConfig } from "~/services/productAnalytics/actionConfig"
@@ -78,7 +78,7 @@ export default function PopupViewSwitchTabs({
   getAnalyticsAction,
 }: PopupViewSwitchTabsProps) {
   const baseClassName = cn(
-    "rounded-md px-2 py-1 text-xs font-medium transition-colors",
+    `${CORNERS.item} px-2 py-1 text-xs font-medium transition-colors`,
     ANIMATIONS.transition.base,
   )
   const tabs = [
@@ -111,7 +111,7 @@ export default function PopupViewSwitchTabs({
     >
       <TabsList
         className={cn(
-          "inline-flex min-w-0 gap-1 rounded-lg p-1",
+          "corners-concentric inline-flex min-w-0 gap-1 rounded-md p-1 [--corner-inset:4px]",
           COLORS.background.tertiary,
         )}
       >

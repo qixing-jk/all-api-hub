@@ -358,7 +358,7 @@ export function Modal({
   }
 
   const panelBaseClass = cn(
-    `flex flex-col max-h-[90vh] relative w-full ${sizeMap[size]} bg-white dark:bg-dark-bg-secondary rounded-lg shadow-xl transform transition-all`,
+    `flex flex-col max-h-[90vh] relative w-full ${sizeMap[size]} bg-white dark:bg-dark-bg-secondary rounded-2xl shadow-xl transform transition-all`,
     panelClassName,
   )
 
@@ -449,7 +449,7 @@ export function Modal({
                     type="button"
                     onClick={requestClose}
                     aria-label={t("common:actions.close")}
-                    className="dark:hover:bg-dark-bg-tertiary dark:hover:text-dark-text-secondary absolute top-3 right-3 z-10 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 sm:top-4 sm:right-4"
+                    className="dark:hover:bg-dark-bg-tertiary dark:hover:text-dark-text-secondary absolute top-3 right-3 z-10 rounded-sm p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 sm:top-4 sm:right-4"
                   >
                     <XIcon className="h-5 w-5" />
                   </button>

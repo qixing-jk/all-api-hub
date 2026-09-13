@@ -273,13 +273,13 @@ function RepairAccountCoverageItem({
         <Collapsible
           open={open}
           onOpenChange={setOpen}
-          className="dark:border-dark-bg-tertiary overflow-hidden rounded-lg border border-gray-200"
+          className="dark:border-dark-bg-tertiary corners-concentric overflow-hidden rounded-lg border border-gray-200 [--corner-inset:1px]"
         >
           <CollapsibleTrigger
             aria-label={t("keyManagement:actions.detailsFor", {
               name: result.accountName,
             })}
-            className="dark:hover:bg-dark-bg-tertiary/60 focus-visible:ring-ring/50 w-full p-3 text-left transition-colors hover:bg-gray-50 focus-visible:ring-[3px] focus-visible:outline-none focus-visible:ring-inset"
+            className="dark:hover:bg-dark-bg-tertiary/60 focus-visible:ring-ring/50 w-full rounded-[var(--corner-inner-radius)] p-3 text-left transition-colors hover:bg-gray-50 focus-visible:ring-[3px] focus-visible:outline-none focus-visible:ring-inset data-[state=open]:rounded-b-none"
           >
             {summary}
           </CollapsibleTrigger>

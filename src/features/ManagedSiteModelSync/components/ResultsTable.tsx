@@ -83,7 +83,7 @@ export default function ResultsTable({
 
   return (
     <Card padding="none">
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto rounded-[var(--corner-inner-radius)]">
         <table className="w-full">
           <thead className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
             <tr>

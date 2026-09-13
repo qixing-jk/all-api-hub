@@ -63,7 +63,7 @@ export function QuickKeyResourceCard({
       <button
         id={detailsTriggerId}
         type="button"
-        className="dark:hover:bg-dark-bg-tertiary flex w-full items-center justify-between gap-3 rounded-lg p-3 text-left transition-colors hover:bg-gray-50"
+        className="dark:hover:bg-dark-bg-tertiary flex w-full items-center justify-between gap-3 rounded-[var(--corner-inner-radius)] p-3 text-left transition-colors hover:bg-gray-50 aria-expanded:rounded-b-none"
         aria-label={t("actions.detailsFor", { name: presentation.title })}
         aria-controls={detailsPanelId}
         aria-expanded={isExpanded}

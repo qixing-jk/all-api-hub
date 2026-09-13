@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs"
-import { ANIMATIONS, COLORS } from "~/constants/designTokens"
+import { ANIMATIONS, COLORS, CORNERS } from "~/constants/designTokens"
 import type { CountedModelVendorCatalogEntry } from "~/features/ModelList/hooks/useFilteredModels"
 import { useHorizontalScrollControls } from "~/hooks/useHorizontalScrollControls"
 import {
@@ -108,7 +108,7 @@ function ProviderTabList({
 
       <TabsList
         ref={tabListRef}
-        className={`flex min-w-0 flex-1 space-x-1 rounded-xl ${COLORS.background.tertiary} scrollbar-hide touch-pan-x overflow-x-auto p-1`}
+        className={`corners-concentric flex min-w-0 flex-1 space-x-1 rounded-lg [--corner-inset:4px] ${CORNERS.buttonItems} ${COLORS.background.tertiary} scrollbar-hide touch-pan-x overflow-x-auto p-1`}
       >
         <TabsTrigger
           value={MODEL_VENDOR_FILTER_VALUES.All}

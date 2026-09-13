@@ -29,7 +29,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import { ANIMATIONS, COLORS } from "~/constants/designTokens"
+import { ANIMATIONS, COLORS, CORNERS } from "~/constants/designTokens"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useTheme } from "~/contexts/ThemeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -1176,7 +1176,7 @@ export default function BalanceHistory() {
               </div>
 
               <div
-                className={`inline-flex ${COLORS.background.tertiary} rounded-lg p-1 shadow-sm ${ANIMATIONS.transition.base}`}
+                className={`inline-flex ${COLORS.background.tertiary} corners-concentric rounded-md p-1 shadow-sm [--corner-inset:--spacing(1)] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`}
               >
                 <ToggleButton
                   onClick={() => handleCurrencyChange("USD")}
@@ -1435,7 +1435,7 @@ export default function BalanceHistory() {
                       </div>
 
                       <div
-                        className={`inline-flex ${COLORS.background.tertiary} rounded-lg p-1 shadow-sm ${ANIMATIONS.transition.base}`}
+                        className={`inline-flex ${COLORS.background.tertiary} corners-concentric rounded-md p-1 shadow-sm [--corner-inset:--spacing(1)] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`}
                         role="group"
                         aria-label={t("breakdown.controls.chartType")}
                       >
@@ -1594,7 +1594,7 @@ export default function BalanceHistory() {
                         </div>
                       </div>
                       <div
-                        className={`inline-flex ${COLORS.background.tertiary} rounded-lg p-1 shadow-sm ${ANIMATIONS.transition.base}`}
+                        className={`inline-flex ${COLORS.background.tertiary} corners-concentric rounded-md p-1 shadow-sm [--corner-inset:--spacing(1)] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`}
                         role="group"
                         aria-label={t("trend.controls.chartType")}
                       >

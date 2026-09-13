@@ -2,6 +2,7 @@ import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 import { Select as SelectPrimitive } from "radix-ui"
 import * as React from "react"
 
+import { CORNERS } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
 
 import { useFloatingLayerClass } from "./floating-layer"
@@ -244,7 +245,7 @@ const SelectContent = React.forwardRef<
           ref={ref}
           data-slot="select-content"
           className={cn(
-            "dark:border-dark-bg-tertiary/80 dark:bg-dark-bg-secondary dark:text-dark-text-primary data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative max-h-(--radix-select-content-available-height) min-w-32 origin-(--radix-select-content-transform-origin) overflow-hidden rounded-md border border-gray-200 bg-white text-gray-900 shadow-lg ring-1 ring-black/5 dark:ring-white/5",
+            "dark:border-dark-bg-tertiary/80 dark:bg-dark-bg-secondary dark:text-dark-text-primary data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 corners-concentric relative max-h-(--radix-select-content-available-height) min-w-32 origin-(--radix-select-content-transform-origin) overflow-hidden rounded-lg border border-gray-200 bg-white text-gray-900 shadow-lg ring-1 ring-black/5 [--corner-inset:5px] dark:ring-white/5",
             floatingLayerClass,
             position === "popper" &&
               "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
@@ -296,7 +297,7 @@ const SelectItem = React.forwardRef<
     ref={ref}
     data-slot="select-item"
     className={cn(
-      "dark:text-dark-text-primary dark:focus:bg-dark-bg-tertiary/80 dark:focus:text-dark-text-primary relative flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-700 outline-hidden transition-colors select-none focus:bg-blue-50 focus:text-gray-900 data-disabled:pointer-events-none data-disabled:opacity-50 data-[state=checked]:text-gray-900 dark:data-[state=checked]:text-white [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+      `dark:text-dark-text-primary dark:focus:bg-dark-bg-tertiary/80 dark:focus:text-dark-text-primary relative flex w-full cursor-pointer items-center gap-2 ${CORNERS.item} px-2 py-1.5 text-sm text-gray-700 outline-hidden transition-colors select-none focus:bg-blue-50 focus:text-gray-900 data-disabled:pointer-events-none data-disabled:opacity-50 data-[state=checked]:text-gray-900 dark:data-[state=checked]:text-white [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2`,
       className,
     )}
     {...props}

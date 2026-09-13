@@ -187,7 +187,7 @@ export default function ProtectionBypassHistoryRow(props: HistoryRowProps) {
           onExpandedChange(entry.id, !isExpanded)
           setIsExpanded(!isExpanded)
         }}
-        className="focus-visible:ring-ring w-full space-y-2 rounded-lg p-4 text-left focus-visible:ring-2 focus-visible:outline-none"
+        className="focus-visible:ring-ring w-full space-y-2 rounded-[var(--corner-inner-radius)] p-4 text-left focus-visible:ring-2 focus-visible:outline-none aria-expanded:rounded-b-none"
       >
         <span className="flex items-start justify-between gap-3">
           <span className="flex min-w-0 flex-wrap items-center gap-2">

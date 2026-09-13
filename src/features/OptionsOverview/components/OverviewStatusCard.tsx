@@ -37,7 +37,7 @@ export function OverviewStatusSummary({
       className="overflow-hidden border-slate-200/80 bg-white/90 shadow-sm shadow-slate-200/50 dark:border-white/10 dark:bg-white/[0.03] dark:shadow-black/20"
       data-testid={dataTestId}
     >
-      <div className="grid grid-cols-2 divide-x divide-y divide-slate-200/70 md:grid-cols-4 md:divide-y-0 dark:divide-white/10">
+      <div className="grid grid-cols-2 divide-x divide-y divide-slate-200/70 *:first:rounded-tl-[var(--corner-inner-radius)] *:last:rounded-br-[var(--corner-inner-radius)] *:nth-2:rounded-tr-[var(--corner-inner-radius)] *:nth-last-2:rounded-bl-[var(--corner-inner-radius)] md:grid-cols-4 md:divide-y-0 md:*:first:rounded-bl-[var(--corner-inner-radius)] md:*:last:rounded-tr-[var(--corner-inner-radius)] md:*:nth-2:rounded-tr-none md:*:nth-last-2:rounded-bl-none dark:divide-white/10">
         {items.map((item) => (
           <StatusMetric
             key={item.id}
@@ -104,7 +104,7 @@ function StatusMetric({ item, t, onNavigate }: StatusMetricProps) {
   return coverageLabel && showsCoverageTooltip ? (
     <Tooltip
       content={coverageLabel}
-      wrapperClassName="h-full w-full min-w-0 justify-start"
+      wrapperClassName="h-full w-full min-w-0 justify-start [&>button]:rounded-[inherit]"
     >
       {metric}
     </Tooltip>

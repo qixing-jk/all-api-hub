@@ -26,6 +26,7 @@ import {
   getStoredUserPreferences,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { setVisualDarkMode } from "~~/e2e/utils/visualTheme"
 
 const BALANCE_HISTORY_URL = (extensionId: string) =>
   `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BALANCE_HISTORY}`
@@ -97,7 +98,7 @@ test("filters balance history by tag/account and persists the selected currency"
   context,
   extensionId,
   page,
-}) => {
+}, testInfo) => {
   const serviceWorker = await getServiceWorker(context)
 
   await seedStoredAccounts(serviceWorker, [
@@ -154,6 +155,29 @@ test("filters balance history by tag/account and persists the selected currency"
     main.getByTestId(BALANCE_HISTORY_TEST_IDS.accountSummary),
   ).toBeVisible()
   await expect(page.getByRole("button", { name: "Production" })).toBeVisible()
+  // Library-generated tooltip surfaces need the same curve as their shadows.
+  const chart = page.locator("canvas").last()
+  await expect(chart).toBeVisible()
+  for (const dark of [false, true]) {
+    await setVisualDarkMode(page, dark)
+    const bounds = await chart.boundingBox()
+    expect(bounds).not.toBeNull()
+    await chart.hover({
+      position: { x: bounds!.width * 0.9, y: bounds!.height * 0.45 },
+    })
+    const tooltip = page.locator(
+      'div[style*="border-radius: var(--radius-sm)"]',
+    )
+    await expect(tooltip).toBeVisible()
+    await expect(tooltip).toHaveCSS("border-top-left-radius", "10px")
+    await expect(tooltip).toHaveCSS("corner-shape", "superellipse(1.5)")
+    await expect(tooltip).not.toHaveCSS("box-shadow", "none")
+    await page.screenshot({
+      animations: "disabled",
+      path: testInfo.outputPath(`chart-shadow-${dark}.png`),
+    })
+    await page.mouse.move(0, 0)
+  }
   await expect(
     page.getByRole("button", { name: "Balance Hub A", exact: true }),
   ).toBeVisible()

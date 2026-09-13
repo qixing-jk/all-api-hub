@@ -35,12 +35,12 @@ export function ResourceEditorSection({
       onOpenChange={(nextOpen) => {
         if (nextOpen || !hasErrors) setExpanded(nextOpen)
       }}
-      className="border-border min-w-0 rounded-lg border"
+      className="border-border corners-concentric min-w-0 rounded-lg border [--corner-inset:1px]"
     >
       <CollapsibleTrigger
         aria-label={label}
         aria-describedby={summary ? summaryId : undefined}
-        className="hover:bg-muted/50 focus-visible:ring-ring flex w-full min-w-0 items-center gap-2 rounded-lg px-3 py-3 text-left focus-visible:ring-2 focus-visible:outline-none"
+        className="hover:bg-muted/50 focus-visible:ring-ring flex w-full min-w-0 items-center gap-2 rounded-[var(--corner-inner-radius)] px-3 py-3 text-left focus-visible:ring-2 focus-visible:outline-none data-[state=open]:rounded-b-none"
       >
         <ChevronDown
           aria-hidden

@@ -68,7 +68,8 @@ export function RuntimeKeyItem({
     <Card variant="interactive" padding="none">
       <CardContent
         padding="sm"
-        className="dark:hover:bg-dark-bg-tertiary cursor-pointer transition-colors hover:bg-gray-50"
+        data-expanded={isExpanded}
+        className="dark:hover:bg-dark-bg-tertiary cursor-pointer rounded-[var(--corner-inner-radius)] transition-colors hover:bg-gray-50 data-[expanded=true]:rounded-b-none"
         onClick={onToggle}
         data-testid={getCopyKeyDialogRuntimeKeyItemTestId(runtimeKey.id)}
       >

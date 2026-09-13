@@ -856,7 +856,12 @@ test("edits a managed-site channel from row actions", async ({
   await expectPermissionOnboardingHidden(page)
 
   await openManagedSiteChannelRowActions(page, "Production OpenAI")
-  await page.getByRole("menuitem", { name: "Edit", exact: true }).click()
+  const rowMenu = page.getByRole("menu")
+  const editItem = rowMenu.getByRole("menuitem", { name: "Edit", exact: true })
+  await expect(rowMenu).toHaveCSS("border-top-left-radius", "20px")
+  await expect(editItem).toHaveCSS("border-top-left-radius", "15px")
+  await expect(editItem).toHaveCSS("corner-shape", "superellipse(1.5)")
+  await editItem.click()
 
   await expect(
     page.getByRole("heading", { name: "Edit Channel" }),

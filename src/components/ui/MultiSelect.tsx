@@ -290,7 +290,7 @@ export function MultiSelect({
   }
 
   const optionListClassName = cn(
-    "ring-opacity-5 dark:bg-dark-bg-secondary absolute z-50 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black focus:outline-none sm:text-sm",
+    "ring-opacity-5 dark:bg-dark-bg-secondary absolute z-50 max-h-60 w-full overflow-auto rounded-lg corners-concentric [--corner-inset:--spacing(1)] bg-white p-1 text-base shadow-lg ring-1 ring-black focus:outline-none sm:text-sm",
     dropdownPosition === "top" ? "bottom-full mb-1" : "top-full mt-1",
   )
 
@@ -369,7 +369,7 @@ export function MultiSelect({
                 data-slot="multiselect-listbox"
                 aria-multiselectable="true"
               >
-                <div className="dark:text-dark-text-secondary relative cursor-default px-4 py-1 text-gray-700 select-none">
+                <div className="dark:text-dark-text-secondary relative cursor-default px-3 py-1 text-gray-700 select-none">
                   {allowCustom
                     ? query
                       ? t("multiSelect.emptyWithQueryAllowCustom", {
@@ -400,7 +400,7 @@ export function MultiSelect({
                     role="option"
                     aria-selected={isSelected}
                     className={cn(
-                      "dark:text-dark-text-primary relative flex w-full cursor-pointer items-center py-2 pr-4 pl-10 text-left text-gray-900 select-none hover:bg-blue-600 hover:text-white focus:bg-blue-600 focus:text-white focus:outline-none",
+                      "dark:text-dark-text-primary relative flex w-full cursor-pointer items-center rounded-[var(--corner-inner-radius)] py-2 pr-3 pl-9 text-left text-gray-900 select-none hover:bg-blue-600 hover:text-white focus:bg-blue-600 focus:text-white focus:outline-none",
                       isActive && "bg-blue-600 text-white",
                     )}
                     onMouseEnter={() => setActiveOptionIndex(index)}
@@ -416,7 +416,7 @@ export function MultiSelect({
                       {option.label}
                     </span>
                     {isSelected ? (
-                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-blue-600 group-hover:text-white">
+                      <span className="absolute inset-y-0 left-0 flex items-center pl-2 text-blue-600 group-hover:text-white">
                         <Check className="h-5 w-5" aria-hidden="true" />
                       </span>
                     ) : null}

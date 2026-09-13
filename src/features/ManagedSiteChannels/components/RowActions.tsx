@@ -116,7 +116,7 @@ export default function RowActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
-          className="w-60 max-w-[calc(100vw-2rem)] rounded-xl shadow-lg [&_[data-slot=dropdown-menu-item]]:rounded-lg"
+          className="w-60 max-w-[calc(100vw-2rem)] rounded-xl shadow-lg"
         >
           {showMigrationAction ? (
             <>
