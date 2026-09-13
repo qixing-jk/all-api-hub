@@ -4,6 +4,7 @@ import { cliProxyApiRef } from "~/services/apiAdapters/managedResources/cliProxy
 import { cliProxyApiCapabilities } from "~/services/apiAdapters/managedSites/cliProxyApi"
 import type { CliProxyApiResource } from "~/services/apiService/cliProxyApi"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
@@ -52,6 +53,138 @@ beforeEach(() => {
 })
 
 describe("CLIProxyAPI configuration and credential matching", () => {
+  it("shares equivalent configs but isolates credentials and deployment paths", async () => {
+    const inventory = createDeferred<CliProxyApiResource[]>()
+    mocks.list.mockReturnValue(inventory.promise)
+    const search = cliProxyApiCapabilities.matching.search
+    const requests = [
+      search(config, "first.example"),
+      search(
+        { adminToken: config.adminToken, baseUrl: config.baseUrl },
+        "second.example",
+      ),
+      search({ ...config, adminToken: "other-admin" }, "first.example"),
+      search(
+        { ...config, baseUrl: `${config.baseUrl}/other` },
+        "first.example",
+      ),
+    ]
+    expect(mocks.list).toHaveBeenCalledTimes(3)
+    inventory.resolve([])
+    await expect(Promise.all(requests)).resolves.toEqual(
+      Array.from({ length: 4 }, () => ({
+        items: [],
+        total: 0,
+        type_counts: {},
+      })),
+    )
+  })
+
+  it("replaces an orphaned read without a late response evicting its replacement", async () => {
+    const oldInventory = createDeferred<CliProxyApiResource[]>()
+    const newInventory = createDeferred<CliProxyApiResource[]>()
+    mocks.list
+      .mockReturnValueOnce(oldInventory.promise)
+      .mockReturnValueOnce(newInventory.promise)
+    const controller = new AbortController()
+    const firstOutcome = Promise.allSettled([
+      cliProxyApiCapabilities.matching.search(config, "first.example", {
+        signal: controller.signal,
+      }),
+    ])
+    const readSignal = mocks.list.mock.calls[0][1].signal as AbortSignal
+    controller.abort()
+    expect(readSignal.aborted).toBe(true)
+    expect(await firstOutcome).toEqual([
+      {
+        status: "rejected",
+        reason: expect.objectContaining({ name: "AbortError" }),
+      },
+    ])
+    const replacement = cliProxyApiCapabilities.matching.search(
+      config,
+      "first.example",
+    )
+    oldInventory.resolve([])
+    await oldInventory.promise
+    const joined = cliProxyApiCapabilities.matching.search(
+      config,
+      "second.example",
+    )
+    expect(mocks.list).toHaveBeenCalledTimes(2)
+    newInventory.resolve([])
+    await Promise.all([replacement, joined])
+  })
+
+  it("does not dispatch canceled consumers and retries failed inventory reads", async () => {
+    const controller = new AbortController()
+    controller.abort()
+    await expect(
+      cliProxyApiCapabilities.matching.search(config, "", {
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: "AbortError" })
+    expect(mocks.list).not.toHaveBeenCalled()
+    mocks.list.mockRejectedValueOnce(new Error("temporarily unavailable"))
+    await expect(
+      cliProxyApiCapabilities.matching.search(config, ""),
+    ).rejects.toThrow("temporarily unavailable")
+    mocks.list.mockResolvedValueOnce([])
+    await expect(
+      cliProxyApiCapabilities.matching.search(config, ""),
+    ).resolves.toMatchObject({ items: [], total: 0 })
+    expect(mocks.list).toHaveBeenCalledTimes(2)
+  })
+
+  it("shares pending inventories across search URLs without canceling another consumer", async () => {
+    const inventory = createDeferred<CliProxyApiResource[]>()
+    mocks.list.mockReturnValueOnce(inventory.promise)
+    const controller = new AbortController()
+    const first = cliProxyApiCapabilities.matching.search(
+      config,
+      "upstream.example",
+      {
+        signal: controller.signal,
+        requestScheduling: { priority: "background" },
+      },
+    )
+    const firstOutcome = Promise.allSettled([first])
+    const second = cliProxyApiCapabilities.matching.search(
+      config,
+      "other.example",
+    )
+    controller.abort()
+    const readOptions = mocks.list.mock.calls[0][1]
+    expect(mocks.list).toHaveBeenCalledTimes(1)
+    expect(readOptions.signal.aborted).toBe(false)
+    expect(readOptions.requestScheduling.priority).toBe("foreground")
+    inventory.resolve([
+      resource,
+      {
+        id: "other",
+        kind: "codex-api-key",
+        value: { "base-url": "https://other.example", "api-key": "other-key" },
+      },
+    ])
+    expect(await firstOutcome).toEqual([
+      {
+        status: "rejected",
+        reason: expect.objectContaining({ name: "AbortError" }),
+      },
+    ])
+    await expect(second).resolves.toMatchObject({
+      total: 1,
+      items: [{ base_url: "https://other.example", key: "other-key" }],
+    })
+
+    // A later import must see any edits made after the shared read completed.
+    mocks.list.mockResolvedValueOnce([])
+    await expect(
+      cliProxyApiCapabilities.matching.search(config, "other.example"),
+    ).resolves.toMatchObject({ total: 0, items: [] })
+    expect(mocks.list).toHaveBeenCalledTimes(2)
+  })
+
   it("validates configuration using an authenticated inventory read", async () => {
     expect(await cliProxyApiCapabilities.config.checkValid()).toBe(true)
     expect(mocks.list).toHaveBeenCalledWith(config)

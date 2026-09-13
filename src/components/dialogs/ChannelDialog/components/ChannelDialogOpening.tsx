@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next"
 
-import { Button } from "~/components/ui"
+import { Alert } from "~/components/ui"
 import { presentManagedResourceFailure } from "~/features/ManagedSiteChannels/presentation/managedResourceFailurePresentation"
 import {
   NativeResourceEditorLoadingSkeleton,
@@ -36,6 +36,16 @@ export function ChannelDialogOpening({
   )
   if (opening.status === "idle") return null
   const loadingLabel = t("channelDialog:opening.loading")
+  const failureDescription = t(
+    "managedSiteChannels:alerts.editorLoadError.description",
+  )
+  const failureMessage =
+    opening.status === "failure"
+      ? presentManagedResourceFailure(opening.failure, {
+          category: "",
+          message: failureDescription,
+        }).message
+      : null
   return (
     <ChannelEditorShell
       isOpen
@@ -47,26 +57,27 @@ export function ChannelDialogOpening({
             : "channelDialog:title.view",
       )}
       onClose={onClose}
-      onSubmit={(event) => event.preventDefault()}
+      onSubmit={(event) => {
+        event.preventDefault()
+        if (opening.status === "failure") onRetry()
+      }}
       closeLabel={t("common:actions.cancel")}
-      showSubmit={false}
+      showSubmit={opening.status === "failure"}
+      submitLabel={t("common:actions.retry")}
     >
       {opening.status === "failure" ? (
-        <div className="space-y-3">
-          <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-            {
-              presentManagedResourceFailure(opening.failure, {
-                category: "",
-                message: t(
-                  "managedSiteChannels:alerts.editorLoadError.description",
-                ),
-              }).message
-            }
-          </p>
-          <Button type="button" variant="outline" onClick={onRetry}>
-            {t("common:actions.retry")}
-          </Button>
-        </div>
+        <Alert
+          compact
+          variant="destructive"
+          title={t("managedSiteChannels:alerts.editorLoadError.title")}
+          description={failureDescription}
+        >
+          {failureMessage && failureMessage !== failureDescription ? (
+            <p className="mt-3 border-t border-current/15 pt-3 text-xs leading-relaxed wrap-anywhere whitespace-pre-wrap opacity-80">
+              {failureMessage}
+            </p>
+          ) : null}
+        </Alert>
       ) : (
         <div aria-busy="true">
           {showSkeleton ? (

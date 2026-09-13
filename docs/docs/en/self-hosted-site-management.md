@@ -68,6 +68,8 @@ When performing sensitive operations (e.g., viewing a channel's real key), if th
 
 - For details, see: [New API Security Verification](./new-api-security-verification.md)
 
+<a id="channel-migration"></a>
+
 ### 4. Channel Migration (Beta)
 
 Copy channels from the current self-hosted site to another configured site without recreating each one manually. Configure connections for both sites before starting.
@@ -78,6 +80,10 @@ Copy channels from the current self-hosted site to another configured site witho
 4. Check each result. If a result is **"Uncertain"**, refresh the list and inspect the target site before deciding whether to retry, to avoid duplicates.
 
 Migration only creates new channels. It does not modify the source, detect duplicates, overwrite existing channels, or roll back changes automatically.
+
+**Multi-key channels**: The preview compares source and target key counts. New API, Octopus, AxonHub, and supported CLIProxyAPI API-key providers can export their complete key lists. If the target can retain the keys and their enabled states together, migration creates one multi-key channel. Otherwise, it creates a channel per key, appends `[Key 1]`, `[Key 2]`, etc. to the names, and reports each result separately. Splitting may change traffic distribution.
+
+Key enabled states are preserved, but rotation policies, disable reasons, runtime history, and provider-specific per-key proxy or weight settings may not be retained. Check the preview warnings. A source that cannot export all keys is blocked. If key counts or enabled states change during execution, refresh the preview before handling unfinished items. Successful creations are never retried automatically.
 
 Supported channel types and settings vary by system; follow the statuses and guidance in the migration preview. Groups, model mappings, priorities, and other settings may change or be omitted. After migration, check the channel settings and enabled status on the target site.
 

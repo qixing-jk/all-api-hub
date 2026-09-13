@@ -55,6 +55,7 @@ export function useInvalidKeyDeletion({
   const [selectedInvalidResourceKeys, setSelectedInvalidResourceKeys] =
     useState<Set<string>>(() => new Set())
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
+  const [cleanupLinkedChannels, setCleanupLinkedChannels] = useState(false)
   const [isDeletingInvalidResources, setIsDeletingInvalidResources] =
     useState(false)
   const [deleteResult, setDeleteResult] = useState<
@@ -107,7 +108,10 @@ export function useInvalidKeyDeletion({
     try {
       const response = await sendAccountKeyRepairMessage(
         AccountKeyRepairMessageTypes.DeleteInvalidResources,
-        { resources: resourcesToDelete },
+        {
+          resources: resourcesToDelete,
+          ...(cleanupLinkedChannels ? { cleanupLinkedChannels: true } : {}),
+        },
       )
 
       if (!response?.success || !response.data) {
@@ -222,7 +226,12 @@ export function useInvalidKeyDeletion({
     } finally {
       setIsDeletingInvalidResources(false)
     }
-  }, [isDeletingInvalidResources, selectedInvalidResources, setProgress])
+  }, [
+    isDeletingInvalidResources,
+    selectedInvalidResources,
+    setProgress,
+    cleanupLinkedChannels,
+  ])
 
   const deleteResultMessage = !deleteResult
     ? ""
@@ -242,6 +251,8 @@ export function useInvalidKeyDeletion({
           })
 
   return {
+    cleanupLinkedChannels,
+    setCleanupLinkedChannels,
     deleteResultMessage,
     handleDeleteInvalidResources,
     isDeleteConfirmOpen,

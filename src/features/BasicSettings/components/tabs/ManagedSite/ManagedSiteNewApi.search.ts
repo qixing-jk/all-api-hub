@@ -1,10 +1,11 @@
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   buildControlDefinition,
   buildSectionDefinition,
   DEFAULT_BREADCRUMBS,
-} from "~/entrypoints/options/search/registryHelpers"
-import type { OptionsSearchItemDefinition } from "~/entrypoints/options/search/types"
+} from "~/features/OptionsSearch/registryHelpers"
+import type { OptionsSearchItemDefinition } from "~/features/OptionsSearch/types"
 
 export const managedSiteNewApiSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
@@ -109,7 +110,7 @@ export const managedSiteNewApiSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:new-api-totp-secret",
     "managedSite",
-    "new-api-totp-secret",
+    SETTINGS_ANCHORS.NEW_API_TOTP_SECRET,
     "settings:newApi.fields.totpSecretLabel",
     646,
     {

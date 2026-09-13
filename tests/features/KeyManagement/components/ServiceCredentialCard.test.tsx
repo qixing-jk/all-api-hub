@@ -436,6 +436,10 @@ describe("ServiceCredentialCard", () => {
       },
     )
 
+    await userEvent
+      .setup()
+      .click(screen.getByTestId("managed-site-status-details"))
+
     expect(
       screen.getByText(
         "keyManagement:managedSiteStatus.descriptions.configMissingOptional",

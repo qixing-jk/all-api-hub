@@ -57,7 +57,7 @@ vi.mock("~/services/tags/tagStorage", () => ({
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
-    exportPreferences: vi.fn(),
+    exportPreferencesForBackup: vi.fn(),
   },
 }))
 
@@ -90,7 +90,9 @@ describe("ExportSection analytics", () => {
       accountDataTransfer.exportData as unknown as ReturnType<typeof vi.fn>
     ).mockRejectedValue(new Error("export failed"))
     ;(
-      userPreferences.exportPreferences as unknown as ReturnType<typeof vi.fn>
+      userPreferences.exportPreferencesForBackup as unknown as ReturnType<
+        typeof vi.fn
+      >
     ).mockRejectedValue(new Error("export failed"))
   })
 

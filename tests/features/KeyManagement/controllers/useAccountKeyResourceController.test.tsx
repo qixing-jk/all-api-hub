@@ -47,6 +47,20 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     startProductAnalyticsActionMock(...args),
 }))
 
+const cleanupMocks = vi.hoisted(() => ({ prepare: vi.fn(), finish: vi.fn() }))
+vi.mock("~/services/managedSites/linkedChannelCleanup", () => ({
+  deleteWithLinkedChannelCleanup: async (
+    input: unknown,
+    deleteSource: () => Promise<void>,
+  ) => {
+    const task = input ? await cleanupMocks.prepare(input) : null
+    await deleteSource()
+    await cleanupMocks.finish(task)
+  },
+  prepareLinkedChannelCleanup: cleanupMocks.prepare,
+  finishLinkedChannelCleanup: cleanupMocks.finish,
+}))
+
 const createAccount = (id: string) =>
   ({
     id,
@@ -2292,62 +2306,104 @@ describe("useAccountKeyResourceController", () => {
     )
   })
 
-  it("deletes a native key from all-account mode without changing the selected account", async () => {
-    const facts = {
-      ...createFacts("scope-native", "key-native"),
-      ref: {
-        ...createFacts("scope-native", "key-native").ref,
-        accountId: "account-native",
-      },
-    }
-    const collection = {
-      list: vi.fn().mockResolvedValue({ items: [facts] }),
-      openEditEditor: vi.fn(),
-      delete: vi.fn().mockResolvedValue(undefined),
-    }
-    const openCollection = vi.fn().mockResolvedValue(collection)
-    const openNativeResources = vi.fn().mockResolvedValue({
-      resolveDefaultScope: vi.fn().mockResolvedValue({
-        scopeKey: "scope-native",
-        routeKey: "default",
-        displayName: "Default",
-        isDefault: true,
-      }),
-      openCollection,
-    })
-    mockNativeResourceSession(openNativeResources)
-    const { result } = renderHook(() =>
-      useAccountKeyResourceController({
-        accounts: [createAccount("account-native")],
-        selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
-      }),
-    )
-
-    await waitFor(() => expect(result.current.rows).toEqual([facts]))
-    let opened = false
-    act(() => {
-      opened = result.current.openDelete(facts.ref)
-    })
-    expect(opened).toBe(true)
-    await waitFor(() => expect(result.current.deleteState.isOpen).toBe(true))
-    await act(async () => result.current.confirmDelete())
-
-    expect(collection.delete).toHaveBeenCalledWith(
-      facts.ref,
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
-    )
-    expect(collection.list).toHaveBeenCalledTimes(2)
-    expect(result.current.mode).toBe("all")
-    expect(trackCompleteMock).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Success,
-      expect.objectContaining({
-        insights: expect.objectContaining({
-          mode: PRODUCT_ANALYTICS_MODE_IDS.All,
-          selectedCount: 1,
+  it.each([false, true, "unavailable"] as const)(
+    "deletes a native key from all-account mode (linked cleanup: %s)",
+    async (cleanupLinkedChannels) => {
+      cleanupMocks.prepare.mockReset().mockResolvedValue({ id: "pending" })
+      cleanupMocks.finish.mockReset().mockResolvedValue(undefined)
+      const facts = {
+        ...createFacts("scope-native", "key-native"),
+        ref: {
+          ...createFacts("scope-native", "key-native").ref,
+          accountId: "account-native",
+        },
+      }
+      const collection = {
+        list: vi.fn().mockResolvedValue({ items: [facts] }),
+        openEditEditor: vi.fn(),
+        delete: vi.fn().mockResolvedValue(undefined),
+      }
+      const openCollection = vi.fn().mockResolvedValue(collection)
+      const openNativeResources = vi.fn().mockResolvedValue({
+        runtimeKey: {
+          resolve: vi
+            .fn()
+            .mockResolvedValue(
+              cleanupLinkedChannels === "unavailable"
+                ? { kind: "unavailable" }
+                : { kind: "resolved", secret: "source-key" },
+            ),
+        },
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "scope-native",
+          routeKey: "default",
+          displayName: "Default",
+          isDefault: true,
         }),
-      }),
-    )
-  })
+        openCollection,
+      })
+      mockNativeResourceSession(openNativeResources)
+      const { result } = renderHook(() =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-native")],
+          selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+        }),
+      )
+
+      await waitFor(() => expect(result.current.rows).toEqual([facts]))
+      let opened = false
+      act(() => {
+        opened = result.current.openDelete(facts.ref)
+      })
+      expect(opened).toBe(true)
+      await waitFor(() => expect(result.current.deleteState.isOpen).toBe(true))
+      await act(async () =>
+        result.current.confirmDelete(Boolean(cleanupLinkedChannels)),
+      )
+
+      if (cleanupLinkedChannels === "unavailable") {
+        expect(collection.delete).not.toHaveBeenCalled()
+        expect(cleanupMocks.prepare).not.toHaveBeenCalled()
+        expect(result.current.deleteState.failure?.code).toBe("unavailable")
+        return
+      }
+      expect(cleanupMocks.prepare).toHaveBeenCalledTimes(
+        cleanupLinkedChannels ? 1 : 0,
+      )
+      if (cleanupLinkedChannels) {
+        expect(cleanupMocks.prepare).toHaveBeenCalledWith({
+          source: { accountId: "account-native", ref: facts.ref },
+          baseUrl: "https://example.invalid",
+          key: "source-key",
+        })
+        const session = await openNativeResources.mock.results[0].value
+        expect(session.runtimeKey.resolve).toHaveBeenCalledWith(facts.ref, {
+          signal: expect.any(AbortSignal),
+        })
+        expect(cleanupMocks.prepare.mock.invocationCallOrder[0]).toBeLessThan(
+          collection.delete.mock.invocationCallOrder[0],
+        )
+        expect(cleanupMocks.finish.mock.invocationCallOrder[0]).toBeGreaterThan(
+          collection.delete.mock.invocationCallOrder[0],
+        )
+      }
+      expect(collection.delete).toHaveBeenCalledWith(
+        facts.ref,
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      )
+      expect(collection.list).toHaveBeenCalledTimes(2)
+      expect(result.current.mode).toBe("all")
+      expect(trackCompleteMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        expect.objectContaining({
+          insights: expect.objectContaining({
+            mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+            selectedCount: 1,
+          }),
+        }),
+      )
+    },
+  )
 
   it("drains cursors and applies controlled search and status filters", async () => {
     const first = createFacts("workspace-default-id", "key-first")

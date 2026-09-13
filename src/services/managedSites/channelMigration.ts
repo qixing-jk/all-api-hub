@@ -14,12 +14,14 @@ import type {
   ManagedSiteMigrationSelectionValidationContext,
   ManagedSiteMigrationTargetPreparation,
 } from "~/types/managedSiteMigrationCapability"
+import { MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES } from "~/types/managedSiteMigrationCapability"
 
 import {
   executeManagedSiteMigrationCore,
   prepareManagedSiteMigrationPreviewCore,
 } from "./channelMigrationCanonicalOrchestrator"
 import { resolveManagedSiteMigrationCapability } from "./channelMigrationCapabilityRegistry"
+import { planMigrationCredentials } from "./channelMigrationCredentials"
 import { toMigrationWarningCodes } from "./channelMigrationWarnings"
 
 const migrationBlockers = MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES
@@ -58,7 +60,7 @@ export async function prepareManagedSiteMigrationPreview(params: {
   const targetCapability = hasValidSourceSelection
     ? resolveManagedSiteMigrationCapability(params.targetSiteType)?.target
     : undefined
-  return await prepareManagedSiteMigrationPreviewCore({
+  const preview = await prepareManagedSiteMigrationPreviewCore({
     sourceSiteType: params.sourceSiteType,
     targetSiteType: params.targetSiteType,
     selections: params.selections,
@@ -89,6 +91,11 @@ export async function prepareManagedSiteMigrationPreview(params: {
       )
     },
   })
+  return planMigrationCredentials(
+    preview,
+    (source) =>
+      targetCapability?.supportsMultipleCredentials?.(source) === true,
+  )
 }
 
 /** Executes canonical migration rows without retaining credentials or commands. */
@@ -174,6 +181,15 @@ export async function executeManagedSiteMigration(params: {
     create: (command) => {
       if (!targetCapability)
         throw new Error("Migration target is not registered")
+      if (
+        command.credentials &&
+        !targetCapability.supportsMultipleCredentials?.(command.source)
+      )
+        return Promise.resolve({
+          status: "failed",
+          failureCode:
+            MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.TargetRejected,
+        })
       return targetCapability.create(command, params.options)
     },
   })

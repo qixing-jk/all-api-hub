@@ -232,6 +232,8 @@ export function useChannelDialog() {
       accountBaseUrl: params.accountBaseUrl,
       models: params.models,
       key: params.key,
+      // URL candidates can expose readable keys even when their models differ.
+      resolveHiddenKeys: true,
       protectionBypassExecution: createAutomaticProtectionBypassExecution(
         PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
         PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
@@ -248,6 +250,16 @@ export function useChannelDialog() {
         existingChannelName: exactMatch.name,
         advisoryWarning: null,
       }
+    }
+
+    // A complete negative key comparison rules out duplicate credentials,
+    // even when channels share an upstream URL or model configuration.
+    if (
+      resolution.searchCompleted &&
+      resolution.key.comparable &&
+      !resolution.key.matched
+    ) {
+      return { existingChannelName: null, advisoryWarning: null }
     }
 
     if (
@@ -471,6 +483,7 @@ export function useChannelDialog() {
       )
       const formData = await managedSite.channelDrafts.prepareFormData(
         buildManagedSiteChannelDraftSource(resolvedRuntimeKey),
+        { purpose: "native-editor" },
       )
       if (!shouldContinue()) {
         return cancelOpen()
@@ -569,6 +582,7 @@ export function useChannelDialog() {
       ].filter(Boolean) as string[]
       const formData = await managedSite.channelDrafts.prepareFormData(
         buildManagedSiteCredentialDraftSource(credentials),
+        { purpose: "native-editor" },
       )
 
       const duplicateState = await resolvePrefilledDialogDuplicateState({

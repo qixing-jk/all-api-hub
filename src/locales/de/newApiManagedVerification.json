@@ -3,6 +3,7 @@
     "actions": {
       "cleanupOwnedSessionAndRetry": "Erweiterungssitzungen bereinigen und erneut versuchen",
       "close": "Schließen",
+      "configureTotp": "Automatische Verifizierung einrichten",
       "openSite": "Website öffnen",
       "retry": "Wiederholen",
       "retryAfterPasskey": "Nach Passkey erneut versuchen",
@@ -28,7 +29,8 @@
       "codeLabel": "Bestätigungscode"
     },
     "hints": {
-      "manualFallback": "Die manuelle Codeeingabe bleibt auch dann verfügbar, wenn automatisches TOTP konfiguriert ist.",
+      "configureTotp": "Häufige Verifizierungen? Hinterlege deinen TOTP-Schlüssel unter Einstellungen → {{section}} → {{provider}}, damit die Erweiterung Bestätigungscodes automatisch erzeugen und senden kann.",
+      "manualFallback": "Gib einen Code manuell ein, um diese Verifizierung abzuschließen.",
       "openSettingsShortcut": "Hier können Sie die fehlende Konfiguration vervollständigen und sofort mit der Verifizierung fortfahren.",
       "passkey": "Öffnen Sie die Website, bestätigen Sie dort die Passkey-Aufforderung, kehren Sie anschließend hierher zurück und versuchen Sie es erneut."
     },

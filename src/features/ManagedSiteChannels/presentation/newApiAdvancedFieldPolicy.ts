@@ -64,6 +64,7 @@ export const newApiAdvancedFields: readonly ManagedResourceFieldPresentation[] =
       order: 40,
       resolveLabel: (t) => t("managedSiteChannels:editor.advanced.lastCheck"),
       channelFieldRole: "timestamp",
+      inlineGroup: "detection-summary",
       isConfigured: () => false,
     },
     {
@@ -74,6 +75,7 @@ export const newApiAdvancedFields: readonly ManagedResourceFieldPresentation[] =
       resolveLabel: (t) =>
         t("managedSiteChannels:editor.advanced.detectedModels"),
       channelFieldRole: "model-summary",
+      inlineGroup: "detection-summary",
       isConfigured: () => false,
     },
     {
@@ -84,6 +86,7 @@ export const newApiAdvancedFields: readonly ManagedResourceFieldPresentation[] =
       resolveLabel: (t) =>
         t("managedSiteChannels:editor.advanced.removedModels"),
       channelFieldRole: "model-summary",
+      inlineGroup: "detection-summary",
       isConfigured: () => false,
     },
     {

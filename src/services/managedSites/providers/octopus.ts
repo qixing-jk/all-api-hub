@@ -2,6 +2,7 @@
  * Octopus configuration validation and managed-channel draft preparation.
  */
 import { DEFAULT_OCTOPUS_CHANNEL_FIELDS } from "~/constants/octopus"
+import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
 import {
   userPreferences,
@@ -61,9 +62,10 @@ export async function checkValidOctopusConfig(): Promise<boolean> {
  */
 export async function prepareChannelFormData(
   source: ManagedSiteChannelDraftSource,
+  options?: ManagedSiteChannelDraftRequestOptions,
 ): Promise<ManagedSiteChannelDraft> {
   const { models: availableModels, fetchFailed } =
-    await fetchManagedSiteImportModels(source)
+    await fetchManagedSiteImportModels(source, options)
 
   return {
     name: source.name,

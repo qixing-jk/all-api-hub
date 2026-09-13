@@ -108,6 +108,22 @@ const expectFailureCode = async (promise: Promise<unknown>, code: string) => {
 }
 
 describe("DoneHub native managed resource", () => {
+  it("retains every other key while cleaning a multi-key channel", async () => {
+    mocks.fetchChannelRaw.mockResolvedValue({
+      ...channel,
+      key: "remove-me\nkeep-me\nalso-keep",
+    })
+    const api = await doneHubManagedResourceRegistration.open()
+    const cleanup = await api.openKeyCleanup!((await api.list()).items[0].ref)
+    expect(cleanup.keys).toEqual(["remove-me", "keep-me", "also-keep"])
+    expect(mocks.fetchChannelRaw).toHaveBeenCalledTimes(1)
+    await cleanup.remove([0])
+    expect(mocks.update.mock.calls[0][1]).toEqual({
+      id: channel.id,
+      key: "keep-me\nalso-keep",
+    })
+    expect(mocks.remove).not.toHaveBeenCalled()
+  })
   it("creates native advanced settings from an editor draft", async () => {
     mocks.list
       .mockResolvedValueOnce({ items: [], total: 0 })
@@ -123,7 +139,7 @@ describe("DoneHub native managed resource", () => {
       "doneHub.models": ["model-a"],
       "doneHub.compatibleResponse": true,
       "doneHub.responsesPath": "/native/responses",
-      "doneHub.proxy": "socks5://localhost:1080",
+      "doneHub.proxy": "socks5h://session-%s:password@localhost:1080",
       "doneHub.modelHeaders": '{"X-Project":"fixture"}',
       "doneHub.customParameter": '{"overwrite":true,"temperature":0.5}',
     }
@@ -133,7 +149,7 @@ describe("DoneHub native managed resource", () => {
       config,
       expect.objectContaining({
         compatible_response: true,
-        proxy: "socks5://localhost:1080",
+        proxy: "socks5h://session-%s:password@localhost:1080",
         model_headers: '{"X-Project":"fixture"}',
         custom_parameter: '{"overwrite":true,"temperature":0.5}',
         plugin: { customize: { "16": "/native/responses" } },

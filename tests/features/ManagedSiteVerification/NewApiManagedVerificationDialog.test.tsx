@@ -18,6 +18,12 @@ import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerificat
 import { NEW_API_MANAGED_VERIFICATION_STEPS } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
 
+const openSettingsTabInNewTabMock = vi.fn()
+vi.mock("~/utils/navigation", () => ({
+  openSettingsTabInNewTab: (...args: unknown[]) =>
+    openSettingsTabInNewTabMock(...args),
+}))
+
 const updateNewApiBaseUrlMock = vi.fn()
 const updateNewApiUsernameMock = vi.fn()
 const updateNewApiPasswordMock = vi.fn()
@@ -166,6 +172,40 @@ function render(ui: ReactElement) {
 }
 
 describe("NewApiManagedVerificationDialog", () => {
+  it("opens TOTP settings separately while keeping the verification workflow open", async () => {
+    const user = userEvent.setup()
+    const props = createProps({
+      step: NEW_API_MANAGED_VERIFICATION_STEPS.SECURE_VERIFICATION,
+    })
+    const { rerender } = render(<NewApiManagedVerificationDialog {...props} />)
+    await user.click(
+      screen.getByRole("button", {
+        name: "newApiManagedVerification:dialog.actions.configureTotp",
+      }),
+    )
+    expect(openSettingsTabInNewTabMock).toHaveBeenCalledWith("managedSite", {
+      anchor: "new-api-totp-secret",
+    })
+    expect(props.onClose).not.toHaveBeenCalled()
+    rerender(
+      <NewApiManagedVerificationDialog
+        {...props}
+        request={{
+          ...BASE_REQUEST,
+          config: {
+            ...BASE_REQUEST.config,
+            totpSecret: "configured-test-secret",
+          },
+        }}
+      />,
+    )
+    expect(
+      screen.queryByRole("button", {
+        name: "newApiManagedVerification:dialog.actions.configureTotp",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
   beforeEach(() => {
     document.elementFromPoint ??= (() =>
       null) as typeof document.elementFromPoint

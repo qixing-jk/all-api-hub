@@ -86,6 +86,7 @@ describe("doneHubService additional flows", () => {
         baseUrl: "https://proxy.example.com",
         apiKey: "done-hub-key",
       }),
+      undefined,
     )
     expect(mockResolveDefaultChannelGroups).toHaveBeenCalled()
     expect(result).toMatchObject({
@@ -170,6 +171,7 @@ describe("doneHubService additional flows", () => {
         baseUrl: "https://aihubmix.com",
         apiKey: token.key,
       }),
+      undefined,
     )
     expect(result.base_url).toBe("https://aihubmix.com")
   })

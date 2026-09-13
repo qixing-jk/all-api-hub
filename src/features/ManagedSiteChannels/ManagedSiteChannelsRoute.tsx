@@ -379,7 +379,13 @@ function NativeManagedSiteChannels({
     scopeKey: normalizeManagedUpstreamResourceScopeKey(config?.baseUrl ?? ""),
     onModelsChanged: list.reconcile,
   })
+  const readEditor = useCallback(
+    <T,>(read: () => Promise<T>, signal?: AbortSignal) =>
+      runRead(read, t("channelDialog:fields.key.label"), signal),
+    [runRead, t],
+  )
   const mutation = useManagedResourceMutationController({
+    readEditor,
     workspace: list.workspace,
     refresh: list.refreshSilently,
     resolveRef: list.resolveRef,

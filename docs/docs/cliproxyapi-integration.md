@@ -48,7 +48,8 @@ OpenAI Compatibility 提供商支持多个 API 密钥。可以逐条添加、查
 - **连接返回 401 或 403？** 检查管理密钥和服务端远程访问设置；客户端 API Key 不能代替管理密钥。
 - **某类提供商返回 404？** 检查部署地址、管理接口是否启用，以及后端版本是否支持该类型。
 - **提交后提示需要刷新或结果不确定？** 先刷新列表核对服务器上的实际状态，再决定是否重试。其他客户端同时修改配置时，过期编辑可能会被拒绝。
-- **是否管理 OAuth 账号或全部服务设置？** 当前管理对象是 API Key 提供商。OAuth 登录、认证文件和全局服务设置仍使用 CLIProxyAPI 自带的管理界面；跨站渠道迁移和自动模型同步尚未接入。
+- **能否迁移到其他站点？** 在渠道列表开启“渠道迁移”。支持 OpenAI Compatibility、Claude、Gemini、xAI 和 Codex API Key 提供商的已适配类型；以预览结果为准。OpenAI Compatibility 的多个 Key 可以整组迁移，目标不能保留时会按 Key 拆分。模型别名和每个 Key 的代理、权重等专有设置不会直接复制。详见[渠道迁移](./self-hosted-site-management.md#channel-migration)。
+- **是否管理 OAuth 账号或全部服务设置？** 当前管理对象是 API Key 提供商。OAuth 登录、认证文件和全局服务设置仍使用 CLIProxyAPI 自带的管理界面；OAuth、Vertex 结构化凭据、Interactions 类型的跨站迁移及自动模型同步尚未接入。
 
 ## 相关文档
 

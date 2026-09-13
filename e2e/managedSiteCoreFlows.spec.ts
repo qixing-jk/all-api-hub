@@ -790,6 +790,11 @@ test("creates a managed-site channel from channel management", async ({
     .fill("E2E Created OpenAI")
   await page
     .getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput)
+    .or(
+      page
+        .getByRole("group", { name: "API Key 1", exact: true })
+        .locator("input[type=password]"),
+    )
     .fill("sk-e2e-created-channel")
   await page
     .getByTestId(CHANNEL_DIALOG_TEST_IDS.modelsInput)

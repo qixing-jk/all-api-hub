@@ -59,6 +59,9 @@ export const discoverOpenAICompatibleModels = async (
   params: OpenAIAuthParams,
 ): Promise<OpenAICompatibleModelDiscovery> => {
   const request = {
+    ...(params.requestScheduling
+      ? { requestScheduling: params.requestScheduling }
+      : {}),
     baseUrl: params.baseUrl,
     auth: {
       authType: AuthTypeEnum.AccessToken,

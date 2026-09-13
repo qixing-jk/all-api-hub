@@ -14,6 +14,7 @@ import {
 import type { NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/factory"
 import type { DoneHubChannelCommand, DoneHubChannelRaw } from "~/types/doneHub"
 import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
+import { isValidProxyUrl } from "~/utils/core/proxyUrl"
 
 const advancedFields = [
   [fields.CompatibleResponse, "compatible_response", types.Boolean],
@@ -54,15 +55,7 @@ const isJsonObject = (value: string, stringsOnly: boolean) => {
 
 const isProxyUrl = (value: string) => {
   if (!value.trim()) return true
-  try {
-    const url = new URL(value.replaceAll("%s", "session"))
-    return (
-      ["http:", "https:", "socks5:", "socks5h:"].includes(url.protocol) &&
-      Boolean(url.hostname)
-    )
-  } catch {
-    return false
-  }
+  return isValidProxyUrl(value.replaceAll("%s", "session"))
 }
 
 /** Adds DoneHub-native fields without changing the shared New API-family command. */

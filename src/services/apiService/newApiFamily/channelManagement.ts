@@ -332,3 +332,26 @@ export async function fetchDraftChannelModels(
 
   return readChannelModelResponse(response, endpoint)
 }
+
+/**
+ * Native multi-key actions preserve status/reason indices when deleting entries.
+ * https://github.com/QuantumNous/new-api/blob/main/controller/channel.go#L1499
+ */
+export function manageChannelKey(
+  request: ApiServiceRequest,
+  channelId: number,
+  action: "delete_key" | "enable_key" | "disable_key",
+  keyIndex: number,
+) {
+  return newApiFamilyRequests.envelope<void>(request, {
+    endpoint: "/api/channel/multi_key/manage",
+    options: {
+      method: "POST",
+      body: JSON.stringify({
+        channel_id: channelId,
+        action,
+        key_index: keyIndex,
+      }),
+    },
+  })
+}

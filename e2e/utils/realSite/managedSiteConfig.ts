@@ -55,9 +55,9 @@ export function resolveNewApiManagedSiteConfig(): ManagedSiteConfigResolution<
   return {
     config: {
       ...resolved.config,
-      username: readEnv("AAH_E2E_NEW_API_USERNAME") ?? "",
-      password: readEnv("AAH_E2E_NEW_API_PASSWORD") ?? "",
-      totpSecret: readEnv("AAH_E2E_NEW_API_TOTP_SECRET") ?? "",
+      username: readEnv("AAH_E2E_NEW_API_ADMIN_USERNAME") ?? "",
+      password: readEnv("AAH_E2E_NEW_API_ADMIN_PASSWORD") ?? "",
+      totpSecret: readEnv("AAH_E2E_NEW_API_ADMIN_TOTP_SECRET") ?? "",
     },
     missingEnvKeys: [],
   }

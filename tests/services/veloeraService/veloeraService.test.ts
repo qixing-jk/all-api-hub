@@ -276,10 +276,12 @@ describe("veloeraService", () => {
         ),
       )
 
-      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith({
-        baseUrl: "https://aihubmix.com",
-        apiKey: token.key,
-      })
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: "https://aihubmix.com",
+          apiKey: token.key,
+        }),
+      )
       expect(result.base_url).toBe("https://aihubmix.com")
     })
   })

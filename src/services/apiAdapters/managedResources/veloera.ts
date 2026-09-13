@@ -19,6 +19,7 @@ import type { ManagedSiteChannelModelProbe } from "~/services/apiAdapters/contra
 import { attributeCreatedNativeResource } from "~/services/apiAdapters/managedResources/createAttribution"
 import { defineNativeResourceKind } from "~/services/apiAdapters/managedResources/factory"
 import { createNewApiFamilyEditorBindings } from "~/services/apiAdapters/managedResources/newApiEditor"
+import { rethrowNewApiFamilyChannelReadError } from "~/services/apiAdapters/managedResources/newApiFamilyChannelErrors"
 import { createNewApiFamilyResourceFacts } from "~/services/apiAdapters/managedResources/newApiFamilyResourceFacts"
 import { throwIfNewApiResourceOperationAborted } from "~/services/apiAdapters/managedResources/newApiResourceUtils"
 import { veloeraManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/veloera"
@@ -285,7 +286,9 @@ export async function openVeloeraNativeResourceOperations(): Promise<VeloeraNati
     list: (query, options) => listChannels(nativeConfig, query, options),
     get: async (locator, options) => {
       throwIfNewApiResourceOperationAborted(options)
-      return await channels.get(nativeConfig.config, locator, options)
+      return await channels
+        .get(nativeConfig.config, locator, options)
+        .catch(rethrowNewApiFamilyChannelReadError)
     },
     loadSecret: async (locator, options) => {
       throwIfNewApiResourceOperationAborted(options)
@@ -388,6 +391,8 @@ const veloeraNativeDefinition = {
     locator: number,
     options?: ResourceOperationOptions,
   ) => operations.delete(locator, options),
+  scalarKeyCleanup: "delimited" as const,
+  scalarKeyCleanupSecret: (detail: VeloeraChannel) => detail.key,
   mapFailure,
 }
 

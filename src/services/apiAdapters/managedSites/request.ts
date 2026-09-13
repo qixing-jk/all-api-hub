@@ -1,3 +1,4 @@
+import type { RequestScheduling } from "~/services/apiTransport/requestScheduling"
 import type {
   ApiServiceRequest,
   ApiTransportRequestObserver,
@@ -18,6 +19,7 @@ type ManagedSiteApiServiceConfig = {
 }
 
 type ManagedSiteApiServiceRequestOptions = {
+  requestScheduling?: RequestScheduling
   signal?: AbortSignal | null
   bypassSiteRequestLimit?: boolean
   observer?: ApiTransportRequestObserver
@@ -37,6 +39,9 @@ export function toManagedSiteApiServiceRequest(
       accessToken: config.adminToken,
       userId: config.userId,
     },
+    ...(options?.requestScheduling
+      ? { requestScheduling: options.requestScheduling }
+      : {}),
     ...(options?.signal ? { abortSignal: options.signal } : {}),
     ...(options?.bypassSiteRequestLimit
       ? { bypassSiteRequestLimit: true }

@@ -25,6 +25,7 @@ import {
 } from "~/services/managedSites/providers/sub2api"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import {
   buildManagedResourceMatchCandidate,
   matchingResourceRef,
@@ -78,6 +79,60 @@ const secretProviders = [
 
 describe("native managed-resource matching", () => {
   beforeEach(() => vi.clearAllMocks())
+
+  it("shares the complete AxonHub pagination across different upstream URLs", async () => {
+    const page =
+      createDeferred<Awaited<ReturnType<typeof listAxonHubChannelPage>>>()
+    vi.mocked(listAxonHubChannelPage)
+      .mockReturnValueOnce(page.promise)
+      .mockResolvedValue({ items: [] })
+    const matching = axonHubManagedSiteCapabilities.matching
+    const first = matching.search(axonConfig, "https://first.example")
+    const second = matching.search({ ...axonConfig }, "https://second.example")
+    expect(listAxonHubChannelPage).toHaveBeenCalledTimes(1)
+    page.resolve({ items: [], nextCursor: "last-page" })
+    await expect(Promise.all([first, second])).resolves.toEqual([
+      { items: [], total: 0, type_counts: {} },
+      { items: [], total: 0, type_counts: {} },
+    ])
+    expect(listAxonHubChannelPage).toHaveBeenCalledTimes(2)
+  })
+
+  it.each([
+    {
+      site: "Sub2API",
+      read: vi.mocked(listSub2ApiApiKeyAccounts),
+      search: (url: string) =>
+        sub2ApiManagedSiteCapabilities.matching.search(subConfig, url),
+    },
+    {
+      site: "Veloera",
+      read: vi.mocked(listAllChannels),
+      search: (url: string) =>
+        veloeraManagedSiteCapabilities.matching.search(
+          { ...subConfig, userId: "1" },
+          url,
+        ),
+    },
+  ])(
+    "shares $site inventory across different upstream URLs",
+    async ({ read, search }) => {
+      const inventory = createDeferred<{
+        items: never[]
+        total: number
+        type_counts: Record<string, number>
+      }>()
+      read.mockReturnValue(inventory.promise)
+      const first = search("https://first.example")
+      const second = search("https://second.example")
+      expect(read).toHaveBeenCalledTimes(1)
+      inventory.resolve({ items: [], total: 0, type_counts: {} })
+      await expect(Promise.all([first, second])).resolves.toEqual([
+        { items: [], total: 0, type_counts: {} },
+        { items: [], total: 0, type_counts: {} },
+      ])
+    },
+  )
 
   it.each(secretProviders)(
     "validates the entire $capabilities.siteType hydration selection before revealing its first key",
@@ -175,10 +230,14 @@ describe("native managed-resource matching", () => {
         PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
       ),
     })
-    expect(listAxonHubChannelPage).toHaveBeenLastCalledWith(axonConfig, {
-      cursor: "page-2",
-      limit: 100,
-    })
+    expect(listAxonHubChannelPage).toHaveBeenLastCalledWith(
+      axonConfig,
+      {
+        cursor: "page-2",
+        limit: 100,
+      },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    )
     expect(result.key.channel).toEqual({
       ref: matchingResourceRef("Channel:opaque-id", {
         siteType: SITE_TYPES.AXON_HUB,
@@ -285,6 +344,7 @@ describe("native managed-resource matching", () => {
       "https://upstream.example",
     )
     expect(listAllChannels).toHaveBeenCalledWith(expect.anything(), {
+      signal: expect.any(AbortSignal),
       requireCompleteInventory: true,
     })
     expect(result?.items[0]).not.toHaveProperty("balance")
@@ -581,8 +641,18 @@ describe("native managed-resource matching", () => {
     ).resolves.toEqual([{ ...masked, key: "hydrated-key" }, usable])
     expect(masked.key).toBe("********")
     expect(getUnmaskedProviderKey).toHaveBeenCalledTimes(2)
-    expect(getUnmaskedProviderKey).toHaveBeenNthCalledWith(1, subConfig, 7)
-    expect(getUnmaskedProviderKey).toHaveBeenNthCalledWith(2, subConfig, 8)
+    expect(getUnmaskedProviderKey).toHaveBeenNthCalledWith(
+      1,
+      subConfig,
+      7,
+      undefined,
+    )
+    expect(getUnmaskedProviderKey).toHaveBeenNthCalledWith(
+      2,
+      subConfig,
+      8,
+      undefined,
+    )
   })
 
   it("redacts the Claude Code Hub admin key from failed matching reads", async () => {

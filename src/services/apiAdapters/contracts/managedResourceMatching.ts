@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next"
 
 import type { ManagedSiteType } from "~/constants/siteType"
+import type { ScheduledReadOptions } from "~/services/apiTransport/requestScheduling"
 import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
 import type {
   ManagedResourceMatchCandidate,
@@ -43,6 +44,7 @@ export interface ManagedResourceMatchingCapability<
   search(
     config: TConfig,
     baseUrl: string,
+    options?: ScheduledReadOptions,
   ): Promise<ManagedResourceMatchList | null>
   fetchSecretKey?(
     config: TConfig,

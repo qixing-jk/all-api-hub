@@ -7,6 +7,7 @@ import {
   type EditableResourceProjection,
   type ManagedResourceCreateSeed,
   type ManagedResourceCreateSeedKind,
+  type ManagedResourceKeyCleanup,
   type ManagedResourceRef,
   type ManagedResourceRegistration,
   type ManagedResourceWorkspace,
@@ -19,6 +20,7 @@ import {
   type ResourceOperationOptions,
   type ResourceValidationResult,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { scalarKeyCleanup } from "~/services/apiAdapters/managedResources/keyCleanup"
 import {
   assertNativeResourceFacts,
   createNativeResourceRefBoundary,
@@ -141,6 +143,14 @@ export type NativeResourceKindDefinition<
     options?: ResourceOperationOptions,
   ): Promise<ManagedSiteMutationResult<void>>
   mapFailure(error: unknown): ResourceFailure
+  keyCleanup?(
+    config: TConfig,
+    detail: TDetail,
+    options?: ResourceOperationOptions,
+  ): Promise<ManagedResourceKeyCleanup>
+  scalarKeyCleanup?: "single" | "delimited"
+  /** Reuse a secret already returned by this cleanup detail read. */
+  scalarKeyCleanupSecret?: (detail: TDetail) => string | undefined
 }
 
 const invalidPublicInput = (fieldIssues?: ResourceFailure["fieldIssues"]) =>
@@ -546,6 +556,62 @@ export function defineNativeResourceKind<
         }
         const rejectUnsupported = () => Promise.reject(invalidPublicInput())
         const workspace: ManagedResourceWorkspace = {
+          ...(definition.keyCleanup || definition.scalarKeyCleanup
+            ? {
+                openKeyCleanup: (
+                  ref: ManagedResourceRef,
+                  options?: ResourceOperationOptions,
+                ) =>
+                  mapOperationFailure(async () => {
+                    const { detail } = await readDetail(ref, options)
+                    if (definition.keyCleanup)
+                      return definition.keyCleanup(config, detail, options)
+                    const fields =
+                      definition.createSeedBindings?.find(
+                        (binding) => binding.kind === "managed-channel-import",
+                      )?.sourceFieldIds ?? {}
+                    const key = Object.keys(fields).find(
+                      (id) => fields[id] === "credential",
+                    )
+                    const baseUrl = Object.keys(fields).find(
+                      (id) => fields[id] === "baseUrl",
+                    )
+                    if (!key || !baseUrl) throw invalidPublicInput()
+                    return scalarKeyCleanup(
+                      await definition.editEditor(config, detail, options),
+                      async (command, updateOptions) => {
+                        if (definition.scalarKeyCleanup === "delimited") {
+                          // A whole-list replacement must not overwrite credentials added after inspection.
+                          const { detail: latest } = await readDetail(
+                            ref,
+                            updateOptions,
+                          )
+                          const latestSecret =
+                            definition.scalarKeyCleanupSecret?.(latest)
+                          if (
+                            typeof latestSecret !== "string" ||
+                            latestSecret !==
+                              definition.scalarKeyCleanupSecret?.(detail)
+                          )
+                            throw new ManagedResourceError({
+                              code: "resource_changed",
+                            })
+                        }
+                        return definition.update(
+                          config,
+                          detail,
+                          command,
+                          updateOptions,
+                        )
+                      },
+                      options,
+                      definition.scalarKeyCleanup === "delimited",
+                      { key, baseUrl },
+                      definition.scalarKeyCleanupSecret?.(detail),
+                    )
+                  }, mapFailure),
+              }
+            : {}),
           capabilities,
           list: (query, listOptions) =>
             query?.search && !capabilities.canSearch
@@ -623,7 +689,33 @@ export function defineNativeResourceKind<
                           ...editorDefinition,
                           initialValues: {
                             ...editorDefinition.initialValues,
-                            ...seedProjection,
+                            ...Object.fromEntries(
+                              Object.entries(seedProjection).map(
+                                ([fieldId, value]) => [
+                                  fieldId,
+                                  editorDefinition.fields.some(
+                                    (field) =>
+                                      field.fieldId === fieldId &&
+                                      field.type === "secret-list",
+                                  ) &&
+                                  value &&
+                                  typeof value === "object" &&
+                                  "kind" in value &&
+                                  value.kind === "replace"
+                                    ? {
+                                        kind: "secret-list",
+                                        entries: [
+                                          {
+                                            id: "new",
+                                            fields: {},
+                                            secret: value,
+                                          },
+                                        ],
+                                      }
+                                    : value,
+                                ],
+                              ),
+                            ),
                           },
                         }
                       : editorDefinition,

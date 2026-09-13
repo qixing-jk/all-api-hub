@@ -103,7 +103,7 @@ export const handleExportAll = async (
     ] = await Promise.all([
       accountDataTransfer.exportData(),
       tagStorage.exportTagStore(),
-      userPreferences.exportPreferences(),
+      userPreferences.exportPreferencesForBackup(),
       featureGuidanceState.getState(),
       channelConfigStorage.exportConfigs(),
       apiCredentialProfilesStorage.exportConfig(),
@@ -200,7 +200,7 @@ export const handleExportPreferences = async (
     setIsExporting(true)
 
     const [preferencesData, featureGuidance] = await Promise.all([
-      userPreferences.exportPreferences(),
+      userPreferences.exportPreferencesForBackup(),
       featureGuidanceState.getState(),
     ])
     const exportData: BackupPreferencesPartialV2 = {

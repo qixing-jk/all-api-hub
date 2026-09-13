@@ -33,6 +33,7 @@ import {
   VeloeraChannelTypeNames,
 } from "~/constants/veloera"
 import {
+  adaptManagedCredentialPolicy,
   createManagedResourceFieldPolicyRegistry,
   defineManagedResourceFieldPolicy,
   getManagedResourceFieldOptionLabel,
@@ -999,4 +1000,49 @@ describe("managed resource field policy", () => {
       }),
     ).toThrow()
   })
+})
+
+it("separates the editable key state from its previous disable reason", () => {
+  const policy = adaptManagedCredentialPolicy(
+    [
+      {
+        fieldId: "key",
+        type: "secret-list",
+        savedEntries: [],
+        entryFields: [{ fieldId: "enabled", type: "boolean" }],
+      },
+    ],
+    {
+      hiddenFields: [],
+      fields: [
+        {
+          fieldId: "key",
+          channelFieldRole: "secret",
+          section: "connection",
+          order: 1,
+          renderer: "secret",
+          resolveLabel: () => "Key",
+        },
+      ],
+    },
+  )
+  const field = policy.fields[0]
+  const t = ((key: string) => key) as TFunction
+  const original = {
+    enabled: "false",
+    status: "3",
+    reason: "Upstream rejected the key",
+  }
+  expect(field.resolveEntrySummary!(t, original)).toBe("common:status.disabled")
+  expect(field.resolveEntrySummary!(t, { ...original, enabled: "true" })).toBe(
+    "common:status.enabled",
+  )
+  expect(field.resolveEntryDescription!(t, original)).toBe(
+    "ui:secretList.previousDisableReason",
+  )
+  expect(
+    field.resolveEntryDescription!(t, { ...original, enabled: "true" }),
+  ).toBe("")
+  expect(field.entryFields![0].resolveLabel(t)).toBe("ui:secretList.enableKey")
+  expect(field.entryFields![0].resolveHelp).toBeUndefined()
 })

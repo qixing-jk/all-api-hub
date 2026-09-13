@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => ({
   get: vi.fn(),
   loadSecret: vi.fn(),
   create: vi.fn(),
+  update: vi.fn(),
 }))
 
 vi.mock("~/services/apiAdapters/managedResources/newApi", () => ({
@@ -118,10 +119,204 @@ describe("New API managed-site migration capability", () => {
       get: mocks.get,
       loadSecret: mocks.loadSecret,
       create: mocks.create,
+      update: mocks.update,
     })
     mocks.get.mockResolvedValue(channel)
     mocks.loadSecret.mockResolvedValue("credential-placeholder")
   })
+
+  it("exports every native key with its current enabled state", async () => {
+    mocks.get.mockResolvedValue({
+      ...channel,
+      channel_info: {
+        is_multi_key: true,
+        multi_key_size: 2,
+        multi_key_status_list: { 1: 2 },
+      },
+    })
+    mocks.loadSecret.mockResolvedValue("first-placeholder\nsecond-placeholder")
+    expect(
+      await newApiManagedSiteMigrationCapability.source!.prepare(selection),
+    ).toMatchObject({
+      source: { credentialMetadata: [{ enabled: true }, { enabled: false }] },
+    })
+    expect(
+      await newApiManagedSiteMigrationCapability.source!.resolveCredential(
+        selection,
+      ),
+    ).toMatchObject({
+      credentials: [
+        { value: "first-placeholder", enabled: true },
+        { value: "second-placeholder", enabled: false },
+      ],
+    })
+  })
+
+  it("rereads key metadata after interactive secret verification", async () => {
+    mocks.get.mockResolvedValueOnce(channel).mockResolvedValueOnce({
+      ...channel,
+      channel_info: {
+        is_multi_key: true,
+        multi_key_size: 2,
+        multi_key_status_list: { 0: 2 },
+      },
+    })
+    mocks.loadSecret.mockResolvedValue("first-placeholder\nsecond-placeholder")
+    expect(
+      await newApiManagedSiteMigrationCapability.source!.resolveCredential(
+        selection,
+      ),
+    ).toMatchObject({
+      credentials: [
+        { value: "first-placeholder", enabled: false },
+        { value: "second-placeholder", enabled: true },
+      ],
+    })
+  })
+
+  it.each(["succeeded", "partial", "throw"])(
+    "pauses creation until disabled key states are confirmed: %s",
+    async (outcome) => {
+      const saved = {
+        ...channel,
+        status: 2,
+        channel_info: {
+          is_multi_key: true,
+          multi_key_size: 2,
+          multi_key_status_list: {},
+        },
+      }
+      mocks.create.mockResolvedValue({ outcome: "succeeded", data: saved })
+      if (outcome === "throw")
+        mocks.update.mockRejectedValue(new Error("readback unavailable"))
+      else mocks.update.mockResolvedValue({ outcome })
+      const prepared =
+        await newApiManagedSiteMigrationCapability.target!.prepare({
+          ...source,
+          status: "enabled",
+        })
+      const result = await newApiManagedSiteMigrationCapability.target!.create({
+        source,
+        targetSiteType: SITE_TYPES.NEW_API,
+        projection: prepared.projection,
+        credential: "first-placeholder",
+        credentials: [
+          { value: "first-placeholder", enabled: true },
+          { value: "second-placeholder", enabled: false },
+        ],
+      })
+      expect(mocks.create.mock.calls[0][0]).toMatchObject({
+        status: 2,
+        credentialPatch: {
+          entries: [
+            { secret: { kind: "replace", value: "first-placeholder" } },
+            { secret: { kind: "replace", value: "second-placeholder" } },
+          ],
+        },
+      })
+      expect(mocks.update.mock.calls[0][1]).toMatchObject({
+        status: 1,
+        key: "",
+        credentialPatch: {
+          entries: [
+            {
+              id: "0",
+              secret: { kind: "unchanged" },
+              fields: { enabled: "true" },
+            },
+            {
+              id: "1",
+              secret: { kind: "unchanged" },
+              fields: { enabled: "false" },
+            },
+          ],
+        },
+      })
+      expect(result.status).toBe(
+        outcome === "succeeded" ? "created" : "uncertain",
+      )
+      expect(mocks.create).toHaveBeenCalledOnce()
+    },
+  )
+
+  it("does not reconcile or recreate when saved key slots differ", async () => {
+    mocks.create.mockResolvedValue({ outcome: "succeeded", data: channel })
+    const prepared =
+      await newApiManagedSiteMigrationCapability.target!.prepare(source)
+    expect(
+      newApiManagedSiteMigrationCapability.target!.supportsMultipleCredentials!(
+        {
+          ...source,
+          credentialMetadata: [{ enabled: true }, { enabled: false }],
+        },
+      ),
+    ).toBe(true)
+    expect(
+      newApiManagedSiteMigrationCapability.target!.supportsMultipleCredentials!(
+        source,
+      ),
+    ).toBe(false)
+    expect(
+      await newApiManagedSiteMigrationCapability.target!.create({
+        source,
+        targetSiteType: SITE_TYPES.NEW_API,
+        projection: prepared.projection,
+        credential: "first-placeholder",
+        credentials: [
+          { value: "first-placeholder", enabled: true },
+          { value: "second-placeholder", enabled: false },
+        ],
+      }),
+    ).toEqual({ status: "uncertain" })
+    expect(mocks.update).not.toHaveBeenCalled()
+    expect(mocks.create).toHaveBeenCalledOnce()
+  })
+
+  it.each(["signal-result", "signal-throw", "abort-error", "abort-code"])(
+    "propagates reconciliation cancellation: %s",
+    async (mode) => {
+      const controller = new AbortController()
+      const cancellation =
+        mode === "abort-code"
+          ? { code: "ABORT_ERR" }
+          : new DOMException("Stopped", "AbortError")
+      mocks.create.mockResolvedValue({
+        outcome: "succeeded",
+        data: {
+          ...channel,
+          channel_info: {
+            is_multi_key: true,
+            multi_key_size: 2,
+            multi_key_status_list: {},
+          },
+        },
+      })
+      mocks.update.mockImplementation(async () => {
+        if (mode.startsWith("signal")) controller.abort(cancellation)
+        if (mode !== "signal-result") throw cancellation
+        return { outcome: "uncertain" }
+      })
+      const prepared =
+        await newApiManagedSiteMigrationCapability.target!.prepare(source)
+      await expect(
+        newApiManagedSiteMigrationCapability.target!.create(
+          {
+            source,
+            targetSiteType: SITE_TYPES.NEW_API,
+            projection: prepared.projection,
+            credential: "first-placeholder",
+            credentials: [
+              { value: "first-placeholder", enabled: true },
+              { value: "second-placeholder", enabled: false },
+            ],
+          },
+          { signal: controller.signal },
+        ),
+      ).rejects.toBe(cancellation)
+      expect(mocks.create).toHaveBeenCalledOnce()
+      expect(mocks.update).toHaveBeenCalledOnce()
+    },
+  )
 
   it("validates native selections against the current scope and numeric locator", async () => {
     const context =

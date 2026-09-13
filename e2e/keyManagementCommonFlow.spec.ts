@@ -100,6 +100,23 @@ async function stubManagedSiteImportTargetRoutes(
 
       if (
         method === "GET" &&
+        createdChannel &&
+        url.pathname === `/api/channel/${createdChannel.id}`
+      ) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            message: "ok",
+            data: createdChannel,
+          }),
+        })
+        return
+      }
+
+      if (
+        method === "GET" &&
         (url.pathname === "/api/channel/" ||
           url.pathname === "/api/channel/search")
       ) {
@@ -257,8 +274,15 @@ async function stubSharedChatServiceCredentialRoutes(
   })
 }
 
-test.beforeEach(async ({ context, page }) => {
-  installExtensionPageGuards(page)
+test.beforeEach(async ({ context, page }, testInfo) => {
+  installExtensionPageGuards(page, {
+    ignoreConsoleError: (message) =>
+      testInfo.title ===
+        "cleans linked channels and retries persisted multi-key cleanup after reloading" &&
+      message.location().url ===
+        "https://managed-cleanup.example.invalid/v0/management/openai-compatibility" &&
+      message.text().includes("503 (Service Unavailable)"),
+  })
   await forceExtensionLanguage(page, "en")
   await stubLlmMetadataIndex(context)
 })
@@ -1241,3 +1265,265 @@ test("links an existing API credential to an existing key and preserves the asso
     page.getByTestId(getKeyManagementTokenRowTestId(9)),
   ).toBeVisible()
 })
+
+test("cleans linked channels and retries persisted multi-key cleanup after reloading", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedStoredAccounts(serviceWorker, [createStoredAccount()])
+  await stubNewApiSiteRoutes(context, { initialTokens: [createStubApiToken()] })
+  await seedUserPreferences(serviceWorker, {
+    managedSiteType: SITE_TYPES.CLI_PROXY_API,
+    cliProxyApi: {
+      baseUrl: "https://managed-cleanup.example.invalid",
+      adminToken: "test-management-key",
+    },
+  })
+  const retained = {
+    "api-key": "retained-key",
+    "proxy-url": "http://proxy.example.invalid",
+    weight: 5,
+  }
+  const providers = [
+    {
+      name: "Single",
+      "base-url": "https://example.com/v1",
+      "api-key-entries": [{ "api-key": "sk-existing-token" }],
+      models: [{ name: "model-a" }],
+    },
+    {
+      name: "Multiple",
+      "base-url": "https://example.com/v1",
+      "api-key-entries": [{ "api-key": "sk-existing-token" }, retained],
+      models: [{ name: "model-a" }],
+    },
+  ]
+  let releaseDelete!: () => void
+  let deleteStarted = false
+  const deleteGate = new Promise<void>((resolve) => {
+    releaseDelete = resolve
+  })
+  let failUpdate = true
+  await context.route(
+    "https://managed-cleanup.example.invalid/**",
+    async (route) => {
+      const request = route.request()
+      const url = new URL(request.url())
+      const kind = url.pathname.split("/").at(-1)!
+      if (request.method() === "GET") {
+        await route.fulfill({
+          json: { [kind]: kind === "openai-compatibility" ? providers : [] },
+        })
+        return
+      }
+      if (request.method() === "DELETE") {
+        deleteStarted = true
+        await deleteGate
+        providers.splice(Number(url.searchParams.get("index")), 1)
+      }
+      if (request.method() === "PATCH") {
+        if (failUpdate) {
+          await route.fulfill({ status: 503, json: { error: "retry later" } })
+          return
+        }
+        const body = request.postDataJSON()
+        providers[body.index] = { ...providers[body.index], ...body.value }
+      }
+      await route.fulfill({ json: { status: "ok" } })
+    },
+  )
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#keys?accountId=e2e-account-1`,
+  )
+  await waitForExtensionRoot(page)
+  await expect(
+    page.getByRole("heading", { name: "Existing Key" }),
+  ).toBeVisible()
+  const statusDetails = page.getByTestId("managed-site-status-details")
+  await expect(statusDetails).toContainText("Managed site")
+  await expect(page.getByRole("dialog", { name: "Managed site" })).toHaveCount(
+    0,
+  )
+  await statusDetails.focus()
+  await page.keyboard.press("Enter")
+  await expect(page.getByRole("dialog", { name: "Managed site" })).toBeVisible()
+  await page.keyboard.press("Escape")
+  await expect(statusDetails).toBeFocused()
+  await page.screenshot({
+    path: ".scratch/status-ui-desktop.png",
+    animations: "disabled",
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await statusDetails.click()
+  const detailsBounds = await page
+    .getByRole("dialog", { name: "Managed site" })
+    .boundingBox()
+  expect(detailsBounds!.x).toBeGreaterThanOrEqual(0)
+  expect(detailsBounds!.x + detailsBounds!.width).toBeLessThanOrEqual(390)
+  await page.screenshot({
+    path: ".scratch/status-ui-mobile.png",
+    animations: "disabled",
+  })
+  await page.keyboard.press("Escape")
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.getByRole("button", { name: "Delete Key", exact: true }).click()
+  await expect(
+    page.getByRole("checkbox", {
+      name: "Also clean up matching channels on the current managed site",
+    }),
+  ).toBeChecked()
+  await page
+    .getByTestId(KEY_MANAGEMENT_TEST_IDS.deleteTokenConfirmButton)
+    .click()
+  await expect.poll(() => deleteStarted).toBe(true)
+  await expect(
+    page.getByRole("button", { name: "Retry cleanup", exact: true }),
+  ).toHaveCount(0)
+  releaseDelete()
+  await expect(page.getByRole("heading", { name: "Existing Key" })).toHaveCount(
+    0,
+  )
+  await expect(
+    page.getByRole("button", { name: "Retry cleanup", exact: true }),
+  ).toBeVisible()
+  expect(providers.map((provider) => provider.name)).toEqual(["Multiple"])
+  await page.reload()
+  await waitForExtensionRoot(page)
+  failUpdate = false
+  await page.getByRole("button", { name: "Retry cleanup", exact: true }).click()
+  await expect(
+    page.getByRole("button", { name: "Retry cleanup", exact: true }),
+  ).toHaveCount(0)
+  await expect.poll(() => providers[0]["api-key-entries"]).toEqual([retained])
+  expect(providers[0].models).toEqual([{ name: "model-a" }])
+})
+
+for (const siteType of [SITE_TYPES.DONE_HUB, SITE_TYPES.VELOERA]) {
+  test(`validates ${siteType} cleanup replacements without redundant secret reads`, async ({
+    context,
+    extensionId,
+    page,
+  }) => {
+    const worker = await getServiceWorker(context)
+    await seedStoredAccounts(worker, [createStoredAccount()])
+    await stubNewApiSiteRoutes(context, {
+      initialTokens: [createStubApiToken()],
+    })
+    const origin = "https://cleanup-read-count.example.invalid"
+    const config = { baseUrl: origin, adminToken: "test-admin", userId: "1" }
+    await seedUserPreferences(worker, {
+      managedSiteType: siteType,
+      ...(siteType === SITE_TYPES.DONE_HUB
+        ? { doneHub: config }
+        : { veloera: config }),
+    })
+    const channels = [1, 2].map((id) => ({
+      id,
+      name: `Channel ${id}`,
+      type: 1,
+      status: 1,
+      base_url: "https://example.com/v1",
+      models: "model-a",
+      group: "default",
+      priority: 0,
+      weight: 1,
+      key: id === 1 ? "sk-existing-token" : "sk-existing-token\nretained-key",
+    }))
+    let recording = false
+    const requests: string[] = []
+    await context.route("https://example.com/api/token/*", async (route) => {
+      if (recording && route.request().method() === "DELETE")
+        requests.push("delete-source")
+      await route.fallback()
+    })
+    await context.route(`${origin}/**`, async (route) => {
+      const request = route.request()
+      const path = new URL(request.url()).pathname
+      const id = Number(path.match(/^\/api\/channel\/(\d+)$/)?.[1])
+      if (request.method() === "GET" && id) {
+        if (recording) requests.push(`read-${id}`)
+        await route.fulfill({
+          json: {
+            success: true,
+            data: channels.find((channel) => channel.id === id),
+          },
+        })
+      } else if (request.method() === "DELETE" && id) {
+        requests.push(`delete-${id}`)
+        channels.splice(
+          channels.findIndex((channel) => channel.id === id),
+          1,
+        )
+        await route.fulfill({ json: { success: true } })
+      } else if (
+        request.method() === "PUT" &&
+        /^\/api\/channel\/?$/.test(path)
+      ) {
+        const body = request.postDataJSON()
+        requests.push(`update-${body.id}`)
+        Object.assign(channels.find((channel) => channel.id === body.id)!, body)
+        await route.fulfill({ json: { success: true } })
+      } else if (
+        request.method() === "GET" &&
+        path.startsWith("/api/channel")
+      ) {
+        await route.fulfill({
+          json: {
+            success: true,
+            data:
+              siteType === SITE_TYPES.DONE_HUB
+                ? {
+                    data: channels,
+                    total_count: channels.length,
+                    page: 1,
+                    size: 100,
+                  }
+                : channels,
+          },
+        })
+      } else {
+        await route.fulfill({ json: { success: true, data: [] } })
+      }
+    })
+    await page.goto(
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#keys?accountId=e2e-account-1`,
+    )
+    await waitForExtensionRoot(page)
+    await expect(
+      page.getByRole("heading", { name: "Existing Key" }),
+    ).toBeVisible()
+    await page.getByRole("button", { name: "Delete Key", exact: true }).click()
+    await expect(
+      page.getByRole("checkbox", {
+        name: "Also clean up matching channels on the current managed site",
+      }),
+    ).toBeChecked()
+    recording = true
+    await page
+      .getByTestId(KEY_MANAGEMENT_TEST_IDS.deleteTokenConfirmButton)
+      .click()
+    await expect(
+      page.getByRole("heading", { name: "Existing Key" }),
+    ).toHaveCount(0)
+    // The source deletion separates discovery from the fresh pre-mutation read.
+    // Multi-key replacement needs one additional snapshot check; secret loading reuses each detail.
+    expect(requests).toEqual([
+      "read-1",
+      "read-2",
+      "delete-source",
+      "read-1",
+      "delete-1",
+      "read-2",
+      "read-2", // Whole-list replacement validates the captured credentials before writing.
+      "update-2",
+    ])
+    expect(channels).toMatchObject([
+      { id: 2, key: "retained-key", models: "model-a" },
+    ])
+    await expect(
+      page.getByRole("button", { name: "Retry cleanup", exact: true }),
+    ).toHaveCount(0)
+  })
+}

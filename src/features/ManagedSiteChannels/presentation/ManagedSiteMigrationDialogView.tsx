@@ -324,7 +324,6 @@ export function ManagedSiteMigrationDialogView({
                               {row.name}
                             </div>
                             <div className="text-muted-foreground mt-0.5 flex flex-wrap gap-2 text-xs">
-                              <span>#{row.displayIdentifier}</span>
                               <span className="truncate">
                                 {row.baseURL || labels.missingValue}
                               </span>
@@ -438,9 +437,6 @@ export function ManagedSiteMigrationDialogView({
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium">
                           {item.name}
-                        </div>
-                        <div className="text-muted-foreground text-xs">
-                          #{item.displayIdentifier}
                         </div>
                       </div>
                       <Badge

@@ -54,7 +54,7 @@ vi.mock("~/services/accounts/accountStorage/accountDataTransfer", () => ({
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
     importPreferences: vi.fn(),
-    exportPreferences: vi.fn(),
+    exportPreferencesForBackup: vi.fn(),
   },
 }))
 
@@ -122,7 +122,9 @@ const mockAccountStorageExportData =
 const mockUserPreferencesImport =
   userPreferences.importPreferences as unknown as ReturnType<typeof vi.fn>
 const mockUserPreferencesExport =
-  userPreferences.exportPreferences as unknown as ReturnType<typeof vi.fn>
+  userPreferences.exportPreferencesForBackup as unknown as ReturnType<
+    typeof vi.fn
+  >
 
 const mockChannelConfigImport =
   channelConfigStorage.importConfigs as unknown as ReturnType<typeof vi.fn>

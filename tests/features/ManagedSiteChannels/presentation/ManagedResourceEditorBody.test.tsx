@@ -707,19 +707,18 @@ describe("ManagedResourceEditorBody", () => {
     )
 
     const createKey = screen.getByLabelText(
-      new RegExp(`^${t("channelDialog:fields.key.label")}`),
+      t("ui:secretList.row", { number: 1 }),
+      { selector: "input" },
     )
     const createModels = screen.getByRole("combobox", {
       name: t("channelDialog:fields.models.label"),
     })
-    expect(createKey).toBeRequired()
+    expect(createKey).toHaveValue("")
     expect(createKey).toHaveAttribute(
       "placeholder",
-      "Enter an upstream API key",
+      t("ui:secretList.newPlaceholder"),
     )
-    expect(createKey).toHaveAccessibleDescription(
-      "Enter the upstream API key for the new channel.",
-    )
+    expect(createKey).toHaveAccessibleDescription(t("ui:secretList.newState"))
     expect(createModels).toHaveAttribute("aria-required", "true")
     expect(createModels).toHaveAccessibleDescription(
       "Type or paste model names. Models added here are kept during automatic model sync.",
@@ -751,11 +750,12 @@ describe("ManagedResourceEditorBody", () => {
     )
 
     const editKey = screen.getByLabelText(
-      new RegExp(`^${t("channelDialog:fields.key.label")}`),
+      t("ui:secretList.row", { number: 1 }),
+      { selector: "input" },
     )
     expect(editKey).not.toBeRequired()
     expect(editKey).toHaveAccessibleDescription(
-      `${t("managedSiteChannels:editor.secret.state.available")} ${t("managedSiteChannels:editor.secret.keepExistingHint")}`,
+      t("ui:secretList.retainedState"),
     )
     expect(
       screen.getByRole("combobox", {
@@ -878,17 +878,23 @@ describe("ManagedResourceEditorBody", () => {
     expect(dialog).toContainElement(closeButton)
     expect(closeButton).toHaveFocus()
     await user.tab()
+    expect(screen.getByRole("button", { name: "Basic" })).toHaveFocus()
+    await user.tab()
     expect(nameInput).toHaveFocus()
     await user.tab()
     expect(typeSelect).toHaveFocus()
     await user.tab()
     expect(statusSelect).toHaveFocus()
     await user.tab()
+    expect(screen.getByRole("button", { name: "Connection" })).toHaveFocus()
+    await user.tab()
     expect(baseUrlInput).toHaveFocus()
     await user.tab()
     expect(keyInput).toHaveFocus()
     await user.tab()
     expect(revealButton).toHaveFocus()
+    await user.tab()
+    expect(screen.getByRole("button", { name: "Models" })).toHaveFocus()
     await user.tab()
     expect(modelsInput).toHaveFocus()
   })
@@ -1557,6 +1563,7 @@ describe("ManagedResourceEditorBody", () => {
     ).toHaveAccessibleDescription(
       "The saved API key is not shown here. Leave blank to keep it unchanged.",
     )
+    expect(screen.queryByText("Loading the saved API key...")).toBeNull()
 
     await user.click(loadingButton)
 
@@ -1687,6 +1694,9 @@ describe("ManagedResourceEditorBody", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "The saved API key could not be loaded.",
     )
+    expect(
+      screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput),
+    ).toHaveAccessibleDescription("The saved API key could not be loaded.")
     expect(screen.queryByText("Loading the saved API key...")).toBeNull()
     expect(
       screen.queryByRole("button", { name: /load saved api key/i }),
@@ -1790,6 +1800,13 @@ describe("ManagedResourceEditorBody", () => {
       expect(onValueChange).toHaveBeenLastCalledWith(
         AXON_HUB_CHANNEL_FIELD_IDS.KEY,
         { kind: "clear" },
+      )
+      await user.click(
+        screen.getByRole("button", { name: "Keep saved API key" }),
+      )
+      expect(onValueChange).toHaveBeenLastCalledWith(
+        AXON_HUB_CHANNEL_FIELD_IDS.KEY,
+        { kind: "unchanged" },
       )
     },
   )

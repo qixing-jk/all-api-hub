@@ -100,7 +100,7 @@ async function expectManagedSiteChannelsIdle(page: Page) {
   return refreshButton
 }
 
-async function cleanupManagedSiteChannelsByPrefix<
+export async function cleanupManagedSiteChannelsByPrefix<
   TSiteType extends ManagedSiteType,
 >(params: {
   page: Page
@@ -603,7 +603,14 @@ async function createManagedSiteChannelFromUi(
     timeout: 30_000,
   })
   await page.getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput).fill(params.name)
-  await page.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput).fill(params.key)
+  await page
+    .getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput)
+    .or(
+      page
+        .getByRole("group", { name: "API Key 1", exact: true })
+        .locator("input[type=password]"),
+    )
+    .fill(params.key)
   await page
     .getByTestId(CHANNEL_DIALOG_TEST_IDS.baseUrlInput)
     .fill(params.baseUrl)

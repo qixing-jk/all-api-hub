@@ -5,11 +5,17 @@ import {
   isManagedResourceRefFor,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { credentialFingerprint } from "~/services/apiAdapters/managedResources/credentialListEditor"
 import {
   isManagedSiteMigrationSourceType,
   resolveManagedSiteMigrationType,
 } from "~/services/apiAdapters/managedResources/migrationTypeRoutes"
 import { openNewApiNativeResourceOperations } from "~/services/apiAdapters/managedResources/newApi"
+import {
+  newApiCredentialRecords,
+  newApiKeyMetadata,
+  newApiKeyMetadataFingerprint,
+} from "~/services/apiAdapters/managedResources/newApiMultiKeyEditor"
 import {
   parseNewApiResourceList,
   throwIfNewApiResourceOperationAborted,
@@ -62,6 +68,13 @@ const toSource = (
   channel: NewApiChannel,
   resourceType: ManagedSiteMigrationSource["resourceType"],
 ): ManagedSiteMigrationSource => ({
+  ...(channel.channel_info?.is_multi_key
+    ? {
+        credentialMetadata: newApiKeyMetadata(channel).map((key) => ({
+          enabled: key.fields.enabled === "true",
+        })),
+      }
+    : {}),
   sourceSiteType: SITE_TYPES.NEW_API,
   resourceType,
   baseUrl: channel.base_url?.trim() ?? "",
@@ -149,6 +162,21 @@ export async function resolveNewApiMigrationCredential(
   const credential = (
     await resolved.operations.loadSecret(resolved.channelId, options)
   ).trim()
+  // Interactive secret verification can outlive the initial metadata read.
+  const current = await resolved.operations.get(resolved.channelId, options)
+  if (current.channel_info?.is_multi_key) {
+    const credentials = newApiCredentialRecords(credential, current).map(
+      (key) => ({
+        value: key.key,
+        enabled: key.fields.enabled === "true",
+      }),
+    )
+    return {
+      status: "ready" as const,
+      credential: credentials[0]?.value ?? "",
+      credentials,
+    }
+  }
   return credential
     ? { status: "ready" as const, credential }
     : {
@@ -196,6 +224,8 @@ export const newApiManagedSiteMigrationCapability: ManagedSiteMigrationCapabilit
       },
     },
     target: {
+      supportsMultipleCredentials: (source) =>
+        (source.credentialMetadata?.length ?? 0) > 1,
       prepare: async (source) => {
         const type = resolveManagedSiteMigrationType(source, SITE_TYPES.NEW_API)
         if (type.status === "unsupported") {
@@ -229,7 +259,21 @@ export const newApiManagedSiteMigrationCapability: ManagedSiteMigrationCapabilit
       },
       create: async (command, options) => {
         const operations = await openNewApiNativeResourceOperations()
+        const hasDisabledKeys =
+          command.credentials?.some((key) => !key.enabled) === true
         const commandFields = {
+          ...(command.credentials
+            ? {
+                credentialPatch: {
+                  baseline: await credentialFingerprint([]),
+                  entries: command.credentials.map((key, index) => ({
+                    id: `new-${index}`,
+                    secret: { kind: "replace" as const, value: key.value },
+                    fields: { enabled: "true" },
+                  })),
+                },
+              }
+            : {}),
           name: command.projection.name,
           type: command.projection.type,
           key: command.credential,
@@ -238,11 +282,59 @@ export const newApiManagedSiteMigrationCapability: ManagedSiteMigrationCapabilit
           groups: [...command.projection.groups],
           priority: command.projection.priority,
           weight: command.projection.weight,
-          status: command.projection.enabled
-            ? CHANNEL_STATUS.Enable
-            : CHANNEL_STATUS.ManuallyDisabled,
+          status:
+            command.projection.enabled && !hasDisabledKeys
+              ? CHANNEL_STATUS.Enable
+              : CHANNEL_STATUS.ManuallyDisabled,
         }
         const result = await operations.create(commandFields, options)
+        // New API creates all key slots enabled. Keep the channel paused until
+        // indexed key actions and the requested channel status are confirmed.
+        // https://github.com/QuantumNous/new-api/blob/main/controller/channel.go
+        if (
+          result.outcome === MANAGED_SITE_MUTATION_OUTCOMES.Succeeded &&
+          hasDisabledKeys &&
+          command.credentials
+        ) {
+          try {
+            const metadata = newApiKeyMetadata(result.data)
+            if (metadata.length !== command.credentials.length)
+              return { status: "uncertain" }
+            const updated = await operations.update(
+              result.data,
+              {
+                ...commandFields,
+                status: command.projection.enabled
+                  ? CHANNEL_STATUS.Enable
+                  : CHANNEL_STATUS.ManuallyDisabled,
+                key: "",
+                credentialPatch: {
+                  baseline: await newApiKeyMetadataFingerprint(metadata),
+                  entries: command.credentials.map((key, index) => ({
+                    id: String(index),
+                    secret: { kind: "unchanged" },
+                    fields: { enabled: String(key.enabled) },
+                  })),
+                },
+              },
+              options,
+            )
+            throwIfNewApiResourceOperationAborted(options)
+            return updated.outcome === MANAGED_SITE_MUTATION_OUTCOMES.Succeeded
+              ? { status: "created" }
+              : { status: "uncertain" }
+          } catch (error) {
+            throwIfNewApiResourceOperationAborted(options)
+            if (
+              typeof error === "object" &&
+              error !== null &&
+              (("name" in error && error.name === "AbortError") ||
+                ("code" in error && error.code === "ABORT_ERR"))
+            )
+              throw error
+            return { status: "uncertain" }
+          }
+        }
         switch (result.outcome) {
           case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
             return { status: "created" }

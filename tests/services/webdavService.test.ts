@@ -107,6 +107,45 @@ describe("webdavService", () => {
   })
 
   describe("parseWebdavBackupJson", () => {
+    it.each([
+      [null],
+      [[]],
+      [{}],
+      [{ profiles: "broken" }],
+      [{ profiles: [null] }],
+      [{ profiles: [], links: {} }],
+      [{ profiles: [], linkTombstones: "broken" }],
+    ])(
+      "rejects corrupt credential snapshots before normalization: %j",
+      (apiCredentialProfiles) => {
+        for (const backup of [
+          { version: "4.0", apiCredentialProfiles },
+          { version: "1.0", data: { apiCredentialProfiles } },
+        ]) {
+          expect(() =>
+            parseWebdavBackupJson(JSON.stringify(backup), {
+              requireBackupShape: true,
+            }),
+          ).toThrow("messages:webdav.invalidBackupJson")
+        }
+      },
+    )
+
+    it.each([
+      { version: 1, profiles: [] },
+      { version: 2, profiles: [], links: [], linkTombstones: [] },
+    ])(
+      "accepts intentional empty credential snapshots: %j",
+      (apiCredentialProfiles) => {
+        const backup = { version: "4.0", apiCredentialProfiles }
+        expect(
+          parseWebdavBackupJson(JSON.stringify(backup), {
+            requireBackupShape: true,
+          }),
+        ).toEqual(backup)
+      },
+    )
+
     it("parses valid backup JSON", () => {
       expect(parseWebdavBackupJson('{"version":"2.0"}')).toEqual({
         version: "2.0",
@@ -117,6 +156,74 @@ describe("webdavService", () => {
       expect(() =>
         parseWebdavBackupJson('{"version":"2.0","accounts":"'),
       ).toThrow("messages:webdav.invalidBackupJson")
+    })
+
+    it("rejects metadata-only remote content in strict mode", () => {
+      expect(() =>
+        parseWebdavBackupJson('{"version":"4.0","timestamp":1}', {
+          requireBackupShape: true,
+        }),
+      ).toThrow("messages:webdav.invalidBackupJson")
+    })
+
+    it("rejects an empty accounts object in strict mode", () => {
+      expect(() =>
+        parseWebdavBackupJson('{"version":"4.0","timestamp":1,"accounts":{}}', {
+          requireBackupShape: true,
+        }),
+      ).toThrow("messages:webdav.invalidBackupJson")
+    })
+
+    it("rejects a null preferences section in strict mode", () => {
+      expect(() =>
+        parseWebdavBackupJson(
+          '{"version":"4.0","timestamp":1,"preferences":null}',
+          { requireBackupShape: true },
+        ),
+      ).toThrow("messages:webdav.invalidBackupJson")
+    })
+
+    it("rejects an empty legacy data wrapper in strict mode", () => {
+      expect(() =>
+        parseWebdavBackupJson('{"version":"1.0","data":{}}', {
+          requireBackupShape: true,
+        }),
+      ).toThrow("messages:webdav.invalidBackupJson")
+    })
+
+    it("rejects a nested data wrapper without a backup section in strict mode", () => {
+      expect(() =>
+        parseWebdavBackupJson('{"version":"1.0","data":{"data":{}}}', {
+          requireBackupShape: true,
+        }),
+      ).toThrow("messages:webdav.invalidBackupJson")
+    })
+
+    it("rejects malformed sections inside a legacy data wrapper", () => {
+      for (const content of [
+        '{"version":"1.0","data":{"accounts":0}}',
+        '{"version":"1.0","data":{"accounts":{}}}',
+        '{"version":"1.0","data":{"preferences":null}}',
+      ]) {
+        expect(() =>
+          parseWebdavBackupJson(content, { requireBackupShape: true }),
+        ).toThrow("messages:webdav.invalidBackupJson")
+      }
+    })
+
+    it("rejects empty, non-object, and malformed data sections", () => {
+      for (const content of [
+        "",
+        "null",
+        '{"version":"4.0","accounts":0}',
+        '{"version":"4.0","accounts":{"accounts":{}}}',
+        '{"version":"4.0","accounts":{"deletedEntryRecords":[]}}',
+        '{"version":"4.0","preferences":[]}',
+      ]) {
+        expect(() =>
+          parseWebdavBackupJson(content, { requireBackupShape: true }),
+        ).toThrow("messages:webdav.invalidBackupJson")
+      }
     })
   })
 

@@ -1317,6 +1317,27 @@ describe("fetchDisplayAccountTokens", () => {
     expect(token.key).toBe("plain-secret")
   })
 
+  it("keeps live scheduling intent when resolving a token secret", async () => {
+    const requestScheduling = {
+      priority: "background" as "background" | "foreground",
+    }
+    const token = { id: 1, key: "", status: 1, name: "Key" }
+    resolveTokenKey.mockImplementationOnce(async ({ request }) => {
+      expect(request.requestScheduling).toBe(requestScheduling)
+      requestScheduling.priority = "foreground"
+      expect(request.requestScheduling.priority).toBe("foreground")
+      return "resolved-secret"
+    })
+
+    await expect(
+      resolveDisplayAccountTokenForSecret(ACCOUNT as any, token as any, {
+        requestScheduling,
+      }),
+    ).resolves.toMatchObject({ key: "sk-resolved-secret" })
+    expect(resolveTokenKey).toHaveBeenCalledTimes(1)
+    expect(token.key).toBe("")
+  })
+
   it("does not synthesize sk-prefixes for non-compatible account types", async () => {
     const token = { id: 1, key: "plain-secret", status: 1, name: "Plain" }
     resolveTokenKey.mockResolvedValue("plain-secret")

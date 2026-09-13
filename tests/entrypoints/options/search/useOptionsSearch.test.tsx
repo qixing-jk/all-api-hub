@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import type { OptionsSearchContext } from "~/entrypoints/options/search/types"
+import type { OptionsSearchContext } from "~/features/OptionsSearch/types"
 import {
   useOptionsSearch,
   useOptionsSearchContext,
-} from "~/entrypoints/options/search/useOptionsSearch"
+} from "~/features/OptionsSearch/useOptionsSearch"
 import * as browserApi from "~/utils/browser/browserApi"
 import { renderHook } from "~~/tests/test-utils/render"
 

@@ -2,8 +2,9 @@ import type { TFunction } from "i18next"
 import { Plus, Trash2 } from "lucide-react"
 import { useId, useState } from "react"
 
-import { Button, IconButton, Input, Label, Textarea } from "~/components/ui"
+import { Button, IconButton, Input, Textarea } from "~/components/ui"
 
+import { ResourceFieldLabel } from "./ResourceFieldLabel"
 import type { ResourceFieldPresentation } from "./resourceFieldPolicy"
 
 type Entry = { id: string; source: string }
@@ -45,13 +46,13 @@ export function ResourceTextEntriesField({
   const valueLabel = configuration.resolveValueLabel(t)
   return (
     <fieldset
-      className="min-w-0 space-y-2"
+      className="min-w-0"
       disabled={disabled}
       aria-describedby={describedBy}
       aria-invalid={invalid}
     >
       <legend className="sr-only">{label}</legend>
-      <div className="flex items-center justify-between gap-2">
+      <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
         <span className="text-sm font-medium">{label}</span>
         <Button
           type="button"
@@ -62,110 +63,120 @@ export function ResourceTextEntriesField({
           {raw ? t("ui:textEntries.editRows") : t("ui:textEntries.editText")}
         </Button>
       </div>
-      {raw ? (
-        <Textarea
-          aria-label={label}
-          aria-describedby={describedBy}
-          aria-invalid={invalid}
-          value={value}
-          rows={6}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      ) : (
-        <>
-          {draft.entries.map((entry, index) => {
-            const separatorIndex = entry.source.indexOf(configuration.separator)
-            const key =
-              separatorIndex < 0
-                ? entry.source
-                : entry.source.slice(0, separatorIndex).trim()
-            const entryValue =
-              separatorIndex < 0
-                ? ""
-                : entry.source.slice(separatorIndex + 1).trimStart()
-            const change = (nextKey: string, nextValue: string) => {
-              const source =
-                configuration.omitEmptyValue && !nextValue
-                  ? nextKey
-                  : `${nextKey}${configuration.separator === ":" ? ": " : " = "}${nextValue}`
-              update(
-                draft.entries.map((item) =>
-                  item.id === entry.id ? { ...item, source } : item,
-                ),
+      <div className="space-y-2">
+        {raw ? (
+          <Textarea
+            aria-label={label}
+            aria-describedby={describedBy}
+            aria-invalid={invalid}
+            value={value}
+            rows={6}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        ) : (
+          <>
+            {draft.entries.map((entry, index) => {
+              const separatorIndex = entry.source.indexOf(
+                configuration.separator,
               )
-            }
-            return (
-              <div
-                key={entry.id}
-                className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
-              >
-                <div className="col-span-2 min-w-0 space-y-1 sm:col-span-1">
-                  <Label
-                    htmlFor={`${id}-${entry.id}-key`}
-                    className="text-muted-foreground text-xs"
-                  >
-                    {keyLabel}
-                  </Label>
-                  <Input
-                    id={`${id}-${entry.id}-key`}
-                    aria-label={`${keyLabel} ${index + 1}`}
-                    aria-describedby={describedBy}
-                    aria-invalid={invalid}
-                    value={key}
-                    onChange={(event) => change(event.target.value, entryValue)}
-                  />
-                </div>
-                <div className="min-w-0 space-y-1">
-                  <Label
-                    htmlFor={`${id}-${entry.id}-value`}
-                    className="text-muted-foreground text-xs"
-                  >
-                    {valueLabel}
-                  </Label>
-                  <Input
-                    id={`${id}-${entry.id}-value`}
-                    aria-label={`${valueLabel} ${index + 1}`}
-                    aria-describedby={describedBy}
-                    aria-invalid={invalid}
-                    placeholder={configuration.resolveValuePlaceholder?.(t)}
-                    value={entryValue}
-                    onChange={(event) => change(key, event.target.value)}
-                  />
-                </div>
-                <IconButton
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  aria-label={t("ui:textEntries.remove", { number: index + 1 })}
-                  onClick={() =>
-                    update(draft.entries.filter((item) => item.id !== entry.id))
-                  }
+              const key =
+                separatorIndex < 0
+                  ? entry.source
+                  : entry.source.slice(0, separatorIndex).trim()
+              const entryValue =
+                separatorIndex < 0
+                  ? ""
+                  : entry.source.slice(separatorIndex + 1).trimStart()
+              const change = (nextKey: string, nextValue: string) => {
+                const source =
+                  configuration.omitEmptyValue && !nextValue
+                    ? nextKey
+                    : `${nextKey}${configuration.separator === ":" ? ": " : " = "}${nextValue}`
+                update(
+                  draft.entries.map((item) =>
+                    item.id === entry.id ? { ...item, source } : item,
+                  ),
+                )
+              }
+              return (
+                <div
+                  key={entry.id}
+                  className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
                 >
-                  <Trash2 className="h-4 w-4" />
-                </IconButton>
-              </div>
-            )
-          })}
-          <Button
-            type="button"
-            variant="dashed"
-            size="sm"
-            className="w-full"
-            leftIcon={<Plus className="h-4 w-4" />}
-            onClick={() =>
-              setDraft({
-                ...draft,
-                entries: [
-                  ...draft.entries,
-                  { id: crypto.randomUUID(), source: "" },
-                ],
-              })
-            }
-          >
-            {t("ui:textEntries.add")}
-          </Button>
-        </>
-      )}
+                  <div className="col-span-2 min-w-0 sm:col-span-1">
+                    <ResourceFieldLabel
+                      htmlFor={`${id}-${entry.id}-key`}
+                      className="text-muted-foreground text-xs"
+                    >
+                      {keyLabel}
+                    </ResourceFieldLabel>
+                    <Input
+                      id={`${id}-${entry.id}-key`}
+                      aria-label={`${keyLabel} ${index + 1}`}
+                      aria-describedby={describedBy}
+                      aria-invalid={invalid}
+                      value={key}
+                      onChange={(event) =>
+                        change(event.target.value, entryValue)
+                      }
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <ResourceFieldLabel
+                      htmlFor={`${id}-${entry.id}-value`}
+                      className="text-muted-foreground text-xs"
+                    >
+                      {valueLabel}
+                    </ResourceFieldLabel>
+                    <Input
+                      id={`${id}-${entry.id}-value`}
+                      aria-label={`${valueLabel} ${index + 1}`}
+                      aria-describedby={describedBy}
+                      aria-invalid={invalid}
+                      placeholder={configuration.resolveValuePlaceholder?.(t)}
+                      value={entryValue}
+                      onChange={(event) => change(key, event.target.value)}
+                    />
+                  </div>
+                  <IconButton
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-label={t("ui:textEntries.remove", {
+                      number: index + 1,
+                    })}
+                    onClick={() =>
+                      update(
+                        draft.entries.filter((item) => item.id !== entry.id),
+                      )
+                    }
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </IconButton>
+                </div>
+              )
+            })}
+            <Button
+              type="button"
+              variant="dashed"
+              size="sm"
+              className="w-full"
+              leftIcon={<Plus className="h-4 w-4" />}
+              onClick={() =>
+                setDraft({
+                  ...draft,
+                  entries: [
+                    ...draft.entries,
+                    { id: crypto.randomUUID(), source: "" },
+                  ],
+                })
+              }
+            >
+              {t("ui:textEntries.add")}
+            </Button>
+          </>
+        )}
+      </div>
     </fieldset>
   )
 }

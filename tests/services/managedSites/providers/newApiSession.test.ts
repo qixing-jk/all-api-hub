@@ -140,6 +140,132 @@ const createDashboardAuthBundle = (
 })
 
 describe("newApiSession", () => {
+  it.each([
+    {},
+    [null],
+    [{ method: "2fa", available: "yes" }],
+    [{ available: true }],
+  ])(
+    "rejects malformed verification method declarations: %j",
+    async (methods) => {
+      server.use(
+        http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+          unauthorizedResponse(),
+        ),
+        http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+          unauthorizedResponse(),
+        ),
+        http.post(`${BASE_CONFIG.baseUrl}/api/user/login`, () =>
+          jsonData({
+            require_verification: true,
+            flow_token: "test-flow",
+            methods,
+          }),
+        ),
+      )
+      await expect(ensureNewApiManagedSession(BASE_CONFIG)).rejects.toThrow(
+        "New API dashboard session response is invalid",
+      )
+    },
+  )
+  it.each(["missing-flow", "no-available-method"])(
+    "rejects an incomplete unified login challenge: %s",
+    async (scenario) => {
+      server.use(
+        http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+          unauthorizedResponse(),
+        ),
+        http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+          unauthorizedResponse(),
+        ),
+        http.post(`${BASE_CONFIG.baseUrl}/api/user/login`, () =>
+          jsonData({
+            require_verification: true,
+            ...(scenario === "missing-flow" ? {} : { flow_token: "test-flow" }),
+            methods: [
+              { method: "2fa", available: scenario === "missing-flow" },
+            ],
+          }),
+        ),
+      )
+      await expect(ensureNewApiManagedSession(BASE_CONFIG)).rejects.toThrow(
+        "New API dashboard session response is invalid",
+      )
+    },
+  )
+
+  it("serializes simultaneous verification requests for distinct channels", async () => {
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let entered!: () => void
+    const started = new Promise<void>((resolve) => {
+      entered = resolve
+    })
+    let calls = 0
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+        jsonData({ enabled: true }),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+        jsonData({ enabled: false }),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/verify`, async () => {
+        calls++
+        if (calls === 1) {
+          entered()
+          await gate
+        }
+        return jsonData({ verified: true })
+      }),
+    )
+    const first = submitNewApiSecureVerificationCode(
+      { ...BASE_CONFIG, channelId: 17 },
+      "111111",
+    )
+    await started
+    const second = submitNewApiSecureVerificationCode(
+      { ...BASE_CONFIG, channelId: 18 },
+      "222222",
+    )
+    expect(calls).toBe(1)
+    release()
+    const results = await Promise.all([first, second])
+    expect(results.map((result) => result.status)).toEqual([
+      "verified",
+      "verified",
+    ])
+    expect(calls).toBe(2)
+  })
+  it("returns manual passkey guidance for a unified login without TOTP", async () => {
+    const verify = vi.fn()
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+        unauthorizedResponse(),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+        unauthorizedResponse(),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/user/login`, () =>
+        jsonData({
+          require_verification: true,
+          flow_token: "test-passkey-flow",
+          methods: [{ method: "passkey", available: true }],
+        }),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/user/login/verify`, () => {
+        verify()
+        return jsonData({})
+      }),
+    )
+    await expect(ensureNewApiManagedSession(BASE_CONFIG)).resolves.toEqual({
+      status: NEW_API_MANAGED_SESSION_STATUSES.PASSKEY_MANUAL_REQUIRED,
+      methods: { twoFactorEnabled: false, passkeyEnabled: true },
+    })
+    expect(verify).not.toHaveBeenCalled()
+    expect(generateNewApiTotpCodeMock).not.toHaveBeenCalled()
+  })
   beforeEach(() => {
     clearNewApiManagedSessionState()
     generateNewApiTotpCodeMock.mockReset()
@@ -463,99 +589,111 @@ describe("newApiSession", () => {
     })
   })
 
-  it("continues the current login flow and manages the session with its dashboard bearer", async () => {
-    const flowToken = "example-flow-token"
-    const dashboardToken = "example-dashboard-token"
-    let loginTwoFactorPayload: Record<string, unknown> | null = null
-    let verifyAuthorization: string | null = null
-    const authenticatedProbeHeaders: Array<string | null> = []
+  it.each([false, true])(
+    "continues the login flow with its dashboard bearer (unified=%s)",
+    async (unified) => {
+      const flowToken = "example-flow-token"
+      const dashboardToken = "example-dashboard-token"
+      let loginTwoFactorPayload: Record<string, unknown> | null = null
+      let verifyAuthorization: string | null = null
+      const authenticatedProbeHeaders: Array<string | null> = []
 
-    generateNewApiTotpCodeMock
-      .mockReturnValueOnce("111111")
-      .mockReturnValueOnce("222222")
+      generateNewApiTotpCodeMock
+        .mockReturnValueOnce("111111")
+        .mockReturnValueOnce("222222")
 
-    server.use(
-      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, ({ request }) => {
-        const authorization = request.headers.get("authorization")
-        if (authorization !== `Bearer ${dashboardToken}`) {
-          return unauthorizedResponse()
-        }
+      server.use(
+        http.get(
+          `${BASE_CONFIG.baseUrl}/api/user/2fa/status`,
+          ({ request }) => {
+            const authorization = request.headers.get("authorization")
+            if (authorization !== `Bearer ${dashboardToken}`) {
+              return unauthorizedResponse()
+            }
 
-        authenticatedProbeHeaders.push(authorization)
-        return jsonData({ enabled: true })
-      }),
-      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, ({ request }) => {
-        const authorization = request.headers.get("authorization")
-        if (authorization !== `Bearer ${dashboardToken}`) {
-          return unauthorizedResponse()
-        }
-
-        authenticatedProbeHeaders.push(authorization)
-        return jsonData({ enabled: false })
-      }),
-      http.post(`${BASE_CONFIG.baseUrl}/api/user/login`, () =>
-        jsonData({
-          require_2fa: true,
-          flow_token: flowToken,
-          expires_at: Math.floor(Date.now() / 1000) + 5 * 60,
-        }),
-      ),
-      http.post(
-        `${BASE_CONFIG.baseUrl}/api/user/login/2fa`,
-        async ({ request }) => {
-          loginTwoFactorPayload = (await request.json()) as Record<
-            string,
-            unknown
-          >
-          if (loginTwoFactorPayload.flow_token !== flowToken) {
-            return HttpResponse.json({
-              success: false,
-              message: "Login flow expired",
-              data: null,
-            })
+            authenticatedProbeHeaders.push(authorization)
+            return jsonData({ enabled: true })
+          },
+        ),
+        http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, ({ request }) => {
+          const authorization = request.headers.get("authorization")
+          if (authorization !== `Bearer ${dashboardToken}`) {
+            return unauthorizedResponse()
           }
 
-          return jsonData({
-            access_token: dashboardToken,
-            token_type: "Bearer",
-            access_expires_at: Math.floor(Date.now() / 1000) + 15 * 60,
-            session: {
-              sid: "example-session-id",
-              current: true,
-            },
-            user: {
-              id: 1,
-              username: "example-admin",
-            },
-          })
-        },
-      ),
-      http.post(`${BASE_CONFIG.baseUrl}/api/verify`, ({ request }) => {
-        verifyAuthorization = request.headers.get("authorization")
-        return jsonData({ verified: true, expires_at: 1_700_000_456 })
-      }),
-    )
+          authenticatedProbeHeaders.push(authorization)
+          return jsonData({ enabled: false })
+        }),
+        http.post(`${BASE_CONFIG.baseUrl}/api/user/login`, () =>
+          jsonData({
+            ...(unified
+              ? {
+                  require_verification: true,
+                  methods: [{ method: "2fa", available: true }],
+                }
+              : { require_2fa: true }),
+            flow_token: flowToken,
+            expires_at: Math.floor(Date.now() / 1000) + 5 * 60,
+          }),
+        ),
+        http.post(
+          `${BASE_CONFIG.baseUrl}/api/user/login/${unified ? "verify" : "2fa"}`,
+          async ({ request }) => {
+            loginTwoFactorPayload = (await request.json()) as Record<
+              string,
+              unknown
+            >
+            if (loginTwoFactorPayload.flow_token !== flowToken) {
+              return HttpResponse.json({
+                success: false,
+                message: "Login flow expired",
+                data: null,
+              })
+            }
 
-    await expect(ensureNewApiManagedSession(BASE_CONFIG)).resolves.toEqual({
-      status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,
-      methods: {
-        twoFactorEnabled: true,
-        passkeyEnabled: false,
-      },
-      verifiedUntil: 1_700_000_456_000,
-    })
-    expect(loginTwoFactorPayload).toEqual({
-      code: "111111",
-      flow_token: flowToken,
-    })
-    expect(authenticatedProbeHeaders.length).toBeGreaterThan(0)
-    expect(
-      authenticatedProbeHeaders.every(
-        (header) => header === `Bearer ${dashboardToken}`,
-      ),
-    ).toBe(true)
-    expect(verifyAuthorization).toBe(`Bearer ${dashboardToken}`)
-  })
+            return jsonData({
+              access_token: dashboardToken,
+              token_type: "Bearer",
+              access_expires_at: Math.floor(Date.now() / 1000) + 15 * 60,
+              session: {
+                sid: "example-session-id",
+                current: true,
+              },
+              user: {
+                id: 1,
+                username: "example-admin",
+              },
+            })
+          },
+        ),
+        http.post(`${BASE_CONFIG.baseUrl}/api/verify`, ({ request }) => {
+          verifyAuthorization = request.headers.get("authorization")
+          return jsonData({ verified: true, expires_at: 1_700_000_456 })
+        }),
+      )
+
+      await expect(ensureNewApiManagedSession(BASE_CONFIG)).resolves.toEqual({
+        status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,
+        methods: {
+          twoFactorEnabled: true,
+          passkeyEnabled: false,
+        },
+        verifiedUntil: 1_700_000_456_000,
+      })
+      expect(loginTwoFactorPayload).toEqual({
+        code: "111111",
+        ...(unified ? { method: "2fa" } : {}),
+        flow_token: flowToken,
+      })
+      expect(authenticatedProbeHeaders.length).toBeGreaterThan(0)
+      expect(
+        authenticatedProbeHeaders.every(
+          (header) => header === `Bearer ${dashboardToken}`,
+        ),
+      ).toBe(true)
+      expect(verifyAuthorization).toBe(`Bearer ${dashboardToken}`)
+    },
+  )
 
   it("does not replace an unexpired modern login flow when the session check repeats", async () => {
     let loginCalls = 0
@@ -1866,6 +2004,103 @@ describe("newApiSession", () => {
 
     expect(observedProofs).toEqual([proofToken, proofToken])
   })
+
+  it.each([false, true])(
+    "issues fresh channel-bound proofs after concurrent/repeated reads (failed first=%s)",
+    async (failFirst) => {
+      const dashboardToken = "example-bound-dashboard-token"
+      const proofs = new Map<string, number>()
+      const verifiedChannels: number[] = []
+      let rejectNextRead = failFirst
+      generateNewApiTotpCodeMock.mockReturnValue("777777")
+      server.use(
+        http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, ({ request }) =>
+          request.headers.get("authorization") === `Bearer ${dashboardToken}`
+            ? jsonData({ enabled: true })
+            : unauthorizedResponse(),
+        ),
+        http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, ({ request }) =>
+          request.headers.get("authorization") === `Bearer ${dashboardToken}`
+            ? jsonData({ enabled: false })
+            : unauthorizedResponse(),
+        ),
+        http.post(`${BASE_CONFIG.baseUrl}/api/user/login`, () =>
+          jsonData({
+            require_verification: true,
+            flow_token: "example-bound-flow",
+            methods: [{ method: "2fa", available: true }],
+          }),
+        ),
+        http.post(`${BASE_CONFIG.baseUrl}/api/user/login/verify`, () =>
+          jsonData(createDashboardAuthBundle(dashboardToken)),
+        ),
+        http.post(`${BASE_CONFIG.baseUrl}/api/verify`, async ({ request }) => {
+          const body = (await request.json()) as {
+            context?: { channel_id: number }
+          }
+          const id = body.context?.channel_id
+          if (!id)
+            return HttpResponse.json(
+              { success: false, message: "SECURITY_CONTEXT_INVALID" },
+              { status: 400 },
+            )
+          verifiedChannels.push(id)
+          const token = `example-bound-proof-${verifiedChannels.length}`
+          proofs.set(token, id)
+          return jsonData({
+            proof_token: token,
+            expires_at: Math.floor(Date.now() / 1000) + 300,
+          })
+        }),
+        http.post(
+          `${BASE_CONFIG.baseUrl}/api/channel/:id/key`,
+          ({ request, params }) => {
+            const token = request.headers.get("X-Security-Proof") ?? ""
+            const channel = proofs.get(token)
+            proofs.delete(token)
+            if (channel !== Number(params.id))
+              return HttpResponse.json(
+                { success: false, message: "verification required" },
+                { status: 403 },
+              )
+            if (rejectNextRead) {
+              rejectNextRead = false
+              return HttpResponse.json(
+                { success: false, message: `request failed ${token}` },
+                { status: 500 },
+              )
+            }
+            return jsonData(`channel-${channel}-key`)
+          },
+        ),
+      )
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await expect(
+          ensureNewApiManagedSession({ ...BASE_CONFIG, channelId: 12 }),
+        ).resolves.toMatchObject({ status: "verified" })
+      }
+      expect(verifiedChannels).toEqual([12])
+      if (failFirst) {
+        const error = await fetchNewApiChannelKey({
+          ...BASE_CONFIG,
+          channelId: 12,
+        }).catch((error) => error)
+        expect(error).toBeInstanceOf(Error)
+        expect(error.message).not.toContain("example-bound-proof")
+      }
+      await expect(
+        Promise.all(
+          [12, 13, 12].map((channelId) =>
+            fetchNewApiChannelKey({ ...BASE_CONFIG, channelId }),
+          ),
+        ),
+      ).resolves.toEqual(["channel-12-key", "channel-13-key", "channel-12-key"])
+      expect(verifiedChannels).toEqual(
+        failFirst ? [12, 12, 13, 12] : [12, 13, 12],
+      )
+      expect(proofs.size).toBe(0)
+    },
+  )
 
   it("clears an expired security proof together with the verified window", async () => {
     vi.useFakeTimers()

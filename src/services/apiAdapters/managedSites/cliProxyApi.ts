@@ -7,6 +7,10 @@ import {
   getCliProxyApiResource,
 } from "~/services/apiAdapters/managedResources/cliProxyApi"
 import { listAllCliProxyApiProviders } from "~/services/apiService/cliProxyApi"
+import {
+  sharePendingConfigRead,
+  type ScheduledReadOptions,
+} from "~/services/apiTransport/requestScheduling"
 import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
@@ -14,6 +18,10 @@ import type { CliProxyApiConfig } from "~/types/cliProxyApiConfig"
 import { transformNormalizedUrlPath } from "~/utils/core/urlParsing"
 
 import { createManagedSiteConfigCapability } from "./config"
+
+const readMatchingInventory = sharePendingConfigRead(
+  listAllCliProxyApiProviders,
+)
 
 /** Match the request paths appended by CLIProxyAPI's native executors. */
 function importedProviderUrl(baseUrl: string, kind: string): string {
@@ -52,8 +60,8 @@ export const cliProxyApiCapabilities = {
   ),
   matching: {
     exactMatchBasis: "url-key",
-    search: async (config, baseUrl) => {
-      const resources = (await listAllCliProxyApiProviders(config)).filter(
+    search: async (config, baseUrl, options?: ScheduledReadOptions) => {
+      const resources = (await readMatchingInventory(config, options)).filter(
         (item) => (item.value["base-url"] ?? "").includes(baseUrl),
       )
       const items = resources.flatMap((resource) =>
@@ -70,21 +78,25 @@ export const cliProxyApiCapabilities = {
       )
       return { items, total: items.length, type_counts: {} }
     },
-    fetchSecretKey: async (config, ref) => {
+    fetchSecretKey: async (config, ref, options?: ScheduledReadOptions) => {
       if (
         ref.siteType !== SITE_TYPES.CLI_PROXY_API ||
         ref.kind !== "channel" ||
         ref.scopeKey !== cliProxyApiScope(config)
       )
         throw new Error("Invalid resource reference")
-      const resource = await getCliProxyApiResource(config, ref.resourceId)
+      const resource = await getCliProxyApiResource(
+        config,
+        ref.resourceId,
+        options,
+      )
       const keys = cliProxyApiKeys(resource)
       if (keys.length !== 1) throw new Error("Multiple provider credentials")
       return keys[0]
     },
   },
   channelDrafts: {
-    prepareFormData: async (source) => {
+    prepareFormData: async (source, options?: ScheduledReadOptions) => {
       const kind =
         source.apiType === API_TYPES.ANTHROPIC
           ? "claude-api-key"
@@ -95,7 +107,7 @@ export const cliProxyApiCapabilities = {
               : "openai-compatibility"
       const { models, fetchFailed } =
         kind === "openai-compatibility" || kind === "codex-api-key"
-          ? await fetchManagedSiteImportModels(source)
+          ? await fetchManagedSiteImportModels(source, options)
           : { models: [...source.modelHints], fetchFailed: false }
       return {
         name: source.name,

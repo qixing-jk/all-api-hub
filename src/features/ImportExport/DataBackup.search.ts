@@ -2,8 +2,8 @@ import {
   buildControlDefinition,
   buildSectionDefinition,
   DEFAULT_BREADCRUMBS,
-} from "~/entrypoints/options/search/registryHelpers"
-import type { OptionsSearchItemDefinition } from "~/entrypoints/options/search/types"
+} from "~/features/OptionsSearch/registryHelpers"
+import type { OptionsSearchItemDefinition } from "~/features/OptionsSearch/types"
 
 import { WEBDAV_AUTO_SYNC_TARGET_IDS, WEBDAV_TARGET_IDS } from "./searchTargets"
 
@@ -22,22 +22,86 @@ export const dataBackupSearchSections: OptionsSearchItemDefinition[] = [
     "importExport:webdav.title",
     421,
     {
-      keywords: ["webdav"],
+      keywords: ["cloud", "webdav", "gist", "github", "backup", "sync"],
     },
   ),
   buildSectionDefinition(
     "section:webdav-auto-sync",
     "dataBackup",
     "webdav-auto-sync",
-    "importExport:webdav.autoSync.title",
+    "importExport:webdav.syncSettings.title",
     422,
     {
-      keywords: ["webdav", "sync"],
+      keywords: ["cloud", "webdav", "gist", "github", "auto sync"],
     },
   ),
 ]
 
 export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
+  buildControlDefinition(
+    "control:webdav-provider",
+    "dataBackup",
+    WEBDAV_TARGET_IDS.provider,
+    "importExport:webdav.provider.label",
+    719,
+    {
+      descriptionKey: "importExport:webdav.configDesc",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.dataBackup",
+        "importExport:webdav.title",
+      ],
+      keywords: ["sync", "provider", "webdav", "gist", "github"],
+    },
+  ),
+  buildControlDefinition(
+    "control:github-gist-token",
+    "dataBackup",
+    WEBDAV_TARGET_IDS.gistToken,
+    "importExport:webdav.gist.token",
+    719.1,
+    {
+      descriptionKey: "importExport:webdav.gist.tokenDesc",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.dataBackup",
+        "importExport:webdav.gist.title",
+      ],
+      keywords: ["github", "gist", "token", "secret"],
+    },
+  ),
+  buildControlDefinition(
+    "control:github-gist-id",
+    "dataBackup",
+    WEBDAV_TARGET_IDS.gistId,
+    "importExport:webdav.gist.id",
+    719.2,
+    {
+      descriptionKey: "importExport:webdav.gist.idDesc",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.dataBackup",
+        "importExport:webdav.gist.title",
+      ],
+      keywords: ["github", "gist", "id", "url"],
+    },
+  ),
+  buildControlDefinition(
+    "control:github-gist-create",
+    "dataBackup",
+    WEBDAV_TARGET_IDS.gistUpload,
+    "importExport:webdav.gist.upload",
+    719.3,
+    {
+      descriptionKey: "importExport:webdav.gist.configDesc",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.dataBackup",
+        "importExport:webdav.gist.title",
+      ],
+      keywords: ["github", "gist", "create", "upload", "backup"],
+    },
+  ),
   buildControlDefinition(
     "control:webdav-url",
     "dataBackup",
@@ -103,29 +167,13 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildControlDefinition(
-    "control:webdav-restore-policy-data-backup",
-    "dataBackup",
-    WEBDAV_TARGET_IDS.restorePolicy,
-    "importExport:webdav.restorePolicy.title",
-    724,
-    {
-      descriptionKey: "importExport:webdav.restorePolicy.description",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.dataBackup",
-        "importExport:webdav.title",
-      ],
-      keywords: ["webdav", "restore policy"],
-    },
-  ),
-  buildControlDefinition(
     "control:webdav-sync-data-data-backup",
     "dataBackup",
     WEBDAV_TARGET_IDS.syncData,
     "importExport:webdav.syncData.title",
     725,
     {
-      descriptionKey: "importExport:webdav.syncData.description",
+      descriptionKey: "importExport:webdav.configDesc",
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.dataBackup",
@@ -141,7 +189,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
     "importExport:webdav.syncData.accounts",
     725.1,
     {
-      descriptionKey: "importExport:webdav.syncData.description",
+      descriptionKey: "importExport:webdav.configDesc",
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.dataBackup",
@@ -158,7 +206,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
     "importExport:webdav.syncData.bookmarks",
     725.2,
     {
-      descriptionKey: "importExport:webdav.syncData.description",
+      descriptionKey: "importExport:webdav.configDesc",
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.dataBackup",
@@ -175,7 +223,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
     "importExport:webdav.syncData.apiCredentialProfiles",
     725.3,
     {
-      descriptionKey: "importExport:webdav.syncData.description",
+      descriptionKey: "importExport:webdav.configDesc",
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.dataBackup",
@@ -197,7 +245,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
     "importExport:webdav.syncData.preferences",
     725.4,
     {
-      descriptionKey: "importExport:webdav.syncData.description",
+      descriptionKey: "importExport:webdav.configDesc",
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.dataBackup",
@@ -210,17 +258,18 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-encryption-enable-data-backup",
     "dataBackup",
-    WEBDAV_TARGET_IDS.encryptionEnable,
+    WEBDAV_TARGET_IDS.encryption,
     "importExport:webdav.encryption.title",
     726,
     {
-      descriptionKey: "importExport:webdav.encryption.enableDesc",
+      descriptionKey:
+        "importExport:webdav.encryption.sharedPasswordDescription",
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.dataBackup",
         "importExport:webdav.title",
       ],
-      keywords: ["webdav", "encryption", "backup encryption"],
+      keywords: ["webdav", "gist", "github", "encryption", "backup encryption"],
     },
   ),
   buildControlDefinition(
@@ -236,23 +285,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.dataBackup",
         "importExport:webdav.title",
       ],
-      keywords: ["webdav", "encryption", "password"],
-    },
-  ),
-  buildControlDefinition(
-    "control:webdav-save-config-data-backup",
-    "dataBackup",
-    WEBDAV_TARGET_IDS.saveConfig,
-    "importExport:webdav.saveConfig",
-    728,
-    {
-      descriptionKey: "importExport:webdav.configDesc",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.dataBackup",
-        "importExport:webdav.title",
-      ],
-      keywords: ["webdav", "save"],
+      keywords: ["webdav", "gist", "github", "encryption", "password"],
     },
   ),
   buildControlDefinition(
@@ -334,23 +367,6 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
         "importExport:webdav.autoSync.title",
       ],
       keywords: ["webdav", "auto sync", "strategy"],
-      isVisible: (context) => context.webdavAutoSyncEnabled,
-    },
-  ),
-  buildControlDefinition(
-    "control:webdav-auto-sync-save-settings-data-backup",
-    "dataBackup",
-    WEBDAV_AUTO_SYNC_TARGET_IDS.saveSettings,
-    "importExport:webdav.autoSync.saveSettings",
-    734,
-    {
-      descriptionKey: "importExport:webdav.autoSync.description",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.dataBackup",
-        "importExport:webdav.autoSync.title",
-      ],
-      keywords: ["webdav", "auto sync", "save"],
     },
   ),
   buildControlDefinition(
@@ -360,7 +376,6 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
     "importExport:webdav.autoSync.syncNow",
     735,
     {
-      descriptionKey: "importExport:webdav.autoSync.description",
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.dataBackup",

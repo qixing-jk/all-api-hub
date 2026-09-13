@@ -1,14 +1,15 @@
 {
-  "description": "备份和恢复插件数据",
+  "description": "备份、迁移或同步 All API Hub 数据。",
   "export": {
     "accountData": "账号数据",
-    "accountDataDescription": "手动账号导出和完整 JSON 导出会以明文包含已保存的凭据。请妥善保管导出文件。",
+    "accountDataDescription": "仅导出账号、书签和标签。",
     "accountsExported": "账号数据导出成功",
     "dataExported": "数据导出成功",
     "description": "将数据导出为JSON文件进行备份",
     "exportFailed": "导出失败，请重试",
     "fullBackup": "完整导出",
-    "fullBackupDescription": "手动完整 JSON 导出会以明文包含已保存的账号凭据和用户设置。请妥善保管文件。",
+    "fullBackupDescription": "导出账号、书签、标签、API 凭据库、渠道配置和用户设置。",
+    "sensitiveDataNotice": "账号和完整导出的 JSON 文件包含明文凭据，请妥善保管。",
     "settingsExported": "用户设置导出成功",
     "title": "导出数据",
     "userSettings": "用户设置",
@@ -17,12 +18,8 @@
   "import": {
     "backupTime": "备份时间",
     "channelConfigMigrationDeferred": "渠道配置迁移尚未完成。请检查管理站点配置后重试。",
-    "containsAccountData": "包含账号数据",
-    "containsApiCredentialProfiles": "包含 API 凭据库",
-    "containsChannelConfigs": "包含渠道配置",
-    "containsUserSettings": "包含用户设置",
     "dataInvalid": "数据格式错误，请检查JSON格式",
-    "dataPreview": "数据预览",
+    "dataPreview": "查看或粘贴 JSON",
     "dataValid": "数据格式正确",
     "description": "从备份文件恢复数据",
     "downloadImportFailed": "从 WebDAV 导入失败",
@@ -97,44 +94,37 @@
     "title": "导入数据",
     "versionNotSupported": "此备份由较新版本创建。请先更新应用后再导入。"
   },
-  "notice": {
-    "importantNotice": "重要提示",
-    "importWarning1": "导入前可以逐项选择添加、替换或不导入；默认会添加账号/API 凭据，并保留当前设置",
-    "importWarning2": "建议在导入前先导出当前数据进行备份",
-    "importWarning3": "仅支持本插件导出的JSON格式文件",
-    "importWarning4": "导入的数据可能包含敏感信息（账号令牌与 API Key），请妥善保管备份文件并确保来源可信"
+  "localBackup": {
+    "description": "使用本地 JSON 文件备份、迁移或恢复 All API Hub 数据。",
+    "title": "本地备份与迁移"
   },
   "title": "导入/导出",
   "webdav": {
-    "actionState": {
-      "saved": "配置已保存。测试连接、上传到 WebDAV 和从 WebDAV 导入会使用当前已保存配置。",
-      "unsaved": "配置有未保存更改。测试连接、上传到 WebDAV 和从 WebDAV 导入会先保存这些更改。"
-    },
     "autoSync": {
-      "actionState": {
-        "saved": "立即同步会使用已保存的 WebDAV 和自动同步设置。",
-        "unsaved": "自动同步设置有未保存更改。立即同步不会使用这些更改，请先保存自动同步设置。"
-      },
-      "description": "配置自动同步共享数据；设备本地设置仍保留在当前设备。",
+      "autosaveDescription": "同步策略和开关自动保存；同步间隔在结束输入后保存。",
+      "currentProvider": "同步服务：{{provider}}",
       "enable": "启用自动同步",
       "enableDesc": "开启后将按设定间隔自动与 WebDAV 同步共享数据。",
       "interval": "同步间隔（秒）",
       "intervalDesc": "设置自动同步的时间间隔",
       "intervalHint": "约 {{minutes}} 分钟",
       "lastSync": "上次同步",
-      "saveSettings": "保存设置",
       "strategy": "同步策略",
       "strategyDesc": "选择数据同步方式",
       "strategyLocalFirst": "本地优先 - 本地数据覆盖远程数据",
       "strategyMerge": "智能合并 - 根据时间戳合并本地和远程数据",
       "strategyRemoteFirst": "远程优先 - 远程数据覆盖本地数据",
       "syncNow": "立即同步",
-      "title": "WebDAV 自动同步"
+      "title": "自动同步"
     },
-    "configDesc": "配置 WebDAV 以同步共享数据。部分设备本地设置不会上传，也不会被远端覆盖。",
+    "configDesc": "选择一个云端服务同步共享数据。连接凭据和设备本地设置只保留在当前设备。",
+    "connection": {
+      "title": "连接配置",
+      "webdavDescription": "填写当前设备用于连接 WebDAV 的地址和凭据。"
+    },
     "downloadImport": "从 WebDAV 导入",
-    "downloadImportWithSave": "保存并从 WebDAV 导入",
     "encryption": {
+      "alwaysEncrypted": "始终加密",
       "decryptAction": "解密并导入",
       "decryptDialogDesc": "该 WebDAV 同步数据已加密，请尝试输入密码进行导入。",
       "decryptDialogTitle": "解密 WebDAV 数据",
@@ -143,34 +133,68 @@
       "decryptPrompt": "无法自动解密，请输入密码",
       "enableDesc": "可选：使用密码加密 WebDAV 备份。关闭加密后，上传的备份会以明文包含已保存的凭据。请加密或妥善保管备份。",
       "password": "加密密码",
-      "passwordDesc": "用于加密上传到 WebDAV 的同步数据，以及解密从 WebDAV 下载的数据。",
+      "passwordDesc": "用于加密上传的云端备份，以及解密下载的备份。",
       "passwordPlaceholder": "请输入密码",
       "savePassword": "保存密码以便下次自动解密",
-      "title": "WebDAV 数据加密"
+      "sharedPasswordDescription": "WebDAV 与 GitHub Gist 共用此加密密码；切换服务不会切换密码。",
+      "title": "数据加密"
+    },
+    "gist": {
+      "autoSyncEnableDesc": "开启后将按设定间隔自动与 Secret Gist 同步共享数据。",
+      "configDesc": "使用 GitHub Secret Gist 同步加密后的共享数据。Secret Gist 是不公开列出的链接，不能替代访问控制。",
+      "downloadImport": "从 Secret Gist 导入",
+      "encryptionDescription": "GitHub Gist 同步必须设置加密密码；密码不会上传到 GitHub，也不会进入备份文件。密码丢失后，无法解密加密备份。",
+      "encryptionPasswordRequired": "保存或同步此 Gist 前，请先填写加密密码。",
+      "id": "Gist ID 或链接",
+      "idDesc": "可选，留空时会在首次上传时自动创建。",
+      "idPlaceholder": "例如：a1b2c3d4 或 https://gist.github.com/...",
+      "openLink": "在 GitHub 打开此 Gist",
+      "restorePolicyDescription": "当前云端服务用于同步共享数据，不等同于完整设备备份。云端凭据、加密密码、同步数据选择和账号自动刷新等设置会保留在本机。如需迁移本机设置，请使用手动导出/导入。",
+      "testFailed": "Secret Gist 连接失败",
+      "testSuccess": "Secret Gist 连接成功",
+      "token": "GitHub Token",
+      "tokenDesc": "仅保存在当前浏览器中，不会写入备份或发送到 All API Hub。建议使用只授予 Gists 读写权限的 fine-grained Token，或只带 gist scope 的 classic Token。",
+      "tokenPlaceholder": "粘贴 GitHub Token",
+      "upload": "上传到 Secret Gist",
+      "uploadFailed": "上传到 GitHub Secret Gist 失败",
+      "uploadSuccess": "已上传到 GitHub Secret Gist"
     },
     "hidePassword": "隐藏密码",
+    "manual": {
+      "confirmCancel": "取消",
+      "confirmContinue": "继续",
+      "confirmDownloadDescription": "选中的云端数据将写入本机，对应范围内的现有本地数据可能被替换；此操作不会使用智能合并。",
+      "confirmDownloadTitle": "恢复选中的数据？",
+      "confirmUploadDescription": "选中的本地数据将写入当前云端备份，对应范围内的现有云端数据可能被替换；此操作不会使用智能合并。",
+      "confirmUploadTitle": "上传选中的数据？",
+      "directionWarning": "这是有明确方向的操作：上传会将选中的本地数据写入云端，恢复会将选中的云端数据写回本机；两者都不会使用智能合并。"
+    },
     "notSynced": "未同步",
-    "password": "密码",
+    "password": "WebDAV 密码",
+    "provider": {
+      "description": "此选择同时用于手动同步和自动同步，同一时间只会启用一个服务。",
+      "githubGist": "GitHub Secret Gist",
+      "label": "同步服务",
+      "webdav": "WebDAV"
+    },
     "rebuildDialog": {
       "cancel": "先不重建",
       "confirm": "用这台设备重建",
-      "description": "WebDAV 上的备份文件不完整，继续同步可能造成数据混乱。你可以用当前设备的数据重新生成一份云端备份。",
+      "description": "云端备份不完整，继续同步可能造成数据混乱。你可以用当前设备的数据重新生成一份云端备份。",
       "fullSelectionNote": "本次重建会包含所有可同步数据，但不会改变你平时保存的同步范围设置。",
       "title": "云端备份可能已损坏",
-      "warningDescription": "重建会用这台设备当前的数据替换 WebDAV 上的备份。如果这台设备缺少账号、书签或偏好设置，请先换一台数据完整的设备上传，或先导入完整备份。",
+      "warningDescription": "重建会用这台设备当前的数据替换云端备份。如果这台设备缺少账号、书签或偏好设置，请先换一台数据完整的设备上传，或先导入完整备份。",
       "warningTitle": "请确认这台设备的数据是完整的"
     },
     "restorePolicy": {
-      "description": "WebDAV 主要用于同步共享数据，不等同于完整设备备份。当前设备的 WebDAV 连接/加密设置、同步数据选择，以及账号自动刷新等本地化设置不会通过 WebDAV 上传，也不会被远端覆盖。如需迁移这些本地设置，请使用手动导出/导入。",
-      "title": "同步范围说明"
+      "description": "WebDAV 主要用于同步共享数据，不等同于完整设备备份。当前设备的 WebDAV 连接/加密设置、同步数据选择，以及账号自动刷新等本地化设置不会通过 WebDAV 上传，也不会被远端覆盖。如需迁移这些本地设置，请使用手动导出/导入。"
     },
-    "saveConfig": "保存配置",
+    "retrySave": "保存失败，重试",
     "showPassword": "显示密码",
     "syncData": {
       "accounts": "账号",
       "apiCredentialProfiles": "API 凭据库",
       "bookmarks": "书签",
-      "description": "选择需要通过 WebDAV 同步的共享数据类型；例如 WebDAV 配置、同步选择和账号自动刷新等设备本地项会保留在当前设备。",
       "preferences": "偏好设置",
       "selectionRequired": "请至少选择一个要同步的数据类型",
       "title": "同步数据"
@@ -178,18 +202,19 @@
     "syncError": "同步失败",
     "syncFailed": "同步失败",
     "syncing": "同步中",
+    "syncSettings": {
+      "title": "同步设置"
+    },
     "syncSuccess": "同步成功",
     "testConnection": "测试连接",
-    "testConnectionWithSave": "保存并测试连接",
     "testFailed": "测试连接失败",
     "testSuccess": "测试连接成功",
-    "title": "WebDAV 同步",
+    "title": "云端同步",
     "uploadBackup": "上传到 WebDAV",
-    "uploadBackupWithSave": "保存并上传到 WebDAV",
     "uploadFailed": "上传到 WebDAV 失败",
     "uploadSuccess": "已上传到 WebDAV",
-    "username": "用户名",
-    "webdavUrl": "Webdav 地址",
+    "username": "WebDAV 用户名",
+    "webdavUrl": "WebDAV 地址",
     "webdavUrlExample": "例如：https://dav.example.com/{{filename}} 完整文件 URL或Webdav 根目录 URL"
   }
 }

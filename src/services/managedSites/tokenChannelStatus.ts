@@ -8,6 +8,7 @@ import type { ManagedResourceSecretVerificationRecovery } from "~/services/apiAd
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
+import type { ScheduledReadOptions } from "~/services/apiTransport/requestScheduling"
 import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import {
   getManagedSiteChannelExactMatch,
@@ -100,7 +101,7 @@ export type ManagedSiteTokenChannelStatus =
         }
     )
 
-interface GetManagedSiteTokenChannelStatusParams {
+interface GetManagedSiteTokenChannelStatusParams extends ScheduledReadOptions {
   runtimeKey: AccountRuntimeKey
   managedSite?: ManagedSiteCapabilities
   managedConfig?: ManagedSiteRuntimeConfigValue | null
@@ -184,7 +185,11 @@ export function resolveManagedSiteTokenChannelStatusWithVerifiedKey(
     }
   }
 
-  if (applied.hasAnyMatch) {
+  const soleCandidateKeyMismatch =
+    applied.assessment.url.candidateCount <= 1 &&
+    applied.assessment.key.comparable &&
+    !applied.assessment.key.matched
+  if (applied.hasAnyMatch && !soleCandidateKeyMismatch) {
     return {
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
       reason:
@@ -209,6 +214,7 @@ export function resolveManagedSiteTokenChannelStatusWithVerifiedKey(
 export async function getManagedSiteTokenChannelStatus(
   params: GetManagedSiteTokenChannelStatusParams,
 ): Promise<ManagedSiteTokenChannelStatus> {
+  params.signal?.throwIfAborted()
   const { runtimeKey } = params
   const managedSite =
     params.managedSite ??
@@ -222,6 +228,7 @@ export async function getManagedSiteTokenChannelStatus(
     }
   }
 
+  params.signal?.throwIfAborted()
   let resolvedRuntimeKey = runtimeKey
   let secretsToRedact = collectSecrets(runtimeKey, managedConfig)
 
@@ -240,7 +247,11 @@ export async function getManagedSiteTokenChannelStatus(
       resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
         runtimeKey.account,
         runtimeKey,
-        { protectionBypassExecution: params.protectionBypassExecution },
+        {
+          protectionBypassExecution: params.protectionBypassExecution,
+          abortSignal: params.signal,
+          requestScheduling: params.requestScheduling,
+        },
       )
     }
     secretsToRedact = Array.from(
@@ -250,6 +261,7 @@ export async function getManagedSiteTokenChannelStatus(
       ]),
     )
   } catch (error) {
+    params.signal?.throwIfAborted()
     const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
 
     logger.warn("Managed-site token secret resolution failed", {
@@ -268,6 +280,7 @@ export async function getManagedSiteTokenChannelStatus(
   }
 
   try {
+    params.signal?.throwIfAborted()
     const source = buildManagedSiteChannelDraftSource({
       ...resolvedRuntimeKey,
       baseUrl: isAccountTokenRuntimeKey(resolvedRuntimeKey)
@@ -276,7 +289,11 @@ export async function getManagedSiteTokenChannelStatus(
     })
     const formData = await managedSite.channelDrafts.prepareFormData(source, {
       operationContext: params.operationContext,
+      purpose: "matching",
+      signal: params.signal,
+      requestScheduling: params.requestScheduling,
     })
+    params.signal?.throwIfAborted()
     const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(formData.base_url)
 
     if (!searchBaseUrl) {
@@ -299,8 +316,11 @@ export async function getManagedSiteTokenChannelStatus(
       resolvedChannelKeysByResourceKey: params.resolvedChannelKeysByResourceKey,
       resolveHiddenKeys: true,
       requestCache: params.operationContext?.channelMatch,
+      signal: params.signal,
+      requestScheduling: params.requestScheduling,
       protectionBypassExecution: params.protectionBypassExecution,
     })
+    params.signal?.throwIfAborted()
     const assessment = toManagedSiteVerifiedKeyAssessment(resolution)
     const exactMatch = getManagedSiteChannelExactMatch(
       resolution,
@@ -369,6 +389,14 @@ export async function getManagedSiteTokenChannelStatus(
       }
     }
 
+    if (resolution.key.comparable && !resolution.key.matched) {
+      return {
+        status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED,
+        assessment,
+        ...resolvedChannelKeys,
+      }
+    }
+
     if (
       resolution.key.matched ||
       resolution.models.matched ||
@@ -389,6 +417,7 @@ export async function getManagedSiteTokenChannelStatus(
       ...resolvedChannelKeys,
     }
   } catch (error) {
+    params.signal?.throwIfAborted()
     const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
 
     logger.warn("Managed-site token status check failed", {

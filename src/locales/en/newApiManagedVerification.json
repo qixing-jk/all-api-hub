@@ -3,6 +3,7 @@
     "actions": {
       "cleanupOwnedSessionAndRetry": "Clean up extension sessions and retry",
       "close": "Close",
+      "configureTotp": "Set up automatic verification",
       "openSite": "Open site",
       "retry": "Retry",
       "retryAfterPasskey": "Retry after passkey",
@@ -28,7 +29,8 @@
       "codeLabel": "Verification code"
     },
     "hints": {
-      "manualFallback": "Manual code entry stays available even when automatic TOTP is configured.",
+      "configureTotp": "Verifying frequently? Add your TOTP secret in Settings → {{section}} → {{provider}} so the extension can generate and submit verification codes automatically.",
+      "manualFallback": "Enter a code manually to complete this verification.",
       "openSettingsShortcut": "You can complete the missing configuration here and continue verification immediately.",
       "passkey": "Open the site, complete the passkey prompt there, then come back here and retry."
     },

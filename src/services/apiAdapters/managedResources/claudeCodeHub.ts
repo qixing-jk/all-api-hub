@@ -924,6 +924,7 @@ const definition = {
     locator: number,
     options?: ResourceOperationOptions,
   ) => operations.delete(locator, options),
+  scalarKeyCleanup: "single" as const,
   mapFailure,
 }
 

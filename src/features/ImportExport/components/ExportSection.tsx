@@ -1,4 +1,5 @@
-import { Upload } from "lucide-react"
+import { Info, Upload } from "lucide-react"
+import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -6,7 +7,6 @@ import {
   Card,
   CardDescription,
   CardHeader,
-  CardItem,
   CardList,
   CardTitle,
 } from "~/components/ui"
@@ -63,25 +63,50 @@ function handleTrackedExport(
     })
 }
 
+/** Keep each export action beside its description in the two-column workspace. */
+function ExportActionRow({
+  id,
+  title,
+  description,
+  rightContent,
+}: {
+  id: string
+  title: string
+  description: string
+  rightContent: ReactNode
+}) {
+  return (
+    <div id={id} className="flex items-center gap-4 px-6 py-4">
+      <div className="min-w-0 flex-1 space-y-1">
+        <p className="text-sm font-medium">{title}</p>
+        <p className="text-muted-foreground text-xs leading-5">{description}</p>
+      </div>
+      <div className="shrink-0">{rightContent}</div>
+    </div>
+  )
+}
+
 /**
  * Export section offering controls for full backup, account data, and user settings.
  */
 const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
   const { t } = useTranslation("importExport")
   return (
-    <section id="export-section" className="flex h-full">
+    <section id="export-section" className="flex min-w-0 flex-col">
       <Card padding="none" className="flex flex-1 flex-col">
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Upload className="h-5 w-5 text-green-600 dark:text-green-400" />
-            <CardTitle className="mb-0">{t("export.title")}</CardTitle>
+            <Upload className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+            <CardTitle className="mb-0 text-base">
+              {t("export.title")}
+            </CardTitle>
           </div>
           <CardDescription>{t("export.description")}</CardDescription>
         </CardHeader>
 
-        <CardList className="flex flex-1 flex-col">
+        <CardList className="flex-1">
           {/* 导出所有数据 */}
-          <CardItem
+          <ExportActionRow
             id="export-full-backup"
             title={t("export.fullBackup")}
             description={t("export.fullBackupDescription")}
@@ -95,7 +120,7 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
                   )
                 }
                 disabled={isExporting}
-                variant="success"
+                variant="default"
                 size="sm"
                 loading={isExporting}
                 data-testid={IMPORT_EXPORT_TEST_IDS.exportFullBackupButton}
@@ -108,7 +133,7 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
           />
 
           {/* 导出账号数据 */}
-          <CardItem
+          <ExportActionRow
             id="export-account-data"
             title={t("export.accountData")}
             description={t("export.accountDataDescription")}
@@ -122,7 +147,7 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
                   )
                 }
                 disabled={isExporting}
-                variant="default"
+                variant="secondary"
                 size="sm"
                 loading={isExporting}
                 data-testid={IMPORT_EXPORT_TEST_IDS.exportAccountDataButton}
@@ -135,7 +160,7 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
           />
 
           {/* 导出用户设置 */}
-          <CardItem
+          <ExportActionRow
             id="export-user-settings"
             title={t("export.userSettings")}
             description={t("export.userSettingsDescription")}
@@ -161,6 +186,10 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
             }
           />
         </CardList>
+        <p className="text-muted-foreground dark:border-dark-bg-tertiary flex items-start gap-2 border-t border-gray-200 px-6 py-4 text-xs leading-5">
+          <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <span>{t("export.sensitiveDataNotice")}</span>
+        </p>
       </Card>
     </section>
   )

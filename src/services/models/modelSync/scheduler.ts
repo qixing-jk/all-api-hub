@@ -12,6 +12,7 @@ import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites
 import {
   assertManagedResourceRefForSite,
   getManagedResourceRefKey,
+  toManagedUpstreamResourceRef,
 } from "~/services/managedSites/managedResourceIdentity"
 import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import {
@@ -243,7 +244,6 @@ class ModelSyncScheduler {
       userPrefs.managedSiteModelSync ??
       DEFAULT_PREFERENCES.managedSiteModelSync!
 
-    await ensureLegacyChannelConfigMigrationReady()
     const channelConfigs = await channelConfigStorage.getConfigsForScope({
       managedSiteType: managedConfig.siteType,
       scopeKey: managedConfig.config.baseUrl,
@@ -524,6 +524,7 @@ class ModelSyncScheduler {
         messagesKey,
         { concurrency, maxRetries, channelProcessingTimeout },
         progressOwner,
+        protectionBypassExecution,
       )
     }
 
@@ -532,6 +533,9 @@ class ModelSyncScheduler {
     }
 
     // Initialize the shared runner for providers with individual model operations.
+    if (!selectedTarget) {
+      throw new Error(getManagedSiteConfigMissingMessage(t, messagesKey))
+    }
     const service = await this.createService(
       trigger,
       protectionBypassExecution,
@@ -561,6 +565,22 @@ class ModelSyncScheduler {
     if (channels.length === 0) {
       throw new Error(getManagedSiteNoChannelsToSyncMessage(t, messagesKey))
     }
+
+    await ensureLegacyChannelConfigMigrationReady({
+      resourceRefs: channels.map(({ ref }) =>
+        toManagedUpstreamResourceRef(ref),
+      ),
+      bypassBackoff: isManualModelSyncProtectionBypassExecution(
+        protectionBypassExecution,
+      ),
+    })
+    // Migration may have resolved selected rules; reload before model writeback.
+    service.setChannelConfigs(
+      await channelConfigStorage.getConfigsForScope({
+        managedSiteType: selectedTarget.siteType,
+        scopeKey: selectedTarget.config.baseUrl,
+      }),
+    )
 
     const standardModels =
       modelRedirectConfig.standardModels.length > 0
@@ -710,6 +730,7 @@ class ModelSyncScheduler {
     messagesKey: ManagedSiteMessagesKey,
     options: ManagedResourceModelSyncBatchOptions,
     progressOwner: ProgressOwner,
+    protectionBypassExecution?: ProtectionBypassExecution,
   ): Promise<ExecutionResult> {
     const batch = await workflow.prepareBatch(resourceRefs)
     if (batch.resources.length === 0) {
@@ -722,7 +743,14 @@ class ModelSyncScheduler {
 
     let result
     try {
-      await ensureLegacyChannelConfigMigrationReady()
+      await ensureLegacyChannelConfigMigrationReady({
+        resourceRefs: batch.resources.map(({ ref }) =>
+          toManagedUpstreamResourceRef(ref),
+        ),
+        bypassBackoff: isManualModelSyncProtectionBypassExecution(
+          protectionBypassExecution,
+        ),
+      })
       const channelConfigs = await channelConfigStorage.getConfigsForScope({
         managedSiteType: runtimeConfig.siteType,
         scopeKey: runtimeConfig.config.baseUrl,

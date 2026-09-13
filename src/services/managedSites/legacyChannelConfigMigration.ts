@@ -26,6 +26,7 @@ import {
 import {
   createManagedUpstreamResourceRef,
   normalizeManagedUpstreamResourceScopeKey,
+  type ManagedUpstreamResourceRef,
 } from "~/types/managedUpstreamResource"
 import { createLogger } from "~/utils/core/logger"
 
@@ -379,9 +380,25 @@ export class LegacyChannelConfigMigrationDeferredError extends Error {
 /** Ensures legacy numeric data is resolved before a scoped-only consumer runs. */
 export async function ensureLegacyChannelConfigMigrationReady(options?: {
   bypassBackoff?: boolean
+  resourceRefs?: readonly ManagedUpstreamResourceRef[]
 }): Promise<void> {
+  const selection = options?.resourceRefs
+  if (
+    selection &&
+    !(await channelConfigStorage.hasPendingLegacyConfigsForResources(selection))
+  )
+    return
   const outcome = await legacyChannelConfigMigration.initialize(options)
   if (outcome.status === "deferred") {
+    // A partial migration can finish the selected resources while unrelated
+    // identities remain unresolved. Never guess ownership of those leftovers.
+    if (
+      selection &&
+      !(await channelConfigStorage.hasPendingLegacyConfigsForResources(
+        selection,
+      ))
+    )
+      return
     throw new LegacyChannelConfigMigrationDeferredError(outcome.reason)
   }
 }

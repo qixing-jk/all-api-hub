@@ -1,14 +1,15 @@
 {
-  "description": "Plugin-Daten sichern und wiederherstellen",
+  "description": "All API Hub-Daten sichern, migrieren oder synchronisieren.",
   "export": {
     "accountData": "Kontodaten",
-    "accountDataDescription": "Manuelle Konto- und vollständige JSON-Exporte enthalten gespeicherte Anmeldeinformationen im Klartext. Speichern Sie exportierte Dateien sicher.",
+    "accountDataDescription": "Nur Konten, Lesezeichen und Tags exportieren.",
     "accountsExported": "Kontodaten erfolgreich exportiert",
     "dataExported": "Daten erfolgreich exportiert",
     "description": "Daten als JSON-Datei zur Sicherung exportieren",
     "exportFailed": "Export fehlgeschlagen, bitte versuchen Sie es erneut",
     "fullBackup": "Vollständiger Export",
-    "fullBackupDescription": "Manuelle vollständige JSON-Exporte umfassen gespeicherte Kontoanmeldeinformationen im Klartext zusammen mit Benutzereinstellungen. Bewahren Sie die Datei sicher auf.",
+    "fullBackupDescription": "Konten, Lesezeichen, Tags, API-Zugangsdaten, Kanalkonfigurationen und Benutzereinstellungen exportieren.",
+    "sensitiveDataNotice": "Konto- und vollständige JSON-Exporte enthalten Zugangsdaten im Klartext. Bewahren Sie exportierte Dateien sicher auf.",
     "settingsExported": "Benutzereinstellungen erfolgreich exportiert",
     "title": "Daten exportieren",
     "userSettings": "Benutzereinstellungen",
@@ -17,12 +18,8 @@
   "import": {
     "backupTime": "Backup-Zeit",
     "channelConfigMigrationDeferred": "Die Migration der Kanalkonfiguration konnte nicht abgeschlossen werden. Prüfen Sie die Einstellungen der verwalteten Website und versuchen Sie es erneut.",
-    "containsAccountData": "Enthält Kontodaten",
-    "containsApiCredentialProfiles": "Enthält die API-Anmeldeinformationsbibliothek",
-    "containsChannelConfigs": "Enthält die Kanalkonfiguration",
-    "containsUserSettings": "Enthält Benutzereinstellungen",
     "dataInvalid": "Datenformatfehler, bitte überprüfen Sie das JSON-Format",
-    "dataPreview": "Datenvorschau",
+    "dataPreview": "JSON anzeigen oder einfügen",
     "dataValid": "Datenformat ist korrekt",
     "description": "Daten aus einer Sicherungsdatei wiederherstellen",
     "downloadImportFailed": "Import aus WebDAV fehlgeschlagen",
@@ -97,44 +94,37 @@
     "title": "Daten importieren",
     "versionNotSupported": "Dieses Backup wurde mit einer neueren Version erstellt. Aktualisieren Sie die App, bevor Sie es importieren."
   },
-  "notice": {
-    "importantNotice": "Wichtiger Hinweis",
-    "importWarning1": "Wählen Sie vor dem Importieren pro Datentyp aus, ob Sie ihn hinzufügen, ersetzen oder überspringen möchten. Konten/API-Anmeldeinformationen werden standardmäßig hinzugefügt, während die aktuellen Einstellungen beibehalten werden",
-    "importWarning2": "Es wird empfohlen, aktuelle Daten zur Sicherung vor dem Import zu exportieren",
-    "importWarning3": "Unterstützt nur Dateien im Format JSON, die von dieser Erweiterung exportiert wurden",
-    "importWarning4": "Importierte Daten können vertrauliche Informationen enthalten (Konto-Tokens und API-Schlüssel). Bewahren Sie Backups sicher auf und importieren Sie sie nur aus vertrauenswürdigen Quellen"
+  "localBackup": {
+    "description": "Verwenden Sie lokale JSON-Dateien, um All API Hub-Daten zu sichern, zu übertragen oder wiederherzustellen.",
+    "title": "Lokale Sicherung und Migration"
   },
   "title": "Import/Export",
   "webdav": {
-    "actionState": {
-      "saved": "Die Konfiguration ist gespeichert. Für Verbindungstest, Upload zu WebDAV und Import aus WebDAV wird die aktuell gespeicherte Konfiguration verwendet.",
-      "unsaved": "Die Konfiguration enthält nicht gespeicherte Änderungen. Vor dem Verbindungstest, dem Upload zu WebDAV oder dem Import aus WebDAV werden diese Änderungen gespeichert."
-    },
     "autoSync": {
-      "actionState": {
-        "saved": "„Jetzt synchronisieren“ verwendet die gespeicherten WebDAV- und Auto-Sync-Einstellungen.",
-        "unsaved": "Die Einstellungen für die automatische Synchronisierung weisen nicht gespeicherte Änderungen auf. „Jetzt synchronisieren“ wird sie nicht verwenden; Speichern Sie zunächst die Einstellungen für die automatische Synchronisierung."
-      },
-      "description": "Konfigurieren Sie die automatische Synchronisierung für freigegebene Daten. Gerätelokale Einstellungen bleiben auf dem aktuellen Gerät.",
+      "autosaveDescription": "Synchronisationsmodus und Schalter werden automatisch gespeichert. Das Intervall wird beim Verlassen des Feldes gespeichert.",
+      "currentProvider": "Synchronisierungsdienst: {{provider}}",
       "enable": "Automatische Synchronisierung aktivieren",
       "enableDesc": "Wenn aktiviert, werden freigegebene Daten in festgelegten Intervallen mit WebDAV synchronisiert.",
       "interval": "Synchronisierungsintervall (Sekunden)",
       "intervalDesc": "Legen Sie fest, wie oft die automatische Synchronisierung ausgeführt wird",
       "intervalHint": "Ungefähre Dauer: {{minutes}} Min.",
       "lastSync": "Letzte Synchronisierung",
-      "saveSettings": "Einstellungen speichern",
       "strategy": "Synchronisierungsstrategie",
       "strategyDesc": "Wählen Sie, wie Daten synchronisiert werden sollen",
       "strategyLocalFirst": "Lokal zuerst – lokale Daten haben Vorrang vor entfernten Daten",
       "strategyMerge": "Smart Merge – lokale und Remote-Daten basierend auf Zeitstempeln zusammenführen",
       "strategyRemoteFirst": "Remote zuerst – Remote-Daten überschreiben lokale Daten",
       "syncNow": "Jetzt synchronisieren",
-      "title": "Automatische WebDAV-Synchronisierung"
+      "title": "Automatische Synchronisierung"
     },
-    "configDesc": "Konfigurieren Sie WebDAV, um freigegebene Daten zu synchronisieren. Einige gerätelokale Einstellungen bleiben auf diesem Gerät und werden nicht hochgeladen oder überschrieben.",
+    "configDesc": "Wählen Sie einen Cloud-Dienst zur Synchronisierung freigegebener Daten. Zugangsdaten und gerätelokale Einstellungen bleiben auf diesem Gerät.",
+    "connection": {
+      "title": "Verbindungseinstellungen",
+      "webdavDescription": "Geben Sie die WebDAV-Adresse und die Zugangsdaten für dieses Gerät ein."
+    },
     "downloadImport": "Import aus WebDAV",
-    "downloadImportWithSave": "Speichern und aus WebDAV importieren",
     "encryption": {
+      "alwaysEncrypted": "Immer verschlüsselt",
       "decryptAction": "Entschlüsseln und importieren",
       "decryptDialogDesc": "Diese WebDAV-Synchronisierungsdaten sind verschlüsselt. Versuchen Sie es mit einem Passwort, um es zu importieren.",
       "decryptDialogTitle": "WebDAV Daten entschlüsseln",
@@ -143,34 +133,68 @@
       "decryptPrompt": "Die Daten können nicht automatisch entschlüsselt werden. Geben Sie Ihr Passwort ein.",
       "enableDesc": "Optional: WebDAV Backups mit einem Passwort verschlüsseln. Wenn die Verschlüsselung deaktiviert ist, enthalten hochgeladene Backups gespeicherte Anmeldeinformationen im Klartext. Verwenden Sie eine Verschlüsselung oder bewahren Sie sie sicher auf.",
       "password": "Verschlüsselungspasswort",
-      "passwordDesc": "Wird zum Verschlüsseln von Daten verwendet, die auf WebDAV hochgeladen wurden, und zum Entschlüsseln von Daten, die von WebDAV heruntergeladen wurden.",
+      "passwordDesc": "Zum Verschlüsseln hochgeladener Cloud-Backups und Entschlüsseln heruntergeladener Backups.",
       "passwordPlaceholder": "Passwort eingeben",
       "savePassword": "Passwort für zukünftige Entschlüsselung speichern",
-      "title": "WebDAV Datenverschlüsselung"
+      "sharedPasswordDescription": "WebDAV und GitHub Gist verwenden dasselbe Verschlüsselungspasswort. Ein Dienstwechsel ändert es nicht.",
+      "title": "Datenverschlüsselung"
+    },
+    "gist": {
+      "autoSyncEnableDesc": "Wenn aktiviert, werden gemeinsame Daten im gewählten Intervall mit dem Secret Gist synchronisiert.",
+      "configDesc": "Synchronisiere gemeinsame Daten über ein verschlüsseltes GitHub Secret Gist. Ein Secret Gist ist ein nicht gelisteter Link und keine Zugriffskontrolle.",
+      "downloadImport": "Aus Secret Gist importieren",
+      "encryptionDescription": "GitHub-Gist-Synchronisierung benötigt ein Verschlüsselungspasswort. Es wird weder zu GitHub hochgeladen noch in Backups aufgenommen. Wenn Sie es verlieren, kann das verschlüsselte Backup nicht entschlüsselt werden.",
+      "encryptionPasswordRequired": "Geben Sie ein Verschlüsselungspasswort ein, bevor Sie dieses Gist speichern oder synchronisieren.",
+      "id": "Gist-ID oder URL",
+      "idDesc": "Optional. Leer lassen, um beim ersten Upload automatisch einen Gist zu erstellen.",
+      "idPlaceholder": "Zum Beispiel: a1b2c3d4 oder https://gist.github.com/...",
+      "openLink": "Dieses Gist auf GitHub öffnen",
+      "restorePolicyDescription": "Der aktive Cloud-Dienst synchronisiert gemeinsame Daten, ist aber keine vollständige Gerätesicherung. Cloud-Zugangsdaten, Verschlüsselungspasswörter, Synchronisierungsauswahl und automatische Kontoaktualisierung bleiben auf diesem Gerät. Für lokale Einstellungen bitte den manuellen Export/Import verwenden.",
+      "testFailed": "Verbindung zum Secret Gist fehlgeschlagen",
+      "testSuccess": "Verbindung zum Secret Gist erfolgreich",
+      "token": "GitHub-Token",
+      "tokenDesc": "Wird nur in diesem Browser gespeichert und niemals in Backups geschrieben oder an All API Hub gesendet. Verwende ein Fine-grained-Token nur mit Lese-/Schreibzugriff für Gists oder ein klassisches Token mit dem gist-Bereich.",
+      "tokenPlaceholder": "GitHub-Token einfügen",
+      "upload": "Auf Secret Gist hochladen",
+      "uploadFailed": "Upload zum GitHub Secret Gist fehlgeschlagen",
+      "uploadSuccess": "Auf GitHub Secret Gist hochgeladen"
     },
     "hidePassword": "Passwort verbergen",
+    "manual": {
+      "confirmCancel": "Abbrechen",
+      "confirmContinue": "Fortfahren",
+      "confirmDownloadDescription": "Ausgewählte Cloud-Daten werden auf dieses Gerät geschrieben. Vorhandene lokale Daten in diesen Bereichen können ersetzt werden; diese Aktion verwendet keine intelligente Zusammenführung.",
+      "confirmDownloadTitle": "Ausgewählte Daten wiederherstellen?",
+      "confirmUploadDescription": "Ausgewählte lokale Daten werden in die aktive Cloud-Sicherung geschrieben. Vorhandene Cloud-Daten in diesen Bereichen können ersetzt werden; diese Aktion verwendet keine intelligente Zusammenführung.",
+      "confirmUploadTitle": "Ausgewählte Daten hochladen?",
+      "directionWarning": "Diese Aktionen sind gerichtet: Der Upload schreibt ausgewählte lokale Daten in die Cloud; die Wiederherstellung schreibt ausgewählte Cloud-Daten auf dieses Gerät. Die intelligente Zusammenführung wird nicht verwendet."
+    },
     "notSynced": "Nicht synchronisiert",
-    "password": "Passwort",
+    "password": "WebDAV-Passwort",
+    "provider": {
+      "description": "Diese Auswahl gilt für die manuelle und automatische Synchronisierung. Es ist jeweils nur ein Dienst aktiv.",
+      "githubGist": "GitHub Secret Gist",
+      "label": "Synchronisierungsdienst",
+      "webdav": "WebDAV"
+    },
     "rebuildDialog": {
       "cancel": "Nicht jetzt",
       "confirm": "Von diesem Gerät neu erstellen",
-      "description": "Die Sicherungsdatei auf WebDAV ist unvollständig. Wenn Sie die Synchronisierung fortsetzen, könnten Daten falsch zusammengeführt werden. Sie können aus den Daten auf diesem Gerät ein neues Cloud-Backup erstellen.",
+      "description": "Das Cloud-Backup ist unvollständig. Wenn Sie die Synchronisierung fortsetzen, könnten Daten falsch zusammengeführt werden. Sie können aus den Daten auf diesem Gerät ein neues Cloud-Backup erstellen.",
       "fullSelectionNote": "Dieser Neuaufbau umfasst nur alle synchronisierbaren Daten für diesen Upload. Ihr gespeicherter Synchronisierungsbereich wird nicht geändert.",
       "title": "Ihr Cloud-Backup ist möglicherweise beschädigt",
-      "warningDescription": "Durch die Neuerstellung wird das WebDAV-Backup durch die aktuellen Daten auf diesem Gerät ersetzt. Wenn auf diesem Gerät Konten, Lesezeichen oder Einstellungen fehlen, laden Sie die vollständigen Daten von einem anderen Gerät hoch oder importieren Sie zunächst eine vollständige Sicherung.",
+      "warningDescription": "Durch die Neuerstellung wird das Cloud-Backup durch die aktuellen Daten auf diesem Gerät ersetzt. Wenn auf diesem Gerät Konten, Lesezeichen oder Einstellungen fehlen, laden Sie die vollständigen Daten von einem anderen Gerät hoch oder importieren Sie zunächst eine vollständige Sicherung.",
       "warningTitle": "Stellen Sie sicher, dass dieses Gerät über vollständige Daten verfügt"
     },
     "restorePolicy": {
-      "description": "WebDAV ist für die Synchronisierung gemeinsamer Daten gedacht, nicht für eine vollständige Gerätesicherung. Die Verbindungs-/Verschlüsselungseinstellungen, die Synchronisierungsauswahl und die Einstellungen für die automatische Kontoaktualisierung WebDAV Ihres aktuellen Geräts bleiben lokal und werden nicht auf WebDAV hochgeladen oder von dort überschrieben. Verwenden Sie den manuellen Export/Import, wenn Sie diese gerätelokalen Einstellungen migrieren müssen.",
-      "title": "Hinweis zum Synchronisierungsbereich"
+      "description": "WebDAV ist für die Synchronisierung gemeinsamer Daten gedacht, nicht für eine vollständige Gerätesicherung. Die Verbindungs-/Verschlüsselungseinstellungen, die Synchronisierungsauswahl und die Einstellungen für die automatische Kontoaktualisierung WebDAV Ihres aktuellen Geräts bleiben lokal und werden nicht auf WebDAV hochgeladen oder von dort überschrieben. Verwenden Sie den manuellen Export/Import, wenn Sie diese gerätelokalen Einstellungen migrieren müssen."
     },
-    "saveConfig": "Konfiguration speichern",
+    "retrySave": "Speichern fehlgeschlagen. Erneut versuchen",
     "showPassword": "Passwort anzeigen",
     "syncData": {
       "accounts": "Konten",
       "apiCredentialProfiles": "API-Anmeldeinformationsbibliothek",
       "bookmarks": "Lesezeichen",
-      "description": "Wählen Sie aus, welche freigegebenen Datendomänen an der WebDAV-Synchronisierung teilnehmen. Gerätelokale Einstellungselemente wie WebDAV-Einstellungen, Synchronisierungsauswahl und automatische Kontoaktualisierung bleiben auf dem aktuellen Gerät, während Kanalkonfigurationen aus Kompatibilitätsgründen synchronisiert bleiben.",
       "preferences": "Einstellungen",
       "selectionRequired": "Wählen Sie mindestens eine Datendomäne zur Synchronisierung aus",
       "title": "Daten synchronisieren"
@@ -178,18 +202,19 @@
     "syncError": "Synchronisierung fehlgeschlagen",
     "syncFailed": "Synchronisierung fehlgeschlagen",
     "syncing": "Synchronisierung",
+    "syncSettings": {
+      "title": "Synchronisierungseinstellungen"
+    },
     "syncSuccess": "Synchronisierung erfolgreich",
     "testConnection": "Verbindung testen",
-    "testConnectionWithSave": "Verbindung speichern und testen",
     "testFailed": "Verbindungstest fehlgeschlagen",
     "testSuccess": "Verbindungstest erfolgreich",
-    "title": "WebDAV-Synchronisierung",
+    "title": "Cloud-Synchronisierung",
     "uploadBackup": "Auf WebDAV hochladen",
-    "uploadBackupWithSave": "Speichern und auf WebDAV hochladen",
     "uploadFailed": "Hochladen auf WebDAV fehlgeschlagen",
     "uploadSuccess": "Hochgeladen auf WebDAV",
-    "username": "Benutzername",
-    "webdavUrl": "Webdav-URL",
+    "username": "WebDAV-Benutzername",
+    "webdavUrl": "WebDAV-URL",
     "webdavUrlExample": "Zum Beispiel: https://dav.example.com/{{filename}} vollständige Datei-URL oder Webdav-Stammverzeichnis-URL"
   }
 }

@@ -1,14 +1,15 @@
 {
-  "description": "Sao lưu và khôi phục dữ liệu tiện ích",
+  "description": "Sao lưu, di chuyển hoặc đồng bộ dữ liệu All API Hub.",
   "export": {
     "accountData": "Dữ liệu tài khoản",
-    "accountDataDescription": "Bản xuất tài khoản và JSON đầy đủ thủ công chứa thông tin xác thực đã lưu ở dạng văn bản thuần túy. Hãy lưu tệp an toàn.",
+    "accountDataDescription": "Chỉ xuất tài khoản, dấu trang và thẻ.",
     "accountsExported": "Xuất dữ liệu tài khoản thành công",
     "dataExported": "Xuất dữ liệu thành công",
     "description": "Xuất dữ liệu dưới dạng tệp JSON để sao lưu",
     "exportFailed": "Xuất thất bại, vui lòng thử lại",
     "fullBackup": "Xuất toàn bộ",
-    "fullBackupDescription": "Bản xuất JSON đầy đủ thủ công chứa thông tin xác thực tài khoản đã lưu ở dạng văn bản thuần túy cùng với cài đặt người dùng. Hãy lưu tệp an toàn.",
+    "fullBackupDescription": "Xuất tài khoản, dấu trang, thẻ, thông tin xác thực API, cấu hình kênh và cài đặt người dùng.",
+    "sensitiveDataNotice": "Bản xuất tài khoản và bản xuất JSON đầy đủ chứa thông tin xác thực ở dạng văn bản thuần túy. Hãy lưu tệp an toàn.",
     "settingsExported": "Xuất cài đặt người dùng thành công",
     "title": "Xuất dữ liệu",
     "userSettings": "Cài đặt người dùng",
@@ -17,12 +18,8 @@
   "import": {
     "backupTime": "Thời gian sao lưu",
     "channelConfigMigrationDeferred": "Không thể hoàn tất quá trình di chuyển cấu hình kênh. Hãy kiểm tra cài đặt trang được quản lý rồi thử lại.",
-    "containsAccountData": "Bao gồm dữ liệu tài khoản",
-    "containsApiCredentialProfiles": "Bao gồm hồ sơ thông tin xác thực API",
-    "containsChannelConfigs": "Bao gồm cấu hình kênh",
-    "containsUserSettings": "Bao gồm cài đặt người dùng",
     "dataInvalid": "Lỗi định dạng dữ liệu, vui lòng kiểm tra định dạng JSON",
-    "dataPreview": "Xem trước dữ liệu",
+    "dataPreview": "Xem hoặc dán JSON",
     "dataValid": "Định dạng dữ liệu hợp lệ",
     "description": "Khôi phục dữ liệu từ tệp sao lưu",
     "downloadImportFailed": "Nhập từ WebDAV thất bại",
@@ -97,44 +94,37 @@
     "title": "Nhập dữ liệu",
     "versionNotSupported": "Bản sao lưu này được tạo bằng phiên bản mới hơn. Hãy cập nhật ứng dụng trước khi nhập."
   },
-  "notice": {
-    "importantNotice": "Thông báo quan trọng",
-    "importWarning1": "Trước khi nhập, bạn có thể chọn thêm, thay thế hoặc bỏ qua từng loại dữ liệu. Theo mặc định, tài khoản/thông tin xác thực API sẽ được thêm vào và cài đặt hiện tại được giữ lại",
-    "importWarning2": "Bạn nên xuất dữ liệu hiện tại để sao lưu trước khi nhập",
-    "importWarning3": "Chỉ hỗ trợ các tệp định dạng JSON được xuất bởi tiện ích này",
-    "importWarning4": "Dữ liệu được nhập có thể chứa thông tin nhạy cảm (Mã thông báo tài khoản và API Key), vui lòng bảo quản tệp sao lưu cẩn thận và đảm bảo nguồn đáng tin cậy"
+  "localBackup": {
+    "description": "Dùng tệp JSON cục bộ để sao lưu, di chuyển hoặc khôi phục dữ liệu All API Hub.",
+    "title": "Sao lưu và di chuyển cục bộ"
   },
   "title": "Nhập/Xuất",
   "webdav": {
-    "actionState": {
-      "saved": "Cấu hình đã được lưu. Việc kiểm tra kết nối, tải lên WebDAV và nhập từ WebDAV sẽ sử dụng cấu hình đã lưu hiện tại.",
-      "unsaved": "Cấu hình có những thay đổi chưa được lưu. Việc kiểm tra kết nối, tải lên WebDAV và nhập từ WebDAV sẽ lưu các thay đổi này trước."
-    },
     "autoSync": {
-      "actionState": {
-        "saved": "Đồng bộ hóa ngay sẽ sử dụng cài đặt WebDAV và tự động đồng bộ hóa đã lưu.",
-        "unsaved": "Cài đặt tự động đồng bộ hóa có những thay đổi chưa được lưu. Đồng bộ hóa ngay sẽ không sử dụng các thay đổi này, vui lòng lưu cài đặt tự động đồng bộ hóa trước."
-      },
-      "description": "Định cấu hình tự động đồng bộ hóa dữ liệu được chia sẻ; cài đặt cục bộ của thiết bị vẫn được giữ lại trên thiết bị hiện tại.",
+      "autosaveDescription": "Chiến lược và công tắc đồng bộ được lưu tự động. Khoảng thời gian được lưu khi rời khỏi ô nhập.",
+      "currentProvider": "Dịch vụ đồng bộ: {{provider}}",
       "enable": "Bật tự động đồng bộ hóa",
       "enableDesc": "Sau khi bật, dữ liệu được chia sẻ sẽ tự động đồng bộ hóa với WebDAV theo khoảng thời gian đã đặt.",
       "interval": "Khoảng thời gian đồng bộ hóa (giây)",
       "intervalDesc": "Thiết lập khoảng thời gian để tự động đồng bộ hóa",
       "intervalHint": "Khoảng {{minutes}} phút",
       "lastSync": "Đồng bộ hóa lần cuối",
-      "saveSettings": "Lưu cài đặt",
       "strategy": "Chiến lược đồng bộ hóa",
       "strategyDesc": "Chọn phương thức đồng bộ hóa dữ liệu",
       "strategyLocalFirst": "Ưu tiên cục bộ - Dữ liệu cục bộ ghi đè dữ liệu từ xa",
       "strategyMerge": "Hợp nhất thông minh - Hợp nhất dữ liệu cục bộ và từ xa dựa trên dấu thời gian",
       "strategyRemoteFirst": "Ưu tiên từ xa - Dữ liệu từ xa ghi đè dữ liệu cục bộ",
       "syncNow": "Đồng bộ hóa ngay",
-      "title": "Tự động đồng bộ hóa WebDAV"
+      "title": "Tự động đồng bộ hóa"
     },
-    "configDesc": "Định cấu hình WebDAV để đồng bộ hóa dữ liệu được chia sẻ. Một số cài đặt cục bộ của thiết bị sẽ không được tải lên và cũng không bị ghi đè bởi máy chủ từ xa.",
+    "configDesc": "Chọn một dịch vụ đám mây để đồng bộ dữ liệu được chia sẻ. Thông tin kết nối và cài đặt cục bộ chỉ được giữ trên thiết bị này.",
+    "connection": {
+      "title": "Cấu hình kết nối",
+      "webdavDescription": "Nhập địa chỉ WebDAV và thông tin xác thực mà thiết bị này sử dụng."
+    },
     "downloadImport": "Nhập từ WebDAV",
-    "downloadImportWithSave": "Lưu và nhập từ WebDAV",
     "encryption": {
+      "alwaysEncrypted": "Luôn mã hóa",
       "decryptAction": "Giải mã và nhập",
       "decryptDialogDesc": "Dữ liệu đồng bộ hóa WebDAV này đã được mã hóa, vui lòng thử nhập mật khẩu để nhập.",
       "decryptDialogTitle": "Giải mã dữ liệu WebDAV",
@@ -143,34 +133,68 @@
       "decryptPrompt": "Không thể tự động giải mã, vui lòng nhập mật khẩu",
       "enableDesc": "Tùy chọn: mã hóa bản sao lưu WebDAV bằng mật khẩu. Khi tắt mã hóa, bản sao tải lên chứa thông tin xác thực đã lưu ở dạng văn bản thuần túy. Hãy mã hóa hoặc lưu trữ an toàn.",
       "password": "Mật khẩu mã hóa",
-      "passwordDesc": "Được sử dụng để mã hóa dữ liệu đồng bộ tải lên WebDAV và giải mã dữ liệu tải xuống từ WebDAV.",
+      "passwordDesc": "Dùng để mã hóa bản sao lưu tải lên đám mây và giải mã bản sao lưu tải xuống.",
       "passwordPlaceholder": "Vui lòng nhập mật khẩu",
       "savePassword": "Lưu mật khẩu để tự động giải mã lần sau",
-      "title": "Mã hóa dữ liệu WebDAV"
+      "sharedPasswordDescription": "WebDAV và GitHub Gist dùng chung mật khẩu mã hóa này. Chuyển dịch vụ không thay đổi mật khẩu.",
+      "title": "Mã hóa dữ liệu"
+    },
+    "gist": {
+      "autoSyncEnableDesc": "Khi bật, dữ liệu được chia sẻ sẽ được đồng bộ với Secret Gist theo khoảng thời gian đã chọn.",
+      "configDesc": "Đồng bộ dữ liệu dùng chung qua GitHub Secret Gist đã mã hóa. Secret Gist là liên kết không được liệt kê, không phải ranh giới kiểm soát truy cập.",
+      "downloadImport": "Nhập từ Secret Gist",
+      "encryptionDescription": "Đồng bộ GitHub Gist yêu cầu mật khẩu mã hóa. Mật khẩu không được tải lên GitHub hoặc đưa vào bản sao lưu. Nếu mất mật khẩu, bạn không thể giải mã bản sao lưu.",
+      "encryptionPasswordRequired": "Nhập mật khẩu mã hóa trước khi lưu hoặc đồng bộ Gist này.",
+      "id": "ID hoặc URL Gist",
+      "idDesc": "Không bắt buộc. Để trống để tự động tạo Gist trong lần tải lên đầu tiên.",
+      "idPlaceholder": "Ví dụ: a1b2c3d4 hoặc https://gist.github.com/...",
+      "openLink": "Mở Gist này trên GitHub",
+      "restorePolicyDescription": "Nhà cung cấp đám mây hiện tại đồng bộ dữ liệu được chia sẻ, không phải bản sao lưu toàn bộ thiết bị. Thông tin xác thực đám mây, mật khẩu mã hóa, lựa chọn đồng bộ và tự động làm mới tài khoản vẫn ở thiết bị này. Hãy dùng xuất/nhập thủ công để chuyển cài đặt cục bộ.",
+      "testFailed": "Kết nối Secret Gist thất bại",
+      "testSuccess": "Kết nối Secret Gist thành công",
+      "token": "Token GitHub",
+      "tokenDesc": "Chỉ lưu trong trình duyệt này; không bao giờ ghi vào bản sao lưu hoặc gửi đến All API Hub. Hãy dùng fine-grained token chỉ có quyền đọc/ghi Gists hoặc classic token với phạm vi gist.",
+      "tokenPlaceholder": "Dán token GitHub",
+      "upload": "Tải lên Secret Gist",
+      "uploadFailed": "Tải lên GitHub Secret Gist thất bại",
+      "uploadSuccess": "Đã tải lên GitHub Secret Gist"
     },
     "hidePassword": "Ẩn mật khẩu",
+    "manual": {
+      "confirmCancel": "Hủy",
+      "confirmContinue": "Tiếp tục",
+      "confirmDownloadDescription": "Dữ liệu đám mây đã chọn sẽ được ghi vào thiết bị này. Dữ liệu cục bộ hiện có trong các phần đó có thể bị thay thế; thao tác này không dùng Hợp nhất thông minh.",
+      "confirmDownloadTitle": "Khôi phục dữ liệu đã chọn?",
+      "confirmUploadDescription": "Dữ liệu cục bộ đã chọn sẽ được ghi vào bản sao lưu đám mây đang dùng. Dữ liệu đám mây hiện có trong các phần đó có thể bị thay thế; thao tác này không dùng Hợp nhất thông minh.",
+      "confirmUploadTitle": "Tải lên dữ liệu đã chọn?",
+      "directionWarning": "Đây là các thao tác một chiều: tải lên ghi dữ liệu cục bộ đã chọn lên đám mây; khôi phục ghi dữ liệu đám mây đã chọn vào thiết bị này. Không dùng Hợp nhất thông minh."
+    },
     "notSynced": "Chưa đồng bộ hóa",
-    "password": "Mật khẩu",
+    "password": "Mật khẩu WebDAV",
+    "provider": {
+      "description": "Lựa chọn này áp dụng cho cả đồng bộ thủ công và tự động. Mỗi lần chỉ có một dịch vụ hoạt động.",
+      "githubGist": "GitHub Secret Gist",
+      "label": "Dịch vụ đồng bộ",
+      "webdav": "WebDAV"
+    },
     "rebuildDialog": {
       "cancel": "Chưa tạo lại",
       "confirm": "Tạo lại từ thiết bị này",
-      "description": "Tệp sao lưu trên WebDAV không đầy đủ. Tiếp tục đồng bộ có thể làm dữ liệu bị trộn sai. Bạn có thể tạo một bản sao lưu đám mây mới từ dữ liệu trên thiết bị này.",
+      "description": "Bản sao lưu đám mây không đầy đủ. Tiếp tục đồng bộ có thể làm dữ liệu bị trộn sai. Bạn có thể tạo một bản sao lưu đám mây mới từ dữ liệu trên thiết bị này.",
       "fullSelectionNote": "Lần tạo lại này sẽ bao gồm mọi dữ liệu có thể đồng bộ, chỉ áp dụng cho lần tải lên này. Phạm vi đồng bộ đã lưu của bạn sẽ không bị thay đổi.",
       "title": "Bản sao lưu đám mây có thể đã hỏng",
-      "warningDescription": "Tạo lại sẽ thay thế bản sao lưu trên WebDAV bằng dữ liệu hiện có trên thiết bị này. Nếu thiết bị này thiếu tài khoản, dấu trang hoặc tùy chọn, hãy tải lên từ một thiết bị khác có dữ liệu đầy đủ hoặc nhập một bản sao lưu hoàn chỉnh trước.",
+      "warningDescription": "Tạo lại sẽ thay thế bản sao lưu đám mây bằng dữ liệu hiện có trên thiết bị này. Nếu thiết bị này thiếu tài khoản, dấu trang hoặc tùy chọn, hãy tải lên từ một thiết bị khác có dữ liệu đầy đủ hoặc nhập một bản sao lưu hoàn chỉnh trước.",
       "warningTitle": "Hãy chắc chắn thiết bị này có dữ liệu đầy đủ"
     },
     "restorePolicy": {
-      "description": "WebDAV chủ yếu được sử dụng để đồng bộ hóa dữ liệu được chia sẻ, không tương đương với việc sao lưu toàn bộ thiết bị. Cài đặt kết nối/mã hóa WebDAV của thiết bị hiện tại, lựa chọn dữ liệu đồng bộ hóa và các cài đặt cục bộ như tự động làm mới tài khoản sẽ không được tải lên qua WebDAV và cũng không bị ghi đè bởi máy chủ từ xa. Nếu bạn cần di chuyển các cài đặt cục bộ này, vui lòng sử dụng xuất/nhập thủ công.",
-      "title": "Giải thích phạm vi đồng bộ hóa"
+      "description": "WebDAV chủ yếu được sử dụng để đồng bộ hóa dữ liệu được chia sẻ, không tương đương với việc sao lưu toàn bộ thiết bị. Cài đặt kết nối/mã hóa WebDAV của thiết bị hiện tại, lựa chọn dữ liệu đồng bộ hóa và các cài đặt cục bộ như tự động làm mới tài khoản sẽ không được tải lên qua WebDAV và cũng không bị ghi đè bởi máy chủ từ xa. Nếu bạn cần di chuyển các cài đặt cục bộ này, vui lòng sử dụng xuất/nhập thủ công."
     },
-    "saveConfig": "Lưu cấu hình",
+    "retrySave": "Lưu thất bại. Thử lại",
     "showPassword": "Hiển thị mật khẩu",
     "syncData": {
       "accounts": "Tài khoản",
       "apiCredentialProfiles": "Hồ sơ thông tin xác thực API",
       "bookmarks": "Dấu trang",
-      "description": "Chọn các loại dữ liệu được chia sẻ cần đồng bộ qua WebDAV; ví dụ: các mục cục bộ của thiết bị như cấu hình WebDAV, lựa chọn đồng bộ hóa và tự động làm mới tài khoản sẽ được giữ lại trên thiết bị hiện tại.",
       "preferences": "Cài đặt tùy chọn",
       "selectionRequired": "Vui lòng chọn ít nhất một loại dữ liệu để đồng bộ hóa",
       "title": "Đồng bộ hóa dữ liệu"
@@ -178,18 +202,19 @@
     "syncError": "Đồng bộ hóa thất bại",
     "syncFailed": "Đồng bộ hóa thất bại",
     "syncing": "Đang đồng bộ hóa",
+    "syncSettings": {
+      "title": "Cài đặt đồng bộ hóa"
+    },
     "syncSuccess": "Đồng bộ hóa thành công",
     "testConnection": "Kiểm tra kết nối",
-    "testConnectionWithSave": "Lưu và kiểm tra kết nối",
     "testFailed": "Kiểm tra kết nối thất bại",
     "testSuccess": "Kiểm tra kết nối thành công",
-    "title": "Đồng bộ hóa WebDAV",
+    "title": "Đồng bộ hóa đám mây",
     "uploadBackup": "Tải lên WebDAV",
-    "uploadBackupWithSave": "Lưu và tải lên WebDAV",
     "uploadFailed": "Tải lên WebDAV thất bại",
     "uploadSuccess": "Đã tải lên WebDAV",
-    "username": "Tên người dùng",
-    "webdavUrl": "Địa chỉ WebDAV",
+    "username": "Tên người dùng WebDAV",
+    "webdavUrl": "URL WebDAV",
     "webdavUrlExample": "Ví dụ: https://dav.example.com/{{filename}} URL tệp đầy đủ hoặc URL thư mục gốc của WebDAV"
   }
 }

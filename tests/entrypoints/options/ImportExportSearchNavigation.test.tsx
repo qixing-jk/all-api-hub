@@ -1,12 +1,12 @@
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import ImportExport from "~/features/ImportExport/ImportExport"
+import { WEBDAV_TARGET_IDS } from "~/features/ImportExport/searchTargets"
 import {
   OPTIONS_SEARCH_ANCHOR_PARAM,
   OPTIONS_SEARCH_HIGHLIGHT_PARAM,
-} from "~/entrypoints/options/search/navigation"
-import ImportExport from "~/features/ImportExport/ImportExport"
-import { WEBDAV_TARGET_IDS } from "~/features/ImportExport/searchTargets"
+} from "~/features/OptionsSearch/navigation"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const { mockedUseImportExport } = vi.hoisted(() => ({

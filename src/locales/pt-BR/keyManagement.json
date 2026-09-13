@@ -260,6 +260,15 @@
   "knownTotalKeys_one": "{{count}} chave lida",
   "knownTotalKeys_many": "{{count}} chaves lidas",
   "knownTotalKeys_other": "{{count}} chaves lidas",
+  "linkedCleanup": {
+    "description": "Verifica todos os canais com esta chave. Remove apenas as credenciais correspondentes; exclui o canal se não restarem chaves. Se a verificação falhar, mantém a chave de origem.",
+    "option": "Limpar também os canais associados no site gerenciado atual",
+    "pending_one": "{{count}} limpeza de canal pendente",
+    "pending_many": "{{count}} limpezas de canais pendentes",
+    "pending_other": "{{count}} limpezas de canais pendentes",
+    "retry": "Tentar limpeza novamente",
+    "retryDescription": "As limpezas incompletas são salvas. A limpeza só continua após confirmar a exclusão da chave de origem."
+  },
   "loadError": {
     "description": "A extensão não conseguiu carregar as chaves desta conta. A sessão pode ter expirado, as permissões podem ser insuficientes ou o site pode estar temporariamente indisponível. Entre novamente no site e tente de novo.\n\nErro: {{error}}",
     "openSite": "Abrir site",
@@ -294,6 +303,7 @@
       "inputPreparationFailed": "A verificação não conseguiu preparar dados de canal comparáveis.",
       "newApiRetrieveKeyHint": "No New API, a comparação completa depende da chave do canal. Como visualizar essa chave exige verificação em duas etapas (2FA), a comparação completa não está disponível no momento."
     },
+    "label": "Site gerenciado",
     "nativeResourceUnsupported": "A correspondência com sites gerenciados ainda não oferece suporte a chaves de recursos nativos nesta página. A atualização se aplica apenas às chaves compatíveis.",
     "pageUnsupported": "As verificações dos canais do site gerenciado não estão disponíveis nesta página porque o site atual não permite buscar canais por URL.",
     "recovery": {

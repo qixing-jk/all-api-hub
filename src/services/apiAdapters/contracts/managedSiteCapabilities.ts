@@ -1,4 +1,5 @@
 import type { ManagedSiteType } from "~/constants/siteType"
+import type { ScheduledReadOptions } from "~/services/apiTransport/requestScheduling"
 import type { ManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
@@ -10,7 +11,7 @@ import type {
 import type { ManagedResourceMatchingCapability } from "./managedResourceMatching"
 import type { ManagedResourceModelsCapability } from "./managedResourceModels"
 
-export type ManagedSiteChannelRequestOptions = {
+export type ManagedSiteChannelRequestOptions = ScheduledReadOptions & {
   signal?: AbortSignal
   protectionBypassExecution?: ProtectionBypassExecution
   bypassSiteRequestLimit?: boolean
@@ -26,7 +27,7 @@ export type ManagedSitePaginatedChannelRequestOptions =
     pageStart?: number
   }
 
-export type ManagedSiteChannelSecretReadOptions = {
+export type ManagedSiteChannelSecretReadOptions = ScheduledReadOptions & {
   protectionBypassExecution: ProtectionBypassExecution
   signal?: AbortSignal
 }
@@ -59,7 +60,9 @@ export type ManagedSiteQueriesCapability<
   }
 }
 
-export type ManagedSiteChannelDraftRequestOptions = {
+export type ManagedSiteChannelDraftRequestOptions = ScheduledReadOptions & {
+  /** Native editors own group loading; matching also needs no draft groups. */
+  purpose?: "import" | "matching" | "native-editor"
   operationContext?: ManagedSiteOperationContext
 }
 

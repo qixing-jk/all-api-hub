@@ -307,9 +307,6 @@ describe("model sync operation helpers", () => {
       },
     )
     expect(modelSyncListChannelsMock).toHaveBeenCalled()
-    expect(ensureLegacyChannelConfigMigrationReadyMock).toHaveBeenCalledTimes(1)
-    expect(
-      ensureLegacyChannelConfigMigrationReadyMock.mock.invocationCallOrder[0],
-    ).toBeLessThan(getConfigsForScopeMock.mock.invocationCallOrder[0])
+    expect(ensureLegacyChannelConfigMigrationReadyMock).not.toHaveBeenCalled()
   })
 })

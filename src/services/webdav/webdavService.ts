@@ -7,6 +7,7 @@ import {
   encryptWebdavBackupContent,
   tryParseEncryptedWebdavBackupEnvelope,
 } from "./webdavBackupEncryption"
+import { validateWebdavBackupData } from "./webdavBackupValidation"
 
 /**
  * Builds a Basic Authorization header value from WebDAV username and password.
@@ -60,9 +61,23 @@ export class WebdavFileNotFoundError extends Error {
  * Parse a downloaded WebDAV backup payload and convert malformed JSON into a
  * stable user-facing backup error instead of exposing engine-specific parser text.
  */
-export function parseWebdavBackupJson<T = unknown>(content: string): T {
+export function parseWebdavBackupJson<T = unknown>(
+  content: string,
+  options?: { requireBackupShape?: boolean },
+): T {
   try {
-    return JSON.parse(content) as T
+    if (typeof content !== "string" || content.trim() === "") {
+      throw new Error("empty backup")
+    }
+
+    const parsed = JSON.parse(content) as unknown
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("backup root is not an object")
+    }
+
+    validateWebdavBackupData(parsed as Record<string, unknown>, options)
+
+    return parsed as T
   } catch {
     throw new Error(t("messages:webdav.invalidBackupJson"))
   }

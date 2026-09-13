@@ -1,25 +1,24 @@
-import { ArrowLeftRight } from "lucide-react"
+import { ArrowLeftRight, HardDrive } from "lucide-react"
 import { useEffect } from "react"
 import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "~/components/PageHeader"
-import { Alert } from "~/components/ui"
+import { Heading3 } from "~/components/ui"
 import {
   clearHighlightSearchParam,
   highlightSearchTarget,
   OPTIONS_SEARCH_ANCHOR_PARAM,
   OPTIONS_SEARCH_HIGHLIGHT_PARAM,
-} from "~/entrypoints/options/search/navigation"
+} from "~/features/OptionsSearch/navigation"
 import { navigateToAnchor } from "~/utils/core/url"
 
+import CloudSyncSettings from "./components/CloudSyncSettings"
 import ExportSection from "./components/ExportSection"
 import ImportSection from "./components/ImportSection"
-import WebDAVAutoSyncSettings from "./components/WebDAVAutoSyncSettings"
-import WebDAVSettings from "./components/WebDAVSettings"
 import { useImportExport } from "./hooks/useImportExport"
 
 /**
- * Import/Export page combining manual export/import sections plus WebDAV backup and notices.
+ * Import/Export page combining local migration and cloud sync.
  */
 export default function ImportExport() {
   const { t } = useTranslation("importExport")
@@ -37,30 +36,39 @@ export default function ImportExport() {
   } = useImportExport()
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search)
-    const pendingAnchor = searchParams.get(OPTIONS_SEARCH_ANCHOR_PARAM)
-    const pendingHighlight = searchParams.get(OPTIONS_SEARCH_HIGHLIGHT_PARAM)
     let anchorTimer: number | undefined
     let highlightTimer: number | undefined
+    const applyUrlState = () => {
+      window.clearTimeout(anchorTimer)
+      window.clearTimeout(highlightTimer)
+      const searchParams = new URLSearchParams(window.location.search)
+      const pendingAnchor = searchParams.get(OPTIONS_SEARCH_ANCHOR_PARAM)
+      const pendingHighlight = searchParams.get(OPTIONS_SEARCH_HIGHLIGHT_PARAM)
 
-    if (pendingAnchor) {
-      anchorTimer = window.setTimeout(() => {
-        navigateToAnchor(pendingAnchor)
-      }, 120)
-    }
+      if (pendingAnchor) {
+        anchorTimer = window.setTimeout(() => {
+          navigateToAnchor(pendingAnchor)
+        }, 120)
+      }
 
-    if (pendingHighlight) {
-      highlightTimer = window.setTimeout(() => {
-        if (!highlightSearchTarget(pendingHighlight)) {
+      if (pendingHighlight) {
+        highlightTimer = window.setTimeout(() => {
+          if (!highlightSearchTarget(pendingHighlight)) {
+            clearHighlightSearchParam()
+            return
+          }
+
           clearHighlightSearchParam()
-          return
-        }
-
-        clearHighlightSearchParam()
-      }, 220)
+        }, 220)
+      }
     }
+    applyUrlState()
+    window.addEventListener("popstate", applyUrlState)
+    window.addEventListener("hashchange", applyUrlState)
 
     return () => {
+      window.removeEventListener("popstate", applyUrlState)
+      window.removeEventListener("hashchange", applyUrlState)
       if (anchorTimer !== undefined) {
         window.clearTimeout(anchorTimer)
       }
@@ -78,41 +86,39 @@ export default function ImportExport() {
         description={t("description")}
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">
-        <ExportSection
-          isExporting={isExporting}
-          setIsExporting={setIsExporting}
-        />
-        <ImportSection
-          importData={importData}
-          setImportData={setImportData}
-          importPlan={importPlan}
-          setImportPlan={setImportPlan}
-          handleFileImport={handleFileImport}
-          handleImport={handleImport}
-          isImporting={isImporting}
-          validation={validation}
-        />
-      </div>
-
-      {/* WebDAV 备份/同步 */}
-      <WebDAVSettings />
-
-      {/* WebDAV 自动同步 */}
-      <WebDAVAutoSyncSettings />
-
-      {/* 重要提示 */}
-      <Alert variant="warning">
-        <div>
-          <p className="mb-2 font-medium">{t("notice.importantNotice")}</p>
-          <ul className="space-y-1 text-sm">
-            <li>• {t("notice.importWarning1")}</li>
-            <li>• {t("notice.importWarning2")}</li>
-            <li>• {t("notice.importWarning3")}</li>
-            <li>• {t("notice.importWarning4")}</li>
-          </ul>
+      <section id="local-backup-migration" className="space-y-4">
+        <div className="space-y-1">
+          <Heading3 as="h2" className="flex items-center gap-2">
+            <HardDrive
+              className="size-5 shrink-0 text-sky-600 dark:text-sky-400"
+              aria-hidden="true"
+            />
+            {t("localBackup.title")}
+          </Heading3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {t("localBackup.description")}
+          </p>
         </div>
-      </Alert>
+
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          <ExportSection
+            isExporting={isExporting}
+            setIsExporting={setIsExporting}
+          />
+          <ImportSection
+            importData={importData}
+            setImportData={setImportData}
+            importPlan={importPlan}
+            setImportPlan={setImportPlan}
+            handleFileImport={handleFileImport}
+            handleImport={handleImport}
+            isImporting={isImporting}
+            validation={validation}
+          />
+        </div>
+      </section>
+
+      <CloudSyncSettings />
     </div>
   )
 }

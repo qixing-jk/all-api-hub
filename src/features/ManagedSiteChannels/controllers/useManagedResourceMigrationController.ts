@@ -389,6 +389,7 @@ export function useManagedResourceMigrationController({
   const execute = useCallback(async () => {
     const executionPreview = canonicalPreview.current
     if (!executionPreview || isRunning || resultState) return
+    const selectedCount = selectedRowKeysRef.current.length
 
     canonicalPreview.current = null
     const current = generation.current
@@ -433,7 +434,7 @@ export function useManagedResourceMigrationController({
       )
       const insights = {
         itemCount: canonicalResult.totalSelected,
-        selectedCount: canonicalResult.totalSelected,
+        selectedCount,
         successCount: canonicalResult.createdCount,
         failureCount:
           canonicalResult.failedCount + canonicalResult.uncertainCount,

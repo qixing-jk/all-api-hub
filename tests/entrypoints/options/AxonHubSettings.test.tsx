@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import { useState, type ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -436,19 +437,14 @@ describe("AxonHubSettings", () => {
     fireEvent.click(validatingButton)
     expect(mockedSignIn).toHaveBeenCalledTimes(1)
 
+    fireEvent.change(
+      screen.getByLabelText("settings:axonHub.fields.emailLabel"),
+      { target: { value: "newer@example.com" } },
+    )
     deferredSignIn.resolve({ accessToken: "token" })
 
     await waitFor(() => {
-      expect(mockUpdateAxonHubConfig).toHaveBeenCalledWith(
-        {
-          baseUrl: "https://validated.example",
-          email: "validated@example.com",
-          password: "validated-password",
-        },
-        {
-          expectedLastUpdated: 1,
-        },
-      )
+      expect(mockUpdateAxonHubConfig).not.toHaveBeenCalled()
       expect(toast.success).toHaveBeenCalledWith(
         "settings:axonHub.validation.success",
       )
@@ -457,8 +453,44 @@ describe("AxonHubSettings", () => {
     const restoredButton = screen.getByRole("button", {
       name: "settings:axonHub.validation.validate",
     })
+    expect(
+      screen.getByLabelText("settings:axonHub.fields.emailLabel"),
+    ).toHaveValue("newer@example.com")
     expect(restoredButton).toBeEnabled()
     expect(restoredButton).not.toHaveAttribute("aria-busy")
+  })
+
+  it("saves edited credentials before a failed connection check without saving again", async () => {
+    const user = userEvent.setup()
+    mockedSignIn.mockRejectedValue(new Error("invalid credentials"))
+    render(<AxonHubSettings />)
+
+    const password = screen.getByLabelText(
+      "settings:axonHub.fields.passwordLabel",
+    )
+    await user.clear(password)
+    await user.type(password, "  new password  ")
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings:axonHub.validation.validate",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "settings:axonHub.validation.failed",
+      )
+    })
+    expect(mockUpdateAxonHubPassword).toHaveBeenCalledWith("  new password  ", {
+      expectedLastUpdated: 1,
+    })
+    expect(mockedSignIn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        password: "  new password  ",
+      }),
+    )
+    expect(password).toHaveValue("  new password  ")
+    expect(mockUpdateAxonHubConfig).not.toHaveBeenCalled()
   })
 
   it("surfaces sign-in failures without overwriting saved config", async () => {
@@ -478,25 +510,6 @@ describe("AxonHubSettings", () => {
       )
     })
     expect(mockUpdateAxonHubConfig).not.toHaveBeenCalled()
-  })
-
-  it("uses the named update-failed toast when validation succeeds but persistence fails", async () => {
-    mockUpdateAxonHubConfig.mockResolvedValue({
-      ok: false,
-      reason: { type: "storage-error", error: new Error("save failed") },
-    })
-
-    render(<AxonHubSettings />)
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "settings:axonHub.validation.validate",
-      }),
-    )
-
-    await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("settings:messages.updateFailed")
-    })
   })
 
   it("uses a CORS setup toast for browser-origin AxonHub validation failures", async () => {

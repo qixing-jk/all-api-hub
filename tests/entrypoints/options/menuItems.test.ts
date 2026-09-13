@@ -35,6 +35,12 @@ describe("options menu items", () => {
     const { menuItems: developmentMenuItems } = await import(
       "~/entrypoints/options/constants"
     )
+    const { PAGE_DEFINITIONS } = await import(
+      "~/features/OptionsSearch/registryPages"
+    )
+    expect(PAGE_DEFINITIONS.map((item) => item.pageId)).toEqual(
+      developmentMenuItems.map((item) => item.id),
+    )
 
     expect(developmentMenuItems.map((item) => item.id)).toContain(
       DEV_MENU_ITEM_IDS.MESH_GRADIENT_LAB,
@@ -53,6 +59,12 @@ describe("options menu items", () => {
 
     const { menuItems: productionMenuItems } = await import(
       "~/entrypoints/options/constants"
+    )
+    const { PAGE_DEFINITIONS } = await import(
+      "~/features/OptionsSearch/registryPages"
+    )
+    expect(PAGE_DEFINITIONS.map((item) => item.pageId)).toEqual(
+      productionMenuItems.map((item) => item.id),
     )
 
     expect(productionMenuItems.map((item) => item.id)).not.toContain(

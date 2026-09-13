@@ -8,7 +8,7 @@ import {
   loadRecentSearchItemIds,
   resolveRecentSearchItems,
   saveRecentSearchItemSelection,
-} from "~/entrypoints/options/search/recentItems"
+} from "~/features/OptionsSearch/recentItems"
 import { OPTIONS_SEARCH_STORAGE_KEYS } from "~/services/core/storageKeys"
 
 async function importRecentItemsWithStorageMock(storageOverrides: {
@@ -24,9 +24,7 @@ async function importRecentItemsWithStorageMock(storageOverrides: {
     },
   }))
 
-  const recentItemsModule = await import(
-    "~/entrypoints/options/search/recentItems"
-  )
+  const recentItemsModule = await import("~/features/OptionsSearch/recentItems")
 
   vi.doUnmock("@plasmohq/storage")
 

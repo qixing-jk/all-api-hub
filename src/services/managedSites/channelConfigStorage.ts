@@ -517,6 +517,31 @@ class ChannelConfigStorage {
     })
   }
 
+  /** Checks only legacy rules that could supersede the selected resources' settings. */
+  async hasPendingLegacyConfigsForResources(
+    resourceRefs: readonly ManagedUpstreamResourceRef[],
+  ): Promise<boolean> {
+    return await this.withStorageWriteLock(async () => {
+      const replacementState = await this.getLegacyReplacementState()
+      if (replacementState)
+        await this.recoverLegacyReplacement(replacementState)
+      const legacy = sanitizeLegacyNumericConfigMap(
+        await this.storage.get(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS),
+      )
+      const scoped = await this.getAllConfigs()
+      return resourceRefs.some((input) => {
+        const ref = normalizeResourceRef(input)
+        if (!ref) throw new Error("resourceRef is invalid")
+        if (!/^[1-9]\d*$/.test(ref.resourceId)) return false
+        const oldConfig = legacy[Number(ref.resourceId)]
+        if (!oldConfig) return false
+        const current = scoped[getManagedUpstreamResourceRefKey(ref)]
+        // Match migration's precedence: equally recent scoped settings win.
+        return !current || oldConfig.updatedAt > current.updatedAt
+      })
+    })
+  }
+
   /**
    * Resolves legacy numeric configs against a complete discovered inventory.
    *

@@ -915,7 +915,7 @@ describe("channelMigration", () => {
     },
   )
 
-  it("propagates an unexpected create failure unchanged and stops later rows", async () => {
+  it("records unexpected create failures as uncertain without dropping later rows", async () => {
     const selections = [
       buildMigrationSelection("failing"),
       buildMigrationSelection("not-attempted"),
@@ -937,9 +937,9 @@ describe("channelMigration", () => {
         }),
         create,
       }),
-    ).rejects.toBe(thrown)
+    ).resolves.toMatchObject({ uncertainCount: 2 })
 
-    expect(create).toHaveBeenCalledOnce()
+    expect(create).toHaveBeenCalledTimes(2)
   })
 
   it("preserves completed progress when a later create throws structured cancellation", async () => {
@@ -1279,6 +1279,55 @@ describe("channelMigration", () => {
       ],
     })
     expect(resolveCredential).not.toHaveBeenCalled()
+    expect(create).not.toHaveBeenCalled()
+  })
+
+  it("rechecks grouped-key support before creating a previewed target", async () => {
+    const { executeManagedSiteMigration, prepareManagedSiteMigrationPreview } =
+      await import("~/services/managedSites/channelMigration")
+    const metadata = [{ enabled: true }, { enabled: true }]
+    const supportsMultipleCredentials = vi.fn().mockReturnValue(true)
+    const create = vi.fn(async () => ({ status: "created" as const }))
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.NEW_API
+        ? {
+            source: {
+              prepare: async () => ({
+                status: "ready",
+                source: buildMigrationSource({ credentialMetadata: metadata }),
+              }),
+              resolveCredential: async () => ({
+                status: "ready",
+                credential: "first-placeholder",
+                credentials: metadata.map((key, index) => ({
+                  ...key,
+                  value: index ? "second-placeholder" : "first-placeholder",
+                })),
+              }),
+            },
+          }
+        : {
+            target: {
+              prepare: async () => buildMigrationTarget(),
+              supportsMultipleCredentials,
+              create,
+            },
+          },
+    )
+    const preview = await prepareManagedSiteMigrationPreview({
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.DONE_HUB,
+      selections: [buildMigrationSelection("grouped")],
+    })
+    expect(preview).toMatchObject({
+      readyCount: 1,
+      items: [{ target: { projection: { keyCount: 2 } } }],
+    })
+    supportsMultipleCredentials.mockReturnValue(false)
+    expect(await executeManagedSiteMigration({ preview })).toMatchObject({
+      failedCount: 1,
+      createdCount: 0,
+    })
     expect(create).not.toHaveBeenCalled()
   })
 
@@ -1676,7 +1725,7 @@ describe("channelMigration", () => {
     })
   })
 
-  it("propagates managed-resource mutation errors unchanged", async () => {
+  it("records managed-resource mutation errors as uncertain", async () => {
     const { executeManagedSiteMigration } = await import(
       "~/services/managedSites/channelMigration"
     )
@@ -1710,7 +1759,7 @@ describe("channelMigration", () => {
           buildMigrationSelection("uncertain-mutation-error"),
         ]),
       }),
-    ).rejects.toBe(mutationError)
+    ).resolves.toMatchObject({ uncertainCount: 1 })
 
     expect(create).toHaveBeenCalledOnce()
   })

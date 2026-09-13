@@ -1408,6 +1408,53 @@ describe("useManagedResourceMutationController", () => {
     expect(refresh).toHaveBeenCalledOnce()
   })
 
+  it("waits for the editor interaction before submitting once with the same cancellation signal", async () => {
+    const submit = vi.fn(async () =>
+      succeededFacts(
+        createManagedResourceFacts("created"),
+        MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
+      ),
+    )
+    const editor = createManagedResourceEditor({ submit })
+    const workspace = createManagedResourceWorkspace({
+      openCreateEditor: vi.fn(async () => editor),
+    })
+    const gate = deferred<void>()
+    let gated = false
+    let interactionSignal: AbortSignal | undefined
+    const readEditor = async <T,>(
+      read: () => Promise<T>,
+      signal?: AbortSignal,
+    ): Promise<T> => {
+      if (gated) {
+        interactionSignal = signal
+        await gate.promise
+      }
+      return read()
+    }
+    const { result } = renderHook(() =>
+      useManagedResourceMutationController({ workspace, readEditor }),
+    )
+    await act(async () => result.current.openCreate())
+    gated = true
+    let pending: ReturnType<typeof result.current.submit>
+    act(() => {
+      pending = result.current.submit({ name: "Created" })
+    })
+    expect(submit).not.toHaveBeenCalled()
+    expect(result.current.isSaving).toBe(true)
+    await act(async () => {
+      gate.resolve()
+      await pending!
+    })
+    expect(interactionSignal).toBeDefined()
+    expect(submit).toHaveBeenCalledExactlyOnceWith(
+      { name: "Created" },
+      { signal: interactionSignal },
+    )
+    expect(result.current.editor).toBeNull()
+  })
+
   it("keeps provider rejection reusable and stores only a controlled failure", async () => {
     const providerSecret = "provider-secret-placeholder"
     const editor = createManagedResourceEditor({

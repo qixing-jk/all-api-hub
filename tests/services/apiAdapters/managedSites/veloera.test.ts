@@ -557,6 +557,14 @@ describe("Veloera managed-site channel capability", () => {
     }
 
     await veloeraManagedSiteCapabilities.queries.siteUserGroups!.fetch(config)
+    const controller = new AbortController()
+    await veloeraManagedSiteCapabilities.queries.siteUserGroups!.fetch(config, {
+      signal: controller.signal,
+    })
+    expect(keyManagement.fetchSiteUserGroups).toHaveBeenLastCalledWith({
+      ...request,
+      abortSignal: controller.signal,
+    })
     await veloeraManagedSiteCapabilities.queries.accountAvailableModels!.fetch(
       config,
     )

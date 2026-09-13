@@ -7,6 +7,22 @@ describe("resolveDefaultChannelGroups", () => {
     vi.clearAllMocks()
   })
 
+  it("does not fetch import-only groups for a status assessment", async () => {
+    const { resolveDefaultChannelGroups } = await import(
+      "~/services/managedSites/providers/defaultChannelGroups"
+    )
+    const getConfig = vi.fn()
+    expect(
+      await resolveDefaultChannelGroups({
+        getConfig,
+        fetchSiteUserGroups: mockFetchSiteUserGroups,
+        purpose: "matching",
+      }),
+    ).toEqual(["default"])
+    expect(getConfig).not.toHaveBeenCalled()
+    expect(mockFetchSiteUserGroups).not.toHaveBeenCalled()
+  })
+
   it("prefers the managed site's default group case-insensitively", async () => {
     const { resolveDefaultChannelGroups } = await import(
       "~/services/managedSites/providers/defaultChannelGroups"

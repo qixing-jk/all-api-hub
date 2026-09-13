@@ -297,20 +297,11 @@ describe("ClaudeCodeHubSettings", () => {
     deferredValidation.resolve({ ok: true })
 
     await waitFor(() => {
-      expect(updateClaudeCodeHubConfig).toHaveBeenCalledWith(
-        {
-          baseUrl: "https://managed-cch.example.com",
-          adminToken: "next-admin-token",
-        },
-        {
-          expectedLastUpdated: 4,
-        },
+      expect(vi.mocked(toast.default.success)).toHaveBeenCalledWith(
+        "settings:claudeCodeHub.validation.success",
       )
     })
-
-    expect(vi.mocked(toast.default.success)).toHaveBeenCalledWith(
-      "settings:claudeCodeHub.validation.success",
-    )
+    expect(updateClaudeCodeHubConfig).not.toHaveBeenCalled()
     const restoredButton = screen.getByRole("button", {
       name: "settings:claudeCodeHub.validation.validate",
     })

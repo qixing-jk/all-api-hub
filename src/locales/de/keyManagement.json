@@ -252,6 +252,14 @@
   },
   "knownTotalKeys_one": "{{count}} Schlüssel gelesen",
   "knownTotalKeys_other": "{{count}} Schlüssel gelesen",
+  "linkedCleanup": {
+    "description": "Prüft alle Kanäle mit diesem Schlüssel. Entfernt nur passende Zugangsdaten und löscht Kanäle ohne verbleibende Schlüssel. Bei fehlgeschlagener Prüfung bleibt der Quellschlüssel erhalten.",
+    "option": "Zugehörige Kanäle auf der aktuellen Verwaltungsseite ebenfalls bereinigen",
+    "pending_one": "{{count}} Kanalbereinigung ausstehend",
+    "pending_other": "{{count}} Kanalbereinigungen ausstehend",
+    "retry": "Bereinigung wiederholen",
+    "retryDescription": "Unvollständige Bereinigungen werden gespeichert. Fortsetzung erst nach bestätigter Löschung des Quellschlüssels."
+  },
   "loadError": {
     "description": "Die Erweiterung konnte keine Schlüssel für dieses Konto laden. Möglicherweise ist die Sitzung abgelaufen, die Berechtigungen reichen möglicherweise nicht aus oder die Website ist möglicherweise vorübergehend nicht verfügbar. Melden Sie sich erneut auf der Website an und versuchen Sie es erneut.\n\nFehler: {{error}}",
     "openSite": "Website öffnen",
@@ -286,6 +294,7 @@
       "inputPreparationFailed": "Die Verifizierung konnte keine vergleichbaren Kanaleingaben vorbereiten.",
       "newApiRetrieveKeyHint": "Für New API hängt der vollständige Schlüsselvergleich vom Kanalschlüssel ab und die Anzeige dieses Kanalschlüssels selbst erfordert eine 2FA-Verifizierung, sodass ein vollständiger Schlüsselvergleich derzeit nicht verfügbar ist."
     },
+    "label": "Verwaltete Website",
     "nativeResourceUnsupported": "Der Abgleich mit verwalteten Websites unterstützt auf dieser Seite noch keine nativen Ressourcenschlüssel. Die Aktualisierung gilt nur für unterstützte Schlüssel.",
     "pageUnsupported": "Kanalprüfungen für verwaltete Websites sind auf dieser Seite nicht verfügbar, da die aktuell verwaltete Website die Suche nach Kanälen nach URL derzeit nicht unterstützt.",
     "recovery": {

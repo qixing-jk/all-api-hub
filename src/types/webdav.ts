@@ -2,6 +2,20 @@
  * WebDAV configuration types
  */
 
+import {
+  CLOUD_SYNC_PROVIDERS,
+  DEFAULT_GITHUB_GIST_SETTINGS,
+  type CloudSyncProvider,
+  type GitHubGistSettings,
+} from "~/types/cloudSync"
+
+export {
+  CLOUD_SYNC_PROVIDERS,
+  DEFAULT_GITHUB_GIST_SETTINGS,
+  type CloudSyncProvider,
+  type GitHubGistSettings,
+}
+
 export const WEBDAV_SYNC_DATA_KEYS = [
   "accounts",
   "bookmarks",
@@ -55,6 +69,9 @@ export function isWebdavSyncDataSelectionEmpty(
 }
 
 export interface WebDAVSettings {
+  /** Active provider; missing values remain WebDAV for old preferences. */
+  provider?: CloudSyncProvider
+
   url: string
   username: string
   password: string
@@ -84,6 +101,8 @@ export interface WebDAVSettings {
   autoSync: boolean
   syncInterval: number // seconds
   syncStrategy: WebDAVSyncStrategy
+  /** GitHub Secret Gist credentials, stored locally only. */
+  githubGist?: GitHubGistSettings
 }
 
 export const WEBDAV_SYNC_STRATEGIES = {
@@ -103,6 +122,7 @@ export interface WebDAVConfig {
 
 // Default WebDAV settings
 export const DEFAULT_WEBDAV_SETTINGS: WebDAVSettings = {
+  provider: CLOUD_SYNC_PROVIDERS.WEBDAV,
   url: "",
   username: "",
   password: "",
@@ -113,4 +133,5 @@ export const DEFAULT_WEBDAV_SETTINGS: WebDAVSettings = {
   autoSync: false,
   syncInterval: 3600,
   syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
+  githubGist: DEFAULT_GITHUB_GIST_SETTINGS,
 }

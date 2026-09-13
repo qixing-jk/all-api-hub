@@ -32,6 +32,7 @@ import {
 } from "~/services/apiAdapters/nativeResources/accountKeyResourceInventory"
 import { mapSettledWithConcurrency } from "~/services/apiAdapters/nativeResources/concurrency"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { deleteWithLinkedChannelCleanup } from "~/services/managedSites/linkedChannelCleanup"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -2183,56 +2184,100 @@ export function useAccountKeyResourceController({
     }
   }, [deleteState.isExecuting])
 
-  const confirmDelete = useCallback(async () => {
-    if (
-      mode === "idle" ||
-      createdSecretRef.current !== null ||
-      loadInProgress.current ||
-      !deleteState.ref ||
-      (mode === "all"
-        ? !isAcceptedResourceRef(deleteState.ref)
-        : !collectionRef.current || !isCurrentResourceRef(deleteState.ref))
-    )
-      return
-    const current = generation.current
-    const ref = deleteState.ref
-    const boundary: ActiveResourceBoundary =
-      mode === "all"
-        ? boundaryFromResourceRef(ref)
-        : activeResourceBoundaryRef.current!
-    if (isFreshReadRequiredForBoundary(boundary)) return
-    const mutationIdentity = boundaryIdentity(boundary)
-    const existingMutation = mutationsByBoundary.current.get(mutationIdentity)
-    if (existingMutation) return existingMutation.promise
-    const account = accountsRef.current.find(
-      (candidate) => candidate.id === boundary.accountId,
-    )
-    const tracker = startProductAnalyticsAction(
-      keyManagementAnalyticsContext(
-        PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccountToken,
-        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
-      ),
-    )
-    const controller = new AbortController()
-    actionAbort.current = controller
-    setDeleteState((state) => ({ ...state, isExecuting: true, failure: null }))
-    const run = resolveResourceActionContext(ref, controller)
-      .then((actionContext) => {
-        if (!actionContext) {
-          throw new AccountKeyResourceError({
-            code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
+  const confirmDelete = useCallback(
+    async (cleanup = false) => {
+      if (
+        mode === "idle" ||
+        createdSecretRef.current !== null ||
+        loadInProgress.current ||
+        !deleteState.ref ||
+        (mode === "all"
+          ? !isAcceptedResourceRef(deleteState.ref)
+          : !collectionRef.current || !isCurrentResourceRef(deleteState.ref))
+      )
+        return
+      const current = generation.current
+      const ref = deleteState.ref
+      const boundary: ActiveResourceBoundary =
+        mode === "all"
+          ? boundaryFromResourceRef(ref)
+          : activeResourceBoundaryRef.current!
+      if (isFreshReadRequiredForBoundary(boundary)) return
+      const mutationIdentity = boundaryIdentity(boundary)
+      const existingMutation = mutationsByBoundary.current.get(mutationIdentity)
+      if (existingMutation) return existingMutation.promise
+      const account = accountsRef.current.find(
+        (candidate) => candidate.id === boundary.accountId,
+      )
+      const tracker = startProductAnalyticsAction(
+        keyManagementAnalyticsContext(
+          PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccountToken,
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+        ),
+      )
+      const controller = new AbortController()
+      actionAbort.current = controller
+      setDeleteState((state) => ({
+        ...state,
+        isExecuting: true,
+        failure: null,
+      }))
+      const run = resolveResourceActionContext(ref, controller)
+        .then(async (actionContext) => {
+          if (!actionContext) {
+            throw new AccountKeyResourceError({
+              code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
+            })
+          }
+          sessionRef.current = actionContext.session
+          collectionRef.current = actionContext.collection
+          activeResourceBoundaryRef.current = actionContext.boundary
+          let cleanupInput: Parameters<
+            typeof deleteWithLinkedChannelCleanup
+          >[0] = null
+          if (cleanup) {
+            const resolution = await actionContext.session.runtimeKey?.resolve(
+              ref,
+              { signal: controller.signal },
+            )
+            if (!account || resolution?.kind !== "resolved")
+              throw new AccountKeyResourceError({
+                code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+              })
+            cleanupInput = {
+              source: { accountId: account.id, ref },
+              baseUrl: account.baseUrl,
+              key: resolution.secret,
+            }
+          }
+          await deleteWithLinkedChannelCleanup(cleanupInput, async () => {
+            await actionContext.collection.delete(ref, {
+              signal: controller.signal,
+            })
           })
-        }
-        sessionRef.current = actionContext.session
-        collectionRef.current = actionContext.collection
-        activeResourceBoundaryRef.current = actionContext.boundary
-        return actionContext.collection.delete(ref, {
-          signal: controller.signal,
         })
-      })
-      .then(async () => {
-        if (current !== generation.current) {
-          requireFreshRead(boundary)
+        .then(async () => {
+          if (current !== generation.current) {
+            requireFreshRead(boundary)
+            tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+              insights: {
+                mode: mutationAnalyticsMode,
+                ...(account
+                  ? { siteType: account.siteType as ProductAnalyticsSiteType }
+                  : {}),
+                selectedCount: 1,
+              },
+            })
+            return
+          }
+          setDeleteState({
+            isOpen: false,
+            isExecuting: false,
+            ref: null,
+            failure: null,
+          })
+          const accepted = await refreshAfterMutation()
+          if (!accepted) requireFreshRead(boundary)
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
             insights: {
               mode: mutationAnalyticsMode,
@@ -2242,34 +2287,34 @@ export function useAccountKeyResourceController({
               selectedCount: 1,
             },
           })
-          return
-        }
-        setDeleteState({
-          isOpen: false,
-          isExecuting: false,
-          ref: null,
-          failure: null,
         })
-        const accepted = await refreshAfterMutation()
-        if (!accepted) requireFreshRead(boundary)
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-          insights: {
-            mode: mutationAnalyticsMode,
-            ...(account
-              ? { siteType: account.siteType as ProductAnalyticsSiteType }
-              : {}),
-            selectedCount: 1,
-          },
-        })
-      })
-      .catch(async (error: unknown) => {
-        const failure = toFailure(error)
-        if (current !== generation.current) {
+        .catch(async (error: unknown) => {
+          const failure = toFailure(error)
+          if (current !== generation.current) {
+            if (
+              failure.code ===
+              ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
+            )
+              requireFreshRead(boundary)
+            tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+              insights: {
+                mode: mutationAnalyticsMode,
+                ...(account
+                  ? { siteType: account.siteType as ProductAnalyticsSiteType }
+                  : {}),
+                selectedCount: 1,
+              },
+            })
+            return
+          }
+          setDeleteState((state) => ({ ...state, isExecuting: false, failure }))
           if (
             failure.code ===
             ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
-          )
+          ) {
             requireFreshRead(boundary)
+          }
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
             errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
             insights: {
@@ -2280,47 +2325,32 @@ export function useAccountKeyResourceController({
               selectedCount: 1,
             },
           })
-          return
-        }
-        setDeleteState((state) => ({ ...state, isExecuting: false, failure }))
-        if (
-          failure.code ===
-          ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
-        ) {
-          requireFreshRead(boundary)
-        }
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-          insights: {
-            mode: mutationAnalyticsMode,
-            ...(account
-              ? { siteType: account.siteType as ProductAnalyticsSiteType }
-              : {}),
-            selectedCount: 1,
-          },
         })
+        .finally(() => {
+          if (
+            mutationsByBoundary.current.get(mutationIdentity)?.promise === run
+          )
+            mutationsByBoundary.current.delete(mutationIdentity)
+          if (actionAbort.current === controller) actionAbort.current = null
+        })
+      mutationsByBoundary.current.set(mutationIdentity, {
+        controller,
+        promise: run,
       })
-      .finally(() => {
-        if (mutationsByBoundary.current.get(mutationIdentity)?.promise === run)
-          mutationsByBoundary.current.delete(mutationIdentity)
-        if (actionAbort.current === controller) actionAbort.current = null
-      })
-    mutationsByBoundary.current.set(mutationIdentity, {
-      controller,
-      promise: run,
-    })
-    return run
-  }, [
-    deleteState.ref,
-    isAcceptedResourceRef,
-    isCurrentResourceRef,
-    isFreshReadRequiredForBoundary,
-    mode,
-    mutationAnalyticsMode,
-    refreshAfterMutation,
-    requireFreshRead,
-    resolveResourceActionContext,
-  ])
+      return run
+    },
+    [
+      deleteState.ref,
+      isAcceptedResourceRef,
+      isCurrentResourceRef,
+      isFreshReadRequiredForBoundary,
+      mode,
+      mutationAnalyticsMode,
+      refreshAfterMutation,
+      requireFreshRead,
+      resolveResourceActionContext,
+    ],
+  )
 
   const recordCreatedSecretActionResult = useCallback(
     (

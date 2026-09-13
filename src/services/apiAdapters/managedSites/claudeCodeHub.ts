@@ -46,9 +46,9 @@ const claudeCodeHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability 
   { prepareFormData: prepareChannelFormData }
 
 const matching: ManagedResourceMatchingCapability<ClaudeCodeHubConfig> = {
-  search: async (config, keyword) =>
+  search: async (config, keyword, options) =>
     runClaudeCodeHubResourceRead(config, async () => {
-      const items = (await searchProviders(config, keyword)).map(
+      const items = (await searchProviders(config, keyword, options)).map(
         (provider) => ({
           ref: createManagedChannelResourceRef(
             SITE_TYPES.CLAUDE_CODE_HUB,
@@ -74,16 +74,18 @@ const matching: ManagedResourceMatchingCapability<ClaudeCodeHubConfig> = {
       )
       return { items, total: items.length, type_counts: {} }
     }),
-  fetchSecretKey: async (config, ref) =>
+  fetchSecretKey: async (config, ref, options) =>
     fetchChannelSecretKey(
       config,
       requireManagedResourceChannelId(SITE_TYPES.CLAUDE_CODE_HUB, config, ref),
+      options,
     ),
-  hydrateComparableKeys: async (config, candidates) => {
+  hydrateComparableKeys: async (config, candidates, options) => {
     const target = { siteType: SITE_TYPES.CLAUDE_CODE_HUB, config }
     const hydrated = await hydrateComparableChannelKeys(
       config,
       toNativeNumericMatchCandidates(candidates, target),
+      options,
     )
     return hydrated.map((candidate) =>
       toManagedResourceMatchCandidate(candidate, target),

@@ -1,5 +1,6 @@
 const REAL_SITE_E2E_CATEGORIES = {
   account: "account",
+  cloudSync: "cloud-sync",
   managedSite: "managed-site",
   webdav: "webdav",
 }
@@ -156,6 +157,14 @@ const REAL_SITE_E2E_MATRIX = [
     provider_account_prefix: "opencloud",
     spec: "e2e/realSite/webdavProviderFlow.spec.ts",
   },
+  {
+    id: "github-gist-sync",
+    category: REAL_SITE_E2E_CATEGORIES.cloudSync,
+    label: "Cloud Sync / GitHub Secret Gist",
+    env_prefix: "GITHUB_GIST",
+    kind: "gist",
+    spec: "e2e/realSite/githubGistSync.spec.ts",
+  },
 ]
 
 export function normalizeRealSiteE2eCategory(category = "all") {
@@ -195,7 +204,7 @@ export function filterRealSiteE2eMatrix(category = "all", target = "all") {
   const allowedCategories = new Set(Object.values(REAL_SITE_E2E_CATEGORIES))
   if (!allowedCategories.has(normalized)) {
     throw new Error(
-      `Unknown real-site E2E category: ${category}. Expected all, account, managed-site, or webdav.`,
+      `Unknown real-site E2E category: ${category}. Expected all, account, cloud-sync, managed-site, or webdav.`,
     )
   }
 

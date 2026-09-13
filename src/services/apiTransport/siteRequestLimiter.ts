@@ -1,3 +1,4 @@
+import type { RequestScheduling } from "~/services/apiTransport/requestScheduling"
 import { isTestMode } from "~/utils/core/environment"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
@@ -14,6 +15,7 @@ type QueueItem = {
   reject: (reason?: unknown) => void
   signal?: AbortSignal
   abortListener?: () => void
+  scheduling?: RequestScheduling
 }
 
 type SiteRequestLease<T> = {
@@ -24,6 +26,7 @@ type SiteRequestLease<T> = {
 }
 
 type SiteLimiterState = {
+  foregroundStreak: number
   activeCount: number
   tokens: number
   lastRefillAt: number
@@ -37,6 +40,9 @@ const SITE_API_REQUEST_LIMITS = {
   requestsPerMinute: 18,
   burst: 4,
 } as const satisfies SiteRequestLimiterConfig
+
+// Reserve one dispatch for waiting background work after five foreground requests.
+const MAX_FOREGROUND_STREAK = 5
 
 const IDLE_STATE_TTL_MS = 5 * 60 * 1000
 
@@ -104,7 +110,7 @@ function resolveNonNegativeNumber(
 }
 
 /**
- * Creates a per-site FIFO token-bucket limiter. Each lease retains its
+ * Creates a per-site priority token-bucket limiter with FIFO within each lane. Each lease retains its
  * concurrency slot until completion, even if its caller result settles first.
  *
  * Defaults are chosen to stay below New API's dashboard/web default of
@@ -139,6 +145,7 @@ export function createSiteRequestLeaseLimiter(
       _key: string,
       task: () => SiteRequestLease<T>,
       signal?: AbortSignal,
+      _scheduling?: RequestScheduling,
     ): Promise<T> => {
       if (signal?.aborted) throw getAbortReason(signal)
       return await runWithoutLimit(task)
@@ -161,6 +168,7 @@ export function createSiteRequestLeaseLimiter(
     let state = states.get(key)
     if (!state) {
       state = {
+        foregroundStreak: 0,
         activeCount: 0,
         tokens: capacity,
         lastRefillAt: Date.now(),
@@ -219,7 +227,22 @@ export function createSiteRequestLeaseLimiter(
 
       // Abort dispatch is synchronous: queued handlers remove their item before
       // this turn, and this turn detaches the handler before starting the task.
-      const item = state.queue.shift()!
+      const foregroundIndex = state.queue.findIndex(
+        (item) => item.scheduling?.priority !== "background",
+      )
+      const backgroundIndex = state.queue.findIndex(
+        (item) => item.scheduling?.priority === "background",
+      )
+      const index =
+        backgroundIndex >= 0 &&
+        (foregroundIndex < 0 || state.foregroundStreak >= MAX_FOREGROUND_STREAK)
+          ? backgroundIndex
+          : Math.max(0, foregroundIndex)
+      const [item] = state.queue.splice(index, 1)
+      state.foregroundStreak =
+        item.scheduling?.priority === "background" || backgroundIndex < 0
+          ? 0
+          : state.foregroundStreak + 1
       detachAbortListener(item)
 
       state.tokens -= 1
@@ -247,6 +270,7 @@ export function createSiteRequestLeaseLimiter(
     key: string,
     task: () => SiteRequestLease<T>,
     signal?: AbortSignal,
+    scheduling?: RequestScheduling,
   ): Promise<T> => {
     if (signal?.aborted) throw getAbortReason(signal)
     if (!key) return await runWithoutLimit(task)
@@ -259,6 +283,7 @@ export function createSiteRequestLeaseLimiter(
         resolve: (value) => resolve(value as T),
         reject,
         signal,
+        scheduling,
       }
 
       if (signal) {
@@ -286,6 +311,7 @@ const wrapLeaseLimiterForTasks =
     key: string,
     task: () => Promise<T>,
     signal?: AbortSignal,
+    scheduling?: RequestScheduling,
   ): Promise<T> =>
     await limiter(
       key,
@@ -305,6 +331,7 @@ const wrapLeaseLimiterForTasks =
         }
       },
       signal,
+      scheduling,
     )
 
 /** Creates a limiter that retains its slot until each task promise settles. */
@@ -327,8 +354,9 @@ export async function withSiteApiRequestLimit<T>(
   key: string,
   task: () => Promise<T>,
   signal?: AbortSignal,
+  scheduling?: RequestScheduling,
 ): Promise<T> {
-  return await productionSiteRequestLimiter(key, task, signal)
+  return await productionSiteRequestLimiter(key, task, signal, scheduling)
 }
 
 /**
@@ -339,6 +367,7 @@ export async function withSiteApiRequestLease<T>(
   key: string,
   task: () => SiteRequestLease<T>,
   signal?: AbortSignal,
+  scheduling?: RequestScheduling,
 ): Promise<T> {
-  return await productionSiteRequestLeaseLimiter(key, task, signal)
+  return await productionSiteRequestLeaseLimiter(key, task, signal, scheduling)
 }

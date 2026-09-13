@@ -47,6 +47,7 @@ function Harness({
   disabled = false,
   compact = false,
   hasErrors = false,
+  described = false,
 }: {
   onChange?: (value: ResourceSecretListValue) => void
   load?: (
@@ -56,6 +57,7 @@ function Harness({
   disabled?: boolean
   compact?: boolean
   hasErrors?: boolean
+  described?: boolean
 }) {
   const [value, setValue] = useState(initial)
   return (
@@ -76,7 +78,10 @@ function Harness({
             loadFieldId: "load-second",
           },
         ],
-        entryFields: [{ fieldId: "proxy", type: "text" }],
+        entryFields: [
+          { fieldId: "proxy", type: "text" },
+          { fieldId: "enabled", type: "boolean" },
+        ],
       }}
       presentation={{
         fieldId: "credentials",
@@ -84,8 +89,27 @@ function Harness({
         order: 1,
         renderer: "secret-list",
         compactSecretRows: compact,
+        ...(described
+          ? {
+              resolveEntrySummary: () => "Current key state",
+              resolveEntryDescription: () => "Previous disable reason",
+            }
+          : {}),
         resolveLabel: () => "API Keys",
-        entryFields: [{ fieldId: "proxy", resolveLabel: () => "Proxy" }],
+        entryFields: [
+          {
+            fieldId: "proxy",
+            resolveLabel: () => "Proxy",
+            ...(described ? { resolveHelp: () => "Proxy help" } : {}),
+          },
+          {
+            fieldId: "enabled",
+            resolveLabel: () => "Enabled",
+            ...(described
+              ? { resolveHelp: () => "Saved after submission" }
+              : {}),
+          },
+        ],
       }}
       value={value}
       onLoadSecret={load}
@@ -101,6 +125,42 @@ const row = (number: number) =>
   within(screen.getByRole("group", { name: `API Key ${number}` }))
 
 describe("ResourceSecretListField", () => {
+  it.each([false, true])(
+    "connects help to editable controls and separates history (compact=%s)",
+    async (compact) => {
+      const user = userEvent.setup()
+      render(<Harness compact={compact} described />)
+      expect(row(1).getByText("Current key state")).toBeVisible()
+      if (compact)
+        await user.click(
+          row(1).getByRole("button", { name: "ui:secretList.expand" }),
+        )
+      expect(
+        row(1).getByRole("switch", { name: "Enabled" }),
+      ).toHaveAccessibleDescription(
+        compact ? "Enabled: Saved after submission" : "Saved after submission",
+      )
+      expect(row(1).getByLabelText("Proxy")).toHaveAccessibleDescription(
+        compact ? "Proxy: Proxy help" : "Proxy help",
+      )
+      expect(row(1).getByText("Previous disable reason")).toBeVisible()
+    },
+  )
+  it("changes one key's enabled state without revealing or replacing either key", async () => {
+    const user = userEvent.setup()
+    const load = vi.fn()
+    const onChange = vi.fn()
+    render(<Harness load={load} onChange={onChange} />)
+    await user.click(row(2).getByRole("switch", { name: "Enabled" }))
+    expect(onChange.mock.calls.at(-1)?.[0].entries).toEqual([
+      initial.entries[0],
+      {
+        ...initial.entries[1],
+        fields: { ...initial.entries[1].fields, enabled: "false" },
+      },
+    ])
+    expect(load).not.toHaveBeenCalled()
+  })
   it("toggles from the title, summary and keyboard while keeping row actions independent", async () => {
     const user = userEvent.setup()
     const load = vi.fn()

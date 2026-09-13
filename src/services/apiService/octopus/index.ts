@@ -4,6 +4,10 @@
  */
 import { OCTOPUS_LOGIN_PATH } from "~/constants/octopus"
 import { ApiError } from "~/services/apiTransport/errors"
+import {
+  sharePendingConfigRead,
+  type ScheduledReadOptions,
+} from "~/services/apiTransport/requestScheduling"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { createUserCommandProtectionBypassExecution } from "~/services/protectionBypass/client"
@@ -279,13 +283,16 @@ const fetchOctopusV013ChannelDetail = async (params: {
     resourceBinding: params.resourceBinding,
   })
   if (!remote.success) {
-    throw new Error(
+    // Preserve HTTP identity so native consumers can distinguish absence from failed reads.
+    throw new ApiError(
       remote.status
         ? "HTTP " +
           remote.status +
           ": " +
           (remote.error || "Octopus request failed")
         : remote.error || "Octopus request failed",
+      remote.status,
+      endpoint,
     )
   }
   return octopusV013Contract.normalizeChannel(
@@ -806,14 +813,32 @@ export async function validateOctopusConfig(
   }
 }
 
-/**
- * 搜索渠道（按名称过滤）
- */
+// Search fetches the full inventory before filtering. Keep protection intent in
+// its identity so interactive and automatic execution never borrow each other's policy.
+const readSearchInventory = sharePendingConfigRead(
+  (
+    {
+      protectionBypassExecution,
+      ...config
+    }: OctopusConfig & Pick<OctopusRequestInit, "protectionBypassExecution">,
+    options,
+  ) => listChannels(config, { ...options, protectionBypassExecution }),
+)
+
+/** 搜索渠道（按名称或上游 URL 过滤）。 */
 export async function searchChannels(
   config: OctopusConfig,
   keyword: string,
+  options?: ScheduledReadOptions &
+    Pick<OctopusRequestInit, "protectionBypassExecution">,
 ): Promise<OctopusChannel[]> {
-  const channels = await listChannels(config)
+  const channels = await readSearchInventory(
+    {
+      ...config,
+      protectionBypassExecution: options?.protectionBypassExecution,
+    },
+    options,
+  )
   const lowerKeyword = keyword.trim().toLowerCase()
   if (!lowerKeyword) return channels
   return channels.filter(
@@ -1058,4 +1083,14 @@ export async function fetchAccountAvailableModels(
     logger.error("Failed to fetch account available models", error)
     return []
   }
+}
+
+/** Resolve credential editing from the probed protocol, never from version labels. */
+export async function getChannelKeyManagement(
+  config: OctopusConfig,
+  options?: Pick<RequestInit, "signal">,
+): Promise<"single" | "legacy" | "named"> {
+  const session = await octopusAuthManager.getValidSession(config, options)
+  if (session.mode === OCTOPUS_AUTH_MODES.Bearer) return "legacy"
+  return (await usesChannelProtocolPaths(config, options)) ? "named" : "single"
 }

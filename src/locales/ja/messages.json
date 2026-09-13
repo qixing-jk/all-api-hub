@@ -68,7 +68,7 @@
     "updateSuccess": "Claude Code Router のプロバイダー {{name}} を正常に更新しました"
   },
   "cliProxyApi": {
-    "managementApiConnectionSuccess": "CLIProxyAPI Management API に接続できました",
+    "managementApiConnectionSuccess": "接続に成功しました",
     "managementApiForbidden": "CLIProxyAPI がリクエストを拒否しました。管理キーの誤入力が多すぎないか、またはサーバー側でアクセス制限されていないか確認してください。",
     "managementApiHttpError": "CLIProxyAPI Management API が想定外のステータスコードを返しました（HTTP {{status}}）",
     "managementApiInvalidKey": "CLIProxyAPI の管理キーが無効です。設定内の管理キーを確認してください。",

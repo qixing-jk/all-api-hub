@@ -463,16 +463,7 @@ describe("OctopusSettings", () => {
     deferredValidation.resolve({ success: true })
 
     await waitFor(() => {
-      expect(mockUpdateOctopusConfig).toHaveBeenCalledWith(
-        {
-          baseUrl: "https://validated.example.com",
-          username: "validated-user",
-          password: "validated-password",
-        },
-        {
-          expectedLastUpdated: 1,
-        },
-      )
+      expect(mockUpdateOctopusConfig).not.toHaveBeenCalled()
       expect(toast.success).toHaveBeenCalledWith(
         "settings:octopus.validation.success",
       )
@@ -586,36 +577,5 @@ describe("OctopusSettings", () => {
       expect.objectContaining({ ok: true }),
       "settings:octopus.fields.usernameLabel",
     )
-  })
-
-  it("shows the validation failure fallback when validation passes but persistence is rejected", async () => {
-    mockUpdateOctopusConfig.mockResolvedValue({
-      ok: false,
-      reason: { type: "storage-error", error: new Error("save failed") },
-    })
-
-    render(<OctopusSettings />)
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "settings:octopus.validation.validate",
-      }),
-    )
-
-    await waitFor(() => {
-      expect(mockUpdateOctopusConfig).toHaveBeenCalledWith(
-        {
-          baseUrl: "https://octopus.example.com",
-          username: "admin",
-          password: "secret",
-        },
-        {
-          expectedLastUpdated: 1,
-        },
-      )
-      expect(toast.error).toHaveBeenCalledWith(
-        "settings:octopus.validation.failed",
-      )
-    })
   })
 })

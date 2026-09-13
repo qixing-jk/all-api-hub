@@ -1069,6 +1069,29 @@ describe("newApiService", () => {
   // ========================================================================
 
   describe("prepareChannelFormData", () => {
+    beforeEach(() => {
+      mockFetchOpenAICompatibleModelIds.mockReset()
+    })
+
+    it("skips destination group requests when preparing a status check", async () => {
+      const { prepareChannelFormData } = await import(
+        "~/services/managedSites/providers/newApi"
+      )
+      mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4"])
+      const result = await prepareChannelFormData(
+        {
+          name: "Check",
+          baseUrl: "https://status.example.com",
+          apiKey: "sk-status",
+          modelHints: [],
+        },
+        { purpose: "matching" },
+      )
+      expect(result.models).toEqual(["gpt-4"])
+      expect(mockFetchSiteUserGroups).not.toHaveBeenCalled()
+      expect(mockGetPreferences).not.toHaveBeenCalled()
+    })
+
     it("should prefer the target site's default group", async () => {
       const { prepareChannelFormData } = await import(
         "~/services/managedSites/providers/newApi"
@@ -1176,10 +1199,12 @@ describe("newApiService", () => {
         ),
       )
 
-      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith({
-        baseUrl: "https://aihubmix.com",
-        apiKey: token.key,
-      })
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: "https://aihubmix.com",
+          apiKey: token.key,
+        }),
+      )
       expect(result.base_url).toBe("https://aihubmix.com")
     })
 

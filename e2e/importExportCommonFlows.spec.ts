@@ -13,7 +13,10 @@ import {
   API_CREDENTIAL_PROFILES_TEST_IDS,
   getApiCredentialEndpointOptionTestId,
 } from "~/features/ApiCredentialProfiles/testIds"
-import { WEBDAV_AUTO_SYNC_TARGET_IDS } from "~/features/ImportExport/searchTargets"
+import {
+  WEBDAV_AUTO_SYNC_TARGET_IDS,
+  WEBDAV_TARGET_IDS,
+} from "~/features/ImportExport/searchTargets"
 import { IMPORT_EXPORT_TEST_IDS } from "~/features/ImportExport/testIds"
 import { SITE_BOOKMARKS_TEST_IDS } from "~/features/SiteBookmarks/testIds"
 import {
@@ -186,10 +189,30 @@ async function installWebdavBackupRoute(
 
     if (method === "GET" && (isBackupFile || isTempBackupFile)) {
       const body = isTempBackupFile ? stagedBackups.get(url.href) : remoteBackup
+      if (!isTempBackupFile && !remoteBackup) {
+        // A missing target is represented by an empty successful response here
+        // so Chromium does not report an expected first-upload 404 as a page
+        // error. `prepareForWrite` maps the empty body to the same
+        // WebdavFileNotFoundError used by real providers.
+        await route.fulfill({
+          status: 204,
+          contentType: "text/plain",
+          body: "",
+        })
+        return
+      }
+      if (body === undefined) {
+        await route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "backup not found" }),
+        })
+        return
+      }
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: body || "{}",
+        body,
       })
       return
     }
@@ -582,11 +605,17 @@ test("round-trips a full backup through export download and file import", async 
   })
 
   await expect(page.getByText("Data format is correct")).toBeVisible()
-  await expect(page.getByText("Contains account data")).toBeVisible()
-  await expect(page.getByText("Contains user settings")).toBeVisible()
-  await expect(page.getByText("Contains channel configuration")).toBeVisible()
   await expect(
-    page.getByTestId(IMPORT_EXPORT_TEST_IDS.containsApiCredentialProfiles),
+    page.getByText("Accounts and bookmarks", { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("group", { name: "User settings", exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("group", { name: "Channel configuration", exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("group", { name: "API credential library", exact: true }),
   ).toBeVisible()
 
   await chooseFullReplaceImport(page)
@@ -697,7 +726,9 @@ test("imports account backup JSON from the preview field and appends by default"
   await page.locator("#import-data-preview").fill(JSON.stringify(backup))
 
   await expect(page.getByText("Data format is correct")).toBeVisible()
-  await expect(page.getByText("Contains account data")).toBeVisible()
+  await expect(
+    page.getByText("Accounts and bookmarks", { exact: true }),
+  ).toBeVisible()
 
   await page.getByTestId(IMPORT_EXPORT_TEST_IDS.importBackupButton).click()
 
@@ -757,11 +788,15 @@ test("imports account backup JSON from a selected file and restores popup accoun
     buffer: Buffer.from(JSON.stringify(backup), "utf8"),
   })
 
+  await expect(page.locator("#import-data-preview")).not.toBeVisible()
+  await page.getByRole("button", { name: "View or paste JSON" }).click()
   await expect(page.locator("#import-data-preview")).toHaveValue(
     JSON.stringify(backup),
   )
   await expect(page.getByText("Data format is correct")).toBeVisible()
-  await expect(page.getByText("Contains account data")).toBeVisible()
+  await expect(
+    page.getByText("Accounts and bookmarks", { exact: true }),
+  ).toBeVisible()
 
   await page.getByTestId(IMPORT_EXPORT_TEST_IDS.importBackupButton).click()
 
@@ -816,7 +851,7 @@ test("imports API credential profiles from backup JSON and restores the popup ta
 
   await expect(page.getByText("Data format is correct")).toBeVisible()
   await expect(
-    page.getByTestId(IMPORT_EXPORT_TEST_IDS.containsApiCredentialProfiles),
+    page.getByRole("group", { name: "API credential library", exact: true }),
   ).toBeVisible()
 
   await page
@@ -904,7 +939,7 @@ test("refreshes an already-open popup API credentials tab after backup import", 
 
   await expect(page.getByText("Data format is correct")).toBeVisible()
   await expect(
-    page.getByTestId(IMPORT_EXPORT_TEST_IDS.containsApiCredentialProfiles),
+    page.getByRole("group", { name: "API credential library", exact: true }),
   ).toBeVisible()
 
   await page
@@ -1009,10 +1044,14 @@ test("restores a full backup and keeps common popup workflows available", async 
   await page.locator("#import-data-preview").fill(JSON.stringify(backup))
 
   await expect(page.getByText("Data format is correct")).toBeVisible()
-  await expect(page.getByText("Contains account data")).toBeVisible()
-  await expect(page.getByText("Contains user settings")).toBeVisible()
   await expect(
-    page.getByTestId(IMPORT_EXPORT_TEST_IDS.containsApiCredentialProfiles),
+    page.getByText("Accounts and bookmarks", { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("group", { name: "User settings", exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("group", { name: "API credential library", exact: true }),
   ).toBeVisible()
 
   await chooseFullReplaceImport(page)
@@ -1165,10 +1204,14 @@ test("restores a full backup and keeps the sidepanel model workflow available", 
 
   await page.locator("#import-data-preview").fill(JSON.stringify(backup))
   await expect(page.getByText("Data format is correct")).toBeVisible()
-  await expect(page.getByText("Contains account data")).toBeVisible()
-  await expect(page.getByText("Contains user settings")).toBeVisible()
   await expect(
-    page.getByTestId(IMPORT_EXPORT_TEST_IDS.containsApiCredentialProfiles),
+    page.getByText("Accounts and bookmarks", { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("group", { name: "User settings", exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("group", { name: "API credential library", exact: true }),
   ).toBeVisible()
 
   await chooseFullReplaceImport(page)
@@ -1258,7 +1301,9 @@ test("imports preference backup JSON and applies settings after reload", async (
   await page.locator("#import-data-preview").fill(JSON.stringify(backup))
 
   await expect(page.getByText("Data format is correct")).toBeVisible()
-  await expect(page.getByText("Contains user settings")).toBeVisible()
+  await expect(
+    page.getByRole("group", { name: "User settings", exact: true }),
+  ).toBeVisible()
 
   await page
     .getByTestId(IMPORT_EXPORT_TEST_IDS.importPreferencesReplaceOption)
@@ -1354,11 +1399,26 @@ test("uploads a WebDAV backup and restores it through the WebDAV download flow",
   )
   await waitForExtensionRoot(page)
 
-  await page.locator("#webdav-url").fill(webdavFileUrl)
-  await page.locator("#webdav-username").fill("webdav-user")
-  await page.locator("#webdav-password").fill("webdav-password")
+  await page.locator(`#${WEBDAV_TARGET_IDS.url}`).fill(webdavFileUrl)
+  await page.locator(`#${WEBDAV_TARGET_IDS.username}`).fill("webdav-user")
+  await page.locator(`#${WEBDAV_TARGET_IDS.password}`).fill("webdav-password")
+
+  await page.locator(`#${WEBDAV_TARGET_IDS.testConnection}`).click()
+  await expect(page.getByText("Connection test successful")).toBeVisible()
+
   await page
     .getByTestId(IMPORT_EXPORT_TEST_IDS.webdavUploadBackupButton)
+    .click()
+  await page
+    .getByTestId(IMPORT_EXPORT_TEST_IDS.webdavManualCancelButton)
+    .click()
+  await expect.poll(() => uploadedPayloads.length).toBe(0)
+
+  await page
+    .getByTestId(IMPORT_EXPORT_TEST_IDS.webdavUploadBackupButton)
+    .click()
+  await page
+    .getByTestId(IMPORT_EXPORT_TEST_IDS.webdavManualConfirmButton)
     .click()
 
   await expect.poll(() => uploadedPayloads.length).toBe(1)
@@ -1433,11 +1493,18 @@ test("uploads a WebDAV backup and restores it through the WebDAV download flow",
   )
   await waitForExtensionRoot(restorePage)
 
-  await restorePage.locator("#webdav-url").fill(webdavFileUrl)
-  await restorePage.locator("#webdav-username").fill("webdav-user")
-  await restorePage.locator("#webdav-password").fill("webdav-password")
+  await restorePage.locator(`#${WEBDAV_TARGET_IDS.url}`).fill(webdavFileUrl)
+  await restorePage
+    .locator(`#${WEBDAV_TARGET_IDS.username}`)
+    .fill("webdav-user")
+  await restorePage
+    .locator(`#${WEBDAV_TARGET_IDS.password}`)
+    .fill("webdav-password")
   await restorePage
     .getByTestId(IMPORT_EXPORT_TEST_IDS.webdavDownloadImportButton)
+    .click()
+  await restorePage
+    .getByTestId(IMPORT_EXPORT_TEST_IDS.webdavManualConfirmButton)
     .click()
 
   await expect
@@ -1564,12 +1631,29 @@ test("runs WebDAV auto-sync from settings and uploads the local snapshot", async
   await expect(
     page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.root}`),
   ).toBeVisible()
+
+  const providerSelector = page.locator(`#${WEBDAV_TARGET_IDS.provider}`)
+  await providerSelector
+    .getByRole("button", { name: "GitHub Secret Gist", exact: true })
+    .click()
+  await expect(page.locator(`#${WEBDAV_TARGET_IDS.gistToken}`)).toBeVisible()
+  await expect(
+    page.getByText("Save the sync service change first", { exact: true }),
+  ).toHaveCount(0)
+  await expect(
+    page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.syncNow}`),
+  ).toBeEnabled()
+
+  await providerSelector
+    .getByRole("button", { name: "WebDAV", exact: true })
+    .click()
+  await expect(page.locator(`#${WEBDAV_TARGET_IDS.url}`)).toBeVisible()
+  await expect(
+    page.getByText("Save the sync service change first", { exact: true }),
+  ).toHaveCount(0)
+
   await page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.enable} button`).click()
   await page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.interval}`).fill("120")
-  await page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.saveSettings}`).click()
-  await expect(
-    page.getByText("WebDAV Auto Sync Update successful"),
-  ).toBeVisible()
 
   await page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.syncNow}`).click()
   await expect(

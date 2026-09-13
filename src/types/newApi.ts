@@ -17,6 +17,7 @@ export type ChannelStatus = (typeof CHANNEL_STATUS)[keyof typeof CHANNEL_STATUS]
 export const CHANNEL_MODE = {
   SINGLE: "single",
   BATCH: "batch",
+  MULTI: "multi_to_single",
 } as const
 
 export type ChannelMode = (typeof CHANNEL_MODE)[keyof typeof CHANNEL_MODE]
@@ -25,6 +26,7 @@ export type ChannelMode = (typeof CHANNEL_MODE)[keyof typeof CHANNEL_MODE]
  * Channel creation payload for New API
  */
 export interface CreateChannelPayload {
+  multi_key_mode?: string
   mode: ChannelMode
   channel: Omit<UpdateChannelPayload, "id"> & {
     status: ChannelStatus
@@ -79,6 +81,7 @@ export interface UpdateChannelPayload {
 }
 
 export interface ChannelInfo {
+  multi_key_disabled_reason?: Record<number, string>
   is_multi_key: boolean
   multi_key_size: number
   multi_key_status_list: any[] | null

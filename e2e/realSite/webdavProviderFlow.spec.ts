@@ -252,12 +252,18 @@ async function uploadBackupToWebdav(page: Page) {
   )
 
   await uploadButton.click()
+  await page
+    .getByTestId(IMPORT_EXPORT_TEST_IDS.webdavManualConfirmButton)
+    .click()
   await waitForToast(page, "Uploaded to WebDAV")
 }
 
 async function importBackupFromWebdav(page: Page) {
   await page
     .getByTestId(IMPORT_EXPORT_TEST_IDS.webdavDownloadImportButton)
+    .click()
+  await page
+    .getByTestId(IMPORT_EXPORT_TEST_IDS.webdavManualConfirmButton)
     .click()
   await waitForToast(page, "Data imported successfully")
 }

@@ -72,7 +72,7 @@
     "updateSuccess": "Provedor {{name}} do Claude Code Router atualizado com sucesso"
   },
   "cliProxyApi": {
-    "managementApiConnectionSuccess": "Conexão com a Management API do CLIProxyAPI bem-sucedida",
+    "managementApiConnectionSuccess": "Conexão bem-sucedida",
     "managementApiForbidden": "CLIProxyAPI rejeitou a requisição. Verifique se a chave de gerenciamento foi digitada incorretamente muitas vezes ou se o acesso está restrito no servidor.",
     "managementApiHttpError": "A Management API do CLIProxyAPI retornou um código de status inesperado (HTTP {{status}})",
     "managementApiInvalidKey": "A Management Key do CLIProxyAPI é inválida. Verifique a chave nas configurações.",

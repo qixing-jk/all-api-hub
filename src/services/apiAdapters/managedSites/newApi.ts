@@ -67,9 +67,9 @@ const matching: ManagedResourceMatchingCapability<NewApiConfig> = {
       toManagedResourceMatchCandidate(candidate, target),
     )
   },
-  search: async (config, keyword) =>
+  search: async (config, keyword, options) =>
     toManagedResourceMatchList(
-      await newApiChannelOperations.search(config, keyword),
+      await newApiChannelOperations.search(config, keyword, options),
       { siteType: SITE_TYPES.NEW_API, config },
     ),
   fetchSecretKey: async (config, ref, options) =>

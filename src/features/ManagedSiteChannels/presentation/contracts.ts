@@ -320,6 +320,7 @@ export type ManagedChannelsCallbacks = {
 
 export type ManagedSiteMigrationComparison = {
   id:
+    | "keyCount"
     | "baseUrl"
     | "type"
     | "models"
@@ -340,15 +341,7 @@ export type ManagedSiteMigrationPreviewRow = {
   name: string
   baseURL: string
   status: "ready" | "blocked"
-  comparisons: [
-    ManagedSiteMigrationComparison,
-    ManagedSiteMigrationComparison,
-    ManagedSiteMigrationComparison,
-    ManagedSiteMigrationComparison,
-    ManagedSiteMigrationComparison,
-    ManagedSiteMigrationComparison,
-    ManagedSiteMigrationComparison,
-  ]
+  comparisons: ManagedSiteMigrationComparison[]
   warningText: string[]
   blockedReason?: string
   blockedMessage?: string

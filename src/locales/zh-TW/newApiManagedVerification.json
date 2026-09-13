@@ -3,6 +3,7 @@
     "actions": {
       "cleanupOwnedSessionAndRetry": "清理擴充功能會話並重試",
       "close": "關閉",
+      "configureTotp": "設定自動驗證",
       "openSite": "開啟站點",
       "retry": "重試",
       "retryAfterPasskey": "完成 Passkey 後重試",
@@ -28,7 +29,8 @@
       "codeLabel": "驗證碼"
     },
     "hints": {
-      "manualFallback": "即使已配置自動 TOTP，仍然可以手動輸入驗證碼。",
+      "configureTotp": "經常需要驗證？可在設定 → {{section}} → {{provider}} 中填寫 TOTP 密鑰，由擴充功能自動產生並提交驗證碼，減少手動輸入。",
+      "manualFallback": "請手動輸入驗證碼完成本次驗證。",
       "openSettingsShortcut": "你可以直接在這裡補齊所需設定，然後繼續驗證。",
       "passkey": "請開啟站點，在那裡完成 Passkey 提示後，再返回這裡重試。"
     },

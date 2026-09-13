@@ -1,4 +1,5 @@
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
+import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import type { ManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import { normalizeList } from "~/utils/core/string"
 
@@ -12,6 +13,7 @@ type ResolveDefaultChannelGroupsParams = {
   getConfig: () => Promise<ManagedSiteConfig | null>
   fetchSiteUserGroups: (config: ManagedSiteConfig) => Promise<string[]>
   onError?: (error: unknown) => void
+  purpose?: ManagedSiteChannelDraftRequestOptions["purpose"]
   operationContext?: ManagedSiteOperationContext
 }
 
@@ -27,7 +29,14 @@ export async function resolveDefaultChannelGroups({
   fetchSiteUserGroups,
   onError,
   operationContext,
+  purpose,
 }: ResolveDefaultChannelGroupsParams): Promise<string[]> {
+  // Native import seeds do not consume draft groups. The editor loads its own
+  // group options, so querying here would duplicate that request.
+  if (purpose === "matching" || purpose === "native-editor") {
+    return [...DEFAULT_CHANNEL_FIELDS.groups]
+  }
+
   const requestCache = operationContext?.defaultChannelGroups
 
   if (requestCache?.resolvedGroups) {

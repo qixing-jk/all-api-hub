@@ -3,8 +3,9 @@ import { Plus, Trash2 } from "lucide-react"
 import { useId } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Button, Input, Label } from "~/components/ui"
+import { Button, Input } from "~/components/ui"
 import { readResourceList } from "~/features/ResourceEditor/resourceEditorProjection"
+import { ResourceFieldLabel } from "~/features/ResourceEditor/ResourceFieldLabel"
 import type {
   EditableResourceProjection,
   ResourceFieldDescriptor,
@@ -82,8 +83,20 @@ export function ManagedResourceAdvancedProjectionField({
   }
   return (
     <div>
-      <Label>{label}</Label>
-      {help}
+      <div className="mb-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <ResourceFieldLabel className="mb-0">{label}</ResourceFieldLabel>
+        <Button
+          type="button"
+          variant="dashed"
+          size="sm"
+          className="ml-auto"
+          disabled={disabled}
+          onClick={() => onValueChange(fieldId, [...list, "", ""])}
+        >
+          <Plus className="mr-1 size-4" aria-hidden />
+          {t("managedSiteChannels:editor.advanced.mapping.add")}
+        </Button>
+      </div>
       {descriptor.readOnly ? (
         <p role="alert" className="text-muted-foreground text-xs">
           {t("managedSiteChannels:editor.advanced.invalidExisting")}
@@ -94,71 +107,71 @@ export function ManagedResourceAdvancedProjectionField({
           <option key={model} value={model} />
         ))}
       </datalist>
-      <div className="mt-2 space-y-2">
+      <div className="space-y-2">
         {list.flatMap((source, index) =>
           index % 2
             ? []
             : [
-                <div key={index} className="flex min-w-0 items-start gap-2">
-                  <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
-                    <div>
-                      <Label
-                        htmlFor={`${id}-source-${index}`}
-                        className="text-xs"
-                      >
-                        {t(
-                          "managedSiteChannels:editor.advanced.mapping.sourcePlaceholder",
-                        )}
-                      </Label>
-                      <Input
-                        id={`${id}-source-${index}`}
-                        value={source}
-                        list={`${id}-models`}
-                        disabled={disabled}
-                        aria-label={t(
-                          "managedSiteChannels:editor.advanced.mapping.source",
-                          { index: index / 2 + 1 },
-                        )}
-                        placeholder={t(
-                          "managedSiteChannels:editor.advanced.mapping.sourcePlaceholder",
-                        )}
-                        onChange={(e) => change(index, e.target.value)}
-                        aria-invalid={Boolean(errorMessage)}
-                        aria-describedby={describedBy}
-                      />
-                    </div>
-                    <div>
-                      <Label
-                        htmlFor={`${id}-target-${index}`}
-                        className="text-xs"
-                      >
-                        {t(
-                          "managedSiteChannels:editor.advanced.mapping.targetPlaceholder",
-                        )}
-                      </Label>
-                      <Input
-                        id={`${id}-target-${index}`}
-                        value={list[index + 1] ?? ""}
-                        list={`${id}-models`}
-                        disabled={disabled}
-                        aria-label={t(
-                          "managedSiteChannels:editor.advanced.mapping.target",
-                          { index: index / 2 + 1 },
-                        )}
-                        placeholder={t(
-                          "managedSiteChannels:editor.advanced.mapping.targetPlaceholder",
-                        )}
-                        onChange={(e) => change(index + 1, e.target.value)}
-                        aria-invalid={Boolean(errorMessage)}
-                        aria-describedby={describedBy}
-                      />
-                    </div>
+                <div
+                  key={index}
+                  className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+                >
+                  <div className="col-span-2 min-w-0 sm:col-span-1">
+                    <ResourceFieldLabel
+                      htmlFor={`${id}-source-${index}`}
+                      className="text-xs"
+                    >
+                      {t(
+                        "managedSiteChannels:editor.advanced.mapping.sourcePlaceholder",
+                      )}
+                    </ResourceFieldLabel>
+                    <Input
+                      id={`${id}-source-${index}`}
+                      value={source}
+                      list={`${id}-models`}
+                      disabled={disabled}
+                      aria-label={t(
+                        "managedSiteChannels:editor.advanced.mapping.source",
+                        { index: index / 2 + 1 },
+                      )}
+                      placeholder={t(
+                        "managedSiteChannels:editor.advanced.mapping.sourcePlaceholder",
+                      )}
+                      onChange={(e) => change(index, e.target.value)}
+                      aria-invalid={Boolean(errorMessage)}
+                      aria-describedby={describedBy}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <ResourceFieldLabel
+                      htmlFor={`${id}-target-${index}`}
+                      className="text-xs"
+                    >
+                      {t(
+                        "managedSiteChannels:editor.advanced.mapping.targetPlaceholder",
+                      )}
+                    </ResourceFieldLabel>
+                    <Input
+                      id={`${id}-target-${index}`}
+                      value={list[index + 1] ?? ""}
+                      list={`${id}-models`}
+                      disabled={disabled}
+                      aria-label={t(
+                        "managedSiteChannels:editor.advanced.mapping.target",
+                        { index: index / 2 + 1 },
+                      )}
+                      placeholder={t(
+                        "managedSiteChannels:editor.advanced.mapping.targetPlaceholder",
+                      )}
+                      onChange={(e) => change(index + 1, e.target.value)}
+                      aria-invalid={Boolean(errorMessage)}
+                      aria-describedby={describedBy}
+                    />
                   </div>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="mt-5"
                     disabled={disabled}
                     aria-label={t(
                       "managedSiteChannels:editor.advanced.mapping.remove",
@@ -177,17 +190,7 @@ export function ManagedResourceAdvancedProjectionField({
               ],
         )}
       </div>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="mt-2"
-        disabled={disabled}
-        onClick={() => onValueChange(fieldId, [...list, "", ""])}
-      >
-        <Plus className="mr-1 size-4" aria-hidden />
-        {t("managedSiteChannels:editor.advanced.mapping.add")}
-      </Button>
+      {help}
       {error}
     </div>
   )

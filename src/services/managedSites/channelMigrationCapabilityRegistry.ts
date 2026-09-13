@@ -1,6 +1,7 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
 import { claudeCodeHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/claudeCodeHubMigration"
+import { cliProxyApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/cliProxyApiMigration"
 import { doneHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/doneHubMigration"
 import { newApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/newApiMigration"
 import { octopusManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/octopusMigration"
@@ -12,6 +13,10 @@ const registrations: readonly {
   siteType: ManagedSiteType
   capability: ManagedSiteMigrationCapability
 }[] = [
+  {
+    siteType: SITE_TYPES.CLI_PROXY_API,
+    capability: cliProxyApiManagedSiteMigrationCapability,
+  },
   {
     siteType: SITE_TYPES.SUB2API,
     capability: sub2ApiManagedSiteMigrationCapability,

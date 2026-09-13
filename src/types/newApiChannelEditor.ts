@@ -1,3 +1,5 @@
+import type { CredentialListPatch } from "~/services/apiAdapters/managedResources/credentialListEditor"
+
 import type { NewApiFamilyChannelCommand } from "./newApiFamilyChannelEditor"
 
 /** Only explicitly edited advanced settings, merged with fresh native detail. */
@@ -17,5 +19,9 @@ export type NewApiChannelAdvancedPatch = {
 
 /** New API additions stay outside the shared New API-family command. */
 export type NewApiChannelCommand = NewApiFamilyChannelCommand & {
+  /** Private, editor-lifetime disclosure used only when preserving unread slots during replacement. */
+  disclosedKeys?: readonly string[]
+  credentialPatch?: CredentialListPatch
+  multiKeyMode?: string
   advanced?: NewApiChannelAdvancedPatch
 }

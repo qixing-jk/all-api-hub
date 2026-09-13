@@ -81,6 +81,101 @@ describe("createSiteRequestLimiter", () => {
     ])
   })
 
+  it("dispatches an export before queued automatic checks without bypassing rate limits", async () => {
+    const limiter = createSiteRequestLimiter({
+      maxConcurrentPerSite: 1,
+      requestsPerMinute: 60,
+      burst: 1,
+    })
+    const events: string[] = []
+    const first = limiter("site", async () => {
+      events.push("active")
+    })
+    const background = limiter(
+      "site",
+      async () => {
+        events.push("automatic")
+      },
+      undefined,
+      { priority: "background" },
+    )
+    const exported = limiter("site", async () => {
+      events.push("export")
+    })
+    await first
+    await vi.advanceTimersByTimeAsync(999)
+    expect(events).toEqual(["active"])
+    await vi.advanceTimersByTimeAsync(1)
+    expect(events).toEqual(["active", "export"])
+    await vi.advanceTimersByTimeAsync(1000)
+    await Promise.all([background, exported])
+    expect(events).toEqual(["active", "export", "automatic"])
+  })
+
+  it("starts export at the next refill despite twenty waiting automatic checks", async () => {
+    const limiter = createSiteRequestLimiter({
+      maxConcurrentPerSite: 1,
+      requestsPerMinute: 60,
+      burst: 1,
+    })
+    await limiter("site", async () => {})
+    const pending = Array.from({ length: 20 }, () =>
+      limiter("site", async () => {}, undefined, { priority: "background" }),
+    )
+    const start = Date.now()
+    const dispatch = vi.fn(async () => Date.now() - start)
+    const exported = limiter("site", dispatch)
+    await vi.advanceTimersByTimeAsync(999)
+    expect(dispatch).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1)
+    await expect(exported).resolves.toBe(1000)
+    await vi.advanceTimersByTimeAsync(20_000)
+    await Promise.all(pending)
+  })
+
+  it("observes promotion of shared queued work and gives background work bounded turns", async () => {
+    const limiter = createSiteRequestLimiter({
+      maxConcurrentPerSite: 1,
+      requestsPerMinute: 60,
+      burst: 1,
+    })
+    const events: string[] = []
+    const scheduling = { priority: "background" as "background" | "foreground" }
+    const requests = [limiter("site", async () => {})]
+    requests.push(
+      limiter(
+        "site",
+        async () => {
+          events.push("background")
+        },
+        undefined,
+        { priority: "background" },
+      ),
+    )
+    requests.push(
+      limiter(
+        "site",
+        async () => {
+          events.push("shared-export")
+        },
+        undefined,
+        scheduling,
+      ),
+    )
+    for (let i = 0; i < 8; i++)
+      requests.push(
+        limiter("site", async () => {
+          events.push(`foreground-${i}`)
+        }),
+      )
+    scheduling.priority = "foreground"
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(events[0]).toBe("shared-export")
+    await vi.advanceTimersByTimeAsync(10_000)
+    await Promise.all(requests)
+    expect(events.indexOf("background")).toBeLessThanOrEqual(5)
+  })
+
   it("keeps FIFO order for queued same-site work", async () => {
     const limiter = createSiteRequestLimiter({
       maxConcurrentPerSite: 1,

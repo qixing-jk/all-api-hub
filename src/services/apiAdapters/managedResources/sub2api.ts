@@ -832,6 +832,7 @@ const sub2ApiNativeDefinition = {
     deleteSub2ApiManagedAccountMutation(nativeConfig.config, locator, {
       signal: options?.signal,
     }),
+  scalarKeyCleanup: "single" as const,
   mapFailure,
 }
 

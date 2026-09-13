@@ -282,7 +282,7 @@ export function ManagedResourceChannelField({
     descriptor.canReplace &&
     intent.kind === MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Unchanged &&
     loadedSecret?.fieldId !== fieldId
-  const showLoadSavedSecretControl = canLoadSavedSecret && !secretLoadFailed
+  const showLoadSavedSecretControl = canLoadSavedSecret
   const description = descriptor.replacementBlockReason ? (
     SECRET_REPLACEMENT_BLOCK_LABEL_RESOLVERS[descriptor.replacementBlockReason](
       t,
@@ -325,57 +325,45 @@ export function ManagedResourceChannelField({
       isLoadingRealKey={isSecretLoading}
       onLoadRealKey={() => onSecretLoadStart(fieldId)}
       onCancelLoadRealKey={onSecretLoadCancel}
-      loadRealKeyLabel={t("managedSiteChannels:editor.secret.actions.view")}
+      loadRealKeyLabel={
+        secretLoadFailed
+          ? t("managedSiteChannels:editor.secret.actions.retry")
+          : t("managedSiteChannels:editor.secret.actions.view")
+      }
+      realKeyLoadError={
+        secretLoadFailed
+          ? t("managedSiteChannels:editor.secret.loadError")
+          : undefined
+      }
       loadingRealKeyLabel={t("managedSiteChannels:editor.secret.loading")}
       cancelLoadRealKeyLabel={t(
         "managedSiteChannels:editor.secret.actions.cancelLoad",
       )}
       realKeyHint={t("managedSiteChannels:editor.secret.loadableHint")}
       actions={
-        descriptor.allowClear || secretLoadFailed ? (
-          <>
-            {descriptor.allowClear ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={disabled}
-                onClick={() =>
-                  onValueChange(
-                    fieldId,
-                    intent.kind ===
-                      MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Clear
-                      ? {
-                          kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Unchanged,
-                        }
-                      : {
-                          kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Clear,
-                        },
-                  )
-                }
-              >
-                {intent.kind === MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Clear
-                  ? t("managedSiteChannels:editor.secret.actions.restore")
-                  : t("managedSiteChannels:editor.secret.actions.clear")}
-              </Button>
-            ) : null}
-            {secretLoadFailed ? (
-              <div className="flex items-center gap-2">
-                <p role="alert" className="text-xs text-red-600">
-                  {t("managedSiteChannels:editor.secret.loadError")}
-                </p>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={disabled}
-                  onClick={() => onSecretLoadStart(fieldId)}
-                >
-                  {t("managedSiteChannels:editor.secret.actions.retry")}
-                </Button>
-              </div>
-            ) : null}
-          </>
+        descriptor.allowClear ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={disabled}
+            onClick={() =>
+              onValueChange(
+                fieldId,
+                intent.kind === MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Clear
+                  ? {
+                      kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Unchanged,
+                    }
+                  : {
+                      kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Clear,
+                    },
+              )
+            }
+          >
+            {intent.kind === MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Clear
+              ? t("managedSiteChannels:editor.secret.actions.restore")
+              : t("managedSiteChannels:editor.secret.actions.clear")}
+          </Button>
         ) : undefined
       }
     />

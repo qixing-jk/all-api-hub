@@ -4,8 +4,8 @@ import {
   buildControlDefinition,
   buildSectionDefinition,
   DEFAULT_BREADCRUMBS,
-} from "~/entrypoints/options/search/registryHelpers"
-import type { OptionsSearchItemDefinition } from "~/entrypoints/options/search/types"
+} from "~/features/OptionsSearch/registryHelpers"
+import type { OptionsSearchItemDefinition } from "~/features/OptionsSearch/types"
 
 export const managedSiteAxonHubSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(

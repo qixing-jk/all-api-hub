@@ -70,7 +70,7 @@
     "updateSuccess": "Claude-Code-Router-Anbieter {{name}} erfolgreich aktualisiert"
   },
   "cliProxyApi": {
-    "managementApiConnectionSuccess": "CLIProxyAPI Management-API-Verbindung erfolgreich",
+    "managementApiConnectionSuccess": "Verbindung erfolgreich",
     "managementApiForbidden": "CLIProxyAPI hat die Anfrage abgelehnt. Überprüfen Sie, ob der Verwaltungsschlüssel zu oft falsch eingegeben wurde oder ob der Zugriff auf den Server eingeschränkt ist.",
     "managementApiHttpError": "Die CLIProxyAPI-Verwaltungs-API hat einen unerwarteten Statuscode zurückgegeben (HTTP {{status}})",
     "managementApiInvalidKey": "Der Verwaltungsschlüssel CLIProxyAPI ist ungültig. Bitte überprüfen Sie den Schlüssel in den Einstellungen.",

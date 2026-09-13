@@ -47,6 +47,270 @@ const parseRequestBody = (
 ) => JSON.parse(request.init.body as string) as Record<string, unknown>
 
 describe("Octopus v0.13 contract", () => {
+  it("removes only matching native keys and grants, preserving retained metadata", () => {
+    const original = detailResponse({
+      keys: [
+        { name: "old", key: "remove-me", enabled: true },
+        { name: "retained", key: "keep-me", enabled: false, custom: 9 },
+      ],
+      grants: [
+        { model_name: "model-a", key_name: "old", protocols: 2 },
+        {
+          model_name: "model-a",
+          key_name: "retained",
+          protocols: 2,
+          custom: "keep",
+        },
+      ],
+    })
+    const body = parseRequestBody(
+      octopusV013Contract.createRequest(
+        {
+          kind: OCTOPUS_API_OPERATIONS.UpdateChannel,
+          input: { id: 7, removeKeys: ["remove-me"] },
+        },
+        {},
+        octopusV013Contract.parseDetail(original),
+      ),
+    )
+    expect(body.keys).toEqual([original.keys[1]])
+    expect(body.grants).toEqual([original.grants[1]])
+    expect(body.models).toEqual(original.models)
+    expect(original.keys).toHaveLength(2)
+  })
+  it("creates grants for both explicit and generated key names", () => {
+    const body = parseRequestBody(
+      octopusV013Contract.createRequest(
+        {
+          kind: OCTOPUS_API_OPERATIONS.CreateChannel,
+          input: {
+            name: "Example",
+            type: OctopusOutboundType.OpenAIChat,
+            baseUrl: "https://upstream.example.invalid",
+            key: "",
+            model: "model-a",
+            keys: [
+              { channel_key: "first", enabled: true },
+              { name: "backup", channel_key: "second", enabled: false },
+            ],
+          },
+        },
+        {},
+      ),
+    )
+    expect(body.keys).toEqual([
+      { name: "key-1", key: "first", enabled: true },
+      { name: "backup", key: "second", enabled: false },
+    ])
+    expect(body.grants).toEqual([
+      { model_name: "model-a", key_name: "key-1", protocols: 2 },
+      { model_name: "model-a", key_name: "backup", protocols: 2 },
+    ])
+  })
+
+  it("rejects a changed source credential before constructing an update", () => {
+    const existing = octopusV013Contract.parseDetail(detailResponse())
+    const source = octopusV013Contract.normalizeChannel(
+      detailResponse({
+        keys: [{ name: "default", key: "old-secret", enabled: true }],
+      }),
+    )
+    expect(() =>
+      octopusV013Contract.createRequest(
+        {
+          kind: OCTOPUS_API_OPERATIONS.UpdateChannel,
+          input: {
+            id: 7,
+            source,
+            keys: [
+              {
+                originalName: "default",
+                name: "default",
+                channel_key: "rotated",
+                enabled: true,
+              },
+            ],
+          },
+        },
+        {},
+        existing,
+      ),
+    ).toThrow("Channel credentials changed")
+  })
+  it("preserves custom grants when a retained key receives a generated name", () => {
+    const existing = octopusV013Contract.parseDetail(
+      detailResponse({
+        grants: [
+          {
+            model_name: "model-a",
+            key_name: "default",
+            protocols: 4,
+            future: "preserved",
+          },
+        ],
+      }),
+    )
+    const body = parseRequestBody(
+      octopusV013Contract.createRequest(
+        {
+          kind: OCTOPUS_API_OPERATIONS.UpdateChannel,
+          input: {
+            id: 7,
+            keys: [
+              {
+                originalName: "default",
+                channel_key: "rotated",
+                enabled: true,
+              },
+            ],
+          },
+        },
+        {},
+        existing,
+      ),
+    )
+    expect(body.keys).toEqual([
+      { name: "key-1", key: "rotated", enabled: true },
+    ])
+    expect(body.grants).toEqual([
+      {
+        model_name: "model-a",
+        key_name: "key-1",
+        protocols: 4,
+        future: "preserved",
+      },
+    ])
+  })
+  it.each([undefined, {}, "[]", [null], [{ header_key: "X-Test" }]])(
+    "rejects malformed custom headers: %j",
+    (custom_header) => {
+      expect(() =>
+        octopusV013Contract.parseDetail(detailResponse({ custom_header })),
+      ).toThrow("Invalid Octopus v0.13 channel response")
+    },
+  )
+
+  it("opens and updates a channel whose custom headers are null", () => {
+    const original = detailResponse({ custom_header: null })
+    const existing = octopusV013Contract.parseDetail(original)
+    const body = parseRequestBody(
+      octopusV013Contract.createRequest(
+        {
+          kind: OCTOPUS_API_OPERATIONS.UpdateChannel,
+          input: { id: 7, name: "Renamed channel" },
+        },
+        {},
+        existing,
+      ),
+    )
+    expect(body).toEqual({
+      ...original,
+      name: "Renamed channel",
+      custom_header: [],
+    })
+  })
+
+  it("adds and removes keys, preserves native key fields, and remaps renamed grants", () => {
+    const existing = octopusV013Contract.parseDetail(
+      detailResponse({
+        keys: [
+          {
+            name: "first",
+            key: "first-secret",
+            enabled: true,
+            future: { keep: true },
+          },
+          { name: "second", key: "second-secret", enabled: true },
+        ],
+        grants: [
+          {
+            model_name: "model-a",
+            key_name: "first",
+            protocols: 2,
+            future: "keep",
+          },
+          { model_name: "model-a", key_name: "second", protocols: 2 },
+        ],
+      }),
+    )
+    const request = octopusV013Contract.createRequest(
+      {
+        kind: OCTOPUS_API_OPERATIONS.UpdateChannel,
+        input: {
+          id: 7,
+          keys: [
+            {
+              originalName: "first",
+              name: "renamed",
+              channel_key: "rotated-first",
+              enabled: false,
+            },
+            { name: "third", channel_key: "third-secret", enabled: true },
+          ],
+        },
+      },
+      {},
+      existing,
+    )
+    const body = JSON.parse(String(request.init.body))
+    expect(body.keys).toEqual([
+      {
+        name: "renamed",
+        key: "rotated-first",
+        enabled: false,
+        future: { keep: true },
+      },
+      { name: "third", key: "third-secret", enabled: true },
+    ])
+    expect(body.grants).toEqual([
+      {
+        model_name: "model-a",
+        key_name: "renamed",
+        protocols: 2,
+        future: "keep",
+      },
+      { model_name: "model-a", key_name: "third", protocols: 2 },
+    ])
+  })
+
+  it("does not transfer deleted grants when a surviving key reuses its name", () => {
+    const existing = octopusV013Contract.parseDetail(
+      detailResponse({
+        keys: [
+          { name: "first", key: "one", enabled: true },
+          { name: "second", key: "two", enabled: true },
+        ],
+        grants: [
+          { model_name: "model-a", key_name: "first", protocols: 2 },
+          { model_name: "model-b", key_name: "second", protocols: 4 },
+        ],
+      }),
+    )
+    const body = parseRequestBody(
+      octopusV013Contract.createRequest(
+        {
+          kind: OCTOPUS_API_OPERATIONS.UpdateChannel,
+          input: {
+            id: 7,
+            keys: [
+              {
+                originalName: "second",
+                name: "first",
+                channel_key: "two",
+                enabled: true,
+              },
+            ],
+          },
+        },
+        {},
+        existing,
+      ),
+    )
+    expect(body.grants).toEqual([
+      { model_name: "model-b", key_name: "first", protocols: 4 },
+    ])
+  })
+
   it.each([
     { name: "Renamed channel" },
     { key: "replacement-key" },

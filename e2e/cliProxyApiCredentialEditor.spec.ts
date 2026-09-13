@@ -159,9 +159,19 @@ for (const width of [1200, 390]) {
       await first.scrollIntoViewIfNeeded()
       await expect
         .poll(() =>
-          first.evaluate(
-            (element) => element.scrollWidth <= element.clientWidth,
-          ),
+          first.evaluate((element) => {
+            const bounds = element.getBoundingClientRect()
+            // Floating tooltips may extend beyond the row; editable controls must fit.
+            return Array.from(element.querySelectorAll("input, button")).every(
+              (control) => {
+                const box = control.getBoundingClientRect()
+                return (
+                  !box.width ||
+                  (box.left >= bounds.left && box.right <= bounds.right)
+                )
+              },
+            )
+          }),
         )
         .toBe(true)
       await page.screenshot({

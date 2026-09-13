@@ -1,4 +1,5 @@
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
+import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import * as axonHubApi from "~/services/apiService/axonHub"
 import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
 import {
@@ -45,9 +46,10 @@ export async function checkValidAxonHubConfig(): Promise<boolean> {
  */
 export async function prepareChannelFormData(
   source: ManagedSiteChannelDraftSource,
+  options?: ManagedSiteChannelDraftRequestOptions,
 ): Promise<ManagedSiteChannelDraft> {
   const { models: availableModels, fetchFailed } =
-    await fetchManagedSiteImportModels(source)
+    await fetchManagedSiteImportModels(source, options)
 
   return {
     name: source.name,

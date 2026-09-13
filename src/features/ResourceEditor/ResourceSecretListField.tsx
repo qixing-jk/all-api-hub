@@ -1,8 +1,15 @@
 import type { TFunction } from "i18next"
-import { ChevronDown, Eye, EyeOff, Plus, Trash2, X } from "lucide-react"
+import {
+  ChevronDown,
+  Eye,
+  EyeOff,
+  LoaderCircle,
+  Plus,
+  Trash2,
+} from "lucide-react"
 import { useCallback, useEffect, useId, useRef, useState } from "react"
 
-import { Button, IconButton, Input, Label } from "~/components/ui"
+import { Button, IconButton, Input, Label, Switch } from "~/components/ui"
 import type {
   ResourceFieldValue,
   ResourceOperationOptions,
@@ -11,6 +18,7 @@ import type {
   ResourceSecretListValue,
 } from "~/services/apiAdapters/contracts/resourceNative"
 
+import { ResourceFieldLabel } from "./ResourceFieldLabel"
 import type { ResourceFieldPresentation } from "./resourceFieldPolicy"
 
 type Props = {
@@ -39,72 +47,77 @@ export function ResourceSecretListField({ value, onChange, ...props }: Props) {
       ? value.entries
       : []
   return (
-    <fieldset
-      className={
-        props.presentation.compactSecretRows ? "space-y-2" : "space-y-3"
-      }
-      disabled={props.disabled}
-    >
-      <legend className="text-sm font-medium">{props.label}</legend>
-      {entries.map((entry, index) => (
-        <SecretRow
-          {...props}
-          helpId={helpId}
-          key={entry.id}
-          entry={entry}
-          index={index}
-          onChange={(updated) =>
+    <fieldset className="min-w-0" disabled={props.disabled}>
+      <legend className="mb-1.5 text-sm leading-5 font-medium">
+        {props.label}
+      </legend>
+      <div className="space-y-2">
+        {entries.map((entry, index) => (
+          <SecretRow
+            {...props}
+            helpId={helpId}
+            key={entry.id}
+            entry={entry}
+            index={index}
+            onChange={(updated) =>
+              onChange({
+                kind: "secret-list",
+                entries: entries.map((row) =>
+                  row.id === entry.id ? updated : row,
+                ),
+              })
+            }
+            canRemove={entries.length > (props.descriptor.minEntries ?? 0)}
+            onRemove={() =>
+              onChange({
+                kind: "secret-list",
+                entries: entries.filter((row) => row.id !== entry.id),
+              })
+            }
+          />
+        ))}
+        <Button
+          type="button"
+          variant="dashed"
+          size="sm"
+          className="w-full"
+          leftIcon={<Plus className="h-4 w-4" />}
+          disabled={props.disabled}
+          onClick={() =>
             onChange({
               kind: "secret-list",
-              entries: entries.map((row) =>
-                row.id === entry.id ? updated : row,
-              ),
+              entries: [
+                ...entries,
+                {
+                  id: crypto.randomUUID(),
+                  secret: { kind: "replace", value: "" },
+                  fields: {},
+                },
+              ],
             })
           }
-          canRemove={entries.length > (props.descriptor.minEntries ?? 0)}
-          onRemove={() =>
-            onChange({
-              kind: "secret-list",
-              entries: entries.filter((row) => row.id !== entry.id),
-            })
-          }
-        />
-      ))}
-      <Button
-        type="button"
-        variant="dashed"
-        size="sm"
-        className="w-full"
-        leftIcon={<Plus className="h-4 w-4" />}
-        disabled={props.disabled}
-        onClick={() =>
-          onChange({
-            kind: "secret-list",
-            entries: [
-              ...entries,
-              {
-                id: crypto.randomUUID(),
-                secret: { kind: "replace", value: "" },
-                fields: {},
-              },
-            ],
-          })
-        }
-      >
-        {props.t("ui:secretList.add")}
-      </Button>
+        >
+          {props.t("ui:secretList.add")}
+        </Button>
+      </div>
       {props.presentation.compactSecretRows &&
-        props.presentation.entryFields?.map((field) =>
-          field.resolveHelp ? (
-            <p
-              key={field.fieldId}
-              id={`${helpId}-${field.fieldId}`}
-              className="text-muted-foreground text-xs"
-            >
-              {field.resolveLabel(props.t)}: {field.resolveHelp(props.t)}
-            </p>
-          ) : null,
-        )}
+        props.presentation.entryFields
+          ?.filter((field) =>
+            props.descriptor.entryFields.some(
+              (descriptor) => descriptor.fieldId === field.fieldId,
+            ),
+          )
+          .map((field) =>
+            field.resolveHelp ? (
+              <p
+                key={field.fieldId}
+                id={`${helpId}-${field.fieldId}`}
+                className="text-muted-foreground mt-1 text-xs"
+              >
+                {field.resolveLabel(props.t)}: {field.resolveHelp(props.t)}
+              </p>
+            ) : null,
+          )}
     </fieldset>
   )
 }
@@ -205,19 +218,22 @@ function SecretRow({
     }
   }
   const rowLabel = t("ui:secretList.row", { number: index + 1 })
-  const summary = descriptor.entryFields
-    .flatMap((field) => {
-      const policy = presentation.entryFields?.find(
-        (item) => item.fieldId === field.fieldId,
-      )
-      const value = entry.fields[field.fieldId]
-      return policy && value !== undefined && value !== ""
-        ? [
-            `${policy.resolveLabel(t)}: ${field.type === "number" ? value : t("ui:secretList.configured")}`,
-          ]
-        : []
-    })
-    .join(" · ")
+  const summary =
+    presentation.resolveEntrySummary?.(t, entry.fields) ??
+    descriptor.entryFields
+      .flatMap((field) => {
+        const policy = presentation.entryFields?.find(
+          (item) => item.fieldId === field.fieldId,
+        )
+        const value = entry.fields[field.fieldId]
+        return policy && value !== undefined && value !== ""
+          ? [
+              `${policy.resolveLabel(t)}: ${field.type === "number" ? value : t("ui:secretList.configured")}`,
+            ]
+          : []
+      })
+      .join(" · ")
+  const description = presentation.resolveEntryDescription?.(t, entry.fields)
   const heading = (
     <>
       {presentation.compactSecretRows && (
@@ -328,6 +344,9 @@ function SecretRow({
         </IconButton>
       </div>
       <div id={`${id}-content`} hidden={!open} className="space-y-2 pb-1">
+        {!presentation.compactSecretRows &&
+          presentation.resolveEntrySummary &&
+          summary && <p className="text-muted-foreground text-xs">{summary}</p>}
         <div className="space-y-1">
           <Label className="sr-only" htmlFor={`${id}-secret`}>
             {rowLabel}
@@ -363,10 +382,11 @@ function SecretRow({
                       : "ui:secretList.show",
                 )}
                 onMouseDown={(event) => event.preventDefault()}
+                aria-busy={loading}
                 onClick={() => (loading ? cancel() : void show())}
               >
                 {loading ? (
-                  <X className="h-4 w-4" />
+                  <LoaderCircle aria-hidden className="h-4 w-4 animate-spin" />
                 ) : revealed ? (
                   <EyeOff className="h-4 w-4" />
                 ) : (
@@ -387,16 +407,14 @@ function SecretRow({
               })
             }}
           />
-          {loading && (
-            <p role="status" className="text-muted-foreground text-xs">
-              {t("common:status.loading")}
-            </p>
-          )}
         </div>
         {failed && (
           <p role="alert" className="text-destructive text-sm">
             {t("ui:secretList.loadFailed")}
           </p>
+        )}
+        {description && (
+          <p className="text-muted-foreground text-xs">{description}</p>
         )}
         <div className="flex flex-wrap gap-2">
           {descriptor.entryFields.map((field) => {
@@ -405,39 +423,66 @@ function SecretRow({
             )
             if (!fieldPolicy)
               throw new Error("Missing credential attribute presentation")
+            const FieldLabel =
+              field.type === "boolean" ? Label : ResourceFieldLabel
             return (
               <div
                 key={field.fieldId}
-                className={`min-w-0 space-y-1 ${fieldPolicy.width === "wide" ? "w-full sm:w-auto sm:flex-1" : fieldPolicy.width === "compact" ? "w-24" : "w-full"}`}
+                className={`min-w-0 ${field.type === "boolean" ? "flex items-center justify-between gap-3" : ""} ${fieldPolicy.width === "wide" ? "w-full sm:w-auto sm:flex-1" : fieldPolicy.width === "compact" ? "w-24" : "w-full"}`}
               >
-                <Label htmlFor={`${id}-${field.fieldId}`}>
+                <FieldLabel htmlFor={`${id}-${field.fieldId}`}>
                   {fieldPolicy.resolveLabel(t)}
-                </Label>
-                <Input
-                  id={`${id}-${field.fieldId}`}
-                  type={field.type}
-                  min={field.min}
-                  max={field.max}
-                  value={entry.fields[field.fieldId] ?? ""}
-                  disabled={disabled}
-                  aria-describedby={
-                    fieldPolicy.resolveHelp
-                      ? presentation.compactSecretRows
-                        ? `${helpId}-${field.fieldId}`
-                        : `${id}-${field.fieldId}-help`
-                      : undefined
-                  }
-                  placeholder={fieldPolicy.resolvePlaceholder?.(t)}
-                  onChange={(event) =>
-                    onChange({
-                      ...entry,
-                      fields: {
-                        ...entry.fields,
-                        [field.fieldId]: event.target.value,
-                      },
-                    })
-                  }
-                />
+                </FieldLabel>
+                {field.type === "boolean" ? (
+                  <Switch
+                    id={`${id}-${field.fieldId}`}
+                    size="sm"
+                    aria-describedby={
+                      fieldPolicy.resolveHelp
+                        ? presentation.compactSecretRows
+                          ? `${helpId}-${field.fieldId}`
+                          : `${id}-${field.fieldId}-help`
+                        : undefined
+                    }
+                    checked={entry.fields[field.fieldId] !== "false"}
+                    disabled={disabled}
+                    onChange={(checked) =>
+                      onChange({
+                        ...entry,
+                        fields: {
+                          ...entry.fields,
+                          [field.fieldId]: String(checked),
+                        },
+                      })
+                    }
+                  />
+                ) : (
+                  <Input
+                    id={`${id}-${field.fieldId}`}
+                    type={field.type}
+                    min={field.min}
+                    max={field.max}
+                    value={entry.fields[field.fieldId] ?? ""}
+                    disabled={disabled}
+                    aria-describedby={
+                      fieldPolicy.resolveHelp
+                        ? presentation.compactSecretRows
+                          ? `${helpId}-${field.fieldId}`
+                          : `${id}-${field.fieldId}-help`
+                        : undefined
+                    }
+                    placeholder={fieldPolicy.resolvePlaceholder?.(t)}
+                    onChange={(event) =>
+                      onChange({
+                        ...entry,
+                        fields: {
+                          ...entry.fields,
+                          [field.fieldId]: event.target.value,
+                        },
+                      })
+                    }
+                  />
+                )}
               </div>
             )
           })}

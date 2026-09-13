@@ -11,6 +11,7 @@ import { ChannelType as NewApiType } from "~/constants/newApi"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import type { Sub2ApiApiKeyAccountPlatform } from "~/constants/sub2api"
 import { VeloeraChannelType as VeloeraType } from "~/constants/veloera"
+import type { CliProxyApiProviderKind } from "~/services/apiService/cliProxyApi"
 import type { ManagedSiteMigrationSource } from "~/types/managedSiteMigrationCapability"
 import { OctopusOutboundType as OctopusType } from "~/types/octopus"
 
@@ -22,6 +23,7 @@ const {
   AXON_HUB,
   CLAUDE_CODE_HUB,
   SUB2API,
+  CLI_PROXY_API,
 } = SITE_TYPES
 
 type NativeChannelTypeBySite = {
@@ -32,6 +34,7 @@ type NativeChannelTypeBySite = {
   [AXON_HUB]: AxonHubChannelType
   [CLAUDE_CODE_HUB]: ClaudeCodeHubProviderType
   [SUB2API]: Sub2ApiApiKeyAccountPlatform
+  [CLI_PROXY_API]: CliProxyApiProviderKind
 }
 
 /**
@@ -62,6 +65,7 @@ type TypeRoute = {
 const routes: readonly TypeRoute[] = [
   {
     [NEW_API]: NewApiType.OpenAI,
+    [CLI_PROXY_API]: "openai-compatibility",
     [VELOERA]: VeloeraType.OpenAI,
     [DONE_HUB]: DoneHubType.OpenAI,
     [OCTOPUS]: OctopusType.OpenAIChat,
@@ -114,6 +118,7 @@ const routes: readonly TypeRoute[] = [
   },
   {
     [NEW_API]: NewApiType.Anthropic,
+    [CLI_PROXY_API]: "claude-api-key",
     [VELOERA]: VeloeraType.Anthropic,
     [DONE_HUB]: DoneHubType.Anthropic,
     [OCTOPUS]: OctopusType.Anthropic,
@@ -142,6 +147,7 @@ const routes: readonly TypeRoute[] = [
   },
   {
     [NEW_API]: NewApiType.Gemini,
+    [CLI_PROXY_API]: "gemini-api-key",
     [VELOERA]: VeloeraType.Gemini,
     [DONE_HUB]: DoneHubType.Gemini,
     [OCTOPUS]: OctopusType.Gemini,
@@ -368,6 +374,7 @@ const routes: readonly TypeRoute[] = [
   },
   {
     [NEW_API]: NewApiType.Xai,
+    [CLI_PROXY_API]: "xai-api-key",
     [VELOERA]: VeloeraType.Xai,
     [DONE_HUB]: DoneHubType.XAI,
     [AXON_HUB]: AXON_HUB_CHANNEL_TYPE.XAI,
@@ -402,6 +409,7 @@ const routes: readonly TypeRoute[] = [
   },
   {
     [NEW_API]: NewApiType.Codex,
+    [CLI_PROXY_API]: "codex-api-key",
     [DONE_HUB]: DoneHubType.Codex,
     [CLAUDE_CODE_HUB]: CLAUDE_CODE_HUB_PROVIDER_TYPE.CODEX,
   },

@@ -16,6 +16,7 @@ type SearchDefinitionOptions = {
   isVisible?: (context: OptionsSearchContext) => boolean
 }
 
+/** Define a page result with a stable identity and a title resolved from page metadata. */
 export const buildPageDefinition = (
   pageId: string,
   order: number,
@@ -29,6 +30,7 @@ export const buildPageDefinition = (
   order,
 })
 
+/** Define a Basic Settings tab result, hiding permissions when the browser has none. */
 export const buildTabDefinition = (
   tabId: BasicSettingsTabId,
   order: number,
@@ -47,6 +49,7 @@ export const buildTabDefinition = (
       : undefined,
 })
 
+/** Define a settings section whose target is revealed within its owning tab. */
 export const buildSectionDefinition = (
   id: string,
   tabId: BasicSettingsTabId,
@@ -72,6 +75,7 @@ export const buildSectionDefinition = (
   isVisible: options?.isVisible,
 })
 
+/** Define a section on a standalone options page with page-level breadcrumbs. */
 export const buildPageSectionDefinition = (
   id: string,
   pageId: string,
@@ -96,6 +100,7 @@ export const buildPageSectionDefinition = (
   isVisible: options?.isVisible,
 })
 
+/** Define a settings control whose tab and target are preserved during navigation. */
 export const buildControlDefinition = (
   id: string,
   tabId: BasicSettingsTabId,
@@ -121,6 +126,7 @@ export const buildControlDefinition = (
   isVisible: options?.isVisible,
 })
 
+/** Define a control on a standalone page while retaining its search target and visibility rule. */
 export const buildPageControlDefinition = (
   id: string,
   pageId: string,

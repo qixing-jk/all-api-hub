@@ -1,14 +1,15 @@
 {
-  "description": "Backup and restore plugin data",
+  "description": "Back up, migrate, or sync All API Hub data.",
   "export": {
     "accountData": "Account Data",
-    "accountDataDescription": "Manual account and full JSON exports include saved credentials in plaintext. Store exported files securely.",
+    "accountDataDescription": "Export only accounts, bookmarks, and tags.",
     "accountsExported": "Account data exported successfully",
     "dataExported": "Data exported successfully",
     "description": "Export data as a JSON file for backup",
     "exportFailed": "Export failed, please try again",
     "fullBackup": "Full Export",
-    "fullBackupDescription": "Manual full JSON exports include saved account credentials in plaintext together with user settings. Store the file securely.",
+    "fullBackupDescription": "Export accounts, bookmarks, tags, API credentials, channel configurations, and user settings.",
+    "sensitiveDataNotice": "Account and full JSON exports include credentials in plaintext. Store exported files securely.",
     "settingsExported": "User settings exported successfully",
     "title": "Export Data",
     "userSettings": "User Settings",
@@ -17,12 +18,8 @@
   "import": {
     "backupTime": "Backup Time",
     "channelConfigMigrationDeferred": "Channel configuration migration could not finish. Check your managed-site settings and try again.",
-    "containsAccountData": "Contains account data",
-    "containsApiCredentialProfiles": "Contains API credential library",
-    "containsChannelConfigs": "Contains channel configuration",
-    "containsUserSettings": "Contains user settings",
     "dataInvalid": "Data format error, please check JSON format",
-    "dataPreview": "Data Preview",
+    "dataPreview": "View or paste JSON",
     "dataValid": "Data format is correct",
     "description": "Restore data from a backup file",
     "downloadImportFailed": "Import from WebDAV failed",
@@ -97,44 +94,37 @@
     "title": "Import Data",
     "versionNotSupported": "This backup was created by a newer version. Update the app before importing it."
   },
-  "notice": {
-    "importantNotice": "Important Notice",
-    "importWarning1": "Before importing, choose per data type whether to add, replace, or skip it. Accounts/API credentials are added by default, while current settings are kept",
-    "importWarning2": "It is recommended to export current data for backup before importing",
-    "importWarning3": "Only supports JSON format files exported by this extension",
-    "importWarning4": "Imported data may contain sensitive information (account tokens and API keys). Keep backups secure and only import from trusted sources"
+  "localBackup": {
+    "description": "Use local JSON files to back up, move, or restore All API Hub data.",
+    "title": "Local backup and migration"
   },
   "title": "Import/Export",
   "webdav": {
-    "actionState": {
-      "saved": "Configuration is saved. Test connection, upload to WebDAV, and import from WebDAV use the currently saved configuration.",
-      "unsaved": "Configuration has unsaved changes. Test connection, upload to WebDAV, and import from WebDAV will save these changes first."
-    },
     "autoSync": {
-      "actionState": {
-        "saved": "Sync Now uses the saved WebDAV and auto-sync settings.",
-        "unsaved": "Auto-sync settings have unsaved changes. Sync Now will not use them; save the auto-sync settings first."
-      },
-      "description": "Configure automatic sync for shared data. Device-local settings stay on the current device.",
+      "autosaveDescription": "Sync strategy and the switch save automatically. The interval saves when you leave the field.",
+      "currentProvider": "Sync service: {{provider}}",
       "enable": "Enable auto sync",
       "enableDesc": "When enabled, shared data will be synchronized to WebDAV at set intervals.",
       "interval": "Sync interval (seconds)",
       "intervalDesc": "Set how often the automatic sync runs",
       "intervalHint": "About {{minutes}} minutes",
       "lastSync": "Last sync",
-      "saveSettings": "Save Settings",
       "strategy": "Sync strategy",
       "strategyDesc": "Choose how data should be synchronized",
       "strategyLocalFirst": "Local first - local data overrides remote data",
       "strategyMerge": "Smart merge - merge local and remote data based on timestamps",
       "strategyRemoteFirst": "Remote first - remote data overwrites local data",
       "syncNow": "Sync Now",
-      "title": "WebDAV Auto Sync"
+      "title": "Automatic sync"
     },
-    "configDesc": "Configure WebDAV to sync shared data. Some device-local settings stay on this device and are not uploaded or overwritten.",
+    "configDesc": "Choose one cloud service to sync shared data. Connection credentials and device-local settings stay on this device.",
+    "connection": {
+      "title": "Connection settings",
+      "webdavDescription": "Enter the WebDAV address and credentials used by this device."
+    },
     "downloadImport": "Import from WebDAV",
-    "downloadImportWithSave": "Save and Import from WebDAV",
     "encryption": {
+      "alwaysEncrypted": "Always encrypted",
       "decryptAction": "Decrypt and import",
       "decryptDialogDesc": "This WebDAV sync data is encrypted. Try a password to import it.",
       "decryptDialogTitle": "Decrypt WebDAV Data",
@@ -143,34 +133,68 @@
       "decryptPrompt": "Cannot decrypt automatically. Please enter your password.",
       "enableDesc": "Optional: encrypt WebDAV backups with a password. If encryption is disabled, uploaded backups contain saved credentials in plaintext. Use encryption or store them securely.",
       "password": "Encryption password",
-      "passwordDesc": "Used to encrypt data uploaded to WebDAV and decrypt data downloaded from WebDAV.",
+      "passwordDesc": "Used to encrypt uploaded cloud backups and decrypt downloaded backups.",
       "passwordPlaceholder": "Enter password",
       "savePassword": "Save password for future decrypt",
-      "title": "WebDAV Data Encryption"
+      "sharedPasswordDescription": "WebDAV and GitHub Gist share this encryption password. Switching services does not change it.",
+      "title": "Data encryption"
+    },
+    "gist": {
+      "autoSyncEnableDesc": "When enabled, shared data will be synchronized to the Secret Gist at the selected interval.",
+      "configDesc": "Sync shared data through an encrypted GitHub Secret Gist. A Secret Gist is an unlisted link, not an access-control boundary.",
+      "downloadImport": "Import from Secret Gist",
+      "encryptionDescription": "GitHub Gist sync requires an encryption password. The password is never uploaded to GitHub or included in backup files. If you lose it, the encrypted backup cannot be decrypted.",
+      "encryptionPasswordRequired": "Enter an encryption password before saving or syncing this Gist.",
+      "id": "Gist ID or URL",
+      "idDesc": "Optional. Leave empty to create a Gist automatically on the first upload.",
+      "idPlaceholder": "For example: a1b2c3d4 or https://gist.github.com/...",
+      "openLink": "Open this Gist on GitHub",
+      "restorePolicyDescription": "The active cloud provider syncs shared data, not a full device backup. Cloud credentials, encryption passwords, sync selection, and account auto-refresh settings stay on this device. Use manual export/import to migrate device-local settings.",
+      "testFailed": "Secret Gist connection failed",
+      "testSuccess": "Secret Gist connection succeeded",
+      "token": "GitHub Token",
+      "tokenDesc": "Stored only in this browser; it is never written to backups or sent to All API Hub. Use a fine-grained token with only Gists read/write access, or a classic token with the gist scope.",
+      "tokenPlaceholder": "Paste a GitHub token",
+      "upload": "Upload to Secret Gist",
+      "uploadFailed": "GitHub Secret Gist upload failed",
+      "uploadSuccess": "Uploaded to GitHub Secret Gist"
     },
     "hidePassword": "Hide password",
+    "manual": {
+      "confirmCancel": "Cancel",
+      "confirmContinue": "Continue",
+      "confirmDownloadDescription": "Selected cloud data will be written to this device. Existing local data in those sections may be replaced; this action does not use Smart Merge.",
+      "confirmDownloadTitle": "Restore selected data?",
+      "confirmUploadDescription": "Selected local data will be written to the active cloud backup. Existing cloud data in those sections may be replaced; this action does not use Smart Merge.",
+      "confirmUploadTitle": "Upload selected data?",
+      "directionWarning": "These actions are directional: upload writes selected local data to the cloud; restore writes selected cloud data to this device. They do not use Smart Merge."
+    },
     "notSynced": "Not synced",
-    "password": "Password",
+    "password": "WebDAV password",
+    "provider": {
+      "description": "This selection controls both manual and automatic sync. Only one service is active at a time.",
+      "githubGist": "GitHub Secret Gist",
+      "label": "Sync service",
+      "webdav": "WebDAV"
+    },
     "rebuildDialog": {
       "cancel": "Not now",
       "confirm": "Rebuild from this device",
-      "description": "The backup file on WebDAV is incomplete. Continuing to sync could mix data incorrectly. You can create a new cloud backup from the data on this device.",
+      "description": "The cloud backup is incomplete. Continuing to sync could mix data incorrectly. You can create a new cloud backup from the data on this device.",
       "fullSelectionNote": "This rebuild will include all syncable data for this upload only. Your saved sync scope will not be changed.",
       "title": "Your cloud backup may be damaged",
-      "warningDescription": "Rebuilding will replace the WebDAV backup with the current data on this device. If this device is missing accounts, bookmarks, or preferences, upload from another device with complete data or import a complete backup first.",
+      "warningDescription": "Rebuilding will replace the cloud backup with the current data on this device. If this device is missing accounts, bookmarks, or preferences, upload from another device with complete data or import a complete backup first.",
       "warningTitle": "Make sure this device has complete data"
     },
     "restorePolicy": {
-      "description": "WebDAV is meant for shared-data sync, not a full device backup. Your current device's WebDAV connection/encryption settings, sync selection, and account auto-refresh settings stay local and will not be uploaded to or overwritten from WebDAV. Use manual export/import when you need to migrate those device-local settings.",
-      "title": "Sync scope notice"
+      "description": "WebDAV is meant for shared-data sync, not a full device backup. Your current device's WebDAV connection/encryption settings, sync selection, and account auto-refresh settings stay local and will not be uploaded to or overwritten from WebDAV. Use manual export/import when you need to migrate those device-local settings."
     },
-    "saveConfig": "Save Configuration",
+    "retrySave": "Save failed. Retry",
     "showPassword": "Show password",
     "syncData": {
       "accounts": "Accounts",
       "apiCredentialProfiles": "API credential library",
       "bookmarks": "Bookmarks",
-      "description": "Choose which shared data domains participate in WebDAV sync. Device-local preference items such as WebDAV settings, sync selection, and account auto-refresh stay on the current device, while channel configurations remain synced for compatibility.",
       "preferences": "Preferences",
       "selectionRequired": "Select at least one data domain to sync",
       "title": "Sync data"
@@ -178,18 +202,19 @@
     "syncError": "Sync failed",
     "syncFailed": "Sync failed",
     "syncing": "Syncing",
+    "syncSettings": {
+      "title": "Sync settings"
+    },
     "syncSuccess": "Sync successful",
     "testConnection": "Test Connection",
-    "testConnectionWithSave": "Save and Test Connection",
     "testFailed": "Connection test failed",
     "testSuccess": "Connection test successful",
-    "title": "WebDAV Sync",
+    "title": "Cloud sync",
     "uploadBackup": "Upload to WebDAV",
-    "uploadBackupWithSave": "Save and Upload to WebDAV",
     "uploadFailed": "Upload to WebDAV failed",
     "uploadSuccess": "Uploaded to WebDAV",
-    "username": "Username",
-    "webdavUrl": "Webdav URL",
+    "username": "WebDAV username",
+    "webdavUrl": "WebDAV URL",
     "webdavUrlExample": "For example: https://dav.example.com/{{filename}} full file URL or Webdav root directory URL"
   }
 }

@@ -1,5 +1,6 @@
 import type { ManagedSiteType } from "~/constants/siteType"
 import {
+  MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES,
   MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES,
   type ManagedSiteChannelMigrationBlockedReasonCode,
   type ManagedSiteChannelMigrationItemWarningCode,
@@ -19,6 +20,11 @@ import {
   type ManagedSiteMigrationSourcePreparation,
   type ManagedSiteMigrationTargetPreparation,
 } from "~/types/managedSiteMigrationCapability"
+
+import {
+  migrationCredentialRevision,
+  resolveMigrationCredentials,
+} from "./channelMigrationCredentials"
 
 const PREVIEW_BUILD_CONCURRENCY = 5
 const migrationFailures = MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES
@@ -184,6 +190,7 @@ export async function executeManagedSiteMigrationCore(
         failureCode: typeof migrationFailures.MutationStateUncertain
       }
   const items: ExecutionItem[] = []
+  const credentialRevisions = new Map<string, string>()
   const append = (
     item: ManagedSiteMigrationCanonicalPreviewItem,
     outcome: ExecutionOutcome,
@@ -247,6 +254,37 @@ export async function executeManagedSiteMigrationCore(
     let credentialResolution: ManagedSiteMigrationCredentialResolution
     try {
       credentialResolution = await params.resolveCredential(item.selection)
+      if (
+        credentialResolution.status === "ready" &&
+        credentialResolution.credentials &&
+        item.selection.credentialIndex !== undefined
+      ) {
+        const ref = item.selection.ref
+        const identity = JSON.stringify([
+          ref.siteType,
+          ref.scopeKey,
+          ref.resourceId,
+        ])
+        const revision = await migrationCredentialRevision(
+          credentialResolution.credentials,
+        )
+        const previous = credentialRevisions.get(identity)
+        if (previous && previous !== revision) {
+          credentialResolution = {
+            status: "blocked",
+            reasonCode:
+              MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEYS_CHANGED,
+          }
+        } else {
+          credentialRevisions.set(identity, revision)
+        }
+      }
+      if (credentialResolution.status === "ready") {
+        credentialResolution = resolveMigrationCredentials(
+          item,
+          credentialResolution,
+        )
+      }
       throwIfExecutionCancelled(index)
     } catch (error) {
       throwIfExecutionCancelled(index, error)
@@ -272,6 +310,9 @@ export async function executeManagedSiteMigrationCore(
         targetSiteType: params.preview.targetSiteType,
         projection: item.target.projection,
         credential: credentialResolution.credential,
+        ...(credentialResolution.credentials
+          ? { credentials: credentialResolution.credentials }
+          : {}),
       })
     } catch (error) {
       if (params.signal?.aborted || isAbortError(error)) {
@@ -281,7 +322,9 @@ export async function executeManagedSiteMigrationCore(
         })
         throwIfExecutionCancelled(index + 1, error)
       }
-      throw error
+      // A thrown create may follow an applied request. Preserve prior successes
+      // and expose this row for manual reconciliation instead of replaying it.
+      createResult = { status: "uncertain" }
     }
 
     if (createResult.status === "created") {

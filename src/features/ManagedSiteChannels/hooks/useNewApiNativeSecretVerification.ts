@@ -84,7 +84,12 @@ export function useNewApiNativeSecretVerification({
           openNewApiManagedVerification({
             kind: "channel",
             label,
-            config,
+            config: {
+              ...config,
+              ...(Number(error.failure.recoveryResourceId) > 0
+                ? { channelId: Number(error.failure.recoveryResourceId) }
+                : {}),
+            },
             closeMode:
               NEW_API_MANAGED_VERIFICATION_CLOSE_MODES.CLOSE_AFTER_CALLBACK,
             onVerified: async () => {

@@ -94,6 +94,8 @@ export type ResourceDisplayFacts = {
   fields: readonly ResourceDisplayFact[]
   /** Safe, non-rendered values used by the shared local search index. */
   searchValues?: readonly string[]
+  /** All known upstream URLs for key cleanup; an empty list requires reading detail. */
+  keyCleanupBaseUrls?: readonly string[]
   actions: {
     canUpdate: boolean
     canDelete: boolean
@@ -174,6 +176,11 @@ export interface ResourceEditor {
 }
 
 export interface ManagedResourceWorkspace {
+  /** Complete native credentials, read afresh for explicit linked-key cleanup. */
+  openKeyCleanup?: (
+    ref: ManagedResourceRef,
+    options?: ResourceOperationOptions,
+  ) => Promise<ManagedResourceKeyCleanup>
   readonly capabilities: {
     canSearch: boolean
     canCreate: boolean
@@ -199,6 +206,16 @@ export interface ManagedResourceWorkspace {
     ref: ManagedResourceRef,
     options?: ResourceOperationOptions,
   ): Promise<ManagedSiteMutationResult<void>>
+}
+
+export interface ManagedResourceKeyCleanup {
+  baseUrls: readonly string[]
+  keys: readonly string[]
+  /** Removes selected entries while preserving all other native attributes. */
+  remove(
+    indices: readonly number[],
+    options?: ResourceOperationOptions,
+  ): Promise<ManagedSiteMutationResult<unknown>>
 }
 
 export interface ManagedResourceRegistration {

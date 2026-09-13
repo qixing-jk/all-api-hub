@@ -35,22 +35,24 @@ const octopusManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
 }
 
 const matching: ManagedResourceMatchingCapability<OctopusConfig> = {
-  search: async (config, keyword) => {
-    const items = (await searchChannels(config, keyword)).map((channel) => ({
-      ref: createManagedChannelResourceRef(
-        SITE_TYPES.OCTOPUS,
-        config.baseUrl,
-        channel.id,
-      ),
-      name: channel.name,
-      type: channel.type,
-      base_url: channel.base_urls[0]?.url ?? "",
-      models: channel.model ?? "",
-      key: channel.keys
-        .map((key) => key.channel_key)
-        .filter(Boolean)
-        .join("\n"),
-    }))
+  search: async (config, keyword, options) => {
+    const items = (await searchChannels(config, keyword, options)).map(
+      (channel) => ({
+        ref: createManagedChannelResourceRef(
+          SITE_TYPES.OCTOPUS,
+          config.baseUrl,
+          channel.id,
+        ),
+        name: channel.name,
+        type: channel.type,
+        base_url: channel.base_urls[0]?.url ?? "",
+        models: channel.model ?? "",
+        key: channel.keys
+          .map((key) => key.channel_key)
+          .filter(Boolean)
+          .join("\n"),
+      }),
+    )
     return { items, total: items.length, type_counts: {} }
   },
 }

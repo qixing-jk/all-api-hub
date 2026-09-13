@@ -490,6 +490,14 @@ describe("TokenHeader save to API profiles", () => {
     )
 
     expect(
+      screen.queryByText("keyManagement:managedSiteStatus.signals.url.matched"),
+    ).not.toBeInTheDocument()
+
+    await userEvent
+      .setup()
+      .click(screen.getByTestId("managed-site-status-details"))
+
+    expect(
       screen.getByText(
         "keyManagement:managedSiteStatus.badges.requiresConfirmation",
       ),
@@ -722,6 +730,10 @@ describe("TokenHeader save to API profiles", () => {
         />,
       )
 
+      await userEvent
+        .setup()
+        .click(screen.getByTestId("managed-site-status-details"))
+
       expect(
         screen.getByText("keyManagement:managedSiteStatus.badges.added"),
       ).toBeInTheDocument()
@@ -798,6 +810,10 @@ describe("TokenHeader save to API profiles", () => {
         }}
       />,
     )
+
+    await userEvent
+      .setup()
+      .click(screen.getByTestId("managed-site-status-details"))
 
     expect(
       screen.getByText(
@@ -884,6 +900,10 @@ describe("TokenHeader save to API profiles", () => {
       />,
     )
 
+    await userEvent
+      .setup()
+      .click(screen.getByTestId("managed-site-status-details"))
+
     expect(
       screen.getByText(
         "keyManagement:managedSiteStatus.recovery.verificationRequired",
@@ -957,6 +977,10 @@ describe("TokenHeader save to API profiles", () => {
         }}
       />,
     )
+
+    await userEvent
+      .setup()
+      .click(screen.getByTestId("managed-site-status-details"))
 
     expect(
       screen.getByText(
@@ -1036,6 +1060,10 @@ describe("TokenHeader save to API profiles", () => {
       />,
     )
 
+    await userEvent
+      .setup()
+      .click(screen.getByTestId("managed-site-status-details"))
+
     const retryButton = screen.getByRole("button", {
       name: "keyManagement:managedSiteStatus.actions.verifyNow",
     })
@@ -1054,7 +1082,7 @@ describe("TokenHeader save to API profiles", () => {
     await waitFor(() => expect(retryButton).not.toBeDisabled())
   })
 
-  it("directs the user to Settings instead of showing retry when login-assist credentials are missing", () => {
+  it("directs the user to Settings instead of showing retry when login-assist credentials are missing", async () => {
     const account = createAccountStub()
 
     const token = {
@@ -1103,6 +1131,10 @@ describe("TokenHeader save to API profiles", () => {
         }}
       />,
     )
+
+    await userEvent
+      .setup()
+      .click(screen.getByTestId("managed-site-status-details"))
 
     expect(
       screen.getByText(
@@ -1155,6 +1187,10 @@ describe("TokenHeader save to API profiles", () => {
         }}
       />,
     )
+
+    await userEvent
+      .setup()
+      .click(screen.getByTestId("managed-site-status-details"))
 
     expect(
       screen.getByText("keyManagement:managedSiteStatus.badges.configMissing"),
@@ -1240,6 +1276,10 @@ describe("TokenHeader save to API profiles", () => {
       />,
     )
 
+    await userEvent
+      .setup()
+      .click(screen.getByTestId("managed-site-status-details"))
+
     await user.click(
       screen.getByRole("button", {
         name: "common:labels.settings",
@@ -1257,7 +1297,7 @@ describe("TokenHeader save to API profiles", () => {
     })
   })
 
-  it("renders fuzzy and similarity explanations for non-exact managed-site matches", () => {
+  it("renders fuzzy and similarity explanations for non-exact managed-site matches", async () => {
     const account = createAccountStub()
 
     const fuzzyToken = {
@@ -1310,6 +1350,10 @@ describe("TokenHeader save to API profiles", () => {
         }}
       />,
     )
+
+    await userEvent
+      .setup()
+      .click(screen.getByTestId("managed-site-status-details"))
 
     expectNoVisibleManagedSiteDescription()
     expect(
@@ -1367,7 +1411,7 @@ describe("TokenHeader save to API profiles", () => {
     ).toBeInTheDocument()
   })
 
-  it("renders separate key and model badges when key matches but models do not", () => {
+  it("renders separate key and model badges when key matches but models do not", async () => {
     const account = createAccountStub()
     const token = {
       id: 7,
@@ -1415,6 +1459,10 @@ describe("TokenHeader save to API profiles", () => {
         }}
       />,
     )
+
+    await userEvent
+      .setup()
+      .click(screen.getByTestId("managed-site-status-details"))
 
     expectNoVisibleManagedSiteDescription()
     expect(

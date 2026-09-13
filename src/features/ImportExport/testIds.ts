@@ -1,6 +1,4 @@
 export const IMPORT_EXPORT_TEST_IDS = {
-  containsApiCredentialProfiles:
-    "import-export-contains-api-credential-profiles",
   exportFullBackupButton: "import-export-export-full-backup-button",
   exportAccountDataButton: "import-export-export-account-data-button",
   exportUserSettingsButton: "import-export-export-user-settings-button",
@@ -22,4 +20,6 @@ export const IMPORT_EXPORT_TEST_IDS = {
     "import-export-import-channel-configs-replace-option",
   webdavUploadBackupButton: "import-export-webdav-upload-backup-button",
   webdavDownloadImportButton: "import-export-webdav-download-import-button",
+  webdavManualCancelButton: "import-export-webdav-manual-cancel-button",
+  webdavManualConfirmButton: "import-export-webdav-manual-confirm-button",
 } as const

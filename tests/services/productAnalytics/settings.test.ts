@@ -29,7 +29,7 @@ import { ACCOUNT_KEY_AUTO_PROVISION_MODES } from "~/types/accountKeyAutoProvisio
 import { AUTO_CHECKIN_SCHEDULE_MODE } from "~/types/autoCheckin"
 import { SortingCriteriaType } from "~/types/sorting"
 import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
-import { WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
+import { CLOUD_SYNC_PROVIDERS, WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
 
 vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
   const actual =
@@ -106,6 +106,41 @@ describe("settings product analytics snapshots", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it("reports complete Gist configuration without including credentials", () => {
+    const preferences = createPreferences({
+      webdav: {
+        ...createPreferences().webdav,
+        provider: CLOUD_SYNC_PROVIDERS.GITHUB_GIST,
+        githubGist: {
+          token: "ghp-sensitive",
+          gistId: "gist-sensitive",
+          gistUrl: "https://gist.github.com/sensitive",
+        },
+        backupEncryptionPassword: "encryption-sensitive",
+      },
+    })
+
+    const [snapshot] = buildSettingsSnapshotEvents(
+      preferences,
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      { webdav: {} },
+    )
+
+    expect(snapshot).toEqual(
+      expect.objectContaining({
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.WebDavConfigSnapshot,
+        configured: true,
+        backup_encryption_enabled: true,
+      }),
+    )
+    expect(JSON.stringify(snapshot)).not.toContain("ghp-sensitive")
+    expect(JSON.stringify(snapshot)).not.toContain("gist-sensitive")
+    expect(JSON.stringify(snapshot)).not.toContain(
+      "https://gist.github.com/sensitive",
+    )
+    expect(JSON.stringify(snapshot)).not.toContain("encryption-sensitive")
   })
 
   it.each([

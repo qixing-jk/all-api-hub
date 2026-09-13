@@ -193,6 +193,54 @@ const preview: ManagedSiteMigrationCanonicalPreview = {
 }
 
 describe("managedResourceMigrationPresentation", () => {
+  it("explains split keys, unknown counts, and key-change blockers", () => {
+    const ready = preview.items[0]
+    if (ready.status !== "ready") throw new Error("fixture")
+    const localT = ((key: string) => key) as TFunction
+    const mapped = mapManagedResourceMigrationPreview(
+      projectManagedResourceMigrationPreview({
+        ...preview,
+        items: [
+          {
+            ...ready,
+            source: {
+              ...ready.source,
+              lossSignals: {
+                ...ready.source.lossSignals,
+                hasMultiKeyState: true,
+              },
+            },
+            warningCodes: [
+              MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.SPLITS_KEYS,
+            ],
+          },
+          ...[
+            MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEYS_CHANGED,
+            MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_MULTI_KEY_UNSUPPORTED,
+          ].map((blockingReasonCode) => ({
+            selection: ready.selection,
+            status: "blocked" as const,
+            warningCodes: [],
+            blockingReasonCode,
+          })),
+        ],
+      }),
+      { t: localT, getSiteLabel: String },
+    )
+    expect(mapped.rows[0].warningText).toContain(
+      "managedSiteChannels:migration.itemWarnings.splitsKeys",
+    )
+    expect(
+      mapped.rows[0].comparisons.find(({ id }) => id === "keyCount")?.source,
+    ).toBe("common:labels.unknown")
+    expect(JSON.stringify(mapped.rows[1])).toContain(
+      "managedSiteChannels:migration.blockedReasons.sourceKeysChanged",
+    )
+    expect(JSON.stringify(mapped.rows[2])).toContain(
+      "managedSiteChannels:migration.blockedReasons.sourceMultiKeyUnsupported",
+    )
+  })
+
   it("retains safe comparison and outcome data without native refs or extra execution fields", () => {
     const unsafePreview = {
       ...preview,
@@ -499,7 +547,7 @@ describe("managedResourceMigrationPresentation", () => {
     )
   })
 
-  it("preserves opaque row order and all seven canonical comparison values", () => {
+  it("preserves opaque row order and all eight canonical comparison values", () => {
     const mapped = mapManagedResourceMigrationPreview(preview, {
       t,
       getSiteLabel: (siteType) => `Site ${siteType}`,
@@ -514,6 +562,7 @@ describe("managedResourceMigrationPresentation", () => {
       "opaque:row/alpha",
     ])
     expect(mapped.rows[0].comparisons.map((field) => field.id)).toEqual([
+      "keyCount",
       "baseUrl",
       "type",
       "models",
@@ -525,6 +574,7 @@ describe("managedResourceMigrationPresentation", () => {
     expect(
       mapped.rows[0].comparisons.map(({ source, target }) => [source, target]),
     ).toEqual([
+      ["1", "1"],
       [
         "https://source.example.invalid/v1",
         "https://target.example.invalid/v2",
@@ -565,7 +615,7 @@ describe("managedResourceMigrationPresentation", () => {
       blockedReason: "Source type unsupported",
       blockedMessage: undefined,
     })
-    expect(mapped.rows[1].comparisons).toHaveLength(7)
+    expect(mapped.rows[1].comparisons).toHaveLength(8)
     expect(
       mapped.rows[1].comparisons.every(
         ({ source, target, status }) =>

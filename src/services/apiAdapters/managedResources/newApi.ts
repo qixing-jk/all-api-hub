@@ -18,6 +18,7 @@ import {
   sanitizeNewApiEditorDetail,
   toNewApiResourceFacts,
 } from "~/services/apiAdapters/managedResources/newApiEditor"
+import { rethrowNewApiFamilyChannelReadError } from "~/services/apiAdapters/managedResources/newApiFamilyChannelErrors"
 import {
   getNewApiResourceSearchData,
   throwIfNewApiResourceOperationAborted,
@@ -55,7 +56,14 @@ import type { NewApiChannelCommand } from "~/types/newApiChannelEditor"
 import type { NewApiConfig } from "~/types/newApiConfig"
 import { normalizeList } from "~/utils/core/string"
 
+import { resolveCredentialPatch } from "./credentialListEditor"
 import { withNewApiAdvancedEditor } from "./newApiAdvancedEditor"
+import {
+  newApiCredentialRecords,
+  newApiKeyMetadata,
+  newApiKeyMetadataFingerprint,
+  withNewApiMultiKeyEditor,
+} from "./newApiMultiKeyEditor"
 import {
   newApiChannelOperations,
   newApiManagedResourceModels,
@@ -67,6 +75,11 @@ type NewApiNativeConfig = {
 }
 
 type NewApiNativeResourceOperations = {
+  deleteKey(
+    locator: number,
+    keyIndex: number,
+    options?: ResourceOperationOptions,
+  ): ReturnType<typeof channels.deleteKey>
   scopeKey: string
   canLoadSecret: boolean
   list(
@@ -135,6 +148,9 @@ const mapFailure = (error: unknown): ResourceFailure => {
       code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
       recoveryHint:
         MANAGED_RESOURCE_FAILURE_RECOVERY_HINTS.InteractiveVerification,
+      ...(error.channelId
+        ? { recoveryResourceId: String(error.channelId) }
+        : {}),
     }
   }
   if (error instanceof ApiError) {
@@ -217,7 +233,9 @@ const getChannel = async (
   locator: number,
   options?: ResourceOperationOptions,
 ) => {
-  return await channels.get(nativeConfig.config, locator, options)
+  return await channels
+    .get(nativeConfig.config, locator, options)
+    .catch(rethrowNewApiFamilyChannelReadError)
 }
 
 const createChannel = async (
@@ -225,7 +243,15 @@ const createChannel = async (
   draft: NewApiChannelCommand,
   options?: ResourceOperationOptions,
 ): Promise<ManagedSiteMutationResult<NewApiChannel>> => {
+  if (draft.credentialPatch) {
+    const keys = await resolveCredentialPatch(draft.credentialPatch, [])
+    draft = { ...draft, key: keys.map(({ key }) => key).join("\n") }
+  }
   const basePayload = buildChannelPayload(draft)
+  if (draft.credentialPatch && draft.credentialPatch.entries.length > 1) {
+    basePayload.mode = "multi_to_single"
+    basePayload.multi_key_mode = draft.multiKeyMode ?? "random"
+  }
   const result = await attributeCreatedNativeResource({
     attributionKey: `${SITE_TYPES.NEW_API}:${nativeConfig.scopeKey}`,
     listInventory: async () =>
@@ -276,7 +302,7 @@ const verifyAdvancedSave = async (
   options?: ResourceOperationOptions,
 ): Promise<ManagedSiteMutationResult<NewApiChannel>> => {
   if (
-    !command.advanced ||
+    (!command.advanced && !command.credentialPatch && !command.multiKeyMode) ||
     result.outcome !== MANAGED_SITE_MUTATION_OUTCOMES.Succeeded
   )
     return result
@@ -286,7 +312,27 @@ const verifyAdvancedSave = async (
       result.data.id,
       options,
     )
-    if (hasNewApiAdvancedValues(saved, command.advanced))
+    // Read back non-secret state only. Saving must not implicitly disclose keys.
+    const entries = command.credentialPatch?.entries
+    const keysMatch =
+      !entries ||
+      (entries.length === 1 && !saved.channel_info?.is_multi_key) ||
+      (saved.channel_info?.multi_key_size === entries.length &&
+        entries.every(
+          (entry, index) =>
+            entry.fields.enabled === undefined ||
+            String(
+              (saved.channel_info?.multi_key_status_list?.[index] ?? 1) === 1,
+            ) === entry.fields.enabled,
+        ))
+    if (
+      keysMatch &&
+      (!command.multiKeyMode ||
+        (command.credentialPatch?.entries.length === 1 &&
+          !saved.channel_info?.is_multi_key) ||
+        saved.channel_info?.multi_key_mode === command.multiKeyMode) &&
+      (!command.advanced || hasNewApiAdvancedValues(saved, command.advanced))
+    )
       return { ...result, data: saved }
   } catch {
     /* The write was dispatched; preserve uncertainty and confirmed effects. */
@@ -315,11 +361,160 @@ const updateChannel = async (
   options?: ResourceOperationOptions,
 ): Promise<ManagedSiteMutationResult<NewApiChannel>> => {
   const payload = buildNewApiUpdatePayload(detail, command)
-  const result = await channels.update(nativeConfig.config, payload, options)
+  const keyActions: {
+    action: "delete_key" | "enable_key" | "disable_key"
+    index: number
+  }[] = []
+  let keyState: number[] | undefined
+  let verificationCommand = command
+  if (command.multiKeyMode) payload.multi_key_mode = command.multiKeyMode
+  if (command.credentialPatch) {
+    if (!detail.channel_info?.is_multi_key)
+      throw new ManagedResourceError({ code: "resource_changed" })
+    const metadata = newApiKeyMetadata(detail)
+    const patch = command.credentialPatch
+    if ((await newApiKeyMetadataFingerprint(metadata)) !== patch.baseline)
+      throw new ManagedResourceError({ code: "resource_changed" })
+    const entries = patch.entries
+    const retained = entries.filter((entry) =>
+      metadata.some((record) => record.id === entry.id),
+    )
+    const added = entries.filter(
+      (entry) => !metadata.some((record) => record.id === entry.id),
+    )
+    if (
+      retained.some(
+        (record, index) =>
+          index > 0 && Number(record.id) <= Number(retained[index - 1].id),
+      ) ||
+      [...retained, ...added].some(
+        (record, index) => record.id !== entries[index].id,
+      )
+    )
+      throw new ManagedResourceError({ code: "validation_failed" })
+    const replacesAll = entries.every(
+      (entry) => entry.secret.kind === "replace",
+    )
+    const replacesRetained = retained.some(
+      (entry) => entry.secret.kind === "replace",
+    )
+    // Native append and indexed actions preserve unread keys on the server.
+    // https://github.com/QuantumNous/new-api/blob/main/controller/channel.go
+    if (replacesAll) {
+      payload.key = entries
+        .map((entry) =>
+          entry.secret.kind === "replace" ? entry.secret.value.trim() : "",
+        )
+        .join("\n")
+      payload.key_mode = "replace"
+    } else if (!replacesRetained || !command.disclosedKeys) {
+      const unchanged = retained.filter(
+        (entry) => entry.secret.kind === "unchanged",
+      )
+      const appended = [
+        ...retained.filter((entry) => entry.secret.kind === "replace"),
+        ...added,
+      ]
+      const newKeys = appended.map((entry) =>
+        entry.secret.kind === "replace" ? entry.secret.value.trim() : "",
+      )
+      if (
+        newKeys.some((key) => !key) ||
+        new Set(newKeys).size !== newKeys.length
+      )
+        throw new ManagedResourceError({ code: "validation_failed" })
+      if (newKeys.length) {
+        payload.key = newKeys.join("\n")
+        payload.key_mode = "append"
+      }
+      // Confirm the native append (which may deduplicate) before any indexed writes.
+      keyState = [
+        ...metadata.map((record) => Number(record.fields.status)),
+        ...appended.map(() => 1),
+      ]
+      for (const [index, entry] of [...unchanged, ...appended].entries()) {
+        const nativeIndex =
+          index < unchanged.length
+            ? Number(entry.id)
+            : metadata.length + index - unchanged.length
+        const enabled = entry.fields.enabled !== "false"
+        if (enabled !== (keyState[nativeIndex] === 1)) {
+          keyActions.push({
+            action: enabled ? "enable_key" : "disable_key",
+            index: nativeIndex,
+          })
+        }
+      }
+      // New keys are in place and configured before old slots are removed.
+      for (const record of [...metadata].reverse())
+        if (!unchanged.some((entry) => entry.id === record.id))
+          keyActions.push({ action: "delete_key", index: Number(record.id) })
+      verificationCommand = {
+        ...command,
+        credentialPatch: { ...patch, entries: [...unchanged, ...appended] },
+      }
+    } else {
+      if (replacesRetained) {
+        const secret = command.disclosedKeys.join("\n")
+        const current = newApiCredentialRecords(secret, detail)
+        if ((await newApiKeyMetadataFingerprint(current)) !== patch.baseline)
+          throw new ManagedResourceError({ code: "resource_changed" })
+        payload.key = [
+          ...current.map((record) => {
+            const edit = entries.find((entry) => entry.id === record.id)
+            return edit?.secret.kind === "replace"
+              ? edit.secret.value.trim()
+              : record.key
+          }),
+          ...added.map((entry) =>
+            entry.secret.kind === "replace" ? entry.secret.value.trim() : "",
+          ),
+        ].join("\n")
+        payload.key_mode = "replace"
+      } else if (added.length) {
+        payload.key = added
+          .map((entry) =>
+            entry.secret.kind === "replace" ? entry.secret.value.trim() : "",
+          )
+          .join("\n")
+        payload.key_mode = "append"
+      }
+      for (const record of [...metadata].reverse())
+        if (!entries.some((entry) => entry.id === record.id))
+          keyActions.push({ action: "delete_key", index: Number(record.id) })
+    }
+    if (!keyState)
+      entries.forEach((entry, index) => {
+        const old = metadata.find((record) => record.id === entry.id)
+        if (
+          entry.fields.enabled !== undefined &&
+          entry.fields.enabled !==
+            (replacesAll
+              ? metadata[index]?.fields.enabled ?? "true"
+              : old?.fields.enabled ?? "true")
+        )
+          keyActions.push({
+            action:
+              entry.fields.enabled === "false" ? "disable_key" : "enable_key",
+            index,
+          })
+      })
+  }
+  const result = keyState
+    ? await channels.update(
+        nativeConfig.config,
+        payload,
+        options,
+        keyActions,
+        keyState,
+      )
+    : keyActions.length
+      ? await channels.update(nativeConfig.config, payload, options, keyActions)
+      : await channels.update(nativeConfig.config, payload, options)
   if (result.outcome === MANAGED_SITE_MUTATION_OUTCOMES.Succeeded) {
     return await verifyAdvancedSave(
       nativeConfig,
-      command,
+      verificationCommand,
       {
         ...result,
         data: applyUpdate(detail, payload, result.confirmedEffects),
@@ -340,26 +535,15 @@ const updateChannel = async (
 /** Opens the provider-owned native channel operations used by UI and migration. */
 export async function openNewApiNativeResourceOperations(): Promise<NewApiNativeResourceOperations> {
   const nativeConfig = await openConfig()
-  const fetchSecretKey = channels.fetchSecretKey
   return {
     scopeKey: nativeConfig.scopeKey,
+    deleteKey: (locator, keyIndex, options) =>
+      channels.deleteKey(nativeConfig.config, locator, keyIndex, options),
     canLoadSecret: true,
     list: (query, options) => listChannels(nativeConfig, query, options),
     get: (locator, options) => getChannel(nativeConfig, locator, options),
-    loadSecret: async (locator, options) => {
-      throwIfNewApiResourceOperationAborted(options)
-      const secret = await withProtectionBypassUserCommand(
-        PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
-        PROTECTION_BYPASS_SURFACES.Options,
-        async (protectionBypassExecution) =>
-          await fetchSecretKey(nativeConfig.config, locator, {
-            protectionBypassExecution,
-            signal: options?.signal,
-          }),
-      )
-      throwIfNewApiResourceOperationAborted(options)
-      return secret
-    },
+    loadSecret: (locator, options) =>
+      loadNativeSecret(nativeConfig, locator, options),
     create: (draft, options) => createChannel(nativeConfig, draft, options),
     update: (detail, command, options) =>
       updateChannel(nativeConfig, detail, command, options),
@@ -444,17 +628,24 @@ const newApiNativeDefinition = {
     operations: NewApiNativeResourceOperations,
     options?: ResourceOperationOptions,
   ) =>
-    withNewApiAdvancedEditor(
-      await createNewApiCreateEditor(operations, options),
+    withNewApiMultiKeyEditor(
+      withNewApiAdvancedEditor(
+        await createNewApiCreateEditor(operations, options),
+      ),
     ),
   editEditor: async (
     operations: NewApiNativeResourceOperations,
     detail: NewApiChannel,
     options?: ResourceOperationOptions,
   ) =>
-    withNewApiAdvancedEditor(
-      await createNewApiEditEditor(operations, detail, options),
+    withNewApiMultiKeyEditor(
+      withNewApiAdvancedEditor(
+        await createNewApiEditEditor(operations, detail, options),
+        detail,
+      ),
       detail,
+      (loadOptions) => operations.loadSecret(detail.id, loadOptions),
+      options,
     ),
   sanitizeEditDetail: sanitizeNewApiEditorDetail,
   create: (
@@ -473,9 +664,72 @@ const newApiNativeDefinition = {
     locator: number,
     options?: ResourceOperationOptions,
   ) => operations.delete(locator, options),
+  keyCleanup: async (
+    operations: NewApiNativeResourceOperations,
+    detail: NewApiChannel,
+    options?: ResourceOperationOptions,
+  ) => {
+    const key = await operations.loadSecret(detail.id, options)
+    // GetKeys preserves internal empty entries; filtering them would change native deletion indices.
+    // https://github.com/QuantumNous/new-api/blob/main/model/channel.go
+    const parseKeys = (value: string) =>
+      detail.channel_info?.is_multi_key
+        ? value
+            .replace(/^\n+|\n+$/g, "")
+            .split("\n")
+            .map((entry) => entry.trim())
+        : [value.trim()]
+    const keys = parseKeys(key)
+    return {
+      baseUrls: [detail.base_url ?? ""],
+      keys,
+      remove: async (
+        indices: readonly number[],
+        removeOptions?: ResourceOperationOptions,
+      ) => {
+        // Descending native indices preserve the location of earlier entries.
+        // Re-read before each deletion so a partial/uncertain run is never replayed by index.
+        const expected = [...keys]
+        let result: Awaited<ReturnType<typeof operations.deleteKey>> | undefined
+        for (const index of [...indices].sort((a, b) => b - a)) {
+          const current = parseKeys(
+            await operations.loadSecret(detail.id, removeOptions),
+          )
+          if (JSON.stringify(current) !== JSON.stringify(expected))
+            throw new ManagedResourceError({ code: "resource_changed" })
+          result = await operations.deleteKey(detail.id, index, removeOptions)
+          if (result.outcome !== "succeeded") return result
+          expected.splice(index, 1)
+        }
+        if (!result)
+          throw new ManagedResourceError({ code: "validation_failed" })
+        return result
+      },
+    }
+  },
   mapFailure,
 }
 
 export const newApiManagedResourceRegistration = defineNativeResourceKind(
   newApiNativeDefinition,
 )
+
+/** Read a channel secret using the configuration captured for this operation. */
+async function loadNativeSecret(
+  nativeConfig: NewApiNativeConfig,
+  locator: number,
+  options?: ResourceOperationOptions,
+): Promise<string> {
+  throwIfNewApiResourceOperationAborted(options)
+  const secret = await withProtectionBypassUserCommand(
+    PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
+    PROTECTION_BYPASS_SURFACES.Options,
+    async (protectionBypassExecution) =>
+      await channels.fetchSecretKey(nativeConfig.config, locator, {
+        protectionBypassExecution,
+        signal: options?.signal,
+      }),
+  )
+  throwIfNewApiResourceOperationAborted(options)
+  return secret
+}

@@ -807,6 +807,7 @@ const _fetchApiWithMapper = async <T, TResult>(
       siteRequestLimitKey,
       startRequest,
       admissionAbort.signal,
+      request.requestScheduling,
     )
   } finally {
     admissionAbort.dispose()

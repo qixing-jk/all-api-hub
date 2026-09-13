@@ -41,6 +41,8 @@ function renderConfirm(
 ) {
   return render(
     <RepairInvalidKeysDeleteConfirm
+      cleanupLinkedChannels={false}
+      setCleanupLinkedChannels={vi.fn()}
       isOpen={true}
       isWorking={false}
       selectedInvalidResources={[buildResource(1)]}
@@ -92,6 +94,8 @@ describe("RepairInvalidKeysDeleteConfirm", () => {
 
     rerender(
       <RepairInvalidKeysDeleteConfirm
+        cleanupLinkedChannels={false}
+        setCleanupLinkedChannels={vi.fn()}
         isOpen={true}
         isWorking={true}
         selectedInvalidResources={[buildResource(1)]}

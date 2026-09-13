@@ -46,7 +46,7 @@ type MigrationSourceDisplayData = Pick<
   | "priority"
   | "weight"
   | "status"
->
+> & { keyCount?: number | null }
 
 type MigrationTargetDisplayData = Omit<
   ManagedSiteMigrationPreviewProjection,
@@ -114,6 +114,9 @@ const projectSource = (
   priority: source.priority,
   weight: source.weight,
   status: source.status,
+  keyCount:
+    source.credentialMetadata?.length ??
+    (source.lossSignals.hasMultiKeyState ? null : 1),
 })
 
 /** Retains only language-independent values that the migration view can display. */
@@ -157,6 +160,7 @@ export function projectManagedResourceMigrationPreview(
             priority: target.priority,
             weight: target.weight,
             enabled: target.enabled,
+            keyCount: target.keyCount ?? 1,
           },
         },
       }
@@ -226,6 +230,7 @@ const formatManagedSiteMigrationResultSummary = (
   })
 
 const comparisonFieldIds = [
+  "keyCount",
   "baseUrl",
   "type",
   "models",
@@ -243,6 +248,8 @@ const getComparisonLabel = (
   fieldId: ManagedSiteMigrationComparison["id"],
 ): string => {
   switch (fieldId) {
+    case "keyCount":
+      return t("managedSiteChannels:migration.keyCount")
     case "baseUrl":
       return t("channelDialog:fields.baseUrl.label")
     case "type":
@@ -281,6 +288,8 @@ const getItemWarningText = (
   code: ManagedSiteChannelMigrationItemWarningCode,
 ): string | null => {
   switch (code) {
+    case MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.SPLITS_KEYS:
+      return t("managedSiteChannels:migration.itemWarnings.splitsKeys")
     case MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.DROPS_MODEL_MAPPING:
       return t("managedSiteChannels:migration.itemWarnings.dropsModelMapping")
     case MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.DROPS_STATUS_CODE_MAPPING:
@@ -325,6 +334,12 @@ const getBlockedReasonText = (
   code: ManagedSiteChannelMigrationBlockedReasonCode,
 ): string => {
   switch (code) {
+    case MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEYS_CHANGED:
+      return t("managedSiteChannels:migration.blockedReasons.sourceKeysChanged")
+    case MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_MULTI_KEY_UNSUPPORTED:
+      return t(
+        "managedSiteChannels:migration.blockedReasons.sourceMultiKeyUnsupported",
+      )
     case MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING:
       return t("managedSiteChannels:migration.blockedReasons.sourceKeyMissing")
     case MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_EXPORT_RESTRICTED:
@@ -362,6 +377,13 @@ const getTypeText = (
     [SITE_TYPES.AXON_HUB]: AxonHubChannelTypeNames,
     [SITE_TYPES.CLAUDE_CODE_HUB]: ClaudeCodeHubProviderTypeNames,
     [SITE_TYPES.SUB2API]: SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS,
+    [SITE_TYPES.CLI_PROXY_API]: {
+      "openai-compatibility": "OpenAI Compatibility",
+      "claude-api-key": "Claude",
+      "gemini-api-key": "Gemini",
+      "codex-api-key": "Codex",
+      "xai-api-key": "xAI",
+    },
   }
   const catalog = catalogs[siteType]
   return catalog && hasOwn(catalog, type)
@@ -429,6 +451,14 @@ const getComparisonValues = (
   const source = item.source
   const target = item.status === "ready" ? item.target.projection : undefined
   return {
+    keyCount: [
+      source
+        ? source.keyCount === null
+          ? t("common:labels.unknown")
+          : String(source.keyCount ?? 1)
+        : "",
+      target ? String(target.keyCount ?? 1) : "",
+    ],
     baseUrl: [source?.baseUrl ?? "", target?.baseUrl ?? ""],
     type: [
       source ? getTypeText(t, source.sourceSiteType, source.resourceType) : "",

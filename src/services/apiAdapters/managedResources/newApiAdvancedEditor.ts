@@ -16,6 +16,7 @@ import type {
   NewApiChannelCommand,
 } from "~/types/newApiChannelEditor"
 import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
+import { isValidProxyUrl } from "~/utils/core/proxyUrl"
 import { normalizeList } from "~/utils/core/string"
 
 const readList = (value: unknown): string[] =>
@@ -144,18 +145,12 @@ export function withNewApiAdvancedEditor(
       )
         invalid(F.ModelMapping)
     }
-    if (changed(values, F.Proxy) && readText(values[F.Proxy])) {
-      try {
-        const url = new URL(readText(values[F.Proxy]))
-        if (
-          !url.hostname ||
-          !["http:", "https:", "socks5:", "socks5h:"].includes(url.protocol)
-        )
-          invalid(F.Proxy)
-      } catch {
-        invalid(F.Proxy)
-      }
-    }
+    if (
+      changed(values, F.Proxy) &&
+      readText(values[F.Proxy]) &&
+      !isValidProxyUrl(readText(values[F.Proxy]))
+    )
+      invalid(F.Proxy)
     if (
       changed(values, F.Remark) &&
       [...readText(values[F.Remark])].length > 255

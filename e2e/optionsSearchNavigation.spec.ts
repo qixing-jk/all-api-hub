@@ -395,7 +395,7 @@ test("opens an import export WebDAV control from settings search", async ({
   await expect(dialog).toBeVisible()
   await dialog.getByPlaceholder("Search settings...").fill("webdav url")
   await dialog
-    .getByRole("option", { name: /Webdav URL/ })
+    .getByRole("option", { name: /WebDAV URL/ })
     .filter({ hasText: "Import/Export" })
     .click()
 
@@ -419,6 +419,56 @@ test("opens an import export WebDAV control from settings search", async ({
 
   await expect(page.locator(`#${WEBDAV_TARGET_IDS.url}`)).toBeInViewport()
 })
+
+for (const surface of ["Import/Export", "Data & Backup"]) {
+  test(`reveals cloud provider search targets without saving on ${surface}`, async ({
+    context,
+    extensionId,
+    page,
+  }) => {
+    const serviceWorker = await getServiceWorker(context)
+    await seedUserPreferences(serviceWorker, {
+      webdav: { ...DEFAULT_PREFERENCES.webdav, provider: "webdav" },
+    })
+    await page.goto(
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BASIC}`,
+    )
+    await waitForExtensionRoot(page)
+    await expectPermissionOnboardingHidden(page)
+
+    for (const { query, label, target } of [
+      {
+        query: "github token",
+        label: /GitHub Token/,
+        target: WEBDAV_TARGET_IDS.gistToken,
+      },
+      {
+        query: "webdav url",
+        label: /WebDAV URL/,
+        target: WEBDAV_TARGET_IDS.url,
+      },
+    ]) {
+      await page.getByRole("button", { name: "Open settings search" }).click()
+      const dialog = page.getByRole("dialog", { name: "Search settings" })
+      await dialog.getByPlaceholder("Search settings...").fill(query)
+      await dialog
+        .getByRole("option", { name: label })
+        .filter({ hasText: surface })
+        .click()
+      await expect(dialog).toHaveCount(0)
+      await expect(page.locator(`#${target}`)).toBeVisible()
+      await expect(page.locator(`#${target}`)).toBeInViewport()
+      await expect
+        .poll(() => new URL(page.url()).searchParams.get("highlight"))
+        .toBeNull()
+    }
+
+    const stored = await getPlasmoStorageJsonValue<{
+      webdav: { provider: string }
+    }>(serviceWorker, STORAGE_KEYS.USER_PREFERENCES)
+    expect(stored?.webdav.provider).toBe("webdav")
+  })
+}
 
 test("persists selected settings search results as recent items across page reloads", async ({
   context,
@@ -464,3 +514,45 @@ test("persists selected settings search results as recent items across page relo
     reopenedDialog.getByRole("option", { name: /Full Export/ }),
   ).toBeVisible()
 })
+
+for (const width of [1280, 420]) {
+  test(`keeps anchored settings below the sticky header at ${width}px`, async ({
+    context,
+    extensionId,
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 800 })
+    await seedUserPreferences(await getServiceWorker(context), {
+      managedSiteType: "new-api",
+    })
+    // Disable scroll animation so assertions measure the final landing position.
+    await page.addInitScript(() => {
+      const scrollIntoView = Element.prototype.scrollIntoView
+      Element.prototype.scrollIntoView = function (options) {
+        scrollIntoView.call(
+          this,
+          typeof options === "object"
+            ? { ...options, behavior: "instant" }
+            : options,
+        )
+      }
+    })
+    await page.goto(
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}?tab=managedSite&anchor=${SETTINGS_ANCHORS.NEW_API_TOTP_SECRET}#${MENU_ITEM_IDS.BASIC}`,
+    )
+    await waitForExtensionRoot(page)
+    await expectPermissionOnboardingHidden(page)
+    const target = page.locator(`#${SETTINGS_ANCHORS.NEW_API_TOTP_SECRET}`)
+    await expect
+      .poll(() =>
+        target.evaluate((element) => {
+          const top = element.getBoundingClientRect().top
+          const headerBottom = document
+            .querySelector("header")!
+            .getBoundingClientRect().bottom
+          return top >= headerBottom + 8 && top <= headerBottom + 24
+        }),
+      )
+      .toBe(true)
+  })
+}

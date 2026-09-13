@@ -423,6 +423,59 @@ const buildMigrationCreateCommand = async (source = buildMigrationSource()) => {
 }
 
 describe("AxonHub native managed-resource Adapter", () => {
+  it("rejects cleanup if credentials change before list replacement", async () => {
+    const detail = buildDetailChannel({
+      credentials: { apiKeys: ["keep", "remove"] },
+    })
+    mocks.getChannel.mockResolvedValueOnce(detail).mockResolvedValue({
+      ...detail,
+      credentials: { apiKeys: ["keep", "remove", "new"] },
+    })
+    const api = await axonHubManagedResourceRegistration.open()
+    const cleanup = await api.openKeyCleanup!(refFor(detail))
+    await expect(cleanup.remove([1])).rejects.toMatchObject({
+      failure: { code: "resource_changed" },
+    })
+    expect(mocks.updateChannel).not.toHaveBeenCalled()
+  })
+
+  it("rejects cleanup when a channel has no readable API keys", async () => {
+    const detail = buildDetailChannel({ credentials: null })
+    mocks.getChannel.mockResolvedValue(detail)
+    const api = await axonHubManagedResourceRegistration.open()
+    await expect(api.openKeyCleanup!(refFor(detail))).rejects.toMatchObject({
+      failure: { code: "unavailable" },
+    })
+  })
+  it("does not treat OAuth credentials as removable API keys", async () => {
+    const detail = buildDetailChannel({
+      type: "codex",
+      credentials: { apiKeys: ["token"] },
+    })
+    mocks.getChannel.mockResolvedValue(detail)
+    const api = await axonHubManagedResourceRegistration.open()
+    await expect(api.openKeyCleanup!(refFor(detail))).rejects.toMatchObject({
+      failure: { code: "unavailable" },
+    })
+    expect(mocks.deleteChannel).not.toHaveBeenCalled()
+  })
+  it("cleans one of several API keys without overwriting other credential fields", async () => {
+    const detail = buildDetailChannel({
+      credentials: { apiKeys: ["remove-me", "keep-me"] },
+    })
+    mocks.getChannel.mockResolvedValue(detail)
+    const api = await axonHubManagedResourceRegistration.open()
+    const cleanup = await api.openKeyCleanup!(refFor(detail))
+    expect(cleanup.keys).toEqual(["remove-me", "keep-me"])
+    await cleanup.remove([0])
+    expect(mocks.updateChannel).toHaveBeenCalledWith(
+      expect.anything(),
+      detail.id,
+      { credentials: { apiKeys: ["keep-me"], apiKey: undefined } },
+      undefined,
+    )
+    expect(mocks.deleteChannel).not.toHaveBeenCalled()
+  })
   it("keeps existing AxonHub editor descriptors compatible with neutral field types", async () => {
     const workspace = await axonHubManagedResourceRegistration.open()
     const editor = await workspace.openCreateEditor()
@@ -459,12 +512,32 @@ describe("AxonHub native managed-resource Adapter", () => {
       type: "openai",
       baseURL: "https://upstream.example.invalid",
       status: AXON_HUB_CHANNEL_STATUS.ENABLED,
-      key: { kind: "replace", value: "credential-placeholder" },
+      key: {
+        kind: "secret-list",
+        entries: [
+          {
+            id: "new",
+            fields: {},
+            secret: { kind: "replace", value: "credential-placeholder" },
+          },
+        ],
+      },
       supportedModels: ["model-a", "model-a", "model-b"],
       manualModels: ["model-a", "model-a", "model-b"],
       defaultTestModel: "model-a",
       orderingWeight: 7,
     })
+    const values = {
+      ...editor.initialValues,
+      supportedModels: ["model-a", "model-b"],
+      manualModels: ["model-a", "model-b"],
+    }
+    expect(await editor.submit(values)).toMatchObject({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+    })
+    expect(
+      mocks.createChannel.mock.calls.at(-1)?.[1].credentials.apiKeys,
+    ).toEqual(["credential-placeholder"])
   })
 
   beforeEach(() => {
@@ -1035,7 +1108,7 @@ describe("AxonHub native managed-resource Adapter", () => {
     expect(editor.fields.map((field) => field.fieldId)).toEqual(
       AXON_HUB_CREATE_FIELD_IDS,
     )
-    expect(editor.initialValues.key).toEqual({ kind: "unchanged" })
+    expect(editor.initialValues.key).toMatchObject({ kind: "secret-list" })
     expect(JSON.stringify(editor.initialValues)).not.toContain("saved-password")
     const typeField = editor.fields.find((field) => field.fieldId === "type")
     expect(typeField).toMatchObject({ type: "select" })
@@ -1058,10 +1131,9 @@ describe("AxonHub native managed-resource Adapter", () => {
     ])
     const keyField = editor.fields.find((field) => field.fieldId === "key")
     expect(keyField).toMatchObject({
-      type: "secret",
-      secretState: "unavailable",
-      canReplace: true,
-      allowClear: false,
+      type: "secret-list",
+      minEntries: 1,
+      savedEntries: [],
     })
     const remarkField = editor.fields.find(
       (field) => field.fieldId === "remark",
@@ -1189,12 +1261,19 @@ describe("AxonHub native managed-resource Adapter", () => {
       const editor = await workspace.openEditEditor(refFor(detail))
       expect(
         editor.fields.find((field) => field.fieldId === "key"),
-      ).toMatchObject({
-        type: "secret",
-        secretState,
-        canReplace: secretState !== "permission-hidden",
-        allowClear: false,
-      })
+      ).toMatchObject(
+        secretState === "available"
+          ? {
+              type: "secret-list",
+              savedEntries: [{ id: "0", secretState: "available" }],
+            }
+          : {
+              type: "secret",
+              secretState,
+              canReplace: secretState !== "permission-hidden",
+              allowClear: false,
+            },
+      )
       await editor.submit({ ...editor.initialValues, name: "Renamed" })
     }
 
@@ -1203,7 +1282,7 @@ describe("AxonHub native managed-resource Adapter", () => {
     }
   })
 
-  it("fails closed for regular channels with multiple API keys", async () => {
+  it("exposes independent rows and still rejects scalar replacement of multiple API keys", async () => {
     const detail = buildDetailChannel({
       credentials: {
         apiKeys: [" first-secret ", "", "second-secret"],
@@ -1219,11 +1298,10 @@ describe("AxonHub native managed-resource Adapter", () => {
     )
 
     expect(keyField).toMatchObject({
-      type: "secret",
-      canReplace: false,
-      replacementBlockReason: "multiple_credentials",
+      type: "secret-list",
+      savedEntries: [{ id: "0" }, { id: "1" }, { id: "2" }],
     })
-    expect(editor.loadSecret).toBeUndefined()
+    await expect(editor.loadSecret!("key:1")).resolves.toBe("second-secret")
 
     for (const intent of [
       { kind: "replace", value: "replacement-secret" },
@@ -1252,6 +1330,81 @@ describe("AxonHub native managed-resource Adapter", () => {
     expect(mocks.updateChannel).toHaveBeenCalledOnce()
   })
 
+  it("edits multiple credentials without losing untouched keys or native credential fields", async () => {
+    const detail = buildDetailChannel({
+      credentials: {
+        apiKeys: ["first-secret", "second-secret", "third-secret"],
+      },
+    })
+    mocks.getChannel.mockResolvedValue(detail)
+    mocks.updateChannel.mockResolvedValue(detail)
+    const workspace = await openWorkspace()
+    const editor = await workspace.openEditEditor(refFor(detail))
+    await editor.submit({
+      ...editor.initialValues,
+      key: {
+        kind: "secret-list",
+        entries: [
+          { id: "0", secret: { kind: "unchanged" }, fields: {} },
+          {
+            id: "2",
+            secret: { kind: "replace", value: "rotated-third" },
+            fields: {},
+          },
+          {
+            id: "added",
+            secret: { kind: "replace", value: "new-fourth" },
+            fields: {},
+          },
+        ],
+      },
+    })
+    expect(
+      mocks.updateChannel.mock.calls.at(-1)?.[2].credentials.apiKeys,
+    ).toEqual(["first-secret", "rotated-third", "new-fourth"])
+  })
+
+  it("rejects a stale multi-key list while permitting unrelated edits", async () => {
+    const detail = buildDetailChannel({
+      credentials: { apiKeys: ["first-secret", "second-secret"] },
+    })
+    mocks.getChannel.mockResolvedValueOnce(detail).mockResolvedValue({
+      ...detail,
+      credentials: { apiKeys: ["rotated-elsewhere", "second-secret"] },
+    })
+    const editor = await (await openWorkspace()).openEditEditor(refFor(detail))
+    await expect(
+      editor.submit({
+        ...editor.initialValues,
+        key: {
+          kind: "secret-list",
+          entries: [{ id: "1", secret: { kind: "unchanged" }, fields: {} }],
+        },
+      }),
+    ).rejects.toMatchObject({ failure: { code: "resource_changed" } })
+    expect(mocks.updateChannel).not.toHaveBeenCalled()
+  })
+
+  it("rejects credential edits if fresh detail hides credentials", async () => {
+    const detail = buildDetailChannel({
+      credentials: { apiKeys: ["first", "second"] },
+    })
+    mocks.getChannel
+      .mockResolvedValueOnce(detail)
+      .mockResolvedValue({ ...detail, credentials: null })
+    const editor = await (await openWorkspace()).openEditEditor(refFor(detail))
+    await expect(
+      editor.submit({
+        ...editor.initialValues,
+        key: {
+          kind: "secret-list",
+          entries: [{ id: "1", fields: {}, secret: { kind: "unchanged" } }],
+        },
+      }),
+    ).rejects.toMatchObject({ failure: { code: "permission_denied" } })
+    expect(mocks.updateChannel).not.toHaveBeenCalled()
+  })
+
   it("blocks a credential replacement when latest detail becomes multi-key", async () => {
     const openingDetail = buildDetailChannel({
       credentials: { apiKeys: ["single-secret"] },
@@ -1271,15 +1424,7 @@ describe("AxonHub native managed-resource Adapter", () => {
         key: { kind: "replace", value: "replacement-secret" },
       }),
     ).rejects.toMatchObject({
-      failure: {
-        code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
-        fieldIssues: [
-          {
-            fieldId: AXON_HUB_CHANNEL_FIELD_IDS.KEY,
-            code: "unsupported_option",
-          },
-        ],
-      },
+      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ResourceChanged },
     })
     expect(mocks.updateChannel).not.toHaveBeenCalled()
   })
@@ -1296,10 +1441,10 @@ describe("AxonHub native managed-resource Adapter", () => {
 
     expect(
       descriptor(createEditor, AXON_HUB_CHANNEL_FIELD_IDS.KEY),
-    ).toMatchObject({ type: "secret", required: true })
+    ).toMatchObject({ type: "secret-list", required: true })
     expect(
       descriptor(editEditor, AXON_HUB_CHANNEL_FIELD_IDS.KEY),
-    ).toMatchObject({ type: "secret", required: false })
+    ).toMatchObject({ type: "secret-list", required: false })
     expect(
       descriptor(createEditor, AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS),
     ).toMatchObject({ type: "multi-select", required: true })
@@ -1508,12 +1653,12 @@ describe("AxonHub native managed-resource Adapter", () => {
     const workspace = await openWorkspace()
     const editor = await workspace.openEditEditor(refFor(detail))
 
-    expect(editor.initialValues.key).toEqual({ kind: "unchanged" })
+    expect(editor.initialValues.key).toMatchObject({ kind: "secret-list" })
     expect(editor.loadSecret).toBeTypeOf("function")
     await expect(
       editor.loadSecret?.(AXON_HUB_CHANNEL_FIELD_IDS.KEY),
     ).resolves.toBe("saved-secret-value")
-    expect(editor.initialValues.key).toEqual({ kind: "unchanged" })
+    expect(editor.initialValues.key).toMatchObject({ kind: "secret-list" })
     expect(mocks.getChannel).toHaveBeenCalledTimes(2)
   })
 
@@ -2782,6 +2927,7 @@ describe("AxonHub native managed-resource Adapter", () => {
         sourceSiteType: SITE_TYPES.AXON_HUB,
         resourceType: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
         baseUrl: "https://native.example.invalid/v1",
+        credentialMetadata: [{ enabled: true }, { enabled: true }],
         models: ["supported-model", "shared-model", "manual-model"],
         groups: [],
         priority: 0,
@@ -2791,11 +2937,12 @@ describe("AxonHub native managed-resource Adapter", () => {
           hasModelMapping: true,
           hasStatusCodeMapping: false,
           hasAdvancedSettings: true,
-          hasMultiKeyState: true,
+          hasMultiKeyState: false,
         },
       },
     })
     expect(JSON.stringify(result)).not.toContain("sk-preview-placeholder")
+    expect(JSON.stringify(result)).not.toContain("sk-second-placeholder")
     expect(JSON.stringify(result)).not.toContain("credentials")
   })
 

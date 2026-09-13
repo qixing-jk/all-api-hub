@@ -120,6 +120,46 @@ describe("AxonHub migration type boundary", () => {
     vi.restoreAllMocks()
   })
 
+  it("exports every native key and groups only enabled key states", async () => {
+    const get = vi.fn(async () => ({
+      id: "resource-safe-token",
+      name: "Example",
+      type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+      baseURL: "https://source.example.invalid",
+      supportedModels: ["model-example"],
+      credentials: { apiKeys: ["first-placeholder", "second-placeholder"] },
+    }))
+    mocks.openAxonHubNativeResourceOperations.mockResolvedValue({ get })
+    expect(
+      await axonHubManagedSiteMigrationCapability.source!.resolveCredential(
+        selection,
+      ),
+    ).toEqual({
+      status: "ready",
+      credential: "first-placeholder",
+      credentials: [
+        { value: "first-placeholder", enabled: true },
+        { value: "second-placeholder", enabled: true },
+      ],
+    })
+    const supports =
+      axonHubManagedSiteMigrationCapability.target!.supportsMultipleCredentials!
+    expect(
+      supports({
+        ...buildSource(),
+        credentialMetadata: [{ enabled: true }, { enabled: true }],
+      }),
+    ).toBe(true)
+    expect(
+      supports({
+        ...buildSource(),
+        credentialMetadata: [{ enabled: true }, { enabled: false }],
+      }),
+    ).toBe(false)
+    expect(supports(buildSource())).toBe(false)
+  })
+
   it("snapshots configured scope once for a validation context and honors AbortSignal", async () => {
     const getPreferences = vi.mocked(userPreferences.getPreferences)
     const createContext =

@@ -10,10 +10,7 @@ import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import toast from "~/lib/notify"
 import { validateClaudeCodeHubConfig } from "~/services/apiService/claudeCodeHub"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import {
-  getPreferenceWriteFailureMessage,
-  runPreferenceUpdateWithToast,
-} from "~/utils/feedback/preferenceFeedback"
+import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
 import { ManagedSiteDeploymentLink } from "./ManagedSiteDeploymentLink"
 
@@ -28,7 +25,6 @@ export default function ClaudeCodeHubSettings() {
     claudeCodeHubAdminToken,
     updateClaudeCodeHubBaseUrl,
     updateClaudeCodeHubAdminToken,
-    updateClaudeCodeHubConfig,
     resetClaudeCodeHubConfig,
   } = useUserPreferencesContext()
 
@@ -91,25 +87,7 @@ export default function ClaudeCodeHubSettings() {
         adminToken,
       })
 
-      const saveResult = await updateClaudeCodeHubConfig(
-        {
-          baseUrl: trimmedUrl,
-          adminToken,
-        },
-        { expectedLastUpdated },
-      )
-
-      if (saveResult.ok) {
-        toast.success(t("claudeCodeHub.validation.success"))
-      } else {
-        toast.error(
-          getPreferenceWriteFailureMessage(saveResult.reason, {
-            fallback: t("messages.updateFailed", {
-              name: t("claudeCodeHub.title"),
-            }),
-          }),
-        )
-      }
+      toast.success(t("claudeCodeHub.validation.success"))
     } catch (error) {
       const safeError =
         toSanitizedErrorSummary(error, [adminToken]) ||

@@ -47,6 +47,7 @@ import {
   createDeferredAbortDeadline,
   runAbortableTask,
 } from "~/services/apiTransport/abortableTask"
+import type { RequestScheduling } from "~/services/apiTransport/requestScheduling"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { normalizeInviteLinkError } from "~/services/inviteLinks/errors"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
@@ -451,6 +452,7 @@ export async function fetchDisplayAccountInviteLink(
 }
 
 export interface ResolveDisplayAccountTokenForSecretOptions {
+  requestScheduling?: RequestScheduling
   abortSignal?: AbortSignal
   protectionBypassExecution?: ProtectionBypassExecution
   secretSource?: AccountRuntimeKeySecretSource
@@ -480,6 +482,9 @@ const buildSecretResolutionRequest = (
   options: ResolveDisplayAccountTokenForSecretOptions,
 ): ApiServiceRequest => ({
   ...request,
+  ...(options.requestScheduling
+    ? { requestScheduling: options.requestScheduling }
+    : {}),
   ...(options.abortSignal ? { abortSignal: options.abortSignal } : {}),
   ...(options.protectionBypassExecution
     ? { protectionBypassExecution: options.protectionBypassExecution }

@@ -1,4 +1,5 @@
 export const SETTINGS_ANCHORS = {
+  NEW_API_TOTP_SECRET: "new-api-totp-secret",
   MANAGED_SITE_DEPLOYMENT_DOCS: "managed-site-deployment-docs",
   SORTING_PRIORITY: "sorting-priority",
   AUTO_PROVISION_KEY: "auto-provision-key-on-account-add",

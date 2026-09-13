@@ -41,6 +41,7 @@ const mocks = vi.hoisted(() => ({
   create: vi.fn(),
   update: vi.fn(),
   remove: vi.fn(),
+  deleteKey: vi.fn(),
   fetchSecretKey: vi.fn(),
   fetchModels: vi.fn(),
   fetchDraftModels: vi.fn(),
@@ -61,6 +62,7 @@ vi.mock("~/services/apiAdapters/managedResources/newApiOperations", () => ({
     create: mocks.create,
     update: mocks.update,
     delete: mocks.remove,
+    deleteKey: mocks.deleteKey,
     fetchSecretKey: mocks.fetchSecretKey,
     fetchModels: mocks.fetchModels,
     fetchDraftModels: mocks.fetchDraftModels,
@@ -182,6 +184,570 @@ describe("New API native managed resource", () => {
         await operation({ commandId: "command-1" }),
     )
   })
+
+  it.each([
+    {
+      message: "record not found",
+      errorCode: API_ERROR_CODES.BUSINESS_ERROR,
+      expected: "not_found",
+    },
+    {
+      message: "record not found",
+      errorCode: API_ERROR_CODES.HTTP_403,
+      expected: "permission_denied",
+    },
+    {
+      message: "database unavailable",
+      errorCode: API_ERROR_CODES.BUSINESS_ERROR,
+      expected: "upstream_rejected",
+    },
+  ])(
+    "classifies channel cleanup reads as $expected for $errorCode: $message",
+    async ({ message, errorCode, expected }) => {
+      const workspace = await newApiManagedResourceRegistration.open()
+      const ref = (await workspace.list()).items[0].ref
+      mocks.get.mockRejectedValueOnce(
+        new ApiError(message, undefined, "/api/channel/17", errorCode),
+      )
+      await expect(workspace.openKeyCleanup!(ref)).rejects.toMatchObject({
+        failure: { code: expected },
+      })
+    },
+  )
+
+  it("uses native multi-key deletion to preserve the remaining credential statuses", async () => {
+    mocks.get.mockResolvedValue({
+      ...channel,
+      channel_info: { ...channel.channel_info, is_multi_key: true },
+    })
+    mocks.fetchSecretKey.mockResolvedValue("keep-me\nremove-me\nalso-keep")
+    mocks.deleteKey.mockResolvedValue(success())
+    const api = await newApiManagedResourceRegistration.open()
+    const cleanup = await api.openKeyCleanup!((await api.list()).items[0].ref)
+    expect(cleanup.keys).toEqual(["keep-me", "remove-me", "also-keep"])
+    await cleanup.remove([1])
+    expect(mocks.deleteKey).toHaveBeenCalledWith(
+      config,
+      channel.id,
+      1,
+      undefined,
+    )
+    expect(mocks.update).not.toHaveBeenCalled()
+    expect(mocks.remove).not.toHaveBeenCalled()
+  })
+  it("treats a non-multi-key credential as one scalar value", async () => {
+    mocks.get.mockResolvedValue({
+      ...channel,
+      channel_info: { ...channel.channel_info, is_multi_key: false },
+    })
+    mocks.fetchSecretKey.mockResolvedValue("  single-key  ")
+    const api = await newApiManagedResourceRegistration.open()
+    const cleanup = await api.openKeyCleanup!((await api.list()).items[0].ref)
+    expect(cleanup.keys).toEqual(["single-key"])
+    expect(mocks.deleteKey).not.toHaveBeenCalled()
+  })
+
+  it("stops native key deletion when credential positions change", async () => {
+    mocks.get.mockResolvedValue({
+      ...channel,
+      channel_info: { ...channel.channel_info, is_multi_key: true },
+    })
+    mocks.fetchSecretKey
+      .mockResolvedValueOnce("first\nsecond")
+      .mockResolvedValueOnce("new\nfirst\nsecond")
+    const api = await newApiManagedResourceRegistration.open()
+    const cleanup = await api.openKeyCleanup!((await api.list()).items[0].ref)
+    await expect(cleanup.remove([1])).rejects.toMatchObject({
+      failure: { code: "resource_changed" },
+    })
+    expect(mocks.deleteKey).not.toHaveBeenCalled()
+  })
+
+  it("stops after an uncertain native key deletion and rejects an empty removal", async () => {
+    mocks.get.mockResolvedValue({
+      ...channel,
+      channel_info: { ...channel.channel_info, is_multi_key: true },
+    })
+    mocks.fetchSecretKey.mockResolvedValue("first\nsecond\nthird")
+    mocks.deleteKey.mockResolvedValue({ outcome: "uncertain" })
+    const api = await newApiManagedResourceRegistration.open()
+    const cleanup = await api.openKeyCleanup!((await api.list()).items[0].ref)
+    await expect(cleanup.remove([0, 1])).resolves.toMatchObject({
+      outcome: "uncertain",
+    })
+    expect(mocks.deleteKey).toHaveBeenCalledOnce()
+    await expect(cleanup.remove([])).rejects.toMatchObject({
+      failure: { code: "validation_failed" },
+    })
+  })
+
+  it("creates one multi-key channel with the selected rotation mode", async () => {
+    const created = {
+      ...createdChannel,
+      channel_info: {
+        ...createdChannel.channel_info,
+        is_multi_key: true,
+        multi_key_size: 2,
+        multi_key_mode: "polling",
+      },
+    }
+    mocks.list
+      .mockResolvedValueOnce({ items: [channel], total: 1 })
+      .mockResolvedValue({ items: [channel, created], total: 2 })
+    mocks.get.mockResolvedValue(created)
+    mocks.fetchSecretKey.mockResolvedValue("first-secret\nsecond-secret")
+    const editor = await (
+      await newApiManagedResourceRegistration.open()
+    ).openCreateEditor()
+    const values = {
+      ...editor.initialValues,
+      [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Name]: "Multi-key",
+      [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Models]: ["model-a"],
+      multiKeyMode: "polling",
+      [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
+        kind: "secret-list" as const,
+        entries: [
+          {
+            id: "first",
+            secret: { kind: "replace" as const, value: "first-secret" },
+            fields: {},
+          },
+          {
+            id: "second",
+            secret: { kind: "replace" as const, value: "second-secret" },
+            fields: {},
+          },
+        ],
+      },
+    }
+    expect(editor.validate(values)).toEqual({ valid: true })
+    await expect(editor.submit(values)).resolves.toMatchObject({
+      outcome: "succeeded",
+    })
+    expect(mocks.create).toHaveBeenCalledWith(
+      config,
+      expect.objectContaining({
+        mode: "multi_to_single",
+        multi_key_mode: "polling",
+        channel: expect.objectContaining({
+          key: "first-secret\nsecond-secret",
+        }),
+      }),
+      undefined,
+    )
+  })
+
+  it("opens multi-key editing and saves metadata without reading secret values", async () => {
+    const detail = {
+      ...channel,
+      channel_info: {
+        ...channel.channel_info,
+        is_multi_key: true,
+        multi_key_size: 2,
+        multi_key_mode: "random",
+      },
+    }
+    mocks.get.mockResolvedValue(detail)
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    expect(mocks.fetchSecretKey).not.toHaveBeenCalled()
+    expect(
+      editor.initialValues[NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key],
+    ).toMatchObject({
+      kind: "secret-list",
+      entries: [
+        { id: "0", secret: { kind: "unchanged" } },
+        { id: "1", secret: { kind: "unchanged" } },
+      ],
+    })
+    await editor.submit({ ...editor.initialValues, name: "Renamed" })
+    expect(mocks.fetchSecretKey).not.toHaveBeenCalled()
+  })
+
+  it.each([false, true])(
+    "preserves retained keys during replacement (disclosed=%s)",
+    async (disclosed) => {
+      let detail = {
+        ...channel,
+        channel_info: {
+          ...channel.channel_info,
+          is_multi_key: true,
+          multi_key_size: 3,
+          multi_key_mode: "random",
+          multi_key_status_list: [1, 1, 1],
+        },
+      }
+      mocks.get.mockImplementation(async () => detail)
+      mocks.fetchSecretKey.mockResolvedValue("first\nsecond\nthird")
+      mocks.update.mockImplementation(async () => {
+        detail = {
+          ...detail,
+          channel_info: {
+            ...detail.channel_info,
+            multi_key_status_list: [2, 1, 2],
+          },
+        }
+        return {
+          outcome: "succeeded",
+          data: detail,
+          confirmedEffects: [
+            {
+              kind: "resource-updated",
+              resourceKind: "channel",
+              resourceId: 17,
+            },
+          ],
+        }
+      })
+      const workspace = await newApiManagedResourceRegistration.open()
+      const editor = await workspace.openEditEditor(
+        (await workspace.list()).items[0].ref,
+      )
+      if (disclosed)
+        await expect(
+          editor.loadSecret!(NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key + ":0"),
+        ).resolves.toBe("first")
+      await expect(
+        editor.submit({
+          ...editor.initialValues,
+          [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
+            kind: "secret-list",
+            entries: [
+              {
+                id: "0",
+                secret: { kind: "replace", value: "rotated" },
+                fields: { enabled: "false" },
+              },
+              {
+                id: "2",
+                secret: disclosed
+                  ? { kind: "unchanged" }
+                  : { kind: "replace", value: "third-replaced" },
+                fields: { enabled: "true" },
+              },
+              {
+                id: "new",
+                secret: { kind: "replace", value: "added" },
+                fields: { enabled: "false" },
+              },
+            ],
+          },
+        }),
+      ).resolves.toMatchObject({ outcome: "succeeded" })
+      expect(mocks.update).toHaveBeenCalledWith(
+        config,
+        expect.objectContaining({
+          key_mode: "replace",
+          key: disclosed
+            ? "rotated\nsecond\nthird\nadded"
+            : "rotated\nthird-replaced\nadded",
+        }),
+        undefined,
+        [
+          ...(disclosed ? [{ action: "delete_key", index: 1 }] : []),
+          { action: "disable_key", index: 0 },
+          { action: "disable_key", index: 2 },
+        ],
+      )
+      expect(mocks.fetchSecretKey).toHaveBeenCalledTimes(disclosed ? 1 : 0)
+    },
+  )
+
+  it("appends, deletes and disables keys without reading retained values", async () => {
+    let detail = {
+      ...channel,
+      channel_info: {
+        ...channel.channel_info,
+        is_multi_key: true,
+        multi_key_size: 2,
+        multi_key_mode: "random",
+        multi_key_status_list: [1, 1],
+      },
+    }
+    mocks.get.mockImplementation(async () => detail)
+    mocks.update.mockImplementation(async () => {
+      detail = {
+        ...detail,
+        channel_info: { ...detail.channel_info, multi_key_status_list: [2, 1] },
+      }
+      return {
+        outcome: "succeeded",
+        data: detail,
+        confirmedEffects: [
+          { kind: "resource-updated", resourceKind: "channel", resourceId: 17 },
+        ],
+      }
+    })
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    await expect(
+      editor.submit({
+        ...editor.initialValues,
+        [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
+          kind: "secret-list",
+          entries: [
+            {
+              id: "1",
+              secret: { kind: "unchanged" },
+              fields: { enabled: "false" },
+            },
+            {
+              id: "new",
+              secret: { kind: "replace", value: "added-key" },
+              fields: {},
+            },
+          ],
+        },
+      }),
+    ).resolves.toMatchObject({ outcome: "succeeded" })
+    expect(mocks.fetchSecretKey).not.toHaveBeenCalled()
+    expect(mocks.update).toHaveBeenCalledWith(
+      config,
+      expect.objectContaining({ key: "added-key", key_mode: "append" }),
+      undefined,
+      [
+        { action: "disable_key", index: 1 },
+        { action: "delete_key", index: 0 },
+      ],
+      [1, 1, 1],
+    )
+  })
+
+  it("replaces individual keys by appending before deleting without disclosing retained keys", async () => {
+    let detail = {
+      ...channel,
+      channel_info: {
+        ...channel.channel_info,
+        is_multi_key: true,
+        multi_key_size: 3,
+        multi_key_status_list: [3, 1, 1],
+        multi_key_mode: "random",
+      },
+    }
+    let secret = "first-secret\nsecond-secret\nthird-secret"
+    mocks.get.mockImplementation(async () => detail)
+    mocks.fetchSecretKey.mockImplementation(async () => secret)
+    mocks.update.mockImplementation(async () => {
+      secret = "first-secret\nrotated-third\nfourth-secret"
+      detail = {
+        ...detail,
+        channel_info: {
+          ...detail.channel_info,
+          multi_key_status_list: [1, 1, 1],
+          multi_key_mode: "polling",
+        },
+      }
+      return {
+        outcome: "succeeded",
+        data: detail,
+        confirmedEffects: [
+          { kind: "resource-updated", resourceKind: "channel", resourceId: 17 },
+        ],
+      }
+    })
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    expect(JSON.stringify(editor.initialValues)).not.toContain("first-secret")
+    await expect(
+      editor.submit({
+        ...editor.initialValues,
+        multiKeyMode: "polling",
+        [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
+          kind: "secret-list",
+          entries: [
+            {
+              id: "0",
+              secret: { kind: "unchanged" },
+              fields: { enabled: "true" },
+            },
+            {
+              id: "2",
+              secret: { kind: "replace", value: "rotated-third" },
+              fields: { enabled: "true" },
+            },
+            {
+              id: "new",
+              secret: { kind: "replace", value: "fourth-secret" },
+              fields: {},
+            },
+          ],
+        },
+      }),
+    ).resolves.toMatchObject({ outcome: "succeeded" })
+    expect(mocks.update).toHaveBeenCalledWith(
+      config,
+      expect.objectContaining({
+        key: "rotated-third\nfourth-secret",
+        key_mode: "append",
+        multi_key_mode: "polling",
+      }),
+      undefined,
+      [
+        { action: "enable_key", index: 0 },
+        { action: "delete_key", index: 2 },
+        { action: "delete_key", index: 1 },
+      ],
+      [3, 1, 1, 1, 1],
+    )
+    expect(mocks.fetchSecretKey).not.toHaveBeenCalled()
+  })
+
+  it("moves a replaced first key to the end and verifies its disabled state at the new index", async () => {
+    let detail = {
+      ...channel,
+      channel_info: {
+        ...channel.channel_info,
+        is_multi_key: true,
+        multi_key_size: 2,
+        multi_key_status_list: [3, 1],
+        multi_key_mode: "polling",
+      },
+    }
+    mocks.get.mockImplementation(async () => detail)
+    mocks.update.mockImplementation(async () => {
+      detail = {
+        ...detail,
+        channel_info: { ...detail.channel_info, multi_key_status_list: [1, 2] },
+      }
+      return {
+        outcome: "succeeded",
+        data: detail,
+        confirmedEffects: [
+          { kind: "resource-updated", resourceKind: "channel", resourceId: 17 },
+        ],
+      }
+    })
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    await expect(
+      editor.submit({
+        ...editor.initialValues,
+        [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
+          kind: "secret-list",
+          entries: [
+            {
+              id: "0",
+              secret: { kind: "replace", value: "new-first" },
+              fields: { enabled: "false" },
+            },
+            {
+              id: "1",
+              secret: { kind: "unchanged" },
+              fields: { enabled: "true" },
+            },
+          ],
+        },
+      }),
+    ).resolves.toMatchObject({ outcome: "succeeded" })
+    expect(mocks.update).toHaveBeenCalledWith(
+      config,
+      expect.objectContaining({ key: "new-first", key_mode: "append" }),
+      undefined,
+      [
+        { action: "disable_key", index: 2 },
+        { action: "delete_key", index: 0 },
+      ],
+      [3, 1, 1],
+    )
+    expect(mocks.fetchSecretKey).not.toHaveBeenCalled()
+  })
+
+  it("rejects multi-key membership changes before dispatch", async () => {
+    const detail = {
+      ...channel,
+      channel_info: {
+        ...channel.channel_info,
+        is_multi_key: true,
+        multi_key_size: 2,
+      },
+    }
+    mocks.get.mockResolvedValue(detail)
+
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    mocks.get.mockResolvedValue({
+      ...detail,
+      channel_info: { ...detail.channel_info, multi_key_size: 3 },
+    })
+    await expect(
+      editor.submit({
+        ...editor.initialValues,
+        [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
+          kind: "secret-list",
+          entries: [{ id: "1", secret: { kind: "unchanged" }, fields: {} }],
+        },
+      }),
+    ).rejects.toMatchObject({ failure: { code: "resource_changed" } })
+    expect(mocks.update).not.toHaveBeenCalled()
+  })
+
+  it.each(["single", "reordered", "interleaved", "duplicate-added"])(
+    "rejects invalid multi-key changes before dispatch: %s",
+    async (scenario) => {
+      const detail = {
+        ...channel,
+        channel_info: {
+          ...channel.channel_info,
+          is_multi_key: true,
+          multi_key_size: 2,
+          multi_key_status_list: [1, 1],
+        },
+      }
+      mocks.get.mockResolvedValue(detail)
+      const workspace = await newApiManagedResourceRegistration.open()
+      const editor = await workspace.openEditEditor(
+        (await workspace.list()).items[0].ref,
+      )
+      if (scenario === "single")
+        mocks.get.mockResolvedValue({
+          ...detail,
+          channel_info: { ...detail.channel_info, is_multi_key: false },
+        })
+      const saved = (id: string) => ({
+        id,
+        fields: {},
+        secret: { kind: "unchanged" as const },
+      })
+      const added = (id: string) => ({
+        id,
+        fields: {},
+        secret: { kind: "replace" as const, value: "same-secret" },
+      })
+      const entries =
+        scenario === "reordered"
+          ? [saved("1"), saved("0")]
+          : scenario === "interleaved"
+            ? [added("new"), saved("0")]
+            : scenario === "duplicate-added"
+              ? [saved("0"), added("new1"), added("new2")]
+              : [saved("0")]
+      await expect(
+        editor.submit({
+          ...editor.initialValues,
+          [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
+            kind: "secret-list",
+            entries,
+          },
+        }),
+      ).rejects.toMatchObject({
+        failure: {
+          code:
+            scenario === "single" ? "resource_changed" : "validation_failed",
+        },
+      })
+      expect(mocks.update).not.toHaveBeenCalled()
+    },
+  )
 
   it("saves advanced edits against fresh settings and verifies persisted values", async () => {
     const initial = {
@@ -454,6 +1020,11 @@ describe("New API native managed resource", () => {
       [F.ModelMapping, ["alias", ""]],
       [F.Proxy, "file:///tmp/proxy"],
       [F.Proxy, "invalid-url"],
+      [F.Proxy, "socks5h://"],
+      [F.Proxy, "socks5h:///missing-host"],
+      [F.Proxy, "socks5h://proxy.example:invalid"],
+      [F.Proxy, "socks5h://proxy.example:65536"],
+      [F.Proxy, "socks5h://proxy.example\\path"],
       [F.AutoBan, "yes"],
       [F.Remark, 42],
       // Deliberately bypass the input type to verify runtime validation.
@@ -484,6 +1055,36 @@ describe("New API native managed resource", () => {
         [F.UpstreamCheck]: true,
       }),
     ).toMatchObject({ valid: false })
+  })
+
+  it("accepts SOCKS proxies when the browser cannot parse non-special URL hosts", async () => {
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    const NativeURL = URL
+    class LegacyURL extends NativeURL {
+      override get hostname() {
+        return this.protocol.startsWith("socks5") ? "" : super.hostname
+      }
+    }
+    vi.stubGlobal("URL", LegacyURL)
+    try {
+      for (const proxy of [
+        "socks5://127.0.0.1:1080",
+        "socks5h://user:password@proxy.example:1080",
+        "SOCKS5H://[::1]:1080",
+      ]) {
+        expect(
+          editor.validate({
+            ...editor.initialValues,
+            [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Proxy]: proxy,
+          }),
+        ).toEqual({ valid: true })
+      }
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 
   it("preserves malformed advanced JSON on unrelated edits and blocks overwriting it", async () => {
@@ -1032,7 +1633,11 @@ describe("New API native managed resource", () => {
 
   it("marks only provider verification requirements with a controlled recovery hint", async () => {
     mocks.fetchSecretKey.mockRejectedValue(
-      new NewApiChannelKeyRequirementError("secure-verification-required"),
+      new NewApiChannelKeyRequirementError(
+        "secure-verification-required",
+        undefined,
+        channel.id,
+      ),
     )
     const workspace = await newApiManagedResourceRegistration.open()
     const ref = (await workspace.list()).items[0].ref
@@ -1045,6 +1650,7 @@ describe("New API native managed resource", () => {
     expect(error).toBeInstanceOf(ManagedResourceError)
     expect((error as ManagedResourceError).failure).toEqual({
       code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
+      recoveryResourceId: String(channel.id),
       recoveryHint:
         MANAGED_RESOURCE_FAILURE_RECOVERY_HINTS.InteractiveVerification,
     })
@@ -1399,6 +2005,7 @@ describe("New API native managed resource", () => {
   ])(
     "imports enabled=$enabled with native status $nativeStatus and confirms the created identity",
     async ({ enabled, nativeStatus }) => {
+      mocks.get.mockResolvedValue(createdChannel)
       mocks.list
         .mockResolvedValueOnce({ items: [channel], total: 1 })
         .mockResolvedValueOnce({ items: [channel, createdChannel], total: 2 })
@@ -1423,8 +2030,14 @@ describe("New API native managed resource", () => {
           [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Type]: "1",
           [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Status]: nativeStatus,
           [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
-            kind: "replace",
-            value: "sk-example",
+            kind: "secret-list",
+            entries: [
+              {
+                id: "new",
+                fields: {},
+                secret: { kind: "replace", value: "sk-example" },
+              },
+            ],
           },
         }),
       )
@@ -1432,7 +2045,10 @@ describe("New API native managed resource", () => {
       expect(mocks.create).toHaveBeenCalledWith(
         config,
         expect.objectContaining({
-          channel: expect.objectContaining({ status: Number(nativeStatus) }),
+          channel: expect.objectContaining({
+            status: Number(nativeStatus),
+            key: "sk-example",
+          }),
         }),
         undefined,
       )

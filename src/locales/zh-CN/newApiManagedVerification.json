@@ -3,6 +3,7 @@
     "actions": {
       "cleanupOwnedSessionAndRetry": "清理扩展会话并重试",
       "close": "关闭",
+      "configureTotp": "配置自动验证",
       "openSite": "打开站点",
       "retry": "重试",
       "retryAfterPasskey": "完成 Passkey 后重试",
@@ -28,7 +29,8 @@
       "codeLabel": "验证码"
     },
     "hints": {
-      "manualFallback": "即使已配置自动 TOTP，仍然可以手动输入验证码。",
+      "configureTotp": "经常需要验证？可在设置 → {{section}} → {{provider}} 中填写 TOTP 密钥，由扩展自动生成并提交验证码，减少手动输入。",
+      "manualFallback": "请手动输入验证码完成本次验证。",
       "openSettingsShortcut": "你可以直接在这里补齐所需配置，然后继续验证。",
       "passkey": "请打开站点，在那里完成 Passkey 提示后，再返回这里重试。"
     },

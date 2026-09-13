@@ -163,7 +163,7 @@ function renderWidget(
 
       return (
         <div
-          className="flex min-h-0 flex-1 scroll-mt-[calc(var(--options-header-height)+1rem)] flex-col"
+          className="flex min-h-0 flex-1 flex-col"
           data-testid={OPTIONS_OVERVIEW_TEST_IDS.unifiedApiGuidance}
           id={GATEWAY_GUIDANCE_OVERVIEW_ID}
           tabIndex={-1}

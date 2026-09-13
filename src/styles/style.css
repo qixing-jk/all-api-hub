@@ -451,6 +451,11 @@
   display: none; /* Chrome, Safari, Edge */
 }
 
+/* Keep anchor navigation and search targets below the sticky options header. */
+html.options-page {
+  scroll-padding-top: calc(var(--options-header-height) + 1rem);
+}
+
 html {
   --options-header-height: 3.75rem;
   transition:

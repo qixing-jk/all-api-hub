@@ -110,7 +110,9 @@ export function useManagedResourceMutationController({
   onMutationSuccess,
   onMutationConfirmed,
   analytics,
+  readEditor,
 }: {
+  readEditor?: <T>(read: () => Promise<T>, signal?: AbortSignal) => Promise<T>
   workspace: ManagedResourceWorkspace | null
   refresh?: () => Promise<boolean>
   resolveRef?: (rowKey: string) => ManagedResourceRef | undefined
@@ -438,7 +440,13 @@ export function useManagedResourceMutationController({
         "edit",
         "editor-loading",
         "editor-open",
-        (signal) => workspace.openEditEditor(ref, { signal }),
+        (signal) =>
+          readEditor
+            ? readEditor(
+                () => workspace.openEditEditor(ref, { signal }),
+                signal,
+              )
+            : workspace.openEditEditor(ref, { signal }),
         (value) => {
           setEditorFeedback(null)
           setEditor(value)
@@ -474,6 +482,7 @@ export function useManagedResourceMutationController({
       isSameRowRef,
       resolveRowRef,
       runSession,
+      readEditor,
       workspace,
     ],
   )
@@ -517,8 +526,13 @@ export function useManagedResourceMutationController({
       setIsSaving(true)
       let closesEditor = false
       const secretCollection = collectManagedResourceSecrets(values)
-      const promise = editor
-        .submit(values, { signal: controller.signal })
+      const submitEditor = () =>
+        editor.submit(values, { signal: controller.signal })
+      const promise = (
+        readEditor
+          ? readEditor(submitEditor, controller.signal)
+          : submitEditor()
+      )
         .then(async (mutationResult) => {
           if (current !== generation.current) return undefined
           assertManagedSiteMutationResult<
@@ -635,6 +649,7 @@ export function useManagedResourceMutationController({
       acceptMutationResult,
       beginMutationSession,
       editor,
+      readEditor,
       editorMode,
       endMutationSession,
       onMutationStart,

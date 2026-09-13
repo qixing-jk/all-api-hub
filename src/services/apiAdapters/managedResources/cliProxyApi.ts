@@ -33,6 +33,7 @@ import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import type { ManagedSiteMutationResult } from "~/services/managedSites/mutations"
 import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import type { CliProxyApiConfig } from "~/types/cliProxyApiConfig"
+import { isValidProxyUrl } from "~/utils/core/proxyUrl"
 
 const invalid = () => new ManagedResourceError({ code: "validation_failed" })
 export const cliProxyApiScope = (config: CliProxyApiConfig) =>
@@ -204,13 +205,13 @@ function validate(
         add(field)
       continue
     }
+    if (field === "proxy_url") {
+      if (!isValidProxyUrl(value)) add(field)
+      continue
+    }
     try {
       const url = new URL(value)
-      const protocols =
-        field === "proxy_url"
-          ? ["http:", "https:", "socks5:", "socks5h:"]
-          : ["http:", "https:"]
-      if (!protocols.includes(url.protocol)) add(field)
+      if (!["http:", "https:"].includes(url.protocol)) add(field)
     } catch {
       add(field)
     }
@@ -321,16 +322,7 @@ function buildCredentials(
       "api-key": secret,
     }
     const proxy = (row.fields.proxy_url ?? "").trim()
-    if (proxy) {
-      let url: URL
-      try {
-        url = new URL(proxy)
-      } catch {
-        throw invalid()
-      }
-      if (!["http:", "https:", "socks5:", "socks5h:"].includes(url.protocol))
-        throw invalid()
-    }
+    if (proxy && !isValidProxyUrl(proxy)) throw invalid()
     if (!existing || proxy !== String(existing["proxy-url"] ?? ""))
       entry["proxy-url"] = proxy
     const weight = (row.fields.weight ?? "").trim()
@@ -522,11 +514,11 @@ const decodeId = (id: string) => {
 }
 
 /** Resolve exactly one provider from its current collection by identity. */
-export async function getCliProxyApiResource(
+async function readCliProxyApiResource(
   config: CliProxyApiConfig,
   id: string,
   options?: ResourceOperationOptions,
-): Promise<CliProxyApiResource> {
+) {
   decodeId(id)
   const list = await listCliProxyApiProviders(
     config,
@@ -538,7 +530,16 @@ export async function getCliProxyApiResource(
     throw new ManagedResourceError({
       code: matches.length ? "validation_failed" : "not_found",
     })
-  return matches[0]
+  return { resource: matches[0], list }
+}
+
+/** Read the current provider without retaining an inventory beyond this operation. */
+export async function getCliProxyApiResource(
+  config: CliProxyApiConfig,
+  id: string,
+  options?: ResourceOperationOptions,
+): Promise<CliProxyApiResource> {
+  return (await readCliProxyApiResource(config, id, options)).resource
 }
 
 type Command = {
@@ -605,6 +606,7 @@ async function mutateUnlocked(
   command: Command | undefined,
   original: CliProxyApiResource | undefined,
   options?: ResourceOperationOptions,
+  inventory?: CliProxyApiResource[],
 ): Promise<ManagedSiteMutationResult<CliProxyApiResource | undefined>> {
   let dispatched = false
   try {
@@ -615,7 +617,8 @@ async function mutateUnlocked(
     )
       throw new ManagedResourceError({ code: "resource_changed" })
     const kind = command?.kind ?? original!.kind
-    const list = await listCliProxyApiProviders(config, kind, options)
+    const list =
+      inventory ?? (await listCliProxyApiProviders(config, kind, options))
     const matches = original
       ? list.filter((item) => item.id === original.id)
       : []
@@ -743,6 +746,16 @@ function importProjection(
   }
 }
 
+/** Reuse the native create lock and persistence readback for migrations. */
+export const createCliProxyApiResource = async (
+  config: CliProxyApiConfig,
+  command: Command,
+  options?: ResourceOperationOptions,
+) =>
+  mutate(config, "create", command, undefined, options) as Promise<
+    ManagedSiteMutationResult<CliProxyApiResource>
+  >
+
 export const cliProxyApiManagedResourceRegistration = defineNativeResourceKind({
   updateChangesIdentity: true,
   siteType: SITE_TYPES.CLI_PROXY_API,
@@ -790,25 +803,62 @@ export const cliProxyApiManagedResourceRegistration = defineNativeResourceKind({
   toDetailFacts: toFacts,
   createEditor: async () => editor(),
   editEditor: (_config, detail) => editor(detail),
-  create: async (config, command: Command, options) =>
-    mutate(config, "create", command, undefined, options) as Promise<
-      ManagedSiteMutationResult<CliProxyApiResource>
-    >,
+  keyCleanup: async (config, detail) => ({
+    baseUrls: [detail.value["base-url"] ?? ""],
+    keys: cliProxyApiKeys(detail),
+    remove: async (indices, options) => {
+      if (detail.kind !== "openai-compatibility") throw invalid()
+      const definition = editor(detail)
+      const credentials = definition.initialValues
+        .credentials as ResourceSecretListValue
+      const values = {
+        ...definition.initialValues,
+        credentials: {
+          ...credentials,
+          entries: credentials.entries.filter(
+            (_, index) => !indices.includes(index),
+          ),
+        },
+      }
+      if (!definition.validate(values).valid) throw invalid()
+      return mutate(
+        config,
+        "update",
+        definition.buildCommand(values),
+        detail,
+        options,
+      )
+    },
+  }),
+  create: createCliProxyApiResource,
   update: async (config, detail, command: Command, options) =>
     mutate(config, "update", command, detail, options) as Promise<
       ManagedSiteMutationResult<CliProxyApiResource>
     >,
-  delete: async (config, id, options) => {
-    const result = await mutate(
-      config,
-      "delete",
-      undefined,
-      await getCliProxyApiResource(config, id, options),
-      options,
-    )
-    return result.outcome === "succeeded"
-      ? { ...result, data: undefined }
-      : (result as ManagedSiteMutationResult<void>)
-  },
+  delete: async (config, id, options) =>
+    withExtensionStorageWriteLock(
+      `cliproxy:${cliProxyApiScope(config)}`,
+      async () => {
+        // Resolve identity and deletion index from one inventory under the mutation lock.
+        // Post-write readback still confirms that the intended provider disappeared.
+        const { resource, list } = await readCliProxyApiResource(
+          config,
+          id,
+          options,
+        )
+        const result = await mutateUnlocked(
+          config,
+          "delete",
+          undefined,
+          resource,
+          options,
+          list,
+        )
+        return result.outcome === "succeeded"
+          ? { ...result, data: undefined }
+          : (result as ManagedSiteMutationResult<void>)
+      },
+    ),
+
   mapFailure: cliProxyApiFailure,
 })

@@ -290,6 +290,7 @@ const parseCurrentChannel = (value: unknown): CurrentOctopusChannelDto => {
 const normalizeCurrentChannel = (value: unknown): OctopusChannel => {
   const current = parseCurrentChannel(value)
   return {
+    keyManagement: "single",
     id: current.id,
     name: current.name,
     type: fromCurrentOctopusChannelType(current.type),
@@ -386,6 +387,12 @@ export const currentOctopusContract = {
     operation: OctopusApiOperation,
     baseInit: RequestInit,
   ): OctopusNativeRequest {
+    if (
+      (operation.kind === OCTOPUS_API_OPERATIONS.CreateChannel ||
+        operation.kind === OCTOPUS_API_OPERATIONS.UpdateChannel) &&
+      operation.input.keys !== undefined
+    )
+      throw new Error("This Octopus protocol supports one key per channel")
     switch (operation.kind) {
       case OCTOPUS_API_OPERATIONS.ListChannels:
         return { endpoint: "/api/v1/channel/list", init: baseInit }
@@ -399,6 +406,9 @@ export const currentOctopusContract = {
           },
         }
       case OCTOPUS_API_OPERATIONS.UpdateChannel:
+        // This protocol represents a single credential; never silently ignore a multi-key mutation.
+        if (operation.input.removeKeys?.length)
+          throw new Error("This Octopus protocol has no multi-key collection")
         return {
           endpoint: "/api/v1/channel/update",
           init: {

@@ -14,6 +14,8 @@ export type ManagedSiteMigrationSelection = {
   selectionId: string
   displayName: string
   ref: ManagedResourceRef
+  /** One explicitly previewed key when the target needs separate resources. */
+  credentialIndex?: number
 }
 
 export type ManagedSiteMigrationStatus = "enabled" | "disabled" | "other"
@@ -26,6 +28,8 @@ export type ManagedSiteMigrationLossSignals = {
 }
 
 export type ManagedSiteMigrationSource = {
+  /** Ordered, secret-free key slots. Omitted for ordinary single-key sources. */
+  credentialMetadata?: readonly { enabled: boolean }[]
   sourceSiteType: ManagedSiteType
   /** Native type identifier, interpreted only together with sourceSiteType. */
   resourceType: string | number
@@ -39,6 +43,7 @@ export type ManagedSiteMigrationSource = {
 }
 
 export type ManagedSiteMigrationPreviewProjection = {
+  keyCount?: number
   name: string
   /** Target-native type identifier; never a shared provider enum. */
   type: string | number
@@ -65,6 +70,7 @@ export type ManagedSiteMigrationExecutionCommand = {
   targetSiteType: ManagedSiteType
   projection: ManagedSiteMigrationPreviewProjection
   credential: string
+  credentials?: readonly { value: string; enabled: boolean }[]
 }
 
 export type ManagedSiteMigrationTargetPreparation = {
@@ -81,7 +87,11 @@ export type ManagedSiteMigrationSourcePreparation =
 
 /** Execution-only ephemeral credential; it must never enter previews, results, persistence, React state, analytics, logs, or caches. */
 export type ManagedSiteMigrationCredentialResolution =
-  | { status: "ready"; credential: string }
+  | {
+      status: "ready"
+      credential: string
+      credentials?: readonly { value: string; enabled: boolean }[]
+    }
   | {
       status: "blocked"
       reasonCode: ManagedSiteChannelMigrationBlockedReasonCode
@@ -224,6 +234,7 @@ export type ManagedSiteMigrationCapability = {
     ): Promise<ManagedSiteMigrationCredentialResolution>
   }
   target?: {
+    supportsMultipleCredentials?(source: ManagedSiteMigrationSource): boolean
     prepare(
       source: ManagedSiteMigrationSource,
       options?: ResourceOperationOptions,

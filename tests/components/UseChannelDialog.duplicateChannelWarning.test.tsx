@@ -4,7 +4,10 @@ import {
   useChannelDialog,
   useChannelDialogContext,
 } from "~/components/dialogs/ChannelDialog"
-import { ChannelType } from "~/constants/newApi"
+import {
+  ChannelType,
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS,
+} from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   buildAccountKeyResourceRuntimeKey,
@@ -22,12 +25,14 @@ import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contra
 import { MANAGED_RESOURCE_CREATE_SEED_KINDS } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { TOKEN_PROVISIONING_BLOCK_REASONS } from "~/services/apiAdapters/contracts/tokenProvisioning"
+import { createNewApiCreateEditor } from "~/services/apiAdapters/managedResources/newApiEditor"
 import * as nativeResourceRegistry from "~/services/apiAdapters/managedResources/registry"
 import * as managedSiteRegistry from "~/services/apiAdapters/registry"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
+import { resolveDefaultChannelGroups } from "~/services/managedSites/providers/defaultChannelGroups"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
@@ -303,6 +308,7 @@ describe("useChannelDialog", () => {
       .mockImplementation((siteType, kind) => {
         if (
           siteType !== SITE_TYPES.NEW_API &&
+          siteType !== SITE_TYPES.DONE_HUB &&
           siteType !== SITE_TYPES.SUB2API
         ) {
           return null
@@ -348,6 +354,66 @@ describe("useChannelDialog", () => {
     registrationSpy?.mockRestore()
     registrationSpy = undefined
   })
+
+  it.each(["account", "credentials"] as const)(
+    "queries destination groups once across %s import preparation and editor options",
+    async (entrypoint) => {
+      const fetchGroups = vi.fn(async () => ["default", "vip"])
+      const service = buildManagedSiteCapabilitiesMock({
+        channelDrafts: {
+          prepareFormData: async (_source, options) =>
+            buildPreparedFormData({
+              groups: await resolveDefaultChannelGroups({
+                getConfig: async () => ({
+                  baseUrl: "https://managed.example.com",
+                  adminToken: "admin-token",
+                  userId: "1",
+                }),
+                fetchSiteUserGroups: fetchGroups,
+                purpose: options?.purpose,
+              }),
+            }),
+        },
+      })
+      getManagedSiteCapabilitiesSpy.mockReturnValue(service)
+      nativeOpenCreateEditorMock.mockImplementation(async () => ({
+        ...(await createNewApiCreateEditor({
+          canLoadSecret: false,
+          loadSecret: vi.fn(),
+          fetchModels: vi.fn(),
+          fetchDraftModels: vi.fn(),
+          loadEditorGroups: fetchGroups,
+        })),
+        submit: vi.fn(),
+      }))
+      const { result } = await renderChannelDialogHook()
+      await act(async () => {
+        const opened =
+          entrypoint === "account"
+            ? await result.current.dialog.openWithAccount(
+                buildDisplaySiteData(),
+                buildDisplayAccountTokenRuntimeKey(
+                  buildDisplaySiteData(),
+                  buildApiToken(),
+                ),
+              )
+            : await result.current.dialog.openWithCredentials({
+                name: "Imported credential",
+                baseUrl: "https://upstream.example.com",
+                apiKey: "sk-test",
+              })
+        expect(opened.opened).toBe(true)
+      })
+      const editor = result.current.context.state.nativeCreate!.editor
+      expect(
+        await editor.loadOptions!(
+          NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups,
+          editor.initialValues,
+        ),
+      ).toEqual([{ value: "default" }, { value: "vip" }])
+      expect(fetchGroups).toHaveBeenCalledTimes(1)
+    },
+  )
 
   it("shows warning and cancels when user does not continue", async () => {
     const existingChannel = buildManagedResourceMatchCandidate()
@@ -775,12 +841,15 @@ describe("useChannelDialog", () => {
 
     expect(ensureAccountApiTokenSpy).not.toHaveBeenCalled()
     expect(mockFetchAccountTokens).not.toHaveBeenCalled()
-    expect(prepareChannelFormDataMock).toHaveBeenCalledWith({
-      name: "Account | Token (auto)",
-      baseUrl: "https://upstream.example.com",
-      apiKey: providedToken.key,
-      modelHints: [],
-    })
+    expect(prepareChannelFormDataMock).toHaveBeenCalledWith(
+      {
+        name: "Account | Token (auto)",
+        baseUrl: "https://upstream.example.com",
+        apiKey: providedToken.key,
+        modelHints: [],
+      },
+      { purpose: "native-editor" },
+    )
     expect(result.current.context.state.isOpen).toBe(true)
   })
 
@@ -853,6 +922,97 @@ describe("useChannelDialog", () => {
       expect(mockResolveApiTokenKey).not.toHaveBeenCalled()
       expect(mockFetchAccountTokens).not.toHaveBeenCalled()
       expect(ensureAccountApiTokenSpy).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    { entrypoint: "account", secret: "sk-other\nsk-test", matched: true },
+    { entrypoint: "credentials", secret: "sk-other\nsk-test", matched: true },
+    { entrypoint: "account", secret: "sk-other\nsk-another", matched: false },
+    {
+      entrypoint: "credentials",
+      secret: "sk-other\nsk-another",
+      matched: false,
+    },
+    {
+      entrypoint: "account",
+      secret: "sk-other\nsk-****",
+      matched: false,
+      comparable: false,
+    },
+  ])(
+    "compares retrievable DoneHub keys despite different models when importing from $entrypoint (matched: $matched)",
+    async ({ entrypoint, secret, matched, comparable = true }) => {
+      const candidate = buildManagedResourceMatchCandidate({
+        ref: matchingResourceRef(22, {
+          siteType: SITE_TYPES.DONE_HUB,
+          scopeKey: "https://managed.example.com",
+        }),
+        key: "",
+        models: "other-model",
+      })
+      const fetchSecretKey = vi.fn(async () => secret)
+      const service = buildManagedSiteCapabilitiesMock({
+        siteType: SITE_TYPES.DONE_HUB,
+        matching: {
+          search: vi.fn(async () => ({
+            items: [candidate],
+            total: 1,
+            type_counts: {},
+          })),
+          fetchSecretKey,
+          hydrateComparableKeys: vi.fn(
+            async (
+              _config: unknown,
+              candidates: readonly ManagedResourceMatchCandidate[],
+            ) => candidates.map((item) => ({ ...item, key: secret })),
+          ),
+        },
+      })
+      getManagedSiteCapabilitiesSpy.mockReturnValue(service)
+      const { result } = await renderChannelDialogHook()
+      await act(async () => {
+        if (entrypoint === "account") {
+          await result.current.dialog.openWithAccount(
+            buildDisplaySiteData(),
+            buildDisplayAccountTokenRuntimeKey(
+              buildDisplaySiteData(),
+              buildApiToken(),
+            ),
+          )
+        } else {
+          await result.current.dialog.openWithCredentials({
+            name: "Saved key",
+            baseUrl: "https://upstream.example.com",
+            apiKey: "sk-test",
+          })
+        }
+      })
+      expect(result.current.context.state.isOpen).toBe(true)
+      if (matched) {
+        expect(
+          result.current.context.state.nativeCreate?.advisoryWarning
+            ?.assessment,
+        ).toMatchObject({
+          url: { matched: true },
+          key: { comparable: true, matched: true },
+          models: { matched: false },
+        })
+      } else if (comparable) {
+        expect(
+          result.current.context.state.nativeCreate?.advisoryWarning,
+        ).toBeNull()
+        expect(result.current.context.duplicateChannelWarning.isOpen).toBe(
+          false,
+        )
+      }
+      if (!comparable) {
+        expect(
+          result.current.context.state.nativeCreate?.advisoryWarning?.assessment
+            ?.key,
+        ).toMatchObject({ comparable: false, matched: false })
+      }
+      expect(fetchSecretKey).toHaveBeenCalledTimes(1)
     },
   )
 
@@ -1500,12 +1660,15 @@ describe("useChannelDialog", () => {
       await result.current.context.handleDefaultTokenQuickCreateSuccess()
     })
 
-    expect(prepareChannelFormDataMock).toHaveBeenCalledWith({
-      name: "Account | Created token (auto)",
-      baseUrl: "https://upstream.example.com",
-      apiKey: createdToken.key,
-      modelHints: [],
-    })
+    expect(prepareChannelFormDataMock).toHaveBeenCalledWith(
+      {
+        name: "Account | Created token (auto)",
+        baseUrl: "https://upstream.example.com",
+        apiKey: createdToken.key,
+        modelHints: [],
+      },
+      { purpose: "native-editor" },
+    )
     expect(result.current.context.state).toMatchObject({
       isOpen: true,
       nativeCreate: {
@@ -1562,12 +1725,15 @@ describe("useChannelDialog", () => {
     })
 
     expect(mockFetchAccountTokens).toHaveBeenCalledTimes(1)
-    expect(prepareChannelFormDataMock).toHaveBeenCalledWith({
-      name: "Account | Created token (auto)",
-      baseUrl: "https://upstream.example.com",
-      apiKey: createdToken.key,
-      modelHints: [],
-    })
+    expect(prepareChannelFormDataMock).toHaveBeenCalledWith(
+      {
+        name: "Account | Created token (auto)",
+        baseUrl: "https://upstream.example.com",
+        apiKey: createdToken.key,
+        modelHints: [],
+      },
+      { purpose: "native-editor" },
+    )
     expect(result.current.context.state).toMatchObject({
       isOpen: true,
       nativeCreate: {
@@ -2277,7 +2443,7 @@ describe("useChannelDialog", () => {
     expect(result.current.context.state.isOpen).toBe(false)
   })
 
-  it("refreshes a cached review advisory before opening", async () => {
+  it("clears a cached review advisory when all candidate keys differ despite matching models", async () => {
     const searchChannelMock = vi.fn(async () => ({
       items: [buildManagedResourceMatchCandidate({ key: "different-key" })],
       total: 1,
@@ -2316,11 +2482,7 @@ describe("useChannelDialog", () => {
     expect(result.current.context.state.isOpen).toBe(true)
     expect(result.current.context.state.nativeCreate).toMatchObject({
       siteType: SITE_TYPES.NEW_API,
-      advisoryWarning: {
-        kind: "reviewSuggested",
-        title: "channelDialog:warnings.reviewSuggested.title",
-        description: "channelDialog:warnings.reviewSuggested.description",
-      },
+      advisoryWarning: null,
     })
   })
 
@@ -2437,12 +2599,15 @@ describe("useChannelDialog", () => {
         toastId: "toast-id",
       }),
     )
-    expect(prepareChannelFormDataMock).toHaveBeenCalledWith({
-      name: "Account | Token (auto)",
-      baseUrl: "https://upstream.example.com",
-      apiKey: "sk-ensured-token",
-      modelHints: [],
-    })
+    expect(prepareChannelFormDataMock).toHaveBeenCalledWith(
+      {
+        name: "Account | Token (auto)",
+        baseUrl: "https://upstream.example.com",
+        apiKey: "sk-ensured-token",
+        modelHints: [],
+      },
+      { purpose: "native-editor" },
+    )
     expect(result.current.context.state).toMatchObject({
       isOpen: true,
       nativeCreate: {

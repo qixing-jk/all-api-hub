@@ -82,12 +82,50 @@ beforeEach(() => {
 const workspace = () => cliProxyApiManagedResourceRegistration.open()
 
 describe("CLIProxyAPI native managed resources", () => {
+  it("reports an unconfirmed delete without removing the provider locally", async () => {
+    const api = await workspace()
+    const ref = (await api.list()).items[0].ref
+    const fetch = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation(async (url: URL, init: RequestInit) =>
+      init.method === "DELETE"
+        ? Response.json({ error: "unavailable" }, { status: 503 })
+        : fetch(url, init),
+    )
+    const result = await api.delete(ref)
+    expect(result.outcome).not.toBe("succeeded")
+    expect(inventory["openai-compatibility"]).toHaveLength(1)
+  })
+  it("removes selected credentials while preserving retained native metadata", async () => {
+    const entry = inventory["openai-compatibility"][0]
+    entry["api-key-entries"]!.push({
+      "api-key": "retained-secret",
+      "proxy-url": "http://retained.example",
+      weight: 7,
+    })
+    const api = await workspace()
+    const target = (await api.list()).items[0].ref
+    const cleanup = await api.openKeyCleanup!(target)
+    expect(cleanup.keys).toEqual(["upstream-secret", "retained-secret"])
+    await cleanup.remove([0])
+    expect(inventory["openai-compatibility"][0]).toEqual({
+      ...entry,
+      "api-key-entries": [
+        {
+          "api-key": "retained-secret",
+          "proxy-url": "http://retained.example",
+          weight: 7,
+        },
+      ],
+    })
+  })
   it.each([
     ["type", "unsupported"],
     ["name", ""],
     ["baseURL", ""],
     ["baseURL", "invalid-url"],
     ["baseURL", "file:///tmp/model"],
+    ["proxy_url", "socks5h:///missing-host"],
+    ["proxy_url", "socks5h://localhost:65536"],
     ["supportedModels", "model=alias=duplicate"],
     ["headers", "missing-colon"],
     ["credentials", "invalid-list"],
@@ -98,6 +136,12 @@ describe("CLIProxyAPI native managed resources", () => {
       name: "Provider",
       baseURL: "https://upstream.example",
       credentials: { kind: "secret-list" as const, entries: [] },
+      ...(field === "proxy_url"
+        ? {
+            type: "gemini-api-key",
+            key: { kind: "replace" as const, value: "key" },
+          }
+        : {}),
       [field]: value,
     }
     expect(editor.validate(values)).toMatchObject({
@@ -301,7 +345,11 @@ describe("CLIProxyAPI native managed resources", () => {
       "base-url": "https://other.example",
       "api-key-entries": [],
     })
+    fetchMock.mockClear()
     const result = await view.delete(ref)
+    expect(
+      fetchMock.mock.calls.map(([, init]) => init.method ?? "GET"),
+    ).toEqual(["GET", "DELETE", "GET"])
     expect(result.outcome).toBe("succeeded")
     expect(inventory["openai-compatibility"].map((item) => item.name)).toEqual([
       "Other",
@@ -520,6 +568,8 @@ describe("CLIProxyAPI multiple credentials", () => {
     "empty-key",
     "invalid-proxy",
     "malformed-proxy",
+    "missing-proxy-host",
+    "invalid-proxy-port",
     "cleared-key",
     "fractional-weight",
     "excess-weight",
@@ -536,6 +586,10 @@ describe("CLIProxyAPI multiple credentials", () => {
       row.secret = { kind: "replace", value: " " }
     if (invalidCase === "invalid-proxy") row.fields.proxy_url = "file:///tmp"
     if (invalidCase === "malformed-proxy") row.fields.proxy_url = "not a URL"
+    if (invalidCase === "missing-proxy-host")
+      row.fields.proxy_url = "socks5h:///missing-host"
+    if (invalidCase === "invalid-proxy-port")
+      row.fields.proxy_url = "socks5h://localhost:65536"
     if (invalidCase === "cleared-key") row.secret = { kind: "clear" }
     if (invalidCase === "fractional-weight") row.fields.weight = "1.5"
     if (invalidCase === "excess-weight") row.fields.weight = "1000001"

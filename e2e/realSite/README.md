@@ -35,6 +35,31 @@ scenario helpers. Real-site specs compose them by saving an account from a live
 site, passing the returned account fixture into reusable usage scenarios, then
 cleaning up through the fixture owner.
 
+Managed-site coverage includes New API, AxonHub, and Octopus multi-key persistence in
+`managedSiteChannels.spec.ts`, so the existing managed-site matrix runs it.
+The tests create a uniquely named temporary channel with nonfunctional keys and
+an `.invalid` upstream, edit keys through the UI, reopen and inspect native
+responses, verify preserved metadata and Octopus model grants, then delete the
+run-owned channel and query again to confirm cleanup. Cleanup errors remain test
+failures. A deployment exposing Octopus's single-key protocol is explicitly
+skipped before creating a channel. Authenticated screenshots, traces, and videos
+are disabled; assertions do not print native credentials.
+The New API multi-key scenario verifies append-before-delete replacement without
+reading saved keys, including selection mode, per-key status, unchanged channel
+fields, and cleanup. Its additional secret-disclosure and in-place editing checks require
+`AAH_E2E_NEW_API_ADMIN_USERNAME`, `AAH_E2E_NEW_API_ADMIN_PASSWORD`, and
+`AAH_E2E_NEW_API_ADMIN_TOTP_SECRET` for its secure key-read verification. These
+must belong to `AAH_E2E_NEW_API_ADMIN_USER_ID`; ordinary account-test login
+credentials are not reused. When those login credentials are absent, native
+save/readback still runs and the untested disclosure checks are recorded in a
+`disclosure-not-tested` annotation.
+
+Run only these persistence checks with the existing `.env.local` configuration:
+
+```bash
+pnpm exec playwright test e2e/realSite/managedSiteChannels.spec.ts --grep "persists multi-key" --workers=1
+```
+
 Run all real-site specs:
 
 ```bash
@@ -45,6 +70,7 @@ Run one real-site category locally:
 
 ```bash
 pnpm e2e:real-site:account
+pnpm e2e:real-site:cloud-sync
 pnpm e2e:real-site:managed-site
 pnpm e2e:real-site:webdav
 ```
@@ -65,14 +91,44 @@ Category scripts run each matching matrix entry separately and reuse the first
 extension build for the remaining entries.
 
 The GitHub Actions workflow has a `category` input with `all`, `account`,
-`managed-site`, and `webdav`. Scheduled runs still use `all`; manual runs can
-select a single category so the CI job list and artifacts are visibly grouped as
-`Account / ...`, `Managed Site / ...`, or `WebDAV / ...`.
+`cloud-sync`, `managed-site`, and `webdav`. Scheduled runs still use `all`; manual
+runs can select a single category so the CI job list and artifacts are visibly
+grouped as `Account / ...`, `Cloud Sync / ...`, `Managed Site / ...`, or
+`WebDAV / ...`.
 
 Playwright loads `.env` and `.env.local` from the repo root. Shell or CI
 environment variables take precedence. Each block is optional; specs skip when
 that site's required variables are missing. Use dedicated low-privilege test
 accounts.
+
+## GitHub Secret Gist Cloud Sync
+
+The cloud-sync spec uses a dedicated GitHub token to create one encrypted,
+unlisted (Secret) Gist, verify the file through the GitHub API, restore the data
+through the extension, and delete only the Gist it created. Creation IDs are
+captured from API responses before UI assertions, so persistence or UI failures
+still trigger cleanup. A teardown fixture has its own 90-second timeout budget,
+including when the test body times out. Cleanup verifies that the Gist returns
+404, retries transient failures up to three times, and reports cleanup failures
+alongside the original test failure. If a creation response has no usable ID,
+cleanup reports the capture failure rather than deleting an unknown resource.
+The test skips when the
+token is not configured. The token is supplied only through the process/CI
+environment and is never written to the backup, logs, or repository.
+
+```env
+AAH_E2E_GITHUB_GIST_TOKEN=replace-with-a-dedicated-gists-token
+```
+
+For local runs:
+
+```bash
+pnpm e2e:real-site:cloud-sync
+```
+
+Use a dedicated low-privilege token with Gists read/write access. The test
+password is local-only and is defined inside the spec; it is not a GitHub
+credential.
 
 ## New API
 
