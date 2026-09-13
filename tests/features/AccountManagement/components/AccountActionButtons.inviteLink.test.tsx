@@ -1,3 +1,5 @@
+import { createDeferred } from "~~/tests/test-utils/deferred"
+
 import "./accountActionButtonsMocks"
 
 import { screen, waitFor } from "@testing-library/react"
@@ -35,7 +37,6 @@ import {
 import {
   buildDisplaySiteData,
   copyInviteLinkFromRowMenu,
-  createDeferred,
   setupAccountActionButtonsTest,
 } from "./accountActionButtonsTestSupport"
 
@@ -45,7 +46,7 @@ describe("AccountActionButtons", () => {
   it("shows local menu refresh as busy and restores it after completion", async () => {
     const deferredRefresh = createDeferred<void>()
     mockHandleRefreshAccount.mockReturnValueOnce(deferredRefresh.promise)
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -90,7 +91,7 @@ describe("AccountActionButtons", () => {
   })
 
   it("copies a supported account invite link from the row menu", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       get: () => ({ writeText: clipboardWriteTextMock }),
@@ -113,6 +114,9 @@ describe("AccountActionButtons", () => {
 
     await user.click(
       screen.getByRole("button", { name: "common:actions.more" }),
+    )
+    await user.click(
+      screen.getByRole("menuitem", { name: "account:actions.share" }),
     )
     const copyInviteLinkItem = await screen.findByRole("menuitem", {
       name: "account:actions.copyInviteLink",
@@ -288,7 +292,7 @@ describe("AccountActionButtons", () => {
     fetchDisplayAccountInviteLinkMock.mockReturnValue(
       deferredInviteLink.promise,
     )
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -306,6 +310,9 @@ describe("AccountActionButtons", () => {
 
     await user.click(
       screen.getByRole("button", { name: "common:actions.more" }),
+    )
+    await user.click(
+      screen.getByRole("menuitem", { name: "account:actions.share" }),
     )
     const copyInviteLinkItem = await screen.findByRole("menuitem", {
       name: "account:actions.copyInviteLink",
@@ -330,7 +337,7 @@ describe("AccountActionButtons", () => {
   })
 
   it("shows an unavailable invite-link action for unsupported enabled accounts", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
     canFetchDisplayAccountInviteLinkMock.mockReturnValue(false)
 
     render(
@@ -348,6 +355,9 @@ describe("AccountActionButtons", () => {
     await user.click(
       screen.getByRole("button", { name: "common:actions.more" }),
     )
+    await user.click(
+      screen.getByRole("menuitem", { name: "account:actions.share" }),
+    )
 
     const copyInviteLinkItem = await screen.findByRole("menuitem", {
       name: "account:actions.copyInviteLink",
@@ -360,7 +370,7 @@ describe("AccountActionButtons", () => {
   })
 
   it("omits the invite-link action for disabled accounts", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -386,7 +396,7 @@ describe("AccountActionButtons", () => {
   })
 
   it("keeps the fetched invite link available for manual copy when clipboard access fails", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       get: () => ({ writeText: clipboardWriteTextMock }),

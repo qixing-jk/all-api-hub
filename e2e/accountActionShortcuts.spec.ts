@@ -240,6 +240,7 @@ test("copies a supported account invite link from the row menu", async ({
   await expectPermissionOnboardingHidden(page)
 
   await openAccountActionsMenu(page, "Invite Shortcut Account")
+  await page.getByRole("menuitem", { name: "Share", exact: true }).click()
   await page
     .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowCopyInviteLinkMenuItem)
     .click()

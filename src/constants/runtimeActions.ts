@@ -77,6 +77,9 @@ export const RuntimeActionIds = {
   CloudflareGuardLog: "cloudflareGuardLog",
 
   CloseTempWindow: "closeTempWindow",
+  CancelCheckinFeedbackScan: "cancelCheckinFeedbackScan",
+  ContentCheckinFeedbackScan: "contentCheckinFeedbackScan",
+  ContentCancelCheckinFeedbackScan: "contentCancelCheckinFeedbackScan",
   TempWindowCancelOpenRouterManagementKeyAction:
     "tempWindowCancelOpenRouterManagementKeyAction",
   TempWindowOpenRouterManagementKeyDispatched:

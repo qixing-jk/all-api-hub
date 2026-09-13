@@ -43,6 +43,17 @@ export function setupContentMessageHandlers() {
       return handleApproveLinuxDoOAuth(request, sendResponse)
     }
 
+    if (
+      request.action === RuntimeActionIds.ContentCheckinFeedbackScan ||
+      request.action === RuntimeActionIds.ContentCancelCheckinFeedbackScan
+    ) {
+      void import("~/services/checkin/feedback/pageScan")
+        .then(({ handlePageFeedbackScan }) =>
+          handlePageFeedbackScan(request, sendResponse),
+        )
+        .catch(() => sendResponse({ success: false }))
+      return true
+    }
     if (request.action === RuntimeActionIds.ContentGetLocalStorage) {
       return handleGetLocalStorage(request, sendResponse)
     }

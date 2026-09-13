@@ -155,6 +155,11 @@ export async function runAccountProviderDestinationsScenario(params: {
       accountId: params.account.accountId,
     })
     const menuItem = params.page.getByTestId(destination.testId)
+    const relatedPages = params.page.getByRole("menuitem", {
+      name: /Related pages|相关页面/,
+      exact: true,
+    })
+    if (await relatedPages.count()) await relatedPages.click()
     if (destination.path === null) {
       await expect(menuItem).toHaveCount(0)
       await params.page.keyboard.press("Escape")

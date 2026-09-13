@@ -253,7 +253,7 @@ export default function ResultsTable({
                 {sortableHeader("timestamp")}
                 <TableHead
                   className={cn(
-                    "sticky right-0 h-auto w-12 min-w-12 border-l border-gray-200 bg-gray-50 px-2 py-3 text-xs font-medium tracking-wider text-gray-500 uppercase dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 [@container(min-width:48rem)]:w-auto [@container(min-width:48rem)]:min-w-0 [@container(min-width:48rem)]:px-6",
+                    "sticky right-0 h-auto w-12 min-w-12 border-l border-gray-200 bg-gray-50 px-2 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 [@container(min-width:48rem)]:w-auto [@container(min-width:48rem)]:min-w-0 [@container(min-width:48rem)]:px-3",
                     Z_INDEX.tableStickyHeader,
                   )}
                 >

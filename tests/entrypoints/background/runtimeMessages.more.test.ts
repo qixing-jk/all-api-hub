@@ -66,6 +66,11 @@ const mocks = vi.hoisted(() => ({
   openBugReportPage: vi.fn(),
   executeProtectionBypassTask: vi.fn(),
   handleOwnedSessionRequest: vi.fn(),
+  cancelTempCheckinFeedbackScan: vi.fn(),
+}))
+
+vi.mock("~/entrypoints/background/checkinFeedbackScan", () => ({
+  cancelTempCheckinFeedbackScan: mocks.cancelTempCheckinFeedbackScan,
 }))
 
 vi.mock("~/services/managedSites/newApiOwnedSession/background", () => ({
@@ -675,6 +680,25 @@ describe("setupRuntimeMessageListeners additional routing", () => {
       expect(sendResponse).toHaveBeenCalledWith(
         expect.objectContaining({ success: false }),
       )
+    },
+  )
+
+  it.each(["feedback-request", null, 123])(
+    "routes feedback cancellation with a normalized request ID: %s",
+    async (requestId) => {
+      const listener = await loadListener()
+      const sendResponse = vi.fn()
+      expect(
+        listener(
+          { action: RuntimeActionIds.CancelCheckinFeedbackScan, requestId },
+          {},
+          sendResponse,
+        ),
+      ).toBe(true)
+      expect(mocks.cancelTempCheckinFeedbackScan).toHaveBeenCalledWith(
+        typeof requestId === "string" ? requestId : "",
+      )
+      expect(sendResponse).toHaveBeenCalledWith({ success: true })
     },
   )
 

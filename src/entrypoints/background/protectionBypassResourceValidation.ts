@@ -28,6 +28,7 @@ export const validateProtectionBypassTaskResource: ValidateProtectionBypassTaskR
       case TEMP_CONTEXT_TASK_KINDS.TurnstileFetch:
       case TEMP_CONTEXT_TASK_KINDS.NativePageAction:
       case TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction:
+      case TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan:
       case TEMP_CONTEXT_TASK_KINDS.RenderedTitle:
       case TEMP_CONTEXT_TASK_KINDS.SessionRead:
       case TEMP_CONTEXT_TASK_KINDS.OpenContext:

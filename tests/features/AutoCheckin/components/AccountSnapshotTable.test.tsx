@@ -24,6 +24,32 @@ const renderSnapshotTable = (snapshots: AutoCheckinAccountSnapshot[]) =>
   })
 
 describe("AutoCheckin AccountSnapshotTable", () => {
+  it.each([
+    [AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD, "feedback"],
+    [AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING, "feedback"],
+    [AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED, "feedback"],
+    [AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE, "feedback"],
+    [AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED, "request"],
+    [AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER, "request"],
+  ] as const)("offers appropriate feedback for %s", (skipReason, action) => {
+    renderSnapshotTable([
+      {
+        accountId: "feedback",
+        accountName: "Feedback",
+        siteType: "new-api",
+        detectionEnabled: false,
+        autoCheckinEnabled: true,
+        providerAvailable: false,
+        skipReason,
+      },
+    ])
+    expect(
+      screen.getByRole("button", {
+        name: `accountDialog:checkInFeedback.${action}`,
+      }),
+    ).toBeVisible()
+  })
+
   it("sorts snapshots from the updated column header", async () => {
     const user = userEvent.setup()
     renderSnapshotTable([

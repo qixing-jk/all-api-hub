@@ -46,7 +46,7 @@ describe("AccountActionButtons", () => {
   it.each([undefined, "https://example.com/custom-redeem"])(
     "offers SharedChat redemption only when a custom page exists: %s",
     async (redeemUrl) => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ skipHover: true })
       render(
         <AccountActionButtons
           site={buildDisplaySiteData({
@@ -63,6 +63,11 @@ describe("AccountActionButtons", () => {
       await user.click(
         screen.getByRole("button", { name: "common:actions.more" }),
       )
+      await user.click(
+        screen.getByRole("menuitem", {
+          name: "account:actions.relatedPages",
+        }),
+      )
       const redeemItem = screen.queryByRole("menuitem", {
         name: "account:actions.redeemPage",
       })
@@ -76,7 +81,7 @@ describe("AccountActionButtons", () => {
 
   it("locks externally refreshed accounts without announcing local menu work", async () => {
     accountActionsContextValue.refreshingAccountId = "acc-external-refresh"
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -103,7 +108,7 @@ describe("AccountActionButtons", () => {
 
   it("tracks controlled analytics for primary account action buttons", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-single" }])
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -174,7 +179,7 @@ describe("AccountActionButtons", () => {
           },
         },
       })
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
     const onDeleteAccount = vi.fn()
 
     render(
@@ -196,32 +201,44 @@ describe("AccountActionButtons", () => {
     )
 
     let menu = await screen.findByRole("menu")
-    expect(menu).toHaveAttribute("data-slot", "dropdown-menu-content")
-    const redeemButton = (
-      await within(menu).findByText("account:actions.redeemPage")
-    ).closest("button")
-    expect(redeemButton).not.toBeNull()
-    await user.click(redeemButton!)
+    await user.click(
+      screen.getByRole("menuitem", { name: "account:actions.relatedPages" }),
+    )
+    menu = await screen.findByRole("menu", {
+      name: "account:actions.relatedPages",
+    })
+    const redeemButton = await within(menu).findByRole("menuitem", {
+      name: "account:actions.redeemPage",
+    })
+
+    await user.click(redeemButton)
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+    await user.click(
+      screen.getByRole("menuitem", {
+        name: "account:actions.relatedPages",
+      }),
+    )
+    menu = await screen.findByRole("menu", {
+      name: "account:actions.relatedPages",
+    })
+    const usageButton = await within(menu).findByRole("menuitem", {
+      name: "account:actions.usageLog",
+    })
+
+    await user.click(usageButton)
 
     await user.click(
       screen.getByRole("button", { name: "common:actions.more" }),
     )
     menu = await screen.findByRole("menu")
-    const usageButton = (
-      await within(menu).findByText("account:actions.usageLog")
-    ).closest("button")
-    expect(usageButton).not.toBeNull()
-    await user.click(usageButton!)
+    const quickCheckinButton = await within(menu).findByRole("menuitem", {
+      name: "account:actions.quickCheckin",
+    })
 
-    await user.click(
-      screen.getByRole("button", { name: "common:actions.more" }),
-    )
-    menu = await screen.findByRole("menu")
-    const quickCheckinButton = (
-      await within(menu).findByText("account:actions.quickCheckin")
-    ).closest("button")
-    expect(quickCheckinButton).not.toBeNull()
-    await user.click(quickCheckinButton!)
+    await user.click(quickCheckinButton)
 
     await waitFor(() => {
       expect(trackStartedMock).toHaveBeenCalledWith({
@@ -262,7 +279,7 @@ describe("AccountActionButtons", () => {
   ])(
     "closes the account action menu before starting $destination navigation",
     async ({ testId, getOpenPageMock }) => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ skipHover: true })
       const site = buildDisplaySiteData({
         id: "acc-in-page-navigation",
         disabled: false,
@@ -313,7 +330,7 @@ describe("AccountActionButtons", () => {
         userId: "1",
       },
     } as Partial<UserPreferences>
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -333,13 +350,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText(
-      "account:actions.locateManagedSiteChannel",
-    )
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.locateManagedSiteChannel",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     expect(trackStartedMock).not.toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
@@ -351,7 +366,7 @@ describe("AccountActionButtons", () => {
   })
 
   it("shows Enable and Delete actions when account is disabled", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
     const onDeleteAccount = vi.fn()
     mockHandleSetAccountDisabled.mockResolvedValueOnce(true)
 
@@ -416,13 +431,12 @@ describe("AccountActionButtons", () => {
     )
 
     const reopenedMenu = await screen.findByRole("menu")
-    const reopenedDeleteLabel = await within(reopenedMenu).findByText(
-      "account:actions.delete",
+    const reopenedDeleteButton = await within(reopenedMenu).findByRole(
+      "menuitem",
+      { name: "account:actions.delete" },
     )
-    const reopenedDeleteButton = reopenedDeleteLabel.closest("button")
-    expect(reopenedDeleteButton).not.toBeNull()
 
-    await user.click(reopenedDeleteButton!)
+    await user.click(reopenedDeleteButton)
     expect(onDeleteAccount).toHaveBeenCalledWith(
       expect.objectContaining({ id: "acc-1" }),
     )
@@ -436,7 +450,7 @@ describe("AccountActionButtons", () => {
   })
 
   it("shows Disable action when account is enabled", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -455,22 +469,20 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const disableLabel = await within(menu).findByText(
-      "account:actions.disableAccount",
-    )
-    const deleteLabel = await within(menu).findByText("account:actions.delete")
-    const disableButton = disableLabel.closest("button")
-    const deleteButton = deleteLabel.closest("button")
-    expect(disableButton).not.toBeNull()
-    expect(deleteButton).not.toBeNull()
+    const disableButton = await within(menu).findByRole("menuitem", {
+      name: "account:actions.disableAccount",
+    })
+    const deleteButton = await within(menu).findByRole("menuitem", {
+      name: "account:actions.delete",
+    })
 
-    expect(disableButton!).toBeInTheDocument()
-    expect(disableButton!).toHaveClass("text-amber-600")
-    expect(deleteButton!).toBeInTheDocument()
+    expect(disableButton).toBeInTheDocument()
+    expect(disableButton).toHaveClass("text-amber-600")
+    expect(deleteButton).toBeInTheDocument()
 
-    const menuButtons = Array.from(menu.querySelectorAll("button"))
-    const disableIndex = menuButtons.indexOf(disableButton!)
-    const deleteIndex = menuButtons.indexOf(deleteButton!)
+    const menuButtons = within(menu).getAllByRole("menuitem")
+    const disableIndex = menuButtons.indexOf(disableButton)
+    const deleteIndex = menuButtons.indexOf(deleteButton)
     expect(deleteIndex - disableIndex).toBe(1)
     expect(
       within(menu).queryByRole("menuitem", {
@@ -480,7 +492,7 @@ describe("AccountActionButtons", () => {
   })
 
   it("closes the menu after clicking Disable to avoid showing Enable immediately", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
     mockHandleSetAccountDisabled.mockResolvedValueOnce(true)
 
     render(
@@ -500,13 +512,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const disableLabel = await within(menu).findByText(
-      "account:actions.disableAccount",
-    )
-    const disableButton = disableLabel.closest("button")
-    expect(disableButton).not.toBeNull()
+    const disableButton = await within(menu).findByRole("menuitem", {
+      name: "account:actions.disableAccount",
+    })
 
-    await user.click(disableButton!)
+    await user.click(disableButton)
 
     expect(mockHandleSetAccountDisabled).toHaveBeenCalledWith(
       expect.objectContaining({ id: "acc-3" }),
@@ -521,7 +531,7 @@ describe("AccountActionButtons", () => {
   it("opens CopyKeyDialog when smart copy finds zero tokens", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
 
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
     const onCopyKey = vi.fn()
 
     render(
@@ -562,7 +572,7 @@ describe("AccountActionButtons", () => {
   it.each([SITE_TYPES.OPENROUTER, SITE_TYPES.AIHUBMIX])(
     "labels %s as a key list and opens it without probing unavailable secrets",
     async (siteType) => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ skipHover: true })
       const onCopyKey = vi.fn()
 
       render(

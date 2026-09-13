@@ -69,6 +69,9 @@ export interface AccountFormHandle {
 }
 
 interface AccountFormProps {
+  feedbackAccountId?: string
+  feedbackBaseUrl?: string
+  feedbackOriginalBaseUrl?: string
   ref?: Ref<AccountFormHandle>
   draft: AccountDialogDraft
   siteUrl?: string
@@ -159,6 +162,9 @@ export default function AccountForm({
   isRedetectingCheckInMethods,
   checkInRedetectionFeedback,
   siteUrl,
+  feedbackAccountId,
+  feedbackBaseUrl = "",
+  feedbackOriginalBaseUrl,
 }: AccountFormProps) {
   const { t } = useTranslation(["accountDialog", "common"])
   const {
@@ -210,6 +216,10 @@ export default function AccountForm({
     input?.scrollIntoView({ block: "center" })
     setAccessTokenFocusRequested(false)
   }, [accessTokenFocusRequested, isAuthSectionOpen])
+
+  const hasFeedbackSiteChanged = Boolean(
+    feedbackOriginalBaseUrl && feedbackOriginalBaseUrl !== feedbackBaseUrl,
+  )
 
   return (
     <div className="space-y-3">
@@ -570,6 +580,23 @@ export default function AccountForm({
       </AccountFormSection>
 
       <AccountCheckInSection
+        feedbackSource={{
+          accountId: feedbackAccountId,
+          snapshot: {
+            baseUrl: feedbackBaseUrl,
+            siteType,
+            checkIn: hasFeedbackSiteChanged
+              ? {
+                  ...checkIn,
+                  methodKnowledge: { methods: {} },
+                  selection: { mode: "automatic" },
+                }
+              : checkIn,
+          },
+          auth: hasFeedbackSiteChanged
+            ? undefined
+            : { authType, accessToken, userId },
+        }}
         checkIn={checkIn}
         siteType={siteType}
         siteUrl={siteUrl}

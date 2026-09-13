@@ -20,9 +20,21 @@ import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKe
 import { ACCOUNT_POST_SAVE_WORKFLOW_STEPS } from "~/services/accounts/accountPostSaveWorkflow"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import { API_CREDENTIAL_PROFILE_CAPTURE_STATUSES } from "~/services/apiCredentialProfiles/apiCredentialProfileLinkContracts"
+import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { AuthTypeEnum } from "~/types"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
+
+vi.mock("~/services/checkin/autoCheckin/storage", () => ({
+  autoCheckinStorage: { getStatus: vi.fn().mockResolvedValue(null) },
+}))
+vi.mock("~/services/checkin/feedback/scan", async (original) => ({
+  ...(await original<typeof import("~/services/checkin/feedback/scan")>()),
+  collectCheckInFeedbackClues: vi
+    .fn()
+    .mockRejectedValue(new Error("unavailable")),
+}))
 
 const {
   mockState,
@@ -445,6 +457,63 @@ describe("AccountDialog", () => {
       items: mockSponsorRecommendationItems,
     }))
   })
+
+  it.each(["same", "changed-url", "changed-user", "changed-site-type"])(
+    "preserves editor history only for the original account: %s",
+    async (scenario) => {
+      const user = userEvent.setup()
+      mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+      mockState.draft.userId = scenario === "changed-user" ? "99" : "12"
+      if (scenario === "changed-site-type")
+        mockState.draft.siteType = SITE_TYPES.NEW_API
+      mockState.url =
+        scenario === "changed-url"
+          ? "https://other.example"
+          : "https://api.example.com"
+      vi.mocked(autoCheckinStorage.getStatus).mockResolvedValue({
+        perAccount: {
+          edited: {
+            accountId: "edited",
+            accountName: "Private",
+            status: "failed",
+            reasonCode: "permission_denied",
+            timestamp: 1,
+          },
+        },
+      })
+      render(
+        <AccountDialog
+          isOpen
+          onClose={vi.fn()}
+          onSuccess={vi.fn()}
+          onError={vi.fn()}
+          mode={DIALOG_MODES.EDIT}
+          account={buildDisplaySiteData({
+            id: "edited",
+            baseUrl: "https://api.example.com",
+            userId: "12",
+          })}
+        />,
+      )
+      await user.click(
+        screen.getByRole("button", {
+          name: /accountDialog:checkInFeedback\.(request|feedback)/,
+        }),
+      )
+      await screen.findByLabelText("accountDialog:checkInFeedback.notes")
+      await user.click(
+        screen.getByText("accountDialog:checkInFeedback.preview"),
+      )
+      const report = (
+        screen.getByLabelText(
+          "accountDialog:checkInFeedback.fullReport",
+        ) as HTMLTextAreaElement
+      ).value
+      expect(report).toContain(
+        `<th scope="row">execution</th><td>${scenario === "same" ? "failed" : "unavailable"}</td>`,
+      )
+    },
+  )
 
   it("hides the form before the dialog reaches the account-form phase", async () => {
     mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT

@@ -84,6 +84,9 @@ body:
     id: requested-capabilities
     attributes:
       label: Capabilities needed / 希望支持的能力
+      description: |
+        For check-in issues only, prefer [Check-in support](https://github.com/qixing-jk/all-api-hub/issues/new?template=checkin_adaptation.md). If several capabilities are affected, include them together in this form.
+        仅反馈签到问题，建议使用[签到适配](https://github.com/qixing-jk/all-api-hub/issues/new?template=checkin_adaptation.md)；涉及多项能力时，可继续在本表中一起反馈。
       options:
         - label: Refresh balance or quota / 刷新余额或额度
         - label: Manage API keys / 管理 API Key

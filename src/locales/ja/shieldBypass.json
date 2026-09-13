@@ -17,6 +17,7 @@
     "clearFilters": "絞り込みを解除",
     "commands": {
       "add_account": "アカウントを追加",
+      "checkin_feedback": "チェックインのフィードバック情報を収集",
       "detect_account": "アカウントを検出",
       "manage_api_keys": "API キーを管理",
       "manage_site_channels": "サイトのチャネルを管理",

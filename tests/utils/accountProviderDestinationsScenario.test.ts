@@ -49,7 +49,12 @@ describe("account provider destinations E2E scenario", () => {
     const redeemMenuItem = {
       click: vi.fn().mockResolvedValue(undefined),
     }
+    const relatedPagesMenuItem = {
+      count: vi.fn().mockResolvedValue(1),
+      click: vi.fn().mockResolvedValue(undefined),
+    }
     const page = {
+      getByRole: vi.fn(() => relatedPagesMenuItem),
       bringToFront: vi.fn().mockResolvedValue(undefined),
       getByTestId: vi.fn((testId: string) => {
         if (testId === getAccountManagementListItemTestId("account-1")) {
@@ -87,6 +92,13 @@ describe("account provider destinations E2E scenario", () => {
     )
     expect(usageMenuItem.click).toHaveBeenCalledOnce()
     expect(redeemMenuItem.click).toHaveBeenCalledOnce()
+    expect(relatedPagesMenuItem.click).toHaveBeenCalledTimes(2)
+    expect(relatedPagesMenuItem.click.mock.invocationCallOrder[0]).toBeLessThan(
+      usageMenuItem.click.mock.invocationCallOrder[0],
+    )
+    expect(relatedPagesMenuItem.click.mock.invocationCallOrder[1]).toBeLessThan(
+      redeemMenuItem.click.mock.invocationCallOrder[0],
+    )
     expect(page.bringToFront).toHaveBeenCalledTimes(3)
 
     const pollCallbacks = vi
@@ -260,6 +272,10 @@ function createProviderDestinationsPage(options: {
   }
 
   return {
+    getByRole: vi.fn(() => ({
+      count: vi.fn().mockResolvedValue(1),
+      click: vi.fn().mockResolvedValue(undefined),
+    })),
     bringToFront: vi.fn().mockResolvedValue(undefined),
     context: vi.fn(() => context),
     getByTestId: vi.fn((testId: string) => {
