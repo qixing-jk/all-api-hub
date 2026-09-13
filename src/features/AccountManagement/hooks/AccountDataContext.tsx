@@ -231,7 +231,14 @@ export const AccountDataProvider = ({
     totalAccounts: 0,
   })
   const [prevBalances, setPrevBalances] = useState<CurrencyAmountMap>({})
-  const [sortField, setSortField] = useState<ActiveSortField>(initialSortField)
+  const [selectedSortField, setSortField] =
+    useState<ActiveSortField>(initialSortField)
+  const sortField =
+    showTodayCashflow === false &&
+    (selectedSortField === DATA_TYPE_CONSUMPTION ||
+      selectedSortField === DATA_TYPE_INCOME)
+      ? DATA_TYPE_BALANCE
+      : selectedSortField
   const [sortOrder, setSortOrder] = useState<SortOrder>(initialSortOrder)
   const [detectedSiteAccounts, setDetectedSiteAccounts] = useState<
     SiteAccount[]
@@ -1028,14 +1035,17 @@ export const AccountDataProvider = ({
   useEffect(() => {
     if (showTodayCashflow !== false) return
 
-    if (sortField !== DATA_TYPE_CONSUMPTION && sortField !== DATA_TYPE_INCOME) {
+    if (
+      selectedSortField !== DATA_TYPE_CONSUMPTION &&
+      selectedSortField !== DATA_TYPE_INCOME
+    ) {
       return
     }
 
     const fallbackField: SortField = DATA_TYPE_BALANCE
     setSortField(fallbackField)
     void updateSortConfig(fallbackField, sortOrder)
-  }, [showTodayCashflow, sortField, sortOrder, updateSortConfig])
+  }, [showTodayCashflow, selectedSortField, sortOrder, updateSortConfig])
 
   const handleReorder = useCallback(
     async (ids: string[]) => {

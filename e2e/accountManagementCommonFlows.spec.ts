@@ -38,6 +38,13 @@ const ACCOUNT_QUICK_CHECKIN_E2E_STATE_KEY =
 const WIDE_VIEWPORT_SIZE = { width: 1920, height: 1080 }
 const DESKTOP_VIEWPORT_SIZE = { width: 1280, height: 720 }
 const MOBILE_VIEWPORT_SIZE = { width: 320, height: 720 }
+const ISOLATED_ACCOUNT_PREFERENCES = {
+  autoCheckin: {
+    ...DEFAULT_PREFERENCES.autoCheckin!,
+    globalEnabled: false,
+    pretriggerDailyOnUiOpen: false,
+  },
+}
 
 type AccountQuickCheckinRuntimeState = {
   calls: Array<{
@@ -182,9 +189,13 @@ async function getAccountButtonY(page: Page, accountName: string) {
 async function openAccountActionsMenu(page: Page, accountName: string) {
   const row = getAccountRow(page, accountName)
   await row.hover()
-  await row
-    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton)
-    .click()
+  const trigger = row.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton,
+  )
+  await expect(trigger).toHaveAttribute("aria-expanded", "false")
+  // A closed Radix menu remains mounted during its exit animation.
+  await expect(page.getByRole("menu", { includeHidden: true })).toHaveCount(0)
+  await trigger.click()
 }
 
 async function readAccountQuickCheckinRuntimeState(
@@ -203,6 +214,10 @@ async function readAccountQuickCheckinRuntimeState(
 }
 
 test.beforeEach(async ({ context, page }) => {
+  await seedUserPreferences(
+    await getServiceWorker(context),
+    ISOLATED_ACCOUNT_PREFERENCES,
+  )
   installExtensionPageGuards(page)
   await forceExtensionLanguage(page, "en")
   await stubLlmMetadataIndex(context)
@@ -413,6 +428,7 @@ test("keeps account management controls reachable across constrained widths", as
       const buttonBoxes = await readElementBounds(
         accountListHeader.getByRole("button"),
       )
+      if (buttonBoxes.length === 0) return false
       const rowCenters = buttonBoxes.map((box) => box.y + box.height / 2)
       return Math.max(...rowCenters) - Math.min(...rowCenters) <= 2
     })
@@ -785,13 +801,6 @@ test("runs quick check-in for the selected eligible account from account managem
   )
 
   const serviceWorker = await getServiceWorker(context)
-  await seedUserPreferences(serviceWorker, {
-    autoCheckin: {
-      ...DEFAULT_PREFERENCES.autoCheckin!,
-      globalEnabled: false,
-      pretriggerDailyOnUiOpen: false,
-    },
-  })
   await seedStoredAccounts(serviceWorker, [
     createStoredAccount({
       id: "quick-checkin-account",
@@ -1085,6 +1094,7 @@ test("explains open-tab priority and restores field order when disabled", async 
 }, testInfo) => {
   const serviceWorker = await getServiceWorker(context)
   await seedUserPreferences(serviceWorker, {
+    ...ISOLATED_ACCOUNT_PREFERENCES,
     sortField: "name",
     sortOrder: "asc",
   })

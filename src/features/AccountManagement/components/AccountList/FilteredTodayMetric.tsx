@@ -32,7 +32,7 @@ export function FilteredTodayMetric({
     )
     const value = (
       <span
-        aria-label={visibleLabel}
+        aria-label={presentation.requiresRefresh ? visibleLabel : undefined}
         className={
           presentation.requiresRefresh
             ? "cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
@@ -43,6 +43,9 @@ export function FilteredTodayMetric({
         <span aria-hidden="true">
           {presentation.requiresRefresh ? visibleLabel : "—"}
         </span>
+        {!presentation.requiresRefresh && (
+          <span className="sr-only">{visibleLabel}</span>
+        )}
       </span>
     )
 

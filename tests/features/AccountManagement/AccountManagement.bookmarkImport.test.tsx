@@ -123,18 +123,7 @@ vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
 })
 
 vi.mock("~/features/AccountManagement/components/AccountList", () => ({
-  default: ({ onAddAccount }: { onAddAccount?: () => void }) => (
-    <div>
-      <div>AccountList</div>
-      <button
-        type="button"
-        data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton}
-        onClick={onAddAccount}
-      >
-        account:addAccount
-      </button>
-    </div>
-  ),
+  default: () => <div>AccountList</div>,
 }))
 
 vi.mock("~/features/AccountManagement/components/DedupeAccountsDialog", () => ({

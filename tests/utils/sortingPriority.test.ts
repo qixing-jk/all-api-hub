@@ -257,6 +257,11 @@ describe("createDynamicSortComparator", () => {
 
   it("supports health status as an active user sort", () => {
     const accounts = [
+      buildDisplaySiteData({ id: "missing", health: undefined }),
+      buildDisplaySiteData({
+        id: "unknown",
+        health: { status: SiteHealthStatus.Unknown },
+      }),
       buildDisplaySiteData({
         id: "healthy",
         health: { status: SiteHealthStatus.Healthy },
@@ -284,6 +289,8 @@ describe("createDynamicSortComparator", () => {
     expect(accounts.map(({ id }) => id)).toEqual([
       "error",
       "warning",
+      "missing",
+      "unknown",
       "healthy",
     ])
   })

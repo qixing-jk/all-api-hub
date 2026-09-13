@@ -2149,6 +2149,35 @@ describe("AccountList", () => {
     expect(incomeSummary).not.toHaveTextContent(/999|888/)
   })
 
+  it("exposes unavailable filtered totals as readable text beside the visual dash", async () => {
+    const account = buildDisplaySiteData({
+      todayStatsAvailability: buildCompleteTodayStatsAvailability({
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        },
+      }),
+    })
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        sortedData: [account],
+        displayData: [account],
+        tags: [],
+        tagCountsById: {},
+      }),
+    )
+    render(<AccountList />)
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "common:status.enabled" }))
+    const label = screen.getByText(
+      "account:todayMetricAvailability.unavailable",
+    )
+    expect(label).toHaveClass("sr-only")
+    expect(label.closest('[aria-hidden="true"]')).toBeNull()
+    expect(label.parentElement).toHaveTextContent("—")
+  })
+
   it("keeps site-type options visible when search narrows counts to zero", () => {
     render(<AccountList initialSearchQuery="beta" />)
 

@@ -2344,7 +2344,27 @@ describe("AccountDataContext sorting behavior", () => {
       sortOrder: "asc",
     }
 
-    const getLatestCtx = await renderAccountDataProvider()
+    const observedSortFields: ActiveSortField[] = []
+    let latestContext: ReturnType<typeof useAccountDataContext> | null = null
+    function ObserveSortField() {
+      latestContext = useAccountDataContext()
+      observedSortFields.push(latestContext.sortField)
+      return null
+    }
+    render(
+      <I18nextProvider i18n={testI18n}>
+        <AccountDataProvider>
+          <ObserveSortField />
+        </AccountDataProvider>
+      </I18nextProvider>,
+    )
+    expect(observedSortFields.length).toBeGreaterThan(0)
+    expect(
+      observedSortFields.every((field) => field === DATA_TYPE_BALANCE),
+    ).toBe(true)
+
+    const getLatestCtx = () =>
+      latestContext as ReturnType<typeof useAccountDataContext>
 
     await waitFor(() => {
       expect(getLatestCtx().sortField).toBe(DATA_TYPE_BALANCE)

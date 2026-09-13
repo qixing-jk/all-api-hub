@@ -145,8 +145,8 @@ function isNotCheckedIn(item: DisplaySiteData): boolean {
 /** Compares health using the established error-to-healthy severity order. */
 function compareHealthStatus(a: DisplaySiteData, b: DisplaySiteData): number {
   const healthPriority = { error: 1, warning: 2, unknown: 3, healthy: 4 }
-  const healthA = healthPriority[a.health?.status] || 4
-  const healthB = healthPriority[b.health?.status] || 4
+  const healthA = healthPriority[a.health?.status] ?? healthPriority.unknown
+  const healthB = healthPriority[b.health?.status] ?? healthPriority.unknown
   return healthA - healthB
 }
 
