@@ -196,10 +196,11 @@ for (const language of ["zh-CN", "en"] as const) {
       await page
         .getByRole("menuitem", { name: feedback.feedback, exact: true })
         .click()
-      await expect(
-        page.getByRole("dialog").getByLabel(feedback.notes),
-      ).toBeVisible()
-      await page.keyboard.press("Escape")
+      const notes = page.getByRole("dialog").getByLabel(feedback.notes)
+      await expect(notes).toBeVisible()
+      // The automatic scan can open a temporary page. Target the feedback
+      // field so Escape has the dialog focus required by its dismissal guard.
+      await notes.press("Escape")
       await expect(page.getByRole("dialog")).toBeHidden()
       await page.screenshot({
         path: testInfo.outputPath(`result-actions-${language}-${width}.png`),

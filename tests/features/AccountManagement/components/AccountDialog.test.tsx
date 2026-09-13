@@ -458,12 +458,14 @@ describe("AccountDialog", () => {
     }))
   })
 
-  it.each(["same", "changed-url", "changed-user"])(
+  it.each(["same", "changed-url", "changed-user", "changed-site-type"])(
     "preserves editor history only for the original account: %s",
     async (scenario) => {
       const user = userEvent.setup()
       mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
       mockState.draft.userId = scenario === "changed-user" ? "99" : "12"
+      if (scenario === "changed-site-type")
+        mockState.draft.siteType = SITE_TYPES.NEW_API
       mockState.url =
         scenario === "changed-url"
           ? "https://other.example"
@@ -495,7 +497,7 @@ describe("AccountDialog", () => {
       )
       await user.click(
         screen.getByRole("button", {
-          name: "accountDialog:checkInFeedback.request",
+          name: /accountDialog:checkInFeedback\.(request|feedback)/,
         }),
       )
       await screen.findByLabelText("accountDialog:checkInFeedback.notes")

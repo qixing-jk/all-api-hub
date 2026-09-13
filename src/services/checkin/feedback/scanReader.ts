@@ -34,6 +34,7 @@ export function createScanReader(
       abort()
     }, FEEDBACK_SCAN_LIMITS.requestTimeoutMs)
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
+    let responseBytes = 0
     try {
       const response = await fetcher(parsed.href, {
         method: "GET",
@@ -56,7 +57,11 @@ export function createScanReader(
         const chunk = await reader.read()
         if (chunk.done) break
         bytes += chunk.value.byteLength
-        if (bytes > FEEDBACK_SCAN_LIMITS.bytes) {
+        responseBytes += chunk.value.byteLength
+        if (
+          bytes > FEEDBACK_SCAN_LIMITS.bytes ||
+          responseBytes > FEEDBACK_SCAN_LIMITS.responseBytes
+        ) {
           issues.add("limit")
           throw new Error("scan_limit")
         }
@@ -68,7 +73,11 @@ export function createScanReader(
         type: response.headers.get("content-type") ?? "",
       }
     } catch (error) {
-      if (!request.signal.aborted && bytes <= FEEDBACK_SCAN_LIMITS.bytes)
+      if (
+        !request.signal.aborted &&
+        bytes <= FEEDBACK_SCAN_LIMITS.bytes &&
+        responseBytes <= FEEDBACK_SCAN_LIMITS.responseBytes
+      )
         issues.add("unavailable")
       throw error
     } finally {

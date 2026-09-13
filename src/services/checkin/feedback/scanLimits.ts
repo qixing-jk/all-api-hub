@@ -5,5 +5,6 @@ export const FEEDBACK_SCAN_LIMITS = {
   resourceConcurrency: 4,
   requests: 64,
   bytes: 32 * 1024 * 1024,
+  responseBytes: 4 * 1024 * 1024,
   routes: 30,
 } as const

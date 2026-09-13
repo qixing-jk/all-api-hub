@@ -408,6 +408,7 @@ export default function AccountDialog({
                 feedbackAccountId={
                   account &&
                   account.baseUrl === state.url &&
+                  account.siteType === state.draft.siteType &&
                   String(account.userId) === state.draft.userId
                     ? account.id
                     : undefined

@@ -425,6 +425,45 @@ describe("optional check-in clue scan", () => {
     expect(clues.issues).toContain("limit")
   })
 
+  it("cancels an oversized asset and continues collecting clues from other assets", async () => {
+    const cancel = vi.fn()
+    const fetch = vi.fn(async (url: string) => {
+      if (url === baseUrl + "/")
+        return response(
+          '<script src="/large.js"></script><script src="/small.js"></script>',
+          "text/html",
+        )
+      if (url.endsWith("large.js"))
+        return new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(
+                new Uint8Array(FEEDBACK_SCAN_LIMITS.responseBytes + 1),
+              )
+              controller.enqueue(
+                new TextEncoder().encode("'/api/checkin/omitted'"),
+              )
+              controller.close()
+            },
+            cancel,
+          }),
+          { headers: { "content-type": "text/javascript" } },
+        )
+      return response("'/api/checkin'", "text/javascript")
+    })
+    vi.stubGlobal("fetch", fetch)
+    const clues = await collectCheckInFeedbackClues(
+      { baseUrl, siteType: SITE_TYPES.UNKNOWN },
+      new AbortController().signal,
+    )
+    expect(clues.routes).toEqual(["/api/checkin"])
+    expect(clues.issues).toContain("limit")
+    expect(clues.issues).not.toContain("unavailable")
+    expect(clues.status).toBe("partial")
+    expect(fetch).toHaveBeenCalledTimes(3)
+    expect(cancel).toHaveBeenCalledOnce()
+  })
+
   it("cancels an oversized stream before reading the remaining body", async () => {
     const cancel = vi.fn()
     const fetch = vi.fn(
