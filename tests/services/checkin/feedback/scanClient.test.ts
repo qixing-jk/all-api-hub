@@ -39,6 +39,35 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 describe("feedback browser scan", () => {
+  it("avoids a browser task for an invalid origin", async () => {
+    expect(
+      await collectFeedbackCluesInBrowser(
+        { ...input, baseUrl: "invalid" },
+        new AbortController().signal,
+      ),
+    ).toEqual(clues)
+    expect(executeProtectionBypassTask).not.toHaveBeenCalled()
+  })
+
+  it("omits an absent user ID from the selected token envelope", async () => {
+    vi.mocked(executeProtectionBypassTask).mockResolvedValue({
+      success: true,
+      data: clues,
+    })
+    await collectFeedbackCluesInBrowser(
+      {
+        ...input,
+        auth: { authType: AuthTypeEnum.AccessToken, accessToken: "selected" },
+      },
+      new AbortController().signal,
+    )
+    const auth = vi.mocked(executeProtectionBypassTask).mock.calls[0][0].task
+    expect(auth).toMatchObject({
+      params: { input: { auth: { accessToken: "selected" } } },
+    })
+    expect(JSON.stringify(auth)).not.toContain("userId")
+  })
+
   it("prefers a protected page with a feedback command and copies only the selected token fields", async () => {
     vi.mocked(executeProtectionBypassTask).mockResolvedValue({
       success: true,
@@ -94,6 +123,9 @@ describe("feedback browser scan", () => {
   })
 
   it("cancels the remote request without falling back or waiting for a late result", async () => {
+    vi.mocked(sendRuntimeMessage).mockRejectedValueOnce(
+      new Error("port closed"),
+    )
     const remote = createDeferred<any>()
     vi.mocked(executeProtectionBypassTask).mockReturnValue(remote.promise)
     const controller = new AbortController()

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { getCheckInFeedbackStatusRoutes } from "~/services/checkin/autoCheckin/providers/feedbackRoutes"
 import {
   collectCheckInFeedbackClues,
   extractCheckInRoutes,
@@ -20,6 +21,64 @@ afterEach(() => {
 })
 
 describe("optional check-in clue scan", () => {
+  it("does not start further status requests after cancellation", async () => {
+    const controller = new AbortController()
+    const fetch = vi.fn(async () => {
+      controller.abort()
+      return response('{"success":true}')
+    })
+    vi.stubGlobal("fetch", fetch)
+    const clues = await collectCheckInFeedbackClues(
+      {
+        baseUrl,
+        siteType: SITE_TYPES.NEW_API,
+        auth: { authType: AuthTypeEnum.AccessToken, accessToken: "selected" },
+      },
+      controller.signal,
+    )
+    expect(fetch).toHaveBeenCalledOnce()
+    expect(clues.statusQueries).toHaveLength(1)
+    expect(clues.status).toBe("partial")
+  })
+
+  it("uses Wong's read-only route and excludes AnyRouter's mutation-only flow", () => {
+    expect(getCheckInFeedbackStatusRoutes(SITE_TYPES.WONG_GONGYI)).toEqual([
+      { path: "/api/user/checkin" },
+    ])
+    expect(getCheckInFeedbackStatusRoutes(SITE_TYPES.ANYROUTER)).toEqual([])
+  })
+  it("reports route limits and invalid resource responses while retaining useful clues", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url === baseUrl + "/")
+          return response(
+            '<script src="/a.js"></script><script src="/b.js"></script><script src="/bad.js"></script>',
+            "text/html",
+          )
+        if (url.endsWith("bad.js"))
+          return response("<html>challenge</html>", "text/html")
+        const prefix = url.endsWith("a.js") ? "a" : "b"
+        return response(
+          Array.from(
+            { length: 20 },
+            (_, i) => `'/api/checkin/${prefix}${i}'`,
+          ).join(";"),
+          "text/javascript",
+        )
+      }),
+    )
+    const clues = await collectCheckInFeedbackClues(
+      { baseUrl, siteType: SITE_TYPES.UNKNOWN },
+      new AbortController().signal,
+    )
+    expect(clues.routes).toHaveLength(FEEDBACK_SCAN_LIMITS.routes)
+    expect(clues.status).toBe("partial")
+    expect(clues.issues).toEqual(
+      expect.arrayContaining(["route_limit", "resource_response"]),
+    )
+  })
+
   it("searches already loaded chunks absent from the DOM without fetching unused references when clues are found", async () => {
     const fetch = vi.fn(async (url: string) =>
       url === baseUrl + "/"
@@ -406,6 +465,9 @@ describe("optional check-in clue scan", () => {
       new AbortController().signal,
     )
     expect(clues.authenticatedQueriesUnavailable).toBe(true)
+    expect(formatCheckInFeedbackClues(clues)).toContain(
+      "authenticated_status: unavailable",
+    )
     expect(clues.statusQueries).toEqual([])
     expect(fetch).toHaveBeenCalledTimes(1)
     expect(fetch).toHaveBeenCalledWith(

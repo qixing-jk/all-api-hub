@@ -6,6 +6,7 @@ import {
 } from "~/constants/openRouterBootstrap"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
+import { executeTempCheckinFeedbackScan } from "~/entrypoints/background/checkinFeedbackScan"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import {
@@ -24,6 +25,10 @@ import {
   AUTH_MODE,
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
 } from "~/utils/browser/cookieHelper"
+
+vi.mock("~/entrypoints/background/checkinFeedbackScan", () => ({
+  executeTempCheckinFeedbackScan: vi.fn(),
+}))
 
 const {
   trackProductAnalyticsActionCompletedMock,
@@ -3445,6 +3450,54 @@ describe("tempWindowPool window fallback", () => {
         action: RuntimeActionIds.ContentPerformTempWindowFetch,
       }),
     )
+  })
+
+  it("dispatches an authorized feedback task with its acquisition policy and reply", async () => {
+    const { executeAuthorizedTempContextTask } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+    const params = {
+      originUrl: "https://example.com",
+      requestId: "feedback-dispatch",
+      input: { baseUrl: "https://example.com", siteType: "new-api" as const },
+    }
+    const authorize = vi
+      .fn()
+      .mockResolvedValue({ kind: "allowed", adapter: "tab" })
+    const reply = vi.fn()
+    await executeAuthorizedTempContextTask(
+      { kind: "checkin_feedback_scan", params },
+      "options",
+      authorize,
+      reply,
+    )
+    expect(executeTempCheckinFeedbackScan).toHaveBeenCalledWith(
+      params,
+      expect.any(Boolean),
+      authorize,
+      reply,
+    )
+  })
+
+  it("cancels readiness immediately if its owner aborts during page creation", async () => {
+    tempContextMode = "tab"
+    const controller = new AbortController()
+    createTabMock.mockImplementationOnce(async () => {
+      controller.abort()
+      return { id: 509 }
+    })
+    const { tempWindowBackgroundRuntime } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+    await expect(
+      tempWindowBackgroundRuntime.acquire(
+        "https://example.com",
+        "feedback-early-close",
+        false,
+        { signal: controller.signal },
+      ),
+    ).rejects.toThrow("Temporary page cancelled")
+    expect(removeTabMock).toHaveBeenCalledWith(509)
   })
 
   it("cancels feedback page readiness and stops polling when its owner closes", async () => {

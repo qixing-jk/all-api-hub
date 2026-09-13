@@ -1,6 +1,9 @@
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import {
+  ACCOUNT_MANAGEMENT_TEST_IDS,
+  getAccountManagementListItemTestId,
+} from "~/features/AccountManagement/testIds"
 import en from "~/locales/en/account.json" with { type: "json" }
 import zh from "~/locales/zh-CN/account.json" with { type: "json" }
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
@@ -50,6 +53,10 @@ for (const width of [390, 1100]) {
       )
       await waitForExtensionRoot(page)
       await expectPermissionOnboardingHidden(page)
+      const row = page.getByTestId(
+        getAccountManagementListItemTestId("menu-account"),
+      )
+      await row.hover()
       const more = page.getByTestId(
         ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton,
       )
@@ -127,6 +134,7 @@ for (const width of [390, 1100]) {
       await page.keyboard.press("ArrowLeft")
       await page.keyboard.press("Escape")
       await expect(page.getByRole("menu")).toHaveCount(0)
+      await row.hover()
       await more.click()
       await page
         .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowKeyManagementMenuItem)

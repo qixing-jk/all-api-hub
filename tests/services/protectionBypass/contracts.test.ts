@@ -575,6 +575,42 @@ describe("protection bypass runtime contracts", () => {
     }
   })
 
+  it.each(["42", 42, {}, null])(
+    "validates feedback user identity %j",
+    (userId) => {
+      expect(
+        isTempContextTask({
+          kind: TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan,
+          params: {
+            originUrl: "https://example.invalid",
+            requestId: "identity",
+            input: {
+              baseUrl: "https://example.invalid",
+              siteType: "new-api",
+              auth: {
+                authType: "access_token",
+                accessToken: "selected",
+                userId,
+              },
+            },
+          },
+        }),
+      ).toBe(typeof userId === "string" || typeof userId === "number")
+    },
+  )
+
+  it("rejects feedback messages with no input object", () => {
+    expect(
+      isTempContextTask({
+        kind: TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan,
+        params: {
+          originUrl: "https://example.invalid",
+          requestId: "missing-input",
+        },
+      }),
+    ).toBe(false)
+  })
+
   it.each(canonicalTasks)("accepts HTTP for $kind", (task) => {
     const params = Object.fromEntries(
       Object.entries(task.params).map(([key, value]) => [

@@ -43,6 +43,40 @@ describe("check-in feedback report", () => {
     expect(report).toContain("executionRecordedAt: 1970-01-01T00:00:00.001Z")
   })
 
+  it("retains unknown detection and status reasons without inventing an execution timestamp", () => {
+    const report = buildCheckInFeedbackDetails(
+      {
+        siteType: SITE_TYPES.NEW_API,
+        baseUrl: "https://example.com",
+        execution: { status: "failed" },
+        checkIn: {
+          ...checkIn,
+          methodKnowledge: {
+            methods: {
+              "new-api:daily-checkin": {
+                detection: {
+                  outcome: "unknown",
+                  reason: "permission_denied",
+                  attemptedAt: 2,
+                },
+                status: {
+                  outcome: "unknown",
+                  reason: "permission_denied",
+                  attemptedAt: 3,
+                },
+              },
+            },
+          },
+        },
+      },
+      { version: "1", platform: "chromium" },
+    )
+    expect(report).toContain("unknown (permission_denied)")
+    expect(report).toContain("savedStatus: unknown")
+    expect(report).toContain("1970-01-01T00:00:00.003Z")
+    expect(report).not.toContain("executionRecordedAt")
+  })
+
   it("omits credentials and distinguishes uninspected, retained and failed evidence", () => {
     const report = buildCheckInFeedbackDetails(
       {

@@ -27,12 +27,14 @@ import { collectFeedbackCluesInBrowser } from "~/services/checkin/feedback/scanC
 import type { CheckinAccountResult } from "~/types/autoCheckin"
 import type { CheckInConfig } from "~/types/checkIn"
 import { createTab } from "~/utils/browser/browserApi"
+import { openAccountManagerWithSearch } from "~/utils/navigation"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
   accountQueries: { getAccountById: vi.fn() },
 }))
+vi.mock("~/utils/navigation", () => ({ openAccountManagerWithSearch: vi.fn() }))
 vi.mock("~/services/checkin/autoCheckin/storage", () => ({
   autoCheckinStorage: { getStatus: vi.fn() },
 }))
@@ -84,6 +86,158 @@ afterEach(() => {
 })
 
 describe("check-in feedback workflow", () => {
+  it("opens adaptation feedback as the primary action for an unsupported result", async () => {
+    const user = userEvent.setup()
+    vi.mocked(accountQueries.getAccountById).mockResolvedValue(
+      buildSiteAccount(),
+    )
+    render(
+      wrap(
+        <ResultsTableRowActions
+          result={{
+            accountId: "unsupported",
+            accountName: "Account",
+            timestamp: 1,
+            status: "skipped",
+            reasonCode: "no_provider",
+          }}
+        />,
+      ),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: accountDialogLocale.checkInFeedback.request,
+      }),
+    )
+    expect(
+      await screen.findByLabelText("What happened? (optional)"),
+    ).toBeVisible()
+    expect(accountQueries.getAccountById).toHaveBeenCalledWith("unsupported")
+  })
+
+  it("retries the selected result from its overflow menu", async () => {
+    const user = userEvent.setup()
+    const retry = vi.fn()
+    render(
+      wrap(
+        <ResultsTableRowActions
+          result={{
+            accountId: "retry-target",
+            accountName: "Account",
+            timestamp: 1,
+            status: "failed",
+          }}
+          onRetryAccount={retry}
+        />,
+      ),
+    )
+    await user.click(screen.getByRole("button", { name: "More" }))
+    await user.click(
+      screen.getByRole("menuitem", {
+        name: autoCheckinLocale.execution.actions.retryAccount,
+      }),
+    )
+    expect(retry).toHaveBeenCalledWith("retry-target")
+  })
+
+  it.each(["editor", "saved"])(
+    "keeps %s feedback available if execution history cannot be read",
+    async (sourceKind) => {
+      vi.mocked(autoCheckinStorage.getStatus).mockRejectedValueOnce(
+        new Error("storage unavailable"),
+      )
+      vi.mocked(accountQueries.getAccountById).mockResolvedValue(
+        buildSiteAccount(),
+      )
+      render(
+        wrap(
+          <CheckInFeedbackDialog
+            source={
+              sourceKind === "editor"
+                ? { accountId: "account", snapshot }
+                : { accountId: "account" }
+            }
+            onClose={vi.fn()}
+          />,
+        ),
+      )
+      expect(
+        await screen.findByLabelText("What happened? (optional)"),
+      ).toBeVisible()
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    },
+  )
+
+  it("returns to the requested account after an account read failure", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    vi.mocked(accountQueries.getAccountById).mockRejectedValueOnce(
+      new Error("storage unavailable"),
+    )
+    render(
+      wrap(
+        <CheckInFeedbackDialog
+          source={{ accountId: "unreadable" }}
+          onClose={onClose}
+        />,
+      ),
+    )
+    await screen.findByRole("alert")
+    await user.click(
+      screen.getByRole("button", {
+        name: accountDialogLocale.checkInFeedback.accounts,
+      }),
+    )
+    expect(openAccountManagerWithSearch).toHaveBeenCalledWith("unreadable")
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it("lets users edit completed clues and retry a failed GitHub opening", async () => {
+    const user = userEvent.setup()
+    vi.mocked(collectFeedbackCluesInBrowser).mockResolvedValue({
+      status: "completed",
+      routes: ["/api/checkin"],
+      statusQueries: [],
+      authenticatedQueriesUnavailable: false,
+    })
+    vi.mocked(createTab).mockRejectedValueOnce(new Error("tabs unavailable"))
+    render(
+      wrap(<CheckInFeedbackDialog source={{ snapshot }} onClose={vi.fn()} />),
+    )
+    await screen.findByText(accountDialogLocale.checkInFeedback.scanCompleted)
+    await user.click(screen.getByText("Review and edit submission"))
+    await user.click(
+      screen.getByText(accountDialogLocale.checkInFeedback.editReport),
+    )
+    const clues = screen.getByLabelText(
+      accountDialogLocale.checkInFeedback.clues,
+    )
+    await user.clear(clues)
+    await user.type(clues, "Manually corrected clue")
+    await user.click(screen.getByRole("button", { name: "Continue to GitHub" }))
+    expect(
+      await screen.findByText(accountDialogLocale.checkInFeedback.openFailed),
+    ).toBeVisible()
+    await user.click(screen.getByRole("button", { name: "Continue to GitHub" }))
+    expect(
+      await screen.findByText(accountDialogLocale.checkInFeedback.opened),
+    ).toBeVisible()
+    expect(vi.mocked(createTab).mock.calls.at(-1)?.[0]).toContain("Manually")
+  })
+
+  it("does not collect from an invalid site address", async () => {
+    render(
+      wrap(
+        <CheckInFeedbackDialog
+          source={{ snapshot: { ...snapshot, baseUrl: "invalid" } }}
+          onClose={vi.fn()}
+        />,
+      ),
+    )
+    await screen.findByLabelText("What happened? (optional)")
+    expect(collectFeedbackCluesInBrowser).not.toHaveBeenCalled()
+  })
+
   it("presents collected information without an incomplete-query warning and retains diagnostic notes", async () => {
     const user = userEvent.setup()
     vi.mocked(collectFeedbackCluesInBrowser).mockResolvedValue({

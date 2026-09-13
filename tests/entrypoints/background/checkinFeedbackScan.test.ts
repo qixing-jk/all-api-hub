@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   cancelTempCheckinFeedbackScan,
@@ -6,8 +6,11 @@ import {
 } from "~/entrypoints/background/checkinFeedbackScan"
 import { tempWindowBackgroundRuntime } from "~/entrypoints/background/tempWindowPool"
 import { resolveAccountSiteRouteUrl } from "~/services/accounts/utils/siteRouteResolver"
+import { FEEDBACK_SCAN_SESSION_TIMEOUT_MS } from "~/services/checkin/feedback/scanTypes"
 import { sendTabMessageWithRetry } from "~/utils/browser/browserApi"
 import { removeTempWindowCookieRule } from "~/utils/browser/dnrCookieInjector"
+
+afterEach(() => vi.useRealTimers())
 
 vi.mock("~/entrypoints/background/tempWindowPool", () => ({
   tempWindowBackgroundRuntime: {
@@ -55,6 +58,51 @@ beforeEach(() => {
 })
 
 describe("temporary feedback scan ownership", () => {
+  it("falls back after route lookup failure", async () => {
+    vi.mocked(resolveAccountSiteRouteUrl).mockRejectedValueOnce(
+      new Error("lookup failed"),
+    )
+    const reply = vi.fn()
+    await executeTempCheckinFeedbackScan(
+      params("route-failure"),
+      false,
+      authorize,
+      reply,
+    )
+    expect(tempWindowBackgroundRuntime.acquire).toHaveBeenCalledWith(
+      "https://example.com",
+      "route-failure",
+      false,
+      expect.any(Object),
+      authorize,
+    )
+    expect(reply).toHaveBeenCalledWith({ success: true, data: {} })
+  })
+
+  it("releases the page at its deadline even if cancellation messages reject", async () => {
+    vi.useFakeTimers()
+    vi.mocked(sendTabMessageWithRetry).mockImplementation(
+      async (_tab, request: any) => {
+        if (request.action === "contentCheckinFeedbackScan")
+          return new Promise(() => {})
+        throw new Error("closed port")
+      },
+    )
+    const reply = vi.fn()
+    const pending = executeTempCheckinFeedbackScan(
+      params("deadline-failure"),
+      false,
+      authorize,
+      reply,
+    )
+    await vi.advanceTimersByTimeAsync(FEEDBACK_SCAN_SESSION_TIMEOUT_MS)
+    await pending
+    expect(reply).toHaveBeenCalledWith({ success: false })
+    expect(removeTempWindowCookieRule).toHaveBeenCalledWith(17)
+    expect(release).toHaveBeenCalledOnce()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
   it.each([null, "https://other.example/checkin"])(
     "uses the site homepage when no same-origin manual route is available: %s",
     async (route) => {

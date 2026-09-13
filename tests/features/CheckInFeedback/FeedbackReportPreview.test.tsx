@@ -32,6 +32,7 @@ it("renders the outgoing issue with expandable literal diagnostics and sanitized
   expect(screen.queryByText("alert(1)")).not.toBeInTheDocument()
   await user.click(screen.getByText("Diagnostics"))
   expect(screen.getByText(/literal diagnostic/)).toBeVisible()
+  screen.getByText("Diagnostics").focus()
   rerender(
     <FeedbackReportPreview
       content={
@@ -40,4 +41,5 @@ it("renders the outgoing issue with expandable literal diagnostics and sanitized
     />,
   )
   expect(screen.getByText("updated diagnostic")).toBeVisible()
+  expect(screen.getByText("Diagnostics")).toHaveFocus()
 })

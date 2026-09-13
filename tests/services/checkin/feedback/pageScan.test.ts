@@ -7,15 +7,115 @@ import { createDeferred } from "~~/tests/test-utils/deferred"
 
 const origin = "https://example.com"
 afterEach(() => {
+  vi.restoreAllMocks()
   vi.unstubAllGlobals()
   document.head.innerHTML = ""
   document.body.innerHTML = ""
 })
 
 describe("rendered feedback scan", () => {
+  it("stops authenticated reads when the page changes origin during collection", async () => {
+    const pageLocation = { origin, href: origin + "/" }
+    vi.stubGlobal("location", pageLocation)
+    const fetch = vi.fn(async () => {
+      pageLocation.origin = "https://other.example"
+      return new Response('{"success":true}')
+    })
+    vi.stubGlobal("fetch", fetch)
+    const result = createDeferred<any>()
+    handlePageFeedbackScan(
+      {
+        params: {
+          originUrl: origin,
+          requestId: "origin-during-read",
+          input: {
+            baseUrl: origin,
+            siteType: "new-api",
+            auth: { authType: "access_token", accessToken: "selected" },
+          },
+        },
+        statusOptions: { "/api/user/checkin": { credentials: "omit" } },
+      },
+      result.resolve,
+    )
+    expect((await result.promise).data.status).toBe("partial")
+    expect(fetch).toHaveBeenCalledOnce()
+  })
+
+  it("rejects malformed scan envelopes before reading the page", () => {
+    const reply = vi.fn()
+    handlePageFeedbackScan({ params: {} }, reply)
+    expect(reply).toHaveBeenCalledWith({ success: false })
+  })
+
+  it("does not send a selected token without background-prepared status options", async () => {
+    vi.stubGlobal("location", { origin, href: origin + "/" })
+    const fetch = vi.fn(
+      async (_url: string, _init: RequestInit) =>
+        new Response('{"success":true}'),
+    )
+    vi.stubGlobal("fetch", fetch)
+    const result = createDeferred<any>()
+    handlePageFeedbackScan(
+      {
+        params: {
+          originUrl: origin,
+          requestId: "missing-isolation",
+          input: {
+            baseUrl: origin,
+            siteType: "new-api",
+            auth: { authType: "access_token", accessToken: "selected" },
+          },
+        },
+      },
+      result.resolve,
+    )
+    const reply = await result.promise
+    expect(reply.success).toBe(true)
+    expect(reply.data.status).toBe("partial")
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(fetch).toHaveBeenCalledWith(
+      origin + "/api/status",
+      expect.any(Object),
+    )
+    expect(
+      new Headers(fetch.mock.calls[0][1]?.headers).has("Authorization"),
+    ).toBe(false)
+  })
+
+  it("discards a result when pagehide cancels an active resource read", async () => {
+    vi.stubGlobal("location", { origin, href: origin + "/" })
+    document.body.innerHTML = '<script src="/app.js"></script>'
+    const resource = createDeferred<Response>()
+    const fetch = vi.fn(() => resource.promise)
+    vi.stubGlobal("fetch", fetch)
+    const result = createDeferred<any>()
+    handlePageFeedbackScan(
+      {
+        params: {
+          originUrl: origin,
+          requestId: "pagehide-read",
+          input: { baseUrl: origin, siteType: "unknown" },
+        },
+      },
+      result.resolve,
+    )
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce())
+    window.dispatchEvent(new Event("pagehide"))
+    resource.resolve(
+      new Response("'/api/checkin'", {
+        headers: { "content-type": "text/javascript" },
+      }),
+    )
+    expect(await result.promise).toEqual({ success: false })
+  })
+
   it("reads the rendered page and fetches resources with its session while isolating status requests", async () => {
     vi.stubGlobal("location", { origin, href: origin + "/" })
     document.body.innerHTML = '<script src="/app.js"></script>'
+    vi.spyOn(performance, "getEntriesByType").mockReturnValue([
+      { name: origin + "/app.js" } as PerformanceEntry,
+    ])
     const fetch = vi.fn(
       async (url: string, _init: RequestInit) =>
         new Response(
@@ -45,7 +145,7 @@ describe("rendered feedback scan", () => {
         },
         statusOptions: {
           "/api/status": { credentials: "omit" },
-          "/api/user/checkin": { credentials: "omit" },
+          "/api/user/checkin": { headers: { "X-Test-Isolation": "prepared" } },
           "/api/user/check_in_status": { credentials: "omit" },
         },
       },
@@ -61,6 +161,10 @@ describe("rendered feedback scan", () => {
       )
       if (url.endsWith("app.js"))
         expect(new Headers(options.headers).has("Authorization")).toBe(false)
+      if (new URL(url).pathname === "/api/user/checkin")
+        expect(new Headers(options.headers).get("X-Test-Isolation")).toBe(
+          "prepared",
+        )
     }
   })
 
