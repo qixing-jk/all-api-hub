@@ -49,6 +49,7 @@ const packageBefore = {
   dependencies: { example: "1.0.0" },
 }
 
+/** Creates a release PR event and overridable Git responses for guard tests. */
 function input(overrides = {}) {
   return {
     eventName: "pull_request",
