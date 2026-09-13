@@ -1,3 +1,5 @@
+import { createDeferred } from "~~/tests/test-utils/deferred"
+
 import "./accountActionButtonsMocks"
 
 import { screen, waitFor, within } from "@testing-library/react"
@@ -28,7 +30,6 @@ import {
 } from "./accountActionButtonsMocks"
 import {
   buildDisplaySiteData,
-  createDeferred,
   setupAccountActionButtonsTest,
 } from "./accountActionButtonsTestSupport"
 
@@ -256,12 +257,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const disableButton = (
-      await within(menu).findByText("account:actions.disableAccount")
-    ).closest("button")
-    expect(disableButton).not.toBeNull()
+    const disableButton = await within(menu).findByRole("menuitem", {
+      name: "account:actions.disableAccount",
+    })
 
-    await user.click(disableButton!)
+    await user.click(disableButton)
 
     await waitFor(() => {
       expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({

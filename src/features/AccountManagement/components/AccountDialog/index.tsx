@@ -405,6 +405,15 @@ export default function AccountDialog({
               <AccountForm
                 ref={accountFormRef}
                 draft={state.draft}
+                feedbackAccountId={
+                  account &&
+                  account.baseUrl === state.url &&
+                  String(account.userId) === state.draft.userId
+                    ? account.id
+                    : undefined
+                }
+                feedbackBaseUrl={state.url}
+                feedbackOriginalBaseUrl={account?.baseUrl}
                 sitePolicy={currentSitePolicy}
                 isDetected={state.isDetected}
                 isImportingSub2apiSession={state.isImportingSub2apiSession}

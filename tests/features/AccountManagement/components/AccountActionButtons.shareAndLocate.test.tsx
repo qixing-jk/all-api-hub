@@ -57,7 +57,7 @@ describe("AccountActionButtons", () => {
     accountDataContextValue.isAccountPinned.mockReturnValue(false)
     mockTogglePinAccount.mockResolvedValueOnce(false)
 
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -76,11 +76,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText("account:actions.pin")
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.pin",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     await waitFor(() => {
       expect(mockTogglePinAccount).toHaveBeenCalledWith("acc-pin-false")
@@ -96,7 +96,7 @@ describe("AccountActionButtons", () => {
 
   it("shares a sanitized snapshot using only visible cashflow data", async () => {
     userPreferencesContextValue.showTodayCashflow = false
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -120,13 +120,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText(
-      "shareSnapshots:actions.shareAccountSnapshot",
-    )
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "shareSnapshots:actions.shareAccountSnapshot",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     await waitFor(() => {
       expect(exportShareSnapshotWithToastMock).toHaveBeenCalledTimes(1)
@@ -163,7 +161,7 @@ describe("AccountActionButtons", () => {
   })
 
   it("includes the full cashflow bundle when the preference and both metrics are complete", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -184,9 +182,9 @@ describe("AccountActionButtons", () => {
     )
     const menu = await screen.findByRole("menu")
     await user.click(
-      within(menu)
-        .getByText("shareSnapshots:actions.shareAccountSnapshot")
-        .closest("button")!,
+      within(menu).getByRole("menuitem", {
+        name: "shareSnapshots:actions.shareAccountSnapshot",
+      }),
     )
 
     await waitFor(() => {
@@ -225,7 +223,7 @@ describe("AccountActionButtons", () => {
   ])(
     "falls back to a balance-only snapshot for $label",
     async ({ availability }) => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ skipHover: true })
 
       render(
         <AccountActionButtons
@@ -246,9 +244,9 @@ describe("AccountActionButtons", () => {
       )
       const menu = await screen.findByRole("menu")
       await user.click(
-        within(menu)
-          .getByText("shareSnapshots:actions.shareAccountSnapshot")
-          .closest("button")!,
+        within(menu).getByRole("menuitem", {
+          name: "shareSnapshots:actions.shareAccountSnapshot",
+        }),
       )
 
       await waitFor(() => {
@@ -266,7 +264,7 @@ describe("AccountActionButtons", () => {
     exportShareSnapshotWithToastMock.mockRejectedValueOnce(
       new Error("export failed"),
     )
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -285,13 +283,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText(
-      "shareSnapshots:actions.shareAccountSnapshot",
-    )
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "shareSnapshots:actions.shareAccountSnapshot",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     await waitFor(() => {
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
@@ -359,7 +355,7 @@ describe("AccountActionButtons", () => {
 
       getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService as any)
 
-      const user = userEvent.setup()
+      const user = userEvent.setup({ skipHover: true })
 
       render(
         <AccountActionButtons
@@ -379,13 +375,11 @@ describe("AccountActionButtons", () => {
       )
 
       const menu = await screen.findByRole("menu")
-      const label = await within(menu).findByText(
-        "account:actions.locateManagedSiteChannel",
-      )
-      const button = label.closest("button")
-      expect(button).not.toBeNull()
+      const button = await within(menu).findByRole("menuitem", {
+        name: "account:actions.locateManagedSiteChannel",
+      })
 
-      await user.click(button!)
+      await user.click(button)
 
       await waitFor(() => {
         expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
@@ -438,7 +432,7 @@ describe("AccountActionButtons", () => {
 
     getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService as any)
 
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -458,13 +452,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText(
-      "account:actions.locateManagedSiteChannel",
-    )
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.locateManagedSiteChannel",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     await waitFor(() => {
       expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
@@ -543,7 +535,7 @@ describe("AccountActionButtons", () => {
       },
     }
     getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService)
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -623,7 +615,7 @@ describe("AccountActionButtons", () => {
       },
     }
     getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService as any)
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -642,11 +634,9 @@ describe("AccountActionButtons", () => {
     )
     const menu = await screen.findByRole("menu")
     await user.click(
-      (
-        await within(menu).findByText(
-          "account:actions.locateManagedSiteChannel",
-        )
-      ).closest("button")!,
+      await within(menu).findByRole("menuitem", {
+        name: "account:actions.locateManagedSiteChannel",
+      }),
     )
 
     await waitFor(() => {
@@ -713,7 +703,7 @@ describe("AccountActionButtons", () => {
 
     getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService as any)
 
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -733,13 +723,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText(
-      "account:actions.locateManagedSiteChannel",
-    )
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.locateManagedSiteChannel",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     await waitFor(() => {
       expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
@@ -794,7 +782,7 @@ describe("AccountActionButtons", () => {
 
     getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService as any)
 
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -814,13 +802,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText(
-      "account:actions.locateManagedSiteChannel",
-    )
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.locateManagedSiteChannel",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     await waitFor(() => {
       expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
@@ -888,7 +874,7 @@ describe("AccountActionButtons", () => {
 
     getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService as any)
 
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -908,13 +894,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText(
-      "account:actions.locateManagedSiteChannel",
-    )
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.locateManagedSiteChannel",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     await waitFor(() => {
       expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
@@ -946,7 +930,7 @@ describe("AccountActionButtons", () => {
 
     getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService as any)
 
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -966,13 +950,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText(
-      "account:actions.locateManagedSiteChannel",
-    )
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.locateManagedSiteChannel",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     await waitFor(() => {
       expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
@@ -1005,7 +987,7 @@ describe("AccountActionButtons", () => {
 
     getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService as any)
 
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -1025,13 +1007,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText(
-      "account:actions.locateManagedSiteChannel",
-    )
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.locateManagedSiteChannel",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     await waitFor(() => {
       expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
@@ -1046,7 +1026,7 @@ describe("AccountActionButtons", () => {
   })
 
   it("shows an actionable locate action for providers with reliable base-url lookup", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -1066,12 +1046,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText(
-      "account:actions.locateManagedSiteChannel",
-    )
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
-    expect(button!).toBeEnabled()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.locateManagedSiteChannel",
+    })
+
+    expect(button).toBeEnabled()
     expect(
       within(menu).queryByText(
         "account:actions.locateManagedSiteChannelUnsupportedHint",
@@ -1098,7 +1077,7 @@ describe("AccountActionButtons", () => {
       userPreferencesContextValue.preferences =
         preferences as Partial<UserPreferences>
 
-      const user = userEvent.setup()
+      const user = userEvent.setup({ skipHover: true })
 
       render(
         <AccountActionButtons
@@ -1118,12 +1097,11 @@ describe("AccountActionButtons", () => {
       )
 
       const menu = await screen.findByRole("menu")
-      const label = await within(menu).findByText(
-        "account:actions.locateManagedSiteChannel",
-      )
-      const button = label.closest("button")
-      expect(button).not.toBeNull()
-      expect(button!).not.toBeDisabled()
+      const button = await within(menu).findByRole("menuitem", {
+        name: "account:actions.locateManagedSiteChannel",
+      })
+
+      expect(button).not.toBeDisabled()
       expect(
         within(menu).queryByText(
           "account:actions.locateManagedSiteChannelUnsupportedHint",
@@ -1140,7 +1118,7 @@ describe("AccountActionButtons", () => {
       },
     } as Partial<UserPreferences>
 
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -1160,12 +1138,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText(
-      "account:actions.locateManagedSiteChannel",
-    )
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
-    expect(button!).toBeEnabled()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.locateManagedSiteChannel",
+    })
+
+    expect(button).toBeEnabled()
     expect(
       within(menu).queryByText(
         "account:actions.locateManagedSiteChannelUnsupportedHint",
@@ -1176,7 +1153,7 @@ describe("AccountActionButtons", () => {
   it("hides the locate action when managed site config is missing", async () => {
     hasValidManagedSiteConfigMock.mockReturnValue(false)
 
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -1215,7 +1192,7 @@ describe("AccountActionButtons", () => {
 
     getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService as any)
 
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -1235,13 +1212,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText(
-      "account:actions.locateManagedSiteChannel",
-    )
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.locateManagedSiteChannel",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     await waitFor(() => {
       expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
@@ -1272,7 +1247,7 @@ describe("AccountActionButtons", () => {
 
     getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService as any)
 
-    const user = userEvent.setup()
+    const user = userEvent.setup({ skipHover: true })
 
     render(
       <AccountActionButtons
@@ -1292,13 +1267,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText(
-      "account:actions.locateManagedSiteChannel",
-    )
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.locateManagedSiteChannel",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledWith(

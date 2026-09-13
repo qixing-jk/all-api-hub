@@ -109,6 +109,7 @@ import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"
 import { appendQueryParam } from "~/utils/core/url"
 import { t } from "~/utils/i18n/core"
 
+import { executeTempCheckinFeedbackScan } from "./checkinFeedbackScan"
 import { handleTempWindowOpenRouterManagementKeyAction } from "./openrouter/managementKeyAction"
 import { resolveTempContextOpenMode } from "./tempContextModeResolver"
 import { checkTempContextProtectionGuards } from "./tempContextProtectionGuards"
@@ -389,9 +390,11 @@ async function prepareTempContextFetchOptions(params: {
 async function navigateTempContextToPage(
   context: TempContext,
   url: string,
-  meta: { requestId: string; origin: string },
+  meta: { requestId: string; origin: string; signal?: AbortSignal },
 ) {
+  meta.signal?.throwIfAborted()
   const currentTab = await getTempContextTabSnapshot(context.tabId)
+  meta.signal?.throwIfAborted()
   if (currentTab?.url === url && currentTab.status === "complete") {
     context.currentUrl = currentTab.url
     return
@@ -675,6 +678,15 @@ export async function executeAuthorizedTempContextTask(
   }
   const { suppressMinimize } = presentation
 
+  if (task.kind === TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan) {
+    await executeTempCheckinFeedbackScan(
+      task.params,
+      suppressMinimize,
+      authorizeAtAcquire,
+      sendResponse,
+    )
+    return
+  }
   if (task.kind === TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction) {
     await handleTempWindowOpenRouterManagementKeyAction(
       task.params,
@@ -2203,7 +2215,7 @@ async function acquireTempContext(
   url: string,
   requestId: string,
   suppressMinimize?: boolean,
-  options: { incognito?: boolean } = {},
+  options: { incognito?: boolean; signal?: AbortSignal } = {},
   authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
 ) {
   const origin = buildTempContextOriginKey(normalizeOrigin(url), options)
@@ -2233,6 +2245,7 @@ async function acquireTempContext(
       const decision = authorizeAtAcquire
         ? await authorizeAtAcquire()
         : undefined
+      options.signal?.throwIfAborted()
       finalDecision = decision
       if (decision?.kind === PROTECTION_BYPASS_DECISION_RESULTS.Denied) {
         throw createProtectionBypassDecisionError(decision)
@@ -2731,7 +2744,7 @@ async function createTempContextInstance(
   requestId: string,
   requestedMode: TempContextOpenMode,
   suppressMinimize = false,
-  options: { incognito?: boolean } = {},
+  options: { incognito?: boolean; signal?: AbortSignal } = {},
 ): Promise<TempContext> {
   let opened: TempContextOpenResult | undefined
   let downloadBlockRuleId: number | null = null
@@ -2781,7 +2794,11 @@ async function createTempContextInstance(
     // Best-effort: annotate the temporary window/tab so users understand why it opened.
     void showShieldBypassUiInTab({ tabId: opened.tabId, origin, requestId })
 
-    await waitForTabComplete(opened.tabId, { requestId, origin })
+    await waitForTabComplete(opened.tabId, {
+      requestId,
+      origin,
+      signal: options.signal,
+    })
     const readyTab = await getTempContextTabSnapshot(opened.tabId)
 
     logTempWindow("createTempContextInstanceReady", {
@@ -2878,6 +2895,7 @@ async function getTempContextTabSnapshot(
 
 /** Generic runtime port for background features that need a temporary page. */
 export const tempWindowBackgroundRuntime = {
+  prepareFetchOptions: prepareTempContextFetchOptions,
   run(
     url: string,
     options: { incognito?: boolean },
@@ -2890,7 +2908,7 @@ export const tempWindowBackgroundRuntime = {
     url: string,
     requestId: string,
     suppressMinimize?: boolean,
-    options: { incognito?: boolean } = {},
+    options: { incognito?: boolean; signal?: AbortSignal } = {},
     authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
   ) {
     const context = await acquireTempContext(
@@ -2904,7 +2922,7 @@ export const tempWindowBackgroundRuntime = {
       tabId: context.tabId,
       navigate: (
         targetUrl: string,
-        meta: { requestId: string; origin: string },
+        meta: { requestId: string; origin: string; signal?: AbortSignal },
       ) => navigateTempContextToPage(context, targetUrl, meta),
       inspect: () => getTempContextTabSnapshot(context.tabId),
       release: (releaseOptions: TempContextReleaseOptions = {}) =>
@@ -3288,17 +3306,35 @@ function normalizeOrigin(url: string) {
  */
 function waitForTabComplete(
   tabId: number,
-  meta?: { requestId?: string; origin?: string },
+  meta?: { requestId?: string; origin?: string; signal?: AbortSignal },
 ): Promise<void> {
   return new Promise((resolve, reject) => {
+    let settled = false
+    let retry: ReturnType<typeof setTimeout> | undefined
+    const finish = (error?: unknown) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timeout)
+      clearTimeout(retry)
+      meta?.signal?.removeEventListener("abort", cancel)
+      if (error) reject(error)
+      else resolve()
+    }
+    const cancel = () => finish(new Error("Temporary page cancelled"))
     const timeout = setTimeout(() => {
       logTempWindow("waitForTabCompleteTimeout", {
         tabId,
         requestId: meta?.requestId ?? null,
         origin: meta?.origin ?? null,
       })
-      reject(new Error(t("messages:background.pageLoadTimeout")))
+      finish(new Error(t("messages:background.pageLoadTimeout")))
     }, 20000) // 20秒超时
+
+    meta?.signal?.addEventListener("abort", cancel, { once: true })
+    if (meta?.signal?.aborted) {
+      cancel()
+      return
+    }
 
     let attempts = 0
     let lastPassed: boolean | null = null
@@ -3313,9 +3349,11 @@ function waitForTabComplete(
     })
 
     const checkStatus = async () => {
+      if (settled) return
       try {
         const tab = await getTab(tabId)
 
+        if (settled) return
         attempts += 1
         if (tab.status !== lastTabStatus) {
           lastTabStatus = tab.status
@@ -3343,6 +3381,7 @@ function waitForTabComplete(
             logger.warn("Guard checks via content script failed", error)
           }
 
+          if (settled) return
           const passed = capPassed && cloudflarePassed
 
           if (
@@ -3365,14 +3404,14 @@ function waitForTabComplete(
           }
           if (passed) {
             clearTimeout(timeout)
-            setTimeout(resolve, 500) // 再等待半秒，确保页面 JS 执行完
+            retry = setTimeout(() => finish(), 500) // 再等待半秒，确保页面 JS 执行完
           } else {
             // 盾页面未通过，继续轮询
-            setTimeout(checkStatus, 500)
+            retry = setTimeout(checkStatus, 500)
           }
         } else {
           // 页面未完全加载，继续轮询
-          setTimeout(checkStatus, 100)
+          retry = setTimeout(checkStatus, 100)
         }
       } catch (error) {
         clearTimeout(timeout)
@@ -3382,7 +3421,7 @@ function waitForTabComplete(
           origin: meta?.origin ?? null,
           error: getErrorMessage(error),
         })
-        reject(error)
+        finish(error)
       }
     }
 

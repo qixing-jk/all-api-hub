@@ -17,6 +17,7 @@
     "clearFilters": "Xóa bộ lọc",
     "commands": {
       "add_account": "Thêm tài khoản",
+      "checkin_feedback": "Thu thập thông tin phản hồi điểm danh",
       "detect_account": "Nhận diện tài khoản",
       "manage_api_keys": "Quản lý khóa API",
       "manage_site_channels": "Quản lý kênh trang web",

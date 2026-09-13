@@ -17,6 +17,7 @@
     "clearFilters": "清除筛选",
     "commands": {
       "add_account": "添加账号",
+      "checkin_feedback": "收集签到反馈信息",
       "detect_account": "识别账号",
       "manage_api_keys": "管理 API 密钥",
       "manage_site_channels": "管理站点渠道",

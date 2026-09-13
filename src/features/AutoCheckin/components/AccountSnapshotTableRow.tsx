@@ -10,6 +10,7 @@ import {
   SNAPSHOT_STATUS_FILTER,
   type SnapshotReadinessFilter,
 } from "~/features/AutoCheckin/utils/snapshotFilters"
+import { CheckInFeedbackButton } from "~/features/CheckInFeedback/CheckInFeedbackButton"
 import { cn } from "~/lib/utils"
 import {
   translateAutoCheckinSkipReason,
@@ -107,20 +108,28 @@ export default function AccountSnapshotTableRow({
       </TableCell>
       <TableCell className="px-4 py-4 text-sm">
         <div className="space-y-1.5">
-          <span
-            className={cn(
-              "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
-              readinessIsReady &&
-                "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-              readinessIsEmphasized &&
-                "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100",
-              !readinessIsReady &&
-                !readinessIsEmphasized &&
-                "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200",
-            )}
-          >
-            {readinessLabels[readinessCategory]}
-          </span>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span
+              className={cn(
+                "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
+                readinessIsReady &&
+                  "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+                readinessIsEmphasized &&
+                  "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100",
+                !readinessIsReady &&
+                  !readinessIsEmphasized &&
+                  "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200",
+              )}
+            >
+              {readinessLabels[readinessCategory]}
+            </span>
+            <CheckInFeedbackButton
+              accountId={snapshot.accountId}
+              requestSupport={
+                readinessCategory === SNAPSHOT_READINESS_FILTER.UNSUPPORTED
+              }
+            />
+          </div>
           <div className="text-xs text-gray-500 dark:text-gray-400">
             <span>
               {snapshot.detectionEnabled

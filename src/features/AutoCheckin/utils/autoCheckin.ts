@@ -179,10 +179,17 @@ export function translateAutoCheckinMessageKey(
 /**
  * Resolves the user-facing message for one persisted execution result.
  */
-export function getAutoCheckinResultMessage(
-  t: TFunction,
-  result: CheckinAccountResult,
-): string {
+export function getAutoCheckinResultMessage<
+  T extends Pick<
+    CheckinAccountResult,
+    | "status"
+    | "reasonCode"
+    | "messageKey"
+    | "messageParams"
+    | "rawMessage"
+    | "message"
+  >,
+>(t: TFunction, result: T): string {
   if (result.status === CHECKIN_RESULT_STATUS.UNCERTAIN) {
     return t("autoCheckin:providerFallback.resultPendingConfirmation")
   }

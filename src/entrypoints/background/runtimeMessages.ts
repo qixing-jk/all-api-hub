@@ -50,6 +50,7 @@ import {
   openProtectionBypassHistory,
 } from "~/utils/navigation"
 
+import { cancelTempCheckinFeedbackScan } from "./checkinFeedbackScan"
 import { trackCookieInterceptorUrl } from "./cookieInterceptor"
 import {
   cancelTempWindowOpenRouterManagementKeyAction,
@@ -195,6 +196,14 @@ export function setupRuntimeMessageListeners() {
           .catch((error) => {
             sendResponse({ success: false, error: getErrorMessage(error) })
           })
+        return true
+      }
+
+      if (request.action === RuntimeActionIds.CancelCheckinFeedbackScan) {
+        cancelTempCheckinFeedbackScan(
+          typeof request.requestId === "string" ? request.requestId : "",
+        )
+        sendResponse({ success: true })
         return true
       }
 

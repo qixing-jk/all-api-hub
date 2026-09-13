@@ -3447,6 +3447,30 @@ describe("tempWindowPool window fallback", () => {
     )
   })
 
+  it("cancels feedback page readiness and stops polling when its owner closes", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 508 })
+    tabsGetMock.mockResolvedValue({ status: "loading" })
+    const { tempWindowBackgroundRuntime } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+    const controller = new AbortController()
+    const pending = tempWindowBackgroundRuntime.acquire(
+      "https://example.com",
+      "feedback-loading-close",
+      false,
+      { signal: controller.signal },
+    )
+    const rejected = expect(pending).rejects.toThrow("Temporary page cancelled")
+    await vi.advanceTimersByTimeAsync(200)
+    controller.abort()
+    await rejected
+    expect(removeTabMock).toHaveBeenCalledWith(508)
+    const calls = tabsGetMock.mock.calls.length
+    await vi.advanceTimersByTimeAsync(20000)
+    expect(tabsGetMock).toHaveBeenCalledTimes(calls)
+  })
+
   it("returns a failure response when the content script never answers the temp fetch", async () => {
     sendMessageMock.mockImplementation(
       async (_tabId: number, message: { action: string }) => {

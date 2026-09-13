@@ -17,6 +17,7 @@
     "clearFilters": "清除篩選",
     "commands": {
       "add_account": "新增帳號",
+      "checkin_feedback": "收集簽到回報資訊",
       "detect_account": "識別帳號",
       "manage_api_keys": "管理 API 金鑰",
       "manage_site_channels": "管理站點渠道",

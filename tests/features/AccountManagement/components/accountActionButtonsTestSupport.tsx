@@ -50,20 +50,9 @@ export const buildDisplaySiteData: typeof buildDisplaySiteDataFixture = (
     ...overrides,
   })
 
-export const createDeferred = <T,>() => {
-  let resolve!: (value: T) => void
-  let reject!: (reason?: unknown) => void
-  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
-    resolve = resolvePromise
-    reject = rejectPromise
-  })
-
-  return { promise, reject, resolve }
-}
-
 export const copyInviteLinkFromRowMenu = async (
   accountId: string,
-  user = userEvent.setup(),
+  user = userEvent.setup({ skipHover: true }),
 ) => {
   render(
     <AccountActionButtons

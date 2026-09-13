@@ -11,6 +11,7 @@ import {
   KeyRound,
   Link,
   List,
+  MessageSquarePlus,
   Pencil,
   Pin,
   PinOff,
@@ -29,6 +30,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
+import { CHECK_IN_DISCOVERY_DECISION_OUTCOMES } from "~/constants/checkIn"
 import { getAccountSiteApiRouter } from "~/constants/siteType"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -46,6 +48,7 @@ import {
 } from "~/features/AccountManagement/inviteLinkCopyWorkflow"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
+import { useCheckInFeedback } from "~/features/CheckInFeedback/useCheckInFeedback"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
 import toast from "~/lib/notify"
 import {
@@ -65,7 +68,10 @@ import {
 } from "~/services/accounts/utils/apiServiceRequest"
 import { MANAGED_RESOURCE_SECRET_VERIFICATION_KINDS } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
-import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/inspection"
+import {
+  inspectAccountCheckIn,
+  isAutomaticCheckInConfiguredForAccount,
+} from "~/services/checkin/autoCheckin/inspection"
 import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
 import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import {
@@ -298,6 +304,7 @@ export default function AccountActionButtons({
     isPinFeatureEnabled,
     loadAccountData,
   } = useAccountDataContext()
+  const { openFeedback, feedbackDialog } = useCheckInFeedback()
   const { openEditAccount } = useDialogStateContext()
   const [isCheckingTokens, setIsCheckingTokens] = useState(false)
   const [isRefreshMenuPending, setIsRefreshMenuPending] = useState(false)
@@ -1226,6 +1233,20 @@ export default function AccountActionButtons({
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowRefreshMenuItem}
                 />
 
+                <AccountActionMenuItem
+                  onClick={() => openFeedback({ accountId: site.id })}
+                  icon={MessageSquarePlus}
+                  label={
+                    inspectAccountCheckIn({
+                      config: site.checkIn,
+                      siteType: site.siteType,
+                    }).decision.outcome ===
+                    CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported
+                      ? t("accountDialog:checkInFeedback.request")
+                      : t("accountDialog:checkInFeedback.feedback")
+                  }
+                />
+
                 {isQuickCheckinEligible && (
                   <ProductAnalyticsScope
                     featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin}
@@ -1291,6 +1312,7 @@ export default function AccountActionButtons({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      {feedbackDialog}
       {manualInviteLinkPayload !== null ? (
         <InviteLinkManualCopyDialog
           payload={manualInviteLinkPayload}

@@ -6,6 +6,10 @@ import {
   type TempWindowOpenRouterManagementKeyActionParams,
   type TempWindowOpenRouterManagementKeyActionResult,
 } from "~/services/apiAdapters/openrouter/managementKeyPageContract"
+import type {
+  CheckInFeedbackClues,
+  CheckInFeedbackScanInput,
+} from "~/services/checkin/feedback/scanTypes"
 import { AuthTypeEnum } from "~/types/auth"
 import {
   OCTOPUS_API_RESOURCE_BINDINGS,
@@ -122,6 +126,7 @@ const PROTECTION_BYPASS_USER_COMMAND_CATALOG = {
   RefreshAllAccounts: "refresh_all_accounts",
   RefreshDisabledAccounts: "refresh_disabled_accounts",
   ManualCheckin: "manual_checkin",
+  CheckinFeedback: "checkin_feedback",
   RetryCheckinAccount: "retry_checkin_account",
   AddAccount: "add_account",
   DetectAccount: "detect_account",
@@ -156,6 +161,8 @@ export const PROTECTION_BYPASS_USER_COMMAND_FEATURES = {
     PROTECTION_BYPASS_FEATURES.AccountRefresh,
   [PROTECTION_BYPASS_USER_COMMANDS.RefreshDisabledAccounts]:
     PROTECTION_BYPASS_FEATURES.AccountRefresh,
+  [PROTECTION_BYPASS_USER_COMMANDS.CheckinFeedback]:
+    PROTECTION_BYPASS_FEATURES.Checkin,
   [PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin]:
     PROTECTION_BYPASS_FEATURES.Checkin,
   [PROTECTION_BYPASS_USER_COMMANDS.RetryCheckinAccount]:
@@ -391,6 +398,7 @@ export const TEMP_CONTEXT_TASK_KINDS = {
   NativePageAction: "native_page_action",
   OpenRouterManagementKeyAction: "openrouter_management_key_action",
   RenderedTitle: "rendered_title",
+  CheckinFeedbackScan: "checkin_feedback_scan",
   SessionRead: "session_read",
   NewApiSessionRead: "new_api_session_read",
   OctopusApiFetch: "octopus_api_fetch",
@@ -414,6 +422,14 @@ type WithoutProtectionBypassIntent<T> = Omit<
 >
 
 export type TempContextTask =
+  | {
+      kind: typeof TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan
+      params: {
+        originUrl: string
+        requestId: string
+        input: CheckInFeedbackScanInput
+      }
+    }
   | {
       kind: typeof TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch
       params: WithoutProtectionBypassIntent<TempWindowFetchParams>
@@ -463,6 +479,10 @@ export type ProtectionBypassExecuteRequest<
 }
 
 type TempContextTaskResultMap = {
+  [TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan]: {
+    success: boolean
+    data?: CheckInFeedbackClues
+  }
   [TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch]: TempWindowFetch
   [TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch]: TempWindowFetch
   [TEMP_CONTEXT_TASK_KINDS.TurnstileFetch]: TempWindowTurnstileFetch
@@ -756,6 +776,8 @@ export function isTempContextTask(value: unknown): value is TempContextTask {
       return isNativePageActionParams(params)
     case TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction:
       return isOpenRouterManagementKeyActionParams(params)
+    case TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan:
+      return isCheckinFeedbackScanParams(params)
     case TEMP_CONTEXT_TASK_KINDS.RenderedTitle:
       return (
         isHttpUrl(params.originUrl) &&
@@ -791,6 +813,10 @@ interface TempContextTaskMetadata {
 }
 
 const TEMP_CONTEXT_TASK_METADATA = {
+  [TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan]: {
+    operation: PROTECTION_BYPASS_OPERATIONS.Fetch,
+    cause: PROTECTION_BYPASS_CAUSES.RenderedPageRequired,
+  },
   [TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch]: {
     operation: PROTECTION_BYPASS_OPERATIONS.Fetch,
     cause: PROTECTION_BYPASS_CAUSES.ApiErrorFallback,
@@ -850,6 +876,7 @@ export const PROTECTION_BYPASS_FEATURE_TASK_KINDS = {
     TEMP_CONTEXT_TASK_KINDS.SessionRead,
   ],
   [PROTECTION_BYPASS_FEATURES.Checkin]: [
+    TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan,
     TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
     TEMP_CONTEXT_TASK_KINDS.TurnstileFetch,
     TEMP_CONTEXT_TASK_KINDS.NativePageAction,
@@ -896,4 +923,41 @@ export function isProtectionBypassTaskPermitted(
       feature
     ] as readonly TempContextTaskKind[]
   ).includes(taskKind)
+}
+
+/** Accepts only the selected token and a fixed scan origin, never arbitrary requests. */
+function isCheckinFeedbackScanParams(params: Record<string, unknown>): boolean {
+  if (
+    !isHttpUrl(params.originUrl) ||
+    !isNonEmptyString(params.requestId) ||
+    !isPlainObject(params.input)
+  )
+    return false
+  const input = params.input
+  const origin = new URL(params.originUrl)
+  if (
+    origin.origin !== params.originUrl ||
+    input.baseUrl !== params.originUrl ||
+    !isAccountSiteType(input.siteType)
+  )
+    return false
+  if (
+    Object.keys(input).some(
+      (key) => !["baseUrl", "siteType", "auth"].includes(key),
+    )
+  )
+    return false
+  if (input.auth === undefined) return true
+  if (!isPlainObject(input.auth)) return false
+  const auth = input.auth
+  return (
+    Object.keys(auth).every((key) =>
+      ["authType", "accessToken", "userId"].includes(key),
+    ) &&
+    auth.authType === AuthTypeEnum.AccessToken &&
+    typeof auth.accessToken === "string" &&
+    (auth.userId === undefined ||
+      typeof auth.userId === "string" ||
+      typeof auth.userId === "number")
+  )
 }

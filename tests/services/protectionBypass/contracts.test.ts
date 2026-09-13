@@ -25,6 +25,14 @@ import { AuthTypeEnum } from "~/types"
 
 const canonicalTasks = [
   {
+    kind: TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan,
+    params: {
+      originUrl: "https://example.invalid",
+      requestId: "scan-1",
+      input: { baseUrl: "https://example.invalid", siteType: "new-api" },
+    },
+  },
+  {
     kind: TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
     params: {
       originUrl: "https://example.invalid",
@@ -305,6 +313,7 @@ describe("protection bypass runtime contracts", () => {
         "native_page_action",
         "openrouter_management_key_action",
         "rendered_title",
+        "checkin_feedback_scan",
         "session_read",
         "new_api_session_read",
         "octopus_api_fetch",
@@ -575,8 +584,48 @@ describe("protection bypass runtime contracts", () => {
           : value,
       ]),
     )
+    if (task.kind === TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan) {
+      params.input = { ...task.params.input, baseUrl: params.originUrl }
+    }
     expect(isTempContextTask({ ...task, params })).toBe(true)
   })
+
+  it.each([
+    { baseUrl: "https://other.invalid", siteType: "new-api" },
+    {
+      baseUrl: "https://example.invalid",
+      siteType: "new-api",
+      fetchUrl: "/arbitrary",
+    },
+    {
+      baseUrl: "https://example.invalid",
+      siteType: "new-api",
+      auth: { authType: "cookie", cookie: "private" },
+    },
+    {
+      baseUrl: "https://example.invalid",
+      siteType: "new-api",
+      auth: {
+        authType: "access_token",
+        accessToken: "selected",
+        refreshToken: "private",
+      },
+    },
+  ])(
+    "rejects scan inputs with mismatched origins or extra request authority %#",
+    (input) => {
+      expect(
+        isTempContextTask({
+          kind: TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan,
+          params: {
+            originUrl: "https://example.invalid",
+            requestId: "scan-input",
+            input,
+          },
+        }),
+      ).toBe(false)
+    },
+  )
 
   it.each([
     [

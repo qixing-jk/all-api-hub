@@ -1,3 +1,5 @@
+import { createDeferred } from "~~/tests/test-utils/deferred"
+
 import "./accountActionButtonsMocks"
 
 import { fireEvent, screen, waitFor, within } from "@testing-library/react"
@@ -40,13 +42,37 @@ import {
 } from "./accountActionButtonsMocks"
 import {
   buildDisplaySiteData,
-  createDeferred,
   createEnabledCheckIn,
   setupAccountActionButtonsTest,
 } from "./accountActionButtonsTestSupport"
 
 describe("AccountActionButtons", () => {
   setupAccountActionButtonsTest()
+
+  it.each([
+    [SITE_TYPES.NEW_API, "feedback"],
+    [SITE_TYPES.UNKNOWN, "request"],
+  ] as const)(
+    "offers %s feedback without treating undetected methods as unsupported",
+    async (siteType, action) => {
+      const user = userEvent.setup()
+      render(
+        <AccountActionButtons
+          site={buildDisplaySiteData({ siteType })}
+          onCopyKey={vi.fn()}
+          onDeleteAccount={vi.fn()}
+        />,
+      )
+      await user.click(
+        screen.getByRole("button", { name: "common:actions.more" }),
+      )
+      expect(
+        screen.getByRole("menuitem", {
+          name: `accountDialog:checkInFeedback.${action}`,
+        }),
+      ).toBeVisible()
+    },
+  )
 
   it("tracks completion when toggling account disabled fails", async () => {
     mockHandleSetAccountDisabled.mockRejectedValueOnce(new Error("failed"))
@@ -70,12 +96,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const disableButton = (
-      await within(menu).findByText("account:actions.disableAccount")
-    ).closest("button")
-    expect(disableButton).not.toBeNull()
+    const disableButton = await within(menu).findByRole("menuitem", {
+      name: "account:actions.disableAccount",
+    })
 
-    act(() => disableButton!.focus())
+    act(() => disableButton.focus())
     await user.keyboard("{Enter}")
 
     await waitFor(() => {
@@ -122,12 +147,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const disableButton = (
-      await within(menu).findByText("account:actions.disableAccount")
-    ).closest("button")
-    expect(disableButton).not.toBeNull()
+    const disableButton = await within(menu).findByRole("menuitem", {
+      name: "account:actions.disableAccount",
+    })
 
-    act(() => disableButton!.focus())
+    act(() => disableButton.focus())
     await user.keyboard("{Enter}")
 
     await waitFor(() => {
@@ -168,12 +192,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const pinButton = (
-      await within(menu).findByText("account:actions.pin")
-    ).closest("button")
-    expect(pinButton).not.toBeNull()
+    const pinButton = await within(menu).findByRole("menuitem", {
+      name: "account:actions.pin",
+    })
 
-    await user.click(pinButton!)
+    await user.click(pinButton)
 
     await waitFor(() => {
       expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
@@ -225,11 +248,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText("account:actions.quickCheckin")
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.quickCheckin",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     expect(toastLoadingMock).toHaveBeenCalledWith(
       "autoCheckin:messages.loading.running",
@@ -317,13 +340,12 @@ describe("AccountActionButtons", () => {
     await user.click(
       screen.getByRole("button", { name: "common:actions.more" }),
     )
-    const quickCheckinButton = (
-      await screen.findByText("account:actions.quickCheckin")
-    ).closest("button")
-    expect(quickCheckinButton).not.toBeNull()
+    const quickCheckinButton = await screen.findByRole("menuitem", {
+      name: "account:actions.quickCheckin",
+    })
 
-    fireEvent.click(quickCheckinButton!)
-    fireEvent.click(quickCheckinButton!)
+    fireEvent.click(quickCheckinButton)
+    fireEvent.click(quickCheckinButton)
 
     expect(withProtectionBypassUserCommandMock).toHaveBeenCalledTimes(1)
     expect(
@@ -368,11 +390,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText("account:actions.quickCheckin")
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.quickCheckin",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     await waitFor(() => {
       expect(toastDismissMock).toHaveBeenCalledWith(
@@ -420,11 +442,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText("account:actions.quickCheckin")
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.quickCheckin",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     await waitFor(() => {
       expect(toastDismissMock).toHaveBeenCalledWith(
@@ -473,11 +495,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText("account:actions.quickCheckin")
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.quickCheckin",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     await waitFor(() => {
       expect(toastDismissMock).toHaveBeenCalledWith("toast-quick-checkin-error")
@@ -518,11 +540,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText("account:actions.quickCheckin")
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.quickCheckin",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     await waitFor(() => {
       expect(toastDismissMock).toHaveBeenCalledWith("toast-quick-checkin-throw")
@@ -566,11 +588,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText("account:actions.quickCheckin")
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.quickCheckin",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     await waitFor(() => {
       expect(
@@ -621,11 +643,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText("account:actions.quickCheckin")
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.quickCheckin",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     await waitFor(() => {
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
@@ -676,11 +698,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText("account:actions.quickCheckin")
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.quickCheckin",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     await waitFor(() => {
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
@@ -732,11 +754,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText("account:actions.quickCheckin")
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.quickCheckin",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     await waitFor(() => {
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
@@ -775,11 +797,11 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText("account:actions.pin")
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+    const button = await within(menu).findByRole("menuitem", {
+      name: "account:actions.pin",
+    })
 
-    await user.click(button!)
+    await user.click(button)
 
     await waitFor(() => {
       expect(mockTogglePinAccount).toHaveBeenCalledWith("acc-pin")

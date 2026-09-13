@@ -17,6 +17,7 @@
     "clearFilters": "Borrar filtros",
     "commands": {
       "add_account": "Agregar cuenta",
+      "checkin_feedback": "Recopilar información para reportar el check-in",
       "detect_account": "Detectar cuenta",
       "manage_api_keys": "Administrar claves API",
       "manage_site_channels": "Administrar canales del sitio",

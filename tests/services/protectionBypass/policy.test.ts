@@ -524,6 +524,7 @@ describe("evaluateProtectionBypassPolicy", () => {
       account_refresh: ["api_fallback_fetch", "session_read"],
       balance_history: ["api_fallback_fetch", "session_read"],
       checkin: [
+        "checkin_feedback_scan",
         "api_fallback_fetch",
         "turnstile_fetch",
         "native_page_action",
@@ -564,6 +565,15 @@ describe("evaluateProtectionBypassPolicy", () => {
             params: {
               requestId: "request-1",
               operation: { kind: "create", label: "Example" },
+            },
+          }
+        case "checkin_feedback_scan":
+          return {
+            kind,
+            params: {
+              originUrl: fetchParams.originUrl,
+              requestId: "scan-1",
+              input: { baseUrl: fetchParams.originUrl, siteType: "new-api" },
             },
           }
         case "rendered_title":
