@@ -1281,14 +1281,31 @@ test("lets scenario cleanup delete only the source key", async ({
       adminToken: "test-management-key",
     },
   })
+  const matchingProvider = {
+    name: "Matching provider",
+    "base-url": "https://example.com/v1",
+    "api-key-entries": [{ "api-key": "sk-existing-token" }],
+    models: [{ name: "model-a" }],
+  }
+  const providers = [matchingProvider]
   const mutations: string[] = []
   await context.route(
     "https://managed-cleanup.example.invalid/**",
     async (route) => {
-      const kind = new URL(route.request().url()).pathname.split("/").at(-1)!
-      if (route.request().method() !== "GET")
-        mutations.push(route.request().method())
-      await route.fulfill({ json: { [kind]: [] } })
+      const request = route.request()
+      const url = new URL(request.url())
+      const kind = url.pathname.split("/").at(-1)!
+      if (request.method() === "GET") {
+        await route.fulfill({
+          json: { [kind]: kind === "openai-compatibility" ? providers : [] },
+        })
+        return
+      }
+      mutations.push(request.method())
+      if (request.method() === "DELETE") {
+        providers.splice(Number(url.searchParams.get("index")), 1)
+      }
+      await route.fulfill({ json: { status: "ok" } })
     },
   )
   await openKeyManagementForAccount({
@@ -1305,6 +1322,7 @@ test("lets scenario cleanup delete only the source key", async ({
     0,
   )
   expect(mutations).toEqual([])
+  expect(providers).toEqual([matchingProvider])
 })
 
 test("cleans linked channels and retries persisted multi-key cleanup after reloading", async ({
