@@ -19,6 +19,7 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import {
   getPlasmoStorageRawValue,
+  getStoredUserPreferences,
   setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
@@ -236,9 +237,29 @@ async function waitForToast(page: Page, text: string) {
   })
 }
 
-async function saveWebdavConfig(page: Page) {
-  await page.locator(`#${WEBDAV_TARGET_IDS.saveConfig}`).click()
-  await waitForToast(page, "WebDAV Sync Update successful")
+async function expectWebdavConfigAutoSaved(
+  page: Page,
+  serviceWorker: Worker,
+  config: WebdavProviderConfig,
+) {
+  await page.locator(`#${WEBDAV_TARGET_IDS.password}`).blur()
+  // Compare inside the poll so a failure never prints provider credentials.
+  await expect
+    .poll(
+      async () => {
+        const preferences = await getStoredUserPreferences(serviceWorker)
+        const saved = preferences.webdav as
+          | WebdavProviderCredentials
+          | undefined
+        return (
+          saved?.url === config.url &&
+          saved.username === config.username &&
+          saved.password === config.password
+        )
+      },
+      { message: "WebDAV connection fields should auto-save" },
+    )
+    .toBe(true)
 }
 
 async function testWebdavConnection(page: Page) {
@@ -302,9 +323,9 @@ test.describe("real-site E2E: WebDAV provider flow", () => {
 
       await seedUserPreferences(serviceWorker, {
         webdav: {
-          url: config.url,
-          username: config.username,
-          password: config.password,
+          url: "",
+          username: "",
+          password: "",
         },
       })
 
@@ -313,7 +334,7 @@ test.describe("real-site E2E: WebDAV provider flow", () => {
       )
       await waitForExtensionRoot(page)
       await fillWebdavSettings(page, config)
-      await saveWebdavConfig(page)
+      await expectWebdavConfigAutoSaved(page, serviceWorker, config)
       await testWebdavConnection(page)
 
       await seedBackupAccount(serviceWorker, {
