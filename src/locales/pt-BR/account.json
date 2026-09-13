@@ -100,7 +100,7 @@
     "reviewHint": "Desmarque contas para removê-las da seleção. A busca e os filtros permanecem iguais.",
     "reviewSelection": "Revisar seleção",
     "selectAccount": "Selecione {{accountName}}",
-    "selectedSummary_one": "{{selected}} selecionadas",
+    "selectedSummary_one": "{{selected}} selecionada",
     "selectedSummary_many": "{{selected}} selecionadas",
     "selectedSummary_other": "{{selected}} selecionadas",
     "selectionEmpty": "Nenhuma conta selecionada",
