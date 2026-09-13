@@ -1,11 +1,7 @@
 import {
   CHECK_IN_METHOD_AVAILABILITIES,
-  CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
-  CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
-  CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
-import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
 import {
   getSub2ApiAuthPersistenceStatus,
   SUB2API_AUTH_PERSISTENCE_STATUSES,
@@ -18,7 +14,6 @@ import {
 } from "~/services/apiService/sub2api/denxioCheckIn"
 import { getSafeErrorMessage } from "~/services/apiService/sub2api/redaction"
 import { ApiError } from "~/services/apiTransport/errors"
-import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   AUTO_CHECKIN_ERROR_CATEGORIES,
   classifyAutoCheckinError,
@@ -31,59 +26,24 @@ import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
-import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 
 import type {
   AutoCheckinProvider,
   AutoCheckinProviderContext,
   AutoCheckinProviderReadContext,
 } from "./contracts"
-
-const hasText = (value: unknown): value is string =>
-  typeof value === "string" && value.trim().length > 0
-
-const createReadRequest = (
-  context: AutoCheckinProviderReadContext,
-): ApiServiceRequest => {
-  const request =
-    context.request ??
-    (context.account
-      ? createAccountApiRequestFromStoredAccount(context.account).request
-      : null)
-  if (!request) throw new Error("Sub2API account data is unavailable")
-  return {
-    ...request,
-    ...(context.signal ? { abortSignal: context.signal } : {}),
-  }
-}
-
-const createMutationRequest = (
-  account: SiteAccount,
-  context: AutoCheckinProviderContext,
-): ApiServiceRequest => ({
-  ...createAccountApiRequestFromStoredAccount(account).request,
-  tempWindowRequestSource: normalizeTempWindowRequestSource(
-    context.tempWindowRequestSource,
-  ),
-  protectionBypassExecution: context.protectionBypassExecution,
-  ...(context.mutationLifecycle ? { observer: context.mutationLifecycle } : {}),
-})
+import {
+  createSub2ApiCheckInMutationRequest,
+  createSub2ApiCheckInReadRequest,
+  getSub2ApiCheckInReadiness,
+  toSub2ApiCheckInStatus,
+} from "./sub2apiShared"
 
 const readStatus = async (context: AutoCheckinProviderReadContext) => {
-  const status = await fetchDenxioDailyCheckInStatus(createReadRequest(context))
-  return {
-    outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
-    availability: status.enabled
-      ? CHECK_IN_METHOD_AVAILABILITIES.Enabled
-      : CHECK_IN_METHOD_AVAILABILITIES.Disabled,
-    today: status.checkedInToday
-      ? CHECK_IN_METHOD_TODAY_STATUSES.Checked
-      : CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
-    evidence: {
-      source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
-      observedAt: context.observedAt,
-    },
-  } as const
+  const status = await fetchDenxioDailyCheckInStatus(
+    createSub2ApiCheckInReadRequest(context),
+  )
+  return toSub2ApiCheckInStatus(status, context.observedAt)
 }
 
 const failed = (
@@ -179,25 +139,7 @@ const mapMutationError = (
 export const denxioProvider: AutoCheckinProvider = {
   requiresAuthoritativeStatusBeforeMutation: true,
 
-  getReadiness(account) {
-    if (
-      !hasText(account.id) ||
-      !hasText(account.site_url) ||
-      !hasText(account.account_info?.id)
-    ) {
-      return {
-        ready: false,
-        reason: CHECK_IN_PROVIDER_READINESS_REASONS.AccountDataMissing,
-      }
-    }
-    if (!hasText(account.account_info?.access_token)) {
-      return {
-        ready: false,
-        reason: CHECK_IN_PROVIDER_READINESS_REASONS.CredentialsMissing,
-      }
-    }
-    return { ready: true }
-  },
+  getReadiness: getSub2ApiCheckInReadiness,
 
   detect(context) {
     return detectWithStatusReadback(context, readStatus)
@@ -216,7 +158,7 @@ export const denxioProvider: AutoCheckinProvider = {
 
     try {
       const result = await performDenxioDailyCheckIn(
-        createMutationRequest(account as SiteAccount, context),
+        createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
         { beforeRecoveredMutation: context.beforeRecoveredMutation },
       )
       switch (result.kind) {

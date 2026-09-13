@@ -10,6 +10,7 @@ export const AUTO_CHECKIN_METHOD_IDS = {
   AgentRouterLoginCheckIn: "agentrouter:login-checkin",
   VoApiV2DailyCheckIn: "voapi-v2:daily-checkin",
   Sub2ApiProDailyCheckIn: "sub2api-pro:daily-checkin",
+  GeniusProgrammerDailyCheckIn: "genius-programmer:daily-checkin",
   DenxioDailyCheckIn: "denxio:daily-checkin",
 } as const
 

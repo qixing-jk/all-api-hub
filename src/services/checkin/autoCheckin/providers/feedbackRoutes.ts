@@ -47,6 +47,10 @@ export function getCheckInFeedbackStatusRoutes(
       case AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn:
         add({ path: "/api/v1/redeem/checkin/status" })
         break
+      // Verified deployment contract: https://codexcli.club/dashboard
+      case AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn:
+        add({ path: "/api/v1/user/checkin/status" })
+        break
       case AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn:
         add({ path: "/api/v1/tbe-sponsor-checkin/status" })
         break

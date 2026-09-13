@@ -3,10 +3,10 @@ import {
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
 import {
-  fetchSub2ApiProDailyCheckInStatus,
-  performSub2ApiProDailyCheckIn,
-} from "~/services/apiService/sub2api"
-import { SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS } from "~/services/apiService/sub2api/checkIn"
+  fetchGeniusProgrammerDailyCheckInStatus,
+  GENIUS_PROGRAMMER_DAILY_CHECK_IN_RESULT_KINDS,
+  performGeniusProgrammerDailyCheckIn,
+} from "~/services/apiService/sub2api/geniusProgrammerCheckIn"
 import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { SiteAccount } from "~/types"
@@ -29,15 +29,14 @@ import {
 } from "./sub2apiShared"
 
 const readStatus = async (context: AutoCheckinProviderReadContext) => {
-  const status = await fetchSub2ApiProDailyCheckInStatus(
+  const status = await fetchGeniusProgrammerDailyCheckInStatus(
     createSub2ApiCheckInReadRequest(context),
   )
   return toSub2ApiCheckInStatus(status, context.observedAt)
 }
 
-export const sub2apiProProvider: AutoCheckinProvider = {
+export const geniusProgrammerProvider: AutoCheckinProvider = {
   requiresAuthoritativeStatusBeforeMutation: true,
-  retryAfterUncertainNotChecked: true,
 
   getReadiness: getSub2ApiCheckInReadiness,
 
@@ -57,40 +56,23 @@ export const sub2apiProProvider: AutoCheckinProvider = {
     }
 
     try {
-      const result = await performSub2ApiProDailyCheckIn(
+      const result = await performGeniusProgrammerDailyCheckIn(
         createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
-        { beforeRecoveredMutation: context.beforeRecoveredMutation },
       )
       switch (result.kind) {
-        case SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.Applied:
+        case GENIUS_PROGRAMMER_DAILY_CHECK_IN_RESULT_KINDS.Applied:
           return {
             status: CHECKIN_RESULT_STATUS.SUCCESS,
             messageKey:
               AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
             data: result.data,
           }
-        case SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked:
+        case GENIUS_PROGRAMMER_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked:
           return {
             status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
             messageKey:
               AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
           }
-        case SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.Disabled:
-          return failedSub2ApiCheckIn(AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED)
-        case SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RoleForbidden:
-          return failedSub2ApiCheckIn(
-            AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED,
-          )
-        case SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryStatusUnavailable:
-          return failedSub2ApiCheckIn(
-            AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
-            false,
-          )
-        case SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryPreconditionFailed:
-          return failedSub2ApiCheckIn(
-            AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE,
-            false,
-          )
       }
     } catch (error) {
       return mapSub2ApiCheckInMutationError(error, context)

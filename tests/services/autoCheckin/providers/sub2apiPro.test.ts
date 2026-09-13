@@ -13,6 +13,7 @@ import {
 } from "~/services/apiService/sub2api"
 import { SUB2API_AUTH_PERSISTENCE_STATUSES } from "~/services/apiService/sub2api/authSession"
 import { fetchDenxioDailyCheckInStatus } from "~/services/apiService/sub2api/denxioCheckIn"
+import { fetchGeniusProgrammerDailyCheckInStatus } from "~/services/apiService/sub2api/geniusProgrammerCheckIn"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
@@ -49,6 +50,16 @@ vi.mock(
       fetchDenxioDailyCheckInStatus: vi.fn(),
     }
   },
+)
+
+vi.mock(
+  "~/services/apiService/sub2api/geniusProgrammerCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/geniusProgrammerCheckIn")
+    >()),
+    fetchGeniusProgrammerDailyCheckInStatus: vi.fn(),
+  }),
 )
 
 const METHOD_ID = AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn
@@ -103,6 +114,9 @@ const notCheckedStatus = {
 describe("Sub2API Pro daily check-in method Adapter", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(fetchGeniusProgrammerDailyCheckInStatus).mockRejectedValue(
+      new ApiError("unsupported", 404),
+    )
     vi.mocked(fetchDenxioDailyCheckInStatus).mockRejectedValue(
       new ApiError("unsupported", 404),
     )

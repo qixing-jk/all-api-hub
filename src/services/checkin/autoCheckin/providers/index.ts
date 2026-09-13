@@ -8,6 +8,7 @@ import type { CheckInMethodId } from "~/types/checkIn"
 import { anyrouterProvider } from "./anyrouter"
 import type { AutoCheckinProvider } from "./contracts"
 import { denxioProvider } from "./denxio"
+import { geniusProgrammerProvider } from "./geniusProgrammer"
 import {
   AUTO_CHECKIN_METHOD_DEFINITIONS,
   createAutoCheckinMethodRegistry,
@@ -23,6 +24,8 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn]: newApiProvider,
   [AUTO_CHECKIN_METHOD_IDS.VoApiV2DailyCheckIn]: voApiV2Provider,
   [AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn]: sub2apiProProvider,
+  [AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn]:
+    geniusProgrammerProvider,
   [AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn]: denxioProvider,
 } as const satisfies Record<CheckInMethodId, AutoCheckinProvider>
 

@@ -53,7 +53,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(8)
+    expect(registrationContracts).toHaveLength(9)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -231,6 +231,7 @@ describe("autoCheckinMethodRegistry", () => {
         .map(({ id }) => id),
     ).toEqual([
       AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn,
+      AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn,
     ])
     expect(getLegacyAutoCheckinMethodIds(SITE_TYPES.SUB2API)).toEqual([])
