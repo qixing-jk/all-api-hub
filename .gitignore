@@ -81,3 +81,6 @@ web-ext.config.ts
 src/public/react-devtools*
 .ace-tool/
 /All API Hub – AI Relay & New API Manager/
+
+# Local Scout audit records
+.scratch/**/scout-audit-*.md
