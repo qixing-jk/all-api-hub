@@ -4,6 +4,7 @@ import {
   resolveAccountExchangeRate,
   resolveKnownAccountExchangeRate,
 } from "~/features/ModelList/accountExchangeRate"
+import { deriveGroupAvailability } from "~/features/ModelList/groupAvailability"
 import {
   MODEL_GROUP_ACCESS_STATES,
   normalizeGroupRatios,
@@ -23,7 +24,6 @@ import {
 import {
   getModelItemKey,
   getModelListSourceIdentityKey,
-  type AccountGroupOption,
   type CalculatedModelItem,
 } from "~/features/ModelList/modelListItems"
 import {
@@ -240,14 +240,6 @@ function filterModelsByVendor<T extends Pick<RawModelItem, "resolvedVendor">>(
 /** Returns true when the value is a finite number. */
 function isFiniteNumber(value: number | null | undefined): value is number {
   return typeof value === "number" && Number.isFinite(value)
-}
-
-/** Creates an account group option without inventing an unknown ratio. */
-function toAccountGroupOption(
-  name: string,
-  ratio: number | undefined,
-): AccountGroupOption {
-  return { name, ...(isFiniteNumber(ratio) ? { ratio } : {}) }
 }
 
 /** Compares normalized ratio maps without relying on object identity. */
@@ -1015,133 +1007,32 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     selectedSource?.kind,
   ])
 
-  const availableGroupsBySourceId = useMemo(() => {
-    if (
-      !selectedSource?.capabilities.supportsGroupFiltering ||
-      selectedSource.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
-    ) {
-      return {}
-    }
-
-    const groupsBySourceId = new Map<string, Set<string>>()
-
-    rawModelItems.forEach((item) => {
-      if (item.source.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT) {
-        return
-      }
-
-      const sourceId = getModelListSourceIdentityKey(item)
-      const sourceGroups = groupsBySourceId.get(sourceId) ?? new Set<string>()
-
-      item.groupContext.usableGroups.forEach((group) => sourceGroups.add(group))
-
-      groupsBySourceId.set(sourceId, sourceGroups)
-    })
-
-    return Object.fromEntries(
-      Array.from(groupsBySourceId.entries()).map(([sourceId, groups]) => [
-        sourceId,
-        normalizeGroupNames(groups),
-      ]),
-    ) as Record<string, string[]>
-  }, [
-    rawModelItems,
-    selectedSource?.capabilities.supportsGroupFiltering,
-    selectedSource?.kind,
-  ])
-
-  const availableAccountGroupsByAccountId = useMemo(() => {
-    if (
-      !selectedSource?.capabilities.supportsGroupFiltering ||
-      selectedSource.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
-    ) {
-      return {}
-    }
-
-    const groupsByAccountId = new Map<string, Set<string>>()
-
-    rawModelItems.forEach((item) => {
-      if (item.source.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT) {
-        return
-      }
-
-      const accountId = item.source.account.id
-      const accountGroups =
-        groupsByAccountId.get(accountId) ?? new Set<string>()
-
-      item.groupContext.usableGroups.forEach((group) =>
-        accountGroups.add(group),
-      )
-
-      groupsByAccountId.set(accountId, accountGroups)
-    })
-
-    return Object.fromEntries(
-      Array.from(groupsByAccountId.entries()).map(([accountId, groups]) => [
-        accountId,
-        normalizeGroupNames(groups),
-      ]),
-    ) as Record<string, string[]>
-  }, [
-    rawModelItems,
-    selectedSource?.capabilities.supportsGroupFiltering,
-    selectedSource?.kind,
-  ])
-
-  const availableAccountGroupOptionsByAccountId = useMemo(() => {
-    if (
-      !selectedSource?.capabilities.supportsGroupFiltering ||
-      selectedSource.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
-    ) {
-      return {}
-    }
-
-    const ratiosByAccountId = new Map<string, Map<string, number | undefined>>()
-
-    rawModelItems.forEach((item) => {
-      if (item.source.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT) {
-        return
-      }
-
-      const accountId = item.source.account.id
-      const ratioMap = ratiosByAccountId.get(accountId) ?? new Map()
-
-      item.groupContext.usableGroups.forEach((group) => {
-        const ratio = item.groupRatios[group]
-        const finiteRatio = isFiniteNumber(ratio) ? ratio : undefined
-        if (!ratioMap.has(group)) {
-          ratioMap.set(group, finiteRatio)
-          return
-        }
-
-        const existingRatio = ratioMap.get(group)
-        if (
-          existingRatio === undefined ||
-          finiteRatio === undefined ||
-          existingRatio !== finiteRatio
-        ) {
-          ratioMap.set(group, undefined)
-        }
-      })
-
-      ratiosByAccountId.set(accountId, ratioMap)
-    })
-
-    return Object.fromEntries(
-      Object.entries(availableAccountGroupsByAccountId).map(
-        ([accountId, groups]) => [
-          accountId,
-          groups.map((group) =>
-            toAccountGroupOption(
-              group,
-              ratiosByAccountId.get(accountId)?.get(group),
-            ),
-          ),
-        ],
-      ),
-    ) as Record<string, AccountGroupOption[]>
-  }, [
+  const {
+    availableGroupsBySourceId,
     availableAccountGroupsByAccountId,
+    availableAccountGroupOptionsByAccountId,
+  } = useMemo(() => {
+    const supportsAllAccountsGroups =
+      selectedSource?.capabilities.supportsGroupFiltering &&
+      selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
+
+    return deriveGroupAvailability(
+      supportsAllAccountsGroups
+        ? rawModelItems.flatMap((item) =>
+            item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+              ? [
+                  {
+                    sourceId: getModelListSourceIdentityKey(item),
+                    accountId: item.source.account.id,
+                    usableGroups: item.groupContext.usableGroups,
+                    groupRatios: item.groupRatios,
+                  },
+                ]
+              : [],
+          )
+        : [],
+    )
+  }, [
     rawModelItems,
     selectedSource?.capabilities.supportsGroupFiltering,
     selectedSource?.kind,
