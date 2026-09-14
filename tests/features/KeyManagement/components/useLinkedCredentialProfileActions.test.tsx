@@ -95,17 +95,19 @@ describe("useLinkedCredentialProfileActions", () => {
     startActionMock.mockReturnValue({ complete: completeActionMock })
   })
 
-  it("exposes export payloads and owns dialog state", () => {
+  it("exposes export credentials and owns dialog state", async () => {
     const { result } = renderHook(() =>
       useLinkedCredentialProfileActions(profile),
     )
 
-    expect(result.current.exportAccount).toMatchObject({
-      name: profile.name,
+    expect(result.current.exportSource).toMatchObject({
+      providerName: profile.name,
+      credentialName: profile.name,
       baseUrl: profile.baseUrl,
     })
-    expect(result.current.exportToken).toMatchObject({ key: profile.apiKey })
-    expect(result.current.exportRuntimeKey).toBeDefined()
+    await expect(result.current.exportSource.resolveApiKey()).resolves.toBe(
+      profile.apiKey,
+    )
     expect(result.current.managedSiteLabel).toBe("managed-site:new-api")
 
     act(() => result.current.openDialog("verify-api"))
@@ -143,10 +145,12 @@ describe("useLinkedCredentialProfileActions", () => {
     )
 
     act(() => result.current.handleCherryStudio())
-    expect(openInCherryStudioMock).toHaveBeenCalledWith(
-      result.current.exportAccount,
-      result.current.exportToken,
-    )
+    expect(openInCherryStudioMock).toHaveBeenCalledWith({
+      providerId: "api-credential-profile:profile-example",
+      providerName: profile.name,
+      baseUrl: profile.baseUrl,
+      apiKey: profile.apiKey,
+    })
     expect(completeActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
     )

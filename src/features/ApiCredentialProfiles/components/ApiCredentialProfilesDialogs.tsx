@@ -1,3 +1,4 @@
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
@@ -6,6 +7,7 @@ import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { KelivoExportDialog } from "~/components/KelivoExportDialog"
 import { ConfirmDialog } from "~/components/ui"
+import { createProfileCredentialExportSource } from "~/services/apiCredentialProfiles/credentialExport"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -16,11 +18,6 @@ import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVer
 
 import type { ApiCredentialProfilesController } from "../hooks/useApiCredentialProfilesController"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "../testIds"
-import {
-  createExportAccount,
-  createExportRuntimeKey,
-  createExportToken,
-} from "../utils/exportShims"
 import { ApiCredentialProfileDialog } from "./ApiCredentialProfileDialog"
 import { KiloCodeProfileExportDialog } from "./KiloCodeProfileExportDialog"
 import { VerifyApiCredentialProfileDialog } from "./VerifyApiCredentialProfileDialog"
@@ -47,6 +44,29 @@ export function ApiCredentialProfilesDialogs({
     "aiApiVerification",
     "common",
   ])
+  const ccSwitchSource = useMemo(
+    () =>
+      controller.ccSwitchProfile
+        ? createProfileCredentialExportSource(controller.ccSwitchProfile)
+        : null,
+    [controller.ccSwitchProfile],
+  )
+  const cursorPlusSource = useMemo(
+    () =>
+      controller.cursorPlusProfile
+        ? createProfileCredentialExportSource(controller.cursorPlusProfile)
+        : null,
+    [controller.cursorPlusProfile],
+  )
+  const claudeCodeRouterSource = useMemo(
+    () =>
+      controller.claudeCodeRouterProfile
+        ? createProfileCredentialExportSource(
+            controller.claudeCodeRouterProfile,
+          )
+        : null,
+    [controller.claudeCodeRouterProfile],
+  )
 
   return (
     <>
@@ -77,12 +97,11 @@ export function ApiCredentialProfilesDialogs({
         />
       ) : null}
 
-      {controller.ccSwitchProfile ? (
+      {ccSwitchSource ? (
         <CCSwitchExportDialog
           isOpen={true}
           onClose={() => controller.setCCSwitchProfile(null)}
-          account={createExportAccount(controller.ccSwitchProfile)}
-          token={createExportToken(controller.ccSwitchProfile)}
+          source={ccSwitchSource}
           analyticsContext={{
             ...apiCredentialProfileThirdPartyExportContext,
             actionId:
@@ -91,12 +110,11 @@ export function ApiCredentialProfilesDialogs({
         />
       ) : null}
 
-      {controller.cursorPlusProfile ? (
+      {cursorPlusSource ? (
         <CursorPlusExportDialog
           isOpen={true}
           onClose={() => controller.setCursorPlusProfile(null)}
-          account={createExportAccount(controller.cursorPlusProfile)}
-          runtimeKey={createExportRuntimeKey(controller.cursorPlusProfile)}
+          source={cursorPlusSource}
           analyticsContext={{
             ...apiCredentialProfileThirdPartyExportContext,
             actionId:
@@ -126,12 +144,11 @@ export function ApiCredentialProfilesDialogs({
         />
       ) : null}
 
-      {controller.claudeCodeRouterProfile ? (
+      {claudeCodeRouterSource ? (
         <ClaudeCodeRouterImportDialog
           isOpen={true}
           onClose={() => controller.setClaudeCodeRouterProfile(null)}
-          account={createExportAccount(controller.claudeCodeRouterProfile)}
-          token={createExportToken(controller.claudeCodeRouterProfile)}
+          source={claudeCodeRouterSource}
           routerBaseUrl={controller.claudeCodeRouterBaseUrl}
           routerApiKey={controller.claudeCodeRouterApiKey}
           analyticsContext={{

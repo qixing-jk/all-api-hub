@@ -5,10 +5,9 @@ import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
-  createExportAccount,
-  createExportRuntimeKey,
-  createExportToken,
-} from "~/features/ApiCredentialProfiles/utils/exportShims"
+  createProfileCredentialExportData,
+  createProfileCredentialExportSource,
+} from "~/services/apiCredentialProfiles/credentialExport"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
@@ -57,10 +56,8 @@ export function useLinkedCredentialProfileActions(
   const { markGatewayGuidanceOnboardingCompleted } = useFeatureGuidanceContext()
   const { openWithCredentials } = useChannelDialog()
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null)
-  const exportAccount = useMemo(() => createExportAccount(profile), [profile])
-  const exportToken = useMemo(() => createExportToken(profile), [profile])
-  const exportRuntimeKey = useMemo(
-    () => createExportRuntimeKey(profile),
+  const exportSource = useMemo(
+    () => createProfileCredentialExportSource(profile),
     [profile],
   )
 
@@ -76,7 +73,7 @@ export function useLinkedCredentialProfileActions(
         PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialProfileToCherryStudio,
     })
     try {
-      OpenInCherryStudio(exportAccount, exportToken)
+      OpenInCherryStudio(createProfileCredentialExportData(profile))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -156,9 +153,7 @@ export function useLinkedCredentialProfileActions(
     claudeCodeRouterBaseUrl,
 
     closeDialog,
-    exportAccount,
-    exportRuntimeKey,
-    exportToken,
+    exportSource,
     handleCherryStudio,
     handleClaudeCodeRouter,
 

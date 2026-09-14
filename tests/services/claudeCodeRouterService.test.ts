@@ -1,18 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import {
-  buildApiToken,
-  buildDisplaySiteData,
-} from "~~/tests/test-utils/factories"
-
 describe("claudeCodeRouterService", () => {
   const baseOptions = {
-    account: buildDisplaySiteData({
-      id: "acc-1",
-      name: "Example",
-      baseUrl: "https://provider.example.com/v1",
-    }),
-    token: buildApiToken({ key: "provider-key" }),
+    providerApiKey: "provider-key",
     routerBaseUrl: "https://router.example.com",
     routerApiKey: "router-secret",
     providerName: "Example Provider",

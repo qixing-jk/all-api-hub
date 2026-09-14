@@ -1,5 +1,5 @@
 import toast from "~/lib/notify"
-import type { ApiToken, DisplaySiteData } from "~/types"
+import type { CredentialExportData } from "~/services/integrations/credentialExport"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeHttpUrl } from "~/utils/core/url"
 import { t } from "~/utils/i18n/core"
@@ -47,8 +47,7 @@ interface CCSwitchDeeplinkPayload {
  * @see https://github.com/farion1231/cc-switch/blob/99b5f881e8efb0fe14953081640a997b635af19c/src-tauri/src/deeplink.rs#L19
  */
 interface OpenInCCSwitchOptions {
-  account: DisplaySiteData
-  token: ApiToken
+  credential: Pick<CredentialExportData, "providerName" | "baseUrl" | "apiKey">
   app: CCSwitchApp
   model?: string
   notes?: string
@@ -96,13 +95,12 @@ const normalizeHermesProviderName = (name: string, endpoint: string) =>
 /**
  * Attempt to open the CC Switch desktop client via deeplink.
  * Validates inputs, normalizes URLs, and surfaces toast feedback.
- * @param options Caller supplied account/token context.
+ * @param options Caller supplied credential and target settings.
  * @returns Whether the operation was initiated successfully.
  */
 export function openInCCSwitch(options: OpenInCCSwitchOptions) {
   const {
-    account,
-    token,
+    credential,
     app,
     model,
     notes,
@@ -111,7 +109,7 @@ export function openInCCSwitch(options: OpenInCCSwitchOptions) {
     endpoint: endpointOverride,
   } = options
 
-  if (!account || !token) {
+  if (!credential) {
     toast.error(t("messages:ccswitch.missingCredentials"))
     return false
   }
@@ -122,25 +120,25 @@ export function openInCCSwitch(options: OpenInCCSwitchOptions) {
   }
 
   const normalizedEndpoint = normalizeHttpUrl(
-    endpointOverride ?? account.baseUrl,
+    endpointOverride ?? credential.baseUrl,
   )
   if (!normalizedEndpoint) {
     toast.error(t("messages:ccswitch.invalidEndpoint"))
     return false
   }
 
-  const homepage = normalizeHttpUrl(homepageOverride ?? account.baseUrl)
+  const homepage = normalizeHttpUrl(homepageOverride ?? credential.baseUrl)
   if (!homepage) {
     toast.error(t("messages:ccswitch.invalidHomepage"))
     return false
   }
 
-  if (!token.key) {
+  if (!credential.apiKey) {
     toast.error(t("messages:ccswitch.missingCredentials"))
     return false
   }
 
-  const providerName = name?.trim() || account.name
+  const providerName = name?.trim() || credential.providerName
   const deeplink = generateCCSwitchURL({
     app,
     name:
@@ -149,7 +147,7 @@ export function openInCCSwitch(options: OpenInCCSwitchOptions) {
         : providerName,
     homepage,
     endpoint: normalizedEndpoint,
-    apiKey: token.key,
+    apiKey: credential.apiKey,
     model,
     notes,
   })

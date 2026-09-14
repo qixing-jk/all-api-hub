@@ -1,0 +1,99 @@
+import {
+  buildAccountTokenRuntimeKeyId,
+  isAccountTokenRuntimeKey,
+  type AccountRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
+import {
+  formatOptionalSkPrefixSiteTokenAuthKey,
+  hasUsableApiTokenKey,
+} from "~/services/accountTokens/apiTokenKey"
+import type { CredentialExportSource } from "~/services/integrations/credentialExport"
+import { hashProviderCatalogValue } from "~/services/integrations/providerCatalogExport"
+import type { ApiToken, DisplaySiteData } from "~/types"
+
+import { resolveDisplayAccountRuntimeKeySecret } from "./apiServiceRequest"
+import { resolveExportTokenForSecret } from "./exportTokenSecret"
+
+const getCredentialCacheKey = (
+  account: DisplaySiteData,
+  id: string,
+  baseUrl: string,
+  secret: string,
+  preferCurrentSecret: boolean,
+) =>
+  hashProviderCatalogValue(
+    JSON.stringify([
+      id,
+      baseUrl,
+      secret,
+      account.baseUrl,
+      account.siteType,
+      account.authType,
+      account.token,
+      account.userId,
+      account.cookieAuthSessionCookie,
+      preferCurrentSecret,
+    ]),
+  )
+
+/** Adapt an existing legacy inventory item without exposing it to exporters. */
+export function createAccountTokenExportSource(
+  account: DisplaySiteData,
+  token: ApiToken,
+): CredentialExportSource {
+  const id = buildAccountTokenRuntimeKeyId(account.id, token.id)
+  return {
+    id,
+    providerId: account.id,
+    providerName: account.name,
+    credentialName: token.name,
+    baseUrl: account.baseUrl,
+    notes: token.note,
+    cacheKey: getCredentialCacheKey(
+      account,
+      id,
+      account.baseUrl,
+      token.key,
+      true,
+    ),
+    resolveApiKey: async () =>
+      (await resolveExportTokenForSecret(account, token)).key,
+  }
+}
+
+/** Keep runtime-key identity and source-specific secret recovery in accounts. */
+export function createAccountRuntimeKeyExportSource(
+  account: DisplaySiteData,
+  runtimeKey: AccountRuntimeKey,
+  { preferCurrentSecret = false }: { preferCurrentSecret?: boolean } = {},
+): CredentialExportSource {
+  return {
+    id: runtimeKey.id,
+    providerId: account.id,
+    providerName: account.name,
+    credentialName: runtimeKey.label,
+    baseUrl: runtimeKey.baseUrl,
+    notes: isAccountTokenRuntimeKey(runtimeKey)
+      ? runtimeKey.token.note
+      : undefined,
+    cacheKey: getCredentialCacheKey(
+      account,
+      runtimeKey.id,
+      runtimeKey.baseUrl,
+      runtimeKey.secret,
+      preferCurrentSecret,
+    ),
+    resolveApiKey: async () => {
+      // Some exporters already hold a creation-only secret; re-reading it could
+      // discard that usable value when the provider cannot reveal it again.
+      if (preferCurrentSecret && hasUsableApiTokenKey(runtimeKey.secret)) {
+        return formatOptionalSkPrefixSiteTokenAuthKey(
+          runtimeKey.secret,
+          runtimeKey.siteType,
+        )
+      }
+      return (await resolveDisplayAccountRuntimeKeySecret(account, runtimeKey))
+        .secret
+    },
+  }
+}

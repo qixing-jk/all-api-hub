@@ -26,10 +26,6 @@ import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { KiloCodeProfileExportDialog } from "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
-import {
-  createExportAccount,
-  createExportToken,
-} from "~/features/ApiCredentialProfiles/utils/exportShims"
 import { BatchSelectionControl } from "~/features/KeyManagement/components/BatchSelectionControl"
 import {
   KeyResourceActionGroup,
@@ -41,8 +37,13 @@ import { KEY_CREDENTIAL_ASSOCIATION_STATES } from "~/features/KeyManagement/cred
 import { saveAccountRuntimeKeysToApiCredentialProfiles } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import { cn } from "~/lib/utils"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
 import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
 import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
+import {
+  createProfileCredentialExportData,
+  createProfileCredentialExportSource,
+} from "~/services/apiCredentialProfiles/credentialExport"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
@@ -185,6 +186,24 @@ export function ServiceCredentialCard({
       }),
     [account, canRotate, credential],
   )
+  const runtimeExportSource = useMemo(
+    () => createAccountRuntimeKeyExportSource(account, runtimeKey),
+    [account, runtimeKey],
+  )
+  const ccSwitchSource = useMemo(
+    () =>
+      ccSwitchProfile
+        ? createProfileCredentialExportSource(ccSwitchProfile)
+        : null,
+    [ccSwitchProfile],
+  )
+  const claudeCodeRouterSource = useMemo(
+    () =>
+      claudeCodeRouterProfile
+        ? createProfileCredentialExportSource(claudeCodeRouterProfile)
+        : null,
+    [claudeCodeRouterProfile],
+  )
 
   const handleSaveToApiCredentialProfiles = async () => {
     try {
@@ -233,10 +252,7 @@ export function ServiceCredentialCard({
     })
 
     try {
-      OpenInCherryStudio(
-        createExportAccount(transientProfile),
-        createExportToken(transientProfile),
-      )
+      OpenInCherryStudio(createProfileCredentialExportData(transientProfile))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -322,12 +338,11 @@ export function ServiceCredentialCard({
 
   return (
     <>
-      {ccSwitchProfile ? (
+      {ccSwitchSource ? (
         <CCSwitchExportDialog
           isOpen={true}
           onClose={() => setCCSwitchProfile(null)}
-          account={createExportAccount(ccSwitchProfile)}
-          token={createExportToken(ccSwitchProfile)}
+          source={ccSwitchSource}
           analyticsContext={{
             ...apiCredentialProfileExportContext,
             actionId:
@@ -358,17 +373,15 @@ export function ServiceCredentialCard({
         <CursorPlusExportDialog
           isOpen={true}
           onClose={() => setIsCursorPlusDialogOpen(false)}
-          account={account}
-          runtimeKey={runtimeKey}
+          source={runtimeExportSource}
         />
       ) : null}
 
-      {claudeCodeRouterProfile ? (
+      {claudeCodeRouterSource ? (
         <ClaudeCodeRouterImportDialog
           isOpen={true}
           onClose={() => setClaudeCodeRouterProfile(null)}
-          account={createExportAccount(claudeCodeRouterProfile)}
-          token={createExportToken(claudeCodeRouterProfile)}
+          source={claudeCodeRouterSource}
           routerBaseUrl={claudeCodeRouterBaseUrl}
           routerApiKey={claudeCodeRouterApiKey}
           analyticsContext={{

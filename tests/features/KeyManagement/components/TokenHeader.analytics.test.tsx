@@ -455,11 +455,10 @@ describe("TokenHeader analytics", () => {
     expect(cursorPlusDialogRenderMock).toHaveBeenLastCalledWith(
       expect.objectContaining({
         isOpen: true,
-        account: expect.objectContaining({ id: "acc-1" }),
-        runtimeKey: expect.objectContaining({
-          accountId: "acc-1",
-          secret: "sk-sensitive-original",
-          tokenId: 1,
+        source: expect.objectContaining({
+          id: "account_token:acc-1:1",
+          providerId: "acc-1",
+          resolveApiKey: expect.any(Function),
         }),
       }),
     )

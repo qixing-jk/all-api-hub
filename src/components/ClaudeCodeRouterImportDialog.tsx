@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react"
+import { useEffect, useId, useState, type FormEvent } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -9,9 +9,9 @@ import {
   Input,
   Modal,
 } from "~/components/ui"
-import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
 import { fetchOpenAICompatibleModels } from "~/services/aiApi/openaiCompatible"
 import { importToClaudeCodeRouter } from "~/services/integrations/claudeCodeRouterService"
+import type { CredentialExportSource } from "~/services/integrations/credentialExport"
 import {
   startProductAnalyticsAction,
   type ProductAnalyticsActionContext,
@@ -24,7 +24,6 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import type { ApiToken, DisplaySiteData } from "~/types"
 import { isTestMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -33,8 +32,7 @@ import { showResultToast } from "~/utils/feedback/operationFeedback"
 interface ClaudeCodeRouterImportDialogProps {
   isOpen: boolean
   onClose: () => void
-  account: DisplaySiteData
-  token: ApiToken
+  source: CredentialExportSource
   routerBaseUrl: string
   routerApiKey?: string
   analyticsContext?: ProductAnalyticsActionContext
@@ -78,7 +76,7 @@ function buildUpstreamBaseUrlFromProviderApiBaseUrl(
 }
 
 /**
- * Modal dialog for importing a token into Claude Code Router.
+ * Modal dialog for importing a credential into Claude Code Router.
  *
  * The dialog collects provider name, provider endpoint (`api_base_url`) and models,
  * then writes the provider into Claude Code Router via `POST /api/config`.
@@ -86,7 +84,7 @@ function buildUpstreamBaseUrlFromProviderApiBaseUrl(
 export function ClaudeCodeRouterImportDialog(
   props: ClaudeCodeRouterImportDialogProps,
 ) {
-  const { isOpen, onClose, account, token, routerBaseUrl, routerApiKey } = props
+  const { isOpen, onClose, source, routerBaseUrl, routerApiKey } = props
   const { analyticsContext } = props
 
   const { t } = useTranslation(["ui", "common"])
@@ -96,21 +94,18 @@ export function ClaudeCodeRouterImportDialog(
   const [restartAfterSave, setRestartAfterSave] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const formId = useMemo(
-    () => `claude-code-router-import-form-${token.id}`,
-    [token.id],
-  )
+  const formId = useId()
   const providerNameInputId = `${formId}-provider-name`
   const providerApiBaseUrlInputId = `${formId}-provider-api-base-url`
 
   useEffect(() => {
     if (!isOpen) return
-    setProviderName(account.name || account.baseUrl)
+    setProviderName(source.providerName || source.baseUrl)
     setProviderApiBaseUrl(
-      buildDefaultProviderApiBaseUrlFromBaseUrl(account.baseUrl),
+      buildDefaultProviderApiBaseUrlFromBaseUrl(source.baseUrl),
     )
     setRestartAfterSave(true)
-  }, [isOpen, account.name, account.baseUrl])
+  }, [isOpen, source.providerName, source.baseUrl])
 
   const [selectedModels, setSelectedModels] = useState<string[]>([])
 
@@ -139,13 +134,10 @@ export function ClaudeCodeRouterImportDialog(
       void (async () => {
         try {
           setIsLoadingModels(true)
-          const resolvedToken = await resolveExportTokenForSecret(
-            account,
-            token,
-          )
+          const apiKey = await source.resolveApiKey()
           const models = await fetchOpenAICompatibleModels({
             baseUrl: upstreamBaseUrl,
-            apiKey: resolvedToken.key,
+            apiKey,
           })
           const options = (models || [])
             .map((item) => item?.id)
@@ -175,7 +167,7 @@ export function ClaudeCodeRouterImportDialog(
       isMounted = false
       clearTimeout(handle)
     }
-  }, [account, isOpen, providerApiBaseUrl, token])
+  }, [source, isOpen, providerApiBaseUrl])
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -196,10 +188,9 @@ export function ClaudeCodeRouterImportDialog(
 
       try {
         setIsSubmitting(true)
-        const resolvedToken = await resolveExportTokenForSecret(account, token)
+        const providerApiKey = await source.resolveApiKey()
         const result = await importToClaudeCodeRouter({
-          account,
-          token: resolvedToken,
+          providerApiKey,
           routerBaseUrl,
           routerApiKey,
           providerName: providerName.trim(),

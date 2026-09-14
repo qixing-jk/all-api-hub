@@ -11,6 +11,7 @@ import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/One
 import { useDefaultTokenQuickCreate } from "~/features/TokenProvisioning/hooks/useDefaultTokenQuickCreate"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keyProductCapabilities"
+import type { CredentialExportSource } from "~/services/integrations/credentialExport"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { openKeysPage } from "~/utils/navigation"
@@ -37,10 +38,8 @@ export default function CopyKeyDialog({
 }: CopyKeyDialogProps) {
   const keyManagementT = useTranslation("keyManagement").t
   const [isAddTokenDialogOpen, setIsAddTokenDialogOpen] = useState(false)
-  const [ccSwitchContext, setCCSwitchContext] = useState<{
-    token: ApiToken
-    account: DisplaySiteData
-  } | null>(null)
+  const [ccSwitchSource, setCCSwitchSource] =
+    useState<CredentialExportSource | null>(null)
   const {
     runtimeKeys,
     nativeKeyRows,
@@ -100,14 +99,11 @@ export default function CopyKeyDialog({
     }
   }, [account, isOpen])
 
-  const handleOpenCCSwitchDialog = (
-    token: ApiToken,
-    currentAccount: DisplaySiteData,
-  ) => {
-    setCCSwitchContext({ token, account: currentAccount })
+  const handleOpenCCSwitchDialog = (source: CredentialExportSource) => {
+    setCCSwitchSource(source)
   }
 
-  const handleCloseCCSwitchDialog = () => setCCSwitchContext(null)
+  const handleCloseCCSwitchDialog = () => setCCSwitchSource(null)
 
   const handleOpenKeyManagement = () => {
     if (!account) return
@@ -179,12 +175,11 @@ export default function CopyKeyDialog({
           {renderContent()}
         </div>
       </Modal>
-      {ccSwitchContext && (
+      {ccSwitchSource && (
         <CCSwitchExportDialog
           isOpen={true}
           onClose={handleCloseCCSwitchDialog}
-          account={ccSwitchContext.account}
-          token={ccSwitchContext.token}
+          source={ccSwitchSource}
         />
       )}
       {account ? (

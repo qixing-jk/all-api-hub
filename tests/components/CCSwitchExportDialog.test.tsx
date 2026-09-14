@@ -3,10 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { CC_SWITCH_EXPORT_TEST_IDS } from "~/components/CCSwitchExportDialog.testIds"
-import {
-  createExportAccount,
-  createExportToken,
-} from "~/features/ApiCredentialProfiles/utils/exportShims"
+import { createAccountTokenExportSource } from "~/services/accounts/utils/credentialExport"
+import { createProfileCredentialExportSource } from "~/services/apiCredentialProfiles/credentialExport"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -90,10 +88,10 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={
-          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any
-        }
-        token={{ id: "tok", key: "sk-test" } as any}
+        source={createAccountTokenExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
+          { id: "tok", key: "sk-test" } as any,
+        )}
       />,
     )
 
@@ -125,10 +123,10 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={
-          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any
-        }
-        token={{ id: "tok", key: "sk-test" } as any}
+        source={createAccountTokenExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
+          { id: "tok", key: "sk-test" } as any,
+        )}
       />,
     )
 
@@ -155,10 +153,10 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={
-          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any
-        }
-        token={{ id: "tok", key: "sk-test" } as any}
+        source={createAccountTokenExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
+          { id: "tok", key: "sk-test" } as any,
+        )}
       />,
     )
 
@@ -186,14 +184,14 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={
+        source={createAccountTokenExportSource(
           {
             id: "acc",
             name: "Example",
             baseUrl: "https://ark.example.invalid/api/v3",
-          } as any
-        }
-        token={{ id: "tok", key: "sk-test" } as any}
+          } as any,
+          { id: "tok", key: "sk-test" } as any,
+        )}
       />,
     )
 
@@ -234,10 +232,10 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={
-          { id: "acc", name: "Example", baseUrl: "https://x.test" } as any
-        }
-        token={{ id: "tok", key: "sk-test" } as any}
+        source={createAccountTokenExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test" } as any,
+          { id: "tok", key: "sk-test" } as any,
+        )}
       />,
     )
 
@@ -284,8 +282,10 @@ describe("CCSwitchExportDialog", () => {
         <CCSwitchExportDialog
           isOpen={true}
           onClose={() => {}}
-          account={{ id: "acc", name: "Example", baseUrl } as any}
-          token={{ id: "tok", key: "sk-test" } as any}
+          source={createAccountTokenExportSource(
+            { id: "acc", name: "Example", baseUrl } as any,
+            { id: "tok", key: "sk-test" } as any,
+          )}
         />,
       )
 
@@ -326,10 +326,10 @@ describe("CCSwitchExportDialog", () => {
         <CCSwitchExportDialog
           isOpen={true}
           onClose={() => {}}
-          account={
-            { id: "acc", name: "Example", baseUrl: "https://x.test" } as any
-          }
-          token={{ id: "tok", key: "sk-test" } as any}
+          source={createAccountTokenExportSource(
+            { id: "acc", name: "Example", baseUrl: "https://x.test" } as any,
+            { id: "tok", key: "sk-test" } as any,
+          )}
         />,
       )
 
@@ -378,10 +378,10 @@ describe("CCSwitchExportDialog", () => {
         <CCSwitchExportDialog
           isOpen={true}
           onClose={() => {}}
-          account={
-            { id: "acc", name: "Example", baseUrl: "https://x.test" } as any
-          }
-          token={{ id: "tok", key: "sk-test" } as any}
+          source={createAccountTokenExportSource(
+            { id: "acc", name: "Example", baseUrl: "https://x.test" } as any,
+            { id: "tok", key: "sk-test" } as any,
+          )}
         />,
       )
 
@@ -429,10 +429,10 @@ describe("CCSwitchExportDialog", () => {
         <CCSwitchExportDialog
           isOpen={true}
           onClose={() => {}}
-          account={
-            { id: "acc", name: "Example", baseUrl: "https://x.test" } as any
-          }
-          token={{ id: "tok", key: "sk-test" } as any}
+          source={createAccountTokenExportSource(
+            { id: "acc", name: "Example", baseUrl: "https://x.test" } as any,
+            { id: "tok", key: "sk-test" } as any,
+          )}
         />,
       )
 
@@ -463,10 +463,10 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={
-          { id: "acc", name: "Example", baseUrl: "https://x.test" } as any
-        }
-        token={{ id: "tok", key: "sk-test" } as any}
+        source={createAccountTokenExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test" } as any,
+          { id: "tok", key: "sk-test" } as any,
+        )}
       />,
     )
 
@@ -493,10 +493,10 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={
-          { id: "acc", name: "Example", baseUrl: "https://x.test" } as any
-        }
-        token={{ id: "tok", key: "sk-test" } as any}
+        source={createAccountTokenExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test" } as any,
+          { id: "tok", key: "sk-test" } as any,
+        )}
       />,
     )
 
@@ -544,10 +544,10 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={
-          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any
-        }
-        token={{ id: "tok", key: "sk-test" } as any}
+        source={createAccountTokenExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
+          { id: "tok", key: "sk-test" } as any,
+        )}
       />,
     )
 
@@ -573,10 +573,10 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={
-          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any
-        }
-        token={{ id: "tok", key: "sk-test", note: "token note" } as any}
+        source={createAccountTokenExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
+          { id: "tok", key: "sk-test", note: "token note" } as any,
+        )}
       />,
     )
 
@@ -594,14 +594,14 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={onClose}
-        account={
+        source={createAccountTokenExportSource(
           {
             id: "acc",
             name: "Sensitive Provider",
             baseUrl: "https://private.example.com/v1",
-          } as any
-        }
-        token={{ id: "tok", key: "sk-sensitive", note: "private note" } as any}
+          } as any,
+          { id: "tok", key: "sk-sensitive", note: "private note" } as any,
+        )}
       />,
     )
 
@@ -645,10 +645,10 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={
-          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any
-        }
-        token={{ id: "tok", key: "sk-test" } as any}
+        source={createAccountTokenExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
+          { id: "tok", key: "sk-test" } as any,
+        )}
       />,
     )
 
@@ -673,10 +673,10 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={
-          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any
-        }
-        token={{ id: "tok", key: "sk-test" } as any}
+        source={createAccountTokenExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
+          { id: "tok", key: "sk-test" } as any,
+        )}
         analyticsContext={{
           featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
           actionId:
@@ -730,8 +730,7 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={createExportAccount(profile)}
-        token={createExportToken(profile)}
+        source={createProfileCredentialExportSource(profile)}
       />,
     )
 
@@ -751,11 +750,12 @@ describe("CCSwitchExportDialog", () => {
     await waitFor(() => {
       expect(mockOpenInCCSwitch).toHaveBeenCalledWith(
         expect.objectContaining({
-          account: expect.objectContaining({
-            id: "api-credential-profile:profile-1",
-            userId: "",
-          }),
-          token: expect.objectContaining({ key: "sk-profile" }),
+          credential: {
+            providerId: "api-credential-profile:profile-1",
+            providerName: profile.name,
+            baseUrl: profile.baseUrl,
+            apiKey: "sk-profile",
+          },
         }),
       )
     })
@@ -773,10 +773,10 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={
-          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any
-        }
-        token={{ id: "tok", key: "sk-abcd************wxyz" } as any}
+        source={createAccountTokenExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
+          { id: "tok", key: "sk-abcd************wxyz" } as any,
+        )}
       />,
     )
 

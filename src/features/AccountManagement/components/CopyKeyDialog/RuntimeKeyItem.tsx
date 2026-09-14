@@ -10,7 +10,8 @@ import {
   type AccountRuntimeKey,
   type AccountTokenRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
-import type { ApiToken, DisplaySiteData } from "~/types"
+import type { CredentialExportSource } from "~/services/integrations/credentialExport"
+import type { DisplaySiteData } from "~/types"
 
 import { QuickKeyResourceCard } from "./QuickKeyResourceCard"
 import { RuntimeKeyActionControls } from "./RuntimeKeyActionControls"
@@ -23,7 +24,7 @@ interface RuntimeKeyItemProps {
   onToggle: () => void
   onCopyKey: (runtimeKey: AccountRuntimeKey) => void
   account: DisplaySiteData
-  onOpenCCSwitchDialog?: (token: ApiToken, account: DisplaySiteData) => void
+  onOpenCCSwitchDialog?: (source: CredentialExportSource) => void
 }
 
 /**

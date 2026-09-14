@@ -1,4 +1,3 @@
-import type { ApiToken, DisplaySiteData } from "~/types"
 import type { ServiceResponse } from "~/types/serviceResponse"
 import { createLogger } from "~/utils/core/logger"
 import { joinUrl } from "~/utils/core/url"
@@ -105,7 +104,7 @@ async function restartService(baseUrl: string, apiKey: string | undefined) {
 }
 
 /**
- * Import a token into Claude Code Router by creating/updating a provider entry.
+ * Import a credential into Claude Code Router by creating/updating a provider entry.
  *
  * Behavior:
  * - Reads existing config (`GET /api/config`).
@@ -114,8 +113,7 @@ async function restartService(baseUrl: string, apiKey: string | undefined) {
  * - Optionally restarts the router (`POST /api/restart`).
  */
 export async function importToClaudeCodeRouter(options: {
-  account: DisplaySiteData
-  token: ApiToken
+  providerApiKey: string
   routerBaseUrl: string
   routerApiKey?: string
   providerName: string
@@ -162,7 +160,7 @@ export async function importToClaudeCodeRouter(options: {
     const newProvider: ClaudeCodeRouterProvider = {
       name: providerName,
       api_base_url: providerApiBaseUrl,
-      api_key: options.token.key,
+      api_key: options.providerApiKey,
       models,
     }
 
@@ -171,7 +169,7 @@ export async function importToClaudeCodeRouter(options: {
       (p) =>
         p.name === providerName &&
         p.api_base_url === providerApiBaseUrl &&
-        p.api_key === options.token.key,
+        p.api_key === options.providerApiKey,
     )
 
     // Update existing provider

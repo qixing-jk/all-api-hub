@@ -1,3 +1,4 @@
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
@@ -15,6 +16,10 @@ import {
 } from "~/features/KeyManagement/components/KeyResourceCard"
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import {
+  createAccountRuntimeKeyExportSource,
+  createAccountTokenExportSource,
+} from "~/services/accounts/utils/credentialExport"
 import type { AccountToken, DisplaySiteData } from "~/types"
 
 import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"
@@ -55,6 +60,18 @@ export function TokenIntegrationDialogs({
   enabled,
   token,
 }: TokenIntegrationDialogsProps) {
+  const exportSource = useMemo(
+    () => createAccountTokenExportSource(account, token),
+    [account, token],
+  )
+  const runtimeExportSource = useMemo(
+    () =>
+      createAccountRuntimeKeyExportSource(
+        account,
+        buildDisplayAccountTokenRuntimeKey(account, token),
+      ),
+    [account, token],
+  )
   if (!enabled) return null
 
   const { dialogs } = controller
@@ -71,8 +88,7 @@ export function TokenIntegrationDialogs({
         <CursorPlusExportDialog
           isOpen={true}
           onClose={dialogs.cursorPlus.close}
-          account={account}
-          runtimeKey={buildDisplayAccountTokenRuntimeKey(account, token)}
+          source={runtimeExportSource}
         />
       ) : null}
       {dialogs.kelivo.input ? (
@@ -86,8 +102,7 @@ export function TokenIntegrationDialogs({
       <ClaudeCodeRouterImportDialog
         isOpen={dialogs.claudeCodeRouter.isOpen}
         onClose={dialogs.claudeCodeRouter.close}
-        account={account}
-        token={token}
+        source={exportSource}
         routerBaseUrl={dialogs.claudeCodeRouter.baseUrl}
         routerApiKey={dialogs.claudeCodeRouter.apiKey}
       />

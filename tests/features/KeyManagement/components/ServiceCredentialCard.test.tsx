@@ -644,11 +644,8 @@ describe("ServiceCredentialCard", () => {
     expect(mockOpenInCherryStudio).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://sharedchat.example.invalid/v1",
-        name: "SharedChat - Codex API Key",
-      }),
-      expect.objectContaining({
-        key: "sk-service-credential",
-        name: "SharedChat - Codex API Key",
+        providerName: "SharedChat - Codex API Key",
+        apiKey: "sk-service-credential",
       }),
     )
 
@@ -679,12 +676,16 @@ describe("ServiceCredentialCard", () => {
     expect(mockCCSwitchDialog).toHaveBeenCalledWith(
       expect.objectContaining({
         isOpen: true,
-        account: expect.objectContaining({
+        source: expect.objectContaining({
           baseUrl: "https://sharedchat.example.invalid/v1",
+          providerName: "SharedChat - Codex API Key",
+          resolveApiKey: expect.any(Function),
         }),
-        token: expect.objectContaining({ key: "sk-service-credential" }),
       }),
     )
+    await expect(
+      mockCCSwitchDialog.mock.lastCall?.[0].source.resolveApiKey(),
+    ).resolves.toBe("sk-service-credential")
 
     await selectExportAction(user, "keyManagement:actions.exportToKiloCode")
     expect(mockKiloCodeDialog).toHaveBeenCalledWith(
@@ -704,11 +705,12 @@ describe("ServiceCredentialCard", () => {
     expect(mockCursorPlusDialog).toHaveBeenLastCalledWith(
       expect.objectContaining({
         isOpen: true,
-        account,
-        runtimeKey: expect.objectContaining({
+        source: expect.objectContaining({
+          id: "service_credential:sharedchat-account:codex",
+          providerName: "SharedChat",
+          credentialName: "Codex API Key",
           baseUrl: "https://sharedchat.example.invalid/v1",
-          secret: "sk-service-credential",
-          service: "codex",
+          resolveApiKey: expect.any(Function),
         }),
       }),
     )
@@ -726,10 +728,11 @@ describe("ServiceCredentialCard", () => {
     expect(mockClaudeCodeRouterDialog).toHaveBeenCalledWith(
       expect.objectContaining({
         isOpen: true,
-        account: expect.objectContaining({
+        source: expect.objectContaining({
           baseUrl: "https://sharedchat.example.invalid/v1",
+          providerName: "SharedChat - Codex API Key",
+          resolveApiKey: expect.any(Function),
         }),
-        token: expect.objectContaining({ key: "sk-service-credential" }),
         routerApiKey: "ccr-management-key",
         routerBaseUrl: "https://router.example.invalid",
       }),

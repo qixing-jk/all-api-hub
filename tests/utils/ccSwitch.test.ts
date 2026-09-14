@@ -1,8 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { openInCCSwitch } from "~/services/integrations/ccSwitch"
-import type { ApiToken } from "~/types"
-import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+import type { CredentialExportData } from "~/services/integrations/credentialExport"
 
 vi.mock("~/lib/notify", () => ({
   default: {
@@ -11,24 +10,11 @@ vi.mock("~/lib/notify", () => ({
   },
 }))
 
-const mockAccount = buildDisplaySiteData({
-  id: "acc",
-  name: "Example",
+const mockCredential: CredentialExportData = {
+  providerId: "acc",
+  providerName: "Example",
   baseUrl: "https://x.test",
-})
-
-const mockToken: ApiToken = {
-  id: 1,
-  user_id: 1,
-  key: "test-api-key",
-  name: "Test Token",
-  created_time: Date.now(),
-  accessed_time: Date.now(),
-  expired_time: -1,
-  remain_quota: 1000000,
-  used_quota: 0,
-  unlimited_quota: true,
-  status: 1,
+  apiKey: "test-api-key",
 }
 
 describe("ccSwitch", () => {
@@ -39,8 +25,7 @@ describe("ccSwitch", () => {
         const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
 
         openInCCSwitch({
-          account: mockAccount,
-          token: mockToken,
+          credential: mockCredential,
           app,
         })
 
@@ -57,8 +42,7 @@ describe("ccSwitch", () => {
       const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
 
       openInCCSwitch({
-        account: mockAccount,
-        token: mockToken,
+        credential: mockCredential,
         app: "codex",
         endpoint: "https://x.test/v1",
       })
@@ -75,8 +59,7 @@ describe("ccSwitch", () => {
       const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
 
       openInCCSwitch({
-        account: { ...mockAccount, baseUrl: "https://x.test" },
-        token: mockToken,
+        credential: { ...mockCredential, baseUrl: "https://x.test" },
         app: "codex",
       })
 
@@ -91,8 +74,7 @@ describe("ccSwitch", () => {
       const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
 
       openInCCSwitch({
-        account: mockAccount,
-        token: mockToken,
+        credential: mockCredential,
         app: "codex",
         endpoint: "x.test/v1/",
       })
@@ -108,8 +90,7 @@ describe("ccSwitch", () => {
       const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
 
       openInCCSwitch({
-        account: mockAccount,
-        token: mockToken,
+        credential: mockCredential,
         app: "hermes",
         name: "  Acme 中文_API Gateway__  ",
       })
@@ -125,8 +106,7 @@ describe("ccSwitch", () => {
       const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
 
       openInCCSwitch({
-        account: mockAccount,
-        token: mockToken,
+        credential: mockCredential,
         app: "hermes",
         name: "示例中转",
         endpoint: "https://api.example.invalid/v1",
@@ -143,8 +123,7 @@ describe("ccSwitch", () => {
       const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
 
       openInCCSwitch({
-        account: mockAccount,
-        token: mockToken,
+        credential: mockCredential,
         app: "grokbuild",
         name: "示例_Provider",
       })

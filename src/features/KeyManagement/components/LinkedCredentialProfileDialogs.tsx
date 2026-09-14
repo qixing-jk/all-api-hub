@@ -29,9 +29,7 @@ export function LinkedCredentialProfileDialogs({
     claudeCodeRouterBaseUrl,
 
     closeDialog,
-    exportAccount,
-    exportRuntimeKey,
-    exportToken,
+    exportSource,
   } = controller
 
   switch (activeDialog) {
@@ -40,8 +38,7 @@ export function LinkedCredentialProfileDialogs({
         <CCSwitchExportDialog
           isOpen
           onClose={closeDialog}
-          account={exportAccount}
-          token={exportToken}
+          source={exportSource}
           analyticsContext={{
             ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
             actionId:
@@ -54,8 +51,7 @@ export function LinkedCredentialProfileDialogs({
         <CursorPlusExportDialog
           isOpen
           onClose={closeDialog}
-          account={exportAccount}
-          runtimeKey={exportRuntimeKey}
+          source={exportSource}
           analyticsContext={{
             ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
             actionId:
@@ -89,8 +85,7 @@ export function LinkedCredentialProfileDialogs({
         <ClaudeCodeRouterImportDialog
           isOpen
           onClose={closeDialog}
-          account={exportAccount}
-          token={exportToken}
+          source={exportSource}
           routerBaseUrl={claudeCodeRouterBaseUrl ?? ""}
           routerApiKey={claudeCodeRouterApiKey}
           analyticsContext={{

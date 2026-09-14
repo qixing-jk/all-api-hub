@@ -1,5 +1,5 @@
 import toast from "~/lib/notify"
-import type { ApiToken, DisplaySiteData } from "~/types"
+import type { CredentialExportData } from "~/services/integrations/credentialExport"
 import { encodeUtf8Base64 } from "~/utils/core/base64"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
@@ -31,22 +31,21 @@ function generateCherryStudioURL(data: CherryStudioExportData): string {
 }
 
 /**
- * Attempt to open Cherry Studio via deeplink using the provided account/token.
+ * Attempt to open Cherry Studio via deeplink using a resolved credential.
  * Validates prerequisites and surfaces toast feedback on both outcomes.
- * @param account Display site information used to populate provider metadata.
- * @param token API token containing the key injected into the export payload.
+ * @param credential Provider metadata and the key injected into the export payload.
  */
-export function OpenInCherryStudio(account: DisplaySiteData, token: ApiToken) {
-  if (!account || !token) {
+export function OpenInCherryStudio(credential: CredentialExportData) {
+  if (!credential) {
     toast.error(t("messages:cherryStudio.missingCredentials"))
     return
   }
 
   const exportData: CherryStudioExportData = {
-    id: account.id,
-    baseUrl: account.baseUrl,
-    apiKey: token.key,
-    name: account.name,
+    id: credential.providerId,
+    baseUrl: credential.baseUrl,
+    apiKey: credential.apiKey,
+    name: credential.providerName,
   }
 
   const url = generateCherryStudioURL(exportData)

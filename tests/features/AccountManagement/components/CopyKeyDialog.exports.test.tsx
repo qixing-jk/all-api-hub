@@ -123,8 +123,10 @@ describe("CopyKeyDialog exports and service credentials", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       })
       expect(openInCherryStudioMock).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "acc-1" }),
-        expect.objectContaining({ key: "sk-full-secret" }),
+        expect.objectContaining({
+          providerId: "acc-1",
+          apiKey: "sk-full-secret",
+        }),
       )
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Success,
@@ -383,11 +385,8 @@ describe("CopyKeyDialog exports and service credentials", () => {
       expect(openInCherryStudioMock).toHaveBeenCalledWith(
         expect.objectContaining({
           baseUrl: "https://api.example.invalid/v1",
-          name: "SharedChat - Codex service key",
-        }),
-        expect.objectContaining({
-          key: "sk-service-credential-secret",
-          name: "SharedChat - Codex service key",
+          providerName: "SharedChat - Codex service key",
+          apiKey: "sk-service-credential-secret",
         }),
       )
     })
@@ -396,15 +395,17 @@ describe("CopyKeyDialog exports and service credentials", () => {
     await waitFor(() => {
       expect(ccSwitchDialogMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          account: expect.objectContaining({
+          source: expect.objectContaining({
             baseUrl: "https://api.example.invalid/v1",
-          }),
-          token: expect.objectContaining({
-            key: "sk-service-credential-secret",
+            providerName: "SharedChat - Codex service key",
+            resolveApiKey: expect.any(Function),
           }),
         }),
       )
     })
+    await expect(
+      ccSwitchDialogMock.mock.lastCall?.[0].source.resolveApiKey(),
+    ).resolves.toBe("sk-service-credential-secret")
 
     await selectExportAction(
       user,
@@ -413,11 +414,10 @@ describe("CopyKeyDialog exports and service credentials", () => {
     await waitFor(() => {
       expect(claudeCodeRouterDialogMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          account: expect.objectContaining({
+          source: expect.objectContaining({
             baseUrl: "https://api.example.invalid/v1",
-          }),
-          token: expect.objectContaining({
-            key: "sk-service-credential-secret",
+            providerName: "SharedChat - Codex service key",
+            resolveApiKey: expect.any(Function),
           }),
           routerApiKey: "ccr-management-key",
           routerBaseUrl: "https://router.example.invalid",
@@ -534,7 +534,7 @@ describe("CopyKeyDialog exports and service credentials", () => {
     })
   })
 
-  it("exports account tokens to external tools with the account token payload", async () => {
+  it("exports account token credentials with deferred secret resolution", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
 
     const user = await renderExpandedDetails()
@@ -542,10 +542,18 @@ describe("CopyKeyDialog exports and service credentials", () => {
     await selectExportAction(user, "keyManagement:actions.exportToCCSwitch")
     expect(ccSwitchDialogMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        account: expect.objectContaining({ id: "acc-1" }),
-        token: expect.objectContaining({ id: 1, key: "sk-test" }),
+        source: expect.objectContaining({
+          id: "account_token:acc-1:1",
+          providerId: "acc-1",
+          resolveApiKey: expect.any(Function),
+        }),
       }),
     )
+    expect(resolveApiTokenKeyMock).not.toHaveBeenCalled()
+    await expect(
+      ccSwitchDialogMock.mock.lastCall?.[0].source.resolveApiKey(),
+    ).resolves.toBe("sk-test")
+    expect(resolveApiTokenKeyMock).not.toHaveBeenCalled()
 
     await selectExportAction(user, "keyManagement:actions.exportToKiloCode")
     await waitFor(() => {
@@ -569,8 +577,11 @@ describe("CopyKeyDialog exports and service credentials", () => {
     )
     expect(claudeCodeRouterDialogMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        account: expect.objectContaining({ id: "acc-1" }),
-        token: expect.objectContaining({ id: 1, key: "sk-test" }),
+        source: expect.objectContaining({
+          id: "account_token:acc-1:1",
+          providerId: "acc-1",
+          resolveApiKey: expect.any(Function),
+        }),
         routerApiKey: "ccr-management-key",
         routerBaseUrl: "https://router.example.invalid",
       }),

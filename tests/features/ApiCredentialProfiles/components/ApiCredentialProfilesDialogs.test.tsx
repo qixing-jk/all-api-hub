@@ -174,14 +174,11 @@ it("adapts a profile for Cursor++ export and clears it on close", async () => {
     expect(cursorPlusExportDialogMock).toHaveBeenCalledWith({
       isOpen: true,
       onClose: expect.any(Function),
-      account: expect.objectContaining({
-        name: cursorPlusProfile.name,
+      source: expect.objectContaining({
+        providerName: cursorPlusProfile.name,
+        credentialName: cursorPlusProfile.name,
         baseUrl: cursorPlusProfile.baseUrl,
-      }),
-      runtimeKey: expect.objectContaining({
-        label: cursorPlusProfile.name,
-        secret: cursorPlusProfile.apiKey,
-        baseUrl: cursorPlusProfile.baseUrl,
+        resolveApiKey: expect.any(Function),
       }),
       analyticsContext: {
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
@@ -193,6 +190,10 @@ it("adapts a profile for Cursor++ export and clears it on close", async () => {
       },
     })
   })
+
+  await expect(
+    cursorPlusExportDialogMock.mock.lastCall?.[0].source.resolveApiKey(),
+  ).resolves.toBe(cursorPlusProfile.apiKey)
 
   await user.click(
     screen.getByRole("button", { name: "close Cursor++ profile export" }),

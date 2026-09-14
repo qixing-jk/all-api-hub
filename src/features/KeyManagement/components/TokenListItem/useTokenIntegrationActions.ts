@@ -233,7 +233,12 @@ export function useTokenIntegrationActions({
         account,
         token,
       )
-      OpenInCherryStudio(account, resolvedToken)
+      OpenInCherryStudio({
+        providerId: account.id,
+        providerName: account.name,
+        baseUrl: account.baseUrl,
+        apiKey: resolvedToken.key,
+      })
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {

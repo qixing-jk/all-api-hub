@@ -289,8 +289,10 @@ describe("RuntimeKeyActionControls deferred module loading", () => {
 
     await waitFor(() => {
       expect(openInCherryStudioMock).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "acc-1" }),
-        expect.objectContaining({ key: "sk-test" }),
+        expect.objectContaining({
+          providerId: "acc-1",
+          apiKey: "sk-test",
+        }),
       )
     })
     expect(cherryStudioModuleLoadMock.count).toBe(1)

@@ -2,7 +2,8 @@ import type {
   AccountRuntimeKey,
   AccountTokenRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
-import type { ApiToken, DisplaySiteData } from "~/types"
+import type { CredentialExportSource } from "~/services/integrations/credentialExport"
+import type { DisplaySiteData } from "~/types"
 import { maskSecretForDisplay } from "~/utils/core/formatters"
 
 import { RuntimeKeyActionControls } from "./RuntimeKeyActionControls"
@@ -26,7 +27,7 @@ interface RuntimeKeyDetailsProps {
   copiedRuntimeKeyId: string | null
   onCopyKey: (runtimeKey: AccountRuntimeKey) => void
   account: DisplaySiteData
-  onOpenCCSwitchDialog?: (token: ApiToken, account: DisplaySiteData) => void
+  onOpenCCSwitchDialog?: (source: CredentialExportSource) => void
 }
 
 /** Renders already-resolved non-token runtime keys without legacy token lookup. */

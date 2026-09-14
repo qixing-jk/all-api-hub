@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
 import { CURSOR_PLUS_EXPORT_TEST_IDS } from "~/components/CursorPlusExportDialog.testIds"
 import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
+import { createProfileCredentialExportSource } from "~/services/apiCredentialProfiles/credentialExport"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -14,7 +16,8 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { buildApiCredentialProfile } from "~~/tests/test-utils/factories"
+import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
   fetchModelIdsMock,
@@ -110,8 +113,7 @@ describe("CursorPlusExportDialog", () => {
       <CursorPlusExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={ACCOUNT}
-        runtimeKey={runtimeKey}
+        source={createAccountRuntimeKeyExportSource(ACCOUNT, runtimeKey)}
       />,
     )
 
@@ -148,6 +150,42 @@ describe("CursorPlusExportDialog", () => {
     )
   })
 
+  it("exports a profile directly with its existing Cursor++ provider id", async () => {
+    const profile = buildApiCredentialProfile({
+      name: "Profile Provider",
+      baseUrl: "https://profile.example.invalid",
+      apiKey: "profile-test-key",
+    })
+    resolveRuntimeKeyMock.mockRejectedValue(
+      new Error("account context unavailable"),
+    )
+    fetchModelIdsMock.mockResolvedValue(["profile-model"])
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+
+    render(
+      <CursorPlusExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createProfileCredentialExportSource(profile)}
+      />,
+    )
+
+    await screen.findByText("profile-model")
+    await user.click(screen.getByTestId(CURSOR_PLUS_EXPORT_TEST_IDS.copyButton))
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce())
+    expect(JSON.parse(writeText.mock.calls[0][0])).toMatchObject({
+      id: "profile-provider-profile-provider-1aaa1c25",
+      name: "Profile Provider - Profile Provider",
+      baseUrl: "https://profile.example.invalid/v1",
+      auth: { kind: "apiKey", value: "profile-test-key" },
+    })
+    expect(resolveRuntimeKeyMock).not.toHaveBeenCalled()
+  })
+
   it("allows multiple manual models after discovery fails", async () => {
     const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
     resolveRuntimeKeyMock.mockImplementation(async (_account, key) => ({
@@ -164,8 +202,7 @@ describe("CursorPlusExportDialog", () => {
       <CursorPlusExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={ACCOUNT}
-        runtimeKey={runtimeKey}
+        source={createAccountRuntimeKeyExportSource(ACCOUNT, runtimeKey)}
       />,
     )
 
@@ -200,8 +237,7 @@ describe("CursorPlusExportDialog", () => {
       <CursorPlusExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={ACCOUNT}
-        runtimeKey={runtimeKey}
+        source={createAccountRuntimeKeyExportSource(ACCOUNT, runtimeKey)}
       />,
     )
 
@@ -230,8 +266,7 @@ describe("CursorPlusExportDialog", () => {
       <CursorPlusExportDialog
         isOpen={true}
         onClose={onClose}
-        account={ACCOUNT}
-        runtimeKey={runtimeKey}
+        source={createAccountRuntimeKeyExportSource(ACCOUNT, runtimeKey)}
       />,
     )
 
@@ -267,8 +302,7 @@ describe("CursorPlusExportDialog", () => {
       <CursorPlusExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={ACCOUNT}
-        runtimeKey={runtimeKey}
+        source={createAccountRuntimeKeyExportSource(ACCOUNT, runtimeKey)}
         analyticsContext={analyticsContext}
       />,
     )
@@ -304,8 +338,7 @@ describe("CursorPlusExportDialog", () => {
       <CursorPlusExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={ACCOUNT}
-        runtimeKey={runtimeKey}
+        source={createAccountRuntimeKeyExportSource(ACCOUNT, runtimeKey)}
       />,
     )
 
@@ -354,8 +387,7 @@ describe("CursorPlusExportDialog", () => {
       <CursorPlusExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={ACCOUNT}
-        runtimeKey={runtimeKey}
+        source={createAccountRuntimeKeyExportSource(ACCOUNT, runtimeKey)}
       />,
     )
 
@@ -376,6 +408,62 @@ describe("CursorPlusExportDialog", () => {
     expect(completeActionMock).not.toHaveBeenCalled()
   })
 
+  it("discards a pending copy and refreshes models after account credentials change", async () => {
+    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    let resolveSecret: ((value: typeof runtimeKey) => void) | undefined
+    const pendingSecret = new Promise<typeof runtimeKey>((resolve) => {
+      resolveSecret = resolve
+    })
+    resolveRuntimeKeyMock
+      .mockResolvedValue({ ...runtimeKey, secret: "rotated-key" })
+      .mockResolvedValueOnce({ ...runtimeKey, secret: "old-key" })
+      .mockReturnValueOnce(pendingSecret)
+    fetchModelIdsMock.mockResolvedValue(["model-a"])
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+    const { rerender } = render(
+      <CursorPlusExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createAccountRuntimeKeyExportSource(ACCOUNT, runtimeKey)}
+      />,
+    )
+
+    await screen.findByText("model-a")
+    await user.click(screen.getByTestId(CURSOR_PLUS_EXPORT_TEST_IDS.copyButton))
+    rerender(
+      <CursorPlusExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createAccountRuntimeKeyExportSource(
+          { ...ACCOUNT, token: "changed-account-auth" },
+          runtimeKey,
+        )}
+      />,
+    )
+
+    await waitFor(() =>
+      expect(fetchModelIdsMock).toHaveBeenLastCalledWith({
+        baseUrl: ACCOUNT.baseUrl,
+        apiKey: "rotated-key",
+      }),
+    )
+    await act(async () => {
+      resolveSecret?.({ ...runtimeKey, secret: "old-key" })
+      await pendingSecret
+    })
+    expect(writeText).not.toHaveBeenCalled()
+
+    await user.click(screen.getByTestId(CURSOR_PLUS_EXPORT_TEST_IDS.copyButton))
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce())
+    expect(JSON.parse(writeText.mock.calls[0][0]).auth).toEqual({
+      kind: "apiKey",
+      value: "rotated-key",
+    })
+  })
+
   it("reports a clipboard failure without exposing provider details to analytics", async () => {
     const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
     resolveRuntimeKeyMock.mockImplementation(async (_account, key) => ({
@@ -392,8 +480,7 @@ describe("CursorPlusExportDialog", () => {
       <CursorPlusExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={ACCOUNT}
-        runtimeKey={runtimeKey}
+        source={createAccountRuntimeKeyExportSource(ACCOUNT, runtimeKey)}
       />,
     )
 
@@ -424,8 +511,7 @@ describe("CursorPlusExportDialog", () => {
       <CursorPlusExportDialog
         isOpen={true}
         onClose={() => {}}
-        account={ACCOUNT}
-        runtimeKey={runtimeKey}
+        source={createAccountRuntimeKeyExportSource(ACCOUNT, runtimeKey)}
       />,
     )
 

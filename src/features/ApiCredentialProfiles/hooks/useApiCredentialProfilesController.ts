@@ -11,6 +11,7 @@ import {
   type ApiCredentialProfileExportAction,
 } from "~/features/ApiCredentialProfiles/contracts"
 import toast from "~/lib/notify"
+import { createProfileCredentialExportData } from "~/services/apiCredentialProfiles/credentialExport"
 import { refreshApiCredentialProfileTelemetry } from "~/services/apiCredentialProfiles/telemetry"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
@@ -66,7 +67,6 @@ import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { openModelsPage } from "~/utils/navigation"
 
-import { createExportAccount, createExportToken } from "../utils/exportShims"
 import { useApiCredentialProfiles } from "./useApiCredentialProfiles"
 
 type SaveApiCredentialProfileInput = {
@@ -584,10 +584,7 @@ export function useApiCredentialProfilesController() {
         })
 
         try {
-          OpenInCherryStudio(
-            createExportAccount(profile),
-            createExportToken(profile),
-          )
+          OpenInCherryStudio(createProfileCredentialExportData(profile))
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
         } catch (error) {
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {

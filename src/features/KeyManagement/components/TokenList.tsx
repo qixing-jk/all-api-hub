@@ -28,6 +28,7 @@ import {
   isServiceCredentialRuntimeKey,
   type AccountRuntimeKeyLocator,
 } from "~/services/accounts/accountRuntimeKeys"
+import { createAccountTokenExportSource } from "~/services/accounts/utils/credentialExport"
 import type {
   AccountKeyResourceFacts,
   AccountKeyResourceRef,
@@ -507,8 +508,7 @@ export function TokenList(props: TokenListProps) {
     )
     return account && token
       ? {
-          account,
-          token,
+          exportSource: createAccountTokenExportSource(account, token),
           runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
         }
       : null
@@ -1471,8 +1471,7 @@ export function TokenList(props: TokenListProps) {
         <CCSwitchExportDialog
           isOpen={true}
           onClose={handleCloseCCSwitchDialog}
-          account={currentCCSwitchTarget.account}
-          token={currentCCSwitchTarget.token}
+          source={currentCCSwitchTarget.exportSource}
         />
       )}
 

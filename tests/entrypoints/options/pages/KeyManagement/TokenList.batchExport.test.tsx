@@ -105,16 +105,16 @@ vi.mock("~/features/KeyManagement/components/TokenListItem", () => ({
 vi.mock("~/components/CCSwitchExportDialog", () => ({
   CCSwitchExportDialog: ({
     isOpen,
-    account,
+    source,
     onClose,
   }: {
     isOpen: boolean
-    account: { name: string }
+    source: { providerName: string }
     onClose: () => void
   }) =>
     isOpen ? (
       <div data-testid="cc-switch-export-dialog">
-        <span>CC Switch export for {account.name}</span>
+        <span>CC Switch export for {source.providerName}</span>
         <button type="button" onClick={onClose}>
           Close CC Switch export
         </button>

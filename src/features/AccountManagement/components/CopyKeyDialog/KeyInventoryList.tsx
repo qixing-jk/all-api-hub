@@ -4,7 +4,8 @@ import { useTranslation } from "react-i18next"
 import { Alert, EmptyState } from "~/components/ui"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
-import type { ApiToken, DisplaySiteData } from "~/types"
+import type { CredentialExportSource } from "~/services/integrations/credentialExport"
+import type { DisplaySiteData } from "~/types"
 
 import { OpenRouterKeyResourceItem } from "./OpenRouterKeyResourceItem"
 import { RuntimeKeyItem } from "./RuntimeKeyItem"
@@ -17,7 +18,7 @@ interface KeyInventoryListProps {
   onToggleRuntimeKey: (id: string) => void
   onCopyKey: (runtimeKey: AccountRuntimeKey) => void
   account: DisplaySiteData
-  onOpenCCSwitchDialog?: (token: ApiToken, account: DisplaySiteData) => void
+  onOpenCCSwitchDialog?: (source: CredentialExportSource) => void
   canCreateDefaultKey?: boolean
   isCreating?: boolean
   createError?: string | null

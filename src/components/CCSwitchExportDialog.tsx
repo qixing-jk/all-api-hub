@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next"
-import { useEffect, useMemo, useState, type FormEvent } from "react"
+import { useEffect, useId, useMemo, useState, type FormEvent } from "react"
 import { useTranslation } from "react-i18next"
 
 import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
@@ -16,13 +16,16 @@ import {
   SelectValue,
 } from "~/components/ui"
 import toast from "~/lib/notify"
-import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
 import { discoverOpenAICompatibleModels } from "~/services/aiApi/openaiCompatible"
 import {
   CCSWITCH_APPS,
   openInCCSwitch,
   type CCSwitchApp,
 } from "~/services/integrations/ccSwitch"
+import {
+  resolveCredentialExport,
+  type CredentialExportSource,
+} from "~/services/integrations/credentialExport"
 import {
   startProductAnalyticsAction,
   type ProductAnalyticsActionContext,
@@ -35,7 +38,6 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import type { ApiToken, DisplaySiteData } from "~/types"
 import { isTestMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -50,8 +52,7 @@ import { CC_SWITCH_EXPORT_TEST_IDS } from "./CCSwitchExportDialog.testIds"
 interface CCSwitchExportDialogProps {
   isOpen: boolean
   onClose: () => void
-  account: DisplaySiteData
-  token: ApiToken
+  source: CredentialExportSource
   analyticsContext?: ProductAnalyticsActionContext
 }
 
@@ -109,27 +110,26 @@ const getCCSwitchLimitationNotice = (t: TFunction, app: CCSwitchApp) => {
 }
 
 /**
- * Presents a modal for exporting an account token into CCSwitch-compatible apps.
+ * Presents a modal for exporting a credential into CCSwitch-compatible apps.
  * Prefills provider metadata and lets the user tweak app, endpoint, model, and helper notes.
  * @param props Component props bundle.
  * @param props.isOpen Whether the dialog is visible.
  * @param props.onClose Callback invoked when the dialog should close.
- * @param props.account Account metadata used to prefill the form.
- * @param props.token API token exported through CCSwitch.
+ * @param props.source Provider metadata and deferred credential resolution.
  */
 export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
-  const { isOpen, onClose, account, token, analyticsContext } = props
+  const { isOpen, onClose, source, analyticsContext } = props
   const { t } = useTranslation(["ui", "common"])
   const [app, setApp] = useState<CCSwitchApp>(DEFAULT_APP)
   const [model, setModel] = useState("")
   const [notes, setNotes] = useState("")
-  const [providerName, setProviderName] = useState(account.name)
-  const [homepage, setHomepage] = useState(account.baseUrl)
+  const [providerName, setProviderName] = useState(source.providerName)
+  const [homepage, setHomepage] = useState(source.baseUrl)
   // CC Switch writes this directly to Codex's provider base_url. Model discovery
   // confirms whether the compatible route uses `/v1`; provider paths remain intact.
   // https://github.com/farion1231/cc-switch/blob/0b5da510168914b251481654a568c3ffacd62cf4/src-tauri/src/deeplink/provider.rs
   // https://developers.openai.com/api/reference/cli/resources/responses/methods/create
-  const [endpoint, setEndpoint] = useState(account.baseUrl)
+  const [endpoint, setEndpoint] = useState(source.baseUrl)
   const [isEndpointCustomized, setIsEndpointCustomized] = useState(false)
   const [codexEndpointDiscovery, setCodexEndpointDiscovery] = useState<{
     sourceBaseUrl: string
@@ -139,7 +139,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
     { value: string; label: string }[]
   >([])
   const [isLoadingModels, setIsLoadingModels] = useState(false)
-  const formId = useMemo(() => `ccswitch-export-form-${token.id}`, [token.id])
+  const formId = useId()
   const limitationNotice = getCCSwitchLimitationNotice(t, app)
   const upstreamBaseUrl = useMemo(() => {
     const normalizedEndpoint = normalizeHttpUrl(endpoint)
@@ -150,16 +150,16 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
     if (isOpen) {
       setApp(DEFAULT_APP)
       setModel("")
-      setNotes(token.note ?? "")
-      setProviderName(account.name)
-      setHomepage(account.baseUrl)
-      setEndpoint(account.baseUrl)
+      setNotes(source.notes ?? "")
+      setProviderName(source.providerName)
+      setHomepage(source.baseUrl)
+      setEndpoint(source.baseUrl)
       setIsEndpointCustomized(false)
       setCodexEndpointDiscovery(null)
       setUpstreamModelOptions([])
       setIsLoadingModels(false)
     }
-  }, [account.baseUrl, account.id, account.name, isOpen, token.id, token.note])
+  }, [source.baseUrl, source.id, source.providerName, source.notes, isOpen])
 
   useEffect(() => {
     if (!isOpen) return
@@ -175,13 +175,10 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
       void (async () => {
         try {
           setIsLoadingModels(true)
-          const resolvedToken = await resolveExportTokenForSecret(
-            account,
-            token,
-          )
+          const apiKey = await source.resolveApiKey()
           const discovery = await discoverOpenAICompatibleModels({
             baseUrl: upstreamBaseUrl,
-            apiKey: resolvedToken.key,
+            apiKey,
           })
           const normalized = discovery.models
             .map((item) => item.id.trim())
@@ -214,23 +211,23 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
       isMounted = false
       clearTimeout(handle)
     }
-  }, [account, isOpen, token, upstreamBaseUrl])
+  }, [source, isOpen, upstreamBaseUrl])
 
   useEffect(() => {
     if (!isOpen || isEndpointCustomized) return
 
     if (app !== "codex") {
-      setEndpoint(account.baseUrl)
+      setEndpoint(source.baseUrl)
       return
     }
 
     const resolvedEndpoint =
       codexEndpointDiscovery?.sourceBaseUrl === upstreamBaseUrl
         ? codexEndpointDiscovery.resolvedBaseUrl
-        : getConservativeCodexEndpoint(account.baseUrl)
+        : getConservativeCodexEndpoint(source.baseUrl)
     setEndpoint(resolvedEndpoint)
   }, [
-    account.baseUrl,
+    source.baseUrl,
     app,
     codexEndpointDiscovery,
     isEndpointCustomized,
@@ -253,10 +250,9 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
       )
 
       try {
-        const resolvedToken = await resolveExportTokenForSecret(account, token)
+        const credential = await resolveCredentialExport(source)
         const opened = openInCCSwitch({
-          account,
-          token: resolvedToken,
+          credential,
           app,
           model: model.trim() || undefined,
           notes: notes.trim() || undefined,

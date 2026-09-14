@@ -15,14 +15,12 @@ import {
   SelectValue,
 } from "~/components/ui"
 import {
-  buildProviderModelDiscoveryCacheKey,
   PROVIDER_MODEL_DISCOVERY_STATUSES,
   useProviderModelDiscovery,
 } from "~/hooks/useProviderModelDiscovery"
 import { useSafeExportAction } from "~/hooks/useSafeExportAction"
 import toast from "~/lib/notify"
-import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
-import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
+import type { CredentialExportSource } from "~/services/integrations/credentialExport"
 import {
   CURSOR_PLUS_PROVIDER_TYPES,
   prepareCursorPlusProvider,
@@ -38,7 +36,6 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { coerceBaseUrlToPathSuffix } from "~/utils/core/url"
 
@@ -47,8 +44,7 @@ import { CURSOR_PLUS_EXPORT_TEST_IDS } from "./CursorPlusExportDialog.testIds"
 interface CursorPlusExportDialogProps {
   isOpen: boolean
   onClose: () => void
-  account: DisplaySiteData
-  runtimeKey: AccountRuntimeKey
+  source: CredentialExportSource
   analyticsContext?: ProductAnalyticsActionContext
 }
 
@@ -81,8 +77,7 @@ function isValidCursorPlusBaseUrl(value: string) {
 export function CursorPlusExportDialog({
   isOpen,
   onClose,
-  account,
-  runtimeKey,
+  source,
   analyticsContext = cursorPlusExportAnalyticsContext,
 }: CursorPlusExportDialogProps) {
   const { t } = useTranslation(["ui", "common", "messages"])
@@ -98,10 +93,10 @@ export function CursorPlusExportDialog({
         return t("ui:dialog.cursorPlus.protocols.openAIChat")
     }
   }
-  const defaultProviderName = `${account.name} - ${runtimeKey.label}`
+  const defaultProviderName = `${source.providerName} - ${source.credentialName}`
   const defaultBaseUrl = useMemo(
-    () => coerceBaseUrlToPathSuffix(runtimeKey.baseUrl, "/v1"),
-    [runtimeKey.baseUrl],
+    () => coerceBaseUrlToPathSuffix(source.baseUrl, "/v1"),
+    [source.baseUrl],
   )
   const [providerName, setProviderName] = useState(defaultProviderName)
   const [baseUrl, setBaseUrl] = useState(defaultBaseUrl)
@@ -111,35 +106,23 @@ export function CursorPlusExportDialog({
   const [selectedModelIds, setSelectedModelIds] = useState<string[]>([])
   const [hasCustomizedModels, setHasCustomizedModels] = useState(false)
 
-  const discoveryCacheKey = useMemo(
-    () =>
-      buildProviderModelDiscoveryCacheKey([
-        runtimeKey.id,
-        runtimeKey.baseUrl,
-        runtimeKey.secret,
-      ]),
-    [runtimeKey.baseUrl, runtimeKey.id, runtimeKey.secret],
-  )
+  const discoveryCacheKey = source.cacheKey
   const discoverySources = useMemo(
     () => [
       {
-        selectionId: runtimeKey.id,
+        selectionId: source.id,
         cacheKey: discoveryCacheKey,
-        baseUrl: runtimeKey.baseUrl,
-        resolveApiKey: async () => {
-          const resolvedRuntimeKey =
-            await resolveDisplayAccountRuntimeKeySecret(account, runtimeKey)
-          return resolvedRuntimeKey.secret
-        },
+        baseUrl: source.baseUrl,
+        resolveApiKey: source.resolveApiKey,
       },
     ],
-    [account, discoveryCacheKey, runtimeKey],
+    [discoveryCacheKey, source],
   )
   const { getInventory, loadModels } = useProviderModelDiscovery({
     isOpen,
     sources: discoverySources,
   })
-  const inventory = getInventory(runtimeKey.id)
+  const inventory = getInventory(source.id)
 
   useEffect(() => {
     if (!isOpen) return
@@ -193,16 +176,13 @@ export function CursorPlusExportDialog({
 
     const tracker = startProductAnalyticsAction(analyticsContext)
     try {
-      const resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
-        account,
-        runtimeKey,
-      )
+      const apiKey = await source.resolveApiKey()
       if (!action.isCurrent()) return
       const provider = prepareCursorPlusProvider({
-        selectionId: runtimeKey.id,
+        selectionId: source.id,
         name: providerName,
         baseUrl,
-        apiKey: resolvedRuntimeKey.secret,
+        apiKey,
         discoveredModelIds: selectedModelIds,
         protocol,
       })
@@ -361,7 +341,7 @@ export function CursorPlusExportDialog({
             variant="secondary"
             size="sm"
             data-testid={CURSOR_PLUS_EXPORT_TEST_IDS.retryButton}
-            onClick={() => void loadModels(runtimeKey.id)}
+            onClick={() => void loadModels(source.id)}
           >
             {t("ui:dialog.cursorPlus.actions.retry")}
           </Button>

@@ -22,13 +22,8 @@ import { IconButton } from "~/components/ui"
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import {
-  createExportAccount,
-  createExportToken,
-} from "~/features/ApiCredentialProfiles/utils/exportShims"
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
 import {
-  accountRuntimeKeyToLegacyAccountToken,
   collectAccountRuntimeKeySecrets,
   isAccountTokenRuntimeKey,
   isServiceCredentialRuntimeKey,
@@ -36,7 +31,19 @@ import {
   type ServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  createAccountRuntimeKeyExportSource,
+  createAccountTokenExportSource,
+} from "~/services/accounts/utils/credentialExport"
 import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
+import {
+  createProfileCredentialExportData,
+  createProfileCredentialExportSource,
+} from "~/services/apiCredentialProfiles/credentialExport"
+import {
+  resolveCredentialExport,
+  type CredentialExportSource,
+} from "~/services/integrations/credentialExport"
 import type { KelivoProviderExportInput } from "~/services/integrations/kelivo"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
@@ -50,7 +57,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import type { ApiToken, DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -64,7 +71,7 @@ interface RuntimeKeyActionControlsProps {
   copiedRuntimeKeyId: string | null
   onCopyKey: (runtimeKey: AccountRuntimeKey) => void
   account: DisplaySiteData
-  onOpenCCSwitchDialog?: (token: ApiToken, account: DisplaySiteData) => void
+  onOpenCCSwitchDialog?: (source: CredentialExportSource) => void
 }
 
 // Kilo Code export dialogs and the Cherry Studio integration are only needed
@@ -144,6 +151,21 @@ export function RuntimeKeyActionControls({
         : null,
     [account, runtimeKey],
   )
+  const runtimeExportSource = useMemo(
+    () => createAccountRuntimeKeyExportSource(account, runtimeKey),
+    [account, runtimeKey],
+  )
+  const exportSource = useMemo(
+    () =>
+      serviceCredentialProfile
+        ? createProfileCredentialExportSource(serviceCredentialProfile)
+        : accountToken
+          ? createAccountTokenExportSource(account, accountToken)
+          : createAccountRuntimeKeyExportSource(account, runtimeKey, {
+              preferCurrentSecret: true,
+            }),
+    [account, accountToken, runtimeKey, serviceCredentialProfile],
+  )
   const kelivoActionId = serviceCredentialProfile
     ? PRODUCT_ANALYTICS_ACTION_IDS.CopyServiceCredentialKelivoImportCode
     : PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountTokenKelivoImportCode
@@ -167,18 +189,10 @@ export function RuntimeKeyActionControls({
       )
       if (serviceCredentialProfile) {
         OpenInCherryStudio(
-          createExportAccount(serviceCredentialProfile),
-          createExportToken(serviceCredentialProfile),
+          createProfileCredentialExportData(serviceCredentialProfile),
         )
       } else {
-        const resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
-          account,
-          runtimeKey,
-        )
-        OpenInCherryStudio(
-          account,
-          accountRuntimeKeyToLegacyAccountToken(resolvedRuntimeKey),
-        )
+        OpenInCherryStudio(await resolveCredentialExport(runtimeExportSource))
       }
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
@@ -242,16 +256,7 @@ export function RuntimeKeyActionControls({
   }
 
   const handleExportToCCSwitch = () => {
-    if (serviceCredentialProfile) {
-      onOpenCCSwitchDialog?.(
-        createExportToken(serviceCredentialProfile),
-        createExportAccount(serviceCredentialProfile),
-      )
-      return
-    }
-
-    const legacyToken = accountRuntimeKeyToLegacyAccountToken(runtimeKey)
-    onOpenCCSwitchDialog?.(legacyToken, account)
+    onOpenCCSwitchDialog?.(exportSource)
   }
 
   const markGatewayGuidanceComplete = () => {
@@ -349,27 +354,11 @@ export function RuntimeKeyActionControls({
   const renderClaudeCodeRouterImportDialog = () => {
     if (!isClaudeCodeRouterOpen) return null
 
-    if (serviceCredentialProfile) {
-      return (
-        <ClaudeCodeRouterImportDialog
-          isOpen={true}
-          onClose={() => setIsClaudeCodeRouterOpen(false)}
-          account={createExportAccount(serviceCredentialProfile)}
-          token={createExportToken(serviceCredentialProfile)}
-          routerBaseUrl={claudeCodeRouterBaseUrl}
-          routerApiKey={claudeCodeRouterApiKey}
-        />
-      )
-    }
-
-    const legacyToken = accountRuntimeKeyToLegacyAccountToken(runtimeKey)
-
     return (
       <ClaudeCodeRouterImportDialog
         isOpen={true}
         onClose={() => setIsClaudeCodeRouterOpen(false)}
-        account={account}
-        token={legacyToken}
+        source={exportSource}
         routerBaseUrl={claudeCodeRouterBaseUrl}
         routerApiKey={claudeCodeRouterApiKey}
       />
@@ -385,8 +374,7 @@ export function RuntimeKeyActionControls({
         <CursorPlusExportDialog
           isOpen={true}
           onClose={() => setIsCursorPlusDialogOpen(false)}
-          account={account}
-          runtimeKey={runtimeKey}
+          source={runtimeExportSource}
         />
       ) : null}
       {actionPolicy.exportSecret && kelivoExportInput ? (

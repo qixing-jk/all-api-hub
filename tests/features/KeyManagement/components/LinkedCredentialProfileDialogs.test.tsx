@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { LinkedCredentialProfileDialogs } from "~/features/KeyManagement/components/LinkedCredentialProfileDialogs"
 import type { LinkedCredentialProfileActionsController } from "~/features/KeyManagement/components/useLinkedCredentialProfileActions"
+import { createProfileCredentialExportSource } from "~/services/apiCredentialProfiles/credentialExport"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { render, screen } from "~~/tests/test-utils/render"
 
@@ -66,11 +67,8 @@ const buildController = (
     activeDialog,
     claudeCodeRouterApiKey: "",
     claudeCodeRouterBaseUrl: "",
-    cliProxyApiPayload: { account: {}, token: {} },
     closeDialog: vi.fn(),
-    exportAccount: {},
-    exportRuntimeKey: {},
-    exportToken: {},
+    exportSource: createProfileCredentialExportSource(profile),
   }) as unknown as LinkedCredentialProfileActionsController
 
 const activeDialogCases = [

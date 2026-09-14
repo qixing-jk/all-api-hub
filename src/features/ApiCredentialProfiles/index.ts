@@ -7,4 +7,3 @@ export type {
   ApiCredentialProfileAssociatedKeyState,
   ApiCredentialProfileAssociatedKeyStateByProfileId,
 } from "./contracts"
-export { createExportAccount, createExportToken } from "./utils/exportShims"
