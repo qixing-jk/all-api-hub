@@ -17,15 +17,15 @@ import type { ManifestOptionalPermissions } from "~/services/permissions/permiss
 export const permissionIconMap: Partial<
   Record<ManifestOptionalPermissions, ReactNode>
 > = {
-  cookies: <Cookie className="h-5 w-5 text-amber-500" />,
+  cookies: <Cookie className="text-link h-5 w-5" />,
   declarativeNetRequestWithHostAccess: (
-    <SlidersHorizontal className="h-5 w-5 text-emerald-500" />
+    <SlidersHorizontal className="text-link h-5 w-5" />
   ),
-  webRequest: <Network className="h-5 w-5 text-blue-500" />,
-  webRequestBlocking: <ShieldAlert className="h-5 w-5 text-purple-500" />,
-  clipboardRead: <ClipboardCheck className="h-5 w-5 text-indigo-500" />,
-  notifications: <Bell className="h-5 w-5 text-teal-500" />,
-  bookmarks: <Bookmark className="h-5 w-5 text-rose-500" />,
+  webRequest: <Network className="text-theme-500 h-5 w-5" />,
+  webRequestBlocking: <ShieldAlert className="text-link h-5 w-5" />,
+  clipboardRead: <ClipboardCheck className="text-theme-500 h-5 w-5" />,
+  notifications: <Bell className="text-link h-5 w-5" />,
+  bookmarks: <Bookmark className="text-link h-5 w-5" />,
 }
 
 export interface PermissionListItem {

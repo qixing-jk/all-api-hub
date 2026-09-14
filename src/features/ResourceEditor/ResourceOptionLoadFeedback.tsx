@@ -45,7 +45,7 @@ export function ResourceManualOptionControl({
     <div className="flex flex-wrap items-center gap-2">
       {state?.status === RESOURCE_OPTION_LOAD_STATUSES.Error ? (
         <>
-          <p role="alert" className="text-xs text-red-600">
+          <p role="alert" className="text-destructive-text text-xs">
             {state.errorMessage ??
               RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.error(t)}
           </p>
@@ -139,7 +139,7 @@ export function ResourceAutomaticOptionFeedback({
   if (state.status !== RESOURCE_OPTION_LOAD_STATUSES.Error) return null
   return (
     <div className="mt-1 flex items-center gap-2">
-      <p role="alert" className="text-xs text-red-600">
+      <p role="alert" className="text-destructive-text text-xs">
         {state.errorMessage ??
           RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.error(t)}
       </p>

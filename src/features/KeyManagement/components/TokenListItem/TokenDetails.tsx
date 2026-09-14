@@ -23,46 +23,34 @@ export function TokenDetails({ token }: TokenDetailsProps) {
   return (
     <div className="xs:grid-cols-2 grid grid-cols-1 gap-2.5 sm:grid-cols-4 sm:gap-3.5">
       <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 break-words">
-        <BodySmall
-          as="span"
-          className="dark:text-dark-text-tertiary shrink-0 text-gray-500"
-        >
+        <BodySmall as="span" className="text-muted-foreground shrink-0">
           {t("keyDetails.remainingQuota")}
         </BodySmall>
-        <span className="dark:text-dark-text-primary min-w-0 font-medium break-words text-gray-900">
+        <span className="text-foreground min-w-0 font-medium break-words">
           {formatQuota(token.remain_quota, token.unlimited_quota)}
         </span>
       </div>
       <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 break-words">
-        <BodySmall
-          as="span"
-          className="dark:text-dark-text-tertiary shrink-0 text-gray-500"
-        >
+        <BodySmall as="span" className="text-muted-foreground shrink-0">
           {t("keyDetails.usedQuota")}
         </BodySmall>
-        <span className="dark:text-dark-text-primary min-w-0 font-medium break-words text-gray-900">
+        <span className="text-foreground min-w-0 font-medium break-words">
           {formatQuota(token.used_quota, false)}
         </span>
       </div>
       <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 break-words">
-        <BodySmall
-          as="span"
-          className="dark:text-dark-text-tertiary shrink-0 text-gray-500"
-        >
+        <BodySmall as="span" className="text-muted-foreground shrink-0">
           {t("keyDetails.expireTime")}
         </BodySmall>
-        <span className="dark:text-dark-text-primary min-w-0 font-medium break-words text-gray-900">
+        <span className="text-foreground min-w-0 font-medium break-words">
           {formatKeyTime(token.expired_time)}
         </span>
       </div>
       <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 break-words">
-        <BodySmall
-          as="span"
-          className="dark:text-dark-text-tertiary shrink-0 text-gray-500"
-        >
+        <BodySmall as="span" className="text-muted-foreground shrink-0">
           {t("keyDetails.createTime")}
         </BodySmall>
-        <span className="dark:text-dark-text-primary min-w-0 font-medium break-words text-gray-900">
+        <span className="text-foreground min-w-0 font-medium break-words">
           {formatKeyTime(token.created_time)}
         </span>
       </div>

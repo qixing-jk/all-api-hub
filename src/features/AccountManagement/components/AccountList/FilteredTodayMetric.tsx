@@ -35,7 +35,7 @@ export function FilteredTodayMetric({
         aria-label={presentation.requiresRefresh ? visibleLabel : undefined}
         className={
           presentation.requiresRefresh
-            ? "cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            ? "focus-visible:ring-ring cursor-help rounded-sm outline-none focus-visible:ring-2"
             : undefined
         }
         tabIndex={presentation.requiresRefresh ? 0 : undefined}
@@ -81,13 +81,13 @@ export function FilteredTodayMetric({
       <Tooltip content={coverageLabel} anchorAsChild>
         <span
           aria-label={`${formattedValue}. ${qualifier}`}
-          className="cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          className="focus-visible:ring-ring cursor-help rounded-sm outline-none focus-visible:ring-2"
           tabIndex={0}
         >
           <span aria-hidden="true">{formattedValue}</span>{" "}
           <span
             aria-hidden="true"
-            className="dark:text-dark-text-tertiary text-[10px] text-gray-500"
+            className="text-muted-foreground text-[10px]"
           >
             {qualifier}
           </span>

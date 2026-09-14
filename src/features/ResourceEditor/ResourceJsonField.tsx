@@ -240,7 +240,7 @@ export function ResourceJsonField({
         <p
           id={`${id}-error`}
           role="alert"
-          className="mt-1 text-xs text-red-600 dark:text-red-400"
+          className="text-destructive-text mt-1 text-xs"
         >
           {errorMessage}
         </p>

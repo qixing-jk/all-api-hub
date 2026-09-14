@@ -2,18 +2,33 @@ import { act, render, screen } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import {
+  THEME_ATTRIBUTES,
+  THEME_COLOR,
+  THEME_MODE,
+  THEME_OWNER,
+  THEME_PRESET,
+  THEME_RADIUS,
+} from "~/constants/theme"
 import { ThemeProvider, useTheme } from "~/contexts/ThemeContext"
+import type { AppearancePreferences, ThemeMode } from "~/types/theme"
+import { THEME_BOOTSTRAP_CACHE_KEY } from "~/utils/ui/themePreferences"
+import { createMatchMediaController } from "~~/tests/test-utils/matchMedia"
 
 const { updateThemeModeMock } = vi.hoisted(() => ({
   updateThemeModeMock: vi.fn(),
 }))
 
-const mockPreferencesContext = vi.hoisted(() => ({
+const mockPreferencesContext = {
   current: {
-    themeMode: "system" as "system" | "light" | "dark",
+    themeMode: THEME_MODE.SYSTEM as ThemeMode,
     updateThemeMode: updateThemeModeMock,
+    isLoading: false,
+    preferences: undefined as
+      | { appearance?: AppearancePreferences }
+      | undefined,
   },
-}))
+}
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => mockPreferencesContext.current,
@@ -24,41 +39,6 @@ const TEST_IDS = {
   resolvedTheme: "resolved-theme",
 } as const
 
-type MatchMediaListener = (event: MediaQueryListEvent) => void
-
-function createMatchMediaController(initialMatches = false) {
-  let matches = initialMatches
-  const listeners = new Set<MatchMediaListener>()
-
-  return {
-    queryList: {
-      get matches() {
-        return matches
-      },
-      media: "(prefers-color-scheme: dark)",
-      onchange: null,
-      addEventListener: vi.fn(
-        (_event: string, listener: MatchMediaListener) => {
-          listeners.add(listener)
-        },
-      ),
-      removeEventListener: vi.fn(
-        (_event: string, listener: MatchMediaListener) => {
-          listeners.delete(listener)
-        },
-      ),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    },
-    emit(nextMatches: boolean) {
-      matches = nextMatches
-      const event = { matches: nextMatches } as MediaQueryListEvent
-      listeners.forEach((listener) => listener(event))
-    },
-  }
-}
-
 const Probe = ({ children }: { children?: ReactNode }) => {
   const context = useTheme()
 
@@ -66,7 +46,9 @@ const Probe = ({ children }: { children?: ReactNode }) => {
     <div>
       <div data-testid={TEST_IDS.themeMode}>{context.themeMode}</div>
       <div data-testid={TEST_IDS.resolvedTheme}>{context.resolvedTheme}</div>
-      <button onClick={() => context.setThemeMode("dark")}>set-dark</button>
+      <button onClick={() => context.setThemeMode(THEME_MODE.DARK)}>
+        set-dark
+      </button>
       {children}
     </div>
   )
@@ -75,11 +57,74 @@ const Probe = ({ children }: { children?: ReactNode }) => {
 describe("ThemeContext", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    document.documentElement.classList.remove("dark")
+    document.documentElement.classList.remove(THEME_MODE.DARK)
+    document.documentElement.removeAttribute(THEME_ATTRIBUTES.OWNER)
+    window.localStorage.removeItem(THEME_BOOTSTRAP_CACHE_KEY)
     mockPreferencesContext.current = {
-      themeMode: "system",
+      themeMode: THEME_MODE.SYSTEM,
       updateThemeMode: updateThemeModeMock,
+      isLoading: false,
+      preferences: undefined,
     }
+  })
+
+  it("preserves the startup palette until authoritative preferences load", () => {
+    const media = createMatchMediaController(false)
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn(() => media.queryList),
+    )
+    const root = document.documentElement
+    root.classList.add(THEME_MODE.DARK)
+    root.setAttribute(THEME_ATTRIBUTES.PRESET, THEME_PRESET.ANTHROPIC)
+    root.setAttribute(THEME_ATTRIBUTES.OWNER, THEME_OWNER.BOOTSTRAP)
+    window.localStorage.setItem(THEME_BOOTSTRAP_CACHE_KEY, "cached-theme")
+    mockPreferencesContext.current.isLoading = true
+
+    const { rerender } = render(
+      <ThemeProvider>
+        <Probe />
+      </ThemeProvider>,
+    )
+    expect(screen.getByTestId(TEST_IDS.resolvedTheme)).toHaveTextContent(
+      THEME_MODE.DARK,
+    )
+    expect(root).toHaveClass(THEME_MODE.DARK)
+    expect(root).toHaveAttribute(
+      THEME_ATTRIBUTES.PRESET,
+      THEME_PRESET.ANTHROPIC,
+    )
+    expect(window.localStorage.getItem(THEME_BOOTSTRAP_CACHE_KEY)).toBe(
+      "cached-theme",
+    )
+
+    mockPreferencesContext.current = {
+      ...mockPreferencesContext.current,
+      isLoading: false,
+      themeMode: THEME_MODE.LIGHT,
+      preferences: {
+        appearance: {
+          preset: THEME_PRESET.DEFAULT,
+          color: THEME_COLOR.ROSE,
+          radius: THEME_RADIUS.SMALL,
+        },
+      },
+    }
+    rerender(
+      <ThemeProvider>
+        <Probe />
+      </ThemeProvider>,
+    )
+    expect(root).not.toHaveClass(THEME_MODE.DARK)
+    expect(root).toHaveAttribute(THEME_ATTRIBUTES.COLOR, THEME_COLOR.ROSE)
+    expect(root).toHaveAttribute(THEME_ATTRIBUTES.PRESET, THEME_PRESET.DEFAULT)
+    expect(root).toHaveAttribute(THEME_ATTRIBUTES.OWNER, THEME_OWNER.REACT)
+    expect(
+      JSON.parse(window.localStorage.getItem(THEME_BOOTSTRAP_CACHE_KEY)!),
+    ).toEqual({
+      themeMode: "light",
+      appearance: { preset: "default", color: "rose", radius: "small" },
+    })
   })
 
   it("throws when useTheme is used outside the provider", () => {
@@ -106,18 +151,26 @@ describe("ThemeContext", () => {
       </ThemeProvider>,
     )
 
-    expect(screen.getByTestId(TEST_IDS.themeMode)).toHaveTextContent("system")
-    expect(screen.getByTestId(TEST_IDS.resolvedTheme)).toHaveTextContent("dark")
-    expect(document.documentElement.classList.contains("dark")).toBe(true)
+    expect(screen.getByTestId(TEST_IDS.themeMode)).toHaveTextContent(
+      THEME_MODE.SYSTEM,
+    )
+    expect(screen.getByTestId(TEST_IDS.resolvedTheme)).toHaveTextContent(
+      THEME_MODE.DARK,
+    )
+    expect(document.documentElement.classList.contains(THEME_MODE.DARK)).toBe(
+      true,
+    )
 
     act(() => {
       media.emit(false)
     })
 
     expect(screen.getByTestId(TEST_IDS.resolvedTheme)).toHaveTextContent(
-      "light",
+      THEME_MODE.LIGHT,
     )
-    expect(document.documentElement.classList.contains("dark")).toBe(false)
+    expect(document.documentElement.classList.contains(THEME_MODE.DARK)).toBe(
+      false,
+    )
 
     unmount()
 
@@ -141,16 +194,22 @@ describe("ThemeContext", () => {
     )
 
     expect(screen.getByTestId(TEST_IDS.resolvedTheme)).toHaveTextContent(
-      "light",
+      THEME_MODE.LIGHT,
     )
-    expect(document.documentElement.classList.contains("dark")).toBe(false)
+    expect(document.documentElement.classList.contains(THEME_MODE.DARK)).toBe(
+      false,
+    )
 
     act(() => {
       media.emit(true)
     })
 
-    expect(screen.getByTestId(TEST_IDS.resolvedTheme)).toHaveTextContent("dark")
-    expect(document.documentElement.classList.contains("dark")).toBe(true)
+    expect(screen.getByTestId(TEST_IDS.resolvedTheme)).toHaveTextContent(
+      THEME_MODE.DARK,
+    )
+    expect(document.documentElement.classList.contains(THEME_MODE.DARK)).toBe(
+      true,
+    )
   })
 
   it("uses explicit theme modes and delegates updates through the preferences context", async () => {
@@ -159,7 +218,7 @@ describe("ThemeContext", () => {
       "matchMedia",
       vi.fn(() => media.queryList),
     )
-    mockPreferencesContext.current.themeMode = "light"
+    mockPreferencesContext.current.themeMode = THEME_MODE.LIGHT
     updateThemeModeMock.mockResolvedValue(undefined)
 
     const { rerender } = render(
@@ -169,25 +228,31 @@ describe("ThemeContext", () => {
     )
 
     expect(screen.getByTestId(TEST_IDS.resolvedTheme)).toHaveTextContent(
-      "light",
+      THEME_MODE.LIGHT,
     )
-    expect(document.documentElement.classList.contains("dark")).toBe(false)
+    expect(document.documentElement.classList.contains(THEME_MODE.DARK)).toBe(
+      false,
+    )
 
     await act(async () => {
       screen.getByRole("button", { name: "set-dark" }).click()
     })
 
-    expect(updateThemeModeMock).toHaveBeenCalledWith("dark")
+    expect(updateThemeModeMock).toHaveBeenCalledWith(THEME_MODE.DARK)
 
-    mockPreferencesContext.current.themeMode = "dark"
+    mockPreferencesContext.current.themeMode = THEME_MODE.DARK
     rerender(
       <ThemeProvider>
         <Probe />
       </ThemeProvider>,
     )
 
-    expect(screen.getByTestId(TEST_IDS.resolvedTheme)).toHaveTextContent("dark")
-    expect(document.documentElement.classList.contains("dark")).toBe(true)
+    expect(screen.getByTestId(TEST_IDS.resolvedTheme)).toHaveTextContent(
+      THEME_MODE.DARK,
+    )
+    expect(document.documentElement.classList.contains(THEME_MODE.DARK)).toBe(
+      true,
+    )
   })
 
   it("ignores system color-scheme change events when the user selected an explicit theme", () => {
@@ -196,7 +261,7 @@ describe("ThemeContext", () => {
       "matchMedia",
       vi.fn(() => media.queryList),
     )
-    mockPreferencesContext.current.themeMode = "dark"
+    mockPreferencesContext.current.themeMode = THEME_MODE.DARK
 
     render(
       <ThemeProvider>
@@ -204,13 +269,19 @@ describe("ThemeContext", () => {
       </ThemeProvider>,
     )
 
-    expect(screen.getByTestId(TEST_IDS.resolvedTheme)).toHaveTextContent("dark")
+    expect(screen.getByTestId(TEST_IDS.resolvedTheme)).toHaveTextContent(
+      THEME_MODE.DARK,
+    )
 
     act(() => {
       media.emit(false)
     })
 
-    expect(screen.getByTestId(TEST_IDS.resolvedTheme)).toHaveTextContent("dark")
-    expect(document.documentElement.classList.contains("dark")).toBe(true)
+    expect(screen.getByTestId(TEST_IDS.resolvedTheme)).toHaveTextContent(
+      THEME_MODE.DARK,
+    )
+    expect(document.documentElement.classList.contains(THEME_MODE.DARK)).toBe(
+      true,
+    )
   })
 })

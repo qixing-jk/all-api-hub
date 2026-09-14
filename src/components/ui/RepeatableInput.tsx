@@ -122,7 +122,7 @@ function SortableRepeatableItem<TItem extends RepeatableInputItem>({
             size="xs"
             aria-label={dragHandleLabel}
             disabled={isDragDisabled}
-            className="shrink-0 text-gray-400 hover:text-gray-700"
+            className="text-faint-foreground hover:text-secondary-foreground shrink-0"
             {...listeners}
             {...attributes}
           >
@@ -138,7 +138,7 @@ function SortableRepeatableItem<TItem extends RepeatableInputItem>({
           aria-label={removeLabel}
           onClick={removeItem}
           disabled={isDeleteDisabled?.(item, index)}
-          className="shrink-0 text-gray-400 hover:text-gray-700"
+          className="text-faint-foreground hover:text-secondary-foreground shrink-0"
         >
           <X className="h-4 w-4" />
         </IconButton>

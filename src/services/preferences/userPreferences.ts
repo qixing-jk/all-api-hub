@@ -2,6 +2,7 @@ import { Storage } from "@plasmohq/storage"
 
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import { DEFAULT_THEME_MODE } from "~/constants/theme"
 import {
   STORAGE_LOCKS,
   USER_PREFERENCES_STORAGE_KEYS,
@@ -103,7 +104,12 @@ import {
   DEFAULT_TASK_NOTIFICATION_PREFERENCES,
   type TaskNotificationPreferences,
 } from "~/types/taskNotifications"
-import type { ThemeMode } from "~/types/theme"
+import {
+  DEFAULT_APPEARANCE,
+  normalizeAppearance,
+  type AppearancePreferences,
+  type ThemeMode,
+} from "~/types/theme"
 import {
   DEFAULT_USAGE_HISTORY_PREFERENCES,
   type UsageHistoryPreferences,
@@ -227,6 +233,7 @@ export interface WebAiApiCheckPreferences {
 
 // 用户偏好设置类型定义
 export interface UserPreferences {
+  appearance?: AppearancePreferences
   themeMode: ThemeMode
   /**
    * Controls what happens when the toolbar icon is clicked.
@@ -631,7 +638,8 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   redemptionAssist: DEFAULT_REDEMPTION_ASSIST_PREFERENCES,
   webAiApiCheck: DEFAULT_WEB_AI_API_CHECK_PREFERENCES,
   sortingPriorityConfig: undefined,
-  themeMode: "system",
+  appearance: { ...DEFAULT_APPEARANCE },
+  themeMode: DEFAULT_THEME_MODE,
   language: undefined, // Default to undefined to trigger browser detection
   logging: getDefaultLoggingPreferences(),
   preferencesVersion: CURRENT_PREFERENCES_VERSION,
@@ -691,6 +699,7 @@ function migrateAndNormalizePreferences(
 
   return normalizeSharedPreferencesMetadata({
     ...currentPreferences,
+    appearance: normalizeAppearance(currentPreferences.appearance),
     autoProvisionKeyOnAccountAddMode:
       currentPreferences.autoProvisionKeyOnAccountAddMode ===
       ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups

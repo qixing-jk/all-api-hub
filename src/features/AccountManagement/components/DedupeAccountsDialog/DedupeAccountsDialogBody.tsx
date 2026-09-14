@@ -87,12 +87,12 @@ export function DedupeAccountsDialogBody({
     <div className="space-y-4">
       {groups.length > 0 && (
         <>
-          <h3 className="dark:text-dark-text-primary text-sm font-semibold text-gray-900">
+          <h3 className="text-foreground text-sm font-semibold">
             {t("ui:dialog.dedupeAccounts.exactTitle")}
           </h3>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0 space-y-1">
-              <div className="dark:text-dark-text-primary text-sm font-medium text-gray-900">
+              <div className="text-foreground text-sm font-medium">
                 {t("ui:dialog.dedupeAccounts.strategyLabel")}
               </div>
               <Select
@@ -115,7 +115,7 @@ export function DedupeAccountsDialogBody({
               </Select>
             </div>
 
-            <div className="dark:text-dark-text-secondary text-sm text-gray-500">
+            <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
               {t("ui:dialog.dedupeAccounts.summary", {
                 groups: groups.length,
                 deleteCount,
@@ -126,14 +126,14 @@ export function DedupeAccountsDialogBody({
       )}
 
       {groups.length > 0 && (
-        <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+        <div className="text-muted-foreground text-xs">
           {t("ui:dialog.dedupeAccounts.manualPickHint")}
         </div>
       )}
 
       {groups.length === 0 ? (
         !hasSuspectedGroups && (
-          <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-tertiary/30 dark:text-dark-text-secondary rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+          <div className="dark:bg-secondary/30 dark:text-secondary-foreground border-border bg-surface-subtle text-muted-foreground rounded-lg border p-4 text-sm">
             {t("ui:dialog.dedupeAccounts.empty")}
           </div>
         )
@@ -152,7 +152,7 @@ export function DedupeAccountsDialogBody({
       )}
 
       {unscannableCount > 0 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
+        <div className="border-warning-border bg-warning-soft text-warning-soft-foreground rounded-lg border p-4 text-sm">
           <Trans
             t={t}
             i18nKey="ui:dialog.dedupeAccounts.unscannableHint"

@@ -117,7 +117,7 @@ export function WebDAVDecryptPasswordModal({
             checked={savePassword}
             onCheckedChange={(v) => onSavePasswordChange(Boolean(v))}
           />
-          <span className="text-sm text-gray-700 dark:text-gray-300">
+          <span className="text-secondary-foreground text-sm">
             {t("webdav.encryption.savePassword")}
           </span>
         </label>

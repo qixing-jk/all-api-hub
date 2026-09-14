@@ -226,7 +226,7 @@ export default function ResultsTable({
         onKeywordChange={setSearchKeyword}
       />
       {forceShowActions && (
-        <div className="border-b border-yellow-200 bg-yellow-50 px-6 py-2 text-xs text-yellow-900 dark:border-yellow-900/50 dark:bg-yellow-950/30 dark:text-yellow-200">
+        <div className="border-warning-border bg-warning-soft text-warning-soft-foreground border-b px-6 py-2 text-xs">
           {t("execution.actions.devModeHint")}
         </div>
       )}
@@ -243,17 +243,17 @@ export default function ResultsTable({
       ) : (
         <div className="[container-type:inline-size]">
           <Table className="min-w-[64rem]">
-            <TableHeader className="bg-gray-50 dark:bg-gray-800">
-              <TableRow className="border-gray-200 hover:bg-transparent dark:border-gray-700">
+            <TableHeader className="bg-surface-subtle dark:bg-card">
+              <TableRow className="border-border hover:bg-transparent">
                 {sortableHeader("accountName")}
                 {sortableHeader("status")}
-                <TableHead className="h-auto px-6 py-3 text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+                <TableHead className="text-muted-foreground h-auto px-6 py-3 text-xs font-medium tracking-wider uppercase">
                   {t("execution.table.message")}
                 </TableHead>
                 {sortableHeader("timestamp")}
                 <TableHead
                   className={cn(
-                    "sticky right-0 h-auto w-12 min-w-12 border-l border-gray-200 bg-gray-50 px-2 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 [@container(min-width:48rem)]:w-auto [@container(min-width:48rem)]:min-w-0 [@container(min-width:48rem)]:px-3",
+                    "border-border bg-surface-subtle text-muted-foreground dark:bg-card sticky right-0 h-auto w-12 min-w-12 border-l px-2 py-3 text-right text-xs font-medium tracking-wider uppercase [@container(min-width:48rem)]:w-auto [@container(min-width:48rem)]:min-w-0 [@container(min-width:48rem)]:px-3",
                     Z_INDEX.tableStickyHeader,
                   )}
                 >
@@ -261,7 +261,7 @@ export default function ResultsTable({
                 </TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody className="bg-white dark:bg-gray-900">
+            <TableBody className="bg-card dark:bg-background">
               {table.getRowModel().rows.map(({ original: result }) => (
                 <ResultsTableRow
                   key={result.accountId}

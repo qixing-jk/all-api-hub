@@ -61,15 +61,15 @@ export default function StatusCard({
   const getResultBadgeColor = (result?: AutoCheckinRunResult): string => {
     switch (result) {
       case AUTO_CHECKIN_RUN_RESULT.SUCCESS:
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+        return "bg-success-soft text-success-soft-foreground"
       case AUTO_CHECKIN_RUN_RESULT.PARTIAL:
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+        return "bg-warning-soft text-warning-soft-foreground"
       case AUTO_CHECKIN_RUN_RESULT.FAILED:
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+        return "bg-destructive-soft text-destructive-soft-foreground"
       case AUTO_CHECKIN_RUN_RESULT.SKIPPED:
-        return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+        return "bg-muted text-secondary-foreground dark:bg-card"
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+        return "bg-muted text-secondary-foreground dark:bg-secondary"
     }
   }
 
@@ -149,7 +149,7 @@ export default function StatusCard({
       <CardContent className="space-y-4" padding="md">
         <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
           <div>
-            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            <div className="text-muted-foreground text-sm font-medium">
               {t("status.lastRun")}
             </div>
             <div className="mt-1 text-base font-semibold">
@@ -158,7 +158,7 @@ export default function StatusCard({
           </div>
 
           <div>
-            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            <div className="text-muted-foreground text-sm font-medium">
               {t("status.nextDaily")}
             </div>
             <div className="mt-1 text-base font-semibold">
@@ -167,13 +167,13 @@ export default function StatusCard({
           </div>
 
           <div>
-            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            <div className="text-muted-foreground text-sm font-medium">
               {t("status.nextRetry")}
             </div>
             <div className="mt-1 text-base font-semibold">
               {getNextRetryText()}
               {hasPendingRetry && isRetryEnabled && (
-                <span className="ml-2 inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">
+                <span className="bg-warning-soft text-warning-soft-foreground ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold">
                   {t("status.pendingRetry")}
                 </span>
               )}
@@ -181,7 +181,7 @@ export default function StatusCard({
           </div>
 
           <div>
-            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            <div className="text-muted-foreground text-sm font-medium">
               {t("execution.statistics.result")}
             </div>
             <div className="mt-1">
@@ -193,22 +193,24 @@ export default function StatusCard({
                 </span>
               )}
               {!status.lastRunResult && (
-                <span className="text-lg font-semibold text-gray-400">-</span>
+                <span className="text-faint-foreground text-lg font-semibold">
+                  -
+                </span>
               )}
             </div>
           </div>
         </div>
-        <div className="border-t border-gray-200 pt-4 dark:border-gray-700">
-          <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+        <div className="border-border border-t pt-4">
+          <div className="text-muted-foreground text-sm font-medium">
             {t("status.summary.title")}
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-3 text-sm text-gray-600 sm:grid-cols-3 lg:grid-cols-7 dark:text-gray-300">
+          <div className="text-muted-foreground dark:text-secondary-foreground mt-2 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3 lg:grid-cols-7">
             {summaryItems.map((item) => (
               <div key={item.label} className="flex flex-col">
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-muted-foreground text-xs">
                   {item.label}
                 </span>
-                <span className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                <span className="text-foreground text-base font-semibold">
                   {item.value ?? "-"}
                 </span>
               </div>

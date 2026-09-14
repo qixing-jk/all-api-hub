@@ -101,10 +101,10 @@ interface ApiCredentialProfileListItemProps {
  * Maps telemetry health to the small status indicator color.
  */
 function getHealthIndicatorColor(status: SiteHealthStatus | undefined): string {
-  if (status === SiteHealthStatus.Healthy) return "bg-green-500"
-  if (status === SiteHealthStatus.Warning) return "bg-yellow-500"
-  if (status === SiteHealthStatus.Error) return "bg-red-500"
-  return "bg-gray-400"
+  if (status === SiteHealthStatus.Healthy) return "bg-success"
+  if (status === SiteHealthStatus.Warning) return "bg-warning"
+  if (status === SiteHealthStatus.Error) return "bg-destructive"
+  return "bg-surface-inverse-muted"
 }
 
 const COMPACT_AUDIT_TIME_FORMAT: Intl.DateTimeFormatOptions = {
@@ -137,7 +137,7 @@ function AuditTimeBadge({
     <Badge
       variant="outline"
       size="sm"
-      className="dark:bg-dark-bg-tertiary/50 dark:text-dark-text-tertiary max-w-full bg-gray-50 font-normal text-gray-500 tabular-nums"
+      className="dark:bg-secondary/50 bg-surface-subtle text-muted-foreground max-w-full font-normal tabular-nums"
       title={fullLabel}
       aria-label={`${label}: ${fullLabel}`}
     >
@@ -390,9 +390,9 @@ export function ApiCredentialProfileListItem({
         tabIndex={-1}
         aria-labelledby={rowHeadingId}
         className={cn(
-          "transition-shadow outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
+          "focus-visible:ring-ring transition-shadow outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
           isTargetHighlighted &&
-            "ring-2 ring-blue-500 ring-offset-2 dark:ring-blue-400",
+            "ring-theme-500 dark:ring-theme-400 ring-2 ring-offset-2",
         )}
       >
         <CardContent padding="md" spacing="sm">
@@ -444,11 +444,11 @@ export function ApiCredentialProfileListItem({
 
               <div className="flex flex-1 flex-col gap-2 text-xs">
                 <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-                  <span className="dark:text-dark-text-tertiary shrink-0 whitespace-nowrap text-gray-500">
+                  <span className="text-muted-foreground shrink-0 whitespace-nowrap">
                     {t("apiCredentialProfiles:list.apiKey")}
                   </span>
                   <div className="flex w-full min-w-0 items-center gap-0.5 sm:flex-1">
-                    <code className="dark:bg-dark-bg-tertiary dark:text-dark-text-secondary min-w-0 flex-1 truncate rounded bg-gray-100 px-2 py-1 font-mono text-[10px] text-gray-800 sm:text-xs">
+                    <code className="dark:bg-secondary bg-muted text-secondary-foreground min-w-0 flex-1 truncate rounded px-2 py-1 font-mono text-[10px] sm:text-xs">
                       {visibleKeys.has(profile.id)
                         ? profile.apiKey
                         : maskSecretForDisplay(profile.apiKey)}
@@ -493,7 +493,7 @@ export function ApiCredentialProfileListItem({
                 </div>
 
                 <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
-                  <span className="dark:text-dark-text-tertiary shrink-0 whitespace-nowrap text-gray-500">
+                  <span className="text-muted-foreground shrink-0 whitespace-nowrap">
                     {t("aiApiVerification:verifyDialog.history.lastVerified")}
                   </span>
                   <VerificationHistorySummary
@@ -505,7 +505,7 @@ export function ApiCredentialProfileListItem({
                 <Collapsible
                   open={isTelemetryOpen}
                   onOpenChange={setIsTelemetryOpen}
-                  className="dark:bg-dark-bg-tertiary/60 flex flex-col rounded-lg border border-gray-100 bg-gray-50 p-2 sm:p-3 dark:border-gray-800"
+                  className="dark:bg-secondary/60 border-border-subtle bg-surface-subtle flex flex-col rounded-lg border p-2 sm:p-3"
                   data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.telemetryPanel}
                 >
                   <div className="flex min-w-0 items-center justify-between gap-2">
@@ -529,7 +529,7 @@ export function ApiCredentialProfileListItem({
                           aria-label={healthTitle}
                           role="img"
                         />
-                        <span className="dark:text-dark-text-secondary min-w-0 truncate text-xs font-medium text-gray-700">
+                        <span className="text-secondary-foreground min-w-0 truncate text-xs font-medium">
                           {t("apiCredentialProfiles:telemetry.title")}
                         </span>
                         {telemetry?.source ? (
@@ -543,7 +543,7 @@ export function ApiCredentialProfileListItem({
                         ) : null}
                         <ChevronDown
                           className={cn(
-                            "dark:text-dark-text-tertiary ml-auto h-3.5 w-3.5 shrink-0 text-gray-500 transition-transform",
+                            "text-muted-foreground ml-auto h-3.5 w-3.5 shrink-0 transition-transform",
                             isTelemetryOpen ? "rotate-180" : "rotate-0",
                           )}
                           aria-hidden="true"
@@ -554,7 +554,7 @@ export function ApiCredentialProfileListItem({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="dark:text-dark-text-tertiary dark:hover:text-dark-text-primary h-auto min-h-0 shrink-0 gap-1 px-1.5 py-1 text-[11px] text-gray-500 hover:text-gray-800"
+                      className="dark:hover:text-foreground text-muted-foreground hover:text-secondary-foreground h-auto min-h-0 shrink-0 gap-1 px-1.5 py-1 text-[11px]"
                       onClick={handleRefreshTelemetry}
                       loading={isTelemetryRefreshing}
                       leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
@@ -575,8 +575,8 @@ export function ApiCredentialProfileListItem({
               </div>
 
               {profile.notes?.trim() ? (
-                <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-tertiary/40 dark:text-dark-text-secondary border-l-2 border-blue-200 bg-blue-50/60 px-3 py-2 text-xs text-gray-600">
-                  <div className="mb-1 text-[11px] font-medium tracking-wide text-blue-600 dark:text-blue-300">
+                <div className="dark:border-border dark:bg-secondary/40 dark:text-secondary-foreground border-theme-200 bg-theme-50/60 text-muted-foreground border-l-2 px-3 py-2 text-xs">
+                  <div className="text-theme-600 dark:text-theme-300 mb-1 text-[11px] font-medium tracking-wide">
                     {t("apiCredentialProfiles:dialog.fields.notes")}
                   </div>
                   <div className="max-h-24 overflow-y-auto leading-relaxed break-words whitespace-pre-wrap">

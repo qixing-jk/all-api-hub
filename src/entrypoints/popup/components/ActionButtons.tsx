@@ -189,8 +189,8 @@ export default function ActionButtons({
                   <CircleDollarSign
                     className={`h-4 w-4 ${
                       hasUncheckedExternalCheckIns
-                        ? "text-red-500"
-                        : "text-green-500"
+                        ? "text-destructive-text"
+                        : "text-success-text"
                     }`}
                   />
                 </IconButton>

@@ -1040,7 +1040,7 @@ export function BatchVerifyModelsDialog({
     return (
       <div
         data-testid={getBatchVerifyRowTestId(row.item.key)}
-        className="dark:border-dark-bg-tertiary rounded-md border border-gray-100 p-3"
+        className="dark:border-border border-border-subtle rounded-md border p-3"
       >
         <div className="flex items-start justify-between gap-3">
           <Checkbox
@@ -1055,7 +1055,7 @@ export function BatchVerifyModelsDialog({
           />
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <div className="dark:text-dark-text-primary min-w-0 truncate text-sm font-medium text-gray-900">
+              <div className="text-foreground min-w-0 truncate text-sm font-medium">
                 {row.item.modelId}
               </div>
               <Badge
@@ -1077,15 +1077,15 @@ export function BatchVerifyModelsDialog({
                         ? t("modelList:batchVerify.status.running")
                         : t("modelList:batchVerify.status.pending")}
               </Badge>
-              <span className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              <span className="text-muted-foreground text-xs">
                 {formatLatency(row.latencyMs)}
               </span>
             </div>
-            <div className="dark:text-dark-text-secondary mt-1 text-xs text-gray-600">
+            <div className="dark:text-secondary-foreground text-muted-foreground mt-1 text-xs">
               {getRowSummary(t, row)}
             </div>
             {row.runtimeKeyName ? (
-              <div className="dark:text-dark-text-tertiary mt-1 text-xs text-gray-500">
+              <div className="text-muted-foreground mt-1 text-xs">
                 {t("modelList:batchVerify.runtimeKeyUsed", {
                   name: row.runtimeKeyName,
                 })}
@@ -1133,7 +1133,7 @@ export function BatchVerifyModelsDialog({
                   .map((result) => (
                     <div
                       key={`${result.id}-summary`}
-                      className="text-xs break-words text-red-600 dark:text-red-400"
+                      className="text-destructive-text text-xs break-words"
                     >
                       {resolveFailureSummaryText(t, result)}
                     </div>
@@ -1151,7 +1151,7 @@ export function BatchVerifyModelsDialog({
       <Heading5 className="truncate">
         {t("modelList:batchVerify.title")}
       </Heading5>
-      <div className="dark:text-dark-text-tertiary mt-1 truncate text-xs text-gray-500">
+      <div className="text-muted-foreground mt-1 truncate text-xs">
         {t("modelList:batchVerify.subtitle", { count: items.length })}
       </div>
     </div>
@@ -1166,7 +1166,7 @@ export function BatchVerifyModelsDialog({
       }
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+        <div className="text-muted-foreground text-xs">
           {hasStarted
             ? t("modelList:batchVerify.summary", {
                 ...summary,
@@ -1225,7 +1225,7 @@ export function BatchVerifyModelsDialog({
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              <div className="text-muted-foreground text-xs">
                 {t("modelList:batchVerify.apiType.label")}
               </div>
               <SearchableSelect
@@ -1246,7 +1246,7 @@ export function BatchVerifyModelsDialog({
             />
 
             <div className="flex flex-wrap items-end gap-2 sm:col-span-2 sm:justify-end">
-              <Badge variant="info">
+              <Badge variant="secondary">
                 {t("modelList:batchVerify.counts.total", {
                   value: summary.total,
                 })}
@@ -1270,14 +1270,14 @@ export function BatchVerifyModelsDialog({
           </div>
 
           <div className="space-y-2">
-            <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+            <div className="text-muted-foreground text-xs">
               {t("modelList:batchVerify.probes.label")}
             </div>
             <div className="flex flex-wrap gap-2">
               {probeOptions.map((probe) => (
                 <label
                   key={probe.id}
-                  className="dark:border-dark-bg-tertiary flex cursor-pointer items-center gap-2 rounded-md border border-gray-100 px-2 py-1.5 text-xs"
+                  className="dark:border-border border-border-subtle flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-xs"
                 >
                   <Checkbox
                     checked={selectedProbeIds.includes(probe.id)}
@@ -1289,7 +1289,7 @@ export function BatchVerifyModelsDialog({
               ))}
             </div>
             {selectedProbeIds.length === 0 ? (
-              <div className="text-xs text-red-500">
+              <div className="text-destructive-text text-xs">
                 {t("modelList:batchVerify.probes.noneSelected")}
               </div>
             ) : null}
@@ -1297,11 +1297,11 @@ export function BatchVerifyModelsDialog({
 
           <div className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              <div className="text-muted-foreground text-xs">
                 {t("modelList:batchVerify.modelSelection.label")}
               </div>
               <div className="flex items-center gap-2">
-                <span className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                <span className="text-muted-foreground text-xs">
                   {t("modelList:batchVerify.modelSelection.selectedSummary", {
                     count: selectedModelKeys.length,
                     selected: selectedModelKeys.length,
@@ -1326,7 +1326,7 @@ export function BatchVerifyModelsDialog({
               </div>
             </div>
             {selectedModelKeys.length === 0 ? (
-              <div className="text-xs text-red-500">
+              <div className="text-destructive-text text-xs">
                 {t("modelList:batchVerify.modelSelection.noneSelected")}
               </div>
             ) : null}
@@ -1337,7 +1337,7 @@ export function BatchVerifyModelsDialog({
           </Alert>
 
           <div
-            className="dark:border-dark-bg-tertiary overflow-hidden rounded-md border border-gray-100"
+            className="dark:border-border border-border-subtle overflow-hidden rounded-md border"
             style={{ height: listContainerHeight }}
           >
             <Virtuoso

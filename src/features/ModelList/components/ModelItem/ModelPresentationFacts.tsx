@@ -197,7 +197,7 @@ function ModelDisplayFactValue({ fact }: { fact: ModelDisplayFact }) {
           href={fact.href}
           target="_blank"
           rel="noreferrer noopener"
-          className="break-all text-blue-600 underline-offset-2 hover:underline dark:text-blue-400"
+          className="text-theme-600 dark:text-theme-400 break-all underline-offset-2 hover:underline"
         >
           {resolveLabel(fact.text)}
         </a>
@@ -210,9 +210,9 @@ function ModelDisplayFactValue({ fact }: { fact: ModelDisplayFact }) {
           {fact.overrides.map((override, index) => (
             <li
               key={`${override.conditions.map(formatPriceCondition).join(":")}:${index}`}
-              className="rounded-md border border-amber-200 bg-amber-50 p-2 dark:border-amber-800 dark:bg-amber-950/30"
+              className="border-warning-border bg-warning-soft rounded-md border p-2"
             >
-              <ul className="mb-1 list-disc space-y-0.5 pl-5 text-xs text-amber-800 dark:text-amber-200">
+              <ul className="text-warning-text mb-1 list-disc space-y-0.5 pl-5 text-xs">
                 {override.conditions.map((condition) => {
                   const conditionText = formatPriceCondition(condition)
                   return <li key={conditionText}>{conditionText}</li>
@@ -306,10 +306,10 @@ function ModelDisplayFactItem({ fact }: { fact: ModelDisplayFact }) {
 
   return (
     <div data-testid="model-display-fact" className="min-w-0 space-y-1">
-      <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">
+      <dt className="text-muted-foreground text-xs font-medium">
         {resolveLabel(fact.label)}
       </dt>
-      <dd className="min-w-0 text-sm text-gray-700 dark:text-gray-200">
+      <dd className="text-secondary-foreground min-w-0 text-sm">
         <ModelDisplayFactValue fact={fact} />
       </dd>
     </div>
@@ -359,7 +359,7 @@ export function ModelPresentationDetails({
           <section key={section.id} aria-labelledby={headingId}>
             <h4
               id={headingId}
-              className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-200"
+              className="text-secondary-foreground mb-2 text-sm font-medium"
             >
               {resolveLabel(section.label)}
             </h4>

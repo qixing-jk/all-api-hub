@@ -11,18 +11,10 @@ import {
   type AccountTokenRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import type { ApiToken, DisplaySiteData } from "~/types"
-import { getGroupBadgeStyle } from "~/utils/core/formatters"
 
 import { QuickKeyResourceCard } from "./QuickKeyResourceCard"
 import { RuntimeKeyActionControls } from "./RuntimeKeyActionControls"
 import { RuntimeKeyDetails, RuntimeKeySecretPreview } from "./RuntimeKeyDetails"
-
-const getRuntimeKeyStatusBadgeStyle = (
-  runtimeKey: Pick<AccountRuntimeKey, "status">,
-): string =>
-  runtimeKey.status === ACCOUNT_RUNTIME_KEY_STATUSES.Active
-    ? "bg-green-100 text-green-800 border-green-200"
-    : "bg-red-100 text-red-800 border-red-200"
 
 interface RuntimeKeyItemProps {
   runtimeKey: AccountRuntimeKey
@@ -69,33 +61,25 @@ export function RuntimeKeyItem({
       <CardContent
         padding="sm"
         data-expanded={isExpanded}
-        className="dark:hover:bg-dark-bg-tertiary cursor-pointer rounded-[var(--corner-inner-radius)] transition-colors hover:bg-gray-50 data-[expanded=true]:rounded-b-none"
+        className="dark:hover:bg-secondary hover:bg-surface-subtle cursor-pointer rounded-[var(--corner-inner-radius)] transition-colors data-[expanded=true]:rounded-b-none"
         onClick={onToggle}
         data-testid={getCopyKeyDialogRuntimeKeyItemTestId(runtimeKey.id)}
       >
         <div className="flex items-center justify-between">
           <div className="min-w-0 flex-1 space-y-1.5">
-            <h4 className="dark:text-dark-text-primary truncate text-sm font-medium text-gray-900">
+            <h4 className="text-foreground truncate text-sm font-medium">
               {runtimeKey.label}
             </h4>
             <div className="flex items-center space-x-1.5">
-              <UsersRound className="h-3 w-3 text-gray-400 dark:text-gray-500" />
-              <Badge
-                variant="outline"
-                size="sm"
-                className={getGroupBadgeStyle("")}
-              >
+              <UsersRound className="text-faint-foreground h-3 w-3" />
+              <Badge variant="secondary" size="sm">
                 {t("dialog.copyKey.defaultGroup")}
               </Badge>
             </div>
           </div>
 
           <div className="ml-3 flex items-center space-x-2">
-            <Badge
-              variant={isActive ? "success" : "secondary"}
-              size="sm"
-              className={getRuntimeKeyStatusBadgeStyle(runtimeKey)}
-            >
+            <Badge variant={isActive ? "success" : "secondary"} size="sm">
               {isActive
                 ? t("dialog.copyKey.enabled")
                 : t("dialog.copyKey.disabled")}

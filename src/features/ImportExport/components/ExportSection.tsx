@@ -96,7 +96,7 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
       <Card padding="none" className="flex flex-1 flex-col">
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Upload className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+            <Upload className="text-theme-600 dark:text-theme-400 h-5 w-5" />
             <CardTitle className="mb-0 text-base">
               {t("export.title")}
             </CardTitle>
@@ -186,7 +186,7 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
             }
           />
         </CardList>
-        <p className="text-muted-foreground dark:border-dark-bg-tertiary flex items-start gap-2 border-t border-gray-200 px-6 py-4 text-xs leading-5">
+        <p className="text-muted-foreground border-border flex items-start gap-2 border-t px-6 py-4 text-xs leading-5">
           <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <span>{t("export.sensitiveDataNotice")}</span>
         </p>

@@ -21,14 +21,14 @@ export function SiteAnnouncementsSummaryMetrics({
         return (
           <div
             key={metric.key}
-            className="dark:bg-dark-bg-secondary rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10"
+            className="border-border bg-card dark:border-foreground/10 rounded-lg border p-4 shadow-sm"
           >
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="dark:text-dark-text-tertiary text-xs font-medium text-gray-500">
+                <p className="text-muted-foreground text-xs font-medium">
                   {metric.label}
                 </p>
-                <p className="dark:text-dark-text-primary mt-1 text-2xl font-semibold text-gray-900">
+                <p className="text-foreground mt-1 text-2xl font-semibold">
                   {metric.value}
                 </p>
               </div>

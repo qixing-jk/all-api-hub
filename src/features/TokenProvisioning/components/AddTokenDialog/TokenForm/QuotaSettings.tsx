@@ -37,21 +37,19 @@ export function QuotaSettings({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <label className="dark:text-dark-text-secondary text-sm font-medium text-gray-700">
+        <label className="text-secondary-foreground text-sm font-medium">
           {t("dialog.quotaSettings")}
         </label>
         <div className="flex items-center space-x-2">
-          <span className="dark:text-dark-text-tertiary text-sm text-gray-500">
+          <span className="text-muted-foreground text-sm">
             {t("dialog.unlimitedQuota")}
           </span>
           <Switch
             checked={unlimitedQuota}
             onChange={handleSwitchChange("unlimitedQuota")}
             className={`${
-              unlimitedQuota
-                ? "bg-blue-600"
-                : "dark:bg-dark-bg-tertiary bg-gray-200"
-            } focus:ring-blue-500`}
+              unlimitedQuota ? "bg-primary" : "bg-secondary"
+            } focus:ring-ring`}
           />
         </div>
       </div>

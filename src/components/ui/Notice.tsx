@@ -3,7 +3,8 @@ import React, { useId } from "react"
 
 import { cn } from "~/lib/utils"
 
-type NoticeTone = "info" | "warning" | "success" | "destructive"
+// General guidance follows the theme; explicit status tones keep their meaning.
+type NoticeTone = "default" | "info" | "warning" | "success" | "destructive"
 
 const noticeToneStyles: Record<
   NoticeTone,
@@ -13,28 +14,29 @@ const noticeToneStyles: Record<
     Icon: React.ComponentType<{ className?: string }>
   }
 > = {
+  default: {
+    surface: "border-primary-soft-border bg-primary-soft",
+    icon: "bg-primary-soft-hover text-primary-soft-foreground",
+    Icon: Info,
+  },
   info: {
-    surface:
-      "border-blue-200/70 bg-blue-50/70 dark:border-blue-900/50 dark:bg-blue-950/20",
-    icon: "bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-200",
+    surface: "border-info-border bg-info-soft",
+    icon: "bg-info-soft text-info-soft-foreground",
     Icon: Info,
   },
   warning: {
-    surface:
-      "border-amber-200/80 bg-amber-50/80 dark:border-amber-900/50 dark:bg-amber-950/25",
-    icon: "bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-200",
+    surface: "border-warning-border bg-warning-soft",
+    icon: "bg-warning-soft text-warning-soft-foreground",
     Icon: TriangleAlert,
   },
   success: {
-    surface:
-      "border-emerald-200/80 bg-emerald-50/80 dark:border-emerald-900/50 dark:bg-emerald-950/25",
-    icon: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-200",
+    surface: "border-success-border bg-success-soft",
+    icon: "bg-success-soft text-success-soft-foreground",
     Icon: CircleCheck,
   },
   destructive: {
-    surface:
-      "border-red-200/80 bg-red-50/80 dark:border-red-900/50 dark:bg-red-950/25",
-    icon: "bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-200",
+    surface: "border-destructive-border bg-destructive-soft",
+    icon: "bg-destructive-soft text-destructive-soft-foreground",
     Icon: CircleAlert,
   },
 }
@@ -55,7 +57,7 @@ export const Notice = React.forwardRef<HTMLDivElement, NoticeProps>(
   (
     {
       className,
-      tone = "info",
+      tone = "default",
       title,
       description,
       icon,
@@ -103,7 +105,7 @@ export const Notice = React.forwardRef<HTMLDivElement, NoticeProps>(
             {title ? (
               <div
                 id={titleId}
-                className="dark:text-dark-text-primary text-sm leading-5 font-medium text-gray-900"
+                className="text-foreground text-sm leading-5 font-medium"
               >
                 {title}
               </div>
@@ -111,7 +113,7 @@ export const Notice = React.forwardRef<HTMLDivElement, NoticeProps>(
             {description ? (
               <p
                 id={descriptionId}
-                className="dark:text-dark-text-secondary mt-0.5 text-xs leading-5 text-gray-600"
+                className="dark:text-secondary-foreground text-muted-foreground mt-0.5 text-xs leading-5"
               >
                 {description}
               </p>

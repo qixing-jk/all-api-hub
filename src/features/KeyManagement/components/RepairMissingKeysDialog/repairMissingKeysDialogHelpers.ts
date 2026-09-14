@@ -419,19 +419,19 @@ export function hasRepairAttentionOutcomes(
 /** Returns the progress bar color class for the current repair state. */
 export function getRepairProgressBarColor(progress: AccountKeyRepairProgress) {
   if (progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Failed) {
-    return "bg-red-600 dark:bg-red-500"
+    return "bg-destructive"
   }
   if (progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled) {
-    return "bg-amber-600 dark:bg-amber-500"
+    return "bg-warning"
   }
   if (
     progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Completed &&
     hasRepairAttentionOutcomes(progress.summary)
   ) {
-    return "bg-amber-600 dark:bg-amber-500"
+    return "bg-warning"
   }
   if (progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Completed) {
-    return "bg-emerald-600 dark:bg-emerald-500"
+    return "bg-success"
   }
-  return "bg-blue-600 dark:bg-blue-500"
+  return "bg-theme-600 dark:bg-theme-500"
 }

@@ -10,10 +10,10 @@ import type { OptionsOverviewStatusCard } from "../types"
 import { getStatusCardLabel } from "./statusCardText"
 
 const severityClasses = {
-  error: "bg-red-500 shadow-red-500/30",
-  warning: "bg-amber-500 shadow-amber-500/30",
-  info: "bg-blue-500 shadow-blue-500/30",
-  success: "bg-emerald-500 shadow-emerald-500/30",
+  error: "bg-destructive shadow-destructive/30",
+  warning: "bg-warning shadow-warning/30",
+  info: "bg-info shadow-info/30",
+  success: "bg-success shadow-success/30",
 } as const
 
 interface OverviewStatusSummaryProps {
@@ -34,10 +34,10 @@ export function OverviewStatusSummary({
 }: OverviewStatusSummaryProps) {
   return (
     <Card
-      className="overflow-hidden border-slate-200/80 bg-white/90 shadow-sm shadow-slate-200/50 dark:border-white/10 dark:bg-white/[0.03] dark:shadow-black/20"
+      className="border-border/80 bg-card/90 shadow-border/50 dark:border-foreground/10 dark:bg-foreground/[0.03] dark:shadow-shadow/20 overflow-hidden shadow-sm"
       data-testid={dataTestId}
     >
-      <div className="grid grid-cols-2 divide-x divide-y divide-slate-200/70 *:first:rounded-tl-[var(--corner-inner-radius)] *:last:rounded-br-[var(--corner-inner-radius)] *:nth-2:rounded-tr-[var(--corner-inner-radius)] *:nth-last-2:rounded-bl-[var(--corner-inner-radius)] md:grid-cols-4 md:divide-y-0 md:*:first:rounded-bl-[var(--corner-inner-radius)] md:*:last:rounded-tr-[var(--corner-inner-radius)] md:*:nth-2:rounded-tr-none md:*:nth-last-2:rounded-bl-none dark:divide-white/10">
+      <div className="divide-border/70 dark:divide-foreground/10 grid grid-cols-2 divide-x divide-y *:first:rounded-tl-[var(--corner-inner-radius)] *:last:rounded-br-[var(--corner-inner-radius)] *:nth-2:rounded-tr-[var(--corner-inner-radius)] *:nth-last-2:rounded-bl-[var(--corner-inner-radius)] md:grid-cols-4 md:divide-y-0 md:*:first:rounded-bl-[var(--corner-inner-radius)] md:*:last:rounded-tr-[var(--corner-inner-radius)] md:*:nth-2:rounded-tr-none md:*:nth-last-2:rounded-bl-none">
         {items.map((item) => (
           <StatusMetric
             key={item.id}
@@ -74,7 +74,7 @@ function StatusMetric({ item, t, onNavigate }: StatusMetricProps) {
     <Button
       type="button"
       variant="ghost"
-      className="group block h-full w-full min-w-0 rounded-none px-0 py-0 text-left whitespace-normal transition-colors hover:bg-slate-50/85 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset dark:hover:bg-white/[0.04]"
+      className="group hover:bg-surface-subtle/85 focus-visible:ring-ring dark:hover:bg-foreground/[0.04] block h-full w-full min-w-0 rounded-none px-0 py-0 text-left whitespace-normal transition-colors focus-visible:ring-2 focus-visible:ring-inset"
       onClick={() => onNavigate(item.target!)}
       aria-label={[
         getStatusCardLabel(item.id, t),
@@ -140,9 +140,9 @@ function StatusMetricContent({
   const value = (
     <span
       className={cn(
-        "text-base leading-none font-semibold text-slate-950 dark:text-white",
+        "text-foreground text-base leading-none font-semibold",
         focusableValue &&
-          "cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+          "focus-visible:ring-ring cursor-help rounded-sm outline-none focus-visible:ring-2",
       )}
       aria-label={accessibleLabel}
       tabIndex={focusableValue ? 0 : undefined}
@@ -151,7 +151,7 @@ function StatusMetricContent({
       {visibleQualifier ? (
         <span
           aria-hidden="true"
-          className="dark:text-dark-text-tertiary ml-1.5 text-[10px] font-medium text-slate-500"
+          className="text-muted-foreground ml-1.5 text-[10px] font-medium"
         >
           {visibleQualifier}
         </span>
@@ -169,7 +169,7 @@ function StatusMetricContent({
           )}
         />
         <div className="min-w-0">
-          <div className="dark:text-dark-text-tertiary truncate text-xs font-medium text-slate-500 uppercase">
+          <div className="text-muted-foreground truncate text-xs font-medium uppercase">
             {label}
           </div>
           <div className="mt-1 flex items-baseline gap-1.5">{value}</div>
@@ -179,7 +179,7 @@ function StatusMetricContent({
         {item.target ? (
           <WorkflowTransitionIcon
             aria-hidden="true"
-            className="h-4 w-4 text-slate-300 transition-colors group-hover:text-blue-600 dark:text-gray-600 dark:group-hover:text-blue-300"
+            className="text-disabled-foreground group-hover:text-theme-600 dark:group-hover:text-theme-300 h-4 w-4 transition-colors"
           />
         ) : null}
       </div>

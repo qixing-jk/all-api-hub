@@ -1503,7 +1503,7 @@ export default function AutoCheckin(props: {
           setUiOpenPretriggerDiagnostics({ isOpen: false, payload: null })
         }
         header={
-          <div className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
+          <div className="text-foreground text-lg font-semibold">
             {t("execution.debug.uiOpenPretriggerDiagnosticsTitle")}
           </div>
         }
@@ -1522,10 +1522,10 @@ export default function AutoCheckin(props: {
         }
       >
         <div className="space-y-3">
-          <p className="dark:text-dark-text-secondary text-sm text-gray-600">
+          <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
             {t("execution.debug.uiOpenPretriggerDiagnosticsDesc")}
           </p>
-          <pre className="dark:bg-dark-bg-tertiary max-h-[60vh] overflow-auto rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-800 md:max-h-[min(70vh,48rem)] dark:border-gray-700 dark:text-gray-200">
+          <pre className="dark:bg-secondary border-border bg-surface-subtle text-secondary-foreground max-h-[60vh] overflow-auto rounded-lg border p-3 text-xs md:max-h-[min(70vh,48rem)]">
             {uiOpenPretriggerDiagnostics.payload
               ? JSON.stringify(uiOpenPretriggerDiagnostics.payload, null, 2)
               : ""}

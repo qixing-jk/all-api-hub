@@ -721,7 +721,7 @@ export default function ModelList(props: {
 
           {isFallbackCatalogActive && (
             <Alert
-              variant="info"
+              variant="default"
               className="mb-6"
               title={
                 isRuntimeKeyOnlyFallbackCatalog

@@ -252,10 +252,10 @@ export function CursorPlusExportDialog({
       panelTestId={CURSOR_PLUS_EXPORT_TEST_IDS.dialog}
       header={
         <div className="pr-8">
-          <div className="dark:text-dark-text-primary text-base font-semibold text-gray-900">
+          <div className="text-foreground text-base font-semibold">
             {t("ui:dialog.cursorPlus.title")}
           </div>
-          <p className="dark:text-dark-text-secondary text-sm text-gray-500">
+          <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
             {t("ui:dialog.cursorPlus.description")}
           </p>
         </div>
@@ -278,7 +278,7 @@ export function CursorPlusExportDialog({
       }
     >
       <Alert
-        variant="info"
+        variant="primary"
         title={t("ui:dialog.cursorPlus.guidance.title")}
         description={t("ui:dialog.cursorPlus.guidance.description")}
       />
@@ -335,15 +335,12 @@ export function CursorPlusExportDialog({
       </FormField>
 
       {isLoading ? (
-        <div
-          role="status"
-          className="dark:text-dark-text-tertiary text-sm text-gray-500"
-        >
+        <div role="status" className="text-muted-foreground text-sm">
           {t("ui:dialog.cursorPlus.status.loading")}
         </div>
       ) : null}
       {!isLoading && !isError && !isEmpty ? (
-        <div className="dark:text-dark-text-tertiary text-sm text-gray-500">
+        <div className="text-muted-foreground text-sm">
           {t("ui:dialog.cursorPlus.status.loaded", {
             count: inventory.modelIds.length,
           })}

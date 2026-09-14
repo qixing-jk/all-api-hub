@@ -251,7 +251,7 @@ export function PriceComparisonControls({
       className={
         embedded
           ? undefined
-          : "dark:border-dark-bg-tertiary dark:bg-dark-bg-primary/40 relative mt-4 rounded-md border border-gray-200 bg-gray-50/70 p-3"
+          : "dark:bg-background/40 border-border bg-surface-subtle/70 relative mt-4 rounded-md border p-3"
       }
     >
       {!embedded && (
@@ -264,7 +264,7 @@ export function PriceComparisonControls({
           </h3>
           <p
             id="model-price-comparison-description"
-            className="dark:text-dark-text-tertiary text-xs text-gray-500"
+            className="text-muted-foreground text-xs"
           >
             {t("priceComparison.sectionDescription")}
           </p>
@@ -285,7 +285,7 @@ export function PriceComparisonControls({
                 <button
                   type="button"
                   aria-label={sourceDetails}
-                  className="dark:text-dark-text-tertiary inline-flex h-4 w-4 items-center justify-center rounded-full text-gray-400 transition-colors hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:outline-none dark:hover:text-gray-300"
+                  className="dark:text-muted-foreground text-faint-foreground hover:text-muted-foreground focus-visible:ring-ring dark:hover:text-secondary-foreground inline-flex h-4 w-4 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
                 >
                   <CircleHelp className="h-4 w-4" aria-hidden="true" />
                 </button>
@@ -324,7 +324,7 @@ export function PriceComparisonControls({
       </div>
       {conditionSummary && <div className="mt-2">{conditionSummary}</div>}
       <details className="group/comparison mt-2">
-        <summary className="bg-background text-foreground hover:bg-muted/70 inline-flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-md border px-3 text-sm font-medium shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:outline-none [&::-webkit-details-marker]:hidden [@container(min-width:48rem)]:absolute [@container(min-width:48rem)]:top-3 [@container(min-width:48rem)]:right-3">
+        <summary className="bg-background text-foreground hover:bg-muted/70 focus-visible:ring-ring inline-flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-md border px-3 text-sm font-medium shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none [&::-webkit-details-marker]:hidden [@container(min-width:48rem)]:absolute [@container(min-width:48rem)]:top-3 [@container(min-width:48rem)]:right-3">
           <SlidersHorizontal
             className="text-muted-foreground size-3.5"
             aria-hidden="true"
@@ -375,7 +375,7 @@ export function PriceComparisonControls({
               ))}
               <p
                 id="model-price-comparison-helper"
-                className="dark:text-dark-text-tertiary col-span-full text-xs leading-5 text-gray-500"
+                className="text-muted-foreground col-span-full text-xs leading-5"
               >
                 {t("priceComparison.helperNote")}
               </p>

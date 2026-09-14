@@ -1056,13 +1056,13 @@ export function KiloCodeExportDialog({
         <div className="flex items-center gap-2">
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <div
-              className="dark:text-dark-text-primary truncate text-sm font-medium text-gray-900"
+              className="text-foreground truncate text-sm font-medium"
               title={siteName}
             >
               {siteName}
             </div>
             <div
-              className="dark:text-dark-text-tertiary truncate text-xs text-gray-500"
+              className="text-muted-foreground truncate text-xs"
               title={site.baseUrl}
             >
               {site.baseUrl}
@@ -1082,20 +1082,20 @@ export function KiloCodeExportDialog({
         </div>
 
         {isTokenInventoryError && (
-          <div className="text-sm text-red-700 dark:text-red-300">
+          <div className="text-destructive-text text-sm">
             {inventory.errorMessage ||
               t("ui:dialog.kiloCode.messages.loadTokensFailed")}
           </div>
         )}
 
         {(isTokenInventoryIdle || isLoadingTokens) && (
-          <div className="dark:text-dark-text-tertiary text-sm text-gray-500">
+          <div className="text-muted-foreground text-sm">
             {t("ui:dialog.kiloCode.messages.loadingTokens")}
           </div>
         )}
 
         {isTokenInventoryLoaded && inventory.tokens.length === 0 && (
-          <div className="dark:text-dark-text-tertiary text-sm text-gray-500">
+          <div className="text-muted-foreground text-sm">
             {t("ui:dialog.kiloCode.messages.noTokensDescription")}
           </div>
         )}
@@ -1201,7 +1201,7 @@ export function KiloCodeExportDialog({
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                             <div className="flex min-w-0 flex-1 items-center gap-2">
                               <div
-                                className="dark:text-dark-text-primary truncate text-sm font-medium text-gray-900"
+                                className="text-foreground truncate text-sm font-medium"
                                 title={getTokenLabel(
                                   token,
                                   t("common:labels.token"),
@@ -1357,7 +1357,7 @@ export function KiloCodeExportDialog({
                           </div>
 
                           {isModelInventoryError && (
-                            <div className="text-sm text-red-700 dark:text-red-300">
+                            <div className="text-destructive-text text-sm">
                               {t(
                                 "ui:dialog.kiloCode.messages.loadModelsFailed",
                               )}
@@ -1365,7 +1365,7 @@ export function KiloCodeExportDialog({
                           )}
 
                           {showV7ManualRecovery && isKiloV7Export && (
-                            <div className="dark:text-dark-text-tertiary text-sm text-gray-500">
+                            <div className="text-muted-foreground text-sm">
                               {t(
                                 "ui:dialog.kiloCode.messages.v7ProviderModelsRequired",
                               )}
@@ -1373,7 +1373,7 @@ export function KiloCodeExportDialog({
                           )}
 
                           {isKiloV7Export && manualModelId.trim() && (
-                            <div className="dark:border-dark-bg-tertiary flex min-w-0 items-center justify-between gap-3 rounded-md border border-gray-200 px-3 py-2 text-sm">
+                            <div className="border-border flex min-w-0 items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm">
                               <span className="min-w-0 flex-1 break-all">
                                 {manualModelId}
                               </span>
@@ -1414,10 +1414,10 @@ export function KiloCodeExportDialog({
         size="lg"
         header={
           <div className="pr-8">
-            <div className="dark:text-dark-text-primary text-base font-semibold text-gray-900">
+            <div className="text-foreground text-base font-semibold">
               {t("ui:dialog.kiloCode.title")}
             </div>
-            <p className="dark:text-dark-text-secondary text-sm text-gray-500">
+            <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
               {t("ui:dialog.kiloCode.description")}
             </p>
           </div>
@@ -1425,7 +1425,7 @@ export function KiloCodeExportDialog({
         footer={
           <div className="flex flex-wrap items-center justify-end gap-2">
             {selectedSiteIds.length > 0 && (
-              <div className="dark:text-dark-text-tertiary mr-auto text-xs text-gray-500">
+              <div className="text-muted-foreground mr-auto text-xs">
                 {selectionSummary}
               </div>
             )}
@@ -1453,7 +1453,7 @@ export function KiloCodeExportDialog({
         }
       >
         <Alert
-          variant="info"
+          variant="primary"
           title={t("ui:dialog.kiloCode.help.perSiteTitle")}
           description={t("ui:dialog.kiloCode.help.perSiteDescription")}
         />
@@ -1612,7 +1612,7 @@ export function KiloCodeExportDialog({
 
         {!hasExportableProfiles && (
           <Alert
-            variant="info"
+            variant="default"
             title={t("ui:dialog.kiloCode.messages.nothingToExportTitle")}
             description={t(
               "ui:dialog.kiloCode.messages.nothingToExportDescription",

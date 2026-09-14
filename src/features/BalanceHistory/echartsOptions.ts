@@ -1,3 +1,4 @@
+import { CHART_COLORS } from "~/components/charts/chartColors"
 import type { EChartsOption } from "~/components/charts/echarts"
 
 /**
@@ -31,7 +32,6 @@ export function buildMultiSeriesTrendOption(params: {
   series: Array<{ name: string; values: Array<number | null> }>
   chartType: BalanceHistoryTrendChartType
   yAxisLabel?: string
-  isDark?: boolean
   axisLabelFormatter?: (value: number | string, index: number) => string
   valueFormatter?: (value: number | string, dataIndex: number) => string
 }): EChartsOption {
@@ -40,7 +40,6 @@ export function buildMultiSeriesTrendOption(params: {
     series,
     chartType,
     yAxisLabel,
-    isDark = false,
     axisLabelFormatter,
     valueFormatter,
   } = params
@@ -50,7 +49,7 @@ export function buildMultiSeriesTrendOption(params: {
         valueFormatter(normalizeTooltipValue(value), dataIndex)
     : undefined
 
-  const legendTextColor = isDark ? "#9ca3af" : "#6b7280"
+  const legendTextColor = CHART_COLORS.axis
 
   const resolvedSeries = series.map((entry) => {
     if (chartType === "line") {
@@ -103,17 +102,17 @@ export function buildMultiSeriesTrendOption(params: {
     xAxis: {
       type: "category",
       data: dayKeys,
-      axisLabel: { color: isDark ? "#9ca3af" : "#6b7280" },
-      axisLine: { lineStyle: { color: isDark ? "#374151" : "#e5e7eb" } },
+      axisLabel: { color: CHART_COLORS.axis },
+      axisLine: { lineStyle: { color: CHART_COLORS.border } },
     },
     yAxis: {
       type: "value",
       name: yAxisLabel,
       axisLabel: {
-        color: isDark ? "#9ca3af" : "#6b7280",
+        color: CHART_COLORS.axis,
         ...(axisLabelFormatter ? { formatter: axisLabelFormatter } : {}),
       },
-      splitLine: { lineStyle: { color: isDark ? "#1f2937" : "#f3f4f6" } },
+      splitLine: { lineStyle: { color: CHART_COLORS.grid } },
     },
     series: resolvedSeries,
   }
@@ -126,23 +125,16 @@ export function buildAccountBreakdownPieOption(params: {
   categories: string[]
   values: number[]
   valueLabel?: string
-  isDark?: boolean
   valueFormatter?: (value: number | string, dataIndex: number) => string
 }): EChartsOption {
-  const {
-    categories,
-    values,
-    valueLabel,
-    isDark = false,
-    valueFormatter,
-  } = params
+  const { categories, values, valueLabel, valueFormatter } = params
 
   const tooltipValueFormatter = valueFormatter
     ? (value: unknown, dataIndex: number) =>
         valueFormatter(normalizeTooltipValue(value), dataIndex)
     : undefined
 
-  const legendTextColor = isDark ? "#9ca3af" : "#6b7280"
+  const legendTextColor = CHART_COLORS.axis
 
   const data = categories.map((name, index) => ({
     name,
@@ -197,25 +189,18 @@ export function buildAccountBreakdownBarOption(params: {
   categories: string[]
   values: number[]
   valueLabel?: string
-  isDark?: boolean
   axisLabelFormatter?: (value: number | string, index: number) => string
   valueFormatter?: (value: number | string, dataIndex: number) => string
 }): EChartsOption {
-  const {
-    categories,
-    values,
-    valueLabel,
-    isDark = false,
-    axisLabelFormatter,
-    valueFormatter,
-  } = params
+  const { categories, values, valueLabel, axisLabelFormatter, valueFormatter } =
+    params
 
   const tooltipValueFormatter = valueFormatter
     ? (value: unknown, dataIndex: number) =>
         valueFormatter(normalizeTooltipValue(value), dataIndex)
     : undefined
 
-  const axisTextColor = isDark ? "#9ca3af" : "#6b7280"
+  const axisTextColor = CHART_COLORS.axis
 
   return {
     backgroundColor: "transparent",
@@ -232,7 +217,7 @@ export function buildAccountBreakdownBarOption(params: {
         color: axisTextColor,
         ...(axisLabelFormatter ? { formatter: axisLabelFormatter } : {}),
       },
-      splitLine: { lineStyle: { color: isDark ? "#1f2937" : "#f3f4f6" } },
+      splitLine: { lineStyle: { color: CHART_COLORS.grid } },
     },
     yAxis: {
       type: "category",
@@ -244,7 +229,7 @@ export function buildAccountBreakdownBarOption(params: {
         overflow: "truncate",
         ellipsis: "…",
       },
-      axisLine: { lineStyle: { color: isDark ? "#374151" : "#e5e7eb" } },
+      axisLine: { lineStyle: { color: CHART_COLORS.border } },
     },
     series: [
       {

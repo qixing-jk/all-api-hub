@@ -161,10 +161,10 @@ export function ApiCredentialProfilesDialogs({
         details={
           controller.deletingProfile ? (
             <div className="space-y-1 text-sm">
-              <div className="dark:text-dark-text-secondary text-gray-600">
+              <div className="dark:text-secondary-foreground text-muted-foreground">
                 {controller.deletingProfile.name}
               </div>
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              <div className="text-muted-foreground text-xs">
                 {getApiVerificationApiTypeLabel(
                   t,
                   controller.deletingProfile.apiType,

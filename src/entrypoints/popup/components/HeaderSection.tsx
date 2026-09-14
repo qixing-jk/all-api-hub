@@ -11,6 +11,7 @@ import { VersionBadge } from "~/components/VersionBadge"
 import { COLORS } from "~/constants/designTokens"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import CompactThemeToggle from "~/features/Appearance/CompactThemeToggle"
 import { ProductAnnouncementButton } from "~/features/ProductAnnouncements/ProductAnnouncementButton"
 import toast from "~/lib/notify"
 import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/accountRefresh"
@@ -38,7 +39,6 @@ import {
 
 import { getPopupOpenFullPageButtonTestId } from "../testIds"
 import type { PopupViewType } from "./PopupViewSwitchTabs"
-import CompactThemeToggle from "./ThemeToggle"
 
 /**
  * Unified logger scoped to the popup header component.

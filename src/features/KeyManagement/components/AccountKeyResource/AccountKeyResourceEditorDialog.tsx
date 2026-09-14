@@ -591,7 +591,7 @@ function AccountKeyResourceEditorDialogSession({
           )
         : null}
       <Alert
-        variant="info"
+        variant="default"
         compact
         role="status"
         aria-live="polite"

@@ -15,14 +15,14 @@ function AccountListLoadingPlaceholderRows({
     <>
       {Array.from({ length: rowCount }, (_, index) => (
         <div key={index} className="flex items-center gap-3 px-3 py-3 sm:px-4">
-          <div className="dark:bg-dark-bg-tertiary h-9 w-9 shrink-0 rounded-full bg-gray-200" />
+          <div className="bg-secondary h-9 w-9 shrink-0 rounded-full" />
           <div className="min-w-0 flex-1 space-y-2">
-            <div className="dark:bg-dark-bg-tertiary h-4 w-[42%] rounded bg-gray-200" />
-            <div className="dark:bg-dark-bg-tertiary h-3 w-[28%] rounded bg-gray-200" />
+            <div className="bg-secondary h-4 w-[42%] rounded" />
+            <div className="bg-secondary h-3 w-[28%] rounded" />
           </div>
           <div className="w-24 shrink-0 space-y-2">
-            <div className="dark:bg-dark-bg-tertiary ml-auto h-4 w-20 rounded bg-gray-200" />
-            <div className="dark:bg-dark-bg-tertiary ml-auto h-3 w-14 rounded bg-gray-200" />
+            <div className="bg-secondary ml-auto h-4 w-20 rounded" />
+            <div className="bg-secondary ml-auto h-3 w-14 rounded" />
           </div>
         </div>
       ))}
@@ -42,20 +42,20 @@ export function AccountListInitialLoadingState() {
       aria-busy="true"
     >
       <CardContent padding="none" spacing="none">
-        <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary border-b border-gray-200 bg-white px-3 py-3 sm:px-5">
+        <div className="dark:bg-background border-border bg-card border-b px-3 py-3 sm:px-5">
           <div className="animate-pulse space-y-3">
             <div className="grid gap-3 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
-              <div className="dark:bg-dark-bg-tertiary h-10 rounded bg-gray-200" />
-              <div className="dark:bg-dark-bg-tertiary h-10 rounded bg-gray-200" />
+              <div className="bg-secondary h-10 rounded" />
+              <div className="bg-secondary h-10 rounded" />
             </div>
-            <div className="dark:bg-dark-bg-tertiary h-8 rounded bg-gray-200" />
+            <div className="bg-secondary h-8 rounded" />
           </div>
         </div>
 
-        <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary border-b border-gray-200 bg-gray-50 px-3 py-3 sm:px-5">
+        <div className="dark:bg-card border-border bg-surface-subtle border-b px-3 py-3 sm:px-5">
           <div className="flex animate-pulse items-center justify-between gap-4">
-            <div className="dark:bg-dark-bg-tertiary h-4 w-40 rounded bg-gray-200" />
-            <div className="dark:bg-dark-bg-tertiary h-4 w-28 rounded bg-gray-200" />
+            <div className="bg-secondary h-4 w-40 rounded" />
+            <div className="bg-secondary h-4 w-28 rounded" />
           </div>
         </div>
 

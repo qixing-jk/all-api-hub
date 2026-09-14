@@ -404,8 +404,8 @@ describe("AccountActionButtons", () => {
       name: "account:actions.delete",
     })
 
-    expect(enableButton).toHaveClass("text-emerald-600")
-    expect(deleteButton).toHaveClass("text-red-600")
+    expect(enableButton).toHaveClass("text-success-text")
+    expect(deleteButton).toHaveClass("text-destructive-text")
     expect(
       within(menu).queryByRole("menuitem", {
         name: "account:actions.disableAccount",
@@ -477,7 +477,7 @@ describe("AccountActionButtons", () => {
     })
 
     expect(disableButton).toBeInTheDocument()
-    expect(disableButton).toHaveClass("text-amber-600")
+    expect(disableButton).toHaveClass("text-warning-text")
     expect(deleteButton).toBeInTheDocument()
 
     const menuButtons = within(menu).getAllByRole("menuitem")

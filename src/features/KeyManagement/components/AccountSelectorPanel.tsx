@@ -114,7 +114,7 @@ export function AccountSelectorPanel({
 
       {selectedAccount && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="dark:text-dark-text-secondary flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-500">
+          <div className="dark:text-secondary-foreground text-muted-foreground flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
             {counts.total !== null ? (
               <span>{t("totalKeys", { count: counts.total })}</span>
             ) : counts.knownTotal > 0 ? (

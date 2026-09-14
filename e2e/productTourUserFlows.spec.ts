@@ -1,5 +1,6 @@
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { THEME_COLOR, THEME_MODE, THEME_RADIUS } from "~/constants/theme"
 import {
   PRODUCT_TOUR_TARGET_ATTRIBUTE,
   PRODUCT_TOUR_TARGETS,
@@ -8,6 +9,7 @@ import {
 import { PRODUCT_TOUR_TEST_IDS } from "~/features/ProductTour/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { PRODUCT_TOUR_VARIANTS } from "~/services/featureGuidance/featureGuidanceState"
+import { THEME_PRESETS } from "~/types/theme"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   forceExtensionLanguage,
@@ -27,6 +29,62 @@ test.beforeEach(async ({ context, page }) => {
   await forceExtensionLanguage(page, "en")
   await stubLlmMetadataIndex(context)
 })
+
+for (const preset of THEME_PRESETS) {
+  for (const themeMode of [THEME_MODE.LIGHT, THEME_MODE.DARK]) {
+    test(`tour arrow joins its themed surface (${preset}, ${themeMode})`, async ({
+      context,
+      extensionId,
+      page,
+    }, testInfo) => {
+      const worker = await getServiceWorker(context)
+      await seedUserPreferences(worker, {
+        themeMode,
+        appearance: {
+          preset,
+          color: THEME_COLOR.VIOLET,
+          radius: THEME_RADIUS.DEFAULT,
+        },
+      })
+      await page.goto(
+        `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`,
+      )
+      await page
+        .getByTestId(PRODUCT_TOUR_TEST_IDS.invitation)
+        .getByRole("button", { name: "Start tour" })
+        .click()
+      const tooltip = page.getByTestId(PRODUCT_TOUR_TEST_IDS.tooltip)
+      const arrow = page.locator(".react-joyride__arrow")
+      await expect(tooltip).toBeVisible()
+      await expect(arrow).toBeVisible()
+      const background = await tooltip.evaluate(
+        (el) => getComputedStyle(el).backgroundColor,
+      )
+      await expect(arrow.locator("polygon")).toHaveCSS("fill", background)
+      await expect(tooltip).toHaveCSS("border-top-width", "0px")
+      await expect(tooltip).toHaveCSS("box-shadow", "none")
+      await expect(page.locator(".react-joyride__floater")).toHaveCSS(
+        "opacity",
+        "1",
+      )
+      await page.screenshot({ path: testInfo.outputPath("tour.png") })
+      await tooltip.getByRole("button", { name: "Next" }).click()
+      await expect(
+        tooltip.getByRole("heading", {
+          name: "Keep account resources together",
+        }),
+      ).toBeVisible()
+      await expect(arrow.locator("polygon")).toHaveCSS("fill", background)
+      await expect(page.locator(".react-joyride__floater")).toHaveCSS(
+        "opacity",
+        "1",
+      )
+      await page.screenshot({
+        path: testInfo.outputPath("tour-side-arrow.png"),
+      })
+    })
+  }
+}
 
 test("introduces options modules without navigating or performing actions", async ({
   context,

@@ -54,7 +54,7 @@ function BookmarkManagementContent({
   }, [createPrefill, openAddBookmark])
 
   return (
-    <div className="dark:bg-dark-bg-secondary flex flex-col bg-white p-6">
+    <div className="bg-card flex flex-col p-6">
       <ProductAnalyticsScope
         entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
         featureId={PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement}
@@ -77,7 +77,7 @@ function BookmarkManagementContent({
         />
       </ProductAnalyticsScope>
 
-      <div className="dark:bg-dark-bg-secondary flex flex-col bg-white">
+      <div className="bg-card flex flex-col">
         <BookmarksList initialSearchQuery={searchQuery} />
       </div>
     </div>

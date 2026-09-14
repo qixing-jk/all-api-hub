@@ -266,7 +266,7 @@ export default function BookmarkDialog({
         header={
           <div className="space-y-1">
             <div className="text-base font-semibold">{title}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">
+            <div className="text-muted-foreground text-xs">
               {t("bookmark:dialog.description")}
             </div>
           </div>
@@ -305,7 +305,7 @@ export default function BookmarkDialog({
         }
       >
         {mode === "add" && (
-          <div className="rounded-md bg-blue-50 p-3 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+          <div className="bg-theme-50 text-theme-700 dark:bg-theme-900/20 dark:text-theme-300 rounded-md p-3 text-xs">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1 font-medium">

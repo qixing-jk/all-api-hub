@@ -209,10 +209,10 @@ export function KelivoExportDialog({
       size="md"
       header={
         <div className="pr-8">
-          <div className="dark:text-dark-text-primary text-base font-semibold text-gray-900">
+          <div className="text-foreground text-base font-semibold">
             {t("ui:dialog.kelivo.title")}
           </div>
-          <p className="dark:text-dark-text-secondary text-sm text-gray-500">
+          <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
             {t("ui:dialog.kelivo.description")}
           </p>
         </div>
@@ -320,7 +320,7 @@ export function KelivoExportDialog({
 
         {isGoogle ? (
           <Alert
-            variant="info"
+            variant="default"
             title={t("ui:dialog.kelivo.googleNotice.title")}
             description={t("ui:dialog.kelivo.googleNotice.description")}
           />
@@ -329,18 +329,18 @@ export function KelivoExportDialog({
         {mobileImportCode ? (
           <section
             aria-labelledby={mobileQrCodeHeadingId}
-            className="dark:border-dark-bg-tertiary rounded-lg border border-gray-200 bg-gray-50 p-4 dark:bg-gray-900/30"
+            className="border-border bg-surface-subtle dark:bg-background/30 rounded-lg border p-4"
           >
             <h3
               id={mobileQrCodeHeadingId}
-              className="dark:text-dark-text-primary text-sm font-semibold text-gray-900"
+              className="text-foreground text-sm font-semibold"
             >
               {t("ui:dialog.kelivo.mobileQrCode.title")}
             </h3>
-            <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
+            <p className="dark:text-secondary-foreground text-muted-foreground mt-1 text-xs">
               {t("ui:dialog.kelivo.mobileQrCode.description")}
             </p>
-            <div className="mt-3 flex justify-center overflow-hidden rounded-lg bg-white p-3">
+            <div className="bg-card mt-3 flex justify-center overflow-hidden rounded-lg p-3">
               <QRCodeSVG
                 value={mobileImportCode}
                 size={196}
@@ -354,7 +354,7 @@ export function KelivoExportDialog({
         ) : null}
 
         <Alert
-          variant="info"
+          variant="primary"
           title={t("ui:dialog.kelivo.desktopNotice.title")}
           description={t("ui:dialog.kelivo.desktopNotice.description")}
         />

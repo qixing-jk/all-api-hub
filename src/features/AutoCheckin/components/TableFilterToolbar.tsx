@@ -25,14 +25,14 @@ export default function TableFilterToolbar({
   controlsClassName,
 }: TableFilterToolbarProps) {
   return (
-    <div className="border-b border-gray-200 p-4 dark:border-gray-800">
+    <div className="border-border dark:border-border-subtle border-b p-4">
       <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div className={cn("min-w-0 flex-1", controlsClassName)}>
           {children}
         </div>
         <div className="flex items-center justify-between gap-3 xl:justify-end">
           <span
-            className="text-xs whitespace-nowrap text-gray-500 dark:text-gray-400"
+            className="text-muted-foreground text-xs whitespace-nowrap"
             aria-live="polite"
           >
             {countLabel}

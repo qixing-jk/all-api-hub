@@ -8,16 +8,16 @@ import type { TFunction } from "i18next"
 // Local configuration object for health status
 const HEALTH_STATUS_CONFIG = {
   healthy: {
-    color: "bg-green-500",
+    color: "bg-success",
   },
   error: {
-    color: "bg-red-500",
+    color: "bg-destructive",
   },
   warning: {
-    color: "bg-yellow-500",
+    color: "bg-warning",
   },
   unknown: {
-    color: "bg-gray-400",
+    color: "bg-surface-inverse-muted",
   },
 } as const
 

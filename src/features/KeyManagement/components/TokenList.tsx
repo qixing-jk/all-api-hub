@@ -206,9 +206,9 @@ function LoadingSkeleton() {
     <div className="space-y-3">
       {[...Array(3)].map((_, i) => (
         <Card key={i} padding="sm" className="animate-pulse">
-          <div className="dark:bg-dark-bg-tertiary mb-2 h-4 w-1/4 rounded bg-gray-200"></div>
-          <div className="dark:bg-dark-bg-tertiary mb-2 h-3 w-1/2 rounded bg-gray-200"></div>
-          <div className="dark:bg-dark-bg-tertiary h-3 w-3/4 rounded bg-gray-200"></div>
+          <div className="bg-secondary mb-2 h-4 w-1/4 rounded"></div>
+          <div className="bg-secondary mb-2 h-3 w-1/2 rounded"></div>
+          <div className="bg-secondary h-3 w-3/4 rounded"></div>
         </Card>
       ))}
     </div>
@@ -377,7 +377,7 @@ function TokenEmptyState({
         action={{
           label: t("createFirstKey"),
           onClick: handleAddToken,
-          variant: "success",
+          variant: "default",
           icon: <Plus className="h-4 w-4" />,
           testId: KEY_MANAGEMENT_TEST_IDS.emptyStateAddTokenButton,
           disabled: !canCreateTokens,
@@ -1260,10 +1260,8 @@ export function TokenList(props: TokenListProps) {
                 >
                   <div
                     className={cn(
-                      "dark:hover:bg-dark-bg-tertiary flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-gray-50",
-                      isCollapsed
-                        ? "rounded-lg"
-                        : "dark:border-dark-bg-tertiary border-b border-gray-200",
+                      "dark:hover:bg-secondary hover:bg-surface-subtle flex w-full items-center justify-between gap-3 px-3 py-2 text-left",
+                      isCollapsed ? "rounded-lg" : "border-border border-b",
                     )}
                   >
                     <BatchSelectionControl
@@ -1323,7 +1321,7 @@ export function TokenList(props: TokenListProps) {
                       </div>
                       <ChevronDown
                         className={cn(
-                          "dark:text-dark-text-tertiary h-4 w-4 shrink-0 text-gray-500 transition-transform",
+                          "text-muted-foreground h-4 w-4 shrink-0 transition-transform",
                           isCollapsed ? "rotate-0" : "rotate-180",
                         )}
                       />

@@ -31,7 +31,7 @@ export default function ChangelogOnUpdateSettings() {
           <CardItem
             id="changelog-on-update-toggle"
             icon={
-              <FileText className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              <FileText className="text-theme-600 dark:text-theme-400 h-5 w-5" />
             }
             title={t("changelogOnUpdate.toggleLabel")}
             description={t("changelogOnUpdate.toggleDesc")}

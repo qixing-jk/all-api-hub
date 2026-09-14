@@ -337,18 +337,6 @@ export const getBillingModeText = (quotaType: number): string => {
 }
 
 /**
- * 获取计费模式的样式
- * @param quotaType 后端返回的计费模式类型
- */
-export const getBillingModeStyle = (
-  quotaType: number,
-): { color: string; bgColor: string } => {
-  return isTokenBillingType(quotaType)
-    ? { color: "text-blue-600", bgColor: "bg-blue-50" }
-    : { color: "text-purple-600", bgColor: "bg-purple-50" }
-}
-
-/**
  * 检查模型是否对指定分组可用
  * @param model 模型定价数据
  * @param userGroup 用户分组标识

@@ -148,10 +148,10 @@ export function AccountCheckInSection({
       id={ACCOUNT_CHECK_IN_TARGET_IDS.section}
     >
       <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-        <p className="dark:text-dark-text-secondary text-sm font-medium text-gray-700">
+        <p className="text-secondary-foreground text-sm font-medium">
           {t("form.checkInStatus")}
         </p>
-        <p className="text-xs text-gray-500 sm:col-span-2 sm:row-start-2 dark:text-gray-400">
+        <p className="text-muted-foreground text-xs sm:col-span-2 sm:row-start-2">
           {isSelectedMethodDisabled
             ? t("form.checkInStatusDisabled")
             : isSelectedStatusUnavailable
@@ -277,7 +277,7 @@ export function AccountCheckInSection({
           </FormField>
           <p
             id={CHECK_IN_METHOD_HELPER_ID}
-            className="text-xs text-gray-500 dark:text-gray-400"
+            className="text-muted-foreground text-xs"
           >
             <span>{selectionPresentation.helperText}</span>
             {selectionPresentation.selectedMethodDisclosure && (
@@ -337,13 +337,13 @@ export function AccountCheckInSection({
             <div className="flex items-center gap-1">
               <label
                 htmlFor={ACCOUNT_CHECK_IN_TARGET_IDS.automaticExecution}
-                className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
+                className="text-secondary-foreground text-sm font-medium"
               >
                 {t("form.autoCheckInEnabled")}
               </label>
               <AutoCheckinRiskHint />
             </div>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-muted-foreground mt-1 text-xs">
               {isSelectedMethodDisabled
                 ? t("form.autoCheckInPausedBySiteDesc")
                 : hasSelectedMethod
@@ -357,9 +357,6 @@ export function AccountCheckInSection({
               onCheckInChange({ ...checkIn, automaticExecutionEnabled })
             }
             id={ACCOUNT_CHECK_IN_TARGET_IDS.automaticExecution}
-            className={`${
-              checkIn.automaticExecutionEnabled ? "bg-green-600" : "bg-gray-200"
-            } focus:ring-green-500`}
           />
         </div>
       )}
@@ -392,7 +389,7 @@ export function AccountCheckInSection({
         <div className="flex w-full items-center justify-between gap-4">
           <label
             htmlFor={OPEN_REDEEM_WITH_CHECKIN_CONTROL_ID}
-            className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
+            className="text-secondary-foreground text-sm font-medium"
           >
             {t("form.openRedeemWithCheckIn")}
           </label>
@@ -408,11 +405,6 @@ export function AccountCheckInSection({
               })
             }
             id={OPEN_REDEEM_WITH_CHECKIN_CONTROL_ID}
-            className={`${
-              checkIn.customCheckIn?.openRedeemWithCheckIn ?? true
-                ? "bg-green-600"
-                : "bg-gray-200"
-            } focus:ring-green-500`}
           />
         </div>
       )}

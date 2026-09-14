@@ -162,10 +162,7 @@ describe("Input", () => {
   it("renders success feedback with success styling", async () => {
     render(<Input aria-label="api-key" success="Saved" />)
 
-    expect(await screen.findByText("Saved")).toHaveClass(
-      "text-green-600",
-      "dark:text-green-400",
-    )
+    expect(await screen.findByText("Saved")).toHaveClass("text-success-text")
   })
 
   it("focuses the input immediately after clearing when animation frames are unavailable", async () => {

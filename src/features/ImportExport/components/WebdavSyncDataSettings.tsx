@@ -25,7 +25,7 @@ export function WebdavSyncDataSettings({
   return (
     <div
       id={WEBDAV_TARGET_IDS.syncData}
-      className="space-y-3 rounded-md bg-gray-50 p-3 dark:bg-gray-800"
+      className="bg-surface-subtle dark:bg-card space-y-3 rounded-md p-3"
     >
       <div className="space-y-1">
         <p className="text-sm font-medium">{t("webdav.syncData.title")}</p>
@@ -54,7 +54,7 @@ export function WebdavSyncDataSettings({
       </div>
 
       {isWebdavSyncDataSelectionEmpty(syncDataSelection) && (
-        <BodySmall className="mb-0 text-red-600 dark:text-red-400">
+        <BodySmall className="text-destructive-text mb-0">
           {t("webdav.syncData.selectionRequired")}
         </BodySmall>
       )}

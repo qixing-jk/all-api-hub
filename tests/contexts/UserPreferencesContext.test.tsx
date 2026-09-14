@@ -9,6 +9,7 @@ import {
   DATA_TYPE_INCOME,
 } from "~/constants"
 import { SITE_TYPES } from "~/constants/siteType"
+import { THEME_MODE } from "~/constants/theme"
 import {
   UserPreferencesProvider,
   useUserPreferencesContext,
@@ -33,6 +34,7 @@ import { SortingCriteriaType } from "~/types/sorting"
 import { DEFAULT_SUB2API_MANAGED_SITE_CONFIG } from "~/types/sub2apiManagedSiteConfig"
 import { DEFAULT_TASK_NOTIFICATION_PREFERENCES } from "~/types/taskNotifications"
 import { deepOverride } from "~/utils"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import {
   createPersistedPreferencesFixture,
   setupMockPreferencePersistence,
@@ -216,17 +218,6 @@ const preferenceWriteFailure: PreferenceWriteResult = {
     type: "storage-error",
     error: new Error("save failed"),
   },
-}
-
-const createDeferred = <T,>() => {
-  let resolve!: (value: T | PromiseLike<T>) => void
-  let reject!: (reason?: unknown) => void
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res
-    reject = rej
-  })
-
-  return { promise, resolve, reject }
 }
 
 const expectFailedWrite = (result: PreferenceWriteResult) => {
@@ -611,7 +602,7 @@ describe("UserPreferencesContext", () => {
         adminToken: "managed-sub2api-token",
       })
       await context.updateManagedSiteType(SITE_TYPES.VELOERA)
-      await context.updateThemeMode("dark")
+      await context.updateThemeMode(THEME_MODE.DARK)
       await context.updateLoggingConsoleEnabled(false)
       await context.updateLoggingLevel("warn")
       await context.updateAutoRefresh(true)
@@ -760,7 +751,7 @@ describe("UserPreferencesContext", () => {
     expect((latestContext as any)?.sortOrder).toBe("asc")
     expect((latestContext as any)?.actionClickBehavior).toBe("sidepanel")
     expect((latestContext as any)?.managedSiteType).toBe(SITE_TYPES.VELOERA)
-    expect((latestContext as any)?.themeMode).toBe("dark")
+    expect((latestContext as any)?.themeMode).toBe(THEME_MODE.DARK)
     expect((latestContext as any)?.preferences.newApi.baseUrl).toBe(
       "https://new-api.example",
     )
@@ -1178,7 +1169,7 @@ describe("UserPreferencesContext", () => {
     const preferences = clonePreferences()
     preferences.currencyType = "CNY"
     preferences.activeTab = DATA_TYPE_BALANCE
-    preferences.themeMode = "dark"
+    preferences.themeMode = THEME_MODE.DARK
     preferences.language = "en"
     preferences.managedSiteType = SITE_TYPES.VELOERA
     preferences.accountAutoRefresh = {
@@ -1502,7 +1493,7 @@ describe("UserPreferencesContext", () => {
     const preferences = clonePreferences()
     preferences.activeTab = DATA_TYPE_BALANCE
     preferences.currencyType = "USD"
-    preferences.themeMode = "system"
+    preferences.themeMode = THEME_MODE.SYSTEM
     preferences.managedSiteType = SITE_TYPES.VELOERA
 
     mockedUserPreferences.updateActiveTab.mockResolvedValue(
@@ -1576,7 +1567,7 @@ describe("UserPreferencesContext", () => {
         await context.updateOctopusBaseUrl("https://octopus.example"),
       )
       expectFailedWrite(await context.updateManagedSiteType(SITE_TYPES.VELOERA))
-      expectFailedWrite(await context.updateThemeMode("dark"))
+      expectFailedWrite(await context.updateThemeMode(THEME_MODE.DARK))
       expectFailedWrite(await context.updateLoggingConsoleEnabled(false))
       expectFailedWrite(await context.updateLoggingLevel("warn"))
       expectFailedWrite(
@@ -1607,7 +1598,7 @@ describe("UserPreferencesContext", () => {
 
     expect((latestContext as any)?.activeTab).toBe(DATA_TYPE_BALANCE)
     expect((latestContext as any)?.currencyType).toBe("USD")
-    expect((latestContext as any)?.themeMode).toBe("system")
+    expect((latestContext as any)?.themeMode).toBe(THEME_MODE.SYSTEM)
     expect((latestContext as any)?.preferences.newApi.baseUrl).toBe(
       DEFAULT_PREFERENCES.newApi.baseUrl,
     )
@@ -1752,7 +1743,7 @@ describe("UserPreferencesContext", () => {
     const preferences = clonePreferences()
     preferences.activeTab = DATA_TYPE_BALANCE
     preferences.currencyType = "CNY"
-    preferences.themeMode = "dark"
+    preferences.themeMode = THEME_MODE.DARK
     preferences.language = "en"
     preferences.accountAutoRefresh = {
       ...preferences.accountAutoRefresh,
@@ -2150,7 +2141,7 @@ describe("UserPreferencesContext", () => {
     expect((latestContext as any)?.managedSiteType).toBe(
       DEFAULT_PREFERENCES.managedSiteType,
     )
-    expect((latestContext as any)?.themeMode).toBe("system")
+    expect((latestContext as any)?.themeMode).toBe(THEME_MODE.SYSTEM)
     expect((latestContext as any)?.loggingConsoleEnabled).toBe(
       DEFAULT_PREFERENCES.logging.consoleEnabled,
     )

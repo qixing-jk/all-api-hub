@@ -1,3 +1,4 @@
+import { CHART_COLORS } from "~/components/charts/chartColors"
 import type { EChartsOption } from "~/components/charts/echarts"
 import {
   createEmptyUsageHistoryAggregate,
@@ -624,7 +625,6 @@ export function buildDailyOverviewOption(params: {
   totalTokensSeriesLabel: string
   quotaSeriesLabel: string
   legendSelected?: Record<string, boolean>
-  isDark?: boolean
 }): EChartsOption {
   const {
     dayKeys,
@@ -637,7 +637,6 @@ export function buildDailyOverviewOption(params: {
     totalTokensSeriesLabel,
     quotaSeriesLabel,
     legendSelected,
-    isDark = false,
   } = params
 
   const requests = dayKeys.map((dayKey) => daily[dayKey]?.requests ?? 0)
@@ -664,20 +663,20 @@ export function buildDailyOverviewOption(params: {
     xAxis: {
       type: "category",
       data: dayKeys,
-      axisLabel: { color: isDark ? "#9ca3af" : "#6b7280" },
-      axisLine: { lineStyle: { color: isDark ? "#374151" : "#e5e7eb" } },
+      axisLabel: { color: CHART_COLORS.axis },
+      axisLine: { lineStyle: { color: CHART_COLORS.border } },
     },
     yAxis: [
       {
         type: "value",
         name: requestsAxisLabel,
-        axisLabel: { color: isDark ? "#9ca3af" : "#6b7280" },
-        splitLine: { lineStyle: { color: isDark ? "#1f2937" : "#f3f4f6" } },
+        axisLabel: { color: CHART_COLORS.axis },
+        splitLine: { lineStyle: { color: CHART_COLORS.grid } },
       },
       {
         type: "value",
         name: tokensAxisLabel,
-        axisLabel: { color: isDark ? "#9ca3af" : "#6b7280" },
+        axisLabel: { color: CHART_COLORS.axis },
         splitLine: { show: false },
       },
     ],
@@ -743,15 +742,8 @@ export function buildHorizontalBarOption(params: {
   values: number[]
   valueLabel?: string
   inverse?: boolean
-  isDark?: boolean
 }): EChartsOption {
-  const {
-    categories,
-    values,
-    valueLabel,
-    inverse = true,
-    isDark = false,
-  } = params
+  const { categories, values, valueLabel, inverse = true } = params
 
   return {
     backgroundColor: "transparent",
@@ -759,15 +751,15 @@ export function buildHorizontalBarOption(params: {
     grid: { left: 16, right: 16, top: 16, bottom: 16, containLabel: true },
     xAxis: {
       type: "value",
-      axisLabel: { color: isDark ? "#9ca3af" : "#6b7280" },
-      splitLine: { lineStyle: { color: isDark ? "#1f2937" : "#f3f4f6" } },
+      axisLabel: { color: CHART_COLORS.axis },
+      splitLine: { lineStyle: { color: CHART_COLORS.grid } },
     },
     yAxis: {
       type: "category",
       data: categories,
       inverse,
-      axisLabel: { color: isDark ? "#9ca3af" : "#6b7280" },
-      axisLine: { lineStyle: { color: isDark ? "#374151" : "#e5e7eb" } },
+      axisLabel: { color: CHART_COLORS.axis },
+      axisLine: { lineStyle: { color: CHART_COLORS.border } },
     },
     series: [
       {
@@ -790,9 +782,8 @@ export function buildPieOption(params: {
   categories: string[]
   values: number[]
   valueLabel?: string
-  isDark?: boolean
 }): EChartsOption {
-  const { categories, values, valueLabel, isDark = false } = params
+  const { categories, values, valueLabel } = params
   const data = categories.map((name, index) => ({
     name,
     value: values[index] ?? 0,
@@ -804,7 +795,7 @@ export function buildPieOption(params: {
     legend: {
       type: "scroll",
       bottom: 0,
-      textStyle: { color: isDark ? "#9ca3af" : "#6b7280" },
+      textStyle: { color: CHART_COLORS.axis },
     },
     series: [
       {
@@ -834,9 +825,8 @@ export function buildLineTrendOption(params: {
   values: Array<number | null>
   seriesLabel: string
   yAxisLabel?: string
-  isDark?: boolean
 }): EChartsOption {
-  const { categories, values, seriesLabel, yAxisLabel, isDark = false } = params
+  const { categories, values, seriesLabel, yAxisLabel } = params
 
   return {
     backgroundColor: "transparent",
@@ -845,14 +835,14 @@ export function buildLineTrendOption(params: {
     xAxis: {
       type: "category",
       data: categories,
-      axisLabel: { color: isDark ? "#9ca3af" : "#6b7280" },
-      axisLine: { lineStyle: { color: isDark ? "#374151" : "#e5e7eb" } },
+      axisLabel: { color: CHART_COLORS.axis },
+      axisLine: { lineStyle: { color: CHART_COLORS.border } },
     },
     yAxis: {
       type: "value",
       name: yAxisLabel,
-      axisLabel: { color: isDark ? "#9ca3af" : "#6b7280" },
-      splitLine: { lineStyle: { color: isDark ? "#1f2937" : "#f3f4f6" } },
+      axisLabel: { color: CHART_COLORS.axis },
+      splitLine: { lineStyle: { color: CHART_COLORS.grid } },
     },
     series: [
       {
@@ -877,15 +867,8 @@ export function buildHeatmapOption(params: {
   modelNames: string[]
   valuesByModelAndDay: Record<string, Record<string, number>>
   seriesLabel: string
-  isDark?: boolean
 }): EChartsOption {
-  const {
-    dayKeys,
-    modelNames,
-    valuesByModelAndDay,
-    seriesLabel,
-    isDark = false,
-  } = params
+  const { dayKeys, modelNames, valuesByModelAndDay, seriesLabel } = params
 
   const data: Array<[number, number, number]> = []
   for (let y = 0; y < modelNames.length; y += 1) {
@@ -906,23 +889,24 @@ export function buildHeatmapOption(params: {
     xAxis: {
       type: "category",
       data: dayKeys,
-      axisLabel: { color: isDark ? "#9ca3af" : "#6b7280" },
-      axisLine: { lineStyle: { color: isDark ? "#374151" : "#e5e7eb" } },
+      axisLabel: { color: CHART_COLORS.axis },
+      axisLine: { lineStyle: { color: CHART_COLORS.border } },
     },
     yAxis: {
       type: "category",
       data: modelNames,
-      axisLabel: { color: isDark ? "#9ca3af" : "#6b7280" },
-      axisLine: { lineStyle: { color: isDark ? "#374151" : "#e5e7eb" } },
+      axisLabel: { color: CHART_COLORS.axis },
+      axisLine: { lineStyle: { color: CHART_COLORS.border } },
     },
     visualMap: {
+      inRange: { color: [CHART_COLORS.heatmapLow, CHART_COLORS.heatmapHigh] },
       min: 0,
       max: Math.max(1, maxValue),
       calculable: true,
       orient: "horizontal",
       left: "center",
       bottom: 0,
-      textStyle: { color: isDark ? "#9ca3af" : "#6b7280" },
+      textStyle: { color: CHART_COLORS.axis },
     },
     series: [
       {
@@ -932,7 +916,7 @@ export function buildHeatmapOption(params: {
         emphasis: {
           itemStyle: {
             shadowBlur: 8,
-            shadowColor: "rgba(0, 0, 0, 0.35)",
+            shadowColor: CHART_COLORS.shadow,
           },
         },
       },
@@ -948,9 +932,8 @@ export function buildHeatmapOption(params: {
 export function buildLatencyHistogramOption(params: {
   latency: UsageHistoryLatencyAggregate
   seriesLabel: string
-  isDark?: boolean
 }): EChartsOption {
-  const { latency, seriesLabel, isDark = false } = params
+  const { latency, seriesLabel } = params
   const labels = getLatencyBucketLabels()
   const counts = labels.map((_, index) => latency.buckets[index] ?? 0)
 
@@ -961,13 +944,13 @@ export function buildLatencyHistogramOption(params: {
     xAxis: {
       type: "category",
       data: labels,
-      axisLabel: { color: isDark ? "#9ca3af" : "#6b7280", rotate: 30 },
-      axisLine: { lineStyle: { color: isDark ? "#374151" : "#e5e7eb" } },
+      axisLabel: { color: CHART_COLORS.axis, rotate: 30 },
+      axisLine: { lineStyle: { color: CHART_COLORS.border } },
     },
     yAxis: {
       type: "value",
-      axisLabel: { color: isDark ? "#9ca3af" : "#6b7280" },
-      splitLine: { lineStyle: { color: isDark ? "#1f2937" : "#f3f4f6" } },
+      axisLabel: { color: CHART_COLORS.axis },
+      splitLine: { lineStyle: { color: CHART_COLORS.grid } },
     },
     series: [
       {
@@ -992,7 +975,6 @@ export function buildLatencyTrendOption(params: {
   slowSeriesLabel: string
   secondsAxisLabel: string
   slowCountAxisLabel: string
-  isDark?: boolean
 }): EChartsOption {
   const {
     dayKeys,
@@ -1002,7 +984,6 @@ export function buildLatencyTrendOption(params: {
     slowSeriesLabel,
     secondsAxisLabel,
     slowCountAxisLabel,
-    isDark = false,
   } = params
 
   const avg = dayKeys.map((dayKey) => {
@@ -1022,20 +1003,20 @@ export function buildLatencyTrendOption(params: {
     xAxis: {
       type: "category",
       data: dayKeys,
-      axisLabel: { color: isDark ? "#9ca3af" : "#6b7280" },
-      axisLine: { lineStyle: { color: isDark ? "#374151" : "#e5e7eb" } },
+      axisLabel: { color: CHART_COLORS.axis },
+      axisLine: { lineStyle: { color: CHART_COLORS.border } },
     },
     yAxis: [
       {
         type: "value",
         name: secondsAxisLabel,
-        axisLabel: { color: isDark ? "#9ca3af" : "#6b7280" },
-        splitLine: { lineStyle: { color: isDark ? "#1f2937" : "#f3f4f6" } },
+        axisLabel: { color: CHART_COLORS.axis },
+        splitLine: { lineStyle: { color: CHART_COLORS.grid } },
       },
       {
         type: "value",
         name: slowCountAxisLabel,
-        axisLabel: { color: isDark ? "#9ca3af" : "#6b7280" },
+        axisLabel: { color: CHART_COLORS.axis },
         splitLine: { show: false },
       },
     ],

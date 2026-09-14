@@ -15,7 +15,6 @@ describe("BalanceHistory echartsOptions", () => {
       yAxisLabel: "Balance",
       axisLabelFormatter: (value) => `$${value}`,
       valueFormatter: (value, index) => `${index}:${value}`,
-      isDark: true,
     }) as any
 
     expect(option.series[0]).toMatchObject({
@@ -28,7 +27,7 @@ describe("BalanceHistory echartsOptions", () => {
       option.tooltip.valueFormatter(new Date("2026-01-01T00:00:00Z"), 2),
     ).toBe(`2:${Date.parse("2026-01-01T00:00:00Z")}`)
     expect(option.tooltip.valueFormatter(["7"], 1)).toBe("1:7")
-    expect(option.xAxis.axisLabel.color).toBe("#9ca3af")
+    expect(option.xAxis.axisLabel.color).toBe("var(--chart-axis)")
   })
 
   it("builds bar-series trend charts without line-only markers", () => {
@@ -52,7 +51,6 @@ describe("BalanceHistory echartsOptions", () => {
       values: [9],
       valueLabel: "Quota",
       valueFormatter: (value, index) => `${index}:${value}`,
-      isDark: true,
     }) as any
 
     expect(option.series[0].data).toEqual([
@@ -60,7 +58,7 @@ describe("BalanceHistory echartsOptions", () => {
       { name: "Bravo", value: 0 },
     ])
     expect(option.tooltip.valueFormatter([12], 0)).toBe("0:12")
-    expect(option.legend.textStyle.color).toBe("#9ca3af")
+    expect(option.legend.textStyle.color).toBe("var(--chart-axis)")
   })
 
   it("builds horizontal bar charts with formatter hooks and normalized tooltip dates", () => {

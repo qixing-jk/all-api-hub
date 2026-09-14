@@ -224,7 +224,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
               </h2>
               <RepairMissingKeysStatusBadge progress={statusProgress} t={t} />
             </div>
-            <p className="dark:text-dark-text-secondary text-sm text-gray-500">
+            <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
               {t("repairMissingKeys.description")}
             </p>
           </div>
@@ -242,7 +242,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
               </Button>
             </div>
           ) : shouldShowProgressDetails && progress ? (
-            <p className="dark:text-dark-text-secondary text-xs text-gray-500">
+            <p className="dark:text-secondary-foreground text-muted-foreground text-xs">
               {progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Running
                 ? t("repairMissingKeys.runningNote")
                 : t("repairMissingKeys.historyNote")}
@@ -288,7 +288,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
 
             {repairCreatedImport.createdReferenceCount > 0 ? (
               <div
-                className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary/40 space-y-3 rounded-lg border border-gray-200 bg-gray-50/70 p-3"
+                className="dark:bg-background/40 border-border bg-surface-subtle/70 space-y-3 rounded-lg border p-3"
                 data-testid={
                   KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportCard
                 }
@@ -300,7 +300,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
                         "keyManagement:repairMissingKeys.managedSiteImport.title",
                       )}
                     </div>
-                    <div className="dark:text-dark-text-secondary text-xs text-gray-500">
+                    <div className="dark:text-secondary-foreground text-muted-foreground text-xs">
                       {t(
                         "keyManagement:repairMissingKeys.managedSiteImport.target",
                         {

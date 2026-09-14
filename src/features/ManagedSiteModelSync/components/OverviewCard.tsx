@@ -67,27 +67,27 @@ export default function OverviewCard(props: OverviewCardProps) {
       <CardContent padding="md">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div>
-            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            <div className="text-muted-foreground text-sm font-medium">
               {t("execution.overview.autoSync")}
             </div>
             <div className="mt-1 text-lg font-semibold">
               {enabled ? (
-                <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800 dark:bg-green-900 dark:text-green-200">
+                <span className="bg-success-soft text-success-soft-foreground inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold">
                   {t("execution.overview.enabled")}
                 </span>
               ) : (
-                <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+                <span className="bg-muted text-secondary-foreground dark:bg-secondary inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold">
                   {t("execution.overview.disabled")}
                 </span>
               )}
-              <span className="ml-2 text-sm font-medium text-gray-600 dark:text-gray-300">
+              <span className="text-muted-foreground dark:text-secondary-foreground ml-2 text-sm font-medium">
                 {formatInterval(t, intervalMs)}
               </span>
             </div>
           </div>
 
           <div>
-            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            <div className="text-muted-foreground text-sm font-medium">
               {t("execution.statistics.nextRun")}
             </div>
             <div className="mt-1 text-lg font-semibold">
@@ -101,7 +101,7 @@ export default function OverviewCard(props: OverviewCardProps) {
           </div>
 
           <div>
-            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            <div className="text-muted-foreground text-sm font-medium">
               {t("execution.overview.lastRun")}
             </div>
             <div className="mt-1 text-lg font-semibold">
@@ -111,8 +111,8 @@ export default function OverviewCard(props: OverviewCardProps) {
         </div>
 
         {!enabled && onConfigureAutoSync ? (
-          <div className="flex flex-col gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-gray-700 dark:bg-gray-800/60">
-            <p className="text-sm text-gray-600 dark:text-gray-300">
+          <div className="border-border bg-surface-subtle dark:bg-card/60 flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-muted-foreground dark:text-secondary-foreground text-sm">
               {t("execution.overview.disabledHint")}
             </p>
             <Button

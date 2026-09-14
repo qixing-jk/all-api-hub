@@ -23,8 +23,8 @@ export default function FirefoxAddAccountWarningDialog({
 
   const header = (
     <div className="flex items-center space-x-3">
-      <TriangleAlert className="h-5 w-5 text-orange-500 dark:text-orange-300" />
-      <div className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
+      <TriangleAlert className="text-warning-text h-5 w-5" />
+      <div className="text-foreground text-lg font-semibold">
         {t("dialog.firefox.warningTitle")}
       </div>
     </div>
@@ -33,29 +33,29 @@ export default function FirefoxAddAccountWarningDialog({
   const footer = (
     <div className="space-y-4">
       <div className="text-center">
-        <TriangleAlert className="mx-auto h-12 w-12 text-orange-500" />
+        <TriangleAlert className="text-warning-text mx-auto h-12 w-12" />
         <div className="mt-3">
-          <h3 className="dark:text-dark-text-primary text-base font-medium text-gray-900">
+          <h3 className="text-foreground text-base font-medium">
             {t("dialog.firefox.limitation")}
           </h3>
           <div className="mt-2">
-            <p className="dark:text-dark-text-secondary text-sm text-gray-500">
+            <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
               {t("dialog.firefox.popupLimitation")}
             </p>
           </div>
         </div>
       </div>
 
-      <div className="rounded-lg border border-orange-100 bg-orange-50 p-3 dark:border-orange-900/30 dark:bg-orange-900/20">
+      <div className="border-warning-border bg-warning-soft rounded-lg border p-3">
         <div className="flex">
           <div className="shrink-0">
-            <TriangleAlert className="h-5 w-5 text-orange-400 dark:text-orange-300" />
+            <TriangleAlert className="text-warning-text h-5 w-5" />
           </div>
           <div className="ml-3">
-            <h3 className="text-xs font-medium text-orange-800 dark:text-orange-200">
+            <h3 className="text-warning-text text-xs font-medium">
               {t("dialog.firefox.howOpenSidebar")}
             </h3>
-            <div className="mt-1 text-xs text-orange-700 dark:text-orange-300">
+            <div className="text-warning-text mt-1 text-xs">
               <p>{t("dialog.firefox.sidebarInstruction")}</p>
             </div>
           </div>

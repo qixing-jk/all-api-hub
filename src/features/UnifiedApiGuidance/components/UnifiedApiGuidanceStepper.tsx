@@ -32,8 +32,8 @@ export function UnifiedApiGuidanceStepper({
             key={step.id}
             className={`min-w-0 rounded-md border px-3 py-2.5 ${
               isCurrent
-                ? "border-blue-300 bg-blue-50/70 dark:border-blue-800 dark:bg-blue-950/20"
-                : "border-slate-200/70 bg-white/50 dark:border-white/10 dark:bg-white/[0.025]"
+                ? "border-theme-300 bg-theme-50/70 dark:border-theme-800 dark:bg-theme-950/20"
+                : "border-border/70 bg-card/50 dark:border-foreground/10 dark:bg-foreground/[0.025]"
             }`}
           >
             <div className="flex min-w-0 gap-2.5">
@@ -41,10 +41,10 @@ export function UnifiedApiGuidanceStepper({
                 aria-hidden="true"
                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
                   isCompleted
-                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-200"
+                    ? "bg-success-soft text-success-soft-foreground"
                     : isCurrent
-                      ? "bg-blue-600 text-white dark:bg-blue-500"
-                      : "bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-400"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground dark:bg-foreground/10"
                 }`}
               >
                 {index + 1}
@@ -53,15 +53,15 @@ export function UnifiedApiGuidanceStepper({
                 <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                   <span
                     aria-current={isCurrent ? "step" : undefined}
-                    className="text-sm font-medium text-slate-900 dark:text-white"
+                    className="text-foreground text-sm font-medium"
                   >
                     {copy.stepTitle(step.id)}
                   </span>
-                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                  <span className="text-muted-foreground dark:text-secondary-foreground text-[11px] font-medium">
                     {copy.stateLabel(step.state)}
                   </span>
                 </div>
-                <p className="mt-0.5 text-xs leading-5 text-slate-600 dark:text-slate-300">
+                <p className="text-muted-foreground dark:text-secondary-foreground mt-0.5 text-xs leading-5">
                   {copy.stepDescription(step.id)}
                 </p>
               </div>

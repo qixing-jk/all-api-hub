@@ -160,7 +160,7 @@ export function useManagedSiteChannelPageExperience({
       ) : undefined,
     description: t("gatewayGuidance.headerDescription"),
     guidanceContent: (
-      <Notice tone="info" className="text-left">
+      <Notice tone="default" className="text-left">
         <GatewayGuidanceDescription>
           {t("gatewayGuidance.unconfiguredValueDescription")}
         </GatewayGuidanceDescription>
@@ -170,7 +170,7 @@ export function useManagedSiteChannelPageExperience({
       isLoadedEmpty && canImportChannel ? (
         <div className="mx-auto flex max-w-md flex-col items-center gap-3 py-4 text-center">
           <div className="space-y-1">
-            <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+            <div className="text-foreground text-sm font-medium">
               {t("gatewayGuidance.empty.title")}
             </div>
             <div className="text-muted-foreground text-sm">

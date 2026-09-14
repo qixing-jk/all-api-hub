@@ -92,7 +92,7 @@ export function LinkedCredentialProfileActions({
             onClick={() => controller.openDialog("verify-api")}
             analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.VerifyApiCredential}
           >
-            <Wrench className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <Wrench className="text-link h-4 w-4" />
           </IconButton>
           <IconButton
             aria-label={t("keyManagement:actions.verifyCliSupport")}
@@ -103,7 +103,7 @@ export function LinkedCredentialProfileActions({
               PRODUCT_ANALYTICS_ACTION_IDS.VerifyApiCredentialCliSupport
             }
           >
-            <Terminal className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+            <Terminal className="text-link h-4 w-4" />
           </IconButton>
         </KeyResourceActionGroup>
         {managementActions ? (

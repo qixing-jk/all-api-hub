@@ -354,7 +354,7 @@ describe("repairMissingKeysDialogHelpers", () => {
           summary: { ...emptySummary, complete: 1, failed: 1 },
         }),
       ),
-    ).toBe("bg-amber-600 dark:bg-amber-500")
+    ).toBe("bg-warning")
   })
 
   it("maps every repair, requirement, skip, and view label to its owned key", () => {
@@ -461,19 +461,19 @@ describe("repairMissingKeysDialogHelpers", () => {
       getRepairProgressBarColor(
         buildProgress({ state: ACCOUNT_KEY_REPAIR_JOB_STATES.Failed }),
       ),
-    ).toBe("bg-red-600 dark:bg-red-500")
+    ).toBe("bg-destructive")
     expect(
       getRepairProgressBarColor(
         buildProgress({ state: ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled }),
       ),
-    ).toBe("bg-amber-600 dark:bg-amber-500")
+    ).toBe("bg-warning")
     expect(
       getRepairProgressBarColor(
         buildProgress({ state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed }),
       ),
-    ).toBe("bg-emerald-600 dark:bg-emerald-500")
+    ).toBe("bg-success")
     expect(getRepairProgressBarColor(buildProgress())).toBe(
-      "bg-blue-600 dark:bg-blue-500",
+      "bg-theme-600 dark:bg-theme-500",
     )
   })
 })

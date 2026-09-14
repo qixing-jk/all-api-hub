@@ -48,7 +48,7 @@ export function KeyDisplay({
 
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2">
-      <code className="dark:bg-dark-bg-tertiary dark:text-dark-text-secondary inline-block max-w-full truncate rounded bg-gray-100 px-1.5 py-0.5 align-middle font-mono text-[10px] text-gray-800 sm:px-2 sm:py-1 sm:text-xs">
+      <code className="dark:bg-secondary bg-muted text-secondary-foreground inline-block max-w-full truncate rounded px-1.5 py-0.5 align-middle font-mono text-[10px] sm:px-2 sm:py-1 sm:text-xs">
         {formatKey(tokenKey, tokenIdentityKey, visibleKeys)}
       </code>
       <IconButton

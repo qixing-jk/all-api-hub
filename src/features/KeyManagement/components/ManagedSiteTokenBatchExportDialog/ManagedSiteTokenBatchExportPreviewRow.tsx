@@ -227,13 +227,13 @@ export function ManagedSiteTokenBatchExportPreviewRow({
           ) : (
             <span className="ml-2 break-words">
               {formatBatchExportValues(item.draft?.models)}
-              </span>
-            )}
-          </div>
+            </span>
+          )}
         </div>
+      </div>
 
       {item.matchedChannel ? (
-        <div className="text-muted-foreground dark:bg-dark-bg-tertiary rounded-md bg-gray-50 p-2 text-xs">
+        <div className="text-muted-foreground dark:bg-secondary bg-surface-subtle rounded-md p-2 text-xs">
           {t("keyManagement:batchManagedSiteExport.messages.duplicate", {
             channel: item.matchedChannel.name,
           })}
@@ -241,7 +241,7 @@ export function ManagedSiteTokenBatchExportPreviewRow({
       ) : null}
 
       {item.warningCodes.length > 0 ? (
-        <div className="space-y-2 rounded-md border border-amber-200/70 bg-amber-50/55 p-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-100">
+        <div className="border-warning-border bg-warning-soft text-warning-soft-foreground space-y-2 rounded-md border p-2 text-xs">
           <ul className="list-disc space-y-1 pl-4 leading-5">
             {item.warningCodes.map((code) => (
               <li key={code}>{getBatchExportWarningText(t, code)}</li>
@@ -257,7 +257,7 @@ export function ManagedSiteTokenBatchExportPreviewRow({
       ) : null}
 
       {item.blockingReasonCode ? (
-        <div className="rounded-md bg-red-50 p-2 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-300">
+        <div className="bg-destructive-soft text-destructive-soft-foreground rounded-md p-2 text-xs">
           {getBatchExportBlockedReasonText(t, item.blockingReasonCode) ??
             t(
               "keyManagement:batchManagedSiteExport.blockedReasons.inputPreparationFailed",
@@ -268,7 +268,7 @@ export function ManagedSiteTokenBatchExportPreviewRow({
       ) : null}
 
       {result?.error ? (
-        <div className="rounded-md bg-red-50 p-2 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-300">
+        <div className="bg-destructive-soft text-destructive-soft-foreground rounded-md p-2 text-xs">
           {getBatchExportExecutionErrorText(t, result.error)}
         </div>
       ) : null}

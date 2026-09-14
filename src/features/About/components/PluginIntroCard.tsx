@@ -13,7 +13,7 @@ const PluginIntroCard = ({ version }: PluginIntroCardProps) => {
     <Card
       padding="md"
       variant="default"
-      className="border-blue-200 bg-linear-to-r from-blue-50 to-indigo-50 dark:border-blue-800 dark:from-blue-900/30 dark:to-indigo-900/30"
+      className="border-theme-200 from-theme-50 dark:border-theme-800 dark:from-theme-900/30 to-card bg-linear-to-r"
     >
       <CardContent padding={"none"}>
         <div className="flex items-start space-x-4">
@@ -24,15 +24,15 @@ const PluginIntroCard = ({ version }: PluginIntroCardProps) => {
           />
           <div className="flex-1">
             <Heading2 className="mb-2">{t("ui:app.name")}</Heading2>
-            <Body className="dark:text-dark-text-secondary mb-4 text-gray-600">
+            <Body className="dark:text-secondary-foreground text-muted-foreground mb-4">
               {t("intro")}
             </Body>
             <div className="text-sm">
               <div>
-                <span className="dark:text-dark-text-secondary text-gray-500">
+                <span className="dark:text-secondary-foreground text-muted-foreground">
                   {t("version")}
                 </span>
-                <span className="dark:text-dark-text-primary ml-2 font-medium text-gray-900">
+                <span className="text-foreground ml-2 font-medium">
                   v{version}
                 </span>
               </div>

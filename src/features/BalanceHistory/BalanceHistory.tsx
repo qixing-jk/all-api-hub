@@ -31,7 +31,6 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { ANIMATIONS, COLORS, CORNERS } from "~/constants/designTokens"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { useTheme } from "~/contexts/ThemeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import toast from "~/lib/notify"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
@@ -196,8 +195,6 @@ function clampRetentionDays(value: unknown): number {
  */
 export default function BalanceHistory() {
   const { t } = useTranslation("balanceHistory")
-  const { resolvedTheme } = useTheme()
-  const isDark = resolvedTheme === "dark"
 
   const { preferences, currencyType, updateCurrencyType } =
     useUserPreferencesContext()
@@ -771,7 +768,6 @@ export default function BalanceHistory() {
       series: trendSeries,
       chartType: trendChartType,
       yAxisLabel: `${metricLabel} (${currencySymbol})`,
-      isDark,
       axisLabelFormatter: formatAxisMoneyValue,
       valueFormatter: formatTooltipMoneyValue,
     })
@@ -779,7 +775,6 @@ export default function BalanceHistory() {
     currencySymbol,
     formatAxisMoneyValue,
     formatTooltipMoneyValue,
-    isDark,
     perAccountSeries.dayKeys,
     t,
     effectiveTrendMetric,
@@ -867,14 +862,12 @@ export default function BalanceHistory() {
           categories: breakdownData.categories,
           values: breakdownData.values,
           valueLabel,
-          isDark,
           valueFormatter: formatTooltipMoneyValue,
         })
       : buildAccountBreakdownBarOption({
           categories: breakdownData.categories,
           values: breakdownData.values,
           valueLabel,
-          isDark,
           axisLabelFormatter: formatAxisMoneyValue,
           valueFormatter: formatTooltipMoneyValue,
         })
@@ -885,7 +878,6 @@ export default function BalanceHistory() {
     currencySymbol,
     formatAxisMoneyValue,
     formatTooltipMoneyValue,
-    isDark,
     t,
     effectiveBreakdownMetric,
   ])
@@ -1104,7 +1096,7 @@ export default function BalanceHistory() {
 
       {shouldShowEnableBalanceHistoryHint ? (
         <Alert
-          variant="info"
+          variant="default"
           title={t("hints.disabled.title")}
           description={t("hints.disabled.description")}
         >
@@ -1134,7 +1126,7 @@ export default function BalanceHistory() {
                 <Label className="text-sm font-medium">
                   {t("filters.tags")}
                 </Label>
-                <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                <div className="text-muted-foreground text-xs">
                   {t("filters.tagsHint")}
                 </div>
               </div>
@@ -1152,7 +1144,7 @@ export default function BalanceHistory() {
                 <Label className="text-sm font-medium">
                   {t("filters.accounts")}
                 </Label>
-                <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                <div className="text-muted-foreground text-xs">
                   {t("filters.accountsHint")}
                 </div>
               </div>
@@ -1170,7 +1162,7 @@ export default function BalanceHistory() {
                 <Label className="text-sm font-medium">
                   {t("settings:display.currencyUnit")}
                 </Label>
-                <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                <div className="text-muted-foreground text-xs">
                   {t("settings:display.currencyDesc")}
                 </div>
               </div>
@@ -1200,7 +1192,7 @@ export default function BalanceHistory() {
                 <Label className="text-sm font-medium">
                   {t("filters.range")}
                 </Label>
-                <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                <div className="text-muted-foreground text-xs">
                   {t("filters.rangeHint", { days: safeRetentionDays })}
                 </div>
               </div>
@@ -1258,7 +1250,7 @@ export default function BalanceHistory() {
                 })}
               </div>
 
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              <div className="text-muted-foreground text-xs">
                 {t("summary.coverage", {
                   snapshotAvailableDays,
                   snapshotCompleteDays: snapshotCompleteDays.snapshotComplete,
@@ -1271,14 +1263,14 @@ export default function BalanceHistory() {
           </Card>
 
           {isInitialLoading ? (
-            <div className="dark:text-dark-text-secondary text-sm text-gray-600">
+            <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
               {t("messages.loading.loadingData")}
             </div>
           ) : isStoreEmpty ? (
             <Card padding="md">
               <div className="space-y-1">
                 <div className="text-sm font-medium">{t("empty.title")}</div>
-                <div className="dark:text-dark-text-tertiary text-sm text-gray-600">
+                <div className="text-muted-foreground text-sm">
                   {t("empty.description")}
                 </div>
               </div>
@@ -1289,7 +1281,7 @@ export default function BalanceHistory() {
                 <div className="text-sm font-medium">
                   {t("emptyRange.title")}
                 </div>
-                <div className="dark:text-dark-text-tertiary text-sm text-gray-600">
+                <div className="text-muted-foreground text-sm">
                   {t("emptyRange.description")}
                 </div>
               </div>
@@ -1305,8 +1297,8 @@ export default function BalanceHistory() {
                     {t("overview.title")}
                   </div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="dark:bg-dark-bg-secondary rounded-lg bg-gray-50 p-3">
-                      <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                    <div className="dark:bg-card bg-surface-subtle rounded-lg p-3">
+                      <div className="text-muted-foreground text-xs">
                         {t("overview.kpis.endBalance.label")}
                       </div>
                       <div className="text-lg font-semibold">
@@ -1314,7 +1306,7 @@ export default function BalanceHistory() {
                           ? "-"
                           : `${currencySymbol}${formatMoneyFixed(overviewTotals.endBalance)}`}
                       </div>
-                      <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                      <div className="text-muted-foreground text-xs">
                         {t("overview.kpis.coverageAccounts", {
                           covered: overviewTotals.endBalanceCovered,
                           total: overviewTotals.totalAccounts,
@@ -1322,8 +1314,8 @@ export default function BalanceHistory() {
                       </div>
                     </div>
 
-                    <div className="dark:bg-dark-bg-secondary rounded-lg bg-gray-50 p-3">
-                      <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                    <div className="dark:bg-card bg-surface-subtle rounded-lg p-3">
+                      <div className="text-muted-foreground text-xs">
                         {t("overview.kpis.rangeNet.label")}
                       </div>
                       <div className="text-lg font-semibold">
@@ -1331,7 +1323,7 @@ export default function BalanceHistory() {
                           ? "-"
                           : `${currencySymbol}${formatMoneyFixed(overviewTotals.rangeNet)}`}
                       </div>
-                      <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                      <div className="text-muted-foreground text-xs">
                         {t("overview.kpis.coverageAccounts", {
                           covered: overviewTotals.rangeNetCovered,
                           total: overviewTotals.totalAccounts,
@@ -1339,8 +1331,8 @@ export default function BalanceHistory() {
                       </div>
                     </div>
 
-                    <div className="dark:bg-dark-bg-secondary rounded-lg bg-gray-50 p-3">
-                      <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                    <div className="dark:bg-card bg-surface-subtle rounded-lg p-3">
+                      <div className="text-muted-foreground text-xs">
                         {t("overview.kpis.incomeTotal.label")}
                       </div>
                       <div className="text-lg font-semibold">
@@ -1348,7 +1340,7 @@ export default function BalanceHistory() {
                           ? "-"
                           : `${currencySymbol}${formatMoneyFixed(overviewTotals.incomeTotal)}`}
                       </div>
-                      <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                      <div className="text-muted-foreground text-xs">
                         {t("overview.kpis.coverageAccounts", {
                           covered: overviewTotals.incomeCovered,
                           total: overviewTotals.totalAccounts,
@@ -1356,8 +1348,8 @@ export default function BalanceHistory() {
                       </div>
                     </div>
 
-                    <div className="dark:bg-dark-bg-secondary rounded-lg bg-gray-50 p-3">
-                      <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                    <div className="dark:bg-card bg-surface-subtle rounded-lg p-3">
+                      <div className="text-muted-foreground text-xs">
                         {t("overview.kpis.outcomeTotal.label")}
                       </div>
                       <div className="text-lg font-semibold">
@@ -1365,7 +1357,7 @@ export default function BalanceHistory() {
                           ? "-"
                           : `${currencySymbol}${formatMoneyFixed(overviewTotals.outcomeTotal)}`}
                       </div>
-                      <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                      <div className="text-muted-foreground text-xs">
                         {t("overview.kpis.coverageAccounts", {
                           covered: overviewTotals.outcomeCovered,
                           total: overviewTotals.totalAccounts,
@@ -1385,7 +1377,7 @@ export default function BalanceHistory() {
                           <DropdownMenuTrigger asChild>
                             <button
                               type="button"
-                              className={`${ANIMATIONS.transition.base} dark:hover:bg-dark-bg-tertiary inline-flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none`}
+                              className={`${ANIMATIONS.transition.base} dark:hover:bg-secondary hover:bg-muted focus-visible:ring-ring inline-flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none`}
                             >
                               <span className="min-w-0 truncate">
                                 {t("breakdown.title")}:{" "}
@@ -1426,7 +1418,7 @@ export default function BalanceHistory() {
                             </DropdownMenuRadioGroup>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                        <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                        <div className="text-muted-foreground text-xs">
                           {t("breakdown.coverage", {
                             covered: breakdownData.coveredAccounts,
                             total: breakdownData.totalAccounts,
@@ -1463,7 +1455,7 @@ export default function BalanceHistory() {
 
                     {effectiveBreakdownMetric === "balance" && (
                       <div className="flex flex-wrap items-center gap-2">
-                        <Label className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                        <Label className="text-muted-foreground text-xs">
                           {t("breakdown.controls.reference")}
                         </Label>
                         <Input
@@ -1484,7 +1476,7 @@ export default function BalanceHistory() {
                     )}
 
                     {breakdownData.hasNegativeValues && (
-                      <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                      <div className="text-muted-foreground text-xs">
                         {t("breakdown.hints.pieDisabledForNegative")}
                       </div>
                     )}
@@ -1494,7 +1486,7 @@ export default function BalanceHistory() {
                         <EChart option={breakdownOption} />
                       </div>
                     ) : (
-                      <div className="dark:text-dark-text-secondary text-sm text-gray-600">
+                      <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
                         {t("breakdown.empty")}
                       </div>
                     )}
@@ -1510,7 +1502,7 @@ export default function BalanceHistory() {
                             <DropdownMenuTrigger asChild>
                               <button
                                 type="button"
-                                className={`${ANIMATIONS.transition.base} dark:hover:bg-dark-bg-tertiary inline-flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none`}
+                                className={`${ANIMATIONS.transition.base} dark:hover:bg-secondary hover:bg-muted focus-visible:ring-ring inline-flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none`}
                               >
                                 <span className="min-w-0 truncate">
                                   {t("trend.title")}:{" "}
@@ -1556,7 +1548,7 @@ export default function BalanceHistory() {
                             <DropdownMenuTrigger asChild>
                               <button
                                 type="button"
-                                className={`${ANIMATIONS.transition.base} dark:hover:bg-dark-bg-tertiary inline-flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none`}
+                                className={`${ANIMATIONS.transition.base} dark:hover:bg-secondary hover:bg-muted focus-visible:ring-ring inline-flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none`}
                               >
                                 <span className="min-w-0 truncate">
                                   {t("trend.controls.scope")}:{" "}
@@ -1587,7 +1579,7 @@ export default function BalanceHistory() {
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
-                        <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                        <div className="text-muted-foreground text-xs">
                           {trendScope === "total"
                             ? t("trend.subtitleTotal")
                             : t("trend.subtitle")}
@@ -1626,7 +1618,7 @@ export default function BalanceHistory() {
                         </div>
                         {shouldShowIncompleteTotalHint && (
                           <Alert
-                            variant="info"
+                            variant="warning"
                             title={t("hints.incompleteSelection.title")}
                             description={t(
                               "hints.incompleteSelection.description",
@@ -1643,7 +1635,7 @@ export default function BalanceHistory() {
                         )}
                       </div>
                     ) : (
-                      <div className="dark:text-dark-text-secondary text-sm text-gray-600">
+                      <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
                         {t("trend.emptyMetric", {
                           metric: getBalanceHistoryMetricLabel(
                             t,

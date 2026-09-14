@@ -13,6 +13,8 @@ import { getDeviceTypeInfo } from "~/utils/browser/device"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
+export { getLocalStorage } from "~/utils/browser/extensionStorage"
+
 /**
  * Unified logger scoped to cross-browser WebExtension API helpers.
  */
@@ -663,13 +665,6 @@ export function hasStorageChangedListener(): boolean {
     typeof onChanged?.addListener === "function" &&
     typeof onChanged?.removeListener === "function"
   )
-}
-
-/**
- * Reads keys from browser.storage.local through the guarded browser adapter.
- */
-export async function getLocalStorage(keys: string | string[]) {
-  return await browser.storage.local.get(keys)
 }
 
 /**

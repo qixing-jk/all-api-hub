@@ -111,19 +111,17 @@ function DedupeAccountsGroupCard({
   return (
     <fieldset
       disabled={isWorking}
-      className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary rounded-lg border border-gray-200 bg-white p-4"
+      className="border-border bg-card rounded-lg border p-4"
     >
       <legend className="sr-only">
         {group.key.origin} · {identityLabel}
       </legend>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="dark:text-dark-text-primary truncate text-sm font-semibold text-gray-900">
+          <div className="text-foreground truncate text-sm font-semibold">
             {group.key.origin}
           </div>
-          <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
-            {identityLabel}
-          </div>
+          <div className="text-muted-foreground text-xs">{identityLabel}</div>
         </div>
         <Badge variant="danger">
           {t("ui:dialog.dedupeAccounts.duplicateCount", {

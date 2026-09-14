@@ -334,7 +334,7 @@ function SecretRow({
           type="button"
           variant="ghost"
           size="sm"
-          className="shrink-0 text-red-600 dark:text-red-400"
+          className="text-destructive-text shrink-0"
           aria-label={t("ui:secretList.remove")}
           title={t("ui:secretList.remove")}
           disabled={disabled || !canRemove}
@@ -409,7 +409,7 @@ function SecretRow({
           />
         </div>
         {failed && (
-          <p role="alert" className="text-destructive text-sm">
+          <p role="alert" className="text-destructive-text text-sm">
             {t("ui:secretList.loadFailed")}
           </p>
         )}

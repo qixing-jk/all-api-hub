@@ -11,21 +11,22 @@ const iconButtonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",
+        default:
+          "bg-(--button-primary-bg) text-(--button-primary-foreground) hover:bg-(--button-primary-bg-hover) focus-visible:ring-(--button-primary-ring)",
         destructive:
-          "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
+          "bg-(--button-destructive-bg) text-(--button-destructive-foreground) hover:bg-(--button-destructive-bg-hover) focus-visible:ring-(--button-destructive-ring)",
         destructiveGhost:
-          "bg-transparent text-destructive hover:bg-destructive/10 focus:ring-destructive/30 dark:hover:bg-destructive/20",
+          "bg-transparent text-destructive-text hover:bg-destructive/10 focus:ring-destructive/30 dark:hover:bg-destructive/20",
         outline:
-          "border border-gray-300 dark:border-dark-bg-tertiary bg-transparent hover:bg-gray-50 dark:hover:bg-dark-bg-secondary text-gray-700 dark:text-dark-text-secondary focus:ring-gray-500",
+          "border border-border-strong dark:border-border bg-transparent hover:bg-surface-subtle dark:hover:bg-card text-secondary-foreground focus:ring-border-strong",
         secondary:
-          "bg-gray-200 hover:bg-gray-300 text-gray-900 dark:bg-dark-bg-tertiary dark:hover:bg-dark-bg-primary dark:text-dark-text-primary focus:ring-gray-500",
+          "bg-secondary hover:bg-surface-strong text-foreground dark:hover:bg-background focus:ring-border-strong",
         ghost:
-          "bg-transparent hover:bg-gray-100 dark:hover:bg-dark-bg-secondary text-gray-700 dark:text-dark-text-secondary focus:ring-gray-500",
+          "bg-transparent hover:bg-muted dark:hover:bg-card text-secondary-foreground focus:ring-border-strong",
         success:
-          "bg-green-600 text-white hover:bg-green-700 focus:ring-green-500",
+          "bg-(--button-success-bg) text-(--button-success-foreground) hover:bg-(--button-success-bg-hover) focus-visible:ring-(--button-success-ring)",
         warning:
-          "bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500",
+          "bg-(--button-warning-bg) text-(--button-warning-foreground) hover:bg-(--button-warning-bg-hover) focus-visible:ring-(--button-warning-ring)",
       },
       size: {
         none: "",

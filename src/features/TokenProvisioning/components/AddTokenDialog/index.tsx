@@ -359,7 +359,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
             />
             {typeof props.prefillNotice === "string" &&
             props.prefillNotice.trim().length > 0 ? (
-              <Alert variant="info" description={props.prefillNotice} />
+              <Alert variant="default" description={props.prefillNotice} />
             ) : null}
             <WarningNote />
           </div>

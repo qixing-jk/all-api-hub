@@ -250,13 +250,13 @@ function BookmarkTreeNode({
       style={style}
       className={cn(
         "group flex min-w-0 items-center gap-2 rounded-md py-0.5 pr-2 text-sm",
-        node.isFocused && "bg-blue-50 dark:bg-blue-950/30",
+        node.isFocused && "bg-theme-50 dark:bg-theme-950/30",
       )}
       title={node.data.url}
     >
       <button
         type="button"
-        className="dark:hover:bg-dark-bg-tertiary grid size-7 shrink-0 place-content-center rounded text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-0 dark:text-gray-400"
+        className="dark:hover:bg-secondary text-muted-foreground hover:bg-muted hover:text-secondary-foreground grid size-7 shrink-0 place-content-center rounded disabled:opacity-0"
         onClick={(event) => {
           event.stopPropagation()
           if (isFolder) node.toggle()
@@ -287,9 +287,9 @@ function BookmarkTreeNode({
         data-testid={`${ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportScopeCheckbox}-${node.id}`}
       />
       {isFolder ? (
-        <Folder className="size-4 shrink-0 text-amber-500" aria-hidden="true" />
+        <Folder className="text-link size-4 shrink-0" aria-hidden="true" />
       ) : (
-        <Globe2 className="size-4 shrink-0 text-sky-500" aria-hidden="true" />
+        <Globe2 className="text-link size-4 shrink-0" aria-hidden="true" />
       )}
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-baseline gap-2">
@@ -297,23 +297,23 @@ function BookmarkTreeNode({
             className={cn(
               "min-w-0 truncate",
               isFolder
-                ? "dark:text-dark-text-primary font-medium text-gray-800"
-                : "dark:text-dark-text-primary text-gray-800",
+                ? "dark:text-foreground text-secondary-foreground font-medium"
+                : "dark:text-foreground text-secondary-foreground",
             )}
           >
             {node.data.name}
           </span>
           {folderSummary ? (
-            <span className="dark:text-dark-text-tertiary shrink-0 text-xs text-gray-500">
+            <span className="text-muted-foreground shrink-0 text-xs">
               {folderSummary}
             </span>
           ) : null}
           {bookmarkSource ? (
             <>
-              <span className="dark:text-dark-text-tertiary shrink-0 text-xs text-gray-400">
+              <span className="dark:text-muted-foreground text-faint-foreground shrink-0 text-xs">
                 |
               </span>
-              <span className="dark:text-dark-text-tertiary min-w-0 truncate text-xs text-gray-500">
+              <span className="text-muted-foreground min-w-0 truncate text-xs">
                 {bookmarkSource}
               </span>
             </>
@@ -397,7 +397,7 @@ export function BookmarkTreeSelector({
     <div
       ref={containerRef}
       className={cn(
-        "dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary flex min-h-[240px] flex-col overflow-hidden rounded-lg border border-gray-200 bg-white p-2",
+        "border-border bg-card flex min-h-[240px] flex-col overflow-hidden rounded-lg border p-2",
         className,
       )}
     >
@@ -491,7 +491,7 @@ export function BookmarkTreeSelector({
             {BookmarkTreeNode}
           </Tree>
         ) : (
-          <div className="dark:text-dark-text-secondary dark:border-dark-bg-tertiary grid h-full place-content-center rounded-md border border-dashed border-gray-200 px-4 text-center text-sm text-gray-500">
+          <div className="dark:text-secondary-foreground border-border text-muted-foreground grid h-full place-content-center rounded-md border border-dashed px-4 text-center text-sm">
             {t("ui:dialog.bookmarkAccountImport.searchEmpty")}
           </div>
         )}

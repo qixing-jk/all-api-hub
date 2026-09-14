@@ -65,10 +65,10 @@ const getBadgeSurface = (mark: HTMLElement) => {
 const expectNeutralBadgeSurface = (surface: HTMLElement) => {
   expect(surface).toHaveClass(
     "rounded-full",
-    "bg-gray-100",
-    "text-gray-600",
-    "dark:bg-dark-bg-tertiary",
-    "dark:text-dark-text-secondary",
+    "bg-muted",
+    "text-muted-foreground",
+    "dark:bg-secondary",
+    "dark:text-secondary-foreground",
   )
   expect(surface).toHaveStyle({ height: "28px", width: "28px" })
   expect(surface.getAttribute("class") ?? "").not.toMatch(
@@ -171,8 +171,8 @@ describe("ModelVendorMark", () => {
     expect(badgeInitials).toBeVisible()
     for (const localShapeClass of [
       "rounded-sm",
-      "bg-gray-200",
-      "dark:bg-gray-700",
+      "bg-secondary",
+      "dark:bg-secondary",
     ]) {
       expect(badgeInitials).not.toHaveClass(localShapeClass)
     }

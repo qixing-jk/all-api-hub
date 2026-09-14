@@ -16,8 +16,8 @@ export function DialogHeader({ isEditMode }: DialogHeaderProps) {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center space-x-2">
-        <KeyRound className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-        <h2 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
+        <KeyRound className="text-theme-600 dark:text-theme-400 h-6 w-6" />
+        <h2 className="text-foreground text-lg font-semibold">
           {isEditMode ? t("dialog.editToken") : t("dialog.addToken")}
         </h2>
       </div>

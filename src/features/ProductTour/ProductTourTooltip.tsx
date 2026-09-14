@@ -5,7 +5,7 @@ import { Button } from "~/components/ui"
 
 import { PRODUCT_TOUR_TEST_IDS } from "./testIds"
 
-/** Project-styled, accessible tooltip used by React Joyride. */
+/** Joyride supplies the shared shadow around this surface and its themed arrow. */
 export function ProductTourTooltip({
   backProps,
   closeProps,
@@ -20,17 +20,17 @@ export function ProductTourTooltip({
   return (
     <section
       {...tooltipProps}
-      className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-gray-200 bg-white p-4 text-gray-900 shadow-xl sm:p-5 dark:text-gray-100"
+      className="bg-card text-foreground w-[min(22rem,calc(100vw-2rem))] rounded-xl p-4 sm:p-5"
       data-testid={PRODUCT_TOUR_TEST_IDS.tooltip}
       aria-labelledby="product-tour-step-title"
       aria-describedby="product-tour-step-description"
     >
       <div className="flex items-start justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-2 text-blue-600 dark:text-blue-400">
+        <div className="text-theme-600 dark:text-theme-400 flex min-w-0 items-center gap-2">
           <Compass className="h-5 w-5 shrink-0" aria-hidden="true" />
           <h2
             id="product-tour-step-title"
-            className="text-base font-semibold text-gray-900 dark:text-gray-100"
+            className="text-foreground text-base font-semibold"
           >
             {step.title}
           </h2>
@@ -43,7 +43,7 @@ export function ProductTourTooltip({
           title={closeProps.title}
           data-action={closeProps["data-action"]}
           onClick={closeProps.onClick}
-          className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+          className="text-muted-foreground hover:text-foreground"
         >
           <X className="h-4 w-4" aria-hidden="true" />
         </Button>
@@ -51,7 +51,7 @@ export function ProductTourTooltip({
 
       <div
         id="product-tour-step-description"
-        className="mt-3 text-sm leading-6 text-gray-600 dark:text-gray-300"
+        className="text-muted-foreground dark:text-secondary-foreground mt-3 text-sm leading-6"
       >
         {step.content}
       </div>
@@ -59,7 +59,7 @@ export function ProductTourTooltip({
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span
-            className="text-xs text-gray-600 dark:text-gray-400"
+            className="text-muted-foreground text-xs"
             aria-label={`${index + 1} / ${size}`}
           >
             {index + 1} / {size}

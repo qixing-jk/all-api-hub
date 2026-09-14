@@ -84,30 +84,17 @@ export default function InfoPanel({
   }
 
   const Icon = isAddMode ? Sparkles : Users
-  const iconColor = isAddMode ? "text-blue-400" : "text-green-400"
-  const bgColor = isAddMode
-    ? "bg-blue-50 dark:bg-blue-900/20"
-    : "bg-green-50 dark:bg-green-900/20"
-  const borderColor = isAddMode
-    ? "border-blue-100 dark:border-blue-900/30"
-    : "border-green-100 dark:border-green-900/30"
-  const titleColor = isAddMode
-    ? "text-blue-800 dark:text-blue-300"
-    : "text-green-800 dark:text-green-300"
-  const textColor = isAddMode
-    ? "text-blue-700 dark:text-blue-400"
-    : "text-green-700 dark:text-green-400"
   const description = getDescription()
 
   return (
-    <div className={`${bgColor} border ${borderColor} rounded-lg p-3`}>
+    <div className="bg-primary-soft text-primary-soft-foreground border-primary-soft-border rounded-lg border p-3">
       <div className="flex">
         <div className="shrink-0">
-          <Icon className={`h-5 w-5 ${iconColor}`} />
+          <Icon className="h-5 w-5" />
         </div>
         <div className="ml-3">
-          <h3 className={`text-xs font-medium ${titleColor}`}>{getTitle()}</h3>
-          <div className={`mt-1 text-xs ${textColor}`}>
+          <h3 className="text-xs font-medium">{getTitle()}</h3>
+          <div className="mt-1 text-xs">
             {typeof description === "string" ? (
               <p>{description}</p>
             ) : (
@@ -115,7 +102,7 @@ export default function InfoPanel({
             )}
 
             {showLdohSiteListLink && (
-              <div className={`${borderColor} mt-2 border-t pt-2`}>
+              <div className="border-primary-soft-border mt-2 border-t pt-2">
                 <p className="mb-1">{t("infoPanel.ldohSiteListHint")}</p>
                 <Button
                   type="button"
@@ -135,7 +122,7 @@ export default function InfoPanel({
             )}
 
             {showManualAddGuideLink && (
-              <div className={`${borderColor} mt-2 border-t pt-2`}>
+              <div className="border-primary-soft-border mt-2 border-t pt-2">
                 <ManualAddGuideButton
                   anchor={manualAddGuideAnchor}
                   className="h-auto min-h-0 justify-start p-0 text-left"

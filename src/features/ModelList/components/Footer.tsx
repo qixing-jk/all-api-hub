@@ -17,7 +17,7 @@ export function Footer({
   }
 
   return (
-    <Alert variant="info" className="mt-8">
+    <Alert variant="default" className="mt-8">
       <div>
         <h4 className="mb-1 font-medium">{t("pricingNote")}</h4>
         <p className="text-sm">{t("pricingDescription")}</p>

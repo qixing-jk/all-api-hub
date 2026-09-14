@@ -101,7 +101,7 @@ export function AccountBulkToolbar({
     <section
       data-testid="account-bulk-toolbar"
       aria-label={t("account:bulk.manage")}
-      className="border-b border-blue-100 bg-blue-50/40 px-3 py-2 dark:border-blue-900/50 dark:bg-blue-950/15"
+      className="border-theme-100 bg-theme-50/40 dark:border-theme-900/50 dark:bg-theme-950/15 border-b px-3 py-2"
     >
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
         <div
@@ -118,7 +118,7 @@ export function AccountBulkToolbar({
               size="sm"
               className={cn(
                 controlClass,
-                "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-200 dark:hover:bg-blue-900/40",
+                "border-theme-200 bg-theme-50 text-theme-700 hover:bg-theme-100 dark:border-theme-800 dark:bg-theme-950/40 dark:text-theme-200 dark:hover:bg-theme-900/40",
               )}
               onClick={() => setIsReviewOpen(true)}
               ref={reviewButtonRef}
@@ -133,7 +133,7 @@ export function AccountBulkToolbar({
                 })}
               </span>
               <span
-                className="h-3 w-px bg-blue-200 dark:bg-blue-700"
+                className="bg-theme-200 dark:bg-theme-700 h-3 w-px"
                 aria-hidden="true"
               />
               {t("account:bulk.reviewSelection")}
@@ -222,7 +222,7 @@ export function AccountBulkToolbar({
             ref={actionGroupRef}
             data-testid="account-bulk-action-group"
             className={cn(
-              "relative flex max-w-full flex-wrap items-center gap-1.5 before:pointer-events-none before:absolute before:bg-slate-300 before:content-[''] dark:before:bg-slate-600",
+              "before:bg-surface-strong relative flex max-w-full flex-wrap items-center gap-1.5 before:pointer-events-none before:absolute before:content-['']",
               actionsWrapped
                 ? "before:-top-2 before:right-0 before:left-0 before:h-px"
                 : "before:top-1 before:bottom-1 before:-left-4 before:w-px",
@@ -264,7 +264,7 @@ export function AccountBulkToolbar({
               size="sm"
               className={cn(
                 controlClass,
-                "border-red-200 bg-red-50/60 text-red-700 hover:bg-red-100 hover:text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-900/40",
+                "border-destructive-border bg-destructive-soft text-destructive-soft-foreground hover:bg-destructive-soft hover:text-destructive-soft-foreground",
               )}
               onClick={onDelete}
               leftIcon={
@@ -280,7 +280,7 @@ export function AccountBulkToolbar({
         <Button
           variant="ghost"
           size="sm"
-          className={cn(controlClass, "text-gray-500 dark:text-gray-400")}
+          className={cn(controlClass, "text-muted-foreground")}
           onClick={onExit}
           disabled={isBusy}
           ref={exitButtonRef}
@@ -289,7 +289,7 @@ export function AccountBulkToolbar({
         </Button>
       </div>
       {hiddenCount > 0 && (
-        <p className="mt-1.5 text-xs leading-5 text-amber-700 dark:text-amber-300">
+        <p className="text-warning-text mt-1.5 text-xs leading-5">
           {t("account:bulk.hiddenSelectedHint", { count: hiddenCount })}
         </p>
       )}
@@ -319,11 +319,11 @@ export function AccountBulkToolbar({
         }
       >
         <div className="space-y-3 p-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-muted-foreground text-xs">
             {t("account:bulk.reviewHint")}
           </p>
           {selectedCount === 0 ? (
-            <p className="py-6 text-center text-sm text-gray-500">
+            <p className="text-muted-foreground py-6 text-center text-sm">
               {t("account:bulk.selectionEmpty")}
             </p>
           ) : (
@@ -331,7 +331,7 @@ export function AccountBulkToolbar({
               {selectedAccounts.map((account) => (
                 <label
                   key={account.id}
-                  className="flex cursor-pointer items-center gap-3 border-b border-gray-100 py-3 last:border-0 dark:border-white/5"
+                  className="border-border-subtle dark:border-foreground/5 flex cursor-pointer items-center gap-3 border-b py-3 last:border-0"
                 >
                   <Checkbox
                     checked
@@ -346,7 +346,7 @@ export function AccountBulkToolbar({
                       {account.name}
                     </span>
                     {!visibleAccountIds.has(account.id) && (
-                      <span className="mt-0.5 block text-xs text-amber-700 dark:text-amber-300">
+                      <span className="text-warning-text mt-0.5 block text-xs">
                         {t("account:bulk.hiddenAccount")}
                       </span>
                     )}

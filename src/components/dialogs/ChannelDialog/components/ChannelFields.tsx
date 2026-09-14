@@ -45,8 +45,8 @@ function ChannelFieldMessage({
       role={tone === "error" ? "alert" : undefined}
       className={
         tone === "error"
-          ? "mt-1 text-xs text-red-600 dark:text-red-400"
-          : "dark:text-dark-text-secondary mt-1 text-xs text-gray-500"
+          ? "text-destructive-text mt-1 text-xs"
+          : "dark:text-secondary-foreground text-muted-foreground mt-1 text-xs"
       }
     >
       {children}
@@ -307,7 +307,7 @@ export function ChannelSecretField({
             role={realKeyLoadError ? "alert" : "status"}
             className={
               realKeyLoadError
-                ? "min-w-0 text-xs text-red-600 dark:text-red-400"
+                ? "text-destructive-text min-w-0 text-xs"
                 : "text-muted-foreground min-w-0 text-xs"
             }
           >

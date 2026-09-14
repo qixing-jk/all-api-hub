@@ -82,7 +82,7 @@ export function ProductAnnouncementBanner({
   return (
     <section
       className={cn(
-        "dark:bg-dark-bg-secondary/95 dark:text-dark-text-primary overflow-hidden rounded-lg border border-slate-200/80 bg-white/95 p-3 text-slate-900 shadow-sm shadow-slate-200/60 dark:border-white/10 dark:shadow-black/20",
+        "border-border/80 bg-card/95 text-foreground shadow-border/60 dark:border-foreground/10 dark:shadow-shadow/20 overflow-hidden rounded-lg border p-3 shadow-sm",
       )}
     >
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -108,11 +108,11 @@ export function ProductAnnouncementBanner({
                 {getProductAnnouncementSeverityLabel(notice.severity, t)}
               </Badge>
             </div>
-            <p className="dark:text-dark-text-secondary text-sm leading-5 break-words whitespace-pre-wrap text-slate-600">
+            <p className="dark:text-secondary-foreground text-muted-foreground text-sm leading-5 break-words whitespace-pre-wrap">
               {notice.message}
             </p>
             {additionalCount > 0 ? (
-              <p className="dark:text-dark-text-tertiary text-xs leading-5 font-medium text-slate-500">
+              <p className="text-muted-foreground text-xs leading-5 font-medium">
                 {getAdditionalSummary(additionalCount, t)}
               </p>
             ) : null}
@@ -123,7 +123,7 @@ export function ProductAnnouncementBanner({
             type="button"
             variant="outline"
             size="sm"
-            className="dark:text-dark-text-secondary h-8 border-slate-200 bg-white/70 px-3 text-xs text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.08]"
+            className="border-border bg-card/70 text-secondary-foreground hover:bg-surface-subtle dark:border-foreground/10 dark:bg-foreground/[0.04] dark:hover:bg-foreground/[0.08] h-8 px-3 text-xs"
             onClick={handleViewAll}
           >
             {t("actions.viewAll")}
@@ -132,7 +132,7 @@ export function ProductAnnouncementBanner({
             type="button"
             variant="ghost"
             size="sm"
-            className="dark:text-dark-text-secondary h-8 px-3 text-xs text-slate-600 hover:bg-slate-100 dark:hover:bg-white/[0.08]"
+            className="dark:text-secondary-foreground text-muted-foreground hover:bg-muted dark:hover:bg-foreground/[0.08] h-8 px-3 text-xs"
             onClick={handleDismiss}
           >
             {t("actions.dismiss")}

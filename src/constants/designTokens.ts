@@ -7,89 +7,61 @@
 export const COLORS = {
   // Background colors
   background: {
-    primary: "bg-white dark:bg-dark-bg-primary",
-    secondary: "bg-gray-50 dark:bg-dark-bg-secondary",
-    tertiary: "bg-gray-100 dark:bg-dark-bg-tertiary",
-    elevated: "bg-white dark:bg-dark-bg-secondary",
-    overlay: "bg-black/50 dark:bg-black/70",
+    primary: "bg-card dark:bg-background",
+    secondary: "bg-surface-subtle dark:bg-card",
+    tertiary: "bg-muted dark:bg-secondary",
+    elevated: "bg-card",
+    overlay: "bg-overlay/50 dark:bg-overlay/70",
   },
 
   // Text colors
   text: {
-    primary: "text-gray-900 dark:text-dark-text-primary",
-    secondary: "text-gray-600 dark:text-dark-text-secondary",
-    tertiary: "text-gray-500 dark:text-dark-text-tertiary",
-    inverse: "text-white dark:text-gray-900",
-    muted: "text-gray-400 dark:text-gray-500",
+    primary: "text-foreground",
+    secondary: "text-muted-foreground dark:text-secondary-foreground",
+    tertiary: "text-muted-foreground",
+    inverse: "text-inverse-foreground",
+    muted: "text-faint-foreground",
   },
 
   // Border colors
   border: {
-    default: "border-gray-200 dark:border-dark-bg-tertiary",
-    subtle: "border-gray-100 dark:border-gray-700",
-    strong: "border-gray-300 dark:border-gray-600",
-    focus: "border-blue-500 dark:border-blue-400",
+    default: "border-border",
+    subtle: "border-border-subtle dark:border-border",
+    strong: "border-border-strong",
+    focus: "border-theme-500 dark:border-theme-400",
   },
-
-  // Semantic colors
-  // semantic: {
-  //   success: {
-  //     bg: "bg-semantic-success-50 dark:bg-semantic-success-900/20",
-  //     border: "border-semantic-success-200 dark:border-semantic-success-800",
-  //     text: "text-semantic-success-800 dark:text-semantic-success-200",
-  //     icon: "text-semantic-success-600 dark:text-semantic-success-400"
-  //   },
-  //   warning: {
-  //     bg: "bg-semantic-warning-50 dark:bg-semantic-warning-900/20",
-  //     border: "border-semantic-warning-200 dark:border-semantic-warning-800",
-  //     text: "text-semantic-warning-800 dark:text-semantic-warning-200",
-  //     icon: "text-semantic-warning-600 dark:text-semantic-warning-400"
-  //   },
-  //   error: {
-  //     bg: "bg-semantic-error-50 dark:bg-semantic-error-900/20",
-  //     border: "border-semantic-error-200 dark:border-semantic-error-800",
-  //     text: "text-semantic-error-800 dark:text-semantic-error-200",
-  //     icon: "text-semantic-error-600 dark:text-semantic-error-400"
-  //   },
-  //   info: {
-  //     bg: "bg-semantic-info-50 dark:bg-semantic-info-900/20",
-  //     border: "border-semantic-info-200 dark:border-semantic-info-800",
-  //     text: "text-semantic-info-800 dark:text-semantic-info-200",
-  //     icon: "text-semantic-info-600 dark:text-semantic-info-400"
-  //   }
-  // }
 } as const
 
 // Typography tokens
 export const TYPOGRAPHY = {
   // Headings
   heading: {
-    h1: "text-3xl font-bold text-gray-900 dark:text-dark-text-primary",
-    h2: "text-2xl font-semibold text-gray-900 dark:text-dark-text-primary",
-    h3: "text-xl font-semibold text-gray-900 dark:text-dark-text-primary",
-    h4: "text-lg font-medium text-gray-900 dark:text-dark-text-primary",
-    h5: "text-base font-medium text-gray-900 dark:text-dark-text-primary",
-    h6: "text-sm font-medium text-gray-900 dark:text-dark-text-primary",
+    h1: "text-3xl font-bold text-foreground",
+    h2: "text-2xl font-semibold text-foreground",
+    h3: "text-xl font-semibold text-foreground",
+    h4: "text-lg font-medium text-foreground",
+    h5: "text-base font-medium text-foreground",
+    h6: "text-sm font-medium text-foreground",
   },
 
   // Body text
   body: {
-    large: "text-lg text-gray-700 dark:text-dark-text-secondary",
-    base: "text-base text-gray-700 dark:text-dark-text-secondary",
-    small: "text-sm text-gray-600 dark:text-dark-text-secondary",
-    xs: "text-xs text-gray-500 dark:text-dark-text-tertiary",
+    large: "text-lg text-secondary-foreground",
+    base: "text-base text-secondary-foreground",
+    small: "text-sm text-muted-foreground dark:text-secondary-foreground",
+    xs: "text-xs text-muted-foreground",
   },
 
   // Labels
   label: {
-    base: "text-sm font-medium text-gray-700 dark:text-dark-text-secondary",
-    small: "text-xs font-medium text-gray-600 dark:text-dark-text-tertiary",
+    base: "text-sm font-medium text-secondary-foreground",
+    small: "text-xs font-medium text-muted-foreground",
   },
 
   // Captions and helper text
   caption: {
-    base: "text-xs text-gray-500 dark:text-dark-text-tertiary",
-    muted: "text-xs text-gray-400 dark:text-gray-500",
+    base: "text-xs text-muted-foreground",
+    muted: "text-xs text-faint-foreground",
   },
 } as const
 
@@ -180,33 +152,35 @@ export const ANIMATIONS = {
 export const COMPONENTS = {
   // Button variants
   button: {
-    primary: "bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500",
+    primary:
+      "bg-primary hover:bg-primary/90 text-primary-foreground focus:ring-ring",
     secondary:
-      "bg-gray-200 hover:bg-gray-300 text-gray-900 dark:bg-dark-bg-tertiary dark:hover:bg-dark-bg-primary dark:text-dark-text-primary focus:ring-gray-500",
+      "bg-secondary hover:bg-surface-strong text-foreground dark:hover:bg-background focus:ring-border-strong",
     outline:
-      "border border-gray-300 dark:border-dark-bg-tertiary bg-transparent hover:bg-gray-50 dark:hover:bg-dark-bg-secondary text-gray-700 dark:text-dark-text-secondary focus:ring-blue-500",
+      "border border-border-strong dark:border-border bg-transparent hover:bg-surface-subtle dark:hover:bg-card text-secondary-foreground focus:ring-ring",
     ghost:
-      "bg-transparent hover:bg-gray-100 dark:hover:bg-dark-bg-secondary text-gray-700 dark:text-dark-text-secondary focus:ring-gray-500",
-    danger: "bg-red-600 hover:bg-red-700 text-white focus:ring-red-500",
-    success: "bg-green-600 hover:bg-green-700 text-white focus:ring-green-500",
+      "bg-transparent hover:bg-muted dark:hover:bg-card text-secondary-foreground focus:ring-border-strong",
+    danger:
+      "bg-destructive hover:bg-destructive-hover text-destructive-foreground focus:ring-destructive-text",
+    success:
+      "bg-success hover:bg-success-hover text-success-foreground focus:ring-success-text",
   },
 
   // Input variants
   input: {
-    base: "block w-full px-3 py-2 border border-gray-300 dark:border-dark-bg-tertiary rounded-md text-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-dark-bg-secondary text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors",
+    base: "block w-full px-3 py-2 border border-input rounded-md text-sm placeholder:text-muted-foreground bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors",
     error:
-      "border-red-300 dark:border-red-600 focus:ring-red-500 focus:border-red-500",
+      "border-destructive-border focus:ring-destructive-text focus:border-destructive-border",
     success:
-      "border-green-300 dark:border-green-600 focus:ring-green-500 focus:border-green-500",
+      "border-success-border focus:ring-success-text focus:border-success-border",
   },
 
   // Card variants
   card: {
-    base: "bg-white dark:bg-dark-bg-secondary border border-gray-200 dark:border-dark-bg-tertiary rounded-lg shadow-sm",
-    elevated:
-      "bg-white dark:bg-dark-bg-secondary border border-gray-200 dark:border-dark-bg-tertiary rounded-lg shadow-md",
+    base: "bg-card border border-border rounded-lg shadow-sm",
+    elevated: "bg-card border border-border rounded-lg shadow-md",
     interactive:
-      "bg-white dark:bg-dark-bg-secondary border border-gray-200 dark:border-dark-bg-tertiary rounded-lg shadow-sm hover:shadow-md transition-shadow",
+      "bg-card border border-border rounded-lg shadow-sm hover:shadow-md transition-shadow",
   },
 } as const
 

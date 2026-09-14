@@ -60,10 +60,7 @@ export function VersionBadge({
       >
         <span>v{version}</span>
         {hasUpdate && (
-          <CircleArrowUp
-            aria-hidden="true"
-            className="h-5 w-5 text-amber-500"
-          />
+          <CircleArrowUp aria-hidden="true" className="text-link h-5 w-5" />
         )}
       </a>
     </Badge>

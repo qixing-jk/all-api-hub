@@ -9,17 +9,17 @@ const CreditsCard = () => {
     <Card>
       <CardContent>
         <div className="flex items-start space-x-4">
-          <Heart className="mt-1 h-6 w-6 shrink-0 text-red-500 dark:text-red-400" />
+          <Heart className="text-destructive-text mt-1 h-6 w-6 shrink-0" />
           <div className="flex-1">
             <Heading6 className="mb-2">{t("devMaintenance")}</Heading6>
-            <BodySmall className="dark:text-dark-text-secondary mb-4 text-gray-600">
+            <BodySmall className="dark:text-secondary-foreground text-muted-foreground mb-4">
               {t("thanksDesc")}
             </BodySmall>
             <div className="flex flex-wrap gap-2">
               <Badge
                 variant="destructive"
                 size="sm"
-                className="bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-300 dark:hover:bg-red-900/70"
+                className="bg-destructive-soft text-destructive-soft-foreground hover:bg-destructive-soft"
               >
                 Made with ❤️
               </Badge>

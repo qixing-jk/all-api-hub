@@ -26,7 +26,7 @@ export default function UsageAnalyticsChartTypeToggle({
 }: UsageAnalyticsChartTypeToggleProps) {
   return (
     <div
-      className={`dark:bg-dark-bg-secondary corners-concentric inline-flex items-center gap-1 rounded-md bg-gray-100 p-1 [--corner-inset:--spacing(1)] ${CORNERS.buttonItems}`}
+      className={`dark:bg-card corners-concentric bg-muted inline-flex items-center gap-1 rounded-md p-1 [--corner-inset:--spacing(1)] ${CORNERS.buttonItems}`}
       role="group"
       aria-label={ariaLabel}
     >

@@ -78,7 +78,7 @@ export function ProductAnnouncementList({
     return (
       <div
         data-testid={testId}
-        className="py-6 text-center text-sm text-gray-500 dark:text-gray-400"
+        className="text-muted-foreground py-6 text-center text-sm"
       >
         {t("loading")}
       </div>
@@ -89,7 +89,7 @@ export function ProductAnnouncementList({
     return (
       <div
         data-testid={testId}
-        className="py-6 text-center text-sm text-gray-500 dark:text-gray-400"
+        className="text-muted-foreground py-6 text-center text-sm"
       >
         {emptyMessage}
       </div>
@@ -119,18 +119,18 @@ export function ProductAnnouncementList({
           <article
             key={`${notice.id}:${notice.revision}`}
             className={cn(
-              "dark:bg-dark-bg-secondary/95 relative overflow-hidden rounded-md border bg-white/95 p-3 shadow-sm shadow-slate-200/40 transition-colors dark:shadow-black/20",
+              "bg-card/95 shadow-border/40 dark:shadow-shadow/20 relative overflow-hidden rounded-md border p-3 shadow-sm transition-colors",
               notice.seen
-                ? "border-slate-200/80 dark:border-white/10"
-                : "border-slate-300/80 dark:border-white/20",
+                ? "border-border/80 dark:border-foreground/10"
+                : "border-border-strong/80 dark:border-foreground/20",
             )}
           >
             <div className="flex min-w-0 items-start justify-between gap-2">
-              <h3 className="dark:text-dark-text-primary min-w-0 flex-1 text-sm leading-5 font-medium break-words text-gray-900">
+              <h3 className="text-foreground min-w-0 flex-1 text-sm leading-5 font-medium break-words">
                 {!notice.seen ? (
                   <>
                     <span
-                      className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-blue-500 align-middle dark:bg-blue-300"
+                      className="bg-theme-500 dark:bg-theme-300 mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle"
                       aria-hidden="true"
                     />
                     <span className="sr-only">{t("labels.unread")} </span>
@@ -178,7 +178,7 @@ export function ProductAnnouncementList({
                 </Button>
               )}
             </div>
-            <p className="dark:text-dark-text-secondary mt-2 text-xs leading-5 break-words whitespace-pre-wrap text-gray-600">
+            <p className="dark:text-secondary-foreground text-muted-foreground mt-2 text-xs leading-5 break-words whitespace-pre-wrap">
               {notice.message}
             </p>
             {cta && ctaHref ? (
@@ -186,7 +186,7 @@ export function ProductAnnouncementList({
                 href={ctaHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-2 inline-flex max-w-full items-center gap-1 text-xs font-medium text-blue-600 underline-offset-4 hover:underline dark:text-blue-300"
+                className="text-theme-600 dark:text-theme-300 mt-2 inline-flex max-w-full items-center gap-1 text-xs font-medium underline-offset-4 hover:underline"
                 onClick={() => onOpenCta?.(notice)}
               >
                 <span className="min-w-0 break-words">{cta.label}</span>

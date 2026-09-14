@@ -83,7 +83,7 @@ export function DedupeAccountCard({
         aria-label={helpLabel}
         className={
           requiresRefresh
-            ? "cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            ? "focus-visible:ring-ring cursor-help rounded-sm outline-none focus-visible:ring-2"
             : undefined
         }
         tabIndex={requiresRefresh ? 0 : undefined}
@@ -132,10 +132,10 @@ export function DedupeAccountCard({
 
   return (
     <div
-      className={`dark:border-dark-bg-tertiary focus-within:border-ring focus-within:ring-ring/50 flex flex-col gap-2 rounded-md border border-gray-100 p-3 transition-[color,box-shadow] focus-within:ring-[3px] ${
+      className={`dark:border-border focus-within:border-ring focus-within:ring-ring/50 border-border-subtle flex flex-col gap-2 rounded-md border p-3 transition-[color,box-shadow] focus-within:ring-[3px] ${
         isWorking
           ? "cursor-not-allowed opacity-70"
-          : "cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5"
+          : "hover:bg-surface-subtle dark:hover:bg-foreground/5 cursor-pointer"
       }`}
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -156,10 +156,10 @@ export function DedupeAccountCard({
           />
 
           <div className="min-w-0">
-            <div className="dark:text-dark-text-primary truncate text-sm font-medium text-gray-900">
+            <div className="text-foreground truncate text-sm font-medium">
               {accountLabel}
             </div>
-            <div className="dark:text-dark-text-tertiary truncate text-xs text-gray-500">
+            <div className="text-muted-foreground truncate text-xs">
               {account.site_url}
             </div>
           </div>
@@ -167,7 +167,7 @@ export function DedupeAccountCard({
 
         <div className="flex flex-wrap items-center gap-2">
           {pinned && (
-            <Badge size="sm" variant="info">
+            <Badge size="sm" variant="secondary">
               {t("account:actions.pinned")}
             </Badge>
           )}
@@ -212,41 +212,41 @@ export function DedupeAccountCard({
       {detailsOpen && (
         <div
           id={detailsId}
-          className="dark:border-dark-bg-tertiary dark:bg-dark-bg-tertiary/40 rounded-md border border-gray-100 bg-gray-50 p-3 text-xs text-gray-700"
+          className="dark:border-border dark:bg-secondary/40 border-border-subtle bg-surface-subtle text-secondary-foreground rounded-md border p-3 text-xs"
         >
           <dl className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
             <div className="space-y-0.5">
-              <dt className="dark:text-dark-text-tertiary text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.accountId")}
               </dt>
-              <dd className="dark:text-dark-text-secondary font-mono break-all text-gray-800">
+              <dd className="text-secondary-foreground font-mono break-all">
                 {account.id}
               </dd>
             </div>
 
             <div className="space-y-0.5">
-              <dt className="dark:text-dark-text-tertiary text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.siteType")}
               </dt>
-              <dd className="dark:text-dark-text-secondary break-all text-gray-800">
+              <dd className="text-secondary-foreground break-all">
                 {account.site_type || t("common:labels.notAvailable")}
               </dd>
             </div>
 
             <div className="space-y-0.5">
-              <dt className="dark:text-dark-text-tertiary text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.authType")}
               </dt>
-              <dd className="dark:text-dark-text-secondary break-all text-gray-800">
+              <dd className="text-secondary-foreground break-all">
                 {account.authType || t("common:labels.notAvailable")}
               </dd>
             </div>
 
             <div className="space-y-0.5">
-              <dt className="dark:text-dark-text-tertiary text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.health")}
               </dt>
-              <dd className="dark:text-dark-text-secondary flex items-center gap-2 text-gray-800">
+              <dd className="text-secondary-foreground flex items-center gap-2">
                 <span
                   className={`h-2 w-2 rounded-full ${healthDisplay.color}`}
                   aria-hidden="true"
@@ -256,64 +256,64 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5 sm:col-span-2">
-              <dt className="dark:text-dark-text-tertiary text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.healthReason")}
               </dt>
-              <dd className="dark:text-dark-text-secondary break-words text-gray-800">
+              <dd className="text-secondary-foreground break-words">
                 {account.health?.reason || t("common:labels.notAvailable")}
               </dd>
             </div>
 
             <div className="space-y-0.5">
-              <dt className="dark:text-dark-text-tertiary text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.lastSync")}
               </dt>
-              <dd className="dark:text-dark-text-secondary text-gray-800">
+              <dd className="text-secondary-foreground">
                 {resolveTimestamp(account.last_sync_time)}
               </dd>
             </div>
 
             <div className="space-y-0.5">
-              <dt className="dark:text-dark-text-tertiary text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.updatedAt")}
               </dt>
-              <dd className="dark:text-dark-text-secondary text-gray-800">
+              <dd className="text-secondary-foreground">
                 {resolveTimestamp(account.updated_at)}
               </dd>
             </div>
 
             <div className="space-y-0.5">
-              <dt className="dark:text-dark-text-tertiary text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.createdAt")}
               </dt>
-              <dd className="dark:text-dark-text-secondary text-gray-800">
+              <dd className="text-secondary-foreground">
                 {resolveTimestamp(account.created_at)}
               </dd>
             </div>
 
             <div className="space-y-0.5">
-              <dt className="dark:text-dark-text-tertiary text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.userId")}
               </dt>
-              <dd className="dark:text-dark-text-secondary text-gray-800">
+              <dd className="text-secondary-foreground">
                 {account.account_info?.id ?? t("common:labels.notAvailable")}
               </dd>
             </div>
 
             <div className="space-y-0.5">
-              <dt className="dark:text-dark-text-tertiary text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.quota")}
               </dt>
-              <dd className="dark:text-dark-text-secondary break-all text-gray-800">
+              <dd className="text-secondary-foreground break-all">
                 {account.account_info?.quota ?? t("common:labels.notAvailable")}
               </dd>
             </div>
 
             <div className="space-y-0.5">
-              <dt className="dark:text-dark-text-tertiary text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.todayConsumption")}
               </dt>
-              <dd className="dark:text-dark-text-secondary break-all text-gray-800">
+              <dd className="text-secondary-foreground break-all">
                 {resolveTodayMetricValue(
                   "consumption",
                   account.account_info?.today_quota_consumption,
@@ -322,10 +322,10 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="dark:text-dark-text-tertiary text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.todayRequests")}
               </dt>
-              <dd className="dark:text-dark-text-secondary break-all text-gray-800">
+              <dd className="text-secondary-foreground break-all">
                 {resolveTodayMetricValue(
                   "requests",
                   account.account_info?.today_requests_count,
@@ -334,10 +334,10 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5 sm:col-span-2">
-              <dt className="dark:text-dark-text-tertiary text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.todayTokens")}
               </dt>
-              <dd className="dark:text-dark-text-secondary break-all text-gray-800">
+              <dd className="text-secondary-foreground break-all">
                 {tokenPresentation.value === null ? (
                   renderUnavailableTodayMetric(
                     tokenPresentation.requiresRefresh,
@@ -364,10 +364,10 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="dark:text-dark-text-tertiary text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.checkinDetection")}
               </dt>
-              <dd className="dark:text-dark-text-secondary text-gray-800">
+              <dd className="text-secondary-foreground">
                 {builtInCheckInSelected
                   ? t("common:status.enabled")
                   : t("common:status.disabled")}
@@ -375,10 +375,10 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="dark:text-dark-text-tertiary text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.autoCheckin")}
               </dt>
-              <dd className="dark:text-dark-text-secondary text-gray-800">
+              <dd className="text-secondary-foreground">
                 {autoCheckinEnabled
                   ? t("common:status.enabled")
                   : t("common:status.disabled")}
@@ -386,29 +386,29 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5 sm:col-span-2">
-              <dt className="dark:text-dark-text-tertiary text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.customCheckinUrl")}
               </dt>
-              <dd className="dark:text-dark-text-secondary font-mono break-all text-gray-800">
+              <dd className="text-secondary-foreground font-mono break-all">
                 {account.checkIn?.customCheckIn?.url ||
                   t("common:labels.notAvailable")}
               </dd>
             </div>
 
             <div className="space-y-0.5 sm:col-span-2">
-              <dt className="dark:text-dark-text-tertiary text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.notes")}
               </dt>
-              <dd className="dark:text-dark-text-secondary break-words text-gray-800">
+              <dd className="text-secondary-foreground break-words">
                 {account.notes || t("common:labels.notAvailable")}
               </dd>
             </div>
 
             <div className="space-y-0.5 sm:col-span-2">
-              <dt className="dark:text-dark-text-tertiary text-[10px] font-medium tracking-wide text-gray-500 uppercase">
+              <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.excludeFromTotalBalance")}
               </dt>
-              <dd className="dark:text-dark-text-secondary text-gray-800">
+              <dd className="text-secondary-foreground">
                 {account.excludeFromTotalBalance === true
                   ? t("common:status.enabled")
                   : t("common:status.disabled")}

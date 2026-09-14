@@ -217,16 +217,16 @@ describe("ManagedSiteMigrationDialogView", () => {
     expect(
       screen.getByText("Migration limits").closest(".rounded-md"),
     ).toHaveClass(
-      "dark:border-amber-900/40",
-      "dark:bg-amber-950/30",
-      "dark:text-amber-200",
+      "border-warning-border",
+      "bg-warning-soft",
+      "text-warning-soft-foreground",
     )
     expect(
       screen.getByText("Secret unavailable").closest(".rounded-md"),
     ).toHaveClass(
-      "dark:border-amber-900/40",
-      "dark:bg-amber-950/30",
-      "dark:text-amber-200",
+      "border-warning-border",
+      "bg-warning-soft",
+      "text-warning-soft-foreground",
     )
     expect(
       screen.getAllByText("https://source.example.invalid").length,
@@ -306,9 +306,9 @@ describe("ManagedSiteMigrationDialogView", () => {
     expect(
       screen.getByText("Migration result").closest(".rounded-md"),
     ).toHaveClass(
-      "dark:border-blue-900/40",
-      "dark:bg-blue-950/30",
-      "dark:text-blue-200",
+      "border-info-border",
+      "bg-info-soft",
+      "text-info-soft-foreground",
     )
 
     await user.click(screen.getByRole("button", { name: "Refresh channels" }))
@@ -397,7 +397,7 @@ describe("ManagedSiteMigrationDialogView", () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
-  it("preserves the migration error dark-theme panel contract", () => {
+  it("uses the migration error foreground and surface contract", () => {
     render(
       <ManagedSiteMigrationDialogView
         isOpen
@@ -424,9 +424,9 @@ describe("ManagedSiteMigrationDialogView", () => {
     expect(
       screen.getByText("Preview failed").closest(".rounded-md"),
     ).toHaveClass(
-      "dark:border-red-900/40",
-      "dark:bg-red-950/30",
-      "dark:text-red-300",
+      "border-destructive-border",
+      "bg-destructive-soft",
+      "text-destructive-soft-foreground",
     )
   })
 })

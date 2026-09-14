@@ -36,18 +36,18 @@ export function RepairInvalidKeysDeleteConfirm({
       selectedInvalidResources.length - previewResources.length
 
     return (
-      <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-tertiary/40 rounded-md border border-gray-200 bg-gray-50 p-3">
+      <div className="dark:bg-secondary/40 border-border bg-surface-subtle rounded-md border p-3">
         <ul className="space-y-2 text-sm">
           {previewResources.map((resource) => (
             <li
               key={getInvalidResourceKey(resource)}
-              className="min-w-0 text-gray-700 dark:text-gray-300"
+              className="text-secondary-foreground min-w-0"
             >
               <span className="font-medium">
                 {resource.displayLabel?.trim() ||
                   t("keyManagement:repairMissingKeys.invalidKeys.unnamed")}
               </span>
-              <span className="dark:text-dark-text-secondary text-gray-500">
+              <span className="dark:text-secondary-foreground text-muted-foreground">
                 {" "}
                 · {resource.accountName}
                 {resource.groupLabel ? ` · ${resource.groupLabel}` : ""}
@@ -56,7 +56,7 @@ export function RepairInvalidKeysDeleteConfirm({
           ))}
         </ul>
         {hiddenCount > 0 ? (
-          <p className="dark:text-dark-text-secondary mt-2 text-xs text-gray-500">
+          <p className="dark:text-secondary-foreground text-muted-foreground mt-2 text-xs">
             {t("keyManagement:repairMissingKeys.deleteConfirm.more", {
               count: hiddenCount,
             })}

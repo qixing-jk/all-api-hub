@@ -127,7 +127,7 @@ export function PermissionOnboardingDialog({
   const header = (
     <div className="flex flex-col gap-1">
       <Heading3>{t("permissionsOnboarding.title")}</Heading3>
-      <BodySmall className="dark:text-dark-text-secondary text-gray-500">
+      <BodySmall className="dark:text-secondary-foreground text-muted-foreground">
         {t("permissionsOnboarding.subtitle")}
       </BodySmall>
     </div>
@@ -159,7 +159,7 @@ export function PermissionOnboardingDialog({
         className="h-auto min-h-9 w-full py-2 text-center whitespace-normal sm:col-span-2"
         onClick={handleOpenGithub}
         disabled={isRequesting}
-        leftIcon={<Star className="h-4 w-4 text-amber-500" />}
+        leftIcon={<Star className="text-link h-4 w-4" />}
       >
         {t("permissionsOnboarding.project.starCta")}
       </Button>
@@ -182,13 +182,13 @@ export function PermissionOnboardingDialog({
           <CardHeader
             bordered
             padding="sm"
-            className="dark:bg-dark-bg-tertiary/40 bg-sky-50/80"
+            className="dark:bg-secondary/40 bg-primary-soft"
           >
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <Languages className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+              <Languages className="text-theme-600 dark:text-theme-400 h-5 w-5" />
               {t("appearanceLanguage.onboardingLabel")}
             </CardTitle>
-            <BodySmall className="dark:text-dark-text-secondary text-gray-500">
+            <BodySmall className="dark:text-secondary-foreground text-muted-foreground">
               {t("appearanceLanguage.onboardingHelper")}
             </BodySmall>
           </CardHeader>
@@ -218,7 +218,7 @@ export function PermissionOnboardingDialog({
         {reason === "new-permissions" && (
           <Alert variant="warning">
             <AlertDescription>
-              <BodySmall className="dark:text-dark-text-secondary text-gray-500">
+              <BodySmall className="dark:text-secondary-foreground text-muted-foreground">
                 {t("permissionsOnboarding.reason.newPermissions")}
               </BodySmall>
             </AlertDescription>
@@ -234,18 +234,18 @@ export function PermissionOnboardingDialog({
         >
           <CardHeader bordered padding="sm">
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <Github className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+              <Github className="text-secondary-foreground h-5 w-5" />
               {t("permissionsOnboarding.openSourceBadge")}
             </CardTitle>
-            <BodySmall className="dark:text-dark-text-secondary mt-1 text-gray-500">
+            <BodySmall className="dark:text-secondary-foreground text-muted-foreground mt-1">
               {t("permissionsOnboarding.intro")}
             </BodySmall>
           </CardHeader>
           <CardContent padding="sm" spacing="sm" className="space-y-3">
-            <BodySmall className="dark:text-dark-text-secondary text-gray-500">
+            <BodySmall className="dark:text-secondary-foreground text-muted-foreground">
               {t("permissionsOnboarding.analyticsDisclosure")}
             </BodySmall>
-            <Alert variant="info" compact className="py-2.5">
+            <Alert variant="primary" compact className="py-2.5">
               <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start md:gap-4">
                 <div className="min-w-0 space-y-1.5">
                   <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
@@ -263,7 +263,7 @@ export function PermissionOnboardingDialog({
                       <Github className="h-4 w-4 shrink-0" />
                     </Link>
                   </div>
-                  <BodySmall className="dark:text-dark-text-secondary text-gray-500">
+                  <BodySmall className="dark:text-secondary-foreground text-muted-foreground">
                     {t("permissionsOnboarding.project.cta")}
                   </BodySmall>
                 </div>
@@ -291,10 +291,10 @@ export function PermissionOnboardingDialog({
         >
           <CardHeader bordered padding="sm">
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <Sparkles className="h-5 w-5 text-emerald-500" />
+              <Sparkles className="text-link h-5 w-5" />
               {t("permissionsOnboarding.permissionListTitle")}
             </CardTitle>
-            <BodySmall className="dark:text-dark-text-secondary mt-1 text-gray-500">
+            <BodySmall className="dark:text-secondary-foreground text-muted-foreground mt-1">
               {t("permissionsOnboarding.permissionListDescription")}
             </BodySmall>
           </CardHeader>

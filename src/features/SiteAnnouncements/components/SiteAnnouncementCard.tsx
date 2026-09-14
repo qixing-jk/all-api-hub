@@ -116,13 +116,13 @@ export function SiteAnnouncementCard({
     >
       <Card
         className={cn(
-          "group overflow-hidden border-gray-200 transition-all hover:shadow-md dark:border-white/10",
-          expanded && "ring-1 ring-blue-500/30 dark:ring-blue-400/30",
+          "group border-border dark:border-foreground/10 overflow-hidden transition-all hover:shadow-md",
+          expanded && "ring-theme-500/30 dark:ring-theme-400/30 ring-1",
         )}
       >
         <div className="flex flex-col">
           <div
-            className="flex cursor-pointer items-start gap-4 p-4 transition-colors hover:bg-gray-50/50 dark:hover:bg-white/5"
+            className="hover:bg-surface-subtle/50 dark:hover:bg-foreground/5 flex cursor-pointer items-start gap-4 p-4 transition-colors"
             onClick={handleToggle}
             onKeyDown={handleHeaderKeyDown}
             role="button"
@@ -136,7 +136,7 @@ export function SiteAnnouncementCard({
                   <div className="flex flex-wrap items-center gap-2">
                     <h3
                       className={cn(
-                        "dark:text-dark-text-primary min-w-0 text-base leading-6 font-semibold break-words text-gray-900",
+                        "text-foreground min-w-0 text-base leading-6 font-semibold break-words",
                         !expanded && "line-clamp-2",
                       )}
                       title={display.title}
@@ -158,7 +158,7 @@ export function SiteAnnouncementCard({
                   </div>
 
                   {display.preview && !expanded && (
-                    <p className="mt-1 line-clamp-2 text-sm leading-6 text-gray-500 dark:text-gray-400">
+                    <p className="text-muted-foreground mt-1 line-clamp-2 text-sm leading-6">
                       {display.preview}
                     </p>
                   )}
@@ -171,14 +171,14 @@ export function SiteAnnouncementCard({
                     iconOnly
                     size="icon-sm"
                     variant="ghost"
-                    className="h-8 w-8 text-gray-400 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-400/10 dark:hover:text-blue-400"
+                    className="text-faint-foreground hover:bg-theme-50 hover:text-theme-600 dark:hover:bg-theme-400/10 dark:hover:text-theme-400 h-8 w-8"
                   />
                   {!expanded && !record.read && (
                     <Button
                       type="button"
                       size="icon-sm"
                       variant="ghost"
-                      className="h-8 w-8 text-gray-400 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-400/10 dark:hover:text-blue-400"
+                      className="text-faint-foreground hover:bg-theme-50 hover:text-theme-600 dark:hover:bg-theme-400/10 dark:hover:text-theme-400 h-8 w-8"
                       onClick={handleMarkRead}
                       title={t("actions.markRead")}
                     >
@@ -190,10 +190,10 @@ export function SiteAnnouncementCard({
                     size="icon-sm"
                     variant="ghost"
                     className={cn(
-                      "h-8 w-8 rounded-full bg-gray-100 text-gray-400 transition-all dark:bg-white/10",
+                      "bg-muted text-faint-foreground dark:bg-foreground/10 h-8 w-8 rounded-full transition-all",
                       expanded
-                        ? "pointer-events-none rotate-180 bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400"
-                        : "group-hover:bg-gray-200 dark:group-hover:bg-white/20",
+                        ? "bg-theme-100 text-theme-600 dark:bg-theme-500/20 dark:text-theme-400 pointer-events-none rotate-180"
+                        : "group-hover:bg-secondary dark:group-hover:bg-foreground/20",
                     )}
                     onClick={(event) => {
                       event.stopPropagation()
@@ -214,12 +214,12 @@ export function SiteAnnouncementCard({
                 </div>
               </div>
 
-              <div className="dark:text-dark-text-tertiary mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-gray-500">
-                <span className="flex items-center gap-1.5 truncate font-medium text-gray-700 dark:text-gray-200">
+              <div className="text-muted-foreground mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
+                <span className="text-secondary-foreground flex items-center gap-1.5 truncate font-medium">
                   <Inbox className="h-3.5 w-3.5" />
                   {record.siteName || record.baseUrl}
                 </span>
-                <span className="inline-flex items-center rounded-md bg-gray-100 px-1.5 py-0.5 font-medium text-gray-600 dark:bg-white/10 dark:text-gray-300">
+                <span className="bg-muted text-muted-foreground dark:bg-foreground/10 dark:text-secondary-foreground inline-flex items-center rounded-md px-1.5 py-0.5 font-medium">
                   {record.siteType}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
@@ -237,8 +237,8 @@ export function SiteAnnouncementCard({
               id={detailsRegionId}
               className="animate-in fade-in slide-in-from-top-2 px-4 pb-4 duration-200"
             >
-              <div className="mb-4 h-px bg-gray-100 dark:bg-white/5" />
-              <div className="dark:bg-dark-bg-tertiary max-h-96 overflow-auto rounded-md bg-gray-50 p-4 shadow-inner">
+              <div className="bg-muted dark:bg-foreground/5 mb-4 h-px" />
+              <div className="dark:bg-secondary bg-surface-subtle max-h-96 overflow-auto rounded-md p-4 shadow-inner">
                 <AnnouncementMarkdown content={display.body} />
               </div>
 
@@ -287,14 +287,14 @@ export function SiteAnnouncementCard({
                 label={t("actions.viewSource")}
                 size="sm"
                 variant="ghost"
-                className="h-7 text-xs text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-400/10"
+                className="text-theme-600 hover:bg-theme-50 dark:text-theme-400 dark:hover:bg-theme-400/10 h-7 text-xs"
                 leftIcon={<WorkflowTransitionIcon className="h-3.5 w-3.5" />}
               />
               <Button
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="min-h-7 text-xs text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-400/10"
+                className="text-theme-600 hover:bg-theme-50 dark:text-theme-400 dark:hover:bg-theme-400/10 min-h-7 text-xs"
                 onClick={handleMarkRead}
                 leftIcon={<CheckCircle2 className="h-3.5 w-3.5" />}
               >

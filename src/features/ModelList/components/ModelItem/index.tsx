@@ -325,7 +325,7 @@ export default function ModelItem(props: ModelItemProps) {
           onClick={handleFilterAccount}
           title={sourceLabel.title ?? sourceLabel.label}
           aria-label={sourceLabel.label}
-          className="max-w-full min-w-0 cursor-pointer hover:border-blue-300 hover:text-blue-700 dark:hover:border-blue-400 dark:hover:text-blue-300"
+          className="hover:border-theme-300 hover:text-theme-700 dark:hover:border-theme-400 dark:hover:text-theme-300 max-w-full min-w-0 cursor-pointer"
         >
           <span className="min-w-0 truncate">{sourceLabel.label}</span>
         </button>
@@ -356,7 +356,7 @@ export default function ModelItem(props: ModelItemProps) {
             : PRODUCT_ANALYTICS_ACTION_IDS.CopyBaseUrl
         }
       >
-        <Copy className="h-3 w-3 text-gray-600 sm:h-3.5 sm:w-3.5 dark:text-gray-300" />
+        <Copy className="text-muted-foreground dark:text-secondary-foreground h-3 w-3 sm:h-3.5 sm:w-3.5" />
       </IconButton>
       {canOpenSourceUrl ? (
         <IconButton
@@ -372,7 +372,7 @@ export default function ModelItem(props: ModelItemProps) {
               : undefined
           }
         >
-          <WorkflowTransitionIcon className="h-3 w-3 text-gray-600 sm:h-3.5 sm:w-3.5 dark:text-gray-300" />
+          <WorkflowTransitionIcon className="text-muted-foreground dark:text-secondary-foreground h-3 w-3 sm:h-3.5 sm:w-3.5" />
         </IconButton>
       ) : null}
     </>
@@ -383,10 +383,10 @@ export default function ModelItem(props: ModelItemProps) {
       variant={isComparisonOffer ? "ghost" : "interactive"}
       className={cn(
         isComparisonOffer
-          ? "rounded-none border-0 bg-transparent shadow-none transition-colors hover:bg-gray-50/80 hover:shadow-none dark:bg-transparent dark:hover:bg-white/[0.025]"
+          ? "hover:bg-surface-subtle/80 dark:hover:bg-foreground/[0.025] rounded-none border-0 bg-transparent shadow-none transition-colors hover:shadow-none"
           : isAvailableForUser &&
-              "hover:border-blue-300 dark:hover:border-blue-500/50",
-        !isAvailableForUser && "bg-gray-50 opacity-75 dark:bg-gray-800/50",
+              "hover:border-theme-300 dark:hover:border-theme-500/50",
+        !isAvailableForUser && "bg-surface-subtle dark:bg-card/50 opacity-75",
       )}
     >
       <CardContent padding="default">
@@ -494,7 +494,7 @@ export default function ModelItem(props: ModelItemProps) {
             <div
               ref={detailsRef}
               tabIndex={-1}
-              className="border-t pt-4 dark:border-gray-700"
+              className="dark:border-border border-t pt-4"
             >
               <div className="space-y-4">
                 {hasLegacyDetails && (
@@ -520,8 +520,8 @@ export default function ModelItem(props: ModelItemProps) {
           )}
 
         {!isAvailableForUser && showGroupDetails && (
-          <div className="mt-3 rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-900/20">
-            <div className="flex items-center gap-2 text-sm text-yellow-700 dark:text-yellow-300">
+          <div className="border-warning-border bg-warning-soft mt-3 rounded-lg border p-3">
+            <div className="text-warning-text flex items-center gap-2 text-sm">
               <Badge variant="warning" size="sm">
                 {t("unavailable")}
               </Badge>
@@ -537,7 +537,7 @@ export default function ModelItem(props: ModelItemProps) {
               </span>
             </div>
             {!hasKnownNoUsableGroup && usableGroupLabels.length > 0 && (
-              <div className="mt-2 text-sm text-yellow-600 dark:text-yellow-400">
+              <div className="text-warning-text mt-2 text-sm">
                 {t("currentUsableGroups")}: {usableGroupLabels.join(", ")}
               </div>
             )}

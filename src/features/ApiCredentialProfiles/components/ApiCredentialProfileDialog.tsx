@@ -409,11 +409,11 @@ export function ApiCredentialProfileDialog({
         header={
           <div className="flex min-w-0 items-center gap-3">
             {isEditMode ? (
-              <Pencil className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <Pencil className="text-theme-600 dark:text-theme-400 h-5 w-5" />
             ) : (
-              <Plus className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <Plus className="text-theme-600 dark:text-theme-400 h-5 w-5" />
             )}
-            <h2 className="dark:text-dark-text-primary truncate text-lg font-semibold text-gray-900">
+            <h2 className="text-foreground truncate text-lg font-semibold">
               {dialogTitle}
             </h2>
           </div>
@@ -532,9 +532,9 @@ export function ApiCredentialProfileDialog({
           </FormField>
 
           {!isEditMode && addPrefill?.apiKeyCreateUrl ? (
-            <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-tertiary/40 rounded-md border border-blue-100 bg-blue-50/70 p-3 text-sm dark:border-blue-900/50">
+            <div className="dark:border-border dark:bg-secondary/40 border-theme-100 bg-theme-50/70 dark:border-theme-900/50 rounded-md border p-3 text-sm">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-blue-800 dark:text-blue-200">
+                <p className="text-theme-800 dark:text-theme-200">
                   {addPrefill.apiKeyCreateHint ??
                     t("apiCredentialProfiles:dialog.hints.apiKeyCreateUrl")}
                 </p>
@@ -710,11 +710,8 @@ export function ApiCredentialProfileDialog({
 
           {telemetryMode ===
             API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint && (
-            <details
-              open
-              className="dark:border-dark-bg-tertiary rounded-lg border border-gray-200 p-3"
-            >
-              <summary className="dark:text-dark-text-primary cursor-pointer text-sm font-medium text-gray-700">
+            <details open className="border-border rounded-lg border p-3">
+              <summary className="dark:text-foreground text-secondary-foreground cursor-pointer text-sm font-medium">
                 {t("apiCredentialProfiles:dialog.customTelemetry.title")}
               </summary>
               <div className="mt-3 space-y-4">
@@ -771,10 +768,10 @@ export function ApiCredentialProfileDialog({
 
                 <div className="space-y-2">
                   <div>
-                    <div className="dark:text-dark-text-primary text-sm font-medium text-gray-700">
+                    <div className="dark:text-foreground text-secondary-foreground text-sm font-medium">
                       {t("apiCredentialProfiles:dialog.customTelemetry.paths")}
                     </div>
-                    <p className="dark:text-dark-text-secondary text-xs text-gray-500">
+                    <p className="dark:text-secondary-foreground text-muted-foreground text-xs">
                       {t(
                         "apiCredentialProfiles:dialog.hints.telemetryJsonPaths",
                       )}
@@ -799,7 +796,7 @@ export function ApiCredentialProfileDialog({
                     })}
                   </div>
                   {errors.telemetryJsonPaths && (
-                    <p className="text-xs text-red-600 dark:text-red-400">
+                    <p className="text-destructive-text text-xs">
                       {errors.telemetryJsonPaths}
                     </p>
                   )}
@@ -808,7 +805,7 @@ export function ApiCredentialProfileDialog({
             </details>
           )}
 
-          <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+          <div className="text-muted-foreground text-xs">
             {t("apiCredentialProfiles:dialog.meta.apiTypeHint", {
               apiType: getApiVerificationApiTypeLabel(t, apiType),
             })}

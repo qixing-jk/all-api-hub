@@ -2,12 +2,25 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useState,
   type ReactNode,
 } from "react"
 
+import {
+  SYSTEM_DARK_MODE_QUERY,
+  THEME_ATTRIBUTES,
+  THEME_MODE,
+  THEME_OWNER,
+} from "~/constants/theme"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import type { ResolvedTheme, ThemeMode } from "~/types/theme"
+import { type ResolvedTheme, type ThemeMode } from "~/types/theme"
+import {
+  applyThemePreferences,
+  cacheThemePreferences,
+  normalizeThemePreferences,
+  resolveThemeMode,
+} from "~/utils/ui/themePreferences"
 
 interface ThemeContextValue {
   themeMode: ThemeMode
@@ -22,39 +35,39 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined)
  * preferences and system color scheme, exposing the mode setter to children.
  */
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  const { themeMode, updateThemeMode } = useUserPreferencesContext()
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light")
+  const { themeMode, updateThemeMode, preferences, isLoading } =
+    useUserPreferencesContext()
+  const [systemDark, setSystemDark] = useState(
+    () => window.matchMedia(SYSTEM_DARK_MODE_QUERY).matches,
+  )
+  const resolvedTheme: ResolvedTheme = isLoading
+    ? document.documentElement.classList.contains(THEME_MODE.DARK)
+      ? THEME_MODE.DARK
+      : THEME_MODE.LIGHT
+    : resolveThemeMode(themeMode, systemDark)
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+    const mediaQuery = window.matchMedia(SYSTEM_DARK_MODE_QUERY)
 
     const handleChange = (e: MediaQueryListEvent) => {
-      if (themeMode === "system") {
-        setResolvedTheme(e.matches ? "dark" : "light")
-      }
+      setSystemDark(e.matches)
     }
 
     mediaQuery.addEventListener("change", handleChange)
     return () => mediaQuery.removeEventListener("change", handleChange)
-  }, [themeMode])
+  }, [])
 
-  useEffect(() => {
-    if (themeMode === "system") {
-      const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches
-      setResolvedTheme(isDark ? "dark" : "light")
-    } else {
-      setResolvedTheme(themeMode)
-    }
-  }, [themeMode])
-
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (isLoading) return
     const root = document.documentElement
-    if (resolvedTheme === "dark") {
-      root.classList.add("dark")
-    } else {
-      root.classList.remove("dark")
-    }
-  }, [resolvedTheme])
+    const normalized = normalizeThemePreferences({
+      themeMode,
+      appearance: preferences?.appearance,
+    })
+    root.setAttribute(THEME_ATTRIBUTES.OWNER, THEME_OWNER.REACT)
+    applyThemePreferences(root, normalized, systemDark)
+    cacheThemePreferences(normalized)
+  }, [themeMode, preferences?.appearance, isLoading, systemDark])
 
   const setThemeMode = async (mode: ThemeMode) => {
     await updateThemeMode(mode)

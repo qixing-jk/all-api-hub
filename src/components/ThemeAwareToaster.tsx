@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next"
 
 import { getThemeAwareToastStyles } from "~/components/toast/themeAwareToastStyles"
 import { useToasterPortalHost } from "~/components/toast/ToasterPortal"
-import { useTheme } from "~/contexts/ThemeContext"
 import { NOTIFICATION_DURATIONS } from "~/lib/notify/defaults"
 
 interface ThemeAwareToasterProps {
@@ -28,7 +27,6 @@ export const ThemeAwareToaster = ({
   containerClassName = "",
   containerStyle,
 }: ThemeAwareToasterProps) => {
-  const { resolvedTheme } = useTheme()
   const portalHost = useToasterPortalHost()
   const { t: translate } = useTranslation("common")
 
@@ -43,29 +41,29 @@ export const ThemeAwareToaster = ({
         className: "rounded-lg shadow-lg",
         duration: NOTIFICATION_DURATIONS.info,
         style: {
-          ...getThemeAwareToastStyles(resolvedTheme),
+          ...getThemeAwareToastStyles(),
           // Override the toast library's unlayered 8px default with our token.
           borderRadius: "var(--radius-lg)",
         },
         success: {
           duration: NOTIFICATION_DURATIONS.success,
           iconTheme: {
-            primary: resolvedTheme === "dark" ? "#10b981" : "#059669",
-            secondary: resolvedTheme === "dark" ? "#1e293b" : "#fff",
+            primary: "var(--success-text)",
+            secondary: "var(--popover)",
           },
         },
         error: {
           duration: NOTIFICATION_DURATIONS.error,
           iconTheme: {
-            primary: resolvedTheme === "dark" ? "#ef4444" : "#dc2626",
-            secondary: resolvedTheme === "dark" ? "#1e293b" : "#fff",
+            primary: "var(--destructive-text)",
+            secondary: "var(--popover)",
           },
         },
         loading: {
           duration: NOTIFICATION_DURATIONS.loading,
           iconTheme: {
-            primary: resolvedTheme === "dark" ? "#3b82f6" : "#2563eb",
-            secondary: resolvedTheme === "dark" ? "#1e293b" : "#fff",
+            primary: "var(--primary)",
+            secondary: "var(--popover)",
           },
         },
       }}
@@ -80,7 +78,7 @@ export const ThemeAwareToaster = ({
                 {toastInstance.type !== "loading" && (
                   <button
                     type="button"
-                    className="rounded-xs focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none"
+                    className="focus-visible:ring-ring rounded-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                     aria-label={translate("actions.close")}
                     onClick={() => toast.dismiss(toastInstance.id)}
                   >

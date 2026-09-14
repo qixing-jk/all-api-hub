@@ -30,10 +30,7 @@ export function VerificationModeSelect({
 
   return (
     <div className="space-y-1.5">
-      <label
-        htmlFor={id}
-        className="dark:text-dark-text-tertiary block text-xs text-gray-500"
-      >
+      <label htmlFor={id} className="text-muted-foreground block text-xs">
         {t("verifyDialog.meta.mode")}
       </label>
       <Select

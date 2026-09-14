@@ -306,9 +306,9 @@ export function ModelDisplay(props: ModelDisplayProps) {
           return (
             <section
               aria-labelledby={`${headingId} ${billingModeId}`}
-              className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
+              className="border-border bg-card overflow-hidden rounded-xl border shadow-sm"
             >
-              <header className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary/45 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-gray-200 bg-gray-50/80 px-3 py-2.5 sm:px-4">
+              <header className="dark:bg-background/45 border-border bg-surface-subtle/80 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 border-b px-3 py-2.5 sm:px-4">
                 <div className="flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto lg:flex-1">
                   <h2
                     id={headingId}
@@ -341,14 +341,14 @@ export function ModelDisplay(props: ModelDisplayProps) {
                   </Badge>
                 </div>
                 <div className="flex w-full flex-wrap items-center gap-1.5 text-xs lg:w-auto lg:shrink-0 lg:justify-end">
-                  <span className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-secondary rounded-full border border-gray-200 bg-white/80 px-2.5 py-1 text-gray-600">
+                  <span className="dark:bg-card dark:text-secondary-foreground border-border bg-card/80 text-muted-foreground rounded-full border px-2.5 py-1">
                     {t("priceComparison.results.comparable")}:{" "}
-                    <strong className="font-semibold text-emerald-700 dark:text-emerald-400">
+                    <strong className="text-success-text font-semibold">
                       {group.comparableItems.length}
                     </strong>
                   </span>
                   {group.notComparedItems.length > 0 && (
-                    <span className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-secondary rounded-full border border-gray-200 bg-white/80 px-2.5 py-1 text-gray-600">
+                    <span className="dark:bg-card dark:text-secondary-foreground border-border bg-card/80 text-muted-foreground rounded-full border px-2.5 py-1">
                       {t("priceComparison.results.notCompared")}:{" "}
                       <strong className="text-foreground font-semibold">
                         {group.notComparedItems.length}
@@ -361,7 +361,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
               {group.comparableItems.length > 0 && (
                 <ul
                   aria-label={t("priceComparison.results.comparable")}
-                  className="dark:divide-dark-bg-tertiary divide-y divide-gray-200/80"
+                  className="dark:divide-border divide-border/80 divide-y"
                 >
                   {group.comparableItems.map((item) => (
                     <li key={getModelItemKey(item)}>
@@ -374,31 +374,31 @@ export function ModelDisplay(props: ModelDisplayProps) {
               {group.notComparedItems.length > 0 && (
                 <div
                   className={cn(
-                    "bg-gray-50/55 dark:bg-white/[0.018]",
+                    "bg-surface-subtle/55 dark:bg-foreground/[0.018]",
                     group.comparableItems.length > 0 &&
-                      "dark:border-dark-bg-tertiary border-t border-dashed border-gray-300",
+                      "dark:border-border border-border-strong border-t border-dashed",
                   )}
                 >
                   <div
                     role="note"
-                    className="dark:border-dark-bg-tertiary flex min-w-0 gap-2 border-b border-gray-200/80 px-3 py-2.5 sm:px-4"
+                    className="dark:border-border border-border/80 flex min-w-0 gap-2 border-b px-3 py-2.5 sm:px-4"
                   >
                     <Info
                       aria-hidden="true"
-                      className="dark:text-dark-text-tertiary mt-0.5 h-4 w-4 shrink-0 text-gray-500"
+                      className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0"
                     />
                     <div className="min-w-0">
                       <p className="text-foreground text-xs font-medium">
                         {t("priceComparison.results.notCompared")}
                       </p>
-                      <p className="dark:text-dark-text-tertiary mt-0.5 text-xs leading-5 text-gray-600">
+                      <p className="text-muted-foreground mt-0.5 text-xs leading-5">
                         {t("priceComparison.results.notComparedHint")}
                       </p>
                     </div>
                   </div>
                   <ul
                     aria-label={t("priceComparison.results.notCompared")}
-                    className="dark:divide-dark-bg-tertiary divide-y divide-gray-200/80"
+                    className="dark:divide-border divide-border/80 divide-y"
                   >
                     {group.notComparedItems.map((item) => (
                       <li key={getModelItemKey(item)}>

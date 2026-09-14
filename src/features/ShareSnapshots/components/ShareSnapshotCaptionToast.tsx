@@ -63,26 +63,24 @@ export const ShareSnapshotCaptionToast = ({
   }
 
   return (
-    <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary w-[340px] rounded-lg border border-gray-200 bg-white p-3 shadow-lg">
-      <div className="dark:text-dark-text-secondary mb-2 text-xs text-gray-500">
+    <div className="border-border bg-card w-[340px] rounded-lg border p-3 shadow-lg">
+      <div className="dark:text-secondary-foreground text-muted-foreground mb-2 text-xs">
         {hint}
       </div>
       <textarea
         readOnly
         value={caption}
         data-testid={SHARE_SNAPSHOT_TEST_IDS.captionTextarea}
-        className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary dark:text-dark-text-primary mb-3 h-28 w-full resize-none rounded-md border border-gray-200 bg-gray-50 p-2 text-xs text-gray-900 focus:outline-none"
+        className="dark:bg-background border-border bg-surface-subtle text-foreground mb-3 h-28 w-full resize-none rounded-md border p-2 text-xs focus:outline-none"
       />
       {copyError ? (
-        <div className="mb-2 text-xs text-red-600 dark:text-red-400">
-          {copyError}
-        </div>
+        <div className="text-destructive-text mb-2 text-xs">{copyError}</div>
       ) : null}
       <div className="flex items-center justify-end gap-2">
         <Button
           type="button"
           size="sm"
-          className="dark:bg-dark-bg-tertiary dark:text-dark-text-primary h-auto min-h-0 bg-gray-900 px-3 py-1.5 text-xs text-white"
+          className="dark:bg-secondary dark:text-foreground bg-surface-inverse text-inverse-foreground h-auto min-h-0 px-3 py-1.5 text-xs"
           onClick={handleCopy}
           loading={isCopying}
         >
@@ -90,7 +88,7 @@ export const ShareSnapshotCaptionToast = ({
         </Button>
         <button
           type="button"
-          className="dark:text-dark-text-secondary rounded-md px-3 py-1.5 text-xs text-gray-600"
+          className="dark:text-secondary-foreground text-muted-foreground rounded-md px-3 py-1.5 text-xs"
           onClick={onClose}
         >
           {closeLabel}

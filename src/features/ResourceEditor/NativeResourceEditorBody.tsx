@@ -114,11 +114,7 @@ const fieldDomId = (fieldId: string) =>
 /** Announces a field-specific validation message to assistive technology. */
 function FieldMessage({ id, message }: { id: string; message: string }) {
   return (
-    <p
-      id={id}
-      role="alert"
-      className="mt-1 text-xs text-red-600 dark:text-red-400"
-    >
+    <p id={id} role="alert" className="text-destructive-text mt-1 text-xs">
       {message}
     </p>
   )

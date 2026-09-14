@@ -98,7 +98,7 @@ export function AccountKeyResourceListItem({
           >
             <Pencil
               aria-hidden="true"
-              className="h-4 w-4 text-blue-500 dark:text-blue-400"
+              className="text-theme-500 dark:text-theme-400 h-4 w-4"
             />
           </IconButton>
         ) : null}

@@ -166,7 +166,7 @@ const AnimatedValue: React.FC<{
           isRefreshing ? "animate-pulse opacity-60" : ""
         } ${
           shouldShowAvailabilityTooltip
-            ? "rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            ? "focus-visible:ring-ring rounded-sm outline-none focus-visible:ring-2"
             : ""
         } ${className}`}
         title={title}
@@ -255,7 +255,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
         startValue={
           isInitialLoad ? 0 : prevBalances[site.id]?.[currencyType] || 0
         }
-        className="dark:text-dark-text-primary mb-0.5 text-sm font-semibold text-gray-900 sm:text-base md:text-lg"
+        className="text-foreground mb-0.5 text-sm font-semibold sm:text-base md:text-lg"
         title={refreshTitle}
         onClick={
           isAccountDisabled
@@ -277,8 +277,8 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
             prefix="-"
             className={`text-[10px] sm:text-xs ${
               (consumptionPresentation.value ?? 0) > 0
-                ? "text-green-500"
-                : "dark:text-dark-text-tertiary text-gray-400"
+                ? "text-cashflow-expense"
+                : "dark:text-muted-foreground text-faint-foreground"
             }`}
             title={
               isAccountDisabled
@@ -304,8 +304,8 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
             prefix="+"
             className={`text-[10px] sm:text-xs ${
               (incomePresentation.value ?? 0) > 0
-                ? "text-blue-500"
-                : "dark:text-dark-text-tertiary text-gray-400"
+                ? "text-cashflow-income"
+                : "dark:text-muted-foreground text-faint-foreground"
             }`}
             title={
               isAccountDisabled
@@ -332,8 +332,8 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
                 prefix="~"
                 className={`text-[10px] sm:text-xs ${
                   estimatedTodayIncome > 0
-                    ? "text-indigo-500"
-                    : "dark:text-dark-text-tertiary text-gray-400"
+                    ? "text-cashflow-income"
+                    : "dark:text-muted-foreground text-faint-foreground"
                 }`}
                 title={
                   isAccountDisabled
@@ -358,7 +358,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
       )}
 
       {(site.usage || site.subscription) && (
-        <div className="dark:text-dark-text-tertiary mt-0.5 flex max-w-full flex-wrap justify-end gap-x-1.5 gap-y-0.5 text-[10px] text-gray-500 sm:text-xs">
+        <div className="text-muted-foreground mt-0.5 flex max-w-full flex-wrap justify-end gap-x-1.5 gap-y-0.5 text-[10px] sm:text-xs">
           {site.subscription?.name && (
             <span
               className="max-w-full truncate"
@@ -369,7 +369,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
           )}
           {isSubscriptionInactive && (
             <span
-              className="shrink-0 text-amber-600 dark:text-amber-400"
+              className="text-warning-text shrink-0"
               title={t("stats.subscriptionStatus")}
             >
               {t("stats.subscriptionInactive")}

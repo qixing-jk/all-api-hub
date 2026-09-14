@@ -312,7 +312,7 @@ export default function UnifiedApiGuidanceDevPreview() {
         description="Dev-only fixture view for checking guidance status, copy, reasons, and CTA targets without changing account data."
       />
 
-      <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200">
+      <div className="border-border bg-surface-subtle text-secondary-foreground dark:border-foreground/10 dark:bg-foreground/[0.04] mb-4 rounded-md border px-4 py-3 text-sm">
         <span className="font-medium">Last action:</span> {lastAction}
       </div>
 
@@ -364,7 +364,7 @@ function CurrentStatePreview({
 
   return (
     <Card
-      className="mb-6 border-blue-200 bg-blue-50/60 dark:border-blue-900/50 dark:bg-blue-950/10"
+      className="border-theme-200 bg-theme-50/60 dark:border-theme-900/50 dark:bg-theme-950/10 mb-6"
       data-testid={UNIFIED_API_GUIDANCE_TEST_IDS.currentPreviewState}
     >
       <CardHeader>
@@ -386,28 +386,28 @@ function CurrentStatePreview({
       </CardHeader>
       <CardContent>
         {isLoading && !model ? (
-          <div className="text-sm text-slate-600 dark:text-slate-300">
+          <div className="text-muted-foreground dark:text-secondary-foreground text-sm">
             Loading current guidance state...
           </div>
         ) : null}
         {error ? (
-          <div className="text-sm text-red-600 dark:text-red-300">
+          <div className="text-destructive-text text-sm">
             Failed to load current guidance state: {error}
           </div>
         ) : null}
         {!isLoading && !error && !model ? (
-          <div className="text-sm text-slate-600 dark:text-slate-300">
+          <div className="text-muted-foreground dark:text-secondary-foreground text-sm">
             Current guidance is unavailable. Reload the page to try again.
           </div>
         ) : null}
         {model && diagnostics ? (
           <div className="grid gap-4 xl:grid-cols-[minmax(14rem,18rem)_minmax(0,1fr)]">
             <GuidanceDiagnostics diagnostics={diagnostics} model={model} />
-            <div className="space-y-3 rounded-md border border-blue-100 bg-white/80 p-3 text-sm leading-6 text-slate-700 dark:border-blue-900/40 dark:bg-white/[0.03] dark:text-slate-200">
+            <div className="border-theme-100 bg-card/80 text-secondary-foreground dark:border-theme-900/40 dark:bg-foreground/[0.03] space-y-3 rounded-md border p-3 text-sm leading-6">
               <div>{getCurrentStateReason(model)}</div>
               {matchedScenario ? (
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="font-medium text-slate-900 dark:text-white">
+                  <div className="text-foreground font-medium">
                     {matchedScenario.exact
                       ? "Matched fixture"
                       : "Closest fixture"}
@@ -528,9 +528,9 @@ function GuidanceDiagnostics({
   model: UnifiedApiGuidanceModel
 }) {
   return (
-    <div className="space-y-3 rounded-md border border-slate-200 bg-white p-3 text-sm dark:border-white/10 dark:bg-white/[0.03]">
+    <div className="border-border bg-card dark:border-foreground/10 dark:bg-foreground/[0.03] space-y-3 rounded-md border p-3 text-sm">
       <div>
-        <div className="mb-1 text-xs font-medium text-slate-500 uppercase">
+        <div className="text-muted-foreground mb-1 text-xs font-medium uppercase">
           Input
         </div>
         <div className="space-y-1 font-mono text-xs">
@@ -544,7 +544,7 @@ function GuidanceDiagnostics({
       </div>
 
       <div>
-        <div className="mb-1 text-xs font-medium text-slate-500 uppercase">
+        <div className="text-muted-foreground mb-1 text-xs font-medium uppercase">
           Model
         </div>
         <div className="space-y-1 font-mono text-xs">
@@ -586,10 +586,10 @@ function SurfacePreview({
   return (
     <div className="min-w-0 space-y-2">
       <div className="flex items-center gap-2">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+        <h3 className="text-secondary-foreground text-sm font-semibold">
           {title}
         </h3>
-        <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[11px] text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-400">
+        <span className="border-border bg-surface-subtle text-muted-foreground dark:border-foreground/10 dark:bg-foreground/[0.04] rounded-md border px-2 py-0.5 font-mono text-[11px]">
           {scenario.id}:{surface}
         </span>
       </div>
@@ -621,10 +621,10 @@ function ApiCredentialSurfacePreview({
   return (
     <div className="min-w-0 space-y-2">
       <div className="flex items-center gap-2">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+        <h3 className="text-secondary-foreground text-sm font-semibold">
           API credential surface
         </h3>
-        <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[11px] text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-400">
+        <span className="border-border bg-surface-subtle text-muted-foreground dark:border-foreground/10 dark:bg-foreground/[0.04] rounded-md border px-2 py-0.5 font-mono text-[11px]">
           {scenario.id}:apiCredentialProfiles
         </span>
       </div>

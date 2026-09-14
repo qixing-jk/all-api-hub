@@ -138,8 +138,8 @@ const DESKTOP_TAB_GAP_PX = 8
 function getTabButtonClass(selected: boolean) {
   return `border-b-2 px-3 py-3 text-sm font-medium whitespace-nowrap transition-colors focus:outline-none ${
     selected
-      ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400"
-      : "border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+      ? "border-theme-600 text-theme-600 dark:border-theme-500 dark:text-theme-400"
+      : "border-transparent text-muted-foreground hover:border-border-strong hover:text-foreground dark:hover:text-secondary-foreground"
   }`
 }
 
@@ -384,7 +384,7 @@ function DesktopTabs({
   return (
     <div
       ref={containerRef}
-      className="dark:border-dark-bg-tertiary relative -mb-px hidden items-center gap-2 border-b border-gray-200 md:flex"
+      className="border-border relative -mb-px hidden items-center gap-2 border-b md:flex"
     >
       <div
         aria-hidden="true"

@@ -31,7 +31,7 @@ const AUTO_CHECKIN_DATA_VIEW = {
 } as const
 
 const DATA_VIEW_TRIGGER_CLASS_NAME =
-  "flex min-h-10 min-w-0 items-center justify-center gap-2 rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:outline-none data-[state=active]:bg-white data-[state=active]:font-semibold data-[state=active]:text-gray-950 data-[state=active]:shadow-sm sm:flex-none sm:px-3 dark:text-gray-400 dark:hover:text-gray-100 dark:data-[state=active]:bg-gray-800 dark:data-[state=active]:text-gray-50"
+  "flex min-h-10 min-w-0 items-center justify-center gap-2 rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:outline-none data-[state=active]:bg-card data-[state=active]:font-semibold data-[state=active]:text-foreground data-[state=active]:shadow-sm sm:flex-none sm:px-3"
 
 interface WorkspaceTabCountProps {
   attentionCount: number
@@ -58,7 +58,7 @@ function WorkspaceTabCount({
         "shrink-0 rounded-full px-2 py-0.5 text-xs",
         hasAttention
           ? attentionClassName
-          : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-200",
+          : "bg-secondary text-muted-foreground dark:text-secondary-foreground",
       )}
     >
       {hasAttention ? attentionCount : totalCount}
@@ -126,7 +126,7 @@ export default function AutoCheckinDataWorkspace({
     <section aria-label={t("workspace.label")} className="space-y-3">
       <Tabs value={activeView} onValueChange={handleViewChange}>
         <TabsList
-          className={`corners-concentric grid w-full grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1 [--corner-inset:4px] sm:inline-flex sm:w-auto dark:bg-gray-900 ${CORNERS.buttonItems}`}
+          className={`corners-concentric bg-muted dark:bg-background grid w-full grid-cols-2 gap-1 rounded-lg p-1 [--corner-inset:4px] sm:inline-flex sm:w-auto ${CORNERS.buttonItems}`}
         >
           <TabsTrigger
             value={AUTO_CHECKIN_DATA_VIEW.Results}
@@ -143,7 +143,7 @@ export default function AutoCheckinDataWorkspace({
               totalLabel={t("execution.filters.countTotal", {
                 total: results.length,
               })}
-              attentionClassName="bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-200"
+              attentionClassName="bg-destructive-soft text-destructive-soft-foreground"
             />
           </TabsTrigger>
           <TabsTrigger
@@ -151,7 +151,7 @@ export default function AutoCheckinDataWorkspace({
             className={DATA_VIEW_TRIGGER_CLASS_NAME}
           >
             {setupRequiredCount > 0 ? (
-              <CircleAlert className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-300" />
+              <CircleAlert className="text-warning-text h-4 w-4 shrink-0" />
             ) : (
               <ClipboardCheck className="h-4 w-4 shrink-0" />
             )}
@@ -163,7 +163,7 @@ export default function AutoCheckinDataWorkspace({
               totalLabel={t("snapshot.filters.countTotal", {
                 total: snapshots.length,
               })}
-              attentionClassName="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-100"
+              attentionClassName="bg-warning-soft text-warning-soft-foreground"
             />
           </TabsTrigger>
         </TabsList>
@@ -182,7 +182,7 @@ export default function AutoCheckinDataWorkspace({
           hidden={activeView !== AUTO_CHECKIN_DATA_VIEW.Readiness}
           className="mt-3 space-y-3 data-[state=inactive]:hidden"
         >
-          <p className="px-1 text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-muted-foreground px-1 text-sm">
             {t("snapshot.description")}
           </p>
           {readinessContent}

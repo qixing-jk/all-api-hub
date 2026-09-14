@@ -36,8 +36,8 @@ export function AihubmixDefaultKeyPromptDialog({
       header={
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <KeyRound className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-            <h2 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
+            <KeyRound className="text-warning-text h-5 w-5" />
+            <h2 className="text-foreground text-lg font-semibold">
               {t("accountDialog:aihubmixDefaultKeyPrompt.title")}
             </h2>
           </div>
@@ -76,7 +76,7 @@ export function AihubmixDefaultKeyPromptDialog({
             accountName,
           })}
         />
-        <p className="dark:text-dark-text-secondary text-sm text-gray-600">
+        <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
           {t("accountDialog:aihubmixDefaultKeyPrompt.cancelHint")}
         </p>
       </div>

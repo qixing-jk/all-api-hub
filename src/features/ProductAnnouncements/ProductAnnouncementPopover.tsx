@@ -69,11 +69,11 @@ function ProductAnnouncementPanel({
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
       <div className="flex items-center justify-between gap-3">
         {surface === "sheet" ? (
-          <SheetTitle className="dark:text-dark-text-primary truncate text-base text-gray-900">
+          <SheetTitle className="text-foreground truncate text-base">
             {t("title")}
           </SheetTitle>
         ) : (
-          <h2 className="dark:text-dark-text-primary truncate text-base font-semibold text-gray-900">
+          <h2 className="text-foreground truncate text-base font-semibold">
             {t("title")}
           </h2>
         )}
@@ -88,14 +88,14 @@ function ProductAnnouncementPanel({
           size="xs"
           aria-label={t("actions.close")}
           data-testid={PRODUCT_ANNOUNCEMENT_TEST_IDS.closeButton}
-          className="dark:hover:text-dark-text-primary shrink-0 text-gray-500 hover:text-gray-900 dark:text-gray-400"
+          className="text-muted-foreground hover:text-foreground shrink-0"
           onClick={onClose}
         >
           <X className="h-3.5 w-3.5" aria-hidden="true" />
         </IconButton>
       </div>
       <div
-        className={`dark:bg-dark-bg-tertiary corners-concentric grid grid-cols-2 gap-1 rounded-md bg-gray-100 p-1 [--corner-inset:--spacing(1)] ${CORNERS.buttonItems}`}
+        className={`dark:bg-secondary corners-concentric bg-muted grid grid-cols-2 gap-1 rounded-md p-1 [--corner-inset:--spacing(1)] ${CORNERS.buttonItems}`}
       >
         <Button
           type="button"
@@ -103,7 +103,7 @@ function ProductAnnouncementPanel({
           size="sm"
           className={cn(
             "h-8 min-w-0 gap-1.5 px-3 text-xs",
-            filter === "active" && "dark:bg-dark-bg-primary bg-white shadow-sm",
+            filter === "active" && "dark:bg-background bg-card shadow-sm",
           )}
           aria-pressed={filter === "active"}
           onClick={() => setFilter("active")}
@@ -118,8 +118,7 @@ function ProductAnnouncementPanel({
           size="sm"
           className={cn(
             "h-8 min-w-0 gap-1.5 px-3 text-xs",
-            filter === "dismissed" &&
-              "dark:bg-dark-bg-primary bg-white shadow-sm",
+            filter === "dismissed" && "dark:bg-background bg-card shadow-sm",
           )}
           aria-pressed={filter === "dismissed"}
           onClick={() => setFilter("dismissed")}

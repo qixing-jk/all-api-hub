@@ -84,8 +84,7 @@ describe("AccountSummaryBar", () => {
 
     expect(screen.getByText("Loading Account")).toBeInTheDocument()
     expect(screen.getByText("accountSummary.loading")).toHaveClass(
-      "text-amber-600",
-      "dark:text-amber-300",
+      "text-warning-text",
     )
     expect(screen.queryByText("accountSummary.models")).toBeNull()
   })
@@ -106,8 +105,7 @@ describe("AccountSummaryBar", () => {
 
     expect(screen.getByText("Broken Account")).toBeInTheDocument()
     expect(screen.getByText("accountSummary.loadFailed")).toHaveClass(
-      "text-red-500",
-      "dark:text-red-400",
+      "text-destructive-text",
     )
     expect(screen.queryByText("accountSummary.models")).toBeNull()
   })
@@ -139,8 +137,7 @@ describe("AccountSummaryBar", () => {
       "Partial Account accountSummary.partialLoadFailed Some keys failed to load. First failure: denied",
     )
     expect(screen.getByText("accountSummary.partialLoadFailed")).toHaveClass(
-      "text-amber-600",
-      "dark:text-amber-300",
+      "text-warning-text",
     )
   })
 
@@ -168,8 +165,7 @@ describe("AccountSummaryBar", () => {
       "Model list is not implemented yet.",
     )
     expect(screen.getByText("accountSummary.unsupported")).toHaveClass(
-      "text-blue-600",
-      "dark:text-blue-300",
+      "text-info-text",
     )
     expect(screen.queryByText("accountSummary.loadFailed")).toBeNull()
   })

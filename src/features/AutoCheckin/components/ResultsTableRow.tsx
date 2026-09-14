@@ -50,8 +50,8 @@ export default function ResultsTableRow({
   }
 
   return (
-    <TableRow className="group border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800">
-      <TableCell className="w-40 max-w-40 min-w-40 px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100 [@container(min-width:48rem)]:w-56 [@container(min-width:48rem)]:max-w-56 [@container(min-width:48rem)]:min-w-56 [@container(min-width:48rem)]:px-6">
+    <TableRow className="group border-border hover:bg-surface-subtle dark:hover:bg-card">
+      <TableCell className="text-foreground w-40 max-w-40 min-w-40 px-4 py-3 text-sm font-medium [@container(min-width:48rem)]:w-56 [@container(min-width:48rem)]:max-w-56 [@container(min-width:48rem)]:min-w-56 [@container(min-width:48rem)]:px-6">
         <AccountLinkButton
           accountId={result.accountId}
           accountName={result.accountName}
@@ -61,11 +61,11 @@ export default function ResultsTableRow({
       <TableCell className="px-4 py-3 text-sm whitespace-nowrap [@container(min-width:48rem)]:px-6">
         <ResultStatusBadge status={result.status} />
       </TableCell>
-      <TableCell className="max-w-lg min-w-64 px-6 py-3 text-sm break-words text-gray-500 dark:text-gray-400">
+      <TableCell className="text-muted-foreground max-w-lg min-w-64 px-6 py-3 text-sm break-words">
         <div className="space-y-1">
           <div>{message}</div>
           {troubleshootingHintKey && (
-            <div className="text-xs text-gray-400 dark:text-gray-500">
+            <div className="text-faint-foreground text-xs">
               {getTroubleshootingHintLabel(troubleshootingHintKey)}
             </div>
           )}
@@ -79,12 +79,12 @@ export default function ResultsTableRow({
           )}
         </div>
       </TableCell>
-      <TableCell className="px-6 py-3 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
+      <TableCell className="text-muted-foreground px-6 py-3 text-sm whitespace-nowrap">
         {formatTimestamp(result.timestamp)}
       </TableCell>
       <TableCell
         className={cn(
-          "sticky right-0 w-12 min-w-12 border-l border-gray-200 bg-white px-2 py-3 text-sm text-gray-500 group-hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:group-hover:bg-gray-800 [@container(min-width:48rem)]:w-auto [@container(min-width:48rem)]:min-w-0 [@container(min-width:48rem)]:px-3",
+          "border-border bg-card text-muted-foreground group-hover:bg-surface-subtle dark:bg-background dark:group-hover:bg-card sticky right-0 w-12 min-w-12 border-l px-2 py-3 text-sm [@container(min-width:48rem)]:w-auto [@container(min-width:48rem)]:min-w-0 [@container(min-width:48rem)]:px-3",
           Z_INDEX.tableStickyCell,
         )}
       >

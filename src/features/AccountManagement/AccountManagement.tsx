@@ -361,7 +361,7 @@ function AccountManagementContent({
   }, [handleRefreshDisabledAccounts, t])
 
   return (
-    <div className="dark:bg-dark-bg-secondary flex flex-col bg-white p-6">
+    <div className="bg-card flex flex-col p-6">
       <PageHeader
         icon={UserRound}
         title={t("account:title")}
@@ -495,7 +495,7 @@ function AccountManagementContent({
         onConfirm={() => void guidanceDismissal.confirmPermanentDismiss()}
       />
 
-      <div className="dark:bg-dark-bg-secondary flex flex-col bg-white">
+      <div className="bg-card flex flex-col">
         <AccountList
           initialSearchQuery={searchQuery}
           onAddAccount={openAddAccount}

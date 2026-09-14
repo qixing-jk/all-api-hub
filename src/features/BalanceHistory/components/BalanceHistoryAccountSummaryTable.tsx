@@ -164,7 +164,7 @@ export default function BalanceHistoryAccountSummaryTable({
         accessorFn: (row) =>
           row.totalDays ? row.snapshotDays / row.totalDays : 0,
         cell: ({ row }: { row: Row<BalanceHistoryAccountSummaryRow> }) => (
-          <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+          <div className="text-muted-foreground text-xs">
             {t("table.coverageFormat", {
               covered: row.original.snapshotDays,
               total: row.original.totalDays,
@@ -178,7 +178,7 @@ export default function BalanceHistoryAccountSummaryTable({
         accessorFn: (row) =>
           row.totalDays ? row.cashflowDays / row.totalDays : 0,
         cell: ({ row }: { row: Row<BalanceHistoryAccountSummaryRow> }) => (
-          <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+          <div className="text-muted-foreground text-xs">
             {t("table.coverageFormat", {
               covered: row.original.cashflowDays,
               total: row.original.totalDays,

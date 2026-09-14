@@ -98,8 +98,8 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
         {shouldShowGroupDetails && groupContext.usableGroups.length > 0 && (
           <div>
             <div className="mb-2 flex items-center space-x-2">
-              <Tag className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
-              <span className="dark:text-dark-text-secondary font-medium text-gray-700">
+              <Tag className="dark:text-muted-foreground text-faint-foreground h-4 w-4" />
+              <span className="text-secondary-foreground font-medium">
                 {t("currentUsableGroups")}
               </span>
             </div>
@@ -167,8 +167,8 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
         {shouldShowGroupDetails && supportedOnlyGroups.length > 0 && (
           <div>
             <div className="mb-2 flex items-center space-x-2">
-              <Tag className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
-              <span className="dark:text-dark-text-secondary font-medium text-gray-700">
+              <Tag className="dark:text-muted-foreground text-faint-foreground h-4 w-4" />
+              <span className="text-secondary-foreground font-medium">
                 {t("siteSupportedGroups")}
               </span>
             </div>
@@ -186,12 +186,12 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
         {shouldShowEndpointTypes && (
           <div>
             <div className="mb-2 flex items-center space-x-2">
-              <Server className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
-              <span className="dark:text-dark-text-secondary font-medium text-gray-700">
+              <Server className="dark:text-muted-foreground text-faint-foreground h-4 w-4" />
+              <span className="text-secondary-foreground font-medium">
                 {t("endpointType")}
               </span>
             </div>
-            <div className="dark:text-dark-text-secondary text-gray-600">
+            <div className="dark:text-secondary-foreground text-muted-foreground">
               {getEndpointTypesText(model.supported_endpoint_types)}
             </div>
           </div>
@@ -203,13 +203,13 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
           isTokenBillingType(model.quota_type) && (
             <div className="md:col-span-2">
               <div className="mb-2 flex items-center space-x-2">
-                <DollarSign className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
-                <span className="dark:text-dark-text-secondary font-medium text-gray-700">
+                <DollarSign className="dark:text-muted-foreground text-faint-foreground h-4 w-4" />
+                <span className="text-secondary-foreground font-medium">
                   {t("detailedPricing")}
                 </span>
               </div>
               {unavailableReason ? (
-                <div className="dark:text-dark-text-secondary text-xs leading-snug text-gray-600">
+                <div className="dark:text-secondary-foreground text-muted-foreground text-xs leading-snug">
                   {getUnavailablePriceReasonText(t, unavailableReason)}
                 </div>
               ) : calculatedPrice.kind === CALCULATED_PRICE_KINDS.TOKEN ? (

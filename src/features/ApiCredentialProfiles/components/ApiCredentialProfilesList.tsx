@@ -137,7 +137,7 @@ function EndpointHeader({
       <div className="flex min-w-0 items-center gap-1">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <code
-            className="min-w-0 truncate font-mono text-xs font-semibold text-gray-950 sm:text-sm dark:text-gray-50"
+            className="text-foreground min-w-0 truncate font-mono text-xs font-semibold sm:text-sm"
             title={baseUrl}
             data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.endpointBaseUrl}
           >
@@ -207,9 +207,9 @@ function DesktopEndpointNavigation({
     <nav
       aria-label={t("apiCredentialProfiles:grouping.navigationLabel")}
       data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.endpointNavigation}
-      className="border-r border-gray-200 bg-gray-50/70 p-2 dark:border-gray-800 dark:bg-gray-900/50"
+      className="border-border bg-surface-subtle/70 dark:border-border-subtle dark:bg-background/50 border-r p-2"
     >
-      <div className="px-2 pt-1 pb-2 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+      <div className="text-muted-foreground px-2 pt-1 pb-2 text-xs font-semibold tracking-wide uppercase">
         {t("apiCredentialProfiles:grouping.baseUrls")}
       </div>
       <div className="space-y-1">
@@ -221,15 +221,15 @@ function DesktopEndpointNavigation({
               className={cn(
                 "flex min-w-0 items-center rounded-lg border transition-colors",
                 selected
-                  ? "border-blue-300 bg-blue-50 text-blue-950 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-100"
-                  : "border-transparent text-gray-700 hover:bg-white dark:text-gray-300 dark:hover:bg-gray-900",
+                  ? "border-theme-300 bg-theme-50 text-theme-950 dark:border-theme-700 dark:bg-theme-950/40 dark:text-theme-100"
+                  : "text-secondary-foreground hover:bg-card dark:hover:bg-background border-transparent",
               )}
             >
               <button
                 type="button"
                 aria-current={selected ? "true" : undefined}
                 aria-label={group.baseUrl}
-                className="min-w-0 flex-1 rounded-lg px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset"
+                className="focus-visible:ring-ring min-w-0 flex-1 rounded-lg px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
                 onClick={() => onSelectBaseUrl(group.baseUrl)}
               >
                 <span
@@ -238,7 +238,7 @@ function DesktopEndpointNavigation({
                 >
                   {getEndpointLabel(group.baseUrl)}
                 </span>
-                <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-muted-foreground mt-1 block text-xs">
                   {t("apiCredentialProfiles:grouping.credentialCount", {
                     count: group.profiles.length,
                   })}
@@ -276,10 +276,10 @@ function CompactEndpointSelector({
   const { t } = useTranslation(["apiCredentialProfiles"])
 
   return (
-    <div className="border-b border-gray-200 bg-gray-50/70 p-3 dark:border-gray-800 dark:bg-gray-900/50">
+    <div className="border-border bg-surface-subtle/70 dark:border-border-subtle dark:bg-background/50 border-b p-3">
       <label
         htmlFor={API_CREDENTIAL_ENDPOINT_SELECT_ID}
-        className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400"
+        className="text-muted-foreground mb-1.5 block text-xs font-medium"
       >
         {t("apiCredentialProfiles:grouping.baseUrlSelector")}
       </label>
@@ -303,7 +303,7 @@ function CompactEndpointSelector({
               <span className="min-w-0 truncate">
                 {getEndpointLabel(group.baseUrl)}
               </span>
-              <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">
+              <span className="text-muted-foreground shrink-0 text-xs">
                 {t("apiCredentialProfiles:grouping.credentialCount", {
                   count: group.profiles.length,
                 })}
@@ -470,13 +470,13 @@ export function ApiCredentialProfilesList({
             aria-label={t("apiCredentialProfiles:grouping.selectedEndpoint", {
               baseUrl: group.baseUrl,
             })}
-            className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950"
+            className="border-border bg-card dark:border-border-subtle dark:bg-surface-deep overflow-hidden rounded-xl border"
           >
             <EndpointHeader
               baseUrl={group.baseUrl}
               credentialCount={group.profiles.length}
               onCopyBaseUrl={controller.handleCopyBaseUrl}
-              className="border-b border-gray-200 bg-gray-50/70 px-3 py-2.5 dark:border-gray-800 dark:bg-gray-900/50"
+              className="border-border bg-surface-subtle/70 dark:border-border-subtle dark:bg-background/50 border-b px-3 py-2.5"
             />
             <div className="space-y-3 p-3 sm:p-4">
               <EndpointProfileList
@@ -506,7 +506,7 @@ export function ApiCredentialProfilesList({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950",
+        "border-border bg-card dark:border-border-subtle dark:bg-surface-deep overflow-hidden rounded-xl border",
         useSidebar && "grid grid-cols-[15rem_minmax(0,1fr)]",
       )}
     >

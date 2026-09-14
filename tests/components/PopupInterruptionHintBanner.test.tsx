@@ -86,7 +86,7 @@ describe("PopupInterruptionHintBanner", () => {
     expect(await screen.findByText("ui:popupInterruption.title")).toBeVisible()
     expect(screen.getByText("ui:popupInterruption.description")).toBeVisible()
     expect(screen.getByRole("status")).toHaveAttribute("aria-live", "polite")
-    expect(screen.getByRole("status").className).toContain("bg-amber-50")
+    expect(screen.getByRole("status").className).toContain("bg-warning-soft")
   })
 
   it("saves the sidepanel preference, opens it, and clears the hint", async () => {

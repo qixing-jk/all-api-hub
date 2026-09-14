@@ -40,12 +40,8 @@ export default function EmptyResults({
   return (
     <Card className="flex flex-col items-center justify-center gap-4 py-16">
       <div className="text-center">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          {title}
-        </h3>
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          {description}
-        </p>
+        <h3 className="text-foreground text-lg font-semibold">{title}</h3>
+        <p className="text-muted-foreground mt-2 text-sm">{description}</p>
       </div>
       {needsAccountSetup && onOpenAccounts ? (
         <Button type="button" onClick={onOpenAccounts}>

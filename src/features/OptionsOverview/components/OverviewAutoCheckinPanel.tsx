@@ -48,20 +48,20 @@ export function OverviewAutoCheckinPanel({
             >
               {getAutoCheckinStatusLabel(panel.status, t)}
             </Badge>
-            <div className="text-xl font-semibold text-slate-950 dark:text-white">
+            <div className="text-foreground text-xl font-semibold">
               {panel.successCount}/{panel.totalEligible}
             </div>
-            <div className="dark:text-dark-text-secondary text-sm leading-6 text-slate-600">
+            <div className="dark:text-secondary-foreground text-muted-foreground text-sm leading-6">
               {t("optionsOverview:autoCheckin.summary")}
             </div>
             {panel.status === AUTO_CHECKIN_PANEL_STATUSES.notRun ||
             panel.status === AUTO_CHECKIN_PANEL_STATUSES.disabled ? (
-              <div className="dark:text-dark-text-tertiary text-sm leading-6 text-slate-500">
+              <div className="text-muted-foreground text-sm leading-6">
                 {getAutoCheckinEmptyDescription(panel.status, t)}
               </div>
             ) : null}
           </div>
-          <CalendarClock className="h-5 w-5 shrink-0 text-slate-400 dark:text-gray-500" />
+          <CalendarClock className="text-faint-foreground h-5 w-5 shrink-0" />
         </div>
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -79,7 +79,7 @@ export function OverviewAutoCheckinPanel({
           />
         </div>
 
-        <div className="dark:text-dark-text-tertiary space-y-1 text-xs text-slate-500">
+        <div className="text-muted-foreground space-y-1 text-xs">
           <TimeLine
             label={t("optionsOverview:autoCheckin.lastRun")}
             value={panel.lastRunAt}
@@ -100,7 +100,7 @@ export function OverviewAutoCheckinPanel({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 border-t border-slate-200/70 bg-slate-50/70 p-4 sm:flex-row dark:border-white/10 dark:bg-white/[0.03]">
+      <div className="border-border/70 bg-surface-subtle/70 dark:border-foreground/10 dark:bg-foreground/[0.03] flex flex-col gap-2 border-t p-4 sm:flex-row">
         {primaryAction ? (
           <WorkflowTransitionButton
             type="button"
@@ -168,7 +168,7 @@ function TimeLine({
   return (
     <div className="flex min-w-0 justify-between gap-3">
       <span className="shrink-0">{label}</span>
-      <span className="truncate font-medium text-slate-700 dark:text-gray-300">
+      <span className="text-secondary-foreground truncate font-medium">
         {value ? new Date(value).toLocaleString() : fallback}
       </span>
     </div>

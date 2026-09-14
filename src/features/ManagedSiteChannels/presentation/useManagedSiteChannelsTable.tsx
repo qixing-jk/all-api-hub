@@ -115,11 +115,11 @@ function CellValue({ cell }: { cell?: ManagedChannelsCell }) {
       },
       [MANAGED_CHANNELS_CELL_TONES.Success]: {
         variant: "secondary" as const,
-        className: "border-emerald-200 text-emerald-700",
+        className: "border-success-border text-success-text",
       },
       [MANAGED_CHANNELS_CELL_TONES.Warning]: {
         variant: "outline" as const,
-        className: "border-amber-200 text-amber-800",
+        className: "border-warning-border text-warning-text",
       },
       [MANAGED_CHANNELS_CELL_TONES.Danger]: {
         variant: "destructive" as const,

@@ -1,5 +1,6 @@
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { THEME_ATTRIBUTES, THEME_PRESET } from "~/constants/theme"
 import { BALANCE_HISTORY_TEST_IDS } from "~/features/BalanceHistory/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
@@ -27,7 +28,10 @@ import {
   getStoredUserPreferences,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
-import { setVisualDarkMode } from "~~/e2e/utils/visualTheme"
+import {
+  setVisualDarkMode,
+  setVisualThemeAttribute,
+} from "~~/e2e/utils/visualTheme"
 
 const BALANCE_HISTORY_URL = (extensionId: string) =>
   `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BALANCE_HISTORY}`
@@ -159,6 +163,57 @@ test("filters balance history by tag/account and persists the selected currency"
   // Library-generated tooltip surfaces need the same curve as their shadows.
   const chart = page.locator("canvas").last()
   await expect(chart).toBeVisible()
+  // Canvas must consume resolved colors and repaint without a reload.
+  const countSeriesPixels = (rgb: number[]) =>
+    page.locator("canvas").evaluateAll((canvases, target) => {
+      let count = 0
+      for (const canvas of canvases as HTMLCanvasElement[]) {
+        const context = canvas.getContext("2d")
+        if (!context) continue
+        const pixels = context.getImageData(
+          0,
+          0,
+          canvas.width,
+          canvas.height,
+        ).data
+        for (let index = 0; index < pixels.length; index += 4) {
+          if (
+            target.every(
+              (channel, offset) =>
+                Math.abs(pixels[index + offset] - channel) < 4,
+            ) &&
+            pixels[index + 3] > 200
+          )
+            count++
+        }
+      }
+      return count
+    }, rgb)
+  for (const [hex, rgb] of [
+    ["#ff00ff", [255, 0, 255]],
+    ["#00ffff", [0, 255, 255]],
+  ] as const) {
+    await page.evaluate(
+      (color) => document.documentElement.style.setProperty("--chart-1", color),
+      hex,
+    )
+    await expect.poll(() => countSeriesPixels([...rgb])).toBeGreaterThan(20)
+  }
+  await expect.poll(() => countSeriesPixels([255, 0, 255])).toBe(0)
+  await page.evaluate(() =>
+    document.documentElement.style.removeProperty("--chart-1"),
+  )
+  await setVisualThemeAttribute(
+    page.locator("html"),
+    THEME_ATTRIBUTES.PRESET,
+    THEME_PRESET.ANTHROPIC,
+  )
+  await expect.poll(() => countSeriesPixels([182, 95, 64])).toBeGreaterThan(20)
+  await setVisualThemeAttribute(
+    page.locator("html"),
+    THEME_ATTRIBUTES.PRESET,
+    THEME_PRESET.DEFAULT,
+  )
   for (const dark of [false, true]) {
     await setVisualDarkMode(page, dark)
     const bounds = await chart.boundingBox()

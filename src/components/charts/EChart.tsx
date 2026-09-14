@@ -1,6 +1,9 @@
 import type { CSSProperties } from "react"
 import { useEffect, useMemo, useRef } from "react"
 
+import { THEME_ATTRIBUTES } from "~/constants/theme"
+
+import { applyChartColors, readChartColors } from "./chartColors"
 import { echarts, type EChartsOption, type SetOptionOpts } from "./echarts"
 
 export type EChartRenderer = "canvas" | "svg"
@@ -80,8 +83,35 @@ export function EChart(props: EChartProps) {
 
   useEffect(() => {
     const instance = instanceRef.current
-    if (!instance) return
-    instance.setOption(option, resolvedSetOptionOpts)
+    const container = containerRef.current
+    if (!instance || !container) return
+    const updateColors = (themeChanged = false) => {
+      instance.setOption(applyChartColors(option, readChartColors(container)), {
+        ...resolvedSetOptionOpts,
+        // Keep chart interaction state (zoom and legend selection) when recoloring.
+        ...(themeChanged ? { notMerge: false } : {}),
+      })
+    }
+    updateColors()
+    let frame: number | undefined
+    const observer = new MutationObserver(() => {
+      if (frame !== undefined) cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => updateColors(true))
+    })
+    // Attribute changes include theme presets and future user-defined CSS values.
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: [
+        "class",
+        "style",
+        THEME_ATTRIBUTES.COLOR,
+        THEME_ATTRIBUTES.PRESET,
+      ],
+    })
+    return () => {
+      observer.disconnect()
+      if (frame !== undefined) cancelAnimationFrame(frame)
+    }
   }, [option, resolvedSetOptionOpts, renderer])
 
   useEffect(() => {

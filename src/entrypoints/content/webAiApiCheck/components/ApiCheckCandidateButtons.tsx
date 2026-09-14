@@ -56,7 +56,7 @@ export function ApiCheckCandidateButtons({
             className={cn(
               "max-w-full truncate rounded-md border px-2 py-1 text-xs sm:max-w-64",
               currentValue === candidate.value
-                ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-200"
+                ? "border-theme-500 bg-theme-50 text-theme-700 dark:bg-theme-950/40 dark:text-theme-200"
                 : "border-border text-muted-foreground hover:bg-muted",
             )}
             title={kind === "baseUrl" ? candidate.value : undefined}

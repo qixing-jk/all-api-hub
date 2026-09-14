@@ -39,15 +39,15 @@ interface AccountActionMenuItemProps {
 }
 
 const menuItemClassName =
-  "flex w-full items-start gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:text-gray-900 data-[highlighted]:bg-gray-50 dark:text-dark-text-secondary dark:hover:text-dark-text-primary dark:data-[highlighted]:bg-dark-bg-tertiary"
+  "flex w-full items-start gap-2 px-3 py-2 text-left text-sm text-secondary-foreground hover:text-foreground data-[highlighted]:bg-surface-subtle dark:data-[highlighted]:bg-secondary"
 const warningMenuItemClassName =
-  "flex w-full items-start gap-2 px-3 py-2 text-left text-sm text-amber-600 hover:text-amber-700 data-[highlighted]:bg-amber-50 dark:text-amber-400 dark:hover:text-amber-300 dark:data-[highlighted]:bg-amber-900/40"
+  "flex w-full items-start gap-2 px-3 py-2 text-left text-sm text-warning-text hover:text-warning-text data-[highlighted]:bg-warning-soft"
 const successMenuItemClassName =
-  "flex w-full items-start gap-2 px-3 py-2 text-left text-sm text-emerald-600 hover:text-emerald-700 data-[highlighted]:bg-emerald-50 dark:text-emerald-400 dark:hover:text-emerald-300 dark:data-[highlighted]:bg-emerald-900/40"
+  "flex w-full items-start gap-2 px-3 py-2 text-left text-sm text-success-text hover:text-success-text data-[highlighted]:bg-success-soft"
 const destructiveMenuItemClassName =
-  "flex w-full items-start gap-2 px-3 py-2 text-left text-sm text-red-600 hover:text-red-700 data-[highlighted]:bg-red-50 dark:data-[highlighted]:bg-red-900/50"
+  "flex w-full items-start gap-2 px-3 py-2 text-left text-sm text-destructive-text hover:text-destructive-text data-[highlighted]:bg-destructive-soft"
 const disabledMenuItemClassName =
-  "flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-400 dark:text-dark-text-tertiary cursor-not-allowed"
+  "flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-faint-foreground dark:text-muted-foreground cursor-not-allowed"
 
 export const AccountActionMenuItem: React.FC<AccountActionMenuItemProps> = ({
   onClick,
@@ -119,7 +119,7 @@ export const AccountActionMenuItem: React.FC<AccountActionMenuItemProps> = ({
             </span>
             {hint ? (
               <span
-                className="dark:border-dark-bg-quaternary dark:text-dark-text-tertiary shrink-0 rounded-full border border-gray-300 px-1.5 py-0.5 text-[11px] leading-none font-medium text-gray-500"
+                className="border-border-strong text-muted-foreground shrink-0 rounded-full border px-1.5 py-0.5 text-[11px] leading-none font-medium"
                 aria-hidden="true"
               >
                 {hint}
@@ -129,7 +129,7 @@ export const AccountActionMenuItem: React.FC<AccountActionMenuItemProps> = ({
           {description && !hint ? (
             <span
               id={descriptionId}
-              className="dark:text-dark-text-tertiary mt-0.5 block text-xs break-words whitespace-normal text-gray-500"
+              className="text-muted-foreground mt-0.5 block text-xs break-words whitespace-normal"
             >
               {description}
             </span>

@@ -192,7 +192,7 @@ const ImportSection = ({
       <Card padding="none" className="flex flex-1 flex-col">
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Download className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <Download className="text-theme-600 dark:text-theme-400 h-5 w-5" />
             <CardTitle className="mb-0 text-base">
               {t("import.title")}
             </CardTitle>
@@ -220,7 +220,7 @@ const ImportSection = ({
                   handleFileImport(event)
                   setShowJson(false)
                 }}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100 dark:text-gray-400 dark:file:bg-blue-900/30 dark:file:text-blue-300 dark:hover:file:bg-blue-900/50"
+                className="text-muted-foreground file:bg-theme-50 file:text-theme-700 hover:file:bg-theme-100 dark:file:bg-theme-900/30 dark:file:text-theme-300 dark:hover:file:bg-theme-900/50 block w-full text-sm file:mr-4 file:rounded-md file:border-0 file:px-4 file:py-2 file:text-sm file:font-medium"
               />
             </div>
           </FormField>
@@ -251,7 +251,7 @@ const ImportSection = ({
                 role="status"
                 className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm"
               >
-                <span className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                <span className="text-success-text flex items-center gap-2">
                   <CheckCircle2
                     className="size-4 shrink-0"
                     aria-hidden="true"
@@ -322,7 +322,7 @@ const ImportSection = ({
                   )}
                 </CardList>
                 {hasReplaceStrategy && (
-                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                  <p className="text-warning-text mt-2 text-xs">
                     {t("import.replaceWarning")}
                   </p>
                 )}

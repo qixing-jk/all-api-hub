@@ -135,10 +135,10 @@ export function NewApiManagedVerificationDialog(
 
   const header = (
     <div className="flex flex-col gap-1 pr-8">
-      <div className="text-lg font-semibold text-gray-900 dark:text-white">
+      <div className="text-foreground text-lg font-semibold">
         {getDialogTitle(t, props.request)}
       </div>
-      <p className="text-sm text-gray-500 dark:text-gray-400">
+      <p className="text-muted-foreground text-sm">
         {getStepBodyCopy(t, props.request, props.step)}
       </p>
     </div>
@@ -342,7 +342,7 @@ export function NewApiManagedVerificationDialog(
             role="status"
             aria-live="polite"
             aria-atomic="true"
-            className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-200"
+            className="border-theme-200 bg-theme-50 text-theme-700 dark:border-theme-900/60 dark:bg-theme-950/40 dark:text-theme-200 rounded-lg border px-3 py-2 text-sm"
           >
             {props.busyMessage || t("dialog.messages.starting")}
           </div>
@@ -353,15 +353,15 @@ export function NewApiManagedVerificationDialog(
             role="alert"
             aria-live="assertive"
             aria-atomic="true"
-            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200"
+            className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground rounded-lg border px-3 py-2 text-sm"
           >
             {props.errorMessage}
           </div>
         ) : null}
 
         {shouldShowSettingsAction ? (
-          <div className="flex min-h-32 flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50/80 px-4 py-6 text-center dark:border-gray-800 dark:bg-gray-900/40">
-            <p className="text-sm text-gray-600 dark:text-gray-300">
+          <div className="border-border bg-surface-subtle/80 dark:border-border-subtle dark:bg-background/40 flex min-h-32 flex-col items-center justify-center rounded-xl border border-dashed px-4 py-6 text-center">
+            <p className="text-muted-foreground dark:text-secondary-foreground text-sm">
               {t("dialog.hints.openSettingsShortcut")}
             </p>
             {quickConfigError ? (
@@ -369,7 +369,7 @@ export function NewApiManagedVerificationDialog(
                 role="alert"
                 aria-live="assertive"
                 aria-atomic="true"
-                className="mt-4 w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-left text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200"
+                className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground mt-4 w-full rounded-lg border px-3 py-2 text-left text-sm"
               >
                 {quickConfigError}
               </div>
@@ -380,7 +380,7 @@ export function NewApiManagedVerificationDialog(
                   <div className="space-y-2">
                     <label
                       htmlFor="new-api-quick-base-url"
-                      className="block text-sm font-medium text-gray-700 dark:text-gray-200"
+                      className="text-secondary-foreground block text-sm font-medium"
                     >
                       {t("settings:newApi.fields.baseUrlLabel")}
                     </label>
@@ -400,7 +400,7 @@ export function NewApiManagedVerificationDialog(
                     <div className="space-y-2">
                       <label
                         htmlFor="new-api-quick-username"
-                        className="block text-sm font-medium text-gray-700 dark:text-gray-200"
+                        className="text-secondary-foreground block text-sm font-medium"
                       >
                         {t("settings:newApi.fields.usernameLabel")}
                       </label>
@@ -419,7 +419,7 @@ export function NewApiManagedVerificationDialog(
                     <div className="space-y-2">
                       <label
                         htmlFor="new-api-quick-password"
-                        className="block text-sm font-medium text-gray-700 dark:text-gray-200"
+                        className="text-secondary-foreground block text-sm font-medium"
                       >
                         {t("settings:newApi.fields.passwordLabel")}
                       </label>
@@ -462,11 +462,11 @@ export function NewApiManagedVerificationDialog(
           <div className="space-y-2">
             <label
               htmlFor="new-api-verification-code"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-200"
+              className="text-secondary-foreground block text-sm font-medium"
             >
               {t("dialog.fields.codeLabel")}
             </label>
-            <div className="rounded-xl border border-gray-200 bg-gray-50/80 px-4 py-4 dark:border-gray-800 dark:bg-gray-900/40">
+            <div className="border-border bg-surface-subtle/80 dark:border-border-subtle dark:bg-background/40 rounded-xl border px-4 py-4">
               <div className="flex justify-center">
                 <InputOTP
                   id="new-api-verification-code"
@@ -489,7 +489,7 @@ export function NewApiManagedVerificationDialog(
                     <InputOTPSlot index={1} />
                     <InputOTPSlot index={2} />
                   </InputOTPGroup>
-                  <InputOTPSeparator className="text-gray-400 dark:text-gray-500" />
+                  <InputOTPSeparator className="text-faint-foreground" />
                   <InputOTPGroup>
                     <InputOTPSlot index={3} />
                     <InputOTPSlot index={4} />
@@ -500,7 +500,7 @@ export function NewApiManagedVerificationDialog(
             </div>
             <p
               id="new-api-verification-code-hint"
-              className="text-xs text-gray-500 dark:text-gray-400"
+              className="text-muted-foreground text-xs"
             >
               {props.request?.config.totpSecret?.trim()
                 ? t("dialog.hints.manualFallback")
@@ -528,7 +528,7 @@ export function NewApiManagedVerificationDialog(
         ) : null}
 
         {props.step === NEW_API_MANAGED_VERIFICATION_STEPS.PASSKEY_MANUAL ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-muted-foreground text-sm">
             {t("dialog.hints.passkey")}
           </p>
         ) : null}

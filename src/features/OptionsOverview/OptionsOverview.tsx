@@ -187,7 +187,7 @@ export default function OptionsOverview() {
       {!showPermissionsOnboarding ? <ProductTourInvitation /> : null}
 
       {isLoading && !viewModel ? (
-        <div className="dark:text-dark-text-secondary flex min-h-64 items-center justify-center gap-3 text-sm text-gray-600">
+        <div className="dark:text-secondary-foreground text-muted-foreground flex min-h-64 items-center justify-center gap-3 text-sm">
           <Spinner size="default" aria-label={t("common:status.loading")} />
           <span>{t("optionsOverview:states.loading")}</span>
         </div>

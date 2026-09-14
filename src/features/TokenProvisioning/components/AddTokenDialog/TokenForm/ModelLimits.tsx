@@ -44,7 +44,7 @@ export function ModelLimits({
   return (
     <div className="space-y-3" aria-busy={isLoading}>
       <div className="flex items-center justify-between">
-        <label className="dark:text-dark-text-secondary text-sm font-medium text-gray-700">
+        <label className="text-secondary-foreground text-sm font-medium">
           {t("dialog.modelLimits")}
         </label>
         <Switch
@@ -60,10 +60,8 @@ export function ModelLimits({
             if (enabled) void onRequestModels()
           }}
           className={`${
-            modelLimitsEnabled
-              ? "bg-blue-600"
-              : "dark:bg-dark-bg-tertiary bg-gray-200"
-          } focus:ring-blue-500`}
+            modelLimitsEnabled ? "bg-primary" : "bg-secondary"
+          } focus:ring-ring`}
         />
       </div>
 
@@ -80,23 +78,20 @@ export function ModelLimits({
             placeholder={t("dialog.selectModels")}
             label={t("dialog.availableModels")}
           />
-          <p className="dark:text-dark-text-tertiary mt-1 text-xs text-gray-500">
+          <p className="text-muted-foreground mt-1 text-xs">
             {t("dialog.modelSelectHint", { count: modelLimits.length })}
           </p>
         </div>
       )}
       {isLoading ? (
-        <p
-          aria-live="polite"
-          className="dark:text-dark-text-tertiary text-xs text-gray-500"
-        >
+        <p aria-live="polite" className="text-muted-foreground text-xs">
           {t("common:status.loadingField", {
             field: t("dialog.availableModels"),
           })}
         </p>
       ) : null}
       {loadErrorMessage ? (
-        <p role="alert" className="text-xs text-amber-700 dark:text-amber-300">
+        <p role="alert" className="text-warning-text text-xs">
           {loadErrorMessage}
         </p>
       ) : null}

@@ -147,7 +147,7 @@ export function ModelCapabilityBadges({
 
         return (
           <div key={id} className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <span className="dark:text-dark-text-tertiary shrink-0 text-[10px] font-medium text-gray-500 sm:text-xs">
+            <span className="text-muted-foreground shrink-0 text-[10px] font-medium sm:text-xs">
               {groupLabels[id]}
             </span>
             {visibleCapabilities.map((capability) => {
@@ -161,7 +161,7 @@ export function ModelCapabilityBadges({
                   key={capability}
                   variant="outline"
                   size="sm"
-                  className="border-slate-300 bg-slate-50 text-[10px] text-slate-700 sm:text-xs dark:border-slate-600 dark:bg-slate-800/70 dark:text-slate-200"
+                  className="border-border-strong bg-surface-subtle text-secondary-foreground dark:bg-card/70 text-[10px] sm:text-xs"
                   title={accessibleLabel}
                   aria-label={accessibleLabel}
                 >

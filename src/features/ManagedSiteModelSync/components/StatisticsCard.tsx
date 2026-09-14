@@ -20,58 +20,58 @@ export default function StatisticsCard(props: StatisticsCardProps) {
   return (
     <Card>
       <CardContent padding="md">
-        <h4 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+        <h4 className="text-foreground mb-4 text-lg font-semibold">
           {t("execution.lastExecution")}
         </h4>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-muted-foreground text-sm">
               {t("execution.statistics.total")}
             </p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+            <p className="text-foreground text-2xl font-bold">
               {statistics.total}
             </p>
           </div>
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-muted-foreground text-sm">
               {t("execution.statistics.success")}
             </p>
-            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+            <p className="text-success-text text-2xl font-bold">
               {statistics.successCount}
             </p>
           </div>
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-muted-foreground text-sm">
               {t("execution.statistics.failed")}
             </p>
-            <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+            <p className="text-destructive-text text-2xl font-bold">
               {statistics.failureCount}
             </p>
           </div>
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-muted-foreground text-sm">
               {t("execution.statistics.duration")}
             </p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+            <p className="text-foreground text-2xl font-bold">
               {(statistics.durationMs / 1000).toFixed(1)}s
             </p>
           </div>
         </div>
-        <div className="mt-4 border-t border-gray-200 pt-4 dark:border-gray-700">
+        <div className="border-border mt-4 border-t pt-4">
           <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-2">
             <div>
-              <span className="text-gray-600 dark:text-gray-400">
+              <span className="text-muted-foreground">
                 {t("execution.statistics.startTime")}:{" "}
               </span>
-              <span className="text-gray-900 dark:text-white">
+              <span className="text-foreground">
                 {formatFullTime(new Date(statistics.startedAt))}
               </span>
             </div>
             <div>
-              <span className="text-gray-600 dark:text-gray-400">
+              <span className="text-muted-foreground">
                 {t("execution.statistics.endTime")}:{" "}
               </span>
-              <span className="text-gray-900 dark:text-white">
+              <span className="text-foreground">
                 {formatFullTime(new Date(statistics.endedAt))}
               </span>
             </div>

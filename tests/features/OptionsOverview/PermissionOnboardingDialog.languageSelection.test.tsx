@@ -169,8 +169,12 @@ vi.mock(
   }),
 )
 
-vi.mock("~/entrypoints/options/components/ThemeToggle", () => ({
+vi.mock("~/features/Appearance/ThemeModeSettings", () => ({
   default: () => <div data-testid="theme-toggle" />,
+}))
+
+vi.mock("~/features/Appearance/AppearanceControls", () => ({
+  AppearanceControls: () => <div data-testid="appearance-controls" />,
 }))
 
 vi.mock("~/utils/feedback/operationFeedback", () => ({
@@ -1037,7 +1041,7 @@ describe("PermissionOnboardingDialog language selection", () => {
     ).toBeInTheDocument()
     expect(
       screen.getByText(i18n.t("permissionsOnboarding.analyticsDisclosure")),
-    ).toHaveClass("text-gray-500")
+    ).toHaveClass("text-muted-foreground")
   })
 
   it("separates introduction copy from the permissions section and keeps permission guidance adjacent to the list", async () => {

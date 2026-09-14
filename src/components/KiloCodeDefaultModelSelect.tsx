@@ -176,7 +176,7 @@ export const KiloCodeDefaultModelSelect = React.forwardRef<
           data-placeholder={value ? undefined : ""}
           disabled={disabled}
           className={cn(
-            "dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary dark:hover:bg-dark-bg-secondary/80 flex w-full items-center justify-between gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm whitespace-nowrap text-gray-900 shadow-xs transition-colors outline-none hover:bg-gray-50 focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-red-500 aria-invalid:focus-visible:ring-red-500/40 data-placeholder:text-gray-400 dark:aria-invalid:border-red-400 dark:aria-invalid:focus-visible:ring-red-400/40 dark:data-placeholder:text-gray-500",
+            "dark:border-border dark:hover:bg-card/80 border-border-strong bg-card text-foreground hover:bg-surface-subtle focus-visible:ring-ring data-placeholder:text-faint-foreground aria-invalid:border-destructive-border aria-invalid:focus-visible:ring-destructive-text/40 flex w-full items-center justify-between gap-2 rounded-md border px-3 text-sm whitespace-nowrap shadow-xs transition-colors outline-none focus-visible:border-transparent focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60",
             !value && "text-muted-foreground",
             className,
           )}

@@ -402,8 +402,8 @@ export function ProtectionBypassDevTrigger() {
               role={feedback.kind === "error" ? "alert" : "status"}
               className={
                 feedback.kind === "error"
-                  ? "text-red-600 dark:text-red-400"
-                  : "text-green-700 dark:text-green-400"
+                  ? "text-destructive-text"
+                  : "text-success-text"
               }
             >
               {getTriggerFeedbackMessage(t, feedback)}

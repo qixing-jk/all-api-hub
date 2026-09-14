@@ -215,7 +215,7 @@ export function ModelPriceCalculationDetails({
               key={rule.id}
               className={
                 quote.matchedRules.some((matched) => matched.id === rule.id)
-                  ? "min-w-0 rounded border border-blue-500 p-2"
+                  ? "border-theme-500 min-w-0 rounded border p-2"
                   : "min-w-0 rounded border p-2"
               }
             >

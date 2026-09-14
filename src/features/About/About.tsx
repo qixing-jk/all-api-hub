@@ -121,7 +121,7 @@ export default function About() {
               href={feedbackDestinations.repository}
               buttonText={t("starRepo")}
               buttonVariant="default"
-              iconClass="text-gray-900 dark:text-gray-100"
+              iconClass="text-foreground"
             />
             <LinkCard
               Icon={Globe2}
@@ -130,7 +130,7 @@ export default function About() {
               href={homepage}
               buttonText={t("visitHomepage")}
               buttonVariant="secondary"
-              iconClass="text-blue-600 dark:text-blue-400"
+              iconClass="text-theme-600 dark:text-theme-400"
             />
           </div>
         </section>
@@ -150,7 +150,7 @@ export default function About() {
               href={feedbackDestinations.bugReport}
               buttonText={t("feedbackSection.bugReport.button")}
               buttonVariant="default"
-              iconClass="text-red-600 dark:text-red-400"
+              iconClass="text-link"
             />
             <LinkCard
               Icon={Lightbulb}
@@ -159,7 +159,7 @@ export default function About() {
               href={feedbackDestinations.featureRequest}
               buttonText={t("feedbackSection.featureRequest.button")}
               buttonVariant="secondary"
-              iconClass="text-amber-500 dark:text-amber-400"
+              iconClass="text-link"
             />
             <LinkCard
               Icon={Languages}
@@ -168,7 +168,7 @@ export default function About() {
               href={feedbackDestinations.languageRequest}
               buttonText={t("feedbackSection.languageRequest.button")}
               buttonVariant="secondary"
-              iconClass="text-indigo-600 dark:text-indigo-400"
+              iconClass="text-theme-600 dark:text-theme-400"
             />
             <LinkCard
               Icon={Users}
@@ -177,7 +177,7 @@ export default function About() {
               href={feedbackDestinations.community}
               buttonText={t("feedbackSection.community.button")}
               buttonVariant="outline"
-              iconClass="text-emerald-600 dark:text-emerald-400"
+              iconClass="text-link"
             />
             <LinkCard
               Icon={MessageSquareMore}
@@ -186,7 +186,7 @@ export default function About() {
               href={feedbackDestinations.discussions}
               buttonText={t("feedbackSection.discussion.button")}
               buttonVariant="outline"
-              iconClass="text-blue-600 dark:text-blue-400"
+              iconClass="text-theme-600 dark:text-theme-400"
             />
           </div>
         </section>
@@ -206,7 +206,7 @@ export default function About() {
                 store: currentStoreName,
               })}
               buttonVariant="default"
-              iconClass="text-yellow-500 dark:text-yellow-400"
+              iconClass="text-link"
             />
             {otherStoreIds.map((storeId) => {
               const storeLabel = getStoreLabel(t, storeId)
@@ -222,7 +222,7 @@ export default function About() {
                   href={EXTENSION_STORE_LISTING_URLS[storeId]}
                   buttonText={t("storesSection.download.button")}
                   buttonVariant="secondary"
-                  iconClass="text-blue-600 dark:text-blue-400"
+                  iconClass="text-theme-600 dark:text-theme-400"
                 />
               )
             })}
@@ -238,14 +238,14 @@ export default function About() {
               <FeatureList
                 title={t("implementedFeatures")}
                 items={FEATURES}
-                color="green"
+                variant="success"
               />
 
               {/* 未来功能 */}
               <FeatureList
                 title={t("upcomingFeatures")}
                 items={FUTURE_FEATURES}
-                color="blue"
+                variant="primary"
               />
             </div>
           </section>

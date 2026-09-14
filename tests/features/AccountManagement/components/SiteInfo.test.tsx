@@ -311,7 +311,7 @@ describe("SiteInfo", () => {
     })
 
     expect(healthButton.querySelector('[aria-hidden="true"]')).toHaveClass(
-      "bg-gray-400",
+      "bg-surface-inverse-muted",
     )
   })
 

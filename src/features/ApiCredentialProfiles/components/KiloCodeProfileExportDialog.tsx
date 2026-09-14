@@ -354,15 +354,12 @@ export function KiloCodeProfileExportDialog({
       onClose={onClose}
       header={
         <div className="flex items-center gap-2">
-          <KiloCodeIcon
-            size="lg"
-            className="dark:text-dark-text-tertiary text-gray-500"
-          />
+          <KiloCodeIcon size="lg" className="text-muted-foreground" />
           <div className="min-w-0">
-            <div className="dark:text-dark-text-primary text-base font-semibold text-gray-900">
+            <div className="text-foreground text-base font-semibold">
               {t("ui:dialog.kiloCode.title")}
             </div>
-            <p className="dark:text-dark-text-secondary truncate text-sm text-gray-500">
+            <p className="dark:text-secondary-foreground text-muted-foreground truncate text-sm">
               {profile.name} · {profile.baseUrl}
             </p>
           </div>
@@ -549,7 +546,7 @@ export function KiloCodeProfileExportDialog({
         )}
 
         {isKiloV7Target && v7ManualModelId.trim() ? (
-          <div className="dark:border-dark-bg-tertiary flex items-center justify-between gap-3 rounded-md border border-gray-200 px-3 py-2 text-sm">
+          <div className="border-border flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm">
             <span className="min-w-0 flex-1 truncate">{v7ManualModelId}</span>
             <Button
               type="button"

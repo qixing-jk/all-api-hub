@@ -28,7 +28,7 @@ export function CookieAuthPermissionRecommendation({
 
   return (
     <Alert
-      variant="info"
+      variant="default"
       compact
       role="note"
       data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionRecommendation}

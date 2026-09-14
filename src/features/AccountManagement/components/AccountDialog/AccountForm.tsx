@@ -387,7 +387,7 @@ export default function AccountForm({
             {isOpenRouterManagementKey &&
               (!isDetected || accessToken.trim().length === 0) && (
                 <Alert
-                  variant="info"
+                  variant="default"
                   title={t("form.openrouterManagementKeyGuidanceTitle")}
                   description={t("form.openrouterManagementKeyGuidance")}
                 />
@@ -401,11 +401,11 @@ export default function AccountForm({
               <div className="flex-1">
                 <label
                   htmlFor="sub2api-refresh-token-mode"
-                  className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
+                  className="text-secondary-foreground text-sm font-medium"
                 >
                   {t("form.sub2apiRefreshTokenMode")}
                 </label>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-muted-foreground mt-1 text-xs">
                   {t("form.sub2apiRefreshTokenModeDesc")}
                 </p>
               </div>
@@ -416,16 +416,13 @@ export default function AccountForm({
                 data-testid={
                   ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiRefreshTokenSwitch
                 }
-                className={`${
-                  sub2apiUseRefreshToken ? "bg-green-600" : "bg-gray-200"
-                } focus:ring-green-500`}
               />
             </div>
 
             {sub2apiUseRefreshToken && (
               <div className="space-y-4">
                 <Alert
-                  variant="info"
+                  variant="warning"
                   title={t("form.sub2apiRefreshTokenWarningTitle")}
                   description={t("form.sub2apiRefreshTokenWarningDesc")}
                 />
@@ -631,7 +628,7 @@ export default function AccountForm({
             placeholder={t("form.exchangeRatePlaceholder")}
             leftIcon={<DollarSign className="h-5 w-5" />}
             rightIcon={
-              <span className="dark:text-dark-text-secondary text-sm text-gray-500">
+              <span className="dark:text-secondary-foreground text-muted-foreground text-sm">
                 CNY
               </span>
             }
@@ -662,7 +659,7 @@ export default function AccountForm({
             placeholder={t("form.manualBalanceUsdPlaceholder")}
             leftIcon={<DollarSign className="h-5 w-5" />}
             rightIcon={
-              <span className="dark:text-dark-text-secondary text-sm text-gray-500">
+              <span className="dark:text-secondary-foreground text-muted-foreground text-sm">
                 USD
               </span>
             }
@@ -674,11 +671,11 @@ export default function AccountForm({
           <div className="flex-1">
             <label
               htmlFor="exclude-from-total-balance"
-              className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
+              className="text-secondary-foreground text-sm font-medium"
             >
               {t("form.excludeFromTotalBalance")}
             </label>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-muted-foreground mt-1 text-xs">
               {t("form.excludeFromTotalBalanceDesc")}
             </p>
           </div>
@@ -686,9 +683,6 @@ export default function AccountForm({
             checked={excludeFromTotalBalance}
             onChange={onExcludeFromTotalBalanceChange}
             id="exclude-from-total-balance"
-            className={`${
-              excludeFromTotalBalance ? "bg-green-600" : "bg-gray-200"
-            } focus:ring-green-500`}
           />
         </div>
 
@@ -696,11 +690,11 @@ export default function AccountForm({
           <div className="flex-1">
             <label
               htmlFor="exclude-from-today-income"
-              className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
+              className="text-secondary-foreground text-sm font-medium"
             >
               {t("form.excludeFromTodayIncome")}
             </label>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-muted-foreground mt-1 text-xs">
               {t("form.excludeFromTodayIncomeDesc")}
             </p>
           </div>
@@ -708,9 +702,6 @@ export default function AccountForm({
             checked={excludeFromTodayIncome}
             onChange={onExcludeFromTodayIncomeChange}
             id="exclude-from-today-income"
-            className={`${
-              excludeFromTodayIncome ? "bg-green-600" : "bg-gray-200"
-            } focus:ring-green-500`}
           />
         </div>
       </AccountFormSection>

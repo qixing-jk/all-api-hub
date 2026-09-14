@@ -71,15 +71,15 @@ function SearchResultItem({
       onSelect={onSelect}
       className="items-start gap-3"
     >
-      <div className="pt-0.5 text-gray-500">{getIconForItem(item)}</div>
+      <div className="text-muted-foreground pt-0.5">{getIconForItem(item)}</div>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium">{item.title}</div>
         {item.description ? (
-          <div className="truncate text-xs text-gray-500">
+          <div className="text-muted-foreground truncate text-xs">
             {item.description}
           </div>
         ) : null}
-        <div className="truncate text-xs text-gray-400">
+        <div className="text-faint-foreground truncate text-xs">
           {item.breadcrumbs.join(" / ")}
         </div>
       </div>

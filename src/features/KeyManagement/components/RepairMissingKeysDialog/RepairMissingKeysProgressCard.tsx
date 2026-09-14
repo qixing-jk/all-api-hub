@@ -86,7 +86,7 @@ export function RepairMissingKeysProgressCard({
           spacing="none"
           className="flex flex-wrap items-center justify-between gap-3"
         >
-          <p className="dark:text-dark-text-secondary min-w-0 flex-1 basis-64 text-sm text-gray-600">
+          <p className="dark:text-secondary-foreground text-muted-foreground min-w-0 flex-1 basis-64 text-sm">
             {getRepairCompletionMessage(progress, t)}
           </p>
           {action ? <div className="ml-auto shrink-0">{action}</div> : null}
@@ -104,17 +104,17 @@ export function RepairMissingKeysProgressCard({
       <CardContent padding="sm" spacing="none" className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-baseline gap-2">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+            <span className="text-secondary-foreground text-sm font-medium">
               {t("keyManagement:repairMissingKeys.progressChecked")}
             </span>
-            <span className="text-sm text-gray-500 tabular-nums dark:text-gray-400">
+            <span className="text-muted-foreground text-sm tabular-nums">
               {processedTotal} / {eligibleTotal}
             </span>
           </div>
           {action ? <div className="ml-auto shrink-0">{action}</div> : null}
         </div>
         <Progress
-          className="dark:bg-dark-bg-tertiary h-1.5 bg-gray-100"
+          className="dark:bg-secondary bg-muted h-1.5"
           indicatorClassName={progressBarColor}
           value={processedTotal}
           max={progressMax}

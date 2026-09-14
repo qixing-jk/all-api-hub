@@ -81,7 +81,7 @@ export function RepairInvalidKeysList({
       ) : null}
 
       {!readOnly ? (
-        <div className="dark:border-dark-bg-tertiary space-y-2 border-b border-gray-200 px-4 py-3">
+        <div className="border-border space-y-2 border-b px-4 py-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <label className="flex items-center gap-2 text-sm">
               <Checkbox
@@ -106,7 +106,7 @@ export function RepairInvalidKeysList({
               {t("keyManagement:repairMissingKeys.invalidKeys.selectAll")}
             </label>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 dark:text-gray-400">
+              <span className="text-muted-foreground text-xs">
                 {t(
                   "keyManagement:repairMissingKeys.invalidKeys.selectedCount",
                   { count: selectedInvalidResources.length },
@@ -128,7 +128,7 @@ export function RepairInvalidKeysList({
         </div>
       ) : null}
 
-      <ul className="dark:divide-dark-bg-tertiary divide-y">
+      <ul className="dark:divide-border divide-y">
         {filteredInvalidResources.map((resource) => {
           const resourceKey = getInvalidResourceKey(resource)
           const displayLabel =
@@ -170,7 +170,7 @@ export function RepairInvalidKeysList({
                         <Badge
                           variant="outline"
                           size="sm"
-                          className="dark:border-dark-bg-tertiary shrink-0 border-gray-200 px-2 py-0.5 text-[11px] font-medium"
+                          className="border-border shrink-0 px-2 py-0.5 text-[11px] font-medium"
                           title={resource.groupLabel}
                         >
                           {t(
@@ -180,7 +180,7 @@ export function RepairInvalidKeysList({
                         </Badge>
                       ) : null}
                     </div>
-                    <div className="dark:text-dark-text-secondary truncate text-xs text-gray-500">
+                    <div className="dark:text-secondary-foreground text-muted-foreground truncate text-xs">
                       {resource.accountName} · {resource.siteUrlOrigin}
                     </div>
                   </div>
@@ -188,13 +188,13 @@ export function RepairInvalidKeysList({
                 <Badge
                   variant="outline"
                   size="sm"
-                  className="dark:border-dark-bg-tertiary shrink-0 border-gray-200 px-2 py-0.5 text-[11px] font-medium"
+                  className="border-border shrink-0 px-2 py-0.5 text-[11px] font-medium"
                   title={resource.siteType}
                 >
                   {resource.siteType}
                 </Badge>
               </div>
-              <div className="mt-2 text-xs text-amber-700 dark:text-amber-200">
+              <div className="text-warning-text mt-2 text-xs">
                 {getInvalidResourceReasonLabel(t, resource)}
               </div>
             </li>

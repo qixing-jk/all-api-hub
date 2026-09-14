@@ -118,7 +118,7 @@ export default function WebDAVAutoSyncSettings({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <RefreshCw
-              className="size-5 text-sky-600 dark:text-sky-400"
+              className="text-theme-600 dark:text-theme-400 size-5"
               aria-hidden="true"
             />
             <CardTitle className="m-0 text-base">
@@ -190,7 +190,7 @@ export default function WebDAVAutoSyncSettings({
                 disabled={providerChangePending}
                 onChange={(checked) => saveSetting({ autoSync: checked })}
               />
-              <span className="text-sm text-gray-700 dark:text-gray-300">
+              <span className="text-secondary-foreground text-sm">
                 {autoSyncEnabled
                   ? t("common:status.enabled")
                   : t("common:status.disabled")}
@@ -220,7 +220,7 @@ export default function WebDAVAutoSyncSettings({
                 onBlur={saveInterval}
                 placeholder="3600"
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="text-muted-foreground mt-1 text-xs">
                 {t("webdav.autoSync.intervalHint", {
                   minutes: Math.floor(syncInterval / 60),
                 })}
@@ -231,15 +231,15 @@ export default function WebDAVAutoSyncSettings({
 
         {/* Status information */}
         {lastSyncTime > 0 && (
-          <div className="space-y-1 rounded-md bg-gray-50 p-3 dark:bg-gray-800">
-            <p className="text-sm text-gray-700 dark:text-gray-300">
+          <div className="bg-surface-subtle dark:bg-card space-y-1 rounded-md p-3">
+            <p className="text-secondary-foreground text-sm">
               <span className="font-medium">
                 {t("webdav.autoSync.lastSync")}:{" "}
               </span>
               {formatTimestamp(lastSyncTime)}
             </p>
             {lastSyncError && (
-              <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+              <p className="text-destructive-text mt-1 text-sm">
                 <span className="font-medium">
                   {t("common:status.error")}:{" "}
                 </span>
@@ -255,7 +255,7 @@ export default function WebDAVAutoSyncSettings({
           featureId={PRODUCT_ANALYTICS_FEATURE_IDS.WebDavSync}
           surfaceId={autoSyncSurface}
         >
-          <div className="flex flex-wrap items-center gap-3 border-t border-gray-200 pt-4 dark:border-gray-700">
+          <div className="border-border flex flex-wrap items-center gap-3 border-t pt-4">
             <BodySmall
               id={WEBDAV_AUTO_SYNC_TARGET_IDS.saveSettings}
               role="status"

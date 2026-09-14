@@ -36,7 +36,7 @@ export function CloudSyncEncryptionSettings({
   return (
     <div
       id={WEBDAV_TARGET_IDS.encryption}
-      className="space-y-3 rounded-md bg-gray-50 p-3 dark:bg-gray-800"
+      className="bg-surface-subtle dark:bg-card space-y-3 rounded-md p-3"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
@@ -108,7 +108,7 @@ export function CloudSyncEncryptionSettings({
       </FormField>
       <p
         id="cloud-sync-shared-password-description"
-        className="text-xs text-gray-500 dark:text-gray-400"
+        className="text-muted-foreground text-xs"
       >
         {t("webdav.encryption.sharedPasswordDescription")}
       </p>

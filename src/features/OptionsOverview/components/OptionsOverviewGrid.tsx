@@ -80,7 +80,7 @@ export function OptionsOverviewGrid({
         <section key={item.id} className={columnSpanClass[item.columnSpan]}>
           {item.id === OPTIONS_OVERVIEW_WIDGET_IDS.statusSummary ||
           item.id === OPTIONS_OVERVIEW_WIDGET_IDS.unifiedApiGuidance ? null : (
-            <h3 className="dark:text-dark-text-secondary mb-3 text-xs font-semibold text-gray-500 uppercase">
+            <h3 className="dark:text-secondary-foreground text-muted-foreground mb-3 text-xs font-semibold uppercase">
               {getOverviewSectionTitle(item.id, t)}
             </h3>
           )}

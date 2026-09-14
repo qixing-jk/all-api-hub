@@ -38,11 +38,11 @@ export function FeedbackFormFooter({
           }
         />
       )}
-      <p className="text-xs leading-5 text-gray-500 dark:text-gray-400">
+      <p className="text-muted-foreground text-xs leading-5">
         {t("checkInFeedback.disclosure")}
       </p>
       {needsCopy && (
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-muted-foreground text-xs">
           {t("checkInFeedback.longReport")}
         </p>
       )}

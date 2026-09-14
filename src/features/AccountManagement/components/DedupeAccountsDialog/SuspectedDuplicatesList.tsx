@@ -30,26 +30,21 @@ export function SuspectedDuplicatesList({
     <section
       aria-labelledby={headingId}
       className={
-        separated
-          ? "dark:border-dark-bg-tertiary mt-6 space-y-3 border-t border-gray-200 pt-5"
-          : "space-y-3"
+        separated ? "border-border mt-6 space-y-3 border-t pt-5" : "space-y-3"
       }
     >
-      <h3
-        id={headingId}
-        className="dark:text-dark-text-primary text-sm font-semibold text-gray-900"
-      >
+      <h3 id={headingId} className="text-foreground text-sm font-semibold">
         {t("ui:dialog.dedupeAccounts.suspected.title")}
       </h3>
-      <p className="dark:text-dark-text-secondary text-sm text-gray-600">
+      <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
         {t("ui:dialog.dedupeAccounts.suspected.description")}
       </p>
       {groups.map((group) => (
         <div
           key={group.id}
-          className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary overflow-hidden rounded-lg border border-gray-200 bg-white"
+          className="border-border bg-card overflow-hidden rounded-lg border"
         >
-          <div className="space-y-1 bg-amber-50 p-3 text-sm [overflow-wrap:anywhere] break-words text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+          <div className="bg-warning-soft text-warning-soft-foreground space-y-1 p-3 text-sm [overflow-wrap:anywhere] break-words">
             <div>
               {t("ui:dialog.dedupeAccounts.userId", { userId: group.userId })}
             </div>
@@ -68,11 +63,11 @@ export function SuspectedDuplicatesList({
               </div>
             )}
           </div>
-          <ul className="dark:divide-dark-bg-tertiary divide-y divide-gray-100">
+          <ul className="dark:divide-border divide-border-subtle divide-y">
             {group.accounts.map((account) => (
               <li key={account.id} className="min-w-0 space-y-2 p-3 text-sm">
                 <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="dark:text-dark-text-primary min-w-0 flex-1 font-medium [overflow-wrap:anywhere] text-gray-900">
+                  <div className="text-foreground min-w-0 flex-1 font-medium [overflow-wrap:anywhere]">
                     {accountLabelById.get(account.id) ?? account.site_name}
                   </div>
                   {account.disabled && (
@@ -81,11 +76,11 @@ export function SuspectedDuplicatesList({
                     </Badge>
                   )}
                 </div>
-                <div className="dark:text-dark-text-secondary break-all text-gray-600">
+                <div className="dark:text-secondary-foreground text-muted-foreground break-all">
                   {account.site_url}
                 </div>
                 <div className="flex flex-wrap items-end justify-between gap-2">
-                  <div className="dark:text-dark-text-tertiary min-w-0 text-xs [overflow-wrap:anywhere] text-gray-500">
+                  <div className="text-muted-foreground min-w-0 text-xs [overflow-wrap:anywhere]">
                     {t("ui:dialog.dedupeAccounts.details.lastSync")}:{" "}
                     {formatTimestamp(account.last_sync_time || undefined, t)}
                   </div>
@@ -114,7 +109,7 @@ export function SuspectedDuplicatesList({
                         type="button"
                         size="sm"
                         variant="outline"
-                        className="text-destructive hover:text-destructive"
+                        className="text-destructive-text hover:text-destructive-text"
                         disabled={isWorking}
                         onClick={() => onDeleteAccount(account.id)}
                         aria-label={t(

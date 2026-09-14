@@ -36,15 +36,15 @@ export function FeedbackReportEditor({
     <details
       open={previewOpen}
       onToggle={(event) => setPreviewOpen(event.currentTarget.open)}
-      className="group corners-concentric rounded-lg border border-gray-200 [--corner-inset:1px] dark:border-gray-700"
+      className="group corners-concentric border-border rounded-lg border [--corner-inset:1px]"
     >
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-[var(--corner-inner-radius)] px-4 py-3 text-sm font-medium group-open:rounded-b-none hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:hover:bg-gray-800/50 [&::-webkit-details-marker]:hidden">
+      <summary className="hover:bg-surface-subtle focus-visible:outline-ring dark:hover:bg-card/50 flex cursor-pointer list-none items-center justify-between gap-2 rounded-[var(--corner-inner-radius)] px-4 py-3 text-sm font-medium group-open:rounded-b-none focus-visible:outline-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
         {t("checkInFeedback.preview")}
         <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
       </summary>
-      <div className="space-y-4 border-t border-gray-200 p-4 dark:border-gray-700">
+      <div className="border-border space-y-4 border-t p-4">
         <FeedbackReportPreview content={report} />
-        <details className="border-t border-gray-200 pt-3 dark:border-gray-700">
+        <details className="border-border border-t pt-3">
           <summary className="cursor-pointer text-xs font-medium">
             {t("checkInFeedback.editReport")}
           </summary>
@@ -82,7 +82,7 @@ export function FeedbackReportEditor({
         <details
           open={rawOpen}
           onToggle={(event) => setRawOpen(event.currentTarget.open)}
-          className="border-t border-gray-200 pt-3 dark:border-gray-700"
+          className="border-border border-t pt-3"
         >
           <summary className="cursor-pointer text-xs font-medium">
             {t("checkInFeedback.fullReport")}

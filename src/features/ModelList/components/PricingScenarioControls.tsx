@@ -149,7 +149,7 @@ function PricingConditionGroup({
 }) {
   return (
     <details className="group/condition py-1">
-      <summary className="text-foreground hover:bg-muted/50 flex cursor-pointer list-none items-center gap-2 rounded-md px-1 py-2 text-sm font-medium focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+      <summary className="text-foreground hover:bg-muted/50 focus-visible:ring-ring flex cursor-pointer list-none items-center gap-2 rounded-md px-1 py-2 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
         <ChevronDown
           className="text-muted-foreground size-4 shrink-0 -rotate-90 transition-transform group-open/condition:rotate-0"
           aria-hidden="true"
@@ -545,7 +545,7 @@ export function PricingScenarioControls({
       ref={navigation?.controlsRef}
       tabIndex={-1}
       aria-label={t("scenario.configure")}
-      className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary/40 relative mt-4 space-y-3 rounded-md border border-gray-200 bg-gray-50/70 p-3 [&_[data-pricing-highlight]]:ring-2 [&_[data-pricing-highlight]]:ring-blue-500 [&_[data-pricing-highlight]]:ring-offset-2"
+      className="dark:bg-background/40 border-border bg-surface-subtle/70 [&_[data-pricing-highlight]]:ring-theme-500 relative mt-4 space-y-3 rounded-md border p-3 [&_[data-pricing-highlight]]:ring-2 [&_[data-pricing-highlight]]:ring-offset-2"
     >
       <div className="space-y-1 [@container(min-width:48rem)]:pr-44">
         <h3

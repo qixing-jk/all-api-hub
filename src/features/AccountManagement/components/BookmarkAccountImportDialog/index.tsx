@@ -121,14 +121,14 @@ export default function BookmarkAccountImportDialog({
 
   const header = (
     <div className="flex min-w-0 items-start gap-3 pr-8">
-      <div className="mt-0.5 rounded-lg bg-blue-50 p-2 text-blue-600 dark:bg-blue-900/30 dark:text-blue-200">
+      <div className="bg-theme-50 text-theme-600 dark:bg-theme-900/30 dark:text-theme-200 mt-0.5 rounded-lg p-2">
         <BookmarkPlus className="h-5 w-5" aria-hidden="true" />
       </div>
       <div className="min-w-0 space-y-1">
-        <h2 className="dark:text-dark-text-primary text-base font-semibold text-gray-900">
+        <h2 className="text-foreground text-base font-semibold">
           {t("ui:dialog.bookmarkAccountImport.title")}
         </h2>
-        <p className="dark:text-dark-text-secondary text-sm leading-5 text-gray-500">
+        <p className="dark:text-secondary-foreground text-muted-foreground text-sm leading-5">
           {t("ui:dialog.bookmarkAccountImport.description")}
         </p>
       </div>
@@ -188,26 +188,24 @@ export default function BookmarkAccountImportDialog({
             />
           ) : (
             <div className="space-y-3">
-              <p className="dark:text-dark-text-secondary text-sm leading-6 text-gray-600">
+              <p className="dark:text-secondary-foreground text-muted-foreground text-sm leading-6">
                 {t("ui:dialog.bookmarkAccountImport.initialValue")}
               </p>
               <div className="grid gap-2 sm:grid-cols-3">
                 {batchImportSteps.map(({ icon: Icon, label }) => (
                   <div
                     key={label}
-                    className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm"
+                    className="dark:bg-card border-border bg-surface-subtle flex items-center gap-2 rounded-lg border p-3 text-sm"
                   >
                     <Icon
-                      className="size-4 shrink-0 text-blue-600 dark:text-blue-300"
+                      className="text-theme-600 dark:text-theme-300 size-4 shrink-0"
                       aria-hidden="true"
                     />
-                    <span className="dark:text-dark-text-secondary text-gray-700">
-                      {label}
-                    </span>
+                    <span className="text-secondary-foreground">{label}</span>
                   </div>
                 ))}
               </div>
-              <p className="dark:text-dark-text-tertiary text-xs leading-5 text-gray-500">
+              <p className="text-muted-foreground text-xs leading-5">
                 {t("ui:dialog.bookmarkAccountImport.permissionNeeded")}
               </p>
             </div>
@@ -228,7 +226,7 @@ export default function BookmarkAccountImportDialog({
       )}
 
       {dialog.stage === "scanning" && (
-        <div className="flex items-center gap-3 rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-100">
+        <div className="border-theme-100 bg-theme-50 text-theme-800 dark:border-theme-800 dark:bg-theme-900/30 dark:text-theme-100 flex items-center gap-3 rounded-lg border p-4 text-sm">
           <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
           <span>{t("ui:dialog.bookmarkAccountImport.scanning")}</span>
         </div>
@@ -245,7 +243,7 @@ export default function BookmarkAccountImportDialog({
           )}
           <Alert
             compact
-            variant="info"
+            variant="default"
             description={t("ui:dialog.bookmarkAccountImport.scopeHelp")}
           />
           <BookmarkTreeSelector
@@ -256,7 +254,7 @@ export default function BookmarkAccountImportDialog({
             className="min-h-0 flex-1"
           />
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="dark:text-dark-text-tertiary text-sm text-gray-500">
+            <p className="text-muted-foreground text-sm">
               {translateSelectedBookmarkCount(
                 t,
                 dialog.selectedBookmarkUrlCount,
@@ -285,7 +283,7 @@ export default function BookmarkAccountImportDialog({
               description={t(errorMessageKeys["import-failed"])}
             />
           )}
-          <label className="dark:border-dark-bg-tertiary flex items-start gap-3 rounded-lg border border-gray-200 p-3 text-sm">
+          <label className="border-border flex items-start gap-3 rounded-lg border p-3 text-sm">
             <Checkbox
               checked={dialog.includeExisting}
               onCheckedChange={(checked) =>
@@ -295,7 +293,7 @@ export default function BookmarkAccountImportDialog({
                 ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportIncludeExistingCheckbox
               }
             />
-            <span className="dark:text-dark-text-secondary leading-5 text-gray-700">
+            <span className="text-secondary-foreground leading-5">
               {t("ui:dialog.bookmarkAccountImport.includeExisting")}
             </span>
           </label>
@@ -315,8 +313,8 @@ export default function BookmarkAccountImportDialog({
                   className={cn(
                     "flex items-start gap-3 rounded-lg border p-3",
                     disabled
-                      ? "border-amber-100 bg-amber-50/60 dark:border-amber-900/60 dark:bg-amber-950/20"
-                      : "dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary border-gray-200 bg-white",
+                      ? "border-warning-border bg-warning-soft"
+                      : "border-border bg-card",
                   )}
                 >
                   <Checkbox
@@ -328,7 +326,7 @@ export default function BookmarkAccountImportDialog({
                   />
                   <div className="min-w-0 flex-1 space-y-2">
                     <div className="flex min-w-0 flex-wrap items-center gap-2">
-                      <span className="dark:text-dark-text-primary min-w-0 text-sm font-medium break-all text-gray-900">
+                      <span className="text-foreground min-w-0 text-sm font-medium break-all">
                         {candidate.url}
                       </span>
                       <CandidateStatusBadge
@@ -345,7 +343,7 @@ export default function BookmarkAccountImportDialog({
       )}
 
       {dialog.stage === "importing" && (
-        <div className="flex items-center gap-3 rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-100">
+        <div className="border-theme-100 bg-theme-50 text-theme-800 dark:border-theme-800 dark:bg-theme-900/30 dark:text-theme-100 flex items-center gap-3 rounded-lg border p-4 text-sm">
           <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
           <span>
             {t("ui:dialog.bookmarkAccountImport.importing", {
@@ -378,26 +376,26 @@ export default function BookmarkAccountImportDialog({
             {dialog.result.rows.map((row) => (
               <div
                 key={row.candidateId}
-                className="dark:border-dark-bg-tertiary flex items-start justify-between gap-3 rounded-lg border border-gray-200 p-3"
+                className="border-border flex items-start justify-between gap-3 rounded-lg border p-3"
               >
                 <div className="min-w-0 space-y-1">
                   <div className="flex items-center gap-2">
                     {row.status === "success" ? (
                       <CheckCircle2
-                        className="h-4 w-4 text-emerald-600"
+                        className="text-success-text h-4 w-4"
                         aria-hidden="true"
                       />
                     ) : (
                       <XCircle
-                        className="h-4 w-4 text-red-600"
+                        className="text-destructive-text h-4 w-4"
                         aria-hidden="true"
                       />
                     )}
-                    <span className="dark:text-dark-text-primary text-sm font-medium break-all text-gray-900">
+                    <span className="text-foreground text-sm font-medium break-all">
                       {row.url}
                     </span>
                   </div>
-                  <p className="dark:text-dark-text-secondary text-xs text-gray-500">
+                  <p className="dark:text-secondary-foreground text-muted-foreground text-xs">
                     {row.status === "success"
                       ? t("ui:dialog.bookmarkAccountImport.status.imported")
                       : translateFailureCategory(t, row.failureCategory)}

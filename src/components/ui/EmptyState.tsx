@@ -77,17 +77,16 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
       >
         <div
           className={cn(
-            "mb-4 flex h-12 w-12 items-center justify-center text-gray-300 dark:text-gray-600",
-            isDestructive && "text-destructive",
+            "text-disabled-foreground mb-4 flex h-12 w-12 items-center justify-center",
+            isDestructive && "text-destructive-text",
           )}
         >
           {icon}
         </div>
         <p
           className={cn(
-            "dark:text-dark-text-secondary mb-4 text-sm font-medium text-gray-700",
-            isDestructive &&
-              "dark:text-dark-text-primary font-semibold text-gray-900",
+            "text-secondary-foreground mb-4 text-sm font-medium",
+            isDestructive && "text-foreground font-semibold",
           )}
         >
           {title}
@@ -95,7 +94,7 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
         {description && (
           <p
             className={cn(
-              "dark:text-dark-text-tertiary mb-4 text-sm text-gray-400",
+              "dark:text-muted-foreground text-faint-foreground mb-4 text-sm",
               isDestructive && "leading-6",
               descriptionClassName,
             )}

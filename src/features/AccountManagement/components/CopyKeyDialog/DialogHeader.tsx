@@ -16,12 +16,12 @@ export function DialogHeader({ account }: DialogHeaderProps) {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center space-x-3">
-        <KeyRound className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+        <KeyRound className="text-theme-600 dark:text-theme-400 h-5 w-5" />
         <div>
-          <h2 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
+          <h2 className="text-foreground text-lg font-semibold">
             {t("dialog.copyKey.title")}
           </h2>
-          <p className="dark:text-dark-text-secondary mt-0.5 text-xs text-gray-500">
+          <p className="dark:text-secondary-foreground text-muted-foreground mt-0.5 text-xs">
             {account?.name}
           </p>
         </div>

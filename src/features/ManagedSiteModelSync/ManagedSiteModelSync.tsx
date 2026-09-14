@@ -1434,17 +1434,17 @@ export default function ManagedSiteModelSync({
       }}
     >
       <TabsList
-        className={`corners-concentric mb-4 flex space-x-2 rounded-lg bg-gray-100 p-1 [--corner-inset:--spacing(1)] dark:bg-gray-800 ${CORNERS.buttonItems}`}
+        className={`corners-concentric bg-muted dark:bg-card mb-4 flex space-x-2 rounded-lg p-1 [--corner-inset:--spacing(1)] ${CORNERS.buttonItems}`}
       >
         <TabsTrigger
           value={TAB_VALUE.history}
-          className="flex-1 rounded-lg px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow dark:text-gray-300 dark:data-[state=active]:bg-gray-900 dark:data-[state=active]:text-blue-400"
+          className="text-muted-foreground hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-theme-700 dark:text-secondary-foreground dark:data-[state=active]:bg-background dark:data-[state=active]:text-theme-400 flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors data-[state=active]:shadow"
         >
           {historyTabLabel}
         </TabsTrigger>
         <TabsTrigger
           value={TAB_VALUE.manual}
-          className="flex-1 rounded-lg px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow dark:text-gray-300 dark:data-[state=active]:bg-gray-900 dark:data-[state=active]:text-blue-400"
+          className="text-muted-foreground hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-theme-700 dark:text-secondary-foreground dark:data-[state=active]:bg-background dark:data-[state=active]:text-theme-400 flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors data-[state=active]:shadow"
         >
           {manualTabLabel}
         </TabsTrigger>
@@ -1499,7 +1499,7 @@ export default function ManagedSiteModelSync({
       <TabsContent value={TAB_VALUE.manual}>
         <div className="space-y-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-muted-foreground text-sm">
               {t("execution.manual.description")}
             </p>
             <div className="flex flex-col gap-3 md:flex-row md:items-center">
@@ -1547,7 +1547,7 @@ export default function ManagedSiteModelSync({
           </div>
 
           {isChannelsLoading ? (
-            <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+            <div className="border-border-strong text-muted-foreground dark:border-border rounded-lg border border-dashed p-6 text-center text-sm">
               {t("execution.manual.loading")}
             </div>
           ) : manualHasResults ? (
@@ -1611,7 +1611,7 @@ export default function ManagedSiteModelSync({
       />
 
       {!isModelSyncUnsupported && !isConfigMissing ? (
-        <p className="mb-6 text-sm leading-6 text-slate-600 dark:text-slate-400">
+        <p className="text-muted-foreground mb-6 text-sm leading-6">
           {t("managedSiteModelSync:optionalGuidance.description")}
         </p>
       ) : null}
@@ -1619,7 +1619,7 @@ export default function ManagedSiteModelSync({
       {isModelSyncUnsupported ? (
         <EmptyState
           className="mt-6"
-          icon={<RefreshCcw className="h-12 w-12 text-slate-400" />}
+          icon={<RefreshCcw className="text-faint-foreground h-12 w-12" />}
           title={t("managedSiteModelSync:execution.unsupported.title")}
           description={getManagedSiteUnsupportedModelSyncMessage(
             t,

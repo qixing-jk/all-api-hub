@@ -69,12 +69,12 @@ export function getAnnouncementSourceUrl(record: SiteAnnouncementRecord) {
 export function getMetricToneClasses(tone: "blue" | "amber" | "emerald") {
   switch (tone) {
     case "amber":
-      return "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-400/10 dark:text-amber-200 dark:ring-amber-400/20"
+      return "bg-warning-soft text-warning-soft-foreground ring-warning-text dark:ring-warning-text/20"
     case "emerald":
-      return "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-400/10 dark:text-emerald-200 dark:ring-emerald-400/20"
+      return "bg-success-soft text-success-soft-foreground ring-success-text dark:ring-success-text/20"
     case "blue":
     default:
-      return "bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-400/10 dark:text-blue-200 dark:ring-blue-400/20"
+      return "bg-theme-50 text-theme-700 ring-theme-200 dark:bg-theme-400/10 dark:text-theme-200 dark:ring-theme-400/20"
   }
 }
 

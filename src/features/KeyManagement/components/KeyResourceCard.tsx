@@ -231,7 +231,7 @@ function KeyResourceActionSeparator() {
   return (
     <span
       aria-hidden="true"
-      className="dark:bg-dark-bg-tertiary hidden h-4 w-px bg-gray-200 sm:block"
+      className="bg-secondary hidden h-4 w-px sm:block"
     />
   )
 }
@@ -281,10 +281,10 @@ export function KeyResourceFactList({
           key={fact.id}
           className="flex min-w-0 flex-wrap items-baseline gap-x-2 break-words"
         >
-          <span className="dark:text-dark-text-tertiary text-xs text-gray-500 sm:text-sm">
+          <span className="text-muted-foreground text-xs sm:text-sm">
             {fact.label}
           </span>
-          <span className="dark:text-dark-text-primary min-w-0 text-xs font-medium break-words text-gray-900 sm:text-sm">
+          <span className="text-foreground min-w-0 text-xs font-medium break-words sm:text-sm">
             {fact.value}
           </span>
         </div>
@@ -308,7 +308,7 @@ export function KeyResourceSecretDisplay({
   }
 
   const labelContent = label ? (
-    <span className="dark:text-dark-text-tertiary shrink-0 whitespace-nowrap text-gray-500">
+    <span className="text-muted-foreground shrink-0 whitespace-nowrap">
       {label}
     </span>
   ) : null
@@ -321,11 +321,11 @@ export function KeyResourceSecretDisplay({
     <div className="flex flex-wrap items-center gap-1.5">{controls}</div>
   ) : null
   const messageContent = message ? (
-    <span className="dark:text-dark-text-tertiary inline-flex min-w-0 items-center gap-1.5 text-xs text-gray-500">
+    <span className="text-muted-foreground inline-flex min-w-0 items-center gap-1.5 text-xs">
       <IconButton
         type="button"
         aria-label={message}
-        className="dark:text-dark-text-tertiary dark:hover:bg-dark-bg-tertiary dark:hover:text-dark-text-secondary shrink-0 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+        className="dark:hover:bg-secondary text-muted-foreground hover:bg-muted hover:text-secondary-foreground shrink-0"
         size="xs"
         tooltip={message}
         variant="ghost"
@@ -445,7 +445,7 @@ export function KeyResourceCard({
       tabIndex={targetId ? -1 : undefined}
       className={cn(
         isNavigationTarget &&
-          "ring-2 ring-blue-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-900",
+          "ring-theme-500 dark:ring-offset-surface-subtle ring-offset-background ring-2 ring-offset-2",
       )}
     >
       <CardContent padding="default" spacing="default">
@@ -470,7 +470,7 @@ export function KeyResourceCard({
               id={detailsPanelId}
               role="region"
               aria-labelledby={detailsTriggerId}
-              className="dark:border-dark-bg-tertiary flex min-w-0 flex-col gap-3 border-t border-gray-200 pt-3"
+              className="border-border flex min-w-0 flex-col gap-3 border-t pt-3"
             >
               {detailState.status === "loading" ? (
                 <div role="status" className="flex items-center gap-2 text-sm">
@@ -502,7 +502,7 @@ export function KeyResourceCard({
                 detailState.facts.length > 0 ? (
                   <KeyResourceFactList facts={detailState.facts} />
                 ) : (
-                  <p className="dark:text-dark-text-secondary text-sm text-gray-600">
+                  <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
                     {t("details.empty")}
                   </p>
                 )

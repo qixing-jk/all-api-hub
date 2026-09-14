@@ -135,7 +135,6 @@ describe("UsageAnalytics echartsOptions", () => {
       categories: ["A", "B"],
       values: [1, 2],
       valueLabel: "Value",
-      isDark: true,
     }) as any
 
     expect(option.series?.[0]?.type).toBe("pie")

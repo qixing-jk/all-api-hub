@@ -17,10 +17,10 @@ export function GatewayGuidanceDiscovery({
 }) {
   const { t } = useTranslation("optionsOverview")
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200/80 bg-slate-50/60 p-4 dark:border-white/10 dark:bg-white/[0.025]">
+    <div className="border-border/80 bg-surface-subtle/60 dark:border-foreground/10 dark:bg-foreground/[0.025] flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4">
       <div className="flex min-w-0 flex-1 items-start gap-3">
         <Workflow
-          className="mt-0.5 h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400"
+          className="text-theme-600 dark:text-theme-400 mt-0.5 h-5 w-5 shrink-0"
           aria-hidden
         />
         <div className="min-w-0 space-y-1">

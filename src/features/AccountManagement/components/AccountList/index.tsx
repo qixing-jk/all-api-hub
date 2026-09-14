@@ -1030,14 +1030,14 @@ export default function AccountList({
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
-            <div className="shrink-0 rounded-md bg-blue-50 p-2 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300">
+            <div className="bg-theme-50 text-theme-600 dark:bg-theme-900/40 dark:text-theme-300 shrink-0 rounded-md p-2">
               <Inbox className="h-5 w-5" />
             </div>
             <div className="space-y-1">
-              <h2 className="dark:text-dark-text-primary text-sm font-medium text-gray-900">
+              <h2 className="text-foreground text-sm font-medium">
                 {t("account:emptyState")}
               </h2>
-              <p className="dark:text-dark-text-secondary max-w-2xl text-sm leading-6 text-gray-600">
+              <p className="dark:text-secondary-foreground text-muted-foreground max-w-2xl text-sm leading-6">
                 {t("account:emptyStateDescription")}
               </p>
             </div>
@@ -1077,20 +1077,20 @@ export default function AccountList({
       />
     ) : undefined
     const rowClassName = cn(
-      "relative transition-colors hover:bg-gray-50/80 focus-within:bg-gray-50/80 dark:hover:bg-white/[0.035] dark:focus-within:bg-white/[0.035]",
+      "relative transition-colors hover:bg-surface-subtle/80 focus-within:bg-surface-subtle/80 dark:hover:bg-foreground/[0.035] dark:focus-within:bg-foreground/[0.035]",
       !item.isLastInGroup &&
-        "after:absolute after:right-4 after:bottom-0 after:left-4 after:h-px after:bg-gray-100 after:content-[''] dark:after:bg-white/[0.06]",
+        "after:absolute after:right-4 after:bottom-0 after:left-4 after:h-px after:bg-muted after:content-[''] dark:after:bg-foreground/[0.06]",
       item.startsNewGroup &&
-        "border-t-4 border-gray-100 dark:border-gray-950/45",
+        "border-t-4 border-border-subtle dark:border-border-subtle/45",
       item.group === "pinned" &&
-        "bg-slate-50 hover:bg-slate-100/80 dark:bg-slate-700/45 dark:hover:bg-slate-700/55",
+        "bg-surface-subtle hover:bg-muted/80 dark:bg-secondary/45 dark:hover:bg-secondary/55",
       item.group === "disabled" &&
-        "bg-gray-50/50 opacity-40 hover:opacity-80 focus-within:opacity-80 dark:bg-black/10",
+        "bg-surface-subtle/50 opacity-40 hover:opacity-80 focus-within:opacity-80 dark:bg-overlay/10",
       isBulkMode &&
         selectedIdSet.has(result.account.id) &&
-        "bg-blue-50/80 opacity-100 hover:bg-blue-100/60 focus-within:bg-blue-100/60 dark:bg-blue-950/35 dark:hover:bg-blue-900/30 dark:focus-within:bg-blue-900/30",
+        "bg-theme-50/80 opacity-100 hover:bg-theme-100/60 focus-within:bg-theme-100/60 dark:bg-theme-950/35 dark:hover:bg-theme-900/30 dark:focus-within:bg-theme-900/30",
       detectedAccount?.id === result.account.id &&
-        "border-l-4 border-l-blue-500 bg-blue-50/70 dark:border-l-blue-400 dark:bg-blue-900/30",
+        "border-l-4 border-l-theme-500 bg-theme-50/70 dark:border-l-theme-400 dark:bg-theme-900/30",
     )
     const rowProps = {
       site: result.account,
@@ -1136,12 +1136,12 @@ export default function AccountList({
   return (
     <Card
       padding="none"
-      className="[container-type:inline-size] flex flex-col overflow-hidden rounded-xl border-gray-200/80 shadow-xs dark:border-white/10"
+      className="border-border/80 dark:border-foreground/10 [container-type:inline-size] flex flex-col overflow-hidden rounded-xl shadow-xs"
       data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListView}
     >
       <CardContent padding={"none"} spacing={"none"}>
         {/* Search + Filters */}
-        <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary bg-white p-3 sm:p-4">
+        <div className="dark:border-border dark:bg-background bg-card p-3 sm:p-4">
           <div className="flex flex-col gap-3">
             <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 [@container(min-width:40rem)]:grid-cols-1 [@container(min-width:68rem)]:grid-cols-[minmax(15rem,1fr)_minmax(0,2fr)]">
               <div className="min-w-0">
@@ -1165,7 +1165,7 @@ export default function AccountList({
                 <SlidersHorizontal aria-hidden="true" className="size-3.5" />
                 {t("account:filter.toggle")}
                 {activeStatusFilterCount > 0 && (
-                  <span className="rounded bg-blue-50 px-1 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                  <span className="bg-theme-50 text-theme-700 dark:bg-theme-950 dark:text-theme-300 rounded px-1">
                     {activeStatusFilterCount}
                   </span>
                 )}
@@ -1228,7 +1228,7 @@ export default function AccountList({
               />
             )}
             {showFilteredSummary && (
-              <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600 dark:text-gray-300">
+              <div className="text-muted-foreground dark:text-secondary-foreground flex flex-wrap items-center gap-3 text-xs">
                 <span>
                   {t("account:filter.summary", {
                     count: filteredSites.length,
@@ -1301,12 +1301,12 @@ export default function AccountList({
 
         {showGroupReorderHint ? (
           <div
-            className="dark:border-dark-bg-tertiary flex items-center gap-2 border-b border-blue-100 bg-blue-50/80 px-3 py-1.5 text-xs leading-5 text-blue-800 dark:bg-blue-950/40 dark:text-blue-200"
+            className="dark:border-border border-theme-100 bg-theme-50/80 text-theme-800 dark:bg-theme-950/40 dark:text-theme-200 flex items-center gap-2 border-b px-3 py-1.5 text-xs leading-5"
             role="note"
           >
             <Info
               aria-hidden="true"
-              className="size-3.5 shrink-0 text-blue-600 dark:text-blue-400"
+              className="text-theme-600 dark:text-theme-400 size-3.5 shrink-0"
             />
             <span>{t("account:list.reorderGroupHint")}</span>
           </div>
@@ -1381,16 +1381,16 @@ export default function AccountList({
         size="md"
         details={
           <div className="space-y-3 text-sm">
-            <div className="font-medium text-gray-900 dark:text-gray-100">
+            <div className="text-foreground font-medium">
               {t("account:bulk.deletePreviewTitle")}
             </div>
-            <div className="space-y-1 text-gray-600 dark:text-gray-300">
+            <div className="text-muted-foreground dark:text-secondary-foreground space-y-1">
               {bulkDeletePreviewAccounts.map((account) => (
                 <div key={account.id}>{account.name}</div>
               ))}
             </div>
             {selectedAccountIds.length > bulkDeletePreviewAccounts.length ? (
-              <div className="text-xs text-gray-500 dark:text-gray-400">
+              <div className="text-muted-foreground text-xs">
                 {t("account:bulk.deletePreviewRemainder", {
                   count:
                     selectedAccountIds.length -
@@ -1399,7 +1399,7 @@ export default function AccountList({
               </div>
             ) : null}
             {hiddenSelectedCount > 0 ? (
-              <div className="text-xs text-amber-700 dark:text-amber-300">
+              <div className="text-warning-text text-xs">
                 {t("account:bulk.deleteHiddenSelectedHint", {
                   count: hiddenSelectedCount,
                 })}

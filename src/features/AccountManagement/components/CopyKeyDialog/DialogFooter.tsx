@@ -24,7 +24,7 @@ export function DialogFooter({
     <div className="flex items-center justify-between">
       <div className="flex items-center space-x-2">
         {keyCount > 0 && (
-          <div className="dark:text-dark-text-secondary flex items-center space-x-1.5 text-xs text-gray-500">
+          <div className="dark:text-secondary-foreground text-muted-foreground flex items-center space-x-1.5 text-xs">
             <KeyRound className="h-3 w-3" />
             <span>{t("ui:dialog.copyKey.totalKeys", { count: keyCount })}</span>
           </div>

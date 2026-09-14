@@ -18,6 +18,41 @@
     "sidepanelUnsupportedHelper": "Trình duyệt này không hỗ trợ thanh bên; lựa chọn thanh bên sẽ tự động chuyển về popup.",
     "title": "Bấm biểu tượng tiện ích"
   },
+  "appearance": {
+    "color": "Màu chủ đề",
+    "colors": {
+      "blue": "Xanh dương",
+      "green": "Xanh lá",
+      "orange": "Cam",
+      "rose": "Hồng",
+      "slate": "Xám đá",
+      "violet": "Tím"
+    },
+    "description": "Thay đổi được lưu tự động và áp dụng cho trang cài đặt, cửa sổ bật lên và bảng bên.",
+    "preset": "Chủ đề có sẵn",
+    "presetColorsHint": "Chủ đề này có bảng màu riêng. Chọn chủ đề mặc định để chọn màu nhấn riêng.",
+    "presetDescriptions": {
+      "anthropic": "Màu kem ấm và đất nung, cùng chế độ tối màu than.",
+      "default": "Tông trung tính cổ điển với màu nhấn tùy chọn."
+    },
+    "presets": {
+      "anthropic": "Anthropic",
+      "default": "Chủ đề mặc định"
+    },
+    "preview": "Xem trước",
+    "primaryAction": "Thao tác chính",
+    "radii": {
+      "default": "Mặc định",
+      "large": "Lớn",
+      "none": "Vuông",
+      "small": "Nhỏ"
+    },
+    "radius": "Độ bo góc",
+    "reset": "Đặt lại giao diện",
+    "saveFailed": "Không thể lưu. Vui lòng thử lại.",
+    "secondaryAction": "Thao tác phụ",
+    "title": "Cài đặt giao diện"
+  },
   "appearanceLanguage": {
     "language": "Ngôn ngữ",
     "languageDesc": "Chọn ngôn ngữ hiển thị bạn muốn dùng",

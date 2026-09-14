@@ -263,7 +263,7 @@ export default function FilterBar({
           <DropdownMenuItem
             onSelect={() => applyStatuses(NEEDS_ATTENTION_RESULT_STATUSES)}
           >
-            <CircleAlert className="h-4 w-4 text-red-500" />
+            <CircleAlert className="text-destructive-text h-4 w-4" />
             <span>{t("execution.filters.needsAttention")}</span>
             {renderMenuCount(needsAttentionCount)}
           </DropdownMenuItem>

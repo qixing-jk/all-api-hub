@@ -57,7 +57,7 @@ export default function UsageAnalyticsFiltersCard({
         {/*site filter*/}
         <div>
           <Label className="text-sm font-medium">{t("filters.sites")}</Label>
-          <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+          <div className="text-muted-foreground text-xs">
             {t("filters.sitesHint")}
           </div>
         </div>
@@ -74,7 +74,7 @@ export default function UsageAnalyticsFiltersCard({
         {/*account filter*/}
         <div>
           <Label className="text-sm font-medium">{t("filters.accounts")}</Label>
-          <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+          <div className="text-muted-foreground text-xs">
             {t("filters.accountsHint")}
           </div>
         </div>
@@ -91,7 +91,7 @@ export default function UsageAnalyticsFiltersCard({
         {/*API token filter*/}
         <div>
           <Label className="text-sm font-medium">{t("filters.tokens")}</Label>
-          <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+          <div className="text-muted-foreground text-xs">
             {t("filters.tokensHint")}
           </div>
         </div>

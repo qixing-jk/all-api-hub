@@ -18,7 +18,7 @@ export function AnimatedStatValue({
 
   return (
     <div
-      className={`${sizeClass} dark:text-dark-text-primary text-left font-bold tracking-tight text-gray-900`}
+      className={`${sizeClass} text-foreground text-left font-bold tracking-tight`}
     >
       <CountUp
         start={0}

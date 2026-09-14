@@ -189,7 +189,7 @@ export default function AutoDetectErrorAlert({
       </Alert>
 
       {manualAddGuideAnchor && (
-        <Alert variant="info" compact>
+        <Alert variant="default" compact>
           <div className="space-y-2 text-sm leading-relaxed">
             <p className="font-semibold">{t("manualAddRecovery.title")}</p>
             <p>{t("manualAddRecovery.description")}</p>
@@ -202,7 +202,7 @@ export default function AutoDetectErrorAlert({
       )}
 
       {canShowApiCredentialFallback && (
-        <Alert variant="info" compact>
+        <Alert variant="default" compact>
           <div className="space-y-2 text-sm leading-relaxed">
             <p className="font-semibold">{t("apiCredentialFallback.title")}</p>
             <ol className="list-decimal space-y-2 pl-4">

@@ -53,7 +53,7 @@ export function Header({
   const { t } = useTranslation(["keyManagement", "common"])
   const [isManualRefreshLoading, setIsManualRefreshLoading] = useState(false)
   const bridgeDescription = (
-    <span className="mt-1 block text-sm text-slate-600 dark:text-slate-400">
+    <span className="text-muted-foreground mt-1 block text-sm">
       {t("unifiedApiGuidance.headerBridge")}
     </span>
   )
@@ -78,7 +78,7 @@ export function Header({
       onClick={onAddToken}
       disabled={isAddTokenDisabled}
       size="sm"
-      variant="success"
+      variant="default"
       leftIcon={<Plus className="h-4 w-4" />}
       data-testid={KEY_MANAGEMENT_TEST_IDS.addTokenButton}
     >
@@ -91,7 +91,7 @@ export function Header({
       <>
         <span className="block">{t("description")}</span>
         {bridgeDescription}
-        <span className="mt-1 block font-medium text-amber-700 dark:text-amber-300">
+        <span className="text-warning-text mt-1 block font-medium">
           {managedSiteStatusHint}
         </span>
       </>

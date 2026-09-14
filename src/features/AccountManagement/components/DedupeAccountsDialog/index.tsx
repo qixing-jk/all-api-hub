@@ -251,12 +251,12 @@ export default function DedupeAccountsDialog({
         header={
           <div className="flex min-w-0 flex-col gap-1 pr-8">
             <div className="flex items-center gap-2">
-              <ScanSearch className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
-              <h2 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
+              <ScanSearch className="text-theme-600 dark:text-theme-400 h-5 w-5 shrink-0" />
+              <h2 className="text-foreground text-lg font-semibold">
                 {t("ui:dialog.dedupeAccounts.title")}
               </h2>
             </div>
-            <p className="dark:text-dark-text-secondary text-sm text-gray-500">
+            <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
               {t("ui:dialog.dedupeAccounts.description")}
             </p>
             <div className="mt-2 flex flex-wrap gap-2">

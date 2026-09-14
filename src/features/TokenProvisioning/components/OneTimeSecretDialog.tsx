@@ -224,10 +224,10 @@ export function OneTimeSecretDialog({
         size="lg"
         header={
           <div className="min-w-0 pr-10">
-            <h2 className="dark:text-dark-text-primary truncate text-base font-semibold text-gray-900 sm:text-lg">
+            <h2 className="text-foreground truncate text-base font-semibold sm:text-lg">
               {t("keyManagement:oneTimeKey.title")}
             </h2>
-            <p className="dark:text-dark-text-tertiary mt-1 text-sm text-gray-500">
+            <p className="text-muted-foreground mt-1 text-sm">
               {result?.displayName
                 ? t("keyManagement:oneTimeKey.subtitle", {
                     name: result.displayName,
@@ -290,7 +290,7 @@ export function OneTimeSecretDialog({
           <div>
             <label
               htmlFor={secretInputId}
-              className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
+              className="text-secondary-foreground text-sm font-medium"
             >
               {t("keyManagement:oneTimeKey.keyLabel")}
             </label>

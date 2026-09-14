@@ -43,7 +43,7 @@ export function GuidanceCardLayout({
       type="button"
       variant="link"
       size="sm"
-      className="h-auto min-h-0 justify-end px-0 py-0 text-xs text-slate-500 dark:text-slate-400"
+      className="text-muted-foreground h-auto min-h-0 justify-end px-0 py-0 text-xs"
       onClick={dismissControls.onRequestPermanentDismiss}
     >
       {dismissControls.permanentlyDismissLabel}
@@ -51,7 +51,7 @@ export function GuidanceCardLayout({
   ) : null
 
   return (
-    <Card className="dark:bg-dark-bg-secondary/95 relative overflow-hidden border-slate-200/80 bg-white/95 shadow-sm shadow-slate-200/60 dark:border-white/10 dark:shadow-black/20">
+    <Card className="border-border/80 bg-card/95 shadow-border/60 dark:border-foreground/10 dark:shadow-shadow/20 relative overflow-hidden shadow-sm">
       <div
         className={cn(
           "grid gap-4 p-4 lg:items-stretch",
@@ -64,12 +64,12 @@ export function GuidanceCardLayout({
             <Badge variant={badgeVariant} size="sm" className="shrink-0">
               {badge}
             </Badge>
-            <h4 className="min-w-0 text-base leading-6 font-semibold break-words text-slate-950 dark:text-white">
+            <h4 className="text-foreground min-w-0 text-base leading-6 font-semibold break-words">
               {title}
             </h4>
           </div>
 
-          <p className="dark:text-dark-text-secondary max-w-4xl text-sm leading-6 text-slate-600">
+          <p className="dark:text-secondary-foreground text-muted-foreground max-w-4xl text-sm leading-6">
             {description}
           </p>
 
@@ -91,7 +91,7 @@ export function GuidanceCardLayout({
                   variant="ghost"
                   size="icon-xs"
                   data-guidance-session-dismiss
-                  className="absolute top-3 right-3 text-slate-500 hover:text-slate-900 lg:static dark:text-slate-400 dark:hover:text-white"
+                  className="text-muted-foreground hover:text-foreground absolute top-3 right-3 lg:static"
                   aria-label={dismissControls.dismissForSessionLabel}
                   title={dismissControls.dismissForSessionLabel}
                   onClick={dismissControls.onDismissForSession}
@@ -104,7 +104,7 @@ export function GuidanceCardLayout({
               <div
                 data-guidance-action-panel
                 className={cn(
-                  "flex min-w-0 flex-1 flex-col gap-3 rounded-lg border border-slate-200/70 bg-slate-50/70 p-3 dark:border-white/10 dark:bg-white/[0.035]",
+                  "border-border/70 bg-surface-subtle/70 dark:border-foreground/10 dark:bg-foreground/[0.035] flex min-w-0 flex-1 flex-col gap-3 rounded-lg border p-3",
                   actionPanelJustify === "between"
                     ? "justify-between"
                     : "justify-start",
@@ -141,9 +141,9 @@ export function GuidanceCardNote({
   const Icon = icon === "key" ? KeyRound : ServerCog
 
   return (
-    <div className="flex min-w-0 gap-2.5 rounded-md border border-slate-200/70 bg-white/70 p-3 text-sm leading-5 text-slate-600 dark:border-white/10 dark:bg-white/[0.035] dark:text-slate-300">
+    <div className="border-border/70 bg-card/70 text-muted-foreground dark:border-foreground/10 dark:bg-foreground/[0.035] dark:text-secondary-foreground flex min-w-0 gap-2.5 rounded-md border p-3 text-sm leading-5">
       <Icon
-        className="mt-0.5 h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400"
+        className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0"
         aria-hidden
       />
       <span className="min-w-0 break-words">{children}</span>
@@ -175,7 +175,7 @@ export function GuidanceCardActionButton({
       className={cn(
         "w-full justify-between whitespace-normal",
         !primary &&
-          "border-slate-200/70 bg-white/70 hover:border-blue-200 hover:bg-blue-50/40 dark:border-white/10 dark:bg-white/[0.035] dark:hover:border-blue-900/70 dark:hover:bg-blue-950/10",
+          "border-border/70 bg-card/70 hover:border-theme-200 hover:bg-theme-50/40 dark:border-foreground/10 dark:bg-foreground/[0.035] dark:hover:border-theme-900/70 dark:hover:bg-theme-950/10",
       )}
       aria-busy={busy || undefined}
       aria-disabled={busy || undefined}

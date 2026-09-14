@@ -71,7 +71,7 @@ export default function SortableBookmarkListItem({
               size="xs"
               aria-label={handleLabel}
               disabled={isDragDisabled}
-              className="shrink-0 text-gray-400 hover:text-gray-700 focus-visible:ring-2 focus-visible:ring-offset-2"
+              className="text-faint-foreground hover:text-secondary-foreground shrink-0 focus-visible:ring-2 focus-visible:ring-offset-2"
               {...listeners}
               {...attributes}
             >

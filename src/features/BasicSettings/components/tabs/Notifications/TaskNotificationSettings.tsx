@@ -104,7 +104,7 @@ function NotificationSettingItem({
               </Label>
             )}
             {description && (
-              <BodySmall className="dark:text-dark-text-tertiary font-normal text-gray-500">
+              <BodySmall className="text-muted-foreground font-normal">
                 {description}
               </BodySmall>
             )}
@@ -119,7 +119,7 @@ function NotificationSettingItem({
           )}
         </div>
         {children && (
-          <div className="dark:bg-dark-bg-tertiary/20 dark:border-dark-bg-tertiary rounded-lg border border-gray-100 bg-gray-50/30 p-4">
+          <div className="dark:bg-secondary/20 dark:border-border border-border-subtle bg-surface-subtle/30 rounded-lg border p-4">
             {children}
           </div>
         )}
@@ -644,9 +644,7 @@ export default function TaskNotificationSettings() {
           <CardList>
             <CardItem
               id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_ENABLED}
-              icon={
-                <Bell className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-              }
+              icon={<Bell className="text-link h-5 w-5" />}
               title={t("taskNotifications.enable")}
               description={t("taskNotifications.enableDesc")}
               rightContent={
@@ -693,7 +691,7 @@ export default function TaskNotificationSettings() {
                   {permissionGranted !== null && (
                     <>
                       {!permissionGranted && (
-                        <div className="dark:bg-dark-bg-tertiary h-4 w-px bg-gray-200" />
+                        <div className="bg-secondary h-4 w-px" />
                       )}
                       <Badge
                         variant={permissionGranted ? "success" : "secondary"}
@@ -868,7 +866,7 @@ export default function TaskNotificationSettings() {
                   onBlur={() => void feishu.commit()}
                   onKeyDown={blurInputOnEnter}
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-muted-foreground text-xs">
                   {t("taskNotifications.channels.feishu.webhookKeyDescription")}{" "}
                   <Link
                     href={feishuDocsUrl}
@@ -979,7 +977,7 @@ export default function TaskNotificationSettings() {
                     />
                   </FormField>
                 </div>
-                <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                <p className="text-muted-foreground text-xs leading-relaxed">
                   {t(
                     "taskNotifications.channels.dingtalk.webhookKeyDescription",
                   )}{" "}
@@ -1043,7 +1041,7 @@ export default function TaskNotificationSettings() {
                   onBlur={() => void wecom.commit()}
                   onKeyDown={blurInputOnEnter}
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-muted-foreground text-xs">
                   {t("taskNotifications.channels.wecom.webhookKeyDescription")}{" "}
                   <Link
                     href={wecomDocsUrl}
@@ -1136,7 +1134,7 @@ export default function TaskNotificationSettings() {
                     />
                   </FormField>
                 </div>
-                <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                <p className="text-muted-foreground text-xs leading-relaxed">
                   {t("taskNotifications.channels.ntfy.topicUrlDescription")}{" "}
                   <Link
                     href={ntfyDocsUrl}
@@ -1196,7 +1194,7 @@ export default function TaskNotificationSettings() {
                   onBlur={() => void webhook.commit()}
                   onKeyDown={blurInputOnEnter}
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-muted-foreground text-xs">
                   {t("taskNotifications.channels.webhook.urlDescription")}
                 </p>
               </FormField>

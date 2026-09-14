@@ -64,19 +64,19 @@ export function NativeResourceEditorLoadingSkeleton({
         aria-hidden="true"
         className="animate-pulse space-y-5 motion-reduce:animate-none"
       >
-        <div className="dark:bg-dark-bg-tertiary h-16 rounded-lg bg-gray-200" />
+        <div className="bg-secondary h-16 rounded-lg" />
         {sectionFieldCounts.map((fieldCount, sectionIndex) => (
           <div key={sectionIndex} className="space-y-4">
-            <div className="dark:bg-dark-bg-tertiary h-4 w-28 rounded bg-gray-200" />
+            <div className="bg-secondary h-4 w-28 rounded" />
             {Array.from({ length: fieldCount }, (_, fieldIndex) => (
               <div key={fieldIndex} className="space-y-2">
-                <div className="dark:bg-dark-bg-tertiary h-3 w-24 rounded bg-gray-200" />
-                <div className="dark:bg-dark-bg-tertiary h-9 rounded-md bg-gray-200" />
+                <div className="bg-secondary h-3 w-24 rounded" />
+                <div className="bg-secondary h-9 rounded-md" />
               </div>
             ))}
           </div>
         ))}
-        <div className="dark:bg-dark-bg-tertiary h-4 w-32 rounded bg-gray-200" />
+        <div className="bg-secondary h-4 w-32 rounded" />
       </div>
     </div>
   )

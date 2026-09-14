@@ -180,7 +180,7 @@ export function AssociateApiCredentialProfileDialog({
         </div>
 
         {existingProfileNames.length > 0 ? (
-          <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+          <div className="border-warning-border bg-warning-soft text-warning-soft-foreground rounded-md border p-3 text-sm">
             {t("apiCredentialProfiles:association.replaceExisting", {
               names: existingProfileNames.join(", "),
             })}

@@ -147,7 +147,7 @@ export function RepairMissingKeysResultsPanel({
               </CardTitle>
               <span
                 data-testid="repair-missing-keys-result-count"
-                className="text-xs leading-none text-gray-500 tabular-nums dark:text-gray-400"
+                className="text-muted-foreground text-xs leading-none tabular-nums"
               >
                 {activeView === REPAIR_RESULT_VIEWS.AccountCoverage
                   ? `${filteredResults.length}/${visibleResults.length}`
@@ -179,7 +179,7 @@ export function RepairMissingKeysResultsPanel({
                       onSearchTermChange("")
                       searchInputRef.current?.focus()
                     }}
-                    className="dark:hover:bg-dark-bg-tertiary rounded p-1 hover:bg-gray-100"
+                    className="dark:hover:bg-secondary hover:bg-muted rounded p-1"
                     aria-label={t("common:actions.clear")}
                   >
                     <X className="h-4 w-4" />
@@ -195,7 +195,7 @@ export function RepairMissingKeysResultsPanel({
           <CardContent
             padding="sm"
             spacing="none"
-            className="dark:border-dark-bg-tertiary border-b border-gray-200"
+            className="border-border border-b"
           >
             <div className="space-y-2">
               <TagFilter

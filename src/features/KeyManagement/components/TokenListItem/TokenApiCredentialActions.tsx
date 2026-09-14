@@ -111,7 +111,7 @@ export function TokenApiCredentialActions({
               data-testid={
                 TOKEN_PROVISIONING_TEST_IDS.openApiProfilesToastButton
               }
-              className="shrink-0 rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 rounded-md px-2 py-1 text-xs font-medium"
               onClick={() => {
                 openApiCredentialProfilesPage()
                 toast.dismiss(toastInstance.id)

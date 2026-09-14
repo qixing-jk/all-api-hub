@@ -12,7 +12,7 @@ export function LoadingIndicator() {
   return (
     <div className="flex flex-col items-center justify-center py-8">
       <Spinner size="lg" className="mb-4" aria-label={loadingLabel} />
-      <p className="dark:text-dark-text-secondary text-sm text-gray-500">
+      <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
         {loadingLabel}
       </p>
     </div>

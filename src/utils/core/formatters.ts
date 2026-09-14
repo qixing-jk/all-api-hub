@@ -345,39 +345,3 @@ export const formatTimestamp = (timestamp: number) => {
 
   return date.toLocaleDateString()
 }
-
-/**
- * 获取组别徽章样式
- */
-export const getGroupBadgeStyle = (group: string) => {
-  // 处理可能为空或未定义的 group
-  const groupName = group || "default"
-
-  // 根据组别名称生成不同的颜色主题
-  const hash = groupName.split("").reduce((a, b) => {
-    a = (a << 5) - a + b.charCodeAt(0)
-    return a & a
-  }, 0)
-
-  const colors = [
-    "bg-blue-100 text-blue-800 border-blue-200",
-    "bg-green-100 text-green-800 border-green-200",
-    "bg-purple-100 text-purple-800 border-purple-200",
-    "bg-orange-100 text-orange-800 border-orange-200",
-    "bg-pink-100 text-pink-800 border-pink-200",
-    "bg-indigo-100 text-indigo-800 border-indigo-200",
-    "bg-teal-100 text-teal-800 border-teal-200",
-    "bg-yellow-100 text-yellow-800 border-yellow-200",
-  ]
-
-  return colors[Math.abs(hash) % colors.length]
-}
-
-/**
- * 获取状态徽章样式
- */
-export const getStatusBadgeStyle = (status: number) => {
-  return status === 1
-    ? "bg-green-100 text-green-800 border-green-200"
-    : "bg-red-100 text-red-800 border-red-200"
-}

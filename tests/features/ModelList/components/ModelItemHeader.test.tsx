@@ -254,7 +254,7 @@ describe("ModelItemHeader", () => {
 
     const billingBadge = screen.getByText("ui:billing.perCall")
     expect(billingBadge).toBeInTheDocument()
-    expect(billingBadge).toHaveClass("bg-primary/10")
+    expect(billingBadge).toHaveClass("bg-primary-soft")
     expect(billingBadge).not.toHaveClass("bg-secondary")
   })
 

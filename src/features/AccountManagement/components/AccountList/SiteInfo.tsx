@@ -131,7 +131,7 @@ function CheckInStatusButton({
         <Icon
           className={cn(
             "h-4 w-4",
-            checkedIn ? "text-green-500" : "text-red-500",
+            checkedIn ? "text-success-text" : "text-destructive-text",
           )}
         />
       </IconButton>
@@ -155,7 +155,7 @@ function renderHighlightedFragments(
     fragment.highlighted ? (
       <mark
         key={`${fragment.text}-${index}`}
-        className="dark:text-dark-text-primary rounded bg-yellow-200 px-0.5 text-gray-900 dark:bg-yellow-500/30"
+        className="text-primary-soft-foreground bg-primary-soft rounded px-0.5"
       >
         {fragment.text}
       </mark>
@@ -410,7 +410,7 @@ export default function SiteInfo({
               disabled={isRefreshLocked}
               aria-label={staleStatusLabel}
             >
-              <TriangleAlert className="h-4 w-4 text-orange-500" />
+              <TriangleAlert className="text-warning-text h-4 w-4" />
             </IconButton>
           </Tooltip>,
         )
@@ -476,7 +476,11 @@ export default function SiteInfo({
             <div className="space-y-1">
               <p>
                 {t("list.site.status")}:{" "}
-                <span className={healthStatusDisplay.color || "text-gray-400"}>
+                <span
+                  className={
+                    healthStatusDisplay.color || "text-faint-foreground"
+                  }
+                >
                   {healthStatusDisplay.text || t("list.site.unknown")}
                 </span>
               </p>
@@ -566,7 +570,7 @@ export default function SiteInfo({
               aria-label={pinTooltipLabel}
             >
               <Pin
-                className="dark:text-dark-text-tertiary h-3 w-3 -rotate-12 text-gray-400 transition-colors"
+                className="dark:text-muted-foreground text-faint-foreground h-3 w-3 -rotate-12 transition-colors"
                 aria-hidden="true"
               />
             </IconButton>
@@ -605,9 +609,9 @@ export default function SiteInfo({
               position="top"
             >
               <Badge
-                variant="outline"
+                variant="secondary"
                 size="sm"
-                className="max-w-[10rem] shrink-0 truncate border-sky-200/80 bg-sky-50/70 whitespace-nowrap text-sky-700 dark:border-sky-700/50 dark:bg-sky-900/20 dark:text-sky-200"
+                className="max-w-[10rem] shrink-0 truncate whitespace-nowrap"
               >
                 {site.siteType}
               </Badge>
@@ -660,7 +664,7 @@ export default function SiteInfo({
         </div>
 
         <div className="mt-0.5 flex min-w-0 items-start gap-1">
-          <User className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
+          <User className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
           <Caption className="truncate" title={site.username}>
             {highlights?.username && site.username
               ? renderHighlightedFragments(highlights.username, site.username)
@@ -670,7 +674,7 @@ export default function SiteInfo({
 
         {showCreatedAt && (
           <div className="mt-0.5 flex min-w-0 items-start gap-1">
-            <CalendarDays className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
+            <CalendarDays className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
             <Caption
               className="truncate"
               title={`${createdAtLabel}: ${createdAtText}`}
@@ -682,7 +686,7 @@ export default function SiteInfo({
 
         {highlights?.baseUrl && (
           <div className="mt-0.5 flex min-w-0 items-start gap-1">
-            <Link className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
+            <Link className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
             <Caption className="truncate" title={site.baseUrl}>
               {renderHighlightedFragments(highlights.baseUrl, site.baseUrl)}
             </Caption>
@@ -691,7 +695,7 @@ export default function SiteInfo({
 
         {highlights?.customCheckInUrl && customCheckInUrl && (
           <div className="mt-0.5 flex min-w-0 items-start gap-1">
-            <RefreshCw className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
+            <RefreshCw className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
             <Caption className="truncate" title={customCheckInUrl}>
               {renderHighlightedFragments(
                 highlights.customCheckInUrl,
@@ -703,7 +707,7 @@ export default function SiteInfo({
 
         {highlights?.customRedeemUrl && customRedeemUrl && (
           <div className="mt-0.5 flex min-w-0 items-start gap-1">
-            <Gift className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
+            <Gift className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
             <Caption className="truncate" title={customRedeemUrl}>
               {renderHighlightedFragments(
                 highlights.customRedeemUrl,
@@ -715,7 +719,7 @@ export default function SiteInfo({
 
         {site.notes && (
           <div className="mt-0.5 flex min-w-0 items-start gap-1 sm:mt-1">
-            <SquarePen className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
+            <SquarePen className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
             <Caption className="truncate" title={site.notes}>
               {site.notes}
             </Caption>
@@ -724,7 +728,7 @@ export default function SiteInfo({
 
         {hasTags && (
           <div className="mt-0.5 flex min-w-0 items-start gap-1 sm:mt-1">
-            <Tag className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
+            <Tag className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
             <Caption className="truncate" title={tagLabel}>
               {highlights?.tags
                 ? renderHighlightedFragments(highlights.tags, tagLabel)

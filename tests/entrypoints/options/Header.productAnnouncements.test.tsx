@@ -13,7 +13,7 @@ vi.mock("~/components/LanguageSwitcher", () => ({
   LanguageSwitcher: () => <div data-testid="language-switcher" />,
 }))
 
-vi.mock("~/entrypoints/options/components/HeaderThemeSwitcher", () => ({
+vi.mock("~/features/Appearance/HeaderThemeSwitcher", () => ({
   default: () => <div data-testid="theme-switcher" />,
 }))
 

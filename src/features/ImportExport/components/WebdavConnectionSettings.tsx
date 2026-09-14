@@ -57,7 +57,7 @@ export function WebdavConnectionSettings({
       <CardHeader>
         <div className="flex items-center gap-2">
           <Plug
-            className="size-5 text-sky-600 dark:text-sky-400"
+            className="text-theme-600 dark:text-theme-400 size-5"
             aria-hidden="true"
           />
           <CardTitle className="m-0 text-base">
@@ -264,7 +264,7 @@ export function WebdavConnectionSettings({
           featureId={PRODUCT_ANALYTICS_FEATURE_IDS.WebDavSync}
           surfaceId={webDavSettingsSurface}
         >
-          <div className="flex flex-wrap items-center gap-3 border-t border-gray-200 pt-4 dark:border-gray-700">
+          <div className="border-border flex flex-wrap items-center gap-3 border-t pt-4">
             <Button
               id={WEBDAV_TARGET_IDS.testConnection}
               onClick={handleTestConnection}

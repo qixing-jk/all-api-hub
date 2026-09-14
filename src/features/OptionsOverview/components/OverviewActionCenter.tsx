@@ -25,13 +25,13 @@ interface OverviewActionCenterProps {
 
 const statusClasses = {
   [CONFIGURATION_STATUSES.configured]:
-    "border-slate-200/80 bg-white/95 hover:border-blue-200 hover:bg-blue-50/35 dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-blue-900/70 dark:hover:bg-blue-950/10",
+    "border-border/80 bg-card/95 hover:border-theme-200 hover:bg-theme-50/35 dark:border-foreground/10 dark:bg-foreground/[0.03] dark:hover:border-theme-900/70 dark:hover:bg-theme-950/10",
   [CONFIGURATION_STATUSES.disabled]:
-    "border-slate-200/80 bg-white/80 hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.025] dark:hover:border-white/20",
+    "border-border/80 bg-card/80 hover:border-border-strong hover:bg-surface-subtle dark:border-foreground/10 dark:bg-foreground/[0.025] dark:hover:border-foreground/20",
   [CONFIGURATION_STATUSES.needsSetup]:
-    "border-slate-200/80 bg-white/95 hover:border-amber-200 hover:bg-amber-50/25 dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-amber-900/70 dark:hover:bg-amber-950/10",
+    "border-border/80 bg-card/95 hover:border-warning-border hover:bg-warning-soft dark:border-foreground/10 dark:bg-foreground/[0.03]",
   [CONFIGURATION_STATUSES.notApplicable]:
-    "border-slate-200/70 bg-white/65 hover:border-slate-300 hover:bg-slate-50/80 dark:border-white/10 dark:bg-transparent dark:hover:border-white/20",
+    "border-border/70 bg-card/65 hover:border-border-strong hover:bg-surface-subtle/80 dark:border-foreground/10 dark:bg-transparent dark:hover:border-foreground/20",
 } as const
 
 /**
@@ -50,14 +50,14 @@ export function OverviewActionCenter({
           <Card
             key={item.id}
             className={cn(
-              "h-full shadow-sm shadow-slate-200/50 transition-colors dark:shadow-black/20",
+              "shadow-border/50 dark:shadow-shadow/20 h-full shadow-sm transition-colors",
               statusClasses[item.status],
             )}
           >
             <div className="flex min-h-28 flex-col gap-3 p-4">
               <div className="min-w-0 space-y-2">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <div className="dark:text-dark-text-primary truncate text-sm font-semibold text-slate-950">
+                  <div className="text-foreground truncate text-sm font-semibold">
                     {getActionCenterLabel(item.id, t)}
                   </div>
                   <Badge
@@ -67,11 +67,11 @@ export function OverviewActionCenter({
                     {getActionCenterStatusLabel(item.status, t)}
                   </Badge>
                 </div>
-                <div className="dark:text-dark-text-secondary text-sm leading-6 text-slate-600">
+                <div className="dark:text-secondary-foreground text-muted-foreground text-sm leading-6">
                   {getActionCenterDescription(item.id, t)}
                 </div>
                 {item.status !== CONFIGURATION_STATUSES.configured ? (
-                  <div className="dark:text-dark-text-tertiary text-xs leading-5 text-slate-500">
+                  <div className="text-muted-foreground text-xs leading-5">
                     {getActionCenterStateDescription(item, t)}
                   </div>
                 ) : null}
@@ -113,11 +113,11 @@ function ConfigurationSubItemButton({
       variant="outline"
       size="sm"
       aria-label={label}
-      className="group h-auto min-h-0 w-full min-w-0 shrink justify-between border-slate-200/70 bg-white/65 px-3 py-2 text-left whitespace-normal hover:border-blue-200 hover:bg-blue-50/40 dark:border-white/10 dark:bg-white/[0.035] dark:hover:border-blue-900/70 dark:hover:bg-blue-950/10 [&>span:last-child_svg]:h-3.5 [&>span:last-child_svg]:w-3.5 [&>span:last-child_svg]:text-slate-400 [&>span:last-child_svg]:transition-transform [&>span:last-child_svg]:group-hover:translate-x-0.5 [&>span:last-child_svg]:group-hover:text-slate-600 dark:[&>span:last-child_svg]:text-slate-500 dark:[&>span:last-child_svg]:group-hover:text-slate-300"
+      className="group border-border/70 bg-card/65 hover:border-theme-200 hover:bg-theme-50/40 dark:border-foreground/10 dark:bg-foreground/[0.035] dark:hover:border-theme-900/70 dark:hover:bg-theme-950/10 [&>span:last-child_svg]:text-faint-foreground [&>span:last-child_svg]:group-hover:text-muted-foreground dark:[&>span:last-child_svg]:group-hover:text-secondary-foreground h-auto min-h-0 w-full min-w-0 shrink justify-between px-3 py-2 text-left whitespace-normal [&>span:last-child_svg]:h-3.5 [&>span:last-child_svg]:w-3.5 [&>span:last-child_svg]:transition-transform [&>span:last-child_svg]:group-hover:translate-x-0.5"
       onClick={onClick}
     >
       <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
-        <span className="truncate text-xs font-medium text-slate-700 dark:text-slate-200">
+        <span className="text-secondary-foreground truncate text-xs font-medium">
           {label}
         </span>
         <Badge

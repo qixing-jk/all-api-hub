@@ -25,7 +25,9 @@ export function ProductTourEntryCard({
   return (
     <Card
       id={id}
-      className={cn(emphasized && "border-blue-200/80 dark:border-blue-900/60")}
+      className={cn(
+        emphasized && "border-theme-200/80 dark:border-theme-900/60",
+      )}
       data-testid={testId}
     >
       <CardContent
@@ -33,7 +35,7 @@ export function ProductTourEntryCard({
         className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
       >
         <div className="flex min-w-0 gap-3">
-          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">
+          <div className="bg-theme-50 text-theme-600 dark:bg-theme-950/60 dark:text-theme-400 mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
             <Compass className="h-5 w-5" aria-hidden="true" />
           </div>
           <div className="min-w-0">

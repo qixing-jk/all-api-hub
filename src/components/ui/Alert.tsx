@@ -8,15 +8,17 @@ import { cn } from "~/lib/utils"
 const alertVariants = cva("relative w-full rounded-lg border p-4", {
   variants: {
     variant: {
-      default:
-        "bg-white dark:bg-dark-bg-secondary text-gray-900 dark:text-dark-text-primary border-gray-200 dark:border-dark-bg-tertiary",
+      default: "bg-card text-foreground border-border",
+      // Emphasized guidance uses the theme; info is reserved for information states.
+      primary:
+        "bg-primary-soft text-primary-soft-foreground border-primary-soft-border",
       destructive:
-        "bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-200 border-red-200 dark:border-red-700",
+        "bg-destructive-soft text-destructive-soft-foreground border-destructive-border",
       success:
-        "bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700",
+        "bg-success-soft text-success-soft-foreground border-success-border",
       warning:
-        "bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-700",
-      info: "bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-700",
+        "bg-warning-soft text-warning-soft-foreground border-warning-border",
+      info: "bg-info-soft text-info-soft-foreground border-info-border",
     },
     compact: {
       false:

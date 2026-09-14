@@ -294,14 +294,14 @@ export function ClearModelRedirectMappingsDialog({
             <div className="text-base font-semibold">
               {t("bulkClear.preview.title")}
             </div>
-            <div className="dark:text-dark-text-secondary text-sm text-gray-500">
+            <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
               {t("bulkClear.preview.description")}
             </div>
           </div>
         }
         footer={
           <div className="flex items-center justify-between gap-3">
-            <div className="dark:text-dark-text-secondary text-sm text-gray-500">
+            <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
               {t("bulkClear.preview.selectedCount", {
                 selected: selectedCount,
                 total: totalCount,
@@ -341,7 +341,7 @@ export function ClearModelRedirectMappingsDialog({
       >
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="dark:text-dark-text-primary text-sm text-gray-700">
+            <div className="dark:text-foreground text-secondary-foreground text-sm">
               {t("bulkClear.preview.channelListLabel")}
             </div>
             <div className="flex items-center gap-2">
@@ -379,25 +379,25 @@ export function ClearModelRedirectMappingsDialog({
           />
 
           {isLoading && (
-            <div className="dark:text-dark-text-secondary rounded-md border border-gray-200 p-3 text-sm text-gray-600 dark:border-gray-700">
+            <div className="dark:text-secondary-foreground border-border text-muted-foreground rounded-md border p-3 text-sm">
               {t("bulkClear.status.loading")}
             </div>
           )}
 
           {loadError && (
-            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
+            <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground rounded-md border p-3 text-sm">
               {t("bulkClear.status.loadFailed", { error: loadError })}
             </div>
           )}
 
           {!isLoading && !loadError && (
-            <div className="max-h-[60vh] space-y-2 overflow-y-auto rounded-md border border-gray-200 p-3 md:max-h-[min(70vh,48rem)] dark:border-gray-700">
+            <div className="border-border max-h-[60vh] space-y-2 overflow-y-auto rounded-md border p-3 md:max-h-[min(70vh,48rem)]">
               {channels.length === 0 ? (
-                <div className="dark:text-dark-text-secondary text-sm text-gray-500">
+                <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
                   {t("bulkClear.status.noChannels")}
                 </div>
               ) : filteredChannelItems.length === 0 ? (
-                <div className="dark:text-dark-text-secondary text-sm text-gray-500">
+                <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
                   {t("bulkClear.search.noResults")}
                 </div>
               ) : (
@@ -411,7 +411,7 @@ export function ClearModelRedirectMappingsDialog({
                   return (
                     <div
                       key={getManagedResourceRefKey(channel.ref)}
-                      className="space-y-2 rounded-md px-2 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                      className="hover:bg-surface-subtle dark:hover:bg-card/50 space-y-2 rounded-md px-2 py-2"
                     >
                       <div className="flex items-start gap-3">
                         <Checkbox
@@ -427,7 +427,7 @@ export function ClearModelRedirectMappingsDialog({
                         />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
-                            <div className="dark:text-dark-text-primary truncate text-sm font-medium text-gray-900">
+                            <div className="text-foreground truncate text-sm font-medium">
                               {channel.name}
                             </div>
                             {!meta.isInvalid ? (
@@ -445,29 +445,29 @@ export function ClearModelRedirectMappingsDialog({
                               </Badge>
                             )}
                           </div>
-                          <div className="dark:text-dark-text-secondary text-xs text-gray-500">
+                          <div className="dark:text-secondary-foreground text-muted-foreground text-xs">
                             #{channel.ref.resourceId}
                           </div>
                         </div>
                       </div>
 
                       {mappingIsEmpty ? (
-                        <div className="dark:text-dark-text-secondary text-xs text-gray-500">
+                        <div className="dark:text-secondary-foreground text-muted-foreground text-xs">
                           {t("bulkClear.preview.mappingEmptyInline")}
                         </div>
                       ) : (
                         <CollapsibleSection
                           title={t("bulkClear.preview.mappingToggle")}
                           buttonClassName="px-1"
-                          panelClassName="bg-gray-50 dark:bg-gray-900/20"
+                          panelClassName="bg-surface-subtle dark:bg-background/20"
                         >
                           <>
                             {meta.isInvalid && (
-                              <div className="mb-2 text-xs text-amber-700 dark:text-amber-200">
+                              <div className="text-warning-text mb-2 text-xs">
                                 {t("bulkClear.preview.mappingInvalid")}
                               </div>
                             )}
-                            <pre className="dark:text-dark-text-secondary max-h-[40vh] overflow-auto text-xs wrap-break-word whitespace-pre-wrap text-gray-700 md:max-h-[min(50vh,32rem)]">
+                            <pre className="text-secondary-foreground max-h-[40vh] overflow-auto text-xs wrap-break-word whitespace-pre-wrap md:max-h-[min(50vh,32rem)]">
                               {meta.previewText}
                             </pre>
                           </>
@@ -484,13 +484,13 @@ export function ClearModelRedirectMappingsDialog({
             !loadError &&
             selectedCount === 0 &&
             channels.length > 0 && (
-              <div className="text-sm text-red-600 dark:text-red-400">
+              <div className="text-destructive-text text-sm">
                 {t("bulkClear.status.emptySelection")}
               </div>
             )}
 
           {resultErrors.length > 0 && (
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+            <div className="border-warning-border bg-warning-soft text-warning-soft-foreground rounded-md border p-3 text-sm">
               <div className="font-medium">{t("bulkClear.result.title")}</div>
               <ul className="mt-2 list-disc space-y-1 pl-5">
                 {resultErrors.map((err, index) => (
@@ -526,7 +526,7 @@ export function ClearModelRedirectMappingsDialog({
         isWorking={isClearing}
         details={
           selectedCount > 0 ? (
-            <div className="dark:text-dark-text-secondary text-sm text-gray-600">
+            <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
               {t("bulkClear.confirm.details", { count: selectedCount })}
             </div>
           ) : undefined

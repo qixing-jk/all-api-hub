@@ -25,7 +25,7 @@ export const ModelItemPerCallPricingView = ({
     return (
       <span
         className={`text-sm ${
-          isAvailableForUser ? "text-purple-600" : "text-gray-500"
+          isAvailableForUser ? "text-pricing-per-call" : "text-muted-foreground"
         }`}
       >
         {showRealPrice

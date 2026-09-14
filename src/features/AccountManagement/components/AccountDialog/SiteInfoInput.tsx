@@ -134,7 +134,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
               className="order-1 max-w-full [@container(min-width:28rem)]:order-2"
             >
               <div className="mb-1 flex items-center gap-1.5">
-                <label className="dark:text-dark-text-secondary text-sm font-medium text-gray-700">
+                <label className="text-secondary-foreground text-sm font-medium">
                   {t("siteInfo.authMethod")}
                 </label>
                 <Tooltip
@@ -144,7 +144,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
                   <button
                     type="button"
                     aria-label={authTypeHelpText}
-                    className="dark:text-dark-text-tertiary inline-flex h-4 w-4 items-center justify-center rounded-full text-gray-400 transition-colors hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:outline-none dark:hover:text-gray-300"
+                    className="dark:text-muted-foreground text-faint-foreground hover:text-muted-foreground focus-visible:ring-ring dark:hover:text-secondary-foreground inline-flex h-4 w-4 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
                   >
                     <CircleHelp className="h-4 w-4" aria-hidden="true" />
                   </button>
@@ -191,7 +191,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
             >
               <label
                 htmlFor="site-url"
-                className="dark:text-dark-text-secondary mb-1 block text-sm font-medium text-gray-700"
+                className="text-secondary-foreground mb-1 block text-sm font-medium"
               >
                 {t("siteInfo.siteUrl")}
               </label>
@@ -215,7 +215,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
         <>
           <label
             htmlFor="site-url"
-            className="dark:text-dark-text-secondary block text-sm font-medium text-gray-700"
+            className="text-secondary-foreground block text-sm font-medium"
           >
             {t("siteInfo.siteUrl")}
           </label>
@@ -249,13 +249,13 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
           />
         )}
         {canUseSub2ApiRefreshToken && (
-          <div className="flex w-full items-start gap-2 rounded-md bg-blue-50 p-2 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+          <div className="bg-theme-50 text-theme-700 dark:bg-theme-900/20 dark:text-theme-300 flex w-full items-start gap-2 rounded-md p-2 text-xs">
             <Info className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{t("siteInfo.sub2apiHint")}</span>
           </div>
         )}
         {isCurrentSiteAdded && (
-          <div className="flex w-full items-center justify-between rounded-md bg-yellow-50 p-2 text-xs text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300">
+          <div className="bg-warning-soft text-warning-soft-foreground flex w-full items-center justify-between rounded-md p-2 text-xs">
             <div className="flex items-center">
               <TriangleAlert className="mr-1.5 h-4 w-4 shrink-0" />
               {/* Distinguish "site exists" vs "current login matches an existing account" for multi-account sites. */}
@@ -279,7 +279,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
           </div>
         )}
         {!isDetected && onUseCurrentTab && (
-          <div className="flex w-full items-center justify-between rounded-md bg-blue-50 p-2 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+          <div className="bg-theme-50 text-theme-700 dark:bg-theme-900/20 dark:text-theme-300 flex w-full items-center justify-between rounded-md p-2 text-xs">
             <div className="flex items-center">
               <Info className="h-4 w-4" />
               <span className="ml-1">{t("siteInfo.currentSite")}:</span>
@@ -293,7 +293,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
             <button
               type="button"
               onClick={onUseCurrentTab}
-              className="flex items-center font-medium text-blue-800 disabled:cursor-not-allowed disabled:text-gray-400 dark:text-blue-200 dark:disabled:text-gray-600"
+              className="text-theme-800 disabled:text-faint-foreground dark:text-theme-200 dark:disabled:text-disabled-foreground flex items-center font-medium disabled:cursor-not-allowed"
               disabled={!currentTabUrl}
             >
               <Globe2 className="mr-1 h-3 w-3" />

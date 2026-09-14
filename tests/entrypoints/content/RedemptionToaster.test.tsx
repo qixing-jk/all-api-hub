@@ -122,11 +122,13 @@ describe("RedemptionToaster", () => {
     expect(customToast.props.className).toContain("sm:w-[360px]")
     expect(customToast.props.children).toBe("Custom custom")
 
-    expect(successToast.props.className).toContain("border-l-emerald-500")
-    expect(successToast.props.className).toContain("text-emerald-700")
-    expect(errorToast.props.className).toContain("border-l-rose-500")
-    expect(errorToast.props.className).toContain("text-rose-700")
-    expect(neutralToast.props.className).not.toContain("border-l-emerald-500")
-    expect(neutralToast.props.className).not.toContain("border-l-rose-500")
+    expect(successToast.props.className).toContain("border-l-success-text")
+    expect(successToast.props.className).toContain("text-success-text")
+    expect(errorToast.props.className).toContain("border-l-destructive-text")
+    expect(errorToast.props.className).toContain("text-destructive-text")
+    expect(neutralToast.props.className).not.toContain("border-l-success-text")
+    expect(neutralToast.props.className).not.toContain(
+      "border-l-destructive-text",
+    )
   })
 })

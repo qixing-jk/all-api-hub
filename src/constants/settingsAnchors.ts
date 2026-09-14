@@ -1,4 +1,10 @@
 export const SETTINGS_ANCHORS = {
+  APPEARANCE: "appearance",
+  APPEARANCE_LANGUAGE: "appearance-language",
+  APPEARANCE_THEME_MODE: "appearance-theme-mode",
+  APPEARANCE_PRESET: "appearance-preset",
+  APPEARANCE_COLOR: "appearance-color",
+  APPEARANCE_RADIUS: "appearance-radius",
   NEW_API_TOTP_SECRET: "new-api-totp-secret",
   MANAGED_SITE_DEPLOYMENT_DOCS: "managed-site-deployment-docs",
   SORTING_PRIORITY: "sorting-priority",

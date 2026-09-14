@@ -9,7 +9,6 @@ import { Button, Card, WorkflowTransitionButton } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
-import { useTheme } from "~/contexts/ThemeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { parseDayKey } from "~/services/history/usageHistory/core"
 import { formatPriceCompact } from "~/services/models/utils/modelPricing"
@@ -56,8 +55,6 @@ import type {
  */
 export default function UsageAnalytics() {
   const { t } = useTranslation("usageAnalytics")
-  const { resolvedTheme } = useTheme()
-  const isDark = resolvedTheme === "dark"
   const { currencyType } = useUserPreferencesContext()
 
   const { enabledAccounts, disabledAccountIdSet, store, isLoading, loadData } =
@@ -278,14 +275,12 @@ export default function UsageAnalytics() {
       daily: fusedDailyForTokens,
       ...dailyLegendLabels,
       legendSelected: dailyLegendSelected,
-      isDark,
     })
   }, [
     dailyLegendLabels,
     dailyLegendSelected,
     dayKeysInRange,
     fusedDailyForTokens,
-    isDark,
   ])
 
   const modelDistributionOption = useMemo(() => {
@@ -294,9 +289,9 @@ export default function UsageAnalytics() {
     const valueLabel = t("charts.modelDistribution.series.tokens")
 
     return breakdownChartTypeByKey.modelDistribution === "pie"
-      ? buildPieOption({ categories, values, valueLabel, isDark })
-      : buildHorizontalBarOption({ categories, values, valueLabel, isDark })
-  }, [breakdownChartTypeByKey.modelDistribution, isDark, modelTotalsRows, t])
+      ? buildPieOption({ categories, values, valueLabel })
+      : buildHorizontalBarOption({ categories, values, valueLabel })
+  }, [breakdownChartTypeByKey.modelDistribution, modelTotalsRows, t])
 
   const modelCostDistributionOption = useMemo(() => {
     const conversionFactor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
@@ -307,14 +302,9 @@ export default function UsageAnalytics() {
     const valueLabel = t("charts.modelCostDistribution.series.usd")
 
     return breakdownChartTypeByKey.modelCostDistribution === "pie"
-      ? buildPieOption({ categories, values, valueLabel, isDark })
-      : buildHorizontalBarOption({ categories, values, valueLabel, isDark })
-  }, [
-    breakdownChartTypeByKey.modelCostDistribution,
-    isDark,
-    modelTotalsRows,
-    t,
-  ])
+      ? buildPieOption({ categories, values, valueLabel })
+      : buildHorizontalBarOption({ categories, values, valueLabel })
+  }, [breakdownChartTypeByKey.modelCostDistribution, modelTotalsRows, t])
 
   const accountComparisonOption = useMemo(() => {
     const categories = accountTotalsRows.map((row) => row.key)
@@ -322,9 +312,9 @@ export default function UsageAnalytics() {
     const valueLabel = t("charts.accountComparison.series.tokens")
 
     return breakdownChartTypeByKey.accountComparison === "pie"
-      ? buildPieOption({ categories, values, valueLabel, isDark })
-      : buildHorizontalBarOption({ categories, values, valueLabel, isDark })
-  }, [accountTotalsRows, breakdownChartTypeByKey.accountComparison, isDark, t])
+      ? buildPieOption({ categories, values, valueLabel })
+      : buildHorizontalBarOption({ categories, values, valueLabel })
+  }, [accountTotalsRows, breakdownChartTypeByKey.accountComparison, t])
 
   const heatmapOption = useMemo(() => {
     const modelsForHeatmap =
@@ -351,13 +341,11 @@ export default function UsageAnalytics() {
       modelNames: modelsForHeatmap,
       valuesByModelAndDay,
       seriesLabel: t("charts.modelHeatmap.series.tokens"),
-      isDark,
     })
   }, [
     dayKeysInRange,
     focusModelName,
     fusedDailyByModelForTokens,
-    isDark,
     modelTotalsRows,
     t,
   ])
@@ -409,9 +397,8 @@ export default function UsageAnalytics() {
       modelNames: weekdayLabels,
       valuesByModelAndDay,
       seriesLabel: t("charts.usageTimeHeatmap.series.tokens"),
-      isDark,
     })
-  }, [fusedHourlyForTokens, isDark, t])
+  }, [fusedHourlyForTokens, t])
 
   const latencyHistogramOption = useMemo(() => {
     if (!selectedLatencyAggregate) {
@@ -421,9 +408,8 @@ export default function UsageAnalytics() {
     return buildLatencyHistogramOption({
       latency: selectedLatencyAggregate,
       seriesLabel: t("charts.latencyHistogram.series.count"),
-      isDark,
     })
-  }, [isDark, selectedLatencyAggregate, t])
+  }, [selectedLatencyAggregate, t])
 
   const latencyTrendOption = useMemo(() => {
     return buildLatencyTrendOption({
@@ -434,9 +420,8 @@ export default function UsageAnalytics() {
       slowSeriesLabel: t("charts.latencyTrend.series.slow"),
       secondsAxisLabel: t("charts.latencyTrend.axes.seconds"),
       slowCountAxisLabel: t("charts.latencyTrend.axes.slowCount"),
-      isDark,
     })
-  }, [dayKeysInRange, isDark, latencyDailyForTokens, t])
+  }, [dayKeysInRange, latencyDailyForTokens, t])
 
   const slowModelsOption = useMemo(() => {
     const categories = slowModelRows.map((row) => row.label)
@@ -444,9 +429,9 @@ export default function UsageAnalytics() {
     const valueLabel = t("charts.slowModels.series.slowCount")
 
     return breakdownChartTypeByKey.slowModels === "pie"
-      ? buildPieOption({ categories, values, valueLabel, isDark })
-      : buildHorizontalBarOption({ categories, values, valueLabel, isDark })
-  }, [breakdownChartTypeByKey.slowModels, isDark, slowModelRows, t])
+      ? buildPieOption({ categories, values, valueLabel })
+      : buildHorizontalBarOption({ categories, values, valueLabel })
+  }, [breakdownChartTypeByKey.slowModels, slowModelRows, t])
 
   const slowTokensOption = useMemo(() => {
     const categories = slowTokenRows.map((row) => row.label)
@@ -454,9 +439,9 @@ export default function UsageAnalytics() {
     const valueLabel = t("charts.slowTokens.series.slowCount")
 
     return breakdownChartTypeByKey.slowTokens === "pie"
-      ? buildPieOption({ categories, values, valueLabel, isDark })
-      : buildHorizontalBarOption({ categories, values, valueLabel, isDark })
-  }, [breakdownChartTypeByKey.slowTokens, isDark, slowTokenRows, t])
+      ? buildPieOption({ categories, values, valueLabel })
+      : buildHorizontalBarOption({ categories, values, valueLabel })
+  }, [breakdownChartTypeByKey.slowTokens, slowTokenRows, t])
   const showNoDataState =
     !isLoading && (!store || availableDayKeys.length === 0)
 
@@ -640,7 +625,7 @@ export default function UsageAnalytics() {
         <Card padding="md">
           <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
             <div className="space-y-1">
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              <div className="text-muted-foreground text-xs">
                 {t("summary.promptTokens")}
               </div>
               <div className="text-lg font-semibold">
@@ -648,7 +633,7 @@ export default function UsageAnalytics() {
               </div>
             </div>
             <div className="space-y-1">
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              <div className="text-muted-foreground text-xs">
                 {t("summary.completionTokens")}
               </div>
               <div className="text-lg font-semibold">
@@ -656,7 +641,7 @@ export default function UsageAnalytics() {
               </div>
             </div>
             <div className="space-y-1">
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              <div className="text-muted-foreground text-xs">
                 {t("summary.totalTokens")}
               </div>
               <div className="text-lg font-semibold">
@@ -664,7 +649,7 @@ export default function UsageAnalytics() {
               </div>
             </div>
             <div className="space-y-1">
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              <div className="text-muted-foreground text-xs">
                 {t("summary.requests")}
               </div>
               <div className="text-lg font-semibold">
@@ -672,7 +657,7 @@ export default function UsageAnalytics() {
               </div>
             </div>
             <div className="space-y-1">
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              <div className="text-muted-foreground text-xs">
                 {t("summary.cost")}
               </div>
               <div className="text-lg font-semibold">
@@ -694,7 +679,7 @@ export default function UsageAnalytics() {
           <Card padding="md">
             <div className="space-y-2">
               <div className="text-sm font-medium">{t("empty.title")}</div>
-              <div className="dark:text-dark-text-tertiary text-sm text-gray-600">
+              <div className="text-muted-foreground text-sm">
                 {t("empty.description")}
               </div>
               {/* Quick navigation so users can enable sync immediately. */}
@@ -722,7 +707,7 @@ export default function UsageAnalytics() {
               <div className="text-sm font-medium">
                 {t("charts.dailyOverview.title")}
               </div>
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              <div className="text-muted-foreground text-xs">
                 {t("charts.dailyOverview.description")}
               </div>
             </div>
@@ -742,7 +727,7 @@ export default function UsageAnalytics() {
                   <div className="text-sm font-medium">
                     {t("charts.modelDistribution.title")}
                   </div>
-                  <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                  <div className="text-muted-foreground text-xs">
                     {t("charts.modelDistribution.description")}
                   </div>
                 </div>
@@ -771,7 +756,7 @@ export default function UsageAnalytics() {
                   <div className="text-sm font-medium">
                     {t("charts.modelCostDistribution.title")}
                   </div>
-                  <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                  <div className="text-muted-foreground text-xs">
                     {t("charts.modelCostDistribution.description")}
                   </div>
                 </div>
@@ -800,7 +785,7 @@ export default function UsageAnalytics() {
                   <div className="text-sm font-medium">
                     {t("charts.accountComparison.title")}
                   </div>
-                  <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                  <div className="text-muted-foreground text-xs">
                     {t("charts.accountComparison.description")}
                   </div>
                 </div>
@@ -826,7 +811,7 @@ export default function UsageAnalytics() {
               <div className="text-sm font-medium">
                 {t("charts.usageTimeHeatmap.title")}
               </div>
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              <div className="text-muted-foreground text-xs">
                 {t("charts.usageTimeHeatmap.description")}
               </div>
             </div>
@@ -841,7 +826,7 @@ export default function UsageAnalytics() {
               <div className="text-sm font-medium">
                 {t("charts.modelHeatmap.title")}
               </div>
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              <div className="text-muted-foreground text-xs">
                 {t("charts.modelHeatmap.description")}
               </div>
             </div>
@@ -860,7 +845,7 @@ export default function UsageAnalytics() {
                     ? ` · ${focusModelName}`
                     : ""}
                 </div>
-                <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                <div className="text-muted-foreground text-xs">
                   {t("charts.latencyHistogram.description")}
                 </div>
               </div>
@@ -877,7 +862,7 @@ export default function UsageAnalytics() {
                 <div className="text-sm font-medium">
                   {t("charts.latencyTrend.title")}
                 </div>
-                <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                <div className="text-muted-foreground text-xs">
                   {t("charts.latencyTrend.description")}
                 </div>
               </div>
@@ -895,7 +880,7 @@ export default function UsageAnalytics() {
                   <div className="text-sm font-medium">
                     {t("charts.slowModels.title")}
                   </div>
-                  <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                  <div className="text-muted-foreground text-xs">
                     {t("charts.slowModels.description")}
                   </div>
                 </div>
@@ -921,7 +906,7 @@ export default function UsageAnalytics() {
                   <div className="text-sm font-medium">
                     {t("charts.slowTokens.title")}
                   </div>
-                  <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                  <div className="text-muted-foreground text-xs">
                     {t("charts.slowTokens.description")}
                   </div>
                 </div>

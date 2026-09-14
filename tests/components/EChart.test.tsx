@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { EChart } from "~/components/charts/EChart"
+import { THEME_ATTRIBUTES, THEME_PRESET } from "~/constants/theme"
 import { render, waitFor } from "~~/tests/test-utils/render"
 
 const { echartsInitMock } = vi.hoisted(() => ({
@@ -12,6 +13,12 @@ vi.mock("~/components/charts/echarts", () => ({
     init: echartsInitMock,
   },
 }))
+
+vi.mock("~/components/charts/chartColors", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/components/charts/chartColors")>()
+  return { ...actual, readChartColors: vi.fn(() => ({})) }
+})
 
 type MockEChartInstance = {
   setOption: ReturnType<typeof vi.fn>
@@ -57,6 +64,31 @@ describe("EChart", () => {
     off: vi.fn(),
   })
 
+  it("recolors on root changes without replacing the chart or resetting interactions", async () => {
+    const instance = createInstance()
+    echartsInitMock.mockReturnValueOnce(instance)
+    const { unmount } = render(
+      <EChart option={{ series: [{ type: "line", data: [1, 2] }] }} />,
+    )
+    await waitFor(() => expect(instance.setOption).toHaveBeenCalledTimes(1))
+    document.documentElement.style.setProperty("--chart-1", "#ff00ff")
+    await waitFor(() => expect(instance.setOption).toHaveBeenCalledTimes(2))
+    expect(instance.setOption).toHaveBeenLastCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ notMerge: false }),
+    )
+    expect(echartsInitMock).toHaveBeenCalledTimes(1)
+    document.documentElement.setAttribute(
+      THEME_ATTRIBUTES.PRESET,
+      THEME_PRESET.ANTHROPIC,
+    )
+    await waitFor(() => expect(instance.setOption).toHaveBeenCalledTimes(3))
+    unmount()
+    document.documentElement.style.removeProperty("--chart-1")
+    document.documentElement.removeAttribute(THEME_ATTRIBUTES.PRESET)
+    expect(instance.dispose).toHaveBeenCalledOnce()
+  })
+
   it("initializes the chart with merged setOption defaults", async () => {
     const instance = createInstance()
     echartsInitMock.mockReturnValueOnce(instance)
@@ -76,7 +108,9 @@ describe("EChart", () => {
         { renderer: "canvas" },
       )
       expect(instance.setOption).toHaveBeenCalledWith(
-        { series: [{ type: "line", data: [1, 2, 3] }] },
+        expect.objectContaining({
+          series: [{ type: "line", data: [1, 2, 3] }],
+        }),
         {
           notMerge: true,
           lazyUpdate: false,

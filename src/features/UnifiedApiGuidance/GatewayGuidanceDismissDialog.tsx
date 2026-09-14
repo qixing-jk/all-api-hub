@@ -45,7 +45,7 @@ export function GatewayGuidanceDismissDialog({
           <p
             role="alert"
             aria-label={errorMessage}
-            className="text-sm text-red-600 dark:text-red-400"
+            className="text-destructive-text text-sm"
           >
             {errorMessage}
           </p>

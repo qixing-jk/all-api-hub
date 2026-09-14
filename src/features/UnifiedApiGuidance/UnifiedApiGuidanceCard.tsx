@@ -65,7 +65,7 @@ export function UnifiedApiGuidanceCard({
     surface === UNIFIED_API_GUIDANCE_SURFACES.OptionsOverview
   if (isOptionsOverview) {
     return (
-      <div className="space-y-5 rounded-xl border border-slate-200/80 p-4 sm:p-5 dark:border-white/10">
+      <div className="border-border/80 dark:border-foreground/10 space-y-5 rounded-xl border p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 space-y-1.5">
             <h3 className="text-base font-semibold">
@@ -160,8 +160,8 @@ export function UnifiedApiGuidanceCard({
             ))}
           </div>
           {model.optionalActions.length > 0 ? (
-            <div className="border-t border-slate-200/70 pt-3 dark:border-white/10">
-              <div className="dark:text-dark-text-tertiary mb-2 text-xs font-medium text-slate-500 uppercase">
+            <div className="border-border/70 dark:border-foreground/10 border-t pt-3">
+              <div className="text-muted-foreground mb-2 text-xs font-medium uppercase">
                 {copy.optionalLabel()}
               </div>
               <div className="grid gap-2">
@@ -193,7 +193,7 @@ export function UnifiedApiGuidanceUnavailableCard({
 
   return (
     <Notice
-      tone="info"
+      tone="default"
       title={t("unifiedApiGuidance.unavailable.title")}
       description={t("unifiedApiGuidance.unavailable.description")}
       actions={

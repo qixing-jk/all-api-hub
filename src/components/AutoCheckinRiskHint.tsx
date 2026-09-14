@@ -14,7 +14,7 @@ export function AutoCheckinRiskHint() {
       size="xs"
       aria-label={t("riskNotice.label")}
       tooltip={t("riskNotice.description")}
-      className="shrink-0 text-gray-400 dark:text-gray-500"
+      className="text-faint-foreground shrink-0"
     >
       <CircleHelp className="h-4 w-4" aria-hidden="true" />
     </IconButton>

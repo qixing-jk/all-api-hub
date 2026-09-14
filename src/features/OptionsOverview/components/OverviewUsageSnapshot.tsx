@@ -30,17 +30,17 @@ export function OverviewUsageSnapshot({
 }: OverviewUsageSnapshotProps) {
   if (!snapshot.hasUsageData) {
     return (
-      <Card className="dark:from-dark-bg-secondary overflow-hidden border-blue-100 bg-gradient-to-br from-white via-white to-blue-50/70 shadow-sm shadow-blue-100/60 dark:border-white/10 dark:bg-gradient-to-br dark:via-slate-900/90 dark:to-blue-950/10 dark:shadow-black/20">
+      <Card className="dark:from-card border-theme-100 to-theme-50/70 shadow-theme-100/60 dark:border-foreground/10 dark:via-background/90 dark:to-theme-950/10 dark:shadow-shadow/20 from-card via-card overflow-hidden bg-gradient-to-br shadow-sm">
         <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <div className="flex min-w-0 gap-4">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-blue-100 bg-white/80 text-blue-600 shadow-sm dark:border-white/10 dark:bg-white/[0.04] dark:text-blue-300">
+            <span className="border-theme-100 bg-card/80 text-theme-600 dark:border-foreground/10 dark:bg-foreground/[0.04] dark:text-theme-300 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border shadow-sm">
               <BarChart3 className="h-5 w-5" aria-hidden />
             </span>
             <div className="min-w-0">
-              <div className="text-base font-semibold text-slate-950 dark:text-white">
+              <div className="text-foreground text-base font-semibold">
                 {t("optionsOverview:usage.empty.title")}
               </div>
-              <div className="dark:text-dark-text-secondary mt-1 max-w-3xl text-sm leading-6 text-slate-600">
+              <div className="dark:text-secondary-foreground text-muted-foreground mt-1 max-w-3xl text-sm leading-6">
                 {t("optionsOverview:usage.empty.description")}
               </div>
             </div>
@@ -78,14 +78,14 @@ export function OverviewUsageSnapshot({
   )
 
   return (
-    <Card className="dark:from-dark-bg-secondary overflow-hidden border-blue-100 bg-gradient-to-br from-white via-white to-blue-50/70 shadow-sm shadow-blue-100/60 dark:border-white/10 dark:bg-gradient-to-br dark:via-slate-900/90 dark:to-blue-950/10 dark:shadow-black/20">
+    <Card className="dark:from-card border-theme-100 to-theme-50/70 shadow-theme-100/60 dark:border-foreground/10 dark:via-background/90 dark:to-theme-950/10 dark:shadow-shadow/20 from-card via-card overflow-hidden bg-gradient-to-br shadow-sm">
       <div className="grid gap-5 p-5 lg:grid-cols-[minmax(12rem,0.85fr)_minmax(0,1.5fr)_minmax(14rem,1fr)] lg:items-stretch">
         <div className="flex min-w-0 flex-col justify-between gap-5">
           <div>
-            <div className="dark:text-dark-text-tertiary text-xs font-medium text-gray-500 uppercase">
+            <div className="text-muted-foreground text-xs font-medium uppercase">
               {t("optionsOverview:usage.todayCost")}
             </div>
-            <div className="mt-2 min-w-0 text-3xl leading-tight font-semibold break-words text-gray-950 dark:text-white">
+            <div className="text-foreground mt-2 min-w-0 text-3xl leading-tight font-semibold break-words">
               <AvailabilityAwareValue
                 value={snapshot.todayCostText}
                 coverage={snapshot.todayCostCoverage}
@@ -127,12 +127,12 @@ export function OverviewUsageSnapshot({
           />
         </div>
 
-        <div className="flex min-w-0 flex-col justify-between gap-4 rounded-lg border border-blue-100/70 bg-white/65 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+        <div className="border-theme-100/70 bg-card/65 dark:border-foreground/10 dark:bg-foreground/[0.03] flex min-w-0 flex-col justify-between gap-4 rounded-lg border p-4">
           <div>
-            <div className="dark:text-dark-text-secondary text-sm font-semibold text-slate-900 dark:text-white">
+            <div className="dark:text-secondary-foreground text-foreground text-sm font-semibold">
               {t("optionsOverview:usage.activityMix")}
             </div>
-            <div className="dark:text-dark-text-tertiary mt-1 text-xs leading-5 text-slate-500">
+            <div className="text-muted-foreground mt-1 text-xs leading-5">
               {snapshot.hasSevenDayUsageData
                 ? t("optionsOverview:usage.todayShare")
                 : t("optionsOverview:usage.noRecentActivity")}
@@ -184,9 +184,9 @@ function TodayUsageMetric({
           t={t}
         />
       }
-      className="border-blue-100/60 bg-white/70 p-3 dark:bg-white/[0.03]"
-      labelClassName="text-gray-500"
-      valueClassName="text-lg leading-normal text-gray-950"
+      className="border-theme-100/60 bg-card/70 dark:bg-foreground/[0.03] p-3"
+      labelClassName="text-muted-foreground"
+      valueClassName="text-lg leading-normal text-foreground"
     />
   )
 }
@@ -215,7 +215,7 @@ function AvailabilityAwareValue({
         >
           <span
             aria-label={unavailableLabel}
-            className="cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="focus-visible:ring-ring cursor-help rounded-sm outline-none focus-visible:ring-2"
             tabIndex={0}
           >
             <span aria-hidden="true">
@@ -255,12 +255,12 @@ function AvailabilityAwareValue({
           aria-label={[value, qualifier ?? partialLabel, coverageLabel]
             .filter(Boolean)
             .join(". ")}
-          className="cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          className="focus-visible:ring-ring cursor-help rounded-sm outline-none focus-visible:ring-2"
           tabIndex={0}
         >
           {value}
           {qualifier ? (
-            <span className="dark:text-dark-text-tertiary ml-1.5 text-[10px] font-medium text-gray-500">
+            <span className="text-muted-foreground ml-1.5 text-[10px] font-medium">
               {qualifier}
             </span>
           ) : null}
@@ -280,9 +280,9 @@ function UsageMetric({ label, value }: { label: string; value: number }) {
     <OverviewMetricTile
       label={label}
       value={formatTokenCount(value)}
-      className="border-blue-100/60 bg-white/70 p-3 dark:bg-white/[0.03]"
-      labelClassName="text-gray-500"
-      valueClassName="dark:text-dark-text-secondary text-base leading-normal text-gray-700"
+      className="border-theme-100/60 bg-card/70 dark:bg-foreground/[0.03] p-3"
+      labelClassName="text-muted-foreground"
+      valueClassName="text-base leading-normal text-secondary-foreground"
     />
   )
 }
@@ -318,7 +318,7 @@ function UsageShare({
       }
       className={
         coverage.legacyUnclassifiedCount > 0
-          ? "cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          ? "focus-visible:ring-ring cursor-help rounded-sm outline-none focus-visible:ring-2"
           : undefined
       }
       tabIndex={coverage.legacyUnclassifiedCount > 0 ? 0 : undefined}
@@ -349,13 +349,13 @@ function UsageShare({
       <Tooltip content={coverageLabel} anchorAsChild>
         <span
           aria-label={`${formattedValue}. ${qualifier}`}
-          className="cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          className="focus-visible:ring-ring cursor-help rounded-sm outline-none focus-visible:ring-2"
           tabIndex={0}
         >
           <span aria-hidden="true">{formattedValue}</span>{" "}
           <span
             aria-hidden="true"
-            className="dark:text-dark-text-tertiary text-[10px] font-medium text-slate-500"
+            className="text-muted-foreground text-[10px] font-medium"
           >
             {qualifier}
           </span>
@@ -367,10 +367,10 @@ function UsageShare({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3">
-        <span className="dark:text-dark-text-tertiary text-xs font-medium text-slate-500">
+        <span className="text-muted-foreground text-xs font-medium">
           {label}
         </span>
-        <span className="dark:text-dark-text-secondary text-xs font-semibold text-slate-700">
+        <span className="text-secondary-foreground text-xs font-semibold">
           {value === null ? (
             coverage.legacyUnclassifiedCount > 0 ? (
               <Tooltip content={unavailableLabel} anchorAsChild>
@@ -384,10 +384,10 @@ function UsageShare({
           )}
         </span>
       </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-blue-100 dark:bg-white/10">
+      <div className="bg-theme-100 dark:bg-foreground/10 h-1.5 overflow-hidden rounded-full">
         {value === null ? null : (
           <div
-            className="h-full rounded-full bg-blue-500 dark:bg-blue-500"
+            className="bg-theme-500 h-full rounded-full"
             style={{ width: `${value}%` }}
           />
         )}

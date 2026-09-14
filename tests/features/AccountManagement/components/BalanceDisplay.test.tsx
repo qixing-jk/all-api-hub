@@ -149,9 +149,9 @@ describe("BalanceDisplay", () => {
 
     expect(balanceNode).toHaveClass("cursor-pointer")
     expect(balanceNode).toHaveClass("ml-auto", "text-right")
-    expect(consumptionNode).toHaveClass("text-green-500")
+    expect(consumptionNode).toHaveClass("text-cashflow-expense")
     expect(consumptionNode).toHaveClass("ml-auto", "text-right")
-    expect(incomeNode).toHaveClass("text-blue-500")
+    expect(incomeNode).toHaveClass("text-cashflow-income")
     expect(incomeNode).toHaveClass("ml-auto", "text-right")
     expect(consumptionValue).toHaveAttribute("data-end", "4")
     expect(incomeValue).toHaveAttribute("data-end", "3")
@@ -351,7 +351,7 @@ describe("BalanceDisplay", () => {
         name: "account:stats.estimatedTodayIncome",
       }),
     ).toHaveTextContent("~$6.50")
-    expect(estimatedNode).toHaveClass("text-indigo-500")
+    expect(estimatedNode).toHaveClass("text-cashflow-income")
     expect(estimatedNode).toHaveTextContent("~$6.50")
     expect(screen.getAllByTestId("countup").at(-1)).toHaveAttribute(
       "data-end",
@@ -437,7 +437,7 @@ describe("BalanceDisplay", () => {
     const disabledValues = screen.getAllByTitle("account:list.site.disabled")
     const estimatedNode = disabledValues.at(-1)!
     expect(estimatedNode).toHaveTextContent("~$0.00")
-    expect(estimatedNode).toHaveClass("text-gray-400")
+    expect(estimatedNode).toHaveClass("text-faint-foreground")
     expect(
       screen.queryByRole("button", {
         name: "account:stats.estimatedTodayIncome",
@@ -477,7 +477,7 @@ describe("BalanceDisplay", () => {
       name: "account:stats.estimatedTodayIncome",
     })
     expect(estimatedButton).toHaveTextContent("~$0.00")
-    expect(estimatedButton).toHaveClass("text-gray-400")
+    expect(estimatedButton).toHaveClass("text-faint-foreground")
 
     await user.click(estimatedButton)
 
@@ -504,8 +504,8 @@ describe("BalanceDisplay", () => {
     const disabledValues = screen.getAllByTitle("account:list.site.disabled")
     expect(disabledValues).toHaveLength(3)
     expect(disabledValues[0]).not.toHaveClass("cursor-pointer")
-    expect(disabledValues[1]).toHaveClass("text-gray-400")
-    expect(disabledValues[2]).toHaveClass("text-gray-400")
+    expect(disabledValues[1]).toHaveClass("text-faint-foreground")
+    expect(disabledValues[2]).toHaveClass("text-faint-foreground")
 
     await user.click(disabledValues[0])
 

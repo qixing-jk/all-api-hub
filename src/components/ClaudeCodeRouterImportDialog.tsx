@@ -239,10 +239,10 @@ export function ClaudeCodeRouterImportDialog(
       size="lg"
       header={
         <div className="pr-8">
-          <div className="dark:text-dark-text-primary text-base font-semibold text-gray-900">
+          <div className="text-foreground text-base font-semibold">
             {t("ui:dialog.claudeCodeRouter.title")}
           </div>
-          <p className="dark:text-dark-text-secondary text-sm text-gray-500">
+          <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
             {t("ui:dialog.claudeCodeRouter.description")}
           </p>
         </div>
@@ -321,10 +321,10 @@ export function ClaudeCodeRouterImportDialog(
             onCheckedChange={(checked) => setRestartAfterSave(!!checked)}
           />
           <div className="space-y-1">
-            <div className="dark:text-dark-text-primary text-sm font-medium text-gray-900">
+            <div className="text-foreground text-sm font-medium">
               {t("ui:dialog.claudeCodeRouter.fields.restartAfterSave")}
             </div>
-            <p className="dark:text-dark-text-secondary text-xs text-gray-500">
+            <p className="dark:text-secondary-foreground text-muted-foreground text-xs">
               {t("ui:dialog.claudeCodeRouter.descriptions.restartAfterSave")}
             </p>
           </div>

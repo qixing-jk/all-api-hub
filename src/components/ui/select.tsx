@@ -214,7 +214,7 @@ const SelectTrigger = React.forwardRef<
     data-slot="select-trigger"
     data-size={size}
     className={cn(
-      "dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary dark:hover:bg-dark-bg-secondary/80 flex w-full items-center justify-between gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm whitespace-nowrap text-gray-900 shadow-xs transition-colors outline-none hover:bg-gray-50 focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-red-500 aria-invalid:focus-visible:ring-red-500/40 data-placeholder:text-gray-400 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 dark:aria-invalid:border-red-400 dark:aria-invalid:focus-visible:ring-red-400/40 dark:data-placeholder:text-gray-500 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-gray-400 dark:[&_svg:not([class*='text-'])]:text-gray-500",
+      "dark:border-border dark:hover:bg-card/80 border-border-strong bg-card text-foreground hover:bg-surface-subtle focus-visible:ring-ring data-placeholder:text-faint-foreground [&_svg:not([class*='text-'])]:text-faint-foreground dark:[&_svg:not([class*='text-'])]:text-muted-foreground aria-invalid:border-destructive-border aria-invalid:focus-visible:ring-destructive-text/40 flex w-full items-center justify-between gap-2 rounded-md border px-3 text-sm whitespace-nowrap shadow-xs transition-colors outline-none focus-visible:border-transparent focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
       className,
     )}
     {...props}
@@ -245,7 +245,7 @@ const SelectContent = React.forwardRef<
           ref={ref}
           data-slot="select-content"
           className={cn(
-            "dark:border-dark-bg-tertiary/80 dark:bg-dark-bg-secondary dark:text-dark-text-primary data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 corners-concentric relative max-h-(--radix-select-content-available-height) min-w-32 origin-(--radix-select-content-transform-origin) overflow-hidden rounded-lg border border-gray-200 bg-white text-gray-900 shadow-lg ring-1 ring-black/5 [--corner-inset:5px] dark:ring-white/5",
+            "dark:border-border/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 corners-concentric border-border bg-popover text-popover-foreground ring-shadow/5 dark:ring-foreground/5 relative max-h-(--radix-select-content-available-height) min-w-32 origin-(--radix-select-content-transform-origin) overflow-hidden rounded-lg border shadow-lg ring-1 [--corner-inset:5px]",
             floatingLayerClass,
             position === "popper" &&
               "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
@@ -281,7 +281,7 @@ const SelectLabel = React.forwardRef<
     ref={ref}
     data-slot="select-label"
     className={cn(
-      "px-2 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400",
+      "text-muted-foreground px-2 py-1.5 text-xs font-medium",
       className,
     )}
     {...props}
@@ -297,14 +297,14 @@ const SelectItem = React.forwardRef<
     ref={ref}
     data-slot="select-item"
     className={cn(
-      `dark:text-dark-text-primary dark:focus:bg-dark-bg-tertiary/80 dark:focus:text-dark-text-primary relative flex w-full cursor-pointer items-center gap-2 ${CORNERS.item} px-2 py-1.5 text-sm text-gray-700 outline-hidden transition-colors select-none focus:bg-blue-50 focus:text-gray-900 data-disabled:pointer-events-none data-disabled:opacity-50 data-[state=checked]:text-gray-900 dark:data-[state=checked]:text-white [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2`,
+      `dark:text-foreground dark:focus:bg-secondary/80 relative flex w-full cursor-pointer items-center gap-2 ${CORNERS.item} text-secondary-foreground focus:bg-theme-50 focus:text-foreground data-[state=checked]:text-foreground px-2 py-1.5 text-sm outline-hidden transition-colors select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2`,
       className,
     )}
     {...props}
   >
     <span className="absolute right-2 flex size-3.5 items-center justify-center">
       <SelectPrimitive.ItemIndicator>
-        <CheckIcon className="size-4 text-blue-500 dark:text-blue-400" />
+        <CheckIcon className="text-theme-500 dark:text-theme-400 size-4" />
       </SelectPrimitive.ItemIndicator>
     </span>
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>

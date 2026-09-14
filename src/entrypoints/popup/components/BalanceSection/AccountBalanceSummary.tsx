@@ -54,7 +54,7 @@ const BalanceDisplay: React.FC<{
     <div className="flex min-w-0 items-center space-x-1">
       <button
         onClick={onCurrencyToggle}
-        className={`${sizeClass} dark:text-dark-text-primary min-w-0 p-0 text-left leading-tight font-bold tracking-tight break-words text-gray-900 tabular-nums transition-colors hover:text-blue-600`}
+        className={`${sizeClass} text-foreground hover:text-theme-600 min-w-0 p-0 text-left leading-tight font-bold tracking-tight break-words tabular-nums transition-colors`}
         aria-label={[
           formattedValue ?? emptyValueText,
           qualifier,
@@ -92,7 +92,7 @@ const BalanceDisplay: React.FC<{
           {qualifier ? (
             <span
               aria-hidden="true"
-              className="dark:text-dark-text-tertiary text-[10px] font-medium text-gray-500"
+              className="text-muted-foreground text-[10px] font-medium"
             >
               {qualifier}
             </span>
@@ -197,7 +197,7 @@ export default function AccountBalanceSummary() {
 
   return (
     <div className="space-y-2">
-      <div className="dark:bg-dark-bg-secondary/40 space-y-1 rounded-lg bg-gray-50/80">
+      <div className="dark:bg-card/40 bg-surface-subtle/80 space-y-1 rounded-lg">
         <BodySmall className="font-medium">
           {t("account:stats.totalBalance")}
         </BodySmall>
@@ -219,7 +219,7 @@ export default function AccountBalanceSummary() {
               : "grid grid-cols-2 gap-2"
           }
         >
-          <div className="dark:bg-dark-bg-secondary/30 min-w-0 space-y-1 rounded-md bg-gray-50/70 p-2">
+          <div className="dark:bg-card/30 bg-surface-subtle/70 min-w-0 space-y-1 rounded-md p-2">
             <Caption className="font-medium">
               {t("account:stats.todayConsumption")}
             </Caption>
@@ -247,7 +247,7 @@ export default function AccountBalanceSummary() {
             />
           </div>
 
-          <div className="dark:bg-dark-bg-secondary/30 min-w-0 space-y-1 rounded-md bg-gray-50/70 p-2">
+          <div className="dark:bg-card/30 bg-surface-subtle/70 min-w-0 space-y-1 rounded-md p-2">
             <Caption className="font-medium">
               {estimatedTodayIncomeEnabled
                 ? t("account:stats.trustedTodayIncome")
@@ -274,7 +274,7 @@ export default function AccountBalanceSummary() {
           </div>
 
           {estimatedTodayIncomeEnabled && (
-            <div className="dark:bg-dark-bg-secondary/30 min-w-0 space-y-1 rounded-md bg-gray-50/70 p-2">
+            <div className="dark:bg-card/30 bg-surface-subtle/70 min-w-0 space-y-1 rounded-md p-2">
               <Caption className="font-medium">
                 {t("account:stats.estimatedTodayIncome")}
               </Caption>
@@ -293,7 +293,7 @@ export default function AccountBalanceSummary() {
                   size="md"
                 />
               ) : (
-                <div className="dark:text-dark-text-tertiary text-base font-bold text-gray-500">
+                <div className="text-muted-foreground text-base font-bold">
                   -
                 </div>
               )}

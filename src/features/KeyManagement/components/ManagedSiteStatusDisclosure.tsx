@@ -20,8 +20,8 @@ export function ManagedSiteStatusDisclosure({
   const { t } = useTranslation("keyManagement")
   if (Children.toArray(children).length === 0) {
     return (
-      <div className="inline-flex max-w-full items-center gap-1.5 border-l border-gray-200 pl-3 text-xs dark:border-gray-700">
-        <span className="text-gray-500 dark:text-gray-400">
+      <div className="border-border inline-flex max-w-full items-center gap-1.5 border-l pl-3 text-xs">
+        <span className="text-muted-foreground">
           {t("managedSiteStatus.label")}
         </span>
         {status}
@@ -29,7 +29,7 @@ export function ManagedSiteStatusDisclosure({
     )
   }
   return (
-    <div className="inline-flex max-w-full items-center border-l border-gray-200 pl-2 dark:border-gray-700">
+    <div className="border-border inline-flex max-w-full items-center border-l pl-2">
       <Popover>
         <PopoverTrigger asChild>
           <Button
@@ -38,7 +38,7 @@ export function ManagedSiteStatusDisclosure({
             className="h-auto min-h-0 min-w-0 gap-1.5 px-1 py-0.5 text-xs"
             data-testid="managed-site-status-details"
           >
-            <span className="shrink-0 font-normal text-gray-500 dark:text-gray-400">
+            <span className="text-muted-foreground shrink-0 font-normal">
               {t("managedSiteStatus.label")}
             </span>
             {status}
@@ -47,10 +47,10 @@ export function ManagedSiteStatusDisclosure({
         </PopoverTrigger>
         <PopoverContent
           align="start"
-          className="dark:bg-dark-bg-secondary w-80 max-w-[calc(100vw-2rem)] bg-white p-3"
+          className="bg-card w-80 max-w-[calc(100vw-2rem)] p-3"
           aria-label={t("managedSiteStatus.label")}
         >
-          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+          <div className="text-muted-foreground dark:text-secondary-foreground flex flex-wrap items-center gap-2 text-xs">
             {children}
           </div>
         </PopoverContent>

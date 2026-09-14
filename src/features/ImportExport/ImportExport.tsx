@@ -90,12 +90,12 @@ export default function ImportExport() {
         <div className="space-y-1">
           <Heading3 as="h2" className="flex items-center gap-2">
             <HardDrive
-              className="size-5 shrink-0 text-sky-600 dark:text-sky-400"
+              className="text-theme-600 dark:text-theme-400 size-5 shrink-0"
               aria-hidden="true"
             />
             {t("localBackup.title")}
           </Heading3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-muted-foreground text-sm">
             {t("localBackup.description")}
           </p>
         </div>

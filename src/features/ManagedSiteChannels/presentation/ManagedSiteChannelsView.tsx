@@ -273,7 +273,7 @@ export function ManagedSiteChannelsView({
           />
 
           <div className="border-border overflow-hidden rounded-xl border">
-            <div className="border-border flex flex-col gap-3 border-b bg-slate-50 p-3 md:flex-row md:flex-wrap md:items-center dark:bg-slate-900/30">
+            <div className="border-border bg-surface-subtle dark:bg-background/30 flex flex-col gap-3 border-b p-3 md:flex-row md:flex-wrap md:items-center">
               <div className="relative w-full md:max-w-xs">
                 <Input
                   ref={searchInputRef}

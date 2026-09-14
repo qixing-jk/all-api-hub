@@ -269,8 +269,8 @@ export function TagFilter(props: TagFilterProps) {
     const count = option.count
 
     const chipBaseClasses = isActive
-      ? "border-emerald-500 bg-emerald-50 text-emerald-800 dark:border-emerald-400/70 dark:bg-emerald-900/40 dark:text-emerald-100"
-      : "border-gray-200 bg-white text-gray-800 dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary/60 dark:text-dark-text-secondary"
+      ? "border-primary-soft-border bg-primary-soft text-primary-soft-foreground"
+      : "border-border bg-card text-secondary-foreground dark:bg-card/60"
 
     return (
       <ToggleButton
@@ -296,7 +296,7 @@ export function TagFilter(props: TagFilterProps) {
           </span>
           {typeof count === "number" && (
             <Badge
-              variant={option.variant ?? (isActive ? "success" : "outline")}
+              variant={option.variant ?? (isActive ? "default" : "outline")}
               size="sm"
               className="shrink-0 border-transparent px-1.5 text-[11px]"
             >
@@ -326,8 +326,8 @@ export function TagFilter(props: TagFilterProps) {
           className={cn(
             "border px-3 py-1 text-xs font-medium shadow-xs sm:text-[13px]",
             !hasSelection
-              ? "border-emerald-500 bg-emerald-500 text-white dark:border-emerald-400 dark:bg-emerald-500/90 dark:text-white"
-              : "dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary/70 dark:text-dark-text-primary border-gray-200 bg-white text-gray-900",
+              ? "border-primary bg-primary text-primary-foreground"
+              : "dark:bg-card/70 border-border bg-card text-foreground",
           )}
           onClick={handleAllClick}
           aria-pressed={!hasSelection}
@@ -336,7 +336,7 @@ export function TagFilter(props: TagFilterProps) {
             <span className="truncate">{allLabel ?? t("common:total")}</span>
             {typeof allCount === "number" && (
               <Badge
-                variant={!hasSelection ? "success" : "outline"}
+                variant={!hasSelection ? "default" : "outline"}
                 size="sm"
                 className="shrink-0 border-transparent px-1.5 text-[11px]"
               >
@@ -360,7 +360,7 @@ export function TagFilter(props: TagFilterProps) {
                 size="sm"
                 shape="pill"
                 disabled={disabled}
-                className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary/70 dark:text-dark-text-primary border border-gray-200 bg-white px-3 py-1 text-xs text-gray-900 shadow-xs sm:text-[13px]"
+                className="dark:bg-card/70 border-border bg-card text-foreground border px-3 py-1 text-xs shadow-xs sm:text-[13px]"
                 aria-label={moreLabel}
               >
                 <span className="flex items-center gap-1">
@@ -374,7 +374,7 @@ export function TagFilter(props: TagFilterProps) {
                   </Badge>
                   {overflowSelectedCount > 0 && (
                     <Badge
-                      variant="info"
+                      variant="default"
                       size="sm"
                       className="border-transparent px-1.5 text-[11px]"
                     >
@@ -395,7 +395,7 @@ export function TagFilter(props: TagFilterProps) {
             size="sm"
             shape="pill"
             disabled={disabled}
-            className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary/70 dark:text-dark-text-primary border border-gray-200 bg-white px-3 py-1 text-xs text-gray-900 shadow-xs sm:text-[13px]"
+            className="dark:bg-card/70 border-border bg-card text-foreground border px-3 py-1 text-xs shadow-xs sm:text-[13px]"
             aria-label={moreLabel}
             onClick={() => {
               if (!disabled) {
@@ -414,7 +414,7 @@ export function TagFilter(props: TagFilterProps) {
               </Badge>
               {overflowSelectedCount > 0 && (
                 <Badge
-                  variant="info"
+                  variant="default"
                   size="sm"
                   className="border-transparent px-1.5 text-[11px]"
                 >

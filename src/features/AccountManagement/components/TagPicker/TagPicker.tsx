@@ -377,7 +377,7 @@ export function TagPicker({
             />
 
             {tagActionError && (
-              <div role="alert" className="text-destructive text-sm">
+              <div role="alert" className="text-destructive-text text-sm">
                 {tagActionError}
               </div>
             )}

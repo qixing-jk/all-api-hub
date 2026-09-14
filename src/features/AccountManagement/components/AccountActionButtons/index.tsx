@@ -1097,7 +1097,7 @@ export default function AccountActionButtons({
                 suppressMoreActionsFocusRestoreRef.current = false
               }
             }}
-            className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary z-50 rounded-lg border border-gray-200 bg-white py-1 shadow-lg focus:outline-none"
+            className="border-border bg-card z-50 rounded-lg border py-1 shadow-lg focus:outline-none"
           >
             {isAccountDisabled ? (
               <>
@@ -1110,7 +1110,7 @@ export default function AccountActionButtons({
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowDisableToggleMenuItem}
                 />
 
-                <DropdownMenuSeparator className="dark:bg-dark-bg-tertiary my-1 bg-gray-200" />
+                <DropdownMenuSeparator className="bg-secondary my-1" />
 
                 <AccountActionMenuItem
                   onClick={handleDeleteLocal}
@@ -1183,7 +1183,7 @@ export default function AccountActionButtons({
                   </ProductAnalyticsScope>
                 )}
 
-                <DropdownMenuSeparator className="dark:bg-dark-bg-tertiary my-1 bg-gray-200" />
+                <DropdownMenuSeparator className="bg-secondary my-1" />
 
                 <AccountActionMenuItem
                   onClick={handleRefreshLocal}
@@ -1210,7 +1210,7 @@ export default function AccountActionButtons({
                   </ProductAnalyticsScope>
                 )}
 
-                <DropdownMenuSeparator className="dark:bg-dark-bg-tertiary my-1 bg-gray-200" />
+                <DropdownMenuSeparator className="bg-secondary my-1" />
 
                 {(pageRoutes.usagePath || canOpenRedeemPage) && (
                   <AccountActionSubmenu
@@ -1292,7 +1292,7 @@ export default function AccountActionButtons({
                   }
                 />
 
-                <DropdownMenuSeparator className="dark:bg-dark-bg-tertiary my-1 bg-gray-200" />
+                <DropdownMenuSeparator className="bg-secondary my-1" />
 
                 {/* Pin/Unpin */}
                 {isPinFeatureEnabled && (

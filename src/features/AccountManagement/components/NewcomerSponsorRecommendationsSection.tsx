@@ -18,7 +18,7 @@ export const NewcomerSponsorRecommendationsSection = () => {
   }
 
   return (
-    <div className="dark:border-dark-bg-tertiary mt-5 border-t border-gray-200 pt-4 sm:mt-6 sm:pt-5">
+    <div className="border-border mt-5 border-t pt-4 sm:mt-6 sm:pt-5">
       <SponsorRecommendationsSection
         surface={SPONSOR_RECOMMENDATION_SURFACES.Newcomer}
         items={sponsorRecommendations.items}

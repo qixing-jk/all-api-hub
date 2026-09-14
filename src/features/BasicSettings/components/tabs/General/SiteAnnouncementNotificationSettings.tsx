@@ -103,7 +103,7 @@ export default function SiteAnnouncementNotificationSettings() {
           <CardItem
             id={SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED}
             icon={
-              <Megaphone className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+              <Megaphone className="text-theme-600 dark:text-theme-400 h-5 w-5" />
             }
             title={t("siteAnnouncementNotifications.polling.enable")}
             description={t("siteAnnouncementNotifications.polling.enableDesc")}
@@ -116,7 +116,9 @@ export default function SiteAnnouncementNotificationSettings() {
           />
           <CardItem
             id={SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_INTERVAL}
-            icon={<Clock className="h-5 w-5 text-sky-600 dark:text-sky-400" />}
+            icon={
+              <Clock className="text-theme-600 dark:text-theme-400 h-5 w-5" />
+            }
             title={t("siteAnnouncementNotifications.polling.interval")}
             description={t(
               "siteAnnouncementNotifications.polling.intervalDesc",
@@ -140,7 +142,7 @@ export default function SiteAnnouncementNotificationSettings() {
           <CardItem
             id={SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE}
             icon={
-              <WorkflowTransitionIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+              <WorkflowTransitionIcon className="text-theme-600 dark:text-theme-400 h-5 w-5" />
             }
             title={t("siteAnnouncementNotifications.page.title")}
             description={t("siteAnnouncementNotifications.page.description", {

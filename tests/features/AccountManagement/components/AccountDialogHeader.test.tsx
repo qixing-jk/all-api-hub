@@ -20,15 +20,19 @@ describe("AccountDialog DialogHeader", () => {
     const { container } = render(<DialogHeader mode={DIALOG_MODES.ADD} />)
 
     expect(screen.getByText("title.add")).toBeInTheDocument()
-    expect(container.querySelector("svg")).toHaveClass("text-blue-600")
-    expect(container.querySelector("svg")).not.toHaveClass("text-emerald-600")
+    expect(container.querySelector("svg")).toHaveClass(
+      "lucide-sparkles",
+      "text-link",
+    )
   })
 
   it("renders edit-mode copy with the pencil styling", () => {
     const { container } = render(<DialogHeader mode={DIALOG_MODES.EDIT} />)
 
     expect(screen.getByText("title.edit")).toBeInTheDocument()
-    expect(container.querySelector("svg")).toHaveClass("text-emerald-600")
-    expect(container.querySelector("svg")).not.toHaveClass("text-blue-600")
+    expect(container.querySelector("svg")).toHaveClass(
+      "lucide-pencil",
+      "text-link",
+    )
   })
 })

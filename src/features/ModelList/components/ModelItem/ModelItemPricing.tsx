@@ -288,8 +288,8 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
         <span
           className={`block max-w-full text-xs leading-snug font-medium sm:text-sm ${
             isAvailableForUser
-              ? "dark:text-dark-text-secondary text-gray-600"
-              : "dark:text-dark-text-tertiary text-gray-500"
+              ? "dark:text-secondary-foreground text-muted-foreground"
+              : "text-muted-foreground"
           }`}
         >
           {getUnavailablePriceReasonText(t, unavailableReason)}
@@ -341,7 +341,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
       ) : (
         calculatedPrice.kind === CALCULATED_PRICE_KINDS.PER_CALL && (
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            <span className="dark:text-dark-text-secondary text-xs whitespace-nowrap text-gray-600 sm:text-sm">
+            <span className="dark:text-secondary-foreground text-muted-foreground text-xs whitespace-nowrap sm:text-sm">
               {t("perCall")}
             </span>
             <ModelItemPerCallPricingView

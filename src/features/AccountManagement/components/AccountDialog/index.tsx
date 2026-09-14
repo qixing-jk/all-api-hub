@@ -342,11 +342,11 @@ export default function AccountDialog({
             <div className="grid gap-3">
               <SiteInfoInput {...siteInfoInputProps} />
               {showEntryAuthTypeSelector && onOpenBookmarkImport ? (
-                <div className="dark:text-dark-text-tertiary flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-gray-500">
+                <div className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs">
                   <span>{tAccountDialog("bookmarkImportBatch.prompt")}</span>
                   <button
                     type="button"
-                    className="text-xs font-medium text-blue-600 underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:outline-none dark:text-blue-300"
+                    className="text-theme-600 focus-visible:ring-ring dark:text-theme-300 text-xs font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
                     onClick={onOpenBookmarkImport}
                     data-testid={
                       ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportFromAddDialogButton
@@ -358,7 +358,7 @@ export default function AccountDialog({
               ) : null}
               {selectedSponsorPostClickNote ? (
                 <div
-                  className="flex items-start gap-2 rounded-md bg-blue-50 p-2 text-xs leading-5 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
+                  className="bg-theme-50 text-theme-700 dark:bg-theme-900/20 dark:text-theme-300 flex items-start gap-2 rounded-md p-2 text-xs leading-5"
                   data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPostClickNote}
                 >
                   <Info

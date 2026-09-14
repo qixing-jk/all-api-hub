@@ -16,17 +16,17 @@ export function RepairPreviousResultSummary({
   t,
 }: RepairPreviousResultSummaryProps) {
   return (
-    <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary/30 rounded-lg border border-dashed border-gray-200 bg-gray-50/60 p-3">
+    <div className="dark:bg-background/30 border-border bg-surface-subtle/60 rounded-lg border border-dashed p-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
-          <div className="shrink-0 rounded-lg bg-gray-100 p-2 text-gray-500 dark:bg-gray-800/60 dark:text-gray-400">
+          <div className="bg-muted text-muted-foreground dark:bg-card/60 shrink-0 rounded-lg p-2">
             <History className="h-4 w-4" aria-hidden="true" />
           </div>
           <div className="min-w-0 space-y-1">
-            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+            <p className="text-secondary-foreground text-sm font-medium">
               {t("keyManagement:repairMissingKeys.previousResult.title")}
             </p>
-            <p className="text-xs leading-5 text-gray-500 dark:text-gray-400">
+            <p className="text-muted-foreground text-xs leading-5">
               {t("keyManagement:repairMissingKeys.previousResult.description")}
             </p>
           </div>

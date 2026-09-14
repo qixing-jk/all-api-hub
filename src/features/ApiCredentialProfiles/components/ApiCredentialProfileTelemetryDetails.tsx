@@ -139,18 +139,18 @@ export function ApiCredentialProfileTelemetryDetails({
           <section
             data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.telemetryQuota}
           >
-            <div className="dark:text-dark-text-tertiary mb-1 text-gray-500">
+            <div className="text-muted-foreground mb-1">
               {t("apiCredentialProfiles:telemetry.quota")}
             </div>
             <div className="grid gap-1.5 sm:grid-cols-3">
               {facts.quota.windows.map((window, index) => (
                 <div
-                  className="dark:bg-dark-bg-tertiary/60 rounded-md bg-white px-2 py-1.5 font-medium text-gray-800 dark:text-gray-200"
+                  className="dark:bg-secondary/60 bg-card text-secondary-foreground rounded-md px-2 py-1.5 font-medium"
                   key={`${window.type}-${index}`}
                 >
                   <div>{formatProviderQuotaWindow(window, t)}</div>
                   {window.resetTime !== undefined ? (
-                    <div className="dark:text-dark-text-tertiary mt-0.5 text-[10px] font-normal text-gray-500">
+                    <div className="text-muted-foreground mt-0.5 text-[10px] font-normal">
                       {t(
                         "apiCredentialProfiles:telemetry.quotaWindows.resetAt",
                       )}{" "}
@@ -169,7 +169,7 @@ export function ApiCredentialProfileTelemetryDetails({
           <section
             data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance}
           >
-            <div className="dark:text-dark-text-tertiary mb-1 text-gray-500">
+            <div className="text-muted-foreground mb-1">
               {t("apiCredentialProfiles:telemetry.balance")}
             </div>
             <div className="flex min-w-0 flex-wrap items-baseline gap-1.5">
@@ -186,11 +186,11 @@ export function ApiCredentialProfileTelemetryDetails({
                           className="flex min-w-0 flex-wrap items-baseline gap-1.5"
                           key={`${balance.unit.kind === API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Money ? balance.unit.currency : balance.unit.code}-${index}`}
                         >
-                          <span className="dark:text-dark-text-primary font-semibold text-gray-900">
+                          <span className="text-foreground font-semibold">
                             {formatProviderBalance(balance, t)}
                           </span>
                           {semanticsLabel ? (
-                            <span className="dark:text-dark-text-tertiary text-[10px] text-gray-500">
+                            <span className="text-muted-foreground text-[10px]">
                               {semanticsLabel}
                             </span>
                           ) : null}
@@ -201,11 +201,11 @@ export function ApiCredentialProfileTelemetryDetails({
             </div>
           </section>
           <section className="min-w-0">
-            <div className="dark:text-dark-text-tertiary mb-1 text-gray-500">
+            <div className="text-muted-foreground mb-1">
               {t("apiCredentialProfiles:telemetry.todayUsage")}
             </div>
             <div
-              className="font-semibold text-emerald-600 dark:text-emerald-400"
+              className="text-cashflow-expense font-semibold"
               data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayUsage}
             >
               {facts?.usage?.todayCost !== undefined
@@ -217,11 +217,11 @@ export function ApiCredentialProfileTelemetryDetails({
             </div>
           </section>
           <section className="min-w-0">
-            <div className="dark:text-dark-text-tertiary mb-1 text-gray-500">
+            <div className="text-muted-foreground mb-1">
               {t("apiCredentialProfiles:telemetry.todayRequests")}
             </div>
             <div
-              className="dark:text-dark-text-primary font-semibold text-gray-900"
+              className="text-foreground font-semibold"
               data-testid={
                 API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayRequests
               }
@@ -232,11 +232,11 @@ export function ApiCredentialProfileTelemetryDetails({
             </div>
           </section>
           <section className="min-w-0">
-            <div className="dark:text-dark-text-tertiary mb-1 text-gray-500">
+            <div className="text-muted-foreground mb-1">
               {t("apiCredentialProfiles:telemetry.models")}
             </div>
             <div
-              className="dark:text-dark-text-primary truncate font-semibold text-gray-900"
+              className="text-foreground truncate font-semibold"
               data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.telemetryModels}
               title={facts?.models?.preview.join(", ")}
             >
@@ -249,7 +249,7 @@ export function ApiCredentialProfileTelemetryDetails({
           </section>
         </div>
       </div>
-      <div className="dark:text-dark-text-tertiary mt-auto flex flex-wrap gap-x-3 gap-y-1 pt-2 text-xs text-gray-500">
+      <div className="text-muted-foreground mt-auto flex flex-wrap gap-x-3 gap-y-1 pt-2 text-xs">
         <span>
           {t("apiCredentialProfiles:telemetry.lastSync")}{" "}
           {formatLocaleDateTime(
@@ -268,9 +268,7 @@ export function ApiCredentialProfileTelemetryDetails({
           </span>
         ) : null}
         {snapshot?.lastError ? (
-          <span className="text-amber-600 dark:text-amber-300">
-            {snapshot.lastError}
-          </span>
+          <span className="text-warning-text">{snapshot.lastError}</span>
         ) : null}
       </div>
     </>

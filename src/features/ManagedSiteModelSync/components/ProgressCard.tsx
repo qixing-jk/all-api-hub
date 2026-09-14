@@ -22,18 +22,18 @@ export default function ProgressCard(props: ProgressCardProps) {
   }
 
   return (
-    <Card className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
+    <Card className="border-theme-200 bg-theme-50 dark:border-theme-900 dark:bg-theme-950">
       <CardContent
         padding="default"
         spacing="none"
         className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-center sm:gap-4 sm:text-left"
       >
-        <RefreshCw className="h-5 w-5 shrink-0 animate-spin text-blue-600 dark:text-blue-400" />
+        <RefreshCw className="text-theme-600 dark:text-theme-400 h-5 w-5 shrink-0 animate-spin" />
         <div className="flex flex-col items-center sm:items-start">
-          <p className="font-medium text-blue-900 dark:text-blue-100">
+          <p className="text-theme-900 dark:text-theme-100 font-medium">
             {t("execution.status.running")}
           </p>
-          <p className="text-sm text-blue-700 dark:text-blue-300">
+          <p className="text-theme-700 dark:text-theme-300 text-sm">
             {t("execution.progress.running", {
               completed: progress.completed,
               total: progress.total,

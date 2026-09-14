@@ -361,35 +361,46 @@ describe("ManagedSiteModelSync components", () => {
     }
   })
 
-  it("exposes status filter pressed state", () => {
-    render(
-      <FilterBar
-        status="failed"
-        statistics={{
-          total: 3,
-          successCount: 2,
-          failureCount: 1,
-          durationMs: 1000,
-          startedAt: 0,
-          endedAt: 1000,
-        }}
-        keyword=""
-        onStatusChange={vi.fn()}
-        onKeywordChange={vi.fn()}
-      />,
-    )
+  it.each([
+    ["all", "bg-primary", "text-primary-foreground", 3],
+    ["success", "bg-success", "text-success-foreground", 2],
+    ["failed", "bg-destructive", "text-destructive-foreground", 1],
+  ] as const)(
+    "pairs the selected %s filter with its own foreground",
+    (status, background, foreground, count) => {
+      render(
+        <FilterBar
+          status={status}
+          statistics={{
+            total: 3,
+            successCount: 2,
+            failureCount: 1,
+            durationMs: 1000,
+            startedAt: 0,
+            endedAt: 1000,
+          }}
+          keyword=""
+          onStatusChange={vi.fn()}
+          onKeywordChange={vi.fn()}
+        />,
+      )
 
-    expect(
-      screen.getByRole("button", {
-        name: /managedSiteModelSync:execution.filters.all/,
-      }),
-    ).toHaveAttribute("aria-pressed", "false")
-    expect(
-      screen.getByRole("button", {
-        name: /managedSiteModelSync:execution.filters.failed/,
-      }),
-    ).toHaveAttribute("aria-pressed", "true")
-  })
+      for (const value of ["all", "success", "failed"]) {
+        expect(
+          screen.getByRole("button", {
+            name: new RegExp(`managedSiteModelSync:execution.filters.${value}`),
+          }),
+        ).toHaveAttribute("aria-pressed", String(value === status))
+      }
+      const selected = screen.getByRole("button", {
+        name: new RegExp(`managedSiteModelSync:execution.filters.${status}`),
+      })
+      expect(selected).toHaveClass(background, foreground)
+      const countBadge = within(selected).getByText(String(count))
+      expect(countBadge).toHaveClass("bg-overlay/10")
+      expect(countBadge).not.toHaveClass("text-primary-foreground")
+    },
+  )
 
   it("renders results and empty states across branches", async () => {
     const onSelectAll = vi.fn()

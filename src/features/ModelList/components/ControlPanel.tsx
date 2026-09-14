@@ -498,7 +498,7 @@ export function ControlPanel({
       <CardContent className="[container-type:inline-size]">
         {isProfileSource && (
           <Alert
-            variant="info"
+            variant="default"
             className="mb-4"
             title={t("profileSourceNotice.title")}
             description={t("profileSourceNotice.description")}
@@ -508,7 +508,7 @@ export function ControlPanel({
         <div className="space-y-4" data-testid="model-list-filter-row">
           <section
             aria-label={t("searchModels")}
-            className="dark:border-dark-bg-tertiary border-b border-gray-100 pb-4"
+            className="dark:border-border border-border-subtle border-b pb-4"
           >
             <div className="grid grid-cols-1 gap-3 [@container(min-width:32rem)]:grid-cols-[minmax(0,1fr)_minmax(12rem,0.55fr)] [@container(min-width:48rem)]:grid-cols-[minmax(0,1fr)_minmax(12rem,0.42fr)_auto] [@container(min-width:48rem)]:items-end">
               <FormField label={t("searchModels")}>
@@ -536,12 +536,12 @@ export function ControlPanel({
               )}
 
               <div className="flex h-9 items-center gap-3 self-end text-xs [@container(min-width:32rem)]:col-span-2 [@container(min-width:32rem)]:justify-end [@container(min-width:48rem)]:col-span-1">
-                <span className="dark:text-dark-text-secondary flex items-center gap-1.5 text-gray-600">
+                <span className="dark:text-secondary-foreground text-muted-foreground flex items-center gap-1.5">
                   <Cpu className="h-4 w-4" />
                   {t("totalModels", { count: totalModels })}
                 </span>
-                <span className="dark:bg-dark-bg-tertiary h-3 w-px bg-gray-300" />
-                <span className="font-medium text-blue-600 dark:text-blue-400">
+                <span className="dark:bg-secondary bg-surface-strong h-3 w-px" />
+                <span className="text-theme-600 dark:text-theme-400 font-medium">
                   {t("showing", { count: filteredModels.length })}
                 </span>
               </div>
@@ -550,7 +550,7 @@ export function ControlPanel({
 
           <section
             aria-labelledby="model-list-filters-heading"
-            className="dark:border-dark-bg-tertiary border-b border-gray-100 pb-4"
+            className="dark:border-border border-border-subtle border-b pb-4"
           >
             <h3
               id="model-list-filters-heading"
@@ -580,7 +580,7 @@ export function ControlPanel({
                         <button
                           type="button"
                           aria-label={t("groupSelectionHint")}
-                          className="dark:text-dark-text-tertiary inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:outline-none dark:hover:text-gray-300"
+                          className="dark:text-muted-foreground text-faint-foreground hover:text-muted-foreground focus-visible:ring-ring dark:hover:text-secondary-foreground inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
                         >
                           <CircleHelp className="h-4 w-4" aria-hidden="true" />
                         </button>
@@ -606,7 +606,7 @@ export function ControlPanel({
                       <button
                         type="button"
                         aria-label={modelCapabilityHint}
-                        className="dark:text-dark-text-tertiary inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:outline-none dark:hover:text-gray-300"
+                        className="dark:text-muted-foreground text-faint-foreground hover:text-muted-foreground focus-visible:ring-ring dark:hover:text-secondary-foreground inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
                       >
                         <CircleHelp className="h-4 w-4" aria-hidden="true" />
                       </button>

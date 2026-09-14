@@ -411,7 +411,7 @@ export function ServiceCredentialCard({
                   onSelectionChange={onSelectionChange}
                   disabledReason={selectionDisabledReason}
                 />
-                <KeyRound className="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
+                <KeyRound className="text-link h-4 w-4 shrink-0" />
                 <Heading6 className="truncate text-sm sm:text-base">
                   {credential.label}
                 </Heading6>
@@ -480,7 +480,7 @@ export function ServiceCredentialCard({
                     variant="ghost"
                     onClick={() => void onCopy(account)}
                   >
-                    <Copy className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
+                    <Copy className="text-muted-foreground h-4 w-4" />
                   </IconButton>
                 </KeyResourceActionGroup>
                 <KeyResourceActionGroup
@@ -537,7 +537,7 @@ export function ServiceCredentialCard({
                     variant="ghost"
                     onClick={() => setVerifyingProfile(transientProfile)}
                   >
-                    <Wrench className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    <Wrench className="text-link h-4 w-4" />
                   </IconButton>
                   <IconButton
                     aria-label={t("actions.verifyCliSupport")}
@@ -545,7 +545,7 @@ export function ServiceCredentialCard({
                     variant="ghost"
                     onClick={() => setCliVerifyingProfile(transientProfile)}
                   >
-                    <Terminal className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                    <Terminal className="text-link h-4 w-4" />
                   </IconButton>
                 </KeyResourceActionGroup>
                 {onRotate ? (
@@ -569,21 +569,21 @@ export function ServiceCredentialCard({
                 ) : null}
               </KeyResourceActionToolbar>
             </div>
-            <div className="dark:text-dark-text-secondary space-y-2 text-xs text-gray-600 sm:text-sm">
+            <div className="dark:text-secondary-foreground text-muted-foreground space-y-2 text-xs sm:text-sm">
               <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 break-words">
-                <span className="dark:text-dark-text-tertiary shrink-0 text-gray-500">
+                <span className="text-muted-foreground shrink-0">
                   {t("keyDetails.key")}
                 </span>
-                <code className="dark:bg-dark-bg-tertiary dark:text-dark-text-secondary inline-block max-w-full truncate rounded bg-gray-100 px-1.5 py-0.5 align-middle font-mono text-[10px] text-gray-800 sm:px-2 sm:py-1 sm:text-xs">
+                <code className="dark:bg-secondary bg-muted text-secondary-foreground inline-block max-w-full truncate rounded px-1.5 py-0.5 align-middle font-mono text-[10px] sm:px-2 sm:py-1 sm:text-xs">
                   {formatKey(credential.key, identityKey, visibleKeys)}
                 </code>
               </div>
               {credential.baseUrl ? (
                 <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 break-words">
-                  <span className="dark:text-dark-text-tertiary shrink-0 text-gray-500">
+                  <span className="text-muted-foreground shrink-0">
                     {t("serviceCredential.baseUrl")}
                   </span>
-                  <span className="dark:text-dark-text-primary min-w-0 font-medium break-words text-gray-900">
+                  <span className="text-foreground min-w-0 font-medium break-words">
                     {credential.baseUrl}
                   </span>
                 </div>

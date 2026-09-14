@@ -19,7 +19,7 @@ export function RepairRenameOption({
   t,
 }: RepairRenameOptionProps) {
   return (
-    <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary/40 rounded-lg border border-gray-200 bg-gray-50/70 p-3">
+    <div className="dark:bg-background/40 border-border bg-surface-subtle/70 rounded-lg border p-3">
       <div className="flex items-start gap-3">
         <Checkbox
           id="repair-missing-keys-rename-auto-template"
@@ -32,7 +32,7 @@ export function RepairRenameOption({
           <div className="flex min-w-0 items-center gap-1.5">
             <Label
               htmlFor="repair-missing-keys-rename-auto-template"
-              className="cursor-pointer text-sm font-medium text-gray-800 dark:text-gray-200"
+              className="text-secondary-foreground cursor-pointer text-sm font-medium"
             >
               {t("keyManagement:repairMissingKeys.renameOption.label")}
             </Label>
@@ -45,7 +45,7 @@ export function RepairRenameOption({
             >
               <button
                 type="button"
-                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none dark:text-gray-500 dark:hover:text-gray-300"
+                className="text-faint-foreground hover:text-muted-foreground focus-visible:ring-ring dark:hover:text-secondary-foreground inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 aria-label={t(
                   "keyManagement:repairMissingKeys.renameOption.infoLabel",
                 )}
@@ -54,7 +54,7 @@ export function RepairRenameOption({
               </button>
             </Tooltip>
           </div>
-          <p className="text-xs leading-5 text-gray-500 dark:text-gray-400">
+          <p className="text-muted-foreground text-xs leading-5">
             {t("keyManagement:repairMissingKeys.renameOption.helper")}
           </p>
         </div>

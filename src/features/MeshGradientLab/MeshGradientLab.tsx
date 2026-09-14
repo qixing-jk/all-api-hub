@@ -122,7 +122,7 @@ const MeshGradientCanvas = ({
   }, [layoutIndex, paletteIndex, seed, showOverlay])
 
   return (
-    <div className="dark:border-dark-bg-tertiary aspect-square w-full overflow-hidden rounded-lg border border-gray-200">
+    <div className="border-border aspect-square w-full overflow-hidden rounded-lg border">
       <canvas
         ref={canvasRef}
         className="h-full w-full"
@@ -146,7 +146,7 @@ const PaletteSwatches = ({ colors }: { colors: readonly string[] }) => {
           />
         ))}
       </div>
-      <div className="dark:text-dark-text-tertiary grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-gray-500">
+      <div className="text-muted-foreground grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
         {colors.map((color, index) => (
           <span key={`${color}-${index}`} className="font-mono">
             {color.toLowerCase()}
@@ -212,7 +212,7 @@ export default function MeshGradientLab() {
                 <div className="flex items-center gap-2">
                   <Label size="sm">{t("meshGradientLab:labels.view")}</Label>
                   <div
-                    className={`dark:bg-dark-bg-tertiary corners-concentric inline-flex rounded-md bg-gray-50 p-1 [--corner-inset:--spacing(1)] ${CORNERS.buttonItems}`}
+                    className={`dark:bg-secondary corners-concentric bg-surface-subtle inline-flex rounded-md p-1 [--corner-inset:--spacing(1)] ${CORNERS.buttonItems}`}
                   >
                     <ToggleButton
                       size="sm"
@@ -295,7 +295,7 @@ export default function MeshGradientLab() {
                 </div>
               </div>
 
-              <div className="dark:text-dark-text-tertiary text-sm text-gray-500">
+              <div className="text-muted-foreground text-sm">
                 {t("meshGradientLab:summaryPalette", { count: paletteCount })}
                 {" · "}
                 {t("meshGradientLab:summaryLayout", { count: layoutCount })}
@@ -315,7 +315,7 @@ export default function MeshGradientLab() {
                     layoutIndex={safeLayoutIndex}
                     showOverlay={showOverlay}
                   />
-                  <div className="dark:text-dark-text-primary mt-3 text-sm font-medium text-gray-900">
+                  <div className="text-foreground mt-3 text-sm font-medium">
                     {t("meshGradientLab:captions.paletteIndex", { index })}
                   </div>
                   <PaletteSwatches colors={palette.colors} />
@@ -334,7 +334,7 @@ export default function MeshGradientLab() {
                     layoutIndex={index}
                     showOverlay={showOverlay}
                   />
-                  <div className="dark:text-dark-text-primary mt-3 text-sm font-medium text-gray-900">
+                  <div className="text-foreground mt-3 text-sm font-medium">
                     {t("meshGradientLab:captions.layoutIndex", { index })}
                   </div>
                   <PaletteSwatches

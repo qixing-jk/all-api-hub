@@ -190,11 +190,11 @@ export function AccountListHeader({
 
   return (
     <div
-      className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-y border-gray-200/80 bg-gray-50/40 px-3 py-1.5 sm:px-4 dark:border-white/10 dark:bg-white/[0.015]"
+      className="border-border/80 bg-surface-subtle/40 dark:border-foreground/10 dark:bg-foreground/[0.015] flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-y px-3 py-1.5 sm:px-4"
       data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListHeader}
     >
       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="dark:text-dark-text-tertiary text-xs font-medium whitespace-nowrap text-gray-500">
+        <span className="text-muted-foreground text-xs font-medium whitespace-nowrap">
           <span className="sr-only [@container(min-width:24rem)]:not-sr-only">
             {t("common:total") + ": "}
           </span>
@@ -207,9 +207,9 @@ export function AccountListHeader({
         >
           <div
             className={cn(
-              "flex h-7 shrink-0 items-center rounded-md bg-gray-100/70 transition-colors dark:bg-white/5",
+              "bg-muted/70 dark:bg-foreground/5 flex h-7 shrink-0 items-center rounded-md transition-colors",
               hasActiveSort &&
-                "bg-blue-50/70 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
+                "bg-theme-50/70 text-theme-700 dark:bg-theme-950/40 dark:text-theme-300",
             )}
           >
             <DropdownMenu>
@@ -228,7 +228,7 @@ export function AccountListHeader({
                   {activeSortOption?.label ?? t("account:list.sortMenu")}
                   <ChevronDown
                     aria-hidden="true"
-                    className="size-3 text-gray-400"
+                    className="text-faint-foreground size-3"
                   />
                 </Button>
               </DropdownMenuTrigger>
@@ -322,7 +322,7 @@ export function AccountListHeader({
               <IconButton
                 variant="ghost"
                 size="none"
-                className="size-7 shrink-0 rounded-md text-gray-500 dark:text-gray-400"
+                className="text-muted-foreground size-7 shrink-0 rounded-md"
                 aria-label={t("settings:sorting.title")}
                 onClick={openSortingSettings}
               >
@@ -399,7 +399,7 @@ export function AccountListHeader({
                 {reorderLabel}
               </DropdownMenuItem>
               {reorderDisabledReason && (
-                <p className="max-w-64 px-2 py-1 text-xs text-gray-500">
+                <p className="text-muted-foreground max-w-64 px-2 py-1 text-xs">
                   {reorderDisabledReason}
                 </p>
               )}

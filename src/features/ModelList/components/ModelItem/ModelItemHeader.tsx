@@ -72,16 +72,14 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
           <div className="min-w-0 flex-1">
             <h3
               className={`min-w-0 flex-1 truncate text-sm font-semibold sm:text-base md:text-lg ${
-                isAvailableForUser
-                  ? "dark:text-dark-text-primary text-gray-900"
-                  : "dark:text-dark-text-tertiary text-gray-500"
+                isAvailableForUser ? "text-foreground" : "text-muted-foreground"
               }`}
             >
               {displayName}
             </h3>
             {showRequestModelId ? (
               <p
-                className="dark:text-dark-text-tertiary mt-0.5 truncate font-mono text-[11px] text-gray-500 sm:text-xs"
+                className="text-muted-foreground mt-0.5 truncate font-mono text-[11px] sm:text-xs"
                 title={model.model_name}
               >
                 {model.model_name}
@@ -121,7 +119,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
                   PRODUCT_ANALYTICS_ACTION_IDS.OpenModelKeyDialog
                 }
               >
-                <KeyRound className="h-3 w-3 text-violet-600 sm:h-3.5 sm:w-3.5 dark:text-violet-400" />
+                <KeyRound className="text-theme-600 dark:text-theme-400 h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </IconButton>
             )}
 
@@ -136,7 +134,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
                 className="shrink-0"
                 analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.VerifyModelApi}
               >
-                <Wrench className="h-3 w-3 text-emerald-600 sm:h-3.5 sm:w-3.5 dark:text-emerald-400" />
+                <Wrench className="text-link h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </IconButton>
             )}
 
@@ -153,7 +151,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
                   PRODUCT_ANALYTICS_ACTION_IDS.VerifyModelCliSupport
                 }
               >
-                <Terminal className="h-3 w-3 text-sky-600 sm:h-3.5 sm:w-3.5 dark:text-sky-400" />
+                <Terminal className="text-link h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </IconButton>
             )}
           </div>

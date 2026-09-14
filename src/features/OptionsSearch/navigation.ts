@@ -8,10 +8,10 @@ export const OPTIONS_SEARCH_ANCHOR_PARAM = "anchor"
 const OPTIONS_SEARCH_TAB_PARAM = "tab"
 const OPTIONS_SEARCH_HIGHLIGHT_CLASSNAMES = [
   "ring-2",
-  "ring-blue-500",
+  "ring-theme-500",
   "ring-offset-2",
-  "ring-offset-white",
-  "dark:ring-offset-slate-900",
+  "ring-offset-background",
+  "dark:ring-offset-surface-subtle",
 ]
 
 /**

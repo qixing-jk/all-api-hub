@@ -54,28 +54,28 @@ export default function AccountSnapshotTableRow({
     switch (getAutoCheckinSnapshotStatus(snapshot)) {
       case SNAPSHOT_STATUS_FILTER.SUCCESS:
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
+          <span className="bg-success-soft text-success-soft-foreground inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
             <CircleCheck className="h-3.5 w-3.5" />
             {t("execution.status.success")}
           </span>
         )
       case SNAPSHOT_STATUS_FILTER.FAILED:
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900 dark:text-red-200">
+          <span className="bg-destructive-soft text-destructive-soft-foreground inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
             <CircleX className="h-3.5 w-3.5" />
             {t("execution.status.failed")}
           </span>
         )
       case SNAPSHOT_STATUS_FILTER.SKIPPED:
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">
+          <span className="bg-warning-soft text-warning-soft-foreground inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
             <TriangleAlert className="h-3.5 w-3.5" />
             {t("execution.status.skipped")}
           </span>
         )
       default:
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+          <span className="bg-muted text-secondary-foreground dark:bg-card inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
             <Clock className="h-3.5 w-3.5" />
             {t("snapshot.badges.pending")}
           </span>
@@ -84,8 +84,8 @@ export default function AccountSnapshotTableRow({
   })()
 
   return (
-    <TableRow className="border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800">
-      <TableCell className="w-56 max-w-56 min-w-56 px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+    <TableRow className="border-border hover:bg-surface-subtle dark:hover:bg-card">
+      <TableCell className="text-foreground w-56 max-w-56 min-w-56 px-6 py-4 text-sm font-medium">
         <AccountLinkButton
           accountId={snapshot.accountId}
           accountName={snapshot.accountName}
@@ -97,8 +97,8 @@ export default function AccountSnapshotTableRow({
           className={cn(
             "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
             snapshot.autoCheckinEnabled
-              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-              : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300",
+              ? "bg-success-soft text-success-soft-foreground"
+              : "bg-muted text-muted-foreground dark:bg-card dark:text-secondary-foreground",
           )}
         >
           {snapshot.autoCheckinEnabled
@@ -113,12 +113,12 @@ export default function AccountSnapshotTableRow({
               className={cn(
                 "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
                 readinessIsReady &&
-                  "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+                  "bg-success-soft text-success-soft-foreground",
                 readinessIsEmphasized &&
-                  "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100",
+                  "bg-warning-soft text-warning-soft-foreground",
                 !readinessIsReady &&
                   !readinessIsEmphasized &&
-                  "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200",
+                  "bg-muted text-secondary-foreground dark:bg-card",
               )}
             >
               {readinessLabels[readinessCategory]}
@@ -130,7 +130,7 @@ export default function AccountSnapshotTableRow({
               }
             />
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
+          <div className="text-muted-foreground text-xs">
             <span>
               {snapshot.detectionEnabled
                 ? t("snapshot.badges.methodSelected")
@@ -149,13 +149,13 @@ export default function AccountSnapshotTableRow({
         <div className="space-y-1.5">
           {statusBadge}
           {reason && (
-            <div className="text-xs text-gray-500 dark:text-gray-400">
+            <div className="text-muted-foreground text-xs">
               {translateAutoCheckinSkipReason(t, reason)}
             </div>
           )}
         </div>
       </TableCell>
-      <TableCell className="px-4 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
+      <TableCell className="text-muted-foreground px-4 py-4 text-sm whitespace-nowrap">
         {snapshot.lastResult?.timestamp
           ? formatTimestamp(snapshot.lastResult.timestamp)
           : "-"}

@@ -285,8 +285,8 @@ export default function AccountSnapshotTable({
       ) : (
         <>
           <Table className="min-w-[58rem]">
-            <TableHeader className="bg-gray-50 dark:bg-gray-800">
-              <TableRow className="border-gray-200 hover:bg-transparent dark:border-gray-700">
+            <TableHeader className="bg-surface-subtle dark:bg-card">
+              <TableRow className="border-border hover:bg-transparent">
                 {sortableHeader("accountName")}
                 {sortableHeader("autoCheckin")}
                 {sortableHeader("readiness")}
@@ -294,7 +294,7 @@ export default function AccountSnapshotTable({
                 {sortableHeader("lastResult")}
               </TableRow>
             </TableHeader>
-            <TableBody className="bg-white dark:bg-gray-900">
+            <TableBody className="bg-card dark:bg-background">
               {table.getRowModel().rows.map(({ original: snapshot }) => (
                 <AccountSnapshotTableRow
                   key={snapshot.accountId}

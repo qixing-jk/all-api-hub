@@ -6,6 +6,7 @@ import {
   LinkedChannelCleanupOption,
   LinkedChannelCleanupPending,
 } from "~/features/KeyManagement/components/LinkedChannelCleanup"
+import { LINKED_CHANNEL_CLEANUP_STORAGE_KEY } from "~/services/core/storageKeys"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const mocks = vi.hoisted(() => ({
@@ -93,6 +94,17 @@ describe("linked cleanup controls", () => {
       expect(screen.queryByText(/Pending channel/)).not.toBeInTheDocument(),
     )
     unmount()
-    expect(mocks.unwatch).toHaveBeenCalledOnce()
+    // The shared preferences provider also owns a storage subscription.
+    const cleanupSubscriptions = mocks.watch.mock.calls.filter(
+      ([callbacks]) => LINKED_CHANNEL_CLEANUP_STORAGE_KEY in callbacks,
+    )
+    expect(cleanupSubscriptions).toHaveLength(1)
+    expect(
+      mocks.unwatch.mock.calls.filter(
+        ([callbacks]) =>
+          callbacks[LINKED_CHANNEL_CLEANUP_STORAGE_KEY] ===
+          cleanupSubscriptions[0][0][LINKED_CHANNEL_CLEANUP_STORAGE_KEY],
+      ),
+    ).toHaveLength(1)
   })
 })

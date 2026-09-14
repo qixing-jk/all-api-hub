@@ -22,7 +22,7 @@ export function SiteAnnouncementsStatusAlert({
   }
 
   return (
-    <div className="mb-4 flex gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+    <div className="border-warning-border bg-warning-soft text-warning-soft-foreground mb-4 flex gap-3 rounded-md border px-4 py-3 text-sm">
       <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
       <div className="min-w-0">
         <p className="font-medium">
@@ -37,7 +37,7 @@ export function SiteAnnouncementsStatusAlert({
                 error: status.lastError ?? "-",
               })}
         </p>
-        <p className="mt-1 text-xs text-amber-800/80 dark:text-amber-100/75">
+        <p className="text-warning-text mt-1 text-xs">
           {t("status.lastChecked", {
             time: formatDateTime(status.lastCheckedAt),
           })}

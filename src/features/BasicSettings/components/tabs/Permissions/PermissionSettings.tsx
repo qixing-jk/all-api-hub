@@ -32,10 +32,10 @@ export default function PermissionSettings() {
       description={t("permissions.description")}
       className="space-y-4"
     >
-      <Alert variant="info" description={t("permissions.helper")} />
+      <Alert variant="default" description={t("permissions.helper")} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <BodySmall className="dark:text-dark-text-tertiary text-gray-500">
+        <BodySmall className="text-muted-foreground">
           {t("permissions.statusCaption")}
         </BodySmall>
         <Button

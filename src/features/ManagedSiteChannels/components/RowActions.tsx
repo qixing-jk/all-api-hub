@@ -193,7 +193,7 @@ export default function RowActions({
               {canDelete ? (
                 <DropdownMenuItem
                   data-testid={testIds.delete}
-                  className="text-destructive focus:text-destructive"
+                  className="text-destructive-text focus:text-destructive-text"
                   onClick={() => onDelete(rowKey)}
                 >
                   {labels.delete}

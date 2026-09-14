@@ -72,13 +72,13 @@ function RepairAccountSummary({
           <Badge
             variant="outline"
             size="sm"
-            className="dark:border-dark-bg-tertiary shrink-0 border-gray-200 px-2 py-0.5 text-[11px] font-medium"
+            className="border-border shrink-0 px-2 py-0.5 text-[11px] font-medium"
             title={result.siteType}
           >
             {result.siteType}
           </Badge>
         </div>
-        <div className="dark:text-dark-text-secondary truncate text-xs text-gray-500">
+        <div className="dark:text-secondary-foreground text-muted-foreground truncate text-xs">
           {result.siteUrlOrigin}
         </div>
       </div>
@@ -89,8 +89,8 @@ function RepairAccountSummary({
             className={cn(
               "min-w-0 flex-1 text-xs leading-5 break-words sm:max-w-72 sm:text-right",
               result.outcome === ACCOUNT_KEY_REPAIR_OUTCOMES.Failed
-                ? "text-red-700 dark:text-red-300"
-                : "dark:text-dark-text-secondary text-gray-500",
+                ? "text-destructive-text"
+                : "dark:text-secondary-foreground text-muted-foreground",
             )}
           >
             {feedbackMessage}
@@ -107,7 +107,7 @@ function RepairAccountSummary({
           <ChevronDown
             aria-hidden="true"
             className={cn(
-              "dark:text-dark-text-tertiary mt-0.5 h-4 w-4 shrink-0 text-gray-500 transition-transform sm:mt-0",
+              "text-muted-foreground mt-0.5 h-4 w-4 shrink-0 transition-transform sm:mt-0",
               open ? "rotate-180" : "rotate-0",
             )}
           />
@@ -134,7 +134,7 @@ function RepairAccountDetails({ result, t }: RepairAccountDetailsProps) {
   return (
     <div className="space-y-2.5">
       {result.inventoryIssues?.length ? (
-        <ul className="space-y-1 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+        <ul className="bg-warning-soft text-warning-soft-foreground space-y-1 rounded-md px-3 py-2 text-xs">
           {result.inventoryIssues.map((issue) => (
             <li key={issue.code}>{getInventoryIssueLabel(t, issue)}</li>
           ))}
@@ -152,9 +152,9 @@ function RepairAccountDetails({ result, t }: RepairAccountDetailsProps) {
             return (
               <li
                 key={requirementResult.requirement.requirementKey}
-                className="dark:border-dark-bg-tertiary flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-md border border-gray-100 px-3 py-2"
+                className="dark:border-border border-border-subtle flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2"
               >
-                <span className="min-w-0 truncate text-xs font-medium text-gray-700 dark:text-gray-300">
+                <span className="text-secondary-foreground min-w-0 truncate text-xs font-medium">
                   {requirementResult.requirement.displayName}
                 </span>
                 <Badge
@@ -169,7 +169,7 @@ function RepairAccountDetails({ result, t }: RepairAccountDetailsProps) {
                   {getRequirementOutcomeLabel(t, requirementResult.outcome)}
                 </Badge>
                 {requirementFailureMessage ? (
-                  <p className="w-full text-xs break-words text-red-700 dark:text-red-300">
+                  <p className="text-destructive-text w-full text-xs break-words">
                     {requirementFailureMessage}
                   </p>
                 ) : null}
@@ -182,7 +182,7 @@ function RepairAccountDetails({ result, t }: RepairAccountDetailsProps) {
       {result.renameResults.length > 0 ? (
         <div className="flex flex-wrap gap-2 text-xs">
           {renameCounts[ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Applied] > 0 ? (
-            <Badge variant="info" size="sm">
+            <Badge variant="success" size="sm">
               {t(
                 "keyManagement:repairMissingKeys.renameSummary.accountApplied",
                 {
@@ -273,24 +273,22 @@ function RepairAccountCoverageItem({
         <Collapsible
           open={open}
           onOpenChange={setOpen}
-          className="dark:border-dark-bg-tertiary corners-concentric overflow-hidden rounded-lg border border-gray-200 [--corner-inset:1px]"
+          className="corners-concentric border-border overflow-hidden rounded-lg border [--corner-inset:1px]"
         >
           <CollapsibleTrigger
             aria-label={t("keyManagement:actions.detailsFor", {
               name: result.accountName,
             })}
-            className="dark:hover:bg-dark-bg-tertiary/60 focus-visible:ring-ring/50 w-full rounded-[var(--corner-inner-radius)] p-3 text-left transition-colors hover:bg-gray-50 focus-visible:ring-[3px] focus-visible:outline-none focus-visible:ring-inset data-[state=open]:rounded-b-none"
+            className="dark:hover:bg-secondary/60 focus-visible:ring-ring/50 hover:bg-surface-subtle w-full rounded-[var(--corner-inner-radius)] p-3 text-left transition-colors focus-visible:ring-[3px] focus-visible:outline-none focus-visible:ring-inset data-[state=open]:rounded-b-none"
           >
             {summary}
           </CollapsibleTrigger>
-          <CollapsibleContent className="dark:border-dark-bg-tertiary border-t border-gray-100 px-3 py-2.5">
+          <CollapsibleContent className="dark:border-border border-border-subtle border-t px-3 py-2.5">
             <RepairAccountDetails result={result} t={t} />
           </CollapsibleContent>
         </Collapsible>
       ) : (
-        <div className="dark:border-dark-bg-tertiary rounded-lg border border-gray-200 p-3">
-          {summary}
-        </div>
+        <div className="border-border rounded-lg border p-3">{summary}</div>
       )}
     </li>
   )

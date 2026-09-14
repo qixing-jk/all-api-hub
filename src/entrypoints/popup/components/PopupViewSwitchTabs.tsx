@@ -56,8 +56,8 @@ function PopupViewSwitchTab({
       className={cn(
         baseClassName,
         "flex min-w-0 items-center justify-center truncate",
-        "data-[state=active]:dark:bg-dark-bg-secondary data-[state=active]:dark:text-dark-text-primary data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm",
-        "dark:text-dark-text-secondary dark:hover:text-dark-text-primary text-gray-500 hover:text-gray-700",
+        "data-[state=active]:dark:bg-card data-[state=active]:dark:text-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+        "dark:text-secondary-foreground dark:hover:text-foreground text-muted-foreground hover:text-secondary-foreground",
       )}
     >
       {label}

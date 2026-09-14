@@ -94,7 +94,7 @@ export function FeedbackForm({
           <h2 className="text-lg font-semibold">
             {t("checkInFeedback.title")}
           </h2>
-          <p className="text-sm leading-6 text-gray-500 dark:text-gray-400">
+          <p className="text-muted-foreground text-sm leading-6">
             {t("checkInFeedback.intro")}
           </p>
         </div>
@@ -119,14 +119,14 @@ export function FeedbackForm({
           <div className="flex flex-col items-start gap-3 [@container(min-width:28rem)]:flex-row [@container(min-width:28rem)]:items-center [@container(min-width:28rem)]:justify-between">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 text-sm font-medium">
-                <Globe className="h-4 w-4 shrink-0 text-gray-400" />
+                <Globe className="text-faint-foreground h-4 w-4 shrink-0" />
                 <span className="break-all">
                   {origin ?? t("checkInFeedback.reportSite")}
                 </span>
               </div>
             </div>
             <label
-              className="flex shrink-0 items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
+              className="text-muted-foreground flex shrink-0 items-center gap-2 text-xs"
               htmlFor={`${id}-address`}
             >
               {t("checkInFeedback.includeAddress")}
@@ -143,10 +143,10 @@ export function FeedbackForm({
             {t("checkInFeedback.addressHint")}
           </p>
           {executionMessage && (
-            <div className="space-y-2 rounded-lg bg-gray-50 px-3 py-2.5 dark:bg-gray-800/50">
+            <div className="bg-surface-subtle dark:bg-card/50 space-y-2 rounded-lg px-3 py-2.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <ResultStatusBadge status={snapshot.execution!.status} />
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-muted-foreground text-xs">
                   {formatTimestamp(snapshot.execution?.timestamp)}
                 </span>
               </div>
@@ -167,13 +167,13 @@ export function FeedbackForm({
           />
         </FormField>
         <div
-          className="flex items-start gap-2 text-xs text-gray-500 dark:text-gray-400"
+          className="text-muted-foreground flex items-start gap-2 text-xs"
           role="status"
         >
           {scanning ? (
             <Spinner size="sm" />
           ) : scanStatus === "completed" ? (
-            <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <Check className="text-success-text mt-0.5 h-4 w-4 shrink-0" />
           ) : (
             <Info className="mt-0.5 h-4 w-4 shrink-0" />
           )}

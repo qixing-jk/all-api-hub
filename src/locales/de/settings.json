@@ -18,6 +18,41 @@
     "sidepanelUnsupportedHelper": "Dieser Browser unterstützt keine Seitenleiste; die Auswahl „Seitenleiste“ wird daher auf das Popup zurückgesetzt.",
     "title": "Klicken Sie auf das Erweiterungssymbol"
   },
+  "appearance": {
+    "color": "Akzentfarbe",
+    "colors": {
+      "blue": "Blau",
+      "green": "Grün",
+      "orange": "Orange",
+      "rose": "Rosa",
+      "slate": "Schiefergrau",
+      "violet": "Violett"
+    },
+    "description": "Änderungen werden automatisch gespeichert und auf Einstellungen, Popup und Seitenleiste angewendet.",
+    "preset": "Designvorlage",
+    "presetColorsHint": "Dieses Design hat eine eigene Farbpalette. Im Standarddesign können Sie die Akzentfarbe separat wählen.",
+    "presetDescriptions": {
+      "anthropic": "Warmes Creme und Terrakotta mit anthrazitfarbenem Dunkelmodus.",
+      "default": "Klassische Neutraltöne mit frei wählbarer Akzentfarbe."
+    },
+    "presets": {
+      "anthropic": "Anthropic",
+      "default": "Standarddesign"
+    },
+    "preview": "Vorschau",
+    "primaryAction": "Hauptaktion",
+    "radii": {
+      "default": "Standard",
+      "large": "Groß",
+      "none": "Eckig",
+      "small": "Klein"
+    },
+    "radius": "Eckenradius",
+    "reset": "Darstellung zurücksetzen",
+    "saveFailed": "Speichern fehlgeschlagen. Bitte erneut versuchen.",
+    "secondaryAction": "Nebenaktion",
+    "title": "Darstellung"
+  },
   "appearanceLanguage": {
     "language": "Sprache",
     "languageDesc": "Wählen Sie Ihre bevorzugte Sprache",

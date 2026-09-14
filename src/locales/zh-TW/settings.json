@@ -18,6 +18,41 @@
     "sidepanelUnsupportedHelper": "目前瀏覽器不支援側邊欄；選擇側邊欄時會自動回退到彈窗。",
     "title": "點擊擴充套件圖示"
   },
+  "appearance": {
+    "color": "主題色",
+    "colors": {
+      "blue": "藍色",
+      "green": "綠色",
+      "orange": "橙色",
+      "rose": "玫紅",
+      "slate": "石板灰",
+      "violet": "紫色"
+    },
+    "description": "修改後自動儲存，套用至設定頁、彈出視窗和側欄。",
+    "preset": "主題風格",
+    "presetColorsHint": "目前主題自帶完整配色。切換到預設主題可單獨選擇強調色。",
+    "presetDescriptions": {
+      "anthropic": "暖米色與陶土色，搭配暖炭灰深色模式。",
+      "default": "經典中性色，可自由選擇強調色。"
+    },
+    "presets": {
+      "anthropic": "Anthropic",
+      "default": "預設主題"
+    },
+    "preview": "效果預覽",
+    "primaryAction": "主要操作",
+    "radii": {
+      "default": "預設",
+      "large": "大",
+      "none": "直角",
+      "small": "小"
+    },
+    "radius": "圓角大小",
+    "reset": "恢復預設外觀",
+    "saveFailed": "儲存失敗，請重試。",
+    "secondaryAction": "次要操作",
+    "title": "外觀設定"
+  },
   "appearanceLanguage": {
     "language": "語言",
     "languageDesc": "選擇您偏好的顯示語言",

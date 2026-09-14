@@ -58,7 +58,7 @@ export function LinkedChannelCleanupOption({
         />
         <Label htmlFor={id}>{t("linkedCleanup.option")}</Label>
       </div>
-      <p className="text-xs text-gray-500 dark:text-gray-400">
+      <p className="text-muted-foreground text-xs">
         {t("linkedCleanup.description")}
       </p>
     </div>

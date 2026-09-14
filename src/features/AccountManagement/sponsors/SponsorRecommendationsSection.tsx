@@ -58,14 +58,11 @@ export function SponsorRecommendationsSection({
       data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.sponsorRecommendations}
     >
       <div className={showVisibleHeader ? "space-y-1" : "sr-only"}>
-        <h3
-          id={headingId}
-          className="dark:text-dark-text-primary text-sm font-medium text-gray-900"
-        >
+        <h3 id={headingId} className="text-foreground text-sm font-medium">
           {heading}
         </h3>
         {isNewcomer ? (
-          <p className="dark:text-dark-text-secondary text-xs leading-5 text-gray-600">
+          <p className="dark:text-secondary-foreground text-muted-foreground text-xs leading-5">
             {t("sponsor.newcomer.description")}
           </p>
         ) : null}

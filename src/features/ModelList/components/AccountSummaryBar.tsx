@@ -50,14 +50,14 @@ function AccountSummaryBadge({
     if (item.isLoading) {
       return {
         label: t("accountSummary.loading"),
-        className: "text-amber-600 dark:text-amber-300",
+        className: "text-warning-text",
       }
     }
 
     if (item.errorType === MODEL_LIST_ACCOUNT_ERROR_TYPES.LOAD_FAILED) {
       return {
         label: t("accountSummary.loadFailed"),
-        className: "text-red-500 dark:text-red-400",
+        className: "text-destructive-text",
         title: item.errorMessage,
       }
     }
@@ -65,7 +65,7 @@ function AccountSummaryBadge({
     if (item.errorType === MODEL_LIST_ACCOUNT_ERROR_TYPES.INVALID_FORMAT) {
       return {
         label: t("accountSummary.incompatible"),
-        className: "text-red-500 dark:text-red-400",
+        className: "text-destructive-text",
         title: item.errorMessage,
       }
     }
@@ -73,7 +73,7 @@ function AccountSummaryBadge({
     if (item.errorType === MODEL_LIST_ACCOUNT_ERROR_TYPES.UNSUPPORTED_SOURCE) {
       return {
         label: t("accountSummary.unsupported"),
-        className: "text-blue-600 dark:text-blue-300",
+        className: "text-info-text",
         title: item.errorMessage,
       }
     }
@@ -81,14 +81,14 @@ function AccountSummaryBadge({
     if (item.errorType === MODEL_LIST_ACCOUNT_ERROR_TYPES.PARTIAL_LOAD_FAILED) {
       return {
         label: t("accountSummary.partialLoadFailed"),
-        className: "text-amber-600 dark:text-amber-300",
+        className: "text-warning-text",
         title: item.errorMessage,
       }
     }
 
     return {
       label: t("accountSummary.models", { count: item.count }),
-      className: "text-emerald-600 dark:text-emerald-400",
+      className: "text-success-text",
     }
   }
 
@@ -97,7 +97,7 @@ function AccountSummaryBadge({
   return (
     <Badge
       asChild
-      variant={isActive ? "info" : "secondary"}
+      variant={isActive ? "default" : "secondary"}
       size="default"
       className="cursor-pointer"
       title={statusPresentation.title}
@@ -169,7 +169,7 @@ export function AccountSummaryBar({
     <Card className="mb-4">
       <CardContent className="py-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="dark:text-dark-text-secondary text-sm font-medium text-gray-700">
+          <div className="text-secondary-foreground text-sm font-medium">
             {t("accountSummary.title")}
           </div>
           <div className="flex flex-wrap gap-2">

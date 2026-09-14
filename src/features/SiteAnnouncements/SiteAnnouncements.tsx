@@ -57,7 +57,7 @@ interface SiteAnnouncementsPageProps {
 }
 
 const textLinkClassName =
-  "font-medium text-blue-600 underline-offset-2 hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none dark:text-blue-400"
+  "font-medium text-theme-600 underline-offset-2 hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none dark:text-theme-400"
 
 const logger = createLogger("SiteAnnouncementsPage")
 

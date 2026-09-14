@@ -85,7 +85,7 @@ export default function ResultsTable({
     <Card padding="none">
       <div className="overflow-x-auto rounded-[var(--corner-inner-radius)]">
         <table className="w-full">
-          <thead className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+          <thead className="border-border bg-surface-subtle dark:bg-card border-b">
             <tr>
               <th className="px-4 py-3 text-left">
                 <input
@@ -95,41 +95,41 @@ export default function ResultsTable({
                   checked={allSelected}
                   disabled={selectableItems.length === 0}
                   onChange={(e) => onSelectAll(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="border-border-strong text-theme-600 focus:ring-ring h-4 w-4 rounded"
                 />
               </th>
               {columns.status && (
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                <th className="text-secondary-foreground px-4 py-3 text-left text-sm font-medium">
                   {t("execution.table.status")}
                 </th>
               )}
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+              <th className="text-secondary-foreground px-4 py-3 text-left text-sm font-medium">
                 {t("execution.table.channelId")}
               </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+              <th className="text-secondary-foreground px-4 py-3 text-left text-sm font-medium">
                 {t("execution.table.channelName")}
               </th>
               {columns.message && (
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                <th className="text-secondary-foreground px-4 py-3 text-left text-sm font-medium">
                   {t("execution.table.message")}
                 </th>
               )}
               {columns.attempts && (
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                <th className="text-secondary-foreground px-4 py-3 text-left text-sm font-medium">
                   {t("execution.table.attempts")}
                 </th>
               )}
               {columns.finishedAt && (
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                <th className="text-secondary-foreground px-4 py-3 text-left text-sm font-medium">
                   {t("execution.table.finishedAt")}
                 </th>
               )}
-              <th className="sticky right-0 z-20 border-l border-gray-200 bg-gray-50 px-4 py-3 text-right text-sm font-medium text-gray-700 shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.45)] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+              <th className="border-border bg-surface-subtle text-secondary-foreground dark:bg-card sticky right-0 z-20 border-l px-4 py-3 text-right text-sm font-medium shadow-[-8px_0_12px_-12px_var(--table-edge-shadow)]">
                 {t("execution.table.actions")}
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody className="divide-border divide-y">
             {items.map((item) => {
               const resourceKey = getModelSyncHistoryItemKey(item)
               const available = Boolean(
@@ -140,7 +140,7 @@ export default function ResultsTable({
               return (
                 <tr
                   key={resourceKey}
-                  className="group hover:bg-gray-50 dark:hover:bg-gray-800"
+                  className="group hover:bg-surface-subtle dark:hover:bg-card"
                 >
                   <td className="px-4 py-3">
                     <input
@@ -153,22 +153,22 @@ export default function ResultsTable({
                       onChange={(e) =>
                         onSelectItem(resourceKey, e.target.checked)
                       }
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="border-border-strong text-theme-600 focus:ring-ring h-4 w-4 rounded"
                     />
                   </td>
                   {columns.status && (
                     <td className="px-4 py-3">
                       {item.ok ? (
-                        <CircleCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        <CircleCheck className="text-success-text h-5 w-5" />
                       ) : (
-                        <CircleAlert className="h-5 w-5 text-red-600 dark:text-red-400" />
+                        <CircleAlert className="text-destructive-text h-5 w-5" />
                       )}
                     </td>
                   )}
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                  <td className="text-foreground px-4 py-3 text-sm">
                     {getModelSyncHistoryResourceId(item)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                  <td className="text-foreground px-4 py-3 text-sm">
                     <ManagedSiteChannelLinkButton
                       resourceRef={
                         available ? item.resourceRef ?? undefined : undefined
@@ -177,7 +177,7 @@ export default function ResultsTable({
                       className="h-auto min-h-0 justify-start p-0 text-sm"
                     />
                     {!available && (
-                      <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                      <p className="text-muted-foreground mt-1 text-xs">
                         {t("execution.table.resourceUnavailable")}
                       </p>
                     )}
@@ -194,12 +194,12 @@ export default function ResultsTable({
                             {t("execution.status.failed")}
                           </Badge>
                           {item.message && (
-                            <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                            <p className="text-muted-foreground mt-1 text-xs">
                               {item.message}
                             </p>
                           )}
                           {item.httpStatus && (
-                            <p className="mt-1 text-xs text-gray-500">
+                            <p className="text-muted-foreground mt-1 text-xs">
                               HTTP: {item.httpStatus}
                             </p>
                           )}
@@ -208,18 +208,18 @@ export default function ResultsTable({
                     </td>
                   )}
                   {columns.attempts && (
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                    <td className="text-muted-foreground px-4 py-3 text-sm">
                       {item.attempts}
                     </td>
                   )}
                   {columns.finishedAt && (
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                    <td className="text-muted-foreground px-4 py-3 text-sm">
                       {item.finishedAt
                         ? dayjs(item.finishedAt).format("HH:mm:ss")
                         : "—"}
                     </td>
                   )}
-                  <td className="sticky right-0 z-10 border-l border-gray-100 bg-white px-4 py-3 text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.45)] group-hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:group-hover:bg-gray-800">
+                  <td className="border-border-subtle bg-card group-hover:bg-surface-subtle dark:border-border dark:bg-background dark:group-hover:bg-card sticky right-0 z-10 border-l px-4 py-3 text-right shadow-[-8px_0_12px_-12px_var(--table-edge-shadow)]">
                     <Button
                       size="sm"
                       variant="ghost"

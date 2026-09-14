@@ -37,10 +37,7 @@ export function ManagedSiteImportButton({
       variant="ghost"
       data-testid={testId}
       data-guidance-highlight={highlighted ? "true" : undefined}
-      className={cn(
-        highlighted &&
-          "ring-2 ring-emerald-500 ring-offset-2 dark:ring-emerald-400",
-      )}
+      className={cn(highlighted && "ring-ring ring-2 ring-offset-2")}
       onClick={(event) => {
         event.stopPropagation()
         void onImport()

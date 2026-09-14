@@ -10,8 +10,8 @@ const labelVariants = cva(
     variants: {
       variant: {
         default: "text-foreground",
-        error: "text-destructive",
-        success: "text-emerald-600 dark:text-emerald-400",
+        error: "text-destructive-text",
+        success: "text-success-text",
       },
       size: {
         default: "text-sm",
@@ -43,7 +43,7 @@ const Label = React.forwardRef<
       {...props}
     >
       {children}
-      {required && <span className="text-destructive">*</span>}
+      {required && <span className="text-destructive-text">*</span>}
       {hint && (
         <span className="text-muted-foreground text-xs font-normal">
           {hint}

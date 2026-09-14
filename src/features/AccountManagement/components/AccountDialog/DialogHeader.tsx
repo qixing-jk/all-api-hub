@@ -17,17 +17,12 @@ export default function DialogHeader({ mode }: DialogHeaderProps) {
   const isAddMode = mode === DIALOG_MODES.ADD
   const title = isAddMode ? t("title.add") : t("title.edit")
   const Icon = isAddMode ? Sparkles : Pencil
-  const iconClass = isAddMode
-    ? "text-blue-600 dark:text-blue-400"
-    : "text-emerald-600 dark:text-emerald-400"
 
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center space-x-3">
-        <Icon className={`h-5 w-5 ${iconClass}`} />
-        <h2 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
-          {title}
-        </h2>
+        <Icon className="text-link h-5 w-5" />
+        <h2 className="text-foreground text-lg font-semibold">{title}</h2>
       </div>
       {/* Modal provides close button */}
     </div>

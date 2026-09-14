@@ -60,7 +60,7 @@ function RootErrorFallback({
   return (
     <main className="bg-background text-foreground flex min-h-screen items-center justify-center px-4 py-8">
       <section className="bg-card w-full max-w-md rounded-lg border p-6 text-center shadow-sm">
-        <div className="bg-destructive/10 text-destructive mx-auto mb-4 flex size-12 items-center justify-center rounded-full">
+        <div className="bg-destructive/10 text-destructive-text mx-auto mb-4 flex size-12 items-center justify-center rounded-full">
           <AlertTriangle className="size-6" aria-hidden="true" />
         </div>
         <h1 className="text-lg font-semibold">

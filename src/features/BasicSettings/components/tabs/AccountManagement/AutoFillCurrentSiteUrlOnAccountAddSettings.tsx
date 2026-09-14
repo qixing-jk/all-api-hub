@@ -35,7 +35,9 @@ export default function AutoFillCurrentSiteUrlOnAccountAddSettings() {
         <CardList>
           <CardItem
             id="auto-fill-current-site-url-toggle"
-            icon={<Globe2 className="h-5 w-5 text-sky-600 dark:text-sky-400" />}
+            icon={
+              <Globe2 className="text-theme-600 dark:text-theme-400 h-5 w-5" />
+            }
             title={t("autoFillCurrentSiteUrlOnAccountAdd.toggleLabel")}
             description={t("autoFillCurrentSiteUrlOnAccountAdd.toggleDesc")}
             rightContent={

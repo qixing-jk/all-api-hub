@@ -32,7 +32,7 @@ export function ManagedSiteTokenBatchExportStatusPanels({
   return (
     <>
       {previewError ? (
-        <div className="space-y-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
+        <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground space-y-2 rounded-md border p-3 text-sm">
           <div>
             {t("keyManagement:batchManagedSiteExport.preview.loadFailed", {
               error: previewError,
@@ -57,7 +57,7 @@ export function ManagedSiteTokenBatchExportStatusPanels({
       ) : null}
 
       {executionError ? (
-        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
+        <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground rounded-md border p-3 text-sm">
           {isTargetChanged
             ? t("keyManagement:batchManagedSiteExport.messages.targetChanged")
             : t(

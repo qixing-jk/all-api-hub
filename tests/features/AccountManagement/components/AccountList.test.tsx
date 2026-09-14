@@ -888,7 +888,7 @@ describe("AccountList", () => {
       "Unsynced Delta",
       "Disabled Beta",
     ])
-    expect(rows[0].closest(".relative")).toHaveClass("bg-slate-50")
+    expect(rows[0].closest(".relative")).toHaveClass("bg-surface-subtle")
     expect(rows[1].closest(".relative")).toHaveClass("border-t-4")
     expect(rows[3].closest(".relative")).toHaveClass("opacity-40")
     expect(document.querySelector(".space-y-0")).toBeInTheDocument()
@@ -1162,7 +1162,7 @@ describe("AccountList", () => {
     render(<AccountList />)
 
     expect(
-      screen.getByText("Enabled Alpha").closest(".border-l-blue-500"),
+      screen.getByText("Enabled Alpha").closest(".border-l-theme-500"),
     ).toBeInTheDocument()
 
     await user.click(
@@ -1171,7 +1171,7 @@ describe("AccountList", () => {
     await screen.findByTestId(TEST_IDS.dndContext)
 
     expect(
-      screen.getByText("Enabled Alpha").closest(".border-l-blue-500"),
+      screen.getByText("Enabled Alpha").closest(".border-l-theme-500"),
     ).toBeInTheDocument()
   })
 

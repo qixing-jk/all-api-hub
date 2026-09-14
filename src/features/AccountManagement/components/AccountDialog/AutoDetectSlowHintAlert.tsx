@@ -42,7 +42,7 @@ export default function AutoDetectSlowHintAlert({
 
   return (
     <>
-      <Alert variant="info" className="mb-4">
+      <Alert variant="default" className="mb-4">
         <div>
           <p className="mb-2 text-xs">
             {t("accountDialog:messages.autoDetectTakingTooLong")}

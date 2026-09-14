@@ -401,7 +401,7 @@ export function ApiCredentialProfilesListView({
       {controller.isLoading && !isInitialLoading ? (
         <div className="flex items-center gap-2 py-1">
           <Spinner size="sm" />
-          <div className="dark:text-dark-text-secondary text-sm text-gray-600">
+          <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
             {t("common:status.refreshing")}
           </div>
         </div>
@@ -410,7 +410,7 @@ export function ApiCredentialProfilesListView({
       {isInitialLoading ? (
         <div className="flex items-center gap-2 py-6">
           <Spinner size="sm" />
-          <div className="dark:text-dark-text-secondary text-sm text-gray-600">
+          <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
             {t("common:status.loading")}
           </div>
         </div>
@@ -440,7 +440,7 @@ export function ApiCredentialProfilesListView({
           />
           {controller.profiles.length === 0 ? (
             <Notice
-              tone="info"
+              tone="default"
               icon={<ApiCredentialLibraryIcon className="h-3.5 w-3.5" />}
               className="text-left"
               description={

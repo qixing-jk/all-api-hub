@@ -132,7 +132,7 @@ describe("Model item pricing and description", () => {
 
       const description = screen.getByText("Reasoning tuned for coding")
       expect(description).toHaveAttribute("title", "Reasoning tuned for coding")
-      expect(description).toHaveClass("text-gray-400")
+      expect(description).toHaveClass("text-faint-foreground")
     })
 
     it("uses the available styling when the model is accessible to the user", () => {
@@ -144,7 +144,7 @@ describe("Model item pricing and description", () => {
       )
 
       expect(screen.getByText("Available to this group")).toHaveClass(
-        "text-gray-600",
+        "text-muted-foreground",
       )
     })
   })
@@ -164,8 +164,8 @@ describe("Model item pricing and description", () => {
 
       expect(screen.getByText("input")).toBeInTheDocument()
       expect(screen.getByText("output")).toBeInTheDocument()
-      expect(screen.getByText("USD:1.25/M")).toHaveClass("text-blue-600")
-      expect(screen.getByText("USD:2.5/M")).toHaveClass("text-green-600")
+      expect(screen.getByText("USD:1.25/M")).toHaveClass("text-pricing-input")
+      expect(screen.getByText("USD:2.5/M")).toHaveClass("text-pricing-output")
       expect(formatPriceCompactMock).toHaveBeenCalledWith(1.25, "USD")
       expect(formatPriceCompactMock).toHaveBeenCalledWith(2.5, "USD")
     })
@@ -182,8 +182,8 @@ describe("Model item pricing and description", () => {
         />,
       )
 
-      expect(screen.getByText("CNY:9")).toHaveClass("text-gray-500")
-      expect(screen.getByText("CNY:18")).toHaveClass("text-gray-500")
+      expect(screen.getByText("CNY:9")).toHaveClass("text-muted-foreground")
+      expect(screen.getByText("CNY:18")).toHaveClass("text-muted-foreground")
       expect(screen.queryByText("CNY:9/M")).toBeNull()
       expect(formatPriceCompactMock).toHaveBeenCalledWith(9, "CNY")
       expect(formatPriceCompactMock).toHaveBeenCalledWith(18, "CNY")
@@ -241,7 +241,7 @@ describe("Model item pricing and description", () => {
         />,
       )
 
-      expect(screen.getByText("CNY:28")).toHaveClass("text-purple-600")
+      expect(screen.getByText("CNY:28")).toHaveClass("text-pricing-per-call")
       expect(formatPriceCompactMock).toHaveBeenCalledWith(28, "CNY")
     })
 
@@ -256,8 +256,8 @@ describe("Model item pricing and description", () => {
         />,
       )
 
-      expect(screen.getByText("USD:0.2")).toHaveClass("text-gray-500")
-      expect(screen.getByText("USD:0.5")).toHaveClass("text-gray-500")
+      expect(screen.getByText("USD:0.2")).toHaveClass("text-muted-foreground")
+      expect(screen.getByText("USD:0.5")).toHaveClass("text-muted-foreground")
       expect(formatPriceCompactMock).toHaveBeenCalledWith(0.2, "USD")
       expect(formatPriceCompactMock).toHaveBeenCalledWith(0.5, "USD")
     })
@@ -273,7 +273,7 @@ describe("Model item pricing and description", () => {
         />,
       )
 
-      expect(screen.getByText("USD:0")).toHaveClass("text-gray-500")
+      expect(screen.getByText("USD:0")).toHaveClass("text-muted-foreground")
       expect(formatPriceCompactMock).toHaveBeenCalledWith(0, "USD")
     })
 
@@ -288,7 +288,7 @@ describe("Model item pricing and description", () => {
         />,
       )
 
-      expect(screen.getByText("CNY:0")).toHaveClass("text-purple-600")
+      expect(screen.getByText("CNY:0")).toHaveClass("text-pricing-per-call")
       expect(formatPriceCompactMock).toHaveBeenCalledWith(0, "CNY")
     })
   })

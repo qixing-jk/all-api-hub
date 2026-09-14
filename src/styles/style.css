@@ -1,222 +1,38 @@
 @import "tailwindcss";
 @import "../../node_modules/tw-animate-css/dist/tw-animate.css";
 
+@import "./appearance.css";
+@import "./colors.css";
+@import "./themePresets.css";
+
 @custom-variant dark (&:is(.dark *));
 
-:root,
-:host {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --table-header: var(--color-slate-50);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
-  --button-primary-bg: var(--color-brand-blue);
-  --button-primary-bg-hover: color-mix(
-    in oklab,
-    var(--color-brand-blue) 90%,
-    white 10%
-  );
-  --button-primary-foreground: oklch(0.995 0 0);
-  --button-primary-ring: var(--color-brand-blue);
-  --button-secondary-bg: color-mix(
-    in oklab,
-    var(--muted) 85%,
-    var(--foreground) 15%
-  );
-  --button-secondary-bg-hover: color-mix(
-    in oklab,
-    var(--muted) 75%,
-    var(--foreground) 25%
-  );
-  --button-secondary-foreground: var(--foreground);
-  --button-secondary-ring: color-mix(
-    in oklab,
-    var(--foreground) 30%,
-    transparent 70%
-  );
-  --button-destructive-bg: var(--color-semantic-error-600);
-  --button-destructive-bg-hover: var(--color-semantic-error-500);
-  --button-destructive-foreground: var(--color-semantic-error-50);
-  --button-destructive-ring: var(--color-semantic-error-600);
-  --button-success-bg: var(--color-semantic-success-600);
-  --button-success-bg-hover: var(--color-semantic-success-500);
-  --button-success-foreground: oklch(0.985 0 0);
-  --button-success-ring: var(--color-semantic-success-600);
-  --button-warning-bg: var(--color-semantic-warning-600);
-  --button-warning-bg-hover: var(--color-semantic-warning-500);
-  --button-warning-foreground: oklch(0.985 0 0);
-  --button-warning-ring: var(--color-semantic-warning-600);
-  --button-outline-bg: var(--background);
-  --button-outline-border: var(--border);
-  --button-outline-hover-bg: color-mix(in oklab, var(--accent) 70%, white 30%);
-  --button-outline-foreground: var(--foreground);
-  --button-outline-ring: var(--ring);
-  --button-ghost-foreground: var(--foreground);
-  --button-ghost-hover-bg: color-mix(
-    in oklab,
-    var(--muted) 65%,
-    transparent 35%
-  );
-  --button-ghost-hover-foreground: color-mix(
-    in oklab,
-    var(--foreground) 90%,
-    black 10%
-  );
-  --button-link-foreground: var(--color-brand-blue);
-  --button-link-hover-foreground: color-mix(
-    in oklab,
-    var(--color-brand-blue) 80%,
-    black 20%
-  );
-  --button-link-ring: var(--color-brand-blue);
-  --spinner-default-color: var(--color-brand-blue);
-  --spinner-white-color: oklch(0.995 0 0);
-  --spinner-gray-color: color-mix(
-    in oklab,
-    var(--muted-foreground) 85%,
-    black 15%
-  );
-  --spinner-primary-color: var(--foreground);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  /* Shared surfaces, including body portals, use the application slate palette. */
-  --background: var(--color-dark-bg-secondary);
-  --foreground: var(--color-dark-text-primary);
-  --card: var(--background);
-  --card-foreground: var(--foreground);
-  --popover: var(--background);
-  --popover-foreground: var(--foreground);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: var(--color-dark-bg-tertiary);
-  --secondary-foreground: var(--foreground);
-  --muted: color-mix(in srgb, var(--background) 60%, var(--secondary));
-  --muted-foreground: var(--color-dark-text-secondary);
-  /* Opaque so sticky cells match the rest of the header while scrolling. */
-  --table-header: color-mix(in srgb, var(--muted) 60%, var(--background));
-  --accent: var(--secondary);
-  --accent-foreground: var(--foreground);
-  --destructive: var(--color-red-400);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --button-primary-bg: var(--color-brand-blue);
-  --button-primary-bg-hover: color-mix(
-    in oklab,
-    var(--color-brand-blue) 85%,
-    black 15%
-  );
-  --button-primary-foreground: var(--color-dark-text-primary);
-  --button-primary-ring: var(--color-brand-blue);
-  --button-secondary-bg: color-mix(
-    in oklab,
-    var(--color-dark-bg-tertiary) 60%,
-    var(--foreground) 40%
-  );
-  --button-secondary-bg-hover: color-mix(
-    in oklab,
-    var(--color-dark-bg-tertiary) 35%,
-    var(--foreground) 65%
-  );
-  --button-secondary-foreground: var(--color-dark-text-primary);
-  --button-secondary-ring: color-mix(
-    in oklab,
-    var(--foreground) 25%,
-    var(--background) 75%
-  );
-  --button-destructive-bg: var(--color-semantic-error-600);
-  --button-destructive-bg-hover: var(--color-semantic-error-500);
-  --button-destructive-foreground: var(--color-semantic-error-50);
-  --button-destructive-ring: var(--color-semantic-error-600);
-  --button-success-bg: var(--color-semantic-success-600);
-  --button-success-bg-hover: var(--color-semantic-success-500);
-  --button-success-foreground: oklch(0.985 0 0);
-  --button-success-ring: var(--color-semantic-success-500);
-  --button-warning-bg: var(--color-semantic-warning-600);
-  --button-warning-bg-hover: var(--color-semantic-warning-500);
-  --button-warning-foreground: oklch(0.985 0 0);
-  --button-warning-ring: var(--color-semantic-warning-500);
-  --button-outline-bg: color-mix(
-    in oklab,
-    var(--background) 80%,
-    var(--foreground) 20%
-  );
-  --button-outline-border: var(--border);
-  --button-outline-hover-bg: color-mix(
-    in oklab,
-    var(--foreground) 25%,
-    var(--background) 75%
-  );
-  --button-outline-foreground: var(--color-dark-text-primary);
-  --button-outline-ring: var(--ring);
-  --button-ghost-foreground: var(--color-dark-text-primary);
-  --button-ghost-hover-bg: color-mix(
-    in oklab,
-    var(--foreground) 15%,
-    transparent 85%
-  );
-  --button-ghost-hover-foreground: var(--color-dark-text-primary);
-  --button-link-foreground: var(--color-brand-blue);
-  --button-link-hover-foreground: color-mix(
-    in oklab,
-    var(--color-brand-blue) 90%,
-    white 10%
-  );
-  --button-link-ring: var(--color-brand-blue);
-  --spinner-default-color: var(--color-brand-blue);
-  --spinner-white-color: oklch(0.995 0 0);
-  --spinner-gray-color: color-mix(
-    in oklab,
-    var(--muted-foreground) 70%,
-    white 30%
-  );
-  --spinner-primary-color: var(--color-dark-text-primary);
-  --border: var(--color-dark-bg-tertiary);
-  --input: var(--border);
-  --ring: oklch(0.439 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
-}
-
 @theme inline {
+  --color-overlay: var(--overlay);
+  --color-shadow: var(--shadow-color);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-deep: var(--surface-deep);
+  --color-surface-strong: var(--surface-strong);
+  --color-surface-inverse: var(--surface-inverse);
+  --color-surface-inverse-muted: var(--surface-inverse-muted);
+  --color-inverse-foreground: var(--inverse-foreground);
+  --color-faint-foreground: var(--faint-foreground);
+  --color-disabled-foreground: var(--disabled-foreground);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-link: var(--link);
+  --color-theme-50: var(--theme-color-50);
+  --color-theme-100: var(--theme-color-100);
+  --color-theme-200: var(--theme-color-200);
+  --color-theme-300: var(--theme-color-300);
+  --color-theme-400: var(--theme-color-400);
+  --color-theme-500: var(--theme-color-500);
+  --color-theme-600: var(--theme-color-600);
+  --color-theme-700: var(--theme-color-700);
+  --color-theme-800: var(--theme-color-800);
+  --color-theme-900: var(--theme-color-900);
+  --color-theme-950: var(--theme-color-950);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -224,6 +40,10 @@
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-hover: var(--primary-soft-hover);
+  --color-primary-soft-foreground: var(--primary-soft-foreground);
+  --color-primary-soft-border: var(--primary-soft-border);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -233,7 +53,49 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-hover: var(--destructive-hover);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-text: var(--destructive-text);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-destructive-soft-hover: var(--destructive-soft-hover);
+  --color-destructive-soft-foreground: var(--destructive-soft-foreground);
+  --color-destructive-border: var(--destructive-border);
+  --color-success: var(--success);
+  --color-success-hover: var(--success-hover);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-text: var(--success-text);
+  --color-success-soft: var(--success-soft);
+  --color-success-soft-hover: var(--success-soft-hover);
+  --color-success-soft-foreground: var(--success-soft-foreground);
+  --color-success-border: var(--success-border);
+  --color-warning: var(--warning);
+  --color-warning-hover: var(--warning-hover);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-text: var(--warning-text);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-soft-hover: var(--warning-soft-hover);
+  --color-warning-soft-foreground: var(--warning-soft-foreground);
+  --color-warning-border: var(--warning-border);
+  --color-info: var(--info);
+  --color-info-hover: var(--info-hover);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-text: var(--info-text);
+  --color-info-soft: var(--info-soft);
+  --color-info-soft-hover: var(--info-soft-hover);
+  --color-info-soft-foreground: var(--info-soft-foreground);
+  --color-info-border: var(--info-border);
+  --color-pricing-input: var(--pricing-input);
+  --color-pricing-input-soft: var(--pricing-input-soft);
+  --color-pricing-output: var(--pricing-output);
+  --color-pricing-output-soft: var(--pricing-output-soft);
+  --color-pricing-cache-read: var(--pricing-cache-read);
+  --color-pricing-cache-read-soft: var(--pricing-cache-read-soft);
+  --color-pricing-cache-write: var(--pricing-cache-write);
+  --color-pricing-cache-write-soft: var(--pricing-cache-write-soft);
+  --color-pricing-per-call: var(--pricing-per-call);
+  --color-pricing-per-call-soft: var(--pricing-per-call-soft);
+  --color-cashflow-income: var(--cashflow-income);
+  --color-cashflow-expense: var(--cashflow-expense);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -267,59 +129,6 @@
   --breakpoint-sm: 480px;
   --breakpoint-md: 768px;
   --breakpoint-lg: 1024px;
-
-  /* 背景颜色 */
-  --color-dark-bg-primary: #0f172a;
-  --color-dark-bg-secondary: #1e293b;
-  --color-dark-bg-tertiary: #334155;
-
-  /* 文字颜色 */
-  --color-dark-text-primary: #f1f5f9;
-  --color-dark-text-secondary: #cbd5e1;
-  --color-dark-text-tertiary: #94a3b8;
-
-  /* 品牌颜色 */
-  --color-brand-blue: #3b82f6;
-  --color-brand-green: #10b981;
-  --color-brand-red: #ef4444;
-  --color-brand-yellow: #f59e0b;
-  --color-brand-purple: #a855f7;
-
-  /* 语义化颜色 - 成功 */
-  --color-semantic-success-50: #f0fdf4;
-  --color-semantic-success-100: #dcfce7;
-  --color-semantic-success-500: #22c55e;
-  --color-semantic-success-600: #16a34a;
-  --color-semantic-success-700: #15803d;
-  --color-semantic-success-800: #166534;
-  --color-semantic-success-900: #14532d;
-
-  /* 语义化颜色 - 警告 */
-  --color-semantic-warning-50: #fffbeb;
-  --color-semantic-warning-100: #fef3c7;
-  --color-semantic-warning-500: #f59e0b;
-  --color-semantic-warning-600: #d97706;
-  --color-semantic-warning-700: #b45309;
-  --color-semantic-warning-800: #92400e;
-  --color-semantic-warning-900: #78350f;
-
-  /* 语义化颜色 - 错误 */
-  --color-semantic-error-50: #fef2f2;
-  --color-semantic-error-100: #fee2e2;
-  --color-semantic-error-500: #ef4444;
-  --color-semantic-error-600: #dc2626;
-  --color-semantic-error-700: #b91c1c;
-  --color-semantic-error-800: #991b1b;
-  --color-semantic-error-900: #7f1d1d;
-
-  /* 语义化颜色 - 信息 */
-  --color-semantic-info-50: #eff6ff;
-  --color-semantic-info-100: #dbeafe;
-  --color-semantic-info-500: #3b82f6;
-  --color-semantic-info-600: #2563eb;
-  --color-semantic-info-700: #1d4ed8;
-  --color-semantic-info-800: #1e40af;
-  --color-semantic-info-900: #1e3a8a;
 
   /* 字体大小 */
   --font-size-xs: 0.75rem;
@@ -363,15 +172,19 @@
   --radius-micro: 0.25rem;
 
   /* 阴影 */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1),
-    0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1),
-    0 8px 10px -6px rgb(0 0 0 / 0.1);
-  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 2px 0
+    color-mix(in srgb, var(--shadow-color) 5%, transparent);
+  --shadow: 0 1px 3px 0 color-mix(in srgb, var(--shadow-color) 10%, transparent),
+    0 1px 2px -1px color-mix(in srgb, var(--shadow-color) 10%, transparent);
+  --shadow-md: 0 4px 6px -1px color-mix(in srgb, var(--shadow-color) 10%, transparent),
+    0 2px 4px -2px color-mix(in srgb, var(--shadow-color) 10%, transparent);
+  --shadow-lg: 0 10px 15px -3px color-mix(in srgb, var(--shadow-color) 10%, transparent),
+    0 4px 6px -4px color-mix(in srgb, var(--shadow-color) 10%, transparent);
+  --shadow-xl: 0 20px 25px -5px color-mix(in srgb, var(--shadow-color) 10%, transparent),
+    0 8px 10px -6px color-mix(in srgb, var(--shadow-color) 10%, transparent);
+  --shadow-2xl: 0 25px 50px -12px color-mix(in srgb, var(--shadow-color) 25%, transparent);
+  --shadow-inner: inset 0 2px 4px 0
+    color-mix(in srgb, var(--shadow-color) 5%, transparent);
 
   /* 动画 */
   --animate-fade-in: fadeIn 0.2s ease-in-out;
@@ -548,13 +361,8 @@ html {
 }
 
 body {
-  --tw-bg-opacity: 1;
-  background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1)); /* #ffffff */
-}
-
-.dark body {
-  --tw-bg-opacity: 1;
-  background-color: rgb(15 23 42 / var(--tw-bg-opacity, 1)) /* #0f172a */;
+  background-color: var(--background);
+  color: var(--foreground);
 }
 
 /* 禁用 Edge / IE 的密码显示按钮 */

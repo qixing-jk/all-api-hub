@@ -251,10 +251,10 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
 
   const header = (
     <div className="min-w-0 pr-10">
-      <h2 className="dark:text-dark-text-primary truncate text-base font-semibold text-gray-900 sm:text-lg">
+      <h2 className="text-foreground truncate text-base font-semibold sm:text-lg">
         {t("modelList:keyDialog.title")}
       </h2>
-      <p className="dark:text-dark-text-tertiary mt-1 truncate text-sm text-gray-500">
+      <p className="text-muted-foreground mt-1 truncate text-sm">
         {t("modelList:keyDialog.subtitle", {
           accountName: account.name,
           modelId,
@@ -285,7 +285,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
       return (
         <div className="flex flex-col items-center justify-center py-10">
           <Spinner size="lg" aria-label={t("common:status.loading")} />
-          <p className="dark:text-dark-text-secondary mt-3 text-sm text-gray-500">
+          <p className="dark:text-secondary-foreground text-muted-foreground mt-3 text-sm">
             {t("modelList:keyDialog.loading")}
           </p>
         </div>
@@ -331,7 +331,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
           !canCreateToken &&
           ineligibleDescription ? (
             <Alert
-              variant="info"
+              variant="default"
               title={t("modelList:keyDialog.createDisabledTitle")}
               description={ineligibleDescription}
             />
@@ -348,7 +348,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
           {compatibleRuntimeKeys.length === 0 ? (
             hasStrictEmptyGroupScope ? (
               <Alert
-                variant="info"
+                variant="default"
                 title={t("modelList:keyDialog.createDisabledTitle")}
                 description={t("modelList:noUsableGroupsForModel")}
               />
@@ -366,7 +366,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                   <div>
                     <label
                       htmlFor={createGroupSelectId}
-                      className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
+                      className="text-secondary-foreground text-sm font-medium"
                     >
                       {t("modelList:keyDialog.createGroupLabel")}
                     </label>
@@ -400,13 +400,13 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                       ) : (
                         <div
                           id={createGroupSelectId}
-                          className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary flex h-9 items-center rounded-md border border-gray-200 bg-gray-50 px-3 text-sm font-medium text-gray-700"
+                          className="dark:bg-card dark:text-foreground border-border bg-surface-subtle text-secondary-foreground flex h-9 items-center rounded-md border px-3 text-sm font-medium"
                         >
                           {createGroupOptions[0]}
                         </div>
                       )}
                     </div>
-                    <p className="dark:text-dark-text-tertiary mt-2 text-sm text-gray-500">
+                    <p className="text-muted-foreground mt-2 text-sm">
                       {requiresCreateGroupSelection
                         ? t("modelList:keyDialog.createGroupHint")
                         : t("modelList:keyDialog.createGroupAutoSelectedHint")}
@@ -453,7 +453,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
               <div>
                 <label
                   htmlFor={compatibleKeySelectId}
-                  className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
+                  className="text-secondary-foreground text-sm font-medium"
                 >
                   {t("modelList:keyDialog.selectLabel")}
                 </label>
@@ -483,7 +483,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                   </Select>
                 </div>
                 {requiresExplicitSelection && selectedRuntimeKeyId === null ? (
-                  <p className="dark:text-dark-text-tertiary mt-2 text-sm text-gray-500">
+                  <p className="text-muted-foreground mt-2 text-sm">
                     {t("modelList:keyDialog.selectHint")}
                   </p>
                 ) : null}

@@ -172,12 +172,12 @@ export const RedemptionBatchResultToast: React.FC<
                     {item.preview}
                   </code>
                   {item.success ? (
-                    <span className="text-emerald-700 dark:text-emerald-300">
+                    <span className="text-success-text">
                       {t("common:status.success")}
                     </span>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <span className="text-rose-700 dark:text-rose-300">
+                      <span className="text-destructive-text">
                         {t("common:status.failed")}
                       </span>
                       <Button

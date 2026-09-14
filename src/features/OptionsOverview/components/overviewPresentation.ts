@@ -10,7 +10,7 @@ import type {
 } from "../types"
 
 export const OVERVIEW_NEUTRAL_PANEL_CLASSES =
-  "border-slate-200/80 bg-white/90 dark:border-white/10 dark:bg-white/[0.03]"
+  "border-border/80 bg-card/90 dark:border-foreground/10 dark:bg-foreground/[0.03]"
 
 export const OVERVIEW_SEVERITY_BADGE_VARIANTS = {
   success: "success",

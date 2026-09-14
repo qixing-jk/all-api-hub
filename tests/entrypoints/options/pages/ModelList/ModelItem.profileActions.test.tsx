@@ -612,10 +612,10 @@ describe("ModelItem profile actions", () => {
 
     expect(
       screen.getByRole("heading", { name: "example-runtime-model" }),
-    ).toHaveClass("text-gray-900")
+    ).toHaveClass("text-foreground")
     expect(
       screen.getByRole("heading", { name: "example-runtime-model" }),
-    ).not.toHaveClass("text-gray-500")
+    ).not.toHaveClass("text-muted-foreground")
   })
 
   it("hides the model-key action for account catalog fallback rows without token compatibility", async () => {

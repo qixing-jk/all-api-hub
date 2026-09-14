@@ -157,7 +157,7 @@ export default function BalanceHistorySettings() {
               <Label className="text-sm font-medium">
                 {t("settings.enabled")}
               </Label>
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              <div className="text-muted-foreground text-xs">
                 {t("settings.enabledHint")}
               </div>
             </div>
@@ -176,7 +176,7 @@ export default function BalanceHistorySettings() {
               <Label className="text-sm font-medium">
                 {t("settings.endOfDayCapture")}
               </Label>
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              <div className="text-muted-foreground text-xs">
                 {t("settings.endOfDayCaptureHint", { time: "23:55" })}
               </div>
             </div>
@@ -196,7 +196,7 @@ export default function BalanceHistorySettings() {
               <Label className="text-sm font-medium">
                 {t("settings.estimatedTodayIncome")}
               </Label>
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              <div className="text-muted-foreground text-xs">
                 {t("settings.estimatedTodayIncomeHint")}
               </div>
             </div>
@@ -208,7 +208,7 @@ export default function BalanceHistorySettings() {
           </div>
 
           {!alarmsSupported && (
-            <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+            <div className="text-muted-foreground text-xs">
               {t("settings.alarmUnsupported")}
             </div>
           )}

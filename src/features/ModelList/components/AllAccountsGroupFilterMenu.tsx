@@ -168,7 +168,7 @@ export function AllAccountsGroupFilterMenu({
             <span>{t("accountGroupFilterTrigger")}</span>
           </span>
           {activeFilteredAccountCount > 0 ? (
-            <Badge variant="info" size="sm">
+            <Badge variant="secondary" size="sm">
               {t("accountGroupFilterTriggerCount", {
                 count: activeFilteredAccountCount,
               })}
@@ -181,13 +181,13 @@ export function AllAccountsGroupFilterMenu({
         align="end"
         className="w-[min(42rem,calc(100vw-2rem))] p-0"
       >
-        <div className="border-b px-4 py-3 dark:border-gray-700">
+        <div className="dark:border-border border-b px-4 py-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">
-              <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              <div className="text-foreground text-sm font-semibold">
                 {t("accountGroupFilterTitle")}
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-muted-foreground text-xs">
                 {t("accountGroupFilterDescription")}
               </p>
             </div>
@@ -205,7 +205,7 @@ export function AllAccountsGroupFilterMenu({
 
         <div className="max-h-[70vh] space-y-3 overflow-y-auto p-4">
           {accountSections.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-gray-200 px-4 py-6 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+            <div className="border-border text-muted-foreground rounded-lg border border-dashed px-4 py-6 text-sm">
               {t("accountGroupFilterNoGroups")}
             </div>
           ) : (
@@ -221,14 +221,14 @@ export function AllAccountsGroupFilterMenu({
                 return (
                   <section
                     key={accountId}
-                    className="space-y-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700"
+                    className="border-border space-y-3 rounded-lg border p-3"
                   >
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="space-y-1">
-                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <div className="text-foreground text-sm font-medium">
                           {accountName}
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                        <div className="text-muted-foreground text-xs">
                           {t("accountGroupFilterSelectedSummary", {
                             selected: selectedGroups.length,
                             total: groups.length,

@@ -6,22 +6,22 @@ import { cn } from "~/lib/utils"
 const typographyVariants = cva("", {
   variants: {
     variant: {
-      h1: "text-3xl font-bold text-gray-900 dark:text-dark-text-primary",
-      h2: "text-2xl font-semibold text-gray-900 dark:text-dark-text-primary",
-      h3: "text-xl font-semibold text-gray-900 dark:text-dark-text-primary",
-      h4: "text-lg font-medium text-gray-900 dark:text-dark-text-primary",
-      h5: "text-base font-medium text-gray-900 dark:text-dark-text-primary",
-      h6: "text-sm font-medium text-gray-900 dark:text-dark-text-primary",
-      body: "text-base text-gray-700 dark:text-dark-text-secondary",
-      "body-large": "text-lg text-gray-700 dark:text-dark-text-secondary",
-      "body-small": "text-sm text-gray-600 dark:text-dark-text-secondary",
-      caption: "text-xs text-gray-500 dark:text-dark-text-tertiary",
-      muted: "text-xs text-gray-400 dark:text-gray-500",
-      label: "text-sm font-medium text-gray-700 dark:text-dark-text-secondary",
-      "label-small":
-        "text-xs font-medium text-gray-600 dark:text-dark-text-tertiary",
-      link: "text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline-offset-4 hover:underline",
-      code: "font-mono text-sm bg-gray-100 dark:bg-dark-bg-tertiary px-1.5 py-0.5 rounded text-gray-800 dark:text-dark-text-primary",
+      h1: "text-3xl font-bold text-foreground",
+      h2: "text-2xl font-semibold text-foreground",
+      h3: "text-xl font-semibold text-foreground",
+      h4: "text-lg font-medium text-foreground",
+      h5: "text-base font-medium text-foreground",
+      h6: "text-sm font-medium text-foreground",
+      body: "text-base text-secondary-foreground",
+      "body-large": "text-lg text-secondary-foreground",
+      "body-small":
+        "text-sm text-muted-foreground dark:text-secondary-foreground",
+      caption: "text-xs text-muted-foreground",
+      muted: "text-xs text-faint-foreground",
+      label: "text-sm font-medium text-secondary-foreground",
+      "label-small": "text-xs font-medium text-muted-foreground",
+      link: "text-theme-600 dark:text-theme-400 hover:text-theme-700 dark:hover:text-theme-300 underline-offset-4 hover:underline",
+      code: "font-mono text-sm bg-muted dark:bg-secondary px-1.5 py-0.5 rounded text-secondary-foreground dark:text-foreground",
     },
     align: {
       left: "text-left",

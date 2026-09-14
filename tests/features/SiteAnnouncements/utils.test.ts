@@ -201,9 +201,9 @@ describe("SiteAnnouncements utils", () => {
   })
 
   it("returns tone classes for each metric color", () => {
-    expect(getMetricToneClasses("blue")).toContain("bg-blue-50")
-    expect(getMetricToneClasses("amber")).toContain("bg-amber-50")
-    expect(getMetricToneClasses("emerald")).toContain("bg-emerald-50")
+    expect(getMetricToneClasses("blue")).toContain("bg-theme-50")
+    expect(getMetricToneClasses("amber")).toContain("bg-warning-soft")
+    expect(getMetricToneClasses("emerald")).toContain("bg-success-soft")
     expect(getMetricToneClasses("unknown" as any)).toEqual(
       getMetricToneClasses(undefined as any),
     )

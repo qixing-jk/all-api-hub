@@ -171,7 +171,7 @@ export function ApiCredentialProfileRowActions({
           data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.verifyButton}
           analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.VerifyApiCredential}
         >
-          <Wrench className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+          <Wrench className="text-link h-4 w-4" />
         </IconButton>
         <IconButton
           aria-label={t("apiCredentialProfiles:actions.verifyCliSupport")}
@@ -183,7 +183,7 @@ export function ApiCredentialProfileRowActions({
             PRODUCT_ANALYTICS_ACTION_IDS.VerifyApiCredentialCliSupport
           }
         >
-          <Terminal className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+          <Terminal className="text-link h-4 w-4" />
         </IconButton>
       </KeyResourceActionGroup>
       <KeyResourceActionGroup
@@ -219,7 +219,7 @@ export function ApiCredentialProfileRowActions({
             PRODUCT_ANALYTICS_ACTION_IDS.OpenUpdateApiCredentialProfileDialog
           }
         >
-          <Pencil className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+          <Pencil className="text-theme-500 dark:text-theme-400 h-4 w-4" />
         </IconButton>
         <IconButton
           aria-label={t("common:actions.delete")}

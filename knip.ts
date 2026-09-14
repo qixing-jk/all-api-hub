@@ -12,6 +12,7 @@ const config: KnipConfig = {
     "scripts/diagnostics/compare-lazy-loading.mjs",
     "scripts/diagnostics/render-extension-memory-report.mjs",
     "scripts/diagnostics/render-lazy-loading-report.mjs",
+    "src/entrypoints/appearance-bootstrap.ts",
     "src/entrypoints/background/index.ts",
     "src/entrypoints/content/index.ts",
     "src/entrypoints/options/main.tsx",

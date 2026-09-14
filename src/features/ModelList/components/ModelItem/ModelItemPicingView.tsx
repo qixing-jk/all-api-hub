@@ -25,12 +25,17 @@ export const PriceView = ({
   const { t } = useTranslation("modelList")
   const currency = showRealPrice ? "CNY" : "USD"
   const priceItems = [
-    { key: "input", label: t("input"), amount: usdPrices.input, tone: "blue" },
+    {
+      key: "input",
+      label: t("input"),
+      amount: usdPrices.input,
+      className: "text-pricing-input",
+    },
     {
       key: "output",
       label: t("output"),
       amount: usdPrices.output,
-      tone: "green",
+      className: "text-pricing-output",
     },
     ...(usdPrices.cacheRead !== undefined
       ? [
@@ -38,7 +43,7 @@ export const PriceView = ({
             key: "cache-read",
             label: t("cacheRead"),
             amount: usdPrices.cacheRead,
-            tone: "amber",
+            className: "text-pricing-cache-read",
           },
         ]
       : []),
@@ -48,30 +53,22 @@ export const PriceView = ({
             key: "cache-write",
             label: t("cacheWrite"),
             amount: usdPrices.cacheWrite,
-            tone: "purple",
+            className: "text-pricing-cache-write",
           },
         ]
       : []),
   ]
-  const availableToneClasses: Record<string, string> = {
-    blue: "text-blue-600",
-    green: "text-green-600",
-    amber: "text-amber-600",
-    purple: "text-purple-600",
-  }
 
   return (
     <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
       {priceItems.map((item) => (
         <div key={item.key} className="flex items-center space-x-2">
-          <span className="dark:text-dark-text-primary text-sm text-gray-600">
+          <span className="dark:text-foreground text-muted-foreground text-sm">
             {item.label}
           </span>
           <span
             className={`text-sm ${
-              isAvailableForUser
-                ? availableToneClasses[item.tone]
-                : "text-gray-500"
+              isAvailableForUser ? item.className : "text-muted-foreground"
             }`}
           >
             {formatPriceCompact(

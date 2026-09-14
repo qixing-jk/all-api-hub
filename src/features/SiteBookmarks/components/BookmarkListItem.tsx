@@ -104,7 +104,7 @@ export default function BookmarkListItem({
                 </BodySmall>
               </Button>
               {isPinned && (
-                <Pin className="h-3.5 w-3.5 shrink-0 text-gray-500 dark:text-gray-300" />
+                <Pin className="text-muted-foreground dark:text-secondary-foreground h-3.5 w-3.5 shrink-0" />
               )}
             </div>
             <Button
@@ -183,7 +183,7 @@ export default function BookmarkListItem({
 
                 <DropdownMenuContent
                   align="end"
-                  className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary z-50 rounded-lg border border-gray-200 bg-white py-1 shadow-lg focus:outline-none"
+                  className="border-border bg-card z-50 rounded-lg border py-1 shadow-lg focus:outline-none"
                 >
                   <AccountActionMenuItem
                     onClick={() => onTogglePin()}
@@ -194,7 +194,7 @@ export default function BookmarkListItem({
                     }
                     testId={SITE_BOOKMARKS_TEST_IDS.rowPinToggleMenuItem}
                   />
-                  <DropdownMenuSeparator className="dark:bg-dark-bg-tertiary my-1 bg-gray-200" />
+                  <DropdownMenuSeparator className="bg-secondary my-1" />
                   <AccountActionMenuItem
                     onClick={() => onDelete()}
                     icon={Trash2}

@@ -76,7 +76,7 @@ export function StatusIndicator({
     return (
       <div className="py-12 text-center">
         <Spinner size="lg" className="mx-auto mb-4" />
-        <p className="dark:text-dark-text-secondary text-sm text-gray-500">
+        <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
           {t("status.loading")}
         </p>
       </div>
@@ -136,14 +136,14 @@ export function StatusIndicator({
         accountFallback.selectedRuntimeKeyId !== null)
 
     return (
-      <div className="dark:border-dark-bg-tertiary mt-4 space-y-4 border-t border-gray-200 pt-4">
+      <div className="border-border mt-4 space-y-4 border-t pt-4">
         <div>
-          <h4 className="dark:text-dark-text-primary text-sm font-semibold text-gray-900">
+          <h4 className="text-foreground text-sm font-semibold">
             {isKeyScopedStatus
               ? t("status.runtimeKeyScopedCatalogFallbackTitle")
               : t("status.fallback.title")}
           </h4>
-          <p className="dark:text-dark-text-secondary mt-1 text-sm text-gray-600">
+          <p className="dark:text-secondary-foreground text-muted-foreground mt-1 text-sm">
             {isKeyScopedStatus
               ? t("status.runtimeKeyScopedCatalogFallbackDescription")
               : t("status.fallback.description")}
@@ -172,7 +172,7 @@ export function StatusIndicator({
         !accountFallback.runtimeKeyLoadErrorMessage ? (
           <div className="flex items-center gap-3 py-1">
             <Spinner size="sm" />
-            <p className="dark:text-dark-text-secondary text-sm text-gray-600">
+            <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
               {t("status.fallback.loadingKeys")}
             </p>
           </div>
@@ -181,7 +181,7 @@ export function StatusIndicator({
         {accountFallback.hasLoadedRuntimeKeys &&
         accountFallback.runtimeKeys.length === 0 ? (
           <Alert
-            variant="info"
+            variant="default"
             title={t("status.fallback.noKeysTitle")}
             description={t("status.fallback.noKeysDescription")}
           >
@@ -205,7 +205,7 @@ export function StatusIndicator({
             <div>
               <label
                 htmlFor={fallbackRuntimeKeySelectId}
-                className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
+                className="text-secondary-foreground text-sm font-medium"
               >
                 {t("status.fallback.selectLabel")}
               </label>
@@ -243,7 +243,7 @@ export function StatusIndicator({
               </div>
               {requiresExplicitSelection &&
               accountFallback.selectedRuntimeKeyId === null ? (
-                <p className="dark:text-dark-text-tertiary mt-2 text-sm text-gray-500">
+                <p className="text-muted-foreground mt-2 text-sm">
                   {t("status.fallback.selectHint")}
                 </p>
               ) : null}

@@ -37,7 +37,7 @@ export default function FilterBar({
   const renderFilterButton = (
     value: FilterStatus,
     label: string,
-    color: string,
+    selectedClassName: string,
     icon: ReactNode,
     count?: number,
   ) => (
@@ -47,8 +47,8 @@ export default function FilterBar({
       onClick={() => onStatusChange(value)}
       className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
         status === value
-          ? `${color} text-white`
-          : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+          ? selectedClassName
+          : "bg-muted text-secondary-foreground hover:bg-secondary dark:bg-secondary dark:hover:bg-surface-strong"
       }`}
     >
       {icon}
@@ -57,8 +57,8 @@ export default function FilterBar({
         <span
           className={`ml-1 rounded-full px-1.5 py-0.5 text-xs font-semibold ${
             status === value
-              ? "bg-white/20 text-white"
-              : "bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300"
+              ? "bg-overlay/10"
+              : "bg-secondary text-muted-foreground dark:bg-surface-strong dark:text-secondary-foreground"
           }`}
         >
           {count}
@@ -73,21 +73,21 @@ export default function FilterBar({
         {renderFilterButton(
           "all",
           t("execution.filters.all"),
-          "bg-blue-600",
+          "bg-primary text-primary-foreground",
           <List className="h-4 w-4" />,
           statistics.total,
         )}
         {renderFilterButton(
           "success",
           t("execution.filters.success"),
-          "bg-green-600",
+          "bg-success text-success-foreground",
           <CircleCheck className="h-4 w-4" />,
           statistics.successCount,
         )}
         {renderFilterButton(
           "failed",
           t("execution.filters.failed"),
-          "bg-red-600",
+          "bg-destructive text-destructive-foreground",
           <CircleX className="h-4 w-4" />,
           statistics.failureCount,
         )}

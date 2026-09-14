@@ -405,12 +405,11 @@ describe("feature UsageAnalytics echartsOptions", () => {
       totalTokensSeriesLabel: "Total",
       quotaSeriesLabel: "Quota",
       legendSelected: { Total: false },
-      isDark: true,
     }) as any
 
     expect(overview.legend.selected).toEqual({ Total: false })
     expect(overview.series[0].data).toEqual([2, 0])
-    expect(overview.xAxis.axisLabel.color).toBe("#9ca3af")
+    expect(overview.xAxis.axisLabel.color).toBe("var(--chart-axis)")
 
     const heatmap = buildHeatmapOption({
       dayKeys: ["2026-01-01", "2026-01-02"],
@@ -419,7 +418,6 @@ describe("feature UsageAnalytics echartsOptions", () => {
         "gpt-4": { "2026-01-02": 8 },
       },
       seriesLabel: "Tokens",
-      isDark: true,
     }) as any
 
     expect(heatmap.series[0].data).toEqual([
@@ -538,7 +536,7 @@ describe("feature UsageAnalytics echartsOptions", () => {
       values: [3],
     }) as any
     expect(pie.series[0].name).toBe("")
-    expect(pie.legend.textStyle.color).toBe("#6b7280")
+    expect(pie.legend.textStyle.color).toBe("var(--chart-axis)")
 
     const line = buildLineTrendOption({
       categories: ["2026-01-01"],

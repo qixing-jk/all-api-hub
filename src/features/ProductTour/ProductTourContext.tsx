@@ -406,6 +406,7 @@ export function ProductTourProvider({
           skip: t("productTour:actions.skip"),
         }}
         options={{
+          arrowColor: "var(--card)",
           blockTargetInteraction: true,
           buttons: ["back", "close", "primary", "skip"],
           closeButtonAction: "skip",

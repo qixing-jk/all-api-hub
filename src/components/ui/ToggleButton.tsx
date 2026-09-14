@@ -9,11 +9,10 @@ const toggleButtonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-transparent hover:bg-gray-50 dark:hover:bg-dark-bg-secondary text-gray-700 dark:text-dark-text-secondary focus:ring-gray-500",
-        active:
-          "bg-white dark:bg-dark-bg-secondary text-gray-900 dark:text-dark-text-primary shadow-sm scale-105 focus:ring-blue-500",
+          "bg-transparent hover:bg-surface-subtle dark:hover:bg-card text-secondary-foreground focus:ring-border-strong",
+        active: "bg-card text-foreground shadow-sm scale-105 focus:ring-ring",
         ghost:
-          "bg-transparent hover:bg-gray-100 dark:hover:bg-dark-bg-secondary text-gray-600 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text-primary focus:ring-gray-500",
+          "bg-transparent hover:bg-muted dark:hover:bg-card text-muted-foreground dark:text-secondary-foreground hover:text-foreground focus:ring-border-strong",
       },
       size: {
         sm: "px-1 py-0.5 text-xs sm:px-2 sm:py-1 sm:text-sm",
@@ -55,7 +54,7 @@ const ToggleButton = React.forwardRef<HTMLButtonElement, ToggleButtonProps>(
       leftIcon,
       rightIcon,
       showActiveIndicator = false,
-      activeIndicatorColor = "bg-blue-500 dark:bg-blue-400",
+      activeIndicatorColor = "bg-theme-500 dark:bg-theme-400",
       children,
       ...props
     },

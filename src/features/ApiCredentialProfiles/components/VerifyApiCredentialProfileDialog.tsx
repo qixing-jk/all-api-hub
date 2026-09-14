@@ -280,7 +280,7 @@ export function VerifyApiCredentialProfileDialog({
         <Heading5 className="truncate">
           {t("aiApiVerification:verifyDialog.title")}
         </Heading5>
-        <div className="dark:text-dark-text-tertiary mt-1 truncate text-xs text-gray-500">
+        <div className="text-muted-foreground mt-1 truncate text-xs">
           {profile.baseUrl} · {profile.name}
         </div>
       </div>
@@ -779,7 +779,7 @@ export function VerifyApiCredentialProfileDialog({
       {!profile ? null : (
         <div className="space-y-3">
           {historyTarget ? (
-            <div className="dark:border-dark-bg-tertiary flex flex-wrap items-center gap-2 rounded-md border border-gray-100 p-3 text-sm">
+            <div className="dark:border-border border-border-subtle flex flex-wrap items-center gap-2 rounded-md border p-3 text-sm">
               <VerificationHistorySummary summary={persistedSummary} />
             </div>
           ) : null}
@@ -787,7 +787,7 @@ export function VerifyApiCredentialProfileDialog({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <div className="flex min-h-7 items-center gap-2">
-                <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                <div className="text-muted-foreground text-xs">
                   {t("aiApiVerification:verifyDialog.meta.apiType")}
                 </div>
                 {hasApiTypeOverride ? (
@@ -844,7 +844,7 @@ export function VerifyApiCredentialProfileDialog({
 
             <div className="space-y-1.5 sm:col-span-2">
               <div className="flex min-h-7 items-center">
-                <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                <div className="text-muted-foreground text-xs">
                   {t("aiApiVerification:verifyDialog.meta.model")}
                 </div>
               </div>
@@ -868,7 +868,7 @@ export function VerifyApiCredentialProfileDialog({
               />
 
               {fetchModelsError ? (
-                <div className="dark:text-dark-text-tertiary text-xs text-red-600">
+                <div className="text-destructive-text text-xs">
                   {fetchModelsError}
                 </div>
               ) : null}
@@ -890,7 +890,7 @@ export function VerifyApiCredentialProfileDialog({
           ) : null}
 
           {!hasAnyResult && (
-            <div className="dark:text-dark-text-secondary text-sm text-gray-600">
+            <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
               {t("apiCredentialProfiles:verify.idleHint")}
             </div>
           )}
@@ -934,12 +934,12 @@ export function VerifyApiCredentialProfileDialog({
                   data-testid={getApiCredentialProfileVerifyProbeTestId(
                     probe.definition.id,
                   )}
-                  className="dark:border-dark-bg-tertiary rounded-md border border-gray-100 p-3"
+                  className="dark:border-border border-border-subtle rounded-md border p-3"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                        <div className="dark:text-dark-text-primary min-w-0 truncate text-sm font-medium text-gray-900">
+                        <div className="text-foreground min-w-0 truncate text-sm font-medium">
                           {getApiVerificationProbeLabel(t, probe.definition.id)}
                         </div>
 
@@ -953,13 +953,13 @@ export function VerifyApiCredentialProfileDialog({
                               )}
                             </Badge>
                           )}
-                          <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                          <div className="text-muted-foreground text-xs">
                             {result ? formatLatency(result.latencyMs) : "-"}
                           </div>
                         </div>
                       </div>
 
-                      <div className="dark:text-dark-text-secondary mt-1 text-xs text-gray-600">
+                      <div className="dark:text-secondary-foreground text-muted-foreground mt-1 text-xs">
                         {resultSummary}
                       </div>
                     </div>
@@ -999,7 +999,7 @@ export function VerifyApiCredentialProfileDialog({
                               "aiApiVerification:verifyDialog.details.input",
                             )}
                           >
-                            <pre className="dark:text-dark-text-secondary overflow-auto text-xs break-words whitespace-pre-wrap text-gray-700">
+                            <pre className="text-secondary-foreground overflow-auto text-xs break-words whitespace-pre-wrap">
                               {safeJsonStringify(result.input)}
                             </pre>
                           </CollapsibleSection>
@@ -1010,7 +1010,7 @@ export function VerifyApiCredentialProfileDialog({
                               "aiApiVerification:verifyDialog.details.output",
                             )}
                           >
-                            <pre className="dark:text-dark-text-secondary overflow-auto text-xs break-words whitespace-pre-wrap text-gray-700">
+                            <pre className="text-secondary-foreground overflow-auto text-xs break-words whitespace-pre-wrap">
                               {safeJsonStringify(result.output)}
                             </pre>
                           </CollapsibleSection>

@@ -93,10 +93,10 @@ export function UpdateLogDialog({
 
   const header = (
     <div className="pr-8">
-      <h3 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
+      <h3 className="text-foreground text-lg font-semibold">
         {t("ui:dialog.updateLog.title")}
       </h3>
-      <p className="dark:text-dark-text-secondary mt-1 text-sm text-gray-500">
+      <p className="dark:text-secondary-foreground text-muted-foreground mt-1 text-sm">
         {t("ui:dialog.updateLog.updatedTo", { version })}
       </p>
     </div>
@@ -162,11 +162,11 @@ export function UpdateLogDialog({
         data-testid={UPDATE_LOG_DIALOG_TEST_IDS.root}
         className="flex min-h-0 flex-1 flex-col gap-3"
       >
-        <div className="dark:border-dark-bg-tertiary min-h-0 flex-1 overflow-hidden rounded-lg border border-gray-200">
+        <div className="border-border min-h-0 flex-1 overflow-hidden rounded-lg border">
           <div className="relative h-full">
             {iframeStatus === "loading" && (
-              <div className="dark:bg-dark-bg-secondary/60 absolute inset-0 z-10 flex items-center justify-center bg-white/60">
-                <p className="dark:text-dark-text-secondary text-sm text-gray-600">
+              <div className="bg-card/60 absolute inset-0 z-10 flex items-center justify-center">
+                <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
                   {t("ui:dialog.updateLog.loading")}
                 </p>
               </div>
@@ -175,7 +175,7 @@ export function UpdateLogDialog({
             <iframe
               title={t("ui:dialog.updateLog.title")}
               src={iframeUrl}
-              className="dark:bg-dark-bg-secondary block h-full w-full bg-white"
+              className="bg-card block h-full w-full"
               onLoad={() => setIframeStatus("loaded")}
               sandbox="allow-same-origin allow-scripts"
             />
@@ -183,7 +183,7 @@ export function UpdateLogDialog({
         </div>
 
         {iframeStatus === "failed" && (
-          <p className="dark:text-dark-text-secondary shrink-0 text-sm text-gray-600">
+          <p className="dark:text-secondary-foreground text-muted-foreground shrink-0 text-sm">
             {t("ui:dialog.updateLog.missingSection", { version })}
           </p>
         )}

@@ -23,21 +23,16 @@ export function OverviewMetricTile({
   return (
     <div
       className={cn(
-        "rounded-lg border border-slate-200/70 bg-white/80 p-2.5 dark:border-white/10 dark:bg-white/[0.04]",
+        "border-border/70 bg-card/80 dark:border-foreground/10 dark:bg-foreground/[0.04] rounded-lg border p-2.5",
         className,
       )}
     >
-      <div
-        className={cn(
-          "dark:text-dark-text-tertiary text-xs text-slate-500",
-          labelClassName,
-        )}
-      >
+      <div className={cn("text-muted-foreground text-xs", labelClassName)}>
         {label}
       </div>
       <div
         className={cn(
-          "mt-1 text-lg leading-none font-semibold text-slate-950 dark:text-white",
+          "text-foreground mt-1 text-lg leading-none font-semibold",
           valueClassName,
         )}
       >

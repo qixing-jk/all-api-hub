@@ -17,14 +17,14 @@ const TechStackGrid = ({ items }: TechStackGridProps) => {
         <Card key={index}>
           <CardContent>
             <div className="mb-2 flex items-center justify-between">
-              <span className="dark:text-dark-text-primary text-base font-medium text-gray-900">
+              <span className="text-foreground text-base font-medium">
                 {tech.name}
               </span>
               <Badge variant="secondary" size="sm">
                 v{tech.version}
               </Badge>
             </div>
-            <p className="dark:text-dark-text-secondary text-sm text-gray-500">
+            <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
               {tech.description}
             </p>
           </CardContent>

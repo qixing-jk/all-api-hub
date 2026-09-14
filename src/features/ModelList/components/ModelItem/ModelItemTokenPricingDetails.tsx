@@ -36,13 +36,11 @@ export function ModelItemTokenPricingDetails({
       {details.map((price) =>
         price.amount === undefined ? null : (
           <div key={price.key} className="space-y-1">
-            <div className="dark:text-dark-text-tertiary text-gray-500">
-              {price.label}
-            </div>
-            <div className="dark:text-dark-text-primary font-medium text-gray-900">
+            <div className="text-muted-foreground">{price.label}</div>
+            <div className="text-foreground font-medium">
               USD: {formatPrice(price.amount, "USD")}
             </div>
-            <div className="dark:text-dark-text-primary font-medium text-gray-900">
+            <div className="text-foreground font-medium">
               CNY:{" "}
               {formatPrice(
                 resolvePriceAmount(price.amount, "CNY", exchangeRate),

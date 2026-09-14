@@ -36,7 +36,7 @@ export const TokenStats = React.memo(() => {
             weight="medium"
             role="status"
             aria-label={unavailableLabel}
-            className="cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="focus-visible:ring-ring cursor-help rounded-sm outline-none focus-visible:ring-2"
             tabIndex={0}
           >
             <span aria-hidden="true">
@@ -74,7 +74,7 @@ export const TokenStats = React.memo(() => {
       <Tooltip content={coverageLabel}>
         <BodySmall
           weight="medium"
-          className="cursor-help rounded-sm tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          className="focus-visible:ring-ring cursor-help rounded-sm tabular-nums outline-none focus-visible:ring-2"
           aria-label={[totalText, qualifier, coverageLabel]
             .filter(Boolean)
             .join(". ")}
@@ -82,7 +82,7 @@ export const TokenStats = React.memo(() => {
         >
           {totalText}
           {qualifier ? (
-            <span className="dark:text-dark-text-tertiary ml-1.5 text-[10px] font-medium text-gray-500">
+            <span className="text-muted-foreground ml-1.5 text-[10px] font-medium">
               {qualifier}
             </span>
           ) : null}
@@ -113,19 +113,19 @@ export const TokenStats = React.memo(() => {
       anchorAsChild
     >
       <div
-        className="flex cursor-help items-center justify-center gap-3 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        className="focus-visible:ring-ring flex cursor-help items-center justify-center gap-3 rounded-sm outline-none focus-visible:ring-2"
         role="group"
         tabIndex={0}
         aria-label={completeBreakdownLabel}
       >
         <div className="flex items-center gap-1">
-          <ArrowUp className="h-4 w-4 text-green-500" />
+          <ArrowUp className="text-pricing-input h-4 w-4" />
           <BodySmall weight="medium">
             {formatTokenCount(todayTokens.today_total_prompt_tokens)}
           </BodySmall>
         </div>
         <div className="flex items-center gap-1">
-          <ArrowDown className="h-4 w-4 text-blue-500" />
+          <ArrowDown className="text-pricing-output h-4 w-4" />
           <BodySmall weight="medium">
             {formatTokenCount(todayTokens.today_total_completion_tokens)}
           </BodySmall>

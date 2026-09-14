@@ -48,11 +48,11 @@ export function AccountFormSection({
         <CollapsibleSection
           title={
             <div className="min-w-0">
-              <div className="dark:text-dark-text-primary truncate text-sm font-medium text-gray-900">
+              <div className="text-foreground truncate text-sm font-medium">
                 {title}
               </div>
               {description && (
-                <div className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
+                <div className="dark:text-secondary-foreground text-muted-foreground mt-1 text-xs">
                   {description}
                 </div>
               )}
@@ -61,8 +61,8 @@ export function AccountFormSection({
           defaultOpen={defaultOpen}
           open={open}
           onOpenChange={onOpenChange}
-          className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm"
-          buttonClassName="rounded-md px-0 py-0 text-left hover:bg-transparent dark:hover:bg-transparent"
+          className="border-border bg-card rounded-lg border px-3 py-2 shadow-sm"
+          buttonClassName="rounded-md px-0 py-0 text-left hover:bg-transparent"
           panelClassName="mt-3 border-0 bg-transparent p-0"
         >
           <div className="space-y-4">{children}</div>

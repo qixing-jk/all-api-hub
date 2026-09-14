@@ -17,7 +17,6 @@ import {
   formatPrice,
   formatPriceCompact,
   formatPriceRange,
-  getBillingModeStyle,
   getBillingModeText,
   getEndpointTypesText,
   isModelAvailableForGroup,
@@ -370,26 +369,6 @@ describe("modelPricing utils", () => {
     it("should return per-call text for other quota types", () => {
       expect(getBillingModeText(2)).toBe("ui:billing.perCall")
       expect(getBillingModeText(99)).toBe("ui:billing.perCall")
-    })
-  })
-
-  describe("getBillingModeStyle", () => {
-    it("should return blue style for token billing", () => {
-      const style = getBillingModeStyle(0)
-      expect(style.color).toBe("text-blue-600")
-      expect(style.bgColor).toBe("bg-blue-50")
-    })
-
-    it("should return purple style for per-call billing", () => {
-      const style = getBillingModeStyle(1)
-      expect(style.color).toBe("text-purple-600")
-      expect(style.bgColor).toBe("bg-purple-50")
-    })
-
-    it("should return purple style for other quota types", () => {
-      const style = getBillingModeStyle(2)
-      expect(style.color).toBe("text-purple-600")
-      expect(style.bgColor).toBe("bg-purple-50")
     })
   })
 

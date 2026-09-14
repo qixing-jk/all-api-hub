@@ -20,9 +20,7 @@ import {
   formatUsedQuota,
   getCurrencyDisplayName,
   getCurrencySymbol,
-  getGroupBadgeStyle,
   getOppositeCurrency,
-  getStatusBadgeStyle,
   getTodayMetricPresentation,
   maskSecretForDisplay,
   normalizeToDate,
@@ -503,37 +501,6 @@ describe("formatters utilities", () => {
       expect(used.startsWith("$")).toBe(true)
       expect(quota).toMatch(/\$\d+\.\d{2}/)
       expect(used).toMatch(/\$\d+\.\d{2}/)
-    })
-  })
-
-  describe("getGroupBadgeStyle", () => {
-    it("should return a non-empty class string for given group", () => {
-      const style = getGroupBadgeStyle("vip")
-      expect(typeof style).toBe("string")
-      expect(style.length).toBeGreaterThan(0)
-    })
-
-    it("should fall back to default group for empty string", () => {
-      const style = getGroupBadgeStyle("")
-      const defaultStyle = getGroupBadgeStyle("default")
-      expect(style).toBe(defaultStyle)
-    })
-  })
-
-  describe("getStatusBadgeStyle", () => {
-    it("should return green style for status 1", () => {
-      expect(getStatusBadgeStyle(1)).toBe(
-        "bg-green-100 text-green-800 border-green-200",
-      )
-    })
-
-    it("should return red style for non-1 status", () => {
-      expect(getStatusBadgeStyle(0)).toBe(
-        "bg-red-100 text-red-800 border-red-200",
-      )
-      expect(getStatusBadgeStyle(2)).toBe(
-        "bg-red-100 text-red-800 border-red-200",
-      )
     })
   })
 })

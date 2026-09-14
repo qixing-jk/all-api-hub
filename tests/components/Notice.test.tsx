@@ -21,7 +21,7 @@ describe("Notice", () => {
 
     const notice = screen.getByRole("status")
     expect(notice).toHaveAttribute("aria-live", "polite")
-    expect(notice.className).toContain("bg-amber-50")
+    expect(notice).toHaveClass("bg-warning-soft")
     expect(screen.getByText("Connection interrupted")).toBeVisible()
     expect(
       screen.getByText("Use a steadier surface to continue."),
@@ -44,7 +44,7 @@ describe("Notice", () => {
     const notice = screen.getByRole("status")
     expect(notice).not.toHaveAttribute("aria-labelledby")
     expect(notice).not.toHaveAttribute("aria-describedby")
-    expect(notice.className).toContain("bg-blue-50")
+    expect(notice.className).toContain("bg-primary-soft")
     expect(screen.getByText("Saved for later")).toBeVisible()
   })
 })

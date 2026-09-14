@@ -1332,7 +1332,7 @@ export default function KeyManagement(props: {
 
       {!isManagedSiteConfigComplete ? (
         <Notice
-          tone="info"
+          tone="default"
           className="mx-auto mt-6 max-w-2xl text-left"
           description={
             <span>

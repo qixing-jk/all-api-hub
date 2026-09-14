@@ -11,18 +11,16 @@ export const PRODUCT_ANNOUNCEMENT_SEVERITY_STYLES: Record<
 > = {
   critical: {
     badge:
-      "border-red-200/80 bg-red-500/10 text-red-700 dark:border-red-900/60 dark:bg-red-500/15 dark:text-red-300",
-    icon: "bg-red-500/10 text-red-600 dark:bg-red-500/15 dark:text-red-300",
+      "border-destructive-border bg-destructive-soft text-destructive-soft-foreground",
+    icon: "bg-destructive-soft text-destructive-soft-foreground",
   },
   warning: {
-    badge:
-      "border-amber-200/80 bg-amber-500/10 text-amber-700 dark:border-amber-900/60 dark:bg-amber-500/15 dark:text-amber-300",
-    icon: "bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300",
+    badge: "border-warning-border bg-warning-soft text-warning-soft-foreground",
+    icon: "bg-warning-soft text-warning-soft-foreground",
   },
   info: {
-    badge:
-      "border-blue-200/80 bg-blue-500/10 text-blue-700 dark:border-blue-900/60 dark:bg-blue-500/15 dark:text-blue-300",
-    icon: "bg-blue-500/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300",
+    badge: "border-info-border bg-info-soft text-info-soft-foreground",
+    icon: "bg-info-soft text-info-soft-foreground",
   },
 }
 

@@ -80,12 +80,12 @@ const intentPresentation = {
   },
   warning: {
     icon: TriangleAlert,
-    iconClassName: "text-amber-600 dark:text-amber-400",
+    iconClassName: "text-warning-text",
     confirmVariant: "warning",
   },
   destructive: {
     icon: TriangleAlert,
-    iconClassName: "text-red-600 dark:text-red-400",
+    iconClassName: "text-destructive-text",
     confirmVariant: "destructive",
   },
 } as const
@@ -131,9 +131,7 @@ export function ConfirmDialog({
               className={`h-5 w-5 ${presentation.iconClassName}`}
               aria-hidden="true"
             />
-            <h2 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
-              {title}
-            </h2>
+            <h2 className="text-foreground text-lg font-semibold">{title}</h2>
           </div>
         </div>
       }
@@ -167,11 +165,11 @@ export function ConfirmDialog({
         <div className="flex space-x-3">
           <div className="flex-1">
             {warningTitle && (
-              <h3 className="dark:text-dark-text-primary mb-2 text-sm font-medium text-gray-900">
+              <h3 className="text-foreground mb-2 text-sm font-medium">
                 {warningTitle}
               </h3>
             )}
-            <p className="dark:text-dark-text-secondary text-sm text-gray-500">
+            <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
               {description}
             </p>
           </div>

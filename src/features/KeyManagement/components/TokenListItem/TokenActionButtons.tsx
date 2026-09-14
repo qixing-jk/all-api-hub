@@ -133,7 +133,7 @@ export function TokenActionButtons({
                 variant="ghost"
                 onClick={() => void copyKey(account, token)}
               >
-                <Copy className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
+                <Copy className="text-muted-foreground h-4 w-4" />
               </IconButton>
             ) : null}
           </KeyResourceActionGroup>
@@ -158,7 +158,7 @@ export function TokenActionButtons({
               data-testid={KEY_MANAGEMENT_TEST_IDS.verifyTokenApiButton}
               onClick={() => void handleVerifyApi()}
             >
-              <Wrench className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <Wrench className="text-link h-4 w-4" />
             </IconButton>
             <IconButton
               aria-label={t("keyManagement:actions.verifyCliSupport")}
@@ -167,7 +167,7 @@ export function TokenActionButtons({
               data-testid={KEY_MANAGEMENT_TEST_IDS.verifyTokenCliSupportButton}
               onClick={() => void handleVerifyCliSupport()}
             >
-              <Terminal className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+              <Terminal className="text-link h-4 w-4" />
             </IconButton>
           </KeyResourceActionGroup>
         ) : null}
@@ -183,7 +183,7 @@ export function TokenActionButtons({
                 variant="ghost"
                 onClick={() => handleEditToken(token)}
               >
-                <Pencil className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+                <Pencil className="text-theme-500 dark:text-theme-400 h-4 w-4" />
               </IconButton>
             ) : null}
             {actionPolicy.delete ? (

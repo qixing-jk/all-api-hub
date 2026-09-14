@@ -70,20 +70,20 @@ export default function AccountFilterBar({
         <SelectTrigger
           size="sm"
           className={cn(
-            "h-10 w-full min-w-0 gap-1.5 rounded-md border-gray-200 bg-transparent px-2 shadow-none hover:bg-gray-50 data-[size=sm]:h-10 dark:bg-transparent [&_[data-slot='select-value']]:min-w-0 [&_[data-slot='select-value']]:flex-1 [&_[data-slot='select-value']]:overflow-hidden [&_[data-slot='select-value']>div]:min-w-0 [@container(min-width:40rem)]:data-[size=sm]:h-9",
+            "border-border hover:bg-surface-subtle h-10 w-full min-w-0 gap-1.5 rounded-md bg-transparent px-2 shadow-none data-[size=sm]:h-10 [&_[data-slot='select-value']]:min-w-0 [&_[data-slot='select-value']]:flex-1 [&_[data-slot='select-value']]:overflow-hidden [&_[data-slot='select-value']>div]:min-w-0 [@container(min-width:40rem)]:data-[size=sm]:h-9",
             value !== "all" &&
-              "border-blue-200 bg-blue-50/60 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300",
+              "border-theme-200 bg-theme-50/60 text-theme-700 dark:border-theme-800 dark:bg-theme-950/40 dark:text-theme-300",
           )}
           title={selectedLabel}
           data-testid={testId}
         >
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
-            <span className="dark:text-dark-text-tertiary flex size-4 shrink-0 items-center justify-center text-gray-500">
+            <span className="text-muted-foreground flex size-4 shrink-0 items-center justify-center">
               <Icon className="size-3.5" />
             </span>
             <SelectValue
               placeholder={placeholder}
-              className="min-w-0 flex-1 truncate text-xs text-gray-700 dark:text-gray-200"
+              className="text-secondary-foreground min-w-0 flex-1 truncate text-xs"
             >
               {selectedLabel}
             </SelectValue>
@@ -99,7 +99,7 @@ export default function AccountFilterBar({
               <div className="flex w-full min-w-0 items-center gap-3">
                 <span className="min-w-0 flex-1 truncate">{option.label}</span>
                 {typeof option.count === "number" && (
-                  <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">
+                  <span className="text-muted-foreground shrink-0 text-xs">
                     {option.count}
                   </span>
                 )}

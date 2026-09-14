@@ -63,14 +63,14 @@ export function QuickKeyResourceCard({
       <button
         id={detailsTriggerId}
         type="button"
-        className="dark:hover:bg-dark-bg-tertiary flex w-full items-center justify-between gap-3 rounded-[var(--corner-inner-radius)] p-3 text-left transition-colors hover:bg-gray-50 aria-expanded:rounded-b-none"
+        className="dark:hover:bg-secondary hover:bg-surface-subtle flex w-full items-center justify-between gap-3 rounded-[var(--corner-inner-radius)] p-3 text-left transition-colors aria-expanded:rounded-b-none"
         aria-label={t("actions.detailsFor", { name: presentation.title })}
         aria-controls={detailsPanelId}
         aria-expanded={isExpanded}
         onClick={() => onExpandedChange(!isExpanded)}
       >
         <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-          <span className="dark:text-dark-text-primary max-w-full truncate text-sm font-medium text-gray-900">
+          <span className="text-foreground max-w-full truncate text-sm font-medium">
             {presentation.title}
           </span>
           {headerFact ? (
@@ -104,7 +104,7 @@ export function QuickKeyResourceCard({
           aria-labelledby={detailsTriggerId}
           padding="sm"
           spacing="sm"
-          className="dark:border-dark-bg-tertiary border-t border-gray-200"
+          className="border-border border-t"
         >
           <KeyResourceSecretDisplay
             label={t("keyDetails.key")}
@@ -119,7 +119,7 @@ export function QuickKeyResourceCard({
             />
           ) : null}
           {expandedDetailFacts.length > 0 ? (
-            <div className="dark:border-dark-bg-tertiary border-t border-gray-200 pt-3">
+            <div className="border-border border-t pt-3">
               <KeyResourceFactList
                 facts={expandedDetailFacts}
                 layout={KEY_RESOURCE_CONTENT_LAYOUTS.Adaptive}

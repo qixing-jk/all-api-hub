@@ -262,7 +262,7 @@ export function ManagedSiteMigrationDialogView({
           {preview?.error ? (
             <div
               role="alert"
-              className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300"
+              className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground rounded-md border p-3 text-sm"
             >
               {preview.error}
             </div>
@@ -279,7 +279,7 @@ export function ManagedSiteMigrationDialogView({
           {!result && preview ? (
             <>
               {preview.generalWarnings.length ? (
-                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+                <div className="border-warning-border bg-warning-soft text-warning-soft-foreground rounded-md border p-3 text-sm">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <div className="font-medium">
@@ -364,7 +364,7 @@ export function ManagedSiteMigrationDialogView({
                         </div>
                       }
                       defaultOpen={row.status === "blocked"}
-                      buttonClassName="px-0 py-0 hover:bg-transparent dark:hover:bg-transparent"
+                      buttonClassName="px-0 py-0 hover:bg-transparent"
                       panelClassName="mt-3 space-y-3 border-0 bg-transparent p-0"
                     >
                       <div className="space-y-3">
@@ -397,7 +397,7 @@ export function ManagedSiteMigrationDialogView({
                           ))}
                         </div>
                         {row.blockedReason ? (
-                          <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+                          <div className="border-warning-border bg-warning-soft text-warning-soft-foreground rounded-md border p-2 text-xs">
                             <div className="font-medium">
                               {row.blockedReason}
                             </div>
@@ -423,7 +423,7 @@ export function ManagedSiteMigrationDialogView({
 
           {result ? (
             <div className="space-y-3">
-              <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-200">
+              <div className="border-info-border bg-info-soft text-info-soft-foreground rounded-md border p-3 text-sm">
                 <div className="font-medium">{labels.resultsTitle}</div>
                 <div className="mt-1">{result.summary}</div>
               </div>

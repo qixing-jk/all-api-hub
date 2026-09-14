@@ -17,14 +17,11 @@ export default function CloudSyncSettings() {
     useState<string>()
 
   return (
-    <section
-      id="cloud-sync"
-      className="space-y-4 border-t border-gray-200 pt-6 dark:border-gray-700"
-    >
+    <section id="cloud-sync" className="border-border space-y-4 border-t pt-6">
       <div className="space-y-1">
         <Heading3 as="h2" className="m-0 flex items-center gap-2 text-xl">
           <Cloud
-            className="size-5 shrink-0 text-sky-600 dark:text-sky-400"
+            className="text-theme-600 dark:text-theme-400 size-5 shrink-0"
             aria-hidden="true"
           />
           {t("webdav.title")}
