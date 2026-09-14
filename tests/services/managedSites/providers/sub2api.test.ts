@@ -564,8 +564,6 @@ describe("Sub2API API-key account managed-site provider", () => {
       base_url: "https://api.example.invalid/v1",
       models: [],
       groups: [],
-      priority: 1,
-      weight: 1,
       enabled: true,
       notes: "",
     })

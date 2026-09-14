@@ -117,8 +117,6 @@ describe("Veloera native channel migration", () => {
         baseUrl: "https://upstream.example.invalid",
         models: ["model-example"],
         groups: ["default"],
-        priority: 0,
-        weight: 0,
         status: "enabled",
         lossSignals: {
           hasModelMapping: false,
@@ -324,8 +322,6 @@ describe("Veloera native channel migration", () => {
       baseUrl: "https://upstream.example.invalid",
       models: ["model-example"],
       groups: [],
-      priority: 3,
-      weight: 4,
       status: "other",
       lossSignals: {
         hasModelMapping: false,
@@ -382,8 +378,6 @@ describe("Veloera native channel migration", () => {
             baseUrl: source.baseUrl,
             models: source.models,
             groups: source.groups,
-            priority: 0,
-            weight: 0,
             enabled: true,
           },
           credential: "credential-placeholder",

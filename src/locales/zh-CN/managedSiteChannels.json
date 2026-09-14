@@ -442,6 +442,7 @@
       "createOnly": "本次迁移仅在目标站点创建新渠道，不会修改源渠道。",
       "noDedupeOrSync": "本次迁移不会查重、覆盖或同步目标站点中已存在的渠道。",
       "noRollback": "本次迁移不提供自动回滚，请根据结果列表手动处理后续工作。",
+      "targetRoutingDefaults": "优先级、权重和并发设置不会迁移，目标采用原生默认值；可在迁移后通过目标编辑器调整。",
       "title": "迁移限制"
     },
     "itemWarnings": {
@@ -452,8 +453,6 @@
       "splitsKeys": "目标无法在同一渠道中保留这些 Key 的状态，将按 Key 拆分创建渠道；负载分配可能变化。",
       "sub2apiDefaultGroup": "不会迁移源分组。目标站点会绑定该平台的默认分组（如有），请在迁移后检查分组。",
       "targetForcesDefaultGroup": "目标站点会改用默认分组。",
-      "targetIgnoresPriority": "目标站点不保留源渠道的优先级。",
-      "targetIgnoresWeight": "目标站点不保留源渠道的权重。",
       "targetNormalizesBaseUrl": "目标站点会对基础 URL 做规范化处理。",
       "targetRemapsChannelType": "目标站点会将渠道类型映射为最接近的兼容类型。",
       "targetSimplifiesStatus": "目标站点会将源渠道状态简化为启用或停用。"

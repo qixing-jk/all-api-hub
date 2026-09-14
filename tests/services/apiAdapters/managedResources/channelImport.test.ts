@@ -21,8 +21,6 @@ const draft: ManagedSiteChannelDraft = {
   base_url: "https://upstream.example.invalid",
   models: ["model-a"],
   groups: [],
-  priority: 0,
-  weight: 7,
   enabled: true,
 }
 
@@ -83,7 +81,7 @@ describe("native managed-channel import", () => {
       editor,
     })
     expect(openCreateEditor).toHaveBeenCalledWith({
-      seed: {
+      seed: expect.objectContaining({
         kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
         name: "Imported channel",
         channelType: "openai",
@@ -91,10 +89,8 @@ describe("native managed-channel import", () => {
         baseUrl: "https://upstream.example.invalid",
         enabled: true,
         models: ["model-a"],
-        orderingWeight: 7,
-        priority: 0,
         notes: "",
-      },
+      }),
     })
   })
 

@@ -195,8 +195,6 @@ export async function prepareChannelFormData(
     models: normalizeList(availableModels),
     ...(fetchFailed ? { modelPrefillFetchFailed: true } : {}),
     groups: [DEFAULT_GROUP_TAG],
-    priority: 0,
-    weight: 1,
     enabled: true,
   }
 }

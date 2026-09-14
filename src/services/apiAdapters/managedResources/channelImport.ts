@@ -49,8 +49,6 @@ const createManagedChannelImportSeed = (
   baseUrl: draft.base_url,
   enabled: draft.enabled,
   models: [...draft.models],
-  orderingWeight: draft.weight,
-  priority: draft.priority,
   notes: draft.notes ?? "",
 })
 

@@ -71,8 +71,6 @@ const source: ManagedSiteMigrationSource = {
   baseUrl: "https://source.example.invalid",
   models: ["model-example"],
   groups: ["default"],
-  priority: 0,
-  weight: 0,
   status: "enabled",
   lossSignals: {
     hasModelMapping: false,
@@ -89,16 +87,12 @@ const target: ManagedSiteMigrationTargetPreparation = {
     baseUrl: "https://target.example.invalid",
     models: ["model-example"],
     groups: ["default"],
-    priority: 0,
-    weight: 0,
     enabled: true,
   },
   adjustments: {
     remappedType: false,
     normalizedBaseUrl: false,
     forcedDefaultGroup: false,
-    ignoredPriority: false,
-    ignoredWeight: false,
     simplifiedStatus: false,
   },
 }

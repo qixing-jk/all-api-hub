@@ -475,8 +475,8 @@ const projectNewApiImportSeed = (
   },
   [policy.fields.Models]: normalizeList(seed.models),
   [policy.fields.Groups]: [...DEFAULT_CHANNEL_FIELDS.groups],
-  [policy.fields.Priority]: seed.priority,
-  [policy.fields.Weight]: seed.orderingWeight,
+  [policy.fields.Priority]: DEFAULT_CHANNEL_FIELDS.priority,
+  [policy.fields.Weight]: DEFAULT_CHANNEL_FIELDS.weight,
 })
 
 const invalidModelProbe = (editorFields: NewApiFamilyEditorFieldIds = fields) =>
@@ -617,8 +617,6 @@ const createImportSeedBinding = (
     [policy.fields.Key]: "credential",
     [policy.fields.BaseUrl]: "baseUrl",
     [policy.fields.Models]: "models",
-    [policy.fields.Priority]: "priority",
-    [policy.fields.Weight]: "orderingWeight",
   },
 })
 

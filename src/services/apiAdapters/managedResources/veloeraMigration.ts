@@ -93,8 +93,6 @@ const toSource = (
   baseUrl: channel.base_url?.trim() ?? "",
   models: parseNewApiResourceList(channel.models),
   groups: parseNewApiResourceList(channel.group),
-  priority: channel.priority ?? DEFAULT_CHANNEL_FIELDS.priority,
-  weight: channel.weight ?? DEFAULT_CHANNEL_FIELDS.weight,
   status:
     channel.status === VeloeraChannelStatus.Enable
       ? "enabled"
@@ -203,16 +201,12 @@ export const veloeraManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
               source.groups.length > 0
                 ? [...source.groups]
                 : [...DEFAULT_CHANNEL_FIELDS.groups],
-            priority: source.priority,
-            weight: source.weight,
             enabled: source.status === "enabled",
           },
           adjustments: {
             remappedType: type.remappedType,
             normalizedBaseUrl: false,
             forcedDefaultGroup: source.groups.length === 0,
-            ignoredPriority: false,
-            ignoredWeight: false,
             simplifiedStatus: source.status === "other",
           },
         }
@@ -226,8 +220,8 @@ export const veloeraManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
           base_url: command.projection.baseUrl,
           models: [...command.projection.models],
           groups: [...command.projection.groups],
-          priority: command.projection.priority,
-          weight: command.projection.weight,
+          priority: DEFAULT_CHANNEL_FIELDS.priority,
+          weight: DEFAULT_CHANNEL_FIELDS.weight,
           status: command.projection.enabled
             ? VeloeraChannelStatus.Enable
             : VeloeraChannelStatus.ManuallyDisabled,

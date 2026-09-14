@@ -442,6 +442,7 @@
       "createOnly": "Diese Migration erstellt nur neue Kanäle auf der Zielseite und verändert die Quellkanäle nicht.",
       "noDedupeOrSync": "Diese Migration prüft nicht auf Duplikate, überschreibt keine vorhandenen Zielkanäle und synchronisiert keine vorhandenen Zielkanäle.",
       "noRollback": "Automatisches Rollback ist in diesem Flow nicht verfügbar. Verwenden Sie die Ergebnisliste, um etwaige manuelle Folgemaßnahmen zu überprüfen.",
+      "targetRoutingDefaults": "Priorität, Gewichtung und Parallelität werden nicht migriert. Das Ziel verwendet seine eigenen Standardwerte; diese können nach der Migration im Zieleditor angepasst werden.",
       "title": "Migrationsbeschränkungen"
     },
     "itemWarnings": {
@@ -452,8 +453,6 @@
       "splitsKeys": "Das Ziel kann diese Keys und ihre Zustände nicht in einem Kanal beibehalten. Für jeden Key wird ein eigener Kanal erstellt; die Lastverteilung kann sich ändern.",
       "sub2apiDefaultGroup": "Quellgruppen werden nicht kopiert. Das Ziel verwendet die Standardgruppe der Plattform, falls vorhanden. Prüfe die Gruppenzuordnung nach der Migration.",
       "targetForcesDefaultGroup": "Die Zielsite ersetzt die Quellgruppen durch ihre Standardgruppe.",
-      "targetIgnoresPriority": "Die Zielsite behält den Quellprioritätswert nicht bei.",
-      "targetIgnoresWeight": "Die Zielseite behält den Quellgewichtungswert nicht bei.",
       "targetNormalizesBaseUrl": "Die Zielseite normalisiert die Basis-URL vor der Erstellung.",
       "targetRemapsChannelType": "Die Ziel-Website ordnet den Kanaltyp dem nächstgelegenen unterstützten Typ zu.",
       "targetSimplifiesStatus": "Die Zielseite vereinfacht den Quellstatus auf „Aktiviert“ oder „Deaktiviert“."

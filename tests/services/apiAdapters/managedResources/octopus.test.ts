@@ -534,8 +534,6 @@ describe("Octopus native resource", () => {
         credential: "secret-placeholder",
         models: [],
         notes: "",
-        priority: 0,
-        orderingWeight: 0,
       },
     })
     expect(editor.initialValues[fields.Type]).toBe("0")
@@ -975,8 +973,6 @@ describe("Octopus native resource", () => {
         credential: "secret-placeholder",
         models: ["model-a"],
         notes: "",
-        priority: 0,
-        orderingWeight: 0,
       },
     })
     expect(editor.initialValues[fields.Type]).toBe("2")

@@ -319,15 +319,7 @@ export type ManagedChannelsCallbacks = {
 }
 
 export type ManagedSiteMigrationComparison = {
-  id:
-    | "keyCount"
-    | "baseUrl"
-    | "type"
-    | "models"
-    | "groups"
-    | "priority"
-    | "weight"
-    | "status"
+  id: "keyCount" | "baseUrl" | "type" | "models" | "groups" | "status"
   label: string
   source: string
   target: string

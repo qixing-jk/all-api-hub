@@ -354,8 +354,6 @@ describe("defineNativeResourceKind", () => {
         baseUrl: "https://upstream.example.invalid",
         enabled: true,
         models: ["model-a"],
-        orderingWeight: 7,
-        priority: 0,
         notes: "",
       },
     })
@@ -382,8 +380,6 @@ describe("defineNativeResourceKind", () => {
           baseUrl: "https://upstream.example.invalid",
           enabled: true,
           models: [],
-          orderingWeight: 0,
-          priority: 0,
           notes: "",
         },
       }),
@@ -426,8 +422,6 @@ describe("defineNativeResourceKind", () => {
       baseUrl: "https://upstream.example.invalid",
       enabled: true,
       models: [],
-      orderingWeight: 0,
-      priority: 0,
       notes: "",
     })
 
@@ -466,8 +460,6 @@ describe("defineNativeResourceKind", () => {
         baseUrl: "https://upstream.example.invalid",
         enabled: true,
         models: [],
-        orderingWeight: 0,
-        priority: 0,
         notes: "",
       },
     })

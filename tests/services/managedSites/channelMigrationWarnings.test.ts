@@ -17,8 +17,6 @@ const noAdjustments: ManagedSiteMigrationTargetAdjustments = {
   remappedType: false,
   normalizedBaseUrl: false,
   forcedDefaultGroup: false,
-  ignoredPriority: false,
-  ignoredWeight: false,
   simplifiedStatus: false,
 }
 
@@ -50,8 +48,6 @@ describe("migration warning attribution", () => {
     ["remappedType", "target-remaps-channel-type"],
     ["normalizedBaseUrl", "target-normalizes-base-url"],
     ["forcedDefaultGroup", "target-forces-default-group"],
-    ["ignoredPriority", "target-ignores-priority"],
-    ["ignoredWeight", "target-ignores-weight"],
     ["simplifiedStatus", "target-simplifies-status"],
   ] as const)(
     "reports the specific adjustment for %s",
@@ -78,8 +74,6 @@ describe("migration warning attribution", () => {
           remappedType: true,
           normalizedBaseUrl: true,
           forcedDefaultGroup: true,
-          ignoredPriority: true,
-          ignoredWeight: true,
           simplifiedStatus: true,
         },
       }),
@@ -91,8 +85,6 @@ describe("migration warning attribution", () => {
       "target-remaps-channel-type",
       "target-normalizes-base-url",
       "target-forces-default-group",
-      "target-ignores-priority",
-      "target-ignores-weight",
       "target-simplifies-status",
     ])
   })

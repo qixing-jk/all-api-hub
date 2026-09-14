@@ -182,8 +182,6 @@ const toSource = (
   baseUrl: detail.url?.trim() ?? "",
   models: normalizeClaudeCodeHubAllowedModels(detail.allowedModels),
   groups: detail.groupTag?.trim() ? [detail.groupTag.trim()] : [],
-  priority: detail.priority ?? DEFAULT_CHANNEL_FIELDS.priority,
-  weight: detail.weight ?? DEFAULT_CHANNEL_FIELDS.weight,
   status: detail.isEnabled === false ? "disabled" : "enabled",
   lossSignals: {
     hasModelMapping: hasMeaningfulValue(detail.modelRedirects),
@@ -211,12 +209,6 @@ const toConfirmedFailure = (
       return failures.Unexpected
   }
 }
-
-const normalizedPriority = (value: number) =>
-  Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : 0
-
-const normalizedWeight = (value: number) =>
-  Number.isFinite(value) ? Math.min(100, Math.max(1, Math.trunc(value))) : 1
 
 /** Canonical source and target behavior for Claude Code Hub native providers. */
 export const claudeCodeHubManagedSiteMigrationCapability: ManagedSiteMigrationCapability =
@@ -304,8 +296,6 @@ export const claudeCodeHubManagedSiteMigrationCapability: ManagedSiteMigrationCa
         const groups = [
           source.groups[0]?.trim() || DEFAULT_CHANNEL_FIELDS.groups[0],
         ]
-        const priority = normalizedPriority(source.priority)
-        const weight = normalizedWeight(source.weight)
         return {
           projection: {
             name: "",
@@ -313,8 +303,6 @@ export const claudeCodeHubManagedSiteMigrationCapability: ManagedSiteMigrationCa
             baseUrl: source.baseUrl,
             models: [...source.models],
             groups,
-            priority,
-            weight,
             enabled: source.status === "enabled",
           },
           adjustments: {
@@ -322,8 +310,6 @@ export const claudeCodeHubManagedSiteMigrationCapability: ManagedSiteMigrationCa
             normalizedBaseUrl: false,
             forcedDefaultGroup:
               source.groups.length !== 1 || source.groups[0] !== groups[0],
-            ignoredPriority: priority !== source.priority,
-            ignoredWeight: weight !== source.weight,
             simplifiedStatus: source.status === "other",
           },
         }
@@ -351,8 +337,8 @@ export const claudeCodeHubManagedSiteMigrationCapability: ManagedSiteMigrationCa
           group_tag:
             command.projection.groups[0]?.trim() ||
             DEFAULT_CHANNEL_FIELDS.groups[0],
-          priority: normalizedPriority(command.projection.priority),
-          weight: normalizedWeight(command.projection.weight),
+          priority: 0,
+          weight: 1,
           is_enabled: command.projection.enabled,
         }
         try {

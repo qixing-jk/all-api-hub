@@ -618,3 +618,25 @@ export async function runManagedSiteMutationStep<
 
   return invalidExecutionEvidence()
 }
+
+/** Builds the common confirmed-effect shape for managed channel writes. */
+export const createManagedSiteChannelEffect = (
+  kind: ManagedSiteMutationConfirmedEffect["kind"],
+  resourceId?: string | number,
+): ManagedSiteMutationConfirmedEffect => ({
+  kind,
+  resourceKind: "channel",
+  ...(resourceId === undefined ? {} : { resourceId }),
+})
+
+/** Completes a single-step provider mutation from its common step result. */
+export const finishManagedSiteMutationStep = <TData>(
+  sequence: ManagedSiteMutationSequence<ManagedSiteMutationConfirmedEffect>,
+  step: ManagedSiteMutationStepRunResult<TData>,
+) =>
+  step.outcome === "applied"
+    ? sequence.finish({ finalState: "confirmed", data: step.data })
+    : sequence.finish({
+        finalState: "unconfirmed",
+        diagnostic: step.diagnostic,
+      })

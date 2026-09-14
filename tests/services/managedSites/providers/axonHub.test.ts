@@ -111,8 +111,6 @@ describe("AxonHub managed-site provider", () => {
         base_url: "https://source.example/v1",
         models: ["gpt-4o", "gpt-4.1"],
         groups: [],
-        priority: 0,
-        weight: 0,
         enabled: true,
       }),
     )

@@ -123,8 +123,6 @@ export async function prepareChannelFormData(
     models: normalizeList(availableModels),
     ...(fetchFailed ? { modelPrefillFetchFailed: true } : {}),
     groups: normalizeList(resolvedGroups),
-    priority: DEFAULT_CHANNEL_FIELDS.priority,
-    weight: DEFAULT_CHANNEL_FIELDS.weight,
     enabled: DEFAULT_CHANNEL_FIELDS.enabled,
   }
 }

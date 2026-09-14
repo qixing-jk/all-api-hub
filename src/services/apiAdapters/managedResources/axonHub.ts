@@ -1445,7 +1445,7 @@ const createAxonHubChannelImportProjection = (
     [AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS]: models,
     [AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS]: models,
     [AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL]: models[0] ?? "",
-    [AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT]: seed.orderingWeight,
+    [AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT]: 0,
   }
 }
 
@@ -1725,7 +1725,6 @@ const axonHubNativeDefinition = {
         [AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS]: "models",
         [AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS]: "models",
         [AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL]: "models",
-        [AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT]: "orderingWeight",
       } as const,
     },
   ],

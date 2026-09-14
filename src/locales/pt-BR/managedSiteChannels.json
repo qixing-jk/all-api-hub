@@ -442,6 +442,7 @@
       "createOnly": "Esta migração apenas cria novos canais no site de destino e não altera os canais de origem.",
       "noDedupeOrSync": "Esta migração não procura duplicatas, não substitui canais de destino existentes nem os sincroniza.",
       "noRollback": "Este fluxo não oferece reversão automática. Use a lista de resultados para revisar qualquer ação manual necessária.",
+      "targetRoutingDefaults": "As configurações de prioridade, peso e concorrência não são migradas. O destino usa seus valores padrão; ajuste-os no editor de destino após a migração.",
       "title": "Limitações da migração"
     },
     "itemWarnings": {
@@ -452,8 +453,6 @@
       "splitsKeys": "O destino não consegue preservar estes Keys e seus estados em um único canal. Será criado um canal por Key; a distribuição do tráfego pode mudar.",
       "sub2apiDefaultGroup": "Os grupos de origem não são copiados. O destino usa o grupo padrão da plataforma, se existir. Confira as atribuições de grupo após a migração.",
       "targetForcesDefaultGroup": "O site de destino substituirá os grupos de origem pelo grupo padrão.",
-      "targetIgnoresPriority": "O site de destino não preservará a prioridade de origem.",
-      "targetIgnoresWeight": "O site de destino não preservará o peso de origem.",
       "targetNormalizesBaseUrl": "O site de destino normalizará a URL base antes da criação.",
       "targetRemapsChannelType": "O site de destino remapeará o tipo de canal para o tipo compatível mais próximo.",
       "targetSimplifiesStatus": "O site de destino simplificará o status de origem para ativado ou desativado."

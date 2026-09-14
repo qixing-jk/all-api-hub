@@ -19,8 +19,6 @@ export interface ManagedSiteChannelDraft {
   models: string[]
   modelPrefillFetchFailed?: boolean
   groups: string[]
-  priority: number
-  weight: number
   enabled: boolean
   /** Provider-native notes carried by import drafts when supported. */
   notes?: string
@@ -29,5 +27,5 @@ export interface ManagedSiteChannelDraft {
 /** Shared import defaults; each provider owns its native payload conversion. */
 export type ManagedSiteChannelDraftDefaults = Pick<
   ManagedSiteChannelDraft,
-  "enabled" | "priority" | "weight" | "groups" | "models"
+  "enabled" | "groups" | "models"
 >

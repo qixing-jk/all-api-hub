@@ -61,8 +61,6 @@ const source: ManagedSiteMigrationSource = {
   baseUrl: "https://upstream.example.invalid",
   models: ["model-a"],
   groups: [],
-  priority: 2,
-  weight: 4,
   status: "other",
   lossSignals: {
     hasModelMapping: false,
@@ -371,16 +369,12 @@ describe("New API managed-site migration capability", () => {
         baseUrl: source.baseUrl,
         models: ["model-a"],
         groups: [...DEFAULT_CHANNEL_FIELDS.groups],
-        priority: 2,
-        weight: 4,
         enabled: false,
       },
       adjustments: {
         remappedType: false,
         normalizedBaseUrl: false,
         forcedDefaultGroup: true,
-        ignoredPriority: false,
-        ignoredWeight: false,
         simplifiedStatus: true,
       },
     })

@@ -1751,8 +1751,6 @@ describe("New API native managed resource", () => {
         baseUrl: "https://upstream.example.invalid",
         enabled: true,
         models: ["model-a"],
-        orderingWeight: 0,
-        priority: 0,
         notes: "",
       },
     })
@@ -2018,8 +2016,6 @@ describe("New API native managed resource", () => {
           base_url: "https://upstream.example.invalid",
           models: ["model-a"],
           groups: ["default"],
-          priority: 2,
-          weight: 4,
           enabled,
         },
       )
@@ -2048,6 +2044,8 @@ describe("New API native managed resource", () => {
           channel: expect.objectContaining({
             status: Number(nativeStatus),
             key: "sk-example",
+            priority: 0,
+            weight: 0,
           }),
         }),
         undefined,
@@ -2246,8 +2244,6 @@ describe("New API native managed resource", () => {
         baseUrl: "https://upstream.example.invalid",
         enabled: true,
         models: ["model-a"],
-        orderingWeight: 0,
-        priority: 0,
         notes: "",
       },
     })
@@ -2284,8 +2280,6 @@ describe("New API native managed resource", () => {
         sourceSiteType: SITE_TYPES.NEW_API,
         models: ["model-a", "model-b"],
         groups: ["default", "vip"],
-        priority: 3,
-        weight: 8,
         lossSignals: {
           hasModelMapping: false,
           hasStatusCodeMapping: false,

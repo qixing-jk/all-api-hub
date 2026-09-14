@@ -442,6 +442,7 @@
       "createOnly": "This migration only creates new channels on the target site and does not modify the source channels.",
       "noDedupeOrSync": "This migration does not check for duplicates, overwrite existing target channels, or sync existing target channels.",
       "noRollback": "Automatic rollback is not available in this flow. Use the result list to review any manual follow-up.",
+      "targetRoutingDefaults": "Priority, weight, and concurrency settings are not migrated. The target uses its native defaults; adjust them in the target editor after migration.",
       "title": "Migration limitations"
     },
     "itemWarnings": {
@@ -452,8 +453,6 @@
       "splitsKeys": "The target cannot preserve these keys and their states in one channel. A separate channel will be created for each key; traffic distribution may change.",
       "sub2apiDefaultGroup": "Source groups are not copied. The target uses the platform's default group if it exists. Check group assignments after migration.",
       "targetForcesDefaultGroup": "The target site will replace the source groups with its default group.",
-      "targetIgnoresPriority": "The target site will not preserve the source priority value.",
-      "targetIgnoresWeight": "The target site will not preserve the source weight value.",
       "targetNormalizesBaseUrl": "The target site will normalize the base URL before creation.",
       "targetRemapsChannelType": "The target site will remap the channel type to the closest supported type.",
       "targetSimplifiesStatus": "The target site will simplify the source status to enabled or disabled."

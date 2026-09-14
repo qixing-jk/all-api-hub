@@ -35,8 +35,6 @@ const buildItem = (
     base_url: "https://source.example.invalid",
     models,
     groups: ["default"],
-    priority: 0,
-    weight: 0,
     enabled: true,
   },
 })

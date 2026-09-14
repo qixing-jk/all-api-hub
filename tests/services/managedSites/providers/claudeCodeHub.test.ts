@@ -137,7 +137,6 @@ describe("Claude Code Hub managed-site provider", () => {
       base_url: "https://api.example.com",
       models: ["gpt-4o"],
       groups: ["default"],
-      weight: 1,
     })
 
     mockFetchManagedSiteImportModels.mockResolvedValueOnce({

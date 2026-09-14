@@ -1,4 +1,3 @@
-import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   isManagedResourceRefFor,
@@ -105,11 +104,7 @@ export const cliProxyApiManagedSiteMigrationCapability: ManagedSiteMigrationCapa
             baseUrl: value["base-url"] ?? "",
             models: (value.models ?? []).map((model) => model.name),
             groups: [],
-            priority:
-              typeof value.priority === "number"
-                ? value.priority
-                : DEFAULT_CHANNEL_FIELDS.priority,
-            weight: DEFAULT_CHANNEL_FIELDS.weight,
+
             status:
               value.disabled === true ||
               (Array.isArray(value["excluded-models"]) &&
@@ -201,16 +196,12 @@ export const cliProxyApiManagedSiteMigrationCapability: ManagedSiteMigrationCapa
             baseUrl: source.baseUrl,
             models: [...source.models],
             groups: [],
-            priority: source.priority,
-            weight: DEFAULT_CHANNEL_FIELDS.weight,
             enabled: source.status === "enabled",
           },
           adjustments: {
             remappedType: route.remappedType,
             normalizedBaseUrl: false,
             forcedDefaultGroup: source.groups.length > 0,
-            ignoredPriority: false,
-            ignoredWeight: source.weight !== DEFAULT_CHANNEL_FIELDS.weight,
             simplifiedStatus: source.status === "other",
           },
         }
@@ -253,7 +244,7 @@ export const cliProxyApiManagedSiteMigrationCapability: ManagedSiteMigrationCapa
                 name,
                 alias: name,
               })),
-              priority: command.projection.priority,
+              priority: 0,
               ...(route.value === "openai-compatibility"
                 ? { disabled: !command.projection.enabled }
                 : !command.projection.enabled

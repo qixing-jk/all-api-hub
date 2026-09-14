@@ -643,8 +643,8 @@ const createImportProjection = (
     value: seed.credential,
   },
   [fields.Models]: normalizeList(seed.models),
-  [fields.Priority]: seed.priority,
-  [fields.Weight]: Math.max(1, Math.trunc(seed.orderingWeight || 1)),
+  [fields.Priority]: 0,
+  [fields.Weight]: 1,
 })
 
 const createEditor =
@@ -865,8 +865,6 @@ const definition = {
         [fields.BaseUrl]: "baseUrl",
         [fields.Key]: "credential",
         [fields.Models]: "models",
-        [fields.Priority]: "priority",
-        [fields.Weight]: "orderingWeight",
       } as const,
     },
   ],

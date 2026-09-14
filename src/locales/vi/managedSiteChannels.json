@@ -442,6 +442,7 @@
       "createOnly": "Lần di chuyển này chỉ tạo các kênh mới trên trang web mục tiêu và sẽ không sửa đổi các kênh nguồn.",
       "noDedupeOrSync": "Lần di chuyển này sẽ không kiểm tra trùng lặp, ghi đè hoặc đồng bộ các kênh đã tồn tại trên trang web mục tiêu.",
       "noRollback": "Lần di chuyển này không cung cấp tính năng tự động hoàn tác, vui lòng xử lý thủ công các công việc tiếp theo dựa trên danh sách kết quả.",
+      "targetRoutingDefaults": "Các thiết lập mức độ ưu tiên, trọng số và số tác vụ đồng thời sẽ không được di chuyển. Trang đích dùng giá trị mặc định riêng; bạn có thể điều chỉnh trong trình chỉnh sửa của trang đích sau khi di chuyển.",
       "title": "Hạn chế di chuyển"
     },
     "itemWarnings": {
@@ -452,8 +453,6 @@
       "splitsKeys": "Đích không thể giữ các Key và trạng thái của chúng trong cùng một kênh. Mỗi Key sẽ được tạo thành một kênh riêng; cách phân phối lưu lượng có thể thay đổi.",
       "sub2apiDefaultGroup": "Các nhóm nguồn không được sao chép. Đích sẽ sử dụng nhóm mặc định của nền tảng nếu có. Hãy kiểm tra việc gán nhóm sau khi di chuyển.",
       "targetForcesDefaultGroup": "Trang web mục tiêu sẽ chuyển sang sử dụng nhóm mặc định.",
-      "targetIgnoresPriority": "Trang web mục tiêu không giữ lại mức độ ưu tiên của kênh nguồn.",
-      "targetIgnoresWeight": "Trang web mục tiêu không giữ lại trọng số của kênh nguồn.",
       "targetNormalizesBaseUrl": "Trang web mục tiêu sẽ chuẩn hóa URL cơ sở.",
       "targetRemapsChannelType": "Trang web mục tiêu sẽ ánh xạ loại kênh sang loại tương thích gần nhất.",
       "targetSimplifiesStatus": "Trang web mục tiêu sẽ đơn giản hóa trạng thái kênh nguồn thành bật hoặc tắt."

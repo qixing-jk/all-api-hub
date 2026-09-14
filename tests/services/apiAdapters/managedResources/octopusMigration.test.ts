@@ -67,8 +67,6 @@ const source: ManagedSiteMigrationSource = {
   baseUrl: "http://upstream.example.invalid",
   models: ["model-a"],
   groups: ["vip"],
-  priority: 4,
-  weight: 5,
   status: "other",
   lossSignals: {
     hasModelMapping: false,
@@ -319,15 +317,11 @@ describe("Octopus native migration", () => {
         type: OctopusOutboundType.OpenAIChat,
         baseUrl: "http://upstream.example.invalid/v1",
         groups: ["default"],
-        priority: 0,
-        weight: 0,
         enabled: false,
       },
       adjustments: {
         normalizedBaseUrl: true,
         forcedDefaultGroup: true,
-        ignoredPriority: true,
-        ignoredWeight: true,
         simplifiedStatus: true,
       },
     })

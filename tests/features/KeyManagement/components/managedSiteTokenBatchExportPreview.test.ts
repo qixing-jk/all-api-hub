@@ -54,8 +54,6 @@ const buildPreviewItem = (
     base_url: "https://api.example.invalid",
     models: ["gpt-4o"],
     groups: ["default"],
-    priority: 0,
-    weight: 0,
     enabled: true,
   },
   ...fields,

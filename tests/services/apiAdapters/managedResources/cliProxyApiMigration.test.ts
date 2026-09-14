@@ -64,8 +64,6 @@ const source: ManagedSiteMigrationSource = {
   baseUrl: "https://upstream.example.invalid/v1",
   models: ["upstream-model"],
   groups: ["default"],
-  priority: 2,
-  weight: 3,
   status: "disabled",
   credentialMetadata: [{ enabled: true }, { enabled: true }],
   lossSignals: {
@@ -110,7 +108,7 @@ describe("CLIProxyAPI native migration", () => {
   })
 
   it.each([false, true])(
-    "preserves a single provider's priority and excluded status: %s",
+    "preserves excluded status without transferring provider priority: %s",
     async (excluded) => {
       mocks.get.mockResolvedValue({
         ...resource,
@@ -123,8 +121,9 @@ describe("CLIProxyAPI native migration", () => {
       })
       const prepared = await capability.source!.prepare(selection)
       expect(prepared).toMatchObject({
-        source: { priority: 7, status: excluded ? "disabled" : "enabled" },
+        source: { status: excluded ? "disabled" : "enabled" },
       })
+      expect(prepared).not.toHaveProperty("source.priority")
       if (prepared.status !== "ready") throw new Error("Expected source")
       expect(prepared.source.credentialMetadata).toBeUndefined()
       expect(await capability.source!.resolveCredential(selection)).toEqual({

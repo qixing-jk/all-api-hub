@@ -1,7 +1,10 @@
 import type { ManagedSiteChannelDraftDefaults } from "~/types/managedSiteChannelDraft"
 
-/** Initial values shared by managed-site import drafts. */
-export const DEFAULT_CHANNEL_FIELDS: ManagedSiteChannelDraftDefaults = {
+/** Common import defaults and New API-family native routing defaults. */
+export const DEFAULT_CHANNEL_FIELDS: ManagedSiteChannelDraftDefaults & {
+  priority: number
+  weight: number
+} = {
   enabled: true,
   priority: 0,
   weight: 0,

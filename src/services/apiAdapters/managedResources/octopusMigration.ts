@@ -125,8 +125,6 @@ export const octopusManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
             baseUrl: detail.base_urls[0]?.url.trim() ?? "",
             models: octopusModels(detail.model),
             groups: [],
-            priority: DEFAULT_CHANNEL_FIELDS.priority,
-            weight: DEFAULT_CHANNEL_FIELDS.weight,
             status: detail.enabled ? "enabled" : "disabled",
             lossSignals: {
               hasModelMapping: false,
@@ -230,8 +228,6 @@ export const octopusManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
             baseUrl,
             models: [...source.models],
             groups: [...DEFAULT_CHANNEL_FIELDS.groups],
-            priority: DEFAULT_CHANNEL_FIELDS.priority,
-            weight: DEFAULT_CHANNEL_FIELDS.weight,
             enabled: source.status === "enabled",
           },
           adjustments: {
@@ -240,9 +236,7 @@ export const octopusManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
             forcedDefaultGroup:
               source.groups.length !== 1 ||
               source.groups[0] !== DEFAULT_CHANNEL_FIELDS.groups[0],
-            ignoredPriority:
-              source.priority !== DEFAULT_CHANNEL_FIELDS.priority,
-            ignoredWeight: source.weight !== DEFAULT_CHANNEL_FIELDS.weight,
+
             simplifiedStatus: source.status === "other",
           },
         }

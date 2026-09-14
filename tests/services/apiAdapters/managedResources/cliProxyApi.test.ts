@@ -392,8 +392,6 @@ describe("CLIProxyAPI native managed resources", () => {
         baseUrl: "https://codex.example",
         models: ["model"],
         enabled: true,
-        orderingWeight: 1,
-        priority: 0,
         notes: "",
       },
     })

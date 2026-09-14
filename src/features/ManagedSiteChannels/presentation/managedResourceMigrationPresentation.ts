@@ -38,14 +38,7 @@ type ManagedResourceMigrationPresentationOptions = {
 
 type MigrationSourceDisplayData = Pick<
   ManagedSiteMigrationSource,
-  | "sourceSiteType"
-  | "resourceType"
-  | "baseUrl"
-  | "models"
-  | "groups"
-  | "priority"
-  | "weight"
-  | "status"
+  "sourceSiteType" | "resourceType" | "baseUrl" | "models" | "groups" | "status"
 > & { keyCount?: number | null }
 
 type MigrationTargetDisplayData = Omit<
@@ -111,8 +104,6 @@ const projectSource = (
   baseUrl: source.baseUrl,
   models: [...source.models],
   groups: [...source.groups],
-  priority: source.priority,
-  weight: source.weight,
   status: source.status,
   keyCount:
     source.credentialMetadata?.length ??
@@ -157,8 +148,6 @@ export function projectManagedResourceMigrationPreview(
             baseUrl: target.baseUrl,
             models: [...target.models],
             groups: [...target.groups],
-            priority: target.priority,
-            weight: target.weight,
             enabled: target.enabled,
             keyCount: target.keyCount ?? 1,
           },
@@ -235,8 +224,6 @@ const comparisonFieldIds = [
   "type",
   "models",
   "groups",
-  "priority",
-  "weight",
   "status",
 ] as const satisfies readonly ManagedSiteMigrationComparison["id"][]
 
@@ -258,10 +245,6 @@ const getComparisonLabel = (
       return t("channelDialog:fields.models.label")
     case "groups":
       return t("channelDialog:fields.groups.label")
-    case "priority":
-      return t("channelDialog:fields.priority.label")
-    case "weight":
-      return t("channelDialog:fields.weight.label")
     case "status":
       return t("channelDialog:fields.status.label")
   }
@@ -272,6 +255,10 @@ const getGeneralWarningText = (
   code: ManagedSiteChannelMigrationGeneralWarningCode,
 ): string | null => {
   switch (code) {
+    case MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES.TARGET_ROUTING_DEFAULTS:
+      return t(
+        "managedSiteChannels:migration.generalWarnings.targetRoutingDefaults",
+      )
     case MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES.CREATE_ONLY:
       return t("managedSiteChannels:migration.generalWarnings.createOnly")
     case MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES.NO_DEDUPE_OR_SYNC:
@@ -314,12 +301,6 @@ const getItemWarningText = (
       return t(
         "managedSiteChannels:migration.itemWarnings.targetForcesDefaultGroup",
       )
-    case MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_IGNORES_PRIORITY:
-      return t(
-        "managedSiteChannels:migration.itemWarnings.targetIgnoresPriority",
-      )
-    case MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_IGNORES_WEIGHT:
-      return t("managedSiteChannels:migration.itemWarnings.targetIgnoresWeight")
     case MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_SIMPLIFIES_STATUS:
       return t(
         "managedSiteChannels:migration.itemWarnings.targetSimplifiesStatus",
@@ -475,14 +456,6 @@ const getComparisonValues = (
           ? t("managedSiteChannels:migration.sub2apiDefaultGroup")
           : formatList(target.groups)
         : "",
-    ],
-    priority: [
-      source ? String(source.priority) : "",
-      target ? String(target.priority) : "",
-    ],
-    weight: [
-      source ? String(source.weight) : "",
-      target ? String(target.weight) : "",
     ],
     status: [
       source ? getStatusText(t, source.status) : "",

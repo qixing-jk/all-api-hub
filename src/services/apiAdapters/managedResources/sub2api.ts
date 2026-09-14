@@ -36,11 +36,6 @@ import {
   defineNativeResourceKind,
   type NativeResourceEditorDefinition,
 } from "~/services/apiAdapters/managedResources/factory"
-import {
-  createSub2ApiManagedAccountMutation,
-  deleteSub2ApiManagedAccountMutation,
-  updateSub2ApiManagedAccountMutation,
-} from "~/services/apiAdapters/managedSites/sub2api"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
 import {
   getSub2ApiApiKeyAccount,
@@ -54,6 +49,11 @@ import {
   type Sub2ApiApiKeyAccountCreateInput,
   type Sub2ApiApiKeyAccountUpdateInput,
 } from "~/services/managedSites/providers/sub2api"
+import {
+  createSub2ApiManagedAccountMutation,
+  deleteSub2ApiManagedAccountMutation,
+  updateSub2ApiManagedAccountMutation,
+} from "~/services/managedSites/providers/sub2apiMutations"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -599,8 +599,7 @@ const createSub2ApiChannelImportProjection = (
       }
     : { kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Unchanged },
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Models]: normalizeList(seed.models),
-  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Concurrency]: 1,
-  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Priority]: seed.priority,
+  // Routing settings are initialized by the native account editor.
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Notes]: seed.notes,
 })
 
@@ -735,7 +734,6 @@ const sub2ApiNativeDefinition = {
         [SUB2API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl]: "baseUrl",
         [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key]: "credential",
         [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Models]: "models",
-        [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Priority]: "priority",
         [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Notes]: "notes",
       } as const,
     },

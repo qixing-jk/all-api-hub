@@ -197,6 +197,8 @@ describe("doneHubService additional flows", () => {
     )
     const payload = buildChannelPayload({
       ...formData,
+      priority: 0,
+      weight: 0,
       status: 1,
       name: "  Imported Channel  ",
       key: "  secret-key  ",

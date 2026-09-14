@@ -183,8 +183,6 @@ describe("DoneHub native channel migration", () => {
         baseUrl: "https://upstream.example.invalid",
         models: [],
         groups: ["default"],
-        priority: 0,
-        weight: 0,
         status: "enabled",
         lossSignals: {
           hasModelMapping: false,
@@ -243,7 +241,7 @@ describe("DoneHub native channel migration", () => {
     [2, "disabled"],
     [3, "other"],
   ] as const)(
-    "normalizes DoneHub status %s and missing ordering values",
+    "normalizes DoneHub status %s without routing values",
     async (status, expectedStatus) => {
       mocks.get.mockResolvedValue({
         ...buildManagedSiteChannel({
@@ -261,8 +259,6 @@ describe("DoneHub native channel migration", () => {
       ).resolves.toMatchObject({
         status: "ready",
         source: {
-          priority: 0,
-          weight: 0,
           status: expectedStatus,
           lossSignals: { hasAdvancedSettings: true },
         },
@@ -312,8 +308,6 @@ describe("DoneHub native channel migration", () => {
         baseUrl: "https://upstream.example.invalid",
         models: [],
         groups: [],
-        priority: 0,
-        weight: 0,
         status: "other",
         lossSignals: {
           hasModelMapping: false,
@@ -346,8 +340,6 @@ describe("DoneHub native channel migration", () => {
           baseUrl: "https://upstream.example.invalid",
           models: [],
           groups: ["default"],
-          priority: 0,
-          weight: 0,
           status: "enabled",
           lossSignals: {
             hasModelMapping: false,
@@ -363,8 +355,6 @@ describe("DoneHub native channel migration", () => {
           baseUrl: "https://upstream.example.invalid",
           models: [],
           groups: ["default"],
-          priority: 0,
-          weight: 0,
           enabled: true,
         },
         credential: "credential-placeholder",

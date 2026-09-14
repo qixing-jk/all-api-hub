@@ -54,28 +54,6 @@ type ManagedSiteApiServiceMutationAttempt<TResponse> =
   | { kind: "response"; response: TResponse }
   | { kind: "response-error"; error: unknown }
 
-/** Builds the common confirmed-effect shape for managed channel writes. */
-export const createManagedSiteChannelEffect = (
-  kind: ManagedSiteMutationConfirmedEffect["kind"],
-  resourceId?: string | number,
-): ManagedSiteMutationConfirmedEffect => ({
-  kind,
-  resourceKind: "channel",
-  ...(resourceId === undefined ? {} : { resourceId }),
-})
-
-/** Completes a single-step provider mutation from its common step result. */
-export const finishManagedSiteMutationStep = <TData>(
-  sequence: ManagedSiteMutationSequence<ManagedSiteMutationConfirmedEffect>,
-  step: ManagedSiteMutationStepRunResult<TData>,
-) =>
-  step.outcome === "applied"
-    ? sequence.finish({ finalState: "confirmed", data: step.data })
-    : sequence.finish({
-        finalState: "unconfirmed",
-        diagnostic: step.diagnostic,
-      })
-
 /**
  * Runs one REST mutation while preserving transport lifecycle evidence for the
  * provider-owned response and response-error classifiers.

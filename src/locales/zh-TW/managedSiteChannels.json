@@ -442,6 +442,7 @@
       "createOnly": "本次遷移僅在目標站點建立新渠道，不會修改來源渠道。",
       "noDedupeOrSync": "本次遷移不會查重、覆蓋或同步目標站點中已存在的渠道。",
       "noRollback": "本次遷移不提供自動回滾，請依結果列表手動處理後續工作。",
+      "targetRoutingDefaults": "優先順序、權重和並行設定不會遷移，目標採用原生預設值；可在遷移後透過目標編輯器調整。",
       "title": "遷移限制"
     },
     "itemWarnings": {
@@ -452,8 +453,6 @@
       "splitsKeys": "目標無法在同一通道中保留這些 Key 的狀態，將依 Key 分別建立通道；負載分配可能改變。",
       "sub2apiDefaultGroup": "不會遷移來源分組。目標站點會綁定該平台的預設分組（如有），請在遷移後檢查分組。",
       "targetForcesDefaultGroup": "目標站點會改用預設分組。",
-      "targetIgnoresPriority": "目標站點不保留來源渠道的優先順序。",
-      "targetIgnoresWeight": "目標站點不保留來源渠道的權重。",
       "targetNormalizesBaseUrl": "目標站點會對基礎 URL 做規範化處理。",
       "targetRemapsChannelType": "目標站點會將渠道型別映射為最接近的相容型別。",
       "targetSimplifiesStatus": "目標站點會將來源渠道狀態簡化為啟用或停用。"

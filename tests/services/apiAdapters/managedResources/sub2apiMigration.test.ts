@@ -56,8 +56,6 @@ const migrationSource: ManagedSiteMigrationSource = {
   baseUrl: "http://upstream.example.invalid/custom",
   models: ["claude-sonnet-4-5"],
   groups: ["vip"],
-  priority: 0,
-  weight: 5,
   status: "disabled",
   lossSignals: {
     hasModelMapping: false,
@@ -79,8 +77,6 @@ const createCommand = (
     baseUrl: migrationSource.baseUrl,
     models: migrationSource.models,
     groups: [],
-    priority: 0,
-    weight: 1,
     enabled: true,
     ...overrides,
   },
@@ -136,7 +132,6 @@ describe("Sub2API channel migration", () => {
             resourceType: "anthropic",
             baseUrl: "https://upstream.example.invalid",
             models: ["claude-sonnet-4-5"],
-            priority: 0,
             status: "enabled",
             lossSignals: { hasModelMapping: false },
           },
@@ -199,16 +194,12 @@ describe("Sub2API channel migration", () => {
         baseUrl: "http://upstream.example.invalid/custom",
         models: ["claude-sonnet-4-5"],
         groups: [],
-        priority: 0,
-        weight: 1,
         enabled: false,
       },
       adjustments: {
         remappedType: false,
         normalizedBaseUrl: false,
         forcedDefaultGroup: true,
-        ignoredPriority: false,
-        ignoredWeight: true,
         simplifiedStatus: false,
       },
     })
@@ -232,7 +223,7 @@ describe("Sub2API channel migration", () => {
             model_mapping: { "claude-sonnet-4-5": "claude-sonnet-4-5" },
           },
           concurrency: 1,
-          priority: 0,
+          priority: 1,
           notes: "",
         },
       },
@@ -393,24 +384,21 @@ describe("Sub2API channel migration", () => {
           baseUrl: "",
           models: [],
           groups: ["VIP"],
-          priority: 1,
           status: "disabled",
         },
       })
     },
   )
 
-  it("uses a valid target priority when the source priority is not finite", async () => {
+  it("keeps routing settings out of the target migration projection", async () => {
     const target = resolveManagedSiteMigrationCapability(
       SITE_TYPES.SUB2API,
     )!.target!
 
-    await expect(
-      target.prepare({ ...migrationSource, priority: Number.NaN }),
-    ).resolves.toMatchObject({
-      projection: { priority: 1 },
-      adjustments: { ignoredPriority: true },
-    })
+    const prepared = await target.prepare(migrationSource)
+    expect(prepared.projection).not.toHaveProperty("priority")
+    expect(prepared.projection).not.toHaveProperty("weight")
+    expect(prepared.projection).not.toHaveProperty("concurrency")
   })
 
   it("blocks accounts whose API key is explicitly missing before execution", async () => {
@@ -503,7 +491,6 @@ describe("Sub2API channel migration", () => {
     { type: "antigravity" },
     { baseUrl: "file:///private" },
     { baseUrl: "https://user:password@upstream.example.invalid" },
-    { priority: -1 },
   ])(
     "rejects an invalid target projection before a create request: %j",
     async (projection) => {

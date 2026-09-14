@@ -2,6 +2,7 @@ export const MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES = {
   CREATE_ONLY: "create-only",
   NO_DEDUPE_OR_SYNC: "no-dedupe-or-sync",
   NO_ROLLBACK: "no-rollback",
+  TARGET_ROUTING_DEFAULTS: "target-routing-defaults",
 } as const
 
 export type ManagedSiteChannelMigrationGeneralWarningCode =
@@ -16,8 +17,6 @@ export const MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES = {
   TARGET_REMAPS_CHANNEL_TYPE: "target-remaps-channel-type",
   TARGET_NORMALIZES_BASE_URL: "target-normalizes-base-url",
   TARGET_FORCES_DEFAULT_GROUP: "target-forces-default-group",
-  TARGET_IGNORES_PRIORITY: "target-ignores-priority",
-  TARGET_IGNORES_WEIGHT: "target-ignores-weight",
   TARGET_SIMPLIFIES_STATUS: "target-simplifies-status",
 } as const
 

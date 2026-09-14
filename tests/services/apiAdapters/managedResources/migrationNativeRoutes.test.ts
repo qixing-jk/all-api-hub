@@ -36,8 +36,6 @@ const buildSource = (
   baseUrl: "http://upstream.example.invalid",
   models: ["example-model"],
   groups: ["default"],
-  priority: 0,
-  weight: 1,
   status: "disabled",
   lossSignals: {
     hasModelMapping: false,

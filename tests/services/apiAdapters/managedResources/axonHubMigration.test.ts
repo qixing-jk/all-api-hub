@@ -72,8 +72,6 @@ const buildSource = (
   baseUrl: "https://source.example.invalid",
   models: ["model-example"],
   groups: ["default"],
-  priority: 0,
-  weight: 0,
   status: "enabled",
   lossSignals: {
     hasModelMapping: false,
@@ -95,8 +93,6 @@ const buildCommand = (
     baseUrl: "https://target.example.invalid",
     models: ["model-example"],
     groups: ["default"],
-    priority: 0,
-    weight: 0,
     enabled: true,
   },
   credential: "credential-placeholder",

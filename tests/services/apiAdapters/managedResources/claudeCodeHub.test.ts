@@ -471,8 +471,6 @@ describe("Claude Code Hub native managed resource", () => {
         baseUrl: "https://import.example.invalid",
         enabled: true,
         models: [" model-a ", "model-a", "model-b"],
-        orderingWeight: 7.9,
-        priority: 4,
         notes: "not part of the editable projection",
       },
     })
@@ -485,8 +483,6 @@ describe("Claude Code Hub native managed resource", () => {
         baseUrl: "https://fallback.example.invalid",
         enabled: false,
         models: [],
-        orderingWeight: 0,
-        priority: 0,
         notes: "",
       },
     })
@@ -504,8 +500,8 @@ describe("Claude Code Hub native managed resource", () => {
         value: "import-secret-placeholder",
       },
       [fields.Models]: ["model-a", "model-b"],
-      [fields.Priority]: 4,
-      [fields.Weight]: 7,
+      [fields.Priority]: 0,
+      [fields.Weight]: 1,
     })
     expect(fallbackTypeEditor.initialValues).toMatchObject({
       [fields.Type]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,

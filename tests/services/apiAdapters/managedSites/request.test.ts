@@ -18,7 +18,7 @@ const effect = {
 describe("managed-site API service mutation requests", () => {
   it("creates provider-neutral channel effects", async () => {
     const { createManagedSiteChannelEffect } = await import(
-      "~/services/apiAdapters/managedSites/request"
+      "~/services/managedSites/mutations/execution"
     )
 
     expect(createManagedSiteChannelEffect("resource-created")).toEqual({
@@ -34,7 +34,7 @@ describe("managed-site API service mutation requests", () => {
 
   it("finishes a provider-neutral mutation step", async () => {
     const { createManagedSiteChannelEffect, finishManagedSiteMutationStep } =
-      await import("~/services/apiAdapters/managedSites/request")
+      await import("~/services/managedSites/mutations/execution")
     const sequence = createManagedSiteMutationSequence({ idempotent: false })
     const applied = sequence.beginStep()
     applied.markPossiblyDispatched()

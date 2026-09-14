@@ -14,7 +14,10 @@ import {
   MANAGED_RESOURCE_FIELD_ISSUE_CODES,
   ManagedResourceError,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import { openNativeManagedChannelImportEditor } from "~/services/apiAdapters/managedResources/channelImport"
+import {
+  openNativeManagedChannelImportEditor,
+  openNativeManagedChannelImportSession,
+} from "~/services/apiAdapters/managedResources/channelImport"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { sub2ApiManagedResourceRegistration } from "~/services/apiAdapters/managedResources/sub2api"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
@@ -354,7 +357,7 @@ describe("Sub2API native managed resource", () => {
     )
   })
 
-  it("opens imported credentials through the shared native create seed", async () => {
+  it("preserves import facts and notes while keeping native routing defaults", async () => {
     expect(sub2ApiManagedResourceRegistration.createSeedKinds).toContain(
       MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
     )
@@ -368,8 +371,6 @@ describe("Sub2API native managed resource", () => {
         base_url: "https://api.example.invalid/v1",
         models: [],
         groups: [],
-        priority: 8,
-        weight: 3,
         enabled: true,
         notes: "Imported note",
       },
@@ -386,7 +387,7 @@ describe("Sub2API native managed resource", () => {
       key: { kind: "replace", value: "import-secret" },
       supportedModels: [],
       concurrency: 1,
-      priority: 8,
+      priority: 1,
       notes: "Imported note",
     })
 
@@ -399,12 +400,61 @@ describe("Sub2API native managed resource", () => {
         base_url: "https://disabled.example.invalid/v1",
         models: [],
         groups: [],
-        priority: 2,
-        weight: 1,
         enabled: false,
       },
     )
     expect(disabled?.editor.initialValues.status).toBe("inactive")
+  })
+
+  it("creates a batch import with native routing defaults", async () => {
+    const session = await openNativeManagedChannelImportSession(
+      SITE_TYPES.SUB2API,
+    )
+    await session.submit({
+      name: "Batch import",
+      type: "openai",
+      key: "import-secret",
+      base_url: "https://api.example.invalid/v1",
+      models: ["model-a"],
+      groups: [],
+      enabled: true,
+      notes: "Keep this operator note",
+    })
+    expect(mocks.createAccount).toHaveBeenCalledOnce()
+    expect(mocks.createAccount).toHaveBeenCalledWith(
+      config,
+      expect.objectContaining({
+        name: "Batch import",
+        concurrency: 1,
+        priority: 1,
+        notes: "Keep this operator note",
+        apiKey: "import-secret",
+        modelMapping: { "model-a": "model-a" },
+      }),
+      expect.any(Object),
+    )
+  })
+
+  it("accepts an import seed with no source routing metadata", async () => {
+    const workspace = await sub2ApiManagedResourceRegistration.open()
+    const editor = await workspace.openCreateEditor({
+      seed: {
+        kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+        name: "Plain import",
+        channelType: "openai",
+        credential: "import-secret",
+        baseUrl: "https://api.example.invalid/v1",
+        enabled: true,
+        models: [],
+        notes: "",
+      },
+    })
+    expect(editor.validate(editor.initialValues)).toEqual({ valid: true })
+    expect(editor.initialValues).toMatchObject({
+      concurrency: 1,
+      priority: 1,
+      notes: "",
+    })
   })
 
   it("keeps masked imported credentials unavailable for native create validation", async () => {
@@ -417,8 +467,6 @@ describe("Sub2API native managed resource", () => {
         base_url: "https://api.example.invalid/v1",
         models: [],
         groups: [],
-        priority: 1,
-        weight: 9,
         enabled: true,
       },
     )
@@ -448,8 +496,6 @@ describe("Sub2API native managed resource", () => {
           base_url: "https://api.example.invalid/v1",
           models: [],
           groups: [],
-          priority: 1,
-          weight: 1,
           enabled: true,
         },
       )

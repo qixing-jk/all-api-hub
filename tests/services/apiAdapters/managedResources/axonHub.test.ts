@@ -326,8 +326,6 @@ const buildMigrationSource = (
   baseUrl: "https://source.example.invalid",
   models: ["model-one"],
   groups: ["default"],
-  priority: 0,
-  weight: 0,
   status: "disabled",
   lossSignals: {
     hasModelMapping: false,
@@ -498,8 +496,6 @@ describe("AxonHub native managed-resource Adapter", () => {
         baseUrl: "https://upstream.example.invalid",
         enabled: true,
         models: [" model-a ", "model-a", "model-b"],
-        orderingWeight: 7,
-        priority: 0,
         notes: "",
       },
     })
@@ -525,7 +521,7 @@ describe("AxonHub native managed-resource Adapter", () => {
       supportedModels: ["model-a", "model-a", "model-b"],
       manualModels: ["model-a", "model-a", "model-b"],
       defaultTestModel: "model-a",
-      orderingWeight: 7,
+      orderingWeight: 0,
     })
     const values = {
       ...editor.initialValues,
@@ -2930,8 +2926,6 @@ describe("AxonHub native managed-resource Adapter", () => {
         credentialMetadata: [{ enabled: true }, { enabled: true }],
         models: ["supported-model", "shared-model", "manual-model"],
         groups: [],
-        priority: 0,
-        weight: 11,
         status: "other",
         lossSignals: {
           hasModelMapping: true,
@@ -3083,16 +3077,12 @@ describe("AxonHub native managed-resource Adapter", () => {
         baseUrl: "https://source.example.invalid/v1",
         models: ["model-one", "model-two"],
         groups: ["default"],
-        priority: 0,
-        weight: 13,
         enabled: true,
       },
       adjustments: {
         remappedType: false,
         normalizedBaseUrl: false,
         forcedDefaultGroup: true,
-        ignoredPriority: true,
-        ignoredWeight: false,
         simplifiedStatus: false,
       },
     })
@@ -3120,7 +3110,7 @@ describe("AxonHub native managed-resource Adapter", () => {
         manualModels: ["model-one", "model-two"],
         defaultTestModel: "model-one",
         settings: {},
-        orderingWeight: 13,
+        orderingWeight: 0,
       },
       { signal: controller.signal },
     )
@@ -3326,8 +3316,6 @@ describe("AxonHub native managed-resource Adapter", () => {
         baseUrl: "https://source.example.invalid",
         models: ["model-one"],
         groups: ["default"],
-        priority: 0,
-        weight: 0,
         status: "disabled",
         lossSignals: {
           hasModelMapping: false,
@@ -3343,8 +3331,6 @@ describe("AxonHub native managed-resource Adapter", () => {
         baseUrl: "https://source.example.invalid",
         models: ["model-one"],
         groups: ["default"],
-        priority: 0,
-        weight: 0,
         status: "disabled" as const,
         lossSignals: {
           hasModelMapping: false,

@@ -121,8 +121,6 @@ const toCanonicalSource = (
       ...(channel.manualModels ?? []),
     ]),
     groups: [],
-    priority: DEFAULT_CHANNEL_FIELDS.priority,
-    weight: channel.orderingWeight ?? DEFAULT_CHANNEL_FIELDS.weight,
     status:
       channel.status === AXON_HUB_CHANNEL_STATUS.ENABLED
         ? "enabled"
@@ -317,7 +315,6 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
           throw new AxonHubUnsupportedMigrationTypeError()
         }
         const groups = [...DEFAULT_CHANNEL_FIELDS.groups]
-        const priority = DEFAULT_CHANNEL_FIELDS.priority
         return {
           projection: {
             name: "",
@@ -325,8 +322,6 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
             baseUrl: source.baseUrl,
             models,
             groups,
-            priority,
-            weight: source.weight,
             enabled: source.status === "enabled",
           },
           adjustments: {
@@ -335,8 +330,6 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
             forcedDefaultGroup:
               groups.length !== source.groups.length ||
               groups.some((group, index) => group !== source.groups[index]),
-            ignoredPriority: priority !== source.priority,
-            ignoredWeight: false,
             simplifiedStatus: source.status === "other",
           },
         }
@@ -364,7 +357,7 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
           manualModels: [...command.projection.models],
           defaultTestModel: command.projection.models[0] ?? "",
           settings: {},
-          orderingWeight: command.projection.weight,
+          orderingWeight: 0,
         }
         let operations: Awaited<
           ReturnType<typeof openAxonHubNativeResourceOperations>

@@ -46,6 +46,8 @@ const translations: Record<string, string> = {
   "managedSiteChannels:editor.options.channelType.unsupported":
     "Unsupported type",
   "managedSiteChannels:migration.generalWarnings.createOnly": "Create only",
+  "managedSiteChannels:migration.generalWarnings.targetRoutingDefaults":
+    "Target routing defaults",
   "managedSiteChannels:migration.generalWarnings.noDedupeOrSync":
     "No dedupe or sync",
   "managedSiteChannels:migration.generalWarnings.noRollback": "No rollback",
@@ -67,10 +69,6 @@ const translations: Record<string, string> = {
     "Platform default group (if available)",
   "managedSiteChannels:migration.itemWarnings.sub2apiDefaultGroup":
     "Source groups are not copied. Check the target platform's default group after migration.",
-  "managedSiteChannels:migration.itemWarnings.targetIgnoresPriority":
-    "Target ignores priority",
-  "managedSiteChannels:migration.itemWarnings.targetIgnoresWeight":
-    "Target ignores weight",
   "managedSiteChannels:migration.itemWarnings.targetSimplifiesStatus":
     "Target simplifies status",
   "managedSiteChannels:migration.blockedReasons.sourceKeyMissing":
@@ -111,8 +109,6 @@ const buildSource = (
   baseUrl: "https://source.example.invalid/v1",
   models: ["model-b", "model-a"],
   groups: ["source-group"],
-  priority: 7,
-  weight: 13,
   status: "enabled",
   lossSignals: {
     hasModelMapping: false,
@@ -127,6 +123,7 @@ const preview: ManagedSiteMigrationCanonicalPreview = {
   sourceSiteType: SITE_TYPES.AXON_HUB,
   targetSiteType: SITE_TYPES.AXON_HUB,
   generalWarningCodes: [
+    MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES.TARGET_ROUTING_DEFAULTS,
     MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES.NO_ROLLBACK,
     MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES.CREATE_ONLY,
   ],
@@ -151,21 +148,16 @@ const preview: ManagedSiteMigrationCanonicalPreview = {
           baseUrl: "https://target.example.invalid/v2",
           models: ["model-a"],
           groups: ["default", "fallback"],
-          priority: 2,
-          weight: 8,
           enabled: false,
         },
         adjustments: {
           remappedType: true,
           normalizedBaseUrl: true,
           forcedDefaultGroup: true,
-          ignoredPriority: true,
-          ignoredWeight: true,
           simplifiedStatus: true,
         },
       },
       warningCodes: [
-        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_IGNORES_PRIORITY,
         MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.DROPS_ADVANCED_SETTINGS,
         MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_REMAPS_CHANNEL_TYPE,
       ],
@@ -547,7 +539,7 @@ describe("managedResourceMigrationPresentation", () => {
     )
   })
 
-  it("preserves opaque row order and all eight canonical comparison values", () => {
+  it("preserves opaque row order and common-field comparisons without routing values", () => {
     const mapped = mapManagedResourceMigrationPreview(preview, {
       t,
       getSiteLabel: (siteType) => `Site ${siteType}`,
@@ -567,8 +559,6 @@ describe("managedResourceMigrationPresentation", () => {
       "type",
       "models",
       "groups",
-      "priority",
-      "weight",
       "status",
     ])
     expect(
@@ -582,8 +572,6 @@ describe("managedResourceMigrationPresentation", () => {
       ["Anthropic", "OpenAI"],
       ["model-b, model-a", "model-a"],
       ["source-group", "default, fallback"],
-      ["7", "2"],
-      ["13", "8"],
       ["Enabled", "Disabled"],
     ])
     expect(mapped).toMatchObject({
@@ -604,9 +592,12 @@ describe("managedResourceMigrationPresentation", () => {
       getSiteLabel: String,
     })
 
-    expect(mapped.generalWarnings).toEqual(["No rollback", "Create only"])
+    expect(mapped.generalWarnings).toEqual([
+      "Target routing defaults",
+      "No rollback",
+      "Create only",
+    ])
     expect(mapped.rows[0].warningText).toEqual([
-      "Target ignores priority",
       "Drops advanced settings",
       "Target remaps type",
     ])
@@ -615,7 +606,7 @@ describe("managedResourceMigrationPresentation", () => {
       blockedReason: "Source type unsupported",
       blockedMessage: undefined,
     })
-    expect(mapped.rows[1].comparisons).toHaveLength(8)
+    expect(mapped.rows[1].comparisons).toHaveLength(6)
     expect(
       mapped.rows[1].comparisons.every(
         ({ source, target, status }) =>
@@ -639,8 +630,6 @@ describe("managedResourceMigrationPresentation", () => {
       MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_REMAPS_CHANNEL_TYPE,
       MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_NORMALIZES_BASE_URL,
       MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
-      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_IGNORES_PRIORITY,
-      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_IGNORES_WEIGHT,
       MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_SIMPLIFIES_STATUS,
       malformedWarning,
     ]
@@ -696,7 +685,11 @@ describe("managedResourceMigrationPresentation", () => {
       getSiteLabel: String,
     })
 
-    expect(mapped.generalWarnings).toEqual(["No rollback", "Create only"])
+    expect(mapped.generalWarnings).toEqual([
+      "Target routing defaults",
+      "No rollback",
+      "Create only",
+    ])
     expect(mapped.rows[0].warningText).toEqual([
       "Drops model mapping",
       "Drops status mapping",
@@ -705,8 +698,6 @@ describe("managedResourceMigrationPresentation", () => {
       "Target remaps type",
       "Target normalizes Base URL",
       "Target forces default group",
-      "Target ignores priority",
-      "Target ignores weight",
       "Target simplifies status",
     ])
     expect(

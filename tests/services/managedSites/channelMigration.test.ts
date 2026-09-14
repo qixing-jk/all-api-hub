@@ -75,8 +75,6 @@ const buildMigrationSource = (
   baseUrl: "https://source.example.invalid",
   models: ["model-example"],
   groups: ["default"],
-  priority: 0,
-  weight: 0,
   status: "enabled",
   lossSignals: {
     hasModelMapping: false,
@@ -94,16 +92,12 @@ const buildMigrationTarget = (): ManagedSiteMigrationTargetPreparation => ({
     baseUrl: "https://target.example.invalid",
     models: ["model-example"],
     groups: ["default"],
-    priority: 0,
-    weight: 0,
     enabled: true,
   },
   adjustments: {
     remappedType: false,
     normalizedBaseUrl: false,
     forcedDefaultGroup: false,
-    ignoredPriority: false,
-    ignoredWeight: false,
     simplifiedStatus: false,
   },
 })
@@ -167,8 +161,6 @@ const buildAxonMigrationSource = (
   baseUrl: "https://native-source.example.invalid",
   models: ["model-native"],
   groups: [],
-  priority: 0,
-  weight: 7,
   ...overrides,
 })
 
@@ -184,16 +176,12 @@ const buildAxonTargetPreparation = (
     baseUrl: source.baseUrl,
     models: [...source.models],
     groups: ["default"],
-    priority: 0,
-    weight: source.weight,
     enabled: source.status === "enabled",
   },
   adjustments: {
     remappedType: true,
     normalizedBaseUrl: false,
     forcedDefaultGroup: source.groups.join(",") !== "default",
-    ignoredPriority: source.priority !== 0,
-    ignoredWeight: false,
     simplifiedStatus: source.status === "other",
   },
 })
@@ -2114,6 +2102,7 @@ describe("channelMigration", () => {
     })
 
     expect(preview.generalWarningCodes).toEqual([
+      MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES.TARGET_ROUTING_DEFAULTS,
       MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES.CREATE_ONLY,
       MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES.NO_DEDUPE_OR_SYNC,
       MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES.NO_ROLLBACK,

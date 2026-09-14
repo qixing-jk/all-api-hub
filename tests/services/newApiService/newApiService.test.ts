@@ -1303,8 +1303,8 @@ describe("newApiService", () => {
 
       expect(result.type).toBe(1) // OpenAI
       expect(result.groups).toEqual(["default"])
-      expect(result.priority).toBe(0)
-      expect(result.weight).toBe(0)
+      expect(result).not.toHaveProperty("priority")
+      expect(result).not.toHaveProperty("weight")
       expect(result.enabled).toBe(true)
     })
   })

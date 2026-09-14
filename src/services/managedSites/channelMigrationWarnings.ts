@@ -51,16 +51,6 @@ export function toMigrationWarningCodes({
       MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
     )
   }
-  if (adjustments.ignoredPriority) {
-    warnings.push(
-      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_IGNORES_PRIORITY,
-    )
-  }
-  if (adjustments.ignoredWeight) {
-    warnings.push(
-      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_IGNORES_WEIGHT,
-    )
-  }
   if (adjustments.simplifiedStatus) {
     warnings.push(
       MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_SIMPLIFIES_STATUS,

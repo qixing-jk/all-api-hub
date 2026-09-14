@@ -124,7 +124,7 @@ export const MANAGED_RESOURCE_CREATE_SEED_KINDS = {
 export type ManagedResourceCreateSeedKind =
   (typeof MANAGED_RESOURCE_CREATE_SEED_KINDS)[keyof typeof MANAGED_RESOURCE_CREATE_SEED_KINDS]
 
-/** Provider-neutral source data for creating a managed channel from an import. */
+/** Common import facts; native editors own routing settings and defaults. */
 export type ManagedChannelImportCreateSeed = {
   kind: typeof MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport
   name: string
@@ -133,8 +133,6 @@ export type ManagedChannelImportCreateSeed = {
   baseUrl: string
   enabled: boolean
   models: readonly string[]
-  orderingWeight: number
-  priority: number
   notes: string
 }
 

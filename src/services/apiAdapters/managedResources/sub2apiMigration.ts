@@ -36,9 +36,6 @@ import {
 } from "~/types/managedSiteMigrationCapability"
 import type { Sub2ApiAdminApiKeyAccount } from "~/types/sub2apiManagedSite"
 
-// Sub2API has no channel weight; use the same neutral value as native imports.
-const SUB2API_MIGRATION_WEIGHT = 1
-
 const prepareBaseUrl = (
   baseUrl: string,
   platform: Sub2ApiApiKeyAccountPlatform,
@@ -166,8 +163,6 @@ const toSource = (
         ),
       ),
     ],
-    priority: account.priority ?? 1,
-    weight: SUB2API_MIGRATION_WEIGHT,
     status:
       account.status === SUB2API_MANAGED_RESOURCE_STATUS.Active &&
       account.schedulable !== false
@@ -291,9 +286,7 @@ export const sub2ApiManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
             "Sub2API does not support this migration channel type",
           )
         }
-        const priority = Number.isFinite(source.priority)
-          ? Math.max(0, Math.trunc(source.priority))
-          : 1
+
         const baseUrl = prepareBaseUrl(source.baseUrl, type.value)
         return {
           projection: {
@@ -310,16 +303,12 @@ export const sub2ApiManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
             // the account ungrouped.
             // github.com/Wei-Shaw/sub2api/blob/b7dba62678a834080564966c002fd0ca2b328b7a/backend/internal/service/admin_account.go
             groups: [],
-            priority,
-            weight: SUB2API_MIGRATION_WEIGHT,
             enabled: source.status === "enabled",
           },
           adjustments: {
             remappedType: type.remappedType,
             normalizedBaseUrl: baseUrl !== source.baseUrl,
             forcedDefaultGroup: true,
-            ignoredPriority: priority !== source.priority,
-            ignoredWeight: source.weight !== SUB2API_MIGRATION_WEIGHT,
             simplifiedStatus: source.status === "other",
           },
         }
@@ -345,8 +334,6 @@ export const sub2ApiManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
           credential: command.credential,
           models: command.projection.models,
           enabled: command.projection.enabled,
-          orderingWeight: command.projection.weight,
-          priority: command.projection.priority,
           notes: "",
         }
         let submitted = false

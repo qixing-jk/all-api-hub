@@ -27,6 +27,7 @@ export type ManagedSiteMigrationLossSignals = {
   hasMultiKeyState: boolean
 }
 
+/** Common migration facts; native scheduling settings do not cross site types. */
 export type ManagedSiteMigrationSource = {
   /** Ordered, secret-free key slots. Omitted for ordinary single-key sources. */
   credentialMetadata?: readonly { enabled: boolean }[]
@@ -36,12 +37,11 @@ export type ManagedSiteMigrationSource = {
   baseUrl: string
   models: string[]
   groups: string[]
-  priority: number
-  weight: number
   status: ManagedSiteMigrationStatus
   lossSignals: ManagedSiteMigrationLossSignals
 }
 
+/** Target common fields; the target adapter initializes native routing defaults. */
 export type ManagedSiteMigrationPreviewProjection = {
   keyCount?: number
   name: string
@@ -50,8 +50,6 @@ export type ManagedSiteMigrationPreviewProjection = {
   baseUrl: string
   models: string[]
   groups: string[]
-  priority: number
-  weight: number
   enabled: boolean
 }
 
@@ -59,8 +57,6 @@ export type ManagedSiteMigrationTargetAdjustments = {
   remappedType: boolean
   normalizedBaseUrl: boolean
   forcedDefaultGroup: boolean
-  ignoredPriority: boolean
-  ignoredWeight: boolean
   simplifiedStatus: boolean
 }
 

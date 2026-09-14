@@ -75,8 +75,6 @@ export async function prepareChannelFormData(
     models: normalizeList(availableModels),
     ...(fetchFailed ? { modelPrefillFetchFailed: true } : {}),
     groups: ["default"],
-    priority: 0,
-    weight: 0,
     enabled: true,
   }
 }

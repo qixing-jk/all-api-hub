@@ -55,7 +55,13 @@ export class Sub2ApiAdminApiError extends Error {
     readonly code: string | number | undefined,
     readonly evidence: Sub2ApiAdminErrorEvidence,
   ) {
-    super(message)
+    // The shared mutation diagnostic reader follows Error.cause and statusCode.
+    // Preserve this evidence so ambiguous writes remain classified outcomes.
+    super(message, { cause: evidence.raw })
+  }
+
+  get statusCode(): number | undefined {
+    return this.status
   }
 }
 
@@ -525,8 +531,6 @@ export async function prepareChannelFormData(
     base_url: normalizeBaseUrl(source.baseUrl),
     models: [],
     groups: [],
-    priority: 1,
-    weight: 1,
     enabled: true,
     notes: "",
   }

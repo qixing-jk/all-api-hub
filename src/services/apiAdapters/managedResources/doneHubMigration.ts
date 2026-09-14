@@ -94,14 +94,6 @@ const toSource = (
   baseUrl: typeof channel.base_url === "string" ? channel.base_url.trim() : "",
   models: parseNewApiResourceList(channel.models),
   groups: parseNewApiResourceList(channel.group),
-  priority:
-    typeof channel.priority === "number"
-      ? channel.priority
-      : DEFAULT_CHANNEL_FIELDS.priority,
-  weight:
-    typeof channel.weight === "number"
-      ? channel.weight
-      : DEFAULT_CHANNEL_FIELDS.weight,
   status:
     channel.status === DoneHubChannelStatus.Enable
       ? "enabled"
@@ -214,16 +206,12 @@ export const doneHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
               source.groups.length > 0
                 ? [...source.groups]
                 : [...DEFAULT_CHANNEL_FIELDS.groups],
-            priority: source.priority,
-            weight: source.weight,
             enabled: source.status === "enabled",
           },
           adjustments: {
             remappedType: type.remappedType,
             normalizedBaseUrl: false,
             forcedDefaultGroup: source.groups.length === 0,
-            ignoredPriority: false,
-            ignoredWeight: false,
             simplifiedStatus: source.status === "other",
           },
         }
@@ -237,8 +225,8 @@ export const doneHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
           base_url: command.projection.baseUrl,
           models: [...command.projection.models],
           groups: [...command.projection.groups],
-          priority: command.projection.priority,
-          weight: command.projection.weight,
+          priority: DEFAULT_CHANNEL_FIELDS.priority,
+          weight: DEFAULT_CHANNEL_FIELDS.weight,
           status: command.projection.enabled
             ? DoneHubChannelStatus.Enable
             : DoneHubChannelStatus.ManuallyDisabled,

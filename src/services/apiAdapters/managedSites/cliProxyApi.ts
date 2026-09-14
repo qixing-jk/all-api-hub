@@ -116,8 +116,6 @@ export const cliProxyApiCapabilities = {
         base_url: importedProviderUrl(source.baseUrl, kind),
         models,
         groups: [],
-        priority: 0,
-        weight: 1,
         enabled: true,
         ...(fetchFailed ? { modelPrefillFetchFailed: true } : {}),
       }

@@ -80,8 +80,6 @@ const toSource = (
   baseUrl: channel.base_url?.trim() ?? "",
   models: parseNewApiResourceList(channel.models),
   groups: parseNewApiResourceList(channel.group),
-  priority: channel.priority ?? DEFAULT_CHANNEL_FIELDS.priority,
-  weight: channel.weight ?? DEFAULT_CHANNEL_FIELDS.weight,
   status:
     channel.status === CHANNEL_STATUS.Enable
       ? "enabled"
@@ -243,16 +241,12 @@ export const newApiManagedSiteMigrationCapability: ManagedSiteMigrationCapabilit
               source.groups.length > 0
                 ? [...source.groups]
                 : [...DEFAULT_CHANNEL_FIELDS.groups],
-            priority: source.priority,
-            weight: source.weight,
             enabled: source.status === "enabled",
           },
           adjustments: {
             remappedType: type.remappedType,
             normalizedBaseUrl: false,
             forcedDefaultGroup: source.groups.length === 0,
-            ignoredPriority: false,
-            ignoredWeight: false,
             simplifiedStatus: source.status === "other",
           },
         }
@@ -280,8 +274,8 @@ export const newApiManagedSiteMigrationCapability: ManagedSiteMigrationCapabilit
           base_url: command.projection.baseUrl,
           models: [...command.projection.models],
           groups: [...command.projection.groups],
-          priority: command.projection.priority,
-          weight: command.projection.weight,
+          priority: DEFAULT_CHANNEL_FIELDS.priority,
+          weight: DEFAULT_CHANNEL_FIELDS.weight,
           status:
             command.projection.enabled && !hasDisabledKeys
               ? CHANNEL_STATUS.Enable
