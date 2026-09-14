@@ -2,6 +2,8 @@ import { act, render, screen, waitFor } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { Storage } from "@plasmohq/storage"
+
 import {
   DATA_TYPE_BALANCE,
   DATA_TYPE_CASHFLOW,
@@ -9,11 +11,17 @@ import {
   DATA_TYPE_INCOME,
 } from "~/constants"
 import { SITE_TYPES } from "~/constants/siteType"
-import { THEME_MODE } from "~/constants/theme"
+import {
+  THEME_COLOR,
+  THEME_MODE,
+  THEME_PRESET,
+  THEME_RADIUS,
+} from "~/constants/theme"
 import {
   UserPreferencesProvider,
   useUserPreferencesContext,
 } from "~/contexts/UserPreferencesContext"
+import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   DEFAULT_REDEMPTION_ASSIST_PREFERENCES,
   DEFAULT_WEB_AI_API_CHECK_PREFERENCES,
@@ -455,6 +463,140 @@ describe("UserPreferencesContext", () => {
     expect(() => render(<BrokenConsumer />)).toThrow(
       "useUserPreferencesContext 必须在 UserPreferencesProvider 中使用",
     )
+  })
+
+  it("preserves other appearance choices when saving an accent, then updates mode and radius together", async () => {
+    const preferences = createPersistedPreferencesFixture({
+      themeMode: THEME_MODE.DARK,
+      appearance: {
+        preset: THEME_PRESET.ANTHROPIC,
+        color: THEME_COLOR.VIOLET,
+        radius: THEME_RADIUS.LARGE,
+      },
+    })
+    const context = await renderProvider(preferences)
+
+    await act(async () => {
+      expect(
+        await context.updateAppearance({ color: THEME_COLOR.ROSE }),
+      ).toMatchObject({ ok: true })
+    })
+
+    expect(latestContext?.preferences).toMatchObject({
+      themeMode: THEME_MODE.DARK,
+      appearance: {
+        ...preferences.appearance,
+        color: THEME_COLOR.ROSE,
+      },
+    })
+    expect(
+      mockedUserPreferences.savePreferencesWithResult,
+    ).toHaveBeenLastCalledWith({ appearance: { color: THEME_COLOR.ROSE } })
+
+    await act(async () => {
+      expect(
+        await context.updateAppearance({
+          themeMode: THEME_MODE.LIGHT,
+          radius: THEME_RADIUS.SMALL,
+        }),
+      ).toMatchObject({ ok: true })
+    })
+
+    const expectedAppearance = {
+      preset: THEME_PRESET.ANTHROPIC,
+      color: THEME_COLOR.ROSE,
+      radius: THEME_RADIUS.SMALL,
+    }
+    expect(latestContext?.preferences).toMatchObject({
+      themeMode: THEME_MODE.LIGHT,
+      appearance: expectedAppearance,
+    })
+    expect(preferencePersistence.getPersistedPreferences()).toMatchObject({
+      themeMode: THEME_MODE.LIGHT,
+      appearance: expectedAppearance,
+    })
+    expect(
+      mockedUserPreferences.savePreferencesWithResult,
+    ).toHaveBeenLastCalledWith({
+      appearance: { radius: THEME_RADIUS.SMALL },
+      themeMode: THEME_MODE.LIGHT,
+    })
+  })
+
+  it("keeps saved appearance after a failed write and applies a successful retry", async () => {
+    const context = await renderProvider()
+    const savedPreferences = latestContext?.preferences
+    mockedUserPreferences.savePreferencesWithResult.mockResolvedValueOnce(
+      preferenceWriteFailure,
+    )
+
+    await act(async () => {
+      expectFailedWrite(
+        await context.updateAppearance({ preset: THEME_PRESET.ANTHROPIC }),
+      )
+    })
+    expect(latestContext?.preferences).toEqual(savedPreferences)
+    expect(preferencePersistence.getPersistedPreferences()).toEqual(
+      savedPreferences,
+    )
+
+    await act(async () => {
+      expect(
+        await context.updateAppearance({ preset: THEME_PRESET.ANTHROPIC }),
+      ).toMatchObject({ ok: true })
+    })
+    expect(latestContext?.preferences?.appearance?.preset).toBe(
+      THEME_PRESET.ANTHROPIC,
+    )
+  })
+
+  it("waits for initial hydration before applying external appearance updates", async () => {
+    const pending = createDeferred<UserPreferences>()
+    mockedUserPreferences.getPreferences.mockReturnValueOnce(pending.promise)
+    const storage = new Storage({ area: "local" })
+    const preferences = createPersistedPreferencesFixture({
+      themeMode: THEME_MODE.DARK,
+    })
+    render(
+      <UserPreferencesProvider>
+        <Probe />
+      </UserPreferencesProvider>,
+    )
+
+    await act(async () => {
+      await storage.set(
+        USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+        preferences,
+      )
+    })
+    expect(latestContext).toBeNull()
+    expect(screen.queryByTestId(TEST_IDS.loadingState)).not.toBeInTheDocument()
+
+    await act(async () => {
+      pending.resolve(preferences)
+      await pending.promise
+    })
+    expect(latestContext?.themeMode).toBe(THEME_MODE.DARK)
+
+    const appearance = {
+      preset: THEME_PRESET.ANTHROPIC,
+      color: THEME_COLOR.ROSE,
+      radius: THEME_RADIUS.SMALL,
+    }
+    await act(async () => {
+      await storage.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+        ...preferences,
+        themeMode: THEME_MODE.LIGHT,
+        appearance,
+        showTodayCashflow: !preferences.showTodayCashflow,
+      })
+    })
+    expect(latestContext?.preferences).toMatchObject({
+      themeMode: THEME_MODE.LIGHT,
+      appearance,
+      showTodayCashflow: preferences.showTodayCashflow,
+    })
+    expect(mockedUserPreferences.savePreferences).not.toHaveBeenCalled()
   })
 
   it("loads preferences and normalizes hidden today-cashflow selections", async () => {

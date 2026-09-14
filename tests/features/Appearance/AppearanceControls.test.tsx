@@ -16,11 +16,18 @@ import { normalizeAppearance } from "~/types/theme"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { render } from "~~/tests/test-utils/render"
 
-const { save } = vi.hoisted(() => ({ save: vi.fn() }))
+const { save, savedAppearance } = vi.hoisted(() => ({
+  save: vi.fn(),
+  savedAppearance: { preset: "default" },
+}))
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => ({
     preferences: {
-      appearance: { color: THEME_COLOR.BLUE, radius: THEME_RADIUS.DEFAULT },
+      appearance: {
+        ...savedAppearance,
+        color: THEME_COLOR.BLUE,
+        radius: THEME_RADIUS.DEFAULT,
+      },
     },
     themeMode: THEME_MODE.SYSTEM,
     updateAppearance: save,
@@ -37,6 +44,56 @@ describe("appearance controls", () => {
   beforeEach(() => {
     save.mockReset()
     save.mockResolvedValue({ ok: true })
+    savedAppearance.preset = THEME_PRESET.DEFAULT
+  })
+
+  it("saves a selected light or dark mode without resetting appearance", async () => {
+    const user = userEvent.setup()
+    renderControls()
+
+    expect(
+      screen.getByRole("radio", { name: "settings:theme.followSystem" }),
+    ).toBeChecked()
+    await user.click(screen.getByRole("radio", { name: "settings:theme.dark" }))
+    expect(save).toHaveBeenLastCalledWith({ themeMode: THEME_MODE.DARK })
+    await user.click(
+      screen.getByRole("radio", { name: "settings:theme.light" }),
+    )
+    expect(save).toHaveBeenLastCalledWith({ themeMode: THEME_MODE.LIGHT })
+  })
+
+  it("explains preset-owned colors and restores accent choices after returning to the default preset", async () => {
+    const user = userEvent.setup()
+    savedAppearance.preset = THEME_PRESET.ANTHROPIC
+    const { rerender } = renderControls()
+
+    expect(
+      screen.getByRole("radio", {
+        name: "settings:appearance.presets.anthropic",
+      }),
+    ).toBeChecked()
+    expect(
+      screen.getByText("settings:appearance.presetColorsHint"),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("radio", { name: "settings:appearance.colors.blue" }),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("radio", {
+        name: "settings:appearance.presets.default",
+      }),
+    )
+    expect(save).toHaveBeenLastCalledWith({ preset: THEME_PRESET.DEFAULT })
+    savedAppearance.preset = THEME_PRESET.DEFAULT
+    rerender(<AppearanceControls showMode anchors />)
+
+    expect(
+      screen.getByRole("radio", { name: "settings:appearance.colors.blue" }),
+    ).toBeChecked()
+    expect(
+      screen.queryByText("settings:appearance.presetColorsHint"),
+    ).not.toBeInTheDocument()
   })
 
   it("keeps searchable appearance controls linked to visible settings groups", () => {

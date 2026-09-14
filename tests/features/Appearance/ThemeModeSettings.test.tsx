@@ -88,4 +88,34 @@ describe("ThemeModeSettings", () => {
       }),
     ).toHaveAttribute("title", "settings:theme.followSystemTheme")
   })
+
+  it("lets the user recover from an unrecognized stored theme mode", async () => {
+    const user = userEvent.setup()
+    themeState.current.themeMode = "legacy-theme" as ThemeMode
+    const { rerender } = render(<ThemeModeSettings />)
+
+    expect(
+      screen.getByText('theme.currentTheme:{"resolvedTheme":"theme.light"}'),
+    ).toBeVisible()
+    const group = within(
+      screen.getByRole("group", { name: "theme.appearance" }),
+    )
+    expect(group.queryAllByRole("button", { pressed: true })).toHaveLength(0)
+
+    await user.click(
+      group.getByRole("button", { name: /settings:theme.light/ }),
+    )
+    expect(themeState.current.setThemeMode).toHaveBeenCalledWith(
+      THEME_MODE.LIGHT,
+    )
+    themeState.current.themeMode = THEME_MODE.LIGHT
+    rerender(<ThemeModeSettings />)
+
+    expect(
+      group.getByRole("button", {
+        name: /settings:theme.light/,
+        pressed: true,
+      }),
+    ).toBeVisible()
+  })
 })

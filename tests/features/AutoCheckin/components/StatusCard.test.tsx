@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 
 import StatusCard from "~/features/AutoCheckin/components/StatusCard"
 import {
+  AUTO_CHECKIN_RUN_RESULT,
   CHECKIN_RESULT_STATUS,
   type AutoCheckinPreferences,
 } from "~/types/autoCheckin"
@@ -24,6 +25,41 @@ const preferences: AutoCheckinPreferences = {
 }
 
 describe("AutoCheckin StatusCard", () => {
+  it.each([
+    [
+      AUTO_CHECKIN_RUN_RESULT.SUCCESS,
+      "bg-success-soft text-success-soft-foreground",
+    ],
+    [
+      AUTO_CHECKIN_RUN_RESULT.PARTIAL,
+      "bg-warning-soft text-warning-soft-foreground",
+    ],
+    [
+      AUTO_CHECKIN_RUN_RESULT.FAILED,
+      "bg-destructive-soft text-destructive-soft-foreground",
+    ],
+    [AUTO_CHECKIN_RUN_RESULT.SKIPPED, "bg-muted text-secondary-foreground"],
+  ] as const)(
+    "shows a distinct label and color for a %s run",
+    (result, colors) => {
+      render(
+        <StatusCard
+          preferences={preferences}
+          status={{ lastRunResult: result }}
+        />,
+        {
+          withReleaseUpdateStatusProvider: false,
+          withThemeProvider: false,
+          withUserPreferencesProvider: false,
+        },
+      )
+
+      const badge = screen.getByText(`autoCheckin:status.result.${result}`)
+      expect(badge).toBeVisible()
+      expect(badge).toHaveClass(colors)
+    },
+  )
+
   it("derives distinct success counts when persisted account results have no summary", () => {
     render(
       <StatusCard

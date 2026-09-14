@@ -1,4 +1,5 @@
-import { createRef } from "react"
+import userEvent from "@testing-library/user-event"
+import { createRef, useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import {
@@ -278,6 +279,61 @@ describe("Input", () => {
 })
 
 describe("Textarea", () => {
+  it.each([
+    {
+      error: "Please shorten the notes",
+      success: "Notes are ready",
+      message: "Please shorten the notes",
+      color: "text-destructive-text",
+    },
+    {
+      error: undefined,
+      success: "Notes are ready",
+      message: "Notes are ready",
+      color: "text-success-text",
+    },
+  ])(
+    "shows validation feedback: $message",
+    async ({ error, success, message, color }) => {
+      render(<Textarea aria-label="Notes" error={error} success={success} />)
+
+      expect(
+        await screen.findByRole("textbox", { name: "Notes" }),
+      ).toBeVisible()
+      expect(screen.getByText(message)).toBeVisible()
+      expect(screen.getByText(message)).toHaveClass(color)
+      if (error) {
+        expect(screen.queryByText(success)).not.toBeInTheDocument()
+      }
+    },
+  )
+
+  it("updates the character count as the user types and clears a limited field", async () => {
+    const user = userEvent.setup()
+    const Notes = () => {
+      const [value, setValue] = useState("")
+      return (
+        <Textarea
+          aria-label="Notes"
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          showCount
+          maxLength={5}
+        />
+      )
+    }
+    render(<Notes />)
+    const textarea = await screen.findByRole("textbox", { name: "Notes" })
+
+    expect(screen.getByText("0/5")).toBeVisible()
+    await user.type(textarea, "hello world")
+    expect(textarea).toHaveValue("hello")
+    expect(screen.getByText("5/5")).toBeVisible()
+    await user.clear(textarea)
+    expect(textarea).toHaveValue("")
+    expect(screen.getByText("0/5")).toBeVisible()
+  })
+
   it("shows a clear button for controlled values and calls the clear handler", async () => {
     const onClear = vi.fn()
 
