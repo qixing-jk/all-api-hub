@@ -20,6 +20,7 @@ import {
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
 import {
+  getPlasmoStorageJsonValue,
   getServiceWorker,
   setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
@@ -117,6 +118,13 @@ for (const language of ["zh-CN", "en"] as const) {
         pretriggerDailyOnUiOpen: false,
       },
     })
+    // Startup scheduling writes an initial status. Seed historical results only
+    // after that write so a slower browser cannot replace them with empty state.
+    await expect
+      .poll(() =>
+        getPlasmoStorageJsonValue(serviceWorker, "autoCheckin_status"),
+      )
+      .toBeTruthy()
     await setPlasmoStorageValue(serviceWorker, "autoCheckin_status", {
       lastRunAt: new Date().toISOString(),
       lastRunResult: "failed",
@@ -198,9 +206,13 @@ for (const language of ["zh-CN", "en"] as const) {
         .click()
       const notes = page.getByRole("dialog").getByLabel(feedback.notes)
       await expect(notes).toBeVisible()
-      // The automatic scan can open a temporary page. Target the feedback
-      // field so Escape has the dialog focus required by its dismissal guard.
-      await notes.press("Escape")
+      // Closing is part of this layout flow; automatic scanning can activate
+      // another page while a keyboard dismissal is being dispatched.
+      await page
+        .getByRole("dialog")
+        .getByRole("button", { name: common.actions.close, exact: true })
+        .filter({ hasText: common.actions.close })
+        .click()
       await expect(page.getByRole("dialog")).toBeHidden()
       await page.screenshot({
         path: testInfo.outputPath(`result-actions-${language}-${width}.png`),

@@ -393,14 +393,14 @@ export function TokenHeader({
               ? undefined
               : managedSiteAssessment?.searchBaseUrl
           }
-          className="h-auto px-0 py-0 text-xs"
+          className="h-auto min-h-0 px-0 py-0 text-xs"
           testId={KEY_MANAGEMENT_TEST_IDS.managedSiteChannelLinkButton}
         />
       ) : managedSiteAssessment?.searchBaseUrl ? (
         <ManagedSiteChannelLinkButton
           channelName={t("managedSiteStatus.actions.reviewChannels")}
           search={managedSiteAssessment.searchBaseUrl}
-          className="h-auto px-0 py-0 text-xs"
+          className="h-auto min-h-0 px-0 py-0 text-xs"
           testId={KEY_MANAGEMENT_TEST_IDS.managedSiteChannelLinkButton}
         />
       ) : null}
@@ -415,7 +415,7 @@ export function TokenHeader({
         <Button
           size="sm"
           variant="outline"
-          className="h-auto px-2 py-0.5 text-xs"
+          className="h-auto min-h-0 px-2 py-0.5 text-xs"
           data-testid={
             KEY_MANAGEMENT_TEST_IDS.managedSiteVerificationRetryButton
           }
@@ -431,7 +431,7 @@ export function TokenHeader({
         <WorkflowTransitionButton
           size="sm"
           variant="outline"
-          className="h-auto px-2 py-0.5 text-xs"
+          className="h-auto min-h-0 px-2 py-0.5 text-xs"
           onClick={handleOpenManagedSiteSettings}
           title={managedSiteRecoveryMessage ?? undefined}
         >

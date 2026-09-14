@@ -682,7 +682,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                     type="button"
                     variant="link"
                     size="sm"
-                    className="h-auto px-0 py-0 text-xs"
+                    className="h-auto min-h-0 px-0 py-0 text-xs"
                     onClick={onManageModelKey}
                   >
                     {t("verifyDialog.actions.manageModelKey")}

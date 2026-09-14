@@ -213,7 +213,7 @@ export default function AutoDetectErrorAlert({
                   onClick={handleReportUnsupportedSite}
                   variant="link"
                   size="sm"
-                  className="mt-0.5 h-auto p-0 text-sm font-semibold"
+                  className="mt-0.5 h-auto min-h-0 p-0 text-sm font-semibold"
                   rightIcon={
                     <WorkflowTransitionIcon
                       aria-hidden="true"
@@ -231,7 +231,7 @@ export default function AutoDetectErrorAlert({
                   onClick={handleApiCredentialProfilesClick}
                   variant="link"
                   size="sm"
-                  className="mt-0.5 h-auto p-0 text-sm font-semibold"
+                  className="mt-0.5 h-auto min-h-0 p-0 text-sm font-semibold"
                   rightIcon={
                     <WorkflowTransitionIcon
                       aria-hidden="true"

@@ -263,7 +263,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
       <WorkflowTransitionButton
         onClick={handleOpenKeysPage}
         variant="link"
-        className="mt-1 h-auto px-0 py-0 text-sm"
+        className="mt-1 h-auto min-h-0 px-0 py-0 text-sm"
         data-testid={MODEL_LIST_TEST_IDS.openKeyManagementButton}
         analyticsAction={{
           featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,

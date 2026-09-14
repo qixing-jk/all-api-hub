@@ -58,7 +58,7 @@ export const ApiCheckConfirmToast: React.FC<{
                     type="button"
                     variant="link"
                     size="sm"
-                    className="h-auto p-0 text-sm"
+                    className="h-auto min-h-0 p-0 text-sm"
                     onClick={(e) => {
                       e.stopPropagation()
                       onAction("feedback")
@@ -70,7 +70,7 @@ export const ApiCheckConfirmToast: React.FC<{
                     type="button"
                     variant="link"
                     size="sm"
-                    className="h-auto p-0 text-sm"
+                    className="h-auto min-h-0 p-0 text-sm"
                     onClick={(e) => {
                       e.stopPropagation()
                       onAction("settings")

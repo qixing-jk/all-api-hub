@@ -487,7 +487,7 @@ export default function SiteInfo({
                     <WorkflowTransitionButton
                       variant="link"
                       size="sm"
-                      className="h-auto p-0 text-left"
+                      className="h-auto min-h-0 p-0 text-left"
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
@@ -621,7 +621,7 @@ export default function SiteInfo({
               type="button"
               variant="link"
               size="sm"
-              className="h-auto min-w-0 flex-1 shrink justify-start p-0 text-left"
+              className="h-auto min-h-0 min-w-0 flex-1 shrink justify-start p-0 text-left"
               title={site.name}
               onClick={handleOpenAccountSite}
               data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.rowOpenButton}

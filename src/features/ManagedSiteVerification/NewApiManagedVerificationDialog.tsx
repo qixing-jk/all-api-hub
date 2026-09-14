@@ -513,7 +513,7 @@ export function NewApiManagedVerificationDialog(
               <WorkflowTransitionButton
                 variant="link"
                 size="sm"
-                className="h-auto p-0"
+                className="h-auto min-h-0 p-0"
                 disabled={props.isBusy}
                 onClick={() =>
                   void openSettingsTabInNewTab("managedSite", {

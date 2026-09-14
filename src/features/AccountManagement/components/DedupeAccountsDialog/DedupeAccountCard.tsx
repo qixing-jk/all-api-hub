@@ -192,7 +192,7 @@ export function DedupeAccountCard({
             variant="ghost"
             size="sm"
             leftIcon={<Info />}
-            className="h-7 px-2 text-xs"
+            className="min-h-7 px-2 text-xs"
             aria-expanded={detailsOpen}
             aria-controls={detailsId}
             disabled={isWorking}

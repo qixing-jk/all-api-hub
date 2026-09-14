@@ -294,7 +294,7 @@ export function SiteAnnouncementCard({
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="h-7 text-xs text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-400/10"
+                className="min-h-7 text-xs text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-400/10"
                 onClick={handleMarkRead}
                 leftIcon={<CheckCircle2 className="h-3.5 w-3.5" />}
               >

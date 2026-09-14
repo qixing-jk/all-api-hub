@@ -35,7 +35,7 @@ export function ManagedSiteStatusDisclosure({
           <Button
             variant="ghost"
             size="sm"
-            className="h-auto min-w-0 gap-1.5 px-1 py-0.5 text-xs"
+            className="h-auto min-h-0 min-w-0 gap-1.5 px-1 py-0.5 text-xs"
             data-testid="managed-site-status-details"
           >
             <span className="shrink-0 font-normal text-gray-500 dark:text-gray-400">

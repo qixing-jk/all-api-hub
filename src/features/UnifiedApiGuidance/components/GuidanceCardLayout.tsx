@@ -43,7 +43,7 @@ export function GuidanceCardLayout({
       type="button"
       variant="link"
       size="sm"
-      className="h-auto justify-end px-0 py-0 text-xs text-slate-500 dark:text-slate-400"
+      className="h-auto min-h-0 justify-end px-0 py-0 text-xs text-slate-500 dark:text-slate-400"
       onClick={dismissControls.onRequestPermanentDismiss}
     >
       {dismissControls.permanentlyDismissLabel}

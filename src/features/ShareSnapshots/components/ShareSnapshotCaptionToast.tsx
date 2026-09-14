@@ -82,7 +82,7 @@ export const ShareSnapshotCaptionToast = ({
         <Button
           type="button"
           size="sm"
-          className="dark:bg-dark-bg-tertiary dark:text-dark-text-primary h-auto bg-gray-900 px-3 py-1.5 text-xs text-white"
+          className="dark:bg-dark-bg-tertiary dark:text-dark-text-primary h-auto min-h-0 bg-gray-900 px-3 py-1.5 text-xs text-white"
           onClick={handleCopy}
           loading={isCopying}
         >

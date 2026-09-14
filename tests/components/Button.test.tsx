@@ -81,7 +81,7 @@ describe("Button", () => {
 
     for (const button of textButtons) {
       expect(button).toHaveClass(
-        "min-h-fit",
+        "h-auto",
         "min-w-0",
         "max-w-full",
         "shrink",
@@ -93,9 +93,9 @@ describe("Button", () => {
       expect(button).not.toHaveClass("whitespace-nowrap")
     }
 
-    expect(textButtons[0]).toHaveClass("h-9")
-    expect(textButtons[1]).toHaveClass("h-8")
-    expect(textButtons[2]).toHaveClass("h-10")
+    expect(textButtons[0]).toHaveClass("min-h-9")
+    expect(textButtons[1]).toHaveClass("min-h-8")
+    expect(textButtons[2]).toHaveClass("min-h-10")
   })
 
   it("keeps icon-only button sizes fixed", async () => {
@@ -124,7 +124,7 @@ describe("Button", () => {
 
   it("lets compact text actions opt out of wrapping", async () => {
     render(
-      <Button className="h-6 max-w-none shrink-0 whitespace-nowrap">
+      <Button className="h-6 min-h-0 max-w-none shrink-0 whitespace-nowrap">
         Compact action
       </Button>,
     )

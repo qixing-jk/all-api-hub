@@ -159,7 +159,7 @@ export function AccountListHeader({
       variant={isReorderMode ? "secondary" : "ghost"}
       size="sm"
       className={cn(
-        "h-7 max-w-none shrink-0 px-2 py-0 text-xs whitespace-nowrap",
+        "min-h-7 max-w-none shrink-0 px-2 py-0 text-xs whitespace-nowrap",
         reorderDisabledReason !== null &&
           "aria-disabled:pointer-events-auto aria-disabled:cursor-not-allowed",
       )}
@@ -218,7 +218,7 @@ export function AccountListHeader({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-7 max-w-none gap-1 rounded-sm px-2 py-0 text-xs whitespace-nowrap has-[>svg]:px-2"
+                  className="min-h-7 max-w-none gap-1 rounded-sm px-2 py-0 text-xs whitespace-nowrap has-[>svg]:px-2"
                   disabled={inSearchMode}
                   aria-label={t("account:list.sortMenu")}
                   data-testid={
@@ -358,7 +358,7 @@ export function AccountListHeader({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 w-7 max-w-none shrink-0 px-0 py-0 text-xs whitespace-nowrap [@container(min-width:24rem)]:w-auto [@container(min-width:24rem)]:px-2"
+            className="min-h-7 w-7 max-w-none shrink-0 px-0 py-0 text-xs whitespace-nowrap [@container(min-width:24rem)]:w-auto [@container(min-width:24rem)]:px-2"
             leftIcon={<ListChecks aria-hidden="true" className="size-3.5" />}
             onClick={onBulkModeEnter}
             disabled={isBulkBusy || isReorderMode}

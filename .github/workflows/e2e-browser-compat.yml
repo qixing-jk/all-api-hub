@@ -11,31 +11,32 @@ concurrency:
 
 jobs:
   chrome-compat:
-    name: Chrome ${{ matrix.chrome_version }} compatibility
+    name: Chrome ${{ matrix.chrome_version }} compatibility (${{ matrix.shard }}/2)
     runs-on: ubuntu-latest
     # Leave time for setup and failure artifacts after Playwright stops.
     timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        include:
+        shard: [1, 2]
+        chrome_version:
           # 114 is the current Chromium support floor for this build: the
           # manifest declares sidePanel, and chrome.sidePanel starts at 114.
-          - chrome_version: "114"
+          - "114"
           # 116 adds sidePanel.open and major MV3 service worker lifetime fixes.
-          - chrome_version: "116"
+          - "116"
           # 120 aligns chrome.alarms with the 30s MV3 service worker lifecycle.
-          - chrome_version: "120"
+          - "120"
           # 122 is a broad promise-support checkpoint for asynchronous extension APIs.
-          - chrome_version: "122"
+          - "122"
           # 144 has known community reports around extension messaging behavior.
-          - chrome_version: "144"
+          - "144"
           # 147 is the last pre-148 checkpoint before native browser namespace rollout.
-          - chrome_version: "147"
+          - "147"
           # 148 introduces native browser namespace and Promise-returning onMessage support.
-          - chrome_version: "148"
+          - "148"
           # stable catches the browser version users are most likely to auto-update to.
-          - chrome_version: "stable"
+          - "stable"
 
     steps:
       - name: Checkout code
@@ -75,13 +76,13 @@ jobs:
           AAH_E2E_SMOKE_ONLY: "1"
         # Playwright finishes its report before the step or job is cancelled.
         # The list reporter preserves per-test progress even during a timeout.
-        run: pnpm run e2e:default --global-timeout=1500000 --reporter=list,github,html
+        run: pnpm run e2e:default --shard=${{ matrix.shard }}/2 --global-timeout=1500000 --reporter=list,github,html
 
       - name: Upload Playwright artifacts (failure)
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-browser-compat-${{ matrix.chrome_version }}-${{ github.run_attempt }}
+          name: playwright-browser-compat-${{ matrix.chrome_version }}-${{ matrix.shard }}-${{ github.run_attempt }}
           path: |
             playwright-report/
             test-results/

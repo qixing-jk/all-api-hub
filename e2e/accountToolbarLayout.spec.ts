@@ -142,8 +142,12 @@ test("keeps bulk selection review and actions usable across widths and themes", 
   await page.reload()
   await waitForExtensionRoot(page)
   await page.getByTestId(ids.accountListBulkManageButton).click()
-  await toolbar.getByRole("button", { name: "选择范围" }).click()
-  await page.getByRole("menuitem", { name: "选择当前结果" }).click()
+  // The compact breakpoint depends on label/font width. Start selection at a
+  // desktop width instead of assuming Chinese labels need a menu at 320px.
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await toolbar
+    .getByRole("button", { name: "选择当前结果", exact: true })
+    .click()
   for (const width of [1280, 960, 480, 320]) {
     await page.setViewportSize({ width, height: 900 })
     if (width >= 960) {

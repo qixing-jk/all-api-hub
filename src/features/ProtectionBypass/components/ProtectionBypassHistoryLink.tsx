@@ -41,7 +41,7 @@ export function ProtectionBypassHistoryLink({
       variant="link"
       size="sm"
       className={cn(
-        "h-auto max-w-full justify-start p-0 text-left whitespace-normal",
+        "h-auto min-h-0 max-w-full justify-start p-0 text-left whitespace-normal",
         className,
       )}
       leftIcon={<History className="size-3.5" aria-hidden="true" />}

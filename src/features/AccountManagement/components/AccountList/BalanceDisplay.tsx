@@ -144,7 +144,7 @@ const AnimatedValue: React.FC<{
           size="sm"
           loading={loading}
           disabled={disabled}
-          className={`ml-auto h-auto max-w-full min-w-0 shrink justify-end truncate bg-transparent px-0 py-0 text-right transition-all duration-200 ${
+          className={`ml-auto h-auto min-h-0 max-w-full min-w-0 shrink justify-end truncate bg-transparent px-0 py-0 text-right transition-all duration-200 ${
             isRefreshing
               ? "animate-pulse opacity-60"
               : "cursor-pointer hover:scale-105 hover:opacity-80"

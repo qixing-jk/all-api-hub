@@ -208,7 +208,7 @@ export function PermissionOnboardingDialog({
               variant="link"
               size="sm"
               onClick={handleOpenLanguageRequest}
-              className="h-auto justify-start px-0 py-0 text-xs font-normal sm:justify-center"
+              className="h-auto min-h-0 justify-start px-0 py-0 text-xs font-normal sm:justify-center"
             >
               {t("appearanceLanguage.onboardingLanguageRequest")}
             </Button>

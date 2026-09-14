@@ -174,7 +174,7 @@ export default function ResultsTable({
                         available ? item.resourceRef ?? undefined : undefined
                       }
                       channelName={item.channelName}
-                      className="h-auto justify-start p-0 text-sm"
+                      className="h-auto min-h-0 justify-start p-0 text-sm"
                     />
                     {!available && (
                       <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">

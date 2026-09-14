@@ -37,9 +37,11 @@ const buttonVariants = cva(
         link: "text-(--button-link-foreground) underline-offset-4 hover:text-(--button-link-hover-foreground) hover:underline focus-visible:ring-(--button-link-ring)",
       },
       size: {
-        default: "h-9 min-h-fit px-4 py-1.5 has-[>svg]:px-3",
-        sm: "h-8 min-h-fit gap-1.5 rounded-sm px-3 py-1 has-[>svg]:px-2.5",
-        lg: "h-10 min-h-fit rounded-md px-6 py-2 has-[>svg]:px-4",
+        // Intrinsic min-height does not grow a fixed-height button in older
+        // Chromium. Let content determine height and use the size as a floor.
+        default: "h-auto min-h-9 px-4 py-1.5 has-[>svg]:px-3",
+        sm: "h-auto min-h-8 gap-1.5 rounded-sm px-3 py-1 has-[>svg]:px-2.5",
+        lg: "h-auto min-h-10 rounded-md px-6 py-2 has-[>svg]:px-4",
         icon: "size-9 max-w-none shrink-0 whitespace-nowrap",
         "icon-xs":
           "size-6 max-w-none shrink-0 rounded-xs whitespace-nowrap [&_svg:not([class*='size-'])]:size-3",

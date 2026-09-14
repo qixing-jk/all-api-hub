@@ -92,7 +92,7 @@ export default function BalanceHistoryAccountSummaryTable({
           <AccountLinkButton
             accountId={row.original.id}
             accountName={row.original.label}
-            className="h-auto max-w-[260px] min-w-0 justify-start p-0 text-sm font-medium"
+            className="h-auto min-h-0 max-w-[260px] min-w-0 justify-start p-0 text-sm font-medium"
           />
         ),
       },

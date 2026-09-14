@@ -94,7 +94,7 @@ export default function BookmarkListItem({
                 type="button"
                 variant="link"
                 size="sm"
-                className="h-auto min-w-0 shrink justify-start p-0 text-left"
+                className="h-auto min-h-0 min-w-0 shrink justify-start p-0 text-left"
                 title={bookmark.name}
                 onClick={handleOpenClick}
                 analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenBookmark}
@@ -111,7 +111,7 @@ export default function BookmarkListItem({
               type="button"
               variant="link"
               size="sm"
-              className="h-auto w-full min-w-0 justify-start p-0 text-left"
+              className="h-auto min-h-0 w-full min-w-0 justify-start p-0 text-left"
               title={bookmark.url}
               onClick={handleOpenClick}
               analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenBookmark}

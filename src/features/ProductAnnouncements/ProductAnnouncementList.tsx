@@ -153,7 +153,7 @@ export function ProductAnnouncementList({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-6 shrink-0 px-2 text-xs leading-none"
+                  className="min-h-6 shrink-0 px-2 text-xs leading-none"
                   aria-label={restoreAriaLabel}
                   onClick={() => onRestore(notice.id)}
                   data-testid={getProductAnnouncementRestoreButtonTestId(
@@ -167,7 +167,7 @@ export function ProductAnnouncementList({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-6 shrink-0 px-2 text-xs leading-none"
+                  className="min-h-6 shrink-0 px-2 text-xs leading-none"
                   aria-label={dismissAriaLabel}
                   onClick={() => onDismiss(notice.id, notice.revision)}
                   data-testid={getProductAnnouncementDismissButtonTestId(

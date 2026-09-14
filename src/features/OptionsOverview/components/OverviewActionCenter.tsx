@@ -113,7 +113,7 @@ function ConfigurationSubItemButton({
       variant="outline"
       size="sm"
       aria-label={label}
-      className="group h-auto w-full min-w-0 shrink justify-between border-slate-200/70 bg-white/65 px-3 py-2 text-left whitespace-normal hover:border-blue-200 hover:bg-blue-50/40 dark:border-white/10 dark:bg-white/[0.035] dark:hover:border-blue-900/70 dark:hover:bg-blue-950/10 [&>span:last-child_svg]:h-3.5 [&>span:last-child_svg]:w-3.5 [&>span:last-child_svg]:text-slate-400 [&>span:last-child_svg]:transition-transform [&>span:last-child_svg]:group-hover:translate-x-0.5 [&>span:last-child_svg]:group-hover:text-slate-600 dark:[&>span:last-child_svg]:text-slate-500 dark:[&>span:last-child_svg]:group-hover:text-slate-300"
+      className="group h-auto min-h-0 w-full min-w-0 shrink justify-between border-slate-200/70 bg-white/65 px-3 py-2 text-left whitespace-normal hover:border-blue-200 hover:bg-blue-50/40 dark:border-white/10 dark:bg-white/[0.035] dark:hover:border-blue-900/70 dark:hover:bg-blue-950/10 [&>span:last-child_svg]:h-3.5 [&>span:last-child_svg]:w-3.5 [&>span:last-child_svg]:text-slate-400 [&>span:last-child_svg]:transition-transform [&>span:last-child_svg]:group-hover:translate-x-0.5 [&>span:last-child_svg]:group-hover:text-slate-600 dark:[&>span:last-child_svg]:text-slate-500 dark:[&>span:last-child_svg]:group-hover:text-slate-300"
       onClick={onClick}
     >
       <span className="flex min-w-0 flex-1 items-center justify-between gap-2">

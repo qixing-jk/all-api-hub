@@ -1127,6 +1127,9 @@ test("explains open-tab priority and restores field order when disabled", async 
   await expect(badge).toHaveAccessibleDescription(
     /site or configured check-in or redeem page is open/,
   )
+  // The site tab was opened after the options tab. Activate options before
+  // exercising keyboard focus and the tooltip it opens.
+  await page.bringToFront()
   await badge.focus()
   await expect(page.getByRole("tooltip")).toContainText(
     "before unrelated pinned accounts",

@@ -513,7 +513,7 @@ export function ApiCredentialProfileListItem({
                       <Button
                         type="button"
                         variant="ghost"
-                        className="group h-auto min-w-0 flex-1 justify-start gap-2 px-1.5 py-1 text-left"
+                        className="group h-auto min-h-0 min-w-0 flex-1 justify-start gap-2 px-1.5 py-1 text-left"
                         aria-label={t("apiCredentialProfiles:telemetry.title")}
                         aria-expanded={isTelemetryOpen}
                         aria-controls={telemetryContentId}
@@ -554,7 +554,7 @@ export function ApiCredentialProfileListItem({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="dark:text-dark-text-tertiary dark:hover:text-dark-text-primary h-auto shrink-0 gap-1 px-1.5 py-1 text-[11px] text-gray-500 hover:text-gray-800"
+                      className="dark:text-dark-text-tertiary dark:hover:text-dark-text-primary h-auto min-h-0 shrink-0 gap-1 px-1.5 py-1 text-[11px] text-gray-500 hover:text-gray-800"
                       onClick={handleRefreshTelemetry}
                       loading={isTelemetryRefreshing}
                       leftIcon={<RefreshCw className="h-3.5 w-3.5" />}

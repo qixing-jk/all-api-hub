@@ -83,7 +83,7 @@ export default function PopupInterruptionHintBanner({
             <Button
               type="button"
               size="sm"
-              className="h-7 px-2.5 text-xs"
+              className="min-h-7 px-2.5 text-xs"
               onClick={handleUseSidepanel}
               loading={isApplying}
               leftIcon={<PanelRightOpen className="h-3.5 w-3.5" />}
@@ -96,7 +96,7 @@ export default function PopupInterruptionHintBanner({
               type="button"
               size="sm"
               variant="ghost"
-              className="dark:text-dark-text-secondary h-7 px-2.5 text-xs text-gray-600 hover:bg-amber-100/70 dark:hover:bg-amber-900/40"
+              className="dark:text-dark-text-secondary min-h-7 px-2.5 text-xs text-gray-600 hover:bg-amber-100/70 dark:hover:bg-amber-900/40"
               onClick={dismiss}
             >
               {t("popupInterruption.actions.keepPopup")}

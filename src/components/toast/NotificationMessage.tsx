@@ -41,7 +41,7 @@ export function NotificationMessage({
         variant="link"
         size="sm"
         loading={pending}
-        className="h-auto w-fit p-0"
+        className="h-auto min-h-0 w-fit p-0"
       >
         {pending ? action.pendingLabel ?? action.label : action.label}
       </Button>

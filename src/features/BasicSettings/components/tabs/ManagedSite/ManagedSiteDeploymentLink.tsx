@@ -21,7 +21,7 @@ export function ManagedSiteDeploymentLink({
       asChild
       variant="link"
       size="sm"
-      className="h-auto max-w-full p-0 text-left whitespace-normal has-[>svg]:px-0"
+      className="h-auto min-h-0 max-w-full p-0 text-left whitespace-normal has-[>svg]:px-0"
     >
       <a
         id={SETTINGS_ANCHORS.MANAGED_SITE_DEPLOYMENT_DOCS}

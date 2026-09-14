@@ -668,7 +668,7 @@ export function CompactMultiSelect({
                       filteredSelectableOptionValues.length === 0 ||
                       allFilteredOptionsSelected
                     }
-                    className="h-7 px-2 text-xs pointer-coarse:h-11 pointer-coarse:px-3 pointer-coarse:text-sm"
+                    className="min-h-7 px-2 text-xs pointer-coarse:h-11 pointer-coarse:px-3 pointer-coarse:text-sm"
                   >
                     {t("multiSelect.selectAll")}
                   </Button>
@@ -681,7 +681,7 @@ export function CompactMultiSelect({
                     disabled={
                       disabled || filteredSelectableOptionValues.length === 0
                     }
-                    className="h-7 px-2 text-xs pointer-coarse:h-11 pointer-coarse:px-3 pointer-coarse:text-sm"
+                    className="min-h-7 px-2 text-xs pointer-coarse:h-11 pointer-coarse:px-3 pointer-coarse:text-sm"
                   >
                     {t("multiSelect.invert")}
                   </Button>
@@ -692,7 +692,7 @@ export function CompactMultiSelect({
                     onClick={deselectAllFilteredOptions}
                     aria-label={t("multiSelect.deselectMatches")}
                     disabled={disabled || !hasFilteredSelection}
-                    className="h-7 px-2 text-xs pointer-coarse:h-11 pointer-coarse:px-3 pointer-coarse:text-sm"
+                    className="min-h-7 px-2 text-xs pointer-coarse:h-11 pointer-coarse:px-3 pointer-coarse:text-sm"
                   >
                     {t("multiSelect.deselect")}
                   </Button>

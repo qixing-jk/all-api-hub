@@ -122,7 +122,7 @@ export default function InfoPanel({
                   onClick={handleOpenLdohSiteList}
                   variant="link"
                   size="sm"
-                  className="h-auto justify-start p-0 text-left"
+                  className="h-auto min-h-0 justify-start p-0 text-left"
                   leftIcon={
                     <span aria-hidden="true">
                       <LdohIcon size="sm" />
@@ -138,7 +138,7 @@ export default function InfoPanel({
               <div className={`${borderColor} mt-2 border-t pt-2`}>
                 <ManualAddGuideButton
                   anchor={manualAddGuideAnchor}
-                  className="h-auto justify-start p-0 text-left"
+                  className="h-auto min-h-0 justify-start p-0 text-left"
                 />
               </div>
             )}

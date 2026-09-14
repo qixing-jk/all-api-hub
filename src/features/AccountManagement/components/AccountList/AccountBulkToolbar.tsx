@@ -28,7 +28,7 @@ interface AccountBulkToolbarProps {
   onExit: () => void
 }
 
-const controlClass = "h-7 shrink-0 px-2 text-xs shadow-xs"
+const controlClass = "min-h-7 shrink-0 px-2 text-xs shadow-xs"
 
 /** Keeps selection scope, inspection, and account mutations visually separate. */
 export function AccountBulkToolbar({
