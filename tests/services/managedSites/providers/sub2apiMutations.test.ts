@@ -38,6 +38,12 @@ describe("Sub2API provider mutation outcomes", () => {
       outcome: "rejected",
     },
     {
+      failure: "rejection without code",
+      response: () =>
+        HttpResponse.json({ message: "forbidden" }, { status: 400 }),
+      outcome: "rejected",
+    },
+    {
       failure: "lost response",
       response: () => HttpResponse.error(),
       outcome: "uncertain",
