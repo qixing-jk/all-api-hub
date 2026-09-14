@@ -20,6 +20,25 @@ const baseSelection: KiloCodeV7ProviderSelection = {
 }
 
 describe("prepareKiloCodeV7Catalog", () => {
+  it("prepares model choices before a native credential is resolved", () => {
+    const catalog = prepareKiloCodeV7Catalog([
+      {
+        accountId: "account",
+        siteName: "Native account",
+        baseUrl: "https://api.example.invalid",
+        tokenId: "workspace:key",
+        tokenName: "Native key",
+        tokenKey: "",
+        selectionId: "scoped-native-key",
+        discoveredModelIds: ["model-a"],
+      },
+    ])
+    expect(catalog.providers[0]).toMatchObject({
+      selectionId: "scoped-native-key",
+      modelIds: ["model-a"],
+      tokenKey: "",
+    })
+  })
   it("prepares a readable provider with a normalized multi-model catalog", () => {
     const result = prepareKiloCodeV7Catalog([baseSelection])
 
@@ -224,7 +243,6 @@ describe("prepareKiloCodeV7Catalog", () => {
   })
 
   it.each([
-    ["blank runtime keys", { tokenKey: "  " }, "Runtime key cannot be blank"],
     [
       "invalid base URLs",
       { baseUrl: "not-a-url" },

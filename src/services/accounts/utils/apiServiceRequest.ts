@@ -1,6 +1,7 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import {
   ACCOUNT_RUNTIME_KEY_STATUSES,
+  buildAccountKeyResourceRuntimeKeyFromFacts,
   buildAccountRuntimeKeyAccount,
   buildDisplayAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
@@ -37,6 +38,7 @@ import {
 import type { ServiceCredentialCapability } from "~/services/apiAdapters/contracts/serviceCredential"
 import type { SiteTypeCapabilities } from "~/services/apiAdapters/contracts/siteTypeCapabilities"
 import type { TokenProvisioningCapability } from "~/services/apiAdapters/contracts/tokenProvisioning"
+import { collectAccountKeyResourceInventory } from "~/services/apiAdapters/nativeResources/accountKeyResourceInventory"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   ASSOCIATED_PROFILE_SECRET_RESOLUTION_STATUSES,
@@ -548,9 +550,25 @@ export async function fetchDisplayAccountTokens(
 export async function fetchDisplayAccountRuntimeKeys(
   account: DisplayAccountApiSnapshot,
 ): Promise<AccountRuntimeKey[]> {
-  const { keyManagement, serviceCredential, request } =
+  const { capabilities, keyManagement, serviceCredential, request } =
     createDisplayAccountApiContext(account)
   const runtimeKeyAccount = buildAccountRuntimeKeyAccount(account)
+
+  const resources =
+    capabilities.account?.keyResourceManagement ??
+    capabilities.account?.keyResources
+  if (resources) {
+    const session = await resources.open({
+      account: runtimeKeyAccount,
+      request,
+    })
+    const scope = await session.resolveDefaultScope()
+    const collection = await session.openCollection(scope.scopeKey)
+    const facts = await collectAccountKeyResourceInventory(collection)
+    return facts
+      .filter((item) => item.runtimeKey)
+      .map((item) => buildAccountKeyResourceRuntimeKeyFromFacts(account, item))
+  }
 
   if (keyManagement || !serviceCredential) {
     const tokens = await fetchDisplayAccountTokens(account)
@@ -741,8 +759,13 @@ export async function resolveDisplayAccountRuntimeKeySecret<
   }
 
   if (isAccountKeyResourceRuntimeKey(runtimeKey)) {
-    const { accountKeyResources, request } =
-      createDisplayAccountApiContext(account)
+    const {
+      capabilities,
+      accountKeyResources: managementResources,
+      request,
+    } = createDisplayAccountApiContext(account)
+    const accountKeyResources =
+      managementResources ?? capabilities.account?.keyResources
     const source =
       options.secretSource ?? ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Auto
     const availability = getInventorySecretAvailability(
@@ -772,6 +795,14 @@ export async function resolveDisplayAccountRuntimeKeySecret<
         secret,
         status: ACCOUNT_RUNTIME_KEY_STATUSES.Active,
       })
+
+    if (
+      source === ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Auto &&
+      usesAssociatedProfileByDefault(availability) &&
+      hasUsableApiTokenKey(runtimeKey.secret)
+    ) {
+      return projectResolvedRuntimeKey(runtimeKey.secret)
+    }
 
     if (
       source === ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.AssociatedProfile ||

@@ -70,6 +70,7 @@ describe("VoAPI v2 account key resources", () => {
     mockDeleteVoApiV2Token.mockReset()
     mockFetchAllVoApiV2RawKeys.mockReset()
     mockFetchVoApiV2KeyGroupDescriptors.mockReset()
+    mockFetchVoApiV2KeyGroupDescriptors.mockResolvedValue([])
     mockRenameVoApiV2Key.mockReset()
     mockResolveVoApiV2KeySecretById.mockReset()
   })

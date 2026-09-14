@@ -82,7 +82,10 @@ const NO_ACCOUNT_KEY_PRODUCT_CAPABILITIES: AccountKeyProductCapabilities = {
 const supportsRecoverableRuntimeKeySecrets = (
   accountCapabilities: ReturnType<typeof getSiteTypeCapabilities>["account"],
 ): boolean => {
-  const keyManagement = accountCapabilities?.keyManagement
+  const keyManagement =
+    accountCapabilities?.keyResourceManagement ??
+    accountCapabilities?.keyResources ??
+    accountCapabilities?.keyManagement
 
   if (keyManagement) {
     return (
@@ -184,7 +187,11 @@ export const getAccountKeyProductCapabilities = (
       delete: hasKeyResources,
     },
     runtimeKeys: {
-      list: hasKeyManagement || hasServiceCredential,
+      list:
+        hasKeyManagement ||
+        hasKeyResources ||
+        Boolean(accountCapabilities?.keyResources) ||
+        hasServiceCredential,
       resolveSecret: canResolveRuntimeSecret,
     },
     apiTokens: {

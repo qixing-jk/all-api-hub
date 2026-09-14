@@ -26,7 +26,7 @@ export interface KiloCodeRuntimeKeyExportInput {
   accountId: string
   siteName: string
   baseUrl: string
-  tokenId: number
+  tokenId: number | string
   tokenName: string
   tokenKey: string
 }
@@ -190,8 +190,6 @@ export function buildUniqueKiloCodeProviderNames<
 function normalizeSelection(
   selection: KiloCodeV7ProviderSelection,
 ): NormalizedKiloCodeV7Selection {
-  if (!selection.tokenKey.trim()) throw new Error("Runtime key cannot be blank")
-
   const preparedProvider = prepareProviderCatalogExport([
     {
       selectionId: selection.selectionId,

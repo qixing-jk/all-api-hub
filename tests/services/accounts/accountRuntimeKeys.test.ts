@@ -23,6 +23,7 @@ import {
   getAccountRuntimeKeyLocatorAccountId,
   hasUsableAccountRuntimeKeySecret,
   isAccountKeyResourceRuntimeKey,
+  isAccountRuntimeKeyLocatorEqual,
   isAccountTokenRuntimeKey,
   isActiveAccountRuntimeKey,
   isSelectableAccountRuntimeKey,
@@ -75,15 +76,64 @@ const token = {
 } satisfies AccountToken
 
 describe("accountRuntimeKeys", () => {
-  it("keeps OpenRouter native resources out of the legacy runtime-key boundary", () => {
+  it("lists OpenRouter runtime resources without claiming provider secret recovery", () => {
     const openRouterAccount = {
       ...account,
       siteType: SITE_TYPES.OPENROUTER,
     }
 
-    expect(canListAccountRuntimeKeys(openRouterAccount)).toBe(false)
+    expect(canListAccountRuntimeKeys(openRouterAccount)).toBe(true)
     expect(canResolveAccountRuntimeKeySecret(openRouterAccount)).toBe(false)
   })
+
+  it.each([
+    SITE_TYPES.NEW_API,
+    SITE_TYPES.SUB2API,
+    SITE_TYPES.VO_API_V2,
+    SITE_TYPES.AIHUBMIX,
+  ])(
+    "preserves old associations after %s inventory becomes native",
+    (siteType) => {
+      expect(
+        isAccountRuntimeKeyLocatorEqual(
+          {
+            source: "account_token",
+            accountId: account.id,
+            siteType,
+            tokenId: 42,
+          },
+          {
+            source: "account_key_resource",
+            ref: {
+              accountId: account.id,
+              siteType,
+              scopeKey: "account",
+              resourceId: "42",
+            },
+          },
+        ),
+      ).toBe(true)
+      expect(
+        isAccountRuntimeKeyLocatorEqual(
+          {
+            source: "account_token",
+            accountId: account.id,
+            siteType,
+            tokenId: 42,
+          },
+          {
+            source: "account_key_resource",
+            ref: {
+              accountId: account.id,
+              siteType,
+              scopeKey: "other",
+              resourceId: "42",
+            },
+          },
+        ),
+      ).toBe(false)
+    },
+  )
 
   it("builds stable account-token runtime keys", () => {
     const runtimeKey = buildAccountTokenRuntimeKey(account, token)

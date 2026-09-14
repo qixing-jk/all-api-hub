@@ -1,39 +1,23 @@
-import type { ApiToken } from "~/types"
+import {
+  getAccountRuntimeKeyExportId,
+  type AccountRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
 
 /**
  * Normalizes the creation timestamp used when choosing the newest token after refresh.
  */
-function resolveTokenCreatedAt(token: ApiToken): number | null {
-  const candidate = token as ApiToken & {
-    createdAt?: number | string
-    created_at?: number | string
-  }
-  const rawCreatedAt =
-    candidate.createdAt ?? candidate.created_at ?? token.created_time
-
-  if (typeof rawCreatedAt === "number" && Number.isFinite(rawCreatedAt)) {
-    return rawCreatedAt
-  }
-
-  if (typeof rawCreatedAt === "string") {
-    const numeric = Number(rawCreatedAt)
-    if (Number.isFinite(numeric)) {
-      return numeric
-    }
-
-    const parsed = Date.parse(rawCreatedAt)
-    if (Number.isFinite(parsed)) {
-      return parsed
-    }
-  }
-
-  return null
+function resolveTokenCreatedAt(key: AccountRuntimeKey): number | null {
+  return typeof key.createdAt === "number" && Number.isFinite(key.createdAt)
+    ? key.createdAt
+    : null
 }
 
 /**
  * Selects the newest token deterministically even when upstream fetch order is unstable.
  */
-export function pickNewestKiloCodeToken(tokens: ApiToken[]): ApiToken {
+export function pickNewestKiloCodeRuntimeKey(
+  tokens: AccountRuntimeKey[],
+): AccountRuntimeKey {
   if (tokens.length === 0) {
     throw new Error("Expected at least one Kilo Code token to select")
   }
@@ -60,6 +44,12 @@ export function pickNewestKiloCodeToken(tokens: ApiToken[]): ApiToken {
       return selectedToken
     }
 
-    return candidateToken.id > selectedToken.id ? candidateToken : selectedToken
+    return getAccountRuntimeKeyExportId(candidateToken).localeCompare(
+      getAccountRuntimeKeyExportId(selectedToken),
+      "en",
+      { numeric: true },
+    ) > 0
+      ? candidateToken
+      : selectedToken
   })
 }

@@ -119,13 +119,24 @@ const createRef = (config: VoApiV2AccountKeyResourceConfig, keyId: number) => ({
 })
 
 const toFacts = (
-  key: VoApiV2Key,
+  key: VoApiV2Key & { runtimeGroupNames?: readonly string[] },
   ref: AccountKeyResourceFacts["ref"],
 ): AccountKeyResourceFacts => ({
   ref,
   displayName: key.name?.trim() || `Key ${key.id}`,
   maskedLabel: key.tokenMasked?.trim() || "••••",
   status: keyStatus(key),
+  runtimeKey: {
+    modelAccess: {
+      groups: key.groups?.length
+        ? key.runtimeGroupNames ?? key.groups.map(String)
+        : ["default"],
+      allowedModelIds: null,
+      suggestedModelIds: [],
+    },
+    legacyTokenId: key.id,
+    notes: key.note,
+  },
   fields: [
     {
       fieldId: "groups",
@@ -401,9 +412,20 @@ export const voApiV2AccountKeyResources = defineAccountKeyResourceCapability({
     _query,
     options,
   ): Promise<AccountKeyResourcePage<VoApiV2Key>> => {
-    const items = await fetchAllVoApiV2RawKeys(
-      requestWithOptions(config, options),
+    const request = requestWithOptions(config, options)
+    const [keys, groups] = await Promise.all([
+      fetchAllVoApiV2RawKeys(request),
+      fetchVoApiV2KeyGroupDescriptors(request).catch(() => []),
+    ])
+    const names = new Map(
+      (groups ?? []).map((group) => [String(group.id), group.displayName]),
     )
+    const items = keys.map((key) => ({
+      ...key,
+      runtimeGroupNames: (key.groups ?? []).map(
+        (id) => names.get(String(id)) ?? String(id),
+      ),
+    }))
     return { items, total: items.length }
   },
   get: async (config, _scope, keyId, options) => {

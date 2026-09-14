@@ -22,17 +22,18 @@ import { buildDefaultTokenCreatePrefill } from "~/features/TokenProvisioning/com
 import { useAccountData } from "~/hooks/useAccountData"
 import { useSafeExportAction } from "~/hooks/useSafeExportAction"
 import toast from "~/lib/notify"
+import {
+  getAccountRuntimeKeyExportId,
+  type AccountRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
 import { ensureAccountApiToken } from "~/services/accounts/ensureAccountApiToken"
 import {
   resolveDefaultTokenQuickCreateResolution,
   TOKEN_QUICK_CREATE_RESOLUTION_KINDS,
 } from "~/services/accounts/tokenQuickCreateResolution"
 import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
-import {
-  createDisplayAccountApiContext,
-  requireDisplayAccountKeyManagement,
-} from "~/services/accounts/utils/apiServiceRequest"
-import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
+import { fetchDisplayAccountRuntimeKeys } from "~/services/accounts/utils/apiServiceRequest"
+import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
 import {
   getKiloCodeApiConfigProfileNames,
   KILO_CODE_EXPORT_FILENAMES,
@@ -51,7 +52,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
+import type { DisplaySiteData, SiteAccount } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 
 import {
@@ -62,7 +63,7 @@ import {
 import { KiloCodeDefaultModelSelect } from "./KiloCodeDefaultModelSelect"
 import { KiloCodeExportGuidance } from "./KiloCodeExportGuidance"
 import { KILO_CODE_EXPORT_TEST_IDS } from "./kiloCodeExportTestIds"
-import { pickNewestKiloCodeToken } from "./kiloCodeTokenSelection"
+import { pickNewestKiloCodeRuntimeKey } from "./kiloCodeKeySelection"
 import {
   KILO_CODE_ACCOUNT_MODEL_STATUSES,
   useKiloCodeAccountModelDiscovery,
@@ -123,7 +124,7 @@ type TokenLoadStatus =
 
 interface TokenInventoryState {
   status: TokenLoadStatus
-  tokens: ApiToken[]
+  tokens: AccountRuntimeKey[]
   errorMessage?: string
 }
 
@@ -135,10 +136,10 @@ type DefaultTokenCreateContext = {
 /**
  * Build a safe, human-readable token label for selection UI (never reveals the key).
  */
-function getTokenLabel(token: ApiToken, fallbackPrefix: string) {
-  const trimmedName = (token.name ?? "").trim()
+function getTokenLabel(token: AccountRuntimeKey, fallbackPrefix: string) {
+  const trimmedName = (token.label ?? "").trim()
   if (trimmedName) return trimmedName
-  return `${fallbackPrefix} #${token.id}`
+  return `${fallbackPrefix} #${getAccountRuntimeKeyExportId(token)}`
 }
 
 /**
@@ -157,7 +158,7 @@ function getSiteDisplayName(site: DisplaySiteData) {
 /**
  * Unique key for state maps tracking (siteId, tokenId) combinations in this dialog.
  */
-function getTokenSelectionKey(siteId: string, tokenId: number) {
+function getTokenSelectionKey(siteId: string, tokenId: string) {
   return `${siteId}:${tokenId}`
 }
 
@@ -170,16 +171,31 @@ function haveMatchingSecretSourceIdentities(
 
   for (const [selectionId, previousSource] of previous) {
     const currentSource = current.get(selectionId)
-    if (
-      !currentSource ||
-      currentSource.site !== previousSource.site ||
-      currentSource.token !== previousSource.token
-    ) {
+    if (!currentSource || currentSource.cacheKey !== previousSource.cacheKey) {
       return false
     }
   }
 
   return true
+}
+
+/** Keep pending exports tied to the account and key objects selected by the user. */
+function haveMatchingSelectionSnapshots(
+  previous: readonly KiloCodeAccountExportSelection[],
+  current: readonly KiloCodeAccountExportSelection[],
+) {
+  return (
+    previous.length === current.length &&
+    previous.every((item, index) => {
+      const next = current[index]
+      return (
+        item.selectionId === next.selectionId &&
+        item.sourceSnapshots.every(
+          (snapshot, offset) => snapshot === next.sourceSnapshots[offset],
+        )
+      )
+    })
+  )
 }
 
 /**
@@ -300,11 +316,7 @@ export function KiloCodeExportDialog({
       }))
 
       try {
-        const { keyManagement, request } = createDisplayAccountApiContext(site)
-        const tokens = await requireDisplayAccountKeyManagement(
-          site,
-          keyManagement,
-        ).fetchTokens(request)
+        const tokens = await fetchDisplayAccountRuntimeKeys(site)
         if (!Array.isArray(tokens)) {
           setTokenInventories((prev) => ({
             ...prev,
@@ -330,13 +342,16 @@ export function KiloCodeExportDialog({
         // and keep previous selections if they still exist after refresh.
         setSelectedTokenIdsBySite((prev) => {
           if (options?.preferNewest && tokens.length > 0) {
-            const newestToken = pickNewestKiloCodeToken(tokens)
-            return { ...prev, [siteId]: [`${newestToken.id}`] }
+            const newestToken = pickNewestKiloCodeRuntimeKey(tokens)
+            return {
+              ...prev,
+              [siteId]: [getAccountRuntimeKeyExportId(newestToken)],
+            }
           }
 
           const existingSelections = prev[siteId] ?? []
           const remainingSelections = existingSelections.filter((id) =>
-            tokens.some((token) => `${token.id}` === id),
+            tokens.some((token) => getAccountRuntimeKeyExportId(token) === id),
           )
           if (remainingSelections.length > 0) {
             return { ...prev, [siteId]: remainingSelections }
@@ -348,7 +363,10 @@ export function KiloCodeExportDialog({
             return rest
           }
 
-          return { ...prev, [siteId]: [`${tokens[0].id}`] }
+          return {
+            ...prev,
+            [siteId]: [getAccountRuntimeKeyExportId(tokens[0])],
+          }
         })
       } catch {
         setTokenInventories((prev) => ({
@@ -520,26 +538,32 @@ export function KiloCodeExportDialog({
       const uniqueTokenIds = Array.from(new Set(tokenIds))
       for (const tokenId of uniqueTokenIds) {
         const token = inventory.tokens.find(
-          (candidate) => `${candidate.id}` === tokenId,
+          (candidate) => getAccountRuntimeKeyExportId(candidate) === tokenId,
         )
         if (!token) continue
 
-        const selectionId = getTokenSelectionKey(siteId, token.id)
+        const selectionId = getTokenSelectionKey(
+          siteId,
+          getAccountRuntimeKeyExportId(token),
+        )
         const tokenName = getTokenLabel(token, t("common:labels.token"))
         const siteName = getSiteDisplayName(site)
+        const credential = createAccountRuntimeKeyExportSource(site, token, {
+          preferCurrentSecret: true,
+        })
 
         selections.push({
           selectionId,
-          site,
-          token,
+          credential,
+          sourceSnapshots: [site, token],
           providerName: `${siteName} - ${tokenName}`,
           runtimeKey: {
             accountId: siteId,
             siteName,
-            baseUrl: site.baseUrl,
-            tokenId: token.id,
+            baseUrl: credential.baseUrl,
+            tokenId: getAccountRuntimeKeyExportId(token),
             tokenName,
-            tokenKey: token.key,
+            tokenKey: token.secret,
           },
         })
       }
@@ -592,7 +616,7 @@ export function KiloCodeExportDialog({
       new Map(
         accountExportSelections.map((selection) => [
           selection.selectionId,
-          { site: selection.site, token: selection.token },
+          selection.credential,
         ]),
       ),
     [accountExportSelections],
@@ -600,6 +624,7 @@ export function KiloCodeExportDialog({
   const previousSecretSourcesBySelectionIdRef = useRef(
     secretSourcesBySelectionId,
   )
+  const previousSelectionSnapshotsRef = useRef(accountExportSelections)
 
   const profileNames = useMemo(
     () => getKiloCodeApiConfigProfileNames({ selections: legacySelections }),
@@ -684,13 +709,26 @@ export function KiloCodeExportDialog({
 
   useEffect(() => {
     const previous = previousSecretSourcesBySelectionIdRef.current
+    const previousSnapshots = previousSelectionSnapshotsRef.current
     previousSecretSourcesBySelectionIdRef.current = secretSourcesBySelectionId
+    previousSelectionSnapshotsRef.current = accountExportSelections
     if (
-      !haveMatchingSecretSourceIdentities(previous, secretSourcesBySelectionId)
+      !haveMatchingSecretSourceIdentities(
+        previous,
+        secretSourcesBySelectionId,
+      ) ||
+      !haveMatchingSelectionSnapshots(
+        previousSnapshots,
+        accountExportSelections,
+      )
     ) {
       invalidateExportAction()
     }
-  }, [invalidateExportAction, secretSourcesBySelectionId])
+  }, [
+    invalidateExportAction,
+    secretSourcesBySelectionId,
+    accountExportSelections,
+  ])
   const missingModelIdCount = isKiloV7Export
     ? v7Selections.filter(
         (selection) =>
@@ -792,7 +830,6 @@ export function KiloCodeExportDialog({
         selections: v7Selections,
         secretSourcesBySelectionId,
         defaultModel: v7DefaultModel,
-        resolveToken: resolveExportTokenForSecret,
       })
     }
 
@@ -801,7 +838,6 @@ export function KiloCodeExportDialog({
       selections: legacySelections,
       secretSourcesBySelectionId,
       currentLegacyProfileName: effectiveCurrentApiConfigName,
-      resolveToken: resolveExportTokenForSecret,
     })
   }, [
     effectiveCurrentApiConfigName,
@@ -994,7 +1030,7 @@ export function KiloCodeExportDialog({
     const selectedTokenIds = selectedTokenIdsBySite[siteId] ?? []
     const tokenOptions: CompactMultiSelectOption[] = inventory.tokens.map(
       (token) => ({
-        value: `${token.id}`,
+        value: getAccountRuntimeKeyExportId(token),
         label: getTokenLabel(token, t("common:labels.token")),
       }),
     )
@@ -1133,9 +1169,16 @@ export function KiloCodeExportDialog({
               >
                 <div className="space-y-2">
                   {inventory.tokens
-                    .filter((token) => selectedTokenIds.includes(`${token.id}`))
+                    .filter((token) =>
+                      selectedTokenIds.includes(
+                        getAccountRuntimeKeyExportId(token),
+                      ),
+                    )
                     .map((token) => {
-                      const selectionId = getTokenSelectionKey(siteId, token.id)
+                      const selectionId = getTokenSelectionKey(
+                        siteId,
+                        getAccountRuntimeKeyExportId(token),
+                      )
                       const selection = accountExportSelections.find(
                         (candidate) => candidate.selectionId === selectionId,
                       )

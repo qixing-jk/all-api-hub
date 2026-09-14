@@ -2,17 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { KiloCodeAccountExportSelection } from "~/components/kiloCodeAccountExport"
 import { useKiloCodeAccountModelDiscovery } from "~/components/useKiloCodeAccountModelDiscovery"
-import { SITE_TYPES } from "~/constants/siteType"
-import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
-const resolveExportTokenForSecretMock = vi.fn()
 const fetchOpenAICompatibleModelIdsMock = vi.fn()
-
-vi.mock("~/services/accounts/utils/exportTokenSecret", () => ({
-  resolveExportTokenForSecret: (...args: unknown[]) =>
-    resolveExportTokenForSecretMock(...args),
-}))
 
 vi.mock("~/services/aiApi/openaiCompatible", () => ({
   fetchOpenAICompatibleModelIds: (...args: unknown[]) =>
@@ -28,32 +20,25 @@ function createSelection({
   tokenKey: string
   accountAccessToken: string
 }): KiloCodeAccountExportSelection {
-  const site = {
-    id: "account-a",
-    name: "Example",
-    siteType: SITE_TYPES.UNKNOWN,
-    baseUrl,
-    authType: AuthTypeEnum.AccessToken,
-    userId: "user-a",
-    token: accountAccessToken,
-  } as DisplaySiteData
-  const token = {
-    id: 7,
-    name: "Default",
-    key: tokenKey,
-  } as ApiToken
-
   return {
     selectionId: "account-a:7",
-    site,
-    token,
+    sourceSnapshots: [],
+    credential: {
+      id: "account-a:7",
+      providerId: "account-a",
+      providerName: "Example",
+      credentialName: "Default",
+      baseUrl,
+      cacheKey: JSON.stringify([baseUrl, tokenKey, accountAccessToken]),
+      resolveApiKey: async () => tokenKey,
+    },
     providerName: "Example - Default",
     runtimeKey: {
-      accountId: site.id,
-      siteName: site.name,
+      accountId: "account-a",
+      siteName: "Example",
       baseUrl,
-      tokenId: token.id,
-      tokenName: token.name,
+      tokenId: 7,
+      tokenName: "Default",
       tokenKey,
     },
   }
@@ -61,10 +46,6 @@ function createSelection({
 
 describe("useKiloCodeAccountModelDiscovery", () => {
   beforeEach(() => {
-    resolveExportTokenForSecretMock.mockReset()
-    resolveExportTokenForSecretMock.mockImplementation(
-      async (_site: DisplaySiteData, token: ApiToken) => token,
-    )
     fetchOpenAICompatibleModelIdsMock.mockReset()
   })
 

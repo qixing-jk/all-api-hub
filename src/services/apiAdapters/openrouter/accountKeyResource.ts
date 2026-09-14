@@ -1,5 +1,6 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+import { UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS } from "~/services/accounts/runtimeKeyModelAccess"
 import { OPENROUTER_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
 import {
   defineAccountKeyResourceCapability,
@@ -479,6 +480,10 @@ const toFacts = (
     displayName: key.name,
     maskedLabel: key.label,
     status,
+    runtimeKey: {
+      modelAccess: UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS,
+      createdAt: Date.parse(key.created_at),
+    },
     fields: [
       { fieldId: field.Name, kind: "text", value: key.name },
       {

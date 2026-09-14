@@ -126,6 +126,20 @@ describe("apiCredentialProfileLinks", () => {
         apiKey: "sk-resolvable-secret",
       }),
     })
+    await expect(
+      apiCredentialProfileLinks.resolve({
+        source: "account_key_resource",
+        ref: {
+          accountId: locator.accountId,
+          siteType: locator.siteType,
+          scopeKey: "account",
+          resourceId: "42",
+        },
+      }),
+    ).resolves.toMatchObject({
+      status: "resolved",
+      profile: { id: captured.profile.id, apiKey: "sk-resolvable-secret" },
+    })
   })
 
   it("allows one credential profile to resolve from multiple remote resources", async () => {

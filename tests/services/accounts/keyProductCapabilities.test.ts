@@ -197,8 +197,11 @@ describe("account key product capabilities", () => {
     expect(canRotateAccountServiceCredential(account as any)).toBe(true)
   })
 
-  it("keeps account-native resources separate from recoverable runtime keys", () => {
-    const keyResources = { open: vi.fn() }
+  it("lists native runtime keys while retaining creation-only secret semantics", () => {
+    const keyResources = {
+      open: vi.fn(),
+      inventorySecretAvailability: "create-response-only",
+    }
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.OPENROUTER,
       account: {
@@ -211,7 +214,7 @@ describe("account key product capabilities", () => {
 
     expect(getAccountKeyProductCapabilities(account as any)).toMatchObject({
       resourceKeys: { list: true, create: true, update: true, delete: true },
-      runtimeKeys: { list: false, resolveSecret: false },
+      runtimeKeys: { list: true, resolveSecret: false },
       apiTokens: { create: false, update: false, delete: false },
       tokenMetadata: { fetchAvailableModels: false, fetchUserGroups: false },
       serviceCredential: { fetch: false, rotate: false },

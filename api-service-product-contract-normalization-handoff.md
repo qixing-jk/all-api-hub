@@ -101,19 +101,30 @@ inventory and ordinary native key editing remain follow-up work below.
 
 ## Remaining migration
 
+The runtime inventory now reads native key resources when registered. Providers
+project machine model policy independently of display fields; full secrets stay
+out of native facts and resolve only for runtime use. Historical numeric-token
+locators compare equal to the corresponding account-scoped native references,
+preserving existing profile associations without rewriting stored data.
+
+Kilo Code now uses runtime inventory and deferred credential export sources.
+Its existing export IDs, newest-key selection, model choices, and cancellation
+when source snapshots change are preserved. Catalog preview can run before a
+secret is available; final export still validates resolved credentials. Kilo's
+creation path still uses legacy provisioning and must migrate with other create
+consumers.
+
 ### 1. Remove inventory DTOs from remaining read-only consumers
 
-Migrate Kilo Code's account inventory/selection workflow and remaining
-verification/model-selection consumers. They should request only the identity,
+Finish migrating remaining verification/model-selection creation workflows.
+Read-only Kilo, API verification, and CLI verification now request only identity,
 runtime secret, model availability, or permission information they actually
 need. Credential-only consumers can reuse `CredentialExportSource`; resource
 management should retain its own native references and capabilities.
 
 Audit these entrypoints:
 
-- `src/components/KiloCodeExportDialog.tsx`
-- `src/components/kiloCodeAccountExport.ts`
-- `src/components/kiloCodeTokenSelection.ts`
+- `src/components/KiloCodeExportDialog.tsx` (creation only)
 - `src/features/ModelList/components/ModelKeyDialog/`
 - `src/features/ModelList/batchVerification.ts`
 - `src/features/KeyManagement/utils.ts`

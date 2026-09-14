@@ -1,6 +1,5 @@
 import {
   buildAccountTokenRuntimeKeyId,
-  isAccountTokenRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import {
@@ -67,19 +66,21 @@ export function createAccountRuntimeKeyExportSource(
   runtimeKey: AccountRuntimeKey,
   { preferCurrentSecret = false }: { preferCurrentSecret?: boolean } = {},
 ): CredentialExportSource {
+  const baseUrl =
+    runtimeKey.baseUrl === runtimeKey.account.baseUrl
+      ? account.baseUrl
+      : runtimeKey.baseUrl
   return {
     id: runtimeKey.id,
     providerId: account.id,
     providerName: account.name,
     credentialName: runtimeKey.label,
-    baseUrl: runtimeKey.baseUrl,
-    notes: isAccountTokenRuntimeKey(runtimeKey)
-      ? runtimeKey.token.note
-      : undefined,
+    baseUrl,
+    notes: runtimeKey.notes,
     cacheKey: getCredentialCacheKey(
       account,
       runtimeKey.id,
-      runtimeKey.baseUrl,
+      baseUrl,
       runtimeKey.secret,
       preferCurrentSecret,
     ),

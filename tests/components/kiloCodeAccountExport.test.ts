@@ -8,7 +8,6 @@ import {
   KILO_CODE_EXPORT_TARGETS,
   type KiloCodeV7ProviderSelection,
 } from "~/services/integrations/kiloCodeExport"
-import type { ApiToken, DisplaySiteData } from "~/types"
 
 const buildKiloCodeExportOutputMock = vi.hoisted(() => vi.fn())
 
@@ -17,8 +16,14 @@ vi.mock("~/services/integrations/kiloCodeExportPolicy", () => ({
     buildKiloCodeExportOutputMock(...args),
 }))
 
-const site = { id: "account-a" } as DisplaySiteData
-const token = { id: 7, key: "masked-key" } as ApiToken
+const source = {
+  id: "account-a:7",
+  providerId: "account-a",
+  providerName: "Account",
+  credentialName: "Key",
+  baseUrl: "https://api.example.invalid",
+  cacheKey: "cache",
+}
 
 describe("resolveKiloCodeAccountExportOutput", () => {
   beforeEach(() => {
@@ -40,26 +45,22 @@ describe("resolveKiloCodeAccountExportOutput", () => {
       discoveredModelIds,
       manualModelId: " manual/already-canonical ",
     }
-    const resolveToken = vi.fn().mockResolvedValue({
-      ...token,
-      key: "resolved-secret",
-    })
+    const resolveApiKey = vi.fn().mockResolvedValue("resolved-secret")
 
     await resolveKiloCodeAccountExportOutput({
       target: KILO_CODE_EXPORT_TARGETS.KiloV7,
       selections: [selection],
       secretSourcesBySelectionId: new Map([
-        [selection.selectionId, { site, token }],
+        [selection.selectionId, { ...source, resolveApiKey }],
       ]),
       defaultModel: {
         selectionId: selection.selectionId,
         modelId: "model/already-canonical",
       },
-      resolveToken,
     })
 
-    expect(resolveToken).toHaveBeenCalledTimes(1)
-    expect(resolveToken).toHaveBeenCalledWith(site, token)
+    expect(resolveApiKey).toHaveBeenCalledTimes(1)
+    expect(resolveApiKey).toHaveBeenCalledWith()
     expect(buildKiloCodeExportOutputMock).toHaveBeenCalledWith({
       target: KILO_CODE_EXPORT_TARGETS.KiloV7,
       selections: [{ ...selection, tokenKey: "resolved-secret" }],
@@ -85,22 +86,18 @@ describe("resolveKiloCodeAccountExportOutput", () => {
       selectionId: "opaque-selection-id",
       legacyModelId: " legacy/already-canonical ",
     }
-    const resolveToken = vi.fn().mockResolvedValue({
-      ...token,
-      key: "resolved-secret",
-    })
+    const resolveApiKey = vi.fn().mockResolvedValue("resolved-secret")
 
     await resolveKiloCodeAccountExportOutput({
       target: KILO_CODE_EXPORT_TARGETS.Legacy,
       selections: [selection],
       secretSourcesBySelectionId: new Map([
-        [selection.selectionId, { site, token }],
+        [selection.selectionId, { ...source, resolveApiKey }],
       ]),
       currentLegacyProfileName: "Prepared site - Prepared token",
-      resolveToken,
     })
 
-    expect(resolveToken).toHaveBeenCalledTimes(1)
+    expect(resolveApiKey).toHaveBeenCalledTimes(1)
     expect(buildKiloCodeExportOutputMock).toHaveBeenCalledWith({
       target: KILO_CODE_EXPORT_TARGETS.Legacy,
       selections: [{ ...selection, tokenKey: "resolved-secret" }],
@@ -120,7 +117,6 @@ describe("resolveKiloCodeAccountExportOutput", () => {
       providerName: "Example - Default",
       discoveredModelIds: ["example-model"],
     }
-    const resolveToken = vi.fn()
 
     await expect(
       resolveKiloCodeAccountExportOutput({
@@ -131,10 +127,8 @@ describe("resolveKiloCodeAccountExportOutput", () => {
           selectionId: selection.selectionId,
           modelId: "example-model",
         },
-        resolveToken,
       }),
     ).rejects.toThrow("Kilo Code export selection source is unavailable")
-    expect(resolveToken).not.toHaveBeenCalled()
     expect(buildKiloCodeExportOutputMock).not.toHaveBeenCalled()
   })
 })

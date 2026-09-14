@@ -1,5 +1,6 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+import type { AccountRuntimeKeyModelAccess } from "~/services/accounts/runtimeKeyModelAccess"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
 import type { InventorySecretAvailability } from "./keyManagement"
@@ -180,6 +181,14 @@ export type AccountKeyResourceFacts = {
   readonly displayName: string
   readonly maskedLabel: string
   readonly status: "enabled" | "disabled" | "expired" | "unknown"
+  /** Safe machine policy projected by the provider, never parsed from display fields. */
+  readonly runtimeKey?: {
+    readonly modelAccess: AccountRuntimeKeyModelAccess
+    readonly createdAt?: number
+    readonly notes?: string
+    /** Compatibility for existing associations and exported provider identities. */
+    readonly legacyTokenId?: number
+  }
   readonly fields: readonly ResourceDisplayFact[]
   readonly searchValues?: readonly string[]
   readonly actions: Readonly<{ canUpdate: boolean; canDelete: boolean }>

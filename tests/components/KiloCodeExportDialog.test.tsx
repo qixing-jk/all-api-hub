@@ -7,9 +7,10 @@ import {
   KiloCodeExportDialog,
 } from "~/components/KiloCodeExportDialog"
 import { KILO_CODE_EXPORT_TEST_IDS } from "~/components/kiloCodeExportTestIds"
-import { pickNewestKiloCodeToken } from "~/components/kiloCodeTokenSelection"
+import { pickNewestKiloCodeRuntimeKey } from "~/components/kiloCodeKeySelection"
 import { SITE_TYPES } from "~/constants/siteType"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
 import { KILO_CODE_EXPORT_TARGETS } from "~/services/integrations/kiloCodeExport"
 import {
@@ -318,7 +319,90 @@ async function chooseDefaultModel(
   )
 }
 
+const createRuntimeKey = (overrides: Parameters<typeof createApiToken>[0]) =>
+  buildDisplayAccountTokenRuntimeKey(
+    createDisplayAccount({}),
+    createApiToken(overrides),
+  )
+
 describe("KiloCodeExportDialog", () => {
+  it("exports a scoped native resource through its resolver without a token inventory", async () => {
+    const user = userEvent.setup()
+    const site = createDisplayAccount({ id: "native-account" })
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [createSiteAccount(site)],
+      enabledDisplayData: [site],
+    })
+    const ref = {
+      accountId: site.id,
+      siteType: site.siteType,
+      scopeKey: "workspace/default",
+      resourceId: "opaque:key",
+    }
+    const resolve = vi
+      .fn()
+      .mockResolvedValue({ kind: "resolved", secret: "sk-native-full" })
+    mockgetSiteTypeCapabilities.mockReturnValue({
+      siteType: site.siteType,
+      account: {
+        keyResources: {
+          open: async () => ({
+            resolveDefaultScope: async () => ({ scopeKey: ref.scopeKey }),
+            openCollection: async () => ({
+              list: async () => ({
+                items: [
+                  {
+                    ref,
+                    displayName: "Native key",
+                    maskedLabel: "sk-****",
+                    status: "enabled",
+                    fields: [],
+                    actions: { canUpdate: true, canDelete: true },
+                    runtimeKey: {
+                      modelAccess: {
+                        groups: null,
+                        allowedModelIds: null,
+                        suggestedModelIds: [],
+                      },
+                    },
+                  },
+                ],
+              }),
+            }),
+            runtimeKey: { resolve },
+          }),
+        },
+      },
+    })
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue(["model-a"])
+    render(
+      <KiloCodeExportDialog
+        isOpen
+        onClose={() => {}}
+        initialSelectedSiteIds={[site.id]}
+      />,
+    )
+    const copy = await screen.findByRole("button", {
+      name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
+    })
+    await waitFor(() => expect(copy).toBeEnabled())
+    await user.click(copy)
+    await waitFor(() =>
+      expect(mockBuildKiloCodeExportOutput).toHaveBeenCalledWith(
+        expect.objectContaining({
+          selections: [
+            expect.objectContaining({
+              tokenName: "Native key",
+              tokenKey: "sk-native-full",
+            }),
+          ],
+        }),
+      ),
+    )
+    expect(resolve).toHaveBeenCalledWith(ref, undefined)
+    expect(mockFetchAccountTokens).not.toHaveBeenCalled()
+  })
+
   beforeEach(() => {
     modalRenderControl.pending = null
     toastSuccessMock.mockReset()
@@ -1225,20 +1309,20 @@ describe("KiloCodeExportDialog", () => {
 
   it("selects the newest refreshed token when upstream creation timestamps arrive as strings or ISO dates", async () => {
     expect(
-      pickNewestKiloCodeToken([
-        createApiToken({
+      pickNewestKiloCodeRuntimeKey([
+        createRuntimeKey({
           id: 11,
           name: "Numeric String",
           key: "sk-older",
           createdAt: "1711929600000",
         }),
-        createApiToken({
+        createRuntimeKey({
           id: 22,
           name: "ISO Newest",
           key: "sk-newest",
           created_at: "2024-04-02T00:00:00.000Z",
         }),
-        createApiToken({
+        createRuntimeKey({
           id: 15,
           name: "ISO Older",
           key: "sk-oldest",
@@ -1246,7 +1330,7 @@ describe("KiloCodeExportDialog", () => {
         }),
       ]),
     ).toEqual(
-      createApiToken({
+      createRuntimeKey({
         id: 22,
         name: "ISO Newest",
         key: "sk-newest",
@@ -1257,21 +1341,21 @@ describe("KiloCodeExportDialog", () => {
 
   it("falls back to the highest token id when refreshed tokens have unusable creation timestamps", async () => {
     expect(
-      pickNewestKiloCodeToken([
-        createApiToken({
+      pickNewestKiloCodeRuntimeKey([
+        createRuntimeKey({
           id: 11,
           name: "Invalid Timestamp",
           key: "sk-older",
           createdAt: "not-a-timestamp",
         }),
-        createApiToken({
+        createRuntimeKey({
           id: 22,
           name: "Higher Id",
           key: "sk-newest",
         }),
       ]),
     ).toEqual(
-      createApiToken({
+      createRuntimeKey({
         id: 22,
         name: "Higher Id",
         key: "sk-newest",
@@ -1280,7 +1364,7 @@ describe("KiloCodeExportDialog", () => {
   })
 
   it("throws a clear invariant error when selecting from an empty refreshed token list", () => {
-    expect(() => pickNewestKiloCodeToken([])).toThrow(
+    expect(() => pickNewestKiloCodeRuntimeKey([])).toThrow(
       "Expected at least one Kilo Code token to select",
     )
   })

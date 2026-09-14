@@ -1,3 +1,4 @@
+import type { CredentialExportSource } from "~/services/integrations/credentialExport"
 import type {
   KiloCodeDefaultModelSelection,
   KiloCodeLegacySelection,
@@ -9,12 +10,12 @@ import {
   buildKiloCodeExportOutput,
   type KiloCodeExportOutput,
 } from "~/services/integrations/kiloCodeExportPolicy"
-import type { ApiToken, DisplaySiteData } from "~/types"
 
 export interface KiloCodeAccountExportSelection {
   selectionId: string
-  site: DisplaySiteData
-  token: ApiToken
+  credential: CredentialExportSource
+  /** Opaque input snapshots used only to invalidate pending export actions. */
+  sourceSnapshots: readonly object[]
   providerName: string
   runtimeKey: KiloCodeRuntimeKeyExportInput
 }
@@ -24,14 +25,10 @@ export interface KiloCodeAccountLegacySelection
   selectionId: string
 }
 
-export interface KiloCodeAccountSecretSource {
-  site: DisplaySiteData
-  token: ApiToken
-}
+export type KiloCodeAccountSecretSource = CredentialExportSource
 
 interface ResolveKiloCodeAccountExportOutputBaseOptions {
   secretSourcesBySelectionId: ReadonlyMap<string, KiloCodeAccountSecretSource>
-  resolveToken: (site: DisplaySiteData, token: ApiToken) => Promise<ApiToken>
 }
 
 interface ResolveKiloCodeAccountV7ExportOutputOptions
@@ -58,7 +55,6 @@ async function resolveCanonicalSelectionSecrets<
 >(
   selections: TSelection[],
   secretSourcesBySelectionId: ReadonlyMap<string, KiloCodeAccountSecretSource>,
-  resolveToken: (site: DisplaySiteData, token: ApiToken) => Promise<ApiToken>,
 ): Promise<TSelection[]> {
   return Promise.all(
     selections.map(async (selection) => {
@@ -66,8 +62,8 @@ async function resolveCanonicalSelectionSecrets<
       if (!source) {
         throw new Error("Kilo Code export selection source is unavailable")
       }
-      const resolvedToken = await resolveToken(source.site, source.token)
-      return { ...selection, tokenKey: resolvedToken.key }
+      const apiKey = await source.resolveApiKey()
+      return { ...selection, tokenKey: apiKey }
     }),
   )
 }
@@ -80,7 +76,6 @@ export async function resolveKiloCodeAccountExportOutput(
     const selections = await resolveCanonicalSelectionSecrets(
       options.selections,
       options.secretSourcesBySelectionId,
-      options.resolveToken,
     )
 
     return buildKiloCodeExportOutput({
@@ -93,7 +88,6 @@ export async function resolveKiloCodeAccountExportOutput(
   const selections = await resolveCanonicalSelectionSecrets(
     options.selections,
     options.secretSourcesBySelectionId,
-    options.resolveToken,
   )
 
   return buildKiloCodeExportOutput({

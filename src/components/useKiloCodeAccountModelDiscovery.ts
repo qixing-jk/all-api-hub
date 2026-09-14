@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import {
-  buildProviderModelDiscoveryCacheKey,
   PROVIDER_MODEL_DISCOVERY_STATUSES,
   useProviderModelDiscovery,
   type ProviderModelDiscoveryInventory,
 } from "~/hooks/useProviderModelDiscovery"
-import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
 import {
   KILO_CODE_PROVIDER_PROTOCOLS,
   type KiloCodeProviderProtocol,
@@ -40,11 +38,7 @@ interface PreparedAccountCatalog {
 
 /** Validate persisted runtime facts before invoking the throwing catalog API. */
 function hasInvalidRuntimeKey(selection: KiloCodeAccountExportSelection) {
-  if (
-    typeof selection.runtimeKey.tokenKey !== "string" ||
-    !selection.runtimeKey.tokenKey.trim() ||
-    typeof selection.runtimeKey.baseUrl !== "string"
-  ) {
+  if (typeof selection.runtimeKey.baseUrl !== "string") {
     return true
   }
 
@@ -62,18 +56,7 @@ function hasInvalidRuntimeKey(selection: KiloCodeAccountExportSelection) {
 function getModelDiscoverySourceFingerprint(
   selection: KiloCodeAccountExportSelection,
 ) {
-  return buildProviderModelDiscoveryCacheKey([
-    selection.runtimeKey.baseUrl,
-    selection.site.id,
-    selection.site.siteType,
-    selection.site.baseUrl,
-    selection.site.authType,
-    selection.site.userId,
-    selection.site.token,
-    selection.site.cookieAuthSessionCookie ?? null,
-    selection.token.id,
-    selection.token.key,
-  ])
+  return selection.credential.cacheKey
 }
 
 /** Convert incomplete or invalid selections into controlled dialog state. */
@@ -144,9 +127,7 @@ export function useKiloCodeAccountModelDiscovery({
           selectionId: selection.selectionId,
           cacheKey: sourceFingerprintById.get(selection.selectionId)!,
           baseUrl: selection.runtimeKey.baseUrl,
-          resolveApiKey: async () =>
-            (await resolveExportTokenForSecret(selection.site, selection.token))
-              .key,
+          resolveApiKey: selection.credential.resolveApiKey,
         })),
     [selections, sourceFingerprintById],
   )

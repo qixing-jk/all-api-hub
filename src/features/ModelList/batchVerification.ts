@@ -5,6 +5,7 @@ import {
   type ModelManagementItemSource,
 } from "~/features/ModelList/modelManagementSources"
 import {
+  isAccountKeyResourceRuntimeKey,
   isAccountRuntimeKeyCompatibleWithModel,
   isAccountTokenRuntimeKey,
   type AccountRuntimeKey,
@@ -112,8 +113,10 @@ export function pickBatchVerifyCompatibleRuntimeKey(
     const sourceIdentity = item.sourceIdentity
     const runtimeKey = runtimeKeys.find(
       (candidate) =>
-        isAccountTokenRuntimeKey(candidate) &&
-        candidate.tokenId === sourceIdentity.tokenId,
+        (isAccountTokenRuntimeKey(candidate) &&
+          candidate.tokenId === sourceIdentity.tokenId) ||
+        (isAccountKeyResourceRuntimeKey(candidate) &&
+          candidate.legacyTokenId === sourceIdentity.tokenId),
     )
     return runtimeKey && isCompatible(runtimeKey) ? runtimeKey : null
   }

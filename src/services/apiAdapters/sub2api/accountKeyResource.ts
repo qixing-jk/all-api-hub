@@ -4,6 +4,8 @@ import {
   DEFAULT_AUTO_PROVISION_TOKEN_NAME,
   generateDefaultTokenRequest,
 } from "~/services/accounts/defaultTokenLifecycle/requests"
+import { projectTokenCreatedAt } from "~/services/accountTokens/tokenCreatedAt"
+import { projectLegacyTokenModelAccess } from "~/services/accountTokens/tokenModelAccess"
 import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
 import {
   defineAccountKeyResourceCapability,
@@ -46,6 +48,7 @@ import {
 } from "~/services/apiService/sub2api"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ApiToken } from "~/types"
+import { maskSecretForDisplay } from "~/utils/core/formatters"
 
 const ACCOUNT_SCOPE_KEY = "account"
 const AUTO_GROUP_TOKEN_NAME_PATTERN = /^(.+) group \(auto\)$/
@@ -406,8 +409,14 @@ const toFacts = (
 ): AccountKeyResourceFacts => ({
   ref,
   displayName: token.name?.trim() || `Key ${token.id}`,
-  maskedLabel: token.key?.trim() || "••••",
+  maskedLabel: maskSecretForDisplay(token.key ?? ""),
   status: tokenStatus(token),
+  runtimeKey: {
+    modelAccess: projectLegacyTokenModelAccess(token),
+    legacyTokenId: token.id,
+    createdAt: projectTokenCreatedAt(token),
+    notes: token.note,
+  },
   fields: [
     { fieldId: "group", kind: "text", value: token.group?.trim() || "" },
     {
@@ -420,7 +429,7 @@ const toFacts = (
   searchValues: [
     String(token.id),
     token.name ?? "",
-    token.key ?? "",
+    maskSecretForDisplay(token.key ?? ""),
     token.group ?? "",
   ],
   actions: { canUpdate: false, canDelete: true },

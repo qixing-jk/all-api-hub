@@ -24,10 +24,7 @@ import {
   buildGroupDefaultTokenRequest,
   resolvePreferredDefaultUserGroup,
 } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
-import {
-  isAccountTokenRuntimeKey,
-  type AccountRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+import { type AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -65,15 +62,10 @@ const analyticsResultByCreateResult: Record<
  * Builds a compact label that disambiguates same-named keys across groups.
  */
 function getCompatibleRuntimeKeyLabel(runtimeKey: AccountRuntimeKey) {
-  if (!isAccountTokenRuntimeKey(runtimeKey)) {
-    return runtimeKey.label
-  }
-
-  const group =
-    typeof runtimeKey.token.group === "string"
-      ? runtimeKey.token.group.trim()
-      : ""
-  return `${runtimeKey.label} · ${group || DEFAULT_MODEL_GROUP}`
+  const groups = runtimeKey.modelAccess.groups
+  return groups?.length
+    ? `${runtimeKey.label} · ${groups.join(", ")}`
+    : runtimeKey.label
 }
 
 /**
