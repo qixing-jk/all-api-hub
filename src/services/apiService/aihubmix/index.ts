@@ -43,16 +43,9 @@ import {
   buildAIHubMixWebsitePricingPlan,
   getAIHubMixPricingSource,
 } from "~/services/apiService/aihubmix/websitePricing"
-import {
-  composeAbortSignals,
-  startAbortableTask,
-} from "~/services/apiTransport/abortableTask"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiData } from "~/services/apiTransport/request"
-import {
-  resolveSiteRequestLimitKey,
-  withSiteApiRequestLease,
-} from "~/services/apiTransport/siteRequestLimiter"
+import { fetchPreparedJsonResponse } from "~/services/apiTransport/requestExecution"
 import type {
   ApiResponse,
   ApiServiceRequest,
@@ -251,6 +244,11 @@ const extractAIHubMixData = <T>(body: unknown, endpoint: string): T => {
   return ("data" in response ? response.data : body) as T
 }
 
+/**
+ * Saved accounts use AIHubMix's raw-token API on its canonical origin.
+ * Direct execution preserves this protocol; browser-session requests belong
+ * to onboarding. https://docs.aihubmix.com/en/api/CliEndpoints/get-self
+ */
 const fetchAIHubMixData = async <T>(
   request: ApiServiceRequest,
   endpoint: string,
@@ -276,25 +274,16 @@ const fetchAIHubMixData = async <T>(
     headers.set("Content-Type", "application/json")
   }
 
-  const response = await fetch(joinUrl(AIHUBMIX_API_ORIGIN, endpoint), {
-    ...options,
-    method,
-    headers,
-    credentials: "omit",
-  })
-
-  let body: unknown = null
-  try {
-    body = await response.json()
-  } catch {
-    body = null
-  }
+  const response = await fetchPreparedJsonResponse(
+    { ...request, baseUrl: AIHUBMIX_API_ORIGIN },
+    {
+      url: joinUrl(AIHUBMIX_API_ORIGIN, endpoint),
+      options: { ...options, method, headers, credentials: "omit" },
+    },
+  )
 
   if (!response.ok) {
-    const providerError = decodeAIHubMixResponseError(
-      { ok: false, status: response.status, headers: {}, body },
-      { endpoint },
-    )
+    const providerError = decodeAIHubMixResponseError(response, { endpoint })
     throw new ApiError(
       getErrorMessage(
         providerError?.message,
@@ -305,7 +294,7 @@ const fetchAIHubMixData = async <T>(
     )
   }
 
-  return extractAIHubMixData<T>(body, endpoint)
+  return extractAIHubMixData<T>(response.body, endpoint)
 }
 
 const normalizeToken = (
@@ -809,39 +798,11 @@ export async function fetchAccountQuota(
 export async function fetchInviteLink(
   request: ApiServiceRequest,
 ): Promise<string> {
-  const admissionAbort = composeAbortSignals([
-    request.abortSignal,
-    request.abortDeadline?.signal,
-  ])
-  let userInfo: unknown
-
-  try {
-    userInfo = await withSiteApiRequestLease(
-      resolveSiteRequestLimitKey(AIHUBMIX_API_ORIGIN),
-      () => {
-        // Keep the deadline inside limiter dispatch so queue wait is not charged.
-        return startAbortableTask(
-          async (signal) => {
-            request.abortDeadline?.start()
-            return await fetchAIHubMixData<unknown>(
-              request,
-              AIHUBMIX_API_USER_SELF_ENDPOINT,
-              { cache: "no-store", signal },
-            )
-          },
-          {
-            signals: [request.abortSignal, request.abortDeadline?.signal],
-            timeoutMs: request.abortDeadline
-              ? undefined
-              : request.requestTimeoutMs,
-          },
-        )
-      },
-      admissionAbort.signal,
-    )
-  } finally {
-    admissionAbort.dispose()
-  }
+  const userInfo = await fetchAIHubMixData<unknown>(
+    request,
+    AIHUBMIX_API_USER_SELF_ENDPOINT,
+    { cache: "no-store" },
+  )
 
   if (!userInfo || typeof userInfo !== "object" || Array.isArray(userInfo)) {
     throw new InviteLinkError(INVITE_LINK_FAILURE_REASONS.InviteDataMissing)

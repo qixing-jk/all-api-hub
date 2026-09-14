@@ -1,8 +1,4 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import {
-  composeAbortSignals,
-  startAbortableTask,
-} from "~/services/apiTransport/abortableTask"
 import { buildCompatUserIdHeaders } from "~/services/apiTransport/compatHeaders"
 import { mapCompatibilityResponse } from "~/services/apiTransport/compatibilityResponse"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
@@ -16,20 +12,16 @@ import {
   isReplaySafeRemoteFetch,
   observeRemoteFetchLifecycle,
 } from "~/services/apiTransport/remoteLifecycle"
+import { executePreparedRequest } from "~/services/apiTransport/requestExecution"
 import {
   extractDataFromApiResponseBody,
   isApiResponseBody,
 } from "~/services/apiTransport/response"
-import {
-  resolveSiteRequestLimitKey,
-  withSiteApiRequestLease,
-} from "~/services/apiTransport/siteRequestLimiter"
 import type {
   ApiAuthTokenMode,
   ApiResponse,
   ApiTransportFetchContext,
   ApiTransportRequest,
-  ApiTransportRequestObserver,
   ApiTransportResponse,
   AuthConfig,
   FetchApiOptions,
@@ -68,6 +60,8 @@ import { createLogger } from "~/utils/core/logger"
 import { joinUrl } from "~/utils/core/url"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 import { t } from "~/utils/i18n/core"
+
+export { notifyApiTransportObserver } from "~/services/apiTransport/requestExecution"
 
 type JsonFetchApiOptions = Omit<FetchApiOptions, "responseType"> & {
   responseType?: "json"
@@ -130,20 +124,6 @@ function getSafeTransportErrorMessage(
 }
 
 const logger = createLogger("ApiTransportRequest")
-
-type ApiTransportObserverEvent = keyof ApiTransportRequestObserver
-
-/** Keeps optional lifecycle evidence best-effort and isolated from transport results. */
-export function notifyApiTransportObserver(
-  observer: ApiTransportRequestObserver | undefined,
-  event: ApiTransportObserverEvent,
-): void {
-  try {
-    observer?.[event]?.()
-  } catch {
-    logger.warn("API transport observer callback failed", { event })
-  }
-}
 
 // Throttle log endpoints (`/api/log*`) to reduce burst traffic that can trigger
 // upstream rate limits (e.g. concurrent paging for usage + income).
@@ -534,17 +514,13 @@ function collectResponseHeaders(headers: Headers): Record<string, string> {
 }
 
 /**
- * Performs one HTTP exchange and preserves the parsed body regardless of status.
+ * Consumes one HTTP response and preserves the parsed body regardless of status.
  */
-const apiRequestResponse = async <T>(
-  url: string,
-  options: RequestInit | undefined,
+const readApiResponse = async <T>(
+  response: Response,
   endpoint: string | undefined,
   responseType: TempWindowResponseType,
-  onResponse: () => void,
 ): Promise<AcquiredTransportResponse<T>> => {
-  const response = await fetch(url, options)
-  onResponse()
   const contentType = response.headers.get("content-type") || ""
 
   if (responseType === "json") {
@@ -687,131 +663,72 @@ const _fetchApiWithMapper = async <T, TResult>(
     })
   }
 
-  const startRequest = () => {
-    let taskFailure: { error: unknown } | undefined
-    const execution = startAbortableTask(
-      async (signal) => {
-        try {
-          request.abortDeadline?.start()
-          let dispatchObserved = false
-          const onDispatch = () => {
-            if (dispatchObserved) return
-            dispatchObserved = true
-            notifyApiTransportObserver(request.observer, "onDispatch")
-          }
-          let responseObserved = false
-          const onResponse = () => {
-            if (responseObserved) return
-            responseObserved = true
-            notifyApiTransportObserver(request.observer, "onResponse")
-          }
-          const dispatchedFetchOptions = { ...fetchOptions, signal }
-          const dispatchedContext = {
-            ...context,
-            fetchOptions: dispatchedFetchOptions,
-          }
-          const primaryRequest = async () => {
-            onDispatch()
-            const response = await apiRequestResponse<T>(
-              url,
-              dispatchedFetchOptions,
-              options.endpoint,
-              responseType,
-              onResponse,
-            )
-            return await mapResponse(response)
-          }
-          const fallback = async () => {
-            const execution = request.protectionBypassExecution
-            if (!execution) {
-              if (dispatchedContext.forceTempWindow) {
-                throw new ApiError(
-                  t("messages:background.tempWindowPolicyContextInvalid"),
-                  undefined,
-                  options.endpoint,
-                  API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
-                )
-              }
-              return await primaryRequest()
-            }
-
-            return await executeWithTempWindowFallback(
-              {
-                ...dispatchedContext,
-                protectionBypassExecution: execution,
-                transportLifecycleObserver: {
-                  onDispatch,
-                  onResponse,
-                },
-              },
-              primaryRequest,
-              mapTempWindowResponse,
-            )
-          }
-
+  return await executePreparedRequest(
+    request,
+    { url, options: fetchOptions },
+    async ({
+      options: dispatchedFetchOptions,
+      dispatch,
+      onDispatch,
+      onResponse,
+      wasDispatched,
+    }) => {
+      const dispatchedContext = {
+        ...context,
+        fetchOptions: dispatchedFetchOptions,
+      }
+      const primaryRequest = async () => {
+        const response = await readApiResponse<T>(
+          await dispatch(),
+          options.endpoint,
+          responseType,
+        )
+        return await mapResponse(response)
+      }
+      const fallback = async () => {
+        const execution = request.protectionBypassExecution
+        if (!execution) {
           if (dispatchedContext.forceTempWindow) {
-            return await fallback()
+            throw new ApiError(
+              t("messages:background.tempWindowPolicyContextInvalid"),
+              undefined,
+              options.endpoint,
+              API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+            )
           }
-
-          return await executeWithCurrentTabContentPreference<T, TResult>(
-            {
-              request,
-              url,
-              endpoint: options.endpoint,
-              fetchOptions: dispatchedFetchOptions,
-              responseType,
-              options,
-              onDispatch,
-              onResponse,
-              wasDispatched: () => dispatchObserved,
-            },
-            mapResponse,
-            fallback,
-          )
-        } catch (error) {
-          taskFailure = { error }
-          throw error
+          return await primaryRequest()
         }
-      },
-      {
-        signals: [
-          fetchOptions.signal ?? undefined,
-          request.abortDeadline?.signal,
-        ],
-        timeoutMs: request.abortDeadline ? undefined : request.requestTimeoutMs,
-      },
-    )
-    return {
-      ...execution,
-      result: execution.result.catch((error) => {
-        // A response getter can synchronously abort and then throw a more
-        // specific inspection error before the abort race callback runs.
-        if (taskFailure) throw taskFailure.error
-        throw error
-      }),
-    }
-  }
 
-  if (request.bypassSiteRequestLimit) {
-    return await startRequest().result
-  }
+        return await executeWithTempWindowFallback(
+          {
+            ...dispatchedContext,
+            protectionBypassExecution: execution,
+            transportLifecycleObserver: { onDispatch, onResponse },
+          },
+          primaryRequest,
+          mapTempWindowResponse,
+        )
+      }
 
-  const siteRequestLimitKey = resolveSiteRequestLimitKey(baseUrl)
-  const admissionAbort = composeAbortSignals([
-    fetchOptions.signal ?? undefined,
-    request.abortDeadline?.signal,
-  ])
+      if (dispatchedContext.forceTempWindow) return await fallback()
 
-  try {
-    return await withSiteApiRequestLease(
-      siteRequestLimitKey,
-      startRequest,
-      admissionAbort.signal,
-      request.requestScheduling,
-    )
-  } finally {
-    admissionAbort.dispose()
-  }
+      return await executeWithCurrentTabContentPreference<T, TResult>(
+        {
+          request,
+          url,
+          endpoint: options.endpoint,
+          fetchOptions: dispatchedFetchOptions,
+          responseType,
+          options,
+          onDispatch,
+          onResponse,
+          wasDispatched,
+        },
+        mapResponse,
+        fallback,
+      )
+    },
+  )
 }
 
 /** Runs the existing compatibility semantics above the raw response result. */

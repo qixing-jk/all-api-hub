@@ -840,6 +840,7 @@ describe("apiService AIHubMix", () => {
   it("admits the raw invite-link request through the site limiter once", async () => {
     const abortController = new AbortController()
     const startDeadline = vi.fn()
+    const requestScheduling = { priority: "foreground" } as const
     server.use(
       http.get("https://aihubmix.com/api/user/self", () =>
         HttpResponse.json({
@@ -853,6 +854,7 @@ describe("apiService AIHubMix", () => {
     await fetchInviteLink({
       ...baseRequest,
       abortSignal: abortController.signal,
+      requestScheduling,
       abortDeadline: {
         signal: abortController.signal,
         start: startDeadline,
@@ -865,6 +867,7 @@ describe("apiService AIHubMix", () => {
       "https://aihubmix.com",
       expect.any(Function),
       abortController.signal,
+      requestScheduling,
     )
     expect(startDeadline).toHaveBeenCalledTimes(1)
   })
@@ -920,6 +923,7 @@ describe("apiService AIHubMix", () => {
         "https://aihubmix.com",
         expect.any(Function),
         abortDeadline.signal,
+        undefined,
       )
 
       await vi.advanceTimersByTimeAsync(1_000)
