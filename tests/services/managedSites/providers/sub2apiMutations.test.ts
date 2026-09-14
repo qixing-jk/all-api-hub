@@ -133,14 +133,35 @@ describe("Sub2API provider mutation outcomes", () => {
     })
   })
 
-  it.each(["update", "delete"] as const)(
-    "does not replay an uncertain %s",
-    async (operation) => {
+  it.each([
+    {
+      operation: "update" as const,
+      response: () => HttpResponse.error(),
+      outcome: "uncertain",
+    },
+    {
+      operation: "delete" as const,
+      response: () => HttpResponse.error(),
+      outcome: "uncertain",
+    },
+    {
+      operation: "update" as const,
+      response: () => HttpResponse.json({ code: 403 }, { status: 403 }),
+      outcome: "rejected",
+    },
+    {
+      operation: "delete" as const,
+      response: () => HttpResponse.json({ code: 403 }, { status: 403 }),
+      outcome: "rejected",
+    },
+  ])(
+    "classifies $operation failures without replaying the request",
+    async ({ operation, response, outcome }) => {
       let requests = 0
       server.use(
         http.all(`${endpoint}/17`, () => {
           requests++
-          return HttpResponse.error()
+          return response()
         }),
       )
       const result =
@@ -149,7 +170,7 @@ describe("Sub2API provider mutation outcomes", () => {
               notes: "Updated",
             })
           : await deleteSub2ApiManagedAccountMutation(config, 17)
-      expect(result).toMatchObject({ outcome: "uncertain" })
+      expect(result).toMatchObject({ outcome })
       expect(requests).toBe(1)
     },
   )
