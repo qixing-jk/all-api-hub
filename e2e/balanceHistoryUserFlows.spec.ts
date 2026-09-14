@@ -19,6 +19,7 @@ import {
   stubLlmMetadataIndex,
   stubNewApiSiteRoutes,
 } from "~~/e2e/utils/commonUserFlows"
+import { expectCornerShape } from "~~/e2e/utils/cornerShape"
 import {
   expectPermissionOnboardingHidden,
   getPlasmoStorageJsonValue,
@@ -170,7 +171,7 @@ test("filters balance history by tag/account and persists the selected currency"
     )
     await expect(tooltip).toBeVisible()
     await expect(tooltip).toHaveCSS("border-top-left-radius", "10px")
-    await expect(tooltip).toHaveCSS("corner-shape", "superellipse(1.5)")
+    await expectCornerShape(tooltip, "superellipse(1.5)")
     await expect(tooltip).not.toHaveCSS("box-shadow", "none")
     await page.screenshot({
       animations: "disabled",

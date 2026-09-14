@@ -19,6 +19,19 @@ const allApiHubRewriteTwProperties = () => ({
 
     // 2) Rename custom property declarations and usages
     root.walkDecls((decl) => {
+      if (
+        decl.prop === "--tw-ring-shadow" ||
+        decl.prop === "--tw-ring-offset-shadow"
+      ) {
+        // Older Chromium rejects an empty fallback for registered properties,
+        // even when --tw-ring-inset is set. A transparent zero-sized shadow
+        // keeps the outer ring valid; an explicit inset still takes precedence.
+        decl.value = decl.value.replace(
+          /var\(--tw-ring-inset,\s*\)/gu,
+          "var(--tw-ring-inset, 0 0 #0000,)",
+        )
+      }
+
       if (decl.prop?.startsWith(OLD_PREFIX)) {
         decl.prop = decl.prop.replace(OLD_PREFIX, NEW_PREFIX)
       }

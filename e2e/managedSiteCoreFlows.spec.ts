@@ -21,6 +21,7 @@ import {
   seedUserPreferences,
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
+import { expectCornerShape } from "~~/e2e/utils/cornerShape"
 import {
   expectPermissionOnboardingHidden,
   getPlasmoStorageRawValue,
@@ -860,7 +861,7 @@ test("edits a managed-site channel from row actions", async ({
   const editItem = rowMenu.getByRole("menuitem", { name: "Edit", exact: true })
   await expect(rowMenu).toHaveCSS("border-top-left-radius", "20px")
   await expect(editItem).toHaveCSS("border-top-left-radius", "15px")
-  await expect(editItem).toHaveCSS("corner-shape", "superellipse(1.5)")
+  await expectCornerShape(editItem, "superellipse(1.5)")
   await editItem.click()
 
   await expect(

@@ -8,6 +8,7 @@ import {
   seedUserPreferences,
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
+import { expectCornerShape } from "~~/e2e/utils/cornerShape"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { setVisualDarkMode } from "~~/e2e/utils/visualTheme"
 
@@ -35,12 +36,14 @@ test("responsive finite radii restore continuous shaping after rounded-full", as
   })
   const button = page.getByRole("button", { name: "Responsive corner probe" })
   await page.setViewportSize({ width: 390, height: 900 })
-  await expect(button).toHaveCSS("corner-shape", "round")
+  await expect(button).toHaveCSS("border-top-left-radius", "9999px")
+  await expectCornerShape(button, "round")
   await page.setViewportSize({ width: 1280, height: 900 })
   await expect(button).toHaveCSS("border-top-left-radius", "10px")
-  await expect(button).toHaveCSS("corner-shape", "superellipse(1.5)")
+  await expectCornerShape(button, "superellipse(1.5)")
   await page.setViewportSize({ width: 390, height: 900 })
-  await expect(button).toHaveCSS("corner-shape", "round")
+  await expect(button).toHaveCSS("border-top-left-radius", "9999px")
+  await expectCornerShape(button, "round")
 })
 
 test("overview edge focus rings follow the responsive card perimeter", async ({
@@ -68,8 +71,8 @@ test("overview edge focus rings follow the responsive card perimeter", async ({
       await button.focus()
       await expect(button).toBeFocused()
       await expect(button).toHaveCSS("border-top-left-radius", "15px")
-      await expect(button).toHaveCSS("corner-shape", "superellipse(1.5)")
-      await expect(button).not.toHaveCSS("box-shadow", "none")
+      await expectCornerShape(button, "superellipse(1.5)")
+      await expect(button).toHaveCSS("box-shadow", / 2px inset(?:,|$)/)
       await page.screenshot({
         animations: "disabled",
         path: testInfo.outputPath(`overview-focus-${width}-${dark}.png`),
@@ -117,13 +120,14 @@ test("card edge rows and notification surfaces use the actual shared radius", as
       "background-color",
       dark ? "rgb(30, 41, 59)" : "rgb(255, 255, 255)",
     )
-    await expect(toast).toHaveCSS("corner-shape", "superellipse(1.5)")
+    await expectCornerShape(toast, "superellipse(1.5)")
     await page.keyboard.press("Tab")
     await closeButton.focus()
     await expect(closeButton).toBeFocused()
     await expect(closeButton).toHaveCSS("border-top-left-radius", "8px")
-    await expect(closeButton).toHaveCSS("corner-shape", "superellipse(1.5)")
-    await expect(closeButton).not.toHaveCSS("box-shadow", "none")
+    await expectCornerShape(closeButton, "superellipse(1.5)")
+    // The visible ring is 2px thick beyond the 2px offset, not just a shadow.
+    await expect(closeButton).toHaveCSS("box-shadow", / 4px(?:,|$)/)
     await page.screenshot({
       animations: "disabled",
       path: testInfo.outputPath(`card-and-toast-${dark}.png`),
@@ -153,7 +157,7 @@ test("bookmark search surface follows the owning card in both themes", async ({
     await setVisualDarkMode(page, dark)
     await expect(searchSurface).toHaveCSS("border-top-left-radius", "15px")
     await expect(searchSurface).toHaveCSS("border-bottom-left-radius", "0px")
-    await expect(searchSurface).toHaveCSS("corner-shape", "superellipse(1.5)")
+    await expectCornerShape(searchSurface, "superellipse(1.5)")
     await page.screenshot({
       animations: "disabled",
       path: testInfo.outputPath(`bookmark-search-${dark}.png`),
@@ -171,9 +175,6 @@ test("settings preserve inset corners, circular switches and focus in both theme
   const group = page.locator("#appearance-theme-mode").getByRole("group")
   const button = group.getByRole("button").first()
   await expect(button).toBeVisible()
-  const native = await page.evaluate(() =>
-    CSS.supports("corner-shape", "superellipse(1.5)"),
-  )
 
   for (const dark of [false, true]) {
     await setVisualDarkMode(page, dark)
@@ -184,11 +185,10 @@ test("settings preserve inset corners, circular switches and focus in both theme
       await expect(button).toBeFocused()
       await expect(button).not.toHaveCSS("box-shadow", "none")
       await expect(button).toHaveCSS("border-top-left-radius", "8px")
-      if (native) {
-        await expect(button).toHaveCSS("corner-shape", "superellipse(1.5)")
-      }
+      await expectCornerShape(button, "superellipse(1.5)")
       const toggle = page.getByRole("switch").first()
-      await expect(toggle).toHaveCSS("corner-shape", "round")
+      await expect(toggle).toHaveCSS("border-top-left-radius", "9999px")
+      await expectCornerShape(toggle, "round")
       await expect
         .poll(() =>
           page.evaluate(
@@ -287,6 +287,7 @@ test("popup tabs retain concentric geometry with native shaping and the fallback
   await expect(tab).toBeVisible()
   await expect(tabs).toHaveCSS("border-top-left-radius", "12px")
   await expect(tab).toHaveCSS("border-top-left-radius", "8px")
+  await expectCornerShape(tab, "superellipse(1.5)")
   await tab.hover()
   await tab.focus()
   await page.screenshot({
@@ -316,7 +317,7 @@ test("popup tabs retain concentric geometry with native shaping and the fallback
     return count
   })
   expect(removed).toBeGreaterThan(0)
-  await expect(tab).toHaveCSS("corner-shape", "round")
+  await expectCornerShape(tab, "round")
   await expect(tab).toHaveCSS("border-top-left-radius", "8px")
   await tab.press("ArrowRight")
   await expect(tabs.getByRole("tab").nth(1)).toBeFocused()
