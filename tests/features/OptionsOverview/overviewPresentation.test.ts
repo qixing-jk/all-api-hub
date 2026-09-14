@@ -44,8 +44,10 @@ describe("overview presentation constants", () => {
     })
   })
 
-  it("exposes a reusable neutral panel class set", () => {
-    expect(OVERVIEW_NEUTRAL_PANEL_CLASSES).toContain("border-slate-200/80")
-    expect(OVERVIEW_NEUTRAL_PANEL_CLASSES).toContain("dark:bg-white/[0.03]")
+  it("uses semantic color roles for reusable neutral panels", () => {
+    expect(OVERVIEW_NEUTRAL_PANEL_CLASSES).toContain("border-border/80")
+    expect(OVERVIEW_NEUTRAL_PANEL_CLASSES).toContain(
+      "dark:bg-foreground/[0.03]",
+    )
   })
 })

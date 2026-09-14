@@ -251,7 +251,7 @@ describe("ApiCredentialProfilesListView", () => {
       ].join(":"),
     )
     const importHint = screen.getByRole("status")
-    expect(importHint).toHaveAttribute("data-tone", "info")
+    expect(importHint).toHaveAttribute("data-tone", "default")
     expect(importHint).toHaveTextContent(
       "apiCredentialProfiles:empty.keyManagementImportHint",
     )

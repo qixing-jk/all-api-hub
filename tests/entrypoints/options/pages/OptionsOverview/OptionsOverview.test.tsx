@@ -1498,7 +1498,7 @@ describe("OptionsOverview", () => {
       "flex-1",
       "px-3",
       "py-2.5",
-      "hover:bg-slate-100/70",
+      "hover:bg-muted/70",
     )
     expect(autoCheckinTrigger).toHaveAttribute("aria-expanded", "false")
     expect(

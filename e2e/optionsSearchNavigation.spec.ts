@@ -23,6 +23,7 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { readVisualThemeRoleColor } from "~~/e2e/utils/visualTheme"
 
 test.beforeEach(async ({ context, page }) => {
   installExtensionPageGuards(page)
@@ -30,7 +31,7 @@ test.beforeEach(async ({ context, page }) => {
   await stubLlmMetadataIndex(context)
 })
 
-test("shares the page palette with portaled dialogs before visiting feature pages", async ({
+test("uses page color roles for portaled dialogs before visiting feature pages", async ({
   extensionId,
   page,
 }) => {
@@ -46,12 +47,17 @@ test("shares the page palette with portaled dialogs before visiting feature page
       mode === "dark",
     )
     const surface = page.getByTestId(OPTIONS_TEST_IDS.contentCard)
-    const background = mode === "dark" ? "rgb(30, 41, 59)" : "oklch(1 0 0)"
-    await expect(surface).toHaveCSS("background-color", background)
+    await expect(surface).toHaveCSS(
+      "background-color",
+      await readVisualThemeRoleColor(page, "--background"),
+    )
     await page.getByRole("button", { name: "Open settings search" }).click()
     const dialog = page.getByRole("dialog", { name: "Search settings" })
     await expect(dialog).toBeVisible()
-    await expect(dialog).toHaveCSS("background-color", background)
+    await expect(dialog).toHaveCSS(
+      "background-color",
+      await readVisualThemeRoleColor(page, "--popover"),
+    )
     await page.keyboard.press("Escape")
     await expect(dialog).toBeHidden()
   }
