@@ -129,6 +129,10 @@ test.describe("real-site E2E: managed-site channel management", () => {
 
   for (const target of selectedManagedSiteTargets) {
     const managedSite = target.resolveConfig()
+    const tokenStatusTestName =
+      target.siteType === SITE_TYPES.OCTOPUS
+        ? "Octopus imports a source key, fetches models and recognizes the saved channel"
+        : `${target.label} covers token channel status when supported`
 
     if (target.siteType === SITE_TYPES.NEW_API) {
       test("New API persists multi-key edits and cleans temporary channels", async ({
@@ -205,7 +209,7 @@ test.describe("real-site E2E: managed-site channel management", () => {
         async () => {},
       )
       test.skip(
-        `${target.label} covers token channel status when supported`,
+        tokenStatusTestName,
         { annotation: { type: "skip", description: skipReason } },
         async () => {},
       )
@@ -311,88 +315,88 @@ test.describe("real-site E2E: managed-site channel management", () => {
       })
     })
 
-    test(`${target.label} covers token channel status when supported`, async ({
-      context,
-      extensionId,
-      page,
-    }, testInfo) => {
-      test.skip(
-        target.siteType !== SITE_TYPES.NEW_API &&
-          target.siteType !== SITE_TYPES.SUB2API,
-        `${target.label} token channel status is not covered by this real-site E2E`,
-      )
-
-      const serviceWorker = await getServiceWorker(context)
-      const config = managedSite.config
-      const runId = buildRealSiteRunId()
-      const runPrefix = buildManagedSiteE2ePrefix({
-        label: target.label.replace(/\s+/g, ""),
-        runId,
-      })
-      const cleanupPrefix = buildManagedSiteE2ePrefix({
-        label: target.label.replace(/\s+/g, ""),
-      })
-      const sourceAccountResult =
-        await test.step(`${target.label}: prepare source account`, async () =>
-          await maybePrepareStatusSourceAccount({
-            context,
-            extensionId,
-            page,
-            serviceWorker,
-            managedSiteType: target.siteType,
-            managedSiteLabel: target.label,
-            managedPreferenceKey: target.preferenceKey,
-            managedConfig: config,
-          }))
-
-      await seedUserPreferences(serviceWorker, {
-        managedSiteType: target.siteType,
-        [target.preferenceKey]: config,
-        autoFillCurrentSiteUrlOnAccountAdd: false,
-        autoProvisionKeyOnAccountAdd: false,
-        openChangelogOnUpdate: false,
-      })
-
-      if (!sourceAccountResult.sourceAccount) {
+    test(
+      tokenStatusTestName,
+      async ({ context, extensionId, page }, testInfo) => {
+        test.setTimeout(180_000)
         test.skip(
-          true,
-          sourceAccountResult.skipReason ??
-            `${target.label} source account E2E env is missing`,
+          !getManagedSiteStatusSourceAccountType(target.siteType),
+          `${target.label} token channel status is not covered by this real-site E2E`,
         )
-        throw new Error("Skipped test continued without a source account")
-      }
 
-      const sourceAccount = sourceAccountResult.sourceAccount
-
-      try {
-        const statusResult =
-          await test.step(`${target.label}: token channel status`, async () =>
-            await runManagedSiteTokenChannelStatusScenario({
-              page,
+        const serviceWorker = await getServiceWorker(context)
+        const config = managedSite.config
+        const runId = buildRealSiteRunId()
+        const runPrefix = buildManagedSiteE2ePrefix({
+          label: target.label.replace(/\s+/g, ""),
+          runId,
+        })
+        const tokenName = buildRealSiteTestTokenName({
+          label: "channel",
+          runId,
+        })
+        await testInfo.attach("temporary-resources", {
+          body: JSON.stringify({ channelPrefix: runPrefix, tokenName }),
+          contentType: "application/json",
+        })
+        const sourceAccountResult =
+          await test.step(`${target.label}: prepare source account`, async () =>
+            await maybePrepareStatusSourceAccount({
+              context,
               extensionId,
-              siteType: target.siteType,
-              label: target.label,
-              runPrefix,
-              cleanupPrefix,
-              sourceAccount,
-              tokenName: buildRealSiteTestTokenName({
-                label: "channel",
-                runId,
-              }),
-              sourceAccountSkipReason: sourceAccountResult.skipReason,
-              tokenCleanupPrefix: "AAH E2E channel",
+              page,
+              serviceWorker,
+              managedSiteType: target.siteType,
+              managedSiteLabel: target.label,
+              managedPreferenceKey: target.preferenceKey,
+              managedConfig: config,
             }))
 
-        if (statusResult.skipped) {
-          testInfo.annotations.push({
-            type: "skip",
-            description: statusResult.reason,
-          })
+        await seedUserPreferences(serviceWorker, {
+          managedSiteType: target.siteType,
+          [target.preferenceKey]: config,
+          autoFillCurrentSiteUrlOnAccountAdd: false,
+          autoProvisionKeyOnAccountAdd: false,
+          openChangelogOnUpdate: false,
+        })
+
+        if (!sourceAccountResult.sourceAccount) {
+          test.skip(
+            true,
+            sourceAccountResult.skipReason ??
+              `${target.label} source account E2E env is missing`,
+          )
+          throw new Error("Skipped test continued without a source account")
         }
-      } finally {
-        await sourceAccount.cleanup()
-      }
-    })
+
+        const sourceAccount = sourceAccountResult.sourceAccount
+
+        try {
+          const statusResult =
+            await test.step(`${target.label}: token channel status`, async () =>
+              await runManagedSiteTokenChannelStatusScenario({
+                page,
+                extensionId,
+                siteType: target.siteType,
+                label: target.label,
+                runPrefix,
+                cleanupPrefix: runPrefix,
+                sourceAccount,
+                tokenName,
+                sourceAccountSkipReason: sourceAccountResult.skipReason,
+              }))
+
+          if (statusResult.skipped) {
+            testInfo.annotations.push({
+              type: "skip",
+              description: statusResult.reason,
+            })
+          }
+        } finally {
+          await sourceAccount.cleanup()
+        }
+      },
+    )
   }
 })
 

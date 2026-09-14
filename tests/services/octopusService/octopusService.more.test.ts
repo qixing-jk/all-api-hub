@@ -9,6 +9,7 @@ import {
   OctopusOutboundType,
   type OctopusChannel,
 } from "~/types/octopus"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import {
   buildApiToken,
   buildDisplaySiteData,
@@ -25,6 +26,7 @@ const {
   mockFetchOctopusAvailableModels,
   mockFetchManagedSiteImportModels,
   mockFetchManagedSiteAvailableModels,
+  mockUsesChannelProtocolPaths,
 } = vi.hoisted(() => ({
   mockGetPreferences: vi.fn(),
   mockListChannels: vi.fn(),
@@ -36,6 +38,7 @@ const {
   mockFetchOctopusAvailableModels: vi.fn(),
   mockFetchManagedSiteImportModels: vi.fn(),
   mockFetchManagedSiteAvailableModels: vi.fn(),
+  mockUsesChannelProtocolPaths: vi.fn(),
 }))
 
 const octopusChannelFixture: OctopusChannel = {
@@ -66,6 +69,7 @@ vi.mock("~/services/apiService/octopus", () => ({
   fetchGroups: mockFetchGroups,
   fetchAvailableModels: mockFetchOctopusAvailableModels,
   fetchRemoteModels: vi.fn(),
+  usesChannelProtocolPaths: mockUsesChannelProtocolPaths,
 }))
 
 vi.mock("~/services/managedSites/utils/fetchManagedSiteImportModels", () => ({
@@ -76,6 +80,7 @@ describe("octopus additional flows", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useRealTimers()
+    mockUsesChannelProtocolPaths.mockReset().mockResolvedValue(false)
     mockGetPreferences.mockResolvedValue({
       octopus: {
         baseUrl: "https://octopus.example.com",
@@ -156,34 +161,136 @@ describe("octopus additional flows", () => {
     })
   })
 
-  it("uses the AIHubMix API origin before appending the Octopus /v1 suffix", async () => {
+  it.each([
+    ["https://proxy.example.com", "https://proxy.example.com"],
+    ["https://proxy.example.com/v1/", "https://proxy.example.com"],
+    [
+      "https://proxy.example.com/gateway/v1",
+      "https://proxy.example.com/gateway",
+    ],
+    [
+      "https://proxy.example.com/custom/v2/",
+      "https://proxy.example.com/custom/v2",
+    ],
+  ])(
+    "prepares v0.13 import URL %s without duplicating protocol paths",
+    async (baseUrl, expected) => {
+      const { prepareChannelFormData } = await import(
+        "~/services/managedSites/providers/octopus"
+      )
+      mockUsesChannelProtocolPaths.mockResolvedValue(true)
+
+      const result = await prepareChannelFormData({
+        name: "Imported channel",
+        baseUrl,
+        apiKey: "imported-key",
+        modelHints: [],
+      })
+
+      expect(result.base_url).toBe(expected)
+    },
+  )
+
+  it.each([false, true])(
+    "uses the AIHubMix API origin in protocol-path mode %s",
+    async (protocolPaths) => {
+      const { prepareChannelFormData } = await import(
+        "~/services/managedSites/providers/octopus"
+      )
+      const account = buildDisplaySiteData({
+        siteType: SITE_TYPES.AIHUBMIX,
+        name: "AIHubMix",
+        baseUrl: "https://console.aihubmix.com",
+      })
+      const token = buildApiToken({
+        key: "octo-aihubmix-key",
+        name: "AIHubMix Token",
+      })
+      mockUsesChannelProtocolPaths.mockResolvedValue(protocolPaths)
+
+      const result = await prepareChannelFormData(
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(account, token),
+        ),
+      )
+
+      expect(mockFetchManagedSiteImportModels).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: "https://aihubmix.com",
+          apiKey: token.key,
+        }),
+        undefined,
+      )
+      expect(result.base_url).toBe(
+        protocolPaths ? "https://aihubmix.com" : "https://aihubmix.com/v1",
+      )
+    },
+  )
+
+  it("does not guess legacy URL rules after a failed protocol probe", async () => {
     const { prepareChannelFormData } = await import(
       "~/services/managedSites/providers/octopus"
     )
-    const account = buildDisplaySiteData({
-      siteType: SITE_TYPES.AIHUBMIX,
-      name: "AIHubMix",
-      baseUrl: "https://console.aihubmix.com",
-    })
-    const token = buildApiToken({
-      key: "octo-aihubmix-key",
-      name: "AIHubMix Token",
-    })
+    const failure = new Error("HTTP 403: channel read forbidden")
+    mockUsesChannelProtocolPaths.mockRejectedValue(failure)
 
-    const result = await prepareChannelFormData(
-      buildManagedSiteChannelDraftSource(
-        buildDisplayAccountTokenRuntimeKey(account, token),
+    await expect(
+      prepareChannelFormData({
+        name: "Import",
+        baseUrl: "https://proxy.example.com",
+        apiKey: "imported-key",
+        modelHints: [],
+      }),
+    ).rejects.toBe(failure)
+    expect(mockFetchManagedSiteImportModels).not.toHaveBeenCalled()
+  })
+
+  it("requires a configured destination before probing its URL contract", async () => {
+    const { prepareChannelFormData } = await import(
+      "~/services/managedSites/providers/octopus"
+    )
+    mockGetPreferences.mockResolvedValue({})
+
+    await expect(
+      prepareChannelFormData({
+        name: "Import",
+        baseUrl: "https://proxy.example.com",
+        apiKey: "imported-key",
+        modelHints: [],
+      }),
+    ).rejects.toThrow(/configuration/i)
+    expect(mockUsesChannelProtocolPaths).not.toHaveBeenCalled()
+    expect(mockFetchManagedSiteImportModels).not.toHaveBeenCalled()
+  })
+
+  it("forwards draft cancellation to the destination protocol probe", async () => {
+    const { prepareChannelFormData } = await import(
+      "~/services/managedSites/providers/octopus"
+    )
+    const controller = new AbortController()
+    const gate = createDeferred<boolean>()
+    mockUsesChannelProtocolPaths.mockReturnValue(gate.promise)
+    const draft = prepareChannelFormData(
+      {
+        name: "Import",
+        baseUrl: "https://proxy.example.com",
+        apiKey: "imported-key",
+        modelHints: [],
+      },
+      { signal: controller.signal },
+    )
+    const rejected = expect(draft).rejects.toMatchObject({ name: "AbortError" })
+    await vi.waitFor(() =>
+      expect(mockUsesChannelProtocolPaths).toHaveBeenCalledWith(
+        expect.objectContaining({ baseUrl: "https://octopus.example.com" }),
+        expect.objectContaining({ signal: controller.signal }),
       ),
     )
+    controller.abort()
+    gate.resolve(true)
 
-    expect(mockFetchManagedSiteImportModels).toHaveBeenCalledWith(
-      expect.objectContaining({
-        baseUrl: "https://aihubmix.com",
-        apiKey: token.key,
-      }),
-      undefined,
-    )
-    expect(result.base_url).toBe("https://aihubmix.com/v1")
+    await rejected
+    expect(mockFetchManagedSiteImportModels).not.toHaveBeenCalled()
   })
 
   it("marks Octopus model-prefill failures while keeping the normalized base URL", async () => {

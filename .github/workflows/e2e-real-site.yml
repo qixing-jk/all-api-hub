@@ -225,6 +225,35 @@ jobs:
             echo "${REAL_SITE_CATEGORY}/${prefix} real-site E2E required secrets are configured."
           fi
 
+      - name: Export Octopus import source environment
+        if: matrix.managed_site_target == 'octopus'
+        env:
+          AAH_E2E_NEW_API_BASE_URL: ${{ secrets.AAH_E2E_NEW_API_BASE_URL }}
+          AAH_E2E_NEW_API_USERNAME: ${{ secrets.AAH_E2E_NEW_API_USERNAME }}
+          AAH_E2E_NEW_API_PASSWORD: ${{ secrets.AAH_E2E_NEW_API_PASSWORD }}
+          AAH_E2E_NEW_API_TOTP_SECRET: ${{ secrets.AAH_E2E_NEW_API_TOTP_SECRET }}
+          AAH_E2E_NEW_API_LOGIN_PATH: ${{ secrets.AAH_E2E_NEW_API_LOGIN_PATH }}
+          AAH_E2E_NEW_API_LOGIN_API_PATH: ${{ secrets.AAH_E2E_NEW_API_LOGIN_API_PATH }}
+          AAH_E2E_NEW_API_LOGIN_2FA_API_PATH: ${{ secrets.AAH_E2E_NEW_API_LOGIN_2FA_API_PATH }}
+          AAH_E2E_NEW_API_USERNAME_SELECTOR: ${{ secrets.AAH_E2E_NEW_API_USERNAME_SELECTOR }}
+          AAH_E2E_NEW_API_PASSWORD_SELECTOR: ${{ secrets.AAH_E2E_NEW_API_PASSWORD_SELECTOR }}
+          AAH_E2E_NEW_API_SUBMIT_SELECTOR: ${{ secrets.AAH_E2E_NEW_API_SUBMIT_SELECTOR }}
+          AAH_E2E_NEW_API_AGREE_SELECTOR: ${{ secrets.AAH_E2E_NEW_API_AGREE_SELECTOR }}
+        run: |
+          for key in "${!AAH_E2E_NEW_API_@}"; do
+            value="${!key}"
+            if [ -n "$value" ]; then
+              printf '%s=%s\n' "$key" "$value" >> "$GITHUB_ENV"
+            fi
+          done
+          missing=()
+          for key in AAH_E2E_NEW_API_BASE_URL AAH_E2E_NEW_API_USERNAME AAH_E2E_NEW_API_PASSWORD; do
+            [ -z "${!key}" ] && missing+=("$key")
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::warning::Octopus cross-site import E2E will skip without source-account secrets: ${missing[*]}"
+          fi
+
       - name: Run real-site E2E
         env:
           AAH_SKIP_E2E_BUILD: "1"

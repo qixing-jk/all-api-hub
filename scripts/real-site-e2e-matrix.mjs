@@ -88,6 +88,7 @@ const REAL_SITE_E2E_MATRIX = [
     env_prefix: "OCTOPUS",
     kind: "managed-site",
     managed_site_target: "octopus",
+    resource_group: REAL_SITE_E2E_RESOURCE_GROUPS.newApiAccount,
     spec: "e2e/realSite/managedSiteChannels.spec.ts",
   },
   {

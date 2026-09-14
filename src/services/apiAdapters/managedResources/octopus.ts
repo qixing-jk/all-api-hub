@@ -49,7 +49,7 @@ import { userPreferences } from "~/services/preferences/userPreferences"
 import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"
 import {
   OCTOPUS_CHANNEL_DETAIL_AVAILABILITY,
-  OctopusOutboundType,
+  type OctopusOutboundType,
   type OctopusChannel,
   type OctopusCreateChannelInput,
   type OctopusFetchModelInput,
@@ -405,16 +405,7 @@ export async function openOctopusNativeResourceOperations(
           config,
           operationOptions,
         )
-        if (!protocolPaths) return buildOctopusBaseUrl(baseUrl)
-        // v0.13 appends /v1 protocol paths itself; imported version roots must
-        // not produce /v1/v1. Preserve other custom prefixes without guessing.
-        // Source: github.com/bestruirui/octopus/blob/27aa40dc0f3b2902bce3e96ccdba019d17041606/internal/model/channel.go
-        const url = new URL(baseUrl.trim())
-        url.pathname = url.pathname.replace(/\/+$/, "")
-        // Volcengine uses unversioned protocol paths, preserving its API prefix.
-        if (type !== OctopusOutboundType.Volcengine)
-          url.pathname = url.pathname.replace(/\/v1$/, "")
-        return url.toString().replace(/\/$/, "")
+        return buildOctopusBaseUrl(baseUrl, { protocolPaths, type })
       }),
     list: async (
       query?: ResourceListQuery,

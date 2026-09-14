@@ -19,12 +19,13 @@ import {
   type ProtectionBypassExecution,
   type ProtectionBypassSurface,
 } from "~/services/protectionBypass/contracts"
-import type {
-  OctopusApiResponse,
-  OctopusChannel,
-  OctopusCreateChannelInput,
-  OctopusFetchModelInput,
-  OctopusUpdateChannelInput,
+import {
+  OCTOPUS_CHANNEL_DETAIL_AVAILABILITY,
+  type OctopusApiResponse,
+  type OctopusChannel,
+  type OctopusCreateChannelInput,
+  type OctopusFetchModelInput,
+  type OctopusUpdateChannelInput,
 } from "~/types/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"
 import {
@@ -813,16 +814,58 @@ export async function validateOctopusConfig(
   }
 }
 
+const SEARCH_DETAIL_CONCURRENCY = 4
+
 // Search fetches the full inventory before filtering. Keep protection intent in
 // its identity so interactive and automatic execution never borrow each other's policy.
 const readSearchInventory = sharePendingConfigRead(
-  (
+  async (
     {
       protectionBypassExecution,
       ...config
     }: OctopusConfig & Pick<OctopusRequestInit, "protectionBypassExecution">,
     options,
-  ) => listChannels(config, { ...options, protectionBypassExecution }),
+  ) => {
+    const requestOptions = { ...options, protectionBypassExecution }
+    const channels = await listChannels(config, requestOptions)
+    const inventory: OctopusChannel[] = []
+
+    // v0.13 stats omit base URLs and keys. Matching needs full details, while
+    // ordinary listChannels callers keep the lightweight stats inventory.
+    // https://github.com/bestruirui/octopus/blob/v0.13.4/internal/model/channel.go
+    for (
+      let offset = 0;
+      offset < channels.length;
+      offset += SEARCH_DETAIL_CONCURRENCY
+    ) {
+      throwIfOctopusRequestAborted(options.signal)
+      const batch = await Promise.all(
+        channels
+          .slice(offset, offset + SEARCH_DETAIL_CONCURRENCY)
+          .map(async (channel) => {
+            if (
+              channel.detailAvailability !==
+              OCTOPUS_CHANNEL_DETAIL_AVAILABILITY.Summary
+            ) {
+              return channel
+            }
+            const detail = await getChannel(config, channel.id, requestOptions)
+            if (detail.id !== channel.id) {
+              throw new Error(
+                "Octopus channel detail identity does not match its summary",
+              )
+            }
+            return {
+              ...channel,
+              ...detail,
+              detailAvailability: OCTOPUS_CHANNEL_DETAIL_AVAILABILITY.Full,
+            }
+          }),
+      )
+      inventory.push(...batch)
+    }
+    return inventory
+  },
 )
 
 /** 搜索渠道（按名称或上游 URL 过滤）。 */

@@ -8,12 +8,15 @@ import {
 } from "~~/e2e/scenarios/managedSiteChannels"
 
 describe("getManagedSiteStatusSourceAccountType", () => {
-  it("uses each provider's own account for token channel status", () => {
+  it("selects a compatible source account for each supported import target", () => {
     expect(getManagedSiteStatusSourceAccountType(SITE_TYPES.NEW_API)).toBe(
       SITE_TYPES.NEW_API,
     )
     expect(getManagedSiteStatusSourceAccountType(SITE_TYPES.SUB2API)).toBe(
       SITE_TYPES.SUB2API,
+    )
+    expect(getManagedSiteStatusSourceAccountType(SITE_TYPES.OCTOPUS)).toBe(
+      SITE_TYPES.NEW_API,
     )
     expect(getManagedSiteStatusSourceAccountType(SITE_TYPES.VELOERA)).toBeNull()
   })

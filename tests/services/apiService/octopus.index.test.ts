@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { octopusManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/octopus"
 import {
   octopusChannelEffect,
   runOctopusMutation,
@@ -25,6 +26,8 @@ import {
   OCTOPUS_AUTH_MODES,
   OCTOPUS_COOKIE_API_VERSIONS,
 } from "~/services/apiService/octopus/auth"
+import { getManagedSiteChannelExactMatch } from "~/services/managedSites/channelMatch"
+import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
 import {
   createAutomaticProtectionBypassExecution,
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
@@ -1906,6 +1909,263 @@ describe("Octopus API service", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(mockGetValidSession).toHaveBeenCalledTimes(2)
     expect(mockClearCache).toHaveBeenCalledTimes(1)
+  })
+
+  it("finds v0.13 channels by upstream URL and returns every key for duplicate detection", async () => {
+    mockGetValidSession.mockResolvedValue(v013CookieSession())
+    mockTempWindowOctopusApiFetch
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: [v013ChannelStatsResponse()] },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: {
+          code: 200,
+          data: v013ChannelDetailResponse({
+            keys: [
+              { name: "primary", key: "other-key", enabled: true },
+              { name: "existing", key: "imported-key", enabled: false },
+            ],
+          }),
+        },
+      })
+
+    await expect(
+      searchChannels(config, "UPSTREAM.EXAMPLE.INVALID"),
+    ).resolves.toMatchObject([
+      {
+        id: 7,
+        base_urls: [{ url: "https://upstream.example.invalid" }],
+        keys: [
+          { channel_key: "other-key", enabled: true },
+          { channel_key: "imported-key", enabled: false },
+        ],
+      },
+    ])
+    expect(
+      mockTempWindowOctopusApiFetch.mock.calls.map(
+        ([request]) => new URL(request.fetchUrl).pathname,
+      ),
+    ).toEqual(["/api/v1/channel/stats", "/api/v1/channel/detail/7"])
+  })
+
+  it.each(["legacy JWT", "v0.12 cookie", "v0.13 cookie"])(
+    "recognizes an existing imported key through the matching adapter on %s",
+    async (version) => {
+      if (version === "legacy JWT") {
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue(
+            new Response(
+              JSON.stringify({
+                success: true,
+                data: [
+                  {
+                    id: 7,
+                    name: "Existing channel",
+                    type: OctopusOutboundType.OpenAIChat,
+                    base_urls: [{ url: "https://upstream.example.invalid/v1" }],
+                    keys: [{ channel_key: "imported-key", enabled: true }],
+                    model: "model-a",
+                  },
+                ],
+              }),
+              { headers: { "Content-Type": "application/json" } },
+            ),
+          ),
+        )
+      } else if (version === "v0.12 cookie") {
+        mockGetValidSession.mockResolvedValue(currentCookieSession())
+        mockTempWindowOctopusApiFetch.mockResolvedValue({
+          success: true,
+          status: 200,
+          data: {
+            code: 200,
+            data: [
+              currentChannelResponse({
+                id: 7,
+                base_url: "https://upstream.example.invalid/v1",
+                key: "imported-key",
+              }),
+            ],
+          },
+        })
+      } else {
+        mockGetValidSession.mockResolvedValue({
+          mode: OCTOPUS_AUTH_MODES.Cookie,
+          expireAt: 1_700_000_900_000,
+          confirmed: false,
+        })
+        mockTempWindowOctopusApiFetch
+          .mockResolvedValueOnce({ success: false, status: 404 })
+          .mockResolvedValueOnce({
+            success: true,
+            status: 200,
+            data: { code: 200, data: [v013ChannelStatsResponse()] },
+          })
+          .mockResolvedValueOnce({
+            success: true,
+            status: 200,
+            data: {
+              code: 200,
+              data: v013ChannelDetailResponse({
+                keys: [
+                  { name: "first", key: "other-key", enabled: true },
+                  { name: "second", key: "imported-key", enabled: false },
+                ],
+              }),
+            },
+          })
+      }
+
+      const inspection = await resolveManagedSiteChannelMatch({
+        managedSite: octopusManagedSiteCapabilities,
+        managedConfig: config,
+        accountBaseUrl: "https://upstream.example.invalid/v1/",
+        key: "imported-key",
+        models: ["model-a"],
+      })
+
+      expect(inspection).toMatchObject({
+        searchCompleted: true,
+        key: { matched: true },
+        models: { matched: true, reason: "exact" },
+      })
+      expect(getManagedSiteChannelExactMatch(inspection)?.ref.resourceId).toBe(
+        "7",
+      )
+      expect(mockTempWindowOctopusApiFetch).toHaveBeenCalledTimes(
+        version === "v0.13 cookie" ? 3 : version === "v0.12 cookie" ? 1 : 0,
+      )
+    },
+  )
+
+  it.each([403, 404, 503])(
+    "rejects incomplete v0.13 searches after HTTP %s instead of reporting no duplicate",
+    async (status) => {
+      mockGetValidSession.mockResolvedValue(v013CookieSession())
+      mockTempWindowOctopusApiFetch
+        .mockResolvedValueOnce({
+          success: true,
+          status: 200,
+          data: { code: 200, data: [v013ChannelStatsResponse()] },
+        })
+        .mockResolvedValueOnce({
+          success: false,
+          status,
+          error: "detail unavailable",
+        })
+
+      await expect(
+        searchChannels(config, "upstream.example.invalid"),
+      ).rejects.toThrow(`HTTP ${status}`)
+    },
+  )
+
+  it("rejects v0.13 search details belonging to a different channel", async () => {
+    mockGetValidSession.mockResolvedValue(v013CookieSession())
+    mockTempWindowOctopusApiFetch
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: [v013ChannelStatsResponse()] },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: v013ChannelDetailResponse({ id: 8 }) },
+      })
+
+    await expect(searchChannels(config, "")).rejects.toThrow(/identity/i)
+  })
+
+  it("shares bounded v0.13 detail reads across concurrent searches and refreshes completed inventories", async () => {
+    const gate = createDeferred<void>()
+    const channelIds = [1, 2, 3, 4, 5, 6]
+    mockGetValidSession.mockResolvedValue(v013CookieSession())
+    mockTempWindowOctopusApiFetch.mockImplementation(async (request) => {
+      const path = new URL(request.fetchUrl).pathname
+      if (path.endsWith("/stats")) {
+        return {
+          success: true,
+          status: 200,
+          data: {
+            code: 200,
+            data: channelIds.map((channel_id) =>
+              v013ChannelStatsResponse({ channel_id }),
+            ),
+          },
+        }
+      }
+      await gate.promise
+      const id = Number(path.split("/").at(-1))
+      return {
+        success: true,
+        status: 200,
+        data: {
+          code: 200,
+          data: v013ChannelDetailResponse({
+            id,
+            base_url: `https://upstream-${id}.example.invalid`,
+          }),
+        },
+      }
+    })
+    const first = searchChannels(config, "")
+    const second = searchChannels({ ...config }, "upstream-6.example.invalid")
+
+    await vi.waitFor(() =>
+      expect(mockTempWindowOctopusApiFetch).toHaveBeenCalledTimes(5),
+    )
+    gate.resolve()
+    await expect(first).resolves.toHaveLength(6)
+    await expect(second).resolves.toMatchObject([{ id: 6 }])
+    expect(mockTempWindowOctopusApiFetch).toHaveBeenCalledTimes(7)
+
+    await expect(searchChannels(config, "")).resolves.toHaveLength(6)
+    expect(mockTempWindowOctopusApiFetch).toHaveBeenCalledTimes(14)
+  })
+
+  it("stops loading further v0.13 search details when the caller cancels", async () => {
+    const controller = new AbortController()
+    const gate = createDeferred<void>()
+    const detailSignals: AbortSignal[] = []
+    mockGetValidSession.mockResolvedValue(v013CookieSession())
+    mockTempWindowOctopusApiFetch.mockImplementation(async (request) => {
+      const path = new URL(request.fetchUrl).pathname
+      if (path.endsWith("/stats")) {
+        return {
+          success: true,
+          status: 200,
+          data: {
+            code: 200,
+            data: [1, 2, 3, 4, 5].map((channel_id) =>
+              v013ChannelStatsResponse({ channel_id }),
+            ),
+          },
+        }
+      }
+      detailSignals.push(request.fetchOptions.signal)
+      await gate.promise
+      request.fetchOptions.signal.throwIfAborted()
+    })
+    const search = searchChannels(config, "", { signal: controller.signal })
+    const rejected = expect(search).rejects.toMatchObject({
+      name: "AbortError",
+    })
+    await vi.waitFor(() => expect(detailSignals).toHaveLength(4))
+
+    controller.abort()
+    await rejected
+    expect(detailSignals.every((signal) => signal.aborted)).toBe(true)
+    gate.resolve()
+    await Promise.allSettled(
+      mockTempWindowOctopusApiFetch.mock.results.map((result) => result.value),
+    )
+    expect(mockTempWindowOctopusApiFetch).toHaveBeenCalledTimes(5)
   })
 
   it("shares pending search inventories while filtering each keyword independently", async () => {

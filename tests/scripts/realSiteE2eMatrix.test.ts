@@ -138,7 +138,7 @@ describe("GitHub real-site E2E matrix selection", () => {
     ])
   })
 
-  it("serializes account and managed-site targets within each provider", () => {
+  it("serializes targets sharing source-account credentials", () => {
     const matrix = runMatrix()
     const idsForResourceGroup = (resourceGroup: string) =>
       matrix.include
@@ -148,6 +148,7 @@ describe("GitHub real-site E2E matrix selection", () => {
     expect(idsForResourceGroup("new-api-account")).toEqual([
       "new-api-account",
       "new-api-managed-site",
+      "octopus-managed-site",
     ])
     expect(idsForResourceGroup("sub2api-account")).toEqual([
       "sub2api-account",
@@ -211,6 +212,17 @@ describe("GitHub real-site E2E matrix selection", () => {
     expect(JSON.parse(output.new_api_matrix)).toEqual({ include: [] })
     expect(selectedIds(JSON.parse(output.sub2api_matrix))).toEqual([
       "sub2api-managed-site",
+    ])
+  })
+
+  it("serializes the Octopus import target with its New API source account", () => {
+    const output = runMatrixWithOutput("managed-site", "octopus-managed-site")
+
+    expect(output.has_parallel).toBe("false")
+    expect(output.has_new_api).toBe("true")
+    expect(output.has_sub2api).toBe("false")
+    expect(selectedIds(JSON.parse(output.new_api_matrix))).toEqual([
+      "octopus-managed-site",
     ])
   })
 

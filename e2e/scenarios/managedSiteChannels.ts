@@ -20,6 +20,7 @@ import {
 } from "~/features/ManagedSiteChannels/testIds"
 import { expect } from "~~/e2e/fixtures/extensionTest"
 import type { AccountFixture } from "~~/e2e/scenarios/accountFixtures"
+import { expectOctopusImportModels } from "~~/e2e/scenarios/octopusImportModels"
 import {
   deleteTokenFromKeyManagementPage,
   expectTokenCreatedInKeyManagementPage,
@@ -61,6 +62,7 @@ export function getManagedSiteStatusSourceAccountType(
   if (siteType === SITE_TYPES.NEW_API || siteType === SITE_TYPES.SUB2API) {
     return siteType
   }
+  if (siteType === SITE_TYPES.OCTOPUS) return SITE_TYPES.NEW_API
 
   return null
 }
@@ -347,22 +349,33 @@ export async function runManagedSiteTokenChannelStatusScenario<
     await keyManagementPage
       .getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
       .fill(channelName)
+    if (context.siteType === SITE_TYPES.OCTOPUS) {
+      await expectOctopusImportModels({
+        page: keyManagementPage,
+        sourceBaseUrl: sourceAccount.baseUrl,
+      })
+    }
     await submitChannelDialogAndWaitForClose(keyManagementPage)
 
-    if (context.siteType === SITE_TYPES.SUB2API) {
-      keyManagementPage = await openKeyManagementForAccount({
-        page: keyManagementPage,
-        extensionId: context.extensionId,
-        accountId: sourceAccount.accountId,
-        openFromAccountRow: false,
-      })
+    if (
+      context.siteType === SITE_TYPES.SUB2API ||
+      context.siteType === SITE_TYPES.OCTOPUS
+    ) {
+      // Hash navigation can preserve React state; reload to force a fresh lookup.
+      await keyManagementPage.reload()
+      await waitForExtensionRoot(keyManagementPage)
       row = (
         await expectTokenCreatedInKeyManagementPage({
           page: keyManagementPage,
           tokenName,
         })
       ).row
-      await expectManagedSiteImportStatusAfterChannelCreate(row)
+    }
+    await expectManagedSiteImportStatusAfterChannelCreate(
+      row,
+      context.siteType === SITE_TYPES.OCTOPUS ? channelName : undefined,
+    )
+    if (context.siteType === SITE_TYPES.SUB2API) {
       await expect
         .poll(() => sub2ApiInventoryRequests.length, { timeout: 30_000 })
         .toBeGreaterThan(0)
@@ -372,8 +385,21 @@ export async function runManagedSiteTokenChannelStatusScenario<
       for (const requestUrl of sub2ApiInventoryRequests) {
         expect(new URL(requestUrl).searchParams.get("search")).toBeNull()
       }
-    } else {
-      await expectManagedSiteImportStatusAfterChannelCreate(row)
+    }
+    if (context.siteType === SITE_TYPES.OCTOPUS) {
+      await row
+        .getByTestId(KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton)
+        .click()
+      const duplicate = keyManagementPage.getByRole("dialog", {
+        name: "Channel already exists",
+        exact: true,
+      })
+      await expect(duplicate).toBeVisible({ timeout: 30_000 })
+      await expect(duplicate).toContainText(channelName)
+      await duplicate
+        .getByRole("button", { name: "Cancel", exact: true })
+        .click()
+      await expect(duplicate).toBeHidden()
     }
     await openManagedSiteChannelsAndExpectRow({
       page: keyManagementPage,
@@ -381,6 +407,17 @@ export async function runManagedSiteTokenChannelStatusScenario<
       channelName,
     })
     await expectPaginationSummary(keyManagementPage, "1", "1", "1")
+    if (context.siteType === SITE_TYPES.OCTOPUS) {
+      await openSingleVisibleChannelEditDialog(keyManagementPage, channelName)
+      await expectOctopusImportModels({
+        page: keyManagementPage,
+        sourceBaseUrl: sourceAccount.baseUrl,
+        saved: true,
+      })
+      await keyManagementPage
+        .getByTestId(CHANNEL_DIALOG_TEST_IDS.cancelButton)
+        .click()
+    }
   } catch (error) {
     primaryError = error
   }
@@ -390,6 +427,9 @@ export async function runManagedSiteTokenChannelStatusScenario<
 
   if (createdTokenName) {
     cleanupFinalizers.push(async () => {
+      // Discard any failed import dialog before attempting source-key cleanup.
+      await keyManagementPage.reload()
+      await waitForExtensionRoot(keyManagementPage)
       keyManagementPage = await openKeyManagementForAccount({
         page: keyManagementPage,
         extensionId: context.extensionId,
@@ -496,7 +536,15 @@ async function expectManagedSiteChannelVisibleAfterRefresh(params: {
   })
 }
 
-async function expectManagedSiteImportStatusAfterChannelCreate(row: Locator) {
+async function expectManagedSiteImportStatusAfterChannelCreate(
+  row: Locator,
+  matchedChannelName?: string,
+) {
+  if (matchedChannelName) {
+    await expect(
+      row.getByTestId(KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge),
+    ).toHaveText("Added", { timeout: 30_000 })
+  }
   const detailsTrigger = row.getByTestId("managed-site-status-details")
   await detailsTrigger.click()
   await expect(detailsTrigger).toHaveAttribute("aria-expanded", "true")
@@ -512,11 +560,15 @@ async function expectManagedSiteImportStatusAfterChannelCreate(row: Locator) {
     KEY_MANAGEMENT_TEST_IDS.managedSiteVerificationRetryButton,
   )
 
-  await expect(
-    channelLinkButton.or(verificationRetryButton).first(),
-  ).toBeVisible({
-    timeout: 30_000,
-  })
+  if (matchedChannelName) {
+    await expect(channelLinkButton).toContainText(matchedChannelName)
+    await expect(verificationRetryButton).toHaveCount(0)
+    await expect(details).toContainText("Key matched")
+  } else {
+    await expect(
+      channelLinkButton.or(verificationRetryButton).first(),
+    ).toBeVisible({ timeout: 30_000 })
+  }
   await details.press("Escape")
 }
 
