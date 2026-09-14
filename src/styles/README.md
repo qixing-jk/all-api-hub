@@ -97,13 +97,28 @@ verify all four preset/mode combinations independently, then checks React takeov
 ## Preventing raw colors
 
 Run `pnpm lint:colors` to check source utilities, CSS and HTML. It rejects raw
-Tailwind palette utilities, literal HEX/RGB/HSL colors, and direct Tailwind
-palette variables outside explicit definition owners. Comments are ignored.
-Use a role instead of adding a local palette override.
+Tailwind palette utilities, arbitrary utility colors and direct Tailwind palette
+variables (including white/black) outside explicit definition owners. Literal
+HEX, RGB/HSL, HWB, Lab/LCH, OKLab/OKLCH and `color()` values with numeric channels
+are checked in CSS declarations, HTML style/color attributes and JS/TS style
+contexts. Comments and `url()` references are ignored. Use a role instead of
+adding a local palette override.
+
+JS/TS color contexts use local syntax: style/color properties and JSX attributes,
+named constants such as `foregroundColor` or `axis`, assignments such as
+`context.fillStyle`, and calls such as `setProperty("color", value)`. Conditional
+result branches and template values keep that context; selectors, lookup keys
+and conditions do not. Ordinary anchors and business data such as `href="#abc"`
+or `{ reference: "#123456" }` are not colors. Utility and palette-variable
+spellings are checked even in standalone class constants.
+The guard does not follow aliases, evaluate computed colors or prove that a
+chosen role has the right meaning or contrast; component and browser checks
+still own those questions. Use descriptive color/style names for constants.
 
 The guard also runs during `lint` and the pre-commit staged checks. `--staged`
-reads indexed file contents; changes to the guard or its baseline check all
-indexed source files. `--report` prints the current findings as JSON.
+reads indexed blobs in one batch, including the baseline, independently of
+unstaged edits. Changes to the guard or its baseline check all indexed source
+files. `--report` prints the current findings as JSON.
 `scripts/color-token-baseline.json` records exact occurrence allowances and
 their reasons. Added occurrences fail, and removed colors or files require
 removing their allowances. Existing exemptions are limited to color-definition

@@ -13,16 +13,79 @@ const colorDefinitionFiles = new Set([
 
 const paletteNames =
   "slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose"
+const colorUtilities =
+  "bg|text|border(?:-[trblxyse])?|ring(?:-offset)?|outline|shadow|divide|from|via|to|fill|stroke|accent|decoration|caret"
 const rawUtilities = new RegExp(
-  `(?<![\\w-])(?:bg|text|border(?:-[trblxyse])?|ring(?:-offset)?|outline|shadow|divide|from|via|to|fill|stroke|accent|decoration|caret)-(?:(?:${paletteNames})-(?:50|[1-9]00|950)|white|black)(?![\\w-])`,
+  `(?<![\\w-])(?:${colorUtilities})-(?:(?:${paletteNames})-(?:50|[1-9]00|950)|white|black)(?![\\w-])`,
+  "g",
+)
+const arbitraryUtilities = new RegExp(
+  `(?<![\\w-])(?:${colorUtilities})-\\[[^\\]\\r\\n]*\\]`,
   "g",
 )
 const rawColors =
-  /#[\da-f]{8}\b|#[\da-f]{6}\b|#[\da-f]{4}\b|#[\da-f]{3}\b|\b(?:rgb|hsl)a?\(\s*[\d.+-][^)]*\)/gi
+  /#[\da-f]{8}\b|#[\da-f]{6}\b|#[\da-f]{4}\b|#[\da-f]{3}\b|\b(?:(?:rgb|hsl)a?|hwb|(?:ok)?l(?:ab|ch))\(\s*[\d.+-][^)]*\)|\bcolor\(\s*(?:srgb(?:-linear)?|display-p3|a98-rgb|prophoto-rgb|rec2020|xyz(?:-d50|-d65)?)[\s_]+[\d.+-][^)]*\)/gi
 const rawPaletteVariables = new RegExp(
-  `--color-(?:${paletteNames})-(?:50|[1-9]00|950)(?![\\w-])`,
+  `--color-(?:(?:${paletteNames})-(?:50|[1-9]00|950)|white|black)(?![\\w-])`,
   "g",
 )
+
+/** Recognize explicit style names, including camelCase and constant names. */
+function isColorName(name) {
+  return /(?:^|[^a-z0-9])(?:class(?:es|names?)?|css|styles?|colors?|fill|stroke|background|border|outline|shadow|palette|gradient|axis)(?:$|[^a-z0-9])/i.test(
+    name.replace(/([a-z0-9])([A-Z])/g, "$1-$2"),
+  )
+}
+
+/** Inspect local syntax only; ordinary references and JSX attributes are data. */
+function hasColorContext(node) {
+  for (let current = node; current.parent; current = current.parent) {
+    const parent = current.parent
+    if (
+      (ts.isConditionalExpression(parent) && current === parent.condition) ||
+      (ts.isElementAccessExpression(parent) &&
+        current === parent.argumentExpression)
+    ) {
+      return false
+    }
+    if (ts.isJsxAttribute(parent)) return isColorName(parent.name.getText())
+    if (
+      ts.isPropertyAssignment(parent) ||
+      ts.isVariableDeclaration(parent) ||
+      ts.isPropertyDeclaration(parent)
+    ) {
+      if (current === parent.name) return false
+      if (isColorName(parent.name.getText())) return true
+    }
+    if (
+      ts.isBinaryExpression(parent) &&
+      parent.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+      current === parent.right &&
+      isColorName(parent.left.getText())
+    ) {
+      return true
+    }
+    if (ts.isCallExpression(parent) && parent.arguments.includes(current)) {
+      const callee = parent.expression
+      const name = ts.isPropertyAccessExpression(callee)
+        ? callee.name.getText()
+        : callee.getText()
+      if (isColorName(name)) return true
+      if (
+        ["setProperty", "setAttribute"].includes(name) &&
+        current === parent.arguments[1] &&
+        ts.isStringLiteralLike(parent.arguments[0]) &&
+        isColorName(parent.arguments[0].text)
+      ) {
+        return true
+      }
+      // A selector/helper argument is not necessarily the returned style value.
+      return false
+    }
+    if (ts.isStatement(parent)) break
+  }
+  return false
+}
 
 /** Find source color literals while excluding comments and color-definition owners. */
 export function findColorTokenViolations(file, source) {
@@ -32,8 +95,16 @@ export function findColorTokenViolations(file, source) {
   }
 
   const violations = []
-  const addMatches = (value, offset) => {
-    for (const expression of [rawUtilities, rawColors, rawPaletteVariables]) {
+  const addMatches = (
+    value,
+    offset,
+    expressions = [rawUtilities, rawColors, rawPaletteVariables],
+  ) => {
+    // SVG paint references and asset URL fragments are not color literals.
+    value = value.replace(/\burl\([^)]*\)/gi, (url) =>
+      url.replace(/[^\r\n]/g, " "),
+    )
+    for (const expression of expressions) {
       for (const match of value.matchAll(expression)) {
         const position = offset + match.index
         const prefix = source.slice(0, position)
@@ -90,7 +161,17 @@ export function findColorTokenViolations(file, source) {
         ts.isTemplateMiddle(node) ||
         ts.isTemplateTail(node)
       ) {
-        addMatches(node.getText(parsed), node.getStart(parsed))
+        const value = node.getText(parsed)
+        const offset = node.getStart(parsed)
+        // Utility/variable spellings are unambiguous even in detached constants.
+        addMatches(value, offset, [rawUtilities, rawPaletteVariables])
+        if (hasColorContext(node)) {
+          addMatches(value, offset, [rawColors])
+        } else {
+          for (const match of value.matchAll(arbitraryUtilities)) {
+            addMatches(match[0], offset + match.index, [rawColors])
+          }
+        }
       }
       ts.forEachChild(node, visit)
     }

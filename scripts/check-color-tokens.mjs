@@ -22,14 +22,33 @@ const guardChanged = changed.some((path) =>
     "scripts/utils/color-tokens.mjs",
   ].includes(path),
 )
-const files = splitPaths(
-  git(
-    "ls-files",
-    "-z",
-    ...(staged ? [] : ["--cached", "--others", "--exclude-standard"]),
-    "--",
-    "src",
-  ),
+const index = new Map(
+  staged
+    ? splitPaths(
+        git("ls-files", "--stage", "-z", "--", "src", baselinePath),
+      ).map((entry) => {
+        const [, object, stage, file] = /^\d+ ([\da-f]+) (\d)\t([\s\S]+)$/.exec(
+          entry,
+        )
+        if (stage !== "0") throw new Error(`Unmerged index entry: ${file}`)
+        return [file, object]
+      })
+    : [],
+)
+const files = (
+  staged
+    ? [...index.keys()].filter((file) => file.startsWith("src/"))
+    : splitPaths(
+        git(
+          "ls-files",
+          "-z",
+          "--cached",
+          "--others",
+          "--exclude-standard",
+          "--",
+          "src",
+        ),
+      )
 ).filter(
   (file) =>
     /\.(?:[cm]?[jt]sx?|css|html)$/.test(file) && (staged || existsSync(file)),
@@ -37,8 +56,48 @@ const files = splitPaths(
 const selected = [...new Set(files)].filter(
   (file) => !staged || guardChanged || changed.includes(file),
 )
+
+/** Read each indexed blob once, preserving byte boundaries before UTF-8 decoding. */
+function readIndexFiles(paths) {
+  const objects = [
+    ...new Set(
+      paths.map((file) => {
+        const object = index.get(file)
+        if (!object) throw new Error(`Missing index entry: ${file}`)
+        return object
+      }),
+    ),
+  ]
+  const contents = new Map()
+  if (!objects.length) return contents
+  const output = execFileSync("git", ["cat-file", "--batch"], {
+    input: objects.join("\n") + "\n",
+    maxBuffer: 64 * 1024 * 1024,
+  })
+  let offset = 0
+  for (const object of objects) {
+    const headerEnd = output.indexOf(10, offset)
+    const header = output.toString("ascii", offset, headerEnd)
+    const match = /^([\da-f]+) blob (\d+)$/.exec(header)
+    if (!match || match[1] !== object) {
+      throw new Error(`Cannot read indexed blob: ${object}`)
+    }
+    const start = headerEnd + 1
+    const end = start + Number(match[2])
+    if (end >= output.length || output[end] !== 10) {
+      throw new Error(`Incomplete indexed blob: ${object}`)
+    }
+    contents.set(object, output.toString("utf8", start, end))
+    offset = end + 1
+  }
+  return new Map(paths.map((file) => [file, contents.get(index.get(file))]))
+}
+
+const indexedContents = staged
+  ? readIndexFiles([...selected, ...(report ? [] : [baselinePath])])
+  : new Map()
 const read = (file) =>
-  staged ? git("show", `:${file}`) : readFileSync(file, "utf8")
+  staged ? indexedContents.get(file) : readFileSync(file, "utf8")
 const baseline = report ? {} : JSON.parse(read(baselinePath))
 const errors = []
 const findings = {}

@@ -115,6 +115,109 @@ describe("color token guard", () => {
     ])
   })
 
+  it("ignores anchors and ordinary data strings without hiding style colors", () => {
+    const source = [
+      'const reference = "#123456";',
+      'const record = { reference: "#abcdef", description: "rgb(1, 2, 3)" };',
+      'const view = <a href="#abc" aria-label="#def" style={{ color: "#123" }}>Jump</a>;',
+      'const foregroundColor = active ? "#456" : "#789";',
+      'const axis = "#aabbcc";',
+      'const chartOptions = { xAxis: { axisLine: { lineStyle: { color: "#ddeeff" } } } };',
+      'context.fillStyle = "#112233";',
+      'element.style.setProperty("color", "#445566");',
+    ].join("\n")
+    expect(
+      findColorTokenViolations("src/example.tsx", source).map(
+        (item) => item.token,
+      ),
+    ).toEqual([
+      "#123",
+      "#456",
+      "#789",
+      "#aabbcc",
+      "#ddeeff",
+      "#112233",
+      "#445566",
+    ])
+  })
+
+  it("checks arbitrary utility colors in standalone constants and template branches", () => {
+    const source = [
+      'const selected = "hover:bg-[#abc]";',
+      'const view = <div className={`text-[#123456] ${active ? "border-[#def]" : "ring-[#fed]"}`} />;',
+      'const svg = <svg fill={active ? "#456" : "#789"} />;',
+    ].join("\n")
+    expect(
+      findColorTokenViolations("src/example.tsx", source).map(
+        (item) => item.token,
+      ),
+    ).toEqual(["#abc", "#123456", "#def", "#fed", "#456", "#789"])
+  })
+
+  it("keeps selectors and conditions separate from the style values they choose", () => {
+    const source = [
+      'const style = document.querySelector("#abc");',
+      'const color = palette["#123456"];',
+      'const view = <div style={{ color: reference === "#def" ? "#456" : "#789" }} />;',
+    ].join("\n")
+    expect(
+      findColorTokenViolations("src/example.tsx", source).map(
+        (item) => item.token,
+      ),
+    ).toEqual(["#456", "#789"])
+  })
+
+  it.each([
+    "oklch(60% 0.2 250)",
+    "oklab(60% 0.1 0.1)",
+    "lch(60% 40 250)",
+    "lab(60% 20 30)",
+    "hwb(250 10% 20%)",
+    "color(display-p3 1 0 0)",
+    "color(srgb-linear 0.1 0.2 0.3)",
+  ])("finds modern color literal %s in JSX and CSS", (color) => {
+    for (const [file, source] of [
+      ["src/example.tsx", `<div style={{ color: "${color}" }} />`],
+      ["src/example.css", `.label { color: ${color}; }`],
+    ]) {
+      expect(
+        findColorTokenViolations(file, source).map((item) => item.token),
+      ).toEqual([color])
+    }
+  })
+
+  it("rejects white and black palette variables without matching longer role names", () => {
+    const source =
+      'const style = { color: "var(--color-white)", background: "var(--color-black)", borderColor: "var(--color-white-label)" }'
+    expect(
+      findColorTokenViolations("src/example.ts", source).map(
+        (item) => item.token,
+      ),
+    ).toEqual(["--color-white", "--color-black"])
+  })
+
+  it("allows role-derived modern colors and URL fragments in styles", () => {
+    const values = [
+      "rgb(var(--foreground))",
+      "oklch(var(--foreground))",
+      "color(srgb var(--foreground))",
+      "color-mix(in oklab, var(--foreground), var(--background))",
+      "rgb(from var(--foreground) r g b / .5)",
+      "url(#abc)",
+    ]
+    for (const value of values) {
+      expect(
+        findColorTokenViolations("src/example.tsx", `<svg fill="${value}" />`),
+      ).toEqual([])
+      expect(
+        findColorTokenViolations(
+          "src/example.css",
+          `.label { background: ${value}; }`,
+        ),
+      ).toEqual([])
+    }
+  })
+
   it("ignores comments and supports role utilities and variable-based colors", () => {
     const source =
       '// issue #204, formerly bg-red-500\nconst css = "text-success-text bg-primary text-primary-foreground focus:ring-ring"; const color = "rgb(var(--foreground))"'
@@ -192,6 +295,71 @@ describe("color token guard", () => {
     const staged = check("--staged")
     expect(staged.status).toBe(1)
     expect(staged.stderr).toContain("Use a color role instead of text-red-600")
+  })
+
+  it("reads indexed UTF-8 contents with spaced paths, shared blobs and empty files", () => {
+    const { directory, git, check } = createGuardRepository()
+    const shared = 'const label = "图表 🎨";\r\nconst color = "#123456"'
+    for (const file of ["src/共享 colors.ts", "src/copy colors.ts"]) {
+      writeFileSync(path.join(directory, file), shared)
+    }
+    writeFileSync(path.join(directory, "src/empty.ts"), "")
+    writeFileSync(
+      path.join(directory, "src/next.ts"),
+      'const color = "rgb(1, 2, 3)"',
+    )
+    // Report mode also works without an indexed baseline.
+    git("add", "src")
+    writeFileSync(
+      path.join(directory, "src/共享 colors.ts"),
+      'const color = "var(--foreground)"',
+    )
+
+    const result = check("--staged", "--report")
+    expect(result.stderr).toBe("")
+    expect(result.status).toBe(0)
+    expect(JSON.parse(result.stdout)).toEqual({
+      "src/共享 colors.ts": [{ token: "#123456", line: 2, column: 16 }],
+      "src/copy colors.ts": [{ token: "#123456", line: 2, column: 16 }],
+      "src/next.ts": [{ token: "rgb(1, 2, 3)", line: 1, column: 16 }],
+    })
+  })
+
+  it("rechecks unchanged indexed sources when the guard changes", () => {
+    const { directory, git, check } = createGuardRepository()
+    writeFileSync(
+      path.join(directory, "src/unchanged.ts"),
+      'const color = "#123456"',
+    )
+    git("add", ".")
+    git(
+      "-c",
+      "user.name=Color guard test",
+      "-c",
+      "user.email=color-guard@example.invalid",
+      "-c",
+      "commit.gpgsign=false",
+      "-c",
+      "core.hooksPath=.git/hooks",
+      "commit",
+      "--quiet",
+      "-m",
+      "fixture",
+    )
+    writeFileSync(
+      path.join(directory, "src/changed.ts"),
+      'const css = "text-foreground"',
+    )
+    git("add", "src/changed.ts")
+    expect(JSON.parse(check("--staged", "--report").stdout)).toEqual({})
+    writeFileSync(
+      path.join(directory, "scripts/check-color-tokens.mjs"),
+      "// Updated guard\n",
+    )
+    git("add", "scripts/check-color-tokens.mjs")
+    expect(JSON.parse(check("--staged", "--report").stdout)).toEqual({
+      "src/unchanged.ts": [{ token: "#123456", line: 1, column: 16 }],
+    })
   })
 
   it("requires the baseline to shrink when a source file is deleted", () => {
