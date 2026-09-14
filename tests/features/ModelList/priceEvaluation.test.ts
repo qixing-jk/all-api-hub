@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
-import type { ModelListItem } from "~/features/ModelList/modelListItems"
-import { createAccountSource } from "~/features/ModelList/modelManagementSources"
+import type {
+  CalculatedModelItem,
+  ModelListItem,
+} from "~/features/ModelList/modelListItems"
+import {
+  createAccountSource,
+  createProfileSource,
+} from "~/features/ModelList/modelManagementSources"
 import {
   calculateModelListPrices,
   rankModelListPrices,
@@ -10,6 +16,7 @@ import {
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import { prepareModelListSource } from "~/features/ModelList/sourcePreparation"
 import { CALCULATED_PRICE_KINDS } from "~/services/modelPricing/pricingConstants"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
@@ -76,6 +83,195 @@ function calculate(rawItems: ModelListItem[], groups?: string[]) {
 }
 
 describe("model list price evaluation", () => {
+  it.each([false, true])(
+    "sorts finite secondary prices before missing ones in either input order (reverse: %s)",
+    (reverse) => {
+      const items = calculate([
+        row("missing-secondary", { a: 1 }),
+        row("finite-secondary", { a: 1 }),
+      ])
+      for (const [index, item] of items.entries()) {
+        item.model = { ...item.model, quota_type: 1 }
+        item.calculatedPrice = {
+          kind: CALCULATED_PRICE_KINDS.PER_CALL,
+          usdPerCall: { input: 1, output: index === 0 ? Number.NaN : 2 },
+        }
+      }
+      const result = rankModelListPrices({
+        ...options,
+        items: reverse ? items.toReversed() : items,
+        sortMode: MODEL_LIST_SORT_MODES.PRICE_DESC,
+        compareAcrossSources: true,
+      })
+      expect(result.map((item) => item.source)).toEqual([
+        items[1].source,
+        items[0].source,
+      ])
+      expect(result.map((item) => item.isLowestPrice)).toEqual([true, false])
+    },
+  )
+  it("uses profile names to order equal legacy prices without account currency conversion", () => {
+    const items = calculate([row("zulu", { a: 1 }), row("alpha", { a: 1 })])
+    for (const [index, item] of items.entries()) {
+      item.source = createProfileSource({
+        id: `profile-${index}`,
+        name: index === 0 ? "Zulu" : "Alpha",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://profile.example.invalid/v1",
+        apiKey: "example-key",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      })
+      item.calculatedPrice = {
+        kind: CALCULATED_PRICE_KINDS.TOKEN,
+        usdPerMillionTokens: { input: 1, output: 1 },
+      }
+    }
+    const result = rankModelListPrices({
+      ...options,
+      items,
+      showRealPrice: true,
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+      compareAcrossSources: true,
+    })
+    expect(result.map((item) => item.source)).toEqual([
+      items[1].source,
+      items[0].source,
+    ])
+    expect(result.every((item) => item.isLowestPrice)).toBe(true)
+  })
+  it("ranks legacy token prices using output and cache weights in the account currency", () => {
+    const items = calculate([
+      row("cached", { a: 1 }),
+      row("uncached", { a: 1 }),
+    ])
+    items[0].calculatedPrice = {
+      kind: CALCULATED_PRICE_KINDS.TOKEN,
+      usdPerMillionTokens: {
+        input: 10,
+        output: 2,
+        cacheRead: 1,
+        cacheWrite: 1,
+      },
+    }
+    items[1].calculatedPrice = {
+      kind: CALCULATED_PRICE_KINDS.TOKEN,
+      usdPerMillionTokens: {
+        input: 1,
+        output: 10,
+        cacheRead: 4,
+        cacheWrite: 4,
+      },
+    }
+    const result = rankModelListPrices({
+      ...options,
+      items,
+      showRealPrice: true,
+      priceComparisonWeights: {
+        input: 1,
+        output: 1,
+        cacheRead: 2,
+        cacheWrite: 2,
+      },
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+      compareAcrossSources: true,
+    })
+    expect(result.map((item) => item.source)).toEqual(
+      items.map((item) => item.source),
+    )
+    expect(result.map((item) => item.isLowestPrice)).toEqual([true, false])
+  })
+  it("orders legacy per-call prices by input then output and keeps missing prices last", () => {
+    const items = calculate([
+      row("high-output", { a: 1 }),
+      row("low-output", { a: 1 }),
+      row("missing", { a: 1 }),
+    ])
+    for (const item of items) item.model = { ...item.model, quota_type: 1 }
+    items[0].calculatedPrice = {
+      kind: CALCULATED_PRICE_KINDS.PER_CALL,
+      usdPerCall: { input: 1, output: 3 },
+    }
+    items[1].calculatedPrice = {
+      kind: CALCULATED_PRICE_KINDS.PER_CALL,
+      usdPerCall: { input: 1, output: 2 },
+    }
+    items[2].calculatedPrice = {
+      kind: CALCULATED_PRICE_KINDS.PER_CALL,
+      usdPerCall: { input: Number.NaN, output: Number.NaN },
+    }
+    const result = rankModelListPrices({
+      ...options,
+      items,
+      showRealPrice: true,
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+      compareAcrossSources: true,
+    })
+    expect(result.map((item) => item.source)).toEqual([
+      items[1].source,
+      items[0].source,
+      items[2].source,
+    ])
+    expect(result.map((item) => item.isLowestPrice)).toEqual([
+      true,
+      false,
+      false,
+    ])
+    expect(result.map((item) => item.isPriceComparable)).toEqual([
+      true,
+      true,
+      false,
+    ])
+  })
+  it("compares finite legacy secondary prices even when the primary price is missing", () => {
+    const items = calculate([
+      row("missing-output", { a: 1 }),
+      row("finite-output", { a: 1 }),
+    ])
+    for (const [index, item] of items.entries()) {
+      item.model = { ...item.model, quota_type: 1 }
+      item.calculatedPrice = {
+        kind: CALCULATED_PRICE_KINDS.PER_CALL,
+        usdPerCall: { input: Number.NaN, output: index === 0 ? Number.NaN : 2 },
+      }
+    }
+    const result = rankModelListPrices({
+      ...options,
+      items,
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_DESC,
+      compareAcrossSources: true,
+    })
+    expect(result.map((item) => item.isPriceComparable)).toEqual([true, false])
+    expect(result[0].source).toEqual(items[1].source)
+  })
+  it("breaks equal prices by source labels and preserves order for identical row keys", () => {
+    const first = calculate([row("first", { a: 1 })])[0]
+    const second = calculate([row("second", { a: 1 })])[0]
+    if (first.source.kind === "account") first.source.account.name = "Zulu"
+    if (second.source.kind === "account") second.source.account.name = "Alpha"
+    const duplicate: CalculatedModelItem = {
+      ...second,
+      hasUniquelyOptimalGroup: true,
+    }
+    const result = rankModelListPrices({
+      ...options,
+      items: [first, second, duplicate],
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+      compareAcrossSources: true,
+    })
+    expect(result.map((item) => item.source)).toEqual([
+      second.source,
+      duplicate.source,
+      first.source,
+    ])
+    expect(result.map((item) => item.hasUniquelyOptimalGroup)).toEqual([
+      undefined,
+      true,
+      undefined,
+    ])
+  })
   it("distinguishes unrestricted candidates from an explicitly empty action scope", () => {
     const item = row("a", { a: 1, b: 2 })
     expect(calculate([item])).toHaveLength(1)

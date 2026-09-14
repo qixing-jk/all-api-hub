@@ -138,6 +138,54 @@ function renderUseFilteredModels(
 }
 
 describe("useFilteredModels", () => {
+  it.each(["priced", "unavailable", "catalog"] as const)(
+    "keeps vendor previews and displayed rows in the same scope for %s models with stale groups",
+    async (kind) => {
+      const { result } = renderUseFilteredModels({
+        selectedSource: createAccountSource(createDisplayAccount({})),
+        selectedGroups: ["stale-group"],
+        selectedProvider: "known:openai",
+        pricingData: createPricingResponse(
+          [
+            {
+              model_name: "gpt-4o",
+              ...(kind === "unavailable"
+                ? {
+                    price_metadata: {
+                      source: MODEL_PRICE_SOURCE_KINDS.NONE,
+                      precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+                      unavailable_reason:
+                        MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE,
+                    },
+                  }
+                : {}),
+            },
+          ],
+          kind === "catalog"
+            ? {
+                model_list_source: {
+                  kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+                  supportsPricing: false,
+                },
+              }
+            : {},
+        ),
+      })
+      const count = kind === "priced" ? 0 : 1
+      await waitFor(() =>
+        expect(result.current?.allVendorsFilteredCount).toBe(count),
+      )
+      expect(result.current.filteredModels).toHaveLength(count)
+      expect(result.current.getFilteredResultCount()).toBe(count)
+      expect(
+        result.current.vendorCatalog.map(({ key, count }) => ({ key, count })),
+      ).toEqual(count ? [{ key: "known:openai", count: 1 }] : [])
+      expect(result.current.effectiveSelectedVendor).toBe(
+        count ? "known:openai" : MODEL_VENDOR_FILTER_VALUES.All,
+      )
+      expect(result.current.shouldRepairSelectedVendor).toBe(count === 0)
+    },
+  )
   it("provides a model pricing destination on the originating account deployment", async () => {
     const account = createDisplayAccount({
       siteType: SITE_TYPES.NEW_API,
