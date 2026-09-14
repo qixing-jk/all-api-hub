@@ -99,7 +99,7 @@ describe("model list price evaluation", () => {
       }
       const result = rankModelListPrices({
         ...options,
-        items: reverse ? items.toReversed() : items,
+        items: reverse ? [...items].reverse() : items,
         sortMode: MODEL_LIST_SORT_MODES.PRICE_DESC,
         compareAcrossSources: true,
       })
