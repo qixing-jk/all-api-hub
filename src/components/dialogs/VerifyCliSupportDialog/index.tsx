@@ -19,11 +19,9 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 import {
   collectAccountRuntimeKeySecrets,
   findDefaultSelectableAccountRuntimeKey,
-  isAccountTokenRuntimeKey,
   isSelectableAccountRuntimeKey,
   sortAccountRuntimeKeysActiveFirst,
   type AccountRuntimeKey,
-  type AccountTokenRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import {
   fetchDisplayAccountRuntimeKeys,
@@ -49,7 +47,6 @@ import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/
 import {
   API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_STATUSES,
-  guessModelIdFromToken,
   type ApiVerificationMode,
 } from "~/services/verification/aiApiVerification"
 import {
@@ -113,21 +110,6 @@ function buildStoppedToolResult(
 }
 
 /**
- * Parse token-provided model metadata into distinct selectable ids.
- */
-function extractTokenModelIds(runtimeKey: AccountTokenRuntimeKey) {
-  return normalizeApiCredentialModelIds(
-    [runtimeKey.token.models, runtimeKey.token.model_limits]
-      .filter(
-        (value): value is string =>
-          typeof value === "string" && value.trim().length > 0,
-      )
-      .flatMap((value) => value.split(/[, \n]+/g))
-      .map((value) => value.trim()),
-  )
-}
-
-/**
  * Modal dialog that runs CLI support simulation for a selected account runtime
  * key or a stored profile.
  *
@@ -183,26 +165,14 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     : selectedRuntimeKeyIsRunnable
   const modelOptions = useMemo(() => {
     if (isProfileSource) return profileModelOptions
-    if (!selectedRuntimeKey || !isAccountTokenRuntimeKey(selectedRuntimeKey)) {
-      return []
-    }
-    return extractTokenModelIds(selectedRuntimeKey)
+    return normalizeApiCredentialModelIds([
+      ...(selectedRuntimeKey?.modelAccess.suggestedModelIds ?? []),
+    ])
   }, [isProfileSource, profileModelOptions, selectedRuntimeKey])
 
   const tokenModelHint = useMemo(() => {
-    if (
-      !selectedRuntimeKey ||
-      !isAccountTokenRuntimeKey(selectedRuntimeKey) ||
-      isProfileSource
-    ) {
-      return ""
-    }
-    return (
-      guessModelIdFromToken({
-        models: selectedRuntimeKey.token.models,
-        model_limits: selectedRuntimeKey.token.model_limits,
-      }) ?? ""
-    )
+    if (isProfileSource) return ""
+    return selectedRuntimeKey?.modelAccess.suggestedModelIds[0] ?? ""
   }, [isProfileSource, selectedRuntimeKey])
 
   const resolvedModelId = (modelId.trim() || tokenModelHint.trim() || "").trim()

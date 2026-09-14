@@ -5,17 +5,15 @@ import {
   type ModelManagementItemSource,
 } from "~/features/ModelList/modelManagementSources"
 import {
-  hasUsableAccountRuntimeKeySecret,
+  isAccountRuntimeKeyCompatibleWithModel,
   isAccountTokenRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { identifyProvider } from "~/services/models/utils/modelProviders"
-import { isTokenCompatibleWithModel } from "~/services/models/utils/tokenModelCompatibility"
 import {
   API_TYPES,
   type ApiVerificationApiType,
 } from "~/services/verification/aiApiVerification"
-import type { ApiToken } from "~/types"
 
 import { getModelItemKey, type CalculatedModelItem } from "./modelListItems"
 
@@ -91,42 +89,6 @@ export function resolveBatchVerifyApiType(
   return API_TYPES.OPENAI_COMPATIBLE
 }
 
-/** Returns whether a token is compatible with the batch row's model/group scope. */
-function isBatchVerifyTokenCompatible(
-  token: ApiToken,
-  item: Pick<BatchVerifyModelItem, "modelId" | "enableGroups">,
-) {
-  return isTokenCompatibleWithModel(token, {
-    id: item.modelId,
-    enableGroups: item.enableGroups,
-  })
-}
-
-/**
- * Pick the deterministic token used to verify a model for an account source.
- */
-export function pickBatchVerifyCompatibleToken(
-  tokens: ApiToken[],
-  item: Pick<
-    BatchVerifyModelItem,
-    "modelId" | "enableGroups" | "sourceIdentity"
-  >,
-): ApiToken | null {
-  if (
-    item.sourceIdentity?.kind === MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_TOKEN
-  ) {
-    const sourceIdentity = item.sourceIdentity
-    const token = tokens.find(
-      (candidate) => candidate.id === sourceIdentity.tokenId,
-    )
-    return token && isBatchVerifyTokenCompatible(token, item) ? token : null
-  }
-
-  return (
-    tokens.find((token) => isBatchVerifyTokenCompatible(token, item)) ?? null
-  )
-}
-
 /**
  * Pick the deterministic runtime key used to verify a model for an account
  * source. Runtime-key scoped rows must match their source identity exactly.
@@ -138,13 +100,11 @@ export function pickBatchVerifyCompatibleRuntimeKey(
     "modelId" | "enableGroups" | "sourceIdentity"
   >,
 ): AccountRuntimeKey | null {
-  const isCompatible = (runtimeKey: AccountRuntimeKey) => {
-    if (isAccountTokenRuntimeKey(runtimeKey)) {
-      return isBatchVerifyTokenCompatible(runtimeKey.token, item)
-    }
-
-    return hasUsableAccountRuntimeKeySecret(runtimeKey)
-  }
+  const isCompatible = (runtimeKey: AccountRuntimeKey) =>
+    isAccountRuntimeKeyCompatibleWithModel(runtimeKey, {
+      id: item.modelId,
+      enableGroups: item.enableGroups,
+    })
 
   if (
     item.sourceIdentity?.kind === MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_TOKEN

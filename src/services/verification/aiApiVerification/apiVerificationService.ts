@@ -1,6 +1,3 @@
-import type { ApiToken } from "~/types"
-
-import { resolveRequestedModelId } from "./modelResolver"
 import { apiVerificationProbeRegistry } from "./probeRegistry"
 import { runApiVerificationSuite } from "./suiteRunner"
 import {
@@ -24,7 +21,7 @@ type RunApiVerificationParams = {
   apiType: ApiVerificationApiType
   mode?: ApiVerificationMode
   modelId?: string
-  tokenMeta?: Pick<ApiToken, "models" | "model_limits" | "name" | "id">
+  fallbackModelId?: string
   abortSignal?: AbortSignal
 }
 
@@ -44,7 +41,7 @@ export async function runApiVerificationProbe(
   params: RunApiVerificationProbeParams,
 ): Promise<ApiVerificationProbeResult> {
   const registryEntry = apiVerificationProbeRegistry[params.probeId]
-  const resolvedModelId = resolveRequestedModelId(params)
+  const resolvedModelId = params.modelId ?? params.fallbackModelId
 
   if (registryEntry.requiresModelId && !resolvedModelId?.trim()) {
     return {
@@ -78,7 +75,7 @@ export async function runApiVerification(
   params: RunApiVerificationParams,
 ): Promise<ApiVerificationReport> {
   const startedAt = Date.now()
-  const requestedModelId = resolveRequestedModelId(params)
+  const requestedModelId = params.modelId ?? params.fallbackModelId
 
   const { results, modelId } = await runApiVerificationSuite({
     baseUrl: params.baseUrl,

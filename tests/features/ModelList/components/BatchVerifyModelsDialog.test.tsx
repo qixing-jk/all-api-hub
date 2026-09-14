@@ -15,6 +15,11 @@ import {
   getBatchVerifyRowTestId,
 } from "~/features/ModelList/testIds"
 import {
+  buildAccountRuntimeKeyAccount,
+  buildDisplayAccountTokenRuntimeKey,
+  buildServiceCredentialRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
+import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
@@ -458,12 +463,6 @@ describe("BatchVerifyModelsDialog", () => {
           apiKey: "sk-real",
           apiType: API_TYPES.OPENAI,
           modelId: "gpt-4o",
-          tokenMeta: {
-            id: 1,
-            name: "default-token",
-            model_limits: "",
-            models: "",
-          },
           probeId: "text-generation",
           abortSignal: expect.any(AbortSignal),
         }),
@@ -485,36 +484,20 @@ describe("BatchVerifyModelsDialog", () => {
 
   it("uses the account-token runtime key identified by the row source identity", async () => {
     const firstRuntimeKey = {
-      id: "account_token:acc-1:1",
-      source: "account_token",
-      account,
-      accountId: account.id,
-      accountName: account.name,
-      siteType: account.siteType,
-      label: "First runtime key",
-      secret: "masked-first",
+      ...buildDisplayAccountTokenRuntimeKey(
+        account,
+        buildApiToken({
+          id: 1,
+          name: "First runtime key",
+          key: "sk-***first",
+          status: 1,
+          group: "default",
+          model_limits_enabled: false,
+          model_limits: "",
+          models: "",
+        }),
+      ),
       baseUrl: "https://first.example.invalid",
-      status: "active",
-      capabilities: {
-        copy: true,
-        export: true,
-        verify: true,
-        fetchRuntimeModels: true,
-        rotate: false,
-        updateToken: true,
-        deleteToken: true,
-      },
-      tokenId: 1,
-      token: {
-        id: 1,
-        name: "First runtime key",
-        key: "masked-first",
-        status: 1,
-        group: "default",
-        model_limits_enabled: false,
-        model_limits: "",
-        models: "",
-      },
     }
     const secondRuntimeKey = {
       ...firstRuntimeKey,
@@ -579,12 +562,6 @@ describe("BatchVerifyModelsDialog", () => {
           baseUrl: "https://second.example.invalid",
           apiKey: "sk-second-real",
           modelId: "gpt-4o",
-          tokenMeta: {
-            id: 2,
-            name: "Second runtime key",
-            model_limits: "",
-            models: "",
-          },
         }),
       )
     })
@@ -598,36 +575,17 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("uses service-credential runtime keys without fake numeric token ids", async () => {
-    const runtimeKey = {
-      id: "service_credential:acc-1:codex",
-      source: "service_credential",
-      account,
-      accountId: account.id,
-      accountName: account.name,
-      siteType: account.siteType,
-      label: "Codex",
-      secret: "masked-service",
-      baseUrl: "https://service.example.invalid",
-      status: "active",
-      capabilities: {
-        copy: true,
-        export: true,
-        verify: true,
-        fetchRuntimeModels: true,
-        rotate: false,
-        updateToken: false,
-        deleteToken: false,
-      },
-      service: "codex",
-      credential: {
+    const runtimeKey = buildServiceCredentialRuntimeKey(
+      buildAccountRuntimeKeyAccount(account),
+      {
         kind: "singleton_service_key",
         service: "codex",
         label: "Codex",
-        key: "masked-service",
+        key: "sk-service",
         isAuthenticated: true,
         baseUrl: "https://service.example.invalid",
       },
-    }
+    )
     mockFetchDisplayAccountRuntimeKeys.mockResolvedValueOnce([runtimeKey])
     mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValueOnce({
       ...runtimeKey,
@@ -671,7 +629,6 @@ describe("BatchVerifyModelsDialog", () => {
           baseUrl: "https://service.example.invalid",
           apiKey: "sk-service-real",
           modelId: "gpt-4o",
-          tokenMeta: undefined,
         }),
       )
     })
@@ -2318,7 +2275,6 @@ describe("BatchVerifyModelsDialog", () => {
           apiKey: "profile-secret",
           apiType: API_TYPES.ANTHROPIC,
           modelId: "gpt-4o",
-          tokenMeta: undefined,
           probeId: "text-generation",
           abortSignal: expect.any(AbortSignal),
         }),

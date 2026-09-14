@@ -127,6 +127,7 @@ describe("apiVerificationService", () => {
       apiKey: "secret",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
       modelId: "override-model",
+      fallbackModelId: "fallback-model",
     })
 
     expect(report.modelId).toBe("override-model")
@@ -136,7 +137,7 @@ describe("apiVerificationService", () => {
     )
   })
 
-  it("uses token model hint when available", async () => {
+  it("uses the supplied fallback model when no explicit model is selected", async () => {
     mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["m1"])
     mockGenerateText
       .mockResolvedValueOnce({ text: "OK" })
@@ -151,11 +152,7 @@ describe("apiVerificationService", () => {
       baseUrl: "https://example.com",
       apiKey: "secret",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
-      tokenMeta: {
-        id: 1,
-        name: "t",
-        models: "hint-model,other",
-      },
+      fallbackModelId: "hint-model",
     })
 
     expect(report.modelId).toBe("hint-model")

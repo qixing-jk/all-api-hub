@@ -318,46 +318,4 @@ describe("aiApiVerification providers", () => {
       },
     })
   })
-
-  it("prefers an explicit model id over token hints and otherwise falls back to token metadata", async () => {
-    const { resolveRequestedModelId } = await import(
-      "~/services/verification/aiApiVerification/modelResolver"
-    )
-
-    expect(
-      resolveRequestedModelId({
-        modelId: "explicit-model",
-        tokenMeta: {
-          models: "fallback-a,fallback-b",
-          model_limits: "fallback-c",
-          name: "Token",
-          id: 1,
-        },
-      }),
-    ).toBe("explicit-model")
-
-    expect(
-      resolveRequestedModelId({
-        tokenMeta: {
-          models: "  gemini-2.5-pro \n gemini-2.5-flash  ",
-          model_limits: "gpt-4.1",
-          name: "Token",
-          id: 2,
-        },
-      }),
-    ).toBe("gemini-2.5-pro")
-
-    expect(
-      resolveRequestedModelId({
-        tokenMeta: {
-          models: "   ",
-          model_limits: "claude-3-7-sonnet claude-3-5-haiku",
-          name: "Token",
-          id: 3,
-        },
-      }),
-    ).toBe("claude-3-7-sonnet")
-
-    expect(resolveRequestedModelId({})).toBeUndefined()
-  })
 })

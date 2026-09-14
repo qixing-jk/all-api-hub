@@ -201,22 +201,3 @@ export function coerceBaseUrlToAnthropicV1(baseUrl: string): string {
 export function coerceBaseUrlToGoogleV1beta(baseUrl: string): string {
   return coerceBaseUrlToPathSuffix(baseUrl, "/v1beta")
 }
-
-/**
- * Best-effort model id guess based on token-provided model fields.
- */
-export function guessModelIdFromToken(token: {
-  models?: string
-  model_limits?: string
-}): string | undefined {
-  const candidates = [token.models, token.model_limits]
-    .filter(
-      (value): value is string =>
-        typeof value === "string" && value.trim().length > 0,
-    )
-    .flatMap((value) => value.split(/[, \n]+/g))
-    .map((value) => value.trim())
-    .filter(Boolean)
-
-  return candidates[0]
-}

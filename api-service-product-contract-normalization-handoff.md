@@ -85,6 +85,20 @@ profile export adaptation. New credential sources can use the same exporters
 without acquiring token-management semantics. Product behavior and exported
 formats stay compatible.
 
+## Completed second slice: runtime model policy and verification
+
+Runtime keys expose owner-projected model groups, allowed model IDs, and model
+selection hints. API verification, CLI verification, and batch/model selection
+consume that policy without interpreting token fields. Hints remain separate
+from restrictions; an enabled empty allow-list still denies all models.
+
+Verification services accept an optional fallback model ID instead of token
+metadata. The unused token-only batch selector and verification model resolver
+have been removed. Native resource keys use the same policy checks directly.
+
+Validation: 12 focused test files / 216 tests, TypeScript, and Knip. Native
+inventory and ordinary native key editing remain follow-up work below.
+
 ## Remaining migration
 
 ### 1. Remove inventory DTOs from remaining read-only consumers

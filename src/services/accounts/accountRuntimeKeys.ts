@@ -1,8 +1,15 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import { formatOptionalSkPrefixSiteTokenAuthKey } from "~/services/accountTokens/apiTokenKey"
+import { projectLegacyTokenModelAccess } from "~/services/accountTokens/tokenModelAccess"
 import type { AccountKeyResourceRef } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
+import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
+
+import {
+  UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS,
+  type AccountRuntimeKeyModelAccess,
+} from "./runtimeKeyModelAccess"
 
 export const ACCOUNT_RUNTIME_KEY_SOURCES = {
   AccountToken: "account_token",
@@ -128,6 +135,7 @@ type AccountRuntimeKeyBase = {
   baseUrl: string
   status: AccountRuntimeKeyStatus
   capabilities: AccountRuntimeKeyCapabilities
+  modelAccess: AccountRuntimeKeyModelAccess
 }
 
 export type AccountTokenRuntimeKey = AccountRuntimeKeyBase & {
@@ -259,6 +267,30 @@ export const isSelectableAccountRuntimeKey = (runtimeKey: AccountRuntimeKey) =>
   isAccountTokenRuntimeKey(runtimeKey) ||
   hasUsableAccountRuntimeKeySecret(runtimeKey)
 
+/** Apply the owner-projected model policy equally to tokens and native resources. */
+export const isAccountRuntimeKeyCompatibleWithModel = (
+  runtimeKey: AccountRuntimeKey,
+  model: { id: string; enableGroups?: readonly string[] | null },
+): boolean => {
+  const modelId = model.id.trim()
+  if (
+    !modelId ||
+    !isActiveAccountRuntimeKey(runtimeKey) ||
+    !isSelectableAccountRuntimeKey(runtimeKey)
+  ) {
+    return false
+  }
+
+  const { groups, allowedModelIds } = runtimeKey.modelAccess
+  if (groups !== null && Array.isArray(model.enableGroups)) {
+    const enabledGroups = new Set(
+      model.enableGroups.map((group) => group.trim() || DEFAULT_MODEL_GROUP),
+    )
+    if (!groups.some((group) => enabledGroups.has(group))) return false
+  }
+  return allowedModelIds === null || allowedModelIds.includes(modelId)
+}
+
 export const sortAccountRuntimeKeysActiveFirst = <
   TRuntimeKey extends Pick<AccountRuntimeKey, "status">,
 >(
@@ -305,9 +337,11 @@ const getAccountRuntimeKeyBase = (
     baseUrl?: string
     status: AccountRuntimeKeyStatus
     capabilities: AccountRuntimeKeyCapabilities
+    modelAccess?: AccountRuntimeKeyModelAccess
   },
 ): Omit<AccountRuntimeKeyBase, "source"> => ({
   ...fields,
+  modelAccess: fields.modelAccess ?? UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS,
   account,
   accountId: account.id,
   accountName: account.name,
@@ -330,6 +364,7 @@ export const buildAccountTokenRuntimeKey = (
     id: buildAccountTokenRuntimeKeyId(account.id, token.id),
     label: token.name,
     secret: token.key,
+    modelAccess: projectLegacyTokenModelAccess(token),
     status: accountTokenStatusToRuntimeKeyStatus(token.status),
     capabilities: {
       ...ACCOUNT_RUNTIME_KEY_BASE_CAPABILITIES,
@@ -388,6 +423,7 @@ export const buildAccountKeyResourceRuntimeKey = (
     ref: AccountKeyResourceRef
     label: string
     secret: string
+    modelAccess?: AccountRuntimeKeyModelAccess
   },
 ): AccountKeyResourceRuntimeKey => {
   const runtimeKeyAccount = buildAccountRuntimeKeyAccount(account)
@@ -396,6 +432,7 @@ export const buildAccountKeyResourceRuntimeKey = (
       id: buildAccountKeyResourceRuntimeKeyId(resource.ref),
       label: resource.label,
       secret: resource.secret,
+      modelAccess: resource.modelAccess,
       status: resource.secret.trim()
         ? ACCOUNT_RUNTIME_KEY_STATUSES.Active
         : ACCOUNT_RUNTIME_KEY_STATUSES.Inactive,

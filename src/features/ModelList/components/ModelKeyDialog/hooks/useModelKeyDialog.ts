@@ -7,8 +7,7 @@ import { buildGroupDefaultTokenRequest } from "~/services/accounts/accountKeyAut
 import {
   appendOrReplaceAccountRuntimeKey,
   buildDisplayAccountTokenRuntimeKey,
-  hasUsableAccountRuntimeKeySecret,
-  isAccountTokenRuntimeKey,
+  isAccountRuntimeKeyCompatibleWithModel,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
@@ -33,7 +32,6 @@ import {
   isCreatedApiToken,
   TOKEN_PROVISIONING_ERRORS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
-import { isTokenCompatibleWithModel } from "~/services/models/utils/tokenModelCompatibility"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import { sleep } from "~/utils/core/async"
 import { getErrorMessage } from "~/utils/core/error"
@@ -86,19 +84,6 @@ const buildAccountTokenRuntimeKeys = (
   account: DisplaySiteData,
   tokens: ApiToken[],
 ) => tokens.map((token) => buildDisplayAccountTokenRuntimeKey(account, token))
-
-const isRuntimeKeyCompatibleWithModel = (
-  runtimeKey: AccountRuntimeKey,
-  model: { id: string; enableGroups?: string[] | null },
-) => {
-  if (isAccountTokenRuntimeKey(runtimeKey)) {
-    return isTokenCompatibleWithModel(runtimeKey.token, model)
-  }
-
-  return (
-    model.id.trim().length > 0 && hasUsableAccountRuntimeKeySecret(runtimeKey)
-  )
-}
 
 /**
  * Dialog state + actions for the model→key compatibility flow.
@@ -194,7 +179,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
   const compatibleRuntimeKeys = useMemo(
     () =>
       runtimeKeys.filter((runtimeKey) =>
-        isRuntimeKeyCompatibleWithModel(runtimeKey, modelContext),
+        isAccountRuntimeKeyCompatibleWithModel(runtimeKey, modelContext),
       ),
     [modelContext, runtimeKeys],
   )
@@ -255,7 +240,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
           await fetchDisplayAccountTokens(currentAccount),
         )
         const refreshedCompatible = refreshedRuntimeKeys.filter((runtimeKey) =>
-          isRuntimeKeyCompatibleWithModel(runtimeKey, modelContext),
+          isAccountRuntimeKeyCompatibleWithModel(runtimeKey, modelContext),
         )
 
         if (
@@ -324,7 +309,10 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
             ),
           )
           if (
-            isRuntimeKeyCompatibleWithModel(createdRuntimeKey, modelContext)
+            isAccountRuntimeKeyCompatibleWithModel(
+              createdRuntimeKey,
+              modelContext,
+            )
           ) {
             setSelectedRuntimeKeyId(createdRuntimeKey.id)
             setOneTimeSecret(

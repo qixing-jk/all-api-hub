@@ -17,7 +17,7 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 import {
   collectAccountRuntimeKeySecrets,
   findDefaultSelectableAccountRuntimeKey,
-  isAccountTokenRuntimeKey,
+  isAccountRuntimeKeyCompatibleWithModel,
   isSelectableAccountRuntimeKey,
   sortAccountRuntimeKeysActiveFirst,
   type AccountRuntimeKey,
@@ -27,7 +27,6 @@ import {
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { identifyProvider } from "~/services/models/utils/modelProviders"
-import { isTokenCompatibleWithModel } from "~/services/models/utils/tokenModelCompatibility"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
@@ -47,7 +46,6 @@ import {
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
   getApiVerificationProbeDefinitions,
-  guessModelIdFromToken,
   runApiVerificationProbe,
 } from "~/services/verification/aiApiVerification"
 import type {
@@ -104,7 +102,7 @@ function buildStoppedProbeResult(
 }
 
 /**
- * Applies model/group limits only to account-token runtime keys.
+ * Applies model/group context to the owner-projected runtime-key policy.
  */
 function isRuntimeKeyCompatibleWithModel(
   runtimeKey: AccountRuntimeKey,
@@ -116,8 +114,7 @@ function isRuntimeKeyCompatibleWithModel(
 ) {
   if (!isSelectableAccountRuntimeKey(runtimeKey)) return false
   if (!options.hasModelGroupContext) return true
-  if (!isAccountTokenRuntimeKey(runtimeKey)) return true
-  return isTokenCompatibleWithModel(runtimeKey.token, {
+  return isAccountRuntimeKeyCompatibleWithModel(runtimeKey, {
     id: options.requestedModelId,
     enableGroups: options.modelEnableGroups,
   })
@@ -215,15 +212,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
       ? t("verifyDialog.selectedRuntimeKeyIncompatibleHint")
       : null
 
-  const tokenModelHint = useMemo(() => {
-    if (!selectedRuntimeKey || !isAccountTokenRuntimeKey(selectedRuntimeKey)) {
-      return undefined
-    }
-    return guessModelIdFromToken({
-      models: selectedRuntimeKey.token.models,
-      model_limits: selectedRuntimeKey.token.model_limits,
-    })
-  }, [selectedRuntimeKey])
+  const tokenModelHint = selectedRuntimeKey?.modelAccess.suggestedModelIds[0]
 
   const isAnyProbeRunning = probes.some((p) => p.isRunning)
   const canClose = !isRunning && !isAnyProbeRunning
@@ -323,14 +312,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         apiType,
         mode: executedMode,
         modelId: modelId.trim() || undefined,
-        tokenMeta: isAccountTokenRuntimeKey(resolvedRuntimeKey)
-          ? {
-              id: resolvedRuntimeKey.token.id,
-              name: resolvedRuntimeKey.token.name,
-              model_limits: resolvedRuntimeKey.token.model_limits,
-              models: resolvedRuntimeKey.token.models,
-            }
-          : undefined,
+        fallbackModelId: resolvedRuntimeKey.modelAccess.suggestedModelIds[0],
         probeId,
         abortSignal,
       })

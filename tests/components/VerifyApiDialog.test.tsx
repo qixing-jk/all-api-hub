@@ -576,10 +576,7 @@ describe("VerifyApiDialog", () => {
       expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
         expect.objectContaining({
           apiKey: "sk-vip-secret",
-          tokenMeta: expect.objectContaining({
-            id: 2,
-            name: "vip-token",
-          }),
+          fallbackModelId: undefined,
         }),
       ),
     )
@@ -650,10 +647,7 @@ describe("VerifyApiDialog", () => {
       expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
         expect.objectContaining({
           apiKey: "sk-default-secret",
-          tokenMeta: expect.objectContaining({
-            id: 1,
-            name: "default-token",
-          }),
+          fallbackModelId: undefined,
         }),
       ),
     )
@@ -779,7 +773,7 @@ describe("VerifyApiDialog", () => {
         expect.objectContaining({
           baseUrl: "https://runtime.example.invalid",
           apiKey: "resolved-service-secret",
-          tokenMeta: undefined,
+          fallbackModelId: undefined,
         }),
       )
     })

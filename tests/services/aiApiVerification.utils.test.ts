@@ -134,12 +134,11 @@ describe("aiApiVerification utils", () => {
     expect(inferStructuredHttpStatus({ statusCode: 401.5 })).toBeUndefined()
   })
 
-  it("normalizes verification base URLs and guesses a fallback model id from token metadata", async () => {
+  it("normalizes verification base URLs", async () => {
     const {
       coerceBaseUrlToAnthropicV1,
       coerceBaseUrlToGoogleV1beta,
       coerceBaseUrlToV1,
-      guessModelIdFromToken,
     } = await import("~/services/verification/aiApiVerification/utils")
 
     expect(coerceBaseUrlToV1("https://proxy.example.com/api/")).toBe(
@@ -164,25 +163,6 @@ describe("aiApiVerification utils", () => {
     expect(
       coerceBaseUrlToGoogleV1beta("https://generativelanguage.googleapis.com"),
     ).toBe("https://generativelanguage.googleapis.com/v1beta")
-
-    expect(
-      guessModelIdFromToken({
-        models: " gpt-4.1-mini,\n gpt-4.1 ",
-        model_limits: "claude-3-7-sonnet",
-      }),
-    ).toBe("gpt-4.1-mini")
-    expect(
-      guessModelIdFromToken({
-        models: " ",
-        model_limits: "claude-3-7-sonnet claude-3-5-haiku",
-      }),
-    ).toBe("claude-3-7-sonnet")
-    expect(
-      guessModelIdFromToken({
-        models: "",
-        model_limits: "",
-      }),
-    ).toBeUndefined()
   })
 })
 

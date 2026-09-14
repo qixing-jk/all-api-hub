@@ -40,7 +40,6 @@ import {
 import { cn } from "~/lib/utils"
 import {
   collectAccountRuntimeKeySecrets,
-  isAccountTokenRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import {
@@ -665,17 +664,11 @@ export function BatchVerifyModelsDialog({
                     runtimeKey,
                     resolvedRuntimeKey,
                   ])
-                const resolvedToken = isAccountTokenRuntimeKey(
-                  resolvedRuntimeKey,
-                )
-                  ? resolvedRuntimeKey.token
-                  : undefined
 
                 return {
                   baseUrl: resolvedRuntimeKey.baseUrl || account.baseUrl,
                   apiKey: resolvedRuntimeKey.secret,
                   runtimeKeyName: runtimeKey.label,
-                  token: resolvedToken,
                 }
               })()
 
@@ -701,16 +694,6 @@ export function BatchVerifyModelsDialog({
           return BATCH_VERIFY_ROW_STATUSES.SKIPPED
         }
 
-        const tokenMeta =
-          "token" in credentials && credentials.token
-            ? {
-                id: credentials.token.id,
-                name: credentials.token.name,
-                model_limits: credentials.token.model_limits,
-                models: credentials.token.models,
-              }
-            : undefined
-
         const results: ApiVerificationProbeResult[] = []
         let stoppedBeforeCompletingProbes = false
         for (const probe of probesToRun) {
@@ -726,7 +709,6 @@ export function BatchVerifyModelsDialog({
               apiType,
               mode: verificationMode,
               modelId: item.modelId,
-              tokenMeta,
               probeId: probe.id,
               abortSignal,
             })
