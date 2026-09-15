@@ -35,6 +35,9 @@ type RuntimeKeyHeaderHarnessProps = Partial<
 
 export function RuntimeKeyHeaderHarness({
   account: accountOverride,
+  runtimeKey: runtimeKeyOverride,
+  handleEditKey,
+  handleDeleteKey,
   token: tokenOverride,
   actionPolicy: actionPolicyOverride,
   headerProps: headerPropsOverride,
@@ -63,18 +66,20 @@ export function RuntimeKeyHeaderHarness({
       accountId: "acc-1",
       accountName: "Account 1",
     })
+  const runtimeKey =
+    runtimeKeyOverride ?? buildDisplayAccountTokenRuntimeKey(account, token)
   const presentation = buildLegacyKeyResourceCardPresentation(
-    buildDisplayAccountTokenRuntimeKey(account, token),
+    runtimeKey,
     translate,
   )
 
   return (
     <RuntimeKeyHeader
       {...restProps}
-      runtimeKey={buildDisplayAccountTokenRuntimeKey(account, token)}
+      runtimeKey={runtimeKey}
       copyKey={copyKey}
-      handleEditKey={handleEditToken}
-      handleDeleteKey={handleDeleteToken}
+      handleEditKey={handleEditKey ?? handleEditToken}
+      handleDeleteKey={handleDeleteKey ?? handleDeleteToken}
       account={account}
       onOpenCCSwitchDialog={
         withCCSwitchExport ? onOpenCCSwitchDialog : undefined

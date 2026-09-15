@@ -101,7 +101,10 @@ describe("model-to-key E2E scenario", () => {
 
     expect(mocks.deleteTokenFromKeyManagementPage).toHaveBeenCalledWith({
       page,
-      token: "model gpt-visible-real-site-model",
+      token: {
+        id: "created-token-id",
+        name: "model gpt-visible-real-site-model",
+      },
     })
   })
 
@@ -123,7 +126,7 @@ describe("model-to-key E2E scenario", () => {
 
     expect(mocks.deleteTokenFromKeyManagementPage).toHaveBeenCalledWith({
       page,
-      token: "model 【official】claude-opus",
+      token: { id: "created-token-id", name: "model 【official】claude-opus" },
     })
   })
 
@@ -198,7 +201,7 @@ describe("model-to-key E2E scenario", () => {
 
     expect(mocks.deleteTokenFromKeyManagementPage).toHaveBeenCalledWith({
       page,
-      token: "model gpt-model-key-mini",
+      token: { id: "created-token-id", name: "model gpt-model-key-mini" },
     })
   })
 
@@ -232,7 +235,7 @@ describe("model-to-key E2E scenario", () => {
 
     expect(mocks.deleteTokenFromKeyManagementPage).toHaveBeenCalledWith({
       page,
-      token: "model gpt-model-key-mini",
+      token: { id: "created-token-id", name: "model gpt-model-key-mini" },
     })
   })
 
@@ -256,7 +259,7 @@ describe("model-to-key E2E scenario", () => {
 
     expect(mocks.deleteTokenFromKeyManagementPage).toHaveBeenCalledWith({
       page,
-      token: "model gpt-model-key-mini",
+      token: { id: "created-token-id", name: "model gpt-model-key-mini" },
     })
   })
 
@@ -420,9 +423,7 @@ function createModelToKeyPage(
     toString: () => "created token heading",
   }
   const tokenRow = {
-    getAttribute: vi
-      .fn()
-      .mockResolvedValue("key-management-token-row-created-token-id"),
+    getAttribute: vi.fn().mockResolvedValue("created-token-id"),
     getByText: options.tokenRowGetByText
       ? vi.fn(options.tokenRowGetByText)
       : vi.fn(() => ({

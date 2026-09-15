@@ -332,6 +332,7 @@
     "copyFailed": "Sao chép thất bại",
     "keyCopied": "Khóa {{name}} đã được sao chép vào clipboard",
     "loadFailed": "Tải danh sách khóa thất bại",
+    "revealFailed": "Hiển thị khóa thất bại",
     "savedToApiProfiles": "Đã lưu {{name}} vào Hồ sơ API",
     "savedToApiProfilesNeedsConfirmation": "Đã lưu thông tin xác thực. Hãy kiểm tra liên kết khóa trong thư viện thông tin xác thực API.",
     "saveToApiProfilesFailed": "Lưu vào Hồ sơ API thất bại",

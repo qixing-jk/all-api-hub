@@ -332,6 +332,7 @@
     "copyFailed": "複製失敗",
     "keyCopied": "金鑰 {{name}} 已複製到剪貼簿",
     "loadFailed": "載入金鑰列表失敗",
+    "revealFailed": "顯示金鑰失敗",
     "savedToApiProfiles": "已儲存 {{name}} 到 API 憑據庫",
     "savedToApiProfilesNeedsConfirmation": "憑據已儲存，請在 API 憑據庫中檢查其金鑰關聯。",
     "saveToApiProfilesFailed": "儲存到 API 憑據庫失敗",

@@ -280,6 +280,7 @@ export function AccountKeyResourceListItem({
         name: presentation.title,
       })}
       testId={KEY_MANAGEMENT_TEST_IDS.nativeKeyRow}
+      resourceId={row.facts.ref.resourceId}
       association={association}
       targetId={targetId}
       isNavigationTarget={isNavigationTarget}

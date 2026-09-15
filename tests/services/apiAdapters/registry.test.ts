@@ -125,6 +125,15 @@ const expectManagedSiteQueries = (
 }
 
 describe("apiAdapters registry", () => {
+  it("gives every legacy key-management provider a native inventory", () => {
+    for (const siteType of Object.values(SITE_TYPES)) {
+      const { account } = getSiteTypeCapabilities(siteType)
+      if (account?.keyManagement) {
+        expect(account.keyResourceManagement, siteType).toBeDefined()
+      }
+    }
+  })
+
   it("shares the managed-site registration across capability lookup paths", () => {
     for (const siteType of MANAGED_SITE_TYPES) {
       const managedSite = getManagedSiteCapabilities(siteType)

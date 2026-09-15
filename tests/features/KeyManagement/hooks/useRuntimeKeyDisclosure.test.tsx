@@ -111,6 +111,36 @@ describe("native runtime key disclosure", () => {
     },
   )
 
+  it.each(["change", "unmount"])(
+    "completes cancellation after pending clipboard write and source %s",
+    async (event) => {
+      const pending = createDeferred<void>()
+      writeText.mockReturnValueOnce(pending.promise)
+      const view = renderDisclosure()
+      let action!: Promise<void>
+      await act(async () => {
+        action = view.result.current.copy()
+      })
+      expect(writeText).toHaveBeenCalledOnce()
+      if (event === "unmount") view.unmount()
+      else view.rerender({ account: { ...account, token: "changed" } })
+      await act(async () => {
+        pending.resolve()
+        await action
+      })
+      expect(complete).toHaveBeenCalledExactlyOnceWith("cancelled")
+      expect(success).not.toHaveBeenCalled()
+    },
+  )
+
+  it("reports reveal failure without calling it a copy", async () => {
+    resolveSecret.mockRejectedValueOnce(new Error("denied"))
+    const view = renderDisclosure()
+    await act(async () => view.result.current.toggle())
+    expect(error).toHaveBeenCalledWith("messages.revealFailed")
+    expect(writeText).not.toHaveBeenCalled()
+  })
+
   it("reports a failed clipboard operation without exposing the resolved secret", async () => {
     writeText.mockRejectedValueOnce(new Error("denied"))
     const view = renderDisclosure()

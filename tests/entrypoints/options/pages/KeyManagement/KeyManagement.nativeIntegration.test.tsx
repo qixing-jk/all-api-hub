@@ -1298,7 +1298,7 @@ describe("KeyManagement native page integration", () => {
           {} as never,
           {
             fetchUserGroups: vi.fn().mockResolvedValue({}),
-            fetchAvailableModels: vi.fn().mockResolvedValue([]),
+            fetchAccountAvailableModels: vi.fn().mockResolvedValue([]),
           } as never,
         )
         Object.assign(createEditor, nativeEditor)
@@ -1474,7 +1474,7 @@ describe("KeyManagement native page integration", () => {
       {} as never,
       {
         fetchUserGroups: vi.fn().mockResolvedValue({}),
-        fetchAvailableModels: vi.fn().mockResolvedValue([]),
+        fetchAccountAvailableModels: vi.fn().mockResolvedValue([]),
       } as never,
     )
     const { session } = createNativeSession({

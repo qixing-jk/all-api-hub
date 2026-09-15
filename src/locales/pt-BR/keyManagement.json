@@ -352,6 +352,7 @@
     "copyFailed": "Falha ao copiar",
     "keyCopied": "Chave {{name}} copiada para a área de transferência",
     "loadFailed": "Falha ao carregar a lista de chaves",
+    "revealFailed": "Falha ao revelar a chave",
     "savedToApiProfiles": "{{name}} foi salva na biblioteca de credenciais de API",
     "savedToApiProfilesNeedsConfirmation": "A credencial foi salva. Revise a associação da chave na biblioteca de credenciais de API.",
     "saveToApiProfilesFailed": "Falha ao salvar na biblioteca de credenciais de API",

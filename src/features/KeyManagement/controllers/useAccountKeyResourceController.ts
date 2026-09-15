@@ -44,6 +44,12 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsSiteType,
 } from "~/services/productAnalytics/contracts"
+import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_SURFACES,
+} from "~/services/protectionBypass/contracts"
 import type { DisplaySiteData } from "~/types"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
@@ -736,7 +742,14 @@ export function useAccountKeyResourceController({
             name: account.name,
             siteType: account.siteType,
           },
-          request: context.request,
+          request: {
+            ...context.request,
+            protectionBypassExecution: createAutomaticProtectionBypassExecution(
+              PROTECTION_BYPASS_FEATURES.KeyManagement,
+              PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+              PROTECTION_BYPASS_SURFACES.Options,
+            ),
+          },
         },
         { signal },
       )

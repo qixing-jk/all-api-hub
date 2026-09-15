@@ -125,6 +125,27 @@ describe("New API account key resources", () => {
     mockResolveWongApiTokenKey.mockReset()
   })
 
+  it("clamps a sentinel unlimited quota before switching to a limited quota", async () => {
+    mockFetchAccountTokens.mockResolvedValue([
+      token({ id: 1, remain_quota: -1, unlimited_quota: true }),
+    ])
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    const collection = await session.openCollection("account")
+    const editor = await collection.openEditEditor({
+      accountId: "account-1",
+      siteType: SITE_TYPES.NEW_API,
+      scopeKey: "account",
+      resourceId: "1",
+    })
+    expect(editor.initialValues.quotaUsd).toBe(0)
+    expect(editor.initialValues.unlimited_quota).toBe(true)
+  })
+
   it("creates a native key and attributes the matching new resource after an acknowledgement", async () => {
     mockFetchAccountTokens
       .mockResolvedValueOnce([token({ id: 1 })])

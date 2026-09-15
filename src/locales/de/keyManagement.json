@@ -342,6 +342,7 @@
     "copyFailed": "Kopieren fehlgeschlagen",
     "keyCopied": "Schlüssel {{name}} in Zwischenablage kopiert",
     "loadFailed": "Schlüsselliste konnte nicht geladen werden",
+    "revealFailed": "Schlüssel konnte nicht angezeigt werden",
     "savedToApiProfiles": "{{name}} in der API-Anmeldeinformationsbibliothek gespeichert",
     "savedToApiProfilesNeedsConfirmation": "Anmeldeinformation gespeichert. Prüfen Sie die Schlüsselverknüpfung in der API-Anmeldeinformationsbibliothek.",
     "saveToApiProfilesFailed": "Speichern in der API-Anmeldeinformationsbibliothek fehlgeschlagen",

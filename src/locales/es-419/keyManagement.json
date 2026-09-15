@@ -352,6 +352,7 @@
     "copyFailed": "No se pudo copiar",
     "keyCopied": "La clave {{name}} se copió al portapapeles",
     "loadFailed": "No se pudo cargar la lista de claves",
+    "revealFailed": "No se pudo revelar la clave",
     "savedToApiProfiles": "{{name}} se guardó en la biblioteca de credenciales API",
     "savedToApiProfilesNeedsConfirmation": "La credencial se guardó. Revisa su asociación de clave en la biblioteca de credenciales API.",
     "saveToApiProfilesFailed": "No se pudo guardar en la biblioteca de credenciales API",
