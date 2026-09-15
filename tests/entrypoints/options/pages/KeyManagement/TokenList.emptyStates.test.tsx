@@ -1,7 +1,9 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { TokenEmptyState } from "~/features/KeyManagement/components/TokenEmptyState"
 import { TokenList } from "~/features/KeyManagement/components/TokenList"
+import { createTab } from "~/utils/browser/browserApi"
 import { nativeRowFromSeed } from "~~/tests/test-utils/keyManagement/TokenListHarness"
 import { render, screen } from "~~/tests/test-utils/render"
 import {
@@ -13,6 +15,11 @@ vi.mock("~/contexts/FeatureGuidanceContext", () => ({
   useFeatureGuidanceContext: () => ({
     markGatewayGuidanceOnboardingCompleted: vi.fn(),
   }),
+}))
+
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
+  createTab: vi.fn().mockResolvedValue(undefined),
 }))
 
 const { openSiteSupportRequestPageMock } = vi.hoisted(() => ({
@@ -32,6 +39,76 @@ describe("TokenList empty states", () => {
   beforeEach(() => {
     openSiteSupportRequestPageMock.mockReset()
     openSiteSupportRequestPageMock.mockResolvedValue(undefined)
+  })
+
+  it("opens the selected site from a load failure", async () => {
+    const user = userEvent.setup()
+    const account = createAccount({ baseUrl: " https://site.example.invalid " })
+    render(
+      <TokenEmptyState
+        selectedAccount={account.id}
+        totalCount={0}
+        displayData={[account]}
+        handleAddToken={vi.fn()}
+        currentAccountLoadError="offline"
+      />,
+    )
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:loadError.openSite",
+      }),
+    )
+    expect(createTab).toHaveBeenCalledWith("https://site.example.invalid", true)
+    expect(
+      screen.getByRole("button", { name: "keyManagement:refreshTokenList" }),
+    ).toBeDisabled()
+  })
+
+  it.each([true, false])(
+    "omits unavailable setup actions when there are no accounts: %s",
+    async (noAccounts) => {
+      const account = createAccount()
+      render(
+        <TokenEmptyState
+          selectedAccount=""
+          totalCount={0}
+          displayData={noAccounts ? [] : [account]}
+          handleAddToken={vi.fn()}
+        />,
+      )
+      expect(
+        await screen.findByText(
+          noAccounts
+            ? "account:emptyState"
+            : "keyManagement:pleaseSelectAccount",
+        ),
+      ).toBeVisible()
+      expect(screen.queryByRole("button")).not.toBeInTheDocument()
+    },
+  )
+
+  it("keeps the unsupported-site recovery action usable after a failed navigation", async () => {
+    const user = userEvent.setup()
+    const account = createAccount()
+    openSiteSupportRequestPageMock.mockRejectedValueOnce(
+      new Error("navigation unavailable"),
+    )
+    render(
+      <TokenEmptyState
+        selectedAccount={account.id}
+        totalCount={0}
+        displayData={[account]}
+        handleAddToken={vi.fn()}
+        currentAccountUnsupportedKeyManagement
+      />,
+    )
+    const action = await screen.findByRole("button", {
+      name: "keyManagement:unsupportedSource.requestSiteSupport",
+    })
+    await user.click(action)
+    await user.click(action)
+    expect(openSiteSupportRequestPageMock).toHaveBeenCalledTimes(2)
+    expect(action).toBeEnabled()
   })
 
   it("guides the user to add an account when none exist", async () => {
