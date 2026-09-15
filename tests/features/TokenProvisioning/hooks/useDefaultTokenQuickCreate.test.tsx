@@ -56,6 +56,70 @@ describe("native default key quick creation", () => {
     expect(result.current.view.error).toBeTruthy()
   })
 
+  it("hands a manually configured requirement to the editor without creating", async () => {
+    const create = vi.fn()
+    prepare.mockResolvedValue({
+      kind: "selection-required",
+      requirements: [
+        {
+          ...requirements[0],
+          provisioning: {
+            kind: "input-required",
+            reasonCode: "finite-quota-required",
+          },
+        },
+        requirements[1],
+      ],
+      create,
+    })
+    const { result, onInputRequired } = setup()
+    await act(() => result.current.start())
+    await act(() => result.current.confirmGroup("first"))
+    expect(onInputRequired).toHaveBeenCalledTimes(1)
+    expect(create).not.toHaveBeenCalled()
+    expect(result.current.view.isBusy).toBe(false)
+  })
+
+  it("cancels requirement selection without dispatching creation", async () => {
+    const create = vi.fn()
+    prepare.mockResolvedValue({
+      kind: "selection-required",
+      requirements,
+      create,
+    })
+    const { result } = setup()
+    await act(() => result.current.start())
+    act(() => result.current.cancelSelection())
+    expect(result.current.view.selection).toBeNull()
+    expect(result.current.view.isBusy).toBe(false)
+    expect(create).not.toHaveBeenCalled()
+  })
+
+  it("does not retry an applied mutation when the consumer rejects its handoff", async () => {
+    const create = vi.fn().mockResolvedValue(created)
+    prepare.mockResolvedValue({ kind: "ready", create })
+    const { result, onCreated } = setup()
+    onCreated.mockRejectedValueOnce(new Error("consumer failure"))
+    await act(() => result.current.start())
+    expect(create).toHaveBeenCalledTimes(1)
+    expect(result.current.view.isBusy).toBe(false)
+    expect(result.current.view.error).toBeNull()
+  })
+
+  it("reports unsupported creation before requesting a provider plan", async () => {
+    const { result } = renderHook(() =>
+      useDefaultTokenQuickCreate({
+        isActive: true,
+        account,
+        canCreate: false,
+        onCreated: vi.fn(),
+      }),
+    )
+    await act(() => result.current.start())
+    expect(prepare).not.toHaveBeenCalled()
+    expect(result.current.view.error).toBeTruthy()
+  })
+
   it("retains opaque group identity through confirmation", async () => {
     const create = vi.fn().mockResolvedValue(created)
     prepare.mockResolvedValue({

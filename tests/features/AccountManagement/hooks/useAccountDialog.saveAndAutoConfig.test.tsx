@@ -8,7 +8,10 @@ import { useAccountDialog } from "~/features/AccountManagement/components/Accoun
 import toast from "~/lib/notify"
 import type { EnsureAccountKeyResult } from "~/services/accounts/accountKeyCreation"
 import { ACCOUNT_POST_SAVE_WORKFLOW_STEPS } from "~/services/accounts/accountPostSaveWorkflow"
-import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+import {
+  createAccountKeyResourceCreatedRuntimeSecret,
+  createUnattributedAccountCreatedRuntimeSecret,
+} from "~/services/accounts/createdRuntimeSecret"
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import {
@@ -59,6 +62,7 @@ const {
   mockFetchRuntimeKeys,
   mockEnsureAccountKey,
   mockOpenWithAccount,
+  mockOpenWithCredentials,
   mockOpenDefaultTokenQuickCreateDialogForAccount,
   mockGetManagedSiteConfig,
   mockOpenSettingsTab,
@@ -74,6 +78,7 @@ const {
   mockFetchRuntimeKeys: vi.fn(),
   mockEnsureAccountKey: vi.fn(),
   mockOpenWithAccount: vi.fn(),
+  mockOpenWithCredentials: vi.fn(),
   mockOpenDefaultTokenQuickCreateDialogForAccount: vi.fn(),
   mockGetManagedSiteConfig: vi.fn(),
   mockOpenSettingsTab: vi.fn().mockResolvedValue(undefined),
@@ -103,6 +108,7 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
   useChannelDialog: () => ({
     openWithAccount: mockOpenWithAccount,
+    openWithCredentials: mockOpenWithCredentials,
     openDefaultTokenQuickCreateDialogForAccount:
       mockOpenDefaultTokenQuickCreateDialogForAccount,
   }),
@@ -255,6 +261,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       ),
     )
     mockOpenWithAccount.mockResolvedValue({ opened: true })
+    mockOpenWithCredentials.mockResolvedValue({ opened: true })
     vi.spyOn(accountStorage, "refreshAccount").mockResolvedValue({
       account: buildSiteAccount({ id: "saved-account-id" }),
       refreshed: true,
@@ -2745,96 +2752,147 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
   })
 
-  it("waits for Sub2API group token creation before opening quick-config", async () => {
-    const savedSiteAccount = buildSiteAccount({
-      id: "saved-account-id",
-      site_name: "Sub2API",
-      site_url: "https://sub2.example.com",
-      health: { status: SiteHealthStatus.Healthy },
-      site_type: SITE_TYPES.SUB2API,
-      exchange_rate: 7,
-      authType: AuthTypeEnum.AccessToken,
-      account_info: {
-        ...buildSiteAccount().account_info,
-        id: "14",
-        username: "sub-user",
-        access_token: "sub-token",
-      },
-    }) as SiteAccount
-    const savedDisplayData = buildDisplayAccount({
-      name: "Sub2API",
-      siteType: SITE_TYPES.SUB2API,
-      baseUrl: "https://sub2.example.com",
-      token: "sub-token",
-      userId: "14",
-    })
-    const createdToken = buildToken({
-      id: 103,
-      key: "sk-sub2-created",
-      group: "vip",
-    })
+  it.each(["inventory", "one-time", "unattributed"])(
+    "waits for Sub2API %s creation and acknowledgement before quick-config",
+    async (kind) => {
+      const savedSiteAccount = buildSiteAccount({
+        id: "saved-account-id",
+        site_name: "Sub2API",
+        site_url: "https://sub2.example.com",
+        health: { status: SiteHealthStatus.Healthy },
+        site_type: SITE_TYPES.SUB2API,
+        exchange_rate: 7,
+        authType: AuthTypeEnum.AccessToken,
+        account_info: {
+          ...buildSiteAccount().account_info,
+          id: "14",
+          username: "sub-user",
+          access_token: "sub-token",
+        },
+      }) as SiteAccount
+      const savedDisplayData = buildDisplayAccount({
+        name: "Sub2API",
+        siteType: SITE_TYPES.SUB2API,
+        baseUrl: "https://sub2.example.com",
+        token: "sub-token",
+        userId: "14",
+      })
+      const createdToken = buildToken({
+        id: 103,
+        key: "sk-sub2-created",
+        group: "vip",
+      })
 
-    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
-      savedSiteAccount,
-    )
-    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
-      savedDisplayData,
-    )
-    mockEnsureAccountKey.mockResolvedValue({
-      kind: "input-required",
-      reason: "editor",
-    })
-
-    const { result } = renderAddHook()
-
-    await waitFor(() => {
-      expect(result.current.state).toBeTruthy()
-    })
-
-    await act(async () => {
-      result.current.setters.setUrl("https://sub2.example.com")
-      result.current.setters.setSiteName("Sub2API")
-      result.current.setters.setUsername("sub-user")
-      result.current.setters.setAccessToken("sub-token")
-      result.current.setters.setUserId("14")
-      result.current.setters.setExchangeRate("7")
-      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
-    })
-
-    await act(async () => {
-      await result.current.handlers.handleAutoConfig()
-    })
-
-    expect(result.current.state.postSaveSub2ApiAccount).toEqual(
-      savedDisplayData,
-    )
-    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
-      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForSub2ApiGroupSelection,
-    )
-    expect(mockOpenWithAccount).not.toHaveBeenCalled()
-
-    await act(async () => {
-      await result.current.handlers.handlePostSaveSub2ApiTokenCreated(
-        buildNewApiKeyCreationResult(savedDisplayData, createdToken),
+      vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+        savedSiteAccount,
       )
-    })
+      vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+        savedDisplayData,
+      )
+      mockEnsureAccountKey.mockResolvedValue({
+        kind: "input-required",
+        reason: "editor",
+      })
 
-    expect(result.current.state.postSaveSub2ApiAccount).toBeNull()
-    expect(mockOpenWithAccount).toHaveBeenCalledWith(
-      savedDisplayData,
-      expect.objectContaining({
-        source: "account_key_resource",
-        legacyTokenId: createdToken.id,
-      }),
-      expect.any(Function),
-      expect.objectContaining({
-        shouldContinue: expect.any(Function),
-      }),
-    )
-    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
-      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed,
-    )
-  })
+      const { result } = renderAddHook()
+
+      await waitFor(() => {
+        expect(result.current.state).toBeTruthy()
+      })
+
+      await act(async () => {
+        result.current.setters.setUrl("https://sub2.example.com")
+        result.current.setters.setSiteName("Sub2API")
+        result.current.setters.setUsername("sub-user")
+        result.current.setters.setAccessToken("sub-token")
+        result.current.setters.setUserId("14")
+        result.current.setters.setExchangeRate("7")
+        result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+      })
+
+      await act(async () => {
+        await result.current.handlers.handleAutoConfig()
+      })
+
+      expect(result.current.state.postSaveSub2ApiAccount).toEqual(
+        savedDisplayData,
+      )
+      expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForSub2ApiGroupSelection,
+      )
+      expect(mockOpenWithAccount).not.toHaveBeenCalled()
+
+      await act(async () => {
+        await result.current.handlers.handlePostSaveSub2ApiTokenCreated(
+          kind === "inventory"
+            ? buildNewApiKeyCreationResult(savedDisplayData, createdToken)
+            : {
+                ref:
+                  kind === "unattributed"
+                    ? null
+                    : buildNewApiKeyCreationResult(
+                        savedDisplayData,
+                        createdToken,
+                      ).ref,
+                facts:
+                  kind === "unattributed"
+                    ? null
+                    : buildNewApiKeyCreationResult(
+                        savedDisplayData,
+                        createdToken,
+                      ).facts,
+                createdSecret: createUnattributedAccountCreatedRuntimeSecret({
+                  accountId: savedDisplayData.id,
+                  displayName: createdToken.name,
+                  secret: createdToken.key,
+                  credential: {
+                    accountName: savedDisplayData.name,
+                    baseUrl: savedDisplayData.baseUrl,
+                    apiType: API_TYPES.OPENAI_COMPATIBLE,
+                    tagIds: [],
+                  },
+                }),
+              },
+        )
+      })
+
+      if (kind !== "inventory") {
+        expect(result.current.state.postSaveOneTimeSecret?.secret).toBe(
+          createdToken.key,
+        )
+        expect(mockOpenWithAccount).not.toHaveBeenCalled()
+        expect(mockOpenWithCredentials).not.toHaveBeenCalled()
+        await act(async () =>
+          result.current.handlers.handlePostSaveOneTimeSecretClose(),
+        )
+      }
+      expect(result.current.state.postSaveSub2ApiAccount).toBeNull()
+      if (kind === "unattributed") {
+        expect(mockOpenWithCredentials).toHaveBeenCalledWith(
+          expect.objectContaining({
+            apiKey: createdToken.key,
+            baseUrl: savedDisplayData.baseUrl,
+          }),
+          expect.any(Function),
+        )
+        expect(mockOpenWithAccount).not.toHaveBeenCalled()
+      } else
+        expect(mockOpenWithAccount).toHaveBeenCalledWith(
+          savedDisplayData,
+          expect.objectContaining({
+            source: "account_key_resource",
+            legacyTokenId: createdToken.id,
+          }),
+          expect.any(Function),
+          expect.objectContaining({
+            shouldContinue: expect.any(Function),
+          }),
+        )
+      expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed,
+      )
+    },
+  )
 
   it("resumes paused Sub2API quick-config after reference-only creation by selecting its exact native ID", async () => {
     const savedSiteAccount = buildSiteAccount({

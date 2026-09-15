@@ -14,7 +14,7 @@ import {
   buildDisplaySiteData,
   buildNewApiToken,
 } from "~~/tests/test-utils/factories"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 const { context } = vi.hoisted(() => ({ context: vi.fn() }))
 vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
@@ -74,7 +74,15 @@ function setup() {
     onSuccess,
     onClose,
   }
-  return { props, submit, openCreateEditor, onSuccess, onClose, initialValues }
+  return {
+    props,
+    submit,
+    openCreateEditor,
+    onSuccess,
+    onClose,
+    initialValues,
+    session,
+  }
 }
 
 describe("native AddTokenDialog", () => {
@@ -84,6 +92,84 @@ describe("native AddTokenDialog", () => {
       configurable: true,
       value: { writeText: vi.fn().mockResolvedValue(undefined) },
     })
+  })
+
+  it("shows an unsupported account message when no native inventory exists", async () => {
+    const { props } = setup()
+    render(
+      <AddTokenDialog
+        {...props}
+        availableAccounts={[]}
+        preSelectedAccountId={null}
+      />,
+    )
+    expect(
+      await screen.findByText("ui:dialog.copyKey.createNotSupported"),
+    ).toBeVisible()
+  })
+
+  it("requires selecting an account when multiple accounts are available", async () => {
+    const { props, openCreateEditor } = setup()
+    const user = userEvent.setup()
+    render(
+      <AddTokenDialog
+        {...props}
+        availableAccounts={[
+          account,
+          { ...account, id: "second-account", name: "Second" },
+        ]}
+        preSelectedAccountId={null}
+      />,
+    )
+    await user.click(await screen.findByRole("combobox"))
+    await user.click(await screen.findByRole("option", { name: "Second" }))
+    await screen.findByDisplayValue("Native default")
+    expect(openCreateEditor).toHaveBeenCalledTimes(1)
+  })
+
+  it("retries an unavailable inventory before opening the editor", async () => {
+    const { props, session } = setup()
+    const open = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValue(session)
+    context.mockReturnValue({ accountKeyResources: { open }, request: {} })
+    const user = userEvent.setup()
+    render(<AddTokenDialog {...props} />)
+    const retry = await screen.findByRole("button", {
+      name: "common:actions.retry",
+    })
+    const readsBeforeRetry = open.mock.calls.length
+    await user.click(retry)
+    await screen.findByDisplayValue("Native default")
+    expect(open.mock.calls.length).toBeGreaterThan(readsBeforeRetry)
+  })
+
+  it("closes after a successful write even if the consumer handoff fails", async () => {
+    const { props, onSuccess, onClose, submit } = setup()
+    onSuccess.mockRejectedValueOnce(new Error("consumer unavailable"))
+    const user = userEvent.setup()
+    render(<AddTokenDialog {...props} />)
+    await screen.findByDisplayValue("Native default")
+    await user.click(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton),
+    )
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+    expect(submit).toHaveBeenCalledTimes(1)
+  })
+
+  it("cancels an open native editor without submitting a write", async () => {
+    const { props, onClose, submit } = setup()
+    const user = userEvent.setup()
+    render(<AddTokenDialog {...props} />)
+    const editor = await screen.findByTestId(
+      KEY_MANAGEMENT_TEST_IDS.nativeEditor,
+    )
+    await user.click(
+      within(editor).getByRole("button", { name: "common:actions.close" }),
+    )
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(submit).not.toHaveBeenCalled()
   })
 
   it("forwards semantic intent and submits the provider's native draft once", async () => {

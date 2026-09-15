@@ -96,6 +96,62 @@ describe("native account key creation", () => {
     inventory.mockReset()
   })
 
+  it("reports unavailable creation without dispatching a write", async () => {
+    const owner = account()
+    context.mockReturnValue({ request: {} })
+    inventory.mockResolvedValue([])
+    await expect(prepareDefaultAccountKeyCreation(owner)).rejects.toMatchObject(
+      { failure: { code: "unavailable" } },
+    )
+    await expect(ensureAccountKey(owner)).rejects.toMatchObject({
+      failure: { code: "unavailable" },
+    })
+  })
+
+  it.each(["missing", "empty"])(
+    "requires manual input when provisioning is %s",
+    async (kind) => {
+      const owner = account()
+      const { session, capability, provision } = setup(
+        owner,
+        "select-requirement",
+      )
+      if (kind === "missing")
+        capability.open.mockResolvedValueOnce({
+          ...session,
+          provisioning: undefined,
+        } as unknown as typeof session)
+      else
+        session.provisioning.inspect.mockResolvedValueOnce({
+          requirements: [],
+          items: [],
+        })
+      await expect(prepareDefaultAccountKeyCreation(owner)).resolves.toEqual({
+        kind: "input-required",
+      })
+      expect(provision).not.toHaveBeenCalled()
+    },
+  )
+
+  it("allows one retry after a provider proves a mutation was not applied", async () => {
+    const owner = account()
+    const { provision } = setup(owner, "select-requirement")
+    provision.mockResolvedValueOnce({
+      certainty: "not-applied",
+      failure: { code: "unavailable" },
+    })
+    const plan = await prepareDefaultAccountKeyCreation(owner)
+    if (plan.kind !== "selection-required")
+      throw new Error("Expected selection")
+    await expect(plan.create("opaque-one")).rejects.toMatchObject({
+      failure: { code: "unavailable" },
+    })
+    await expect(plan.create("opaque-one")).resolves.toMatchObject({
+      ref: facts(owner).ref,
+    })
+    expect(provision).toHaveBeenCalledTimes(2)
+  })
+
   it("uses provider defaults and dispatches a prepared creation only once", async () => {
     const owner = account()
     const { submit, session } = setup(owner)

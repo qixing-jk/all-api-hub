@@ -715,7 +715,7 @@ describe("ModelKeyDialog", () => {
     fetchAccountTokensMock.mockResolvedValue([])
     const pending = createDeferred<AccountKeyCreationResult>()
     createKeyMock.mockReturnValue(pending.promise)
-    const { rerender } = await beginCreate()
+    const { rerender, user } = await beginCreate()
     rerender(
       <ModelKeyDialog
         isOpen
@@ -735,6 +735,12 @@ describe("ModelKeyDialog", () => {
     expect(toastSuccessMock).not.toHaveBeenCalledWith(
       "modelList:keyDialog.createSuccess",
     )
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:oneTimeKey.close" }),
+    )
+    expect(
+      screen.queryByText("keyManagement:oneTimeKey.title"),
+    ).not.toBeInTheDocument()
   })
 
   it.each(["resolve", "reject"] as const)(

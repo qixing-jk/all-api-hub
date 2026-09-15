@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -20,6 +21,29 @@ const request = {
 }
 
 describe("native key editor field policies", () => {
+  it.each([
+    ["required", "required"],
+    ["invalid_value", "invalidValue"],
+    ["out_of_range", "outOfRange"],
+    ["unsupported_option", "unsupportedOption"],
+    ["inconsistent_value", "inconsistentValue"],
+  ] as const)(
+    "provides actionable translated feedback for %s validation",
+    (code, suffix) => {
+      const presentation = getNativeKeyResourceEditorPresentation(
+        SITE_TYPES.NEW_API,
+        "create",
+      )
+      const name = presentation.policy.fields.find(
+        (field) => field.fieldId === "name",
+      )!
+      const translate = ((key: string) => key) as TFunction
+      expect(name.issueLabelResolvers?.[code]?.(translate)).toBe(
+        `keyManagement:native.editor.issues.${suffix}`,
+      )
+    },
+  )
+
   it.each([undefined, "Model specific key"])(
     "prefills the selected group name and preserves an explicit name hint %s",
     (nameHint) => {
