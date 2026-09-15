@@ -396,12 +396,49 @@ describe("automatic check-in preparation", () => {
     })
   })
 
+  it("does not probe when automation is disabled while the cooldown claim is pending", async () => {
+    const account = saveAccount()
+    let enabled = true
+    const started = createDeferred<void>()
+    const release = createDeferred<void>()
+    storageSet.mockImplementationOnce(async (key: string, value: unknown) => {
+      started.resolve()
+      await release.promise
+      storageData.set(key, structuredClone(value))
+    })
+
+    const pending = prepare(
+      account,
+      vi.fn(async () => enabled),
+    )
+    await started.promise
+    enabled = false
+    release.resolve()
+
+    const prepared = await pending
+    expect(prepared.discovered).toBe(false)
+    expect(prepared.account?.checkIn.selection).toEqual({ mode: "automatic" })
+    expect(
+      prepared.account?.checkIn.methodKnowledge.lastAutomaticDiscoveryAttemptAt,
+    ).toBe(NOW)
+    expect(
+      (await accountQueries.getAccountById(account.id))?.checkIn
+        .methodKnowledge,
+    ).toMatchObject({
+      lastAutomaticDiscoveryAttemptAt: NOW,
+    })
+    detectors.forEach((detect) => expect(detect).not.toHaveBeenCalled())
+    expect(checkIn).not.toHaveBeenCalled()
+  })
+
   it("does not commit an automatic choice after the global switch is disabled", async () => {
     const account = saveAccount()
-    const isEnabled = vi
-      .fn()
-      .mockResolvedValueOnce(true)
-      .mockResolvedValue(false)
+    let enabled = true
+    const isEnabled = vi.fn(async () => enabled)
+    detectors[0].mockImplementation(async () => {
+      enabled = false
+      return detection("matched")
+    })
 
     const prepared = await prepare(account, isEnabled)
 

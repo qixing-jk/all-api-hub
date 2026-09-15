@@ -31,6 +31,10 @@ export async function prepareAutomaticCheckIn(input: {
     if (!claim.claimed) return { account: claim.account, discovered: false }
 
     const { account } = claim
+    // The global switch can change while the cooldown claim waits for storage.
+    if (!(await input.isAutomaticExecutionEnabled())) {
+      return { account, discovered: false }
+    }
     const discovery = await discoverCheckInMethods({
       account,
       config: account.checkIn,
