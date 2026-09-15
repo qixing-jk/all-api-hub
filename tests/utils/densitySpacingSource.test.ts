@@ -20,19 +20,29 @@ it("avoids order-dependent shorthand and density axes in UI class strings", () =
         continue
       }
       if (!/\.tsx?$/.test(file)) continue
+      const text = fs.readFileSync(file, "utf8")
+      // Only parse possible conflicts. Escapes keep a file eligible because
+      // TypeScript decodes them when reading string and template contents.
+      if (
+        !text.includes("\\") &&
+        (!text.includes("-density-") || !/(?:p|px|py|gap)-\d/.test(text))
+      ) {
+        continue
+      }
       const source = ts.createSourceFile(
         file,
-        fs.readFileSync(file, "utf8"),
+        text,
         ts.ScriptTarget.Latest,
-        true,
+        false,
       )
       const visit = (node: ts.Node) => {
         if (
-          ts.isStringLiteral(node) ||
-          ts.isNoSubstitutionTemplateLiteral(node) ||
-          ts.isTemplateHead(node) ||
-          ts.isTemplateMiddle(node) ||
-          ts.isTemplateTail(node)
+          (ts.isStringLiteral(node) ||
+            ts.isNoSubstitutionTemplateLiteral(node) ||
+            ts.isTemplateHead(node) ||
+            ts.isTemplateMiddle(node) ||
+            ts.isTemplateTail(node)) &&
+          node.text.includes("-density-")
         ) {
           const tokens = node.text.split(/\s+/)
           for (const token of tokens) {

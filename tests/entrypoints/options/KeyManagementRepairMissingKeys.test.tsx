@@ -1187,7 +1187,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     ).toHaveClass("space-y-0")
     expect(
       screen.getByTestId("repair-missing-keys-result-heading-row"),
-    ).toHaveClass("h-9", "items-center")
+    ).toHaveClass("min-h-(--density-control)", "items-center")
     expect(
       screen.getByTestId("repair-missing-keys-result-heading"),
     ).toHaveClass("items-baseline")

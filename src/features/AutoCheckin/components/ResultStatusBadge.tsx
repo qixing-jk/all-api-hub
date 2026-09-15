@@ -37,7 +37,7 @@ export default function ResultStatusBadge({
       )
     case CHECKIN_RESULT_STATUS.SKIPPED:
       return (
-        <span className="bg-warning-soft text-warning-soft-foreground gap-y-density-1 inline-flex items-center gap-x-1 rounded-full px-2 py-0.5 text-xs font-medium">
+        <span className="bg-warning-soft text-warning-soft-foreground gap-y-density-1 py-density-1 inline-flex items-center gap-x-1 rounded-full px-2 text-xs font-medium">
           <TriangleAlert className="h-3 w-3" />
           {t("execution.status.skipped")}
         </span>
