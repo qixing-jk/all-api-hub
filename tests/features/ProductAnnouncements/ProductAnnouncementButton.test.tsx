@@ -234,7 +234,11 @@ describe("ProductAnnouncementButton", () => {
     const trigger = await screen.findByRole("button", {
       name: "productAnnouncements:actions.openWithRiskCount",
     })
-    expect(trigger).toHaveClass("h-6", "w-6", "border")
+    expect(trigger).toHaveClass(
+      "h-(--density-control-xs)",
+      "w-(--density-control-xs)",
+      "border",
+    )
     expect(trigger.querySelector("svg")).toHaveClass("h-4", "w-4")
   })
 

@@ -209,11 +209,21 @@ describe("UpdateLogDialog", () => {
 
     expect(
       screen.getByTestId(UPDATE_LOG_DIALOG_TEST_IDS.autoOpenToggle),
-    ).toHaveClass("h-auto", "min-h-9", "w-full", "whitespace-normal")
+    ).toHaveClass(
+      "h-auto",
+      "min-h-(--density-control)",
+      "w-full",
+      "whitespace-normal",
+    )
 
     expect(
       screen.getByTestId(UPDATE_LOG_DIALOG_TEST_IDS.openFullChangelogButton),
-    ).toHaveClass("h-auto", "min-h-9", "w-full", "whitespace-normal")
+    ).toHaveClass(
+      "h-auto",
+      "min-h-(--density-control)",
+      "w-full",
+      "whitespace-normal",
+    )
   })
 
   it("shows the fallback message when the iframe does not finish loading in time", async () => {

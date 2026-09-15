@@ -129,6 +129,19 @@ for (const width of [1280, 390, 320]) {
           THEME_ATTRIBUTES.DENSITY,
           density,
         )
+      await page.getByRole("button", { name: "Open settings search" }).click()
+      const searchDialog = page.getByRole("dialog", { name: "Search settings" })
+      const searchHeight = { default: 48, compact: 44, comfortable: 52 }[
+        density
+      ]
+      for (const slot of ["command-input-wrapper", "command-input"]) {
+        await expect(searchDialog.locator(`[data-slot="${slot}"]`)).toHaveCSS(
+          "height",
+          `${searchHeight}px`,
+        )
+      }
+      await page.keyboard.press("Escape")
+      await expect(searchDialog).toBeHidden()
       metrics[density] = {}
       // Sample real lists using the same saved preference, including a secondary list.
       for (const route of [

@@ -66,7 +66,7 @@ function CommandDialog({
         <Command
           shouldFilter={shouldFilter}
           className={cn(
-            "[&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-item]]:py-density-3 rounded-[inherit] [--corner-inset:8px] **:data-[slot=command-input-wrapper]:h-12 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5",
+            "[&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-item]]:py-density-3 rounded-[inherit] [--corner-inset:8px] **:data-[slot=command-input-wrapper]:h-(--density-control-xl) [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-(--density-control-xl) [&_[cmdk-item]]:px-2 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5",
             contentClassName,
           )}
         >

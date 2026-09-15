@@ -776,14 +776,14 @@ describe("CompactMultiSelect", () => {
       />,
     )
 
-    expect(screen.getByRole("combobox")).toHaveClass("h-9")
+    expect(screen.getByRole("combobox")).toHaveClass("h-(--density-control)")
   })
 
   it.each([
-    ["small", "sm", "h-8"],
-    ["large", "lg", "h-10"],
+    ["small", "sm", "h-(--density-control-sm)"],
+    ["large", "lg", "h-(--density-control-lg)"],
   ] as const)(
-    "keeps the %s summary trigger at its compact fixed height",
+    "uses the shared %s summary trigger height",
     async (_label, size, expectedClass) => {
       renderCompact(
         <CompactMultiSelect

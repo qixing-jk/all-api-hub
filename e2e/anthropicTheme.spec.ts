@@ -163,7 +163,12 @@ test("Anthropic supplies complete light/dark palettes and restores the user's de
   ).toBeChecked()
   await expect
     .poll(async () => (await getStoredUserPreferences(worker)).appearance)
-    .toEqual({ preset: "default", color: "violet", radius: "large" })
+    .toEqual({
+      preset: "default",
+      color: "violet",
+      radius: "large",
+      density: "default",
+    })
   await expect(popup.locator("html")).toHaveAttribute(
     THEME_ATTRIBUTES.PRESET,
     THEME_PRESET.DEFAULT,

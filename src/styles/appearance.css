@@ -137,16 +137,20 @@
   --density-control-sm: 2rem;
   --density-control: 2.25rem;
   --density-control-lg: 2.5rem;
+  --density-control-xl: 3rem;
   --density-input-lg: 2.75rem;
   --density-table-head: 3rem;
 }
 [data-theme-density="compact"] {
+  /* Preserve a 24px floor for tiny icon actions instead of shrinking hit areas. */
+  --density-control-xs: 1.5rem;
   --density-control-xxs: 1.5rem;
   --density-space-scale: 0.75;
   --density-control-tight: 1.5rem;
   --density-control-sm: 1.75rem;
   --density-control: 2rem;
   --density-control-lg: 2.25rem;
+  --density-control-xl: 2.75rem;
   --density-input-lg: 2.5rem;
   --density-table-head: 2.5rem;
 }
@@ -158,6 +162,7 @@
   --density-control-sm: 2.25rem;
   --density-control: 2.5rem;
   --density-control-lg: 2.75rem;
+  --density-control-xl: 3.25rem;
   --density-input-lg: 3rem;
   --density-table-head: 3.5rem;
 }

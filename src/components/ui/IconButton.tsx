@@ -35,7 +35,7 @@ const iconButtonVariants = cva(
         default:
           "h-(--density-control-sm) w-(--density-control-sm) sm:h-(--density-control) sm:w-(--density-control)",
         lg: "h-(--density-control-lg) w-(--density-control-lg)",
-        xl: "h-12 w-12",
+        xl: "h-(--density-control-xl) w-(--density-control-xl)",
       },
     },
     defaultVariants: {

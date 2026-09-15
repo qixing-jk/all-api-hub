@@ -171,7 +171,7 @@ export function SiteAnnouncementCard({
                     iconOnly
                     size="icon-sm"
                     variant="ghost"
-                    className="text-faint-foreground hover:bg-theme-50 hover:text-theme-600 dark:hover:bg-theme-400/10 dark:hover:text-theme-400 h-8 w-8"
+                    className="text-faint-foreground hover:bg-theme-50 hover:text-theme-600 dark:hover:bg-theme-400/10 dark:hover:text-theme-400 h-(--density-control-sm) w-(--density-control-sm)"
                   />
                   {!expanded && !record.read && (
                     <Button
@@ -287,7 +287,7 @@ export function SiteAnnouncementCard({
                 label={t("actions.viewSource")}
                 size="sm"
                 variant="ghost"
-                className="text-theme-600 hover:bg-theme-50 dark:text-theme-400 dark:hover:bg-theme-400/10 h-7 text-xs"
+                className="text-theme-600 hover:bg-theme-50 dark:text-theme-400 dark:hover:bg-theme-400/10 h-(--density-control-tight) text-xs"
                 leftIcon={<WorkflowTransitionIcon className="h-3.5 w-3.5" />}
               />
               <Button

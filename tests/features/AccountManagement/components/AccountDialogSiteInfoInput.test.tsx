@@ -209,7 +209,9 @@ describe("AccountDialog SiteInfoInput", () => {
       "[@container(min-width:28rem)]:order-1",
     )
     expect(authTypeTrigger).toHaveAttribute("data-size", "default")
-    expect(authTypeTrigger).toHaveClass("data-[size=default]:h-9")
+    expect(authTypeTrigger).toHaveClass(
+      "data-[size=default]:h-(--density-control)",
+    )
   })
 
   it("shows the generic already-added warning and disables current-tab reuse when the tab URL is unavailable", async () => {
