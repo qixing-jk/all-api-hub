@@ -6,6 +6,8 @@
  * - Day-key arithmetic uses UTC fields to keep calendar math predictable.
  */
 
+import { getHistoryRetentionCutoffDayKey } from "~/services/history/retention"
+
 /**
  * Pad a numeric value to 2 digits using leading zeros.
  */
@@ -128,18 +130,11 @@ export function computeRetentionCutoffDayKey(params: {
   nowUnixSeconds: number
   timeZone?: string
 }): string {
-  const safeRetentionDays = Math.max(
-    1,
-    Number.isFinite(params.retentionDays)
-      ? Math.trunc(params.retentionDays)
-      : 1,
-  )
-
   const todayKey = getDayKeyFromUnixSeconds(
     params.nowUnixSeconds,
     params.timeZone,
   )
-  return subtractDaysFromDayKey(todayKey, safeRetentionDays - 1)
+  return getHistoryRetentionCutoffDayKey(todayKey, params.retentionDays)
 }
 
 /**

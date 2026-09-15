@@ -385,6 +385,8 @@ class SiteAnnouncementStorage {
         const previousIdentityLedger = serializeIdentityLedger(
           store.identityLedger,
         )
+        // Markers have no time-based expiry; always retain recency eviction,
+        // independently of the browser's local-storage quota.
         const prunedIdentityLedger = pruneIdentityLedger(store.identityLedger, {
           identitiesPerSite: SITE_ANNOUNCEMENTS_LIMITS.identitiesPerSite,
           identitiesTotal: SITE_ANNOUNCEMENTS_LIMITS.identitiesTotal,

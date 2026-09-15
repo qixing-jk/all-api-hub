@@ -17,10 +17,6 @@ export const USAGE_HISTORY_LIMITS = {
    * Hard cap on items ingested per account sync run.
    */
   maxItems: 2000,
-  /**
-   * Cap on stored cursor fingerprints at the boundary timestamp.
-   */
-  maxFingerprints: 256,
 } as const
 
 export const USAGE_HISTORY_UNSUPPORTED_COOLDOWN_MS = 24 * 60 * 60 * 1000

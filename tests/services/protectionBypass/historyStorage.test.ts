@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
@@ -8,6 +8,60 @@ import { createAutomaticProtectionBypassExecution } from "~/services/protectionB
 import { protectionBypassHistoryStorage } from "~/services/protectionBypass/historyStorage"
 
 describe("protection bypass history", () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it("evicts old entries and cannot resurrect them on completion", async () => {
+    const request = {
+      execution: createAutomaticProtectionBypassExecution(
+        "account_refresh",
+        "scheduled",
+        "background",
+      ),
+      task: {
+        kind: "api_fallback_fetch" as const,
+        params: {
+          originUrl: "https://example.com",
+          fetchUrl: "https://example.com/api",
+        },
+      },
+    }
+    await protectionBypassHistoryStorage.start(request)
+    const [entry] = await protectionBypassHistoryStorage.list()
+    const storage = new Storage({ area: "local" })
+    await storage.set(STORAGE_KEYS.PROTECTION_BYPASS_HISTORY, {
+      version: 1,
+      entries: Array.from({ length: 101 }, (_, index) => ({
+        ...entry,
+        id: `entry-${index}`,
+        startedAt: entry.startedAt - index,
+      })),
+    })
+
+    const newestId = await protectionBypassHistoryStorage.start(request)
+    await protectionBypassHistoryStorage.finish("entry-100", {
+      response: { success: true },
+    })
+    await protectionBypassHistoryStorage.finish("entry-0", {
+      response: { success: true },
+    })
+    const history = await protectionBypassHistoryStorage.list()
+    expect(history).toHaveLength(100)
+    expect(history[0].id).toBe(newestId)
+    expect(
+      history.some((item) => item.id === "entry-99" || item.id === "entry-100"),
+    ).toBe(false)
+    expect(history.find((item) => item.id === "entry-0")?.status).toBe(
+      "completed",
+    )
+    expect(
+      (
+        await storage.get<{ entries: unknown[] }>(
+          STORAGE_KEYS.PROTECTION_BYPASS_HISTORY,
+        )
+      )?.entries,
+    ).toHaveLength(100)
+  })
+
   it("omits invalid origins and unrecognized fallback evidence", async () => {
     await protectionBypassHistoryStorage.start({
       execution: createAutomaticProtectionBypassExecution(

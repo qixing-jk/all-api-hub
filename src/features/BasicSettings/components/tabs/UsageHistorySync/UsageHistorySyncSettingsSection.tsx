@@ -86,7 +86,6 @@ export default function UsageHistorySyncSettingsSection({
             <Input
               type="number"
               min={1}
-              max={365}
               value={retentionDays}
               onChange={(event) =>
                 onRetentionDaysChange(Number(event.target.value))

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
@@ -13,8 +13,57 @@ import {
 } from "~/services/verification/verificationResultHistory"
 
 describe("verificationResultHistoryStorage", () => {
+  afterEach(() => vi.restoreAllMocks())
+
   beforeEach(async () => {
     await verificationResultHistoryStorage.clearAllData()
+  })
+
+  it("evicts old targets", async () => {
+    const summaries = Array.from(
+      { length: 500 },
+      (_, index) =>
+        createVerificationHistorySummary({
+          target: createProfileVerificationHistoryTarget(`profile-${index}`)!,
+          apiType: API_TYPES.OPENAI,
+          results: [
+            {
+              id: "models",
+              status: "pass",
+              latencyMs: 1,
+              summary: "Available",
+            },
+          ],
+        })!,
+    )
+    const storage = new Storage({ area: "local" })
+    await storage.set(
+      API_VERIFICATION_HISTORY_STORAGE_KEYS.VERIFICATION_RESULT_HISTORY,
+      {
+        version: 1,
+        summaries,
+        lastUpdated: Date.now(),
+      },
+    )
+    const added = createVerificationHistorySummary({
+      target: createProfileVerificationHistoryTarget("new-profile")!,
+      apiType: API_TYPES.OPENAI,
+      results: [
+        { id: "models", status: "pass", latencyMs: 1, summary: "Available" },
+      ],
+    })!
+
+    await verificationResultHistoryStorage.upsertLatestSummary(added)
+    const stored = await verificationResultHistoryStorage.listSummaries()
+    expect(stored).toHaveLength(500)
+    expect(stored[0]).toEqual(added)
+    expect(
+      stored.some((item) => item.targetKey === summaries[499].targetKey),
+    ).toBe(false)
+    await verificationResultHistoryStorage.upsertLatestSummary(added)
+    expect(await verificationResultHistoryStorage.listSummaries()).toEqual(
+      stored,
+    )
   })
 
   it.each(["streaming", "non-streaming"] as const)(

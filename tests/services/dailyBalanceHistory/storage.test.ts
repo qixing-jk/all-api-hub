@@ -39,60 +39,74 @@ describe("dailyBalanceHistoryStorage", () => {
     expect(store.snapshotsByAccountId).toEqual({})
   })
 
-  it("prunes snapshots older than the retention window on upsert", async () => {
-    vi.useFakeTimers()
-    const fixedNow = new Date(Date.UTC(2026, 1, 7, 12, 0, 0))
-    vi.setSystemTime(fixedNow)
+  it.each([
+    { retentionDays: 2, expiredDay: "2026-02-05", cutoffDay: "2026-02-06" },
+    { retentionDays: 7300, expiredDay: "2006-02-12", cutoffDay: "2006-02-13" },
+  ])(
+    "prunes snapshots outside a $retentionDays-day window on upsert",
+    async ({ retentionDays, expiredDay, cutoffDay }) => {
+      vi.useFakeTimers()
+      const fixedNow = new Date(Date.UTC(2026, 1, 7, 12, 0, 0))
+      vi.setSystemTime(fixedNow)
 
-    try {
-      storageData.set(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE, {
-        schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-        snapshotsByAccountId: {
-          a1: {
-            "2026-02-05": {
-              quota: 1,
-              today_income: 0,
-              today_quota_consumption: 0,
-              capturedAt: fixedNow.getTime(),
-              source: "refresh",
+      try {
+        storageData.set(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE, {
+          schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+          snapshotsByAccountId: {
+            a1: {
+              [expiredDay]: {
+                quota: 1,
+                today_income: 0,
+                today_quota_consumption: 0,
+                capturedAt: fixedNow.getTime(),
+                source: "refresh",
+              },
+              [cutoffDay]: {
+                quota: 2,
+                today_income: 0,
+                today_quota_consumption: 0,
+                capturedAt: fixedNow.getTime(),
+                source: "refresh",
+              },
             },
           },
-        },
-      })
+        })
 
-      const nowUnixSeconds = Math.floor(Date.now() / 1000)
-      const todayKey = getDayKeyFromUnixSeconds(nowUnixSeconds, "UTC")
+        const nowUnixSeconds = Math.floor(Date.now() / 1000)
+        const todayKey = getDayKeyFromUnixSeconds(nowUnixSeconds, "UTC")
 
-      const ok = await dailyBalanceHistoryStorage.upsertSnapshot({
-        accountId: "a1",
-        dayKey: todayKey,
-        snapshot: {
-          quota: 10,
-          today_income: 1,
-          today_quota_consumption: 2,
-          capturedAt: fixedNow.getTime(),
-          source: "refresh",
-        },
-        retentionDays: 2,
-        timeZone: "UTC",
-      })
+        const ok = await dailyBalanceHistoryStorage.upsertSnapshot({
+          accountId: "a1",
+          dayKey: todayKey,
+          snapshot: {
+            quota: 10,
+            today_income: 1,
+            today_quota_consumption: 2,
+            capturedAt: fixedNow.getTime(),
+            source: "refresh",
+          },
+          retentionDays,
+          timeZone: "UTC",
+        })
 
-      expect(ok).toBe(true)
+        expect(ok).toBe(true)
 
-      const store = await dailyBalanceHistoryStorage.getStore()
-      expect(store.snapshotsByAccountId.a1?.["2026-02-05"]).toBeUndefined()
-      expect(store.snapshotsByAccountId.a1?.[todayKey]).toEqual(
-        expect.objectContaining({
-          quota: 10,
-          today_income: 1,
-          today_quota_consumption: 2,
-          source: "refresh",
-        }),
-      )
-    } finally {
-      vi.useRealTimers()
-    }
-  })
+        const store = await dailyBalanceHistoryStorage.getStore()
+        expect(store.snapshotsByAccountId.a1?.[expiredDay]).toBeUndefined()
+        expect(store.snapshotsByAccountId.a1?.[cutoffDay]?.quota).toBe(2)
+        expect(store.snapshotsByAccountId.a1?.[todayKey]).toEqual(
+          expect.objectContaining({
+            quota: 10,
+            today_income: 1,
+            today_quota_consumption: 2,
+            source: "refresh",
+          }),
+        )
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
 
   it("drops malformed account buckets and snapshot rows while preserving null optional fields", async () => {
     storageData.set(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE, {

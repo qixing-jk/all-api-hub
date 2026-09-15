@@ -12,6 +12,7 @@ import { createLogger } from "~/utils/core/logger"
 const logger = createLogger("WebAiApiCheckBaseUrlHistory")
 
 const STORE_VERSION = 1
+// These recency caps evict unused history; the scoring window below does not expire it.
 const MAX_HISTORY_ENTRIES = 20
 const MAX_SOURCE_ORIGINS_PER_ENTRY = 8
 const MAX_SUGGESTION_LIMIT = 10

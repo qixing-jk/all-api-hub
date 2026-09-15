@@ -381,7 +381,7 @@ describe("preferencesMigration", () => {
       expect(result.balanceHistory).toEqual(DEFAULT_BALANCE_HISTORY_PREFERENCES)
     })
 
-    it("clamps balance-history retention days into the supported storage range", () => {
+    it("normalizes invalid days without shortening longer balance-history retention", () => {
       const lowPrefs = createV0Preferences({
         preferencesVersion: 11,
         balanceHistory: {
@@ -405,7 +405,7 @@ describe("preferencesMigration", () => {
       const highResult = migratePreferences(highPrefs)
 
       expect(lowResult.balanceHistory?.retentionDays).toBe(1)
-      expect(highResult.balanceHistory?.retentionDays).toBe(3650)
+      expect(highResult.balanceHistory?.retentionDays).toBe(99999)
       expect(highResult.balanceHistory?.endOfDayCapture.enabled).toBe(false)
     })
 

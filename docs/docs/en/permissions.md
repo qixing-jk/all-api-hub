@@ -1,6 +1,6 @@
 # Permission Management (Optional Permissions)
 
-> These optional permissions only need to be granted when a temporary window is required for shield bypass, automatic refresh, or background supplementation of Cookies/request headers; for daily use, they can remain fully disabled.
+> Grant optional permissions as needed for temporary-window shield bypass, automatic refresh, or assistive tools. Keep them disabled when you do not need the related features. Local storage uses a built-in permission and needs no separate opt-in.
 
 ## Feature Overview
 
@@ -38,7 +38,25 @@ Specific permission names may vary slightly depending on the browser, but typica
     -   Typical Scenarios:
         -   Ensuring Cloudflare shield bypass or refresh requests with cookies can reliably pass site protection.
 
-> The extension will not use these permissions to scan sites unrelated to you; they are only used on the relay station domains you have connected to, and only within necessary workflows.
+> The extension will not use network permissions to scan sites unrelated to you; they are only used on the relay station domains you have connected to, and only within necessary workflows.
+
+## Built-in Local Storage Permission
+
+The extension declares **unlimited storage (`unlimitedStorage`)** as a required permission. Chrome, Edge, and Firefox do not support requesting it as an optional permission, but it produces no permission warning. Adding this permission alone does not disable the extension after an update or require renewed consent. No manual action in Permissions is needed.
+
+This built-in permission lets local storage exceed the browser's default quota. The extension only lifts the following limits, where an independent cleanup mechanism exists or complete data is needed for accurate statistics:
+
+- The settings caps of 365 days for usage history and 3,650 days for balance history, allowing you to choose longer retention periods. **Your existing retention periods do not change.** Data beyond your chosen retention period is still cleaned up automatically.
+- The limit of 256 deduplication fingerprints at the usage-sync boundary timestamp, preventing requests in a busy second from being counted again. Advancing the sync boundary replaces the old fingerprints; fingerprints for all historical requests are not retained.
+
+The following entry limits still evict old records and remain in effect with unlimited storage:
+
+- Shield-bypass history: the latest 100 records; verification summaries: the latest 500 targets.
+- Recently used API addresses: 20 addresses, with up to 8 source origins per address.
+- Site announcements: up to 100 content records per site; deduplication markers: up to 1,000 per site and 10,000 globally.
+- Managed-site import receipts: the latest 500 records; starting a new repair task replaces the previous task's data.
+
+These histories and caches have no independent expiry mechanism, so entry limits prevent ongoing accumulation. Cache expiry, in-memory caches, per-request limits, data validation, and display limits retain their respective constraints. Unlimited storage does not increase browser sync-storage or session-storage quotas, and available space still depends on device storage.
 
 ## Status and Operations
 
@@ -49,7 +67,7 @@ On the permission management page, you can see:
     -   "已授予 / Granted": Currently allowed by the browser.
     -   "未授予 / Not granted": Currently not allowed.
 -   **Action Buttons**
-    -   **允许 (推荐) / Allow (Recommended)**: Initiates a permission request pop-up to the browser.
+    -   **允许 (推荐) / Allow (Recommended)**: Requests the corresponding optional permission from the browser.
     -   **撤销 / Revoke**: Actively withdraws the current permission.
     -   **刷新状态 / Refresh Status**: If you have manually modified permissions in your browser settings, click refresh to synchronize the status.
 
@@ -67,7 +85,7 @@ On the permission management page, you can see:
 -   Account and site configurations are stored locally in the browser by default; features such as balance refresh, site API access, WebDAV backup or sync, and anonymous product analytics make the necessary network requests according to your settings.
 -   Optional permissions are only enabled under the following conditions:
     -   You explicitly click "Allow" on the permission management page;
-    -   The browser displays a permission request dialog and you confirm it.
+    -   The browser grants the permission; if a confirmation dialog appears, you confirm it.
 -   You can always:
     -   Click "Revoke" on the "Permission Management" page;
     -   Or remove relevant permissions from the browser's own extension management interface.
@@ -75,7 +93,8 @@ On the permission management page, you can see:
 ## Troubleshooting
 
 -   **Nothing happens after clicking "Allow"?**
-    -   The browser might not have displayed the permission dialog, or it might have been blocked by the system;
+    -   First check whether the status has changed to "Granted";
+    -   If it is still not granted, the browser might not have displayed the permission dialog, or it might have been blocked by the system;
     -   Check for a permission icon or prompt near the address bar.
 -   **Shield bypass/refresh still failing?**
     -   Confirm that Cloudflare shield bypass related settings are enabled, and refer to the [Cloudflare Shield Bypass Helper](./cloudflare-helper.md) documentation;

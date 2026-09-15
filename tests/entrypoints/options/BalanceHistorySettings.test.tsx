@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import userEvent from "@testing-library/user-event"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -38,6 +39,7 @@ vi.mock("~/lib/notify", () => {
 })
 
 describe("BalanceHistorySettings", () => {
+  afterEach(() => vi.restoreAllMocks())
   beforeEach(() => {
     vi.clearAllMocks()
     vi.unstubAllEnvs()
@@ -311,7 +313,9 @@ describe("BalanceHistorySettings", () => {
     })
   })
 
-  it("uses the clamped retention value from numeric input", async () => {
+  it("saves long retention without a permission check", async () => {
+    const user = userEvent.setup()
+    const contains = vi.spyOn(browser.permissions, "contains")
     const updateBalanceHistory = vi.fn().mockResolvedValue(true)
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: {
@@ -327,15 +331,19 @@ describe("BalanceHistorySettings", () => {
 
     renderSubject()
 
-    fireEvent.change(
-      await screen.findByLabelText("balanceHistory:settings.retentionDays"),
-      { target: { value: "9999" } },
+    const input = await screen.findByLabelText(
+      "balanceHistory:settings.retentionDays",
     )
-    fireEvent.click(screen.getByText("balanceHistory:actions.applySettings"))
+    expect(input).not.toHaveAttribute("max")
+    expect(contains).not.toHaveBeenCalled()
+    fireEvent.change(input, { target: { value: "9999" } })
+    await user.click(screen.getByText("balanceHistory:actions.applySettings"))
 
     await waitFor(() => {
       expect(updateBalanceHistory).toHaveBeenCalledWith(
-        expect.objectContaining({ retentionDays: 3650 }),
+        expect.objectContaining({
+          retentionDays: 9999,
+        }),
       )
     })
   })

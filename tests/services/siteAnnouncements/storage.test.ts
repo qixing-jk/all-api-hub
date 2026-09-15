@@ -1412,7 +1412,54 @@ describe("siteAnnouncementStorage", () => {
     ).toBeDefined()
   })
 
-  it("prunes an oversized all-read ledger during a no-op mark-all mutation", async () => {
+  it("evicts announcement content beyond 100 records while preserving dedupe and read state", async () => {
+    const site = {
+      siteKey: "site-limited",
+      siteName: "Limited",
+      siteType: "new-api" as const,
+      baseUrl: "https://example.invalid",
+      accountId: "account-limited",
+      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      status: SITE_ANNOUNCEMENT_STATUS.Success,
+    }
+    const records = Array.from({ length: 101 }, (_, index) => ({
+      ...site,
+      title: `Announcement ${index}`,
+      content: `Content ${index}`,
+      fingerprint: `announcement-${index}`,
+    }))
+    await siteAnnouncementStorage.upsertDiscoveredRecords({
+      site,
+      records: records.slice(0, 1),
+      now: 1000,
+    })
+    await siteAnnouncementStorage.upsertDiscoveredRecords({
+      site,
+      records: records.slice(1),
+      now: 2000,
+    })
+    const stored = await siteAnnouncementStorage.listRecords()
+    expect(stored).toHaveLength(100)
+    expect(
+      stored.some((record) => record.fingerprint === "announcement-0"),
+    ).toBe(false)
+    await siteAnnouncementStorage.markRead(stored[0].id)
+    expect(await siteAnnouncementStorage.listRecords()).toHaveLength(100)
+    expect(
+      await siteAnnouncementStorage.upsertDiscoveredRecords({
+        site,
+        records,
+        now: 3000,
+      }),
+    ).toEqual([])
+    expect(
+      (await siteAnnouncementStorage.listRecords()).find(
+        (record) => record.id === stored[0].id,
+      )?.read,
+    ).toBe(true)
+  })
+
+  it("prunes an oversized all-read ledger during a no-op mutation", async () => {
     const storage = new Storage({ area: "local" })
     const identityLedger = createOversizedIdentityLedger(1)
 
@@ -1436,6 +1483,12 @@ describe("siteAnnouncementStorage", () => {
     expect(
       Object.keys(firstPersistedStore!.identityLedger["site-10"] ?? {}),
     ).toHaveLength(1000)
+    expect(
+      firstPersistedStore!.identityLedger["site-0"]?.["0".repeat(64)],
+    ).toBeUndefined()
+    expect(
+      firstPersistedStore!.identityLedger["site-10"]["2710".padStart(64, "0")],
+    ).toBeUndefined()
 
     setSpy.mockClear()
     await expect(siteAnnouncementStorage.markAllRead()).resolves.toBe(0)

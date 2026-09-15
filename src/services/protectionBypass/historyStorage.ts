@@ -23,6 +23,7 @@ import {
 } from "./contracts"
 import type { ProtectionBypassPolicyDecision } from "./policy"
 
+// Diagnostic entries have no expiry; this cap is their automatic eviction policy.
 export const PROTECTION_BYPASS_HISTORY_LIMIT = 100
 
 const httpStatusSchema = z.number().int().min(100).max(599)

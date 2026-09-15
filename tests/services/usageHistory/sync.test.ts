@@ -1,10 +1,13 @@
 import { http, HttpResponse } from "msw"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { USAGE_HISTORY_LIMITS } from "~/services/history/usageHistory/constants"
-import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
+import {
+  fingerprintLogItem,
+  getDayKeyFromUnixSeconds,
+} from "~/services/history/usageHistory/core"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { syncUsageHistoryForAccount } from "~/services/history/usageHistory/sync"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
@@ -86,6 +89,89 @@ async function createTestAccount(baseUrl: string): Promise<string> {
 }
 
 describe("usageHistory sync (MSW)", () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it("retains all current boundary fingerprints without recounting usage and discards them when the cursor advances", async () => {
+    const baseUrl = "https://usage-history-unlimited.example.invalid"
+    const accountId = await createTestAccount(baseUrl)
+    const createdAt = Math.floor(Date.now() / 1000) - 10
+    const items = Array.from({ length: 300 }, (_, index) =>
+      createConsumeLogItem({
+        id: index + 1,
+        created_at: createdAt,
+        quota: index + 1,
+      }),
+    )
+    server.use(
+      http.get(`${baseUrl}/api/log/self`, ({ request }) => {
+        const url = new URL(request.url)
+        const page = Number(url.searchParams.get("p"))
+        const pageSize = Number(url.searchParams.get("page_size"))
+        const startTimestamp = Number(url.searchParams.get("start_timestamp"))
+        const filtered = items.filter(
+          (item) => item.created_at >= startTimestamp,
+        )
+        return HttpResponse.json({
+          success: true,
+          data: {
+            items: filtered.slice((page - 1) * pageSize, page * pageSize),
+            total: filtered.length,
+          },
+        })
+      }),
+    )
+    const params = {
+      accountId,
+      trigger: "manual" as const,
+      force: true,
+      timeZone: "UTC",
+      config: {
+        enabled: true,
+        retentionDays: 30,
+        scheduleMode: USAGE_HISTORY_SCHEDULE_MODE.MANUAL,
+        syncIntervalMinutes: 60,
+      },
+    }
+
+    expect(await syncUsageHistoryForAccount(params)).toMatchObject({
+      status: "success",
+      ingestedCount: 300,
+    })
+    expect(
+      (await usageHistoryStorage.getAccountStore(accountId)).cursor
+        .fingerprintsAtLastSeenCreatedAt,
+    ).toHaveLength(300)
+    expect(await syncUsageHistoryForAccount(params)).toMatchObject({
+      status: "success",
+      ingestedCount: 0,
+    })
+
+    const nextItem = createConsumeLogItem({
+      id: 301,
+      created_at: createdAt + 1,
+    })
+    items.unshift(nextItem)
+    expect(await syncUsageHistoryForAccount(params)).toMatchObject({
+      status: "success",
+      ingestedCount: 1,
+    })
+    const advancedStore = await usageHistoryStorage.getAccountStore(accountId)
+    expect(advancedStore.cursor).toEqual({
+      lastSeenCreatedAt: createdAt + 1,
+      fingerprintsAtLastSeenCreatedAt: [fingerprintLogItem(nextItem)],
+    })
+    expect(
+      Object.values(advancedStore.daily).reduce(
+        (total, day) => total + day.requests,
+        0,
+      ),
+    ).toBe(301)
+    expect(await syncUsageHistoryForAccount(params)).toMatchObject({
+      status: "success",
+      ingestedCount: 0,
+    })
+  })
+
   it("routes log pages through the New API-family request seam", async () => {
     const baseUrl = "https://usage-history.example.invalid"
     const accountId = await createTestAccount(baseUrl)
@@ -499,7 +585,7 @@ describe("usageHistory sync (MSW)", () => {
     expect(store.status.unsupportedUntil).toBeUndefined()
   })
 
-  it("marks the run as partial when the item safety cap truncates a page", async () => {
+  it("keeps the item safety cap", async () => {
     const baseUrl = "https://api-item-cap.example.com"
     const accountId = await createTestAccount(baseUrl)
     const nowUnixSeconds = Math.floor(Date.now() / 1000)
@@ -553,7 +639,7 @@ describe("usageHistory sync (MSW)", () => {
     }
   })
 
-  it("marks the run as partial when the page safety cap stops additional fetches", async () => {
+  it("keeps the page safety cap", async () => {
     const baseUrl = "https://api-page-cap.example.com"
     const accountId = await createTestAccount(baseUrl)
     const nowUnixSeconds = Math.floor(Date.now() / 1000)

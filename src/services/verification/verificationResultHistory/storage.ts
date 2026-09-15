@@ -34,6 +34,8 @@ import {
 const KNOWN_PROBE_IDS = new Set<ApiVerificationProbeId>(
   Object.values(API_VERIFICATION_PROBE_IDS),
 )
+// Targets can outlive deleted accounts/models; keep recency eviction even with
+// unlimitedStorage until summaries have an independent cleanup lifecycle.
 const MAX_STORED_SUMMARIES = 500
 
 const createDefaultConfig = (): ApiVerificationHistoryConfig => ({

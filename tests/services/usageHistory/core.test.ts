@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest"
 
-import { USAGE_HISTORY_LIMITS } from "~/services/history/usageHistory/constants"
 import {
   computeRetentionCutoffDayKey,
   createEmptyUsageHistoryAccountStore,
@@ -45,6 +44,19 @@ function createConsumeLogItem(
 }
 
 describe("usageHistory core", () => {
+  it("keeps a valid cutoff for retention periods beyond the Date range", () => {
+    expect(
+      computeRetentionCutoffDayKey(
+        Number.MAX_SAFE_INTEGER,
+        Date.UTC(2026, 0, 10) / 1000,
+        "UTC",
+      ),
+    ).toBe("1969-12-31")
+    expect(computeRetentionCutoffDayKey(1, 0, "America/Los_Angeles")).toBe(
+      "1969-12-31",
+    )
+  })
+
   it("computes cutoff dayKey from retentionDays", () => {
     // 2026-01-10T12:00:00Z
     const nowUnixSeconds = Math.floor(Date.UTC(2026, 0, 10, 12, 0, 0) / 1000)
@@ -477,7 +489,7 @@ describe("usageHistory core", () => {
     expect(result.cursorCandidate).toEqual(startCursor)
   })
 
-  it("caps stored boundary fingerprints to the configured maximum", () => {
+  it("retains all fingerprints at the current boundary", () => {
     const accountStore = createEmptyUsageHistoryAccountStore()
     const createdAt = Math.floor(Date.UTC(2026, 0, 1, 12, 0, 0) / 1000)
     const startCursor = {
@@ -485,16 +497,14 @@ describe("usageHistory core", () => {
       fingerprintsAtLastSeenCreatedAt: [],
     }
 
-    const items = Array.from(
-      { length: USAGE_HISTORY_LIMITS.maxFingerprints + 5 },
-      (_, index) =>
-        createConsumeLogItem({
-          id: index + 1,
-          created_at: createdAt,
-          quota: index + 1,
-          prompt_tokens: index + 1,
-          completion_tokens: index + 1,
-        }),
+    const items = Array.from({ length: 300 }, (_, index) =>
+      createConsumeLogItem({
+        id: index + 1,
+        created_at: createdAt,
+        quota: index + 1,
+        prompt_tokens: index + 1,
+        completion_tokens: index + 1,
+      }),
     )
 
     const result = ingestConsumeLogItems({
@@ -508,7 +518,7 @@ describe("usageHistory core", () => {
     expect(result.ingestedCount).toBe(items.length)
     expect(result.cursorCandidate.lastSeenCreatedAt).toBe(createdAt)
     expect(result.cursorCandidate.fingerprintsAtLastSeenCreatedAt).toHaveLength(
-      USAGE_HISTORY_LIMITS.maxFingerprints,
+      items.length,
     )
 
     const firstFingerprint = fingerprintLogItem(items[0]!)
@@ -517,7 +527,7 @@ describe("usageHistory core", () => {
       result.cursorCandidate.fingerprintsAtLastSeenCreatedAt.includes(
         firstFingerprint,
       ),
-    ).toBe(false)
+    ).toBe(true)
     expect(
       result.cursorCandidate.fingerprintsAtLastSeenCreatedAt.includes(
         lastFingerprint,

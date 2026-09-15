@@ -1,4 +1,5 @@
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { normalizeHistoryRetentionDays } from "~/services/history/retention"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { UsageHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
@@ -48,16 +49,6 @@ interface UsageHistoryBatchSyncResult {
     unsupported: number
   }
   perAccount: Array<Awaited<ReturnType<typeof syncUsageHistoryForAccount>>>
-}
-
-/**
- * Clamp retention days to a safe bounded range.
- */
-function clampRetentionDays(value: unknown): number {
-  const parsed = Number(value)
-  if (!Number.isFinite(parsed))
-    return DEFAULT_USAGE_HISTORY_PREFERENCES.retentionDays
-  return Math.min(365, Math.max(1, Math.trunc(parsed)))
 }
 
 /**
@@ -157,8 +148,9 @@ class UsageHistoryScheduler {
     const next: UsageHistoryPreferences = {
       ...current,
       ...updates,
-      retentionDays: clampRetentionDays(
+      retentionDays: normalizeHistoryRetentionDays(
         updates.retentionDays ?? current.retentionDays,
+        DEFAULT_USAGE_HISTORY_PREFERENCES.retentionDays,
       ),
       syncIntervalMinutes: clampSyncIntervalMinutes(
         updates.syncIntervalMinutes ?? current.syncIntervalMinutes,

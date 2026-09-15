@@ -223,7 +223,6 @@ export default function BalanceHistorySettings() {
             <Input
               type="number"
               min={1}
-              max={3650}
               value={safeRetentionDays}
               aria-label={t("settings.retentionDays")}
               onChange={(event) => setRetentionDays(Number(event.target.value))}

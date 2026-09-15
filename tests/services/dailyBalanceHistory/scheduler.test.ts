@@ -254,6 +254,14 @@ describe("dailyBalanceHistoryScheduler", () => {
     expect(mockCreateAlarm).not.toHaveBeenCalled()
   })
 
+  it("saves longer retention and still honors the user's period", async () => {
+    await dailyBalanceHistoryScheduler.updateSettings({ retentionDays: 7300 })
+    expect(mockSavePreferences).toHaveBeenCalledWith({
+      balanceHistory: expect.objectContaining({ retentionDays: 7300 }),
+    })
+    expect(mockPruneAll).toHaveBeenCalledWith({ retentionDays: 7300 })
+  })
+
   it("disables end-of-day capture with a warning when alarms are unavailable", async () => {
     mockHasAlarmsAPI.mockReturnValue(false)
 
@@ -272,10 +280,10 @@ describe("dailyBalanceHistoryScheduler", () => {
         enabled: true,
         endOfDayCapture: { enabled: false },
         estimatedTodayIncome: { enabled: false },
-        retentionDays: 3650,
+        retentionDays: 9999,
       },
     })
-    expect(mockPruneAll).toHaveBeenCalledWith({ retentionDays: 3650 })
+    expect(mockPruneAll).toHaveBeenCalledWith({ retentionDays: 9999 })
     expect(mockClearAlarm).toHaveBeenCalledWith(
       DAILY_BALANCE_HISTORY_ALARM_NAME,
     )

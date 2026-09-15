@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
@@ -242,6 +242,8 @@ const waitForStoredState = async (state: AccountKeyRepairProgress["state"]) => {
 }
 
 describe("accountKeyRepair", () => {
+  afterEach(() => vi.restoreAllMocks())
+
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
@@ -441,6 +443,47 @@ describe("accountKeyRepair", () => {
     await expect(accountKeyRepairRunner.getProgress()).resolves.toBe(
       progressBeforeMalformedRequest,
     )
+  })
+
+  it("keeps receipt eviction and request caps", async () => {
+    const targetFingerprint = "a".repeat(64)
+    const stored = createProgress({
+      jobId: "receipt-capacity-job",
+      managedSiteImportReceipts: Array.from({ length: 500 }, (_, index) => ({
+        targetFingerprint,
+        resourceRef: createRef("account-1", `resource-${index}`),
+        status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created,
+        updatedAt: index + 1,
+      })),
+    })
+    mocks.storageMap.set(REPAIR_PROGRESS_STORAGE_KEY, stored)
+    const { accountKeyRepairRunner, recordManagedSiteImportResults } =
+      await import("~/services/accounts/accountKeyAutoProvisioning/repair")
+    const item = {
+      resourceRef: createRef("account-1", "new-resource"),
+      status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created,
+    }
+    await recordManagedSiteImportResults({
+      jobId: stored.jobId,
+      targetFingerprint,
+      items: [item],
+    })
+    const receipts = (await accountKeyRepairRunner.getProgress())
+      .managedSiteImportReceipts
+    expect(receipts).toHaveLength(500)
+    expect(
+      receipts?.some(
+        (receipt) => receipt.resourceRef.resourceId === "resource-0",
+      ),
+    ).toBe(false)
+    expect(receipts?.at(-1)?.resourceRef).toEqual(item.resourceRef)
+    await expect(
+      recordManagedSiteImportResults({
+        jobId: stored.jobId,
+        targetFingerprint,
+        items: Array.from({ length: 501 }, () => item),
+      }),
+    ).rejects.toThrow("invalid_managed_site_import_results_request")
   })
 
   it("opens native key resources from the stored request and persists secret-free created refs", async () => {

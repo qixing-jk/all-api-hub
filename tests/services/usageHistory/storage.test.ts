@@ -314,41 +314,27 @@ describe("usageHistoryStorage", () => {
     })
   })
 
-  it("updates account stores, exposes fallback account state, and prunes retained days", async () => {
-    vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-03-28T00:00:00Z"))
+  it.each([
+    { retentionDays: 2, now: "2026-03-28T00:00:00Z" },
+    { retentionDays: 730, now: "2028-03-25T00:00:00Z" },
+  ])(
+    "updates account stores and prunes data outside a $retentionDays-day window",
+    async ({ retentionDays, now }) => {
+      vi.spyOn(Date, "now").mockReturnValue(Date.parse(now))
 
-    const updated = await usageHistoryStorage.updateAccountStore(
-      "account-2",
-      (accountStore) => ({
-        ...accountStore,
-        daily: {
-          "2026-03-26": {
-            requests: 1,
-            promptTokens: 1,
-            completionTokens: 1,
-            totalTokens: 2,
-            quotaConsumed: 1,
-          },
-          "2026-03-27": {
-            requests: 2,
-            promptTokens: 2,
-            completionTokens: 2,
-            totalTokens: 4,
-            quotaConsumed: 2,
-          },
-        },
-        hourly: {
-          "2026-03-26": {
-            "09": {
+      const updated = await usageHistoryStorage.updateAccountStore(
+        "account-2",
+        (accountStore) => ({
+          ...accountStore,
+          daily: {
+            "2026-03-26": {
               requests: 1,
               promptTokens: 1,
               completionTokens: 1,
               totalTokens: 2,
               quotaConsumed: 1,
             },
-          },
-          "2026-03-27": {
-            "10": {
+            "2026-03-27": {
               requests: 2,
               promptTokens: 2,
               completionTokens: 2,
@@ -356,33 +342,151 @@ describe("usageHistoryStorage", () => {
               quotaConsumed: 2,
             },
           },
-        },
-        tokenNamesById: {
-          old: "Old token",
-          keep: "Keep token",
-        },
-        dailyByToken: {
-          old: {
+          hourly: {
             "2026-03-26": {
-              requests: 1,
-              promptTokens: 0,
-              completionTokens: 0,
-              totalTokens: 0,
-              quotaConsumed: 1,
+              "09": {
+                requests: 1,
+                promptTokens: 1,
+                completionTokens: 1,
+                totalTokens: 2,
+                quotaConsumed: 1,
+              },
+            },
+            "2026-03-27": {
+              "10": {
+                requests: 2,
+                promptTokens: 2,
+                completionTokens: 2,
+                totalTokens: 4,
+                quotaConsumed: 2,
+              },
             },
           },
-          keep: {
-            "2026-03-27": {
-              requests: 1,
-              promptTokens: 0,
-              completionTokens: 0,
-              totalTokens: 0,
-              quotaConsumed: 1,
+          tokenNamesById: {
+            old: "Old token",
+            keep: "Keep token",
+          },
+          dailyByToken: {
+            old: {
+              "2026-03-26": {
+                requests: 1,
+                promptTokens: 0,
+                completionTokens: 0,
+                totalTokens: 0,
+                quotaConsumed: 1,
+              },
             },
+            keep: {
+              "2026-03-27": {
+                requests: 1,
+                promptTokens: 0,
+                completionTokens: 0,
+                totalTokens: 0,
+                quotaConsumed: 1,
+              },
+            },
+          },
+          latencyDaily: {
+            "2026-03-26": {
+              count: 1,
+              sum: 1,
+              max: 1,
+              slowCount: 0,
+              unknownCount: 0,
+              buckets: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            },
+            "2026-03-27": {
+              count: 2,
+              sum: 2,
+              max: 2,
+              slowCount: 0,
+              unknownCount: 0,
+              buckets: [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            },
+          },
+          latencyDailyByToken: {
+            old: {
+              "2026-03-26": {
+                count: 1,
+                sum: 1,
+                max: 1,
+                slowCount: 0,
+                unknownCount: 0,
+                buckets: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+              },
+            },
+            keep: {
+              "2026-03-27": {
+                count: 1,
+                sum: 1,
+                max: 1,
+                slowCount: 0,
+                unknownCount: 0,
+                buckets: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+              },
+            },
+          },
+        }),
+      )
+
+      expect(updated.daily["2026-03-27"]?.requests).toBe(2)
+      expect(
+        await usageHistoryStorage.getAccountStore("missing-account"),
+      ).toMatchObject({
+        daily: {},
+        status: { state: "never" },
+      })
+
+      await expect(
+        usageHistoryStorage.pruneAllAccounts(retentionDays, "UTC"),
+      ).resolves.toBe(true)
+
+      const accountAfterPrune =
+        await usageHistoryStorage.getAccountStore("account-2")
+      expect(accountAfterPrune.daily).toEqual({
+        "2026-03-27": {
+          requests: 2,
+          promptTokens: 2,
+          completionTokens: 2,
+          totalTokens: 4,
+          quotaConsumed: 2,
+        },
+      })
+      expect(accountAfterPrune.hourly).toEqual({
+        "2026-03-27": {
+          "10": {
+            requests: 2,
+            promptTokens: 2,
+            completionTokens: 2,
+            totalTokens: 4,
+            quotaConsumed: 2,
           },
         },
-        latencyDaily: {
-          "2026-03-26": {
+      })
+      expect(accountAfterPrune.dailyByToken).toEqual({
+        keep: {
+          "2026-03-27": {
+            requests: 1,
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+            quotaConsumed: 1,
+          },
+        },
+      })
+      expect(accountAfterPrune.latencyDaily).toEqual({
+        "2026-03-27": {
+          count: 2,
+          sum: 2,
+          max: 2,
+          slowCount: 0,
+          unknownCount: 0,
+          buckets: [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        },
+      })
+      expect(accountAfterPrune.latencyDailyByToken).toEqual({
+        keep: {
+          "2026-03-27": {
             count: 1,
             sum: 1,
             max: 1,
@@ -390,111 +494,13 @@ describe("usageHistoryStorage", () => {
             unknownCount: 0,
             buckets: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
           },
-          "2026-03-27": {
-            count: 2,
-            sum: 2,
-            max: 2,
-            slowCount: 0,
-            unknownCount: 0,
-            buckets: [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-          },
         },
-        latencyDailyByToken: {
-          old: {
-            "2026-03-26": {
-              count: 1,
-              sum: 1,
-              max: 1,
-              slowCount: 0,
-              unknownCount: 0,
-              buckets: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            },
-          },
-          keep: {
-            "2026-03-27": {
-              count: 1,
-              sum: 1,
-              max: 1,
-              slowCount: 0,
-              unknownCount: 0,
-              buckets: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            },
-          },
-        },
-      }),
-    )
-
-    expect(updated.daily["2026-03-27"]?.requests).toBe(2)
-    expect(
-      await usageHistoryStorage.getAccountStore("missing-account"),
-    ).toMatchObject({
-      daily: {},
-      status: { state: "never" },
-    })
-
-    await expect(usageHistoryStorage.pruneAllAccounts(2, "UTC")).resolves.toBe(
-      true,
-    )
-
-    const accountAfterPrune =
-      await usageHistoryStorage.getAccountStore("account-2")
-    expect(accountAfterPrune.daily).toEqual({
-      "2026-03-27": {
-        requests: 2,
-        promptTokens: 2,
-        completionTokens: 2,
-        totalTokens: 4,
-        quotaConsumed: 2,
-      },
-    })
-    expect(accountAfterPrune.hourly).toEqual({
-      "2026-03-27": {
-        "10": {
-          requests: 2,
-          promptTokens: 2,
-          completionTokens: 2,
-          totalTokens: 4,
-          quotaConsumed: 2,
-        },
-      },
-    })
-    expect(accountAfterPrune.dailyByToken).toEqual({
-      keep: {
-        "2026-03-27": {
-          requests: 1,
-          promptTokens: 0,
-          completionTokens: 0,
-          totalTokens: 0,
-          quotaConsumed: 1,
-        },
-      },
-    })
-    expect(accountAfterPrune.latencyDaily).toEqual({
-      "2026-03-27": {
-        count: 2,
-        sum: 2,
-        max: 2,
-        slowCount: 0,
-        unknownCount: 0,
-        buckets: [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      },
-    })
-    expect(accountAfterPrune.latencyDailyByToken).toEqual({
-      keep: {
-        "2026-03-27": {
-          count: 1,
-          sum: 1,
-          max: 1,
-          slowCount: 0,
-          unknownCount: 0,
-          buckets: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        },
-      },
-    })
-    expect(accountAfterPrune.tokenNamesById).toEqual({
-      keep: "Keep token",
-    })
-  })
+      })
+      expect(accountAfterPrune.tokenNamesById).toEqual({
+        keep: "Keep token",
+      })
+    },
+  )
 
   it("returns empty stores for invalid payloads and read failures", async () => {
     const storage = new Storage({ area: "local" })

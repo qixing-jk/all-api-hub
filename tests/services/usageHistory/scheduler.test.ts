@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
@@ -96,6 +96,16 @@ const createUsageHistoryConfig = (overrides = {}) => ({
 })
 
 describe("usageHistoryScheduler", () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it("saves longer retention and still honors the user's period", async () => {
+    await usageHistoryScheduler.updateSettings({ retentionDays: 730 })
+    expect(userPreferences.savePreferences).toHaveBeenCalledWith({
+      usageHistory: expect.objectContaining({ retentionDays: 730 }),
+    })
+    expect(usageHistoryStorage.pruneAllAccounts).toHaveBeenCalledWith(730)
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     registeredAlarmListeners.length = 0
@@ -261,12 +271,12 @@ describe("usageHistoryScheduler", () => {
     expect(userPreferences.savePreferences).toHaveBeenCalledWith({
       usageHistory: expect.objectContaining({
         enabled: true,
-        retentionDays: 365,
+        retentionDays: 9999,
         scheduleMode: USAGE_HISTORY_SCHEDULE_MODE.AFTER_REFRESH,
         syncIntervalMinutes: 1,
       }),
     })
-    expect(usageHistoryStorage.pruneAllAccounts).toHaveBeenCalledWith(365)
+    expect(usageHistoryStorage.pruneAllAccounts).toHaveBeenCalledWith(9999)
     expect(clearAlarm).toHaveBeenCalledWith("usageHistorySync")
   })
 

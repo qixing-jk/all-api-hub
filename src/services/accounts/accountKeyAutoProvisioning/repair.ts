@@ -71,6 +71,8 @@ import {
 
 const logger = createLogger("AccountKeyRepair")
 
+// A job can accumulate target/resource pairs until the next manual run, so
+// retain recency eviction independently of the browser's storage quota.
 export const ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_RECEIPT_LIMIT = 500
 export const ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_REQUEST_ERROR =
   "invalid_managed_site_import_results_request"

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
@@ -14,10 +14,51 @@ import {
 
 describe("webAiApiCheckBaseUrlHistoryStorage", () => {
   const storage = new Storage({ area: "local" })
+  afterEach(() => vi.restoreAllMocks())
 
   beforeEach(async () => {
     vi.useRealTimers()
     await webAiApiCheckBaseUrlHistoryStorage.clearAllData()
+  })
+
+  it("evicts old URLs and source origins", async () => {
+    const now = vi.spyOn(Date, "now")
+    for (let index = 0; index < 21; index += 1) {
+      now.mockReturnValue(1000 + index)
+      await webAiApiCheckBaseUrlHistoryStorage.recordUse({
+        baseUrl: `https://api-${index}.example.com`,
+      })
+    }
+    const baseUrl = "https://shared.example.com"
+    for (let index = 0; index < 10; index += 1) {
+      now.mockReturnValue(2000 + index)
+      await webAiApiCheckBaseUrlHistoryStorage.recordUse({
+        baseUrl,
+        pageUrl: `https://source-${index}.example.com/path?token=secret`,
+      })
+    }
+    const stored = await webAiApiCheckBaseUrlHistoryStorage.getStore()
+    expect(stored.entries).toHaveLength(20)
+    expect(
+      stored.entries.some(
+        (entry) => entry.baseUrl === "https://api-0.example.com",
+      ),
+    ).toBe(false)
+    expect(
+      stored.entries.some(
+        (entry) => entry.baseUrl === "https://api-1.example.com",
+      ),
+    ).toBe(false)
+    const origins = Object.keys(stored.entries[0].sourceOrigins)
+    expect(stored.entries[0].baseUrl).toBe(baseUrl)
+    expect(origins).toHaveLength(8)
+    expect(origins).not.toContain("https://source-0.example.com")
+    expect(origins).not.toContain("https://source-1.example.com")
+    expect(origins).toContain("https://source-9.example.com")
+    expect(JSON.stringify(stored)).not.toContain("token=secret")
+    expect(
+      await webAiApiCheckBaseUrlHistoryStorage.getSuggestions(),
+    ).toHaveLength(5)
   })
 
   it("records normalized base URLs with source origins but without page paths or secrets", async () => {

@@ -4,6 +4,7 @@
  */
 
 import { DATA_TYPE_CASHFLOW, DATA_TYPE_CONSUMPTION } from "~/constants"
+import { clampBalanceHistoryRetentionDays } from "~/services/history/dailyBalanceHistory/utils"
 import { DEFAULT_WEB_AI_API_CHECK_PREFERENCES } from "~/services/preferences/contentScriptFeatureDefaults"
 import { migrateAutoRefreshConfig } from "~/services/preferences/migrations/autoRefreshConfigMigration"
 import { migrateNewApiConfig } from "~/services/preferences/migrations/newApiConfigMigration"
@@ -52,16 +53,6 @@ export const CURRENT_PREFERENCES_VERSION = 29
  * Takes preferences at version N and returns it at version N+1
  */
 type PreferencesMigrationFunction = (prefs: UserPreferences) => UserPreferences
-
-/**
- * Clamp balance-history retention days to a bounded, storage-safe range.
- */
-function clampBalanceHistoryRetentionDays(value: unknown): number {
-  const parsed = Number(value)
-  if (!Number.isFinite(parsed))
-    return DEFAULT_BALANCE_HISTORY_PREFERENCES.retentionDays
-  return Math.min(3650, Math.max(1, Math.trunc(parsed)))
-}
 
 /**
  * Registry of migration functions

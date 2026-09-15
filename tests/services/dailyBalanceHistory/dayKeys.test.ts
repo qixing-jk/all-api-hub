@@ -9,6 +9,16 @@ import {
 } from "~/services/history/dailyBalanceHistory/dayKeys"
 
 describe("dailyBalanceHistory dayKeys", () => {
+  it("keeps a valid cutoff for retention periods beyond the Date range", () => {
+    expect(
+      computeRetentionCutoffDayKey({
+        retentionDays: Number.MAX_SAFE_INTEGER,
+        nowUnixSeconds: Date.UTC(2026, 0, 10) / 1000,
+        timeZone: "UTC",
+      }),
+    ).toBe("1969-12-31")
+  })
+
   it("returns [] when start or end is an invalid calendar day", () => {
     expect(
       listDayKeysInRange({

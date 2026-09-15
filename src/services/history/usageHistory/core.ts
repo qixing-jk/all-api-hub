@@ -1,3 +1,4 @@
+import { getHistoryRetentionCutoffDayKey } from "~/services/history/retention"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import type { LogItem } from "~/services/history/usageHistory/usageLogModel"
 import type {
@@ -6,8 +7,6 @@ import type {
   UsageHistoryCursor,
   UsageHistoryLatencyAggregate,
 } from "~/types/usageHistory"
-
-import { USAGE_HISTORY_LIMITS } from "./constants"
 
 /**
  * Fixed latency threshold (seconds) for "slow" outcomes.
@@ -164,12 +163,8 @@ export function computeRetentionCutoffDayKey(
   nowUnixSeconds: number,
   timeZone?: string,
 ): string {
-  const safeRetentionDays = Math.max(
-    1,
-    Number.isFinite(retentionDays) ? Math.trunc(retentionDays) : 1,
-  )
   const todayKey = getDayKeyFromUnixSeconds(nowUnixSeconds, timeZone)
-  return subtractDaysFromDayKey(todayKey, safeRetentionDays - 1)
+  return getHistoryRetentionCutoffDayKey(todayKey, retentionDays)
 }
 
 /**
@@ -679,18 +674,6 @@ export function ingestConsumeLogItems(params: {
     }
   }
 
-  if (
-    cursorCandidate.fingerprintsAtLastSeenCreatedAt.length >
-    USAGE_HISTORY_LIMITS.maxFingerprints
-  ) {
-    cursorCandidate = {
-      ...cursorCandidate,
-      fingerprintsAtLastSeenCreatedAt:
-        cursorCandidate.fingerprintsAtLastSeenCreatedAt.slice(
-          -USAGE_HISTORY_LIMITS.maxFingerprints,
-        ),
-    }
-  }
-
+  // Keep the complete boundary for deduplication; a newer timestamp replaces it.
   return { cursorCandidate, ingestedCount }
 }

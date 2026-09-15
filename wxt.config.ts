@@ -24,6 +24,8 @@ const PRODUCTION_OUT_DIR_TEMPLATE =
 const CORE_EXTENSION_PERMISSIONS = [
   "tabs",
   "storage",
+  // This permission has no warning and cannot be requested as optional.
+  "unlimitedStorage",
   "alarms",
   "contextMenus",
 ] as const
