@@ -31,14 +31,14 @@ export default function FirefoxAddAccountWarningDialog({
   )
 
   const footer = (
-    <div className="space-y-4">
+    <div className="space-y-density-4">
       <div className="text-center">
         <TriangleAlert className="text-warning-text mx-auto h-12 w-12" />
-        <div className="mt-3">
+        <div className="mt-density-3">
           <h3 className="text-foreground text-base font-medium">
             {t("dialog.firefox.limitation")}
           </h3>
-          <div className="mt-2">
+          <div className="mt-density-2">
             <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
               {t("dialog.firefox.popupLimitation")}
             </p>
@@ -46,7 +46,7 @@ export default function FirefoxAddAccountWarningDialog({
         </div>
       </div>
 
-      <div className="border-warning-border bg-warning-soft rounded-lg border p-3">
+      <div className="border-warning-border bg-warning-soft py-density-3 rounded-lg border px-3">
         <div className="flex">
           <div className="shrink-0">
             <TriangleAlert className="text-warning-text h-5 w-5" />
@@ -55,7 +55,7 @@ export default function FirefoxAddAccountWarningDialog({
             <h3 className="text-warning-text text-xs font-medium">
               {t("dialog.firefox.howOpenSidebar")}
             </h3>
-            <div className="text-warning-text mt-1 text-xs">
+            <div className="text-warning-text mt-density-1 text-xs">
               <p>{t("dialog.firefox.sidebarInstruction")}</p>
             </div>
           </div>
@@ -63,7 +63,7 @@ export default function FirefoxAddAccountWarningDialog({
       </div>
 
       {/* 按钮组 */}
-      <div className="flex space-x-3 pt-2">
+      <div className="pt-density-2 flex space-x-3">
         <Button
           type="button"
           variant="secondary"

@@ -319,7 +319,10 @@ const SelectSeparator = React.forwardRef<
   <SelectPrimitive.Separator
     ref={ref}
     data-slot="select-separator"
-    className={cn("bg-border pointer-events-none -mx-1 my-1 h-px", className)}
+    className={cn(
+      "bg-border my-density-1 pointer-events-none -mx-1 h-px",
+      className,
+    )}
     {...props}
   />
 ))

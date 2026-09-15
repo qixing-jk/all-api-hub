@@ -69,7 +69,7 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
       <div
         ref={ref}
         className={cn(
-          "flex flex-col items-center py-12 text-center",
+          "py-density-12 flex flex-col items-center text-center",
           className,
         )}
         role={isDestructive ? "alert" : "status"}
@@ -77,7 +77,7 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
       >
         <div
           className={cn(
-            "text-disabled-foreground mb-4 flex h-12 w-12 items-center justify-center",
+            "text-disabled-foreground mb-density-4 flex h-12 w-12 items-center justify-center",
             isDestructive && "text-destructive-text",
           )}
         >
@@ -85,7 +85,7 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
         </div>
         <p
           className={cn(
-            "text-secondary-foreground mb-4 text-sm font-medium",
+            "text-secondary-foreground mb-density-4 text-sm font-medium",
             isDestructive && "text-foreground font-semibold",
           )}
         >
@@ -94,7 +94,7 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
         {description && (
           <p
             className={cn(
-              "dark:text-muted-foreground text-faint-foreground mb-4 text-sm",
+              "dark:text-muted-foreground text-faint-foreground mb-density-4 text-sm",
               isDestructive && "leading-6",
               descriptionClassName,
             )}
@@ -105,7 +105,7 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
         {resolvedActions.length === 1 ? (
           <EmptyStateActionButton action={resolvedActions[0]} />
         ) : resolvedActions.length > 1 ? (
-          <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
+          <div className="gap-y-density-2 flex flex-col items-center gap-x-2 sm:flex-row sm:justify-center">
             {resolvedActions.map((resolvedAction, index) => (
               <EmptyStateActionButton
                 key={`${resolvedAction.label}-${index}`}

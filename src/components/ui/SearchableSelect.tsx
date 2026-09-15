@@ -215,10 +215,10 @@ export const SearchableSelect = React.forwardRef<
       </PopoverTrigger>
       <PopoverContent
         container={portalContainer}
-        className="max-h-(--radix-popover-content-available-height) w-(--radix-popper-anchor-width) overflow-hidden p-0"
+        className="flex max-h-(--radix-popover-content-available-height) w-(--radix-popper-anchor-width) flex-col overflow-hidden p-0"
         collisionPadding={8}
       >
-        <Command className="rounded-(--popover-inner-radius)">
+        <Command className="min-h-0 flex-1 rounded-(--popover-inner-radius) [&>[data-slot=command-input-wrapper]]:shrink-0">
           <CommandInput
             placeholder={resolvedSearchPlaceholder}
             value={searchTerm}
@@ -226,10 +226,7 @@ export const SearchableSelect = React.forwardRef<
             data-testid={searchInputTestId}
           />
           <CommandList
-            className={cn(
-              "max-h-[calc(var(--radix-popover-content-available-height)-2.25rem)]",
-              listClassName,
-            )}
+            className={cn("max-h-none min-h-0 flex-1", listClassName)}
           >
             {options.length === 0 && !canUseCustomValue ? (
               <div

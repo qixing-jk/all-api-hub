@@ -6,5 +6,6 @@ export function getThemeAwareToastStyles() {
     background: "var(--popover)",
     color: "var(--popover-foreground)",
     border: "1px solid var(--border)",
+    padding: "calc(8px * var(--density-space-scale, 1)) 10px",
   }
 }

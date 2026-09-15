@@ -97,7 +97,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         <textarea
           className={cn(
             textareaVariants({ variant: textareaVariant, size, className }),
-            showClearButton && "pr-10",
+            showClearButton && "pr-[calc(var(--density-control-xs)+1rem)]",
           )}
           ref={setTextareaRef}
           value={value}
@@ -117,7 +117,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         {(error || success) && (
           <p
             className={cn(
-              "mt-1 text-xs",
+              "mt-density-1 text-xs",
               error ? "text-destructive-text" : "text-success-text",
             )}
           >

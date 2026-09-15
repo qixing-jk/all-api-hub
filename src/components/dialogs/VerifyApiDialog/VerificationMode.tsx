@@ -29,7 +29,7 @@ export function VerificationModeSelect({
   const id = useId()
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-density-1-5">
       <label htmlFor={id} className="text-muted-foreground block text-xs">
         {t("verifyDialog.meta.mode")}
       </label>

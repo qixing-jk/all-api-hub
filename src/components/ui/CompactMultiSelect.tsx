@@ -766,7 +766,7 @@ export function CompactMultiSelect({
         {label && (
           <label
             id={labelId}
-            className="dark:text-foreground text-secondary-foreground mb-1 block text-sm font-medium"
+            className="dark:text-foreground text-secondary-foreground mb-density-1 block text-sm font-medium"
           >
             {label}
           </label>
@@ -786,7 +786,7 @@ export function CompactMultiSelect({
       {label && (
         <label
           id={labelId}
-          className="dark:text-foreground text-secondary-foreground mb-1 block text-sm font-medium"
+          className="dark:text-foreground text-secondary-foreground mb-density-1 block text-sm font-medium"
         >
           {label}
         </label>

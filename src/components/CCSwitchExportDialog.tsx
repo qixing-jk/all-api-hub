@@ -287,7 +287,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
       onClose={onClose}
       panelTestId={CC_SWITCH_EXPORT_TEST_IDS.dialog}
       header={
-        <div className="flex items-center gap-2">
+        <div className="gap-y-density-2 flex items-center gap-x-2">
           <CCSwitchIcon size="lg" />
           <div>
             <div className="text-foreground text-base font-semibold">
@@ -300,7 +300,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
         </div>
       }
       footer={
-        <div className="flex flex-wrap justify-end gap-2">
+        <div className="gap-y-density-2 flex flex-wrap justify-end gap-x-2">
           <Button
             variant="ghost"
             type="button"
@@ -319,7 +319,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
         </div>
       }
     >
-      <form className="space-y-4" id={formId} onSubmit={handleSubmit}>
+      <form className="space-y-density-4" id={formId} onSubmit={handleSubmit}>
         <div>
           <Label htmlFor="ccswitch-app">
             {t("ui:dialog.ccswitch.fields.app")}
@@ -330,7 +330,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
           >
             <SelectTrigger
               id="ccswitch-app"
-              className="mt-1"
+              className="mt-density-1"
               aria-describedby={
                 limitationNotice ? APP_LIMITATION_NOTICE_ID : undefined
               }
@@ -353,7 +353,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
             role="status"
             aria-live="polite"
             aria-atomic="true"
-            className="border-warning-border bg-warning-soft text-warning-soft-foreground rounded-lg border px-3 py-2 text-sm"
+            className="border-warning-border bg-warning-soft text-warning-soft-foreground py-density-2 rounded-lg border px-3 text-sm"
           >
             {limitationNotice}
           </div>
@@ -366,7 +366,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
           <Input
             id="ccswitch-name"
             value={providerName}
-            className="mt-1"
+            className="mt-density-1"
             placeholder={t("ui:dialog.ccswitch.placeholders.name")}
             onChange={(event) => setProviderName(event.target.value)}
           />
@@ -379,7 +379,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
           <Input
             id="ccswitch-homepage"
             value={homepage}
-            className="mt-1"
+            className="mt-density-1"
             placeholder={t("ui:dialog.ccswitch.placeholders.homepage")}
             onChange={(event) => setHomepage(event.target.value)}
           />
@@ -392,7 +392,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
           <Input
             id="ccswitch-endpoint"
             value={endpoint}
-            className="mt-1"
+            className="mt-density-1"
             placeholder={t("ui:dialog.ccswitch.placeholders.endpoint")}
             onChange={(event) => {
               setIsEndpointCustomized(true)
@@ -407,7 +407,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
           </Label>
           <SearchableSelect
             id="ccswitch-model"
-            className="mt-1"
+            className="mt-density-1"
             value={model}
             onChange={setModel}
             placeholder={
@@ -427,7 +427,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
             data-testid={CC_SWITCH_EXPORT_TEST_IDS.modelPicker}
             searchInputTestId={CC_SWITCH_EXPORT_TEST_IDS.modelSearchInput}
           />
-          <p className="dark:text-secondary-foreground text-muted-foreground mt-1 text-xs">
+          <p className="dark:text-secondary-foreground text-muted-foreground mt-density-1 text-xs">
             {t("ui:dialog.ccswitch.descriptions.model")}
           </p>
         </div>
@@ -439,7 +439,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
           <Input
             id="ccswitch-notes"
             value={notes}
-            className="mt-1"
+            className="mt-density-1"
             placeholder={t("ui:dialog.ccswitch.placeholders.notes")}
             onChange={(event) => setNotes(event.target.value)}
           />

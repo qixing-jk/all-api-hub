@@ -76,13 +76,13 @@ export function AppearanceControls({
     [THEME_RADIUS.LARGE]: t("appearance.radii.large"),
   } satisfies Record<AppearancePreferences["radius"], string>
   return (
-    <div className="space-y-6" aria-busy={saving}>
+    <div className="space-y-density-6" aria-busy={saving}>
       {showMode && (
-        <fieldset className="space-y-3">
+        <fieldset className="space-y-density-3">
           <legend className="text-sm font-medium">
             {t("theme.appearance")}
           </legend>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="gap-y-density-2 grid grid-cols-3 gap-x-2">
             {THEME_MODES.map((mode) => (
               <label key={mode} className="cursor-pointer">
                 <input
@@ -93,7 +93,7 @@ export function AppearanceControls({
                   checked={themeMode === mode}
                   onChange={() => void save({ themeMode: mode })}
                 />
-                <span className="border-border peer-checked:border-primary peer-checked:bg-primary/10 peer-focus-visible:ring-ring block rounded-md border px-2 py-3 text-center text-sm peer-focus-visible:ring-2">
+                <span className="border-border peer-checked:border-primary peer-checked:bg-primary/10 peer-focus-visible:ring-ring py-density-3 block rounded-md border px-2 text-center text-sm peer-focus-visible:ring-2">
                   {themeOptions[mode].label}
                 </span>
               </label>
@@ -103,12 +103,12 @@ export function AppearanceControls({
       )}
       <fieldset
         id={anchors ? SETTINGS_ANCHORS.APPEARANCE_PRESET : undefined}
-        className="space-y-3"
+        className="space-y-density-3"
       >
         <legend className="text-sm font-medium">
           {t("appearance.preset")}
         </legend>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="gap-y-density-3 grid grid-cols-2 gap-x-3">
           {THEME_PRESETS.map((preset) => (
             <label key={preset} className="min-w-0 cursor-pointer">
               <input
@@ -120,7 +120,7 @@ export function AppearanceControls({
                 onChange={() => void save({ preset })}
                 aria-label={presetLabels[preset]}
               />
-              <span className="border-border peer-checked:border-primary peer-checked:ring-primary peer-focus-visible:ring-ring flex h-full flex-col gap-2 rounded-lg border p-3 peer-checked:ring-1 peer-focus-visible:ring-2">
+              <span className="border-border peer-checked:border-primary peer-checked:ring-primary peer-focus-visible:ring-ring gap-y-density-2 py-density-3 flex h-full flex-col gap-x-2 rounded-lg border px-3 peer-checked:ring-1 peer-focus-visible:ring-2">
                 <ThemePresetPreview preset={preset} />
                 <span className="text-sm font-medium">
                   {presetLabels[preset]}
@@ -135,7 +135,7 @@ export function AppearanceControls({
       </fieldset>
       <fieldset
         id={anchors ? SETTINGS_ANCHORS.APPEARANCE_COLOR : undefined}
-        className="space-y-3"
+        className="space-y-density-3"
       >
         <legend className="text-sm font-medium">{t("appearance.color")}</legend>
         {appearance.preset !== THEME_PRESET.DEFAULT ? (
@@ -143,7 +143,7 @@ export function AppearanceControls({
             {t("appearance.presetColorsHint")}
           </p>
         ) : (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="gap-y-density-3 grid grid-cols-3 gap-x-3">
             {THEME_COLORS.map((color) => (
               <label key={color} className="cursor-pointer">
                 <input
@@ -154,7 +154,7 @@ export function AppearanceControls({
                   checked={appearance.color === color}
                   onChange={() => void save({ color })}
                 />
-                <span className="border-border peer-checked:border-primary peer-checked:bg-primary/10 peer-focus-visible:ring-ring flex items-center gap-2 rounded-md border p-3 text-sm peer-focus-visible:ring-2">
+                <span className="border-border peer-checked:border-primary peer-checked:bg-primary/10 peer-focus-visible:ring-ring gap-y-density-2 py-density-3 flex items-center gap-x-2 rounded-md border px-3 text-sm peer-focus-visible:ring-2">
                   <span
                     aria-hidden="true"
                     {...{ [THEME_ATTRIBUTES.COLOR]: color }}
@@ -171,12 +171,12 @@ export function AppearanceControls({
       </fieldset>
       <fieldset
         id={anchors ? SETTINGS_ANCHORS.APPEARANCE_RADIUS : undefined}
-        className="space-y-3"
+        className="space-y-density-3"
       >
         <legend className="text-sm font-medium">
           {t("appearance.radius")}
         </legend>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="gap-y-density-2 grid grid-cols-4 gap-x-2">
           {THEME_RADII.map((radius) => (
             <label key={radius} className="cursor-pointer">
               <input
@@ -187,7 +187,7 @@ export function AppearanceControls({
                 checked={appearance.radius === radius}
                 onChange={() => void save({ radius })}
               />
-              <span className="border-border peer-checked:border-primary peer-checked:bg-primary/10 peer-focus-visible:ring-ring flex flex-col items-center gap-2 rounded-md border p-2 text-xs peer-focus-visible:ring-2">
+              <span className="border-border peer-checked:border-primary peer-checked:bg-primary/10 peer-focus-visible:ring-ring gap-y-density-2 py-density-2 flex flex-col items-center gap-x-2 rounded-md border px-2 text-xs peer-focus-visible:ring-2">
                 <span
                   aria-hidden="true"
                   className="border-primary/70 bg-primary/10 h-9 w-10 border-2"
@@ -203,7 +203,7 @@ export function AppearanceControls({
       </fieldset>
       <fieldset
         id={anchors ? SETTINGS_ANCHORS.APPEARANCE_DENSITY : undefined}
-        className="space-y-3"
+        className="space-y-density-3"
       >
         <legend className="text-sm font-medium">
           {t("appearance.density")}
@@ -211,7 +211,7 @@ export function AppearanceControls({
         <p className="text-muted-foreground text-sm">
           {t("appearance.densityDescription")}
         </p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="gap-y-density-2 grid grid-cols-3 gap-x-2">
           {THEME_DENSITIES.map((density) => (
             <label key={density} className="min-w-0 cursor-pointer">
               <input
@@ -222,7 +222,7 @@ export function AppearanceControls({
                 checked={appearance.density === density}
                 onChange={() => void save({ density })}
               />
-              <span className="border-border peer-checked:border-primary peer-checked:bg-primary/10 peer-focus-visible:ring-ring flex min-h-11 items-center justify-center rounded-md border px-2 py-2 text-center text-sm break-words peer-focus-visible:ring-2">
+              <span className="border-border peer-checked:border-primary peer-checked:bg-primary/10 peer-focus-visible:ring-ring py-density-2 flex min-h-11 items-center justify-center rounded-md border px-2 text-center text-sm break-words peer-focus-visible:ring-2">
                 {densityLabels[density]}
               </span>
             </label>

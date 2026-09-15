@@ -86,7 +86,7 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
           >
             <div className="gap-density-3 flex w-full min-w-0 flex-1 items-center [@container(min-width:42rem)]:w-auto">
               {icon && (
-                <div className="dark:bg-secondary bg-muted shrink-0 rounded-sm p-1 transition-colors sm:p-2">
+                <div className="dark:bg-secondary bg-muted py-density-1 sm:py-density-2 shrink-0 rounded-sm px-1 transition-colors sm:px-2">
                   {icon}
                 </div>
               )}
@@ -108,7 +108,7 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
                   </BodySmall>
                 )}
                 {leftContent && (
-                  <div className={cn(hasHeaderContent && "mt-2")}>
+                  <div className={cn(hasHeaderContent && "mt-density-2")}>
                     {leftContent}
                   </div>
                 )}

@@ -52,7 +52,7 @@ export function KiloCodeExportGuidance({
 
   return (
     <Alert variant="primary" title={t("dialog.kiloCode.help.usageTitle")}>
-      <div className="space-y-2 text-sm">
+      <div className="space-y-density-2 text-sm">
         {instructions.map(({ id, text }) => (
           <p key={id}>{text}</p>
         ))}

@@ -67,7 +67,7 @@ const BalanceDisplay: React.FC<{
           .filter(Boolean)
           .join(". ")}
       >
-        <span className="inline-flex max-w-full flex-wrap items-baseline gap-1.5">
+        <span className="gap-y-density-1-5 inline-flex max-w-full flex-wrap items-baseline gap-x-1.5">
           <span aria-hidden="true">
             {value === null ? (
               emptyValueText ?? "—"
@@ -196,8 +196,8 @@ export default function AccountBalanceSummary() {
   }
 
   return (
-    <div className="space-y-2">
-      <div className="dark:bg-card/40 bg-surface-subtle/80 space-y-1 rounded-lg">
+    <div className="space-y-density-2">
+      <div className="dark:bg-card/40 bg-surface-subtle/80 space-y-density-1 rounded-lg">
         <BodySmall className="font-medium">
           {t("account:stats.totalBalance")}
         </BodySmall>
@@ -215,11 +215,11 @@ export default function AccountBalanceSummary() {
         <div
           className={
             estimatedTodayIncomeEnabled
-              ? "grid grid-cols-3 gap-2"
-              : "grid grid-cols-2 gap-2"
+              ? "gap-y-density-2 grid grid-cols-3 gap-x-2"
+              : "gap-y-density-2 grid grid-cols-2 gap-x-2"
           }
         >
-          <div className="dark:bg-card/30 bg-surface-subtle/70 min-w-0 space-y-1 rounded-md p-2">
+          <div className="dark:bg-card/30 bg-surface-subtle/70 space-y-density-1 py-density-2 min-w-0 rounded-md px-2">
             <Caption className="font-medium">
               {t("account:stats.todayConsumption")}
             </Caption>
@@ -247,7 +247,7 @@ export default function AccountBalanceSummary() {
             />
           </div>
 
-          <div className="dark:bg-card/30 bg-surface-subtle/70 min-w-0 space-y-1 rounded-md p-2">
+          <div className="dark:bg-card/30 bg-surface-subtle/70 space-y-density-1 py-density-2 min-w-0 rounded-md px-2">
             <Caption className="font-medium">
               {estimatedTodayIncomeEnabled
                 ? t("account:stats.trustedTodayIncome")
@@ -274,7 +274,7 @@ export default function AccountBalanceSummary() {
           </div>
 
           {estimatedTodayIncomeEnabled && (
-            <div className="dark:bg-card/30 bg-surface-subtle/70 min-w-0 space-y-1 rounded-md p-2">
+            <div className="dark:bg-card/30 bg-surface-subtle/70 space-y-density-1 py-density-2 min-w-0 rounded-md px-2">
               <Caption className="font-medium">
                 {t("account:stats.estimatedTodayIncome")}
               </Caption>

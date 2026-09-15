@@ -84,7 +84,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
         }}
       />
 
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-3">
+      <div className="py-density-3 pointer-events-none absolute inset-0 flex items-center justify-center px-3">
         <div
           ref={refs.dialogRef}
           role="dialog"
@@ -95,7 +95,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
           onKeyDown={stopHostPageKeyboardShortcuts}
           onKeyUp={stopHostPageKeyboardShortcuts}
         >
-          <div className="border-border flex items-start justify-between gap-3 border-b p-4">
+          <div className="border-border gap-y-density-3 py-density-4 flex items-start justify-between gap-x-3 border-b px-4">
             <div className="min-w-0">
               <div
                 id="api-check-modal-title"
@@ -124,10 +124,10 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
           <div
             ref={refs.scrollContainerRef}
             data-testid={WEB_AI_API_CHECK_TEST_IDS.scrollContainer}
-            className="max-h-[calc(90vh-64px)] overflow-y-auto overscroll-contain p-4"
+            className="py-density-4 max-h-[calc(90vh-64px)] overflow-y-auto overscroll-contain px-4"
           >
-            <div className="space-y-4">
-              <div className="space-y-2">
+            <div className="space-y-density-4">
+              <div className="space-y-density-2">
                 <label
                   htmlFor="api-check-source-text"
                   className="text-foreground block text-sm font-medium"
@@ -143,8 +143,8 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                 />
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
+              <div className="gap-y-density-3 grid gap-x-3 md:grid-cols-2">
+                <div className="space-y-density-1-5">
                   <label
                     htmlFor="api-check-base-url"
                     className="text-muted-foreground block text-xs"
@@ -180,7 +180,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                   />
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-density-1-5">
                   <label
                     htmlFor="api-check-api-key"
                     className="text-muted-foreground block text-xs"
@@ -212,7 +212,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                   />
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-density-1-5">
                   <label
                     htmlFor="api-check-api-type"
                     className="text-muted-foreground block text-xs"
@@ -232,7 +232,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                   />
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-density-1-5">
                   <label
                     htmlFor="api-check-verification-mode"
                     className="text-muted-foreground block text-xs"
@@ -257,7 +257,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                   />
                 </div>
 
-                <div className="space-y-1.5 md:col-span-2">
+                <div className="space-y-density-1-5 md:col-span-2">
                   <label
                     htmlFor="api-check-model-id"
                     className="text-muted-foreground block text-xs"
@@ -293,7 +293,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                   aria-label={t(
                     "webAiApiCheck:modal.optionalProfileFields.title",
                   )}
-                  className="hover:bg-muted/40 flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left transition-colors"
+                  className="hover:bg-muted/40 gap-y-density-3 py-density-2 flex w-full items-center justify-between gap-x-3 rounded-md px-3 text-left transition-colors"
                 >
                   <div className="min-w-0">
                     <div className="text-foreground text-sm font-medium">
@@ -314,8 +314,8 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                     )}
                   />
                 </CollapsibleTrigger>
-                <CollapsibleContent className="border-border/60 border-t px-3 py-3">
-                  <div className="grid gap-3 md:grid-cols-2">
+                <CollapsibleContent className="border-border/60 py-density-3 border-t px-3">
+                  <div className="gap-y-density-3 grid gap-x-3 md:grid-cols-2">
                     <FormField
                       label={t("webAiApiCheck:modal.fields.tags")}
                       description={t("webAiApiCheck:modal.hints.tags")}
@@ -394,7 +394,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
               </Collapsible>
 
               {view.validationError ? (
-                <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground rounded-md border p-3 text-sm">
+                <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground py-density-3 rounded-md border px-3 text-sm">
                   {view.validationError}
                 </div>
               ) : null}
@@ -405,7 +405,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                 </div>
               ) : null}
 
-              <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="gap-y-density-2 flex flex-wrap items-center justify-end gap-x-2">
                 {view.modelListSupported ? (
                   <Button
                     type="button"
@@ -451,7 +451,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
               </div>
 
               {view.fetchModelsError ? (
-                <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground rounded-md border p-3 text-sm">
+                <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground py-density-3 rounded-md border px-3 text-sm">
                   {view.fetchModelsError}
                 </div>
               ) : null}

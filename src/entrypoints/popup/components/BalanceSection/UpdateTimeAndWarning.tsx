@@ -43,7 +43,7 @@ export const UpdateTimeAndWarning = () => {
   }, [])
 
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div className="gap-y-density-2 flex items-center justify-between gap-x-2">
       <Tooltip content={formatFullTime(lastUpdateTime)}>
         <Caption className="cursor-help">
           {t("common:time.updatedAt", {

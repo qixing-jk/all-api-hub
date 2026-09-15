@@ -58,23 +58,23 @@ function RootErrorFallback({
   const showTranslationGuidance = isLikelyExternalDomMutationError(error)
 
   return (
-    <main className="bg-background text-foreground flex min-h-screen items-center justify-center px-4 py-8">
-      <section className="bg-card w-full max-w-md rounded-lg border p-6 text-center shadow-sm">
-        <div className="bg-destructive/10 text-destructive-text mx-auto mb-4 flex size-12 items-center justify-center rounded-full">
+    <main className="bg-background text-foreground py-density-8 flex min-h-screen items-center justify-center px-4">
+      <section className="bg-card py-density-6 w-full max-w-md rounded-lg border px-6 text-center shadow-sm">
+        <div className="bg-destructive/10 text-destructive-text mb-density-4 mx-auto flex size-12 items-center justify-center rounded-full">
           <AlertTriangle className="size-6" aria-hidden="true" />
         </div>
         <h1 className="text-lg font-semibold">
           {t("rootErrorBoundary.title")}
         </h1>
-        <p className="text-muted-foreground mt-3 text-sm leading-6">
+        <p className="text-muted-foreground mt-density-3 text-sm leading-6">
           {t("rootErrorBoundary.genericDescription")}
         </p>
         {showTranslationGuidance ? (
-          <p className="text-muted-foreground mt-2 text-sm leading-6">
+          <p className="text-muted-foreground mt-density-2 text-sm leading-6">
             {t("rootErrorBoundary.translationDescription")}
           </p>
         ) : null}
-        <div className="mt-5 flex flex-col items-center justify-center gap-2 sm:flex-row">
+        <div className="mt-density-5 gap-y-density-2 flex flex-col items-center justify-center gap-x-2 sm:flex-row">
           <Button
             type="button"
             leftIcon={<RefreshCw className="size-4" aria-hidden="true" />}

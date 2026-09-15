@@ -53,7 +53,7 @@ function SearchTrigger({
       type="button"
       onClick={onClick}
       className={cn(
-        "dark:bg-background dark:hover:bg-secondary border-border bg-surface-subtle hover:bg-muted flex h-10 w-full items-center justify-between rounded-md border px-4 text-left transition-colors",
+        "dark:bg-background dark:hover:bg-secondary border-border bg-surface-subtle hover:bg-muted flex h-(--density-control-lg) w-full items-center justify-between rounded-md border px-4 text-left transition-colors",
         className,
       )}
       aria-label={ariaLabel}
@@ -61,7 +61,7 @@ function SearchTrigger({
         [PRODUCT_TOUR_TARGET_ATTRIBUTE]: productTourTarget,
       }}
     >
-      <span className="text-muted-foreground flex min-w-0 items-center gap-2 text-sm">
+      <span className="text-muted-foreground gap-y-density-2 flex min-w-0 items-center gap-x-2 text-sm">
         <Search className="h-4 w-4 shrink-0" />
         <span className="truncate">{placeholder}</span>
       </span>
@@ -125,10 +125,10 @@ function Header({
       )}
     >
       <div className="mx-auto h-full px-2 sm:px-4 md:px-6 lg:px-8">
-        <div className="flex h-full items-center gap-2">
+        <div className="gap-y-density-2 flex h-full items-center gap-x-2">
           <div
             className={cn(
-              "flex min-w-0 items-center gap-2",
+              "gap-y-density-2 flex min-w-0 items-center gap-x-2",
               showMobileExpandedSearch ? "shrink-0" : "flex-1",
             )}
           >
@@ -182,7 +182,7 @@ function Header({
                       {/* Current extension version (links to the changelog). */}
                       <VersionBadge
                         size="sm"
-                        className="w-fit self-start text-[0.7rem] leading-tight [&>a]:gap-1 [&>a]:leading-tight [&>a>svg]:size-3"
+                        className="[&>a]:gap-y-density-1 w-fit self-start text-[0.7rem] leading-tight [&>a]:gap-x-1 [&>a]:leading-tight [&>a>svg]:size-3"
                       />
                     </div>
                   </div>
@@ -212,7 +212,7 @@ function Header({
 
           <div
             className={cn(
-              "flex shrink-0 items-center gap-1.5 sm:gap-2",
+              "gap-y-density-1-5 sm:gap-y-density-2 flex shrink-0 items-center gap-x-1.5 sm:gap-x-2",
               showMobileExpandedSearch && "hidden md:flex",
             )}
           >

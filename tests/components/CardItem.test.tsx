@@ -88,7 +88,9 @@ describe("CardItem", () => {
       />,
     )
 
-    expect(screen.getByTestId("left-content").parentElement).toHaveClass("mt-2")
+    expect(screen.getByTestId("left-content").parentElement).toHaveClass(
+      "mt-density-2",
+    )
   })
 
   it("omits top spacing above left content when header copy is absent", () => {
@@ -99,7 +101,7 @@ describe("CardItem", () => {
     )
 
     expect(screen.getByTestId("left-content").parentElement).not.toHaveClass(
-      "mt-2",
+      "mt-density-2",
     )
   })
 
@@ -111,7 +113,9 @@ describe("CardItem", () => {
       />,
     )
 
-    expect(screen.getByTestId("left-content").parentElement).toHaveClass("mt-2")
+    expect(screen.getByTestId("left-content").parentElement).toHaveClass(
+      "mt-density-2",
+    )
   })
 
   it("renders supplemental title content beside the title", () => {

@@ -35,7 +35,8 @@ export function VerificationHistorySummary({
   return (
     <div
       className={
-        className ?? "flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2"
+        className ??
+        "gap-y-density-1-5 sm:gap-y-density-2 flex min-w-0 flex-wrap items-center gap-x-1.5 sm:gap-x-2"
       }
     >
       <span className="sr-only">{t("verifyDialog.history.lastVerified")}</span>
@@ -48,7 +49,7 @@ export function VerificationHistorySummary({
         </span>
       ) : null}
       {verificationTimestamp ? (
-        <span className="inline-flex min-w-0 items-center gap-1.5">
+        <span className="gap-y-density-1-5 inline-flex min-w-0 items-center gap-x-1.5">
           <span
             aria-hidden="true"
             className="bg-surface-strong h-1 w-1 shrink-0 rounded-full"

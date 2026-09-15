@@ -1178,9 +1178,9 @@ export function KiloCodeExportDialog({
     ) : null
 
     return (
-      <Card key={siteId} padding="sm" className="space-y-2">
-        <div className="flex items-center gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2">
+      <Card key={siteId} padding="sm" className="space-y-density-2">
+        <div className="gap-y-density-2 flex items-center gap-x-2">
+          <div className="gap-y-density-2 flex min-w-0 flex-1 items-center gap-x-2">
             <div
               className="text-foreground truncate text-sm font-medium"
               title={siteName}
@@ -1204,7 +1204,9 @@ export function KiloCodeExportDialog({
               </Badge>
             )}
           </div>
-          <div className="flex shrink-0 items-center gap-2">{actionButton}</div>
+          <div className="gap-y-density-2 flex shrink-0 items-center gap-x-2">
+            {actionButton}
+          </div>
         </div>
 
         {isTokenInventoryError && (
@@ -1227,7 +1229,7 @@ export function KiloCodeExportDialog({
         )}
 
         {isTokenInventoryLoaded && inventory.tokens.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-density-3">
             <FormField label={t("common:labels.apiKey")}>
               <CompactMultiSelect
                 options={tokenOptions}
@@ -1257,7 +1259,7 @@ export function KiloCodeExportDialog({
                     : t("ui:dialog.kiloCode.descriptions.modelId")
                 }
               >
-                <div className="space-y-2">
+                <div className="space-y-density-2">
                   {inventory.tokens
                     .filter((token) =>
                       selectedTokenIds.includes(
@@ -1329,10 +1331,10 @@ export function KiloCodeExportDialog({
                           key={selectionId}
                           role="group"
                           aria-label={selection.providerName}
-                          className="space-y-2"
+                          className="space-y-density-2"
                         >
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                            <div className="flex min-w-0 flex-1 items-center gap-2">
+                          <div className="gap-y-density-2 flex flex-col gap-x-2 sm:flex-row sm:items-center">
+                            <div className="gap-y-density-2 flex min-w-0 flex-1 items-center gap-x-2">
                               <div
                                 className="text-foreground truncate text-sm font-medium"
                                 title={getTokenLabel(
@@ -1349,7 +1351,7 @@ export function KiloCodeExportDialog({
                                 </Badge>
                               )}
                             </div>
-                            <div className="flex w-full min-w-0 flex-col items-stretch gap-2 sm:w-auto sm:shrink-0 sm:flex-row sm:items-center">
+                            <div className="gap-y-density-2 flex w-full min-w-0 flex-col items-stretch gap-x-2 sm:w-auto sm:shrink-0 sm:flex-row sm:items-center">
                               {showRetry && (
                                 <Button
                                   ref={(element) => {
@@ -1506,7 +1508,7 @@ export function KiloCodeExportDialog({
                           )}
 
                           {isKiloV7Export && manualModelId.trim() && (
-                            <div className="border-border flex min-w-0 items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm">
+                            <div className="border-border gap-y-density-3 py-density-2 flex min-w-0 items-center justify-between gap-x-3 rounded-md border px-3 text-sm">
                               <span className="min-w-0 flex-1 break-all">
                                 {manualModelId}
                               </span>
@@ -1556,7 +1558,7 @@ export function KiloCodeExportDialog({
           </div>
         }
         footer={
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="gap-y-density-2 flex flex-wrap items-center justify-end gap-x-2">
             {selectedSiteIds.length > 0 && (
               <div className="text-muted-foreground mr-auto text-xs">
                 {selectionSummary}
@@ -1607,7 +1609,7 @@ export function KiloCodeExportDialog({
         </FormField>
 
         {selectedSites.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-density-3">
             {selectedSites.map((site) => renderSiteCard(site))}
           </div>
         )}
@@ -1643,7 +1645,7 @@ export function KiloCodeExportDialog({
         </FormField>
 
         {isKiloV7Export && (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="gap-y-density-3 grid gap-x-3 sm:grid-cols-2">
             <FormField
               label={t("ui:dialog.kiloCode.labels.defaultProvider")}
               htmlFor="kilo-code-account-default-provider"

@@ -89,7 +89,7 @@ export default function ManagedSiteTypeSwitcher({
       {label ? (
         <div
           className={cn(
-            "text-muted-foreground mb-1 text-xs font-medium",
+            "text-muted-foreground mb-density-1 text-xs font-medium",
             labelClassName,
           )}
         >

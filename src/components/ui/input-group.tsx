@@ -90,8 +90,8 @@ const inputGroupButtonVariants = cva(
   {
     variants: {
       size: {
-        xs: "h-(--density-control-xs) gap-density-1 px-2 rounded-xs [&>svg:not([class*='size-'])]:size-3.5 has-[>svg]:px-2",
-        sm: "h-(--density-control-sm) px-2.5 gap-density-1-5 rounded-sm has-[>svg]:px-2.5",
+        xs: "h-(--density-control-xs) gap-density-1 py-0 px-2 rounded-xs [&>svg:not([class*='size-'])]:size-3.5 has-[>svg]:px-2",
+        sm: "h-(--density-control-sm) py-0 px-2.5 gap-density-1-5 rounded-sm has-[>svg]:px-2.5",
         "icon-xs": "size-(--density-control-xs) rounded-xs p-0 has-[>svg]:p-0",
         "icon-sm": "size-(--density-control-sm) rounded-sm p-0 has-[>svg]:p-0",
       },

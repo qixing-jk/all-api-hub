@@ -26,7 +26,7 @@ export function ApiCheckCandidateButtons({
   if (candidates.length <= 1) return null
 
   return (
-    <div className="mt-1 flex flex-wrap gap-1">
+    <div className="mt-density-1 gap-y-density-1 flex flex-wrap gap-x-1">
       {candidates.slice(0, 4).map((candidate, index) => {
         const label =
           kind === "apiKey"
@@ -54,7 +54,7 @@ export function ApiCheckCandidateButtons({
                 : WEB_AI_API_CHECK_TEST_IDS.baseUrlCandidatePrefix
             }-${index}`}
             className={cn(
-              "max-w-full truncate rounded-md border px-2 py-1 text-xs sm:max-w-64",
+              "py-density-1 min-h-(--density-control-xs) max-w-full truncate rounded-md border px-2 text-xs sm:max-w-64",
               currentValue === candidate.value
                 ? "border-theme-500 bg-theme-50 text-theme-700 dark:bg-theme-950/40 dark:text-theme-200"
                 : "border-border text-muted-foreground hover:bg-muted",

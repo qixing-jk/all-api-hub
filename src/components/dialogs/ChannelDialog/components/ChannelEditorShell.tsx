@@ -43,14 +43,14 @@ export function ChannelEditorShell({
     <div>
       <h3 className="text-foreground text-lg font-semibold">{title}</h3>
       {description ? (
-        <p className="dark:text-secondary-foreground text-muted-foreground mt-1 text-sm">
+        <p className="dark:text-secondary-foreground text-muted-foreground mt-density-1 text-sm">
           {description}
         </p>
       ) : null}
     </div>
   )
   const footer = (
-    <div className="flex justify-end gap-3">
+    <div className="gap-y-density-3 flex justify-end gap-x-3">
       <Button
         variant="outline"
         onClick={handleClose}
@@ -93,7 +93,7 @@ export function ChannelEditorShell({
         data-testid={CHANNEL_DIALOG_TEST_IDS.form}
         onSubmit={onSubmit}
         noValidate={noValidate}
-        className="space-y-4"
+        className="space-y-density-4"
       >
         {children}
       </form>

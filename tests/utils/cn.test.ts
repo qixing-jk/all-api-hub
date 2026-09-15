@@ -55,6 +55,22 @@ describe("cn utility", () => {
 })
 
 describe("density spacing overrides", () => {
+  it("keeps disjoint density axes after formatting while allowing caller overrides", () => {
+    for (const classes of [
+      "px-4 py-density-4",
+      "py-density-4 px-4",
+      "sm:px-4 sm:py-density-4",
+      "sm:py-density-4 sm:px-4",
+      "gap-x-4 gap-y-density-4",
+      "gap-y-density-4 gap-x-4",
+    ]) {
+      expect(cn(classes).split(" ")).toHaveLength(2)
+    }
+    expect(cn("py-density-4 px-4", "p-0")).toBe("p-0")
+    expect(cn("py-density-4 px-4", "pt-0")).toBe("py-density-4 px-4 pt-0")
+    expect(cn("gap-y-density-4 gap-x-4", "gap-0")).toBe("gap-0")
+  })
+
   it("merges density spacing with ordinary spacing and responsive overrides", () => {
     expect(cn("py-density-3", "py-0")).toBe("py-0")
     expect(cn("gap-2", "gap-density-2")).toBe("gap-density-2")

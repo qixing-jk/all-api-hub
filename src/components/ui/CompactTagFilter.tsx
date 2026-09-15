@@ -18,7 +18,7 @@ interface CompactTagFilterProps {
 }
 
 const chipClassName =
-  "inline-flex h-(--density-control) max-w-36 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium whitespace-nowrap sm:h-(--density-control-sm)"
+  "inline-flex h-(--density-control) max-w-36 shrink-0 items-center gap-x-1.5 gap-y-density-1-5 rounded-md px-2.5 text-xs font-medium whitespace-nowrap sm:h-(--density-control-sm)"
 
 /** A single row of stable shortcuts with searchable access to every tag. */
 export function CompactTagFilter({
@@ -83,7 +83,7 @@ export function CompactTagFilter({
 
   return (
     <div
-      className="relative flex min-w-0 items-center gap-2"
+      className="gap-y-density-2 relative flex min-w-0 items-center gap-x-2"
       data-slot="compact-tag-filter"
     >
       {/* Measure noninteractive copies so clipped shortcuts never remain tabbable. */}
@@ -92,7 +92,10 @@ export function CompactTagFilter({
         inert
         className="pointer-events-none invisible absolute inset-x-0 top-0 h-0 overflow-hidden"
       >
-        <div ref={measurementRef} className="flex w-max gap-1">
+        <div
+          ref={measurementRef}
+          className="gap-y-density-1 flex w-max gap-x-1"
+        >
           <span className={chipClassName}>{allLabel}</span>
           {options.map((option) => (
             <span key={option.value} className={chipClassName}>
@@ -103,7 +106,7 @@ export function CompactTagFilter({
       </div>
       <div
         ref={shortcutsRef}
-        className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden"
+        className="gap-y-density-1 flex min-w-0 flex-1 items-center gap-x-1 overflow-hidden"
       >
         <button
           type="button"
@@ -153,7 +156,7 @@ export function CompactTagFilter({
             aria-label={`${value.length > 0 ? t("tagFilter.selected") : t("tagFilter.allTags")} ${value.length > 0 ? value.length : options.length}`}
             variant="outline"
             size="sm"
-            className="h-(--density-control) max-w-[60%] shrink-0 gap-1.5 px-2.5 text-xs shadow-none sm:h-(--density-control-sm)"
+            className="gap-y-density-1-5 h-(--density-control) max-w-[60%] shrink-0 gap-x-1.5 px-2.5 text-xs shadow-none sm:h-(--density-control-sm)"
           >
             <span aria-hidden="true" className="grid min-w-0">
               <span
@@ -197,7 +200,7 @@ export function CompactTagFilter({
           }}
           collisionPadding={12}
           aria-labelledby={headingId}
-          className="flex max-h-[var(--radix-popover-content-available-height)] w-80 max-w-[calc(100vw-1.5rem)] flex-col gap-3 overflow-hidden p-3"
+          className="gap-y-density-3 py-density-3 flex max-h-[var(--radix-popover-content-available-height)] w-80 max-w-[calc(100vw-1.5rem)] flex-col gap-x-3 overflow-hidden px-3"
         >
           <div id={headingId} className="text-sm font-medium">
             {t("tagFilter.allTags")}
@@ -212,14 +215,14 @@ export function CompactTagFilter({
           />
           <div className="max-h-64 min-h-0 overflow-y-auto overscroll-contain">
             {matchingOptions.length === 0 ? (
-              <p className="text-muted-foreground p-3 text-sm">
+              <p className="text-muted-foreground py-density-3 px-3 text-sm">
                 {t("tagFilter.noResults")}
               </p>
             ) : (
               matchingOptions.map((option) => (
                 <label
                   key={option.value}
-                  className="hover:bg-surface-subtle dark:hover:bg-foreground/5 flex min-h-(--density-control-lg) cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm"
+                  className="hover:bg-surface-subtle dark:hover:bg-foreground/5 gap-y-density-3 py-density-2 flex min-h-(--density-control-lg) cursor-pointer items-center gap-x-3 rounded-md px-2 text-sm"
                 >
                   <Checkbox
                     aria-label={option.label}
@@ -239,11 +242,11 @@ export function CompactTagFilter({
               ))
             )}
           </div>
-          <div className="border-border dark:border-foreground/10 flex shrink-0 items-center justify-between gap-2 border-t pt-2">
+          <div className="border-border dark:border-foreground/10 gap-y-density-2 pt-density-2 flex shrink-0 items-center justify-between gap-x-2 border-t">
             <span className="text-muted-foreground text-xs">
               {t("tagFilter.selected")} {value.length}
             </span>
-            <div className="flex gap-1">
+            <div className="gap-y-density-1 flex gap-x-1">
               <Button
                 variant="ghost"
                 size="sm"

@@ -43,12 +43,12 @@ export function PageHeader({
     <div
       className={cn(
         "[container-type:inline-size]",
-        spacing === "compact" ? "mb-6" : "mb-8",
+        spacing === "compact" ? "mb-density-6" : "mb-density-8",
         className,
       )}
     >
-      <div className="flex flex-col gap-2 [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-start [@container(min-width:42rem)]:justify-between [@container(min-width:42rem)]:gap-4">
-        <div className="flex min-w-0 items-center gap-3">
+      <div className="gap-y-density-2 [@container(min-width:42rem)]:gap-y-density-4 flex flex-col gap-x-2 [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-start [@container(min-width:42rem)]:justify-between [@container(min-width:42rem)]:gap-x-4">
+        <div className="gap-y-density-3 flex min-w-0 items-center gap-x-3">
           <Icon
             className={cn(
               "text-theme-600 dark:text-theme-400 h-6 w-6 shrink-0",
@@ -56,7 +56,7 @@ export function PageHeader({
             )}
           />
           <div
-            className="flex min-w-0 items-center gap-2"
+            className="gap-y-density-2 flex min-w-0 items-center gap-x-2"
             data-testid={titleActionsTestId}
           >
             <Heading2 className="text-foreground">{title}</Heading2>
@@ -64,13 +64,13 @@ export function PageHeader({
           </div>
         </div>
         {actions && (
-          <div className="flex w-full min-w-0 flex-wrap items-center gap-3 [&_[data-slot=button]]:h-auto [&_[data-slot=button]]:min-h-9 [&_[data-slot=button]]:max-w-full [&_[data-slot=button]]:whitespace-normal [&_[data-slot=button][data-size=default]]:min-h-9 [&_[data-slot=button][data-size=icon-lg]]:min-h-10 [&_[data-slot=button][data-size=icon-sm]]:min-h-8 [&_[data-slot=button][data-size=icon-xs]]:min-h-6 [&_[data-slot=button][data-size=icon]]:min-h-9 [&_[data-slot=button][data-size=lg]]:min-h-10 [&_[data-slot=button][data-size=sm]]:min-h-8 [@container(min-width:42rem)]:w-auto [@container(min-width:42rem)]:flex-1 [@container(min-width:42rem)]:justify-end">
+          <div className="gap-y-density-3 flex w-full min-w-0 flex-wrap items-center gap-x-3 [&_[data-slot=button]]:h-auto [&_[data-slot=button]]:min-h-9 [&_[data-slot=button]]:max-w-full [&_[data-slot=button]]:whitespace-normal [&_[data-slot=button][data-size=default]]:min-h-9 [&_[data-slot=button][data-size=icon-lg]]:min-h-10 [&_[data-slot=button][data-size=icon-sm]]:min-h-8 [&_[data-slot=button][data-size=icon-xs]]:min-h-6 [&_[data-slot=button][data-size=icon]]:min-h-9 [&_[data-slot=button][data-size=lg]]:min-h-10 [&_[data-slot=button][data-size=sm]]:min-h-8 [@container(min-width:42rem)]:w-auto [@container(min-width:42rem)]:flex-1 [@container(min-width:42rem)]:justify-end">
             {actions}
           </div>
         )}
       </div>
       {description && (
-        <BodySmall className="dark:text-secondary-foreground text-muted-foreground mt-2">
+        <BodySmall className="dark:text-secondary-foreground text-muted-foreground mt-density-2">
           {description}
         </BodySmall>
       )}

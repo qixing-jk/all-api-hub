@@ -34,7 +34,8 @@ describe("ResponsiveButtonGroup", () => {
       "flex",
       "w-full",
       "flex-wrap",
-      "gap-2",
+      "gap-x-2",
+      "gap-y-density-2",
       "[@container(min-width:42rem)]:w-auto",
     )
   })

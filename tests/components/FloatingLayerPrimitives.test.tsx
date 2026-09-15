@@ -31,6 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
+import { InputGroup, InputGroupInput } from "~/components/ui/input-group"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 /**
@@ -151,6 +152,28 @@ function ModalComboboxEscapeHarness({ onClose }: { onClose: () => void }) {
         </ComboboxContent>
       </Combobox>
     </Modal>
+  )
+}
+
+function ComboboxWithPopupInputGroupHarness() {
+  const items = React.useMemo(() => ["alpha"], [])
+
+  return (
+    <Combobox items={items} open={true} value={null}>
+      <ComboboxInput aria-label="Combobox with popup input group" />
+      <ComboboxContent>
+        <InputGroup>
+          <InputGroupInput aria-label="Popup search" />
+        </InputGroup>
+        <ComboboxList>
+          {(item) => (
+            <ComboboxItem key={item} value={item}>
+              {item}
+            </ComboboxItem>
+          )}
+        </ComboboxList>
+      </ComboboxContent>
+    </Combobox>
   )
 }
 
@@ -567,11 +590,25 @@ describe("floating layer primitives inside dialogs", () => {
 
     const popup = document.querySelector('[data-slot="combobox-content"]')
     expect(popup).toBeInTheDocument()
+    expect(popup).toHaveClass("flex", "flex-col")
+    expect(popup?.querySelector('[data-slot="combobox-list"]')).toHaveClass(
+      "min-h-0",
+      "flex-1",
+      "overflow-y-auto",
+    )
 
     const positioner = popup?.parentElement
     expect(positioner).toBeInTheDocument()
     expect(positioner).toHaveClass(Z_INDEX.modalFloating)
     expect(positioner).not.toHaveClass(Z_INDEX.floating)
+  })
+
+  it("reserves the density-aware input group height when it is inside the popup", async () => {
+    render(<ComboboxWithPopupInputGroupHarness />)
+
+    const list = await screen.findByRole("listbox")
+
+    expect(list).toHaveClass("min-h-0", "flex-1", "overflow-y-auto")
   })
 
   it("keeps Modal open when Escape closes a nested combobox popup", async () => {

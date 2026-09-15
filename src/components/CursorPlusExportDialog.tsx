@@ -241,7 +241,7 @@ export function CursorPlusExportDialog({
         </div>
       }
       footer={
-        <div className="flex justify-end gap-2">
+        <div className="gap-y-density-2 flex justify-end gap-x-2">
           <Button type="button" variant="ghost" onClick={handleClose}>
             {t("common:actions.cancel")}
           </Button>

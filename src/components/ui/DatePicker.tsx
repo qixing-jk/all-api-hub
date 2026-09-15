@@ -173,7 +173,7 @@ export function DatePicker({
         onSelect={selectDate}
         locale={calendarLocale}
       />
-      <div className="border-border grid grid-cols-2 gap-2 border-t p-2">
+      <div className="border-border gap-y-density-2 py-density-2 grid grid-cols-2 gap-x-2 border-t px-2">
         <Button
           type="button"
           variant="ghost"
@@ -230,7 +230,7 @@ export function DatePicker({
         : null
 
     return (
-      <div className={cn("space-y-1", className)}>
+      <div className={cn("space-y-density-1", className)}>
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverAnchor asChild>
             <div className="relative" onBlur={handleNaturalInputBlur}>
@@ -303,7 +303,7 @@ export function DatePicker({
           aria-label={accessibleTriggerLabel}
           disabled={disabled}
           className={cn(
-            "w-full justify-start gap-2 text-left font-normal",
+            "gap-y-density-2 w-full justify-start gap-x-2 text-left font-normal",
             !selectedDate && "text-muted-foreground",
             className,
           )}

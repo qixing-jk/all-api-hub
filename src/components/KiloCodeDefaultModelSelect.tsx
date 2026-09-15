@@ -176,7 +176,7 @@ export const KiloCodeDefaultModelSelect = React.forwardRef<
           data-placeholder={value ? undefined : ""}
           disabled={disabled}
           className={cn(
-            "dark:border-border dark:hover:bg-card/80 border-border-strong bg-card text-foreground hover:bg-surface-subtle focus-visible:ring-ring data-placeholder:text-faint-foreground aria-invalid:border-destructive-border aria-invalid:focus-visible:ring-destructive-text/40 flex w-full items-center justify-between gap-2 rounded-md border px-3 text-sm whitespace-nowrap shadow-xs transition-colors outline-none focus-visible:border-transparent focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60",
+            "dark:border-border dark:hover:bg-card/80 border-border-strong bg-card text-foreground hover:bg-surface-subtle focus-visible:ring-ring data-placeholder:text-faint-foreground aria-invalid:border-destructive-border aria-invalid:focus-visible:ring-destructive-text/40 gap-y-density-2 flex w-full items-center justify-between gap-x-2 rounded-md border px-3 text-sm whitespace-nowrap shadow-xs transition-colors outline-none focus-visible:border-transparent focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60",
             !value && "text-muted-foreground",
             className,
           )}
@@ -209,7 +209,7 @@ export const KiloCodeDefaultModelSelect = React.forwardRef<
           {isLimited ? (
             <div
               role="status"
-              className="text-muted-foreground shrink-0 border-b px-3 py-2 text-xs"
+              className="text-muted-foreground py-density-2 shrink-0 border-b px-3 text-xs"
             >
               {t(
                 "dialog.kiloCode.messages.modelSearchLimited",

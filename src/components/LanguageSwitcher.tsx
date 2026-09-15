@@ -170,7 +170,7 @@ export function LanguageSwitcher({
     return (
       <div
         className={cn(
-          "flex items-center gap-1.5 sm:gap-2",
+          "gap-y-density-1-5 sm:gap-y-density-2 flex items-center gap-x-1.5 sm:gap-x-2",
           showIcon && "w-full",
         )}
       >
@@ -221,8 +221,8 @@ export function LanguageSwitcher({
   return (
     <div
       className={cn(
-        "flex w-full items-center gap-1.5 sm:gap-2 [@container(min-width:42rem)]:w-auto",
-        compact && "gap-1.5",
+        "gap-y-density-1-5 sm:gap-y-density-2 flex w-full items-center gap-x-1.5 sm:gap-x-2 [@container(min-width:42rem)]:w-auto",
+        compact && "gap-y-density-1-5 gap-x-1.5",
         className,
       )}
     >
@@ -240,7 +240,7 @@ export function LanguageSwitcher({
         onValueChange={queueLanguageChange}
         buttonSize="sm"
         showActiveIndicator
-        className={cn("p-0.5", !compact && "sm:p-1")}
+        className={cn("p-0.5", !compact && "sm:py-density-1 sm:px-1")}
         options={SUPPORTED_UI_LANGUAGES.map((code) => {
           const label = getLanguageOptionLabel(t, code)
           const languageName = getLanguageOptionName(t, code)

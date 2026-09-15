@@ -190,10 +190,10 @@ export default function HeaderSection({
 
   return (
     <header
-      className={`flex items-center justify-between px-3 py-2 sm:px-5 sm:py-3 ${COLORS.background.primary} ${COLORS.border.default} shrink-0 border-b`}
+      className={`py-density-2 sm:py-density-3 flex items-center justify-between px-3 sm:px-5 ${COLORS.background.primary} ${COLORS.border.default} shrink-0 border-b`}
     >
       {/* Logo and Title Section */}
-      <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3">
+      <div className="gap-y-density-2-5 sm:gap-y-density-3 flex min-w-0 flex-1 items-center gap-x-2.5 sm:gap-x-3">
         <img
           src={iconImage}
           alt={t("ui:app.name")}
@@ -207,7 +207,7 @@ export default function HeaderSection({
             {/* Current extension version (links to the changelog). */}
             <VersionBadge
               size="sm"
-              className="w-fit self-start px-1.5 py-0 text-[0.65rem] leading-tight [&>a]:gap-1 [&>a]:leading-tight [&>a>svg]:size-3"
+              className="[&>a]:gap-y-density-1 w-fit self-start px-1.5 py-0 text-[0.65rem] leading-tight [&>a]:gap-x-1 [&>a]:leading-tight [&>a>svg]:size-3"
             />
           </div>
         </div>
@@ -215,7 +215,7 @@ export default function HeaderSection({
 
       {/* Action Buttons Section */}
       <ProductAnalyticsScope entrypoint={entrypoint} surfaceId={headerSurface}>
-        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+        <div className="gap-y-density-1 sm:gap-y-density-2 flex shrink-0 items-center gap-x-1 sm:gap-x-2">
           <ProductAnnouncementButton surface="popup-header" onlyWhenRisk />
           <CompactThemeToggle />
           <FeedbackDropdownMenu language={i18n.language} />

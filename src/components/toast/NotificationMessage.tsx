@@ -33,7 +33,7 @@ export function NotificationMessage({
   }
 
   return (
-    <span className="flex min-w-0 flex-col gap-1">
+    <span className="gap-y-density-1 flex min-w-0 flex-col gap-x-1">
       <span className="min-w-0">{message}</span>
       <Button
         type="button"

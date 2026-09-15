@@ -192,7 +192,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     return (
       <div className="min-w-0">
         <Heading5 className="truncate">{t("verifyDialog.title")}</Heading5>
-        <div className="text-muted-foreground mt-1 truncate text-xs">
+        <div className="text-muted-foreground mt-density-1 truncate text-xs">
           {sourceBaseUrl} · {sourceName}
         </div>
       </div>
@@ -653,7 +653,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   const canRunAll = hasRunnableSource && resolvedModelId.trim().length > 0
 
   const footer = (
-    <div className="flex justify-end gap-2">
+    <div className="gap-y-density-2 flex justify-end gap-x-2">
       <Button variant="secondary" onClick={onClose} disabled={!canClose}>
         {t("verifyDialog.actions.close")}
       </Button>
@@ -681,10 +681,10 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       closeOnEsc={canClose}
       closeOnBackdropClick={canClose}
     >
-      <div className="space-y-3">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="space-y-density-3">
+        <div className="gap-y-density-3 grid grid-cols-1 gap-x-3 sm:grid-cols-2">
           {!isProfileSource && (
-            <div className="space-y-1.5">
+            <div className="space-y-density-1-5">
               <div className="text-muted-foreground text-xs">
                 {t("verifyDialog.meta.runtimeKey")}
               </div>
@@ -717,7 +717,9 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
 
           <div
             className={
-              isProfileSource ? "space-y-1.5" : "space-y-1.5 sm:col-span-2"
+              isProfileSource
+                ? "space-y-density-1-5"
+                : "space-y-density-1-5 sm:col-span-2"
             }
           >
             <div className="text-muted-foreground text-xs">
@@ -781,7 +783,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
           <p>{t("verifyDialog.warning")}</p>
         </Alert>
 
-        <div className="space-y-2">
+        <div className="space-y-density-2">
           {tools.map((tool) => {
             const result = tool.result
             const isDisabledForModel = !resolvedModelId.trim()
@@ -818,16 +820,16 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
               <div
                 key={tool.toolId}
                 data-testid={`verify-cli-${tool.toolId}`}
-                className="dark:border-border border-border-subtle rounded-md border p-3"
+                className="dark:border-border border-border-subtle py-density-3 rounded-md border px-3"
               >
-                <div className="flex items-start justify-between gap-2">
+                <div className="gap-y-density-2 flex items-start justify-between gap-x-2">
                   <div className="min-w-0 flex-1">
-                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                    <div className="gap-y-density-1 flex min-w-0 flex-wrap items-center gap-x-2">
                       <div className="text-foreground min-w-0 truncate text-sm font-medium">
                         {getCliSupportToolLabel(t, tool.toolId)}
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2">
                         {result ? (
                           <>
                             <ToolStatusBadge result={result} />
@@ -844,7 +846,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                       </div>
                     </div>
 
-                    <div className="dark:text-secondary-foreground text-muted-foreground mt-1 text-xs">
+                    <div className="dark:text-secondary-foreground text-muted-foreground mt-density-1 text-xs">
                       {resultSummary}
                     </div>
                   </div>
@@ -880,7 +882,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                 {result &&
                   (result.input !== undefined ||
                     result.output !== undefined) && (
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-density-3 space-y-density-2">
                       {result.input !== undefined && (
                         <CollapsibleSection
                           title={t("verifyDialog.details.input")}

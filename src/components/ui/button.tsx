@@ -14,7 +14,7 @@ type SlottedChildProps = React.AriaAttributes & {
 }
 
 const buttonVariants = cva(
-  "inline-flex min-w-0 max-w-full shrink items-center justify-center gap-2 rounded-md text-center text-sm font-medium whitespace-normal break-words transition-all disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  "inline-flex min-w-0 max-w-full shrink items-center justify-center gap-x-2 gap-y-density-2 rounded-md text-center text-sm font-medium whitespace-normal break-words transition-all disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
   {
     variants: {
       variant: {
@@ -39,9 +39,10 @@ const buttonVariants = cva(
       size: {
         // Intrinsic min-height does not grow a fixed-height button in older
         // Chromium. Let content determine height and use the size as a floor.
-        default: "h-auto min-h-(--density-control) px-4 py-1.5 has-[>svg]:px-3",
-        sm: "h-auto min-h-(--density-control-sm) gap-1.5 rounded-sm px-3 py-1 has-[>svg]:px-2.5",
-        lg: "h-auto min-h-(--density-control-lg) rounded-md px-6 py-2 has-[>svg]:px-4",
+        default:
+          "h-auto min-h-(--density-control) px-4 py-density-1-5 has-[>svg]:px-3",
+        sm: "h-auto min-h-(--density-control-sm) gap-x-1.5 gap-y-density-1-5 rounded-sm px-3 py-density-1 has-[>svg]:px-2.5",
+        lg: "h-auto min-h-(--density-control-lg) rounded-md px-6 py-density-2 has-[>svg]:px-4",
         icon: "size-(--density-control) max-w-none shrink-0 whitespace-nowrap",
         "icon-xs":
           "size-(--density-control-xs) max-w-none shrink-0 rounded-xs whitespace-nowrap [&_svg:not([class*='size-'])]:size-3",

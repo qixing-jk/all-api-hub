@@ -229,7 +229,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     return (
       <div className="min-w-0">
         <Heading5 className="truncate">{t("verifyDialog.title")}</Heading5>
-        <div className="text-muted-foreground mt-1 truncate text-xs">
+        <div className="text-muted-foreground mt-density-1 truncate text-xs">
           {account.baseUrl} · {account.name}
         </div>
       </div>
@@ -578,7 +578,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
   }, [apiType, isOpen, persistedSummaryRef, replaceProbes])
 
   const footer = (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div className="gap-y-density-2 flex flex-col gap-x-2 sm:flex-row sm:items-center sm:justify-between">
       <div>
         {historyTarget ? (
           <Button variant="outline" onClick={clearHistory} disabled={!canClose}>
@@ -586,7 +586,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
           </Button>
         ) : null}
       </div>
-      <div className="flex justify-end gap-2">
+      <div className="gap-y-density-2 flex justify-end gap-x-2">
         <Button variant="secondary" onClick={onClose} disabled={!canClose}>
           {t("verifyDialog.actions.close")}
         </Button>
@@ -615,15 +615,15 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
       closeOnEsc={canClose}
       closeOnBackdropClick={canClose}
     >
-      <div className="space-y-3">
+      <div className="space-y-density-3">
         {historyTarget ? (
-          <div className="dark:border-border border-border-subtle flex flex-wrap items-center gap-2 rounded-md border p-3 text-sm">
+          <div className="dark:border-border border-border-subtle gap-y-density-2 py-density-3 flex flex-wrap items-center gap-x-2 rounded-md border px-3 text-sm">
             <VerificationHistorySummary summary={persistedSummary} />
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
+        <div className="gap-y-density-3 grid grid-cols-1 gap-x-3 sm:grid-cols-2">
+          <div className="space-y-density-1-5">
             <div className="text-muted-foreground text-xs">
               {t("verifyDialog.meta.runtimeKey")}
             </div>
@@ -655,7 +655,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
               placeholder={t("verifyDialog.meta.runtimeKeyPlaceholder")}
             />
             {runtimeKeyCompatibilityHint ? (
-              <div className="space-y-1.5">
+              <div className="space-y-density-1-5">
                 <div className="text-destructive-text text-xs" role="alert">
                   {runtimeKeyCompatibilityHint}
                 </div>
@@ -674,7 +674,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
             ) : null}
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-density-1-5">
             <div className="text-muted-foreground text-xs">
               {t("verifyDialog.meta.apiType")}
             </div>
@@ -714,7 +714,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
             disabled={!canClose}
           />
 
-          <div className="space-y-1.5">
+          <div className="space-y-density-1-5">
             <div className="text-muted-foreground text-xs">
               {t("verifyDialog.meta.model")}
             </div>
@@ -739,7 +739,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
           <p>{t("verifyDialog.warning")}</p>
         </Alert>
 
-        <div className="space-y-2">
+        <div className="space-y-density-2">
           {probes.map((probe) => {
             const result = probe.result
             const isDisabledForModel =
@@ -791,16 +791,16 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
               <div
                 key={probe.definition.id}
                 data-testid={`verify-probe-${probe.definition.id}`}
-                className="dark:border-border border-border-subtle rounded-md border p-3"
+                className="dark:border-border border-border-subtle py-density-3 rounded-md border px-3"
               >
-                <div className="flex items-start justify-between gap-2">
+                <div className="gap-y-density-2 flex items-start justify-between gap-x-2">
                   <div className="min-w-0 flex-1">
-                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                    <div className="gap-y-density-1 flex min-w-0 flex-wrap items-center gap-x-2">
                       <div className="text-foreground min-w-0 truncate text-sm font-medium">
                         {getApiVerificationProbeLabel(t, probe.definition.id)}
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="gap-y-density-2 flex items-center gap-x-2">
                         {result ? (
                           <ProbeStatusBadge result={result} />
                         ) : (
@@ -814,7 +814,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                       </div>
                     </div>
 
-                    <div className="dark:text-secondary-foreground text-muted-foreground mt-1 text-xs">
+                    <div className="dark:text-secondary-foreground text-muted-foreground mt-density-1 text-xs">
                       {resultSummary}
                     </div>
                   </div>
@@ -855,7 +855,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                 {result &&
                   (result.input !== undefined ||
                     result.output !== undefined) && (
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-density-3 space-y-density-2">
                       {result.input !== undefined && (
                         <CollapsibleSection
                           title={t("verifyDialog.details.input")}

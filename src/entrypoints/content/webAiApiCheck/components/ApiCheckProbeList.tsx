@@ -34,7 +34,7 @@ export function ApiCheckProbeList({
   const notRunYet = t("webAiApiCheck:modal.probes.notRunYet")
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-density-2">
       {probes.map((probe) => {
         const result = probe.result
         const summary = result?.summaryKey
@@ -49,11 +49,11 @@ export function ApiCheckProbeList({
           <div
             key={probe.id}
             data-testid={getWebAiApiCheckProbeTestId(probe.id)}
-            className="border-border rounded-md border p-3"
+            className="border-border py-density-3 rounded-md border px-3"
           >
-            <div className="flex items-start justify-between gap-2">
+            <div className="gap-y-density-2 flex items-start justify-between gap-x-2">
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2">
                   <div className="text-foreground min-w-0 truncate text-sm font-medium">
                     {getApiVerificationProbeLabel(t, probe.id)}
                   </div>
@@ -62,7 +62,7 @@ export function ApiCheckProbeList({
                     {result ? `${Math.round(result.latencyMs)}ms` : " "}
                   </div>
                 </div>
-                <div className="text-muted-foreground mt-1 text-xs">
+                <div className="text-muted-foreground mt-density-1 text-xs">
                   {result ? summary : notRunYet}
                 </div>
               </div>

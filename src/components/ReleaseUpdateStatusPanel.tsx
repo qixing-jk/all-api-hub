@@ -256,7 +256,7 @@ export function ReleaseUpdateStatusPanel() {
           title={statusTitle}
           description={statusDescription}
           leftContent={
-            <div className="space-y-1">
+            <div className="space-y-density-1">
               {status?.currentVersion && (
                 <BodySmall>
                   {t("about:releaseUpdate.currentVersion", {
@@ -275,7 +275,7 @@ export function ReleaseUpdateStatusPanel() {
             </div>
           }
           rightContent={
-            <div className="flex flex-wrap justify-end gap-2">
+            <div className="gap-y-density-2 flex flex-wrap justify-end gap-x-2">
               <Button
                 type="button"
                 variant="outline"

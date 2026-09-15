@@ -96,7 +96,7 @@ export function UpdateLogDialog({
       <h3 className="text-foreground text-lg font-semibold">
         {t("ui:dialog.updateLog.title")}
       </h3>
-      <p className="dark:text-secondary-foreground text-muted-foreground mt-1 text-sm">
+      <p className="dark:text-secondary-foreground text-muted-foreground mt-density-1 text-sm">
         {t("ui:dialog.updateLog.updatedTo", { version })}
       </p>
     </div>
@@ -105,7 +105,7 @@ export function UpdateLogDialog({
   const footer = (
     <div
       data-testid={UPDATE_LOG_DIALOG_TEST_IDS.footer}
-      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row sm:items-center sm:justify-between"
     >
       <Button
         data-testid={UPDATE_LOG_DIALOG_TEST_IDS.autoOpenToggle}
@@ -113,7 +113,7 @@ export function UpdateLogDialog({
         loading={isSavingAutoOpen}
         onClick={() => void handleSetAutoOpenEnabled(!autoOpenEnabled)}
         type="button"
-        className="h-auto min-h-(--density-control) w-full py-2 text-left whitespace-normal sm:w-auto sm:text-center sm:whitespace-nowrap"
+        className="py-density-2 h-auto min-h-(--density-control) w-full text-left whitespace-normal sm:w-auto sm:text-center sm:whitespace-nowrap"
       >
         {isSavingAutoOpen
           ? autoOpenEnabled
@@ -126,7 +126,7 @@ export function UpdateLogDialog({
 
       <div
         data-testid={UPDATE_LOG_DIALOG_TEST_IDS.footerActions}
-        className="flex flex-col gap-3 sm:flex-row sm:justify-end"
+        className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row sm:justify-end"
       >
         <Button
           data-testid={UPDATE_LOG_DIALOG_TEST_IDS.closeButton}
@@ -141,7 +141,7 @@ export function UpdateLogDialog({
           data-testid={UPDATE_LOG_DIALOG_TEST_IDS.openFullChangelogButton}
           onClick={() => void handleOpenFullChangelog()}
           type="button"
-          className="h-auto min-h-(--density-control) w-full py-2 text-center whitespace-normal sm:w-auto sm:whitespace-nowrap"
+          className="py-density-2 h-auto min-h-(--density-control) w-full text-center whitespace-normal sm:w-auto sm:whitespace-nowrap"
         >
           {t("ui:dialog.updateLog.openFullChangelog")}
         </Button>
@@ -160,7 +160,7 @@ export function UpdateLogDialog({
     >
       <div
         data-testid={UPDATE_LOG_DIALOG_TEST_IDS.root}
-        className="flex min-h-0 flex-1 flex-col gap-3"
+        className="gap-y-density-3 flex min-h-0 flex-1 flex-col gap-x-3"
       >
         <div className="border-border min-h-0 flex-1 overflow-hidden rounded-lg border">
           <div className="relative h-full">

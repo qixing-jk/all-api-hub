@@ -240,7 +240,7 @@ export function ClaudeCodeRouterImportDialog(
         </div>
       }
       footer={
-        <div className="flex flex-wrap justify-end gap-2">
+        <div className="gap-y-density-2 flex flex-wrap justify-end gap-x-2">
           <Button variant="ghost" type="button" onClick={onClose}>
             {t("common:actions.cancel")}
           </Button>
@@ -252,8 +252,8 @@ export function ClaudeCodeRouterImportDialog(
         </div>
       }
     >
-      <form className="space-y-4" id={formId} onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <form className="space-y-density-4" id={formId} onSubmit={handleSubmit}>
+        <div className="gap-y-density-4 grid grid-cols-1 gap-x-4 md:grid-cols-2">
           <FormField
             label={t("ui:dialog.claudeCodeRouter.fields.providerName")}
             htmlFor={providerNameInputId}
@@ -307,12 +307,12 @@ export function ClaudeCodeRouterImportDialog(
           />
         </FormField>
 
-        <div className="flex items-start gap-3">
+        <div className="gap-y-density-3 flex items-start gap-x-3">
           <Checkbox
             checked={restartAfterSave}
             onCheckedChange={(checked) => setRestartAfterSave(!!checked)}
           />
-          <div className="space-y-1">
+          <div className="space-y-density-1">
             <div className="text-foreground text-sm font-medium">
               {t("ui:dialog.claudeCodeRouter.fields.restartAfterSave")}
             </div>

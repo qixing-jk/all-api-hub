@@ -452,7 +452,7 @@ describe("DatePicker", () => {
 })
 
 describe("Calendar", () => {
-  it("keeps navigation controls square at the configured cell size", () => {
+  it("keeps calendar columns fixed while navigation height follows density", () => {
     render(<Calendar mode="single" month={new Date(2026, 6, 1)} />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
@@ -466,7 +466,7 @@ describe("Calendar", () => {
     })
 
     for (const button of [previousMonthButton, nextMonthButton]) {
-      expect(button).toHaveClass("size-(--cell-size)")
+      expect(button).toHaveClass("w-(--cell-size)", "h-(--density-control-sm)")
       expect(button).toHaveClass("max-w-none")
       expect(button).toHaveClass("shrink-0")
       expect(button).toHaveClass("whitespace-nowrap")

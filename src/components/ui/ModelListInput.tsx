@@ -124,9 +124,9 @@ export function ModelListInput({
     removeLabel ?? strings?.removeLabel ?? t("modelListInput.actions.remove")
 
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn("space-y-density-2", className)}>
       {showHeader && (
-        <div className="space-y-1">
+        <div className="space-y-density-1">
           <div className="text-foreground text-sm font-medium">
             {resolvedTitle}
           </div>
@@ -145,7 +145,7 @@ export function ModelListInput({
         removeLabel={resolvedRemoveLabel}
         showDragHandle={value.length > 1}
         renderItem={({ item, updateItem }) => (
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="gap-y-density-2 flex min-w-0 items-center gap-x-2">
             <div className="min-w-0 flex-1">
               {nameOptions.length > 0 ? (
                 <SearchableSelect

@@ -82,7 +82,7 @@ function SheetContent({
         <SheetPrimitive.Content
           data-slot="sheet-content"
           className={cn(
-            "bg-popover text-popover-foreground data-[state=closed]:animate-out data-[state=open]:animate-in fixed flex flex-col gap-4 overflow-hidden shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
+            "bg-popover text-popover-foreground data-[state=closed]:animate-out data-[state=open]:animate-in gap-y-density-4 fixed flex flex-col gap-x-4 overflow-hidden shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
             Z_INDEX.modal,
             side === "right" &&
               "data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm",
@@ -98,7 +98,7 @@ function SheetContent({
         >
           {children}
           {showCloseButton && (
-            <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
+            <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 inline-flex size-(--density-control-xs) items-center justify-center rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
               <XIcon className="size-4" />
               <span className="sr-only">{t("common:actions.close")}</span>
             </SheetPrimitive.Close>
@@ -116,7 +116,10 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sheet-header"
-      className={cn("flex flex-col gap-1.5 p-4", className)}
+      className={cn(
+        "gap-y-density-1-5 py-density-4 flex flex-col gap-x-1.5 px-4",
+        className,
+      )}
       {...props}
     />
   )
@@ -129,7 +132,10 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sheet-footer"
-      className={cn("mt-auto flex flex-col gap-2 p-4", className)}
+      className={cn(
+        "gap-y-density-2 py-density-4 mt-auto flex flex-col gap-x-2 px-4",
+        className,
+      )}
       {...props}
     />
   )

@@ -432,7 +432,7 @@ export function Modal({
               <span className="sr-only" aria-label={title} />
             </DialogPrimitive.Title>
             <div
-              className="flex items-center justify-center p-4"
+              className="py-density-4 flex items-center justify-center px-4"
               data-slot="modal-positioner"
               onPointerDown={handleBackdropPointerDown}
               onPointerCancel={handleBackdropPointerCancel}
@@ -449,7 +449,7 @@ export function Modal({
                     type="button"
                     onClick={requestClose}
                     aria-label={t("common:actions.close")}
-                    className="dark:hover:bg-secondary dark:hover:text-secondary-foreground text-faint-foreground hover:bg-muted hover:text-muted-foreground absolute top-3 right-3 z-10 rounded-sm p-1.5 transition-colors sm:top-4 sm:right-4"
+                    className="dark:hover:bg-secondary dark:hover:text-secondary-foreground text-faint-foreground hover:bg-muted hover:text-muted-foreground py-density-1-5 absolute top-3 right-3 z-10 min-h-(--density-control-xs) rounded-sm px-1.5 transition-colors sm:top-4 sm:right-4"
                   >
                     <XIcon className="h-5 w-5" />
                   </button>

@@ -127,7 +127,7 @@ function Sidebar({
         animate={{ width: targetWidth }}
         style={{ width: targetWidth, height: sidebarHeight, top: sidebarTop }}
         className={cn(
-          "density-default shrink-0 transform transition-transform duration-300 ease-in-out motion-reduce:transition-none",
+          "shrink-0 transform transition-transform duration-300 ease-in-out motion-reduce:transition-none",
           Z_INDEX.sidebar,
           isMobileOpen
             ? "fixed inset-y-0 left-0 translate-x-0"
@@ -141,12 +141,12 @@ function Sidebar({
         <div className="border-sidebar-border bg-sidebar text-sidebar-foreground flex h-full flex-col border-r shadow-sm">
           <div
             className={cn(
-              "flex h-16 items-center px-3 py-2",
+              "py-density-2 flex h-16 items-center px-3",
               shouldShowCollapsedState ? "justify-center" : "justify-between",
             )}
           >
             {!shouldShowCollapsedState && (
-              <div className="flex flex-1 items-center gap-2 overflow-hidden">
+              <div className="gap-y-density-2 flex flex-1 items-center gap-x-2 overflow-hidden">
                 <Heading3
                   aria-hidden={shouldShowCollapsedState}
                   className={cn(
@@ -165,7 +165,7 @@ function Sidebar({
                 aria-label={collapseButtonLabel}
                 variant="outline"
                 size="icon"
-                className="hidden h-8 w-8 rounded-full md:inline-flex"
+                className="hidden size-(--density-control-sm) rounded-full md:inline-flex"
                 onClick={handleCollapseButtonClick}
               >
                 {shouldShowCollapsedState ? (
@@ -181,7 +181,7 @@ function Sidebar({
 
           <nav
             aria-label={navAriaLabel}
-            className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto py-4"
+            className="py-density-4 min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
           >
             {menuGroups.map((group, groupIndex) => {
               const categoryLabel = group.category
@@ -202,7 +202,7 @@ function Sidebar({
                   aria-labelledby={
                     !shouldShowCollapsedState ? categoryHeadingId : undefined
                   }
-                  className={cn("mx-2", group.category && "mt-4")}
+                  className={cn("mx-2", group.category && "mt-density-4")}
                   {...{
                     [PRODUCT_TOUR_TARGET_ATTRIBUTE]:
                       group.category && !shouldShowCollapsedState
@@ -211,7 +211,7 @@ function Sidebar({
                   }}
                 >
                   {categoryLabel && !shouldShowCollapsedState && (
-                    <div className="mb-2 px-3">
+                    <div className="mb-density-2 px-3">
                       <Heading3
                         id={categoryHeadingId}
                         className="dark:text-muted-foreground text-faint-foreground text-xs font-semibold tracking-wide uppercase"
@@ -221,7 +221,7 @@ function Sidebar({
                     </div>
                   )}
 
-                  <ul className="space-y-1">
+                  <ul className="space-y-density-1">
                     {group.items.map((item) => {
                       const Icon = item.icon
                       const isActive = activeMenuItem === item.id
@@ -239,7 +239,7 @@ function Sidebar({
                               shouldShowCollapsedState ? label : undefined
                             }
                             className={cn(
-                              "group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors",
+                              "group gap-y-density-3 py-density-2 relative flex w-full items-center gap-x-3 rounded-lg px-3 text-left text-sm font-medium transition-colors",
                               shouldShowCollapsedState && "justify-center px-0",
                               isActive
                                 ? "bg-sidebar-primary text-sidebar-primary-foreground"
@@ -277,7 +277,7 @@ function Sidebar({
 
           <Separator className="mx-3" />
 
-          <div className="flex items-center justify-between px-3 py-3 sm:px-4">
+          <div className="py-density-3 flex items-center justify-between px-3 sm:px-4">
             <Heading3
               className={cn(
                 "dark:text-muted-foreground text-faint-foreground text-xs font-semibold tracking-wide uppercase",

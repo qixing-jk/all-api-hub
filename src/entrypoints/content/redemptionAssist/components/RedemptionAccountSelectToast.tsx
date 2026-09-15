@@ -151,10 +151,10 @@ export const RedemptionAccountSelectToast: React.FC<
       }
     >
       <div
-        className="border-border bg-background text-foreground pointer-events-auto flex w-full flex-col gap-3 rounded-lg border px-3 py-2 text-xs sm:px-4 sm:py-3 sm:text-sm"
+        className="border-border bg-background text-foreground gap-y-density-3 py-density-2 sm:py-density-3 pointer-events-auto flex w-full flex-col gap-x-3 rounded-lg border px-3 text-xs sm:px-4 sm:text-sm"
         onKeyDownCapture={handleKeyDownCapture}
       >
-        <div className="flex flex-col gap-1">
+        <div className="gap-y-density-1 flex flex-col gap-x-1">
           <div id={titleId} className="text-foreground text-sm font-medium">
             {title || t("accountSelect.title")}
           </div>
@@ -172,7 +172,7 @@ export const RedemptionAccountSelectToast: React.FC<
         />
 
         <div
-          className="max-h-56 space-y-1 overflow-y-auto pr-1"
+          className="space-y-density-1 max-h-56 overflow-y-auto pr-1"
           role="radiogroup"
           aria-labelledby={titleId}
         >
@@ -182,12 +182,12 @@ export const RedemptionAccountSelectToast: React.FC<
                 account.automaticRedemptionSupport.status ===
                 REDEMPTION_ACCOUNT_SUPPORT_STATUSES.Unsupported,
             ) && (
-              <div className="bg-muted text-muted-foreground mb-2 rounded-md px-2 py-1.5 text-xs">
+              <div className="bg-muted text-muted-foreground mb-density-2 py-density-1-5 rounded-md px-2 text-xs">
                 {t("accountSelect.noSupportedAccounts")}
               </div>
             )}
           {displayedAccounts.length === 0 ? (
-            <div className="text-muted-foreground py-4 text-center text-xs">
+            <div className="text-muted-foreground py-density-4 text-center text-xs">
               {t("accountSelect.noResults")}
             </div>
           ) : (
@@ -211,7 +211,7 @@ export const RedemptionAccountSelectToast: React.FC<
                     }
                   }}
                   className={cn(
-                    "border-border/60 flex flex-col gap-0.5 rounded-md border px-2 py-1.5 text-xs",
+                    "border-border/60 py-density-1-5 flex flex-col gap-0.5 rounded-md border px-2 text-xs",
                     isSupported
                       ? "hover:bg-muted/70"
                       : "bg-muted/40 opacity-70",
@@ -223,7 +223,7 @@ export const RedemptionAccountSelectToast: React.FC<
                       isSupported ? "cursor-pointer" : "cursor-not-allowed",
                     )}
                   >
-                    <span className="flex items-center gap-2">
+                    <span className="gap-y-density-2 flex items-center gap-x-2">
                       <input
                         type="radio"
                         className="h-3 w-3"
@@ -245,7 +245,7 @@ export const RedemptionAccountSelectToast: React.FC<
                     )}
                   </label>
                   {!isSupported && (
-                    <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 pl-5 text-[11px]">
+                    <div className="text-muted-foreground gap-y-density-1 flex flex-wrap items-center gap-x-2 pl-5 text-[11px]">
                       <span id={unsupportedReasonId}>
                         {t("accountSelect.unsupported")}
                       </span>
@@ -268,7 +268,7 @@ export const RedemptionAccountSelectToast: React.FC<
           )}
         </div>
 
-        <div className="mt-2 flex justify-end gap-2">
+        <div className="mt-density-2 gap-y-density-2 flex justify-end gap-x-2">
           <Button
             variant="secondary"
             analyticsAction={

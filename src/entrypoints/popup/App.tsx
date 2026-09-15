@@ -151,8 +151,8 @@ function PopupContent({ inPopup }: { inPopup: boolean }) {
       />
       <PopupInterruptionHintBanner surfaceClassName="rounded-none border-x-0 shadow-none" />
 
-      <section className="border-border from-theme-50/50 dark:from-theme-900/20 to-theme-50/30 dark:to-theme-900/10 shrink-0 space-y-2 border-b bg-linear-to-br p-3 sm:p-4">
-        <div className="flex items-center justify-between gap-2">
+      <section className="border-border from-theme-50/50 dark:from-theme-900/20 to-theme-50/30 dark:to-theme-900/10 space-y-density-2 py-density-3 sm:py-density-4 shrink-0 border-b bg-linear-to-br px-3 sm:px-4">
+        <div className="gap-y-density-2 flex items-center justify-between gap-x-2">
           <ProductAnalyticsScope
             entrypoint={entrypoint}
             surfaceId={viewTabsSurface}

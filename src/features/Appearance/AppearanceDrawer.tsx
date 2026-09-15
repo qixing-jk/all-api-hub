@@ -31,7 +31,7 @@ export function AppearanceDrawer({
           <SheetTitle>{t("appearance.title")}</SheetTitle>
           <SheetDescription>{t("appearance.description")}</SheetDescription>
         </SheetHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 pt-0">
+        <div className="py-density-4 min-h-0 flex-1 overflow-y-auto px-4 pt-0">
           <AppearanceControls showMode />
         </div>
       </SheetContent>

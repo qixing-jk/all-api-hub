@@ -102,13 +102,13 @@ export default function ActionButtons({
 
   return (
     <section
-      className={`px-3 py-2 sm:px-5 sm:py-3 ${COLORS.background.secondary} ${COLORS.border.default} border-b`}
+      className={`py-density-2 sm:py-density-3 px-3 sm:px-5 ${COLORS.background.secondary} ${COLORS.border.default} border-b`}
     >
       <ProductAnalyticsScope
         entrypoint={entrypoint}
         surfaceId={actionBarSurface}
       >
-        <div className="flex gap-1.5 sm:gap-2">
+        <div className="gap-y-density-1-5 sm:gap-y-density-2 flex gap-x-1.5 sm:gap-x-2">
           <Button
             onClick={onPrimaryAction}
             data-testid={primaryActionTestId}

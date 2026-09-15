@@ -139,10 +139,10 @@ export function ShieldBypassPromptToast({
         <CardContent padding="sm">
           <Body className="whitespace-pre-line">{t("toast.body")}</Body>
           <ProtectionBypassHistoryLink
-            className="mt-3"
+            className="mt-density-3"
             onOpen={onOpenHistory}
           />
-          <div className="mt-3 flex flex-wrap justify-end gap-2">
+          <div className="mt-density-3 gap-y-density-2 flex flex-wrap justify-end gap-x-2">
             <Button
               variant="secondary"
               analyticsAction={

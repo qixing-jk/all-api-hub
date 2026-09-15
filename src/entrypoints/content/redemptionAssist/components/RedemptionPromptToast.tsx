@@ -150,7 +150,7 @@ export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
         <CardContent padding="sm">
           <Body>{message}</Body>
           {codes.length > 1 && (
-            <label className="mt-2 flex items-center gap-2">
+            <label className="mt-density-2 gap-y-density-2 flex items-center gap-x-2">
               <input
                 ref={selectAllRef}
                 type="checkbox"
@@ -164,11 +164,11 @@ export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
             </label>
           )}
           {codes.length > 0 && (
-            <div className="mt-2 max-h-44 space-y-1 overflow-y-auto pr-1">
+            <div className="mt-density-2 space-y-density-1 max-h-44 overflow-y-auto pr-1">
               {codes.map(({ code, preview }) => (
                 <label
                   key={code}
-                  className="border-border/60 hover:bg-muted/70 flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-xs"
+                  className="border-border/60 hover:bg-muted/70 gap-y-density-2 py-density-1-5 flex cursor-pointer items-center gap-x-2 rounded-md border px-2 text-xs"
                 >
                   <input
                     type="checkbox"
@@ -181,13 +181,13 @@ export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
               ))}
             </div>
           )}
-          <div className="flex flex-wrap items-center gap-1">
+          <div className="gap-y-density-1 flex flex-wrap items-center gap-x-1">
             <Caption>{t("redemptionAssist:messages.promptSource")}</Caption>
             <Link size="xs" href="#" onClick={handleOpenSettings}>
               {t("redemptionAssist:messages.promptSettingsLink")}
             </Link>
           </div>
-          <div className="flex justify-end gap-2">
+          <div className="gap-y-density-2 flex justify-end gap-x-2">
             <Button variant="secondary" onClick={handleCancel}>
               {t("common:actions.cancel")}
             </Button>

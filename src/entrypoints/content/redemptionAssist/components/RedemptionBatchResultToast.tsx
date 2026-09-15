@@ -136,7 +136,7 @@ export const RedemptionBatchResultToast: React.FC<
     >
       <Card>
         <CardHeader padding="sm">
-          <div className="flex items-center justify-between gap-2">
+          <div className="gap-y-density-2 flex items-center justify-between gap-x-2">
             <Heading3>
               {t("redemptionAssist:messages.batchResultTitle")}
             </Heading3>
@@ -161,13 +161,13 @@ export const RedemptionBatchResultToast: React.FC<
             })}
           </Body>
 
-          <div className="mt-3 max-h-60 space-y-2 overflow-y-auto pr-1">
+          <div className="mt-density-3 space-y-density-2 max-h-60 overflow-y-auto pr-1">
             {items.map((item, index) => (
               <div
                 key={`${item.code}-${index}`}
-                className="border-border/60 bg-muted/20 flex flex-col gap-1 rounded-md border px-2 py-2 text-xs"
+                className="border-border/60 bg-muted/20 gap-y-density-1 py-density-2 flex flex-col gap-x-1 rounded-md border px-2 text-xs"
               >
-                <div className="flex items-center justify-between gap-2">
+                <div className="gap-y-density-2 flex items-center justify-between gap-x-2">
                   <code className="text-foreground font-mono">
                     {item.preview}
                   </code>
@@ -176,7 +176,7 @@ export const RedemptionBatchResultToast: React.FC<
                       {t("common:status.success")}
                     </span>
                   ) : (
-                    <div className="flex items-center gap-2">
+                    <div className="gap-y-density-2 flex items-center gap-x-2">
                       <span className="text-destructive-text">
                         {t("common:status.failed")}
                       </span>

@@ -168,7 +168,7 @@ export const COMPONENTS = {
 
   // Input variants
   input: {
-    base: "block w-full px-3 py-2 border border-input rounded-md text-sm placeholder:text-muted-foreground bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors",
+    base: "block w-full px-3 py-density-2 border border-input rounded-md text-sm placeholder:text-muted-foreground bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors",
     error:
       "border-destructive-border focus:ring-destructive-text focus:border-destructive-border",
     success:

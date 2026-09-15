@@ -78,7 +78,7 @@ function OptionsPageContentFallback() {
   const { t } = useTranslation("common")
 
   return (
-    <div className="flex items-center justify-center py-12">
+    <div className="py-density-12 flex items-center justify-center">
       <Spinner size="lg" aria-label={t("status.loading")} />
     </div>
   )
@@ -163,8 +163,8 @@ function OptionsPage() {
             tabIndex={-1}
             {...{ [PRODUCT_TOUR_FOCUS_RETURN_ATTRIBUTE]: true }}
           >
-            <div className="mx-auto w-full max-w-7xl px-2 py-3 sm:px-4 sm:py-5 md:px-6 md:py-6">
-              <PopupInterruptionHintBanner className="mb-3 sm:mb-4" />
+            <div className="py-density-3 sm:py-density-5 md:py-density-6 mx-auto w-full max-w-7xl px-2 sm:px-4 md:px-6">
+              <PopupInterruptionHintBanner className="mb-density-3 sm:mb-density-4" />
               <div
                 className="bg-background border-border overflow-hidden rounded-2xl border shadow-sm"
                 data-testid={OPTIONS_TEST_IDS.contentCard}

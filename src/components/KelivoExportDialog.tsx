@@ -218,7 +218,7 @@ export function KelivoExportDialog({
         </div>
       }
       footer={
-        <div className="flex justify-end gap-2">
+        <div className="gap-y-density-2 flex justify-end gap-x-2">
           <Button type="button" variant="ghost" onClick={handleClose}>
             {t("common:actions.cancel")}
           </Button>
@@ -233,7 +233,7 @@ export function KelivoExportDialog({
         </div>
       }
     >
-      <form id={formId} className="space-y-4" onSubmit={handleSubmit}>
+      <form id={formId} className="space-y-density-4" onSubmit={handleSubmit}>
         <FormField
           label={t("aiApiVerification:verifyDialog.meta.apiType")}
           required
@@ -329,7 +329,7 @@ export function KelivoExportDialog({
         {mobileImportCode ? (
           <section
             aria-labelledby={mobileQrCodeHeadingId}
-            className="border-border bg-surface-subtle dark:bg-background/30 rounded-lg border p-4"
+            className="border-border bg-surface-subtle dark:bg-background/30 py-density-4 rounded-lg border px-4"
           >
             <h3
               id={mobileQrCodeHeadingId}
@@ -337,10 +337,10 @@ export function KelivoExportDialog({
             >
               {t("ui:dialog.kelivo.mobileQrCode.title")}
             </h3>
-            <p className="dark:text-secondary-foreground text-muted-foreground mt-1 text-xs">
+            <p className="dark:text-secondary-foreground text-muted-foreground mt-density-1 text-xs">
               {t("ui:dialog.kelivo.mobileQrCode.description")}
             </p>
-            <div className="bg-card mt-3 flex justify-center overflow-hidden rounded-lg p-3">
+            <div className="bg-card mt-density-3 py-density-3 flex justify-center overflow-hidden rounded-lg px-3">
               <QRCodeSVG
                 value={mobileImportCode}
                 size={196}

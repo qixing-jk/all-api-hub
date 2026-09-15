@@ -32,8 +32,8 @@ export function ResponsiveButtonGroup({
       className={cn(
         "flex w-full flex-wrap [@container(min-width:42rem)]:w-auto",
         variant === "segmented"
-          ? `${COLORS.background.tertiary} corners-concentric rounded-md p-1 shadow-sm [--corner-inset:4px] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`
-          : "gap-2",
+          ? `${COLORS.background.tertiary} corners-concentric py-density-1 rounded-md px-1 shadow-sm [--corner-inset:4px] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`
+          : "gap-y-density-2 gap-x-2",
         className,
       )}
       {...props}

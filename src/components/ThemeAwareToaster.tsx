@@ -78,7 +78,7 @@ export const ThemeAwareToaster = ({
                 {toastInstance.type !== "loading" && (
                   <button
                     type="button"
-                    className="focus-visible:ring-ring rounded-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                    className="focus-visible:ring-ring inline-flex size-(--density-control-xs) shrink-0 items-center justify-center rounded-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                     aria-label={translate("actions.close")}
                     onClick={() => toast.dismiss(toastInstance.id)}
                   >

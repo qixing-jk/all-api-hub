@@ -17,11 +17,11 @@ html.desktop-extension-popup #root {
 .popup-skeleton {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: calc(12px * var(--density-space-scale, 1));
   box-sizing: border-box;
   width: 100%;
   height: 100vh;
-  padding: 16px;
+  padding: calc(16px * var(--density-space-scale, 1)) 16px;
   background: var(--background);
 }
 
@@ -45,7 +45,7 @@ html.desktop-extension-popup #root {
 
 .popup-skeleton__row {
   border-radius: var(--radius-lg, 16px);
-  height: 64px;
+  height: calc(64px * var(--density-space-scale, 1));
   width: 100%;
 }
 

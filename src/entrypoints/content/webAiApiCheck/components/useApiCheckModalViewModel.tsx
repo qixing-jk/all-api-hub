@@ -558,7 +558,7 @@ export function useApiCheckModalViewModel() {
 
         toast.success(
           (toastInstance) => (
-            <div className="flex min-w-0 items-center gap-2">
+            <div className="gap-y-density-2 flex min-w-0 items-center gap-x-2">
               <span className="min-w-0 flex-1 truncate">
                 {t("webAiApiCheck:modal.messages.savedToProfiles", {
                   name: typeof response.name === "string" ? response.name : "",
@@ -569,7 +569,7 @@ export function useApiCheckModalViewModel() {
                 data-testid={
                   WEB_AI_API_CHECK_TEST_IDS.openApiProfilesToastButton
                 }
-                className="bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 rounded-md px-2 py-1 text-xs font-medium"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 py-density-1 min-h-(--density-control-xs) shrink-0 rounded-md px-2 text-xs font-medium"
                 onClick={() => {
                   void sendRuntimeMessage({
                     action: RuntimeActionIds.OpenSettingsApiCredentialProfiles,

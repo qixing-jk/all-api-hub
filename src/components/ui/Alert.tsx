@@ -5,32 +5,34 @@ import React from "react"
 import { Heading5 } from "~/components/ui/Typography"
 import { cn } from "~/lib/utils"
 
-const alertVariants = cva("relative w-full rounded-lg border p-4", {
-  variants: {
-    variant: {
-      default: "bg-card text-foreground border-border",
-      // Emphasized guidance uses the theme; info is reserved for information states.
-      primary:
-        "bg-primary-soft text-primary-soft-foreground border-primary-soft-border",
-      destructive:
-        "bg-destructive-soft text-destructive-soft-foreground border-destructive-border",
-      success:
-        "bg-success-soft text-success-soft-foreground border-success-border",
-      warning:
-        "bg-warning-soft text-warning-soft-foreground border-warning-border",
-      info: "bg-info-soft text-info-soft-foreground border-info-border",
+const alertVariants = cva(
+  "relative w-full rounded-lg border px-4 py-density-4",
+  {
+    variants: {
+      variant: {
+        default: "bg-card text-foreground border-border",
+        // Emphasized guidance uses the theme; info is reserved for information states.
+        primary:
+          "bg-primary-soft text-primary-soft-foreground border-primary-soft-border",
+        destructive:
+          "bg-destructive-soft text-destructive-soft-foreground border-destructive-border",
+        success:
+          "bg-success-soft text-success-soft-foreground border-success-border",
+        warning:
+          "bg-warning-soft text-warning-soft-foreground border-warning-border",
+        info: "bg-info-soft text-info-soft-foreground border-info-border",
+      },
+      compact: {
+        false: "",
+        true: "grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-density-3 px-3 py-density-3",
+      },
     },
-    compact: {
-      false:
-        "[&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4",
-      true: "grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 p-3",
+    defaultVariants: {
+      variant: "default",
+      compact: false,
     },
   },
-  defaultVariants: {
-    variant: "default",
-    compact: false,
-  },
-})
+)
 
 export interface AlertProps
   extends React.HTMLAttributes<HTMLDivElement>,
@@ -79,11 +81,17 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
       <div
         ref={ref}
         role="alert"
-        className={cn(alertVariants({ variant, compact }), className)}
+        className={cn(
+          alertVariants({ variant, compact }),
+          showIcon
+            ? "grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3"
+            : "block",
+          className,
+        )}
         {...props}
       >
         {icon}
-        <div className={cn("ml-0 space-y-1.5", compact && "min-w-0")}>
+        <div className={cn("space-y-density-1-5 ml-0", compact && "min-w-0")}>
           {title && (
             <Heading5 className="leading-none tracking-tight">{title}</Heading5>
           )}
@@ -104,7 +112,10 @@ const AlertTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <h5
     ref={ref}
-    className={cn("mb-1 leading-none font-medium tracking-tight", className)}
+    className={cn(
+      "mb-density-1 leading-none font-medium tracking-tight",
+      className,
+    )}
     {...props}
   />
 ))

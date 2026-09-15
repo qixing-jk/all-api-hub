@@ -62,7 +62,7 @@ export function CollapsibleSection({
       </CollapsibleTrigger>
       <CollapsibleContent
         className={cn(
-          "dark:border-border border-border-subtle bg-card mt-2 rounded-md border p-2",
+          "dark:border-border border-border-subtle bg-card mt-density-2 py-density-2 rounded-md border px-2",
           panelClassName,
         )}
       >

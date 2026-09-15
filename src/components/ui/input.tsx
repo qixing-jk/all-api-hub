@@ -10,7 +10,7 @@ import { IconButton } from "~/components/ui/IconButton"
 import { cn } from "~/lib/utils"
 
 const inputVariants = cva(
-  "file:text-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input h-(--density-control) w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive placeholder:text-faint-foreground text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent",
+  "file:text-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input h-(--density-control) w-full min-w-0 rounded-md border bg-transparent px-3 py-density-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive placeholder:text-faint-foreground text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent",
   {
     variants: {
       variant: {
@@ -119,11 +119,11 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       Number(showClearButton)
     const rightPaddingClass =
       rightContentCount >= 3
-        ? "pr-24"
+        ? "pr-[calc(var(--density-control-sm)*3+1rem)]"
         : rightContentCount === 2
-          ? "pr-16"
+          ? "pr-[calc(var(--density-control-sm)*2+1rem)]"
           : rightContentCount === 1
-            ? "pr-10"
+            ? "pr-[calc(var(--density-control-sm)+0.75rem)]"
             : ""
     const inputType = showRevealButton && isRevealed ? "text" : props.type
 
@@ -182,7 +182,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           type={inputType}
         />
         {showRightContent && (
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center gap-1 pr-2">
+          <div className="gap-y-density-1 pointer-events-none absolute inset-y-0 right-0 flex items-center gap-x-1 pr-2">
             {rightIcon && (
               <span className="text-faint-foreground pointer-events-auto">
                 {rightIcon}
@@ -224,7 +224,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {(error || success) && (
           <p
             className={cn(
-              "mt-1 text-xs",
+              "mt-density-1 text-xs",
               error ? "text-destructive-text" : "text-success-text",
             )}
           >

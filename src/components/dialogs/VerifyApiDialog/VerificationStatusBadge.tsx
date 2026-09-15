@@ -27,7 +27,7 @@ export function VerificationStatusBadge({
   if (status === API_VERIFICATION_PROBE_STATUSES.Pass) {
     return (
       <Badge variant="success" size="sm">
-        <span className="flex items-center gap-1">
+        <span className="gap-y-density-1 flex items-center gap-x-1">
           <CircleCheck className="h-3.5 w-3.5" />
           {t("verifyDialog.status.pass")}
         </span>
@@ -53,7 +53,7 @@ export function VerificationStatusBadge({
 
   return (
     <Badge variant="destructive" size="sm">
-      <span className="flex items-center gap-1">
+      <span className="gap-y-density-1 flex items-center gap-x-1">
         <CircleX className="h-3.5 w-3.5" />
         {t("verifyDialog.status.fail")}
       </span>

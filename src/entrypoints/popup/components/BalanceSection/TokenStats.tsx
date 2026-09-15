@@ -101,7 +101,7 @@ export const TokenStats = React.memo(() => {
   return (
     <Tooltip
       content={
-        <div className="space-y-1">
+        <div className="space-y-density-1">
           <div>
             {promptLabel}: {promptTokens} {tokenLabel}
           </div>
@@ -113,18 +113,18 @@ export const TokenStats = React.memo(() => {
       anchorAsChild
     >
       <div
-        className="focus-visible:ring-ring flex cursor-help items-center justify-center gap-3 rounded-sm outline-none focus-visible:ring-2"
+        className="focus-visible:ring-ring gap-y-density-3 flex cursor-help items-center justify-center gap-x-3 rounded-sm outline-none focus-visible:ring-2"
         role="group"
         tabIndex={0}
         aria-label={completeBreakdownLabel}
       >
-        <div className="flex items-center gap-1">
+        <div className="gap-y-density-1 flex items-center gap-x-1">
           <ArrowUp className="text-pricing-input h-4 w-4" />
           <BodySmall weight="medium">
             {formatTokenCount(todayTokens.today_total_prompt_tokens)}
           </BodySmall>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="gap-y-density-1 flex items-center gap-x-1">
           <ArrowDown className="text-pricing-output h-4 w-4" />
           <BodySmall weight="medium">
             {formatTokenCount(todayTokens.today_total_completion_tokens)}

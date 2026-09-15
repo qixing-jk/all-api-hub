@@ -161,11 +161,11 @@ export function ConfirmDialog({
         </div>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-density-4">
         <div className="flex space-x-3">
           <div className="flex-1">
             {warningTitle && (
-              <h3 className="text-foreground mb-2 text-sm font-medium">
+              <h3 className="text-foreground mb-density-2 text-sm font-medium">
                 {warningTitle}
               </h3>
             )}

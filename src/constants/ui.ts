@@ -53,16 +53,16 @@ export const UI_CONSTANTS = {
     // 按钮样式
     BUTTON: {
       PRIMARY:
-        "flex-1 flex items-center justify-center space-x-2 py-2.5 px-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 dark:focus:ring-offset-background transition-colors text-sm font-medium shadow-sm border border-theme-600",
+        "flex-1 flex items-center justify-center space-x-2 py-density-2-5 px-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 dark:focus:ring-offset-background transition-colors text-sm font-medium shadow-sm border border-theme-600",
       SECONDARY:
-        "flex items-center justify-center py-2.5 px-3 bg-card text-muted-foreground dark:text-secondary-foreground rounded-lg hover:bg-surface-subtle dark:hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 dark:focus:ring-offset-background transition-colors text-sm font-medium border border-border-strong dark:border-border",
+        "flex items-center justify-center py-density-2-5 px-3 bg-card text-muted-foreground dark:text-secondary-foreground rounded-lg hover:bg-surface-subtle dark:hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 dark:focus:ring-offset-background transition-colors text-sm font-medium border border-border-strong dark:border-border",
       ICON: "p-2 text-faint-foreground dark:text-muted-foreground hover:text-muted-foreground dark:hover:text-secondary-foreground hover:bg-muted dark:hover:bg-secondary rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 dark:focus:ring-offset-background border border-border",
       SUCCESS:
-        "px-4 py-2 bg-success text-success-foreground text-sm font-medium rounded-lg hover:bg-success-hover focus:outline-none focus:ring-2 focus:ring-success-text focus:ring-offset-2 dark:focus:ring-offset-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2",
+        "px-4 py-density-2 bg-success text-success-foreground text-sm font-medium rounded-lg hover:bg-success-hover focus:outline-none focus:ring-2 focus:ring-success-text focus:ring-offset-2 dark:focus:ring-offset-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2",
       REFRESH:
-        "px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 dark:focus:ring-offset-background transition-colors disabled:opacity-50",
-      COPY: "inline-flex items-center space-x-2 cursor-pointer rounded-md bg-muted dark:bg-secondary px-3 py-1.5 text-secondary-foreground hover:bg-secondary dark:hover:bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 dark:focus:ring-offset-background",
-      SAVE: "rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 dark:focus:ring-offset-background transition-colors",
+        "px-4 py-density-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 dark:focus:ring-offset-background transition-colors disabled:opacity-50",
+      COPY: "inline-flex items-center space-x-2 cursor-pointer rounded-md bg-muted dark:bg-secondary px-3 py-density-1-5 text-secondary-foreground hover:bg-secondary dark:hover:bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 dark:focus:ring-offset-background",
+      SAVE: "rounded-md bg-primary px-4 py-density-2 text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 dark:focus:ring-offset-background transition-colors",
     },
 
     // 状态指示器
@@ -84,10 +84,10 @@ export const UI_CONSTANTS = {
 
     // 输入框
     INPUT: {
-      BASE: "block w-full py-3 border border-border-strong dark:border-border rounded-lg text-sm placeholder:text-muted-foreground bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors",
+      BASE: "block w-full py-density-3 border border-border-strong dark:border-border rounded-lg text-sm placeholder:text-muted-foreground bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors",
       WITH_ICON: "pl-10",
       SEARCH:
-        "w-full pl-10 pr-4 py-2 border border-border-strong dark:border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:bg-muted dark:disabled:bg-secondary disabled:cursor-not-allowed bg-card text-foreground placeholder:text-muted-foreground",
+        "w-full pl-10 pr-4 py-density-2 border border-border-strong dark:border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:bg-muted dark:disabled:bg-secondary disabled:cursor-not-allowed bg-card text-foreground placeholder:text-muted-foreground",
       CHECKBOX:
         "rounded border-border-strong dark:border-border text-theme-600 focus:ring-ring focus:ring-offset-2 dark:focus:ring-offset-background",
     },

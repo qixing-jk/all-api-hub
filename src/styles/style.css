@@ -18,6 +18,9 @@
   --spacing-density-5: calc(1.25rem * var(--density-space-scale));
   --spacing-density-6: calc(1.5rem * var(--density-space-scale));
   --spacing-density-8: calc(2rem * var(--density-space-scale));
+  --spacing-density-10: calc(2.5rem * var(--density-space-scale));
+  --spacing-density-12: calc(3rem * var(--density-space-scale));
+  --spacing-density-16: calc(4rem * var(--density-space-scale));
   --color-overlay: var(--overlay);
   --color-shadow: var(--shadow-color);
   --color-surface-subtle: var(--surface-subtle);

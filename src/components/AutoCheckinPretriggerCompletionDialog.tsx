@@ -83,7 +83,7 @@ export function AutoCheckinPretriggerCompletionDialog({
   }
 
   const footer = (
-    <div className="flex gap-2">
+    <div className="gap-y-density-2 flex gap-x-2">
       <Button
         type="button"
         variant="secondary"
@@ -110,14 +110,14 @@ export function AutoCheckinPretriggerCompletionDialog({
       header={header}
       footer={footer}
     >
-      <div className="space-y-4">
+      <div className="space-y-density-4">
         <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
           {t("uiOpenPretrigger.dialogDescription")}
         </p>
 
         {summary && (
-          <div className="dark:bg-secondary border-border bg-surface-subtle grid grid-cols-2 gap-3 rounded-lg border p-3 text-sm">
-            <div className="flex items-center justify-between gap-3">
+          <div className="dark:bg-secondary border-border bg-surface-subtle gap-y-density-3 py-density-3 grid grid-cols-2 gap-x-3 rounded-lg border px-3 text-sm">
+            <div className="gap-y-density-3 flex items-center justify-between gap-x-3">
               <span className="dark:text-secondary-foreground text-muted-foreground">
                 {t("status.summary.eligible")}
               </span>
@@ -125,7 +125,7 @@ export function AutoCheckinPretriggerCompletionDialog({
                 {summary.totalEligible}
               </span>
             </div>
-            <div className="flex items-center justify-between gap-3">
+            <div className="gap-y-density-3 flex items-center justify-between gap-x-3">
               <span className="dark:text-secondary-foreground text-muted-foreground">
                 {t("status.summary.executed")}
               </span>
@@ -133,7 +133,7 @@ export function AutoCheckinPretriggerCompletionDialog({
                 {summary.executed}
               </span>
             </div>
-            <div className="flex items-center justify-between gap-3">
+            <div className="gap-y-density-3 flex items-center justify-between gap-x-3">
               <span className="dark:text-secondary-foreground text-muted-foreground">
                 {t("status.summary.success")}
               </span>
@@ -141,7 +141,7 @@ export function AutoCheckinPretriggerCompletionDialog({
                 {summary.successCount}
               </span>
             </div>
-            <div className="flex items-center justify-between gap-3">
+            <div className="gap-y-density-3 flex items-center justify-between gap-x-3">
               <span className="dark:text-secondary-foreground text-muted-foreground">
                 {t("status.summary.failed")}
               </span>
@@ -149,7 +149,7 @@ export function AutoCheckinPretriggerCompletionDialog({
                 {summary.failedCount}
               </span>
             </div>
-            <div className="flex items-center justify-between gap-3">
+            <div className="gap-y-density-3 flex items-center justify-between gap-x-3">
               <span className="dark:text-secondary-foreground text-muted-foreground">
                 {t("status.summary.skipped")}
               </span>

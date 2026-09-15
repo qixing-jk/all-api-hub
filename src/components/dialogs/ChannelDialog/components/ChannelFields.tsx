@@ -45,8 +45,8 @@ function ChannelFieldMessage({
       role={tone === "error" ? "alert" : undefined}
       className={
         tone === "error"
-          ? "text-destructive-text mt-1 text-xs"
-          : "dark:text-secondary-foreground text-muted-foreground mt-1 text-xs"
+          ? "text-destructive-text mt-density-1 text-xs"
+          : "dark:text-secondary-foreground text-muted-foreground mt-density-1 text-xs"
       }
     >
       {children}
@@ -301,7 +301,7 @@ export function ChannelSecretField({
         </ChannelFieldMessage>
       ) : null}
       {canLoadRealKey ? (
-        <div className="mt-1">
+        <div className="mt-density-1">
           <p
             id={realKeyHintId}
             role={realKeyLoadError ? "alert" : "status"}
@@ -323,7 +323,9 @@ export function ChannelSecretField({
         </ChannelFieldMessage>
       ) : null}
       {actions ? (
-        <div className="mt-2 flex flex-wrap gap-2">{actions}</div>
+        <div className="mt-density-2 gap-y-density-2 flex flex-wrap gap-x-2">
+          {actions}
+        </div>
       ) : null}
     </div>
   )
@@ -412,12 +414,12 @@ export function ChannelModelsField({
   const errorId = errorMessage ? "channel-models-error" : undefined
   return (
     <div role="group" aria-label={t("channelDialog:fields.models.label")}>
-      <div className="mb-1.5 flex items-center justify-between gap-3">
+      <div className="mb-density-1-5 gap-y-density-3 flex items-center justify-between gap-x-3">
         <ResourceFieldLabel className="mb-0 min-w-0" required={required}>
           {t("channelDialog:fields.models.label")}
         </ResourceFieldLabel>
         {showBulkActions || actions ? (
-          <div className="ml-auto flex max-w-[65%] shrink-0 flex-wrap items-center justify-end gap-2">
+          <div className="gap-y-density-2 ml-auto flex max-w-[65%] shrink-0 flex-wrap items-center justify-end gap-x-2">
             {showBulkActions ? (
               <>
                 <Button
@@ -460,7 +462,7 @@ export function ChannelModelsField({
           description={t(
             "channelDialog:warnings.modelsPrefillFailed.description",
           )}
-          className="mb-3"
+          className="mb-density-3"
         />
       ) : null}
       <CompactMultiSelect

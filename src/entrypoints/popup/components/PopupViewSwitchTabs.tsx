@@ -78,7 +78,7 @@ export default function PopupViewSwitchTabs({
   getAnalyticsAction,
 }: PopupViewSwitchTabsProps) {
   const baseClassName = cn(
-    `${CORNERS.item} px-2 py-1 text-xs font-medium transition-colors`,
+    `${CORNERS.item} px-2 py-density-1 text-xs font-medium transition-colors`,
     ANIMATIONS.transition.base,
   )
   const tabs = [
@@ -111,7 +111,7 @@ export default function PopupViewSwitchTabs({
     >
       <TabsList
         className={cn(
-          "corners-concentric inline-flex min-w-0 gap-1 rounded-md p-1 [--corner-inset:4px]",
+          "corners-concentric gap-y-density-1 py-density-1 inline-flex min-w-0 gap-x-1 rounded-md px-1 [--corner-inset:4px]",
           COLORS.background.tertiary,
         )}
       >

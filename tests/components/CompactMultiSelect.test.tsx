@@ -94,6 +94,21 @@ describe("CompactMultiSelect", () => {
     expect(onChange).toHaveBeenCalledWith(["id-alpha"])
   })
 
+  it("sizes selected chips to contain their density-aware remove button", () => {
+    renderCompact(
+      <CompactMultiSelect
+        displayMode="chips"
+        options={[{ value: "id-alpha", label: "Alpha" }]}
+        selected={["id-alpha"]}
+        onChange={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.getByText("Alpha").closest('[data-slot="combobox-chip"]'),
+    ).toHaveClass("h-(--density-control-xs)")
+  })
+
   it("shows a compact filtered-results toolbar by default in chips mode", async () => {
     const user = userEvent.setup()
 

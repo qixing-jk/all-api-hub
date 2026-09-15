@@ -150,7 +150,9 @@ describe("Input", () => {
       />,
     )
 
-    expect(await screen.findByLabelText("compound-token")).toHaveClass("pr-24")
+    expect(await screen.findByLabelText("compound-token")).toHaveClass(
+      "pr-[calc(var(--density-control-sm)*3+1rem)]",
+    )
     expect(screen.getByTestId("right-icon")).toBeInTheDocument()
     expect(
       screen.getByRole("button", { name: "Show token" }),

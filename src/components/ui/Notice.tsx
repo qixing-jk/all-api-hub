@@ -83,13 +83,13 @@ export const Notice = React.forwardRef<HTMLDivElement, NoticeProps>(
         aria-labelledby={title ? titleId : undefined}
         aria-describedby={description ? descriptionId : undefined}
         className={cn(
-          "rounded-lg border p-3 shadow-xs",
+          "py-density-3 rounded-lg border px-3 shadow-xs",
           toneStyles.surface,
           className,
         )}
         {...props}
       >
-        <div className="flex gap-2.5">
+        <div className="gap-y-density-2-5 flex gap-x-2.5">
           {resolvedIcon ? (
             <div
               aria-hidden="true"
@@ -120,7 +120,9 @@ export const Notice = React.forwardRef<HTMLDivElement, NoticeProps>(
             ) : null}
             {children}
             {actions ? (
-              <div className="mt-2 flex flex-wrap gap-2">{actions}</div>
+              <div className="mt-density-2 gap-y-density-2 flex flex-wrap gap-x-2">
+                {actions}
+              </div>
             ) : null}
           </div>
         </div>

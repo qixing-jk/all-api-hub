@@ -32,7 +32,7 @@ export const RedemptionToaster: React.FC = () => {
       onMouseEnter={startPause}
       onMouseLeave={endPause}
     >
-      <div className="flex max-h-[calc(100vh-3rem)] max-w-full flex-col gap-3 overflow-y-auto px-3 sm:px-4">
+      <div className="gap-y-density-3 flex max-h-[calc(100vh-3rem)] max-w-full flex-col gap-x-3 overflow-y-auto px-3 sm:px-4">
         {visibleToasts.map((toast) => {
           // 自定义 toast（toast.custom）：统一由这里控制外层宽度/布局，内部组件只关心内容样式
           if (toast.type === "custom") {
@@ -50,7 +50,7 @@ export const RedemptionToaster: React.FC = () => {
           }
 
           const baseCardClasses =
-            "pointer-events-auto w-full sm:w-[360px] max-w-[96vw] rounded-lg border border-border bg-background px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm flex items-start gap-2 text-foreground break-words"
+            "pointer-events-auto w-full sm:w-[360px] max-w-[96vw] rounded-lg border border-border bg-background px-3 py-density-2 sm:px-4 sm:py-density-3 text-xs sm:text-sm flex items-start gap-x-2 gap-y-density-2 text-foreground break-words"
 
           const typeClasses =
             toast.type === "success"

@@ -131,10 +131,19 @@ describe("SearchableSelect", () => {
     expect(screen.getByText("3")).toBeInTheDocument()
     expect(document.querySelector('[data-slot="popover-content"]')).toHaveClass(
       "max-h-(--radix-popover-content-available-height)",
+      "flex",
+      "flex-col",
       "overflow-hidden",
     )
+    expect(document.querySelector('[data-slot="command"]')).toHaveClass(
+      "min-h-0",
+      "flex-1",
+      "[&>[data-slot=command-input-wrapper]]:shrink-0",
+    )
     expect(document.querySelector('[data-slot="command-list"]')).toHaveClass(
-      "max-h-[calc(var(--radix-popover-content-available-height)-2.25rem)]",
+      "max-h-none",
+      "min-h-0",
+      "flex-1",
     )
   })
 })

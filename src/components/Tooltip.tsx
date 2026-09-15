@@ -172,7 +172,10 @@ export default function Tooltip({
   ) : (
     <div
       id={anchorId}
-      className={cn("flex items-center justify-center gap-2", wrapperClassName)}
+      className={cn(
+        "gap-y-density-2 flex items-center justify-center gap-x-2",
+        wrapperClassName,
+      )}
       onFocusCapture={handleFocusCapture}
       onBlurCapture={handleBlurCapture}
     >
@@ -180,7 +183,7 @@ export default function Tooltip({
     </div>
   )
 
-  const defaultClassName = `${Z_INDEX.tooltip} max-w-[90vw] rounded-sm bg-surface-inverse px-3 py-2 text-xs text-inverse-foreground shadow-lg dark:bg-secondary dark:text-foreground ${className}`
+  const defaultClassName = `${Z_INDEX.tooltip} max-w-[90vw] rounded-sm bg-surface-inverse px-3 py-density-2 text-xs text-inverse-foreground shadow-lg dark:bg-secondary dark:text-foreground ${className}`
   return (
     <TooltipContext.Provider value={anchorId}>
       {anchor}

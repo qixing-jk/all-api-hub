@@ -44,8 +44,8 @@ export default function BookmarkStatsSection() {
 
   return (
     <>
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
+      <div className="space-y-density-3">
+        <div className="gap-y-density-3 flex items-center justify-between gap-x-3">
           <BodySmall className="font-medium">
             {t("bookmark:stats.totalBookmarks")}
           </BodySmall>
@@ -55,8 +55,8 @@ export default function BookmarkStatsSection() {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
+        <div className="gap-y-density-3 grid grid-cols-2 gap-x-3">
+          <div className="space-y-density-1">
             <Caption className="font-medium">
               {t("bookmark:stats.pinnedBookmarks")}
             </Caption>
@@ -66,7 +66,7 @@ export default function BookmarkStatsSection() {
               isInitialLoad={isInitialLoad}
             />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-density-1">
             <Caption className="font-medium">
               {t("bookmark:stats.usedTags")}
             </Caption>

@@ -26,19 +26,19 @@ const FeatureList = ({ title, items, variant }: FeatureListProps) => {
 
   return (
     <div>
-      <h3 className="dark:text-foreground text-secondary-foreground mb-3 flex items-center text-base font-medium">
+      <h3 className="dark:text-foreground text-secondary-foreground mb-density-3 flex items-center text-base font-medium">
         <div className={`h-2 w-2 ${palette.dot} mr-2 rounded-full`}></div>
         {title}
       </h3>
-      <div className={`rounded-lg border p-4 ${palette.box}`}>
-        <ul className="space-y-2">
+      <div className={`py-density-4 rounded-lg border px-4 ${palette.box}`}>
+        <ul className="space-y-density-2">
           {items.map((feature, index) => (
             <li
               key={index}
               className={`flex items-start space-x-2 text-sm ${palette.text}`}
             >
               <div
-                className={`h-1.5 w-1.5 ${palette.bullet} mt-2 shrink-0 rounded-full`}
+                className={`h-1.5 w-1.5 ${palette.bullet} mt-density-2 shrink-0 rounded-full`}
               ></div>
               <span>{feature}</span>
             </li>

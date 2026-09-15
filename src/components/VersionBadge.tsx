@@ -54,7 +54,7 @@ export function VersionBadge({
         target="_blank"
         rel="noopener noreferrer"
         className={cn(
-          "tap-highlight-transparent inline-flex touch-manipulation items-center gap-1.5",
+          "tap-highlight-transparent gap-y-density-1-5 inline-flex touch-manipulation items-center gap-x-1.5",
         )}
         aria-label={ariaLabel}
       >

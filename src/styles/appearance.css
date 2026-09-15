@@ -128,8 +128,7 @@
 
 /* Density is independent of color, typography, radius, and content width. */
 :root,
-:host,
-.density-default {
+:host {
   --density-space-scale: 1;
   --density-control-xxs: 1.25rem;
   --density-control-xs: 1.5rem;
@@ -140,6 +139,7 @@
   --density-control-xl: 3rem;
   --density-input-lg: 2.75rem;
   --density-table-head: 3rem;
+  --density-tree-row: 2.125rem;
 }
 [data-theme-density="compact"] {
   /* Preserve a 24px floor for tiny icon actions instead of shrinking hit areas. */
@@ -153,6 +153,7 @@
   --density-control-xl: 2.75rem;
   --density-input-lg: 2.5rem;
   --density-table-head: 2.5rem;
+  --density-tree-row: 1.875rem;
 }
 [data-theme-density="comfortable"] {
   --density-control-xxs: 1.75rem;
@@ -165,4 +166,5 @@
   --density-control-xl: 3.25rem;
   --density-input-lg: 3rem;
   --density-table-head: 3.5rem;
+  --density-tree-row: 2.375rem;
 }

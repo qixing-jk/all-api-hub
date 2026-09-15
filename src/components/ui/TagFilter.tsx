@@ -283,13 +283,13 @@ export function TagFilter(props: TagFilterProps) {
         disabled={isOptionDisabled}
         data-tag-filter-chip="true"
         className={cn(
-          "border px-3 py-1 text-xs shadow-xs disabled:cursor-not-allowed disabled:opacity-60 sm:text-[13px]",
+          "py-density-1 border px-3 text-xs shadow-xs disabled:cursor-not-allowed disabled:opacity-60 sm:text-[13px]",
           chipBaseClasses,
           isInOverflow && "w-full justify-between",
         )}
         onClick={handleClick}
       >
-        <span className="flex min-w-0 items-center gap-1">
+        <span className="gap-y-density-1 flex min-w-0 items-center gap-x-1">
           {option.icon && <span className="shrink-0">{option.icon}</span>}
           <span className="truncate" title={option.title ?? option.label}>
             {option.label}
@@ -313,7 +313,10 @@ export function TagFilter(props: TagFilterProps) {
   return (
     <div
       ref={containerRef}
-      className={cn("flex flex-wrap items-center gap-2", className)}
+      className={cn(
+        "gap-y-density-2 flex flex-wrap items-center gap-x-2",
+        className,
+      )}
     >
       {includeAllOption && (
         <ToggleButton
@@ -324,7 +327,7 @@ export function TagFilter(props: TagFilterProps) {
           isActive={!hasSelection}
           disabled={disabled}
           className={cn(
-            "border px-3 py-1 text-xs font-medium shadow-xs sm:text-[13px]",
+            "py-density-1 border px-3 text-xs font-medium shadow-xs sm:text-[13px]",
             !hasSelection
               ? "border-primary bg-primary text-primary-foreground"
               : "dark:bg-card/70 border-border bg-card text-foreground",
@@ -332,7 +335,7 @@ export function TagFilter(props: TagFilterProps) {
           onClick={handleAllClick}
           aria-pressed={!hasSelection}
         >
-          <span className="flex min-w-0 items-center gap-1">
+          <span className="gap-y-density-1 flex min-w-0 items-center gap-x-1">
             <span className="truncate">{allLabel ?? t("common:total")}</span>
             {typeof allCount === "number" && (
               <Badge
@@ -360,10 +363,10 @@ export function TagFilter(props: TagFilterProps) {
                 size="sm"
                 shape="pill"
                 disabled={disabled}
-                className="dark:bg-card/70 border-border bg-card text-foreground border px-3 py-1 text-xs shadow-xs sm:text-[13px]"
+                className="dark:bg-card/70 border-border bg-card text-foreground py-density-1 border px-3 text-xs shadow-xs sm:text-[13px]"
                 aria-label={moreLabel}
               >
-                <span className="flex items-center gap-1">
+                <span className="gap-y-density-1 flex items-center gap-x-1">
                   <span>{moreLabel}</span>
                   <Badge
                     variant="outline"
@@ -384,7 +387,7 @@ export function TagFilter(props: TagFilterProps) {
                 </span>
               </ToggleButton>
             </PopoverTrigger>
-            <PopoverContent className="flex max-h-64 flex-col gap-2 overflow-y-auto p-2">
+            <PopoverContent className="gap-y-density-2 py-density-2 flex max-h-64 flex-col gap-x-2 overflow-y-auto px-2">
               {overflowOptions.map((option) => renderTagButton(option, true))}
             </PopoverContent>
           </Popover>
@@ -395,7 +398,7 @@ export function TagFilter(props: TagFilterProps) {
             size="sm"
             shape="pill"
             disabled={disabled}
-            className="dark:bg-card/70 border-border bg-card text-foreground border px-3 py-1 text-xs shadow-xs sm:text-[13px]"
+            className="dark:bg-card/70 border-border bg-card text-foreground py-density-1 border px-3 text-xs shadow-xs sm:text-[13px]"
             aria-label={moreLabel}
             onClick={() => {
               if (!disabled) {
@@ -403,7 +406,7 @@ export function TagFilter(props: TagFilterProps) {
               }
             }}
           >
-            <span className="flex items-center gap-1">
+            <span className="gap-y-density-1 flex items-center gap-x-1">
               <span>{moreLabel}</span>
               <Badge
                 variant="outline"

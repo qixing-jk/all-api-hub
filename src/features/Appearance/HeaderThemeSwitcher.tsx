@@ -75,7 +75,7 @@ export default function HeaderThemeSwitcher() {
               const { label, icon: Icon, iconClassName } = themeOptions[mode]
               return (
                 <DropdownMenuRadioItem key={mode} value={mode}>
-                  <div className="flex min-w-0 items-center gap-2">
+                  <div className="gap-y-density-2 flex min-w-0 items-center gap-x-2">
                     <Icon
                       className={cn(
                         "h-4 w-4 shrink-0 transition-colors",

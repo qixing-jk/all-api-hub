@@ -15,12 +15,12 @@ export function ThemePresetPreview({
         <span
           key={String(dark)}
           {...getAppearanceScopeAttributes({ preset, color: THEME_COLOR.BLUE })}
-          className={`${dark ? THEME_MODE.DARK : ""} bg-background flex h-16 w-1/2 gap-1 p-2`}
+          className={`${dark ? THEME_MODE.DARK : ""} bg-background gap-y-density-1 py-density-2 flex h-16 w-1/2 gap-x-1 px-2`}
         >
           <span className="bg-sidebar w-3 rounded-xs" />
-          <span className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="gap-y-density-1 flex min-w-0 flex-1 flex-col gap-x-1">
             <span className="bg-foreground/60 h-1 w-2/3 rounded-full" />
-            <span className="bg-card border-border flex flex-1 items-end rounded-xs border p-1">
+            <span className="bg-card border-border py-density-1 flex flex-1 items-end rounded-xs border px-1">
               <span className="bg-primary h-2 w-1/2 rounded-xs" />
             </span>
           </span>
@@ -39,11 +39,14 @@ export function AppearancePreview({ presetLabel }: { presetLabel: string }) {
       className="bg-muted/40 space-y-density-3 py-density-4 rounded-lg border px-4"
       aria-label={t("appearance.preview")}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="gap-y-density-2 flex flex-wrap items-center justify-between gap-x-2">
         <p className="text-sm font-medium">{t("appearance.preview")}</p>
         <Badge>{presetLabel}</Badge>
       </div>
-      <div className="flex items-center gap-2" aria-hidden="true">
+      <div
+        className="gap-y-density-2 flex items-center gap-x-2"
+        aria-hidden="true"
+      >
         <span className="bg-primary text-primary-foreground py-density-2 rounded-md px-3 text-sm">
           {t("appearance.primaryAction")}
         </span>

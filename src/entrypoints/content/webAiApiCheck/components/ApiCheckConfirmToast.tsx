@@ -46,14 +46,14 @@ export const ApiCheckConfirmToast: React.FC<{
         <CardHeader padding="sm">
           <Heading3>{t("webAiApiCheck:confirmToast.title")}</Heading3>
         </CardHeader>
-        <CardContent padding="sm" className="space-y-3">
+        <CardContent padding="sm" className="space-y-density-3">
           <Body>{t("webAiApiCheck:confirmToast.body")}</Body>
           {usesEnhancedResult ? (
-            <div className="bg-muted/50 text-muted-foreground flex items-start gap-2 rounded-md px-2 py-2 text-sm">
+            <div className="bg-muted/50 text-muted-foreground gap-y-density-2 py-density-2 flex items-start gap-x-2 rounded-md px-2 text-sm">
               <Info className="mt-0.5 h-4 w-4 shrink-0" />
               <div>
                 <span>{t("webAiApiCheck:confirmToast.enhancedInfo")}</span>
-                <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1">
+                <div className="mt-density-1 gap-y-density-1 flex flex-wrap gap-x-2">
                   <Button
                     type="button"
                     variant="link"
@@ -82,7 +82,7 @@ export const ApiCheckConfirmToast: React.FC<{
               </div>
             </div>
           ) : null}
-          <div className="flex justify-end gap-2">
+          <div className="gap-y-density-2 flex justify-end gap-x-2">
             <Button
               variant="secondary"
               analyticsAction={

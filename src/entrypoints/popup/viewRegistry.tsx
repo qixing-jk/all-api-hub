@@ -80,7 +80,7 @@ function PopupContentFallback() {
   const { t } = useTranslation("common")
 
   return (
-    <div className="text-muted-foreground flex min-h-40 items-center justify-center px-4 py-8 text-sm">
+    <div className="text-muted-foreground py-density-8 flex min-h-40 items-center justify-center px-4 text-sm">
       {t("status.loading")}
     </div>
   )

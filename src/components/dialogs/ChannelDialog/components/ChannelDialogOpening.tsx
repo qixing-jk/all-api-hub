@@ -73,7 +73,7 @@ export function ChannelDialogOpening({
           description={failureDescription}
         >
           {failureMessage && failureMessage !== failureDescription ? (
-            <p className="mt-3 border-t border-current/15 pt-3 text-xs leading-relaxed wrap-anywhere whitespace-pre-wrap opacity-80">
+            <p className="mt-density-3 pt-density-3 border-t border-current/15 text-xs leading-relaxed wrap-anywhere whitespace-pre-wrap opacity-80">
               {failureMessage}
             </p>
           ) : null}

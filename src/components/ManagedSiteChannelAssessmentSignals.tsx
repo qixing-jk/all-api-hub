@@ -26,7 +26,12 @@ export function ManagedSiteChannelAssessmentSignalsRow(props: {
   const { t } = useTranslation("keyManagement")
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-2", props.className)}>
+    <div
+      className={cn(
+        "gap-y-density-2 flex flex-wrap items-center gap-x-2",
+        props.className,
+      )}
+    >
       <SignalBadge
         badgeText={getUrlSignalLabel(t, props.assessment)}
         tooltipText={getUrlSignalTooltip(t, props.assessment)}

@@ -96,7 +96,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
 
   if (isLoading) {
     return (
-      <div className="text-muted-foreground flex min-h-[160px] items-center justify-center gap-2">
+      <div className="text-muted-foreground gap-y-density-2 flex min-h-[160px] items-center justify-center gap-x-2">
         <Loader2 className="h-4 w-4 animate-spin" />
         {t("filters.loading")}
       </div>
@@ -104,12 +104,12 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
+    <div className="space-y-density-4">
+      <div className="gap-y-density-2 flex items-center justify-between gap-x-2">
         <Label className="text-muted-foreground text-xs font-medium">
           {t("filters.viewMode.label")}
         </Label>
-        <div className="flex gap-2">
+        <div className="gap-y-density-2 flex gap-x-2">
           <Button
             type="button"
             size="sm"
@@ -133,16 +133,16 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
       {viewMode === "visual" ? (
         !filters.length ? (
           <div className="text-center">
-            <div className="bg-muted mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full">
+            <div className="bg-muted mb-density-3 mx-auto flex h-12 w-12 items-center justify-center rounded-full">
               <Settings2 className="text-muted-foreground h-5 w-5" />
             </div>
             <p className="text-base font-semibold">
               {t("filters.empty.title")}
             </p>
-            <p className="text-muted-foreground mb-6 text-sm">
+            <p className="text-muted-foreground mb-density-6 text-sm">
               {t("filters.empty.description")}
             </p>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="gap-y-density-2 grid grid-cols-1 gap-x-2 sm:grid-cols-2">
               <Button
                 type="button"
                 variant="dashed"
@@ -166,7 +166,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
               </Button>
             </div>
             {!probeRulesSupported && probeRulesUnsupportedMessage ? (
-              <p className="text-muted-foreground mt-3 text-xs">
+              <p className="text-muted-foreground mt-density-3 text-xs">
                 {probeRulesUnsupportedMessage}
               </p>
             ) : null}
@@ -176,10 +176,10 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
             {filters.map((filter, index) => (
               <div
                 key={filter.id}
-                className="border-border space-y-5 rounded-lg border p-5"
+                className="border-border space-y-density-5 py-density-5 rounded-lg border px-5"
               >
-                <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] md:items-end">
-                  <div className="space-y-2">
+                <div className="gap-y-density-4 grid gap-x-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] md:items-end">
+                  <div className="space-y-density-2">
                     <Label>{t("filters.labels.name")}</Label>
                     <Input
                       value={filter.name}
@@ -191,9 +191,9 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                       clearButtonLabel={t("common:actions.clear")}
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-density-2">
                     <Label>{t("filters.labels.enabled")}</Label>
-                    <div className="border-input flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
+                    <div className="border-input py-density-2 flex items-center justify-between rounded-lg border px-3 text-sm">
                       <span className="text-muted-foreground">
                         {filter.enabled
                           ? t("common:status.enabled")
@@ -208,7 +208,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                       />
                     </div>
                   </div>
-                  <div className="flex justify-end gap-1">
+                  <div className="gap-y-density-1 flex justify-end gap-x-1">
                     <Button
                       type="button"
                       size="icon"
@@ -244,8 +244,8 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,0.45fr)_minmax(180px,0.4fr)]">
-                  <div className="space-y-2">
+                <div className="gap-y-density-4 grid gap-x-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,0.45fr)_minmax(180px,0.4fr)]">
+                  <div className="space-y-density-2">
                     <Label>{t("filters.labels.ruleType")}</Label>
                     <Select
                       value={filter.kind ?? "pattern"}
@@ -274,7 +274,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                       </p>
                     ) : null}
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-density-2">
                     {isProbeChannelModelFilterRule(filter) ? (
                       <>
                         <Label>{t("filters.labels.probes")}</Label>
@@ -299,9 +299,9 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                       </>
                     ) : (
                       <>
-                        <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="gap-y-density-3 flex flex-wrap items-center justify-between gap-x-3">
                           <Label>{t("filters.labels.pattern")}</Label>
-                          <div className="text-muted-foreground flex items-center gap-2 text-sm">
+                          <div className="text-muted-foreground gap-y-density-2 flex items-center gap-x-2 text-sm">
                             <span>{t("filters.labels.regex")}</span>
                             <Switch
                               size={"sm"}
@@ -336,7 +336,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                       </>
                     )}
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-density-2">
                     <Label>{t("filters.labels.action")}</Label>
                     <Select
                       value={filter.action}
@@ -359,7 +359,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                   </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-density-2">
                   <Label>{t("filters.labels.description")}</Label>
                   <Textarea
                     value={filter.description ?? ""}
@@ -379,7 +379,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
               </div>
             ))}
 
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="gap-y-density-2 grid grid-cols-1 gap-x-2 sm:grid-cols-2">
               <Button
                 type="button"
                 variant="dashed"
@@ -410,7 +410,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
           </>
         )
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-density-2">
           <Label>{t("filters.jsonEditor.label")}</Label>
           <Textarea
             data-testid={testIds?.jsonEditor}

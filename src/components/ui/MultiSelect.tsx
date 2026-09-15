@@ -291,7 +291,9 @@ export function MultiSelect({
 
   const optionListClassName = cn(
     "ring-opacity-5 absolute z-50 max-h-60 w-full overflow-auto rounded-lg corners-concentric [--corner-inset:--spacing(1)] bg-popover px-1 py-density-1 text-base shadow-lg ring-1 ring-shadow focus:outline-none sm:text-sm",
-    dropdownPosition === "top" ? "bottom-full mb-1" : "top-full mt-1",
+    dropdownPosition === "top"
+      ? "bottom-full mb-density-1"
+      : "top-full mt-density-1",
   )
 
   return (
@@ -299,7 +301,7 @@ export function MultiSelect({
       {label && (
         <label
           htmlFor={inputId}
-          className="dark:text-foreground text-secondary-foreground mb-1 block text-sm font-medium"
+          className="dark:text-foreground text-secondary-foreground mb-density-1 block text-sm font-medium"
         >
           {label}
         </label>
@@ -428,7 +430,7 @@ export function MultiSelect({
       </div>
 
       {selectedOptions.length > 0 && (
-        <div className="space-y-density-2 mt-2">
+        <div className="space-y-density-2 mt-density-2">
           <div className="gap-density-2 flex flex-col sm:flex-row">
             <button
               type="button"

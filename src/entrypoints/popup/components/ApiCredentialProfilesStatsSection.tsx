@@ -151,8 +151,8 @@ export default function ApiCredentialProfilesStatsSection() {
   ])
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
+    <div className="space-y-density-3">
+      <div className="gap-y-density-3 flex items-center justify-between gap-x-3">
         <BodySmall className="font-medium">
           {t("apiCredentialProfiles:stats.totalProfiles")}
         </BodySmall>
@@ -162,8 +162,8 @@ export default function ApiCredentialProfilesStatsSection() {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1">
+      <div className="gap-y-density-3 grid grid-cols-2 gap-x-3">
+        <div className="space-y-density-1">
           <Caption className="font-medium">
             {t("apiCredentialProfiles:stats.baseUrls")}
           </Caption>
@@ -173,7 +173,7 @@ export default function ApiCredentialProfilesStatsSection() {
             isInitialLoad={isInitialLoad}
           />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-density-1">
           <Caption className="font-medium">
             {t("apiCredentialProfiles:stats.usedTags")}
           </Caption>
@@ -185,8 +185,8 @@ export default function ApiCredentialProfilesStatsSection() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <div className="space-y-1">
+      <div className="gap-y-density-3 grid grid-cols-3 gap-x-3">
+        <div className="space-y-density-1">
           <Caption className="font-medium">
             {t("apiCredentialProfiles:stats.healthyProfiles")}
           </Caption>
@@ -196,7 +196,7 @@ export default function ApiCredentialProfilesStatsSection() {
             isInitialLoad={isInitialLoad}
           />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-density-1">
           <Caption className="font-medium">
             {t("apiCredentialProfiles:stats.totalBalance")}
           </Caption>
@@ -210,7 +210,7 @@ export default function ApiCredentialProfilesStatsSection() {
             {balanceText}
           </span>
         </div>
-        <div className="space-y-1">
+        <div className="space-y-density-1">
           <Caption className="font-medium">
             {t("apiCredentialProfiles:stats.todayUsage")}
           </Caption>

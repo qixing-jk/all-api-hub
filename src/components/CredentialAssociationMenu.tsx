@@ -92,7 +92,7 @@ export function CredentialAssociationMenu({
   const hasVisibleCount = count !== undefined
   const triggerSize = hasVisibleLabel || hasVisibleCount ? "sm" : "icon-sm"
   const triggerClassName = cn(
-    "max-w-full gap-1.5 px-2 text-xs",
+    "max-w-full gap-x-1.5 gap-y-density-1-5 px-2 text-xs",
     !hasVisibleLabel && !hasVisibleCount && "p-0",
     className,
   )

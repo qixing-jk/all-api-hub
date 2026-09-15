@@ -58,9 +58,9 @@ export function ApiCheckBaseUrlHistoryPicker({
         align="end"
         aria-label={t("webAiApiCheck:modal.history.label")}
         container={portalContainer ?? undefined}
-        className="w-72 p-1"
+        className="py-density-1 w-72 px-1"
       >
-        <div className="text-muted-foreground px-2 py-1.5 text-xs">
+        <div className="text-muted-foreground py-density-1-5 px-2 text-xs">
           {t("webAiApiCheck:modal.history.label")}
         </div>
         <div
@@ -72,12 +72,12 @@ export function ApiCheckBaseUrlHistoryPicker({
             <div
               key={suggestion.baseUrl}
               role="listitem"
-              className="group flex min-w-0 items-center gap-1 rounded-sm"
+              className="group gap-y-density-1 flex min-w-0 items-center gap-x-1 rounded-sm"
             >
               <button
                 type="button"
                 className={cn(
-                  "focus:bg-accent focus:text-accent-foreground flex min-w-0 flex-1 rounded-sm px-2 py-1.5 text-left text-sm outline-none",
+                  "focus:bg-accent focus:text-accent-foreground py-density-1-5 flex min-h-(--density-control-xs) min-w-0 flex-1 rounded-sm px-2 text-left text-sm outline-none",
                   suggestion.baseUrl === selectedBaseUrl
                     ? "text-foreground font-medium"
                     : "text-muted-foreground",
