@@ -242,6 +242,55 @@ describe("ClaudeCodeRouterImportDialog", () => {
     })
   })
 
+  it("clears selection and suggestions when the credential changes while open", async () => {
+    const user = userEvent.setup()
+    const pendingModels = createDeferred<{ id: string }[]>()
+    mockFetchOpenAICompatibleModels
+      .mockResolvedValueOnce([{ id: "old-model" }])
+      .mockReturnValueOnce(pendingModels.promise)
+    const account = buildDisplaySiteData({
+      id: "acc",
+      baseUrl: "https://x.test",
+    })
+    const renderDialog = (tokenId: number) => (
+      <ClaudeCodeRouterImportDialog
+        isOpen
+        onClose={() => {}}
+        source={createAccountRuntimeKeyExportSource(
+          account,
+          buildNewApiRuntimeKey(
+            account,
+            buildNewApiToken({ id: tokenId, key: `sk-${tokenId}` }),
+          ),
+        )}
+        routerBaseUrl="https://router.example.com"
+        routerApiKey="router-secret"
+      />
+    )
+    const { rerender } = render(renderDialog(1))
+    await user.click(screen.getByRole("combobox"))
+    await user.click(await screen.findByRole("option", { name: "old-model" }))
+    await user.keyboard("{Escape}")
+    expect(screen.getByText("old-model")).toBeVisible()
+
+    rerender(renderDialog(2))
+    expect(screen.queryByText("old-model")).not.toBeInTheDocument()
+    await user.click(screen.getByRole("combobox"))
+    expect(
+      screen.queryByRole("option", { name: "old-model" }),
+    ).not.toBeInTheDocument()
+    await user.keyboard("{Escape}")
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.import" }),
+    )
+    await waitFor(() =>
+      expect(mockImportToClaudeCodeRouter).toHaveBeenCalledWith(
+        expect.objectContaining({ providerApiKey: "sk-2", providerModels: [] }),
+      ),
+    )
+    pendingModels.resolve([])
+  })
+
   it("clears model suggestions when the provider endpoint becomes blank", async () => {
     const user = userEvent.setup()
 
