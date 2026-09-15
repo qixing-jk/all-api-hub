@@ -116,6 +116,17 @@ const expectManagedSiteQueries = (
 }
 
 describe("apiAdapters registry", () => {
+  it.each([
+    SITE_TYPES.NEW_API,
+    SITE_TYPES.SUB2API,
+    SITE_TYPES.VO_API_V2,
+    SITE_TYPES.AIHUBMIX,
+  ])("retains native inventory for migrated %s key management", (siteType) => {
+    expect(
+      getSiteTypeCapabilities(siteType).account?.keyResourceManagement,
+    ).toBeDefined()
+  })
+
   it("shares the managed-site registration across capability lookup paths", () => {
     for (const siteType of MANAGED_SITE_TYPES) {
       const managedSite = getManagedSiteCapabilities(siteType)

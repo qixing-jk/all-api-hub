@@ -31,6 +31,7 @@ type ModelToKeyManagementScenarioParams = {
 }
 
 type CreatedKeyManagementToken = {
+  id: string
   name: string
 }
 
@@ -75,6 +76,8 @@ async function resolveCreatedKeyManagementToken(params: {
   await expect(tokenRows).toHaveCount(1, { timeout: 30_000 })
 
   const row = tokenRows.first()
+  const id = await row.getAttribute("data-resource-id")
+  if (!id) throw new Error("Created key row has no stable resource identity")
   const name = await row
     .locator("h1,h2,h3,h4,h5,h6")
     .first()
@@ -85,6 +88,7 @@ async function resolveCreatedKeyManagementToken(params: {
   return {
     row,
     token: {
+      id,
       name: name || params.fallbackName,
     },
   }
@@ -220,7 +224,7 @@ export async function runModelToKeyManagementScenario(
       } else {
         await deleteTokenFromKeyManagementPage({
           page: keysPage,
-          token: createdKeyManagementToken.name,
+          token: createdKeyManagementToken,
         })
       }
     }

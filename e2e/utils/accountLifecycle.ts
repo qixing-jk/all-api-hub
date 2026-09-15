@@ -475,11 +475,15 @@ export async function deleteTokenFromKeyManagementPage(params: {
 }) {
   await closeTokenCreationDialogsIfPresent(params.page)
 
-  const row = await expectTokenVisibleInKeyManagementPage({
-    page: params.page,
-    tokenName:
-      typeof params.token === "string" ? params.token : params.token.name,
-  })
+  const row =
+    typeof params.token === "string"
+      ? await expectTokenVisibleInKeyManagementPage({
+          page: params.page,
+          tokenName: params.token,
+        })
+      : params.page.locator(
+          `[data-testid="${KEY_MANAGEMENT_TEST_IDS.nativeKeyRow}"][data-resource-id=${JSON.stringify(String(params.token.id))}]`,
+        )
   await deleteTokenRowFromKeyManagementPage({
     page: params.page,
     row,

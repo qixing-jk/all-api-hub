@@ -37,7 +37,16 @@ export function AccountKeyScopeSelector({
   const { t } = useTranslation()
   const headingId = useId()
 
-  if (!shouldShowAccountKeyScopeSelector(siteType, scopes.length)) return null
+  if (
+    !shouldShowAccountKeyScopeSelector(siteType, scopes.length) &&
+    scopes.length === 1 &&
+    selectedScope &&
+    !isLoading &&
+    !isRetrying &&
+    !isPartial &&
+    !error
+  )
+    return null
 
   const messages = getAccountKeyScopeMessages(siteType, t)
   const options = scopes.map((scope) => ({

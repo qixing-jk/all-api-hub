@@ -20,7 +20,7 @@ describe("AccountKeyScopeSelector", () => {
     SITE_TYPES.VO_API_V2,
     SITE_TYPES.AIHUBMIX,
   ])(
-    "hides the implicit account scope for %s, including while loading",
+    "shows loading before hiding the settled implicit account scope for %s",
     (siteType) => {
       const props = { siteType, onSelectScope: vi.fn() }
       const { rerender } = render(
@@ -32,8 +32,9 @@ describe("AccountKeyScopeSelector", () => {
         />,
         { withUserPreferencesProvider: false, withThemeProvider: false },
       )
-      expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
-      expect(screen.queryByRole("heading")).not.toBeInTheDocument()
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "keyManagement:native.scope.loading",
+      )
 
       const accountScope: AccountKeyScope = {
         scopeKey: "account",
@@ -111,76 +112,83 @@ describe("AccountKeyScopeSelector", () => {
     expect(onSelectScope).toHaveBeenCalledWith(workspace.scopeKey)
   })
 
-  it("shows distinguishable loading, empty, and retryable error states without a raw-ID fallback", () => {
-    const onRetry = vi.fn()
-    const { rerender } = render(
-      <AccountKeyScopeSelector
-        siteType="openrouter"
-        scopes={[]}
-        selectedScope={null}
-        isLoading
-        onSelectScope={() => undefined}
-      />,
-      { withUserPreferencesProvider: false, withThemeProvider: false },
-    )
+  it.each(["openrouter", "new-api"])(
+    "shows loading, empty and retryable errors for %s",
+    (siteType) => {
+      const onRetry = vi.fn()
+      const { rerender } = render(
+        <AccountKeyScopeSelector
+          siteType={siteType}
+          scopes={[]}
+          selectedScope={null}
+          isLoading
+          onSelectScope={() => undefined}
+        />,
+        { withUserPreferencesProvider: false, withThemeProvider: false },
+      )
 
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "keyManagement:openRouter.workspace.loading",
-    )
-    rerender(
-      <AccountKeyScopeSelector
-        siteType="openrouter"
-        scopes={[workspace]}
-        selectedScope={workspace}
-        isPartial
-        onRetry={onRetry}
-        onSelectScope={() => undefined}
-      />,
-    )
-    expect(
-      screen.getByText("keyManagement:openRouter.workspace.partial"),
-    ).toBeVisible()
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "keyManagement:openRouter.workspace.retry",
-      }),
-    )
-    expect(onRetry).toHaveBeenCalledOnce()
-    expect(
-      screen.getByRole("combobox", {
-        name: "keyManagement:openRouter.workspace.label",
-      }),
-    ).toHaveTextContent("Example team")
-    rerender(
-      <AccountKeyScopeSelector
-        siteType="openrouter"
-        scopes={[]}
-        selectedScope={null}
-        onSelectScope={() => undefined}
-      />,
-    )
-    expect(
-      screen.getByText("keyManagement:openRouter.workspace.empty"),
-    ).toBeVisible()
-    rerender(
-      <AccountKeyScopeSelector
-        siteType="openrouter"
-        scopes={[]}
-        selectedScope={null}
-        error="unavailable"
-        onRetry={onRetry}
-        onSelectScope={() => undefined}
-      />,
-    )
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "keyManagement:openRouter.workspace.error",
-    )
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "keyManagement:openRouter.workspace.retry",
-      }),
-    )
-    expect(onRetry).toHaveBeenCalledTimes(2)
-    expect(screen.queryByRole("textbox")).toBeNull()
-  })
+      expect(screen.getByRole("status")).toHaveTextContent(
+        `keyManagement:${siteType === "openrouter" ? "openRouter.workspace" : "native.scope"}.loading`,
+      )
+      rerender(
+        <AccountKeyScopeSelector
+          siteType={siteType}
+          scopes={[workspace]}
+          selectedScope={workspace}
+          isPartial
+          onRetry={onRetry}
+          onSelectScope={() => undefined}
+        />,
+      )
+      expect(
+        screen.getByText(
+          `keyManagement:${siteType === "openrouter" ? "openRouter.workspace" : "native.scope"}.partial`,
+        ),
+      ).toBeVisible()
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: `keyManagement:${siteType === "openrouter" ? "openRouter.workspace" : "native.scope"}.retry`,
+        }),
+      )
+      expect(onRetry).toHaveBeenCalledOnce()
+      expect(
+        screen.getByRole("combobox", {
+          name: `keyManagement:${siteType === "openrouter" ? "openRouter.workspace" : "native.scope"}.label`,
+        }),
+      ).toHaveTextContent("Example team")
+      rerender(
+        <AccountKeyScopeSelector
+          siteType={siteType}
+          scopes={[]}
+          selectedScope={null}
+          onSelectScope={() => undefined}
+        />,
+      )
+      expect(
+        screen.getByText(
+          `keyManagement:${siteType === "openrouter" ? "openRouter.workspace" : "native.scope"}.empty`,
+        ),
+      ).toBeVisible()
+      rerender(
+        <AccountKeyScopeSelector
+          siteType={siteType}
+          scopes={[]}
+          selectedScope={null}
+          error="unavailable"
+          onRetry={onRetry}
+          onSelectScope={() => undefined}
+        />,
+      )
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        `keyManagement:${siteType === "openrouter" ? "openRouter.workspace" : "native.scope"}.error`,
+      )
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: `keyManagement:${siteType === "openrouter" ? "openRouter.workspace" : "native.scope"}.retry`,
+        }),
+      )
+      expect(onRetry).toHaveBeenCalledTimes(2)
+      expect(screen.queryByRole("textbox")).toBeNull()
+    },
+  )
 })

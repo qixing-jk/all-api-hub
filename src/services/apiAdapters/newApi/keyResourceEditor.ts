@@ -81,7 +81,7 @@ export function createNewApiKeyEditor(
   const allowedGroups = token ? undefined : intent?.allowedGroups
   const initialValues: EditableResourceProjection = {
     [field.Name]: baseline.name,
-    [field.Quota]: baseline.remain_quota / quotaPerUsd,
+    [field.Quota]: Math.max(0, baseline.remain_quota) / quotaPerUsd,
     [field.Unlimited]: baseline.unlimited_quota,
     [field.ExpiresAt]:
       baseline.expired_time === -1

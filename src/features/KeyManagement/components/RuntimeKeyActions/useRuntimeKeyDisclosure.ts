@@ -81,7 +81,10 @@ export function useRuntimeKeyDisclosure(
       }
       if (copy) {
         await navigator.clipboard.writeText(resolved.secret)
-        if (source.signal.aborted) return
+        if (source.signal.aborted || sourceRef.current !== source) {
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
+          return
+        }
         toast.success(t("messages.keyCopied", { name: runtimeKey.label }))
       } else {
         setSecret(resolved.secret)
@@ -96,7 +99,7 @@ export function useRuntimeKeyDisclosure(
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
-      toast.error(t("messages.copyFailed"))
+      toast.error(t(copy ? "messages.copyFailed" : "messages.revealFailed"))
     } finally {
       if (sourceRef.current === source) {
         resolvingRef.current = false

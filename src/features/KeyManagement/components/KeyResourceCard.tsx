@@ -58,6 +58,7 @@ export type KeyResourceCardProps = {
   selectionDisabledReason?: string
   renderHeader?: (props: KeyResourceCardHeaderRenderProps) => ReactNode
   testId?: string
+  resourceId?: string
   /** Stable local target used by asynchronous in-page navigation. */
   targetId?: string
   /** Whether this card is the current route navigation target. */
@@ -385,6 +386,7 @@ export function KeyResourceCard({
   selectionLabel,
   selectionDisabledReason,
   renderHeader,
+  resourceId,
   testId,
   targetId,
   isNavigationTarget = false,
@@ -440,6 +442,7 @@ export function KeyResourceCard({
   return (
     <Card
       id={targetId}
+      data-resource-id={resourceId}
       data-testid={testId}
       data-navigation-target={isNavigationTarget ? "true" : undefined}
       tabIndex={targetId ? -1 : undefined}

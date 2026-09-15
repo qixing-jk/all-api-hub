@@ -307,6 +307,7 @@
     "copyFailed": "复制失败",
     "keyCopied": "密钥 {{name}} 已复制到剪贴板",
     "loadFailed": "加载密钥列表失败",
+    "revealFailed": "显示密钥失败",
     "savedToApiProfiles": "已保存 {{name}} 到 API 凭据库",
     "savedToApiProfilesNeedsConfirmation": "凭据已保存，请在 API 凭据库中检查其密钥关联。",
     "saveToApiProfilesFailed": "保存到 API 凭据库失败",

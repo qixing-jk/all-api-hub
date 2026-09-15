@@ -307,6 +307,7 @@
     "copyFailed": "コピーに失敗しました",
     "keyCopied": "キー {{name}} をクリップボードにコピーしました",
     "loadFailed": "キー一覧の読み込みに失敗しました",
+    "revealFailed": "キーの表示に失敗しました",
     "savedToApiProfiles": "{{name}} を API 認証情報庫に保存しました",
     "savedToApiProfilesNeedsConfirmation": "認証情報を保存しました。API 認証情報庫でキーの関連付けを確認してください。",
     "saveToApiProfilesFailed": "API 認証情報庫への保存に失敗しました",

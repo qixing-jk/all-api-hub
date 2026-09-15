@@ -316,6 +316,7 @@
     "copyFailed": "Copy failed",
     "keyCopied": "Key {{name}} copied to clipboard",
     "loadFailed": "Failed to load key list",
+    "revealFailed": "Failed to reveal key",
     "savedToApiProfiles": "Saved {{name}} to API credential library",
     "savedToApiProfilesNeedsConfirmation": "Credential saved. Review its key association in the API credential library.",
     "saveToApiProfilesFailed": "Failed to save to API credential library",
