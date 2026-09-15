@@ -1,3 +1,5 @@
+import type { FetchFunction } from "@ai-sdk/provider-utils"
+
 export const API_AUTH_MODES = {
   ApiKey: "api-key",
   Bearer: "bearer",
@@ -90,8 +92,11 @@ export async function executeWithUnauthorizedFallback<
 /** Create an SDK fetch that retries one 401 with a provider-defined credential. */
 export function createUnauthorizedFallbackFetch<TMode extends string>(
   params: UnauthorizedFallbackFetchParams<TMode>,
-): (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> {
-  return async (input, init) => {
+): FetchFunction {
+  const fallbackFetch = async (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => {
     const request = new Request(input, init)
 
     if (params.initialMode === params.fallbackMode) {
@@ -110,6 +115,10 @@ export function createUnauthorizedFallbackFetch<TMode extends string>(
 
     return fallbackResponse
   }
+
+  return Object.assign(fallbackFetch, {
+    preconnect: globalThis.fetch.preconnect,
+  })
 }
 
 /** Return whether a transport error exposes the exact retryable status code. */

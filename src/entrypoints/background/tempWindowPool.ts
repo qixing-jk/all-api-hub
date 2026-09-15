@@ -50,18 +50,30 @@ import {
 import { getProtectionBypassDecisionErrorCode } from "~/services/protectionBypass/decisionErrorCode"
 import type { ProtectionBypassPolicyDecision } from "~/services/protectionBypass/policy"
 import { AuthTypeEnum } from "~/types"
+import {
+  BROWSER_CHECK_IN_DEFAULT_TIMEOUT_MS,
+  BROWSER_CHECK_IN_EXECUTION_REASONS,
+  BROWSER_CHECK_IN_MAX_TIMEOUT_MS,
+  BROWSER_CHECK_IN_MIN_TIMEOUT_MS,
+  BROWSER_CHECK_IN_STEP_REASONS,
+} from "~/types/checkinAutomation"
 import type {
+  TempWindowBrowserCheckIn,
   TempWindowCheckinPageAction,
   TempWindowFetch,
   TempWindowPageAccountIdentity,
   TempWindowTurnstileFetch,
   TempWindowTurnstileMeta,
 } from "~/types/tempWindowFetch"
-import type { CheckinPageActionTriggerResult } from "~/types/turnstile"
+import type {
+  CheckinPageActionTriggerResult,
+  TurnstileTokenWaitResult,
+} from "~/types/turnstile"
 import {
   classifyRecoverableWindowCreationFailure,
   createTab,
   createWindow,
+  focusTab,
   getTab,
   getWindow,
   hasWindowsAPI,
@@ -622,7 +634,12 @@ function resolveAuthorizedTaskPresentation(
     : {
         kind: "ready",
         source: policy.tempWindowRequestSource,
-        suppressMinimize: policy.suppressMinimize,
+        // Browser check-in may require the user to finish login or an
+        // interactive challenge in the page, so keep its context visible.
+        suppressMinimize:
+          task.kind === TEMP_CONTEXT_TASK_KINDS.BrowserCheckIn
+            ? true
+            : policy.suppressMinimize,
       }
 }
 
@@ -637,6 +654,9 @@ function buildPresentationFailure(task: TempContextTask, error: string) {
   }
   if (task.kind === TEMP_CONTEXT_TASK_KINDS.NativePageAction) {
     return { success: false, reason: "trigger_failed", error }
+  }
+  if (task.kind === TEMP_CONTEXT_TASK_KINDS.BrowserCheckIn) {
+    return { success: false, reason: "invalid_request", error }
   }
   if (task.kind === TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction) {
     return {
@@ -705,8 +725,9 @@ export async function executeAuthorizedTempContextTask(
             task.kind === TEMP_CONTEXT_TASK_KINDS.OpenContext
           ? task.params.url
           : task.kind === TEMP_CONTEXT_TASK_KINDS.TurnstileFetch ||
-              task.kind === TEMP_CONTEXT_TASK_KINDS.NativePageAction
-            ? task.params.pageUrl || task.params.originUrl
+              task.kind === TEMP_CONTEXT_TASK_KINDS.NativePageAction ||
+              task.kind === TEMP_CONTEXT_TASK_KINDS.BrowserCheckIn
+            ? task.params.pageUrl
             : task.params.originUrl
   const incognito =
     "useIncognito" in task.params && Boolean(task.params.useIncognito)
@@ -741,6 +762,14 @@ export async function executeAuthorizedTempContextTask(
         return
       case TEMP_CONTEXT_TASK_KINDS.NativePageAction:
         await executeTempWindowCheckinPageAction(
+          task.params,
+          suppressMinimize,
+          sendResponse,
+          authorizeAtAcquire,
+        )
+        return
+      case TEMP_CONTEXT_TASK_KINDS.BrowserCheckIn:
+        await executeTempWindowBrowserCheckIn(
           task.params,
           suppressMinimize,
           sendResponse,
@@ -1833,6 +1862,277 @@ async function executeTempWindowCheckinPageAction(
     })
   } finally {
     await releaseTempContext(tempRequestId)
+  }
+}
+
+const BROWSER_CHECK_IN_POLL_INTERVAL_MS = 250
+const BROWSER_CHECK_IN_TURNSTILE_LATE_APPEARANCE_MS = 2_000
+
+const browserCheckInDelay = (timeoutMs: number) =>
+  new Promise((resolve) => setTimeout(resolve, timeoutMs))
+
+/**
+ * Waits for the page's own Turnstile flow after a browser action.
+ *
+ * The token is deliberately discarded here. Generic browser check-in pages
+ * must let their own callback/form/request consume it; only known protocol
+ * adapters may attach a token to a request they explicitly own.
+ */
+async function waitForBrowserCheckInTurnstile(params: {
+  tabId: number
+  requestId: string
+  timeoutMs: number
+}): Promise<TurnstileTokenWaitResult["status"] | "error"> {
+  try {
+    const response = await sendTabMessageWithRetry<{
+      success?: boolean
+      status?: TurnstileTokenWaitResult["status"]
+      token?: unknown
+    }>(params.tabId, {
+      action: RuntimeActionIds.ContentWaitForTurnstileToken,
+      requestId: params.requestId,
+      timeoutMs: params.timeoutMs,
+      waitForLateAppearanceMs: Math.min(
+        BROWSER_CHECK_IN_TURNSTILE_LATE_APPEARANCE_MS,
+        params.timeoutMs,
+      ),
+    })
+
+    if (
+      response?.success !== true ||
+      (response.status !== "not_present" &&
+        response.status !== "token_obtained" &&
+        response.status !== "timeout")
+    ) {
+      return "error"
+    }
+
+    return response.status
+  } catch {
+    return "error"
+  }
+}
+
+const toBrowserCheckInExecutionReason = (
+  reason: string | undefined,
+): TempWindowBrowserCheckIn["reason"] => {
+  switch (reason) {
+    case BROWSER_CHECK_IN_STEP_REASONS.IdentityMissing:
+      return BROWSER_CHECK_IN_EXECUTION_REASONS.IdentityMissing
+    case BROWSER_CHECK_IN_STEP_REASONS.IdentityMismatch:
+      return BROWSER_CHECK_IN_EXECUTION_REASONS.IdentityMismatch
+    case BROWSER_CHECK_IN_STEP_REASONS.ActionTargetMissing:
+      return BROWSER_CHECK_IN_EXECUTION_REASONS.ActionTargetNotFound
+    case BROWSER_CHECK_IN_STEP_REASONS.InvalidRequest:
+      return BROWSER_CHECK_IN_EXECUTION_REASONS.InvalidRequest
+    default:
+      return BROWSER_CHECK_IN_EXECUTION_REASONS.Timeout
+  }
+}
+
+/** Runs one configured browser action and waits for its explicit page proof. */
+async function executeTempWindowBrowserCheckIn(
+  request: TaskParams<typeof TEMP_CONTEXT_TASK_KINDS.BrowserCheckIn>,
+  suppressMinimize: boolean,
+  sendResponse: (response?: TempWindowBrowserCheckIn) => void,
+  authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
+) {
+  const { pageUrl, requestId, action, success, identity, timeoutMs } = request
+  const tempRequestId =
+    requestId || safeRandomUUID(`temp-browser-checkin-${pageUrl}`)
+  const waitTimeoutMs = Math.min(
+    BROWSER_CHECK_IN_MAX_TIMEOUT_MS,
+    Math.max(
+      BROWSER_CHECK_IN_MIN_TIMEOUT_MS,
+      Math.round(timeoutMs ?? BROWSER_CHECK_IN_DEFAULT_TIMEOUT_MS),
+    ),
+  )
+
+  if (!pageUrl) {
+    sendResponse({
+      success: false,
+      reason: BROWSER_CHECK_IN_EXECUTION_REASONS.InvalidRequest,
+    })
+    return
+  }
+
+  logTempWindow("tempWindowBrowserCheckInStart", {
+    requestId: tempRequestId,
+    pageUrl: sanitizeUrlForLog(pageUrl),
+    timeoutMs: waitTimeoutMs,
+  })
+
+  let actionTriggered = false
+  let turnstileWaitStatus:
+    | TurnstileTokenWaitResult["status"]
+    | "error"
+    | undefined
+  let lastStepReason: string | undefined
+  let lastCurrentUrl: string | undefined
+
+  try {
+    if (request.useIncognito) {
+      const allowed = await isAllowedIncognitoAccess()
+      if (allowed === false) {
+        sendResponse({
+          success: false,
+          reason: BROWSER_CHECK_IN_EXECUTION_REASONS.TriggerFailed,
+          error: t("messages:background.incognitoAccessRequired"),
+        })
+        return
+      }
+    }
+
+    const context = await acquireTempContext(
+      pageUrl,
+      tempRequestId,
+      suppressMinimize,
+      { incognito: Boolean(request.useIncognito) },
+      authorizeAtAcquire,
+    )
+
+    try {
+      await navigateTempContextToPage(context, pageUrl, {
+        requestId: tempRequestId,
+        origin: normalizeOrigin(pageUrl),
+      })
+      // The user may need to complete login or an interactive challenge in
+      // this page; browser check-in contexts are intentionally foregrounded.
+      await focusTab(await getTab(context.tabId))
+
+      const deadlineAt = Date.now() + waitTimeoutMs
+      let shouldTrigger = true
+      while (Date.now() <= deadlineAt) {
+        const tab = await getTempContextTabSnapshot(context.tabId)
+        if (tab?.status !== "complete") {
+          await browserCheckInDelay(BROWSER_CHECK_IN_POLL_INTERVAL_MS)
+          continue
+        }
+
+        // A click can replace the whole document. Wait for the replacement
+        // page to be complete before asking its content script about Turnstile;
+        // otherwise the request may target the destroyed document and become a
+        // permanent false negative for a successful redirect.
+        if (
+          actionTriggered &&
+          (turnstileWaitStatus === undefined || turnstileWaitStatus === "error")
+        ) {
+          const remainingMs = deadlineAt - Date.now()
+          if (remainingMs <= 0) break
+
+          turnstileWaitStatus = await waitForBrowserCheckInTurnstile({
+            tabId: context.tabId,
+            requestId: tempRequestId,
+            timeoutMs: remainingMs,
+          })
+
+          // Message delivery can still race content-script injection after a
+          // navigation. Retry from the next complete-page poll, but never use
+          // a Turnstile error as evidence of a successful check-in.
+          if (turnstileWaitStatus === "error") {
+            const retryDelay = Math.min(
+              BROWSER_CHECK_IN_POLL_INTERVAL_MS,
+              Math.max(0, deadlineAt - Date.now()),
+            )
+            await browserCheckInDelay(retryDelay)
+            continue
+          }
+        }
+
+        if (actionTriggered) {
+          const guards = await checkTempContextProtectionGuards({
+            tabId: context.tabId,
+            requestId: tempRequestId,
+          }).catch(() => ({ passed: false }))
+          if (!guards.passed) {
+            await browserCheckInDelay(BROWSER_CHECK_IN_POLL_INTERVAL_MS)
+            continue
+          }
+        }
+
+        const step = await sendTabMessageWithRetry(
+          context.tabId,
+          {
+            action: RuntimeActionIds.ContentRunBrowserCheckIn,
+            requestId: tempRequestId,
+            browserAction: action,
+            success,
+            // Identity is a pre-action guard. Once a click has triggered a
+            // redirect, the next document may legitimately omit the old
+            // account element while still being the page that proves success.
+            ...(identity && !actionTriggered ? { identity } : {}),
+            executeAction: shouldTrigger,
+          },
+          { maxAttempts: shouldTrigger ? 1 : 3, delayMs: 250 },
+        )
+
+        lastStepReason = step?.reason
+        lastCurrentUrl = step?.currentUrl
+        const turnstileBlocksSuccess =
+          actionTriggered &&
+          turnstileWaitStatus !== "not_present" &&
+          turnstileWaitStatus !== "token_obtained"
+        if (step?.success === true && !turnstileBlocksSuccess) {
+          sendResponse({
+            success: true,
+            reason: BROWSER_CHECK_IN_EXECUTION_REASONS.Completed,
+            actionTriggered,
+            matchedCondition: step.matchedCondition,
+            currentUrl: step.currentUrl,
+          })
+          return
+        }
+
+        if (step?.reason === BROWSER_CHECK_IN_STEP_REASONS.InvalidRequest) {
+          sendResponse({
+            success: false,
+            reason: BROWSER_CHECK_IN_EXECUTION_REASONS.InvalidRequest,
+            actionTriggered,
+            currentUrl: step.currentUrl,
+          })
+          return
+        }
+
+        if (step?.actionTriggered === true) {
+          actionTriggered = true
+          shouldTrigger = false
+        }
+
+        const remainingMs = deadlineAt - Date.now()
+        if (remainingMs <= 0) break
+        await browserCheckInDelay(
+          Math.min(BROWSER_CHECK_IN_POLL_INTERVAL_MS, remainingMs),
+        )
+      }
+
+      sendResponse({
+        success: false,
+        reason: actionTriggered
+          ? BROWSER_CHECK_IN_EXECUTION_REASONS.Timeout
+          : toBrowserCheckInExecutionReason(lastStepReason),
+        actionTriggered,
+        currentUrl: lastCurrentUrl,
+      })
+    } finally {
+      await releaseTempContext(tempRequestId)
+    }
+  } catch (error) {
+    const failure = toTempWindowFailureResponse(error)
+    logTempWindow("tempWindowBrowserCheckInError", {
+      requestId: tempRequestId,
+      error: failure.error,
+      code: failure.code ?? null,
+    })
+    await releaseTempContext(tempRequestId, {
+      forceClose: true,
+      reason: "tempWindowBrowserCheckInError",
+    })
+    sendResponse({
+      success: false,
+      reason: BROWSER_CHECK_IN_EXECUTION_REASONS.TriggerFailed,
+      error: failure.error,
+      currentUrl: lastCurrentUrl,
+    })
   }
 }
 

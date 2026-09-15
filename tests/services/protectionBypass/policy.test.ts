@@ -528,6 +528,7 @@ describe("evaluateProtectionBypassPolicy", () => {
         "api_fallback_fetch",
         "turnstile_fetch",
         "native_page_action",
+        "browser_check_in",
         "session_read",
       ],
       redemption_assist: ["api_fallback_fetch", "session_read"],
@@ -559,6 +560,15 @@ describe("evaluateProtectionBypassPolicy", () => {
           }
         case "native_page_action":
           return { kind, params: nativeParams }
+        case "browser_check_in":
+          return {
+            kind,
+            params: {
+              pageUrl: fetchParams.originUrl,
+              action: { kind: "page_load" },
+              success: { textPattern: "signed" },
+            },
+          }
         case "openrouter_management_key_action":
           return {
             kind,

@@ -12,6 +12,7 @@ export const AUTO_CHECKIN_METHOD_IDS = {
   Sub2ApiProDailyCheckIn: "sub2api-pro:daily-checkin",
   GeniusProgrammerDailyCheckIn: "genius-programmer:daily-checkin",
   DenxioDailyCheckIn: "denxio:daily-checkin",
+  BrowserAutomationDailyCheckIn: "browser-automation:daily-checkin",
 } as const
 
 export const CHECK_IN_METHOD_UNKNOWN_REASON_CODES = {
@@ -51,6 +52,7 @@ export const CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES = {
   Probe: "probe",
   LegacyMigration: "legacy_migration",
   CompatibilityRegistration: "compatibility_registration",
+  UserConfiguration: "user_configuration",
 } as const
 
 export const CHECK_IN_METHOD_STATUS_OUTCOMES = {

@@ -22,6 +22,8 @@ import {
 } from "~/services/protectionBypass/contracts"
 import type { ProtectionBypassPolicyDecision } from "~/services/protectionBypass/policy"
 import type {
+  TempWindowBrowserCheckIn,
+  TempWindowBrowserCheckInParams,
   TempWindowCheckinPageAction,
   TempWindowCheckinPageActionParams,
   TempWindowFetchParams,
@@ -170,6 +172,7 @@ const TEST_DECISION_FEATURE_BY_TASK_KIND: Partial<
   [TEMP_CONTEXT_TASK_KINDS.TurnstileFetch]: PROTECTION_BYPASS_FEATURES.Checkin,
   [TEMP_CONTEXT_TASK_KINDS.NativePageAction]:
     PROTECTION_BYPASS_FEATURES.Checkin,
+  [TEMP_CONTEXT_TASK_KINDS.BrowserCheckIn]: PROTECTION_BYPASS_FEATURES.Checkin,
   [TEMP_CONTEXT_TASK_KINDS.SessionRead]:
     PROTECTION_BYPASS_FEATURES.AccountRefresh,
   [TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead]:
@@ -264,6 +267,16 @@ export async function handleTempWindowCheckinPageAction(
 ) {
   await executeTestTask(
     { kind: "native_page_action", params: withTestExecution(request) },
+    sendResponse,
+  )
+}
+
+export async function handleTempWindowBrowserCheckIn(
+  request: TestProtectedRequest<TempWindowBrowserCheckInParams>,
+  sendResponse: (response?: TempWindowBrowserCheckIn) => void,
+) {
+  await executeTestTask(
+    { kind: "browser_check_in", params: withTestExecution(request) },
     sendResponse,
   )
 }

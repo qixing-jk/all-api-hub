@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest"
 
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
-import { SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_SITE_TYPES, SITE_TYPES } from "~/constants/siteType"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
+import { browserAutomationProvider } from "~/services/checkin/autoCheckin/providers/browserAutomation"
 import { denxioProvider } from "~/services/checkin/autoCheckin/providers/denxio"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import {
@@ -25,6 +26,7 @@ import { veloeraProvider } from "~/services/checkin/autoCheckin/providers/veloer
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
 import { wongGongyiProvider } from "~/services/checkin/autoCheckin/providers/wong"
 import type { CheckInMethodId } from "~/types/checkIn"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const OFFICIAL_METHOD_SOURCE = {
   kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.Official,
@@ -53,7 +55,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(9)
+    expect(registrationContracts).toHaveLength(10)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -91,6 +93,11 @@ describe("autoCheckinMethodRegistry", () => {
           candidateSiteTypes: [SITE_TYPES.SUB2API],
           provider: denxioProvider,
         },
+        {
+          id: "browser-automation:daily-checkin",
+          candidateSiteTypes: ACCOUNT_SITE_TYPES,
+          provider: browserAutomationProvider,
+        },
       ]),
     )
 
@@ -115,6 +122,8 @@ describe("autoCheckinMethodRegistry", () => {
     expect(sub2apiProProvider.detect).toBeTypeOf("function")
     expect(denxioProvider.getStatus).toBeTypeOf("function")
     expect(denxioProvider.detect).toBeTypeOf("function")
+    expect(browserAutomationProvider.getStatus).toBeUndefined()
+    expect(browserAutomationProvider.detect).toBeTypeOf("function")
   })
 
   it("offers login check-in only on Agent Router without adding a site type", () => {
@@ -154,6 +163,39 @@ describe("autoCheckinMethodRegistry", () => {
       kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
       sourceName: "登仙公益站",
     })
+    expect(
+      getAutoCheckinMethodSource(
+        AUTO_CHECKIN_METHOD_IDS.BrowserAutomationDailyCheckIn,
+      ),
+    ).toEqual({
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "Browser automation",
+    })
+  })
+
+  it("only exposes browser automation after a valid user configuration exists", () => {
+    const unconfigured = autoCheckinMethodRegistry
+      .getCandidates(SITE_TYPES.NEW_API)
+      .map(({ id }) => id)
+    expect(unconfigured).not.toContain(
+      AUTO_CHECKIN_METHOD_IDS.BrowserAutomationDailyCheckIn,
+    )
+
+    const configured = buildCheckInConfig({
+      customCheckIn: {
+        url: "https://checkin.example.invalid",
+        browserAutomation: {
+          enabled: true,
+          action: { kind: "page_load" },
+          success: { textPattern: "success" },
+        },
+      },
+    })
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.NEW_API, undefined, configured)
+        .map(({ id }) => id),
+    ).toContain(AUTO_CHECKIN_METHOD_IDS.BrowserAutomationDailyCheckIn)
   })
 
   it("keeps newly introduced candidates outside legacy and new-account compatibility", () => {

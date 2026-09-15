@@ -135,6 +135,12 @@
   },
   "providerFallback": {
     "alreadyCheckedToday": "Hôm nay đã điểm danh",
+    "browserAutomationActionTargetNotFound": "Không tìm thấy đối tượng thao tác đã cấu hình trên trang. Hãy kiểm tra bộ chọn hoặc mẫu văn bản.",
+    "browserAutomationIdentityMismatch": "Trang điểm danh đang đăng nhập bằng tài khoản khác. Hãy đăng nhập bằng tài khoản mục tiêu rồi thử lại.",
+    "browserAutomationIdentityMissing": "Không thể xác nhận tài khoản mục tiêu trên trang điểm danh. Hãy đăng nhập bằng tài khoản mục tiêu rồi thử lại.",
+    "browserAutomationInvalidRequest": "Cấu hình điểm danh trên trình duyệt không hợp lệ. Hãy kiểm tra cài đặt điểm danh tùy chỉnh của tài khoản này.",
+    "browserAutomationTimeout": "Hết thời gian chờ điều kiện điểm danh thành công nên kết quả chưa được xác nhận. Hãy mở trang điểm danh để kiểm tra thủ công.",
+    "browserAutomationTriggerFailed": "Không thể thực hiện thao tác điểm danh trên trang. Hãy mở trang điểm danh và điểm danh thủ công.",
     "checkinFailed": "Điểm danh thất bại",
     "checkinSuccessful": "Điểm danh thành công",
     "endpointNotSupported": "Giao diện điểm danh này không được hỗ trợ, vui lòng kiểm tra xem loại trang web của tài khoản có giống với trang web thực tế hay không",

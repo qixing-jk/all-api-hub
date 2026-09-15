@@ -11,6 +11,7 @@ import {
   handleOpenRouterManagementKeyAction,
   handlePerformTempWindowFetch,
   handlePrepareAgentRouterOAuth,
+  handleRunBrowserCheckIn,
   handleShowShieldBypassUi,
   handleTriggerCheckinPageAction,
   handleWaitAndGetUserInfo,
@@ -84,6 +85,10 @@ export function setupContentMessageHandlers() {
 
     if (request.action === RuntimeActionIds.ContentPerformTempWindowFetch) {
       return handlePerformTempWindowFetch(request, sendResponse)
+    }
+
+    if (request.action === RuntimeActionIds.ContentRunBrowserCheckIn) {
+      return handleRunBrowserCheckIn(request, sendResponse)
     }
 
     if (request.action === RuntimeActionIds.ContentGetRenderedTitle) {

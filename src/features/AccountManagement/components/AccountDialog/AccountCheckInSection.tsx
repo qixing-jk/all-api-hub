@@ -32,6 +32,7 @@ import {
 import type { AccountSiteType } from "~/constants/siteType"
 import { AccountFormSection } from "~/features/AccountManagement/components/AccountDialog/AccountFormSection"
 import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "~/features/AccountManagement/components/AccountDialog/accountFormSections"
+import { BrowserCheckInConfigFields } from "~/features/AccountManagement/components/AccountDialog/BrowserCheckInConfigFields"
 import {
   getCheckInMethodPresentation,
   getCheckInRedetectionFeedbackPresentation,
@@ -128,6 +129,7 @@ export function AccountCheckInSection({
     selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown
   const redetectionFeedbackPresentation =
     getCheckInRedetectionFeedbackPresentation(t, checkInRedetectionFeedback)
+  const browserAutomation = checkIn.customCheckIn?.browserAutomation
 
   const setAutomaticSelection = () => {
     onCheckInSelectionChange(
@@ -384,6 +386,21 @@ export function AccountCheckInSection({
           leftIcon={<CalendarDays className="h-5 w-5" />}
         />
       </FormField>
+
+      {checkIn.customCheckIn?.url && (
+        <BrowserCheckInConfigFields
+          config={browserAutomation}
+          onChange={(nextBrowserAutomation) =>
+            onCheckInChange({
+              ...checkIn,
+              customCheckIn: {
+                ...(checkIn.customCheckIn ?? { url: "" }),
+                browserAutomation: nextBrowserAutomation,
+              },
+            })
+          }
+        />
+      )}
 
       {checkIn.customCheckIn?.url && (
         <div className="gap-y-density-4 flex w-full items-center justify-between gap-x-4">

@@ -7,6 +7,7 @@ const domOnlyTsTests = [
   "entrypoints/content/index.test.ts",
   "entrypoints/content/redemptionAssist/index.test.ts",
   "entrypoints/content/messageHandlers/utils/capGuard.test.ts",
+  "entrypoints/content/messageHandlers/utils/browserCheckIn.test.ts",
   "entrypoints/content/messageHandlers/utils/turnstileGuard.test.ts",
   "entrypoints/content/webAiApiCheck/index.test.ts",
   "entrypoints/content/messageHandlers/handlers/storage.test.ts",

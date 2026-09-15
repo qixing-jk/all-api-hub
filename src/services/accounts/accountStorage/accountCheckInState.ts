@@ -179,6 +179,7 @@ class AccountCheckInState {
               candidateMethodIds: getAutoCheckinCandidateMethodIds(
                 effectiveSiteType,
                 updates.site_url ?? account.site_url,
+                draft,
               ),
               discoveryBaseSelection: options.discoveryBaseSelection,
               selectionChanged: options.selectionChanged,

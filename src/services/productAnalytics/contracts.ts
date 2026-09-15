@@ -181,6 +181,7 @@ export const PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES = [
   "protection_bypass_operation_fetch_count",
   "protection_bypass_operation_turnstile_fetch_count",
   "protection_bypass_operation_native_page_action_count",
+  "protection_bypass_operation_browser_check_in_count",
   "protection_bypass_operation_rendered_title_count",
   "protection_bypass_operation_session_read_count",
   "protection_bypass_operation_open_context_count",
@@ -981,6 +982,7 @@ export type ProductAnalyticsAutoCheckinRunKind =
 export const PRODUCT_ANALYTICS_AUTO_CHECKIN_METHOD_CATEGORIES = {
   StrictReadback: "strict_readback",
   Compatibility: "compatibility",
+  BrowserAutomation: "browser_automation",
 } as const
 
 export type ProductAnalyticsAutoCheckinMethodCategory =

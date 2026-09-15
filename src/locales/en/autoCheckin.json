@@ -138,6 +138,12 @@
   },
   "providerFallback": {
     "alreadyCheckedToday": "Already checked in today",
+    "browserAutomationActionTargetNotFound": "The configured action target was not found on the page. Check the selector or text pattern.",
+    "browserAutomationIdentityMismatch": "The check-in page is signed in as a different account. Sign in with the target account and retry.",
+    "browserAutomationIdentityMissing": "The target account could not be confirmed on the check-in page. Sign in with the target account and retry.",
+    "browserAutomationInvalidRequest": "The browser check-in configuration is invalid. Review the custom check-in settings for this account.",
+    "browserAutomationTimeout": "Timed out waiting for the check-in success condition, so the result is unconfirmed. Open the check-in page to verify manually.",
+    "browserAutomationTriggerFailed": "The page check-in action could not be performed. Open the check-in page and complete check-in manually.",
     "checkinFailed": "Check-in failed",
     "checkinSuccessful": "Check-in successful",
     "endpointNotSupported": "This check-in endpoint is not supported. Please check if your account's site type is the same as the actual site.",
