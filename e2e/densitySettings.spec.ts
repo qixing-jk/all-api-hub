@@ -195,7 +195,14 @@ for (const width of [1280, 390, 320]) {
           ),
         ).toBe(true)
         // Scroll the measured row into view so narrow screenshots include results.
-        await row.scrollIntoViewIfNeeded()
+        await row.evaluate((element) =>
+          element.scrollIntoView({ block: "center", behavior: "instant" }),
+        )
+        await page.mouse.move(0, 0)
+        await expect(page.getByRole("tooltip")).toHaveCount(0)
+        await expect(
+          page.getByText("Model data loaded successfully", { exact: true }),
+        ).toHaveCount(0)
         // Screenshots capture actual rendered rows, controls and wrapping.
         await page.screenshot({
           path: testInfo.outputPath(
