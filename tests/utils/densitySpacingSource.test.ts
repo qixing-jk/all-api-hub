@@ -46,7 +46,9 @@ it("avoids order-dependent shorthand and density axes in UI class strings", () =
         ) {
           const tokens = node.text.split(/\s+/)
           for (const token of tokens) {
-            const match = /^(.*:)?(p|px|py|gap)-(\d+(?:\.\d+)?)$/.exec(token)
+            const match = /^(.*:)?!?(p|px|py|gap)-(\d+(?:\.\d+)?)!?$/.exec(
+              token,
+            )
             if (!match) continue
             const [, modifier = "", shorthand] = match
             const axes =
@@ -59,8 +61,10 @@ it("avoids order-dependent shorthand and density axes in UI class strings", () =
                     : ["gap-x", "gap-y"]
             if (
               tokens.some((other) =>
-                axes.some((axis) =>
-                  other.startsWith(`${modifier}${axis}-density-`),
+                axes.some(
+                  (axis) =>
+                    other.startsWith(`${modifier}${axis}-density-`) ||
+                    other.startsWith(`${modifier}!${axis}-density-`),
                 ),
               )
             ) {
