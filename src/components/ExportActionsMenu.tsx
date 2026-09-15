@@ -62,7 +62,10 @@ const CODING_AGENT_TARGETS = [
 
 const GATEWAY_TARGETS = [EXPORT_ACTION_TARGETS.ClaudeCodeRouter] as const
 
-/** Renders the shared, grouped export menu used by account and credential rows. */
+/**
+ * Renders the shared export menu. Non-modal behavior lets an opened export
+ * dialog retain focus while the menu finishes its exit animation.
+ */
 export function ExportActionsMenu({
   actions,
   open,
@@ -152,7 +155,7 @@ export function ExportActionsMenu({
   ].filter((group) => group.actions.length > 0)
 
   return (
-    <DropdownMenu open={open} onOpenChange={onOpenChange}>
+    <DropdownMenu modal={false} open={open} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
         <IconButton
           ref={triggerRef}

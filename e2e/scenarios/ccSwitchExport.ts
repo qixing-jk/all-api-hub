@@ -81,32 +81,19 @@ async function selectCcSwitchModel(params: {
   )
   await expect(searchInput).toBeVisible({ timeout: 10_000 })
   await searchInput.fill(params.modelName)
-  await expect(
-    params.page
-      .getByRole("option", {
-        name: new RegExp(escapeRegExp(params.modelName), "u"),
-      })
-      .first(),
-  ).toBeVisible({ timeout: 10_000 })
-  await searchInput.press("Enter")
-
-  const selected = await expect(params.modelPicker)
-    .toContainText(params.modelName, { timeout: 3_000 })
-    .then(() => true)
-    .catch(() => false)
-
-  if (selected) {
-    return
-  }
-
-  await params.modelPicker.click()
-  await searchInput.fill(params.modelName)
-  await params.page
+  const option = params.page
     .getByRole("option", {
       name: new RegExp(escapeRegExp(params.modelName), "u"),
     })
     .first()
-    .click()
+  await expect(option).toBeVisible({ timeout: 10_000 })
+  await expect(option).toHaveAttribute("aria-selected", "true")
+  await expect(searchInput).toBeFocused()
+  await searchInput.press("Enter")
+
+  await expect(params.modelPicker).toContainText(params.modelName, {
+    timeout: 3_000,
+  })
 }
 
 export async function verifyCcSwitchModelPickerCancelable(params: {
