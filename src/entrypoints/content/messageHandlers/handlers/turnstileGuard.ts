@@ -14,6 +14,7 @@ interface WaitForTurnstileTokenRequest {
   requestId?: string
   timeoutMs?: number
   preTrigger?: TurnstilePreTrigger
+  waitForLateAppearanceMs?: number
 }
 
 interface WaitForTurnstileTokenSuccessResponse
@@ -70,6 +71,7 @@ export function handleWaitForTurnstileToken(
         requestId: request.requestId,
         timeoutMs: request.timeoutMs,
         preTrigger: request.preTrigger,
+        waitForLateAppearanceMs: request.waitForLateAppearanceMs,
       })
 
       logger.debug("Turnstile token wait completed", {

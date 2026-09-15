@@ -27,11 +27,14 @@ import {
 } from "~/services/protectionBypass/contracts"
 import { isAutomaticProtectionBypassEnabled } from "~/services/protectionBypass/policy"
 import { AuthTypeEnum } from "~/types"
+import { isBrowserCheckInExecutionResult } from "~/types/checkinAutomation"
 import {
   TEMP_WINDOW_HEALTH_STATUS_CODES,
   type TempWindowHealthStatusCode,
 } from "~/types/tempWindow"
 import {
+  type TempWindowBrowserCheckIn,
+  type TempWindowBrowserCheckInParams,
   type TempWindowCheckinPageAction,
   type TempWindowCheckinPageActionParams,
   type TempWindowFallbackAllowlist,
@@ -307,6 +310,28 @@ export async function tempWindowTriggerCheckinPageAction(
       params: taskParams,
     },
   })
+}
+
+/** Runs one user-declared browser check-in contract in a visible temp page. */
+export async function tempWindowBrowserCheckIn(
+  params: TempWindowBrowserCheckInParams,
+): Promise<TempWindowBrowserCheckIn> {
+  const {
+    protectionBypassExecution: execution,
+    tempWindowRequestSource: _ignoredSource,
+    ...taskParams
+  } = params
+  const response = await executeProtectionBypassTask({
+    execution,
+    task: {
+      kind: TEMP_CONTEXT_TASK_KINDS.BrowserCheckIn,
+      params: taskParams,
+    },
+  })
+  if (!isBrowserCheckInExecutionResult(response)) {
+    throw new TypeError("Invalid browser check-in response")
+  }
+  return response
 }
 
 /**

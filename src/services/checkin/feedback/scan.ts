@@ -15,6 +15,7 @@ import {
   normalizeAssetUrls,
 } from "./scanParsing"
 import { createScanReader } from "./scanReader"
+import type { ScanFetch } from "./scanReader"
 import type {
   CheckInFeedbackClues,
   CheckInFeedbackScanInput,
@@ -27,7 +28,7 @@ export async function collectCheckInFeedbackClues(
   input: CheckInFeedbackScanInput,
   signal: AbortSignal,
   options: {
-    fetch?: typeof fetch
+    fetch?: ScanFetch
     timeoutMs?: number
     pageUrl?: string
     loadedAssets?: string[]

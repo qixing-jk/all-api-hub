@@ -5,6 +5,7 @@ import {
   CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { ensureBrowserAutomationMethodState } from "~/services/checkin/autoCheckin/browserAutomation"
 import {
   setCheckInSelection as applySelection,
   inspectCheckInMethods,
@@ -164,7 +165,11 @@ export async function discoverCheckInMethods(
 ): Promise<CheckInDiscoveryResult> {
   const registry = input.registry ?? autoCheckinMethodRegistry
   const registrations = [
-    ...registry.getCandidates(input.account.site_type, input.account.site_url),
+    ...registry.getCandidates(
+      input.account.site_type,
+      input.account.site_url,
+      input.config,
+    ),
   ]
   const observedAt = input.observedAt ?? Date.now()
   const perAdapterTimeoutMs =
@@ -254,18 +259,19 @@ export function setCheckInSelection(input: {
   registry?: AutoCheckinMethodRegistry
 }): CheckInConfig {
   const registry = input.registry ?? autoCheckinMethodRegistry
+  const config = ensureBrowserAutomationMethodState(input.config)
   const candidateMethodIds = registry
-    .getCandidates(input.siteType, input.siteUrl)
+    .getCandidates(input.siteType, input.siteUrl, config)
     .map(({ id }) => id)
   if (
     input.mode === CHECK_IN_SELECTION_MODES.Manual &&
     (!input.methodId ||
       !candidateMethodIds.includes(input.methodId as CheckInMethodId))
   ) {
-    return input.config
+    return config
   }
   return applySelection({
-    config: input.config,
+    config,
     candidateMethodIds,
     selection:
       input.mode === CHECK_IN_SELECTION_MODES.Manual

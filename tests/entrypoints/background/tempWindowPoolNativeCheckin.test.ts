@@ -759,4 +759,535 @@ describe("tempWindowPool native check-in page action", () => {
       }),
     )
   })
+
+  it("keeps browser check-in visible, triggers once, and waits for success evidence", async () => {
+    let browserCheckInSteps = 0
+    tabsGetMock.mockResolvedValue({
+      id: 701,
+      windowId: 77,
+      status: "complete",
+      url: "https://example.invalid/checkin",
+    })
+    sendMessageMock.mockImplementation(
+      async (_tabId: number, message: RuntimeMessage) => {
+        switch (message.action) {
+          case RuntimeActionIds.ContentShowShieldBypassUi:
+            return undefined
+          case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckCloudflareGuard:
+            return { success: true, passed: true }
+          case RuntimeActionIds.ContentWaitForTurnstileToken:
+            return {
+              success: true,
+              status: "not_present",
+              token: null,
+              detection: {
+                hasTurnstile: false,
+                reasons: [],
+                score: 0,
+                title: "Check in",
+                url: "https://example.invalid/checkin",
+              },
+            }
+          case RuntimeActionIds.ContentRunBrowserCheckIn:
+            browserCheckInSteps += 1
+            return browserCheckInSteps === 1
+              ? {
+                  success: false,
+                  reason: "action_triggered",
+                  actionTriggered: true,
+                  currentUrl: "https://example.invalid/checkin",
+                }
+              : {
+                  success: true,
+                  reason: "completed",
+                  actionTriggered: true,
+                  matchedCondition: "text",
+                  currentUrl: "https://example.invalid/checkin",
+                }
+          default:
+            throw new Error(`Unexpected action: ${message.action}`)
+        }
+      },
+    )
+
+    const { handleTempWindowBrowserCheckIn } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+
+    const sendResponse = vi.fn()
+    const request = handleTempWindowBrowserCheckIn(
+      {
+        pageUrl: "https://example.invalid/checkin",
+        requestId: "req-browser-checkin",
+        action: { kind: "page_load" },
+        success: { textPattern: "check-in complete" },
+        timeoutMs: 5_000,
+      },
+      sendResponse,
+    )
+
+    await settleTempContextReadiness()
+    await request
+
+    expect((globalThis as any).browser.windows.update).toHaveBeenCalledWith(
+      77,
+      {
+        focused: true,
+      },
+    )
+    expect((globalThis as any).browser.tabs.update).toHaveBeenCalledWith(701, {
+      active: true,
+    })
+    expect(browserCheckInSteps).toBe(2)
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      reason: "completed",
+      actionTriggered: true,
+      matchedCondition: "text",
+      currentUrl: "https://example.invalid/checkin",
+    })
+  })
+
+  it("waits for the page Turnstile token after the native check-in click", async () => {
+    let browserCheckInSteps = 0
+    let turnstileWaits = 0
+    tabsGetMock.mockResolvedValue({
+      id: 702,
+      windowId: 78,
+      status: "complete",
+      url: "https://example.invalid/checkin",
+    })
+    sendMessageMock.mockImplementation(
+      async (_tabId: number, message: RuntimeMessage) => {
+        switch (message.action) {
+          case RuntimeActionIds.ContentShowShieldBypassUi:
+            return undefined
+          case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckCloudflareGuard:
+            return { success: true, passed: true }
+          case RuntimeActionIds.ContentWaitForTurnstileToken:
+            turnstileWaits += 1
+            return {
+              success: true,
+              status: "token_obtained",
+              token: "page-token-must-not-be-replayed",
+              detection: {
+                hasTurnstile: true,
+                reasons: ["cf-turnstile-response-field"],
+                score: 3,
+                title: "Check in",
+                url: "https://example.invalid/checkin",
+              },
+            }
+          case RuntimeActionIds.ContentRunBrowserCheckIn:
+            browserCheckInSteps += 1
+            return browserCheckInSteps === 1
+              ? {
+                  success: false,
+                  reason: "action_triggered",
+                  actionTriggered: true,
+                  currentUrl: "https://example.invalid/checkin",
+                }
+              : {
+                  success: true,
+                  reason: "completed",
+                  actionTriggered: true,
+                  matchedCondition: "text",
+                  currentUrl: "https://example.invalid/checkin",
+                }
+          default:
+            throw new Error("Unexpected action: " + message.action)
+        }
+      },
+    )
+
+    const { handleTempWindowBrowserCheckIn } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+
+    const sendResponse = vi.fn()
+    const request = handleTempWindowBrowserCheckIn(
+      {
+        pageUrl: "https://example.invalid/checkin",
+        requestId: "req-browser-checkin-turnstile",
+        action: {
+          kind: "click_selector",
+          selector: "#check-in",
+        },
+        success: { textPattern: "check-in complete" },
+        timeoutMs: 5_000,
+      },
+      sendResponse,
+    )
+
+    await settleTempContextReadiness()
+    await request
+
+    expect(turnstileWaits).toBe(1)
+    expect(sendResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        reason: "completed",
+      }),
+    )
+
+    const actions = sendMessageMock.mock.calls.map(
+      ([, message]) => message.action,
+    )
+    expect(
+      actions.filter(
+        (action) => action === RuntimeActionIds.ContentWaitForTurnstileToken,
+      ),
+    ).toHaveLength(1)
+    expect(actions).not.toContain(
+      RuntimeActionIds.ContentPerformTempWindowFetch,
+    )
+  })
+
+  it("continues without a Turnstile wait when the page has no widget", async () => {
+    let browserCheckInSteps = 0
+    tabsGetMock.mockResolvedValue({
+      id: 703,
+      windowId: 79,
+      status: "complete",
+      url: "https://example.invalid/checkin",
+    })
+    sendMessageMock.mockImplementation(
+      async (_tabId: number, message: RuntimeMessage) => {
+        switch (message.action) {
+          case RuntimeActionIds.ContentShowShieldBypassUi:
+            return undefined
+          case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckCloudflareGuard:
+            return { success: true, passed: true }
+          case RuntimeActionIds.ContentWaitForTurnstileToken:
+            return {
+              success: true,
+              status: "not_present",
+              token: null,
+              detection: {
+                hasTurnstile: false,
+                reasons: [],
+                score: 0,
+                title: "Check in",
+                url: "https://example.invalid/checkin",
+              },
+            }
+          case RuntimeActionIds.ContentRunBrowserCheckIn:
+            browserCheckInSteps += 1
+            return browserCheckInSteps === 1
+              ? {
+                  success: false,
+                  reason: "action_triggered",
+                  actionTriggered: true,
+                  currentUrl: "https://example.invalid/checkin",
+                }
+              : {
+                  success: true,
+                  reason: "completed",
+                  actionTriggered: true,
+                  matchedCondition: "selector",
+                  currentUrl: "https://example.invalid/checkin",
+                }
+          default:
+            throw new Error("Unexpected action: " + message.action)
+        }
+      },
+    )
+
+    const { handleTempWindowBrowserCheckIn } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+    const sendResponse = vi.fn()
+    const request = handleTempWindowBrowserCheckIn(
+      {
+        pageUrl: "https://example.invalid/checkin",
+        requestId: "req-browser-checkin-no-turnstile",
+        action: { kind: "click_selector", selector: "#check-in" },
+        success: { selector: ".done" },
+        timeoutMs: 5_000,
+      },
+      sendResponse,
+    )
+
+    await settleTempContextReadiness()
+    await request
+
+    expect(browserCheckInSteps).toBe(2)
+    expect(sendResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true, reason: "completed" }),
+    )
+  })
+
+  it("does not report success when the page Turnstile wait fails", async () => {
+    let browserCheckInSteps = 0
+    tabsGetMock.mockResolvedValue({
+      id: 704,
+      windowId: 80,
+      status: "complete",
+      url: "https://example.invalid/checkin",
+    })
+    sendMessageMock.mockImplementation(
+      async (_tabId: number, message: RuntimeMessage) => {
+        switch (message.action) {
+          case RuntimeActionIds.ContentShowShieldBypassUi:
+            return undefined
+          case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckCloudflareGuard:
+            return { success: true, passed: true }
+          case RuntimeActionIds.ContentWaitForTurnstileToken:
+            return {
+              success: true,
+              status: "timeout",
+              token: null,
+              detection: {
+                hasTurnstile: true,
+                reasons: ["cf-turnstile-class"],
+                score: 2,
+                title: "Check in",
+                url: "https://example.invalid/checkin",
+              },
+            }
+          case RuntimeActionIds.ContentRunBrowserCheckIn:
+            browserCheckInSteps += 1
+            return browserCheckInSteps === 1
+              ? {
+                  success: false,
+                  reason: "action_triggered",
+                  actionTriggered: true,
+                  currentUrl: "https://example.invalid/checkin",
+                }
+              : {
+                  success: true,
+                  reason: "completed",
+                  actionTriggered: true,
+                  matchedCondition: "text",
+                  currentUrl: "https://example.invalid/checkin",
+                }
+          default:
+            throw new Error("Unexpected action: " + message.action)
+        }
+      },
+    )
+
+    const { handleTempWindowBrowserCheckIn } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+    const sendResponse = vi.fn()
+    const request = handleTempWindowBrowserCheckIn(
+      {
+        pageUrl: "https://example.invalid/checkin",
+        requestId: "req-browser-checkin-turnstile-timeout",
+        action: { kind: "click_selector", selector: "#check-in" },
+        success: { textPattern: "never appears" },
+        timeoutMs: 1_000,
+      },
+      sendResponse,
+    )
+
+    await settleTempContextReadiness()
+    await vi.advanceTimersByTimeAsync(2_000)
+    await request
+
+    expect(sendResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false, reason: "timeout" }),
+    )
+  })
+
+  it("waits for the replacement document before asking it about Turnstile", async () => {
+    let browserCheckInSteps = 0
+    let turnstileWaits = 0
+    let clickObserved = false
+    let postClickTabReads = 0
+    let navigationSettled = false
+
+    tabsGetMock.mockImplementation(async () => {
+      if (!clickObserved) {
+        return {
+          id: 705,
+          windowId: 81,
+          status: "complete",
+          url: "https://example.invalid/checkin",
+        }
+      }
+
+      postClickTabReads += 1
+      if (postClickTabReads < 2) {
+        return {
+          id: 705,
+          windowId: 81,
+          status: "loading",
+          url: "https://example.invalid/checkin/processing",
+        }
+      }
+
+      navigationSettled = true
+      return {
+        id: 705,
+        windowId: 81,
+        status: "complete",
+        url: "https://example.invalid/checkin/success",
+      }
+    })
+    sendMessageMock.mockImplementation(
+      async (_tabId: number, message: RuntimeMessage) => {
+        switch (message.action) {
+          case RuntimeActionIds.ContentShowShieldBypassUi:
+            return undefined
+          case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckCloudflareGuard:
+            return { success: true, passed: true }
+          case RuntimeActionIds.ContentWaitForTurnstileToken:
+            turnstileWaits += 1
+            if (!navigationSettled) {
+              throw new Error("Receiving end does not exist")
+            }
+            return {
+              success: true,
+              status: "not_present",
+              token: null,
+              detection: {
+                hasTurnstile: false,
+                reasons: [],
+                score: 0,
+                title: "Check in",
+                url: "https://example.invalid/checkin/success",
+              },
+            }
+          case RuntimeActionIds.ContentRunBrowserCheckIn:
+            browserCheckInSteps += 1
+            if (browserCheckInSteps === 1) {
+              clickObserved = true
+              return {
+                success: false,
+                reason: "action_triggered",
+                actionTriggered: true,
+                currentUrl: "https://example.invalid/checkin",
+              }
+            }
+            return {
+              success: true,
+              reason: "completed",
+              actionTriggered: true,
+              matchedCondition: "url",
+              currentUrl: "https://example.invalid/checkin/success",
+            }
+          default:
+            throw new Error("Unexpected action: " + message.action)
+        }
+      },
+    )
+
+    const { handleTempWindowBrowserCheckIn } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+    const sendResponse = vi.fn()
+    const request = handleTempWindowBrowserCheckIn(
+      {
+        pageUrl: "https://example.invalid/checkin",
+        requestId: "req-browser-checkin-navigation",
+        action: { kind: "click_selector", selector: "#check-in" },
+        success: { urlPattern: "/checkin/success$" },
+        timeoutMs: 8_000,
+      },
+      sendResponse,
+    )
+
+    await settleTempContextReadiness()
+    await vi.advanceTimersByTimeAsync(12_000)
+    await request
+
+    expect(postClickTabReads).toBeGreaterThanOrEqual(2)
+    expect(turnstileWaits).toBe(1)
+    expect(sendResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        reason: "completed",
+        matchedCondition: "url",
+      }),
+    )
+  })
+
+  it("does not reapply the pre-action identity guard after a click redirect", async () => {
+    let browserCheckInSteps = 0
+    const browserCheckInMessages: Array<Record<string, unknown>> = []
+    tabsGetMock.mockResolvedValue({
+      id: 706,
+      windowId: 82,
+      status: "complete",
+      url: "https://example.invalid/checkin",
+    })
+    sendMessageMock.mockImplementation(
+      async (_tabId: number, message: RuntimeMessage) => {
+        switch (message.action) {
+          case RuntimeActionIds.ContentShowShieldBypassUi:
+            return undefined
+          case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckCloudflareGuard:
+            return { success: true, passed: true }
+          case RuntimeActionIds.ContentWaitForTurnstileToken:
+            return {
+              success: true,
+              status: "not_present",
+              token: null,
+              detection: {
+                hasTurnstile: false,
+                reasons: [],
+                score: 0,
+                title: "Check in",
+                url: "https://example.invalid/checkin",
+              },
+            }
+          case RuntimeActionIds.ContentRunBrowserCheckIn:
+            browserCheckInSteps += 1
+            browserCheckInMessages.push(message as Record<string, unknown>)
+            return browserCheckInSteps === 1
+              ? {
+                  success: false,
+                  reason: "action_triggered",
+                  actionTriggered: true,
+                  currentUrl: "https://example.invalid/checkin",
+                }
+              : {
+                  success: true,
+                  reason: "completed",
+                  actionTriggered: true,
+                  matchedCondition: "selector",
+                  currentUrl: "https://example.invalid/checkin/success",
+                }
+          default:
+            throw new Error("Unexpected action: " + message.action)
+        }
+      },
+    )
+
+    const { handleTempWindowBrowserCheckIn } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+    const sendResponse = vi.fn()
+    const request = handleTempWindowBrowserCheckIn(
+      {
+        pageUrl: "https://example.invalid/checkin",
+        requestId: "req-browser-checkin-identity-redirect",
+        action: { kind: "click_selector", selector: "#check-in" },
+        identity: {
+          selector: ".account",
+          textPattern: "target@example.com",
+        },
+        success: { selector: ".check-in-success" },
+        timeoutMs: 5_000,
+      },
+      sendResponse,
+    )
+
+    await settleTempContextReadiness()
+    await request
+
+    expect(browserCheckInMessages[0]).toHaveProperty("identity")
+    expect(browserCheckInMessages[1]).not.toHaveProperty("identity")
+    expect(sendResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true, reason: "completed" }),
+    )
+  })
 })

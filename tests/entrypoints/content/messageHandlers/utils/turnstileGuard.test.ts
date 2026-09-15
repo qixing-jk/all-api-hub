@@ -349,6 +349,28 @@ describe("turnstileGuard", () => {
       expect(result.detection.hasTurnstile).toBe(false)
     })
 
+    it("waits briefly for a widget injected after the protected action", async () => {
+      setTimeout(() => {
+        const container = document.createElement("div")
+        container.className = "cf-turnstile"
+        document.body.appendChild(container)
+
+        const input = document.createElement("input")
+        input.name = "cf-turnstile-response"
+        input.value = "token-after-late-widget"
+        document.body.appendChild(input)
+      }, 25)
+
+      const result = await waitForTurnstileToken({
+        requestId: "req-late-widget",
+        timeoutMs: 1_000,
+        waitForLateAppearanceMs: 150,
+      })
+
+      expect(result.status).toBe("token_obtained")
+      expect(result.token).toBe("token-after-late-widget")
+    })
+
     it("returns timeout when Turnstile is present but token never appears", async () => {
       document.body.innerHTML = '<div class="cf-turnstile"></div>'
 

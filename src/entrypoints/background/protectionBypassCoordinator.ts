@@ -84,6 +84,9 @@ function buildTaskFailure(
   if (task?.kind === TEMP_CONTEXT_TASK_KINDS.NativePageAction) {
     return { success: false, reason: "trigger_failed", error, code }
   }
+  if (task?.kind === TEMP_CONTEXT_TASK_KINDS.BrowserCheckIn) {
+    return { success: false, reason: "invalid_request", error, code }
+  }
   return { success: false, error, code }
 }
 

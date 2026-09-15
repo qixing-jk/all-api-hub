@@ -11,6 +11,10 @@ import {
   CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
 import {
+  normalizeBrowserCheckInConfig,
+  syncBrowserAutomationMethodState,
+} from "~/services/checkin/autoCheckin/browserAutomation"
+import {
   decodePersistedCheckInMethodId,
   isCheckInMethodId,
 } from "~/services/checkin/autoCheckin/providers/registry"
@@ -216,7 +220,9 @@ const normalizeDetection = (
     value.evidence.source !==
       CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.LegacyMigration &&
     value.evidence.source !==
-      CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.CompatibilityRegistration
+      CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.CompatibilityRegistration &&
+    value.evidence.source !==
+      CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.UserConfiguration
   ) {
     return undefined
   }
@@ -298,9 +304,13 @@ const normalizeCustomCheckIn = (
   const turnstilePreTrigger = normalizeTurnstilePreTrigger(
     value.turnstilePreTrigger,
   )
+  const browserAutomation = normalizeBrowserCheckInConfig(
+    value.browserAutomation,
+  )
   const normalized: NonNullable<CheckInConfig["customCheckIn"]> = {
     ...(typeof value.url === "string" ? { url: value.url } : {}),
     ...(turnstilePreTrigger ? { turnstilePreTrigger } : {}),
+    ...(browserAutomation ? { browserAutomation } : {}),
     ...(typeof value.redeemUrl === "string"
       ? { redeemUrl: value.redeemUrl }
       : {}),
@@ -383,7 +393,7 @@ export function normalizeCheckInConfigV7(value: unknown): CheckInConfig {
       ? { provider }
       : undefined
 
-  return {
+  return syncBrowserAutomationMethodState({
     automaticExecutionEnabled: raw.automaticExecutionEnabled !== false,
     methodKnowledge: {
       methods,
@@ -395,5 +405,5 @@ export function normalizeCheckInConfigV7(value: unknown): CheckInConfig {
     selection,
     ...(customCheckIn ? { customCheckIn } : {}),
     ...(loginCheckIn ? { loginCheckIn } : {}),
-  }
+  })
 }

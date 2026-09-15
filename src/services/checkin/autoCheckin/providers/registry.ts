@@ -1,6 +1,15 @@
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
-import type { CheckInMethodId, PersistedCheckInMethodId } from "~/types/checkIn"
+import {
+  ACCOUNT_SITE_TYPES,
+  SITE_TYPES,
+  type AccountSiteType,
+} from "~/constants/siteType"
+import { isBrowserAutomationCheckInConfigured } from "~/services/checkin/autoCheckin/browserAutomation"
+import type {
+  CheckInConfig,
+  CheckInMethodId,
+  PersistedCheckInMethodId,
+} from "~/types/checkIn"
 
 import type { AutoCheckinProvider } from "./contracts"
 
@@ -238,6 +247,16 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     legacy: false,
     newAccountCompatibility: false,
   },
+  [AUTO_CHECKIN_METHOD_IDS.BrowserAutomationDailyCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.BrowserAutomationDailyCheckIn,
+    siteTypes: ACCOUNT_SITE_TYPES,
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "Browser automation",
+    },
+    legacy: false,
+    newAccountCompatibility: false,
+  },
 } as const satisfies Record<CheckInMethodId, AutoCheckinMethodDefinition>
 
 /** Returns the product source used to present a registered method. */
@@ -280,12 +299,16 @@ const getMethodIdsForSiteType = (
 export function getAutoCheckinCandidateMethodIds(
   siteType: AccountSiteType,
   siteUrl?: string,
+  config?: CheckInConfig,
 ): CheckInMethodId[] {
   return getMethodIdsForSiteType(CHECK_IN_METHOD_SITE_TYPES, siteType).filter(
     (id) => {
       const definition: AutoCheckinMethodDefinition =
         AUTO_CHECKIN_METHOD_DEFINITIONS[id]
-      return matchesMethodOrigin(definition, siteUrl)
+      return (
+        matchesMethodOrigin(definition, siteUrl) &&
+        isMethodCandidate(definition.id, config)
+      )
     },
   )
 }
@@ -308,6 +331,17 @@ function matchesMethodOrigin(
   } catch {
     return !origins
   }
+}
+
+/** User-declared methods stay out of discovery until their config opts in. */
+function isMethodCandidate(
+  methodId: CheckInMethodId,
+  config?: CheckInConfig,
+): boolean {
+  return (
+    methodId !== AUTO_CHECKIN_METHOD_IDS.BrowserAutomationDailyCheckIn ||
+    isBrowserAutomationCheckInConfigured(config?.customCheckIn)
+  )
 }
 
 /** Resolves the pre-registry method IDs used by the V6 migration. */
@@ -361,6 +395,8 @@ export interface AutoCheckinMethodRegistration {
   readonly provider: AutoCheckinProvider
   /** Existing-provider bridge used until a strict read-only probe is ready. */
   readonly compatibilityRegistration?: boolean
+  /** Optional account-config gate for methods that are user-declared. */
+  readonly isCandidate?: (config?: CheckInConfig) => boolean
 }
 
 export interface AutoCheckinMethodRegistry {
@@ -368,6 +404,7 @@ export interface AutoCheckinMethodRegistry {
   getCandidates(
     siteType: AccountSiteType,
     siteUrl?: string,
+    config?: CheckInConfig,
   ): readonly AutoCheckinMethodRegistration[]
   /** Resolve executable code only when the ID is registered by this build. */
   resolveById(
@@ -402,11 +439,12 @@ export function createAutoCheckinMethodRegistry(
 
   return {
     registrations,
-    getCandidates: (siteType, siteUrl) =>
+    getCandidates: (siteType, siteUrl, config) =>
       registrations.filter(
         (registration) =>
           registration.siteTypes.includes(siteType) &&
-          matchesMethodOrigin(registration, siteUrl),
+          matchesMethodOrigin(registration, siteUrl) &&
+          (registration.isCandidate?.(config) ?? true),
       ),
     resolveById: (id) =>
       registrations.find((registration) => registration.id === id) ?? null,

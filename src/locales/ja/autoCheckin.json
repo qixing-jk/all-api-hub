@@ -135,6 +135,12 @@
   },
   "providerFallback": {
     "alreadyCheckedToday": "本日はすでにチェックイン済みです",
+    "browserAutomationActionTargetNotFound": "設定された操作対象がページに見つかりませんでした。セレクターまたはテキストパターンを確認してください。",
+    "browserAutomationIdentityMismatch": "チェックインページは別のアカウントでログインされています。対象のアカウントでログインして再試行してください。",
+    "browserAutomationIdentityMissing": "チェックインページで対象のアカウントを確認できませんでした。対象のアカウントでログインして再試行してください。",
+    "browserAutomationInvalidRequest": "ブラウザチェックインの設定が無効です。このアカウントのカスタムチェックイン設定を確認してください。",
+    "browserAutomationTimeout": "チェックイン成功条件の待機がタイムアウトしたため、結果は未確認です。チェックインページを開いて手動で確認してください。",
+    "browserAutomationTriggerFailed": "ページのチェックイン操作を実行できませんでした。チェックインページを開いて手動でチェックインしてください。",
     "checkinFailed": "チェックインに失敗しました",
     "checkinSuccessful": "チェックインに成功しました",
     "endpointNotSupported": "このチェックインエンドポイントはサポートされていません。アカウントのサイト種別が実際のサイトと一致しているか確認してください。",

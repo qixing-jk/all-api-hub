@@ -134,6 +134,7 @@ export function mergeUserOwnedCheckInDraft(input: {
         redeemUrl: draftCustom.redeemUrl,
         openRedeemWithCheckIn: draftCustom.openRedeemWithCheckIn,
         turnstilePreTrigger: draftCustom.turnstilePreTrigger,
+        browserAutomation: draftCustom.browserAutomation,
       }
     : undefined
 

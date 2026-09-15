@@ -1,3 +1,5 @@
+import type { FetchFunction } from "@ai-sdk/provider-utils"
+
 import {
   API_AUTH_MODES,
   createAuthModeMemory,
@@ -15,7 +17,7 @@ export const ANTHROPIC_VERSION = "2023-06-01"
 
 type AnthropicSdkAuthConfig = {
   apiKey: string
-  fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+  fetch: FetchFunction
 }
 
 /**

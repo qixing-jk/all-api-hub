@@ -25,6 +25,7 @@ export function inspectAccountCheckIn(input: {
     candidateMethodIds: getAutoCheckinCandidateMethodIds(
       input.siteType,
       input.siteUrl,
+      input.config,
     ),
     accountDisabled: input.accountDisabled,
     globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,

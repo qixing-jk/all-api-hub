@@ -141,6 +141,12 @@
   },
   "providerFallback": {
     "alreadyCheckedToday": "Ya hizo check-in hoy",
+    "browserAutomationActionTargetNotFound": "No se encontró en la página el objetivo de la acción configurado. Revisa el selector o el patrón de texto.",
+    "browserAutomationIdentityMismatch": "La página de check-in inició sesión con otra cuenta. Inicia sesión con la cuenta objetivo y vuelve a intentarlo.",
+    "browserAutomationIdentityMissing": "No se pudo confirmar la cuenta objetivo en la página de check-in. Inicia sesión con la cuenta objetivo y vuelve a intentarlo.",
+    "browserAutomationInvalidRequest": "La configuración del check-in en el navegador no es válida. Revisa la configuración de check-in personalizada de esta cuenta.",
+    "browserAutomationTimeout": "Se agotó el tiempo de espera de la condición de éxito del check-in, por lo que el resultado no está confirmado. Abre la página de check-in para verificarlo manualmente.",
+    "browserAutomationTriggerFailed": "No se pudo realizar la acción de check-in en la página. Abre la página de check-in y completa el check-in manualmente.",
     "checkinFailed": "Check-in fallido",
     "checkinSuccessful": "Check-in correcto",
     "endpointNotSupported": "Este endpoint de check-in no es compatible. Comprueba si el tipo de sitio de tu cuenta coincide con el sitio real.",

@@ -14,12 +14,14 @@ import type {
   CHECK_IN_SELECTION_STALE_REASONS,
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
+import type { BrowserCheckInConfig } from "~/types/checkinAutomation"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
 
 /** Independent user-owned custom check-in/bookmark configuration. */
 export interface CustomCheckInConfig {
   url?: string
   turnstilePreTrigger?: TurnstilePreTrigger
+  browserAutomation?: BrowserCheckInConfig
   redeemUrl?: string
   openRedeemWithCheckIn?: boolean
   isCheckedInToday?: boolean
@@ -60,6 +62,9 @@ export type CheckInMethodDetection =
           }
         | {
             source: typeof CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.CompatibilityRegistration
+          }
+        | {
+            source: typeof CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.UserConfiguration
           }
       lastUnknownAttempt?: CheckInMethodUnknownAttempt
     }

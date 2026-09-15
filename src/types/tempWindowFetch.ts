@@ -4,6 +4,12 @@ import type {
   ProtectionBypassExecution,
   TempWindowFetchTaskKind,
 } from "~/services/protectionBypass/contracts"
+import type {
+  BrowserCheckInAction,
+  BrowserCheckInExecutionResult,
+  BrowserCheckInIdentityCondition,
+  BrowserCheckInSuccessCondition,
+} from "~/types/checkinAutomation"
 import type { AuthTypeEnum } from "~/types/index"
 import type {
   CheckinPageActionTriggerResult,
@@ -148,6 +154,21 @@ export interface TempWindowCheckinPageActionParams {
   cookieStoreId?: string
   protectionBypassExecution: ProtectionBypassExecution
 }
+
+export interface TempWindowBrowserCheckInParams {
+  pageUrl: string
+  requestId?: string
+  tempWindowRequestSource?: TempWindowRequestSource
+  suppressMinimize?: boolean
+  useIncognito?: boolean
+  action: BrowserCheckInAction
+  success: BrowserCheckInSuccessCondition
+  identity?: BrowserCheckInIdentityCondition
+  timeoutMs?: number
+  protectionBypassExecution: ProtectionBypassExecution
+}
+
+export type TempWindowBrowserCheckIn = BrowserCheckInExecutionResult
 
 export interface TempWindowFetch {
   transportLifecycle?: ApiTransportRemoteLifecycleEvidence

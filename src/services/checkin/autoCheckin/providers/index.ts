@@ -1,4 +1,5 @@
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
+import { isBrowserAutomationCheckInConfigured } from "~/services/checkin/autoCheckin/browserAutomation"
 import { agentRouterProvider } from "~/services/checkin/autoCheckin/providers/agentrouter"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import { sub2apiProProvider } from "~/services/checkin/autoCheckin/providers/sub2apiPro"
@@ -6,6 +7,7 @@ import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV
 import type { CheckInMethodId } from "~/types/checkIn"
 
 import { anyrouterProvider } from "./anyrouter"
+import { browserAutomationProvider } from "./browserAutomation"
 import type { AutoCheckinProvider } from "./contracts"
 import { denxioProvider } from "./denxio"
 import { geniusProgrammerProvider } from "./geniusProgrammer"
@@ -27,6 +29,8 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn]:
     geniusProgrammerProvider,
   [AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn]: denxioProvider,
+  [AUTO_CHECKIN_METHOD_IDS.BrowserAutomationDailyCheckIn]:
+    browserAutomationProvider,
 } as const satisfies Record<CheckInMethodId, AutoCheckinProvider>
 
 export const autoCheckinMethodRegistry = createAutoCheckinMethodRegistry(
@@ -38,6 +42,12 @@ export const autoCheckinMethodRegistry = createAutoCheckinMethodRegistry(
       ? { excludedOrigins: definition.excludedOrigins }
       : {}),
     provider: PROVIDER_BY_METHOD_ID[definition.id],
+    ...(definition.id === AUTO_CHECKIN_METHOD_IDS.BrowserAutomationDailyCheckIn
+      ? {
+          isCandidate: (config) =>
+            isBrowserAutomationCheckInConfigured(config?.customCheckIn),
+        }
+      : {}),
     compatibilityRegistration: definition.newAccountCompatibility,
   })),
 )

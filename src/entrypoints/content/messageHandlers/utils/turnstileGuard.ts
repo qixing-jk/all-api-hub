@@ -697,12 +697,29 @@ function normalizeTimeoutMs(timeoutMs: unknown): number {
 }
 
 /**
+ * Normalize the short grace period used by actions that inject Turnstile
+ * asynchronously after the user action.
+ */
+function normalizeLateAppearanceTimeoutMs(timeoutMs: unknown): number {
+  const raw =
+    typeof timeoutMs === "number"
+      ? timeoutMs
+      : typeof timeoutMs === "string"
+        ? Number(timeoutMs)
+        : NaN
+
+  if (!Number.isFinite(raw)) return 0
+  return Math.max(0, Math.min(raw, MAX_WAIT_TIMEOUT_MS))
+}
+
+/**
  * Wait for a Turnstile token to appear in the DOM.
  */
 export async function waitForTurnstileToken(params: {
   requestId?: string | null
   timeoutMs?: unknown
   preTrigger?: TurnstilePreTrigger
+  waitForLateAppearanceMs?: unknown
 }): Promise<TurnstileTokenWaitResult> {
   let detection = detectTurnstileWidget()
 
@@ -716,13 +733,24 @@ export async function waitForTurnstileToken(params: {
     return { status: "token_obtained", token: existing, detection }
   }
 
-  if (!detection.hasTurnstile && !preTriggerEnabled) {
+  const timeoutMs = normalizeTimeoutMs(params.timeoutMs)
+  const deadline = Date.now() + timeoutMs
+  const lateAppearanceTimeoutMs = normalizeLateAppearanceTimeoutMs(
+    params.waitForLateAppearanceMs,
+  )
+  const lateAppearanceDeadline = Math.min(
+    deadline,
+    Date.now() + lateAppearanceTimeoutMs,
+  )
+
+  if (
+    !detection.hasTurnstile &&
+    !preTriggerEnabled &&
+    lateAppearanceTimeoutMs <= 0
+  ) {
     clearTurnstileGuardState(params.requestId)
     return { status: "not_present", token: null, detection }
   }
-
-  const timeoutMs = normalizeTimeoutMs(params.timeoutMs)
-  const deadline = Date.now() + timeoutMs
 
   let sawTurnstile = detection.hasTurnstile
 
@@ -751,6 +779,8 @@ export async function waitForTurnstileToken(params: {
         )
         continue
       }
+    } else if (Date.now() >= lateAppearanceDeadline) {
+      break
     }
 
     await new Promise((resolve) => setTimeout(resolve, WAIT_POLL_INTERVAL_MS))

@@ -91,6 +91,7 @@ import {
 import type { ManagedSiteMessagesKey } from "~/services/accountSiteDefinitions/contracts"
 import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
+import { syncBrowserAutomationMethodState } from "~/services/checkin/autoCheckin/browserAutomation"
 import {
   createCompatibilityCheckInConfig,
   resolveNewAccountAutomaticExecutionEnabled,
@@ -664,12 +665,14 @@ export function useAccountDialog({
   )
   const setCheckIn = useCallback(
     (value: CheckInConfig) => {
+      const normalizedValue = syncBrowserAutomationMethodState(value)
       if (
-        value.automaticExecutionEnabled !== checkIn.automaticExecutionEnabled
+        normalizedValue.automaticExecutionEnabled !==
+        checkIn.automaticExecutionEnabled
       ) {
         automaticExecutionPreferenceChangedRef.current = true
       }
-      updateDraft((prev) => ({ ...prev, checkIn: value }))
+      updateDraft((prev) => ({ ...prev, checkIn: normalizedValue }))
     },
     [checkIn.automaticExecutionEnabled, updateDraft],
   )
@@ -677,7 +680,11 @@ export function useAccountDialog({
     (value: CheckInConfig) => {
       checkInSelectionChangedRef.current = true
       setCheckIn(value)
-      const candidateMethodIds = getAutoCheckinCandidateMethodIds(siteType, url)
+      const candidateMethodIds = getAutoCheckinCandidateMethodIds(
+        siteType,
+        url,
+        value,
+      )
       const inspection = inspectAccountCheckIn({
         config: value,
         siteUrl: url,
@@ -2190,7 +2197,11 @@ export function useAccountDialog({
           ? candidateSiteType
           : undefined
       const candidateMethodIds = checkInSiteType
-        ? getAutoCheckinCandidateMethodIds(checkInSiteType, url)
+        ? getAutoCheckinCandidateMethodIds(
+            checkInSiteType,
+            url,
+            resultData?.checkIn,
+          )
         : []
       const checkInInspection =
         resultData && checkInSiteType

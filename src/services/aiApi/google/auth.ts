@@ -1,3 +1,5 @@
+import type { FetchFunction } from "@ai-sdk/provider-utils"
+
 import {
   API_AUTH_MODES,
   createAuthModeMemory,
@@ -13,7 +15,7 @@ export type GoogleAuthMode =
 
 type GoogleSdkAuthConfig = {
   apiKey: string
-  fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+  fetch: FetchFunction
 }
 
 const authModeMemory = createAuthModeMemory<GoogleAuthMode>(
