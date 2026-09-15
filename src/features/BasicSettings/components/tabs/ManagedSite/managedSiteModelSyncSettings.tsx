@@ -699,7 +699,7 @@ export default function ManagedSiteModelSyncSettings() {
                   disabled={intervalHoursField.isCommitting}
                   className="w-24"
                 />
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-muted-foreground text-sm">
                   {t("managedSiteModelSync:settings.intervalUnit")}
                 </span>
               </div>
@@ -783,7 +783,7 @@ export default function ManagedSiteModelSyncSettings() {
                   disabled={channelProcessingTimeoutField.isCommitting}
                   className="w-24"
                 />
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-muted-foreground text-sm">
                   {t(
                     "managedSiteModelSync:settings.channelProcessingTimeoutUnit",
                   )}
@@ -865,17 +865,17 @@ export default function ManagedSiteModelSyncSettings() {
                 disabled={optionsLoading}
               />
               {optionsLoading ? (
-                <p className="text-xs text-gray-500">
+                <p className="text-muted-foreground text-xs">
                   {t("managedSiteModelSync:settings.allowedModelsLoading")}
                 </p>
               ) : optionsError ? (
-                <p className="text-xs text-red-500">
+                <p className="text-destructive-text text-xs">
                   {t("managedSiteModelSync:settings.allowedModelsLoadFailed", {
                     error: optionsError,
                   })}
                 </p>
               ) : (
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-muted-foreground text-xs">
                   {t("managedSiteModelSync:settings.allowedModelsHint")}
                 </p>
               )}

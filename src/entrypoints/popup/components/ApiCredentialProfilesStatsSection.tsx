@@ -204,7 +204,7 @@ export default function ApiCredentialProfilesStatsSection() {
             className={cn(
               moneyValueClassName,
               telemetryStats.balanceUsd === undefined &&
-                "dark:text-dark-text-tertiary text-gray-500",
+                "text-muted-foreground",
             )}
           >
             {balanceText}
@@ -218,8 +218,8 @@ export default function ApiCredentialProfilesStatsSection() {
             className={cn(
               moneyValueClassName,
               telemetryStats.todayUsageUsd === undefined
-                ? "dark:text-dark-text-tertiary text-gray-500"
-                : "text-emerald-600 dark:text-emerald-400",
+                ? "text-muted-foreground"
+                : "text-cashflow-expense",
             )}
           >
             {todayUsageText}

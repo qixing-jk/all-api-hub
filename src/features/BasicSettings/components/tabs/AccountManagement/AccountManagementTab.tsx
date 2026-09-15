@@ -30,12 +30,12 @@ export default function AccountManagementTab() {
     <div className="space-y-6">
       <section id="account-management">
         <Heading4 className="mb-2 flex items-center gap-2">
-          <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <Users className="text-theme-600 dark:text-theme-400 h-5 w-5" />
           <span>{t("accountManagement.title")}</span>
         </Heading4>
         <Card>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-700 dark:text-gray-300">
+            <p className="text-secondary-foreground text-sm">
               {t("accountManagement.description")}
             </p>
             <WorkflowTransitionButton

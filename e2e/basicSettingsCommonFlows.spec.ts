@@ -1,5 +1,7 @@
 import { OPTIONS_PAGE_PATH, POPUP_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
+import { THEME_MODE } from "~/constants/theme"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
@@ -135,7 +137,7 @@ test("persists an options setting through extension storage and reload", async (
     currencyType: "USD",
     activeTab: "cashflow",
     showTodayCashflow: true,
-    themeMode: "system",
+    themeMode: THEME_MODE.SYSTEM,
     actionClickBehavior: "popup",
   })
 
@@ -276,7 +278,7 @@ test("uses control-specific layouts at narrow card widths", async ({
   )
   await waitForExtensionRoot(page)
 
-  const card = page.locator("#appearance-theme-mode")
+  const card = page.locator(`#${SETTINGS_ANCHORS.APPEARANCE_THEME_MODE}`)
   const content = card.locator('[data-slot="card-item-content"]')
 
   await expect(card).toBeVisible()

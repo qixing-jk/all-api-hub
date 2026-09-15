@@ -29,7 +29,7 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:appearance",
     "general",
-    "appearance",
+    SETTINGS_ANCHORS.APPEARANCE,
     "settings:theme.appearance",
     201,
   ),
@@ -87,6 +87,32 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
 
 export const generalSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
+    "control:appearance-preset",
+    "general",
+    SETTINGS_ANCHORS.APPEARANCE_PRESET,
+    "settings:appearance.preset",
+    529,
+    {
+      keywords: ["theme", "preset", "Anthropic", "主题", "配色", "暖色"],
+    },
+  ),
+  buildControlDefinition(
+    "control:appearance-color",
+    "general",
+    SETTINGS_ANCHORS.APPEARANCE_COLOR,
+    "settings:appearance.color",
+    530,
+    { keywords: ["theme", "color", "palette", "主题色", "配色"] },
+  ),
+  buildControlDefinition(
+    "control:appearance-radius",
+    "general",
+    SETTINGS_ANCHORS.APPEARANCE_RADIUS,
+    "settings:appearance.radius",
+    531,
+    { keywords: ["radius", "corners", "rounded", "圆角"] },
+  ),
+  buildControlDefinition(
     "control:display-currency",
     "general",
     "display-currency-unit",
@@ -138,7 +164,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:appearance-theme-mode",
     "general",
-    "appearance-theme-mode",
+    SETTINGS_ANCHORS.APPEARANCE_THEME_MODE,
     "settings:theme.appearance",
     503,
     {
@@ -154,7 +180,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:appearance-language",
     "general",
-    "appearance-language",
+    SETTINGS_ANCHORS.APPEARANCE_LANGUAGE,
     "settings:appearanceLanguage.language",
     504,
     {

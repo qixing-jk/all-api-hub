@@ -237,7 +237,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                       variant="ghost"
                       onClick={() => onRemoveFilter(filter.id)}
                       aria-label={t("filters.labels.delete")}
-                      className="text-muted-foreground hover:text-destructive"
+                      className="text-muted-foreground hover:text-destructive-text"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

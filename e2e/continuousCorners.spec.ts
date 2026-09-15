@@ -1,5 +1,7 @@
 import { OPTIONS_PAGE_PATH, POPUP_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
+import { THEME_MODE } from "~/constants/theme"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredBookmark,
@@ -16,7 +18,7 @@ test.beforeEach(async ({ context, page }) => {
   await forceExtensionLanguage(page, "en")
   await stubLlmMetadataIndex(context)
   await seedUserPreferences(await getServiceWorker(context), {
-    themeMode: "light",
+    themeMode: THEME_MODE.LIGHT,
     currencyType: "USD",
   })
 })
@@ -94,7 +96,7 @@ test("card edge rows and notification surfaces use the actual shared radius", as
   await expect(firstRow).toBeVisible()
   for (const dark of [false, true]) {
     await page
-      .locator("#appearance-theme-mode")
+      .locator(`#${SETTINGS_ANCHORS.APPEARANCE_THEME_MODE}`)
       .getByRole("button", {
         name: dark ? /Dark/ : /Light/,
       })
@@ -172,7 +174,9 @@ test("settings preserve inset corners, circular switches and focus in both theme
   await page.goto(
     `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BASIC}`,
   )
-  const group = page.locator("#appearance-theme-mode").getByRole("group")
+  const group = page
+    .locator(`#${SETTINGS_ANCHORS.APPEARANCE_THEME_MODE}`)
+    .getByRole("group")
   const button = group.getByRole("button").first()
   await expect(button).toBeVisible()
 
@@ -222,7 +226,9 @@ test("portalled menus and search dialog keep their nested outlines", async ({
   await page.goto(
     `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BASIC}`,
   )
-  const language = page.locator("#appearance-language").getByRole("combobox")
+  const language = page
+    .locator(`#${SETTINGS_ANCHORS.APPEARANCE_LANGUAGE}`)
+    .getByRole("combobox")
   await expect(language).toBeVisible()
   for (const dark of [false, true]) {
     await setVisualDarkMode(page, dark)

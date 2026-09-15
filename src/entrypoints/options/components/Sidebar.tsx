@@ -114,7 +114,7 @@ function Sidebar({
       {isMobileOpen && (
         <div
           className={cn(
-            "fixed inset-0 bg-black/20 md:hidden",
+            "bg-overlay/20 fixed inset-0 md:hidden",
             Z_INDEX.backdrop,
           )}
           onClick={onMobileClose}
@@ -138,7 +138,7 @@ function Sidebar({
           [PRODUCT_TOUR_TARGET_ATTRIBUTE]: PRODUCT_TOUR_TARGETS.Navigation,
         }}
       >
-        <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary flex h-full flex-col border-r border-gray-200 bg-white shadow-sm">
+        <div className="border-sidebar-border bg-sidebar text-sidebar-foreground flex h-full flex-col border-r shadow-sm">
           <div
             className={cn(
               "flex h-16 items-center px-3 py-2",
@@ -150,7 +150,7 @@ function Sidebar({
                 <Heading3
                   aria-hidden={shouldShowCollapsedState}
                   className={cn(
-                    "dark:text-dark-text-tertiary truncate text-sm font-semibold tracking-wide text-gray-500 uppercase transition-all duration-200",
+                    "text-muted-foreground truncate text-sm font-semibold tracking-wide uppercase transition-all duration-200",
                     shouldShowCollapsedState
                       ? "max-w-0 opacity-0"
                       : "max-w-[200px] opacity-100",
@@ -214,7 +214,7 @@ function Sidebar({
                     <div className="mb-2 px-3">
                       <Heading3
                         id={categoryHeadingId}
-                        className="dark:text-dark-text-tertiary text-xs font-semibold tracking-wide text-gray-400 uppercase"
+                        className="dark:text-muted-foreground text-faint-foreground text-xs font-semibold tracking-wide uppercase"
                       >
                         {categoryLabel}
                       </Heading3>
@@ -242,16 +242,16 @@ function Sidebar({
                               "group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors",
                               shouldShowCollapsedState && "justify-center px-0",
                               isActive
-                                ? "bg-blue-600 text-white dark:bg-blue-500"
-                                : "dark:text-dark-text-secondary text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-white/10 dark:hover:text-white",
+                                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                             )}
                           >
                             <Icon
                               className={cn(
                                 "h-5 w-5 shrink-0",
                                 isActive
-                                  ? "text-white"
-                                  : "dark:text-dark-text-tertiary text-gray-400 group-hover:text-gray-600 dark:group-hover:text-white",
+                                  ? "text-sidebar-primary-foreground"
+                                  : "text-sidebar-foreground/70 group-hover:text-sidebar-accent-foreground",
                               )}
                             />
 
@@ -280,7 +280,7 @@ function Sidebar({
           <div className="flex items-center justify-between px-3 py-3 sm:px-4">
             <Heading3
               className={cn(
-                "dark:text-dark-text-tertiary text-xs font-semibold tracking-wide text-gray-400 uppercase",
+                "dark:text-muted-foreground text-faint-foreground text-xs font-semibold tracking-wide uppercase",
                 shouldShowCollapsedState && "sr-only",
               )}
             >

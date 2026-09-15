@@ -34,7 +34,7 @@ export default function ManagedSiteConfigRequiredState({
   return (
     <EmptyState
       className={className}
-      icon={<TriangleAlert className="h-12 w-12 text-yellow-500" />}
+      icon={<TriangleAlert className="text-warning-text h-12 w-12" />}
       title={t("status.configurationRequired")}
       description={description}
       actions={[

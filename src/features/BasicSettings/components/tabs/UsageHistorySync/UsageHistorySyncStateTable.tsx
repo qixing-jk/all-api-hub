@@ -161,7 +161,7 @@ export default function UsageHistorySyncStateTable({
         header: t("syncTab.table.columns.lastSyncAt"),
         accessorFn: (row) => row.lastSyncAtMs ?? 0,
         cell: ({ row }: { row: Row<UsageHistoryAccountRow> }) => (
-          <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+          <div className="text-muted-foreground text-xs">
             {row.original.lastSyncAtMs
               ? row.original.lastSyncAtLabel
               : t("status.never")}
@@ -174,12 +174,12 @@ export default function UsageHistorySyncStateTable({
         cell: ({ row }: { row: Row<UsageHistoryAccountRow> }) => (
           <div className="space-y-1">
             {row.original.lastError && (
-              <div className="text-xs text-red-600 dark:text-red-400">
+              <div className="text-destructive-text text-xs">
                 {row.original.lastError}
               </div>
             )}
             {row.original.lastWarning && (
-              <div className="text-xs text-amber-600 dark:text-amber-400">
+              <div className="text-warning-text text-xs">
                 {row.original.lastWarning}
               </div>
             )}
@@ -284,7 +284,7 @@ export default function UsageHistorySyncStateTable({
         </div>
       </div>
 
-      <div className="dark:border-dark-bg-tertiary overflow-auto rounded-lg border border-gray-200">
+      <div className="border-border overflow-auto rounded-lg border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

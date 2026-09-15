@@ -137,7 +137,7 @@ function OptionsPage() {
       onMobileSidebarOpenChange={setIsMobileSidebarOpen}
     >
       <div
-        className="dark:bg-dark-bg-primary flex min-h-screen flex-col bg-gray-50"
+        className="dark:bg-background bg-surface-subtle flex min-h-screen flex-col"
         data-testid={OPTIONS_TEST_IDS.app}
       >
         <Header
@@ -147,7 +147,7 @@ function OptionsPage() {
           isMobileSidebarOpen={isMobileSidebarOpen}
         />
 
-        <div className="dark:bg-dark-bg-primary flex flex-1 flex-col bg-gray-50 md:flex-row">
+        <div className="dark:bg-background bg-surface-subtle flex flex-1 flex-col md:flex-row">
           <Sidebar
             activeMenuItem={activeMenuItem}
             onMenuItemClick={handleMenuItemClick}
@@ -166,7 +166,7 @@ function OptionsPage() {
             <div className="mx-auto w-full max-w-7xl px-2 py-3 sm:px-4 sm:py-5 md:px-6 md:py-6">
               <PopupInterruptionHintBanner className="mb-3 sm:mb-4" />
               <div
-                className="dark:border-dark-bg-tertiary bg-background overflow-hidden rounded-2xl border border-gray-200 shadow-sm"
+                className="bg-background border-border overflow-hidden rounded-2xl border shadow-sm"
                 data-testid={OPTIONS_TEST_IDS.contentCard}
                 {...{
                   [PRODUCT_TOUR_TARGET_ATTRIBUTE]: PRODUCT_TOUR_TARGETS.Content,

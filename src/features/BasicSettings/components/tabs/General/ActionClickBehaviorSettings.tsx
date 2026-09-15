@@ -58,7 +58,7 @@ export default function ActionClickBehaviorSettings() {
           <CardItem
             id="action-click-behavior"
             icon={
-              <MousePointerClick className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <MousePointerClick className="text-theme-600 dark:text-theme-400 h-5 w-5" />
             }
             title={t("actionClick.actionIconClickTitle")}
             description={

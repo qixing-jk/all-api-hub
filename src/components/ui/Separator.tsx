@@ -25,7 +25,7 @@ export function Separator({
     <div
       {...ariaProps}
       className={cn(
-        "dark:bg-dark-bg-tertiary shrink-0 bg-gray-100",
+        "dark:bg-secondary bg-muted shrink-0",
         orientation === "horizontal" ? "h-px w-full" : "h-full w-px",
         className,
       )}

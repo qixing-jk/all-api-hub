@@ -127,10 +127,10 @@ export function ModelListInput({
     <div className={cn("space-y-2", className)}>
       {showHeader && (
         <div className="space-y-1">
-          <div className="dark:text-dark-text-primary text-sm font-medium text-gray-900">
+          <div className="text-foreground text-sm font-medium">
             {resolvedTitle}
           </div>
-          <div className="dark:text-dark-text-secondary text-xs text-gray-500">
+          <div className="dark:text-secondary-foreground text-muted-foreground text-xs">
             {resolvedDescription}
           </div>
         </div>
@@ -170,7 +170,7 @@ export function ModelListInput({
                 />
               )}
             </div>
-            <ArrowRight className="h-4 w-4 shrink-0 text-gray-400" />
+            <ArrowRight className="text-faint-foreground h-4 w-4 shrink-0" />
             <div className="min-w-0 flex-1">
               <Input
                 value={item.alias}

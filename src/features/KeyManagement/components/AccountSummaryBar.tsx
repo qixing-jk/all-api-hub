@@ -29,7 +29,7 @@ export function AccountSummaryBar({
     <Card className="mb-4">
       <CardContent className="py-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="dark:text-dark-text-secondary text-sm font-medium text-gray-700">
+          <div className="text-secondary-foreground text-sm font-medium">
             {t("accountSummary.title")}
           </div>
           <div className="flex flex-wrap gap-2">
@@ -52,7 +52,7 @@ export function AccountSummaryBar({
               return (
                 <Badge
                   key={item.accountId}
-                  variant={isActive ? "info" : "secondary"}
+                  variant={isActive ? "default" : "secondary"}
                   size="default"
                   {...(onAccountClick
                     ? {
@@ -63,12 +63,12 @@ export function AccountSummaryBar({
                 >
                   <span className="truncate font-medium">{item.name}</span>
                   {countLabel ? (
-                    <span className="dark:text-dark-text-tertiary ml-2 text-gray-500">
+                    <span className="text-muted-foreground ml-2">
                       {countLabel}
                     </span>
                   ) : null}
                   {item.errorType && (
-                    <span className="ml-2 text-xs text-red-500 dark:text-red-400">
+                    <span className="text-destructive-text ml-2 text-xs">
                       {item.errorType === "unsupported"
                         ? t("accountSummary.unsupported")
                         : t("accountSummary.loadFailed")}

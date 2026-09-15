@@ -13,15 +13,15 @@ const cardEdgePaddingClasses = {
 } as const
 
 const cardVariants = cva(
-  "rounded-lg corners-concentric [--corner-inset:1px] border bg-white dark:bg-dark-bg-secondary text-gray-900 dark:text-dark-text-primary",
+  "rounded-lg corners-concentric [--corner-inset:1px] border bg-card text-foreground",
   {
     variants: {
       variant: {
-        default: "border-gray-200 dark:border-dark-bg-tertiary shadow-sm",
-        elevated: "border-gray-200 dark:border-dark-bg-tertiary shadow-md",
+        default: "border-border shadow-sm",
+        elevated: "border-border shadow-md",
         interactive:
-          "border-gray-200 dark:border-dark-bg-tertiary shadow-sm hover:shadow-md transition-shadow",
-        outlined: "border-gray-300 dark:border-gray-600 shadow-none",
+          "border-border shadow-sm hover:shadow-md transition-shadow",
+        outlined: "border-border-strong shadow-none",
         ghost: "border-transparent shadow-none",
       },
       padding: {
@@ -69,7 +69,7 @@ const CardHeader = React.forwardRef<HTMLDivElement, CardHeaderProps>(
         ref={ref}
         className={cn(
           "flex flex-col space-y-1.5 rounded-t-[var(--corner-inner-radius,0px)]",
-          bordered && "dark:border-dark-bg-tertiary border-b border-gray-200",
+          bordered && "border-border border-b",
           cardEdgePaddingClasses[padding],
           className,
         )}
@@ -100,7 +100,10 @@ const CardDescription = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <BodySmall
     ref={ref}
-    className={cn("dark:text-dark-text-secondary text-gray-600", className)}
+    className={cn(
+      "dark:text-secondary-foreground text-muted-foreground",
+      className,
+    )}
     {...props}
   >
     {children}
@@ -163,7 +166,7 @@ const CardFooter = React.forwardRef<HTMLDivElement, CardFooterProps>(
         ref={ref}
         className={cn(
           "flex items-center justify-end space-x-3 rounded-b-[var(--corner-inner-radius,0px)]",
-          bordered && "dark:border-dark-bg-tertiary border-t border-gray-200",
+          bordered && "border-border border-t",
           cardEdgePaddingClasses[padding],
           className,
         )}

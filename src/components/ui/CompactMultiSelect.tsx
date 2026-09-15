@@ -740,7 +740,7 @@ export function CompactMultiSelect({
                 selectableOptionValues.length === 0 ||
                 allSelectableOptionsSelected
               }
-              className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary dark:hover:bg-dark-bg-secondary/80"
+              className="dark:border-border dark:bg-card dark:text-foreground dark:hover:bg-card/80"
             >
               <ListChecksIcon className="size-4" />
             </Button>
@@ -752,7 +752,7 @@ export function CompactMultiSelect({
               aria-label={t("multiSelect.cancelSelected")}
               title={t("multiSelect.cancelSelected")}
               disabled={disabled || !hasSelection || !clearable}
-              className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary dark:hover:bg-dark-bg-secondary/80"
+              className="dark:border-border dark:bg-card dark:text-foreground dark:hover:bg-card/80"
             >
               <ListXIcon className="size-4" />
             </Button>
@@ -766,7 +766,7 @@ export function CompactMultiSelect({
         {label && (
           <label
             id={labelId}
-            className="dark:text-dark-text-primary mb-1 block text-sm font-medium text-gray-700"
+            className="dark:text-foreground text-secondary-foreground mb-1 block text-sm font-medium"
           >
             {label}
           </label>
@@ -786,7 +786,7 @@ export function CompactMultiSelect({
       {label && (
         <label
           id={labelId}
-          className="dark:text-dark-text-primary mb-1 block text-sm font-medium text-gray-700"
+          className="dark:text-foreground text-secondary-foreground mb-1 block text-sm font-medium"
         >
           {label}
         </label>
@@ -802,7 +802,7 @@ export function CompactMultiSelect({
               aria-expanded={open}
               aria-labelledby={triggerAriaLabelledBy}
               className={cn(
-                "dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary dark:hover:bg-dark-bg-secondary/80 flex min-w-0 flex-1 items-center justify-between gap-2 overflow-hidden text-left",
+                "dark:border-border dark:bg-card dark:text-foreground dark:hover:bg-card/80 flex min-w-0 flex-1 items-center justify-between gap-2 overflow-hidden text-left",
                 "whitespace-nowrap",
                 size === "default" && "h-9",
                 size === "sm" && "h-8",
@@ -889,7 +889,7 @@ export function CompactMultiSelect({
             onClick={clearSelection}
             aria-label={t("multiSelect.clearSelected")}
             title={t("multiSelect.clearSelected")}
-            className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary dark:hover:bg-dark-bg-secondary/80 shrink-0"
+            className="dark:border-border dark:bg-card dark:text-foreground dark:hover:bg-card/80 shrink-0"
           >
             <XIcon className="size-4" />
           </Button>

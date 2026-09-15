@@ -51,7 +51,7 @@ export function PageHeader({
         <div className="flex min-w-0 items-center gap-3">
           <Icon
             className={cn(
-              "h-6 w-6 shrink-0 text-blue-600 dark:text-blue-400",
+              "text-theme-600 dark:text-theme-400 h-6 w-6 shrink-0",
               iconClassName,
             )}
           />
@@ -59,9 +59,7 @@ export function PageHeader({
             className="flex min-w-0 items-center gap-2"
             data-testid={titleActionsTestId}
           >
-            <Heading2 className="dark:text-dark-text-primary text-gray-900">
-              {title}
-            </Heading2>
+            <Heading2 className="text-foreground">{title}</Heading2>
             {titleActions}
           </div>
         </div>
@@ -72,7 +70,7 @@ export function PageHeader({
         )}
       </div>
       {description && (
-        <BodySmall className="dark:text-dark-text-secondary mt-2 text-gray-600">
+        <BodySmall className="dark:text-secondary-foreground text-muted-foreground mt-2">
           {description}
         </BodySmall>
       )}

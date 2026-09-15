@@ -10,19 +10,19 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary/10 text-primary hover:bg-primary/15 dark:bg-primary/20 dark:text-primary-foreground",
+          "border-transparent bg-primary-soft text-primary-soft-foreground hover:bg-primary-soft-hover",
         secondary:
           "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
         destructive:
-          "border-transparent bg-destructive/10 text-destructive hover:bg-destructive/20",
+          "border-transparent bg-destructive-soft text-destructive-soft-foreground hover:bg-destructive-soft-hover",
         outline: "text-foreground hover:bg-accent hover:text-accent-foreground",
         success:
-          "border-transparent bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-200",
+          "border-transparent bg-success-soft text-success-soft-foreground hover:bg-success-soft-hover",
         warning:
-          "border-transparent bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-200",
-        info: "border-transparent bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-200",
+          "border-transparent bg-warning-soft text-warning-soft-foreground hover:bg-warning-soft-hover",
+        info: "border-transparent bg-info-soft text-info-soft-foreground hover:bg-info-soft-hover",
         danger:
-          "border-transparent bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300",
+          "border-transparent bg-destructive-soft text-destructive-soft-foreground hover:bg-destructive-soft-hover",
       },
       size: {
         default: "text-xs px-2.5 py-0.5",

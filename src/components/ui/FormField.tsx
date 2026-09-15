@@ -46,18 +46,10 @@ const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
         )}
         {children}
         {description && !error && !success && (
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {description}
-          </p>
+          <p className="text-muted-foreground text-xs">{description}</p>
         )}
-        {error && (
-          <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
-        )}
-        {success && (
-          <p className="text-xs text-green-600 dark:text-green-400">
-            {success}
-          </p>
-        )}
+        {error && <p className="text-destructive-text text-xs">{error}</p>}
+        {success && <p className="text-success-text text-xs">{success}</p>}
       </div>
     )
   },

@@ -1,0 +1,329 @@
+/* Public color contract. Surfaces and content use roles; theme-* is the
+   configurable accent ramp. Status and external brand palettes stay independent. */
+:root,
+:host,
+[data-color-scope] {
+  --background: #ffffff;
+  --foreground: #111827;
+  --card: #ffffff;
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --surface-subtle: #f9fafb;
+  --surface-deep: #f3f4f6;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+  --faint-foreground: #9ca3af;
+  --disabled-foreground: #d1d5db;
+  --secondary: #e5e7eb;
+  --secondary-foreground: #374151;
+  --surface-strong: #d1d5db;
+  --surface-inverse: #111827;
+  --surface-inverse-muted: #6b7280;
+  --inverse-foreground: #ffffff;
+  --border: #e5e7eb;
+  --border-subtle: #f3f4f6;
+  --border-strong: #d1d5db;
+  --input: var(--border-strong);
+  --overlay: #000000;
+  --shadow-color: #000000;
+  --table-edge-shadow: color-mix(in srgb, var(--shadow-color) 45%, transparent);
+  --chart-shadow: color-mix(in srgb, var(--shadow-color) 35%, transparent);
+  --accent: var(--muted);
+  --accent-foreground: var(--foreground);
+  --table-header: var(--surface-subtle);
+  --theme-solid: var(--theme-color-600);
+  --primary: var(--theme-solid);
+  --primary-foreground: #ffffff;
+  --theme-link: var(--theme-color-700);
+  --link: var(--theme-link);
+  /* Tinted controls need readable accent text, not the solid button's foreground. */
+  --primary-soft: color-mix(in srgb, var(--primary) 8%, var(--card));
+  --primary-soft-hover: color-mix(in srgb, var(--primary) 14%, var(--card));
+  --primary-soft-foreground: var(--link);
+  --primary-soft-border: color-mix(in srgb, var(--primary) 30%, var(--card));
+  --ring: var(--theme-color-500);
+  /* Solid feedback, inline text and tinted feedback have different contrast
+     requirements. None of these roles depends on the selected accent. */
+  --success: var(--color-semantic-success-700);
+  --success-hover: var(--color-semantic-success-800);
+  --success-foreground: #ffffff;
+  --success-text: var(--color-semantic-success-800);
+  --success-soft: var(--color-semantic-success-50);
+  --success-soft-foreground: var(--color-semantic-success-800);
+  --success-border: var(--color-semantic-success-200);
+  --warning: var(--color-semantic-warning-700);
+  --warning-hover: var(--color-semantic-warning-800);
+  --warning-foreground: #ffffff;
+  --warning-text: var(--color-semantic-warning-800);
+  --warning-soft: var(--color-semantic-warning-50);
+  --warning-soft-foreground: var(--color-semantic-warning-800);
+  --warning-border: var(--color-semantic-warning-200);
+  --destructive: var(--color-semantic-error-600);
+  --destructive-hover: var(--color-semantic-error-700);
+  --destructive-foreground: #ffffff;
+  --destructive-text: var(--color-semantic-error-700);
+  --destructive-soft: var(--color-semantic-error-50);
+  --destructive-soft-foreground: var(--color-semantic-error-800);
+  --destructive-border: var(--color-semantic-error-200);
+  --info: var(--color-semantic-info-700);
+  --info-hover: var(--color-semantic-info-800);
+  --info-foreground: #ffffff;
+  --info-text: var(--color-semantic-info-700);
+  --info-soft: var(--color-semantic-info-50);
+  --info-soft-foreground: var(--color-semantic-info-800);
+  --info-border: var(--color-semantic-info-200);
+  /* Pricing categories convey different units, not success or warning. */
+  --pricing-input: var(--link);
+  --pricing-input-soft: var(--primary-soft);
+  --pricing-output: #047857;
+  --pricing-output-soft: #ecfdf5;
+  --pricing-cache-read: #92400e;
+  --pricing-cache-read-soft: #fffbeb;
+  --pricing-cache-write: #7e22ce;
+  --pricing-cache-write-soft: #faf5ff;
+  --pricing-per-call: #6d28d9;
+  --pricing-per-call-soft: #f5f3ff;
+  --cashflow-income: var(--link);
+  --cashflow-expense: #047857;
+  --chart-1: var(--theme-color-600);
+  --chart-2: var(--color-violet-500);
+  --chart-3: var(--color-teal-600);
+  --chart-4: var(--color-amber-500);
+  --chart-5: var(--color-rose-500);
+  --chart-axis: var(--muted-foreground);
+  --chart-grid: var(--border-subtle);
+  --chart-border: var(--border);
+  --chart-heatmap-low: var(--theme-color-50);
+  --chart-heatmap-high: var(--theme-color-700);
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  --radius: 0.625rem;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    accent-color: var(--primary);
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  ::selection {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+}
+
+.dark {
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+  --card: #1e293b;
+  --surface-subtle: #1e293b;
+  --surface-deep: #020617;
+  --muted: #253247;
+  --muted-foreground: #94a3b8;
+  --faint-foreground: #64748b;
+  --disabled-foreground: #475569;
+  --secondary: #334155;
+  --secondary-foreground: #cbd5e1;
+  --surface-strong: #475569;
+  --surface-inverse: #f1f5f9;
+  --surface-inverse-muted: #94a3b8;
+  --inverse-foreground: #0f172a;
+  --border: #334155;
+  --border-subtle: #28364b;
+  --border-strong: #475569;
+  --accent: var(--secondary);
+  --table-header: var(--muted);
+  --link: var(--theme-color-300);
+  --ring: var(--theme-color-400);
+  --success-text: var(--color-semantic-success-300);
+  --success-soft: color-mix(
+    in srgb,
+    var(--color-semantic-success-900) 35%,
+    var(--card)
+  );
+  --success-soft-foreground: var(--color-semantic-success-200);
+  --success-border: color-mix(
+    in srgb,
+    var(--color-semantic-success-600) 55%,
+    var(--border)
+  );
+  --warning-text: var(--color-semantic-warning-300);
+  --warning-soft: color-mix(
+    in srgb,
+    var(--color-semantic-warning-900) 35%,
+    var(--card)
+  );
+  --warning-soft-foreground: var(--color-semantic-warning-200);
+  --warning-border: color-mix(
+    in srgb,
+    var(--color-semantic-warning-600) 55%,
+    var(--border)
+  );
+  --destructive-text: var(--color-semantic-error-300);
+  --destructive-soft: color-mix(
+    in srgb,
+    var(--color-semantic-error-900) 35%,
+    var(--card)
+  );
+  --destructive-soft-foreground: var(--color-semantic-error-200);
+  --destructive-border: color-mix(
+    in srgb,
+    var(--color-semantic-error-600) 55%,
+    var(--border)
+  );
+  --info-text: var(--color-semantic-info-300);
+  --info-soft: color-mix(
+    in srgb,
+    var(--color-semantic-info-900) 35%,
+    var(--card)
+  );
+  --info-soft-foreground: var(--color-semantic-info-200);
+  --info-border: color-mix(
+    in srgb,
+    var(--color-semantic-info-600) 55%,
+    var(--border)
+  );
+  --pricing-output: #6ee7b7;
+  --pricing-output-soft: color-mix(in srgb, #064e3b 35%, var(--card));
+  --pricing-cache-read: #fcd34d;
+  --pricing-cache-read-soft: color-mix(in srgb, #78350f 35%, var(--card));
+  --pricing-cache-write: #d8b4fe;
+  --pricing-cache-write-soft: color-mix(in srgb, #581c87 35%, var(--card));
+  --pricing-per-call: #c4b5fd;
+  --pricing-per-call-soft: color-mix(in srgb, #4c1d95 35%, var(--card));
+  --cashflow-expense: #6ee7b7;
+  --chart-1: var(--theme-color-400);
+  --chart-heatmap-low: var(--theme-color-950);
+  --chart-heatmap-high: var(--theme-color-300);
+}
+
+/* Component aliases are shared by real controls and previews. */
+:root,
+:host,
+[data-color-scope] {
+  --success-soft-hover: color-mix(
+    in srgb,
+    var(--success-text) 8%,
+    var(--success-soft)
+  );
+  --warning-soft-hover: color-mix(
+    in srgb,
+    var(--warning-text) 8%,
+    var(--warning-soft)
+  );
+  --destructive-soft-hover: color-mix(
+    in srgb,
+    var(--destructive-text) 8%,
+    var(--destructive-soft)
+  );
+  --info-soft-hover: color-mix(in srgb, var(--info-text) 8%, var(--info-soft));
+  --button-primary-bg: var(--primary);
+  --button-primary-bg-hover: color-mix(
+    in srgb,
+    var(--primary) 90%,
+    var(--overlay)
+  );
+  --button-primary-foreground: var(--primary-foreground);
+  --button-primary-ring: var(--ring);
+  --button-secondary-bg: var(--secondary);
+  --button-secondary-bg-hover: var(--surface-strong);
+  --button-secondary-foreground: var(--secondary-foreground);
+  --button-secondary-ring: var(--ring);
+  --button-outline-bg: var(--card);
+  --button-outline-border: var(--border);
+  --button-outline-hover-bg: var(--accent);
+  --button-outline-foreground: var(--foreground);
+  --button-outline-ring: var(--ring);
+  --button-ghost-foreground: var(--foreground);
+  --button-ghost-hover-bg: var(--accent);
+  --button-ghost-hover-foreground: var(--foreground);
+  --button-link-foreground: var(--link);
+  --button-link-hover-foreground: var(--primary);
+  --button-link-ring: var(--ring);
+  --button-destructive-bg: var(--destructive);
+  --button-destructive-bg-hover: var(--destructive-hover);
+  --button-destructive-foreground: var(--destructive-foreground);
+  --button-destructive-ring: var(--destructive-text);
+  --button-success-bg: var(--success);
+  --button-success-bg-hover: var(--success-hover);
+  --button-success-foreground: var(--success-foreground);
+  --button-success-ring: var(--success-text);
+  --button-warning-bg: var(--warning);
+  --button-warning-bg-hover: var(--warning-hover);
+  --button-warning-foreground: var(--warning-foreground);
+  --button-warning-ring: var(--warning-text);
+  --spinner-default-color: var(--primary);
+  --spinner-white-color: #ffffff;
+  --spinner-gray-color: var(--muted-foreground);
+  --spinner-primary-color: var(--primary);
+}
+
+@theme {
+  --color-semantic-info-950: var(--color-blue-950);
+  --color-semantic-error-950: var(--color-red-950);
+  --color-semantic-error-400: var(--color-red-400);
+  --color-semantic-error-300: var(--color-red-300);
+  --color-semantic-error-200: var(--color-red-200);
+  --color-semantic-warning-950: var(--color-amber-950);
+  --color-semantic-warning-400: var(--color-amber-400);
+  --color-semantic-warning-300: var(--color-amber-300);
+  --color-semantic-warning-200: var(--color-amber-200);
+  --color-semantic-success-950: var(--color-green-950);
+  --color-semantic-success-400: var(--color-green-400);
+  --color-semantic-success-300: var(--color-green-300);
+  --color-semantic-success-200: var(--color-green-200);
+  /* 品牌颜色 */
+  --color-brand-blue: #3b82f6;
+  --color-brand-green: #10b981;
+  --color-brand-red: #ef4444;
+  --color-brand-yellow: #f59e0b;
+  --color-brand-purple: #a855f7;
+
+  /* 语义化颜色 - 成功 */
+  --color-semantic-success-50: #f0fdf4;
+  --color-semantic-success-100: #dcfce7;
+  --color-semantic-success-500: #22c55e;
+  --color-semantic-success-600: #16a34a;
+  --color-semantic-success-700: #15803d;
+  --color-semantic-success-800: #166534;
+  --color-semantic-success-900: #14532d;
+
+  /* 语义化颜色 - 警告 */
+  --color-semantic-warning-50: #fffbeb;
+  --color-semantic-warning-100: #fef3c7;
+  --color-semantic-warning-500: #f59e0b;
+  --color-semantic-warning-600: #d97706;
+  --color-semantic-warning-700: #b45309;
+  --color-semantic-warning-800: #92400e;
+  --color-semantic-warning-900: #78350f;
+
+  /* 语义化颜色 - 错误 */
+  --color-semantic-error-50: #fef2f2;
+  --color-semantic-error-100: #fee2e2;
+  --color-semantic-error-500: #ef4444;
+  --color-semantic-error-600: #dc2626;
+  --color-semantic-error-700: #b91c1c;
+  --color-semantic-error-800: #991b1b;
+  --color-semantic-error-900: #7f1d1d;
+
+  /* 语义化颜色 - 信息 */
+  --color-semantic-info-50: #eff6ff;
+  --color-semantic-info-100: #dbeafe;
+  --color-semantic-info-200: #bfdbfe;
+  --color-semantic-info-300: #93c5fd;
+  --color-semantic-info-400: #60a5fa;
+  --color-semantic-info-500: #3b82f6;
+  --color-semantic-info-600: #2563eb;
+  --color-semantic-info-700: #1d4ed8;
+  --color-semantic-info-800: #1e40af;
+  --color-semantic-info-900: #1e3a8a;
+}

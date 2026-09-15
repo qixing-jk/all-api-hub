@@ -18,6 +18,41 @@
     "sidepanelUnsupportedHelper": "Este navegador não suporta painéis laterais; as seleções do painel lateral retornarão ao pop-up.",
     "title": "Clique no ícone da extensão"
   },
+  "appearance": {
+    "color": "Cor do tema",
+    "colors": {
+      "blue": "Azul",
+      "green": "Verde",
+      "orange": "Laranja",
+      "rose": "Rosa",
+      "slate": "Cinza ardósia",
+      "violet": "Violeta"
+    },
+    "description": "As alterações são salvas automaticamente e aplicadas às configurações, ao popup e ao painel lateral.",
+    "preset": "Tema predefinido",
+    "presetColorsHint": "Este tema inclui sua própria paleta. Escolha o tema padrão para selecionar a cor de destaque separadamente.",
+    "presetDescriptions": {
+      "anthropic": "Creme quente e terracota, com modo escuro em tons de carvão.",
+      "default": "Tons neutros clássicos com a cor de destaque que você preferir."
+    },
+    "presets": {
+      "anthropic": "Anthropic",
+      "default": "Tema padrão"
+    },
+    "preview": "Prévia",
+    "primaryAction": "Ação principal",
+    "radii": {
+      "default": "Padrão",
+      "large": "Grande",
+      "none": "Retos",
+      "small": "Pequeno"
+    },
+    "radius": "Arredondamento dos cantos",
+    "reset": "Redefinir aparência",
+    "saveFailed": "Não foi possível salvar. Tente novamente.",
+    "secondaryAction": "Ação secundária",
+    "title": "Configurações de aparência"
+  },
   "appearanceLanguage": {
     "language": "Idioma",
     "languageDesc": "Escolha seu idioma preferido",

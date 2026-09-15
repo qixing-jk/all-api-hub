@@ -32,13 +32,10 @@ describe("ChannelEditorShell", () => {
     expect(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.header)).toBeVisible()
     expect(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.footer)).toBeVisible()
     expect(submit).toHaveAccessibleName("Create")
-    expect(screen.getByText("Create channel")).toHaveClass(
-      "dark:text-dark-text-primary",
-      "text-gray-900",
-    )
+    expect(screen.getByText("Create channel")).toHaveClass("text-foreground")
     expect(screen.getByText("Configure common fields")).toHaveClass(
-      "dark:text-dark-text-secondary",
-      "text-gray-500",
+      "dark:text-secondary-foreground",
+      "text-muted-foreground",
     )
     await user.click(submit)
     expect(onSubmit).toHaveBeenCalledTimes(1)

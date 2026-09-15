@@ -41,11 +41,9 @@ export function ChannelEditorShell({
   }
   const header = (
     <div>
-      <h3 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
-        {title}
-      </h3>
+      <h3 className="text-foreground text-lg font-semibold">{title}</h3>
       {description ? (
-        <p className="dark:text-dark-text-secondary mt-1 text-sm text-gray-500">
+        <p className="dark:text-secondary-foreground text-muted-foreground mt-1 text-sm">
           {description}
         </p>
       ) : null}

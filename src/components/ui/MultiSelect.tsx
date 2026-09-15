@@ -290,7 +290,7 @@ export function MultiSelect({
   }
 
   const optionListClassName = cn(
-    "ring-opacity-5 dark:bg-dark-bg-secondary absolute z-50 max-h-60 w-full overflow-auto rounded-lg corners-concentric [--corner-inset:--spacing(1)] bg-white p-1 text-base shadow-lg ring-1 ring-black focus:outline-none sm:text-sm",
+    "ring-opacity-5 absolute z-50 max-h-60 w-full overflow-auto rounded-lg corners-concentric [--corner-inset:--spacing(1)] bg-popover p-1 text-base shadow-lg ring-1 ring-shadow focus:outline-none sm:text-sm",
     dropdownPosition === "top" ? "bottom-full mb-1" : "top-full mt-1",
   )
 
@@ -299,7 +299,7 @@ export function MultiSelect({
       {label && (
         <label
           htmlFor={inputId}
-          className="dark:text-dark-text-primary mb-1 block text-sm font-medium text-gray-700"
+          className="dark:text-foreground text-secondary-foreground mb-1 block text-sm font-medium"
         >
           {label}
         </label>
@@ -308,7 +308,7 @@ export function MultiSelect({
         <div className="relative w-full">
           <input
             id={inputId}
-            className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary w-full rounded-md border border-gray-300 bg-white py-2 pr-10 pl-3 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            className="dark:border-border border-border-strong bg-card text-foreground focus:border-ring focus:ring-ring w-full rounded-md border py-2 pr-10 pl-3 text-sm shadow-sm focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
             placeholder={resolvedPlaceholder}
             value={query}
             onChange={(event) => {
@@ -334,7 +334,7 @@ export function MultiSelect({
                   setQuery("")
                   setIsOpen(true)
                 }}
-                className="inline-flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 focus:bg-gray-200 focus:text-gray-700 focus:outline-none"
+                className="text-faint-foreground hover:bg-muted hover:text-muted-foreground focus:bg-secondary focus:text-secondary-foreground inline-flex items-center justify-center rounded-full focus:outline-none"
                 aria-label={t("multiSelect.clearInput")}
               >
                 <X className="h-5 w-5" />
@@ -353,7 +353,7 @@ export function MultiSelect({
               }}
             >
               <ChevronsUpDown
-                className="h-5 w-5 text-gray-400"
+                className="text-faint-foreground h-5 w-5"
                 aria-hidden="true"
               />
             </button>
@@ -369,7 +369,7 @@ export function MultiSelect({
                 data-slot="multiselect-listbox"
                 aria-multiselectable="true"
               >
-                <div className="dark:text-dark-text-secondary relative cursor-default px-3 py-1 text-gray-700 select-none">
+                <div className="text-secondary-foreground relative cursor-default px-3 py-1 select-none">
                   {allowCustom
                     ? query
                       ? t("multiSelect.emptyWithQueryAllowCustom", {
@@ -400,8 +400,8 @@ export function MultiSelect({
                     role="option"
                     aria-selected={isSelected}
                     className={cn(
-                      "dark:text-dark-text-primary relative flex w-full cursor-pointer items-center rounded-[var(--corner-inner-radius)] py-2 pr-3 pl-9 text-left text-gray-900 select-none hover:bg-blue-600 hover:text-white focus:bg-blue-600 focus:text-white focus:outline-none",
-                      isActive && "bg-blue-600 text-white",
+                      "text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground relative flex w-full cursor-pointer items-center rounded-[var(--corner-inner-radius)] py-2 pr-3 pl-9 text-left select-none focus:outline-none",
+                      isActive && "bg-primary text-primary-foreground",
                     )}
                     onMouseEnter={() => setActiveOptionIndex(index)}
                     onClick={() => handleOptionToggle(option)}
@@ -416,7 +416,7 @@ export function MultiSelect({
                       {option.label}
                     </span>
                     {isSelected ? (
-                      <span className="absolute inset-y-0 left-0 flex items-center pl-2 text-blue-600 group-hover:text-white">
+                      <span className="absolute inset-y-0 left-0 flex items-center pl-2 text-current">
                         <Check className="h-5 w-5" aria-hidden="true" />
                       </span>
                     ) : null}
@@ -432,7 +432,7 @@ export function MultiSelect({
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
               type="button"
-              className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary/60 dark:text-dark-text-primary dark:hover:bg-dark-bg-secondary flex w-full flex-1 items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-left text-sm font-medium text-gray-700 transition hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="dark:bg-card/60 dark:text-foreground dark:hover:bg-card border-border bg-surface-subtle text-secondary-foreground hover:bg-muted focus:ring-ring flex w-full flex-1 items-center justify-between rounded-md border px-3 py-2 text-left text-sm font-medium transition focus:ring-2 focus:outline-none"
               onClick={toggleSelectedExpanded}
               aria-expanded={isSelectedExpanded}
               aria-controls={`${uid}-selected-items`}
@@ -440,7 +440,7 @@ export function MultiSelect({
               <span className="flex min-w-0 items-center gap-2">
                 <ChevronDown
                   className={cn(
-                    "dark:text-dark-text-secondary h-4 w-4 shrink-0 text-gray-500 transition-transform",
+                    "dark:text-secondary-foreground text-muted-foreground h-4 w-4 shrink-0 transition-transform",
                     isSelectedExpanded ? "rotate-180" : "",
                   )}
                 />
@@ -449,18 +449,18 @@ export function MultiSelect({
                 </span>
               </span>
               {!isSelectedExpanded && (
-                <span className="dark:text-dark-text-secondary ml-3 flex items-center gap-1 overflow-hidden text-xs text-gray-500">
+                <span className="dark:text-secondary-foreground text-muted-foreground ml-3 flex items-center gap-1 overflow-hidden text-xs">
                   {previewOptions.map((option) => (
                     <span
                       key={`preview-${option.value}`}
-                      className="dark:bg-dark-bg-tertiary dark:text-dark-text-tertiary max-w-[100px] shrink-0 truncate rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-600"
+                      className="bg-secondary text-muted-foreground max-w-[100px] shrink-0 truncate rounded-full px-2 py-0.5 text-xs"
                       title={option.label}
                     >
                       {option.label}
                     </span>
                   ))}
                   {remainingPreviewCount > 0 && (
-                    <span className="dark:text-dark-text-tertiary shrink-0 text-xs text-gray-400">
+                    <span className="dark:text-muted-foreground text-faint-foreground shrink-0 text-xs">
                       +{remainingPreviewCount}
                     </span>
                   )}
@@ -473,7 +473,7 @@ export function MultiSelect({
                 onClick={() => {
                   onChange([])
                 }}
-                className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary/60 dark:text-dark-text-primary dark:hover:bg-dark-bg-secondary inline-flex items-center justify-center rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                className="dark:bg-card/60 dark:text-foreground dark:hover:bg-card border-border bg-card text-secondary-foreground hover:bg-surface-subtle focus:ring-ring inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium transition focus:ring-2 focus:outline-none"
                 title={t("multiSelect.clearSelected")}
                 aria-label={t("multiSelect.clearSelected")}
               >
@@ -483,7 +483,7 @@ export function MultiSelect({
             <button
               type="button"
               onClick={handleCopySelected}
-              className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary/60 dark:text-dark-text-primary dark:hover:bg-dark-bg-secondary inline-flex items-center justify-center rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="dark:bg-card/60 dark:text-foreground dark:hover:bg-card border-border bg-card text-secondary-foreground hover:bg-surface-subtle focus:ring-ring inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium transition focus:ring-2 focus:outline-none"
               title={t("multiSelect.copySelectedValues")}
               aria-label={t("multiSelect.copySelectedValues")}
             >
@@ -499,7 +499,7 @@ export function MultiSelect({
               {selectedOptions.map((option) => (
                 <span
                   key={option.value}
-                  className="inline-flex max-w-full items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                  className="bg-theme-100 text-theme-800 dark:bg-theme-900 dark:text-theme-200 inline-flex max-w-full items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
                   title={option.label}
                 >
                   <span className="max-w-[200px] truncate">{option.label}</span>
@@ -507,7 +507,7 @@ export function MultiSelect({
                     <button
                       type="button"
                       onClick={() => handleRemove(option.value)}
-                      className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-blue-400 hover:bg-blue-200 hover:text-blue-500 focus:bg-blue-500 focus:text-white focus:outline-none dark:hover:bg-blue-800"
+                      className="text-theme-400 hover:bg-theme-200 hover:text-theme-500 focus:bg-theme-500 focus:text-primary-foreground dark:hover:bg-theme-800 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full focus:outline-none"
                       aria-label={t("multiSelect.removeValue", {
                         value: option.label,
                       })}

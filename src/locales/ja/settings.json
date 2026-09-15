@@ -18,6 +18,41 @@
     "sidepanelUnsupportedHelper": "このブラウザーではサイドパネルを利用できません。サイドパネルを選択するとポップアップ表示にフォールバックします。",
     "title": "拡張機能アイコンのクリック"
   },
+  "appearance": {
+    "color": "テーマカラー",
+    "colors": {
+      "blue": "青",
+      "green": "緑",
+      "orange": "オレンジ",
+      "rose": "ローズ",
+      "slate": "スレート",
+      "violet": "紫"
+    },
+    "description": "変更は自動保存され、設定画面、ポップアップ、サイドパネルに適用されます。",
+    "preset": "テーマプリセット",
+    "presetColorsHint": "このテーマは専用の配色を使用します。アクセントカラーを個別に選ぶには標準テーマに切り替えてください。",
+    "presetDescriptions": {
+      "anthropic": "温かなクリームとテラコッタ。ダークモードはチャコール調。",
+      "default": "落ち着いた無彩色に、お好みのアクセントカラーを。"
+    },
+    "presets": {
+      "anthropic": "Anthropic",
+      "default": "標準テーマ"
+    },
+    "preview": "プレビュー",
+    "primaryAction": "メイン操作",
+    "radii": {
+      "default": "標準",
+      "large": "大",
+      "none": "四角",
+      "small": "小"
+    },
+    "radius": "角の丸み",
+    "reset": "外観をリセット",
+    "saveFailed": "保存できませんでした。もう一度お試しください。",
+    "secondaryAction": "サブ操作",
+    "title": "外観設定"
+  },
   "appearanceLanguage": {
     "language": "言語",
     "languageDesc": "表示に使用する言語を選択します",

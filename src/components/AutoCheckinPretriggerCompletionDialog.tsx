@@ -61,7 +61,7 @@ export function AutoCheckinPretriggerCompletionDialog({
   }
 
   const header = (
-    <div className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
+    <div className="text-foreground text-lg font-semibold">
       {t("uiOpenPretrigger.dialogTitle")}
     </div>
   )
@@ -111,54 +111,54 @@ export function AutoCheckinPretriggerCompletionDialog({
       footer={footer}
     >
       <div className="space-y-4">
-        <p className="dark:text-dark-text-secondary text-sm text-gray-600">
+        <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
           {t("uiOpenPretrigger.dialogDescription")}
         </p>
 
         {summary && (
-          <div className="dark:bg-dark-bg-tertiary grid grid-cols-2 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-gray-700">
+          <div className="dark:bg-secondary border-border bg-surface-subtle grid grid-cols-2 gap-3 rounded-lg border p-3 text-sm">
             <div className="flex items-center justify-between gap-3">
-              <span className="dark:text-dark-text-secondary text-gray-600">
+              <span className="dark:text-secondary-foreground text-muted-foreground">
                 {t("status.summary.eligible")}
               </span>
-              <span className="dark:text-dark-text-primary font-medium text-gray-900">
+              <span className="text-foreground font-medium">
                 {summary.totalEligible}
               </span>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <span className="dark:text-dark-text-secondary text-gray-600">
+              <span className="dark:text-secondary-foreground text-muted-foreground">
                 {t("status.summary.executed")}
               </span>
-              <span className="dark:text-dark-text-primary font-medium text-gray-900">
+              <span className="text-foreground font-medium">
                 {summary.executed}
               </span>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <span className="dark:text-dark-text-secondary text-gray-600">
+              <span className="dark:text-secondary-foreground text-muted-foreground">
                 {t("status.summary.success")}
               </span>
-              <span className="dark:text-dark-text-primary font-medium text-gray-900">
+              <span className="text-foreground font-medium">
                 {summary.successCount}
               </span>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <span className="dark:text-dark-text-secondary text-gray-600">
+              <span className="dark:text-secondary-foreground text-muted-foreground">
                 {t("status.summary.failed")}
               </span>
-              <span className="dark:text-dark-text-primary font-medium text-gray-900">
+              <span className="text-foreground font-medium">
                 {summary.failedCount}
               </span>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <span className="dark:text-dark-text-secondary text-gray-600">
+              <span className="dark:text-secondary-foreground text-muted-foreground">
                 {t("status.summary.skipped")}
               </span>
-              <span className="dark:text-dark-text-primary font-medium text-gray-900">
+              <span className="text-foreground font-medium">
                 {summary.skippedCount}
               </span>
             </div>
             {pendingRetry && (
-              <div className="col-span-2 text-xs text-amber-600 dark:text-amber-300">
+              <div className="text-warning-text col-span-2 text-xs">
                 {t("status.pendingRetry")}
               </div>
             )}

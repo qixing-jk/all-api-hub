@@ -63,9 +63,7 @@ export default function AutoProvisionKeyOnAccountAddSettings() {
         <CardList>
           <CardItem
             id={SETTINGS_ANCHORS.AUTO_PROVISION_KEY_ENABLED}
-            icon={
-              <KeyRound className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            }
+            icon={<KeyRound className="text-link h-5 w-5" />}
             title={t("autoProvisionKeyOnAccountAdd.toggleLabel")}
             description={t("autoProvisionKeyOnAccountAdd.toggleDesc")}
             rightContent={
@@ -108,7 +106,7 @@ export default function AutoProvisionKeyOnAccountAddSettings() {
           />
         </CardList>
       </Card>
-      <p className="dark:text-dark-text-tertiary text-sm text-gray-500">
+      <p className="text-muted-foreground text-sm">
         {t("autoProvisionKeyOnAccountAdd.manualHint", {
           actionLabel: t("keyManagement:repairMissingKeys.action"),
         })}

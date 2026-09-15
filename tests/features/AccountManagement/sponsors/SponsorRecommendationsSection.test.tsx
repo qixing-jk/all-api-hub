@@ -224,7 +224,7 @@ describe("SponsorRecommendationsSection", () => {
     ).toHaveClass("line-clamp-2")
     expect(
       screen.getByText("account:sponsor.supportStatus.fallbackBookmarkAndApi"),
-    ).toHaveClass("bg-blue-100")
+    ).toHaveClass("bg-info-soft")
     expect(
       screen.queryByTestId(
         ACCOUNT_MANAGEMENT_TEST_IDS.sponsorContinueAddAccountAction,

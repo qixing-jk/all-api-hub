@@ -53,9 +53,7 @@ export default function DisplaySettings() {
         <CardList>
           <CardItem
             id="display-currency-unit"
-            icon={
-              <Globe2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-            }
+            icon={<Globe2 className="text-link h-5 w-5" />}
             title={t("display.currencyUnit")}
             description={t("display.currencyDesc")}
             rightContent={
@@ -81,9 +79,7 @@ export default function DisplaySettings() {
 
           <CardItem
             id="display-today-cashflow-enabled"
-            icon={
-              <CalendarDays className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            }
+            icon={<CalendarDays className="text-link h-5 w-5" />}
             title={t("display.todayCashflowEnabled")}
             description={t("display.todayCashflowEnabledDesc")}
             rightContent={
@@ -96,7 +92,9 @@ export default function DisplaySettings() {
 
           <CardItem
             id="display-default-tab"
-            icon={<Eye className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
+            icon={
+              <Eye className="text-theme-600 dark:text-theme-400 h-5 w-5" />
+            }
             title={t("display.defaultTab")}
             description={t("display.defaultTabDesc")}
             rightContent={

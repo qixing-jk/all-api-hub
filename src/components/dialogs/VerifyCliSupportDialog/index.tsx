@@ -222,7 +222,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     return (
       <div className="min-w-0">
         <Heading5 className="truncate">{t("verifyDialog.title")}</Heading5>
-        <div className="dark:text-dark-text-tertiary mt-1 truncate text-xs text-gray-500">
+        <div className="text-muted-foreground mt-1 truncate text-xs">
           {sourceBaseUrl} · {sourceName}
         </div>
       </div>
@@ -715,7 +715,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {!isProfileSource && (
             <div className="space-y-1.5">
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              <div className="text-muted-foreground text-xs">
                 {t("verifyDialog.meta.runtimeKey")}
               </div>
               <SearchableSelect
@@ -750,7 +750,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
               isProfileSource ? "space-y-1.5" : "space-y-1.5 sm:col-span-2"
             }
           >
-            <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+            <div className="text-muted-foreground text-xs">
               {t("verifyDialog.meta.model")}
             </div>
             {isProfileSource ? (
@@ -770,7 +770,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                   disabled={isRunning}
                 />
                 {fetchModelsError ? (
-                  <div className="dark:text-dark-text-tertiary text-xs text-red-600">
+                  <div className="text-destructive-text text-xs">
                     {fetchModelsError}
                   </div>
                 ) : null}
@@ -784,7 +784,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                   disabled={isRunning}
                 />
                 {tokenModelHint && !modelId.trim() && (
-                  <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                  <div className="text-muted-foreground text-xs">
                     {t("verifyDialog.modelHint", {
                       modelId: tokenModelHint,
                     })}
@@ -796,7 +796,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         </div>
 
         {!hasAnyResult && (
-          <div className="dark:text-dark-text-secondary text-sm text-gray-600">
+          <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
             {isProfileSource
               ? isLoadingModels
                 ? t("verifyDialog.loadingModelsHint")
@@ -848,12 +848,12 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
               <div
                 key={tool.toolId}
                 data-testid={`verify-cli-${tool.toolId}`}
-                className="dark:border-dark-bg-tertiary rounded-md border border-gray-100 p-3"
+                className="dark:border-border border-border-subtle rounded-md border p-3"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                      <div className="dark:text-dark-text-primary min-w-0 truncate text-sm font-medium text-gray-900">
+                      <div className="text-foreground min-w-0 truncate text-sm font-medium">
                         {getCliSupportToolLabel(t, tool.toolId)}
                       </div>
 
@@ -868,13 +868,13 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                             {t("verifyDialog.status.pending")}
                           </Badge>
                         )}
-                        <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                        <div className="text-muted-foreground text-xs">
                           {result ? formatLatency(result.latencyMs) : "-"}
                         </div>
                       </div>
                     </div>
 
-                    <div className="dark:text-dark-text-secondary mt-1 text-xs text-gray-600">
+                    <div className="dark:text-secondary-foreground text-muted-foreground mt-1 text-xs">
                       {resultSummary}
                     </div>
                   </div>
@@ -915,7 +915,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                         <CollapsibleSection
                           title={t("verifyDialog.details.input")}
                         >
-                          <pre className="dark:text-dark-text-secondary overflow-auto text-xs break-words whitespace-pre-wrap text-gray-700">
+                          <pre className="text-secondary-foreground overflow-auto text-xs break-words whitespace-pre-wrap">
                             {safeJsonStringify(result.input)}
                           </pre>
                         </CollapsibleSection>
@@ -924,7 +924,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                         <CollapsibleSection
                           title={t("verifyDialog.details.output")}
                         >
-                          <pre className="dark:text-dark-text-secondary overflow-auto text-xs break-words whitespace-pre-wrap text-gray-700">
+                          <pre className="text-secondary-foreground overflow-auto text-xs break-words whitespace-pre-wrap">
                             {safeJsonStringify(result.output)}
                           </pre>
                         </CollapsibleSection>

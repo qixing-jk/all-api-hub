@@ -5,12 +5,12 @@ import React from "react"
 import { cn } from "~/lib/utils"
 
 const switchVariants = cva(
-  "relative inline-flex items-center rounded-full overflow-hidden p-0 border-0 box-border shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+  "relative inline-flex items-center rounded-full overflow-hidden p-0 border-0 box-border shrink-0 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       checked: {
-        true: "bg-blue-600",
-        false: "bg-gray-200 dark:bg-dark-bg-tertiary",
+        true: "bg-primary",
+        false: "bg-secondary",
       },
       size: {
         sm: "h-5 w-9",
@@ -31,7 +31,7 @@ const switchVariants = cva(
 )
 
 const thumbVariants = cva(
-  "inline-block transform rounded-full bg-white transition-transform",
+  "inline-block transform rounded-full transition-transform",
   {
     variants: {
       size: {
@@ -40,8 +40,8 @@ const thumbVariants = cva(
         lg: "h-5 w-5",
       },
       checked: {
-        true: "",
-        false: "",
+        true: "bg-primary-foreground",
+        false: "bg-secondary-foreground",
       },
     },
     compoundVariants: [

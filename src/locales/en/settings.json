@@ -18,6 +18,41 @@
     "sidepanelUnsupportedHelper": "This browser does not support side panels; side panel selections will fall back to the popup.",
     "title": "Extension icon click"
   },
+  "appearance": {
+    "color": "Theme color",
+    "colors": {
+      "blue": "Blue",
+      "green": "Green",
+      "orange": "Orange",
+      "rose": "Rose",
+      "slate": "Slate",
+      "violet": "Violet"
+    },
+    "description": "Changes are saved automatically and apply to options, popup and side panel.",
+    "preset": "Theme preset",
+    "presetColorsHint": "This theme includes its own palette. Choose Default theme to pick an accent color separately.",
+    "presetDescriptions": {
+      "anthropic": "Warm cream and clay, with a charcoal dark mode.",
+      "default": "Classic neutrals with your choice of accent."
+    },
+    "presets": {
+      "anthropic": "Anthropic",
+      "default": "Default theme"
+    },
+    "preview": "Preview",
+    "primaryAction": "Primary action",
+    "radii": {
+      "default": "Default",
+      "large": "Large",
+      "none": "Square",
+      "small": "Small"
+    },
+    "radius": "Corner radius",
+    "reset": "Reset appearance",
+    "saveFailed": "Could not save. Please try again.",
+    "secondaryAction": "Secondary action",
+    "title": "Appearance settings"
+  },
   "appearanceLanguage": {
     "language": "Language",
     "languageDesc": "Choose your preferred language",

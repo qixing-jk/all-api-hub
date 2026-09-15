@@ -285,7 +285,7 @@ export default function RedemptionAssistSettings() {
 
         <CardContent
           id="redemption-assist-url-whitelist-patterns"
-          className="border-border dark:border-dark-bg-tertiary border-t"
+          className="border-border border-t"
           spacing="sm"
         >
           <div className="space-y-2">

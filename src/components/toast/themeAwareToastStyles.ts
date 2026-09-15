@@ -1,18 +1,10 @@
 /**
- * Returns theme-aware styles for toast notifications based on the resolved theme.
+ * Library-rendered notifications resolve the same live roles as other popovers.
  */
-export function getThemeAwareToastStyles(resolvedTheme?: string) {
-  if (resolvedTheme === "dark") {
-    return {
-      background: "#1e293b",
-      color: "#f1f5f9",
-      border: "1px solid #334155",
-    }
-  }
-
+export function getThemeAwareToastStyles() {
   return {
-    background: "#fff",
-    color: "#363636",
-    border: "1px solid #e5e7eb",
+    background: "var(--popover)",
+    color: "var(--popover-foreground)",
+    border: "1px solid var(--border)",
   }
 }

@@ -61,7 +61,7 @@ describe("IconButton", () => {
 
     expect(screen.getByRole("button", { name: "Delete item" })).toHaveClass(
       "bg-transparent",
-      "text-destructive",
+      "text-destructive-text",
       "hover:bg-destructive/10",
     )
   })

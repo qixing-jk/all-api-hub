@@ -294,10 +294,10 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
         <div className="flex items-center gap-2">
           <CCSwitchIcon size="lg" />
           <div>
-            <div className="dark:text-dark-text-primary text-base font-semibold text-gray-900">
+            <div className="text-foreground text-base font-semibold">
               {t("ui:dialog.ccswitch.title")}
             </div>
-            <p className="dark:text-dark-text-secondary text-sm text-gray-500">
+            <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
               {t("ui:dialog.ccswitch.description")}
             </p>
           </div>
@@ -357,7 +357,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
             role="status"
             aria-live="polite"
             aria-atomic="true"
-            className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800/80 dark:bg-amber-950/30 dark:text-amber-100"
+            className="border-warning-border bg-warning-soft text-warning-soft-foreground rounded-lg border px-3 py-2 text-sm"
           >
             {limitationNotice}
           </div>
@@ -431,7 +431,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
             data-testid={CC_SWITCH_EXPORT_TEST_IDS.modelPicker}
             searchInputTestId={CC_SWITCH_EXPORT_TEST_IDS.modelSearchInput}
           />
-          <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
+          <p className="dark:text-secondary-foreground text-muted-foreground mt-1 text-xs">
             {t("ui:dialog.ccswitch.descriptions.model")}
           </p>
         </div>

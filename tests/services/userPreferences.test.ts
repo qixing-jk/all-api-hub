@@ -7,6 +7,12 @@ import {
   TEMP_CONTEXT_MODES,
   TEMP_CONTEXT_PREFERENCE_MODES,
 } from "~/constants/tempContextMode"
+import {
+  THEME_COLOR,
+  THEME_MODE,
+  THEME_PRESET,
+  THEME_RADIUS,
+} from "~/constants/theme"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
@@ -18,6 +24,26 @@ import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import { DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES } from "~/types/siteAnnouncements"
 
 describe("userPreferences", () => {
+  it("merges appearance edits without discarding other choices or settings", async () => {
+    await userPreferences.savePreferences({
+      appearance: { color: THEME_COLOR.ROSE, radius: THEME_RADIUS.LARGE },
+      currencyType: "CNY",
+    })
+    await userPreferences.savePreferences({
+      appearance: { radius: THEME_RADIUS.SMALL },
+    })
+    await userPreferences.savePreferences({
+      appearance: { preset: THEME_PRESET.ANTHROPIC },
+    })
+    const preferences = await userPreferences.getPreferences()
+    expect(preferences.appearance).toEqual({
+      preset: "anthropic",
+      color: "rose",
+      radius: "small",
+    })
+    expect(preferences.currencyType).toBe("CNY")
+  })
+
   describe("DEFAULT_PREFERENCES", () => {
     it("has correct default values", () => {
       expect(DEFAULT_PREFERENCES.currencyType).toBe("USD")
@@ -189,7 +215,7 @@ describe("userPreferences", () => {
       ).toEqual(stored)
 
       await expect(
-        userPreferences.savePreferences({ themeMode: "dark" }),
+        userPreferences.savePreferences({ themeMode: THEME_MODE.DARK }),
       ).resolves.toMatchObject({ ok: true })
       await expect(userPreferences.getPreferences()).resolves.toMatchObject(
         expected,
@@ -372,7 +398,7 @@ describe("userPreferences", () => {
       await expect(
         userPreferences.importPreferences({
           ...DEFAULT_PREFERENCES,
-          themeMode: "dark",
+          themeMode: THEME_MODE.DARK,
         }),
       ).resolves.toEqual({
         ok: false,

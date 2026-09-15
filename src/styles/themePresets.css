@@ -1,0 +1,82 @@
+/* Anthropic-inspired warm neutrals and clay accents. Each theme scope owns its
+   mode, including content roots and the paired light/dark preview tiles.
+   The default preset intentionally uses the unchanged colors.css contract. */
+[data-theme-preset="anthropic"] {
+  --theme-color-50: #fcf3ed;
+  --theme-color-100: #f8e5d8;
+  --theme-color-200: #f0cbb5;
+  --theme-color-300: #e8ae91;
+  --theme-color-400: #e09271;
+  --theme-color-500: #d97757;
+  --theme-color-600: #ad593c;
+  --theme-color-700: #964a31;
+  --theme-color-800: #773d2c;
+  --theme-color-900: #603327;
+  --theme-color-950: #341a13;
+  --background: #faf9f5;
+  --foreground: #2f2e29;
+  --card: #f0eee6;
+  --popover: #fffdf7;
+  --surface-subtle: #f5f3ed;
+  --surface-deep: #e5e1d6;
+  --muted: #eeece4;
+  --muted-foreground: #69675f;
+  --faint-foreground: #807b70;
+  --disabled-foreground: #aba597;
+  --secondary: #e7e4da;
+  --secondary-foreground: #4b483f;
+  --surface-strong: #d9d5ca;
+  --surface-inverse: #2f2e29;
+  --surface-inverse-muted: #777064;
+  --inverse-foreground: #faf9f5;
+  --border: #d9d5ca;
+  --border-subtle: #e6e2d8;
+  --border-strong: #aaa292;
+  --accent: #e6e1d6;
+  --primary: #ad593c;
+  --primary-foreground: #ffffff;
+  --link: #964a31;
+  --ring: #ad593c;
+  --shadow-color: #29251f;
+  --chart-1: #b65f40;
+  --chart-2: #788c5d;
+  --chart-3: #5686b4;
+  --chart-4: #a7688a;
+  --chart-5: #60877b;
+  --sidebar: #eeebe2;
+  --sidebar-accent: #e1dbcf;
+}
+
+.dark[data-theme-preset="anthropic"] {
+  --background: #242320;
+  --foreground: #eeeae1;
+  --card: #2d2b27;
+  --popover: #35322d;
+  --surface-subtle: #302e29;
+  --surface-deep: #1b1a18;
+  --muted: #34312c;
+  --muted-foreground: #b9b1a4;
+  --faint-foreground: #a49b8c;
+  --disabled-foreground: #756d60;
+  --secondary: #3b3831;
+  --secondary-foreground: #dcd5c8;
+  --surface-strong: #514b41;
+  --surface-inverse: #eeeae1;
+  --surface-inverse-muted: #b9b1a4;
+  --inverse-foreground: #242320;
+  --border: #504b42;
+  --border-subtle: #403b34;
+  --border-strong: #756d60;
+  --accent: #454037;
+  --primary: #df9578;
+  --primary-foreground: #231c18;
+  --link: #e8ae91;
+  --ring: #df9578;
+  --chart-1: #df9578;
+  --chart-2: #a4b887;
+  --chart-3: #8db4d7;
+  --chart-4: #c397b2;
+  --chart-5: #92b8a9;
+  --sidebar: #201f1c;
+  --sidebar-accent: #3d3831;
+}

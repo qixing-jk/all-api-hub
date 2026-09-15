@@ -222,10 +222,10 @@ export default function ModelRedirectSettings() {
             className="flex items-start justify-between"
           >
             <div className="flex-1">
-              <p className="dark:text-dark-text-primary text-sm font-medium text-gray-700">
+              <p className="dark:text-foreground text-secondary-foreground text-sm font-medium">
                 {t("enable")}
               </p>
-              <p className="dark:text-dark-text-secondary mt-1 text-sm text-gray-500">
+              <p className="dark:text-secondary-foreground text-muted-foreground mt-1 text-sm">
                 {t("enableDesc")}
               </p>
             </div>
@@ -256,7 +256,7 @@ export default function ModelRedirectSettings() {
                   disabled={isUpdating}
                   allowCustom
                 />
-                <p className="dark:text-dark-text-secondary mt-1 text-sm text-gray-500">
+                <p className="dark:text-secondary-foreground text-muted-foreground mt-1 text-sm">
                   {t("standardModelsDesc")}
                 </p>
               </div>
@@ -266,12 +266,12 @@ export default function ModelRedirectSettings() {
                 className="mt-4 flex items-start justify-between"
               >
                 <div className="flex-1">
-                  <p className="dark:text-dark-text-primary text-sm font-medium text-gray-700">
+                  <p className="dark:text-foreground text-secondary-foreground text-sm font-medium">
                     {t("pruneMissingTargetsOnModelSync")}
                   </p>
                   <p
                     id="prune-missing-targets-desc"
-                    className="dark:text-dark-text-secondary mt-1 text-sm text-gray-500"
+                    className="dark:text-secondary-foreground text-muted-foreground mt-1 text-sm"
                   >
                     {t("pruneMissingTargetsOnModelSyncDesc")}
                   </p>
@@ -318,7 +318,7 @@ export default function ModelRedirectSettings() {
             >
               {t("bulkClear.action")}
             </Button>
-            <p className="dark:text-dark-text-secondary mt-1 text-sm text-gray-500">
+            <p className="dark:text-secondary-foreground text-muted-foreground mt-1 text-sm">
               {t("bulkClear.actionDesc")}
             </p>
           </div>

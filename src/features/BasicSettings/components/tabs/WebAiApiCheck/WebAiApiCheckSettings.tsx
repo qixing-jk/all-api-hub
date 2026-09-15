@@ -100,7 +100,7 @@ function RegexPatternWarning({
   if (invalid.length === 0) return null
 
   return (
-    <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-800 dark:border-yellow-900/40 dark:bg-yellow-900/20 dark:text-yellow-200">
+    <div className="border-warning-border bg-warning-soft text-warning-soft-foreground rounded-md border p-3 text-xs">
       <div className="font-medium">{title}</div>
       <ul className="mt-1 list-disc space-y-0.5 pl-4">
         {invalid.slice(0, 10).map((pattern) => (
@@ -310,10 +310,7 @@ export default function WebAiApiCheckSettings() {
           />
         </CardList>
 
-        <CardContent
-          className="border-border dark:border-dark-bg-tertiary border-t"
-          spacing="sm"
-        >
+        <CardContent className="border-border border-t" spacing="sm">
           <div className="space-y-2">
             <div className="text-sm font-medium">
               {t("webAiApiCheck:settings.autoDetect.whitelist.patterns")}
@@ -367,10 +364,7 @@ export default function WebAiApiCheckSettings() {
           </div>
         </CardContent>
 
-        <CardContent
-          className="border-border dark:border-dark-bg-tertiary border-t"
-          spacing="sm"
-        >
+        <CardContent className="border-border border-t" spacing="sm">
           <div className="space-y-2">
             <div className="text-sm font-medium">
               {t("webAiApiCheck:settings.keyCleanup.patterns")}

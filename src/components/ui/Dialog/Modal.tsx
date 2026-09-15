@@ -358,7 +358,7 @@ export function Modal({
   }
 
   const panelBaseClass = cn(
-    `flex flex-col max-h-[90vh] relative w-full ${sizeMap[size]} bg-white dark:bg-dark-bg-secondary rounded-2xl shadow-xl transform transition-all`,
+    `flex flex-col max-h-[90vh] relative w-full ${sizeMap[size]} bg-popover text-popover-foreground rounded-2xl shadow-xl transform transition-all`,
     panelClassName,
   )
 
@@ -369,7 +369,7 @@ export function Modal({
           data-slot="modal-overlay"
           data-state={isOpen ? "open" : "closed"}
           className={cn(
-            "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 bg-black/30 backdrop-blur-sm",
+            "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 bg-overlay/30 fixed inset-0 backdrop-blur-sm",
             Z_INDEX.modal,
           )}
           onPointerDown={handleBackdropPointerDown}
@@ -449,7 +449,7 @@ export function Modal({
                     type="button"
                     onClick={requestClose}
                     aria-label={t("common:actions.close")}
-                    className="dark:hover:bg-dark-bg-tertiary dark:hover:text-dark-text-secondary absolute top-3 right-3 z-10 rounded-sm p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 sm:top-4 sm:right-4"
+                    className="dark:hover:bg-secondary dark:hover:text-secondary-foreground text-faint-foreground hover:bg-muted hover:text-muted-foreground absolute top-3 right-3 z-10 rounded-sm p-1.5 transition-colors sm:top-4 sm:right-4"
                   >
                     <XIcon className="h-5 w-5" />
                   </button>
@@ -458,7 +458,7 @@ export function Modal({
                 {header && (
                   <div
                     data-testid={headerTestId}
-                    className="dark:border-dark-bg-tertiary shrink-0 border-b border-gray-100 px-4 py-3 sm:px-6 sm:py-4"
+                    className="dark:border-border border-border-subtle shrink-0 border-b px-4 py-3 sm:px-6 sm:py-4"
                   >
                     <div className="flex items-start justify-between">
                       {header}
@@ -476,7 +476,7 @@ export function Modal({
                 {footer && (
                   <div
                     data-testid={footerTestId}
-                    className="dark:border-dark-bg-tertiary shrink-0 border-t border-gray-100 px-4 py-3 sm:px-6 sm:py-4"
+                    className="dark:border-border border-border-subtle shrink-0 border-t px-4 py-3 sm:px-6 sm:py-4"
                   >
                     {footer}
                   </div>

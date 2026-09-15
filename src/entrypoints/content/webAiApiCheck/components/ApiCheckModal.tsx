@@ -77,7 +77,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
       <div
         ref={refs.backdropRef}
         data-testid={WEB_AI_API_CHECK_TEST_IDS.backdrop}
-        className="pointer-events-auto absolute inset-0 bg-black/40"
+        className="bg-overlay/40 pointer-events-auto absolute inset-0"
         onClick={() => {
           if (!view.canClose) return
           actions.close()
@@ -394,7 +394,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
               </Collapsible>
 
               {view.validationError ? (
-                <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-200">
+                <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground rounded-md border p-3 text-sm">
                   {view.validationError}
                 </div>
               ) : null}
@@ -451,7 +451,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
               </div>
 
               {view.fetchModelsError ? (
-                <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-200">
+                <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground rounded-md border p-3 text-sm">
                   {view.fetchModelsError}
                 </div>
               ) : null}

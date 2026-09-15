@@ -177,7 +177,7 @@ export function LanguageSwitcher({
         {showIcon && (
           <Languages
             className={cn(
-              "dark:text-dark-text-secondary h-4 w-4 shrink-0",
+              "dark:text-secondary-foreground h-4 w-4 shrink-0",
               !compact && "sm:h-[1.2rem] sm:w-[1.2rem]",
             )}
           />
@@ -229,7 +229,7 @@ export function LanguageSwitcher({
       {showIcon && (
         <Languages
           className={cn(
-            "dark:text-dark-text-secondary h-4 w-4 shrink-0",
+            "dark:text-secondary-foreground h-4 w-4 shrink-0",
             !compact && "sm:h-[1.2rem] sm:w-[1.2rem]",
           )}
         />

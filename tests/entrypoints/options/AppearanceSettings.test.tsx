@@ -12,8 +12,12 @@ vi.mock("~/components/LanguageSwitcher", () => ({
   },
 }))
 
-vi.mock("~/entrypoints/options/components/ThemeToggle", () => ({
+vi.mock("~/features/Appearance/ThemeModeSettings", () => ({
   default: () => <div data-testid="theme-toggle" />,
+}))
+
+vi.mock("~/features/Appearance/AppearanceControls", () => ({
+  AppearanceControls: () => <div data-testid="appearance-controls" />,
 }))
 
 describe("AppearanceSettings", () => {

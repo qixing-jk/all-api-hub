@@ -1,3 +1,75 @@
-export const THEME_MODES = ["light", "dark", "system"] as const
+import {
+  THEME_COLOR,
+  THEME_MODE,
+  THEME_PRESET,
+  THEME_RADIUS,
+} from "~/constants/theme"
+
+export const THEME_MODES = [
+  THEME_MODE.LIGHT,
+  THEME_MODE.DARK,
+  THEME_MODE.SYSTEM,
+] as const
 export type ThemeMode = (typeof THEME_MODES)[number]
-export type ResolvedTheme = "light" | "dark"
+export type ResolvedTheme = Exclude<ThemeMode, typeof THEME_MODE.SYSTEM>
+
+/** Narrow stored or selected values to a supported theme mode. */
+export function isThemeMode(value: unknown): value is ThemeMode {
+  return THEME_MODES.some((mode) => mode === value)
+}
+
+export const THEME_PRESETS = [
+  THEME_PRESET.DEFAULT,
+  THEME_PRESET.ANTHROPIC,
+] as const
+
+export const THEME_COLORS = [
+  THEME_COLOR.BLUE,
+  THEME_COLOR.VIOLET,
+  THEME_COLOR.ROSE,
+  THEME_COLOR.ORANGE,
+  THEME_COLOR.GREEN,
+  THEME_COLOR.SLATE,
+] as const
+export const THEME_RADII = [
+  THEME_RADIUS.NONE,
+  THEME_RADIUS.SMALL,
+  THEME_RADIUS.DEFAULT,
+  THEME_RADIUS.LARGE,
+] as const
+export interface AppearancePreferences {
+  preset: (typeof THEME_PRESETS)[number]
+  color: (typeof THEME_COLORS)[number]
+  radius: (typeof THEME_RADII)[number]
+}
+export type AppearanceUpdates = Partial<AppearancePreferences> & {
+  themeMode?: ThemeMode
+}
+
+export const DEFAULT_APPEARANCE: AppearancePreferences = {
+  preset: THEME_PRESET.DEFAULT,
+  color: THEME_COLOR.BLUE,
+  radius: THEME_RADIUS.DEFAULT,
+}
+
+/** Old backups and unknown imported values retain supported appearance defaults. */
+export function normalizeAppearance(value: unknown): AppearancePreferences {
+  const input =
+    value && typeof value === "object"
+      ? (value as Partial<AppearancePreferences>)
+      : {}
+  return {
+    preset:
+      input.preset && THEME_PRESETS.includes(input.preset)
+        ? input.preset
+        : DEFAULT_APPEARANCE.preset,
+    color:
+      input.color && THEME_COLORS.includes(input.color)
+        ? input.color
+        : DEFAULT_APPEARANCE.color,
+    radius:
+      input.radius && THEME_RADII.includes(input.radius)
+        ? input.radius
+        : DEFAULT_APPEARANCE.radius,
+  }
+}

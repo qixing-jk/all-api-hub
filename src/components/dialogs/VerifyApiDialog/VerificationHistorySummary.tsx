@@ -43,7 +43,7 @@ export function VerificationHistorySummary({
         status={summary?.status ?? API_VERIFICATION_HISTORY_STATUSES.Unverified}
       />
       {latencyMs !== null ? (
-        <span className="dark:text-dark-text-tertiary truncate text-[11px] text-gray-500 sm:text-xs">
+        <span className="text-muted-foreground truncate text-[11px] sm:text-xs">
           {formatLatency(latencyMs)}
         </span>
       ) : null}
@@ -51,12 +51,12 @@ export function VerificationHistorySummary({
         <span className="inline-flex min-w-0 items-center gap-1.5">
           <span
             aria-hidden="true"
-            className="h-1 w-1 shrink-0 rounded-full bg-gray-300 dark:bg-gray-600"
+            className="bg-surface-strong h-1 w-1 shrink-0 rounded-full"
           />
           <time
             dateTime={verificationTimestampIso}
             title={t("verifyDialog.history.lastVerified")}
-            className="dark:text-dark-text-tertiary truncate text-[11px] text-gray-500 sm:text-xs"
+            className="text-muted-foreground truncate text-[11px] sm:text-xs"
           >
             {verificationTimestamp}
           </time>

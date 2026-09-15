@@ -18,6 +18,41 @@
     "sidepanelUnsupportedHelper": "当前浏览器不支持侧边栏；选择侧边栏时会自动回退到弹窗。",
     "title": "点击扩展图标"
   },
+  "appearance": {
+    "color": "主题色",
+    "colors": {
+      "blue": "蓝色",
+      "green": "绿色",
+      "orange": "橙色",
+      "rose": "玫红",
+      "slate": "石板灰",
+      "violet": "紫色"
+    },
+    "description": "修改后自动保存，应用于设置页、弹窗和侧栏。",
+    "preset": "主题风格",
+    "presetColorsHint": "当前主题自带完整配色。切换到默认主题可单独选择强调色。",
+    "presetDescriptions": {
+      "anthropic": "暖米色与陶土色，搭配暖炭灰深色模式。",
+      "default": "经典中性色，可自由选择强调色。"
+    },
+    "presets": {
+      "anthropic": "Anthropic",
+      "default": "默认主题"
+    },
+    "preview": "效果预览",
+    "primaryAction": "主要操作",
+    "radii": {
+      "default": "默认",
+      "large": "大",
+      "none": "直角",
+      "small": "小"
+    },
+    "radius": "圆角大小",
+    "reset": "恢复默认外观",
+    "saveFailed": "保存失败，请重试。",
+    "secondaryAction": "次要操作",
+    "title": "外观设置"
+  },
   "appearanceLanguage": {
     "language": "语言",
     "languageDesc": "选择您偏好的显示语言",

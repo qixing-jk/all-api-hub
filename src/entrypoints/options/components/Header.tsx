@@ -9,6 +9,7 @@ import { LanguageSwitcher } from "~/components/LanguageSwitcher"
 import { Heading5, IconButton } from "~/components/ui"
 import { VersionBadge } from "~/components/VersionBadge"
 import { Z_INDEX } from "~/constants/designTokens"
+import HeaderThemeSwitcher from "~/features/Appearance/HeaderThemeSwitcher"
 import { ProductAnnouncementButton } from "~/features/ProductAnnouncements/ProductAnnouncementButton"
 import {
   PRODUCT_TOUR_TARGET_ATTRIBUTE,
@@ -17,8 +18,6 @@ import {
 import { useIsMobile } from "~/hooks/useMediaQuery"
 import { cn } from "~/lib/utils"
 import { getRepository } from "~/utils/navigation/packageMeta"
-
-import HeaderThemeSwitcher from "./HeaderThemeSwitcher"
 
 interface HeaderProps {
   onSearchOpen: () => void
@@ -54,7 +53,7 @@ function SearchTrigger({
       type="button"
       onClick={onClick}
       className={cn(
-        "dark:border-dark-bg-tertiary dark:bg-dark-bg-primary dark:hover:bg-dark-bg-tertiary flex h-10 w-full items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-4 text-left transition-colors hover:bg-gray-100",
+        "dark:bg-background dark:hover:bg-secondary border-border bg-surface-subtle hover:bg-muted flex h-10 w-full items-center justify-between rounded-md border px-4 text-left transition-colors",
         className,
       )}
       aria-label={ariaLabel}
@@ -62,12 +61,12 @@ function SearchTrigger({
         [PRODUCT_TOUR_TARGET_ATTRIBUTE]: productTourTarget,
       }}
     >
-      <span className="flex min-w-0 items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+      <span className="text-muted-foreground flex min-w-0 items-center gap-2 text-sm">
         <Search className="h-4 w-4 shrink-0" />
         <span className="truncate">{placeholder}</span>
       </span>
       {showShortcutHint ? (
-        <span className="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs text-gray-500 dark:border-white/10 dark:bg-white/5 dark:text-gray-400">
+        <span className="border-border bg-card text-muted-foreground dark:border-foreground/10 dark:bg-foreground/5 rounded-md border px-2 py-0.5 text-xs">
           {navigator.platform.includes("Mac") ? "Cmd+K" : "Ctrl+K"}
         </span>
       ) : null}
@@ -121,7 +120,7 @@ function Header({
   return (
     <header
       className={cn(
-        "dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary sticky top-0 h-(--options-header-height) border-b border-gray-200 bg-white shadow-sm",
+        "border-border bg-card sticky top-0 h-(--options-header-height) border-b shadow-sm",
         Z_INDEX.pageHeader,
       )}
     >
@@ -157,7 +156,7 @@ function Header({
               <button
                 type="button"
                 onClick={onTitleClick}
-                className="tap-highlight-transparent touch-manipulation rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none"
+                className="tap-highlight-transparent focus-visible:ring-ring touch-manipulation rounded-lg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                 aria-label={t("app.name")}
               >
                 <img
@@ -169,7 +168,7 @@ function Header({
               {!showMobileExpandedSearch ? (
                 <div className="min-w-0">
                   <div className="flex min-w-0 flex-col gap-0.5">
-                    <Heading5 className="dark:text-dark-text-primary truncate text-sm leading-tight font-semibold text-gray-900 sm:text-lg">
+                    <Heading5 className="text-foreground truncate text-sm leading-tight font-semibold sm:text-lg">
                       <a
                         href={repositoryUrl}
                         target="_blank"

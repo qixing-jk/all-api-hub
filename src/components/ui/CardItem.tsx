@@ -18,7 +18,7 @@ const cardItemVariants = cva(
       },
       interactive: {
         false: "",
-        true: "hover:bg-gray-50 dark:hover:bg-dark-bg-tertiary cursor-pointer",
+        true: "hover:bg-surface-subtle dark:hover:bg-secondary cursor-pointer",
       },
     },
     defaultVariants: {
@@ -86,7 +86,7 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
           >
             <div className="flex w-full min-w-0 flex-1 items-center gap-3 [@container(min-width:42rem)]:w-auto">
               {icon && (
-                <div className="dark:bg-dark-bg-tertiary shrink-0 rounded-sm bg-gray-100 p-1 transition-colors sm:p-2">
+                <div className="dark:bg-secondary bg-muted shrink-0 rounded-sm p-1 transition-colors sm:p-2">
                   {icon}
                 </div>
               )}
@@ -95,7 +95,7 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
                   <div className="mb-0.5 flex flex-wrap items-center gap-2">
                     <Typography
                       variant="h6"
-                      className="dark:text-dark-text-primary text-gray-900 transition-colors"
+                      className="text-foreground transition-colors"
                     >
                       {title}
                     </Typography>
@@ -103,7 +103,7 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
                   </div>
                 )}
                 {description && (
-                  <BodySmall className="dark:text-dark-text-tertiary text-gray-500">
+                  <BodySmall className="text-muted-foreground">
                     {description}
                   </BodySmall>
                 )}

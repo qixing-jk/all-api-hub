@@ -254,8 +254,8 @@ describe("ApiCredentialProfilesStatsSection", () => {
     expect(placeholders).toHaveLength(2)
     expect(placeholders[0]).toHaveClass("block")
     expect(placeholders[1]).toHaveClass("block")
-    expect(placeholders[1]).not.toHaveClass("text-emerald-600")
-    expect(placeholders[1]).toHaveClass("text-gray-500")
+    expect(placeholders[1]).not.toHaveClass("text-cashflow-expense")
+    expect(placeholders[1]).toHaveClass("text-muted-foreground")
   })
 
   it("tracks anonymous inventory buckets without raw counts", () => {

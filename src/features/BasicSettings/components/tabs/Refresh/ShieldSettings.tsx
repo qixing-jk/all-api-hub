@@ -266,7 +266,7 @@ export default function ShieldSettings() {
                             className={
                               mode === nextMode
                                 ? "size-3.5 fill-current text-current"
-                                : "size-3.5 fill-current text-amber-500 dark:text-amber-400"
+                                : "text-warning-text size-3.5 fill-current"
                             }
                           />
                         ) : undefined
@@ -324,7 +324,7 @@ export default function ShieldSettings() {
                         updateAutomaticFeatureBypass(feature, Boolean(checked))
                       }
                     />
-                    <BodySmall className="dark:text-dark-text-secondary text-gray-700">
+                    <BodySmall className="text-secondary-foreground">
                       {label}
                     </BodySmall>
                   </label>

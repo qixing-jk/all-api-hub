@@ -140,7 +140,7 @@ function PopupContent({ inPopup }: { inPopup: boolean }) {
       ref={setScrollParent}
       data-testid={POPUP_TEST_IDS.scrollContainer}
       className={cn(
-        "dark:bg-dark-bg-primary flex flex-col overflow-y-auto bg-white",
+        "dark:bg-background bg-card flex flex-col overflow-y-auto",
         popupWidthClass,
         popupHeightClass,
       )}
@@ -151,7 +151,7 @@ function PopupContent({ inPopup }: { inPopup: boolean }) {
       />
       <PopupInterruptionHintBanner surfaceClassName="rounded-none border-x-0 shadow-none" />
 
-      <section className="dark:border-dark-bg-tertiary shrink-0 space-y-2 border-b border-gray-200 bg-linear-to-br from-blue-50/50 to-indigo-50/30 p-3 sm:p-4 dark:from-blue-900/20 dark:to-indigo-900/10">
+      <section className="border-border from-theme-50/50 dark:from-theme-900/20 to-theme-50/30 dark:to-theme-900/10 shrink-0 space-y-2 border-b bg-linear-to-br p-3 sm:p-4">
         <div className="flex items-center justify-between gap-2">
           <ProductAnalyticsScope
             entrypoint={entrypoint}

@@ -28,14 +28,14 @@ export default function DataBackupTab() {
       <section id="import-export-entry">
         <Heading3 as="h2" className="mb-2 flex items-center gap-2 text-xl">
           <ArrowRightLeft
-            className="size-5 shrink-0 text-sky-600 dark:text-sky-400"
+            className="text-theme-600 dark:text-theme-400 size-5 shrink-0"
             aria-hidden="true"
           />
           {t("dataBackup.importExport.title")}
         </Heading3>
         <Card>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-700 dark:text-gray-300">
+            <p className="text-secondary-foreground text-sm">
               {t("dataBackup.importExport.description")}
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -48,7 +48,7 @@ export default function DataBackupTab() {
                 {t("dataBackup.importExport.openPage")}
               </WorkflowTransitionButton>
             </div>
-            <Alert variant="info">
+            <Alert variant="default">
               <p className="text-sm">{t("dataBackup.importExport.info")}</p>
             </Alert>
           </CardContent>

@@ -105,7 +105,7 @@ export default function ProductAnalyticsSettings() {
           <CardItem
             id={SETTINGS_ANCHORS.PRODUCT_ANALYTICS_ENABLED}
             icon={
-              <BarChart3 className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+              <BarChart3 className="text-muted-foreground dark:text-secondary-foreground h-5 w-5" />
             }
             title={t("productAnalytics.enableLabel")}
             description={t("productAnalytics.enableDescription")}

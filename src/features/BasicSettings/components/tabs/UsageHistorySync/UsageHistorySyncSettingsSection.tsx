@@ -69,7 +69,7 @@ export default function UsageHistorySyncSettingsSection({
               <Label className="text-sm font-medium">
                 {t("settings.enabled")}
               </Label>
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              <div className="text-muted-foreground text-xs">
                 {t("settings.enabledHint")}
               </div>
             </div>
@@ -133,7 +133,7 @@ export default function UsageHistorySyncSettingsSection({
               </SelectContent>
             </Select>
             {!alarmsSupported && (
-              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              <div className="text-muted-foreground text-xs">
                 {t("settings.alarmUnsupported")}
               </div>
             )}

@@ -69,7 +69,7 @@ interface PopupViewRegistryOptions {
  */
 function PopupStatsFallback() {
   return (
-    <div className="h-16 animate-pulse rounded-xl bg-white/50 dark:bg-white/5" />
+    <div className="bg-card/50 dark:bg-foreground/5 h-16 animate-pulse rounded-xl" />
   )
 }
 
@@ -80,7 +80,7 @@ function PopupContentFallback() {
   const { t } = useTranslation("common")
 
   return (
-    <div className="flex min-h-40 items-center justify-center px-4 py-8 text-sm text-gray-500 dark:text-gray-400">
+    <div className="text-muted-foreground flex min-h-40 items-center justify-center px-4 py-8 text-sm">
       {t("status.loading")}
     </div>
   )

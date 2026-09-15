@@ -59,8 +59,8 @@ export function createNotify(runtime: typeof toast) {
             aria-hidden="true"
             className={
               kind === "warning"
-                ? "h-5 w-5 shrink-0 text-amber-500 dark:text-amber-400"
-                : "h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400"
+                ? "text-warning-text h-5 w-5 shrink-0"
+                : "text-info-text h-5 w-5 shrink-0"
             }
           />
         ),

@@ -128,7 +128,7 @@ export function SettingSection({
         size="sm"
         header={
           <div className="pr-8">
-            <h3 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
+            <h3 className="text-foreground text-lg font-semibold">
               {t("messages.confirmReset")}
             </h3>
           </div>
@@ -154,7 +154,7 @@ export function SettingSection({
           </div>
         }
       >
-        <p className="dark:text-dark-text-secondary text-sm text-gray-600">
+        <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
           {t("messages.resetConfirmDesc", { name: title })}
         </p>
       </Modal>

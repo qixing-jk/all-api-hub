@@ -18,6 +18,41 @@
     "sidepanelUnsupportedHelper": "Este navegador no admite paneles laterales; las selecciones de panel lateral usarán el popup como alternativa.",
     "title": "Clic en ícono de extensión"
   },
+  "appearance": {
+    "color": "Color del tema",
+    "colors": {
+      "blue": "Azul",
+      "green": "Verde",
+      "orange": "Naranja",
+      "rose": "Rosa",
+      "slate": "Gris pizarra",
+      "violet": "Violeta"
+    },
+    "description": "Los cambios se guardan automáticamente y se aplican a la configuración, la ventana emergente y el panel lateral.",
+    "preset": "Tema predefinido",
+    "presetColorsHint": "Este tema incluye su propia paleta. Elige el tema predeterminado para seleccionar el color de acento por separado.",
+    "presetDescriptions": {
+      "anthropic": "Crema cálida y terracota, con modo oscuro en tonos carbón.",
+      "default": "Tonos neutros clásicos con el color de acento que prefieras."
+    },
+    "presets": {
+      "anthropic": "Anthropic",
+      "default": "Tema predeterminado"
+    },
+    "preview": "Vista previa",
+    "primaryAction": "Acción principal",
+    "radii": {
+      "default": "Predeterminado",
+      "large": "Grande",
+      "none": "Rectas",
+      "small": "Pequeño"
+    },
+    "radius": "Redondeado de esquinas",
+    "reset": "Restablecer apariencia",
+    "saveFailed": "No se pudo guardar. Inténtalo de nuevo.",
+    "secondaryAction": "Acción secundaria",
+    "title": "Configuración de apariencia"
+  },
   "appearanceLanguage": {
     "language": "Idioma",
     "languageDesc": "Elige tu idioma preferido",

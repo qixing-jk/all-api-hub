@@ -34,6 +34,7 @@ import {
   runManagedSiteChannelsCrudScenario,
 } from "~~/e2e/scenarios/managedSiteChannels"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { readVisualThemeRoleColor } from "~~/e2e/utils/visualTheme"
 
 test.use({
   viewport: { width: 1440, height: 1000 },
@@ -679,18 +680,18 @@ test("keeps channel surfaces coherent in light and dark modes", async ({
       (dark) => document.documentElement.classList.toggle("dark", dark),
       mode === "dark",
     )
-    if (mode === "dark") {
-      await expect(
-        page.getByRole("table").locator("..").locator(".."),
-      ).toHaveCSS("background-color", "rgb(30, 41, 59)")
-    }
+    await expect(page.getByRole("table").locator("..").locator("..")).toHaveCSS(
+      "background-color",
+      await readVisualThemeRoleColor(page, "--background"),
+    )
     await openManagedSiteChannelRowActions(page, "Example primary")
     const menu = page.getByRole("menu")
     await expect(menu).toBeVisible()
     await expect(menu).toHaveCSS("opacity", "1")
-    if (mode === "dark") {
-      await expect(menu).toHaveCSS("background-color", "rgb(30, 41, 59)")
-    }
+    await expect(menu).toHaveCSS(
+      "background-color",
+      await readVisualThemeRoleColor(page, "--popover"),
+    )
     await page.screenshot({
       path: testInfo.outputPath(`channels-${mode}.png`),
       fullPage: true,

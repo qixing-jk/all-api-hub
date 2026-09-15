@@ -48,21 +48,21 @@ export function CollapsibleSection({
     >
       <CollapsibleTrigger
         className={cn(
-          "dark:hover:bg-dark-bg-tertiary dark:text-dark-text-secondary flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-xs text-gray-700 hover:bg-gray-50",
+          "dark:hover:bg-secondary text-secondary-foreground hover:bg-surface-subtle flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-xs",
           buttonClassName,
         )}
       >
         <span className="min-w-0 truncate">{title}</span>
         <ChevronDown
           className={cn(
-            "dark:text-dark-text-tertiary h-4 w-4 shrink-0 text-gray-500 transition-transform",
+            "text-muted-foreground h-4 w-4 shrink-0 transition-transform",
             open ? "rotate-180" : "rotate-0",
           )}
         />
       </CollapsibleTrigger>
       <CollapsibleContent
         className={cn(
-          "dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary mt-2 rounded-md border border-gray-100 bg-white p-2",
+          "dark:border-border border-border-subtle bg-card mt-2 rounded-md border p-2",
           panelClassName,
         )}
       >

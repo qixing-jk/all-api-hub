@@ -53,7 +53,7 @@ describe("KeyManagement AccountSummaryBar", () => {
     expect(
       screen.queryByRole("button", { name: "accountSummary.clearSelection" }),
     ).toBeNull()
-    expect(primaryBadge).toHaveClass("bg-blue-100")
+    expect(primaryBadge).toHaveClass("bg-primary-soft")
     expect(backupBadge).toHaveClass("bg-secondary")
 
     await user.click(screen.getByText("Backup Account"))
@@ -84,7 +84,7 @@ describe("KeyManagement AccountSummaryBar", () => {
     ).toHaveClass("bg-secondary")
     expect(
       screen.getByText("Backup Account").closest('[data-slot="badge"]'),
-    ).toHaveClass("bg-blue-100")
+    ).toHaveClass("bg-primary-soft")
   })
 
   it("renders passive error badges when no click handler is provided", () => {

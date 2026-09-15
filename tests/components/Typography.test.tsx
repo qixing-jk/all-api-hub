@@ -55,7 +55,7 @@ describe("Typography", () => {
     const element = screen.getByText("override")
     expect(element.tagName).toBe("SPAN")
     expect(element).toHaveClass(
-      "text-gray-900",
+      "text-foreground",
       "text-center",
       "font-bold",
       "text-xl",

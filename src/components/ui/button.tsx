@@ -21,13 +21,13 @@ const buttonVariants = cva(
         default:
           "bg-(--button-primary-bg) text-(--button-primary-foreground) shadow hover:bg-(--button-primary-bg-hover) focus-visible:ring-(--button-primary-ring) focus-visible:ring-opacity-40",
         destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+          "bg-(--button-destructive-bg) text-(--button-destructive-foreground) hover:bg-(--button-destructive-bg-hover) focus-visible:ring-(--button-destructive-ring)",
         outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
+          "border border-(--button-outline-border) bg-(--button-outline-bg) text-(--button-outline-foreground) shadow-xs hover:bg-(--button-outline-hover-bg) focus-visible:ring-(--button-outline-ring)",
         dashed:
-          "border border-input border-dashed bg-transparent text-muted-foreground shadow-none hover:border-primary/50 hover:bg-accent hover:text-foreground dark:bg-transparent dark:hover:bg-accent/50",
+          "border border-input border-dashed bg-transparent text-muted-foreground shadow-none hover:border-primary/50 hover:bg-accent hover:text-foreground dark:hover:bg-accent/50",
         secondary:
-          "border bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "border bg-(--button-secondary-bg) text-(--button-secondary-foreground) hover:bg-(--button-secondary-bg-hover) focus-visible:ring-(--button-secondary-ring)",
         success:
           "bg-(--button-success-bg) text-(--button-success-foreground) shadow-sm hover:bg-(--button-success-bg-hover) focus-visible:ring-(--button-success-ring) focus-visible:ring-opacity-40",
         warning:

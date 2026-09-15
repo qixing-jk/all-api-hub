@@ -4,8 +4,6 @@ import { isMobileDevice } from "~/utils/browser"
 
 import App from "./App"
 
-import "./style.css"
-
 if (!isMobileDevice()) {
   const popupDocument = document.documentElement
   const { HEIGHT_PX, WIDTH_PX } = UI_CONSTANTS.POPUP

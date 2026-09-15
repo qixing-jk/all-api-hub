@@ -282,7 +282,7 @@ export function DatePicker({
             className={cn(
               "text-xs",
               naturalInputIsInvalid
-                ? "text-red-600 dark:text-red-400"
+                ? "text-destructive-text"
                 : "text-muted-foreground",
             )}
           >

@@ -7,6 +7,8 @@ import {
   useState,
 } from "react"
 
+import { Storage, type StorageCallbackMap } from "@plasmohq/storage"
+
 import {
   DATA_TYPE_BALANCE,
   DATA_TYPE_CASHFLOW,
@@ -14,12 +16,14 @@ import {
   DATA_TYPE_INCOME,
 } from "~/constants"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import { DEFAULT_THEME_MODE } from "~/constants/theme"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
   AutoRefreshMessageTypes,
   sendAutoRefreshMessage,
 } from "~/services/accounts/autoRefreshMessaging"
 import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
+import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { sendBalanceHistoryMessage } from "~/services/history/dailyBalanceHistory/messaging"
 import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"
 import {
@@ -95,11 +99,12 @@ import {
   normalizeTaskNotificationPreferences,
   type TaskNotificationPreferences,
 } from "~/types/taskNotifications"
-import type { ThemeMode } from "~/types/theme"
+import type { AppearanceUpdates, ThemeMode } from "~/types/theme"
 import type { DeepPartial, PartialWithNested } from "~/types/utils"
 import type { WebDAVSettings } from "~/types/webdav"
 import { deepOverride } from "~/utils"
 import { createLogger } from "~/utils/core/logger"
+import { normalizeThemePreferences } from "~/utils/ui/themePreferences"
 
 const logger = createLogger("UserPreferencesContext")
 
@@ -454,6 +459,7 @@ interface UserPreferencesContextType {
     key: string,
     options?: PreferenceSaveOptions,
   ) => PreferenceWritePromise
+  updateAppearance: (updates: AppearanceUpdates) => PreferenceWritePromise
   updateThemeMode: (themeMode: ThemeMode) => PreferenceWritePromise
   updateLoggingConsoleEnabled: (enabled: boolean) => PreferenceWritePromise
   updateLoggingLevel: (level: LogLevel) => PreferenceWritePromise
@@ -558,6 +564,27 @@ export const UserPreferencesProvider = ({
       logger.error("加载用户偏好设置失败", error)
     } finally {
       setIsLoading(false)
+    }
+  }, [])
+
+  // Plasmo decodes stored JSON and supports both Chrome and Firefox listeners.
+  useEffect(() => {
+    const storage = new Storage({ area: "local" })
+    const callbacks: StorageCallbackMap = {
+      [USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES]: ({ newValue }) => {
+        setPreferences((current) =>
+          current
+            ? {
+                ...current,
+                ...normalizeThemePreferences(newValue),
+              }
+            : current,
+        )
+      },
+    }
+    storage.watch(callbacks)
+    return () => {
+      storage.unwatch(callbacks)
     }
   }, [])
 
@@ -1274,6 +1301,15 @@ export const UserPreferencesProvider = ({
     [applySuccessfulPreferenceWrite],
   )
 
+  const updateAppearance = useCallback(
+    async ({ themeMode, ...appearance }: AppearanceUpdates) =>
+      persistPreferenceUpdates({
+        appearance,
+        ...(themeMode ? { themeMode } : {}),
+      }),
+    [persistPreferenceUpdates],
+  )
+
   const updateThemeMode = useCallback(
     async (themeMode: ThemeMode) => {
       const result = await userPreferences.savePreferences({ themeMode })
@@ -1973,7 +2009,7 @@ export const UserPreferencesProvider = ({
     cliProxyApiManagementKey: preferences?.cliProxyApi?.adminToken || "",
     claudeCodeRouterBaseUrl: preferences?.claudeCodeRouter?.baseUrl || "",
     claudeCodeRouterApiKey: preferences?.claudeCodeRouter?.apiKey || "",
-    themeMode: preferences?.themeMode || "system",
+    themeMode: preferences?.themeMode || DEFAULT_THEME_MODE,
     loggingConsoleEnabled:
       preferences?.logging?.consoleEnabled ??
       DEFAULT_PREFERENCES.logging.consoleEnabled,
@@ -2038,6 +2074,7 @@ export const UserPreferencesProvider = ({
     updateCliProxyApiManagementKey,
     updateClaudeCodeRouterBaseUrl,
     updateClaudeCodeRouterApiKey,
+    updateAppearance,
     updateThemeMode,
     updateLoggingConsoleEnabled,
     updateLoggingLevel,

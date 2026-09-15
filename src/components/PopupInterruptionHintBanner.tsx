@@ -96,7 +96,7 @@ export default function PopupInterruptionHintBanner({
               type="button"
               size="sm"
               variant="ghost"
-              className="dark:text-dark-text-secondary min-h-7 px-2.5 text-xs text-gray-600 hover:bg-amber-100/70 dark:hover:bg-amber-900/40"
+              className="dark:text-secondary-foreground text-muted-foreground hover:bg-warning-soft min-h-7 px-2.5 text-xs"
               onClick={dismiss}
             >
               {t("popupInterruption.actions.keepPopup")}

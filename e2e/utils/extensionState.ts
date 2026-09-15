@@ -267,6 +267,20 @@ export async function closeOtherPages(
   )
 }
 
+/** Release extra extension views before the fixture closes its active context. */
+export async function closeExtensionViews(context: BrowserContext, page: Page) {
+  // Release extension workers before closing sibling views in older Chromium.
+  const session = await context.newCDPSession(page)
+  try {
+    await session.send("ServiceWorker.enable")
+    await session.send("ServiceWorker.stopAllWorkers")
+  } finally {
+    await session.detach()
+  }
+  // Keep the final view alive until context.close() owns browser shutdown.
+  await closeOtherPages(context, page)
+}
+
 /**
  * Assert that the first-install permission onboarding dialog is not present.
  */

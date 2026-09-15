@@ -8,30 +8,18 @@ import {
   ToasterPortalProvider,
 } from "~/components/toast/ToasterPortal"
 
-const {
-  dismissMock,
-  renderedToastState,
-  resolvedThemeState,
-  toasterPropsHistory,
-} = vi.hoisted(() => ({
-  dismissMock: vi.fn(),
-  renderedToastState: {
-    current: {
-      id: "toast-1",
-      type: "success",
+const { dismissMock, renderedToastState, toasterPropsHistory } = vi.hoisted(
+  () => ({
+    dismissMock: vi.fn(),
+    renderedToastState: {
+      current: {
+        id: "toast-1",
+        type: "success",
+      },
     },
-  },
-  resolvedThemeState: {
-    current: "light",
-  },
-  toasterPropsHistory: [] as Array<Record<string, unknown>>,
-}))
-
-vi.mock("~/contexts/ThemeContext", () => ({
-  useTheme: () => ({
-    resolvedTheme: resolvedThemeState.current,
+    toasterPropsHistory: [] as Array<Record<string, unknown>>,
   }),
-}))
+)
 
 vi.mock("react-hot-toast", async () => {
   return {
@@ -69,11 +57,10 @@ describe("ThemeAwareToaster", () => {
       id: "toast-1",
       type: "success",
     }
-    resolvedThemeState.current = "light"
     toasterPropsHistory.length = 0
   })
 
-  it("uses default props and light theme styling for dismissible toasts", () => {
+  it("uses default props and live semantic colors for dismissible toasts", () => {
     render(<ThemeAwareToaster />)
 
     const toasterProps = toasterPropsHistory.at(-1)
@@ -86,30 +73,30 @@ describe("ThemeAwareToaster", () => {
       containerStyle: undefined,
       toastOptions: expect.objectContaining({
         style: {
-          background: "#fff",
-          color: "#363636",
-          border: "1px solid #e5e7eb",
+          background: "var(--popover)",
+          color: "var(--popover-foreground)",
+          border: "1px solid var(--border)",
           borderRadius: "var(--radius-lg)",
         },
         success: {
           duration: 3000,
           iconTheme: {
-            primary: "#059669",
-            secondary: "#fff",
+            primary: "var(--success-text)",
+            secondary: "var(--popover)",
           },
         },
         error: {
           duration: 5000,
           iconTheme: {
-            primary: "#dc2626",
-            secondary: "#fff",
+            primary: "var(--destructive-text)",
+            secondary: "var(--popover)",
           },
         },
         loading: {
           duration: Infinity,
           iconTheme: {
-            primary: "#2563eb",
-            secondary: "#fff",
+            primary: "var(--primary)",
+            secondary: "var(--popover)",
           },
         },
       }),
@@ -127,12 +114,11 @@ describe("ThemeAwareToaster", () => {
     expect(dismissMock).toHaveBeenCalledWith("toast-1")
   })
 
-  it("applies custom props and dark theme colors", () => {
+  it("applies custom positioning and container props", () => {
     renderedToastState.current = {
       id: "toast-2",
       type: "error",
     }
-    resolvedThemeState.current = "dark"
 
     render(
       <ThemeAwareToaster
@@ -150,32 +136,6 @@ describe("ThemeAwareToaster", () => {
       reverseOrder: true,
       containerClassName: "toast-shell",
       containerStyle: { zIndex: 99 },
-    })
-
-    expect(toasterProps?.toastOptions).toMatchObject({
-      style: {
-        background: "#1e293b",
-        color: "#f1f5f9",
-        border: "1px solid #334155",
-      },
-      success: {
-        iconTheme: {
-          primary: "#10b981",
-          secondary: "#1e293b",
-        },
-      },
-      error: {
-        iconTheme: {
-          primary: "#ef4444",
-          secondary: "#1e293b",
-        },
-      },
-      loading: {
-        iconTheme: {
-          primary: "#3b82f6",
-          secondary: "#1e293b",
-        },
-      },
     })
   })
 

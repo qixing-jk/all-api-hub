@@ -71,7 +71,7 @@ export default function LoggingSettings() {
           <CardItem
             id="logging-console-enabled"
             icon={
-              <Terminal className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+              <Terminal className="text-muted-foreground dark:text-secondary-foreground h-5 w-5" />
             }
             title={t("logging.consoleEnabled")}
             description={t("logging.consoleEnabledDesc")}
@@ -86,7 +86,7 @@ export default function LoggingSettings() {
           <CardItem
             id="logging-min-level"
             icon={
-              <SlidersHorizontal className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+              <SlidersHorizontal className="text-muted-foreground dark:text-secondary-foreground h-5 w-5" />
             }
             title={t("logging.minLevel")}
             description={t("logging.minLevelDesc")}

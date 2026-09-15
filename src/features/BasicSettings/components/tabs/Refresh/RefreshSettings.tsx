@@ -141,7 +141,7 @@ export default function RefreshSettings() {
                     disabled={refreshIntervalField.isCommitting}
                     className="w-24"
                   />
-                  <span className="dark:text-dark-text-secondary text-sm text-gray-500">
+                  <span className="dark:text-secondary-foreground text-muted-foreground text-sm">
                     {t("common:time.seconds")}
                   </span>
                 </div>
@@ -184,7 +184,7 @@ export default function RefreshSettings() {
                   disabled={minRefreshIntervalField.isCommitting}
                   className="w-24"
                 />
-                <span className="dark:text-dark-text-secondary text-sm text-gray-500">
+                <span className="dark:text-secondary-foreground text-muted-foreground text-sm">
                   {t("common:time.seconds")}
                 </span>
               </div>

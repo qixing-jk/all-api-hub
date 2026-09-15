@@ -53,43 +53,43 @@ export const UI_CONSTANTS = {
     // 按钮样式
     BUTTON: {
       PRIMARY:
-        "flex-1 flex items-center justify-center space-x-2 py-2.5 px-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-dark-bg-primary transition-colors text-sm font-medium shadow-sm border border-blue-600",
+        "flex-1 flex items-center justify-center space-x-2 py-2.5 px-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 dark:focus:ring-offset-background transition-colors text-sm font-medium shadow-sm border border-theme-600",
       SECONDARY:
-        "flex items-center justify-center py-2.5 px-3 bg-white dark:bg-dark-bg-secondary text-gray-600 dark:text-dark-text-secondary rounded-lg hover:bg-gray-50 dark:hover:bg-dark-bg-tertiary focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-dark-bg-primary transition-colors text-sm font-medium border border-gray-300 dark:border-dark-bg-tertiary",
-      ICON: "p-2 text-gray-400 dark:text-dark-text-tertiary hover:text-gray-600 dark:hover:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-bg-tertiary rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-dark-bg-primary border border-gray-200 dark:border-dark-bg-tertiary",
+        "flex items-center justify-center py-2.5 px-3 bg-card text-muted-foreground dark:text-secondary-foreground rounded-lg hover:bg-surface-subtle dark:hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 dark:focus:ring-offset-background transition-colors text-sm font-medium border border-border-strong dark:border-border",
+      ICON: "p-2 text-faint-foreground dark:text-muted-foreground hover:text-muted-foreground dark:hover:text-secondary-foreground hover:bg-muted dark:hover:bg-secondary rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 dark:focus:ring-offset-background border border-border",
       SUCCESS:
-        "px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-dark-bg-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2",
+        "px-4 py-2 bg-success text-success-foreground text-sm font-medium rounded-lg hover:bg-success-hover focus:outline-none focus:ring-2 focus:ring-success-text focus:ring-offset-2 dark:focus:ring-offset-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2",
       REFRESH:
-        "px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-dark-bg-primary transition-colors disabled:opacity-50",
-      COPY: "inline-flex items-center space-x-2 cursor-pointer rounded-md bg-gray-100 dark:bg-dark-bg-tertiary px-3 py-1.5 text-gray-700 dark:text-dark-text-secondary hover:bg-gray-200 dark:hover:bg-dark-bg-primary focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-dark-bg-primary",
-      SAVE: "rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-dark-bg-primary transition-colors",
+        "px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 dark:focus:ring-offset-background transition-colors disabled:opacity-50",
+      COPY: "inline-flex items-center space-x-2 cursor-pointer rounded-md bg-muted dark:bg-secondary px-3 py-1.5 text-secondary-foreground hover:bg-secondary dark:hover:bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 dark:focus:ring-offset-background",
+      SAVE: "rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 dark:focus:ring-offset-background transition-colors",
     },
 
     // 状态指示器
     STATUS_INDICATOR: {
-      HEALTHY: "bg-green-500",
-      ERROR: "bg-red-500",
-      WARNING: "bg-yellow-500",
-      UNKNOWN: "bg-gray-400",
+      HEALTHY: "bg-success",
+      ERROR: "bg-destructive",
+      WARNING: "bg-warning",
+      UNKNOWN: "bg-surface-inverse-muted",
     },
 
     // 文本颜色
     TEXT: {
-      PRIMARY: "text-gray-900 dark:text-dark-text-primary",
-      SECONDARY: "text-gray-500 dark:text-dark-text-secondary",
-      SUCCESS: "text-green-500",
-      ERROR: "text-red-500",
-      WARNING: "text-yellow-500",
+      PRIMARY: "text-foreground",
+      SECONDARY: "text-muted-foreground dark:text-secondary-foreground",
+      SUCCESS: "text-success-text",
+      ERROR: "text-destructive-text",
+      WARNING: "text-warning-text",
     },
 
     // 输入框
     INPUT: {
-      BASE: "block w-full py-3 border border-gray-300 dark:border-dark-bg-tertiary rounded-lg text-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-dark-bg-secondary text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors",
+      BASE: "block w-full py-3 border border-border-strong dark:border-border rounded-lg text-sm placeholder:text-muted-foreground bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors",
       WITH_ICON: "pl-10",
       SEARCH:
-        "w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-bg-tertiary rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 dark:disabled:bg-dark-bg-tertiary disabled:cursor-not-allowed bg-white dark:bg-dark-bg-secondary text-gray-900 dark:text-dark-text-primary placeholder-gray-400 dark:placeholder-gray-500",
+        "w-full pl-10 pr-4 py-2 border border-border-strong dark:border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:bg-muted dark:disabled:bg-secondary disabled:cursor-not-allowed bg-card text-foreground placeholder:text-muted-foreground",
       CHECKBOX:
-        "rounded border-gray-300 dark:border-dark-bg-tertiary text-blue-600 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-dark-bg-primary",
+        "rounded border-border-strong dark:border-border text-theme-600 focus:ring-ring focus:ring-offset-2 dark:focus:ring-offset-background",
     },
   },
 } as const

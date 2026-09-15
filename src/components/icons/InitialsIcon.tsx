@@ -24,7 +24,7 @@ export function InitialsIcon({
     <span
       {...props}
       className={cn(
-        "inline-flex size-4 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-gray-200 leading-none font-semibold tracking-tight select-none dark:bg-gray-700",
+        "bg-secondary inline-flex size-4 shrink-0 items-center justify-center overflow-hidden rounded-sm leading-none font-semibold tracking-tight select-none",
         fontSizeClassName,
         className,
       )}

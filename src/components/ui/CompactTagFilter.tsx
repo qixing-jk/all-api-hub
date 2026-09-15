@@ -111,10 +111,10 @@ export function CompactTagFilter({
           onClick={() => onChange([])}
           className={cn(
             chipClassName,
-            "focus-visible:outline-2 focus-visible:outline-blue-500",
+            "focus-visible:outline-ring focus-visible:outline-2",
             value.length === 0
-              ? "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"
-              : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5",
+              ? "bg-theme-50 text-theme-700 dark:bg-theme-950/50 dark:text-theme-300"
+              : "text-muted-foreground hover:bg-muted dark:text-secondary-foreground dark:hover:bg-foreground/5",
           )}
         >
           {allLabel}
@@ -129,10 +129,10 @@ export function CompactTagFilter({
             onClick={() => toggle(option.value)}
             className={cn(
               chipClassName,
-              "focus-visible:outline-2 focus-visible:outline-blue-500 disabled:opacity-50",
+              "focus-visible:outline-ring focus-visible:outline-2 disabled:opacity-50",
               selected.has(option.value)
-                ? "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"
-                : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5",
+                ? "bg-theme-50 text-theme-700 dark:bg-theme-950/50 dark:text-theme-300"
+                : "text-muted-foreground hover:bg-muted dark:text-secondary-foreground dark:hover:bg-foreground/5",
             )}
           >
             {renderLabel(option)}
@@ -212,14 +212,14 @@ export function CompactTagFilter({
           />
           <div className="max-h-64 min-h-0 overflow-y-auto overscroll-contain">
             {matchingOptions.length === 0 ? (
-              <p className="p-3 text-sm text-gray-500">
+              <p className="text-muted-foreground p-3 text-sm">
                 {t("tagFilter.noResults")}
               </p>
             ) : (
               matchingOptions.map((option) => (
                 <label
                   key={option.value}
-                  className="flex min-h-10 cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm hover:bg-gray-50 dark:hover:bg-white/5"
+                  className="hover:bg-surface-subtle dark:hover:bg-foreground/5 flex min-h-10 cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm"
                 >
                   <Checkbox
                     aria-label={option.label}
@@ -231,7 +231,7 @@ export function CompactTagFilter({
                     {option.label}
                   </span>
                   {typeof option.count === "number" && (
-                    <span className="shrink-0 text-xs text-gray-500">
+                    <span className="text-muted-foreground shrink-0 text-xs">
                       {option.count}
                     </span>
                   )}
@@ -239,8 +239,8 @@ export function CompactTagFilter({
               ))
             )}
           </div>
-          <div className="flex shrink-0 items-center justify-between gap-2 border-t border-gray-200 pt-2 dark:border-white/10">
-            <span className="text-xs text-gray-500">
+          <div className="border-border dark:border-foreground/10 flex shrink-0 items-center justify-between gap-2 border-t pt-2">
+            <span className="text-muted-foreground text-xs">
               {t("tagFilter.selected")} {value.length}
             </span>
             <div className="flex gap-1">
