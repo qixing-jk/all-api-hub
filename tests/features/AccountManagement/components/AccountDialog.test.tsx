@@ -24,7 +24,7 @@ import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { AuthTypeEnum } from "~/types"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("~/services/checkin/autoCheckin/storage", () => ({
   autoCheckinStorage: { getStatus: vi.fn().mockResolvedValue(null) },
@@ -500,6 +500,11 @@ describe("AccountDialog", () => {
           name: /accountDialog:checkInFeedback\.(request|feedback)/,
         }),
       )
+      // First use loads the feedback dialog lazily; await that module boundary
+      // before the form query starts its normal DOM-readiness timeout.
+      await act(async () => {
+        await vi.dynamicImportSettled()
+      })
       await screen.findByLabelText("accountDialog:checkInFeedback.notes")
       await user.click(
         screen.getByText("accountDialog:checkInFeedback.preview"),
