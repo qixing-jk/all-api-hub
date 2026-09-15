@@ -1,5 +1,27 @@
 # Changelog
 
+## [3.63.0](https://github.com/qixing-jk/all-api-hub/compare/v3.62.0...v3.63.0) (2026-09-15)
+
+
+### Features
+
+* **appearance:** add global interface density controls ([#1467](https://github.com/qixing-jk/all-api-hub/issues/1467)) ([1986f57](https://github.com/qixing-jk/all-api-hub/commit/1986f578ff7c22f4d1edf62f195d649f7e3c2f39))
+* **appearance:** complete density adaptation across feature pages ([#1469](https://github.com/qixing-jk/all-api-hub/issues/1469)) ([15e6d13](https://github.com/qixing-jk/all-api-hub/commit/15e6d134c97b5f7e90b160c60fabb058cc219747))
+* **appearance:** extend density across shared controls and extension shells ([#1468](https://github.com/qixing-jk/all-api-hub/issues/1468)) ([8140436](https://github.com/qixing-jk/all-api-hub/commit/814043662866d6b0c8602e0f85eaf49dda54da42))
+* **checkin:** rediscover automatic methods before daily execution ([#1461](https://github.com/qixing-jk/all-api-hub/issues/1461)) ([ec9463e](https://github.com/qixing-jk/all-api-hub/commit/ec9463e36965e7b4783972a25cad95650efcb3df))
+* **checkin:** support Genius Programmer daily check-in ([#1446](https://github.com/qixing-jk/all-api-hub/issues/1446)) ([aad6ec8](https://github.com/qixing-jk/all-api-hub/commit/aad6ec80306042a2d0853902a7ea6df759cff165))
+* **storage:** enable unlimited local storage and longer history retention ([#1460](https://github.com/qixing-jk/all-api-hub/issues/1460)) ([4da727b](https://github.com/qixing-jk/all-api-hub/commit/4da727b9db7b431594ea980dfa79ad8e401a7e13))
+* **ui:** add appearance preferences and shared theme roles ([#1459](https://github.com/qixing-jk/all-api-hub/issues/1459)) ([91936be](https://github.com/qixing-jk/all-api-hub/commit/91936be917161a8efc9ce0414640fb56dc612c2d))
+* **ui:** migrate feature pages to semantic theme colors ([#1458](https://github.com/qixing-jk/all-api-hub/issues/1458)) ([2c52a83](https://github.com/qixing-jk/all-api-hub/commit/2c52a834d265f11075a6b54f85bc48a4869baa47))
+
+
+### Bug Fixes
+
+* **aihubmix:** honor shared request limits and timeouts ([#1457](https://github.com/qixing-jk/all-api-hub/issues/1457)) ([d15a6e9](https://github.com/qixing-jk/all-api-hub/commit/d15a6e9224b8f5aa232d77d8a84859d9b8559f37))
+* **octopus:** preserve channel import compatibility across versions ([#1455](https://github.com/qixing-jk/all-api-hub/issues/1455)) ([6134648](https://github.com/qixing-jk/all-api-hub/commit/6134648595450a1c5205b76ac58415aa4876e97e))
+* **ui:** restore focus rings and Chromium compatibility checks ([#1456](https://github.com/qixing-jk/all-api-hub/issues/1456)) ([f286124](https://github.com/qixing-jk/all-api-hub/commit/f286124555a8e044d9137c91160627fac091045d))
+* **ui:** support button wrapping on older Chromium ([#1454](https://github.com/qixing-jk/all-api-hub/issues/1454)) ([d16fb5d](https://github.com/qixing-jk/all-api-hub/commit/d16fb5d86c8a694b09b7713c81cc7085c478160e))
+
 ## [3.62.0](https://github.com/qixing-jk/all-api-hub/compare/v3.61.0...v3.62.0) (2026-09-13)
 
 
