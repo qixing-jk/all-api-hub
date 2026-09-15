@@ -171,3 +171,47 @@ it("does not infer OpenRouter behavior when the owner is absent or unknown", () 
     expect(presentation.getOptionFeedback).toBeUndefined()
   }
 })
+
+it.each([
+  [
+    SITE_TYPES.SUB2API,
+    "quota",
+    "native.editor.totalQuotaUsd",
+    "dialog.quotaPlaceholder",
+  ],
+  [
+    SITE_TYPES.AIHUBMIX,
+    "models",
+    "dialog.availableModels",
+    "dialog.selectModels",
+  ],
+  [
+    SITE_TYPES.AIHUBMIX,
+    "subnet",
+    "dialog.subnetLimits",
+    "dialog.subnetPlaceholder",
+  ],
+  [
+    SITE_TYPES.NEW_API,
+    "model_limits",
+    "dialog.availableModels",
+    "dialog.selectModels",
+  ],
+  [SITE_TYPES.NEW_API, "model_limits_enabled", "dialog.modelLimits", undefined],
+] as const)(
+  "provides native field labels for %s %s",
+  (siteType, fieldId, label, placeholder) => {
+    const field = getNativeKeyResourceEditorPresentation(
+      siteType,
+      "create",
+    ).policy.fields.find((field) => field.fieldId === fieldId)!
+    const t = ((key: string) => key) as TFunction
+    expect(field.resolveLabel?.(t)).toBe(`keyManagement:${label}`)
+    if (placeholder)
+      expect(field.resolvePlaceholder?.(t)).toBe(`keyManagement:${placeholder}`)
+    if (fieldId === "model_limits") {
+      expect(field.visibleWhen?.({ model_limits_enabled: true })).toBe(true)
+      expect(field.visibleWhen?.({ model_limits_enabled: false })).toBe(false)
+    }
+  },
+)

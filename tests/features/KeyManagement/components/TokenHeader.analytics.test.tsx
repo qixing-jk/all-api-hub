@@ -283,6 +283,35 @@ describe("RuntimeKeyHeader analytics", () => {
     })
   })
 
+  it("passes the selected native identity to copy, edit and delete actions", async () => {
+    const user = userEvent.setup()
+    const account = createAccount({ id: "actions-account" })
+    const token = createToken({ id: 37, name: "Selected key" })
+    const copyKey = vi.fn()
+    const handleEditKey = vi.fn()
+    const handleDeleteKey = vi.fn()
+    renderRuntimeKeyHeader({
+      account,
+      token,
+      copyKey,
+      handleEditKey,
+      handleDeleteKey,
+    })
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.copyKey" }),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:actions.editKey" }),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:actions.deleteKey" }),
+    )
+    const runtimeKey = handleEditKey.mock.calls[0][0]
+    expect(runtimeKey).toMatchObject({ label: "Selected key" })
+    expect(handleDeleteKey).toHaveBeenCalledExactlyOnceWith(runtimeKey)
+    expect(copyKey).toHaveBeenCalledExactlyOnceWith(account, runtimeKey)
+  })
+
   it("keeps the full secret action set for recoverable account tokens", () => {
     renderRuntimeKeyHeader()
 
