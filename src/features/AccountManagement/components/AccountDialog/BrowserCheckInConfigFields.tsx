@@ -156,20 +156,20 @@ export function BrowserCheckInConfigFields({
     currentConfig.timeoutMs ?? BROWSER_CHECK_IN_DEFAULT_TIMEOUT_MS
 
   return (
-    <div className="border-theme-300 dark:border-theme-700 space-y-3 border-l-2 pl-3">
-      <div className="flex items-start gap-2">
+    <div className="border-theme-300 dark:border-theme-700 space-y-density-3 border-l-2 pl-3">
+      <div className="gap-y-density-2 flex items-start gap-x-2">
         <MousePointerClick className="text-theme-600 dark:text-theme-400 mt-0.5 h-4 w-4 shrink-0" />
         <div className="min-w-0">
           <p className="text-foreground text-sm font-medium">
             {t("form.browserAutomationTitle")}
           </p>
-          <p className="text-muted-foreground mt-1 text-xs">
+          <p className="text-muted-foreground mt-density-1 text-xs">
             {t("form.browserAutomationDescription")}
           </p>
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-4">
+      <div className="gap-y-density-4 flex items-center justify-between gap-x-4">
         <div className="min-w-0 flex-1">
           <label
             htmlFor="account-browser-check-in-enabled"
@@ -177,7 +177,7 @@ export function BrowserCheckInConfigFields({
           >
             {t("form.browserAutomationEnabled")}
           </label>
-          <p className="text-muted-foreground mt-1 text-xs">
+          <p className="text-muted-foreground mt-density-1 text-xs">
             {t("form.browserAutomationEnabledDesc")}
           </p>
         </div>
@@ -334,7 +334,7 @@ export function BrowserCheckInConfigFields({
         />
       </FormField>
 
-      <div className="flex items-center justify-between gap-4">
+      <div className="gap-y-density-4 flex items-center justify-between gap-x-4">
         <div className="min-w-0 flex-1">
           <label
             htmlFor="account-browser-check-in-identity-enabled"
@@ -342,7 +342,7 @@ export function BrowserCheckInConfigFields({
           >
             {t("form.browserAutomationIdentityEnabled")}
           </label>
-          <p className="text-muted-foreground mt-1 text-xs">
+          <p className="text-muted-foreground mt-density-1 text-xs">
             {t("form.browserAutomationIdentityEnabledDesc")}
           </p>
         </div>
@@ -412,7 +412,7 @@ export function BrowserCheckInConfigFields({
         />
       </FormField>
 
-      <div className="text-muted-foreground flex items-start gap-2 text-xs">
+      <div className="text-muted-foreground gap-y-density-2 flex items-start gap-x-2 text-xs">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
         <span>{t("form.browserAutomationVisiblePageNote")}</span>
       </div>
