@@ -1155,15 +1155,9 @@ describe("AccountDialog AccountForm", () => {
         "Automatic selection: Daily check-in",
       )
       expect(methodSelect).not.toHaveTextContent("New API")
-      expect(methodSelect).toHaveAttribute(
-        "aria-describedby",
-        "check-in-method-helper",
+      expect(methodSelect).toHaveAccessibleDescription(
+        "Automatically selected: Daily check-in. When automatic check-in is enabled, discovery runs again if this method becomes unsupported.",
       )
-      expect(
-        screen.getByText(
-          "The system currently selects Daily check-in. Re-detection may update this method.",
-        ),
-      ).toBeVisible()
     } finally {
       testI18n.removeResourceBundle("en", "accountDialog")
     }
