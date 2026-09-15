@@ -414,8 +414,8 @@ export function ServiceCredentialCard({
             "ring-primary-500 dark:ring-primary-400 ring-2 ring-offset-2 outline-none",
         )}
       >
-        <CardContent padding="default">
-          <div className="flex min-w-0 flex-col gap-3">
+        <CardContent padding="default" spacing="default">
+          <div className="gap-density-3 flex min-w-0 flex-col">
             <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <BatchSelectionControl

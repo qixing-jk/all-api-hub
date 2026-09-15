@@ -54,28 +54,28 @@ export default function AccountSnapshotTableRow({
     switch (getAutoCheckinSnapshotStatus(snapshot)) {
       case SNAPSHOT_STATUS_FILTER.SUCCESS:
         return (
-          <span className="bg-success-soft text-success-soft-foreground inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
+          <span className="bg-success-soft text-success-soft-foreground gap-density-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium">
             <CircleCheck className="h-3.5 w-3.5" />
             {t("execution.status.success")}
           </span>
         )
       case SNAPSHOT_STATUS_FILTER.FAILED:
         return (
-          <span className="bg-destructive-soft text-destructive-soft-foreground inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
+          <span className="bg-destructive-soft text-destructive-soft-foreground gap-density-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium">
             <CircleX className="h-3.5 w-3.5" />
             {t("execution.status.failed")}
           </span>
         )
       case SNAPSHOT_STATUS_FILTER.SKIPPED:
         return (
-          <span className="bg-warning-soft text-warning-soft-foreground inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
+          <span className="bg-warning-soft text-warning-soft-foreground gap-density-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium">
             <TriangleAlert className="h-3.5 w-3.5" />
             {t("execution.status.skipped")}
           </span>
         )
       default:
         return (
-          <span className="bg-muted text-secondary-foreground dark:bg-card inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
+          <span className="bg-muted text-secondary-foreground dark:bg-card gap-density-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium">
             <Clock className="h-3.5 w-3.5" />
             {t("snapshot.badges.pending")}
           </span>
@@ -85,14 +85,14 @@ export default function AccountSnapshotTableRow({
 
   return (
     <TableRow className="border-border hover:bg-surface-subtle dark:hover:bg-card">
-      <TableCell className="text-foreground w-56 max-w-56 min-w-56 px-6 py-4 text-sm font-medium">
+      <TableCell className="text-foreground py-density-4 w-56 max-w-56 min-w-56 px-6 text-sm font-medium">
         <AccountLinkButton
           accountId={snapshot.accountId}
           accountName={snapshot.accountName}
           className="w-full max-w-full min-w-0 justify-start overflow-hidden px-0 text-left"
         />
       </TableCell>
-      <TableCell className="px-4 py-4 text-sm">
+      <TableCell className="py-density-4 px-4 text-sm">
         <span
           className={cn(
             "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
@@ -106,9 +106,9 @@ export default function AccountSnapshotTableRow({
             : t("snapshot.badges.disabled")}
         </span>
       </TableCell>
-      <TableCell className="px-4 py-4 text-sm">
-        <div className="space-y-1.5">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <TableCell className="py-density-4 px-4 text-sm">
+        <div className="space-y-density-1-5">
+          <div className="gap-x-density-2 gap-y-density-1 flex flex-wrap items-center">
             <span
               className={cn(
                 "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
@@ -145,8 +145,8 @@ export default function AccountSnapshotTableRow({
           </div>
         </div>
       </TableCell>
-      <TableCell className="max-w-sm px-4 py-4 text-sm">
-        <div className="space-y-1.5">
+      <TableCell className="py-density-4 max-w-sm px-4 text-sm">
+        <div className="space-y-density-1-5">
           {statusBadge}
           {reason && (
             <div className="text-muted-foreground text-xs">
@@ -155,7 +155,7 @@ export default function AccountSnapshotTableRow({
           )}
         </div>
       </TableCell>
-      <TableCell className="text-muted-foreground px-4 py-4 text-sm whitespace-nowrap">
+      <TableCell className="text-muted-foreground py-density-4 px-4 text-sm whitespace-nowrap">
         {snapshot.lastResult?.timestamp
           ? formatTimestamp(snapshot.lastResult.timestamp)
           : "-"}

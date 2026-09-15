@@ -211,7 +211,7 @@ export default function BalanceHistoryAccountSummaryTable({
                   {header.isPlaceholder ? null : header.column.getCanSort() ? (
                     <button
                       type="button"
-                      className="flex w-full items-center gap-2"
+                      className="gap-density-2 flex w-full items-center"
                       onClick={header.column.getToggleSortingHandler()}
                     >
                       {flexRender(
@@ -249,7 +249,7 @@ export default function BalanceHistoryAccountSummaryTable({
             table.getRowModel().rows.map((row) => (
               <TableRow key={row.id}>
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className={cn("py-3")}>
+                  <TableCell key={cell.id} className={cn("py-density-3")}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}

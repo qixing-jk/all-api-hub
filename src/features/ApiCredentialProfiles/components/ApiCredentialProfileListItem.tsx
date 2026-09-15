@@ -396,10 +396,10 @@ export function ApiCredentialProfileListItem({
         )}
       >
         <CardContent padding="md" spacing="sm">
-          <div className="flex min-w-0 flex-col gap-5">
-            <div className="flex min-w-0 flex-1 flex-col gap-2">
-              <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-2">
-                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <div className="gap-density-5 flex min-w-0 flex-col">
+            <div className="gap-density-2 flex min-w-0 flex-1 flex-col">
+              <div className="gap-x-density-3 gap-y-density-2 flex min-w-0 flex-wrap items-start justify-between">
+                <div className="gap-density-2 flex min-w-0 flex-1 flex-wrap items-center">
                   <Heading6
                     id={rowHeadingId}
                     className="max-w-full min-w-0 truncate"
@@ -442,13 +442,13 @@ export function ApiCredentialProfileListItem({
                 </div>
               </div>
 
-              <div className="flex flex-1 flex-col gap-2 text-xs">
-                <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+              <div className="gap-density-2 flex flex-1 flex-col text-xs">
+                <div className="gap-density-1 sm:gap-density-2 flex min-w-0 flex-col sm:flex-row sm:items-center">
                   <span className="text-muted-foreground shrink-0 whitespace-nowrap">
                     {t("apiCredentialProfiles:list.apiKey")}
                   </span>
                   <div className="flex w-full min-w-0 items-center gap-0.5 sm:flex-1">
-                    <code className="dark:bg-secondary bg-muted text-secondary-foreground min-w-0 flex-1 truncate rounded px-2 py-1 font-mono text-[10px] sm:text-xs">
+                    <code className="dark:bg-secondary bg-muted text-secondary-foreground py-density-1 min-w-0 flex-1 truncate rounded px-2 font-mono text-[10px] sm:text-xs">
                       {visibleKeys.has(profile.id)
                         ? profile.apiKey
                         : maskSecretForDisplay(profile.apiKey)}
@@ -492,28 +492,28 @@ export function ApiCredentialProfileListItem({
                   </div>
                 </div>
 
-                <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
+                <div className="gap-density-1-5 sm:gap-density-2 flex min-w-0 flex-wrap items-center">
                   <span className="text-muted-foreground shrink-0 whitespace-nowrap">
                     {t("aiApiVerification:verifyDialog.history.lastVerified")}
                   </span>
                   <VerificationHistorySummary
                     summary={verificationSummary}
-                    className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2"
+                    className="gap-density-1-5 sm:gap-density-2 flex min-w-0 flex-wrap items-center"
                   />
                 </div>
 
                 <Collapsible
                   open={isTelemetryOpen}
                   onOpenChange={setIsTelemetryOpen}
-                  className="dark:bg-secondary/60 border-border-subtle bg-surface-subtle flex flex-col rounded-lg border p-2 sm:p-3"
+                  className="dark:bg-secondary/60 border-border-subtle bg-surface-subtle py-density-2 sm:py-density-3 flex flex-col rounded-lg border px-2 sm:px-3"
                   data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.telemetryPanel}
                 >
-                  <div className="flex min-w-0 items-center justify-between gap-2">
+                  <div className="gap-density-2 flex min-w-0 items-center justify-between">
                     <CollapsibleTrigger asChild>
                       <Button
                         type="button"
                         variant="ghost"
-                        className="group h-auto min-h-0 min-w-0 flex-1 justify-start gap-2 px-1.5 py-1 text-left"
+                        className="group gap-density-2 py-density-1 h-auto min-h-0 min-w-0 flex-1 justify-start px-1.5 text-left"
                         aria-label={t("apiCredentialProfiles:telemetry.title")}
                         aria-expanded={isTelemetryOpen}
                         aria-controls={telemetryContentId}
@@ -554,7 +554,7 @@ export function ApiCredentialProfileListItem({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="dark:hover:text-foreground text-muted-foreground hover:text-secondary-foreground h-auto min-h-0 shrink-0 gap-1 px-1.5 py-1 text-[11px]"
+                      className="dark:hover:text-foreground text-muted-foreground hover:text-secondary-foreground gap-density-1 py-density-1 h-auto min-h-0 shrink-0 px-1.5 text-[11px]"
                       onClick={handleRefreshTelemetry}
                       loading={isTelemetryRefreshing}
                       leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
@@ -575,7 +575,7 @@ export function ApiCredentialProfileListItem({
               </div>
 
               {profile.notes?.trim() ? (
-                <div className="dark:border-border dark:bg-secondary/40 dark:text-secondary-foreground border-theme-200 bg-theme-50/60 text-muted-foreground border-l-2 px-3 py-2 text-xs">
+                <div className="dark:border-border dark:bg-secondary/40 dark:text-secondary-foreground border-theme-200 bg-theme-50/60 text-muted-foreground py-density-2 border-l-2 px-3 text-xs">
                   <div className="text-theme-600 dark:text-theme-300 mb-1 text-[11px] font-medium tracking-wide">
                     {t("apiCredentialProfiles:dialog.fields.notes")}
                   </div>
@@ -586,8 +586,8 @@ export function ApiCredentialProfileListItem({
               ) : null}
             </div>
 
-            <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
-              <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
+            <div className="gap-x-density-4 gap-y-density-2 flex w-full min-w-0 flex-wrap items-center justify-between">
+              <div className="gap-density-1-5 sm:gap-density-2 flex min-w-0 flex-wrap items-center">
                 <AuditTimeBadge
                   Icon={CalendarPlus}
                   label={t("apiCredentialProfiles:list.createdAt")}

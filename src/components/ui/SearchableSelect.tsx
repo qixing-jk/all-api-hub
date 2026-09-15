@@ -197,7 +197,7 @@ export const SearchableSelect = React.forwardRef<
           aria-expanded={resolvedOpen}
           data-slot="searchable-select-trigger"
           className={cn(
-            "dark:border-border dark:hover:bg-card/80 border-border-strong bg-card text-foreground hover:bg-surface-subtle focus-visible:ring-ring data-placeholder:text-faint-foreground aria-invalid:border-destructive-border aria-invalid:focus-visible:ring-destructive-text/40 flex w-full items-center justify-between gap-2 rounded-md border px-3 text-sm whitespace-nowrap shadow-xs transition-colors outline-none focus-visible:border-transparent focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60",
+            "dark:border-border dark:hover:bg-card/80 border-border-strong bg-card text-foreground hover:bg-surface-subtle focus-visible:ring-ring data-placeholder:text-faint-foreground aria-invalid:border-destructive-border aria-invalid:focus-visible:ring-destructive-text/40 gap-density-2 flex w-full items-center justify-between rounded-md border px-3 text-sm whitespace-nowrap shadow-xs transition-colors outline-none focus-visible:border-transparent focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60",
             !selectedOption && "text-muted-foreground",
             className,
           )}
@@ -234,7 +234,7 @@ export const SearchableSelect = React.forwardRef<
             {options.length === 0 && !canUseCustomValue ? (
               <div
                 data-slot="searchable-select-empty"
-                className="py-6 text-center text-sm"
+                className="py-density-6 text-center text-sm"
               >
                 {resolvedEmptyMessage}
               </div>

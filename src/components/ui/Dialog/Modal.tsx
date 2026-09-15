@@ -458,7 +458,7 @@ export function Modal({
                 {header && (
                   <div
                     data-testid={headerTestId}
-                    className="dark:border-border border-border-subtle shrink-0 border-b px-4 py-3 sm:px-6 sm:py-4"
+                    className="dark:border-border border-border-subtle py-density-3 sm:py-density-4 shrink-0 border-b px-4 sm:px-6"
                   >
                     <div className="flex items-start justify-between">
                       {header}
@@ -468,7 +468,7 @@ export function Modal({
 
                 <div
                   data-slot="modal-body"
-                  className="flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto p-4 sm:space-y-4 sm:p-6"
+                  className="space-y-density-3 py-density-4 sm:space-y-density-4 sm:py-density-6 flex min-h-0 flex-1 flex-col overflow-y-auto px-4 sm:px-6"
                 >
                   {children}
                 </div>
@@ -476,7 +476,7 @@ export function Modal({
                 {footer && (
                   <div
                     data-testid={footerTestId}
-                    className="dark:border-border border-border-subtle shrink-0 border-t px-4 py-3 sm:px-6 sm:py-4"
+                    className="dark:border-border border-border-subtle py-density-3 sm:py-density-4 shrink-0 border-t px-4 sm:px-6"
                   >
                     {footer}
                   </div>

@@ -17,13 +17,13 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
       role="group"
       className={cn(
         "group/input-group border-input dark:bg-input/30 relative flex w-full items-center rounded-md border shadow-xs transition-[color,box-shadow] outline-none",
-        "h-9 min-w-0 has-[>textarea]:h-auto",
+        "h-(--density-control) min-w-0 has-[>textarea]:h-auto",
 
         // Variants based on alignment.
         "has-[>[data-align=inline-start]]:[&>input]:pl-2",
         "has-[>[data-align=inline-end]]:[&>input]:pr-2",
-        "has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>[data-align=block-start]]:[&>input]:pb-3",
-        "has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-end]]:[&>input]:pt-3",
+        "has-[>[data-align=block-start]]:[&>input]:pb-density-3 has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col",
+        "has-[>[data-align=block-end]]:[&>input]:pt-density-3 has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col",
 
         // Focus state.
         "has-[[data-slot=input-group-control]:focus-visible]:border-ring has-[[data-slot=input-group-control]:focus-visible]:ring-ring/50 has-[[data-slot=input-group-control]:focus-visible]:ring-[3px]",
@@ -39,7 +39,7 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 const inputGroupAddonVariants = cva(
-  "text-muted-foreground flex h-auto cursor-text items-center justify-center gap-2 py-1.5 text-sm font-medium select-none [&>svg:not([class*='size-'])]:size-4 [&>kbd]:rounded-xs group-data-[disabled=true]/input-group:opacity-50",
+  "text-muted-foreground flex h-auto cursor-text items-center justify-center gap-density-2 py-density-1-5 text-sm font-medium select-none [&>svg:not([class*='size-'])]:size-4 [&>kbd]:rounded-xs group-data-[disabled=true]/input-group:opacity-50",
   {
     variants: {
       align: {
@@ -48,9 +48,9 @@ const inputGroupAddonVariants = cva(
         "inline-end":
           "order-last pr-3 has-[>button]:mr-[-0.45rem] has-[>kbd]:mr-[-0.35rem]",
         "block-start":
-          "order-first w-full justify-start px-3 pt-3 [.border-b]:pb-3 group-has-[>input]/input-group:pt-2.5",
+          "order-first w-full justify-start px-3 pt-density-3 [.border-b]:pb-density-3 group-has-[>input]/input-group:pt-density-2-5",
         "block-end":
-          "order-last w-full justify-start px-3 pb-3 [.border-t]:pt-3 group-has-[>input]/input-group:pb-2.5",
+          "order-last w-full justify-start px-3 pb-density-3 [.border-t]:pt-density-3 group-has-[>input]/input-group:pb-density-2-5",
       },
     },
     defaultVariants: {
@@ -86,14 +86,14 @@ function InputGroupAddon({
 }
 
 const inputGroupButtonVariants = cva(
-  "min-h-0 text-sm shadow-none flex gap-2 items-center",
+  "min-h-0 text-sm shadow-none flex gap-density-2 items-center",
   {
     variants: {
       size: {
-        xs: "h-6 gap-1 px-2 rounded-xs [&>svg:not([class*='size-'])]:size-3.5 has-[>svg]:px-2",
-        sm: "h-8 px-2.5 gap-1.5 rounded-sm has-[>svg]:px-2.5",
-        "icon-xs": "size-6 rounded-xs p-0 has-[>svg]:p-0",
-        "icon-sm": "size-8 rounded-sm p-0 has-[>svg]:p-0",
+        xs: "h-(--density-control-xs) gap-density-1 px-2 rounded-xs [&>svg:not([class*='size-'])]:size-3.5 has-[>svg]:px-2",
+        sm: "h-(--density-control-sm) px-2.5 gap-density-1-5 rounded-sm has-[>svg]:px-2.5",
+        "icon-xs": "size-(--density-control-xs) rounded-xs p-0 has-[>svg]:p-0",
+        "icon-sm": "size-(--density-control-sm) rounded-sm p-0 has-[>svg]:p-0",
       },
     },
     defaultVariants: {
@@ -131,7 +131,7 @@ function InputGroupText({ className, ...props }: React.ComponentProps<"span">) {
   return (
     <span
       className={cn(
-        "text-muted-foreground flex items-center gap-2 text-sm [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4",
+        "text-muted-foreground gap-density-2 flex items-center text-sm [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}
@@ -170,7 +170,7 @@ function InputGroupTextarea({
     <Textarea
       data-slot="input-group-control"
       className={cn(
-        "flex-1 resize-none rounded-none border-0 bg-transparent py-3 shadow-none focus:ring-0 focus-visible:ring-0",
+        "py-density-3 flex-1 resize-none rounded-none border-0 bg-transparent shadow-none focus:ring-0 focus-visible:ring-0",
         className,
       )}
       {...props}

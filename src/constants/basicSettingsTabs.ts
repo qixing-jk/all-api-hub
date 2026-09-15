@@ -26,6 +26,7 @@ export const BASIC_SETTINGS_ANCHOR_TO_TAB: Record<string, BasicSettingsTabId> =
     [SETTINGS_ANCHORS.APPEARANCE_COLOR]: "general",
     [SETTINGS_ANCHORS.APPEARANCE_PRESET]: "general",
     [SETTINGS_ANCHORS.APPEARANCE_RADIUS]: "general",
+    [SETTINGS_ANCHORS.APPEARANCE_DENSITY]: "general",
     theme: "general",
     [SETTINGS_ANCHORS.TASK_NOTIFICATIONS]: "notifications",
     [SETTINGS_ANCHORS.TASK_NOTIFICATIONS_ENABLED]: "notifications",

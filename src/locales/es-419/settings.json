@@ -28,6 +28,13 @@
       "slate": "Gris pizarra",
       "violet": "Violeta"
     },
+    "densities": {
+      "comfortable": "Amplia",
+      "compact": "Compacta",
+      "default": "Predeterminada"
+    },
+    "density": "Densidad de la interfaz",
+    "densityDescription": "Ajusta el espacio entre filas y la altura de los controles sin cambiar el tamaño del texto.",
     "description": "Los cambios se guardan automáticamente y se aplican a la configuración, la ventana emergente y el panel lateral.",
     "preset": "Tema predefinido",
     "presetColorsHint": "Este tema incluye su propia paleta. Elige el tema predeterminado para seleccionar el color de acento por separado.",
@@ -49,6 +56,7 @@
     },
     "radius": "Redondeado de esquinas",
     "reset": "Restablecer apariencia",
+    "resetDensity": "Restablecer densidad",
     "saveFailed": "No se pudo guardar. Inténtalo de nuevo.",
     "secondaryAction": "Acción secundaria",
     "title": "Configuración de apariencia"

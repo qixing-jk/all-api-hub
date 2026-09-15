@@ -1,5 +1,6 @@
 import {
   THEME_COLOR,
+  THEME_DENSITY,
   THEME_MODE,
   THEME_PRESET,
   THEME_RADIUS,
@@ -37,7 +38,14 @@ export const THEME_RADII = [
   THEME_RADIUS.DEFAULT,
   THEME_RADIUS.LARGE,
 ] as const
+export const THEME_DENSITIES = [
+  THEME_DENSITY.COMPACT,
+  THEME_DENSITY.DEFAULT,
+  THEME_DENSITY.COMFORTABLE,
+] as const
+
 export interface AppearancePreferences {
+  density: (typeof THEME_DENSITIES)[number]
   preset: (typeof THEME_PRESETS)[number]
   color: (typeof THEME_COLORS)[number]
   radius: (typeof THEME_RADII)[number]
@@ -50,6 +58,7 @@ export const DEFAULT_APPEARANCE: AppearancePreferences = {
   preset: THEME_PRESET.DEFAULT,
   color: THEME_COLOR.BLUE,
   radius: THEME_RADIUS.DEFAULT,
+  density: THEME_DENSITY.DEFAULT,
 }
 
 /** Old backups and unknown imported values retain supported appearance defaults. */
@@ -67,6 +76,10 @@ export function normalizeAppearance(value: unknown): AppearancePreferences {
       input.color && THEME_COLORS.includes(input.color)
         ? input.color
         : DEFAULT_APPEARANCE.color,
+    density:
+      input.density && THEME_DENSITIES.includes(input.density)
+        ? input.density
+        : DEFAULT_APPEARANCE.density,
     radius:
       input.radius && THEME_RADII.includes(input.radius)
         ? input.radius

@@ -26,6 +26,7 @@ const saved = {
     preset: THEME_PRESET.ANTHROPIC,
     color: THEME_COLOR.VIOLET,
     radius: THEME_RADIUS.LARGE,
+    density: "compact" as const,
   },
 }
 
@@ -87,6 +88,10 @@ describe("popup appearance bootstrap", () => {
       expect(
         JSON.parse(window.localStorage.getItem(THEME_BOOTSTRAP_CACHE_KEY)!),
       ).toEqual(saved)
+      expect(document.documentElement).toHaveAttribute(
+        THEME_ATTRIBUTES.DENSITY,
+        "compact",
+      )
     },
   )
 
@@ -198,7 +203,12 @@ describe("popup appearance bootstrap", () => {
       }),
     ).toEqual({
       themeMode: "system",
-      appearance: { preset: "default", color: "green", radius: "default" },
+      appearance: {
+        preset: "default",
+        color: "green",
+        radius: "default",
+        density: "default",
+      },
     })
   })
 })

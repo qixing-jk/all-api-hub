@@ -119,7 +119,7 @@ export default function ActionButtons({
           bleed
           className={
             autoDetectPresentation?.multiline
-              ? "h-auto min-h-9 flex-1 whitespace-normal"
+              ? "h-auto min-h-(--density-control) flex-1 whitespace-normal"
               : "flex-1"
           }
           variant="default"
@@ -159,7 +159,7 @@ export default function ActionButtons({
           bleed
           className={
             autoDetectPresentation?.multiline
-              ? "h-auto min-h-9 flex-1 whitespace-normal"
+              ? "h-auto min-h-(--density-control) flex-1 whitespace-normal"
               : "flex-1"
           }
           variant="warning"

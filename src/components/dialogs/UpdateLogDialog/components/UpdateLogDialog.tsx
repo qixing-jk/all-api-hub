@@ -113,7 +113,7 @@ export function UpdateLogDialog({
         loading={isSavingAutoOpen}
         onClick={() => void handleSetAutoOpenEnabled(!autoOpenEnabled)}
         type="button"
-        className="h-auto min-h-9 w-full py-2 text-left whitespace-normal sm:w-auto sm:text-center sm:whitespace-nowrap"
+        className="h-auto min-h-(--density-control) w-full py-2 text-left whitespace-normal sm:w-auto sm:text-center sm:whitespace-nowrap"
       >
         {isSavingAutoOpen
           ? autoOpenEnabled
@@ -141,7 +141,7 @@ export function UpdateLogDialog({
           data-testid={UPDATE_LOG_DIALOG_TEST_IDS.openFullChangelogButton}
           onClick={() => void handleOpenFullChangelog()}
           type="button"
-          className="h-auto min-h-9 w-full py-2 text-center whitespace-normal sm:w-auto sm:whitespace-nowrap"
+          className="h-auto min-h-(--density-control) w-full py-2 text-center whitespace-normal sm:w-auto sm:whitespace-nowrap"
         >
           {t("ui:dialog.updateLog.openFullChangelog")}
         </Button>

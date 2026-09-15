@@ -81,7 +81,7 @@ export function KeyInventoryList({
       : []
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-density-4">
         <EmptyState
           icon={<KeyRound className="h-12 w-12" />}
           title={t("dialog.copyKey.noKeys")}
@@ -96,7 +96,7 @@ export function KeyInventoryList({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-density-3">
       {createError ? (
         <Alert variant="destructive" description={createError} />
       ) : null}

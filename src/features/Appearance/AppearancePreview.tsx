@@ -36,7 +36,7 @@ export function AppearancePreview({ presetLabel }: { presetLabel: string }) {
 
   return (
     <div
-      className="bg-muted/40 space-y-3 rounded-lg border p-4"
+      className="bg-muted/40 space-y-density-3 py-density-4 rounded-lg border px-4"
       aria-label={t("appearance.preview")}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -44,10 +44,10 @@ export function AppearancePreview({ presetLabel }: { presetLabel: string }) {
         <Badge>{presetLabel}</Badge>
       </div>
       <div className="flex items-center gap-2" aria-hidden="true">
-        <span className="bg-primary text-primary-foreground rounded-md px-3 py-2 text-sm">
+        <span className="bg-primary text-primary-foreground py-density-2 rounded-md px-3 text-sm">
           {t("appearance.primaryAction")}
         </span>
-        <span className="rounded-md border border-(--button-outline-border) bg-(--button-outline-bg) px-3 py-2 text-sm text-(--button-outline-foreground)">
+        <span className="py-density-2 rounded-md border border-(--button-outline-border) bg-(--button-outline-bg) px-3 text-sm text-(--button-outline-foreground)">
           {t("appearance.secondaryAction")}
         </span>
         <span className="bg-primary ml-auto size-3 shrink-0 rounded-full" />

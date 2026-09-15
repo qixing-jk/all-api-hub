@@ -4,6 +4,7 @@ export const SETTINGS_ANCHORS = {
   APPEARANCE_THEME_MODE: "appearance-theme-mode",
   APPEARANCE_PRESET: "appearance-preset",
   APPEARANCE_COLOR: "appearance-color",
+  APPEARANCE_DENSITY: "appearance-density",
   APPEARANCE_RADIUS: "appearance-radius",
   NEW_API_TOTP_SECRET: "new-api-totp-secret",
   MANAGED_SITE_DEPLOYMENT_DOCS: "managed-site-deployment-docs",

@@ -107,6 +107,7 @@ describe("ThemeContext", () => {
           preset: THEME_PRESET.DEFAULT,
           color: THEME_COLOR.ROSE,
           radius: THEME_RADIUS.SMALL,
+          density: "default",
         },
       },
     }
@@ -123,7 +124,12 @@ describe("ThemeContext", () => {
       JSON.parse(window.localStorage.getItem(THEME_BOOTSTRAP_CACHE_KEY)!),
     ).toEqual({
       themeMode: "light",
-      appearance: { preset: "default", color: "rose", radius: "small" },
+      appearance: {
+        preset: "default",
+        color: "rose",
+        radius: "small",
+        density: "default",
+      },
     })
   })
 

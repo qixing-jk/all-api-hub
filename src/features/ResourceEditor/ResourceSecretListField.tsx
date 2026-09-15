@@ -290,7 +290,7 @@ function SecretRow({
               type="button"
               variant="ghost"
               size="sm"
-              className={`min-h-8 min-w-0 flex-1 justify-start px-1 text-left font-normal has-[>svg]:px-1 ${open ? "basis-full sm:basis-0" : ""}`}
+              className={`min-h-(--density-control-sm) min-w-0 flex-1 justify-start px-1 text-left font-normal has-[>svg]:px-1 ${open ? "basis-full sm:basis-0" : ""}`}
               aria-describedby={!open && summary ? `${id}-summary` : undefined}
               aria-label={t(
                 open ? "ui:secretList.collapse" : "ui:secretList.expand",

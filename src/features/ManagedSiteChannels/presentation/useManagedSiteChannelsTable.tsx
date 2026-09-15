@@ -96,7 +96,7 @@ function CellValue({ cell }: { cell?: ManagedChannelsCell }) {
       return <span className="text-muted-foreground">—</span>
     }
     return (
-      <div className="text-muted-foreground flex flex-wrap gap-1 text-xs">
+      <div className="text-muted-foreground gap-density-1 flex flex-wrap text-xs">
         {cell.values.slice(0, 3).map((value) => (
           <span key={value} className="rounded border px-1 py-0.5">
             {value}

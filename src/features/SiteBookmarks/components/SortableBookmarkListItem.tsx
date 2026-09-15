@@ -62,7 +62,7 @@ export default function SortableBookmarkListItem({
       style={style}
       className={isDragging ? "relative z-10" : undefined}
     >
-      <div className={cn("flex items-center gap-2", className)}>
+      <div className={cn("gap-density-2 flex items-center", className)}>
         {showHandle && (
           <div className="pl-2 sm:pl-3">
             <IconButton

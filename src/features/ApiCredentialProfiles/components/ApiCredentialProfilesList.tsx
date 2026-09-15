@@ -134,8 +134,8 @@ function EndpointHeader({
 
   return (
     <div className={cn("min-w-0", className)}>
-      <div className="flex min-w-0 items-center gap-1">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+      <div className="gap-density-1 flex min-w-0 items-center">
+        <div className="gap-density-2 flex min-w-0 flex-1 items-center">
           <code
             className="text-foreground min-w-0 truncate font-mono text-xs font-semibold sm:text-sm"
             title={baseUrl}
@@ -165,7 +165,7 @@ function EndpointHeader({
               API_CREDENTIAL_PROFILES_TEST_IDS.endpointAddCredentialButton
             }
             aria-label={t("apiCredentialProfiles:grouping.addCredential")}
-            className="h-8 shrink-0 gap-1.5 px-2 text-xs"
+            className="gap-density-1-5 h-(--density-control-sm) shrink-0 px-2 text-xs"
             leftIcon={<Plus className="h-4 w-4" />}
             analyticsAction={
               PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateApiCredentialProfileDialog
@@ -207,12 +207,12 @@ function DesktopEndpointNavigation({
     <nav
       aria-label={t("apiCredentialProfiles:grouping.navigationLabel")}
       data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.endpointNavigation}
-      className="border-border bg-surface-subtle/70 dark:border-border-subtle dark:bg-background/50 border-r p-2"
+      className="border-border bg-surface-subtle/70 dark:border-border-subtle dark:bg-background/50 py-density-2 border-r px-2"
     >
-      <div className="text-muted-foreground px-2 pt-1 pb-2 text-xs font-semibold tracking-wide uppercase">
+      <div className="text-muted-foreground pt-density-1 pb-density-2 px-2 text-xs font-semibold tracking-wide uppercase">
         {t("apiCredentialProfiles:grouping.baseUrls")}
       </div>
-      <div className="space-y-1">
+      <div className="space-y-density-1">
         {groups.map((group) => {
           const selected = group.baseUrl === selectedBaseUrl
           return (
@@ -229,7 +229,7 @@ function DesktopEndpointNavigation({
                 type="button"
                 aria-current={selected ? "true" : undefined}
                 aria-label={group.baseUrl}
-                className="focus-visible:ring-ring min-w-0 flex-1 rounded-lg px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
+                className="focus-visible:ring-ring py-density-2-5 min-w-0 flex-1 rounded-lg px-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
                 onClick={() => onSelectBaseUrl(group.baseUrl)}
               >
                 <span
@@ -276,7 +276,7 @@ function CompactEndpointSelector({
   const { t } = useTranslation(["apiCredentialProfiles"])
 
   return (
-    <div className="border-border bg-surface-subtle/70 dark:border-border-subtle dark:bg-background/50 border-b p-3">
+    <div className="border-border bg-surface-subtle/70 dark:border-border-subtle dark:bg-background/50 py-density-3 border-b px-3">
       <label
         htmlFor={API_CREDENTIAL_ENDPOINT_SELECT_ID}
         className="text-muted-foreground mb-1.5 block text-xs font-medium"
@@ -463,7 +463,7 @@ export function ApiCredentialProfilesList({
 
   if (isFiltering) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-density-4">
         {groups.map((group) => (
           <section
             key={group.baseUrl}
@@ -476,9 +476,9 @@ export function ApiCredentialProfilesList({
               baseUrl={group.baseUrl}
               credentialCount={group.profiles.length}
               onCopyBaseUrl={controller.handleCopyBaseUrl}
-              className="border-border bg-surface-subtle/70 dark:border-border-subtle dark:bg-background/50 border-b px-3 py-2.5"
+              className="border-border bg-surface-subtle/70 dark:border-border-subtle dark:bg-background/50 py-density-2-5 border-b px-3"
             />
-            <div className="space-y-3 p-3 sm:p-4">
+            <div className="space-y-density-3 py-density-3 sm:py-density-4 px-3 sm:px-4">
               <EndpointProfileList
                 profiles={group.profiles}
                 controller={controller}
@@ -529,7 +529,7 @@ export function ApiCredentialProfilesList({
         aria-label={t("apiCredentialProfiles:grouping.selectedEndpoint", {
           baseUrl: selectedGroup.baseUrl,
         })}
-        className="min-w-0 p-3 sm:p-4"
+        className="py-density-3 sm:py-density-4 min-w-0 px-3 sm:px-4"
       >
         <EndpointHeader
           baseUrl={selectedGroup.baseUrl}
@@ -538,7 +538,7 @@ export function ApiCredentialProfilesList({
           onCopyBaseUrl={controller.handleCopyBaseUrl}
           className="mb-3"
         />
-        <div className="space-y-3">
+        <div className="space-y-density-3">
           <EndpointProfileList
             profiles={selectedGroup.profiles}
             controller={controller}

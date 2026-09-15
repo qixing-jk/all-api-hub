@@ -85,8 +85,8 @@ export function ManagedSiteTokenBatchExportPreviewList({
   return (
     <>
       {!executionResult ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3">
-          <div className="flex items-center gap-2 text-sm">
+        <div className="gap-density-2 py-density-3 flex flex-wrap items-center justify-between rounded-md border px-3">
+          <div className="gap-density-2 flex items-center text-sm">
             <Checkbox
               id={selectAllId}
               checked={executableSelection.checked}
@@ -125,7 +125,7 @@ export function ManagedSiteTokenBatchExportPreviewList({
         </div>
       ) : null}
 
-      <div className="max-h-[60vh] space-y-3 overflow-y-auto rounded-md border p-3 md:max-h-[min(70vh,48rem)]">
+      <div className="space-y-density-3 py-density-3 max-h-[60vh] overflow-y-auto rounded-md border px-3 md:max-h-[min(70vh,48rem)]">
         {preview.items.map((item) => {
           const result = executionItemById.get(item.id)
           return (

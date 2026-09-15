@@ -58,7 +58,7 @@ export function ManagedSiteTokenBatchExportFooter({
             <Button
               type="button"
               variant="outline"
-              className="h-auto min-h-9 whitespace-normal"
+              className="h-auto min-h-(--density-control) whitespace-normal"
               onClick={onRetry}
               data-testid={
                 KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportRetryButton
@@ -71,7 +71,7 @@ export function ManagedSiteTokenBatchExportFooter({
             <Button
               type="button"
               variant="outline"
-              className="h-auto min-h-9 whitespace-normal"
+              className="h-auto min-h-(--density-control) whitespace-normal"
               onClick={onViewChannels}
             >
               {t("keyManagement:batchManagedSiteExport.actions.viewChannels")}
@@ -79,7 +79,7 @@ export function ManagedSiteTokenBatchExportFooter({
           ) : null}
           <Button
             type="button"
-            className="h-auto min-h-9 whitespace-normal"
+            className="h-auto min-h-(--density-control) whitespace-normal"
             onClick={onClose}
             data-testid={
               KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportCloseButton

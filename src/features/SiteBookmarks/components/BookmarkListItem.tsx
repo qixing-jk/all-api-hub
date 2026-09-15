@@ -87,9 +87,9 @@ export default function BookmarkListItem({
         className={cn("group touch-manipulation transition-all")}
         data-testid={getSiteBookmarkListItemTestId(bookmark.id)}
       >
-        <div className="flex w-full min-w-0 items-center gap-2 px-3 py-2.5 sm:px-4 sm:py-3">
+        <div className="gap-density-2 py-density-2-5 sm:py-density-3 flex w-full min-w-0 items-center px-3 sm:px-4">
           <div className="min-w-0 flex-1 overflow-x-hidden">
-            <div className="flex min-w-0 items-center gap-2">
+            <div className="gap-density-2 flex min-w-0 items-center">
               <Button
                 type="button"
                 variant="link"
@@ -119,7 +119,7 @@ export default function BookmarkListItem({
               <Caption className="truncate">{bookmark.url}</Caption>
             </Button>
             {bookmark.tags && bookmark.tags.length > 0 && (
-              <div className="mt-1 flex flex-wrap gap-1">
+              <div className="gap-density-1 mt-1 flex flex-wrap">
                 {bookmark.tags.slice(0, 6).map((tag) => (
                   <Badge key={tag} variant="secondary" className="text-[10px]">
                     {tag}
@@ -132,7 +132,7 @@ export default function BookmarkListItem({
           <div
             className={`shrink-0 transition-opacity duration-200 ${revealButtonsClass}`}
           >
-            <div className="grid grid-cols-2 justify-end gap-2 sm:grid-cols-4">
+            <div className="gap-density-2 grid grid-cols-2 justify-end sm:grid-cols-4">
               <IconButton
                 onClick={onOpen}
                 variant="ghost"
@@ -183,7 +183,7 @@ export default function BookmarkListItem({
 
                 <DropdownMenuContent
                   align="end"
-                  className="border-border bg-card z-50 rounded-lg border py-1 shadow-lg focus:outline-none"
+                  className="border-border bg-card py-density-1 z-50 rounded-lg border shadow-lg focus:outline-none"
                 >
                   <AccountActionMenuItem
                     onClick={() => onTogglePin()}

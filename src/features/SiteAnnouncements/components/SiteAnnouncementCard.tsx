@@ -178,7 +178,7 @@ export function SiteAnnouncementCard({
                       type="button"
                       size="icon-sm"
                       variant="ghost"
-                      className="text-faint-foreground hover:bg-theme-50 hover:text-theme-600 dark:hover:bg-theme-400/10 dark:hover:text-theme-400 h-8 w-8"
+                      className="text-faint-foreground hover:bg-theme-50 hover:text-theme-600 dark:hover:bg-theme-400/10 dark:hover:text-theme-400 h-(--density-control-sm) w-(--density-control-sm)"
                       onClick={handleMarkRead}
                       title={t("actions.markRead")}
                     >
@@ -190,7 +190,7 @@ export function SiteAnnouncementCard({
                     size="icon-sm"
                     variant="ghost"
                     className={cn(
-                      "bg-muted text-faint-foreground dark:bg-foreground/10 h-8 w-8 rounded-full transition-all",
+                      "bg-muted text-faint-foreground dark:bg-foreground/10 h-(--density-control-sm) w-(--density-control-sm) rounded-full transition-all",
                       expanded
                         ? "bg-theme-100 text-theme-600 dark:bg-theme-500/20 dark:text-theme-400 pointer-events-none rotate-180"
                         : "group-hover:bg-secondary dark:group-hover:bg-foreground/20",
@@ -294,7 +294,7 @@ export function SiteAnnouncementCard({
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="text-theme-600 hover:bg-theme-50 dark:text-theme-400 dark:hover:bg-theme-400/10 min-h-7 text-xs"
+                className="text-theme-600 hover:bg-theme-50 dark:text-theme-400 dark:hover:bg-theme-400/10 min-h-(--density-control-tight) text-xs"
                 onClick={handleMarkRead}
                 leftIcon={<CheckCircle2 className="h-3.5 w-3.5" />}
               >

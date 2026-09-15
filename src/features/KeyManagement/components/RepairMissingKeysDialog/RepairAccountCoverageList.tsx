@@ -63,9 +63,9 @@ function RepairAccountSummary({
   t,
 }: RepairAccountSummaryProps) {
   return (
-    <div className="grid w-full min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-      <div className="min-w-0 space-y-1">
-        <div className="flex min-w-0 items-center gap-2">
+    <div className="gap-density-3 grid w-full min-w-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+      <div className="space-y-density-1 min-w-0">
+        <div className="gap-density-2 flex min-w-0 items-center">
           <span className="min-w-0 truncate text-sm font-medium">
             {result.accountName}
           </span>
@@ -83,7 +83,7 @@ function RepairAccountSummary({
         </div>
       </div>
 
-      <div className="flex min-w-0 items-start justify-between gap-2 sm:max-w-md sm:items-center sm:justify-end">
+      <div className="gap-density-2 flex min-w-0 items-start justify-between sm:max-w-md sm:items-center sm:justify-end">
         {feedbackMessage ? (
           <span
             className={cn(
@@ -132,9 +132,9 @@ function RepairAccountDetails({ result, t }: RepairAccountDetailsProps) {
   )
 
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-density-2-5">
       {result.inventoryIssues?.length ? (
-        <ul className="bg-warning-soft text-warning-soft-foreground space-y-1 rounded-md px-3 py-2 text-xs">
+        <ul className="bg-warning-soft text-warning-soft-foreground space-y-density-1 py-density-2 rounded-md px-3 text-xs">
           {result.inventoryIssues.map((issue) => (
             <li key={issue.code}>{getInventoryIssueLabel(t, issue)}</li>
           ))}
@@ -142,7 +142,7 @@ function RepairAccountDetails({ result, t }: RepairAccountDetailsProps) {
       ) : null}
 
       {result.requirementResults.length > 0 ? (
-        <ul className="space-y-2">
+        <ul className="space-y-density-2">
           {result.requirementResults.map((requirementResult) => {
             const requirementFailureMessage =
               "failure" in requirementResult
@@ -152,7 +152,7 @@ function RepairAccountDetails({ result, t }: RepairAccountDetailsProps) {
             return (
               <li
                 key={requirementResult.requirement.requirementKey}
-                className="dark:border-border border-border-subtle flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2"
+                className="dark:border-border border-border-subtle gap-density-2 py-density-2 flex min-w-0 flex-wrap items-center justify-between rounded-md border px-3"
               >
                 <span className="text-secondary-foreground min-w-0 truncate text-xs font-medium">
                   {requirementResult.requirement.displayName}
@@ -180,7 +180,7 @@ function RepairAccountDetails({ result, t }: RepairAccountDetailsProps) {
       ) : null}
 
       {result.renameResults.length > 0 ? (
-        <div className="flex flex-wrap gap-2 text-xs">
+        <div className="gap-density-2 flex flex-wrap text-xs">
           {renameCounts[ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Applied] > 0 ? (
             <Badge variant="success" size="sm">
               {t(
@@ -279,16 +279,18 @@ function RepairAccountCoverageItem({
             aria-label={t("keyManagement:actions.detailsFor", {
               name: result.accountName,
             })}
-            className="dark:hover:bg-secondary/60 focus-visible:ring-ring/50 hover:bg-surface-subtle w-full rounded-[var(--corner-inner-radius)] p-3 text-left transition-colors focus-visible:ring-[3px] focus-visible:outline-none focus-visible:ring-inset data-[state=open]:rounded-b-none"
+            className="dark:hover:bg-secondary/60 focus-visible:ring-ring/50 hover:bg-surface-subtle py-density-3 w-full rounded-[var(--corner-inner-radius)] px-3 text-left transition-colors focus-visible:ring-[3px] focus-visible:outline-none focus-visible:ring-inset data-[state=open]:rounded-b-none"
           >
             {summary}
           </CollapsibleTrigger>
-          <CollapsibleContent className="dark:border-border border-border-subtle border-t px-3 py-2.5">
+          <CollapsibleContent className="dark:border-border border-border-subtle py-density-2-5 border-t px-3">
             <RepairAccountDetails result={result} t={t} />
           </CollapsibleContent>
         </Collapsible>
       ) : (
-        <div className="border-border rounded-lg border p-3">{summary}</div>
+        <div className="border-border py-density-3 rounded-lg border px-3">
+          {summary}
+        </div>
       )}
     </li>
   )
@@ -311,7 +313,7 @@ export function RepairAccountCoverageList({
   }
 
   return (
-    <ul className="space-y-2 p-2">
+    <ul className="space-y-density-2 py-density-2 px-2">
       {filteredResults.map((result) => (
         <RepairAccountCoverageItem
           key={`${result.accountId}-${result.finishedAt}`}

@@ -290,7 +290,7 @@ export function MultiSelect({
   }
 
   const optionListClassName = cn(
-    "ring-opacity-5 absolute z-50 max-h-60 w-full overflow-auto rounded-lg corners-concentric [--corner-inset:--spacing(1)] bg-popover p-1 text-base shadow-lg ring-1 ring-shadow focus:outline-none sm:text-sm",
+    "ring-opacity-5 absolute z-50 max-h-60 w-full overflow-auto rounded-lg corners-concentric [--corner-inset:--spacing(1)] bg-popover px-1 py-density-1 text-base shadow-lg ring-1 ring-shadow focus:outline-none sm:text-sm",
     dropdownPosition === "top" ? "bottom-full mb-1" : "top-full mt-1",
   )
 
@@ -308,7 +308,7 @@ export function MultiSelect({
         <div className="relative w-full">
           <input
             id={inputId}
-            className="dark:border-border border-border-strong bg-card text-foreground focus:border-ring focus:ring-ring w-full rounded-md border py-2 pr-10 pl-3 text-sm shadow-sm focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            className="dark:border-border border-border-strong bg-card text-foreground focus:border-ring focus:ring-ring py-density-2 w-full rounded-md border pr-10 pl-3 text-sm shadow-sm focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
             placeholder={resolvedPlaceholder}
             value={query}
             onChange={(event) => {
@@ -326,7 +326,7 @@ export function MultiSelect({
             aria-activedescendant={activeOptionId}
             disabled={disabled}
           />
-          <div className="absolute inset-y-0 right-0 flex items-center gap-1 pr-2">
+          <div className="gap-density-1 absolute inset-y-0 right-0 flex items-center pr-2">
             {!disabled && query.length > 0 && (
               <button
                 type="button"
@@ -369,7 +369,7 @@ export function MultiSelect({
                 data-slot="multiselect-listbox"
                 aria-multiselectable="true"
               >
-                <div className="text-secondary-foreground relative cursor-default px-3 py-1 select-none">
+                <div className="text-secondary-foreground py-density-1 relative cursor-default px-3 select-none">
                   {allowCustom
                     ? query
                       ? t("multiSelect.emptyWithQueryAllowCustom", {
@@ -400,7 +400,7 @@ export function MultiSelect({
                     role="option"
                     aria-selected={isSelected}
                     className={cn(
-                      "text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground relative flex w-full cursor-pointer items-center rounded-[var(--corner-inner-radius)] py-2 pr-3 pl-9 text-left select-none focus:outline-none",
+                      "text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground py-density-2 relative flex w-full cursor-pointer items-center rounded-[var(--corner-inner-radius)] pr-3 pl-9 text-left select-none focus:outline-none",
                       isActive && "bg-primary text-primary-foreground",
                     )}
                     onMouseEnter={() => setActiveOptionIndex(index)}
@@ -428,16 +428,16 @@ export function MultiSelect({
       </div>
 
       {selectedOptions.length > 0 && (
-        <div className="mt-2 space-y-2">
-          <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="space-y-density-2 mt-2">
+          <div className="gap-density-2 flex flex-col sm:flex-row">
             <button
               type="button"
-              className="dark:bg-card/60 dark:text-foreground dark:hover:bg-card border-border bg-surface-subtle text-secondary-foreground hover:bg-muted focus:ring-ring flex w-full flex-1 items-center justify-between rounded-md border px-3 py-2 text-left text-sm font-medium transition focus:ring-2 focus:outline-none"
+              className="dark:bg-card/60 dark:text-foreground dark:hover:bg-card border-border bg-surface-subtle text-secondary-foreground hover:bg-muted focus:ring-ring py-density-2 flex w-full flex-1 items-center justify-between rounded-md border px-3 text-left text-sm font-medium transition focus:ring-2 focus:outline-none"
               onClick={toggleSelectedExpanded}
               aria-expanded={isSelectedExpanded}
               aria-controls={`${uid}-selected-items`}
             >
-              <span className="flex min-w-0 items-center gap-2">
+              <span className="gap-density-2 flex min-w-0 items-center">
                 <ChevronDown
                   className={cn(
                     "dark:text-secondary-foreground text-muted-foreground h-4 w-4 shrink-0 transition-transform",
@@ -449,7 +449,7 @@ export function MultiSelect({
                 </span>
               </span>
               {!isSelectedExpanded && (
-                <span className="dark:text-secondary-foreground text-muted-foreground ml-3 flex items-center gap-1 overflow-hidden text-xs">
+                <span className="dark:text-secondary-foreground text-muted-foreground gap-density-1 ml-3 flex items-center overflow-hidden text-xs">
                   {previewOptions.map((option) => (
                     <span
                       key={`preview-${option.value}`}
@@ -473,7 +473,7 @@ export function MultiSelect({
                 onClick={() => {
                   onChange([])
                 }}
-                className="dark:bg-card/60 dark:text-foreground dark:hover:bg-card border-border bg-card text-secondary-foreground hover:bg-surface-subtle focus:ring-ring inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium transition focus:ring-2 focus:outline-none"
+                className="dark:bg-card/60 dark:text-foreground dark:hover:bg-card border-border bg-card text-secondary-foreground hover:bg-surface-subtle focus:ring-ring py-density-2 inline-flex items-center justify-center rounded-md border px-3 text-sm font-medium transition focus:ring-2 focus:outline-none"
                 title={t("multiSelect.clearSelected")}
                 aria-label={t("multiSelect.clearSelected")}
               >
@@ -483,7 +483,7 @@ export function MultiSelect({
             <button
               type="button"
               onClick={handleCopySelected}
-              className="dark:bg-card/60 dark:text-foreground dark:hover:bg-card border-border bg-card text-secondary-foreground hover:bg-surface-subtle focus:ring-ring inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium transition focus:ring-2 focus:outline-none"
+              className="dark:bg-card/60 dark:text-foreground dark:hover:bg-card border-border bg-card text-secondary-foreground hover:bg-surface-subtle focus:ring-ring py-density-2 inline-flex items-center justify-center rounded-md border px-3 text-sm font-medium transition focus:ring-2 focus:outline-none"
               title={t("multiSelect.copySelectedValues")}
               aria-label={t("multiSelect.copySelectedValues")}
             >
@@ -494,12 +494,12 @@ export function MultiSelect({
           {isSelectedExpanded && (
             <div
               id={`${uid}-selected-items`}
-              className="flex max-h-40 flex-wrap gap-2 overflow-y-auto p-1"
+              className="gap-density-2 py-density-1 flex max-h-40 flex-wrap overflow-y-auto px-1"
             >
               {selectedOptions.map((option) => (
                 <span
                   key={option.value}
-                  className="bg-theme-100 text-theme-800 dark:bg-theme-900 dark:text-theme-200 inline-flex max-w-full items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                  className="bg-theme-100 text-theme-800 dark:bg-theme-900 dark:text-theme-200 gap-density-1 inline-flex max-w-full items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
                   title={option.label}
                 >
                   <span className="max-w-[200px] truncate">{option.label}</span>

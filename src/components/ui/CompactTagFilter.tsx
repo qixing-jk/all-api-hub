@@ -18,7 +18,7 @@ interface CompactTagFilterProps {
 }
 
 const chipClassName =
-  "inline-flex h-9 max-w-36 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium whitespace-nowrap sm:h-8"
+  "inline-flex h-(--density-control) max-w-36 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium whitespace-nowrap sm:h-(--density-control-sm)"
 
 /** A single row of stable shortcuts with searchable access to every tag. */
 export function CompactTagFilter({
@@ -153,7 +153,7 @@ export function CompactTagFilter({
             aria-label={`${value.length > 0 ? t("tagFilter.selected") : t("tagFilter.allTags")} ${value.length > 0 ? value.length : options.length}`}
             variant="outline"
             size="sm"
-            className="h-9 max-w-[60%] shrink-0 gap-1.5 px-2.5 text-xs shadow-none sm:h-8"
+            className="h-(--density-control) max-w-[60%] shrink-0 gap-1.5 px-2.5 text-xs shadow-none sm:h-(--density-control-sm)"
           >
             <span aria-hidden="true" className="grid min-w-0">
               <span
@@ -219,7 +219,7 @@ export function CompactTagFilter({
               matchingOptions.map((option) => (
                 <label
                   key={option.value}
-                  className="hover:bg-surface-subtle dark:hover:bg-foreground/5 flex min-h-10 cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm"
+                  className="hover:bg-surface-subtle dark:hover:bg-foreground/5 flex min-h-(--density-control-lg) cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm"
                 >
                   <Checkbox
                     aria-label={option.label}

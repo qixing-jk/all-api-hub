@@ -7,9 +7,9 @@ import { BodySmall, Heading3 } from "./Typography"
 
 const cardEdgePaddingClasses = {
   none: "",
-  sm: "px-4 py-3",
-  default: "px-6 py-4",
-  lg: "px-8 py-6",
+  sm: "px-4 py-density-3",
+  default: "px-6 py-density-4",
+  lg: "px-8 py-density-6",
 } as const
 
 const cardVariants = cva(
@@ -27,9 +27,9 @@ const cardVariants = cva(
       padding: {
         none: "p-0",
         default: "p-0",
-        sm: "p-2 [--corner-inset:calc(--spacing(2)+1px)] sm:p-3 sm:[--corner-inset:calc(--spacing(3)+1px)]",
-        md: "p-4 [--corner-inset:calc(--spacing(4)+1px)] sm:p-6 sm:[--corner-inset:calc(--spacing(6)+1px)]",
-        lg: "p-6 [--corner-inset:calc(--spacing(6)+1px)] sm:p-8 sm:[--corner-inset:calc(--spacing(8)+1px)]",
+        sm: "px-2 py-density-2 [--corner-inset:calc(--spacing(2)+1px)] sm:px-3 sm:py-density-3 sm:[--corner-inset:calc(--spacing(3)+1px)]",
+        md: "px-4 py-density-4 [--corner-inset:calc(--spacing(4)+1px)] sm:px-6 sm:py-density-6 sm:[--corner-inset:calc(--spacing(6)+1px)]",
+        lg: "px-6 py-density-6 [--corner-inset:calc(--spacing(6)+1px)] sm:px-8 sm:py-density-8 sm:[--corner-inset:calc(--spacing(8)+1px)]",
       },
     },
     defaultVariants: {
@@ -58,7 +58,7 @@ Card.displayName = "Card"
 export interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Whether to show a bottom border. Defaults to true */
   bordered?: boolean
-  /** Padding size. Defaults to "default" (px-6 py-4) */
+  /** Padding size. Defaults to "default" (px-6 py-density-4) */
   padding?: keyof typeof cardEdgePaddingClasses
 }
 
@@ -68,7 +68,7 @@ const CardHeader = React.forwardRef<HTMLDivElement, CardHeaderProps>(
       <div
         ref={ref}
         className={cn(
-          "flex flex-col space-y-1.5 rounded-t-[var(--corner-inner-radius,0px)]",
+          "space-y-density-1-5 flex flex-col rounded-t-[var(--corner-inner-radius,0px)]",
           bordered && "border-border border-b",
           cardEdgePaddingClasses[padding],
           className,
@@ -115,17 +115,17 @@ const cardContentVariants = cva("", {
   variants: {
     padding: {
       none: "p-0",
-      sm: "p-3",
-      default: "p-4",
-      md: "p-6",
-      lg: "p-8",
+      sm: "px-3 py-density-3",
+      default: "px-4 py-density-4",
+      md: "px-6 py-density-6",
+      lg: "px-8 py-density-8",
     },
     spacing: {
       none: "",
-      sm: "space-y-2",
-      default: "space-y-4",
-      md: "space-y-6",
-      lg: "space-y-8",
+      sm: "space-y-density-2",
+      default: "space-y-density-4",
+      md: "space-y-density-6",
+      lg: "space-y-density-8",
     },
   },
   defaultVariants: {
@@ -155,7 +155,7 @@ CardContent.displayName = "CardContent"
 export interface CardFooterProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Whether to show a top border. Defaults to true */
   bordered?: boolean
-  /** Padding size. Defaults to "default" (px-6 py-4) */
+  /** Padding size. Defaults to "default" (px-6 py-density-4) */
   padding?: keyof typeof cardEdgePaddingClasses
 }
 

@@ -452,7 +452,7 @@ export function KeyResourceCard({
       )}
     >
       <CardContent padding="default" spacing="default">
-        <div className="flex min-w-0 flex-col gap-3">
+        <div className="gap-density-3 flex min-w-0 flex-col">
           {renderHeader ? (
             renderHeader(headerProps)
           ) : (
@@ -473,7 +473,7 @@ export function KeyResourceCard({
               id={detailsPanelId}
               role="region"
               aria-labelledby={detailsTriggerId}
-              className="border-border flex min-w-0 flex-col gap-3 border-t pt-3"
+              className="border-border gap-density-3 flex min-w-0 flex-col border-t pt-3"
             >
               {detailState.status === "loading" ? (
                 <div role="status" className="flex items-center gap-2 text-sm">

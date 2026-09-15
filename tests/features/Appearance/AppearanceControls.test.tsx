@@ -27,6 +27,7 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
         ...savedAppearance,
         color: THEME_COLOR.BLUE,
         radius: THEME_RADIUS.DEFAULT,
+        density: "default",
       },
     },
     themeMode: THEME_MODE.SYSTEM,
@@ -96,12 +97,39 @@ describe("appearance controls", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("changes and independently resets density without changing other appearance fields", async () => {
+    const user = userEvent.setup()
+    renderControls()
+    expect(
+      screen.getByRole("radio", {
+        name: "settings:appearance.densities.default",
+      }),
+    ).toBeChecked()
+    for (const density of ["compact", "comfortable"]) {
+      await user.click(
+        screen.getByRole("radio", {
+          name: `settings:appearance.densities.${density}`,
+        }),
+      )
+      expect(save).toHaveBeenLastCalledWith({ density })
+    }
+    await user.click(
+      screen.getByRole("button", { name: "settings:appearance.resetDensity" }),
+    )
+    expect(save).toHaveBeenLastCalledWith({ density: "default" })
+    expect(
+      normalizeAppearance({ density: "invalid", color: "rose" }),
+    ).toMatchObject({ density: "default", color: "rose" })
+    expect(normalizeAppearance({ density: "compact" }).density).toBe("compact")
+  })
+
   it("keeps searchable appearance controls linked to visible settings groups", () => {
     renderControls()
     for (const targetId of [
       SETTINGS_ANCHORS.APPEARANCE_PRESET,
       SETTINGS_ANCHORS.APPEARANCE_COLOR,
       SETTINGS_ANCHORS.APPEARANCE_RADIUS,
+      SETTINGS_ANCHORS.APPEARANCE_DENSITY,
     ]) {
       const definition = generalSearchControls.find(
         (item) => item.targetId === targetId,
@@ -118,6 +146,7 @@ describe("appearance controls", () => {
       preset: "default",
       color: "blue",
       radius: "default",
+      density: "default",
     })
     expect(
       normalizeAppearance({ color: "custom", radius: THEME_RADIUS.SMALL }),
@@ -125,6 +154,7 @@ describe("appearance controls", () => {
       preset: "default",
       color: "blue",
       radius: "small",
+      density: "default",
     })
     expect(
       normalizeAppearance({ color: THEME_COLOR.ROSE, radius: -10 }),
@@ -132,6 +162,7 @@ describe("appearance controls", () => {
       preset: "default",
       color: "rose",
       radius: "default",
+      density: "default",
     })
   })
 
@@ -142,14 +173,24 @@ describe("appearance controls", () => {
         color: THEME_COLOR.ROSE,
         radius: THEME_RADIUS.SMALL,
       }),
-    ).toEqual({ preset: "default", color: "rose", radius: "small" })
+    ).toEqual({
+      preset: "default",
+      color: "rose",
+      radius: "small",
+      density: "default",
+    })
     expect(
       normalizeAppearance({
         preset: THEME_PRESET.ANTHROPIC,
         color: THEME_COLOR.VIOLET,
         radius: THEME_RADIUS.LARGE,
       }),
-    ).toEqual({ preset: "anthropic", color: "violet", radius: "large" })
+    ).toEqual({
+      preset: "anthropic",
+      color: "violet",
+      radius: "large",
+      density: "default",
+    })
     const user = userEvent.setup()
     renderControls()
     await user.click(
@@ -178,6 +219,7 @@ describe("appearance controls", () => {
       preset: THEME_PRESET.DEFAULT,
       color: THEME_COLOR.BLUE,
       radius: THEME_RADIUS.DEFAULT,
+      density: "default",
       themeMode: THEME_MODE.SYSTEM,
     })
   })

@@ -125,3 +125,39 @@
   --theme-solid: var(--theme-color-700);
   --theme-link: var(--theme-color-800);
 }
+
+/* Density is independent of color, typography, radius, and content width. */
+:root,
+:host,
+.density-default {
+  --density-space-scale: 1;
+  --density-control-xxs: 1.25rem;
+  --density-control-xs: 1.5rem;
+  --density-control-tight: 1.75rem;
+  --density-control-sm: 2rem;
+  --density-control: 2.25rem;
+  --density-control-lg: 2.5rem;
+  --density-input-lg: 2.75rem;
+  --density-table-head: 3rem;
+}
+[data-theme-density="compact"] {
+  --density-control-xxs: 1.5rem;
+  --density-space-scale: 0.75;
+  --density-control-tight: 1.5rem;
+  --density-control-sm: 1.75rem;
+  --density-control: 2rem;
+  --density-control-lg: 2.25rem;
+  --density-input-lg: 2.5rem;
+  --density-table-head: 2.5rem;
+}
+[data-theme-density="comfortable"] {
+  --density-control-xxs: 1.75rem;
+  --density-space-scale: 1.25;
+  --density-control-xs: 1.75rem;
+  --density-control-tight: 2rem;
+  --density-control-sm: 2.25rem;
+  --density-control: 2.5rem;
+  --density-control-lg: 2.75rem;
+  --density-input-lg: 3rem;
+  --density-table-head: 3.5rem;
+}

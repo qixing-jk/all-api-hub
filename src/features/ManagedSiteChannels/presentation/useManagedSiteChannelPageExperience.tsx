@@ -184,7 +184,7 @@ export function useManagedSiteChannelPageExperience({
                 type="button"
                 variant={index === 0 ? "default" : "outline"}
                 size="sm"
-                className="h-auto min-h-8 max-w-full break-words whitespace-normal"
+                className="h-auto min-h-(--density-control-sm) max-w-full break-words whitespace-normal"
                 onClick={action.onClick}
               >
                 {action.label}

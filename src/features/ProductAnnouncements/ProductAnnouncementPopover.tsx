@@ -102,7 +102,7 @@ function ProductAnnouncementPanel({
           variant={filter === "active" ? "secondary" : "ghost"}
           size="sm"
           className={cn(
-            "h-8 min-w-0 gap-1.5 px-3 text-xs",
+            "h-(--density-control-sm) min-w-0 gap-1.5 px-3 text-xs",
             filter === "active" && "dark:bg-background bg-card shadow-sm",
           )}
           aria-pressed={filter === "active"}
@@ -117,7 +117,7 @@ function ProductAnnouncementPanel({
           variant={filter === "dismissed" ? "secondary" : "ghost"}
           size="sm"
           className={cn(
-            "h-8 min-w-0 gap-1.5 px-3 text-xs",
+            "h-(--density-control-sm) min-w-0 gap-1.5 px-3 text-xs",
             filter === "dismissed" && "dark:bg-background bg-card shadow-sm",
           )}
           aria-pressed={filter === "dismissed"}

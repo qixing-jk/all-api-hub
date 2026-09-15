@@ -442,8 +442,8 @@ describe("ModelDisplay", () => {
     expect(firstItem).not.toHaveClass("my-3")
     expect(firstItem).not.toHaveClass("first:mt-0")
     expect(lastItem).not.toHaveClass("my-3")
-    expect(firstItem).toHaveClass("pb-3")
-    expect(lastItem).toHaveClass("pb-3")
+    expect(firstItem).toHaveClass("pb-density-3")
+    expect(lastItem).toHaveClass("pb-density-3")
   })
 
   it("separates video output tokens from text tokens for the same model", () => {

@@ -42,7 +42,7 @@ export default function TableFilterToolbar({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-8 px-2 text-xs"
+              className="h-(--density-control-sm) px-2 text-xs"
               onClick={onClearFilters}
             >
               {clearLabel}

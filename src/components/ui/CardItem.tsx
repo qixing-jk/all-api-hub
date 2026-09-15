@@ -6,15 +6,15 @@ import { cn } from "~/lib/utils"
 import { BodySmall, Typography } from "./Typography"
 
 const cardItemVariants = cva(
-  "flex flex-1 flex-col items-start justify-between gap-4 [container-type:inline-size] transition-colors sm:flex-row sm:items-center",
+  "flex flex-1 flex-col items-start justify-between gap-density-4 [container-type:inline-size] transition-colors sm:flex-row sm:items-center",
   {
     variants: {
       padding: {
         none: "p-0",
-        sm: "sm:py-3 sm:px-4 py-2 px-3",
-        default: "sm:py-4 sm:px-6 py-3 px-4",
-        md: "sm:py-5 sm:px-6 py-4 px-5",
-        lg: "sm:py-6 sm:px-8 py-5 px-6",
+        sm: "sm:py-density-3 sm:px-4 py-density-2 px-3",
+        default: "sm:py-density-4 sm:px-6 py-density-3 px-4",
+        md: "sm:py-density-5 sm:px-6 py-density-4 px-5",
+        lg: "sm:py-density-6 sm:px-8 py-density-5 px-6",
       },
       interactive: {
         false: "",
@@ -82,9 +82,9 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
         {children || (
           <div
             data-slot="card-item-content"
-            className="flex w-full flex-col items-start justify-between gap-4 text-left has-[>[data-slot=card-item-control]>[data-slot=switch]]:flex-row has-[>[data-slot=card-item-control]>[data-slot=switch]]:items-center [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center"
+            className="gap-density-4 flex w-full flex-col items-start justify-between text-left has-[>[data-slot=card-item-control]>[data-slot=switch]]:flex-row has-[>[data-slot=card-item-control]>[data-slot=switch]]:items-center [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center"
           >
-            <div className="flex w-full min-w-0 flex-1 items-center gap-3 [@container(min-width:42rem)]:w-auto">
+            <div className="gap-density-3 flex w-full min-w-0 flex-1 items-center [@container(min-width:42rem)]:w-auto">
               {icon && (
                 <div className="dark:bg-secondary bg-muted shrink-0 rounded-sm p-1 transition-colors sm:p-2">
                   {icon}
@@ -92,7 +92,7 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
               )}
               <div className="min-w-0 flex-1">
                 {title && (
-                  <div className="mb-0.5 flex flex-wrap items-center gap-2">
+                  <div className="gap-density-2 mb-0.5 flex flex-wrap items-center">
                     <Typography
                       variant="h6"
                       className="text-foreground transition-colors"

@@ -30,7 +30,9 @@ export function SuspectedDuplicatesList({
     <section
       aria-labelledby={headingId}
       className={
-        separated ? "border-border mt-6 space-y-3 border-t pt-5" : "space-y-3"
+        separated
+          ? "border-border space-y-density-3 pt-density-5 mt-6 border-t"
+          : "space-y-density-3"
       }
     >
       <h3 id={headingId} className="text-foreground text-sm font-semibold">
@@ -44,7 +46,7 @@ export function SuspectedDuplicatesList({
           key={group.id}
           className="border-border bg-card overflow-hidden rounded-lg border"
         >
-          <div className="bg-warning-soft text-warning-soft-foreground space-y-1 p-3 text-sm [overflow-wrap:anywhere] break-words">
+          <div className="bg-warning-soft text-warning-soft-foreground space-y-density-1 py-density-3 px-3 text-sm [overflow-wrap:anywhere] break-words">
             <div>
               {t("ui:dialog.dedupeAccounts.userId", { userId: group.userId })}
             </div>
@@ -65,8 +67,11 @@ export function SuspectedDuplicatesList({
           </div>
           <ul className="dark:divide-border divide-border-subtle divide-y">
             {group.accounts.map((account) => (
-              <li key={account.id} className="min-w-0 space-y-2 p-3 text-sm">
-                <div className="flex flex-wrap items-start justify-between gap-2">
+              <li
+                key={account.id}
+                className="space-y-density-2 py-density-3 min-w-0 px-3 text-sm"
+              >
+                <div className="gap-density-2 flex flex-wrap items-start justify-between">
                   <div className="text-foreground min-w-0 flex-1 font-medium [overflow-wrap:anywhere]">
                     {accountLabelById.get(account.id) ?? account.site_name}
                   </div>
@@ -79,12 +84,12 @@ export function SuspectedDuplicatesList({
                 <div className="dark:text-secondary-foreground text-muted-foreground break-all">
                   {account.site_url}
                 </div>
-                <div className="flex flex-wrap items-end justify-between gap-2">
+                <div className="gap-density-2 flex flex-wrap items-end justify-between">
                   <div className="text-muted-foreground min-w-0 text-xs [overflow-wrap:anywhere]">
                     {t("ui:dialog.dedupeAccounts.details.lastSync")}:{" "}
                     {formatTimestamp(account.last_sync_time || undefined, t)}
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="gap-density-2 flex flex-wrap">
                     {onReviewAccount && (
                       <Button
                         type="button"

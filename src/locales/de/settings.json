@@ -28,6 +28,13 @@
       "slate": "Schiefergrau",
       "violet": "Violett"
     },
+    "densities": {
+      "comfortable": "Geräumig",
+      "compact": "Kompakt",
+      "default": "Standard"
+    },
+    "density": "Oberflächendichte",
+    "densityDescription": "Zeilenabstände und Höhe der Bedienelemente anpassen, ohne die Schriftgröße zu ändern.",
     "description": "Änderungen werden automatisch gespeichert und auf Einstellungen, Popup und Seitenleiste angewendet.",
     "preset": "Designvorlage",
     "presetColorsHint": "Dieses Design hat eine eigene Farbpalette. Im Standarddesign können Sie die Akzentfarbe separat wählen.",
@@ -49,6 +56,7 @@
     },
     "radius": "Eckenradius",
     "reset": "Darstellung zurücksetzen",
+    "resetDensity": "Dichte zurücksetzen",
     "saveFailed": "Speichern fehlgeschlagen. Bitte erneut versuchen.",
     "secondaryAction": "Nebenaktion",
     "title": "Darstellung"

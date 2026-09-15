@@ -8,7 +8,7 @@ import {
 import { cn } from "~/lib/utils"
 
 const textareaVariants = cva(
-  "flex w-full rounded-md border border-input bg-card px-3 py-2 text-sm placeholder:text-faint-foreground text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-colors resize-vertical",
+  "flex w-full rounded-md border border-input bg-card px-3 py-density-2 text-sm placeholder:text-faint-foreground text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-colors resize-vertical",
   {
     variants: {
       variant: {
@@ -20,8 +20,8 @@ const textareaVariants = cva(
       },
       size: {
         default: "min-h-16",
-        sm: "min-h-14 px-2 py-1 text-xs",
-        lg: "min-h-20 px-4 py-3",
+        sm: "min-h-14 px-2 py-density-1 text-xs",
+        lg: "min-h-20 px-4 py-density-3",
       },
     },
     defaultVariants: {

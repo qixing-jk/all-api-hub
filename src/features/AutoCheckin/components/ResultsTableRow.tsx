@@ -51,18 +51,18 @@ export default function ResultsTableRow({
 
   return (
     <TableRow className="group border-border hover:bg-surface-subtle dark:hover:bg-card">
-      <TableCell className="text-foreground w-40 max-w-40 min-w-40 px-4 py-3 text-sm font-medium [@container(min-width:48rem)]:w-56 [@container(min-width:48rem)]:max-w-56 [@container(min-width:48rem)]:min-w-56 [@container(min-width:48rem)]:px-6">
+      <TableCell className="text-foreground py-density-3 w-40 max-w-40 min-w-40 px-4 text-sm font-medium [@container(min-width:48rem)]:w-56 [@container(min-width:48rem)]:max-w-56 [@container(min-width:48rem)]:min-w-56 [@container(min-width:48rem)]:px-6">
         <AccountLinkButton
           accountId={result.accountId}
           accountName={result.accountName}
           className="w-full max-w-full min-w-0 shrink justify-start overflow-hidden px-0 text-left"
         />
       </TableCell>
-      <TableCell className="px-4 py-3 text-sm whitespace-nowrap [@container(min-width:48rem)]:px-6">
+      <TableCell className="py-density-3 px-4 text-sm whitespace-nowrap [@container(min-width:48rem)]:px-6">
         <ResultStatusBadge status={result.status} />
       </TableCell>
-      <TableCell className="text-muted-foreground max-w-lg min-w-64 px-6 py-3 text-sm break-words">
-        <div className="space-y-1">
+      <TableCell className="text-muted-foreground py-density-3 max-w-lg min-w-64 px-6 text-sm break-words">
+        <div className="space-y-density-1">
           <div>{message}</div>
           {troubleshootingHintKey && (
             <div className="text-faint-foreground text-xs">
@@ -79,12 +79,12 @@ export default function ResultsTableRow({
           )}
         </div>
       </TableCell>
-      <TableCell className="text-muted-foreground px-6 py-3 text-sm whitespace-nowrap">
+      <TableCell className="text-muted-foreground py-density-3 px-6 text-sm whitespace-nowrap">
         {formatTimestamp(result.timestamp)}
       </TableCell>
       <TableCell
         className={cn(
-          "border-border bg-card text-muted-foreground group-hover:bg-surface-subtle dark:bg-background dark:group-hover:bg-card sticky right-0 w-12 min-w-12 border-l px-2 py-3 text-sm [@container(min-width:48rem)]:w-auto [@container(min-width:48rem)]:min-w-0 [@container(min-width:48rem)]:px-3",
+          "border-border bg-card text-muted-foreground group-hover:bg-surface-subtle dark:bg-background dark:group-hover:bg-card py-density-3 sticky right-0 w-12 min-w-12 border-l px-2 text-sm [@container(min-width:48rem)]:w-auto [@container(min-width:48rem)]:min-w-0 [@container(min-width:48rem)]:px-3",
           Z_INDEX.tableStickyCell,
         )}
       >

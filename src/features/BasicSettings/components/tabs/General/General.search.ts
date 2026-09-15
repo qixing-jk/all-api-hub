@@ -87,6 +87,27 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
 
 export const generalSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
+    "control:appearance-density",
+    "general",
+    SETTINGS_ANCHORS.APPEARANCE_DENSITY,
+    "settings:appearance.density",
+    532,
+    {
+      keywords: [
+        "density",
+        "compact",
+        "comfortable",
+        "spacing",
+        "密度",
+        "紧凑",
+        "宽松",
+        "間距",
+        "緊湊",
+        "寬鬆",
+      ],
+    },
+  ),
+  buildControlDefinition(
     "control:appearance-preset",
     "general",
     SETTINGS_ANCHORS.APPEARANCE_PRESET,

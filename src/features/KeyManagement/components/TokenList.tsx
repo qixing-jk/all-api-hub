@@ -163,7 +163,7 @@ interface TokenListProps {
  */
 function LoadingSkeleton() {
   return (
-    <div className="space-y-3">
+    <div className="space-y-density-3">
       {[...Array(3)].map((_, i) => (
         <Card key={i} padding="sm" className="animate-pulse">
           <div className="bg-secondary mb-2 h-4 w-1/4 rounded"></div>
@@ -852,7 +852,7 @@ export function TokenList(props: TokenListProps) {
   return (
     <>
       {filteredEligibleEntries.length > 0 ? (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border p-3">
+        <div className="gap-density-2 py-density-3 mb-4 flex flex-wrap items-center justify-between rounded-md border px-3">
           {hasFilteredIneligibleEntries ? (
             <p className="text-muted-foreground w-full text-sm" role="status">
               {t("keyManagement:batchSelection.eligibilityNotice", {
@@ -860,7 +860,7 @@ export function TokenList(props: TokenListProps) {
               })}
             </p>
           ) : null}
-          <label className="flex items-center gap-2 text-sm">
+          <label className="gap-density-2 flex items-center text-sm">
             <Checkbox
               checked={visibleSelectionChecked}
               onCheckedChange={toggleFilteredSelection}
@@ -870,7 +870,7 @@ export function TokenList(props: TokenListProps) {
               total: filteredEligibleEntries.length,
             })}
           </label>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="gap-density-2 flex flex-wrap items-center">
             <Button
               size="sm"
               variant="outline"
@@ -904,7 +904,7 @@ export function TokenList(props: TokenListProps) {
               onClick={openBatchExportDialog}
               leftIcon={<SendToBack className="h-4 w-4" />}
             >
-              <span className="inline-flex items-center gap-1">
+              <span className="gap-density-1 inline-flex items-center">
                 <ManagedSiteIcon siteType={managedSiteType} size="sm" />
                 {t("batchManagedSiteExport.actions.open", {
                   site: managedSiteLabel,
@@ -920,7 +920,7 @@ export function TokenList(props: TokenListProps) {
 
       {isAllAccountsMode && groupedRows && groupedRows.length > 0 ? (
         <>
-          <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+          <div className="gap-density-2 mb-4 flex flex-wrap items-center justify-end">
             <Button
               size="sm"
               variant="outline"
@@ -942,7 +942,7 @@ export function TokenList(props: TokenListProps) {
             </Button>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-density-3">
             {groupedRows.map((group) => {
               const { account } = group
               const isCollapsed = collapsedAccountIds.has(account.id)
@@ -971,7 +971,7 @@ export function TokenList(props: TokenListProps) {
                 >
                   <div
                     className={cn(
-                      "dark:hover:bg-secondary hover:bg-surface-subtle flex w-full items-center justify-between gap-3 px-3 py-2 text-left",
+                      "dark:hover:bg-secondary hover:bg-surface-subtle gap-density-3 py-density-2 flex w-full items-center justify-between px-3 text-left",
                       isCollapsed ? "rounded-lg" : "border-border border-b",
                     )}
                   >
@@ -1000,11 +1000,11 @@ export function TokenList(props: TokenListProps) {
                     />
                     <button
                       type="button"
-                      className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+                      className="gap-density-3 flex min-w-0 flex-1 items-center justify-between text-left"
                       onClick={() => toggleGroup(account.id)}
                       aria-expanded={!isCollapsed}
                     >
-                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <div className="gap-density-2 flex min-w-0 flex-1 items-center">
                         <span className="truncate font-medium">
                           {account.name}
                         </span>
@@ -1040,7 +1040,7 @@ export function TokenList(props: TokenListProps) {
                   </div>
 
                   {!isCollapsed ? (
-                    <div className="space-y-3 p-3">
+                    <div className="space-y-density-3 py-density-3 px-3">
                       {group.filteredEntries.map((entry) => (
                         <div key={entry.id}>
                           {renderServiceCredentialCard(entry)}
@@ -1055,7 +1055,7 @@ export function TokenList(props: TokenListProps) {
           </div>
         </>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-density-3">
           {filteredEntries.map((entry) => (
             <div key={entry.id}>{renderServiceCredentialCard(entry)}</div>
           ))}

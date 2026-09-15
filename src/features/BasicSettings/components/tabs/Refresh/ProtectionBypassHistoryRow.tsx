@@ -33,13 +33,13 @@ function HistoryDetailGroup({
   )
   if (visibleRows.length === 0) return null
   return (
-    <section className="space-y-2">
+    <section className="space-y-density-2">
       <h3 className="text-sm font-medium">{title}</h3>
-      <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[minmax(7rem,auto)_1fr]">
+      <dl className="gap-x-density-4 gap-y-density-2 grid text-sm sm:grid-cols-[minmax(7rem,auto)_1fr]">
         {visibleRows.map(([label, value]) => (
           <div
             key={label}
-            className="grid gap-x-4 gap-y-1 sm:col-span-2 sm:grid-cols-subgrid"
+            className="gap-x-density-4 gap-y-density-1 grid sm:col-span-2 sm:grid-cols-subgrid"
           >
             <dt className="text-muted-foreground">{label}</dt>
             <dd className="min-w-0 break-words">{value}</dd>
@@ -80,9 +80,9 @@ function HistoryDetails({
         )
 
   return (
-    <div className="space-y-5 border-t p-4">
+    <div className="space-y-density-5 py-density-4 border-t px-4">
       {hasGuidance && (
-        <div className="bg-muted/50 space-y-2 rounded-lg p-3 text-sm">
+        <div className="bg-muted/50 space-y-density-2 py-density-3 rounded-lg px-3 text-sm">
           {description.reason && (
             <p className="font-medium">{description.reason}</p>
           )}
@@ -187,10 +187,10 @@ export default function ProtectionBypassHistoryRow(props: HistoryRowProps) {
           onExpandedChange(entry.id, !isExpanded)
           setIsExpanded(!isExpanded)
         }}
-        className="focus-visible:ring-ring w-full space-y-2 rounded-[var(--corner-inner-radius)] p-4 text-left focus-visible:ring-2 focus-visible:outline-none aria-expanded:rounded-b-none"
+        className="focus-visible:ring-ring space-y-density-2 py-density-4 w-full rounded-[var(--corner-inner-radius)] px-4 text-left focus-visible:ring-2 focus-visible:outline-none aria-expanded:rounded-b-none"
       >
-        <span className="flex items-start justify-between gap-3">
-          <span className="flex min-w-0 flex-wrap items-center gap-2">
+        <span className="gap-density-3 flex items-start justify-between">
+          <span className="gap-density-2 flex min-w-0 flex-wrap items-center">
             <span className="font-medium break-all">
               {entry.origin ?? t("common:labels.unknown")}
             </span>
@@ -227,11 +227,11 @@ export default function ProtectionBypassHistoryRow(props: HistoryRowProps) {
             {description.reason || description.cause}
           </span>
         </span>
-        <span className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+        <span className="text-muted-foreground gap-x-density-3 gap-y-density-1 flex flex-wrap items-center text-xs">
           <span>
             {description.operation} · {description.trigger}
           </span>
-          <span className="inline-flex items-center gap-1">
+          <span className="gap-density-1 inline-flex items-center">
             <Clock3 className="size-3" aria-hidden="true" />
             <time dateTime={new Date(entry.startedAt).toISOString()}>
               {props.dateFormat.format(entry.startedAt)}

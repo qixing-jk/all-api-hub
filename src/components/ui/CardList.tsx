@@ -14,7 +14,7 @@ const CardList = React.forwardRef<HTMLDivElement, CardListProps>(
         ref={ref}
         data-slot="card-list"
         className={cn(
-          dividers ? "divide-border divide-y" : "space-y-4",
+          dividers ? "divide-border divide-y" : "space-y-density-4",
           className,
         )}
         {...props}

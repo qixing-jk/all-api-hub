@@ -28,6 +28,13 @@
       "slate": "Xám đá",
       "violet": "Tím"
     },
+    "densities": {
+      "comfortable": "Thoáng",
+      "compact": "Gọn",
+      "default": "Mặc định"
+    },
+    "density": "Mật độ giao diện",
+    "densityDescription": "Điều chỉnh khoảng cách giữa các hàng và chiều cao điều khiển mà không đổi cỡ chữ.",
     "description": "Thay đổi được lưu tự động và áp dụng cho trang cài đặt, cửa sổ bật lên và bảng bên.",
     "preset": "Chủ đề có sẵn",
     "presetColorsHint": "Chủ đề này có bảng màu riêng. Chọn chủ đề mặc định để chọn màu nhấn riêng.",
@@ -49,6 +56,7 @@
     },
     "radius": "Độ bo góc",
     "reset": "Đặt lại giao diện",
+    "resetDensity": "Đặt lại mật độ",
     "saveFailed": "Không thể lưu. Vui lòng thử lại.",
     "secondaryAction": "Thao tác phụ",
     "title": "Cài đặt giao diện"

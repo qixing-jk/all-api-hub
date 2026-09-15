@@ -78,7 +78,7 @@ export function ProductAnnouncementList({
     return (
       <div
         data-testid={testId}
-        className="text-muted-foreground py-6 text-center text-sm"
+        className="text-muted-foreground py-density-6 text-center text-sm"
       >
         {t("loading")}
       </div>
@@ -89,7 +89,7 @@ export function ProductAnnouncementList({
     return (
       <div
         data-testid={testId}
-        className="text-muted-foreground py-6 text-center text-sm"
+        className="text-muted-foreground py-density-6 text-center text-sm"
       >
         {emptyMessage}
       </div>
@@ -99,7 +99,7 @@ export function ProductAnnouncementList({
   return (
     <div
       data-testid={testId}
-      className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1"
+      className="space-y-density-3 min-h-0 flex-1 overflow-y-auto pr-1"
     >
       {notices.map((notice) => {
         const cta = notice.cta
@@ -119,13 +119,13 @@ export function ProductAnnouncementList({
           <article
             key={`${notice.id}:${notice.revision}`}
             className={cn(
-              "bg-card/95 shadow-border/40 dark:shadow-shadow/20 relative overflow-hidden rounded-md border p-3 shadow-sm transition-colors",
+              "bg-card/95 shadow-border/40 dark:shadow-shadow/20 py-density-3 relative overflow-hidden rounded-md border px-3 shadow-sm transition-colors",
               notice.seen
                 ? "border-border/80 dark:border-foreground/10"
                 : "border-border-strong/80 dark:border-foreground/20",
             )}
           >
-            <div className="flex min-w-0 items-start justify-between gap-2">
+            <div className="gap-density-2 flex min-w-0 items-start justify-between">
               <h3 className="text-foreground min-w-0 flex-1 text-sm leading-5 font-medium break-words">
                 {!notice.seen ? (
                   <>
@@ -153,7 +153,7 @@ export function ProductAnnouncementList({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="min-h-6 shrink-0 px-2 text-xs leading-none"
+                  className="min-h-(--density-control-xs) shrink-0 px-2 text-xs leading-none"
                   aria-label={restoreAriaLabel}
                   onClick={() => onRestore(notice.id)}
                   data-testid={getProductAnnouncementRestoreButtonTestId(
@@ -167,7 +167,7 @@ export function ProductAnnouncementList({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="min-h-6 shrink-0 px-2 text-xs leading-none"
+                  className="min-h-(--density-control-xs) shrink-0 px-2 text-xs leading-none"
                   aria-label={dismissAriaLabel}
                   onClick={() => onDismiss(notice.id, notice.revision)}
                   data-testid={getProductAnnouncementDismissButtonTestId(
@@ -186,7 +186,7 @@ export function ProductAnnouncementList({
                 href={ctaHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-theme-600 dark:text-theme-300 mt-2 inline-flex max-w-full items-center gap-1 text-xs font-medium underline-offset-4 hover:underline"
+                className="text-theme-600 dark:text-theme-300 gap-density-1 mt-2 inline-flex max-w-full items-center text-xs font-medium underline-offset-4 hover:underline"
                 onClick={() => onOpenCta?.(notice)}
               >
                 <span className="min-w-0 break-words">{cta.label}</span>

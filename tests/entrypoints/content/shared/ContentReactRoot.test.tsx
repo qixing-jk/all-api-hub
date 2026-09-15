@@ -69,7 +69,7 @@ describe("ContentReactRoot", () => {
   it("applies live accent preferences inside its scope without modifying the host document", async () => {
     getPreferencesMock.mockResolvedValue({
       themeMode: THEME_MODE.LIGHT,
-      appearance: { color: THEME_COLOR.ROSE },
+      appearance: { color: THEME_COLOR.ROSE, density: "compact" },
     })
     const { ContentReactRoot } = await import(
       "~/entrypoints/content/shared/ContentReactRoot"
@@ -146,6 +146,7 @@ describe("ContentReactRoot", () => {
           preset: THEME_PRESET.DEFAULT,
           color: THEME_COLOR.ROSE,
           radius: THEME_RADIUS.SMALL,
+          density: "default",
         },
       })
       await initial.promise

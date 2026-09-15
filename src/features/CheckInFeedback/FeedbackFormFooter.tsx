@@ -66,7 +66,7 @@ export function FeedbackFormFooter({
         <Button
           type="button"
           onClick={() => void open(manualCopy)}
-          className="col-span-2 h-auto min-h-9 whitespace-normal"
+          className="col-span-2 h-auto min-h-(--density-control) whitespace-normal"
           loading={opening}
           leftIcon={<WorkflowTransitionIcon className="h-4 w-4" />}
         >

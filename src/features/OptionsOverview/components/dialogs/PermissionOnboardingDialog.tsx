@@ -139,7 +139,7 @@ export function PermissionOnboardingDialog({
         onClick={handleGrantAll}
         loading={isRequesting}
         disabled={isAnyPending}
-        className="h-auto min-h-9 w-full py-2 text-center whitespace-normal"
+        className="h-auto min-h-(--density-control) w-full py-2 text-center whitespace-normal"
       >
         {isRequesting
           ? t("common:status.applying")
@@ -156,7 +156,7 @@ export function PermissionOnboardingDialog({
       </Button>
       <Button
         variant="secondary"
-        className="h-auto min-h-9 w-full py-2 text-center whitespace-normal sm:col-span-2"
+        className="h-auto min-h-(--density-control) w-full py-2 text-center whitespace-normal sm:col-span-2"
         onClick={handleOpenGithub}
         disabled={isRequesting}
         leftIcon={<Star className="text-link h-4 w-4" />}

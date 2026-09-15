@@ -87,7 +87,7 @@ export default function ResultsTable({
         <table className="w-full">
           <thead className="border-border bg-surface-subtle dark:bg-card border-b">
             <tr>
-              <th className="px-4 py-3 text-left">
+              <th className="py-density-3 px-4 text-left">
                 <input
                   ref={selectAllRef}
                   type="checkbox"
@@ -99,32 +99,32 @@ export default function ResultsTable({
                 />
               </th>
               {columns.status && (
-                <th className="text-secondary-foreground px-4 py-3 text-left text-sm font-medium">
+                <th className="text-secondary-foreground py-density-3 px-4 text-left text-sm font-medium">
                   {t("execution.table.status")}
                 </th>
               )}
-              <th className="text-secondary-foreground px-4 py-3 text-left text-sm font-medium">
+              <th className="text-secondary-foreground py-density-3 px-4 text-left text-sm font-medium">
                 {t("execution.table.channelId")}
               </th>
-              <th className="text-secondary-foreground px-4 py-3 text-left text-sm font-medium">
+              <th className="text-secondary-foreground py-density-3 px-4 text-left text-sm font-medium">
                 {t("execution.table.channelName")}
               </th>
               {columns.message && (
-                <th className="text-secondary-foreground px-4 py-3 text-left text-sm font-medium">
+                <th className="text-secondary-foreground py-density-3 px-4 text-left text-sm font-medium">
                   {t("execution.table.message")}
                 </th>
               )}
               {columns.attempts && (
-                <th className="text-secondary-foreground px-4 py-3 text-left text-sm font-medium">
+                <th className="text-secondary-foreground py-density-3 px-4 text-left text-sm font-medium">
                   {t("execution.table.attempts")}
                 </th>
               )}
               {columns.finishedAt && (
-                <th className="text-secondary-foreground px-4 py-3 text-left text-sm font-medium">
+                <th className="text-secondary-foreground py-density-3 px-4 text-left text-sm font-medium">
                   {t("execution.table.finishedAt")}
                 </th>
               )}
-              <th className="border-border bg-surface-subtle text-secondary-foreground dark:bg-card sticky right-0 z-20 border-l px-4 py-3 text-right text-sm font-medium shadow-[-8px_0_12px_-12px_var(--table-edge-shadow)]">
+              <th className="border-border bg-surface-subtle text-secondary-foreground dark:bg-card py-density-3 sticky right-0 z-20 border-l px-4 text-right text-sm font-medium shadow-[-8px_0_12px_-12px_var(--table-edge-shadow)]">
                 {t("execution.table.actions")}
               </th>
             </tr>
@@ -142,7 +142,7 @@ export default function ResultsTable({
                   key={resourceKey}
                   className="group hover:bg-surface-subtle dark:hover:bg-card"
                 >
-                  <td className="px-4 py-3">
+                  <td className="py-density-3 px-4">
                     <input
                       type="checkbox"
                       aria-label={t("execution.table.selectChannel", {
@@ -157,7 +157,7 @@ export default function ResultsTable({
                     />
                   </td>
                   {columns.status && (
-                    <td className="px-4 py-3">
+                    <td className="py-density-3 px-4">
                       {item.ok ? (
                         <CircleCheck className="text-success-text h-5 w-5" />
                       ) : (
@@ -165,10 +165,10 @@ export default function ResultsTable({
                       )}
                     </td>
                   )}
-                  <td className="text-foreground px-4 py-3 text-sm">
+                  <td className="text-foreground py-density-3 px-4 text-sm">
                     {getModelSyncHistoryResourceId(item)}
                   </td>
-                  <td className="text-foreground px-4 py-3 text-sm">
+                  <td className="text-foreground py-density-3 px-4 text-sm">
                     <ManagedSiteChannelLinkButton
                       resourceRef={
                         available ? item.resourceRef ?? undefined : undefined
@@ -183,7 +183,7 @@ export default function ResultsTable({
                     )}
                   </td>
                   {columns.message && (
-                    <td className="px-4 py-3">
+                    <td className="py-density-3 px-4">
                       {item.ok ? (
                         <Badge variant="success">
                           {t("execution.status.success")}
@@ -208,18 +208,18 @@ export default function ResultsTable({
                     </td>
                   )}
                   {columns.attempts && (
-                    <td className="text-muted-foreground px-4 py-3 text-sm">
+                    <td className="text-muted-foreground py-density-3 px-4 text-sm">
                       {item.attempts}
                     </td>
                   )}
                   {columns.finishedAt && (
-                    <td className="text-muted-foreground px-4 py-3 text-sm">
+                    <td className="text-muted-foreground py-density-3 px-4 text-sm">
                       {item.finishedAt
                         ? dayjs(item.finishedAt).format("HH:mm:ss")
                         : "—"}
                     </td>
                   )}
-                  <td className="border-border-subtle bg-card group-hover:bg-surface-subtle dark:border-border dark:bg-background dark:group-hover:bg-card sticky right-0 z-10 border-l px-4 py-3 text-right shadow-[-8px_0_12px_-12px_var(--table-edge-shadow)]">
+                  <td className="border-border-subtle bg-card group-hover:bg-surface-subtle dark:border-border dark:bg-background dark:group-hover:bg-card py-density-3 sticky right-0 z-10 border-l px-4 text-right shadow-[-8px_0_12px_-12px_var(--table-edge-shadow)]">
                     <Button
                       size="sm"
                       variant="ghost"

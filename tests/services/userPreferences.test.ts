@@ -35,11 +35,15 @@ describe("userPreferences", () => {
     await userPreferences.savePreferences({
       appearance: { preset: THEME_PRESET.ANTHROPIC },
     })
+    await userPreferences.savePreferences({
+      appearance: { density: "comfortable" },
+    })
     const preferences = await userPreferences.getPreferences()
     expect(preferences.appearance).toEqual({
       preset: "anthropic",
       color: "rose",
       radius: "small",
+      density: "comfortable",
     })
     expect(preferences.currencyType).toBe("CNY")
   })

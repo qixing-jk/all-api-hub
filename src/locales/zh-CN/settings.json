@@ -28,6 +28,13 @@
       "slate": "石板灰",
       "violet": "紫色"
     },
+    "densities": {
+      "comfortable": "宽松",
+      "compact": "紧凑",
+      "default": "默认"
+    },
+    "density": "界面密度",
+    "densityDescription": "调整列表间距和控件高度，不改变字号。",
     "description": "修改后自动保存，应用于设置页、弹窗和侧栏。",
     "preset": "主题风格",
     "presetColorsHint": "当前主题自带完整配色。切换到默认主题可单独选择强调色。",
@@ -49,6 +56,7 @@
     },
     "radius": "圆角大小",
     "reset": "恢复默认外观",
+    "resetDensity": "重置密度",
     "saveFailed": "保存失败，请重试。",
     "secondaryAction": "次要操作",
     "title": "外观设置"

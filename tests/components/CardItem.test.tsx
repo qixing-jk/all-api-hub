@@ -126,7 +126,11 @@ describe("CardItem", () => {
     const title = screen.getByText("Bookmarks")
     const badge = screen.getByTestId("title-badge")
 
-    expect(title.parentElement).toHaveClass("flex", "flex-wrap", "gap-2")
+    expect(title.parentElement).toHaveClass(
+      "flex",
+      "flex-wrap",
+      "gap-density-2",
+    )
     expect(title.parentElement).toContainElement(badge)
     expect(
       screen.getByRole("button", { name: "Remove" }).parentElement,

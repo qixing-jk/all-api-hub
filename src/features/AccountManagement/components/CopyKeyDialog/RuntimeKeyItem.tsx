@@ -48,7 +48,7 @@ export function RuntimeKeyItem({
         data-testid={getCopyKeyDialogRuntimeKeyItemTestId(runtimeKey.id)}
       >
         <div className="flex items-center justify-between">
-          <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="space-y-density-1-5 min-w-0 flex-1">
             <h4 className="text-foreground truncate text-sm font-medium">
               {runtimeKey.label}
             </h4>

@@ -125,3 +125,14 @@ removing their allowances. Existing exemptions are limited to color-definition
 owners, brand assets, the Mesh Gradient implementation and the vendored
 development-tools bundle. The development toolbar badge has one documented
 baseline allowance because it is outside CSS theme scopes.
+
+
+## Interface density
+
+`appearance.density` selects compact, default, or comfortable. The default scale
+is 1 and retains existing dimensions. Use `py-density-*`, `gap-density-*`, and
+`space-y-density-*` for vertical rhythm and list/form spacing; use the
+`--density-control*` height tokens through shared controls. Keep text sizes,
+content widths, icon artwork, and structural shell dimensions independent.
+The navigation sidebar uses `density-default` to retain its existing layout.
+`cn` registers density spacing with Tailwind Merge so caller overrides still win.

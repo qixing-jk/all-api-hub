@@ -93,9 +93,9 @@ describe("Button", () => {
       expect(button).not.toHaveClass("whitespace-nowrap")
     }
 
-    expect(textButtons[0]).toHaveClass("min-h-9")
-    expect(textButtons[1]).toHaveClass("min-h-8")
-    expect(textButtons[2]).toHaveClass("min-h-10")
+    expect(textButtons[0]).toHaveClass("min-h-(--density-control)")
+    expect(textButtons[1]).toHaveClass("min-h-(--density-control-sm)")
+    expect(textButtons[2]).toHaveClass("min-h-(--density-control-lg)")
   })
 
   it("keeps icon-only button sizes fixed", async () => {
@@ -139,7 +139,7 @@ describe("Button", () => {
       "whitespace-nowrap",
     )
     expect(button).not.toHaveClass("h-auto")
-    expect(button).not.toHaveClass("min-h-9")
+    expect(button).not.toHaveClass("min-h-(--density-control)")
     expect(button).not.toHaveClass("max-w-full")
     expect(button).not.toHaveClass("shrink")
     expect(button).not.toHaveClass("whitespace-normal")

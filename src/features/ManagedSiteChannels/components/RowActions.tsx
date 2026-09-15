@@ -103,7 +103,7 @@ export default function RowActions({
           <IconButton
             size="default"
             variant="ghost"
-            className="h-8 w-8"
+            className="h-(--density-control-sm) w-(--density-control-sm)"
             aria-label={labels.trigger}
             disableAutoTooltip
             disableAutoTitle

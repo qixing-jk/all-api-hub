@@ -53,3 +53,12 @@ describe("cn utility", () => {
     expect(result).toContain("class3")
   })
 })
+
+describe("density spacing overrides", () => {
+  it("merges density spacing with ordinary spacing and responsive overrides", () => {
+    expect(cn("py-density-3", "py-0")).toBe("py-0")
+    expect(cn("gap-2", "gap-density-2")).toBe("gap-density-2")
+    expect(cn("space-y-density-4", "space-y-0")).toBe("space-y-0")
+    expect(cn("sm:py-density-6", "sm:py-2")).toBe("sm:py-2")
+  })
+})

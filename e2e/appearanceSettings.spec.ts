@@ -151,10 +151,12 @@ test("appearance applies across windows, survives reload, and resets", async ({
   await page.screenshot({
     path: testInfo.outputPath("appearance-light-390.png"),
   })
-  const defaultRadius = drawer.getByRole("radio", {
-    name: "Default",
-    exact: true,
-  })
+  const defaultRadius = drawer
+    .getByRole("group", { name: "Corner radius" })
+    .getByRole("radio", {
+      name: "Default",
+      exact: true,
+    })
   await defaultRadius.focus()
   await page.keyboard.press("ArrowRight")
   const largeRadius = drawer.getByRole("radio", { name: "Large", exact: true })

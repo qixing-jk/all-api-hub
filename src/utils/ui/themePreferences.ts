@@ -46,10 +46,14 @@ export function resolveThemeMode(
 
 /** Scope preview/content colors without applying document-only radius settings. */
 export function getAppearanceScopeAttributes(
-  appearance: Pick<AppearancePreferences, "color" | "preset">,
+  appearance: Pick<AppearancePreferences, "color" | "preset"> &
+    Partial<Pick<AppearancePreferences, "density">>,
 ) {
   return {
     [THEME_ATTRIBUTES.COLOR_SCOPE]: "",
+    ...(appearance.density
+      ? { [THEME_ATTRIBUTES.DENSITY]: appearance.density }
+      : {}),
     [THEME_ATTRIBUTES.COLOR]: appearance.color,
     [THEME_ATTRIBUTES.PRESET]: appearance.preset,
   }
@@ -67,6 +71,7 @@ export function applyThemePreferences(
   root.setAttribute(THEME_ATTRIBUTES.COLOR, appearance.color)
   root.setAttribute(THEME_ATTRIBUTES.PRESET, appearance.preset)
   root.setAttribute(THEME_ATTRIBUTES.RADIUS, appearance.radius)
+  root.setAttribute(THEME_ATTRIBUTES.DENSITY, appearance.density)
   root.style.colorScheme = resolvedTheme
 }
 

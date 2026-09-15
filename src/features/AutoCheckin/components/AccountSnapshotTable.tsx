@@ -191,7 +191,7 @@ export default function AccountSnapshotTable({
         clearLabel={t("snapshot.filters.clearAll")}
         showClear={isFiltered && filteredCount > 0}
         onClearFilters={clearFilters}
-        controlsClassName="grid gap-2 md:grid-cols-[minmax(14rem,1fr)_13rem_11rem]"
+        controlsClassName="grid gap-density-2 md:grid-cols-[minmax(14rem,1fr)_13rem_11rem]"
       >
         <Input
           type="text"
@@ -214,7 +214,7 @@ export default function AccountSnapshotTable({
           }}
         >
           <SelectTrigger
-            className="h-9 w-full"
+            className="h-(--density-control) w-full"
             aria-label={t("snapshot.filters.readinessLabel")}
           >
             <SelectValue />
@@ -250,7 +250,7 @@ export default function AccountSnapshotTable({
           }}
         >
           <SelectTrigger
-            className="h-9 w-full"
+            className="h-(--density-control) w-full"
             aria-label={t("snapshot.filters.statusLabel")}
           >
             <SelectValue />

@@ -92,7 +92,7 @@ export function AccountKeyResourceList({
   )
   if (rows.length === 0) return null
   return (
-    <section aria-label={ariaLabel} className="space-y-3">
+    <section aria-label={ariaLabel} className="space-y-density-3">
       {rows.map((row) => {
         const account = accounts.find(
           (candidate) => candidate.id === row.accountId,

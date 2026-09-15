@@ -47,7 +47,7 @@ export default function UsageHistorySyncRowActions({
         <IconButton
           size="default"
           variant="ghost"
-          className="h-8 w-8"
+          className="h-(--density-control-sm) w-(--density-control-sm)"
           aria-label={t("syncTab.table.rowActions")}
           disabled={isSyncing}
           loading={isActionPending}

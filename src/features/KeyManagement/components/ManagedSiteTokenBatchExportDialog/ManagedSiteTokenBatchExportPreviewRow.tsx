@@ -144,9 +144,9 @@ export function ManagedSiteTokenBatchExportPreviewRow({
   ) : null
 
   return (
-    <div className="space-y-2 rounded-md border p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-2">
+    <div className="space-y-density-2 py-density-3 rounded-md border px-3">
+      <div className="gap-density-3 flex items-start justify-between">
+        <div className="gap-density-2 flex min-w-0 items-start">
           <Checkbox
             id={checkboxId}
             className="mt-0.5"
@@ -167,7 +167,7 @@ export function ManagedSiteTokenBatchExportPreviewRow({
             </span>
           </label>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+        <div className="gap-density-2 flex shrink-0 flex-wrap items-center justify-end">
           {result ? (
             <Badge variant={getExecutionResultVariant(result)} size="sm">
               {getExecutionResultLabel(t, result)}
@@ -187,7 +187,7 @@ export function ManagedSiteTokenBatchExportPreviewRow({
         </div>
       </div>
 
-      <div className="grid gap-2 text-xs md:grid-cols-2">
+      <div className="gap-density-2 grid text-xs md:grid-cols-2">
         <div>
           <span className="text-muted-foreground">
             {t("keyManagement:batchManagedSiteExport.fields.baseUrl")}
@@ -233,7 +233,7 @@ export function ManagedSiteTokenBatchExportPreviewRow({
       </div>
 
       {item.matchedChannel ? (
-        <div className="text-muted-foreground dark:bg-secondary bg-surface-subtle rounded-md p-2 text-xs">
+        <div className="text-muted-foreground dark:bg-secondary bg-surface-subtle py-density-2 rounded-md px-2 text-xs">
           {t("keyManagement:batchManagedSiteExport.messages.duplicate", {
             channel: item.matchedChannel.name,
           })}
@@ -241,8 +241,8 @@ export function ManagedSiteTokenBatchExportPreviewRow({
       ) : null}
 
       {item.warningCodes.length > 0 ? (
-        <div className="border-warning-border bg-warning-soft text-warning-soft-foreground space-y-2 rounded-md border p-2 text-xs">
-          <ul className="list-disc space-y-1 pl-4 leading-5">
+        <div className="border-warning-border bg-warning-soft text-warning-soft-foreground space-y-density-2 py-density-2 rounded-md border px-2 text-xs">
+          <ul className="space-y-density-1 list-disc pl-4 leading-5">
             {item.warningCodes.map((code) => (
               <li key={code}>{getBatchExportWarningText(t, code)}</li>
             ))}
@@ -257,7 +257,7 @@ export function ManagedSiteTokenBatchExportPreviewRow({
       ) : null}
 
       {item.blockingReasonCode ? (
-        <div className="bg-destructive-soft text-destructive-soft-foreground rounded-md p-2 text-xs">
+        <div className="bg-destructive-soft text-destructive-soft-foreground py-density-2 rounded-md px-2 text-xs">
           {getBatchExportBlockedReasonText(t, item.blockingReasonCode) ??
             t(
               "keyManagement:batchManagedSiteExport.blockedReasons.inputPreparationFailed",
@@ -268,7 +268,7 @@ export function ManagedSiteTokenBatchExportPreviewRow({
       ) : null}
 
       {result?.error ? (
-        <div className="bg-destructive-soft text-destructive-soft-foreground rounded-md p-2 text-xs">
+        <div className="bg-destructive-soft text-destructive-soft-foreground py-density-2 rounded-md px-2 text-xs">
           {getBatchExportExecutionErrorText(t, result.error)}
         </div>
       ) : null}

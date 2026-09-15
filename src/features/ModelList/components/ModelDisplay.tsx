@@ -141,7 +141,7 @@ const ModelRowsItem = forwardRef<
   HTMLAttributes<HTMLDivElement>
 >(function ModelRowsItem({ children, className, ...props }, ref) {
   return (
-    <div ref={ref} className={cn("min-w-0 pb-3", className)} {...props}>
+    <div ref={ref} className={cn("pb-density-3 min-w-0", className)} {...props}>
       {children}
     </div>
   )

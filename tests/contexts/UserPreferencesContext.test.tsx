@@ -594,6 +594,7 @@ describe("UserPreferencesContext", () => {
     })
 
     const appearance = {
+      density: "compact",
       preset: THEME_PRESET.ANTHROPIC,
       color: THEME_COLOR.ROSE,
       radius: THEME_RADIUS.SMALL,

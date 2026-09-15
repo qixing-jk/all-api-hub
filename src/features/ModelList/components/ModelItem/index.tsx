@@ -389,7 +389,7 @@ export default function ModelItem(props: ModelItemProps) {
         !isAvailableForUser && "bg-surface-subtle dark:bg-card/50 opacity-75",
       )}
     >
-      <CardContent padding="default">
+      <CardContent padding="default" spacing="default">
         <div className="flex min-w-0 flex-wrap items-start gap-2">
           <ModelItemHeader
             model={model}

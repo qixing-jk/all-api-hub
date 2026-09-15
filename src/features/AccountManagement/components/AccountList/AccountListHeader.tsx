@@ -159,7 +159,7 @@ export function AccountListHeader({
       variant={isReorderMode ? "secondary" : "ghost"}
       size="sm"
       className={cn(
-        "min-h-7 max-w-none shrink-0 px-2 py-0 text-xs whitespace-nowrap",
+        "min-h-(--density-control-tight) max-w-none shrink-0 px-2 py-0 text-xs whitespace-nowrap",
         reorderDisabledReason !== null &&
           "aria-disabled:pointer-events-auto aria-disabled:cursor-not-allowed",
       )}
@@ -218,7 +218,7 @@ export function AccountListHeader({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="min-h-7 max-w-none gap-1 rounded-sm px-2 py-0 text-xs whitespace-nowrap has-[>svg]:px-2"
+                  className="min-h-(--density-control-tight) max-w-none gap-1 rounded-sm px-2 py-0 text-xs whitespace-nowrap has-[>svg]:px-2"
                   disabled={inSearchMode}
                   aria-label={t("account:list.sortMenu")}
                   data-testid={
@@ -274,7 +274,7 @@ export function AccountListHeader({
               type="button"
               variant="ghost"
               size="none"
-              className="size-7 rounded-sm"
+              className="size-(--density-control-tight) rounded-sm"
               onClick={() => activeSortOption && onSort(activeSortOption.field)}
               disabled={!hasActiveSort}
               aria-label={t("account:list.toggleSortOrder")}
@@ -304,7 +304,7 @@ export function AccountListHeader({
                     type="button"
                     variant="ghost"
                     size="none"
-                    className="size-7 rounded-sm"
+                    className="size-(--density-control-tight) rounded-sm"
                     onClick={onClearSort}
                     aria-label={t("account:list.resetSort")}
                     data-testid={
@@ -322,7 +322,7 @@ export function AccountListHeader({
               <IconButton
                 variant="ghost"
                 size="none"
-                className="text-muted-foreground size-7 shrink-0 rounded-md"
+                className="text-muted-foreground size-(--density-control-tight) shrink-0 rounded-md"
                 aria-label={t("settings:sorting.title")}
                 onClick={openSortingSettings}
               >
@@ -358,7 +358,7 @@ export function AccountListHeader({
             type="button"
             variant="ghost"
             size="sm"
-            className="min-h-7 w-7 max-w-none shrink-0 px-0 py-0 text-xs whitespace-nowrap [@container(min-width:24rem)]:w-auto [@container(min-width:24rem)]:px-2"
+            className="min-h-(--density-control-tight) w-(--density-control-tight) max-w-none shrink-0 px-0 py-0 text-xs whitespace-nowrap [@container(min-width:24rem)]:w-auto [@container(min-width:24rem)]:px-2"
             leftIcon={<ListChecks aria-hidden="true" className="size-3.5" />}
             onClick={onBulkModeEnter}
             disabled={isBulkBusy || isReorderMode}
@@ -379,7 +379,7 @@ export function AccountListHeader({
               <IconButton
                 variant="ghost"
                 size="none"
-                className="size-7"
+                className="size-(--density-control-tight)"
                 aria-label={t("common:actions.more")}
               >
                 <MoreHorizontal aria-hidden="true" className="size-4" />

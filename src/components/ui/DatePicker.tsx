@@ -260,7 +260,7 @@ export function DatePicker({
                   size="icon"
                   aria-label={`${labels.trigger}: ${naturalInputLabels.openCalendar}`}
                   disabled={disabled}
-                  className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
+                  className="absolute top-1/2 right-1 h-(--density-control-tight) w-(--density-control-tight) -translate-y-1/2"
                 >
                   <CalendarIcon className="h-4 w-4" />
                 </Button>

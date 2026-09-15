@@ -8,6 +8,16 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --spacing-density-1: calc(0.25rem * var(--density-space-scale));
+  --spacing-density-1-5: calc(0.375rem * var(--density-space-scale));
+  --spacing-density-2: calc(0.5rem * var(--density-space-scale));
+  --spacing-density-2-5: calc(0.625rem * var(--density-space-scale));
+  --spacing-density-3: calc(0.75rem * var(--density-space-scale));
+  --spacing-density-3-5: calc(0.875rem * var(--density-space-scale));
+  --spacing-density-4: calc(1rem * var(--density-space-scale));
+  --spacing-density-5: calc(1.25rem * var(--density-space-scale));
+  --spacing-density-6: calc(1.5rem * var(--density-space-scale));
+  --spacing-density-8: calc(2rem * var(--density-space-scale));
   --color-overlay: var(--overlay);
   --color-shadow: var(--shadow-color);
   --color-surface-subtle: var(--surface-subtle);

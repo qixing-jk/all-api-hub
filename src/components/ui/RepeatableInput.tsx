@@ -110,7 +110,7 @@ function SortableRepeatableItem<TItem extends RepeatableInputItem>({
     <div ref={setNodeRef} style={style} className={isDragging ? "z-10" : ""}>
       <div
         className={cn(
-          "border-input bg-background flex items-center gap-2 rounded-md border px-2 py-2 shadow-xs",
+          "border-input bg-background gap-density-2 py-density-2 flex items-center rounded-md border px-2 shadow-xs",
           isDragging && "opacity-50",
           itemClassName,
         )}
@@ -205,7 +205,7 @@ export function RepeatableInput<TItem extends RepeatableInputItem>({
   const showAddButton = !!(onAdd || createItem)
 
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn("space-y-density-2", className)}>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}

@@ -172,7 +172,7 @@ export default function UsageHistorySyncStateTable({
         id: "message",
         header: t("syncTab.table.columns.message"),
         cell: ({ row }: { row: Row<UsageHistoryAccountRow> }) => (
-          <div className="space-y-1">
+          <div className="space-y-density-1">
             {row.original.lastError && (
               <div className="text-destructive-text text-xs">
                 {row.original.lastError}
@@ -247,14 +247,14 @@ export default function UsageHistorySyncStateTable({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="space-y-density-3">
+      <div className="gap-density-2 flex flex-wrap items-center justify-between">
         <div className="text-muted-foreground text-xs">
           {t("syncTab.table.selectedCount", {
             count: selectedAccountIds.length,
           })}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="gap-density-2 flex flex-wrap">
           <Button
             variant="default"
             size="sm"
@@ -330,7 +330,7 @@ export default function UsageHistorySyncStateTable({
                     <TableCell
                       key={cell.id}
                       className={cn(
-                        "py-3",
+                        "py-density-3",
                         cell.column.id === "actions" &&
                           cn(
                             "bg-background group-hover:bg-muted/50 data-[state=selected]:bg-muted sticky right-0 border-l",

@@ -19,7 +19,7 @@ export function SiteAnnouncementsList({
   onMarkRead,
 }: SiteAnnouncementsListProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-density-4">
       {records.map((record) => (
         <SiteAnnouncementCard
           key={record.id}

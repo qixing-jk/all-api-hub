@@ -21,6 +21,12 @@ export const THEME_COLOR = {
   SLATE: "slate",
 } as const
 
+export const THEME_DENSITY = {
+  COMPACT: "compact",
+  DEFAULT: "default",
+  COMFORTABLE: "comfortable",
+} as const
+
 export const THEME_RADIUS = {
   NONE: "none",
   SMALL: "small",
@@ -36,6 +42,7 @@ export const THEME_ATTRIBUTES = {
   COLOR: "data-theme-color",
   PRESET: "data-theme-preset",
   RADIUS: "data-theme-radius",
+  DENSITY: "data-theme-density",
   OWNER: "data-theme-owner",
 } as const
 

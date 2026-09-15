@@ -50,7 +50,7 @@ export function AccountListItemRowLayout({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 px-3 py-2.5 transition-all sm:px-4 sm:py-3",
+        "gap-density-2 py-density-2-5 sm:py-density-3 flex items-center px-3 transition-all sm:px-4",
         className,
       )}
     >

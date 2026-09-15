@@ -568,7 +568,7 @@ export function CompactMultiSelect({
 
   if (displayMode === "chips") {
     const chipsControl = (
-      <div className="flex w-full items-center gap-2">
+      <div className="gap-density-2 flex w-full items-center">
         <Combobox
           multiple
           autoHighlight
@@ -642,7 +642,7 @@ export function CompactMultiSelect({
               <div
                 role="group"
                 aria-label={t("multiSelect.filteredResultsScope")}
-                className="border-border bg-muted/40 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b px-2 py-1.5 pointer-coarse:gap-y-2 pointer-coarse:px-3 pointer-coarse:py-2"
+                className="border-border bg-muted/40 gap-x-density-2 gap-y-density-1 py-density-1-5 pointer-coarse:gap-y-density-2 pointer-coarse:py-density-2 flex flex-wrap items-center justify-between border-b px-2 pointer-coarse:px-3"
               >
                 <p
                   className="text-muted-foreground mr-auto text-xs tabular-nums"
@@ -668,7 +668,7 @@ export function CompactMultiSelect({
                       filteredSelectableOptionValues.length === 0 ||
                       allFilteredOptionsSelected
                     }
-                    className="min-h-7 px-2 text-xs pointer-coarse:h-11 pointer-coarse:px-3 pointer-coarse:text-sm"
+                    className="min-h-(--density-control-tight) px-2 text-xs pointer-coarse:h-11 pointer-coarse:px-3 pointer-coarse:text-sm"
                   >
                     {t("multiSelect.selectAll")}
                   </Button>
@@ -681,7 +681,7 @@ export function CompactMultiSelect({
                     disabled={
                       disabled || filteredSelectableOptionValues.length === 0
                     }
-                    className="min-h-7 px-2 text-xs pointer-coarse:h-11 pointer-coarse:px-3 pointer-coarse:text-sm"
+                    className="min-h-(--density-control-tight) px-2 text-xs pointer-coarse:h-11 pointer-coarse:px-3 pointer-coarse:text-sm"
                   >
                     {t("multiSelect.invert")}
                   </Button>
@@ -692,7 +692,7 @@ export function CompactMultiSelect({
                     onClick={deselectAllFilteredOptions}
                     aria-label={t("multiSelect.deselectMatches")}
                     disabled={disabled || !hasFilteredSelection}
-                    className="min-h-7 px-2 text-xs pointer-coarse:h-11 pointer-coarse:px-3 pointer-coarse:text-sm"
+                    className="min-h-(--density-control-tight) px-2 text-xs pointer-coarse:h-11 pointer-coarse:px-3 pointer-coarse:text-sm"
                   >
                     {t("multiSelect.deselect")}
                   </Button>
@@ -724,8 +724,8 @@ export function CompactMultiSelect({
             className={cn(
               "shrink-0",
               actionsOrientation === "vertical"
-                ? "flex flex-col items-start gap-2 self-stretch"
-                : "flex flex-row items-center gap-2",
+                ? "gap-density-2 flex flex-col items-start self-stretch"
+                : "gap-density-2 flex flex-row items-center",
             )}
           >
             <Button
@@ -791,7 +791,7 @@ export function CompactMultiSelect({
           {label}
         </label>
       )}
-      <div className="flex w-full items-center gap-2">
+      <div className="gap-density-2 flex w-full items-center">
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -802,11 +802,11 @@ export function CompactMultiSelect({
               aria-expanded={open}
               aria-labelledby={triggerAriaLabelledBy}
               className={cn(
-                "dark:border-border dark:bg-card dark:text-foreground dark:hover:bg-card/80 flex min-w-0 flex-1 items-center justify-between gap-2 overflow-hidden text-left",
+                "dark:border-border dark:bg-card dark:text-foreground dark:hover:bg-card/80 gap-density-2 flex min-w-0 flex-1 items-center justify-between overflow-hidden text-left",
                 "whitespace-nowrap",
-                size === "default" && "h-9",
-                size === "sm" && "h-8",
-                size === "lg" && "h-10",
+                size === "default" && "h-(--density-control)",
+                size === "sm" && "h-(--density-control-sm)",
+                size === "lg" && "h-(--density-control-lg)",
                 !hasSelection && "text-muted-foreground",
                 className,
               )}
@@ -814,7 +814,7 @@ export function CompactMultiSelect({
               {...buttonProps}
             >
               <span className="min-w-0 flex-1 truncate">{triggerText}</span>
-              <span className="flex shrink-0 items-center gap-2">
+              <span className="gap-density-2 flex shrink-0 items-center">
                 {hasSelection && (
                   <Badge variant="secondary" size="sm">
                     {selected.length}

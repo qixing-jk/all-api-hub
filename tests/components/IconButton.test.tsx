@@ -39,16 +39,16 @@ describe("IconButton", () => {
     )
 
     expect(screen.getByRole("button", { name: "Default icon" })).toHaveClass(
-      "h-8",
-      "w-8",
-      "sm:h-9",
-      "sm:w-9",
+      "h-(--density-control-sm)",
+      "w-(--density-control-sm)",
+      "sm:h-(--density-control)",
+      "sm:w-(--density-control)",
     )
     expect(screen.getByRole("button", { name: "Small icon" })).toHaveClass(
-      "h-6",
-      "w-6",
-      "sm:h-8",
-      "sm:w-8",
+      "h-(--density-control-xs)",
+      "w-(--density-control-xs)",
+      "sm:h-(--density-control-sm)",
+      "sm:w-(--density-control-sm)",
     )
   })
 

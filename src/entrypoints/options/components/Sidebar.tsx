@@ -127,7 +127,7 @@ function Sidebar({
         animate={{ width: targetWidth }}
         style={{ width: targetWidth, height: sidebarHeight, top: sidebarTop }}
         className={cn(
-          "shrink-0 transform transition-transform duration-300 ease-in-out motion-reduce:transition-none",
+          "density-default shrink-0 transform transition-transform duration-300 ease-in-out motion-reduce:transition-none",
           Z_INDEX.sidebar,
           isMobileOpen
             ? "fixed inset-y-0 left-0 translate-x-0"

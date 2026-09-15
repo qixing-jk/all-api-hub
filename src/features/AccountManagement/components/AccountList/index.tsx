@@ -1157,7 +1157,7 @@ export default function AccountList({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-10 shrink-0 gap-1.5 px-2.5 text-xs shadow-none [@container(min-width:40rem)]:hidden"
+                className="h-(--density-control-lg) shrink-0 gap-1.5 px-2.5 text-xs shadow-none [@container(min-width:40rem)]:hidden"
                 aria-expanded={filtersOpen}
                 aria-controls={filterPanelId}
                 onClick={() => setFiltersOpen((previous) => !previous)}

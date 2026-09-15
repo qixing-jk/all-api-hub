@@ -90,7 +90,7 @@ export function ManagedSiteChannelsTable({
                       {header.isPlaceholder ? null : header.column.getCanSort() ? (
                         <button
                           type="button"
-                          className="flex w-full items-center gap-2"
+                          className="gap-density-2 flex w-full items-center"
                           onClick={header.column.getToggleSortingHandler()}
                         >
                           {flexRender(
@@ -122,7 +122,7 @@ export function ManagedSiteChannelsTable({
           {isInitialLoading ? (
             <TableRow>
               <TableCell colSpan={columnCount} className="h-32 text-center">
-                <div className="text-muted-foreground flex items-center justify-center gap-2">
+                <div className="text-muted-foreground gap-density-2 flex items-center justify-center">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   {loadingLabel}
                 </div>
@@ -163,7 +163,7 @@ export function ManagedSiteChannelsTable({
                               : undefined
                           }
                           className={cn(
-                            "py-3",
+                            "py-density-3",
                             meta.renderer ===
                               MANAGED_CHANNELS_COLUMN_RENDERERS.Actions &&
                               cn(

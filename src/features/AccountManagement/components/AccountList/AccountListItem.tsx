@@ -44,7 +44,7 @@ const AccountListItem: React.FC<AccountListItemProps> = React.memo(
         data-site-type={site.siteType}
         data-disabled={site.disabled ? "true" : undefined}
       >
-        <div className="flex w-full min-w-0 items-center gap-1 sm:gap-2">
+        <div className="gap-density-1 sm:gap-density-2 flex w-full min-w-0 items-center">
           {/* 左侧：站点信息 - 可压缩 */}
           {/* Clip any accidental overflow so long names/links never overlap the middle action buttons. */}
           <div className="min-w-[60px] flex-1 overflow-x-hidden sm:min-w-[80px]">

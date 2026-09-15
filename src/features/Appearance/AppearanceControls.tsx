@@ -7,6 +7,7 @@ import {
   DEFAULT_THEME_MODE,
   THEME_ATTRIBUTES,
   THEME_COLOR,
+  THEME_DENSITY,
   THEME_PRESET,
   THEME_RADIUS,
 } from "~/constants/theme"
@@ -15,6 +16,7 @@ import {
   DEFAULT_APPEARANCE,
   normalizeAppearance,
   THEME_COLORS,
+  THEME_DENSITIES,
   THEME_MODES,
   THEME_PRESETS,
   THEME_RADII,
@@ -62,6 +64,11 @@ export function AppearanceControls({
     [THEME_COLOR.GREEN]: t("appearance.colors.green"),
     [THEME_COLOR.SLATE]: t("appearance.colors.slate"),
   } satisfies Record<AppearancePreferences["color"], string>
+  const densityLabels = {
+    [THEME_DENSITY.COMPACT]: t("appearance.densities.compact"),
+    [THEME_DENSITY.DEFAULT]: t("appearance.densities.default"),
+    [THEME_DENSITY.COMFORTABLE]: t("appearance.densities.comfortable"),
+  } satisfies Record<AppearancePreferences["density"], string>
   const radiusLabels = {
     [THEME_RADIUS.NONE]: t("appearance.radii.none"),
     [THEME_RADIUS.SMALL]: t("appearance.radii.small"),
@@ -193,6 +200,41 @@ export function AppearanceControls({
             </label>
           ))}
         </div>
+      </fieldset>
+      <fieldset
+        id={anchors ? SETTINGS_ANCHORS.APPEARANCE_DENSITY : undefined}
+        className="space-y-3"
+      >
+        <legend className="text-sm font-medium">
+          {t("appearance.density")}
+        </legend>
+        <p className="text-muted-foreground text-sm">
+          {t("appearance.densityDescription")}
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {THEME_DENSITIES.map((density) => (
+            <label key={density} className="min-w-0 cursor-pointer">
+              <input
+                className="peer sr-only"
+                type="radio"
+                name={`${id}-density`}
+                value={density}
+                checked={appearance.density === density}
+                onChange={() => void save({ density })}
+              />
+              <span className="border-border peer-checked:border-primary peer-checked:bg-primary/10 peer-focus-visible:ring-ring flex min-h-11 items-center justify-center rounded-md border px-2 py-2 text-center text-sm break-words peer-focus-visible:ring-2">
+                {densityLabels[density]}
+              </span>
+            </label>
+          ))}
+        </div>
+        <Button
+          variant="outline"
+          disabled={saving}
+          onClick={() => void save({ density: DEFAULT_APPEARANCE.density })}
+        >
+          {t("appearance.resetDensity")}
+        </Button>
       </fieldset>
       <AppearancePreview presetLabel={presetLabels[appearance.preset]} />
       {failed && (

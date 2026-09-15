@@ -39,7 +39,7 @@ export function RepairInvalidKeysList({
     return (
       <div>
         {deleteResultMessage ? (
-          <div className="px-4 pt-4">
+          <div className="pt-density-4 px-4">
             <Alert description={deleteResultMessage} />
           </div>
         ) : null}
@@ -59,7 +59,7 @@ export function RepairInvalidKeysList({
     return (
       <div>
         {deleteResultMessage ? (
-          <div className="px-4 pt-4">
+          <div className="pt-density-4 px-4">
             <Alert description={deleteResultMessage} />
           </div>
         ) : null}
@@ -75,15 +75,15 @@ export function RepairInvalidKeysList({
   return (
     <div>
       {deleteResultMessage ? (
-        <div className="px-4 pt-4">
+        <div className="pt-density-4 px-4">
           <Alert description={deleteResultMessage} />
         </div>
       ) : null}
 
       {!readOnly ? (
-        <div className="border-border space-y-2 border-b px-4 py-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <label className="flex items-center gap-2 text-sm">
+        <div className="border-border space-y-density-2 py-density-3 border-b px-4">
+          <div className="gap-density-2 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <label className="gap-density-2 flex items-center text-sm">
               <Checkbox
                 checked={
                   filteredInvalidResources.length > 0 &&
@@ -105,7 +105,7 @@ export function RepairInvalidKeysList({
               />
               {t("keyManagement:repairMissingKeys.invalidKeys.selectAll")}
             </label>
-            <div className="flex items-center gap-2">
+            <div className="gap-density-2 flex items-center">
               <span className="text-muted-foreground text-xs">
                 {t(
                   "keyManagement:repairMissingKeys.invalidKeys.selectedCount",
@@ -136,9 +136,9 @@ export function RepairInvalidKeysList({
             t("keyManagement:repairMissingKeys.invalidKeys.unnamed")
 
           return (
-            <li key={resourceKey} className="px-4 py-3">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex min-w-0 gap-3">
+            <li key={resourceKey} className="py-density-3 px-4">
+              <div className="gap-density-2 flex flex-col sm:flex-row sm:items-start sm:justify-between">
+                <div className="gap-density-3 flex min-w-0">
                   {!readOnly ? (
                     <Checkbox
                       checked={selectedInvalidResourceKeys.has(resourceKey)}
@@ -154,8 +154,8 @@ export function RepairInvalidKeysList({
                       className="mt-0.5 shrink-0"
                     />
                   ) : null}
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <div className="space-y-density-1 min-w-0">
+                    <div className="gap-density-2 flex min-w-0 flex-wrap items-center">
                       <div className="truncate text-sm font-medium">
                         {displayLabel}
                       </div>

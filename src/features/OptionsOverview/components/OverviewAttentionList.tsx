@@ -28,7 +28,7 @@ export function OverviewAttentionList({
   if (items.length === 0) {
     return (
       <Card className="dark:bg-card/95 border-border/80 bg-card/90 shadow-border/50 dark:border-foreground/10 dark:shadow-shadow/20 flex h-full items-center justify-center shadow-sm">
-        <div className="flex items-center gap-3">
+        <div className="gap-density-3 flex items-center">
           <CheckCircle2 className="text-success-text h-5 w-5" />
           <div className="text-sm font-medium">
             {t("optionsOverview:states.allClear")}
@@ -48,10 +48,10 @@ export function OverviewAttentionList({
           return (
             <li
               key={item.id}
-              className="border-border-subtle dark:border-foreground/10 flex min-w-0 flex-col gap-3 border-b p-4 first:pt-4 last:pb-4 sm:flex-row sm:items-start sm:justify-between"
+              className="border-border-subtle dark:border-foreground/10 gap-density-3 py-density-4 first:pt-density-4 last:pb-density-4 flex min-w-0 flex-col border-b px-4 sm:flex-row sm:items-start sm:justify-between"
             >
-              <div className="min-w-0 flex-1 space-y-1.5">
-                <div className="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1">
+              <div className="space-y-density-1-5 min-w-0 flex-1">
+                <div className="gap-x-density-2 gap-y-density-1 flex min-w-0 flex-wrap items-start">
                   <Badge
                     variant={OVERVIEW_ATTENTION_BADGE_VARIANTS[item.severity]}
                     size="sm"

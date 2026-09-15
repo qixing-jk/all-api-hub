@@ -39,15 +39,15 @@ interface AccountActionMenuItemProps {
 }
 
 const menuItemClassName =
-  "flex w-full items-start gap-2 px-3 py-2 text-left text-sm text-secondary-foreground hover:text-foreground data-[highlighted]:bg-surface-subtle dark:data-[highlighted]:bg-secondary"
+  "flex w-full items-start gap-density-2 px-3 py-density-2 text-left text-sm text-secondary-foreground hover:text-foreground data-[highlighted]:bg-surface-subtle dark:data-[highlighted]:bg-secondary"
 const warningMenuItemClassName =
-  "flex w-full items-start gap-2 px-3 py-2 text-left text-sm text-warning-text hover:text-warning-text data-[highlighted]:bg-warning-soft"
+  "flex w-full items-start gap-density-2 px-3 py-density-2 text-left text-sm text-warning-text hover:text-warning-text data-[highlighted]:bg-warning-soft"
 const successMenuItemClassName =
-  "flex w-full items-start gap-2 px-3 py-2 text-left text-sm text-success-text hover:text-success-text data-[highlighted]:bg-success-soft"
+  "flex w-full items-start gap-density-2 px-3 py-density-2 text-left text-sm text-success-text hover:text-success-text data-[highlighted]:bg-success-soft"
 const destructiveMenuItemClassName =
-  "flex w-full items-start gap-2 px-3 py-2 text-left text-sm text-destructive-text hover:text-destructive-text data-[highlighted]:bg-destructive-soft"
+  "flex w-full items-start gap-density-2 px-3 py-density-2 text-left text-sm text-destructive-text hover:text-destructive-text data-[highlighted]:bg-destructive-soft"
 const disabledMenuItemClassName =
-  "flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-faint-foreground dark:text-muted-foreground cursor-not-allowed"
+  "flex w-full items-center gap-density-2 px-3 py-density-2 text-left text-sm text-faint-foreground dark:text-muted-foreground cursor-not-allowed"
 
 export const AccountActionMenuItem: React.FC<AccountActionMenuItemProps> = ({
   onClick,
@@ -113,7 +113,7 @@ export const AccountActionMenuItem: React.FC<AccountActionMenuItemProps> = ({
           <Icon className="mt-0.5 h-4 w-4 shrink-0" />
         )}
         <span className="min-w-0 flex-1">
-          <span className="flex min-w-0 items-center gap-2">
+          <span className="gap-density-2 flex min-w-0 items-center">
             <span className="min-w-0 break-words whitespace-normal">
               {resolvedLabel}
             </span>

@@ -28,6 +28,13 @@
       "slate": "Cinza ardósia",
       "violet": "Violeta"
     },
+    "densities": {
+      "comfortable": "Confortável",
+      "compact": "Compacta",
+      "default": "Padrão"
+    },
+    "density": "Densidade da interface",
+    "densityDescription": "Ajuste o espaçamento entre linhas e a altura dos controles sem alterar o tamanho do texto.",
     "description": "As alterações são salvas automaticamente e aplicadas às configurações, ao popup e ao painel lateral.",
     "preset": "Tema predefinido",
     "presetColorsHint": "Este tema inclui sua própria paleta. Escolha o tema padrão para selecionar a cor de destaque separadamente.",
@@ -49,6 +56,7 @@
     },
     "radius": "Arredondamento dos cantos",
     "reset": "Redefinir aparência",
+    "resetDensity": "Redefinir densidade",
     "saveFailed": "Não foi possível salvar. Tente novamente.",
     "secondaryAction": "Ação secundária",
     "title": "Configurações de aparência"
