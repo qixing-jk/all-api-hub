@@ -55,6 +55,25 @@ vi.mock(
   }),
 )
 
+vi.mock("~/services/accounts/accountKeyResourceInventory", () => ({
+  fetchDisplayAccountKeyResourceInventory: async () => ({
+    scope: { displayName: "Account" },
+    items: (await mocks.keys()).map((key: any) => ({
+      ref: {
+        accountId: account.id,
+        siteType: account.siteType,
+        scopeKey: "default",
+        resourceId: String(key.id),
+      },
+      displayName: key.label,
+      maskedLabel: "masked",
+      status: "enabled",
+      fields: [],
+      actions: { canUpdate: true, canDelete: true },
+    })),
+  }),
+}))
+
 vi.mock(
   "~/services/accounts/tokenQuickCreateResolution",
   async (importOriginal) => ({
@@ -126,16 +145,16 @@ describe("key workflow language changes", () => {
     },
   )
 
-  it("keeps copy-key expansion and post-create feedback through language changes", async () => {
+  it("keeps native inventory and post-create feedback through language changes", async () => {
     const { result } = renderHook(() => useCopyKeyDialog(true, account), {
       wrapper,
     })
-    await waitFor(() => expect(result.current.runtimeKeys).toHaveLength(1))
-    act(() => result.current.toggleRuntimeKeyExpansion(runtimeKey.id))
+    await waitFor(() => expect(result.current.nativeKeyRows).toHaveLength(1))
+    const inventory = result.current.nativeKeyRows
     await act(async () => {
       await i18n.changeLanguage("zh-CN")
     })
-    expect(result.current.expandedRuntimeKeys.has(runtimeKey.id)).toBe(true)
+    expect(result.current.nativeKeyRows).toBe(inventory)
     expect(mocks.keys).toHaveBeenCalledTimes(1)
 
     mocks.keys.mockResolvedValue([])
