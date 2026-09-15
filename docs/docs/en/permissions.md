@@ -1,107 +1,47 @@
 # Permission Management (Optional Permissions)
 
-> Grant optional permissions as needed for temporary-window shield bypass, automatic refresh, or assistive tools. Keep them disabled when you do not need the related features. Local storage uses a built-in permission and needs no separate opt-in.
-
-## Feature Overview
-
--   **Centralized Management of Optional Permissions**
-    -   View, grant, or revoke the optional permission status of the extension uniformly on the "Permission Management" page.
--   **Integration with Cloudflare Shield Bypass**
-    -   Some permissions are used to support temporary window shield bypass (e.g., Cloudflare 5-second challenge), ensuring data can still be refreshed normally even when the site has a firewall.
--   **Revocable at Any Time**
-    -   All optional permissions can be disabled at any time in browser settings or on the plugin's "Permission Management" page, without affecting core offline functionality.
+Use Permission Management to view, grant, and revoke optional extension permissions. Enable the permissions needed for account refresh, assistive tools, system notifications, or bookmark imports. Without a permission, its related feature may be limited while other features remain available.
 
 ## Accessing Settings
 
-1.  Open the plugin → Go to the **Settings** page.
-2.  When the browser supports optional permissions, the **"Permission Management / Permissions"** tab will appear.
-3.  Click to enter and view the list and status of optional permissions available for the current extension.
+Open **Settings → Permissions** in the extension to see the permissions available in your browser and their current status. Supported permissions vary by browser; use the list shown on the page as your guide.
 
-> Tip: If your browser does not support or has not enabled relevant permissions, this tab may not appear.
+## When to Grant Permissions
 
-## Supported Permission Types
+| Permission | Purpose and use |
+| --- | --- |
+| Cookie access | Read the cookies needed for the relevant site when checking sign-in status or refreshing an account. |
+| Network request rules, access, or modification | Supply the current account's request information during temporary-page verification and account refresh. Chrome, Edge, and Firefox use different permission names. |
+| Clipboard Read | Recognize redemption codes or API details in content you copy for Redemption Assist or AI API Test. |
+| System notifications | Send browser notifications for background task results and other configured events. Select the events in notification settings as well. |
+| Browser bookmarks | Read saved URLs when importing sites from bookmarks. |
 
-Specific permission names may vary slightly depending on the browser, but typically include:
+Leave a permission disabled if you do not use its feature. For verification or refresh problems, check the permissions requested by the feature; ordinary refresh does not require enabling every permission. See [Cloudflare Shield Bypass Helper](./cloudflare-helper.md) for website verification settings.
 
--   **Cookies (Cookie Permission)**
-    -   Purpose: Allows the extension to read necessary cookies within a controlled scope, in order to attach authentication information to background requests.
-    -   Typical Scenarios:
-        -   After a temporary window shield bypass is complete, carry the same session cookie to background refresh requests.
+## Granting, Revoking, and Refreshing Status
 
--   **Web Request (Network Request Observation)**
-    -   Purpose: Allows the extension to observe outgoing requests in specific scenarios (e.g., supplementing necessary request headers for the shield bypass process).
-    -   Typical Scenarios:
-        -   Determining if a request is blocked by a firewall, or if a temporary window retry needs to be triggered.
+1. Find the permission you need and click **Allow (recommended)**.
+2. If the browser shows a confirmation dialog, confirm it and check that the page shows **Granted**. Some permissions do not show a dialog; use the status on the page to confirm the result.
+3. Click **Revoke** when you no longer need the permission. You may need to grant it again when using the related feature.
 
--   **Web Request Blocking (Network Request Blocking/Modification)**
-    -   Purpose: Synchronously modify requests before they are sent (e.g., attach Cookies, Headers) to ensure correct authentication information is carried before firewalls/Cloudflare.
-    -   Typical Scenarios:
-        -   Ensuring Cloudflare shield bypass or refresh requests with cookies can reliably pass site protection.
+Wait for status loading to finish while the page shows **Checking…**. If you change permissions in browser settings, click **Refresh status** to read them again.
 
-> The extension will not use network permissions to scan sites unrelated to you; they are only used on the relay station domains you have connected to, and only within necessary workflows.
+## Data Storage and Privacy
 
-## Built-in Local Storage Permission
+Account and site settings are stored locally in your browser by default. The extension uses built-in local storage permissions, including `unlimitedStorage`, to save settings and history. These do not need to be enabled separately on the permissions page. The unlimited storage permission itself produces no permission warning.
 
-The extension declares **unlimited storage (`unlimitedStorage`)** as a required permission. Chrome, Edge, and Firefox do not support requesting it as an optional permission, but it produces no permission warning. Adding this permission alone does not disable the extension after an update or require renewed consent. No manual action in Permissions is needed.
+Usage and balance histories are retained for the number of days you choose in their settings, then cleaned up automatically. Other histories and caches have their own cleanup rules. Available storage still depends on free space on your device. For backups, see [WebDAV Backup and Automatic Synchronization](./webdav-sync.md).
 
-This built-in permission lets local storage exceed the browser's default quota. The extension only lifts the following limits, where an independent cleanup mechanism exists or complete data is needed for accurate statistics:
-
-- The settings caps of 365 days for usage history and 3,650 days for balance history, allowing you to choose longer retention periods. **Your existing retention periods do not change.** Data beyond your chosen retention period is still cleaned up automatically.
-- The limit of 256 deduplication fingerprints at the usage-sync boundary timestamp, preventing requests in a busy second from being counted again. Advancing the sync boundary replaces the old fingerprints; fingerprints for all historical requests are not retained.
-
-The following entry limits still evict old records and remain in effect with unlimited storage:
-
-- Shield-bypass history: the latest 100 records; verification summaries: the latest 500 targets.
-- Recently used API addresses: 20 addresses, with up to 8 source origins per address.
-- Site announcements: up to 100 content records per site; deduplication markers: up to 1,000 per site and 10,000 globally.
-- Managed-site import receipts: the latest 500 records; starting a new repair task replaces the previous task's data.
-
-These histories and caches have no independent expiry mechanism, so entry limits prevent ongoing accumulation. Cache expiry, in-memory caches, per-request limits, data validation, and display limits retain their respective constraints. Unlimited storage does not increase browser sync-storage or session-storage quotas, and available space still depends on device storage.
-
-## Status and Operations
-
-On the permission management page, you can see:
-
--   **Status Indicators**
-    -   "检测中 / Checking…": Synchronizing permission status with the browser.
-    -   "已授予 / Granted": Currently allowed by the browser.
-    -   "未授予 / Not granted": Currently not allowed.
--   **Action Buttons**
-    -   **允许 (推荐) / Allow (Recommended)**: Requests the corresponding optional permission from the browser.
-    -   **撤销 / Revoke**: Actively withdraws the current permission.
-    -   **刷新状态 / Refresh Status**: If you have manually modified permissions in your browser settings, click refresh to synchronize the status.
-
-## When Are These Permissions Needed?
-
--   It is recommended to consider enabling them in the following scenarios:
-    -   Frequently accessing relay stations protected by Cloudflare or other firewalls, and wishing to automatically complete shield bypass and refresh data.
-    -   Needing to automatically refresh a large amount of account data in the background, and wishing to minimize failures due to protection.
--   In the following scenarios, they can remain disabled:
-    -   Only occasionally manually refreshing a small number of accounts.
-    -   The relay station used has no additional firewalls or 5-second challenges, etc.
-
-## Privacy and Security Statement
-
--   Account and site configurations are stored locally in the browser by default; features such as balance refresh, site API access, WebDAV backup or sync, and anonymous product analytics make the necessary network requests according to your settings.
--   Optional permissions are only enabled under the following conditions:
-    -   You explicitly click "Allow" on the permission management page;
-    -   The browser grants the permission; if a confirmation dialog appears, you confirm it.
--   You can always:
-    -   Click "Revoke" on the "Permission Management" page;
-    -   Or remove relevant permissions from the browser's own extension management interface.
+Granting an optional permission does not enable its related feature by itself. The extension accesses data according to the features and settings you use. Balance refresh, site API requests, backup and sync, and anonymous product analytics make their corresponding network requests.
 
 ## Troubleshooting
 
--   **Nothing happens after clicking "Allow"?**
-    -   First check whether the status has changed to "Granted";
-    -   If it is still not granted, the browser might not have displayed the permission dialog, or it might have been blocked by the system;
-    -   Check for a permission icon or prompt near the address bar.
--   **Shield bypass/refresh still failing?**
-    -   Confirm that Cloudflare shield bypass related settings are enabled, and refer to the [Cloudflare Shield Bypass Helper](./cloudflare-helper.md) documentation;
-    -   Check your network environment (proxy, firewall, IP quality, etc.).
+- **No dialog appears after clicking Allow:** Check whether the status already shows Granted. If it does not, look for browser permission prompts and retry when you need the feature.
+- **A permission is unavailable or missing:** Check whether your browser supports it, then try refreshing the status.
+- **Verification or refresh still fails after granting permissions:** Also check website verification settings, site sign-in status, and your network connection. See [Cloudflare Shield Bypass Helper](./cloudflare-helper.md).
 
 ## Related Documentation
 
--   [Cloudflare Shield Bypass Helper](./cloudflare-helper.md)
--   [Automatic Refresh and Real-time Data](./auto-refresh.md)
--   [WebDAV Backup and Automatic Synchronization](./webdav-sync.md)
+- [Cloudflare Shield Bypass Helper](./cloudflare-helper.md)
+- [Automatic Refresh and Real-time Data](./auto-refresh.md)
+- [WebDAV Backup and Automatic Synchronization](./webdav-sync.md)
