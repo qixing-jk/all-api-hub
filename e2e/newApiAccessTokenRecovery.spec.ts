@@ -160,6 +160,9 @@ for (const scenario of [
     const serviceWorker = await getServiceWorker(context)
     await seedUserPreferences(serviceWorker, {
       autoProvisionKeyOnAccountAdd: false,
+      // This flow enters its URL manually; an asynchronous active-tab prefill
+      // must not race Playwright's fill operation.
+      autoFillCurrentSiteUrlOnAccountAdd: false,
       tempWindowFallback: { enabled: false },
     })
 

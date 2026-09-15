@@ -310,6 +310,15 @@ for (const scenario of cases) {
     await expect(
       page.getByRole("heading", { name: "Request count key" }),
     ).toBeVisible()
+    // Initial status discovery reads the same managed-site endpoints. Finish
+    // that phase before attributing requests to explicit deletion preparation.
+    await expect(
+      page.getByTestId(KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge),
+    ).toContainText(
+      scenario.site === SITE_TYPES.CLI_PROXY_API
+        ? "Unknown"
+        : /Added|Not added|Needs confirmation|Cannot fully verify/u,
+    )
     await page.getByRole("button", { name: "Delete Key", exact: true }).click()
     await expect(
       page.getByRole("checkbox", {
