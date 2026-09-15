@@ -89,17 +89,30 @@ describe("AIHubMix native key HTTP contract", () => {
       full_key: "sk-once",
     })
   })
-  it.each([undefined, [], true])(
+  it.each([undefined, [], true, {}, { success: true, message: "ok" }])(
     "does not invent a key from an acknowledgement",
     async (data) => {
       server.use(
         http.post(endpoint, () => HttpResponse.json({ success: true, data })),
       )
       const result = await createAIHubMixKey(request, payload)
-      if (data === undefined) expect(result).toEqual({ success: true })
-      else expect(result).toBeUndefined()
+      expect(result).toBeUndefined()
     },
   )
+  it.each([
+    { id: 7 },
+    { token_id: "7" },
+    { name: "Created" },
+    { key: "sk-once" },
+    { full_key: "sk-once" },
+    { token: "sk-once" },
+    { value: "sk-once" },
+  ])("preserves native create evidence %j", async (data) => {
+    server.use(
+      http.post(endpoint, () => HttpResponse.json({ success: true, data })),
+    )
+    await expect(createAIHubMixKey(request, payload)).resolves.toEqual(data)
+  })
   it("updates the exact key with native quota and restrictions", async () => {
     let written: unknown
     server.use(

@@ -890,7 +890,12 @@ export async function createAIHubMixKey(
     method: "POST",
     body: JSON.stringify(payload),
   })
-  return created && typeof created === "object" && !Array.isArray(created)
+  return created &&
+    typeof created === "object" &&
+    !Array.isArray(created) &&
+    ["id", "token_id", "name", "key", "full_key", "token", "value"].some(
+      (field) => field in created,
+    )
     ? (created as AIHubMixKeyData)
     : undefined
 }

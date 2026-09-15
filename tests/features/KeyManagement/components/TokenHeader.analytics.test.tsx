@@ -8,7 +8,10 @@ import {
   SITE_TYPES,
 } from "~/constants/siteType"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
-import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import {
+  ACCOUNT_RUNTIME_KEY_SOURCES,
+  buildAccountKeyResourceRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
@@ -307,7 +310,17 @@ describe("RuntimeKeyHeader analytics", () => {
       screen.getByRole("button", { name: "keyManagement:actions.deleteKey" }),
     )
     const runtimeKey = handleEditKey.mock.calls[0][0]
-    expect(runtimeKey).toMatchObject({ label: "Selected key" })
+    expect(runtimeKey).toMatchObject({
+      label: "Selected key",
+      accountId: account.id,
+      source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
+      resourceRef: {
+        accountId: account.id,
+        siteType: account.siteType,
+        resourceId: String(token.id),
+        scopeKey: "account",
+      },
+    })
     expect(handleDeleteKey).toHaveBeenCalledExactlyOnceWith(runtimeKey)
     expect(copyKey).toHaveBeenCalledExactlyOnceWith(account, runtimeKey)
   })
