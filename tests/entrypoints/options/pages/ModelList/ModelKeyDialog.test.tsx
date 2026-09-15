@@ -732,6 +732,9 @@ describe("ModelKeyDialog", () => {
     expect(
       screen.getByText("keyManagement:oneTimeKey.title"),
     ).toBeInTheDocument()
+    expect(
+      screen.getByLabelText("keyManagement:oneTimeKey.keyLabel"),
+    ).toHaveValue("sk-obsolete")
     expect(toastSuccessMock).not.toHaveBeenCalledWith(
       "modelList:keyDialog.createSuccess",
     )

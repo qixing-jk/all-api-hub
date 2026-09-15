@@ -27,15 +27,19 @@ export const RECOVERABLE_ACTION_POLICY: KeyResourceActionPolicy = {
   batchSelect: true,
 }
 
-type RuntimeKeyHeaderHarnessProps = Partial<
-  ComponentProps<typeof RuntimeKeyHeader>
-> & {
-  token?: ReturnType<typeof createToken>
-  handleEditToken?: () => void
-  handleDeleteToken?: () => void
-  translate?: TFunction
-  withCCSwitchExport?: boolean
-}
+type HeaderProps = ComponentProps<typeof RuntimeKeyHeader>
+
+type RuntimeKeyHeaderHarnessProps = Partial<Omit<HeaderProps, "runtimeKey">> &
+  (
+    | { runtimeKey?: undefined }
+    | Required<Pick<HeaderProps, "runtimeKey" | "headerProps" | "actionPolicy">>
+  ) & {
+    token?: ReturnType<typeof createToken>
+    handleEditToken?: () => void
+    handleDeleteToken?: () => void
+    translate?: TFunction
+    withCCSwitchExport?: boolean
+  }
 
 export function RuntimeKeyHeaderHarness({
   account: accountOverride,
