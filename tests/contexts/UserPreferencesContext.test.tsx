@@ -550,13 +550,18 @@ describe("UserPreferencesContext", () => {
     )
   })
 
-  it("waits for initial hydration before applying external appearance updates", async () => {
+  it("preserves external appearance updates when initial hydration returns an older snapshot", async () => {
     const pending = createDeferred<UserPreferences>()
     mockedUserPreferences.getPreferences.mockReturnValueOnce(pending.promise)
     const storage = new Storage({ area: "local" })
     const preferences = createPersistedPreferencesFixture({
-      themeMode: THEME_MODE.DARK,
+      themeMode: THEME_MODE.LIGHT,
     })
+    const pendingAppearance = {
+      preset: THEME_PRESET.ANTHROPIC,
+      color: THEME_COLOR.VIOLET,
+      radius: THEME_RADIUS.LARGE,
+    }
     render(
       <UserPreferencesProvider>
         <Probe />
@@ -564,10 +569,16 @@ describe("UserPreferencesContext", () => {
     )
 
     await act(async () => {
-      await storage.set(
-        USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
-        preferences,
-      )
+      await storage.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+        ...preferences,
+        themeMode: THEME_MODE.DARK,
+      })
+      await storage.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+        ...preferences,
+        themeMode: THEME_MODE.DARK,
+        appearance: pendingAppearance,
+        showTodayCashflow: !preferences.showTodayCashflow,
+      })
     })
     expect(latestContext).toBeNull()
     expect(screen.queryByTestId(TEST_IDS.loadingState)).not.toBeInTheDocument()
@@ -577,6 +588,10 @@ describe("UserPreferencesContext", () => {
       await pending.promise
     })
     expect(latestContext?.themeMode).toBe(THEME_MODE.DARK)
+    expect(latestContext?.preferences).toMatchObject({
+      appearance: pendingAppearance,
+      showTodayCashflow: preferences.showTodayCashflow,
+    })
 
     const appearance = {
       preset: THEME_PRESET.ANTHROPIC,
@@ -597,6 +612,39 @@ describe("UserPreferencesContext", () => {
       showTodayCashflow: preferences.showTodayCashflow,
     })
     expect(mockedUserPreferences.savePreferences).not.toHaveBeenCalled()
+  })
+
+  it("does not replay older storage events over an explicit preference reload", async () => {
+    const preferences = createPersistedPreferencesFixture()
+    await renderProvider(preferences)
+    const storage = new Storage({ area: "local" })
+    await act(async () => {
+      await storage.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+        ...preferences,
+        themeMode: THEME_MODE.DARK,
+      })
+    })
+    expect(latestContext?.themeMode).toBe(THEME_MODE.DARK)
+
+    const reloadedPreferences = createPersistedPreferencesFixture({
+      themeMode: THEME_MODE.LIGHT,
+      appearance: {
+        preset: THEME_PRESET.DEFAULT,
+        color: THEME_COLOR.GREEN,
+        radius: THEME_RADIUS.NONE,
+      },
+    })
+    mockedUserPreferences.getPreferences.mockResolvedValueOnce(
+      reloadedPreferences,
+    )
+    await act(async () => {
+      await latestContext!.loadPreferences()
+    })
+
+    expect(latestContext?.preferences).toMatchObject({
+      themeMode: THEME_MODE.LIGHT,
+      appearance: reloadedPreferences.appearance,
+    })
   })
 
   it("loads preferences and normalizes hidden today-cashflow selections", async () => {
