@@ -18,6 +18,7 @@ import {
   MODEL_LIST_SOURCE_IDENTITY_KINDS,
 } from "~/features/ModelList/modelManagementSources"
 import {
+  buildAccountKeyResourceRuntimeKey,
   buildAccountRuntimeKeyAccount,
   buildDisplayAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
@@ -211,6 +212,35 @@ describe("model list batch verification helpers", () => {
         tokenName: "Second key",
       },
     ])
+  })
+
+  it("retains legacy row identity when inventory keys become native resources", () => {
+    const account = createAccountFixture()
+    const keys = [51, 52].map((id) =>
+      buildAccountKeyResourceRuntimeKey(account, {
+        ref: {
+          accountId: account.id,
+          siteType: account.siteType,
+          scopeKey: "account",
+          resourceId: String(id),
+        },
+        label: `Key ${id}`,
+        secret: "sk-native",
+        legacyTokenId: id,
+      }),
+    )
+    expect(
+      pickBatchVerifyCompatibleRuntimeKey(keys, {
+        modelId: "shared-model",
+        enableGroups: null,
+        sourceIdentity: {
+          kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_TOKEN,
+          id: "account-1:token:52",
+          tokenId: 52,
+          tokenName: "Second key",
+        },
+      }),
+    ).toBe(keys[1])
   })
 
   it("selects the matching token for token-scoped rows", () => {

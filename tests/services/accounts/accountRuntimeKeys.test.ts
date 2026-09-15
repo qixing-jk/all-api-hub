@@ -9,6 +9,7 @@ import {
   accountRuntimeKeyToLegacyApiToken,
   appendOrReplaceAccountRuntimeKey,
   buildAccountKeyResourceRuntimeKey,
+  buildAccountKeyResourceRuntimeKeyFromFacts,
   buildAccountKeyResourceRuntimeKeyId,
   buildAccountTokenRuntimeKey,
   buildAccountTokenRuntimeKeyId,
@@ -19,6 +20,7 @@ import {
   collectAccountRuntimeKeySecrets,
   findDefaultSelectableAccountRuntimeKey,
   formatAccountRuntimeKeySecretForSite,
+  getAccountRuntimeKeyExportId,
   getAccountRuntimeKeyLocator,
   getAccountRuntimeKeyLocatorAccountId,
   hasUsableAccountRuntimeKeySecret,
@@ -132,6 +134,33 @@ describe("accountRuntimeKeys", () => {
           },
         ),
       ).toBe(false)
+    },
+  )
+
+  it.each([
+    ["enabled", "active"],
+    ["unknown", "unknown"],
+    ["disabled", "inactive"],
+    ["expired", "inactive"],
+  ] as const)(
+    "preserves %s resource status without recovering a secret",
+    (status, expected) => {
+      const key = buildAccountKeyResourceRuntimeKeyFromFacts(account, {
+        ref: {
+          accountId: account.id,
+          siteType: account.siteType,
+          scopeKey: "account",
+          resourceId: "opaque-key",
+        },
+        displayName: "Native key",
+        maskedLabel: "***",
+        status,
+        fields: [],
+        actions: { canUpdate: false, canDelete: false },
+      })
+      expect(key.status).toBe(expected)
+      expect(key.secret).toBe("")
+      expect(getAccountRuntimeKeyExportId(key)).toBe(key.id)
     },
   )
 
