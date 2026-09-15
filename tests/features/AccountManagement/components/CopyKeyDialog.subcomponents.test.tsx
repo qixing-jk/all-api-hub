@@ -177,8 +177,11 @@ describe("CopyKeyDialog subcomponents", () => {
     expect(cursorPlusExportDialogMock).toHaveBeenCalledWith(
       expect.objectContaining({
         isOpen: true,
-        account: ACCOUNT,
-        runtimeKey,
+        source: expect.objectContaining({
+          id: runtimeKey.id,
+          providerId: ACCOUNT.id,
+          resolveApiKey: expect.any(Function),
+        }),
       }),
     )
     await user.click(

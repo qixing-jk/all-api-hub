@@ -171,6 +171,8 @@ vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: (siteType: string) => {
     if (siteType === SITE_TYPES.OPENROUTER) {
       const keyResources = {
+        inventorySecretAvailability:
+          INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
         open: (...args: any[]) => openAccountKeyResourcesMock(...args),
       }
       return {
