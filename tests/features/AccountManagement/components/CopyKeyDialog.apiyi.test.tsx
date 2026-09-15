@@ -64,9 +64,13 @@ describe("CopyKeyDialog APIyi family defaults", () => {
         screen.queryByText("keyManagement:keyDetails.createResponseOnlySecret"),
       ).not.toBeInTheDocument()
       await waitFor(() => expect(inventoryPages).toEqual(["0", "1"]))
-      await user.click(await screen.findByText(token.name))
       await user.click(
-        screen.getByRole("button", { name: "ui:dialog.copyKey.copy" }),
+        await screen.findByRole("button", {
+          name: "keyManagement:actions.detailsFor",
+        }),
+      )
+      await user.click(
+        await screen.findByRole("button", { name: "ui:dialog.copyKey.copy" }),
       )
 
       await waitFor(() =>

@@ -161,7 +161,7 @@ for (const width of [320, 390, 1100]) {
         .click()
       expect((await tokenResponse).ok()).toBe(true)
       await expect(page).toHaveURL(
-        /options\.html\?accountId=menu-account#keys$/,
+        /options\.html\?accountId=menu-account&workspace=account#keys$/,
       )
       await expect(page.getByRole("menu")).toHaveCount(0)
     })
