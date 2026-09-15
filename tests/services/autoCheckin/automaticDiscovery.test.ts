@@ -448,6 +448,29 @@ describe("automatic check-in preparation", () => {
     ).toEqual({ mode: "automatic" })
   })
 
+  it.each(["before claim", "before probes", "after probes"])(
+    "fails closed when reading global preferences throws %s",
+    async (stage) => {
+      const account = saveAccount()
+      const isEnabled = vi.fn(async () => true)
+      if (stage !== "before claim") isEnabled.mockResolvedValueOnce(true)
+      if (stage === "after probes") isEnabled.mockResolvedValueOnce(true)
+      isEnabled.mockRejectedValue(new Error("preferences unavailable"))
+
+      expect(await prepare(account, isEnabled)).toEqual({
+        account: null,
+        discovered: false,
+      })
+      const saved = await accountQueries.getAccountById(account.id)
+      expect(saved?.checkIn.selection).toEqual({ mode: "automatic" })
+      expect(saved?.checkIn.methodKnowledge.lastFullDiscoveryAt).toBeUndefined()
+      expect(checkIn).not.toHaveBeenCalled()
+      if (stage !== "after probes") {
+        detectors.forEach((detect) => expect(detect).not.toHaveBeenCalled())
+      }
+    },
+  )
+
   it("rejects stale selected-method status before writing it to a changed account", async () => {
     const account = createAccount()
     account.checkIn.selection = { mode: "automatic", methodId: PRO }

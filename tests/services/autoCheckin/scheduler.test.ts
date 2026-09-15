@@ -507,7 +507,8 @@ describe("daily automatic check-in preparation", () => {
     account.checkIn = noSelectedCheckIn()
     mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
     vi.mocked(prepareAutomaticCheckIn).mockImplementation(
-      async ({ account: current, context }) => {
+      async ({ account: current, context, isAutomaticExecutionEnabled }) => {
+        expect(await isAutomaticExecutionEnabled()).toBe(true)
         expect(context.protectionBypassExecution).toEqual(SCHEDULED_EXECUTION)
         return {
           account: { ...current, checkIn: readyConfig },
@@ -616,7 +617,8 @@ describe("daily automatic check-in preparation", () => {
       reason: "method_unsupported",
     })
     vi.mocked(prepareAutomaticCheckIn).mockImplementation(
-      async ({ account: current }) => {
+      async ({ account: current, isAutomaticExecutionEnabled }) => {
+        expect(await isAutomaticExecutionEnabled()).toBe(true)
         if (
           current.checkIn.methodKnowledge.methods["sub2api-pro:daily-checkin"]
             ?.detection.outcome !== "unsupported"
@@ -661,6 +663,36 @@ describe("daily automatic check-in preparation", () => {
     ).toBe("genius-programmer:daily-checkin")
     expect(storedStatus.perAccount[account.id].status).toBe("success")
   })
+
+  it.each(["deleted account", "failed preparation"])(
+    "does not execute a replacement after recovery finds a %s",
+    async (failure) => {
+      const account = createAccount()
+      mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+      mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+        kind: "skipped",
+        reason: "method_unsupported",
+      })
+      mockedAccountStorage.getAccountById.mockResolvedValue(
+        failure === "deleted account" ? null : account,
+      )
+      vi.mocked(prepareAutomaticCheckIn)
+        .mockImplementationOnce(async ({ account }) => ({
+          account,
+          discovered: false,
+        }))
+        .mockResolvedValue({ account: null, discovered: false })
+
+      await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+
+      expect(mockedMethods.executeSelectedCheckIn).toHaveBeenCalledTimes(1)
+      expect(storedStatus.perAccount[account.id]).toMatchObject({
+        status: "failed",
+        reasonCode: "account_unavailable",
+        retryable: false,
+      })
+    },
+  )
 
   it.each([
     {
