@@ -12,12 +12,15 @@ import {
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
-const { cursorPlusExportDialogMock, kelivoExportDialogMock } = vi.hoisted(
-  () => ({
-    cursorPlusExportDialogMock: vi.fn(),
-    kelivoExportDialogMock: vi.fn(),
-  }),
-)
+const {
+  cursorPlusExportDialogMock,
+  kelivoExportDialogMock,
+  claudeCodeRouterImportDialogMock,
+} = vi.hoisted(() => ({
+  cursorPlusExportDialogMock: vi.fn(),
+  kelivoExportDialogMock: vi.fn(),
+  claudeCodeRouterImportDialogMock: vi.fn(),
+}))
 
 vi.mock("~/components/CursorPlusExportDialog", () => ({
   CursorPlusExportDialog: (props: unknown) => {
@@ -47,7 +50,14 @@ vi.mock("~/components/CCSwitchExportDialog", () => ({
   CCSwitchExportDialog: () => null,
 }))
 vi.mock("~/components/ClaudeCodeRouterImportDialog", () => ({
-  ClaudeCodeRouterImportDialog: () => null,
+  ClaudeCodeRouterImportDialog: (props: { onClose: () => void }) => {
+    claudeCodeRouterImportDialogMock(props)
+    return (
+      <button onClick={props.onClose}>
+        close Claude Code Router profile export
+      </button>
+    )
+  },
 }))
 vi.mock("~/components/CliProxyApiExportDialog", () => ({
   CliProxyApiExportDialog: () => null,
@@ -199,4 +209,77 @@ it("adapts a profile for Cursor++ export and clears it on close", async () => {
     screen.getByRole("button", { name: "close Cursor++ profile export" }),
   )
   expect(setCursorPlusProfile).toHaveBeenCalledWith(null)
+})
+
+it("adapts a profile for Claude Code Router export and clears it on close", async () => {
+  const setClaudeCodeRouterProfile = vi.fn()
+  const claudeCodeRouterProfile = {
+    id: "profile-example",
+    name: "Example Provider",
+    apiType: API_TYPES.OPENAI_COMPATIBLE,
+    baseUrl: "https://api.example.invalid/v1",
+    apiKey: "sk-example",
+    tagIds: [],
+    notes: "",
+    createdAt: 1,
+    updatedAt: 1,
+  }
+  const controller = {
+    isEditorOpen: false,
+    setIsEditorOpen: vi.fn(),
+    editingProfile: null,
+    addPrefill: null,
+    tags: [],
+    createTag: vi.fn(),
+    renameTag: vi.fn(),
+    deleteTag: vi.fn(),
+    handleSave: vi.fn(),
+    verifyingProfile: null,
+    setVerifyingProfile: vi.fn(),
+    cliVerifyingProfile: null,
+    ccSwitchProfile: null,
+    claudeCodeRouterProfile,
+    setClaudeCodeRouterProfile,
+    kiloCodeProfile: null,
+    kelivoProfile: null,
+    cliProxyApiProfile: null,
+    deletingProfile: null,
+  } as unknown as ApiCredentialProfilesController
+
+  const user = userEvent.setup()
+  render(<ApiCredentialProfilesDialogs controller={controller} />)
+
+  await waitFor(() => {
+    expect(claudeCodeRouterImportDialogMock).toHaveBeenCalledWith({
+      isOpen: true,
+      onClose: expect.any(Function),
+      routerBaseUrl: undefined,
+      routerApiKey: undefined,
+      source: expect.objectContaining({
+        providerName: claudeCodeRouterProfile.name,
+        credentialName: claudeCodeRouterProfile.name,
+        baseUrl: claudeCodeRouterProfile.baseUrl,
+        resolveApiKey: expect.any(Function),
+      }),
+      analyticsContext: {
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+        actionId:
+          PRODUCT_ANALYTICS_ACTION_IDS.ImportApiCredentialProfileToClaudeCodeRouter,
+        surfaceId:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    })
+  })
+
+  await expect(
+    claudeCodeRouterImportDialogMock.mock.lastCall?.[0].source.resolveApiKey(),
+  ).resolves.toBe(claudeCodeRouterProfile.apiKey)
+
+  await user.click(
+    screen.getByRole("button", {
+      name: "close Claude Code Router profile export",
+    }),
+  )
+  expect(setClaudeCodeRouterProfile).toHaveBeenCalledWith(null)
 })

@@ -1363,6 +1363,28 @@ describe("KiloCodeExportDialog", () => {
     )
   })
 
+  it("keeps newest selection independent of inventory order with missing or equal timestamps", () => {
+    const dated = {
+      ...createRuntimeKey({ id: 2, name: "Dated", key: "sk-dated" }),
+      createdAt: 100,
+    }
+    const undated = {
+      ...createRuntimeKey({ id: 99, name: "Undated", key: "sk-undated" }),
+      createdAt: undefined,
+    }
+    const tied = {
+      ...createRuntimeKey({ id: 10, name: "Tied", key: "sk-tied" }),
+      createdAt: 100,
+    }
+    for (const keys of [
+      [dated, undated, tied],
+      [tied, undated, dated],
+      [undated, dated, tied],
+    ]) {
+      expect(pickNewestKiloCodeRuntimeKey(keys)).toBe(tied)
+    }
+  })
+
   it("throws a clear invariant error when selecting from an empty refreshed token list", () => {
     expect(() => pickNewestKiloCodeRuntimeKey([])).toThrow(
       "Expected at least one Kilo Code token to select",

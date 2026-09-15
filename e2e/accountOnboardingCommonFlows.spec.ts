@@ -20,7 +20,7 @@ import {
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import enMessages from "~/locales/en/messages.json" with { type: "json" }
-import { buildAccountTokenRuntimeKeyId } from "~/services/accounts/accountRuntimeKeys"
+import { buildAccountKeyResourceRuntimeKeyId } from "~/services/accounts/accountRuntimeKeys"
 import { OPENROUTER_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { ApiToken, SiteAccount } from "~/types"
@@ -988,7 +988,12 @@ test("exports an account key from the copy-key dialog to CC Switch", async ({
   await page
     .getByTestId(
       getCopyKeyDialogRuntimeKeyItemTestId(
-        buildAccountTokenRuntimeKeyId("e2e-copy-dialog-cc-switch-account", 1),
+        buildAccountKeyResourceRuntimeKeyId({
+          accountId: "e2e-copy-dialog-cc-switch-account",
+          siteType: SITE_TYPES.NEW_API,
+          scopeKey: "account",
+          resourceId: "1",
+        }),
       ),
     )
     .click()
