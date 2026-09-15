@@ -848,7 +848,10 @@ describe("AccountActionButtons", () => {
       }),
       expect.objectContaining({
         secret: "",
-        token: expect.objectContaining({ key: "" }),
+        resourceRef: expect.objectContaining({
+          accountId: "acc-6b",
+          scopeKey: "account",
+        }),
       }),
     )
     expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalledWith(

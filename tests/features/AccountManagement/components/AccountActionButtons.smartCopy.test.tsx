@@ -116,7 +116,7 @@ describe("AccountActionButtons", () => {
     ).not.toHaveAttribute("aria-busy")
   })
 
-  it("shows a fetch-info error when the token probe returns a non-array payload", async () => {
+  it("reports an inventory failure when the native key list cannot be loaded", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce({ invalid: true } as any)
 
     const user = userEvent.setup()
@@ -139,7 +139,7 @@ describe("AccountActionButtons", () => {
 
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledWith(
-        "account:actions.fetchKeyInfoFailed",
+        "account:actions.fetchKeyListFailed",
       )
     })
     expect(clipboardWriteTextMock).not.toHaveBeenCalled()

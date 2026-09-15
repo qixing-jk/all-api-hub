@@ -101,7 +101,10 @@ vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/protectionBypass/client", () => ({
+vi.mock("~/services/protectionBypass/client", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/protectionBypass/client")
+  >()),
   withProtectionBypassUserCommand: withProtectionBypassUserCommandMock,
 }))
 
