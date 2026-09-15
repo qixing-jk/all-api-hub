@@ -43,6 +43,19 @@ describe("native default key quick creation", () => {
     prepare.mockReset()
   })
 
+  it("keeps selection actionable when confirming an unknown requirement", async () => {
+    prepare.mockResolvedValue({
+      kind: "selection-required",
+      requirements,
+      create: vi.fn(),
+    })
+    const { result } = setup()
+    await act(async () => result.current.start())
+    await act(async () => result.current.confirmGroup("missing"))
+    expect(result.current.view.isBusy).toBe(false)
+    expect(result.current.view.error).toBeTruthy()
+  })
+
   it("retains opaque group identity through confirmation", async () => {
     const create = vi.fn().mockResolvedValue(created)
     prepare.mockResolvedValue({

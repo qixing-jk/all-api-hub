@@ -29,6 +29,7 @@ import { useAccountData } from "~/hooks/useAccountData"
 import { useSafeExportAction } from "~/hooks/useSafeExportAction"
 import toast from "~/lib/notify"
 import {
+  accountKeySourceSignature,
   ensureAccountKey,
   getCreatedAccountRuntimeKey,
   getCreatedAccountRuntimeKeyId,
@@ -296,7 +297,37 @@ export function KiloCodeExportDialog({
   const inventoryControllers = useRef(new Map<string, AbortController>())
   const currentCreationSource = useRef({ isOpen, displayById })
   useLayoutEffect(() => {
+    const previous = currentCreationSource.current.displayById
     currentCreationSource.current = { isOpen, displayById }
+    const changed = new Set(
+      [...previous.keys()].filter(
+        (id) =>
+          accountKeySourceSignature(previous.get(id) ?? null) !==
+          accountKeySourceSignature(displayById.get(id) ?? null),
+      ),
+    )
+    if (!changed.size) return
+    for (const id of changed) {
+      creationControllers.current.get(id)?.abort()
+      creationControllers.current.delete(id)
+      inventoryControllers.current.get(id)?.abort()
+      inventoryControllers.current.delete(id)
+    }
+    setIsCreatingToken((values) =>
+      Object.fromEntries(
+        Object.entries(values).filter(([id]) => !changed.has(id)),
+      ),
+    )
+    setTokenInventories((values) =>
+      Object.fromEntries(
+        Object.entries(values).filter(([id]) => !changed.has(id)),
+      ),
+    )
+    setDefaultTokenCreateContext((value) =>
+      value && changed.has(value.siteId) ? null : value,
+    )
+  }, [isOpen, displayById])
+  useLayoutEffect(() => {
     const controllers = creationControllers.current
     const inventories = inventoryControllers.current
     setIsCreatingToken({})
@@ -308,7 +339,7 @@ export function KiloCodeExportDialog({
       for (const controller of inventories.values()) controller.abort()
       inventories.clear()
     }
-  }, [isOpen, displayById])
+  }, [isOpen])
 
   const accountById = useMemo(() => {
     return new Map<string, SiteAccount>(accounts.map((acc) => [acc.id, acc]))
@@ -340,7 +371,9 @@ export function KiloCodeExportDialog({
         !controller.signal.aborted &&
         inventoryControllers.current.get(siteId) === controller &&
         currentCreationSource.current.isOpen &&
-        currentCreationSource.current.displayById.get(siteId) === site
+        accountKeySourceSignature(
+          currentCreationSource.current.displayById.get(siteId) ?? null,
+        ) === accountKeySourceSignature(site)
 
       setTokenInventories((prev) => ({
         ...prev,
@@ -460,7 +493,9 @@ export function KiloCodeExportDialog({
     const isCurrent = () =>
       !controller.signal.aborted &&
       currentCreationSource.current.isOpen &&
-      currentCreationSource.current.displayById.get(siteId) === site
+      accountKeySourceSignature(
+        currentCreationSource.current.displayById.get(siteId) ?? null,
+      ) === accountKeySourceSignature(site)
     const toastId = buildKiloCodeCreateTokenToastId(siteId)
 
     setIsCreatingToken((prev) => ({ ...prev, [siteId]: true }))
@@ -1051,9 +1086,11 @@ export function KiloCodeExportDialog({
     if (
       !defaultTokenCreateContext ||
       !currentCreationSource.current.isOpen ||
-      currentCreationSource.current.displayById.get(
-        defaultTokenCreateContext.siteId,
-      ) !== defaultTokenCreateContext.account
+      accountKeySourceSignature(
+        currentCreationSource.current.displayById.get(
+          defaultTokenCreateContext.siteId,
+        ) ?? null,
+      ) !== accountKeySourceSignature(defaultTokenCreateContext.account)
     )
       return
 

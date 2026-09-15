@@ -15,7 +15,6 @@ import {
 } from "~/services/accounts/accountKeyCreation"
 import {
   collectAccountRuntimeKeySecrets,
-  isServiceCredentialRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
@@ -376,14 +375,12 @@ export function useChannelDialog() {
         ...collectAccountRuntimeKeySecrets([selectedRuntimeKey]),
         ...collectManagedConfigSecrets(managedConfig),
       ]
-      const resolvedRuntimeKey =
-        isServiceCredentialRuntimeKey(selectedRuntimeKey) &&
-        hasUsableApiTokenKey(selectedRuntimeKey.secret)
-          ? selectedRuntimeKey
-          : await resolveDisplayAccountRuntimeKeySecret(
-              displaySiteData,
-              selectedRuntimeKey,
-            )
+      const resolvedRuntimeKey = hasUsableApiTokenKey(selectedRuntimeKey.secret)
+        ? selectedRuntimeKey
+        : await resolveDisplayAccountRuntimeKeySecret(
+            displaySiteData,
+            selectedRuntimeKey,
+          )
       secretsToRedact.push(
         ...collectAccountRuntimeKeySecrets([resolvedRuntimeKey]),
       )

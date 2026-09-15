@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -65,9 +71,13 @@ export function useDefaultTokenQuickCreate({
     ],
   )
   const sourceRef = useRef({ sourceKey, isActive })
-  sourceRef.current = { sourceKey, isActive }
+  useLayoutEffect(() => {
+    sourceRef.current = { sourceKey, isActive }
+  }, [sourceKey, isActive])
   const observers = useRef({ onCreated, onInputRequired })
-  observers.current = { onCreated, onInputRequired }
+  useLayoutEffect(() => {
+    observers.current = { onCreated, onInputRequired }
+  }, [onCreated, onInputRequired])
 
   const cancelPending = useCallback(() => {
     generation.current++
@@ -118,7 +128,11 @@ export function useDefaultTokenQuickCreate({
           : await prepareDefaultAccountKeyCreation(account, {
               signal: controller.signal,
             })
-        if (!isCurrent() || !plan) return
+        if (!isCurrent()) return
+        if (!plan) {
+          setState({ ...idle(), error: { kind: "input-required" } })
+          return
+        }
         planRef.current = { plan, controller }
         if (plan.kind === "input-required") {
           setState({ ...idle(), error: { kind: "input-required" } })
@@ -134,7 +148,14 @@ export function useDefaultTokenQuickCreate({
           const selected = plan.requirements.find(
             (item) => item.requirementKey === requirementKey,
           )
-          if (!selected) return
+          if (!selected) {
+            setState({
+              kind: "selecting",
+              selection,
+              error: { kind: "input-required" },
+            })
+            return
+          }
           if (selected.provisioning.kind === "input-required") {
             setState({ ...idle(), error: { kind: "input-required" } })
             observers.current.onInputRequired?.()

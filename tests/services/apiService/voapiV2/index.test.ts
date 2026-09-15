@@ -11,6 +11,7 @@ import {
   fetchVoApiV2AccountData,
   fetchVoApiV2KeyGroupDescriptors,
   refreshAccountData,
+  renameVoApiV2Key,
   submitVoApiV2CheckIn,
 } from "~/services/apiService/voapiV2"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
@@ -643,6 +644,50 @@ describe("apiService VoAPI v2", () => {
       }),
     )
   })
+
+  it.each([
+    ["2", "9"],
+    ["02", "9"],
+  ])(
+    "renames only keys with canonical group identities: %j",
+    async (...groups) => {
+      const write = vi.fn()
+      server.use(
+        http.get("https://example.invalid/api/keys", () =>
+          HttpResponse.json({
+            code: 0,
+            data: {
+              records: [
+                { id: 11, groups, name: "Original", amount: "7", note: "keep" },
+              ],
+            },
+          }),
+        ),
+        http.put("https://example.invalid/api/keys/11", async ({ request }) => {
+          write(await request.json())
+          return HttpResponse.json({ code: 0, data: null })
+        }),
+      )
+      if (groups[0] === "02") {
+        await expect(
+          renameVoApiV2Key(createVoApiV2Request(), 11, "Renamed"),
+        ).rejects.toThrow("invalid group identity")
+        expect(write).not.toHaveBeenCalled()
+      } else {
+        await expect(
+          renameVoApiV2Key(createVoApiV2Request(), 11, "Renamed"),
+        ).resolves.toBe(true)
+        expect(write).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: "Renamed",
+            groups: [2, 9],
+            amount: "7",
+            note: "keep",
+          }),
+        )
+      }
+    },
+  )
 
   it("fetches every page of the native VoAPI v2 key inventory", async () => {
     const requestedPages: number[] = []

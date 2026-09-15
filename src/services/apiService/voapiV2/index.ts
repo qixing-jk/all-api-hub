@@ -706,7 +706,17 @@ export async function renameVoApiV2Key(
       body: JSON.stringify({
         id: keyId,
         name,
-        groups: existing.groups ?? [],
+        groups: (existing.groups ?? []).map((group) => {
+          const id = toCanonicalPositiveInteger(group)
+          if (id === null)
+            throw new ApiError(
+              "VoAPI v2 key contains invalid group identity",
+              undefined,
+              `${VOAPI_V2_ENDPOINTS.Keys}/${keyId}`,
+              API_ERROR_CODES.JSON_PARSE_ERROR,
+            )
+          return id
+        }),
         enable: existing.enable ?? true,
         expireTime: existing.expireTime ?? -1,
         boundlessAmount: existing.boundlessAmount === true,

@@ -1,5 +1,12 @@
 import type { TFunction } from "i18next"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import { useTranslation } from "react-i18next"
 
 import toast from "~/lib/notify"
@@ -75,6 +82,7 @@ type UseModelKeyDialogParams = {
   account: DisplaySiteData | null
   modelId: string
   modelEnableGroups?: string[]
+  onLateCreated?: (created: AccountKeyCreationResult) => void
 }
 
 /**
@@ -96,7 +104,13 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
     modelEnableGroups,
   ])
   const sourceRef = useRef(sourceKey)
-  sourceRef.current = sourceKey
+  useLayoutEffect(() => {
+    sourceRef.current = sourceKey
+  }, [sourceKey])
+  const lateCreatedObserver = useRef(params.onLateCreated)
+  useLayoutEffect(() => {
+    lateCreatedObserver.current = params.onLateCreated
+  }, [params.onLateCreated])
   const creationAbort = useRef<AbortController | null>(null)
   const uncertainSources = useRef(new Set<string>())
   const { t } = useTranslation(["modelList", "common", "messages"])
@@ -411,15 +425,22 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
         return "skipped" as const
       }
 
-      if (creationAbort.current || uncertainSources.current.has(sourceKey))
-        return "skipped" as const
-
       const normalizedGroup = typeof group === "string" ? group.trim() : ""
       if (!normalizedGroup) {
         setCreateError({ kind: "group-required" })
         return "skipped" as const
       }
 
+      const writeKey = JSON.stringify([
+        account.id,
+        account.siteType,
+        account.baseUrl.replace(/\/+$/, ""),
+        account.userId,
+        normalizedGroup,
+        [...(modelEnableGroups ?? [])].map((value) => value.trim()).sort(),
+      ])
+      if (creationAbort.current || uncertainSources.current.has(writeKey))
+        return "skipped" as const
       setIsCreating(true)
       setCreateError(null)
 
@@ -438,15 +459,17 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
           return "skipped" as const
         if (plan.kind !== "ready") return "input-required" as const
         const created = await plan.create()
-        if (sourceRef.current !== sourceKey || controller.signal.aborted)
+        if (sourceRef.current !== sourceKey || controller.signal.aborted) {
+          lateCreatedObserver.current?.(created)
           return "skipped" as const
+        }
         return await refreshRuntimeKeysAfterCreate(created)
       } catch (error) {
         if (
           error instanceof AccountKeyResourceError &&
           error.failure.code === "mutation_state_uncertain"
         )
-          uncertainSources.current.add(sourceKey)
+          uncertainSources.current.add(writeKey)
         if (sourceRef.current !== sourceKey) return "skipped" as const
         const errorMessage = getErrorMessage(error)
         logger.error("Failed to create default token (model key dialog)", {

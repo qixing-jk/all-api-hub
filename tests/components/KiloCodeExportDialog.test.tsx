@@ -1337,6 +1337,55 @@ describe("KiloCodeExportDialog", () => {
     },
   )
 
+  it("preserves in-flight creation during an ordinary account balance refresh", async () => {
+    const user = userEvent.setup()
+    const site = createDisplayAccount({ id: "account-a" })
+    const delayed = createDeferred<EnsureAccountKeyResult>()
+    const token = createApiToken({
+      id: 1,
+      name: "Created key",
+      key: "sk-created",
+    })
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [createSiteAccount(site)],
+      enabledDisplayData: [site],
+    })
+    mockFetchAccountTokens.mockResolvedValueOnce([]).mockResolvedValue([token])
+    mockEnsureAccountKey.mockReturnValueOnce(delayed.promise)
+    const props = {
+      isOpen: true,
+      onClose: vi.fn(),
+      initialSelectedSiteIds: [site.id],
+    }
+    const { rerender } = render(<KiloCodeExportDialog {...props} />)
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.kiloCode.actions.createDefaultToken",
+      }),
+    )
+    await waitFor(() => expect(mockEnsureAccountKey).toHaveBeenCalledTimes(1))
+    const signal = mockEnsureAccountKey.mock.calls[0][1].signal as AbortSignal
+    const refreshed = { ...site, balance: { USD: 50, CNY: 350 } }
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [createSiteAccount(refreshed)],
+      enabledDisplayData: [refreshed],
+    })
+    rerender(<KiloCodeExportDialog {...props} />)
+    expect(signal.aborted).toBe(false)
+    await act(async () => {
+      delayed.resolve({
+        kind: "created",
+        creation: buildNewApiKeyCreationResult(site, token),
+        runtimeKey: buildNewApiRuntimeKey(site, token),
+      })
+      await delayed.promise
+    })
+    expect((await screen.findAllByText("Created key")).length).toBeGreaterThan(
+      0,
+    )
+    expect(mockEnsureAccountKey).toHaveBeenCalledTimes(1)
+  })
+
   it("does not select an unrelated key when the editor returns only a missing resource reference", async () => {
     const user = userEvent.setup()
     const site = createDisplayAccount({ id: "account-a" })

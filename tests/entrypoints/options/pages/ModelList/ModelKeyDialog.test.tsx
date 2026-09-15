@@ -606,16 +606,30 @@ describe("ModelKeyDialog", () => {
       ref: buildNewApiKeyCreationResult(ACCOUNT, { ...TOKEN, id: 8 }).ref,
       facts: null,
     })
-    await beginCreate(ACCOUNT)
-    expect(
-      await screen.findByText(
+    const { result } = renderHook(() =>
+      useModelKeyDialog({
+        isOpen: true,
+        account: ACCOUNT,
+        modelId: "gpt-4",
+        modelEnableGroups: ["default"],
+      }),
+    )
+    await waitFor(() => expect(result.current).not.toBeNull())
+    vi.useFakeTimers()
+    try {
+      await act(async () => {
+        const creation = result.current.createDefaultKey("default")
+        await vi.advanceTimersByTimeAsync(5000)
+        expect(await creation).toBe("failure")
+      })
+      expect(result.current.createError).toBe(
         "modelList:keyDialog.noCompatibleFoundAfterCreate",
-        {},
-        { timeout: 7000 },
-      ),
-    ).toBeVisible()
-    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(6)
-    expect(createKeyMock).toHaveBeenCalledTimes(1)
+      )
+      expect(fetchAccountTokensMock).toHaveBeenCalledTimes(6)
+      expect(createKeyMock).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it("retains an unattributed one-time secret when inventory recovery fails", async () => {
@@ -671,7 +685,33 @@ describe("ModelKeyDialog", () => {
     expect(createKeyMock).toHaveBeenCalledTimes(2)
   })
 
-  it("drops a late create result after the authentication source changes", async () => {
+  it("does not repeat an uncertain write after changing only the model", async () => {
+    fetchAccountTokensMock.mockResolvedValue([])
+    createKeyMock.mockRejectedValue(
+      new AccountKeyResourceError({ code: "mutation_state_uncertain" }),
+    )
+    const { result, rerender } = renderHook(
+      ({ modelId }) =>
+        useModelKeyDialog({
+          isOpen: true,
+          account: ACCOUNT,
+          modelId,
+          modelEnableGroups: ["default"],
+        }),
+      { initialProps: { modelId: "gpt-4" } },
+    )
+    await waitFor(() => expect(result.current).not.toBeNull())
+    await act(async () => {
+      await result.current.createDefaultKey("default")
+    })
+    rerender({ modelId: "gpt-4o" })
+    await act(async () => {
+      expect(await result.current.createDefaultKey(" default ")).toBe("skipped")
+    })
+    expect(createKeyMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("preserves a late one-time secret under its original credential after authentication changes", async () => {
     fetchAccountTokensMock.mockResolvedValue([])
     const pending = createDeferred<AccountKeyCreationResult>()
     createKeyMock.mockReturnValue(pending.promise)
@@ -690,9 +730,11 @@ describe("ModelKeyDialog", () => {
       await pending.promise
     })
     expect(
-      screen.queryByText("keyManagement:oneTimeKey.title"),
-    ).not.toBeInTheDocument()
-    expect(toastSuccessMock).not.toHaveBeenCalled()
+      screen.getByText("keyManagement:oneTimeKey.title"),
+    ).toBeInTheDocument()
+    expect(toastSuccessMock).not.toHaveBeenCalledWith(
+      "modelList:keyDialog.createSuccess",
+    )
   })
 
   it.each(["resolve", "reject"] as const)(

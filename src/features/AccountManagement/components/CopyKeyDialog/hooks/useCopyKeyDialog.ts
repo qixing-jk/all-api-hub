@@ -1,5 +1,11 @@
 import type { TFunction } from "i18next"
-import { useCallback, useEffect, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -98,7 +104,9 @@ export function useCopyKeyDialog(
     account?.disabled,
   ])
   const sourceRef = useRef(sourceKey)
-  sourceRef.current = sourceKey
+  useLayoutEffect(() => {
+    sourceRef.current = sourceKey
+  }, [sourceKey])
   const [runtimeKeys, setRuntimeKeys] = useState<AccountRuntimeKey[]>([])
   const [nativeKeyRows, setNativeKeyRows] = useState<NativeKeyManagementRow[]>(
     [],

@@ -176,6 +176,54 @@ describe("native account key creation", () => {
     expect(submit).not.toHaveBeenCalled()
   })
 
+  it("chooses an active compatible key instead of the last inventory row", async () => {
+    const owner = account()
+    const { submit } = setup(owner)
+    const valid = getCreatedAccountRuntimeKey(owner, {
+      ref: facts(owner).ref,
+      facts: facts(owner),
+    })!
+    inventory.mockResolvedValue([
+      valid,
+      { ...valid, id: "inactive", status: "inactive" },
+      {
+        ...valid,
+        id: "restricted",
+        modelAccess: {
+          groups: null,
+          allowedModelIds: ["other"],
+          suggestedModelIds: [],
+        },
+      },
+    ])
+    expect(
+      await ensureAccountKey(owner, {
+        intent: { modelContext: { modelId: "model-a" } },
+      }),
+    ).toEqual({ kind: "ready", runtimeKey: valid })
+    expect(submit).not.toHaveBeenCalled()
+  })
+
+  it("creates when no existing key satisfies the requested group", async () => {
+    const owner = account()
+    const { submit } = setup(owner)
+    const valid = getCreatedAccountRuntimeKey(owner, {
+      ref: facts(owner).ref,
+      facts: facts(owner),
+    })!
+    inventory.mockResolvedValue([
+      { ...valid, modelAccess: { ...valid.modelAccess, groups: ["other"] } },
+    ])
+    expect(
+      (
+        await ensureAccountKey(owner, {
+          intent: { preferredGroup: "required" },
+        })
+      ).kind,
+    ).toBe("created")
+    expect(submit).toHaveBeenCalledOnce()
+  })
+
   it("shares concurrent ensure operations across inventory and dispatch", async () => {
     const owner = account()
     const { submit } = setup(owner)

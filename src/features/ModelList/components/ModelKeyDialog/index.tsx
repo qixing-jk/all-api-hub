@@ -110,6 +110,8 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
   const { isOpen, onClose, account, modelId, modelEnableGroups } = props
   const { t } = useTranslation(["modelList", "common"])
   const [isAddTokenDialogOpen, setIsAddTokenDialogOpen] = useState(false)
+  const [lateCreation, setLateCreation] =
+    useState<AccountKeyCreationResult | null>(null)
   const [createGroup, setCreateGroup] = useState("")
   const createGroupSelectId = `model-key-dialog-create-group-${useId()}`
   const compatibleKeySelectId = `model-key-dialog-compatible-key-${useId()}`
@@ -153,7 +155,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
     ineligibleDescription,
     isCreating,
     createError,
-    oneTimeSecret,
+    oneTimeSecret: currentOneTimeSecret,
     fetchRuntimeKeys,
     copySelectedKey,
     createDefaultKey,
@@ -164,7 +166,9 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
     account,
     modelId,
     modelEnableGroups,
+    onLateCreated: setLateCreation,
   })
+  const oneTimeSecret = lateCreation?.createdSecret ?? currentOneTimeSecret
   const oneTimeKeySaveAction = oneTimeSecret
     ? buildOneTimeApiKeyProfileSaveAction({
         result: oneTimeSecret,
@@ -538,7 +542,10 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
       <OneTimeSecretDialog
         isOpen={!!oneTimeSecret}
         result={oneTimeSecret}
-        onClose={clearOneTimeSecret}
+        onClose={() => {
+          setLateCreation(null)
+          clearOneTimeSecret()
+        }}
         saveAction={oneTimeKeySaveAction}
       />
     </>

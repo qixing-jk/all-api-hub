@@ -6,6 +6,7 @@ import {
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
 } from "~/services/accounts/accountSiteProfile"
+import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   canLoadModelListAccountFallbackRuntimeKeys,
@@ -114,6 +115,30 @@ describe("resolveModelListAccountSourceReadiness", () => {
         ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
     })
   })
+
+  it.each([
+    [INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly, false],
+    [INVENTORY_SECRET_AVAILABILITIES.Recoverable, true],
+  ])(
+    "requires secret resolution only for recoverable inventories: %s",
+    (inventorySecretAvailability, required) => {
+      vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+        siteType: SITE_TYPES.SUB2API,
+        account: {
+          modelCatalog,
+          keyResourceManagement: { inventorySecretAvailability, open: vi.fn() },
+        },
+      } as any)
+      expect(
+        resolveModelListAccountSourceReadiness({
+          siteType: SITE_TYPES.SUB2API,
+        }),
+      ).toMatchObject({
+        route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog,
+        requiresTokenKeyResolution: required,
+      })
+    },
+  )
 
   it("returns a provider-wide catalog without requiring account pricing or runtime keys", () => {
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({

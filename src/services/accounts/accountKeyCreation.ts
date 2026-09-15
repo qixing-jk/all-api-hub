@@ -1,6 +1,7 @@
 import {
   buildAccountKeyResourceRuntimeKeyFromFacts,
   buildAccountKeyResourceRuntimeKeyId,
+  isAccountRuntimeKeyCompatibleWithModel,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
@@ -250,7 +251,26 @@ export async function ensureAccountKey(
   const run = (async (): Promise<EnsureAccountKeyResult> => {
     const inventory = await fetchDisplayAccountRuntimeKeys(account, options)
     options.signal?.throwIfAborted()
-    const existing = inventory.at(-1)
+    const existing = inventory.findLast((key) => {
+      if (key.status !== "active") return false
+      const intent = options.intent
+      if (
+        intent?.modelContext &&
+        !isAccountRuntimeKeyCompatibleWithModel(key, {
+          id: intent.modelContext.modelId,
+          enableGroups: intent.allowedGroups,
+        })
+      )
+        return false
+      const groups = intent?.preferredGroup?.trim()
+        ? [intent.preferredGroup.trim()]
+        : intent?.allowedGroups?.map((group) => group.trim())
+      return (
+        !groups ||
+        key.modelAccess.groups === null ||
+        key.modelAccess.groups.some((group) => groups.includes(group))
+      )
+    })
     if (existing) {
       uncertainCreations.delete(signature)
       unreconciledCreations.delete(signature)

@@ -22,7 +22,8 @@ All paths in this section are relative to `src/services/`.
 | Runtime identity, secret resolution, model access | `accounts/accountRuntimeKeys.ts`, `accounts/runtimeKeyModelAccess.ts`, and `accounts/utils/apiServiceRequest.ts` |
 | Foreground/default key creation | `accounts/accountKeyCreation.ts` |
 | Response-only secret disclosure | `accounts/createdRuntimeSecret.ts` |
-| External credential export | `integrations/credentialExport.ts` |
+| Shared export contract and resolver | `integrations/credentialExport.ts` |
+| Account runtime-key export sources | `accounts/utils/credentialExport.ts` |
 | Persistent credential profiles and associations | `apiCredentialProfiles/` |
 | New API-family wire records and writes | `apiService/newApiFamily/tokenTypes.ts` |
 

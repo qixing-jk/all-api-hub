@@ -30,6 +30,7 @@ const {
   fetchSub2ApiAvailableGroupsMock,
   fetchSub2ApiGroupRatesMock,
   fetchSub2ApiRuntimeModelsMock,
+  fetchSub2ApiPricingCatalogsMock,
   getSiteTypeCapabilitiesMock,
   loadModelPriceTableMock,
   resolveDisplayAccountRuntimeKeySecretMock,
@@ -39,6 +40,7 @@ const {
   fetchSub2ApiAvailableGroupsMock: vi.fn(),
   fetchSub2ApiGroupRatesMock: vi.fn(),
   fetchSub2ApiRuntimeModelsMock: vi.fn(),
+  fetchSub2ApiPricingCatalogsMock: vi.fn(),
   getSiteTypeCapabilitiesMock: vi.fn(),
   loadModelPriceTableMock: vi.fn(),
   resolveDisplayAccountRuntimeKeySecretMock: vi.fn(),
@@ -64,37 +66,13 @@ vi.mock(
   },
 )
 
-vi.mock(
-  "~/services/apiAdapters/sub2api/dashboardEstimates",
-  async (importOriginal) => {
-    const actual =
-      await importOriginal<
-        typeof import("~/services/apiAdapters/sub2api/dashboardEstimates")
-      >()
-    return {
-      ...actual,
-      loadSub2ApiDashboardEstimateData: async (
-        request: unknown,
-        selection: { ref: { resourceId: string }; resolvedKey: string },
-      ) => {
-        const [groups, groupRates, keys] = await Promise.all([
-          fetchSub2ApiAvailableGroupsMock(request),
-          fetchSub2ApiGroupRatesMock(request),
-          fetchSub2ApiKeysMock(request),
-        ])
-        return {
-          group: actual.resolveSub2ApiKeyGroupForPriceEstimation({
-            resourceId: selection.ref.resourceId,
-            resolvedKey: selection.resolvedKey,
-            keys,
-            groups,
-          }),
-          groupRates,
-        }
-      },
-    }
-  },
-)
+vi.mock("~/services/apiService/sub2api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/services/apiService/sub2api")>()),
+  fetchSub2ApiAvailableGroups: fetchSub2ApiAvailableGroupsMock,
+  fetchSub2ApiGroupRates: fetchSub2ApiGroupRatesMock,
+  fetchSub2ApiKeys: fetchSub2ApiKeysMock,
+  fetchSub2ApiPricingCatalogs: fetchSub2ApiPricingCatalogsMock,
+}))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
@@ -195,6 +173,7 @@ const mockSub2ApiModelCatalogAdapter = (
 describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
   beforeEach(() => {
     fetchOpenAICompatibleModelIdsMock.mockReset()
+    fetchSub2ApiPricingCatalogsMock.mockReset().mockResolvedValue(undefined)
     fetchSub2ApiKeysMock.mockReset()
     fetchSub2ApiAvailableGroupsMock.mockReset()
     fetchSub2ApiGroupRatesMock.mockReset()
@@ -728,6 +707,45 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       expect.objectContaining({ abortSignal: abortController.signal }),
     )
     expect(loadModelPriceTableMock).toHaveBeenCalledWith(abortController.signal)
+  })
+
+  it("preserves station pricing catalogs through dashboard estimate loading", async () => {
+    fetchSub2ApiRuntimeModelsMock.mockResolvedValueOnce([
+      { id: "station-model" },
+    ])
+    fetchSub2ApiAvailableGroupsMock.mockResolvedValueOnce([
+      { id: 9, name: "vip", rate_multiplier: 1 },
+    ])
+    fetchSub2ApiGroupRatesMock.mockResolvedValueOnce({ "9": 1 })
+    fetchSub2ApiKeysMock.mockResolvedValueOnce([
+      { ...TOKEN, key: "sk-station", group_name: "vip", group_id: 9 },
+    ])
+    fetchSub2ApiPricingCatalogsMock.mockResolvedValueOnce({
+      plaza: {
+        groups: [
+          {
+            id: 9,
+            models: [
+              {
+                name: "station-model",
+                pricing: {
+                  billing_mode: "token",
+                  input_price: 0.000003,
+                  output_price: 0.000015,
+                },
+              },
+            ],
+          },
+        ],
+      },
+    })
+    const result = await loadAccountRuntimeKeyFallbackPricingResponseFromToken({
+      account: { ...ACCOUNT, siteType: SITE_TYPES.SUB2API },
+      token: { ...TOKEN, key: "sk-station" },
+    })
+    expect(fetchSub2ApiPricingCatalogsMock).toHaveBeenCalledTimes(1)
+    expect(result.data[0].pricingPlan?.rates.input?.amount).toBe(0.000003)
+    expect(result.data[0].pricingPlan?.rates.output?.amount).toBe(0.000015)
   })
 
   it("preserves Sub2API evidence when official-rate estimation succeeds", async () => {
