@@ -4,6 +4,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react"
 
@@ -549,34 +550,51 @@ export const UserPreferencesProvider = ({
 }) => {
   const [preferences, setPreferences] = useState<UserPreferences | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const latestThemeStorageChangeRef = useRef<ReturnType<
+    typeof normalizeThemePreferences
+  > | null>(null)
+
+  /** Preserve theme events received while the persisted snapshot is loading. */
+  const hydratePreferences = useCallback(async () => {
+    const themeBeforeRead = latestThemeStorageChangeRef.current
+    const prefs = await userPreferences.getPreferences()
+    const snapshot = normalizeContextPreferenceSnapshot(prefs)
+    const themeAfterRead = latestThemeStorageChangeRef.current
+    const nextPreferences =
+      themeAfterRead && themeAfterRead !== themeBeforeRead
+        ? { ...snapshot, ...themeAfterRead }
+        : snapshot
+    setPreferences(nextPreferences)
+    return nextPreferences
+  }, [])
 
   /**
    * Fetch the latest preference snapshot from storage and hydrate local state.
-   * Guards against repeated calls by toggling an `isLoading` flag.
+   * Exposes the pending read through the `isLoading` flag.
    */
   const loadPreferences = useCallback(async () => {
     try {
       setIsLoading(true)
-      const prefs = await userPreferences.getPreferences()
-      const nextPreferences = normalizeContextPreferenceSnapshot(prefs)
-      setPreferences(nextPreferences)
+      await hydratePreferences()
     } catch (error) {
       logger.error("加载用户偏好设置失败", error)
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [hydratePreferences])
 
   // Plasmo decodes stored JSON and supports both Chrome and Firefox listeners.
   useEffect(() => {
     const storage = new Storage({ area: "local" })
     const callbacks: StorageCallbackMap = {
       [USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES]: ({ newValue }) => {
+        const themePreferences = normalizeThemePreferences(newValue)
+        latestThemeStorageChangeRef.current = themePreferences
         setPreferences((current) =>
           current
             ? {
                 ...current,
-                ...normalizeThemePreferences(newValue),
+                ...themePreferences,
               }
             : current,
         )
@@ -592,9 +610,7 @@ export const UserPreferencesProvider = ({
     async (updates: DeepPartial<UserPreferences>) => {
       try {
         setIsLoading(true)
-        const prefs = await userPreferences.getPreferences()
-        const nextPreferences = normalizeContextPreferenceSnapshot(prefs)
-        setPreferences(nextPreferences)
+        const nextPreferences = await hydratePreferences()
         trackOptionsSettingsSnapshots(nextPreferences, updates)
       } catch (error) {
         logger.error("加载用户偏好设置失败", error)
@@ -602,7 +618,7 @@ export const UserPreferencesProvider = ({
         setIsLoading(false)
       }
     },
-    [],
+    [hydratePreferences],
   )
 
   useEffect(() => {

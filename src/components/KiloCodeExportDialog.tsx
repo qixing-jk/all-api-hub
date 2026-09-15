@@ -1417,7 +1417,7 @@ export function KiloCodeExportDialog({
             <div className="text-foreground text-base font-semibold">
               {t("ui:dialog.kiloCode.title")}
             </div>
-            <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-sm">
               {t("ui:dialog.kiloCode.description")}
             </p>
           </div>

@@ -21,6 +21,8 @@ export const BASIC_SETTINGS_ANCHOR_TO_TAB: Record<string, BasicSettingsTabId> =
     "general-display": "general",
     display: "general",
     [SETTINGS_ANCHORS.APPEARANCE]: "general",
+    [SETTINGS_ANCHORS.APPEARANCE_THEME_MODE]: "general",
+    [SETTINGS_ANCHORS.APPEARANCE_LANGUAGE]: "general",
     [SETTINGS_ANCHORS.APPEARANCE_COLOR]: "general",
     [SETTINGS_ANCHORS.APPEARANCE_PRESET]: "general",
     [SETTINGS_ANCHORS.APPEARANCE_RADIUS]: "general",
