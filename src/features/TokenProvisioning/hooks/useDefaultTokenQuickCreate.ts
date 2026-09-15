@@ -8,6 +8,7 @@ import {
 import { useTranslation } from "react-i18next"
 
 import {
+  accountKeySourceSignature,
   prepareDefaultAccountKeyCreation,
   type AccountKeyCreationPlan,
   type AccountKeyCreationResult,
@@ -58,18 +59,7 @@ export function useDefaultTokenQuickCreate({
   } | null>(null)
   const generation = useRef(0)
   const uncertainSources = useRef(new Set<string>())
-  const sourceKey = JSON.stringify(
-    account && [
-      account.id,
-      account.siteType,
-      account.baseUrl,
-      account.authType,
-      account.userId,
-      account.token,
-      account.cookieAuthSessionCookie,
-      account.disabled,
-    ],
-  )
+  const sourceKey = accountKeySourceSignature(account)
   const sourceRef = useRef({ sourceKey, isActive })
   useLayoutEffect(() => {
     sourceRef.current = { sourceKey, isActive }

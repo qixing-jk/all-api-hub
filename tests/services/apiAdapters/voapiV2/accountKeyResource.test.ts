@@ -15,7 +15,6 @@ import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
 
 const {
-  mockCreateVoApiV2Token,
   mockCreateVoApiV2Key,
   mockUpdateVoApiV2Key,
   mockDeleteVoApiV2Token,
@@ -24,7 +23,6 @@ const {
   mockRenameVoApiV2Key,
   mockResolveVoApiV2KeySecretById,
 } = vi.hoisted(() => ({
-  mockCreateVoApiV2Token: vi.fn(),
   mockCreateVoApiV2Key: vi.fn(),
   mockUpdateVoApiV2Key: vi.fn(),
   mockDeleteVoApiV2Token: vi.fn(),
@@ -36,7 +34,6 @@ const {
 
 vi.mock("~/services/apiService/voapiV2", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/services/apiService/voapiV2")>()),
-  createVoApiV2Token: mockCreateVoApiV2Token,
   createVoApiV2Key: mockCreateVoApiV2Key,
   updateVoApiV2Key: mockUpdateVoApiV2Key,
   deleteVoApiV2Token: mockDeleteVoApiV2Token,
@@ -72,7 +69,6 @@ const rawKey = (overrides: Partial<VoApiV2Key>): VoApiV2Key => ({
 describe("VoAPI v2 account key resources", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockCreateVoApiV2Token.mockReset()
     mockCreateVoApiV2Key.mockReset()
     mockUpdateVoApiV2Key.mockReset()
     mockDeleteVoApiV2Token.mockReset()
@@ -487,7 +483,7 @@ describe("VoAPI v2 account key resources", () => {
         code: "configuration_required",
       },
     })
-    expect(mockCreateVoApiV2Token).not.toHaveBeenCalled()
+    expect(mockCreateVoApiV2Key).not.toHaveBeenCalled()
     expect(mockFetchAllVoApiV2RawKeys).not.toHaveBeenCalled()
   })
 

@@ -1,6 +1,15 @@
 /** Extension-generated names are product hints, separate from provider write fields. */
 export const DEFAULT_AUTO_PROVISION_KEY_NAME = "user group (auto)"
 const DEFAULT_KEY_GROUP_NAME = "default"
+const AUTO_GROUP_KEY_NAME_PATTERN = /^(.+) group \(auto\)$/
+
+/** Recognize extension naming templates before suggesting an automatic rename. */
+export function isAutomaticAccountKeyName(name: string): boolean {
+  return (
+    name === DEFAULT_AUTO_PROVISION_KEY_NAME ||
+    AUTO_GROUP_KEY_NAME_PATTERN.test(name)
+  )
+}
 
 /** Names generated keys consistently without exposing provider write fields. */
 export function getDefaultAccountKeyName(group = ""): string {

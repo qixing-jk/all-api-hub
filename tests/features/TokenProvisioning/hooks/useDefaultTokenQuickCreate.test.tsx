@@ -11,7 +11,10 @@ import {
 } from "~~/tests/test-utils/factories"
 
 const { prepare } = vi.hoisted(() => ({ prepare: vi.fn() }))
-vi.mock("~/services/accounts/accountKeyCreation", () => ({
+vi.mock("~/services/accounts/accountKeyCreation", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/accounts/accountKeyCreation")
+  >()),
   prepareDefaultAccountKeyCreation: prepare,
 }))
 const account = buildDisplaySiteData({ siteType: "sub2api" })

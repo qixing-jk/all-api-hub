@@ -1,7 +1,7 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  DEFAULT_AUTO_PROVISION_KEY_NAME,
   getDefaultAccountKeyName,
+  isAutomaticAccountKeyName,
 } from "~/services/accounts/accountKeyNames"
 import {
   defineAccountKeyResourceCapability,
@@ -89,7 +89,6 @@ const matchesVoApiKeyWrite = (
         : resourceValuesEqual(actual[id as keyof typeof actual], value)),
   )
 }
-const AUTO_GROUP_TOKEN_NAME_PATTERN = /^(.+) group \(auto\)$/
 
 type VoApiV2AccountKeyResourceConfig = {
   readonly account: AccountKeyResourceOpenInput["account"]
@@ -281,8 +280,7 @@ const inspectProvisioning = async (
       const renameSuggested =
         targetDisplayName !== "" &&
         currentName !== targetDisplayName &&
-        (currentName === DEFAULT_AUTO_PROVISION_KEY_NAME ||
-          AUTO_GROUP_TOKEN_NAME_PATTERN.test(currentName))
+        isAutomaticAccountKeyName(currentName)
 
       return {
         ref: createRef(config, key.id),
@@ -365,8 +363,7 @@ const renameProvisionedResource = async (
   const targetDisplayName = getDefaultAccountKeyName(group.displayName)
   if (
     currentName === targetDisplayName ||
-    (currentName !== DEFAULT_AUTO_PROVISION_KEY_NAME &&
-      !AUTO_GROUP_TOKEN_NAME_PATTERN.test(currentName))
+    !isAutomaticAccountKeyName(currentName)
   ) {
     return {
       certainty: "not-applied" as const,

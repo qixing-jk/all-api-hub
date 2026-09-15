@@ -2,6 +2,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   DEFAULT_AUTO_PROVISION_KEY_NAME,
   getDefaultAccountKeyName,
+  isAutomaticAccountKeyName,
 } from "~/services/accounts/accountKeyNames"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
@@ -62,7 +63,6 @@ import {
 } from "./keyResourceEditor"
 
 const ACCOUNT_SCOPE_KEY = "account"
-const AUTO_GROUP_TOKEN_NAME_PATTERN = /^(.+) group \(auto\)$/
 
 type Sub2ApiAccountKeyResourceConfig = {
   readonly account: AccountKeyResourceOpenInput["account"]
@@ -159,10 +159,7 @@ const resolveAutoTemplateRenameTarget = (
   groupDisplayName: string,
 ): string | null => {
   const currentName = token.name?.trim() || ""
-  if (
-    currentName !== DEFAULT_AUTO_PROVISION_KEY_NAME &&
-    !AUTO_GROUP_TOKEN_NAME_PATTERN.test(currentName)
-  ) {
+  if (!isAutomaticAccountKeyName(currentName)) {
     return null
   }
 

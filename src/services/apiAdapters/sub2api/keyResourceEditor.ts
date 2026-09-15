@@ -1,5 +1,6 @@
 import { getDefaultAccountKeyName } from "~/services/accounts/accountKeyNames"
 import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/factory"
+import { resolveKeyCreationGroupIntent } from "~/services/apiAdapters/accountKeyResources/groupCreationIntent"
 import type { AccountKeyCreationIntent } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   RESOURCE_FIELD_TYPES,
@@ -72,28 +73,17 @@ export function createSub2ApiKeyEditor(
   intent?: AccountKeyCreationIntent,
   groups?: Awaited<ReturnType<typeof fetchSub2ApiGroupDescriptors>>,
 ): AccountKeyResourceEditorDefinition<Sub2ApiKeyEditorCommand> {
-  const allowedNames = key ? undefined : intent?.allowedGroups
-  const allowedIds = allowedNames
-    ? new Set(
-        (groups ?? [])
-          .filter((group) => allowedNames.includes(group.displayName))
-          .map((group) => String(group.id)),
-      )
-    : null
-  const preferred = (groups ?? []).filter((group) =>
-    intent?.preferredGroup
-      ? group.displayName === intent.preferredGroup
-      : allowedNames?.length === 1 && group.displayName === allowedNames[0],
+  const { allowedIds, preferred } = resolveKeyCreationGroupIntent(
+    groups,
+    key ? undefined : intent,
   )
   const baseline = key
     ? toSub2ApiKeyEditable(key)
     : {
         name:
           intent?.nameHint?.trim() ||
-          getDefaultAccountKeyName(
-            preferred.length === 1 ? preferred[0].displayName : "",
-          ),
-        group_id: preferred.length === 1 ? preferred[0].id : null,
+          getDefaultAccountKeyName(preferred?.displayName ?? ""),
+        group_id: preferred?.id ?? null,
         quota: 0,
         expires_at: "",
         ip_whitelist: [],

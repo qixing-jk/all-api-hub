@@ -1,7 +1,7 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import {
-  DEFAULT_AUTO_PROVISION_KEY_NAME,
   getDefaultAccountKeyName,
+  isAutomaticAccountKeyName,
 } from "~/services/accounts/accountKeyNames"
 import { validateApiTokenInventory } from "~/services/accountTokens/apiTokenKey"
 import {
@@ -63,7 +63,6 @@ import {
 const ACCOUNT_SCOPE_KEY = "account"
 const ONE_API_SINGLETON_REQUIREMENT_KEY = "new-api-family:account-singleton"
 const GROUP_REQUIREMENT_PREFIX = "new-api-family:group:"
-const AUTO_GROUP_TOKEN_NAME_PATTERN = /^(.+) group \(auto\)$/
 
 type NewApiAccountKeyResourceConfig = {
   readonly account: AccountKeyResourceOpenInput["account"]
@@ -151,10 +150,7 @@ const resolveAutoTemplateRenameTarget = (
 ): string | null => {
   if (!group) return null
   const currentName = token.name?.trim() || ""
-  if (
-    currentName !== DEFAULT_AUTO_PROVISION_KEY_NAME &&
-    !AUTO_GROUP_TOKEN_NAME_PATTERN.test(currentName)
-  ) {
+  if (!isAutomaticAccountKeyName(currentName)) {
     return null
   }
 

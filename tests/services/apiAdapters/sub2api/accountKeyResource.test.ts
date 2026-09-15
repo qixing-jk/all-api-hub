@@ -19,7 +19,6 @@ const {
   mockFetchSub2ApiKeys,
   mockFetchSub2ApiGroupDescriptors,
   mockFetchSub2ApiKey,
-  mockResolveApiTokenKey,
   mockUpdateSub2ApiKey,
 } = vi.hoisted(() => ({
   mockCreateSub2ApiKey: vi.fn(),
@@ -27,7 +26,6 @@ const {
   mockFetchSub2ApiKeys: vi.fn(),
   mockFetchSub2ApiGroupDescriptors: vi.fn(),
   mockFetchSub2ApiKey: vi.fn(),
-  mockResolveApiTokenKey: vi.fn(),
   mockUpdateSub2ApiKey: vi.fn(),
 }))
 
@@ -38,7 +36,6 @@ vi.mock("~/services/apiService/sub2api", async (importOriginal) => ({
   fetchSub2ApiKeys: mockFetchSub2ApiKeys,
   fetchSub2ApiGroupDescriptors: mockFetchSub2ApiGroupDescriptors,
   fetchSub2ApiKey: mockFetchSub2ApiKey,
-  resolveApiTokenKey: mockResolveApiTokenKey,
   updateSub2ApiKey: mockUpdateSub2ApiKey,
 }))
 
@@ -77,7 +74,6 @@ describe("Sub2API account key resources", () => {
     mockFetchSub2ApiKeys.mockReset()
     mockFetchSub2ApiGroupDescriptors.mockReset()
     mockFetchSub2ApiKey.mockReset()
-    mockResolveApiTokenKey.mockReset()
     mockUpdateSub2ApiKey.mockReset()
   })
 
@@ -777,7 +773,7 @@ describe("Sub2API account key resources", () => {
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed },
     })
     expect(mockFetchSub2ApiKey).not.toHaveBeenCalled()
-    expect(mockResolveApiTokenKey).not.toHaveBeenCalled()
+    expect(mockFetchSub2ApiKeys).not.toHaveBeenCalled()
   })
 
   it("deletes the exact referenced key once without replay", async () => {
@@ -1011,7 +1007,7 @@ describe("Sub2API account key resources", () => {
         message: "detail unavailable",
       },
     })
-    expect(mockResolveApiTokenKey).not.toHaveBeenCalled()
+    expect(mockFetchSub2ApiKeys).not.toHaveBeenCalled()
   })
 
   it("propagates list cancellation and rejects invalid or missing locators", async () => {
