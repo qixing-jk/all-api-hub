@@ -26,6 +26,7 @@ import type {
   Sub2ApiKeyData,
   Sub2ApiKeyListData,
   Sub2ApiKeyWritePayloadBase,
+  Sub2ApiNativeKey,
   Sub2ApiUpdateKeyPayload,
   Sub2ApiUsageStatsData,
 } from "./type"
@@ -358,6 +359,27 @@ export const parseSub2ApiKey = (
   })
 }
 
+/** Keep native key fields while validating identities used by resource operations. */
+export function parseSub2ApiNativeKey(
+  payload: unknown,
+  options?: { defaultUserId?: number | string; endpoint?: string },
+): Sub2ApiNativeKey {
+  const endpoint = options?.endpoint ?? "/api/v1/keys"
+  const data = toObjectRecord<Sub2ApiKeyData>(payload, endpoint)
+  const id = toFiniteIntegerOrNull(data.id)
+  if (id === null || !Number.isSafeInteger(id) || id <= 0)
+    throw createInvalidResponseError(endpoint)
+  return {
+    ...data,
+    id,
+    user_id: data.user_id ?? options?.defaultUserId,
+    key: toTrimmedString(data.key),
+    name: toTrimmedString(data.name),
+    group_id: parseSub2ApiKeyGroupId(data),
+    group_name: parseSub2ApiKeyGroup(data),
+  }
+}
+
 /**
  * Parse Sub2API user usage stats from `/api/v1/usage/stats?period=today`.
  *
@@ -522,7 +544,7 @@ export const resolveSub2ApiGroupId = (
   return match ? toFiniteIntegerOrNull(match.id) ?? undefined : undefined
 }
 
-const withOptionalGroupId = <T extends { group_id?: number }>(
+const withOptionalGroupId = <T extends { group_id?: number | null }>(
   payload: T,
   groupId?: number,
 ): T => {

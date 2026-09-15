@@ -2,11 +2,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   buildGroupDefaultTokenRequest,
   DEFAULT_AUTO_PROVISION_TOKEN_NAME,
-  generateDefaultTokenRequest,
 } from "~/services/accounts/defaultTokenLifecycle/requests"
-import { projectTokenCreatedAt } from "~/services/accountTokens/tokenCreatedAt"
-import { projectLegacyTokenModelAccess } from "~/services/accountTokens/tokenModelAccess"
-import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
 import {
   defineAccountKeyResourceCapability,
   type AccountKeyResourcePage,
@@ -32,23 +28,38 @@ import {
   type ResourceFailure,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
 import type { NativeResourceMutationResult } from "~/services/apiAdapters/contracts/resourceNative"
+import {
+  mergeResourceEdits,
+  resourceValuesEqual,
+} from "~/services/apiAdapters/nativeResources/editableChanges"
 import {
   isApiBusinessError,
   runNativeResourceMutation,
 } from "~/services/apiAdapters/nativeResources/mutation"
 import {
-  createSub2ApiTokenForGroupId,
+  createSub2ApiKey,
   deleteApiToken,
-  fetchAccountTokens,
   fetchSub2ApiGroupDescriptors,
-  fetchTokenById,
+  fetchSub2ApiKey,
+  fetchSub2ApiKeys,
   resolveApiTokenKey,
-  updateApiToken,
+  updateSub2ApiKey,
 } from "~/services/apiService/sub2api"
+import type {
+  Sub2ApiCreateKeyPayload,
+  Sub2ApiNativeKey,
+  Sub2ApiUpdateKeyPayload,
+} from "~/services/apiService/sub2api/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { ApiToken } from "~/types"
-import { maskSecretForDisplay } from "~/utils/core/formatters"
+import { maskSecretForDisplay, normalizeToMs } from "~/utils/core/formatters"
+
+import {
+  createSub2ApiKeyEditor,
+  toSub2ApiKeyEditable,
+  type Sub2ApiKeyEditorCommand,
+} from "./keyResourceEditor"
 
 const ACCOUNT_SCOPE_KEY = "account"
 const AUTO_GROUP_TOKEN_NAME_PATTERN = /^(.+) group \(auto\)$/
@@ -99,20 +110,31 @@ const decodeGroupRequirementKey = (requirementKey: string): number => {
   return groupId
 }
 
-const tokenStatus = (token: ApiToken): AccountKeyResourceFacts["status"] => {
-  if (token.expired_time !== -1) {
-    if (!Number.isSafeInteger(token.expired_time) || token.expired_time < 0) {
-      return "unknown"
-    }
-    if (token.expired_time <= Math.floor(Date.now() / 1000)) return "expired"
-  }
-  if (token.status === 1) return "enabled"
-  if (token.status === 2) return "disabled"
+const tokenStatus = (
+  token: Sub2ApiNativeKey,
+): AccountKeyResourceFacts["status"] => {
+  const expiry = normalizeToMs(token.expires_at)
+  if (
+    token.expires_at != null &&
+    token.expires_at !== "" &&
+    (expiry === null || (expiry < 0 && token.expires_at !== -1))
+  )
+    return "unknown"
+  if (expiry && expiry > 0 && expiry <= Date.now()) return "expired"
+  if (token.status === "expired") return "expired"
+  if (token.status === "active" || token.status === 1) return "enabled"
+  if (
+    token.status === "inactive" ||
+    token.status === "quota_exhausted" ||
+    token.status === 0 ||
+    token.status === 2
+  )
+    return "disabled"
   return "unknown"
 }
 
 const tokenCoverage = (
-  token: ApiToken,
+  token: Sub2ApiNativeKey,
 ): (typeof ACCOUNT_KEY_PROVISIONING_COVERAGE)[keyof typeof ACCOUNT_KEY_PROVISIONING_COVERAGE] => {
   const status = tokenStatus(token)
   if (status === "enabled") return ACCOUNT_KEY_PROVISIONING_COVERAGE.Usable
@@ -133,7 +155,7 @@ const createRef = (
 })
 
 const resolveAutoTemplateRenameTarget = (
-  token: ApiToken,
+  token: Sub2ApiNativeKey,
   groupDisplayName: string,
 ): string | null => {
   const currentName = token.name?.trim() || ""
@@ -181,14 +203,14 @@ const inspectProvisioning = async (
 ): Promise<AccountKeyProvisioningSnapshot> => {
   const [{ requirements, requirementByKey }, tokens] = await Promise.all([
     loadRequirements(config, options),
-    fetchAccountTokens(requestWithOptions(config, options)),
+    fetchSub2ApiKeys(requestWithOptions(config, options)),
   ])
 
   return {
     requirements,
     items: tokens.map((token) => {
-      const groupKey = toCanonicalGroupKey(token.sub2api_group_id)
-      const groupName = token.group?.trim() || ""
+      const groupKey = toCanonicalGroupKey(token.group_id)
+      const groupName = token.group_name?.trim() || ""
       const requirement = groupKey ? requirementByKey.get(groupKey) : undefined
       const placement =
         groupKey && groupName && requirement
@@ -239,27 +261,21 @@ const provisionRequirement = async (
     throw new Error("invalid_group_requirement")
   }
 
-  const before = await fetchAccountTokens(request)
+  const before = await fetchSub2ApiKeys(request)
   const beforeIds = new Set(before.map((token) => requireTokenId(token.id)))
   const createResult = await runNativeResourceMutation({
     request,
     execute: async (mutationRequest) =>
-      await createSub2ApiTokenForGroupId(
-        mutationRequest,
-        generateDefaultTokenRequest(),
-        groupId,
-      ),
+      await createSub2ApiKey(mutationRequest, {
+        name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+        group_id: groupId,
+        quota: 0,
+      }),
     mapFailure,
     classifyError: (error) =>
       isApiBusinessError(error) ? "not-applied" : undefined,
   })
   if (createResult.certainty === "not-applied") return createResult
-  if (createResult.certainty === "applied" && createResult.value === false) {
-    return {
-      certainty: "not-applied",
-      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected },
-    }
-  }
   const created =
     createResult.certainty === "applied" ? createResult.value : undefined
   const createdToken =
@@ -269,7 +285,7 @@ const provisionRequirement = async (
     createdToken &&
     createdId !== null &&
     !beforeIds.has(createdId) &&
-    createdToken.sub2api_group_id === groupId
+    createdToken.group_id === groupId
   ) {
     return {
       certainty: "applied",
@@ -279,12 +295,12 @@ const provisionRequirement = async (
 
   let reconciliationError: unknown
   try {
-    const after = await fetchAccountTokens(request)
+    const after = await fetchSub2ApiKeys(request)
     const newTokens = after.filter((token) => !beforeIds.has(token.id))
     if (
       newTokens.length === 1 &&
-      newTokens[0].sub2api_group_id === groupId &&
-      Boolean(newTokens[0].group?.trim())
+      newTokens[0].group_id === groupId &&
+      Boolean(newTokens[0].group_name?.trim())
     ) {
       return {
         certainty: "applied",
@@ -306,20 +322,6 @@ const provisionRequirement = async (
   }
 }
 
-const toTokenUpdateRequest = (
-  token: ApiToken,
-  name: string,
-): CreateTokenRequest => ({
-  name,
-  remain_quota: token.remain_quota,
-  expired_time: token.expired_time,
-  unlimited_quota: token.unlimited_quota,
-  model_limits_enabled: token.model_limits_enabled ?? false,
-  model_limits: token.model_limits ?? token.models ?? "",
-  allow_ips: token.allow_ips ?? "",
-  group: token.group ?? "",
-})
-
 const renameProvisionedResource = async (
   config: Sub2ApiAccountKeyResourceConfig,
   ref: AccountKeyResourceRef,
@@ -327,7 +329,7 @@ const renameProvisionedResource = async (
 ): Promise<NativeResourceMutationResult<void, ResourceFailure>> => {
   const request = requestWithOptions(config, options)
   const tokenId = decodeTokenId(ref.resourceId)
-  const current = await fetchTokenById(request, tokenId)
+  const current = await fetchSub2ApiKey(request, tokenId)
   if (current.id !== tokenId) {
     return {
       certainty: "not-applied",
@@ -335,8 +337,8 @@ const renameProvisionedResource = async (
     }
   }
 
-  const groupKey = toCanonicalGroupKey(current.sub2api_group_id)
-  const groupName = current.group?.trim() || ""
+  const groupKey = toCanonicalGroupKey(current.group_id)
+  const groupName = current.group_name?.trim() || ""
   const { requirementByKey } = await loadRequirements(config, options)
   const requirement = groupKey ? requirementByKey.get(groupKey) : undefined
   if (!requirement || !groupName) {
@@ -359,27 +361,17 @@ const renameProvisionedResource = async (
   const updateResult = await runNativeResourceMutation({
     request,
     execute: async (mutationRequest) =>
-      await updateApiToken(
-        mutationRequest,
-        tokenId,
-        toTokenUpdateRequest(current, targetDisplayName),
-      ),
+      await updateSub2ApiKey(mutationRequest, tokenId, {
+        name: targetDisplayName,
+      }),
     mapFailure,
     classifyError: (error) =>
       isApiBusinessError(error) ? "not-applied" : undefined,
   })
   if (updateResult.certainty === "not-applied") return updateResult
-  if (updateResult.certainty === "applied") {
-    if (updateResult.value === false) {
-      return {
-        certainty: "not-applied",
-        failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected },
-      }
-    }
-  }
 
   try {
-    const refreshed = await fetchTokenById(request, tokenId)
+    const refreshed = await fetchSub2ApiKey(request, tokenId)
     return refreshed.id === tokenId &&
       refreshed.name.trim() === targetDisplayName
       ? { certainty: "applied", value: undefined }
@@ -404,7 +396,7 @@ const renameProvisionedResource = async (
 }
 
 const toFacts = (
-  token: ApiToken,
+  token: Sub2ApiNativeKey,
   ref: AccountKeyResourceFacts["ref"],
 ): AccountKeyResourceFacts => ({
   ref,
@@ -412,30 +404,94 @@ const toFacts = (
   maskedLabel: maskSecretForDisplay(token.key ?? ""),
   status: tokenStatus(token),
   runtimeKey: {
-    modelAccess: projectLegacyTokenModelAccess(token),
+    modelAccess: {
+      groups: token.group_name ? [token.group_name] : null,
+      allowedModelIds: null,
+      suggestedModelIds: [],
+    },
     legacyTokenId: token.id,
-    createdAt: projectTokenCreatedAt(token),
-    notes: token.note,
+    createdAt: normalizeToMs(token.created_at) ?? undefined,
   },
   fields: [
-    { fieldId: "group", kind: "text", value: token.group?.trim() || "" },
+    { fieldId: "group", kind: "text", value: token.group_name?.trim() || "" },
     {
       fieldId: "unlimitedQuota",
       kind: "boolean",
-      value: token.unlimited_quota,
+      value: Number(token.quota) <= 0,
     },
-    { fieldId: "remainingQuota", kind: "number", value: token.remain_quota },
+    { fieldId: "quota", kind: "number", value: Number(token.quota) || 0 },
+    {
+      fieldId: "quota_used",
+      kind: "number",
+      value: Number(token.quota_used) || 0,
+    },
+    {
+      fieldId: "remainingQuotaUsd",
+      kind: "number",
+      value:
+        Math.max(0, Number(token.quota) - Number(token.quota_used ?? 0)) || 0,
+    },
+    {
+      fieldId: "ip_whitelist",
+      kind: "list",
+      value: toSub2ApiKeyEditable(token).ip_whitelist,
+    },
+    {
+      fieldId: "expires_at",
+      kind: "text",
+      value: toSub2ApiKeyEditable(token).expires_at,
+    },
   ],
   searchValues: [
     String(token.id),
     token.name ?? "",
     maskSecretForDisplay(token.key ?? ""),
-    token.group ?? "",
+    token.group_name ?? "",
   ],
-  actions: { canUpdate: false, canDelete: true },
+  actions: { canUpdate: true, canDelete: true },
 })
 
 const mapFailure = mapAccountKeyResourceFailure
+
+/** Correlate native create responses or a unique new key without replaying writes. */
+async function createNativeKey(
+  config: Sub2ApiAccountKeyResourceConfig,
+  payload: Sub2ApiCreateKeyPayload,
+  options?: ResourceOperationOptions,
+) {
+  const request = requestWithOptions(config, options)
+  const before = new Set((await fetchSub2ApiKeys(request)).map((key) => key.id))
+  const matches = (key: Sub2ApiNativeKey) =>
+    !before.has(key.id) &&
+    key.name === payload.name &&
+    (key.group_id ?? null) === (payload.group_id ?? null)
+  const result = await runNativeResourceMutation({
+    request,
+    execute: (mutationRequest) => createSub2ApiKey(mutationRequest, payload),
+    mapFailure,
+    classifyError: (error) =>
+      isApiBusinessError(error) ? "not-applied" : undefined,
+  })
+  if (result.certainty === "not-applied") return result
+  if (result.certainty === "applied" && result.value && matches(result.value))
+    return { certainty: "applied" as const, value: { detail: result.value } }
+  try {
+    const candidates = (await fetchSub2ApiKeys(request)).filter(matches)
+    if (candidates.length === 1)
+      return { certainty: "applied" as const, value: { detail: candidates[0] } }
+  } catch (error) {
+    return {
+      certainty: "possibly-applied" as const,
+      failure: mapAccountKeyResourceUncertainFailure(error),
+    }
+  }
+  return {
+    certainty: "possibly-applied" as const,
+    failure: mapAccountKeyResourceUncertainFailure(
+      result.certainty === "possibly-applied" ? result.failure : undefined,
+    ),
+  }
+}
 
 const resolveRuntimeKey = async (
   config: Sub2ApiAccountKeyResourceConfig,
@@ -445,7 +501,7 @@ const resolveRuntimeKey = async (
   const request = requestWithOptions(config, options)
   const tokenId = decodeTokenId(ref.resourceId)
   try {
-    const token = await fetchTokenById(request, tokenId)
+    const token = await fetchSub2ApiKey(request, tokenId)
     if (token.id !== tokenId) {
       return {
         kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
@@ -467,6 +523,7 @@ const resolveRuntimeKey = async (
 /** Sub2API-native account key resources for one saved account. */
 export const sub2ApiAccountKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.SUB2API,
+  inventorySecretAvailability: INVENTORY_SECRET_AVAILABILITIES.Recoverable,
   openConfig: async (input) => ({
     account: input.account,
     request: input.request,
@@ -488,37 +545,80 @@ export const sub2ApiAccountKeyResources = defineAccountKeyResourceCapability({
   defaultScopeKey: () => ACCOUNT_SCOPE_KEY,
   encodeLocator: encodeTokenId,
   decodeLocator: decodeTokenId,
-  locatorFromListItem: (item: ApiToken) => requireTokenId(item.id),
-  locatorFromDetail: (detail: ApiToken) => requireTokenId(detail.id),
+  locatorFromListItem: (item: Sub2ApiNativeKey) => requireTokenId(item.id),
+  locatorFromDetail: (detail: Sub2ApiNativeKey) => requireTokenId(detail.id),
   list: async (
     config,
     _scope,
     _query,
     options,
-  ): Promise<AccountKeyResourcePage<ApiToken>> => {
-    const items = await fetchAccountTokens(requestWithOptions(config, options))
+  ): Promise<AccountKeyResourcePage<Sub2ApiNativeKey>> => {
+    const items = await fetchSub2ApiKeys(requestWithOptions(config, options))
     return { items, total: items.length }
   },
   get: async (config, _scope, tokenId, options) => {
-    const token = (
-      await fetchAccountTokens(requestWithOptions(config, options))
-    ).find((candidate) => candidate.id === tokenId)
-    if (!token) throw new Error("token_not_found")
-    return token
+    return fetchSub2ApiKey(requestWithOptions(config, options), tokenId)
   },
   toListFacts: toFacts,
   toDetailFacts: toFacts,
-  createEditor: async () => {
-    throw new Error("account_key_resource_create_not_implemented")
-  },
-  editEditor: () => {
-    throw new Error("account_key_resource_edit_not_implemented")
-  },
-  create: async () => {
-    throw new Error("account_key_resource_create_not_implemented")
-  },
-  update: async () => {
-    throw new Error("account_key_resource_update_not_implemented")
+  createEditor: async (config) => createSub2ApiKeyEditor(config.request),
+  editEditor: (config, _scope, detail) =>
+    createSub2ApiKeyEditor(config.request, detail),
+  create: async (config, _scope, command: Sub2ApiKeyEditorCommand, options) =>
+    createNativeKey(config, command.create, options),
+  update: async (
+    config,
+    _scope,
+    detail,
+    command: Sub2ApiKeyEditorCommand,
+    options,
+  ) => {
+    const latest = toSub2ApiKeyEditable(detail)
+    const merged = mergeResourceEdits(command.baseline, command.values, latest)
+    if (!merged)
+      return {
+        certainty: "not-applied" as const,
+        failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ResourceChanged },
+      }
+    const changed = Object.fromEntries(
+      Object.entries(merged).filter(
+        ([key, value]) =>
+          !resourceValuesEqual(value, latest[key as keyof typeof latest]),
+      ),
+    ) as Partial<Sub2ApiUpdateKeyPayload>
+    if (!Object.keys(changed).length)
+      return { certainty: "applied" as const, value: detail }
+    const request = requestWithOptions(config, options)
+    const result = await runNativeResourceMutation({
+      request,
+      execute: (mutationRequest) =>
+        updateSub2ApiKey(mutationRequest, detail.id, changed),
+      mapFailure,
+      classifyError: (error) =>
+        isApiBusinessError(error) ? "not-applied" : undefined,
+    })
+    if (result.certainty === "not-applied") return result
+    try {
+      const updated = await fetchSub2ApiKey(request, detail.id)
+      const actual = toSub2ApiKeyEditable(updated)
+      if (
+        Object.entries(changed).every(([key, value]) =>
+          resourceValuesEqual(value, actual[key as keyof typeof actual]),
+        )
+      )
+        return { certainty: "applied" as const, value: updated }
+    } catch (error) {
+      return {
+        certainty: "possibly-applied" as const,
+        failure: mapAccountKeyResourceUncertainFailure(error),
+      }
+    }
+    return {
+      certainty: "possibly-applied" as const,
+      failure: mapAccountKeyResourceUncertainFailure(
+        result.certainty === "possibly-applied" ? result.failure : undefined,
+      ),
+    }
   },
   delete: async (config, _scope, tokenId, options) => {
     const result = await runNativeResourceMutation({

@@ -2,15 +2,17 @@ import type { Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { KEY_MANAGEMENT_TOKEN_ROW_TEST_ID_PREFIX } from "~/features/KeyManagement/testIds"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
-import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { expect } from "~~/e2e/fixtures/extensionTest"
 import {
   runModelListCatalogScenario,
   type ModelListCatalogExpectations,
 } from "~~/e2e/scenarios/modelListCatalog"
-import { deleteTokenFromKeyManagementPage } from "~~/e2e/utils/accountLifecycle"
+import {
+  deleteTokenFromKeyManagementPage,
+  getAccountKeyResourceRow,
+} from "~~/e2e/utils/accountLifecycle"
 import { expectPermissionOnboardingHidden } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
@@ -29,7 +31,6 @@ type ModelToKeyManagementScenarioParams = {
 }
 
 type CreatedKeyManagementToken = {
-  id: string
   name: string
 }
 
@@ -69,27 +70,11 @@ async function resolveCreatedKeyManagementToken(params: {
   page: Page
   fallbackName: string
 }) {
-  const tokenRows = params.page
-    .locator(`[data-testid^="${KEY_MANAGEMENT_TOKEN_ROW_TEST_ID_PREFIX}"]`)
-    .filter({
-      has: params.page.getByRole("heading", {
-        name: params.fallbackName,
-        exact: true,
-      }),
-    })
+  const tokenRows = getAccountKeyResourceRow(params.page, params.fallbackName)
 
   await expect(tokenRows).toHaveCount(1, { timeout: 30_000 })
 
   const row = tokenRows.first()
-  const testId = await row.getAttribute("data-testid")
-  const id = testId?.startsWith(KEY_MANAGEMENT_TOKEN_ROW_TEST_ID_PREFIX)
-    ? testId.slice(KEY_MANAGEMENT_TOKEN_ROW_TEST_ID_PREFIX.length)
-    : ""
-
-  if (!id) {
-    throw new Error("Model-to-key scenario could not resolve created key id")
-  }
-
   const name = await row
     .locator("h1,h2,h3,h4,h5,h6")
     .first()
@@ -100,7 +85,6 @@ async function resolveCreatedKeyManagementToken(params: {
   return {
     row,
     token: {
-      id,
       name: name || params.fallbackName,
     },
   }
@@ -145,10 +129,10 @@ export async function runModelToKeyManagementScenario(
 
   await keyDialog.getByTestId(MODEL_LIST_TEST_IDS.createCustomKeyButton).click()
 
-  const addKeyDialog = page.getByTestId(
-    TOKEN_PROVISIONING_TEST_IDS.addTokenDialog,
-  )
-  const tokenNameInput = addKeyDialog.locator("#tokenName")
+  const addKeyDialog = page.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditor)
+  const tokenNameInput = addKeyDialog.getByRole("textbox", {
+    name: "Token Name",
+  })
   const defaultCreatedKeyName = await tokenNameInput.inputValue()
   const createdKeyName = params.createdKeyName ?? defaultCreatedKeyName
   const modelId =
@@ -162,14 +146,14 @@ export async function runModelToKeyManagementScenario(
     await tokenNameInput.fill(createdKeyName)
   }
 
-  await expect(addKeyDialog.locator("#tokenName")).toHaveValue(createdKeyName)
+  await expect(tokenNameInput).toHaveValue(createdKeyName)
 
   for (const label of params.expectedAddKeyDialogLabels ?? []) {
-    await expect(addKeyDialog.getByText(label)).toBeVisible()
+    await expect(addKeyDialog.getByText(label, { exact: true })).toBeVisible()
   }
 
   await addKeyDialog
-    .getByTestId(TOKEN_PROVISIONING_TEST_IDS.addTokenSubmitButton)
+    .getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton)
     .click()
 
   await expect(addKeyDialog).toHaveCount(0)
@@ -236,7 +220,7 @@ export async function runModelToKeyManagementScenario(
       } else {
         await deleteTokenFromKeyManagementPage({
           page: keysPage,
-          token: createdKeyManagementToken,
+          token: createdKeyManagementToken.name,
         })
       }
     }

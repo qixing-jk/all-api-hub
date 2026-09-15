@@ -2,7 +2,6 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { TokenList } from "~/features/KeyManagement/components/TokenList"
 import {
   KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
   KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES,
@@ -21,6 +20,7 @@ import {
   API_CREDENTIAL_PROFILE_LINK_SOURCES,
   API_CREDENTIAL_PROFILE_LINK_STATES,
 } from "~/types/apiCredentialProfiles"
+import { TokenListHarness as TokenList } from "~~/tests/test-utils/keyManagement/TokenListHarness"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 import {
   createAccount,
@@ -42,55 +42,61 @@ vi.mock("~/utils/navigation", async (importOriginal) => ({
   openApiCredentialProfilesPage: openApiCredentialProfilesPageMock,
 }))
 
-vi.mock("~/features/KeyManagement/components/TokenListItem", () => ({
-  TokenListItem: ({
-    token,
-    guidedManagedSiteImportRequest,
-    onSelectionChange,
-    selectionDisabledReason,
-    association,
-    targetId,
-    isNavigationTarget,
-  }: {
-    token: { name: string }
-    guidedManagedSiteImportRequest?: string
-    onSelectionChange?: (checked: boolean) => void
-    selectionDisabledReason?: string
-    association?: {
-      status: KeyCredentialAssociationStatus
-      label: string
-      actionLabel?: string
-      onOpen?: () => void
-    }
-    targetId?: string
-    isNavigationTarget?: boolean
-  }) => (
-    <div
-      id={targetId}
-      tabIndex={targetId ? -1 : undefined}
-      data-testid={`token-row-${token.name}`}
-      data-guided-import-request={guidedManagedSiteImportRequest}
-      data-navigation-target={isNavigationTarget}
-    >
-      {onSelectionChange || selectionDisabledReason ? (
-        <input
-          type="checkbox"
-          aria-label={token.name}
-          disabled={!onSelectionChange}
-          onChange={(event) => onSelectionChange?.(event.currentTarget.checked)}
-        />
-      ) : null}
-      {token.name}
-      {association?.status === KEY_CREDENTIAL_ASSOCIATION_STATES.Linked ? (
-        <button type="button" onClick={association.onOpen}>
-          {association.actionLabel}
-        </button>
-      ) : null}
-    </div>
-  ),
-}))
-
-const getVisibleTokenKey = (token: { key: string }) => token.key
+vi.mock(
+  "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceListItem",
+  () => ({
+    AccountKeyResourceListItem: ({
+      row,
+      guidedManagedSiteImportRequest,
+      isSelected,
+      onSelectionChange,
+      selectionDisabledReason,
+      association,
+      targetId,
+      isNavigationTarget,
+    }: {
+      row: { facts: { displayName: string } }
+      guidedManagedSiteImportRequest?: string
+      isSelected?: boolean
+      onSelectionChange?: (checked: boolean) => void
+      selectionDisabledReason?: string
+      association?: {
+        status: KeyCredentialAssociationStatus
+        label: string
+        actionLabel?: string
+        onOpen?: () => void
+      }
+      targetId?: string
+      isNavigationTarget?: boolean
+    }) => (
+      <div
+        id={targetId}
+        tabIndex={targetId ? -1 : undefined}
+        data-testid={`token-row-${row.facts.displayName}`}
+        data-guided-import-request={guidedManagedSiteImportRequest}
+        data-navigation-target={isNavigationTarget}
+      >
+        {onSelectionChange || selectionDisabledReason ? (
+          <input
+            type="checkbox"
+            checked={isSelected === true}
+            aria-label={row.facts.displayName}
+            disabled={!onSelectionChange}
+            onChange={(event) =>
+              onSelectionChange?.(event.currentTarget.checked)
+            }
+          />
+        ) : null}
+        {row.facts.displayName}
+        {association?.status === KEY_CREDENTIAL_ASSOCIATION_STATES.Linked ? (
+          <button type="button" onClick={association.onOpen}>
+            {association.actionLabel}
+          </button>
+        ) : null}
+      </div>
+    ),
+  }),
+)
 
 const nativeRow = {
   kind: "account-key-resource" as const,
@@ -145,13 +151,6 @@ describe("TokenList grouped all-accounts UX", () => {
         isLoading={false}
         tokens={[token] as any}
         filteredTokens={[token] as any}
-        visibleKeys={new Set()}
-        resolvingVisibleKeys={new Set()}
-        getVisibleTokenKey={getVisibleTokenKey as any}
-        toggleKeyVisibility={vi.fn()}
-        copyKey={vi.fn()}
-        handleEditToken={vi.fn()}
-        handleDeleteToken={vi.fn()}
         handleAddToken={vi.fn()}
         selectedAccount={account.id}
         displayData={[account] as any}
@@ -203,13 +202,6 @@ describe("TokenList grouped all-accounts UX", () => {
         tokens={[token] as any}
         filteredTokens={[token] as any}
         nativeRows={[nativeRow]}
-        visibleKeys={new Set()}
-        resolvingVisibleKeys={new Set()}
-        getVisibleTokenKey={getVisibleTokenKey as any}
-        toggleKeyVisibility={vi.fn()}
-        copyKey={vi.fn()}
-        handleEditToken={vi.fn()}
-        handleDeleteToken={vi.fn()}
         handleAddToken={vi.fn()}
         selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
         displayData={[account, nativeAccount] as any}
@@ -256,13 +248,6 @@ describe("TokenList grouped all-accounts UX", () => {
         tokens={[]}
         filteredTokens={[]}
         nativeRows={[nativeRow]}
-        visibleKeys={new Set()}
-        resolvingVisibleKeys={new Set()}
-        getVisibleTokenKey={getVisibleTokenKey as any}
-        toggleKeyVisibility={vi.fn()}
-        copyKey={vi.fn()}
-        handleEditToken={vi.fn()}
-        handleDeleteToken={vi.fn()}
         handleAddToken={vi.fn()}
         selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
         displayData={[account] as any}
@@ -321,13 +306,6 @@ describe("TokenList grouped all-accounts UX", () => {
         isLoading={false}
         tokens={[tokenA1, tokenA2, tokenB1] as any}
         filteredTokens={[tokenA1, tokenA2, tokenB1] as any}
-        visibleKeys={new Set()}
-        resolvingVisibleKeys={new Set()}
-        getVisibleTokenKey={getVisibleTokenKey as any}
-        toggleKeyVisibility={vi.fn()}
-        copyKey={vi.fn()}
-        handleEditToken={vi.fn()}
-        handleDeleteToken={vi.fn()}
         handleAddToken={vi.fn()}
         selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
         displayData={[accountA, accountB] as any}
@@ -390,13 +368,6 @@ describe("TokenList grouped all-accounts UX", () => {
         isLoading={false}
         tokens={[tokenA1, tokenB1] as any}
         filteredTokens={[tokenA1, tokenB1] as any}
-        visibleKeys={new Set()}
-        resolvingVisibleKeys={new Set()}
-        getVisibleTokenKey={getVisibleTokenKey as any}
-        toggleKeyVisibility={vi.fn()}
-        copyKey={vi.fn()}
-        handleEditToken={vi.fn()}
-        handleDeleteToken={vi.fn()}
         handleAddToken={vi.fn()}
         selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
         displayData={[accountA, accountB] as any}
@@ -444,13 +415,6 @@ describe("TokenList grouped all-accounts UX", () => {
         isLoading={false}
         tokens={[tokenA1, tokenB1] as any}
         filteredTokens={[tokenA1, tokenB1] as any}
-        visibleKeys={new Set()}
-        resolvingVisibleKeys={new Set()}
-        getVisibleTokenKey={getVisibleTokenKey as any}
-        toggleKeyVisibility={vi.fn()}
-        copyKey={vi.fn()}
-        handleEditToken={vi.fn()}
-        handleDeleteToken={vi.fn()}
         handleAddToken={vi.fn()}
         selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
         displayData={[accountA, accountB] as any}
@@ -489,13 +453,6 @@ describe("TokenList grouped all-accounts UX", () => {
         isLoading={false}
         tokens={[tokenA1, tokenB1] as any}
         filteredTokens={[tokenA1, tokenB1] as any}
-        visibleKeys={new Set()}
-        resolvingVisibleKeys={new Set()}
-        getVisibleTokenKey={getVisibleTokenKey as any}
-        toggleKeyVisibility={vi.fn()}
-        copyKey={vi.fn()}
-        handleEditToken={vi.fn()}
-        handleDeleteToken={vi.fn()}
         handleAddToken={vi.fn()}
         selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
         displayData={[accountA, accountB] as any}
@@ -528,13 +485,6 @@ describe("TokenList grouped all-accounts UX", () => {
         isLoading={false}
         tokens={[]}
         filteredTokens={[]}
-        visibleKeys={new Set()}
-        resolvingVisibleKeys={new Set()}
-        getVisibleTokenKey={getVisibleTokenKey as any}
-        toggleKeyVisibility={vi.fn()}
-        copyKey={vi.fn()}
-        handleEditToken={vi.fn()}
-        handleDeleteToken={vi.fn()}
         handleAddToken={vi.fn()}
         selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
         displayData={[account] as any}

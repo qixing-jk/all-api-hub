@@ -16,8 +16,14 @@ describe("KeyManagement AccountSelectorPanel retry failed", () => {
         selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
         setSelectedAccount={vi.fn()}
         displayData={[createAccount({ id: "acc-a", name: "Account A" })] as any}
-        tokens={[]}
-        filteredTokens={[]}
+        aggregateCounts={{
+          total: 0,
+          enabled: 0,
+          showing: 0,
+          knownTotal: 0,
+          knownEnabled: 0,
+          knownShowing: 0,
+        }}
         tokenLoadProgress={null}
         failedAccounts={[
           {
@@ -54,8 +60,6 @@ describe("KeyManagement AccountSelectorPanel retry failed", () => {
         selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
         setSelectedAccount={vi.fn()}
         displayData={[createAccount({ id: "acc-a", name: "Account A" })] as any}
-        tokens={[]}
-        filteredTokens={[]}
         aggregateCounts={{
           total: null,
           enabled: null,
@@ -82,8 +86,6 @@ describe("KeyManagement AccountSelectorPanel retry failed", () => {
         selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
         setSelectedAccount={vi.fn()}
         displayData={[createAccount({ id: "acc-a", name: "Account A" })] as any}
-        tokens={[]}
-        filteredTokens={[]}
         aggregateCounts={{
           total: null,
           enabled: null,
@@ -110,8 +112,14 @@ describe("KeyManagement AccountSelectorPanel retry failed", () => {
       selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
       setSelectedAccount: vi.fn(),
       displayData: [createAccount({ id: "acc-a", name: "Account A" })] as any,
-      tokens: [],
-      filteredTokens: [],
+      aggregateCounts: {
+        total: 0,
+        enabled: 0,
+        showing: 0,
+        knownTotal: 0,
+        knownEnabled: 0,
+        knownShowing: 0,
+      },
       failedAccounts: [
         {
           accountId: "acc-b",

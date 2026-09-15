@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { AccountKeyScopeSelector } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyScopeSelector"
 import type { AccountKeyScope } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
@@ -13,11 +14,58 @@ const workspace: AccountKeyScope = {
 }
 
 describe("AccountKeyScopeSelector", () => {
+  it.each([
+    SITE_TYPES.NEW_API,
+    SITE_TYPES.SUB2API,
+    SITE_TYPES.VO_API_V2,
+    SITE_TYPES.AIHUBMIX,
+  ])(
+    "hides the implicit account scope for %s, including while loading",
+    (siteType) => {
+      const props = { siteType, onSelectScope: vi.fn() }
+      const { rerender } = render(
+        <AccountKeyScopeSelector
+          {...props}
+          scopes={[]}
+          selectedScope={null}
+          isLoading
+        />,
+        { withUserPreferencesProvider: false, withThemeProvider: false },
+      )
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+      expect(screen.queryByRole("heading")).not.toBeInTheDocument()
+
+      const accountScope: AccountKeyScope = {
+        scopeKey: "account",
+        routeKey: "account",
+        displayName: "Example account",
+        isDefault: true,
+      }
+      rerender(
+        <AccountKeyScopeSelector
+          {...props}
+          scopes={[accountScope]}
+          selectedScope={accountScope}
+        />,
+      )
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+      expect(screen.queryByRole("heading")).not.toBeInTheDocument()
+    },
+  )
+
   it("uses neutral scope terminology for another provider", () => {
     render(
       <AccountKeyScopeSelector
         siteType="new-api"
-        scopes={[workspace]}
+        scopes={[
+          workspace,
+          {
+            scopeKey: "another-scope",
+            routeKey: "another",
+            displayName: "Another scope",
+            isDefault: false,
+          },
+        ]}
         selectedScope={workspace}
         onSelectScope={vi.fn()}
       />,

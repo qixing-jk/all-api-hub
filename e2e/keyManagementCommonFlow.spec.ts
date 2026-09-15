@@ -2,7 +2,6 @@ import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { SITE_TYPES } from "~/constants/siteType"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
 import {
-  getKeyManagementTokenRowTestId,
   getManagedSiteBatchExportRowSelectTestId,
   getRepairAccountResultTestId,
   KEY_MANAGEMENT_TEST_IDS,
@@ -14,11 +13,12 @@ import {
   ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
   type AccountKeyResourceRef,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import {
   ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS,
   STORAGE_KEYS,
 } from "~/services/core/storageKeys"
-import { AuthTypeEnum, type ApiToken } from "~/types"
+import { AuthTypeEnum } from "~/types"
 import {
   ACCOUNT_KEY_REPAIR_JOB_STATES,
   ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES,
@@ -35,6 +35,7 @@ import {
 import { verifyCcSwitchModelExportDeepLink } from "~~/e2e/scenarios/ccSwitchExport"
 import {
   deleteTokenFromKeyManagementPage,
+  getAccountKeyResourceRow,
   openKeyManagementForAccount,
   saveTokenToApiCredentialProfilesFromKeyManagementPage,
 } from "~~/e2e/utils/accountLifecycle"
@@ -59,7 +60,7 @@ import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { seedMockAccountFixture } from "~~/e2e/utils/mockedSite/accountFixtures"
 import { isRealSiteTestTokenName } from "~~/e2e/utils/realSite/keyManagement"
 
-function createStubApiToken(overrides: Partial<ApiToken> = {}): ApiToken {
+function createStubApiToken(overrides: Partial<NewApiToken> = {}): NewApiToken {
   const nowSeconds = Math.floor(Date.now() / 1000)
 
   return {
@@ -411,7 +412,7 @@ test("reports the create response instead of timing out on a missing token row",
       openFromAccountRow: false,
       buildTokenName: () => "E2E Rejected Key",
     }),
-  ).rejects.toThrow("API key creation failed: Fixture token quota reached")
+  ).rejects.toThrow(/API key creation failed:.*Fixture token quota reached/s)
 })
 
 test("reports the delete response instead of timing out on a retained token row", async ({
@@ -445,7 +446,7 @@ test("reports the delete response instead of timing out on a retained token row"
       buildTokenName: () => "E2E Rejected Token",
     }),
   ).rejects.toThrow(
-    "API key deletion failed: Fixture delete temporarily unavailable",
+    /API key deletion failed:.*Fixture delete temporarily unavailable/s,
   )
   await expect(
     page.getByRole("heading", {
@@ -507,7 +508,7 @@ test("ignores an unrelated success notification while deleting a token", async (
   })
 
   await expect(
-    keyManagementPage.getByTestId(getKeyManagementTokenRowTestId(token.id)),
+    getAccountKeyResourceRow(keyManagementPage, token.name),
   ).toHaveCount(0)
 })
 
@@ -629,9 +630,11 @@ test("updates an existing token from key management and reloads the visible list
   ).toBeVisible()
 
   await page.getByRole("button", { name: "Edit Key" }).click()
-  await expect(page.locator("#tokenName")).toBeVisible()
-  await page.locator("#tokenName").fill("Updated Key")
-  await page.getByRole("button", { name: "Update Key" }).click()
+  const editor = page.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditor)
+  await editor.getByRole("textbox", { name: "Token Name" }).fill("Updated Key")
+  await editor
+    .getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton)
+    .click()
 
   await expect(page.getByRole("heading", { name: "Updated Key" })).toBeVisible()
   await expect(page.getByRole("heading", { name: "Existing Key" })).toHaveCount(
@@ -662,7 +665,7 @@ test("deletes an existing token from key management and shows the empty state", 
 
   await page.getByRole("button", { name: "Delete Key" }).click()
   await page
-    .getByTestId(KEY_MANAGEMENT_TEST_IDS.deleteTokenConfirmButton)
+    .getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton)
     .click()
 
   await expect(page.getByRole("heading", { name: "Existing Key" })).toHaveCount(
@@ -1103,7 +1106,7 @@ test("saves a key to API credential profiles and opens the profiles page", async
   await saveTokenToApiCredentialProfilesFromKeyManagementPage({
     serviceWorker,
     page,
-    row: page.getByTestId(getKeyManagementTokenRowTestId(1)),
+    row: getAccountKeyResourceRow(page, "Profile Export Key"),
     expectedProfile: {
       name: "Profile Source - Profile Export Key",
       baseUrl: "https://profile-source.example.com",
@@ -1122,7 +1125,7 @@ test("saves a key to API credential profiles and opens the profiles page", async
     .click()
   await page.getByRole("menuitem", { name: "View corresponding key" }).click()
 
-  const linkedKeyRow = page.getByTestId(getKeyManagementTokenRowTestId(1))
+  const linkedKeyRow = getAccountKeyResourceRow(page, "Profile Export Key")
   await expect(linkedKeyRow).toHaveAttribute("data-navigation-target", "true")
   const associationButton = linkedKeyRow.getByTestId(
     KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton,
@@ -1186,7 +1189,7 @@ test("links an existing API credential to an existing key and preserves the asso
   await waitForExtensionRoot(page)
   await expectPermissionOnboardingHidden(page)
 
-  const keyRow = page.getByTestId(getKeyManagementTokenRowTestId(9))
+  const keyRow = getAccountKeyResourceRow(page, "Manual Association Key")
   await expect(keyRow).toBeVisible()
   await keyRow
     .getByTestId(KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton)
@@ -1236,10 +1239,13 @@ test("links an existing API credential to an existing key and preserves the asso
       state: "active",
       linkedBy: "user",
       locator: {
-        source: "account_token",
-        accountId: "e2e-manual-association-account",
-        siteType: SITE_TYPES.NEW_API,
-        tokenId: 9,
+        source: "account_key_resource",
+        ref: {
+          accountId: "e2e-manual-association-account",
+          siteType: SITE_TYPES.NEW_API,
+          scopeKey: "account",
+          resourceId: "9",
+        },
       },
     })
 
@@ -1262,7 +1268,7 @@ test("links an existing API credential to an existing key and preserves the asso
     )
   })
   await expect(
-    page.getByTestId(getKeyManagementTokenRowTestId(9)),
+    getAccountKeyResourceRow(page, "Manual Association Key"),
   ).toBeVisible()
 })
 
@@ -1434,7 +1440,7 @@ test("cleans linked channels and retries persisted multi-key cleanup after reloa
     }),
   ).toBeChecked()
   await page
-    .getByTestId(KEY_MANAGEMENT_TEST_IDS.deleteTokenConfirmButton)
+    .getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton)
     .click()
   await expect.poll(() => deleteStarted).toBe(true)
   await expect(
@@ -1561,7 +1567,7 @@ for (const siteType of [SITE_TYPES.DONE_HUB, SITE_TYPES.VELOERA]) {
     ).toBeChecked()
     recording = true
     await page
-      .getByTestId(KEY_MANAGEMENT_TEST_IDS.deleteTokenConfirmButton)
+      .getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton)
       .click()
     await expect(
       page.getByRole("heading", { name: "Existing Key" }),

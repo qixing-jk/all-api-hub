@@ -9,6 +9,7 @@ import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import { maskSecretForDisplay } from "~/utils/core/formatters"
 import { server } from "~~/tests/msw/server"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { createAccount } from "~~/tests/utils/keyManagementFactories"
 
 vi.mock("~/contexts/FeatureGuidanceContext", () => ({
   useFeatureGuidanceContext: () => ({
@@ -19,6 +20,10 @@ vi.mock("~/contexts/FeatureGuidanceContext", () => ({
 const AccountKeyResourceListItem = (props: any) => (
   <NativeAccountKeyResourceListItem
     cardAdapter={openRouterKeyResourceCardAdapter}
+    account={createAccount({
+      id: props.row.accountId,
+      siteType: props.row.facts.ref.siteType,
+    })}
     {...props}
   />
 )

@@ -4,6 +4,7 @@ import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
 import { aihubmixAccountBootstrap } from "./accountBootstrap"
 import { aihubmixAccountCompletion } from "./accountCompletion"
 import { aihubmixAccountData } from "./accountData"
+import { aihubmixAccountKeyResources } from "./accountKeyResource"
 import { aihubmixAccountRefresh } from "./accountRefresh"
 import { aihubmixInviteLink } from "./inviteLink"
 import { aihubmixKeyManagement } from "./keyManagement"
@@ -18,6 +19,8 @@ export const aihubmixCapabilities: SiteTypeCapabilities = {
     bootstrap: aihubmixAccountBootstrap,
     completion: aihubmixAccountCompletion,
     keyManagement: aihubmixKeyManagement,
+    keyResources: aihubmixAccountKeyResources,
+    keyResourceManagement: aihubmixAccountKeyResources,
     tokenProvisioning: aihubmixTokenProvisioning,
     refresh: aihubmixAccountRefresh,
     modelPricing: aihubmixModelPricing,

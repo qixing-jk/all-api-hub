@@ -15,62 +15,59 @@ import {
   type KeyResourceCredentialAssociation,
 } from "~/features/KeyManagement/components/KeyResourceCard"
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
-import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
-import {
-  createAccountRuntimeKeyExportSource,
-  createAccountTokenExportSource,
-} from "~/services/accounts/utils/credentialExport"
-import type { AccountToken, DisplaySiteData } from "~/types"
+import { getAccountRuntimeKeyExportId } from "~/services/accounts/accountRuntimeKeys"
+import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
+import type { DisplaySiteData } from "~/types"
 
 import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"
-import { TokenApiCredentialActions } from "./TokenApiCredentialActions"
+import { RuntimeKeyApiCredentialActions } from "./RuntimeKeyApiCredentialActions"
 import {
-  TOKEN_KELIVO_EXPORT_ANALYTICS_CONTEXT,
-  type TokenIntegrationActionsController,
-} from "./useTokenIntegrationActions"
+  RUNTIME_KEY_KELIVO_EXPORT_ANALYTICS_CONTEXT,
+  type RuntimeKeyIntegrationActionsController,
+} from "./useRuntimeKeyIntegrationActions"
 
-interface TokenIntegrationDialogsProps {
+interface RuntimeKeyIntegrationDialogsProps {
   account: DisplaySiteData
-  controller: TokenIntegrationActionsController
+  controller: RuntimeKeyIntegrationActionsController
   enabled: boolean
-  token: AccountToken
+  runtimeKey: AccountRuntimeKey
 }
 
-interface TokenIntegrationActionGroupProps {
+interface RuntimeKeyIntegrationActionGroupProps {
   account: DisplaySiteData
   actionPolicy: KeyResourceActionPolicy
   association?: KeyResourceCredentialAssociation
-  controller: TokenIntegrationActionsController
+  controller: RuntimeKeyIntegrationActionsController
   onOpenCCSwitchDialog?: () => void
-  token: AccountToken
+  runtimeKey: AccountRuntimeKey
 }
 
-/** Reports whether a token row needs the integrations-and-export action group. */
-export function hasTokenIntegrationActionGroup(
+/** Reports whether a runtimeKey row needs the integrations-and-export action group. */
+export function hasRuntimeKeyIntegrationActionGroup(
   actionPolicy: KeyResourceActionPolicy,
   association?: KeyResourceCredentialAssociation,
 ): boolean {
   return actionPolicy.exportSecret || Boolean(association)
 }
 
-/** Renders export dialogs outside the token action toolbar. */
-export function TokenIntegrationDialogs({
+/** Renders export dialogs outside the runtimeKey action toolbar. */
+export function RuntimeKeyIntegrationDialogs({
   account,
   controller,
   enabled,
-  token,
-}: TokenIntegrationDialogsProps) {
+  runtimeKey,
+}: RuntimeKeyIntegrationDialogsProps) {
   const exportSource = useMemo(
-    () => createAccountTokenExportSource(account, token),
-    [account, token],
+    () =>
+      createAccountRuntimeKeyExportSource(account, runtimeKey, {
+        preferCurrentSecret: true,
+      }),
+    [account, runtimeKey],
   )
   const runtimeExportSource = useMemo(
-    () =>
-      createAccountRuntimeKeyExportSource(
-        account,
-        buildDisplayAccountTokenRuntimeKey(account, token),
-      ),
-    [account, token],
+    () => createAccountRuntimeKeyExportSource(account, runtimeKey),
+    [account, runtimeKey],
   )
   if (!enabled) return null
 
@@ -82,7 +79,9 @@ export function TokenIntegrationDialogs({
         isOpen={dialogs.kiloCode.isOpen}
         onClose={dialogs.kiloCode.close}
         initialSelectedSiteIds={[account.id]}
-        initialSelectedTokenIdsBySite={{ [account.id]: [`${token.id}`] }}
+        initialSelectedTokenIdsBySite={{
+          [account.id]: [getAccountRuntimeKeyExportId(runtimeKey)],
+        }}
       />
       {dialogs.cursorPlus.isOpen ? (
         <CursorPlusExportDialog
@@ -96,7 +95,7 @@ export function TokenIntegrationDialogs({
           isOpen={true}
           onClose={dialogs.kelivo.close}
           initialValue={dialogs.kelivo.input}
-          analyticsContext={TOKEN_KELIVO_EXPORT_ANALYTICS_CONTEXT}
+          analyticsContext={RUNTIME_KEY_KELIVO_EXPORT_ANALYTICS_CONTEXT}
         />
       ) : null}
       <ClaudeCodeRouterImportDialog
@@ -111,18 +110,19 @@ export function TokenIntegrationDialogs({
 }
 
 /** Renders managed-site import, third-party export, and credential actions. */
-export function TokenIntegrationActionGroup({
+export function RuntimeKeyIntegrationActionGroup({
   account,
   actionPolicy,
   association,
   controller,
   onOpenCCSwitchDialog,
-  token,
-}: TokenIntegrationActionGroupProps) {
+  runtimeKey,
+}: RuntimeKeyIntegrationActionGroupProps) {
   const { t } = useTranslation("keyManagement")
   const hasIntegrations = actionPolicy.exportSecret
 
-  if (!hasTokenIntegrationActionGroup(actionPolicy, association)) return null
+  if (!hasRuntimeKeyIntegrationActionGroup(actionPolicy, association))
+    return null
 
   const { exportActions, managedSiteImport } = controller
 
@@ -172,11 +172,11 @@ export function TokenIntegrationActionGroup({
           />
         </>
       ) : null}
-      <TokenApiCredentialActions
+      <RuntimeKeyApiCredentialActions
         association={association}
         actionPolicy={actionPolicy}
         account={account}
-        token={token}
+        runtimeKey={runtimeKey}
       />
     </KeyResourceActionGroup>
   )

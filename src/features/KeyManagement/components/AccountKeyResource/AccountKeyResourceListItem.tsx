@@ -1,5 +1,5 @@
 import { Copy, Eye, EyeOff, Pencil, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { IconButton } from "~/components/ui"
@@ -9,10 +9,14 @@ import { LinkedCredentialProfileActions } from "~/features/KeyManagement/compone
 import type { AccountKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/accountKeyResourceCardAdapter"
 import type { KeyResourceDetailState } from "~/features/KeyManagement/presentation/keyResourceCard"
 import toast from "~/lib/notify"
+import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/accountRuntimeKeys"
+import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keyProductCapabilities"
 import type {
   AccountKeyResourceFacts,
   ResourceFailure,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
+import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { maskSecretForDisplay } from "~/utils/core/formatters"
 
@@ -21,10 +25,13 @@ import type {
   NativeKeyManagementRow,
   NativeKeyManagementRowAction,
 } from "../../types"
+import { RuntimeKeyHeader } from "../RuntimeKeyActions/RuntimeKeyHeader"
+import { useRuntimeKeyDisclosure } from "../RuntimeKeyActions/useRuntimeKeyDisclosure"
 
 /** Composes one native account-key resource with the shared key-resource card. */
 export function AccountKeyResourceListItem({
   row,
+  account,
   cardAdapter,
   onEdit,
   onDelete,
@@ -39,8 +46,17 @@ export function AccountKeyResourceListItem({
   associatedProfile,
   targetId,
   isNavigationTarget,
+  isSelected,
+  onSelectionChange,
+  onOpenCCSwitchDialog,
+  managedSiteStatus,
+  isManagedSiteStatusChecking,
+  onManagedSiteImportSuccess,
+  onManagedSiteVerificationRetry,
+  guidedManagedSiteImportRequest,
 }: {
   row: NativeKeyManagementRow
+  account: DisplaySiteData
   cardAdapter: AccountKeyResourceCardAdapter
   onEdit: NativeKeyManagementRowAction
   onDelete: NativeKeyManagementRowAction
@@ -55,8 +71,26 @@ export function AccountKeyResourceListItem({
   associatedProfile?: ApiCredentialProfile
   targetId?: string
   isNavigationTarget?: boolean
+  isSelected?: boolean
+  onSelectionChange?: (selected: boolean) => void
+  onOpenCCSwitchDialog?: () => void
+  managedSiteStatus?: ManagedSiteTokenChannelStatus
+  isManagedSiteStatusChecking?: boolean
+  onManagedSiteImportSuccess?: () => void | Promise<void>
+  onManagedSiteVerificationRetry?: (
+    status: ManagedSiteTokenChannelStatus,
+  ) => void | Promise<void>
+  guidedManagedSiteImportRequest?: string
 }) {
   const { t } = useTranslation(["keyManagement", "common"])
+  const runtimeKey = useMemo(
+    () => buildAccountKeyResourceRuntimeKeyFromFacts(account, row.facts),
+    [account, row.facts],
+  )
+  const recoverable = supportsRecoverableAccountRuntimeKeySecrets(
+    account.siteType,
+  )
+  const disclosure = useRuntimeKeyDisclosure(account, runtimeKey)
   const [visibleSecretProfileId, setVisibleSecretProfileId] = useState<
     string | null
   >(null)
@@ -123,11 +157,13 @@ export function AccountKeyResourceListItem({
   ) : (
     managementActions
   )
-  const secret = associatedProfileWithSecret
-    ? isSecretVisible
-      ? associatedProfileWithSecret.apiKey
-      : maskSecretForDisplay(associatedProfileWithSecret.apiKey)
-    : presentation.maskedLabel
+  const secret = recoverable
+    ? disclosure.secret ?? presentation.maskedLabel
+    : associatedProfileWithSecret
+      ? isSecretVisible
+        ? associatedProfileWithSecret.apiKey
+        : maskSecretForDisplay(associatedProfileWithSecret.apiKey)
+      : presentation.maskedLabel
   const copyAssociatedSecret = async () => {
     if (!associatedProfileWithSecret) return
     try {
@@ -141,7 +177,25 @@ export function AccountKeyResourceListItem({
       toast.error(t("keyManagement:messages.copyFailed"))
     }
   }
-  const secretControls = hasAssociatedSecret ? (
+  const secretControls = recoverable ? (
+    <IconButton
+      type="button"
+      size="sm"
+      variant="ghost"
+      loading={disclosure.resolving}
+      aria-label={
+        disclosure.visible ? t("actions.hideKey") : t("actions.showKey")
+      }
+      tooltip={disclosure.visible ? t("actions.hideKey") : t("actions.showKey")}
+      onClick={() => void disclosure.toggle()}
+    >
+      {disclosure.visible ? (
+        <EyeOff aria-hidden="true" className="h-4 w-4" />
+      ) : (
+        <Eye aria-hidden="true" className="h-4 w-4" />
+      )}
+    </IconButton>
+  ) : hasAssociatedSecret ? (
     <>
       {/* These local disclosure actions do not resolve provider secrets, so the
           existing provider reveal/copy analytics would misclassify them. */}
@@ -189,11 +243,39 @@ export function AccountKeyResourceListItem({
       presentation={presentation}
       secret={secret}
       secretControls={secretControls}
-      actions={actions}
+      actions={recoverable ? undefined : actions}
+      renderHeader={
+        recoverable
+          ? (headerProps) => (
+              <RuntimeKeyHeader
+                headerProps={headerProps}
+                account={account}
+                runtimeKey={runtimeKey}
+                actionPolicy={presentation.actions}
+                association={association}
+                copyKey={disclosure.copy}
+                handleEditKey={() => onEdit(row.facts.ref)}
+                handleDeleteKey={() => onDelete(row.facts.ref)}
+                onOpenCCSwitchDialog={onOpenCCSwitchDialog}
+                managedSiteStatus={managedSiteStatus}
+                isManagedSiteStatusChecking={isManagedSiteStatusChecking}
+                onManagedSiteImportSuccess={onManagedSiteImportSuccess}
+                onManagedSiteVerificationRetry={
+                  onManagedSiteVerificationRetry
+                    ? (_key, status) => onManagedSiteVerificationRetry(status)
+                    : undefined
+                }
+                guidedManagedSiteImportRequest={guidedManagedSiteImportRequest}
+              />
+            )
+          : undefined
+      }
       details={detailState}
       isDetailsExpanded={expanded}
       onDetailsExpandedChange={onExpandedChange}
       selectionDisabledReason={selectionDisabledReason}
+      isSelected={isSelected}
+      onSelectionChange={onSelectionChange}
       selectionLabel={t("batchManagedSiteExport.selection.rowLabel", {
         name: presentation.title,
       })}

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { StrictMode, useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   AccountKeyResourceEditorDialog,
   type AccountKeyResourceEditorDialogProps,
@@ -12,14 +13,27 @@ import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { NATIVE_RESOURCE_EDITOR_LOADING_REVEALS } from "~/features/ResourceEditor/nativeResourceEditorOpeningState"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import { RESOURCE_FIELD_OPTION_LOAD_TRIGGERS } from "~/services/apiAdapters/contracts/resourceNative"
+import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResourceEditor"
+import { resolveNewApiFamilyTokenTransport } from "~/services/apiAdapters/newApi/tokenTransport"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
   OPENROUTER_KEY_LIMIT_RESETS,
 } from "~/services/apiAdapters/openrouter/keyResourceFields"
+import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keyResourceEditor"
+import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
+import { AuthTypeEnum } from "~/types"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const field = OPENROUTER_KEY_FIELD_IDS
+const nativeRequest = {
+  baseUrl: "https://example.invalid",
+  auth: {
+    authType: AuthTypeEnum.AccessToken,
+    accessToken: "example",
+    userId: 1,
+  },
+}
 
 const editor = (mode: "create" | "edit" = "create") => ({
   editorId: 1,
@@ -99,6 +113,203 @@ const editor = (mode: "create" | "edit" = "create") => ({
 })
 
 describe("AccountKeyResourceEditorDialog", () => {
+  it.each(["create", "edit"] as const)(
+    "updates generated names with the group while preserving custom names in %s mode",
+    async (mode) => {
+      const user = userEvent.setup()
+      const onSubmit = vi.fn()
+      const onValuesChange = vi.fn()
+      const definition = createNewApiKeyEditor(
+        SITE_TYPES.NEW_API,
+        nativeRequest,
+        resolveNewApiFamilyTokenTransport(SITE_TYPES.NEW_API),
+      )
+      render(
+        <AccountKeyResourceEditorDialog
+          editor={{
+            editorId: 1,
+            siteType: SITE_TYPES.NEW_API,
+            mode,
+            fields: definition.fields,
+            initialValues: definition.initialValues,
+            values: definition.initialValues,
+            optionsByField: {
+              group: [
+                { value: "default", displayLabel: "default" },
+                { value: "vip", displayLabel: "vip" },
+                { value: "paid", displayLabel: "paid" },
+              ],
+              model_limits: [],
+            },
+          }}
+          onClose={vi.fn()}
+          onSubmit={onSubmit}
+          onValuesChange={onValuesChange}
+          onLoadOptions={vi.fn()}
+        />,
+        { withUserPreferencesProvider: false, withThemeProvider: false },
+      )
+      const name = screen.getByRole("textbox", {
+        name: /keyManagement:dialog.tokenName/,
+      })
+      const group = screen.getByRole("combobox", {
+        name: /keyManagement:dialog.groupLabel/,
+      })
+      expect(name).toHaveValue("user group (auto)")
+      await user.click(group)
+      await user.click(await screen.findByRole("option", { name: "vip" }))
+      expect(name).toHaveValue("vip group (auto)")
+      expect(onValuesChange).toHaveBeenLastCalledWith(
+        1,
+        expect.objectContaining({
+          name: "vip group (auto)",
+          group: "vip",
+        }),
+      )
+
+      await user.click(group)
+      await user.click(await screen.findByRole("option", { name: "default" }))
+      expect(name).toHaveValue("user group (auto)")
+
+      await user.clear(name)
+      await user.type(name, "My custom key")
+      await user.click(group)
+      await user.click(await screen.findByRole("option", { name: "paid" }))
+      expect(name).toHaveValue("My custom key")
+      await user.click(
+        screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton),
+      )
+      expect(onSubmit).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          name: "My custom key",
+          group: "paid",
+        }),
+      )
+    },
+  )
+
+  it.each([SITE_TYPES.SUB2API, SITE_TYPES.VO_API_V2])(
+    "names %s keys after the visible group while retaining native group IDs",
+    async (siteType) => {
+      const user = userEvent.setup()
+      const onValuesChange = vi.fn()
+      const isMultiple = siteType === SITE_TYPES.VO_API_V2
+      const groupField = isMultiple ? "groups" : "group_id"
+      const definition = isMultiple
+        ? createVoApiV2KeyEditor(nativeRequest)
+        : createSub2ApiKeyEditor(nativeRequest)
+      render(
+        <AccountKeyResourceEditorDialog
+          editor={{
+            editorId: 1,
+            siteType,
+            mode: "create",
+            fields: definition.fields,
+            initialValues: definition.initialValues,
+            values: definition.initialValues,
+            optionsByField: {
+              [groupField]: [
+                { value: "11", displayLabel: "Priority" },
+                { value: "15", displayLabel: "Backup" },
+              ],
+            },
+          }}
+          onClose={vi.fn()}
+          onSubmit={vi.fn()}
+          onValuesChange={onValuesChange}
+          onLoadOptions={vi.fn()}
+        />,
+        { withUserPreferencesProvider: false, withThemeProvider: false },
+      )
+
+      const name = screen.getByRole("textbox", {
+        name: /keyManagement:dialog.tokenName/,
+      })
+      const group = screen.getByRole("combobox", {
+        name: /keyManagement:dialog.groupLabel/,
+      })
+      await user.click(group)
+      await user.click(await screen.findByRole("option", { name: "Priority" }))
+      expect(name).toHaveValue("Priority group (auto)")
+      expect(onValuesChange).toHaveBeenLastCalledWith(
+        1,
+        expect.objectContaining({
+          name: "Priority group (auto)",
+          [groupField]: isMultiple ? ["11"] : "11",
+        }),
+      )
+
+      if (isMultiple) {
+        await user.click(screen.getByRole("option", { name: "Backup" }))
+        expect(name).toHaveValue("user group (auto)")
+        await user.click(screen.getByRole("option", { name: "Priority" }))
+        expect(name).toHaveValue("Backup group (auto)")
+        await user.keyboard("{Escape}")
+      }
+      await user.clear(name)
+      await user.type(name, "Model specific key")
+      await user.click(group)
+      await user.click(await screen.findByRole("option", { name: "Priority" }))
+      expect(name).toHaveValue("Model specific key")
+    },
+  )
+
+  it("edits native USD quota and preserves untouched expiry precision without OpenRouter fields", async () => {
+    const onSubmit = vi.fn()
+    const initialValues = {
+      name: "Native key",
+      quota: 7.25,
+      unlimited: false,
+      expires_at: "2030-01-01T00:00:31.000Z",
+      group_id: null,
+      enabled: true,
+      ip_whitelist: "",
+    }
+    render(
+      <AccountKeyResourceEditorDialog
+        editor={{
+          editorId: 1,
+          siteType: SITE_TYPES.SUB2API,
+          mode: "edit",
+          fields: [
+            { fieldId: "name", type: "text", required: true },
+            { fieldId: "quota", type: "number", min: 0 },
+            { fieldId: "unlimited", type: "boolean" },
+            { fieldId: "expires_at", type: "date-time", nullable: true },
+            {
+              fieldId: "group_id",
+              type: "select",
+              nullable: true,
+              options: [],
+            },
+            { fieldId: "enabled", type: "boolean" },
+            { fieldId: "ip_whitelist", type: "textarea" },
+          ],
+          initialValues,
+          values: initialValues,
+        }}
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+        onValuesChange={vi.fn()}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+
+    expect(
+      screen.queryByText("keyManagement:openRouter.editor.summary"),
+    ).toBeNull()
+    const quota = screen.getByRole("spinbutton", {
+      name: "keyManagement:native.editor.totalQuotaUsd",
+    })
+    expect(quota).toHaveValue(7.25)
+    fireEvent.change(quota, { target: { value: "9.5" } })
+    await userEvent.click(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton),
+    )
+    expect(onSubmit).toHaveBeenCalledWith(1, { ...initialValues, quota: 9.5 })
+  })
+
   it("delays the initial loading skeleton and uses the final editor frame when it appears", () => {
     vi.useFakeTimers()
     try {

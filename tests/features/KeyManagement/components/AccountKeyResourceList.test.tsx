@@ -4,9 +4,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { AccountKeyResourceList as NativeAccountKeyResourceList } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceList"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import { render, screen } from "~~/tests/test-utils/render"
+import { createAccount } from "~~/tests/utils/keyManagementFactories"
 
 const AccountKeyResourceList = (props: any) => (
-  <NativeAccountKeyResourceList ariaLabel="Native account keys" {...props} />
+  <NativeAccountKeyResourceList
+    ariaLabel="Native account keys"
+    accounts={props.rows.map((row: NativeKeyManagementRow) =>
+      createAccount({ id: row.accountId, siteType: row.facts.ref.siteType }),
+    )}
+    {...props}
+  />
 )
 
 const itemProps = new Map<string, any>()

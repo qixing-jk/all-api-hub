@@ -10,68 +10,74 @@ import {
   type KeyResourceCredentialAssociation,
 } from "~/features/KeyManagement/components/KeyResourceCard"
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
+import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
-import type { AccountToken, DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
 
 import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"
 import {
-  hasTokenIntegrationActionGroup,
-  TokenIntegrationActionGroup,
-  TokenIntegrationDialogs,
-} from "./TokenIntegrationActions"
-import { useTokenIntegrationActions } from "./useTokenIntegrationActions"
-import { useTokenVerificationActions } from "./useTokenVerificationActions"
+  hasRuntimeKeyIntegrationActionGroup,
+  RuntimeKeyIntegrationActionGroup,
+  RuntimeKeyIntegrationDialogs,
+} from "./RuntimeKeyIntegrationActions"
+import { useRuntimeKeyIntegrationActions } from "./useRuntimeKeyIntegrationActions"
+import { useRuntimeKeyVerificationActions } from "./useRuntimeKeyVerificationActions"
 
-export interface TokenActionButtonsProps {
+export interface RuntimeKeyActionButtonsProps {
   association?: KeyResourceCredentialAssociation
   actionPolicy: KeyResourceActionPolicy
-  token: AccountToken
-  copyKey: (account: DisplaySiteData, token: AccountToken) => Promise<void>
-  handleEditToken: (token: AccountToken) => void
-  handleDeleteToken: (token: AccountToken) => void
+  runtimeKey: AccountRuntimeKey
+  copyKey: (
+    account: DisplaySiteData,
+    runtimeKey: AccountRuntimeKey,
+  ) => Promise<void>
+  handleEditKey: (runtimeKey: AccountRuntimeKey) => void
+  handleDeleteKey: (runtimeKey: AccountRuntimeKey) => void
   account: DisplaySiteData
   onOpenCCSwitchDialog?: () => void
   managedSiteStatus?: ManagedSiteTokenChannelStatus
-  onManagedSiteImportSuccess?: (token: AccountToken) => void | Promise<void>
+  onManagedSiteImportSuccess?: (
+    runtimeKey: AccountRuntimeKey,
+  ) => void | Promise<void>
   guidedManagedSiteImportRequest?: string
 }
 
 /**
- * Renders action buttons for a token (copy, export, edit/delete).
+ * Renders action buttons for a runtimeKey (copy, export, edit/delete).
  * @param props Component props container.
- * @param props.actionPolicy Provider capability policy controlling available token actions.
+ * @param props.actionPolicy Provider capability policy controlling available runtimeKey actions.
  * @param props.association Current API credential-library relationship.
- * @param props.token Token being acted upon.
+ * @param props.runtimeKey Token being acted upon.
  * @param props.copyKey Clipboard copy handler.
- * @param props.handleEditToken Edit action callback.
- * @param props.handleDeleteToken Delete action callback.
+ * @param props.handleEditKey Edit action callback.
+ * @param props.handleDeleteKey Delete action callback.
  * @param props.account Account context for integrations.
  * @param props.managedSiteStatus Current managed-site status used to reuse duplicate-review results when available.
  * @param props.onOpenCCSwitchDialog Optional CCSwitch export opener.
  * @param props.onManagedSiteImportSuccess Optional managed-site import success callback.
  * @param props.guidedManagedSiteImportRequest Request key that highlights the managed-site import action.
  */
-export function TokenActionButtons({
+export function RuntimeKeyActionButtons({
   actionPolicy,
-  token,
+  runtimeKey,
   copyKey,
-  handleEditToken,
-  handleDeleteToken,
+  handleEditKey,
+  handleDeleteKey,
   account,
   managedSiteStatus,
   onOpenCCSwitchDialog,
   onManagedSiteImportSuccess,
   guidedManagedSiteImportRequest,
   association,
-}: TokenActionButtonsProps) {
+}: RuntimeKeyActionButtonsProps) {
   const { t } = useTranslation("keyManagement")
-  const integrationActions = useTokenIntegrationActions({
+  const integrationActions = useRuntimeKeyIntegrationActions({
     account,
     enabled: actionPolicy.exportSecret,
     guidedManagedSiteImportRequest,
     managedSiteStatus,
     onManagedSiteImportSuccess,
-    token,
+    runtimeKey,
   })
   const {
     cliVerifyingProfile,
@@ -80,15 +86,15 @@ export function TokenActionButtons({
     handleVerifyApi,
     handleVerifyCliSupport,
     verifyingProfile,
-  } = useTokenVerificationActions({
+  } = useRuntimeKeyVerificationActions({
     account,
     enabled: actionPolicy.verifySecret,
-    token,
+    runtimeKey,
   })
 
   const hasQuickActions = actionPolicy.copySecret
   const hasIntegrations = actionPolicy.exportSecret
-  const hasIntegrationGroup = hasTokenIntegrationActionGroup(
+  const hasIntegrationGroup = hasRuntimeKeyIntegrationActionGroup(
     actionPolicy,
     association,
   )
@@ -96,11 +102,11 @@ export function TokenActionButtons({
 
   return (
     <>
-      <TokenIntegrationDialogs
+      <RuntimeKeyIntegrationDialogs
         account={account}
         controller={integrationActions}
         enabled={actionPolicy.exportSecret}
-        token={token}
+        runtimeKey={runtimeKey}
       />
       {actionPolicy.verifySecret ? (
         <>
@@ -131,20 +137,20 @@ export function TokenActionButtons({
                 aria-label={t("common:actions.copyKey")}
                 size="sm"
                 variant="ghost"
-                onClick={() => void copyKey(account, token)}
+                onClick={() => void copyKey(account, runtimeKey)}
               >
                 <Copy className="text-muted-foreground h-4 w-4" />
               </IconButton>
             ) : null}
           </KeyResourceActionGroup>
         ) : null}
-        <TokenIntegrationActionGroup
+        <RuntimeKeyIntegrationActionGroup
           account={account}
           actionPolicy={actionPolicy}
           association={association}
           controller={integrationActions}
           onOpenCCSwitchDialog={onOpenCCSwitchDialog}
-          token={token}
+          runtimeKey={runtimeKey}
         />
         {actionPolicy.verifySecret ? (
           <KeyResourceActionGroup
@@ -181,7 +187,7 @@ export function TokenActionButtons({
                 aria-label={t("actions.editKey")}
                 size="sm"
                 variant="ghost"
-                onClick={() => handleEditToken(token)}
+                onClick={() => handleEditKey(runtimeKey)}
               >
                 <Pencil className="text-theme-500 dark:text-theme-400 h-4 w-4" />
               </IconButton>
@@ -191,7 +197,7 @@ export function TokenActionButtons({
                 aria-label={t("actions.deleteKey")}
                 size="sm"
                 variant="destructiveGhost"
-                onClick={() => handleDeleteToken(token)}
+                onClick={() => handleDeleteKey(runtimeKey)}
               >
                 <Trash2 className="h-4 w-4" />
               </IconButton>

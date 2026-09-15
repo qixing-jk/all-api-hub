@@ -5,6 +5,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { getAccountKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/accountKeyResourcePresentation"
 import { openRouterKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/openRouterKeyResourceCard"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
+import { formatLocaleDateTime } from "~/utils/core/formatters"
 
 const t = ((key: string) => key) as TFunction
 
@@ -19,7 +20,7 @@ describe("native resource card presentation", () => {
       facts: {
         ref: {
           accountId: "account-example",
-          siteType: "new-api",
+          siteType: SITE_TYPES.SHAREDCHAT,
           scopeKey: "project-id",
           resourceId: "key-id",
         },
@@ -72,6 +73,45 @@ describe("native resource card presentation", () => {
   })
 
   it.each([
+    SITE_TYPES.NEW_API,
+    SITE_TYPES.SUB2API,
+    SITE_TYPES.VO_API_V2,
+    SITE_TYPES.AIHUBMIX,
+  ])("does not repeat the implicit account scope on %s cards", (siteType) => {
+    const row: NativeKeyManagementRow = {
+      kind: "account-key-resource",
+      rowKey: "account-key",
+      accountId: "account-example",
+      accountName: "Example account",
+      scopeName: "Example account",
+      facts: {
+        ref: {
+          accountId: "account-example",
+          siteType,
+          scopeKey: "account",
+          resourceId: "1",
+        },
+        displayName: "Example key",
+        maskedLabel: "sk-••••example",
+        status: "enabled",
+        fields: [],
+        actions: { canUpdate: true, canDelete: true },
+      },
+    }
+    const presentation = getAccountKeyResourceCardAdapter(
+      siteType,
+    ).buildPresentation(row, t, {
+      hasAssociatedSecret: false,
+    })
+
+    expect(presentation.accountLabel).toBe("Example account")
+    expect(presentation.contextFact).toBeUndefined()
+    expect(presentation.summaryFacts).not.toContainEqual(
+      expect.objectContaining({ id: "scope" }),
+    )
+  })
+
+  it.each([
     ["disabled", "inactive", "keyManagement:native.status.disabled"],
     ["expired", "inactive", "keyManagement:native.status.expired"],
     ["unknown", "unknown", "keyManagement:native.status.unknown"],
@@ -112,3 +152,54 @@ describe("native resource card presentation", () => {
     },
   )
 })
+
+it.each([SITE_TYPES.NEW_API, SITE_TYPES.AIHUBMIX])(
+  "retains creation and last-use date and time for %s",
+  (siteType) => {
+    const createdAt = Date.parse("2026-09-15T01:23:45Z")
+    const accessedAt = Date.parse("2026-09-15T05:43:21Z")
+    const facts = {
+      ref: { accountId: "a", siteType, scopeKey: "account", resourceId: "1" },
+      displayName: "Example",
+      maskedLabel: "masked",
+      status: "enabled" as const,
+      fields: [
+        {
+          fieldId: "accessed_time",
+          kind: "number" as const,
+          value: accessedAt / 1000,
+        },
+      ],
+      actions: { canUpdate: true, canDelete: true },
+      runtimeKey: {
+        createdAt,
+        modelAccess: {
+          groups: null,
+          allowedModelIds: null,
+          suggestedModelIds: [],
+        },
+      },
+    }
+    const adapter = getAccountKeyResourceCardAdapter(siteType)
+    expect(adapter.buildDetailFacts(facts, t)).toEqual(
+      expect.arrayContaining([
+        {
+          id: "createdAt",
+          label: "keyManagement:keyDetails.createTime",
+          value: formatLocaleDateTime(createdAt),
+        },
+        {
+          id: "accessed_time",
+          label: "keyManagement:keyDetails.lastUsedTime",
+          value: formatLocaleDateTime(accessedAt),
+        },
+      ]),
+    )
+    expect(
+      adapter.buildDetailFacts(
+        { ...facts, fields: [{ ...facts.fields[0], value: 0 }] },
+        t,
+      ),
+    ).not.toContainEqual(expect.objectContaining({ id: "accessed_time" }))
+  },
+)

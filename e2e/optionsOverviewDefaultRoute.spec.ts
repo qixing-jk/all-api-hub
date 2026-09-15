@@ -12,14 +12,12 @@ import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/KeyManagement/constants"
-import {
-  getKeyManagementTokenRowTestId,
-  KEY_MANAGEMENT_TEST_IDS,
-} from "~/features/KeyManagement/testIds"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
 import { UNIFIED_API_GUIDANCE_TEST_IDS } from "~/features/UnifiedApiGuidance/testIds"
-import type { ApiToken } from "~/types"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
+import { getAccountKeyResourceRow } from "~~/e2e/utils/accountLifecycle"
 import {
   createStoredAccount,
   forceExtensionLanguage,
@@ -37,7 +35,7 @@ import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
 const MANAGED_SITE_BASE_URL = "https://managed-gateway.example.invalid"
 
-function createStubApiToken(overrides: Partial<ApiToken> = {}): ApiToken {
+function createStubApiToken(overrides: Partial<NewApiToken> = {}): NewApiToken {
   const nowSeconds = Math.floor(Date.now() / 1000)
 
   return {
@@ -288,7 +286,7 @@ test("overview gateway CTA opens key management with guided account import highl
     })
 
   await expectPermissionOnboardingHidden(page)
-  const tokenRow = page.getByTestId(getKeyManagementTokenRowTestId(1))
+  const tokenRow = getAccountKeyResourceRow(page, "Existing Key")
   await expect(tokenRow).toBeVisible()
 
   const importButton = tokenRow.getByTestId(

@@ -15,10 +15,7 @@ import {
 } from "~/services/preferences/userPreferences"
 import { API_CREDENTIAL_PROFILE_LINK_STATES } from "~/types/apiCredentialProfiles"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
-import {
-  createAccount,
-  createToken,
-} from "~~/tests/utils/keyManagementFactories"
+import { createAccount } from "~~/tests/utils/keyManagementFactories"
 
 const {
   sendRuntimeActionMessageMock,
@@ -78,6 +75,20 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
 
 vi.mock("~/features/KeyManagement/hooks/useKeyManagement", () => ({
   useKeyManagement: (...args: unknown[]) => useKeyManagementMock(...args),
+}))
+
+vi.mock("~/features/KeyManagement/hooks/useManagedSiteKeyStatuses", () => ({
+  useManagedSiteKeyStatuses: () => {
+    const fixture = useKeyManagementMock.mock.results.at(-1)?.value
+    return {
+      states: fixture.managedSiteTokenStatuses ?? {},
+      supported: fixture.isManagedSiteChannelStatusSupported ?? true,
+      refreshing: fixture.isManagedSiteStatusRefreshing ?? false,
+      refresh: fixture.refreshManagedSiteTokenStatuses,
+      refreshKey: fixture.refreshManagedSiteTokenStatusForToken,
+      confirm: fixture.confirmManagedSiteTokenStatusWithChannelKey,
+    }
+  },
 }))
 
 vi.mock(
@@ -238,6 +249,8 @@ const createHookResult = (
   searchTerm: "",
   setSearchTerm: vi.fn(),
   tokens: [],
+  entries: [],
+  filteredEntries: [],
   isLoading: false,
   visibleKeys: new Set(),
   resolvingVisibleKeys: new Set(),
@@ -252,7 +265,7 @@ const createHookResult = (
   isManagedSiteStatusRefreshing: false,
   allAccountsFilterAccountIds: [],
   setAllAccountsFilterAccountIds: vi.fn(),
-  loadTokens: vi.fn(),
+  refreshServiceCredentials: vi.fn(),
   filteredTokens: [],
   getVisibleTokenKey: vi.fn(),
   refreshManagedSiteTokenStatuses: vi.fn(),
@@ -788,61 +801,6 @@ describe("KeyManagement empty-state actions", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("uses the destructive confirmation dialog before deleting a token", async () => {
-    const user = userEvent.setup()
-    const handleDeleteToken = vi.fn()
-    const token = createToken({
-      id: 31,
-      name: "Dialog Token",
-      accountId: "acc-1",
-      accountName: "Account 1",
-    })
-
-    useKeyManagementMock.mockReturnValue(
-      createHookResult({
-        selectedAccount: "acc-1",
-        tokens: [token],
-        filteredTokens: [token],
-        handleDeleteToken,
-      }),
-    )
-
-    render(<KeyManagement />)
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "trigger-delete-token-31",
-      }),
-    )
-
-    expect(handleDeleteToken).not.toHaveBeenCalled()
-    expect(
-      await screen.findByText("keyManagement:messages.deleteConfirm"),
-    ).toBeInTheDocument()
-
-    await user.click(
-      screen.getByRole("button", { name: "common:actions.cancel" }),
-    )
-
-    expect(handleDeleteToken).not.toHaveBeenCalled()
-    await waitFor(() =>
-      expect(
-        screen.queryByText("keyManagement:messages.deleteConfirm"),
-      ).toBeNull(),
-    )
-
-    await user.click(
-      screen.getByRole("button", {
-        name: "trigger-delete-token-31",
-      }),
-    )
-    await user.click(
-      await screen.findByRole("button", { name: "common:actions.delete" }),
-    )
-
-    expect(handleDeleteToken).toHaveBeenCalledWith(token, false)
-  })
-
   it("preselects the filtered account in the add-token dialog while viewing all accounts", async () => {
     const account = createAccount({
       id: "acc-1",
@@ -859,6 +817,9 @@ describe("KeyManagement empty-state actions", () => {
     )
 
     render(<KeyManagement />)
+    await userEvent
+      .setup()
+      .click(await screen.findByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenButton))
 
     await waitFor(() => expect(addTokenDialogPropsSpy).toHaveBeenCalled())
 
@@ -1039,6 +1000,9 @@ describe("KeyManagement empty-state actions", () => {
     )
 
     render(<KeyManagement />)
+    await userEvent
+      .setup()
+      .click(await screen.findByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenButton))
 
     await waitFor(() => expect(addTokenDialogPropsSpy).toHaveBeenCalled())
 

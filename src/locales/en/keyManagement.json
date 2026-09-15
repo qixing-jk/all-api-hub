@@ -295,7 +295,6 @@
       "newApiRetrieveKeyHint": "For New API, full key comparison depends on the channel key, and viewing that channel key itself requires 2FA verification, so full key comparison is currently unavailable."
     },
     "label": "Managed site",
-    "nativeResourceUnsupported": "Managed-site matching does not yet support native resource keys on this page. Refresh applies only to supported keys.",
     "pageUnsupported": "Managed-site channel checks are unavailable on this page because the current managed site does not currently support searching channels by URL.",
     "recovery": {
       "configureLogin": "Add the New API login and 2FA-assist fields in Settings first. Until then, the channel key cannot be read and full key comparison cannot be completed.",
@@ -336,17 +335,13 @@
     }
   },
   "messages": {
-    "accountNotFound": "Account information not found",
     "batchSavedToApiProfiles": "Saved selected keys to API credential library",
     "batchSavedToApiProfilesNeedsConfirmation": "Saved selected keys. Review the highlighted associations in the API credential library.",
     "batchSaveToApiProfilesFailed": "Failed to save selected keys to API credential library",
     "batchSaveToApiProfilesPartialFailed": "Saved {{savedCount}} of {{totalCount}} selected keys. {{failedCount}} could not be saved.",
     "copyFailed": "Copy failed",
-    "deleteConfirm": "Are you sure you want to delete key {{name}}? This action cannot be undone",
-    "deleteSuccess": "Key {{name}} deleted successfully",
     "keyCopied": "Key {{name}} copied to clipboard",
     "loadFailed": "Failed to load key list",
-    "revealFailed": "Failed to reveal key",
     "savedToApiProfiles": "Saved {{name}} to API credential library",
     "savedToApiProfilesNeedsConfirmation": "Credential saved. Review its key association in the API credential library.",
     "saveToApiProfilesFailed": "Failed to save to API credential library",
@@ -358,6 +353,11 @@
   },
   "native": {
     "detailsLoadFailed": "Could not load key details.",
+    "editor": {
+      "expiryDays": "Expires in (days)",
+      "quotaUsd": "Quota (USD)",
+      "totalQuotaUsd": "Total quota (USD)"
+    },
     "heading": "API keys",
     "missing": "Not available",
     "scope": {
@@ -532,10 +532,10 @@
         "edit": "Edit API Key"
       },
       "unsaved": {
-        "description": "Your changes have not been saved.",
+        "description": "Closing will discard your changes.",
         "discard": "Discard changes",
         "keepEditing": "Keep editing",
-        "title": "Discard unsaved changes?"
+        "title": "Discard changes?"
       }
     },
     "list": {

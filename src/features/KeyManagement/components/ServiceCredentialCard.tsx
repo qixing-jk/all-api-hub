@@ -79,7 +79,7 @@ import {
   getManagedSiteStatusBadgeVariant,
   getManagedSiteStatusDescription,
   getManagedSiteStatusLabel,
-} from "./TokenListItem/TokenHeader"
+} from "./RuntimeKeyActions/RuntimeKeyHeader"
 
 const logger = createLogger("ServiceCredentialCard")
 

@@ -9,7 +9,7 @@ import { API_TYPES } from "~/services/verification/aiApiVerification"
 
 type CreatedRuntimeSecretCorrelation =
   | {
-      readonly kind: "legacy-create"
+      readonly kind: "legacy-create" | "account-create"
       readonly accountId: string
     }
   | {
@@ -131,6 +131,7 @@ export const getCreatedRuntimeSecretLocator = (
     case "account-runtime-key":
       return result.correlation.locator
     case "legacy-create":
+    case "account-create":
       return undefined
   }
 }
@@ -155,6 +156,23 @@ export const createAccountRuntimeKeyCreatedRuntimeSecret = ({
     displayName,
     secret,
     credential,
+  })
+
+/** Retain a confirmed create secret when the provider has not supplied an attributable ID. */
+export const createUnattributedAccountCreatedRuntimeSecret = (params: {
+  accountId: string
+  displayName: string
+  secret: string
+  credential: CreatedRuntimeSecretCredential
+}): CreatedRuntimeSecret =>
+  createCreatedRuntimeSecret({
+    correlation: {
+      kind: "account-create",
+      accountId: requireNonBlankString(params.accountId, "an account id"),
+    },
+    displayName: params.displayName,
+    secret: params.secret,
+    credential: params.credential,
   })
 
 /** Builds a one-time secret from a legacy token-create response. */

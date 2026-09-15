@@ -51,7 +51,7 @@ export type AccountKeyResourceEditorDefinition<TCommand> = {
 }
 
 export type AccountKeyCreateMutation<TDetail> = {
-  detail: TDetail
+  detail: TDetail | null
   scopeKey?: string
   createdSecret?: AccountKeyEditorSubmitResult["createdSecret"]
 }
@@ -867,6 +867,16 @@ export function defineAccountKeyResourceCapability<
                 )
               },
               projectApplied: (result) => {
+                if (result.detail === null) {
+                  const secret = result.createdSecret
+                  if (
+                    !secret ||
+                    secret.correlation.kind !== "account-create" ||
+                    secret.correlation.accountId !== accountId
+                  )
+                    throw unexpectedFailure()
+                  return { facts: null, createdSecret: secret }
+                }
                 const appliedScopeKey = result.scopeKey ?? canonicalScopeKey
                 if (!isBoundedNonBlankString(appliedScopeKey, 2048))
                   throw unexpectedFailure()

@@ -12,8 +12,9 @@ import {
   createNewApiAccountKeyResources,
   createNewApiCapabilities,
 } from "~/services/apiAdapters/newApi"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
-import { AuthTypeEnum, type ApiToken } from "~/types"
+import { AuthTypeEnum } from "~/types"
 
 const {
   mockFetchAccountTokens,
@@ -91,7 +92,7 @@ const request = {
   },
 }
 
-const token = (overrides: Partial<ApiToken>): ApiToken => ({
+const token = (overrides: Partial<NewApiToken>): NewApiToken => ({
   id: 1,
   user_id: 1,
   key: "sk-masked********test",
@@ -122,6 +123,145 @@ describe("New API account key resources", () => {
     mockDeleteApiToken.mockReset()
     mockResolveApiTokenKey.mockReset()
     mockResolveWongApiTokenKey.mockReset()
+  })
+
+  it("creates a native key and attributes the matching new resource after an acknowledgement", async () => {
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([token({ id: 1 })])
+      .mockResolvedValueOnce([
+        token({ id: 1 }),
+        token({
+          id: 2,
+          name: "Created",
+          remain_quota: 1250000,
+          unlimited_quota: false,
+          model_limits_enabled: true,
+          model_limits: "model-a",
+          allow_ips: "127.0.0.1",
+        }),
+      ])
+    mockCreateApiToken.mockResolvedValueOnce(true)
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    const editor = await session.openCreateEditor("account")
+    const result = await editor.submit({
+      ...editor.initialValues,
+      name: "Created",
+      quotaUsd: 2.5,
+      unlimited_quota: false,
+      group: "default",
+      model_limits_enabled: true,
+      model_limits: ["model-a"],
+      allow_ips: "127.0.0.1",
+    })
+    expect(result.facts?.ref.resourceId).toBe("2")
+    expect(mockCreateApiToken).toHaveBeenCalledWith(
+      expect.objectContaining(request),
+      expect.objectContaining({
+        remain_quota: 1250000,
+        model_limits: "model-a",
+        group: "default",
+      }),
+    )
+    expect(JSON.stringify(result.facts)).not.toContain("sk-masked********test")
+  })
+
+  it("preserves fresh unrelated quota and advanced settings when editing a name", async () => {
+    const original = token({
+      group: "auto",
+      cross_group_retry: true,
+      auto_groups: ["fast"],
+    })
+    const latest = {
+      ...original,
+      remain_quota: 1250000,
+      auto_groups: ["fast", "economy"],
+    }
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([original])
+      .mockResolvedValueOnce([latest])
+      .mockResolvedValueOnce([{ ...latest, name: "Renamed" }])
+    mockUpdateApiToken.mockResolvedValueOnce(true)
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    const collection = await session.openCollection("account")
+    const editor = await collection.openEditEditor({
+      accountId: "account-1",
+      siteType: SITE_TYPES.NEW_API,
+      scopeKey: "account",
+      resourceId: "1",
+    })
+    await editor.submit({ ...editor.initialValues, name: "Renamed" })
+    expect(mockUpdateApiToken).toHaveBeenCalledWith(
+      expect.objectContaining(request),
+      1,
+      expect.objectContaining({
+        name: "Renamed",
+        remain_quota: 1250000,
+        cross_group_retry: true,
+        auto_groups: ["fast", "economy"],
+      }),
+    )
+  })
+
+  it("rejects concurrent edits to the same field before dispatch", async () => {
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([token({ name: "Original" })])
+      .mockResolvedValueOnce([token({ name: "Remote" })])
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    const collection = await session.openCollection("account")
+    const editor = await collection.openEditEditor({
+      accountId: "account-1",
+      siteType: SITE_TYPES.NEW_API,
+      scopeKey: "account",
+      resourceId: "1",
+    })
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "Local" }),
+    ).rejects.toMatchObject({ failure: { code: "resource_changed" } })
+    expect(mockUpdateApiToken).not.toHaveBeenCalled()
+  })
+
+  it("does not retry an ambiguous native create", async () => {
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        token({ id: 2, name: "Created" }),
+        token({ id: 3, name: "Created" }),
+      ])
+    mockCreateApiToken.mockResolvedValueOnce(true)
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    const editor = await session.openCreateEditor("account")
+    const values = {
+      ...editor.initialValues,
+      name: "Created",
+      group: "default",
+    }
+    await expect(editor.submit(values)).rejects.toMatchObject({
+      failure: { code: "mutation_state_uncertain" },
+    })
+    await expect(editor.submit(values)).rejects.toMatchObject({
+      failure: { code: "validation_failed" },
+    })
+    expect(mockCreateApiToken).toHaveBeenCalledTimes(1)
   })
 
   it("lists the complete account token inventory with canonical numeric refs", async () => {
@@ -942,8 +1082,10 @@ describe("New API account key resources", () => {
     } as const
     const editor = await collection.openEditEditor(ref)
 
-    expect(editor.initialValues).toEqual({ name: "Before" })
-    await expect(editor.submit({ name: "After" })).resolves.toMatchObject({
+    expect(editor.initialValues).toMatchObject({ name: "Before" })
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "After" }),
+    ).resolves.toMatchObject({
       facts: { ref, displayName: "After" },
     })
     expect(mockUpdateApiToken).toHaveBeenCalledWith(
@@ -1273,7 +1415,9 @@ describe("New API account key resources", () => {
 
     mockFetchAccountTokens.mockResolvedValueOnce([current])
     const invalidEditor = await collection.openEditEditor(ref)
-    await expect(invalidEditor.submit({ name: "   " })).rejects.toMatchObject({
+    await expect(
+      invalidEditor.submit({ ...invalidEditor.initialValues, name: "   " }),
+    ).rejects.toMatchObject({
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed },
     })
 
@@ -1282,7 +1426,9 @@ describe("New API account key resources", () => {
       .mockResolvedValueOnce([current])
     const falseEditor = await collection.openEditEditor(ref)
     mockUpdateApiToken.mockResolvedValueOnce(false)
-    await expect(falseEditor.submit({ name: "After" })).rejects.toMatchObject({
+    await expect(
+      falseEditor.submit({ ...falseEditor.initialValues, name: "After" }),
+    ).rejects.toMatchObject({
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected },
     })
 
@@ -1301,7 +1447,7 @@ describe("New API account key resources", () => {
       )
     })
     await expect(
-      rejectedEditor.submit({ name: "After" }),
+      rejectedEditor.submit({ ...rejectedEditor.initialValues, name: "After" }),
     ).rejects.toMatchObject({
       failure: {
         code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected,
@@ -1316,7 +1462,10 @@ describe("New API account key resources", () => {
     const uncertainEditor = await collection.openEditEditor(ref)
     mockUpdateApiToken.mockResolvedValueOnce(true)
     await expect(
-      uncertainEditor.submit({ name: "After" }),
+      uncertainEditor.submit({
+        ...uncertainEditor.initialValues,
+        name: "After",
+      }),
     ).rejects.toMatchObject({
       failure: {
         code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
@@ -1364,7 +1513,7 @@ describe("New API account key resources", () => {
     expect(mockDeleteApiToken).toHaveBeenCalledTimes(2)
   })
 
-  it("rejects the unsupported native create editor", async () => {
+  it("opens the native create editor", async () => {
     const session = await createNewApiAccountKeyResources(
       SITE_TYPES.NEW_API,
     ).open({
@@ -1372,8 +1521,8 @@ describe("New API account key resources", () => {
       request,
     })
 
-    await expect(session.openCreateEditor("account")).rejects.toMatchObject({
-      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    await expect(session.openCreateEditor("account")).resolves.toMatchObject({
+      initialValues: { name: "user group (auto)", unlimited_quota: true },
     })
   })
 
@@ -1595,7 +1744,9 @@ describe("New API account key resources", () => {
       resourceId: "9",
     })
 
-    await expect(editor.submit({ name: "After" })).rejects.toMatchObject({
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "After" }),
+    ).rejects.toMatchObject({
       failure: {
         code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
         message: "update timed out",
@@ -1675,7 +1826,9 @@ describe("New API account key resources", () => {
         resourceId: "9",
       })
 
-      await expect(editor.submit({ name: "After" })).rejects.toMatchObject({
+      await expect(
+        editor.submit({ ...editor.initialValues, name: "After" }),
+      ).rejects.toMatchObject({
         failure: {
           code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
           ...(updateThrows ? { message: "update timed out" } : {}),
@@ -1684,10 +1837,181 @@ describe("New API account key resources", () => {
     },
   )
 
-  it("registers repair resources without opting into native Key Management UI", () => {
+  it("confirms leaving automatic groups after the provider resets retry settings", async () => {
+    const before = token({
+      id: 9,
+      group: "auto",
+      cross_group_retry: true,
+      auto_groups: ["vip"],
+    })
+    const after = {
+      ...before,
+      group: "vip",
+      cross_group_retry: false,
+      auto_groups: null,
+    }
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([before])
+      .mockResolvedValueOnce([before])
+      .mockResolvedValueOnce([after])
+    mockUpdateApiToken.mockResolvedValueOnce(true)
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    const editor = await (
+      await session.openCollection("account")
+    ).openEditEditor({
+      accountId: "account-1",
+      siteType: SITE_TYPES.NEW_API,
+      scopeKey: "account",
+      resourceId: "9",
+    })
+
+    await expect(
+      editor.submit({ ...editor.initialValues, group: "vip" }),
+    ).resolves.toMatchObject({ facts: { ref: { resourceId: "9" } } })
+    expect(mockUpdateApiToken).toHaveBeenCalledWith(
+      expect.anything(),
+      9,
+      expect.objectContaining({
+        group: "vip",
+        cross_group_retry: false,
+        auto_groups: null,
+      }),
+    )
+  })
+
+  it("does not rewrite untouched model restrictions or overwrite fresh advanced settings", async () => {
+    const before = token({
+      id: 9,
+      group: "auto",
+      model_limits: "gpt-a, gpt-b",
+      cross_group_retry: false,
+      auto_groups: ["default"],
+    })
+    const latest = { ...before, cross_group_retry: true, auto_groups: ["vip"] }
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([before])
+      .mockResolvedValueOnce([latest])
+      .mockResolvedValueOnce([{ ...latest, name: "Renamed" }])
+    mockUpdateApiToken.mockResolvedValueOnce(true)
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    const editor = await (
+      await session.openCollection("account")
+    ).openEditEditor({
+      accountId: "account-1",
+      siteType: SITE_TYPES.NEW_API,
+      scopeKey: "account",
+      resourceId: "9",
+    })
+
+    await editor.submit({ ...editor.initialValues, name: "Renamed" })
+    expect(mockUpdateApiToken).toHaveBeenCalledWith(
+      expect.anything(),
+      9,
+      expect.objectContaining({
+        name: "Renamed",
+        model_limits: "gpt-a, gpt-b",
+        cross_group_retry: true,
+        auto_groups: ["vip"],
+      }),
+    )
+  })
+
+  it("registers one native resource capability for management and repair", () => {
     const account = createNewApiCapabilities(SITE_TYPES.NEW_API).account
 
-    expect(account?.keyResources).toBeDefined()
-    expect(account?.keyResourceManagement).toBeUndefined()
+    expect(account?.keyResourceManagement).toBeDefined()
+  })
+})
+
+it.each([
+  {
+    lostResponse: false,
+    editQuota: false,
+    readName: "Renamed",
+    succeeds: true,
+  },
+  { lostResponse: true, editQuota: false, readName: "Renamed", succeeds: true },
+  { lostResponse: false, editQuota: true, readName: "Renamed", succeeds: true },
+  { lostResponse: true, editQuota: true, readName: "Renamed", succeeds: false },
+  {
+    lostResponse: true,
+    editQuota: false,
+    readName: "Original",
+    succeeds: false,
+  },
+])(
+  "reconciles consumed quota without guessing uncertain edits: %j",
+  async ({ lostResponse, editQuota, readName, succeeds }) => {
+    mockFetchAccountTokens.mockReset()
+    mockUpdateApiToken.mockReset()
+    const original = token({
+      name: "Original",
+      unlimited_quota: false,
+      remain_quota: 1000000,
+    })
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([original])
+      .mockResolvedValueOnce([original])
+      .mockResolvedValueOnce([
+        { ...original, name: readName, remain_quota: 900000 },
+      ])
+    mockUpdateApiToken.mockImplementation(async (request) => {
+      request.observer?.onDispatch()
+      if (lostResponse) throw new Error("response lost")
+      return true
+    })
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    const collection = await session.openCollection("account")
+    const editor = await collection.openEditEditor({
+      accountId: "account-1",
+      siteType: SITE_TYPES.NEW_API,
+      scopeKey: "account",
+      resourceId: "1",
+    })
+    const result = editor.submit({
+      ...editor.initialValues,
+      name: "Renamed",
+      ...(editQuota ? { quotaUsd: 4 } : {}),
+    })
+    if (succeeds) await expect(result).resolves.toBeDefined()
+    else
+      await expect(result).rejects.toMatchObject({
+        failure: { code: "mutation_state_uncertain" },
+      })
+    expect(mockUpdateApiToken).toHaveBeenCalledTimes(1)
+  },
+)
+
+it("preserves the last-use timestamp in safe resource facts", async () => {
+  mockFetchAccountTokens.mockReset()
+  mockFetchAccountTokens.mockResolvedValue([
+    token({ accessed_time: 1750000000 }),
+  ])
+  const session = await createNewApiAccountKeyResources(
+    SITE_TYPES.NEW_API,
+  ).open({
+    account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+    request,
+  })
+  const page = await (await session.openCollection("account")).list()
+  expect(page.items[0].fields).toContainEqual({
+    fieldId: "accessed_time",
+    kind: "number",
+    value: 1750000000,
   })
 })

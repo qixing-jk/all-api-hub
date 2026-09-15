@@ -286,7 +286,6 @@
       "newApiRetrieveKeyHint": "Đối với New API, việc so sánh toàn bộ key phụ thuộc vào key kênh, và việc xem key kênh yêu cầu phải hoàn tất xác minh 2FA trước, do đó hiện tại chưa thể hoàn tất so sánh toàn bộ key."
     },
     "label": "Trang được quản lý",
-    "nativeResourceUnsupported": "Tính năng đối chiếu trang web được quản lý trên trang này chưa hỗ trợ khóa tài nguyên gốc. Việc làm mới chỉ áp dụng cho các khóa được hỗ trợ.",
     "pageUnsupported": "Do trang web lưu trữ hiện tại tạm thời không hỗ trợ tìm kiếm kênh bằng URL, chức năng kiểm tra kênh trang web quản lý không khả dụng.",
     "recovery": {
       "configureLogin": "Vui lòng điền thông tin đăng nhập New API và thông tin hỗ trợ xác minh hai bước trong cài đặt trước, nếu không hiện tại không thể đọc key kênh, cũng như không thể hoàn tất so sánh toàn bộ key.",
@@ -326,17 +325,13 @@
     }
   },
   "messages": {
-    "accountNotFound": "Không tìm thấy thông tin tài khoản tương ứng",
     "batchSavedToApiProfiles": "Đã lưu các khóa đã chọn vào thư viện thông tin xác thực API",
     "batchSavedToApiProfilesNeedsConfirmation": "Đã lưu các khóa đã chọn. Hãy kiểm tra các liên kết được đánh dấu trong thư viện thông tin xác thực API.",
     "batchSaveToApiProfilesFailed": "Không thể lưu các khóa đã chọn vào thư viện thông tin xác thực API",
     "batchSaveToApiProfilesPartialFailed": "Đã lưu {{savedCount}}/{{totalCount}} khóa đã chọn. {{failedCount}} khóa chưa được lưu.",
     "copyFailed": "Sao chép thất bại",
-    "deleteConfirm": "Bạn có chắc chắn muốn xóa khóa {{name}} không? Thao tác này không thể hoàn tác",
-    "deleteSuccess": "Đã xóa khóa {{name}} thành công",
     "keyCopied": "Khóa {{name}} đã được sao chép vào clipboard",
     "loadFailed": "Tải danh sách khóa thất bại",
-    "revealFailed": "Hiển thị khóa thất bại",
     "savedToApiProfiles": "Đã lưu {{name}} vào Hồ sơ API",
     "savedToApiProfilesNeedsConfirmation": "Đã lưu thông tin xác thực. Hãy kiểm tra liên kết khóa trong thư viện thông tin xác thực API.",
     "saveToApiProfilesFailed": "Lưu vào Hồ sơ API thất bại",
@@ -348,6 +343,11 @@
   },
   "native": {
     "detailsLoadFailed": "Không thể tải chi tiết khóa.",
+    "editor": {
+      "expiryDays": "Hết hạn sau (ngày)",
+      "quotaUsd": "Hạn mức (USD)",
+      "totalQuotaUsd": "Tổng hạn mức (USD)"
+    },
     "heading": "Khóa API",
     "missing": "Không khả dụng",
     "scope": {
@@ -522,10 +522,10 @@
         "edit": "Chỉnh sửa khóa API"
       },
       "unsaved": {
-        "description": "Các thay đổi của bạn chưa được lưu.",
+        "description": "Đóng sẽ hủy các thay đổi của bạn.",
         "discard": "Bỏ thay đổi",
         "keepEditing": "Tiếp tục chỉnh sửa",
-        "title": "Bỏ các thay đổi chưa lưu?"
+        "title": "Bỏ thay đổi?"
       }
     },
     "list": {

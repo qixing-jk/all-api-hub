@@ -9,36 +9,37 @@ import {
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { sub2ApiCapabilities } from "~/services/apiAdapters/sub2api"
 import { sub2ApiAccountKeyResources } from "~/services/apiAdapters/sub2api/accountKeyResource"
+import type { Sub2ApiNativeKey } from "~/services/apiService/sub2api/type"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
-import { AuthTypeEnum, type ApiToken } from "~/types"
+import { AuthTypeEnum } from "~/types"
 
 const {
-  mockCreateSub2ApiTokenForGroupId,
+  mockCreateSub2ApiKey,
   mockDeleteApiToken,
-  mockFetchAccountTokens,
+  mockFetchSub2ApiKeys,
   mockFetchSub2ApiGroupDescriptors,
-  mockFetchTokenById,
+  mockFetchSub2ApiKey,
   mockResolveApiTokenKey,
-  mockUpdateApiToken,
+  mockUpdateSub2ApiKey,
 } = vi.hoisted(() => ({
-  mockCreateSub2ApiTokenForGroupId: vi.fn(),
+  mockCreateSub2ApiKey: vi.fn(),
   mockDeleteApiToken: vi.fn(),
-  mockFetchAccountTokens: vi.fn(),
+  mockFetchSub2ApiKeys: vi.fn(),
   mockFetchSub2ApiGroupDescriptors: vi.fn(),
-  mockFetchTokenById: vi.fn(),
+  mockFetchSub2ApiKey: vi.fn(),
   mockResolveApiTokenKey: vi.fn(),
-  mockUpdateApiToken: vi.fn(),
+  mockUpdateSub2ApiKey: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/sub2api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/services/apiService/sub2api")>()),
-  createSub2ApiTokenForGroupId: mockCreateSub2ApiTokenForGroupId,
+  createSub2ApiKey: mockCreateSub2ApiKey,
   deleteApiToken: mockDeleteApiToken,
-  fetchAccountTokens: mockFetchAccountTokens,
+  fetchSub2ApiKeys: mockFetchSub2ApiKeys,
   fetchSub2ApiGroupDescriptors: mockFetchSub2ApiGroupDescriptors,
-  fetchTokenById: mockFetchTokenById,
+  fetchSub2ApiKey: mockFetchSub2ApiKey,
   resolveApiTokenKey: mockResolveApiTokenKey,
-  updateApiToken: mockUpdateApiToken,
+  updateSub2ApiKey: mockUpdateSub2ApiKey,
 }))
 
 const request = {
@@ -51,36 +52,33 @@ const request = {
   },
 }
 
-const token = (overrides: Partial<ApiToken>): ApiToken => ({
+const token = (overrides: Partial<Sub2ApiNativeKey>): Sub2ApiNativeKey => ({
   id: 1,
   user_id: 1,
   key: "sk-masked-example",
   status: 1,
   name: "Example key",
-  created_time: 1,
-  accessed_time: 1,
-  expired_time: -1,
-  remain_quota: 0,
-  unlimited_quota: true,
-  model_limits_enabled: false,
-  model_limits: "",
-  allow_ips: "",
-  used_quota: 0,
-  group: "Example group",
-  sub2api_group_id: 9,
+  created_at: 1,
+  updated_at: 1,
+  expires_at: -1,
+  quota: 0,
+  ip_whitelist: [],
+  quota_used: 0,
+  group_name: "Example group",
+  group_id: 9,
   ...overrides,
 })
 
 describe("Sub2API account key resources", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockCreateSub2ApiTokenForGroupId.mockReset()
+    mockCreateSub2ApiKey.mockReset()
     mockDeleteApiToken.mockReset()
-    mockFetchAccountTokens.mockReset()
+    mockFetchSub2ApiKeys.mockReset()
     mockFetchSub2ApiGroupDescriptors.mockReset()
-    mockFetchTokenById.mockReset()
+    mockFetchSub2ApiKey.mockReset()
     mockResolveApiTokenKey.mockReset()
-    mockUpdateApiToken.mockReset()
+    mockUpdateSub2ApiKey.mockReset()
   })
 
   it("maps structured inventory authorization failures at the session boundary", async () => {
@@ -93,7 +91,7 @@ describe("Sub2API account key resources", () => {
         "ADMIN_REQUIRED",
       ),
     )
-    mockFetchAccountTokens.mockResolvedValueOnce([])
+    mockFetchSub2ApiKeys.mockResolvedValueOnce([])
 
     const session = await sub2ApiAccountKeyResources.open({
       account: {
@@ -114,7 +112,7 @@ describe("Sub2API account key resources", () => {
   })
 
   it("lists the complete account inventory with canonical numeric resource refs", async () => {
-    mockFetchAccountTokens.mockResolvedValueOnce([
+    mockFetchSub2ApiKeys.mockResolvedValueOnce([
       token({ id: 7, name: "First" }),
       token({ id: 11, name: "Second" }),
     ])
@@ -152,10 +150,10 @@ describe("Sub2API account key resources", () => {
     ])
     expect(page.total).toBe(2)
     expect(page.items.map(({ actions }) => actions)).toEqual([
-      { canUpdate: false, canDelete: true },
-      { canUpdate: false, canDelete: true },
+      { canUpdate: true, canDelete: true },
+      { canUpdate: true, canDelete: true },
     ])
-    expect(mockFetchAccountTokens).toHaveBeenCalledWith(request)
+    expect(mockFetchSub2ApiKeys).toHaveBeenCalledWith(request)
   })
 
   it("keeps duplicate group names distinct by native group id and fails closed for incomplete placement", async () => {
@@ -163,14 +161,14 @@ describe("Sub2API account key resources", () => {
       { id: 9, displayName: "Shared", description: "First", ratio: 1 },
       { id: 10, displayName: "Shared", description: "Second", ratio: 2 },
     ])
-    mockFetchAccountTokens.mockResolvedValueOnce([
-      token({ id: 1, sub2api_group_id: 9, group: "Shared" }),
-      token({ id: 2, sub2api_group_id: 10, group: "Shared" }),
-      token({ id: 3, sub2api_group_id: 9, group: "" }),
-      token({ id: 4, sub2api_group_id: undefined, group: "" }),
-      token({ id: 5, sub2api_group_id: 99, group: "Retired" }),
-      token({ id: 6, sub2api_group_id: undefined, group: "Missing id" }),
-      token({ id: 7, sub2api_group_id: 9, group: "Shared", status: 9 }),
+    mockFetchSub2ApiKeys.mockResolvedValueOnce([
+      token({ id: 1, group_id: 9, group_name: "Shared" }),
+      token({ id: 2, group_id: 10, group_name: "Shared" }),
+      token({ id: 3, group_id: 9, group_name: "" }),
+      token({ id: 4, group_id: undefined, group_name: "" }),
+      token({ id: 5, group_id: 99, group_name: "Retired" }),
+      token({ id: 6, group_id: undefined, group_name: "Missing id" }),
+      token({ id: 7, group_id: 9, group_name: "Shared", status: 9 }),
     ])
 
     const session = await sub2ApiAccountKeyResources.open({
@@ -248,30 +246,30 @@ describe("Sub2API account key resources", () => {
     mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
       { id: 9, displayName: "Premium", description: "Current", ratio: 1 },
     ])
-    mockFetchAccountTokens.mockResolvedValueOnce([
+    mockFetchSub2ApiKeys.mockResolvedValueOnce([
       token({
         id: 1,
         name: "user group (auto)",
-        sub2api_group_id: 9,
-        group: "Premium",
+        group_id: 9,
+        group_name: "Premium",
       }),
       token({
         id: 2,
         name: "My custom key",
-        sub2api_group_id: 9,
-        group: "Premium",
+        group_id: 9,
+        group_name: "Premium",
       }),
       token({
         id: 3,
         name: "user group (auto)",
-        sub2api_group_id: 99,
-        group: "Premium",
+        group_id: 99,
+        group_name: "Premium",
       }),
       token({
         id: 4,
         name: undefined,
-        sub2api_group_id: 9,
-        group: "Premium",
+        group_id: 9,
+        group_name: "Premium",
       }),
     ])
 
@@ -293,23 +291,20 @@ describe("Sub2API account key resources", () => {
     const before = token({
       id: 9,
       name: "user group (auto)",
-      group: "Premium",
-      sub2api_group_id: 42,
-      remain_quota: 123,
-      expired_time: 4_000_000_000,
-      unlimited_quota: false,
-      model_limits_enabled: true,
-      model_limits: "model-a,model-b",
-      allow_ips: "192.0.2.1",
+      group_name: "Premium",
+      group_id: 42,
+      quota: 123,
+      expires_at: 4_000_000_000,
+      ip_whitelist: ["192.0.2.1"],
     })
     mockFetchSub2ApiGroupDescriptors.mockResolvedValue([
       { id: 42, displayName: "Premium", description: "Current", ratio: 1 },
     ])
-    mockFetchAccountTokens.mockResolvedValueOnce([before])
-    mockFetchTokenById
+    mockFetchSub2ApiKeys.mockResolvedValueOnce([before])
+    mockFetchSub2ApiKey
       .mockResolvedValueOnce(before)
       .mockResolvedValueOnce({ ...before, name: "Premium group (auto)" })
-    mockUpdateApiToken.mockResolvedValueOnce(true)
+    mockUpdateSub2ApiKey.mockResolvedValueOnce(true)
 
     const session = await sub2ApiAccountKeyResources.open({
       account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
@@ -321,21 +316,14 @@ describe("Sub2API account key resources", () => {
       certainty: "applied",
       value: undefined,
     })
-    expect(mockFetchTokenById).toHaveBeenCalledTimes(2)
-    expect(mockFetchTokenById).toHaveBeenNthCalledWith(1, request, 9)
-    expect(mockFetchTokenById).toHaveBeenNthCalledWith(2, request, 9)
-    expect(mockUpdateApiToken).toHaveBeenCalledWith(
+    expect(mockFetchSub2ApiKey).toHaveBeenCalledTimes(2)
+    expect(mockFetchSub2ApiKey).toHaveBeenNthCalledWith(1, request, 9)
+    expect(mockFetchSub2ApiKey).toHaveBeenNthCalledWith(2, request, 9)
+    expect(mockUpdateSub2ApiKey).toHaveBeenCalledWith(
       expect.objectContaining(request),
       9,
       {
         name: "Premium group (auto)",
-        remain_quota: 123,
-        expired_time: 4_000_000_000,
-        unlimited_quota: false,
-        model_limits_enabled: true,
-        model_limits: "model-a,model-b",
-        allow_ips: "192.0.2.1",
-        group: "Premium",
       },
     )
   })
@@ -344,14 +332,21 @@ describe("Sub2API account key resources", () => {
     const current = token({
       id: 9,
       name: "user group (auto)",
-      group: "Premium",
-      sub2api_group_id: 42,
+      group_name: "Premium",
+      group_id: 42,
     })
-    mockFetchTokenById.mockResolvedValueOnce(current)
+    mockFetchSub2ApiKey.mockResolvedValueOnce(current)
     mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
       { id: 42, displayName: "Premium", description: "Current", ratio: 1 },
     ])
-    mockUpdateApiToken.mockResolvedValueOnce(false)
+    mockUpdateSub2ApiKey.mockRejectedValueOnce(
+      new ApiError(
+        "Rejected",
+        undefined,
+        "/api/v1/keys/9",
+        API_ERROR_CODES.BUSINESS_ERROR,
+      ),
+    )
 
     const session = await sub2ApiAccountKeyResources.open({
       account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
@@ -366,19 +361,22 @@ describe("Sub2API account key resources", () => {
 
     await expect(session.provisioning!.rename!(ref)).resolves.toEqual({
       certainty: "not-applied",
-      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected },
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected,
+        message: "Rejected",
+      },
     })
-    expect(mockUpdateApiToken).toHaveBeenCalledOnce()
-    expect(mockFetchTokenById).toHaveBeenCalledOnce()
+    expect(mockUpdateSub2ApiKey).toHaveBeenCalledOnce()
+    expect(mockFetchSub2ApiKey).toHaveBeenCalledOnce()
   })
 
   it("does not treat a matching group display name as requirement identity", async () => {
-    mockFetchTokenById.mockResolvedValueOnce(
+    mockFetchSub2ApiKey.mockResolvedValueOnce(
       token({
         id: 9,
         name: "user group (auto)",
-        group: "Premium",
-        sub2api_group_id: 99,
+        group_name: "Premium",
+        group_id: 99,
       }),
     )
     mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
@@ -400,23 +398,23 @@ describe("Sub2API account key resources", () => {
       certainty: "not-applied",
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed },
     })
-    expect(mockUpdateApiToken).not.toHaveBeenCalled()
+    expect(mockUpdateSub2ApiKey).not.toHaveBeenCalled()
   })
 
   it("keeps a thrown rename uncertain without replay or blind confirmation", async () => {
     const current = token({
       id: 9,
       name: "user group (auto)",
-      group: "Premium",
-      sub2api_group_id: 42,
+      group_name: "Premium",
+      group_id: 42,
     })
-    mockFetchTokenById
+    mockFetchSub2ApiKey
       .mockResolvedValueOnce(current)
       .mockResolvedValueOnce(current)
     mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
       { id: 42, displayName: "Premium", description: "Current", ratio: 1 },
     ])
-    mockUpdateApiToken.mockImplementationOnce(async (mutationRequest) => {
+    mockUpdateSub2ApiKey.mockImplementationOnce(async (mutationRequest) => {
       mutationRequest.observer?.onDispatch()
       throw new Error("update timed out")
     })
@@ -439,24 +437,24 @@ describe("Sub2API account key resources", () => {
         message: "update timed out",
       },
     })
-    expect(mockUpdateApiToken).toHaveBeenCalledOnce()
-    expect(mockFetchTokenById).toHaveBeenCalledTimes(2)
+    expect(mockUpdateSub2ApiKey).toHaveBeenCalledOnce()
+    expect(mockFetchSub2ApiKey).toHaveBeenCalledTimes(2)
   })
 
   it("keeps an unconfirmed rename uncertain after one read-only check", async () => {
     const current = token({
       id: 9,
       name: "user group (auto)",
-      group: "Premium",
-      sub2api_group_id: 42,
+      group_name: "Premium",
+      group_id: 42,
     })
-    mockFetchTokenById
+    mockFetchSub2ApiKey
       .mockResolvedValueOnce(current)
       .mockResolvedValueOnce(current)
     mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
       { id: 42, displayName: "Premium", description: "Current", ratio: 1 },
     ])
-    mockUpdateApiToken.mockResolvedValueOnce(true)
+    mockUpdateSub2ApiKey.mockResolvedValueOnce(true)
 
     const session = await sub2ApiAccountKeyResources.open({
       account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
@@ -475,17 +473,17 @@ describe("Sub2API account key resources", () => {
         code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
       },
     })
-    expect(mockUpdateApiToken).toHaveBeenCalledOnce()
-    expect(mockFetchTokenById).toHaveBeenCalledTimes(2)
+    expect(mockUpdateSub2ApiKey).toHaveBeenCalledOnce()
+    expect(mockFetchSub2ApiKey).toHaveBeenCalledTimes(2)
   })
 
   it("provisions an exact ref from a native create DTO correlated to the requested group id", async () => {
     mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
       { id: 9, displayName: "Shared", description: "First", ratio: 1 },
     ])
-    mockFetchAccountTokens.mockResolvedValueOnce([token({ id: 1 })])
-    mockCreateSub2ApiTokenForGroupId.mockResolvedValueOnce(
-      token({ id: 12, sub2api_group_id: 9, group: "Shared" }),
+    mockFetchSub2ApiKeys.mockResolvedValueOnce([token({ id: 1 })])
+    mockCreateSub2ApiKey.mockResolvedValueOnce(
+      token({ id: 12, group_id: 9, group_name: "Shared" }),
     )
 
     const session = await sub2ApiAccountKeyResources.open({
@@ -504,31 +502,28 @@ describe("Sub2API account key resources", () => {
         },
       },
     })
-    expect(mockCreateSub2ApiTokenForGroupId).toHaveBeenCalledWith(
+    expect(mockCreateSub2ApiKey).toHaveBeenCalledWith(
       expect.objectContaining(request),
-      expect.objectContaining({ group: "" }),
-      9,
+      expect.objectContaining({ group_id: 9, quota: 0 }),
     )
-    expect(mockFetchAccountTokens).toHaveBeenCalledOnce()
+    expect(mockFetchSub2ApiKeys).toHaveBeenCalledOnce()
   })
 
   it("preserves an explicit native create rejection without marking it uncertain", async () => {
     mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
       { id: 9, displayName: "Shared", description: "First", ratio: 1 },
     ])
-    mockFetchAccountTokens.mockResolvedValueOnce([token({ id: 1 })])
-    mockCreateSub2ApiTokenForGroupId.mockImplementationOnce(
-      async (mutationRequest) => {
-        mutationRequest.observer?.onDispatch()
-        mutationRequest.observer?.onResponse()
-        throw new ApiError(
-          "Key limit reached",
-          undefined,
-          "/api/v1/keys",
-          API_ERROR_CODES.BUSINESS_ERROR,
-        )
-      },
-    )
+    mockFetchSub2ApiKeys.mockResolvedValueOnce([token({ id: 1 })])
+    mockCreateSub2ApiKey.mockImplementationOnce(async (mutationRequest) => {
+      mutationRequest.observer?.onDispatch()
+      mutationRequest.observer?.onResponse()
+      throw new ApiError(
+        "Key limit reached",
+        undefined,
+        "/api/v1/keys",
+        API_ERROR_CODES.BUSINESS_ERROR,
+      )
+    })
 
     const session = await sub2ApiAccountKeyResources.open({
       account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
@@ -542,21 +537,21 @@ describe("Sub2API account key resources", () => {
         message: "Key limit reached",
       },
     })
-    expect(mockCreateSub2ApiTokenForGroupId).toHaveBeenCalledOnce()
-    expect(mockFetchAccountTokens).toHaveBeenCalledOnce()
+    expect(mockCreateSub2ApiKey).toHaveBeenCalledOnce()
+    expect(mockFetchSub2ApiKeys).toHaveBeenCalledOnce()
   })
 
   it("provisions an exact ref from one unique native group id inventory diff", async () => {
     mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
       { id: 9, displayName: "Shared", description: "First", ratio: 1 },
     ])
-    mockFetchAccountTokens
+    mockFetchSub2ApiKeys
       .mockResolvedValueOnce([token({ id: 1 })])
       .mockResolvedValueOnce([
         token({ id: 1 }),
-        token({ id: 12, sub2api_group_id: 9, group: "Shared" }),
+        token({ id: 12, group_id: 9, group_name: "Shared" }),
       ])
-    mockCreateSub2ApiTokenForGroupId.mockResolvedValueOnce(true)
+    mockCreateSub2ApiKey.mockResolvedValueOnce(true)
 
     const session = await sub2ApiAccountKeyResources.open({
       account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
@@ -569,22 +564,22 @@ describe("Sub2API account key resources", () => {
         ref: expect.objectContaining({ resourceId: "12" }),
       },
     })
-    expect(mockCreateSub2ApiTokenForGroupId).toHaveBeenCalledOnce()
-    expect(mockFetchAccountTokens).toHaveBeenCalledTimes(2)
+    expect(mockCreateSub2ApiKey).toHaveBeenCalledOnce()
+    expect(mockFetchSub2ApiKeys).toHaveBeenCalledTimes(2)
   })
 
   it("keeps an ambiguous native inventory diff uncertain without replaying create", async () => {
     mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
       { id: 9, displayName: "Shared", description: "First", ratio: 1 },
     ])
-    mockFetchAccountTokens
+    mockFetchSub2ApiKeys
       .mockResolvedValueOnce([token({ id: 1 })])
       .mockResolvedValueOnce([
         token({ id: 1 }),
-        token({ id: 12, sub2api_group_id: 9, group: "Shared" }),
-        token({ id: 13, sub2api_group_id: 9, group: "Shared" }),
+        token({ id: 12, group_id: 9, group_name: "Shared" }),
+        token({ id: 13, group_id: 9, group_name: "Shared" }),
       ])
-    mockCreateSub2ApiTokenForGroupId.mockResolvedValueOnce(true)
+    mockCreateSub2ApiKey.mockResolvedValueOnce(true)
 
     const session = await sub2ApiAccountKeyResources.open({
       account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
@@ -597,18 +592,18 @@ describe("Sub2API account key resources", () => {
         code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
       },
     })
-    expect(mockCreateSub2ApiTokenForGroupId).toHaveBeenCalledOnce()
+    expect(mockCreateSub2ApiKey).toHaveBeenCalledOnce()
   })
 
   it("keeps a malformed create DTO uncertain when inventory cannot prove one ref", async () => {
     mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
       { id: 9, displayName: "Shared", description: "First", ratio: 1 },
     ])
-    mockFetchAccountTokens
+    mockFetchSub2ApiKeys
       .mockResolvedValueOnce([token({ id: 1 })])
       .mockRejectedValueOnce(new Error("inventory unavailable"))
-    mockCreateSub2ApiTokenForGroupId.mockResolvedValueOnce(
-      token({ id: Number.NaN, sub2api_group_id: 9 }),
+    mockCreateSub2ApiKey.mockResolvedValueOnce(
+      token({ id: Number.NaN, group_id: 9 }),
     )
 
     const session = await sub2ApiAccountKeyResources.open({
@@ -623,22 +618,20 @@ describe("Sub2API account key resources", () => {
         message: "inventory unavailable",
       },
     })
-    expect(mockCreateSub2ApiTokenForGroupId).toHaveBeenCalledOnce()
+    expect(mockCreateSub2ApiKey).toHaveBeenCalledOnce()
   })
 
   it("prefers a dispatched create failure when reconciliation also fails", async () => {
     mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
       { id: 9, displayName: "Shared", description: "First", ratio: 1 },
     ])
-    mockFetchAccountTokens
+    mockFetchSub2ApiKeys
       .mockResolvedValueOnce([token({ id: 1 })])
       .mockRejectedValueOnce(new Error("inventory unavailable"))
-    mockCreateSub2ApiTokenForGroupId.mockImplementationOnce(
-      async (mutationRequest) => {
-        mutationRequest.observer?.onDispatch()
-        throw new Error("create timed out")
-      },
-    )
+    mockCreateSub2ApiKey.mockImplementationOnce(async (mutationRequest) => {
+      mutationRequest.observer?.onDispatch()
+      throw new Error("create timed out")
+    })
     const session = await sub2ApiAccountKeyResources.open({
       account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
       request,
@@ -651,15 +644,22 @@ describe("Sub2API account key resources", () => {
         message: "create timed out",
       },
     })
-    expect(mockCreateSub2ApiTokenForGroupId).toHaveBeenCalledOnce()
+    expect(mockCreateSub2ApiKey).toHaveBeenCalledOnce()
   })
 
-  it("preserves a false create result as a definite rejection", async () => {
+  it("preserves a rejected native create without retry", async () => {
     mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
       { id: 9, displayName: "Shared", description: "First", ratio: 1 },
     ])
-    mockFetchAccountTokens.mockResolvedValueOnce([token({ id: 1 })])
-    mockCreateSub2ApiTokenForGroupId.mockResolvedValueOnce(false)
+    mockFetchSub2ApiKeys.mockResolvedValueOnce([token({ id: 1 })])
+    mockCreateSub2ApiKey.mockRejectedValueOnce(
+      new ApiError(
+        "Rejected",
+        undefined,
+        "/api/v1/keys",
+        API_ERROR_CODES.BUSINESS_ERROR,
+      ),
+    )
 
     const session = await sub2ApiAccountKeyResources.open({
       account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
@@ -670,10 +670,11 @@ describe("Sub2API account key resources", () => {
       certainty: "not-applied",
       failure: {
         code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected,
+        message: "Rejected",
       },
     })
-    expect(mockCreateSub2ApiTokenForGroupId).toHaveBeenCalledOnce()
-    expect(mockFetchAccountTokens).toHaveBeenCalledOnce()
+    expect(mockCreateSub2ApiKey).toHaveBeenCalledOnce()
+    expect(mockFetchSub2ApiKeys).toHaveBeenCalledOnce()
   })
 
   it("rejects a non-canonical group requirement before inventory or mutation", async () => {
@@ -686,13 +687,13 @@ describe("Sub2API account key resources", () => {
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
     })
     expect(mockFetchSub2ApiGroupDescriptors).not.toHaveBeenCalled()
-    expect(mockFetchAccountTokens).not.toHaveBeenCalled()
-    expect(mockCreateSub2ApiTokenForGroupId).not.toHaveBeenCalled()
+    expect(mockFetchSub2ApiKeys).not.toHaveBeenCalled()
+    expect(mockCreateSub2ApiKey).not.toHaveBeenCalled()
   })
 
   it("resolves only the exact referenced key through Sub2API native detail and secret transport", async () => {
     const detail = token({ id: 9, key: "sk-masked-example" })
-    mockFetchTokenById.mockResolvedValueOnce(detail)
+    mockFetchSub2ApiKey.mockResolvedValueOnce(detail)
     mockResolveApiTokenKey.mockResolvedValueOnce("sub2api-full-secret")
 
     const session = await sub2ApiAccountKeyResources.open({
@@ -710,9 +711,9 @@ describe("Sub2API account key resources", () => {
       kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
       secret: "sub2api-full-secret",
     })
-    expect(mockFetchTokenById).toHaveBeenCalledWith(request, 9)
+    expect(mockFetchSub2ApiKey).toHaveBeenCalledWith(request, 9)
     expect(mockResolveApiTokenKey).toHaveBeenCalledWith(request, detail)
-    expect(mockFetchAccountTokens).not.toHaveBeenCalled()
+    expect(mockFetchSub2ApiKeys).not.toHaveBeenCalled()
   })
 
   it("rejects a runtime ref from another scope before native detail access", async () => {
@@ -731,7 +732,7 @@ describe("Sub2API account key resources", () => {
     ).rejects.toMatchObject({
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed },
     })
-    expect(mockFetchTokenById).not.toHaveBeenCalled()
+    expect(mockFetchSub2ApiKey).not.toHaveBeenCalled()
     expect(mockResolveApiTokenKey).not.toHaveBeenCalled()
   })
 
@@ -762,10 +763,10 @@ describe("Sub2API account key resources", () => {
     mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
       { id: 9, displayName: "Example group" },
     ])
-    mockFetchAccountTokens.mockResolvedValueOnce([
+    mockFetchSub2ApiKeys.mockResolvedValueOnce([
       token({ id: 1, status: 2 }),
-      token({ id: 2, expired_time: Math.floor(Date.now() / 1000) - 1 }),
-      token({ id: 3, expired_time: -2 }),
+      token({ id: 2, expires_at: Math.floor(Date.now() / 1000) - 1 }),
+      token({ id: 3, expires_at: -2 }),
       token({ id: 4, status: 99 }),
     ])
     const session = await sub2ApiAccountKeyResources.open({
@@ -817,7 +818,7 @@ describe("Sub2API account key resources", () => {
         message: "invalid_group_requirement",
       },
     })
-    expect(mockCreateSub2ApiTokenForGroupId).not.toHaveBeenCalled()
+    expect(mockCreateSub2ApiKey).not.toHaveBeenCalled()
   })
 
   it("rejects missing or provider-owned rename targets before mutation", async () => {
@@ -832,14 +833,14 @@ describe("Sub2API account key resources", () => {
       resourceId: "9",
     } as const
 
-    mockFetchTokenById.mockResolvedValueOnce(token({ id: 8 }))
+    mockFetchSub2ApiKey.mockResolvedValueOnce(token({ id: 8 }))
     await expect(session.provisioning!.rename!(ref)).resolves.toEqual({
       certainty: "not-applied",
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.NotFound },
     })
 
-    mockFetchTokenById.mockResolvedValueOnce(
-      token({ id: 9, name: "Custom key", group: "Example group" }),
+    mockFetchSub2ApiKey.mockResolvedValueOnce(
+      token({ id: 9, name: "Custom key", group_name: "Example group" }),
     )
     mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
       { id: 9, displayName: "Example group" },
@@ -848,14 +849,14 @@ describe("Sub2API account key resources", () => {
       certainty: "not-applied",
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed },
     })
-    expect(mockUpdateApiToken).not.toHaveBeenCalled()
+    expect(mockUpdateSub2ApiKey).not.toHaveBeenCalled()
   })
 
   it("preserves explicit and unverifiable rename outcomes without replay", async () => {
     const before = token({
       id: 9,
       name: "user group (auto)",
-      group: "Example group",
+      group_name: "Example group",
     })
     const ref = {
       accountId: "account-example",
@@ -869,9 +870,9 @@ describe("Sub2API account key resources", () => {
       request,
     })
 
-    mockFetchTokenById.mockResolvedValueOnce(before)
+    mockFetchSub2ApiKey.mockResolvedValueOnce(before)
     mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce(groups)
-    mockUpdateApiToken.mockImplementationOnce(async (mutationRequest) => {
+    mockUpdateSub2ApiKey.mockImplementationOnce(async (mutationRequest) => {
       mutationRequest.observer?.onDispatch()
       mutationRequest.observer?.onResponse()
       throw new ApiError(
@@ -886,11 +887,11 @@ describe("Sub2API account key resources", () => {
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected },
     })
 
-    mockFetchTokenById
+    mockFetchSub2ApiKey
       .mockResolvedValueOnce(before)
       .mockRejectedValueOnce(new Error("refresh unavailable"))
     mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce(groups)
-    mockUpdateApiToken.mockResolvedValueOnce(true)
+    mockUpdateSub2ApiKey.mockResolvedValueOnce(true)
     await expect(session.provisioning!.rename!(ref)).resolves.toEqual({
       certainty: "possibly-applied",
       failure: {
@@ -898,23 +899,23 @@ describe("Sub2API account key resources", () => {
         message: "refresh unavailable",
       },
     })
-    expect(mockUpdateApiToken).toHaveBeenCalledTimes(2)
+    expect(mockUpdateSub2ApiKey).toHaveBeenCalledTimes(2)
   })
 
   it("prefers a dispatched rename failure when confirmation also fails", async () => {
     const before = token({
       id: 9,
       name: "user group (auto)",
-      group: "Example group",
-      sub2api_group_id: 9,
+      group_name: "Example group",
+      group_id: 9,
     })
-    mockFetchTokenById
+    mockFetchSub2ApiKey
       .mockResolvedValueOnce(before)
       .mockRejectedValueOnce(new Error("refresh unavailable"))
     mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
       { id: 9, displayName: "Example group" },
     ])
-    mockUpdateApiToken.mockImplementationOnce(async (mutationRequest) => {
+    mockUpdateSub2ApiKey.mockImplementationOnce(async (mutationRequest) => {
       mutationRequest.observer?.onDispatch()
       throw new Error("rename timed out")
     })
@@ -937,7 +938,7 @@ describe("Sub2API account key resources", () => {
         message: "rename timed out",
       },
     })
-    expect(mockUpdateApiToken).toHaveBeenCalledOnce()
+    expect(mockUpdateSub2ApiKey).toHaveBeenCalledOnce()
   })
 
   it("reports mismatched and failed runtime detail lookups as unavailable", async () => {
@@ -952,13 +953,13 @@ describe("Sub2API account key resources", () => {
       resourceId: "9",
     } as const
 
-    mockFetchTokenById.mockResolvedValueOnce(token({ id: 8 }))
+    mockFetchSub2ApiKey.mockResolvedValueOnce(token({ id: 8 }))
     await expect(session.runtimeKey!.resolve(ref)).resolves.toEqual({
       kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
     })
 
-    mockFetchTokenById.mockRejectedValueOnce(new Error("detail unavailable"))
+    mockFetchSub2ApiKey.mockRejectedValueOnce(new Error("detail unavailable"))
     await expect(session.runtimeKey!.resolve(ref)).resolves.toEqual({
       kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
       failure: {
@@ -977,9 +978,9 @@ describe("Sub2API account key resources", () => {
     })
     const collection = await session.openCollection("account")
 
-    mockFetchAccountTokens.mockResolvedValueOnce([])
+    mockFetchSub2ApiKeys.mockResolvedValueOnce([])
     await collection.list(undefined, { signal: controller.signal })
-    expect(mockFetchAccountTokens).toHaveBeenLastCalledWith({
+    expect(mockFetchSub2ApiKeys).toHaveBeenLastCalledWith({
       ...request,
       abortSignal: controller.signal,
     })
@@ -995,7 +996,7 @@ describe("Sub2API account key resources", () => {
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
     })
 
-    mockFetchAccountTokens.mockResolvedValueOnce([])
+    mockFetchSub2ApiKey.mockRejectedValueOnce(new Error("key_not_found"))
     await expect(
       collection.get({
         accountId: "account-example",
@@ -1007,13 +1008,13 @@ describe("Sub2API account key resources", () => {
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
     })
 
-    mockFetchAccountTokens.mockResolvedValueOnce([token({ id: 0 })])
+    mockFetchSub2ApiKeys.mockResolvedValueOnce([token({ id: 0 })])
     await expect(collection.list()).rejects.toMatchObject({
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
     })
   })
 
-  it("rejects unsupported native create and edit editors", async () => {
+  it("opens native create and edit editors", async () => {
     const session = await sub2ApiAccountKeyResources.open({
       account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
       request,
@@ -1026,12 +1027,12 @@ describe("Sub2API account key resources", () => {
       resourceId: "9",
     } as const
 
-    await expect(session.openCreateEditor("account")).rejects.toMatchObject({
-      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    await expect(session.openCreateEditor("account")).resolves.toMatchObject({
+      initialValues: { quota: 0, unlimited: true },
     })
-    mockFetchAccountTokens.mockResolvedValueOnce([token({ id: 9 })])
-    await expect(collection.openEditEditor(ref)).rejects.toMatchObject({
-      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    mockFetchSub2ApiKey.mockResolvedValueOnce(token({ id: 9 }))
+    await expect(collection.openEditEditor(ref)).resolves.toMatchObject({
+      initialValues: { group_id: "9" },
     })
   })
 
@@ -1082,11 +1083,107 @@ describe("Sub2API account key resources", () => {
     expect(mockDeleteApiToken).toHaveBeenCalledOnce()
   })
 
-  it("registers the orchestration resource seam without replacing ordinary Key Management routing", () => {
-    expect(sub2ApiCapabilities.account?.keyResources).toBe(
+  it("creates with an exact group, total USD quota and whole-day expiry", async () => {
+    mockFetchSub2ApiKeys.mockResolvedValueOnce([])
+    mockCreateSub2ApiKey.mockResolvedValueOnce(
+      token({ id: 23, name: "Native key", group_id: 12, quota: 7.25 }),
+    )
+    const session = await sub2ApiAccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+      request,
+    })
+    const editor = await session.openCreateEditor("account")
+
+    await expect(
+      editor.submit({
+        ...editor.initialValues,
+        name: "Native key",
+        group_id: "12",
+        unlimited: false,
+        quota: 7.25,
+        expires_in_days: 5,
+        ip_whitelist: "192.0.2.1\n198.51.100.0/24",
+      }),
+    ).resolves.toMatchObject({ facts: { ref: { resourceId: "23" } } })
+    expect(mockCreateSub2ApiKey).toHaveBeenCalledWith(expect.anything(), {
+      name: "Native key",
+      group_id: 12,
+      quota: 7.25,
+      expires_in_days: 5,
+      ip_whitelist: ["192.0.2.1", "198.51.100.0/24"],
+    })
+  })
+
+  it("renames using a partial update and preserves fresh native quota, expiry and status", async () => {
+    const before = token({
+      id: 9,
+      quota: 10,
+      status: "quota_exhausted",
+      expires_at: "2030-01-01T00:00:31Z",
+    })
+    const latest = { ...before, quota: 18, group_id: 12 }
+    mockFetchSub2ApiKey
+      .mockResolvedValueOnce(before)
+      .mockResolvedValueOnce(latest)
+      .mockResolvedValueOnce({ ...latest, name: "Renamed" })
+    const session = await sub2ApiAccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+      request,
+    })
+    const editor = await (
+      await session.openCollection("account")
+    ).openEditEditor({
+      accountId: "account-example",
+      siteType: SITE_TYPES.SUB2API,
+      scopeKey: "account",
+      resourceId: "9",
+    })
+
+    await editor.submit({ ...editor.initialValues, name: "Renamed" })
+    expect(mockUpdateSub2ApiKey).toHaveBeenCalledWith(expect.anything(), 9, {
+      name: "Renamed",
+    })
+  })
+
+  it.each([false, true])(
+    "avoids writes for unchanged fields or conflicting concurrent edits (conflict=%s)",
+    async (conflict) => {
+      const before = token({ id: 9 })
+      mockFetchSub2ApiKey
+        .mockResolvedValueOnce(before)
+        .mockResolvedValueOnce({ ...before, name: "Remote rename" })
+      const session = await sub2ApiAccountKeyResources.open({
+        account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+        request,
+      })
+      const editor = await (
+        await session.openCollection("account")
+      ).openEditEditor({
+        accountId: "account-example",
+        siteType: SITE_TYPES.SUB2API,
+        scopeKey: "account",
+        resourceId: "9",
+      })
+      const submitted = editor.submit({
+        ...editor.initialValues,
+        ...(conflict ? { name: "Local rename" } : {}),
+      })
+
+      if (conflict)
+        await expect(submitted).rejects.toMatchObject({
+          failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ResourceChanged },
+        })
+      else
+        await expect(submitted).resolves.toMatchObject({
+          facts: { displayName: "Remote rename" },
+        })
+      expect(mockUpdateSub2ApiKey).not.toHaveBeenCalled()
+    },
+  )
+
+  it("registers native resources for ordinary Key Management", () => {
+    expect(sub2ApiCapabilities.account?.keyResourceManagement).toBe(
       sub2ApiAccountKeyResources,
     )
-    expect(sub2ApiCapabilities.account?.keyResourceManagement).toBeUndefined()
-    expect(sub2ApiCapabilities.account?.keyManagement).toBeDefined()
   })
 })

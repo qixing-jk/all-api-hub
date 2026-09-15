@@ -17,6 +17,7 @@ import {
   normalizeSiteAccount,
 } from "~/services/accounts/accountDefaults"
 import { CURRENT_CONFIG_VERSION } from "~/services/accounts/migrations/accountDataMigration"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import {
   I18NEXT_LANGUAGE_STORAGE_KEY,
   STORAGE_KEYS,
@@ -30,7 +31,6 @@ import {
   AuthTypeEnum,
   SiteHealthStatus,
   type AccountStorageConfig,
-  type ApiToken,
   type SiteAccount,
   type SiteBookmark,
 } from "~/types"
@@ -84,7 +84,7 @@ type StubNewApiSiteRoutesOptions = {
   accessToken?: string
   models?: string[]
   pricingModels?: ModelPricing[]
-  initialTokens?: ApiToken[]
+  initialTokens?: NewApiToken[]
   createTokenError?: {
     status?: number
     message: string
@@ -577,7 +577,7 @@ function buildStubToken(input: {
   modelLimitsEnabled: boolean
   modelLimits: string
   allowIps: string
-}): ApiToken {
+}): NewApiToken {
   const nowSeconds = Math.floor(Date.now() / 1000)
 
   return {

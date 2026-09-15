@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { AccountKeyResourceEditorDialog } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceEditorDialog"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import {
@@ -2179,9 +2180,9 @@ describe("useAccountKeyResourceController", () => {
         baseUrl: "https://native.example.invalid",
       },
       {
-        ...createAccount("account-legacy"),
-        siteType: "new-api" as const,
-        baseUrl: "https://legacy.example.invalid",
+        ...createAccount("account-singleton"),
+        siteType: SITE_TYPES.SHAREDCHAT,
+        baseUrl: "https://singleton.example.invalid",
       },
       {
         ...createAccount("account-failed"),
@@ -2209,7 +2210,7 @@ describe("useAccountKeyResourceController", () => {
     expect(result.current.selectedScope).toBeNull()
     expect(result.current.rows).toEqual([nativeRow])
     expect(result.current.failures).toHaveProperty("account-failed")
-    expect(result.current.failures).not.toHaveProperty("account-legacy")
+    expect(result.current.failures).not.toHaveProperty("account-singleton")
     expect(result.current.progress).toEqual({
       total: 2,
       loaded: 1,
@@ -3087,70 +3088,80 @@ describe("useAccountKeyResourceController", () => {
     expect(result.current.controller.createdSecret).toBeNull()
   })
 
-  it("keeps a settled one-time secret when the follow-up refresh rejects", async () => {
-    const scope = {
-      scopeKey: "workspace-default-id",
-      routeKey: "team",
-      displayName: "Team",
-      isDefault: true,
-    }
-    const facts = createFacts(scope.scopeKey, "key-created")
-    const createdSecret = {
-      correlation: { kind: "account-key-resource" as const, ref: facts.ref },
-      displayName: "Created key",
-      secret: "one-time-secret-example",
-      secretAvailability: "create-response-only" as const,
-      credential: {},
-    }
-    const refreshFailure = new AccountKeyResourceError({
-      code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
-    })
-    const editor = {
-      fields: [],
-      initialValues: {},
-      validate: vi.fn().mockReturnValue({ valid: true }),
-      resolveDestinationScopeKey: () => scope.scopeKey,
-      submit: vi.fn().mockResolvedValue({ facts, createdSecret }),
-    }
-    const resolveDefaultScope = vi
-      .fn()
-      .mockResolvedValueOnce(scope)
-      .mockRejectedValueOnce(refreshFailure)
-    const session = {
-      resolveDefaultScope,
-      listScopes: vi.fn().mockResolvedValue([scope]),
-      openCollection: vi.fn().mockResolvedValue({
-        list: vi.fn().mockResolvedValue({ items: [] }),
-      }),
-      openCreateEditor: vi.fn().mockResolvedValue(editor),
-    }
-    mockNativeResourceSession(vi.fn().mockResolvedValue(session))
-    const { result } = renderHook(() =>
-      useAccountKeyResourceController({
-        accounts: [createAccount("account-example")],
-        selectedAccount: "account-example",
-        routeParams: { accountId: "account-example", workspace: "team" },
-      }),
-    )
+  it.each([true, false])(
+    "keeps a settled one-time secret when the follow-up refresh rejects (attributed=%s)",
+    async (attributed) => {
+      const scope = {
+        scopeKey: "workspace-default-id",
+        routeKey: "team",
+        displayName: "Team",
+        isDefault: true,
+      }
+      const facts = createFacts(scope.scopeKey, "key-created")
+      const createdSecret = {
+        correlation: attributed
+          ? { kind: "account-key-resource" as const, ref: facts.ref }
+          : { kind: "account-create" as const, accountId: "account-example" },
+        displayName: "Created key",
+        secret: "one-time-secret-example",
+        secretAvailability: "create-response-only" as const,
+        credential: {},
+      }
+      const refreshFailure = new AccountKeyResourceError({
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+      })
+      const editor = {
+        fields: [],
+        initialValues: {},
+        validate: vi.fn().mockReturnValue({ valid: true }),
+        resolveDestinationScopeKey: () => scope.scopeKey,
+        submit: vi.fn().mockResolvedValue({
+          facts: attributed ? facts : null,
+          createdSecret,
+        }),
+      }
+      const resolveDefaultScope = vi
+        .fn()
+        .mockResolvedValueOnce(scope)
+        .mockRejectedValueOnce(refreshFailure)
+      const session = {
+        resolveDefaultScope,
+        listScopes: vi.fn().mockResolvedValue([scope]),
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({ items: [] }),
+        }),
+        openCreateEditor: vi.fn().mockResolvedValue(editor),
+      }
+      mockNativeResourceSession(vi.fn().mockResolvedValue(session))
+      const { result } = renderHook(() =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example", workspace: "team" },
+        }),
+      )
 
-    await waitFor(() => expect(result.current.selectedScope).toEqual(scope))
-    await act(async () => result.current.openCreate())
-    const focusWorkflowId = result.current.focusWorkflowId
-    expect(focusWorkflowId).toMatch(/^account-key-resource-editor-/)
-    await act(async () =>
-      result.current.submitEditor(result.current.editor!.editorId, {}),
-    )
+      await waitFor(() => expect(result.current.selectedScope).toEqual(scope))
+      await act(async () => result.current.openCreate())
+      const focusWorkflowId = result.current.focusWorkflowId
+      expect(focusWorkflowId).toMatch(/^account-key-resource-editor-/)
+      await act(async () =>
+        result.current.submitEditor(result.current.editor!.editorId, {}),
+      )
 
-    expect(editor.submit).toHaveBeenCalledTimes(1)
-    expect(result.current.createdSecret).toBe(createdSecret)
-    expect(result.current.createdSecret?.secret).toBe("one-time-secret-example")
-    expect(result.current.failures["account-example"]?.code).toBe(
-      ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
-    )
-    expect(result.current.focusWorkflowId).toBe(focusWorkflowId)
-    act(() => result.current.closeCreatedSecret())
-    expect(result.current.focusWorkflowId).toBeNull()
-  })
+      expect(editor.submit).toHaveBeenCalledTimes(1)
+      expect(result.current.createdSecret).toBe(createdSecret)
+      expect(result.current.createdSecret?.secret).toBe(
+        "one-time-secret-example",
+      )
+      expect(result.current.failures["account-example"]?.code).toBe(
+        ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+      )
+      expect(result.current.focusWorkflowId).toBe(focusWorkflowId)
+      act(() => result.current.closeCreatedSecret())
+      expect(result.current.focusWorkflowId).toBeNull()
+    },
+  )
 
   it("clears a terminal edit workflow after the editor settles without a secret successor", async () => {
     const scope = {

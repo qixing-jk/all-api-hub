@@ -52,6 +52,7 @@ import {
   type VoApiV2Key,
   type VoApiV2KeyGroupDescriptor,
   type VoApiV2KeyTemplate,
+  type VoApiV2KeyWrite,
   type VoApiV2UserInfo,
 } from "./type"
 
@@ -847,6 +848,33 @@ export const resolveVoApiV2TokenKey = (
 /**
  * Creates a VoAPI v2 key and relies on inventory refetch for the created secret.
  */
+export async function createVoApiV2Key(
+  request: ApiServiceRequest,
+  payload: VoApiV2KeyWrite,
+): Promise<void> {
+  await fetchVoApiV2Data<null>(
+    request,
+    VOAPI_V2_ENDPOINTS.Keys,
+    { method: "POST", body: JSON.stringify({ ...payload, genCount: 1 }) },
+    { allowNullData: true },
+  )
+}
+
+/** Write one native key, preserving fields from its freshly loaded snapshot. */
+export async function updateVoApiV2Key(
+  request: ApiServiceRequest,
+  id: number,
+  payload: VoApiV2KeyWrite,
+): Promise<void> {
+  await fetchVoApiV2Data<null>(
+    request,
+    `${VOAPI_V2_ENDPOINTS.Keys}/${id}`,
+    { method: "PUT", body: JSON.stringify({ ...payload, id }) },
+    { allowNullData: true },
+  )
+}
+
+/** Legacy create transport pending removal of token provisioning callers. */
 export async function createVoApiV2Token(
   request: ApiServiceRequest,
   tokenData: CreateTokenRequest,

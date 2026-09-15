@@ -4,10 +4,7 @@ import type { BrowserContext, Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  getKeyManagementTokenRowTestId,
-  KEY_MANAGEMENT_TEST_IDS,
-} from "~/features/KeyManagement/testIds"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { OPTIONAL_PERMISSION_IDS } from "~/services/permissions/permissionManager"
 import { PROTECTION_BYPASS_AUTOMATIC_FEATURES } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
@@ -309,18 +306,16 @@ test("isolates same-site cookie and access-token accounts through account refres
         accountId: savedAccounts[0].id,
       })
       await expect(
-        page.getByTestId(
-          getKeyManagementTokenRowTestId(
-            ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_A_SESSION_COOKIE].tokenId,
-          ),
-        ),
+        page.getByRole("heading", {
+          name: ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_A_SESSION_COOKIE].tokenName,
+          exact: true,
+        }),
       ).toBeVisible()
       await expect(
-        page.getByTestId(
-          getKeyManagementTokenRowTestId(
-            ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_B_SESSION_COOKIE].tokenId,
-          ),
-        ),
+        page.getByRole("heading", {
+          name: ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_B_SESSION_COOKIE].tokenName,
+          exact: true,
+        }),
       ).toHaveCount(0)
 
       expectTokenDnrFallbackSequence(
@@ -339,18 +334,16 @@ test("isolates same-site cookie and access-token accounts through account refres
         accountId: savedAccounts[1].id,
       })
       await expect(
-        page.getByTestId(
-          getKeyManagementTokenRowTestId(
-            ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_B_SESSION_COOKIE].tokenId,
-          ),
-        ),
+        page.getByRole("heading", {
+          name: ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_B_SESSION_COOKIE].tokenName,
+          exact: true,
+        }),
       ).toBeVisible()
       await expect(
-        page.getByTestId(
-          getKeyManagementTokenRowTestId(
-            ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_A_SESSION_COOKIE].tokenId,
-          ),
-        ),
+        page.getByRole("heading", {
+          name: ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_A_SESSION_COOKIE].tokenName,
+          exact: true,
+        }),
       ).toHaveCount(0)
 
       expectTokenDnrFallbackSequence(
@@ -372,18 +365,16 @@ test("isolates same-site cookie and access-token accounts through account refres
       })
       await page.getByTestId(KEY_MANAGEMENT_TEST_IDS.expandAllButton).click()
       await expect(
-        page.getByTestId(
-          getKeyManagementTokenRowTestId(
-            ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_A_SESSION_COOKIE].tokenId,
-          ),
-        ),
+        page.getByRole("heading", {
+          name: ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_A_SESSION_COOKIE].tokenName,
+          exact: true,
+        }),
       ).toBeVisible()
       await expect(
-        page.getByTestId(
-          getKeyManagementTokenRowTestId(
-            ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_B_SESSION_COOKIE].tokenId,
-          ),
-        ),
+        page.getByRole("heading", {
+          name: ACCOUNT_BY_SESSION_COOKIE[ACCOUNT_B_SESSION_COOKIE].tokenName,
+          exact: true,
+        }),
       ).toBeVisible()
 
       expectTokenDnrFallbackSequence(

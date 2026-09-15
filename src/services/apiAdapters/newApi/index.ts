@@ -34,6 +34,7 @@ export const createNewApiCapabilities = (
     inviteLink: createNewApiInviteLink(),
     keyManagement: createNewApiKeyManagement(siteType),
     keyResources: createNewApiAccountKeyResources(siteType),
+    keyResourceManagement: createNewApiAccountKeyResources(siteType),
     tokenProvisioning: createNewApiTokenProvisioning(siteType),
     refresh: createNewApiAccountRefresh(siteType),
     modelPricing: createNewApiModelPricing(siteType),

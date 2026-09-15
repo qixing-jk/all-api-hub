@@ -2,14 +2,11 @@ import type { Ref } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Badge, Button, Heading3, SearchableSelect } from "~/components/ui"
-import type { AccountToken, DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
 import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
-import type {
-  KeyManagementAggregateCounts,
-  NativeKeyManagementRow,
-} from "../types"
+import type { KeyManagementAggregateCounts } from "../types"
 
 interface AccountSelectorPanelProps {
   selectedAccount: string
@@ -18,8 +15,6 @@ interface AccountSelectorPanelProps {
   selectorOpen?: boolean
   onSelectorOpenChange?: (open: boolean) => void
   selectorTriggerRef?: Ref<HTMLButtonElement>
-  tokens: AccountToken[]
-  filteredTokens: AccountToken[]
   tokenLoadProgress?: {
     total: number
     loaded: number
@@ -32,9 +27,7 @@ interface AccountSelectorPanelProps {
     errorMessage?: string
   }>
   onRetryFailedAccounts?: () => void
-  nativeRows?: readonly NativeKeyManagementRow[]
-  filteredNativeRows?: readonly NativeKeyManagementRow[]
-  aggregateCounts?: KeyManagementAggregateCounts
+  aggregateCounts: KeyManagementAggregateCounts
 }
 
 /**
@@ -47,14 +40,10 @@ export function AccountSelectorPanel({
   selectorOpen,
   onSelectorOpenChange,
   selectorTriggerRef,
-  tokens,
-  filteredTokens,
   tokenLoadProgress,
   failedAccounts = [],
   onRetryFailedAccounts,
-  nativeRows = [],
-  filteredNativeRows = nativeRows,
-  aggregateCounts,
+  aggregateCounts: counts,
 }: AccountSelectorPanelProps) {
   const { t } = useTranslation("keyManagement")
 
@@ -64,19 +53,6 @@ export function AccountSelectorPanel({
   const failedAccountNames = failedAccounts
     .map((account) => account.accountName)
     .join(", ")
-  const knownTotal = tokens.length + nativeRows.length
-  const knownEnabled =
-    tokens.filter((token) => token.status === 1).length +
-    nativeRows.filter((row) => row.facts.status === "enabled").length
-  const knownShowing = filteredTokens.length + filteredNativeRows.length
-  const counts = aggregateCounts ?? {
-    total: knownTotal,
-    enabled: knownEnabled,
-    showing: knownShowing,
-    knownTotal,
-    knownEnabled,
-    knownShowing,
-  }
 
   return (
     <div className="mb-6 space-y-4">

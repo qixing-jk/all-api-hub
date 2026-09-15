@@ -16,6 +16,8 @@ import { AuthTypeEnum } from "~/types"
 
 const {
   mockCreateVoApiV2Token,
+  mockCreateVoApiV2Key,
+  mockUpdateVoApiV2Key,
   mockDeleteVoApiV2Token,
   mockFetchAllVoApiV2RawKeys,
   mockFetchVoApiV2KeyGroupDescriptors,
@@ -23,6 +25,8 @@ const {
   mockResolveVoApiV2KeySecretById,
 } = vi.hoisted(() => ({
   mockCreateVoApiV2Token: vi.fn(),
+  mockCreateVoApiV2Key: vi.fn(),
+  mockUpdateVoApiV2Key: vi.fn(),
   mockDeleteVoApiV2Token: vi.fn(),
   mockFetchAllVoApiV2RawKeys: vi.fn(),
   mockFetchVoApiV2KeyGroupDescriptors: vi.fn(),
@@ -33,6 +37,8 @@ const {
 vi.mock("~/services/apiService/voapiV2", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/services/apiService/voapiV2")>()),
   createVoApiV2Token: mockCreateVoApiV2Token,
+  createVoApiV2Key: mockCreateVoApiV2Key,
+  updateVoApiV2Key: mockUpdateVoApiV2Key,
   deleteVoApiV2Token: mockDeleteVoApiV2Token,
   fetchAllVoApiV2RawKeys: mockFetchAllVoApiV2RawKeys,
   fetchVoApiV2KeyGroupDescriptors: mockFetchVoApiV2KeyGroupDescriptors,
@@ -67,6 +73,8 @@ describe("VoAPI v2 account key resources", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockCreateVoApiV2Token.mockReset()
+    mockCreateVoApiV2Key.mockReset()
+    mockUpdateVoApiV2Key.mockReset()
     mockDeleteVoApiV2Token.mockReset()
     mockFetchAllVoApiV2RawKeys.mockReset()
     mockFetchVoApiV2KeyGroupDescriptors.mockReset()
@@ -617,7 +625,7 @@ describe("VoAPI v2 account key resources", () => {
     expect(mockDeleteVoApiV2Token).toHaveBeenCalledTimes(2)
   })
 
-  it("rejects unsupported editors and missing collection resources", async () => {
+  it("opens native editors and rejects missing collection resources", async () => {
     const session = await voApiV2AccountKeyResources.open({
       account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
       request,
@@ -630,12 +638,12 @@ describe("VoAPI v2 account key resources", () => {
       resourceId: "9",
     } as const
 
-    await expect(session.openCreateEditor("account")).rejects.toMatchObject({
-      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    await expect(session.openCreateEditor("account")).resolves.toMatchObject({
+      initialValues: { boundlessAmount: false },
     })
     mockFetchAllVoApiV2RawKeys.mockResolvedValueOnce([rawKey({ id: 9 })])
-    await expect(collection.openEditEditor(ref)).rejects.toMatchObject({
-      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    await expect(collection.openEditEditor(ref)).resolves.toMatchObject({
+      initialValues: { amount: 10 },
     })
     mockFetchAllVoApiV2RawKeys.mockResolvedValueOnce([])
     await expect(collection.get(ref)).rejects.toMatchObject({
@@ -739,11 +747,132 @@ describe("VoAPI v2 account key resources", () => {
     },
   )
 
-  it("registers native key resources without replacing legacy key management", () => {
-    expect(voApiV2Capabilities.account?.keyResources).toBe(
+  it("creates finite native quota with multiple exact groups and returns runtime names", async () => {
+    mockFetchAllVoApiV2RawKeys.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      rawKey({
+        id: 23,
+        name: "Native key",
+        groups: [9, 12],
+        amount: "7.25",
+        used: "0",
+      }),
+    ])
+    mockFetchVoApiV2KeyGroupDescriptors.mockResolvedValue([
+      { id: 9, displayName: "Default" },
+      { id: 12, displayName: "Premium" },
+    ])
+    const session = await voApiV2AccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
+      request,
+    })
+    const editor = await session.openCreateEditor("account")
+
+    await expect(
+      editor.submit({
+        ...editor.initialValues,
+        name: "Native key",
+        groups: ["9", "12"],
+        amount: 7.25,
+      }),
+    ).resolves.toMatchObject({
+      facts: {
+        ref: { resourceId: "23" },
+        runtimeKey: { modelAccess: { groups: ["Default", "Premium"] } },
+      },
+    })
+    expect(mockCreateVoApiV2Key).toHaveBeenCalledWith(expect.anything(), {
+      name: "Native key",
+      groups: [9, 12],
+      amount: "7.25",
+      used: "0",
+      boundlessAmount: false,
+      expireTime: -1,
+      enable: true,
+      note: "",
+    })
+  })
+
+  it("preserves all groups, unchanged monetary precision and fresh usage while renaming", async () => {
+    const before = rawKey({
+      id: 9,
+      groups: [9, 12],
+      amount: "10.000000",
+      used: "1",
+      note: "Original",
+      expireTime: 1893456031000,
+    })
+    const latest = { ...before, used: "3", note: "Remote note" }
+    mockFetchAllVoApiV2RawKeys
+      .mockResolvedValueOnce([before])
+      .mockResolvedValueOnce([latest])
+      .mockResolvedValueOnce([{ ...latest, name: "Renamed" }])
+    const session = await voApiV2AccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
+      request,
+    })
+    const editor = await (
+      await session.openCollection("account")
+    ).openEditEditor({
+      accountId: "account-example",
+      siteType: SITE_TYPES.VO_API_V2,
+      scopeKey: "account",
+      resourceId: "9",
+    })
+
+    await editor.submit({ ...editor.initialValues, name: "Renamed" })
+    expect(mockUpdateVoApiV2Key).toHaveBeenCalledWith(
+      expect.anything(),
+      9,
+      expect.objectContaining({
+        name: "Renamed",
+        groups: [9, 12],
+        amount: "10.000000",
+        used: "3",
+        note: "Remote note",
+        expireTime: 1893456031000,
+      }),
+    )
+  })
+
+  it("blocks conflicting edits and never retries an uncertain creation", async () => {
+    const before = rawKey({ id: 9 })
+    mockFetchAllVoApiV2RawKeys
+      .mockResolvedValueOnce([before])
+      .mockResolvedValueOnce([{ ...before, name: "Remote rename" }])
+    const session = await voApiV2AccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
+      request,
+    })
+    const editor = await (
+      await session.openCollection("account")
+    ).openEditEditor({
+      accountId: "account-example",
+      siteType: SITE_TYPES.VO_API_V2,
+      scopeKey: "account",
+      resourceId: "9",
+    })
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "Local rename" }),
+    ).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ResourceChanged },
+    })
+    expect(mockUpdateVoApiV2Key).not.toHaveBeenCalled()
+
+    mockFetchAllVoApiV2RawKeys.mockResolvedValue([before])
+    const creator = await session.openCreateEditor("account")
+    const values = { ...creator.initialValues, groups: ["9"], amount: 10 }
+    await expect(creator.submit(values)).rejects.toMatchObject({
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+      },
+    })
+    await expect(creator.submit(values)).rejects.toBeDefined()
+    expect(mockCreateVoApiV2Key).toHaveBeenCalledTimes(1)
+  })
+
+  it("registers native key management", () => {
+    expect(voApiV2Capabilities.account?.keyResourceManagement).toBe(
       voApiV2AccountKeyResources,
     )
-    expect(voApiV2Capabilities.account?.keyResourceManagement).toBeUndefined()
-    expect(voApiV2Capabilities.account?.keyManagement).toBeDefined()
   })
 })

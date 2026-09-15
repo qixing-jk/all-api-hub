@@ -8,6 +8,7 @@ import {
   SITE_TYPES,
 } from "~/constants/siteType"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
@@ -24,8 +25,8 @@ import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import {
   RECOVERABLE_ACTION_POLICY,
-  renderTokenHeader,
-} from "~~/tests/test-utils/keyManagement/TokenHeaderHarness"
+  renderRuntimeKeyHeader,
+} from "~~/tests/test-utils/keyManagement/RuntimeKeyHeaderHarness"
 import { screen, waitFor, within } from "~~/tests/test-utils/render"
 import {
   createAccount,
@@ -43,7 +44,7 @@ const {
   markGatewayGuidanceOnboardingCompletedMock,
   openInCherryStudioMock,
   openWithAccountMock,
-  resolveDisplayAccountTokenForSecretMock,
+  resolveDisplayAccountRuntimeKeySecretMock,
   showResultToastMock,
   startProductAnalyticsActionMock,
   userPreferencesContextMock,
@@ -60,7 +61,7 @@ const {
   markGatewayGuidanceOnboardingCompletedMock: vi.fn(),
   openInCherryStudioMock: vi.fn(),
   openWithAccountMock: vi.fn(),
-  resolveDisplayAccountTokenForSecretMock: vi.fn(),
+  resolveDisplayAccountRuntimeKeySecretMock: vi.fn(),
   showResultToastMock: vi.fn(),
   startProductAnalyticsActionMock: vi.fn(),
   userPreferencesContextMock: vi.fn(),
@@ -173,8 +174,8 @@ vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
     AssociatedProfile: "associated-profile",
     ProviderThenAssociatedProfile: "provider-then-associated-profile",
   },
-  resolveDisplayAccountTokenForSecret: (...args: unknown[]) =>
-    resolveDisplayAccountTokenForSecretMock(...args),
+  resolveDisplayAccountRuntimeKeySecret: (...args: unknown[]) =>
+    resolveDisplayAccountRuntimeKeySecretMock(...args),
 }))
 
 vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
@@ -211,6 +212,21 @@ vi.mock("~/lib/notify", () => ({
   },
 }))
 
+/** A native resolved key supplies plaintext independently of inventory fixtures. */
+function createResolvedKey(secret: string) {
+  const account = createAccount({ id: "acc-1" })
+  return buildAccountKeyResourceRuntimeKey(account, {
+    ref: {
+      accountId: account.id,
+      siteType: account.siteType,
+      scopeKey: "account",
+      resourceId: "opaque-key",
+    },
+    label: "Key",
+    secret,
+  })
+}
+
 async function selectExportAction(
   user: ReturnType<typeof userEvent.setup>,
   name: string,
@@ -236,7 +252,7 @@ async function selectExportAction(
   await user.click(screen.getByRole("menuitem", { name }))
 }
 
-describe("TokenHeader analytics", () => {
+describe("RuntimeKeyHeader analytics", () => {
   beforeEach(() => {
     completeProductAnalyticsActionMock.mockReset()
     kelivoExportDialogRenderMock.mockReset()
@@ -247,7 +263,7 @@ describe("TokenHeader analytics", () => {
     markGatewayGuidanceOnboardingCompletedMock.mockReset()
     openInCherryStudioMock.mockReset()
     openWithAccountMock.mockReset()
-    resolveDisplayAccountTokenForSecretMock.mockReset()
+    resolveDisplayAccountRuntimeKeySecretMock.mockReset()
     showResultToastMock.mockReset()
     startProductAnalyticsActionMock.mockReset()
     verifyCliDialogRenderMock.mockReset()
@@ -268,7 +284,7 @@ describe("TokenHeader analytics", () => {
   })
 
   it("keeps the full secret action set for recoverable account tokens", () => {
-    renderTokenHeader()
+    renderRuntimeKeyHeader()
 
     expect(
       screen.getByRole("button", { name: "common:actions.copyKey" }),
@@ -292,7 +308,7 @@ describe("TokenHeader analytics", () => {
   })
 
   it("places the unified API credential menu after export actions", () => {
-    renderTokenHeader()
+    renderRuntimeKeyHeader()
 
     const toolbar = screen.getByRole("toolbar", {
       name: "keyManagement:actionToolbar.label",
@@ -350,7 +366,7 @@ describe("TokenHeader analytics", () => {
   })
 
   it("does not separate an association-only action from management", () => {
-    renderTokenHeader({
+    renderRuntimeKeyHeader({
       actionPolicy: {
         ...RECOVERABLE_ACTION_POLICY,
         copySecret: false,
@@ -378,7 +394,7 @@ describe("TokenHeader analytics", () => {
 
   it("uses the linked identity menu without offering another save", async () => {
     const user = userEvent.setup()
-    renderTokenHeader({
+    renderRuntimeKeyHeader({
       association: {
         status: "linked",
         label: "keyManagement:credentialAssociation.linked",
@@ -401,7 +417,7 @@ describe("TokenHeader analytics", () => {
 
   it("offers save and existing-credential actions in the unlinked menu", async () => {
     const user = userEvent.setup()
-    renderTokenHeader({
+    renderRuntimeKeyHeader({
       association: {
         status: "unlinked",
         label: "apiCredentialProfiles:association.notLinked",
@@ -430,7 +446,7 @@ describe("TokenHeader analytics", () => {
 
   it("omits CC Switch when its export opener is unavailable", async () => {
     const user = userEvent.setup()
-    renderTokenHeader({ withCCSwitchExport: false })
+    renderRuntimeKeyHeader({ withCCSwitchExport: false })
 
     await user.click(
       screen.getByRole("button", { name: "common:actions.export" }),
@@ -445,7 +461,7 @@ describe("TokenHeader analytics", () => {
 
   it("opens Cursor++ export from a recoverable token row", async () => {
     const user = userEvent.setup()
-    renderTokenHeader()
+    renderRuntimeKeyHeader()
 
     await selectExportAction(user, "keyManagement:actions.exportToCursorPlus")
 
@@ -471,7 +487,7 @@ describe("TokenHeader analytics", () => {
   })
 
   it("omits secret-dependent actions and dialogs for AIHubMix tokens", () => {
-    renderTokenHeader({
+    renderRuntimeKeyHeader({
       account: createAccount({
         id: "aihubmix-account",
         name: "AIHubMix Account",
@@ -525,8 +541,8 @@ describe("TokenHeader analytics", () => {
 
   it("tracks saving a token to API Credential Profiles as sanitized success after profile creation", async () => {
     const resolvedSecret = "sk-sensitive-resolved"
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce(
-      createToken({ id: 1, key: resolvedSecret }),
+    resolveDisplayAccountRuntimeKeySecretMock.mockResolvedValueOnce(
+      createResolvedKey(resolvedSecret),
     )
     createProfileMock.mockResolvedValueOnce({
       id: "profile-sensitive-id",
@@ -541,7 +557,7 @@ describe("TokenHeader analytics", () => {
     })
 
     const user = userEvent.setup()
-    renderTokenHeader()
+    renderRuntimeKeyHeader()
 
     await user.click(
       screen.getByTestId(
@@ -579,12 +595,12 @@ describe("TokenHeader analytics", () => {
   })
 
   it("tracks saving a token to API Credential Profiles as sanitized unknown failure when secret resolution fails", async () => {
-    resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(
+    resolveDisplayAccountRuntimeKeySecretMock.mockRejectedValueOnce(
       new Error("secret resolution exposed sk-sensitive-resolved"),
     )
 
     const user = userEvent.setup()
-    renderTokenHeader()
+    renderRuntimeKeyHeader()
 
     await user.click(
       screen.getByTestId(
@@ -621,12 +637,12 @@ describe("TokenHeader analytics", () => {
 
   it("tracks opening token API verification without exposing the resolved secret", async () => {
     const resolvedSecret = "sk-sensitive-verify"
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce(
-      createToken({ id: 1, key: resolvedSecret }),
+    resolveDisplayAccountRuntimeKeySecretMock.mockResolvedValueOnce(
+      createResolvedKey(resolvedSecret),
     )
 
     const user = userEvent.setup()
-    renderTokenHeader()
+    renderRuntimeKeyHeader()
 
     await user.click(
       screen.getByRole("button", {
@@ -635,7 +651,7 @@ describe("TokenHeader analytics", () => {
     )
 
     await waitFor(() => {
-      expect(resolveDisplayAccountTokenForSecretMock).toHaveBeenCalledTimes(1)
+      expect(resolveDisplayAccountRuntimeKeySecretMock).toHaveBeenCalledTimes(1)
       expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
         actionId: PRODUCT_ANALYTICS_ACTION_IDS.VerifyAccountTokenApi,
@@ -656,12 +672,12 @@ describe("TokenHeader analytics", () => {
 
   it("opens token API verification with a transient normalized profile", async () => {
     const resolvedSecret = "sk-aihubmix-resolved"
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce(
-      createToken({ id: 8, key: resolvedSecret }),
+    resolveDisplayAccountRuntimeKeySecretMock.mockResolvedValueOnce(
+      createResolvedKey(resolvedSecret),
     )
 
     const user = userEvent.setup()
-    renderTokenHeader({
+    renderRuntimeKeyHeader({
       account: createAccount({
         id: "aihubmix-account",
         name: "AIHubMix Account",
@@ -688,7 +704,7 @@ describe("TokenHeader analytics", () => {
         expect.objectContaining({
           isOpen: true,
           profile: expect.objectContaining({
-            id: "account-token:aihubmix-account:8",
+            id: "runtime-key:account_token:aihubmix-account:8",
             name: "AIHubMix Account - Model Key",
             apiType: API_TYPES.OPENAI_COMPATIBLE,
             baseUrl: AIHUBMIX_API_ORIGIN,
@@ -727,11 +743,14 @@ describe("TokenHeader analytics", () => {
       accountId: account.id,
       key: "masked-api-key-before",
     })
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce(
-      createToken({ ...token, key: "resolved-api-key-before" }),
+    resolveDisplayAccountRuntimeKeySecretMock.mockResolvedValueOnce(
+      createResolvedKey("resolved-api-key-before"),
     )
     const user = userEvent.setup()
-    const { rerenderTokenHeader } = renderTokenHeader({ account, token })
+    const { rerenderRuntimeKeyHeader } = renderRuntimeKeyHeader({
+      account,
+      token,
+    })
 
     await user.click(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenApiButton),
@@ -747,7 +766,7 @@ describe("TokenHeader analytics", () => {
       "https://api-before.example.invalid/v1",
     )
 
-    rerenderTokenHeader({
+    rerenderRuntimeKeyHeader({
       account: {
         ...account,
         name: "Renamed account",
@@ -762,7 +781,7 @@ describe("TokenHeader analytics", () => {
     })
     expect(screen.getByTestId("verify-api-dialog-mock")).toBeVisible()
 
-    rerenderTokenHeader({
+    rerenderRuntimeKeyHeader({
       account: {
         ...account,
         baseUrl: "https://api-after.example.invalid/v1",
@@ -778,12 +797,12 @@ describe("TokenHeader analytics", () => {
   })
 
   it("tracks token API verification open as sanitized unknown failure when secret resolution fails", async () => {
-    resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(
+    resolveDisplayAccountRuntimeKeySecretMock.mockRejectedValueOnce(
       new Error("verification exposed sk-sensitive-verify"),
     )
 
     const user = userEvent.setup()
-    renderTokenHeader()
+    renderRuntimeKeyHeader()
 
     await user.click(
       screen.getByRole("button", {
@@ -822,12 +841,12 @@ describe("TokenHeader analytics", () => {
 
   it("opens token CLI support verification with a transient normalized profile", async () => {
     const resolvedSecret = "sk-cli-resolved"
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce(
-      createToken({ id: 9, key: resolvedSecret }),
+    resolveDisplayAccountRuntimeKeySecretMock.mockResolvedValueOnce(
+      createResolvedKey(resolvedSecret),
     )
 
     const user = userEvent.setup()
-    renderTokenHeader({
+    renderRuntimeKeyHeader({
       account: createAccount({
         id: "cli-account",
         name: "CLI Account",
@@ -854,7 +873,7 @@ describe("TokenHeader analytics", () => {
         expect.objectContaining({
           isOpen: true,
           profile: expect.objectContaining({
-            id: "account-token:cli-account:9",
+            id: "runtime-key:account_token:cli-account:9",
             name: "CLI Account - CLI Key",
             apiType: API_TYPES.OPENAI_COMPATIBLE,
             baseUrl: "https://cli.example/v1",
@@ -896,11 +915,14 @@ describe("TokenHeader analytics", () => {
       accountId: account.id,
       key: "masked-cli-key-before",
     })
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce(
-      createToken({ ...token, key: "resolved-cli-key-before" }),
+    resolveDisplayAccountRuntimeKeySecretMock.mockResolvedValueOnce(
+      createResolvedKey("resolved-cli-key-before"),
     )
     const user = userEvent.setup()
-    const { rerenderTokenHeader } = renderTokenHeader({ account, token })
+    const { rerenderRuntimeKeyHeader } = renderRuntimeKeyHeader({
+      account,
+      token,
+    })
 
     await user.click(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenCliSupportButton),
@@ -916,14 +938,14 @@ describe("TokenHeader analytics", () => {
       "https://cli-before.example.invalid/v1",
     )
 
-    rerenderTokenHeader({
+    rerenderRuntimeKeyHeader({
       account,
       token,
       isManagedSiteStatusChecking: true,
     })
     expect(screen.getByTestId("verify-cli-dialog-mock")).toBeVisible()
 
-    rerenderTokenHeader({
+    rerenderRuntimeKeyHeader({
       account,
       token: { ...token, key: "masked-cli-key-after" },
     })
@@ -932,12 +954,12 @@ describe("TokenHeader analytics", () => {
   })
 
   it("tracks token CLI support verification open as sanitized unknown failure when secret resolution fails", async () => {
-    resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(
+    resolveDisplayAccountRuntimeKeySecretMock.mockRejectedValueOnce(
       new Error("cli verification exposed sk-sensitive-cli"),
     )
 
     const user = userEvent.setup()
-    renderTokenHeader()
+    renderRuntimeKeyHeader()
 
     await user.click(
       screen.getByRole("button", {
@@ -980,7 +1002,7 @@ describe("TokenHeader analytics", () => {
       .mockResolvedValueOnce(undefined)
 
     const user = userEvent.setup()
-    renderTokenHeader({
+    renderRuntimeKeyHeader({
       onManagedSiteVerificationRetry,
       managedSiteStatus: {
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
@@ -1034,7 +1056,7 @@ describe("TokenHeader analytics", () => {
       .mockRejectedValueOnce(new Error("retry exposed sk-sensitive-retry"))
 
     const user = userEvent.setup()
-    renderTokenHeader({
+    renderRuntimeKeyHeader({
       onManagedSiteVerificationRetry,
       managedSiteStatus: {
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
@@ -1076,12 +1098,12 @@ describe("TokenHeader analytics", () => {
   })
 
   it("tracks Cherry Studio export success after opening", async () => {
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce(
-      createToken({ id: 1, key: "sk-resolved" }),
+    resolveDisplayAccountRuntimeKeySecretMock.mockResolvedValueOnce(
+      createResolvedKey("sk-resolved"),
     )
 
     const user = userEvent.setup()
-    renderTokenHeader()
+    renderRuntimeKeyHeader()
 
     await selectExportAction(user, "keyManagement:actions.useInCherry")
 
@@ -1101,12 +1123,12 @@ describe("TokenHeader analytics", () => {
   })
 
   it("opens an editable Kelivo export dialog with the resolved account token", async () => {
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce(
-      createToken({ id: 1, key: "sk-resolved" }),
+    resolveDisplayAccountRuntimeKeySecretMock.mockResolvedValueOnce(
+      createResolvedKey("sk-resolved"),
     )
 
     const user = userEvent.setup()
-    renderTokenHeader()
+    renderRuntimeKeyHeader()
 
     await selectExportAction(user, "keyManagement:actions.copyKelivoImportCode")
 
@@ -1132,14 +1154,14 @@ describe("TokenHeader analytics", () => {
   })
 
   it("redacts credential values from Kelivo export errors", async () => {
-    resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(
+    resolveDisplayAccountRuntimeKeySecretMock.mockRejectedValueOnce(
       new Error(
         "Provider rejected sk-sensitive-original because the account is suspended",
       ),
     )
 
     const user = userEvent.setup()
-    renderTokenHeader()
+    renderRuntimeKeyHeader()
 
     await selectExportAction(user, "keyManagement:actions.copyKelivoImportCode")
 
@@ -1159,10 +1181,12 @@ describe("TokenHeader analytics", () => {
   })
 
   it("falls back to the local unknown error for a blank Kelivo failure", async () => {
-    resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(new Error(""))
+    resolveDisplayAccountRuntimeKeySecretMock.mockRejectedValueOnce(
+      new Error(""),
+    )
 
     const user = userEvent.setup()
-    renderTokenHeader()
+    renderRuntimeKeyHeader()
 
     await selectExportAction(user, "keyManagement:actions.copyKelivoImportCode")
 
@@ -1175,46 +1199,49 @@ describe("TokenHeader analytics", () => {
   })
 
   it("ignores a pending Kelivo secret after export permission is revoked", async () => {
-    const deferred = createDeferred<ReturnType<typeof createToken>>()
-    resolveDisplayAccountTokenForSecretMock.mockReturnValueOnce(
+    const deferred = createDeferred<ReturnType<typeof createResolvedKey>>()
+    resolveDisplayAccountRuntimeKeySecretMock.mockReturnValueOnce(
       deferred.promise,
     )
     const user = userEvent.setup()
-    const { rerenderTokenHeader } = renderTokenHeader()
+    const { rerenderRuntimeKeyHeader } = renderRuntimeKeyHeader()
 
     await selectExportAction(user, "keyManagement:actions.copyKelivoImportCode")
-    rerenderTokenHeader({
+    rerenderRuntimeKeyHeader({
       actionPolicy: { ...RECOVERABLE_ACTION_POLICY, exportSecret: false },
     })
 
     await act(async () => {
-      deferred.resolve(createToken({ id: 1, key: "sk-stale-permission" }))
+      deferred.resolve(createResolvedKey("sk-stale-permission"))
       await deferred.promise
     })
-    rerenderTokenHeader({ actionPolicy: RECOVERABLE_ACTION_POLICY })
+    rerenderRuntimeKeyHeader({ actionPolicy: RECOVERABLE_ACTION_POLICY })
 
     expect(kelivoExportDialogRenderMock).not.toHaveBeenCalled()
     expect(showResultToastMock).not.toHaveBeenCalled()
   })
 
   it("ignores a pending Kelivo secret after the token changes", async () => {
-    const deferred = createDeferred<ReturnType<typeof createToken>>()
-    resolveDisplayAccountTokenForSecretMock.mockReturnValueOnce(
+    const deferred = createDeferred<ReturnType<typeof createResolvedKey>>()
+    resolveDisplayAccountRuntimeKeySecretMock.mockReturnValueOnce(
       deferred.promise,
     )
     const user = userEvent.setup()
     const account = createAccount({ id: "acc-1" })
     const token = createToken({ id: 1, accountId: account.id })
-    const { rerenderTokenHeader } = renderTokenHeader({ account, token })
+    const { rerenderRuntimeKeyHeader } = renderRuntimeKeyHeader({
+      account,
+      token,
+    })
 
     await selectExportAction(user, "keyManagement:actions.copyKelivoImportCode")
-    rerenderTokenHeader({
+    rerenderRuntimeKeyHeader({
       account,
       token: createToken({ id: 2, accountId: account.id }),
     })
 
     await act(async () => {
-      deferred.resolve(createToken({ id: 1, key: "sk-stale-token" }))
+      deferred.resolve(createResolvedKey("sk-stale-token"))
       await deferred.promise
     })
 
@@ -1222,16 +1249,54 @@ describe("TokenHeader analytics", () => {
     expect(showResultToastMock).not.toHaveBeenCalled()
   })
 
+  it.each(["Cherry Studio", "credential save"])(
+    "cancels a pending %s action when its source permission is revoked",
+    async (action) => {
+      const pending = createDeferred<ReturnType<typeof createResolvedKey>>()
+      resolveDisplayAccountRuntimeKeySecretMock.mockReturnValueOnce(
+        pending.promise,
+      )
+      const user = userEvent.setup()
+      const { rerenderRuntimeKeyHeader } = renderRuntimeKeyHeader()
+      if (action === "Cherry Studio") {
+        await selectExportAction(user, "keyManagement:actions.useInCherry")
+      } else {
+        await user.click(
+          screen.getByTestId(
+            KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton,
+          ),
+        )
+        await user.click(
+          screen.getByRole("menuitem", {
+            name: "keyManagement:actions.saveToApiProfiles",
+          }),
+        )
+      }
+      rerenderRuntimeKeyHeader({
+        actionPolicy: { ...RECOVERABLE_ACTION_POLICY, exportSecret: false },
+      })
+      await act(async () => {
+        pending.resolve(createResolvedKey("stale-secret"))
+        await pending.promise
+      })
+      expect(createProfileMock).not.toHaveBeenCalled()
+      expect(openInCherryStudioMock).not.toHaveBeenCalled()
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      )
+    },
+  )
+
   it("tracks Cherry Studio export as unknown failure when opening throws", async () => {
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce(
-      createToken({ id: 1, key: "sk-resolved" }),
+    resolveDisplayAccountRuntimeKeySecretMock.mockResolvedValueOnce(
+      createResolvedKey("sk-resolved"),
     )
     openInCherryStudioMock.mockImplementationOnce(() => {
       throw new Error("open failed for sk-resolved")
     })
 
     const user = userEvent.setup()
-    renderTokenHeader()
+    renderRuntimeKeyHeader()
 
     await selectExportAction(user, "keyManagement:actions.useInCherry")
 
@@ -1250,7 +1315,7 @@ describe("TokenHeader analytics", () => {
     openWithAccountMock.mockResolvedValueOnce({ opened: true })
 
     const user = userEvent.setup()
-    renderTokenHeader()
+    renderRuntimeKeyHeader()
 
     await selectExportAction(user, "keyManagement:actions.importToManagedSite")
 
@@ -1275,7 +1340,7 @@ describe("TokenHeader analytics", () => {
     )
 
     const user = userEvent.setup()
-    renderTokenHeader()
+    renderRuntimeKeyHeader()
     await selectExportAction(user, "keyManagement:actions.importToManagedSite")
 
     const onImportCompleted = openWithAccountMock.mock.calls[0]?.[2]
@@ -1295,7 +1360,7 @@ describe("TokenHeader analytics", () => {
   it("highlights managed-site import without opening the import dialog", async () => {
     vi.useFakeTimers()
     try {
-      renderTokenHeader({ guidedManagedSiteImportRequest: "request-1" })
+      renderRuntimeKeyHeader({ guidedManagedSiteImportRequest: "request-1" })
       await act(async () => {
         vi.advanceTimersByTime(0)
       })
@@ -1316,7 +1381,7 @@ describe("TokenHeader analytics", () => {
 
   it("clears export dialogs and consumes guided requests when export permission is revoked", async () => {
     const user = userEvent.setup()
-    const { rerenderTokenHeader } = renderTokenHeader({
+    const { rerenderRuntimeKeyHeader } = renderRuntimeKeyHeader({
       guidedManagedSiteImportRequest: "request-1",
     })
 
@@ -1336,14 +1401,14 @@ describe("TokenHeader analytics", () => {
       expect.objectContaining({ isOpen: true }),
     )
 
-    rerenderTokenHeader({
+    rerenderRuntimeKeyHeader({
       actionPolicy: { ...RECOVERABLE_ACTION_POLICY, exportSecret: false },
       guidedManagedSiteImportRequest: "request-1",
     })
     kiloCodeDialogRenderMock.mockClear()
     claudeCodeRouterDialogRenderMock.mockClear()
 
-    rerenderTokenHeader({ guidedManagedSiteImportRequest: "request-1" })
+    rerenderRuntimeKeyHeader({ guidedManagedSiteImportRequest: "request-1" })
     expect(
       screen.queryByRole("dialog", { name: "Cursor++ export" }),
     ).not.toBeInTheDocument()
@@ -1357,7 +1422,7 @@ describe("TokenHeader analytics", () => {
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton),
     ).not.toHaveAttribute("data-guidance-highlight")
 
-    rerenderTokenHeader({ guidedManagedSiteImportRequest: "request-2" })
+    rerenderRuntimeKeyHeader({ guidedManagedSiteImportRequest: "request-2" })
     const importButton = screen.getByTestId(
       KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton,
     )
@@ -1367,13 +1432,13 @@ describe("TokenHeader analytics", () => {
   })
 
   it("invalidates pending API and CLI verification when permission is revoked", async () => {
-    const apiResolution = createDeferred<ReturnType<typeof createToken>>()
-    const cliResolution = createDeferred<ReturnType<typeof createToken>>()
-    resolveDisplayAccountTokenForSecretMock
+    const apiResolution = createDeferred<ReturnType<typeof createResolvedKey>>()
+    const cliResolution = createDeferred<ReturnType<typeof createResolvedKey>>()
+    resolveDisplayAccountRuntimeKeySecretMock
       .mockReturnValueOnce(apiResolution.promise)
       .mockReturnValueOnce(cliResolution.promise)
     const user = userEvent.setup()
-    const { rerenderTokenHeader } = renderTokenHeader()
+    const { rerenderRuntimeKeyHeader } = renderRuntimeKeyHeader()
 
     await user.click(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenApiButton),
@@ -1381,19 +1446,19 @@ describe("TokenHeader analytics", () => {
     await user.click(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenCliSupportButton),
     )
-    expect(resolveDisplayAccountTokenForSecretMock).toHaveBeenCalledTimes(2)
+    expect(resolveDisplayAccountRuntimeKeySecretMock).toHaveBeenCalledTimes(2)
 
-    rerenderTokenHeader({
+    rerenderRuntimeKeyHeader({
       actionPolicy: { ...RECOVERABLE_ACTION_POLICY, verifySecret: false },
     })
     verifyDialogRenderMock.mockClear()
     verifyCliDialogRenderMock.mockClear()
     await act(async () => {
-      apiResolution.resolve(createToken({ key: "resolved-api-key" }))
-      cliResolution.resolve(createToken({ key: "resolved-cli-key" }))
+      apiResolution.resolve(createResolvedKey("resolved-api-key"))
+      cliResolution.resolve(createResolvedKey("resolved-cli-key"))
       await Promise.all([apiResolution.promise, cliResolution.promise])
     })
-    rerenderTokenHeader({ actionPolicy: RECOVERABLE_ACTION_POLICY })
+    rerenderRuntimeKeyHeader({ actionPolicy: RECOVERABLE_ACTION_POLICY })
 
     expect(verifyDialogRenderMock).toHaveBeenLastCalledWith(
       expect.objectContaining({ isOpen: false, profile: null }),
@@ -1413,13 +1478,13 @@ describe("TokenHeader analytics", () => {
   })
 
   it("ignores late API and CLI verification failures after permission is revoked", async () => {
-    const apiResolution = createDeferred<ReturnType<typeof createToken>>()
-    const cliResolution = createDeferred<ReturnType<typeof createToken>>()
-    resolveDisplayAccountTokenForSecretMock
+    const apiResolution = createDeferred<ReturnType<typeof createResolvedKey>>()
+    const cliResolution = createDeferred<ReturnType<typeof createResolvedKey>>()
+    resolveDisplayAccountRuntimeKeySecretMock
       .mockReturnValueOnce(apiResolution.promise)
       .mockReturnValueOnce(cliResolution.promise)
     const user = userEvent.setup()
-    const { rerenderTokenHeader } = renderTokenHeader()
+    const { rerenderRuntimeKeyHeader } = renderRuntimeKeyHeader()
 
     await user.click(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenApiButton),
@@ -1427,7 +1492,7 @@ describe("TokenHeader analytics", () => {
     await user.click(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenCliSupportButton),
     )
-    rerenderTokenHeader({
+    rerenderRuntimeKeyHeader({
       actionPolicy: { ...RECOVERABLE_ACTION_POLICY, verifySecret: false },
     })
 
@@ -1453,13 +1518,13 @@ describe("TokenHeader analytics", () => {
   })
 
   it("cancels deferred API and CLI verification successes after unmount", async () => {
-    const apiResolution = createDeferred<ReturnType<typeof createToken>>()
-    const cliResolution = createDeferred<ReturnType<typeof createToken>>()
-    resolveDisplayAccountTokenForSecretMock
+    const apiResolution = createDeferred<ReturnType<typeof createResolvedKey>>()
+    const cliResolution = createDeferred<ReturnType<typeof createResolvedKey>>()
+    resolveDisplayAccountRuntimeKeySecretMock
       .mockReturnValueOnce(apiResolution.promise)
       .mockReturnValueOnce(cliResolution.promise)
     const user = userEvent.setup()
-    const { unmount } = renderTokenHeader()
+    const { unmount } = renderRuntimeKeyHeader()
 
     await user.click(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenApiButton),
@@ -1472,8 +1537,8 @@ describe("TokenHeader analytics", () => {
     verifyCliDialogRenderMock.mockClear()
 
     await act(async () => {
-      apiResolution.resolve(createToken({ key: "resolved-stale-api-key" }))
-      cliResolution.resolve(createToken({ key: "resolved-stale-cli-key" }))
+      apiResolution.resolve(createResolvedKey("resolved-stale-api-key"))
+      cliResolution.resolve(createResolvedKey("resolved-stale-cli-key"))
       await Promise.all([apiResolution.promise, cliResolution.promise])
     })
 
@@ -1494,13 +1559,13 @@ describe("TokenHeader analytics", () => {
   })
 
   it("cancels deferred API and CLI verification failures after unmount", async () => {
-    const apiResolution = createDeferred<ReturnType<typeof createToken>>()
-    const cliResolution = createDeferred<ReturnType<typeof createToken>>()
-    resolveDisplayAccountTokenForSecretMock
+    const apiResolution = createDeferred<ReturnType<typeof createResolvedKey>>()
+    const cliResolution = createDeferred<ReturnType<typeof createResolvedKey>>()
+    resolveDisplayAccountRuntimeKeySecretMock
       .mockReturnValueOnce(apiResolution.promise)
       .mockReturnValueOnce(cliResolution.promise)
     const user = userEvent.setup()
-    const { unmount } = renderTokenHeader()
+    const { unmount } = renderRuntimeKeyHeader()
 
     await user.click(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenApiButton),
@@ -1532,9 +1597,10 @@ describe("TokenHeader analytics", () => {
   })
 
   it("keeps current StrictMode verification valid while cancelling a prior same-ID resource generation", async () => {
-    const staleApiResolution = createDeferred<ReturnType<typeof createToken>>()
-    const currentCliToken = createToken({ key: "resolved-current-cli-key" })
-    resolveDisplayAccountTokenForSecretMock
+    const staleApiResolution =
+      createDeferred<ReturnType<typeof createResolvedKey>>()
+    const currentCliToken = createResolvedKey("resolved-current-cli-key")
+    resolveDisplayAccountRuntimeKeySecretMock
       .mockReturnValueOnce(staleApiResolution.promise)
       .mockResolvedValueOnce(currentCliToken)
     const initialAccount = createAccount({
@@ -1562,7 +1628,7 @@ describe("TokenHeader analytics", () => {
       key: "masked-after-key",
     })
     const user = userEvent.setup()
-    const { rerenderTokenHeader } = renderTokenHeader(
+    const { rerenderRuntimeKeyHeader } = renderRuntimeKeyHeader(
       { account: initialAccount, token: initialToken },
       { strictMode: true },
     )
@@ -1570,7 +1636,7 @@ describe("TokenHeader analytics", () => {
     await user.click(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenApiButton),
     )
-    rerenderTokenHeader({ account: changedAccount, token: changedToken })
+    rerenderRuntimeKeyHeader({ account: changedAccount, token: changedToken })
     verifyDialogRenderMock.mockClear()
     await user.click(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenCliSupportButton),
@@ -1589,7 +1655,7 @@ describe("TokenHeader analytics", () => {
     })
 
     await act(async () => {
-      staleApiResolution.resolve(createToken({ key: "resolved-stale-api-key" }))
+      staleApiResolution.resolve(createResolvedKey("resolved-stale-api-key"))
       await staleApiResolution.promise
     })
 
@@ -1612,7 +1678,7 @@ describe("TokenHeader analytics", () => {
     openWithAccountMock.mockResolvedValueOnce({ opened: false })
 
     const user = userEvent.setup()
-    renderTokenHeader()
+    renderRuntimeKeyHeader()
 
     await selectExportAction(user, "keyManagement:actions.importToManagedSite")
 
@@ -1628,7 +1694,7 @@ describe("TokenHeader analytics", () => {
     openWithAccountMock.mockRejectedValueOnce(new Error("prepare failed"))
 
     const user = userEvent.setup()
-    renderTokenHeader()
+    renderRuntimeKeyHeader()
 
     await selectExportAction(user, "keyManagement:actions.importToManagedSite")
 
@@ -1645,9 +1711,9 @@ describe("TokenHeader analytics", () => {
   })
 })
 
-describe("TokenHeader shared card composition", () => {
+describe("RuntimeKeyHeader shared card composition", () => {
   it("renders the token title and row actions", async () => {
-    renderTokenHeader({
+    renderRuntimeKeyHeader({
       token: createToken({
         id: 1,
         name: "Readable Key Card Name",

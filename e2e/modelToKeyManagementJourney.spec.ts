@@ -76,7 +76,7 @@ test("creates a group default key from Model List and continues in Key Managemen
       totalModels: 1,
     },
     expectedModelDialogLabels: ["vip"],
-    expectedAddKeyDialogLabels: ["vip - VIP"],
+    expectedAddKeyDialogLabels: ["vip"],
     expectedKeyManagementLabels: ["vip"],
     prepareKeyManagementPage: async (keysPage) => {
       installExtensionPageGuards(keysPage)

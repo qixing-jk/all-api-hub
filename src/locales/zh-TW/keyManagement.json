@@ -286,7 +286,6 @@
       "newApiRetrieveKeyHint": "對於 New API，完整的 key 比對依賴渠道 key，而檢視渠道 key 本身需要先完成 2FA 驗證，因此當前暫無法完成完整 key 比對。"
     },
     "label": "管理站台",
-    "nativeResourceUnsupported": "本頁的託管站點比對暫不支援原生資源金鑰，重新整理僅適用於已支援的金鑰。",
     "pageUnsupported": "由於目前的託管站點暫不支援使用 URL 搜尋渠道，暫不提供管理站點渠道檢查功能。",
     "recovery": {
       "configureLogin": "請先在設定中填寫 New API 登入與兩步驗證輔助資訊，否則當前無法讀取渠道 key，也無法完成完整的 key 比對。",
@@ -326,17 +325,13 @@
     }
   },
   "messages": {
-    "accountNotFound": "找不到對應帳號資訊",
     "batchSavedToApiProfiles": "已儲存所選金鑰到 API 憑據庫",
     "batchSavedToApiProfilesNeedsConfirmation": "已儲存所選金鑰，請在 API 憑據庫中檢查標記的關聯。",
     "batchSaveToApiProfilesFailed": "儲存所選金鑰到 API 憑據庫失敗",
     "batchSaveToApiProfilesPartialFailed": "已儲存 {{savedCount}}/{{totalCount}} 個所選金鑰，{{failedCount}} 個未能儲存。",
     "copyFailed": "複製失敗",
-    "deleteConfirm": "確定要刪除金鑰 {{name}} 嗎？此操作不可撤銷",
-    "deleteSuccess": "金鑰 {{name}} 刪除成功",
     "keyCopied": "金鑰 {{name}} 已複製到剪貼簿",
     "loadFailed": "載入金鑰列表失敗",
-    "revealFailed": "顯示金鑰失敗",
     "savedToApiProfiles": "已儲存 {{name}} 到 API 憑據庫",
     "savedToApiProfilesNeedsConfirmation": "憑據已儲存，請在 API 憑據庫中檢查其金鑰關聯。",
     "saveToApiProfilesFailed": "儲存到 API 憑據庫失敗",
@@ -348,6 +343,11 @@
   },
   "native": {
     "detailsLoadFailed": "無法載入金鑰詳細資料。",
+    "editor": {
+      "expiryDays": "有效期限（天）",
+      "quotaUsd": "額度（美元）",
+      "totalQuotaUsd": "總額度（美元）"
+    },
     "heading": "API 金鑰",
     "missing": "無可用資料",
     "scope": {
@@ -522,10 +522,10 @@
         "edit": "編輯 API 金鑰"
       },
       "unsaved": {
-        "description": "你的變更尚未儲存。",
+        "description": "關閉後，本次修改不會儲存。",
         "discard": "捨棄變更",
         "keepEditing": "繼續編輯",
-        "title": "捨棄未儲存的變更？"
+        "title": "捨棄變更？"
       }
     },
     "list": {

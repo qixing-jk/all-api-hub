@@ -1,13 +1,10 @@
-import type { Locator, Page } from "@playwright/test"
+import type { ElementHandle, Locator, Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import type { AccountSiteType } from "~/constants/siteType"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import {
-  getKeyManagementTokenRowTestId,
-  KEY_MANAGEMENT_TEST_IDS,
-} from "~/features/KeyManagement/testIds"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
@@ -45,8 +42,6 @@ type TokenCreationOutcome =
 type TokenDeletionOutcome =
   | { status: "deleted" }
   | { status: "failed"; message: string }
-
-const PREEXISTING_STATUS_ATTRIBUTE = "data-aah-e2e-preexisting-status"
 
 export type SavedApiCredentialProfileExpectation = Partial<
   Pick<ApiCredentialProfile, "name" | "baseUrl" | "apiKey" | "tagIds">
@@ -268,36 +263,30 @@ async function submitCreateTokenForm(params: {
   page: Page
   tokenName: string
 }) {
-  await markExistingStatusMessages(params.page)
   await params.page.getByRole("button", { name: "Add API Key" }).click()
-  await expect(params.page.locator("#tokenName")).toBeVisible({
+  const editor = params.page.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditor)
+  const nameInput = editor.getByRole("textbox", { name: "Token Name" })
+  await expect(nameInput).toBeVisible({
     timeout: 30_000,
   })
-  await params.page.locator("#tokenName").fill(params.tokenName)
+  await nameInput.fill(params.tokenName)
   await params.page
-    .getByTestId(TOKEN_PROVISIONING_TEST_IDS.addTokenSubmitButton)
+    .getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton)
     .click()
 
   const outcomeHandle = await params.page.waitForFunction(
-    ({
-      addTokenDialogTestId,
-      addTokenSubmitButtonTestId,
-      oneTimeCloseTestId,
-      preexistingStatusAttribute,
-    }) => {
-      const addTokenDialog = document.querySelector(
-        `[data-testid="${addTokenDialogTestId}"]`,
-      )
+    ({ editorTestId, submitButtonTestId, oneTimeCloseTestId }) => {
+      const editor = document.querySelector(`[data-testid="${editorTestId}"]`)
       const oneTimeCloseButton = document.querySelector(
         `[data-testid="${oneTimeCloseTestId}"]`,
       )
 
-      if (!addTokenDialog || oneTimeCloseButton) {
+      if (!editor || oneTimeCloseButton) {
         return { status: "created" } satisfies TokenCreationOutcome
       }
 
       const submitButton = document.querySelector(
-        `[data-testid="${addTokenSubmitButtonTestId}"]`,
+        `[data-testid="${submitButtonTestId}"]`,
       )
       if (
         !(submitButton instanceof HTMLButtonElement) ||
@@ -306,23 +295,19 @@ async function submitCreateTokenForm(params: {
         return null
       }
 
-      const visibleStatusMessages = Array.from(
-        document.querySelectorAll<HTMLElement>(
-          `[role="status"]:not([${preexistingStatusAttribute}])`,
-        ),
+      const visibleErrors = Array.from(
+        editor.querySelectorAll<HTMLElement>('[role="alert"]'),
       ).filter((element) => element.getClientRects().length > 0)
-      const message = visibleStatusMessages.at(-1)?.textContent?.trim()
+      const message = visibleErrors.at(-1)?.textContent?.trim()
 
       return message
         ? ({ status: "failed", message } satisfies TokenCreationOutcome)
         : null
     },
     {
-      addTokenDialogTestId: TOKEN_PROVISIONING_TEST_IDS.addTokenDialog,
-      addTokenSubmitButtonTestId:
-        TOKEN_PROVISIONING_TEST_IDS.addTokenSubmitButton,
+      editorTestId: KEY_MANAGEMENT_TEST_IDS.nativeEditor,
+      submitButtonTestId: KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton,
       oneTimeCloseTestId: TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyCloseButton,
-      preexistingStatusAttribute: PREEXISTING_STATUS_ATTRIBUTE,
     },
     { timeout: 30_000 },
   )
@@ -333,53 +318,31 @@ async function submitCreateTokenForm(params: {
   }
 }
 
-async function markExistingStatusMessages(page: Page) {
-  await page.getByRole("status").evaluateAll((elements, attribute) => {
-    for (const element of elements) {
-      element.setAttribute(attribute, "true")
-    }
-  }, PREEXISTING_STATUS_ATTRIBUTE)
-}
-
 async function waitForTokenDeletionOutcome(params: {
   page: Page
-  rowTestId: string
+  row: ElementHandle<HTMLElement | SVGElement>
 }) {
   const outcomeHandle = await params.page.waitForFunction(
-    ({
-      rowTestId,
-      preexistingStatusAttribute,
-      deleteTokenErrorToastTestId,
-    }) => {
-      const row = document.querySelector(
-        `[data-testid="${CSS.escape(rowTestId)}"]`,
-      )
-      if (!row) {
+    ({ row, confirmButtonTestId }) => {
+      if (!row.isConnected) {
         return { status: "deleted" } satisfies TokenDeletionOutcome
       }
-
-      const visibleStatusMessages = Array.from(
-        document.querySelectorAll<HTMLElement>(
-          `[role="status"]:not([${preexistingStatusAttribute}])`,
-        ),
-      ).filter(
-        (element) =>
-          element.getClientRects().length > 0 &&
-          element.querySelector(
-            `[data-testid="${deleteTokenErrorToastTestId}"]`,
-          ),
+      const confirm = document.querySelector<HTMLButtonElement>(
+        `[data-testid="${confirmButtonTestId}"]`,
       )
-      const message = visibleStatusMessages.at(-1)?.textContent?.trim()
+      if (!confirm || confirm.disabled) return null
+      const dialog = confirm.closest('[data-slot="modal-panel"]')
+      const message = dialog
+        ?.querySelector('[role="alert"]')
+        ?.textContent?.trim()
 
       return message
         ? ({ status: "failed", message } satisfies TokenDeletionOutcome)
         : null
     },
     {
-      rowTestId: params.rowTestId,
-      preexistingStatusAttribute: PREEXISTING_STATUS_ATTRIBUTE,
-      deleteTokenErrorToastTestId:
-        KEY_MANAGEMENT_TEST_IDS.deleteTokenErrorToast,
+      row: params.row,
+      confirmButtonTestId: KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton,
     },
     { timeout: 30_000 },
   )
@@ -405,13 +368,15 @@ async function closeOneTimeKeyDialogIfPresent(page: Page) {
 }
 
 async function closeAddTokenDialogIfPresent(page: Page) {
-  const dialog = page.getByTestId(TOKEN_PROVISIONING_TEST_IDS.addTokenDialog)
+  const dialog = page.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditor)
 
   if (!(await dialog.isVisible().catch(() => false))) {
     return
   }
 
   await dialog.getByRole("button", { name: "Cancel" }).click()
+  const discard = dialog.getByRole("button", { name: "Discard changes" })
+  if (await discard.isVisible()) await discard.click()
   await expect(dialog).toBeHidden({ timeout: 30_000 })
 }
 
@@ -419,22 +384,26 @@ async function closeTokenCreationDialogsIfPresent(page: Page) {
   const closedOneTimeKeyDialog = await closeOneTimeKeyDialogIfPresent(page)
   if (closedOneTimeKeyDialog) {
     await expect(
-      page.getByTestId(TOKEN_PROVISIONING_TEST_IDS.addTokenDialog),
+      page.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditor),
     ).toBeHidden({ timeout: 30_000 })
   }
   await closeAddTokenDialogIfPresent(page)
+}
+
+/** Finds a native key card by its visible name within the selected account. */
+export function getAccountKeyResourceRow(page: Page, name: string): Locator {
+  return page.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeKeyRow).filter({
+    has: page.getByRole("heading", { name, exact: true }),
+  })
 }
 
 async function expectTokenVisibleInKeyManagementPage(params: {
   page: Page
   tokenName: string
 }): Promise<Locator> {
-  const heading = params.page.getByRole("heading", {
-    name: params.tokenName,
-    exact: true,
-  })
-  await expect(heading).toBeVisible({ timeout: 30_000 })
-  return heading.locator("xpath=ancestor::*[@data-testid][1]")
+  const row = getAccountKeyResourceRow(params.page, params.tokenName)
+  await expect(row).toBeVisible({ timeout: 30_000 })
+  return row
 }
 
 export async function deleteTokensMatchingNameFromKeyManagementPage(params: {
@@ -452,18 +421,10 @@ export async function deleteTokensMatchingNameFromKeyManagementPage(params: {
   )
 
   while (ownedTokenName) {
-    const row = params.page
-      .getByRole("heading", { name: ownedTokenName, exact: true })
-      .first()
-      .locator("xpath=ancestor::*[@data-testid][1]")
-    const rowTestId = await row.getAttribute("data-testid")
-    if (!rowTestId) {
-      throw new Error("Unable to identify an owned test token row for cleanup.")
-    }
-
+    const row = getAccountKeyResourceRow(params.page, ownedTokenName).first()
     await deleteTokenRowFromKeyManagementPage({
       page: params.page,
-      row: params.page.getByTestId(rowTestId),
+      row,
     })
     ownedTokenName = (await tokenHeadings.allTextContents()).find(
       params.nameMatcher,
@@ -477,12 +438,11 @@ async function deleteTokenRowFromKeyManagementPage(params: {
   cleanupLinkedChannels?: boolean
 }) {
   await expect(params.row).toBeVisible({ timeout: 30_000 })
-  const rowTestId = await params.row.getAttribute("data-testid")
-  if (!rowTestId) {
+  const row = await params.row.elementHandle()
+  if (!row) {
     throw new Error("Unable to identify a token row for deletion.")
   }
 
-  await markExistingStatusMessages(params.page)
   await params.row
     .getByRole("button", { name: "Delete Key", exact: true })
     .click()
@@ -495,12 +455,13 @@ async function deleteTokenRowFromKeyManagementPage(params: {
       .setChecked(params.cleanupLinkedChannels)
   }
   await params.page
-    .getByTestId(KEY_MANAGEMENT_TEST_IDS.deleteTokenConfirmButton)
+    .getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton)
     .click()
   const outcome = await waitForTokenDeletionOutcome({
     page: params.page,
-    rowTestId,
+    row,
   })
+  await row.dispose()
 
   if (outcome.status === "failed") {
     throw new Error(`API key deletion failed: ${outcome.message}`)
@@ -514,13 +475,11 @@ export async function deleteTokenFromKeyManagementPage(params: {
 }) {
   await closeTokenCreationDialogsIfPresent(params.page)
 
-  const row =
-    typeof params.token === "string"
-      ? await expectTokenVisibleInKeyManagementPage({
-          page: params.page,
-          tokenName: params.token,
-        })
-      : params.page.getByTestId(getKeyManagementTokenRowTestId(params.token.id))
+  const row = await expectTokenVisibleInKeyManagementPage({
+    page: params.page,
+    tokenName:
+      typeof params.token === "string" ? params.token : params.token.name,
+  })
   await deleteTokenRowFromKeyManagementPage({
     page: params.page,
     row,

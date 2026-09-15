@@ -195,7 +195,8 @@ export type AccountKeyResourceFacts = {
 }
 
 export type AccountKeyEditorSubmitResult = {
-  readonly facts: AccountKeyResourceFacts
+  /** Null only for confirmed creation with a response-only secret and no attributable ID. */
+  readonly facts: AccountKeyResourceFacts | null
   readonly createdSecret?: CreatedRuntimeSecret
 }
 
@@ -292,4 +293,14 @@ export interface AccountKeyResourceCapability {
     input: AccountKeyResourceOpenInput,
     options?: ResourceOperationOptions,
   ): Promise<AccountKeyResourceSession>
+}
+
+/** Product intent; each adapter chooses the native fields that can satisfy it. */
+export type AccountKeyCreationIntent = {
+  readonly nameHint?: string
+  readonly preferredGroup?: string
+  readonly allowedGroups?: readonly string[]
+  readonly modelContext?: {
+    readonly modelId: string
+  }
 }

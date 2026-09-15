@@ -20,6 +20,7 @@ import {
   KeyResourceCardHeader,
   type KeyResourceCardHeaderRenderProps,
 } from "~/features/KeyManagement/components/KeyResourceCard"
+import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
@@ -35,34 +36,33 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import type { AccountToken } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { openSettingsTab } from "~/utils/navigation"
 
 import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"
 import { ManagedSiteStatusDisclosure } from "../ManagedSiteStatusDisclosure"
 import {
-  TokenActionButtons,
-  type TokenActionButtonsProps,
-} from "./TokenActionButtons"
+  RuntimeKeyActionButtons,
+  type RuntimeKeyActionButtonsProps,
+} from "./RuntimeKeyActionButtons"
 
 /**
- * Unified logger scoped to the Key Management token header actions.
+ * Unified logger scoped to the Key Management runtimeKey header actions.
  */
-const logger = createLogger("TokenHeader")
+const logger = createLogger("RuntimeKeyHeader")
 
-export interface TokenHeaderProps extends TokenActionButtonsProps {
+export interface RuntimeKeyHeaderProps extends RuntimeKeyActionButtonsProps {
   /** Shared header content and controls owned by the key-resource card. */
   headerProps: KeyResourceCardHeaderRenderProps
   /**
-   * Whether a managed-site status check is currently running for the token.
+   * Whether a managed-site status check is currently running for the runtimeKey.
    */
   isManagedSiteStatusChecking?: boolean
   /**
    * Optional callback invoked to recover a New API exact-verification state.
    */
   onManagedSiteVerificationRetry?: (
-    token: AccountToken,
+    runtimeKey: AccountRuntimeKey,
     managedSiteStatus: ManagedSiteTokenChannelStatus,
   ) => void | Promise<void>
 }
@@ -189,27 +189,27 @@ export const getManagedSiteSettingsActionLabel = (
  * @param props Component props container.
  * @param props.headerProps Shared key-resource header content and controls.
  * @param props.association Current API credential-library relationship.
- * @param props.actionPolicy Provider capability policy controlling available token actions.
- * @param props.token Token entity with account name.
+ * @param props.actionPolicy Provider capability policy controlling available runtimeKey actions.
+ * @param props.runtimeKey Token entity with account name.
  * @param props.copyKey Clipboard copy handler.
- * @param props.handleEditToken Edit action callback.
- * @param props.handleDeleteToken Delete action callback.
+ * @param props.handleEditKey Edit action callback.
+ * @param props.handleDeleteKey Delete action callback.
  * @param props.account Account context for cross-app operations.
  * @param props.onOpenCCSwitchDialog Optional CCSwitch export opener.
- * @param props.managedSiteStatus Current managed-site status for the token.
+ * @param props.managedSiteStatus Current managed-site status for the runtimeKey.
  * @param props.isManagedSiteStatusChecking Whether the managed-site status is checking.
  * @param props.onManagedSiteImportSuccess Optional callback after successful managed-site import.
  * @param props.onManagedSiteVerificationRetry Optional callback for New API verification-assisted retry.
  * @param props.guidedManagedSiteImportRequest Request key that highlights the managed-site import action.
  */
-export function TokenHeader({
+export function RuntimeKeyHeader({
   headerProps,
   association,
   actionPolicy,
-  token,
+  runtimeKey,
   copyKey,
-  handleEditToken,
-  handleDeleteToken,
+  handleEditKey,
+  handleDeleteKey,
   account,
   onOpenCCSwitchDialog,
   managedSiteStatus,
@@ -217,7 +217,7 @@ export function TokenHeader({
   onManagedSiteImportSuccess,
   onManagedSiteVerificationRetry,
   guidedManagedSiteImportRequest,
-}: TokenHeaderProps) {
+}: RuntimeKeyHeaderProps) {
   const { t } = useTranslation(["keyManagement", "common"])
   const { managedSiteType } = useUserPreferencesContext()
   const [
@@ -292,7 +292,7 @@ export function TokenHeader({
 
     void (async () => {
       try {
-        await onManagedSiteVerificationRetry(token, managedSiteStatus)
+        await onManagedSiteVerificationRetry(runtimeKey, managedSiteStatus)
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       } catch (error) {
         logger.error("Managed-site verification retry callback failed", error)
@@ -405,7 +405,7 @@ export function TokenHeader({
         />
       ) : null}
 
-      {/* verification retry button - only show if the token is in an exact-verification-unavailable unknown status with login credentials configured, which indicates the user can take action to potentially recover to an added status without needing to re-import */}
+      {/* verification retry button - only show if the runtimeKey is in an exact-verification-unavailable unknown status with login credentials configured, which indicates the user can take action to potentially recover to an added status without needing to re-import */}
       {managedSiteRecoveryMessage ? (
         <span className="break-words whitespace-normal">
           {managedSiteRecoveryMessage}
@@ -451,13 +451,13 @@ export function TokenHeader({
       actions={
         <>
           {headerProps.actions}
-          <TokenActionButtons
+          <RuntimeKeyActionButtons
             association={association}
             actionPolicy={actionPolicy}
-            token={token}
+            runtimeKey={runtimeKey}
             copyKey={copyKey}
-            handleEditToken={handleEditToken}
-            handleDeleteToken={handleDeleteToken}
+            handleEditKey={handleEditKey}
+            handleDeleteKey={handleDeleteKey}
             account={account}
             managedSiteStatus={managedSiteStatus}
             onOpenCCSwitchDialog={onOpenCCSwitchDialog}

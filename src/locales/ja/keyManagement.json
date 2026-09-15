@@ -286,7 +286,6 @@
       "newApiRetrieveKeyHint": "New API では完全なキー比較がチャネルキーに依存しますが、そのチャネルキー自体の表示に 2FA 認証が必要なため、現時点では完全なキー比較は利用できません。"
     },
     "label": "管理サイト",
-    "nativeResourceUnsupported": "このページの管理対象サイトとの照合は、ネイティブリソースキーにまだ対応していません。更新は対応済みのキーにのみ適用されます。",
     "pageUnsupported": "このページでは管理対象サイトのチャネル確認を利用できません。現在の管理対象サイトが URL によるチャネル検索をサポートしていないためです。",
     "recovery": {
       "configureLogin": "先に設定で New API のログイン情報と 2FA 補助項目を追加してください。それまではチャネルキーを読み取れず、完全なキー比較を完了できません。",
@@ -326,17 +325,13 @@
     }
   },
   "messages": {
-    "accountNotFound": "アカウント情報が見つかりません",
     "batchSavedToApiProfiles": "選択したキーを API 認証情報庫に保存しました",
     "batchSavedToApiProfilesNeedsConfirmation": "選択したキーを保存しました。API 認証情報庫で強調表示された関連付けを確認してください。",
     "batchSaveToApiProfilesFailed": "選択したキーを API 認証情報庫に保存できませんでした",
     "batchSaveToApiProfilesPartialFailed": "選択した {{totalCount}} 件のうち {{savedCount}} 件を保存しました。{{failedCount}} 件は保存できませんでした。",
     "copyFailed": "コピーに失敗しました",
-    "deleteConfirm": "キー {{name}} を削除してもよろしいですか？ この操作は元に戻せません",
-    "deleteSuccess": "キー {{name}} を正常に削除しました",
     "keyCopied": "キー {{name}} をクリップボードにコピーしました",
     "loadFailed": "キー一覧の読み込みに失敗しました",
-    "revealFailed": "キーの表示に失敗しました",
     "savedToApiProfiles": "{{name}} を API 認証情報庫に保存しました",
     "savedToApiProfilesNeedsConfirmation": "認証情報を保存しました。API 認証情報庫でキーの関連付けを確認してください。",
     "saveToApiProfilesFailed": "API 認証情報庫への保存に失敗しました",
@@ -348,6 +343,11 @@
   },
   "native": {
     "detailsLoadFailed": "キーの詳細を読み込めませんでした。",
+    "editor": {
+      "expiryDays": "有効期間（日）",
+      "quotaUsd": "クォータ（米ドル）",
+      "totalQuotaUsd": "合計クォータ（米ドル）"
+    },
     "heading": "API キー",
     "missing": "利用不可",
     "scope": {
@@ -522,10 +522,10 @@
         "edit": "APIキーを編集"
       },
       "unsaved": {
-        "description": "変更は保存されていません。",
+        "description": "閉じると、今回の変更は保存されません。",
         "discard": "変更を破棄",
         "keepEditing": "編集を続ける",
-        "title": "未保存の変更を破棄しますか？"
+        "title": "変更を破棄しますか？"
       }
     },
     "list": {

@@ -7,6 +7,7 @@ import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/KeyManagement/constants"
+import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS } from "~/services/managedSites/channelMatch"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
@@ -14,6 +15,7 @@ import {
 } from "~/services/managedSites/tokenChannelStatus"
 import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { createAccount } from "~~/tests/utils/keyManagementFactories"
 
 const {
   sendRuntimeActionMessageMock,
@@ -52,6 +54,20 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 
 vi.mock("~/features/KeyManagement/hooks/useKeyManagement", () => ({
   useKeyManagement: (...args: unknown[]) => useKeyManagementMock(...args),
+}))
+
+vi.mock("~/features/KeyManagement/hooks/useManagedSiteKeyStatuses", () => ({
+  useManagedSiteKeyStatuses: () => {
+    const fixture = useKeyManagementMock.mock.results.at(-1)?.value
+    return {
+      states: fixture.managedSiteTokenStatuses ?? {},
+      supported: fixture.isManagedSiteChannelStatusSupported ?? true,
+      refreshing: fixture.isManagedSiteStatusRefreshing ?? false,
+      refresh: fixture.refreshManagedSiteTokenStatuses,
+      refreshKey: fixture.refreshManagedSiteTokenStatusForToken,
+      confirm: fixture.confirmManagedSiteTokenStatusWithChannelKey,
+    }
+  },
 }))
 
 vi.mock(
@@ -129,9 +145,25 @@ vi.mock("~/features/KeyManagement/components/RepairMissingKeysDialog", () => ({
   RepairMissingKeysDialog: () => null,
 }))
 
+const nativeAccount = createAccount({ id: "acc-1" })
+const nativeRuntimeKey = buildAccountKeyResourceRuntimeKey(nativeAccount, {
+  ref: {
+    accountId: nativeAccount.id,
+    siteType: nativeAccount.siteType,
+    scopeKey: "account",
+    resourceId: "opaque-id",
+  },
+  label: "Token 1",
+  secret: "",
+})
+
 const baseHookResult = {
   displayData: [{ id: "acc-1", name: "Account 1", disabled: false }],
   selectedAccount: "acc-1",
+  entries: [
+    { id: nativeRuntimeKey.id, runtimeKey: nativeRuntimeKey, uiState: {} },
+  ],
+  filteredEntries: [],
   setSelectedAccount: vi.fn(),
   searchTerm: "",
   setSearchTerm: vi.fn(),
@@ -150,7 +182,7 @@ const baseHookResult = {
   isManagedSiteStatusRefreshing: false,
   allAccountsFilterAccountIds: [],
   setAllAccountsFilterAccountIds: vi.fn(),
-  loadTokens: vi.fn(),
+  refreshServiceCredentials: vi.fn(),
   filteredTokens: [
     { id: 1, name: "Token 1", accountId: "acc-1", accountName: "Account 1" },
   ],
@@ -282,11 +314,11 @@ describe("KeyManagement managed-site status support", () => {
   })
 
   it("marks a single-account token reload as a key-management command", async () => {
-    const loadTokens = vi.fn().mockResolvedValue(undefined)
+    const refreshServiceCredentials = vi.fn().mockResolvedValue(undefined)
     useKeyManagementMock.mockReturnValue({
       ...baseHookResult,
       isManagedSiteChannelStatusSupported: false,
-      loadTokens,
+      refreshServiceCredentials,
     })
 
     render(<KeyManagement />)
@@ -302,7 +334,7 @@ describe("KeyManagement managed-site status support", () => {
       "options",
       expect.any(Function),
     )
-    expect(loadTokens).toHaveBeenCalledWith(undefined, {
+    expect(refreshServiceCredentials).toHaveBeenCalledWith(undefined, {
       protectionBypassExecution: {
         version: 2,
         kind: "user_command",
@@ -313,12 +345,12 @@ describe("KeyManagement managed-site status support", () => {
   })
 
   it("marks an all-account token reload as a key-management command", async () => {
-    const loadTokens = vi.fn().mockResolvedValue(undefined)
+    const refreshServiceCredentials = vi.fn().mockResolvedValue(undefined)
     useKeyManagementMock.mockReturnValue({
       ...baseHookResult,
       selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
       isManagedSiteChannelStatusSupported: false,
-      loadTokens,
+      refreshServiceCredentials,
     })
 
     render(<KeyManagement />)
@@ -334,7 +366,7 @@ describe("KeyManagement managed-site status support", () => {
       "options",
       expect.any(Function),
     )
-    expect(loadTokens).toHaveBeenCalledWith(undefined, {
+    expect(refreshServiceCredentials).toHaveBeenCalledWith(undefined, {
       protectionBypassExecution: expect.objectContaining({
         command: "manage_api_keys",
       }),
@@ -342,11 +374,11 @@ describe("KeyManagement managed-site status support", () => {
   })
 
   it("marks a current-account token retry as a key-management command", async () => {
-    const loadTokens = vi.fn().mockResolvedValue(undefined)
+    const refreshServiceCredentials = vi.fn().mockResolvedValue(undefined)
     useKeyManagementMock.mockReturnValue({
       ...baseHookResult,
       isManagedSiteChannelStatusSupported: false,
-      loadTokens,
+      refreshServiceCredentials,
     })
 
     render(<KeyManagement />)
@@ -359,7 +391,7 @@ describe("KeyManagement managed-site status support", () => {
       "options",
       expect.any(Function),
     )
-    expect(loadTokens).toHaveBeenCalledWith("acc-1", {
+    expect(refreshServiceCredentials).toHaveBeenCalledWith("acc-1", {
       protectionBypassExecution: expect.objectContaining({
         command: "manage_api_keys",
       }),
@@ -403,7 +435,7 @@ describe("KeyManagement managed-site status support", () => {
       | ((token: any, managedSiteStatus: any) => Promise<void>)
       | undefined
 
-    await retry?.(baseHookResult.tokens[0] as any, {
+    await retry?.(nativeRuntimeKey, {
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
       reason:
         MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
@@ -458,7 +490,7 @@ describe("KeyManagement managed-site status support", () => {
       }),
     )
     expect(confirmManagedSiteTokenStatusWithChannelKey).toHaveBeenCalledWith(
-      baseHookResult.tokens[0],
+      nativeRuntimeKey,
       expect.objectContaining({
         reason:
           MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
@@ -526,7 +558,7 @@ describe("KeyManagement managed-site status support", () => {
 
     expect(retry).toEqual(expect.any(Function))
 
-    await retry?.(baseHookResult.tokens[0] as any, {
+    await retry?.(nativeRuntimeKey, {
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
       reason:
         MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
@@ -541,7 +573,7 @@ describe("KeyManagement managed-site status support", () => {
     })
 
     expect(refreshManagedSiteTokenStatusForToken).toHaveBeenCalledWith(
-      baseHookResult.tokens[0],
+      nativeRuntimeKey,
       {
         protectionBypassExecution: {
           version: 2,
@@ -566,7 +598,7 @@ describe("KeyManagement managed-site status support", () => {
       expect.any(Function),
     )
     expect(refreshManagedSiteTokenStatusForToken).toHaveBeenLastCalledWith(
-      baseHookResult.tokens[0],
+      nativeRuntimeKey,
       {
         protectionBypassExecution: {
           version: 2,
@@ -618,7 +650,7 @@ describe("KeyManagement managed-site status support", () => {
       | ((token: any, managedSiteStatus: any) => Promise<void>)
       | undefined
 
-    await retry?.(baseHookResult.tokens[0] as any, {
+    await retry?.(nativeRuntimeKey, {
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
       reason:
         MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
@@ -633,7 +665,7 @@ describe("KeyManagement managed-site status support", () => {
     })
 
     expect(refreshManagedSiteTokenStatusForToken).toHaveBeenCalledWith(
-      baseHookResult.tokens[0],
+      nativeRuntimeKey,
       {
         protectionBypassExecution: {
           version: 2,
@@ -668,7 +700,7 @@ describe("KeyManagement managed-site status support", () => {
       | ((token: any, managedSiteStatus: any) => Promise<void>)
       | undefined
 
-    await retry?.(baseHookResult.tokens[0] as any, {
+    await retry?.(nativeRuntimeKey, {
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
       reason:
         MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,

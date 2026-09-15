@@ -85,6 +85,18 @@ export type VoApiV2KeyTemplate = {
   ssb?: boolean
 }
 
+/** VoAPI v2's native edit payload, including usage that PUT must preserve. */
+export type VoApiV2KeyWrite = {
+  name: string
+  groups: number[]
+  enable: boolean
+  expireTime: number
+  boundlessAmount: boolean
+  amount: string
+  used: string | number
+  note: string
+}
+
 export type VoApiV2KeyGroupDescriptor = {
   id: number
   requirementKey: string

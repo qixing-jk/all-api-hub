@@ -9,10 +9,12 @@ import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/cons
 import type { AccountKeyResourceRouteTransition } from "~/features/KeyManagement/controllers/useAccountKeyResourceController"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
+import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   AccountKeyResourceError,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResourceEditor"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
@@ -55,7 +57,7 @@ const {
   useKeyManagementMock,
   useUserPreferencesContextMock,
   legacyAddTokenSpy,
-  legacyLoadTokensSpy,
+  refreshServiceCredentialsSpy,
   legacyRetryFailedAccountsSpy,
 } = vi.hoisted(() => ({
   accountKeyResourceControllerOptionsSpy: vi.fn(),
@@ -75,7 +77,7 @@ const {
   useKeyManagementMock: vi.fn(),
   useUserPreferencesContextMock: vi.fn(),
   legacyAddTokenSpy: vi.fn(),
-  legacyLoadTokensSpy: vi.fn(),
+  refreshServiceCredentialsSpy: vi.fn(),
   legacyRetryFailedAccountsSpy: vi.fn(),
 }))
 
@@ -248,6 +250,20 @@ vi.mock("~/features/KeyManagement/hooks/useKeyManagement", () => ({
   useKeyManagement: (...args: unknown[]) => useKeyManagementMock(...args),
 }))
 
+vi.mock("~/features/KeyManagement/hooks/useManagedSiteKeyStatuses", () => ({
+  useManagedSiteKeyStatuses: () => {
+    const fixture = useKeyManagementMock.mock.results.at(-1)?.value
+    return {
+      states: fixture.managedSiteTokenStatuses ?? {},
+      supported: fixture.isManagedSiteChannelStatusSupported ?? true,
+      refreshing: fixture.isManagedSiteStatusRefreshing ?? false,
+      refresh: fixture.refreshManagedSiteTokenStatuses,
+      refreshKey: fixture.refreshManagedSiteTokenStatusForToken,
+      confirm: fixture.confirmManagedSiteTokenStatusWithChannelKey,
+    }
+  },
+}))
+
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/utils/browser/browserApi")>()
@@ -336,6 +352,20 @@ function useLegacyKeyManagementHarness() {
     useState(legacyHarnessConfig.allAccountsFilterAccountIds ?? [])
   const [isAddTokenOpen, setIsAddTokenOpen] = useState(false)
   const tokens = legacyHarnessConfig.tokens ?? []
+  const entries = tokens.map((seed) => {
+    const account = legacyHarnessConfig.accounts.find(
+      (candidate) => candidate.id === seed.accountId,
+    )
+    const runtimeKey = buildServiceCredentialRuntimeKey(account, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: seed.name,
+      key: seed.key,
+      baseUrl: account.baseUrl,
+      isAuthenticated: true,
+    })
+    return { id: runtimeKey.id, runtimeKey, uiState: {} }
+  })
 
   return {
     displayData: legacyHarnessConfig.accounts,
@@ -361,26 +391,13 @@ function useLegacyKeyManagementHarness() {
     isManagedSiteStatusRefreshing: false,
     allAccountsFilterAccountIds,
     setAllAccountsFilterAccountIds,
-    loadTokens: legacyLoadTokensSpy,
-    entries: tokens.map((token) => ({
-      id: `${token.accountId}:${token.id}`,
-      runtimeKey: {
-        kind: "account-token",
-        accountId: token.accountId,
-        accountName: token.accountName,
-        token,
-      },
-    })),
-    filteredTokens: tokens,
-    filteredEntries: tokens.map((token) => ({
-      id: `${token.accountId}:${token.id}`,
-      runtimeKey: {
-        kind: "account-token",
-        accountId: token.accountId,
-        accountName: token.accountName,
-        token,
-      },
-    })),
+    refreshServiceCredentials: refreshServiceCredentialsSpy,
+    entries,
+    filteredEntries: entries.filter(
+      (entry) =>
+        !allAccountsFilterAccountIds.length ||
+        allAccountsFilterAccountIds.includes(entry.runtimeKey.accountId),
+    ),
     getVisibleTokenKey: (token: { key: string }) => token.key,
     refreshManagedSiteTokenStatuses: vi.fn(),
     refreshManagedSiteTokenStatusForToken: vi.fn(),
@@ -670,8 +687,8 @@ describe("KeyManagement native page integration", () => {
     useKeyManagementMock.mockReset()
     useUserPreferencesContextMock.mockReset()
     legacyAddTokenSpy.mockReset()
-    legacyLoadTokensSpy.mockReset()
-    legacyLoadTokensSpy.mockResolvedValue(undefined)
+    refreshServiceCredentialsSpy.mockReset()
+    refreshServiceCredentialsSpy.mockResolvedValue(undefined)
     legacyRetryFailedAccountsSpy.mockReset()
 
     useKeyManagementMock.mockImplementation(useLegacyKeyManagementHarness)
@@ -1275,6 +1292,17 @@ describe("KeyManagement native page integration", () => {
         destinationScopeKey: scope.scopeKey,
         submit: vi.fn(),
       })
+      if (siteType === SITE_TYPES.NEW_API) {
+        const nativeEditor = createNewApiKeyEditor(
+          siteType,
+          {} as never,
+          {
+            fetchUserGroups: vi.fn().mockResolvedValue({}),
+            fetchAvailableModels: vi.fn().mockResolvedValue([]),
+          } as never,
+        )
+        Object.assign(createEditor, nativeEditor)
+      }
       const { session } = createNativeSession({
         scopes: [scope],
         createEditor,
@@ -1286,7 +1314,7 @@ describe("KeyManagement native page integration", () => {
       legacyHarnessConfig = {
         accounts: [account],
         initialSelectedAccount: account.id,
-        isManagedSiteChannelStatusSupported: false,
+        isManagedSiteChannelStatusSupported: true,
       }
 
       render(
@@ -1313,24 +1341,24 @@ describe("KeyManagement native page integration", () => {
         }),
       ).toBeVisible()
       expect(
-        screen.getByText(
+        screen.queryByText(
           "keyManagement:managedSiteStatus.nativeResourceUnsupported",
         ),
-      ).toBeVisible()
+      ).toBeNull()
       expect(
-        screen.queryByRole("button", {
+        screen.getByRole("button", {
           name: "keyManagement:managedSiteStatus.actions.refresh",
         }),
-      ).toBeNull()
+      ).toBeVisible()
 
-      legacyLoadTokensSpy.mockClear()
+      refreshServiceCredentialsSpy.mockClear()
       await user.click(
         screen.getByRole("button", { name: "keyManagement:refreshTokenList" }),
       )
       await waitFor(() =>
         expect(session.openCollection).toHaveBeenCalledTimes(2),
       )
-      expect(legacyLoadTokensSpy).not.toHaveBeenCalled()
+      expect(refreshServiceCredentialsSpy).not.toHaveBeenCalled()
 
       await user.click(addButton)
 
@@ -1435,40 +1463,55 @@ describe("KeyManagement native page integration", () => {
     expect(collection.list).toHaveBeenCalledOnce()
   })
 
-  it("routes Add exclusively to the legacy dialog for a legacy account", async () => {
-    const user = userEvent.setup()
+  it("opens the native editor for an ordinary New API account without an implicit scope selector", async () => {
     const account = createAccount({
-      id: "legacy-account",
-      name: "Legacy account",
+      id: "new-api-account",
       siteType: SITE_TYPES.NEW_API,
-      baseUrl: "https://legacy.example.invalid",
     })
-    createDisplayAccountApiContextMock.mockReturnValue({ request: {} })
+    const scope = createScope("account", "account", "Account", true)
+    const createEditor = createNewApiKeyEditor(
+      SITE_TYPES.NEW_API,
+      {} as never,
+      {
+        fetchUserGroups: vi.fn().mockResolvedValue({}),
+        fetchAvailableModels: vi.fn().mockResolvedValue([]),
+      } as never,
+    )
+    const { session } = createNativeSession({
+      scopes: [scope],
+      createEditor: { ...createEditor, submit: vi.fn() },
+    })
+    createDisplayAccountApiContextMock.mockReturnValue({
+      accountKeyResources: { open: vi.fn().mockResolvedValue(session) },
+      request: {},
+    })
     legacyHarnessConfig = {
       accounts: [account],
       initialSelectedAccount: account.id,
     }
-
     render(<KeyManagement routeParams={{ accountId: account.id }} />)
-
+    expect(
+      screen.queryByRole("combobox", {
+        name: "keyManagement:native.scope.label",
+      }),
+    ).not.toBeInTheDocument()
     const addButton = await screen.findByTestId(
       KEY_MANAGEMENT_TEST_IDS.addTokenButton,
     )
-    expect(addButton).toBeEnabled()
-    await user.click(addButton)
-
-    expect(legacyAddTokenSpy).toHaveBeenCalledTimes(1)
-    await waitFor(() =>
-      expect(addTokenDialogPropsSpy.mock.lastCall?.[0]).toMatchObject({
-        isOpen: true,
-        preSelectedAccountId: account.id,
-      }),
-    )
+    await waitFor(() => expect(addButton).toBeEnabled())
     expect(
-      accountKeyResourceEditorDialogPropsSpy.mock.lastCall?.[0],
-    ).toMatchObject({
-      editor: null,
-    })
+      screen.queryByRole("combobox", {
+        name: "keyManagement:native.scope.label",
+      }),
+    ).not.toBeInTheDocument()
+    await userEvent.setup().click(addButton)
+    await waitFor(() => expect(session.openCreateEditor).toHaveBeenCalledOnce())
+    expect(addTokenDialogPropsSpy.mock.lastCall?.[0].isOpen).toBe(false)
+    await waitFor(() =>
+      expect(
+        accountKeyResourceEditorDialogPropsSpy.mock.lastCall?.[0].editor,
+      ).not.toBeNull(),
+    )
   })
 
   it("keeps filtered-all native scope non-creatable and never opens both add flows", async () => {
@@ -1789,7 +1832,7 @@ describe("KeyManagement native page integration", () => {
     const legacyAccount = createAccount({
       id: "legacy-account",
       name: "Legacy account",
-      siteType: SITE_TYPES.NEW_API,
+      siteType: SITE_TYPES.SHAREDCHAT,
       baseUrl: "https://legacy.example.invalid",
     })
     const scope = createScope(
@@ -1860,11 +1903,13 @@ describe("KeyManagement native page integration", () => {
       />,
     )
 
-    expect(
-      await screen.findByRole("button", {
-        name: "keyManagement:managedSiteStatus.actions.refresh",
-      }),
-    ).toBeEnabled()
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", {
+          name: "keyManagement:managedSiteStatus.actions.refresh",
+        }),
+      ).toBeEnabled(),
+    )
     await waitFor(() => expect(failedOpen).toHaveBeenCalledTimes(1))
     await waitFor(() =>
       expect(accountSummaryBarPropsSpy.mock.lastCall?.[0]).toMatchObject({
@@ -1886,11 +1931,6 @@ describe("KeyManagement native page integration", () => {
       }),
     )
     expect(accountSelectorPanelPropsSpy.mock.lastCall?.[0]).toMatchObject({
-      tokens: [legacyToken],
-      nativeRows: expect.arrayContaining([
-        expect.objectContaining({ accountId: nativeAccount.id }),
-        expect.objectContaining({ accountId: nativeAccount.id }),
-      ]),
       failedAccounts: [
         {
           accountId: failedNativeAccount.id,
@@ -1921,12 +1961,12 @@ describe("KeyManagement native page integration", () => {
     await waitFor(() =>
       expect(accountSelectorPanelPropsSpy.mock.lastCall?.[0]).toMatchObject({
         aggregateCounts: {
-          total: 3,
-          enabled: 3,
-          showing: 3,
-          knownTotal: 3,
-          knownEnabled: 3,
-          knownShowing: 3,
+          total: 2,
+          enabled: 2,
+          showing: 2,
+          knownTotal: 2,
+          knownEnabled: 2,
+          knownShowing: 2,
         },
       }),
     )
@@ -2188,7 +2228,7 @@ describe("KeyManagement native page integration", () => {
       initialSelectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
       tokenLoadProgress: { total: 1, loaded: 1, loading: 0, error: 0 },
     }
-    legacyLoadTokensSpy.mockRejectedValueOnce(
+    refreshServiceCredentialsSpy.mockRejectedValueOnce(
       new Error("Legacy refresh unavailable"),
     )
 
@@ -2204,7 +2244,7 @@ describe("KeyManagement native page integration", () => {
     await user.click(refreshButton)
 
     await waitFor(() => {
-      expect(legacyLoadTokensSpy).toHaveBeenCalledWith(undefined, {
+      expect(refreshServiceCredentialsSpy).toHaveBeenCalledWith(undefined, {
         protectionBypassExecution: expect.any(Object),
       })
       expect(openResources).toHaveBeenCalledTimes(2)

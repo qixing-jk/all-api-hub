@@ -27,22 +27,68 @@ import {
   type ResourceFailure,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
 import type { NativeResourceMutationResult } from "~/services/apiAdapters/contracts/resourceNative"
+import {
+  mergeResourceEdits,
+  resourceValuesEqual,
+} from "~/services/apiAdapters/nativeResources/editableChanges"
 import {
   isApiBusinessError,
   runNativeResourceMutation,
 } from "~/services/apiAdapters/nativeResources/mutation"
 import {
+  createVoApiV2Key,
   deleteVoApiV2Token,
   fetchAllVoApiV2RawKeys,
   fetchVoApiV2KeyGroupDescriptors,
   renameVoApiV2Key,
   resolveVoApiV2KeySecretById,
+  updateVoApiV2Key,
 } from "~/services/apiService/voapiV2"
 import type { VoApiV2Key } from "~/services/apiService/voapiV2/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { maskSecretForDisplay } from "~/utils/core/formatters"
+
+import {
+  createVoApiV2KeyEditor,
+  toVoApiV2KeyWrite,
+  type VoApiV2KeyEditCommand,
+} from "./keyResourceEditor"
 
 const ACCOUNT_SCOPE_KEY = "account"
+
+/** Keep runtime group names available on inventory and newly written resources. */
+async function fetchKeysWithRuntimeGroups(request: ApiServiceRequest) {
+  const [keys, groups] = await Promise.all([
+    fetchAllVoApiV2RawKeys(request),
+    fetchVoApiV2KeyGroupDescriptors(request).catch(() => []),
+  ])
+  const names = new Map(
+    (groups ?? []).map((group) => [String(group.id), group.displayName]),
+  )
+  return keys.map((key) => ({
+    ...key,
+    runtimeGroupNames: (key.groups ?? []).map(
+      (id) => names.get(String(id)) ?? String(id),
+    ),
+  }))
+}
+
+/** Ignore consumption accrued after a write while confirming the chosen settings. */
+const matchesVoApiKeyWrite = (
+  key: VoApiV2Key,
+  command: VoApiV2KeyEditCommand["values"],
+) => {
+  const actual = toVoApiV2KeyWrite(key)
+  return Object.entries(command).every(
+    ([id, value]) =>
+      id === "used" ||
+      (id === "amount"
+        ? Number(actual.amount) === Number(value)
+        : resourceValuesEqual(actual[id as keyof typeof actual], value)),
+  )
+}
 const AUTO_GROUP_TOKEN_NAME_PATTERN = /^(.+) group \(auto\)$/
 
 type VoApiV2AccountKeyResourceConfig = {
@@ -124,7 +170,7 @@ const toFacts = (
 ): AccountKeyResourceFacts => ({
   ref,
   displayName: key.name?.trim() || `Key ${key.id}`,
-  maskedLabel: key.tokenMasked?.trim() || "••••",
+  maskedLabel: maskSecretForDisplay(key.tokenMasked?.trim() || "••••"),
   status: keyStatus(key),
   runtimeKey: {
     modelAccess: {
@@ -141,21 +187,24 @@ const toFacts = (
     {
       fieldId: "groups",
       kind: "list",
-      value: (key.groups ?? []).map(String),
+      value: key.runtimeGroupNames ?? (key.groups ?? []).map(String),
     },
     {
       fieldId: "boundlessAmount",
       kind: "boolean",
       value: key.boundlessAmount === true,
     },
+    { fieldId: "amount", kind: "number", value: Number(key.amount) || 0 },
+    { fieldId: "used", kind: "number", value: Number(key.used) || 0 },
+    { fieldId: "expireTime", kind: "number", value: key.expireTime ?? -1 },
   ],
   searchValues: [
     String(key.id),
     key.name ?? "",
-    key.tokenMasked ?? "",
-    ...(key.groups ?? []).map(String),
+    maskSecretForDisplay(key.tokenMasked ?? ""),
+    ...(key.runtimeGroupNames ?? (key.groups ?? []).map(String)),
   ],
-  actions: { canUpdate: false, canDelete: true },
+  actions: { canUpdate: true, canDelete: true },
 })
 
 const mapFailure = mapAccountKeyResourceFailure
@@ -383,6 +432,7 @@ const rejectProvisionWithoutFiniteQuotaInput = async (): Promise<
 /** VoAPI v2-native account key resources for one saved account. */
 export const voApiV2AccountKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.VO_API_V2,
+  inventorySecretAvailability: INVENTORY_SECRET_AVAILABILITIES.Recoverable,
   openConfig: async (input) => ({
     account: input.account,
     request: input.request,
@@ -412,42 +462,101 @@ export const voApiV2AccountKeyResources = defineAccountKeyResourceCapability({
     _query,
     options,
   ): Promise<AccountKeyResourcePage<VoApiV2Key>> => {
-    const request = requestWithOptions(config, options)
-    const [keys, groups] = await Promise.all([
-      fetchAllVoApiV2RawKeys(request),
-      fetchVoApiV2KeyGroupDescriptors(request).catch(() => []),
-    ])
-    const names = new Map(
-      (groups ?? []).map((group) => [String(group.id), group.displayName]),
+    const items = await fetchKeysWithRuntimeGroups(
+      requestWithOptions(config, options),
     )
-    const items = keys.map((key) => ({
-      ...key,
-      runtimeGroupNames: (key.groups ?? []).map(
-        (id) => names.get(String(id)) ?? String(id),
-      ),
-    }))
     return { items, total: items.length }
   },
   get: async (config, _scope, keyId, options) => {
-    const key = (
-      await fetchAllVoApiV2RawKeys(requestWithOptions(config, options))
-    ).find((candidate) => candidate.id === keyId)
+    const request = requestWithOptions(config, options)
+    const keys = await fetchKeysWithRuntimeGroups(request)
+    const key = keys.find((candidate) => candidate.id === keyId)
     if (!key) throw new Error("key_not_found")
     return key
   },
   toListFacts: toFacts,
   toDetailFacts: toFacts,
-  createEditor: async () => {
-    throw new Error("account_key_resource_create_not_implemented")
+  createEditor: async (config) => createVoApiV2KeyEditor(config.request),
+  editEditor: (config, _scope, detail) =>
+    createVoApiV2KeyEditor(config.request, detail),
+  create: async (config, _scope, command: VoApiV2KeyEditCommand, options) => {
+    const request = requestWithOptions(config, options)
+    const before = new Set(
+      (await fetchAllVoApiV2RawKeys(request)).map((key) => key.id),
+    )
+    const result = await runNativeResourceMutation({
+      request,
+      execute: (mutationRequest) =>
+        createVoApiV2Key(mutationRequest, command.values),
+      mapFailure,
+      classifyError: (error) =>
+        isApiBusinessError(error) ? "not-applied" : undefined,
+    })
+    if (result.certainty === "not-applied") return result
+    try {
+      const created = (await fetchKeysWithRuntimeGroups(request)).filter(
+        (key) =>
+          !before.has(key.id) && matchesVoApiKeyWrite(key, command.values),
+      )
+      if (created.length === 1)
+        return { certainty: "applied" as const, value: { detail: created[0] } }
+    } catch (error) {
+      return {
+        certainty: "possibly-applied" as const,
+        failure: mapAccountKeyResourceUncertainFailure(error),
+      }
+    }
+    return {
+      certainty: "possibly-applied" as const,
+      failure: mapAccountKeyResourceUncertainFailure(
+        result.certainty === "possibly-applied" ? result.failure : undefined,
+      ),
+    }
   },
-  editEditor: () => {
-    throw new Error("account_key_resource_edit_not_implemented")
-  },
-  create: async () => {
-    throw new Error("account_key_resource_create_not_implemented")
-  },
-  update: async () => {
-    throw new Error("account_key_resource_update_not_implemented")
+  update: async (
+    config,
+    _scope,
+    detail,
+    command: VoApiV2KeyEditCommand,
+    options,
+  ) => {
+    const latest = toVoApiV2KeyWrite(detail)
+    const merged = mergeResourceEdits(command.baseline, command.values, latest)
+    if (!merged)
+      return {
+        certainty: "not-applied" as const,
+        failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ResourceChanged },
+      }
+    if (resourceValuesEqual(merged, latest))
+      return { certainty: "applied" as const, value: detail }
+    const request = requestWithOptions(config, options)
+    const result = await runNativeResourceMutation({
+      request,
+      execute: (mutationRequest) =>
+        updateVoApiV2Key(mutationRequest, detail.id, merged),
+      mapFailure,
+      classifyError: (error) =>
+        isApiBusinessError(error) ? "not-applied" : undefined,
+    })
+    if (result.certainty === "not-applied") return result
+    try {
+      const updated = (await fetchKeysWithRuntimeGroups(request)).find(
+        (key) => key.id === detail.id,
+      )
+      if (updated && matchesVoApiKeyWrite(updated, merged))
+        return { certainty: "applied" as const, value: updated }
+    } catch (error) {
+      return {
+        certainty: "possibly-applied" as const,
+        failure: mapAccountKeyResourceUncertainFailure(error),
+      }
+    }
+    return {
+      certainty: "possibly-applied" as const,
+      failure: mapAccountKeyResourceUncertainFailure(
+        result.certainty === "possibly-applied" ? result.failure : undefined,
+      ),
+    }
   },
   delete: async (config, _scope, keyId, options) => {
     const result = await runNativeResourceMutation({

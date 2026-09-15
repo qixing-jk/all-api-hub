@@ -1,4 +1,5 @@
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,
@@ -28,7 +29,63 @@ test.beforeEach(async ({ context, page }) => {
   })
 })
 
-test("modal-hosted group selector stays visible and clickable above the add-token dialog", async ({
+for (const width of [1280, 320]) {
+  test(`unsaved confirmation preserves the editor and closes deliberately at ${width}px`, async ({
+    context,
+    extensionId,
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    await seedStoredAccounts(await getServiceWorker(context), [
+      createStoredAccount(),
+    ])
+    await page.goto(
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#keys?accountId=e2e-account-1`,
+    )
+    await waitForExtensionRoot(page)
+    await expectPermissionOnboardingHidden(page)
+    const add = page.getByRole("button", { name: "添加 API 密钥" })
+    await add.click()
+    const editor = page.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditor)
+    const name = editor.getByRole("textbox", { name: "密钥名称" })
+    await name.fill("Keep this draft")
+    await name.press("Escape")
+    const confirmation = page.getByRole("dialog", {
+      name: "放弃更改？",
+      exact: true,
+    })
+    await expect(confirmation).toBeVisible()
+    await expect(
+      confirmation.getByText("关闭后，本次修改不会保存。"),
+    ).toBeVisible()
+    const box = await confirmation.boundingBox()
+    expect(box).not.toBeNull()
+    expect(box!.x).toBeGreaterThanOrEqual(0)
+    expect(box!.x + box!.width).toBeLessThanOrEqual(width)
+    await page.screenshot({
+      path: testInfo.outputPath("unsaved-confirmation.png"),
+      animations: "disabled",
+    })
+    await page.keyboard.press("Escape")
+    await expect(confirmation).toHaveCount(0)
+    await expect(name).toHaveValue("Keep this draft")
+    await expect(name).toBeFocused()
+    await name.press("Escape")
+    await confirmation.getByRole("button", { name: "继续编辑" }).click()
+    await expect(confirmation).toHaveCount(0)
+    await expect(name).toHaveValue("Keep this draft")
+    await expect(name).toBeFocused()
+    await name.press("Escape")
+    await confirmation
+      .getByRole("button", { name: "放弃更改", exact: true })
+      .click()
+    await expect(editor).toHaveCount(0)
+    await expect(confirmation).toHaveCount(0)
+    await expect(add).toBeFocused()
+  })
+}
+
+test("native group selector stays visible and clickable above the key editor", async ({
   context,
   extensionId,
   page,
@@ -47,42 +104,30 @@ test("modal-hosted group selector stays visible and clickable above the add-toke
   ).toBeVisible()
   await page.getByRole("button", { name: "添加 API 密钥" }).click()
 
-  const nameInput = page.locator("#tokenName")
+  const editor = page.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditor)
+  const nameInput = editor.getByRole("textbox", { name: "密钥名称" })
   await expect(nameInput).toBeVisible()
   await nameInput.fill("e2e layered token")
 
-  // The search surface sits inside an unpadded popover with a 1px border.
-  const accountTrigger = page
-    .locator('[data-slot="modal-panel"]')
-    .getByRole("combobox")
-    .first()
+  const groupTrigger = editor.getByRole("combobox", {
+    name: "分组",
+    exact: true,
+  })
+  await expect(groupTrigger).toBeEnabled()
   for (const dark of [false, true]) {
     await setVisualDarkMode(page, dark)
-    await accountTrigger.click()
-    const popover = page.locator('[data-slot="popover-content"]')
-    const command = popover.locator('[data-slot="command"]')
-    await expect(popover).toHaveCSS("border-top-left-radius", "16px")
-    await expect(command).toHaveCSS("border-top-left-radius", "15px")
-    const item = command.getByRole("option").first()
-    await item.hover()
-    await expect(item).toHaveCSS("border-top-left-radius", "11px")
+    await groupTrigger.click()
+    const groupOption = page.getByRole("option", {
+      name: dark ? /default.*默认分组/ : /vip.*VIP/,
+    })
+    await expect(groupOption).toBeVisible()
+    await groupOption.hover()
     await page.screenshot({
       animations: "disabled",
-      path: testInfo.outputPath(`account-search-${dark}.png`),
+      path: testInfo.outputPath(`native-group-selector-${dark}.png`),
     })
-    await page.keyboard.press("Escape")
-    await expect(accountTrigger).toBeFocused()
+    await groupOption.click()
+    await expect(groupTrigger).toContainText(dark ? "default" : "vip")
+    await expect(groupTrigger).toBeFocused()
   }
-
-  const groupTrigger = page.getByRole("combobox").last()
-  await expect(groupTrigger).toBeVisible()
-  await groupTrigger.click()
-
-  const groupOption = page.getByRole("option", {
-    name: /vip - VIP \(倍率： 1\.5\)/,
-  })
-  await expect(groupOption).toBeVisible()
-  await groupOption.click()
-
-  await expect(groupTrigger).toContainText("vip - VIP")
 })

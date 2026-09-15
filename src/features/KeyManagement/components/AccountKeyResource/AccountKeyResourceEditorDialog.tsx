@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { useTranslation } from "react-i18next"
 
-import { Alert, Button, Modal } from "~/components/ui"
+import { Alert, Button, ConfirmDialog, Modal } from "~/components/ui"
 import {
   NativeResourceEditorBody,
   type ResourceEditorControlledOptionState,
@@ -29,17 +29,14 @@ import {
   OPENROUTER_KEY_LIMIT_RESETS,
 } from "~/services/apiAdapters/openrouter/keyResourceFields"
 
-import {
-  getOpenRouterKeyResourceFieldPolicy,
-  OPENROUTER_KEY_EDITOR_SECTION_LABEL_RESOLVERS,
-  OPENROUTER_KEY_EDITOR_SECTION_ORDER,
-  type OpenRouterKeyEditorMode,
-} from "../../presentation/accountKeyResourceFieldPolicy"
+import type { OpenRouterKeyEditorMode } from "../../presentation/accountKeyResourceFieldPolicy"
+import { getNativeKeyResourceEditorPresentation } from "../../presentation/nativeKeyResourceFieldPolicy"
 import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"
 
 export type AccountKeyResourceEditorDialogState = {
   /** Stable for the dialog session; changes only when opening a different editor. */
   editorId: number
+  siteType?: string
   mode: OpenRouterKeyEditorMode
   fields: readonly ResourceFieldDescriptor[]
   initialValues: EditableResourceProjection
@@ -195,7 +192,7 @@ const semanticSummary = (
   ].join(" · ")
 }
 
-/** Renders the local OpenRouter projection while delegating all native operations to its controller. */
+/** Renders the provider's native projection while its controller owns operations. */
 export function AccountKeyResourceEditorDialog({
   editor,
   terminalCloseEditor = null,
@@ -402,6 +399,11 @@ function AccountKeyResourceEditorDialogSession({
   footerHost,
 }: AccountKeyResourceEditorDialogSessionProps) {
   const { t, i18n } = useTranslation()
+  const presentation = getNativeKeyResourceEditorPresentation(
+    editor.siteType,
+    editor.mode,
+  )
+  const isOpenRouter = presentation.kind === "openrouter"
   const [values, setValues] = useState<EditableResourceProjection>(() =>
     toEditorValues(editor.values),
   )
@@ -497,7 +499,9 @@ function AccountKeyResourceEditorDialogSession({
                         "keyManagement:openRouter.editor.options.creator.unavailable",
                       ),
                     }
-                  : options?.length === 0
+                  : options?.length === 0 &&
+                      isOpenRouter &&
+                      descriptor.fieldId === field.Creator
                     ? {
                         emptyMessage: t(
                           "keyManagement:openRouter.editor.options.creator.empty",
@@ -518,7 +522,14 @@ function AccountKeyResourceEditorDialogSession({
       const hasSelectedValue = Array.isArray(value)
         ? value.length > 0
         : value !== null && value !== undefined && value !== ""
-      return descriptor.required || hasSelectedValue
+      if (isOpenRouter) return descriptor.required || hasSelectedValue
+      const isUnchanged =
+        JSON.stringify(value) ===
+        JSON.stringify(initialValuesRef.current[descriptor.fieldId])
+      return (
+        (descriptor.required && !hasSelectedValue) ||
+        (hasSelectedValue && !isUnchanged)
+      )
     },
   )
 
@@ -532,6 +543,21 @@ function AccountKeyResourceEditorDialogSession({
       ) {
         next[candidate.fieldId] = candidate.nullable ? null : ""
       }
+    }
+    const previousAutoName = presentation.getAutomaticName?.(
+      valuesRef.current,
+      editor.optionsByField,
+    )
+    const nextAutoName = presentation.getAutomaticName?.(
+      next,
+      editor.optionsByField,
+    )
+    if (
+      previousAutoName !== undefined &&
+      next.name === previousAutoName &&
+      nextAutoName !== undefined
+    ) {
+      next.name = nextAutoName
     }
     valuesRef.current = next
     setValues(next)
@@ -554,14 +580,25 @@ function AccountKeyResourceEditorDialogSession({
     submittingRef.current = true
     setIsSubmitting(true)
     try {
-      await onSubmit(editor.editorId, values)
+      const submitValues = { ...values }
+      // datetime-local shows minutes. Preserve the original seconds when that
+      // visible field was not edited instead of truncating an upstream expiry.
+      for (const descriptor of editor.fields) {
+        if (
+          descriptor.type === RESOURCE_FIELD_TYPES.DateTime &&
+          values[descriptor.fieldId] ===
+            initialValuesRef.current[descriptor.fieldId]
+        )
+          submitValues[descriptor.fieldId] =
+            editor.initialValues[descriptor.fieldId]
+      }
+      await onSubmit(editor.editorId, submitValues)
     } finally {
       submittingRef.current = false
       setIsSubmitting(false)
     }
   }
 
-  const policy = getOpenRouterKeyResourceFieldPolicy(editor.mode)
   const fieldIssues = editor.feedback?.fieldIssues
   return (
     <>
@@ -590,15 +627,17 @@ function AccountKeyResourceEditorDialogSession({
             footerHost,
           )
         : null}
-      <Alert
-        variant="default"
-        compact
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-        title={t("keyManagement:openRouter.editor.summary")}
-        description={semanticSummary(values, t, i18n.language)}
-      />
+      {isOpenRouter ? (
+        <Alert
+          variant="default"
+          compact
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          title={t("keyManagement:openRouter.editor.summary")}
+          description={semanticSummary(values, t, i18n.language)}
+        />
+      ) : null}
       {editor.feedback && !fieldIssues?.length ? (
         <Alert
           variant="destructive"
@@ -607,39 +646,22 @@ function AccountKeyResourceEditorDialogSession({
           description={feedbackDescription(editor.feedback, t)}
         />
       ) : null}
-      {confirmDiscard ? (
-        <Alert
-          variant="warning"
-          compact
-          title={t("keyManagement:openRouter.editor.unsaved.title")}
-          description={t("keyManagement:openRouter.editor.unsaved.description")}
-        >
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => setConfirmDiscard(false)}
-            >
-              {t("keyManagement:openRouter.editor.unsaved.keepEditing")}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="destructive"
-              onClick={close}
-            >
-              {t("keyManagement:openRouter.editor.unsaved.discard")}
-            </Button>
-          </div>
-        </Alert>
-      ) : null}
+      <ConfirmDialog
+        isOpen={confirmDiscard}
+        intent="destructive"
+        onClose={() => setConfirmDiscard(false)}
+        title={t("keyManagement:openRouter.editor.unsaved.title")}
+        description={t("keyManagement:openRouter.editor.unsaved.description")}
+        cancelLabel={t("keyManagement:openRouter.editor.unsaved.keepEditing")}
+        confirmLabel={t("keyManagement:openRouter.editor.unsaved.discard")}
+        onConfirm={close}
+      />
       <NativeResourceEditorBody
         t={t}
         descriptors={editor.fields}
-        policy={policy}
-        sectionOrder={OPENROUTER_KEY_EDITOR_SECTION_ORDER}
-        sectionLabelResolvers={OPENROUTER_KEY_EDITOR_SECTION_LABEL_RESOLVERS}
+        policy={presentation.policy}
+        sectionOrder={presentation.sectionOrder}
+        sectionLabelResolvers={presentation.sectionLabelResolvers}
         values={values}
         fieldIssues={fieldIssues}
         disabled={isSubmitting}
@@ -649,7 +671,7 @@ function AccountKeyResourceEditorDialogSession({
           onLoadOptions?.(editor.editorId, fieldId, values)
         }
         renderSectionOverride={(section, label, children) =>
-          section === "advanced" ? (
+          isOpenRouter && section === "advanced" ? (
             <details
               className="space-y-4"
               open={isAdvancedOpen}

@@ -7,8 +7,9 @@ import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementListItemTestId,
 } from "~/features/AccountManagement/testIds"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
-import type { ApiToken, SiteAccount } from "~/types"
+import type { SiteAccount } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { createNoopAccountFixtureCleanup } from "~~/e2e/scenarios/accountFixtures"
 import { runAccountKeyToApiProfileScenario } from "~~/e2e/scenarios/accountKeyToApiProfile"
@@ -61,7 +62,7 @@ async function getJourneyAccountId(serviceWorker: Worker): Promise<string> {
   return account!.id
 }
 
-function createJourneyToken(overrides: Partial<ApiToken> = {}): ApiToken {
+function createJourneyToken(overrides: Partial<NewApiToken> = {}): NewApiToken {
   const nowSeconds = Math.floor(Date.now() / 1000)
 
   return {

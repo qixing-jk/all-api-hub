@@ -295,7 +295,6 @@
       "newApiRetrieveKeyHint": "Für New API hängt der vollständige Schlüsselvergleich vom Kanalschlüssel ab und die Anzeige dieses Kanalschlüssels selbst erfordert eine 2FA-Verifizierung, sodass ein vollständiger Schlüsselvergleich derzeit nicht verfügbar ist."
     },
     "label": "Verwaltete Website",
-    "nativeResourceUnsupported": "Der Abgleich mit verwalteten Websites unterstützt auf dieser Seite noch keine nativen Ressourcenschlüssel. Die Aktualisierung gilt nur für unterstützte Schlüssel.",
     "pageUnsupported": "Kanalprüfungen für verwaltete Websites sind auf dieser Seite nicht verfügbar, da die aktuell verwaltete Website die Suche nach Kanälen nach URL derzeit nicht unterstützt.",
     "recovery": {
       "configureLogin": "Fügen Sie zuerst in den Einstellungen die Felder für die New-API-Anmeldung und die 2FA-Unterstützung hinzu. Bis dahin kann der Kanalschlüssel nicht gelesen und kein vollständiger Schlüsselvergleich durchgeführt werden.",
@@ -336,17 +335,13 @@
     }
   },
   "messages": {
-    "accountNotFound": "Kontoinformationen nicht gefunden",
     "batchSavedToApiProfiles": "Ausgewählte Schlüssel in der API-Anmeldeinformationsbibliothek gespeichert",
     "batchSavedToApiProfilesNeedsConfirmation": "Ausgewählte Schlüssel gespeichert. Prüfen Sie die markierten Verknüpfungen in der API-Anmeldeinformationsbibliothek.",
     "batchSaveToApiProfilesFailed": "Ausgewählte Schlüssel konnten nicht in der API-Anmeldeinformationsbibliothek gespeichert werden",
     "batchSaveToApiProfilesPartialFailed": "Gespeicherte Schlüssel: {{savedCount}}/{{totalCount}}. Nicht gespeicherte Schlüssel: {{failedCount}}.",
     "copyFailed": "Kopieren fehlgeschlagen",
-    "deleteConfirm": "Sind Sie sicher, dass Sie den Schlüssel {{name}} löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden",
-    "deleteSuccess": "Schlüssel {{name}} erfolgreich gelöscht",
     "keyCopied": "Schlüssel {{name}} in Zwischenablage kopiert",
     "loadFailed": "Schlüsselliste konnte nicht geladen werden",
-    "revealFailed": "Schlüssel konnte nicht angezeigt werden",
     "savedToApiProfiles": "{{name}} in der API-Anmeldeinformationsbibliothek gespeichert",
     "savedToApiProfilesNeedsConfirmation": "Anmeldeinformation gespeichert. Prüfen Sie die Schlüsselverknüpfung in der API-Anmeldeinformationsbibliothek.",
     "saveToApiProfilesFailed": "Speichern in der API-Anmeldeinformationsbibliothek fehlgeschlagen",
@@ -358,6 +353,11 @@
   },
   "native": {
     "detailsLoadFailed": "Schlüsseldetails konnten nicht geladen werden.",
+    "editor": {
+      "expiryDays": "Gültigkeitsdauer (Tage)",
+      "quotaUsd": "Kontingent (USD)",
+      "totalQuotaUsd": "Gesamtkontingent (USD)"
+    },
     "heading": "API-Schlüssel",
     "missing": "Nicht verfügbar",
     "scope": {
@@ -532,10 +532,10 @@
         "edit": "API-Schlüssel bearbeiten"
       },
       "unsaved": {
-        "description": "Ihre Änderungen wurden nicht gespeichert.",
+        "description": "Beim Schließen werden Ihre Änderungen verworfen.",
         "discard": "Änderungen verwerfen",
         "keepEditing": "Weiter bearbeiten",
-        "title": "Nicht gespeicherte Änderungen verwerfen?"
+        "title": "Änderungen verwerfen?"
       }
     },
     "list": {

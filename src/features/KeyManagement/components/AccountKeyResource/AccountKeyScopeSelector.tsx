@@ -4,7 +4,10 @@ import { useTranslation } from "react-i18next"
 import { Alert, Button, SearchableSelect } from "~/components/ui"
 import type { AccountKeyScope } from "~/services/apiAdapters/contracts/accountKeyResource"
 
-import { getAccountKeyScopeMessages } from "../../presentation/accountKeyResourcePresentation"
+import {
+  getAccountKeyScopeMessages,
+  shouldShowAccountKeyScopeSelector,
+} from "../../presentation/accountKeyResourcePresentation"
 import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"
 
 export type AccountKeyScopeSelectorProps = {
@@ -33,6 +36,9 @@ export function AccountKeyScopeSelector({
 }: AccountKeyScopeSelectorProps) {
   const { t } = useTranslation()
   const headingId = useId()
+
+  if (!shouldShowAccountKeyScopeSelector(siteType, scopes.length)) return null
+
   const messages = getAccountKeyScopeMessages(siteType, t)
   const options = scopes.map((scope) => ({
     value: scope.scopeKey,

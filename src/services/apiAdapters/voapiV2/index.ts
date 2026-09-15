@@ -20,6 +20,7 @@ export const voApiV2Capabilities: SiteTypeCapabilities = {
     inviteLink: voApiV2InviteLink,
     keyManagement: voApiV2KeyManagement,
     keyResources: voApiV2AccountKeyResources,
+    keyResourceManagement: voApiV2AccountKeyResources,
     tokenProvisioning: voApiV2TokenProvisioning,
     refresh: voApiV2AccountRefresh,
   },

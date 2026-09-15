@@ -7,7 +7,7 @@ import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRun
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
-import { TokenHeaderHarness as TokenHeader } from "~~/tests/test-utils/keyManagement/TokenHeaderHarness"
+import { RuntimeKeyHeaderHarness as RuntimeKeyHeader } from "~~/tests/test-utils/keyManagement/RuntimeKeyHeaderHarness"
 import { render, screen } from "~~/tests/test-utils/render"
 
 vi.mock("~/components/dialogs/ChannelDialog", () => {
@@ -102,7 +102,7 @@ describe("Managed site logo", () => {
     })
 
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={createTokenStub()}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -121,7 +121,7 @@ describe("Managed site logo", () => {
     })
 
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={createTokenStub()}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -140,7 +140,7 @@ describe("Managed site logo", () => {
     })
 
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={createTokenStub()}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -159,7 +159,7 @@ describe("Managed site logo", () => {
     })
 
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={createTokenStub()}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -180,7 +180,7 @@ describe("Managed site logo", () => {
     })
 
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={createTokenStub()}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}

@@ -101,6 +101,18 @@ export type Sub2ApiKeyListData =
   | Sub2ApiPaginatedData<Sub2ApiKeyData>
   | Sub2ApiKeyData[]
 
+/** Validated native key identity; quota and expiry retain Sub2API semantics. */
+export type Sub2ApiNativeKey = Omit<
+  Sub2ApiKeyData,
+  "id" | "key" | "name" | "group_id"
+> & {
+  id: number
+  key: string
+  name: string
+  group_id?: number
+  group_name: string
+}
+
 export type Sub2ApiUsageStatsData = {
   total_requests?: NumericLike | null
   total_input_tokens?: NumericLike | null
@@ -125,7 +137,7 @@ export type Sub2ApiAnnouncementListData =
 
 export type Sub2ApiKeyWritePayloadBase = {
   name: string
-  group_id?: number
+  group_id?: number | null
   quota?: number
   ip_whitelist?: string[]
 }

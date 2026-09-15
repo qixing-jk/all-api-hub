@@ -15,15 +15,14 @@ import {
 import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementListItemTestId,
-  getCopyKeyDialogRuntimeKeyItemTestId,
 } from "~/features/AccountManagement/testIds"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import enMessages from "~/locales/en/messages.json" with { type: "json" }
-import { buildAccountTokenRuntimeKeyId } from "~/services/accounts/accountRuntimeKeys"
 import { OPENROUTER_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
-import type { ApiToken, SiteAccount } from "~/types"
+import type { SiteAccount } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { runAccountAutoDetectScenario } from "~~/e2e/scenarios/accountAutoDetect"
 import { saveExistingAccountTokenToApiProfileScenario } from "~~/e2e/scenarios/accountKeyToApiProfile"
@@ -202,7 +201,9 @@ async function stubOpenRouterManagementKeyRoutes(
   }
 }
 
-function createCopyDialogToken(overrides: Partial<ApiToken> = {}): ApiToken {
+function createCopyDialogToken(
+  overrides: Partial<NewApiToken> = {},
+): NewApiToken {
   const nowSeconds = Math.floor(Date.now() / 1000)
 
   return {
@@ -986,11 +987,10 @@ test("exports an account key from the copy-key dialog to CC Switch", async ({
 
   await expect(page.getByRole("heading", { name: "Key List" })).toBeVisible()
   await page
-    .getByTestId(
-      getCopyKeyDialogRuntimeKeyItemTestId(
-        buildAccountTokenRuntimeKeyId("e2e-copy-dialog-cc-switch-account", 1),
-      ),
-    )
+    .getByRole("button", {
+      name: "View details for Copy Dialog CC Key",
+      exact: true,
+    })
     .click()
   await page
     .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.copyKeyDialogExportMenuButton)

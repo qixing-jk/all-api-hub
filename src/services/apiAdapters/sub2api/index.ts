@@ -24,6 +24,7 @@ export const sub2ApiCapabilities: SiteTypeCapabilities = {
     inviteLink: sub2ApiInviteLink,
     keyManagement: sub2ApiKeyManagement,
     keyResources: sub2ApiAccountKeyResources,
+    keyResourceManagement: sub2ApiAccountKeyResources,
     tokenProvisioning: sub2ApiTokenProvisioning,
     refresh: sub2ApiAccountRefresh,
   },

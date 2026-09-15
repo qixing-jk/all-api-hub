@@ -1,23 +1,14 @@
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
   ACCOUNT_RUNTIME_KEY_SOURCES,
-  accountRuntimeKeyToLegacyAccountToken,
-  buildAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
   getAccountRuntimeKeyLocator,
   isAccountRuntimeKeyLocatorEqual,
   type AccountRuntimeKey,
   type AccountRuntimeKeyLocator,
-  type ServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import type { AccountKeyResourceRef } from "~/services/apiAdapters/contracts/accountKeyResource"
-import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
-import type {
-  AccountServiceCredential,
-  ServiceCredentialCapability,
-} from "~/services/apiAdapters/contracts/serviceCredential"
-import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { AccountToken, DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
 import { maskSecretForDisplay } from "~/utils/core/formatters"
 import { t } from "~/utils/i18n/core"
 
@@ -26,10 +17,6 @@ import {
   type KeyManagementEntry,
   type ServiceCredentialState,
 } from "./types"
-
-// 构建 token 在 UI 中的唯一标识 (accountId + tokenId)，避免跨账号 tokenId 冲突
-export const buildTokenIdentityKey = (accountId: string, tokenId: number) =>
-  `${accountId}:${tokenId}`
 
 /** Matches a rendered native resource against a persisted opaque locator. */
 export const isAccountKeyResourceLocatorMatch = (
@@ -51,49 +38,8 @@ export const isAccountRuntimeKeyLocatorMatch = (
     locator,
   )
 
-export const buildAccountRuntimeKeyEntryIdentityKey = (runtimeKeyId: string) =>
+const buildAccountRuntimeKeyEntryIdentityKey = (runtimeKeyId: string) =>
   ["runtime_key", runtimeKeyId].join(":")
-
-const buildAccountRuntimeKeyEntryIdentityPrefix = (
-  source: (typeof ACCOUNT_RUNTIME_KEY_SOURCES)[keyof typeof ACCOUNT_RUNTIME_KEY_SOURCES],
-  accountId: string,
-) => buildAccountRuntimeKeyEntryIdentityKey(`${source}:${accountId}:`)
-
-export interface ManagedSiteStatusCheckTargetInput {
-  identityKey: string
-  runtimeKey: AccountRuntimeKey
-}
-
-export const isManagedSiteStatusIdentityForAccount = (
-  identityKey: string,
-  accountId: string,
-) =>
-  identityKey.startsWith(`${accountId}:`) ||
-  identityKey.startsWith(
-    buildAccountRuntimeKeyEntryIdentityPrefix(
-      ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
-      accountId,
-    ),
-  ) ||
-  identityKey.startsWith(
-    buildAccountRuntimeKeyEntryIdentityPrefix(
-      ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential,
-      accountId,
-    ),
-  )
-
-export const buildAccountTokenKeyManagementEntry = (
-  account: DisplaySiteData,
-  token: AccountToken,
-): KeyManagementEntry => {
-  const runtimeKey = buildAccountTokenRuntimeKey(account, token)
-
-  return {
-    id: buildAccountRuntimeKeyEntryIdentityKey(runtimeKey.id),
-    runtimeKey,
-    uiState: {},
-  }
-}
 
 export const buildServiceCredentialKeyManagementEntry = (params: {
   account: DisplaySiteData
@@ -120,41 +66,6 @@ export const buildServiceCredentialKeyManagementEntry = (params: {
     uiState: {
       isRotating: serviceCredential.isRotating === true,
     },
-  }
-}
-
-export const toLegacyAccountTokenForKeyManagementEntry = (
-  entry: Pick<KeyManagementEntry, "runtimeKey">,
-): AccountToken => accountRuntimeKeyToLegacyAccountToken(entry.runtimeKey)
-
-export const buildServiceCredentialManagedSiteStatusTarget = (
-  runtimeKey: ServiceCredentialRuntimeKey,
-): ManagedSiteStatusCheckTargetInput => ({
-  identityKey: buildAccountRuntimeKeyEntryIdentityKey(runtimeKey.id),
-  runtimeKey,
-})
-
-export const loadServiceCredentialKeyManagementRuntimeKey = async (params: {
-  account: DisplaySiteData
-  keyManagement: KeyManagementCapability | undefined
-  serviceCredential: ServiceCredentialCapability | undefined
-  request: ApiServiceRequest
-  onBeforeFetch?: () => void
-}): Promise<{
-  credential: AccountServiceCredential
-  runtimeKey: ServiceCredentialRuntimeKey
-} | null> => {
-  const { account, keyManagement, serviceCredential, request, onBeforeFetch } =
-    params
-  if (keyManagement || !serviceCredential) return null
-
-  onBeforeFetch?.()
-  const credential = await serviceCredential.fetch(request)
-  return {
-    credential,
-    runtimeKey: buildServiceCredentialRuntimeKey(account, credential, {
-      canRotate: typeof serviceCredential.rotate === "function",
-    }),
   }
 }
 

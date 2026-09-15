@@ -82,6 +82,8 @@ import { createLogger } from "~/utils/core/logger"
 import { joinUrl } from "~/utils/core/url"
 import { t } from "~/utils/i18n/core"
 
+import type { AIHubMixKey, AIHubMixKeyData, AIHubMixKeyWrite } from "./keyTypes"
+
 const logger = createLogger("ApiService.AIHubMix")
 // AIHubMix console traffic is pinned to the main origin even when detection
 // starts from console.aihubmix.com.
@@ -135,14 +137,7 @@ type AIHubMixUserInfo = {
   request_count?: number | string
 }
 
-type AIHubMixTokenRaw = Partial<ApiToken> & {
-  full_key?: string
-  token?: string
-  token_id?: number | string
-  value?: string
-  ip_whitelist?: string
-  subnet?: string
-}
+type AIHubMixTokenRaw = AIHubMixKeyData
 
 type AIHubMixUserAvailableModel = {
   model: string
@@ -918,6 +913,80 @@ export async function validateAccountConnection(
 /**
  * Fetch and normalize AIHubMix API keys.
  */
+export async function fetchAIHubMixKeys(
+  request: ApiServiceRequest,
+): Promise<AIHubMixKey[]> {
+  const payload = await fetchAIHubMixData<unknown>(request, "/api/token/", {
+    cache: "no-store",
+  })
+  if (
+    !Array.isArray(payload) &&
+    (!payload ||
+      typeof payload !== "object" ||
+      !(
+        Array.isArray((payload as { items?: unknown }).items) ||
+        Array.isArray((payload as { data?: unknown }).data)
+      ))
+  )
+    throw new Error("invalid_aihubmix_key_inventory")
+  const ids = new Set<number>()
+  return extractTokenItems(payload).map((key) => {
+    const normalized = requireAIHubMixKey(key)
+    if (ids.has(normalized.id)) throw new Error("duplicate_aihubmix_key_id")
+    ids.add(normalized.id)
+    return normalized
+  })
+}
+
+/** Validate the identity without inventing a key when an acknowledgement omits it. */
+function requireAIHubMixKey(key: AIHubMixKeyData): AIHubMixKey {
+  const id = Number(key?.id ?? key?.token_id)
+  if (!Number.isSafeInteger(id) || id <= 0)
+    throw new Error("invalid_aihubmix_key_id")
+  return { ...key, id }
+}
+
+/** Read one provider-native key with its exact identity. */
+export async function fetchAIHubMixKey(
+  request: ApiServiceRequest,
+  id: number,
+): Promise<AIHubMixKey> {
+  const key = requireAIHubMixKey(
+    await fetchAIHubMixData<AIHubMixKeyData>(request, `/api/token/${id}`, {
+      cache: "no-store",
+    }),
+  )
+  if (key.id !== id) throw new Error("aihubmix_key_identity_mismatch")
+  return key
+}
+
+/** Preserve response-only plaintext even when a create response omits its ID. */
+export async function createAIHubMixKey(
+  request: ApiServiceRequest,
+  payload: AIHubMixKeyWrite,
+): Promise<AIHubMixKeyData | undefined> {
+  const created = await fetchAIHubMixData<unknown>(request, "/api/token/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+  return created && typeof created === "object" && !Array.isArray(created)
+    ? (created as AIHubMixKeyData)
+    : undefined
+}
+
+/** Send only the documented native update payload to the canonical origin. */
+export async function updateAIHubMixKey(
+  request: ApiServiceRequest,
+  id: number,
+  payload: AIHubMixKeyWrite,
+): Promise<void> {
+  await fetchAIHubMixData(request, "/api/token/", {
+    method: "PUT",
+    body: JSON.stringify({ ...payload, id }),
+  })
+}
+
+/** Transitional token projection pending native consumer migration. */
 export async function fetchAccountTokens(
   request: ApiServiceRequest,
 ): Promise<ApiToken[]> {

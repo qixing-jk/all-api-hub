@@ -26,8 +26,8 @@ import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import {
   RECOVERABLE_ACTION_POLICY,
-  TokenHeaderHarness as TokenHeader,
-} from "~~/tests/test-utils/keyManagement/TokenHeaderHarness"
+  RuntimeKeyHeaderHarness as RuntimeKeyHeader,
+} from "~~/tests/test-utils/keyManagement/RuntimeKeyHeaderHarness"
 import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -209,7 +209,7 @@ async function clickSaveAndAssociateAction(
   )
 }
 
-describe("TokenHeader save to API profiles", () => {
+describe("RuntimeKeyHeader save to API profiles", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     mockCreateProfile.mockReset()
@@ -251,7 +251,7 @@ describe("TokenHeader save to API profiles", () => {
     }
 
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={token as any}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -304,7 +304,7 @@ describe("TokenHeader save to API profiles", () => {
     })
 
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={token as any}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -367,7 +367,7 @@ describe("TokenHeader save to API profiles", () => {
     // AIHubMix is create-response-only in production; this explicit policy keeps
     // the save action reachable so the test can isolate origin normalization.
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={token as any}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -424,7 +424,7 @@ describe("TokenHeader save to API profiles", () => {
     })
 
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={token as any}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -474,7 +474,7 @@ describe("TokenHeader save to API profiles", () => {
     }
 
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={token as any}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -565,7 +565,7 @@ describe("TokenHeader save to API profiles", () => {
     }
 
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={token as any}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -608,7 +608,7 @@ describe("TokenHeader save to API profiles", () => {
     const account = createAccountStub()
 
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={
           {
             id: 9,
@@ -685,7 +685,7 @@ describe("TokenHeader save to API profiles", () => {
       }
 
       render(
-        <TokenHeader
+        <RuntimeKeyHeader
           token={token as any}
           copyKey={vi.fn()}
           handleEditToken={vi.fn()}
@@ -779,7 +779,7 @@ describe("TokenHeader save to API profiles", () => {
     }
 
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={token as any}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -869,7 +869,7 @@ describe("TokenHeader save to API profiles", () => {
     }
 
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={token as any}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -917,7 +917,7 @@ describe("TokenHeader save to API profiles", () => {
     )
 
     expect(onManagedSiteVerificationRetry).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 8 }),
+      expect.objectContaining({ tokenId: 8 }),
       expect.objectContaining({
         reason:
           MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
@@ -947,7 +947,7 @@ describe("TokenHeader save to API profiles", () => {
     }
 
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={token as any}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -995,7 +995,7 @@ describe("TokenHeader save to API profiles", () => {
     )
 
     expect(onManagedSiteVerificationRetry).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 8_1 }),
+      expect.objectContaining({ tokenId: 8_1 }),
       expect.objectContaining({
         reason:
           MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
@@ -1029,7 +1029,7 @@ describe("TokenHeader save to API profiles", () => {
     }
 
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={token as any}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -1102,7 +1102,7 @@ describe("TokenHeader save to API profiles", () => {
     }
 
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={token as any}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -1174,7 +1174,7 @@ describe("TokenHeader save to API profiles", () => {
     }
 
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={token as any}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -1246,7 +1246,7 @@ describe("TokenHeader save to API profiles", () => {
     mockOpenSettingsTab.mockRejectedValueOnce(navigationError)
 
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={token as any}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -1317,7 +1317,7 @@ describe("TokenHeader save to API profiles", () => {
     }
 
     const { rerender } = render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={fuzzyToken as any}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -1363,7 +1363,7 @@ describe("TokenHeader save to API profiles", () => {
     ).toBeInTheDocument()
 
     rerender(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={fuzzyToken as any}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -1430,7 +1430,7 @@ describe("TokenHeader save to API profiles", () => {
     }
 
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={token as any}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -1516,7 +1516,7 @@ describe("TokenHeader save to API profiles", () => {
     )
 
     render(
-      <TokenHeader
+      <RuntimeKeyHeader
         token={token as any}
         copyKey={vi.fn()}
         handleEditToken={vi.fn()}
@@ -1535,7 +1535,7 @@ describe("TokenHeader save to API profiles", () => {
     await waitFor(() => {
       expect(mockOpenWithAccount).toHaveBeenCalled()
       expect(onManagedSiteImportSuccess).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 3 }),
+        expect.objectContaining({ tokenId: 3 }),
       )
     })
   })

@@ -81,6 +81,7 @@ type EditorMode = "create" | "edit"
 
 type EditorState = {
   editorId: number
+  siteType: AccountKeyResourceRef["siteType"]
   mode: EditorMode
   fields: AccountKeyResourceEditor["fields"]
   initialValues: EditableResourceProjection
@@ -1269,6 +1270,7 @@ export function useAccountKeyResourceController({
                 // Rehydration replaces the native contract, so it must also
                 // replace the dialog session that owns dynamic option caches.
                 editorId: ++editorInstanceId.current,
+                siteType: activeBoundary.siteType,
                 mode: "create",
                 fields: nativeEditor.fields,
                 initialValues: nativeEditor.initialValues,
@@ -1816,6 +1818,7 @@ export function useAccountKeyResourceController({
         editorBoundaryRef.current = boundary
         transitionEditor(() => ({
           editorId: ++editorInstanceId.current,
+          siteType: boundary.siteType,
           mode: editorMode,
           fields: nativeEditor.fields,
           initialValues: nativeEditor.initialValues,
@@ -2021,25 +2024,27 @@ export function useAccountKeyResourceController({
             })
             return
           }
+          const returnedFacts = result.facts
           const returnedScope = scopes.find(
-            (scope) => scope.scopeKey === result.facts.ref.scopeKey,
+            (scope) => scope.scopeKey === returnedFacts?.ref.scopeKey,
           )
           const returnedBoundary =
             returnedScope &&
-            result.facts.ref.accountId === editorBoundary.accountId &&
-            result.facts.ref.siteType === editorBoundary.siteType
+            returnedFacts &&
+            returnedFacts.ref.accountId === editorBoundary.accountId &&
+            returnedFacts.ref.siteType === editorBoundary.siteType
               ? {
-                  accountId: result.facts.ref.accountId,
-                  siteType: result.facts.ref.siteType,
+                  accountId: returnedFacts.ref.accountId,
+                  siteType: returnedFacts.ref.siteType,
                   scopeKey: returnedScope.scopeKey,
                   routeKey: returnedScope.routeKey,
                 }
               : intendedBoundary
-          if (submitMode === "edit") {
+          if (submitMode === "edit" && returnedFacts) {
             replaceAcceptedRows(
               acceptedRowsRef.current.map((facts) =>
-                refIdentity(facts.ref) === refIdentity(result.facts.ref)
-                  ? result.facts
+                refIdentity(facts.ref) === refIdentity(returnedFacts.ref)
+                  ? returnedFacts
                   : facts,
               ),
             )

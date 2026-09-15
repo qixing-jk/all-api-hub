@@ -30,10 +30,10 @@ Account capability registrations currently differ:
 | Adapter | Ordinary native key UI | Native key workflow capability | Legacy token capabilities |
 | --- | --- | --- | --- |
 | OpenRouter | `keyResourceManagement` | `keyResources` | Neither `keyManagement` nor `tokenProvisioning` |
-| New API family | Not registered | `keyResources` | `keyManagement`, `tokenProvisioning` |
-| Sub2API | Not registered | `keyResources` | `keyManagement`, `tokenProvisioning` |
-| VoAPI v2 | Not registered | `keyResources` | `keyManagement`, `tokenProvisioning` |
-| AIHubMix | Not registered | Not registered | `keyManagement`, `tokenProvisioning` |
+| New API family | `keyResourceManagement` | `keyResources` | `keyManagement`, `tokenProvisioning` |
+| Sub2API | `keyResourceManagement` | `keyResources` | `keyManagement`, `tokenProvisioning` |
+| VoAPI v2 | `keyResourceManagement` | `keyResources` | `keyManagement`, `tokenProvisioning` |
+| AIHubMix | `keyResourceManagement` | `keyResources` | `keyManagement`, `tokenProvisioning` |
 
 Verify the relevant `src/services/apiAdapters/<adapter>/index.ts` before changing
 one of these registrations. `keyResources` is explicitly transitional;
@@ -99,6 +99,55 @@ have been removed. Native resource keys use the same policy checks directly.
 Validation: 12 focused test files / 216 tests, TypeScript, and Knip. Native
 inventory and ordinary native key editing remain follow-up work below.
 
+## Completed fourth slice: provider-owned creation and editing
+
+New API, Sub2API, VoAPI v2, and AIHubMix now own native creation/editing commands
+and editor projections. Editors preserve unmodified fresh fields, reject
+conflicting changes, skip no-op updates, and confirm writes without replaying
+ambiguous mutations. Sub2API keeps total USD quota and exact group IDs; VoAPI v2
+keeps multiple groups and monetary precision. New API preserves advanced settings
+and follows the backend reset when leaving automatic groups.
+
+AIHubMix preserves its response-only secret even when the response has no
+attributable resource ID. Such a confirmed creation returns null facts with an
+account-scoped secret correlation; the controller preserves disclosure through
+a failed inventory refresh. Native facts never carry plaintext secrets.
+
+Frontend field policies and detail presentation support these providers.
+Ordinary management now uses their native resources. Legacy creation workflows
+and transports remain to be removed; the shared `ApiToken` is not yet deleted.
+
+## Completed fifth slice: runtime actions and managed-site status
+
+Recoverable native resource rows now use runtime-key copy, disclosure,
+verification, credential capture, and export actions. Native resource selections
+participate in batch import and credential-library capture, with opaque identity
+and full-inventory eligibility preserved across display filtering. Creation-only
+resources retain their linked credential profile's API type and endpoint.
+
+Managed-site checks now live in `useManagedSiteKeyStatuses`, accepting runtime
+keys directly. Source/target changes cancel stale checks and clear private
+comparison evidence. Focused regressions cover StrictMode remount, bounded
+concurrency, removed queued targets, verification confirmation, delayed secret
+disclosure, and action permission changes.
+
+## Completed sixth slice: ordinary native management
+
+New API-family, Sub2API, VoAPI v2, and AIHubMix ordinary key management now
+registers the native capability. Key Management no longer loads or renders
+`AccountToken` inventories, converts runtime keys back to tokens, or performs
+legacy CRUD. Its selection/service hook owns only singleton credentials; native
+controllers own resource inventory, editing, and deletion.
+
+Batch selection and status checks consume runtime keys. Filtering retains
+selection and per-account counts while failures keep totals unknown. Removed
+the obsolete token row, disclosure component, and status/conversion helpers.
+Historical numeric credential locators still match account-scoped native refs.
+
+Validation: the management-page test run passed 140 tests, followed by 28
+focused hook/helper tests and 26 capability tests after cleanup. TypeScript and
+Knip passed. Browser verification remains for the final integrated migration.
+
 ## Remaining migration
 
 The runtime inventory now reads native key resources when registered. Providers
@@ -134,16 +183,11 @@ Audit these entrypoints:
 Remove each bridge only after its production callers and behavioral tests have
 migrated.
 
-### 2. Complete ordinary native key management per provider
+### 2. Remove the last quick-list compatibility presentation
 
-Start with providers that already expose `keyResources`, then implement missing
-native support such as AIHubMix. Verify listing, details, editing, deletion,
-scope changes, search, and bulk selection before opting a provider into
-`keyResourceManagement`.
-
-Retain provider-owned units, expiry rules, restrictions, and mutation outcomes.
-Use opaque resource IDs together with their account/site/scope; avoid converting
-native IDs into numeric token IDs. Keep unsupported operations explicit.
+Ordinary native management is complete. `CopyKeyDialog` still contains a legacy
+runtime-token card for creation consumers. Migrate those creation handoffs, then
+remove the remaining legacy presentation and runtime-token variant.
 
 ### 3. Move creation and provisioning onto native results
 

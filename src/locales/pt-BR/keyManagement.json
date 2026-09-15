@@ -304,7 +304,6 @@
       "newApiRetrieveKeyHint": "No New API, a comparação completa depende da chave do canal. Como visualizar essa chave exige verificação em duas etapas (2FA), a comparação completa não está disponível no momento."
     },
     "label": "Site gerenciado",
-    "nativeResourceUnsupported": "A correspondência com sites gerenciados ainda não oferece suporte a chaves de recursos nativos nesta página. A atualização se aplica apenas às chaves compatíveis.",
     "pageUnsupported": "As verificações dos canais do site gerenciado não estão disponíveis nesta página porque o site atual não permite buscar canais por URL.",
     "recovery": {
       "configureLogin": "Primeiro, adicione nas Configurações os campos de login e auxílio de 2FA do New API. Até lá, a chave do canal não poderá ser lida e a comparação completa não poderá ser concluída.",
@@ -346,17 +345,13 @@
     }
   },
   "messages": {
-    "accountNotFound": "Informações da conta não encontradas",
     "batchSavedToApiProfiles": "Chaves selecionadas salvas na biblioteca de credenciais de API",
     "batchSavedToApiProfilesNeedsConfirmation": "As chaves selecionadas foram salvas. Revise as associações destacadas na biblioteca de credenciais de API.",
     "batchSaveToApiProfilesFailed": "Falha ao salvar as chaves selecionadas na biblioteca de credenciais de API",
     "batchSaveToApiProfilesPartialFailed": "{{savedCount}} de {{totalCount}} chaves selecionadas foram salvas. Não foi possível salvar {{failedCount}}.",
     "copyFailed": "Falha ao copiar",
-    "deleteConfirm": "Tem certeza de que deseja excluir a chave {{name}}? Esta ação não pode ser desfeita",
-    "deleteSuccess": "Chave {{name}} excluída com sucesso",
     "keyCopied": "Chave {{name}} copiada para a área de transferência",
     "loadFailed": "Falha ao carregar a lista de chaves",
-    "revealFailed": "Falha ao revelar a chave",
     "savedToApiProfiles": "{{name}} foi salva na biblioteca de credenciais de API",
     "savedToApiProfilesNeedsConfirmation": "A credencial foi salva. Revise a associação da chave na biblioteca de credenciais de API.",
     "saveToApiProfilesFailed": "Falha ao salvar na biblioteca de credenciais de API",
@@ -368,6 +363,11 @@
   },
   "native": {
     "detailsLoadFailed": "Não foi possível carregar os detalhes da chave.",
+    "editor": {
+      "expiryDays": "Expira em (dias)",
+      "quotaUsd": "Cota (USD)",
+      "totalQuotaUsd": "Cota total (USD)"
+    },
     "heading": "Chaves de API",
     "missing": "Indisponível",
     "scope": {
@@ -542,10 +542,10 @@
         "edit": "Editar chave de API"
       },
       "unsaved": {
-        "description": "Suas alterações não foram salvas.",
+        "description": "Ao fechar, suas alterações serão descartadas.",
         "discard": "Descartar alterações",
         "keepEditing": "Continuar editando",
-        "title": "Descartar alterações não salvas?"
+        "title": "Descartar alterações?"
       }
     },
     "list": {

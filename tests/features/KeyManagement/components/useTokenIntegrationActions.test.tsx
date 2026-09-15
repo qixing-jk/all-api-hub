@@ -2,7 +2,8 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { useTokenIntegrationActions } from "~/features/KeyManagement/components/TokenListItem/useTokenIntegrationActions"
+import { useRuntimeKeyIntegrationActions } from "~/features/KeyManagement/components/RuntimeKeyActions/useRuntimeKeyIntegrationActions"
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
@@ -116,15 +117,15 @@ const token = {
 
 const renderActions = (onManagedSiteImportSuccess?: () => Promise<void>) =>
   renderHook(() =>
-    useTokenIntegrationActions({
+    useRuntimeKeyIntegrationActions({
       account,
       enabled: true,
       onManagedSiteImportSuccess,
-      token,
+      runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
     }),
   )
 
-describe("useTokenIntegrationActions", () => {
+describe("useRuntimeKeyIntegrationActions", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     preferences.claudeCodeRouterBaseUrl = ""

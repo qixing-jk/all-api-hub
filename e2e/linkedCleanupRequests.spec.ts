@@ -318,7 +318,7 @@ for (const scenario of cases) {
     ).toBeChecked()
     phase = "prepare"
     await page
-      .getByTestId(KEY_MANAGEMENT_TEST_IDS.deleteTokenConfirmButton)
+      .getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton)
       .click()
     await expect(page.getByRole("heading", { name: "Request count key" }))
       .toHaveCount(0)

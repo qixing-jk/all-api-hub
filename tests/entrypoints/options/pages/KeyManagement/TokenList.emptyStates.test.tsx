@@ -2,8 +2,12 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TokenList } from "~/features/KeyManagement/components/TokenList"
+import { nativeRowFromSeed } from "~~/tests/test-utils/keyManagement/TokenListHarness"
 import { render, screen } from "~~/tests/test-utils/render"
-import { createAccount } from "~~/tests/utils/keyManagementFactories"
+import {
+  createAccount,
+  createToken,
+} from "~~/tests/utils/keyManagementFactories"
 
 vi.mock("~/contexts/FeatureGuidanceContext", () => ({
   useFeatureGuidanceContext: () => ({
@@ -37,15 +41,8 @@ describe("TokenList empty states", () => {
     render(
       <TokenList
         isLoading={false}
-        tokens={[]}
-        filteredTokens={[]}
-        visibleKeys={new Set()}
-        resolvingVisibleKeys={new Set()}
-        getVisibleTokenKey={vi.fn()}
-        toggleKeyVisibility={vi.fn()}
-        copyKey={vi.fn()}
-        handleEditToken={vi.fn()}
-        handleDeleteToken={vi.fn()}
+        entries={[]}
+        filteredEntries={[]}
         handleAddToken={vi.fn()}
         onAddAccount={onAddAccount}
         selectedAccount=""
@@ -78,15 +75,8 @@ describe("TokenList empty states", () => {
     render(
       <TokenList
         isLoading={false}
-        tokens={[]}
-        filteredTokens={[]}
-        visibleKeys={new Set()}
-        resolvingVisibleKeys={new Set()}
-        getVisibleTokenKey={vi.fn()}
-        toggleKeyVisibility={vi.fn()}
-        copyKey={vi.fn()}
-        handleEditToken={vi.fn()}
-        handleDeleteToken={vi.fn()}
+        entries={[]}
+        filteredEntries={[]}
         handleAddToken={vi.fn()}
         onRequestAccountSelection={onRequestAccountSelection}
         selectedAccount=""
@@ -125,15 +115,8 @@ describe("TokenList empty states", () => {
     render(
       <TokenList
         isLoading={false}
-        tokens={[]}
-        filteredTokens={[]}
-        visibleKeys={new Set()}
-        resolvingVisibleKeys={new Set()}
-        getVisibleTokenKey={vi.fn()}
-        toggleKeyVisibility={vi.fn()}
-        copyKey={vi.fn()}
-        handleEditToken={vi.fn()}
-        handleDeleteToken={vi.fn()}
+        entries={[]}
+        filteredEntries={[]}
         handleAddToken={handleAddToken}
         selectedAccount={account.id}
         displayData={[account]}
@@ -161,15 +144,8 @@ describe("TokenList empty states", () => {
     render(
       <TokenList
         isLoading={false}
-        tokens={[]}
-        filteredTokens={[]}
-        visibleKeys={new Set()}
-        resolvingVisibleKeys={new Set()}
-        getVisibleTokenKey={vi.fn()}
-        toggleKeyVisibility={vi.fn()}
-        copyKey={vi.fn()}
-        handleEditToken={vi.fn()}
-        handleDeleteToken={vi.fn()}
+        entries={[]}
+        filteredEntries={[]}
         handleAddToken={handleAddToken}
         canCreateTokens={false}
         selectedAccount={account.id}
@@ -199,15 +175,8 @@ describe("TokenList empty states", () => {
     render(
       <TokenList
         isLoading={false}
-        tokens={[]}
-        filteredTokens={[]}
-        visibleKeys={new Set()}
-        resolvingVisibleKeys={new Set()}
-        getVisibleTokenKey={vi.fn()}
-        toggleKeyVisibility={vi.fn()}
-        copyKey={vi.fn()}
-        handleEditToken={vi.fn()}
-        handleDeleteToken={vi.fn()}
+        entries={[]}
+        filteredEntries={[]}
         handleAddToken={vi.fn()}
         selectedAccount={account.id}
         displayData={[account]}
@@ -245,37 +214,14 @@ describe("TokenList empty states", () => {
     render(
       <TokenList
         isLoading={true}
-        tokens={
-          [
-            {
-              id: 1,
-              name: "Existing Token",
-              key: "sk-existing",
-              accountId: account.id,
-              accountName: account.name,
-              status: 1,
-            },
-          ] as any
-        }
-        filteredTokens={
-          [
-            {
-              id: 1,
-              name: "Existing Token",
-              key: "sk-existing",
-              accountId: account.id,
-              accountName: account.name,
-              status: 1,
-            },
-          ] as any
-        }
-        visibleKeys={new Set()}
-        resolvingVisibleKeys={new Set()}
-        getVisibleTokenKey={vi.fn((token: { key: string }) => token.key)}
-        toggleKeyVisibility={vi.fn()}
-        copyKey={vi.fn()}
-        handleEditToken={vi.fn()}
-        handleDeleteToken={vi.fn()}
+        entries={[]}
+        filteredEntries={[]}
+        nativeRows={[
+          nativeRowFromSeed(
+            account,
+            createToken({ name: "Existing Token", accountId: account.id }),
+          ),
+        ]}
         handleAddToken={vi.fn()}
         selectedAccount={account.id}
         displayData={[account]}
@@ -293,15 +239,8 @@ describe("TokenList empty states", () => {
     render(
       <TokenList
         isLoading={false}
-        tokens={[]}
-        filteredTokens={[]}
-        visibleKeys={new Set()}
-        resolvingVisibleKeys={new Set()}
-        getVisibleTokenKey={vi.fn()}
-        toggleKeyVisibility={vi.fn()}
-        copyKey={vi.fn()}
-        handleEditToken={vi.fn()}
-        handleDeleteToken={vi.fn()}
+        entries={[]}
+        filteredEntries={[]}
         handleAddToken={vi.fn()}
         selectedAccount={account.id}
         displayData={[account]}
@@ -340,15 +279,8 @@ describe("TokenList empty states", () => {
       <TokenList
         isLoading={false}
         nativeLoading
-        tokens={[]}
-        filteredTokens={[]}
-        visibleKeys={new Set()}
-        resolvingVisibleKeys={new Set()}
-        getVisibleTokenKey={vi.fn()}
-        toggleKeyVisibility={vi.fn()}
-        copyKey={vi.fn()}
-        handleEditToken={vi.fn()}
-        handleDeleteToken={vi.fn()}
+        entries={[]}
+        filteredEntries={[]}
         handleAddToken={vi.fn()}
         selectedAccount={account.id}
         displayData={[account]}
@@ -366,15 +298,8 @@ describe("TokenList empty states", () => {
     render(
       <TokenList
         isLoading={false}
-        tokens={[]}
-        filteredTokens={[]}
-        visibleKeys={new Set()}
-        resolvingVisibleKeys={new Set()}
-        getVisibleTokenKey={vi.fn()}
-        toggleKeyVisibility={vi.fn()}
-        copyKey={vi.fn()}
-        handleEditToken={vi.fn()}
-        handleDeleteToken={vi.fn()}
+        entries={[]}
+        filteredEntries={[]}
         handleAddToken={vi.fn()}
         selectedAccount={account.id}
         displayData={[account]}
@@ -419,17 +344,10 @@ describe("TokenList empty states", () => {
     render(
       <TokenList
         isLoading={false}
-        tokens={[]}
-        filteredTokens={[]}
+        entries={[]}
+        filteredEntries={[]}
         nativeRows={[]}
         nativeUnfilteredRows={[nativeRow]}
-        visibleKeys={new Set()}
-        resolvingVisibleKeys={new Set()}
-        getVisibleTokenKey={vi.fn()}
-        toggleKeyVisibility={vi.fn()}
-        copyKey={vi.fn()}
-        handleEditToken={vi.fn()}
-        handleDeleteToken={vi.fn()}
         handleAddToken={vi.fn()}
         selectedAccount={account.id}
         displayData={[account]}

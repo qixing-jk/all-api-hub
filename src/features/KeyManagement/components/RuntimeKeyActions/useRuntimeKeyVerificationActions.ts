@@ -2,8 +2,9 @@ import type { Dispatch, RefObject, SetStateAction } from "react"
 import { useLayoutEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { normalizeAccountSiteProfileUrlForManagedChannel } from "~/services/accounts/accountSiteProfile/urls"
-import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -17,12 +18,12 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import type { AccountToken, DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
 
-const logger = createLogger("TokenVerificationActions")
+const logger = createLogger("RuntimeKeyVerificationActions")
 
 interface VerificationAction {
   actionId: ProductAnalyticsActionId
@@ -32,33 +33,33 @@ interface VerificationAction {
   setProfile: Dispatch<SetStateAction<ApiCredentialProfile | null>>
 }
 
-interface UseTokenVerificationActionsParams {
+interface UseRuntimeKeyVerificationActionsParams {
   account: DisplaySiteData
   enabled: boolean
-  token: AccountToken
+  runtimeKey: AccountRuntimeKey
 }
 
 /** Builds the temporary credential profile consumed by verification dialogs. */
 function buildTransientVerificationProfile(
   account: DisplaySiteData,
-  token: AccountToken,
-  resolvedToken: AccountToken,
+  runtimeKey: AccountRuntimeKey,
+  resolvedKey: AccountRuntimeKey,
 ): ApiCredentialProfile {
   const now = Date.now()
 
   return {
-    id: `account-token:${account.id}:${token.id}`,
+    id: `runtime-key:${runtimeKey.id}`,
     name: buildApiCredentialProfileName({
       accountName: account.name,
-      fallbackAccountName: token.accountName,
-      tokenName: token.name,
+      fallbackAccountName: runtimeKey.accountName,
+      tokenName: runtimeKey.label,
     }),
     apiType: API_TYPES.OPENAI_COMPATIBLE,
     baseUrl: normalizeAccountSiteProfileUrlForManagedChannel({
       siteType: account.siteType,
       url: account.baseUrl,
     }),
-    apiKey: resolvedToken.key,
+    apiKey: resolvedKey.secret,
     tagIds: account.tagIds ?? [],
     notes: "",
     createdAt: now,
@@ -66,12 +67,12 @@ function buildTransientVerificationProfile(
   }
 }
 
-/** Owns token secret resolution and stale-request protection for verification dialogs. */
-export function useTokenVerificationActions({
+/** Owns runtime secret resolution and stale-request protection for verification dialogs. */
+export function useRuntimeKeyVerificationActions({
   account,
   enabled,
-  token,
-}: UseTokenVerificationActionsParams) {
+  runtimeKey,
+}: UseRuntimeKeyVerificationActionsParams) {
   const { t } = useTranslation("keyManagement")
   const verificationAllowedRef = useRef(false)
   const verificationGenerationRef = useRef<symbol | null>(null)
@@ -83,7 +84,7 @@ export function useTokenVerificationActions({
     useState<ApiCredentialProfile | null>(null)
 
   useLayoutEffect(() => {
-    const verificationGeneration = Symbol("token-verification-generation")
+    const verificationGeneration = Symbol("runtimeKey-verification-generation")
     verificationGenerationRef.current = verificationGeneration
     verificationAllowedRef.current = enabled
     setVerifyingProfile(null)
@@ -106,9 +107,9 @@ export function useTokenVerificationActions({
     account.siteType,
     account.token,
     account.userId,
-    token.accountId,
-    token.id,
-    token.key,
+    runtimeKey.accountId,
+    runtimeKey.id,
+    runtimeKey.secret,
   ])
 
   const isRequestCurrent = (
@@ -136,10 +137,13 @@ export function useTokenVerificationActions({
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
-    let resolvedToken = token
+    let resolvedKey = runtimeKey
 
     try {
-      resolvedToken = await resolveDisplayAccountTokenForSecret(account, token)
+      resolvedKey = await resolveDisplayAccountRuntimeKeySecret(
+        account,
+        runtimeKey,
+      )
       if (
         !isRequestCurrent(
           verificationGeneration,
@@ -153,7 +157,7 @@ export function useTokenVerificationActions({
         return
       }
       setProfile(
-        buildTransientVerificationProfile(account, token, resolvedToken),
+        buildTransientVerificationProfile(account, runtimeKey, resolvedKey),
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
@@ -176,8 +180,8 @@ export function useTokenVerificationActions({
         message: toSanitizedErrorSummary(
           error,
           [
-            token.key,
-            resolvedToken.key,
+            runtimeKey.secret,
+            resolvedKey.secret,
             account.token,
             account.cookieAuthSessionCookie,
           ].filter(Boolean) as string[],
@@ -195,7 +199,7 @@ export function useTokenVerificationActions({
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.VerifyAccountTokenApi,
       epochRef: apiVerificationEpochRef,
       getFailureMessage: () => t("keyManagement:messages.verifyApiFailed"),
-      logMessage: "Failed to open token API verification",
+      logMessage: "Failed to open runtimeKey API verification",
       setProfile: setVerifyingProfile,
     })
 
@@ -205,7 +209,7 @@ export function useTokenVerificationActions({
       epochRef: cliVerificationEpochRef,
       getFailureMessage: () =>
         t("keyManagement:messages.verifyCliSupportFailed"),
-      logMessage: "Failed to open token CLI support verification",
+      logMessage: "Failed to open runtimeKey CLI support verification",
       setProfile: setCliVerifyingProfile,
     })
 

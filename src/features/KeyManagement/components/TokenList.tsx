@@ -20,15 +20,16 @@ import { saveAccountRuntimeKeysToApiCredentialProfiles } from "~/features/TokenP
 import { cn } from "~/lib/utils"
 import {
   ACCOUNT_RUNTIME_KEY_SOURCES,
-  buildAccountTokenRuntimeKeyId,
-  buildDisplayAccountTokenRuntimeKey,
+  buildAccountKeyResourceRuntimeKeyFromFacts,
+  getAccountRuntimeKeyExportId,
   getAccountRuntimeKeyLocator,
   hasUsableAccountRuntimeKeySecret,
-  isAccountTokenRuntimeKey,
   isServiceCredentialRuntimeKey,
+  type AccountRuntimeKey,
   type AccountRuntimeKeyLocator,
 } from "~/services/accounts/accountRuntimeKeys"
-import { createAccountTokenExportSource } from "~/services/accounts/utils/credentialExport"
+import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keyProductCapabilities"
+import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
 import type {
   AccountKeyResourceFacts,
   AccountKeyResourceRef,
@@ -45,7 +46,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import type { AccountToken, DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
 import type {
   ApiCredentialProfile,
   ApiCredentialProfileLink,
@@ -68,31 +69,18 @@ import {
   type KeyManagementAssociationTargetResultState,
 } from "../constants"
 import { useTokenCredentialAssociations } from "../hooks/useTokenCredentialAssociations"
-import {
-  isKeyResourceBatchSelectable,
-  isKeyResourceExportable,
-} from "../presentation/legacyKeyResourceCard"
 import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
 import {
   KEY_MANAGEMENT_DISPLAY_ROW_KINDS,
-  KEY_MANAGEMENT_LOAD_STATUSES,
   type ApiCredentialProfileSaveEntry,
   type KeyManagementDisplayRow,
   type KeyManagementEntry,
   type NativeKeyManagementRow,
-  type ServiceCredentialState,
 } from "../types"
-import {
-  buildAccountTokenKeyManagementEntry,
-  buildServiceCredentialKeyManagementEntry,
-  buildTokenIdentityKey,
-  toLegacyAccountTokenForKeyManagementEntry,
-} from "../utils"
 import { AccountKeyResourceList } from "./AccountKeyResource/AccountKeyResourceList"
 import { BatchSelectionControl } from "./BatchSelectionControl"
 import { ManagedSiteTokenBatchExportDialog } from "./ManagedSiteTokenBatchExportDialog"
 import { ServiceCredentialCard } from "./ServiceCredentialCard"
-import { TokenListItem } from "./TokenListItem"
 
 const logger = createLogger("TokenList")
 
@@ -101,16 +89,10 @@ const MANUAL_MANAGED_SITE_BATCH_IMPORT_INTENT = {
   verification: MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE,
 } satisfies ManagedSiteBatchImportIntent
 
-const isAccountTokenEntry = (
-  entry: KeyManagementEntry,
-): entry is KeyManagementEntry & {
-  runtimeKey: Extract<KeyManagementEntry["runtimeKey"], { token: AccountToken }>
-} => isAccountTokenRuntimeKey(entry.runtimeKey)
-
 const isBatchSelectableEntry = (entry: KeyManagementEntry) =>
-  isAccountTokenEntry(entry)
-    ? isKeyResourceBatchSelectable(entry.runtimeKey)
-    : hasUsableAccountRuntimeKeySecret(entry.runtimeKey)
+  entry.runtimeKey.capabilities.export &&
+  (supportsRecoverableAccountRuntimeKeySecrets(entry.runtimeKey.siteType) ||
+    hasUsableAccountRuntimeKeySecret(entry.runtimeKey))
 
 const isBatchSnapshotEligible = (
   items: ReadonlyArray<Pick<KeyManagementEntry, "runtimeKey">>,
@@ -128,20 +110,8 @@ interface GuidedManagedSiteImportTarget {
 
 interface TokenListProps {
   isLoading: boolean
-  tokens: AccountToken[]
-  filteredTokens: AccountToken[]
-  entries?: KeyManagementEntry[]
-  filteredEntries?: KeyManagementEntry[]
-  visibleKeys: Set<string>
-  resolvingVisibleKeys: Set<string>
-  getVisibleTokenKey: (token: AccountToken) => string
-  toggleKeyVisibility: (
-    account: DisplaySiteData,
-    token: AccountToken,
-  ) => Promise<void>
-  copyKey: (account: DisplaySiteData, token: AccountToken) => Promise<void>
-  handleEditToken: (token: AccountToken) => void
-  handleDeleteToken: (token: AccountToken) => void
+  entries: KeyManagementEntry[]
+  filteredEntries: KeyManagementEntry[]
   handleAddToken: () => void
   canCreateTokens?: boolean
   onAddAccount?: () => void
@@ -159,13 +129,14 @@ interface TokenListProps {
       result?: ManagedSiteTokenChannelStatus
     }
   >
-  onManagedSiteImportSuccess?: (token: AccountToken) => void | Promise<void>
+  onManagedSiteImportSuccess?: (
+    runtimeKey: AccountRuntimeKey,
+  ) => void | Promise<void>
   onManagedSiteVerificationRetry?: (
-    token: AccountToken,
+    runtimeKey: AccountRuntimeKey,
     managedSiteStatus: ManagedSiteTokenChannelStatus,
   ) => void | Promise<void>
   allAccountsFilterAccountIds?: string[]
-  serviceCredentials?: Record<string, ServiceCredentialState>
   onCopyServiceCredential?: (account: DisplaySiteData) => Promise<void>
   onRotateServiceCredential?: (account: DisplaySiteData) => Promise<void>
   guidedManagedSiteImport?: GuidedManagedSiteImportTarget
@@ -220,7 +191,7 @@ function LoadingSkeleton() {
  * Empty state content for no tokens or filtered results.
  * @param props Component props container.
  * @param props.selectedAccount Currently selected account identifier.
- * @param props.tokens All tokens for the current account.
+ * @param props.totalCount Known resources before filtering.
  * @param props.handleAddToken Callback to open the add-token flow.
  * @param props.canCreateTokens Whether the current account scope supports token creation.
  * @param props.displayData Account display data used to determine empty states.
@@ -232,7 +203,7 @@ function LoadingSkeleton() {
  */
 function TokenEmptyState({
   selectedAccount,
-  tokens,
+  totalCount,
   handleAddToken,
   canCreateTokens = true,
   displayData,
@@ -243,7 +214,7 @@ function TokenEmptyState({
   onRequestAccountSelection,
 }: {
   selectedAccount: string
-  tokens: unknown[]
+  totalCount: number
   handleAddToken: () => void
   canCreateTokens?: boolean
   displayData: DisplaySiteData[]
@@ -370,7 +341,7 @@ function TokenEmptyState({
   }
 
   // 如果没有密钥
-  if (tokens.length === 0) {
+  if (totalCount === 0) {
     return (
       <EmptyState
         icon={<KeyRound className="h-12 w-12" />}
@@ -396,47 +367,12 @@ function TokenEmptyState({
   )
 }
 
-/**
- * Displays a list of API tokens with loading and empty states.
- * Handles key visibility toggles, copy, edit/delete actions, and CCSwitch export.
- * @param props Component props configuring the token list view.
- * @param props.isLoading Whether data for the current account is still loading.
- * @param props.tokens Tokens belonging to the selected account.
- * @param props.filteredTokens Tokens after search/filter is applied.
- * @param props.visibleKeys Set of token IDs whose values are currently unmasked.
- * @param props.resolvingVisibleKeys Set of token IDs currently resolving to a usable secret.
- * @param props.getVisibleTokenKey Returns the best available source value for a token key.
- * @param props.toggleKeyVisibility Toggles a token between visible/hidden states.
- * @param props.copyKey Copies the token value to the clipboard.
- * @param props.handleEditToken Opens the edit modal for the given token.
- * @param props.handleDeleteToken Removes the token after confirmation.
- * @param props.handleAddToken Opens the add-token dialog.
- * @param props.canCreateTokens Whether the current account scope supports token creation.
- * @param props.selectedAccount Currently selected account identifier.
- * @param props.displayData Account metadata used to render contextual info.
- * @param props.currentAccountLoadError Optional load error for the currently selected account.
- * @param props.currentAccountUnsupportedKeyManagement Whether the selected account lacks a key-management route.
- * @param props.onRetryCurrentAccount Optional retry handler for the current account load.
- * @param props.managedSiteTokenStatuses Optional managed-site channel status by token identity.
- * @param props.onManagedSiteImportSuccess Optional callback after a managed-site token import succeeds.
- * @param props.onManagedSiteVerificationRetry Optional callback to retry managed-site token verification.
- * @param props.allAccountsFilterAccountIds Optional account ID filters applied in all-accounts mode.
- * @param props.guidedManagedSiteImport Optional guided import target from route params.
- */
+/** Display native resources and singleton credentials with shared runtime actions. */
 export function TokenList(props: TokenListProps) {
   const {
     isLoading,
-    tokens,
-    filteredTokens,
-    entries: providedEntries,
-    filteredEntries: providedFilteredEntries,
-    visibleKeys,
-    resolvingVisibleKeys,
-    getVisibleTokenKey,
-    toggleKeyVisibility,
-    copyKey,
-    handleEditToken,
-    handleDeleteToken,
+    entries,
+    filteredEntries,
     handleAddToken,
     canCreateTokens = true,
     onAddAccount,
@@ -451,7 +387,6 @@ export function TokenList(props: TokenListProps) {
     onManagedSiteImportSuccess,
     onManagedSiteVerificationRetry,
     allAccountsFilterAccountIds = [],
-    serviceCredentials = {},
     onCopyServiceCredential,
     onRotateServiceCredential,
     guidedManagedSiteImport,
@@ -480,7 +415,7 @@ export function TokenList(props: TokenListProps) {
   const guidedManagedSiteImportAccountId = guidedManagedSiteImport?.accountId
   const guidedManagedSiteImportTokenId = guidedManagedSiteImport?.tokenId
   const [ccSwitchContext, setCCSwitchContext] = useState<{
-    token: AccountToken
+    runtimeKey: AccountRuntimeKey
     account: DisplaySiteData
   } | null>(null)
   const [batchExportOpen, setBatchExportOpen] = useState(false)
@@ -497,75 +432,72 @@ export function TokenList(props: TokenListProps) {
   const accountById = useMemo(() => {
     return new Map(displayData.map((account) => [account.id, account]))
   }, [displayData])
+  const nativeEntriesByRowKey = useMemo(
+    () =>
+      new Map(
+        nativeUnfilteredRows.flatMap((row) => {
+          const account = accountById.get(row.accountId)
+          if (!account) return []
+          const profile = getCredentialProfileForLocator?.({
+            source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
+            ref: row.facts.ref,
+          })
+          const runtimeKey = buildAccountKeyResourceRuntimeKeyFromFacts(
+            account,
+            row.facts,
+            profile?.apiKey ?? "",
+          )
+          return [
+            [
+              row.rowKey,
+              {
+                id: runtimeKey.id,
+                runtimeKey,
+                uiState: {},
+              } satisfies KeyManagementEntry,
+            ] as const,
+          ]
+        }),
+      ),
+    [nativeUnfilteredRows, accountById, getCredentialProfileForLocator],
+  )
+  const actionEntries = useMemo(
+    () => [...entries, ...nativeEntriesByRowKey.values()],
+    [entries, nativeEntriesByRowKey],
+  )
+  const filteredActionEntries = useMemo(
+    () => [
+      ...filteredEntries,
+      ...nativeRows.flatMap((row) => {
+        const entry = nativeEntriesByRowKey.get(row.rowKey)
+        return entry ? [entry] : []
+      }),
+    ],
+    [filteredEntries, nativeRows, nativeEntriesByRowKey],
+  )
   const currentCCSwitchTarget = useMemo(() => {
     if (!ccSwitchContext) return null
-
     const account = accountById.get(ccSwitchContext.account.id)
-    const token = tokens.find(
-      (candidate) =>
-        candidate.accountId === ccSwitchContext.token.accountId &&
-        candidate.id === ccSwitchContext.token.id,
+    const entry = actionEntries.find(
+      (candidate) => candidate.runtimeKey.id === ccSwitchContext.runtimeKey.id,
     )
-    return account && token
+    return account && entry && isBatchSelectableEntry(entry)
       ? {
-          exportSource: createAccountTokenExportSource(account, token),
-          runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
+          exportSource: createAccountRuntimeKeyExportSource(
+            account,
+            entry.runtimeKey,
+            { preferCurrentSecret: true },
+          ),
+          runtimeKey: entry.runtimeKey,
         }
       : null
-  }, [accountById, ccSwitchContext, tokens])
-  const isCurrentCCSwitchContextExportable = Boolean(
-    currentCCSwitchTarget &&
-      isKeyResourceExportable(currentCCSwitchTarget.runtimeKey),
-  )
-
+  }, [accountById, actionEntries, ccSwitchContext])
+  const isCurrentCCSwitchContextExportable = currentCCSwitchTarget !== null
   useEffect(() => {
-    if (ccSwitchContext && !isCurrentCCSwitchContextExportable) {
+    if (ccSwitchContext && !isCurrentCCSwitchContextExportable)
       setCCSwitchContext(null)
-    }
   }, [ccSwitchContext, isCurrentCCSwitchContextExportable])
 
-  const entries = useMemo(() => {
-    if (providedEntries) return providedEntries
-
-    const tokenEntries = filteredTokens
-      .map((token): KeyManagementEntry | null => {
-        const account = accountById.get(token.accountId)
-        if (!account) return null
-        return buildAccountTokenKeyManagementEntry(account, token)
-      })
-      .filter((entry): entry is KeyManagementEntry => entry !== null)
-
-    const serviceCredentialEntries = onCopyServiceCredential
-      ? displayData
-          .map((account): KeyManagementEntry | null => {
-            const entry = serviceCredentials[account.id]
-            if (
-              entry?.status !== KEY_MANAGEMENT_LOAD_STATUSES.Loaded ||
-              !entry.credential
-            ) {
-              return null
-            }
-
-            return buildServiceCredentialKeyManagementEntry({
-              account,
-              serviceCredential: entry,
-              canRotate: onRotateServiceCredential !== undefined,
-            })
-          })
-          .filter((entry): entry is KeyManagementEntry => entry !== null)
-      : []
-
-    return [...serviceCredentialEntries, ...tokenEntries]
-  }, [
-    accountById,
-    displayData,
-    filteredTokens,
-    onCopyServiceCredential,
-    onRotateServiceCredential,
-    providedEntries,
-    serviceCredentials,
-  ])
-  const filteredEntries = providedFilteredEntries ?? entries
   const displayRows = useMemo<readonly KeyManagementDisplayRow[]>(
     () => [
       ...entries.map(
@@ -610,43 +542,22 @@ export function TokenList(props: TokenListProps) {
   const guidedManagedSiteImportEntryId = useMemo(() => {
     if (!guidedManagedSiteImportAccountId) return null
 
-    const targetEntry = filteredEntries.find((entry) => {
-      if (!isAccountTokenEntry(entry)) return false
-
-      const token = entry.runtimeKey.token
+    const targetEntry = filteredActionEntries.find((entry) => {
+      const runtimeKey = entry.runtimeKey
       return (
-        token.accountId === guidedManagedSiteImportAccountId &&
+        runtimeKey.accountId === guidedManagedSiteImportAccountId &&
         (!guidedManagedSiteImportTokenId ||
-          String(token.id) === guidedManagedSiteImportTokenId)
+          getAccountRuntimeKeyExportId(runtimeKey) ===
+            guidedManagedSiteImportTokenId)
       )
     })
 
     return targetEntry?.id ?? null
   }, [
-    filteredEntries,
+    filteredActionEntries,
     guidedManagedSiteImportAccountId,
     guidedManagedSiteImportTokenId,
   ])
-
-  const getTokenRowAssociationProps = (
-    entry: KeyManagementEntry,
-    token: AccountToken,
-  ) => {
-    const tokenIdentityKey = buildTokenIdentityKey(token.accountId, token.id)
-    const runtimeKeyLocator = getAccountRuntimeKeyLocator(entry.runtimeKey)
-    const associatedProfile =
-      getCredentialProfileForLocator?.(runtimeKeyLocator)
-
-    return {
-      associatedProfile,
-      displayTokenKey:
-        associatedProfile?.apiKey.trim() && !visibleKeys.has(tokenIdentityKey)
-          ? associatedProfile.apiKey
-          : getVisibleTokenKey(token),
-      runtimeKeyLocator,
-      tokenIdentityKey,
-    }
-  }
 
   const isAllAccountsMode =
     selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
@@ -727,17 +638,17 @@ export function TokenList(props: TokenListProps) {
       filteredRowsByAccountId.set(accountId, list)
     }
 
-    const totalTokensByAccountId = new Map<string, AccountToken[]>()
-    for (const token of tokens) {
-      const list = totalTokensByAccountId.get(token.accountId) ?? []
-      list.push(token)
-      totalTokensByAccountId.set(token.accountId, list)
+    const totalEntriesByAccountId = new Map<string, KeyManagementEntry[]>()
+    for (const entry of entries) {
+      const list = totalEntriesByAccountId.get(entry.runtimeKey.accountId) ?? []
+      list.push(entry)
+      totalEntriesByAccountId.set(entry.runtimeKey.accountId, list)
     }
 
     return displayData
       .filter((account) => filteredRowsByAccountId.has(account.id))
       .map((account) => {
-        const total = totalTokensByAccountId.get(account.id) ?? []
+        const total = totalEntriesByAccountId.get(account.id) ?? []
         const totalNativeRows = totalNativeRowsByAccountId.get(account.id) ?? []
         const filteredAccountRows =
           filteredRowsByAccountId.get(account.id) ?? []
@@ -753,13 +664,8 @@ export function TokenList(props: TokenListProps) {
         const totalEnabledNativeRows = totalNativeRows.filter(
           (row) => row.facts.status === "enabled",
         ).length
-        const filteredAccountTokens = filteredAccountEntries
-          .filter(isAccountTokenEntry)
-          .map((entry) => entry.runtimeKey.token)
         return {
           account,
-          totalTokens: total,
-          filteredTokens: filteredAccountTokens,
           filteredEntries: filteredAccountEntries,
           nativeRows: filteredNativeRows,
           totalCount: Math.max(
@@ -767,8 +673,8 @@ export function TokenList(props: TokenListProps) {
             filteredAccountRows.length,
           ),
           enabledCount:
-            total.filter((item) => item.status === 1).length +
-            totalEnabledNativeRows,
+            total.filter((entry) => entry.runtimeKey.status === "active")
+              .length + totalEnabledNativeRows,
           showingCount: filteredAccountRows.length,
         }
       })
@@ -777,24 +683,24 @@ export function TokenList(props: TokenListProps) {
     filteredDisplayRows,
     isAllAccountsMode,
     nativeUnfilteredRows,
-    tokens,
+    entries,
   ])
 
   const eligibleEntries = useMemo(
-    () => entries.filter(isBatchSelectableEntry),
-    [entries],
+    () => actionEntries.filter(isBatchSelectableEntry),
+    [actionEntries],
   )
   const eligibleEntryIds = useMemo(
     () => new Set(eligibleEntries.map((entry) => entry.id)),
     [eligibleEntries],
   )
   const filteredEligibleEntries = useMemo(
-    () => filteredEntries.filter((entry) => eligibleEntryIds.has(entry.id)),
-    [eligibleEntryIds, filteredEntries],
+    () =>
+      filteredActionEntries.filter((entry) => eligibleEntryIds.has(entry.id)),
+    [eligibleEntryIds, filteredActionEntries],
   )
   const hasFilteredIneligibleEntries =
-    filteredEligibleEntries.length < filteredEntries.length ||
-    nativeRows.length > 0
+    filteredEligibleEntries.length < filteredActionEntries.length
   const filteredEligibleEntryIds = useMemo(
     () => new Set(filteredEligibleEntries.map((entry) => entry.id)),
     [filteredEligibleEntries],
@@ -832,35 +738,16 @@ export function TokenList(props: TokenListProps) {
     [selectedEntries],
   )
 
-  const currentBatchEligibilityByRuntimeKeyId = useMemo(() => {
-    const eligibility = new Map<string, boolean>()
-
-    for (const entry of entries) {
-      if (!isServiceCredentialRuntimeKey(entry.runtimeKey)) continue
-      eligibility.set(
-        entry.runtimeKey.id,
-        hasUsableAccountRuntimeKeySecret(entry.runtimeKey),
-      )
-    }
-
-    for (const token of tokens) {
-      const runtimeKeyId = buildAccountTokenRuntimeKeyId(
-        token.accountId,
-        token.id,
-      )
-      const account = accountById.get(token.accountId)
-      eligibility.set(
-        runtimeKeyId,
-        account
-          ? isKeyResourceBatchSelectable(
-              buildDisplayAccountTokenRuntimeKey(account, token),
-            )
-          : false,
-      )
-    }
-
-    return eligibility
-  }, [accountById, entries, tokens])
+  const currentBatchEligibilityByRuntimeKeyId = useMemo(
+    () =>
+      new Map(
+        actionEntries.map((entry) => [
+          entry.runtimeKey.id,
+          isBatchSelectableEntry(entry),
+        ]),
+      ),
+    [actionEntries],
+  )
   const isBatchExportSnapshotEligible = useMemo(
     () =>
       isBatchSnapshotEligible(
@@ -1020,9 +907,8 @@ export function TokenList(props: TokenListProps) {
 
     const selectedTokenByIdentity = new Map(
       batchExportItems.flatMap((item) =>
-        isResolvedManagedSiteTokenBatchExportItemInput(item) &&
-        isAccountTokenRuntimeKey(item.runtimeKey)
-          ? [[item.runtimeKey.id, item.runtimeKey.token] as const]
+        isResolvedManagedSiteTokenBatchExportItemInput(item)
+          ? [[item.runtimeKey.id, item.runtimeKey] as const]
           : [],
       ),
     )
@@ -1033,13 +919,6 @@ export function TokenList(props: TokenListProps) {
       if (!token) continue
       void Promise.resolve(onManagedSiteImportSuccess(token))
     }
-  }
-
-  const handleOpenCCSwitchDialog = (
-    token: AccountToken,
-    account: DisplaySiteData,
-  ) => {
-    setCCSwitchContext({ token, account })
   }
 
   const handleCloseCCSwitchDialog = () => {
@@ -1053,7 +932,8 @@ export function TokenList(props: TokenListProps) {
   const renderServiceCredentialCard = (entry: KeyManagementEntry) => {
     if (!isServiceCredentialRuntimeKey(entry.runtimeKey)) return null
 
-    const managedSiteStatusEntry = managedSiteTokenStatuses?.[entry.id]
+    const managedSiteStatusEntry =
+      managedSiteTokenStatuses?.[entry.runtimeKey.id]
     return onCopyServiceCredential ? (
       <ServiceCredentialCard
         account={entry.runtimeKey.account as DisplaySiteData}
@@ -1082,6 +962,7 @@ export function TokenList(props: TokenListProps) {
   ) => (
     <AccountKeyResourceList
       rows={rows}
+      accounts={displayData}
       ariaLabel={t("keyManagement:native.heading")}
       onOpenDetail={onOpenNativeDetail}
       onEdit={onEditNativeKey ?? (() => undefined)}
@@ -1111,6 +992,31 @@ export function TokenList(props: TokenListProps) {
         })
       }
       getNavigationTarget={getNativeNavigationProps}
+      getActions={(row) => {
+        const entry = nativeEntriesByRowKey.get(row.rowKey)
+        const account = accountById.get(row.accountId)
+        if (!entry || !account) return {}
+        return {
+          ...getSelectionProps(entry.id),
+          onOpenCCSwitchDialog: () =>
+            setCCSwitchContext({ runtimeKey: entry.runtimeKey, account }),
+          managedSiteStatus:
+            managedSiteTokenStatuses?.[entry.runtimeKey.id]?.result,
+          isManagedSiteStatusChecking:
+            managedSiteTokenStatuses?.[entry.runtimeKey.id]?.isChecking,
+          onManagedSiteImportSuccess: onManagedSiteImportSuccess
+            ? () => onManagedSiteImportSuccess(entry.runtimeKey)
+            : undefined,
+          onManagedSiteVerificationRetry: onManagedSiteVerificationRetry
+            ? (status) =>
+                onManagedSiteVerificationRetry(entry.runtimeKey, status)
+            : undefined,
+          guidedManagedSiteImportRequest:
+            entry.id === guidedManagedSiteImportEntryId
+              ? guidedManagedSiteImport?.request
+              : undefined,
+        }
+      }}
     />
   )
   const nativeResourceList = renderNativeResourceList(nativeRows)
@@ -1118,7 +1024,7 @@ export function TokenList(props: TokenListProps) {
     return (
       <TokenEmptyState
         selectedAccount={selectedAccount}
-        tokens={[...tokens, ...nativeUnfilteredRows]}
+        totalCount={displayRows.length}
         handleAddToken={handleAddToken}
         canCreateTokens={canCreateTokens}
         displayData={displayData}
@@ -1135,13 +1041,8 @@ export function TokenList(props: TokenListProps) {
     )
   }
 
-  if (!isAllAccountsMode && filteredEntries.length === 0) {
-    return nativeResourceList
-  }
-
   return (
     <>
-      {!isAllAccountsMode ? nativeResourceList : null}
       {filteredEligibleEntries.length > 0 ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border p-3">
           {hasFilteredIneligibleEntries ? (
@@ -1207,6 +1108,8 @@ export function TokenList(props: TokenListProps) {
         </div>
       ) : null}
 
+      {!isAllAccountsMode ? nativeResourceList : null}
+
       {isAllAccountsMode && groupedRows && groupedRows.length > 0 ? (
         <>
           <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
@@ -1237,8 +1140,8 @@ export function TokenList(props: TokenListProps) {
               const isCollapsed = collapsedAccountIds.has(account.id)
               const shouldShowShowingCount =
                 group.showingCount !== group.totalCount
-              const groupEligibleEntries = group.filteredEntries.filter(
-                (entry) => eligibleEntryIds.has(entry.id),
+              const groupEligibleEntries = filteredEligibleEntries.filter(
+                (entry) => entry.runtimeKey.accountId === account.id,
               )
               const selectedGroupVisibleCount = groupEligibleEntries.filter(
                 (entry) => selectedEntryIds.has(entry.id),
@@ -1330,69 +1233,11 @@ export function TokenList(props: TokenListProps) {
 
                   {!isCollapsed ? (
                     <div className="space-y-3 p-3">
-                      {group.filteredEntries.map((entry) => {
-                        if (isServiceCredentialRuntimeKey(entry.runtimeKey)) {
-                          return (
-                            <div key={entry.id}>
-                              {renderServiceCredentialCard(entry)}
-                            </div>
-                          )
-                        }
-
-                        const token =
-                          toLegacyAccountTokenForKeyManagementEntry(entry)
-                        const {
-                          associatedProfile,
-                          displayTokenKey,
-                          runtimeKeyLocator,
-                          tokenIdentityKey,
-                        } = getTokenRowAssociationProps(entry, token)
-                        const managedSiteStatusEntry =
-                          managedSiteTokenStatuses?.[tokenIdentityKey]
-
-                        return (
-                          <TokenListItem
-                            key={entry.id}
-                            token={token}
-                            displayTokenKey={displayTokenKey}
-                            visibleKeys={visibleKeys}
-                            isKeyVisibilityLoading={resolvingVisibleKeys.has(
-                              tokenIdentityKey,
-                            )}
-                            toggleKeyVisibility={toggleKeyVisibility}
-                            copyKey={copyKey}
-                            handleEditToken={handleEditToken}
-                            handleDeleteToken={handleDeleteToken}
-                            account={account}
-                            managedSiteStatus={managedSiteStatusEntry?.result}
-                            isManagedSiteStatusChecking={
-                              managedSiteStatusEntry?.isChecking === true
-                            }
-                            onManagedSiteImportSuccess={
-                              onManagedSiteImportSuccess
-                            }
-                            onManagedSiteVerificationRetry={
-                              onManagedSiteVerificationRetry
-                            }
-                            {...getSelectionProps(entry.id)}
-                            onOpenCCSwitchDialog={() =>
-                              handleOpenCCSwitchDialog(token, account)
-                            }
-                            guidedManagedSiteImportRequest={
-                              entry.id === guidedManagedSiteImportEntryId
-                                ? guidedManagedSiteImport?.request
-                                : undefined
-                            }
-                            association={getAssociationPresentation(
-                              runtimeKeyLocator,
-                              entry.runtimeKey.label,
-                              entry.runtimeKey.secret,
-                            )}
-                            associatedProfile={associatedProfile}
-                            {...getRuntimeEntryNavigationProps(entry)}
-                          />
-                        )
-                      })}
+                      {group.filteredEntries.map((entry) => (
+                        <div key={entry.id}>
+                          {renderServiceCredentialCard(entry)}
+                        </div>
+                      ))}
                       {renderNativeResourceList(group.nativeRows)}
                     </div>
                   ) : null}
@@ -1403,67 +1248,9 @@ export function TokenList(props: TokenListProps) {
         </>
       ) : (
         <div className="space-y-3">
-          {filteredEntries.map((entry) => {
-            if (isServiceCredentialRuntimeKey(entry.runtimeKey)) {
-              return (
-                <div key={entry.id}>{renderServiceCredentialCard(entry)}</div>
-              )
-            }
-
-            const token = toLegacyAccountTokenForKeyManagementEntry(entry)
-            const account = accountById.get(token.accountId)
-            if (!account) {
-              return null
-            }
-
-            const {
-              associatedProfile,
-              displayTokenKey,
-              runtimeKeyLocator,
-              tokenIdentityKey,
-            } = getTokenRowAssociationProps(entry, token)
-            const managedSiteStatusEntry =
-              managedSiteTokenStatuses?.[tokenIdentityKey]
-
-            return (
-              <TokenListItem
-                key={entry.id}
-                token={token}
-                displayTokenKey={displayTokenKey}
-                visibleKeys={visibleKeys}
-                isKeyVisibilityLoading={resolvingVisibleKeys.has(
-                  tokenIdentityKey,
-                )}
-                toggleKeyVisibility={toggleKeyVisibility}
-                copyKey={copyKey}
-                handleEditToken={handleEditToken}
-                handleDeleteToken={handleDeleteToken}
-                account={account}
-                managedSiteStatus={managedSiteStatusEntry?.result}
-                isManagedSiteStatusChecking={
-                  managedSiteStatusEntry?.isChecking === true
-                }
-                onManagedSiteImportSuccess={onManagedSiteImportSuccess}
-                onManagedSiteVerificationRetry={onManagedSiteVerificationRetry}
-                {...getSelectionProps(entry.id)}
-                onOpenCCSwitchDialog={() =>
-                  handleOpenCCSwitchDialog(token, account)
-                }
-                guidedManagedSiteImportRequest={
-                  entry.id === guidedManagedSiteImportEntryId
-                    ? guidedManagedSiteImport?.request
-                    : undefined
-                }
-                association={getAssociationPresentation(
-                  runtimeKeyLocator,
-                  entry.runtimeKey.label,
-                  entry.runtimeKey.secret,
-                )}
-                associatedProfile={associatedProfile}
-                {...getRuntimeEntryNavigationProps(entry)}
-              />
-            )
-          })}
+          {filteredEntries.map((entry) => (
+            <div key={entry.id}>{renderServiceCredentialCard(entry)}</div>
+          ))}
         </div>
       )}
 

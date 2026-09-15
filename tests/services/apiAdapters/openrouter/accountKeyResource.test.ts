@@ -1072,13 +1072,13 @@ describe("openRouterAccountKeyResources", () => {
       expect.anything(),
       expect.objectContaining({ workspaceId: "workspace-selected-id" }),
     )
-    expect(result.facts.ref).toEqual({
+    expect(result.facts?.ref).toEqual({
       accountId: "account-example",
       siteType: SITE_TYPES.OPENROUTER,
       scopeKey: "workspace-selected-id",
       resourceId: "selected-key-hash",
     })
-    expect(result.facts.fields).toContainEqual(
+    expect(result.facts?.fields).toContainEqual(
       expect.objectContaining({
         fieldId: OPENROUTER_KEY_FIELD_IDS.Workspace,
         value: "Selected workspace",

@@ -75,6 +75,7 @@ import {
   parseSub2ApiEnvelope,
   parseSub2ApiGroupRates,
   parseSub2ApiKey,
+  parseSub2ApiNativeKey,
   parseSub2ApiTodayUsage,
   resolveSub2ApiGroupId,
   translateSub2ApiCreateTokenRequest,
@@ -95,10 +96,13 @@ import {
   type Sub2ApiAffiliateData,
   type Sub2ApiAnnouncementData,
   type Sub2ApiAnnouncementListData,
+  type Sub2ApiCreateKeyPayload,
   type Sub2ApiGroupDescriptor,
   type Sub2ApiKeyData,
   type Sub2ApiKeyListData,
+  type Sub2ApiNativeKey,
   type Sub2ApiPublicSettingsData,
+  type Sub2ApiUpdateKeyPayload,
   type Sub2ApiUsageStatsData,
 } from "./type"
 
@@ -950,7 +954,7 @@ export async function refreshAccountData(
 }
 
 type Sub2ApiKeyPage = {
-  tokens: ApiToken[]
+  tokens: Sub2ApiNativeKey[]
   totalPages: number
   reportedPage?: number
 }
@@ -1003,7 +1007,7 @@ const fetchAccountTokenPage = async (
 
     return {
       tokens: extractSub2ApiKeyItems(data).map((item) =>
-        parseSub2ApiKey(item, {
+        parseSub2ApiNativeKey(item, {
           defaultUserId: hydratedRequest.auth?.userId,
           endpoint,
         }),
@@ -1024,10 +1028,10 @@ const fetchAccountTokenPage = async (
 }
 
 /** Fetch the complete API-token inventory for all key-management consumers. */
-export async function fetchAccountTokens(
+export async function fetchSub2ApiKeys(
   request: ApiServiceRequest,
-): Promise<ApiToken[]> {
-  const tokens: ApiToken[] = []
+): Promise<Sub2ApiNativeKey[]> {
+  const tokens: Sub2ApiNativeKey[] = []
   const seenTokenIds = new Set<number>()
   let page = DEFAULT_KEYS_PAGE
 
@@ -1069,6 +1073,70 @@ export async function fetchAccountTokens(
 
     page += 1
   }
+}
+
+/** Transitional inventory projection for consumers awaiting native resources. */
+export async function fetchAccountTokens(
+  request: ApiServiceRequest,
+): Promise<ApiToken[]> {
+  return (await fetchSub2ApiKeys(request)).map((key) =>
+    parseSub2ApiKey(key, { defaultUserId: request.auth?.userId }),
+  )
+}
+
+/** Fetch a native key without flattening its group identity or quota units. */
+export async function fetchSub2ApiKey(
+  request: ApiServiceRequest,
+  keyId: number,
+): Promise<Sub2ApiNativeKey> {
+  const endpoint = `${SUB2API_KEYS_ENDPOINT}/${keyId}`
+  const { data, request: hydrated } =
+    await fetchSub2ApiDataWithRequest<Sub2ApiKeyData>(request, endpoint, {
+      method: "GET",
+      cache: "no-store",
+    })
+  const key = parseSub2ApiNativeKey(data, {
+    defaultUserId: hydrated.auth?.userId,
+    endpoint,
+  })
+  if (key.id !== keyId)
+    throw createSub2ApiKeyInventoryError(
+      endpoint,
+      SUB2API_KEY_INVENTORY_FAILURE_CODES.DuplicateKey,
+    )
+  return key
+}
+
+/** Sub2API accepts native group_id, USD quota, and whole expiry days on create. */
+export async function createSub2ApiKey(
+  request: ApiServiceRequest,
+  payload: Sub2ApiCreateKeyPayload,
+): Promise<Sub2ApiNativeKey | undefined> {
+  const { data, request: hydrated } = await fetchSub2ApiDataWithRequest<
+    Sub2ApiKeyData | undefined
+  >(
+    request,
+    SUB2API_KEYS_ENDPOINT,
+    { method: "POST", body: JSON.stringify(payload) },
+    { allowMissingData: true },
+  )
+  return data
+    ? parseSub2ApiNativeKey(data, { defaultUserId: hydrated.auth?.userId })
+    : undefined
+}
+
+/** Update only the native fields selected by the provider editor. */
+export async function updateSub2ApiKey(
+  request: ApiServiceRequest,
+  keyId: number,
+  payload: Partial<Sub2ApiUpdateKeyPayload>,
+): Promise<void> {
+  await fetchSub2ApiData(
+    request,
+    `${SUB2API_KEYS_ENDPOINT}/${keyId}`,
+    { method: "PUT", body: JSON.stringify(payload) },
+    { allowMissingData: true },
+  )
 }
 
 /**

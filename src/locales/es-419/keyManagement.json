@@ -304,7 +304,6 @@
       "newApiRetrieveKeyHint": "En New API, la comparación completa de claves depende de la clave del canal, y ver esa clave del canal requiere verificación 2FA, por lo que la comparación completa de claves no está disponible actualmente."
     },
     "label": "Sitio administrado",
-    "nativeResourceUnsupported": "La coincidencia con sitios administrados aún no admite claves de recursos nativos en esta página. La actualización solo se aplica a las claves compatibles.",
     "pageUnsupported": "Las comprobaciones de canales del sitio administrado no están disponibles en esta página porque el sitio administrado actual no admite buscar canales por URL.",
     "recovery": {
       "configureLogin": "Primero agrega en Configuración los campos de inicio de sesión de New API y asistencia 2FA. Hasta entonces, la clave del canal no se puede leer y la comparación completa de claves no se puede completar.",
@@ -346,17 +345,13 @@
     }
   },
   "messages": {
-    "accountNotFound": "No se encontró información de la cuenta",
     "batchSavedToApiProfiles": "Las claves seleccionadas se guardaron en la biblioteca de credenciales API",
     "batchSavedToApiProfilesNeedsConfirmation": "Se guardaron las claves seleccionadas. Revisa las asociaciones marcadas en la biblioteca de credenciales API.",
     "batchSaveToApiProfilesFailed": "No se pudieron guardar las claves seleccionadas en la biblioteca de credenciales API",
     "batchSaveToApiProfilesPartialFailed": "Se guardaron {{savedCount}} de {{totalCount}} claves seleccionadas. {{failedCount}} no se pudieron guardar.",
     "copyFailed": "No se pudo copiar",
-    "deleteConfirm": "¿Seguro que quieres eliminar la clave {{name}}? Esta acción no se puede deshacer",
-    "deleteSuccess": "La clave {{name}} se eliminó correctamente",
     "keyCopied": "La clave {{name}} se copió al portapapeles",
     "loadFailed": "No se pudo cargar la lista de claves",
-    "revealFailed": "No se pudo revelar la clave",
     "savedToApiProfiles": "{{name}} se guardó en la biblioteca de credenciales API",
     "savedToApiProfilesNeedsConfirmation": "La credencial se guardó. Revisa su asociación de clave en la biblioteca de credenciales API.",
     "saveToApiProfilesFailed": "No se pudo guardar en la biblioteca de credenciales API",
@@ -368,6 +363,11 @@
   },
   "native": {
     "detailsLoadFailed": "No se pudieron cargar los detalles de la clave.",
+    "editor": {
+      "expiryDays": "Vence en (días)",
+      "quotaUsd": "Cuota (USD)",
+      "totalQuotaUsd": "Cuota total (USD)"
+    },
     "heading": "Claves API",
     "missing": "No disponible",
     "scope": {
@@ -542,10 +542,10 @@
         "edit": "Editar clave API"
       },
       "unsaved": {
-        "description": "Tus cambios no se han guardado.",
+        "description": "Al cerrar, se descartarán tus cambios.",
         "discard": "Descartar cambios",
         "keepEditing": "Seguir editando",
-        "title": "¿Descartar cambios sin guardar?"
+        "title": "¿Descartar cambios?"
       }
     },
     "list": {

@@ -4,11 +4,9 @@ import { useTranslation } from "react-i18next"
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import {
-  buildDisplayAccountTokenRuntimeKey,
-  collectAccountRuntimeKeySecrets,
-} from "~/services/accounts/accountRuntimeKeys"
-import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import { collectAccountRuntimeKeySecrets } from "~/services/accounts/accountRuntimeKeys"
+import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import type { KelivoProviderExportInput } from "~/services/integrations/kelivo"
@@ -25,39 +23,40 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import type { AccountToken, DisplaySiteData } from "~/types"
-import { getErrorMessage } from "~/utils/core/error"
+import type { DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
 
-const logger = createLogger("TokenIntegrationActions")
+const logger = createLogger("RuntimeKeyIntegrationActions")
 
-/** Shared analytics context for opening and completing a Kelivo token export. */
-export const TOKEN_KELIVO_EXPORT_ANALYTICS_CONTEXT = {
+/** Shared analytics context for opening and completing a Kelivo key export. */
+export const RUNTIME_KEY_KELIVO_EXPORT_ANALYTICS_CONTEXT = {
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
   actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountTokenKelivoImportCode,
   surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.AccountTokenThirdPartyExportDialog,
   entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
 } as const
 
-interface UseTokenIntegrationActionsParams {
+interface UseRuntimeKeyIntegrationActionsParams {
   account: DisplaySiteData
   enabled: boolean
   guidedManagedSiteImportRequest?: string
   managedSiteStatus?: ManagedSiteTokenChannelStatus
-  onManagedSiteImportSuccess?: (token: AccountToken) => void | Promise<void>
-  token: AccountToken
+  onManagedSiteImportSuccess?: (
+    runtimeKey: AccountRuntimeKey,
+  ) => void | Promise<void>
+  runtimeKey: AccountRuntimeKey
 }
 
-/** Owns third-party export and managed-site import state for one token row. */
-export function useTokenIntegrationActions({
+/** Owns third-party export and managed-site import state for one runtime key. */
+export function useRuntimeKeyIntegrationActions({
   account,
   enabled,
   guidedManagedSiteImportRequest,
   managedSiteStatus,
   onManagedSiteImportSuccess,
-  token,
-}: UseTokenIntegrationActionsParams) {
+  runtimeKey,
+}: UseRuntimeKeyIntegrationActionsParams) {
   const { t } = useTranslation(["keyManagement", "settings"])
   const { managedSiteType, claudeCodeRouterBaseUrl, claudeCodeRouterApiKey } =
     useUserPreferencesContext()
@@ -108,10 +107,10 @@ export function useTokenIntegrationActions({
     account.token,
     account.userId,
     enabled,
-    token.accountId,
-    token.id,
-    token.key,
-    token.name,
+    runtimeKey.accountId,
+    runtimeKey.id,
+    runtimeKey.secret,
+    runtimeKey.label,
   ])
 
   useEffect(() => {
@@ -152,12 +151,12 @@ export function useTokenIntegrationActions({
     try {
       const result = await openWithAccount(
         account,
-        buildDisplayAccountTokenRuntimeKey(account, token),
+        runtimeKey,
         (result) => {
           showResultToast(result)
 
           if (result?.success && onManagedSiteImportSuccess) {
-            void Promise.resolve(onManagedSiteImportSuccess(token)).catch(
+            void Promise.resolve(onManagedSiteImportSuccess(runtimeKey)).catch(
               (error) =>
                 logger.error(
                   "Managed-site import success callback failed",
@@ -199,9 +198,7 @@ export function useTokenIntegrationActions({
           error:
             toSanitizedErrorSummary(
               error,
-              collectAccountRuntimeKeySecrets([
-                buildDisplayAccountTokenRuntimeKey(account, token),
-              ]),
+              collectAccountRuntimeKeySecrets([runtimeKey]),
             ) || t("messages:errors.unknown"),
         }),
       })
@@ -220,6 +217,7 @@ export function useTokenIntegrationActions({
   }
 
   const handleUseInCherry = async () => {
+    const exportEpoch = kelivoExportEpochRef.current
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportAccountTokenToCherryStudio,
@@ -229,25 +227,37 @@ export function useTokenIntegrationActions({
     })
 
     try {
-      const resolvedToken = await resolveDisplayAccountTokenForSecret(
+      const resolvedKey = await resolveDisplayAccountRuntimeKeySecret(
         account,
-        token,
+        runtimeKey,
       )
+      if (kelivoExportEpochRef.current !== exportEpoch) {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
+        return
+      }
       OpenInCherryStudio({
         providerId: account.id,
         providerName: account.name,
         baseUrl: account.baseUrl,
-        apiKey: resolvedToken.key,
+        apiKey: resolvedKey.secret,
       })
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
+      if (kelivoExportEpochRef.current !== exportEpoch) {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
+        return
+      }
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
       showResultToast({
         success: false,
         message: t("messages:errors.operation.failed", {
-          error: getErrorMessage(error),
+          error:
+            toSanitizedErrorSummary(
+              error,
+              collectAccountRuntimeKeySecrets([runtimeKey]),
+            ) || t("messages:errors.unknown"),
         }),
       })
     }
@@ -256,9 +266,9 @@ export function useTokenIntegrationActions({
   const handleOpenKelivoExportDialog = async () => {
     const exportEpoch = ++kelivoExportEpochRef.current
     try {
-      const resolvedToken = await resolveDisplayAccountTokenForSecret(
+      const resolvedKey = await resolveDisplayAccountRuntimeKeySecret(
         account,
-        token,
+        runtimeKey,
       )
       if (kelivoExportEpochRef.current !== exportEpoch) return
 
@@ -266,17 +276,17 @@ export function useTokenIntegrationActions({
         apiType: API_TYPES.OPENAI_COMPATIBLE,
         name: buildApiCredentialProfileName({
           accountName: account.name,
-          fallbackAccountName: token.accountName,
-          tokenName: token.name,
+          fallbackAccountName: runtimeKey.accountName,
+          tokenName: runtimeKey.label,
         }),
         baseUrl: account.baseUrl,
-        apiKey: resolvedToken.key,
+        apiKey: resolvedKey.secret,
       })
     } catch (error) {
       if (kelivoExportEpochRef.current !== exportEpoch) return
 
       const tracker = startProductAnalyticsAction(
-        TOKEN_KELIVO_EXPORT_ANALYTICS_CONTEXT,
+        RUNTIME_KEY_KELIVO_EXPORT_ANALYTICS_CONTEXT,
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
@@ -287,9 +297,7 @@ export function useTokenIntegrationActions({
           error:
             toSanitizedErrorSummary(
               error,
-              collectAccountRuntimeKeySecrets([
-                buildDisplayAccountTokenRuntimeKey(account, token),
-              ]),
+              collectAccountRuntimeKeySecrets([runtimeKey]),
             ) || t("messages:errors.unknown"),
         }),
       })
@@ -336,6 +344,6 @@ export function useTokenIntegrationActions({
   }
 }
 
-export type TokenIntegrationActionsController = ReturnType<
-  typeof useTokenIntegrationActions
+export type RuntimeKeyIntegrationActionsController = ReturnType<
+  typeof useRuntimeKeyIntegrationActions
 >

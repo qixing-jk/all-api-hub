@@ -2,7 +2,6 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { TokenList } from "~/features/KeyManagement/components/TokenList"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { KEY_MANAGEMENT_LOAD_STATUSES } from "~/features/KeyManagement/types"
@@ -13,6 +12,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { TokenListHarness as TokenList } from "~~/tests/test-utils/keyManagement/TokenListHarness"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 import {
   createAccount,
@@ -65,42 +65,45 @@ vi.mock(
   }),
 )
 
-vi.mock("~/features/KeyManagement/components/TokenListItem", () => ({
-  TokenListItem: ({
-    token,
-    isSelected,
-    onSelectionChange,
-    selectionDisabledReason,
-    onOpenCCSwitchDialog,
-  }: {
-    token: { name: string }
-    isSelected?: boolean
-    onSelectionChange?: (checked: boolean) => void
-    selectionDisabledReason?: string
-    onOpenCCSwitchDialog?: () => void
-  }) => (
-    <div>
-      {onSelectionChange || selectionDisabledReason ? (
-        <label>
-          <input
-            type="checkbox"
-            checked={isSelected === true}
-            disabled={!onSelectionChange}
-            onChange={(event) =>
-              onSelectionChange?.(event.currentTarget.checked)
-            }
-          />
-          {token.name}
-        </label>
-      ) : (
-        <span>{token.name}</span>
-      )}
-      <button type="button" onClick={onOpenCCSwitchDialog}>
-        Open CC Switch for {token.name}
-      </button>
-    </div>
-  ),
-}))
+vi.mock(
+  "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceListItem",
+  () => ({
+    AccountKeyResourceListItem: ({
+      row,
+      isSelected,
+      onSelectionChange,
+      selectionDisabledReason,
+      onOpenCCSwitchDialog,
+    }: {
+      row: { facts: { displayName: string } }
+      isSelected?: boolean
+      onSelectionChange?: (checked: boolean) => void
+      selectionDisabledReason?: string
+      onOpenCCSwitchDialog?: () => void
+    }) => (
+      <div>
+        {onSelectionChange || selectionDisabledReason ? (
+          <label>
+            <input
+              type="checkbox"
+              checked={isSelected === true}
+              disabled={!onSelectionChange}
+              onChange={(event) =>
+                onSelectionChange?.(event.currentTarget.checked)
+              }
+            />
+            {row.facts.displayName}
+          </label>
+        ) : (
+          <span>{row.facts.displayName}</span>
+        )}
+        <button type="button" onClick={onOpenCCSwitchDialog}>
+          Open CC Switch for {row.facts.displayName}
+        </button>
+      </div>
+    ),
+  }),
+)
 
 vi.mock("~/components/CCSwitchExportDialog", () => ({
   CCSwitchExportDialog: ({
@@ -238,31 +241,56 @@ describe("TokenList batch export selection", () => {
     )
   })
 
-  it("toggles visible token selection from the toolbar", async () => {
-    const user = userEvent.setup()
-    renderTokenList()
+  it.each([account.id, KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE])(
+    "places batch actions before keys and toggles visible selection in %s",
+    async (selectedAccount) => {
+      const user = userEvent.setup()
+      renderTokenList({ selectedAccount })
 
-    const visibleSelection = await screen.findByRole("checkbox", {
-      name: "keyManagement:batchManagedSiteExport.selection.visible",
-    })
-    const token1Selection = await screen.findByRole("checkbox", {
-      name: "Token 1",
-    })
-    const token2Selection = await screen.findByRole("checkbox", {
-      name: "Token 2",
-    })
+      if (selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE) {
+        await user.click(
+          await screen.findByRole("button", {
+            name: "keyManagement:actions.expandAll",
+          }),
+        )
+      }
 
-    expect(token1Selection).not.toBeChecked()
-    expect(token2Selection).not.toBeChecked()
+      const visibleSelection = await screen.findByRole("checkbox", {
+        name: "keyManagement:batchManagedSiteExport.selection.visible",
+      })
+      const token1Selection = await screen.findByRole("checkbox", {
+        name: "Token 1",
+      })
+      const token2Selection = await screen.findByRole("checkbox", {
+        name: "Token 2",
+      })
 
-    await user.click(visibleSelection)
-    expect(token1Selection).toBeChecked()
-    expect(token2Selection).toBeChecked()
+      const batchSave = screen.getByRole("button", {
+        name: "keyManagement:batchApiCredentialProfiles.actions.open",
+      })
+      for (const selection of [token1Selection, token2Selection]) {
+        expect(
+          visibleSelection.compareDocumentPosition(selection) &
+            Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy()
+        expect(
+          batchSave.compareDocumentPosition(selection) &
+            Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy()
+      }
 
-    await user.click(visibleSelection)
-    expect(token1Selection).not.toBeChecked()
-    expect(token2Selection).not.toBeChecked()
-  })
+      expect(token1Selection).not.toBeChecked()
+      expect(token2Selection).not.toBeChecked()
+
+      await user.click(visibleSelection)
+      expect(token1Selection).toBeChecked()
+      expect(token2Selection).toBeChecked()
+
+      await user.click(visibleSelection)
+      expect(token1Selection).not.toBeChecked()
+      expect(token2Selection).not.toBeChecked()
+    },
+  )
 
   it("excludes create-response-only keys from selection in a mixed inventory", async () => {
     const user = userEvent.setup()
@@ -499,7 +527,7 @@ describe("TokenList batch export selection", () => {
     expect(onManagedSiteImportSuccess).toHaveBeenCalledTimes(2)
     expect(onManagedSiteImportSuccess).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: token1.id,
+        resourceRef: expect.objectContaining({ resourceId: String(token1.id) }),
         accountId: account.id,
       }),
     )
@@ -773,19 +801,23 @@ describe("TokenList batch export selection", () => {
       expect.objectContaining({
         items: [
           expect.objectContaining({
-            id: "runtime_key:account_token:acc-1:1",
+            id: "account_key_resource:acc-1:new-api:account:1",
             runtimeKey: expect.objectContaining({
-              id: "account_token:acc-1:1",
+              id: "account_key_resource:acc-1:new-api:account:1",
               account: expect.objectContaining({ id: account.id }),
-              token: expect.objectContaining({ id: token1.id }),
+              resourceRef: expect.objectContaining({
+                resourceId: String(token1.id),
+              }),
             }),
           }),
           expect.objectContaining({
-            id: "runtime_key:account_token:acc-1:2",
+            id: "account_key_resource:acc-1:new-api:account:2",
             runtimeKey: expect.objectContaining({
-              id: "account_token:acc-1:2",
+              id: "account_key_resource:acc-1:new-api:account:2",
               account: expect.objectContaining({ id: account.id }),
-              token: expect.objectContaining({ id: token2.id }),
+              resourceRef: expect.objectContaining({
+                resourceId: String(token2.id),
+              }),
             }),
           }),
         ],
