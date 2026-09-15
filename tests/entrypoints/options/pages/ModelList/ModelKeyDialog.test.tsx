@@ -5,7 +5,12 @@ import { SITE_TYPES } from "~/constants/siteType"
 import ModelKeyDialog from "~/features/ModelList/components/ModelKeyDialog"
 import { useModelKeyDialog } from "~/features/ModelList/components/ModelKeyDialog/hooks/useModelKeyDialog"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
-import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
+import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
+import {
+  createAccountKeyResourceCreatedRuntimeSecret,
+  createUnattributedAccountCreatedRuntimeSecret,
+} from "~/services/accounts/createdRuntimeSecret"
+import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -16,6 +21,10 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"
+import {
+  buildNewApiKeyCreationResult,
+  buildNewApiRuntimeKey,
+} from "~~/tests/test-utils/accountKeyFixtures"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import {
   act,
@@ -27,7 +36,8 @@ import {
 
 const {
   fetchAccountTokensMock,
-  adapterCreateTokenMock,
+  createKeyMock,
+  prepareCreationMock,
   toastSuccessMock,
   toastErrorMock,
   resolveDisplayAccountRuntimeKeySecretMock,
@@ -39,7 +49,8 @@ const {
   captureApiCredentialProfileMock,
 } = vi.hoisted(() => ({
   fetchAccountTokensMock: vi.fn(),
-  adapterCreateTokenMock: vi.fn(),
+  createKeyMock: vi.fn(),
+  prepareCreationMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
   resolveDisplayAccountRuntimeKeySecretMock: vi.fn(),
@@ -67,10 +78,17 @@ vi.mock(
       >()
     return {
       ...original,
-      resolveDisplayAccountTokenForSecret: () => {
-        throw new Error(
-          "resolveDisplayAccountTokenForSecret should not be used by model key dialog",
-        )
+      fetchDisplayAccountRuntimeKeys: async (account: any) => {
+        const inventory = await fetchAccountTokensMock(account)
+        if (account.siteType === SITE_TYPES.SHAREDCHAT) {
+          const { buildServiceCredentialRuntimeKey } = await import(
+            "~/services/accounts/accountRuntimeKeys"
+          )
+          return [buildServiceCredentialRuntimeKey(account, inventory)]
+        }
+        if (!Array.isArray(inventory))
+          throw new AccountKeyResourceError({ code: "unexpected" })
+        return inventory.map((token) => buildNewApiRuntimeKey(account, token))
       },
       resolveDisplayAccountRuntimeKeySecret: (...args: any[]) =>
         resolveDisplayAccountRuntimeKeySecretMock(...args),
@@ -79,33 +97,35 @@ vi.mock(
 )
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteTypeCapabilities: (siteType: string) => {
-    if (siteType === SITE_TYPES.SHAREDCHAT) {
-      return {
-        account: {
-          serviceCredential: {
-            fetch: (...args: any[]) => fetchAccountTokensMock(...args),
-            rotate: vi.fn(),
+  getSiteTypeCapabilities: (siteType: string) => ({
+    account:
+      siteType === SITE_TYPES.SHAREDCHAT
+        ? {
+            serviceCredential: {
+              fetch: fetchAccountTokensMock,
+              rotate: vi.fn(),
+            },
+          }
+        : {
+            keyResourceManagement: {
+              defaultCreation: "editor-defaults",
+              inventorySecretAvailability:
+                siteType === SITE_TYPES.AIHUBMIX
+                  ? "create-response-only"
+                  : "recoverable",
+            },
           },
-        },
-      }
-    }
-
-    return {
-      account: {
-        keyManagement: {
-          fetchTokens: (...args: any[]) => fetchAccountTokensMock(...args),
-          createToken: (...args: any[]) => adapterCreateTokenMock(...args),
-          createRuntimeSecret:
-            siteType === SITE_TYPES.AIHUBMIX
-              ? createAIHubMixCreatedRuntimeSecret
-              : undefined,
-          resolveTokenKey: async ({ token }: { token: { key: string } }) =>
-            token.key,
-        },
-      },
-    }
-  },
+  }),
+}))
+vi.mock("~/services/accounts/accountKeyCreation", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/accounts/accountKeyCreation")
+  >()),
+  prepareDefaultAccountKeyCreation: prepareCreationMock,
+}))
+vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
+  default: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div>Native key editor</div> : null,
 }))
 
 vi.mock("~/utils/navigation", () => ({
@@ -170,21 +190,6 @@ const TOKEN = {
   group: "",
 } as any
 
-function mockTimeoutsAsMicrotasks() {
-  const originalSetTimeout = globalThis.setTimeout
-
-  return vi
-    .spyOn(globalThis, "setTimeout")
-    .mockImplementation((callback, delay) => {
-      if (delay === 1_000) {
-        queueMicrotask(() => callback(undefined))
-        return originalSetTimeout(() => undefined, 0)
-      }
-
-      return originalSetTimeout(callback, delay)
-    })
-}
-
 function createDeferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void
   let reject!: (reason?: unknown) => void
@@ -200,7 +205,12 @@ describe("ModelKeyDialog", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     fetchAccountTokensMock.mockReset()
-    adapterCreateTokenMock.mockReset()
+    createKeyMock.mockReset()
+    prepareCreationMock.mockReset()
+    prepareCreationMock.mockResolvedValue({
+      kind: "ready",
+      create: createKeyMock,
+    })
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
     resolveDisplayAccountRuntimeKeySecretMock.mockReset()
@@ -438,502 +448,292 @@ describe("ModelKeyDialog", () => {
     ).toBeInTheDocument()
   })
 
-  it("shows a one-time key dialog when AIHubMix default create returns a full token", async () => {
-    fetchAccountTokensMock.mockResolvedValueOnce([])
-    adapterCreateTokenMock.mockResolvedValueOnce({
-      ...TOKEN,
-      id: 8,
-      key: "sk-created-full-secret",
-      name: "model-key",
-    })
-
+  const createdKey = (
+    overrides: Partial<typeof TOKEN> = {},
+    oneTimeSecret?: string,
+  ): AccountKeyCreationResult => {
+    const token = { ...TOKEN, id: 8, name: "model-key", ...overrides }
+    const creation = buildNewApiKeyCreationResult(AIHUBMIX_ACCOUNT, token)
+    return {
+      ...creation,
+      ...(oneTimeSecret
+        ? {
+            createdSecret: createAccountKeyResourceCreatedRuntimeSecret({
+              ref: creation.ref!,
+              displayName: token.name,
+              secret: oneTimeSecret,
+              credential: {
+                accountName: AIHUBMIX_ACCOUNT.name,
+                baseUrl: AIHUBMIX_ACCOUNT.baseUrl,
+                siteType: SITE_TYPES.AIHUBMIX,
+                apiType: API_TYPES.OPENAI_COMPATIBLE,
+                tagIds: AIHUBMIX_ACCOUNT.tagIds,
+              },
+            }),
+          }
+        : {}),
+    }
+  }
+  const beginCreate = async (account = AIHUBMIX_ACCOUNT) => {
     const user = userEvent.setup()
     const writeText = vi
       .spyOn(navigator.clipboard, "writeText")
       .mockResolvedValue(undefined)
-
-    render(
+    const view = render(
       <ModelKeyDialog
-        isOpen={true}
+        isOpen
         onClose={() => {}}
-        account={AIHUBMIX_ACCOUNT}
+        account={account}
         modelId="gpt-4"
         modelEnableGroups={["default"]}
       />,
     )
-
     await user.click(
       await screen.findByRole("button", {
         name: "modelList:keyDialog.createKey",
       }),
     )
+    return { user, writeText, ...view }
+  }
 
-    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateCompatibleModelKey,
-      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListKeyDialog,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
-    expect(trackProductAnalyticsActionStartedMock).not.toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateCompatibleModelKey,
-      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListKeyDialog,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
-    expect(
-      await screen.findByText("keyManagement:oneTimeKey.title"),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByLabelText("keyManagement:oneTimeKey.keyLabel"),
-    ).toHaveValue("sk-created-full-secret")
-
-    await waitFor(() => {
-      expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
-      expect(adapterCreateTokenMock.mock.calls[0]?.[1]).toMatchObject({
-        group: "default",
-        model_limits_enabled: false,
-        model_limits: "",
-      })
+  it.each(["sk-created-full-secret", "created-full-secret"])(
+    "preserves a provider-native one-time secret unchanged: %s",
+    async (secret) => {
+      fetchAccountTokensMock.mockResolvedValue([])
+      createKeyMock.mockResolvedValue(createdKey({}, secret))
+      const { writeText } = await beginCreate()
+      expect(
+        await screen.findByLabelText("keyManagement:oneTimeKey.keyLabel"),
+      ).toHaveValue(secret)
+      await waitFor(() => expect(writeText).toHaveBeenCalledWith(secret))
+      expect(createKeyMock).toHaveBeenCalledTimes(1)
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
-      expect(writeText).toHaveBeenCalledWith("sk-created-full-secret")
-    })
-    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Success,
-    )
-  })
+      expect(prepareCreationMock).toHaveBeenCalledWith(
+        AIHUBMIX_ACCOUNT,
+        expect.objectContaining({
+          signal: expect.any(AbortSignal),
+          intent: expect.objectContaining({
+            preferredGroup: "default",
+            allowedGroups: ["default"],
+          }),
+        }),
+      )
+      expect(startProductAnalyticsActionMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateCompatibleModelKey,
+        }),
+      )
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+      )
+    },
+  )
 
-  it("saves an AIHubMix default-created one-time key to an API credential profile without closing the dialog", async () => {
-    fetchAccountTokensMock.mockResolvedValueOnce([])
-    adapterCreateTokenMock.mockResolvedValueOnce({
-      ...TOKEN,
-      id: 8,
-      key: "sk-created-full-secret",
-      name: "model-key",
-    })
-    createApiCredentialProfileMock.mockResolvedValueOnce({
-      id: "profile-1",
-      name: "AIHubMix - model-key",
-      apiType: API_TYPES.OPENAI_COMPATIBLE,
-      baseUrl: AIHUBMIX_ACCOUNT.baseUrl,
-      apiKey: "sk-created-full-secret",
-      tagIds: AIHUBMIX_ACCOUNT.tagIds,
-      notes: "",
-      createdAt: 1,
-      updatedAt: 1,
-    })
-    const onClose = vi.fn()
-
-    const user = userEvent.setup()
-    vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined)
-
-    render(
-      <ModelKeyDialog
-        isOpen={true}
-        onClose={onClose}
-        account={AIHUBMIX_ACCOUNT}
-        modelId="gpt-4"
-        modelEnableGroups={["default"]}
-      />,
-    )
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "modelList:keyDialog.createKey",
-      }),
-    )
+  it("saves the one-time secret with its native resource association", async () => {
+    fetchAccountTokensMock.mockResolvedValue([])
+    const creation = createdKey({}, "sk-created-full-secret")
+    createKeyMock.mockResolvedValue(creation)
+    createApiCredentialProfileMock.mockResolvedValue({ id: "profile-1" })
+    const { user } = await beginCreate()
     await user.click(
       await screen.findByTestId(
         TOKEN_PROVISIONING_TEST_IDS.oneTimeKeySaveButton,
       ),
     )
-
-    await waitFor(() => {
-      expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
+    await waitFor(() =>
       expect(createApiCredentialProfileMock).toHaveBeenCalledWith({
         name: "AIHubMix - model-key",
         apiType: API_TYPES.OPENAI_COMPATIBLE,
         baseUrl: AIHUBMIX_ACCOUNT.baseUrl,
         apiKey: "sk-created-full-secret",
         tagIds: AIHUBMIX_ACCOUNT.tagIds,
-      })
-    })
+      }),
+    )
     expect(captureApiCredentialProfileMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        locator: {
-          source: "account_token",
-          accountId: AIHUBMIX_ACCOUNT.id,
-          siteType: SITE_TYPES.AIHUBMIX,
-          tokenId: 8,
-        },
+        locator: { source: "account_key_resource", ref: creation.ref },
         linkedBy: "creation-response",
       }),
     )
-    expect(toastSuccessMock).toHaveBeenCalledWith(
-      "keyManagement:messages.savedToApiProfiles",
-    )
-    expect(onClose).not.toHaveBeenCalled()
     expect(
       screen.getByLabelText("keyManagement:oneTimeKey.keyLabel"),
     ).toHaveValue("sk-created-full-secret")
   })
 
-  it("keeps AIHubMix created keys unchanged before showing the one-time dialog", async () => {
-    fetchAccountTokensMock.mockResolvedValueOnce([])
-    adapterCreateTokenMock.mockResolvedValueOnce({
-      ...TOKEN,
-      id: 8,
-      key: "created-full-secret",
-      name: "model-key",
-    })
-
-    const user = userEvent.setup()
-    const writeText = vi
-      .spyOn(navigator.clipboard, "writeText")
-      .mockResolvedValue(undefined)
-
-    render(
-      <ModelKeyDialog
-        isOpen={true}
-        onClose={() => {}}
-        account={AIHUBMIX_ACCOUNT}
-        modelId="gpt-4"
-        modelEnableGroups={["default"]}
-      />,
+  it("retains the one-time secret when observed model policy denies the requested model", async () => {
+    fetchAccountTokensMock.mockResolvedValue([])
+    createKeyMock.mockResolvedValue(
+      createdKey({ group: "vip" }, "sk-created-full-secret"),
     )
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "modelList:keyDialog.createKey",
-      }),
-    )
-
+    await beginCreate()
     expect(
-      await screen.findByText("keyManagement:oneTimeKey.title"),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByLabelText("keyManagement:oneTimeKey.keyLabel"),
-    ).toHaveValue("created-full-secret")
-
-    await waitFor(() => {
-      expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
-      expect(writeText).toHaveBeenCalledWith("created-full-secret")
-    })
-  })
-
-  it("refreshes instead of showing a one-time key when AIHubMix create returns a masked key", async () => {
-    fetchAccountTokensMock.mockResolvedValueOnce([]).mockResolvedValueOnce([
-      {
-        ...TOKEN,
-        id: 11,
-        key: "sk-refreshed-compatible",
-        name: "refreshed",
-      },
-    ])
-    adapterCreateTokenMock.mockResolvedValueOnce({
-      ...TOKEN,
-      id: 8,
-      key: "sk-created********masked",
-      name: "masked-created-token",
-    })
-
-    const user = userEvent.setup()
-
-    render(
-      <ModelKeyDialog
-        isOpen={true}
-        onClose={() => {}}
-        account={AIHUBMIX_ACCOUNT}
-        modelId="gpt-4"
-        modelEnableGroups={["default"]}
-      />,
-    )
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "modelList:keyDialog.createKey",
-      }),
-    )
-
-    await waitFor(() => {
-      expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
-      expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
-    })
-
-    expect(
-      screen.queryByText("keyManagement:oneTimeKey.title"),
-    ).not.toBeInTheDocument()
-    expect(
-      await screen.findByRole("button", { name: "common:actions.copyKey" }),
-    ).toBeInTheDocument()
-    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Success,
-    )
-  })
-
-  it("shows a compatibility error when default create returns an incompatible full token", async () => {
-    fetchAccountTokensMock.mockResolvedValueOnce([])
-    adapterCreateTokenMock.mockResolvedValueOnce({
-      ...TOKEN,
-      id: 8,
-      key: "sk-created-full-secret",
-      name: "wrong-group-key",
-      group: "vip",
-    })
-
-    const user = userEvent.setup()
-    const writeText = vi
-      .spyOn(navigator.clipboard, "writeText")
-      .mockResolvedValue(undefined)
-
-    render(
-      <ModelKeyDialog
-        isOpen={true}
-        onClose={() => {}}
-        account={AIHUBMIX_ACCOUNT}
-        modelId="gpt-4"
-        modelEnableGroups={["default"]}
-      />,
-    )
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "modelList:keyDialog.createKey",
-      }),
-    )
-
+      await screen.findByLabelText("keyManagement:oneTimeKey.keyLabel"),
+    ).toHaveValue("sk-created-full-secret")
     expect(
       await screen.findByText(
         "modelList:keyDialog.noCompatibleFoundAfterCreate",
       ),
     ).toBeInTheDocument()
-    expect(
-      screen.queryByText("keyManagement:oneTimeKey.title"),
-    ).not.toBeInTheDocument()
-    expect(writeText).not.toHaveBeenCalled()
-    expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
     )
   })
 
-  it("refreshes runtime keys when default create returns a token-shaped object with an invalid secret", async () => {
-    fetchAccountTokensMock.mockResolvedValueOnce([]).mockResolvedValueOnce([
-      {
-        ...TOKEN,
-        id: 11,
-        key: "sk-refreshed-compatible",
-        name: "refreshed",
-      },
-    ])
-    adapterCreateTokenMock.mockResolvedValueOnce({
-      ...TOKEN,
-      id: 8,
-      key: null,
-      name: "invalid-created-token",
-    })
-
-    const user = userEvent.setup()
-
-    render(
-      <ModelKeyDialog
-        isOpen={true}
-        onClose={() => {}}
-        account={AIHUBMIX_ACCOUNT}
-        modelId="gpt-4"
-        modelEnableGroups={["default"]}
-      />,
-    )
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "modelList:keyDialog.createKey",
-      }),
-    )
-
-    await waitFor(() => {
-      expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
-      expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
-    })
-
-    expect(
-      screen.queryByText("keyManagement:oneTimeKey.title"),
-    ).not.toBeInTheDocument()
+  it("waits for the returned reference rather than accepting an unrelated compatible key", async () => {
+    const token = { ...TOKEN, id: 8, name: "Returned key" }
+    const creation = buildNewApiKeyCreationResult(ACCOUNT, token)
+    fetchAccountTokensMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ ...TOKEN, id: 9, name: "Other key" }])
+      .mockResolvedValueOnce([token])
+    createKeyMock.mockResolvedValue({ ref: creation.ref, facts: null })
+    await beginCreate(ACCOUNT)
+    await waitFor(() => expect(fetchAccountTokensMock).toHaveBeenCalledTimes(3))
     expect(
       await screen.findByRole("button", { name: "common:actions.copyKey" }),
-    ).toBeInTheDocument()
+    ).toBeVisible()
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
     )
   })
 
-  it("waits for a compatible key to appear after create returns without a token payload", async () => {
+  it("reports an unreconciled creation without issuing another write", async () => {
     fetchAccountTokensMock
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([
-        {
-          ...TOKEN,
-          id: 11,
-          key: "sk-refreshed-compatible",
-          name: "refreshed",
-        },
-      ])
-    adapterCreateTokenMock.mockResolvedValueOnce(true)
+      .mockResolvedValue([{ ...TOKEN, id: 9 }])
+    createKeyMock.mockResolvedValue({
+      ref: buildNewApiKeyCreationResult(ACCOUNT, { ...TOKEN, id: 8 }).ref,
+      facts: null,
+    })
+    await beginCreate(ACCOUNT)
+    expect(
+      await screen.findByText(
+        "modelList:keyDialog.noCompatibleFoundAfterCreate",
+        {},
+        { timeout: 7000 },
+      ),
+    ).toBeVisible()
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(6)
+    expect(createKeyMock).toHaveBeenCalledTimes(1)
+  })
 
-    render(
+  it("retains an unattributed one-time secret when inventory recovery fails", async () => {
+    fetchAccountTokensMock
+      .mockResolvedValueOnce([])
+      .mockRejectedValue(new Error("offline"))
+    const original = createdKey({}, "sk-created-full-secret").createdSecret!
+    createKeyMock.mockResolvedValue({
+      ref: null,
+      facts: null,
+      createdSecret: createUnattributedAccountCreatedRuntimeSecret({
+        accountId: AIHUBMIX_ACCOUNT.id,
+        displayName: original.displayName,
+        secret: original.secret,
+        credential: original.credential,
+      }),
+    })
+    await beginCreate()
+    expect(
+      await screen.findByLabelText("keyManagement:oneTimeKey.keyLabel"),
+    ).toHaveValue(original.secret)
+    expect(
+      await screen.findByText("modelList:keyDialog.createFailed"),
+    ).toBeInTheDocument()
+    expect(createKeyMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("allows a definite failure to retry but never repeats an uncertain native write", async () => {
+    fetchAccountTokensMock.mockResolvedValue([])
+    createKeyMock
+      .mockRejectedValueOnce(new Error("not submitted"))
+      .mockRejectedValue(
+        new AccountKeyResourceError({ code: "mutation_state_uncertain" }),
+      )
+    const { result } = renderHook(() =>
+      useModelKeyDialog({
+        isOpen: true,
+        account: ACCOUNT,
+        modelId: "gpt-4",
+        modelEnableGroups: ["default"],
+      }),
+    )
+    await waitFor(() => expect(result.current).not.toBeNull())
+    await act(async () => {
+      expect(await result.current.createDefaultKey("default")).toBe("failure")
+    })
+    await act(async () => {
+      expect(await result.current.createDefaultKey("default")).toBe("failure")
+    })
+    await act(async () => {
+      expect(await result.current.createDefaultKey("default")).toBe("skipped")
+    })
+    expect(createKeyMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("drops a late create result after the authentication source changes", async () => {
+    fetchAccountTokensMock.mockResolvedValue([])
+    const pending = createDeferred<AccountKeyCreationResult>()
+    createKeyMock.mockReturnValue(pending.promise)
+    const { rerender } = await beginCreate()
+    rerender(
       <ModelKeyDialog
-        isOpen={true}
+        isOpen
         onClose={() => {}}
-        account={ACCOUNT}
+        account={{ ...AIHUBMIX_ACCOUNT, token: "new-login" }}
         modelId="gpt-4"
         modelEnableGroups={["default"]}
       />,
     )
-
-    const createButton = await screen.findByRole("button", {
-      name: "modelList:keyDialog.createKey",
+    await act(async () => {
+      pending.resolve(createdKey({}, "sk-obsolete"))
+      await pending.promise
     })
-    const setTimeoutSpy = mockTimeoutsAsMicrotasks()
-    const user = userEvent.setup()
+    expect(
+      screen.queryByText("keyManagement:oneTimeKey.title"),
+    ).not.toBeInTheDocument()
+    expect(toastSuccessMock).not.toHaveBeenCalled()
+  })
 
-    await user.click(createButton)
-
-    await waitFor(() => {
-      expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
-      expect(adapterCreateTokenMock.mock.calls[0]?.[1]).toMatchObject({
-        group: "default",
-        model_limits_enabled: false,
-        model_limits: "",
+  it.each(["resolve", "reject"] as const)(
+    "ignores a stale copy %s after closing the dialog",
+    async (outcome) => {
+      fetchAccountTokensMock.mockResolvedValue([TOKEN])
+      const pending = createDeferred<any>()
+      resolveDisplayAccountRuntimeKeySecretMock.mockReturnValue(pending.promise)
+      const user = userEvent.setup()
+      const writeText = vi
+        .spyOn(navigator.clipboard, "writeText")
+        .mockResolvedValue(undefined)
+      const { rerender } = render(
+        <ModelKeyDialog
+          isOpen
+          onClose={() => {}}
+          account={ACCOUNT}
+          modelId="gpt-4"
+        />,
+      )
+      await user.click(
+        await screen.findByRole("button", { name: "common:actions.copyKey" }),
+      )
+      rerender(
+        <ModelKeyDialog
+          isOpen={false}
+          onClose={() => {}}
+          account={ACCOUNT}
+          modelId="gpt-4"
+        />,
+      )
+      await act(async () => {
+        if (outcome === "resolve") pending.resolve({ secret: "sk-obsolete" })
+        else pending.reject(new Error("obsolete"))
+        await pending.promise.catch(() => {})
       })
-      expect(fetchAccountTokensMock).toHaveBeenCalledTimes(3)
-    })
-    setTimeoutSpy.mockRestore()
-
-    expect(
-      await screen.findByRole("button", { name: "common:actions.copyKey" }),
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByText("modelList:keyDialog.noCompatibleFoundAfterCreate"),
-    ).not.toBeInTheDocument()
-    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Success,
-    )
-  })
-
-  it("shows a create error when refreshed inventory has no compatible runtime key", async () => {
-    fetchAccountTokensMock
-      .mockResolvedValueOnce([])
-      .mockResolvedValue([{ ...TOKEN, id: 11, group: "vip" }])
-    adapterCreateTokenMock.mockResolvedValueOnce(true)
-
-    render(
-      <ModelKeyDialog
-        isOpen={true}
-        onClose={() => {}}
-        account={ACCOUNT}
-        modelId="gpt-4"
-        modelEnableGroups={["default"]}
-      />,
-    )
-
-    const createButton = await screen.findByRole("button", {
-      name: "modelList:keyDialog.createKey",
-    })
-    const setTimeoutSpy = mockTimeoutsAsMicrotasks()
-    const user = userEvent.setup()
-
-    await user.click(createButton)
-
-    await waitFor(() => {
-      expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
-      expect(fetchAccountTokensMock).toHaveBeenCalledTimes(6)
-    })
-    setTimeoutSpy.mockRestore()
-
-    expect(
-      await screen.findByText(
-        "modelList:keyDialog.noCompatibleFoundAfterCreate",
-      ),
-    ).toBeInTheDocument()
-    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Failure,
-      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
-    )
-  })
-
-  it("shows a create error when post-create runtime-key refresh fails", async () => {
-    fetchAccountTokensMock
-      .mockResolvedValueOnce([])
-      .mockRejectedValueOnce(new Error("inventory offline"))
-    adapterCreateTokenMock.mockResolvedValueOnce(true)
-
-    const user = userEvent.setup()
-
-    render(
-      <ModelKeyDialog
-        isOpen={true}
-        onClose={() => {}}
-        account={ACCOUNT}
-        modelId="gpt-4"
-        modelEnableGroups={["default"]}
-      />,
-    )
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "modelList:keyDialog.createKey",
-      }),
-    )
-
-    expect(
-      await screen.findByText("modelList:keyDialog.createFailed"),
-    ).toBeInTheDocument()
-    expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
-    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
-    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Failure,
-      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
-    )
-  })
-
-  it("shows a create error when the default create request fails", async () => {
-    fetchAccountTokensMock.mockResolvedValueOnce([])
-    adapterCreateTokenMock.mockRejectedValueOnce(new Error("create failed"))
-
-    const user = userEvent.setup()
-
-    render(
-      <ModelKeyDialog
-        isOpen={true}
-        onClose={() => {}}
-        account={ACCOUNT}
-        modelId="gpt-4"
-        modelEnableGroups={["default"]}
-      />,
-    )
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "modelList:keyDialog.createKey",
-      }),
-    )
-
-    expect(
-      await screen.findByText("modelList:keyDialog.createFailed"),
-    ).toBeInTheDocument()
-    expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
-    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateCompatibleModelKey,
-      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListKeyDialog,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
-    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Failure,
-      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
-    )
-  })
+      expect(writeText).not.toHaveBeenCalled()
+      expect(toastSuccessMock).not.toHaveBeenCalled()
+      expect(toastErrorMock).not.toHaveBeenCalled()
+    },
+  )
 
   it("treats group mismatch as incompatible and shows empty state", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([{ ...TOKEN, group: "vip" }])
@@ -1168,9 +968,11 @@ describe("ModelKeyDialog", () => {
     ).toBeInTheDocument()
   })
 
-  it("shows a create error when the default create request returns false", async () => {
+  it("shows a create error when native preparation rejects the request", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
-    adapterCreateTokenMock.mockResolvedValueOnce(false)
+    prepareCreationMock.mockRejectedValueOnce(
+      new AccountKeyResourceError({ code: "validation_failed" }),
+    )
 
     const user = userEvent.setup()
 
@@ -1193,7 +995,7 @@ describe("ModelKeyDialog", () => {
     expect(
       await screen.findByText("modelList:keyDialog.createFailed"),
     ).toBeInTheDocument()
-    expect(adapterCreateTokenMock).toHaveBeenCalledTimes(1)
+    expect(createKeyMock).not.toHaveBeenCalled()
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },

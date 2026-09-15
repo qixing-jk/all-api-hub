@@ -135,3 +135,15 @@ describe("native key editor field policies", () => {
     },
   )
 })
+
+it("does not infer OpenRouter behavior when the owner is absent or unknown", () => {
+  for (const siteType of [undefined, "unknown-provider", SITE_TYPES.NEW_API]) {
+    const presentation = getNativeKeyResourceEditorPresentation(
+      siteType,
+      "create",
+    )
+    expect(presentation.summary).toBeUndefined()
+    expect(presentation.requireFreshOptions).toBeUndefined()
+    expect(presentation.getOptionFeedback).toBeUndefined()
+  }
+})

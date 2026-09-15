@@ -60,18 +60,19 @@ import {
   parseManualQuotaFromUsd,
 } from "~/services/accounts/accountFormValidation"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import {
+  ensureAccountKey,
+  getCreatedAccountRuntimeKey,
+  resolveCreatedAccountRuntimeKey,
+  type AccountKeyCreationResult,
+} from "~/services/accounts/accountKeyCreation"
 import { findAccountsBySiteIdentity } from "~/services/accounts/accountMatching"
 import { ACCOUNT_SAVE_FEEDBACK_LEVELS } from "~/services/accounts/accountPersistence/constants"
 import {
   ACCOUNT_POST_SAVE_WORKFLOW_STEPS,
-  ACCOUNT_TOKEN_INVENTORY_STATE_KINDS,
-  ENSURE_ACCOUNT_TOKEN_RESULT_KINDS,
-  ensureAccountTokenForPostSaveWorkflow,
-  inspectAccountTokenInventory,
-  selectSingleNewApiTokenByIdDiff,
   type AccountPostSaveWorkflowStep,
 } from "~/services/accounts/accountPostSaveWorkflow"
-import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { normalizeAccountSiteProfileUrlForDuplicateCheck } from "~/services/accounts/accountSiteProfile/urls"
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
@@ -80,12 +81,8 @@ import { accountRefresh } from "~/services/accounts/accountStorage/accountRefres
 import { validateAndUpdateAccount } from "~/services/accounts/accountUpdate"
 import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
-import { createDisplayAccountTokenRuntimeSecret } from "~/services/accounts/createdTokenSecretHandling"
 import { getSiteName } from "~/services/accounts/siteName"
-import {
-  createDisplayAccountApiContext,
-  requireDisplayAccountKeyManagement,
-} from "~/services/accounts/utils/apiServiceRequest"
+import { fetchDisplayAccountRuntimeKeys } from "~/services/accounts/utils/apiServiceRequest"
 import {
   analyzeAutoDetectError,
   AutoDetectErrorType,
@@ -141,7 +138,6 @@ import {
 } from "~/services/protectionBypass/contracts"
 import {
   AuthTypeEnum,
-  type ApiToken,
   type CheckInConfig,
   type DisplaySiteData,
   type SiteAccount,
@@ -443,8 +439,6 @@ export function useAccountDialog({
     useState<AccountPostSaveWorkflowStep>(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
   const [postSaveOneTimeSecret, setPostSaveOneTimeSecret] =
     useState<CreatedRuntimeSecret | null>(null)
-  const [postSaveSub2ApiAllowedGroups, setPostSaveSub2ApiAllowedGroups] =
-    useState<string[] | null>(null)
   const [postSaveSub2ApiAccount, setPostSaveSub2ApiAccount] =
     useState<DisplaySiteData | null>(null)
   const [postSaveSub2ApiDialogSessionId, setPostSaveSub2ApiDialogSessionId] =
@@ -1110,11 +1104,12 @@ export function useAccountDialog({
   const targetAccountRef = useRef<any>(null)
   const pendingPostSaveChannelRef = useRef<{
     displaySiteData: DisplaySiteData
-    token?: ApiToken
-    existingTokenIds?: number[]
+    runtimeKey?: AccountRuntimeKey | null
+    createdSecret?: CreatedRuntimeSecret
   } | null>(null)
   const pendingAihubmixPostSaveSuccessRef = useRef<string | null>(null)
   const postSaveAutoConfigRunRef = useRef(0)
+  const postSaveCreationAbort = useRef<AbortController | null>(null)
   const aihubmixPostSaveKeyRunRef = useRef(0)
   const nextPostSaveSub2ApiDialogSessionIdRef = useRef(0)
   const activePostSaveSub2ApiDialogSessionIdRef = useRef<number | null>(null)
@@ -1128,6 +1123,7 @@ export function useAccountDialog({
 
   const {
     openWithAccount: openChannelDialog,
+    openWithCredentials: openChannelDialogWithCredentials,
     openDefaultTokenQuickCreateDialogForAccount,
   } = useChannelDialog()
 
@@ -1149,12 +1145,13 @@ export function useAccountDialog({
   }, [])
 
   const clearPostSaveWorkflowState = useCallback(() => {
+    postSaveCreationAbort.current?.abort()
+    postSaveCreationAbort.current = null
     invalidatePostSaveAutoConfigRun()
     invalidatePostSaveSub2ApiDialogSession()
     aihubmixPostSaveKeyRunRef.current += 1
     setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
     setPostSaveOneTimeSecret(null)
-    setPostSaveSub2ApiAllowedGroups(null)
     setPostSaveSub2ApiAccount(null)
     setAihubmixPostSaveKeyPrompt({
       isOpen: false,
@@ -1218,14 +1215,10 @@ export function useAccountDialog({
           accountPresentation.convertToDisplayData(savedAccount)
         if (!isCurrentRun()) return
 
-        const inventoryState = await inspectAccountTokenInventory({
-          displaySiteData,
-        })
+        const inventory = await fetchDisplayAccountRuntimeKeys(displaySiteData)
         if (!isCurrentRun()) return
 
-        if (
-          inventoryState.kind === ACCOUNT_TOKEN_INVENTORY_STATE_KINDS.Present
-        ) {
+        if (inventory.length) {
           onSuccess?.(savedAccountId)
           return
         }
@@ -2873,20 +2866,20 @@ export function useAccountDialog({
         return
       }
 
-      const displaySiteData =
-        (await accountReadModels.getDisplayDataById(accountId)) ??
-        accountPresentation.convertToDisplayData(savedAccount)
       if (!isCurrentRun()) return
 
-      const ensureResult = await ensureAccountTokenForPostSaveWorkflow({
-        account: savedAccount,
-        displaySiteData,
-      })
+      postSaveCreationAbort.current?.abort()
+      const controller = new AbortController()
+      postSaveCreationAbort.current = controller
+      const ensureResult = await ensureAccountKey(
+        accountPresentation.convertToDisplayData(savedAccount),
+        { allowOneTimeSecret: true, signal: controller.signal },
+      )
       if (!isCurrentRun()) return
 
       if (
-        ensureResult.kind === ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created &&
-        ensureResult.oneTimeSecret
+        ensureResult.kind === "created" &&
+        ensureResult.creation.createdSecret
       ) {
         setAihubmixPostSaveKeyPrompt({
           isOpen: false,
@@ -2894,12 +2887,7 @@ export function useAccountDialog({
           accountName: "",
           isCreating: false,
         })
-        setPostSaveOneTimeSecret(
-          createDisplayAccountTokenRuntimeSecret({
-            account: displaySiteData,
-            token: ensureResult.token,
-          }),
-        )
+        setPostSaveOneTimeSecret(ensureResult.creation.createdSecret)
         return
       }
 
@@ -2936,9 +2924,10 @@ export function useAccountDialog({
   const openPostSaveManagedSiteDialog = useCallback(
     async (
       displaySiteData: DisplaySiteData,
-      token: ApiToken,
+      runtimeKey: AccountRuntimeKey | null,
       runId = postSaveAutoConfigRunRef.current,
       targetAccount = targetAccountRef.current,
+      createdSecret?: CreatedRuntimeSecret,
     ) => {
       if (postSaveAutoConfigRunRef.current !== runId) {
         return
@@ -2949,16 +2938,25 @@ export function useAccountDialog({
         ACCOUNT_POST_SAVE_WORKFLOW_STEPS.OpeningManagedSiteDialog,
       )
       try {
-        const openResult = await openChannelDialog(
-          displaySiteData,
-          buildDisplayAccountTokenRuntimeKey(displaySiteData, token),
-          () => {
-            if (onSuccess && targetAccount && isCurrentRun()) {
-              onSuccess(targetAccount)
-            }
-          },
-          { shouldContinue: isCurrentRun },
-        )
+        const completed = () => {
+          if (onSuccess && targetAccount && isCurrentRun())
+            onSuccess(targetAccount)
+        }
+        const openResult = runtimeKey
+          ? await openChannelDialog(displaySiteData, runtimeKey, completed, {
+              shouldContinue: isCurrentRun,
+            })
+          : createdSecret
+            ? await openChannelDialogWithCredentials(
+                {
+                  name: createdSecret.displayName,
+                  baseUrl: createdSecret.credential.baseUrl,
+                  apiKey: createdSecret.secret,
+                  apiType: createdSecret.credential.apiType,
+                },
+                completed,
+              )
+            : { opened: false }
         if (!isCurrentRun()) {
           return
         }
@@ -2991,7 +2989,7 @@ export function useAccountDialog({
         })
       }
     },
-    [onSuccess, openChannelDialog, t],
+    [onSuccess, openChannelDialog, openChannelDialogWithCredentials, t],
   )
 
   const handlePostSaveOneTimeSecretClose = useCallback(async () => {
@@ -2999,7 +2997,7 @@ export function useAccountDialog({
     setPostSaveOneTimeSecret(null)
     const pending = pendingPostSaveChannelRef.current
     pendingPostSaveChannelRef.current = null
-    if (!pending?.token) {
+    if (!pending || (!pending.runtimeKey && !pending.createdSecret)) {
       setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
       completePendingAihubmixPostSaveSuccess()
       return
@@ -3007,8 +3005,10 @@ export function useAccountDialog({
 
     await openPostSaveManagedSiteDialog(
       pending.displaySiteData,
-      pending.token,
+      pending.runtimeKey ?? null,
       runId,
+      undefined,
+      pending.createdSecret,
     )
   }, [completePendingAihubmixPostSaveSuccess, openPostSaveManagedSiteDialog])
 
@@ -3023,7 +3023,6 @@ export function useAccountDialog({
 
       invalidatePostSaveSub2ApiDialogSession()
       pendingPostSaveChannelRef.current = null
-      setPostSaveSub2ApiAllowedGroups(null)
       setPostSaveSub2ApiAccount(null)
       setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
     },
@@ -3037,7 +3036,10 @@ export function useAccountDialog({
   }, [handlePostSaveSub2ApiTokenDialogCloseForSession])
 
   const handlePostSaveSub2ApiTokenCreatedForSession = useCallback(
-    async (sessionId: number | null, createdToken?: ApiToken) => {
+    async (
+      sessionId: number | null,
+      createdToken: AccountKeyCreationResult,
+    ) => {
       if (
         sessionId === null ||
         activePostSaveSub2ApiDialogSessionIdRef.current !== sessionId
@@ -3048,7 +3050,6 @@ export function useAccountDialog({
       invalidatePostSaveSub2ApiDialogSession()
       const runId = postSaveAutoConfigRunRef.current
       const pending = pendingPostSaveChannelRef.current
-      setPostSaveSub2ApiAllowedGroups(null)
       setPostSaveSub2ApiAccount(null)
 
       if (!pending) {
@@ -3058,50 +3059,37 @@ export function useAccountDialog({
       }
 
       pendingPostSaveChannelRef.current = null
-      if (createdToken) {
-        await openPostSaveManagedSiteDialog(
-          pending.displaySiteData,
-          createdToken,
-          runId,
+      if (createdToken.createdSecret) {
+        pendingPostSaveChannelRef.current = {
+          ...pending,
+          runtimeKey: getCreatedAccountRuntimeKey(
+            pending.displaySiteData,
+            createdToken,
+          ),
+          createdSecret: createdToken.createdSecret,
+        }
+        setPostSaveOneTimeSecret(createdToken.createdSecret)
+        setAccountPostSaveWorkflowStep(
+          ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForOneTimeKeyAcknowledgement,
         )
         return
       }
-
       try {
-        const { keyManagement, request } = createDisplayAccountApiContext(
+        const runtimeKey = await resolveCreatedAccountRuntimeKey(
           pending.displaySiteData,
+          createdToken,
         )
-        const fetchedTokens = await requireDisplayAccountKeyManagement(
-          pending.displaySiteData,
-          keyManagement,
-        ).fetchTokens(request)
-        if (postSaveAutoConfigRunRef.current !== runId) {
-          return
-        }
-        const latestToken = Array.isArray(fetchedTokens)
-          ? selectSingleNewApiTokenByIdDiff({
-              existingTokenIds: pending.existingTokenIds ?? [],
-              tokens: fetchedTokens,
-            })
-          : null
-
-        if (!latestToken) {
-          if (postSaveAutoConfigRunRef.current !== runId) {
-            return
-          }
+        if (postSaveAutoConfigRunRef.current !== runId) return
+        if (!runtimeKey) {
           setAccountPostSaveWorkflowStep(
             ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
           )
-          toast.error(t("messages:accountOperations.createTokenFailed"))
-          return
-        }
-
-        if (postSaveAutoConfigRunRef.current !== runId) {
+          toast.error(t("messages:accountOperations.tokenNotFound"))
           return
         }
         await openPostSaveManagedSiteDialog(
           pending.displaySiteData,
-          latestToken,
+          runtimeKey,
           runId,
         )
       } catch (error) {
@@ -3124,7 +3112,7 @@ export function useAccountDialog({
   )
 
   const handlePostSaveSub2ApiTokenCreated = useCallback(
-    async (createdToken?: ApiToken) => {
+    async (createdToken: AccountKeyCreationResult) => {
       await handlePostSaveSub2ApiTokenCreatedForSession(
         activePostSaveSub2ApiDialogSessionIdRef.current,
         createdToken,
@@ -3138,7 +3126,7 @@ export function useAccountDialog({
       onClose: () => {
         handlePostSaveSub2ApiTokenDialogCloseForSession(sessionId)
       },
-      onSuccess: async (createdToken?: ApiToken) => {
+      onSuccess: async (createdToken: AccountKeyCreationResult) => {
         await handlePostSaveSub2ApiTokenCreatedForSession(
           sessionId,
           createdToken,
@@ -3289,63 +3277,48 @@ export function useAccountDialog({
       setAccountPostSaveWorkflowStep(
         ACCOUNT_POST_SAVE_WORKFLOW_STEPS.CheckingToken,
       )
-      const ensureResult = await ensureAccountTokenForPostSaveWorkflow({
-        account: savedSiteAccount,
-        displaySiteData,
-      })
+      postSaveCreationAbort.current?.abort()
+      const controller = new AbortController()
+      postSaveCreationAbort.current = controller
+      const ensureResult = await ensureAccountKey(
+        accountPresentation.convertToDisplayData(savedSiteAccount),
+        { allowOneTimeSecret: true, signal: controller.signal },
+      )
       if (!isCurrentRun()) {
         return
       }
 
-      switch (ensureResult.kind) {
-        case ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Ready:
-        case ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created:
-          if (
-            ensureResult.kind === ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created &&
-            ensureResult.oneTimeSecret
-          ) {
-            pendingPostSaveChannelRef.current = {
-              displaySiteData,
-              token: ensureResult.token,
-            }
-            setPostSaveOneTimeSecret(
-              createDisplayAccountTokenRuntimeSecret({
-                account: displaySiteData,
-                token: ensureResult.token,
-              }),
-            )
-            setAccountPostSaveWorkflowStep(
-              ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForOneTimeKeyAcknowledgement,
-            )
-            return
-          }
-
-          await openPostSaveManagedSiteDialog(
-            displaySiteData,
-            ensureResult.token,
-            runId,
-            intendedTargetAccount,
-          )
-          return
-        case ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired:
-          openPostSaveSub2ApiDialogSession()
-          pendingPostSaveChannelRef.current = {
-            displaySiteData,
-            existingTokenIds: ensureResult.existingTokenIds,
-          }
-          setPostSaveSub2ApiAccount(displaySiteData)
-          setPostSaveSub2ApiAllowedGroups(ensureResult.allowedGroups)
-          setAccountPostSaveWorkflowStep(
-            ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForSub2ApiGroupSelection,
-          )
-          return
-        case ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked:
-          toast.error(ensureResult.message)
-          setAccountPostSaveWorkflowStep(
-            ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
-          )
-          return
+      if (ensureResult.kind === "input-required") {
+        openPostSaveSub2ApiDialogSession()
+        pendingPostSaveChannelRef.current = { displaySiteData }
+        setPostSaveSub2ApiAccount(displaySiteData)
+        setAccountPostSaveWorkflowStep(
+          ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForSub2ApiGroupSelection,
+        )
+        return
       }
+      const secret =
+        ensureResult.kind === "created"
+          ? ensureResult.creation.createdSecret
+          : undefined
+      if (secret) {
+        pendingPostSaveChannelRef.current = {
+          displaySiteData,
+          runtimeKey: ensureResult.runtimeKey,
+          createdSecret: secret,
+        }
+        setPostSaveOneTimeSecret(secret)
+        setAccountPostSaveWorkflowStep(
+          ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForOneTimeKeyAcknowledgement,
+        )
+        return
+      }
+      await openPostSaveManagedSiteDialog(
+        displaySiteData,
+        ensureResult.runtimeKey,
+        runId,
+        intendedTargetAccount,
+      )
     } catch (error) {
       if (!isCurrentRun()) {
         return
@@ -3466,7 +3439,6 @@ export function useAccountDialog({
       isImportingSub2apiSession,
       accountPostSaveWorkflowStep,
       postSaveOneTimeSecret,
-      postSaveSub2ApiAllowedGroups,
       postSaveSub2ApiAccount,
       postSaveSub2ApiDialogSessionId,
       duplicateAccountWarning,

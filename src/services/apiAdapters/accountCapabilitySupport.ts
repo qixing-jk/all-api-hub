@@ -16,11 +16,8 @@ const ACCOUNT_SITE_CAPABILITY_INVENTORY = {
   bootstrap: true,
   completion: true,
   inviteLink: true,
-  keyManagement: true,
   keyResourceManagement: true,
-  keyResources: true,
   serviceCredential: true,
-  tokenProvisioning: true,
   refresh: true,
   redemption: true,
 } as const satisfies Record<AccountSiteCapabilityId, true>
@@ -45,10 +42,9 @@ type AccountUserFeatureCapabilityMap = {
   [ACCOUNT_USER_FEATURE_IDS.AutomaticRedemption]: NonNullable<
     AccountSiteCapabilities["redemption"]
   >
-  [ACCOUNT_USER_FEATURE_IDS.DefaultTokenAutomation]: {
-    keyManagement: NonNullable<AccountSiteCapabilities["keyManagement"]>
-    tokenProvisioning: NonNullable<AccountSiteCapabilities["tokenProvisioning"]>
-  }
+  [ACCOUNT_USER_FEATURE_IDS.DefaultTokenAutomation]: NonNullable<
+    AccountSiteCapabilities["keyResourceManagement"]
+  >
 }
 
 type AccountUserFeatureAvailability<K extends AccountUserFeatureId> =
@@ -72,10 +68,10 @@ const ACCOUNT_USER_FEATURE_SELECTORS = {
   [ACCOUNT_USER_FEATURE_IDS.DefaultTokenAutomation]: (
     capabilities: SiteTypeCapabilities,
   ) => {
-    const keyManagement = capabilities.account?.keyManagement
-    const tokenProvisioning = capabilities.account?.tokenProvisioning
-    return keyManagement && tokenProvisioning
-      ? { keyManagement, tokenProvisioning }
+    const resource = capabilities.account?.keyResourceManagement
+    return resource?.defaultCreation &&
+      resource.defaultCreation !== "requires-input"
+      ? resource
       : undefined
   },
 } satisfies {

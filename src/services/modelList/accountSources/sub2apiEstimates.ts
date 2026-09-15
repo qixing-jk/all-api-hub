@@ -1,9 +1,9 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import type { AccountKeyResourceRef } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
-  isMaskedApiTokenKey,
-  normalizeApiTokenKeyValue,
-} from "~/services/accountTokens/apiTokenKey"
-import { loadSub2ApiDashboardEstimateData } from "~/services/apiAdapters/sub2api/dashboardEstimates"
+  loadSub2ApiDashboardEstimateData,
+  type Sub2ApiPriceGroup as ResolvedSub2ApiPriceGroup,
+} from "~/services/apiAdapters/sub2api/dashboardEstimates"
 import {
   applySub2ApiStationPrice,
   type Sub2ApiPricingCatalogs,
@@ -27,26 +27,7 @@ import { PRICING_GROUP_MULTIPLIERS } from "~/services/modelPricing/pricingConsta
 import { scalePricingRates } from "~/services/modelPricing/pricingRates"
 import type { ModelDescriptor } from "~/services/models/modelDescriptor"
 import { isAbortError } from "~/services/verification/aiApiVerification/utils"
-import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
-
-interface Sub2ApiGroupLike {
-  id?: number | string | null
-  name?: string | null
-  rate_multiplier?: number | string | null
-}
-
-interface ResolvedSub2ApiPriceGroup {
-  groupId: string
-  groupName: string
-  rate_multiplier?: number
-}
-
-interface ResolveSub2ApiKeyGroupParams {
-  selectedToken: ApiToken
-  resolvedKey: string
-  accountTokens: ApiToken[]
-  groups: unknown[]
-}
+import { AuthTypeEnum, type DisplaySiteData } from "~/types"
 
 interface ApplySub2ApiPriceEstimatesParams {
   models: readonly ModelDescriptor[]
@@ -69,14 +50,11 @@ type Sub2ApiEstimateAccount = Pick<
 
 interface LoadSub2ApiEstimatedPricingResponseParams {
   account: Sub2ApiEstimateAccount
-  selectedToken: ApiToken
+  selectedRef: AccountKeyResourceRef
   resolvedKey: string
   runtimeModels: readonly ModelDescriptor[]
   abortSignal?: AbortSignal
 }
-
-const toTrimmedString = (value: unknown): string =>
-  typeof value === "string" ? value.trim() : ""
 
 const toFiniteNumber = (value: unknown): number | undefined => {
   if (typeof value === "number" && Number.isFinite(value)) return value
@@ -90,110 +68,6 @@ const toFiniteNumber = (value: unknown): number | undefined => {
 const toSafeRateMultiplier = (value: unknown): number => {
   const parsed = toFiniteNumber(value)
   return parsed && parsed > 0 ? parsed : 1
-}
-
-const toFiniteGroupId = (value: unknown): number | undefined => {
-  const parsed = toFiniteNumber(value)
-  return typeof parsed === "number" && Number.isInteger(parsed)
-    ? parsed
-    : undefined
-}
-
-const normalizeGroup = (
-  group: Sub2ApiGroupLike,
-): ResolvedSub2ApiPriceGroup | null => {
-  const id = toFiniteGroupId(group.id)
-  const name = toTrimmedString(group.name)
-  if (id === undefined || !name) return null
-
-  return {
-    groupId: String(id),
-    groupName: name,
-    rate_multiplier: toSafeRateMultiplier(group.rate_multiplier),
-  }
-}
-
-const normalizeGroups = (
-  groups: Sub2ApiGroupLike[],
-): ResolvedSub2ApiPriceGroup[] =>
-  groups
-    .map(normalizeGroup)
-    .filter((group): group is ResolvedSub2ApiPriceGroup => Boolean(group))
-
-const findGroupByStableId = (
-  groups: ResolvedSub2ApiPriceGroup[],
-  groupId: unknown,
-): ResolvedSub2ApiPriceGroup | null => {
-  const normalizedGroupId = toFiniteGroupId(groupId)
-  if (normalizedGroupId === undefined) return null
-
-  return (
-    groups.find((group) => group.groupId === String(normalizedGroupId)) ?? null
-  )
-}
-
-const findSingleGroupByName = (
-  groups: ResolvedSub2ApiPriceGroup[],
-  groupName: string | undefined,
-): ResolvedSub2ApiPriceGroup | null => {
-  const normalizedGroupName = toTrimmedString(groupName)
-  if (!normalizedGroupName) return null
-
-  const matches = groups.filter(
-    (group) => group.groupName === normalizedGroupName,
-  )
-  return matches.length === 1 ? matches[0] : null
-}
-
-const findExactUnmaskedTokenMatch = (
-  accountTokens: ApiToken[],
-  resolvedKey: string,
-): ApiToken | null => {
-  const normalizedResolvedKey = normalizeApiTokenKeyValue(resolvedKey)
-  if (!normalizedResolvedKey || isMaskedApiTokenKey(normalizedResolvedKey)) {
-    return null
-  }
-
-  return (
-    accountTokens.find((token) => {
-      const normalizedTokenKey = normalizeApiTokenKeyValue(token.key ?? "")
-      return (
-        normalizedTokenKey === normalizedResolvedKey &&
-        !isMaskedApiTokenKey(normalizedTokenKey)
-      )
-    }) ?? null
-  )
-}
-
-/**
- * Resolve the selected Sub2API key's stable group for optional price estimation.
- */
-export function resolveSub2ApiKeyGroupForPriceEstimation(
-  params: ResolveSub2ApiKeyGroupParams,
-): ResolvedSub2ApiPriceGroup | null {
-  const groups = normalizeGroups(params.groups as Sub2ApiGroupLike[])
-
-  const selectedStableGroup = findGroupByStableId(
-    groups,
-    params.selectedToken.sub2api_group_id,
-  )
-  if (selectedStableGroup) return selectedStableGroup
-
-  if (params.accountTokens.length > 0) {
-    const matchedToken = findExactUnmaskedTokenMatch(
-      params.accountTokens,
-      params.resolvedKey,
-    )
-
-    if (matchedToken) {
-      return (
-        findGroupByStableId(groups, matchedToken.sub2api_group_id) ??
-        findSingleGroupByName(groups, matchedToken.group)
-      )
-    }
-  }
-
-  return findSingleGroupByName(groups, params.selectedToken.group)
 }
 
 const hasFinitePrice = (value: number | undefined): value is number =>
@@ -366,19 +240,16 @@ export const loadSub2ApiEstimatedPricingResponse = async (
       params.abortSignal,
     )
     const [dashboardEstimateData, priceTable] = await Promise.all([
-      loadSub2ApiDashboardEstimateData(dashboardRequest),
+      loadSub2ApiDashboardEstimateData(dashboardRequest, {
+        ref: params.selectedRef,
+        resolvedKey: params.resolvedKey,
+      }),
       loadModelPriceTable(params.abortSignal).catch((error) => {
         if (isAbortError(error, params.abortSignal)) throw error
         return { source: "unavailable", models: {} }
       }),
     ])
-    const { groups, groupRates, accountTokens } = dashboardEstimateData
-    const group = resolveSub2ApiKeyGroupForPriceEstimation({
-      selectedToken: params.selectedToken,
-      resolvedKey: params.resolvedKey,
-      accountTokens,
-      groups,
-    })
+    const { group, groupRates } = dashboardEstimateData
 
     return applySub2ApiPriceEstimates({
       models: params.runtimeModels,

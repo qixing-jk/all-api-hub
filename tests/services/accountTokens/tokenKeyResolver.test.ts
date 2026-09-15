@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  formatOptionalSkPrefixSiteToken,
   formatOptionalSkPrefixSiteTokenAuthKey,
   formatOptionalSkPrefixSiteTokenComparableKey,
   formatOptionalSkPrefixTokenComparableKey,
@@ -98,22 +97,6 @@ describe("token key resolver", () => {
         SITE_TYPES.SUB2API,
       ),
     ).toBe("sk-abc")
-  })
-
-  it("formats token auth keys by site type and preserves identity when unchanged", () => {
-    const token = { id: 1, key: "plain-key" } as any
-    const formatted = formatOptionalSkPrefixSiteToken(token, SITE_TYPES.NEW_API)
-
-    expect(formatted.key).toBe("sk-plain-key")
-    expect(formatted).not.toBe(token)
-
-    const alreadyPrefixed = { id: 2, key: "sk-ready" } as any
-    const unchanged = formatOptionalSkPrefixSiteToken(
-      alreadyPrefixed,
-      SITE_TYPES.NEW_API,
-    )
-
-    expect(unchanged).toBe(alreadyPrefixed)
   })
 
   it("resolveApiTokenKey fetches the explicit secret when inventory key is masked", async () => {

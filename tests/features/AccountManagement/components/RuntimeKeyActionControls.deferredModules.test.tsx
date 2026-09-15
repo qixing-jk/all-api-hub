@@ -4,12 +4,10 @@ import { Suspense } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeKeyActionControls } from "~/features/AccountManagement/components/CopyKeyDialog/RuntimeKeyActionControls"
-import {
-  buildDisplayAccountTokenRuntimeKey,
-  buildServiceCredentialRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { AuthTypeEnum } from "~/types"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -123,8 +121,8 @@ vi.mock(
       ...actual,
       resolveDisplayAccountRuntimeKeySecret: async (
         _account: unknown,
-        runtimeKey: { token: { key: string } },
-      ) => ({ ...runtimeKey, secret: runtimeKey.token.key }),
+        runtimeKey: AccountRuntimeKey,
+      ) => runtimeKey,
     }
   },
 )
@@ -164,7 +162,7 @@ function renderActionControls(overrides?: {
 }) {
   const account = overrides?.account ?? ACCOUNT
   const runtimeKey =
-    overrides?.runtimeKey ?? buildDisplayAccountTokenRuntimeKey(account, TOKEN)
+    overrides?.runtimeKey ?? buildNewApiRuntimeKey(account, TOKEN)
   return render(
     <Suspense fallback={null}>
       <RuntimeKeyActionControls

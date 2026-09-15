@@ -27,14 +27,14 @@ import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 const {
   fetchAccountDataMock,
   getSiteTypeCapabilitiesMock,
-  ensureDefaultApiTokenForAccountMock,
+  ensureAccountKeyMock,
   loggerMock,
   otherLoggerMock,
   validateManagementKeyMock,
 } = vi.hoisted(() => ({
   fetchAccountDataMock: vi.fn(),
   getSiteTypeCapabilitiesMock: vi.fn(),
-  ensureDefaultApiTokenForAccountMock: vi.fn(),
+  ensureAccountKeyMock: vi.fn(),
   loggerMock: {
     debug: vi.fn(),
     error: vi.fn(),
@@ -56,6 +56,7 @@ vi.mock("~/lib/notify", () => ({
     success: vi.fn(),
     error: vi.fn(),
     dismiss: vi.fn(),
+    warning: vi.fn(),
   },
 }))
 
@@ -72,22 +73,9 @@ vi.mock("~/utils/core/logger", () => ({
     scope === "AccountOperations" ? loggerMock : otherLoggerMock,
 }))
 
-vi.mock(
-  "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken",
-  () => ({
-    ensureDefaultApiTokenForAccount: ensureDefaultApiTokenForAccountMock,
-    generateDefaultTokenRequest: vi.fn(() => ({
-      name: "user group (auto)",
-      unlimited_quota: true,
-      expired_time: -1,
-      remain_quota: 0,
-      allow_ips: "",
-      model_limits_enabled: false,
-      model_limits: "",
-      group: "",
-    })),
-  }),
-)
+vi.mock("~/services/accounts/accountKeyCreation", () => ({
+  ensureAccountKey: ensureAccountKeyMock,
+}))
 
 const CHECK_IN_DISABLED = buildCheckInConfig({
   customCheckIn: {
@@ -295,8 +283,10 @@ describe("accountPersistence save and update", () => {
         data: {
           fetchData: fetchAccountDataMock,
         },
-        keyManagement: {},
-        tokenProvisioning: {},
+        keyResourceManagement: {
+          defaultCreation: "editor-defaults",
+          open: vi.fn(),
+        },
       },
     }))
   })
@@ -1896,7 +1886,7 @@ describe("accountPersistence save and update", () => {
         cookie: "session=abc123",
       },
     })
-    expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
+    expect(ensureAccountKeyMock).not.toHaveBeenCalled()
   })
 
   it("stores AIHubMix accounts with the canonical console origin", async () => {
@@ -2757,7 +2747,7 @@ describe("accountPersistence save and update", () => {
 
     expect(result.success).toBe(true)
     await flushMicrotasks()
-    expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
+    expect(ensureAccountKeyMock).not.toHaveBeenCalled()
   })
 
   it("skips background auto-provisioning after fallback save when requested by a foreground workflow", async () => {
@@ -2794,7 +2784,7 @@ describe("accountPersistence save and update", () => {
       feedbackLevel: "warning",
     })
     await flushMicrotasks()
-    expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
+    expect(ensureAccountKeyMock).not.toHaveBeenCalled()
   })
 
   it("runs background auto-provisioning after save when preference is enabled", async () => {
@@ -2812,8 +2802,10 @@ describe("accountPersistence save and update", () => {
       today_income: 0,
       checkIn: CHECK_IN_DISABLED,
     })
-    ensureDefaultApiTokenForAccountMock.mockResolvedValueOnce({
-      created: true,
+    ensureAccountKeyMock.mockResolvedValueOnce({
+      kind: "created",
+      creation: { ref: null, facts: null },
+      runtimeKey: null,
     })
 
     const result = await validateAndSaveAccount(
@@ -2833,14 +2825,12 @@ describe("accountPersistence save and update", () => {
 
     expect(result.success).toBe(true)
     await flushMicrotasks()
-    expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
-    expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledWith(
+    expect(ensureAccountKeyMock).toHaveBeenCalledTimes(1)
+    expect(ensureAccountKeyMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        account: expect.objectContaining({
-          site_name: "Example",
-          site_url: "https://api.example.com",
-          site_type: SITE_TYPES.NEW_API,
-        }),
+        name: "Example",
+        baseUrl: "https://api.example.com",
+        siteType: SITE_TYPES.NEW_API,
       }),
     )
   })

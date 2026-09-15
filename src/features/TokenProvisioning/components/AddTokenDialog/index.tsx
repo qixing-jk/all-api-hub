@@ -1,375 +1,231 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Alert } from "~/components/ui"
-import { Modal } from "~/components/ui/Dialog/Modal"
-import { UI_CONSTANTS } from "~/constants/ui"
-import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
+import {
+  Alert,
+  Button,
+  FormField,
+  Modal,
+  SearchableSelect,
+} from "~/components/ui"
+import { AccountKeyResourceEditorDialog } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceEditorDialog"
+import {
+  useAccountKeyResourceController,
+  type AccountKeyResourceRouteTransition,
+} from "~/features/KeyManagement/controllers/useAccountKeyResourceController"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
-import toast from "~/lib/notify"
-import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
-import { normalizeDefaultTokenRequestName } from "~/services/accounts/defaultTokenLifecycle"
+import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
+import { canListAccountKeyResources } from "~/services/accounts/keyProductCapabilities"
+import type { AccountKeyCreationIntent } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { createUserCommandProtectionBypassExecution } from "~/services/protectionBypass/client"
 import {
-  canCreateAccountApiTokens,
-  canUpdateAccountApiTokens,
-} from "~/services/accounts/keyProductCapabilities"
-import {
-  createDisplayAccountApiContext,
-  requireDisplayAccountKeyManagement,
-} from "~/services/accounts/utils/apiServiceRequest"
-import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
-import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
-import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
-  PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
-  PRODUCT_ANALYTICS_FEATURE_IDS,
-  PRODUCT_ANALYTICS_RESULTS,
-  PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/contracts"
-import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
-import { getErrorMessage } from "~/utils/core/error"
+  PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
+import type { DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
 import { OneTimeSecretDialog } from "../OneTimeSecretDialog"
-import { DialogHeader } from "./DialogHeader"
-import { FormActions } from "./FormActions"
-import { useTokenData } from "./hooks/useTokenData"
-import { useTokenForm } from "./hooks/useTokenForm"
-import { LoadingIndicator } from "./LoadingIndicator"
-import { TokenForm } from "./TokenForm"
-import { WarningNote } from "./WarningNote"
 
-/**
- * Unified logger scoped to the Key Management add/edit token dialog.
- */
 const logger = createLogger("AddTokenDialog")
-
-const isCreatedApiToken = (value: unknown): value is ApiToken =>
-  !!value &&
-  typeof value === "object" &&
-  typeof (value as Partial<ApiToken>).id === "number" &&
-  typeof (value as Partial<ApiToken>).key === "string"
-
-const keyManagementDialogAnalyticsContext = (
-  actionId:
-    | typeof PRODUCT_ANALYTICS_ACTION_IDS.CreateAccountToken
-    | typeof PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken,
-) => ({
-  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
-  actionId,
-  surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementDialog,
-  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-})
-
-const startKeyManagementDialogAnalytics = (
-  actionId:
-    | typeof PRODUCT_ANALYTICS_ACTION_IDS.CreateAccountToken
-    | typeof PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken,
-) => {
-  try {
-    return startProductAnalyticsAction(
-      keyManagementDialogAnalyticsContext(actionId),
-    )
-  } catch (error) {
-    logger.warn("Add token dialog analytics start failed", error)
-    return {
-      complete: () => undefined,
-    }
-  }
-}
+const CREATION_INVENTORY_EXECUTION = createUserCommandProtectionBypassExecution(
+  PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
+  PROTECTION_BYPASS_SURFACES.Options,
+)
 
 interface AddTokenDialogProps {
   isOpen: boolean
   onClose: () => void
   availableAccounts: DisplaySiteData[]
   preSelectedAccountId?: string | null
-  editingToken?: AccountToken | null
   createPrefill?: {
     modelId: string
     defaultName?: string
     group?: string
-    /**
-     * Optional list of allowed group ids for create-mode. When provided, the group
-     * selection UI should restrict the user to these groups.
-     */
     allowedGroups?: string[]
   }
   prefillNotice?: string
-  onSuccess?: (createdToken?: ApiToken) => void | Promise<void>
+  onSuccess?: (result: AccountKeyCreationResult) => void | Promise<void>
+  /** False transfers the response-only secret to onSuccess's owner. */
   showOneTimeKeyDialog?: boolean
 }
 
-/**
- * Modal dialog for creating/updating API tokens with form handling and validation.
- * @param props Component props container for dialog configuration.
- * @returns Modal element rendered through shared UI primitives.
- */
+/** Foreground creation uses the same native editor and secret handoff as key management. */
 export default function AddTokenDialog(props: AddTokenDialogProps) {
-  const { isOpen, onClose, availableAccounts, editingToken, onSuccess } = props
-  const showOneTimeKeyDialog = props.showOneTimeKeyDialog ?? true
-  const { t } = useTranslation("keyManagement")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [oneTimeSecret, setOneTimeSecret] =
-    useState<CreatedRuntimeSecret | null>(null)
+  return props.isOpen ? (
+    <AccountKeyCreateSession
+      key={props.preSelectedAccountId ?? ""}
+      {...props}
+    />
+  ) : null
+}
 
-  const { formData, setFormData, errors, validateForm, isEditMode, resetForm } =
-    useTokenForm(props)
-
-  const currentAccount = availableAccounts.find(
-    (acc) => acc.id === formData.accountId,
+/** Owns account selection and one native editor session for a creation dialog. */
+function AccountKeyCreateSession({
+  availableAccounts,
+  preSelectedAccountId,
+  createPrefill,
+  prefillNotice,
+  onClose,
+  onSuccess,
+  showOneTimeKeyDialog = true,
+}: AddTokenDialogProps) {
+  const { t } = useTranslation(["keyManagement", "common"])
+  const accounts = availableAccounts.filter(canListAccountKeyResources)
+  const [accountId, setAccountId] = useState(() =>
+    accounts.some((account) => account.id === preSelectedAccountId)
+      ? preSelectedAccountId!
+      : accounts.length === 1
+        ? accounts[0].id
+        : "",
   )
-
-  const {
-    isLoading,
-    availableModels,
-    groups,
-    canFetchModels,
-    isModelsLoading,
-    modelsLoaded,
-    modelLoadErrorMessage,
-    loadAvailableModels,
-    resetData,
-  } = useTokenData(
-    isOpen,
-    currentAccount,
-    setFormData,
-    !isEditMode ? props.createPrefill?.allowedGroups : undefined,
-    isEditMode,
-  )
-  const showGroupSelection =
-    Object.keys(groups).length > 0 ||
-    (!isEditMode && (props.createPrefill?.allowedGroups?.length ?? 0) > 0)
-  const showModelLimits = canFetchModels || formData.modelLimitsEnabled
-
+  const [route, setRoute] = useState<{
+    params: Record<string, string>
+    transition?: AccountKeyResourceRouteTransition
+  }>({ params: {} })
+  const [completed, setCompleted] = useState(false)
+  const pendingResult = useRef<AccountKeyCreationResult | null>(null)
+  const finish = async (result: AccountKeyCreationResult) => {
+    try {
+      await onSuccess?.(result)
+    } catch (error) {
+      logger.error("Created key handoff failed", error)
+    } finally {
+      onClose()
+    }
+  }
+  const intent: AccountKeyCreationIntent | undefined = createPrefill
+    ? {
+        nameHint: createPrefill.defaultName,
+        preferredGroup: createPrefill.group,
+        allowedGroups: createPrefill.allowedGroups,
+        ...(createPrefill.modelId
+          ? { modelContext: { modelId: createPrefill.modelId } }
+          : {}),
+      }
+    : undefined
+  const controller = useAccountKeyResourceController({
+    accounts,
+    selectedAccount: accountId,
+    inventoryExecution: CREATION_INVENTORY_EXECUTION,
+    creationIntent: intent,
+    routeParams: route.params,
+    routeTransition: route.transition,
+    replaceRoute: (params, transition) => setRoute({ params, transition }),
+    onCreated: async (_account, result) => {
+      setCompleted(true)
+      if (showOneTimeKeyDialog && result.createdSecret)
+        pendingResult.current = result
+      else await finish(result)
+    },
+  })
+  const failure =
+    controller.failures[accountId] ?? controller.scopeInventoryFailure
+  const hasEditor =
+    Boolean(controller.editor || controller.terminalCloseEditor) ||
+    controller.editorOpening.status !== "idle"
   useEffect(() => {
     if (
-      isOpen &&
-      formData.modelLimitsEnabled &&
-      !modelsLoaded &&
-      !isModelsLoading &&
-      !modelLoadErrorMessage
-    ) {
-      void loadAvailableModels()
-    }
-  }, [
-    formData.modelLimitsEnabled,
-    isModelsLoading,
-    isOpen,
-    loadAvailableModels,
-    modelLoadErrorMessage,
-    modelsLoaded,
-  ])
+      !accountId ||
+      hasEditor ||
+      controller.isLoading ||
+      !controller.selectedScope ||
+      failure ||
+      completed
+    )
+      return
+    void controller.openCreate()
+  }, [accountId, controller, failure, completed, hasEditor])
 
-  const handleClose = () => {
-    resetForm()
-    resetData()
-    setOneTimeSecret(null)
-    onClose()
-  }
-
-  const handleCloseOneTimeKeyDialog = () => {
-    setOneTimeSecret(null)
-    handleClose()
-  }
-  const oneTimeKeySaveAction = oneTimeSecret
+  const saveAction = controller.createdSecret
     ? buildOneTimeApiKeyProfileSaveAction({
-        result: oneTimeSecret,
+        result: controller.createdSecret,
         t,
         logger,
         source: "AddTokenDialog",
       })
     : undefined
 
-  const handleSubmit = async () => {
-    if (
-      !currentAccount ||
-      !validateForm({ requireGroup: showGroupSelection })
-    ) {
-      return
-    }
-
-    const tracker = startKeyManagementDialogAnalytics(
-      isEditMode
-        ? PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken
-        : PRODUCT_ANALYTICS_ACTION_IDS.CreateAccountToken,
-    )
-    setIsSubmitting(true)
-    try {
-      if (
-        (isEditMode && !canUpdateAccountApiTokens(currentAccount)) ||
-        (!isEditMode && !canCreateAccountApiTokens(currentAccount))
-      ) {
-        throw new Error(
-          isEditMode
-            ? t("dialog.updateNotSupported")
-            : t("dialog.createNotSupported"),
-        )
-      }
-
-      const rawTokenData: CreateTokenRequest = {
-        name: formData.name.trim(),
-        remain_quota: formData.unlimitedQuota
-          ? -1
-          : Math.floor(
-              parseFloat(formData.quota) *
-                UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
-            ),
-        expired_time: formData.expiredTime
-          ? Math.floor(new Date(formData.expiredTime).getTime() / 1000)
-          : -1,
-        unlimited_quota: formData.unlimitedQuota,
-        model_limits_enabled: formData.modelLimitsEnabled,
-        model_limits: formData.modelLimits.join(","),
-        allow_ips: formData.allowIps.trim() || "",
-        group: formData.group,
-      }
-      const tokenData = isEditMode
-        ? rawTokenData
-        : normalizeDefaultTokenRequestName(rawTokenData)
-      const { keyManagement, request } =
-        createDisplayAccountApiContext(currentAccount)
-
-      if (isEditMode && editingToken) {
-        const updated = await requireDisplayAccountKeyManagement(
-          currentAccount,
-          keyManagement,
-        ).updateToken({
-          request,
-          tokenId: editingToken.id,
-          tokenData,
-        })
-        if (updated === false) {
-          throw new Error(t("dialog.updateFailed"))
-        }
-        toast.success(t("dialog.updateSuccess"))
-      } else {
-        const created = await requireDisplayAccountKeyManagement(
-          currentAccount,
-          keyManagement,
-        ).createToken(request, tokenData)
-        const createdToken = isCreatedApiToken(created) ? created : undefined
-        const createdSecret =
-          createdToken &&
-          showOneTimeKeyDialog &&
-          keyManagement?.createRuntimeSecret
-            ? (() => {
-                try {
-                  return keyManagement.createRuntimeSecret({
-                    account: currentAccount,
-                    token: createdToken,
-                  })
-                } catch (error) {
-                  logger.warn("Created secret projection failed", {
-                    error: getErrorMessage(error),
-                  })
-                  return null
-                }
-              })()
-            : null
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-        if (createdSecret) {
-          setOneTimeSecret(createdSecret)
-        } else {
-          toast.success(t("dialog.createSuccess"))
-        }
-        if (onSuccess) {
-          try {
-            await onSuccess(createdToken)
-          } catch (error) {
-            logger.error("AddTokenDialog onSuccess callback failed", error)
-          }
-        }
-
-        if (createdSecret) {
-          return
-        }
-      }
-
-      if (isEditMode) {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-      }
-      if (isEditMode && onSuccess) {
-        try {
-          await onSuccess()
-        } catch (error) {
-          logger.error("AddTokenDialog onSuccess callback failed", error)
-        }
-      }
-      handleClose()
-    } catch (error) {
-      logger.error(`${isEditMode ? "更新" : "创建"}密钥失败`, error)
-      const message = getErrorMessage(error)
-      const fallbackMessage = isEditMode
-        ? t("dialog.updateFailed")
-        : t("dialog.createFailed")
-      const displayMessage =
-        message && message.trim() ? message : fallbackMessage
-
-      toast.error(displayMessage)
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
   return (
     <>
       <Modal
-        isOpen={isOpen}
-        onClose={handleClose}
-        size="lg"
-        title={isEditMode ? t("dialog.editToken") : t("dialog.addToken")}
-        header={<DialogHeader isEditMode={isEditMode} />}
-        panelTestId={TOKEN_PROVISIONING_TEST_IDS.addTokenDialog}
-        footer={
-          isLoading ? null : (
-            <FormActions
-              isSubmitting={isSubmitting}
-              isEditMode={isEditMode}
-              onClose={handleClose}
-              onSubmit={handleSubmit}
-              canSubmit={!!currentAccount && !isModelsLoading}
-            />
-          )
-        }
+        isOpen={!hasEditor && !completed}
+        onClose={onClose}
+        size="sm"
+        title={t("keyManagement:native.editor.title.create")}
+        header={<h2>{t("keyManagement:native.editor.title.create")}</h2>}
       >
-        {isLoading ? (
-          <LoadingIndicator />
-        ) : (
-          <div className="space-y-4">
-            <TokenForm
-              formData={formData}
-              setFormData={setFormData}
-              errors={errors}
-              isEditMode={isEditMode}
-              availableAccounts={availableAccounts}
-              groups={groups}
-              allowedGroups={
-                !isEditMode ? props.createPrefill?.allowedGroups : undefined
-              }
-              availableModels={availableModels}
-              showGroupSelection={showGroupSelection}
-              showModelLimits={showModelLimits}
-              isModelsLoading={isModelsLoading}
-              modelLoadErrorMessage={modelLoadErrorMessage}
-              onRequestModels={loadAvailableModels}
+        <FormField
+          label={t("keyManagement:dialog.accountSelect")}
+          htmlFor="create-key-account"
+        >
+          <SearchableSelect
+            id="create-key-account"
+            options={accounts.map((account) => ({
+              value: account.id,
+              label: account.name,
+            }))}
+            value={accountId}
+            onChange={(value) => {
+              setAccountId(value)
+              setRoute({ params: {} })
+            }}
+            placeholder={t("keyManagement:pleaseSelectAccount")}
+            disabled={controller.isLoading}
+          />
+        </FormField>
+        {controller.isLoading ? (
+          <p role="status">{t("common:status.loading")}</p>
+        ) : null}
+        {failure ? (
+          <>
+            <Alert
+              variant="destructive"
+              description={t("keyManagement:native.editor.feedback.error")}
             />
-            {typeof props.prefillNotice === "string" &&
-            props.prefillNotice.trim().length > 0 ? (
-              <Alert variant="default" description={props.prefillNotice} />
-            ) : null}
-            <WarningNote />
-          </div>
-        )}
+            <Button onClick={() => void controller.refresh()}>
+              {t("common:actions.retry")}
+            </Button>
+          </>
+        ) : null}
+        {!accounts.length ? (
+          <Alert description={t("ui:dialog.copyKey.createNotSupported")} />
+        ) : null}
       </Modal>
+      <AccountKeyResourceEditorDialog
+        editor={controller.editor}
+        terminalCloseEditor={controller.terminalCloseEditor}
+        opening={controller.editorOpening}
+        notice={prefillNotice}
+        onRetryOpening={controller.retryEditorOpening}
+        onCancelOpening={(attemptId) => {
+          controller.cancelEditorOpening(attemptId)
+          onClose()
+        }}
+        onClose={(editorId) => {
+          controller.closeEditor(editorId)
+          onClose()
+        }}
+        onTerminalCloseSettled={controller.settleTerminalClose}
+        onSubmit={controller.submitEditor}
+        onValuesChange={controller.setEditorValues}
+        onLoadOptions={controller.loadEditorOptions}
+        focusWorkflowId={controller.focusWorkflowId ?? undefined}
+      />
       <OneTimeSecretDialog
-        isOpen={!!oneTimeSecret}
-        result={oneTimeSecret}
-        onClose={handleCloseOneTimeKeyDialog}
-        saveAction={oneTimeKeySaveAction}
+        isOpen={showOneTimeKeyDialog && controller.createdSecret !== null}
+        result={showOneTimeKeyDialog ? controller.createdSecret : null}
+        onClose={() => {
+          const result = pendingResult.current
+          pendingResult.current = null
+          controller.closeCreatedSecret()
+          if (result) void finish(result)
+          else onClose()
+        }}
+        saveAction={saveAction}
+        onCopyResult={controller.recordCreatedSecretCopyResult}
+        onSaveResult={controller.recordCreatedSecretSaveResult}
+        focusWorkflowId={controller.focusWorkflowId ?? undefined}
       />
     </>
   )

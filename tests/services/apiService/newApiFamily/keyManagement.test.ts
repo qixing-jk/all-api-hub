@@ -12,9 +12,10 @@ import {
   fetchUserGroups,
   updateApiToken,
 } from "~/services/apiService/newApiFamily/default/keyManagement"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { PaginationLimitError } from "~/services/apiTransport/pagination"
-import { AuthTypeEnum, type ApiToken } from "~/types"
+import { AuthTypeEnum } from "~/types"
 
 const {
   mockFetchApi,
@@ -66,7 +67,7 @@ describe("newApiFamily keyManagement", () => {
     },
   }
 
-  const token: ApiToken = {
+  const token: NewApiToken = {
     id: 123,
     user_id: 1,
     key: "sk-abcd************wxyz",
@@ -83,7 +84,7 @@ describe("newApiFamily keyManagement", () => {
     used_quota: 0,
     group: "",
   }
-  const tokenKeyReference: Pick<ApiToken, "id" | "key"> = {
+  const tokenKeyReference: Pick<NewApiToken, "id" | "key"> = {
     id: token.id,
     key: token.key,
   }

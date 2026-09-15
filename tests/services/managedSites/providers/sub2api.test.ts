@@ -6,7 +6,6 @@ import {
   SUB2API_ADMIN_REQUEST_TIMEOUT_MS,
   SUB2API_MANAGED_RESOURCE_STATUS,
 } from "~/constants/sub2api"
-import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import {
@@ -27,15 +26,29 @@ import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
 } from "~/services/managedSites/tokenChannelStatus"
 import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import {
-  buildApiToken,
   buildDisplaySiteData,
+  buildNewApiToken,
 } from "~~/tests/test-utils/factories"
 import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 
 vi.mock("~/services/managedSites/utils/fetchManagedSiteImportModels", () => ({
   fetchManagedSiteImportModels: vi.fn(),
 }))
+
+vi.mock(
+  "~/services/accounts/utils/apiServiceRequest",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/accounts/utils/apiServiceRequest")
+    >()),
+    resolveDisplayAccountRuntimeKeySecret: async (
+      _account: unknown,
+      runtimeKey: unknown,
+    ) => runtimeKey,
+  }),
+)
 
 const config = {
   baseUrl: "https://sub2api.example.invalid/",
@@ -485,12 +498,12 @@ describe("Sub2API API-key account managed-site provider", () => {
     })
 
     const result = await getManagedSiteTokenChannelStatus({
-      runtimeKey: buildDisplayAccountTokenRuntimeKey(
+      runtimeKey: buildNewApiRuntimeKey(
         buildDisplaySiteData({
           siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://api.example.invalid/v1",
         }),
-        buildApiToken({ key: "sk-test-token-key" }),
+        buildNewApiToken({ key: "sk-test-token-key" }),
       ),
       managedSite: getManagedSiteCapabilities(SITE_TYPES.SUB2API),
       managedConfig: config,
@@ -540,7 +553,7 @@ describe("Sub2API API-key account managed-site provider", () => {
   it("prepares a provider-native import draft without model discovery", async () => {
     const draft = await prepareChannelFormData(
       buildManagedSiteChannelDraftSource(
-        buildDisplayAccountTokenRuntimeKey(
+        buildNewApiRuntimeKey(
           {
             id: "source-account",
             name: "Source account",

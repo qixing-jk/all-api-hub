@@ -3,7 +3,7 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
-import { createAccountTokenExportSource } from "~/services/accounts/utils/credentialExport"
+import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
 import { createProfileCredentialExportSource } from "~/services/apiCredentialProfiles/credentialExport"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -14,9 +14,10 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import {
-  buildApiToken,
   buildDisplaySiteData,
+  buildNewApiToken,
 } from "~~/tests/test-utils/factories"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -34,7 +35,7 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   }
 })
 
-const mockResolveDisplayAccountTokenForSecret = vi.fn()
+const mockResolveDisplayAccountRuntimeKeySecret = vi.fn()
 const mockFetchOpenAICompatibleModels = vi.fn()
 const mockImportToClaudeCodeRouter = vi.fn()
 const mockShowResultToast = vi.fn()
@@ -60,8 +61,8 @@ vi.mock(
       >()
     return {
       ...original,
-      resolveDisplayAccountTokenForSecret: (...args: any[]) =>
-        mockResolveDisplayAccountTokenForSecret(...args),
+      resolveDisplayAccountRuntimeKeySecret: (...args: any[]) =>
+        mockResolveDisplayAccountRuntimeKeySecret(...args),
     }
   },
 )
@@ -86,14 +87,14 @@ vi.mock("~/services/productAnalytics/actions", () => ({
 
 describe("ClaudeCodeRouterImportDialog", () => {
   beforeEach(() => {
-    mockResolveDisplayAccountTokenForSecret.mockReset()
+    mockResolveDisplayAccountRuntimeKeySecret.mockReset()
     mockFetchOpenAICompatibleModels.mockReset()
     mockImportToClaudeCodeRouter.mockReset()
     mockShowResultToast.mockReset()
     startProductAnalyticsActionMock.mockReset()
     completeProductAnalyticsActionMock.mockReset()
 
-    mockResolveDisplayAccountTokenForSecret.mockImplementation(
+    mockResolveDisplayAccountRuntimeKeySecret.mockImplementation(
       async (_account, token) => token,
     )
     mockFetchOpenAICompatibleModels.mockResolvedValue([])
@@ -123,13 +124,21 @@ describe("ClaudeCodeRouterImportDialog", () => {
       <ClaudeCodeRouterImportDialog
         isOpen={true}
         onClose={onClose}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           buildDisplaySiteData({
             id: "acc",
             name: "Example",
             baseUrl: "https://x.test",
           }),
-          buildApiToken({ id: 7, key: "sk-test" }),
+          buildNewApiRuntimeKey(
+            buildDisplaySiteData({
+              id: "acc",
+              name: "Example",
+              baseUrl: "https://x.test",
+            }),
+            buildNewApiToken({ id: 7, key: "sk-test" }),
+          ),
+          { preferCurrentSecret: true },
         )}
         routerBaseUrl="https://router.example.com"
         routerApiKey="router-secret"
@@ -244,13 +253,21 @@ describe("ClaudeCodeRouterImportDialog", () => {
       <ClaudeCodeRouterImportDialog
         isOpen={true}
         onClose={() => {}}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           buildDisplaySiteData({
             id: "acc",
             name: "Example",
             baseUrl: "https://x.test",
           }),
-          buildApiToken({ key: "sk-test" }),
+          buildNewApiRuntimeKey(
+            buildDisplaySiteData({
+              id: "acc",
+              name: "Example",
+              baseUrl: "https://x.test",
+            }),
+            buildNewApiToken({ key: "sk-test" }),
+          ),
+          { preferCurrentSecret: true },
         )}
         routerBaseUrl="https://router.example.com"
       />,
@@ -299,13 +316,21 @@ describe("ClaudeCodeRouterImportDialog", () => {
       <ClaudeCodeRouterImportDialog
         isOpen={true}
         onClose={onClose}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           buildDisplaySiteData({
             id: "acc",
             name: "Example",
             baseUrl: "https://x.test",
           }),
-          buildApiToken({ key: "sk-test" }),
+          buildNewApiRuntimeKey(
+            buildDisplaySiteData({
+              id: "acc",
+              name: "Example",
+              baseUrl: "https://x.test",
+            }),
+            buildNewApiToken({ key: "sk-test" }),
+          ),
+          { preferCurrentSecret: true },
         )}
         routerBaseUrl="https://router.example.com"
       />,
@@ -338,13 +363,21 @@ describe("ClaudeCodeRouterImportDialog", () => {
       <ClaudeCodeRouterImportDialog
         isOpen={true}
         onClose={() => {}}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           buildDisplaySiteData({
             id: "acc",
             name: "Example",
             baseUrl: "https://x.test",
           }),
-          buildApiToken({ key: "sk-test" }),
+          buildNewApiRuntimeKey(
+            buildDisplaySiteData({
+              id: "acc",
+              name: "Example",
+              baseUrl: "https://x.test",
+            }),
+            buildNewApiToken({ key: "sk-test" }),
+          ),
+          { preferCurrentSecret: true },
         )}
         routerBaseUrl="https://router.example.com"
       />,
@@ -374,13 +407,21 @@ describe("ClaudeCodeRouterImportDialog", () => {
       <ClaudeCodeRouterImportDialog
         isOpen={true}
         onClose={() => {}}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           buildDisplaySiteData({
             id: "acc",
             name: "Sensitive Provider",
             baseUrl: "https://private.example.com",
           }),
-          buildApiToken({ key: "sk-sensitive" }),
+          buildNewApiRuntimeKey(
+            buildDisplaySiteData({
+              id: "acc",
+              name: "Sensitive Provider",
+              baseUrl: "https://private.example.com",
+            }),
+            buildNewApiToken({ key: "sk-sensitive" }),
+          ),
+          { preferCurrentSecret: true },
         )}
         routerBaseUrl="https://router.example.com"
         routerApiKey="router-secret"
@@ -421,13 +462,21 @@ describe("ClaudeCodeRouterImportDialog", () => {
       <ClaudeCodeRouterImportDialog
         isOpen={true}
         onClose={onClose}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           buildDisplaySiteData({
             id: "acc",
             name: "Example",
             baseUrl: "https://x.test",
           }),
-          buildApiToken({ key: "sk-test" }),
+          buildNewApiRuntimeKey(
+            buildDisplaySiteData({
+              id: "acc",
+              name: "Example",
+              baseUrl: "https://x.test",
+            }),
+            buildNewApiToken({ key: "sk-test" }),
+          ),
+          { preferCurrentSecret: true },
         )}
         routerBaseUrl="https://router.example.com"
       />,
@@ -457,13 +506,21 @@ describe("ClaudeCodeRouterImportDialog", () => {
       <ClaudeCodeRouterImportDialog
         isOpen={true}
         onClose={onClose}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           buildDisplaySiteData({
             id: "acc",
             name: "Sensitive Provider",
             baseUrl: "https://private.example.com",
           }),
-          buildApiToken({ key: "sk-sensitive" }),
+          buildNewApiRuntimeKey(
+            buildDisplaySiteData({
+              id: "acc",
+              name: "Sensitive Provider",
+              baseUrl: "https://private.example.com",
+            }),
+            buildNewApiToken({ key: "sk-sensitive" }),
+          ),
+          { preferCurrentSecret: true },
         )}
         routerBaseUrl="https://router.example.com"
         routerApiKey="router-secret"
@@ -512,13 +569,21 @@ describe("ClaudeCodeRouterImportDialog", () => {
       <ClaudeCodeRouterImportDialog
         isOpen={true}
         onClose={() => {}}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           buildDisplaySiteData({
             id: "acc",
             name: "Example",
             baseUrl: "https://x.test",
           }),
-          buildApiToken({ key: "sk-test" }),
+          buildNewApiRuntimeKey(
+            buildDisplaySiteData({
+              id: "acc",
+              name: "Example",
+              baseUrl: "https://x.test",
+            }),
+            buildNewApiToken({ key: "sk-test" }),
+          ),
+          { preferCurrentSecret: true },
         )}
         routerBaseUrl="https://router.example.com"
       />,
@@ -545,13 +610,21 @@ describe("ClaudeCodeRouterImportDialog", () => {
       <ClaudeCodeRouterImportDialog
         isOpen={true}
         onClose={() => {}}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           buildDisplaySiteData({
             id: "acc",
             name: "Example",
             baseUrl: "https://x.test",
           }),
-          buildApiToken({ key: "sk-test" }),
+          buildNewApiRuntimeKey(
+            buildDisplaySiteData({
+              id: "acc",
+              name: "Example",
+              baseUrl: "https://x.test",
+            }),
+            buildNewApiToken({ key: "sk-test" }),
+          ),
+          { preferCurrentSecret: true },
         )}
         routerBaseUrl="https://router.example.com"
         analyticsContext={{
@@ -594,7 +667,7 @@ describe("ClaudeCodeRouterImportDialog", () => {
       createdAt: 1,
       updatedAt: 2,
     }
-    mockResolveDisplayAccountTokenForSecret.mockRejectedValue(
+    mockResolveDisplayAccountRuntimeKeySecret.mockRejectedValue(
       new Error("account_api_context_missing_user_id"),
     )
     mockFetchOpenAICompatibleModels.mockResolvedValueOnce([{ id: "gpt-4o" }])
@@ -626,6 +699,6 @@ describe("ClaudeCodeRouterImportDialog", () => {
         }),
       )
     })
-    expect(mockResolveDisplayAccountTokenForSecret).not.toHaveBeenCalled()
+    expect(mockResolveDisplayAccountRuntimeKeySecret).not.toHaveBeenCalled()
   })
 })

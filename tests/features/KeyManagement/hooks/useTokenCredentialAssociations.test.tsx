@@ -16,6 +16,11 @@ import {
   API_CREDENTIAL_PROFILE_LINK_STATES,
   type ApiCredentialProfileLink,
 } from "~/types/apiCredentialProfiles"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
+import {
+  buildDisplaySiteData,
+  buildNewApiToken,
+} from "~~/tests/test-utils/factories"
 
 const { openApiCredentialProfilesPageMock } = vi.hoisted(() => ({
   openApiCredentialProfilesPageMock: vi.fn(),
@@ -51,14 +56,12 @@ const activeLink = {
 
 const runtimeEntry = {
   id: "runtime-example",
-  runtimeKey: {
-    source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
-    accountId: locator.accountId,
-    siteType: locator.siteType,
-    tokenId: locator.tokenId,
-  },
+  runtimeKey: buildNewApiRuntimeKey(
+    buildDisplaySiteData({ id: locator.accountId, siteType: locator.siteType }),
+    buildNewApiToken({ id: locator.tokenId }),
+  ),
   uiState: {},
-} as KeyManagementEntry
+} satisfies KeyManagementEntry
 
 const nativeRow = {
   kind: KEY_MANAGEMENT_DISPLAY_ROW_KINDS.AccountKeyResource,
@@ -185,7 +188,11 @@ describe("useTokenCredentialAssociations", () => {
         ...runtimeEntry,
         runtimeKey: {
           ...runtimeEntry.runtimeKey,
-          tokenId: 8,
+          resourceRef: {
+            ...runtimeEntry.runtimeKey.resourceRef,
+            resourceId: "8",
+          },
+          legacyTokenId: 8,
         },
       } as KeyManagementEntry),
     ).toBeUndefined()

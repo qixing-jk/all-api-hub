@@ -585,7 +585,7 @@ describe("RepairMissingKeysDialog", () => {
             siteType: SITE_TYPES.AIHUBMIX,
             siteUrlOrigin: "https://aihubmix.example.invalid",
             outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
-            skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
+            skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.OneTimeKey,
           }),
         ],
       },
@@ -609,7 +609,7 @@ describe("RepairMissingKeysDialog", () => {
     expect(screen.getAllByText("AIHubMix")).not.toHaveLength(0)
     expect(
       screen.getByText(
-        "keyManagement:repairMissingKeys.skipReasons.aihubmixOneTimeKey",
+        "keyManagement:repairMissingKeys.skipReasons.oneTimeKey",
       ),
     ).toBeInTheDocument()
     expect(

@@ -1,5 +1,6 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type {
+  AccountKeyCreationIntent,
   AccountKeyEditorSubmitResult,
   AccountKeyProvisionedResource,
   AccountKeyProvisioningSnapshot,
@@ -67,6 +68,7 @@ export type AccountKeyResourceDefinition<
 > = {
   siteType: AccountSiteType
   inventorySecretAvailability?: AccountKeyResourceCapability["inventorySecretAvailability"]
+  defaultCreation?: AccountKeyResourceCapability["defaultCreation"]
   openConfig(
     input: AccountKeyResourceOpenInput,
     options?: ResourceOperationOptions,
@@ -134,6 +136,7 @@ export type AccountKeyResourceDefinition<
     scope: AccountKeyScope,
     options?: ResourceOperationOptions,
     scopeInventory?: AccountKeyScopeInventory,
+    intent?: AccountKeyCreationIntent,
   ): Promise<AccountKeyResourceEditorDefinition<TCreateCommand>>
   editEditor(
     config: TConfig,
@@ -371,6 +374,9 @@ export function defineAccountKeyResourceCapability<
   const siteType = definition.siteType
 
   return {
+    ...(definition.defaultCreation
+      ? { defaultCreation: definition.defaultCreation }
+      : {}),
     ...(definition.inventorySecretAvailability
       ? { inventorySecretAvailability: definition.inventorySecretAvailability }
       : {}),
@@ -813,7 +819,7 @@ export function defineAccountKeyResourceCapability<
           refreshScopeInventory: (scopeOptions) =>
             loadScopeInventory(scopeOptions, true),
           openCollection,
-          openCreateEditor: async (scopeKey: string, editorOptions) => {
+          openCreateEditor: async (scopeKey: string, editorOptions, intent) => {
             const resolvedScope = await resolveScope(scopeKey, editorOptions)
             const editorScopeInventory = cachedScopeInventory
             if (!editorScopeInventory) throw unexpectedFailure()
@@ -831,6 +837,7 @@ export function defineAccountKeyResourceCapability<
                   providerScope,
                   editorOptions,
                   editorScopeInventory,
+                  intent,
                 ),
               mapFailure,
             )

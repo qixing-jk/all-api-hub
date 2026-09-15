@@ -1,14 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { decodeNewApiResponseError } from "~/services/apiService/newApiFamily/responseError"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import { MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS } from "~/services/managedSites/channelMatch"
-import type { ApiToken, DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type { CreateChannelPayload } from "~/types/newApi"
 import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
@@ -137,9 +138,9 @@ function createMockDisplaySiteData(
 }
 
 /**
- * Creates a mock ApiToken instance representing a typical API key record.
+ * Creates a mock NewApiToken instance representing a typical API key record.
  */
-function createMockApiToken(overrides?: Partial<ApiToken>): ApiToken {
+function createMockApiToken(overrides?: Partial<NewApiToken>): NewApiToken {
   return {
     id: 1,
     user_id: 1,
@@ -1033,7 +1034,7 @@ describe("newApiService", () => {
       const token = createMockApiToken({ name: "My Token" })
 
       const result = buildManagedSiteChannelDraftSource(
-        buildDisplayAccountTokenRuntimeKey(account, token),
+        buildNewApiRuntimeKey(account, token),
       ).name
 
       expect(result).toBe("My Site | My Token (auto)")
@@ -1044,7 +1045,7 @@ describe("newApiService", () => {
       const token = createMockApiToken({ name: "My Token (auto)" })
 
       const result = buildManagedSiteChannelDraftSource(
-        buildDisplayAccountTokenRuntimeKey(account, token),
+        buildNewApiRuntimeKey(account, token),
       ).name
 
       expect(result).toBe("My Site | My Token (auto)")
@@ -1056,7 +1057,7 @@ describe("newApiService", () => {
       const token = createMockApiToken()
 
       const result = buildManagedSiteChannelDraftSource(
-        buildDisplayAccountTokenRuntimeKey(account, token),
+        buildNewApiRuntimeKey(account, token),
       ).name
 
       expect(result).not.toMatch(/^\s/)
@@ -1110,7 +1111,7 @@ describe("newApiService", () => {
 
       const result = await prepareChannelFormData(
         buildManagedSiteChannelDraftSource(
-          buildDisplayAccountTokenRuntimeKey(account, token),
+          buildNewApiRuntimeKey(account, token),
         ),
       )
 
@@ -1136,7 +1137,7 @@ describe("newApiService", () => {
 
       await prepareChannelFormData(
         buildManagedSiteChannelDraftSource(
-          buildDisplayAccountTokenRuntimeKey(account, token),
+          buildNewApiRuntimeKey(account, token),
         ),
       )
 
@@ -1167,7 +1168,7 @@ describe("newApiService", () => {
 
       const result = await prepareChannelFormData(
         buildManagedSiteChannelDraftSource(
-          buildDisplayAccountTokenRuntimeKey(account, token),
+          buildNewApiRuntimeKey(account, token),
         ),
       )
 
@@ -1195,7 +1196,7 @@ describe("newApiService", () => {
 
       const result = await prepareChannelFormData(
         buildManagedSiteChannelDraftSource(
-          buildDisplayAccountTokenRuntimeKey(account, token),
+          buildNewApiRuntimeKey(account, token),
         ),
       )
 
@@ -1225,7 +1226,7 @@ describe("newApiService", () => {
 
       const result = await prepareChannelFormData(
         buildManagedSiteChannelDraftSource(
-          buildDisplayAccountTokenRuntimeKey(account, token),
+          buildNewApiRuntimeKey(account, token),
         ),
       )
 
@@ -1248,7 +1249,7 @@ describe("newApiService", () => {
 
       const result = await prepareChannelFormData(
         buildManagedSiteChannelDraftSource(
-          buildDisplayAccountTokenRuntimeKey(account, token),
+          buildNewApiRuntimeKey(account, token),
         ),
       )
 
@@ -1271,7 +1272,7 @@ describe("newApiService", () => {
 
       const result = await prepareChannelFormData(
         buildManagedSiteChannelDraftSource(
-          buildDisplayAccountTokenRuntimeKey(account, token),
+          buildNewApiRuntimeKey(account, token),
         ),
       )
 
@@ -1297,7 +1298,7 @@ describe("newApiService", () => {
 
       const result = await prepareChannelFormData(
         buildManagedSiteChannelDraftSource(
-          buildDisplayAccountTokenRuntimeKey(account, token),
+          buildNewApiRuntimeKey(account, token),
         ),
       )
 

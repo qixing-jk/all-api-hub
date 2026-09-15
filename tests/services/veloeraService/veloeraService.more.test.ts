@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import {
-  buildApiToken,
   buildDisplaySiteData,
+  buildNewApiToken,
 } from "~~/tests/test-utils/factories"
 
 const {
@@ -97,7 +97,7 @@ describe("veloeraService additional flows", () => {
       fetchFailed: true,
     })
 
-    const token = buildApiToken({
+    const token = buildNewApiToken({
       key: "veloera-key",
       name: "Primary Token",
       models: "gpt-4o,claude-3",
@@ -105,7 +105,7 @@ describe("veloeraService additional flows", () => {
 
     const result = await prepareChannelFormData(
       buildManagedSiteChannelDraftSource(
-        buildDisplayAccountTokenRuntimeKey(
+        buildNewApiRuntimeKey(
           buildDisplaySiteData({
             name: "Veloera Site",
             baseUrl: "https://proxy.example.com",

@@ -176,43 +176,21 @@
     "advancedSettings": "高階設定",
     "availableModels": "可用模型",
     "basicInfo": "基本資訊",
-    "createFailed": "建立金鑰失敗，請稍後重試",
     "createNotSupported": "該帳號不支援建立 API 金鑰。",
-    "createSuccess": "金鑰建立成功",
     "createToken": "建立金鑰",
-    "editModeNoChange": "編輯模式下無法更改帳號",
-    "editToken": "編輯 API 金鑰",
     "expiration": "過期時間",
     "expirationPlaceholder": "留空表示永不過期",
     "groupLabel": "分組",
-    "groupRate": "倍率：",
-    "groupRestrictedNote": "僅可選擇可用分組，其他分組已停用。",
-    "ipExample": "例如：192.168.1.1,10.0.0.1 或使用 * 表示不限制",
     "ipLimits": "IP 限制",
     "ipPlaceholder": "留空表示不限制，多個 IP 用逗號分隔",
-    "loadDataFailed": "載入資料失敗，請稍後重試",
     "modelLimits": "模型限制",
-    "modelLoadFailed": "無法載入可用模型。你仍可建立金鑰；若未選取模型，模型限制將維持關閉。原因：{{reason}}",
-    "modelSelectHint_other": "已選擇 {{count}} 個模型",
-    "nameRequired": "金鑰名稱不能為空",
-    "noAvailableModels": "目前帳號沒有可用於模型限制的模型",
     "quotaPlaceholder": "請輸入額度金額（美元）",
-    "quotaRate": "1美元 = {{rate}} 配額點數",
     "quotaSettings": "額度設定",
-    "selectAccountError": "請選擇帳號",
     "selectModels": "選擇模型",
-    "subnetExample": "例如：192.168.1.0/24",
     "subnetLimits": "Subnet 限制",
     "subnetPlaceholder": "留空表示不限制，輸入 subnet 或 CIDR",
     "tokenName": "金鑰名稱",
     "unlimitedQuota": "無限額度",
-    "updateFailed": "更新金鑰失敗，請稍後重試",
-    "updateNotSupported": "該帳號不支援更新 API 金鑰。",
-    "updateSuccess": "金鑰更新成功",
-    "updateToken": "更新金鑰",
-    "validExpiration": "過期時間必須大於當前時間",
-    "validIp": "請輸入有效的 IP 地址，多個 IP 用逗號分隔",
-    "validQuota": "請輸入有效的額度金額",
     "warningText": "請妥善保管 API 金鑰，避免洩露",
     "warningTitle": "注意事項"
   },
@@ -233,13 +211,10 @@
     "ipLimits": "IP 限制：",
     "key": "金鑰：",
     "lastUsedTime": "最近使用時間：",
-    "limitedQuota": "有限額度",
     "models": "模型限制：",
     "neverExpires": "永不過期",
     "note": "備註：",
-    "quotaPolicy": "額度策略：",
     "remainingQuota": "剩餘額度：",
-    "secretUnavailable": "此已儲存金鑰的完整值不可用。",
     "ungrouped": "未分組",
     "usedQuota": "已用額度："
   },
@@ -342,11 +317,62 @@
     "verifyCliSupportFailed": "開啟 CLI 相容性驗證失敗"
   },
   "native": {
+    "actions": {
+      "delete": "刪除金鑰",
+      "edit": "編輯金鑰"
+    },
+    "delete": {
+      "confirm": "刪除金鑰",
+      "description": "要永久刪除金鑰 {{name}} 嗎？刪除後無法復原。",
+      "feedback": {
+        "authenticationFailed": "請重新登入或更新此帳號的憑證，然後重試。",
+        "error": "無法刪除此金鑰。請重新整理後再試。",
+        "permissionDenied": "請使用有權查看與管理金鑰的憑證，然後重試。",
+        "unavailable": "服務暫時無法使用，請先重新整理再試。",
+        "uncertain": "金鑰狀態可能已變更。請先重新整理金鑰，再決定是否重試。"
+      },
+      "refresh": "重新整理金鑰",
+      "title": "刪除 API 金鑰？"
+    },
     "detailsLoadFailed": "無法載入金鑰詳細資料。",
     "editor": {
+      "actions": {
+        "cancel": "取消",
+        "save": "儲存金鑰"
+      },
       "expiryDays": "有效期限（天）",
+      "feedback": {
+        "authenticationFailed": "請重新登入或更新此帳號的憑證，然後重試。",
+        "error": "請依照錯誤資訊處理後重試。",
+        "permissionDenied": "請使用有權查看與管理金鑰的憑證，然後重試。",
+        "title": "無法儲存金鑰",
+        "unavailable": "服務暫時無法使用，請稍後重試。",
+        "uncertain": "服務可能已套用此變更。請先重新整理金鑰確認目前狀態，再決定是否重試。"
+      },
+      "issues": {
+        "inconsistentValue": "請檢查此值後重試。",
+        "invalidValue": "請輸入有效值。",
+        "outOfRange": "請輸入允許範圍內的值。",
+        "required": "此項為必填項。",
+        "unsupportedOption": "請選擇可用選項。"
+      },
+      "opening": {
+        "failed": "無法開啟金鑰編輯器",
+        "loading": "正在開啟金鑰編輯器...",
+        "retry": "重試"
+      },
       "quotaUsd": "額度（美元）",
-      "totalQuotaUsd": "總額度（美元）"
+      "title": {
+        "create": "建立 API 金鑰",
+        "edit": "編輯 API 金鑰"
+      },
+      "totalQuotaUsd": "總額度（美元）",
+      "unsaved": {
+        "description": "關閉後，本次修改不會儲存。",
+        "discard": "捨棄變更",
+        "keepEditing": "繼續編輯",
+        "title": "捨棄變更？"
+      }
     },
     "heading": "API 金鑰",
     "missing": "無可用資料",
@@ -354,6 +380,7 @@
       "empty": "暫無可用作用域",
       "error": "無法載入作用域",
       "errorHelp": "請檢查帳戶存取權限後重試。",
+      "fallback": "請求的作用域無法使用，現已顯示預設作用域。",
       "heading": "作用域",
       "label": "選擇作用域",
       "loading": "正在載入作用域…",
@@ -362,10 +389,14 @@
       "retry": "重新載入作用域"
     },
     "status": {
+      "all": "全部",
       "disabled": "已停用",
       "enabled": "已啟用",
       "expired": "已到期",
       "unknown": "未知"
+    },
+    "statusFilter": {
+      "label": "金鑰狀態"
     }
   },
   "noAccountsSupportKeyCreation": "目前檢視中的帳號都不支援建立 API 金鑰。請選擇其他帳號或新增受支援的帳號。",
@@ -391,32 +422,7 @@
     "warningTitle": "該金鑰只能查看一次"
   },
   "openRouter": {
-    "delete": {
-      "confirm": "刪除金鑰",
-      "description": "要從 OpenRouter 永久刪除 {{name}} 嗎？刪除後無法復原。",
-      "feedback": {
-        "authenticationFailed": "請更新此帳號的 OpenRouter Management API Key，然後重新整理。",
-        "error": "無法刪除此金鑰。請重新整理後再試。",
-        "permissionDenied": "你沒有刪除此金鑰的權限。",
-        "unavailable": "服務暫時無法使用，請先重新整理再試。",
-        "uncertain": "金鑰狀態可能已變更。請先重新整理金鑰，再決定是否重試。"
-      },
-      "refresh": "重新整理金鑰",
-      "title": "刪除 API 金鑰？"
-    },
     "editor": {
-      "actions": {
-        "cancel": "取消",
-        "save": "儲存金鑰"
-      },
-      "feedback": {
-        "authenticationFailed": "請更新此帳號的 OpenRouter Management API Key，然後重試。",
-        "error": "請依照錯誤資訊處理後重試。",
-        "permissionDenied": "你沒有在此工作區管理金鑰的權限。",
-        "title": "無法儲存金鑰",
-        "unavailable": "服務暫時無法使用，請稍後重試。",
-        "uncertain": "服務可能已套用此變更。請先重新整理金鑰確認目前狀態，再決定是否重試。"
-      },
       "fields": {
         "creator": {
           "editHelp": "如需變更建立者，請建立新的金鑰。",
@@ -459,18 +465,6 @@
           "label": "工作區",
           "placeholder": "選擇工作區"
         }
-      },
-      "issues": {
-        "inconsistentValue": "請檢查此值後重試。",
-        "invalidValue": "請輸入有效值。",
-        "outOfRange": "請輸入允許範圍內的值。",
-        "required": "此項為必填項。",
-        "unsupportedOption": "請選擇可用選項。"
-      },
-      "opening": {
-        "failed": "無法開啟金鑰編輯器",
-        "loading": "正在開啟金鑰編輯器...",
-        "retry": "重試"
       },
       "options": {
         "creator": {
@@ -516,23 +510,9 @@
           "weekly": "每週重設"
         },
         "unlimited": "無用量上限"
-      },
-      "title": {
-        "create": "建立 API 金鑰",
-        "edit": "編輯 API 金鑰"
-      },
-      "unsaved": {
-        "description": "關閉後，本次修改不會儲存。",
-        "discard": "捨棄變更",
-        "keepEditing": "繼續編輯",
-        "title": "捨棄變更？"
       }
     },
     "list": {
-      "actions": {
-        "delete": "刪除金鑰",
-        "edit": "編輯金鑰"
-      },
       "details": {
         "byokUsage": "BYOK 用量",
         "byokUsageDaily": "每日 BYOK 用量",
@@ -554,16 +534,6 @@
         "usageMonthly": "每月用量",
         "usageWeekly": "每週用量",
         "workspace": "工作區"
-      },
-      "status": {
-        "all": "全部",
-        "disabled": "已停用",
-        "enabled": "已啟用",
-        "expired": "已到期",
-        "unknown": "未知"
-      },
-      "statusFilter": {
-        "label": "金鑰狀態"
       },
       "values": {
         "missing": "無可用資料",
@@ -705,8 +675,8 @@
     "searchLabel": "搜尋",
     "searchPlaceholder": "搜尋帳號、金鑰名稱、群組、網域或網站類型...",
     "skipReasons": {
-      "aihubmixOneTimeKey": "AIHubMix 金鑰僅可查看一次，請手動建立並立即保存完整金鑰",
       "noneAuth": "無憑據（認證方式：無）",
+      "oneTimeKey": "此站點僅在建立時顯示完整金鑰，請手動建立並立即保存完整金鑰",
       "provisioningUnavailable": "此帳號不支援自動建立金鑰；如有需要，請前往對應網站手動建立。"
     },
     "status": {

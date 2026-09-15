@@ -7,8 +7,6 @@ import { voApiV2AccountData } from "./accountData"
 import { voApiV2AccountKeyResources } from "./accountKeyResource"
 import { voApiV2AccountRefresh } from "./accountRefresh"
 import { voApiV2InviteLink } from "./inviteLink"
-import { voApiV2KeyManagement } from "./keyManagement"
-import { voApiV2TokenProvisioning } from "./tokenProvisioning"
 
 export const voApiV2Capabilities: SiteTypeCapabilities = {
   siteType: SITE_TYPES.VO_API_V2,
@@ -18,10 +16,7 @@ export const voApiV2Capabilities: SiteTypeCapabilities = {
     bootstrap: voApiV2AccountBootstrap,
     completion: voApiV2AccountCompletion,
     inviteLink: voApiV2InviteLink,
-    keyManagement: voApiV2KeyManagement,
-    keyResources: voApiV2AccountKeyResources,
     keyResourceManagement: voApiV2AccountKeyResources,
-    tokenProvisioning: voApiV2TokenProvisioning,
     refresh: voApiV2AccountRefresh,
   },
 }

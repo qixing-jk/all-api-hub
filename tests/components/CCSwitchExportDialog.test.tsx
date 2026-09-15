@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { CC_SWITCH_EXPORT_TEST_IDS } from "~/components/CCSwitchExportDialog.testIds"
-import { createAccountTokenExportSource } from "~/services/accounts/utils/credentialExport"
+import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
 import { createProfileCredentialExportSource } from "~/services/apiCredentialProfiles/credentialExport"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -14,11 +14,12 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const mockDiscoverOpenAICompatibleModels = vi.fn()
 const mockOpenInCCSwitch = vi.fn()
-const mockResolveDisplayAccountTokenForSecret = vi.fn()
+const mockResolveDisplayAccountRuntimeKeySecret = vi.fn()
 const createModelDiscovery = (
   models: { id: string }[] = [],
   resolvedBaseUrl = "https://x.test/v1",
@@ -38,8 +39,8 @@ vi.mock(
       >()
     return {
       ...original,
-      resolveDisplayAccountTokenForSecret: (...args: any[]) =>
-        mockResolveDisplayAccountTokenForSecret(...args),
+      resolveDisplayAccountRuntimeKeySecret: (...args: any[]) =>
+        mockResolveDisplayAccountRuntimeKeySecret(...args),
     }
   },
 )
@@ -66,10 +67,10 @@ describe("CCSwitchExportDialog", () => {
   beforeEach(() => {
     mockDiscoverOpenAICompatibleModels.mockReset()
     mockOpenInCCSwitch.mockReset()
-    mockResolveDisplayAccountTokenForSecret.mockReset()
+    mockResolveDisplayAccountRuntimeKeySecret.mockReset()
     startProductAnalyticsActionMock.mockReset()
     completeProductAnalyticsActionMock.mockReset()
-    mockResolveDisplayAccountTokenForSecret.mockImplementation(
+    mockResolveDisplayAccountRuntimeKeySecret.mockImplementation(
       async (_account, token) => token,
     )
     mockOpenInCCSwitch.mockReturnValue(true)
@@ -88,9 +89,13 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
-          { id: "tok", key: "sk-test" } as any,
+          buildNewApiRuntimeKey(
+            { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
+            { id: "tok", key: "sk-test" } as any,
+          ),
+          { preferCurrentSecret: true },
         )}
       />,
     )
@@ -123,9 +128,13 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
-          { id: "tok", key: "sk-test" } as any,
+          buildNewApiRuntimeKey(
+            { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
+            { id: "tok", key: "sk-test" } as any,
+          ),
+          { preferCurrentSecret: true },
         )}
       />,
     )
@@ -153,9 +162,13 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
-          { id: "tok", key: "sk-test" } as any,
+          buildNewApiRuntimeKey(
+            { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
+            { id: "tok", key: "sk-test" } as any,
+          ),
+          { preferCurrentSecret: true },
         )}
       />,
     )
@@ -184,13 +197,21 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           {
             id: "acc",
             name: "Example",
             baseUrl: "https://ark.example.invalid/api/v3",
           } as any,
-          { id: "tok", key: "sk-test" } as any,
+          buildNewApiRuntimeKey(
+            {
+              id: "acc",
+              name: "Example",
+              baseUrl: "https://ark.example.invalid/api/v3",
+            } as any,
+            { id: "tok", key: "sk-test" } as any,
+          ),
+          { preferCurrentSecret: true },
         )}
       />,
     )
@@ -232,9 +253,13 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           { id: "acc", name: "Example", baseUrl: "https://x.test" } as any,
-          { id: "tok", key: "sk-test" } as any,
+          buildNewApiRuntimeKey(
+            { id: "acc", name: "Example", baseUrl: "https://x.test" } as any,
+            { id: "tok", key: "sk-test" } as any,
+          ),
+          { preferCurrentSecret: true },
         )}
       />,
     )
@@ -282,9 +307,13 @@ describe("CCSwitchExportDialog", () => {
         <CCSwitchExportDialog
           isOpen={true}
           onClose={() => {}}
-          source={createAccountTokenExportSource(
+          source={createAccountRuntimeKeyExportSource(
             { id: "acc", name: "Example", baseUrl } as any,
-            { id: "tok", key: "sk-test" } as any,
+            buildNewApiRuntimeKey(
+              { id: "acc", name: "Example", baseUrl } as any,
+              { id: "tok", key: "sk-test" } as any,
+            ),
+            { preferCurrentSecret: true },
           )}
         />,
       )
@@ -326,9 +355,13 @@ describe("CCSwitchExportDialog", () => {
         <CCSwitchExportDialog
           isOpen={true}
           onClose={() => {}}
-          source={createAccountTokenExportSource(
+          source={createAccountRuntimeKeyExportSource(
             { id: "acc", name: "Example", baseUrl: "https://x.test" } as any,
-            { id: "tok", key: "sk-test" } as any,
+            buildNewApiRuntimeKey(
+              { id: "acc", name: "Example", baseUrl: "https://x.test" } as any,
+              { id: "tok", key: "sk-test" } as any,
+            ),
+            { preferCurrentSecret: true },
           )}
         />,
       )
@@ -378,9 +411,13 @@ describe("CCSwitchExportDialog", () => {
         <CCSwitchExportDialog
           isOpen={true}
           onClose={() => {}}
-          source={createAccountTokenExportSource(
+          source={createAccountRuntimeKeyExportSource(
             { id: "acc", name: "Example", baseUrl: "https://x.test" } as any,
-            { id: "tok", key: "sk-test" } as any,
+            buildNewApiRuntimeKey(
+              { id: "acc", name: "Example", baseUrl: "https://x.test" } as any,
+              { id: "tok", key: "sk-test" } as any,
+            ),
+            { preferCurrentSecret: true },
           )}
         />,
       )
@@ -429,9 +466,13 @@ describe("CCSwitchExportDialog", () => {
         <CCSwitchExportDialog
           isOpen={true}
           onClose={() => {}}
-          source={createAccountTokenExportSource(
+          source={createAccountRuntimeKeyExportSource(
             { id: "acc", name: "Example", baseUrl: "https://x.test" } as any,
-            { id: "tok", key: "sk-test" } as any,
+            buildNewApiRuntimeKey(
+              { id: "acc", name: "Example", baseUrl: "https://x.test" } as any,
+              { id: "tok", key: "sk-test" } as any,
+            ),
+            { preferCurrentSecret: true },
           )}
         />,
       )
@@ -463,9 +504,13 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           { id: "acc", name: "Example", baseUrl: "https://x.test" } as any,
-          { id: "tok", key: "sk-test" } as any,
+          buildNewApiRuntimeKey(
+            { id: "acc", name: "Example", baseUrl: "https://x.test" } as any,
+            { id: "tok", key: "sk-test" } as any,
+          ),
+          { preferCurrentSecret: true },
         )}
       />,
     )
@@ -493,9 +538,13 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           { id: "acc", name: "Example", baseUrl: "https://x.test" } as any,
-          { id: "tok", key: "sk-test" } as any,
+          buildNewApiRuntimeKey(
+            { id: "acc", name: "Example", baseUrl: "https://x.test" } as any,
+            { id: "tok", key: "sk-test" } as any,
+          ),
+          { preferCurrentSecret: true },
         )}
       />,
     )
@@ -544,9 +593,13 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
-          { id: "tok", key: "sk-test" } as any,
+          buildNewApiRuntimeKey(
+            { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
+            { id: "tok", key: "sk-test" } as any,
+          ),
+          { preferCurrentSecret: true },
         )}
       />,
     )
@@ -573,9 +626,13 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
-          { id: "tok", key: "sk-test", note: "token note" } as any,
+          buildNewApiRuntimeKey(
+            { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
+            { id: "tok", key: "sk-test", note: "token note" } as any,
+          ),
+          { preferCurrentSecret: true },
         )}
       />,
     )
@@ -594,13 +651,21 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={onClose}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           {
             id: "acc",
             name: "Sensitive Provider",
             baseUrl: "https://private.example.com/v1",
           } as any,
-          { id: "tok", key: "sk-sensitive", note: "private note" } as any,
+          buildNewApiRuntimeKey(
+            {
+              id: "acc",
+              name: "Sensitive Provider",
+              baseUrl: "https://private.example.com/v1",
+            } as any,
+            { id: "tok", key: "sk-sensitive", note: "private note" } as any,
+          ),
+          { preferCurrentSecret: true },
         )}
       />,
     )
@@ -645,9 +710,13 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
-          { id: "tok", key: "sk-test" } as any,
+          buildNewApiRuntimeKey(
+            { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
+            { id: "tok", key: "sk-test" } as any,
+          ),
+          { preferCurrentSecret: true },
         )}
       />,
     )
@@ -673,9 +742,13 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
-          { id: "tok", key: "sk-test" } as any,
+          buildNewApiRuntimeKey(
+            { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
+            { id: "tok", key: "sk-test" } as any,
+          ),
+          { preferCurrentSecret: true },
         )}
         analyticsContext={{
           featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
@@ -719,7 +792,7 @@ describe("CCSwitchExportDialog", () => {
       createdAt: 1,
       updatedAt: 2,
     }
-    mockResolveDisplayAccountTokenForSecret.mockRejectedValue(
+    mockResolveDisplayAccountRuntimeKeySecret.mockRejectedValue(
       new Error("account_api_context_missing_user_id"),
     )
     mockDiscoverOpenAICompatibleModels.mockResolvedValueOnce(
@@ -759,13 +832,13 @@ describe("CCSwitchExportDialog", () => {
         }),
       )
     })
-    expect(mockResolveDisplayAccountTokenForSecret).not.toHaveBeenCalled()
+    expect(mockResolveDisplayAccountRuntimeKeySecret).not.toHaveBeenCalled()
   })
 
   it("tracks thrown CC Switch submissions as unknown failures", async () => {
     const user = userEvent.setup()
     mockDiscoverOpenAICompatibleModels.mockResolvedValue(createModelDiscovery())
-    mockResolveDisplayAccountTokenForSecret.mockRejectedValue(
+    mockResolveDisplayAccountRuntimeKeySecret.mockRejectedValue(
       new Error("secret unavailable"),
     )
 
@@ -773,9 +846,13 @@ describe("CCSwitchExportDialog", () => {
       <CCSwitchExportDialog
         isOpen={true}
         onClose={() => {}}
-        source={createAccountTokenExportSource(
+        source={createAccountRuntimeKeyExportSource(
           { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
-          { id: "tok", key: "sk-abcd************wxyz" } as any,
+          buildNewApiRuntimeKey(
+            { id: "acc", name: "Example", baseUrl: "https://x.test/v1" } as any,
+            { id: "tok", key: "sk-abcd************wxyz" } as any,
+          ),
+          { preferCurrentSecret: true },
         )}
       />,
     )

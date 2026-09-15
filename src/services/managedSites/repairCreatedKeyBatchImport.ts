@@ -276,10 +276,11 @@ export async function resolveRepairCreatedKeyBatchImportCandidate(
 
     const session = (async () => {
       const context = createDisplayAccountApiContext(account)
-      const keyResources = context.capabilities.account?.keyResources
-      if (!keyResources) return null
+      const keyResourceManagement =
+        context.capabilities.account?.keyResourceManagement
+      if (!keyResourceManagement) return null
 
-      return keyResources.open({
+      return keyResourceManagement.open({
         account: {
           id: account.id,
           name: account.name,

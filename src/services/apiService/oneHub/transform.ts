@@ -1,4 +1,3 @@
-import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
 import { buildDoneHubPricingPlan } from "~/services/apiService/oneHub/pricingPlan"
 import type {
   OneHubModelPricing,
@@ -16,6 +15,7 @@ import {
   MODEL_VENDOR_EVIDENCE_KINDS,
   normalizeModelDescriptors,
 } from "~/services/models/modelDescriptor"
+import type { UserGroupInfo } from "~/services/models/userGroup"
 
 const isFiniteNonnegativeRatio = (value: number | undefined): value is number =>
   typeof value === "number" && Number.isFinite(value) && value >= 0

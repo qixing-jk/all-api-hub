@@ -1,6 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
-import type { ApiToken } from "~/types"
 
 /**
  * Normalizes a raw token key string without changing the backend-provided
@@ -79,21 +78,6 @@ export function formatOptionalSkPrefixSiteTokenComparableKey(
 }
 
 /**
- * Returns a transient token clone with an auth/display key for compatible site
- * types, preserving the caller's original token object when no change is
- * needed.
- */
-export function formatOptionalSkPrefixSiteToken<TToken extends ApiToken>(
-  token: TToken,
-  siteType?: AccountSiteType | string,
-): TToken {
-  if (!token || typeof token.key !== "string") return token
-
-  const authKey = formatOptionalSkPrefixSiteTokenAuthKey(token.key, siteType)
-  return authKey === token.key ? token : { ...token, key: authKey }
-}
-
-/**
  * Detects inventory keys that are masked and therefore unusable as credentials.
  *
  * Upstream `new-api` currently replaces the middle of inventory keys with `*`.
@@ -114,9 +98,9 @@ export function hasUsableApiTokenKey(key: string): boolean {
 }
 
 /**
- * Normalizes an ApiToken so callers can rely on a trimmed key value.
+ * Normalizes a provider key record without changing its native fields.
  */
-export function normalizeApiTokenKey(token: ApiToken): ApiToken {
+export function normalizeApiTokenKey<T extends { key: string }>(token: T): T {
   if (!token || typeof token.key !== "string") return token
 
   const normalizedKey = normalizeApiTokenKeyValue(token.key)
@@ -125,7 +109,9 @@ export function normalizeApiTokenKey(token: ApiToken): ApiToken {
 }
 
 /** Validates stable positive identities across a complete token inventory. */
-export function validateApiTokenInventory(tokens: ApiToken[]): ApiToken[] {
+export function validateApiTokenInventory<T extends { id: number }>(
+  tokens: T[],
+): T[] {
   const tokenIds = new Set<number>()
 
   for (const token of tokens) {

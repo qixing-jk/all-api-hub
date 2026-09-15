@@ -19,17 +19,20 @@ import {
 } from "~/features/ModelList/modelManagementSources"
 import {
   buildAccountRuntimeKeyAccount,
-  buildDisplayAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
-import type { ApiToken } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+import {
+  buildNewApiRuntimeKey,
+  buildNewApiRuntimeKeyId,
+} from "~~/tests/test-utils/accountKeyFixtures"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
-import { buildApiToken } from "~~/tests/test-utils/factories"
+import { buildNewApiToken } from "~~/tests/test-utils/factories"
 
 const createAccountFixture = (id = "account-1"): DisplaySiteData => ({
   id,
@@ -50,9 +53,9 @@ const createAccountFixture = (id = "account-1"): DisplaySiteData => ({
 })
 
 const runtimeKeyFromToken = (
-  token: Partial<ApiToken>,
+  token: Partial<NewApiToken>,
   account = createAccountFixture(),
-) => buildDisplayAccountTokenRuntimeKey(account, buildApiToken(token))
+) => buildNewApiRuntimeKey(account, buildNewApiToken(token))
 
 const DEFAULT_ACCOUNT_SOURCE = createAccountSource(createAccountFixture())
 
@@ -235,7 +238,7 @@ describe("model list batch verification helpers", () => {
 
     expect(
       pickBatchVerifyCompatibleRuntimeKey(
-        tokens.map((token: Partial<ApiToken>) => runtimeKeyFromToken(token)),
+        tokens.map((token: Partial<NewApiToken>) => runtimeKeyFromToken(token)),
         {
           modelId: "shared-model",
           enableGroups: [DEFAULT_MODEL_GROUP],
@@ -247,7 +250,7 @@ describe("model list batch verification helpers", () => {
           },
         },
       )?.id,
-    ).toBe("account_token:account-1:52")
+    ).toBe(buildNewApiRuntimeKeyId("account-1", 52))
   })
 
   it("does not fall back to another compatible token for token-scoped rows", () => {
@@ -272,7 +275,7 @@ describe("model list batch verification helpers", () => {
 
     expect(
       pickBatchVerifyCompatibleRuntimeKey(
-        tokens.map((token: Partial<ApiToken>) => runtimeKeyFromToken(token)),
+        tokens.map((token: Partial<NewApiToken>) => runtimeKeyFromToken(token)),
         {
           modelId: "shared-model",
           enableGroups: [DEFAULT_MODEL_GROUP],
@@ -288,7 +291,7 @@ describe("model list batch verification helpers", () => {
 
     expect(
       pickBatchVerifyCompatibleRuntimeKey(
-        tokens.map((token: Partial<ApiToken>) => runtimeKeyFromToken(token)),
+        tokens.map((token: Partial<NewApiToken>) => runtimeKeyFromToken(token)),
         {
           modelId: "shared-model",
           enableGroups: [DEFAULT_MODEL_GROUP],
@@ -407,7 +410,7 @@ describe("model list batch verification helpers", () => {
         ].map((token) => runtimeKeyFromToken(token)),
         item,
       )?.id,
-    ).toBe("account_token:account-1:2")
+    ).toBe(buildNewApiRuntimeKeyId("account-1", 2))
   })
 
   it("omits rows whose source cannot provide verification credentials", () => {
@@ -499,13 +502,13 @@ describe("model list batch verification helpers", () => {
 
     expect(
       pickBatchVerifyCompatibleRuntimeKey(
-        tokens.map((token: Partial<ApiToken>) => runtimeKeyFromToken(token)),
+        tokens.map((token: Partial<NewApiToken>) => runtimeKeyFromToken(token)),
         {
           modelId: "gpt-4o-mini",
           enableGroups: [DEFAULT_MODEL_GROUP],
         },
       )?.id,
-    ).toBe("account_token:account-1:3")
+    ).toBe(buildNewApiRuntimeKeyId("account-1", 3))
   })
 
   it("selects an enabled token when model group metadata is unavailable", () => {
@@ -522,13 +525,13 @@ describe("model list batch verification helpers", () => {
 
     expect(
       pickBatchVerifyCompatibleRuntimeKey(
-        tokens.map((token: Partial<ApiToken>) => runtimeKeyFromToken(token)),
+        tokens.map((token: Partial<NewApiToken>) => runtimeKeyFromToken(token)),
         {
           modelId: "gpt-4o-mini",
           enableGroups: null,
         },
       )?.id,
-    ).toBe("account_token:account-1:1")
+    ).toBe(buildNewApiRuntimeKeyId("account-1", 1))
   })
 
   it("returns null when no enabled token is model-compatible", () => {
@@ -545,7 +548,7 @@ describe("model list batch verification helpers", () => {
 
     expect(
       pickBatchVerifyCompatibleRuntimeKey(
-        tokens.map((token: Partial<ApiToken>) => runtimeKeyFromToken(token)),
+        tokens.map((token: Partial<NewApiToken>) => runtimeKeyFromToken(token)),
         {
           modelId: "gpt-4o-mini",
           enableGroups: [DEFAULT_MODEL_GROUP],
@@ -645,8 +648,8 @@ describe("model list batch verification helpers", () => {
         enableGroups: [DEFAULT_MODEL_GROUP],
         sourceIdentity: {
           kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_RUNTIME_KEY,
-          id: "acc-1:runtime-key:account_token:acc-1:2",
-          runtimeKeyId: "account_token:acc-1:2",
+          id: `acc-1:runtime-key:${runtimeKeys[1].id}`,
+          runtimeKeyId: runtimeKeys[1].id,
           runtimeKeyName: "VIP key",
         },
       }),
@@ -658,8 +661,8 @@ describe("model list batch verification helpers", () => {
         enableGroups: ["vip"],
         sourceIdentity: {
           kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.ACCOUNT_RUNTIME_KEY,
-          id: "acc-1:runtime-key:account_token:acc-1:2",
-          runtimeKeyId: "account_token:acc-1:2",
+          id: `acc-1:runtime-key:${runtimeKeys[1].id}`,
+          runtimeKeyId: runtimeKeys[1].id,
           runtimeKeyName: "VIP key",
         },
       }),

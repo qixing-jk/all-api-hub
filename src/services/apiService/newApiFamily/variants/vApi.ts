@@ -1,8 +1,8 @@
-import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
 import { fetchAccountAvailableModels as fetchLegacyAccountAvailableModels } from "~/services/apiService/newApiFamily/default/keyManagement"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import type { UserGroupInfo } from "~/services/models/userGroup"
 import { isRecord } from "~/utils/core/object"
 
 const CURRENT_AVAILABLE_MODELS_ENDPOINT = "/api/user/available_models"

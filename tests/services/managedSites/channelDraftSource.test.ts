@@ -1,17 +1,15 @@
 import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  buildDisplayAccountTokenRuntimeKey,
-  buildServiceCredentialRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
   buildManagedSiteChannelDraftSource,
   buildManagedSiteCredentialDraftSource,
 } from "~/services/managedSites/channelDraftSource"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import {
-  buildApiToken,
   buildDisplaySiteData,
+  buildNewApiToken,
 } from "~~/tests/test-utils/factories"
 
 describe("managed-site channel draft sources", () => {
@@ -45,9 +43,9 @@ describe("managed-site channel draft sources", () => {
       siteType: SITE_TYPES.AIHUBMIX,
       baseUrl: "https://console.aihubmix.com",
     })
-    const runtimeKey = buildDisplayAccountTokenRuntimeKey(
+    const runtimeKey = buildNewApiRuntimeKey(
       account,
-      buildApiToken({
+      buildNewApiToken({
         name: "Primary (auto)",
         key: "sk-********",
         models: "gpt-4o,claude-sonnet-4",

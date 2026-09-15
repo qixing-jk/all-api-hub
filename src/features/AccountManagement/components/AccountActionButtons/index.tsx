@@ -54,7 +54,7 @@ import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/ex
 import toast from "~/lib/notify"
 import {
   collectAccountRuntimeKeySecrets,
-  isAccountTokenRuntimeKey,
+  isAccountKeyResourceRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { isAccountTodayMetricComplete } from "~/services/accounts/accountTodayStats"
 import {
@@ -64,7 +64,6 @@ import {
 import {
   canFetchDisplayAccountInviteLink,
   fetchDisplayAccountRuntimeKeys,
-  InvalidTokenPayloadError,
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { MANAGED_RESOURCE_SECRET_VERIFICATION_KINDS } from "~/services/apiAdapters/contracts/managedResourceMatching"
@@ -453,14 +452,6 @@ export default function AccountActionButtons({
         siteId: site.id,
         siteType: site.siteType,
       })
-      if (error instanceof InvalidTokenPayloadError) {
-        toast.error(t("actions.fetchKeyInfoFailed"))
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        })
-        return
-      }
-
       const errorMessage = getErrorMessage(error)
       toast.error(t("actions.fetchKeyListFailed", { errorMessage }))
       // Fallback to opening dialog
@@ -578,9 +569,12 @@ export default function AccountActionButtons({
         formData = await managedSite.channelDrafts.prepareFormData(
           buildManagedSiteChannelDraftSource({
             ...resolvedRuntimeKey,
-            baseUrl: isAccountTokenRuntimeKey(resolvedRuntimeKey)
-              ? normalizedAccountBaseUrl
-              : resolvedRuntimeKey.baseUrl,
+            baseUrl:
+              isAccountKeyResourceRuntimeKey(resolvedRuntimeKey) &&
+              resolvedRuntimeKey.baseUrl.trim() ===
+                tokenLookupAccount.baseUrl.trim()
+                ? normalizedAccountBaseUrl
+                : resolvedRuntimeKey.baseUrl,
           }),
         )
       } catch (error) {

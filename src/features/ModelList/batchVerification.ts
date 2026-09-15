@@ -7,7 +7,6 @@ import {
 import {
   isAccountKeyResourceRuntimeKey,
   isAccountRuntimeKeyCompatibleWithModel,
-  isAccountTokenRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { identifyProvider } from "~/services/models/utils/modelProviders"
@@ -113,10 +112,8 @@ export function pickBatchVerifyCompatibleRuntimeKey(
     const sourceIdentity = item.sourceIdentity
     const runtimeKey = runtimeKeys.find(
       (candidate) =>
-        (isAccountTokenRuntimeKey(candidate) &&
-          candidate.tokenId === sourceIdentity.tokenId) ||
-        (isAccountKeyResourceRuntimeKey(candidate) &&
-          candidate.legacyTokenId === sourceIdentity.tokenId),
+        isAccountKeyResourceRuntimeKey(candidate) &&
+        candidate.legacyTokenId === sourceIdentity.tokenId,
     )
     return runtimeKey && isCompatible(runtimeKey) ? runtimeKey : null
   }

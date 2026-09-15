@@ -1,616 +1,188 @@
 import { describe, expect, it } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
 import {
-  ACCOUNT_RUNTIME_KEY_LEGACY_TOKEN_ID,
-  ACCOUNT_RUNTIME_KEY_SOURCES,
-  ACCOUNT_RUNTIME_KEY_STATUSES,
-  accountRuntimeKeyToLegacyAccountToken,
-  accountRuntimeKeyToLegacyApiToken,
   appendOrReplaceAccountRuntimeKey,
   buildAccountKeyResourceRuntimeKey,
+  buildAccountKeyResourceRuntimeKeyFromFacts,
   buildAccountKeyResourceRuntimeKeyId,
-  buildAccountTokenRuntimeKey,
-  buildAccountTokenRuntimeKeyId,
-  buildDisplayAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
-  buildServiceCredentialRuntimeKeyId,
   buildTargetScopedAccountKeyResourceId,
   collectAccountRuntimeKeySecrets,
   findDefaultSelectableAccountRuntimeKey,
   formatAccountRuntimeKeySecretForSite,
+  getAccountRuntimeKeyExportId,
   getAccountRuntimeKeyLocator,
   getAccountRuntimeKeyLocatorAccountId,
   hasUsableAccountRuntimeKeySecret,
-  isAccountKeyResourceRuntimeKey,
   isAccountRuntimeKeyLocatorEqual,
-  isAccountTokenRuntimeKey,
-  isActiveAccountRuntimeKey,
   isSelectableAccountRuntimeKey,
-  isServiceCredentialRuntimeKey,
   sortAccountRuntimeKeysActiveFirst,
 } from "~/services/accounts/accountRuntimeKeys"
-import {
-  canListAccountRuntimeKeys,
-  canResolveAccountRuntimeKeySecret,
-} from "~/services/accounts/keyProductCapabilities"
-import { AuthTypeEnum, type AccountToken, type DisplaySiteData } from "~/types"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
-const account = {
+const account = buildDisplaySiteData({
   id: "account-1",
-  name: "Example Account",
+  name: "Account",
   siteType: "new-api",
-  baseUrl: "https://example.invalid",
-  authType: AuthTypeEnum.AccessToken,
-  token: "account-access-token",
-  userId: "user-1",
-  cookieAuthSessionCookie: "session=redacted",
-  tagIds: ["tag-1"],
-} satisfies Pick<
-  DisplaySiteData,
-  | "authType"
-  | "baseUrl"
-  | "cookieAuthSessionCookie"
-  | "id"
-  | "name"
-  | "siteType"
-  | "tagIds"
-  | "token"
-  | "userId"
->
-
-const token = {
-  id: 42,
-  user_id: 7,
-  key: "sk-token-secret",
-  status: 1,
-  name: "Primary token",
-  created_time: 1,
-  accessed_time: 2,
-  expired_time: -1,
-  remain_quota: 1000,
-  unlimited_quota: false,
-  used_quota: 10,
+  token: "access-secret",
+  cookieAuthSessionCookie: "session=cookie",
+})
+const ref = {
   accountId: account.id,
-  accountName: account.name,
-} satisfies AccountToken
-
-describe("accountRuntimeKeys", () => {
-  it("lists OpenRouter runtime resources without claiming provider secret recovery", () => {
-    const openRouterAccount = {
-      ...account,
-      siteType: SITE_TYPES.OPENROUTER,
-    }
-
-    expect(canListAccountRuntimeKeys(openRouterAccount)).toBe(true)
-    expect(canResolveAccountRuntimeKeySecret(openRouterAccount)).toBe(false)
+  siteType: account.siteType,
+  scopeKey: "account",
+  resourceId: "42",
+}
+const native = (status: "active" | "inactive" | "unknown" = "active") =>
+  buildAccountKeyResourceRuntimeKey(account, {
+    ref,
+    label: "Native key",
+    secret: "",
+    status,
+    legacyTokenId: 42,
+  })
+const service = (authenticated = true) =>
+  buildServiceCredentialRuntimeKey(account, {
+    kind: "singleton_service_key",
+    service: "openai",
+    label: "Service",
+    key: "service-secret",
+    isAuthenticated: authenticated,
+    baseUrl: "https://runtime.example/api/v1",
   })
 
-  it.each([
-    SITE_TYPES.NEW_API,
-    SITE_TYPES.SUB2API,
-    SITE_TYPES.VO_API_V2,
-    SITE_TYPES.AIHUBMIX,
-  ])(
-    "preserves old associations after %s inventory becomes native",
+describe("account runtime keys", () => {
+  it.each(["new-api", "sub2api", "voapi-v2", "AIHubMix"] as const)(
+    "preserves historical %s associations without a legacy runtime variant",
     (siteType) => {
+      const old = {
+        source: "account_token" as const,
+        accountId: account.id,
+        siteType,
+        tokenId: 42,
+      }
+      const current = {
+        source: "account_key_resource" as const,
+        ref: { ...ref, siteType },
+      }
+      expect(isAccountRuntimeKeyLocatorEqual(old, current)).toBe(true)
       expect(
-        isAccountRuntimeKeyLocatorEqual(
-          {
-            source: "account_token",
-            accountId: account.id,
-            siteType,
-            tokenId: 42,
-          },
-          {
-            source: "account_key_resource",
-            ref: {
-              accountId: account.id,
-              siteType,
-              scopeKey: "account",
-              resourceId: "42",
-            },
-          },
-        ),
-      ).toBe(true)
+        isAccountRuntimeKeyLocatorEqual(old, {
+          ...current,
+          ref: { ...current.ref, scopeKey: "other" },
+        }),
+      ).toBe(false)
       expect(
-        isAccountRuntimeKeyLocatorEqual(
-          {
-            source: "account_token",
-            accountId: account.id,
-            siteType,
-            tokenId: 42,
-          },
-          {
-            source: "account_key_resource",
-            ref: {
-              accountId: account.id,
-              siteType,
-              scopeKey: "other",
-              resourceId: "42",
-            },
-          },
-        ),
+        isAccountRuntimeKeyLocatorEqual(old, {
+          ...current,
+          ref: { ...current.ref, accountId: "other" },
+        }),
       ).toBe(false)
     },
   )
 
-  it("builds stable account-token runtime keys", () => {
-    const runtimeKey = buildAccountTokenRuntimeKey(account, token)
-
-    expect(runtimeKey).toMatchObject({
-      id: "account_token:account-1:42",
-      source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
-      accountId: account.id,
-      accountName: account.name,
-      siteType: account.siteType,
-      label: "Primary token",
-      secret: "sk-token-secret",
-      baseUrl: "https://example.invalid",
-      status: ACCOUNT_RUNTIME_KEY_STATUSES.Active,
-      tokenId: 42,
-      token,
-      capabilities: {
-        copy: true,
-        export: true,
-        verify: true,
-        fetchRuntimeModels: true,
-        rotate: false,
-        updateToken: true,
-        deleteToken: true,
-      },
-    })
-    expect(isAccountTokenRuntimeKey(runtimeKey)).toBe(true)
-    expect(isServiceCredentialRuntimeKey(runtimeKey)).toBe(false)
-  })
-
-  it("projects account runtime keys into provider-neutral locators", () => {
-    const accountToken = buildAccountTokenRuntimeKey(account, token)
-    const accountKeyResource = buildAccountKeyResourceRuntimeKey(account, {
-      ref: {
-        accountId: account.id,
-        siteType: account.siteType,
-        scopeKey: "scope-example",
-        resourceId: "resource-example",
-      },
-      label: "Native key",
-      secret: "native-secret",
-    })
-    const serviceCredential = buildServiceCredentialRuntimeKey(account, {
-      kind: "singleton_service_key",
-      service: "codex",
-      label: "Codex",
-      key: "service-secret",
-      isAuthenticated: true,
-    })
-
-    expect(getAccountRuntimeKeyLocator(accountToken)).toEqual({
-      source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
-      accountId: account.id,
-      siteType: account.siteType,
-      tokenId: token.id,
-    })
-    expect(getAccountRuntimeKeyLocator(accountKeyResource)).toEqual({
-      source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
-      ref: accountKeyResource.resourceRef,
-    })
-    expect(getAccountRuntimeKeyLocator(serviceCredential)).toEqual({
-      source: ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential,
-      accountId: account.id,
-      siteType: account.siteType,
-      service: "codex",
-    })
-    expect(
-      [accountToken, accountKeyResource, serviceCredential].map((runtimeKey) =>
-        getAccountRuntimeKeyLocatorAccountId(
-          getAccountRuntimeKeyLocator(runtimeKey),
-        ),
-      ),
-    ).toEqual([account.id, account.id, account.id])
-  })
-
-  it("maps account-token statuses to runtime-key statuses", () => {
-    expect(
-      buildAccountTokenRuntimeKey(account, { ...token, status: 2 }).status,
-    ).toBe(ACCOUNT_RUNTIME_KEY_STATUSES.Inactive)
-    expect(
-      buildAccountTokenRuntimeKey(account, { ...token, status: 99 }).status,
-    ).toBe(ACCOUNT_RUNTIME_KEY_STATUSES.Unknown)
-  })
-
-  it("builds display-account token runtime keys with normalized account fields", () => {
-    const runtimeKey = buildDisplayAccountTokenRuntimeKey(
-      {
-        ...account,
-        name: "",
-        tagIds: undefined,
-      },
-      {
-        ...token,
-        accountId: undefined as unknown as string,
-        accountName: undefined as unknown as string,
-      },
-    )
-
-    expect(runtimeKey.account).toMatchObject({
-      id: account.id,
-      name: account.id,
-      tagIds: [],
-    })
-    expect(runtimeKey.accountName).toBe(account.id)
-    expect(runtimeKey.token).toMatchObject({
-      accountId: account.id,
-      accountName: account.id,
-    })
-  })
-
-  it("builds stable service-credential runtime keys", () => {
-    const runtimeKey = buildServiceCredentialRuntimeKey(
-      account,
-      {
-        kind: "singleton_service_key",
-        service: "codex",
-        label: "Codex",
-        key: "service-secret",
-        isAuthenticated: true,
-        baseUrl: "https://runtime.example.invalid",
-      },
-      { canRotate: true },
-    )
-
-    expect(runtimeKey).toMatchObject({
-      id: "service_credential:account-1:codex",
-      source: ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential,
-      accountId: account.id,
-      accountName: account.name,
-      siteType: account.siteType,
-      label: "Codex",
-      secret: "service-secret",
-      baseUrl: "https://runtime.example.invalid",
-      status: ACCOUNT_RUNTIME_KEY_STATUSES.Active,
-      service: "codex",
-      capabilities: {
-        copy: true,
-        export: true,
-        verify: true,
-        fetchRuntimeModels: true,
-        rotate: true,
-        updateToken: false,
-        deleteToken: false,
-      },
-    })
-    expect(isAccountTokenRuntimeKey(runtimeKey)).toBe(false)
-    expect(isServiceCredentialRuntimeKey(runtimeKey)).toBe(true)
-  })
-
-  it("normalizes inactive service credentials without creating numeric identity", () => {
-    const runtimeKey = buildServiceCredentialRuntimeKey(account, {
-      kind: "singleton_service_key",
-      service: "codex",
-      label: "Codex",
-      key: "stale-service-secret",
-      isAuthenticated: false,
-    })
-
-    expect(runtimeKey.id).toBe("service_credential:account-1:codex")
-    expect(runtimeKey.status).toBe(ACCOUNT_RUNTIME_KEY_STATUSES.Inactive)
-    expect(runtimeKey.secret).toBe("")
-  })
-
-  it("builds native resource runtime keys from the complete opaque ref", () => {
-    const ref = {
-      accountId: account.id,
-      siteType: account.siteType,
-      scopeKey: "workspace:primary",
-      resourceId: "key/42",
-    } as const
-
-    const runtimeKey = buildAccountKeyResourceRuntimeKey(account, {
-      ref,
-      label: "Repair-created key",
-      secret: "sk-native-resource-secret",
-    })
-
-    expect(runtimeKey).toMatchObject({
-      id: buildAccountKeyResourceRuntimeKeyId(ref),
-      source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
-      resourceRef: ref,
-      accountId: account.id,
-      label: "Repair-created key",
-      secret: "sk-native-resource-secret",
-      status: ACCOUNT_RUNTIME_KEY_STATUSES.Active,
-      capabilities: {
-        copy: true,
-        export: true,
-        verify: true,
-        fetchRuntimeModels: true,
-        rotate: false,
-        updateToken: false,
-        deleteToken: false,
-      },
-    })
-    expect(isAccountKeyResourceRuntimeKey(runtimeKey)).toBe(true)
-    expect(isAccountTokenRuntimeKey(runtimeKey)).toBe(false)
-    expect(isServiceCredentialRuntimeKey(runtimeKey)).toBe(false)
-  })
-
-  it("marks a native resource with a blank secret as inactive", () => {
-    const runtimeKey = buildAccountKeyResourceRuntimeKey(account, {
-      ref: {
-        accountId: account.id,
-        siteType: account.siteType,
-        scopeKey: "workspace:primary",
-        resourceId: "key/blank",
-      },
-      label: "Unavailable repair-created key",
-      secret: "   ",
-    })
-
-    expect(runtimeKey.status).toBe(ACCOUNT_RUNTIME_KEY_STATUSES.Inactive)
-    expect(hasUsableAccountRuntimeKeySecret(runtimeKey)).toBe(false)
-  })
-
-  it("builds ids from source identity", () => {
-    expect(buildAccountTokenRuntimeKeyId("account-1", 42)).toBe(
-      "account_token:account-1:42",
-    )
-    expect(buildServiceCredentialRuntimeKeyId("account-1", "codex")).toBe(
-      "service_credential:account-1:codex",
-    )
-    expect(
+  it("keeps opaque identities and target scopes collision safe", () => {
+    expect(buildAccountKeyResourceRuntimeKeyId(ref)).not.toBe(
       buildAccountKeyResourceRuntimeKeyId({
-        accountId: "account:1",
-        siteType: SITE_TYPES.NEW_API,
-        scopeKey: "workspace:primary",
-        resourceId: "key/42",
+        ...ref,
+        scopeKey: "account:42",
+        resourceId: "",
       }),
-    ).toBe(
-      "account_key_resource:account%3A1:new-api:workspace%3Aprimary:key%2F42",
     )
-    expect(
-      buildTargetScopedAccountKeyResourceId("target:one", {
-        accountId: "account:1",
-        siteType: SITE_TYPES.NEW_API,
-        scopeKey: "workspace:primary",
-        resourceId: "key/42",
-      }),
-    ).toBe(
-      '["target:one","account_key_resource:account%3A1:new-api:workspace%3Aprimary:key%2F42"]',
+    expect(buildTargetScopedAccountKeyResourceId("target-a", ref)).not.toBe(
+      buildTargetScopedAccountKeyResourceId("target-b", ref),
     )
-  })
-
-  it("keeps legacy token conversion behind an explicit helper", () => {
-    const runtimeKey = buildServiceCredentialRuntimeKey(account, {
-      kind: "singleton_service_key",
-      service: "codex",
-      label: "Codex",
-      key: "service-secret",
-      isAuthenticated: true,
+    expect(getAccountRuntimeKeyLocator(native())).toEqual({
+      source: "account_key_resource",
+      ref,
     })
-
-    expect(accountRuntimeKeyToLegacyApiToken(runtimeKey)).toMatchObject({
-      id: ACCOUNT_RUNTIME_KEY_LEGACY_TOKEN_ID,
-      name: "Codex",
-      key: "service-secret",
-      unlimited_quota: true,
-    })
-    expect(accountRuntimeKeyToLegacyAccountToken(runtimeKey)).toMatchObject({
-      id: ACCOUNT_RUNTIME_KEY_LEGACY_TOKEN_ID,
-      accountId: "account-1",
-      accountName: "Example Account",
-      name: "Codex",
-      key: "service-secret",
-    })
-  })
-
-  it("detects active runtime keys with a usable secret", () => {
-    const activeRuntimeKey = buildServiceCredentialRuntimeKey(account, {
-      kind: "singleton_service_key",
-      service: "codex",
-      label: "Codex",
-      key: "service-secret",
-      isAuthenticated: true,
-    })
-    const inactiveRuntimeKey = buildServiceCredentialRuntimeKey(account, {
-      kind: "singleton_service_key",
-      service: "codex",
-      label: "Codex",
-      key: "stale-service-secret",
-      isAuthenticated: false,
-    })
-
-    expect(hasUsableAccountRuntimeKeySecret(activeRuntimeKey)).toBe(true)
-    expect(hasUsableAccountRuntimeKeySecret(inactiveRuntimeKey)).toBe(false)
     expect(
-      hasUsableAccountRuntimeKeySecret({
-        ...activeRuntimeKey,
-        secret: "   ",
-      }),
-    ).toBe(false)
-  })
-
-  it("sorts runtime keys with active entries first without mutating input", () => {
-    const inactiveRuntimeKey = buildServiceCredentialRuntimeKey(account, {
-      kind: "singleton_service_key",
-      service: "codex",
-      label: "Codex",
-      key: "stale-service-secret",
-      isAuthenticated: false,
-    })
-    const activeRuntimeKey = buildAccountTokenRuntimeKey(account, token)
-    const runtimeKeys = [inactiveRuntimeKey, activeRuntimeKey]
-
-    expect(isActiveAccountRuntimeKey(activeRuntimeKey)).toBe(true)
-    expect(sortAccountRuntimeKeysActiveFirst(runtimeKeys)).toEqual([
-      activeRuntimeKey,
-      inactiveRuntimeKey,
-    ])
-    expect(runtimeKeys).toEqual([inactiveRuntimeKey, activeRuntimeKey])
-  })
-
-  it("keeps account tokens selectable while requiring service credentials to expose a usable secret", () => {
-    const accountTokenRuntimeKey = buildAccountTokenRuntimeKey(account, {
-      ...token,
-      key: "",
-      status: 2,
-    })
-    const activeServiceRuntimeKey = buildServiceCredentialRuntimeKey(account, {
-      kind: "singleton_service_key",
-      service: "codex",
-      label: "Codex",
-      key: "service-secret",
-      isAuthenticated: true,
-    })
-    const inactiveServiceRuntimeKey = buildServiceCredentialRuntimeKey(
-      account,
-      {
-        kind: "singleton_service_key",
-        service: "codex",
-        label: "Codex",
-        key: "stale-service-secret",
-        isAuthenticated: false,
-      },
-    )
-
-    expect(isSelectableAccountRuntimeKey(accountTokenRuntimeKey)).toBe(true)
-    expect(isSelectableAccountRuntimeKey(activeServiceRuntimeKey)).toBe(true)
-    expect(isSelectableAccountRuntimeKey(inactiveServiceRuntimeKey)).toBe(false)
-  })
-
-  it("selects the first active selectable runtime key and falls back to account tokens", () => {
-    const inactiveServiceRuntimeKey = buildServiceCredentialRuntimeKey(
-      account,
-      {
-        kind: "singleton_service_key",
-        service: "codex",
-        label: "Codex",
-        key: "stale-service-secret",
-        isAuthenticated: false,
-      },
-    )
-    const accountTokenRuntimeKey = buildAccountTokenRuntimeKey(account, {
-      ...token,
-      status: 2,
-    })
-    const activeServiceRuntimeKey = buildServiceCredentialRuntimeKey(account, {
-      kind: "singleton_service_key",
-      service: "codex",
-      label: "Codex",
-      key: "service-secret",
-      isAuthenticated: true,
-    })
-
-    expect(
-      findDefaultSelectableAccountRuntimeKey([
-        inactiveServiceRuntimeKey,
-        accountTokenRuntimeKey,
-        activeServiceRuntimeKey,
-      ]),
-    ).toBe(activeServiceRuntimeKey)
-    expect(
-      findDefaultSelectableAccountRuntimeKey([
-        inactiveServiceRuntimeKey,
-        accountTokenRuntimeKey,
-      ]),
-    ).toBe(accountTokenRuntimeKey)
-    expect(
-      findDefaultSelectableAccountRuntimeKey([inactiveServiceRuntimeKey]),
-    ).toBeNull()
-  })
-
-  it("appends a new runtime key while replacing an existing key with the same id", () => {
-    const existingRuntimeKey = buildAccountTokenRuntimeKey(account, token)
-    const otherRuntimeKey = buildServiceCredentialRuntimeKey(account, {
-      kind: "singleton_service_key",
-      service: "codex",
-      label: "Codex",
-      key: "service-secret",
-      isAuthenticated: true,
-    })
-    const updatedRuntimeKey = buildAccountTokenRuntimeKey(account, {
-      ...token,
-      key: "sk-updated-token-secret",
-    })
-
-    expect(
-      appendOrReplaceAccountRuntimeKey(
-        [existingRuntimeKey, otherRuntimeKey],
-        updatedRuntimeKey,
+      getAccountRuntimeKeyLocatorAccountId(
+        getAccountRuntimeKeyLocator(native()),
       ),
-    ).toEqual([otherRuntimeKey, updatedRuntimeKey])
+    ).toBe(account.id)
+    expect(getAccountRuntimeKeyExportId(native())).toBe("42")
+  })
+
+  it("projects safe policy facts without fabricating token fields or plaintext", () => {
+    const modelAccess = {
+      groups: ["vip"],
+      allowedModelIds: [],
+      suggestedModelIds: ["model-a"],
+    }
+    const key = buildAccountKeyResourceRuntimeKeyFromFacts(account, {
+      ref,
+      displayName: "Key",
+      maskedLabel: "masked",
+      status: "enabled",
+      fields: [],
+      actions: { canUpdate: true, canDelete: true },
+      runtimeKey: { modelAccess, legacyTokenId: 42 },
+    })
+    expect(key).toMatchObject({
+      source: "account_key_resource",
+      secret: "",
+      status: "active",
+      modelAccess,
+    })
+    expect(key).not.toHaveProperty("token")
+    expect(key).not.toHaveProperty("tokenId")
+    expect(isSelectableAccountRuntimeKey(key)).toBe(true)
+    expect(hasUsableAccountRuntimeKeySecret(key)).toBe(false)
+  })
+
+  it("preserves service endpoint and authentication status", () => {
+    expect(service()).toMatchObject({
+      source: "service_credential",
+      secret: "service-secret",
+      baseUrl: "https://runtime.example/api/v1",
+      status: "active",
+    })
+    expect(service(false)).toMatchObject({ secret: "", status: "inactive" })
+    expect(isSelectableAccountRuntimeKey(service(false))).toBe(false)
+    expect(getAccountRuntimeKeyLocator(service())).toEqual({
+      source: "service_credential",
+      accountId: account.id,
+      siteType: account.siteType,
+      service: "openai",
+    })
+  })
+
+  it("sorts active keys first and retains unavailable native keys for explicit recovery", () => {
+    const inactive = native("inactive")
+    const active = service()
+    const keys = [inactive, active]
+    expect(sortAccountRuntimeKeysActiveFirst(keys)).toEqual([active, inactive])
+    expect(keys[0]).toBe(inactive)
+    expect(findDefaultSelectableAccountRuntimeKey(keys)).toBe(active)
+    expect(findDefaultSelectableAccountRuntimeKey([inactive])).toBe(inactive)
+    expect(findDefaultSelectableAccountRuntimeKey([service(false)])).toBeNull()
+  })
+
+  it("replaces only the same resource and formats a transient secret", () => {
+    const old = native()
+    const replacement = { ...old, secret: "key-value" }
     expect(
-      appendOrReplaceAccountRuntimeKey([existingRuntimeKey], otherRuntimeKey),
-    ).toEqual([existingRuntimeKey, otherRuntimeKey])
+      appendOrReplaceAccountRuntimeKey([old, service()], replacement),
+    ).toEqual([service(), replacement])
+    expect(formatAccountRuntimeKeySecretForSite(replacement).secret).toBe(
+      "sk-key-value",
+    )
+    expect(replacement.secret).toBe("key-value")
   })
 
-  it("formats account-token runtime key secrets for compatible site auth", () => {
-    const runtimeKey = buildAccountTokenRuntimeKey(account, {
-      ...token,
-      key: "raw-token-secret",
-    })
-
-    expect(formatAccountRuntimeKeySecretForSite(runtimeKey)).toMatchObject({
-      source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
-      secret: "sk-raw-token-secret",
-      token: {
-        key: "raw-token-secret",
-      },
-    })
-  })
-
-  it("formats service-credential runtime key secrets for compatible site auth", () => {
-    const runtimeKey = buildServiceCredentialRuntimeKey(account, {
-      kind: "singleton_service_key",
-      service: "codex",
-      label: "Codex",
-      key: "service-secret",
-      isAuthenticated: true,
-    })
-
-    expect(formatAccountRuntimeKeySecretForSite(runtimeKey)).toMatchObject({
-      source: ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential,
-      secret: "sk-service-secret",
-      credential: {
-        key: "service-secret",
-      },
-    })
-  })
-
-  it("collects runtime-key and account secrets for sanitized errors", () => {
-    const runtimeKeys = [
-      buildAccountTokenRuntimeKey(account, token),
-      buildServiceCredentialRuntimeKey(account, {
-        kind: "singleton_service_key",
-        service: "codex",
-        label: "Codex",
-        key: "service-secret",
-        isAuthenticated: true,
-      }),
-    ]
-
-    expect(collectAccountRuntimeKeySecrets(runtimeKeys)).toEqual([
-      "sk-token-secret",
-      "account-access-token",
-      "session=redacted",
-      "service-secret",
-    ])
-  })
-
-  it("collects stale raw credential keys from inactive service credentials for sanitized errors", () => {
-    const runtimeKey = buildServiceCredentialRuntimeKey(account, {
-      kind: "singleton_service_key",
-      service: "codex",
-      label: "Codex",
-      key: "stale-service-secret",
-      isAuthenticated: false,
-    })
-
-    expect(runtimeKey.secret).toBe("")
-    expect(collectAccountRuntimeKeySecrets([runtimeKey])).toEqual(
+  it("redacts both runtime and stale service secrets alongside account credentials", () => {
+    expect(
+      collectAccountRuntimeKeySecrets([
+        { ...native(), secret: "key-value" },
+        service(false),
+      ]),
+    ).toEqual(
       expect.arrayContaining([
-        "account-access-token",
-        "session=redacted",
-        "stale-service-secret",
+        "key-value",
+        "service-secret",
+        "access-secret",
+        "session=cookie",
       ]),
     )
   })

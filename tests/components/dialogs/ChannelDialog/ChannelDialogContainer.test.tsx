@@ -68,20 +68,15 @@ const buildDisplaySiteData = (): DisplaySiteData => ({
   checkIn: buildCheckInConfig(),
 })
 
-function OpenDefaultTokenQuickCreateDialog({
-  allowedGroups,
-}: {
-  allowedGroups: string[]
-}) {
+function OpenDefaultTokenQuickCreateDialog() {
   const { openDefaultTokenQuickCreateDialog } = useChannelDialogContext()
 
   useEffect(() => {
     openDefaultTokenQuickCreateDialog({
       account: buildDisplaySiteData(),
-      allowedGroups,
       notice: "Choose a group",
     })
-  }, [allowedGroups, openDefaultTokenQuickCreateDialog])
+  }, [openDefaultTokenQuickCreateDialog])
 
   return null
 }
@@ -186,12 +181,12 @@ describe("ChannelDialogContainer", () => {
     expect(signal?.aborted).toBe(true)
   })
 
-  it("renders AddTokenDialog with default-token prefill for non-empty allowed groups", async () => {
+  it("opens native key creation for the source account without constructing group defaults", async () => {
     addTokenDialogPropsMock.mockReset()
 
     render(
       <ChannelDialogProvider>
-        <OpenDefaultTokenQuickCreateDialog allowedGroups={["vip"]} />
+        <OpenDefaultTokenQuickCreateDialog />
         <ChannelDialogContainer />
       </ChannelDialogProvider>,
     )
@@ -203,24 +198,22 @@ describe("ChannelDialogContainer", () => {
       expect(addTokenDialogPropsMock).toHaveBeenLastCalledWith(
         expect.objectContaining({
           isOpen: true,
-          createPrefill: {
-            modelId: "",
-            defaultName: "vip group (auto)",
-            group: "vip",
-            allowedGroups: ["vip"],
-          },
+          availableAccounts: [buildDisplaySiteData()],
+          preSelectedAccountId: "account-id",
           prefillNotice: "Choose a group",
         }),
       )
     })
+    expect(
+      addTokenDialogPropsMock.mock.lastCall?.[0].createPrefill,
+    ).toBeUndefined()
   })
 
-  it("does not render AddTokenDialog when allowed groups are empty", async () => {
+  it("does not render native key creation without a source account", async () => {
     addTokenDialogPropsMock.mockReset()
 
     render(
       <ChannelDialogProvider>
-        <OpenDefaultTokenQuickCreateDialog allowedGroups={[]} />
         <ChannelDialogContainer />
       </ChannelDialogProvider>,
     )

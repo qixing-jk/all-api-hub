@@ -1,7 +1,4 @@
-import type {
-  AccountRuntimeKey,
-  AccountTokenRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { CredentialExportSource } from "~/services/integrations/credentialExport"
 import type { DisplaySiteData } from "~/types"
 import { maskSecretForDisplay } from "~/utils/core/formatters"
@@ -23,7 +20,7 @@ export function RuntimeKeySecretPreview({ secret }: { secret: string }) {
 }
 
 interface RuntimeKeyDetailsProps {
-  runtimeKey: Exclude<AccountRuntimeKey, AccountTokenRuntimeKey>
+  runtimeKey: AccountRuntimeKey
   copiedRuntimeKeyId: string | null
   onCopyKey: (runtimeKey: AccountRuntimeKey) => void
   account: DisplaySiteData

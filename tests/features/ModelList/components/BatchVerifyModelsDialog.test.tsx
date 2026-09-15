@@ -16,7 +16,6 @@ import {
 } from "~/features/ModelList/testIds"
 import {
   buildAccountRuntimeKeyAccount,
-  buildDisplayAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import {
@@ -28,16 +27,17 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
-import { buildApiToken } from "~~/tests/test-utils/factories"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
+import { buildNewApiToken } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
   mockFetchDisplayAccountRuntimeKeys,
-  mockFetchDisplayAccountTokens,
+  mockNewApiInventory,
   mockGetApiVerificationProbeDefinitions,
   mockResolveDisplayAccountRuntimeKeySecret,
-  mockResolveDisplayAccountTokenForSecret,
+  mockNewApiSecret,
   mockRunApiVerificationProbe,
   mockStartProductAnalyticsAction,
   mockCompleteStartProductAnalyticsAction,
@@ -47,10 +47,10 @@ const {
   mockUpsertLatestSummary,
 } = vi.hoisted(() => ({
   mockFetchDisplayAccountRuntimeKeys: vi.fn(),
-  mockFetchDisplayAccountTokens: vi.fn(),
+  mockNewApiInventory: vi.fn(),
   mockGetApiVerificationProbeDefinitions: vi.fn(),
   mockResolveDisplayAccountRuntimeKeySecret: vi.fn(),
-  mockResolveDisplayAccountTokenForSecret: vi.fn(),
+  mockNewApiSecret: vi.fn(),
   mockRunApiVerificationProbe: vi.fn(),
   mockStartProductAnalyticsAction: vi.fn(),
   mockCompleteStartProductAnalyticsAction: vi.fn(),
@@ -69,8 +69,8 @@ vi.mock(
       await importOriginal<
         typeof import("~/services/accounts/utils/apiServiceRequest")
       >()
-    const { buildDisplayAccountTokenRuntimeKey } = await import(
-      "~/services/accounts/accountRuntimeKeys"
+    const { buildNewApiRuntimeKey } = await import(
+      "~~/tests/test-utils/accountKeyFixtures"
     )
 
     return {
@@ -82,40 +82,33 @@ vi.mock(
           return runtimeKeys.map((runtimeKey: any) =>
             runtimeKey?.source && runtimeKey?.accountId
               ? runtimeKey
-              : buildDisplayAccountTokenRuntimeKey(account, runtimeKey),
+              : buildNewApiRuntimeKey(account, runtimeKey),
           )
         }
 
-        const tokens = await mockFetchDisplayAccountTokens(...args)
-        return tokens.map((token: any) =>
-          buildDisplayAccountTokenRuntimeKey(account, token),
-        )
+        const tokens = await mockNewApiInventory(...args)
+        return tokens.map((token: any) => buildNewApiRuntimeKey(account, token))
       },
-      fetchDisplayAccountTokens: (...args: any[]) =>
-        mockFetchDisplayAccountTokens(...args),
       resolveDisplayAccountRuntimeKeySecret: async (...args: any[]) => {
         const [account, runtimeKey, options] = args
         const resolvedRuntimeKey =
           await mockResolveDisplayAccountRuntimeKeySecret(...args)
         if (resolvedRuntimeKey !== undefined) return resolvedRuntimeKey
 
-        if (runtimeKey?.source === "account_token") {
-          const resolvedToken = await mockResolveDisplayAccountTokenForSecret(
+        if (runtimeKey?.source === "account_key_resource") {
+          const resolvedToken = await mockNewApiSecret(
             account,
-            runtimeKey.token,
+            { id: runtimeKey.legacyTokenId, key: runtimeKey.secret },
             options,
           )
           return {
             ...runtimeKey,
-            token: resolvedToken,
             secret: resolvedToken.key,
           }
         }
 
         return runtimeKey
       },
-      resolveDisplayAccountTokenForSecret: (...args: any[]) =>
-        mockResolveDisplayAccountTokenForSecret(...args),
     }
   },
 )
@@ -225,10 +218,10 @@ function renderDialog(items: any[]) {
 describe("BatchVerifyModelsDialog", () => {
   beforeEach(() => {
     mockFetchDisplayAccountRuntimeKeys.mockReset()
-    mockFetchDisplayAccountTokens.mockReset()
+    mockNewApiInventory.mockReset()
     mockGetApiVerificationProbeDefinitions.mockReset()
     mockResolveDisplayAccountRuntimeKeySecret.mockReset()
-    mockResolveDisplayAccountTokenForSecret.mockReset()
+    mockNewApiSecret.mockReset()
     mockRunApiVerificationProbe.mockReset()
     mockStartProductAnalyticsAction.mockReset()
     mockCompleteStartProductAnalyticsAction.mockReset()
@@ -402,7 +395,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("uses the first compatible account token and runs text-generation for the model", async () => {
-    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+    mockNewApiInventory.mockResolvedValueOnce([
       {
         id: 1,
         name: "default-token",
@@ -414,7 +407,7 @@ describe("BatchVerifyModelsDialog", () => {
         models: "",
       },
     ])
-    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+    mockNewApiSecret.mockResolvedValueOnce({
       id: 1,
       name: "default-token",
       key: "sk-real",
@@ -484,9 +477,9 @@ describe("BatchVerifyModelsDialog", () => {
 
   it("uses the account-token runtime key identified by the row source identity", async () => {
     const firstRuntimeKey = {
-      ...buildDisplayAccountTokenRuntimeKey(
+      ...buildNewApiRuntimeKey(
         account,
-        buildApiToken({
+        buildNewApiToken({
           id: 1,
           name: "First runtime key",
           key: "sk-***first",
@@ -505,21 +498,12 @@ describe("BatchVerifyModelsDialog", () => {
       label: "Second runtime key",
       secret: "masked-second",
       baseUrl: "https://second.example.invalid",
-      tokenId: 2,
-      token: {
-        ...firstRuntimeKey.token,
-        id: 2,
-        name: "Second runtime key",
-        key: "masked-second",
-      },
+      legacyTokenId: 2,
+      resourceRef: { ...firstRuntimeKey.resourceRef, resourceId: "2" },
     }
     const resolvedSecondRuntimeKey = {
       ...secondRuntimeKey,
       secret: "sk-second-real",
-      token: {
-        ...secondRuntimeKey.token,
-        key: "sk-second-real",
-      },
     }
     mockFetchDisplayAccountRuntimeKeys.mockResolvedValueOnce([
       firstRuntimeKey,
@@ -565,8 +549,8 @@ describe("BatchVerifyModelsDialog", () => {
         }),
       )
     })
-    expect(mockFetchDisplayAccountTokens).not.toHaveBeenCalled()
-    expect(mockResolveDisplayAccountTokenForSecret).not.toHaveBeenCalled()
+    expect(mockNewApiInventory).not.toHaveBeenCalled()
+    expect(mockNewApiSecret).not.toHaveBeenCalled()
     expect(mockResolveDisplayAccountRuntimeKeySecret).toHaveBeenCalledWith(
       account,
       secondRuntimeKey,
@@ -632,8 +616,8 @@ describe("BatchVerifyModelsDialog", () => {
         }),
       )
     })
-    expect(mockFetchDisplayAccountTokens).not.toHaveBeenCalled()
-    expect(mockResolveDisplayAccountTokenForSecret).not.toHaveBeenCalled()
+    expect(mockNewApiInventory).not.toHaveBeenCalled()
+    expect(mockNewApiSecret).not.toHaveBeenCalled()
     expect(mockResolveDisplayAccountRuntimeKeySecret).toHaveBeenCalledWith(
       account,
       runtimeKey,
@@ -642,7 +626,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("runs the selected probe set for each model and persists combined results", async () => {
-    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+    mockNewApiInventory.mockResolvedValueOnce([
       {
         id: 1,
         name: "default-token",
@@ -654,7 +638,7 @@ describe("BatchVerifyModelsDialog", () => {
         models: "",
       },
     ])
-    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+    mockNewApiSecret.mockResolvedValueOnce({
       id: 1,
       name: "default-token",
       key: "sk-real",
@@ -717,7 +701,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("stops before the next probe and skips persisting partial model results", async () => {
-    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+    mockNewApiInventory.mockResolvedValueOnce([
       {
         id: 1,
         name: "default-token",
@@ -729,7 +713,7 @@ describe("BatchVerifyModelsDialog", () => {
         models: "",
       },
     ])
-    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+    mockNewApiSecret.mockResolvedValueOnce({
       id: 1,
       name: "default-token",
       key: "sk-real",
@@ -810,7 +794,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("aborts the running probe request when the batch is stopped", async () => {
-    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+    mockNewApiInventory.mockResolvedValueOnce([
       {
         id: 1,
         name: "default-token",
@@ -822,7 +806,7 @@ describe("BatchVerifyModelsDialog", () => {
         models: "",
       },
     ])
-    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+    mockNewApiSecret.mockResolvedValueOnce({
       id: 1,
       name: "default-token",
       key: "sk-real",
@@ -905,7 +889,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("aborts token secret resolution when the batch is stopped before probes start", async () => {
-    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+    mockNewApiInventory.mockResolvedValueOnce([
       {
         id: 1,
         name: "default-token",
@@ -919,7 +903,7 @@ describe("BatchVerifyModelsDialog", () => {
     ])
 
     let receivedSignal: AbortSignal | undefined
-    mockResolveDisplayAccountTokenForSecret.mockImplementationOnce(
+    mockNewApiSecret.mockImplementationOnce(
       (_account, _token, options?: { abortSignal?: AbortSignal }) => {
         receivedSignal = options?.abortSignal
         if (!receivedSignal) {
@@ -952,7 +936,7 @@ describe("BatchVerifyModelsDialog", () => {
     )
 
     await waitFor(() => {
-      expect(mockResolveDisplayAccountTokenForSecret).toHaveBeenCalledTimes(1)
+      expect(mockNewApiSecret).toHaveBeenCalledTimes(1)
     })
 
     fireEvent.click(
@@ -969,7 +953,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("completes batch verification analytics as success when selected probes pass", async () => {
-    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+    mockNewApiInventory.mockResolvedValueOnce([
       {
         id: 1,
         name: "default-token",
@@ -981,7 +965,7 @@ describe("BatchVerifyModelsDialog", () => {
         models: "",
       },
     ])
-    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+    mockNewApiSecret.mockResolvedValueOnce({
       id: 1,
       name: "default-token",
       key: "sk-real",
@@ -1028,7 +1012,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("completes batch verification analytics as failure when a probe fails", async () => {
-    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+    mockNewApiInventory.mockResolvedValueOnce([
       {
         id: 1,
         name: "default-token",
@@ -1040,7 +1024,7 @@ describe("BatchVerifyModelsDialog", () => {
         models: "",
       },
     ])
-    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+    mockNewApiSecret.mockResolvedValueOnce({
       id: 1,
       name: "default-token",
       key: "sk-real",
@@ -1093,7 +1077,7 @@ describe("BatchVerifyModelsDialog", () => {
       { id: "models", requiresModelId: false },
       { id: "text-generation", requiresModelId: false },
     ])
-    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+    mockNewApiInventory.mockResolvedValueOnce([
       {
         id: 1,
         name: "default-token",
@@ -1105,7 +1089,7 @@ describe("BatchVerifyModelsDialog", () => {
         models: "",
       },
     ])
-    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+    mockNewApiSecret.mockResolvedValueOnce({
       id: 1,
       name: "default-token",
       key: "sk-real",
@@ -1166,7 +1150,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("maps structured thrown probe status to an auth batch analytics failure", async () => {
-    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+    mockNewApiInventory.mockResolvedValueOnce([
       {
         id: 1,
         name: "default-token",
@@ -1178,7 +1162,7 @@ describe("BatchVerifyModelsDialog", () => {
         models: "",
       },
     ])
-    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+    mockNewApiSecret.mockResolvedValueOnce({
       id: 1,
       name: "default-token",
       key: "sk-real",
@@ -1224,7 +1208,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("completes batch verification analytics as skipped when no compatible runtime key exists", async () => {
-    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+    mockNewApiInventory.mockResolvedValueOnce([
       {
         id: 1,
         name: "vip-token",
@@ -1261,7 +1245,7 @@ describe("BatchVerifyModelsDialog", () => {
 
   it("records probe errors and continues when history persistence fails", async () => {
     const user = userEvent.setup()
-    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+    mockNewApiInventory.mockResolvedValueOnce([
       {
         id: 1,
         name: "default-token",
@@ -1273,7 +1257,7 @@ describe("BatchVerifyModelsDialog", () => {
         models: "",
       },
     ])
-    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+    mockNewApiSecret.mockResolvedValueOnce({
       id: 1,
       name: "default-token",
       key: "sk-real",
@@ -1342,7 +1326,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("shows the failed probe response summary in the final row feedback", async () => {
-    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+    mockNewApiInventory.mockResolvedValueOnce([
       {
         id: 1,
         name: "default-token",
@@ -1354,7 +1338,7 @@ describe("BatchVerifyModelsDialog", () => {
         models: "",
       },
     ])
-    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+    mockNewApiSecret.mockResolvedValueOnce({
       id: 1,
       name: "default-token",
       key: "sk-real",
@@ -1411,15 +1395,15 @@ describe("BatchVerifyModelsDialog", () => {
         "aiApiVerification",
         (await import("~/locales/zh-CN/aiApiVerification.json")).default,
       )
-      mockFetchDisplayAccountTokens.mockResolvedValue([
-        buildApiToken({
+      mockNewApiInventory.mockResolvedValue([
+        buildNewApiToken({
           key: "masked",
           group: "default",
           model_limits_enabled: false,
         }),
       ])
-      mockResolveDisplayAccountTokenForSecret.mockResolvedValue(
-        buildApiToken({
+      mockNewApiSecret.mockResolvedValue(
+        buildNewApiToken({
           key: "sk-real",
           group: "default",
           model_limits_enabled: false,
@@ -1427,7 +1411,7 @@ describe("BatchVerifyModelsDialog", () => {
       )
       const error = Object.assign(new Error(""), { statusCode })
       if (phase === "setup") {
-        mockFetchDisplayAccountTokens.mockRejectedValue(error)
+        mockNewApiInventory.mockRejectedValue(error)
       } else {
         mockRunApiVerificationProbe.mockRejectedValue(error)
       }
@@ -1475,7 +1459,7 @@ describe("BatchVerifyModelsDialog", () => {
         expect(row).toHaveTextContent(
           testI18n.t(`aiApiVerification:${summaryKey}`),
         )
-        expect(mockFetchDisplayAccountTokens).toHaveBeenCalledTimes(1)
+        expect(mockNewApiInventory).toHaveBeenCalledTimes(1)
         expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(
           phase === "probe" ? 1 : 0,
         )
@@ -1491,7 +1475,7 @@ describe("BatchVerifyModelsDialog", () => {
   )
 
   it("renders localized failed probe summaries with a local fallback", async () => {
-    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+    mockNewApiInventory.mockResolvedValueOnce([
       {
         id: 1,
         name: "default-token",
@@ -1503,7 +1487,7 @@ describe("BatchVerifyModelsDialog", () => {
         models: "",
       },
     ])
-    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+    mockNewApiSecret.mockResolvedValueOnce({
       id: 1,
       name: "default-token",
       key: "sk-real",
@@ -1576,7 +1560,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("defaults to all models selected and only runs checked models", async () => {
-    mockFetchDisplayAccountTokens.mockResolvedValue([
+    mockNewApiInventory.mockResolvedValue([
       {
         id: 1,
         name: "default-token",
@@ -1588,7 +1572,7 @@ describe("BatchVerifyModelsDialog", () => {
         models: "",
       },
     ])
-    mockResolveDisplayAccountTokenForSecret.mockResolvedValue({
+    mockNewApiSecret.mockResolvedValue({
       id: 1,
       name: "default-token",
       key: "sk-real",
@@ -1741,7 +1725,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("marks unsupported-only probe results as skipped", async () => {
-    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+    mockNewApiInventory.mockResolvedValueOnce([
       {
         id: 1,
         name: "default-token",
@@ -1753,7 +1737,7 @@ describe("BatchVerifyModelsDialog", () => {
         models: "",
       },
     ])
-    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+    mockNewApiSecret.mockResolvedValueOnce({
       id: 1,
       name: "default-token",
       key: "sk-real",
@@ -1803,7 +1787,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("skips an account model when no compatible runtime key exists", async () => {
-    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+    mockNewApiInventory.mockResolvedValueOnce([
       {
         id: 1,
         name: "vip-token",
@@ -1844,7 +1828,7 @@ describe("BatchVerifyModelsDialog", () => {
     mockGetApiVerificationProbeDefinitions.mockReturnValue([
       { id: "models", requiresModelId: false },
     ])
-    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+    mockNewApiInventory.mockResolvedValueOnce([
       {
         id: 1,
         name: "default-token",
@@ -1856,7 +1840,7 @@ describe("BatchVerifyModelsDialog", () => {
         models: "",
       },
     ])
-    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+    mockNewApiSecret.mockResolvedValueOnce({
       id: 1,
       name: "default-token",
       key: "sk-real",
@@ -1895,7 +1879,7 @@ describe("BatchVerifyModelsDialog", () => {
     mockGetApiVerificationProbeDefinitions.mockReturnValue([
       { id: "models", requiresModelId: false },
     ])
-    mockFetchDisplayAccountTokens.mockRejectedValueOnce(
+    mockNewApiInventory.mockRejectedValueOnce(
       new Error("temporary token failure"),
     )
     mockUpsertLatestSummary.mockRejectedValueOnce(new Error("storage failed"))
@@ -1939,7 +1923,7 @@ describe("BatchVerifyModelsDialog", () => {
 
   it("uses text generation for setup failures when no probe definition is available", async () => {
     mockGetApiVerificationProbeDefinitions.mockReturnValue([])
-    mockFetchDisplayAccountTokens.mockRejectedValueOnce(
+    mockNewApiInventory.mockRejectedValueOnce(
       new Error("temporary token failure"),
     )
 
@@ -1974,7 +1958,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("refetches runtime keys after a failed run when rerunning the batch", async () => {
-    mockFetchDisplayAccountTokens
+    mockNewApiInventory
       .mockRejectedValueOnce(new Error("temporary token failure"))
       .mockResolvedValueOnce([
         {
@@ -1988,7 +1972,7 @@ describe("BatchVerifyModelsDialog", () => {
           models: "",
         },
       ])
-    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+    mockNewApiSecret.mockResolvedValueOnce({
       id: 1,
       name: "default-token",
       key: "sk-real",
@@ -2021,7 +2005,7 @@ describe("BatchVerifyModelsDialog", () => {
     )
 
     await waitFor(() => {
-      expect(mockFetchDisplayAccountTokens).toHaveBeenCalledTimes(1)
+      expect(mockNewApiInventory).toHaveBeenCalledTimes(1)
     })
 
     const rerunButton = await screen.findByRole("button", {
@@ -2033,7 +2017,7 @@ describe("BatchVerifyModelsDialog", () => {
     fireEvent.click(rerunButton)
 
     await waitFor(() => {
-      expect(mockFetchDisplayAccountTokens).toHaveBeenCalledTimes(2)
+      expect(mockNewApiInventory).toHaveBeenCalledTimes(2)
     })
     await waitFor(() => {
       expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
@@ -2047,7 +2031,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("does not reset an active batch when the item snapshot changes", async () => {
-    mockFetchDisplayAccountTokens.mockResolvedValue([
+    mockNewApiInventory.mockResolvedValue([
       {
         id: 1,
         name: "default-token",
@@ -2059,7 +2043,7 @@ describe("BatchVerifyModelsDialog", () => {
         models: "",
       },
     ])
-    mockResolveDisplayAccountTokenForSecret.mockResolvedValue({
+    mockNewApiSecret.mockResolvedValue({
       id: 1,
       name: "default-token",
       key: "sk-real",
@@ -2146,7 +2130,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("marks queued models as stopped when the running batch is stopped", async () => {
-    mockFetchDisplayAccountTokens.mockResolvedValue([
+    mockNewApiInventory.mockResolvedValue([
       {
         id: 1,
         name: "default-token",
@@ -2158,7 +2142,7 @@ describe("BatchVerifyModelsDialog", () => {
         models: "",
       },
     ])
-    mockResolveDisplayAccountTokenForSecret.mockResolvedValue({
+    mockNewApiSecret.mockResolvedValue({
       id: 1,
       name: "default-token",
       key: "sk-real",
@@ -2280,7 +2264,7 @@ describe("BatchVerifyModelsDialog", () => {
         }),
       )
     })
-    expect(mockFetchDisplayAccountTokens).not.toHaveBeenCalled()
+    expect(mockNewApiInventory).not.toHaveBeenCalled()
     await waitFor(() => {
       expect(mockUpsertLatestSummary).toHaveBeenCalledWith(
         expect.objectContaining({

@@ -1,8 +1,9 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  buildGroupDefaultTokenRequest,
-  DEFAULT_AUTO_PROVISION_TOKEN_NAME,
-} from "~/services/accounts/defaultTokenLifecycle/requests"
+  DEFAULT_AUTO_PROVISION_KEY_NAME,
+  getDefaultAccountKeyName,
+} from "~/services/accounts/accountKeyNames"
+import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
   defineAccountKeyResourceCapability,
   type AccountKeyResourcePage,
@@ -28,7 +29,7 @@ import {
   type ResourceFailure,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
+import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import type { NativeResourceMutationResult } from "~/services/apiAdapters/contracts/resourceNative"
 import {
   mergeResourceEdits,
@@ -44,7 +45,6 @@ import {
   fetchSub2ApiGroupDescriptors,
   fetchSub2ApiKey,
   fetchSub2ApiKeys,
-  resolveApiTokenKey,
   updateSub2ApiKey,
 } from "~/services/apiService/sub2api"
 import type {
@@ -160,13 +160,13 @@ const resolveAutoTemplateRenameTarget = (
 ): string | null => {
   const currentName = token.name?.trim() || ""
   if (
-    currentName !== DEFAULT_AUTO_PROVISION_TOKEN_NAME &&
+    currentName !== DEFAULT_AUTO_PROVISION_KEY_NAME &&
     !AUTO_GROUP_TOKEN_NAME_PATTERN.test(currentName)
   ) {
     return null
   }
 
-  const targetDisplayName = buildGroupDefaultTokenRequest(groupDisplayName).name
+  const targetDisplayName = getDefaultAccountKeyName(groupDisplayName)
   return currentName === targetDisplayName ? null : targetDisplayName
 }
 
@@ -267,7 +267,7 @@ const provisionRequirement = async (
     request,
     execute: async (mutationRequest) =>
       await createSub2ApiKey(mutationRequest, {
-        name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+        name: DEFAULT_AUTO_PROVISION_KEY_NAME,
         group_id: groupId,
         quota: 0,
       }),
@@ -502,7 +502,7 @@ const resolveRuntimeKey = async (
   const tokenId = decodeTokenId(ref.resourceId)
   try {
     const token = await fetchSub2ApiKey(request, tokenId)
-    if (token.id !== tokenId) {
+    if (token.id !== tokenId || !hasUsableApiTokenKey(token.key ?? "")) {
       return {
         kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
         failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
@@ -510,7 +510,7 @@ const resolveRuntimeKey = async (
     }
     return {
       kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
-      secret: await resolveApiTokenKey(request, token),
+      secret: token.key.trim(),
     }
   } catch (error) {
     return {
@@ -524,6 +524,7 @@ const resolveRuntimeKey = async (
 export const sub2ApiAccountKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.SUB2API,
   inventorySecretAvailability: INVENTORY_SECRET_AVAILABILITIES.Recoverable,
+  defaultCreation: "select-requirement",
   openConfig: async (input) => ({
     account: input.account,
     request: input.request,
@@ -561,7 +562,17 @@ export const sub2ApiAccountKeyResources = defineAccountKeyResourceCapability({
   },
   toListFacts: toFacts,
   toDetailFacts: toFacts,
-  createEditor: async (config) => createSub2ApiKeyEditor(config.request),
+  createEditor: async (config, _scope, options, _inventory, intent) =>
+    createSub2ApiKeyEditor(
+      config.request,
+      undefined,
+      intent,
+      intent
+        ? await fetchSub2ApiGroupDescriptors(
+            requestWithOptions(config, options),
+          )
+        : undefined,
+    ),
   editEditor: (config, _scope, detail) =>
     createSub2ApiKeyEditor(config.request, detail),
   create: async (config, _scope, command: Sub2ApiKeyEditorCommand, options) =>

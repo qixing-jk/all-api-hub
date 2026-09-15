@@ -5,7 +5,7 @@ import type {
   AccountKeyResourceFacts,
   ResourceDisplayFact,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
+import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
@@ -184,22 +184,22 @@ const statusPresentation = (
     case "enabled":
       return {
         status: "active",
-        statusLabel: t("keyManagement:openRouter.list.status.enabled"),
+        statusLabel: t("keyManagement:native.status.enabled"),
       }
     case "disabled":
       return {
         status: "inactive",
-        statusLabel: t("keyManagement:openRouter.list.status.disabled"),
+        statusLabel: t("keyManagement:native.status.disabled"),
       }
     case "expired":
       return {
         status: "inactive",
-        statusLabel: t("keyManagement:openRouter.list.status.expired"),
+        statusLabel: t("keyManagement:native.status.expired"),
       }
     default:
       return {
         status: "unknown",
-        statusLabel: t("keyManagement:openRouter.list.status.unknown"),
+        statusLabel: t("keyManagement:native.status.unknown"),
       }
   }
 }

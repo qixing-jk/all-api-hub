@@ -4,6 +4,12 @@
  * Sub2API differs from One-API/New-API backends in that authenticated endpoints
  * live under `/api/v1/*` and require a dashboard JWT.
  */
+/**
+ * Sub2API API overrides.
+ *
+ * Sub2API differs from One-API/New-API backends in that authenticated endpoints
+ * live under `/api/v1/*` and require a dashboard JWT.
+ */
 import type {
   AccountData,
   ApiServiceAccountRequest,
@@ -13,13 +19,6 @@ import type {
   TodayUsageDataWithAvailability,
 } from "~/services/accounts/accountDataModel"
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
-import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
-import { resolveApiTokenKeyWithFetcher } from "~/services/accountTokens/tokenKeyResolver"
-import type {
-  CreateTokenRequest,
-  CreateTokenResult,
-  UserGroupInfo,
-} from "~/services/accountTokens/tokenProvisioningModel"
 import type {
   AccessTokenInfo,
   SiteStatusInfo,
@@ -43,7 +42,6 @@ import {
   AuthTypeEnum,
   SiteHealthStatus,
   type AccountTodayMetricReason,
-  type ApiToken,
   type CheckInConfig,
 } from "~/types"
 import { createLogger } from "~/utils/core/logger"
@@ -70,16 +68,11 @@ import {
 } from "./checkIn"
 import {
   buildSub2ApiGroupDescriptors,
-  buildSub2ApiUserGroups,
   extractSub2ApiKeyItems,
   parseSub2ApiEnvelope,
   parseSub2ApiGroupRates,
-  parseSub2ApiKey,
   parseSub2ApiNativeKey,
   parseSub2ApiTodayUsage,
-  resolveSub2ApiGroupId,
-  translateSub2ApiCreateTokenRequest,
-  translateSub2ApiUpdateTokenRequest,
 } from "./parsing"
 import { getSafeErrorMessage } from "./redaction"
 import { decodeSub2ApiResponseError } from "./responseError"
@@ -503,34 +496,6 @@ const extractSub2ApiAnnouncementItems = (
   }
 
   return []
-}
-
-const resolveSelectedGroupId = async (
-  request: ApiServiceRequest,
-  groupName: string,
-): Promise<number | undefined> => {
-  const normalizedGroup = groupName.trim()
-  if (!normalizedGroup) {
-    return undefined
-  }
-
-  const groups = await fetchAvailableGroupsInternal(request)
-  const groupId = resolveSub2ApiGroupId(
-    groups,
-    normalizedGroup,
-    SUB2API_AVAILABLE_GROUPS_ENDPOINT,
-  )
-
-  if (typeof groupId !== "number" || !Number.isFinite(groupId)) {
-    throw new ApiError(
-      t("messages:sub2api.groupMissing", { group: normalizedGroup }),
-      undefined,
-      SUB2API_AVAILABLE_GROUPS_ENDPOINT,
-      API_ERROR_CODES.BUSINESS_ERROR,
-    )
-  }
-
-  return groupId
 }
 
 type Sub2ApiCurrentUser = {
@@ -1075,15 +1040,6 @@ export async function fetchSub2ApiKeys(
   }
 }
 
-/** Transitional inventory projection for consumers awaiting native resources. */
-export async function fetchAccountTokens(
-  request: ApiServiceRequest,
-): Promise<ApiToken[]> {
-  return (await fetchSub2ApiKeys(request)).map((key) =>
-    parseSub2ApiKey(key, { defaultUserId: request.auth?.userId }),
-  )
-}
-
 /** Fetch a native key without flattening its group identity or quota units. */
 export async function fetchSub2ApiKey(
   request: ApiServiceRequest,
@@ -1209,91 +1165,6 @@ export async function markSub2ApiAnnouncementRead(
 }
 
 /**
- * Fetch the details of a specific API token by its ID.
- */
-export async function fetchTokenById(
-  request: ApiServiceRequest,
-  tokenId: number,
-): Promise<ApiToken> {
-  const endpoint = `${SUB2API_KEYS_ENDPOINT}/${tokenId}`
-
-  try {
-    const { data, request: hydratedRequest } =
-      await fetchSub2ApiDataWithRequest<Sub2ApiKeyData>(request, endpoint, {
-        method: "GET",
-        cache: "no-store",
-      })
-
-    return parseSub2ApiKey(data, {
-      defaultUserId: hydratedRequest.auth?.userId,
-      endpoint,
-    })
-  } catch (error) {
-    logger.error("Failed to fetch Sub2API key detail", {
-      accountId: request.accountId,
-      tokenId,
-      endpoint,
-      error: getSafeErrorMessage(error),
-    })
-    throw error
-  }
-}
-
-/**
- * Resolve a Sub2API key secret without falling back to One/New API-compatible
- * `/api/token/{id}/key` semantics.
- *
- * Source: https://github.com/Wei-Shaw/sub2api
- * User key routes live under `/api/v1/keys`; upstream exposes list/get/create
- * DTOs with a full `key` directly and does not define a separate reveal
- * endpoint. The detail fallback below is defensive for forks or unexpected
- * cached/masked inventory data; it must stay inside Sub2API routes instead of
- * falling through to One/New API's `/api/token/{id}/key` contract.
- */
-export async function resolveApiTokenKey(
-  request: ApiServiceRequest,
-  token: Pick<ApiToken, "id" | "key">,
-): Promise<string> {
-  return await resolveApiTokenKeyWithFetcher(
-    request,
-    token,
-    async (detailRequest, tokenId) => {
-      const detail = await fetchTokenById(detailRequest, tokenId)
-      if (!hasUsableApiTokenKey(detail.key)) {
-        throw new Error("token_secret_key_unresolvable")
-      }
-
-      return detail.key
-    },
-  )
-}
-
-/**
- * Fetch the list of user groups available in Sub2API and their associated rates, then build a mapping of group name to `UserGroupInfo` for use in the extension.
- */
-export async function fetchUserGroups(
-  request: ApiServiceRequest,
-): Promise<Record<string, UserGroupInfo>> {
-  try {
-    const [groups, rates] = await Promise.all([
-      fetchAvailableGroupsInternal(request),
-      fetchGroupRatesInternal(request),
-    ])
-
-    return buildSub2ApiUserGroups(groups, rates, {
-      groups: SUB2API_AVAILABLE_GROUPS_ENDPOINT,
-      rates: SUB2API_GROUP_RATES_ENDPOINT,
-    })
-  } catch (error) {
-    logger.error("Failed to fetch Sub2API groups", {
-      accountId: request.accountId,
-      error: getSafeErrorMessage(error),
-    })
-    throw error
-  }
-}
-
-/**
  * Source: https://github.com/Wei-Shaw/sub2api - gateway /v1/models uses
  * runtime API-key auth and returns models visible to that key's group/platform.
  */
@@ -1344,141 +1215,6 @@ export async function fetchSub2ApiRuntimeModels(
     logger.error("Failed to fetch Sub2API runtime models", {
       accountId: request.accountId,
       endpoint: SUB2API_RUNTIME_MODELS_ENDPOINT,
-      error: getSafeErrorMessage(error),
-    })
-    throw error
-  }
-}
-
-/**
- * Sub2API does not provide a list of available models, so return an empty array and rely on the extension's default model handling logic.
- */
-export async function fetchAccountAvailableModels(
-  _request: ApiServiceRequest,
-): Promise<string[]> {
-  return []
-}
-
-/**
- * Create a new API token in Sub2API with the specified data, resolving the group name to an ID as needed.
- */
-const createSub2ApiTokenWithGroupId = async (
-  request: ApiServiceRequest,
-  tokenData: CreateTokenRequest,
-  groupId?: number,
-): Promise<CreateTokenResult> => {
-  const payload = translateSub2ApiCreateTokenRequest(tokenData, groupId)
-
-  const { data: created, request: hydratedRequest } =
-    await fetchSub2ApiDataWithRequest<Sub2ApiKeyData | undefined>(
-      request,
-      SUB2API_KEYS_ENDPOINT,
-      {
-        method: "POST",
-        body: JSON.stringify(payload),
-      },
-      { allowMissingData: true },
-    )
-
-  if (!created || typeof created !== "object" || !("id" in created)) {
-    return true
-  }
-
-  return parseSub2ApiKey(created, {
-    defaultUserId: hydratedRequest.auth?.userId,
-    endpoint: SUB2API_KEYS_ENDPOINT,
-  })
-}
-
-/**
- * Creates a key for an exact provider-owned group identity.
- *
- * Source: https://github.com/Wei-Shaw/sub2api
- * Sub2API's create-key DTO accepts `group_id`; native reconciliation must not
- * round-trip a display name when distinct groups may share that label.
- */
-export async function createSub2ApiTokenForGroupId(
-  request: ApiServiceRequest,
-  tokenData: CreateTokenRequest,
-  groupId: number,
-): Promise<CreateTokenResult> {
-  if (!Number.isSafeInteger(groupId) || groupId <= 0) {
-    throw new ApiError(
-      "Invalid Sub2API group id",
-      undefined,
-      SUB2API_KEYS_ENDPOINT,
-      API_ERROR_CODES.BUSINESS_ERROR,
-      "sub2api_invalid_group_id",
-    )
-  }
-
-  try {
-    return await createSub2ApiTokenWithGroupId(request, tokenData, groupId)
-  } catch (error) {
-    logger.error("Failed to create Sub2API key for native group id", {
-      accountId: request.accountId,
-      endpoint: SUB2API_KEYS_ENDPOINT,
-      error: getSafeErrorMessage(error),
-    })
-    throw error
-  }
-}
-
-/**
- * Create a new API token in Sub2API with the specified data, resolving the
- * legacy group name to an ID as needed.
- */
-export async function createApiToken(
-  request: ApiServiceRequest,
-  tokenData: CreateTokenRequest,
-): Promise<CreateTokenResult> {
-  try {
-    const groupId = await resolveSelectedGroupId(request, tokenData.group)
-    return await createSub2ApiTokenWithGroupId(request, tokenData, groupId)
-  } catch (error) {
-    logger.error("Failed to create Sub2API key", {
-      accountId: request.accountId,
-      endpoint: SUB2API_KEYS_ENDPOINT,
-      error: getSafeErrorMessage(error),
-    })
-    throw error
-  }
-}
-
-/**
- * Update an existing API token in Sub2API by its ID with the specified data, resolving the group name to an ID as needed.
- */
-export async function updateApiToken(
-  request: ApiServiceRequest,
-  tokenId: number,
-  tokenData: CreateTokenRequest,
-): Promise<boolean> {
-  const endpoint = `${SUB2API_KEYS_ENDPOINT}/${tokenId}`
-
-  try {
-    const existingToken = await fetchTokenById(request, tokenId)
-    const groupId = await resolveSelectedGroupId(request, tokenData.group)
-    const payload = translateSub2ApiUpdateTokenRequest(
-      tokenData.unlimited_quota
-        ? tokenData
-        : {
-            ...tokenData,
-            remain_quota: tokenData.remain_quota + existingToken.used_quota,
-          },
-      groupId,
-    )
-
-    await fetchSub2ApiData<unknown>(request, endpoint, {
-      method: "PUT",
-      body: JSON.stringify(payload),
-    })
-
-    return true
-  } catch (error) {
-    logger.error("Failed to update Sub2API key", {
-      accountId: request.accountId,
-      tokenId,
-      endpoint,
       error: getSafeErrorMessage(error),
     })
     throw error

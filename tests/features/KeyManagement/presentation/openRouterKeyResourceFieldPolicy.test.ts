@@ -7,7 +7,7 @@ import {
   getOpenRouterKeyResourceFieldPolicy,
   OPENROUTER_KEY_EDITOR_SECTION_ORDER,
   resolveOpenRouterKeyResourceFieldPolicy,
-} from "~/features/KeyManagement/presentation/accountKeyResourceFieldPolicy"
+} from "~/features/KeyManagement/presentation/openRouterKeyResourceFieldPolicy"
 import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   OPENROUTER_KEY_FIELD_IDS,
@@ -78,20 +78,20 @@ describe("OpenRouter key resource field policy", () => {
       "keyManagement:openRouter.editor.options.workspace.unknown",
     )
     expect(workspace?.issueLabelResolvers?.required?.(translate)).toBe(
-      "keyManagement:openRouter.editor.issues.required",
+      "keyManagement:native.editor.issues.required",
     )
     expect(workspace?.issueLabelResolvers?.invalid_value?.(translate)).toBe(
-      "keyManagement:openRouter.editor.issues.invalidValue",
+      "keyManagement:native.editor.issues.invalidValue",
     )
     expect(workspace?.issueLabelResolvers?.out_of_range?.(translate)).toBe(
-      "keyManagement:openRouter.editor.issues.outOfRange",
+      "keyManagement:native.editor.issues.outOfRange",
     )
     expect(
       workspace?.issueLabelResolvers?.unsupported_option?.(translate),
-    ).toBe("keyManagement:openRouter.editor.issues.unsupportedOption")
+    ).toBe("keyManagement:native.editor.issues.unsupportedOption")
     expect(
       workspace?.issueLabelResolvers?.inconsistent_value?.(translate),
-    ).toBe("keyManagement:openRouter.editor.issues.inconsistentValue")
+    ).toBe("keyManagement:native.editor.issues.inconsistentValue")
   })
 
   it("uses edit-specific immutable-field help and keeps USD visible in every supported locale", async () => {
@@ -137,9 +137,9 @@ describe("OpenRouter key resource field policy", () => {
             }
             summaryRules: { limit: string; expiresAt: string }
             summary: string
-            title: { create: string; edit: string }
           }
         }
+        native: { editor: { title: { create: string; edit: string } } }
       }
 
       expect(resource.openRouter.editor.fields.limit.help).toContain("USD")
@@ -161,8 +161,8 @@ describe("OpenRouter key resource field policy", () => {
       expect(resource.openRouter.editor.fields.creator.editHelp).not.toBe("")
       expect(resource.openRouter.editor.fields.expiresAt.editHelp).not.toBe("")
       expect(resource.openRouter.editor.summary).toContain("API")
-      expect(resource.openRouter.editor.title.create).toContain("API")
-      expect(resource.openRouter.editor.title.edit).toContain("API")
+      expect(resource.native.editor.title.create).toContain("API")
+      expect(resource.native.editor.title.edit).toContain("API")
     }
   })
 

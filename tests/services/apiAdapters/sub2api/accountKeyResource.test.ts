@@ -692,9 +692,8 @@ describe("Sub2API account key resources", () => {
   })
 
   it("resolves only the exact referenced key through Sub2API native detail and secret transport", async () => {
-    const detail = token({ id: 9, key: "sk-masked-example" })
+    const detail = token({ id: 9, key: "sub2api-full-secret" })
     mockFetchSub2ApiKey.mockResolvedValueOnce(detail)
-    mockResolveApiTokenKey.mockResolvedValueOnce("sub2api-full-secret")
 
     const session = await sub2ApiAccountKeyResources.open({
       account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
@@ -712,7 +711,6 @@ describe("Sub2API account key resources", () => {
       secret: "sub2api-full-secret",
     })
     expect(mockFetchSub2ApiKey).toHaveBeenCalledWith(request, 9)
-    expect(mockResolveApiTokenKey).toHaveBeenCalledWith(request, detail)
     expect(mockFetchSub2ApiKeys).not.toHaveBeenCalled()
   })
 

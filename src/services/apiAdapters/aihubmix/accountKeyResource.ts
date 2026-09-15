@@ -15,7 +15,7 @@ import type {
   AccountKeyResourceRef,
   ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
+import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import {
   mergeResourceEdits,
   resourceValuesEqual,
@@ -165,6 +165,7 @@ const createdSecret = (
 
 /** AIHubMix native keys keep create-only plaintext out of inventory and detail facts. */
 export const aihubmixAccountKeyResources = defineAccountKeyResourceCapability({
+  defaultCreation: "editor-defaults",
   siteType: SITE_TYPES.AIHUBMIX,
   inventorySecretAvailability:
     INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
@@ -199,8 +200,12 @@ export const aihubmixAccountKeyResources = defineAccountKeyResourceCapability({
       failure: { code: "unavailable" },
     }),
   },
-  createEditor: async (config) =>
-    createAIHubMixKeyEditor(requestWithOptions(config)),
+  createEditor: async (config, _scope, options, _inventory, intent) =>
+    createAIHubMixKeyEditor(
+      requestWithOptions(config, options),
+      undefined,
+      intent,
+    ),
   editEditor: (config, _scope, detail) =>
     createAIHubMixKeyEditor(requestWithOptions(config), detail),
   create: async (config, _scope, command: AIHubMixKeyEditCommand, options) => {

@@ -1,58 +1,27 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  expectTypeOf,
-  it,
-  vi,
-} from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  buildAccountKeyResourceRuntimeKey,
-  buildAccountTokenRuntimeKey,
-  type AccountRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 import {
   ACCOUNT_RUNTIME_KEY_SECRET_SOURCES,
-  canCreateDisplayAccountTokens,
   canFetchDisplayAccountInviteLink,
-  canManageDisplayAccountTokens,
   createAccountApiRequestFromStoredAccount,
   createDisplayAccountApiContext,
   createDisplayAccountRequestContext,
-  fetchDisplayAccountAvailableModels,
   fetchDisplayAccountInviteLink,
   fetchDisplayAccountRuntimeKeys,
-  fetchDisplayAccountTokens,
-  getInvalidTokenPayloadLogContext,
-  getRuntimeKeyInventoryErrorMessage,
-  InvalidTokenPayloadError,
   resolveDisplayAccountRuntimeKeySecret,
-  resolveDisplayAccountTokenForSecret,
   resolveStoredAccountApiContext,
   StoredAccountApiContextError,
 } from "~/services/accounts/utils/apiServiceRequest"
-import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
 import { ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
+import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { resolveAssociatedProfileSecret } from "~/services/apiCredentialProfiles/accountRuntimeKeyRecovery"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
-import {
-  PROTECTION_BYPASS_EXECUTION_KINDS,
-  PROTECTION_BYPASS_EXECUTION_VERSION,
-  PROTECTION_BYPASS_SURFACES,
-  PROTECTION_BYPASS_USER_COMMANDS,
-} from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
-
-type ExpectAccountRuntimeKeyFetcher = (
-  account: Parameters<typeof fetchDisplayAccountRuntimeKeys>[0],
-) => Promise<AccountRuntimeKey[]>
 
 const { mockGetAccountById } = vi.hoisted(() => ({
   mockGetAccountById: vi.fn(),
@@ -128,85 +97,26 @@ const buildStoredAccount = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 })
 
-describe("fetchDisplayAccountTokens", () => {
-  let fetchTokens: ReturnType<typeof vi.fn>
+describe("display account API context and native runtime keys", () => {
   let fetchInviteLink: ReturnType<typeof vi.fn>
-  let createToken: ReturnType<typeof vi.fn>
-  let updateToken: ReturnType<typeof vi.fn>
-  let resolveTokenKey: ReturnType<typeof vi.fn>
-  let deleteToken: ReturnType<typeof vi.fn>
-  let fetchUserGroups: ReturnType<typeof vi.fn>
-  let fetchAvailableModels: ReturnType<typeof vi.fn>
   let fetchServiceCredential: ReturnType<typeof vi.fn>
-  let tokenProvisioning: {
-    isInventoryTokenUsable: ReturnType<typeof vi.fn>
-    resolveDefaultTokenCreation: ReturnType<typeof vi.fn>
-    classifyCreatedToken: ReturnType<typeof vi.fn>
-  }
-  let keyManagement: {
-    fetchTokens: typeof fetchTokens
-    createToken: typeof createToken
-    updateToken: typeof updateToken
-    resolveTokenKey: typeof resolveTokenKey
-    deleteToken: typeof deleteToken
-    fetchAvailableModels: typeof fetchAvailableModels
-    inventorySecretAvailability?: string
-    userGroups: {
-      fetch: typeof fetchUserGroups
-    }
-  }
   let capabilities: {
     siteType: string
     account?: {
-      inviteLink?: {
-        fetchInviteLink: typeof fetchInviteLink
-      }
-      keyManagement?: typeof keyManagement
+      inviteLink?: { fetchInviteLink: typeof fetchInviteLink }
       serviceCredential?: {
         fetch: typeof fetchServiceCredential
         rotate?: ReturnType<typeof vi.fn>
       }
-      tokenProvisioning?: typeof tokenProvisioning
     }
   }
-
   beforeEach(() => {
-    fetchTokens = vi.fn()
     fetchInviteLink = vi.fn()
-    createToken = vi.fn()
-    updateToken = vi.fn()
-    resolveTokenKey = vi.fn()
-    deleteToken = vi.fn()
-    fetchUserGroups = vi.fn()
-    fetchAvailableModels = vi.fn()
     fetchServiceCredential = vi.fn()
-    keyManagement = {
-      fetchTokens,
-      createToken,
-      updateToken,
-      resolveTokenKey,
-      deleteToken,
-      fetchAvailableModels,
-      userGroups: {
-        fetch: fetchUserGroups,
-      },
-    }
-    tokenProvisioning = {
-      isInventoryTokenUsable: vi.fn(),
-      resolveDefaultTokenCreation: vi.fn(),
-      classifyCreatedToken: vi.fn(),
-    }
     capabilities = {
       siteType: "new-api",
-      account: {
-        inviteLink: {
-          fetchInviteLink,
-        },
-        keyManagement,
-        tokenProvisioning,
-      },
+      account: { inviteLink: { fetchInviteLink } },
     }
-
     vi.mocked(getSiteTypeCapabilities).mockReset()
     vi.mocked(getSiteTypeCapabilities).mockReturnValue(capabilities as any)
     vi.mocked(resolveAssociatedProfileSecret).mockReset()
@@ -217,13 +127,7 @@ describe("fetchDisplayAccountTokens", () => {
     vi.useRealTimers()
   })
 
-  it("types runtime key loading as account runtime keys only", () => {
-    expectTypeOf(
-      fetchDisplayAccountRuntimeKeys,
-    ).toEqualTypeOf<ExpectAccountRuntimeKeyFetcher>()
-  })
-
-  it("loads native runtime policy without querying the legacy token inventory or secrets", async () => {
+  it("loads native runtime policy without querying the secret resolution", async () => {
     const ref = {
       accountId: ACCOUNT.id,
       siteType: ACCOUNT.siteType,
@@ -248,7 +152,6 @@ describe("fetchDisplayAccountTokens", () => {
         },
       ],
     })
-    const fetchTokens = vi.fn()
     const resolve = vi.fn()
     const open = vi.fn().mockResolvedValue({
       resolveDefaultScope: async () => ({ scopeKey: "account" }),
@@ -257,7 +160,7 @@ describe("fetchDisplayAccountTokens", () => {
     })
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.NEW_API,
-      account: { keyResources: { open }, keyManagement: { fetchTokens } },
+      account: { keyResourceManagement: { open } },
     } as any)
     const keys = await fetchDisplayAccountRuntimeKeys({
       ...ACCOUNT,
@@ -273,56 +176,14 @@ describe("fetchDisplayAccountTokens", () => {
         modelAccess,
       },
     ])
-    expect(fetchTokens).not.toHaveBeenCalled()
     expect(resolve).not.toHaveBeenCalled()
-  })
-
-  it("returns the token array when the API payload is valid", async () => {
-    fetchTokens.mockResolvedValue([{ id: 1, key: "sk-test", status: 1 }])
-
-    const result = await fetchDisplayAccountTokens(ACCOUNT as any)
-
-    expect(result).toEqual([{ id: 1, key: "sk-test", status: 1 }])
-    expect(fetchTokens).toHaveBeenCalledWith(expect.objectContaining(REQUEST))
-    expect(createDisplayAccountApiContext(ACCOUNT as any)).toEqual(
-      expect.objectContaining({
-        capabilities,
-        keyManagement,
-        tokenProvisioning,
-        request: expect.objectContaining(REQUEST),
-      }),
-    )
-    expect(createDisplayAccountApiContext(ACCOUNT as any)).not.toHaveProperty(
-      "service",
-    )
-    expect(createDisplayAccountApiContext(ACCOUNT as any)).toEqual(
-      expect.objectContaining({
-        accountKeyResources: undefined,
-      }),
-    )
-    expect(createDisplayAccountApiContext(ACCOUNT as any)).toMatchObject({
-      accountKeyResources: createDisplayAccountApiContext(ACCOUNT as any)
-        .capabilities.account?.keyResources,
-    })
-    expect(createDisplayAccountApiContext(ACCOUNT as any)).toMatchObject({
-      keyManagement,
-    })
-    expect(createDisplayAccountApiContext(ACCOUNT as any)).toEqual(
-      expect.objectContaining({
-        request: expect.not.objectContaining({
-          accountAuthStore: expect.anything(),
-        }),
-      }),
-    )
   })
 
   it("projects account-native key resources without inventing legacy key management", () => {
     const accountKeyResources = { open: vi.fn() }
-    const accountKeyProvisioningResources = { open: vi.fn() }
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.OPENROUTER,
       account: {
-        keyResources: accountKeyProvisioningResources,
         keyResourceManagement: accountKeyResources,
       },
     } as any)
@@ -337,9 +198,7 @@ describe("fetchDisplayAccountTokens", () => {
     )
     expect(context).toMatchObject({
       accountKeyResources,
-      keyManagement: undefined,
       serviceCredential: undefined,
-      tokenProvisioning: undefined,
     })
   })
 
@@ -394,36 +253,6 @@ describe("fetchDisplayAccountTokens", () => {
         baseUrl: "https://runtime.example.invalid",
       }),
     )
-    expect(fetchTokens).not.toHaveBeenCalled()
-  })
-
-  it("keeps runtime key loading on key management when token inventory is supported", async () => {
-    fetchTokens.mockResolvedValueOnce([
-      { id: 1, key: "sk-test", status: 1, name: "Primary token" },
-    ])
-
-    await expect(
-      fetchDisplayAccountRuntimeKeys(ACCOUNT as any),
-    ).resolves.toEqual([
-      expect.objectContaining({
-        id: "account_token:account-1:1",
-        source: "account_token",
-        accountId: "account-1",
-        accountName: ACCOUNT.name,
-        label: "Primary token",
-        secret: "sk-test",
-        tokenId: 1,
-        token: expect.objectContaining({
-          id: 1,
-          key: "sk-test",
-          accountId: ACCOUNT.id,
-          accountName: ACCOUNT.name,
-        }),
-      }),
-    ])
-
-    expect(fetchTokens).toHaveBeenCalledWith(expect.objectContaining(REQUEST))
-    expect(fetchServiceCredential).not.toHaveBeenCalled()
   })
 
   it("builds a request-only context from a display account snapshot", () => {
@@ -452,68 +281,6 @@ describe("fetchDisplayAccountTokens", () => {
     expect(fetchInviteLink).toHaveBeenCalledWith({
       request: expect.objectContaining(REQUEST),
     })
-  })
-
-  it("fetches available models through the site key-management capability", async () => {
-    fetchAvailableModels.mockResolvedValueOnce(["example-model"])
-
-    await expect(
-      fetchDisplayAccountAvailableModels(ACCOUNT as any),
-    ).resolves.toEqual(["example-model"])
-
-    expect(fetchAvailableModels).toHaveBeenCalledWith(
-      expect.objectContaining(REQUEST),
-    )
-  })
-
-  it("bounds model discovery even when a provider ignores cancellation", async () => {
-    vi.useFakeTimers()
-    fetchAvailableModels.mockImplementationOnce(
-      () => new Promise<string[]>(() => {}),
-    )
-
-    const requestSettled = fetchDisplayAccountAvailableModels(ACCOUNT as any, {
-      requestTimeoutMs: 1_000,
-    })
-    const timeoutExpectation = expect(requestSettled).rejects.toMatchObject({
-      name: "TimeoutError",
-    })
-
-    await vi.advanceTimersByTimeAsync(1_000)
-
-    await timeoutExpectation
-    expect(fetchAvailableModels).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ...REQUEST,
-        abortSignal: expect.any(AbortSignal),
-        requestTimeoutMs: 1_000,
-      }),
-    )
-  })
-
-  it("cancels model discovery through the caller abort signal", async () => {
-    const controller = new AbortController()
-    fetchAvailableModels.mockImplementationOnce(
-      () => new Promise<string[]>(() => {}),
-    )
-
-    const requestSettled = fetchDisplayAccountAvailableModels(ACCOUNT as any, {
-      abortSignal: controller.signal,
-    })
-    const abortExpectation = expect(requestSettled).rejects.toMatchObject({
-      name: "AbortError",
-    })
-
-    await Promise.resolve()
-    controller.abort(new DOMException("Dialog closed", "AbortError"))
-
-    await abortExpectation
-    expect(fetchAvailableModels).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ...REQUEST,
-        abortSignal: expect.any(AbortSignal),
-      }),
-    )
   })
 
   it("normalizes provider failures at the display-account invite-link boundary", async () => {
@@ -931,196 +698,6 @@ describe("fetchDisplayAccountTokens", () => {
     })
   })
 
-  it("keeps non-Sub2API account-scoped requests transport-only", async () => {
-    fetchTokens.mockResolvedValue([])
-
-    await fetchDisplayAccountTokens(ACCOUNT as any)
-
-    const request = fetchTokens.mock.calls[0]?.[0] as Record<string, unknown>
-    expect(request).toEqual(expect.objectContaining(REQUEST))
-    expect(request).not.toHaveProperty("accountAuthStore")
-    expect(request).not.toHaveProperty("sub2apiAuthSession")
-  })
-
-  it("adds an auth session only when the account site profile permits it", async () => {
-    const sub2apiAccount = {
-      ...ACCOUNT,
-      siteType: SITE_TYPES.SUB2API,
-    }
-    fetchTokens.mockResolvedValue([])
-
-    await fetchDisplayAccountTokens(sub2apiAccount as any)
-
-    const request = fetchTokens.mock.calls[0]?.[0] as Record<string, unknown>
-    expect(request).toEqual(expect.objectContaining(REQUEST))
-    expect(request).not.toHaveProperty("accountAuthStore")
-    expect(request.sub2apiAuthSession).toBe(accountSub2ApiAuthSession)
-    expect(
-      createDisplayAccountApiContext(sub2apiAccount as any).request,
-    ).toEqual(
-      expect.objectContaining({
-        ...REQUEST,
-        sub2apiAuthSession: accountSub2ApiAuthSession,
-      }),
-    )
-  })
-
-  it("throws InvalidTokenPayloadError when the API payload is not an array", async () => {
-    fetchTokens.mockResolvedValue({ items: [] })
-
-    await expect(
-      fetchDisplayAccountTokens(ACCOUNT as any),
-    ).rejects.toBeInstanceOf(InvalidTokenPayloadError)
-
-    try {
-      await fetchDisplayAccountTokens(ACCOUNT as any)
-    } catch (error) {
-      expect(error).toBeInstanceOf(InvalidTokenPayloadError)
-      if (!(error instanceof InvalidTokenPayloadError)) {
-        throw error
-      }
-
-      expect(error.accountId).toBe("account-1")
-      expect(error.baseUrl).toBe("https://example.com")
-      expect(error.siteType).toBe("new-api")
-      expect(error.responseType).toBe("object")
-    }
-  })
-
-  it("keeps invalid token payload errors user-safe while exposing diagnostic log context", () => {
-    const error = new InvalidTokenPayloadError({
-      accountId: "account-1",
-      baseUrl: "https://example.com",
-      siteType: "new-api",
-      responseType: "object",
-    })
-
-    expect(getRuntimeKeyInventoryErrorMessage(error, "fallback")).toBe(
-      "fallback",
-    )
-    expect(getInvalidTokenPayloadLogContext(error)).toEqual({
-      payloadAccountId: "account-1",
-      payloadBaseUrl: "https://example.com",
-      payloadSiteType: "new-api",
-      payloadResponseType: "object",
-    })
-  })
-
-  it("preserves ordinary runtime key inventory error messages without payload diagnostics", () => {
-    const error = new Error("network failed")
-
-    expect(getRuntimeKeyInventoryErrorMessage(error, "fallback")).toBe(
-      "network failed",
-    )
-    expect(getInvalidTokenPayloadLogContext(error)).toEqual({})
-  })
-
-  it("returns the original token object when the resolved secret key is unchanged", async () => {
-    const token = { id: 1, key: "sk-test", status: 1 }
-    resolveTokenKey.mockResolvedValue("sk-test")
-
-    const result = await resolveDisplayAccountTokenForSecret(
-      ACCOUNT as any,
-      token as any,
-    )
-
-    expect(result).toBe(token)
-    expect(resolveTokenKey).toHaveBeenCalledWith({
-      request: expect.objectContaining(REQUEST),
-      token,
-    })
-  })
-
-  it("clones the token when the resolved secret key differs from the masked key", async () => {
-    const token = { id: 1, key: "sk-masked", status: 1, name: "Masked" }
-    resolveTokenKey.mockResolvedValue("sk-real")
-
-    const result = await resolveDisplayAccountTokenForSecret(
-      ACCOUNT as any,
-      token as any,
-    )
-
-    expect(result).toEqual({
-      id: 1,
-      key: "sk-real",
-      status: 1,
-      name: "Masked",
-    })
-    expect(result).not.toBe(token)
-    expect(resolveTokenKey).toHaveBeenCalledWith({
-      request: expect.objectContaining(REQUEST),
-      token,
-    })
-  })
-
-  it("passes abort and protection-bypass context to token secret resolution requests", async () => {
-    const token = { id: 1, key: "sk-masked", status: 1, name: "Masked" }
-    const abortController = new AbortController()
-    const protectionBypassExecution = {
-      version: PROTECTION_BYPASS_EXECUTION_VERSION,
-      kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
-      command: PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
-      surface: PROTECTION_BYPASS_SURFACES.Options,
-    } as const
-    resolveTokenKey.mockResolvedValue("sk-real")
-
-    await resolveDisplayAccountTokenForSecret(ACCOUNT as any, token as any, {
-      abortSignal: abortController.signal,
-      protectionBypassExecution,
-    })
-
-    expect(resolveTokenKey).toHaveBeenCalledWith({
-      request: expect.objectContaining({
-        ...REQUEST,
-        abortSignal: abortController.signal,
-        protectionBypassExecution,
-      }),
-      token,
-    })
-    const request = resolveTokenKey.mock.calls[0]?.[0]?.request
-    expect(request).not.toHaveProperty("tempWindowRequestSource")
-    expect(request.protectionBypassExecution).toBe(protectionBypassExecution)
-  })
-
-  it("resolves singleton service credential runtime tokens without key management", async () => {
-    capabilities = {
-      siteType: SITE_TYPES.SHAREDCHAT,
-      account: {
-        serviceCredential: {
-          fetch: fetchServiceCredential,
-        },
-      },
-    }
-    vi.mocked(getSiteTypeCapabilities).mockReturnValue(capabilities as any)
-    fetchServiceCredential.mockResolvedValueOnce({
-      kind: "singleton_service_key",
-      service: "codex",
-      label: "Codex",
-      key: "sk-sharedchat-codex",
-      isAuthenticated: true,
-    })
-
-    await expect(
-      resolveDisplayAccountTokenForSecret(
-        {
-          ...ACCOUNT,
-          siteType: SITE_TYPES.SHAREDCHAT,
-        } as any,
-        { id: -1, key: "sk-masked", status: 1, name: "Codex" } as any,
-      ),
-    ).resolves.toEqual(
-      expect.objectContaining({
-        id: -1,
-        key: "sk-sharedchat-codex",
-        name: "Codex",
-      }),
-    )
-    expect(resolveTokenKey).not.toHaveBeenCalled()
-    expect(fetchServiceCredential).toHaveBeenCalledWith(
-      expect.objectContaining(REQUEST),
-    )
-  })
-
   it("resolves service credential runtime key secrets through serviceCredential fetch", async () => {
     const serviceCredentialAccount = {
       ...ACCOUNT,
@@ -1352,226 +929,6 @@ describe("fetchDisplayAccountTokens", () => {
     })
   })
 
-  it("returns a transient sk-prefixed secret for optional-prefix compatible account types", async () => {
-    const token = { id: 1, key: "plain-secret", status: 1, name: "Plain" }
-    resolveTokenKey.mockResolvedValue("plain-secret")
-
-    const result = await resolveDisplayAccountTokenForSecret(
-      { ...ACCOUNT, siteType: "Veloera" } as any,
-      token as any,
-    )
-
-    expect(result).toEqual({
-      id: 1,
-      key: "sk-plain-secret",
-      status: 1,
-      name: "Plain",
-    })
-    expect(result).not.toBe(token)
-    expect(token.key).toBe("plain-secret")
-  })
-
-  it("keeps live scheduling intent when resolving a token secret", async () => {
-    const requestScheduling = {
-      priority: "background" as "background" | "foreground",
-    }
-    const token = { id: 1, key: "", status: 1, name: "Key" }
-    resolveTokenKey.mockImplementationOnce(async ({ request }) => {
-      expect(request.requestScheduling).toBe(requestScheduling)
-      requestScheduling.priority = "foreground"
-      expect(request.requestScheduling.priority).toBe("foreground")
-      return "resolved-secret"
-    })
-
-    await expect(
-      resolveDisplayAccountTokenForSecret(ACCOUNT as any, token as any, {
-        requestScheduling,
-      }),
-    ).resolves.toMatchObject({ key: "sk-resolved-secret" })
-    expect(resolveTokenKey).toHaveBeenCalledTimes(1)
-    expect(token.key).toBe("")
-  })
-
-  it("does not synthesize sk-prefixes for non-compatible account types", async () => {
-    const token = { id: 1, key: "plain-secret", status: 1, name: "Plain" }
-    resolveTokenKey.mockResolvedValue("plain-secret")
-
-    const result = await resolveDisplayAccountTokenForSecret(
-      { ...ACCOUNT, siteType: "sub2api" } as any,
-      token as any,
-    )
-
-    expect(result).toBe(token)
-  })
-
-  it("uses an already usable export token without resolving the account context", async () => {
-    const token = { id: 1, key: "plain-secret", status: 1, name: "Plain" }
-
-    const result = await resolveExportTokenForSecret(
-      { ...ACCOUNT, siteType: "Veloera" } as any,
-      token as any,
-    )
-
-    expect(result).toEqual({
-      id: 1,
-      key: "sk-plain-secret",
-      status: 1,
-      name: "Plain",
-    })
-    expect(resolveTokenKey).not.toHaveBeenCalled()
-  })
-
-  it("resolves export tokens when the current key is masked", async () => {
-    const token = {
-      id: 1,
-      key: "sk-abcd************wxyz",
-      status: 1,
-      name: "Masked",
-    }
-    resolveTokenKey.mockResolvedValue("sk-real")
-
-    const result = await resolveExportTokenForSecret(
-      ACCOUNT as any,
-      token as any,
-    )
-
-    expect(result).toEqual({
-      id: 1,
-      key: "sk-real",
-      status: 1,
-      name: "Masked",
-    })
-    expect(resolveTokenKey).toHaveBeenCalledWith({
-      request: expect.objectContaining(REQUEST),
-      token,
-    })
-  })
-
-  it("uses an associated profile for create-response-only account tokens", async () => {
-    capabilities = {
-      siteType: SITE_TYPES.AIHUBMIX,
-      account: {
-        keyManagement: {
-          ...keyManagement,
-          inventorySecretAvailability:
-            INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
-        },
-      },
-    }
-    vi.mocked(getSiteTypeCapabilities).mockReturnValue(capabilities as any)
-    vi.mocked(resolveAssociatedProfileSecret).mockResolvedValue({
-      status: "resolved",
-      secret: "profile-secret",
-      profile: { baseUrl: "https://api.example.invalid/v1" },
-    } as any)
-    const token = {
-      id: 42,
-      key: "sk-abcd********wxyz",
-      status: 1,
-      name: "Create-only",
-    }
-
-    await expect(
-      resolveDisplayAccountTokenForSecret(
-        { ...ACCOUNT, siteType: SITE_TYPES.AIHUBMIX } as any,
-        token as any,
-      ),
-    ).resolves.toMatchObject({ key: "profile-secret" })
-    expect(resolveTokenKey).not.toHaveBeenCalled()
-  })
-
-  it("supports explicit associated-profile token resolution and reports missing links", async () => {
-    const token = {
-      id: 42,
-      key: "sk-masked********",
-      status: 1,
-      name: "Associated",
-    }
-    vi.mocked(resolveAssociatedProfileSecret).mockResolvedValueOnce({
-      status: "resolved",
-      secret: "associated-secret",
-      profile: { baseUrl: "https://associated.example.invalid" },
-    } as any)
-
-    await expect(
-      resolveDisplayAccountTokenForSecret(ACCOUNT as any, token as any, {
-        secretSource: ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.AssociatedProfile,
-      }),
-    ).resolves.toMatchObject({ key: "sk-associated-secret" })
-
-    vi.mocked(resolveAssociatedProfileSecret).mockResolvedValueOnce({
-      status: "not-found",
-    } as any)
-    await expect(
-      resolveDisplayAccountTokenForSecret(ACCOUNT as any, token as any, {
-        secretSource: ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.AssociatedProfile,
-      }),
-    ).rejects.toThrow("account_runtime_key_secret_unavailable:not-found")
-  })
-
-  it("falls back from token provider resolution without hiding the original failure", async () => {
-    const token = {
-      id: 43,
-      key: "sk-masked********",
-      status: 1,
-      name: "Fallback",
-    }
-    resolveTokenKey.mockRejectedValueOnce(new Error("provider unavailable"))
-    vi.mocked(resolveAssociatedProfileSecret).mockResolvedValueOnce({
-      status: "resolved",
-      secret: "associated-fallback-secret",
-      profile: { baseUrl: "https://associated.example.invalid" },
-    } as any)
-
-    await expect(
-      resolveDisplayAccountTokenForSecret(ACCOUNT as any, token as any, {
-        secretSource:
-          ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.ProviderThenAssociatedProfile,
-      }),
-    ).resolves.toMatchObject({ key: "sk-associated-fallback-secret" })
-
-    const providerError = new Error("original provider failure")
-    resolveTokenKey.mockRejectedValueOnce(providerError)
-    vi.mocked(resolveAssociatedProfileSecret).mockResolvedValueOnce({
-      status: "not-found",
-    } as any)
-    await expect(
-      resolveDisplayAccountTokenForSecret(ACCOUNT as any, token as any, {
-        secretSource:
-          ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.ProviderThenAssociatedProfile,
-      }),
-    ).rejects.toBe(providerError)
-  })
-
-  it("keeps a newly created full secret for create-response-only account tokens", async () => {
-    capabilities = {
-      siteType: SITE_TYPES.AIHUBMIX,
-      account: {
-        keyManagement: {
-          ...keyManagement,
-          inventorySecretAvailability:
-            INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
-        },
-      },
-    }
-    vi.mocked(getSiteTypeCapabilities).mockReturnValue(capabilities as any)
-    const token = {
-      id: 42,
-      key: "sk-created-one-time-secret",
-      status: 1,
-      name: "Create-only",
-    }
-
-    await expect(
-      resolveDisplayAccountTokenForSecret(
-        { ...ACCOUNT, siteType: SITE_TYPES.AIHUBMIX } as any,
-        token as any,
-      ),
-    ).resolves.toBe(token)
-    expect(resolveAssociatedProfileSecret).not.toHaveBeenCalled()
-    expect(resolveTokenKey).not.toHaveBeenCalled()
-  })
-
   it("reports unavailable native resource resolution boundaries", async () => {
     const resourceAccount = {
       ...ACCOUNT,
@@ -1697,67 +1054,36 @@ describe("fetchDisplayAccountTokens", () => {
     ).rejects.toBe(providerError)
   })
 
-  it("resolves account-token runtime key secrets without double-formatting optional prefixes", async () => {
-    const token = { id: 1, key: "plain-secret", status: 1, name: "Plain" }
-    const runtimeKey = buildAccountTokenRuntimeKey(
-      { ...ACCOUNT, siteType: "Veloera" } as any,
-      {
-        ...token,
-        accountId: ACCOUNT.id,
-        accountName: ACCOUNT.name,
-      } as any,
-    )
-    resolveTokenKey.mockResolvedValue("plain-secret")
-
+  it("formats the recovered native secret exactly once", async () => {
+    const resolve = vi.fn().mockResolvedValue({
+      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
+      secret: "plain-secret",
+    })
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.VELOERA,
+      account: {
+        keyResourceManagement: {
+          open: vi.fn().mockResolvedValue({ runtimeKey: { resolve } }),
+        },
+      },
+    } as any)
+    const account = { ...ACCOUNT, siteType: SITE_TYPES.VELOERA } as any
+    const runtimeKey = buildAccountKeyResourceRuntimeKey(account, {
+      ref: {
+        accountId: account.id,
+        siteType: account.siteType,
+        scopeKey: "account",
+        resourceId: "1",
+      },
+      label: "Plain",
+      secret: "",
+    })
     const result = await resolveDisplayAccountRuntimeKeySecret(
-      { ...ACCOUNT, siteType: "Veloera" } as any,
+      account,
       runtimeKey,
     )
-
     expect(result.secret).toBe("sk-plain-secret")
-    expect(result.token.key).toBe("sk-plain-secret")
-  })
-
-  it("throws when resolving a token secret without key-management or service-credential support", async () => {
-    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
-      siteType: "unsupported",
-    } as any)
-
-    await expect(
-      resolveDisplayAccountTokenForSecret(
-        {
-          ...ACCOUNT,
-          siteType: "unsupported",
-        } as any,
-        { id: 1, key: "sk-masked", status: 1, name: "Masked" } as any,
-      ),
-    ).rejects.toThrow("keyManagement is not implemented for unsupported")
-  })
-
-  it("throws when adapter key management is not implemented", async () => {
-    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
-      siteType: "unsupported",
-    } as any)
-
-    await expect(
-      fetchDisplayAccountTokens({
-        ...ACCOUNT,
-        siteType: "unsupported",
-      } as any),
-    ).rejects.toThrow("keyManagement is not implemented for unsupported")
-  })
-
-  it("throws when adapter token provisioning is not implemented", async () => {
-    const { requireDisplayAccountTokenProvisioning } = await import(
-      "~/services/accounts/utils/apiServiceRequest"
-    )
-
-    expect(() =>
-      requireDisplayAccountTokenProvisioning(
-        { siteType: "unsupported" } as any,
-        undefined,
-      ),
-    ).toThrow("tokenProvisioning is not implemented for unsupported")
+    expect(resolve).toHaveBeenCalledTimes(1)
   })
 
   it("throws when adapter invite-link loading is not implemented", async () => {
@@ -1771,87 +1097,6 @@ describe("fetchDisplayAccountTokens", () => {
         undefined,
       ),
     ).toThrow("inviteLink is not implemented for unsupported")
-  })
-
-  it("only allows token management for enabled accounts with complete auth context", () => {
-    expect(canManageDisplayAccountTokens(null)).toBe(false)
-    expect(
-      canManageDisplayAccountTokens({
-        ...ACCOUNT,
-        disabled: true,
-      } as any),
-    ).toBe(false)
-    expect(
-      canManageDisplayAccountTokens({
-        ...ACCOUNT,
-        authType: AuthTypeEnum.None,
-      } as any),
-    ).toBe(false)
-    expect(
-      canManageDisplayAccountTokens({
-        ...ACCOUNT,
-        token: "   ",
-      } as any),
-    ).toBe(false)
-    expect(
-      canManageDisplayAccountTokens({
-        ...ACCOUNT,
-        authType: AuthTypeEnum.Cookie,
-        token: "",
-        cookieAuthSessionCookie: "session=abc",
-      } as any),
-    ).toBe(true)
-    expect(
-      canManageDisplayAccountTokens({
-        ...ACCOUNT,
-        userId: Number.NaN,
-      } as any),
-    ).toBe(false)
-
-    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
-      siteType: "unsupported",
-      account: {},
-    } as any)
-
-    expect(
-      canManageDisplayAccountTokens({
-        ...ACCOUNT,
-        siteType: "unsupported",
-      } as any),
-    ).toBe(false)
-  })
-
-  it("only allows token creation when the account has key-management capability", () => {
-    expect(canCreateDisplayAccountTokens(null)).toBe(false)
-    expect(canCreateDisplayAccountTokens(ACCOUNT as any)).toBe(true)
-
-    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
-      siteType: "unsupported",
-      account: {},
-    } as any)
-
-    expect(
-      canCreateDisplayAccountTokens({
-        ...ACCOUNT,
-        siteType: "unsupported",
-      } as any),
-    ).toBe(false)
-
-    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
-      siteType: SITE_TYPES.SHAREDCHAT,
-      account: {
-        serviceCredential: {
-          fetch: fetchServiceCredential,
-        },
-      },
-    } as any)
-
-    expect(
-      canCreateDisplayAccountTokens({
-        ...ACCOUNT,
-        siteType: SITE_TYPES.SHAREDCHAT,
-      } as any),
-    ).toBe(false)
   })
 
   it("only allows invite-link loading when the account has capability and valid auth context", () => {

@@ -2,7 +2,7 @@ import type { AccountRuntimeKeyModelAccess } from "~/services/accounts/runtimeKe
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 
 /** Translate the remaining token protocol fields before runtime consumers see them. */
-export function projectLegacyTokenModelAccess(token: {
+export function projectNewApiTokenModelAccess(token: {
   group?: string
   model_limits_enabled?: boolean
   model_limits?: string

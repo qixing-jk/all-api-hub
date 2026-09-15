@@ -3,7 +3,6 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { ManagedResourceCreateDialog } from "~/features/ManagedSiteChannels/components/ManagedResourceCreateDialog"
 import { useManagedResourceInteraction } from "~/features/ManagedSiteChannels/providers/useManagedResourceInteraction"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
-import { buildDefaultTokenCreatePrefill } from "~/features/TokenProvisioning/components/AddTokenDialog/defaultTokenCreatePrefill"
 
 import { ChannelDialogOpening } from "./ChannelDialogOpening"
 
@@ -24,11 +23,6 @@ export function ChannelDialogContainer() {
     handleDefaultTokenQuickCreateSuccess,
   } = useChannelDialogContext()
 
-  const defaultTokenQuickCreatePrefill = defaultTokenQuickCreateDialog.account
-    ? buildDefaultTokenCreatePrefill(
-        defaultTokenQuickCreateDialog.allowedGroups,
-      )
-    : undefined
   const nativeCreate = state.nativeCreate
   const { runRead, verificationDialog } = useManagedResourceInteraction({
     siteType: nativeCreate?.siteType ?? managedSiteType,
@@ -62,14 +56,12 @@ export function ChannelDialogContainer() {
         />
       ) : null}
       {verificationDialog}
-      {defaultTokenQuickCreateDialog.account &&
-      defaultTokenQuickCreatePrefill ? (
+      {defaultTokenQuickCreateDialog.account ? (
         <AddTokenDialog
           isOpen={defaultTokenQuickCreateDialog.isOpen}
           onClose={closeDefaultTokenQuickCreateDialog}
           availableAccounts={[defaultTokenQuickCreateDialog.account]}
           preSelectedAccountId={defaultTokenQuickCreateDialog.account.id}
-          createPrefill={defaultTokenQuickCreatePrefill}
           prefillNotice={defaultTokenQuickCreateDialog.notice}
           onSuccess={handleDefaultTokenQuickCreateSuccess}
         />

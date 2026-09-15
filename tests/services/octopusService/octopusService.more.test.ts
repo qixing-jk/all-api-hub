@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import {
@@ -9,10 +8,11 @@ import {
   OctopusOutboundType,
   type OctopusChannel,
 } from "~/types/octopus"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import {
-  buildApiToken,
   buildDisplaySiteData,
+  buildNewApiToken,
 } from "~~/tests/test-utils/factories"
 
 const {
@@ -140,15 +140,13 @@ describe("octopus additional flows", () => {
       name: "Octopus Site",
       baseUrl: "https://proxy.example.com",
     })
-    const token = buildApiToken({
+    const token = buildNewApiToken({
       key: "octo-key",
       name: "Primary Token",
     })
 
     const result = await prepareChannelFormData(
-      buildManagedSiteChannelDraftSource(
-        buildDisplayAccountTokenRuntimeKey(account, token),
-      ),
+      buildManagedSiteChannelDraftSource(buildNewApiRuntimeKey(account, token)),
     )
 
     expect(result).toMatchObject({
@@ -202,7 +200,7 @@ describe("octopus additional flows", () => {
         name: "AIHubMix",
         baseUrl: "https://console.aihubmix.com",
       })
-      const token = buildApiToken({
+      const token = buildNewApiToken({
         key: "octo-aihubmix-key",
         name: "AIHubMix Token",
       })
@@ -210,7 +208,7 @@ describe("octopus additional flows", () => {
 
       const result = await prepareChannelFormData(
         buildManagedSiteChannelDraftSource(
-          buildDisplayAccountTokenRuntimeKey(account, token),
+          buildNewApiRuntimeKey(account, token),
         ),
       )
 
@@ -304,9 +302,9 @@ describe("octopus additional flows", () => {
 
     const result = await prepareChannelFormData(
       buildManagedSiteChannelDraftSource(
-        buildDisplayAccountTokenRuntimeKey(
+        buildNewApiRuntimeKey(
           buildDisplaySiteData({ baseUrl: "https://proxy.example.com/" }),
-          buildApiToken({ key: "octo-key" }),
+          buildNewApiToken({ key: "octo-key" }),
         ),
       ),
     )

@@ -1,11 +1,9 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import {
-  buildGroupDefaultTokenRequest,
-  DEFAULT_AUTO_PROVISION_TOKEN_NAME,
-} from "~/services/accounts/defaultTokenLifecycle/requests"
+  DEFAULT_AUTO_PROVISION_KEY_NAME,
+  getDefaultAccountKeyName,
+} from "~/services/accounts/accountKeyNames"
 import { validateApiTokenInventory } from "~/services/accountTokens/apiTokenKey"
-import { projectTokenCreatedAt } from "~/services/accountTokens/tokenCreatedAt"
-import { projectLegacyTokenModelAccess } from "~/services/accountTokens/tokenModelAccess"
 import {
   defineAccountKeyResourceCapability,
   type AccountKeyResourcePage,
@@ -32,7 +30,7 @@ import {
   type ResourceFailure,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
+import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import type { NativeResourceMutationResult } from "~/services/apiAdapters/contracts/resourceNative"
 import {
   mergeResourceEdits,
@@ -49,12 +47,14 @@ import type {
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { maskSecretForDisplay } from "~/utils/core/formatters"
 
-import { tokenGroupFollowsAccount } from "./keyManagement"
 import {
   createNewApiKeyEditor,
   toNewApiTokenWrite,
   type NewApiKeyEditCommand,
 } from "./keyResourceEditor"
+import { projectTokenCreatedAt } from "./tokenCreatedAt"
+import { tokenGroupFollowsAccount } from "./tokenGroup"
+import { projectNewApiTokenModelAccess } from "./tokenModelAccess"
 import {
   resolveNewApiFamilyTokenTransport,
   type NewApiFamilyTokenTransport,
@@ -152,13 +152,13 @@ const resolveAutoTemplateRenameTarget = (
   if (!group) return null
   const currentName = token.name?.trim() || ""
   if (
-    currentName !== DEFAULT_AUTO_PROVISION_TOKEN_NAME &&
+    currentName !== DEFAULT_AUTO_PROVISION_KEY_NAME &&
     !AUTO_GROUP_TOKEN_NAME_PATTERN.test(currentName)
   ) {
     return null
   }
 
-  const targetDisplayName = buildGroupDefaultTokenRequest(group).name
+  const targetDisplayName = getDefaultAccountKeyName(group)
   return currentName === targetDisplayName ? null : targetDisplayName
 }
 
@@ -306,10 +306,16 @@ const provisionRequirement = async (
   const createResult = await runNativeResourceMutation({
     request: requestWithOptions(config, options),
     execute: async (request) =>
-      await config.transport.createApiToken(
-        request,
-        buildGroupDefaultTokenRequest(group),
-      ),
+      await config.transport.createApiToken(request, {
+        name: getDefaultAccountKeyName(group),
+        unlimited_quota: true,
+        expired_time: -1,
+        remain_quota: 0,
+        allow_ips: "",
+        model_limits_enabled: false,
+        model_limits: "",
+        group,
+      }),
     mapFailure,
     classifyError: (error) =>
       isApiBusinessError(error) ? "not-applied" : undefined,
@@ -422,7 +428,7 @@ const toFacts = (
   maskedLabel: maskSecretForDisplay(token.key ?? ""),
   status: tokenStatus(token),
   runtimeKey: {
-    modelAccess: projectLegacyTokenModelAccess(token),
+    modelAccess: projectNewApiTokenModelAccess(token),
     legacyTokenId: token.id,
     createdAt: projectTokenCreatedAt(token),
     notes: token.note,
@@ -453,7 +459,7 @@ const toFacts = (
     {
       fieldId: "models",
       kind: "list",
-      value: projectLegacyTokenModelAccess(token).allowedModelIds ?? [],
+      value: projectNewApiTokenModelAccess(token).allowedModelIds ?? [],
     },
     { fieldId: "allow_ips", kind: "text", value: token.allow_ips ?? "" },
   ],
@@ -590,6 +596,10 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) =>
   defineAccountKeyResourceCapability({
     siteType,
     inventorySecretAvailability: INVENTORY_SECRET_AVAILABILITIES.Recoverable,
+    defaultCreation:
+      siteType === SITE_TYPES.MODELFLARE
+        ? "select-requirement"
+        : "editor-defaults",
     openConfig: async (input) => ({
       account: input.account,
       request: input.request,
@@ -632,8 +642,14 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) =>
     },
     toListFacts: toFacts,
     toDetailFacts: toFacts,
-    createEditor: async (config) =>
-      createNewApiKeyEditor(siteType, config.request, config.transport),
+    createEditor: async (config, _scope, _options, _inventory, intent) =>
+      createNewApiKeyEditor(
+        siteType,
+        config.request,
+        config.transport,
+        undefined,
+        intent,
+      ),
     editEditor: (config, _scope, detail) =>
       createNewApiKeyEditor(siteType, config.request, config.transport, detail),
     create: async (config, _scope, command: NewApiKeyEditCommand, options) => {

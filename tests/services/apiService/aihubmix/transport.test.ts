@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   deleteApiToken,
   fetchAccountQuota,
-  fetchAccountTokens,
+  fetchAIHubMixKeys,
 } from "~/services/apiService/aihubmix"
 import { createDeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
@@ -124,7 +124,7 @@ describe("AIHubMix saved-account transport", () => {
       }),
     )
 
-    await expect(fetchAccountTokens(request)).resolves.toEqual([])
+    await expect(fetchAIHubMixKeys(request)).resolves.toEqual([])
     await deleteApiToken(request, 9)
 
     expect(observed).toEqual([
@@ -256,13 +256,13 @@ describe("AIHubMix saved-account transport", () => {
       .mockResolvedValueOnce(response)
       .mockResolvedValueOnce(Response.json({ data: [] }))
     const observer = { onDispatch: vi.fn(), onResponse: vi.fn() }
-    const first = fetchAccountTokens({
+    const first = fetchAIHubMixKeys({
       ...request,
       requestTimeoutMs: 1_000,
       observer,
     })
     const firstFailure = first.catch((error: unknown) => error)
-    const second = fetchAccountTokens({
+    const second = fetchAIHubMixKeys({
       ...request,
       baseUrl: "https://aihubmix.com",
     })
@@ -295,10 +295,10 @@ describe("AIHubMix saved-account transport", () => {
       .spyOn(globalThis, "fetch")
       .mockReturnValueOnce(firstResponse.promise)
       .mockReturnValueOnce(secondResponse.promise)
-    const first = fetchAccountTokens(request)
+    const first = fetchAIHubMixKeys(request)
     const abortDeadline = createDeferredAbortDeadline(1_000)
     const observer = { onDispatch: vi.fn(), onResponse: vi.fn() }
-    const second = fetchAccountTokens({ ...request, abortDeadline, observer })
+    const second = fetchAIHubMixKeys({ ...request, abortDeadline, observer })
     const secondFailure = second.catch((error: unknown) => error)
 
     try {
@@ -332,7 +332,7 @@ describe("AIHubMix saved-account transport", () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockReturnValueOnce(firstResponse.promise)
-    const first = fetchAccountTokens(request)
+    const first = fetchAIHubMixKeys(request)
     const controller = new AbortController()
     const observer = { onDispatch: vi.fn(), onResponse: vi.fn() }
     const queued = deleteApiToken(

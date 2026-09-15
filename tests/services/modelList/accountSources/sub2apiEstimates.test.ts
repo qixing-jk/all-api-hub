@@ -4,7 +4,6 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   applySub2ApiPriceEstimates,
   buildSub2ApiRuntimePricingResponse,
-  resolveSub2ApiKeyGroupForPriceEstimation,
 } from "~/services/modelList/accountSources/sub2apiEstimates"
 import {
   MODEL_LIST_SOURCE_KINDS,
@@ -18,30 +17,6 @@ import {
 } from "~/services/modelPricing/pricingConstants"
 import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
 import { calculateModelPrice } from "~/services/models/utils/modelPricing"
-import type { ApiToken } from "~/types"
-
-const createToken = (overrides: Partial<ApiToken> = {}): ApiToken => ({
-  id: 10,
-  user_id: 1,
-  key: "stored-key",
-  status: 1,
-  name: "Fallback Key",
-  created_time: 0,
-  accessed_time: 0,
-  expired_time: -1,
-  remain_quota: 0,
-  unlimited_quota: true,
-  used_quota: 0,
-  models: "",
-  ...overrides,
-})
-
-const groups = [
-  { id: 1, name: "default", rate_multiplier: 1 },
-  { id: 9, name: "vip", rate_multiplier: 1.5 },
-  { id: 10, name: "duplicate", rate_multiplier: 2 },
-  { id: 11, name: "duplicate", rate_multiplier: 3 },
-]
 
 const priceTable = {
   source: "synthetic-test",
@@ -66,131 +41,6 @@ const priceTable = {
     "example-unpriced-model": {},
   },
 }
-
-describe("resolveSub2ApiKeyGroupForPriceEstimation", () => {
-  it("resolves an exact unmasked backend key match to the backend key's stable group id", () => {
-    expect(
-      resolveSub2ApiKeyGroupForPriceEstimation({
-        selectedToken: createToken({
-          key: "masked********key",
-          group: "vip",
-        }),
-        resolvedKey: "sub2api-full-secret",
-        accountTokens: [
-          createToken({
-            id: 1,
-            key: "sub2api-full-secret",
-            group: "vip",
-            sub2api_group_id: 9,
-          }),
-        ],
-        groups,
-      }),
-    ).toEqual(expect.objectContaining({ groupId: "9", groupName: "vip" }))
-  })
-
-  it("prefers a stored stable group id over name matching", () => {
-    expect(
-      resolveSub2ApiKeyGroupForPriceEstimation({
-        selectedToken: createToken({
-          key: "stored-key",
-          group: "duplicate",
-          sub2api_group_id: 9,
-        }),
-        resolvedKey: "stored-key",
-        accountTokens: [],
-        groups,
-      }),
-    ).toEqual(expect.objectContaining({ groupId: "9", groupName: "vip" }))
-  })
-
-  it("resolves a stored group name only when exactly one available group has that name", () => {
-    expect(
-      resolveSub2ApiKeyGroupForPriceEstimation({
-        selectedToken: createToken({
-          group: "vip",
-        }),
-        resolvedKey: "stored-key",
-        accountTokens: [],
-        groups,
-      }),
-    ).toEqual(expect.objectContaining({ groupId: "9", groupName: "vip" }))
-  })
-
-  it("falls back to the selected key group name when account tokens do not reveal an exact key match", () => {
-    expect(
-      resolveSub2ApiKeyGroupForPriceEstimation({
-        selectedToken: createToken({
-          key: "masked********key",
-          group: "vip",
-        }),
-        resolvedKey: "sub2api-full-secret",
-        accountTokens: [
-          createToken({
-            id: 1,
-            key: "different-sub2api-secret",
-            group: "default",
-            sub2api_group_id: 1,
-          }),
-        ],
-        groups,
-      }),
-    ).toEqual(expect.objectContaining({ groupId: "9", groupName: "vip" }))
-  })
-
-  it("disables estimation for masked matches, no match, no stored group, or multiple same-name matches", () => {
-    const baseParams = {
-      resolvedKey: "stored-key",
-      groups,
-    }
-
-    expect(
-      resolveSub2ApiKeyGroupForPriceEstimation({
-        ...baseParams,
-        selectedToken: createToken({ group: "" }),
-        accountTokens: [
-          createToken({
-            key: "stored********key",
-            group: "vip",
-            sub2api_group_id: 9,
-          }),
-        ],
-      }),
-    ).toBeNull()
-    expect(
-      resolveSub2ApiKeyGroupForPriceEstimation({
-        ...baseParams,
-        selectedToken: createToken({ group: "" }),
-        accountTokens: [createToken({ key: "other-key", group: "vip" })],
-      }),
-    ).toBeNull()
-    expect(
-      resolveSub2ApiKeyGroupForPriceEstimation({
-        ...baseParams,
-        selectedToken: createToken({ group: "" }),
-        accountTokens: [],
-      }),
-    ).toBeNull()
-    expect(
-      resolveSub2ApiKeyGroupForPriceEstimation({
-        ...baseParams,
-        selectedToken: createToken({ group: "duplicate" }),
-        accountTokens: [],
-      }),
-    ).toBeNull()
-  })
-
-  it("treats normalized ApiToken.group as a name-like value, not a stable group id", () => {
-    expect(
-      resolveSub2ApiKeyGroupForPriceEstimation({
-        selectedToken: createToken({ group: "9" }),
-        resolvedKey: "stored-key",
-        accountTokens: [],
-        groups,
-      }),
-    ).toBeNull()
-  })
-})
 
 describe("buildSub2ApiRuntimePricingResponse", () => {
   it("builds Sub2API runtime-key source metadata without pricing", () => {

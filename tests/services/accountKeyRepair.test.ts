@@ -258,11 +258,11 @@ describe("accountKeyRepair", () => {
         siteType === "unknown"
           ? undefined
           : {
-              keyManagement:
-                siteType === SITE_TYPES.AIHUBMIX
-                  ? { inventorySecretAvailability: "create-response-only" }
-                  : undefined,
-              keyResources: {
+              keyResourceManagement: {
+                inventorySecretAvailability:
+                  siteType === SITE_TYPES.AIHUBMIX
+                    ? "create-response-only"
+                    : "recoverable",
                 open: mocks.openKeyResources,
               },
             },
@@ -910,30 +910,35 @@ describe("accountKeyRepair", () => {
     expect(progress.summary).toMatchObject({ complete: 0, partial: 1 })
   })
 
-  it("skips response-only secret providers before opening a repair session regardless of site name", async () => {
-    const account = buildRepairAccount("response-only", SITE_TYPES.DONE_HUB)
-    mocks.getAllAccounts.mockResolvedValue([account])
-    mocks.getSiteTypeCapabilities.mockReturnValue({
-      account: {
-        keyManagement: { inventorySecretAvailability: "create-response-only" },
-        keyResources: { open: mocks.openKeyResources },
-      },
-    })
-    const { startAccountKeyRepair } = await import(
-      "~/services/accounts/accountKeyAutoProvisioning/repair"
-    )
-    await startAccountKeyRepair()
-    const progress = await waitForStoredState(
-      ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
-    )
-    expect(progress.results).toEqual([
-      expect.objectContaining({
-        accountId: account.id,
-        skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
-      }),
-    ])
-    expect(mocks.openKeyResources).not.toHaveBeenCalled()
-  })
+  it.each([SITE_TYPES.DONE_HUB, SITE_TYPES.AIHUBMIX, SITE_TYPES.OPENROUTER])(
+    "skips response-only secret provider %s before opening a repair session",
+    async (siteType) => {
+      const account = buildRepairAccount("response-only", siteType)
+      mocks.getAllAccounts.mockResolvedValue([account])
+      mocks.getSiteTypeCapabilities.mockReturnValue({
+        account: {
+          keyResourceManagement: {
+            inventorySecretAvailability: "create-response-only",
+            open: mocks.openKeyResources,
+          },
+        },
+      })
+      const { startAccountKeyRepair } = await import(
+        "~/services/accounts/accountKeyAutoProvisioning/repair"
+      )
+      await startAccountKeyRepair()
+      const progress = await waitForStoredState(
+        ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
+      )
+      expect(progress.results).toEqual([
+        expect.objectContaining({
+          accountId: account.id,
+          skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.OneTimeKey,
+        }),
+      ])
+      expect(mocks.openKeyResources).not.toHaveBeenCalled()
+    },
+  )
 
   it("keeps none-auth, AIHubMix, missing key resources, and missing provisioning as controlled skips", async () => {
     const noneAuth = buildRepairAccount("none", SITE_TYPES.NEW_API, {
@@ -973,7 +978,7 @@ describe("accountKeyRepair", () => {
         }),
         expect.objectContaining({
           accountId: aihubmix.id,
-          skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
+          skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.OneTimeKey,
         }),
         expect.objectContaining({
           accountId: unsupported.id,
@@ -999,7 +1004,7 @@ describe("accountKeyRepair", () => {
     mocks.getSiteTypeCapabilities
       .mockReturnValueOnce({
         siteType: account.site_type,
-        account: { keyResources: { open: mocks.openKeyResources } },
+        account: { keyResourceManagement: { open: mocks.openKeyResources } },
       })
       .mockReturnValueOnce({ siteType: account.site_type, account: {} })
 

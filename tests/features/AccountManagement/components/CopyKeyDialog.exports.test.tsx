@@ -1,9 +1,12 @@
+import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
+import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+import { buildNewApiKeyCreationResult } from "~~/tests/test-utils/accountKeyFixtures"
+
 import "./copyKeyDialogMocks"
 
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
@@ -24,10 +27,7 @@ import {
   claudeCodeRouterDialogMock,
   completeProductAnalyticsActionMock,
   createApiCredentialProfileMock,
-  createApiTokenMock,
-  fetchAccountAvailableModelsMock,
   fetchAccountTokensMock,
-  fetchUserGroupsMock,
   kelivoExportDialogMock,
   kiloCodeExportDialogMock,
   kiloCodeProfileExportDialogMock,
@@ -62,6 +62,24 @@ async function renderExpandedDetails() {
 
   return user
 }
+
+const { manualCreation } = vi.hoisted(() => ({
+  manualCreation: { current: null as AccountKeyCreationResult | null },
+}))
+vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
+  default: ({
+    isOpen,
+    onSuccess,
+  }: {
+    isOpen: boolean
+    onSuccess: (result: AccountKeyCreationResult) => void
+  }) =>
+    isOpen ? (
+      <button onClick={() => onSuccess(manualCreation.current!)}>
+        Submit native key
+      </button>
+    ) : null,
+}))
 
 describe("CopyKeyDialog exports and service credentials", () => {
   beforeEach(() => {
@@ -200,7 +218,10 @@ describe("CopyKeyDialog exports and service credentials", () => {
       })
       expect(openWithAccountMock).toHaveBeenCalledWith(
         expect.objectContaining({ id: "acc-1" }),
-        expect.objectContaining({ source: "account_token", tokenId: 1 }),
+        expect.objectContaining({
+          source: "account_key_resource",
+          legacyTokenId: 1,
+        }),
         expect.any(Function),
       )
       expect(toastErrorMock).toHaveBeenCalledWith("managed import failed")
@@ -543,7 +564,7 @@ describe("CopyKeyDialog exports and service credentials", () => {
     expect(ccSwitchDialogMock).toHaveBeenCalledWith(
       expect.objectContaining({
         source: expect.objectContaining({
-          id: "account_token:acc-1:1",
+          id: "account_key_resource:acc-1:new-api:account:1",
           providerId: "acc-1",
           resolveApiKey: expect.any(Function),
         }),
@@ -553,7 +574,7 @@ describe("CopyKeyDialog exports and service credentials", () => {
     await expect(
       ccSwitchDialogMock.mock.lastCall?.[0].source.resolveApiKey(),
     ).resolves.toBe("sk-test")
-    expect(resolveApiTokenKeyMock).not.toHaveBeenCalled()
+    expect(resolveApiTokenKeyMock).toHaveBeenCalledTimes(1)
 
     await selectExportAction(user, "keyManagement:actions.exportToKiloCode")
     await waitFor(() => {
@@ -578,7 +599,7 @@ describe("CopyKeyDialog exports and service credentials", () => {
     expect(claudeCodeRouterDialogMock).toHaveBeenCalledWith(
       expect.objectContaining({
         source: expect.objectContaining({
-          id: "account_token:acc-1:1",
+          id: "account_key_resource:acc-1:new-api:account:1",
           providerId: "acc-1",
           resolveApiKey: expect.any(Function),
         }),
@@ -593,16 +614,26 @@ describe("CopyKeyDialog exports and service credentials", () => {
 
   it("saves a custom AIHubMix one-time key to an API credential profile without closing the dialog", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
-    fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
-    fetchUserGroupsMock.mockResolvedValueOnce({
-      default: { desc: "default", ratio: 1 },
-    })
-    createApiTokenMock.mockResolvedValueOnce({
+    const creation = buildNewApiKeyCreationResult(AIHUBMIX_ACCOUNT, {
       ...TOKEN,
       id: 10,
-      key: "sk-custom-full-secret",
       name: "My Key",
     })
+    manualCreation.current = {
+      ...creation,
+      createdSecret: createAccountKeyResourceCreatedRuntimeSecret({
+        ref: creation.ref!,
+        displayName: "My Key",
+        secret: "sk-custom-full-secret",
+        credential: {
+          accountName: AIHUBMIX_ACCOUNT.name,
+          baseUrl: AIHUBMIX_ACCOUNT.baseUrl,
+          siteType: AIHUBMIX_ACCOUNT.siteType,
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          tagIds: AIHUBMIX_ACCOUNT.tagIds ?? [],
+        },
+      }),
+    }
     createApiCredentialProfileMock.mockResolvedValueOnce({
       id: "profile-1",
       name: "AIHubMix - My Key",
@@ -632,13 +663,8 @@ describe("CopyKeyDialog exports and service credentials", () => {
         name: "ui:dialog.copyKey.createCustomKey",
       }),
     )
-    const tokenNameInput = await screen.findByLabelText(
-      /keyManagement:dialog\.tokenName/,
-    )
-    await user.clear(tokenNameInput)
-    await user.type(tokenNameInput, "My Key")
     await user.click(
-      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+      await screen.findByRole("button", { name: "Submit native key" }),
     )
     await user.click(
       await screen.findByTestId(
@@ -657,12 +683,7 @@ describe("CopyKeyDialog exports and service credentials", () => {
     })
     expect(captureApiCredentialProfileMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        locator: {
-          source: "account_token",
-          accountId: AIHUBMIX_ACCOUNT.id,
-          siteType: SITE_TYPES.AIHUBMIX,
-          tokenId: 10,
-        },
+        locator: { source: "account_key_resource", ref: creation.ref },
         linkedBy: "creation-response",
       }),
     )

@@ -24,7 +24,7 @@ import {
 import {
   getInventorySecretAvailability,
   INVENTORY_SECRET_AVAILABILITIES,
-} from "~/services/apiAdapters/contracts/keyManagement"
+} from "~/services/apiAdapters/contracts/inventorySecret"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
@@ -361,15 +361,15 @@ function getSkipReason(
 
   const capabilities = getSiteTypeCapabilities(account.site_type).account
   if (
-    capabilities?.keyManagement &&
-    getInventorySecretAvailability(capabilities.keyManagement) ===
+    capabilities?.keyResourceManagement &&
+    getInventorySecretAvailability(capabilities.keyResourceManagement) ===
       INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly
   ) {
     // Keep the persisted skip code while deriving eligibility from secret availability.
-    return ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey
+    return ACCOUNT_KEY_REPAIR_SKIP_REASONS.OneTimeKey
   }
 
-  if (!capabilities?.keyResources) {
+  if (!capabilities?.keyResourceManagement) {
     return ACCOUNT_KEY_REPAIR_SKIP_REASONS.ProvisioningUnavailable
   }
 
@@ -660,9 +660,9 @@ class AccountKeyRepairRunner {
         return
       }
 
-      const keyResources = getSiteTypeCapabilities(account.site_type).account
-        ?.keyResources
-      if (!keyResources) {
+      const keyResourceManagement = getSiteTypeCapabilities(account.site_type)
+        .account?.keyResourceManagement
+      if (!keyResourceManagement) {
         await this.recordResult({
           accountId: account.id,
           accountName,
@@ -677,7 +677,7 @@ class AccountKeyRepairRunner {
       }
 
       const { request } = createAccountApiRequestFromStoredAccount(account)
-      const session = await keyResources.open(
+      const session = await keyResourceManagement.open(
         {
           account: {
             id: account.id,
@@ -925,7 +925,7 @@ class AccountKeyRepairRunner {
         !currentInvalidByRef.has(
           buildAccountKeyResourceRuntimeKeyId(resource.ref),
         ) ||
-        !accountCapabilities?.keyResources
+        !accountCapabilities?.keyResourceManagement
       ) {
         results.push({
           resource,
@@ -945,7 +945,7 @@ class AccountKeyRepairRunner {
         if (!session) {
           session = await runAbortableTask(
             (signal) =>
-              accountCapabilities.keyResources!.open(
+              accountCapabilities.keyResourceManagement!.open(
                 {
                   account: {
                     id: account.id,

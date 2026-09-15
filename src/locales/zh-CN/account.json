@@ -26,7 +26,6 @@
     "disableAccount": "禁用账号",
     "edit": "编辑",
     "enableAccount": "启用账号",
-    "fetchKeyInfoFailed": "获取密钥信息失败",
     "fetchKeyListFailed": "获取密钥列表失败: {{errorMessage}}",
     "importFromBookmarks": "从书签批量导入",
     "importFromBookmarksHint": "批量扫描浏览器书签中的账号站点，避免逐个添加",

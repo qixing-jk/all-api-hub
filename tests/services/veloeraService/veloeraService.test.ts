@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
-import type { ApiToken, DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
@@ -98,7 +99,7 @@ function createMockDisplaySiteData(
   }
 }
 
-function createMockApiToken(overrides: Partial<ApiToken> = {}): ApiToken {
+function createMockApiToken(overrides: Partial<NewApiToken> = {}): NewApiToken {
   return {
     id: 1,
     user_id: 1,
@@ -222,7 +223,7 @@ describe("veloeraService", () => {
 
       const result = await prepareChannelFormData(
         buildManagedSiteChannelDraftSource(
-          buildDisplayAccountTokenRuntimeKey(account, token),
+          buildNewApiRuntimeKey(account, token),
         ),
       )
 
@@ -245,7 +246,7 @@ describe("veloeraService", () => {
 
       const result = await prepareChannelFormData(
         buildManagedSiteChannelDraftSource(
-          buildDisplayAccountTokenRuntimeKey(account, token),
+          buildNewApiRuntimeKey(account, token),
         ),
       )
 
@@ -272,7 +273,7 @@ describe("veloeraService", () => {
 
       const result = await prepareChannelFormData(
         buildManagedSiteChannelDraftSource(
-          buildDisplayAccountTokenRuntimeKey(account, token),
+          buildNewApiRuntimeKey(account, token),
         ),
       )
 

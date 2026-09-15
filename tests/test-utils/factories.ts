@@ -8,6 +8,7 @@
 
 import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { DEFAULT_TEMP_WINDOW_SIZE } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   createDefaultPreferences,
@@ -24,7 +25,6 @@ import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
-  type ApiToken,
   type DisplaySiteData,
   type SiteAccount,
   type Tag,
@@ -126,10 +126,12 @@ export function buildDisplaySiteData(
 }
 
 /**
- * Build an `ApiToken` fixture with stable defaults and shallow overrides.
+ * Build an `NewApiToken` fixture with stable defaults and shallow overrides.
  */
-export function buildApiToken(overrides: Partial<ApiToken> = {}): ApiToken {
-  const base: ApiToken = {
+export function buildNewApiToken(
+  overrides: Partial<NewApiToken> = {},
+): NewApiToken {
+  const base: NewApiToken = {
     id: 1,
     user_id: 1,
     key: "test-key",
@@ -171,10 +173,12 @@ export function buildSub2ApiAccount(
 }
 
 /**
- * Build a Sub2API-flavored `ApiToken` fixture for shared key-flow tests.
+ * Build a Sub2API-flavored `NewApiToken` fixture for shared key-flow tests.
  */
-export function buildSub2ApiToken(overrides: Partial<ApiToken> = {}): ApiToken {
-  return buildApiToken({
+export function buildSub2ApiToken(
+  overrides: Partial<NewApiToken> = {},
+): NewApiToken {
+  return buildNewApiToken({
     id: 1,
     user_id: 1,
     key: "sub2api-test-key",

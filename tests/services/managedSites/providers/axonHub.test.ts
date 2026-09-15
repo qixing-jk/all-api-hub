@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { SITE_TYPES } from "~/constants/siteType"
-import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import {
-  buildApiToken,
   buildDisplaySiteData,
+  buildNewApiToken,
   buildUserPreferences,
 } from "~~/tests/test-utils/factories"
 
@@ -127,7 +127,7 @@ describe("AxonHub managed-site provider", () => {
       siteType: SITE_TYPES.AIHUBMIX,
       baseUrl: "https://console.aihubmix.com",
     })
-    const token = buildApiToken({
+    const token = buildNewApiToken({
       name: "AIHubMix Token",
       key: "test-aihubmix-token-key",
     })
@@ -135,7 +135,7 @@ describe("AxonHub managed-site provider", () => {
     await expect(
       provider.prepareChannelFormData(
         buildManagedSiteChannelDraftSource(
-          buildDisplayAccountTokenRuntimeKey(account, token),
+          buildNewApiRuntimeKey(account, token),
         ),
       ),
     ).resolves.toEqual(
@@ -159,7 +159,7 @@ describe("AxonHub managed-site provider", () => {
     const account = buildDisplaySiteData({
       baseUrl: "https://source.example/v1",
     })
-    const token = buildApiToken({
+    const token = buildNewApiToken({
       key: "test-token-without-live-models",
       model_limits: "metadata-model",
     })
@@ -172,7 +172,7 @@ describe("AxonHub managed-site provider", () => {
     await expect(
       provider.prepareChannelFormData(
         buildManagedSiteChannelDraftSource(
-          buildDisplayAccountTokenRuntimeKey(account, token),
+          buildNewApiRuntimeKey(account, token),
         ),
       ),
     ).resolves.toEqual(

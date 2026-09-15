@@ -7,7 +7,7 @@ import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { CredentialExportSource } from "~/services/integrations/credentialExport"
 import type { DisplaySiteData } from "~/types"
 
-import { OpenRouterKeyResourceItem } from "./OpenRouterKeyResourceItem"
+import { AccountKeyResourceItem } from "./AccountKeyResourceItem"
 import { RuntimeKeyItem } from "./RuntimeKeyItem"
 
 interface KeyInventoryListProps {
@@ -28,7 +28,7 @@ interface KeyInventoryListProps {
 }
 
 /**
- * Renders legacy runtime keys and provider-native key inventory in one quick list.
+ * Renders service credentials and provider-native key inventory in one quick list.
  */
 export function KeyInventoryList({
   runtimeKeys,
@@ -97,6 +97,9 @@ export function KeyInventoryList({
 
   return (
     <div className="space-y-3">
+      {createError ? (
+        <Alert variant="destructive" description={createError} />
+      ) : null}
       {runtimeKeys.map((runtimeKey) => (
         <RuntimeKeyItem
           key={runtimeKey.id}
@@ -110,7 +113,14 @@ export function KeyInventoryList({
         />
       ))}
       {nativeKeyRows.map((row) => (
-        <OpenRouterKeyResourceItem key={row.rowKey} row={row} />
+        <AccountKeyResourceItem
+          key={row.rowKey}
+          row={row}
+          account={account}
+          copiedRuntimeKeyId={copiedRuntimeKeyId}
+          onCopyKey={onCopyKey}
+          onOpenCCSwitchDialog={onOpenCCSwitchDialog}
+        />
       ))}
     </div>
   )

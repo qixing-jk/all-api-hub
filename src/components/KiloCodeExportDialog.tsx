@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -18,19 +25,20 @@ import {
   type CompactMultiSelectOption,
 } from "~/components/ui"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
-import { buildDefaultTokenCreatePrefill } from "~/features/TokenProvisioning/components/AddTokenDialog/defaultTokenCreatePrefill"
 import { useAccountData } from "~/hooks/useAccountData"
 import { useSafeExportAction } from "~/hooks/useSafeExportAction"
 import toast from "~/lib/notify"
 import {
+  ensureAccountKey,
+  getCreatedAccountRuntimeKey,
+  getCreatedAccountRuntimeKeyId,
+  type AccountKeyCreationResult,
+} from "~/services/accounts/accountKeyCreation"
+import {
+  appendOrReplaceAccountRuntimeKey,
   getAccountRuntimeKeyExportId,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
-import { ensureAccountApiToken } from "~/services/accounts/ensureAccountApiToken"
-import {
-  resolveDefaultTokenQuickCreateResolution,
-  TOKEN_QUICK_CREATE_RESOLUTION_KINDS,
-} from "~/services/accounts/tokenQuickCreateResolution"
 import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
 import { fetchDisplayAccountRuntimeKeys } from "~/services/accounts/utils/apiServiceRequest"
 import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
@@ -63,7 +71,6 @@ import {
 import { KiloCodeDefaultModelSelect } from "./KiloCodeDefaultModelSelect"
 import { KiloCodeExportGuidance } from "./KiloCodeExportGuidance"
 import { KILO_CODE_EXPORT_TEST_IDS } from "./kiloCodeExportTestIds"
-import { pickNewestKiloCodeRuntimeKey } from "./kiloCodeKeySelection"
 import {
   KILO_CODE_ACCOUNT_MODEL_STATUSES,
   useKiloCodeAccountModelDiscovery,
@@ -130,7 +137,7 @@ interface TokenInventoryState {
 
 type DefaultTokenCreateContext = {
   siteId: string
-  allowedGroups: string[]
+  account: DisplaySiteData
 }
 
 /**
@@ -285,6 +292,24 @@ export function KiloCodeExportDialog({
     )
   }, [displayData])
 
+  const creationControllers = useRef(new Map<string, AbortController>())
+  const inventoryControllers = useRef(new Map<string, AbortController>())
+  const currentCreationSource = useRef({ isOpen, displayById })
+  useLayoutEffect(() => {
+    currentCreationSource.current = { isOpen, displayById }
+    const controllers = creationControllers.current
+    const inventories = inventoryControllers.current
+    setIsCreatingToken({})
+    setTokenInventories({})
+    setDefaultTokenCreateContext(null)
+    return () => {
+      for (const controller of controllers.values()) controller.abort()
+      controllers.clear()
+      for (const controller of inventories.values()) controller.abort()
+      inventories.clear()
+    }
+  }, [isOpen, displayById])
+
   const accountById = useMemo(() => {
     return new Map<string, SiteAccount>(accounts.map((acc) => [acc.id, acc]))
   }, [accounts])
@@ -302,9 +327,20 @@ export function KiloCodeExportDialog({
   )
 
   const loadTokensForSite = useCallback(
-    async (siteId: string, options?: { preferNewest?: boolean }) => {
+    async (
+      siteId: string,
+      options?: { created?: AccountKeyCreationResult },
+    ) => {
       const site = displayById.get(siteId)
-      if (!site) return
+      if (!site || !currentCreationSource.current.isOpen) return false
+      inventoryControllers.current.get(siteId)?.abort()
+      const controller = new AbortController()
+      inventoryControllers.current.set(siteId, controller)
+      const isCurrent = () =>
+        !controller.signal.aborted &&
+        inventoryControllers.current.get(siteId) === controller &&
+        currentCreationSource.current.isOpen &&
+        currentCreationSource.current.displayById.get(siteId) === site
 
       setTokenInventories((prev) => ({
         ...prev,
@@ -316,7 +352,18 @@ export function KiloCodeExportDialog({
       }))
 
       try {
-        const tokens = await fetchDisplayAccountRuntimeKeys(site)
+        const createdKey = options?.created
+          ? getCreatedAccountRuntimeKey(site, options.created)
+          : null
+        let tokens = await fetchDisplayAccountRuntimeKeys(site, {
+          signal: controller.signal,
+        }).catch((error) => {
+          if (createdKey) return [createdKey]
+          throw error
+        })
+        if (createdKey)
+          tokens = appendOrReplaceAccountRuntimeKey(tokens, createdKey)
+        if (!isCurrent()) return false
         if (!Array.isArray(tokens)) {
           setTokenInventories((prev) => ({
             ...prev,
@@ -326,28 +373,39 @@ export function KiloCodeExportDialog({
               errorMessage: t("ui:dialog.kiloCode.messages.loadTokensFailed"),
             },
           }))
-          return
+          return false
         }
+
+        const createdId = options?.created
+          ? getCreatedAccountRuntimeKeyId(options.created)
+          : null
+        const missingCreatedKey = Boolean(
+          options?.created && !tokens.some((key) => key.id === createdId),
+        )
 
         setTokenInventories((prev) => ({
           ...prev,
           [siteId]: {
-            status: KILO_CODE_INVENTORY_STATUSES.Loaded,
+            status: missingCreatedKey
+              ? KILO_CODE_INVENTORY_STATUSES.Error
+              : KILO_CODE_INVENTORY_STATUSES.Loaded,
             tokens,
-            errorMessage: undefined,
+            errorMessage: missingCreatedKey
+              ? t("ui:dialog.kiloCode.messages.createTokenFailed")
+              : undefined,
           },
         }))
 
         // UX: default-select the first token (common case is "one token per site"),
         // and keep previous selections if they still exist after refresh.
         setSelectedTokenIdsBySite((prev) => {
-          if (options?.preferNewest && tokens.length > 0) {
-            const newestToken = pickNewestKiloCodeRuntimeKey(tokens)
+          const created = tokens.find((key) => key.id === createdId)
+          if (created)
             return {
               ...prev,
-              [siteId]: [getAccountRuntimeKeyExportId(newestToken)],
+              [siteId]: [getAccountRuntimeKeyExportId(created)],
             }
-          }
+          if (missingCreatedKey) return { ...prev, [siteId]: [] }
 
           const existingSelections = prev[siteId] ?? []
           const remainingSelections = existingSelections.filter((id) =>
@@ -368,7 +426,9 @@ export function KiloCodeExportDialog({
             [siteId]: [getAccountRuntimeKeyExportId(tokens[0])],
           }
         })
+        return !missingCreatedKey
       } catch {
+        if (!isCurrent()) return false
         setTokenInventories((prev) => ({
           ...prev,
           [siteId]: {
@@ -377,6 +437,10 @@ export function KiloCodeExportDialog({
             errorMessage: t("ui:dialog.kiloCode.messages.loadTokensFailed"),
           },
         }))
+        return false
+      } finally {
+        if (inventoryControllers.current.get(siteId) === controller)
+          inventoryControllers.current.delete(siteId)
       }
     },
     [displayById, t],
@@ -390,6 +454,13 @@ export function KiloCodeExportDialog({
       return
     }
 
+    if (creationControllers.current.has(siteId)) return
+    const controller = new AbortController()
+    creationControllers.current.set(siteId, controller)
+    const isCurrent = () =>
+      !controller.signal.aborted &&
+      currentCreationSource.current.isOpen &&
+      currentCreationSource.current.displayById.get(siteId) === site
     const toastId = buildKiloCodeCreateTokenToastId(siteId)
 
     setIsCreatingToken((prev) => ({ ...prev, [siteId]: true }))
@@ -402,59 +473,32 @@ export function KiloCodeExportDialog({
     }))
 
     try {
-      const resolution = await resolveDefaultTokenQuickCreateResolution(site)
-      if (resolution.kind === TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked) {
-        const userMessage = resolution.message?.trim()
-          ? resolution.message
-          : t("ui:dialog.kiloCode.messages.createTokenBlockedFallback")
-
-        toast.error(userMessage, { id: toastId })
-        setTokenInventories((prev) => ({
-          ...prev,
-          [siteId]: {
-            status: KILO_CODE_INVENTORY_STATUSES.Error,
-            tokens: prev[siteId]?.tokens ?? [],
-            errorMessage: userMessage,
-          },
-        }))
-        return
-      }
-
-      if (
-        resolution.kind ===
-        TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired
-      ) {
-        setDefaultTokenCreateContext({
-          siteId,
-          allowedGroups: resolution.allowedGroups,
-        })
+      const ensured = await ensureAccountKey(site, {
+        signal: controller.signal,
+      })
+      if (!isCurrent()) return
+      if (ensured.kind === "input-required") {
+        setDefaultTokenCreateContext({ siteId, account: site })
         setTokenInventories((prev) => ({
           ...prev,
           [siteId]: {
             status: KILO_CODE_INVENTORY_STATUSES.Loaded,
             tokens: prev[siteId]?.tokens ?? [],
-            errorMessage: undefined,
           },
         }))
         return
       }
-
-      const ensuredToken = await ensureAccountApiToken(account, site, {
-        toastId,
-        defaultTokenData: resolution.tokenData,
-      })
-
+      const loaded = await loadTokensForSite(
+        siteId,
+        ensured.kind === "created" ? { created: ensured.creation } : undefined,
+      )
+      if (!isCurrent()) return
+      if (!loaded) return
       toast.success(t("ui:dialog.kiloCode.messages.tokenCreated"), {
         id: toastId,
       })
-
-      await loadTokensForSite(siteId, { preferNewest: true })
-
-      setSelectedTokenIdsBySite((prev) => ({
-        ...prev,
-        [siteId]: [`${ensuredToken.id}`],
-      }))
     } catch {
+      if (!isCurrent()) return
       toast.error(t("ui:dialog.kiloCode.messages.createTokenFailed"), {
         id: toastId,
       })
@@ -467,7 +511,10 @@ export function KiloCodeExportDialog({
         },
       }))
     } finally {
-      setIsCreatingToken((prev) => ({ ...prev, [siteId]: false }))
+      if (creationControllers.current.get(siteId) === controller) {
+        creationControllers.current.delete(siteId)
+        setIsCreatingToken((prev) => ({ ...prev, [siteId]: false }))
+      }
     }
   }
 
@@ -998,20 +1045,26 @@ export function KiloCodeExportDialog({
     setDefaultTokenCreateContext(null)
   }
 
-  const handleDefaultTokenCreateSuccess = async () => {
-    if (!defaultTokenCreateContext) return
+  const handleDefaultTokenCreateSuccess = async (
+    created: AccountKeyCreationResult,
+  ) => {
+    if (
+      !defaultTokenCreateContext ||
+      !currentCreationSource.current.isOpen ||
+      currentCreationSource.current.displayById.get(
+        defaultTokenCreateContext.siteId,
+      ) !== defaultTokenCreateContext.account
+    )
+      return
 
     const { siteId } = defaultTokenCreateContext
     setDefaultTokenCreateContext(null)
-    await loadTokensForSite(siteId, { preferNewest: true })
+    await loadTokensForSite(siteId, { created })
   }
 
   const defaultTokenQuickCreateSite = defaultTokenCreateContext
     ? displayById.get(defaultTokenCreateContext.siteId)
     : undefined
-  const defaultTokenQuickCreatePrefill = buildDefaultTokenCreatePrefill(
-    defaultTokenCreateContext?.allowedGroups,
-  )
 
   const renderSiteCard = (site: DisplaySiteData) => {
     const siteId = site.id
@@ -1671,13 +1724,12 @@ export function KiloCodeExportDialog({
           description={t("ui:dialog.kiloCode.warning.description")}
         />
       </Modal>
-      {defaultTokenQuickCreateSite && defaultTokenQuickCreatePrefill ? (
+      {defaultTokenQuickCreateSite ? (
         <AddTokenDialog
           isOpen={true}
           onClose={handleCloseDefaultTokenCreateDialog}
           availableAccounts={[defaultTokenQuickCreateSite]}
           preSelectedAccountId={defaultTokenQuickCreateSite.id}
-          createPrefill={defaultTokenQuickCreatePrefill}
           prefillNotice={t(
             "messages:tokenProvisioning.createRequiresGroupSelection",
           )}

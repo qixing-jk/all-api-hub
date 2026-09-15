@@ -1,4 +1,4 @@
-import type { InventorySecretAvailability } from "~/services/apiAdapters/contracts/keyManagement"
+import type { InventorySecretAvailability } from "~/services/apiAdapters/contracts/inventorySecret"
 
 export type KeyResourceFact = {
   id: string

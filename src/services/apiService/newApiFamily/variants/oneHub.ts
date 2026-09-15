@@ -1,7 +1,7 @@
 import { normalizeApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import { syncResolvedApiTokenKeyCache } from "~/services/accountTokens/tokenKeyResolver"
-import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import {
   transformModelPricing,
   transformUserGroup,
@@ -18,7 +18,7 @@ import {
 } from "~/services/apiTransport/pagination"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { PricingResponse } from "~/services/modelList/pricingModel"
-import type { ApiToken } from "~/types"
+import type { UserGroupInfo } from "~/services/models/userGroup"
 import { createLogger } from "~/utils/core/logger"
 import { isRecord } from "~/utils/core/object"
 
@@ -72,8 +72,8 @@ export const fetchModelPricing = async (
  */
 export const fetchAccountTokens = async (
   request: ApiServiceRequest,
-): Promise<ApiToken[]> => {
-  const tokens = await fetchAllItems<ApiToken>(
+): Promise<NewApiToken[]> => {
+  const tokens = await fetchAllItems<NewApiToken>(
     async (page) => {
       const upstreamPage = page + 1
       const searchParams = new URLSearchParams({

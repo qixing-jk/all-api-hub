@@ -181,44 +181,21 @@
     "advancedSettings": "Erweiterte Einstellungen",
     "availableModels": "Verfügbare Modelle",
     "basicInfo": "Grundlegende Informationen",
-    "createFailed": "Fehler beim Erstellen des Schlüssels, bitte versuchen Sie es später erneut",
     "createNotSupported": "Dieses Konto unterstützt das Erstellen von API-Schlüsseln nicht.",
-    "createSuccess": "Schlüssel erfolgreich erstellt",
     "createToken": "Schlüssel erstellen",
-    "editModeNoChange": "Konto kann im Bearbeitungsmodus nicht geändert werden",
-    "editToken": "API-Schlüssel bearbeiten",
     "expiration": "Ablaufzeit",
     "expirationPlaceholder": "Leer lassen, da es nie abläuft",
     "groupLabel": "Gruppe",
-    "groupRate": "Multiplikator:",
-    "groupRestrictedNote": "Nur verfügbare Gruppen können ausgewählt werden; andere Gruppen sind deaktiviert.",
-    "ipExample": "Beispiel: 192.168.1.1,10.0.0.1 oder verwenden Sie * für keine Begrenzung",
     "ipLimits": "IP-Limits",
     "ipPlaceholder": "Für keine Begrenzung leer lassen, mehrere IPs durch Kommas trennen",
-    "loadDataFailed": "Fehler beim Laden der Daten, bitte versuchen Sie es später erneut",
     "modelLimits": "Modellgrenzen",
-    "modelLoadFailed": "Die verfügbaren Modelle konnten nicht geladen werden. Der Schlüssel kann trotzdem erstellt werden; ohne Modellauswahl bleiben Modellbeschränkungen deaktiviert. Grund: {{reason}}",
-    "modelSelectHint_one": "{{count}} Modell ausgewählt",
-    "modelSelectHint_other": "{{count}} Modelle ausgewählt",
-    "nameRequired": "Schlüsselname darf nicht leer sein",
-    "noAvailableModels": "Für dieses Konto sind keine Modelle für Beschränkungen verfügbar",
     "quotaPlaceholder": "Bitte geben Sie den Kontingentbetrag (USD) ein",
-    "quotaRate": "1 USD = {{rate}} Kontingentpunkte",
     "quotaSettings": "Kontingenteinstellungen",
-    "selectAccountError": "Bitte Konto auswählen",
     "selectModels": "Modelle auswählen",
-    "subnetExample": "Beispiel: 192.168.1.0/24",
     "subnetLimits": "Subnetzgrenzen",
     "subnetPlaceholder": "Lassen Sie das Feld leer, um keine Begrenzung zu erhalten, oder geben Sie ein Subnetz oder CIDR ein",
     "tokenName": "Token-Name",
     "unlimitedQuota": "Unbegrenztes Kontingent",
-    "updateFailed": "Fehler beim Aktualisieren des Schlüssels, bitte versuchen Sie es später noch einmal",
-    "updateNotSupported": "Dieses Konto unterstützt das Aktualisieren von API-Schlüsseln nicht.",
-    "updateSuccess": "Schlüssel erfolgreich aktualisiert",
-    "updateToken": "Schlüssel aktualisieren",
-    "validExpiration": "Die Ablaufzeit muss größer als die aktuelle Zeit sein",
-    "validIp": "Bitte geben Sie gültige IP-Adressen ein, trennen Sie mehrere IPs durch Kommas",
-    "validQuota": "Bitte geben Sie einen gültigen Kontingentbetrag ein",
     "warningText": "Bitte bewahren Sie API-Schlüssel sicher auf und vermeiden Sie eine Weitergabe.",
     "warningTitle": "Notizen"
   },
@@ -240,13 +217,10 @@
     "ipLimits": "IP-Grenzwerte:",
     "key": "Schlüssel:",
     "lastUsedTime": "Zuletzt verwendet:",
-    "limitedQuota": "Begrenztes Kontingent",
     "models": "Modellbeschränkungen:",
     "neverExpires": "Läuft nie ab",
     "note": "Hinweis:",
-    "quotaPolicy": "Quotenrichtlinie:",
     "remainingQuota": "Verbleibendes Kontingent:",
-    "secretUnavailable": "Der vollständige Schlüssel ist für diesen gespeicherten Schlüssel nicht verfügbar.",
     "ungrouped": "Nicht gruppiert",
     "usedQuota": "Verwendetes Kontingent:"
   },
@@ -352,11 +326,62 @@
     "verifyCliSupportFailed": "Fehler beim Öffnen der CLI-Kompatibilitätsüberprüfung"
   },
   "native": {
+    "actions": {
+      "delete": "Schlüssel löschen",
+      "edit": "Schlüssel bearbeiten"
+    },
+    "delete": {
+      "confirm": "Schlüssel löschen",
+      "description": "Den API-Schlüssel {{name}} dauerhaft löschen? Dies kann nicht rückgängig gemacht werden.",
+      "feedback": {
+        "authenticationFailed": "Melden Sie sich erneut an oder aktualisieren Sie die Zugangsdaten dieses Kontos und versuchen Sie es erneut.",
+        "error": "Dieser Schlüssel konnte nicht gelöscht werden. Aktualisieren Sie und versuchen Sie es erneut.",
+        "permissionDenied": "Verwenden Sie Zugangsdaten mit Berechtigung zum Anzeigen und Verwalten von Schlüsseln und versuchen Sie es erneut.",
+        "unavailable": "Der Dienst ist vorübergehend nicht verfügbar. Aktualisieren Sie die Schlüssel, bevor Sie es erneut versuchen.",
+        "uncertain": "Der Schlüsselstatus hat sich möglicherweise geändert. Aktualisieren Sie die Schlüssel, bevor Sie entscheiden, ob Sie es erneut versuchen möchten."
+      },
+      "refresh": "Schlüssel aktualisieren",
+      "title": "API-Schlüssel löschen?"
+    },
     "detailsLoadFailed": "Schlüsseldetails konnten nicht geladen werden.",
     "editor": {
+      "actions": {
+        "cancel": "Abbrechen",
+        "save": "Schlüssel speichern"
+      },
       "expiryDays": "Gültigkeitsdauer (Tage)",
+      "feedback": {
+        "authenticationFailed": "Melden Sie sich erneut an oder aktualisieren Sie die Zugangsdaten dieses Kontos und versuchen Sie es erneut.",
+        "error": "Befolgen Sie die Fehlerdetails unten und versuchen Sie es dann erneut.",
+        "permissionDenied": "Verwenden Sie Zugangsdaten mit Berechtigung zum Anzeigen und Verwalten von Schlüsseln und versuchen Sie es erneut.",
+        "title": "Schlüssel konnte nicht gespeichert werden",
+        "unavailable": "Der Dienst ist vorübergehend nicht verfügbar. Versuchen Sie es in Kürze noch einmal.",
+        "uncertain": "Der Dienst hat diese Änderung möglicherweise übernommen. Aktualisieren Sie die Schlüssel, um den aktuellen Status zu bestätigen, bevor Sie entscheiden, ob Sie es erneut versuchen."
+      },
+      "issues": {
+        "inconsistentValue": "Überprüfen Sie diesen Wert und versuchen Sie es erneut.",
+        "invalidValue": "Geben Sie einen gültigen Wert ein.",
+        "outOfRange": "Geben Sie einen Wert innerhalb des zulässigen Bereichs ein.",
+        "required": "Dieses Feld ist erforderlich.",
+        "unsupportedOption": "Wählen Sie eine verfügbare Option."
+      },
+      "opening": {
+        "failed": "Schlüsseleditor konnte nicht geöffnet werden",
+        "loading": "Schlüsseleditor öffnen...",
+        "retry": "Versuchen Sie es erneut"
+      },
       "quotaUsd": "Kontingent (USD)",
-      "totalQuotaUsd": "Gesamtkontingent (USD)"
+      "title": {
+        "create": "API-Schlüssel erstellen",
+        "edit": "API-Schlüssel bearbeiten"
+      },
+      "totalQuotaUsd": "Gesamtkontingent (USD)",
+      "unsaved": {
+        "description": "Beim Schließen werden Ihre Änderungen verworfen.",
+        "discard": "Änderungen verwerfen",
+        "keepEditing": "Weiter bearbeiten",
+        "title": "Änderungen verwerfen?"
+      }
     },
     "heading": "API-Schlüssel",
     "missing": "Nicht verfügbar",
@@ -364,6 +389,7 @@
       "empty": "Keine Bereiche verfügbar",
       "error": "Bereiche konnten nicht geladen werden",
       "errorHelp": "Prüfe den Kontozugriff und versuche es erneut.",
+      "fallback": "Der angeforderte Bereich ist nicht verfügbar. Der Standardbereich wird angezeigt.",
       "heading": "Bereich",
       "label": "Bereich auswählen",
       "loading": "Bereiche werden geladen…",
@@ -372,10 +398,14 @@
       "retry": "Bereiche erneut laden"
     },
     "status": {
+      "all": "Alle",
       "disabled": "Deaktiviert",
       "enabled": "Aktiviert",
       "expired": "Abgelaufen",
       "unknown": "Unbekannt"
+    },
+    "statusFilter": {
+      "label": "Schlüsselstatus"
     }
   },
   "noAccountsSupportKeyCreation": "Keines der Konten in dieser Ansicht unterstützt das Erstellen von API-Schlüsseln. Wählen Sie ein anderes Konto oder fügen Sie ein unterstütztes Konto hinzu.",
@@ -401,32 +431,7 @@
     "warningTitle": "Dieser Schlüssel kann nur einmal angezeigt werden"
   },
   "openRouter": {
-    "delete": {
-      "confirm": "Schlüssel löschen",
-      "description": "{{name}} dauerhaft aus OpenRouter löschen? Es kann nach dem Löschen nicht wiederhergestellt werden.",
-      "feedback": {
-        "authenticationFailed": "Aktualisieren Sie den OpenRouter-Verwaltungsschlüssel dieses Kontos und laden Sie die Seite anschließend neu.",
-        "error": "Dieser Schlüssel konnte nicht gelöscht werden. Aktualisieren Sie und versuchen Sie es erneut.",
-        "permissionDenied": "Sie haben keine Berechtigung zum Löschen dieses Schlüssels.",
-        "unavailable": "Der Dienst ist vorübergehend nicht verfügbar. Aktualisieren Sie die Schlüssel, bevor Sie es erneut versuchen.",
-        "uncertain": "Der Schlüsselstatus hat sich möglicherweise geändert. Aktualisieren Sie die Schlüssel, bevor Sie entscheiden, ob Sie es erneut versuchen möchten."
-      },
-      "refresh": "Schlüssel aktualisieren",
-      "title": "API-Schlüssel löschen?"
-    },
     "editor": {
-      "actions": {
-        "cancel": "Abbrechen",
-        "save": "Schlüssel speichern"
-      },
-      "feedback": {
-        "authenticationFailed": "Aktualisieren Sie den OpenRouter-Verwaltungsschlüssel dieses Kontos und versuchen Sie es dann erneut.",
-        "error": "Befolgen Sie die Fehlerdetails unten und versuchen Sie es dann erneut.",
-        "permissionDenied": "Sie haben keine Berechtigung zum Verwalten von Schlüsseln in diesem Arbeitsbereich.",
-        "title": "Schlüssel konnte nicht gespeichert werden",
-        "unavailable": "Der Dienst ist vorübergehend nicht verfügbar. Versuchen Sie es in Kürze noch einmal.",
-        "uncertain": "Der Dienst hat diese Änderung möglicherweise übernommen. Aktualisieren Sie die Schlüssel, um den aktuellen Status zu bestätigen, bevor Sie entscheiden, ob Sie es erneut versuchen."
-      },
       "fields": {
         "creator": {
           "editHelp": "Um den Ersteller zu ändern, erstellen Sie einen neuen Schlüssel.",
@@ -469,18 +474,6 @@
           "label": "Arbeitsbereich",
           "placeholder": "Wählen Sie einen Arbeitsbereich aus"
         }
-      },
-      "issues": {
-        "inconsistentValue": "Überprüfen Sie diesen Wert und versuchen Sie es erneut.",
-        "invalidValue": "Geben Sie einen gültigen Wert ein.",
-        "outOfRange": "Geben Sie einen Wert innerhalb des zulässigen Bereichs ein.",
-        "required": "Dieses Feld ist erforderlich.",
-        "unsupportedOption": "Wählen Sie eine verfügbare Option."
-      },
-      "opening": {
-        "failed": "Schlüsseleditor konnte nicht geöffnet werden",
-        "loading": "Schlüsseleditor öffnen...",
-        "retry": "Versuchen Sie es erneut"
       },
       "options": {
         "creator": {
@@ -526,23 +519,9 @@
           "weekly": "Wird wöchentlich zurückgesetzt"
         },
         "unlimited": "Kein Ausgabenlimit"
-      },
-      "title": {
-        "create": "API-Schlüssel erstellen",
-        "edit": "API-Schlüssel bearbeiten"
-      },
-      "unsaved": {
-        "description": "Beim Schließen werden Ihre Änderungen verworfen.",
-        "discard": "Änderungen verwerfen",
-        "keepEditing": "Weiter bearbeiten",
-        "title": "Änderungen verwerfen?"
       }
     },
     "list": {
-      "actions": {
-        "delete": "Schlüssel löschen",
-        "edit": "Schlüssel bearbeiten"
-      },
       "details": {
         "byokUsage": "BYOK-Nutzung",
         "byokUsageDaily": "Tägliche BYOK-Nutzung",
@@ -564,16 +543,6 @@
         "usageMonthly": "Monatliche Nutzung",
         "usageWeekly": "Wöchentliche Nutzung",
         "workspace": "Arbeitsbereich"
-      },
-      "status": {
-        "all": "Alle",
-        "disabled": "Deaktiviert",
-        "enabled": "Aktiviert",
-        "expired": "Abgelaufen",
-        "unknown": "Unbekannt"
-      },
-      "statusFilter": {
-        "label": "Schlüsselstatus"
       },
       "values": {
         "missing": "Nicht verfügbar",
@@ -729,8 +698,8 @@
     "searchLabel": "Suche",
     "searchPlaceholder": "Konto, Schlüsselname, Gruppe, Domain oder Website-Typ suchen...",
     "skipReasons": {
-      "aihubmixOneTimeKey": "AIHubMix Schlüssel können nur einmal angezeigt werden. Erstellen Sie den Schlüssel manuell und speichern Sie den vollständigen Schlüssel sofort.",
       "noneAuth": "Keine Anmeldeinformationen (Authentifizierungstyp: keine)",
+      "oneTimeKey": "Diese Website zeigt den vollständigen Schlüssel nur bei der Erstellung an. Erstellen Sie den Schlüssel manuell und speichern Sie ihn sofort.",
       "provisioningUnavailable": "Dieses Konto unterstützt keine automatische Schlüsselerstellung. Erstellen Sie den Schlüssel bei Bedarf auf der Website."
     },
     "status": {

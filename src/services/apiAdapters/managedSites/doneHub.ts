@@ -12,7 +12,7 @@ import {
   toNativeNumericMatchCandidates,
 } from "~/services/apiAdapters/managedResources/matchingInputs"
 import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/resourceIds"
-import { createNewApiKeyManagement } from "~/services/apiAdapters/newApi/keyManagement"
+import { resolveNewApiFamilyTokenTransport } from "~/services/apiAdapters/newApi/tokenTransport"
 import {
   fetchSiteUserGroups,
   searchChannel,
@@ -36,7 +36,9 @@ const doneHubManagedSiteConfig: ManagedSiteConfigCapability<DoneHubConfig> =
     checkValidDoneHubConfig,
   )
 
-const doneHubKeyManagement = createNewApiKeyManagement(SITE_TYPES.DONE_HUB)
+const doneHubTokenTransport = resolveNewApiFamilyTokenTransport(
+  SITE_TYPES.DONE_HUB,
+)
 
 const doneHubManagedSiteQueries: ManagedSiteQueriesCapability<DoneHubConfig> = {
   siteUserGroups: {
@@ -47,7 +49,7 @@ const doneHubManagedSiteQueries: ManagedSiteQueriesCapability<DoneHubConfig> = {
   },
   accountAvailableModels: {
     fetch: async (config) =>
-      await doneHubKeyManagement.fetchAvailableModels(
+      await doneHubTokenTransport.fetchAccountAvailableModels(
         toManagedSiteApiServiceRequest(config),
       ),
   },

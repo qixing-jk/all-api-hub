@@ -10,10 +10,11 @@ import React, {
 import type { ChannelDialogOpeningState } from "~/components/dialogs/ChannelDialog/components/ChannelDialogOpening"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { toSafeManagedResourceFailure } from "~/features/ManagedSiteChannels/utils/managedResource"
+import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
 import type { ManagedResourceKind } from "~/services/accountSiteDefinitions/contracts"
 import type { ResourceEditor } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
-import type { ApiToken, DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
 
 export interface ChannelDialogAdvisoryWarning {
   kind: string
@@ -50,9 +51,10 @@ interface DefaultTokenQuickCreateDialogState {
   isOpen: boolean
   sessionId: number
   account: DisplaySiteData | null
-  allowedGroups: string[]
   notice?: string
-  onSuccessCallback?: ((createdToken?: ApiToken) => void | Promise<void>) | null
+  onSuccessCallback?:
+    | ((createdToken: AccountKeyCreationResult) => void | Promise<void>)
+    | null
 }
 
 interface NativeChannelPreparation {
@@ -80,13 +82,12 @@ interface ChannelDialogContextValue {
   handleSuccess: (result: any) => void
   openDefaultTokenQuickCreateDialog: (config: {
     account: DisplaySiteData
-    allowedGroups: string[]
     notice?: string
-    onSuccess?: (createdToken?: ApiToken) => void | Promise<void>
+    onSuccess?: (createdToken: AccountKeyCreationResult) => void | Promise<void>
   }) => void
   closeDefaultTokenQuickCreateDialog: () => void
   handleDefaultTokenQuickCreateSuccess: (
-    createdToken?: ApiToken,
+    createdToken: AccountKeyCreationResult,
   ) => Promise<void>
   requestDuplicateChannelWarning: (options: {
     existingChannelName: string
@@ -120,7 +121,6 @@ export function ChannelDialogProvider({
       isOpen: false,
       sessionId: 0,
       account: null,
-      allowedGroups: [],
       notice: undefined,
       onSuccessCallback: null,
     })
@@ -261,9 +261,10 @@ export function ChannelDialogProvider({
   const openDefaultTokenQuickCreateDialog = useCallback(
     (config: {
       account: DisplaySiteData
-      allowedGroups: string[]
       notice?: string
-      onSuccess?: (createdToken?: ApiToken) => void | Promise<void>
+      onSuccess?: (
+        createdToken: AccountKeyCreationResult,
+      ) => void | Promise<void>
     }) => {
       const nextSessionId =
         defaultTokenQuickCreateDialogSessionIdRef.current + 1
@@ -274,7 +275,6 @@ export function ChannelDialogProvider({
         isOpen: true,
         sessionId: nextSessionId,
         account: config.account,
-        allowedGroups: config.allowedGroups,
         notice: config.notice,
         onSuccessCallback: nextOnSuccess,
       }))
@@ -290,14 +290,13 @@ export function ChannelDialogProvider({
       isOpen: false,
       sessionId: nextSessionId,
       account: null,
-      allowedGroups: [],
       notice: undefined,
       onSuccessCallback: null,
     }))
   }, [])
 
   const handleDefaultTokenQuickCreateSuccess = useCallback(
-    async (createdToken?: ApiToken) => {
+    async (createdToken: AccountKeyCreationResult) => {
       const sessionIdAtInvocation = defaultTokenQuickCreateDialog.sessionId
       if (!defaultTokenQuickCreateDialog.isOpen) {
         return

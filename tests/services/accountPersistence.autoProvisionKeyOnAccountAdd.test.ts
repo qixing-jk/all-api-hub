@@ -5,9 +5,7 @@ import { Storage } from "@plasmohq/storage"
 import { OPENROUTER_WEB_ORIGIN, SITE_TYPES } from "~/constants/siteType"
 import { validateAndSaveAccount } from "~/services/accounts/accountCreation"
 import { autoProvisionKeyOnAccountAdd } from "~/services/accounts/accountKeyAutoProvisioning/autoProvisionOnAccountAdd"
-import { DefaultTokenLifecyclePolicyBlockedError } from "~/services/accounts/defaultTokenLifecycle"
 import type { AccountKeyResourceSession } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { TOKEN_PROVISIONING_BLOCK_REASONS } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   DEFAULT_PREFERENCES,
@@ -19,7 +17,7 @@ import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const {
   fetchAccountDataMock,
-  ensureDefaultApiTokenForAccountMock,
+  ensureAccountKeyMock,
   getSiteTypeCapabilitiesMock,
   toastSuccessMock,
   toastErrorMock,
@@ -29,7 +27,7 @@ const {
   validateManagementKeyMock,
 } = vi.hoisted(() => ({
   fetchAccountDataMock: vi.fn(),
-  ensureDefaultApiTokenForAccountMock: vi.fn(),
+  ensureAccountKeyMock: vi.fn(),
   getSiteTypeCapabilitiesMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
@@ -60,22 +58,9 @@ vi.mock("~/services/apiService/openrouter", async (importOriginal) => ({
   validateManagementKey: validateManagementKeyMock,
 }))
 
-vi.mock(
-  "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken",
-  () => ({
-    ensureDefaultApiTokenForAccount: ensureDefaultApiTokenForAccountMock,
-    generateDefaultTokenRequest: () => ({
-      name: "user group (auto)",
-      unlimited_quota: true,
-      expired_time: -1,
-      remain_quota: 0,
-      allow_ips: "",
-      model_limits_enabled: false,
-      model_limits: "",
-      group: "",
-    }),
-  }),
-)
+vi.mock("~/services/accounts/accountKeyCreation", () => ({
+  ensureAccountKey: ensureAccountKeyMock,
+}))
 
 const CHECK_IN_DISABLED = buildCheckInConfig({
   customCheckIn: {
@@ -91,7 +76,7 @@ const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0))
 describe("accountPersistence auto-provision key on add", () => {
   beforeEach(async () => {
     fetchAccountDataMock.mockReset()
-    ensureDefaultApiTokenForAccountMock.mockReset()
+    ensureAccountKeyMock.mockReset()
     getSiteTypeCapabilitiesMock.mockReset()
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
@@ -117,25 +102,16 @@ describe("accountPersistence auto-provision key on add", () => {
         data: {
           fetchData: fetchAccountDataMock,
         },
-        keyManagement: {
-          fetchTokens: vi.fn(),
-          createToken: vi.fn(),
-          updateToken: vi.fn(),
-          resolveTokenKey: vi.fn(),
-          deleteToken: vi.fn(),
-          fetchAvailableModels: vi.fn(),
-        },
-        tokenProvisioning: {
-          isInventoryTokenUsable: vi.fn(),
-          resolveDefaultTokenCreation: vi.fn(),
-          classifyCreatedToken: vi.fn(),
+        keyResourceManagement: {
+          defaultCreation: "editor-defaults",
+          open: vi.fn(),
         },
       },
     })
 
-    ensureDefaultApiTokenForAccountMock.mockResolvedValue({
+    ensureAccountKeyMock.mockResolvedValue({
       token: { id: 1, name: "t", key: "k" },
-      created: true,
+      kind: "created",
     })
 
     await accountStorage.clearAllData()
@@ -150,7 +126,7 @@ describe("accountPersistence auto-provision key on add", () => {
   it("silently skips provisioning when the saved account no longer exists", async () => {
     await autoProvisionKeyOnAccountAdd("missing-account", true)
 
-    expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
+    expect(ensureAccountKeyMock).not.toHaveBeenCalled()
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(toastWarningMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
@@ -178,7 +154,7 @@ describe("accountPersistence auto-provision key on add", () => {
     await flushPromises()
     await flushPromises()
 
-    expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
+    expect(ensureAccountKeyMock).toHaveBeenCalledTimes(1)
     expect(toastSuccessMock).toHaveBeenCalledTimes(1)
     expect(toastWarningMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
@@ -231,7 +207,7 @@ describe("accountPersistence auto-provision key on add", () => {
     getSiteTypeCapabilitiesMock.mockReturnValue({
       account: {
         data: { fetchData: fetchAccountDataMock },
-        keyResources: { open: async () => session },
+        keyResourceManagement: { open: async () => session },
       },
     })
     await userPreferences.savePreferences({
@@ -257,16 +233,16 @@ describe("accountPersistence auto-provision key on add", () => {
     expect(result.success).toBe(true)
     await vi.waitFor(() => expect(remoteGroups.has("group:missing")).toBe(true))
     expect(remoteGroups.size).toBe(2)
-    expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
+    expect(ensureAccountKeyMock).not.toHaveBeenCalled()
     expect(toastSuccessMock).toHaveBeenCalledWith(
       "messages:accountOperations.autoProvisionGroupsCreated",
     )
   })
 
   it("uses warning toast when auto-provision is skipped because an API key already exists", async () => {
-    ensureDefaultApiTokenForAccountMock.mockResolvedValueOnce({
+    ensureAccountKeyMock.mockResolvedValueOnce({
       token: { id: 1, name: "t", key: "k" },
-      created: false,
+      kind: "ready",
     })
 
     const result = await validateAndSaveAccount(
@@ -289,7 +265,7 @@ describe("accountPersistence auto-provision key on add", () => {
     await flushPromises()
     await flushPromises()
 
-    expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
+    expect(ensureAccountKeyMock).toHaveBeenCalledTimes(1)
     expect(toastWarningMock).toHaveBeenCalledTimes(1)
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
@@ -322,12 +298,12 @@ describe("accountPersistence auto-provision key on add", () => {
     await flushPromises()
     await flushPromises()
 
-    expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
+    expect(ensureAccountKeyMock).not.toHaveBeenCalled()
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
   })
 
-  it("uses the disambiguated account label for the auto-provision flow", async () => {
+  it("preserves the saved account name and identity for native auto-provision", async () => {
     const firstResult = await validateAndSaveAccount(
       "https://api.example.com",
       "Test Site",
@@ -349,7 +325,7 @@ describe("accountPersistence auto-provision key on add", () => {
     await flushPromises()
 
     toastSuccessMock.mockReset()
-    ensureDefaultApiTokenForAccountMock.mockClear()
+    ensureAccountKeyMock.mockClear()
 
     const secondResult = await validateAndSaveAccount(
       "https://api-2.example.com",
@@ -371,17 +347,15 @@ describe("accountPersistence auto-provision key on add", () => {
     await flushPromises()
     await flushPromises()
 
-    expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
+    expect(ensureAccountKeyMock).toHaveBeenCalledTimes(1)
     expect(toastSuccessMock).toHaveBeenCalledTimes(1)
     expect(toastWarningMock).not.toHaveBeenCalled()
-    expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledWith({
-      account: expect.objectContaining({
-        site_name: "Test Site",
-        account_info: expect.objectContaining({
-          username: "tester-2",
-        }),
+    expect(ensureAccountKeyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Test Site",
+        username: "tester-2",
       }),
-    })
+    )
   })
 
   it("defaults to disabling auto-provision when preferences read fails", async () => {
@@ -409,16 +383,14 @@ describe("accountPersistence auto-provision key on add", () => {
     await flushPromises()
     await flushPromises()
 
-    expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
+    expect(ensureAccountKeyMock).not.toHaveBeenCalled()
   })
 
   it("explains when auto-provision needs a manual group selection", async () => {
-    ensureDefaultApiTokenForAccountMock.mockRejectedValueOnce(
-      new DefaultTokenLifecyclePolicyBlockedError({
-        reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
-        message: "messages:tokenProvisioning.createRequiresGroup",
-      }),
-    )
+    ensureAccountKeyMock.mockResolvedValueOnce({
+      kind: "input-required",
+      reason: "editor",
+    })
 
     const result = await validateAndSaveAccount(
       "https://api.example.com",
@@ -440,20 +412,17 @@ describe("accountPersistence auto-provision key on add", () => {
     await flushPromises()
     await flushPromises()
 
-    expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
+    expect(ensureAccountKeyMock).toHaveBeenCalledTimes(1)
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
     expect(toastWarningMock).toHaveBeenCalledTimes(1)
   })
 
   it("explains when a one-time key must be created manually", async () => {
-    ensureDefaultApiTokenForAccountMock.mockRejectedValueOnce(
-      new DefaultTokenLifecyclePolicyBlockedError({
-        reason: TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired,
-        message:
-          "messages:tokenProvisioning.createRequiresOneTimeSecretHandling",
-      }),
-    )
+    ensureAccountKeyMock.mockResolvedValueOnce({
+      kind: "input-required",
+      reason: "one-time-secret",
+    })
 
     const result = await validateAndSaveAccount(
       "https://aihubmix.example.invalid",
@@ -475,7 +444,7 @@ describe("accountPersistence auto-provision key on add", () => {
     await flushPromises()
     await flushPromises()
 
-    expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
+    expect(ensureAccountKeyMock).toHaveBeenCalledTimes(1)
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
     expect(toastWarningMock).toHaveBeenCalledTimes(1)
@@ -486,7 +455,7 @@ describe("accountPersistence auto-provision key on add", () => {
       siteType: SITE_TYPES.OPENROUTER,
       account: {
         data: { fetchData: fetchAccountDataMock },
-        keyResources: { open: vi.fn() },
+        keyResourceManagement: { open: vi.fn() },
       },
     })
 
@@ -510,7 +479,7 @@ describe("accountPersistence auto-provision key on add", () => {
     await flushPromises()
     await flushPromises()
 
-    expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
+    expect(ensureAccountKeyMock).not.toHaveBeenCalled()
     expect(toastWarningMock).toHaveBeenCalledTimes(1)
   })
 
@@ -535,7 +504,7 @@ describe("accountPersistence auto-provision key on add", () => {
     await flushPromises()
     await flushPromises()
 
-    expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
+    expect(ensureAccountKeyMock).not.toHaveBeenCalled()
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
   })
@@ -574,14 +543,14 @@ describe("accountPersistence auto-provision key on add", () => {
     await flushPromises()
     await flushPromises()
 
-    expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
+    expect(ensureAccountKeyMock).not.toHaveBeenCalled()
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(toastWarningMock).toHaveBeenCalledTimes(1)
     expect(toastErrorMock).not.toHaveBeenCalled()
   })
 
   it("does not fail account add when provisioning throws", async () => {
-    ensureDefaultApiTokenForAccountMock.mockRejectedValueOnce(new Error("boom"))
+    ensureAccountKeyMock.mockRejectedValueOnce(new Error("boom"))
 
     const result = await validateAndSaveAccount(
       "https://api.example.com",
@@ -603,7 +572,7 @@ describe("accountPersistence auto-provision key on add", () => {
     await flushPromises()
     await flushPromises()
 
-    expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
+    expect(ensureAccountKeyMock).toHaveBeenCalledTimes(1)
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(toastErrorMock).toHaveBeenCalledTimes(1)
   })
@@ -643,16 +612,12 @@ describe("accountPersistence auto-provision key on add", () => {
     await flushPromises()
     await flushPromises()
 
-    expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledWith(
+    expect(ensureAccountKeyMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        account: expect.objectContaining({
-          id: expect.any(String),
-          site_url: "https://api.example.com",
-          account_info: expect.objectContaining({
-            id: "1",
-            access_token: "test-token",
-          }),
-        }),
+        id: expect.any(String),
+        baseUrl: "https://api.example.com",
+        userId: "1",
+        token: "test-token",
       }),
     )
     expect(toastSuccessMock).toHaveBeenCalledTimes(1)

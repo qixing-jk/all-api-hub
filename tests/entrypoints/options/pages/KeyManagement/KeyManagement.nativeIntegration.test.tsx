@@ -1,6 +1,8 @@
 import { act, fireEvent, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { createInstance } from "i18next"
 import { useState } from "react"
+import { I18nextProvider } from "react-i18next"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -9,10 +11,13 @@ import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/cons
 import type { AccountKeyResourceRouteTransition } from "~/features/KeyManagement/controllers/useAccountKeyResourceController"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
+import enKeyManagement from "~/locales/en/keyManagement.json"
+import zhKeyManagement from "~/locales/zh-CN/keyManagement.json"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   AccountKeyResourceError,
+  type AccountKeyResourceFacts,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResourceEditor"
 import {
@@ -460,7 +465,7 @@ const createNativeSession = ({
   deleteResource = vi.fn().mockResolvedValue(undefined),
 }: {
   scopes: ReturnType<typeof createScope>[]
-  rows?: ReturnType<typeof createFacts>[]
+  rows?: AccountKeyResourceFacts[]
   createEditor?: any
   deleteResource?: ReturnType<typeof vi.fn>
 }) => {
@@ -607,7 +612,7 @@ async function renderCreatedNativeSecret() {
   await user.click(screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenButton))
   await user.click(
     await screen.findByRole("button", {
-      name: "keyManagement:openRouter.editor.actions.save",
+      name: "keyManagement:native.editor.actions.save",
     }),
   )
   await screen.findByRole("dialog", {
@@ -724,10 +729,92 @@ describe("KeyManagement native page integration", () => {
     testI18n.addResource(
       "en",
       "keyManagement",
-      "openRouter.delete.description",
-      "Delete {{name}} from the remote provider permanently. This cannot be undone.",
+      "native.delete.description",
+      enKeyManagement.native.delete.description,
     )
   })
+
+  it.each([
+    SITE_TYPES.NEW_API,
+    SITE_TYPES.SUB2API,
+    SITE_TYPES.VO_API_V2,
+    SITE_TYPES.AIHUBMIX,
+    SITE_TYPES.OPENROUTER,
+  ])(
+    "uses real provider-neutral delete and authentication copy for %s",
+    async (siteType) => {
+      const user = userEvent.setup()
+      const locale = createInstance()
+      await locale.init({
+        lng: "zh-CN",
+        fallbackLng: "en",
+        resources: {
+          "zh-CN": { keyManagement: zhKeyManagement },
+          en: { keyManagement: enKeyManagement },
+        },
+        interpolation: { escapeValue: false },
+      })
+      const account = createAccount({
+        id: "native-account",
+        name: "Example account",
+        siteType,
+        baseUrl: "https://native.example.invalid",
+      })
+      const scope = createScope("account", "account", "Example account", true)
+      const originalFacts = createFacts(
+        account.id,
+        scope.scopeKey,
+        "private-id",
+        "Example key",
+      )
+      const facts = {
+        ...originalFacts,
+        ref: { ...originalFacts.ref, siteType },
+      }
+      const deleteResource = vi
+        .fn()
+        .mockRejectedValue(
+          new AccountKeyResourceError({ code: "authentication_failed" }),
+        )
+      const { session } = createNativeSession({
+        scopes: [scope],
+        rows: [facts],
+        deleteResource,
+      })
+      createDisplayAccountApiContextMock.mockReturnValue({
+        accountKeyResources: { open: vi.fn().mockResolvedValue(session) },
+        request: {},
+      })
+      legacyHarnessConfig = {
+        accounts: [account],
+        initialSelectedAccount: account.id,
+      }
+      render(
+        <I18nextProvider i18n={locale}>
+          <KeyManagement
+            routeParams={{ accountId: account.id, workspace: scope.routeKey }}
+          />
+        </I18nextProvider>,
+        { withFeatureGuidanceProvider: true },
+      )
+      await user.click(await screen.findByRole("button", { name: "删除密钥" }))
+      const description = await screen.findByText(
+        "要永久删除密钥 Example key 吗？删除后无法恢复。",
+      )
+      expect(description).toBeVisible()
+      expect(description).not.toHaveTextContent("OpenRouter")
+      await user.click(
+        screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton),
+      )
+      expect(
+        await screen.findByText("请重新登录或更新此账号的凭据，然后重试。"),
+      ).toBeVisible()
+      expect(document.body).not.toHaveTextContent(
+        "OpenRouter Management API Key",
+      )
+      expect(deleteResource).toHaveBeenCalledTimes(1)
+    },
+  )
 
   it("echoes the exact applied transition through the real controller and preserves its focus workflow until deliberate secret close", async () => {
     const user = userEvent.setup()
@@ -815,7 +902,7 @@ describe("KeyManagement native page integration", () => {
     await user.click(screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenButton))
     await user.click(
       await screen.findByRole("button", {
-        name: "keyManagement:openRouter.editor.actions.save",
+        name: "keyManagement:native.editor.actions.save",
       }),
     )
 
@@ -1068,7 +1155,7 @@ describe("KeyManagement native page integration", () => {
     await user.click(screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenButton))
     await user.click(
       await screen.findByRole("button", {
-        name: "keyManagement:openRouter.editor.actions.save",
+        name: "keyManagement:native.editor.actions.save",
       }),
     )
     await waitFor(() =>
@@ -1514,7 +1601,7 @@ describe("KeyManagement native page integration", () => {
     )
   })
 
-  it("keeps filtered-all native scope non-creatable and never opens both add flows", async () => {
+  it("opens one native editor for the sole filtered account in all-account mode", async () => {
     const user = userEvent.setup()
     const account = createAccount({
       id: "native-account",
@@ -1528,7 +1615,12 @@ describe("KeyManagement native page integration", () => {
       "Default workspace",
       true,
     )
-    const { session } = createNativeSession({ scopes: [scope] })
+    const createEditor = createOpenRouterEditor({
+      scopes: [scope],
+      destinationScopeKey: scope.scopeKey,
+      submit: vi.fn(),
+    })
+    const { session } = createNativeSession({ scopes: [scope], createEditor })
     createDisplayAccountApiContextMock.mockReturnValue({
       accountKeyResources: { open: vi.fn().mockResolvedValue(session) },
       request: {},
@@ -1548,14 +1640,18 @@ describe("KeyManagement native page integration", () => {
     const addButton = await screen.findByTestId(
       KEY_MANAGEMENT_TEST_IDS.addTokenButton,
     )
-    await waitFor(() => expect(addButton).toBeDisabled())
+    await waitFor(() => expect(addButton).toBeEnabled())
     await user.click(addButton)
 
-    expect(session.openCreateEditor).not.toHaveBeenCalled()
+    expect(
+      await screen.findByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditor),
+    ).toBeVisible()
+    expect(screen.getAllByRole("dialog")).toHaveLength(1)
+    expect(session.openCreateEditor).toHaveBeenCalledOnce()
     expect(legacyAddTokenSpy).not.toHaveBeenCalled()
     expect(addTokenDialogPropsSpy.mock.lastCall?.[0]).toMatchObject({
-      isOpen: false,
-      preSelectedAccountId: null,
+      isOpen: true,
+      preSelectedAccountId: account.id,
     })
   })
 
@@ -1773,7 +1869,7 @@ describe("KeyManagement native page integration", () => {
     render(<KeyManagement routeParams={{ accountId: nativeAccount.id }} />)
 
     const statusFilter = await screen.findByRole("combobox", {
-      name: "keyManagement:openRouter.list.statusFilter.label",
+      name: "keyManagement:native.statusFilter.label",
     })
     await waitFor(() =>
       expect(screen.getByText(enabledRow.displayName)).toBeVisible(),
@@ -1781,7 +1877,7 @@ describe("KeyManagement native page integration", () => {
     await user.click(statusFilter)
     await user.click(
       await screen.findByRole("option", {
-        name: "keyManagement:openRouter.list.status.disabled",
+        name: "keyManagement:native.status.disabled",
       }),
     )
     await waitFor(() =>
@@ -1806,7 +1902,7 @@ describe("KeyManagement native page integration", () => {
     expect(screen.getByText(disabledRow.displayName)).toBeVisible()
     expect(
       screen.queryByRole("combobox", {
-        name: "keyManagement:openRouter.list.statusFilter.label",
+        name: "keyManagement:native.statusFilter.label",
       }),
     ).toBeNull()
     expect(
@@ -1989,11 +2085,11 @@ describe("KeyManagement native page integration", () => {
     ).toBeVisible()
     expect(
       screen.getAllByRole("button", {
-        name: "keyManagement:openRouter.list.actions.edit",
+        name: "keyManagement:native.actions.edit",
       }),
     ).toHaveLength(2)
     for (const button of screen.getAllByRole("button", {
-      name: "keyManagement:openRouter.list.actions.edit",
+      name: "keyManagement:native.actions.edit",
     })) {
       expect(button).toBeEnabled()
     }
@@ -2314,12 +2410,12 @@ describe("KeyManagement native page integration", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "keyManagement:openRouter.list.actions.delete",
+        name: "keyManagement:native.actions.delete",
       }),
     )
     expect(
       await screen.findByText(
-        "Delete Visible native key from the remote provider permanently. This cannot be undone.",
+        "Permanently delete the API key Visible native key? This cannot be undone.",
       ),
     ).toBeVisible()
     expect(document.body).not.toHaveTextContent("private-resource-id-example")
@@ -2387,7 +2483,7 @@ describe("KeyManagement native page integration", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "keyManagement:openRouter.list.actions.delete",
+        name: "keyManagement:native.actions.delete",
       }),
     )
     await user.click(
@@ -2399,7 +2495,7 @@ describe("KeyManagement native page integration", () => {
     ).toBeVisible()
     expect(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton),
-    ).toHaveTextContent("keyManagement:openRouter.delete.refresh")
+    ).toHaveTextContent("keyManagement:native.delete.refresh")
     expect(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton),
     ).toHaveAttribute("data-variant", "warning")

@@ -237,8 +237,8 @@ export function getSkipReasonLabel(
 ) {
   if (!reason) return ""
   switch (reason) {
-    case ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey:
-      return t("keyManagement:repairMissingKeys.skipReasons.aihubmixOneTimeKey")
+    case ACCOUNT_KEY_REPAIR_SKIP_REASONS.OneTimeKey:
+      return t("keyManagement:repairMissingKeys.skipReasons.oneTimeKey")
     case ACCOUNT_KEY_REPAIR_SKIP_REASONS.NoneAuth:
       return t("keyManagement:repairMissingKeys.skipReasons.noneAuth")
     case ACCOUNT_KEY_REPAIR_SKIP_REASONS.ProvisioningUnavailable:

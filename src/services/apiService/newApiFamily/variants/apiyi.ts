@@ -1,4 +1,3 @@
-import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
 import {
   fetchSiteStatus,
   fetchUserInfo,
@@ -7,6 +6,7 @@ import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchAllItems } from "~/services/apiTransport/pagination"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import type { UserGroupInfo } from "~/services/models/userGroup"
 import { isRecord } from "~/utils/core/object"
 
 /** Reads an existing management token, leaving an empty token for manual recovery. */

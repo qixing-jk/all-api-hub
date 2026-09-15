@@ -3,9 +3,7 @@ import { vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
-import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
-import * as tokenQuickCreateResolution from "~/services/accounts/tokenQuickCreateResolution"
-import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
+import * as accountKeyCreation from "~/services/accounts/accountKeyCreation"
 import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { render, screen } from "~~/tests/test-utils/render"
@@ -42,12 +40,9 @@ import {
   userPreferencesContextMock,
 } from "./copyKeyDialogMocks"
 
-const actualResolveDefaultTokenQuickCreateResolution =
-  tokenQuickCreateResolution.resolveDefaultTokenQuickCreateResolution
-
-export const resolveDefaultTokenQuickCreateResolutionSpy = vi.spyOn(
-  tokenQuickCreateResolution,
-  "resolveDefaultTokenQuickCreateResolution",
+export const prepareAccountKeyCreationSpy = vi.spyOn(
+  accountKeyCreation,
+  "prepareDefaultAccountKeyCreation",
 )
 
 export const ACCOUNT = {
@@ -227,19 +222,8 @@ export function setupCopyKeyDialogTestDefaults() {
   resolveApiTokenKeyMock.mockImplementation(
     async ({ token }: { token: { key: string } }) => token.key,
   )
-  resolveDefaultTokenQuickCreateResolutionSpy.mockReset()
-  resolveDefaultTokenQuickCreateResolutionSpy.mockImplementation(
-    async (account, options) => {
-      if (account.siteType === SITE_TYPES.SUB2API) {
-        return actualResolveDefaultTokenQuickCreateResolution(account, options)
-      }
-
-      return {
-        kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready,
-        tokenData: generateDefaultTokenRequest(),
-      }
-    },
-  )
+  prepareAccountKeyCreationSpy.mockReset()
+  prepareAccountKeyCreationSpy.mockResolvedValue({ kind: "input-required" })
   toastSuccessMock.mockReset()
   toastErrorMock.mockReset()
   openWithCredentialsMock.mockResolvedValue({ opened: true })

@@ -3,13 +3,12 @@ import {
   invalidateResolvedApiTokenKeyCache,
   syncResolvedApiTokenKeyCache,
 } from "~/services/accountTokens/tokenKeyResolver"
-import type {
-  CreateTokenRequest,
-  CreateTokenResult,
-  UserGroupInfo,
-} from "~/services/accountTokens/tokenProvisioningModel"
 import { resolveApiTokenKey } from "~/services/apiService/newApiFamily/default/tokenKeyResolver"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
+import type {
+  NewApiToken,
+  NewApiTokenWrite,
+} from "~/services/apiService/newApiFamily/tokenTypes"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
@@ -17,27 +16,27 @@ import {
   inferHasMoreFromNumberedPage,
 } from "~/services/apiTransport/pagination"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { ApiToken } from "~/types"
+import type { UserGroupInfo } from "~/services/models/userGroup"
 import { createLogger } from "~/utils/core/logger"
 import { isRecord } from "~/utils/core/object"
 
 const logger = createLogger("NewApiFamilyKeyManagement")
 
 interface KeyManagementImplementation {
-  fetchAccountTokens: (request: ApiServiceRequest) => Promise<ApiToken[]>
+  fetchAccountTokens: (request: ApiServiceRequest) => Promise<NewApiToken[]>
   fetchCurrentUserGroup: (request: ApiServiceRequest) => Promise<string>
   createApiToken: (
     request: ApiServiceRequest,
-    tokenData: CreateTokenRequest,
-  ) => Promise<CreateTokenResult>
+    tokenData: NewApiTokenWrite,
+  ) => Promise<boolean | NewApiToken>
   updateApiToken: (
     request: ApiServiceRequest,
     tokenId: number,
-    tokenData: CreateTokenRequest,
+    tokenData: NewApiTokenWrite,
   ) => Promise<boolean | void>
   resolveApiTokenKey: (
     request: ApiServiceRequest,
-    token: Pick<ApiToken, "id" | "key">,
+    token: Pick<NewApiToken, "id" | "key">,
   ) => Promise<string>
   deleteApiToken: (
     request: ApiServiceRequest,
@@ -70,14 +69,14 @@ interface AccountTokenPaginationOptions {
 export async function fetchAccountTokens(
   request: ApiServiceRequest,
   options: number | AccountTokenPaginationOptions = {},
-): Promise<ApiToken[]> {
+): Promise<NewApiToken[]> {
   const {
     startPage = 1,
     detectsNormalizedFirstPage = false,
     trustsRequestedPageSize = false,
   } = typeof options === "number" ? { startPage: options } : options
 
-  const tokens = await fetchAllItems<ApiToken>(
+  const tokens = await fetchAllItems<NewApiToken>(
     async (page) => {
       const searchParams = new URLSearchParams({
         p: page.toString(),
@@ -213,8 +212,8 @@ export async function fetchSiteUserGroups(
  */
 export async function createApiToken(
   request: ApiServiceRequest,
-  tokenData: CreateTokenRequest,
-): Promise<CreateTokenResult> {
+  tokenData: NewApiTokenWrite,
+): Promise<boolean | NewApiToken> {
   try {
     const response = await newApiFamilyRequests.envelope<any>(request, {
       endpoint: "/api/token/",
@@ -247,9 +246,9 @@ export async function createApiToken(
 export async function fetchTokenById(
   request: ApiServiceRequest,
   tokenId: number,
-): Promise<ApiToken> {
+): Promise<NewApiToken> {
   try {
-    const token = await newApiFamilyRequests.data<ApiToken>(request, {
+    const token = await newApiFamilyRequests.data<NewApiToken>(request, {
       endpoint: `/api/token/${tokenId}`,
     })
     return normalizeApiTokenKey(token)
@@ -265,7 +264,7 @@ export async function fetchTokenById(
 export async function updateApiToken(
   request: ApiServiceRequest,
   tokenId: number,
-  tokenData: CreateTokenRequest,
+  tokenData: NewApiTokenWrite,
 ): Promise<boolean> {
   try {
     const response = await newApiFamilyRequests.envelope<any>(request, {

@@ -13,7 +13,6 @@
     "autoProvisionNeedsManualAction": "{{accountName}} was saved, but its default key needs a manual choice or one-time secret handling. Use “{{actionLabel}}” in Key Management to finish.",
     "autoProvisionUnsupported": "{{accountName}} was saved, but this site type does not support automatic default API key creation.",
     "checkingApiKeys": "Checking API key...",
-    "createTokenFailed": "Failed to create API token",
     "tokenNotFound": "Failed to create or find an API token"
   },
   "aihubmix": {
@@ -96,7 +95,6 @@
       "failed": "Operation failed: {{error}}",
       "saveFailed": "Save failed: {{error}}"
     },
-    "tokenSecretUnavailable": "This platform does not support viewing the full key again. Copy and save it when you create it.",
     "unknown": "Unknown error",
     "validation": {
       "bookmarkNameRequired": "Bookmark name cannot be empty",
@@ -164,7 +162,6 @@
   "sub2api": {
     "authPersistenceFailed": "The refreshed Sub2API sign-in could not be saved to this account. Refresh or re-import the account, then try again.",
     "configMissing": "Please configure the Sub2API Base URL and Admin API Key in basic settings first.",
-    "groupMissing": "Sub2API group '{{group}}' is no longer available. Refresh the group list and try again.",
     "loginRequired": "Please log in to the Sub2API dashboard first (so the extension can read auth_token/auth_user from localStorage) and try again.",
     "refreshTokenInvalid": "Sub2API refresh token is invalid/rotated. Re-import the session from the dashboard (recommended: incognito/private window) or paste an updated refresh_token, then try again."
   },
@@ -219,10 +216,8 @@
     }
   },
   "tokenProvisioning": {
-    "createRequiresAvailableGroup": "This account has no group available for key creation. Check the account's available groups and try again.",
     "createRequiresGroup": "Key creation requires a confirmed group. Choose an available group before continuing.",
     "createRequiresGroupSelection": "This account has multiple available groups. Choose one before creating the key.",
-    "createRequiresOneTimeSecretHandling": "This provider only reveals newly created keys once. Create the key manually in Key Management and save the full key immediately.",
     "selectGroupTitle": "Choose a key group"
   },
   "veloera": {

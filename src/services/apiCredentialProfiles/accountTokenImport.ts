@@ -7,7 +7,7 @@ import {
 } from "~/services/apiCredentialProfiles/apiCredentialProfileLinks"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
-import type { ApiToken, DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
 import { API_CREDENTIAL_PROFILE_LINK_SOURCES } from "~/types/apiCredentialProfiles"
 
 export type ApiCredentialProfileLinkedBy =
@@ -19,7 +19,7 @@ interface CreateProfileFromAccountTokenParams {
   baseUrl: string
   siteType?: DisplaySiteData["siteType"] | string
   tagIds?: string[]
-  token: Pick<ApiToken, "key" | "name">
+  token: { key: string; name: string }
   apiType?: ApiVerificationApiType
   locator?: AccountRuntimeKeyLocator
   linkedBy?: ApiCredentialProfileLinkedBy

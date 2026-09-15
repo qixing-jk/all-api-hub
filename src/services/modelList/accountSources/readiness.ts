@@ -88,7 +88,9 @@ export function resolveModelListAccountSourceReadiness(account: {
       ...base,
       route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog,
       modelCatalog: accountCapabilities.modelCatalog,
-      requiresTokenKeyResolution: Boolean(accountCapabilities.keyManagement),
+      requiresTokenKeyResolution: Boolean(
+        accountCapabilities.keyResourceManagement,
+      ),
       dashboardEstimateLoader: profile.dashboardEstimateLoader,
     }
   }

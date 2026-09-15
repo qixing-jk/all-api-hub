@@ -1,3 +1,5 @@
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
+
 import "./copyKeyDialogMocks"
 
 import userEvent from "@testing-library/user-event"
@@ -8,10 +10,7 @@ import { KeyInventoryList } from "~/features/AccountManagement/components/CopyKe
 import { QuickKeyResourceCard } from "~/features/AccountManagement/components/CopyKeyDialog/QuickKeyResourceCard"
 import { RuntimeKeyActionControls } from "~/features/AccountManagement/components/CopyKeyDialog/RuntimeKeyActionControls"
 import type { KeyResourceCardPresentation } from "~/features/KeyManagement/presentation/keyResourceCard"
-import {
-  buildDisplayAccountTokenRuntimeKey,
-  buildServiceCredentialRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { PRODUCT_ANALYTICS_ACTION_IDS } from "~/services/productAnalytics/contracts"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -114,7 +113,7 @@ describe("CopyKeyDialog subcomponents", () => {
 
   it("keeps copy and export action policies independent", async () => {
     const user = userEvent.setup()
-    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    const runtimeKey = buildNewApiRuntimeKey(ACCOUNT, TOKEN)
     const { rerender } = render(
       <RuntimeKeyActionControls
         runtimeKey={runtimeKey}
@@ -159,7 +158,7 @@ describe("CopyKeyDialog subcomponents", () => {
   })
 
   it("opens Cursor++ export for an exportable runtime key", async () => {
-    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    const runtimeKey = buildNewApiRuntimeKey(ACCOUNT, TOKEN)
     const user = userEvent.setup()
 
     render(
@@ -177,8 +176,11 @@ describe("CopyKeyDialog subcomponents", () => {
     expect(cursorPlusExportDialogMock).toHaveBeenCalledWith(
       expect.objectContaining({
         isOpen: true,
-        account: ACCOUNT,
-        runtimeKey,
+        source: expect.objectContaining({
+          id: runtimeKey.id,
+          providerId: ACCOUNT.id,
+          resolveApiKey: expect.any(Function),
+        }),
       }),
     )
     await user.click(
@@ -190,7 +192,7 @@ describe("CopyKeyDialog subcomponents", () => {
   })
 
   it("redacts credential values from runtime-key Kelivo export errors", async () => {
-    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    const runtimeKey = buildNewApiRuntimeKey(ACCOUNT, TOKEN)
     resolveApiTokenKeyMock.mockRejectedValueOnce(
       new Error("Provider rejected sk-test because the account is suspended"),
     )
@@ -217,7 +219,7 @@ describe("CopyKeyDialog subcomponents", () => {
   })
 
   it("falls back to the local unknown error for a blank runtime-key Kelivo failure", async () => {
-    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    const runtimeKey = buildNewApiRuntimeKey(ACCOUNT, TOKEN)
     resolveApiTokenKeyMock.mockRejectedValueOnce(new Error(""))
     const user = userEvent.setup()
 

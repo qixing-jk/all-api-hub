@@ -129,12 +129,12 @@ describe("CopyKeyDialog inventory", () => {
     ).not.toBeInTheDocument()
     expect(
       screen.queryByRole("button", {
-        name: "keyManagement:openRouter.list.actions.edit",
+        name: "keyManagement:native.actions.edit",
       }),
     ).not.toBeInTheDocument()
     expect(
       screen.queryByRole("button", {
-        name: "keyManagement:openRouter.list.actions.delete",
+        name: "keyManagement:native.actions.delete",
       }),
     ).not.toBeInTheDocument()
 
@@ -182,7 +182,7 @@ describe("CopyKeyDialog inventory", () => {
     expect(openKeysPageMock).toHaveBeenCalledWith(ACCOUNT.id)
   })
 
-  it("offers full key management instead of legacy create actions for an empty OpenRouter inventory", async () => {
+  it("offers native creation and full management for an empty OpenRouter inventory", async () => {
     listAccountKeyResourcesMock.mockResolvedValueOnce({ items: [] })
 
     render(
@@ -198,15 +198,15 @@ describe("CopyKeyDialog inventory", () => {
       screen.getByRole("button", { name: "account:actions.keyManagement" }),
     ).toBeEnabled()
     expect(
-      screen.queryByRole("button", {
+      screen.getByRole("button", {
         name: "ui:dialog.copyKey.createKey",
       }),
-    ).not.toBeInTheDocument()
+    ).toBeEnabled()
     expect(
-      screen.queryByRole("button", {
+      screen.getByRole("button", {
         name: "ui:dialog.copyKey.createCustomKey",
       }),
-    ).not.toBeInTheDocument()
+    ).toBeEnabled()
   })
 
   it("keeps OpenRouter inventory load failures retryable", async () => {
@@ -376,7 +376,9 @@ describe("CopyKeyDialog inventory", () => {
     render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
 
     expect(await screen.findByText("default")).toBeInTheDocument()
-    expect(screen.getByText("common:status.disabled")).toBeInTheDocument()
+    expect(
+      screen.getByText("keyManagement:native.status.disabled"),
+    ).toBeInTheDocument()
     expect(
       screen.queryByText("keyManagement:keyDetails.usedQuota"),
     ).not.toBeInTheDocument()
@@ -384,7 +386,7 @@ describe("CopyKeyDialog inventory", () => {
       screen.queryByRole("button", { name: "ui:dialog.copyKey.copy" }),
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByText("keyManagement:keyDetails.quotaPolicy"),
+      screen.queryByText("keyManagement:keyDetails.remainingQuota"),
     ).not.toBeInTheDocument()
 
     const detailsButton = screen.getByRole("button", {
@@ -404,13 +406,13 @@ describe("CopyKeyDialog inventory", () => {
       screen.getByRole("button", { name: "ui:dialog.copyKey.copy" }),
     ).toBeVisible()
     expect(
-      screen.getByText("keyManagement:keyDetails.quotaPolicy"),
+      screen.getByText("keyManagement:keyDetails.remainingQuota"),
     ).toBeVisible()
 
     await user.click(detailsButton)
     expect(detailsButton).toHaveAttribute("aria-expanded", "false")
     expect(
-      screen.queryByText("keyManagement:keyDetails.quotaPolicy"),
+      screen.queryByText("keyManagement:keyDetails.remainingQuota"),
     ).not.toBeInTheDocument()
   })
 })

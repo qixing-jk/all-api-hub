@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelList from "~/entrypoints/options/pages/ModelList"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
 import { createAccountSource } from "~/features/ModelList/modelManagementSources"
 import { AuthTypeEnum } from "~/types"
@@ -45,6 +46,7 @@ vi.mock(
       fetchAccountAvailableModels: (...args: any[]) =>
         fetchAccountAvailableModelsMock(...args),
       fetchAccountTokens: (...args: any[]) => fetchAccountTokensMock(...args),
+      fetchCurrentUserGroup: vi.fn(async () => "vip"),
       fetchUserGroups: (...args: any[]) => fetchUserGroupsMock(...args),
       defaultKeyManagementImplementation: {
         fetchAccountTokens: (...args: any[]) => fetchAccountTokensMock(...args),
@@ -187,14 +189,15 @@ describe("Model List → ModelKeyDialog", () => {
   })
 
   it("opens dialog and creates a custom group key without model limits prefilled", async () => {
-    fetchAccountTokensMock
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([TOKEN])
-    fetchAccountAvailableModelsMock.mockResolvedValueOnce(["gpt-4"])
-    fetchUserGroupsMock.mockResolvedValueOnce({
+    fetchAccountTokensMock.mockResolvedValue([])
+    fetchAccountAvailableModelsMock.mockResolvedValue(["gpt-4"])
+    fetchUserGroupsMock.mockResolvedValue({
       vip: { desc: "vip", ratio: 1 },
     })
-    createApiTokenMock.mockResolvedValueOnce(true)
+    createApiTokenMock.mockImplementationOnce(async () => {
+      fetchAccountTokensMock.mockResolvedValue([{ ...TOKEN, group: "vip" }])
+      return true
+    })
 
     const user = userEvent.setup()
 
@@ -211,12 +214,14 @@ describe("Model List → ModelKeyDialog", () => {
     )
 
     expect(
-      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
+      await screen.findByLabelText(/keyManagement:dialog.tokenName/),
     ).toHaveValue("vip group (auto)")
 
-    await user.click(
-      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    const submit = screen.getByTestId(
+      KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton,
     )
+    await waitFor(() => expect(submit).toBeEnabled())
+    await user.click(submit)
 
     await waitFor(() => {
       expect(createApiTokenMock).toHaveBeenCalledTimes(1)

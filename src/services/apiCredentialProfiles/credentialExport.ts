@@ -1,4 +1,3 @@
-import { buildAccountTokenRuntimeKeyId } from "~/services/accounts/accountRuntimeKeys"
 import type {
   CredentialExportData,
   CredentialExportSource,
@@ -14,10 +13,7 @@ function getLegacyProfileExportId(profileId: string) {
   for (let i = 0; i < profileId.length; i += 1) {
     hash = (hash * 31 + profileId.charCodeAt(i)) | 0
   }
-  return buildAccountTokenRuntimeKeyId(
-    buildApiCredentialProfileSyntheticAccountId(profileId),
-    Math.abs(hash) || 1,
-  )
+  return `account_token:${buildApiCredentialProfileSyntheticAccountId(profileId)}:${Math.abs(hash) || 1}`
 }
 
 /** Project a stored credential for synchronous desktop-client deeplinks. */

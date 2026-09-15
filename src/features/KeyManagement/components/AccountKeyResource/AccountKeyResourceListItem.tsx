@@ -127,7 +127,7 @@ export function AccountKeyResourceListItem({
             type="button"
             size="sm"
             variant="ghost"
-            aria-label={t("openRouter.list.actions.edit")}
+            aria-label={t("native.actions.edit")}
             onClick={() => onEdit(row.facts.ref)}
           >
             <Pencil
@@ -141,7 +141,7 @@ export function AccountKeyResourceListItem({
             type="button"
             size="sm"
             variant="destructiveGhost"
-            aria-label={t("openRouter.list.actions.delete")}
+            aria-label={t("native.actions.delete")}
             onClick={() => onDelete(row.facts.ref)}
           >
             <Trash2 aria-hidden="true" className="h-4 w-4" />

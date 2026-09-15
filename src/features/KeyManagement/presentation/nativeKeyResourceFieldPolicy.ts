@@ -3,33 +3,24 @@ import type { TFunction } from "i18next"
 import { ACCOUNT_SITE_ADAPTER_FAMILIES, SITE_TYPES } from "~/constants/siteType"
 import {
   defineResourceEditorFieldPolicy,
-  type ResourceEditorFieldPolicy,
   type ResourceFieldPresentation,
 } from "~/features/ResourceEditor/resourceFieldPolicy"
 import { getDefaultAccountKeyName } from "~/services/accounts/accountKeyNames"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
-import type {
-  EditableResourceProjection,
-  ResourceFieldOption,
-} from "~/services/apiAdapters/contracts/resourceNative"
 
-import {
-  getOpenRouterKeyResourceFieldPolicy,
-  OPENROUTER_KEY_EDITOR_SECTION_LABEL_RESOLVERS,
-  OPENROUTER_KEY_EDITOR_SECTION_ORDER,
-} from "./accountKeyResourceFieldPolicy"
+import type { AccountKeyResourceEditorPresentation as EditorPresentation } from "./accountKeyResourceEditorPresentation"
+import { getOpenRouterKeyResourceEditorPresentation } from "./openRouterKeyResourceFieldPolicy"
 
 const issues = {
-  required: (t: TFunction) =>
-    t("keyManagement:openRouter.editor.issues.required"),
+  required: (t: TFunction) => t("keyManagement:native.editor.issues.required"),
   invalid_value: (t: TFunction) =>
-    t("keyManagement:openRouter.editor.issues.invalidValue"),
+    t("keyManagement:native.editor.issues.invalidValue"),
   out_of_range: (t: TFunction) =>
-    t("keyManagement:openRouter.editor.issues.outOfRange"),
+    t("keyManagement:native.editor.issues.outOfRange"),
   unsupported_option: (t: TFunction) =>
-    t("keyManagement:openRouter.editor.issues.unsupportedOption"),
+    t("keyManagement:native.editor.issues.unsupportedOption"),
   inconsistent_value: (t: TFunction) =>
-    t("keyManagement:openRouter.editor.issues.inconsistentValue"),
+    t("keyManagement:native.editor.issues.inconsistentValue"),
 }
 
 const name: ResourceFieldPresentation = {
@@ -131,17 +122,6 @@ const enabled = (fieldId: string): ResourceFieldPresentation => ({
   issueLabelResolvers: issues,
 })
 
-type EditorPresentation = {
-  kind: "openrouter" | "standard"
-  policy: ResourceEditorFieldPolicy
-  sectionOrder: Readonly<Record<string, number>>
-  sectionLabelResolvers: Readonly<Record<string, (t: TFunction) => string>>
-  getAutomaticName?: (
-    values: EditableResourceProjection,
-    optionsByField?: Readonly<Record<string, readonly ResourceFieldOption[]>>,
-  ) => string | undefined
-}
-
 /** Uses visible group names; multiple groups retain the generic generated name. */
 const groupAutomaticName =
   (
@@ -168,16 +148,11 @@ const groupAutomaticName =
 
 /** Frontend-owned field policies are selected by provider, never by upstream labels. */
 export function getNativeKeyResourceEditorPresentation(
-  siteType: string = SITE_TYPES.OPENROUTER,
+  siteType: string | undefined,
   mode: "create" | "edit",
 ): EditorPresentation {
   if (siteType === SITE_TYPES.OPENROUTER)
-    return {
-      kind: "openrouter",
-      policy: getOpenRouterKeyResourceFieldPolicy(mode),
-      sectionOrder: OPENROUTER_KEY_EDITOR_SECTION_ORDER,
-      sectionLabelResolvers: OPENROUTER_KEY_EDITOR_SECTION_LABEL_RESOLVERS,
-    }
+    return getOpenRouterKeyResourceEditorPresentation(mode)
   let fields: ResourceFieldPresentation[]
   let getAutomaticName: EditorPresentation["getAutomaticName"]
   if (siteType === SITE_TYPES.SUB2API) {
@@ -234,7 +209,7 @@ export function getNativeKeyResourceEditorPresentation(
       },
     ]
   } else if (
-    getAccountSiteDefinition(siteType)?.adapterFamily ===
+    getAccountSiteDefinition(siteType ?? "")?.adapterFamily ===
     ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily
   ) {
     getAutomaticName = groupAutomaticName("group")
@@ -263,7 +238,6 @@ export function getNativeKeyResourceEditorPresentation(
     fields = []
   }
   return {
-    kind: "standard",
     getAutomaticName,
     policy: defineResourceEditorFieldPolicy({ fields, hiddenFields: [] }),
     sectionOrder: { basic: 0, spending: 1, lifecycle: 2, advanced: 3 },

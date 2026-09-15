@@ -11,16 +11,6 @@ import type {
 } from "~/services/accounts/accountDataModel"
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
-import {
-  hasUsableApiTokenKey,
-  isMaskedApiTokenKey,
-  normalizeApiTokenKey,
-  normalizeApiTokenKeyValue,
-} from "~/services/accountTokens/apiTokenKey"
-import type {
-  CreateTokenRequest,
-  CreateTokenResult,
-} from "~/services/accountTokens/tokenProvisioningModel"
 import type {
   AccessTokenInfo,
   SiteStatusInfo,
@@ -75,7 +65,6 @@ import {
   AuthTypeEnum,
   SiteHealthStatus,
   type AccountTodayStatsAvailability,
-  type ApiToken,
 } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -137,8 +126,6 @@ type AIHubMixUserInfo = {
   request_count?: number | string
 }
 
-type AIHubMixTokenRaw = AIHubMixKeyData
-
 type AIHubMixUserAvailableModel = {
   model: string
   developer_id?: number
@@ -175,19 +162,6 @@ type AIHubMixWebsiteModel = {
   display_input?: unknown
   img_price_config?: unknown
   display_output?: unknown
-}
-
-// AIHubMix create-key docs define the management payload as:
-// name, expired_time, unlimited_quota, remain_quota, models, subnet.
-// They do not define One-API style group/model_limits/allow_ips fields.
-// Reference: https://docs.aihubmix.com/en/api/CliEndpoints/create-key
-type AIHubMixTokenPayload = {
-  name: string
-  expired_time: number
-  unlimited_quota: boolean
-  remain_quota: number
-  models: string
-  subnet: string
 }
 
 const toFiniteNumber = (value: unknown, fallback = 0): number => {
@@ -292,65 +266,12 @@ const fetchAIHubMixData = async <T>(
   return extractAIHubMixData<T>(response.body, endpoint)
 }
 
-const normalizeToken = (
-  token: AIHubMixTokenRaw,
-  defaultUserId?: number | string,
-): ApiToken => {
-  const key = token.full_key ?? token.key ?? token.token ?? token.value ?? ""
-  const modelLimits =
-    typeof token.model_limits === "string"
-      ? token.model_limits
-      : typeof token.models === "string"
-        ? token.models
-        : ""
-  const allowIps =
-    typeof token.allow_ips === "string"
-      ? token.allow_ips
-      : typeof token.ip_whitelist === "string"
-        ? token.ip_whitelist
-        : typeof token.subnet === "string"
-          ? token.subnet
-          : ""
-
-  return normalizeApiTokenKey({
-    id: toFiniteNumber(token.id ?? token.token_id),
-    user_id: toFiniteNumber(token.user_id ?? defaultUserId),
-    key,
-    status: toFiniteNumber(token.status, 1),
-    name: typeof token.name === "string" ? token.name : "",
-    note: token.note,
-    created_time: toFiniteNumber(token.created_time),
-    accessed_time: toFiniteNumber(token.accessed_time),
-    expired_time: toFiniteNumber(token.expired_time, -1),
-    remain_quota: toFiniteNumber(token.remain_quota),
-    unlimited_quota: Boolean(token.unlimited_quota),
-    model_limits_enabled: Boolean(token.model_limits_enabled) || !!modelLimits,
-    model_limits: modelLimits,
-    allow_ips: allowIps,
-    used_quota: toFiniteNumber(token.used_quota),
-    group: typeof token.group === "string" ? token.group : undefined,
-    DeletedAt: token.DeletedAt ?? null,
-    models: typeof token.models === "string" ? token.models : undefined,
-  })
-}
-
-const createAIHubMixTokenPayload = (
-  tokenData: CreateTokenRequest,
-): AIHubMixTokenPayload => ({
-  name: tokenData.name,
-  expired_time: tokenData.expired_time,
-  unlimited_quota: tokenData.unlimited_quota,
-  remain_quota: tokenData.unlimited_quota ? -1 : tokenData.remain_quota,
-  models: tokenData.model_limits_enabled ? tokenData.model_limits : "",
-  subnet: (tokenData.allow_ips ?? "").trim(),
-})
-
-const extractTokenItems = (payload: unknown): AIHubMixTokenRaw[] => {
-  if (Array.isArray(payload)) return payload as AIHubMixTokenRaw[]
+const extractKeyItems = (payload: unknown): AIHubMixKeyData[] => {
+  if (Array.isArray(payload)) return payload as AIHubMixKeyData[]
   if (payload && typeof payload === "object") {
     const record = payload as Record<string, unknown>
-    if (Array.isArray(record.items)) return record.items as AIHubMixTokenRaw[]
-    if (Array.isArray(record.data)) return record.data as AIHubMixTokenRaw[]
+    if (Array.isArray(record.items)) return record.items as AIHubMixKeyData[]
+    if (Array.isArray(record.data)) return record.data as AIHubMixKeyData[]
   }
   return []
 }
@@ -930,7 +851,7 @@ export async function fetchAIHubMixKeys(
   )
     throw new Error("invalid_aihubmix_key_inventory")
   const ids = new Set<number>()
-  return extractTokenItems(payload).map((key) => {
+  return extractKeyItems(payload).map((key) => {
     const normalized = requireAIHubMixKey(key)
     if (ids.has(normalized.id)) throw new Error("duplicate_aihubmix_key_id")
     ids.add(normalized.id)
@@ -984,111 +905,6 @@ export async function updateAIHubMixKey(
     method: "PUT",
     body: JSON.stringify({ ...payload, id }),
   })
-}
-
-/** Transitional token projection pending native consumer migration. */
-export async function fetchAccountTokens(
-  request: ApiServiceRequest,
-): Promise<ApiToken[]> {
-  const payload = await fetchAIHubMixData<unknown>(request, "/api/token/")
-  return extractTokenItems(payload).map((token) =>
-    normalizeToken(token, request.auth?.userId),
-  )
-}
-
-/**
- * Search and normalize AIHubMix API keys by keyword.
- */
-export async function searchApiTokens(
-  request: ApiServiceRequest,
-  keyword: string,
-): Promise<ApiToken[]> {
-  const searchParams = new URLSearchParams({
-    keyword,
-  })
-  const payload = await fetchAIHubMixData<unknown>(
-    request,
-    `/api/token/search?${searchParams.toString()}`,
-  )
-  return extractTokenItems(payload).map((token) =>
-    normalizeToken(token, request.auth?.userId),
-  )
-}
-
-/**
- * Fetch and normalize one AIHubMix API key by id.
- */
-export async function fetchTokenById(
-  request: ApiServiceRequest,
-  tokenId: number,
-): Promise<ApiToken> {
-  const endpoint = `/api/token/${tokenId}`
-  const payload = await fetchAIHubMixData<AIHubMixTokenRaw>(request, endpoint)
-  return normalizeToken(payload, request.auth?.userId)
-}
-
-/**
- * AIHubMix only exposes a key secret when it is created. Saved/listed keys may
- * be masked and cannot be revealed again through detail APIs, so this adapter
- * must not fall back to common `/api/token/{id}/key` behavior.
- */
-export async function resolveApiTokenKey(
-  _request: ApiServiceRequest,
-  token: Pick<ApiToken, "key">,
-): Promise<string> {
-  const normalizedKey = normalizeApiTokenKeyValue(token.key ?? "")
-  if (!normalizedKey) return normalizedKey
-  if (hasUsableApiTokenKey(normalizedKey)) return normalizedKey
-  if (!isMaskedApiTokenKey(normalizedKey)) return normalizedKey
-
-  throw new ApiError(
-    t("messages:errors.tokenSecretUnavailable"),
-    undefined,
-    undefined,
-    API_ERROR_CODES.TOKEN_SECRET_UNAVAILABLE,
-  )
-}
-
-/**
- * Create an AIHubMix API key.
- * AIHubMix may include the only full key value in this response; later list or
- * detail reads can be masked and are not revealable.
- */
-export async function createApiToken(
-  request: ApiServiceRequest,
-  tokenData: CreateTokenRequest,
-): Promise<CreateTokenResult> {
-  const payload = createAIHubMixTokenPayload(tokenData)
-  const createdToken = await fetchAIHubMixData<AIHubMixTokenRaw>(
-    request,
-    "/api/token/",
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-    },
-  )
-
-  if (createdToken && typeof createdToken === "object") {
-    return normalizeToken(createdToken, request.auth?.userId)
-  }
-
-  return true
-}
-
-/**
- * Update an AIHubMix API key.
- */
-export async function updateApiToken(
-  request: ApiServiceRequest,
-  tokenId: number,
-  tokenData: CreateTokenRequest,
-): Promise<boolean> {
-  const payload = createAIHubMixTokenPayload(tokenData)
-  await fetchAIHubMixData<unknown>(request, "/api/token/", {
-    method: "PUT",
-    body: JSON.stringify({ ...payload, id: tokenId }),
-  })
-  return true
 }
 
 /**

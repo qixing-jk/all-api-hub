@@ -176,43 +176,21 @@
     "advancedSettings": "高级设置",
     "availableModels": "可用模型",
     "basicInfo": "基本信息",
-    "createFailed": "创建密钥失败，请稍后重试",
     "createNotSupported": "该账号不支持创建 API 密钥。",
-    "createSuccess": "密钥创建成功",
     "createToken": "创建密钥",
-    "editModeNoChange": "编辑模式下无法更改账号",
-    "editToken": "编辑 API 密钥",
     "expiration": "过期时间",
     "expirationPlaceholder": "留空表示永不过期",
     "groupLabel": "分组",
-    "groupRate": "倍率：",
-    "groupRestrictedNote": "仅可选择可用分组，其他分组已禁用。",
-    "ipExample": "例如：192.168.1.1,10.0.0.1 或使用 * 表示不限制",
     "ipLimits": "IP 限制",
     "ipPlaceholder": "留空表示不限制，多个 IP 用逗号分隔",
-    "loadDataFailed": "加载数据失败，请稍后重试",
     "modelLimits": "模型限制",
-    "modelLoadFailed": "无法加载可用模型。你仍可创建密钥；如未选择模型，模型限制将保持关闭。原因：{{reason}}",
-    "modelSelectHint": "已选择 {{count}} 个模型",
-    "nameRequired": "密钥名称不能为空",
-    "noAvailableModels": "当前账号没有可用于模型限制的模型",
     "quotaPlaceholder": "请输入额度金额（美元）",
-    "quotaRate": "1美元 = {{rate}} 配额点数",
     "quotaSettings": "额度设置",
-    "selectAccountError": "请选择账号",
     "selectModels": "选择模型",
-    "subnetExample": "例如：192.168.1.0/24",
     "subnetLimits": "Subnet 限制",
     "subnetPlaceholder": "留空表示不限制，输入 subnet 或 CIDR",
     "tokenName": "密钥名称",
     "unlimitedQuota": "无限额度",
-    "updateFailed": "更新密钥失败，请稍后重试",
-    "updateNotSupported": "该账号不支持更新 API 密钥。",
-    "updateSuccess": "密钥更新成功",
-    "updateToken": "更新密钥",
-    "validExpiration": "过期时间必须大于当前时间",
-    "validIp": "请输入有效的 IP 地址，多个 IP 用逗号分隔",
-    "validQuota": "请输入有效的额度金额",
     "warningText": "请妥善保管 API 密钥，避免泄露",
     "warningTitle": "注意事项"
   },
@@ -233,13 +211,10 @@
     "ipLimits": "IP 限制：",
     "key": "密钥：",
     "lastUsedTime": "最近使用时间：",
-    "limitedQuota": "有限额度",
     "models": "模型限制：",
     "neverExpires": "永不过期",
     "note": "备注：",
-    "quotaPolicy": "额度策略：",
     "remainingQuota": "剩余额度：",
-    "secretUnavailable": "此已保存密钥的完整值不可用。",
     "ungrouped": "未分组",
     "usedQuota": "已用额度："
   },
@@ -342,11 +317,62 @@
     "verifyCliSupportFailed": "打开 CLI 兼容性验证失败"
   },
   "native": {
+    "actions": {
+      "delete": "删除密钥",
+      "edit": "编辑密钥"
+    },
+    "delete": {
+      "confirm": "删除密钥",
+      "description": "要永久删除密钥 {{name}} 吗？删除后无法恢复。",
+      "feedback": {
+        "authenticationFailed": "请重新登录或更新此账号的凭据，然后重试。",
+        "error": "无法删除此密钥。请刷新后再试。",
+        "permissionDenied": "请使用有权查看和管理密钥的凭据，然后重试。",
+        "unavailable": "服务暂时不可用，请刷新后再试。",
+        "uncertain": "密钥状态可能已变化。请先刷新密钥，再决定是否重试。"
+      },
+      "refresh": "刷新密钥",
+      "title": "删除 API 密钥？"
+    },
     "detailsLoadFailed": "无法加载密钥详情。",
     "editor": {
+      "actions": {
+        "cancel": "取消",
+        "save": "保存密钥"
+      },
       "expiryDays": "有效期（天）",
+      "feedback": {
+        "authenticationFailed": "请重新登录或更新此账号的凭据，然后重试。",
+        "error": "请根据错误信息处理后重试。",
+        "permissionDenied": "请使用有权查看和管理密钥的凭据，然后重试。",
+        "title": "无法保存密钥",
+        "unavailable": "服务暂时不可用，请稍后重试。",
+        "uncertain": "服务可能已应用此更改。请先刷新密钥确认当前状态，再决定是否重试。"
+      },
+      "issues": {
+        "inconsistentValue": "请检查此值后重试。",
+        "invalidValue": "请输入有效值。",
+        "outOfRange": "请输入允许范围内的值。",
+        "required": "此项为必填项。",
+        "unsupportedOption": "请选择可用选项。"
+      },
+      "opening": {
+        "failed": "无法打开密钥编辑器",
+        "loading": "正在打开密钥编辑器...",
+        "retry": "重试"
+      },
       "quotaUsd": "额度（美元）",
-      "totalQuotaUsd": "总额度（美元）"
+      "title": {
+        "create": "创建 API 密钥",
+        "edit": "编辑 API 密钥"
+      },
+      "totalQuotaUsd": "总额度（美元）",
+      "unsaved": {
+        "description": "关闭后，本次修改不会保存。",
+        "discard": "放弃更改",
+        "keepEditing": "继续编辑",
+        "title": "放弃更改？"
+      }
     },
     "heading": "API 密钥",
     "missing": "暂无数据",
@@ -354,6 +380,7 @@
       "empty": "暂无可用作用域",
       "error": "无法加载作用域",
       "errorHelp": "请检查账户访问权限后重试。",
+      "fallback": "请求的作用域不可用，现已显示默认作用域。",
       "heading": "作用域",
       "label": "选择作用域",
       "loading": "正在加载作用域…",
@@ -362,10 +389,14 @@
       "retry": "重新加载作用域"
     },
     "status": {
+      "all": "全部",
       "disabled": "已停用",
       "enabled": "已启用",
       "expired": "已过期",
       "unknown": "未知"
+    },
+    "statusFilter": {
+      "label": "密钥状态"
     }
   },
   "noAccountsSupportKeyCreation": "当前视图中的账号都不支持创建 API 密钥。请选择其他账号或添加受支持的账号。",
@@ -391,32 +422,7 @@
     "warningTitle": "该密钥只能查看一次"
   },
   "openRouter": {
-    "delete": {
-      "confirm": "删除密钥",
-      "description": "要从 OpenRouter 永久删除 {{name}} 吗？删除后无法恢复。",
-      "feedback": {
-        "authenticationFailed": "请更新此账号的 OpenRouter Management API Key，然后刷新。",
-        "error": "无法删除此密钥。请刷新后再试。",
-        "permissionDenied": "你没有删除此密钥的权限。",
-        "unavailable": "服务暂时不可用，请刷新后再试。",
-        "uncertain": "密钥状态可能已变化。请先刷新密钥，再决定是否重试。"
-      },
-      "refresh": "刷新密钥",
-      "title": "删除 API 密钥？"
-    },
     "editor": {
-      "actions": {
-        "cancel": "取消",
-        "save": "保存密钥"
-      },
-      "feedback": {
-        "authenticationFailed": "请更新此账号的 OpenRouter Management API Key，然后重试。",
-        "error": "请根据错误信息处理后重试。",
-        "permissionDenied": "你没有在此工作区管理密钥的权限。",
-        "title": "无法保存密钥",
-        "unavailable": "服务暂时不可用，请稍后重试。",
-        "uncertain": "服务可能已应用此更改。请先刷新密钥确认当前状态，再决定是否重试。"
-      },
       "fields": {
         "creator": {
           "editHelp": "如需更改创建者，请新建密钥。",
@@ -459,18 +465,6 @@
           "label": "工作区",
           "placeholder": "选择工作区"
         }
-      },
-      "issues": {
-        "inconsistentValue": "请检查此值后重试。",
-        "invalidValue": "请输入有效值。",
-        "outOfRange": "请输入允许范围内的值。",
-        "required": "此项为必填项。",
-        "unsupportedOption": "请选择可用选项。"
-      },
-      "opening": {
-        "failed": "无法打开密钥编辑器",
-        "loading": "正在打开密钥编辑器...",
-        "retry": "重试"
       },
       "options": {
         "creator": {
@@ -516,23 +510,9 @@
           "weekly": "每周重置"
         },
         "unlimited": "无用量上限"
-      },
-      "title": {
-        "create": "创建 API 密钥",
-        "edit": "编辑 API 密钥"
-      },
-      "unsaved": {
-        "description": "关闭后，本次修改不会保存。",
-        "discard": "放弃更改",
-        "keepEditing": "继续编辑",
-        "title": "放弃更改？"
       }
     },
     "list": {
-      "actions": {
-        "delete": "删除密钥",
-        "edit": "编辑密钥"
-      },
       "details": {
         "byokUsage": "BYOK 用量",
         "byokUsageDaily": "每日 BYOK 用量",
@@ -554,16 +534,6 @@
         "usageMonthly": "月用量",
         "usageWeekly": "周用量",
         "workspace": "工作区"
-      },
-      "status": {
-        "all": "全部",
-        "disabled": "已停用",
-        "enabled": "已启用",
-        "expired": "已过期",
-        "unknown": "未知"
-      },
-      "statusFilter": {
-        "label": "密钥状态"
       },
       "values": {
         "missing": "暂无数据",
@@ -705,8 +675,8 @@
     "searchLabel": "搜索",
     "searchPlaceholder": "搜索账号、密钥名称、分组、域名或站点类型...",
     "skipReasons": {
-      "aihubmixOneTimeKey": "AIHubMix 密钥仅可查看一次，请手动创建并立即保存完整密钥",
       "noneAuth": "无凭据（认证方式：无）",
+      "oneTimeKey": "此站点仅在创建时显示完整密钥，请手动创建并立即保存完整密钥",
       "provisioningUnavailable": "此账号不支持自动创建密钥；如有需要，请前往对应站点手动创建。"
     },
     "status": {

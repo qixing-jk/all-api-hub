@@ -13,7 +13,7 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 import { SITE_TYPES } from "~/constants/siteType"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
-import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
+import { createUnattributedAccountCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 
 const RESULT = {
   displayName: "Example key",
@@ -70,16 +70,16 @@ describe("OneTimeSecretDialog", () => {
   })
 
   it("renders a fresh AIHubMix create result through the common secret dialog", () => {
-    const result = createAIHubMixCreatedRuntimeSecret({
-      account: {
-        id: "aihubmix-account-example",
-        name: "AIHubMix",
+    const result = createUnattributedAccountCreatedRuntimeSecret({
+      accountId: "aihubmix-account-example",
+      displayName: "Example key",
+      secret: "sk-aihubmix-created-secret",
+      credential: {
+        accountName: "AIHubMix",
         siteType: SITE_TYPES.AIHUBMIX,
+        baseUrl: "https://aihubmix.com",
+        apiType: "openai-compatible",
         tagIds: [],
-      },
-      token: {
-        name: "Example key",
-        full_key: "sk-aihubmix-created-secret",
       },
     })
 

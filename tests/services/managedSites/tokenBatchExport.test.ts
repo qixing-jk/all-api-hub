@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   buildAccountKeyResourceRuntimeKey,
-  buildAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import {
@@ -11,13 +10,13 @@ import {
   ManagedResourceError,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import {
   PROTECTION_BYPASS_SURFACES,
   PROTECTION_BYPASS_USER_COMMANDS,
 } from "~/services/protectionBypass/contracts"
-import type { AccountToken } from "~/types"
 import type { ManagedSiteChannelDraftSource } from "~/types/managedSiteChannelDraft"
 import {
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES,
@@ -28,9 +27,10 @@ import {
   MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES,
 } from "~/types/managedSiteTokenBatchExport"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import {
-  buildApiToken,
   buildDisplaySiteData,
+  buildNewApiToken,
 } from "~~/tests/test-utils/factories"
 import {
   buildManagedResourceMatchCandidate,
@@ -94,15 +94,13 @@ vi.mock(
 )
 
 const buildAccountToken = (
-  overrides: Partial<AccountToken> = {},
-): AccountToken => ({
-  ...buildApiToken({
+  overrides: Partial<NewApiToken> = {},
+): NewApiToken => ({
+  ...buildNewApiToken({
     id: 11,
     name: "Token 11",
     key: "token-secret",
   }),
-  accountId: "account-1",
-  accountName: "Account 1",
   ...overrides,
 })
 
@@ -111,7 +109,7 @@ const buildAccountTokenInput = (
   token = buildAccountToken(),
 ) => ({
   account,
-  runtimeKey: buildAccountTokenRuntimeKey(account, token),
+  runtimeKey: buildNewApiRuntimeKey(account, token),
 })
 
 const sessionResyncExecution = {
@@ -638,7 +636,12 @@ describe("managed-site token batch export", () => {
       })
     }
     expect(preview.items[0].id).not.toBe(preview.items[1].id)
-    expect(mockResolveDisplayAccountRuntimeKeySecret).not.toHaveBeenCalled()
+    expect(mockResolveDisplayAccountRuntimeKeySecret).toHaveBeenCalledTimes(2)
+    expect(
+      mockResolveDisplayAccountRuntimeKeySecret.mock.calls.map(
+        ([, key]) => key.resourceRef.scopeKey,
+      ),
+    ).toEqual(["workspace-a", "workspace-b"])
   })
 
   it("normalizes account-token runtime key base URLs before preparing channel drafts", async () => {
@@ -685,7 +688,7 @@ describe("managed-site token batch export", () => {
       baseUrl: "https://upstream.example.com/v1",
     })
     const token = buildAccountToken()
-    const runtimeKey = buildAccountTokenRuntimeKey(account, token)
+    const runtimeKey = buildNewApiRuntimeKey(account, token)
 
     await prepareManagedSiteTokenBatchExportPreview({
       items: [
@@ -890,8 +893,6 @@ describe("managed-site token batch export", () => {
           buildAccountToken({
             id: 12,
             name: "Token 12",
-            accountId: "account-2",
-            accountName: "Account 2",
           }),
         ),
       ],
@@ -979,8 +980,6 @@ describe("managed-site token batch export", () => {
           buildDisplaySiteData({ id: "account-2", name: "Account 2" }),
           buildAccountToken({
             id: 12,
-            accountId: "account-2",
-            accountName: "Account 2",
             name: "Token 12",
           }),
         ),
@@ -1064,8 +1063,6 @@ describe("managed-site token batch export", () => {
         buildAccountToken({
           id: index + 11,
           name: `Token ${index + 11}`,
-          accountId,
-          accountName: `Account ${index + 1}`,
         }),
       )
     })
@@ -1114,8 +1111,6 @@ describe("managed-site token batch export", () => {
           buildAccountToken({
             id: 12,
             name: "Token 12",
-            accountId: "account-2",
-            accountName: "Account 2",
           }),
         ),
       ],
@@ -2327,8 +2322,6 @@ describe("managed-site token batch export", () => {
           buildDisplaySiteData({ id: "account-2", name: "Account 2" }),
           buildAccountToken({
             id: 12,
-            accountId: "account-2",
-            accountName: "Account 2",
           }),
         ),
       ],
@@ -2467,8 +2460,6 @@ describe("managed-site token batch export", () => {
           buildDisplaySiteData({ id: "account-2", name: "Account 2" }),
           buildAccountToken({
             id: 12,
-            accountId: "account-2",
-            accountName: "Account 2",
             name: "Token 12",
           }),
         ),

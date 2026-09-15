@@ -186,45 +186,21 @@
     "advancedSettings": "Configuración avanzada",
     "availableModels": "Modelos disponibles",
     "basicInfo": "Información básica",
-    "createFailed": "No se pudo crear la clave, inténtalo de nuevo más tarde",
     "createNotSupported": "Esta cuenta no admite crear claves API.",
-    "createSuccess": "Clave creada correctamente",
     "createToken": "Crear clave",
-    "editModeNoChange": "No se puede cambiar la cuenta en modo de edición",
-    "editToken": "Editar clave API",
     "expiration": "Hora de expiración",
     "expirationPlaceholder": "Deja vacío para que nunca expire",
     "groupLabel": "Grupo",
-    "groupRate": "Tarifa:",
-    "groupRestrictedNote": "Solo se pueden seleccionar los grupos disponibles; los demás están deshabilitados.",
-    "ipExample": "Ejemplo: 192.168.1.1,10.0.0.1 o usa * para no limitar",
     "ipLimits": "Límites de IP",
     "ipPlaceholder": "Deja vacío para no limitar, separa varias IP con comas",
-    "loadDataFailed": "No se pudieron cargar los datos, inténtalo de nuevo más tarde",
     "modelLimits": "Límites de modelo",
-    "modelLoadFailed": "No se pudieron cargar los modelos disponibles. Aun así puedes crear la clave; si no seleccionas modelos, las restricciones permanecerán desactivadas. Motivo: {{reason}}",
-    "modelSelectHint_one": "{{count}} modelo seleccionado",
-    "modelSelectHint_many": "{{count}} modelos seleccionados",
-    "modelSelectHint_other": "{{count}} modelos seleccionados",
-    "nameRequired": "El nombre de la clave no puede estar vacío",
-    "noAvailableModels": "Esta cuenta no devolvió modelos disponibles para aplicar restricciones",
     "quotaPlaceholder": "Ingresa el monto de cuota (USD)",
-    "quotaRate": "1 USD = {{rate}} puntos de cuota",
     "quotaSettings": "Configuración de cuota",
-    "selectAccountError": "Selecciona una cuenta",
     "selectModels": "Seleccionar modelos",
-    "subnetExample": "Ejemplo: 192.168.1.0/24",
     "subnetLimits": "Límites de subred",
     "subnetPlaceholder": "Deja vacío para no limitar, o ingresa una subred o CIDR",
     "tokenName": "Nombre del token",
     "unlimitedQuota": "Cuota ilimitada",
-    "updateFailed": "No se pudo actualizar la clave, inténtalo de nuevo más tarde",
-    "updateNotSupported": "Esta cuenta no admite actualizar claves API.",
-    "updateSuccess": "Clave actualizada correctamente",
-    "updateToken": "Actualizar clave",
-    "validExpiration": "La hora de expiración debe ser posterior a la hora actual",
-    "validIp": "Ingresa direcciones IP válidas, separa varias IP con comas",
-    "validQuota": "Ingresa un monto de cuota válido",
     "warningText": "Mantén las claves API seguras y evita filtrarlas",
     "warningTitle": "Notas"
   },
@@ -247,13 +223,10 @@
     "ipLimits": "Límites de IP:",
     "key": "Clave:",
     "lastUsedTime": "Último uso:",
-    "limitedQuota": "Cuota limitada",
     "models": "Restricciones de modelos:",
     "neverExpires": "Nunca expira",
     "note": "Nota:",
-    "quotaPolicy": "Política de cuota:",
     "remainingQuota": "Cuota restante:",
-    "secretUnavailable": "La clave completa no está disponible para esta clave guardada.",
     "ungrouped": "Sin grupo",
     "usedQuota": "Cuota usada:"
   },
@@ -362,11 +335,62 @@
     "verifyCliSupportFailed": "No se pudo abrir la verificación de compatibilidad con CLI"
   },
   "native": {
+    "actions": {
+      "delete": "Eliminar clave",
+      "edit": "Editar clave"
+    },
+    "delete": {
+      "confirm": "Eliminar clave",
+      "description": "¿Eliminar permanentemente la clave API {{name}}? Esta acción no se puede deshacer.",
+      "feedback": {
+        "authenticationFailed": "Vuelve a iniciar sesión o actualiza las credenciales de esta cuenta y vuelve a intentarlo.",
+        "error": "No se pudo eliminar esta clave. Actualiza e inténtalo de nuevo.",
+        "permissionDenied": "Usa credenciales con permiso para ver y administrar claves y vuelve a intentarlo.",
+        "unavailable": "El servicio no está disponible temporalmente. Actualiza antes de volver a intentarlo.",
+        "uncertain": "El estado de la clave puede haber cambiado. Actualiza las claves antes de decidir si vuelves a intentarlo."
+      },
+      "refresh": "Actualizar claves",
+      "title": "¿Eliminar clave API?"
+    },
     "detailsLoadFailed": "No se pudieron cargar los detalles de la clave.",
     "editor": {
+      "actions": {
+        "cancel": "Cancelar",
+        "save": "Guardar clave"
+      },
       "expiryDays": "Vence en (días)",
+      "feedback": {
+        "authenticationFailed": "Vuelve a iniciar sesión o actualiza las credenciales de esta cuenta y vuelve a intentarlo.",
+        "error": "Sigue los detalles del error y vuelve a intentarlo.",
+        "permissionDenied": "Usa credenciales con permiso para ver y administrar claves y vuelve a intentarlo.",
+        "title": "No se pudo guardar la clave",
+        "unavailable": "El servicio no está disponible temporalmente. Inténtalo pronto.",
+        "uncertain": "El servicio pudo haber aplicado este cambio. Actualiza las claves para confirmar el estado actual antes de decidir si vuelves a intentarlo."
+      },
+      "issues": {
+        "inconsistentValue": "Revisa este valor e inténtalo de nuevo.",
+        "invalidValue": "Introduce un valor válido.",
+        "outOfRange": "Introduce un valor dentro del rango permitido.",
+        "required": "Este campo es obligatorio.",
+        "unsupportedOption": "Elige una opción disponible."
+      },
+      "opening": {
+        "failed": "No se pudo abrir el editor de claves",
+        "loading": "Abriendo el editor de claves...",
+        "retry": "Intentar de nuevo"
+      },
       "quotaUsd": "Cuota (USD)",
-      "totalQuotaUsd": "Cuota total (USD)"
+      "title": {
+        "create": "Crear clave API",
+        "edit": "Editar clave API"
+      },
+      "totalQuotaUsd": "Cuota total (USD)",
+      "unsaved": {
+        "description": "Al cerrar, se descartarán tus cambios.",
+        "discard": "Descartar cambios",
+        "keepEditing": "Seguir editando",
+        "title": "¿Descartar cambios?"
+      }
     },
     "heading": "Claves API",
     "missing": "No disponible",
@@ -374,6 +398,7 @@
       "empty": "No hay ámbitos disponibles",
       "error": "No se pudieron cargar los ámbitos",
       "errorHelp": "Verifica el acceso a la cuenta y vuelve a intentarlo.",
+      "fallback": "El ámbito solicitado no está disponible. Se muestra el ámbito predeterminado.",
       "heading": "Ámbito",
       "label": "Seleccionar un ámbito",
       "loading": "Cargando ámbitos…",
@@ -382,10 +407,14 @@
       "retry": "Volver a cargar los ámbitos"
     },
     "status": {
+      "all": "Todas",
       "disabled": "Desactivada",
       "enabled": "Activa",
       "expired": "Caducada",
       "unknown": "Desconocida"
+    },
+    "statusFilter": {
+      "label": "Estado de clave"
     }
   },
   "noAccountsSupportKeyCreation": "Ninguna cuenta de esta vista permite crear claves de API. Selecciona otra cuenta o agrega una compatible.",
@@ -411,32 +440,7 @@
     "warningTitle": "Esta clave solo se puede ver una vez"
   },
   "openRouter": {
-    "delete": {
-      "confirm": "Eliminar clave",
-      "description": "¿Eliminar {{name}} de OpenRouter permanentemente? No se podrá recuperar después.",
-      "feedback": {
-        "authenticationFailed": "Actualiza la OpenRouter Management API Key de esta cuenta y luego actualiza las claves.",
-        "error": "No se pudo eliminar esta clave. Actualiza e inténtalo de nuevo.",
-        "permissionDenied": "No tienes permiso para eliminar esta clave.",
-        "unavailable": "El servicio no está disponible temporalmente. Actualiza antes de volver a intentarlo.",
-        "uncertain": "El estado de la clave puede haber cambiado. Actualiza las claves antes de decidir si vuelves a intentarlo."
-      },
-      "refresh": "Actualizar claves",
-      "title": "¿Eliminar clave API?"
-    },
     "editor": {
-      "actions": {
-        "cancel": "Cancelar",
-        "save": "Guardar clave"
-      },
-      "feedback": {
-        "authenticationFailed": "Actualiza la OpenRouter Management API Key de esta cuenta y vuelve a intentarlo.",
-        "error": "Sigue los detalles del error y vuelve a intentarlo.",
-        "permissionDenied": "No tienes permiso para administrar claves en este espacio de trabajo.",
-        "title": "No se pudo guardar la clave",
-        "unavailable": "El servicio no está disponible temporalmente. Inténtalo pronto.",
-        "uncertain": "El servicio pudo haber aplicado este cambio. Actualiza las claves para confirmar el estado actual antes de decidir si vuelves a intentarlo."
-      },
       "fields": {
         "creator": {
           "editHelp": "Para cambiar el creador, crea una clave nueva.",
@@ -479,18 +483,6 @@
           "label": "Espacio de trabajo",
           "placeholder": "Selecciona un espacio de trabajo"
         }
-      },
-      "issues": {
-        "inconsistentValue": "Revisa este valor e inténtalo de nuevo.",
-        "invalidValue": "Introduce un valor válido.",
-        "outOfRange": "Introduce un valor dentro del rango permitido.",
-        "required": "Este campo es obligatorio.",
-        "unsupportedOption": "Elige una opción disponible."
-      },
-      "opening": {
-        "failed": "No se pudo abrir el editor de claves",
-        "loading": "Abriendo el editor de claves...",
-        "retry": "Intentar de nuevo"
       },
       "options": {
         "creator": {
@@ -536,23 +528,9 @@
           "weekly": "Se restablece semanalmente"
         },
         "unlimited": "Sin límite de gasto"
-      },
-      "title": {
-        "create": "Crear clave API",
-        "edit": "Editar clave API"
-      },
-      "unsaved": {
-        "description": "Al cerrar, se descartarán tus cambios.",
-        "discard": "Descartar cambios",
-        "keepEditing": "Seguir editando",
-        "title": "¿Descartar cambios?"
       }
     },
     "list": {
-      "actions": {
-        "delete": "Eliminar clave",
-        "edit": "Editar clave"
-      },
       "details": {
         "byokUsage": "Uso BYOK",
         "byokUsageDaily": "Uso diario de BYOK",
@@ -574,16 +552,6 @@
         "usageMonthly": "Uso mensual",
         "usageWeekly": "Uso semanal",
         "workspace": "Espacio de trabajo"
-      },
-      "status": {
-        "all": "Todas",
-        "disabled": "Desactivada",
-        "enabled": "Activa",
-        "expired": "Caducada",
-        "unknown": "Desconocida"
-      },
-      "statusFilter": {
-        "label": "Estado de clave"
       },
       "values": {
         "missing": "No disponible",
@@ -753,8 +721,8 @@
     "searchLabel": "Buscar",
     "searchPlaceholder": "Buscar cuenta, nombre de clave, grupo, dominio o tipo de sitio...",
     "skipReasons": {
-      "aihubmixOneTimeKey": "Las claves de AIHubMix solo se pueden ver una vez. Crea la clave manualmente y guarda la clave completa de inmediato.",
       "noneAuth": "Sin credenciales (tipo de autenticación: none)",
+      "oneTimeKey": "Este sitio solo muestra la clave completa al crearla. Crea la clave manualmente y guárdala de inmediato.",
       "provisioningUnavailable": "Esta cuenta no permite crear claves automáticamente. Si hace falta, crea una en el sitio."
     },
     "status": {

@@ -1,6 +1,6 @@
 import {
   collectAccountRuntimeKeySecrets,
-  isAccountTokenRuntimeKey,
+  isAccountKeyResourceRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS } from "~/services/accounts/accountSiteProfile"
@@ -33,7 +33,6 @@ import {
   toSanitizedErrorSummary,
 } from "~/services/verification/aiApiVerification/utils"
 import { AuthTypeEnum, type DisplaySiteData } from "~/types"
-import { parseDelimitedList } from "~/utils/core/string"
 
 interface LoadAccountRuntimeKeyFallbackPricingParams {
   account: Pick<
@@ -129,9 +128,7 @@ const resolveFallbackRuntimeKeySecret = async (
 export async function loadAccountRuntimeKeyFallbackPricingResponse(
   params: LoadAccountRuntimeKeyFallbackPricingParams,
 ): Promise<PricingResponse> {
-  const declaredModelIds = isAccountTokenRuntimeKey(params.runtimeKey)
-    ? parseDelimitedList(params.runtimeKey.token.models)
-    : []
+  const declaredModelIds = params.runtimeKey.modelAccess.suggestedModelIds
   const readiness = resolveModelListAccountSourceReadiness(params.account)
   let resolvedRuntimeKeySecret = ""
   let resolvedRuntimeKeySecrets: string[] = []
@@ -180,13 +177,13 @@ export async function loadAccountRuntimeKeyFallbackPricingResponse(
         const modelOnlyResponse =
           buildSub2ApiRuntimePricingResponse(runtimeModels)
 
-        if (!isAccountTokenRuntimeKey(resolvedRuntimeKey)) {
+        if (!isAccountKeyResourceRuntimeKey(resolvedRuntimeKey)) {
           return modelOnlyResponse
         }
 
         return await loadSub2ApiEstimatedPricingResponse({
           account: params.account,
-          selectedToken: resolvedRuntimeKey.token,
+          selectedRef: resolvedRuntimeKey.resourceRef,
           resolvedKey: resolvedRuntimeKey.secret,
           runtimeModels,
           abortSignal: params.abortSignal,

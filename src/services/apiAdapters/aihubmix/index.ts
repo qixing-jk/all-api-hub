@@ -7,9 +7,7 @@ import { aihubmixAccountData } from "./accountData"
 import { aihubmixAccountKeyResources } from "./accountKeyResource"
 import { aihubmixAccountRefresh } from "./accountRefresh"
 import { aihubmixInviteLink } from "./inviteLink"
-import { aihubmixKeyManagement } from "./keyManagement"
 import { aihubmixModelPricing } from "./modelPricing"
-import { aihubmixTokenProvisioning } from "./tokenProvisioning"
 
 export const aihubmixCapabilities: SiteTypeCapabilities = {
   siteType: SITE_TYPES.AIHUBMIX,
@@ -18,10 +16,7 @@ export const aihubmixCapabilities: SiteTypeCapabilities = {
     data: aihubmixAccountData,
     bootstrap: aihubmixAccountBootstrap,
     completion: aihubmixAccountCompletion,
-    keyManagement: aihubmixKeyManagement,
-    keyResources: aihubmixAccountKeyResources,
     keyResourceManagement: aihubmixAccountKeyResources,
-    tokenProvisioning: aihubmixTokenProvisioning,
     refresh: aihubmixAccountRefresh,
     modelPricing: aihubmixModelPricing,
     inviteLink: aihubmixInviteLink,

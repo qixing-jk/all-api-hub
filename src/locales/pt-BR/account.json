@@ -26,7 +26,6 @@
     "disableAccount": "Desativar conta",
     "edit": "Editar",
     "enableAccount": "Habilitar conta",
-    "fetchKeyInfoFailed": "Falha ao buscar informações da chave",
     "fetchKeyListFailed": "Falha ao buscar lista de chaves: {{errorMessage}}",
     "importFromBookmarks": "Importação em lote de favoritos",
     "importFromBookmarksHint": "Varredura em lote dos favoritos do navegador para sites de contas em vez de adicioná-los um por um",

@@ -26,7 +26,6 @@
     "disableAccount": "Konto deaktivieren",
     "edit": "Bearbeiten",
     "enableAccount": "Konto aktivieren",
-    "fetchKeyInfoFailed": "Schlüsselinformationen konnten nicht abgerufen werden",
     "fetchKeyListFailed": "Schlüsselliste konnte nicht abgerufen werden: {{errorMessage}}",
     "importFromBookmarks": "Stapelimport aus Lesezeichen",
     "importFromBookmarksHint": "Durchsuchen Sie Browser-Lesezeichen stapelweise nach Kontoseiten, anstatt sie einzeln hinzuzufügen",

@@ -14,14 +14,10 @@ import {
 } from "~/services/apiService/newApiFamily/default/accountData"
 import { getTodayTimestampRange } from "~/services/apiService/newApiFamily/default/accountDataUtils"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/refresh"
-import {
-  AuthTypeEnum,
-  SiteHealthStatus,
-  type ApiToken,
-  type CheckInConfig,
-} from "~/types"
+import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
@@ -205,7 +201,7 @@ export async function refreshAccountData(
  */
 export async function resolveApiTokenKey(
   request: ApiServiceRequest,
-  token: Pick<ApiToken, "id" | "key">,
+  token: Pick<NewApiToken, "id" | "key">,
 ): Promise<string> {
   return resolveApiTokenKeyWithFetcher(
     request,

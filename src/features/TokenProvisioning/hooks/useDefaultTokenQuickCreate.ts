@@ -1,312 +1,205 @@
-import type { TFunction } from "i18next"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
-  resolveDefaultTokenQuickCreateResolution,
-  TOKEN_QUICK_CREATE_RESOLUTION_KINDS,
-  type DefaultTokenGroupSelection,
-} from "~/services/accounts/tokenQuickCreateResolution"
+  prepareDefaultAccountKeyCreation,
+  type AccountKeyCreationPlan,
+  type AccountKeyCreationResult,
+} from "~/services/accounts/accountKeyCreation"
 import {
-  createDisplayAccountApiContext,
-  requireDisplayAccountKeyManagement,
-} from "~/services/accounts/utils/apiServiceRequest"
-import {
-  isCreatedApiToken,
-  TOKEN_PROVISIONING_BLOCK_REASONS,
-  TOKEN_PROVISIONING_ERRORS,
-  type TokenProvisioningBlockReason,
-} from "~/services/apiAdapters/contracts/tokenProvisioning"
-import type { ApiToken, DisplaySiteData } from "~/types"
+  AccountKeyResourceError,
+  type AccountKeyProvisioningRequirement,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
+import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
-export const DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS = {
-  Idle: "idle",
-  Resolving: "resolving",
-  Selecting: "selecting",
-  Creating: "creating",
-} as const
-
-type QuickCreateFailure =
-  | { kind: "unsupported" }
-  | { kind: "blocked"; reason: TokenProvisioningBlockReason }
+type Selection = { requirements: readonly AccountKeyProvisioningRequirement[] }
+type Failure =
+  | { kind: "unsupported" | "input-required" | "uncertain" }
   | { kind: "failed"; message: string }
-
-/** Presents policy feedback using reasons rather than the service's event-time message. */
-function presentQuickCreateFailure(
-  failure: QuickCreateFailure | null,
-  t: TFunction,
-): string | null {
-  if (!failure) return null
-  if (failure.kind === "unsupported")
-    return t("ui:dialog.copyKey.createNotSupported")
-  if (failure.kind === "failed")
-    return t("ui:dialog.copyKey.createFailed", { error: failure.message })
-  if (
-    failure.reason === TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired
-  ) {
-    return t("messages:tokenProvisioning.createRequiresAvailableGroup")
-  }
-  if (
-    failure.reason === TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired
-  ) {
-    return t("messages:tokenProvisioning.createRequiresOneTimeSecretHandling")
-  }
-  return t("messages:tokenProvisioning.createRequiresGroup")
+type State = {
+  kind: "idle" | "resolving" | "selecting" | "creating"
+  selection: Selection | null
+  error: Failure | null
 }
+const idle = (): State => ({ kind: "idle", selection: null, error: null })
+const logger = createLogger("DefaultTokenQuickCreate")
 
-type DefaultTokenQuickCreateState =
-  | {
-      kind: typeof DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Idle
-      error: QuickCreateFailure | null
-    }
-  | { kind: typeof DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Resolving }
-  | {
-      kind: typeof DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Selecting
-      selection: DefaultTokenGroupSelection
-      error: QuickCreateFailure | null
-    }
-  | {
-      kind: typeof DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Creating
-      selection: DefaultTokenGroupSelection | null
-    }
-
-interface DefaultTokenQuickCreateViewState {
-  selection: DefaultTokenGroupSelection | null
-  isBusy: boolean
-  isCreating: boolean
-  error: string | null
-}
-
-/** Projects state-machine details into the display contract consumed by dialogs. */
-function getDefaultTokenQuickCreateViewState(
-  state: DefaultTokenQuickCreateState,
-  t: TFunction,
-): DefaultTokenQuickCreateViewState {
-  const isSelecting =
-    state.kind === DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Selecting
-  const isCreating =
-    state.kind === DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Creating
-
-  return {
-    selection: isSelecting || isCreating ? state.selection : null,
-    isBusy:
-      state.kind === DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Resolving ||
-      isCreating,
-    isCreating,
-    error:
-      state.kind === DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Idle || isSelecting
-        ? presentQuickCreateFailure(state.error, t)
-        : null,
-  }
-}
-
-interface UseDefaultTokenQuickCreateOptions {
-  isActive: boolean
-  account: DisplaySiteData | null
-  canCreate: boolean
-  onCreated: (createdToken?: ApiToken) => void | Promise<void>
-}
-
-const DEFAULT_TOKEN_QUICK_CREATE_EXECUTION_KINDS = {
-  Created: "created",
-} as const
-
-type DefaultTokenQuickCreateExecutionResult =
-  | Exclude<
-      Awaited<ReturnType<typeof resolveDefaultTokenQuickCreateResolution>>,
-      { kind: typeof TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready }
-    >
-  | {
-      kind: typeof DEFAULT_TOKEN_QUICK_CREATE_EXECUTION_KINDS.Created
-      createdToken?: ApiToken
-    }
-
-const createIdleState = (
-  error: QuickCreateFailure | null = null,
-): DefaultTokenQuickCreateState => ({
-  kind: DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Idle,
-  error,
-})
-
-const createFailureState = (
-  selection: DefaultTokenGroupSelection | null,
-  error: QuickCreateFailure,
-): DefaultTokenQuickCreateState =>
-  selection
-    ? {
-        kind: DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Selecting,
-        selection,
-        error,
-      }
-    : createIdleState(error)
-
-/** Resolves quick-create policy and creates a token only when the decision is ready. */
-async function executeDefaultTokenQuickCreate(
-  account: DisplaySiteData,
-  explicitGroup?: string,
-): Promise<DefaultTokenQuickCreateExecutionResult> {
-  const { keyManagement, request } = createDisplayAccountApiContext(account)
-  const resolution = explicitGroup
-    ? await resolveDefaultTokenQuickCreateResolution(account, { explicitGroup })
-    : await resolveDefaultTokenQuickCreateResolution(account)
-
-  if (resolution.kind !== TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready) {
-    return resolution
-  }
-
-  const created = await requireDisplayAccountKeyManagement(
-    account,
-    keyManagement,
-  ).createToken(request, resolution.tokenData)
-  if (!created) {
-    throw new Error(TOKEN_PROVISIONING_ERRORS.CreateTokenFailed)
-  }
-
-  return {
-    kind: DEFAULT_TOKEN_QUICK_CREATE_EXECUTION_KINDS.Created,
-    createdToken: isCreatedApiToken(created) ? created : undefined,
-  }
-}
-
-/** Owns default-token quick-create resolution, selection, creation, and failure state. */
+/** Retains one native plan through group selection; resets never replay uncertain writes. */
 export function useDefaultTokenQuickCreate({
   isActive,
   account,
   canCreate,
   onCreated,
-}: UseDefaultTokenQuickCreateOptions) {
-  const { t } = useTranslation("ui")
-  const [state, setState] = useState<DefaultTokenQuickCreateState>(() =>
-    createIdleState(),
+  onInputRequired,
+}: {
+  isActive: boolean
+  account: DisplaySiteData | null
+  canCreate: boolean
+  onCreated: (result: AccountKeyCreationResult) => void | Promise<void>
+  onInputRequired?: () => void
+}) {
+  const { t } = useTranslation(["ui", "keyManagement", "messages"])
+  const [state, setState] = useState<State>(idle)
+  const planRef = useRef<{
+    plan: AccountKeyCreationPlan
+    controller: AbortController
+  } | null>(null)
+  const operationRef = useRef<{
+    controller: AbortController
+    id: number
+  } | null>(null)
+  const generation = useRef(0)
+  const uncertainSources = useRef(new Set<string>())
+  const sourceKey = JSON.stringify(
+    account && [
+      account.id,
+      account.siteType,
+      account.baseUrl,
+      account.authType,
+      account.userId,
+      account.token,
+      account.cookieAuthSessionCookie,
+      account.disabled,
+    ],
   )
-  const operationIdRef = useRef(0)
-  const isOperationActiveRef = useRef(false)
+  const sourceRef = useRef({ sourceKey, isActive })
+  sourceRef.current = { sourceKey, isActive }
+  const observers = useRef({ onCreated, onInputRequired })
+  observers.current = { onCreated, onInputRequired }
 
-  const reset = useCallback(() => {
-    operationIdRef.current += 1
-    isOperationActiveRef.current = false
-    setState(createIdleState())
+  const cancelPending = useCallback(() => {
+    generation.current++
+    operationRef.current?.controller.abort()
+    planRef.current?.controller.abort()
+    operationRef.current = null
+    planRef.current = null
   }, [])
-
+  const reset = useCallback(() => {
+    cancelPending()
+    setState(idle())
+  }, [cancelPending])
   useEffect(() => {
     reset()
-  }, [account, isActive, reset])
+    return cancelPending
+  }, [sourceKey, isActive, reset, cancelPending])
 
   const execute = useCallback(
-    async (
-      explicitGroup?: string,
-      currentSelection: DefaultTokenGroupSelection | null = null,
-    ) => {
-      if (!isActive || !account) return
-
-      if (!canCreate) {
-        setState(createFailureState(currentSelection, { kind: "unsupported" }))
+    async (requirementKey?: string) => {
+      if (!isActive || !account || operationRef.current) return
+      if (!canCreate || uncertainSources.current.has(sourceKey)) {
+        setState({
+          ...idle(),
+          error: { kind: canCreate ? "uncertain" : "unsupported" },
+        })
         return
       }
-
-      if (isOperationActiveRef.current) return
-
-      const operationId = (operationIdRef.current += 1)
-      isOperationActiveRef.current = true
-      setState(
-        explicitGroup
-          ? {
-              kind: DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Creating,
-              selection: currentSelection,
-            }
-          : { kind: DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Resolving },
-      )
-
+      const id = ++generation.current
+      const controller =
+        requirementKey && planRef.current
+          ? planRef.current.controller
+          : new AbortController()
+      operationRef.current = { id, controller }
+      const isCurrent = () =>
+        generation.current === id &&
+        !controller.signal.aborted &&
+        sourceRef.current.isActive &&
+        sourceRef.current.sourceKey === sourceKey
+      let selection: Selection | null = null
+      setState({
+        ...idle(),
+        kind: requirementKey ? "creating" : "resolving",
+        selection: state.selection,
+      })
       try {
-        const result = await executeDefaultTokenQuickCreate(
-          account,
-          explicitGroup,
-        )
-
-        if (operationIdRef.current !== operationId) return
-
-        if (result.kind === TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked) {
-          setState(
-            createFailureState(currentSelection, {
-              kind: "blocked",
-              reason: result.reason,
-            }),
+        const plan = requirementKey
+          ? planRef.current?.plan
+          : await prepareDefaultAccountKeyCreation(account, {
+              signal: controller.signal,
+            })
+        if (!isCurrent() || !plan) return
+        planRef.current = { plan, controller }
+        if (plan.kind === "input-required") {
+          setState({ ...idle(), error: { kind: "input-required" } })
+          observers.current.onInputRequired?.()
+          return
+        }
+        if (plan.kind === "selection-required") {
+          selection = { requirements: plan.requirements }
+          if (!requirementKey) {
+            setState({ kind: "selecting", selection, error: null })
+            return
+          }
+          const selected = plan.requirements.find(
+            (item) => item.requirementKey === requirementKey,
           )
-          return
+          if (!selected) return
+          if (selected.provisioning.kind === "input-required") {
+            setState({ ...idle(), error: { kind: "input-required" } })
+            observers.current.onInputRequired?.()
+            return
+          }
         }
-
-        if (
-          result.kind === TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired
-        ) {
-          setState({
-            kind: DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Selecting,
-            selection: {
-              allowedGroups: result.allowedGroups,
-              suggestedGroup: result.suggestedGroup,
-              groups: result.groups,
-            },
-            error: null,
-          })
-          return
+        if (!isCurrent()) return
+        setState({ kind: "creating", selection, error: null })
+        const result = await (plan.kind === "ready"
+          ? plan.create()
+          : plan.create(requirementKey!))
+        if (!isCurrent()) return
+        setState(idle())
+        planRef.current = null
+        try {
+          await observers.current.onCreated(result)
+        } catch (error) {
+          logger.error("Created key handoff failed", error)
         }
-
-        setState(createIdleState())
-        await onCreated(result.createdToken)
       } catch (error) {
-        if (operationIdRef.current !== operationId) return
-        logger.error("Failed to create default key", {
-          error,
-          accountId: account.id,
-          baseUrl: account.baseUrl,
-          siteType: account.siteType,
+        const uncertain =
+          error instanceof AccountKeyResourceError &&
+          error.failure.code === "mutation_state_uncertain"
+        if (uncertain) uncertainSources.current.add(sourceKey)
+        if (!isCurrent()) return
+        setState({
+          kind: selection && !uncertain ? "selecting" : "idle",
+          selection: uncertain ? null : selection,
+          error: uncertain
+            ? { kind: "uncertain" }
+            : { kind: "failed", message: getErrorMessage(error) },
         })
-        setState(
-          createFailureState(currentSelection, {
-            kind: "failed",
-            message: getErrorMessage(error),
-          }),
-        )
       } finally {
-        if (operationIdRef.current === operationId) {
-          isOperationActiveRef.current = false
-        }
+        if (operationRef.current?.id === id) operationRef.current = null
       }
     },
-    [account, canCreate, isActive, onCreated],
+    [account, canCreate, isActive, sourceKey, state.selection],
   )
 
-  const start = useCallback(() => execute(), [execute])
-
-  const confirmGroup = useCallback(
-    (group: string) => {
-      const selection =
-        state.kind === DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Selecting
-          ? state.selection
-          : null
-      const normalizedGroup = group.trim()
-      if (!selection || !normalizedGroup) return Promise.resolve()
-      return execute(normalizedGroup, selection)
-    },
-    [execute, state],
-  )
-
-  const cancelSelection = useCallback(() => {
-    if (state.kind !== DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Selecting) return
-    setState(createIdleState())
-  }, [state.kind])
-
-  const view = getDefaultTokenQuickCreateViewState(state, t)
-
+  const failure = state.error
+  const error = !failure
+    ? null
+    : failure.kind === "uncertain"
+      ? t("keyManagement:native.editor.feedback.uncertain")
+      : failure.kind === "unsupported"
+        ? t("ui:dialog.copyKey.createNotSupported")
+        : failure.kind === "input-required"
+          ? t("messages:tokenProvisioning.createRequiresGroup")
+          : t("ui:dialog.copyKey.createFailed", {
+              error: "message" in failure ? failure.message : "",
+            })
   return {
     state,
-    view,
-    start,
-    confirmGroup,
-    cancelSelection,
+    view: {
+      selection: state.selection,
+      isBusy: state.kind === "resolving" || state.kind === "creating",
+      isCreating: state.kind === "creating",
+      error,
+    },
+    start: () => execute(),
+    confirmGroup: (key: string) =>
+      state.kind === "selecting" ? execute(key) : Promise.resolve(),
+    cancelSelection: () => {
+      if (state.kind === "selecting") reset()
+    },
     reset,
   }
 }
-
-const logger = createLogger("DefaultTokenQuickCreate")

@@ -132,7 +132,7 @@ vi.mock("~/features/KeyManagement/hooks/useKeyManagement", () => ({
     setSelectedAccount: vi.fn(),
     searchTerm: "",
     setSearchTerm: vi.fn(),
-    tokens: [],
+    entries: [],
     isLoading: false,
     visibleKeys: new Set(),
     isAddTokenOpen: false,
@@ -144,7 +144,7 @@ vi.mock("~/features/KeyManagement/hooks/useKeyManagement", () => ({
     allAccountsFilterAccountIds: [],
     setAllAccountsFilterAccountIds: vi.fn(),
     loadTokens: vi.fn(),
-    filteredTokens: [],
+    filteredEntries: [],
     copyKey: vi.fn(),
     toggleKeyVisibility: vi.fn(),
     retryFailedAccounts: vi.fn(),
@@ -432,7 +432,7 @@ const aihubmixSkippedProgress: AccountKeyRepairProgress = {
       siteType: "AIHubMix",
       siteUrlOrigin: "https://aihubmix.com",
       outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
-      skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
+      skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.OneTimeKey,
     }),
   ],
 }
@@ -1142,7 +1142,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     expect((await screen.findAllByText("AIHubMix"))[0]).toBeInTheDocument()
     expect(
       screen.getByText(
-        "keyManagement:repairMissingKeys.skipReasons.aihubmixOneTimeKey",
+        "keyManagement:repairMissingKeys.skipReasons.oneTimeKey",
       ),
     ).toBeInTheDocument()
     expect(

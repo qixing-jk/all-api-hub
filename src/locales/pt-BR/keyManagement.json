@@ -186,45 +186,21 @@
     "advancedSettings": "Configurações avançadas",
     "availableModels": "Modelos disponíveis",
     "basicInfo": "Informações básicas",
-    "createFailed": "Falha ao criar a chave. Tente novamente mais tarde",
     "createNotSupported": "Esta conta não permite criar chaves de API.",
-    "createSuccess": "Chave criada com sucesso",
     "createToken": "Criar chave",
-    "editModeNoChange": "Não é possível alterar a conta no modo de edição",
-    "editToken": "Editar chave de API",
     "expiration": "Data de expiração",
     "expirationPlaceholder": "Deixe em branco para nunca expirar",
     "groupLabel": "Grupo",
-    "groupRate": "Taxa:",
-    "groupRestrictedNote": "Somente os grupos disponíveis podem ser selecionados; os demais estão desativados.",
-    "ipExample": "Exemplo: 192.168.1.1,10.0.0.1 ou use * para não limitar",
     "ipLimits": "Limites de IP",
     "ipPlaceholder": "Deixe em branco para não limitar; separe vários IPs com vírgulas",
-    "loadDataFailed": "Falha ao carregar os dados. Tente novamente mais tarde",
     "modelLimits": "Limites de modelos",
-    "modelLoadFailed": "Não foi possível carregar os modelos disponíveis. Você ainda pode criar a chave; sem modelos selecionados, as restrições permanecerão desativadas. Motivo: {{reason}}",
-    "modelSelectHint_one": "{{count}} modelo selecionado",
-    "modelSelectHint_many": "{{count}} modelos selecionados",
-    "modelSelectHint_other": "{{count}} modelos selecionados",
-    "nameRequired": "O nome da chave não pode ficar em branco",
-    "noAvailableModels": "Esta conta não retornou modelos disponíveis para restrições",
     "quotaPlaceholder": "Insira o valor da cota (USD)",
-    "quotaRate": "1 USD = {{rate}} pontos de cota",
     "quotaSettings": "Configurações de cota",
-    "selectAccountError": "Selecione uma conta",
     "selectModels": "Selecionar modelos",
-    "subnetExample": "Exemplo: 192.168.1.0/24",
     "subnetLimits": "Limites de sub-rede",
     "subnetPlaceholder": "Deixe em branco para não limitar ou insira uma sub-rede ou CIDR",
     "tokenName": "Nome do token",
     "unlimitedQuota": "Cota ilimitada",
-    "updateFailed": "Falha ao atualizar a chave. Tente novamente mais tarde",
-    "updateNotSupported": "Esta conta não permite atualizar chaves de API.",
-    "updateSuccess": "Chave atualizada com sucesso",
-    "updateToken": "Atualizar chave",
-    "validExpiration": "A data de expiração deve ser posterior à data atual",
-    "validIp": "Insira endereços IP válidos e separe vários IPs com vírgulas",
-    "validQuota": "Insira um valor de cota válido",
     "warningText": "Mantenha suas chaves de API seguras e não as compartilhe",
     "warningTitle": "Observações"
   },
@@ -247,13 +223,10 @@
     "ipLimits": "Limites de IP:",
     "key": "Chave:",
     "lastUsedTime": "Último uso:",
-    "limitedQuota": "Cota limitada",
     "models": "Restrições de modelos:",
     "neverExpires": "Nunca expira",
     "note": "Observação:",
-    "quotaPolicy": "Política de cota:",
     "remainingQuota": "Cota restante:",
-    "secretUnavailable": "A chave completa não está disponível para esta chave salva.",
     "ungrouped": "Sem grupo",
     "usedQuota": "Cota usada:"
   },
@@ -362,11 +335,62 @@
     "verifyCliSupportFailed": "Falha ao abrir a verificação de compatibilidade com CLI"
   },
   "native": {
+    "actions": {
+      "delete": "Excluir chave",
+      "edit": "Editar chave"
+    },
+    "delete": {
+      "confirm": "Excluir chave",
+      "description": "Excluir permanentemente a chave de API {{name}}? Esta ação não pode ser desfeita.",
+      "feedback": {
+        "authenticationFailed": "Entre novamente ou atualize as credenciais desta conta e tente outra vez.",
+        "error": "Não foi possível excluir esta chave. Atualize e tente novamente.",
+        "permissionDenied": "Use credenciais com permissão para visualizar e gerenciar chaves e tente novamente.",
+        "unavailable": "O serviço está temporariamente indisponível. Atualize antes de tentar novamente.",
+        "uncertain": "O estado da chave pode ter mudado. Atualize as chaves antes de decidir se deve tentar novamente."
+      },
+      "refresh": "Atualizar chaves",
+      "title": "Excluir chave de API?"
+    },
     "detailsLoadFailed": "Não foi possível carregar os detalhes da chave.",
     "editor": {
+      "actions": {
+        "cancel": "Cancelar",
+        "save": "Salvar chave"
+      },
       "expiryDays": "Expira em (dias)",
+      "feedback": {
+        "authenticationFailed": "Entre novamente ou atualize as credenciais desta conta e tente outra vez.",
+        "error": "Siga os detalhes do erro e tente novamente.",
+        "permissionDenied": "Use credenciais com permissão para visualizar e gerenciar chaves e tente novamente.",
+        "title": "Não foi possível salvar a chave",
+        "unavailable": "O serviço está temporariamente indisponível. Tente novamente em instantes.",
+        "uncertain": "O serviço pode ter aplicado esta alteração. Atualize as chaves para confirmar o estado atual antes de decidir se deve tentar novamente."
+      },
+      "issues": {
+        "inconsistentValue": "Revise este valor e tente novamente.",
+        "invalidValue": "Insira um valor válido.",
+        "outOfRange": "Insira um valor dentro do intervalo permitido.",
+        "required": "Este campo é obrigatório.",
+        "unsupportedOption": "Escolha uma opção disponível."
+      },
+      "opening": {
+        "failed": "Não foi possível abrir o editor de chaves",
+        "loading": "Abrindo o editor de chaves...",
+        "retry": "Tentar novamente"
+      },
       "quotaUsd": "Cota (USD)",
-      "totalQuotaUsd": "Cota total (USD)"
+      "title": {
+        "create": "Criar chave de API",
+        "edit": "Editar chave de API"
+      },
+      "totalQuotaUsd": "Cota total (USD)",
+      "unsaved": {
+        "description": "Ao fechar, suas alterações serão descartadas.",
+        "discard": "Descartar alterações",
+        "keepEditing": "Continuar editando",
+        "title": "Descartar alterações?"
+      }
     },
     "heading": "Chaves de API",
     "missing": "Indisponível",
@@ -374,6 +398,7 @@
       "empty": "Nenhum escopo disponível",
       "error": "Não foi possível carregar os escopos",
       "errorHelp": "Verifique o acesso à conta e tente novamente.",
+      "fallback": "O escopo solicitado está indisponível. O escopo padrão está sendo exibido.",
       "heading": "Escopo",
       "label": "Selecionar um escopo",
       "loading": "Carregando escopos…",
@@ -382,10 +407,14 @@
       "retry": "Recarregar escopos"
     },
     "status": {
+      "all": "Todas",
       "disabled": "Desativada",
       "enabled": "Ativada",
       "expired": "Expirada",
       "unknown": "Desconhecida"
+    },
+    "statusFilter": {
+      "label": "Status da chave"
     }
   },
   "noAccountsSupportKeyCreation": "Nenhuma conta nesta visualização permite criar chaves de API. Selecione outra conta ou adicione uma conta compatível.",
@@ -411,32 +440,7 @@
     "warningTitle": "Esta chave só pode ser visualizada uma vez"
   },
   "openRouter": {
-    "delete": {
-      "confirm": "Excluir chave",
-      "description": "Excluir {{name}} permanentemente do OpenRouter? Não será possível recuperar a chave depois.",
-      "feedback": {
-        "authenticationFailed": "Atualize a OpenRouter Management API Key desta conta e depois atualize as chaves.",
-        "error": "Não foi possível excluir esta chave. Atualize e tente novamente.",
-        "permissionDenied": "Você não tem permissão para excluir esta chave.",
-        "unavailable": "O serviço está temporariamente indisponível. Atualize antes de tentar novamente.",
-        "uncertain": "O estado da chave pode ter mudado. Atualize as chaves antes de decidir se deve tentar novamente."
-      },
-      "refresh": "Atualizar chaves",
-      "title": "Excluir chave de API?"
-    },
     "editor": {
-      "actions": {
-        "cancel": "Cancelar",
-        "save": "Salvar chave"
-      },
-      "feedback": {
-        "authenticationFailed": "Atualize a OpenRouter Management API Key desta conta e tente novamente.",
-        "error": "Siga os detalhes do erro e tente novamente.",
-        "permissionDenied": "Você não tem permissão para gerenciar chaves neste espaço de trabalho.",
-        "title": "Não foi possível salvar a chave",
-        "unavailable": "O serviço está temporariamente indisponível. Tente novamente em instantes.",
-        "uncertain": "O serviço pode ter aplicado esta alteração. Atualize as chaves para confirmar o estado atual antes de decidir se deve tentar novamente."
-      },
       "fields": {
         "creator": {
           "editHelp": "Para alterar o criador, crie uma nova chave.",
@@ -479,18 +483,6 @@
           "label": "Espaço de trabalho",
           "placeholder": "Selecione um espaço de trabalho"
         }
-      },
-      "issues": {
-        "inconsistentValue": "Revise este valor e tente novamente.",
-        "invalidValue": "Insira um valor válido.",
-        "outOfRange": "Insira um valor dentro do intervalo permitido.",
-        "required": "Este campo é obrigatório.",
-        "unsupportedOption": "Escolha uma opção disponível."
-      },
-      "opening": {
-        "failed": "Não foi possível abrir o editor de chaves",
-        "loading": "Abrindo o editor de chaves...",
-        "retry": "Tentar novamente"
       },
       "options": {
         "creator": {
@@ -536,23 +528,9 @@
           "weekly": "Redefine semanalmente"
         },
         "unlimited": "Sem limite de gastos"
-      },
-      "title": {
-        "create": "Criar chave de API",
-        "edit": "Editar chave de API"
-      },
-      "unsaved": {
-        "description": "Ao fechar, suas alterações serão descartadas.",
-        "discard": "Descartar alterações",
-        "keepEditing": "Continuar editando",
-        "title": "Descartar alterações?"
       }
     },
     "list": {
-      "actions": {
-        "delete": "Excluir chave",
-        "edit": "Editar chave"
-      },
       "details": {
         "byokUsage": "Uso de BYOK",
         "byokUsageDaily": "Uso diário de BYOK",
@@ -574,16 +552,6 @@
         "usageMonthly": "Uso mensal",
         "usageWeekly": "Uso semanal",
         "workspace": "Espaço de trabalho"
-      },
-      "status": {
-        "all": "Todas",
-        "disabled": "Desativada",
-        "enabled": "Ativada",
-        "expired": "Expirada",
-        "unknown": "Desconhecida"
-      },
-      "statusFilter": {
-        "label": "Status da chave"
       },
       "values": {
         "missing": "Indisponível",
@@ -753,8 +721,8 @@
     "searchLabel": "Pesquisar",
     "searchPlaceholder": "Pesquisar conta, nome da chave, grupo, domínio ou tipo de site...",
     "skipReasons": {
-      "aihubmixOneTimeKey": "As chaves do AIHubMix só podem ser visualizadas uma vez. Crie a chave manualmente e salve a chave completa imediatamente.",
       "noneAuth": "Sem credenciais (tipo de autenticação: none)",
+      "oneTimeKey": "Este site só mostra a chave completa no momento da criação. Crie a chave manualmente e salve-a imediatamente.",
       "provisioningUnavailable": "Esta conta não permite criar chaves automaticamente. Se necessário, crie uma no site."
     },
     "status": {

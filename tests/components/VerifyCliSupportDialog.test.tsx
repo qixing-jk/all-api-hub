@@ -69,43 +69,20 @@ vi.mock(
       await importOriginal<
         typeof import("~/services/accounts/utils/apiServiceRequest")
       >()
+    const fixtures = await import("~~/tests/test-utils/accountKeyFixtures")
     const runtimeKeyHelpers = await vi.importActual<
       typeof import("~/services/accounts/accountRuntimeKeys")
     >("~/services/accounts/accountRuntimeKeys")
 
     return {
       ...actual,
-      createDisplayAccountApiContext: (account: any) => ({
-        keyManagement: {
-          fetchTokens: (...args: any[]) => mockFetchAccountTokens(...args),
-          createToken: vi.fn(),
-          resolveTokenKey: vi.fn(),
-          deleteToken: vi.fn(),
-          fetchUserGroups: vi.fn(),
-          fetchAvailableModels: vi.fn(),
-        },
-        request: {
-          baseUrl: account.baseUrl,
-          accountId: account.id,
-          auth: {
-            authType: account.authType,
-            userId: account.userId,
-            accessToken: account.token,
-            cookie: account.cookieAuthSessionCookie,
-          },
-        },
-      }),
-      requireDisplayAccountKeyManagement: (
-        _account: unknown,
-        keyManagement: unknown,
-      ) => keyManagement,
       fetchDisplayAccountRuntimeKeys: async (...args: any[]) => {
         const runtimeKeys = await mockFetchDisplayAccountRuntimeKeys(...args)
         if (runtimeKeys !== undefined) return runtimeKeys
         const [account] = args
         const tokens = await mockFetchAccountTokens(...args)
         return tokens.map((token: any) =>
-          runtimeKeyHelpers.buildDisplayAccountTokenRuntimeKey(account, token),
+          fixtures.buildNewApiRuntimeKey(account, token),
         )
       },
       resolveDisplayAccountRuntimeKeySecret: async (...args: any[]) => {
@@ -118,23 +95,20 @@ vi.mock(
           AccountRuntimeKey,
           unknown,
         ]
-        if (!runtimeKeyHelpers.isAccountTokenRuntimeKey(runtimeKey)) {
+        if (!runtimeKeyHelpers.isAccountKeyResourceRuntimeKey(runtimeKey)) {
           return runtimeKey
         }
 
         const resolvedToken = await mockResolveDisplayAccountTokenForSecret(
           args[0],
-          runtimeKey.token,
+          { id: runtimeKey.legacyTokenId, key: runtimeKey.secret },
           args[2],
         )
         return runtimeKeyHelpers.formatAccountRuntimeKeySecretForSite({
           ...runtimeKey,
-          token: resolvedToken,
           secret: resolvedToken.key,
         })
       },
-      resolveDisplayAccountTokenForSecret: (...args: any[]) =>
-        mockResolveDisplayAccountTokenForSecret(...args),
     }
   },
 )

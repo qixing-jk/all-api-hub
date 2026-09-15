@@ -33,7 +33,7 @@ import {
   type AccountRuntimeKeyLocator,
 } from "~/services/accounts/accountRuntimeKeys"
 import {
-  canCreateAccountApiTokens,
+  canCreateAccountKeyResources,
   supportsRecoverableAccountRuntimeKeySecrets,
 } from "~/services/accounts/keyProductCapabilities"
 import {
@@ -106,6 +106,7 @@ import {
 import { useKeyCredentialAssociations } from "./hooks/useKeyCredentialAssociations"
 import { useKeyManagement } from "./hooks/useKeyManagement"
 import { useManagedSiteKeyStatuses } from "./hooks/useManagedSiteKeyStatuses"
+import { getAccountKeyScopeMessages } from "./presentation/accountKeyResourcePresentation"
 import { KEY_MANAGEMENT_TEST_IDS } from "./testIds"
 import {
   KEY_MANAGEMENT_DISPLAY_ROW_KINDS,
@@ -119,23 +120,23 @@ const logger = createLogger("KeyManagement")
 const nativeStatusOptions = (t: TFunction) => [
   {
     value: ACCOUNT_KEY_STATUS_FILTERS.All,
-    label: t("keyManagement:openRouter.list.status.all"),
+    label: t("keyManagement:native.status.all"),
   },
   {
     value: ACCOUNT_KEY_STATUS_FILTERS.Enabled,
-    label: t("keyManagement:openRouter.list.status.enabled"),
+    label: t("keyManagement:native.status.enabled"),
   },
   {
     value: ACCOUNT_KEY_STATUS_FILTERS.Disabled,
-    label: t("keyManagement:openRouter.list.status.disabled"),
+    label: t("keyManagement:native.status.disabled"),
   },
   {
     value: ACCOUNT_KEY_STATUS_FILTERS.Expired,
-    label: t("keyManagement:openRouter.list.status.expired"),
+    label: t("keyManagement:native.status.expired"),
   },
   {
     value: ACCOUNT_KEY_STATUS_FILTERS.Unknown,
-    label: t("keyManagement:openRouter.list.status.unknown"),
+    label: t("keyManagement:native.status.unknown"),
   },
 ]
 
@@ -174,15 +175,15 @@ const getAssociationTargetStatusMessage = (
 const nativeDeleteFailureMessage = (code: string | undefined, t: TFunction) => {
   switch (code) {
     case ACCOUNT_KEY_RESOURCE_FAILURE_CODES.AuthenticationFailed:
-      return t("keyManagement:openRouter.delete.feedback.authenticationFailed")
+      return t("keyManagement:native.delete.feedback.authenticationFailed")
     case ACCOUNT_KEY_RESOURCE_FAILURE_CODES.PermissionDenied:
-      return t("keyManagement:openRouter.delete.feedback.permissionDenied")
+      return t("keyManagement:native.delete.feedback.permissionDenied")
     case ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable:
-      return t("keyManagement:openRouter.delete.feedback.unavailable")
+      return t("keyManagement:native.delete.feedback.unavailable")
     case ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain:
-      return t("keyManagement:openRouter.delete.feedback.uncertain")
+      return t("keyManagement:native.delete.feedback.uncertain")
     default:
-      return t("keyManagement:openRouter.delete.feedback.error")
+      return t("keyManagement:native.delete.feedback.error")
   }
 }
 
@@ -262,6 +263,8 @@ export default function KeyManagement(props: {
   const acknowledgedNativeRouteTransitionIdRef = useRef<string | null>(null)
   const routeAssociationId =
     routeParams?.[KEY_MANAGEMENT_ROUTE_PARAMS.AssociationId]
+  const routeAccountId = routeParams?.[KEY_MANAGEMENT_ROUTE_PARAMS.AccountId]
+  const routeWorkspace = routeParams?.[KEY_MANAGEMENT_ROUTE_PARAMS.Workspace]
   const associationNavigationActiveRef = useRef(Boolean(routeAssociationId))
   const [pendingNativeRoute, setPendingNativeRoute] = useState<{
     params: Record<string, string>
@@ -365,13 +368,20 @@ export default function KeyManagement(props: {
     routeParams,
     routeTransition,
     replaceRoute: (params, transition) => {
-      const nextParams =
-        associationNavigationActiveRef.current && routeAssociationId
-          ? {
-              ...params,
-              [KEY_MANAGEMENT_ROUTE_PARAMS.AssociationId]: routeAssociationId,
-            }
-          : params
+      const nextParams = { ...params }
+      if (params[KEY_MANAGEMENT_ROUTE_PARAMS.AccountId] === routeAccountId) {
+        for (const key of [
+          KEY_MANAGEMENT_ROUTE_PARAMS.GuidedImport,
+          KEY_MANAGEMENT_ROUTE_PARAMS.TokenId,
+        ]) {
+          const value = routeParams?.[key]
+          if (value !== undefined) nextParams[key] = value
+        }
+      }
+      if (associationNavigationActiveRef.current && routeAssociationId) {
+        nextParams[KEY_MANAGEMENT_ROUTE_PARAMS.AssociationId] =
+          routeAssociationId
+      }
       if (transition) {
         const pending = {
           params: nextParams,
@@ -455,9 +465,15 @@ export default function KeyManagement(props: {
     const workspaceScopeKey = getAssociationLocatorWorkspace(
       associationTarget.locator,
     )
-    const workspace = nativeKeys.scopes.find(
-      (scope) => scope.scopeKey === workspaceScopeKey,
-    )?.routeKey
+    // A reload temporarily clears the scope inventory. Retain this account's
+    // route until its scope can be resolved, so navigation cannot replay loading.
+    const workspace =
+      (selectedAccount === accountId
+        ? nativeKeys.scopes.find(
+            (scope) => scope.scopeKey === workspaceScopeKey,
+          )?.routeKey
+        : undefined) ??
+      (routeAccountId === accountId ? routeWorkspace : undefined)
     const nextParams = {
       [KEY_MANAGEMENT_ROUTE_PARAMS.AssociationId]: associationTarget.id,
       [KEY_MANAGEMENT_ROUTE_PARAMS.AccountId]: accountId,
@@ -475,7 +491,10 @@ export default function KeyManagement(props: {
   }, [
     associationTarget,
     nativeKeys.scopes,
+    routeAccountId,
     routeSignature,
+    routeWorkspace,
+    selectedAccount,
     setAllAccountsFilterAccountIds,
     setSearchTerm,
     setSelectedAccount,
@@ -755,7 +774,7 @@ export default function KeyManagement(props: {
   }
 
   const addTokenAvailableAccounts = useMemo(
-    () => displayData.filter(canCreateAccountApiTokens),
+    () => displayData.filter(canCreateAccountKeyResources),
     [displayData],
   )
 
@@ -773,7 +792,7 @@ export default function KeyManagement(props: {
       : singleFilteredAllAccountsAccount
 
   const canCreateTokensInCurrentScope = selectedAddTokenScopeAccount
-    ? canCreateAccountApiTokens(selectedAddTokenScopeAccount)
+    ? canCreateAccountKeyResources(selectedAddTokenScopeAccount)
     : selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
       ? addTokenAvailableAccounts.length > 0
       : false
@@ -828,7 +847,7 @@ export default function KeyManagement(props: {
 
   const addTokenPreSelectedAccountId =
     selectedAddTokenScopeAccount &&
-    canCreateAccountApiTokens(selectedAddTokenScopeAccount)
+    canCreateAccountKeyResources(selectedAddTokenScopeAccount)
       ? selectedAddTokenScopeAccount.id
       : null
 
@@ -1232,7 +1251,7 @@ export default function KeyManagement(props: {
           />
           <SearchableSelect
             data-testid={KEY_MANAGEMENT_TEST_IDS.nativeStatusFilter}
-            aria-label={t("keyManagement:openRouter.list.statusFilter.label")}
+            aria-label={t("keyManagement:native.statusFilter.label")}
             options={nativeStatusOptions(t)}
             value={nativeKeys.statusFilter}
             onChange={(value) => {
@@ -1246,7 +1265,13 @@ export default function KeyManagement(props: {
             <Alert
               variant="warning"
               compact
-              title={t("keyManagement:openRouter.workspace.fallback")}
+              title={
+                getAccountKeyScopeMessages(
+                  displayData.find((account) => account.id === selectedAccount)
+                    ?.siteType,
+                  t,
+                ).fallback
+              }
             />
           ) : null}
         </div>
@@ -1410,15 +1435,15 @@ export default function KeyManagement(props: {
         icon={nativeDeleteIsUncertain ? RefreshCw : undefined}
         isOpen={nativeKeys.deleteState.isOpen}
         onClose={nativeKeys.cancelDelete}
-        title={t("keyManagement:openRouter.delete.title")}
-        description={t("keyManagement:openRouter.delete.description", {
+        title={t("keyManagement:native.delete.title")}
+        description={t("keyManagement:native.delete.description", {
           name: nativeDeleteFacts?.displayName ?? "",
         })}
         cancelLabel={t("common:actions.cancel")}
         confirmLabel={
           nativeDeleteIsUncertain
-            ? t("keyManagement:openRouter.delete.refresh")
-            : t("keyManagement:openRouter.delete.confirm")
+            ? t("keyManagement:native.delete.refresh")
+            : t("keyManagement:native.delete.confirm")
         }
         confirmButtonTestId={KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton}
         isWorking={nativeKeys.deleteState.isExecuting}

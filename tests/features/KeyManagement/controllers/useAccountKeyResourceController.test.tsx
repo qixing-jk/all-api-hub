@@ -14,6 +14,7 @@ import { NATIVE_RESOURCE_EDITOR_LOADING_REVEALS } from "~/features/ResourceEdito
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   AccountKeyResourceError,
+  type ResourceFieldOption,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   OPENROUTER_KEY_FIELD_IDS,
@@ -110,6 +111,68 @@ describe("useAccountKeyResourceController", () => {
       complete: trackCompleteMock,
     })
   })
+
+  it.each(["single", "all"] as const)(
+    "recovers %s inventory through an explicit refresh when automatic fallback is denied",
+    async (mode) => {
+      const account = createAccount("account-example")
+      const scope = {
+        scopeKey: "workspace-example",
+        routeKey: "team",
+        displayName: "Team",
+        isDefault: true,
+      }
+      const facts = createFacts(scope.scopeKey, "key-example")
+      const open = vi.fn(async ({ request }) => {
+        if (request.protectionBypassExecution?.kind !== "user_command") {
+          throw new AccountKeyResourceError({
+            code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.AuthenticationFailed,
+          })
+        }
+        return {
+          resolveDefaultScope: vi.fn().mockResolvedValue(scope),
+          listScopes: vi.fn().mockResolvedValue([scope]),
+          openCollection: vi.fn().mockResolvedValue({
+            list: vi.fn().mockResolvedValue({ items: [facts] }),
+          }),
+        }
+      })
+      mockNativeResourceSession(open)
+      const { result } = renderHook(() =>
+        useAccountKeyResourceController({
+          accounts: [account],
+          selectedAccount:
+            mode === "single" ? account.id : KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+        }),
+      )
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false))
+      expect(result.current.rows).toEqual([])
+      expect(result.current.failures[account.id]).toBeDefined()
+      expect(open.mock.calls[0][0].request.protectionBypassExecution).toEqual({
+        version: 2,
+        kind: "automatic",
+        feature: "key_management",
+        trigger: "ui_lifecycle",
+        surface: "options",
+      })
+
+      await act(async () => {
+        await result.current.refresh()
+      })
+
+      expect(result.current.rows).toEqual([facts])
+      expect(result.current.failures).toEqual({})
+      expect(open.mock.lastCall?.[0].request.protectionBypassExecution).toEqual(
+        {
+          version: 2,
+          kind: "user_command",
+          command: "manage_api_keys",
+          surface: "options",
+        },
+      )
+    },
+  )
 
   it("tracks a native refresh with controlled insights only", async () => {
     startProductAnalyticsActionMock.mockReturnValue({
@@ -644,12 +707,19 @@ describe("useAccountKeyResourceController", () => {
       openCollection: vi.fn().mockResolvedValue(collection),
       openCreateEditor: vi.fn().mockResolvedValue(editor),
     })
-    const open = vi
-      .fn()
-      .mockResolvedValueOnce(createSession(initialCollection))
-      .mockResolvedValueOnce(createSession(staleCollection))
-      .mockResolvedValueOnce(createSession(currentCollection))
-    mockNativeResourceSession(open)
+    const open = vi.fn(async ({ request }) =>
+      createSession(
+        request.baseUrl === "https://second.example.invalid"
+          ? currentCollection
+          : editor.submit.mock.calls.length
+            ? staleCollection
+            : initialCollection,
+      ),
+    )
+    createDisplayAccountApiContextMock.mockImplementation((account) => ({
+      accountKeyResources: { open },
+      request: { baseUrl: account.baseUrl },
+    }))
     const firstAccount = {
       ...createAccount("account-example"),
       baseUrl: "https://first.example.invalid",
@@ -680,13 +750,14 @@ describe("useAccountKeyResourceController", () => {
     })
     await waitFor(() => expect(staleCollection.list).toHaveBeenCalledOnce())
     expect(result.current.createdSecret).toBe(createdSecret)
+    const opensBeforeContextChange = open.mock.calls.length
 
     rerender({ account: secondAccount })
 
     await waitFor(() =>
       expect(result.current.createdSecret).toBe(createdSecret),
     )
-    expect(open).toHaveBeenCalledTimes(2)
+    expect(open).toHaveBeenCalledTimes(opensBeforeContextChange)
     expect(result.current.openDelete(initialFacts.ref)).toBe(false)
 
     act(() => {
@@ -695,7 +766,9 @@ describe("useAccountKeyResourceController", () => {
       expect(result.current.openDelete(initialFacts.ref)).toBe(false)
     })
 
-    await waitFor(() => expect(open).toHaveBeenCalledTimes(3))
+    await waitFor(() =>
+      expect(open).toHaveBeenCalledTimes(opensBeforeContextChange + 1),
+    )
     await waitFor(() => expect(currentCollection.list).toHaveBeenCalledOnce())
     expect(initialCollection.get).not.toHaveBeenCalled()
     expect(result.current.isLoading).toBe(true)
@@ -712,7 +785,7 @@ describe("useAccountKeyResourceController", () => {
     await waitFor(() => expect(result.current.rows).toEqual([currentFacts]))
     await act(async () => staleList.resolve({ items: [staleFacts] }))
     expect(result.current.rows).toEqual([currentFacts])
-    expect(open).toHaveBeenCalledTimes(3)
+    expect(open).toHaveBeenCalledTimes(opensBeforeContextChange + 1)
   })
 
   it("aborts an obsolete workspace list and ignores its late rows", async () => {
@@ -1136,7 +1209,7 @@ describe("useAccountKeyResourceController", () => {
     )
     await user.click(
       screen.getByRole("button", {
-        name: "keyManagement:openRouter.editor.actions.save",
+        name: "keyManagement:native.editor.actions.save",
       }),
     )
 
@@ -1566,6 +1639,109 @@ describe("useAccountKeyResourceController", () => {
     expect(firstEditor.submit).not.toHaveBeenCalled()
     expect(secondEditor.submit).not.toHaveBeenCalled()
   })
+
+  it.each([
+    {
+      fieldId: "group",
+      type: "select" as const,
+      nullable: true,
+      initialValue: "vip",
+      changedValue: "team",
+      options: [{ value: "vip" }, { value: "team" }],
+      clearedValue: null,
+    },
+    {
+      fieldId: "models",
+      type: "multi-select" as const,
+      nullable: false,
+      initialValue: ["gpt-4"],
+      changedValue: ["gpt-4", "gpt-4o"],
+      options: [{ value: "gpt-4" }, { value: "gpt-4o" }],
+      clearedValue: [],
+    },
+  ])(
+    "preserves native $fieldId selections until returned options invalidate them",
+    async ({
+      fieldId,
+      type,
+      nullable,
+      initialValue,
+      changedValue,
+      options,
+      clearedValue,
+    }) => {
+      const initialOptions = deferred<readonly ResourceFieldOption[]>()
+      const refreshedOptions = deferred<readonly ResourceFieldOption[]>()
+      const loadOptions = vi
+        .fn()
+        .mockReturnValueOnce(initialOptions.promise)
+        .mockReturnValueOnce(refreshedOptions.promise)
+      const scope = {
+        scopeKey: "workspace-default-id",
+        routeKey: "team",
+        displayName: "Team",
+        isDefault: true,
+      }
+      mockNativeResourceSession(
+        vi.fn().mockResolvedValue({
+          resolveDefaultScope: vi.fn().mockResolvedValue(scope),
+          listScopes: vi.fn().mockResolvedValue([scope]),
+          openCollection: vi.fn().mockResolvedValue({
+            list: vi.fn().mockResolvedValue({ items: [] }),
+          }),
+          openCreateEditor: vi.fn().mockResolvedValue({
+            fields: [
+              {
+                fieldId,
+                type,
+                nullable,
+                options: [],
+                optionLoader: { dependsOn: [] },
+              },
+            ],
+            initialValues: { [fieldId]: initialValue },
+            validate: vi.fn().mockReturnValue({ valid: true }),
+            loadOptions,
+            submit: vi.fn(),
+          }),
+        }),
+      )
+      const { result } = renderHook(() =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example", workspace: "team" },
+        }),
+      )
+      await waitFor(() => expect(result.current.selectedScope).toEqual(scope))
+      await act(async () => result.current.openCreate())
+
+      act(() => {
+        void result.current.loadEditorOptions(
+          result.current.editor!.editorId,
+          fieldId,
+        )
+      })
+      expect(result.current.editor?.values[fieldId]).toEqual(initialValue)
+      await act(async () => initialOptions.resolve(options))
+      expect(result.current.editor?.values[fieldId]).toEqual(initialValue)
+
+      act(() =>
+        result.current.setEditorValues(result.current.editor!.editorId, {
+          [fieldId]: changedValue,
+        }),
+      )
+      act(() => {
+        void result.current.loadEditorOptions(
+          result.current.editor!.editorId,
+          fieldId,
+        )
+      })
+      expect(result.current.editor?.values[fieldId]).toEqual(changedValue)
+      await act(async () => refreshedOptions.resolve([{ value: "other" }]))
+      expect(result.current.editor?.values[fieldId]).toEqual(clearedValue)
+    },
+  )
 
   it("aborts obsolete editor option loads and ignores their late options", async () => {
     const firstOptions = deferred<any>()
@@ -4988,7 +5164,7 @@ describe("useAccountKeyResourceController", () => {
       void result.current.openCreate()
       void result.current.openCreate()
     })
-    expect(openCreateEditor).toHaveBeenCalledOnce()
+    await waitFor(() => expect(openCreateEditor).toHaveBeenCalledOnce())
     expect(result.current.editorOpening.status).toBe("loading")
 
     await act(async () =>

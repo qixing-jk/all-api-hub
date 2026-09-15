@@ -1,6 +1,7 @@
 import { UI_CONSTANTS } from "~/constants/ui"
 import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/accountKeyNames"
 import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/factory"
+import type { AccountKeyCreationIntent } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   RESOURCE_FIELD_TYPES,
   type ResourceFieldIssue,
@@ -41,15 +42,16 @@ export const toAIHubMixKeyWrite = (key: AIHubMixKey): AIHubMixKeyWrite => ({
 export function createAIHubMixKeyEditor(
   request: ApiServiceRequest,
   key?: AIHubMixKey,
+  intent?: AccountKeyCreationIntent,
 ): AccountKeyResourceEditorDefinition<AIHubMixKeyEditCommand> {
   const baseline: AIHubMixKeyWrite = key
     ? toAIHubMixKeyWrite(key)
     : {
-        name: DEFAULT_AUTO_PROVISION_KEY_NAME,
+        name: intent?.nameHint?.trim() || DEFAULT_AUTO_PROVISION_KEY_NAME,
         expired_time: -1,
         unlimited_quota: true,
         remain_quota: -1,
-        models: "",
+        models: intent?.modelContext?.modelId ?? "",
         subnet: "",
       }
   const modelIds = baseline.models

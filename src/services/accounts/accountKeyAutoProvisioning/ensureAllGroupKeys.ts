@@ -13,12 +13,12 @@ import type { SiteAccount } from "~/types"
 export async function ensureAllGroupKeysForAccount(
   account: SiteAccount,
 ): Promise<AccountKeyInventoryReconciliationResult | null> {
-  const keyResources = getSiteTypeCapabilities(account.site_type).account
-    ?.keyResources
-  if (!keyResources) return null
+  const keyResourceManagement = getSiteTypeCapabilities(account.site_type)
+    .account?.keyResourceManagement
+  if (!keyResourceManagement) return null
 
   const { request } = createAccountApiRequestFromStoredAccount(account)
-  const session = await keyResources.open({
+  const session = await keyResourceManagement.open({
     account: {
       id: account.id,
       name: account.site_name,

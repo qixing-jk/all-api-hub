@@ -13,6 +13,7 @@ import {
   type ManagedResourceWorkspace,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
+import { collectAccountKeyResourceInventory } from "~/services/apiAdapters/nativeResources/accountKeyResourceInventory"
 import {
   getManagedSiteCapabilities,
   getSiteTypeCapabilities,
@@ -245,9 +246,12 @@ async function sourceIsAbsent(
   const capability = getSiteTypeCapabilities(account.site_type).account
   if (task.source.ref) {
     const ref = task.source.ref
-    if (ref.siteType !== account.site_type || !capability?.keyResources)
+    if (
+      ref.siteType !== account.site_type ||
+      !capability?.keyResourceManagement
+    )
       return false
-    const session = await capability.keyResources.open({
+    const session = await capability.keyResourceManagement.open({
       account: { id: account.id, siteType: account.site_type },
       request,
     })
@@ -264,10 +268,17 @@ async function sourceIsAbsent(
       throw error
     }
   }
-  if (task.source.tokenId === undefined || !capability?.keyManagement)
+  if (task.source.tokenId === undefined || !capability?.keyResourceManagement)
     return false
-  return !(await capability.keyManagement.fetchTokens(request)).some(
-    (token) => token.id === task.source.tokenId,
+  const session = await capability.keyResourceManagement.open({
+    account: { id: account.id, siteType: account.site_type },
+    request,
+  })
+  const scope = await session.resolveDefaultScope()
+  const collection = await session.openCollection(scope.scopeKey)
+  // Persisted cleanup tasks can still contain numeric IDs from before native resources.
+  return !(await collectAccountKeyResourceInventory(collection)).some(
+    (resource) => resource.runtimeKey?.legacyTokenId === task.source.tokenId,
   )
 }
 

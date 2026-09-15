@@ -3,7 +3,7 @@ import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSec
 import type { AccountRuntimeKeyModelAccess } from "~/services/accounts/runtimeKeyModelAccess"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
-import type { InventorySecretAvailability } from "./keyManagement"
+import type { InventorySecretAvailability } from "./inventorySecret"
 import type {
   EditableResourceProjection,
   NativeResourceMutationResult,
@@ -51,6 +51,21 @@ export type AccountKeyScopeInventory = {
   readonly scopes: readonly AccountKeyScope[]
   readonly partialFailure?: ResourceFailure
 }
+
+/** Product intent; each adapter chooses the native fields that can satisfy it. */
+export type AccountKeyCreationIntent = {
+  readonly nameHint?: string
+  readonly preferredGroup?: string
+  readonly allowedGroups?: readonly string[]
+  readonly modelContext?: {
+    readonly modelId: string
+  }
+}
+
+export type AccountKeyDefaultCreationPolicy =
+  | "editor-defaults"
+  | "select-requirement"
+  | "requires-input"
 
 export const ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS = {
   Requirement: "requirement",
@@ -274,6 +289,7 @@ export interface AccountKeyResourceSession {
   openCreateEditor(
     scopeKey: string,
     options?: ResourceOperationOptions,
+    intent?: AccountKeyCreationIntent,
   ): Promise<AccountKeyResourceEditor>
 }
 
@@ -289,18 +305,10 @@ export type AccountKeyResourceOpenInput = {
 export interface AccountKeyResourceCapability {
   /** Declares whether an inventory item can yield a complete runtime secret. */
   readonly inventorySecretAvailability?: InventorySecretAvailability
+  /** The adapter decides whether its defaults are safe to submit without a form. */
+  readonly defaultCreation?: AccountKeyDefaultCreationPolicy
   open(
     input: AccountKeyResourceOpenInput,
     options?: ResourceOperationOptions,
   ): Promise<AccountKeyResourceSession>
-}
-
-/** Product intent; each adapter chooses the native fields that can satisfy it. */
-export type AccountKeyCreationIntent = {
-  readonly nameHint?: string
-  readonly preferredGroup?: string
-  readonly allowedGroups?: readonly string[]
-  readonly modelContext?: {
-    readonly modelId: string
-  }
 }

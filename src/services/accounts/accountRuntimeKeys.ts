@@ -3,16 +3,17 @@ import {
   type AccountSiteType,
 } from "~/constants/siteType"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
-import { formatOptionalSkPrefixSiteTokenAuthKey } from "~/services/accountTokens/apiTokenKey"
-import { projectTokenCreatedAt } from "~/services/accountTokens/tokenCreatedAt"
-import { projectLegacyTokenModelAccess } from "~/services/accountTokens/tokenModelAccess"
+import {
+  formatOptionalSkPrefixSiteTokenAuthKey,
+  formatOptionalSkPrefixSiteTokenComparableKey,
+} from "~/services/accountTokens/apiTokenKey"
 import type {
   AccountKeyResourceFacts,
   AccountKeyResourceRef,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
-import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
 
 import {
   UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS,
@@ -159,12 +160,6 @@ type AccountRuntimeKeyBase = {
   notes?: string
 }
 
-export type AccountTokenRuntimeKey = AccountRuntimeKeyBase & {
-  source: typeof ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken
-  tokenId: number
-  token: AccountToken
-}
-
 export type ServiceCredentialRuntimeKey = AccountRuntimeKeyBase & {
   source: typeof ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential
   service: AccountServiceCredential["service"]
@@ -178,7 +173,6 @@ export type AccountKeyResourceRuntimeKey = AccountRuntimeKeyBase & {
 }
 
 export type AccountRuntimeKey =
-  | AccountTokenRuntimeKey
   | AccountKeyResourceRuntimeKey
   | ServiceCredentialRuntimeKey
 
@@ -187,13 +181,6 @@ export const getAccountRuntimeKeyLocator = (
   runtimeKey: AccountRuntimeKey,
 ): AccountRuntimeKeyLocator => {
   switch (runtimeKey.source) {
-    case ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken:
-      return {
-        source: runtimeKey.source,
-        accountId: runtimeKey.accountId,
-        siteType: runtimeKey.siteType,
-        tokenId: runtimeKey.tokenId,
-      }
     case ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource:
       return { source: runtimeKey.source, ref: runtimeKey.resourceRef }
     case ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential:
@@ -206,14 +193,7 @@ export const getAccountRuntimeKeyLocator = (
   }
 }
 
-export const ACCOUNT_RUNTIME_KEY_LEGACY_TOKEN_ID = -1
-
-export const buildAccountTokenRuntimeKeyId = (
-  accountId: string,
-  tokenId: number,
-) => `${ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken}:${accountId}:${tokenId}`
-
-export const buildServiceCredentialRuntimeKeyId = (
+const buildServiceCredentialRuntimeKeyId = (
   accountId: string,
   service: AccountServiceCredential["service"],
 ) => `${ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential}:${accountId}:${service}`
@@ -260,11 +240,6 @@ export const deriveServiceCredentialRuntimeKeyFields = (
     : ACCOUNT_RUNTIME_KEY_STATUSES.Inactive,
 })
 
-export const isAccountTokenRuntimeKey = (
-  runtimeKey: AccountRuntimeKey,
-): runtimeKey is AccountTokenRuntimeKey =>
-  runtimeKey.source === ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken
-
 export const isServiceCredentialRuntimeKey = (
   runtimeKey: AccountRuntimeKey,
 ): runtimeKey is ServiceCredentialRuntimeKey =>
@@ -281,16 +256,15 @@ export const hasUsableAccountRuntimeKeySecret = (
   runtimeKey.status === ACCOUNT_RUNTIME_KEY_STATUSES.Active &&
   runtimeKey.secret.trim().length > 0
 
-export const isActiveAccountRuntimeKey = (
+const isActiveAccountRuntimeKey = (
   runtimeKey: Pick<AccountRuntimeKey, "status">,
 ) => runtimeKey.status === ACCOUNT_RUNTIME_KEY_STATUSES.Active
 
 export const isSelectableAccountRuntimeKey = (runtimeKey: AccountRuntimeKey) =>
-  isAccountTokenRuntimeKey(runtimeKey) ||
   isAccountKeyResourceRuntimeKey(runtimeKey) ||
   hasUsableAccountRuntimeKeySecret(runtimeKey)
 
-/** Apply the owner-projected model policy equally to tokens and native resources. */
+/** Apply the owner-projected model policy to every runtime credential. */
 export const isAccountRuntimeKeyCompatibleWithModel = (
   runtimeKey: AccountRuntimeKey,
   model: { id: string; enableGroups?: readonly string[] | null },
@@ -333,29 +307,13 @@ export const findDefaultSelectableAccountRuntimeKey = (
       isActiveAccountRuntimeKey(runtimeKey) &&
       isSelectableAccountRuntimeKey(runtimeKey),
   ) ??
-  runtimeKeys.find(
-    (key) =>
-      isAccountTokenRuntimeKey(key) || isAccountKeyResourceRuntimeKey(key),
-  ) ??
+  runtimeKeys.find((key) => isAccountKeyResourceRuntimeKey(key)) ??
   null
 
 export const appendOrReplaceAccountRuntimeKey = (
   runtimeKeys: AccountRuntimeKey[],
   runtimeKey: AccountRuntimeKey,
 ) => [...runtimeKeys.filter(({ id }) => id !== runtimeKey.id), runtimeKey]
-
-const accountTokenStatusToRuntimeKeyStatus = (
-  status: AccountToken["status"],
-): AccountRuntimeKeyStatus => {
-  if (status === 1) return ACCOUNT_RUNTIME_KEY_STATUSES.Active
-  if (status === 2) return ACCOUNT_RUNTIME_KEY_STATUSES.Inactive
-  return ACCOUNT_RUNTIME_KEY_STATUSES.Unknown
-}
-
-const accountRuntimeKeyStatusToLegacyTokenStatus = (
-  status: AccountRuntimeKeyStatus,
-): ApiToken["status"] =>
-  status === ACCOUNT_RUNTIME_KEY_STATUSES.Active ? 1 : 2
 
 const getAccountRuntimeKeyBase = (
   account: AccountRuntimeKeyAccount,
@@ -383,48 +341,6 @@ const ACCOUNT_RUNTIME_KEY_BASE_CAPABILITIES = {
   verify: true,
   fetchRuntimeModels: true,
 } as const
-
-export const buildAccountTokenRuntimeKey = (
-  account: AccountRuntimeKeyAccount,
-  token: AccountToken,
-): AccountTokenRuntimeKey => ({
-  ...getAccountRuntimeKeyBase(account, {
-    id: buildAccountTokenRuntimeKeyId(account.id, token.id),
-    label: token.name,
-    secret: token.key,
-    createdAt: projectTokenCreatedAt(token),
-    notes: token.note,
-    modelAccess: projectLegacyTokenModelAccess(token),
-    status: accountTokenStatusToRuntimeKeyStatus(token.status),
-    capabilities: {
-      ...ACCOUNT_RUNTIME_KEY_BASE_CAPABILITIES,
-      rotate: false,
-      updateToken: true,
-      deleteToken: true,
-    },
-  }),
-  source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
-  tokenId: token.id,
-  token,
-})
-
-export const buildDisplayAccountTokenRuntimeKey = (
-  account: AccountRuntimeKeyAccountSource,
-  token: ApiToken | AccountToken,
-): AccountTokenRuntimeKey => {
-  const runtimeKeyAccount = buildAccountRuntimeKeyAccount(account)
-  return buildAccountTokenRuntimeKey(runtimeKeyAccount, {
-    ...token,
-    accountId:
-      "accountId" in token && typeof token.accountId === "string"
-        ? token.accountId
-        : runtimeKeyAccount.id,
-    accountName:
-      "accountName" in token && typeof token.accountName === "string"
-        ? token.accountName
-        : runtimeKeyAccount.name,
-  })
-}
 
 export const buildServiceCredentialRuntimeKey = (
   account: AccountRuntimeKeyAccount,
@@ -510,7 +426,6 @@ export const buildAccountKeyResourceRuntimeKeyFromFacts = (
 export const getAccountRuntimeKeyExportId = (
   key: AccountRuntimeKey,
 ): string => {
-  if (isAccountTokenRuntimeKey(key)) return String(key.tokenId)
   if (isAccountKeyResourceRuntimeKey(key) && key.legacyTokenId !== undefined)
     return String(key.legacyTokenId)
   return key.id
@@ -526,40 +441,6 @@ function isLegacyAccountKeyResourceSite(siteType: AccountSiteType) {
     family === ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix
   )
 }
-
-export const accountRuntimeKeyToLegacyApiToken = (
-  runtimeKey: AccountRuntimeKey,
-): ApiToken => {
-  if (isAccountTokenRuntimeKey(runtimeKey)) {
-    return runtimeKey.token
-  }
-
-  return {
-    id: ACCOUNT_RUNTIME_KEY_LEGACY_TOKEN_ID,
-    user_id: 0,
-    key: runtimeKey.secret,
-    status: accountRuntimeKeyStatusToLegacyTokenStatus(runtimeKey.status),
-    name: runtimeKey.label,
-    created_time: 0,
-    accessed_time: 0,
-    expired_time: -1,
-    remain_quota: 0,
-    unlimited_quota: true,
-    used_quota: 0,
-    models: "",
-  }
-}
-
-export const accountRuntimeKeyToLegacyAccountToken = (
-  runtimeKey: AccountRuntimeKey,
-): AccountToken =>
-  isAccountTokenRuntimeKey(runtimeKey)
-    ? runtimeKey.token
-    : {
-        ...accountRuntimeKeyToLegacyApiToken(runtimeKey),
-        accountId: runtimeKey.accountId,
-        accountName: runtimeKey.accountName,
-      }
 
 /** Formats the runtime secret without changing the provider's original credential. */
 export const formatAccountRuntimeKeySecretForSite = <
@@ -585,7 +466,14 @@ export const collectAccountRuntimeKeySecrets = (
     runtimeKeys
       .flatMap((runtimeKey) => [
         runtimeKey.secret,
-        isAccountTokenRuntimeKey(runtimeKey) ? runtimeKey.token.key : undefined,
+        formatOptionalSkPrefixSiteTokenAuthKey(
+          runtimeKey.secret,
+          runtimeKey.siteType,
+        ),
+        formatOptionalSkPrefixSiteTokenComparableKey(
+          runtimeKey.secret,
+          runtimeKey.siteType,
+        ),
         isServiceCredentialRuntimeKey(runtimeKey)
           ? runtimeKey.credential.key
           : undefined,

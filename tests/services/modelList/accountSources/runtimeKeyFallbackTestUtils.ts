@@ -1,13 +1,14 @@
-import { buildAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { loadAccountRuntimeKeyFallbackPricingResponse } from "~/services/modelList/accountSources/runtimeKeyFallback"
-import type { ApiToken, DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 
 export const loadAccountRuntimeKeyFallbackPricingResponseFromToken = (params: {
   account: Parameters<
     typeof loadAccountRuntimeKeyFallbackPricingResponse
   >[0]["account"] &
     Partial<Pick<DisplaySiteData, "name" | "tagIds">>
-  token: ApiToken
+  token: NewApiToken
   abortSignal?: AbortSignal
 }) => {
   const account = {
@@ -21,7 +22,7 @@ export const loadAccountRuntimeKeyFallbackPricingResponseFromToken = (params: {
 
   return loadAccountRuntimeKeyFallbackPricingResponse({
     account: params.account,
-    runtimeKey: buildAccountTokenRuntimeKey(account, {
+    runtimeKey: buildNewApiRuntimeKey(account, {
       ...params.token,
       accountId: params.account.id,
       accountName: account.name,

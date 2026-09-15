@@ -3,19 +3,14 @@ import { useTranslation } from "react-i18next"
 
 import { Badge, Card, CardContent, IconButton } from "~/components/ui"
 import { getCopyKeyDialogRuntimeKeyItemTestId } from "~/features/AccountManagement/testIds"
-import { buildLegacyKeyResourceCardPresentation } from "~/features/KeyManagement/presentation/legacyKeyResourceCard"
 import {
   ACCOUNT_RUNTIME_KEY_STATUSES,
-  isAccountTokenRuntimeKey,
   type AccountRuntimeKey,
-  type AccountTokenRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import type { CredentialExportSource } from "~/services/integrations/credentialExport"
 import type { DisplaySiteData } from "~/types"
 
-import { QuickKeyResourceCard } from "./QuickKeyResourceCard"
-import { RuntimeKeyActionControls } from "./RuntimeKeyActionControls"
-import { RuntimeKeyDetails, RuntimeKeySecretPreview } from "./RuntimeKeyDetails"
+import { RuntimeKeyDetails } from "./RuntimeKeyDetails"
 
 interface RuntimeKeyItemProps {
   runtimeKey: AccountRuntimeKey
@@ -40,20 +35,6 @@ export function RuntimeKeyItem({
   onOpenCCSwitchDialog,
 }: RuntimeKeyItemProps) {
   const { t } = useTranslation("ui")
-
-  if (isAccountTokenRuntimeKey(runtimeKey)) {
-    return (
-      <AccountTokenRuntimeKeyItem
-        runtimeKey={runtimeKey}
-        isExpanded={isExpanded}
-        copiedRuntimeKeyId={copiedRuntimeKeyId}
-        onToggle={onToggle}
-        onCopyKey={onCopyKey}
-        account={account}
-        onOpenCCSwitchDialog={onOpenCCSwitchDialog}
-      />
-    )
-  }
 
   const isActive = runtimeKey.status === ACCOUNT_RUNTIME_KEY_STATUSES.Active
 
@@ -113,47 +94,5 @@ export function RuntimeKeyItem({
         />
       )}
     </Card>
-  )
-}
-
-/** Composes a legacy account runtime key through the shared key-resource card. */
-function AccountTokenRuntimeKeyItem({
-  runtimeKey,
-  isExpanded,
-  copiedRuntimeKeyId,
-  onToggle,
-  onCopyKey,
-  account,
-  onOpenCCSwitchDialog,
-}: Omit<RuntimeKeyItemProps, "runtimeKey"> & {
-  runtimeKey: AccountTokenRuntimeKey
-}) {
-  const { t } = useTranslation("keyManagement")
-  const presentation = buildLegacyKeyResourceCardPresentation(runtimeKey, t)
-
-  return (
-    <QuickKeyResourceCard
-      presentation={presentation}
-      secret={
-        presentation.actions.copySecret ? (
-          <RuntimeKeySecretPreview secret={runtimeKey.secret} />
-        ) : presentation.maskedLabel ? (
-          <code>{presentation.maskedLabel}</code>
-        ) : undefined
-      }
-      secretControls={
-        <RuntimeKeyActionControls
-          runtimeKey={runtimeKey}
-          actionPolicy={presentation.actions}
-          copiedRuntimeKeyId={copiedRuntimeKeyId}
-          onCopyKey={onCopyKey}
-          account={account}
-          onOpenCCSwitchDialog={onOpenCCSwitchDialog}
-        />
-      }
-      isExpanded={isExpanded}
-      onExpandedChange={() => onToggle()}
-      testId={getCopyKeyDialogRuntimeKeyItemTestId(runtimeKey.id)}
-    />
   )
 }

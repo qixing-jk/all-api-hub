@@ -1,8 +1,8 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  buildGroupDefaultTokenRequest,
-  DEFAULT_AUTO_PROVISION_TOKEN_NAME,
-} from "~/services/accounts/defaultTokenLifecycle/requests"
+  DEFAULT_AUTO_PROVISION_KEY_NAME,
+  getDefaultAccountKeyName,
+} from "~/services/accounts/accountKeyNames"
 import {
   defineAccountKeyResourceCapability,
   type AccountKeyResourcePage,
@@ -27,7 +27,7 @@ import {
   type ResourceFailure,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
+import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import type { NativeResourceMutationResult } from "~/services/apiAdapters/contracts/resourceNative"
 import {
   mergeResourceEdits,
@@ -276,12 +276,12 @@ const inspectProvisioning = async (
           ? groupByRequirementKey.get(knownGroupKeys[0])
           : undefined
       const targetDisplayName = singleKnownGroup
-        ? buildGroupDefaultTokenRequest(singleKnownGroup.displayName).name
+        ? getDefaultAccountKeyName(singleKnownGroup.displayName)
         : ""
       const renameSuggested =
         targetDisplayName !== "" &&
         currentName !== targetDisplayName &&
-        (currentName === DEFAULT_AUTO_PROVISION_TOKEN_NAME ||
+        (currentName === DEFAULT_AUTO_PROVISION_KEY_NAME ||
           AUTO_GROUP_TOKEN_NAME_PATTERN.test(currentName))
 
       return {
@@ -362,12 +362,10 @@ const renameProvisionedResource = async (
     (candidate) => candidate.requirementKey === groupKeys[0],
   )!
   const currentName = key.name?.trim() || ""
-  const targetDisplayName = buildGroupDefaultTokenRequest(
-    group.displayName,
-  ).name
+  const targetDisplayName = getDefaultAccountKeyName(group.displayName)
   if (
     currentName === targetDisplayName ||
-    (currentName !== DEFAULT_AUTO_PROVISION_TOKEN_NAME &&
+    (currentName !== DEFAULT_AUTO_PROVISION_KEY_NAME &&
       !AUTO_GROUP_TOKEN_NAME_PATTERN.test(currentName))
   ) {
     return {
@@ -433,6 +431,7 @@ const rejectProvisionWithoutFiniteQuotaInput = async (): Promise<
 export const voApiV2AccountKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.VO_API_V2,
   inventorySecretAvailability: INVENTORY_SECRET_AVAILABILITIES.Recoverable,
+  defaultCreation: "requires-input",
   openConfig: async (input) => ({
     account: input.account,
     request: input.request,
@@ -476,7 +475,17 @@ export const voApiV2AccountKeyResources = defineAccountKeyResourceCapability({
   },
   toListFacts: toFacts,
   toDetailFacts: toFacts,
-  createEditor: async (config) => createVoApiV2KeyEditor(config.request),
+  createEditor: async (config, _scope, options, _inventory, intent) =>
+    createVoApiV2KeyEditor(
+      config.request,
+      undefined,
+      intent,
+      intent
+        ? await fetchVoApiV2KeyGroupDescriptors(
+            requestWithOptions(config, options),
+          )
+        : undefined,
+    ),
   editEditor: (config, _scope, detail) =>
     createVoApiV2KeyEditor(config.request, detail),
   create: async (config, _scope, command: VoApiV2KeyEditCommand, options) => {

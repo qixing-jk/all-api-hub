@@ -176,43 +176,21 @@
     "advancedSettings": "Cài đặt nâng cao",
     "availableModels": "Mô hình khả dụng",
     "basicInfo": "Thông tin cơ bản",
-    "createFailed": "Tạo khóa thất bại, vui lòng thử lại sau",
     "createNotSupported": "Tài khoản này không hỗ trợ tạo khóa API.",
-    "createSuccess": "Tạo khóa thành công",
     "createToken": "Tạo khóa",
-    "editModeNoChange": "Không thể thay đổi tài khoản trong chế độ chỉnh sửa",
-    "editToken": "Chỉnh sửa khóa API",
     "expiration": "Thời gian hết hạn",
     "expirationPlaceholder": "Để trống nghĩa là không bao giờ hết hạn",
     "groupLabel": "Nhóm",
-    "groupRate": "Hệ số: ",
-    "groupRestrictedNote": "Chỉ có thể chọn các nhóm khả dụng; các nhóm khác đã bị vô hiệu hóa.",
-    "ipExample": "Ví dụ: 192.168.1.1,10.0.0.1 hoặc dùng * để không giới hạn",
     "ipLimits": "Giới hạn IP",
     "ipPlaceholder": "Để trống để không giới hạn, phân tách nhiều IP bằng dấu phẩy",
-    "loadDataFailed": "Tải dữ liệu thất bại, vui lòng thử lại sau",
     "modelLimits": "Giới hạn mô hình",
-    "modelLoadFailed": "Không thể tải các mô hình khả dụng. Bạn vẫn có thể tạo khóa; nếu chưa chọn mô hình, giới hạn mô hình sẽ vẫn tắt. Lý do: {{reason}}",
-    "modelSelectHint_other": "Đã chọn {{count}} mô hình",
-    "nameRequired": "Tên khóa không được để trống",
-    "noAvailableModels": "Tài khoản này không có mô hình khả dụng để đặt giới hạn",
     "quotaPlaceholder": "Vui lòng nhập số tiền hạn ngạch (USD)",
-    "quotaRate": "1 USD = {{rate}} điểm hạn ngạch",
     "quotaSettings": "Cài đặt hạn ngạch",
-    "selectAccountError": "Vui lòng chọn tài khoản",
     "selectModels": "Chọn mô hình",
-    "subnetExample": "Ví dụ: 192.168.1.0/24",
     "subnetLimits": "Giới hạn Subnet",
     "subnetPlaceholder": "Để trống để không giới hạn, nhập subnet hoặc CIDR",
     "tokenName": "Tên khóa",
     "unlimitedQuota": "Hạn ngạch không giới hạn",
-    "updateFailed": "Cập nhật khóa thất bại, vui lòng thử lại sau",
-    "updateNotSupported": "Tài khoản này không hỗ trợ cập nhật khóa API.",
-    "updateSuccess": "Cập nhật khóa thành công",
-    "updateToken": "Cập nhật khóa",
-    "validExpiration": "Thời gian hết hạn phải lớn hơn thời gian hiện tại",
-    "validIp": "Vui lòng nhập địa chỉ IP hợp lệ, phân tách nhiều IP bằng dấu phẩy",
-    "validQuota": "Vui lòng nhập số tiền hạn ngạch hợp lệ",
     "warningText": "Vui lòng bảo quản an toàn khóa API, tránh để lộ",
     "warningTitle": "Lưu ý"
   },
@@ -233,13 +211,10 @@
     "ipLimits": "Giới hạn IP:",
     "key": "Khóa:",
     "lastUsedTime": "Lần dùng gần nhất:",
-    "limitedQuota": "Hạn ngạch có giới hạn",
     "models": "Giới hạn mô hình:",
     "neverExpires": "Không bao giờ hết hạn",
     "note": "Ghi chú:",
-    "quotaPolicy": "Chính sách hạn ngạch:",
     "remainingQuota": "Hạn ngạch còn lại:",
-    "secretUnavailable": "Không có khóa đầy đủ cho khóa đã lưu này.",
     "ungrouped": "Chưa phân nhóm",
     "usedQuota": "Hạn ngạch đã dùng:"
   },
@@ -342,11 +317,62 @@
     "verifyCliSupportFailed": "Không thể mở xác minh tính tương thích CLI"
   },
   "native": {
+    "actions": {
+      "delete": "Xóa khóa",
+      "edit": "Sửa khóa"
+    },
+    "delete": {
+      "confirm": "Xóa khóa",
+      "description": "Xóa vĩnh viễn khóa API {{name}}? Không thể hoàn tác thao tác này.",
+      "feedback": {
+        "authenticationFailed": "Đăng nhập lại hoặc cập nhật thông tin xác thực của tài khoản này, rồi thử lại.",
+        "error": "Không thể xóa khóa này. Hãy làm mới rồi thử lại.",
+        "permissionDenied": "Sử dụng thông tin xác thực có quyền xem và quản lý khóa, rồi thử lại.",
+        "unavailable": "Dịch vụ tạm thời không khả dụng. Hãy làm mới trước khi thử lại.",
+        "uncertain": "Trạng thái khóa có thể đã thay đổi. Hãy làm mới khóa trước khi quyết định có thử lại hay không."
+      },
+      "refresh": "Làm mới khóa",
+      "title": "Xóa khóa API?"
+    },
     "detailsLoadFailed": "Không thể tải chi tiết khóa.",
     "editor": {
+      "actions": {
+        "cancel": "Hủy",
+        "save": "Lưu khóa"
+      },
       "expiryDays": "Hết hạn sau (ngày)",
+      "feedback": {
+        "authenticationFailed": "Đăng nhập lại hoặc cập nhật thông tin xác thực của tài khoản này, rồi thử lại.",
+        "error": "Làm theo chi tiết lỗi rồi thử lại.",
+        "permissionDenied": "Sử dụng thông tin xác thực có quyền xem và quản lý khóa, rồi thử lại.",
+        "title": "Không thể lưu khóa",
+        "unavailable": "Dịch vụ tạm thời không khả dụng. Hãy thử lại sau.",
+        "uncertain": "Dịch vụ có thể đã áp dụng thay đổi này. Hãy làm mới khóa để xác nhận trạng thái hiện tại trước khi quyết định có thử lại hay không."
+      },
+      "issues": {
+        "inconsistentValue": "Kiểm tra giá trị này rồi thử lại.",
+        "invalidValue": "Nhập giá trị hợp lệ.",
+        "outOfRange": "Nhập giá trị trong phạm vi cho phép.",
+        "required": "Trường này là bắt buộc.",
+        "unsupportedOption": "Chọn một tùy chọn có sẵn."
+      },
+      "opening": {
+        "failed": "Không thể mở trình chỉnh sửa khóa",
+        "loading": "Đang mở trình chỉnh sửa khóa...",
+        "retry": "Thử lại"
+      },
       "quotaUsd": "Hạn mức (USD)",
-      "totalQuotaUsd": "Tổng hạn mức (USD)"
+      "title": {
+        "create": "Tạo khóa API",
+        "edit": "Chỉnh sửa khóa API"
+      },
+      "totalQuotaUsd": "Tổng hạn mức (USD)",
+      "unsaved": {
+        "description": "Đóng sẽ hủy các thay đổi của bạn.",
+        "discard": "Bỏ thay đổi",
+        "keepEditing": "Tiếp tục chỉnh sửa",
+        "title": "Bỏ thay đổi?"
+      }
     },
     "heading": "Khóa API",
     "missing": "Không khả dụng",
@@ -354,6 +380,7 @@
       "empty": "Không có phạm vi khả dụng",
       "error": "Không thể tải phạm vi",
       "errorHelp": "Kiểm tra quyền truy cập tài khoản rồi thử lại.",
+      "fallback": "Phạm vi yêu cầu không khả dụng. Phạm vi mặc định đang được hiển thị.",
       "heading": "Phạm vi",
       "label": "Chọn phạm vi",
       "loading": "Đang tải phạm vi…",
@@ -362,10 +389,14 @@
       "retry": "Tải lại phạm vi"
     },
     "status": {
+      "all": "Tất cả",
       "disabled": "Đã tắt",
       "enabled": "Đang bật",
       "expired": "Đã hết hạn",
       "unknown": "Không rõ"
+    },
+    "statusFilter": {
+      "label": "Trạng thái khóa"
     }
   },
   "noAccountsSupportKeyCreation": "Không có tài khoản nào trong chế độ xem này hỗ trợ tạo khóa API. Hãy chọn tài khoản khác hoặc thêm tài khoản được hỗ trợ.",
@@ -391,32 +422,7 @@
     "warningTitle": "Khóa này chỉ có thể được xem một lần"
   },
   "openRouter": {
-    "delete": {
-      "confirm": "Xóa khóa",
-      "description": "Xóa vĩnh viễn {{name}} khỏi OpenRouter? Không thể khôi phục sau khi xóa.",
-      "feedback": {
-        "authenticationFailed": "Cập nhật OpenRouter Management API Key của tài khoản này rồi làm mới khóa.",
-        "error": "Không thể xóa khóa này. Hãy làm mới rồi thử lại.",
-        "permissionDenied": "Bạn không có quyền xóa khóa này.",
-        "unavailable": "Dịch vụ tạm thời không khả dụng. Hãy làm mới trước khi thử lại.",
-        "uncertain": "Trạng thái khóa có thể đã thay đổi. Hãy làm mới khóa trước khi quyết định có thử lại hay không."
-      },
-      "refresh": "Làm mới khóa",
-      "title": "Xóa khóa API?"
-    },
     "editor": {
-      "actions": {
-        "cancel": "Hủy",
-        "save": "Lưu khóa"
-      },
-      "feedback": {
-        "authenticationFailed": "Cập nhật OpenRouter Management API Key của tài khoản này rồi thử lại.",
-        "error": "Làm theo chi tiết lỗi rồi thử lại.",
-        "permissionDenied": "Bạn không có quyền quản lý khóa trong không gian làm việc này.",
-        "title": "Không thể lưu khóa",
-        "unavailable": "Dịch vụ tạm thời không khả dụng. Hãy thử lại sau.",
-        "uncertain": "Dịch vụ có thể đã áp dụng thay đổi này. Hãy làm mới khóa để xác nhận trạng thái hiện tại trước khi quyết định có thử lại hay không."
-      },
       "fields": {
         "creator": {
           "editHelp": "Để thay đổi người tạo, hãy tạo khóa mới.",
@@ -459,18 +465,6 @@
           "label": "Không gian làm việc",
           "placeholder": "Chọn không gian làm việc"
         }
-      },
-      "issues": {
-        "inconsistentValue": "Kiểm tra giá trị này rồi thử lại.",
-        "invalidValue": "Nhập giá trị hợp lệ.",
-        "outOfRange": "Nhập giá trị trong phạm vi cho phép.",
-        "required": "Trường này là bắt buộc.",
-        "unsupportedOption": "Chọn một tùy chọn có sẵn."
-      },
-      "opening": {
-        "failed": "Không thể mở trình chỉnh sửa khóa",
-        "loading": "Đang mở trình chỉnh sửa khóa...",
-        "retry": "Thử lại"
       },
       "options": {
         "creator": {
@@ -516,23 +510,9 @@
           "weekly": "Đặt lại hằng tuần"
         },
         "unlimited": "Không giới hạn chi tiêu"
-      },
-      "title": {
-        "create": "Tạo khóa API",
-        "edit": "Chỉnh sửa khóa API"
-      },
-      "unsaved": {
-        "description": "Đóng sẽ hủy các thay đổi của bạn.",
-        "discard": "Bỏ thay đổi",
-        "keepEditing": "Tiếp tục chỉnh sửa",
-        "title": "Bỏ thay đổi?"
       }
     },
     "list": {
-      "actions": {
-        "delete": "Xóa khóa",
-        "edit": "Sửa khóa"
-      },
       "details": {
         "byokUsage": "Sử dụng BYOK",
         "byokUsageDaily": "Sử dụng BYOK hằng ngày",
@@ -554,16 +534,6 @@
         "usageMonthly": "Sử dụng hàng tháng",
         "usageWeekly": "Sử dụng hàng tuần",
         "workspace": "Không gian làm việc"
-      },
-      "status": {
-        "all": "Tất cả",
-        "disabled": "Đã tắt",
-        "enabled": "Đang bật",
-        "expired": "Đã hết hạn",
-        "unknown": "Không rõ"
-      },
-      "statusFilter": {
-        "label": "Trạng thái khóa"
       },
       "values": {
         "missing": "Không khả dụng",
@@ -705,8 +675,8 @@
     "searchLabel": "Tìm kiếm",
     "searchPlaceholder": "Tìm tài khoản, tên khóa, nhóm, tên miền hoặc loại trang web...",
     "skipReasons": {
-      "aihubmixOneTimeKey": "Khóa AIHubMix chỉ có thể xem một lần, vui lòng tạo thủ công và lưu ngay khóa đầy đủ",
       "noneAuth": "Không có thông tin xác thực (Phương thức xác thực: Không có)",
+      "oneTimeKey": "Trang web này chỉ hiển thị khóa đầy đủ khi tạo. Hãy tạo khóa thủ công và lưu ngay.",
       "provisioningUnavailable": "Tài khoản này không hỗ trợ tự động tạo khóa. Nếu cần, hãy tạo khóa trên trang web."
     },
     "status": {

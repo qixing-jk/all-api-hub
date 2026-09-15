@@ -52,7 +52,7 @@ describe("account capability support", () => {
     }
   })
 
-  it("uses both registered capabilities for default-token automation", () => {
+  it("uses the native default-creation policy for automation", () => {
     for (const siteType of ACCOUNT_SITE_TYPES) {
       const capabilities = getSiteTypeCapabilities(siteType)
       const availability = resolveAccountUserFeatureAvailability(
@@ -61,8 +61,9 @@ describe("account capability support", () => {
         capabilities,
       )
       const implementationIsComplete = Boolean(
-        capabilities.account?.keyManagement &&
-          capabilities.account.tokenProvisioning,
+        capabilities.account?.keyResourceManagement?.defaultCreation &&
+          capabilities.account.keyResourceManagement.defaultCreation !==
+            "requires-input",
       )
 
       expect(availability.status).toBe(

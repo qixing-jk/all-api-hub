@@ -19,7 +19,7 @@ import {
 } from "~/services/apiCredentialProfiles/accountTokenImport"
 import { API_CREDENTIAL_PROFILE_CAPTURE_STATUSES } from "~/services/apiCredentialProfiles/apiCredentialProfileLinkContracts"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import type { ApiToken, DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
 import { API_CREDENTIAL_PROFILE_LINK_SOURCES } from "~/types/apiCredentialProfiles"
 import { openApiCredentialProfilesPage } from "~/utils/navigation"
 
@@ -81,7 +81,7 @@ type OneTimeSecretProfileInput = {
   baseUrl: string
   siteType?: string
   tagIds?: string[]
-  token: Pick<ApiToken, "key" | "name">
+  token: { key: string; name: string }
   apiType?: CreatedRuntimeSecret["credential"]["apiType"]
   locator?: AccountRuntimeKeyLocator
   linkedBy?: ApiCredentialProfileLinkedBy

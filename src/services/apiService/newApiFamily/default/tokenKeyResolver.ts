@@ -1,8 +1,8 @@
 import { normalizeApiTokenKeyValue } from "~/services/accountTokens/apiTokenKey"
 import { resolveApiTokenKeyWithFetcher } from "~/services/accountTokens/tokenKeyResolver"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { ApiToken } from "~/types"
 
 /**
  * Fetches a New API-family token secret through its explicit reveal endpoint.
@@ -30,7 +30,7 @@ export async function fetchTokenSecretKeyById(
 /** Resolves a usable New API-family token key through the shared cache. */
 export async function resolveApiTokenKey(
   request: ApiServiceRequest,
-  token: Pick<ApiToken, "id" | "key">,
+  token: Pick<NewApiToken, "id" | "key">,
 ): Promise<string> {
   return await resolveApiTokenKeyWithFetcher(
     request,

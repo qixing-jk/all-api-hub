@@ -374,7 +374,6 @@
         "accountNotFound": "Conta não encontrada.",
         "copiedExportConfig": "Configuração de exportação copiada para a área de transferência",
         "copyFailed": "Falha na cópia",
-        "createTokenBlockedFallback": "A criação de token foi bloqueada. Verifique a política do site e tente novamente.",
         "createTokenFailed": "Falha ao criar token.",
         "downloadedSettings": "Arquivo de configurações baixado",
         "downloadFailed": "Falha ao baixar o arquivo de configurações",

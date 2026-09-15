@@ -5,7 +5,6 @@ import {
   ClaudeCodeHubProviderTypeOptions,
 } from "~/constants/claudeCodeHub"
 import { SITE_TYPES } from "~/constants/siteType"
-import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
@@ -18,6 +17,7 @@ import {
   prepareChannelFormData,
 } from "~/services/managedSites/providers/claudeCodeHub"
 import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 
 const mockFetchManagedSiteImportModels = vi.fn()
 const mockFetchManagedSiteAvailableModels = vi.fn()
@@ -119,7 +119,7 @@ describe("Claude Code Hub managed-site provider", () => {
     await expect(
       prepareChannelFormData(
         buildManagedSiteChannelDraftSource(
-          buildDisplayAccountTokenRuntimeKey(
+          buildNewApiRuntimeKey(
             {
               id: "account-1",
               name: "Account",
@@ -147,7 +147,7 @@ describe("Claude Code Hub managed-site provider", () => {
     await expect(
       prepareChannelFormData(
         buildManagedSiteChannelDraftSource(
-          buildDisplayAccountTokenRuntimeKey(
+          buildNewApiRuntimeKey(
             {
               id: "account-1",
               name: "Account",
@@ -174,7 +174,7 @@ describe("Claude Code Hub managed-site provider", () => {
     await expect(
       prepareChannelFormData(
         buildManagedSiteChannelDraftSource(
-          buildDisplayAccountTokenRuntimeKey(
+          buildNewApiRuntimeKey(
             {
               id: "account-1",
               name: "AIHubMix",

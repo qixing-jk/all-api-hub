@@ -9,3 +9,11 @@ export function getDefaultAccountKeyName(group = ""): string {
     ? `${name} group (auto)`
     : DEFAULT_AUTO_PROVISION_KEY_NAME
 }
+
+/** Prefers the default group, falling back to the first available group name. */
+export function getPreferredAccountKeyGroup(groups: readonly string[]): string {
+  const names = groups.map((group) => group.trim()).filter(Boolean)
+  return names.includes(DEFAULT_KEY_GROUP_NAME)
+    ? DEFAULT_KEY_GROUP_NAME
+    : names[0] ?? DEFAULT_KEY_GROUP_NAME
+}

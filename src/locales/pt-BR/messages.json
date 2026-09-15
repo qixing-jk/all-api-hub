@@ -15,7 +15,6 @@
     "autoProvisionNeedsManualAction": "{{accountName}} foi salva, mas a chave padrão exige uma seleção manual ou o tratamento de um segredo de uso único. Conclua com “{{actionLabel}}” no Gerenciamento de Chaves.",
     "autoProvisionUnsupported": "{{accountName}} foi salva, mas este tipo de site não oferece criação automática de uma chave de API padrão.",
     "checkingApiKeys": "Verificando chave de API...",
-    "createTokenFailed": "Falha ao criar token de API",
     "tokenNotFound": "Falha ao criar ou encontrar um token de API"
   },
   "aihubmix": {
@@ -98,7 +97,6 @@
       "failed": "Operação falhou: {{error}}",
       "saveFailed": "Falha ao salvar: {{error}}"
     },
-    "tokenSecretUnavailable": "Esta plataforma não suporta visualizar a chave completa novamente. Copie e salve-a no momento da criação.",
     "unknown": "Erro desconhecido",
     "validation": {
       "bookmarkNameRequired": "O nome do favorito não pode estar vazio",
@@ -166,7 +164,6 @@
   "sub2api": {
     "authPersistenceFailed": "Não foi possível salvar com segurança o login atualizado do Sub2API nesta conta. Atualize ou importe a conta novamente e tente outra vez.",
     "configMissing": "Configure primeiro a URL base e a Admin API Key do Sub2API nas configurações básicas.",
-    "groupMissing": "O grupo '{{group}}' do Sub2API não está mais disponível. Atualize a lista de grupos e tente novamente.",
     "loginRequired": "Faça login no painel do Sub2API primeiro (para que a extensão possa ler auth_token/auth_user do localStorage) e tente novamente.",
     "refreshTokenInvalid": "O refresh token do Sub2API é inválido ou foi alterado/rotacionado. Reimporte a sessão pelo painel (recomendado: janela anônima/privativa) ou cole um refresh_token atualizado e tente novamente."
   },
@@ -226,10 +223,8 @@
     }
   },
   "tokenProvisioning": {
-    "createRequiresAvailableGroup": "Esta conta não possui nenhum grupo disponível para criação de chave. Verifique os grupos disponíveis da conta e tente novamente.",
     "createRequiresGroup": "A criação de chaves requer um grupo confirmado. Escolha um grupo disponível antes de continuar.",
     "createRequiresGroupSelection": "Esta conta possui múltiplos grupos disponíveis. Escolha um antes de criar a chave.",
-    "createRequiresOneTimeSecretHandling": "Este provedor exibe chaves recém-criadas apenas uma vez. Crie a chave manualmente no Gerenciamento de Chaves e salve a chave completa imediatamente.",
     "selectGroupTitle": "Escolher um grupo de chaves"
   },
   "veloera": {

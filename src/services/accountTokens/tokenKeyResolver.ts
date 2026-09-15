@@ -4,9 +4,8 @@ import {
   normalizeApiTokenKeyValue,
 } from "~/services/accountTokens/apiTokenKey"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { ApiToken } from "~/types"
 
-type TokenKeyLike = Pick<ApiToken, "id" | "key">
+type TokenKeyLike = { id: number; key: string }
 type TokenSecretKeyFetcher = (
   request: ApiServiceRequest,
   tokenId: number,

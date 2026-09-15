@@ -13,7 +13,7 @@ import {
   MODEL_LIST_SOURCE_IDENTITY_KINDS,
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
-import { InvalidTokenPayloadError } from "~/services/accounts/utils/apiServiceRequest"
+import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
@@ -91,21 +91,31 @@ vi.mock(
       await importOriginal<
         typeof import("~/services/accounts/utils/apiServiceRequest")
       >()
-    const { buildDisplayAccountTokenRuntimeKey } = await import(
+    const { buildNewApiRuntimeKey } = await import(
+      "~~/tests/test-utils/accountKeyFixtures"
+    )
+    const { buildServiceCredentialRuntimeKey } = await import(
       "~/services/accounts/accountRuntimeKeys"
     )
 
     return {
       ...actual,
-      fetchDisplayAccountTokens: (...args: unknown[]) =>
-        mockFetchDisplayAccountTokens(...args),
       fetchDisplayAccountRuntimeKeys: async (...args: unknown[]) => {
         const [account] = args as [DisplaySiteData]
         const runtimeKeys = await mockFetchDisplayAccountRuntimeKeys(account)
         return runtimeKeys.map((runtimeKey: any) =>
           runtimeKey?.source && runtimeKey?.accountId
             ? runtimeKey
-            : buildDisplayAccountTokenRuntimeKey(account, runtimeKey),
+            : account.siteType === SITE_TYPES.SHAREDCHAT
+              ? buildServiceCredentialRuntimeKey(account, {
+                  kind: "singleton_service_key",
+                  service: "codex",
+                  label: runtimeKey.name,
+                  key: runtimeKey.key,
+                  baseUrl: account.baseUrl,
+                  isAuthenticated: true,
+                })
+              : buildNewApiRuntimeKey(account, runtimeKey),
         )
       },
     }
@@ -181,12 +191,12 @@ const createMockSiteTypeCapabilities = (
     siteType?: DisplaySiteData["siteType"]
     modelPricing?: false
     modelCatalog?: false
-    keyManagement?: false
+    keyResourceManagement?: false
     serviceCredential?: false
   } = {},
 ) => {
   const shouldIncludeKeyManagement =
-    overrides.keyManagement !== false &&
+    overrides.keyResourceManagement !== false &&
     (!overrides.siteType ||
       overrides.siteType === SITE_TYPES.NEW_API ||
       overrides.siteType === SITE_TYPES.SUB2API)
@@ -212,7 +222,7 @@ const createMockSiteTypeCapabilities = (
         : {}),
       ...(shouldIncludeKeyManagement
         ? {
-            keyManagement: {},
+            keyResourceManagement: {},
           }
         : {}),
       ...(overrides.siteType === SITE_TYPES.SHAREDCHAT &&
@@ -2151,7 +2161,7 @@ describe("useModelData all-accounts loading", () => {
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.VO_API_V2,
       account: {
-        keyManagement: {},
+        keyResourceManagement: {},
       },
     } as any)
 
@@ -2354,8 +2364,9 @@ describe("useModelData all-accounts loading", () => {
         pricing: defaultPricing,
         sourceIdentity: {
           kind: "account-runtime-key",
-          id: "sub2api-all-accounts:runtime-key:account_token:sub2api-all-accounts:21",
-          runtimeKeyId: "account_token:sub2api-all-accounts:21",
+          id: "sub2api-all-accounts:runtime-key:account_key_resource:sub2api-all-accounts:sub2api:account:21",
+          runtimeKeyId:
+            "account_key_resource:sub2api-all-accounts:sub2api:account:21",
           runtimeKeyName: "Default runtime key",
         },
       },
@@ -2364,8 +2375,9 @@ describe("useModelData all-accounts loading", () => {
         pricing: vipPricing,
         sourceIdentity: {
           kind: "account-runtime-key",
-          id: "sub2api-all-accounts:runtime-key:account_token:sub2api-all-accounts:22",
-          runtimeKeyId: "account_token:sub2api-all-accounts:22",
+          id: "sub2api-all-accounts:runtime-key:account_key_resource:sub2api-all-accounts:sub2api:account:22",
+          runtimeKeyId:
+            "account_key_resource:sub2api-all-accounts:sub2api:account:22",
           runtimeKeyName: "VIP runtime key",
         },
       },
@@ -2461,9 +2473,9 @@ describe("useModelData all-accounts loading", () => {
       expect.objectContaining({
         account,
         runtimeKey: expect.objectContaining({
-          id: "account_token:sub2api-active-only:21",
+          id: "account_key_resource:sub2api-active-only:sub2api:account:21",
           label: "Active runtime key",
-          token: expect.objectContaining({ id: tokens[0].id }),
+          legacyTokenId: tokens[0].id,
         }),
         abortSignal: expect.anything(),
       }),
@@ -2476,8 +2488,9 @@ describe("useModelData all-accounts loading", () => {
         pricing,
         sourceIdentity: {
           kind: "account-runtime-key",
-          id: "sub2api-active-only:runtime-key:account_token:sub2api-active-only:21",
-          runtimeKeyId: "account_token:sub2api-active-only:21",
+          id: "sub2api-active-only:runtime-key:account_key_resource:sub2api-active-only:sub2api:account:21",
+          runtimeKeyId:
+            "account_key_resource:sub2api-active-only:sub2api:account:21",
           runtimeKeyName: "Active runtime key",
         },
       },
@@ -3526,7 +3539,7 @@ describe("useModelData all-accounts loading", () => {
     await waitFor(
       () => {
         expect(result.current.accountFallback?.selectedRuntimeKeyId).toBe(
-          "account_token:analytics-fallback-account:8",
+          "account_key_resource:analytics-fallback-account:unknown:account:8",
         )
       },
       { timeout: 3000 },
@@ -3887,9 +3900,9 @@ describe("useModelData all-accounts loading", () => {
       expect.objectContaining({
         account,
         runtimeKey: expect.objectContaining({
-          id: "account_token:sub2api-readiness-all-accounts:10",
+          id: "account_key_resource:sub2api-readiness-all-accounts:sub2api:account:10",
           label: "Runtime Key",
-          token: expect.objectContaining({ id: 10 }),
+          legacyTokenId: 10,
         }),
         abortSignal: expect.anything(),
       }),
@@ -4110,12 +4123,12 @@ describe("useModelData all-accounts loading", () => {
       expect(result.current.accountFallback?.statusScope).toBe("runtime-key")
       expect(result.current.accountFallback?.runtimeKeys).toEqual([
         expect.objectContaining({
-          id: "account_token:sub2api-runtime-fallback-account:17",
-          token: expect.objectContaining({ id: fallbackTokens[0].id }),
+          id: "account_key_resource:sub2api-runtime-fallback-account:sub2api:account:17",
+          legacyTokenId: fallbackTokens[0].id,
         }),
         expect.objectContaining({
-          id: "account_token:sub2api-runtime-fallback-account:18",
-          token: expect.objectContaining({ id: fallbackTokens[1].id }),
+          id: "account_key_resource:sub2api-runtime-fallback-account:sub2api:account:18",
+          legacyTokenId: fallbackTokens[1].id,
         }),
       ])
     })
@@ -4126,13 +4139,13 @@ describe("useModelData all-accounts loading", () => {
 
     act(() => {
       result.current.accountFallback?.setSelectedRuntimeKeyId(
-        "account_token:sub2api-runtime-fallback-account:18",
+        "account_key_resource:sub2api-runtime-fallback-account:sub2api:account:18",
       )
     })
 
     await waitFor(() => {
       expect(result.current.accountFallback?.selectedRuntimeKeyId).toBe(
-        "account_token:sub2api-runtime-fallback-account:18",
+        "account_key_resource:sub2api-runtime-fallback-account:sub2api:account:18",
       )
     })
 
@@ -4147,8 +4160,8 @@ describe("useModelData all-accounts loading", () => {
         expect.objectContaining({
           account,
           runtimeKey: expect.objectContaining({
-            id: "account_token:sub2api-runtime-fallback-account:18",
-            token: expect.objectContaining({ id: fallbackTokens[1].id }),
+            id: "account_key_resource:sub2api-runtime-fallback-account:sub2api:account:18",
+            legacyTokenId: fallbackTokens[1].id,
           }),
           abortSignal: expect.anything(),
         }),
@@ -4188,8 +4201,9 @@ describe("useModelData all-accounts loading", () => {
         }),
         sourceIdentity: {
           kind: "account-runtime-key",
-          id: "sub2api-runtime-fallback-account:runtime-key:account_token:sub2api-runtime-fallback-account:18",
-          runtimeKeyId: "account_token:sub2api-runtime-fallback-account:18",
+          id: "sub2api-runtime-fallback-account:runtime-key:account_key_resource:sub2api-runtime-fallback-account:sub2api:account:18",
+          runtimeKeyId:
+            "account_key_resource:sub2api-runtime-fallback-account:sub2api:account:18",
           runtimeKeyName: "Runtime key",
         },
       },
@@ -4251,7 +4265,7 @@ describe("useModelData all-accounts loading", () => {
     await waitFor(() => {
       expect(result.current.accountFallback?.runtimeKeys).toEqual([
         expect.objectContaining({
-          id: "account_token:sharedchat-runtime-fallback-account:-1",
+          id: "service_credential:sharedchat-runtime-fallback-account:codex",
           label: "Codex",
           secret: "sk-sharedchat-codex",
           status: "active",
@@ -4261,7 +4275,7 @@ describe("useModelData all-accounts loading", () => {
 
     expect(result.current.accountFallback?.isAvailable).toBe(true)
     expect(result.current.accountFallback?.selectedRuntimeKeyId).toBe(
-      "account_token:sharedchat-runtime-fallback-account:-1",
+      "service_credential:sharedchat-runtime-fallback-account:codex",
     )
     expect(fetchPricing).not.toHaveBeenCalled()
     expect(mockFetchDisplayAccountTokens).toHaveBeenCalledWith(account)
@@ -4367,13 +4381,13 @@ describe("useModelData all-accounts loading", () => {
     await waitFor(() => {
       expect(result.current.accountFallback?.runtimeKeys).toEqual([
         expect.objectContaining({
-          id: "account_token:sub2api-single-active-only:32",
+          id: "account_key_resource:sub2api-single-active-only:sub2api:account:32",
           label: "Active runtime key",
         }),
       ])
     })
     expect(result.current.accountFallback?.selectedRuntimeKeyId).toBe(
-      "account_token:sub2api-single-active-only:32",
+      "account_key_resource:sub2api-single-active-only:sub2api:account:32",
     )
   })
 
@@ -4467,8 +4481,8 @@ describe("useModelData all-accounts loading", () => {
           expect.objectContaining({
             account,
             runtimeKey: expect.objectContaining({
-              id: "account_token:sub2api-auto-runtime-account:19",
-              token: expect.objectContaining({ id: fallbackToken.id }),
+              id: "account_key_resource:sub2api-auto-runtime-account:sub2api:account:19",
+              legacyTokenId: fallbackToken.id,
             }),
             abortSignal: expect.anything(),
           }),
@@ -4586,8 +4600,8 @@ describe("useModelData all-accounts loading", () => {
       expect.objectContaining({
         account,
         runtimeKey: expect.objectContaining({
-          id: "account_token:sub2api-refresh-runtime-account:20",
-          token: expect.objectContaining({ id: fallbackToken.id }),
+          id: "account_key_resource:sub2api-refresh-runtime-account:sub2api:account:20",
+          legacyTokenId: fallbackToken.id,
         }),
         abortSignal: expect.anything(),
       }),
@@ -4895,7 +4909,7 @@ describe("useModelData all-accounts loading", () => {
 
     act(() => {
       result.current.accountFallback?.setSelectedRuntimeKeyId(
-        "account_token:fallback-account:2",
+        "account_key_resource:fallback-account:unknown:account:2",
       )
     })
     await act(async () => {
@@ -4909,8 +4923,8 @@ describe("useModelData all-accounts loading", () => {
         expect.objectContaining({
           account,
           runtimeKey: expect.objectContaining({
-            id: "account_token:fallback-account:2",
-            token: expect.objectContaining({ id: fallbackTokens[1].id }),
+            id: "account_key_resource:fallback-account:unknown:account:2",
+            legacyTokenId: fallbackTokens[1].id,
           }),
           abortSignal: expect.anything(),
         }),
@@ -5008,7 +5022,7 @@ describe("useModelData all-accounts loading", () => {
     )
     await waitFor(() => {
       expect(result.current.accountFallback?.selectedRuntimeKeyId).toBe(
-        "account_token:fallback-reset-account:7",
+        "account_key_resource:fallback-reset-account:unknown:account:7",
       )
     })
 
@@ -5212,12 +5226,7 @@ describe("useModelData all-accounts loading", () => {
       createMockSiteTypeCapabilities(fetchPricing),
     )
     mockFetchDisplayAccountTokens.mockRejectedValueOnce(
-      new InvalidTokenPayloadError({
-        accountId: "invalid-token-account",
-        baseUrl: "https://invalid-token.example.com",
-        siteType: SITE_TYPES.UNKNOWN,
-        responseType: "object",
-      }),
+      new AccountKeyResourceError({ code: "unexpected" }),
     )
 
     const account = createDisplayAccount({
@@ -5325,7 +5334,7 @@ describe("useModelData all-accounts loading", () => {
     await waitFor(
       () => {
         expect(result.current.accountFallback?.selectedRuntimeKeyId).toBe(
-          "account_token:catalog-error-account:5",
+          "account_key_resource:catalog-error-account:unknown:account:5",
         )
       },
       { timeout: 3000 },
@@ -5362,7 +5371,7 @@ describe("useModelData all-accounts loading", () => {
         testI18n.t("modelList:status.fallback.loadModelsFailedFallback"),
       )
       expect(result.current.accountFallback?.selectedRuntimeKeyId).toBe(
-        "account_token:catalog-error-account:5",
+        "account_key_resource:catalog-error-account:unknown:account:5",
       )
       expect(
         mockLoadAccountRuntimeKeyFallbackPricingResponse,
@@ -5435,7 +5444,7 @@ describe("useModelData all-accounts loading", () => {
     await waitFor(
       () => {
         expect(result.current.accountFallback?.selectedRuntimeKeyId).toBe(
-          "account_token:catalog-auth-error-account:6",
+          "account_key_resource:catalog-auth-error-account:unknown:account:6",
         )
       },
       { timeout: 3000 },

@@ -8,6 +8,10 @@ import { completeAutoDetectedAccount } from "~/services/accounts/autoDetectCompl
 import { getAccountKeyProductCapabilities } from "~/services/accounts/keyProductCapabilities"
 import { normalizeApiYiModelPricingResponse } from "~/services/apiAdapters/newApi/apiyiModelPricing"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import {
+  fetchAccountAvailableModels,
+  fetchUserGroups,
+} from "~/services/apiService/newApiFamily/variants/apiyi"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { PRICING_PURPOSES } from "~/services/modelPricing/pricingConstants"
 import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
@@ -333,8 +337,7 @@ describe("APIyi account capabilities", () => {
       }),
     ).toMatchObject({
       runtimeKeys: { list: true, resolveSecret: true },
-      apiTokens: { create: true, update: true, delete: true },
-      tokenMetadata: { fetchAvailableModels: true, fetchUserGroups: true },
+      resourceKeys: { list: true, create: true, update: true, delete: true },
       defaultTokenAutomation: { run: true },
     })
   })
@@ -355,9 +358,7 @@ describe("APIyi account capabilities", () => {
     )
 
     await expect(
-      getSiteTypeCapabilities(
-        SITE_TYPES.APIYI,
-      ).account!.keyManagement!.fetchAvailableModels({
+      fetchAccountAvailableModels({
         baseUrl,
         auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
       }),
@@ -404,9 +405,7 @@ describe("APIyi account capabilities", () => {
       }),
     )
 
-    const groups = await getSiteTypeCapabilities(
-      SITE_TYPES.APIYI,
-    ).account!.keyManagement!.userGroups!.fetch({
+    const groups = await fetchUserGroups({
       baseUrl,
       auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
     })
@@ -438,9 +437,7 @@ describe("APIyi account capabilities", () => {
       )
 
       await expect(
-        getSiteTypeCapabilities(
-          SITE_TYPES.APIYI,
-        ).account!.keyManagement!.userGroups!.fetch({
+        fetchUserGroups({
           baseUrl,
           auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
         }),
@@ -461,9 +458,7 @@ describe("APIyi account capabilities", () => {
       )
 
       await expect(
-        getSiteTypeCapabilities(
-          SITE_TYPES.APIYI,
-        ).account!.keyManagement!.userGroups!.fetch({
+        fetchUserGroups({
           baseUrl,
           auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
         }),

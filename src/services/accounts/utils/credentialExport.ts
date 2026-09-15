@@ -1,17 +1,13 @@
-import {
-  buildAccountTokenRuntimeKeyId,
-  type AccountRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+import { type AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
   formatOptionalSkPrefixSiteTokenAuthKey,
   hasUsableApiTokenKey,
 } from "~/services/accountTokens/apiTokenKey"
 import type { CredentialExportSource } from "~/services/integrations/credentialExport"
 import { hashProviderCatalogValue } from "~/services/integrations/providerCatalogExport"
-import type { ApiToken, DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
 
 import { resolveDisplayAccountRuntimeKeySecret } from "./apiServiceRequest"
-import { resolveExportTokenForSecret } from "./exportTokenSecret"
 
 const getCredentialCacheKey = (
   account: DisplaySiteData,
@@ -34,31 +30,6 @@ const getCredentialCacheKey = (
       preferCurrentSecret,
     ]),
   )
-
-/** Adapt an existing legacy inventory item without exposing it to exporters. */
-export function createAccountTokenExportSource(
-  account: DisplaySiteData,
-  token: ApiToken,
-): CredentialExportSource {
-  const id = buildAccountTokenRuntimeKeyId(account.id, token.id)
-  return {
-    id,
-    providerId: account.id,
-    providerName: account.name,
-    credentialName: token.name,
-    baseUrl: account.baseUrl,
-    notes: token.note,
-    cacheKey: getCredentialCacheKey(
-      account,
-      id,
-      account.baseUrl,
-      token.key,
-      true,
-    ),
-    resolveApiKey: async () =>
-      (await resolveExportTokenForSecret(account, token)).key,
-  }
-}
 
 /** Keep runtime-key identity and source-specific secret recovery in accounts. */
 export function createAccountRuntimeKeyExportSource(

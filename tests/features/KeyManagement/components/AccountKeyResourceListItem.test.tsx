@@ -98,12 +98,12 @@ describe("AccountKeyResourceListItem", () => {
     )
     expect(
       screen.getByRole("button", {
-        name: "keyManagement:openRouter.list.actions.edit",
+        name: "keyManagement:native.actions.edit",
       }),
     ).toBeVisible()
     expect(
       screen.getByRole("button", {
-        name: "keyManagement:openRouter.list.actions.delete",
+        name: "keyManagement:native.actions.delete",
       }),
     ).toBeVisible()
     expect(
@@ -130,12 +130,12 @@ describe("AccountKeyResourceListItem", () => {
     )
     await user.click(
       screen.getByRole("button", {
-        name: "keyManagement:openRouter.list.actions.edit",
+        name: "keyManagement:native.actions.edit",
       }),
     )
     await user.click(
       screen.getByRole("button", {
-        name: "keyManagement:openRouter.list.actions.delete",
+        name: "keyManagement:native.actions.delete",
       }),
     )
     expect(edit).toHaveBeenCalledWith(row.facts.ref)
@@ -348,10 +348,10 @@ describe("AccountKeyResourceListItem", () => {
     )
 
     const editButton = screen.getByRole("button", {
-      name: "keyManagement:openRouter.list.actions.edit",
+      name: "keyManagement:native.actions.edit",
     })
     const deleteButton = screen.getByRole("button", {
-      name: "keyManagement:openRouter.list.actions.delete",
+      name: "keyManagement:native.actions.delete",
     })
     expect(editButton).toBeEnabled()
     expect(deleteButton).toBeEnabled()
@@ -381,12 +381,12 @@ describe("AccountKeyResourceListItem", () => {
 
     expect(
       screen.queryByRole("button", {
-        name: "keyManagement:openRouter.list.actions.edit",
+        name: "keyManagement:native.actions.edit",
       }),
     ).toBeNull()
     expect(
       screen.queryByRole("button", {
-        name: "keyManagement:openRouter.list.actions.delete",
+        name: "keyManagement:native.actions.delete",
       }),
     ).toBeNull()
   })

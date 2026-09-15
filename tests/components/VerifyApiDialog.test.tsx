@@ -51,13 +51,9 @@ const {
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: () => ({
     account: {
-      keyManagement: {
-        fetchTokens: (...args: any[]) => mockFetchAccountTokens(...args),
-        createToken: vi.fn(),
-        resolveTokenKey: (...args: any[]) => mockResolveTokenKey(...args),
-        deleteToken: vi.fn(),
-        fetchUserGroups: vi.fn(),
-        fetchAvailableModels: vi.fn(),
+      keyResourceManagement: {
+        inventorySecretAvailability: "recoverable",
+        open: vi.fn(),
       },
     },
   }),
@@ -70,6 +66,7 @@ vi.mock(
       await importOriginal<
         typeof import("~/services/accounts/utils/apiServiceRequest")
       >()
+    const fixtures = await import("~~/tests/test-utils/accountKeyFixtures")
     const runtimeKeyHelpers = await vi.importActual<
       typeof import("~/services/accounts/accountRuntimeKeys")
     >("~/services/accounts/accountRuntimeKeys")
@@ -80,7 +77,7 @@ vi.mock(
 
       const tokens = await mockFetchAccountTokens(account)
       return tokens.map((token: any) =>
-        runtimeKeyHelpers.buildDisplayAccountTokenRuntimeKey(account, token),
+        fixtures.buildNewApiRuntimeKey(account, token),
       )
     }
 
@@ -98,42 +95,22 @@ vi.mock(
           AccountRuntimeKey,
           { abortSignal?: AbortSignal } | undefined,
         ]
-        if (runtimeKeyHelpers.isAccountTokenRuntimeKey(runtimeKey)) {
+        if (runtimeKeyHelpers.isAccountKeyResourceRuntimeKey(runtimeKey)) {
           const resolvedKey = await mockResolveTokenKey({
             request: {
               baseUrl: account.baseUrl,
               accountId: account.id,
               abortSignal: options?.abortSignal,
             },
-            token: runtimeKey.token,
+            token: { id: runtimeKey.legacyTokenId, key: runtimeKey.secret },
           })
           return runtimeKeyHelpers.formatAccountRuntimeKeySecretForSite({
             ...runtimeKey,
-            token: { ...runtimeKey.token, key: resolvedKey },
             secret: resolvedKey,
           })
         }
 
         return runtimeKey
-      },
-      resolveDisplayAccountTokenForSecret: async (...args: any[]) => {
-        const [account, token, options] = args
-        const resolvedKey = await mockResolveTokenKey({
-          request: {
-            baseUrl: account.baseUrl,
-            accountId: account.id,
-            abortSignal: options?.abortSignal,
-          },
-          token,
-        })
-        return runtimeKeyHelpers.accountRuntimeKeyToLegacyApiToken(
-          runtimeKeyHelpers.formatAccountRuntimeKeySecretForSite(
-            runtimeKeyHelpers.buildAccountTokenRuntimeKey(
-              runtimeKeyHelpers.buildAccountRuntimeKeyAccount(account),
-              { ...token, key: resolvedKey },
-            ),
-          ),
-        )
       },
     }
   },

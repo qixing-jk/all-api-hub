@@ -217,24 +217,11 @@ vi.mock(
         typeof import("~/services/accounts/utils/apiServiceRequest")
       >()
     const runtimeKeyHelpers = await import(
-      "~/services/accounts/accountRuntimeKeys"
+      "~~/tests/test-utils/accountKeyFixtures"
     )
 
     return {
       ...actual,
-      fetchDisplayAccountTokens: async (...args: unknown[]) => {
-        const result = await fetchAccountTokensMock(...args)
-        if (Array.isArray(result)) {
-          return result
-        }
-
-        throw new actual.InvalidTokenPayloadError({
-          accountId: "test-account",
-          baseUrl: "https://example.com",
-          siteType: "test-site",
-          responseType: typeof result,
-        })
-      },
       fetchDisplayAccountRuntimeKeys: async (...args: unknown[]) => {
         const result = await fetchAccountTokensMock(...args)
         if (Array.isArray(result)) {
@@ -242,29 +229,16 @@ vi.mock(
           return result.map((token) =>
             "source" in Object(token)
               ? token
-              : runtimeKeyHelpers.buildDisplayAccountTokenRuntimeKey(
-                  account,
-                  token as any,
-                ),
+              : runtimeKeyHelpers.buildNewApiRuntimeKey(account, token as any),
           )
         }
 
-        throw new actual.InvalidTokenPayloadError({
-          accountId: "test-account",
-          baseUrl: "https://example.com",
-          siteType: "test-site",
-          responseType: typeof result,
-        })
+        throw new Error("Native inventory unavailable")
       },
       fetchDisplayAccountInviteLink: (...args: unknown[]) =>
         fetchDisplayAccountInviteLinkMock(...args),
       canFetchDisplayAccountInviteLink: (...args: unknown[]) =>
         canFetchDisplayAccountInviteLinkMock(...args),
-      resolveDisplayAccountTokenForSecret: async () => {
-        throw new Error(
-          "resolveDisplayAccountTokenForSecret should not be used by account row actions",
-        )
-      },
       resolveDisplayAccountRuntimeKeySecret: async (
         account: unknown,
         runtimeKey: { secret: string },

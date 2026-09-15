@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Alert, Button } from "~/components/ui"
+import { Alert, Button, FormField, SearchableSelect } from "~/components/ui"
 import {
   Dialog,
   DialogContent,
@@ -10,15 +10,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog"
-import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
-
-import { TokenGroupSelectionField } from "./TokenGroupSelectionField"
+import type { AccountKeyProvisioningRequirement } from "~/services/apiAdapters/contracts/accountKeyResource"
 
 interface DefaultTokenGroupSelectionDialogProps {
   isOpen: boolean
-  allowedGroups: readonly string[]
-  groups: Record<string, UserGroupInfo>
-  suggestedGroup: string
+  requirements: readonly AccountKeyProvisioningRequirement[]
   isCreating: boolean
   error: string | null
   onCancel: () => void
@@ -28,9 +24,7 @@ interface DefaultTokenGroupSelectionDialogProps {
 /** Confirms the group required by default-token quick creation without loading the full token editor. */
 export function DefaultTokenGroupSelectionDialog({
   isOpen,
-  allowedGroups,
-  groups,
-  suggestedGroup,
+  requirements,
   isCreating,
   error,
   onCancel,
@@ -39,6 +33,7 @@ export function DefaultTokenGroupSelectionDialog({
   const { t } = useTranslation(["messages", "keyManagement", "common"])
   const groupFieldId = useId()
   const [selectedGroup, setSelectedGroup] = useState("")
+  const suggestedGroup = requirements[0]?.requirementKey ?? ""
 
   useEffect(() => {
     if (!isOpen) return
@@ -69,15 +64,22 @@ export function DefaultTokenGroupSelectionDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <TokenGroupSelectionField
-          id={groupFieldId}
-          group={selectedGroup}
-          onChange={setSelectedGroup}
-          groups={groups}
-          allowedGroups={allowedGroups}
+        <FormField
+          label={t("keyManagement:dialog.groupLabel")}
+          htmlFor={groupFieldId}
           required
-          disabled={isCreating}
-        />
+        >
+          <SearchableSelect
+            id={groupFieldId}
+            value={selectedGroup}
+            onChange={setSelectedGroup}
+            options={requirements.map((item) => ({
+              value: item.requirementKey,
+              label: item.displayName,
+            }))}
+            disabled={isCreating}
+          />
+        </FormField>
         {error ? (
           <Alert compact variant="destructive" description={error} />
         ) : null}

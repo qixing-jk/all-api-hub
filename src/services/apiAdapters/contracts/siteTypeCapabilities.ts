@@ -8,7 +8,6 @@ import type { AccountKeyResourceCapability } from "./accountKeyResource"
 import type { AccountPersistenceCapability } from "./accountPersistence"
 import type { AccountRefreshCapability } from "./accountRefresh"
 import type { InviteLinkCapability } from "./inviteLink"
-import type { KeyManagementCapability } from "./keyManagement"
 import type { ManagedSiteCapabilities } from "./managedSiteCapabilities"
 import type { ModelCatalogCapability } from "./modelCatalog"
 import type { ModelPricingCapability } from "./modelPricing"
@@ -18,7 +17,6 @@ import type { ServiceCredentialCapability } from "./serviceCredential"
 import type { SiteAnnouncementsCapability } from "./siteAnnouncements"
 import type { SiteNoticeCapability } from "./siteNotice"
 import type { SiteStructuredAnnouncementsCapability } from "./siteStructuredAnnouncements"
-import type { TokenProvisioningCapability } from "./tokenProvisioning"
 
 export type SiteType = AccountSiteType | ManagedSiteType
 
@@ -41,17 +39,9 @@ export type SiteTypeCapabilities = {
     bootstrap?: AccountBootstrapCapability
     completion?: AccountCompletionCapability
     inviteLink?: InviteLinkCapability
-    keyManagement?: KeyManagementCapability
     /** Native resource surface wired into the ordinary Key Management UI. */
     keyResourceManagement?: AccountKeyResourceCapability
-    /**
-     * Legacy orchestration/native-workflow capability kept separate while some
-     * providers must not opt into the ordinary UI. Remove after every consumer
-     * and provider has migrated to `keyResourceManagement`.
-     */
-    keyResources?: AccountKeyResourceCapability
     serviceCredential?: ServiceCredentialCapability
-    tokenProvisioning?: TokenProvisioningCapability
     refresh?: AccountRefreshCapability
     redemption?: RedemptionCapability
   }

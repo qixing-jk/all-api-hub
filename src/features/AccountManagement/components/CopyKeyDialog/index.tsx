@@ -10,9 +10,10 @@ import { DefaultTokenGroupSelectionDialog } from "~/features/TokenProvisioning/c
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import { useDefaultTokenQuickCreate } from "~/features/TokenProvisioning/hooks/useDefaultTokenQuickCreate"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
+import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
 import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keyProductCapabilities"
 import type { CredentialExportSource } from "~/services/integrations/credentialExport"
-import type { ApiToken, DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { openKeysPage } from "~/utils/navigation"
 
@@ -62,6 +63,7 @@ export default function CopyKeyDialog({
     account,
     canCreate: canCreateDefaultKey,
     onCreated: refreshRuntimeKeysAfterCreate,
+    onInputRequired: () => setIsAddTokenDialogOpen(true),
   })
   const {
     selection: defaultTokenGroupSelection,
@@ -89,7 +91,7 @@ export default function CopyKeyDialog({
   const handleCloseAddTokenDialog = () => {
     setIsAddTokenDialogOpen(false)
   }
-  const handleAddTokenSuccess = (createdToken?: ApiToken) => {
+  const handleAddTokenSuccess = (createdToken: AccountKeyCreationResult) => {
     return refreshRuntimeKeysAfterCreate(createdToken)
   }
 
@@ -194,9 +196,7 @@ export default function CopyKeyDialog({
       ) : null}
       <DefaultTokenGroupSelectionDialog
         isOpen={Boolean(defaultTokenGroupSelection)}
-        allowedGroups={defaultTokenGroupSelection?.allowedGroups ?? []}
-        groups={defaultTokenGroupSelection?.groups ?? {}}
-        suggestedGroup={defaultTokenGroupSelection?.suggestedGroup ?? ""}
+        requirements={defaultTokenGroupSelection?.requirements ?? []}
         isCreating={isDefaultTokenQuickCreating}
         error={defaultTokenGroupSelection ? defaultTokenQuickCreateError : null}
         onCancel={defaultTokenQuickCreate.cancelSelection}

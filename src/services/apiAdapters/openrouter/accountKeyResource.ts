@@ -20,7 +20,7 @@ import {
   type ResourceOperationOptions,
   type ResourceValidationResult,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
+import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import { RESOURCE_FIELD_TYPES } from "~/services/apiAdapters/contracts/resourceNative"
 import type { NativeResourceMutationResult } from "~/services/apiAdapters/nativeResources/factory"
 import {

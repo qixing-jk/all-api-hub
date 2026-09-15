@@ -3,41 +3,31 @@ import {
   ACCOUNT_RUNTIME_KEY_STATUSES,
   buildAccountKeyResourceRuntimeKeyFromFacts,
   buildAccountRuntimeKeyAccount,
-  buildDisplayAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
   deriveServiceCredentialRuntimeKeyFields,
   formatAccountRuntimeKeySecretForSite,
   getAccountRuntimeKeyLocator,
   isAccountKeyResourceRuntimeKey,
-  isAccountTokenRuntimeKey,
   isServiceCredentialRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { shouldDecorateAccountApiRequestWithAuthSession } from "~/services/accounts/accountSiteProfile"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
-import {
-  canCreateAccountApiTokens,
-  canListAccountRuntimeKeys,
-} from "~/services/accounts/keyProductCapabilities"
 import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
-import {
-  formatOptionalSkPrefixSiteToken,
-  hasUsableApiTokenKey,
-} from "~/services/accountTokens/apiTokenKey"
+import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
   ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
+  AccountKeyResourceError,
   type AccountKeyResourceCapability,
   type AccountRuntimeKeyResolution,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
-import type { InviteLinkCapability } from "~/services/apiAdapters/contracts/inviteLink"
 import {
   getInventorySecretAvailability,
   INVENTORY_SECRET_AVAILABILITIES,
-  type KeyManagementCapability,
-} from "~/services/apiAdapters/contracts/keyManagement"
+} from "~/services/apiAdapters/contracts/inventorySecret"
+import type { InviteLinkCapability } from "~/services/apiAdapters/contracts/inviteLink"
 import type { ServiceCredentialCapability } from "~/services/apiAdapters/contracts/serviceCredential"
 import type { SiteTypeCapabilities } from "~/services/apiAdapters/contracts/siteTypeCapabilities"
-import type { TokenProvisioningCapability } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { collectAccountKeyResourceInventory } from "~/services/apiAdapters/nativeResources/accountKeyResourceInventory"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
@@ -53,53 +43,13 @@ import type { RequestScheduling } from "~/services/apiTransport/requestSchedulin
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { normalizeInviteLinkError } from "~/services/inviteLinks/errors"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import {
-  AuthTypeEnum,
-  type ApiToken,
-  type DisplaySiteData,
-  type SiteAccount,
-} from "~/types"
-import { getErrorMessage } from "~/utils/core/error"
-import { createLogger } from "~/utils/core/logger"
+import { AuthTypeEnum, type DisplaySiteData, type SiteAccount } from "~/types"
 
 const hasNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0
 
-const logger = createLogger("DisplayAccountApiContext")
-
-export const createMissingKeyManagementCapabilityError = (
-  siteType: string,
-): Error => new Error(`keyManagement is not implemented for ${siteType}`)
-
-export const requireDisplayAccountKeyManagement = (
-  account: Pick<DisplaySiteData, "siteType">,
-  keyManagement: KeyManagementCapability | undefined,
-): KeyManagementCapability => {
-  if (!keyManagement) {
-    throw createMissingKeyManagementCapabilityError(account.siteType)
-  }
-
-  return keyManagement
-}
-
-export const createMissingTokenProvisioningCapabilityError = (
-  siteType: string,
-) => new Error(`tokenProvisioning is not implemented for ${siteType}`)
-
-export const requireDisplayAccountTokenProvisioning = (
-  account: Pick<DisplaySiteData, "siteType">,
-  tokenProvisioning: TokenProvisioningCapability | undefined,
-): TokenProvisioningCapability => {
-  if (!tokenProvisioning) {
-    throw createMissingTokenProvisioningCapabilityError(account.siteType)
-  }
-
-  return tokenProvisioning
-}
-
-export const createMissingInviteLinkCapabilityError = (
-  siteType: string,
-): Error => new Error(`inviteLink is not implemented for ${siteType}`)
+const createMissingInviteLinkCapabilityError = (siteType: string): Error =>
+  new Error(`inviteLink is not implemented for ${siteType}`)
 
 export const requireDisplayAccountInviteLink = (
   account: Pick<DisplaySiteData, "siteType">,
@@ -111,46 +61,6 @@ export const requireDisplayAccountInviteLink = (
 
   return inviteLink
 }
-
-export class InvalidTokenPayloadError extends Error {
-  readonly code = "INVALID_TOKEN_PAYLOAD"
-  readonly accountId: string
-  readonly baseUrl: string
-  readonly siteType: string
-  readonly responseType: string
-
-  constructor(params: {
-    accountId: string
-    baseUrl: string
-    siteType: string
-    responseType: string
-  }) {
-    super("invalid_token_payload")
-    this.name = "InvalidTokenPayloadError"
-    this.accountId = params.accountId
-    this.baseUrl = params.baseUrl
-    this.siteType = params.siteType
-    this.responseType = params.responseType
-  }
-}
-
-export const getRuntimeKeyInventoryErrorMessage = (
-  error: unknown,
-  invalidPayloadFallback: string,
-) =>
-  error instanceof InvalidTokenPayloadError
-    ? invalidPayloadFallback
-    : getErrorMessage(error)
-
-export const getInvalidTokenPayloadLogContext = (error: unknown) =>
-  error instanceof InvalidTokenPayloadError
-    ? {
-        payloadAccountId: error.accountId,
-        payloadBaseUrl: error.baseUrl,
-        payloadSiteType: error.siteType,
-        payloadResponseType: error.responseType,
-      }
-    : {}
 
 export class StoredAccountApiContextError extends Error {
   readonly code:
@@ -179,19 +89,17 @@ export interface DisplayAccountApiSnapshot {
   tagIds?: DisplaySiteData["tagIds"]
 }
 
-export interface AccountApiContext {
+interface AccountApiContext {
   accountId: string
   siteType: AccountSiteType
   request: ApiServiceRequest | Sub2ApiAuthSessionRequest
 }
 
-export interface DisplayAccountApiCapabilityContext extends AccountApiContext {
+interface DisplayAccountApiCapabilityContext extends AccountApiContext {
   capabilities: SiteTypeCapabilities
   inviteLink?: InviteLinkCapability
   accountKeyResources?: AccountKeyResourceCapability
-  keyManagement: KeyManagementCapability | undefined
   serviceCredential: ServiceCredentialCapability | undefined
-  tokenProvisioning: TokenProvisioningCapability | undefined
 }
 
 interface StoredAccountApiRequestSource {
@@ -367,44 +275,8 @@ export const createDisplayAccountApiContext = (
     capabilities,
     inviteLink: accountCapabilities?.inviteLink,
     accountKeyResources: accountCapabilities?.keyResourceManagement,
-    keyManagement: accountCapabilities?.keyManagement,
     serviceCredential: accountCapabilities?.serviceCredential,
-    tokenProvisioning: accountCapabilities?.tokenProvisioning,
   }
-}
-
-export interface FetchDisplayAccountAvailableModelsOptions {
-  abortSignal?: AbortSignal
-  requestTimeoutMs?: number
-}
-
-/**
- * Fetches account-available models with caller-owned cancellation and a bounded
- * end-to-end wait, even when a provider does not observe the abort signal.
- */
-export async function fetchDisplayAccountAvailableModels(
-  account: DisplayAccountApiSnapshot,
-  options: FetchDisplayAccountAvailableModelsOptions = {},
-): Promise<string[]> {
-  const { keyManagement, request } = createDisplayAccountApiContext(account)
-
-  return await runAbortableTask(
-    async (signal) =>
-      await requireDisplayAccountKeyManagement(
-        account,
-        keyManagement,
-      ).fetchAvailableModels({
-        ...request,
-        ...(signal ? { abortSignal: signal } : {}),
-        ...(options.requestTimeoutMs !== undefined
-          ? { requestTimeoutMs: options.requestTimeoutMs }
-          : {}),
-      }),
-    {
-      signals: [options.abortSignal],
-      timeoutMs: options.requestTimeoutMs,
-    },
-  )
 }
 
 /**
@@ -453,7 +325,7 @@ export async function fetchDisplayAccountInviteLink(
   }
 }
 
-export interface ResolveDisplayAccountTokenForSecretOptions {
+interface ResolveAccountRuntimeKeySecretOptions {
   requestScheduling?: RequestScheduling
   abortSignal?: AbortSignal
   protectionBypassExecution?: ProtectionBypassExecution
@@ -467,10 +339,10 @@ export const ACCOUNT_RUNTIME_KEY_SECRET_SOURCES = {
   ProviderThenAssociatedProfile: "provider-then-associated-profile",
 } as const
 
-export type AccountRuntimeKeySecretSource =
+type AccountRuntimeKeySecretSource =
   (typeof ACCOUNT_RUNTIME_KEY_SECRET_SOURCES)[keyof typeof ACCOUNT_RUNTIME_KEY_SECRET_SOURCES]
 
-export class AccountRuntimeKeySecretUnavailableError extends Error {
+class AccountRuntimeKeySecretUnavailableError extends Error {
   readonly code = "ACCOUNT_RUNTIME_KEY_SECRET_UNAVAILABLE"
 
   constructor(readonly reason: string) {
@@ -481,7 +353,7 @@ export class AccountRuntimeKeySecretUnavailableError extends Error {
 
 const buildSecretResolutionRequest = (
   request: ApiServiceRequest,
-  options: ResolveDisplayAccountTokenForSecretOptions,
+  options: ResolveAccountRuntimeKeySecretOptions,
 ): ApiServiceRequest => ({
   ...request,
   ...(options.requestScheduling
@@ -510,74 +382,43 @@ const usesAssociatedProfileByDefault = (
 ) => availability !== INVENTORY_SECRET_AVAILABILITIES.Recoverable
 
 /**
- * Fetches the current token inventory for a display account.
- */
-export async function fetchDisplayAccountTokens(
-  account: DisplayAccountApiSnapshot,
-): Promise<ApiToken[]> {
-  const { keyManagement, request } = createDisplayAccountApiContext(account)
-  const tokensResponse = await requireDisplayAccountKeyManagement(
-    account,
-    keyManagement,
-  ).fetchTokens(request)
-
-  if (Array.isArray(tokensResponse)) {
-    return tokensResponse
-  }
-
-  logger.warn("Token response is not an array", {
-    accountId: account.id,
-    baseUrl: account.baseUrl,
-    responseType: typeof tokensResponse,
-    siteType: account.siteType,
-  })
-
-  throw new InvalidTokenPayloadError({
-    accountId: account.id,
-    baseUrl: account.baseUrl,
-    siteType: account.siteType,
-    responseType: typeof tokensResponse,
-  })
-}
-
-/**
  * Fetch account runtime keys for verification/model probing flows.
  *
- * Token CRUD-capable sites use key management inventory. Sites like SharedChat
- * expose an account-bound singleton service key instead, so runtime probes can
- * still verify the key without pretending token CRUD is supported.
+ * Native resource facts expose policy and identity without plaintext. Sites like
+ * SharedChat expose an account-bound singleton service credential instead.
  */
 export async function fetchDisplayAccountRuntimeKeys(
   account: DisplayAccountApiSnapshot,
+  options: { signal?: AbortSignal } = {},
 ): Promise<AccountRuntimeKey[]> {
-  const { capabilities, keyManagement, serviceCredential, request } =
+  const { capabilities, serviceCredential, request } =
     createDisplayAccountApiContext(account)
   const runtimeKeyAccount = buildAccountRuntimeKeyAccount(account)
 
-  const resources =
-    capabilities.account?.keyResourceManagement ??
-    capabilities.account?.keyResources
+  const resources = capabilities.account?.keyResourceManagement
   if (resources) {
-    const session = await resources.open({
-      account: runtimeKeyAccount,
-      request,
-    })
-    const scope = await session.resolveDefaultScope()
-    const collection = await session.openCollection(scope.scopeKey)
-    const facts = await collectAccountKeyResourceInventory(collection)
+    const session = await resources.open(
+      {
+        account: runtimeKeyAccount,
+        request,
+      },
+      options,
+    )
+    const scope = await session.resolveDefaultScope(options)
+    const collection = await session.openCollection(scope.scopeKey, options)
+    const facts = await collectAccountKeyResourceInventory(collection, options)
     return facts
       .filter((item) => item.runtimeKey)
       .map((item) => buildAccountKeyResourceRuntimeKeyFromFacts(account, item))
   }
 
-  if (keyManagement || !serviceCredential) {
-    const tokens = await fetchDisplayAccountTokens(account)
-    return tokens.map((token) =>
-      buildDisplayAccountTokenRuntimeKey(runtimeKeyAccount, token),
-    )
-  }
+  if (!serviceCredential)
+    throw new AccountKeyResourceError({ code: "unavailable" })
 
-  const credential = await serviceCredential.fetch(request)
+  const credential = await serviceCredential.fetch({
+    ...request,
+    ...(options.signal ? { abortSignal: options.signal } : {}),
+  })
   if (!credential.key.trim()) return []
 
   return [
@@ -587,89 +428,12 @@ export async function fetchDisplayAccountRuntimeKeys(
   ]
 }
 
-/**
- * Resolves a token into a transient clone with a usable secret key for the
- * current display-account context, without mutating the shared inventory item.
- */
-export async function resolveDisplayAccountTokenForSecret<
-  TToken extends ApiToken,
->(
-  account: DisplayAccountApiSnapshot,
-  token: TToken,
-  options: ResolveDisplayAccountTokenForSecretOptions = {},
-): Promise<TToken> {
-  const { keyManagement, serviceCredential, request } =
-    createDisplayAccountApiContext(account)
-  const resolutionRequest = buildSecretResolutionRequest(request, options)
-  const source = options.secretSource ?? ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Auto
-  const locator = getAccountRuntimeKeyLocator(
-    buildDisplayAccountTokenRuntimeKey(account, token),
-  )
-  const resolveAssociated = async () =>
-    (await resolveRequiredAssociatedProfileSecret(locator)).secret
-  const inventorySecretAvailability = keyManagement
-    ? getInventorySecretAvailability(keyManagement)
-    : undefined
-  const resolveProvider = async () => {
-    if (keyManagement) {
-      return keyManagement.resolveTokenKey({
-        request: resolutionRequest,
-        token,
-      })
-    }
-    if (serviceCredential) {
-      return (await serviceCredential.fetch(resolutionRequest)).key
-    }
-    return requireDisplayAccountKeyManagement(
-      account,
-      keyManagement,
-    ).resolveTokenKey({ request: resolutionRequest, token })
-  }
-
-  let resolvedKey: string
-  if (source === ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.AssociatedProfile) {
-    resolvedKey = await resolveAssociated()
-  } else if (
-    source === ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Auto &&
-    inventorySecretAvailability &&
-    usesAssociatedProfileByDefault(inventorySecretAvailability) &&
-    hasUsableApiTokenKey(token.key)
-  ) {
-    resolvedKey = token.key
-  } else if (
-    source === ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Auto &&
-    inventorySecretAvailability &&
-    usesAssociatedProfileByDefault(inventorySecretAvailability)
-  ) {
-    resolvedKey = await resolveAssociated()
-  } else if (
-    source === ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.ProviderThenAssociatedProfile
-  ) {
-    try {
-      resolvedKey = await resolveProvider()
-    } catch (providerError) {
-      try {
-        resolvedKey = await resolveAssociated()
-      } catch {
-        throw providerError
-      }
-    }
-  } else {
-    resolvedKey = await resolveProvider()
-  }
-
-  return formatOptionalSkPrefixSiteToken(
-    resolvedKey === token.key ? token : { ...token, key: resolvedKey },
-    account.siteType,
-  )
-}
-
 const resolveProviderAccountKeyResourceSecret = async (
   account: DisplayAccountApiSnapshot,
   runtimeKey: Extract<AccountRuntimeKey, { source: "account_key_resource" }>,
   accountKeyResources: AccountKeyResourceCapability | undefined,
   request: ApiServiceRequest,
-  options: ResolveDisplayAccountTokenForSecretOptions,
+  options: ResolveAccountRuntimeKeySecretOptions,
 ): Promise<AccountRuntimeKeyResolution> => {
   if (!accountKeyResources) {
     throw new AccountRuntimeKeySecretUnavailableError(
@@ -724,21 +488,8 @@ export async function resolveDisplayAccountRuntimeKeySecret<
 >(
   account: DisplayAccountApiSnapshot,
   runtimeKey: TRuntimeKey,
-  options: ResolveDisplayAccountTokenForSecretOptions = {},
+  options: ResolveAccountRuntimeKeySecretOptions = {},
 ): Promise<TRuntimeKey> {
-  if (isAccountTokenRuntimeKey(runtimeKey)) {
-    const resolvedToken = await resolveDisplayAccountTokenForSecret(
-      account,
-      runtimeKey.token,
-      options,
-    )
-    return formatAccountRuntimeKeySecretForSite({
-      ...runtimeKey,
-      token: resolvedToken,
-      secret: resolvedToken.key,
-    })
-  }
-
   if (isServiceCredentialRuntimeKey(runtimeKey)) {
     const { serviceCredential, request } =
       createDisplayAccountApiContext(account)
@@ -759,13 +510,8 @@ export async function resolveDisplayAccountRuntimeKeySecret<
   }
 
   if (isAccountKeyResourceRuntimeKey(runtimeKey)) {
-    const {
-      capabilities,
-      accountKeyResources: managementResources,
-      request,
-    } = createDisplayAccountApiContext(account)
-    const accountKeyResources =
-      managementResources ?? capabilities.account?.keyResources
+    const { accountKeyResources, request } =
+      createDisplayAccountApiContext(account)
     const source =
       options.secretSource ?? ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Auto
     const availability = getInventorySecretAvailability(
@@ -842,22 +588,6 @@ export async function resolveDisplayAccountRuntimeKeySecret<
 
   return runtimeKey
 }
-
-/**
- * Guard used by token-management entry points before create/list actions.
- */
-export const canManageDisplayAccountTokens = (
-  account: DisplaySiteData | null | undefined,
-): account is DisplaySiteData => canListAccountRuntimeKeys(account)
-
-/**
- * Guard used by token-creation entry points before showing or enabling create
- * controls. Service-credential-only backends can expose usable runtime keys
- * without supporting token CRUD.
- */
-export const canCreateDisplayAccountTokens = (
-  account: DisplaySiteData | null | undefined,
-): account is DisplaySiteData => canCreateAccountApiTokens(account)
 
 /**
  * Guard used by invite-link entry points before enabling fetch/copy actions.

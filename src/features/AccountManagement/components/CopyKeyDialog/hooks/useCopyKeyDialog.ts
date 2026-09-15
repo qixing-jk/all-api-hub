@@ -7,27 +7,26 @@ import {
   type NativeKeyManagementRow,
 } from "~/features/KeyManagement/types"
 import toast from "~/lib/notify"
+import {
+  getCreatedAccountRuntimeKey,
+  getCreatedAccountRuntimeKeyId,
+  type AccountKeyCreationResult,
+} from "~/services/accounts/accountKeyCreation"
 import { fetchDisplayAccountKeyResourceInventory } from "~/services/accounts/accountKeyResourceInventory"
 import {
-  appendOrReplaceAccountRuntimeKey,
-  buildDisplayAccountTokenRuntimeKey,
+  buildAccountKeyResourceRuntimeKeyFromFacts,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import {
-  createDisplayAccountTokenRuntimeSecret,
-  shouldShowOneTimeKeyDialogForCreatedToken,
-} from "~/services/accounts/createdTokenSecretHandling"
-import {
-  canCreateAccountApiTokens,
+  canCreateAccountKeyResources,
   canListAccountKeyResources,
   canListAccountRuntimeKeys,
-  supportsAccountApiTokenCreation,
+  supportsAccountKeyCreation,
   supportsRecoverableAccountRuntimeKeySecrets,
 } from "~/services/accounts/keyProductCapabilities"
 import {
   fetchDisplayAccountRuntimeKeys,
-  getRuntimeKeyInventoryErrorMessage,
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
@@ -39,7 +38,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import type { ApiToken, DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -87,6 +86,19 @@ export function useCopyKeyDialog(
   account: DisplaySiteData | null,
 ) {
   const { t } = useTranslation("ui")
+  const sourceKey = JSON.stringify([
+    isOpen,
+    account?.id,
+    account?.baseUrl,
+    account?.siteType,
+    account?.authType,
+    account?.userId,
+    account?.token,
+    account?.cookieAuthSessionCookie,
+    account?.disabled,
+  ])
+  const sourceRef = useRef(sourceKey)
+  sourceRef.current = sourceKey
   const [runtimeKeys, setRuntimeKeys] = useState<AccountRuntimeKey[]>([])
   const [nativeKeyRows, setNativeKeyRows] = useState<NativeKeyManagementRow[]>(
     [],
@@ -110,11 +122,11 @@ export function useCopyKeyDialog(
   const fetchRequestIdRef = useRef(0)
   const inventoryAbortControllerRef = useRef<AbortController | null>(null)
 
-  const canCreateDefaultKey = canCreateAccountApiTokens(account)
+  const canCreateDefaultKey = canCreateAccountKeyResources(account)
   const canLoadRuntimeKeys = canListAccountRuntimeKeys(account)
   const canLoadNativeKeys = canListAccountKeyResources(account)
   const supportsApiTokenCreation = Boolean(
-    account && supportsAccountApiTokenCreation(account.siteType),
+    account && supportsAccountKeyCreation(account.siteType),
   )
 
   const resetPresentationState = useCallback(() => {
@@ -170,13 +182,18 @@ export function useCopyKeyDialog(
             facts,
           })),
         )
-        return
+        return inventory.items
+          .filter((facts) => facts.runtimeKey)
+          .map((facts) =>
+            buildAccountKeyResourceRuntimeKeyFromFacts(account, facts),
+          )
       }
 
       const loadedRuntimeKeys = await fetchDisplayAccountRuntimeKeys(account)
       if (fetchRequestIdRef.current !== requestId) return
       setNativeKeyRows([])
       setRuntimeKeys(loadedRuntimeKeys)
+      return loadedRuntimeKeys
     } catch (error) {
       if (
         fetchRequestIdRef.current !== requestId ||
@@ -190,7 +207,7 @@ export function useCopyKeyDialog(
         baseUrl: account.baseUrl,
         siteType: account.siteType,
       })
-      setError(getRuntimeKeyInventoryErrorMessage(error, ""))
+      setError(getErrorMessage(error))
     } finally {
       if (fetchRequestIdRef.current === requestId) {
         if (inventoryAbortControllerRef.current === controller) {
@@ -202,13 +219,18 @@ export function useCopyKeyDialog(
   }, [account, canLoadNativeKeys, canLoadRuntimeKeys, resetPresentationState])
 
   useEffect(() => {
+    resetPresentationState()
     if (isOpen && account) {
-      fetchKeyInventory()
+      void fetchKeyInventory()
     } else {
       inventoryAbortControllerRef.current?.abort()
       inventoryAbortControllerRef.current = null
       clearCopiedRuntimeKeyResetTimeout()
       resetPresentationState()
+    }
+    return () => {
+      fetchRequestIdRef.current++
+      inventoryAbortControllerRef.current?.abort()
     }
   }, [
     account,
@@ -227,7 +249,7 @@ export function useCopyKeyDialog(
 
   const copyKey = useCallback(
     async (runtimeKey: AccountRuntimeKey) => {
-      if (!account) return
+      if (!account || sourceRef.current !== sourceKey) return
 
       const tracker = startProductAnalyticsAction(copyKeyAnalyticsContext)
 
@@ -236,7 +258,9 @@ export function useCopyKeyDialog(
           account,
           runtimeKey,
         )
+        if (sourceRef.current !== sourceKey) return
         await navigator.clipboard.writeText(resolvedRuntimeKey.secret)
+        if (sourceRef.current !== sourceKey) return
         setCopiedRuntimeKeyId(runtimeKey.id)
         toast.success(t("ui:dialog.copyKey.keyCopied"))
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
@@ -247,6 +271,7 @@ export function useCopyKeyDialog(
           copiedRuntimeKeyResetTimeoutRef.current = null
         }, 2000)
       } catch (error) {
+        if (sourceRef.current !== sourceKey) return
         logger.error("Failed to copy key to clipboard", { error })
         toast.error(
           getErrorMessage(error, t("ui:dialog.copyKey.copyFailedManual")),
@@ -256,89 +281,38 @@ export function useCopyKeyDialog(
         })
       }
     },
-    [account, clearCopiedRuntimeKeyResetTimeout, t],
+    [account, clearCopiedRuntimeKeyResetTimeout, sourceKey, t],
   )
 
-  /**
-   * Refreshes runtime-key inventory after a successful create flow and applies the same UX rules:
-   * - If no runtime key is found, show an actionable error.
-   * - If exactly one recoverable runtime key exists, auto-copy it.
-   * - Otherwise, keep the list visible and show a success toast.
-   *
-   * Some sites, including AIHubMix, only return the full key in the create
-   * response and list masked keys afterwards. Callers that receive a created
-   * token directly should pass it here so the secret can be copied before any
-   * follow-up inventory refresh loses it.
-   */
+  /** Retains creation-only secrets even if the independent inventory refresh fails. */
   const refreshRuntimeKeysAfterCreate = useCallback(
-    async (createdToken?: ApiToken) => {
-      if (!account) return
-
-      if (!canCreateDefaultKey) {
-        setPostCreateError({ kind: "unsupported" })
+    async (created: AccountKeyCreationResult) => {
+      if (!account || sourceRef.current !== sourceKey) return
+      setPostCreateError(null)
+      if (created.createdSecret) setOneTimeSecret(created.createdSecret)
+      const createdRuntimeKey = getCreatedAccountRuntimeKey(account, created)
+      const refreshed = await fetchKeyInventory()
+      if (sourceRef.current !== sourceKey) return
+      if (created.createdSecret) return
+      const createdId = getCreatedAccountRuntimeKeyId(created)
+      const key =
+        createdRuntimeKey ??
+        refreshed?.find((candidate) => candidate.id === createdId)
+      if (
+        key &&
+        supportsRecoverableAccountRuntimeKeySecrets(account.siteType)
+      ) {
+        await copyKey(key)
         return
       }
-
-      setPostCreateError(null)
-
-      try {
-        const shouldShowOneTimeKeyDialog =
-          !!createdToken &&
-          shouldShowOneTimeKeyDialogForCreatedToken(account, createdToken)
-
-        if (createdToken && shouldShowOneTimeKeyDialog) {
-          const createdRuntimeKey = buildDisplayAccountTokenRuntimeKey(
-            account,
-            createdToken,
-          )
-          setRuntimeKeys((currentRuntimeKeys) =>
-            appendOrReplaceAccountRuntimeKey(
-              currentRuntimeKeys,
-              createdRuntimeKey,
-            ),
-          )
-          setOneTimeSecret(
-            createDisplayAccountTokenRuntimeSecret({
-              account,
-              token: createdToken,
-            }),
-          )
-          await copyKey(createdRuntimeKey)
-          return
-        }
-
-        const refreshedRuntimeKeys =
-          await fetchDisplayAccountRuntimeKeys(account)
-        setRuntimeKeys(refreshedRuntimeKeys)
-
-        if (refreshedRuntimeKeys.length === 0) {
-          setPostCreateError({ kind: "empty" })
-          return
-        }
-
-        if (
-          refreshedRuntimeKeys.length === 1 &&
-          supportsRecoverableAccountRuntimeKeySecrets(account.siteType)
-        ) {
-          await copyKey(refreshedRuntimeKeys[0])
-          return
-        }
-
-        toast.success(t("ui:dialog.copyKey.createSuccess"))
-      } catch (error) {
-        logger.error("Failed to refresh runtime-key list after create", {
-          error,
-          accountId: account.id,
-          baseUrl: account.baseUrl,
-          siteType: account.siteType,
-        })
-        setPostCreateError({
-          kind: "failed",
-          message: getRuntimeKeyInventoryErrorMessage(error, ""),
-        })
+      if (!refreshed) return
+      if (!refreshed.length || (createdId && !key)) {
+        setPostCreateError({ kind: "empty" })
+        return
       }
+      toast.success(t("ui:dialog.copyKey.createSuccess"))
     },
-    [account, canCreateDefaultKey, copyKey, t],
+    [account, copyKey, fetchKeyInventory, sourceKey, t],
   )
 
   const toggleRuntimeKeyExpansion = (runtimeKeyId: string) => {

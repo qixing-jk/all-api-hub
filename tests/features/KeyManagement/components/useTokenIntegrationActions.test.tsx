@@ -3,13 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useRuntimeKeyIntegrationActions } from "~/features/KeyManagement/components/RuntimeKeyActions/useRuntimeKeyIntegrationActions"
-import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
-import {
-  AuthTypeEnum,
-  SiteHealthStatus,
-  type AccountToken,
-  type DisplaySiteData,
-} from "~/types"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
+import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/factories"
 
@@ -108,12 +104,10 @@ const token = {
   remain_quota: 0,
   unlimited_quota: false,
   used_quota: 0,
-  accountId: account.id,
-  accountName: account.name,
   key: "sk-example",
   name: "Example key",
   status: 1,
-} satisfies AccountToken
+} satisfies NewApiToken
 
 const renderActions = (onManagedSiteImportSuccess?: () => Promise<void>) =>
   renderHook(() =>
@@ -121,7 +115,7 @@ const renderActions = (onManagedSiteImportSuccess?: () => Promise<void>) =>
       account,
       enabled: true,
       onManagedSiteImportSuccess,
-      runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
+      runtimeKey: buildNewApiRuntimeKey(account, token),
     }),
   )
 

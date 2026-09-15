@@ -14,7 +14,6 @@ import type { AddAccountPrefill } from "~/features/AccountManagement/sponsors/ty
 import { useSponsorRecommendations } from "~/features/AccountManagement/sponsors/useSponsorRecommendations"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
-import { buildDefaultTokenCreatePrefill } from "~/features/TokenProvisioning/components/AddTokenDialog/defaultTokenCreatePrefill"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
@@ -211,9 +210,6 @@ export default function AccountDialog({
           ...addModeSiteInfoProps,
         }
 
-  const postSaveSub2ApiCreatePrefill = buildDefaultTokenCreatePrefill(
-    state.postSaveSub2ApiAllowedGroups,
-  )
   const postSaveSub2ApiDialogSessionId =
     typeof state.postSaveSub2ApiDialogSessionId === "number"
       ? state.postSaveSub2ApiDialogSessionId
@@ -520,7 +516,7 @@ export default function AccountDialog({
         onConfirm={handlers.handleAihubmixPostSaveKeyPromptConfirm}
       />
 
-      {state.postSaveSub2ApiAccount && postSaveSub2ApiCreatePrefill ? (
+      {state.postSaveSub2ApiAccount ? (
         <AddTokenDialog
           isOpen={true}
           onClose={
@@ -529,7 +525,6 @@ export default function AccountDialog({
           }
           availableAccounts={[state.postSaveSub2ApiAccount]}
           preSelectedAccountId={state.postSaveSub2ApiAccount.id}
-          createPrefill={postSaveSub2ApiCreatePrefill}
           prefillNotice={t("tokenProvisioning.createRequiresGroupSelection")}
           onSuccess={
             postSaveSub2ApiDialogHandlers?.onSuccess ??

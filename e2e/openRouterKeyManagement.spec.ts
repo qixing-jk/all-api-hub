@@ -131,7 +131,7 @@ test("manages an OpenRouter key through its native one-time-secret lifecycle", a
   await expectPermissionOnboardingHidden(page)
 
   const workspaceSelect = page.getByTestId(
-    KEY_MANAGEMENT_TEST_IDS.openRouterWorkspaceSelect,
+    KEY_MANAGEMENT_TEST_IDS.nativeScopeSelect,
   )
   await expect(workspaceSelect).toContainText("Team workspace (team)")
   await expect(

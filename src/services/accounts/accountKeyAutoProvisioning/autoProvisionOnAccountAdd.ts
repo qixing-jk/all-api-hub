@@ -1,13 +1,13 @@
 import toast from "~/lib/notify"
 import { ensureAllGroupKeysForAccount } from "~/services/accounts/accountKeyAutoProvisioning/ensureAllGroupKeys"
-import { ensureDefaultApiTokenForAccount } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
+import { ensureAccountKey } from "~/services/accounts/accountKeyCreation"
 import {
   ACCOUNT_KEY_RECONCILIATION_INVENTORY_STATUSES,
   ACCOUNT_KEY_RECONCILIATION_OUTCOMES,
   type AccountKeyInventoryReconciliationResult,
 } from "~/services/accounts/accountKeyInventoryReconciliation"
+import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
-import { DefaultTokenLifecyclePolicyBlockedError } from "~/services/accounts/defaultTokenLifecycle"
 import {
   canRunAccountDefaultTokenAutomation,
   createStoredAccountKeyProductContext,
@@ -148,9 +148,20 @@ export async function autoProvisionKeyOnAccountAdd(
     )
       return
 
-    const { created } = await ensureDefaultApiTokenForAccount({ account })
+    const result = await ensureAccountKey(
+      accountPresentation.convertToDisplayData(account),
+    )
+    if (result.kind === "input-required") {
+      toast.warning(
+        t("messages:accountOperations.autoProvisionNeedsManualAction", {
+          accountName,
+          actionLabel: t("keyManagement:dialog.createToken"),
+        }),
+      )
+      return
+    }
 
-    if (created) {
+    if (result.kind === "created") {
       toast.success(
         t("messages:accountOperations.autoProvisionCreated", {
           accountName: account.site_name,
@@ -164,20 +175,6 @@ export async function autoProvisionKeyOnAccountAdd(
       )
     }
   } catch (error) {
-    if (error instanceof DefaultTokenLifecyclePolicyBlockedError) {
-      toast.warning(
-        t("messages:accountOperations.autoProvisionNeedsManualAction", {
-          accountName,
-          actionLabel: t("keyManagement:dialog.createToken"),
-        }),
-      )
-      logger.info("Auto-provision requires a manual key workflow", {
-        accountId,
-        reason: error.reason,
-      })
-      return
-    }
-
     toast.error(
       t("messages:accountOperations.autoProvisionFailed", {
         actionLabel: t("keyManagement:repairMissingKeys.action"),

@@ -26,24 +26,22 @@ import { loadAccountRuntimeKeyFallbackPricingResponseFromToken } from "./runtime
 
 const {
   fetchOpenAICompatibleModelIdsMock,
-  fetchAccountTokensMock,
+  fetchSub2ApiKeysMock,
   fetchSub2ApiAvailableGroupsMock,
   fetchSub2ApiGroupRatesMock,
   fetchSub2ApiRuntimeModelsMock,
   getSiteTypeCapabilitiesMock,
   loadModelPriceTableMock,
   resolveDisplayAccountRuntimeKeySecretMock,
-  resolveDisplayAccountTokenForSecretMock,
 } = vi.hoisted(() => ({
   fetchOpenAICompatibleModelIdsMock: vi.fn(),
-  fetchAccountTokensMock: vi.fn(),
+  fetchSub2ApiKeysMock: vi.fn(),
   fetchSub2ApiAvailableGroupsMock: vi.fn(),
   fetchSub2ApiGroupRatesMock: vi.fn(),
   fetchSub2ApiRuntimeModelsMock: vi.fn(),
   getSiteTypeCapabilitiesMock: vi.fn(),
   loadModelPriceTableMock: vi.fn(),
   resolveDisplayAccountRuntimeKeySecretMock: vi.fn(),
-  resolveDisplayAccountTokenForSecretMock: vi.fn(),
 }))
 
 vi.mock("~/services/modelPricing/modelPriceTable", () => ({
@@ -66,18 +64,37 @@ vi.mock(
   },
 )
 
-vi.mock("~/services/apiAdapters/sub2api/dashboardEstimates", () => ({
-  loadSub2ApiDashboardEstimateData: async (...args: unknown[]) => {
-    const [request] = args
-    const [groups, groupRates, accountTokens] = await Promise.all([
-      fetchSub2ApiAvailableGroupsMock(request),
-      fetchSub2ApiGroupRatesMock(request),
-      fetchAccountTokensMock(request),
-    ])
-
-    return { groups, groupRates, accountTokens }
+vi.mock(
+  "~/services/apiAdapters/sub2api/dashboardEstimates",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/apiAdapters/sub2api/dashboardEstimates")
+      >()
+    return {
+      ...actual,
+      loadSub2ApiDashboardEstimateData: async (
+        request: unknown,
+        selection: { ref: { resourceId: string }; resolvedKey: string },
+      ) => {
+        const [groups, groupRates, keys] = await Promise.all([
+          fetchSub2ApiAvailableGroupsMock(request),
+          fetchSub2ApiGroupRatesMock(request),
+          fetchSub2ApiKeysMock(request),
+        ])
+        return {
+          group: actual.resolveSub2ApiKeyGroupForPriceEstimation({
+            resourceId: selection.ref.resourceId,
+            resolvedKey: selection.resolvedKey,
+            keys,
+            groups,
+          }),
+          groupRates,
+        }
+      },
+    }
   },
-}))
+)
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
@@ -95,8 +112,6 @@ vi.mock(
       ...actual,
       resolveDisplayAccountRuntimeKeySecret: (...args: unknown[]) =>
         resolveDisplayAccountRuntimeKeySecretMock(...args),
-      resolveDisplayAccountTokenForSecret: (...args: unknown[]) =>
-        resolveDisplayAccountTokenForSecretMock(...args),
     }
   },
 )
@@ -121,7 +136,7 @@ const ACCOUNT = {
 const TOKEN = {
   id: 10,
   user_id: 1,
-  key: "sk-masked",
+  key: "sk-********",
   status: 1,
   name: "Fallback Key",
   created_time: 0,
@@ -145,9 +160,7 @@ const createSub2ApiModelCatalogAdapter = (
   siteType: SITE_TYPES.SUB2API,
   family: "sub2api" as const,
   account: {
-    keyManagement: {
-      resolveTokenKey: vi.fn(),
-    },
+    keyResourceManagement: {},
     modelCatalog: {
       fetchModels,
     },
@@ -182,41 +195,22 @@ const mockSub2ApiModelCatalogAdapter = (
 describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
   beforeEach(() => {
     fetchOpenAICompatibleModelIdsMock.mockReset()
-    fetchAccountTokensMock.mockReset()
+    fetchSub2ApiKeysMock.mockReset()
     fetchSub2ApiAvailableGroupsMock.mockReset()
     fetchSub2ApiGroupRatesMock.mockReset()
     fetchSub2ApiRuntimeModelsMock.mockReset()
     getSiteTypeCapabilitiesMock.mockReset()
     loadModelPriceTableMock.mockReset()
     resolveDisplayAccountRuntimeKeySecretMock.mockReset()
-    resolveDisplayAccountTokenForSecretMock.mockReset()
     mockSub2ApiModelCatalogAdapter()
     resolveDisplayAccountRuntimeKeySecretMock.mockImplementation(
-      async (account, runtimeKey, options) => {
-        if (runtimeKey.source === ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken) {
-          const token = await resolveDisplayAccountTokenForSecretMock(
-            account,
-            runtimeKey.token,
-            options,
-          )
-          return {
-            ...runtimeKey,
-            token,
-            secret: token.key,
-          }
-        }
-
-        return runtimeKey
-      },
-    )
-    resolveDisplayAccountTokenForSecretMock.mockImplementation(
-      async (_account, token) => token,
+      async (_account, runtimeKey) => runtimeKey,
     )
     fetchSub2ApiAvailableGroupsMock.mockRejectedValue(
       new Error("dashboard auth unavailable"),
     )
     fetchSub2ApiGroupRatesMock.mockResolvedValue({})
-    fetchAccountTokensMock.mockResolvedValue([])
+    fetchSub2ApiKeysMock.mockResolvedValue([])
     loadModelPriceTableMock.mockResolvedValue({
       source: "synthetic-test",
       models: {},
@@ -224,11 +218,12 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
   })
 
   it("merges token-declared and upstream model ids into a normalized catalog", async () => {
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
-      ...TOKEN,
-      key: "sk-real-secret",
-      models: "gpt-4o-mini, claude-3-haiku",
-    })
+    resolveDisplayAccountRuntimeKeySecretMock.mockImplementationOnce(
+      async (_account, runtimeKey) => ({
+        ...runtimeKey,
+        secret: "sk-real-secret",
+      }),
+    )
     fetchOpenAICompatibleModelIdsMock.mockResolvedValueOnce([
       "gpt-4o",
       " gpt-4o-mini ",
@@ -270,11 +265,12 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
         },
       },
     })
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
-      ...TOKEN,
-      key: "sk-selected-token-secret",
-      models: "",
-    })
+    resolveDisplayAccountRuntimeKeySecretMock.mockImplementationOnce(
+      async (_account, runtimeKey) => ({
+        ...runtimeKey,
+        secret: "sk-selected-token-secret",
+      }),
+    )
     fetchOpenAICompatibleModelIdsMock.mockResolvedValueOnce([
       "selected-token-model",
     ])
@@ -286,7 +282,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       },
       token: {
         ...TOKEN,
-        key: "sk-compatible-masked",
+        key: "sk-compatible-****",
       },
     })
 
@@ -294,8 +290,9 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
     expect(resolveDisplayAccountRuntimeKeySecretMock).toHaveBeenCalledWith(
       expect.objectContaining({ siteType: SITE_TYPES.NEW_API }),
       expect.objectContaining({
-        secret: "sk-compatible-masked",
-        token: expect.objectContaining({ key: "sk-compatible-masked" }),
+        secret: "sk-compatible-****",
+        source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
+        resourceRef: expect.objectContaining({ resourceId: String(TOKEN.id) }),
       }),
     )
     expect(fetchOpenAICompatibleModelIdsMock).toHaveBeenCalledWith(
@@ -311,11 +308,12 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
   })
 
   it("falls back to token-declared models when the upstream key lookup fails", async () => {
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
-      ...TOKEN,
-      key: "sk-real-secret",
-      models: "gpt-4o-mini",
-    })
+    resolveDisplayAccountRuntimeKeySecretMock.mockImplementationOnce(
+      async (_account, runtimeKey) => ({
+        ...runtimeKey,
+        secret: "sk-real-secret",
+      }),
+    )
     fetchOpenAICompatibleModelIdsMock.mockRejectedValueOnce(
       new Error("temporary upstream failure"),
     )
@@ -334,11 +332,12 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
   it("preserves caller aborts from upstream model lookup even when declared models exist", async () => {
     const abortController = new AbortController()
     const abortError = new DOMException("Aborted", "AbortError")
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
-      ...TOKEN,
-      key: "sk-real-secret",
-      models: "gpt-4o-mini",
-    })
+    resolveDisplayAccountRuntimeKeySecretMock.mockImplementationOnce(
+      async (_account, runtimeKey) => ({
+        ...runtimeKey,
+        secret: "sk-real-secret",
+      }),
+    )
     fetchOpenAICompatibleModelIdsMock.mockImplementationOnce(() => {
       abortController.abort(abortError)
       return Promise.reject(abortError)
@@ -388,7 +387,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
         },
       },
     })
-    resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(
+    resolveDisplayAccountRuntimeKeySecretMock.mockRejectedValueOnce(
       new Error("AIHubMix cannot reveal masked keys"),
     )
 
@@ -419,7 +418,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
         cookie: undefined,
       },
     })
-    expect(resolveDisplayAccountTokenForSecretMock).not.toHaveBeenCalled()
+    expect(resolveDisplayAccountRuntimeKeySecretMock).not.toHaveBeenCalled()
     expect(fetchOpenAICompatibleModelIdsMock).not.toHaveBeenCalled()
   })
 
@@ -445,7 +444,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       "No model-list source capability is registered for AIHubMix",
     )
 
-    expect(resolveDisplayAccountTokenForSecretMock).not.toHaveBeenCalled()
+    expect(resolveDisplayAccountRuntimeKeySecretMock).not.toHaveBeenCalled()
     expect(fetchOpenAICompatibleModelIdsMock).not.toHaveBeenCalled()
   })
 
@@ -462,7 +461,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
         },
         token: {
           ...TOKEN,
-          key: "sk-compatible-masked",
+          key: "sk-compatible-****",
           models: "",
         },
       }),
@@ -476,10 +475,12 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
   })
 
   it("preserves Sub2API evidence when estimate fetching fails", async () => {
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
-      ...TOKEN,
-      key: "sk-real-sub2api-secret",
-    })
+    resolveDisplayAccountRuntimeKeySecretMock.mockImplementationOnce(
+      async (_account, runtimeKey) => ({
+        ...runtimeKey,
+        secret: "sk-real-sub2api-secret",
+      }),
+    )
     fetchSub2ApiRuntimeModelsMock.mockResolvedValueOnce([
       {
         id: "example-runtime-model",
@@ -495,7 +496,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       },
       token: {
         ...TOKEN,
-        key: "sk-masked-sub2api",
+        key: "sk-sub2api-****",
       },
     })
 
@@ -505,8 +506,9 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
         baseUrl: "https://sub2api.example.invalid",
       }),
       expect.objectContaining({
-        secret: "sk-masked-sub2api",
-        token: expect.objectContaining({ key: "sk-masked-sub2api" }),
+        secret: "sk-sub2api-****",
+        source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
+        resourceRef: expect.objectContaining({ resourceId: String(TOKEN.id) }),
       }),
     )
     expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledWith(SITE_TYPES.SUB2API)
@@ -576,7 +578,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       },
     })
 
-    expect(resolveDisplayAccountTokenForSecretMock).not.toHaveBeenCalled()
+    expect(resolveDisplayAccountRuntimeKeySecretMock).not.toHaveBeenCalled()
     expect(fetchSub2ApiRuntimeModelsMock).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://new.sharedchat.cc",
@@ -642,7 +644,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       runtimeKey,
     })
 
-    expect(resolveDisplayAccountTokenForSecretMock).not.toHaveBeenCalled()
+    expect(resolveDisplayAccountRuntimeKeySecretMock).not.toHaveBeenCalled()
     expect(fetchSub2ApiRuntimeModelsMock).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://runtime.example.invalid",
@@ -659,11 +661,12 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
 
   it("passes abort signals through runtime-key catalog fallback requests", async () => {
     const abortController = new AbortController()
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
-      ...TOKEN,
-      key: "sk-real-secret",
-      models: "",
-    })
+    resolveDisplayAccountRuntimeKeySecretMock.mockImplementationOnce(
+      async (_account, runtimeKey) => ({
+        ...runtimeKey,
+        secret: "sk-real-secret",
+      }),
+    )
     fetchOpenAICompatibleModelIdsMock.mockResolvedValueOnce(["gpt-compatible"])
 
     await loadAccountRuntimeKeyFallbackPricingResponseFromToken({
@@ -676,7 +679,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       ACCOUNT,
       expect.objectContaining({
         secret: TOKEN.key,
-        token: expect.objectContaining({ id: TOKEN.id }),
+        resourceRef: expect.objectContaining({ resourceId: String(TOKEN.id) }),
       }),
       { abortSignal: abortController.signal },
     )
@@ -684,16 +687,18 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       expect.objectContaining({ abortSignal: abortController.signal }),
     )
 
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
-      ...TOKEN,
-      key: "sk-real-sub2api-secret",
-    })
+    resolveDisplayAccountRuntimeKeySecretMock.mockImplementationOnce(
+      async (_account, runtimeKey) => ({
+        ...runtimeKey,
+        secret: "sk-real-sub2api-secret",
+      }),
+    )
     fetchSub2ApiRuntimeModelsMock.mockResolvedValueOnce([
       { id: "example-runtime-model" },
     ])
     fetchSub2ApiAvailableGroupsMock.mockResolvedValueOnce([])
     fetchSub2ApiGroupRatesMock.mockResolvedValueOnce({})
-    fetchAccountTokensMock.mockResolvedValueOnce([])
+    fetchSub2ApiKeysMock.mockResolvedValueOnce([])
 
     await loadAccountRuntimeKeyFallbackPricingResponseFromToken({
       account: {
@@ -712,7 +717,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       }),
       expect.objectContaining({
         secret: TOKEN.key,
-        token: expect.objectContaining({ id: TOKEN.id }),
+        resourceRef: expect.objectContaining({ resourceId: String(TOKEN.id) }),
       }),
       { abortSignal: abortController.signal },
     )
@@ -726,10 +731,12 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
   })
 
   it("preserves Sub2API evidence when official-rate estimation succeeds", async () => {
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
-      ...TOKEN,
-      key: "sk-real-sub2api-secret",
-    })
+    resolveDisplayAccountRuntimeKeySecretMock.mockImplementationOnce(
+      async (_account, runtimeKey) => ({
+        ...runtimeKey,
+        secret: "sk-real-sub2api-secret",
+      }),
+    )
     fetchSub2ApiRuntimeModelsMock.mockResolvedValueOnce([
       {
         id: "example-priced-model",
@@ -741,13 +748,13 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       { id: 9, name: "vip", rate_multiplier: 1.5 },
     ])
     fetchSub2ApiGroupRatesMock.mockResolvedValueOnce({ "9": 2 })
-    fetchAccountTokensMock.mockResolvedValueOnce([
+    fetchSub2ApiKeysMock.mockResolvedValueOnce([
       {
         ...TOKEN,
         id: 99,
         key: "sk-real-sub2api-secret",
-        group: "vip",
-        sub2api_group_id: 9,
+        group_name: "vip",
+        group_id: 9,
       },
     ])
     loadModelPriceTableMock.mockResolvedValueOnce({
@@ -770,7 +777,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       },
       token: {
         ...TOKEN,
-        key: "sk-masked-sub2api",
+        key: "sk-sub2api-****",
       },
     })
 
@@ -807,10 +814,12 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
   })
 
   it("preserves Sub2API evidence when dashboard authentication is missing", async () => {
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
-      ...TOKEN,
-      key: "sk-real-sub2api-secret",
-    })
+    resolveDisplayAccountRuntimeKeySecretMock.mockImplementationOnce(
+      async (_account, runtimeKey) => ({
+        ...runtimeKey,
+        secret: "sk-real-sub2api-secret",
+      }),
+    )
     fetchSub2ApiRuntimeModelsMock.mockResolvedValueOnce([
       {
         id: "example-runtime-model",
@@ -827,7 +836,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       },
       token: {
         ...TOKEN,
-        key: "sk-masked-sub2api",
+        key: "sk-sub2api-****",
       },
     })
 
@@ -864,7 +873,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
         },
         token: {
           ...TOKEN,
-          key: "sk-masked-sub2api",
+          key: "sk-sub2api-****",
         },
       }),
     ).rejects.toThrow(
@@ -875,10 +884,12 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
   })
 
   it("redacts the resolved key and base URL when fallback loading fails", async () => {
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
-      ...TOKEN,
-      key: "sk-real-secret",
-    })
+    resolveDisplayAccountRuntimeKeySecretMock.mockImplementationOnce(
+      async (_account, runtimeKey) => ({
+        ...runtimeKey,
+        secret: "sk-real-secret",
+      }),
+    )
     fetchOpenAICompatibleModelIdsMock.mockRejectedValueOnce(
       new Error("401 for sk-real-secret at https://example.com/v1/models"),
     )
@@ -1020,10 +1031,12 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
   })
 
   it("preserves structured fallback load failure metadata for analytics", async () => {
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
-      ...TOKEN,
-      key: "sk-real-secret",
-    })
+    resolveDisplayAccountRuntimeKeySecretMock.mockImplementationOnce(
+      async (_account, runtimeKey) => ({
+        ...runtimeKey,
+        secret: "sk-real-secret",
+      }),
+    )
     const authError = new ApiError(
       "401 for sk-real-secret at https://example.com/v1/models",
       401,
@@ -1054,10 +1067,12 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
   })
 
   it("surfaces Sub2API runtime key business errors for fallback catalog loading", async () => {
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
-      ...TOKEN,
-      key: "sk-real-sub2api-secret",
-    })
+    resolveDisplayAccountRuntimeKeySecretMock.mockImplementationOnce(
+      async (_account, runtimeKey) => ({
+        ...runtimeKey,
+        secret: "sk-real-sub2api-secret",
+      }),
+    )
     const groupDeletedError = new ApiError(
       "API Key 所属分组已删除",
       undefined,
@@ -1075,7 +1090,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
         },
         token: {
           ...TOKEN,
-          key: "sk-masked-sub2api",
+          key: "sk-sub2api-****",
         },
       }),
     ).rejects.toMatchObject({
@@ -1086,10 +1101,12 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
 
   it("preserves caller aborts during Sub2API dashboard price estimation", async () => {
     const abortController = new AbortController()
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
-      ...TOKEN,
-      key: "sk-real-sub2api-secret",
-    })
+    resolveDisplayAccountRuntimeKeySecretMock.mockImplementationOnce(
+      async (_account, runtimeKey) => ({
+        ...runtimeKey,
+        secret: "sk-real-sub2api-secret",
+      }),
+    )
     fetchSub2ApiRuntimeModelsMock.mockResolvedValueOnce([
       { id: "example-runtime-model" },
     ])
@@ -1109,7 +1126,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
         },
         token: {
           ...TOKEN,
-          key: "sk-masked-sub2api",
+          key: "sk-sub2api-****",
         },
         abortSignal: abortController.signal,
       }),

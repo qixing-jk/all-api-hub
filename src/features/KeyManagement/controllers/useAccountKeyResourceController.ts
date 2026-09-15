@@ -5,6 +5,7 @@ import {
   NATIVE_RESOURCE_EDITOR_LOADING_REVEALS,
   type NativeResourceEditorOpeningState,
 } from "~/features/ResourceEditor/nativeResourceEditorOpeningState"
+import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import {
   createDisplayAccountApiContext,
@@ -13,6 +14,7 @@ import {
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   AccountKeyResourceError,
+  type AccountKeyCreationIntent,
   type AccountKeyResourceCollection,
   type AccountKeyResourceEditor,
   type AccountKeyResourceFacts,
@@ -44,7 +46,19 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsSiteType,
 } from "~/services/productAnalytics/contracts"
+import {
+  createAutomaticProtectionBypassExecution,
+  createUserCommandProtectionBypassExecution,
+} from "~/services/protectionBypass/client"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_FEATURES,
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+  type ProtectionBypassExecution,
+} from "~/services/protectionBypass/contracts"
 import type { DisplaySiteData } from "~/types"
+import { createLogger } from "~/utils/core/logger"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 import {
@@ -53,6 +67,16 @@ import {
 } from "../constants"
 
 const ALL_ACCOUNT_CONCURRENCY = 4
+const AUTOMATIC_INVENTORY_EXECUTION = createAutomaticProtectionBypassExecution(
+  PROTECTION_BYPASS_AUTOMATIC_FEATURES.KeyManagement,
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+  PROTECTION_BYPASS_SURFACES.Options,
+)
+const USER_KEY_MANAGEMENT_EXECUTION =
+  createUserCommandProtectionBypassExecution(
+    PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
+    PROTECTION_BYPASS_SURFACES.Options,
+  )
 let nextAccountKeyResourceControllerInstanceId = 0
 
 const keyManagementAnalyticsContext = (
@@ -129,7 +153,10 @@ type LoadProgress = {
 
 type OpenAccountResources = (
   account: DisplaySiteData,
-  options: { signal: AbortSignal },
+  options: {
+    signal: AbortSignal
+    protectionBypassExecution: ProtectionBypassExecution
+  },
 ) => Promise<AccountKeyResourceSession | null>
 
 type LoadOptionsEditor = Pick<
@@ -140,6 +167,13 @@ type LoadOptionsEditor = Pick<
 type Options = {
   accounts: readonly DisplaySiteData[]
   selectedAccount: string
+  /** Foreground creation can own the initial reads as part of its user command. */
+  inventoryExecution?: ProtectionBypassExecution
+  creationIntent?: AccountKeyCreationIntent
+  onCreated?: (
+    account: DisplaySiteData,
+    result: AccountKeyCreationResult,
+  ) => void | Promise<void>
   routeParams?: Record<string, string>
   /** Echoed by the route owner only after it applies this controller's replacement. */
   routeTransition?: AccountKeyResourceRouteTransition
@@ -428,10 +462,19 @@ const groupAccountsByOrigin = (accounts: readonly DisplaySiteData[]) => {
 export function useAccountKeyResourceController({
   accounts,
   selectedAccount,
+  inventoryExecution,
+  creationIntent,
+  onCreated,
   routeParams,
   routeTransition,
   replaceRoute,
 }: Options) {
+  const inventoryExecutionRef = useRef(inventoryExecution)
+  inventoryExecutionRef.current = inventoryExecution
+  const creationIntentRef = useRef(creationIntent)
+  creationIntentRef.current = creationIntent
+  const onCreatedRef = useRef(onCreated)
+  onCreatedRef.current = onCreated
   const accountsRef = useRef(accounts)
   accountsRef.current = accounts
   const routeRef = useRef(routeParams)
@@ -455,7 +498,9 @@ export function useAccountKeyResourceController({
   const accountKey = accounts
     .map((account) => `${account.id}:${account.siteType}`)
     .join("|")
-    .concat(`:${accountContextRevisionRef.current}`)
+    .concat(
+      `:${accountContextRevisionRef.current}:${JSON.stringify(creationIntent)}:${JSON.stringify(inventoryExecution)}`,
+    )
   const routeAccountId = routeParams?.[KEY_MANAGEMENT_ROUTE_PARAMS.AccountId]
   const routeWorkspace = routeParams?.[KEY_MANAGEMENT_ROUTE_PARAMS.Workspace]
   const routeTransitionId = routeTransition?.id
@@ -579,6 +624,7 @@ export function useAccountKeyResourceController({
   const editorRef = useRef<AccountKeyResourceEditor | null>(null)
   const editorBoundaryRef = useRef<ActiveResourceBoundary | null>(null)
   const editorFieldGenerations = useRef<Record<string, number>>({})
+  const editorFieldDependencySignatures = useRef(new Map<string, string>())
   const editorGeneration = useRef(0)
   const editorInstanceId = useRef(0)
   const editorOpeningAttemptId = useRef(0)
@@ -680,6 +726,7 @@ export function useAccountKeyResourceController({
     )
     editorFieldAbortControllers.current.clear()
     editorFieldGenerations.current = {}
+    editorFieldDependencySignatures.current.clear()
   }, [])
 
   const clearActiveResourceRefs = useCallback(() => {
@@ -726,7 +773,7 @@ export function useAccountKeyResourceController({
   )
 
   const defaultOpenResources = useCallback<OpenAccountResources>(
-    async (account, { signal }) => {
+    async (account, { signal, protectionBypassExecution }) => {
       const context = createDisplayAccountApiContext(account)
       if (!context.accountKeyResources) return null
       return await context.accountKeyResources.open(
@@ -736,7 +783,7 @@ export function useAccountKeyResourceController({
             name: account.name,
             siteType: account.siteType,
           },
-          request: context.request,
+          request: { ...context.request, protectionBypassExecution },
         },
         { signal },
       )
@@ -745,9 +792,14 @@ export function useAccountKeyResourceController({
   )
 
   const openSession = useCallback(
-    async (account: DisplaySiteData, signal: AbortSignal) => {
+    async (
+      account: DisplaySiteData,
+      signal: AbortSignal,
+      protectionBypassExecution = inventoryExecutionRef.current ??
+        AUTOMATIC_INVENTORY_EXECUTION,
+    ) => {
       return await awaitAbortable(
-        defaultOpenResources(account, { signal }),
+        defaultOpenResources(account, { signal, protectionBypassExecution }),
         signal,
       )
     },
@@ -805,8 +857,22 @@ export function useAccountKeyResourceController({
       const requestedField = nativeEditor.fields.find(
         (field) => field.fieldId === fieldId,
       )
+      const dependencies =
+        requestedField && "optionLoader" in requestedField
+          ? requestedField.optionLoader?.dependsOn ?? []
+          : []
+      const dependencySignature = (projection: EditableResourceProjection) =>
+        JSON.stringify(dependencies.map((dependency) => projection[dependency]))
+      const signature = dependencySignature(requestedValues)
+      const dependenciesChanged =
+        signature !==
+        (editorFieldDependencySignatures.current.get(fieldId) ??
+          dependencySignature(currentEditorState.initialValues))
+      editorFieldDependencySignatures.current.set(fieldId, signature)
+      // Loading options does not invalidate an existing selection. Only a
+      // dependency change clears it before the returned choices are known.
       const nextValues =
-        currentEditorState && requestedField
+        dependenciesChanged && requestedField
           ? resetInvalidOptionValue(
               requestedValues,
               currentEditorState.initialValues,
@@ -823,14 +889,15 @@ export function useAccountKeyResourceController({
         delete optionFailuresByField[fieldId]
         return {
           ...current,
-          values: field
-            ? resetInvalidOptionValue(
-                current.values,
-                current.initialValues,
-                field,
-                [],
-              )
-            : current.values,
+          values:
+            dependenciesChanged && field
+              ? resetInvalidOptionValue(
+                  current.values,
+                  current.initialValues,
+                  field,
+                  [],
+                )
+              : current.values,
           optionsByField: { ...current.optionsByField, [fieldId]: [] },
           optionFailuresByField,
           loadingFieldIds: [...new Set([...current.loadingFieldIds, fieldId])],
@@ -919,6 +986,7 @@ export function useAccountKeyResourceController({
   const load = useCallback(
     async (
       options: {
+        protectionBypassExecution?: ProtectionBypassExecution
         preserveCreatedSecret?: boolean
         preserveEditor?: boolean
         preserveRows?: boolean
@@ -1069,7 +1137,11 @@ export function useAccountKeyResourceController({
             )
           }
           const loadAccount = async (account: DisplaySiteData) => {
-            const session = await openSession(account, controller.signal)
+            const session = await openSession(
+              account,
+              controller.signal,
+              options.protectionBypassExecution,
+            )
             if (!session) return [] as AccountKeyResourceFacts[]
             const scope = await awaitAbortable(
               session.resolveDefaultScope({ signal: controller.signal }),
@@ -1139,7 +1211,11 @@ export function useAccountKeyResourceController({
           })
           return false
         }
-        const session = await openSession(account, controller.signal)
+        const session = await openSession(
+          account,
+          controller.signal,
+          options.protectionBypassExecution,
+        )
         if (!session) {
           clearTerminalResourceState({
             preserveCreatedSecret: options.preserveCreatedSecret,
@@ -1249,9 +1325,13 @@ export function useAccountKeyResourceController({
         } | null = null
         if (preserveEditor && preservedEditorId !== undefined) {
           const nativeEditor = await awaitAbortable(
-            session.openCreateEditor(scope.scopeKey, {
-              signal: controller.signal,
-            }),
+            session.openCreateEditor(
+              scope.scopeKey,
+              {
+                signal: controller.signal,
+              },
+              creationIntentRef.current,
+            ),
             controller.signal,
           )
           if (current !== generation.current) return false
@@ -1544,22 +1624,27 @@ export function useAccountKeyResourceController({
       ref: AccountKeyResourceRef,
       controller: AbortController,
     ): Promise<ResourceActionContext | null> => {
-      if (mode === "single") {
-        const session = sessionRef.current
-        const collection = collectionRef.current
-        const boundary = activeResourceBoundaryRef.current
-        return session && collection && boundary && isCurrentResourceRef(ref)
-          ? { session, collection, boundary }
-          : null
-      }
-      if (mode !== "all" || !isAcceptedResourceRef(ref)) return null
+      if (
+        mode === "idle" ||
+        (mode === "single"
+          ? !isCurrentResourceRef(ref)
+          : !isAcceptedResourceRef(ref))
+      )
+        return null
       const account = accountsRef.current.find(
         (candidate) =>
           candidate.id === ref.accountId && candidate.siteType === ref.siteType,
       )
       if (!account) return null
-      const boundary = boundaryFromResourceRef(ref)
-      const session = await openSession(account, controller.signal)
+      const boundary =
+        mode === "single"
+          ? activeResourceBoundaryRef.current!
+          : boundaryFromResourceRef(ref)
+      const session = await openSession(
+        account,
+        controller.signal,
+        USER_KEY_MANAGEMENT_EXECUTION,
+      )
       if (!session) return null
       const collection = await awaitAbortable(
         session.openCollection(ref.scopeKey, { signal: controller.signal }),
@@ -1601,6 +1686,7 @@ export function useAccountKeyResourceController({
         ),
       )
       const accepted = await load({
+        protectionBypassExecution: USER_KEY_MANAGEMENT_EXECUTION,
         preserveCreatedSecret: true,
         preserveRows: true,
         ...(targetBoundary ? { targetScopeKey: targetBoundary.scopeKey } : {}),
@@ -1666,8 +1752,13 @@ export function useAccountKeyResourceController({
       setDetailFailure(null)
       setIsDetailLoading(true)
       try {
+        const actionContext = await resolveResourceActionContext(
+          ref,
+          controller,
+        )
+        if (!actionContext) return
         const facts = await awaitAbortable(
-          collection.get(ref, { signal: controller.signal }),
+          actionContext.collection.get(ref, { signal: controller.signal }),
           controller.signal,
         )
         if (isCurrentDetailRequest()) {
@@ -1680,7 +1771,7 @@ export function useAccountKeyResourceController({
         if (isCurrentDetailRequest()) setIsDetailLoading(false)
       }
     },
-    [isCurrentResourceRef, mode],
+    [isCurrentResourceRef, mode, resolveResourceActionContext],
   )
 
   const closeDetail = useCallback(() => {
@@ -1792,15 +1883,30 @@ export function useAccountKeyResourceController({
             controller.signal,
           )
         } else {
-          if (!session) {
+          const account = accountsRef.current.find(
+            (candidate) => candidate.id === boundary.accountId,
+          )
+          const creationSession = account
+            ? await openSession(
+                account,
+                controller.signal,
+                USER_KEY_MANAGEMENT_EXECUTION,
+              )
+            : null
+          if (!creationSession) {
             throw new AccountKeyResourceError({
               code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
             })
           }
+          sessionRef.current = creationSession
           nativeEditor = await awaitAbortable(
-            session.openCreateEditor(boundary.scopeKey, {
-              signal: controller.signal,
-            }),
+            creationSession.openCreateEditor(
+              boundary.scopeKey,
+              {
+                signal: controller.signal,
+              },
+              creationIntentRef.current,
+            ),
             controller.signal,
           )
         }
@@ -1853,6 +1959,7 @@ export function useAccountKeyResourceController({
       isCurrentResourceRef,
       isFreshReadRequiredForBoundary,
       mode,
+      openSession,
       resolveResourceActionContext,
       transitionEditor,
       transitionEditorOpening,
@@ -2062,6 +2169,19 @@ export function useAccountKeyResourceController({
           editorRef.current = null
           editorBoundaryRef.current = null
           transitionEditor(() => null)
+          if (submitMode === "create" && account && onCreatedRef.current) {
+            try {
+              await onCreatedRef.current(account, {
+                ...result,
+                ref: result.facts?.ref ?? null,
+              })
+            } catch (error) {
+              createLogger("AccountKeyResourceController").error(
+                "Created key handoff failed",
+                error,
+              )
+            }
+          }
           const accepted = await refreshAfterMutation(
             returnedBoundary,
             result.createdSecret

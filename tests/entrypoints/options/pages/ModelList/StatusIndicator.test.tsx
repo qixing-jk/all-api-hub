@@ -7,9 +7,9 @@ import {
   createAccountSource,
   createProfileSource,
 } from "~/features/ModelList/modelManagementSources"
-import { buildAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { render, screen } from "~~/tests/test-utils/render"
 
@@ -266,7 +266,7 @@ describe("StatusIndicator", () => {
           runtimeKeyLoadErrorMessage: null,
           catalogLoadErrorMessage: null,
           runtimeKeys: [
-            buildAccountTokenRuntimeKey(
+            buildNewApiRuntimeKey(
               ACCOUNT as any,
               {
                 id: 7,
@@ -305,7 +305,7 @@ describe("StatusIndicator", () => {
     const loadCatalog = vi.fn()
     const loadRuntimeKeys = vi.fn()
     const runtimeKeys = [
-      buildAccountTokenRuntimeKey(
+      buildNewApiRuntimeKey(
         ACCOUNT as any,
         {
           id: 7,

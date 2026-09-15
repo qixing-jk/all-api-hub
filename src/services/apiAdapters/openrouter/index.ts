@@ -14,7 +14,6 @@ export const openRouterCapabilities: SiteTypeCapabilities = {
     data: openRouterAccountData,
     persistence: openRouterAccountPersistence,
     keyResourceManagement: openRouterAccountKeyResources,
-    keyResources: openRouterAccountKeyResources,
     providerModelCatalog: openRouterProviderModelCatalog,
     refresh: openRouterAccountRefresh,
   },

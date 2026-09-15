@@ -13,7 +13,6 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { ManagedSiteTokenBatchExportDialog } from "~/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog"
 import { ManagedSiteTokenBatchExportFooter } from "~/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog/ManagedSiteTokenBatchExportFooter"
 import { NEW_API_MANAGED_VERIFICATION_CLOSE_MODES } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
-import { buildAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
@@ -41,10 +40,11 @@ import {
   type ManagedSiteTokenBatchExportPreview,
   type ManagedSiteTokenBatchExportPreviewItem,
 } from "~/types/managedSiteTokenBatchExport"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import {
-  buildApiToken,
   buildDisplaySiteData,
+  buildNewApiToken,
 } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
@@ -356,14 +356,14 @@ const account = buildDisplaySiteData({
   name: "Account 1",
 })
 const token = {
-  ...buildApiToken({
+  ...buildNewApiToken({
     id: 1,
     name: "Token 1",
   }),
   accountId: account.id,
   accountName: account.name,
 }
-const runtimeKey = buildAccountTokenRuntimeKey(account, token)
+const runtimeKey = buildNewApiRuntimeKey(account, token)
 
 const buildDialogPreviewItem = (
   tokenId: number,

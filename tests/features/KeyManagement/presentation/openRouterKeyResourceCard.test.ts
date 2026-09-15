@@ -7,7 +7,7 @@ import {
   buildReadOnlyOpenRouterKeyResourceCardPresentation,
 } from "~/features/KeyManagement/presentation/openRouterKeyResourceCard"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
-import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
+import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_RESETS,
@@ -95,7 +95,7 @@ describe("buildOpenRouterKeyResourceCardPresentation", () => {
       title: "Example key",
       accountLabel: "Example account",
       status: "active",
-      statusLabel: "keyManagement:openRouter.list.status.enabled",
+      statusLabel: "keyManagement:native.status.enabled",
       secretAvailability: INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
       maskedLabel: "sk-or-v1-••••example",
       secretAvailabilityMessage:
@@ -292,11 +292,11 @@ describe("buildOpenRouterKeyResourceCardPresentation", () => {
 
     expect(disabled).toMatchObject({
       status: "inactive",
-      statusLabel: "keyManagement:openRouter.list.status.disabled",
+      statusLabel: "keyManagement:native.status.disabled",
     })
     expect(unknown).toMatchObject({
       status: "unknown",
-      statusLabel: "keyManagement:openRouter.list.status.unknown",
+      statusLabel: "keyManagement:native.status.unknown",
     })
   })
 
@@ -317,9 +317,7 @@ describe("buildOpenRouterKeyResourceCardPresentation", () => {
     )
 
     expect(unlimited.status).toBe("inactive")
-    expect(unlimited.statusLabel).toBe(
-      "keyManagement:openRouter.list.status.expired",
-    )
+    expect(unlimited.statusLabel).toBe("keyManagement:native.status.expired")
     expect(unlimited.summaryFacts.map(({ value }) => value)).toEqual([
       "Example workspace",
       "keyManagement:openRouter.list.values.unlimited",

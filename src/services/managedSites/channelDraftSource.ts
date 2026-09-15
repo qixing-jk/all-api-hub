@@ -1,10 +1,9 @@
 import {
-  isAccountTokenRuntimeKey,
+  isAccountKeyResourceRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { normalizeAccountSiteProfileUrlForManagedChannel } from "~/services/accounts/accountSiteProfile/urls"
 import type { ManagedSiteChannelDraftSource } from "~/types/managedSiteChannelDraft"
-import { parseDelimitedList } from "~/utils/core/string"
 
 /** Keeps the existing account/key name and automatic-import suffix. */
 const buildDraftName = (sourceName: string, keyName: string): string => {
@@ -18,14 +17,16 @@ export function buildManagedSiteChannelDraftSource(
 ): ManagedSiteChannelDraftSource {
   return {
     name: buildDraftName(runtimeKey.accountName, runtimeKey.label),
-    baseUrl: normalizeAccountSiteProfileUrlForManagedChannel({
-      siteType: runtimeKey.siteType,
-      url: runtimeKey.baseUrl.trim() || runtimeKey.account.baseUrl,
-    }),
+    baseUrl:
+      isAccountKeyResourceRuntimeKey(runtimeKey) &&
+      runtimeKey.baseUrl.trim() === runtimeKey.account.baseUrl.trim()
+        ? normalizeAccountSiteProfileUrlForManagedChannel({
+            siteType: runtimeKey.siteType,
+            url: runtimeKey.baseUrl.trim(),
+          })
+        : runtimeKey.baseUrl.trim() || runtimeKey.account.baseUrl,
     apiKey: runtimeKey.secret,
-    modelHints: isAccountTokenRuntimeKey(runtimeKey)
-      ? parseDelimitedList(runtimeKey.token.models)
-      : [],
+    modelHints: [...runtimeKey.modelAccess.suggestedModelIds],
   }
 }
 

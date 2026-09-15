@@ -2,23 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
-import {
-  resolveDisplayAccountRuntimeKeySecret,
-  resolveDisplayAccountTokenForSecret,
-} from "~/services/accounts/utils/apiServiceRequest"
-import {
-  createAccountRuntimeKeyExportSource,
-  createAccountTokenExportSource,
-} from "~/services/accounts/utils/credentialExport"
+import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
+import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
 import { resolveCredentialExport } from "~/services/integrations/credentialExport"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import {
-  buildApiToken,
   buildDisplaySiteData,
+  buildNewApiToken,
 } from "~~/tests/test-utils/factories"
 
 vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
   resolveDisplayAccountRuntimeKeySecret: vi.fn(),
-  resolveDisplayAccountTokenForSecret: vi.fn(),
 }))
 
 const account = buildDisplaySiteData({ siteType: SITE_TYPES.NEW_API })
@@ -39,11 +33,15 @@ describe("account credential exports", () => {
   })
 
   it("exports a usable inventory secret without a provider read or inventory mutation", async () => {
-    const token = buildApiToken({
+    const token = buildNewApiToken({
       key: " current-test-key ",
       note: "Key notes",
     })
-    const source = createAccountTokenExportSource(account, token)
+    const source = createAccountRuntimeKeyExportSource(
+      account,
+      buildNewApiRuntimeKey(account, token),
+      { preferCurrentSecret: true },
+    )
 
     expect(source.notes).toBe("Key notes")
     await expect(resolveCredentialExport(source)).resolves.toEqual({
@@ -52,24 +50,27 @@ describe("account credential exports", () => {
       baseUrl: account.baseUrl,
       apiKey: "sk-current-test-key",
     })
-    expect(resolveDisplayAccountTokenForSecret).not.toHaveBeenCalled()
+    expect(resolveDisplayAccountRuntimeKeySecret).not.toHaveBeenCalled()
     expect(token.key).toBe(" current-test-key ")
   })
 
   it("defers masked inventory secret recovery until the credential is needed", async () => {
-    const token = buildApiToken({ key: "sk-********" })
-    vi.mocked(resolveDisplayAccountTokenForSecret).mockResolvedValue({
-      ...token,
-      key: "resolved-test-key",
+    const token = buildNewApiToken({ key: "sk-********" })
+    vi.mocked(resolveDisplayAccountRuntimeKeySecret).mockResolvedValue({
+      ...buildNewApiRuntimeKey(account, token),
+      secret: "resolved-test-key",
     })
-    const source = createAccountTokenExportSource(account, token)
-
-    expect(resolveDisplayAccountTokenForSecret).not.toHaveBeenCalled()
-    await expect(source.resolveApiKey()).resolves.toBe("resolved-test-key")
-    expect(resolveDisplayAccountTokenForSecret).toHaveBeenCalledWith(
+    const source = createAccountRuntimeKeyExportSource(
       account,
-      token,
-      {},
+      buildNewApiRuntimeKey(account, token),
+      { preferCurrentSecret: true },
+    )
+
+    expect(resolveDisplayAccountRuntimeKeySecret).not.toHaveBeenCalled()
+    await expect(source.resolveApiKey()).resolves.toBe("resolved-test-key")
+    expect(resolveDisplayAccountRuntimeKeySecret).toHaveBeenCalledWith(
+      account,
+      buildNewApiRuntimeKey(account, token),
     )
     expect(token.key).toBe("sk-********")
   })
@@ -90,7 +91,6 @@ describe("account credential exports", () => {
       account,
       runtimeKey,
     )
-    expect(resolveDisplayAccountTokenForSecret).not.toHaveBeenCalled()
   })
 
   it("retains a creation-only native secret when the exporter prefers its current value", async () => {

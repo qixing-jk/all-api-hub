@@ -25,16 +25,13 @@ import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testId
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
 import {
   collectAccountRuntimeKeySecrets,
-  isAccountTokenRuntimeKey,
+  getAccountRuntimeKeyExportId,
   isServiceCredentialRuntimeKey,
   type AccountRuntimeKey,
   type ServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
-import {
-  createAccountRuntimeKeyExportSource,
-  createAccountTokenExportSource,
-} from "~/services/accounts/utils/credentialExport"
+import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
 import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
 import {
   createProfileCredentialExportData,
@@ -141,9 +138,6 @@ export function RuntimeKeyActionControls({
   }, [actionPolicy.exportSecret])
 
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
-  const accountToken = isAccountTokenRuntimeKey(runtimeKey)
-    ? runtimeKey.token
-    : null
   const serviceCredentialProfile = useMemo(
     () =>
       isServiceCredentialRuntimeKey(runtimeKey)
@@ -159,12 +153,10 @@ export function RuntimeKeyActionControls({
     () =>
       serviceCredentialProfile
         ? createProfileCredentialExportSource(serviceCredentialProfile)
-        : accountToken
-          ? createAccountTokenExportSource(account, accountToken)
-          : createAccountRuntimeKeyExportSource(account, runtimeKey, {
-              preferCurrentSecret: true,
-            }),
-    [account, accountToken, runtimeKey, serviceCredentialProfile],
+        : createAccountRuntimeKeyExportSource(account, runtimeKey, {
+            preferCurrentSecret: true,
+          }),
+    [account, runtimeKey, serviceCredentialProfile],
   )
   const kelivoActionId = serviceCredentialProfile
     ? PRODUCT_ANALYTICS_ACTION_IDS.CopyServiceCredentialKelivoImportCode
@@ -335,8 +327,6 @@ export function RuntimeKeyActionControls({
       )
     }
 
-    if (!accountToken) return null
-
     return (
       <Suspense fallback={null}>
         <LazyKiloCodeExportDialog
@@ -344,7 +334,7 @@ export function RuntimeKeyActionControls({
           onClose={() => setIsKiloCodeDialogOpen(false)}
           initialSelectedSiteIds={[account.id]}
           initialSelectedTokenIdsBySite={{
-            [account.id]: [`${accountToken.id}`],
+            [account.id]: [getAccountRuntimeKeyExportId(runtimeKey)],
           }}
         />
       </Suspense>

@@ -459,45 +459,6 @@ export interface DisplaySiteData {
   checkIn: CheckInConfig
 }
 
-// 站点的token 密钥信息(API 密钥)
-export interface ApiToken {
-  id: number
-  user_id: number
-  key: string
-  status: number
-  name: string
-  note?: string
-  created_time: number
-  accessed_time: number
-  expired_time: number
-  remain_quota: number
-  unlimited_quota: boolean
-  model_limits_enabled?: boolean
-  model_limits?: string
-  allow_ips?: string
-  used_quota: number
-  group?: string // 可选字段，某些站点可能没有
-  /**
-   * Stable Sub2API backend group id, when the key DTO exposes it.
-   *
-   * `group` remains the display/group name and must not be interpreted as this id.
-   */
-  sub2api_group_id?: number
-  DeletedAt?: null
-  /**
-   * Token-scoped model allow-list / restriction field returned by some backends.
-   *
-   * Semantic notes:
-   * - This is equivalent to `model_limits` for compatible backends that serialize
-   *   the token's model restriction list under `models` instead.
-   * - It describes models allowed for this specific API key/token, not the
-   *   account-wide available model list.
-   * - It is metadata returned by the token API payload, not a live upstream
-   *   `/models` probe result.
-   */
-  models?: string
-}
-
 export const DASHBOARD_TAB_TYPES = [
   DATA_TYPE_CASHFLOW,
   DATA_TYPE_BALANCE,
@@ -506,6 +467,5 @@ export type DashboardTabType = (typeof DASHBOARD_TAB_TYPES)[number]
 
 export { AuthTypeEnum } from "~/types/auth"
 export * from "~/types/accountTodayStats"
-export type { AccountToken } from "~/types/accountToken"
 export type { TempWindowHealthStatusCode } from "~/types/tempWindow"
 export { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types/tempWindow"

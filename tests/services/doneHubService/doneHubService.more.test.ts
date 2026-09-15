@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import {
-  buildApiToken,
   buildDisplaySiteData,
+  buildNewApiToken,
 } from "~~/tests/test-utils/factories"
 
 const {
@@ -70,15 +70,13 @@ describe("doneHubService additional flows", () => {
       name: "Done Hub Account",
       baseUrl: "https://proxy.example.com",
     })
-    const token = buildApiToken({
+    const token = buildNewApiToken({
       key: "done-hub-key",
       name: "Primary Token",
     })
 
     const result = await prepareChannelFormData(
-      buildManagedSiteChannelDraftSource(
-        buildDisplayAccountTokenRuntimeKey(account, token),
-      ),
+      buildManagedSiteChannelDraftSource(buildNewApiRuntimeKey(account, token)),
     )
 
     expect(mockFetchManagedSiteImportModels).toHaveBeenCalledWith(
@@ -119,15 +117,13 @@ describe("doneHubService additional flows", () => {
       name: "Done Hub Account",
       baseUrl: "https://proxy.example.com",
     })
-    const token = buildApiToken({
+    const token = buildNewApiToken({
       key: "done-hub-key",
       name: "Primary Token",
     })
 
     const result = await prepareChannelFormData(
-      buildManagedSiteChannelDraftSource(
-        buildDisplayAccountTokenRuntimeKey(account, token),
-      ),
+      buildManagedSiteChannelDraftSource(buildNewApiRuntimeKey(account, token)),
     )
 
     expect(mockResolveDefaultChannelGroups).toHaveBeenCalled()
@@ -155,15 +151,13 @@ describe("doneHubService additional flows", () => {
       siteType: SITE_TYPES.AIHUBMIX,
       baseUrl: "https://console.aihubmix.com",
     })
-    const token = buildApiToken({
+    const token = buildNewApiToken({
       key: "aihubmix-key",
       name: "AIHubMix Token",
     })
 
     const result = await prepareChannelFormData(
-      buildManagedSiteChannelDraftSource(
-        buildDisplayAccountTokenRuntimeKey(account, token),
-      ),
+      buildManagedSiteChannelDraftSource(buildNewApiRuntimeKey(account, token)),
     )
 
     expect(mockFetchManagedSiteImportModels).toHaveBeenCalledWith(
@@ -189,10 +183,7 @@ describe("doneHubService additional flows", () => {
 
     const formData = await prepareChannelFormData(
       buildManagedSiteChannelDraftSource(
-        buildDisplayAccountTokenRuntimeKey(
-          buildDisplaySiteData(),
-          buildApiToken(),
-        ),
+        buildNewApiRuntimeKey(buildDisplaySiteData(), buildNewApiToken()),
       ),
     )
     const payload = buildChannelPayload({

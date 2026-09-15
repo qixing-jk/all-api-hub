@@ -1,4 +1,4 @@
-import type { TFunction } from "i18next"
+import { createInstance, type TFunction } from "i18next"
 import { describe, expect, it } from "vitest"
 
 import {
@@ -20,6 +20,7 @@ import {
   isSuccessfulRepairOutcome,
   REPAIR_RESULT_VIEWS,
 } from "~/features/KeyManagement/components/RepairMissingKeysDialog/repairMissingKeysDialogHelpers"
+import zhCN from "~/locales/zh-CN/keyManagement.json"
 import {
   ACCOUNT_KEY_RECONCILIATION_INVALID_REASONS,
   ACCOUNT_KEY_RECONCILIATION_INVENTORY_ISSUES,
@@ -355,6 +356,17 @@ describe("repairMissingKeysDialogHelpers", () => {
         }),
       ),
     ).toBe("bg-warning")
+  })
+
+  it("renders persisted one-time-key skips without naming a provider", async () => {
+    const i18n = createInstance()
+    await i18n.init({
+      lng: "zh-CN",
+      resources: { "zh-CN": { keyManagement: zhCN } },
+    })
+    expect(getSkipReasonLabel(i18n.t, "aihubmixOneTimeKey")).toBe(
+      "此站点仅在创建时显示完整密钥，请手动创建并立即保存完整密钥",
+    )
   })
 
   it("maps every repair, requirement, skip, and view label to its owned key", () => {

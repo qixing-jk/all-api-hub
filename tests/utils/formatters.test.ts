@@ -13,11 +13,9 @@ import {
   formatFullTime,
   formatKeyTime,
   formatLocaleDateTime,
-  formatQuota,
   formatRelativeTime,
   formatTimestamp,
   formatTokenCount,
-  formatUsedQuota,
   getCurrencyDisplayName,
   getCurrencySymbol,
   getOppositeCurrency,
@@ -469,38 +467,6 @@ describe("formatters utilities", () => {
       expect(localeSpy).toHaveBeenCalledWith()
 
       localeSpy.mockRestore()
-    })
-  })
-
-  describe("formatQuota and formatUsedQuota", () => {
-    it("should return unlimited label when quota is unlimited or negative", () => {
-      const tokenUnlimited = {
-        unlimited_quota: true,
-        remain_quota: 1000,
-      } as any
-      const tokenNegative = {
-        unlimited_quota: false,
-        remain_quota: -1,
-      } as any
-
-      expect(formatQuota(tokenUnlimited)).toBe("common:quota.unlimited")
-      expect(formatQuota(tokenNegative)).toBe("common:quota.unlimited")
-    })
-
-    it("should format remaining and used quota with $ and 2 decimals", () => {
-      const token = {
-        unlimited_quota: false,
-        remain_quota: 12345,
-        used_quota: 6789,
-      } as any
-
-      const quota = formatQuota(token)
-      const used = formatUsedQuota(token)
-
-      expect(quota.startsWith("$")).toBe(true)
-      expect(used.startsWith("$")).toBe(true)
-      expect(quota).toMatch(/\$\d+\.\d{2}/)
-      expect(used).toMatch(/\$\d+\.\d{2}/)
     })
   })
 })

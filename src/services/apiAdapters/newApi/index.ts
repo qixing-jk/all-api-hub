@@ -11,12 +11,10 @@ import { createNewApiAccountData } from "./accountData"
 import { createNewApiAccountKeyResources } from "./accountKeyResource"
 import { createNewApiAccountRefresh } from "./accountRefresh"
 import { createNewApiInviteLink } from "./inviteLink"
-import { createNewApiKeyManagement } from "./keyManagement"
 import { createNewApiModelPricing } from "./modelPricing"
 import { createNewApiRedemption } from "./redemption"
 import { newApiSiteNotice } from "./siteNotice"
 import { newApiSiteStructuredAnnouncements } from "./siteStructuredAnnouncements"
-import { createNewApiTokenProvisioning } from "./tokenProvisioning"
 
 export const createNewApiCapabilities = (
   siteType: AccountSiteType = SITE_TYPES.NEW_API,
@@ -32,10 +30,7 @@ export const createNewApiCapabilities = (
     bootstrap: createNewApiAccountBootstrap(siteType),
     completion: createNewApiAccountCompletion(siteType),
     inviteLink: createNewApiInviteLink(),
-    keyManagement: createNewApiKeyManagement(siteType),
-    keyResources: createNewApiAccountKeyResources(siteType),
     keyResourceManagement: createNewApiAccountKeyResources(siteType),
-    tokenProvisioning: createNewApiTokenProvisioning(siteType),
     refresh: createNewApiAccountRefresh(siteType),
     modelPricing: createNewApiModelPricing(siteType),
     redemption: createNewApiRedemption(),

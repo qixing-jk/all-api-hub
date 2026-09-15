@@ -4,7 +4,7 @@ import { ACCOUNT_SITE_ADAPTER_FAMILIES, SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import type { AccountKeyResourceFacts } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
+import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { formatKeyTime, formatLocaleDateTime } from "~/utils/core/formatters"
 
@@ -227,11 +227,10 @@ const nativeKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
     return {
       ...base,
       contextFact,
-      summaryFacts: details.length
-        ? details.slice(0, 4)
-        : contextFact
-          ? [contextFact]
-          : [],
+      summaryFacts: [...(contextFact ? [contextFact] : []), ...details].slice(
+        0,
+        4,
+      ),
       detailFacts: details,
       actions: {
         ...base.actions,
@@ -284,6 +283,7 @@ export function getAccountKeyScopeMessages(
   if (siteType === SITE_TYPES.OPENROUTER) {
     return {
       heading: t("keyManagement:openRouter.workspace.heading"),
+      fallback: t("keyManagement:openRouter.workspace.fallback"),
       label: t("keyManagement:openRouter.workspace.label"),
       empty: t("keyManagement:openRouter.workspace.empty"),
       error: t("keyManagement:openRouter.workspace.error"),
@@ -296,6 +296,7 @@ export function getAccountKeyScopeMessages(
   }
   return {
     heading: t("keyManagement:native.scope.heading"),
+    fallback: t("keyManagement:native.scope.fallback"),
     label: t("keyManagement:native.scope.label"),
     empty: t("keyManagement:native.scope.empty"),
     error: t("keyManagement:native.scope.error"),

@@ -126,7 +126,7 @@ function installNativeInventory() {
   const open = vi.fn(async () => session)
   vi.mocked(getSiteTypeCapabilities).mockReturnValue({
     siteType: SITE_TYPES.NEW_API,
-    account: { keyResources: { open } },
+    account: { keyResourceManagement: { open } },
   })
   return { snapshot, items, writes, rejected, uncertain, rename, session, open }
 }

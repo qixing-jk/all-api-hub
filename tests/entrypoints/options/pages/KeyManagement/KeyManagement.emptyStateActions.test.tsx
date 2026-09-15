@@ -14,8 +14,12 @@ import {
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
 import { API_CREDENTIAL_PROFILE_LINK_STATES } from "~/types/apiCredentialProfiles"
+import { buildNewApiKeyFacts } from "~~/tests/test-utils/accountKeyFixtures"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
-import { createAccount } from "~~/tests/utils/keyManagementFactories"
+import {
+  createAccount,
+  createToken,
+} from "~~/tests/utils/keyManagementFactories"
 
 const {
   sendRuntimeActionMessageMock,
@@ -358,13 +362,7 @@ describe("KeyManagement empty-state actions", () => {
                 },
               }
             : {
-                keyManagement: {
-                  fetchTokens: vi.fn(),
-                  createToken: vi.fn(),
-                  updateToken: vi.fn(),
-                  deleteToken: vi.fn(),
-                  resolveTokenKey: vi.fn(),
-                },
+                keyResourceManagement: { open: openAccountKeyResourcesMock },
               },
     }))
     mockedUseUserPreferencesContext.mockReturnValue(
@@ -1019,18 +1017,27 @@ describe("KeyManagement empty-state actions", () => {
       name: "Account 1",
     })
     const setAllAccountsFilterAccountIds = vi.fn()
+    const scope = {
+      scopeKey: "account",
+      displayName: "Account",
+      isDefault: true,
+    }
+    openAccountKeyResourcesMock.mockResolvedValue({
+      resolveDefaultScope: vi.fn().mockResolvedValue(scope),
+      listScopes: vi.fn().mockResolvedValue([scope]),
+      openCollection: vi.fn().mockResolvedValue({
+        list: vi.fn().mockResolvedValue({
+          items: [1, 2].map((id) =>
+            buildNewApiKeyFacts(account, createToken({ id })),
+          ),
+        }),
+      }),
+    })
 
     useKeyManagementMock.mockReturnValue(
       createHookResult({
         displayData: [account],
         selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
-        accountSummaryItems: [
-          {
-            accountId: account.id,
-            name: account.name,
-            count: 2,
-          },
-        ],
         setAllAccountsFilterAccountIds,
       }),
     )

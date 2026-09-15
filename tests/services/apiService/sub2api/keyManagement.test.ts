@@ -1,26 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
-import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
 import {
-  createApiToken,
-  createSub2ApiTokenForGroupId,
-  fetchAccountAvailableModels,
-  fetchAccountTokens,
+  createSub2ApiKey,
   fetchSub2ApiGroupDescriptors,
   fetchSub2ApiGroupRates,
-  fetchTokenById,
-  fetchUserGroups,
-  resolveApiTokenKey,
-  updateApiToken,
+  fetchSub2ApiKey,
+  fetchSub2ApiKeys,
+  updateSub2ApiKey,
 } from "~/services/apiService/sub2api"
 import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/authSession"
-import {
-  convertExpirySecondsToSub2ApiDays,
-  parseSub2ApiKey,
-  translateSub2ApiCreateTokenRequest,
-  translateSub2ApiUpdateTokenRequest,
-} from "~/services/apiService/sub2api/parsing"
+import { parseSub2ApiNativeKey } from "~/services/apiService/sub2api/parsing"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
@@ -72,135 +62,6 @@ const createRequest = (
   ...overrides,
 })
 
-const createTokenRequest = (
-  overrides: Partial<CreateTokenRequest> = {},
-): CreateTokenRequest => ({
-  name: " demo key ",
-  remain_quota: 750000,
-  expired_time: 0,
-  unlimited_quota: false,
-  model_limits_enabled: true,
-  model_limits: "gpt-4,gpt-4o",
-  allow_ips: "1.1.1.1, 2.2.2.2",
-  group: "vip",
-  ...overrides,
-})
-
-describe("apiService sub2api key management parsing", () => {
-  it("normalizes Sub2API keys into shared token semantics", () => {
-    const token = parseSub2ApiKey({
-      id: "7",
-      user_id: "5",
-      key: "test-key",
-      name: "VIP Key",
-      status: "quota_exhausted",
-      quota: 2.5,
-      quota_used: 1.25,
-      expires_at: "2026-03-08T12:00:00.000Z",
-      created_at: "2026-03-01T08:30:00.000Z",
-      updated_at: "2026-03-02T09:45:00.000Z",
-      ip_whitelist: ["1.1.1.1", "2.2.2.2"],
-      group: { id: 9, name: "vip" },
-    })
-
-    expect(token.id).toBe(7)
-    expect(token.user_id).toBe(5)
-    expect(token.key).toBe("test-key")
-    expect(token.status).toBe(0)
-    expect(token.remain_quota).toBe(Math.round(1.25 * 500000))
-    expect(token.used_quota).toBe(Math.round(1.25 * 500000))
-    expect(token.allow_ips).toBe("1.1.1.1,2.2.2.2")
-    expect(token.group).toBe("vip")
-    expect(token.sub2api_group_id).toBeUndefined()
-    expect(token.unlimited_quota).toBe(false)
-    expect(token.expired_time).toBe(1772971200)
-  })
-
-  it("treats nested Sub2API group ids as group metadata, not stable key group ids", () => {
-    const token = parseSub2ApiKey({
-      id: "7",
-      user_id: "5",
-      key: "test-key",
-      name: "VIP Key",
-      status: "active",
-      quota: 2.5,
-      quota_used: 1.25,
-      expires_at: null,
-      created_at: "2026-03-01T08:30:00.000Z",
-      updated_at: "2026-03-02T09:45:00.000Z",
-      ip_whitelist: [],
-      group: { id: 9, name: "vip" },
-    })
-
-    expect(token.group).toBe("vip")
-    expect(token.sub2api_group_id).toBeUndefined()
-  })
-
-  it("preserves a stable Sub2API key group id when the backend exposes group_id", () => {
-    const token = parseSub2ApiKey({
-      id: "7",
-      user_id: "5",
-      key: "test-key",
-      name: "VIP Key",
-      status: "active",
-      quota: 2.5,
-      quota_used: 1.25,
-      expires_at: null,
-      created_at: "2026-03-01T08:30:00.000Z",
-      updated_at: "2026-03-02T09:45:00.000Z",
-      ip_whitelist: [],
-      group_id: "11",
-      group: { id: 9, name: "vip" },
-    })
-
-    expect(token.group).toBe("vip")
-    expect(token.sub2api_group_id).toBe(11)
-  })
-
-  it("treats non-positive numeric strings like numeric expiries", () => {
-    const token = parseSub2ApiKey({
-      id: 7,
-      user_id: 5,
-      key: "test-key",
-      name: "VIP Key",
-      status: "active",
-      quota: 1,
-      quota_used: 0,
-      expires_at: "0",
-      created_at: "2026-03-01T08:30:00.000Z",
-      updated_at: "2026-03-02T09:45:00.000Z",
-      ip_whitelist: [],
-      group: { id: 9, name: "vip" },
-    })
-
-    expect(token.expired_time).toBe(-1)
-  })
-
-  it("translates shared token requests into Sub2API create and update payloads", () => {
-    const now = Date.UTC(2026, 2, 6, 0, 0, 0)
-    const expiredTime = Math.floor((now + 36 * 60 * 60 * 1000) / 1000)
-    const request = createTokenRequest({ expired_time: expiredTime })
-
-    expect(convertExpirySecondsToSub2ApiDays(expiredTime, now)).toBe(2)
-
-    expect(translateSub2ApiCreateTokenRequest(request, 9, now)).toEqual({
-      name: "demo key",
-      group_id: 9,
-      quota: 1.5,
-      expires_in_days: 2,
-      ip_whitelist: ["1.1.1.1", "2.2.2.2"],
-    })
-
-    expect(translateSub2ApiUpdateTokenRequest(request, 9)).toEqual({
-      name: "demo key",
-      group_id: 9,
-      quota: 1.5,
-      expires_at: new Date(expiredTime * 1000).toISOString(),
-      ip_whitelist: ["1.1.1.1", "2.2.2.2"],
-    })
-  })
-})
-
 describe("apiService sub2api key management service", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -211,28 +72,6 @@ describe("apiService sub2api key management service", () => {
     persistAuthUpdateMock.mockReset()
     getLatestAuthMock.mockResolvedValue(null)
     persistAuthUpdateMock.mockResolvedValue({ status: "persisted" })
-  })
-
-  it("combines available groups with rate data for shared forms", async () => {
-    fetchApiMock
-      .mockResolvedValueOnce({
-        code: 0,
-        message: "ok",
-        data: [
-          { id: 1, name: "default", description: "Default plan" },
-          { id: 9, name: "vip", description: "VIP plan" },
-        ],
-      })
-      .mockResolvedValueOnce({
-        code: 0,
-        message: "ok",
-        data: { "1": 1, "9": 2.5 },
-      })
-
-    await expect(fetchUserGroups(createRequest())).resolves.toEqual({
-      default: { desc: "Default plan", ratio: 1 },
-      vip: { desc: "VIP plan", ratio: 2.5 },
-    })
   })
 
   it("exposes native group descriptors without using display names as identity", async () => {
@@ -335,12 +174,6 @@ describe("apiService sub2api key management service", () => {
     })
   })
 
-  it("returns no available models so Sub2API form hides model-limit controls", async () => {
-    await expect(fetchAccountAvailableModels(createRequest())).resolves.toEqual(
-      [],
-    )
-  })
-
   it("fetches every key inventory page for group coverage", async () => {
     fetchApiMock
       .mockResolvedValueOnce({
@@ -382,9 +215,9 @@ describe("apiService sub2api key management service", () => {
         },
       })
 
-    await expect(fetchAccountTokens(createRequest())).resolves.toEqual([
-      expect.objectContaining({ id: 1, group: "default" }),
-      expect.objectContaining({ id: 2, group: "vip" }),
+    await expect(fetchSub2ApiKeys(createRequest())).resolves.toEqual([
+      expect.objectContaining({ id: 1, group_name: "default" }),
+      expect.objectContaining({ id: 2, group_name: "vip" }),
     ])
 
     expect(fetchApiMock.mock.calls.map((call) => call[1]?.endpoint)).toEqual([
@@ -414,7 +247,7 @@ describe("apiService sub2api key management service", () => {
         },
       })
 
-    await expect(fetchAccountTokens(createRequest())).rejects.toMatchObject({
+    await expect(fetchSub2ApiKeys(createRequest())).rejects.toMatchObject({
       code: API_ERROR_CODES.JSON_PARSE_ERROR,
       endpoint: "/api/v1/keys?page=2&page_size=1000",
     })
@@ -441,7 +274,7 @@ describe("apiService sub2api key management service", () => {
         },
       })
 
-    await expect(fetchAccountTokens(createRequest())).rejects.toMatchObject({
+    await expect(fetchSub2ApiKeys(createRequest())).rejects.toMatchObject({
       code: API_ERROR_CODES.JSON_PARSE_ERROR,
       endpoint: "/api/v1/keys?page=2&page_size=1000",
     })
@@ -458,7 +291,7 @@ describe("apiService sub2api key management service", () => {
       },
     })
 
-    await expect(fetchAccountTokens(createRequest())).rejects.toMatchObject({
+    await expect(fetchSub2ApiKeys(createRequest())).rejects.toMatchObject({
       code: API_ERROR_CODES.JSON_PARSE_ERROR,
       endpoint: "/api/v1/keys?page=1&page_size=1000",
       upstreamCode: "sub2api_key_inventory_page_limit_exceeded",
@@ -477,7 +310,7 @@ describe("apiService sub2api key management service", () => {
       },
     })
 
-    await expect(fetchAccountTokens(createRequest())).rejects.toMatchObject({
+    await expect(fetchSub2ApiKeys(createRequest())).rejects.toMatchObject({
       code: API_ERROR_CODES.JSON_PARSE_ERROR,
       endpoint: "/api/v1/keys?page=1&page_size=1000",
       upstreamCode: "sub2api_key_inventory_invalid_pagination",
@@ -495,313 +328,9 @@ describe("apiService sub2api key management service", () => {
       },
     })
 
-    await expect(fetchAccountTokens(createRequest())).rejects.toMatchObject({
+    await expect(fetchSub2ApiKeys(createRequest())).rejects.toMatchObject({
       code: API_ERROR_CODES.JSON_PARSE_ERROR,
       upstreamCode: "sub2api_key_inventory_invalid_pagination",
-    })
-  })
-
-  it("keeps key-creation available models empty even with Sub2API form metadata", async () => {
-    await expect(
-      fetchAccountAvailableModels(
-        createRequest({
-          auth: {
-            authType: AuthTypeEnum.AccessToken,
-            apiKey: "runtime-api-key",
-            accessToken: "dashboard-jwt",
-          } as ApiServiceRequest["auth"] & { apiKey: string },
-        }),
-      ),
-    ).resolves.toEqual([])
-    expect(fetchApiMock).not.toHaveBeenCalled()
-  })
-
-  it("resolves usable inventory keys without calling unsupported compatible reveal endpoints", async () => {
-    await expect(
-      resolveApiTokenKey(createRequest(), {
-        id: 1,
-        key: "sub2api-full-secret",
-      }),
-    ).resolves.toBe("sub2api-full-secret")
-
-    expect(fetchApiMock).not.toHaveBeenCalled()
-  })
-
-  it("tries the Sub2API key detail endpoint before rejecting masked inventory keys", async () => {
-    fetchApiMock.mockResolvedValueOnce({
-      code: 0,
-      message: "ok",
-      data: {
-        id: 1,
-        user_id: 1,
-        key: "sk-still********masked",
-        name: "demo key",
-        status: "active",
-        quota: 1.5,
-        quota_used: 0,
-        created_at: "2026-03-06T00:00:00.000Z",
-        updated_at: "2026-03-06T00:00:00.000Z",
-        expires_at: null,
-      },
-    })
-
-    await expect(
-      resolveApiTokenKey(createRequest(), {
-        id: 1,
-        key: "sk-still********masked",
-      }),
-    ).rejects.toThrow("token_secret_key_unresolvable")
-
-    expect(fetchApiMock).toHaveBeenCalledTimes(1)
-    expect(fetchApiMock.mock.calls[0]?.[1]?.endpoint).toBe("/api/v1/keys/1")
-  })
-
-  it("resolves masked inventory keys from the Sub2API key detail endpoint", async () => {
-    fetchApiMock.mockResolvedValueOnce({
-      code: 0,
-      message: "ok",
-      data: {
-        id: 1,
-        user_id: 1,
-        key: "sub2api-detail-full-secret",
-        name: "demo key",
-        status: "active",
-        quota: 1.5,
-        quota_used: 0,
-        created_at: "2026-03-06T00:00:00.000Z",
-        updated_at: "2026-03-06T00:00:00.000Z",
-        expires_at: null,
-      },
-    })
-
-    await expect(
-      resolveApiTokenKey(createRequest(), {
-        id: 1,
-        key: "sk-still********masked",
-      }),
-    ).resolves.toBe("sub2api-detail-full-secret")
-
-    expect(fetchApiMock).toHaveBeenCalledTimes(1)
-    expect(fetchApiMock.mock.calls[0]?.[1]?.endpoint).toBe("/api/v1/keys/1")
-  })
-
-  it("resolves the current group and strips unsupported fields on create", async () => {
-    const now = Date.UTC(2026, 2, 6, 0, 0, 0)
-    vi.spyOn(Date, "now").mockReturnValue(now)
-
-    fetchApiMock
-      .mockResolvedValueOnce({
-        code: 0,
-        message: "ok",
-        data: [{ id: 9, name: "vip", description: "VIP plan" }],
-      })
-      .mockResolvedValueOnce({
-        code: 0,
-        message: "ok",
-        data: {
-          id: 1,
-          user_id: 1,
-          key: "new-key",
-          name: "demo key",
-          status: "active",
-          quota: 1.5,
-          quota_used: 0,
-          created_at: "2026-03-06T00:00:00.000Z",
-          updated_at: "2026-03-06T00:00:00.000Z",
-          expires_at: null,
-          ip_whitelist: ["1.1.1.1", "2.2.2.2"],
-          group: { id: 9, name: "vip" },
-        },
-      })
-
-    const tokenRequest = createTokenRequest({
-      expired_time: Math.floor((now + 36 * 60 * 60 * 1000) / 1000),
-    })
-
-    await expect(
-      createApiToken(createRequest(), tokenRequest),
-    ).resolves.toEqual(
-      expect.objectContaining({
-        id: 1,
-        key: "new-key",
-        name: "demo key",
-      }),
-    )
-
-    const postCall = fetchApiMock.mock.calls[1]
-    expect(postCall?.[1]?.endpoint).toBe("/api/v1/keys")
-    expect(JSON.parse(postCall?.[1]?.options?.body)).toEqual({
-      name: "demo key",
-      group_id: 9,
-      quota: 1.5,
-      expires_in_days: 2,
-      ip_whitelist: ["1.1.1.1", "2.2.2.2"],
-    })
-  })
-
-  it("creates against an explicit native group id without resolving a display name", async () => {
-    fetchApiMock.mockResolvedValueOnce({
-      code: 0,
-      message: "ok",
-      data: {
-        id: 12,
-        user_id: 1,
-        key: "new-key",
-        name: "demo key",
-        status: "active",
-        quota: 1.5,
-        quota_used: 0,
-        created_at: "2026-03-06T00:00:00.000Z",
-        updated_at: "2026-03-06T00:00:00.000Z",
-        expires_at: null,
-        group_id: 10,
-        group: { id: 10, name: "Shared" },
-      },
-    })
-
-    await expect(
-      createSub2ApiTokenForGroupId(createRequest(), createTokenRequest(), 10),
-    ).resolves.toEqual(
-      expect.objectContaining({ id: 12, sub2api_group_id: 10 }),
-    )
-
-    expect(fetchApiMock).toHaveBeenCalledOnce()
-    expect(fetchApiMock.mock.calls[0]?.[1]?.endpoint).toBe("/api/v1/keys")
-    expect(JSON.parse(fetchApiMock.mock.calls[0]?.[1]?.options?.body)).toEqual({
-      name: "demo key",
-      group_id: 10,
-      quota: 1.5,
-      ip_whitelist: ["1.1.1.1", "2.2.2.2"],
-    })
-  })
-
-  it("rejects an invalid native group id as a deterministic caller error", async () => {
-    await expect(
-      createSub2ApiTokenForGroupId(createRequest(), createTokenRequest(), 0),
-    ).rejects.toMatchObject({
-      code: API_ERROR_CODES.BUSINESS_ERROR,
-      upstreamCode: "sub2api_invalid_group_id",
-    })
-    expect(fetchApiMock).not.toHaveBeenCalled()
-  })
-
-  it("uses hydrated auth user id when create returns a key DTO without user_id", async () => {
-    getLatestAuthMock.mockResolvedValue({
-      accessToken: "stored-jwt",
-      userId: "42",
-    })
-    fetchApiMock
-      .mockResolvedValueOnce({
-        code: 0,
-        message: "ok",
-        data: [{ id: 9, name: "vip", description: "VIP plan" }],
-      })
-      .mockResolvedValueOnce({
-        code: 0,
-        message: "ok",
-        data: {
-          id: 1,
-          key: "new-key",
-          name: "demo key",
-          status: "active",
-          quota: 1.5,
-          quota_used: 0,
-          created_at: "2026-03-06T00:00:00.000Z",
-          updated_at: "2026-03-06T00:00:00.000Z",
-          expires_at: null,
-          group: { id: 9, name: "vip" },
-        },
-      })
-
-    await expect(
-      createApiToken(
-        createRequest({
-          auth: {
-            authType: AuthTypeEnum.AccessToken,
-            accessToken: "stale-jwt",
-          },
-        }),
-        createTokenRequest(),
-      ),
-    ).resolves.toEqual(
-      expect.objectContaining({
-        id: 1,
-        user_id: 42,
-        key: "new-key",
-      }),
-    )
-    expect((fetchApiMock.mock.calls[1]?.[0] as any)?.auth?.accessToken).toBe(
-      "stored-jwt",
-    )
-  })
-
-  it("preserves consumed quota when translating shared edit payloads", async () => {
-    const editedRemainQuota = 1500000
-    const preservedConsumedQuotaUsd = 0.5
-
-    fetchApiMock
-      .mockResolvedValueOnce({
-        code: 0,
-        message: "ok",
-        data: {
-          id: 1,
-          user_id: 1,
-          key: "existing-key",
-          name: "demo key",
-          status: "active",
-          quota: 2,
-          quota_used: 0.5,
-          created_at: "2026-03-06T00:00:00.000Z",
-          updated_at: "2026-03-06T00:00:00.000Z",
-          expires_at: null,
-          ip_whitelist: ["1.1.1.1"],
-          group: { id: 9, name: "vip" },
-        },
-      })
-      .mockResolvedValueOnce({
-        code: 0,
-        message: "ok",
-        data: [{ id: 9, name: "vip", description: "VIP plan" }],
-      })
-      .mockResolvedValueOnce({
-        code: 0,
-        message: "ok",
-        data: {
-          id: 1,
-          user_id: 1,
-          key: "existing-key",
-          name: "demo key",
-          status: "active",
-          quota: 2,
-          quota_used: 0.5,
-          created_at: "2026-03-06T00:00:00.000Z",
-          updated_at: "2026-03-06T00:00:00.000Z",
-          expires_at: null,
-          ip_whitelist: ["1.1.1.1"],
-          group: { id: 9, name: "vip" },
-        },
-      })
-
-    await expect(
-      updateApiToken(
-        createRequest(),
-        1,
-        createTokenRequest({
-          remain_quota: editedRemainQuota,
-          allow_ips: "1.1.1.1",
-          expired_time: -1,
-        }),
-      ),
-    ).resolves.toBe(true)
-
-    const putCall = fetchApiMock.mock.calls[2]
-    expect(putCall?.[1]?.endpoint).toBe("/api/v1/keys/1")
-    expect(JSON.parse(putCall?.[1]?.options?.body)).toEqual({
-      name: "demo key",
-      group_id: 9,
-      quota: editedRemainQuota / 500000 + preservedConsumedQuotaUsd,
-      expires_at: "",
-      ip_whitelist: ["1.1.1.1"],
     })
   })
 
@@ -837,7 +366,7 @@ describe("apiService sub2api key management service", () => {
       },
     })
 
-    const tokens = await fetchAccountTokens(
+    const tokens = await fetchSub2ApiKeys(
       createRequest({
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -846,7 +375,7 @@ describe("apiService sub2api key management service", () => {
       }),
     )
 
-    expect(tokens[0]?.user_id).toBe(42)
+    expect(tokens[0]?.user_id).toBe("42")
   })
 
   it("uses hydrated auth userId when fetching key detail without upstream user_id", async () => {
@@ -873,7 +402,7 @@ describe("apiService sub2api key management service", () => {
       },
     })
 
-    const token = await fetchTokenById(
+    const token = await fetchSub2ApiKey(
       createRequest({
         auth: {
           authType: AuthTypeEnum.AccessToken,
@@ -883,7 +412,7 @@ describe("apiService sub2api key management service", () => {
       9,
     )
 
-    expect(token.user_id).toBe(42)
+    expect(token.user_id).toBe("42")
   })
 
   it("serializes concurrent refreshes for group fetches and reuses rotated auth", async () => {
@@ -965,14 +494,14 @@ describe("apiService sub2api key management service", () => {
     })
 
     const [firstGroups, secondGroups] = await Promise.all([
-      fetchUserGroups(createRequest()),
-      fetchUserGroups(createRequest()),
+      fetchSub2ApiGroupDescriptors(createRequest()),
+      fetchSub2ApiGroupDescriptors(createRequest()),
     ])
 
-    expect(firstGroups).toEqual({ default: { desc: "Default plan", ratio: 1 } })
-    expect(secondGroups).toEqual({
-      default: { desc: "Default plan", ratio: 1 },
-    })
+    expect(firstGroups).toEqual([
+      expect.objectContaining({ id: 1, displayName: "default" }),
+    ])
+    expect(secondGroups).toEqual(firstGroups)
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(persistAuthUpdateMock).toHaveBeenCalledTimes(1)
   })
@@ -1037,7 +566,7 @@ describe("apiService sub2api key management service", () => {
         },
       })
 
-    const tokens = await fetchAccountTokens(createRequest())
+    const tokens = await fetchSub2ApiKeys(createRequest())
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(tokens).toHaveLength(1)
@@ -1089,7 +618,7 @@ describe("apiService sub2api key management service", () => {
         },
       })
 
-    const tokens = await fetchAccountTokens(createRequest())
+    const tokens = await fetchSub2ApiKeys(createRequest())
 
     expect(tokens).toHaveLength(1)
     expect(resyncSub2ApiAuthTokenMock).toHaveBeenCalledWith(
@@ -1118,8 +647,97 @@ describe("apiService sub2api key management service", () => {
       new ApiError("Unauthorized", 401, "/api/v1/keys"),
     )
 
-    await expect(fetchAccountTokens(createRequest())).rejects.toThrow(
+    await expect(fetchSub2ApiKeys(createRequest())).rejects.toThrow(
       "messages:sub2api.loginRequired",
     )
+  })
+})
+
+describe("Sub2API native key transport", () => {
+  beforeEach(() => {
+    fetchApiMock.mockReset()
+    getLatestAuthMock.mockResolvedValue(null)
+  })
+
+  it("preserves native quota, group identity, expiry and extension fields", () => {
+    const wire = {
+      id: "7",
+      name: " VIP ",
+      key: " secret ",
+      quota: 2.5,
+      quota_used: 1.25,
+      expires_at: "2026-10-01T00:00:00Z",
+      group_id: 9,
+      group: { id: 10, name: "vip" },
+      status: "quota_exhausted",
+      metadata: { custom: true },
+    }
+    expect(parseSub2ApiNativeKey(wire)).toMatchObject({
+      id: 7,
+      name: "VIP",
+      key: "secret",
+      quota: 2.5,
+      quota_used: 1.25,
+      group_id: 9,
+      group_name: "vip",
+      expires_at: wire.expires_at,
+      status: "quota_exhausted",
+      metadata: wire.metadata,
+    })
+    expect(
+      parseSub2ApiNativeKey({ id: 7, group: { id: 10, name: "vip" } }).group_id,
+    ).toBeUndefined()
+  })
+
+  it("rejects invalid native identities", () => {
+    for (const id of [0, -1, 1.5, "invalid"])
+      expect(() => parseSub2ApiNativeKey({ id })).toThrow()
+  })
+
+  it("dispatches the exact native create and update payloads without group-name reads", async () => {
+    const request = createRequest()
+    const payload = {
+      name: "native",
+      group_id: 10,
+      quota: 1.5,
+      expires_in_days: 2,
+      ip_whitelist: ["1.1.1.1"],
+    }
+    fetchApiMock.mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: { id: 12, group_id: 10, key: "created-secret" },
+    })
+    await expect(createSub2ApiKey(request, payload)).resolves.toMatchObject({
+      id: 12,
+      group_id: 10,
+      key: "created-secret",
+    })
+    expect(fetchApiMock).toHaveBeenCalledTimes(1)
+    expect(fetchApiMock.mock.calls[0][1]).toMatchObject({
+      endpoint: "/api/v1/keys",
+      options: { method: "POST", body: JSON.stringify(payload) },
+    })
+    fetchApiMock.mockResolvedValueOnce({ code: 0, message: "ok" })
+    const edit = { name: "renamed", quota: 4.25 }
+    await updateSub2ApiKey(request, 12, edit)
+    expect(fetchApiMock.mock.calls[1][1]).toMatchObject({
+      endpoint: "/api/v1/keys/12",
+      options: { method: "PUT", body: JSON.stringify(edit) },
+    })
+    expect(fetchApiMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("retains acknowledgements without invented identity and rejects mismatched detail ids", async () => {
+    fetchApiMock.mockResolvedValueOnce({ code: 0, message: "ok" })
+    await expect(
+      createSub2ApiKey(createRequest(), { name: "native", group_id: 10 }),
+    ).resolves.toBeUndefined()
+    fetchApiMock.mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: { id: 13 },
+    })
+    await expect(fetchSub2ApiKey(createRequest(), 12)).rejects.toThrow()
   })
 })

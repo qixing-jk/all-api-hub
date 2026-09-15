@@ -13,16 +13,16 @@ import {
 } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import {
   buildAccountKeyResourceRuntimeKey,
-  buildAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import {
   createAccountKeyResourceCreatedRuntimeSecret,
-  createLegacyCreatedRuntimeSecret,
+  createUnattributedAccountCreatedRuntimeSecret,
 } from "~/services/accounts/createdRuntimeSecret"
 import { API_CREDENTIAL_PROFILE_CAPTURE_STATUSES } from "~/services/apiCredentialProfiles/apiCredentialProfileLinkContracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import {
   createAccount,
   createToken,
@@ -122,15 +122,17 @@ describe("buildOneTimeApiKeyProfileSaveAction", () => {
   })
 
   it("uses the created secret contract and rejects with a detached sanitized error", async () => {
-    const secret = createLegacyCreatedRuntimeSecret({
-      account: {
-        id: "account-example",
-        name: "Example",
+    const secret = createUnattributedAccountCreatedRuntimeSecret({
+      accountId: "account-example",
+      displayName: "Example key",
+      secret: "sk-one-time-secret",
+      credential: {
+        accountName: "Example",
         baseUrl: "https://api.example.invalid",
         siteType: SITE_TYPES.NEW_API,
+        apiType: API_TYPES.ANTHROPIC,
+        tagIds: [],
       },
-      token: { name: "Example key", key: "sk-one-time-secret" },
-      apiType: API_TYPES.ANTHROPIC,
     })
     const error = Object.assign(
       new Error("could not save sk-one-time-secret", {
@@ -421,10 +423,10 @@ describe("saveAccountRuntimeKeysToApiCredentialProfiles", () => {
     const result = await saveAccountRuntimeKeysToApiCredentialProfiles({
       items: [
         {
-          runtimeKey: buildAccountTokenRuntimeKey(account1, token1),
+          runtimeKey: buildNewApiRuntimeKey(account1, token1),
         },
         {
-          runtimeKey: buildAccountTokenRuntimeKey(account2, token2),
+          runtimeKey: buildNewApiRuntimeKey(account2, token2),
         },
       ],
       t,
@@ -443,10 +445,13 @@ describe("saveAccountRuntimeKeysToApiCredentialProfiles", () => {
         tagIds: ["tag-a"],
       },
       locator: {
-        source: "account_token",
-        accountId: "account-1",
-        siteType: SITE_TYPES.NEW_API,
-        tokenId: 1,
+        source: "account_key_resource",
+        ref: {
+          accountId: "account-1",
+          siteType: SITE_TYPES.NEW_API,
+          scopeKey: "account",
+          resourceId: "1",
+        },
       },
       linkedBy: "resolved-runtime-key",
     })
@@ -459,10 +464,13 @@ describe("saveAccountRuntimeKeysToApiCredentialProfiles", () => {
         tagIds: ["tag-b"],
       },
       locator: {
-        source: "account_token",
-        accountId: "account-2",
-        siteType: SITE_TYPES.AIHUBMIX,
-        tokenId: 2,
+        source: "account_key_resource",
+        ref: {
+          accountId: "account-2",
+          siteType: SITE_TYPES.AIHUBMIX,
+          scopeKey: "account",
+          resourceId: "2",
+        },
       },
       linkedBy: "resolved-runtime-key",
     })
@@ -533,10 +541,10 @@ describe("saveAccountRuntimeKeysToApiCredentialProfiles", () => {
       saveAccountRuntimeKeysToApiCredentialProfiles({
         items: [
           {
-            runtimeKey: buildAccountTokenRuntimeKey(account1, token1),
+            runtimeKey: buildNewApiRuntimeKey(account1, token1),
           },
           {
-            runtimeKey: buildAccountTokenRuntimeKey(account2, token2),
+            runtimeKey: buildNewApiRuntimeKey(account2, token2),
           },
         ],
         t,

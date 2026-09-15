@@ -11,7 +11,6 @@
     "autoProvisionNeedsManualAction": "{{accountName}} 已儲存，但預設金鑰需要手動選擇或處理一次性金鑰。請前往金鑰管理使用“{{actionLabel}}”完成。",
     "autoProvisionUnsupported": "{{accountName}} 已儲存，但該站點類型暫不支援自動建立預設 API 金鑰。",
     "checkingApiKeys": "正在檢查 API 金鑰...",
-    "createTokenFailed": "建立 API 令牌失敗",
     "tokenNotFound": "無法建立或找到 API 令牌"
   },
   "aihubmix": {
@@ -94,7 +93,6 @@
       "failed": "操作失敗：{{error}}",
       "saveFailed": "儲存失敗：{{error}}"
     },
-    "tokenSecretUnavailable": "該平台不支援二次查看完整金鑰。請在建立金鑰時立即複製並保存。",
     "unknown": "未知錯誤",
     "validation": {
       "bookmarkNameRequired": "書籤名稱不能為空",
@@ -162,7 +160,6 @@
   "sub2api": {
     "authPersistenceFailed": "無法將重新整理的 Sub2API 登入資訊安全地儲存到此帳號。請重新整理或重新匯入該帳號，然後再試一次。",
     "configMissing": "請先在基礎設定中配置 Sub2API 基礎 URL 和管理員 API Key。",
-    "groupMissing": "Sub2API 分組“{{group}}”已不可用。請重新整理分組列表後重試。",
     "loginRequired": "請先登入 Sub2API 控制台（外掛會讀取 auth_token/auth_user 用於匯入會話）後再重試。",
     "refreshTokenInvalid": "Sub2API refresh_token 已失效/已輪轉。請從控制台重新匯入會話（推薦無痕/隱私視窗），或貼上新的 refresh_token 後重試。"
   },
@@ -213,10 +210,8 @@
     }
   },
   "tokenProvisioning": {
-    "createRequiresAvailableGroup": "目前這個帳號沒有可用於建立金鑰的分組，請先確認帳號分組情況後再試。",
     "createRequiresGroup": "建立金鑰前需要先確認分組，請先選擇一個可用分組後再繼續。",
     "createRequiresGroupSelection": "目前這個帳號有多個可用分組。請先選擇要使用的分組，再建立金鑰。",
-    "createRequiresOneTimeSecretHandling": "此服務建立的金鑰只能查看一次，請在金鑰管理中手動建立並立即保存完整金鑰。",
     "selectGroupTitle": "選擇金鑰分組"
   },
   "veloera": {

@@ -33,7 +33,7 @@ import {
 } from "~/features/ModelList/priceComparisonActivation"
 import { PricingScenarioNavigation } from "~/features/ModelList/pricingScenarioNavigation"
 import {
-  canCreateAccountApiTokens,
+  canCreateAccountKeyResources,
   canListAccountRuntimeKeys,
 } from "~/services/accounts/keyProductCapabilities"
 import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
@@ -286,7 +286,7 @@ export default function ModelList(props: {
     isFallbackCatalogActive &&
     !!currentAccount &&
     canListAccountRuntimeKeys(currentAccount) &&
-    !canCreateAccountApiTokens(currentAccount)
+    !canCreateAccountKeyResources(currentAccount)
   const shouldShowSourceSetupEmptyState = !hasAnySources
   const shouldShowSourceSelectionEmptyState =
     !shouldShowSourceSetupEmptyState && !selectedSource

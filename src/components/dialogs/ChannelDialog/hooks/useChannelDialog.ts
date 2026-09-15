@@ -7,26 +7,25 @@ import {
   CHANNEL_DIALOG_ADVISORY_WARNING_KINDS,
 } from "~/components/dialogs/ChannelDialog/utils/advisoryWarning"
 import toast from "~/lib/notify"
-import { selectSingleNewApiTokenByIdDiff } from "~/services/accounts/accountPostSaveWorkflow"
 import {
-  buildDisplayAccountTokenRuntimeKey,
+  ensureAccountKey,
+  getCreatedAccountRuntimeKey,
+  resolveCreatedAccountRuntimeKey,
+  type AccountKeyCreationResult,
+} from "~/services/accounts/accountKeyCreation"
+import {
   collectAccountRuntimeKeySecrets,
-  isAccountTokenRuntimeKey,
+  isServiceCredentialRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
-import { ensureAccountApiToken } from "~/services/accounts/ensureAccountApiToken"
 import {
-  resolveDefaultTokenQuickCreateResolution,
-  TOKEN_QUICK_CREATE_RESOLUTION_KINDS,
-} from "~/services/accounts/tokenQuickCreateResolution"
-import {
-  createDisplayAccountApiContext,
-  requireDisplayAccountKeyManagement,
+  fetchDisplayAccountRuntimeKeys,
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import { type ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { openNativeManagedChannelImportEditor } from "~/services/apiAdapters/managedResources/channelImport"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
@@ -60,7 +59,7 @@ import {
   PROTECTION_BYPASS_FEATURES,
 } from "~/services/protectionBypass/contracts"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import { type ApiToken, type DisplaySiteData, type SiteAccount } from "~/types"
+import { type DisplaySiteData, type SiteAccount } from "~/types"
 import type { ManagedSiteChannelDraftSource } from "~/types/managedSiteChannelDraft"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
@@ -93,15 +92,6 @@ function isSiteAccount(
   account: DisplaySiteData | SiteAccount,
 ): account is SiteAccount {
   return "site_name" in account && "account_info" in account
-}
-
-/**
- * Extracts numeric token IDs from potentially sparse token lists.
- */
-function getApiTokenIds(tokens: ApiToken[]): number[] {
-  return tokens
-    .map((token) => token?.id)
-    .filter((tokenId): tokenId is number => typeof tokenId === "number")
 }
 
 /**
@@ -145,49 +135,18 @@ export function useChannelDialog() {
     account: DisplaySiteData,
     options?: {
       notice?: string
-      onSuccess?: (createdToken?: ApiToken) => void | Promise<void>
+      onSuccess?: (
+        createdToken: AccountKeyCreationResult,
+      ) => void | Promise<void>
     },
   ): Promise<boolean> => {
-    const { keyManagement, request } = createDisplayAccountApiContext(account)
-    const existingTokens = await requireDisplayAccountKeyManagement(
-      account,
-      keyManagement,
-    ).fetchTokens(request)
-    if (Array.isArray(existingTokens) && existingTokens.length > 0) {
-      return false
-    }
-
-    const resolution = await resolveDefaultTokenQuickCreateResolution(account)
-    if (resolution.kind === TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked) {
-      toast.error(resolution.message)
-      return false
-    }
-
-    if (resolution.kind === TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready) {
-      const selectedGroup = resolution.tokenData.group?.trim()
-      if (!selectedGroup) {
-        toast.error(t("messages:tokenProvisioning.createRequiresGroup"))
-        return false
-      }
-
-      openDefaultTokenQuickCreateDialog({
-        account,
-        allowedGroups: [selectedGroup],
-        notice: options?.notice,
-        onSuccess: options?.onSuccess,
-      })
-      return true
-    }
-
+    const existing = await fetchDisplayAccountRuntimeKeys(account)
+    if (existing.length) return false
     openDefaultTokenQuickCreateDialog({
       account,
-      allowedGroups: resolution.allowedGroups,
-      notice:
-        options?.notice ??
-        t("messages:tokenProvisioning.createRequiresGroupSelection"),
+      notice: options?.notice,
       onSuccess: options?.onSuccess,
     })
-
     return true
   }
 
@@ -325,10 +284,7 @@ export function useChannelDialog() {
 
     try {
       // Get full account if needed
-      let siteAccount: SiteAccount
-
       if (isSiteAccount(account)) {
-        siteAccount = account
         displaySiteData =
           (await accountReadModels.getDisplayDataById(account.id)) ??
           accountPresentation.convertToDisplayData(account)
@@ -338,7 +294,6 @@ export function useChannelDialog() {
         if (!fetchedAccount) {
           throw new Error(t("messages:toast.error.findAccountDetailsFailed"))
         }
-        siteAccount = fetchedAccount
       }
 
       const managedSite = getManagedSiteCapabilities(
@@ -360,109 +315,58 @@ export function useChannelDialog() {
 
       let selectedRuntimeKey = runtimeKey
       if (!selectedRuntimeKey) {
-        const accountApiContext =
-          createDisplayAccountApiContext(displaySiteData)
-        const accountKeyManagement = requireDisplayAccountKeyManagement(
-          displaySiteData,
-          accountApiContext.keyManagement,
-        )
-        const accountApiRequest = accountApiContext.request
-        const existingTokens =
-          await accountKeyManagement.fetchTokens(accountApiRequest)
-        const existingTokenList = Array.isArray(existingTokens)
-          ? existingTokens
-          : []
-        const existingTokenIds = getApiTokenIds(existingTokenList)
-        let apiToken = existingTokenList.at(-1) ?? null
-
-        if (!apiToken) {
-          const resolution =
-            await resolveDefaultTokenQuickCreateResolution(displaySiteData)
-          if (!shouldContinue()) {
-            return cancelOpen()
-          }
-
-          if (resolution.kind === TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked) {
-            toast.error(resolution.message, { id: toastId })
-            return { opened: false }
-          }
-
-          if (
-            resolution.kind ===
-            TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired
-          ) {
-            if (!shouldContinue()) {
-              return cancelOpen()
-            }
-            toast.dismiss(toastId)
-            openDefaultTokenQuickCreateDialog({
-              account: displaySiteData,
-              allowedGroups: resolution.allowedGroups,
-              notice: t(
-                "messages:tokenProvisioning.createRequiresGroupSelection",
-              ),
-              onSuccess: async (createdToken?: ApiToken) => {
-                if (!shouldContinue()) {
-                  return
-                }
-
-                if (createdToken) {
+        const ensured = await ensureAccountKey(displaySiteData)
+        if (!shouldContinue()) return cancelOpen()
+        if (ensured.kind === "input-required") {
+          toast.dismiss(toastId)
+          openDefaultTokenQuickCreateDialog({
+            account: displaySiteData,
+            onSuccess: async (created) => {
+              if (!shouldContinue()) return
+              try {
+                const key = created.createdSecret
+                  ? getCreatedAccountRuntimeKey(displaySiteData!, created)
+                  : await resolveCreatedAccountRuntimeKey(
+                      displaySiteData!,
+                      created,
+                    )
+                if (!shouldContinue()) return
+                if (key) {
                   await openWithAccount(
                     displaySiteData!,
-                    buildDisplayAccountTokenRuntimeKey(
-                      displaySiteData!,
-                      createdToken,
-                    ),
+                    key,
                     onSuccess,
                     options,
                   )
-                  return
+                } else if (created.createdSecret) {
+                  await openWithCredentials(
+                    {
+                      name: created.createdSecret.displayName,
+                      baseUrl: created.createdSecret.credential.baseUrl,
+                      apiKey: created.createdSecret.secret,
+                      apiType: created.createdSecret.credential.apiType,
+                    },
+                    onSuccess,
+                    options,
+                  )
+                } else {
+                  toast.error(t("messages:accountOperations.tokenNotFound"))
                 }
-
-                if (!shouldContinue()) {
-                  return
-                }
-
-                const refetchedTokens =
-                  await accountKeyManagement.fetchTokens(accountApiRequest)
-                if (!shouldContinue()) {
-                  return
-                }
-                const recoveredToken = Array.isArray(refetchedTokens)
-                  ? selectSingleNewApiTokenByIdDiff({
-                      existingTokenIds,
-                      tokens: refetchedTokens,
-                    })
-                  : null
-
-                if (!recoveredToken) {
-                  toast.error(t("messages:accountOperations.createTokenFailed"))
-                  return
-                }
-
-                await openWithAccount(
-                  displaySiteData!,
-                  buildDisplayAccountTokenRuntimeKey(
-                    displaySiteData!,
-                    recoveredToken,
-                  ),
-                  onSuccess,
-                  options,
-                )
-              },
-            })
-            return { opened: false, deferred: true }
-          }
-
-          apiToken = await ensureAccountApiToken(siteAccount, displaySiteData, {
-            toastId,
-            defaultTokenData: resolution.tokenData,
+              } catch {
+                if (shouldContinue())
+                  toast.error(t("messages:accountOperations.tokenNotFound"))
+              }
+            },
           })
+          return { opened: false, deferred: true }
         }
-        selectedRuntimeKey = buildDisplayAccountTokenRuntimeKey(
-          displaySiteData,
-          apiToken,
-        )
+        selectedRuntimeKey = ensured.runtimeKey
+        if (!selectedRuntimeKey) {
+          toast.error(t("messages:accountOperations.tokenNotFound"), {
+            id: toastId,
+          })
+          return { opened: false }
+        }
       }
       if (!shouldContinue()) {
         return cancelOpen()
@@ -472,12 +376,14 @@ export function useChannelDialog() {
         ...collectAccountRuntimeKeySecrets([selectedRuntimeKey]),
         ...collectManagedConfigSecrets(managedConfig),
       ]
-      const resolvedRuntimeKey = isAccountTokenRuntimeKey(selectedRuntimeKey)
-        ? await resolveDisplayAccountRuntimeKeySecret(
-            displaySiteData,
-            selectedRuntimeKey,
-          )
-        : selectedRuntimeKey
+      const resolvedRuntimeKey =
+        isServiceCredentialRuntimeKey(selectedRuntimeKey) &&
+        hasUsableApiTokenKey(selectedRuntimeKey.secret)
+          ? selectedRuntimeKey
+          : await resolveDisplayAccountRuntimeKeySecret(
+              displaySiteData,
+              selectedRuntimeKey,
+            )
       secretsToRedact.push(
         ...collectAccountRuntimeKeySecrets([resolvedRuntimeKey]),
       )

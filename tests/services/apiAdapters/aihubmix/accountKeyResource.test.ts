@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AIHUBMIX_API_ORIGIN, SITE_TYPES } from "~/constants/siteType"
+import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/accountKeyNames"
 import { aihubmixAccountKeyResources } from "~/services/apiAdapters/aihubmix/accountKeyResource"
 import type { AIHubMixKey } from "~/services/apiService/aihubmix/keyTypes"
 import { AuthTypeEnum } from "~/types"
@@ -140,7 +141,7 @@ describe("AIHubMix native account keys", () => {
     mocks.list
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
-        key({ name: "user group (auto)", models: "", subnet: "" }),
+        key({ name: DEFAULT_AUTO_PROVISION_KEY_NAME, models: "", subnet: "" }),
       ])
     mocks.create.mockResolvedValueOnce(undefined)
     const editor = await (

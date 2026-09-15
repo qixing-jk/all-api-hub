@@ -6,8 +6,8 @@ import { SITE_TYPES } from "~/constants/siteType"
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
 import { server } from "~~/tests/msw/server"
 import {
-  buildApiToken,
   buildDisplaySiteData,
+  buildNewApiToken,
 } from "~~/tests/test-utils/factories"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -28,7 +28,7 @@ describe("CopyKeyDialog APIyi family defaults", () => {
         baseUrl: "https://api.apiyi.com",
         name: "APIyi",
       })
-      const token = buildApiToken({
+      const token = buildNewApiToken({
         name: "Existing APIyi key",
         key,
       })
@@ -72,7 +72,8 @@ describe("CopyKeyDialog APIyi family defaults", () => {
         expect(writeText).toHaveBeenCalledWith("sk-apiyi-existing-test-key"),
       )
       expect(revealRequests).toBe(reveals)
-      expect(inventoryPages).toEqual(["0", "1"])
+      // Native facts omit plaintext; copying resolves the key from a fresh inventory.
+      expect(inventoryPages).toEqual(["0", "1", "0", "1"])
     },
   )
 })

@@ -11,7 +11,6 @@
     "autoProvisionNeedsManualAction": "Đã lưu {{accountName}}, nhưng khóa mặc định cần lựa chọn thủ công hoặc xử lý bí mật dùng một lần. Hãy dùng \"{{actionLabel}}\" trong phần quản lý khóa để hoàn tất.",
     "autoProvisionUnsupported": "Đã lưu {{accountName}}, nhưng loại trang này không hỗ trợ tự động tạo API Key mặc định.",
     "checkingApiKeys": "Đang kiểm tra các API Key...",
-    "createTokenFailed": "Tạo API token thất bại",
     "tokenNotFound": "Không thể tạo hoặc tìm thấy API token"
   },
   "aihubmix": {
@@ -94,7 +93,6 @@
       "failed": "Thao tác thất bại: {{error}}",
       "saveFailed": "Lưu thất bại: {{error}}"
     },
-    "tokenSecretUnavailable": "Nền tảng này không hỗ trợ xem lại toàn bộ khóa lần thứ hai. Vui lòng sao chép và lưu lại ngay khi tạo khóa.",
     "unknown": "Lỗi không xác định",
     "validation": {
       "bookmarkNameRequired": "Tên dấu trang không được để trống",
@@ -162,7 +160,6 @@
   "sub2api": {
     "authPersistenceFailed": "Không thể lưu thông tin đăng nhập Sub2API đã làm mới vào tài khoản này một cách an toàn. Hãy làm mới hoặc nhập lại tài khoản rồi thử lại.",
     "configMissing": "Hãy cấu hình URL gốc và Admin API Key của Sub2API trong phần Cài đặt cơ bản trước.",
-    "groupMissing": "Nhóm Sub2API \"{{group}}\" không còn khả dụng. Vui lòng làm mới danh sách nhóm rồi thử lại.",
     "loginRequired": "Vui lòng đăng nhập vào bảng điều khiển Sub2API (tiện ích sẽ đọc auth_token/auth_user để nhập phiên) rồi thử lại.",
     "refreshTokenInvalid": "refresh_token của Sub2API đã hết hạn/bị xoay vòng. Vui lòng nhập lại phiên từ bảng điều khiển (khuyến nghị dùng cửa sổ ẩn danh/riêng tư) hoặc dán refresh_token mới rồi thử lại."
   },
@@ -213,10 +210,8 @@
     }
   },
   "tokenProvisioning": {
-    "createRequiresAvailableGroup": "Tài khoản hiện tại không có nhóm khả dụng để tạo khóa, vui lòng kiểm tra tình trạng nhóm của tài khoản trước khi thử lại.",
     "createRequiresGroup": "Cần xác định nhóm trước khi tạo khóa, vui lòng chọn một nhóm khả dụng trước khi tiếp tục.",
     "createRequiresGroupSelection": "Tài khoản hiện tại có nhiều nhóm khả dụng, vui lòng chọn nhóm muốn sử dụng trước khi tạo khóa.",
-    "createRequiresOneTimeSecretHandling": "Nhà cung cấp này chỉ hiển thị khóa mới tạo một lần. Hãy tạo khóa thủ công trong phần quản lý khóa và lưu toàn bộ khóa ngay lập tức.",
     "selectGroupTitle": "Chọn nhóm khóa"
   },
   "veloera": {

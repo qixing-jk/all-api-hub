@@ -27,11 +27,9 @@ import {
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
   getAccountSiteModelListProfile,
 } from "~/services/accounts/accountSiteProfile"
-import {
-  canManageDisplayAccountTokens,
-  fetchDisplayAccountRuntimeKeys,
-  InvalidTokenPayloadError,
-} from "~/services/accounts/utils/apiServiceRequest"
+import { canListAccountRuntimeKeys } from "~/services/accounts/keyProductCapabilities"
+import { fetchDisplayAccountRuntimeKeys } from "~/services/accounts/utils/apiServiceRequest"
+import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { ModelPricingRequest } from "~/services/apiAdapters/contracts/modelPricing"
 import type { ProviderModelCatalogCapability } from "~/services/apiAdapters/contracts/providerModelCatalog"
 import {
@@ -1048,7 +1046,7 @@ function useSingleAccountModelData(params: {
 
   const fallbackAvailable = useMemo(
     () =>
-      canManageDisplayAccountTokens(currentAccount) ||
+      canListAccountRuntimeKeys(currentAccount) ||
       canLoadModelListAccountFallbackRuntimeKeys(currentAccount),
     [currentAccount],
   )
@@ -1264,7 +1262,9 @@ function useSingleAccountModelData(params: {
       }
 
       const errorMessage =
-        error instanceof InvalidTokenPayloadError ? "" : getErrorMessage(error)
+        error instanceof AccountKeyResourceError
+          ? error.failure.message?.trim() ?? ""
+          : getErrorMessage(error)
 
       setFallbackStateScopeKey(requestScopeKey)
       setFallbackRuntimeKeyLoadDiagnostic(errorMessage)

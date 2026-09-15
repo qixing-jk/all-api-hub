@@ -188,7 +188,7 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
       mocks.createDisplayAccountApiContext.mockReturnValue({
         request: { baseUrl: account.baseUrl },
         capabilities: {
-          account: { keyResources: { open } },
+          account: { keyResourceManagement: { open } },
         },
       })
 
@@ -274,7 +274,7 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
     mocks.createDisplayAccountApiContext.mockReturnValue({
       request: { baseUrl: account.baseUrl },
       capabilities: {
-        account: { keyResources: { open } },
+        account: { keyResourceManagement: { open } },
       },
     })
 
@@ -421,7 +421,7 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
       request: { baseUrl: account.baseUrl },
       capabilities: {
         account: {
-          keyResources: {
+          keyResourceManagement: {
             open: vi.fn().mockResolvedValue(createSession(resolve)),
           },
         },
@@ -533,7 +533,7 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
       request: { baseUrl: account.baseUrl },
       capabilities: {
         account: {
-          keyResources: { open },
+          keyResourceManagement: { open },
         },
       },
     })
@@ -603,7 +603,7 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
     const open = vi.fn().mockResolvedValue(createSession(resolve))
     mocks.createDisplayAccountApiContext.mockReturnValue({
       request: { baseUrl: account.baseUrl },
-      capabilities: { account: { keyResources: { open } } },
+      capabilities: { account: { keyResourceManagement: { open } } },
     })
 
     const candidate = await resolveRepairCreatedKeyBatchImportCandidate({
@@ -694,7 +694,7 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
       request: { baseUrl: account.baseUrl },
       capabilities: {
         account: {
-          keyResources: {
+          keyResourceManagement: {
             open: vi.fn().mockResolvedValue(createSession(resolve)),
           },
         },
@@ -766,7 +766,7 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
       request: { baseUrl: account.baseUrl },
       capabilities: {
         account: {
-          keyResources: {
+          keyResourceManagement: {
             open: vi.fn().mockResolvedValue(createSession(resolve)),
           },
         },
@@ -843,7 +843,7 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
       request: { baseUrl: account.baseUrl },
       capabilities: {
         account: {
-          keyResources: {
+          keyResourceManagement: {
             open: vi.fn().mockResolvedValue(createSession(resolve)),
           },
         },

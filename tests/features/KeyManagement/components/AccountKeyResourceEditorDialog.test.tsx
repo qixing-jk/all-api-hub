@@ -1,6 +1,8 @@
 import { act } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { createInstance } from "i18next"
 import { StrictMode, useState } from "react"
+import { I18nextProvider } from "react-i18next"
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -12,6 +14,7 @@ import {
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { NATIVE_RESOURCE_EDITOR_LOADING_REVEALS } from "~/features/ResourceEditor/nativeResourceEditorOpeningState"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
+import zhKeyManagement from "~/locales/zh-CN/keyManagement.json"
 import { RESOURCE_FIELD_OPTION_LOAD_TRIGGERS } from "~/services/apiAdapters/contracts/resourceNative"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResourceEditor"
 import { resolveNewApiFamilyTokenTransport } from "~/services/apiAdapters/newApi/tokenTransport"
@@ -37,6 +40,7 @@ const nativeRequest = {
 
 const editor = (mode: "create" | "edit" = "create") => ({
   editorId: 1,
+  siteType: SITE_TYPES.OPENROUTER,
   mode,
   fields: [
     { fieldId: field.Name, type: "text" as const, required: true },
@@ -113,6 +117,78 @@ const editor = (mode: "create" | "edit" = "create") => ({
 })
 
 describe("AccountKeyResourceEditorDialog", () => {
+  it.each(["authentication_failed", "permission_denied"] as const)(
+    "uses generic %s guidance for a New API editor",
+    async (code) => {
+      const locale = createInstance()
+      await locale.init({
+        lng: "zh-CN",
+        resources: { "zh-CN": { keyManagement: zhKeyManagement } },
+        interpolation: { escapeValue: false },
+      })
+      const definition = createNewApiKeyEditor(
+        SITE_TYPES.NEW_API,
+        nativeRequest,
+        resolveNewApiFamilyTokenTransport(SITE_TYPES.NEW_API),
+      )
+      render(
+        <I18nextProvider i18n={locale}>
+          <AccountKeyResourceEditorDialog
+            editor={{
+              editorId: 1,
+              siteType: SITE_TYPES.NEW_API,
+              mode: "create",
+              fields: definition.fields,
+              initialValues: definition.initialValues,
+              values: definition.initialValues,
+              feedback: { code },
+            }}
+            onClose={vi.fn()}
+            onSubmit={vi.fn()}
+            onValuesChange={vi.fn()}
+          />
+        </I18nextProvider>,
+        { withUserPreferencesProvider: false, withThemeProvider: false },
+      )
+      expect(
+        await screen.findByText(
+          code === "authentication_failed"
+            ? "请重新登录或更新此账号的凭据，然后重试。"
+            : "请使用有权查看和管理密钥的凭据，然后重试。",
+        ),
+      ).toBeVisible()
+      expect(document.body).not.toHaveTextContent("OpenRouter")
+      expect(document.body).not.toHaveTextContent("工作区")
+    },
+  )
+
+  it("does not add an undeclared expiry field to a native creation command", async () => {
+    const user = userEvent.setup()
+    const submit = vi.fn()
+    const definition = createSub2ApiKeyEditor(nativeRequest)
+    render(
+      <AccountKeyResourceEditorDialog
+        editor={{
+          editorId: 1,
+          siteType: SITE_TYPES.SUB2API,
+          mode: "create",
+          fields: definition.fields,
+          initialValues: definition.initialValues,
+          values: definition.initialValues,
+        }}
+        onClose={vi.fn()}
+        onSubmit={submit}
+        onValuesChange={vi.fn()}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+    await user.click(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton),
+    )
+    expect(submit).toHaveBeenCalledWith(1, definition.initialValues)
+    expect(submit.mock.calls[0][1]).not.toHaveProperty("expires_at")
+  })
+
   it.each(["create", "edit"] as const)(
     "updates generated names with the group while preserving custom names in %s mode",
     async (mode) => {
@@ -342,7 +418,7 @@ describe("AccountKeyResourceEditorDialog", () => {
         screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorLoading),
       ).toBeVisible()
       expect(
-        screen.getAllByText("keyManagement:openRouter.editor.title.edit"),
+        screen.getAllByText("keyManagement:native.editor.title.edit"),
       ).not.toHaveLength(0)
     } finally {
       vi.useRealTimers()
@@ -421,7 +497,7 @@ describe("AccountKeyResourceEditorDialog", () => {
     )
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "keyManagement:openRouter.editor.opening.failed",
+      "keyManagement:native.editor.opening.failed",
     )
     fireEvent.click(
       screen
@@ -431,7 +507,7 @@ describe("AccountKeyResourceEditorDialog", () => {
     expect(cancel).toHaveBeenCalledWith(4)
     fireEvent.click(
       screen.getByRole("button", {
-        name: "keyManagement:openRouter.editor.opening.retry",
+        name: "keyManagement:native.editor.opening.retry",
       }),
     )
     expect(retry).toHaveBeenCalledWith(4)
@@ -552,10 +628,10 @@ describe("AccountKeyResourceEditorDialog", () => {
       screen.getByText("keyManagement:openRouter.editor.summary"),
     ).toBeVisible()
     const cancel = screen.getByRole("button", {
-      name: "keyManagement:openRouter.editor.actions.cancel",
+      name: "keyManagement:native.editor.actions.cancel",
     })
     const save = screen.getByRole("button", {
-      name: "keyManagement:openRouter.editor.actions.save",
+      name: "keyManagement:native.editor.actions.save",
     })
     expect(cancel.parentElement).toBe(save.parentElement)
     expect(cancel.parentElement).toHaveClass("flex-wrap")
@@ -603,7 +679,7 @@ describe("AccountKeyResourceEditorDialog", () => {
       }),
     ).toHaveAttribute("aria-invalid", "true")
     expect(
-      screen.getByText("keyManagement:openRouter.editor.issues.required"),
+      screen.getByText("keyManagement:native.editor.issues.required"),
     ).toHaveAttribute("role", "alert")
   })
 
@@ -817,7 +893,7 @@ describe("AccountKeyResourceEditorDialog", () => {
     ).toHaveTextContent("Next team")
     await user.click(
       screen.getByRole("button", {
-        name: "keyManagement:openRouter.editor.actions.save",
+        name: "keyManagement:native.editor.actions.save",
       }),
     )
     expect(submit).toHaveBeenCalledWith(
@@ -857,7 +933,7 @@ describe("AccountKeyResourceEditorDialog", () => {
       }),
     ).toBeDisabled()
     const save = screen.getByRole("button", {
-      name: "keyManagement:openRouter.editor.actions.save",
+      name: "keyManagement:native.editor.actions.save",
     })
     expect(save).toBeEnabled()
     fireEvent.click(save)
@@ -897,7 +973,7 @@ describe("AccountKeyResourceEditorDialog", () => {
     )
     expect(
       screen.queryByText(
-        "keyManagement:openRouter.editor.feedback.permissionDenied",
+        "keyManagement:native.editor.feedback.permissionDenied",
       ),
     ).not.toBeInTheDocument()
     expect(
@@ -940,7 +1016,7 @@ describe("AccountKeyResourceEditorDialog", () => {
       />,
     )
     expect(
-      screen.getByText("keyManagement:openRouter.editor.feedback.unavailable"),
+      screen.getByText("keyManagement:native.editor.feedback.unavailable"),
     ).toHaveAttribute("role", "alert")
     const loadCallCountBeforeRetry = retry.mock.calls.length
     fireEvent.click(
@@ -967,7 +1043,7 @@ describe("AccountKeyResourceEditorDialog", () => {
     ).toBeVisible()
     expect(
       screen.getByRole("button", {
-        name: "keyManagement:openRouter.editor.actions.save",
+        name: "keyManagement:native.editor.actions.save",
       }),
     ).toBeEnabled()
   })
@@ -1005,7 +1081,7 @@ describe("AccountKeyResourceEditorDialog", () => {
     )
     await user.click(
       screen.getByRole("button", {
-        name: "keyManagement:openRouter.editor.actions.save",
+        name: "keyManagement:native.editor.actions.save",
       }),
     )
     expect(submit).toHaveBeenCalledWith(
@@ -1080,7 +1156,7 @@ describe("AccountKeyResourceEditorDialog", () => {
     )
 
     const retry = screen.getByRole("button", {
-      name: "keyManagement:openRouter.editor.opening.retry",
+      name: "keyManagement:native.editor.opening.retry",
     })
     retry.focus()
     rerender(
@@ -1143,7 +1219,7 @@ describe("AccountKeyResourceEditorDialog", () => {
 
     const alert = screen.getByRole("alert")
     expect(alert).toHaveTextContent(
-      "keyManagement:openRouter.editor.feedback.permissionDenied",
+      "keyManagement:native.editor.feedback.permissionDenied",
     )
     expect(alert).toHaveTextContent("Workspace policy blocks this key.")
     expect(alert).toHaveTextContent("workspace_policy")
@@ -1183,7 +1259,7 @@ describe("AccountKeyResourceEditorDialog", () => {
     await user.click(trigger)
     await user.click(
       screen.getByRole("button", {
-        name: "keyManagement:openRouter.editor.actions.save",
+        name: "keyManagement:native.editor.actions.save",
       }),
     )
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
@@ -1229,7 +1305,7 @@ describe("AccountKeyResourceEditorDialog", () => {
     await user.click(trigger)
     await user.click(
       screen.getByRole("button", {
-        name: "keyManagement:openRouter.editor.actions.save",
+        name: "keyManagement:native.editor.actions.save",
       }),
     )
 
@@ -1306,7 +1382,7 @@ describe("AccountKeyResourceEditorDialog", () => {
     await user.click(launcher)
     await user.click(
       screen.getByRole("button", {
-        name: "keyManagement:openRouter.editor.actions.save",
+        name: "keyManagement:native.editor.actions.save",
       }),
     )
     await act(async () => resolveCreate())
@@ -1499,7 +1575,7 @@ describe("AccountKeyResourceEditorDialog", () => {
     )
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "keyManagement:openRouter.editor.feedback.authenticationFailed",
+      "keyManagement:native.editor.feedback.authenticationFailed",
     )
     expect(screen.getByRole("status")).toHaveTextContent(
       "keyManagement:openRouter.editor.summaryRules.reset.weekly",
@@ -1521,7 +1597,7 @@ describe("AccountKeyResourceEditorDialog", () => {
       />,
     )
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "keyManagement:openRouter.editor.feedback.uncertain",
+      "keyManagement:native.editor.feedback.uncertain",
     )
     expect(screen.getByRole("status")).toHaveTextContent(
       "keyManagement:openRouter.editor.summaryRules.reset.monthly",
@@ -1629,19 +1705,19 @@ describe("AccountKeyResourceEditorDialog", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "keyManagement:openRouter.editor.actions.save",
+        name: "keyManagement:native.editor.actions.save",
       }),
     )
     fireEvent.click(
       screen.getByRole("button", {
-        name: "keyManagement:openRouter.editor.actions.save",
+        name: "keyManagement:native.editor.actions.save",
       }),
     )
     expect(submit).toHaveBeenCalledOnce()
     await waitFor(() =>
       expect(
         screen.getByRole("button", {
-          name: "keyManagement:openRouter.editor.actions.save",
+          name: "keyManagement:native.editor.actions.save",
         }),
       ).not.toBeDisabled(),
     )
@@ -1655,22 +1731,22 @@ describe("AccountKeyResourceEditorDialog", () => {
       screen.getByRole("button", { name: "common:actions.close" }),
     )
     expect(
-      screen.getByText("keyManagement:openRouter.editor.unsaved.title"),
+      screen.getByText("keyManagement:native.editor.unsaved.title"),
     ).toBeVisible()
     fireEvent.click(
       screen.getByRole("button", {
-        name: "keyManagement:openRouter.editor.unsaved.keepEditing",
+        name: "keyManagement:native.editor.unsaved.keepEditing",
       }),
     )
     expect(
-      screen.queryByText("keyManagement:openRouter.editor.unsaved.title"),
+      screen.queryByText("keyManagement:native.editor.unsaved.title"),
     ).not.toBeInTheDocument()
     fireEvent.click(
       screen.getByRole("button", { name: "common:actions.close" }),
     )
     fireEvent.click(
       screen.getByRole("button", {
-        name: "keyManagement:openRouter.editor.unsaved.discard",
+        name: "keyManagement:native.editor.unsaved.discard",
       }),
     )
     expect(close).toHaveBeenCalledOnce()
@@ -1698,7 +1774,7 @@ describe("AccountKeyResourceEditorDialog", () => {
 
     const feedback = screen.getByRole("alert")
     expect(feedback).toHaveTextContent(
-      "keyManagement:openRouter.editor.feedback.error",
+      "keyManagement:native.editor.feedback.error",
     )
     expect(feedback).toHaveTextContent(
       "The selected workspace cannot create this key.",
@@ -1707,7 +1783,7 @@ describe("AccountKeyResourceEditorDialog", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "keyManagement:openRouter.editor.actions.save",
+        name: "keyManagement:native.editor.actions.save",
       }),
     )
     expect(submit).toHaveBeenCalledWith(
@@ -1717,7 +1793,7 @@ describe("AccountKeyResourceEditorDialog", () => {
     await waitFor(() =>
       expect(
         screen.getByRole("button", {
-          name: "keyManagement:openRouter.editor.actions.save",
+          name: "keyManagement:native.editor.actions.save",
         }),
       ).not.toBeDisabled(),
     )

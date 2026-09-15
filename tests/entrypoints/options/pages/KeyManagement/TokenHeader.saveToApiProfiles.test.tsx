@@ -9,6 +9,7 @@ import {
 } from "~/constants/siteType"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import toast from "~/lib/notify"
+import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
@@ -21,6 +22,7 @@ import {
 import * as managedSiteSupport from "~/services/managedSites/utils/managedSite"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { testI18n } from "~~/tests/test-utils/i18n"
@@ -37,6 +39,23 @@ const mockOpenManagedSiteChannelsPage = vi.fn()
 const mockOpenSettingsTab = vi.fn()
 const mockOpenWithAccount = vi.fn()
 const mockLoggerError = vi.fn()
+const mockResolveDisplayAccountRuntimeKeySecret = vi.fn()
+
+vi.mock(
+  "~/services/accounts/utils/apiServiceRequest",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/accounts/utils/apiServiceRequest")
+      >()
+
+    return {
+      ...actual,
+      resolveDisplayAccountRuntimeKeySecret: (...args: unknown[]) =>
+        mockResolveDisplayAccountRuntimeKeySecret(...args),
+    }
+  },
+)
 
 vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
   apiCredentialProfileLinks: {
@@ -218,6 +237,12 @@ describe("RuntimeKeyHeader save to API profiles", () => {
     mockOpenSettingsTab.mockReset()
     mockOpenWithAccount.mockReset()
     mockLoggerError.mockReset()
+    mockResolveDisplayAccountRuntimeKeySecret
+      .mockReset()
+      .mockImplementation(
+        async (_account: DisplaySiteData, runtimeKey: AccountRuntimeKey) =>
+          runtimeKey,
+      )
     ;(toast.success as any).mockReset()
     ;(toast.error as any).mockReset()
     ;(toast.dismiss as any).mockReset()
@@ -315,6 +340,14 @@ describe("RuntimeKeyHeader save to API profiles", () => {
 
     await clickSaveAndAssociateAction(user)
 
+    expect(mockResolveDisplayAccountRuntimeKeySecret).toHaveBeenCalledWith(
+      account,
+      buildNewApiRuntimeKey(account, token),
+      expect.objectContaining({
+        abortSignal: expect.any(AbortSignal),
+        secretSource: "provider-then-associated-profile",
+      }),
+    )
     await waitFor(() => {
       expect(mockCreateProfile).toHaveBeenCalledWith({
         name: expectedProfileName,
@@ -917,7 +950,7 @@ describe("RuntimeKeyHeader save to API profiles", () => {
     )
 
     expect(onManagedSiteVerificationRetry).toHaveBeenCalledWith(
-      expect.objectContaining({ tokenId: 8 }),
+      buildNewApiRuntimeKey(account, token),
       expect.objectContaining({
         reason:
           MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
@@ -995,7 +1028,7 @@ describe("RuntimeKeyHeader save to API profiles", () => {
     )
 
     expect(onManagedSiteVerificationRetry).toHaveBeenCalledWith(
-      expect.objectContaining({ tokenId: 8_1 }),
+      buildNewApiRuntimeKey(account, token),
       expect.objectContaining({
         reason:
           MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
@@ -1535,7 +1568,7 @@ describe("RuntimeKeyHeader save to API profiles", () => {
     await waitFor(() => {
       expect(mockOpenWithAccount).toHaveBeenCalled()
       expect(onManagedSiteImportSuccess).toHaveBeenCalledWith(
-        expect.objectContaining({ tokenId: 3 }),
+        buildNewApiRuntimeKey(account, token),
       )
     })
   })

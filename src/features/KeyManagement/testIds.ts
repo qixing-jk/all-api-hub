@@ -59,7 +59,7 @@ export const KEY_MANAGEMENT_TEST_IDS = {
   accountScopeSelect: "key-management-account-scope-select",
   accountScopeAllOption: "key-management-account-scope-all-option",
   expandAllButton: "key-management-expand-all-button",
-  openRouterWorkspaceSelect: "key-management-openrouter-workspace-select",
+  nativeScopeSelect: "key-management-native-scope-select",
   nativeEditor: "key-management-native-editor",
   nativeEditorFooter: "key-management-native-editor-footer",
   nativeEditorLoading: "key-management-native-editor-loading",

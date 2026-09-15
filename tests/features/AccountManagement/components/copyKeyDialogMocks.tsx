@@ -2,15 +2,6 @@ import type { ReactNode } from "react"
 import { vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
-import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
-import {
-  CREATED_TOKEN_SECRET_DECISION_KINDS,
-  DEFAULT_TOKEN_CREATION_DECISION_KINDS,
-  TOKEN_CREATION_SECRET_RECOVERY,
-  TOKEN_PROVISIONING_BLOCK_REASONS,
-  TOKEN_PROVISIONING_WORKFLOWS,
-} from "~/services/apiAdapters/contracts/tokenProvisioning"
 
 const mocks = vi.hoisted(() => ({
   fetchAccountTokensMock: vi.fn(),
@@ -86,80 +77,6 @@ export const {
   userPreferencesContextMock,
 } = mocks
 
-const normalizeGroupNames = (groups: Record<string, unknown>): string[] =>
-  Array.from(
-    new Set(
-      Object.keys(groups)
-        .map((group) => group.trim())
-        .filter(Boolean),
-    ),
-  )
-
-const createSub2ApiTokenProvisioningMock = () => ({
-  isInventoryTokenUsable: vi.fn(() => true),
-  resolveDefaultTokenCreation: vi.fn((request: any) => {
-    const explicitGroup =
-      typeof request.explicitGroup === "string"
-        ? request.explicitGroup.trim()
-        : ""
-
-    if (explicitGroup) {
-      return {
-        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
-        tokenData: { ...request.defaultTokenData, group: explicitGroup },
-        oneTimeSecret: false,
-        recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
-      }
-    }
-
-    if (
-      request.workflow !== TOKEN_PROVISIONING_WORKFLOWS.QuickCreateSelection &&
-      request.workflow !== TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation
-    ) {
-      return {
-        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
-        reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired,
-      }
-    }
-
-    if (!request.userGroups) {
-      return { kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups }
-    }
-
-    const allowedGroups = normalizeGroupNames(request.userGroups)
-
-    if (allowedGroups.length === 0) {
-      return {
-        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
-        reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
-      }
-    }
-
-    if (allowedGroups.length === 1) {
-      return {
-        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
-        tokenData: { ...request.defaultTokenData, group: allowedGroups[0] },
-        oneTimeSecret: false,
-        recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
-      }
-    }
-
-    return {
-      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.SelectionRequired,
-      allowedGroups,
-      reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
-    }
-  }),
-  classifyCreatedToken: vi.fn(({ result }: any) =>
-    result
-      ? { kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch }
-      : {
-          kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Failed,
-          reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
-        },
-  ),
-})
-
 vi.mock("~/lib/notify", () => ({
   default: {
     success: toastSuccessMock,
@@ -168,55 +85,111 @@ vi.mock("~/lib/notify", () => ({
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteTypeCapabilities: (siteType: string) => {
-    if (siteType === SITE_TYPES.OPENROUTER) {
-      const keyResources = {
-        open: (...args: any[]) => openAccountKeyResourcesMock(...args),
-      }
-      return {
-        account: {
-          keyResourceManagement: keyResources,
-          keyResources,
-        },
-      }
-    }
-
-    if (siteType === SITE_TYPES.SHAREDCHAT) {
-      return {
-        account: {
-          serviceCredential: {
-            fetch: (...args: any[]) => fetchServiceCredentialMock(...args),
+  getSiteTypeCapabilities: (siteType: string) => ({
+    account:
+      siteType === SITE_TYPES.SHAREDCHAT
+        ? {
+            serviceCredential: {
+              fetch: (...args: any[]) => fetchServiceCredentialMock(...args),
+            },
+          }
+        : {
+            keyResourceManagement: {
+              defaultCreation: "editor-defaults",
+              inventorySecretAvailability: [
+                SITE_TYPES.AIHUBMIX,
+                SITE_TYPES.OPENROUTER,
+              ].includes(siteType as any)
+                ? "create-response-only"
+                : "recoverable",
+              open: (...args: any[]) => openAccountKeyResourcesMock(...args),
+            },
           },
-        },
-      }
-    }
+  }),
+}))
 
+const inventoryFixtures = new Map<string, any[]>()
+vi.mock(
+  "~/services/accounts/accountKeyResourceInventory",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/accounts/accountKeyResourceInventory")
+      >()
+    const { buildNewApiKeyFacts } = await import(
+      "~~/tests/test-utils/accountKeyFixtures"
+    )
     return {
-      account: {
-        keyManagement: {
-          createRuntimeSecret:
-            siteType === SITE_TYPES.AIHUBMIX
-              ? createAIHubMixCreatedRuntimeSecret
-              : undefined,
-          fetchTokens: (...args: any[]) => fetchAccountTokensMock(...args),
-          createToken: (...args: any[]) => createApiTokenMock(...args),
-          resolveTokenKey: (...args: any[]) => resolveApiTokenKeyMock(...args),
-          deleteToken: vi.fn(),
-          fetchAvailableModels: (...args: any[]) =>
-            fetchAccountAvailableModelsMock(...args),
-          userGroups: {
-            fetch: (...args: any[]) => fetchUserGroupsMock(...args),
+      ...actual,
+      fetchDisplayAccountKeyResourceInventory: async (
+        account: any,
+        options: any,
+      ) => {
+        if (account.siteType === SITE_TYPES.OPENROUTER)
+          return actual.fetchDisplayAccountKeyResourceInventory(
+            account,
+            options,
+          )
+        const tokens = await fetchAccountTokensMock(account)
+        if (!Array.isArray(tokens))
+          throw new Error("Native inventory unavailable")
+        inventoryFixtures.set(account.id, tokens)
+        return {
+          scope: {
+            scopeKey: "account",
+            routeKey: "account",
+            displayName: "Account",
+            isDefault: true,
           },
-          inventorySecretAvailability:
-            siteType === SITE_TYPES.AIHUBMIX
-              ? INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly
-              : INVENTORY_SECRET_AVAILABILITIES.Recoverable,
-        },
-        tokenProvisioning: createSub2ApiTokenProvisioningMock(),
+          items: tokens.map((token) => buildNewApiKeyFacts(account, token)),
+        }
       },
     }
   },
-}))
+)
+vi.mock(
+  "~/services/accounts/utils/apiServiceRequest",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/accounts/utils/apiServiceRequest")
+      >()
+    const { formatAccountRuntimeKeySecretForSite } = await import(
+      "~/services/accounts/accountRuntimeKeys"
+    )
+    return {
+      ...actual,
+      resolveDisplayAccountRuntimeKeySecret: async (
+        account: any,
+        runtimeKey: any,
+        options: any,
+      ) => {
+        if (
+          runtimeKey.source === "service_credential" ||
+          account.siteType === SITE_TYPES.OPENROUTER
+        )
+          return actual.resolveDisplayAccountRuntimeKeySecret(
+            account,
+            runtimeKey,
+            options,
+          )
+        const token = inventoryFixtures
+          .get(account.id)
+          ?.find(
+            (item) => String(item.id) === runtimeKey.resourceRef.resourceId,
+          )
+        const secret = await resolveApiTokenKeyMock({
+          request: actual.createDisplayAccountApiContext(account).request,
+          token: token ?? {
+            id: runtimeKey.legacyTokenId,
+            key: runtimeKey.secret,
+          },
+        })
+        return formatAccountRuntimeKeySecretForSite({ ...runtimeKey, secret })
+      },
+    }
+  },
+)
 
 vi.mock("~/utils/navigation", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/navigation")>()

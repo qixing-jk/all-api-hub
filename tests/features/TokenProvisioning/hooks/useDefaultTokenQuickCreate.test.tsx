@@ -1,310 +1,145 @@
-import { renderHook } from "@testing-library/react"
-import { act } from "react"
+import { act, renderHook } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
-import {
-  DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS,
-  useDefaultTokenQuickCreate,
-} from "~/features/TokenProvisioning/hooks/useDefaultTokenQuickCreate"
-import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
-import { TOKEN_PROVISIONING_BLOCK_REASONS } from "~/services/apiAdapters/contracts/tokenProvisioning"
+import { useDefaultTokenQuickCreate } from "~/features/TokenProvisioning/hooks/useDefaultTokenQuickCreate"
+import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { buildNewApiKeyCreationResult } from "~~/tests/test-utils/accountKeyFixtures"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import {
-  buildApiToken,
   buildDisplaySiteData,
+  buildNewApiToken,
 } from "~~/tests/test-utils/factories"
-import { waitFor } from "~~/tests/test-utils/render"
 
-const { resolveQuickCreateMock, createTokenMock } = vi.hoisted(() => ({
-  resolveQuickCreateMock: vi.fn(),
-  createTokenMock: vi.fn(),
+const { prepare } = vi.hoisted(() => ({ prepare: vi.fn() }))
+vi.mock("~/services/accounts/accountKeyCreation", () => ({
+  prepareDefaultAccountKeyCreation: prepare,
 }))
-
-vi.mock("~/services/accounts/tokenQuickCreateResolution", async () => {
-  const actual = await vi.importActual<
-    typeof import("~/services/accounts/tokenQuickCreateResolution")
-  >("~/services/accounts/tokenQuickCreateResolution")
-  return {
-    ...actual,
-    resolveDefaultTokenQuickCreateResolution: resolveQuickCreateMock,
-  }
-})
-
-vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
-  createDisplayAccountApiContext: () => ({
-    keyManagement: { createToken: createTokenMock },
-    request: { baseUrl: "https://api.example.invalid" },
-  }),
-  requireDisplayAccountKeyManagement: (
-    _account: unknown,
-    keyManagement: unknown,
-  ) => keyManagement,
+const account = buildDisplaySiteData({ siteType: "sub2api" })
+const created = buildNewApiKeyCreationResult(account, buildNewApiToken())
+const requirements = ["first", "second"].map((key) => ({
+  requirementKey: key,
+  displayName: "Same group",
+  provisioning: { kind: "automatic" as const },
 }))
-
-const account = buildDisplaySiteData({
-  siteType: SITE_TYPES.MODELFLARE,
-  baseUrl: "https://portal.example.invalid",
-})
-
-describe("useDefaultTokenQuickCreate", () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it("selects a group, creates the token, and reports the created token", async () => {
-    const createdToken = buildApiToken({ group: "vip" })
-    const pendingCreate = createDeferred<typeof createdToken>()
-    const onCreated = vi.fn()
-    resolveQuickCreateMock
-      .mockResolvedValueOnce({
-        kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-        allowedGroups: ["default", "vip"],
-        suggestedGroup: "default",
-        groups: {
-          default: { desc: "Default", ratio: 1 },
-          vip: { desc: "VIP", ratio: 2 },
-        },
-      })
-      .mockResolvedValueOnce({
-        kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready,
-        tokenData: { name: "Example key", group: "vip" },
-      })
-    createTokenMock.mockReturnValueOnce(pendingCreate.promise)
-
-    const { result } = renderHook(() =>
+const setup = () => {
+  const onCreated = vi.fn()
+  const onInputRequired = vi.fn()
+  const hook = renderHook(
+    (owner) =>
       useDefaultTokenQuickCreate({
         isActive: true,
-        account,
+        account: owner,
         canCreate: true,
         onCreated,
+        onInputRequired,
       }),
-    )
+    { initialProps: account },
+  )
+  return { ...hook, onCreated, onInputRequired }
+}
 
-    await act(async () => result.current.start())
-    expect(result.current.state).toMatchObject({
-      kind: DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Selecting,
-      selection: {
-        suggestedGroup: "default",
-        groups: {
-          default: { desc: "Default", ratio: 1 },
-          vip: { desc: "VIP", ratio: 2 },
-        },
-      },
+describe("native default key quick creation", () => {
+  beforeEach(() => {
+    prepare.mockReset()
+  })
+
+  it("retains opaque group identity through confirmation", async () => {
+    const create = vi.fn().mockResolvedValue(created)
+    prepare.mockResolvedValue({
+      kind: "selection-required",
+      requirements,
+      create,
     })
+    const { result, onCreated } = setup()
+    await act(() => result.current.start())
+    expect(result.current.view.selection?.requirements).toEqual(requirements)
+    await act(() => result.current.confirmGroup("second"))
+    expect(create).toHaveBeenCalledExactlyOnceWith("second")
+    expect(onCreated).toHaveBeenCalledExactlyOnceWith(created)
+  })
 
-    let confirmPromise: Promise<void> | undefined
+  it("aborts the same request context after selection and suppresses a late handoff", async () => {
+    const pending = createDeferred<typeof created>()
+    let signal: AbortSignal | undefined
+    prepare.mockImplementation(async (_account, options) => {
+      signal = options.signal
+      return {
+        kind: "selection-required",
+        requirements,
+        create: () => pending.promise,
+      }
+    })
+    const { result, onCreated } = setup()
+    await act(() => result.current.start())
+    let operation!: Promise<void>
     act(() => {
-      confirmPromise = result.current.confirmGroup(" vip ")
+      operation = result.current.confirmGroup("first")
     })
-    await waitFor(() => {
-      expect(result.current.view).toMatchObject({
-        isBusy: true,
-        isCreating: true,
-      })
+    act(() => result.current.reset())
+    expect(signal?.aborted).toBe(true)
+    await act(async () => {
+      pending.resolve(created)
+      await operation
     })
-
-    pendingCreate.resolve(createdToken)
-    await act(async () => confirmPromise)
-
-    expect(createTokenMock).toHaveBeenCalledWith(
-      expect.any(Object),
-      expect.objectContaining({ group: "vip" }),
-    )
-    expect(onCreated).toHaveBeenCalledWith(createdToken)
-    expect(result.current.state).toEqual({
-      kind: DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Idle,
-      error: null,
-    })
-  })
-
-  it("keeps selection open when token creation fails", async () => {
-    resolveQuickCreateMock
-      .mockResolvedValueOnce({
-        kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-        allowedGroups: ["default", "vip"],
-        suggestedGroup: "default",
-        groups: {},
-      })
-      .mockResolvedValueOnce({
-        kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready,
-        tokenData: { name: "Example key", group: "default" },
-      })
-    createTokenMock.mockResolvedValueOnce(false)
-
-    const { result } = renderHook(() =>
-      useDefaultTokenQuickCreate({
-        isActive: true,
-        account,
-        canCreate: true,
-        onCreated: vi.fn(),
-      }),
-    )
-
-    await act(async () => result.current.start())
-    await act(async () => result.current.confirmGroup("default"))
-
-    expect(result.current.state).toMatchObject({
-      kind: DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Selecting,
-    })
-    expect(result.current.view.error).toContain(
-      "ui:dialog.copyKey.createFailed",
-    )
-  })
-
-  it("cancels selection without creating a token", async () => {
-    resolveQuickCreateMock.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-      allowedGroups: ["default", "vip"],
-      suggestedGroup: "default",
-      groups: {},
-    })
-
-    const { result } = renderHook(() =>
-      useDefaultTokenQuickCreate({
-        isActive: true,
-        account,
-        canCreate: true,
-        onCreated: vi.fn(),
-      }),
-    )
-
-    await act(async () => result.current.start())
-    act(() => result.current.cancelSelection())
-
-    expect(result.current.state).toEqual({
-      kind: DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Idle,
-      error: null,
-    })
-    expect(createTokenMock).not.toHaveBeenCalled()
-  })
-
-  it("ignores a stale policy result after the active account changes", async () => {
-    const pendingResolution = createDeferred<{
-      kind: typeof TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired
-      allowedGroups: string[]
-      suggestedGroup: string
-      groups: Record<string, { desc: string; ratio: number }>
-    }>()
-    resolveQuickCreateMock.mockReturnValueOnce(pendingResolution.promise)
-    const replacementAccount = buildDisplaySiteData({ id: "account-2" })
-    const onCreated = vi.fn()
-
-    const { result, rerender } = renderHook(
-      ({ currentAccount }) =>
-        useDefaultTokenQuickCreate({
-          isActive: true,
-          account: currentAccount,
-          canCreate: true,
-          onCreated,
-        }),
-      { initialProps: { currentAccount: account } },
-    )
-
-    let startPromise: Promise<void> | undefined
-    act(() => {
-      startPromise = result.current.start()
-    })
-    await waitFor(() =>
-      expect(result.current.state.kind).toBe(
-        DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Resolving,
-      ),
-    )
-
-    rerender({ currentAccount: replacementAccount })
-    pendingResolution.resolve({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-      allowedGroups: ["default", "vip"],
-      suggestedGroup: "default",
-      groups: {},
-    })
-    await act(async () => startPromise)
-
-    expect(result.current.state).toEqual({
-      kind: DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Idle,
-      error: null,
-    })
-    expect(createTokenMock).not.toHaveBeenCalled()
     expect(onCreated).not.toHaveBeenCalled()
-
-    resolveQuickCreateMock.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked,
-      reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
-      message: "No available groups",
-    })
-    await act(async () => result.current.start())
-
-    expect(resolveQuickCreateMock).toHaveBeenLastCalledWith(replacementAccount)
-    expect(result.current.state).toMatchObject({
-      kind: DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Idle,
-    })
-    expect(result.current.view.error).toBe(
-      "messages:tokenProvisioning.createRequiresAvailableGroup",
-    )
   })
 
-  it("surfaces policy blocks without attempting token creation", async () => {
-    resolveQuickCreateMock.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked,
-      reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
-      message: "No available groups",
+  it("shares a rapid repeated start without duplicate mutation", async () => {
+    const pending = createDeferred<typeof created>()
+    const create = vi.fn(() => pending.promise)
+    prepare.mockResolvedValue({ kind: "ready", create })
+    const { result } = setup()
+    await act(async () => {
+      const first = result.current.start()
+      const second = result.current.start()
+      pending.resolve(created)
+      await Promise.all([first, second])
     })
-
-    const { result } = renderHook(() =>
-      useDefaultTokenQuickCreate({
-        isActive: true,
-        account,
-        canCreate: true,
-        onCreated: vi.fn(),
-      }),
-    )
-
-    await act(async () => result.current.start())
-
-    expect(result.current.state).toMatchObject({
-      kind: DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Idle,
-    })
-    expect(result.current.view.error).toBe(
-      "messages:tokenProvisioning.createRequiresAvailableGroup",
-    )
-    expect(createTokenMock).not.toHaveBeenCalled()
+    expect(prepare).toHaveBeenCalledTimes(1)
+    expect(create).toHaveBeenCalledTimes(1)
   })
 
-  it("reports unsupported creation before resolving provider policy", async () => {
-    const { result } = renderHook(() =>
-      useDefaultTokenQuickCreate({
-        isActive: true,
-        account,
-        canCreate: false,
-        onCreated: vi.fn(),
-      }),
-    )
-
-    await act(async () => result.current.start())
-
-    expect(result.current.state).toMatchObject({
-      kind: DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Idle,
-    })
-    expect(result.current.view.error).toBe(
-      "ui:dialog.copyKey.createNotSupported",
-    )
-    expect(resolveQuickCreateMock).not.toHaveBeenCalled()
-    expect(createTokenMock).not.toHaveBeenCalled()
+  it("retains an uncertain-write lock after reset", async () => {
+    const create = vi
+      .fn()
+      .mockRejectedValue(
+        new AccountKeyResourceError({ code: "mutation_state_uncertain" }),
+      )
+    prepare.mockResolvedValue({ kind: "ready", create })
+    const { result } = setup()
+    await act(() => result.current.start())
+    act(() => result.current.reset())
+    await act(() => result.current.start())
+    expect(result.current.state.error).toEqual({ kind: "uncertain" })
+    expect(create).toHaveBeenCalledTimes(1)
   })
 
-  it("ignores group confirmation outside the selection state", async () => {
-    const { result } = renderHook(() =>
-      useDefaultTokenQuickCreate({
-        isActive: true,
-        account,
-        canCreate: true,
-        onCreated: vi.fn(),
-      }),
-    )
+  it("opens the native editor when required input is missing", async () => {
+    prepare.mockResolvedValue({ kind: "input-required" })
+    const { result, onCreated, onInputRequired } = setup()
+    await act(() => result.current.start())
+    expect(onInputRequired).toHaveBeenCalledTimes(1)
+    expect(onCreated).not.toHaveBeenCalled()
+  })
 
-    await act(async () => result.current.confirmGroup("vip"))
-
-    expect(resolveQuickCreateMock).not.toHaveBeenCalled()
-    expect(createTokenMock).not.toHaveBeenCalled()
+  it("drops work after credentials change on the same account", async () => {
+    const pending = createDeferred<{
+      kind: "ready"
+      create: ReturnType<typeof vi.fn>
+    }>()
+    const create = vi.fn().mockResolvedValue(created)
+    prepare.mockReturnValue(pending.promise)
+    const { result, rerender, onCreated } = setup()
+    let operation!: Promise<void>
+    act(() => {
+      operation = result.current.start()
+    })
+    rerender({ ...account, token: "different-login" })
+    await act(async () => {
+      pending.resolve({ kind: "ready", create })
+      await operation
+    })
+    expect(create).not.toHaveBeenCalled()
+    expect(onCreated).not.toHaveBeenCalled()
   })
 })

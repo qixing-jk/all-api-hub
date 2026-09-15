@@ -9,25 +9,21 @@ import {
   NEW_API_MANAGED_RESOURCE_FIELD_IDS,
 } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
+import * as accountKeyCreation from "~/services/accounts/accountKeyCreation"
 import {
   buildAccountKeyResourceRuntimeKey,
-  buildDisplayAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
-import * as accountTokenOperations from "~/services/accounts/ensureAccountApiToken"
-import * as tokenQuickCreateResolution from "~/services/accounts/tokenQuickCreateResolution"
-import {
-  TOKEN_QUICK_CREATE_RESOLUTION_KINDS,
-  type DefaultTokenQuickCreateResolution,
-} from "~/services/accounts/tokenQuickCreateResolution"
+import { createUnattributedAccountCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
+import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { MANAGED_RESOURCE_CREATE_SEED_KINDS } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { TOKEN_PROVISIONING_BLOCK_REASONS } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { createNewApiCreateEditor } from "~/services/apiAdapters/managedResources/newApiEditor"
 import * as nativeResourceRegistry from "~/services/apiAdapters/managedResources/registry"
 import * as managedSiteRegistry from "~/services/apiAdapters/registry"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
@@ -39,10 +35,10 @@ import {
   type ManagedSiteTokenChannelAssessment,
   type ManagedSiteTokenChannelStatus,
 } from "~/services/managedSites/tokenChannelStatus"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
-  type ApiToken,
   type DisplaySiteData,
   type SiteAccount,
 } from "~/types"
@@ -51,6 +47,10 @@ import type {
   ManagedSiteChannelDraft,
   ManagedSiteChannelDraftSource,
 } from "~/types/managedSiteChannelDraft"
+import {
+  buildNewApiKeyCreationResult,
+  buildNewApiRuntimeKey,
+} from "~~/tests/test-utils/accountKeyFixtures"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { createDeferred } from "~~/tests/test-utils/deferred"
@@ -65,32 +65,19 @@ const { mockToastLoading, mockToastDismiss, mockToastError } = vi.hoisted(
     mockToastError: vi.fn(),
   }),
 )
-const { mockFetchAccountTokens, mockResolveApiTokenKey } = vi.hoisted(() => ({
-  mockFetchAccountTokens: vi.fn(),
-  mockResolveApiTokenKey: vi.fn(),
-}))
+const { mockFetchAccountTokens, mockResolveRuntimeKeySecret } = vi.hoisted(
+  () => ({
+    mockFetchAccountTokens: vi.fn(),
+    mockResolveRuntimeKeySecret: vi.fn(),
+  }),
+)
 
 const getManagedSiteCapabilitiesSpy = vi.spyOn(
   managedSiteRegistry,
   "getManagedSiteCapabilities",
 )
 const getAccountByIdSpy = vi.spyOn(accountQueries, "getAccountById")
-const ensureAccountApiTokenSpy = vi.spyOn(
-  accountTokenOperations,
-  "ensureAccountApiToken",
-)
-const resolveDefaultTokenQuickCreateResolutionSpy = vi.spyOn(
-  tokenQuickCreateResolution,
-  "resolveDefaultTokenQuickCreateResolution",
-)
-
-const buildSelectionRequiredResolution =
-  (): DefaultTokenQuickCreateResolution => ({
-    kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-    allowedGroups: ["default", "vip"],
-    suggestedGroup: "default",
-    groups: {},
-  })
+const ensureAccountKeySpy = vi.spyOn(accountKeyCreation, "ensureAccountKey")
 
 const buildSiteAccount = (
   overrides: Partial<SiteAccount> = {},
@@ -149,7 +136,9 @@ const buildDisplaySiteData = (
   ...overrides,
 })
 
-const buildApiToken = (overrides: Partial<ApiToken> = {}): ApiToken => ({
+const buildNewApiToken = (
+  overrides: Partial<NewApiToken> = {},
+): NewApiToken => ({
   id: 1,
   user_id: 1,
   key: "token",
@@ -273,21 +262,62 @@ vi.mock("~/lib/notify", () => ({
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getManagedSiteCapabilities: vi.fn(),
-  getSiteTypeCapabilities: () => ({
+  getSiteTypeCapabilities: (siteType: string) => ({
     managedSites: { matching: { search: vi.fn() } },
     account: {
-      keyManagement: {
-        fetchTokens: (...args: any[]) => mockFetchAccountTokens(...args),
-        createToken: vi.fn(),
-        resolveTokenKey: ({ request, token }: any) =>
-          mockResolveApiTokenKey(request, token),
-        deleteToken: vi.fn(),
-        fetchUserGroups: vi.fn(),
-        fetchAvailableModels: vi.fn(),
+      keyResourceManagement: {
+        defaultCreation: "editor-defaults",
+        inventorySecretAvailability:
+          siteType === SITE_TYPES.OPENROUTER
+            ? "create-response-only"
+            : "recoverable",
       },
     },
   }),
 }))
+vi.mock(
+  "~/services/accounts/utils/apiServiceRequest",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/accounts/utils/apiServiceRequest")
+      >()
+    const { buildNewApiRuntimeKey } = await import(
+      "~~/tests/test-utils/accountKeyFixtures"
+    )
+    const { formatAccountRuntimeKeySecretForSite } = await import(
+      "~/services/accounts/accountRuntimeKeys"
+    )
+    return {
+      ...actual,
+      fetchDisplayAccountRuntimeKeys: async (account: DisplaySiteData) => {
+        const inventory = await mockFetchAccountTokens(account)
+        if (!Array.isArray(inventory))
+          throw new AccountKeyResourceError({ code: "unexpected" })
+        return inventory.map((token) => buildNewApiRuntimeKey(account, token))
+      },
+      resolveDisplayAccountRuntimeKeySecret: async (
+        account: DisplaySiteData,
+        runtimeKey: any,
+        options: any,
+      ) => {
+        if (
+          account.siteType === SITE_TYPES.OPENROUTER ||
+          runtimeKey.source === "service_credential"
+        )
+          return actual.resolveDisplayAccountRuntimeKeySecret(
+            account,
+            runtimeKey,
+            options,
+          )
+        return formatAccountRuntimeKeySecretForSite({
+          ...runtimeKey,
+          secret: await mockResolveRuntimeKeySecret(account, runtimeKey),
+        })
+      },
+    }
+  },
+)
 
 describe("useChannelDialog", () => {
   let registrationSpy: { mockRestore: () => void } | undefined
@@ -336,15 +366,14 @@ describe("useChannelDialog", () => {
 
     mockToastLoading.mockReturnValue("toast-id")
     getAccountByIdSpy.mockResolvedValue(buildSiteAccount())
-    ensureAccountApiTokenSpy.mockImplementation(() => {
-      throw new Error("ensureAccountApiToken should not be called in this test")
+    ensureAccountKeySpy.mockImplementation(() => {
+      throw new Error("ensureAccountKey should not be called in this test")
     })
-    resolveDefaultTokenQuickCreateResolutionSpy.mockReset()
     mockFetchAccountTokens.mockReset()
     mockFetchAccountTokens.mockResolvedValue([])
-    mockResolveApiTokenKey.mockReset()
-    mockResolveApiTokenKey.mockImplementation(
-      async (_request: unknown, token: { key: string }) => token.key,
+    mockResolveRuntimeKeySecret.mockReset()
+    mockResolveRuntimeKeySecret.mockImplementation(
+      async (_account: unknown, key: { secret: string }) => key.secret,
     )
   })
 
@@ -390,9 +419,9 @@ describe("useChannelDialog", () => {
           entrypoint === "account"
             ? await result.current.dialog.openWithAccount(
                 buildDisplaySiteData(),
-                buildDisplayAccountTokenRuntimeKey(
+                buildNewApiRuntimeKey(
                   buildDisplaySiteData(),
-                  buildApiToken(),
+                  buildNewApiToken(),
                 ),
               )
             : await result.current.dialog.openWithCredentials({
@@ -461,10 +490,7 @@ describe("useChannelDialog", () => {
 
     const openPromise = result.current.dialog.openWithAccount(
       buildDisplaySiteData(),
-      buildDisplayAccountTokenRuntimeKey(
-        buildDisplaySiteData(),
-        buildApiToken(),
-      ),
+      buildNewApiRuntimeKey(buildDisplaySiteData(), buildNewApiToken()),
     )
 
     await waitFor(() => {
@@ -546,10 +572,7 @@ describe("useChannelDialog", () => {
     await act(async () => {
       await result.current.dialog.openWithAccount(
         buildDisplaySiteData(),
-        buildDisplayAccountTokenRuntimeKey(
-          buildDisplaySiteData(),
-          buildApiToken(),
-        ),
+        buildNewApiRuntimeKey(buildDisplaySiteData(), buildNewApiToken()),
       )
     })
 
@@ -619,10 +642,7 @@ describe("useChannelDialog", () => {
 
     const openPromise = result.current.dialog.openWithAccount(
       buildDisplaySiteData(),
-      buildDisplayAccountTokenRuntimeKey(
-        buildDisplaySiteData(),
-        buildApiToken(),
-      ),
+      buildNewApiRuntimeKey(buildDisplaySiteData(), buildNewApiToken()),
       undefined,
       { shouldContinue: () => shouldContinue },
     )
@@ -658,10 +678,7 @@ describe("useChannelDialog", () => {
     await act(async () => {
       openResult = await result.current.dialog.openWithAccount(
         buildDisplaySiteData(),
-        buildDisplayAccountTokenRuntimeKey(
-          buildDisplaySiteData(),
-          buildApiToken(),
-        ),
+        buildNewApiRuntimeKey(buildDisplaySiteData(), buildNewApiToken()),
       )
     })
 
@@ -697,10 +714,7 @@ describe("useChannelDialog", () => {
 
     const openPromise = result.current.dialog.openWithAccount(
       buildDisplaySiteData(),
-      buildDisplayAccountTokenRuntimeKey(
-        buildDisplaySiteData(),
-        buildApiToken(),
-      ),
+      buildNewApiRuntimeKey(buildDisplaySiteData(), buildNewApiToken()),
     )
 
     await waitFor(() => {
@@ -767,10 +781,7 @@ describe("useChannelDialog", () => {
 
     const openPromise = result.current.dialog.openWithAccount(
       buildSiteAccount(),
-      buildDisplayAccountTokenRuntimeKey(
-        buildDisplaySiteData(),
-        buildApiToken(),
-      ),
+      buildNewApiRuntimeKey(buildDisplaySiteData(), buildNewApiToken()),
     )
 
     await waitFor(() => {
@@ -800,7 +811,7 @@ describe("useChannelDialog", () => {
   })
 
   it("does not ensure or create a token when openWithAccount receives a token", async () => {
-    const providedToken = buildApiToken({
+    const providedToken = buildNewApiToken({
       id: 123,
       key: "sk-provided-token",
     })
@@ -823,14 +834,11 @@ describe("useChannelDialog", () => {
     await act(async () => {
       await result.current.dialog.openWithAccount(
         buildDisplaySiteData(),
-        buildDisplayAccountTokenRuntimeKey(
-          buildDisplaySiteData(),
-          providedToken,
-        ),
+        buildNewApiRuntimeKey(buildDisplaySiteData(), providedToken),
       )
     })
 
-    expect(ensureAccountApiTokenSpy).not.toHaveBeenCalled()
+    expect(ensureAccountKeySpy).not.toHaveBeenCalled()
     expect(mockFetchAccountTokens).not.toHaveBeenCalled()
     expect(prepareChannelFormDataMock).toHaveBeenCalledWith(
       {
@@ -910,9 +918,9 @@ describe("useChannelDialog", () => {
         }),
       })
       expect(result.current.context.state.isOpen).toBe(true)
-      expect(mockResolveApiTokenKey).not.toHaveBeenCalled()
+      expect(mockResolveRuntimeKeySecret).not.toHaveBeenCalled()
       expect(mockFetchAccountTokens).not.toHaveBeenCalled()
-      expect(ensureAccountApiTokenSpy).not.toHaveBeenCalled()
+      expect(ensureAccountKeySpy).not.toHaveBeenCalled()
     },
   )
 
@@ -966,10 +974,7 @@ describe("useChannelDialog", () => {
         if (entrypoint === "account") {
           await result.current.dialog.openWithAccount(
             buildDisplaySiteData(),
-            buildDisplayAccountTokenRuntimeKey(
-              buildDisplaySiteData(),
-              buildApiToken(),
-            ),
+            buildNewApiRuntimeKey(buildDisplaySiteData(), buildNewApiToken()),
           )
         } else {
           await result.current.dialog.openWithCredentials({
@@ -1064,10 +1069,7 @@ describe("useChannelDialog", () => {
     await act(async () => {
       await result.current.dialog.openWithAccount(
         buildDisplaySiteData(),
-        buildDisplayAccountTokenRuntimeKey(
-          buildDisplaySiteData(),
-          buildApiToken(),
-        ),
+        buildNewApiRuntimeKey(buildDisplaySiteData(), buildNewApiToken()),
       )
     })
 
@@ -1152,9 +1154,9 @@ describe("useChannelDialog", () => {
     await act(async () => {
       await result.current.dialog.openWithAccount(
         buildDisplaySiteData({ siteType: SITE_TYPES.SUB2API }),
-        buildDisplayAccountTokenRuntimeKey(
+        buildNewApiRuntimeKey(
           buildDisplaySiteData({ siteType: SITE_TYPES.SUB2API }),
-          buildApiToken(),
+          buildNewApiToken(),
         ),
       )
     })
@@ -1220,10 +1222,7 @@ describe("useChannelDialog", () => {
     await act(async () => {
       await result.current.dialog.openWithAccount(
         buildDisplaySiteData(),
-        buildDisplayAccountTokenRuntimeKey(
-          buildDisplaySiteData(),
-          buildApiToken(),
-        ),
+        buildNewApiRuntimeKey(buildDisplaySiteData(), buildNewApiToken()),
       )
     })
 
@@ -1283,10 +1282,7 @@ describe("useChannelDialog", () => {
     await act(async () => {
       await result.current.dialog.openWithAccount(
         buildDisplaySiteData(),
-        buildDisplayAccountTokenRuntimeKey(
-          buildDisplaySiteData(),
-          buildApiToken(),
-        ),
+        buildNewApiRuntimeKey(buildDisplaySiteData(), buildNewApiToken()),
       )
     })
 
@@ -1298,971 +1294,277 @@ describe("useChannelDialog", () => {
     expect(mockToastDismiss).toHaveBeenCalledWith("toast-id")
   })
 
-  it("opens the global Sub2API token dialog when multiple groups are available", async () => {
-    const mockService = createManagedSiteCapabilitiesStub({
-      siteType: SITE_TYPES.NEW_API,
-      config: {
-        get: vi.fn(async () => ({
-          baseUrl: "https://managed.example.com",
-          adminToken: "admin-token",
-          userId: "1",
-        })),
-      },
-      channelDrafts: { prepareFormData: vi.fn() },
-      matching: { search: vi.fn() },
+  const setupNativeCreationHandoff = async () => {
+    const account = buildDisplaySiteData({ siteType: SITE_TYPES.SUB2API })
+    const token = buildNewApiToken({
+      id: 11,
+      key: "sk-created-11",
+      name: "Created key",
     })
+    const creation = buildNewApiKeyCreationResult(account, token)
+    const prepare = vi.fn(async (source: ManagedSiteChannelDraftSource) =>
+      buildPreparedFormData({ key: source.apiKey, base_url: source.baseUrl }),
+    )
     getManagedSiteCapabilitiesSpy.mockReturnValue(
-      mockService as ManagedSiteCapabilities,
-    )
-    getAccountByIdSpy.mockResolvedValue(
-      buildSiteAccount({ site_type: "sub2api" }),
-    )
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
-      buildSelectionRequiredResolution(),
-    )
-
-    const { result } = renderHook(() => ({
-      dialog: useChannelDialog(),
-      context: useChannelDialogContext(),
-    }))
-
-    await waitFor(() => {
-      expect(result.current).not.toBeNull()
-    })
-
-    await act(async () => {
-      await result.current.dialog.openWithAccount(
-        buildDisplaySiteData({ siteType: "sub2api" }),
-        null,
-      )
-    })
-
-    expect(result.current.context.defaultTokenQuickCreateDialog).toMatchObject({
-      isOpen: true,
-      allowedGroups: ["default", "vip"],
-      notice: "messages:tokenProvisioning.createRequiresGroupSelection",
-    })
-    expect(ensureAccountApiTokenSpy).not.toHaveBeenCalled()
-    expect(mockToastDismiss).toHaveBeenCalledWith("toast-id")
-  })
-
-  it("resumes the Sub2API token ensure flow after the token dialog succeeds", async () => {
-    const mockService = createManagedSiteCapabilitiesStub({
-      siteType: SITE_TYPES.NEW_API,
-      config: {
-        get: vi.fn(async () => ({
-          baseUrl: "https://managed.example.com",
-          adminToken: "admin-token",
-          userId: "1",
-        })),
-      },
-      channelDrafts: {
-        prepareFormData: vi.fn(
-          async () =>
-            ({
-              name: "Auto channel",
-              type: ChannelType.OpenAI,
-              key: "sk-test",
-              base_url: "https://upstream.example.com",
-              models: ["gpt-4"],
-              groups: ["default"],
-              enabled: true,
-            }) satisfies ManagedSiteChannelDraft,
-        ),
-      },
-      matching: {
-        search: vi.fn(async () => ({
-          items: [],
-          total: 0,
-          type_counts: {},
-        })),
-      },
-    })
-    getManagedSiteCapabilitiesSpy.mockReturnValue(
-      mockService as ManagedSiteCapabilities,
-    )
-    getAccountByIdSpy.mockResolvedValue(
-      buildSiteAccount({ site_type: "sub2api" }),
-    )
-    mockFetchAccountTokens
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([buildApiToken()])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
-      buildSelectionRequiredResolution(),
-    )
-
-    const { result } = renderHook(() => ({
-      dialog: useChannelDialog(),
-      context: useChannelDialogContext(),
-    }))
-
-    await waitFor(() => {
-      expect(result.current).not.toBeNull()
-    })
-
-    await act(async () => {
-      await result.current.dialog.openWithAccount(
-        buildDisplaySiteData({ siteType: "sub2api" }),
-        null,
-      )
-    })
-
-    expect(result.current.context.defaultTokenQuickCreateDialog.isOpen).toBe(
-      true,
-    )
-
-    await act(async () => {
-      await result.current.context.handleDefaultTokenQuickCreateSuccess()
-    })
-
-    expect(result.current.context.defaultTokenQuickCreateDialog.isOpen).toBe(
-      false,
-    )
-    expect(resolveDefaultTokenQuickCreateResolutionSpy).toHaveBeenCalledTimes(1)
-    expect(ensureAccountApiTokenSpy).not.toHaveBeenCalled()
-    expect(mockFetchAccountTokens).toHaveBeenCalledTimes(2)
-  })
-
-  it("ensures a token with full generic quick-create token data", async () => {
-    const policyTokenData = {
-      name: "Channel Policy Token",
-      remain_quota: 65432,
-      expired_time: -1,
-      unlimited_quota: false,
-      model_limits_enabled: false,
-      model_limits: "",
-      allow_ips: "",
-      group: "ops",
-    }
-    const createdToken = buildApiToken({ id: 30, key: "sk-created" })
-
-    const mockService = createManagedSiteCapabilitiesStub({
-      siteType: SITE_TYPES.NEW_API,
-      config: {
-        get: vi.fn(async () => ({
-          baseUrl: "https://managed.example.com",
-          adminToken: "admin-token",
-          userId: "1",
-        })),
-      },
-      channelDrafts: {
-        prepareFormData: vi.fn(async () =>
-          buildPreparedFormData({
-            key: createdToken.key,
-          }),
-        ),
-      },
-      matching: {
-        search: vi.fn(async () => ({
-          items: [],
-          total: 0,
-          type_counts: {},
-        })),
-      },
-    })
-    getManagedSiteCapabilitiesSpy.mockReturnValue(
-      mockService as ManagedSiteCapabilities,
-    )
-    getAccountByIdSpy.mockResolvedValue(
-      buildSiteAccount({ site_type: "new-api" }),
-    )
-    mockFetchAccountTokens.mockResolvedValueOnce([])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready,
-      tokenData: policyTokenData,
-    })
-    ensureAccountApiTokenSpy.mockResolvedValueOnce(createdToken)
-    mockResolveApiTokenKey.mockResolvedValueOnce(createdToken)
-
-    const { result } = await renderChannelDialogHook()
-
-    await act(async () => {
-      await result.current.dialog.openWithAccount(
-        buildDisplaySiteData({ siteType: "new-api" }),
-        null,
-      )
-    })
-
-    expect(resolveDefaultTokenQuickCreateResolutionSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ siteType: "new-api" }),
-    )
-    expect(ensureAccountApiTokenSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ site_type: "new-api" }),
-      expect.objectContaining({ siteType: "new-api" }),
-      expect.objectContaining({
-        toastId: "toast-id",
-        defaultTokenData: policyTokenData,
+      buildManagedSiteCapabilitiesMock({
+        channelDrafts: { prepareFormData: prepare },
       }),
     )
-  })
-
-  it("surfaces blocked default-token creation while opening from an account", async () => {
-    const prepareChannelFormDataMock = vi.fn(
-      async (source: ManagedSiteChannelDraftSource) =>
-        buildPreparedFormData({
-          key: source.apiKey,
-        }),
-    )
-    const mockService = buildManagedSiteCapabilitiesMock({
-      siteType: SITE_TYPES.SUB2API,
-      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
-    })
-    getManagedSiteCapabilitiesSpy.mockReturnValue(
-      mockService as ManagedSiteCapabilities,
-    )
     getAccountByIdSpy.mockResolvedValue(
       buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
     )
-    mockFetchAccountTokens.mockResolvedValueOnce([])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked,
-      reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
-      message: "No valid upstream groups are available",
+    ensureAccountKeySpy.mockResolvedValue({
+      kind: "input-required",
+      reason: "editor",
     })
+    mockResolveRuntimeKeySecret.mockResolvedValue(token.key)
+    const hook = await renderChannelDialogHook()
+    return { ...hook, account, token, creation, prepare }
+  }
 
-    const { result } = await renderChannelDialogHook()
-
-    let openResult: Awaited<
-      ReturnType<typeof result.current.dialog.openWithAccount>
-    > | null = null
+  it("hands account creation to the native editor and resumes with the returned resource", async () => {
+    const { result, account, creation, prepare, token } =
+      await setupNativeCreationHandoff()
     await act(async () => {
-      openResult = await result.current.dialog.openWithAccount(
-        buildDisplaySiteData({ siteType: SITE_TYPES.SUB2API }),
-        null,
-      )
+      expect(
+        await result.current.dialog.openWithAccount(account, null),
+      ).toEqual({ opened: false, deferred: true })
     })
-
-    expect(openResult).toEqual({ opened: false })
-    expect(mockToastError).toHaveBeenCalledWith(
-      "No valid upstream groups are available",
-      { id: "toast-id" },
-    )
-    expect(ensureAccountApiTokenSpy).not.toHaveBeenCalled()
-    expect(prepareChannelFormDataMock).not.toHaveBeenCalled()
-    expect(result.current.context.state.isOpen).toBe(false)
-  })
-
-  it("cancels account opening when the caller continuation guard cancels after quick-create resolution", async () => {
-    const prepareChannelFormDataMock = vi.fn(
-      async (source: ManagedSiteChannelDraftSource) =>
-        buildPreparedFormData({
-          key: source.apiKey,
-        }),
-    )
-    const mockService = buildManagedSiteCapabilitiesMock({
-      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
-    })
-    getManagedSiteCapabilitiesSpy.mockReturnValue(
-      mockService as ManagedSiteCapabilities,
-    )
-    getAccountByIdSpy.mockResolvedValue(
-      buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
-    )
-    mockFetchAccountTokens.mockResolvedValueOnce([])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
-      buildSelectionRequiredResolution(),
-    )
-
-    let shouldContinueCalls = 0
-    const { result } = await renderChannelDialogHook()
-
-    let openResult: Awaited<
-      ReturnType<typeof result.current.dialog.openWithAccount>
-    > | null = null
-    await act(async () => {
-      openResult = await result.current.dialog.openWithAccount(
-        buildDisplaySiteData({ siteType: SITE_TYPES.SUB2API }),
-        null,
-        undefined,
-        {
-          shouldContinue: () => {
-            shouldContinueCalls += 1
-            return shouldContinueCalls < 2
-          },
-        },
-      )
-    })
-
-    expect(openResult).toEqual({ opened: false })
-    expect(mockToastDismiss).toHaveBeenCalledWith("toast-id")
-    expect(result.current.context.defaultTokenQuickCreateDialog.isOpen).toBe(
-      false,
-    )
-    expect(prepareChannelFormDataMock).not.toHaveBeenCalled()
-    expect(mockToastError).not.toHaveBeenCalled()
-  })
-
-  it("resumes Sub2API channel opening with the single new refetched token when AddTokenDialog does not return one", async () => {
-    const existingToken = buildApiToken({
-      id: 3,
-      key: "sk-existing-3",
-      name: "Existing token",
-    })
-    const createdToken = buildApiToken({
-      id: 11,
-      key: "sk-created-11",
-      name: "Created token",
-    })
-    const prepareChannelFormDataMock = vi.fn(
-      async (source: ManagedSiteChannelDraftSource) =>
-        buildPreparedFormData({
-          key: source.apiKey,
-        }),
-    )
-    const mockService = buildManagedSiteCapabilitiesMock({
-      siteType: SITE_TYPES.SUB2API,
-      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
-    })
-    getManagedSiteCapabilitiesSpy.mockReturnValue(
-      mockService as ManagedSiteCapabilities,
-    )
-    getAccountByIdSpy.mockResolvedValue(
-      buildSiteAccount({ site_type: "sub2api" }),
-    )
-    mockFetchAccountTokens
-      .mockResolvedValueOnce([existingToken, undefined] as ApiToken[])
-      .mockResolvedValueOnce([createdToken, existingToken])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
-      buildSelectionRequiredResolution(),
-    )
-
-    const { result } = await renderChannelDialogHook()
-
-    await act(async () => {
-      await result.current.dialog.openWithAccount(
-        buildDisplaySiteData({ siteType: "sub2api" }),
-        null,
-      )
-    })
-
-    expect(result.current.context.defaultTokenQuickCreateDialog.isOpen).toBe(
-      true,
-    )
-
-    await act(async () => {
-      await result.current.context.handleDefaultTokenQuickCreateSuccess()
-    })
-
-    expect(prepareChannelFormDataMock).toHaveBeenCalledWith(
-      {
-        name: "Account | Created token (auto)",
-        baseUrl: "https://upstream.example.com",
-        apiKey: createdToken.key,
-        modelHints: [],
-      },
-      { purpose: "native-editor" },
-    )
-    expect(result.current.context.state).toMatchObject({
-      isOpen: true,
-      nativeCreate: {
-        siteType: SITE_TYPES.SUB2API,
-      },
-    })
-    expect(nativeOpenCreateEditorMock).toHaveBeenLastCalledWith({
-      signal: expect.any(AbortSignal),
-      seed: expect.objectContaining({ credential: createdToken.key }),
-    })
-    expect(mockToastError).not.toHaveBeenCalled()
-  })
-
-  it("resumes Sub2API channel opening with a token returned from AddTokenDialog", async () => {
-    const createdToken = buildApiToken({
-      id: 11,
-      key: "sk-created-11",
-      name: "Created token",
-    })
-    const prepareChannelFormDataMock = vi.fn(
-      async (source: ManagedSiteChannelDraftSource) =>
-        buildPreparedFormData({
-          key: source.apiKey,
-        }),
-    )
-    const mockService = buildManagedSiteCapabilitiesMock({
-      siteType: SITE_TYPES.SUB2API,
-      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
-    })
-    getManagedSiteCapabilitiesSpy.mockReturnValue(
-      mockService as ManagedSiteCapabilities,
-    )
-    getAccountByIdSpy.mockResolvedValue(
-      buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
-    )
-    mockFetchAccountTokens.mockResolvedValueOnce([])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
-      buildSelectionRequiredResolution(),
-    )
-
-    const { result } = await renderChannelDialogHook()
-
-    await act(async () => {
-      await result.current.dialog.openWithAccount(
-        buildDisplaySiteData({ siteType: SITE_TYPES.SUB2API }),
-        null,
-      )
-    })
-
-    await act(async () => {
-      await result.current.context.handleDefaultTokenQuickCreateSuccess(
-        createdToken,
-      )
-    })
-
-    expect(mockFetchAccountTokens).toHaveBeenCalledTimes(1)
-    expect(prepareChannelFormDataMock).toHaveBeenCalledWith(
-      {
-        name: "Account | Created token (auto)",
-        baseUrl: "https://upstream.example.com",
-        apiKey: createdToken.key,
-        modelHints: [],
-      },
-      { purpose: "native-editor" },
-    )
-    expect(result.current.context.state).toMatchObject({
-      isOpen: true,
-      nativeCreate: {
-        siteType: SITE_TYPES.SUB2API,
-      },
-    })
-    expect(nativeOpenCreateEditorMock).toHaveBeenLastCalledWith({
-      signal: expect.any(AbortSignal),
-      seed: expect.objectContaining({ credential: createdToken.key }),
-    })
-    expect(mockToastError).not.toHaveBeenCalled()
-  })
-
-  it("ignores late Sub2API token success after the dialog was closed", async () => {
-    const createdToken = buildApiToken({
-      id: 11,
-      key: "sk-created-11",
-      name: "Created token",
-    })
-    const prepareChannelFormDataMock = vi.fn(
-      async (source: ManagedSiteChannelDraftSource) =>
-        buildPreparedFormData({
-          key: source.apiKey,
-        }),
-    )
-    const mockService = buildManagedSiteCapabilitiesMock({
-      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
-    })
-    getManagedSiteCapabilitiesSpy.mockReturnValue(
-      mockService as ManagedSiteCapabilities,
-    )
-    getAccountByIdSpy.mockResolvedValue(
-      buildSiteAccount({ site_type: "sub2api" }),
-    )
-    mockFetchAccountTokens.mockResolvedValueOnce([])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
-      buildSelectionRequiredResolution(),
-    )
-
-    const { result } = await renderChannelDialogHook()
-
-    let openResult: Awaited<
-      ReturnType<typeof result.current.dialog.openWithAccount>
-    > | null = null
-    await act(async () => {
-      openResult = await result.current.dialog.openWithAccount(
-        buildDisplaySiteData({ siteType: "sub2api" }),
-        null,
-      )
-    })
-
-    expect(openResult).toEqual({ opened: false, deferred: true })
-    expect(result.current.context.defaultTokenQuickCreateDialog.isOpen).toBe(
-      true,
-    )
-
-    act(() => {
-      result.current.context.closeDefaultTokenQuickCreateDialog()
-    })
-
-    expect(result.current.context.defaultTokenQuickCreateDialog.isOpen).toBe(
-      false,
-    )
-
-    await act(async () => {
-      await result.current.context.handleDefaultTokenQuickCreateSuccess(
-        createdToken,
-      )
-    })
-
-    expect(prepareChannelFormDataMock).not.toHaveBeenCalled()
-    expect(result.current.context.state.isOpen).toBe(false)
-    expect(mockToastError).not.toHaveBeenCalled()
-  })
-
-  it("ignores stale Sub2API token success from session A immediately after session B opens", async () => {
-    const createdToken = buildApiToken({
-      id: 21,
-      key: "sk-created-21",
-      name: "Created token",
-    })
-    const sessionAOnSuccess = vi.fn()
-    const sessionBOnSuccess = vi.fn()
-    const sessionAAccount = buildDisplaySiteData({
-      id: "account-a",
-      name: "Account A",
-      siteType: "sub2api",
-    })
-    const sessionBAccount = buildDisplaySiteData({
-      id: "account-b",
-      name: "Account B",
-      siteType: "sub2api",
-    })
-    const { result } = await renderChannelDialogHook()
-
-    act(() => {
-      result.current.context.openDefaultTokenQuickCreateDialog({
-        account: sessionAAccount,
-        allowedGroups: ["default"],
-        onSuccess: sessionAOnSuccess,
-      })
-    })
-
+    expect(ensureAccountKeySpy).toHaveBeenCalledWith(account)
     expect(result.current.context.defaultTokenQuickCreateDialog).toMatchObject({
       isOpen: true,
-      account: sessionAAccount,
-      allowedGroups: ["default"],
+      account,
     })
+    await act(async () => {
+      await result.current.context.handleDefaultTokenQuickCreateSuccess(
+        creation,
+      )
+    })
+    expect(mockFetchAccountTokens).not.toHaveBeenCalled()
+    expect(prepare).toHaveBeenCalledWith(
+      expect.objectContaining({ apiKey: token.key }),
+      { purpose: "native-editor" },
+    )
+    expect(nativeOpenCreateEditorMock).toHaveBeenLastCalledWith({
+      signal: expect.any(AbortSignal),
+      seed: expect.objectContaining({ credential: token.key }),
+    })
+    expect(result.current.context.state.isOpen).toBe(true)
+  })
 
-    const sessionASuccessHandler =
-      result.current.context.handleDefaultTokenQuickCreateSuccess
+  it("recovers the exact returned reference even when several keys appear", async () => {
+    const { result, account, creation, token, prepare } =
+      await setupNativeCreationHandoff()
+    mockFetchAccountTokens.mockResolvedValue([
+      buildNewApiToken({ id: 10 }),
+      token,
+      buildNewApiToken({ id: 12 }),
+    ])
+    await act(async () => {
+      await result.current.dialog.openWithAccount(account, null)
+    })
+    await act(async () => {
+      await result.current.context.handleDefaultTokenQuickCreateSuccess({
+        ref: creation.ref,
+        facts: null,
+      })
+    })
+    expect(mockFetchAccountTokens).toHaveBeenCalledTimes(1)
+    expect(prepare).toHaveBeenCalledWith(
+      expect.objectContaining({ apiKey: token.key }),
+      { purpose: "native-editor" },
+    )
+    expect(ensureAccountKeySpy).toHaveBeenCalledTimes(1)
+  })
 
+  it.each([[], [buildNewApiToken({ id: 50 })], null])(
+    "does not guess a created key from unrelated or invalid inventory: %s",
+    async (inventory) => {
+      const { result, account, creation, prepare } =
+        await setupNativeCreationHandoff()
+      mockFetchAccountTokens.mockResolvedValue(inventory)
+      await act(async () => {
+        await result.current.dialog.openWithAccount(account, null)
+      })
+      await act(async () => {
+        await result.current.context.handleDefaultTokenQuickCreateSuccess({
+          ref: creation.ref,
+          facts: null,
+        })
+      })
+      expect(mockToastError).toHaveBeenCalledWith(
+        "messages:accountOperations.tokenNotFound",
+      )
+      expect(prepare).not.toHaveBeenCalled()
+      expect(ensureAccountKeySpy).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it("hands an unattributed one-time secret to the managed editor without inventing a resource ID", async () => {
+    const { result, account } = await setupNativeCreationHandoff()
+    const secret = createUnattributedAccountCreatedRuntimeSecret({
+      accountId: account.id,
+      displayName: "Response-only key",
+      secret: "sk-only-once",
+      credential: {
+        accountName: account.name,
+        baseUrl: account.baseUrl,
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        tagIds: [],
+      },
+    })
+    await act(async () => {
+      await result.current.dialog.openWithAccount(account, null)
+    })
+    await act(async () => {
+      await result.current.context.handleDefaultTokenQuickCreateSuccess({
+        ref: null,
+        facts: null,
+        createdSecret: secret,
+      })
+    })
+    expect(mockFetchAccountTokens).not.toHaveBeenCalled()
+    expect(mockResolveRuntimeKeySecret).not.toHaveBeenCalled()
+    expect(nativeOpenCreateEditorMock).toHaveBeenLastCalledWith({
+      signal: expect.any(AbortSignal),
+      seed: expect.objectContaining({ credential: secret.secret }),
+    })
+  })
+
+  it("ignores a late creation callback after its native editor was closed", async () => {
+    const { result, account, creation, prepare } =
+      await setupNativeCreationHandoff()
+    await act(async () => {
+      await result.current.dialog.openWithAccount(account, null)
+    })
+    act(() => result.current.context.closeDefaultTokenQuickCreateDialog())
+    await act(async () => {
+      await result.current.context.handleDefaultTokenQuickCreateSuccess(
+        creation,
+      )
+    })
+    expect(prepare).not.toHaveBeenCalled()
+    expect(mockToastError).not.toHaveBeenCalled()
+  })
+
+  it("keeps a new creation session intact when an old callback arrives", async () => {
+    const { result, account, creation } = await setupNativeCreationHandoff()
+    const first = vi.fn()
+    const second = vi.fn()
+    act(() =>
+      result.current.context.openDefaultTokenQuickCreateDialog({
+        account,
+        onSuccess: first,
+      }),
+    )
+    const stale = result.current.context.handleDefaultTokenQuickCreateSuccess
     await act(async () => {
       result.current.context.closeDefaultTokenQuickCreateDialog()
       result.current.context.openDefaultTokenQuickCreateDialog({
-        account: sessionBAccount,
-        allowedGroups: ["vip"],
-        onSuccess: sessionBOnSuccess,
+        account: { ...account, id: "another-account" },
+        onSuccess: second,
       })
-      await sessionASuccessHandler(createdToken)
+      await stale(creation)
     })
-
     expect(result.current.context.defaultTokenQuickCreateDialog).toMatchObject({
       isOpen: true,
-      account: sessionBAccount,
-      allowedGroups: ["vip"],
+      account: { id: "another-account" },
     })
-    expect(result.current.context.state.isOpen).toBe(false)
-    expect(sessionAOnSuccess).not.toHaveBeenCalled()
-    expect(sessionBOnSuccess).not.toHaveBeenCalled()
-    expect(mockToastError).not.toHaveBeenCalled()
+    expect(first).not.toHaveBeenCalled()
+    expect(second).not.toHaveBeenCalled()
   })
 
-  it("fails closed when Sub2API token refetch cannot identify a single new token after dialog success", async () => {
-    const existingToken = buildApiToken({
-      id: 3,
-      key: "sk-existing-3",
-      name: "Existing token",
-    })
-    const ambiguousTokenA = buildApiToken({
-      id: 11,
-      key: "sk-created-11",
-      name: "Created token A",
-    })
-    const ambiguousTokenB = buildApiToken({
-      id: 12,
-      key: "sk-created-12",
-      name: "Created token B",
-    })
-    const prepareChannelFormDataMock = vi.fn(
-      async (source: ManagedSiteChannelDraftSource) =>
-        buildPreparedFormData({
-          key: source.apiKey,
-        }),
-    )
-    const mockService = buildManagedSiteCapabilitiesMock({
-      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
-    })
-    getManagedSiteCapabilitiesSpy.mockReturnValue(
-      mockService as ManagedSiteCapabilities,
-    )
-    getAccountByIdSpy.mockResolvedValue(
-      buildSiteAccount({ site_type: "sub2api" }),
-    )
-    mockFetchAccountTokens
-      .mockResolvedValueOnce([existingToken, undefined] as ApiToken[])
-      .mockResolvedValueOnce([existingToken, ambiguousTokenA, ambiguousTokenB])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
-      buildSelectionRequiredResolution(),
-    )
-
-    const { result } = await renderChannelDialogHook()
-
-    await act(async () => {
-      await result.current.dialog.openWithAccount(
-        buildDisplaySiteData({ siteType: "sub2api" }),
-        null,
-      )
-    })
-
-    expect(result.current.context.defaultTokenQuickCreateDialog.isOpen).toBe(
-      true,
-    )
-
-    await act(async () => {
-      await result.current.context.handleDefaultTokenQuickCreateSuccess()
-    })
-
-    expect(prepareChannelFormDataMock).not.toHaveBeenCalled()
-    expect(result.current.context.state.isOpen).toBe(false)
-    expect(mockToastError).toHaveBeenCalledWith(
-      "messages:accountOperations.createTokenFailed",
-    )
-  })
-
-  it("fails closed when Sub2API token refetch returns a non-array after dialog success", async () => {
-    const prepareChannelFormDataMock = vi.fn(
-      async (source: ManagedSiteChannelDraftSource) =>
-        buildPreparedFormData({
-          key: source.apiKey,
-        }),
-    )
-    const mockService = buildManagedSiteCapabilitiesMock({
-      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
-    })
-    getManagedSiteCapabilitiesSpy.mockReturnValue(
-      mockService as ManagedSiteCapabilities,
-    )
-    getAccountByIdSpy.mockResolvedValue(
-      buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
-    )
-    mockFetchAccountTokens.mockResolvedValueOnce([]).mockResolvedValueOnce(null)
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
-      buildSelectionRequiredResolution(),
-    )
-
-    const { result } = await renderChannelDialogHook()
-
-    await act(async () => {
-      await result.current.dialog.openWithAccount(
-        buildDisplaySiteData({ siteType: SITE_TYPES.SUB2API }),
-        null,
-      )
-    })
-
-    expect(result.current.context.defaultTokenQuickCreateDialog.isOpen).toBe(
-      true,
-    )
-
-    await act(async () => {
-      await result.current.context.handleDefaultTokenQuickCreateSuccess()
-    })
-
-    expect(prepareChannelFormDataMock).not.toHaveBeenCalled()
-    expect(result.current.context.state.isOpen).toBe(false)
-    expect(mockToastError).toHaveBeenCalledWith(
-      "messages:accountOperations.createTokenFailed",
-    )
-  })
-
-  it("cancels deferred Sub2API resume before using a returned created token", async () => {
-    const createdToken = buildApiToken({
-      id: 11,
-      key: "sk-created-11",
-      name: "Created token",
-    })
-    const prepareChannelFormDataMock = vi.fn(
-      async (source: ManagedSiteChannelDraftSource) =>
-        buildPreparedFormData({
-          key: source.apiKey,
-        }),
-    )
-    const mockService = buildManagedSiteCapabilitiesMock({
-      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
-    })
-    getManagedSiteCapabilitiesSpy.mockReturnValue(
-      mockService as ManagedSiteCapabilities,
-    )
-    getAccountByIdSpy.mockResolvedValue(
-      buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
-    )
-    mockFetchAccountTokens.mockResolvedValueOnce([])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
-      buildSelectionRequiredResolution(),
-    )
-
-    let shouldContinue = true
-    const { result } = await renderChannelDialogHook()
-
-    await act(async () => {
-      await result.current.dialog.openWithAccount(
-        buildDisplaySiteData({ siteType: SITE_TYPES.SUB2API }),
-        null,
-        undefined,
-        { shouldContinue: () => shouldContinue },
-      )
-    })
-
-    shouldContinue = false
-
-    await act(async () => {
-      await result.current.context.handleDefaultTokenQuickCreateSuccess(
-        createdToken,
-      )
-    })
-
-    expect(prepareChannelFormDataMock).not.toHaveBeenCalled()
-    expect(mockFetchAccountTokens).toHaveBeenCalledTimes(1)
-    expect(result.current.context.state.isOpen).toBe(false)
-    expect(mockToastError).not.toHaveBeenCalled()
-  })
-
-  it("cancels deferred Sub2API resume before refetching tokens", async () => {
-    const prepareChannelFormDataMock = vi.fn(
-      async (source: ManagedSiteChannelDraftSource) =>
-        buildPreparedFormData({
-          key: source.apiKey,
-        }),
-    )
-    const mockService = buildManagedSiteCapabilitiesMock({
-      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
-    })
-    getManagedSiteCapabilitiesSpy.mockReturnValue(
-      mockService as ManagedSiteCapabilities,
-    )
-    getAccountByIdSpy.mockResolvedValue(
-      buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
-    )
-    mockFetchAccountTokens.mockResolvedValueOnce([])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
-      buildSelectionRequiredResolution(),
-    )
-
-    let shouldContinueCalls = 0
-    const { result } = await renderChannelDialogHook()
-
-    await act(async () => {
-      await result.current.dialog.openWithAccount(
-        buildDisplaySiteData({ siteType: SITE_TYPES.SUB2API }),
-        null,
-        undefined,
-        {
-          shouldContinue: () => {
-            shouldContinueCalls += 1
-            return shouldContinueCalls < 4
-          },
-        },
-      )
-    })
-
-    await act(async () => {
-      await result.current.context.handleDefaultTokenQuickCreateSuccess()
-    })
-
-    expect(mockFetchAccountTokens).toHaveBeenCalledTimes(1)
-    expect(prepareChannelFormDataMock).not.toHaveBeenCalled()
-    expect(result.current.context.state.isOpen).toBe(false)
-    expect(mockToastError).not.toHaveBeenCalled()
-  })
-
-  it("cancels deferred Sub2API resume after refetching tokens but before recovery", async () => {
-    const existingToken = buildApiToken({
-      id: 3,
-      key: "sk-existing-3",
-      name: "Existing token",
-    })
-    const createdToken = buildApiToken({
-      id: 11,
-      key: "sk-created-11",
-      name: "Created token",
-    })
-    const prepareChannelFormDataMock = vi.fn(
-      async (source: ManagedSiteChannelDraftSource) =>
-        buildPreparedFormData({
-          key: source.apiKey,
-        }),
-    )
-    const mockService = buildManagedSiteCapabilitiesMock({
-      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
-    })
-    getManagedSiteCapabilitiesSpy.mockReturnValue(
-      mockService as ManagedSiteCapabilities,
-    )
-    getAccountByIdSpy.mockResolvedValue(
-      buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
-    )
-    mockFetchAccountTokens
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([createdToken, existingToken])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
-      buildSelectionRequiredResolution(),
-    )
-
-    let shouldContinueCalls = 0
-    const { result } = await renderChannelDialogHook()
-
-    await act(async () => {
-      await result.current.dialog.openWithAccount(
-        buildDisplaySiteData({ siteType: SITE_TYPES.SUB2API }),
-        null,
-        undefined,
-        {
-          shouldContinue: () => {
-            shouldContinueCalls += 1
-            return shouldContinueCalls < 5
-          },
-        },
-      )
-    })
-
-    await act(async () => {
-      await result.current.context.handleDefaultTokenQuickCreateSuccess()
-    })
-
-    expect(mockFetchAccountTokens).toHaveBeenCalledTimes(2)
-    expect(prepareChannelFormDataMock).not.toHaveBeenCalled()
-    expect(result.current.context.state.isOpen).toBe(false)
-    expect(mockToastError).not.toHaveBeenCalled()
-  })
-
-  it("does not open the Sub2API quick-create dialog when tokens already exist", async () => {
-    mockFetchAccountTokens.mockResolvedValueOnce([buildApiToken()])
-
-    const { result } = await renderChannelDialogHook()
-
-    let didOpen = false
-    await act(async () => {
-      didOpen =
-        await result.current.dialog.openDefaultTokenQuickCreateDialogForAccount(
-          buildDisplaySiteData({ siteType: "sub2api" }),
+  it.each([true, false])(
+    "honors cancellation before resuming a creation with observed facts: %s",
+    async (hasFacts) => {
+      const { result, account, creation, prepare } =
+        await setupNativeCreationHandoff()
+      let current = true
+      await act(async () => {
+        await result.current.dialog.openWithAccount(account, null, undefined, {
+          shouldContinue: () => current,
+        })
+      })
+      current = false
+      await act(async () => {
+        await result.current.context.handleDefaultTokenQuickCreateSuccess(
+          hasFacts ? creation : { ref: creation.ref, facts: null },
         )
-    })
+      })
+      expect(mockFetchAccountTokens).not.toHaveBeenCalled()
+      expect(prepare).not.toHaveBeenCalled()
+    },
+  )
 
-    expect(didOpen).toBe(false)
-    expect(resolveDefaultTokenQuickCreateResolutionSpy).not.toHaveBeenCalled()
+  it("honors cancellation while the created resource is being recovered", async () => {
+    const { result, account, creation, prepare } =
+      await setupNativeCreationHandoff()
+    const pending = createDeferred<NewApiToken[]>()
+    mockFetchAccountTokens.mockReturnValue(pending.promise)
+    let current = true
+    await act(async () => {
+      await result.current.dialog.openWithAccount(account, null, undefined, {
+        shouldContinue: () => current,
+      })
+    })
+    let resume: Promise<void> | undefined
+    act(() => {
+      resume = result.current.context.handleDefaultTokenQuickCreateSuccess({
+        ref: creation.ref,
+        facts: null,
+      })
+    })
+    await waitFor(() => expect(mockFetchAccountTokens).toHaveBeenCalledTimes(1))
+    current = false
+    await act(async () => {
+      pending.resolve([buildNewApiToken({ id: 11 })])
+      await resume
+    })
+    expect(prepare).not.toHaveBeenCalled()
+    expect(mockToastError).not.toHaveBeenCalled()
+  })
+
+  it("does not open an empty-inventory creation prompt when keys already exist", async () => {
+    mockFetchAccountTokens.mockResolvedValue([buildNewApiToken()])
+    const { result } = await renderChannelDialogHook()
+    await act(async () => {
+      expect(
+        await result.current.dialog.openDefaultTokenQuickCreateDialogForAccount(
+          buildDisplaySiteData(),
+        ),
+      ).toBe(false)
+    })
     expect(result.current.context.defaultTokenQuickCreateDialog.isOpen).toBe(
       false,
     )
+    expect(ensureAccountKeySpy).not.toHaveBeenCalled()
   })
 
-  it("surfaces blocked Sub2API quick-create resolutions without opening the dialog", async () => {
-    mockFetchAccountTokens.mockResolvedValueOnce([])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked,
-      reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
-      message: "No valid upstream groups are available",
-    })
-
-    const { result } = await renderChannelDialogHook()
-
-    let didOpen = true
-    await act(async () => {
-      didOpen =
-        await result.current.dialog.openDefaultTokenQuickCreateDialogForAccount(
-          buildDisplaySiteData({ siteType: "sub2api" }),
+  it.each([undefined, "Choose a native workspace"])(
+    "opens the native editor and preserves its notice and callback: %s",
+    async (notice) => {
+      const { result, account, creation } = await setupNativeCreationHandoff()
+      const onSuccess = vi.fn()
+      await act(async () => {
+        expect(
+          await result.current.dialog.openDefaultTokenQuickCreateDialogForAccount(
+            account,
+            { notice, onSuccess },
+          ),
+        ).toBe(true)
+      })
+      expect(
+        result.current.context.defaultTokenQuickCreateDialog,
+      ).toMatchObject({ isOpen: true, account, notice })
+      await act(async () => {
+        await result.current.context.handleDefaultTokenQuickCreateSuccess(
+          creation,
         )
-    })
-
-    expect(didOpen).toBe(false)
-    expect(mockToastError).toHaveBeenCalledWith(
-      "No valid upstream groups are available",
-    )
-    expect(result.current.context.defaultTokenQuickCreateDialog.isOpen).toBe(
-      false,
-    )
-  })
-
-  it("opens the Sub2API quick-create dialog with the default notice and resumes the caller callback", async () => {
-    const onSuccess = vi.fn(async () => {})
-
-    mockFetchAccountTokens.mockResolvedValueOnce([])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
-      buildSelectionRequiredResolution(),
-    )
-
-    const { result } = await renderChannelDialogHook()
-
-    let didOpen = false
-    await act(async () => {
-      didOpen =
-        await result.current.dialog.openDefaultTokenQuickCreateDialogForAccount(
-          buildDisplaySiteData({ siteType: "sub2api" }),
-          { onSuccess },
-        )
-    })
-
-    expect(didOpen).toBe(true)
-    expect(result.current.context.defaultTokenQuickCreateDialog).toMatchObject({
-      isOpen: true,
-      allowedGroups: ["default", "vip"],
-      notice: "messages:tokenProvisioning.createRequiresGroupSelection",
-    })
-
-    await act(async () => {
-      await result.current.context.handleDefaultTokenQuickCreateSuccess()
-    })
-
-    expect(onSuccess).toHaveBeenCalledTimes(1)
-  })
-
-  it("opens the Sub2API quick-create dialog with a resolved single group and preserves a custom notice", async () => {
-    mockFetchAccountTokens.mockResolvedValueOnce([])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready,
-      tokenData: {
-        name: "Default token",
-        remain_quota: 500000,
-        expired_time: -1,
-        unlimited_quota: false,
-        model_limits_enabled: false,
-        model_limits: "",
-        allow_ips: "",
-        group: "ops",
-      },
-    })
-
-    const { result } = await renderChannelDialogHook()
-
-    await act(async () => {
-      await result.current.dialog.openDefaultTokenQuickCreateDialogForAccount(
-        buildDisplaySiteData({ siteType: "sub2api" }),
-        { notice: "Use the audited group" },
-      )
-    })
-
-    expect(result.current.context.defaultTokenQuickCreateDialog).toMatchObject({
-      isOpen: true,
-      allowedGroups: ["ops"],
-      notice: "Use the audited group",
-    })
-  })
-
-  it("shows feedback when a resolved quick-create group is empty", async () => {
-    mockFetchAccountTokens.mockResolvedValueOnce([])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready,
-      tokenData: {
-        name: "Default token",
-        remain_quota: 500000,
-        expired_time: -1,
-        unlimited_quota: false,
-        model_limits_enabled: false,
-        model_limits: "",
-        allow_ips: "",
-        group: "   ",
-      },
-    })
-
-    const { result } = await renderChannelDialogHook()
-
-    let didOpen = true
-    await act(async () => {
-      didOpen =
-        await result.current.dialog.openDefaultTokenQuickCreateDialogForAccount(
-          buildDisplaySiteData({ siteType: "sub2api" }),
-        )
-    })
-
-    expect(didOpen).toBe(false)
-    expect(mockToastError).toHaveBeenCalledWith(
-      "messages:tokenProvisioning.createRequiresGroup",
-    )
-    expect(result.current.context.defaultTokenQuickCreateDialog.isOpen).toBe(
-      false,
-    )
-  })
+      })
+      expect(onSuccess).toHaveBeenCalledWith(creation)
+      expect(ensureAccountKeySpy).not.toHaveBeenCalled()
+    },
+  )
 
   it("shows an operation failure toast when the account details cannot be loaded", async () => {
     getAccountByIdSpy.mockResolvedValueOnce(null)
@@ -2272,10 +1574,7 @@ describe("useChannelDialog", () => {
     await act(async () => {
       await result.current.dialog.openWithAccount(
         buildDisplaySiteData(),
-        buildDisplayAccountTokenRuntimeKey(
-          buildDisplaySiteData(),
-          buildApiToken(),
-        ),
+        buildNewApiRuntimeKey(buildDisplaySiteData(), buildNewApiToken()),
       )
     })
 
@@ -2299,10 +1598,7 @@ describe("useChannelDialog", () => {
     await act(async () => {
       await result.current.dialog.openWithAccount(
         buildDisplaySiteData(),
-        buildDisplayAccountTokenRuntimeKey(
-          buildDisplaySiteData(),
-          buildApiToken(),
-        ),
+        buildNewApiRuntimeKey(buildDisplaySiteData(), buildNewApiToken()),
       )
     })
 
@@ -2340,10 +1636,7 @@ describe("useChannelDialog", () => {
 
     const openPromise = result.current.dialog.openWithAccount(
       buildDisplaySiteData(),
-      buildDisplayAccountTokenRuntimeKey(
-        buildDisplaySiteData(),
-        buildApiToken(),
-      ),
+      buildNewApiRuntimeKey(buildDisplaySiteData(), buildNewApiToken()),
       undefined,
       { managedSiteStatus },
     )
@@ -2402,9 +1695,9 @@ describe("useChannelDialog", () => {
 
     const openPromise = result.current.dialog.openWithAccount(
       buildDisplaySiteData(),
-      buildDisplayAccountTokenRuntimeKey(
+      buildNewApiRuntimeKey(
         buildDisplaySiteData(),
-        buildApiToken({ key: "sk-test" }),
+        buildNewApiToken({ key: "sk-test" }),
       ),
       undefined,
       { managedSiteStatus },
@@ -2451,10 +1744,7 @@ describe("useChannelDialog", () => {
     await act(async () => {
       await result.current.dialog.openWithAccount(
         buildDisplaySiteData(),
-        buildDisplayAccountTokenRuntimeKey(
-          buildDisplaySiteData(),
-          buildApiToken(),
-        ),
+        buildNewApiRuntimeKey(buildDisplaySiteData(), buildNewApiToken()),
         undefined,
         { managedSiteStatus },
       )
@@ -2507,10 +1797,7 @@ describe("useChannelDialog", () => {
     await act(async () => {
       await result.current.dialog.openWithAccount(
         buildDisplaySiteData(),
-        buildDisplayAccountTokenRuntimeKey(
-          buildDisplaySiteData(),
-          buildApiToken(),
-        ),
+        buildNewApiRuntimeKey(buildDisplaySiteData(), buildNewApiToken()),
         undefined,
         { managedSiteStatus },
       )
@@ -2527,93 +1814,42 @@ describe("useChannelDialog", () => {
     })
   })
 
-  it("falls back to ensuring an account token when token discovery returns an unexpected payload", async () => {
-    const prepareChannelFormDataMock = vi.fn(
-      async (source: ManagedSiteChannelDraftSource) =>
-        buildPreparedFormData({
-          key: source.apiKey,
-        }),
-    )
-    const mockService = buildManagedSiteCapabilitiesMock({
-      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
+  it("opens with an ensured native key and forwards managed editor completion", async () => {
+    const { result, account, token } = await setupNativeCreationHandoff()
+    ensureAccountKeySpy.mockResolvedValue({
+      kind: "ready",
+      runtimeKey: buildNewApiRuntimeKey(account, token),
     })
-    getManagedSiteCapabilitiesSpy.mockReturnValue(
-      mockService as ManagedSiteCapabilities,
-    )
-    mockFetchAccountTokens.mockResolvedValueOnce({ items: [] })
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready,
-      tokenData: {
-        name: "Default token",
-        remain_quota: 500000,
-        expired_time: -1,
-        unlimited_quota: false,
-        model_limits_enabled: false,
-        model_limits: "",
-        allow_ips: "",
-        group: "",
-      },
-    })
-    ensureAccountApiTokenSpy.mockResolvedValueOnce(
-      buildApiToken({
-        key: "ensured-token",
-      }),
-    )
-
     const onSuccess = vi.fn()
-    const { result } = await renderChannelDialogHook()
-
     await act(async () => {
-      await result.current.dialog.openWithAccount(
-        buildDisplaySiteData(),
-        null,
-        onSuccess,
-      )
+      expect(
+        await result.current.dialog.openWithAccount(account, null, onSuccess),
+      ).toEqual({ opened: true })
     })
-
-    expect(ensureAccountApiTokenSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: "account-id",
-      }),
-      expect.objectContaining({
-        id: "account-id",
-      }),
-      expect.objectContaining({
-        toastId: "toast-id",
-      }),
-    )
-    expect(prepareChannelFormDataMock).toHaveBeenCalledWith(
-      {
-        name: "Account | Token (auto)",
-        baseUrl: "https://upstream.example.com",
-        apiKey: "sk-ensured-token",
-        modelHints: [],
-      },
-      { purpose: "native-editor" },
-    )
-    expect(result.current.context.state).toMatchObject({
-      isOpen: true,
-      nativeCreate: {
-        siteType: SITE_TYPES.NEW_API,
-      },
-    })
-    expect(nativeOpenCreateEditorMock).toHaveBeenLastCalledWith({
+    expect(ensureAccountKeySpy).toHaveBeenCalledWith(account)
+    expect(nativeOpenCreateEditorMock).toHaveBeenCalledWith({
       signal: expect.any(AbortSignal),
-      seed: expect.objectContaining({ credential: "sk-ensured-token" }),
+      seed: expect.objectContaining({ credential: token.key }),
     })
+    await act(async () =>
+      result.current.context.handleSuccess({ success: true, message: "saved" }),
+    )
+    expect(onSuccess).toHaveBeenCalledWith({ success: true, message: "saved" })
+  })
 
+  it("stops the channel workflow when native ensure cannot read the inventory", async () => {
+    const { result, account, prepare } = await setupNativeCreationHandoff()
+    ensureAccountKeySpy.mockRejectedValue(
+      new AccountKeyResourceError({ code: "unexpected" }),
+    )
     await act(async () => {
-      result.current.context.handleSuccess({
-        success: true,
-        message: "saved",
-      })
+      expect(
+        await result.current.dialog.openWithAccount(account, null),
+      ).toEqual({ opened: false })
     })
-
-    expect(onSuccess).toHaveBeenCalledWith({
-      success: true,
-      message: "saved",
-    })
-    expect(result.current.context.state.isOpen).toBe(false)
+    expect(prepare).not.toHaveBeenCalled()
+    expect(nativeOpenCreateEditorMock).not.toHaveBeenCalled()
+    expect(mockToastError).toHaveBeenCalled()
   })
 
   it("returns closed without opening when the caller continuation guard cancels before dialog open", async () => {
@@ -2641,10 +1877,7 @@ describe("useChannelDialog", () => {
 
     const openPromise = result.current.dialog.openWithAccount(
       buildDisplaySiteData(),
-      buildDisplayAccountTokenRuntimeKey(
-        buildDisplaySiteData(),
-        buildApiToken(),
-      ),
+      buildNewApiRuntimeKey(buildDisplaySiteData(), buildNewApiToken()),
       undefined,
       {
         shouldContinue: () => shouldContinue,

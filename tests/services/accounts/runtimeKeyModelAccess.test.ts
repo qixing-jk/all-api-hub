@@ -3,12 +3,13 @@ import { describe, expect, it } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   buildAccountKeyResourceRuntimeKey,
-  buildDisplayAccountTokenRuntimeKey,
   isAccountRuntimeKeyCompatibleWithModel,
 } from "~/services/accounts/accountRuntimeKeys"
-import { projectLegacyTokenModelAccess } from "~/services/accountTokens/tokenModelAccess"
-import { AuthTypeEnum, type ApiToken } from "~/types"
-import { buildApiToken } from "~~/tests/test-utils/factories"
+import { projectNewApiTokenModelAccess } from "~/services/apiAdapters/newApi/tokenModelAccess"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
+import { AuthTypeEnum } from "~/types"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
+import { buildNewApiToken } from "~~/tests/test-utils/factories"
 
 const account = {
   id: "account-1",
@@ -23,7 +24,7 @@ const account = {
 describe("runtime key model access", () => {
   it.each<{
     name: string
-    token: Partial<ApiToken>
+    token: Partial<NewApiToken>
     groups?: string[] | null
     compatible: boolean
   }>([
@@ -84,9 +85,9 @@ describe("runtime key model access", () => {
       compatible: true,
     },
   ])("preserves $name semantics", ({ token, groups, compatible }) => {
-    const key = buildDisplayAccountTokenRuntimeKey(
+    const key = buildNewApiRuntimeKey(
       account,
-      buildApiToken({
+      buildNewApiToken({
         status: 1,
         group: "default",
         models: "",
@@ -106,7 +107,7 @@ describe("runtime key model access", () => {
 
   it("keeps hints separate from restrictions and preserves all selectable candidates", () => {
     expect(
-      projectLegacyTokenModelAccess({
+      projectNewApiTokenModelAccess({
         models: " gpt-4 , gpt-4, gpt-3.5 ",
         model_limits: "claude\ngpt-4 other",
         model_limits_enabled: false,
@@ -117,7 +118,7 @@ describe("runtime key model access", () => {
       suggestedModelIds: ["gpt-4", "gpt-3.5", "claude", "other"],
     })
     expect(
-      projectLegacyTokenModelAccess({
+      projectNewApiTokenModelAccess({
         models: " ",
         model_limits: "claude other",
       }),
@@ -125,7 +126,7 @@ describe("runtime key model access", () => {
       allowedModelIds: null,
       suggestedModelIds: ["claude", "other"],
     })
-    expect(projectLegacyTokenModelAccess({})).toMatchObject({
+    expect(projectNewApiTokenModelAccess({})).toMatchObject({
       allowedModelIds: null,
       suggestedModelIds: [],
     })

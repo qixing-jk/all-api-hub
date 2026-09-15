@@ -39,7 +39,8 @@ export type AccountKeyRepairOutcome =
   (typeof ACCOUNT_KEY_REPAIR_OUTCOMES)[keyof typeof ACCOUNT_KEY_REPAIR_OUTCOMES]
 
 export const ACCOUNT_KEY_REPAIR_SKIP_REASONS = {
-  AihubmixOneTimeKey: "aihubmixOneTimeKey",
+  // Preserve the persisted code for repair progress created before provider-neutral naming.
+  OneTimeKey: "aihubmixOneTimeKey",
   NoneAuth: "noneAuth",
   ProvisioningUnavailable: "provisioning-unavailable",
 } as const

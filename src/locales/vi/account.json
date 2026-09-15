@@ -26,7 +26,6 @@
     "disableAccount": "Vô hiệu hóa tài khoản",
     "edit": "Chỉnh sửa",
     "enableAccount": "Kích hoạt tài khoản",
-    "fetchKeyInfoFailed": "Lấy thông tin API Key thất bại",
     "fetchKeyListFailed": "Lấy danh sách API Key thất bại: {{errorMessage}}",
     "importFromBookmarks": "Nhập hàng loạt từ dấu trang",
     "importFromBookmarksHint": "Quét hàng loạt dấu trang trình duyệt để tìm trang tài khoản, không cần thêm từng mục",

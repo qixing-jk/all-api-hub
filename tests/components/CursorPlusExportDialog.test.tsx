@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
 import { CURSOR_PLUS_EXPORT_TEST_IDS } from "~/components/CursorPlusExportDialog.testIds"
-import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
 import { createProfileCredentialExportSource } from "~/services/apiCredentialProfiles/credentialExport"
 import {
@@ -15,6 +14,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { AuthTypeEnum } from "~/types"
+import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildApiCredentialProfile } from "~~/tests/test-utils/factories"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -98,7 +98,7 @@ describe("CursorPlusExportDialog", () => {
   })
 
   it("discovers models and copies a Cursor++ provider fragment", async () => {
-    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    const runtimeKey = buildNewApiRuntimeKey(ACCOUNT, TOKEN)
     resolveRuntimeKeyMock.mockImplementation(async (_account, key) => ({
       ...key,
       secret: "resolved-key",
@@ -187,7 +187,7 @@ describe("CursorPlusExportDialog", () => {
   })
 
   it("allows multiple manual models after discovery fails", async () => {
-    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    const runtimeKey = buildNewApiRuntimeKey(ACCOUNT, TOKEN)
     resolveRuntimeKeyMock.mockImplementation(async (_account, key) => ({
       ...key,
       secret: "resolved-key",
@@ -223,7 +223,7 @@ describe("CursorPlusExportDialog", () => {
   })
 
   it("retries an empty discovery result", async () => {
-    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    const runtimeKey = buildNewApiRuntimeKey(ACCOUNT, TOKEN)
     resolveRuntimeKeyMock.mockImplementation(async (_account, key) => ({
       ...key,
       secret: "resolved-key",
@@ -253,7 +253,7 @@ describe("CursorPlusExportDialog", () => {
   })
 
   it("closes from the cancel action", async () => {
-    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    const runtimeKey = buildNewApiRuntimeKey(ACCOUNT, TOKEN)
     const onClose = vi.fn()
     resolveRuntimeKeyMock.mockImplementation(async (_account, key) => ({
       ...key,
@@ -279,7 +279,7 @@ describe("CursorPlusExportDialog", () => {
   })
 
   it("copies only the models the user keeps selected", async () => {
-    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    const runtimeKey = buildNewApiRuntimeKey(ACCOUNT, TOKEN)
     resolveRuntimeKeyMock.mockImplementation(async (_account, key) => ({
       ...key,
       secret: "resolved-key",
@@ -323,7 +323,7 @@ describe("CursorPlusExportDialog", () => {
   })
 
   it("exports the protocol selected for Cursor++", async () => {
-    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    const runtimeKey = buildNewApiRuntimeKey(ACCOUNT, TOKEN)
     resolveRuntimeKeyMock.mockImplementation(async (_account, key) => ({
       ...key,
       secret: "resolved-key",
@@ -368,7 +368,7 @@ describe("CursorPlusExportDialog", () => {
   })
 
   it("drops a delayed copy after the provider name changes", async () => {
-    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    const runtimeKey = buildNewApiRuntimeKey(ACCOUNT, TOKEN)
     let resolveSecret: ((value: typeof runtimeKey) => void) | undefined
     resolveRuntimeKeyMock
       .mockResolvedValueOnce({ ...runtimeKey, secret: "discovery-key" })
@@ -409,7 +409,7 @@ describe("CursorPlusExportDialog", () => {
   })
 
   it("discards a pending copy and refreshes models after account credentials change", async () => {
-    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    const runtimeKey = buildNewApiRuntimeKey(ACCOUNT, TOKEN)
     let resolveSecret: ((value: typeof runtimeKey) => void) | undefined
     const pendingSecret = new Promise<typeof runtimeKey>((resolve) => {
       resolveSecret = resolve
@@ -465,7 +465,7 @@ describe("CursorPlusExportDialog", () => {
   })
 
   it("reports a clipboard failure without exposing provider details to analytics", async () => {
-    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    const runtimeKey = buildNewApiRuntimeKey(ACCOUNT, TOKEN)
     resolveRuntimeKeyMock.mockImplementation(async (_account, key) => ({
       ...key,
       secret: "resolved-key",
@@ -499,7 +499,7 @@ describe("CursorPlusExportDialog", () => {
   })
 
   it("explains an invalid provider base URL before export", async () => {
-    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    const runtimeKey = buildNewApiRuntimeKey(ACCOUNT, TOKEN)
     resolveRuntimeKeyMock.mockImplementation(async (_account, key) => ({
       ...key,
       secret: "resolved-key",

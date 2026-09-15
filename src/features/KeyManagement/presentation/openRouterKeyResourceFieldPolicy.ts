@@ -15,13 +15,15 @@ import {
   OPENROUTER_KEY_LIMIT_RESETS,
 } from "~/services/apiAdapters/openrouter/keyResourceFields"
 
+import type { AccountKeyResourceEditorPresentation } from "./accountKeyResourceEditorPresentation"
+
 type OpenRouterKeyEditorSection =
   | "basic"
   | "spending"
   | "lifecycle"
   | "advanced"
 
-export type OpenRouterKeyEditorMode = "create" | "edit"
+type OpenRouterKeyEditorMode = "create" | "edit"
 
 const field = OPENROUTER_KEY_FIELD_IDS
 
@@ -34,7 +36,7 @@ export const OPENROUTER_KEY_EDITOR_SECTION_ORDER: Readonly<
   advanced: 3,
 }
 
-export const OPENROUTER_KEY_EDITOR_SECTION_LABEL_RESOLVERS: Readonly<
+const OPENROUTER_KEY_EDITOR_SECTION_LABEL_RESOLVERS: Readonly<
   Record<OpenRouterKeyEditorSection, (t: TFunction) => string>
 > = {
   basic: (t) => t("keyManagement:openRouter.editor.sections.basic"),
@@ -44,16 +46,15 @@ export const OPENROUTER_KEY_EDITOR_SECTION_LABEL_RESOLVERS: Readonly<
 }
 
 const optionIssues = {
-  required: (t: TFunction) =>
-    t("keyManagement:openRouter.editor.issues.required"),
+  required: (t: TFunction) => t("keyManagement:native.editor.issues.required"),
   invalid_value: (t: TFunction) =>
-    t("keyManagement:openRouter.editor.issues.invalidValue"),
+    t("keyManagement:native.editor.issues.invalidValue"),
   out_of_range: (t: TFunction) =>
-    t("keyManagement:openRouter.editor.issues.outOfRange"),
+    t("keyManagement:native.editor.issues.outOfRange"),
   unsupported_option: (t: TFunction) =>
-    t("keyManagement:openRouter.editor.issues.unsupportedOption"),
+    t("keyManagement:native.editor.issues.unsupportedOption"),
   inconsistent_value: (t: TFunction) =>
-    t("keyManagement:openRouter.editor.issues.inconsistentValue"),
+    t("keyManagement:native.editor.issues.inconsistentValue"),
 } as const
 
 const commonFields = [
@@ -240,3 +241,91 @@ export const resolveOpenRouterKeyResourceFieldPolicy = (
     getOpenRouterKeyResourceFieldPolicy(mode),
     OPENROUTER_KEY_EDITOR_SECTION_ORDER,
   )
+
+const formatLocalDateTime = (value: string, language: string) => {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat(language, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date)
+}
+
+const semanticSummary = (
+  values: EditableResourceProjection,
+  t: TFunction,
+  language: string,
+) => {
+  const limit = values[field.Limit]
+  const reset = values[field.LimitReset]
+  const expiresAt = values[field.ExpiresAt]
+  const isLimited =
+    values[field.LimitMode] === OPENROUTER_KEY_LIMIT_MODES.Limited
+  return [
+    isLimited
+      ? typeof limit === "number"
+        ? t("keyManagement:openRouter.editor.summaryRules.limit", { limit })
+        : t("keyManagement:openRouter.editor.summaryRules.limitUnset")
+      : t("keyManagement:openRouter.editor.summaryRules.unlimited"),
+    ...(isLimited
+      ? [
+          reset === OPENROUTER_KEY_LIMIT_RESETS.Daily
+            ? t("keyManagement:openRouter.editor.summaryRules.reset.daily")
+            : reset === OPENROUTER_KEY_LIMIT_RESETS.Weekly
+              ? t("keyManagement:openRouter.editor.summaryRules.reset.weekly")
+              : reset === OPENROUTER_KEY_LIMIT_RESETS.Monthly
+                ? t(
+                    "keyManagement:openRouter.editor.summaryRules.reset.monthly",
+                  )
+                : t("keyManagement:openRouter.editor.summaryRules.reset.none"),
+        ]
+      : []),
+    values[field.IncludeByokInLimit]
+      ? t("keyManagement:openRouter.editor.summaryRules.byok.included")
+      : t("keyManagement:openRouter.editor.summaryRules.byok.excluded"),
+    typeof expiresAt === "string" && expiresAt
+      ? t("keyManagement:openRouter.editor.summaryRules.expiresAt", {
+          expiresAt: formatLocalDateTime(expiresAt, language),
+        })
+      : t("keyManagement:openRouter.editor.summaryRules.neverExpires"),
+  ].join(" · ")
+}
+
+/** OpenRouter workspace membership and BYOK rules stay behind its presentation contract. */
+export function getOpenRouterKeyResourceEditorPresentation(
+  mode: "create" | "edit",
+): AccountKeyResourceEditorPresentation {
+  return {
+    policy: getOpenRouterKeyResourceFieldPolicy(mode),
+    sectionOrder: OPENROUTER_KEY_EDITOR_SECTION_ORDER,
+    sectionLabelResolvers: OPENROUTER_KEY_EDITOR_SECTION_LABEL_RESOLVERS,
+    requireFreshOptions: true,
+    getOptionFeedback(descriptor, options, failure, t) {
+      if (descriptor.fieldId !== field.Creator) return {}
+      // OpenRouter creator assignment is optional for organization-owned keys:
+      // https://github.com/OpenRouterTeam/docs/blob/main/openapi/openapi.yaml
+      if (descriptor.nullable && failure?.code === "permission_denied")
+        return {
+          ignoreFailure: true,
+          emptyMessage: t(
+            "keyManagement:openRouter.editor.options.creator.unavailable",
+          ),
+        }
+      return options?.length === 0
+        ? {
+            emptyMessage: t(
+              "keyManagement:openRouter.editor.options.creator.empty",
+            ),
+          }
+        : {}
+    },
+    summary: {
+      title: (t) => t("keyManagement:openRouter.editor.summary"),
+      describe: semanticSummary,
+    },
+    collapsibleSection: {
+      id: "advanced",
+      initiallyOpen: (values) => Boolean(values[field.IncludeByokInLimit]),
+    },
+  }
+}

@@ -2,7 +2,7 @@ import type { SiteType } from "~/constants/siteType"
 import {
   getInventorySecretAvailability,
   INVENTORY_SECRET_AVAILABILITIES,
-} from "~/services/apiAdapters/contracts/keyManagement"
+} from "~/services/apiAdapters/contracts/inventorySecret"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { AuthTypeEnum, type DisplaySiteData, type SiteAccount } from "~/types"
 
@@ -19,15 +19,6 @@ type AccountKeyProductCapabilities = {
   runtimeKeys: {
     list: boolean
     resolveSecret: boolean
-  }
-  apiTokens: {
-    create: boolean
-    update: boolean
-    delete: boolean
-  }
-  tokenMetadata: {
-    fetchAvailableModels: boolean
-    fetchUserGroups: boolean
   }
   serviceCredential: {
     fetch: boolean
@@ -61,15 +52,6 @@ const NO_ACCOUNT_KEY_PRODUCT_CAPABILITIES: AccountKeyProductCapabilities = {
     list: false,
     resolveSecret: false,
   },
-  apiTokens: {
-    create: false,
-    update: false,
-    delete: false,
-  },
-  tokenMetadata: {
-    fetchAvailableModels: false,
-    fetchUserGroups: false,
-  },
   serviceCredential: {
     fetch: false,
     rotate: false,
@@ -82,10 +64,7 @@ const NO_ACCOUNT_KEY_PRODUCT_CAPABILITIES: AccountKeyProductCapabilities = {
 const supportsRecoverableRuntimeKeySecrets = (
   accountCapabilities: ReturnType<typeof getSiteTypeCapabilities>["account"],
 ): boolean => {
-  const keyManagement =
-    accountCapabilities?.keyResourceManagement ??
-    accountCapabilities?.keyResources ??
-    accountCapabilities?.keyManagement
+  const keyManagement = accountCapabilities?.keyResourceManagement
 
   if (keyManagement) {
     return (
@@ -150,9 +129,9 @@ export const createStoredAccountKeyProductContext = (
   disabled: account.disabled,
 })
 
-/** Whether the provider exposes the legacy account API-token creation surface. */
-export const supportsAccountApiTokenCreation = (siteType: SiteType) =>
-  Boolean(getSiteTypeCapabilities(siteType).account?.keyManagement)
+/** Whether the provider exposes native account key creation. */
+export const supportsAccountKeyCreation = (siteType: SiteType) =>
+  Boolean(getSiteTypeCapabilities(siteType).account?.keyResourceManagement)
 
 /** Whether existing account runtime keys can yield a usable plaintext secret. */
 export const supportsRecoverableAccountRuntimeKeySecrets = (
@@ -170,12 +149,11 @@ export const getAccountKeyProductCapabilities = (
   }
 
   const accountCapabilities = getSiteTypeCapabilities(account.siteType).account
-  const keyManagement = accountCapabilities?.keyManagement
   const hasKeyResources = Boolean(accountCapabilities?.keyResourceManagement)
   const serviceCredential = accountCapabilities?.serviceCredential
-  const hasKeyManagement = Boolean(keyManagement)
   const hasServiceCredential = Boolean(serviceCredential)
-  const hasTokenProvisioning = Boolean(accountCapabilities?.tokenProvisioning)
+  const defaultCreation =
+    accountCapabilities?.keyResourceManagement?.defaultCreation
   const canResolveRuntimeSecret =
     supportsRecoverableRuntimeKeySecrets(accountCapabilities)
 
@@ -187,28 +165,15 @@ export const getAccountKeyProductCapabilities = (
       delete: hasKeyResources,
     },
     runtimeKeys: {
-      list:
-        hasKeyManagement ||
-        hasKeyResources ||
-        Boolean(accountCapabilities?.keyResources) ||
-        hasServiceCredential,
+      list: hasKeyResources || hasServiceCredential,
       resolveSecret: canResolveRuntimeSecret,
-    },
-    apiTokens: {
-      create: hasKeyManagement,
-      update: hasKeyManagement,
-      delete: hasKeyManagement,
-    },
-    tokenMetadata: {
-      fetchAvailableModels: hasKeyManagement,
-      fetchUserGroups: Boolean(keyManagement?.userGroups),
     },
     serviceCredential: {
       fetch: hasServiceCredential,
       rotate: Boolean(serviceCredential?.rotate),
     },
     defaultTokenAutomation: {
-      run: hasKeyManagement && hasTokenProvisioning,
+      run: Boolean(defaultCreation && defaultCreation !== "requires-input"),
     },
   }
 }
@@ -234,40 +199,12 @@ export const canResolveAccountRuntimeKeySecret = <
 ): account is TAccount =>
   getAccountKeyProductCapabilities(account).runtimeKeys.resolveSecret
 
-export const canCreateAccountApiTokens = <
+export const canCreateAccountKeyResources = <
   TAccount extends AccountKeyProductCapabilityContext,
 >(
   account: TAccount | null | undefined,
 ): account is TAccount =>
-  getAccountKeyProductCapabilities(account).apiTokens.create
-
-export const canUpdateAccountApiTokens = <
-  TAccount extends AccountKeyProductCapabilityContext,
->(
-  account: TAccount | null | undefined,
-): account is TAccount =>
-  getAccountKeyProductCapabilities(account).apiTokens.update
-
-export const canFetchAccountTokenModels = <
-  TAccount extends AccountKeyProductCapabilityContext,
->(
-  account: TAccount | null | undefined,
-): account is TAccount =>
-  getAccountKeyProductCapabilities(account).tokenMetadata.fetchAvailableModels
-
-export const canFetchAccountTokenGroups = <
-  TAccount extends AccountKeyProductCapabilityContext,
->(
-  account: TAccount | null | undefined,
-): account is TAccount =>
-  getAccountKeyProductCapabilities(account).tokenMetadata.fetchUserGroups
-
-export const canRotateAccountServiceCredential = <
-  TAccount extends AccountKeyProductCapabilityContext,
->(
-  account: TAccount | null | undefined,
-): account is TAccount =>
-  getAccountKeyProductCapabilities(account).serviceCredential.rotate
+  getAccountKeyProductCapabilities(account).resourceKeys.create
 
 export const canRunAccountDefaultTokenAutomation = <
   TAccount extends AccountKeyProductCapabilityContext,

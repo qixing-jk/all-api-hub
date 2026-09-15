@@ -16,7 +16,6 @@ import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testId
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import toast from "~/lib/notify"
 import enAccountDialog from "~/locales/en/accountDialog.json"
-import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { ACCOUNT_POST_SAVE_WORKFLOW_STEPS } from "~/services/accounts/accountPostSaveWorkflow"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import { API_CREDENTIAL_PROFILE_CAPTURE_STATUSES } from "~/services/apiCredentialProfiles/apiCredentialProfileLinkContracts"
@@ -151,7 +150,6 @@ const {
       isCreating: false,
     },
     postSaveOneTimeSecret: null,
-    postSaveSub2ApiAllowedGroups: null,
     postSaveSub2ApiAccount: null,
     postSaveSub2ApiDialogSessionId: null,
   } as any,
@@ -262,7 +260,6 @@ function resetMockState() {
     },
     accountPostSaveWorkflowStep: ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
     postSaveOneTimeSecret: null,
-    postSaveSub2ApiAllowedGroups: null,
     postSaveSub2ApiAccount: null,
     postSaveSub2ApiDialogSessionId: null,
   })
@@ -1160,12 +1157,11 @@ describe("AccountDialog", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("renders the post-save Sub2API token dialog with default-token prefill", async () => {
+  it("delegates post-save Sub2API creation defaults to the native editor", async () => {
     mockState.postSaveSub2ApiAccount = {
       id: "sub2-account-id",
       name: "Sub2API",
     }
-    mockState.postSaveSub2ApiAllowedGroups = ["vip", "default"]
     mockState.postSaveSub2ApiDialogSessionId = 42
     mockHandlers.getPostSaveSub2ApiDialogHandlers.mockReturnValue({
       onClose: vi.fn(),
@@ -1188,14 +1184,9 @@ describe("AccountDialog", () => {
     expect(screen.getByTestId("post-save-add-token-account")).toHaveTextContent(
       "sub2-account-id",
     )
-    expect(screen.getByTestId("post-save-add-token-prefill")).toHaveTextContent(
-      JSON.stringify({
-        modelId: "",
-        defaultName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
-        group: "default",
-        allowedGroups: ["vip", "default"],
-      }),
-    )
+    expect(
+      screen.getByTestId("post-save-add-token-prefill"),
+    ).toBeEmptyDOMElement()
     expect(screen.getByTestId("post-save-add-token-notice")).toHaveTextContent(
       "messages:tokenProvisioning.createRequiresGroupSelection",
     )
@@ -1207,39 +1198,10 @@ describe("AccountDialog", () => {
     )
   })
 
-  it("prefills the first allowed Sub2API group when default is unavailable", async () => {
-    mockState.postSaveSub2ApiAccount = {
-      id: "sub2-account-id",
-      name: "Sub2API",
-    }
-    mockState.postSaveSub2ApiAllowedGroups = ["vip", "paid"]
-
-    render(
-      <AccountDialog
-        isOpen={true}
-        onClose={vi.fn()}
-        mode={DIALOG_MODES.ADD}
-        onSuccess={vi.fn()}
-        onError={vi.fn()}
-      />,
-    )
-
-    expect(
-      await screen.findByTestId("post-save-add-token-prefill"),
-    ).toHaveTextContent(
-      JSON.stringify({
-        modelId: "",
-        defaultName: "vip group (auto)",
-        group: "vip",
-        allowedGroups: ["vip", "paid"],
-      }),
-    )
-  })
-
   it("renders the post-save one-time key dialog only when a created secret is pending", async () => {
     mockState.postSaveOneTimeSecret = {
       correlation: {
-        kind: "legacy-create",
+        kind: "account-create",
         accountId: "created-secret-fixture",
       },
       displayName: "Default API Key",
@@ -1281,12 +1243,12 @@ describe("AccountDialog", () => {
     mockState.draft.tagIds = ["tag-a"]
     mockState.postSaveOneTimeSecret = {
       correlation: {
-        kind: "account-runtime-key",
-        locator: {
-          source: "account_token",
+        kind: "account-key-resource",
+        ref: {
           accountId: "aihubmix-account",
           siteType: SITE_TYPES.AIHUBMIX,
-          tokenId: 10,
+          scopeKey: "account",
+          resourceId: "10",
         },
       },
       displayName: "Default API Key",
@@ -1340,10 +1302,13 @@ describe("AccountDialog", () => {
     expect(mockCaptureApiCredentialProfile).toHaveBeenCalledWith(
       expect.objectContaining({
         locator: {
-          source: "account_token",
-          accountId: "aihubmix-account",
-          siteType: SITE_TYPES.AIHUBMIX,
-          tokenId: 10,
+          source: "account_key_resource",
+          ref: {
+            accountId: "aihubmix-account",
+            siteType: SITE_TYPES.AIHUBMIX,
+            scopeKey: "account",
+            resourceId: "10",
+          },
         },
         linkedBy: "creation-response",
       }),
@@ -1360,7 +1325,7 @@ describe("AccountDialog", () => {
     mockState.draft.siteName = "AIHubMix"
     mockState.postSaveOneTimeSecret = {
       correlation: {
-        kind: "legacy-create",
+        kind: "account-create",
         accountId: "created-secret-fixture",
       },
       displayName: "Default API Key",

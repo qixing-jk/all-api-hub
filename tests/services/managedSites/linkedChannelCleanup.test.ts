@@ -47,10 +47,23 @@ vi.mock("~/services/apiAdapters/registry", () => ({
   getManagedSiteCapabilities: () => ({ config: { get: mocks.config } }),
   getSiteTypeCapabilities: () => ({
     account: {
-      keyManagement: { fetchTokens: mocks.tokens },
-      keyResources: {
+      keyResourceManagement: {
         open: async () => ({
-          openCollection: async () => ({ get: mocks.sourceGet }),
+          resolveDefaultScope: async () => ({ scopeKey: "account" }),
+          openCollection: async () => ({
+            get: mocks.sourceGet,
+            list: async () => ({
+              items: (await mocks.tokens()).map((token: { id: number }) => ({
+                ref: {
+                  accountId: "account",
+                  siteType: "new-api",
+                  scopeKey: "account",
+                  resourceId: String(token.id),
+                },
+                runtimeKey: { legacyTokenId: token.id },
+              })),
+            }),
+          }),
         }),
       },
     },

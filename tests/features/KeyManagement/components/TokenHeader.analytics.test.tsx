@@ -472,7 +472,7 @@ describe("RuntimeKeyHeader analytics", () => {
       expect.objectContaining({
         isOpen: true,
         source: expect.objectContaining({
-          id: "account_token:acc-1:1",
+          id: "account_key_resource:acc-1:new-api:account:1",
           providerId: "acc-1",
           resolveApiKey: expect.any(Function),
         }),
@@ -704,7 +704,7 @@ describe("RuntimeKeyHeader analytics", () => {
         expect.objectContaining({
           isOpen: true,
           profile: expect.objectContaining({
-            id: "runtime-key:account_token:aihubmix-account:8",
+            id: "runtime-key:account_key_resource:aihubmix-account:AIHubMix:account:8",
             name: "AIHubMix Account - Model Key",
             apiType: API_TYPES.OPENAI_COMPATIBLE,
             baseUrl: AIHUBMIX_API_ORIGIN,
@@ -873,7 +873,7 @@ describe("RuntimeKeyHeader analytics", () => {
         expect.objectContaining({
           isOpen: true,
           profile: expect.objectContaining({
-            id: "runtime-key:account_token:cli-account:9",
+            id: "runtime-key:account_key_resource:cli-account:new-api:account:9",
             name: "CLI Account - CLI Key",
             apiType: API_TYPES.OPENAI_COMPATIBLE,
             baseUrl: "https://cli.example/v1",

@@ -29,23 +29,16 @@ const doneHubApi = vi.hoisted(() => ({
   fetchSiteUserGroups: vi.fn(),
 }))
 
-const newApiKeyManagement = vi.hoisted(() => {
-  const doneHubKeyManagement = {
-    fetchAvailableModels: vi.fn(),
-  }
-
-  return {
-    doneHubKeyManagement,
-    createNewApiKeyManagement: vi.fn(() => doneHubKeyManagement),
-  }
-})
+const doneHubTokenTransport = vi.hoisted(() => ({
+  fetchAccountAvailableModels: vi.fn(),
+}))
 
 vi.mock("~/services/apiService/doneHub", () => ({
   ...doneHubApi,
 }))
 
-vi.mock("~/services/apiAdapters/newApi/keyManagement", () => ({
-  ...newApiKeyManagement,
+vi.mock("~/services/apiAdapters/newApi/tokenTransport", () => ({
+  resolveNewApiFamilyTokenTransport: () => doneHubTokenTransport,
 }))
 
 describe("DoneHub managed-site channel capability", () => {
@@ -500,7 +493,7 @@ describe("DoneHub managed-site channel capability", () => {
       abortSignal: controller.signal,
     })
     expect(
-      newApiKeyManagement.doneHubKeyManagement.fetchAvailableModels,
+      doneHubTokenTransport.fetchAccountAvailableModels,
     ).toHaveBeenCalledWith(request)
   })
 

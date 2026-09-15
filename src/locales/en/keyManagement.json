@@ -181,44 +181,21 @@
     "advancedSettings": "Advanced Settings",
     "availableModels": "Available Models",
     "basicInfo": "Basic Information",
-    "createFailed": "Failed to create key, please try again later",
     "createNotSupported": "This account does not support creating API keys.",
-    "createSuccess": "Key created successfully",
     "createToken": "Create Key",
-    "editModeNoChange": "Cannot change account in edit mode",
-    "editToken": "Edit API Key",
     "expiration": "Expiration Time",
     "expirationPlaceholder": "Leave empty for never expires",
     "groupLabel": "Group",
-    "groupRate": "Rate:",
-    "groupRestrictedNote": "Only available groups can be selected; other groups are disabled.",
-    "ipExample": "Example: 192.168.1.1,10.0.0.1 or use * for no limit",
     "ipLimits": "IP Limits",
     "ipPlaceholder": "Leave empty for no limit, separate multiple IPs with commas",
-    "loadDataFailed": "Failed to load data, please try again later",
     "modelLimits": "Model Limits",
-    "modelLoadFailed": "Available models could not be loaded. You can still create the key; model restrictions stay off when no models are selected. Reason: {{reason}}",
-    "modelSelectHint_one": "{{count}} model selected",
-    "modelSelectHint_other": "{{count}} models selected",
-    "nameRequired": "Key name cannot be empty",
-    "noAvailableModels": "This account returned no models available for restrictions",
     "quotaPlaceholder": "Please enter quota amount (USD)",
-    "quotaRate": "1 USD = {{rate}} quota points",
     "quotaSettings": "Quota Settings",
-    "selectAccountError": "Please select account",
     "selectModels": "Select models",
-    "subnetExample": "Example: 192.168.1.0/24",
     "subnetLimits": "Subnet Limits",
     "subnetPlaceholder": "Leave empty for no limit, or enter a subnet or CIDR",
     "tokenName": "Token Name",
     "unlimitedQuota": "Unlimited Quota",
-    "updateFailed": "Failed to update key, please try again later",
-    "updateNotSupported": "This account does not support updating API keys.",
-    "updateSuccess": "Key updated successfully",
-    "updateToken": "Update Key",
-    "validExpiration": "Expiration time must be greater than current time",
-    "validIp": "Please enter valid IP addresses, separate multiple IPs with commas",
-    "validQuota": "Please enter valid quota amount",
     "warningText": "Please keep API keys safe and avoid leaking",
     "warningTitle": "Notes"
   },
@@ -240,13 +217,10 @@
     "ipLimits": "IP Limits:",
     "key": "Key:",
     "lastUsedTime": "Last Used:",
-    "limitedQuota": "Limited Quota",
     "models": "Model Restrictions:",
     "neverExpires": "Never Expires",
     "note": "Note:",
-    "quotaPolicy": "Quota Policy:",
     "remainingQuota": "Remaining Quota:",
-    "secretUnavailable": "The full key is unavailable for this saved key.",
     "ungrouped": "Ungrouped",
     "usedQuota": "Used Quota:"
   },
@@ -352,11 +326,62 @@
     "verifyCliSupportFailed": "Failed to open CLI compatibility verification"
   },
   "native": {
+    "actions": {
+      "delete": "Delete key",
+      "edit": "Edit key"
+    },
+    "delete": {
+      "confirm": "Delete key",
+      "description": "Permanently delete the API key {{name}}? This cannot be undone.",
+      "feedback": {
+        "authenticationFailed": "Sign in again or update this account's credentials, then retry.",
+        "error": "Could not delete this key. Refresh and try again.",
+        "permissionDenied": "Use credentials that can view and manage keys, then retry.",
+        "unavailable": "The service is temporarily unavailable. Refresh before trying again.",
+        "uncertain": "The key state may have changed. Refresh keys before deciding whether to retry."
+      },
+      "refresh": "Refresh keys",
+      "title": "Delete API key?"
+    },
     "detailsLoadFailed": "Could not load key details.",
     "editor": {
+      "actions": {
+        "cancel": "Cancel",
+        "save": "Save key"
+      },
       "expiryDays": "Expires in (days)",
+      "feedback": {
+        "authenticationFailed": "Sign in again or update this account's credentials, then retry.",
+        "error": "Follow the error details below, then retry.",
+        "permissionDenied": "Use credentials that can view and manage keys, then retry.",
+        "title": "Could not save key",
+        "unavailable": "The service is temporarily unavailable. Try again shortly.",
+        "uncertain": "The service may have applied this change. Refresh keys to confirm the current state before deciding whether to retry."
+      },
+      "issues": {
+        "inconsistentValue": "Review this value and try again.",
+        "invalidValue": "Enter a valid value.",
+        "outOfRange": "Enter a value within the allowed range.",
+        "required": "This field is required.",
+        "unsupportedOption": "Choose an available option."
+      },
+      "opening": {
+        "failed": "Could not open key editor",
+        "loading": "Opening key editor...",
+        "retry": "Try again"
+      },
       "quotaUsd": "Quota (USD)",
-      "totalQuotaUsd": "Total quota (USD)"
+      "title": {
+        "create": "Create API Key",
+        "edit": "Edit API Key"
+      },
+      "totalQuotaUsd": "Total quota (USD)",
+      "unsaved": {
+        "description": "Closing will discard your changes.",
+        "discard": "Discard changes",
+        "keepEditing": "Keep editing",
+        "title": "Discard changes?"
+      }
     },
     "heading": "API keys",
     "missing": "Not available",
@@ -364,6 +389,7 @@
       "empty": "No scopes available",
       "error": "Could not load scopes",
       "errorHelp": "Check account access and try again.",
+      "fallback": "The requested scope is unavailable. The default scope is now shown.",
       "heading": "Scope",
       "label": "Select a scope",
       "loading": "Loading scopes…",
@@ -372,10 +398,14 @@
       "retry": "Retry loading scopes"
     },
     "status": {
+      "all": "All",
       "disabled": "Disabled",
       "enabled": "Enabled",
       "expired": "Expired",
       "unknown": "Unknown"
+    },
+    "statusFilter": {
+      "label": "Key status"
     }
   },
   "noAccountsSupportKeyCreation": "None of the accounts in this view support creating API keys. Select another account or add a supported account.",
@@ -401,32 +431,7 @@
     "warningTitle": "This key can only be viewed once"
   },
   "openRouter": {
-    "delete": {
-      "confirm": "Delete key",
-      "description": "Permanently delete {{name}} from OpenRouter? It cannot be recovered after deletion.",
-      "feedback": {
-        "authenticationFailed": "Update this account's OpenRouter Management API Key, then refresh.",
-        "error": "Could not delete this key. Refresh and try again.",
-        "permissionDenied": "You do not have permission to delete this key.",
-        "unavailable": "The service is temporarily unavailable. Refresh before trying again.",
-        "uncertain": "The key state may have changed. Refresh keys before deciding whether to retry."
-      },
-      "refresh": "Refresh keys",
-      "title": "Delete API key?"
-    },
     "editor": {
-      "actions": {
-        "cancel": "Cancel",
-        "save": "Save key"
-      },
-      "feedback": {
-        "authenticationFailed": "Update this account's OpenRouter Management API Key, then retry.",
-        "error": "Follow the error details below, then retry.",
-        "permissionDenied": "You do not have permission to manage keys in this workspace.",
-        "title": "Could not save key",
-        "unavailable": "The service is temporarily unavailable. Try again shortly.",
-        "uncertain": "The service may have applied this change. Refresh keys to confirm the current state before deciding whether to retry."
-      },
       "fields": {
         "creator": {
           "editHelp": "To change the creator, create a new key.",
@@ -469,18 +474,6 @@
           "label": "Workspace",
           "placeholder": "Select a workspace"
         }
-      },
-      "issues": {
-        "inconsistentValue": "Review this value and try again.",
-        "invalidValue": "Enter a valid value.",
-        "outOfRange": "Enter a value within the allowed range.",
-        "required": "This field is required.",
-        "unsupportedOption": "Choose an available option."
-      },
-      "opening": {
-        "failed": "Could not open key editor",
-        "loading": "Opening key editor...",
-        "retry": "Try again"
       },
       "options": {
         "creator": {
@@ -526,23 +519,9 @@
           "weekly": "Resets weekly"
         },
         "unlimited": "No spending limit"
-      },
-      "title": {
-        "create": "Create API Key",
-        "edit": "Edit API Key"
-      },
-      "unsaved": {
-        "description": "Closing will discard your changes.",
-        "discard": "Discard changes",
-        "keepEditing": "Keep editing",
-        "title": "Discard changes?"
       }
     },
     "list": {
-      "actions": {
-        "delete": "Delete key",
-        "edit": "Edit key"
-      },
       "details": {
         "byokUsage": "BYOK usage",
         "byokUsageDaily": "Daily BYOK usage",
@@ -564,16 +543,6 @@
         "usageMonthly": "Monthly usage",
         "usageWeekly": "Weekly usage",
         "workspace": "Workspace"
-      },
-      "status": {
-        "all": "All",
-        "disabled": "Disabled",
-        "enabled": "Enabled",
-        "expired": "Expired",
-        "unknown": "Unknown"
-      },
-      "statusFilter": {
-        "label": "Key status"
       },
       "values": {
         "missing": "Not available",
@@ -729,8 +698,8 @@
     "searchLabel": "Search",
     "searchPlaceholder": "Search account, key name, group, domain, or site type...",
     "skipReasons": {
-      "aihubmixOneTimeKey": "AIHubMix keys can only be viewed once. Create the key manually and save the full key immediately.",
       "noneAuth": "No credentials (auth type: none)",
+      "oneTimeKey": "This site only shows the full key when it is created. Create the key manually and save it immediately.",
       "provisioningUnavailable": "This account does not support automatic key creation. Create a key on the site if needed."
     },
     "status": {

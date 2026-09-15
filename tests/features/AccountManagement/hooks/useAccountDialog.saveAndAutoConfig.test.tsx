@@ -6,13 +6,11 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import toast from "~/lib/notify"
-import {
-  ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES,
-  ACCOUNT_POST_SAVE_WORKFLOW_STEPS,
-  ACCOUNT_TOKEN_INVENTORY_STATE_KINDS,
-  ENSURE_ACCOUNT_TOKEN_RESULT_KINDS,
-} from "~/services/accounts/accountPostSaveWorkflow"
-import * as apiServiceRequest from "~/services/accounts/utils/apiServiceRequest"
+import type { EnsureAccountKeyResult } from "~/services/accounts/accountKeyCreation"
+import { ACCOUNT_POST_SAVE_WORKFLOW_STEPS } from "~/services/accounts/accountPostSaveWorkflow"
+import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
+import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -31,10 +29,10 @@ import type {
   ProtectionBypassSurface,
   ProtectionBypassUserCommand,
 } from "~/services/protectionBypass/contracts"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
-  type ApiToken,
   type DisplaySiteData,
   type SiteAccount,
 } from "~/types"
@@ -44,6 +42,10 @@ import {
 } from "~/types/accountKeyAutoProvisioning"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import {
+  buildNewApiKeyCreationResult,
+  buildNewApiRuntimeKey,
+} from "~~/tests/test-utils/accountKeyFixtures"
 import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
@@ -54,8 +56,8 @@ const {
   mockToast,
   mockValidateAndSaveAccount,
   mockValidateAndUpdateAccount,
-  mockInspectAccountTokenInventory,
-  mockEnsureAccountTokenForPostSaveWorkflow,
+  mockFetchRuntimeKeys,
+  mockEnsureAccountKey,
   mockOpenWithAccount,
   mockOpenDefaultTokenQuickCreateDialogForAccount,
   mockGetManagedSiteConfig,
@@ -69,8 +71,8 @@ const {
   mockToast: vi.fn(),
   mockValidateAndSaveAccount: vi.fn(),
   mockValidateAndUpdateAccount: vi.fn(),
-  mockInspectAccountTokenInventory: vi.fn(),
-  mockEnsureAccountTokenForPostSaveWorkflow: vi.fn(),
+  mockFetchRuntimeKeys: vi.fn(),
+  mockEnsureAccountKey: vi.fn(),
   mockOpenWithAccount: vi.fn(),
   mockOpenDefaultTokenQuickCreateDialogForAccount: vi.fn(),
   mockGetManagedSiteConfig: vi.fn(),
@@ -115,21 +117,50 @@ vi.mock("~/services/accounts/accountUpdate", () => ({
 }))
 
 vi.mock(
-  "~/services/accounts/accountPostSaveWorkflow",
-  async (importOriginal) => {
-    const actual =
-      await importOriginal<
-        typeof import("~/services/accounts/accountPostSaveWorkflow")
-      >()
-
-    return {
-      ...actual,
-      inspectAccountTokenInventory: mockInspectAccountTokenInventory,
-      ensureAccountTokenForPostSaveWorkflow:
-        mockEnsureAccountTokenForPostSaveWorkflow,
-    }
-  },
+  "~/services/accounts/utils/apiServiceRequest",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/accounts/utils/apiServiceRequest")
+    >()),
+    fetchDisplayAccountRuntimeKeys: mockFetchRuntimeKeys,
+  }),
 )
+vi.mock("~/services/accounts/accountKeyCreation", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/accounts/accountKeyCreation")
+  >()),
+  ensureAccountKey: mockEnsureAccountKey,
+}))
+
+function nativeEnsureResult(
+  account: DisplaySiteData,
+  token: NewApiToken,
+  created = false,
+): EnsureAccountKeyResult {
+  const runtimeKey = buildNewApiRuntimeKey(account, token)
+  if (!created) return { kind: "ready", runtimeKey }
+  const creation = buildNewApiKeyCreationResult(account, token)
+  return {
+    kind: "created",
+    runtimeKey,
+    creation: {
+      ...creation,
+      createdSecret: createAccountKeyResourceCreatedRuntimeSecret({
+        ref: creation.ref!,
+        displayName: token.name,
+        secret: token.key,
+        credential: {
+          accountName: account.name,
+          fallbackAccountName: account.baseName,
+          baseUrl: account.baseUrl,
+          siteType: account.siteType,
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          tagIds: account.tagIds ?? [],
+        },
+      }),
+    },
+  }
+}
 
 vi.mock("~/services/apiAdapters/registry", async (importOriginal) => {
   const actual =
@@ -215,15 +246,14 @@ describe("useAccountDialog save and auto-config flows", () => {
       success: true,
       feedbackLevel: "success",
     })
-    mockInspectAccountTokenInventory.mockResolvedValue({
-      kind: ACCOUNT_TOKEN_INVENTORY_STATE_KINDS.Missing,
-      existingTokenIds: [],
-    })
-    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
-      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Ready,
-      token: buildToken({ id: 99, key: "sk-default-ensured" }),
-      created: false,
-    })
+    mockFetchRuntimeKeys.mockResolvedValue([])
+    mockEnsureAccountKey.mockImplementation(async (account: DisplaySiteData) =>
+      nativeEnsureResult(
+        account,
+        buildToken({ id: 99, key: "sk-default-ensured" }),
+        false,
+      ),
+    )
     mockOpenWithAccount.mockResolvedValue({ opened: true })
     vi.spyOn(accountStorage, "refreshAccount").mockResolvedValue({
       account: buildSiteAccount({ id: "saved-account-id" }),
@@ -334,7 +364,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       ...overrides,
     }) as DisplaySiteData
 
-  const buildToken = (overrides: Partial<ApiToken> = {}): ApiToken => ({
+  const buildToken = (overrides: Partial<NewApiToken> = {}): NewApiToken => ({
     id: 1,
     user_id: 12,
     key: "sk-ensured",
@@ -1514,7 +1544,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       },
     )
     expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(true)
-    expect(mockEnsureAccountTokenForPostSaveWorkflow).not.toHaveBeenCalled()
+    expect(mockEnsureAccountKey).not.toHaveBeenCalled()
   })
 
   it("does not open the AIHubMix foreground key prompt when the saved account already has a token", async () => {
@@ -1548,12 +1578,9 @@ describe("useAccountDialog save and auto-config flows", () => {
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
       savedDisplayData,
     )
-    mockInspectAccountTokenInventory.mockResolvedValueOnce({
-      kind: ACCOUNT_TOKEN_INVENTORY_STATE_KINDS.Present,
-      token: existingToken,
-      existingTokenIds: [existingToken.id],
-      hasUsableSecret: false,
-    })
+    mockFetchRuntimeKeys.mockResolvedValueOnce([
+      buildNewApiRuntimeKey(savedDisplayData, existingToken),
+    ])
 
     const { result } = renderAddHook({ onSuccess })
 
@@ -1567,9 +1594,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    expect(mockInspectAccountTokenInventory).toHaveBeenCalledWith({
-      displaySiteData: savedDisplayData,
-    })
+    expect(mockFetchRuntimeKeys).toHaveBeenCalledWith(savedDisplayData)
     expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
     expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     expect(onSuccess).toHaveBeenCalledWith("saved-account-id")
@@ -1596,12 +1621,10 @@ describe("useAccountDialog save and auto-config flows", () => {
     const savedDisplayData =
       accountStorage.convertToDisplayData(savedSiteAccount)
     let resolveInventory:
-      | ((
-          value: Awaited<ReturnType<typeof mockInspectAccountTokenInventory>>,
-        ) => void)
+      | ((value: Awaited<ReturnType<typeof mockFetchRuntimeKeys>>) => void)
       | undefined
     const pendingInventory = new Promise<
-      Awaited<ReturnType<typeof mockInspectAccountTokenInventory>>
+      Awaited<ReturnType<typeof mockFetchRuntimeKeys>>
     >((resolve) => {
       resolveInventory = resolve
     })
@@ -1612,7 +1635,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
       savedDisplayData,
     )
-    mockInspectAccountTokenInventory.mockReturnValueOnce(pendingInventory)
+    mockFetchRuntimeKeys.mockReturnValueOnce(pendingInventory)
 
     const { result } = renderAddHook({ onSuccess })
 
@@ -1630,9 +1653,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
 
     await waitFor(() => {
-      expect(mockInspectAccountTokenInventory).toHaveBeenCalledWith({
-        displaySiteData: savedDisplayData,
-      })
+      expect(mockFetchRuntimeKeys).toHaveBeenCalledWith(savedDisplayData)
     })
 
     act(() => {
@@ -1640,10 +1661,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
 
     await act(async () => {
-      resolveInventory?.({
-        kind: ACCOUNT_TOKEN_INVENTORY_STATE_KINDS.Missing,
-        existingTokenIds: [],
-      })
+      resolveInventory?.([])
       await savePromise
     })
 
@@ -1678,7 +1696,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
       savedDisplayData,
     )
-    mockInspectAccountTokenInventory.mockRejectedValueOnce(
+    mockFetchRuntimeKeys.mockRejectedValueOnce(
       new Error("inventory unavailable"),
     )
 
@@ -1694,9 +1712,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    expect(mockInspectAccountTokenInventory).toHaveBeenCalledWith({
-      displaySiteData: savedDisplayData,
-    })
+    expect(mockFetchRuntimeKeys).toHaveBeenCalledWith(savedDisplayData)
     expect(result.current.state.aihubmixPostSaveKeyPrompt).toMatchObject({
       isOpen: true,
       accountId: "saved-account-id",
@@ -1781,12 +1797,10 @@ describe("useAccountDialog save and auto-config flows", () => {
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
       savedDisplayData,
     )
-    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValueOnce({
-      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created,
-      token: oneTimeToken,
-      created: true,
-      oneTimeSecret: true,
-    })
+    mockEnsureAccountKey.mockImplementationOnce(
+      async (account: DisplaySiteData) =>
+        nativeEnsureResult(account, oneTimeToken, true),
+    )
 
     const { result } = renderAddHook()
 
@@ -1812,10 +1826,10 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleAihubmixPostSaveKeyPromptConfirm()
     })
 
-    expect(mockEnsureAccountTokenForPostSaveWorkflow).toHaveBeenCalledWith({
-      account: savedSiteAccount,
-      displaySiteData: savedDisplayData,
-    })
+    expect(mockEnsureAccountKey).toHaveBeenCalledWith(
+      accountStorage.convertToDisplayData(savedSiteAccount),
+      { allowOneTimeSecret: true, signal: expect.any(AbortSignal) },
+    )
     expect(result.current.state.postSaveOneTimeSecret).toMatchObject({
       secret: oneTimeToken.key,
       displayName: oneTimeToken.name,
@@ -1850,12 +1864,10 @@ describe("useAccountDialog save and auto-config flows", () => {
       savedSiteAccount,
     )
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(null)
-    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValueOnce({
-      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created,
-      token: oneTimeToken,
-      created: true,
-      oneTimeSecret: true,
-    })
+    mockEnsureAccountKey.mockImplementationOnce(
+      async (account: DisplaySiteData) =>
+        nativeEnsureResult(account, oneTimeToken, true),
+    )
 
     const { result } = renderAddHook()
 
@@ -1873,14 +1885,14 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleAihubmixPostSaveKeyPromptConfirm()
     })
 
-    expect(mockEnsureAccountTokenForPostSaveWorkflow).toHaveBeenCalledWith({
-      account: savedSiteAccount,
-      displaySiteData: expect.objectContaining({
+    expect(mockEnsureAccountKey).toHaveBeenCalledWith(
+      expect.objectContaining({
         id: "saved-account-id",
         name: "AIHubMix",
         siteType: SITE_TYPES.AIHUBMIX,
       }),
-    })
+      { allowOneTimeSecret: true, signal: expect.any(AbortSignal) },
+    )
     expect(result.current.state.postSaveOneTimeSecret).toMatchObject({
       secret: oneTimeToken.key,
       displayName: oneTimeToken.name,
@@ -1911,11 +1923,9 @@ describe("useAccountDialog save and auto-config flows", () => {
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
       accountStorage.convertToDisplayData(savedSiteAccount),
     )
-    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValueOnce({
-      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
-      code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenSecretUnavailable,
-      message: "",
-    })
+    mockEnsureAccountKey.mockRejectedValueOnce(
+      new AccountKeyResourceError({ code: "unavailable" }),
+    )
 
     const { result } = renderAddHook()
 
@@ -1964,7 +1974,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(toast.error).toHaveBeenCalledWith(
       "messages:toast.error.findAccountDetailsFailed",
     )
-    expect(mockEnsureAccountTokenForPostSaveWorkflow).not.toHaveBeenCalled()
+    expect(mockEnsureAccountKey).not.toHaveBeenCalled()
     expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
     expect(onSuccess).toHaveBeenCalledWith("saved-account-id")
   })
@@ -1987,7 +1997,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       result.current.handlers.handleAihubmixPostSaveKeyPromptCancel()
     })
 
-    expect(mockEnsureAccountTokenForPostSaveWorkflow).not.toHaveBeenCalled()
+    expect(mockEnsureAccountKey).not.toHaveBeenCalled()
     expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
     expect(toast.success).toHaveBeenCalledWith("Saved successfully")
@@ -2050,11 +2060,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       key: "sk-aihubmix-late",
     })
     let resolveEnsure:
-      | ((
-          value: Awaited<
-            ReturnType<typeof mockEnsureAccountTokenForPostSaveWorkflow>
-          >,
-        ) => void)
+      | ((value: Awaited<ReturnType<typeof mockEnsureAccountKey>>) => void)
       | undefined
 
     vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
@@ -2063,7 +2069,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
       accountStorage.convertToDisplayData(savedSiteAccount),
     )
-    mockEnsureAccountTokenForPostSaveWorkflow.mockImplementationOnce(
+    mockEnsureAccountKey.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
           resolveEnsure = resolve
@@ -2103,7 +2109,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
 
     await waitFor(() => {
-      expect(mockEnsureAccountTokenForPostSaveWorkflow).toHaveBeenCalledTimes(1)
+      expect(mockEnsureAccountKey).toHaveBeenCalledTimes(1)
     })
 
     await act(async () => {
@@ -2111,12 +2117,13 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
 
     await act(async () => {
-      resolveEnsure?.({
-        kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created,
-        token: oneTimeToken,
-        created: true,
-        oneTimeSecret: true,
-      })
+      resolveEnsure?.(
+        nativeEnsureResult(
+          accountStorage.convertToDisplayData(savedSiteAccount),
+          oneTimeToken,
+          true,
+        ),
+      )
     })
 
     expect(result.current.state.postSaveOneTimeSecret).toBeNull()
@@ -2148,9 +2155,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
       accountStorage.convertToDisplayData(savedSiteAccount),
     )
-    mockEnsureAccountTokenForPostSaveWorkflow.mockRejectedValueOnce(
-      new Error("create failed"),
-    )
+    mockEnsureAccountKey.mockRejectedValueOnce(new Error("create failed"))
 
     const { result } = renderAddHook({ onSuccess })
 
@@ -2232,7 +2237,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       })
 
       expect(mockValidateAndSaveAccount).not.toHaveBeenCalled()
-      expect(mockEnsureAccountTokenForPostSaveWorkflow).not.toHaveBeenCalled()
+      expect(mockEnsureAccountKey).not.toHaveBeenCalled()
       expect(mockOpenWithAccount).not.toHaveBeenCalled()
       expect(onSuccess).not.toHaveBeenCalled()
       expect(toast.error).not.toHaveBeenCalled()
@@ -2310,11 +2315,9 @@ describe("useAccountDialog save and auto-config flows", () => {
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
       savedDisplayData,
     )
-    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
-      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Ready,
-      token: ensuredToken,
-      created: false,
-    })
+    mockEnsureAccountKey.mockImplementation(async (account: DisplaySiteData) =>
+      nativeEnsureResult(account, ensuredToken, false),
+    )
 
     const { result } = renderAddHook()
 
@@ -2358,16 +2361,15 @@ describe("useAccountDialog save and auto-config flows", () => {
         skipAutoProvisionKeyOnAccountAdd: true,
       },
     )
-    expect(mockEnsureAccountTokenForPostSaveWorkflow).toHaveBeenCalledWith({
-      account: savedSiteAccount,
-      displaySiteData: savedDisplayData,
-    })
+    expect(mockEnsureAccountKey).toHaveBeenCalledWith(
+      accountStorage.convertToDisplayData(savedSiteAccount),
+      { allowOneTimeSecret: true, signal: expect.any(AbortSignal) },
+    )
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       savedDisplayData,
       expect.objectContaining({
-        source: "account_token",
-        secret: ensuredToken.key,
-        token: expect.objectContaining(ensuredToken),
+        source: "account_key_resource",
+        legacyTokenId: ensuredToken.id,
       }),
       expect.any(Function),
       expect.objectContaining({
@@ -2413,12 +2415,9 @@ describe("useAccountDialog save and auto-config flows", () => {
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
       savedDisplayData,
     )
-    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
-      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created,
-      token: oneTimeToken,
-      created: true,
-      oneTimeSecret: true,
-    })
+    mockEnsureAccountKey.mockImplementation(async (account: DisplaySiteData) =>
+      nativeEnsureResult(account, oneTimeToken, true),
+    )
 
     const { result } = renderAddHook()
 
@@ -2457,9 +2456,8 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       savedDisplayData,
       expect.objectContaining({
-        source: "account_token",
-        secret: oneTimeToken.key,
-        token: expect.objectContaining(oneTimeToken),
+        source: "account_key_resource",
+        legacyTokenId: oneTimeToken.id,
       }),
       expect.any(Function),
       expect.objectContaining({
@@ -2505,12 +2503,9 @@ describe("useAccountDialog save and auto-config flows", () => {
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
       savedDisplayData,
     )
-    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
-      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created,
-      token: oneTimeToken,
-      created: true,
-      oneTimeSecret: true,
-    })
+    mockEnsureAccountKey.mockImplementation(async (account: DisplaySiteData) =>
+      nativeEnsureResult(account, oneTimeToken, true),
+    )
 
     const { result } = renderAddHook()
 
@@ -2579,11 +2574,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
 
     let resolveEnsureAccountToken:
-      | ((
-          value: Awaited<
-            ReturnType<typeof mockEnsureAccountTokenForPostSaveWorkflow>
-          >,
-        ) => void)
+      | ((value: Awaited<ReturnType<typeof mockEnsureAccountKey>>) => void)
       | null = null
 
     vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
@@ -2592,7 +2583,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
       savedDisplayData,
     )
-    mockEnsureAccountTokenForPostSaveWorkflow.mockImplementation(
+    mockEnsureAccountKey.mockImplementation(
       () =>
         new Promise((resolve) => {
           resolveEnsureAccountToken = resolve
@@ -2654,12 +2645,13 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
 
     await act(async () => {
-      resolveEnsureAccountToken?.({
-        kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created,
-        token: oneTimeToken,
-        created: true,
-        oneTimeSecret: true,
-      })
+      resolveEnsureAccountToken?.(
+        nativeEnsureResult(
+          accountStorage.convertToDisplayData(savedSiteAccount),
+          oneTimeToken,
+          true,
+        ),
+      )
       await autoConfigPromise
     })
 
@@ -2705,12 +2697,9 @@ describe("useAccountDialog save and auto-config flows", () => {
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
       savedDisplayData,
     )
-    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
-      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created,
-      token: oneTimeToken,
-      created: true,
-      oneTimeSecret: true,
-    })
+    mockEnsureAccountKey.mockImplementation(async (account: DisplaySiteData) =>
+      nativeEnsureResult(account, oneTimeToken, true),
+    )
     mockOpenWithAccount.mockRejectedValueOnce(
       new Error("channel dialog failed"),
     )
@@ -2791,9 +2780,9 @@ describe("useAccountDialog save and auto-config flows", () => {
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
       savedDisplayData,
     )
-    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
-      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired,
-      allowedGroups: ["default", "vip"],
+    mockEnsureAccountKey.mockResolvedValue({
+      kind: "input-required",
+      reason: "editor",
     })
 
     const { result } = renderAddHook()
@@ -2816,10 +2805,9 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleAutoConfig()
     })
 
-    expect(result.current.state.postSaveSub2ApiAllowedGroups).toEqual([
-      "default",
-      "vip",
-    ])
+    expect(result.current.state.postSaveSub2ApiAccount).toEqual(
+      savedDisplayData,
+    )
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
       ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForSub2ApiGroupSelection,
     )
@@ -2827,17 +2815,16 @@ describe("useAccountDialog save and auto-config flows", () => {
 
     await act(async () => {
       await result.current.handlers.handlePostSaveSub2ApiTokenCreated(
-        createdToken,
+        buildNewApiKeyCreationResult(savedDisplayData, createdToken),
       )
     })
 
-    expect(result.current.state.postSaveSub2ApiAllowedGroups).toBeNull()
+    expect(result.current.state.postSaveSub2ApiAccount).toBeNull()
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       savedDisplayData,
       expect.objectContaining({
-        source: "account_token",
-        secret: createdToken.key,
-        token: expect.objectContaining(createdToken),
+        source: "account_key_resource",
+        legacyTokenId: createdToken.id,
       }),
       expect.any(Function),
       expect.objectContaining({
@@ -2849,7 +2836,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     )
   })
 
-  it("resumes paused Sub2API quick-config after boolean token creation by selecting the newly added token id", async () => {
+  it("resumes paused Sub2API quick-config after reference-only creation by selecting its exact native ID", async () => {
     const savedSiteAccount = buildSiteAccount({
       id: "saved-account-id",
       site_name: "Sub2API",
@@ -2892,35 +2879,14 @@ describe("useAccountDialog save and auto-config flows", () => {
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
       savedDisplayData,
     )
-    vi.spyOn(
-      apiServiceRequest,
-      "createDisplayAccountApiContext",
-    ).mockReturnValue({
-      accountId: savedDisplayData.id,
-      siteType: SITE_TYPES.SUB2API,
-      capabilities: {
-        siteType: SITE_TYPES.SUB2API,
-        account: {
-          keyManagement: {
-            fetchTokens: fetchAccountTokens,
-            createToken: vi.fn(),
-            resolveTokenKey: vi.fn(),
-          },
-        },
-      } as any,
-      keyManagement: {
-        fetchTokens: fetchAccountTokens,
-        createToken: vi.fn(),
-        resolveTokenKey: vi.fn(),
-      } as any,
-      serviceCredential: undefined,
-      tokenProvisioning: undefined,
-      request: { accountId: savedDisplayData.id } as any,
-    })
-    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
-      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired,
-      allowedGroups: ["default", "vip"],
-      existingTokenIds: [existingToken.id],
+    mockFetchRuntimeKeys.mockImplementation(async (account) =>
+      (await fetchAccountTokens({ accountId: account.id })).map(
+        (token: NewApiToken) => buildNewApiRuntimeKey(account, token),
+      ),
+    )
+    mockEnsureAccountKey.mockResolvedValue({
+      kind: "input-required",
+      reason: "editor",
     })
 
     const { result } = renderAddHook()
@@ -2948,7 +2914,13 @@ describe("useAccountDialog save and auto-config flows", () => {
     )
 
     await act(async () => {
-      await result.current.handlers.handlePostSaveSub2ApiTokenCreated()
+      await result.current.handlers.handlePostSaveSub2ApiTokenCreated({
+        ref: buildNewApiKeyCreationResult(
+          savedDisplayData,
+          buildToken({ id: 104 }),
+        ).ref,
+        facts: null,
+      })
     })
 
     expect(fetchAccountTokens).toHaveBeenCalledWith({
@@ -2957,9 +2929,8 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       savedDisplayData,
       expect.objectContaining({
-        source: "account_token",
-        secret: createdToken.key,
-        token: expect.objectContaining(createdToken),
+        source: "account_key_resource",
+        legacyTokenId: createdToken.id,
       }),
       expect.any(Function),
       expect.objectContaining({
@@ -2971,7 +2942,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     )
   })
 
-  it("fails closed when boolean Sub2API token creation refetch does not identify exactly one new token", async () => {
+  it("fails closed when native creation recovery cannot find its returned resource ID", async () => {
     const savedSiteAccount = buildSiteAccount({
       id: "saved-account-id",
       site_name: "Sub2API",
@@ -3010,35 +2981,14 @@ describe("useAccountDialog save and auto-config flows", () => {
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
       savedDisplayData,
     )
-    vi.spyOn(
-      apiServiceRequest,
-      "createDisplayAccountApiContext",
-    ).mockReturnValue({
-      accountId: savedDisplayData.id,
-      siteType: SITE_TYPES.SUB2API,
-      capabilities: {
-        siteType: SITE_TYPES.SUB2API,
-        account: {
-          keyManagement: {
-            fetchTokens: fetchAccountTokens,
-            createToken: vi.fn(),
-            resolveTokenKey: vi.fn(),
-          },
-        },
-      } as any,
-      keyManagement: {
-        fetchTokens: fetchAccountTokens,
-        createToken: vi.fn(),
-        resolveTokenKey: vi.fn(),
-      } as any,
-      serviceCredential: undefined,
-      tokenProvisioning: undefined,
-      request: { accountId: savedDisplayData.id } as any,
-    })
-    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
-      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired,
-      allowedGroups: ["default", "vip"],
-      existingTokenIds: [existingToken.id],
+    mockFetchRuntimeKeys.mockImplementation(async (account) =>
+      (await fetchAccountTokens({ accountId: account.id })).map(
+        (token: NewApiToken) => buildNewApiRuntimeKey(account, token),
+      ),
+    )
+    mockEnsureAccountKey.mockResolvedValue({
+      kind: "input-required",
+      reason: "editor",
     })
 
     const { result } = renderAddHook()
@@ -3062,7 +3012,13 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
 
     await act(async () => {
-      await result.current.handlers.handlePostSaveSub2ApiTokenCreated()
+      await result.current.handlers.handlePostSaveSub2ApiTokenCreated({
+        ref: buildNewApiKeyCreationResult(
+          savedDisplayData,
+          buildToken({ id: 104 }),
+        ).ref,
+        facts: null,
+      })
     })
 
     expect(mockOpenWithAccount).not.toHaveBeenCalled()
@@ -3070,11 +3026,11 @@ describe("useAccountDialog save and auto-config flows", () => {
       ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
     )
     expect(toast.error).toHaveBeenCalledWith(
-      "messages:accountOperations.createTokenFailed",
+      "messages:accountOperations.tokenNotFound",
     )
   })
 
-  it("ignores stale boolean Sub2API token recovery results after the dialog closes", async () => {
+  it("ignores stale native key recovery results after the dialog closes", async () => {
     const savedSiteAccount = buildSiteAccount({
       id: "saved-account-id",
       site_name: "Sub2API",
@@ -3103,10 +3059,11 @@ describe("useAccountDialog save and auto-config flows", () => {
       group: "default",
     })
 
-    let resolveFetchAccountTokens: ((value: ApiToken[]) => void) | null = null
+    let resolveFetchAccountTokens: ((value: NewApiToken[]) => void) | null =
+      null
     const fetchAccountTokens = vi.fn(
-      () =>
-        new Promise<ApiToken[]>((resolve) => {
+      (_request: unknown) =>
+        new Promise<NewApiToken[]>((resolve) => {
           resolveFetchAccountTokens = resolve
         }),
     )
@@ -3117,35 +3074,14 @@ describe("useAccountDialog save and auto-config flows", () => {
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
       savedDisplayData,
     )
-    vi.spyOn(
-      apiServiceRequest,
-      "createDisplayAccountApiContext",
-    ).mockReturnValue({
-      accountId: savedDisplayData.id,
-      siteType: SITE_TYPES.SUB2API,
-      capabilities: {
-        siteType: SITE_TYPES.SUB2API,
-        account: {
-          keyManagement: {
-            fetchTokens: fetchAccountTokens,
-            createToken: vi.fn(),
-            resolveTokenKey: vi.fn(),
-          },
-        },
-      } as any,
-      keyManagement: {
-        fetchTokens: fetchAccountTokens,
-        createToken: vi.fn(),
-        resolveTokenKey: vi.fn(),
-      } as any,
-      serviceCredential: undefined,
-      tokenProvisioning: undefined,
-      request: { accountId: savedDisplayData.id } as any,
-    })
-    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
-      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired,
-      allowedGroups: ["default", "vip"],
-      existingTokenIds: [existingToken.id],
+    mockFetchRuntimeKeys.mockImplementation(async (account) =>
+      (await fetchAccountTokens({ accountId: account.id })).map(
+        (token: NewApiToken) => buildNewApiRuntimeKey(account, token),
+      ),
+    )
+    mockEnsureAccountKey.mockResolvedValue({
+      kind: "input-required",
+      reason: "editor",
     })
 
     const onClose = vi.fn()
@@ -3187,7 +3123,13 @@ describe("useAccountDialog save and auto-config flows", () => {
     let recoverPromise: Promise<void> | undefined
     await act(async () => {
       recoverPromise =
-        result.current.handlers.handlePostSaveSub2ApiTokenCreated()
+        result.current.handlers.handlePostSaveSub2ApiTokenCreated({
+          ref: buildNewApiKeyCreationResult(
+            savedDisplayData,
+            buildToken({ id: 104 }),
+          ).ref,
+          facts: null,
+        })
     })
 
     await waitFor(() => {
@@ -3207,7 +3149,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       expect(result.current.state.accountPostSaveWorkflowStep).toBe(
         ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
       )
-      expect(result.current.state.postSaveSub2ApiAllowedGroups).toBeNull()
+      expect(result.current.state.postSaveSub2ApiAccount).toBeNull()
       expect(result.current.state.postSaveSub2ApiAccount).toBeNull()
     })
 
@@ -3218,7 +3160,7 @@ describe("useAccountDialog save and auto-config flows", () => {
 
     expect(mockOpenWithAccount).not.toHaveBeenCalled()
     expect(toast.error).not.toHaveBeenCalledWith(
-      "messages:accountOperations.createTokenFailed",
+      "messages:accountOperations.tokenNotFound",
     )
     expect(toast.error).not.toHaveBeenCalledWith(
       "accountDialog:messages.newApiConfigFailed",
@@ -3263,9 +3205,9 @@ describe("useAccountDialog save and auto-config flows", () => {
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
       savedDisplayData,
     )
-    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
-      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired,
-      allowedGroups: ["default", "vip"],
+    mockEnsureAccountKey.mockResolvedValue({
+      kind: "input-required",
+      reason: "editor",
     })
     mockOpenWithAccount.mockRejectedValueOnce(
       new Error("channel dialog failed"),
@@ -3298,13 +3240,13 @@ describe("useAccountDialog save and auto-config flows", () => {
     await expect(
       act(async () => {
         await result.current.handlers.handlePostSaveSub2ApiTokenCreated(
-          createdToken,
+          buildNewApiKeyCreationResult(savedDisplayData, createdToken),
         )
       }),
     ).resolves.toBeUndefined()
 
     await waitFor(() => {
-      expect(result.current.state.postSaveSub2ApiAllowedGroups).toBeNull()
+      expect(result.current.state.postSaveSub2ApiAccount).toBeNull()
       expect(result.current.state.accountPostSaveWorkflowStep).toBe(
         ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
       )
@@ -3344,9 +3286,9 @@ describe("useAccountDialog save and auto-config flows", () => {
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
       savedDisplayData,
     )
-    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
-      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired,
-      allowedGroups: ["default", "vip"],
+    mockEnsureAccountKey.mockResolvedValue({
+      kind: "input-required",
+      reason: "editor",
     })
 
     const { result } = renderAddHook()
@@ -3369,10 +3311,9 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleAutoConfig()
     })
 
-    expect(result.current.state.postSaveSub2ApiAllowedGroups).toEqual([
-      "default",
-      "vip",
-    ])
+    expect(result.current.state.postSaveSub2ApiAccount).toEqual(
+      savedDisplayData,
+    )
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
       ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForSub2ApiGroupSelection,
     )
@@ -3381,7 +3322,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       result.current.handlers.handleClose()
     })
 
-    expect(result.current.state.postSaveSub2ApiAllowedGroups).toBeNull()
+    expect(result.current.state.postSaveSub2ApiAccount).toBeNull()
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
       ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
     )
@@ -3417,9 +3358,9 @@ describe("useAccountDialog save and auto-config flows", () => {
     vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
       savedDisplayData,
     )
-    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
-      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired,
-      allowedGroups: ["default", "vip"],
+    mockEnsureAccountKey.mockResolvedValue({
+      kind: "input-required",
+      reason: "editor",
     })
 
     const { result } = renderAddHook()
@@ -3451,7 +3392,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
 
     expect(mockOpenWithAccount).not.toHaveBeenCalled()
-    expect(result.current.state.postSaveSub2ApiAllowedGroups).toBeNull()
+    expect(result.current.state.postSaveSub2ApiAccount).toBeNull()
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
       ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
     )
@@ -3540,15 +3481,9 @@ describe("useAccountDialog save and auto-config flows", () => {
         message: "Saved successfully",
         feedbackLevel: "success",
       })
-    mockEnsureAccountTokenForPostSaveWorkflow
-      .mockResolvedValueOnce({
-        kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired,
-        allowedGroups: ["default", "vip"],
-      })
-      .mockResolvedValueOnce({
-        kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired,
-        allowedGroups: ["default", "vip"],
-      })
+    mockEnsureAccountKey
+      .mockResolvedValueOnce({ kind: "input-required", reason: "editor" })
+      .mockResolvedValueOnce({ kind: "input-required", reason: "editor" })
 
     let resolveOpenWithAccount:
       | ((value: Awaited<ReturnType<typeof mockOpenWithAccount>>) => void)
@@ -3634,7 +3569,9 @@ describe("useAccountDialog save and auto-config flows", () => {
       group: "default",
     })
     await act(async () => {
-      await firstDialogHandlers.onSuccess(staleToken)
+      await firstDialogHandlers.onSuccess(
+        buildNewApiKeyCreationResult(firstDisplayData, staleToken),
+      )
     })
 
     expect(mockOpenWithAccount).not.toHaveBeenCalled()
@@ -3646,7 +3583,9 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
     let resumePromise: Promise<void> | undefined
     await act(async () => {
-      resumePromise = secondDialogHandlers.onSuccess(currentToken)
+      resumePromise = secondDialogHandlers.onSuccess(
+        buildNewApiKeyCreationResult(secondDisplayData, currentToken),
+      )
       secondDialogHandlers.onClose()
     })
 
@@ -3654,9 +3593,8 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       secondDisplayData,
       expect.objectContaining({
-        source: "account_token",
-        secret: currentToken.key,
-        token: expect.objectContaining(currentToken),
+        source: "account_key_resource",
+        legacyTokenId: currentToken.id,
       }),
       expect.any(Function),
       expect.objectContaining({
@@ -3807,11 +3745,9 @@ describe("useAccountDialog save and auto-config flows", () => {
     const fallbackDisplayData =
       accountStorage.convertToDisplayData(savedSiteAccount)
     const ensuredToken = buildToken({ id: 104, key: "sk-fallback-ensured" })
-    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
-      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Ready,
-      token: ensuredToken,
-      created: false,
-    })
+    mockEnsureAccountKey.mockImplementation(async (account: DisplaySiteData) =>
+      nativeEnsureResult(account, ensuredToken, false),
+    )
 
     const { result } = renderAddHook()
 
@@ -3836,9 +3772,8 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       fallbackDisplayData,
       expect.objectContaining({
-        source: "account_token",
-        secret: ensuredToken.key,
-        token: expect.objectContaining(ensuredToken),
+        source: "account_key_resource",
+        legacyTokenId: ensuredToken.id,
       }),
       expect.any(Function),
       expect.objectContaining({
@@ -3999,11 +3934,9 @@ describe("useAccountDialog save and auto-config flows", () => {
       savedDisplayData,
     )
     const ensuredToken = buildToken({ id: 105, key: "sk-sub2-ensured" })
-    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
-      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Ready,
-      token: ensuredToken,
-      created: false,
-    })
+    mockEnsureAccountKey.mockImplementation(async (account: DisplaySiteData) =>
+      nativeEnsureResult(account, ensuredToken, false),
+    )
 
     const { result } = renderAddHook()
 
@@ -4028,9 +3961,8 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       savedDisplayData,
       expect.objectContaining({
-        source: "account_token",
-        secret: ensuredToken.key,
-        token: expect.objectContaining(ensuredToken),
+        source: "account_key_resource",
+        legacyTokenId: ensuredToken.id,
       }),
       expect.any(Function),
       expect.objectContaining({
@@ -4249,17 +4181,13 @@ describe("useAccountDialog save and auto-config flows", () => {
       })
     const firstEnsuredToken = buildToken({ id: 106, key: "sk-first-ensured" })
     const secondEnsuredToken = buildToken({ id: 107, key: "sk-second-ensured" })
-    mockEnsureAccountTokenForPostSaveWorkflow
-      .mockResolvedValueOnce({
-        kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Ready,
-        token: firstEnsuredToken,
-        created: false,
-      })
-      .mockResolvedValueOnce({
-        kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Ready,
-        token: secondEnsuredToken,
-        created: false,
-      })
+    mockEnsureAccountKey
+      .mockImplementationOnce(async (account: DisplaySiteData) =>
+        nativeEnsureResult(account, firstEnsuredToken, false),
+      )
+      .mockImplementationOnce(async (account: DisplaySiteData) =>
+        nativeEnsureResult(account, secondEnsuredToken, false),
+      )
     mockOpenWithAccount.mockImplementation(
       async (
         _displaySiteData: any,
@@ -4339,9 +4267,8 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(mockOpenWithAccount).toHaveBeenLastCalledWith(
       accountStorage.convertToDisplayData(secondSavedSiteAccount),
       expect.objectContaining({
-        source: "account_token",
-        secret: secondEnsuredToken.key,
-        token: expect.objectContaining(secondEnsuredToken),
+        source: "account_key_resource",
+        legacyTokenId: secondEnsuredToken.id,
       }),
       expect.any(Function),
       expect.objectContaining({
@@ -4420,17 +4347,13 @@ describe("useAccountDialog save and auto-config flows", () => {
       id: 302,
       key: "sk-second-ensured",
     })
-    mockEnsureAccountTokenForPostSaveWorkflow
-      .mockResolvedValueOnce({
-        kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Ready,
-        token: firstEnsuredToken,
-        created: false,
-      })
-      .mockResolvedValueOnce({
-        kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Ready,
-        token: secondEnsuredToken,
-        created: false,
-      })
+    mockEnsureAccountKey
+      .mockImplementationOnce(async (account: DisplaySiteData) =>
+        nativeEnsureResult(account, firstEnsuredToken, false),
+      )
+      .mockImplementationOnce(async (account: DisplaySiteData) =>
+        nativeEnsureResult(account, secondEnsuredToken, false),
+      )
 
     let firstShouldContinue: (() => boolean) | undefined
     let firstOnCompleted: (() => void) | undefined
@@ -4529,9 +4452,8 @@ describe("useAccountDialog save and auto-config flows", () => {
       2,
       accountStorage.convertToDisplayData(secondSavedSiteAccount),
       expect.objectContaining({
-        source: "account_token",
-        secret: secondEnsuredToken.key,
-        token: expect.objectContaining(secondEnsuredToken),
+        source: "account_key_resource",
+        legacyTokenId: secondEnsuredToken.id,
       }),
       expect.any(Function),
       expect.objectContaining({

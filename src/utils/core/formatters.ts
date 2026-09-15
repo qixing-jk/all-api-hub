@@ -11,13 +11,11 @@ import type {
   AccountMetricCoverage,
   AccountTodayMetricAvailability,
   AccountTodayMetricStatus,
-  ApiToken,
   CurrencyMetricTotal,
   CurrencyType,
   DisplaySiteData,
   SortOrder,
 } from "~/types"
-import { formatMoneyFixed } from "~/utils/core/money"
 import { t } from "~/utils/i18n/core"
 
 // 初始化 dayjs
@@ -307,29 +305,6 @@ export const createSortComparator = <T>(field: keyof T, order: SortOrder) => {
       return aValue > bValue ? -1 : aValue < bValue ? 1 : 0
     }
   }
-}
-
-/**
- * 格式化额度显示
- */
-export const formatQuota = (token: ApiToken) => {
-  if (token.unlimited_quota || token.remain_quota < 0) {
-    return t("common:quota.unlimited")
-  }
-
-  // 使用CONVERSION_FACTOR转换真实额度
-  const realQuota =
-    token.remain_quota / UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
-  return `$${formatMoneyFixed(realQuota)}`
-}
-
-/**
- * 格式化已用额度
- */
-export const formatUsedQuota = (token: ApiToken) => {
-  const realUsedQuota =
-    token.used_quota / UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
-  return `$${formatMoneyFixed(realUsedQuota)}`
 }
 
 /**
