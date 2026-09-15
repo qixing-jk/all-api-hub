@@ -277,6 +277,22 @@ describe("ApiCredentialProfileListItem", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("shows non-empty notes with their text intact and omits whitespace-only notes", () => {
+    const notes = "First line\nSecond line"
+    const { unmount } = renderListItem(buildProfile({ notes: `  ${notes}  ` }))
+
+    expect(
+      screen.getByText("apiCredentialProfiles:dialog.fields.notes"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("First line Second line").textContent).toBe(notes)
+
+    unmount()
+    renderListItem(buildProfile({ notes: "  \n  " }))
+    expect(
+      screen.queryByText("apiCredentialProfiles:dialog.fields.notes"),
+    ).not.toBeInTheDocument()
+  })
+
   it("focuses and scrolls the exact profile card for a deep-link request", () => {
     const focusSpy = vi.spyOn(HTMLElement.prototype, "focus")
     const scrollIntoViewSpy = vi
