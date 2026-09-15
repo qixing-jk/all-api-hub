@@ -429,7 +429,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
   })
 
-  it.each(["service credential", "native key"])(
+  it.each(["service credential", "native key", "native inventory key"])(
     "matches a %s using its API endpoint and supplied secret",
     async (sourceKind) => {
       const account = buildDisplaySiteData({
@@ -460,10 +460,16 @@ describe("getManagedSiteTokenChannelStatus", () => {
                   resourceId: "opaque-key/7",
                 },
                 label: "Selected key",
-                secret,
+                secret: sourceKind === "native inventory key" ? "" : secret,
               }),
               baseUrl,
             }
+      if (sourceKind === "native inventory key") {
+        resolveDisplayAccountRuntimeKeySecretMock.mockResolvedValueOnce({
+          ...runtimeKey,
+          secret,
+        })
+      }
       const managedSite = createManagedSiteCapabilitiesStub({
         channelDrafts: {
           prepareFormData: vi.fn(
@@ -510,7 +516,12 @@ describe("getManagedSiteTokenChannelStatus", () => {
         expect.objectContaining({ baseUrl, apiKey: secret }),
         expect.objectContaining({ purpose: "matching" }),
       )
-      expect(resolveDisplayAccountRuntimeKeySecretMock).not.toHaveBeenCalled()
+      if (sourceKind === "native inventory key")
+        expect(resolveDisplayAccountRuntimeKeySecretMock).toHaveBeenCalledTimes(
+          1,
+        )
+      else
+        expect(resolveDisplayAccountRuntimeKeySecretMock).not.toHaveBeenCalled()
     },
   )
 

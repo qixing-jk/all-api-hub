@@ -227,11 +227,10 @@ const nativeKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
     return {
       ...base,
       contextFact,
-      summaryFacts: details.length
-        ? details.slice(0, 4)
-        : contextFact
-          ? [contextFact]
-          : [],
+      summaryFacts: [...(contextFact ? [contextFact] : []), ...details].slice(
+        0,
+        4,
+      ),
       detailFacts: details,
       actions: {
         ...base.actions,

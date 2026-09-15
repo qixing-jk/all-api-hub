@@ -11,6 +11,8 @@ import { selectSingleNewApiTokenByIdDiff } from "~/services/accounts/accountPost
 import {
   buildDisplayAccountTokenRuntimeKey,
   collectAccountRuntimeKeySecrets,
+  hasUsableAccountRuntimeKeySecret,
+  isAccountKeyResourceRuntimeKey,
   isAccountTokenRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
@@ -472,12 +474,15 @@ export function useChannelDialog() {
         ...collectAccountRuntimeKeySecrets([selectedRuntimeKey]),
         ...collectManagedConfigSecrets(managedConfig),
       ]
-      const resolvedRuntimeKey = isAccountTokenRuntimeKey(selectedRuntimeKey)
-        ? await resolveDisplayAccountRuntimeKeySecret(
-            displaySiteData,
-            selectedRuntimeKey,
-          )
-        : selectedRuntimeKey
+      const resolvedRuntimeKey =
+        isAccountTokenRuntimeKey(selectedRuntimeKey) ||
+        (isAccountKeyResourceRuntimeKey(selectedRuntimeKey) &&
+          !hasUsableAccountRuntimeKeySecret(selectedRuntimeKey))
+          ? await resolveDisplayAccountRuntimeKeySecret(
+              displaySiteData,
+              selectedRuntimeKey,
+            )
+          : selectedRuntimeKey
       secretsToRedact.push(
         ...collectAccountRuntimeKeySecrets([resolvedRuntimeKey]),
       )

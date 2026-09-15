@@ -262,6 +262,8 @@ export default function KeyManagement(props: {
   const acknowledgedNativeRouteTransitionIdRef = useRef<string | null>(null)
   const routeAssociationId =
     routeParams?.[KEY_MANAGEMENT_ROUTE_PARAMS.AssociationId]
+  const routeAccountId = routeParams?.[KEY_MANAGEMENT_ROUTE_PARAMS.AccountId]
+  const routeWorkspace = routeParams?.[KEY_MANAGEMENT_ROUTE_PARAMS.Workspace]
   const associationNavigationActiveRef = useRef(Boolean(routeAssociationId))
   const [pendingNativeRoute, setPendingNativeRoute] = useState<{
     params: Record<string, string>
@@ -365,13 +367,20 @@ export default function KeyManagement(props: {
     routeParams,
     routeTransition,
     replaceRoute: (params, transition) => {
-      const nextParams =
-        associationNavigationActiveRef.current && routeAssociationId
-          ? {
-              ...params,
-              [KEY_MANAGEMENT_ROUTE_PARAMS.AssociationId]: routeAssociationId,
-            }
-          : params
+      const nextParams = { ...params }
+      if (params[KEY_MANAGEMENT_ROUTE_PARAMS.AccountId] === routeAccountId) {
+        for (const key of [
+          KEY_MANAGEMENT_ROUTE_PARAMS.GuidedImport,
+          KEY_MANAGEMENT_ROUTE_PARAMS.TokenId,
+        ]) {
+          const value = routeParams?.[key]
+          if (value !== undefined) nextParams[key] = value
+        }
+      }
+      if (associationNavigationActiveRef.current && routeAssociationId) {
+        nextParams[KEY_MANAGEMENT_ROUTE_PARAMS.AssociationId] =
+          routeAssociationId
+      }
       if (transition) {
         const pending = {
           params: nextParams,
@@ -455,9 +464,15 @@ export default function KeyManagement(props: {
     const workspaceScopeKey = getAssociationLocatorWorkspace(
       associationTarget.locator,
     )
-    const workspace = nativeKeys.scopes.find(
-      (scope) => scope.scopeKey === workspaceScopeKey,
-    )?.routeKey
+    // A reload temporarily clears the scope inventory. Retain this account's
+    // route until its scope can be resolved, so navigation cannot replay loading.
+    const workspace =
+      (selectedAccount === accountId
+        ? nativeKeys.scopes.find(
+            (scope) => scope.scopeKey === workspaceScopeKey,
+          )?.routeKey
+        : undefined) ??
+      (routeAccountId === accountId ? routeWorkspace : undefined)
     const nextParams = {
       [KEY_MANAGEMENT_ROUTE_PARAMS.AssociationId]: associationTarget.id,
       [KEY_MANAGEMENT_ROUTE_PARAMS.AccountId]: accountId,
@@ -475,7 +490,10 @@ export default function KeyManagement(props: {
   }, [
     associationTarget,
     nativeKeys.scopes,
+    routeAccountId,
     routeSignature,
+    routeWorkspace,
+    selectedAccount,
     setAllAccountsFilterAccountIds,
     setSearchTerm,
     setSelectedAccount,

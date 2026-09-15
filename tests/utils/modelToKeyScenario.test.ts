@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
+import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { runModelListCatalogScenario } from "~~/e2e/scenarios/modelListCatalog"
 import { runModelToKeyManagementScenario } from "~~/e2e/scenarios/modelToKeyManagement"
 import { expectPermissionOnboardingHidden } from "~~/e2e/utils/extensionState"
@@ -378,7 +379,7 @@ function createModelToKeyPage(
     toString: () => "token name input",
   }
   const addKeyDialog = {
-    getByRole: vi.fn(() => tokenNameInput),
+    locator: vi.fn(() => tokenNameInput),
     getByText: vi.fn(() => ({
       toString: () => "add key dialog text",
     })),
@@ -460,7 +461,7 @@ function createModelToKeyPage(
     url: vi.fn(() => currentUrl),
     getByTestId: vi.fn((testId: string) => {
       if (testId === MODEL_LIST_TEST_IDS.modelKeyDialog) return keyDialog
-      if (testId === KEY_MANAGEMENT_TEST_IDS.nativeEditor) {
+      if (testId === TOKEN_PROVISIONING_TEST_IDS.addTokenDialog) {
         return addKeyDialog
       }
 

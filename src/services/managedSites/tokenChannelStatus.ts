@@ -1,5 +1,7 @@
 import {
   collectAccountRuntimeKeySecrets,
+  hasUsableAccountRuntimeKeySecret,
+  isAccountKeyResourceRuntimeKey,
   isAccountTokenRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
@@ -243,7 +245,11 @@ export async function getManagedSiteTokenChannelStatus(
   }
 
   try {
-    if (isAccountTokenRuntimeKey(runtimeKey)) {
+    if (
+      isAccountTokenRuntimeKey(runtimeKey) ||
+      (isAccountKeyResourceRuntimeKey(runtimeKey) &&
+        !hasUsableAccountRuntimeKeySecret(runtimeKey))
+    ) {
       resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
         runtimeKey.account,
         runtimeKey,
@@ -283,9 +289,13 @@ export async function getManagedSiteTokenChannelStatus(
     params.signal?.throwIfAborted()
     const source = buildManagedSiteChannelDraftSource({
       ...resolvedRuntimeKey,
-      baseUrl: isAccountTokenRuntimeKey(resolvedRuntimeKey)
-        ? normalizeManagedSiteChannelBaseUrl(resolvedRuntimeKey.baseUrl)
-        : resolvedRuntimeKey.baseUrl,
+      baseUrl:
+        isAccountTokenRuntimeKey(resolvedRuntimeKey) ||
+        (isAccountKeyResourceRuntimeKey(resolvedRuntimeKey) &&
+          resolvedRuntimeKey.baseUrl.trim() ===
+            runtimeKey.account.baseUrl.trim())
+          ? normalizeManagedSiteChannelBaseUrl(resolvedRuntimeKey.baseUrl)
+          : resolvedRuntimeKey.baseUrl,
     })
     const formData = await managedSite.channelDrafts.prepareFormData(source, {
       operationContext: params.operationContext,

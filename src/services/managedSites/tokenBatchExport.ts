@@ -1,4 +1,6 @@
 import {
+  hasUsableAccountRuntimeKeySecret,
+  isAccountKeyResourceRuntimeKey,
   isAccountTokenRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
@@ -289,7 +291,13 @@ const resolveInputRuntimeKeyForManagedSiteExport = async (
   input: ResolvedManagedSiteTokenBatchExportItemInput,
   protectionBypassExecution?: ProtectionBypassExecution,
 ): Promise<AccountRuntimeKey> => {
-  if (!isAccountTokenRuntimeKey(input.runtimeKey)) {
+  if (
+    !isAccountTokenRuntimeKey(input.runtimeKey) &&
+    !(
+      isAccountKeyResourceRuntimeKey(input.runtimeKey) &&
+      !hasUsableAccountRuntimeKeySecret(input.runtimeKey)
+    )
+  ) {
     return input.runtimeKey
   }
 
@@ -307,12 +315,15 @@ const buildInputDraftSource = (
   runtimeKey: AccountRuntimeKey,
 ) => {
   const runtimeKeyBaseUrl = input.runtimeKey.baseUrl.trim()
-  const baseUrl = isAccountTokenRuntimeKey(input.runtimeKey)
-    ? normalizeManagedSiteChannelBaseUrl(
-        runtimeKeyBaseUrl || input.account.baseUrl,
-      )
-    : runtimeKeyBaseUrl ||
-      normalizeManagedSiteChannelBaseUrl(input.account.baseUrl)
+  const baseUrl =
+    isAccountTokenRuntimeKey(input.runtimeKey) ||
+    (isAccountKeyResourceRuntimeKey(runtimeKey) &&
+      runtimeKeyBaseUrl === input.account.baseUrl.trim())
+      ? normalizeManagedSiteChannelBaseUrl(
+          runtimeKeyBaseUrl || input.account.baseUrl,
+        )
+      : runtimeKeyBaseUrl ||
+        normalizeManagedSiteChannelBaseUrl(input.account.baseUrl)
 
   return buildManagedSiteChannelDraftSource({
     ...runtimeKey,
