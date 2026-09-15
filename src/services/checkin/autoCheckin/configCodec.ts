@@ -370,6 +370,9 @@ export function normalizeCheckInConfigV7(value: unknown): CheckInConfig {
   const lastFullDiscoveryAt = coerceTimestamp(
     rawMethodKnowledge.lastFullDiscoveryAt,
   )
+  const lastAutomaticDiscoveryAttemptAt = coerceTimestamp(
+    rawMethodKnowledge.lastAutomaticDiscoveryAttemptAt,
+  )
   const customCheckIn = normalizeCustomCheckIn(raw.customCheckIn)
   const provider = isRecord(raw.loginCheckIn)
     ? raw.loginCheckIn.provider
@@ -385,6 +388,9 @@ export function normalizeCheckInConfigV7(value: unknown): CheckInConfig {
     methodKnowledge: {
       methods,
       ...(lastFullDiscoveryAt !== undefined ? { lastFullDiscoveryAt } : {}),
+      ...(lastAutomaticDiscoveryAttemptAt !== undefined
+        ? { lastAutomaticDiscoveryAttemptAt }
+        : {}),
     },
     selection,
     ...(customCheckIn ? { customCheckIn } : {}),

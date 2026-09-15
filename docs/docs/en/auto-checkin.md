@@ -12,7 +12,7 @@
 ## Requirements
 
 1. The account has been added in **Account Management** and completed at least one successful refresh or detection.
-2. After adding or re-detecting the account, confirm that an available check-in method was detected. See Supported Sites and Authentication Requirements below.
+2. Make sure the account has valid login credentials. With Automatic Selection, accounts without a selected method can run discovery during the daily task; check-in starts only after a usable method is confirmed. See Supported Sites and Authentication Requirements below.
 3. Under **Account Management → Edit Account → Check-in Settings**, the **Enable Daily Auto Check-in** switch is visible. Only accounts with a built-in provider show it.
 4. The browser must support background scheduling. Exact timing is not guaranteed when the browser is closed, the device sleeps, or background policies change.
 
@@ -22,10 +22,13 @@
 
 - Open an account → **Edit Account** → Check-in Settings.
 - Accounts with a built-in provider show:
+  - **Check-in Method**: Automatic Selection re-detects as needed when no method is selected or the current method is confirmed unavailable. It selects or switches only when a suitable method can be uniquely determined. A manual choice stays fixed.
   - **Enable Daily Auto Check-in**: Enabled by default. When disabled, the account does not participate even if the global schedule is enabled.
   - **External Check-in Site URL** (optional): Enter it when the page is not at the standard path. Every account can configure an external entry point.
   - **Custom Recharge/Redemption Page URL** (optional) and "Open the recharge page when using external check-in".
 - The account form has no "check-in detection" switch. Status is read automatically during account refresh or detection.
+- Automatic re-detection requires both the global and account-level automatic check-in switches. It runs with the daily task, including a daily task triggered early by opening the interface, with at least 24 hours between automatic discovery attempts for an account. Network errors, timeouts, and expired logins do not mean the method is unsupported.
+- **Re-detect Check-in Methods** is available manually during the cooldown. It only finds methods and does not submit a check-in; discovery results in the account editor take effect when saved.
 
 ### 2. Global Time Window
 
@@ -59,7 +62,7 @@ Settings take effect after saving, without restarting the extension. Upgrades pr
 
 ### 4. Handle Detection and Execution States
 
-The account's check-in configuration retains your selected method and custom URL. It does not silently switch to another method after a detection failure. Take the corresponding action based on the state:
+The account's check-in configuration retains your manual method choice and custom URL. Network errors or an expired login do not trigger a method switch. Take the corresponding action based on the state:
 
 | State | Meaning | Next Step |
 |------|------|--------|
@@ -78,7 +81,8 @@ The account's check-in configuration retains your selected method and custom URL
    - **Daily alarm**: Regular automatic check-in, at most once per day.
    - **Retry alarm**: Created only when the regular daily run has failed accounts; retries only those accounts.
 3. **Execute**:
-   - Read accounts and create a snapshot, then require each account to be enabled, refreshed/detected, enabled at account level, supported by a built-in provider, and backed by usable credentials.
+   - The daily task first checks automatic selection for enabled accounts. When re-detection is needed and the cooldown has elapsed, it detects and saves the result before checking the selected method, credentials, and today's status. It does not arbitrarily pick a method when none applies, several remain possible, or detection is incomplete.
+   - Keep using an existing method while it remains supported. If the read-only check before execution confirms that it is unsupported, discovery may select a unique replacement when the cooldown allows. If a check-in request has already been sent and its result is uncertain, verify the result instead of submitting through another method.
    - Call the site's built-in provider and record success, failure, pending confirmation, or a skip reason.
    - Both "success" and "already checked in today" count as success. A newly successful check-in also refreshes account data.
    - Only safely retryable failures enter the same-day queue when retries are enabled. Authentication failures, permission failures, and sites without check-in status readback are not retried automatically.
@@ -128,7 +132,7 @@ If no available method is detected for another site, use an external check-in UR
 | "Not Scheduled / Disabled / No Pending Retries" | "Disabled": the global switch is off.<br/>"Retries Disabled": Retry Strategy is off.<br/>"No Pending Retries": retries are on, but no account currently failed.<br/>"Not Scheduled": enabled, but background scheduling is unsupported or the alarm has not been created/was cleared; save the settings again. |
 | An account fails every day or shows Skipped | Check its provider and skip reason under Account Detection Status. Confirm the account is enabled, refreshed/detected, enabled at account level, supported by a built-in provider, and has usable credentials. |
 | Access Token is invalid | Usually the Access Token expired or was revoked. Sign in to the site, then open Account Management → Edit Account and run Auto Detect / refresh the Access Token. If the site disables Tokens or no Token can be obtained, use Cookie authentication or disable automatic check-in for that account and use manual check-in. |
-| New API returns 404/405 | The deployment does not provide the expected endpoint. This is not necessarily an extension failure; use Manual or External Check-in. |
+| New API returns 404/405 | The deployment does not provide the expected endpoint. This is not necessarily an extension failure. Automatic Selection re-detects as needed during subsequent daily tasks; if no suitable method is found, use Manual or External Check-in, or request check-in support. |
 | Sign-in or human verification is required | Open the site as prompted, complete verification, and retry. Do not assume the extension has already checked in. |
 | Multiple accounts check in repeatedly | Multiple devices can run while execution state is not shared. Enable the schedule on only one device. |
 | External Check-in does not work | It only opens the page and does not submit or confirm success. Ensure the URL opens directly in the browser and finish check-in manually. |

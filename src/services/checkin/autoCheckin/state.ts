@@ -180,6 +180,7 @@ export function mergeDiscoveredCheckInDraft(input: {
     ...input.draft,
     methodKnowledge: discoveryWasApplied
       ? {
+          ...input.latest.methodKnowledge,
           methods,
           lastFullDiscoveryAt: input.draft.methodKnowledge.lastFullDiscoveryAt,
         }

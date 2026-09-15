@@ -282,6 +282,7 @@ const createRecoveredMutationGuard = (input: {
   globalAutomaticExecutionEnabled: boolean
   registration: AutoCheckinMethodRegistration
   revalidateAccount?: RevalidateCheckInAccount
+  isAutomaticExecutionEnabled?: () => Promise<boolean>
 }): (() => Promise<boolean>) | undefined => {
   const revalidateAccount = input.revalidateAccount
   if (!revalidateAccount) return undefined
@@ -310,7 +311,9 @@ const createRecoveredMutationGuard = (input: {
     return (
       latestState.executionEligibility.eligible &&
       latestState.executionEligibility.methodId === input.registration.id &&
-      input.registration.provider.getReadiness(latestAccount).ready
+      input.registration.provider.getReadiness(latestAccount).ready &&
+      (!input.isAutomaticExecutionEnabled ||
+        (await input.isAutomaticExecutionEnabled()))
     )
   }
 }
@@ -403,6 +406,8 @@ export async function executeSelectedCheckIn(input: {
   globalAutomaticExecutionEnabled: boolean
   context: AutoCheckinProviderContext
   revalidateAccount?: RevalidateCheckInAccount
+  /** Rechecks unattended-run intent immediately before an initial or recovered POST. */
+  isAutomaticExecutionEnabled?: () => Promise<boolean>
   /**
    * Retry safety guard: a provider with readback must confirm current status
    * before another mutation. Providers may also require this for initial
@@ -540,7 +545,10 @@ export async function executeSelectedCheckIn(input: {
       currentAccount = null
     }
   }
-  if (!currentAccount) {
+  if (
+    !currentAccount ||
+    !hasSameCheckInAccountIdentity(input.account, currentAccount)
+  ) {
     return {
       kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
       reason: CHECK_IN_EXECUTION_SKIP_REASONS.AccountUnavailable,
@@ -573,6 +581,16 @@ export async function executeSelectedCheckIn(input: {
     }
   }
 
+  if (
+    input.isAutomaticExecutionEnabled &&
+    !(await input.isAutomaticExecutionEnabled())
+  ) {
+    return {
+      kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
+      reason: CHECK_IN_EXECUTION_SKIP_REASONS.GlobalAutomaticExecutionDisabled,
+    }
+  }
+
   const mutationLifecycle = createMutationLifecycle()
   const beforeRecoveredMutation = createRecoveredMutationGuard({
     currentAccount,
@@ -580,6 +598,7 @@ export async function executeSelectedCheckIn(input: {
     globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
     registration,
     revalidateAccount: input.revalidateAccount,
+    isAutomaticExecutionEnabled: input.isAutomaticExecutionEnabled,
   })
   const providerResult = await registration.provider.checkIn(currentAccount, {
     ...input.context,

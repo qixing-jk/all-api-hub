@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest"
 
-import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
+import {
+  AUTO_CHECKIN_METHOD_IDS,
+  AUTOMATIC_CHECK_IN_DISCOVERY_COOLDOWN_MS,
+} from "~/constants/checkIn"
 import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configCodec"
 import {
   inspectCheckInMethods,
   mergeCheckInDiscoveryResults,
   setCheckInSelection,
+  shouldAutomaticallyDiscoverCheckIn,
 } from "~/services/checkin/autoCheckin/domain"
 import type {
   CheckInConfig,
@@ -49,6 +53,136 @@ const unknown: CheckInMethodDetection = {
   reason: "network",
   attemptedAt: 100,
 }
+
+describe("automatic check-in discovery policy", () => {
+  it.each([
+    {
+      name: "no selected method",
+      selection: undefined,
+      detection: undefined,
+      expected: true,
+    },
+    {
+      name: "an explicitly unsupported method",
+      selection: NEW_API_METHOD_ID,
+      detection: unsupported,
+      expected: true,
+    },
+    {
+      name: "a method removed from the candidate registry",
+      selection: VELOERA_METHOD_ID,
+      detection: matched,
+      expected: true,
+    },
+    {
+      name: "a usable selected method",
+      selection: NEW_API_METHOD_ID,
+      detection: matched,
+      expected: false,
+    },
+    {
+      name: "a selected method with unknown support",
+      selection: NEW_API_METHOD_ID,
+      detection: unknown,
+      expected: false,
+    },
+    {
+      name: "a selected method without detection evidence",
+      selection: NEW_API_METHOD_ID,
+      detection: undefined,
+      expected: false,
+    },
+    {
+      name: "a previously matched method whose latest probe failed",
+      selection: NEW_API_METHOD_ID,
+      detection: {
+        ...matched,
+        lastUnknownAttempt: { reason: "network", attemptedAt: 200 },
+      } as CheckInMethodDetection,
+      expected: false,
+    },
+  ])("handles $name without probing", ({ selection, detection, expected }) => {
+    const config = createConfig(detection ? { [selection!]: detection } : {})
+    config.selection = {
+      mode: "automatic",
+      ...(selection ? { methodId: selection } : {}),
+    }
+
+    expect(
+      shouldAutomaticallyDiscoverCheckIn({
+        config,
+        candidateMethodIds: [NEW_API_METHOD_ID],
+      }),
+    ).toBe(expected)
+  })
+
+  it.each([
+    { name: "manual selection", manual: true },
+    { name: "disabled account", accountDisabled: true },
+    { name: "disabled account check-in", automaticExecutionEnabled: false },
+    {
+      name: "disabled global check-in",
+      globalAutomaticExecutionEnabled: false,
+    },
+    { name: "no registered candidate", candidateMethodIds: [] },
+  ])("does not rediscover with $name", (testCase) => {
+    const config = createConfig({ [NEW_API_METHOD_ID]: unsupported })
+    config.selection = {
+      mode: testCase.manual ? "manual" : "automatic",
+      methodId: NEW_API_METHOD_ID,
+    }
+    config.automaticExecutionEnabled =
+      testCase.automaticExecutionEnabled ?? true
+
+    expect(
+      shouldAutomaticallyDiscoverCheckIn({
+        config,
+        accountDisabled: testCase.accountDisabled,
+        globalAutomaticExecutionEnabled:
+          testCase.globalAutomaticExecutionEnabled,
+        candidateMethodIds: testCase.candidateMethodIds ?? [NEW_API_METHOD_ID],
+      }),
+    ).toBe(false)
+  })
+
+  it.each(["lastFullDiscoveryAt", "lastAutomaticDiscoveryAttemptAt"] as const)(
+    "honors persisted %s at the exact cooldown boundary",
+    (timestampField) => {
+      const config = createConfig({})
+      config.methodKnowledge[timestampField] = 100
+      const inspect = (now: number) =>
+        shouldAutomaticallyDiscoverCheckIn({
+          config,
+          candidateMethodIds: [NEW_API_METHOD_ID],
+          now,
+        })
+
+      expect(inspect(99)).toBe(false)
+      expect(inspect(100 + AUTOMATIC_CHECK_IN_DISCOVERY_COOLDOWN_MS - 1)).toBe(
+        false,
+      )
+      expect(inspect(100 + AUTOMATIC_CHECK_IN_DISCOVERY_COOLDOWN_MS)).toBe(true)
+    },
+  )
+
+  it("retains the latest attempt when normalizing and merging manual discovery", () => {
+    const config = normalizeCheckInConfigV7({
+      ...createConfig({}),
+      methodKnowledge: { methods: {}, lastAutomaticDiscoveryAttemptAt: "250" },
+    })
+    const merged = mergeCheckInDiscoveryResults({
+      config,
+      candidateMethodIds: [NEW_API_METHOD_ID],
+      detections: { [NEW_API_METHOD_ID]: matched },
+      completedAt: 300,
+    })
+
+    expect(merged.methodKnowledge).toMatchObject({
+      lastAutomaticDiscoveryAttemptAt: 250,
+      lastFullDiscoveryAt: 300,
+    })
+  })
+})
 
 describe("inspectCheckInMethods", () => {
   it.each([

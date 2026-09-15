@@ -1,4 +1,5 @@
 import {
+  AUTOMATIC_CHECK_IN_DISCOVERY_COOLDOWN_MS,
   CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
   CHECK_IN_EXECUTION_SKIP_REASONS,
   CHECK_IN_METHOD_AVAILABILITIES,
@@ -138,6 +139,42 @@ const deriveSelectionState = (
         ? CHECK_IN_SELECTION_STALE_REASONS.MethodUnsupported
         : CHECK_IN_SELECTION_STALE_REASONS.MethodNotMatched,
   }
+}
+
+/** Decides from saved facts alone whether a daily run may probe other methods. */
+export function shouldAutomaticallyDiscoverCheckIn(
+  input: CheckInInspectionInput,
+): boolean {
+  if (
+    input.accountDisabled ||
+    input.globalAutomaticExecutionEnabled === false ||
+    !input.config.automaticExecutionEnabled ||
+    input.config.selection.mode !== CHECK_IN_SELECTION_MODES.Automatic ||
+    input.candidateMethodIds.length === 0
+  ) {
+    return false
+  }
+
+  const selection = deriveSelectionState(input.config, input.candidateMethodIds)
+  const needsDiscovery =
+    selection.status === CHECK_IN_SELECTION_STATUSES.None ||
+    (selection.status === CHECK_IN_SELECTION_STATUSES.Stale &&
+      (selection.reason ===
+        CHECK_IN_SELECTION_STALE_REASONS.MethodUnsupported ||
+        selection.reason ===
+          CHECK_IN_SELECTION_STALE_REASONS.MethodUnavailable))
+  if (!needsDiscovery) return false
+
+  const { lastAutomaticDiscoveryAttemptAt, lastFullDiscoveryAt } =
+    input.config.methodKnowledge
+  const lastAttemptAt = Math.max(
+    lastAutomaticDiscoveryAttemptAt ?? Number.NEGATIVE_INFINITY,
+    lastFullDiscoveryAt ?? Number.NEGATIVE_INFINITY,
+  )
+  return (
+    (input.now ?? Date.now()) - lastAttemptAt >=
+    AUTOMATIC_CHECK_IN_DISCOVERY_COOLDOWN_MS
+  )
 }
 
 const deriveExecutionEligibility = (
@@ -367,6 +404,7 @@ export function mergeCheckInDiscoveryResults(input: {
   const merged: CheckInConfig = {
     ...input.config,
     methodKnowledge: {
+      ...input.config.methodKnowledge,
       methods,
       lastFullDiscoveryAt: input.completedAt,
     },

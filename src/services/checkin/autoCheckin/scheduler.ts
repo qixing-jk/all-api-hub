@@ -13,6 +13,7 @@ import { accountQueries } from "~/services/accounts/accountStorage/accountQuerie
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
 import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
+import { prepareAutomaticCheckIn } from "~/services/checkin/autoCheckin/automaticDiscovery"
 import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
 import {
   onAutoCheckinMessage,
@@ -1092,7 +1093,13 @@ class AutoCheckinScheduler {
     accountName: string,
     tempWindowRequestSource: TempWindowRequestSource,
     protectionBypassExecution: ProtectionBypassExecution,
-    requireStatusConfirmationBeforeMutation = false,
+    {
+      requireStatusConfirmationBeforeMutation = false,
+      allowAutomaticDiscovery = false,
+    }: {
+      requireStatusConfirmationBeforeMutation?: boolean
+      allowAutomaticDiscovery?: boolean
+    } = {},
   ): Promise<{
     result: CheckinAccountResult
   }> {
@@ -1122,21 +1129,58 @@ class AutoCheckinScheduler {
       }) as CheckinAccountResult
 
     try {
-      const execution = await executeSelectedCheckIn({
-        account,
-        // This helper is called only after the scheduler's global/manual gate.
-        globalAutomaticExecutionEnabled: true,
-        context: {
-          tempWindowRequestSource,
-          protectionBypassExecution,
-        },
-        revalidateAccount: (refreshedConfig) =>
-          accountCheckInState.prepareAccountForSelectedCheckIn(
-            account.id,
-            refreshedConfig,
-          ),
-        requireStatusConfirmationBeforeMutation,
-      })
+      const context = { tempWindowRequestSource, protectionBypassExecution }
+      const execute = async () =>
+        executeSelectedCheckIn({
+          account,
+          globalAutomaticExecutionEnabled:
+            !allowAutomaticDiscovery ||
+            (await this.isAutomaticExecutionEnabled()),
+          ...(allowAutomaticDiscovery
+            ? {
+                isAutomaticExecutionEnabled: () =>
+                  this.isAutomaticExecutionEnabled(),
+              }
+            : {}),
+          context,
+          revalidateAccount: (refreshedConfig) =>
+            accountCheckInState.prepareAccountForSelectedCheckIn(
+              account.id,
+              refreshedConfig,
+              account,
+            ),
+          requireStatusConfirmationBeforeMutation,
+        })
+
+      let execution = await execute()
+      if (
+        allowAutomaticDiscovery &&
+        !requireStatusConfirmationBeforeMutation &&
+        execution.kind === CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped &&
+        execution.reason === CHECK_IN_EXECUTION_SKIP_REASONS.MethodUnsupported
+      ) {
+        // This result proves the old method stopped before POST. Recover at most
+        // once; failed or uncertain mutation results never enter this path.
+        const latest = await accountQueries.getAccountById(account.id)
+        const prepared = latest
+          ? await prepareAutomaticCheckIn({
+              account: latest,
+              context,
+              isAutomaticExecutionEnabled: () =>
+                this.isAutomaticExecutionEnabled(),
+            })
+          : { account: null, discovered: false }
+        if (!prepared.account) {
+          execution = {
+            kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Blocked,
+            reason: CHECK_IN_EXECUTION_SKIP_REASONS.AccountUnavailable,
+            retryable: false,
+          }
+        } else if (prepared.discovered) {
+          account = prepared.account
+          execution = await execute()
+        }
+      }
       if (execution.kind !== CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed) {
         const reasonCode = toSchedulerSkipReason(execution.reason)
         const blocked =
@@ -1149,7 +1193,10 @@ class AutoCheckinScheduler {
             {
               messageKey: getAutoCheckinSkipReasonTranslationKey(reasonCode),
               reasonCode,
-              ...(blocked ? { retryable: execution.retryable } : {}),
+              ...(execution.kind ===
+              CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Blocked
+                ? { retryable: execution.retryable }
+                : {}),
             },
           ),
         }
@@ -1216,11 +1263,18 @@ class AutoCheckinScheduler {
     }
   }
 
+  private async isAutomaticExecutionEnabled(): Promise<boolean> {
+    const preferences = await userPreferences.getPreferences()
+    return (preferences.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!)
+      .globalEnabled
+  }
+
   private async runAccountCheckins(params: {
     accounts: SiteAccount[]
     accountDisplayNameById: Map<string, string>
     tempWindowRequestSource: TempWindowRequestSource
     protectionBypassExecution: ProtectionBypassExecution
+    allowAutomaticDiscovery?: boolean
   }): Promise<
     Array<{
       result: CheckinAccountResult
@@ -1236,6 +1290,7 @@ class AutoCheckinScheduler {
             accountName,
             params.tempWindowRequestSource,
             params.protectionBypassExecution,
+            { allowAutomaticDiscovery: params.allowAutomaticDiscovery },
           )
         } catch (error) {
           return {
@@ -2176,11 +2231,30 @@ class AutoCheckinScheduler {
       const availableAccounts = await accountQueries.getAllAccounts()
       const accountDisplayNameById =
         buildAccountDisplayNameMap(availableAccounts)
-      const allAccounts = targetAccountIdSet
+      let allAccounts = targetAccountIdSet
         ? availableAccounts.filter((account) =>
             targetAccountIdSet.has(account.id),
           )
         : availableAccounts
+      const preparationFailedIds = new Set<string>()
+      if (isDailyRun) {
+        // Unselected automatic accounts must reach discovery before readiness
+        // filtering. Probes retain the normal transport's per-site limits.
+        allAccounts = await Promise.all(
+          allAccounts.map(async (account) => {
+            const prepared = await prepareAutomaticCheckIn({
+              account,
+              context: { tempWindowRequestSource, protectionBypassExecution },
+              isAutomaticExecutionEnabled: () =>
+                this.isAutomaticExecutionEnabled(),
+            })
+            if (!prepared.account) preparationFailedIds.add(account.id)
+            return prepared.account ?? account
+          }),
+        )
+      }
+      const automaticExecutionEnabled =
+        !isDailyRun || (await this.isAutomaticExecutionEnabled())
       const enabledAccounts = allAccounts.filter(
         (account) => account.disabled !== true,
       )
@@ -2197,6 +2271,11 @@ class AutoCheckinScheduler {
           account,
           accountDisplayNameById.get(account.id) ?? account.id,
         )
+        if (!automaticExecutionEnabled) {
+          snapshot.skipReason = AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED
+        } else if (preparationFailedIds.has(account.id)) {
+          snapshot.skipReason = AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE
+        }
         accountSnapshots.push(snapshot)
         if (!snapshot.skipReason) {
           runnableAccounts.push(account)
@@ -2323,6 +2402,7 @@ class AutoCheckinScheduler {
         accountDisplayNameById,
         tempWindowRequestSource,
         protectionBypassExecution,
+        allowAutomaticDiscovery: isDailyRun,
       })
 
       for (const outcome of checkinOutcomes) {
@@ -2646,7 +2726,7 @@ class AutoCheckinScheduler {
         accountDisplayNameById.get(account.id) ?? account.id,
         tempWindowRequestSource,
         protectionBypassExecution,
-        true,
+        { requireStatusConfirmationBeforeMutation: true },
       )
       // Persist that we've attempted one more time for this account today, regardless of outcome.
       attemptsByAccount[accountId] = attempts + 1

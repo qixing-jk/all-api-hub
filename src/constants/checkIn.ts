@@ -79,6 +79,9 @@ export const CHECK_IN_SELECTION_MODES = {
   Manual: "manual",
 } as const
 
+/** Minimum interval between unattended full-discovery attempts for an account. */
+export const AUTOMATIC_CHECK_IN_DISCOVERY_COOLDOWN_MS = 24 * 60 * 60 * 1_000
+
 export const CHECK_IN_DISCOVERY_DECISION_OUTCOMES = {
   Resolved: "resolved",
   Ambiguous: "ambiguous",

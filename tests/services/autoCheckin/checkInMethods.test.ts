@@ -38,6 +38,7 @@ import {
 } from "~/services/checkin/autoCheckin/state"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
+import type { CheckInConfig } from "~/types/checkIn"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
@@ -1586,6 +1587,123 @@ describe("check-in methods compatibility activation", () => {
       expect(checkInRequest).not.toHaveBeenCalled()
     },
   )
+
+  it("rechecks the global switch before an initial or recovered mutation", async () => {
+    const registration = getNewApiExecutionRegistration()
+    const account = createNewApiExecutionAccount()
+    vi.spyOn(registration.provider, "getStatus").mockResolvedValue({
+      outcome: "known",
+      availability: "enabled",
+      today: "not_checked",
+      evidence: { source: "probe", observedAt: Date.now() },
+    })
+    const isAutomaticExecutionEnabled = vi.fn(async () => false)
+    const checkInRequest = vi
+      .spyOn(registration.provider, "checkIn")
+      .mockResolvedValue({ status: "success" })
+    const input = {
+      account,
+      globalAutomaticExecutionEnabled: true,
+      context: createExecutionContext(),
+      revalidateAccount: async () => account,
+      isAutomaticExecutionEnabled,
+    }
+
+    expect(await executeSelectedCheckIn(input)).toEqual({
+      kind: "skipped",
+      reason: "global_automatic_execution_disabled",
+    })
+    expect(checkInRequest).not.toHaveBeenCalled()
+
+    isAutomaticExecutionEnabled.mockResolvedValueOnce(true)
+    checkInRequest.mockImplementation(async (_account, context) => {
+      expect(await context.beforeRecoveredMutation?.()).toBe(false)
+      return { status: "failed", retryable: false }
+    })
+    expect(await executeSelectedCheckIn(input)).toMatchObject({
+      kind: "executed",
+      result: { status: "failed" },
+    })
+    expect(checkInRequest).toHaveBeenCalledOnce()
+  })
+
+  it("preserves a dispatched unsupported result when the global switch changes", async () => {
+    const registration = getNewApiExecutionRegistration()
+    const account = createNewApiExecutionAccount()
+    vi.spyOn(registration.provider, "getStatus").mockResolvedValue({
+      outcome: "known",
+      availability: "enabled",
+      today: "not_checked",
+      evidence: { source: "probe", observedAt: Date.now() },
+    })
+    let enabled = true
+    const revalidateAccount = vi.fn(async (config?: CheckInConfig) => ({
+      ...account,
+      checkIn: config ?? account.checkIn,
+    }))
+    vi.spyOn(registration.provider, "checkIn").mockImplementation(
+      async (_account, context) => {
+        context.mutationLifecycle?.onDispatch()
+        enabled = false
+        return {
+          status: "failed",
+          reasonCode: "method_unsupported",
+          retryable: false,
+        }
+      },
+    )
+
+    expect(
+      await executeSelectedCheckIn({
+        account,
+        globalAutomaticExecutionEnabled: true,
+        context: createExecutionContext(),
+        revalidateAccount,
+        isAutomaticExecutionEnabled: async () => enabled,
+      }),
+    ).toMatchObject({
+      kind: "executed",
+      result: { status: "failed", reasonCode: "method_unsupported" },
+    })
+    expect(revalidateAccount).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        methodKnowledge: expect.objectContaining({
+          methods: expect.objectContaining({
+            "new-api:daily-checkin": expect.objectContaining({
+              detection: expect.objectContaining({ outcome: "unsupported" }),
+            }),
+          }),
+        }),
+      }),
+    )
+  })
+
+  it("does not post after revalidation returns another account identity", async () => {
+    const registration = getNewApiExecutionRegistration()
+    const account = createNewApiExecutionAccount()
+    vi.spyOn(registration.provider, "getStatus").mockResolvedValue({
+      outcome: "known",
+      availability: "enabled",
+      today: "not_checked",
+      evidence: { source: "probe", observedAt: Date.now() },
+    })
+    const checkInRequest = vi
+      .spyOn(registration.provider, "checkIn")
+      .mockResolvedValue({ status: "success" })
+
+    expect(
+      await executeSelectedCheckIn({
+        account,
+        globalAutomaticExecutionEnabled: true,
+        context: createExecutionContext(),
+        revalidateAccount: async () => ({
+          ...account,
+          account_info: { ...account.account_info, id: "another-user" },
+        }),
+      }),
+    ).toEqual({ kind: "skipped", reason: "account_unavailable" })
+    expect(checkInRequest).not.toHaveBeenCalled()
+  })
 
   it("exposes unavailable provider readiness without leaking the provider", () => {
     const account = buildSiteAccount({

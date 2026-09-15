@@ -1,7 +1,11 @@
 import { CHECK_IN_SELECTION_STATUSES } from "~/constants/checkIn"
 import type { AccountSiteType } from "~/constants/siteType"
-import { inspectCheckInMethods } from "~/services/checkin/autoCheckin/domain"
+import {
+  inspectCheckInMethods,
+  shouldAutomaticallyDiscoverCheckIn,
+} from "~/services/checkin/autoCheckin/domain"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
+import type { SiteAccount } from "~/types"
 import type {
   CheckInAccountState,
   CheckInConfig,
@@ -68,4 +72,20 @@ export function getSelectedCheckInStatus(input: {
   return methodId
     ? input.config.methodKnowledge.methods[methodId]?.status
     : null
+}
+
+/** Applies automatic discovery policy to the account's current registry candidates. */
+export function shouldAutomaticallyDiscoverAccountCheckIn(
+  account: SiteAccount,
+  now?: number,
+): boolean {
+  return shouldAutomaticallyDiscoverCheckIn({
+    config: account.checkIn,
+    candidateMethodIds: getAutoCheckinCandidateMethodIds(
+      account.site_type,
+      account.site_url,
+    ),
+    accountDisabled: account.disabled,
+    now,
+  })
 }

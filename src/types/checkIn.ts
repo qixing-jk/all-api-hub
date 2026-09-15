@@ -127,6 +127,8 @@ export interface CheckInConfig {
   methodKnowledge: {
     methods: Partial<Record<CheckInMethodId, CheckInMethodKnowledge>>
     lastFullDiscoveryAt?: number
+    /** Reserved before unattended probing so worker restarts retain the cooldown. */
+    lastAutomaticDiscoveryAttemptAt?: number
   }
   selection: CheckInMethodSelection
   customCheckIn?: CustomCheckInConfig
