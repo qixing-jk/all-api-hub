@@ -36,7 +36,7 @@ const hasSameCheckInIdentity = (account: SiteAccount, snapshot: SiteAccount) =>
     normalizeAccountIdentity(snapshot.account_info.id)
 
 /** Rejects discovery from an obsolete request, selection, or cooldown claim. */
-const canApplyAutomaticDiscovery = (
+export const isAutomaticCheckInDiscoveryCurrent = (
   account: SiteAccount,
   snapshot: SiteAccount,
 ): boolean =>
@@ -107,7 +107,7 @@ class AccountCheckInState {
   ): Promise<SiteAccount | null> {
     try {
       return await accountConfigStore.mutateAccount(snapshot.id, (account) => {
-        if (!canApplyAutomaticDiscovery(account, snapshot)) {
+        if (!isAutomaticCheckInDiscoveryCurrent(account, snapshot)) {
           return { nextAccount: account, result: account, changed: false }
         }
 

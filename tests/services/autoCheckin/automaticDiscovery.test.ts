@@ -448,6 +448,77 @@ describe("automatic check-in preparation", () => {
     ).toEqual({ mode: "automatic" })
   })
 
+  it.each([
+    "account disabled",
+    "automation disabled",
+    "manual choice",
+    "credentials changed",
+  ])(
+    "does not probe a stale claim when %s during the global setting read",
+    async (change) => {
+      const account = saveAccount()
+      const started = createDeferred<void>()
+      const release = createDeferred<void>()
+      const isEnabled = vi
+        .fn(async () => {
+          started.resolve()
+          await release.promise
+          return true
+        })
+        .mockResolvedValueOnce(true)
+      const pending = prepare(account, isEnabled)
+      await started.promise
+      const latest = await updateAccount((current) => {
+        if (change === "account disabled") return { ...current, disabled: true }
+        if (change === "automation disabled")
+          return {
+            ...current,
+            checkIn: { ...current.checkIn, automaticExecutionEnabled: false },
+          }
+        if (change === "manual choice")
+          return {
+            ...current,
+            checkIn: {
+              ...current.checkIn,
+              selection: { mode: "manual", methodId: GENIUS },
+            },
+          }
+        return {
+          ...current,
+          account_info: {
+            ...current.account_info,
+            access_token: "replacement",
+          },
+        }
+      })
+      release.resolve()
+
+      expect(await pending).toEqual({ account: latest, discovered: false })
+      detectors.forEach((detect) => expect(detect).not.toHaveBeenCalled())
+      expect(checkIn).not.toHaveBeenCalled()
+    },
+  )
+
+  it("does not probe an account deleted during the global setting read", async () => {
+    const account = saveAccount()
+    const isEnabled = vi
+      .fn(async () => {
+        storageData.set(
+          ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+          createDefaultAccountStorageConfig(NOW),
+        )
+        return true
+      })
+      .mockResolvedValueOnce(true)
+
+    expect(await prepare(account, isEnabled)).toEqual({
+      account: null,
+      discovered: false,
+    })
+    detectors.forEach((detect) => expect(detect).not.toHaveBeenCalled())
+    expect(checkIn).not.toHaveBeenCalled()
+  })
+
   it.each(["before claim", "before probes", "after probes"])(
     "fails closed when reading global preferences throws %s",
     async (stage) => {

@@ -1,4 +1,7 @@
-import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
+import {
+  accountCheckInState,
+  isAutomaticCheckInDiscoveryCurrent,
+} from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery"
 import { shouldAutomaticallyDiscoverAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
@@ -30,9 +33,15 @@ export async function prepareAutomaticCheckIn(input: {
     if (!claim) return { account: null, discovered: false }
     if (!claim.claimed) return { account: claim.account, discovered: false }
 
-    const { account } = claim
     // The global switch can change while the cooldown claim waits for storage.
     if (!(await input.isAutomaticExecutionEnabled())) {
+      return { account: claim.account, discovered: false }
+    }
+    const account = await accountQueries.getAccountById(claim.account.id)
+    if (
+      !account ||
+      !isAutomaticCheckInDiscoveryCurrent(account, claim.account)
+    ) {
       return { account, discovered: false }
     }
     const discovery = await discoverCheckInMethods({
