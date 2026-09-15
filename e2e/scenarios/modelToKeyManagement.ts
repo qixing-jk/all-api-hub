@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 import { expect } from "~~/e2e/fixtures/extensionTest"
 import {
