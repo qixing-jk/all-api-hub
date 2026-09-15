@@ -48,8 +48,8 @@ export function LinkedChannelCleanupOption({
   }, [onCheckedChange])
   if (!available) return null
   return (
-    <div className="space-y-2">
-      <div className="flex items-start gap-2">
+    <div className="space-y-density-2">
+      <div className="gap-y-density-2 flex items-start gap-x-2">
         <Checkbox
           id={id}
           checked={checked}
@@ -98,7 +98,7 @@ export function LinkedChannelCleanupPending() {
       })}
     >
       <p>{t("linkedCleanup.retryDescription")}</p>
-      <ul className="my-2 text-sm">
+      <ul className="my-density-2 text-sm">
         {tasks.flatMap((task) =>
           task.targets.map((target) => (
             <li key={`${task.id}:${target.ref.resourceId}`}>

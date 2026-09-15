@@ -23,10 +23,13 @@ export default function DataBackupTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-density-6">
       {/* Import/Export Entry Section */}
       <section id="import-export-entry">
-        <Heading3 as="h2" className="mb-2 flex items-center gap-2 text-xl">
+        <Heading3
+          as="h2"
+          className="mb-density-2 gap-y-density-2 flex items-center gap-x-2 text-xl"
+        >
           <ArrowRightLeft
             className="text-theme-600 dark:text-theme-400 size-5 shrink-0"
             aria-hidden="true"
@@ -34,11 +37,11 @@ export default function DataBackupTab() {
           {t("dataBackup.importExport.title")}
         </Heading3>
         <Card>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-density-4">
             <p className="text-secondary-foreground text-sm">
               {t("dataBackup.importExport.description")}
             </p>
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row">
               <WorkflowTransitionButton
                 onClick={handleNavigateToImportExport}
                 variant="default"

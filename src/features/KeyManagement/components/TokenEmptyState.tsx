@@ -130,7 +130,7 @@ export function TokenEmptyState({
           error: currentAccountLoadError,
         })}
         descriptionClassName="max-w-xl whitespace-pre-line"
-        className="mt-4"
+        className="mt-density-4"
         actions={[
           {
             label: t("refreshTokenList"),

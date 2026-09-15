@@ -14,8 +14,8 @@ export default function AppearanceSettings() {
   const { t } = useTranslation("settings")
 
   return (
-    <section id={SETTINGS_ANCHORS.APPEARANCE} className="space-y-6">
-      <div className="space-y-1.5">
+    <section id={SETTINGS_ANCHORS.APPEARANCE} className="space-y-density-6">
+      <div className="space-y-density-1-5">
         <Heading3>{t("theme.appearance")}</Heading3>
         <BodySmall>{t("display.description")}</BodySmall>
       </div>

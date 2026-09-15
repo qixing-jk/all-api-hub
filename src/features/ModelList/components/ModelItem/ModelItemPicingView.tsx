@@ -60,7 +60,7 @@ export const PriceView = ({
   ]
 
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+    <div className="gap-y-density-2 flex flex-wrap items-center gap-x-6">
       {priceItems.map((item) => (
         <div key={item.key} className="flex items-center space-x-2">
           <span className="dark:text-foreground text-muted-foreground text-sm">

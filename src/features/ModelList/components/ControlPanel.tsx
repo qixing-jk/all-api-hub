@@ -494,23 +494,26 @@ export function ControlPanel({
   }
 
   return (
-    <Card className="mb-6" data-testid={MODEL_LIST_TEST_IDS.controlPanel}>
+    <Card
+      className="mb-density-6"
+      data-testid={MODEL_LIST_TEST_IDS.controlPanel}
+    >
       <CardContent className="[container-type:inline-size]">
         {isProfileSource && (
           <Alert
             variant="default"
-            className="mb-4"
+            className="mb-density-4"
             title={t("profileSourceNotice.title")}
             description={t("profileSourceNotice.description")}
           />
         )}
 
-        <div className="space-y-4" data-testid="model-list-filter-row">
+        <div className="space-y-density-4" data-testid="model-list-filter-row">
           <section
             aria-label={t("searchModels")}
-            className="dark:border-border border-border-subtle border-b pb-4"
+            className="dark:border-border border-border-subtle pb-density-4 border-b"
           >
-            <div className="grid grid-cols-1 gap-3 [@container(min-width:32rem)]:grid-cols-[minmax(0,1fr)_minmax(12rem,0.55fr)] [@container(min-width:48rem)]:grid-cols-[minmax(0,1fr)_minmax(12rem,0.42fr)_auto] [@container(min-width:48rem)]:items-end">
+            <div className="gap-y-density-3 grid grid-cols-1 gap-x-3 [@container(min-width:32rem)]:grid-cols-[minmax(0,1fr)_minmax(12rem,0.55fr)] [@container(min-width:48rem)]:grid-cols-[minmax(0,1fr)_minmax(12rem,0.42fr)_auto] [@container(min-width:48rem)]:items-end">
               <FormField label={t("searchModels")}>
                 <Input
                   type="text"
@@ -535,8 +538,8 @@ export function ControlPanel({
                 </FormField>
               )}
 
-              <div className="flex h-9 items-center gap-3 self-end text-xs [@container(min-width:32rem)]:col-span-2 [@container(min-width:32rem)]:justify-end [@container(min-width:48rem)]:col-span-1">
-                <span className="dark:text-secondary-foreground text-muted-foreground flex items-center gap-1.5">
+              <div className="gap-y-density-3 flex min-h-(--density-control) items-center gap-x-3 self-end text-xs [@container(min-width:32rem)]:col-span-2 [@container(min-width:32rem)]:justify-end [@container(min-width:48rem)]:col-span-1">
+                <span className="dark:text-secondary-foreground text-muted-foreground gap-y-density-1-5 flex items-center gap-x-1.5">
                   <Cpu className="h-4 w-4" />
                   {t("totalModels", { count: totalModels })}
                 </span>
@@ -550,16 +553,16 @@ export function ControlPanel({
 
           <section
             aria-labelledby="model-list-filters-heading"
-            className="dark:border-border border-border-subtle border-b pb-4"
+            className="dark:border-border border-border-subtle pb-density-4 border-b"
           >
             <h3
               id="model-list-filters-heading"
-              className="text-foreground mb-3 text-sm font-semibold"
+              className="text-foreground mb-density-3 text-sm font-semibold"
             >
               {t("controlPanelSections.filters")}
             </h3>
 
-            <div className="grid grid-cols-1 gap-4 [@container(min-width:32rem)]:grid-cols-2 [@container(min-width:48rem)]:grid-cols-[repeat(auto-fit,minmax(9rem,1fr))]">
+            <div className="gap-y-density-4 grid grid-cols-1 gap-x-4 [@container(min-width:32rem)]:grid-cols-2 [@container(min-width:48rem)]:grid-cols-[repeat(auto-fit,minmax(9rem,1fr))]">
               {sourceCapabilities.supportsPricing && (
                 <FormField label={t("billingMode")}>
                   <SearchableSelect
@@ -573,8 +576,8 @@ export function ControlPanel({
 
               {sourceCapabilities.supportsGroupFiltering &&
                 !isAllAccountsSource && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-1.5">
+                  <div className="space-y-density-2">
+                    <div className="gap-y-density-1-5 flex items-center gap-x-1.5">
                       <Label>{t("userGroup")}</Label>
                       <Tooltip content={t("groupSelectionHint")} anchorAsChild>
                         <button
@@ -599,8 +602,8 @@ export function ControlPanel({
                 )}
 
               {supportsModelCapabilityFilter && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1.5">
+                <div className="space-y-density-2">
+                  <div className="gap-y-density-1-5 flex items-center gap-x-1.5">
                     <Label>{t("modelCapabilityFilter.label")}</Label>
                     <Tooltip content={modelCapabilityHint} anchorAsChild>
                       <button
@@ -675,10 +678,10 @@ export function ControlPanel({
           featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ModelList}
           surfaceId={PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListControlPanel}
         >
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="mt-density-4 gap-y-density-3 flex flex-wrap items-center justify-between gap-x-3">
             <fieldset className="max-w-full shrink-0">
               <legend className="sr-only">{t("displayOptions")}</legend>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+              <div className="gap-y-density-2 flex flex-wrap items-center gap-x-4 text-sm">
                 {sourceCapabilities.supportsPricing && (
                   <label className="flex cursor-pointer items-center space-x-2">
                     <Switch
@@ -705,7 +708,7 @@ export function ControlPanel({
               <legend className="sr-only">
                 {t("controlPanelSections.actions")}
               </legend>
-              <div className="flex flex-wrap items-center gap-2 [@container(min-width:50rem)]:justify-end">
+              <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2 [@container(min-width:50rem)]:justify-end">
                 <Button
                   variant="ghost"
                   size="sm"

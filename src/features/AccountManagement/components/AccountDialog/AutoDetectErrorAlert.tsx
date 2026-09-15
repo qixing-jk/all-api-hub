@@ -146,9 +146,9 @@ export default function AutoDetectErrorAlert({
   }
 
   return (
-    <div className="mb-4 space-y-3">
+    <div className="mb-density-4 space-y-density-3">
       <Alert variant="warning">
-        <div className="flex flex-wrap items-start gap-3">
+        <div className="gap-y-density-3 flex flex-wrap items-start gap-x-3">
           <p
             className="min-w-0 flex-1 text-sm leading-relaxed"
             data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage}
@@ -158,7 +158,7 @@ export default function AutoDetectErrorAlert({
 
           {/* 操作按钮区域 */}
           {hasRecoveryAction && (
-            <div className="flex shrink-0 flex-wrap gap-2">
+            <div className="gap-y-density-2 flex shrink-0 flex-wrap gap-x-2">
               {/* 主要操作按钮 */}
               {error.actionText && (
                 <Button
@@ -190,7 +190,7 @@ export default function AutoDetectErrorAlert({
 
       {manualAddGuideAnchor && (
         <Alert variant="default" compact>
-          <div className="space-y-2 text-sm leading-relaxed">
+          <div className="space-y-density-2 text-sm leading-relaxed">
             <p className="font-semibold">{t("manualAddRecovery.title")}</p>
             <p>{t("manualAddRecovery.description")}</p>
             <ManualAddGuideButton
@@ -203,9 +203,9 @@ export default function AutoDetectErrorAlert({
 
       {canShowApiCredentialFallback && (
         <Alert variant="default" compact>
-          <div className="space-y-2 text-sm leading-relaxed">
+          <div className="space-y-density-2 text-sm leading-relaxed">
             <p className="font-semibold">{t("apiCredentialFallback.title")}</p>
-            <ol className="list-decimal space-y-2 pl-4">
+            <ol className="space-y-density-2 list-decimal pl-4">
               <li className="pl-1">
                 <p>{t("apiCredentialFallback.siteSupport.description")}</p>
                 <Button

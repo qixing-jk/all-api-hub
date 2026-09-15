@@ -200,7 +200,7 @@ export default function CliProxyApiSettings() {
             title={t("cliProxyApi.checkConnectionLabel")}
             description={t("cliProxyApi.checkConnectionDesc")}
             rightContent={
-              <div className="flex flex-col items-start gap-2 sm:items-end">
+              <div className="gap-y-density-2 flex flex-col items-start gap-x-2 sm:items-end">
                 <Button
                   type="button"
                   variant="outline"

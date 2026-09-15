@@ -106,7 +106,7 @@ function DiagnosticsPanel({ models, onLocate }: Props) {
   }
 
   return (
-    <section className="my-3 rounded-md border p-3 text-sm">
+    <section className="my-density-3 py-density-3 rounded-md border px-3 text-sm">
       <Button
         variant="outline"
         size="sm"
@@ -121,7 +121,7 @@ function DiagnosticsPanel({ models, onLocate }: Props) {
         {t("diagnostics.title")} ({models.length})
       </Button>
       {open && report && (
-        <div id={id} className="mt-3 space-y-3">
+        <div id={id} className="mt-density-3 space-y-density-3">
           <p className="text-muted-foreground text-xs">
             {t("diagnostics.scope")}
           </p>
@@ -132,7 +132,7 @@ function DiagnosticsPanel({ models, onLocate }: Props) {
               .map(({ unit, count }) => `${unit} (${count})`)
               .join(" · ")}
           </p>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2">
             <Select
               value={grouping}
               onValueChange={(value: PricingDiagnosticGrouping) =>
@@ -191,7 +191,7 @@ function DiagnosticsPanel({ models, onLocate }: Props) {
               })}
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2">
             <Input
               className="min-w-48 flex-1"
               aria-label={t("diagnostics.search")}
@@ -289,7 +289,7 @@ function DiagnosticGroup({
           aria-expanded={open}
           aria-controls={id}
           onClick={() => setOpen(!open)}
-          className="bg-muted/40 flex w-full items-center gap-2 px-3 py-2 text-left focus-visible:outline-2 focus-visible:outline-offset-2"
+          className="bg-muted/40 gap-y-density-2 py-density-2 flex w-full items-center gap-x-2 px-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2"
         >
           <span aria-hidden="true">{open ? "▾" : "▸"}</span>
           <strong className="min-w-0 flex-1 font-mono text-xs break-all">
@@ -299,8 +299,8 @@ function DiagnosticGroup({
         </button>
       )}
       {(flat || open) && (
-        <div id={id} className="p-2">
-          <p className="text-muted-foreground mb-2 text-xs">
+        <div id={id} className="py-density-2 px-2">
+          <p className="text-muted-foreground mb-density-2 text-xs">
             {t("diagnostics.shown", {
               shown: Math.min(limit, rows.length),
               total: rows.length,
@@ -310,9 +310,9 @@ function DiagnosticGroup({
             {rows.slice(0, limit).map((row, index) => (
               <li
                 key={`${row.source.origin}:${row.source.name}:${row.model}:${row.group}:${index}`}
-                className="py-2"
+                className="py-density-2"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="gap-y-density-2 flex flex-wrap items-center justify-between gap-x-2">
                   <div className="min-w-0 flex-1">
                     <strong className="font-mono break-all">{row.model}</strong>
                     <p className="text-muted-foreground text-xs break-all">
@@ -329,7 +329,7 @@ function DiagnosticGroup({
                     {t("diagnostics.locate")}
                   </Button>
                 </div>
-                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+                <div className="mt-density-1 gap-y-density-1-5 flex flex-wrap items-center gap-x-1.5 text-xs">
                   <Badge variant={row.issues.length ? "warning" : "secondary"}>
                     {row.status}
                   </Badge>
@@ -350,11 +350,11 @@ function DiagnosticGroup({
                   issues={row.issues}
                   actions
                 />
-                <details className="mt-1">
+                <details className="mt-density-1">
                   <summary className="text-muted-foreground cursor-pointer text-xs">
                     {t("diagnostics.inspect")}
                   </summary>
-                  <pre className="bg-muted/40 mt-2 max-h-80 overflow-auto rounded p-2 text-xs break-all whitespace-pre-wrap">
+                  <pre className="bg-muted/40 mt-density-2 py-density-2 max-h-80 overflow-auto rounded px-2 text-xs break-all whitespace-pre-wrap">
                     {JSON.stringify(row, null, 2)}
                   </pre>
                 </details>

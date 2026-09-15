@@ -31,7 +31,7 @@ export function SuspectedDuplicatesList({
       aria-labelledby={headingId}
       className={
         separated
-          ? "border-border space-y-density-3 pt-density-5 mt-6 border-t"
+          ? "border-border space-y-density-3 pt-density-5 mt-density-6 border-t"
           : "space-y-density-3"
       }
     >

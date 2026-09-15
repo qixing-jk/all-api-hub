@@ -79,16 +79,19 @@ export default function ImportExport() {
   }, [])
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-density-6 py-density-6 px-6">
       <PageHeader
         icon={ArrowLeftRight}
         title={t("title")}
         description={t("description")}
       />
 
-      <section id="local-backup-migration" className="space-y-4">
-        <div className="space-y-1">
-          <Heading3 as="h2" className="flex items-center gap-2">
+      <section id="local-backup-migration" className="space-y-density-4">
+        <div className="space-y-density-1">
+          <Heading3
+            as="h2"
+            className="gap-y-density-2 flex items-center gap-x-2"
+          >
             <HardDrive
               className="text-theme-600 dark:text-theme-400 size-5 shrink-0"
               aria-hidden="true"
@@ -100,7 +103,7 @@ export default function ImportExport() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        <div className="gap-y-density-4 grid grid-cols-1 gap-x-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           <ExportSection
             isExporting={isExporting}
             setIsExporting={setIsExporting}

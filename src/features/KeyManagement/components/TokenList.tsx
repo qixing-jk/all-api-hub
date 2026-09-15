@@ -166,8 +166,8 @@ function LoadingSkeleton() {
     <div className="space-y-density-3">
       {[...Array(3)].map((_, i) => (
         <Card key={i} padding="sm" className="animate-pulse">
-          <div className="bg-secondary mb-2 h-4 w-1/4 rounded"></div>
-          <div className="bg-secondary mb-2 h-3 w-1/2 rounded"></div>
+          <div className="bg-secondary mb-density-2 h-4 w-1/4 rounded"></div>
+          <div className="bg-secondary mb-density-2 h-3 w-1/2 rounded"></div>
           <div className="bg-secondary h-3 w-3/4 rounded"></div>
         </Card>
       ))}
@@ -852,7 +852,7 @@ export function TokenList(props: TokenListProps) {
   return (
     <>
       {filteredEligibleEntries.length > 0 ? (
-        <div className="gap-density-2 py-density-3 mb-4 flex flex-wrap items-center justify-between rounded-md border px-3">
+        <div className="gap-density-2 py-density-3 mb-density-4 flex flex-wrap items-center justify-between rounded-md border px-3">
           {hasFilteredIneligibleEntries ? (
             <p className="text-muted-foreground w-full text-sm" role="status">
               {t("keyManagement:batchSelection.eligibilityNotice", {
@@ -920,7 +920,7 @@ export function TokenList(props: TokenListProps) {
 
       {isAllAccountsMode && groupedRows && groupedRows.length > 0 ? (
         <>
-          <div className="gap-density-2 mb-4 flex flex-wrap items-center justify-end">
+          <div className="gap-density-2 mb-density-4 flex flex-wrap items-center justify-end">
             <Button
               size="sm"
               variant="outline"

@@ -19,7 +19,7 @@ export function TokenSearchBar({
   const { t } = useTranslation("keyManagement")
 
   return (
-    <div className="mb-4">
+    <div className="mb-density-4">
       <Input
         type="text"
         placeholder={t("searchPlaceholder")}

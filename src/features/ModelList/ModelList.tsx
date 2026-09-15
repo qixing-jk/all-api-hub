@@ -722,7 +722,7 @@ export default function ModelList(props: {
           {isFallbackCatalogActive && (
             <Alert
               variant="default"
-              className="mb-6"
+              className="mb-density-6"
               title={
                 isRuntimeKeyOnlyFallbackCatalog
                   ? t("runtimeKeyFallbackSourceNotice.title")
@@ -739,7 +739,7 @@ export default function ModelList(props: {
           {isProviderCatalogFallbackActive && (
             <Alert
               variant="warning"
-              className="mb-6"
+              className="mb-density-6"
               title={t("providerCatalogFallbackNotice.title")}
               description={t("providerCatalogFallbackNotice.description")}
             />

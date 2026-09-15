@@ -280,7 +280,7 @@ export function VerifyApiCredentialProfileDialog({
         <Heading5 className="truncate">
           {t("aiApiVerification:verifyDialog.title")}
         </Heading5>
-        <div className="text-muted-foreground mt-1 truncate text-xs">
+        <div className="text-muted-foreground mt-density-1 truncate text-xs">
           {profile.baseUrl} · {profile.name}
         </div>
       </div>
@@ -735,7 +735,7 @@ export function VerifyApiCredentialProfileDialog({
   }
 
   const footer = (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div className="gap-y-density-2 flex flex-col gap-x-2 sm:flex-row sm:items-center sm:justify-between">
       <div>
         {historyTarget ? (
           <Button variant="outline" onClick={clearHistory} disabled={!canClose}>
@@ -743,7 +743,7 @@ export function VerifyApiCredentialProfileDialog({
           </Button>
         ) : null}
       </div>
-      <div className="flex justify-end gap-2">
+      <div className="gap-y-density-2 flex justify-end gap-x-2">
         <Button
           variant="secondary"
           onClick={onClose}
@@ -777,16 +777,16 @@ export function VerifyApiCredentialProfileDialog({
       closeOnBackdropClick={canClose}
     >
       {!profile ? null : (
-        <div className="space-y-3">
+        <div className="space-y-density-3">
           {historyTarget ? (
-            <div className="dark:border-border border-border-subtle flex flex-wrap items-center gap-2 rounded-md border p-3 text-sm">
+            <div className="dark:border-border border-border-subtle gap-y-density-2 py-density-3 flex flex-wrap items-center gap-x-2 rounded-md border px-3 text-sm">
               <VerificationHistorySummary summary={persistedSummary} />
             </div>
           ) : null}
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <div className="flex min-h-7 items-center gap-2">
+          <div className="gap-y-density-3 grid grid-cols-1 gap-x-3 sm:grid-cols-2">
+            <div className="space-y-density-1-5">
+              <div className="gap-y-density-2 flex min-h-(--density-control-tight) items-center gap-x-2">
                 <div className="text-muted-foreground text-xs">
                   {t("aiApiVerification:verifyDialog.meta.apiType")}
                 </div>
@@ -842,8 +842,8 @@ export function VerifyApiCredentialProfileDialog({
               disabled={!canClose}
             />
 
-            <div className="space-y-1.5 sm:col-span-2">
-              <div className="flex min-h-7 items-center">
+            <div className="space-y-density-1-5 sm:col-span-2">
+              <div className="flex min-h-(--density-control-tight) items-center">
                 <div className="text-muted-foreground text-xs">
                   {t("aiApiVerification:verifyDialog.meta.model")}
                 </div>
@@ -899,7 +899,7 @@ export function VerifyApiCredentialProfileDialog({
             <p>{t("aiApiVerification:verifyDialog.warning")}</p>
           </Alert>
 
-          <div className="space-y-2">
+          <div className="space-y-density-2">
             {probes.map((probe) => {
               const result = probe.result
               const isDisabledForModel =
@@ -934,16 +934,16 @@ export function VerifyApiCredentialProfileDialog({
                   data-testid={getApiCredentialProfileVerifyProbeTestId(
                     probe.definition.id,
                   )}
-                  className="dark:border-border border-border-subtle rounded-md border p-3"
+                  className="dark:border-border border-border-subtle py-density-3 rounded-md border px-3"
                 >
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="gap-y-density-2 flex items-start justify-between gap-x-2">
                     <div className="min-w-0 flex-1">
-                      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                      <div className="gap-y-density-1 flex min-w-0 flex-wrap items-center gap-x-2">
                         <div className="text-foreground min-w-0 truncate text-sm font-medium">
                           {getApiVerificationProbeLabel(t, probe.definition.id)}
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="gap-y-density-2 flex items-center gap-x-2">
                           {result ? (
                             <ProbeStatusBadge result={result} />
                           ) : (
@@ -959,7 +959,7 @@ export function VerifyApiCredentialProfileDialog({
                         </div>
                       </div>
 
-                      <div className="dark:text-secondary-foreground text-muted-foreground mt-1 text-xs">
+                      <div className="dark:text-secondary-foreground text-muted-foreground mt-density-1 text-xs">
                         {resultSummary}
                       </div>
                     </div>
@@ -992,7 +992,7 @@ export function VerifyApiCredentialProfileDialog({
                   {result &&
                     (result.input !== undefined ||
                       result.output !== undefined) && (
-                      <div className="mt-3 space-y-2">
+                      <div className="mt-density-3 space-y-density-2">
                         {result.input !== undefined && (
                           <CollapsibleSection
                             title={t(

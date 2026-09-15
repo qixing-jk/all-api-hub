@@ -6,7 +6,7 @@ import RedemptionAssistSettings from "./RedemptionAssistSettings"
  */
 export default function CheckinRedeemTab() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-density-6">
       <section id="checkin">
         <AutoCheckinSettings />
       </section>

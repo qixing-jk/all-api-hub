@@ -60,7 +60,7 @@ export function getProviderFilterAnalyticsResultCount(
   )
 }
 
-const providerTabClassName = `shrink-0 rounded-lg px-4 py-2.5 text-sm leading-5 font-medium transition-all ${ANIMATIONS.transition.base} data-[state=active]:dark:bg-card data-[state=active]:bg-card data-[state=active]:text-theme-700 data-[state=active]:shadow data-[state=active]:dark:text-theme-400 text-secondary-foreground hover:bg-card/60 hover:text-foreground`
+const providerTabClassName = `shrink-0 rounded-lg px-4 py-density-2-5 text-sm leading-5 font-medium transition-all ${ANIMATIONS.transition.base} data-[state=active]:dark:bg-card data-[state=active]:bg-card data-[state=active]:text-theme-700 data-[state=active]:shadow data-[state=active]:dark:text-theme-400 text-secondary-foreground hover:bg-card/60 hover:text-foreground`
 
 /**
  * Renders the provider tab list.
@@ -93,7 +93,7 @@ function ProviderTabList({
   }, [selectedIndex, vendorCatalog, scrollChildIntoCenter, updateScrollState])
 
   return (
-    <div className="mb-6 flex items-center gap-2">
+    <div className="mb-density-6 gap-y-density-2 flex items-center gap-x-2">
       <Button
         type="button"
         size="icon-sm"
@@ -108,7 +108,7 @@ function ProviderTabList({
 
       <TabsList
         ref={tabListRef}
-        className={`corners-concentric flex min-w-0 flex-1 space-x-1 rounded-lg [--corner-inset:4px] ${CORNERS.buttonItems} ${COLORS.background.tertiary} scrollbar-hide touch-pan-x overflow-x-auto p-1`}
+        className={`corners-concentric flex min-w-0 flex-1 space-x-1 rounded-lg [--corner-inset:4px] ${CORNERS.buttonItems} ${COLORS.background.tertiary} scrollbar-hide py-density-1 touch-pan-x overflow-x-auto px-1`}
       >
         <TabsTrigger
           value={MODEL_VENDOR_FILTER_VALUES.All}

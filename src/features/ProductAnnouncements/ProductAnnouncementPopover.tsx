@@ -66,8 +66,8 @@ function ProductAnnouncementPanel({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-      <div className="flex items-center justify-between gap-3">
+    <div className="gap-y-density-4 flex min-h-0 flex-1 flex-col gap-x-4 overflow-hidden">
+      <div className="gap-y-density-3 flex items-center justify-between gap-x-3">
         {surface === "sheet" ? (
           <SheetTitle className="text-foreground truncate text-base">
             {t("title")}
@@ -95,14 +95,14 @@ function ProductAnnouncementPanel({
         </IconButton>
       </div>
       <div
-        className={`dark:bg-secondary corners-concentric bg-muted grid grid-cols-2 gap-1 rounded-md p-1 [--corner-inset:--spacing(1)] ${CORNERS.buttonItems}`}
+        className={`dark:bg-secondary corners-concentric bg-muted gap-y-density-1 py-density-1 grid grid-cols-2 gap-x-1 rounded-md px-1 [--corner-inset:--spacing(1)] ${CORNERS.buttonItems}`}
       >
         <Button
           type="button"
           variant={filter === "active" ? "secondary" : "ghost"}
           size="sm"
           className={cn(
-            "h-(--density-control-sm) min-w-0 gap-1.5 px-3 text-xs",
+            "gap-y-density-1-5 h-(--density-control-sm) min-w-0 gap-x-1.5 px-3 text-xs",
             filter === "active" && "dark:bg-background bg-card shadow-sm",
           )}
           aria-pressed={filter === "active"}
@@ -117,7 +117,7 @@ function ProductAnnouncementPanel({
           variant={filter === "dismissed" ? "secondary" : "ghost"}
           size="sm"
           className={cn(
-            "h-(--density-control-sm) min-w-0 gap-1.5 px-3 text-xs",
+            "gap-y-density-1-5 h-(--density-control-sm) min-w-0 gap-x-1.5 px-3 text-xs",
             filter === "dismissed" && "dark:bg-background bg-card shadow-sm",
           )}
           aria-pressed={filter === "dismissed"}
@@ -162,7 +162,7 @@ export function ProductAnnouncementPopover({
   return (
     <PopoverContent
       align="end"
-      className="flex max-h-[min(var(--radix-popover-content-available-height,32rem),70vh,32rem)] w-[min(calc(100vw-2rem),28rem)] max-w-[calc(100vw-2rem)] flex-col p-4"
+      className="py-density-4 flex max-h-[min(var(--radix-popover-content-available-height,32rem),70vh,32rem)] w-[min(calc(100vw-2rem),28rem)] max-w-[calc(100vw-2rem)] flex-col px-4"
       data-testid={PRODUCT_ANNOUNCEMENT_TEST_IDS.popover}
       onOpenAutoFocus={onOpenAutoFocus}
     >

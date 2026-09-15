@@ -147,7 +147,7 @@ export function AccountCheckInSection({
       testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn}
       id={ACCOUNT_CHECK_IN_TARGET_IDS.section}
     >
-      <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="gap-y-density-2 grid grid-cols-1 items-center gap-x-2 sm:grid-cols-[minmax(0,1fr)_auto]">
         <p className="text-secondary-foreground text-sm font-medium">
           {t("form.checkInStatus")}
         </p>
@@ -166,7 +166,7 @@ export function AccountCheckInSection({
                     ? t("form.checkInStatusPending")
                     : t("form.checkInStatusUnsupported")}
         </p>
-        <div className="flex flex-wrap items-center gap-1.5 sm:col-start-2 sm:row-start-1 sm:justify-end">
+        <div className="gap-y-density-1-5 flex flex-wrap items-center gap-x-1.5 sm:col-start-2 sm:row-start-1 sm:justify-end">
           {shouldOfferRedetect && (
             <Button
               type="button"
@@ -224,7 +224,7 @@ export function AccountCheckInSection({
       )}
 
       {hasCandidates && (
-        <div className="space-y-2">
+        <div className="space-y-density-2">
           <FormField label={t("form.checkInMethod")}>
             <Select
               value={
@@ -281,7 +281,7 @@ export function AccountCheckInSection({
           >
             <span>{selectionPresentation.helperText}</span>
             {selectionPresentation.selectedMethodDisclosure && (
-              <span className="mt-1 block">
+              <span className="mt-density-1 block">
                 {selectionPresentation.selectedMethodDisclosure}
               </span>
             )}
@@ -332,9 +332,9 @@ export function AccountCheckInSection({
       )}
 
       {hasCandidates && (
-        <div className="flex w-full items-center justify-between gap-4">
+        <div className="gap-y-density-4 flex w-full items-center justify-between gap-x-4">
           <div className="flex-1">
-            <div className="flex items-center gap-1">
+            <div className="gap-y-density-1 flex items-center gap-x-1">
               <label
                 htmlFor={ACCOUNT_CHECK_IN_TARGET_IDS.automaticExecution}
                 className="text-secondary-foreground text-sm font-medium"
@@ -343,7 +343,7 @@ export function AccountCheckInSection({
               </label>
               <AutoCheckinRiskHint />
             </div>
-            <p className="text-muted-foreground mt-1 text-xs">
+            <p className="text-muted-foreground mt-density-1 text-xs">
               {isSelectedMethodDisabled
                 ? t("form.autoCheckInPausedBySiteDesc")
                 : hasSelectedMethod
@@ -386,7 +386,7 @@ export function AccountCheckInSection({
       </FormField>
 
       {checkIn.customCheckIn?.url && (
-        <div className="flex w-full items-center justify-between gap-4">
+        <div className="gap-y-density-4 flex w-full items-center justify-between gap-x-4">
           <label
             htmlFor={OPEN_REDEEM_WITH_CHECKIN_CONTROL_ID}
             className="text-secondary-foreground text-sm font-medium"

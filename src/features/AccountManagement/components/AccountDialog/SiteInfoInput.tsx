@@ -119,7 +119,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-density-2">
       {!isDetected && props.showAuthTypeSelector === true ? (
         <div
           data-layout="site-auth-url-container"
@@ -127,13 +127,13 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
         >
           <div
             data-layout="site-auth-url-layout"
-            className="grid gap-2 [@container(min-width:28rem)]:grid-cols-[minmax(0,1fr)_auto] [@container(min-width:28rem)]:items-end"
+            className="gap-y-density-2 grid gap-x-2 [@container(min-width:28rem)]:grid-cols-[minmax(0,1fr)_auto] [@container(min-width:28rem)]:items-end"
           >
             <div
               data-layout="auth-type-field"
               className="order-1 max-w-full [@container(min-width:28rem)]:order-2"
             >
-              <div className="mb-1 flex items-center gap-1.5">
+              <div className="mb-density-1 gap-y-density-1-5 flex items-center gap-x-1.5">
                 <label className="text-secondary-foreground text-sm font-medium">
                   {t("siteInfo.authMethod")}
                 </label>
@@ -169,14 +169,14 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
                 </SelectTrigger>
                 <SelectContent align="end" className="min-w-48">
                   <SelectItem value={AuthTypeEnum.AccessToken}>
-                    <div className="flex items-center gap-2">
+                    <div className="gap-y-density-2 flex items-center gap-x-2">
                       <KeyRound className="h-4 w-4" />
                       <span>{t("siteInfo.authType.accessToken")}</span>
                     </div>
                   </SelectItem>
                   {canUseCookieAuth && (
                     <SelectItem value={AuthTypeEnum.Cookie}>
-                      <div className="flex items-center gap-2">
+                      <div className="gap-y-density-2 flex items-center gap-x-2">
                         <Cookie className="h-4 w-4" />
                         <span>{t("siteInfo.authType.cookieAuth")}</span>
                       </div>
@@ -191,7 +191,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
             >
               <label
                 htmlFor="site-url"
-                className="text-secondary-foreground mb-1 block text-sm font-medium"
+                className="text-secondary-foreground mb-density-1 block text-sm font-medium"
               >
                 {t("siteInfo.siteUrl")}
               </label>
@@ -236,7 +236,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
           </div>
         </>
       )}
-      <div className="flex flex-col justify-between gap-y-2 text-xs">
+      <div className="gap-y-density-2 flex flex-col justify-between text-xs">
         {shouldShowCookiePermissionRecommendation && (
           <CookieAuthPermissionRecommendation
             cookieAuthPermissionsGranted={props.cookieAuthPermissionsGranted}
@@ -249,13 +249,13 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
           />
         )}
         {canUseSub2ApiRefreshToken && (
-          <div className="bg-theme-50 text-theme-700 dark:bg-theme-900/20 dark:text-theme-300 flex w-full items-start gap-2 rounded-md p-2 text-xs">
+          <div className="bg-theme-50 text-theme-700 dark:bg-theme-900/20 dark:text-theme-300 gap-y-density-2 py-density-2 flex w-full items-start gap-x-2 rounded-md px-2 text-xs">
             <Info className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{t("siteInfo.sub2apiHint")}</span>
           </div>
         )}
         {isCurrentSiteAdded && (
-          <div className="bg-warning-soft text-warning-soft-foreground flex w-full items-center justify-between rounded-md p-2 text-xs">
+          <div className="bg-warning-soft text-warning-soft-foreground py-density-2 flex w-full items-center justify-between rounded-md px-2 text-xs">
             <div className="flex items-center">
               <TriangleAlert className="mr-1.5 h-4 w-4 shrink-0" />
               {/* Distinguish "site exists" vs "current login matches an existing account" for multi-account sites. */}
@@ -279,7 +279,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
           </div>
         )}
         {!isDetected && onUseCurrentTab && (
-          <div className="bg-theme-50 text-theme-700 dark:bg-theme-900/20 dark:text-theme-300 flex w-full items-center justify-between rounded-md p-2 text-xs">
+          <div className="bg-theme-50 text-theme-700 dark:bg-theme-900/20 dark:text-theme-300 py-density-2 flex w-full items-center justify-between rounded-md px-2 text-xs">
             <div className="flex items-center">
               <Info className="h-4 w-4" />
               <span className="ml-1">{t("siteInfo.currentSite")}:</span>

@@ -14,21 +14,21 @@ export function SiteAnnouncementsSummaryMetrics({
   metrics,
 }: SiteAnnouncementsSummaryMetricsProps) {
   return (
-    <div className="mb-5 grid gap-3 sm:grid-cols-3">
+    <div className="mb-density-5 gap-y-density-3 grid gap-x-3 sm:grid-cols-3">
       {metrics.map((metric) => {
         const Icon = metric.icon
 
         return (
           <div
             key={metric.key}
-            className="border-border bg-card dark:border-foreground/10 rounded-lg border p-4 shadow-sm"
+            className="border-border bg-card dark:border-foreground/10 py-density-4 rounded-lg border px-4 shadow-sm"
           >
-            <div className="flex items-center justify-between gap-3">
+            <div className="gap-y-density-3 flex items-center justify-between gap-x-3">
               <div>
                 <p className="text-muted-foreground text-xs font-medium">
                   {metric.label}
                 </p>
-                <p className="text-foreground mt-1 text-2xl font-semibold">
+                <p className="text-foreground mt-density-1 text-2xl font-semibold">
                   {metric.value}
                 </p>
               </div>

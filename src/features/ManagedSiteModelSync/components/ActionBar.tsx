@@ -62,7 +62,7 @@ export default function ActionBar({
       featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync}
       surfaceId={actionBarSurface}
     >
-      <div className="flex flex-wrap gap-3">
+      <div className="gap-y-density-3 flex flex-wrap gap-x-3">
         <Button
           onClick={onRunAll}
           variant="default"

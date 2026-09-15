@@ -25,12 +25,12 @@ export default function TableFilterToolbar({
   controlsClassName,
 }: TableFilterToolbarProps) {
   return (
-    <div className="border-border dark:border-border-subtle border-b p-4">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+    <div className="border-border dark:border-border-subtle py-density-4 border-b px-4">
+      <div className="gap-y-density-3 flex flex-col gap-x-3 xl:flex-row xl:items-center xl:justify-between">
         <div className={cn("min-w-0 flex-1", controlsClassName)}>
           {children}
         </div>
-        <div className="flex items-center justify-between gap-3 xl:justify-end">
+        <div className="gap-y-density-3 flex items-center justify-between gap-x-3 xl:justify-end">
           <span
             className="text-muted-foreground text-xs whitespace-nowrap"
             aria-live="polite"

@@ -7,7 +7,7 @@ const PrivacyNotice = () => {
   return (
     <Alert variant="success">
       <div>
-        <p className="mb-1 font-medium">{t("privacyTitle")}</p>
+        <p className="mb-density-1 font-medium">{t("privacyTitle")}</p>
         <p className="text-sm">{t("privacyText")}</p>
       </div>
     </Alert>

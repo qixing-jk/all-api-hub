@@ -217,7 +217,7 @@ export function ProductAnnouncementButton({
         <SheetContent
           side="bottom"
           showCloseButton={false}
-          className="p-4"
+          className="py-density-4 px-4"
           data-testid={PRODUCT_ANNOUNCEMENT_TEST_IDS.sheet}
           onOpenAutoFocus={handleOpenAutoFocus}
         >
@@ -254,7 +254,7 @@ export function ProductAnnouncementButton({
         aria-hidden={!shouldShowButton ? "true" : undefined}
         data-testid={PRODUCT_ANNOUNCEMENT_TEST_IDS.reservedSlot}
         className={cn(
-          "inline-flex h-6 w-6 shrink-0 items-center justify-center sm:h-8 sm:w-8",
+          "inline-flex h-(--density-control-xs) w-(--density-control-xs) shrink-0 items-center justify-center sm:h-(--density-control-sm) sm:w-(--density-control-sm)",
           className,
         )}
       >

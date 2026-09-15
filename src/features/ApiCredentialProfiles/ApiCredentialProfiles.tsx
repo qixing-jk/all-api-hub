@@ -238,7 +238,7 @@ export default function ApiCredentialProfiles({
       featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles}
       surfaceId={PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesPage}
     >
-      <div className="space-y-6 p-6">
+      <div className="space-y-density-6 py-density-6 px-6">
         <PageHeader
           icon={ApiCredentialLibraryIcon}
           title={t("title")}
@@ -369,7 +369,9 @@ export function ApiCredentialGatewayGuidance({
       notes={
         <div
           className={
-            isReadyToImport ? "grid gap-2" : "grid gap-2 md:grid-cols-2"
+            isReadyToImport
+              ? "gap-y-density-2 grid gap-x-2"
+              : "gap-y-density-2 grid gap-x-2 md:grid-cols-2"
           }
         >
           <GuidanceCardNote icon="managedSite">

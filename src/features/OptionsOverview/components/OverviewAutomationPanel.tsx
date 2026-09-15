@@ -61,7 +61,7 @@ export function OverviewAutomationPanel({
 }: OverviewAutomationPanelProps) {
   return (
     <Card className="border-border/80 bg-card/95 shadow-border/60 dark:border-foreground/10 dark:shadow-shadow/20 flex h-full max-h-none flex-col overflow-hidden shadow-sm xl:max-h-[28rem]">
-      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
+      <div className="space-y-density-2 py-density-3 min-h-0 flex-1 overflow-y-auto px-3">
         {overview.items.map((item) => (
           <AutomationItemRow
             key={item.id}
@@ -99,12 +99,12 @@ function AutomationItemRow({
           OVERVIEW_NEUTRAL_PANEL_CLASSES,
         )}
       >
-        <div className="flex min-w-0 items-center gap-2 p-1.5">
+        <div className="gap-y-density-2 py-density-1-5 flex min-w-0 items-center gap-x-2 px-1.5">
           <CollapsibleTrigger asChild>
             <Button
               type="button"
               variant="ghost"
-              className="group hover:bg-muted/70 focus-visible:ring-ring dark:hover:bg-foreground/[0.06] flex h-auto min-h-0 min-w-0 flex-1 shrink items-center justify-start gap-3 rounded-md px-3 py-2.5 text-left whitespace-normal focus-visible:ring-2 focus-visible:outline-none"
+              className="group hover:bg-muted/70 focus-visible:ring-ring dark:hover:bg-foreground/[0.06] gap-y-density-3 py-density-2-5 flex h-auto min-h-0 min-w-0 flex-1 shrink items-center justify-start gap-x-3 rounded-md px-3 text-left whitespace-normal focus-visible:ring-2 focus-visible:outline-none"
               aria-label={label}
               aria-expanded={open}
               aria-controls={contentId}
@@ -113,7 +113,7 @@ function AutomationItemRow({
                 <Icon className="h-4 w-4" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="flex min-w-0 flex-wrap items-center gap-2">
+                <span className="gap-y-density-2 flex min-w-0 flex-wrap items-center gap-x-2">
                   <span className="text-foreground truncate text-sm font-semibold">
                     {label}
                   </span>
@@ -148,7 +148,7 @@ function AutomationItemRow({
         </div>
 
         <CollapsibleContent id={contentId}>
-          <div className="border-border/70 bg-surface-subtle/60 dark:border-foreground/10 dark:bg-foreground/[0.03] border-t p-3">
+          <div className="border-border/70 bg-surface-subtle/60 dark:border-foreground/10 dark:bg-foreground/[0.03] py-density-3 border-t px-3">
             {item.autoCheckinPanel ? (
               <OverviewAutoCheckinPanel
                 panel={item.autoCheckinPanel}
@@ -179,17 +179,17 @@ function AutomationSummary({
   onNavigate: OverviewAutomationPanelProps["onNavigate"]
 }) {
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+    <div className="space-y-density-3">
+      <div className="gap-y-density-2 grid grid-cols-1 gap-x-2 sm:grid-cols-2">
         {item.summaryRows.map((row) => (
           <div
             key={row.id}
-            className="border-border/70 bg-card/80 dark:border-foreground/10 dark:bg-foreground/[0.04] rounded-md border p-2.5"
+            className="border-border/70 bg-card/80 dark:border-foreground/10 dark:bg-foreground/[0.04] py-density-2-5 rounded-md border px-2.5"
           >
             <div className="text-muted-foreground text-xs">
               {getAutomationSummaryRowLabel(item.id, row.id, t)}
             </div>
-            <div className="text-foreground mt-1 truncate text-sm font-semibold">
+            <div className="text-foreground mt-density-1 truncate text-sm font-semibold">
               {formatSummaryValue(item.id, row, t)}
             </div>
           </div>
@@ -197,13 +197,13 @@ function AutomationSummary({
       </div>
 
       {item.statusLabel === AUTOMATION_STATUS_LABELS.disabled ? (
-        <div className="dark:text-secondary-foreground border-border/70 bg-card/70 text-muted-foreground dark:border-foreground/10 dark:bg-foreground/[0.04] rounded-md border p-2.5 text-sm leading-6">
+        <div className="dark:text-secondary-foreground border-border/70 bg-card/70 text-muted-foreground dark:border-foreground/10 dark:bg-foreground/[0.04] py-density-2-5 rounded-md border px-2.5 text-sm leading-6">
           {getAutomationDisabledDescription(item.id, t)}
         </div>
       ) : null}
 
       {item.actions.length > 0 ? (
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="gap-y-density-2 flex flex-col gap-x-2 sm:flex-row">
           {item.actions.map((action, index) => (
             <WorkflowTransitionButton
               key={action.id}

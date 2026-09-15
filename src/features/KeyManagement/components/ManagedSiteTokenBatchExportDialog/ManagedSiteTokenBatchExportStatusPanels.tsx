@@ -32,7 +32,7 @@ export function ManagedSiteTokenBatchExportStatusPanels({
   return (
     <>
       {previewError ? (
-        <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground space-y-2 rounded-md border p-3 text-sm">
+        <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground space-y-density-2 py-density-3 rounded-md border px-3 text-sm">
           <div>
             {t("keyManagement:batchManagedSiteExport.preview.loadFailed", {
               error: previewError,
@@ -57,7 +57,7 @@ export function ManagedSiteTokenBatchExportStatusPanels({
       ) : null}
 
       {executionError ? (
-        <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground rounded-md border p-3 text-sm">
+        <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground py-density-3 rounded-md border px-3 text-sm">
           {isTargetChanged
             ? t("keyManagement:batchManagedSiteExport.messages.targetChanged")
             : t(
@@ -70,8 +70,8 @@ export function ManagedSiteTokenBatchExportStatusPanels({
       ) : null}
 
       {isLoadingPreview && showPreviewLoadingStatus ? (
-        <div className="text-muted-foreground rounded-md border p-3 text-sm">
-          <div className="flex items-center gap-2">
+        <div className="text-muted-foreground py-density-3 rounded-md border px-3 text-sm">
+          <div className="gap-y-density-2 flex items-center gap-x-2">
             <Loader2 className="h-4 w-4 animate-spin" />
             {t("keyManagement:batchManagedSiteExport.preview.loading")}
           </div>

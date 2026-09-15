@@ -134,18 +134,18 @@ export function ApiCredentialProfileTelemetryDetails({
 
   return (
     <>
-      <div className="space-y-3 pt-2 text-xs">
+      <div className="space-y-density-3 pt-density-2 text-xs">
         {facts?.quota?.windows.length ? (
           <section
             data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.telemetryQuota}
           >
-            <div className="text-muted-foreground mb-1">
+            <div className="text-muted-foreground mb-density-1">
               {t("apiCredentialProfiles:telemetry.quota")}
             </div>
-            <div className="grid gap-1.5 sm:grid-cols-3">
+            <div className="gap-y-density-1-5 grid gap-x-1.5 sm:grid-cols-3">
               {facts.quota.windows.map((window, index) => (
                 <div
-                  className="dark:bg-secondary/60 bg-card text-secondary-foreground rounded-md px-2 py-1.5 font-medium"
+                  className="dark:bg-secondary/60 bg-card text-secondary-foreground py-density-1-5 rounded-md px-2 font-medium"
                   key={`${window.type}-${index}`}
                 >
                   <div>{formatProviderQuotaWindow(window, t)}</div>
@@ -165,14 +165,14 @@ export function ApiCredentialProfileTelemetryDetails({
             </div>
           </section>
         ) : null}
-        <div className="grid gap-2 sm:grid-cols-4">
+        <div className="gap-y-density-2 grid gap-x-2 sm:grid-cols-4">
           <section
             data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance}
           >
-            <div className="text-muted-foreground mb-1">
+            <div className="text-muted-foreground mb-density-1">
               {t("apiCredentialProfiles:telemetry.balance")}
             </div>
-            <div className="flex min-w-0 flex-wrap items-baseline gap-1.5">
+            <div className="gap-y-density-1-5 flex min-w-0 flex-wrap items-baseline gap-x-1.5">
               {facts?.usage?.unlimited
                 ? t("common:quota.unlimited")
                 : facts?.balances?.length
@@ -183,7 +183,7 @@ export function ApiCredentialProfileTelemetryDetails({
                       )
                       return (
                         <div
-                          className="flex min-w-0 flex-wrap items-baseline gap-1.5"
+                          className="gap-y-density-1-5 flex min-w-0 flex-wrap items-baseline gap-x-1.5"
                           key={`${balance.unit.kind === API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Money ? balance.unit.currency : balance.unit.code}-${index}`}
                         >
                           <span className="text-foreground font-semibold">
@@ -201,7 +201,7 @@ export function ApiCredentialProfileTelemetryDetails({
             </div>
           </section>
           <section className="min-w-0">
-            <div className="text-muted-foreground mb-1">
+            <div className="text-muted-foreground mb-density-1">
               {t("apiCredentialProfiles:telemetry.todayUsage")}
             </div>
             <div
@@ -217,7 +217,7 @@ export function ApiCredentialProfileTelemetryDetails({
             </div>
           </section>
           <section className="min-w-0">
-            <div className="text-muted-foreground mb-1">
+            <div className="text-muted-foreground mb-density-1">
               {t("apiCredentialProfiles:telemetry.todayRequests")}
             </div>
             <div
@@ -232,7 +232,7 @@ export function ApiCredentialProfileTelemetryDetails({
             </div>
           </section>
           <section className="min-w-0">
-            <div className="text-muted-foreground mb-1">
+            <div className="text-muted-foreground mb-density-1">
               {t("apiCredentialProfiles:telemetry.models")}
             </div>
             <div
@@ -249,7 +249,7 @@ export function ApiCredentialProfileTelemetryDetails({
           </section>
         </div>
       </div>
-      <div className="text-muted-foreground mt-auto flex flex-wrap gap-x-3 gap-y-1 pt-2 text-xs">
+      <div className="text-muted-foreground gap-y-density-1 pt-density-2 mt-auto flex flex-wrap gap-x-3 text-xs">
         <span>
           {t("apiCredentialProfiles:telemetry.lastSync")}{" "}
           {formatLocaleDateTime(

@@ -89,9 +89,9 @@ export function ResourceJsonField({
   return (
     <fieldset className="min-w-0">
       <legend className="sr-only">{label}</legend>
-      <div className="mb-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+      <div className="mb-density-1-5 gap-y-density-1 flex flex-wrap items-center justify-between gap-x-3">
         <span className="text-sm font-medium">{label}</span>
-        <div className="flex flex-wrap items-center gap-1">
+        <div className="gap-y-density-1 flex flex-wrap items-center gap-x-1">
           {actions}
           {stringMap && (
             <Button
@@ -124,11 +124,11 @@ export function ResourceJsonField({
         </div>
       </div>
       {showRows ? (
-        <div className="space-y-2">
+        <div className="space-y-density-2">
           {rows.map(([key, item], index) => (
             <div
               key={index}
-              className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+              className="gap-y-density-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-x-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
             >
               <div className="col-span-2 min-w-0 sm:col-span-1">
                 <ResourceFieldLabel
@@ -232,7 +232,7 @@ export function ResourceJsonField({
       )}
       <p
         id={`${id}-help`}
-        className="text-muted-foreground mt-1 text-xs leading-relaxed"
+        className="text-muted-foreground mt-density-1 text-xs leading-relaxed"
       >
         {help}
       </p>
@@ -240,7 +240,7 @@ export function ResourceJsonField({
         <p
           id={`${id}-error`}
           role="alert"
-          className="text-destructive-text mt-1 text-xs"
+          className="text-destructive-text mt-density-1 text-xs"
         >
           {errorMessage}
         </p>

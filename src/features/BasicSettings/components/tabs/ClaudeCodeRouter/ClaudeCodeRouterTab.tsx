@@ -5,7 +5,7 @@ import ClaudeCodeRouterSettings from "./ClaudeCodeRouterSettings"
  */
 export default function ClaudeCodeRouterTab() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-density-6">
       <section id="claude-code-router">
         <ClaudeCodeRouterSettings />
       </section>

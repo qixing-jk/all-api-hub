@@ -47,11 +47,14 @@ export default function ResetSettingsSection() {
   return (
     <>
       <section>
-        <Heading5 className="text-destructive-text mb-4 text-lg font-medium">
+        <Heading5 className="text-destructive-text mb-density-4 text-lg font-medium">
           {t("danger.title")}
         </Heading5>
-        <Alert variant="destructive" className="p-3 sm:p-4">
-          <div className="flex items-start justify-between gap-3 sm:items-center">
+        <Alert
+          variant="destructive"
+          className="py-density-3 sm:py-density-4 px-3 sm:px-4"
+        >
+          <div className="gap-y-density-3 flex items-start justify-between gap-x-3 sm:items-center">
             <div className="min-w-0">
               <AlertTitle className="text-sm">
                 {t("danger.resetAllSettings")}

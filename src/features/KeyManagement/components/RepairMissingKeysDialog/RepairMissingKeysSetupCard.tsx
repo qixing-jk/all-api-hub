@@ -24,12 +24,12 @@ export function RepairMissingKeysSetupCard({
 }: RepairMissingKeysSetupCardProps) {
   return (
     <Card variant="outlined" className="overflow-hidden">
-      <CardContent padding="default" className="space-y-4">
-        <div className="flex items-start gap-3">
-          <div className="bg-theme-50 text-theme-600 dark:bg-theme-900/30 dark:text-theme-300 shrink-0 rounded-lg p-2">
+      <CardContent padding="default" className="space-y-density-4">
+        <div className="gap-y-density-3 flex items-start gap-x-3">
+          <div className="bg-theme-50 text-theme-600 dark:bg-theme-900/30 dark:text-theme-300 py-density-2 shrink-0 rounded-lg px-2">
             <ShieldCheck className="h-5 w-5" aria-hidden="true" />
           </div>
-          <p className="text-secondary-foreground pt-1 text-sm leading-6">
+          <p className="text-secondary-foreground pt-density-1 text-sm leading-6">
             {t("keyManagement:repairMissingKeys.initialNotice")}
           </p>
         </div>

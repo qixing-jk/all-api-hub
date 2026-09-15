@@ -132,18 +132,18 @@ export function DedupeAccountCard({
 
   return (
     <div
-      className={`dark:border-border focus-within:border-ring focus-within:ring-ring/50 border-border-subtle flex flex-col gap-2 rounded-md border p-3 transition-[color,box-shadow] focus-within:ring-[3px] ${
+      className={`dark:border-border focus-within:border-ring focus-within:ring-ring/50 border-border-subtle gap-y-density-2 py-density-3 flex flex-col gap-x-2 rounded-md border px-3 transition-[color,box-shadow] focus-within:ring-[3px] ${
         isWorking
           ? "cursor-not-allowed opacity-70"
           : "hover:bg-surface-subtle dark:hover:bg-foreground/5 cursor-pointer"
       }`}
     >
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <label className="flex min-w-0 items-start gap-3">
+      <div className="gap-y-density-2 flex flex-col gap-x-2 sm:flex-row sm:items-center sm:justify-between">
+        <label className="gap-y-density-3 flex min-w-0 items-start gap-x-3">
           <input
             type="radio"
             name={`dedupe-keep-${encodeURIComponent(group.groupId)}`}
-            className="mt-1 h-3 w-3"
+            className="mt-density-1 h-3 w-3"
             checked={isKeep}
             disabled={isWorking}
             onChange={() =>
@@ -165,7 +165,7 @@ export function DedupeAccountCard({
           </div>
         </label>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2">
           {pinned && (
             <Badge size="sm" variant="secondary">
               {t("account:actions.pinned")}
@@ -212,9 +212,9 @@ export function DedupeAccountCard({
       {detailsOpen && (
         <div
           id={detailsId}
-          className="dark:border-border dark:bg-secondary/40 border-border-subtle bg-surface-subtle text-secondary-foreground rounded-md border p-3 text-xs"
+          className="dark:border-border dark:bg-secondary/40 border-border-subtle bg-surface-subtle text-secondary-foreground py-density-3 rounded-md border px-3 text-xs"
         >
-          <dl className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+          <dl className="gap-y-density-2 grid grid-cols-1 gap-x-4 sm:grid-cols-2">
             <div className="space-y-0.5">
               <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.accountId")}
@@ -246,7 +246,7 @@ export function DedupeAccountCard({
               <dt className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 {t("ui:dialog.dedupeAccounts.details.health")}
               </dt>
-              <dd className="text-secondary-foreground flex items-center gap-2">
+              <dd className="text-secondary-foreground gap-y-density-2 flex items-center gap-x-2">
                 <span
                   className={`h-2 w-2 rounded-full ${healthDisplay.color}`}
                   aria-hidden="true"

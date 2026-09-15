@@ -11,15 +11,15 @@ export function ManagedSiteChannelDetailView({
   missingValue?: string
 }) {
   return (
-    <div className="space-y-4" aria-label={name}>
+    <div className="space-y-density-4" aria-label={name}>
       <h3 className="font-semibold">{name}</h3>
-      <dl className="grid gap-3 sm:grid-cols-2">
+      <dl className="gap-y-density-3 grid gap-x-3 sm:grid-cols-2">
         {fields.map((field) => (
           <div key={field.label}>
             <dt className="text-muted-foreground text-xs font-medium uppercase">
               {field.label}
             </dt>
-            <dd className="mt-1">
+            <dd className="mt-density-1">
               {typeof field.value === "string"
                 ? field.value || missingValue
                 : field.value.kind === "groups"

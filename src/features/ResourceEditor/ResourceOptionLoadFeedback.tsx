@@ -42,7 +42,7 @@ export function ResourceManualOptionControl({
       : RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.loadField(t, label)
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2">
       {state?.status === RESOURCE_OPTION_LOAD_STATUSES.Error ? (
         <>
           <p role="alert" className="text-destructive-text text-xs">
@@ -114,7 +114,7 @@ export function ResourceAutomaticOptionFeedback({
       <p
         role="status"
         aria-live="polite"
-        className="text-muted-foreground mt-1 text-xs"
+        className="text-muted-foreground mt-density-1 text-xs"
       >
         {RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.loading(t)}
       </p>
@@ -130,7 +130,7 @@ export function ResourceAutomaticOptionFeedback({
         aria-live={
           announceControlledEmpty && emptyMessage ? "polite" : undefined
         }
-        className="text-muted-foreground mt-1 text-xs"
+        className="text-muted-foreground mt-density-1 text-xs"
       >
         {emptyMessage ?? RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.empty(t)}
       </p>
@@ -138,7 +138,7 @@ export function ResourceAutomaticOptionFeedback({
   }
   if (state.status !== RESOURCE_OPTION_LOAD_STATUSES.Error) return null
   return (
-    <div className="mt-1 flex items-center gap-2">
+    <div className="mt-density-1 gap-y-density-2 flex items-center gap-x-2">
       <p role="alert" className="text-destructive-text text-xs">
         {state.errorMessage ??
           RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.error(t)}

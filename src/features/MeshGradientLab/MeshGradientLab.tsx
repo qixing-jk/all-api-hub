@@ -135,8 +135,8 @@ const MeshGradientCanvas = ({
 
 const PaletteSwatches = ({ colors }: { colors: readonly string[] }) => {
   return (
-    <div className="mt-3 space-y-2">
-      <div className="flex gap-1">
+    <div className="space-y-density-2">
+      <div className="flex gap-x-1">
         {colors.map((color, index) => (
           <div
             key={`${color}-${index}`}
@@ -146,7 +146,7 @@ const PaletteSwatches = ({ colors }: { colors: readonly string[] }) => {
           />
         ))}
       </div>
-      <div className="text-muted-foreground grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
+      <div className="text-muted-foreground gap-y-density-1 grid grid-cols-2 gap-x-2 text-xs">
         {colors.map((color, index) => (
           <span key={`${color}-${index}`} className="font-mono">
             {color.toLowerCase()}
@@ -192,24 +192,28 @@ export default function MeshGradientLab() {
   }
 
   return (
-    <div className="p-6">
+    <div className="py-density-6 px-6">
       <PageHeader
         icon={Palette}
         title={t("meshGradientLab:title")}
         actions={
-          <Button size="sm" onClick={handleShuffleSeed} variant="secondary">
-            <Shuffle className="mr-2 h-4 w-4" />
+          <Button
+            size="sm"
+            onClick={handleShuffleSeed}
+            variant="secondary"
+            leftIcon={<Shuffle className="h-4 w-4" />}
+          >
             {t("meshGradientLab:actions.shuffleSeed")}
           </Button>
         }
       />
 
-      <div className="space-y-6">
+      <div className="space-y-density-6">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                <div className="flex items-center gap-2">
+          <CardContent>
+            <div className="gap-y-density-3 flex flex-col gap-x-3 md:flex-row md:items-center md:justify-between">
+              <div className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row sm:flex-wrap sm:items-center">
+                <div className="flex items-center gap-x-2">
                   <Label size="sm">{t("meshGradientLab:labels.view")}</Label>
                   <div
                     className={`dark:bg-secondary corners-concentric bg-surface-subtle inline-flex rounded-md p-1 [--corner-inset:--spacing(1)] ${CORNERS.buttonItems}`}
@@ -231,7 +235,7 @@ export default function MeshGradientLab() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-x-2">
                   <Label size="sm">{t("meshGradientLab:labels.seed")}</Label>
                   <Input
                     type="number"
@@ -246,7 +250,7 @@ export default function MeshGradientLab() {
                 </div>
 
                 {viewMode === "palettes" ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-x-2">
                     <Label size="sm">
                       {t("meshGradientLab:labels.layout")}
                     </Label>
@@ -264,7 +268,7 @@ export default function MeshGradientLab() {
                     />
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-x-2">
                     <Label size="sm">
                       {t("meshGradientLab:labels.palette")}
                     </Label>
@@ -285,7 +289,7 @@ export default function MeshGradientLab() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-x-2">
                   <Label size="sm">{t("meshGradientLab:labels.overlay")}</Label>
                   <Switch
                     checked={showOverlay}
@@ -305,17 +309,17 @@ export default function MeshGradientLab() {
         </Card>
 
         {viewMode === "palettes" ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="gap-y-density-4 grid grid-cols-1 gap-x-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {MESH_GRADIENT_PALETTES.map((palette, index) => (
               <Card key={index} className="overflow-hidden">
-                <CardContent className="p-4">
+                <CardContent>
                   <MeshGradientCanvas
                     seed={seed}
                     paletteIndex={index}
                     layoutIndex={safeLayoutIndex}
                     showOverlay={showOverlay}
                   />
-                  <div className="text-foreground mt-3 text-sm font-medium">
+                  <div className="text-foreground text-sm font-medium">
                     {t("meshGradientLab:captions.paletteIndex", { index })}
                   </div>
                   <PaletteSwatches colors={palette.colors} />
@@ -324,17 +328,17 @@ export default function MeshGradientLab() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="gap-y-density-4 grid grid-cols-1 gap-x-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {layoutIndexes.map((index) => (
               <Card key={index} className="overflow-hidden">
-                <CardContent className="p-4">
+                <CardContent>
                   <MeshGradientCanvas
                     seed={seed}
                     paletteIndex={safePaletteIndex}
                     layoutIndex={index}
                     showOverlay={showOverlay}
                   />
-                  <div className="text-foreground mt-3 text-sm font-medium">
+                  <div className="text-foreground text-sm font-medium">
                     {t("meshGradientLab:captions.layoutIndex", { index })}
                   </div>
                   <PaletteSwatches

@@ -28,7 +28,7 @@ interface AccountBulkToolbarProps {
   onExit: () => void
 }
 
-const controlClass = "min-h-7 shrink-0 px-2 text-xs shadow-xs"
+const controlClass = "shrink-0 px-2 text-xs shadow-xs"
 
 /** Keeps selection scope, inspection, and account mutations visually separate. */
 export function AccountBulkToolbar({
@@ -101,17 +101,17 @@ export function AccountBulkToolbar({
     <section
       data-testid="account-bulk-toolbar"
       aria-label={t("account:bulk.manage")}
-      className="border-theme-100 bg-theme-50/40 dark:border-theme-900/50 dark:bg-theme-950/15 border-b px-3 py-2"
+      className="border-theme-100 bg-theme-50/40 dark:border-theme-900/50 dark:bg-theme-950/15 py-density-2 border-b px-3"
     >
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+      <div className="gap-y-density-2 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2">
         <div
           ref={contentRef}
-          className="flex min-w-0 flex-wrap items-center gap-x-8 gap-y-4"
+          className="gap-y-density-4 flex min-w-0 flex-wrap items-center gap-x-8"
         >
           <div
             ref={selectionGroupRef}
             data-testid="account-bulk-selection-group"
-            className="flex max-w-full flex-wrap items-center gap-1.5"
+            className="gap-y-density-1-5 flex max-w-full flex-wrap items-center gap-x-1.5"
           >
             <Button
               variant="outline"
@@ -138,7 +138,7 @@ export function AccountBulkToolbar({
               />
               {t("account:bulk.reviewSelection")}
             </Button>
-            <div className="flex max-w-full flex-wrap items-center gap-1.5">
+            <div className="gap-y-density-1-5 flex max-w-full flex-wrap items-center gap-x-1.5">
               <div
                 ref={selectionPairRef}
                 aria-hidden={compactSelection}
@@ -222,7 +222,7 @@ export function AccountBulkToolbar({
             ref={actionGroupRef}
             data-testid="account-bulk-action-group"
             className={cn(
-              "before:bg-surface-strong relative flex max-w-full flex-wrap items-center gap-1.5 before:pointer-events-none before:absolute before:content-['']",
+              "before:bg-surface-strong gap-y-density-1-5 relative flex max-w-full flex-wrap items-center gap-x-1.5 before:pointer-events-none before:absolute before:content-['']",
               actionsWrapped
                 ? "before:-top-2 before:right-0 before:left-0 before:h-px"
                 : "before:top-1 before:bottom-1 before:-left-4 before:w-px",
@@ -289,7 +289,7 @@ export function AccountBulkToolbar({
         </Button>
       </div>
       {hiddenCount > 0 && (
-        <p className="text-warning-text mt-1.5 text-xs leading-5">
+        <p className="text-warning-text mt-density-1-5 text-xs leading-5">
           {t("account:bulk.hiddenSelectedHint", { count: hiddenCount })}
         </p>
       )}
@@ -318,12 +318,12 @@ export function AccountBulkToolbar({
           </Button>
         }
       >
-        <div className="space-y-3 p-4">
+        <div className="space-y-density-3 py-density-4 px-4">
           <p className="text-muted-foreground text-xs">
             {t("account:bulk.reviewHint")}
           </p>
           {selectedCount === 0 ? (
-            <p className="text-muted-foreground py-6 text-center text-sm">
+            <p className="text-muted-foreground py-density-6 text-center text-sm">
               {t("account:bulk.selectionEmpty")}
             </p>
           ) : (
@@ -331,7 +331,7 @@ export function AccountBulkToolbar({
               {selectedAccounts.map((account) => (
                 <label
                   key={account.id}
-                  className="border-border-subtle dark:border-foreground/5 flex cursor-pointer items-center gap-3 border-b py-3 last:border-0"
+                  className="border-border-subtle dark:border-foreground/5 gap-y-density-3 py-density-3 flex cursor-pointer items-center gap-x-3 border-b last:border-0"
                 >
                   <Checkbox
                     checked

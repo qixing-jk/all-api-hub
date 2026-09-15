@@ -101,7 +101,7 @@ export function ModelPriceCalculationDetails({
   }
 
   return (
-    <div id={calculationId} className="space-y-3">
+    <div id={calculationId} className="space-y-density-3">
       <h4 className="text-sm font-medium">
         {t("scenario.calculationDetails")}
       </h4>
@@ -138,17 +138,25 @@ export function ModelPriceCalculationDetails({
           <table className="w-full text-left text-xs tabular-nums">
             <thead>
               <tr>
-                <th className="py-2 pr-3">{t("scenario.calculationItem")}</th>
-                <th className="py-2 pr-3">{t("scenario.effectiveRate")}</th>
-                <th className="py-2 pr-3">{t("scenario.calculationShare")}</th>
-                <th className="py-2">{t("scenario.contribution")}</th>
+                <th className="py-density-2 pr-3">
+                  {t("scenario.calculationItem")}
+                </th>
+                <th className="py-density-2 pr-3">
+                  {t("scenario.effectiveRate")}
+                </th>
+                <th className="py-density-2 pr-3">
+                  {t("scenario.calculationShare")}
+                </th>
+                <th className="py-density-2">{t("scenario.contribution")}</th>
               </tr>
             </thead>
             <tbody>
               {quote.lines.map((line) => (
                 <tr key={line.meter} className="border-t">
-                  <td className="py-2 pr-3">{meterLabels[line.meter]}</td>
-                  <td className="py-2 pr-3">
+                  <td className="py-density-2 pr-3">
+                    {meterLabels[line.meter]}
+                  </td>
+                  <td className="py-density-2 pr-3">
                     {line.effectiveUnitRate === undefined
                       ? "—"
                       : formatPrice(line.effectiveUnitRate, quote.currency, 6)}
@@ -168,7 +176,7 @@ export function ModelPriceCalculationDetails({
                       {unitLabels[line.rate.unit]}
                     </div>
                   </td>
-                  <td className="py-2 pr-3">
+                  <td className="py-density-2 pr-3">
                     {quote.calculation?.totalWeight
                       ? new Intl.NumberFormat(i18n.language, {
                           style: "percent",
@@ -183,7 +191,7 @@ export function ModelPriceCalculationDetails({
                       </div>
                     )}
                   </td>
-                  <td className="py-2">
+                  <td className="py-density-2">
                     {formatPrice(line.amount, quote.currency, 6)}
                   </td>
                 </tr>
@@ -192,14 +200,14 @@ export function ModelPriceCalculationDetails({
             {quote.amount !== null && (
               <tfoot>
                 <tr className="border-t font-medium">
-                  <td colSpan={3} className="py-2 pr-3">
+                  <td colSpan={3} className="py-density-2 pr-3">
                     {t(
                       quote.status === QUOTE_STATUSES.COMPLETE
                         ? "scenario.calculationTotal"
                         : "scenario.knownPrice",
                     )}
                   </td>
-                  <td className="py-2">
+                  <td className="py-density-2">
                     {formatPrice(quote.amount, quote.currency, 6)}
                   </td>
                 </tr>
@@ -209,14 +217,14 @@ export function ModelPriceCalculationDetails({
         </div>
       )}
       {displayedSchedule.length > 0 && (
-        <div className="grid [grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-3">
+        <div className="gap-y-density-3 grid [grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-x-3">
           {displayedSchedule.map((rule) => (
             <fieldset
               key={rule.id}
               className={
                 quote.matchedRules.some((matched) => matched.id === rule.id)
-                  ? "border-theme-500 min-w-0 rounded border p-2"
-                  : "min-w-0 rounded border p-2"
+                  ? "border-theme-500 py-density-2 min-w-0 rounded border px-2"
+                  : "py-density-2 min-w-0 rounded border px-2"
               }
             >
               <legend>
@@ -227,7 +235,7 @@ export function ModelPriceCalculationDetails({
               {quote.matchedRules.some((matched) => matched.id === rule.id) && (
                 <p>{t("scenario.matched")}</p>
               )}
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="gap-y-density-2 grid grid-cols-1 gap-x-2 sm:grid-cols-2">
                 {Object.entries(rule.rates).map(([meter, rate]) => (
                   <div key={meter}>
                     <p>

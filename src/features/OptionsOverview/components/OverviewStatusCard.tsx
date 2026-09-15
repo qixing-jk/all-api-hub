@@ -160,8 +160,8 @@ function StatusMetricContent({
   )
 
   return (
-    <div className="flex min-h-16 w-full items-center justify-between gap-3 px-4 py-3">
-      <div className="flex min-w-0 items-center gap-3.5">
+    <div className="gap-y-density-3 py-density-3 flex min-h-16 w-full items-center justify-between gap-x-3 px-4">
+      <div className="gap-y-density-3-5 flex min-w-0 items-center gap-x-3.5">
         <span
           className={cn(
             "h-2 w-2 shrink-0 rounded-full shadow-[0_0_0_4px]",
@@ -172,10 +172,12 @@ function StatusMetricContent({
           <div className="text-muted-foreground truncate text-xs font-medium uppercase">
             {label}
           </div>
-          <div className="mt-1 flex items-baseline gap-1.5">{value}</div>
+          <div className="mt-density-1 gap-y-density-1-5 flex items-baseline gap-x-1.5">
+            {value}
+          </div>
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="gap-y-density-2 flex shrink-0 items-center gap-x-2">
         {item.target ? (
           <WorkflowTransitionIcon
             aria-hidden="true"

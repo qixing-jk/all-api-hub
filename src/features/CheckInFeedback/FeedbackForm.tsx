@@ -90,7 +90,7 @@ export function FeedbackForm({
       onClose={onClose}
       title={t("checkInFeedback.title")}
       header={
-        <div className="space-y-1 pr-6">
+        <div className="space-y-density-1 pr-6">
           <h2 className="text-lg font-semibold">
             {t("checkInFeedback.title")}
           </h2>
@@ -112,13 +112,13 @@ export function FeedbackForm({
       }
     >
       <div
-        className="[container-type:inline-size] space-y-5"
+        className="space-y-density-5 [container-type:inline-size]"
         data-testid="checkin-feedback-form"
       >
-        <div className="space-y-3">
-          <div className="flex flex-col items-start gap-3 [@container(min-width:28rem)]:flex-row [@container(min-width:28rem)]:items-center [@container(min-width:28rem)]:justify-between">
+        <div className="space-y-density-3">
+          <div className="gap-y-density-3 flex flex-col items-start gap-x-3 [@container(min-width:28rem)]:flex-row [@container(min-width:28rem)]:items-center [@container(min-width:28rem)]:justify-between">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 text-sm font-medium">
+              <div className="gap-y-density-2 flex items-center gap-x-2 text-sm font-medium">
                 <Globe className="text-faint-foreground h-4 w-4 shrink-0" />
                 <span className="break-all">
                   {origin ?? t("checkInFeedback.reportSite")}
@@ -126,7 +126,7 @@ export function FeedbackForm({
               </div>
             </div>
             <label
-              className="text-muted-foreground flex shrink-0 items-center gap-2 text-xs"
+              className="text-muted-foreground gap-y-density-2 flex shrink-0 items-center gap-x-2 text-xs"
               htmlFor={`${id}-address`}
             >
               {t("checkInFeedback.includeAddress")}
@@ -143,8 +143,8 @@ export function FeedbackForm({
             {t("checkInFeedback.addressHint")}
           </p>
           {executionMessage && (
-            <div className="bg-surface-subtle dark:bg-card/50 space-y-2 rounded-lg px-3 py-2.5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="bg-surface-subtle dark:bg-card/50 space-y-density-2 py-density-2-5 rounded-lg px-3">
+              <div className="gap-y-density-2 flex flex-wrap items-center justify-between gap-x-2">
                 <ResultStatusBadge status={snapshot.execution!.status} />
                 <span className="text-muted-foreground text-xs">
                   {formatTimestamp(snapshot.execution?.timestamp)}
@@ -167,7 +167,7 @@ export function FeedbackForm({
           />
         </FormField>
         <div
-          className="text-muted-foreground flex items-start gap-2 text-xs"
+          className="text-muted-foreground gap-y-density-2 flex items-start gap-x-2 text-xs"
           role="status"
         >
           {scanning ? (
@@ -177,7 +177,7 @@ export function FeedbackForm({
           ) : (
             <Info className="mt-0.5 h-4 w-4 shrink-0" />
           )}
-          <div className="min-w-0 space-y-1 leading-5">
+          <div className="space-y-density-1 min-w-0 leading-5">
             <p>
               {scanning
                 ? t("checkInFeedback.scanning")

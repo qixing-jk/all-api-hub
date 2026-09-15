@@ -10,7 +10,10 @@ export function ResourceFieldLabel({
 }: ComponentProps<typeof Label>) {
   return (
     <Label
-      className={cn("mb-1.5 flex w-fit max-w-full leading-5", className)}
+      className={cn(
+        "mb-density-1-5 flex w-fit max-w-full leading-5",
+        className,
+      )}
       {...props}
     />
   )

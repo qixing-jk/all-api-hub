@@ -20,13 +20,13 @@ export function ProductTourTooltip({
   return (
     <section
       {...tooltipProps}
-      className="bg-card text-foreground w-[min(22rem,calc(100vw-2rem))] rounded-xl p-4 sm:p-5"
+      className="bg-card text-foreground py-density-4 sm:py-density-5 w-[min(22rem,calc(100vw-2rem))] rounded-xl px-4 sm:px-5"
       data-testid={PRODUCT_TOUR_TEST_IDS.tooltip}
       aria-labelledby="product-tour-step-title"
       aria-describedby="product-tour-step-description"
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="text-theme-600 dark:text-theme-400 flex min-w-0 items-center gap-2">
+      <div className="gap-y-density-4 flex items-start justify-between gap-x-4">
+        <div className="text-theme-600 dark:text-theme-400 gap-y-density-2 flex min-w-0 items-center gap-x-2">
           <Compass className="h-5 w-5 shrink-0" aria-hidden="true" />
           <h2
             id="product-tour-step-title"
@@ -51,13 +51,13 @@ export function ProductTourTooltip({
 
       <div
         id="product-tour-step-description"
-        className="text-muted-foreground dark:text-secondary-foreground mt-3 text-sm leading-6"
+        className="text-muted-foreground dark:text-secondary-foreground mt-density-3 text-sm leading-6"
       >
         {step.content}
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+      <div className="mt-density-5 gap-y-density-3 flex flex-wrap items-center justify-between gap-x-3">
+        <div className="gap-y-density-2 flex items-center gap-x-2">
           <span
             className="text-muted-foreground text-xs"
             aria-label={`${index + 1} / ${size}`}
@@ -78,7 +78,7 @@ export function ProductTourTooltip({
             </Button>
           ) : null}
         </div>
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+        <div className="gap-y-density-2 ml-auto flex flex-wrap items-center justify-end gap-x-2">
           {index > 0 ? (
             <Button
               type="button"

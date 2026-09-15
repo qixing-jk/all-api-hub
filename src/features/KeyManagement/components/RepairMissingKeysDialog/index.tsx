@@ -217,8 +217,8 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
         size="lg"
         panelClassName="sm:max-w-3xl"
         header={
-          <div className="space-y-1 pr-10">
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="space-y-density-1 pr-10">
+            <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2">
               <h2 className="text-base font-semibold">
                 {t("repairMissingKeys.title")}
               </h2>
@@ -270,7 +270,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
         ) : null}
 
         {shouldShowProgressDetails && progress ? (
-          <div className="space-y-4">
+          <div className="space-y-density-4">
             {progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Running &&
             !shouldShowReadonlyPreviousResult
               ? renameOption
@@ -288,13 +288,13 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
 
             {repairCreatedImport.createdReferenceCount > 0 ? (
               <div
-                className="dark:bg-background/40 border-border bg-surface-subtle/70 space-y-3 rounded-lg border p-3"
+                className="dark:bg-background/40 border-border bg-surface-subtle/70 space-y-density-3 py-density-3 rounded-lg border px-3"
                 data-testid={
                   KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportCard
                 }
               >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-1">
+                <div className="gap-y-density-3 flex flex-wrap items-start justify-between gap-x-3">
+                  <div className="space-y-density-1 min-w-0">
                     <div className="text-sm font-medium">
                       {t(
                         "keyManagement:repairMissingKeys.managedSiteImport.title",
@@ -310,7 +310,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
                       )}
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="gap-y-density-2 flex flex-wrap gap-x-2">
                     <ManagedSiteTypeSwitcher
                       ariaLabel={t(
                         "keyManagement:repairMissingKeys.managedSiteImport.changeTarget",

@@ -407,7 +407,7 @@ export function ApiCredentialProfileDialog({
         title={dialogTitle}
         panelTestId={API_CREDENTIAL_PROFILES_TEST_IDS.dialog}
         header={
-          <div className="flex min-w-0 items-center gap-3">
+          <div className="gap-y-density-3 flex min-w-0 items-center gap-x-3">
             {isEditMode ? (
               <Pencil className="text-theme-600 dark:text-theme-400 h-5 w-5" />
             ) : (
@@ -419,7 +419,7 @@ export function ApiCredentialProfileDialog({
           </div>
         }
         footer={
-          <div className="flex justify-end gap-2">
+          <div className="gap-y-density-2 flex justify-end gap-x-2">
             <Button
               variant="secondary"
               onClick={handleClose}
@@ -437,7 +437,7 @@ export function ApiCredentialProfileDialog({
           </div>
         }
       >
-        <div className="space-y-4">
+        <div className="space-y-density-4">
           <FormField
             label={t("apiCredentialProfiles:dialog.fields.name")}
             required
@@ -532,8 +532,8 @@ export function ApiCredentialProfileDialog({
           </FormField>
 
           {!isEditMode && addPrefill?.apiKeyCreateUrl ? (
-            <div className="dark:border-border dark:bg-secondary/40 border-theme-100 bg-theme-50/70 dark:border-theme-900/50 rounded-md border p-3 text-sm">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="dark:border-border dark:bg-secondary/40 border-theme-100 bg-theme-50/70 dark:border-theme-900/50 py-density-3 rounded-md border px-3 text-sm">
+              <div className="gap-y-density-2 flex flex-col gap-x-2 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-theme-800 dark:text-theme-200">
                   {addPrefill.apiKeyCreateHint ??
                     t("apiCredentialProfiles:dialog.hints.apiKeyCreateUrl")}
@@ -710,11 +710,14 @@ export function ApiCredentialProfileDialog({
 
           {telemetryMode ===
             API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint && (
-            <details open className="border-border rounded-lg border p-3">
+            <details
+              open
+              className="border-border py-density-3 rounded-lg border px-3"
+            >
               <summary className="dark:text-foreground text-secondary-foreground cursor-pointer text-sm font-medium">
                 {t("apiCredentialProfiles:dialog.customTelemetry.title")}
               </summary>
-              <div className="mt-3 space-y-4">
+              <div className="mt-density-3 space-y-density-4">
                 <FormField
                   label={t(
                     "apiCredentialProfiles:dialog.fields.telemetryEndpoint",
@@ -766,7 +769,7 @@ export function ApiCredentialProfileDialog({
                   />
                 </FormField>
 
-                <div className="space-y-2">
+                <div className="space-y-density-2">
                   <div>
                     <div className="dark:text-foreground text-secondary-foreground text-sm font-medium">
                       {t("apiCredentialProfiles:dialog.customTelemetry.paths")}
@@ -777,7 +780,7 @@ export function ApiCredentialProfileDialog({
                       )}
                     </p>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="gap-y-density-3 grid gap-x-3 sm:grid-cols-2">
                     {telemetryJsonPathFields.map(({ field, label }) => {
                       const inputId = `api-credential-profile-telemetry-path-${field}`
                       return (

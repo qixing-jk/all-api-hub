@@ -165,7 +165,7 @@ function ModelDisplayFactValue({ fact }: { fact: ModelDisplayFact }) {
       )
     case MODEL_DISPLAY_FACT_TYPES.StringList:
       return (
-        <ul className="flex min-w-0 flex-wrap gap-1">
+        <ul className="gap-y-density-1 flex min-w-0 flex-wrap gap-x-1">
           {fact.values.map((value) => (
             <li key={value} className="max-w-full min-w-0">
               <Badge
@@ -206,19 +206,19 @@ function ModelDisplayFactValue({ fact }: { fact: ModelDisplayFact }) {
       return <span>{formatPrice(fact)}</span>
     case MODEL_DISPLAY_FACT_TYPES.PriceOverrides:
       return (
-        <ol className="space-y-3">
+        <ol className="space-y-density-3">
           {fact.overrides.map((override, index) => (
             <li
               key={`${override.conditions.map(formatPriceCondition).join(":")}:${index}`}
-              className="border-warning-border bg-warning-soft rounded-md border p-2"
+              className="border-warning-border bg-warning-soft py-density-2 rounded-md border px-2"
             >
-              <ul className="text-warning-text mb-1 list-disc space-y-0.5 pl-5 text-xs">
+              <ul className="text-warning-text mb-density-1 list-disc space-y-0.5 pl-5 text-xs">
                 {override.conditions.map((condition) => {
                   const conditionText = formatPriceCondition(condition)
                   return <li key={conditionText}>{conditionText}</li>
                 })}
               </ul>
-              <ul className="space-y-1">
+              <ul className="space-y-density-1">
                 {override.prices.map((price) => (
                   <li
                     key={`${price.label.translationKey ?? price.label.fallback}:${price.unit}`}
@@ -246,27 +246,27 @@ function ModelDisplayFactValue({ fact }: { fact: ModelDisplayFact }) {
           >
             <thead>
               <tr>
-                <th className="pr-3 pb-1">
+                <th className="pb-density-1 pr-3">
                   {t("displayFacts.benchmarkTable.arena", {
                     defaultValue: "Arena",
                   })}
                 </th>
-                <th className="pr-3 pb-1">
+                <th className="pb-density-1 pr-3">
                   {t("displayFacts.benchmarkTable.category", {
                     defaultValue: "Category",
                   })}
                 </th>
-                <th className="pr-3 pb-1">
+                <th className="pb-density-1 pr-3">
                   {t("displayFacts.benchmarkTable.score", {
                     defaultValue: "Score",
                   })}
                 </th>
-                <th className="pr-3 pb-1">
+                <th className="pb-density-1 pr-3">
                   {t("displayFacts.benchmarkTable.rank", {
                     defaultValue: "Rank",
                   })}
                 </th>
-                <th className="pb-1">
+                <th className="pb-density-1">
                   {t("displayFacts.benchmarkTable.winRate", {
                     defaultValue: "Win rate",
                   })}
@@ -276,19 +276,19 @@ function ModelDisplayFactValue({ fact }: { fact: ModelDisplayFact }) {
             <tbody>
               {fact.entries.map((entry) => (
                 <tr key={`${entry.arena}:${entry.category}`}>
-                  <td className="border-t py-1 pr-3 break-all">
+                  <td className="py-density-1 border-t pr-3 break-all">
                     {entry.arena}
                   </td>
-                  <td className="border-t py-1 pr-3 break-all">
+                  <td className="py-density-1 border-t pr-3 break-all">
                     {entry.category}
                   </td>
-                  <td className="border-t py-1 pr-3">
+                  <td className="py-density-1 border-t pr-3">
                     {formatNumber(entry.score)}
                   </td>
-                  <td className="border-t py-1 pr-3">
+                  <td className="py-density-1 border-t pr-3">
                     {formatNumber(entry.rank)}
                   </td>
-                  <td className="border-t py-1">
+                  <td className="py-density-1 border-t">
                     {formatPercent(entry.winRatePercent)}
                   </td>
                 </tr>
@@ -305,7 +305,7 @@ function ModelDisplayFactItem({ fact }: { fact: ModelDisplayFact }) {
   const { resolveLabel } = useModelDisplayFactText()
 
   return (
-    <div data-testid="model-display-fact" className="min-w-0 space-y-1">
+    <div data-testid="model-display-fact" className="space-y-density-1 min-w-0">
       <dt className="text-muted-foreground text-xs font-medium">
         {resolveLabel(fact.label)}
       </dt>
@@ -326,7 +326,7 @@ export function ModelPresentationSummary({
   if (facts.length === 0) return null
 
   return (
-    <dl className="mt-2 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+    <dl className="mt-density-2 gap-y-density-2 grid min-w-0 grid-cols-1 gap-x-2 sm:grid-cols-2 lg:grid-cols-3">
       {facts.map((fact, index) => (
         <ModelDisplayFactItem
           key={`${fact.label.translationKey ?? fact.label.fallback}:${index}`}
@@ -351,7 +351,7 @@ export function ModelPresentationDetails({
   if (sections.length === 0) return null
 
   return (
-    <div data-testid="model-presentation-details" className="space-y-4">
+    <div data-testid="model-presentation-details" className="space-y-density-4">
       {sections.map((section) => {
         const headingId = `${instanceId}-model-facts-${section.id}`
 
@@ -359,11 +359,11 @@ export function ModelPresentationDetails({
           <section key={section.id} aria-labelledby={headingId}>
             <h4
               id={headingId}
-              className="text-secondary-foreground mb-2 text-sm font-medium"
+              className="text-secondary-foreground mb-density-2 text-sm font-medium"
             >
               {resolveLabel(section.label)}
             </h4>
-            <dl className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">
+            <dl className="gap-y-density-3 grid min-w-0 grid-cols-1 gap-x-3 md:grid-cols-2">
               {section.facts.map((fact, index) => (
                 <ModelDisplayFactItem
                   key={`${fact.label.translationKey ?? fact.label.fallback}:${index}`}

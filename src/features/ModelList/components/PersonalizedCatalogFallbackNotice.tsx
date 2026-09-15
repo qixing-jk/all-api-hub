@@ -29,12 +29,12 @@ export function PersonalizedCatalogFallbackNotice({
   return (
     <Alert
       variant="warning"
-      className="mb-6"
+      className="mb-density-6"
       title={t("personalizedCatalogFallback.title")}
       description={fallback.message}
       aria-live="polite"
     >
-      <div className="mt-3">
+      <div className="mt-density-3">
         <Button
           data-testid={MODEL_LIST_TEST_IDS.retryPersonalizedCatalogButton}
           variant="secondary"

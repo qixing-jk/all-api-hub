@@ -148,10 +148,10 @@ export default function BalanceHistorySettings() {
       description={t("description")}
     >
       <Card>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-density-4">
           <div
             id="balance-history-enabled"
-            className="flex items-center justify-between gap-3"
+            className="gap-y-density-3 flex items-center justify-between gap-x-3"
           >
             <div>
               <Label className="text-sm font-medium">
@@ -170,7 +170,7 @@ export default function BalanceHistorySettings() {
 
           <div
             id="balance-history-end-of-day-capture"
-            className="flex items-center justify-between gap-3"
+            className="gap-y-density-3 flex items-center justify-between gap-x-3"
           >
             <div>
               <Label className="text-sm font-medium">
@@ -190,7 +190,7 @@ export default function BalanceHistorySettings() {
 
           <div
             id="balance-history-estimated-today-income"
-            className="flex items-center justify-between gap-3"
+            className="gap-y-density-3 flex items-center justify-between gap-x-3"
           >
             <div>
               <Label className="text-sm font-medium">
@@ -215,7 +215,7 @@ export default function BalanceHistorySettings() {
 
           <div
             id="balance-history-retention-days"
-            className="grid grid-cols-1 gap-2"
+            className="gap-y-density-2 grid grid-cols-1 gap-x-2"
           >
             <Label className="text-sm font-medium">
               {t("settings.retentionDays")}
@@ -229,7 +229,7 @@ export default function BalanceHistorySettings() {
             />
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="gap-y-density-2 flex flex-wrap gap-x-2">
             <Button
               id="balance-history-apply-settings"
               variant="default"

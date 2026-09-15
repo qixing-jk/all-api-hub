@@ -99,8 +99,8 @@ export default function ActionBar({
       featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin}
       surfaceId={toolbarSurface}
     >
-      <div className="space-y-1.5">
-        <div className="flex flex-wrap gap-2">
+      <div className="space-y-density-1-5">
+        <div className="gap-y-density-2 flex flex-wrap gap-x-2">
           <Button
             onClick={onRunNow}
             disabled={isBusy}

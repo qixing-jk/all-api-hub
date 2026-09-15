@@ -32,10 +32,10 @@ export function ModelItemTokenPricingDetails({
   ]
 
   return (
-    <div className="grid grid-cols-2 gap-4 text-xs">
+    <div className="gap-y-density-4 grid grid-cols-2 gap-x-4 text-xs">
       {details.map((price) =>
         price.amount === undefined ? null : (
-          <div key={price.key} className="space-y-1">
+          <div key={price.key} className="space-y-density-1">
             <div className="text-muted-foreground">{price.label}</div>
             <div className="text-foreground font-medium">
               USD: {formatPrice(price.amount, "USD")}

@@ -12,11 +12,11 @@ export interface TechStackGridProps {
 
 const TechStackGrid = ({ items }: TechStackGridProps) => {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="gap-y-density-4 grid grid-cols-1 gap-x-4 sm:grid-cols-2 lg:grid-cols-3">
       {items.map((tech, index) => (
         <Card key={index}>
           <CardContent>
-            <div className="mb-2 flex items-center justify-between">
+            <div className="mb-density-2 flex items-center justify-between">
               <span className="text-foreground text-base font-medium">
                 {tech.name}
               </span>

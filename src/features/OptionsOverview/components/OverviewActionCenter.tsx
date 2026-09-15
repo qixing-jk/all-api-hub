@@ -43,7 +43,7 @@ export function OverviewActionCenter({
   onNavigate,
 }: OverviewActionCenterProps) {
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+    <div className="gap-y-density-3 grid grid-cols-1 gap-x-3 md:grid-cols-2">
       {items
         .filter((item) => item.isVisible)
         .map((item) => (
@@ -54,9 +54,9 @@ export function OverviewActionCenter({
               statusClasses[item.status],
             )}
           >
-            <div className="flex min-h-28 flex-col gap-3 p-4">
-              <div className="min-w-0 space-y-2">
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <div className="gap-y-density-3 py-density-4 flex min-h-28 flex-col gap-x-3 px-4">
+              <div className="space-y-density-2 min-w-0">
+                <div className="gap-y-density-2 flex min-w-0 flex-wrap items-center gap-x-2">
                   <div className="text-foreground truncate text-sm font-semibold">
                     {getActionCenterLabel(item.id, t)}
                   </div>
@@ -77,7 +77,7 @@ export function OverviewActionCenter({
                 ) : null}
               </div>
 
-              <div className="grid grid-cols-1 gap-2">
+              <div className="gap-y-density-2 grid grid-cols-1 gap-x-2">
                 {item.subItems.map((subItem) => (
                   <ConfigurationSubItemButton
                     key={subItem.id}
@@ -113,10 +113,10 @@ function ConfigurationSubItemButton({
       variant="outline"
       size="sm"
       aria-label={label}
-      className="group border-border/70 bg-card/65 hover:border-theme-200 hover:bg-theme-50/40 dark:border-foreground/10 dark:bg-foreground/[0.035] dark:hover:border-theme-900/70 dark:hover:bg-theme-950/10 [&>span:last-child_svg]:text-faint-foreground [&>span:last-child_svg]:group-hover:text-muted-foreground dark:[&>span:last-child_svg]:group-hover:text-secondary-foreground h-auto min-h-0 w-full min-w-0 shrink justify-between px-3 py-2 text-left whitespace-normal [&>span:last-child_svg]:h-3.5 [&>span:last-child_svg]:w-3.5 [&>span:last-child_svg]:transition-transform [&>span:last-child_svg]:group-hover:translate-x-0.5"
+      className="group border-border/70 bg-card/65 hover:border-theme-200 hover:bg-theme-50/40 dark:border-foreground/10 dark:bg-foreground/[0.035] dark:hover:border-theme-900/70 dark:hover:bg-theme-950/10 [&>span:last-child_svg]:text-faint-foreground [&>span:last-child_svg]:group-hover:text-muted-foreground dark:[&>span:last-child_svg]:group-hover:text-secondary-foreground py-density-2 h-auto min-h-0 w-full min-w-0 shrink justify-between px-3 text-left whitespace-normal [&>span:last-child_svg]:h-3.5 [&>span:last-child_svg]:w-3.5 [&>span:last-child_svg]:transition-transform [&>span:last-child_svg]:group-hover:translate-x-0.5"
       onClick={onClick}
     >
-      <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+      <span className="gap-y-density-2 flex min-w-0 flex-1 items-center justify-between gap-x-2">
         <span className="text-secondary-foreground truncate text-xs font-medium">
           {label}
         </span>

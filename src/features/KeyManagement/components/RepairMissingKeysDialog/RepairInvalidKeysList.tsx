@@ -49,7 +49,7 @@ export function RepairInvalidKeysList({
           description={t(
             "keyManagement:repairMissingKeys.invalidKeys.emptyDescription",
           )}
-          className="py-10"
+          className="py-density-10"
         />
       </div>
     )
@@ -66,7 +66,7 @@ export function RepairInvalidKeysList({
         <EmptyState
           icon={<Search className="h-12 w-12" />}
           title={t("keyManagement:repairMissingKeys.noMatchingResults")}
-          className="py-10"
+          className="py-density-10"
         />
       </div>
     )
@@ -194,7 +194,7 @@ export function RepairInvalidKeysList({
                   {resource.siteType}
                 </Badge>
               </div>
-              <div className="text-warning-text mt-2 text-xs">
+              <div className="text-warning-text mt-density-2 text-xs">
                 {getInvalidResourceReasonLabel(t, resource)}
               </div>
             </li>

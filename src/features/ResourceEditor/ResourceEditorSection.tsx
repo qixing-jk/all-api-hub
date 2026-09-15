@@ -40,7 +40,7 @@ export function ResourceEditorSection({
       <CollapsibleTrigger
         aria-label={label}
         aria-describedby={summary ? summaryId : undefined}
-        className="hover:bg-muted/50 focus-visible:ring-ring flex w-full min-w-0 items-center gap-2 rounded-[var(--corner-inner-radius)] px-3 py-3 text-left focus-visible:ring-2 focus-visible:outline-none data-[state=open]:rounded-b-none"
+        className="hover:bg-muted/50 focus-visible:ring-ring gap-y-density-2 py-density-3 flex w-full min-w-0 items-center gap-x-2 rounded-[var(--corner-inner-radius)] px-3 text-left focus-visible:ring-2 focus-visible:outline-none data-[state=open]:rounded-b-none"
       >
         <ChevronDown
           aria-hidden
@@ -60,8 +60,8 @@ export function ResourceEditorSection({
         <fieldset
           className={
             columns === 2
-              ? "grid min-w-0 grid-cols-1 gap-4 px-3 pt-1 pb-4 sm:grid-cols-2"
-              : "min-w-0 space-y-4 px-3 pt-1 pb-4"
+              ? "gap-y-density-4 pt-density-1 pb-density-4 grid min-w-0 grid-cols-1 gap-x-4 px-3 sm:grid-cols-2"
+              : "space-y-density-4 pt-density-1 pb-density-4 min-w-0 px-3"
           }
         >
           <legend className="sr-only">{label}</legend>

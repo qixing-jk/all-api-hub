@@ -11,8 +11,8 @@ export function GatewayGuidanceDescription({
   children: ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0 space-y-1">
+    <div className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="space-y-density-1 min-w-0">
         {title ? (
           <div className="text-foreground text-sm font-medium">{title}</div>
         ) : null}

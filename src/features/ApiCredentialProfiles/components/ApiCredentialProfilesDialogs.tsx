@@ -177,7 +177,7 @@ export function ApiCredentialProfilesDialogs({
         }
         details={
           controller.deletingProfile ? (
-            <div className="space-y-1 text-sm">
+            <div className="space-y-density-1 text-sm">
               <div className="dark:text-secondary-foreground text-muted-foreground">
                 {controller.deletingProfile.name}
               </div>

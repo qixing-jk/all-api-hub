@@ -23,7 +23,7 @@ export function OverviewMetricTile({
   return (
     <div
       className={cn(
-        "border-border/70 bg-card/80 dark:border-foreground/10 dark:bg-foreground/[0.04] rounded-lg border p-2.5",
+        "border-border/70 bg-card/80 dark:border-foreground/10 dark:bg-foreground/[0.04] py-density-2-5 rounded-lg border px-2.5",
         className,
       )}
     >
@@ -32,7 +32,7 @@ export function OverviewMetricTile({
       </div>
       <div
         className={cn(
-          "text-foreground mt-1 text-lg leading-none font-semibold",
+          "text-foreground mt-density-1 text-lg leading-none font-semibold",
           valueClassName,
         )}
       >

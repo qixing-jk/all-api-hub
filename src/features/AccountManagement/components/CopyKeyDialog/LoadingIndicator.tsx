@@ -10,8 +10,8 @@ export function LoadingIndicator() {
   const loadingLabel = t("dialog.copyKey.loading")
 
   return (
-    <div className="flex flex-col items-center justify-center py-8">
-      <Spinner size="lg" className="mb-4" aria-label={loadingLabel} />
+    <div className="py-density-8 flex flex-col items-center justify-center">
+      <Spinner size="lg" className="mb-density-4" aria-label={loadingLabel} />
       <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
         {loadingLabel}
       </p>

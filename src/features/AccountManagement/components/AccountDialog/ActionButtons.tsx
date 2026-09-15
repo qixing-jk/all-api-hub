@@ -110,7 +110,7 @@ export default function ActionButtons({
 
   if (shouldShowAddDetectionActions) {
     return (
-      <div className="flex flex-wrap gap-2">
+      <div className="gap-y-density-2 flex flex-wrap gap-x-2">
         <Button
           type="button"
           onClick={onAutoDetect}
@@ -145,7 +145,7 @@ export default function ActionButtons({
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="gap-y-density-2 flex flex-wrap gap-x-2">
       <Button type="button" onClick={onClose} variant="secondary">
         {t("common:actions.cancel")}
       </Button>

@@ -8,7 +8,7 @@ import {
   Globe2,
   Search,
 } from "lucide-react"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { Tree, type NodeRendererProps, type TreeApi } from "react-arborist"
 import { useTranslation } from "react-i18next"
 
@@ -44,6 +44,7 @@ interface BookmarkTreeNodeData {
 type BookmarkTreeSelectionState = boolean | "indeterminate"
 
 const MIN_TREE_HEIGHT = 240
+const DEFAULT_ROW_HEIGHT = 34
 
 interface BookmarkTreeNodeRendererData extends BookmarkTreeNodeData {
   selectedNodeIds: Set<string>
@@ -249,14 +250,14 @@ function BookmarkTreeNode({
     <div
       style={style}
       className={cn(
-        "group flex min-w-0 items-center gap-2 rounded-md py-0.5 pr-2 text-sm",
+        "group gap-y-density-2 flex min-w-0 items-center gap-x-2 rounded-md py-0.5 pr-2 text-sm",
         node.isFocused && "bg-theme-50 dark:bg-theme-950/30",
       )}
       title={node.data.url}
     >
       <button
         type="button"
-        className="dark:hover:bg-secondary text-muted-foreground hover:bg-muted hover:text-secondary-foreground grid size-7 shrink-0 place-content-center rounded disabled:opacity-0"
+        className="dark:hover:bg-secondary text-muted-foreground hover:bg-muted hover:text-secondary-foreground grid size-(--density-control-tight) shrink-0 place-content-center rounded disabled:opacity-0"
         onClick={(event) => {
           event.stopPropagation()
           if (isFolder) node.toggle()
@@ -292,7 +293,7 @@ function BookmarkTreeNode({
         <Globe2 className="text-link size-4 shrink-0" aria-hidden="true" />
       )}
       <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-baseline gap-2">
+        <div className="gap-y-density-2 flex min-w-0 items-baseline gap-x-2">
           <span
             className={cn(
               "min-w-0 truncate",
@@ -334,6 +335,8 @@ export function BookmarkTreeSelector({
 }: BookmarkTreeSelectorProps) {
   const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
+  const rowMeasureRef = useRef<HTMLDivElement>(null)
+  const [rowHeight, setRowHeight] = useState(DEFAULT_ROW_HEIGHT)
   const treeRef = useRef<TreeApi<BookmarkTreeNodeRendererData> | undefined>(
     undefined,
   )
@@ -363,6 +366,22 @@ export function BookmarkTreeSelector({
   )
   const isSearching = searchQuery.trim().length > 0
   const hasVisibleNodes = visibleNodeIds.length > 0
+
+  // The virtualizer needs pixels, including live density and root-font changes.
+  // Measure the inherited CSS token so its offsets match the visible rows.
+  useLayoutEffect(() => {
+    const element = rowMeasureRef.current
+    if (!element) return
+    const measure = () => {
+      const height = element.getBoundingClientRect().height
+      if (height > 0) setRowHeight(height)
+    }
+    measure()
+    if (typeof ResizeObserver === "undefined") return
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     const element = containerRef.current
@@ -397,11 +416,16 @@ export function BookmarkTreeSelector({
     <div
       ref={containerRef}
       className={cn(
-        "border-border bg-card flex min-h-[240px] flex-col overflow-hidden rounded-lg border p-2",
+        "border-border bg-card py-density-2 flex min-h-[240px] flex-col overflow-hidden rounded-lg border px-2",
         className,
       )}
     >
-      <div className="mb-2 flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+      <div
+        ref={rowMeasureRef}
+        aria-hidden="true"
+        className="pointer-events-none invisible absolute h-(--density-tree-row) w-0"
+      />
+      <div className="mb-density-2 gap-y-density-2 flex shrink-0 flex-col gap-x-2 sm:flex-row sm:items-center">
         <Input
           type="text"
           value={searchQuery}
@@ -415,7 +439,7 @@ export function BookmarkTreeSelector({
           leftIcon={<Search className="size-4" aria-hidden="true" />}
           containerClassName="min-w-0 flex-1"
         />
-        <div className="flex shrink-0 flex-wrap gap-2">
+        <div className="gap-y-density-2 flex shrink-0 flex-wrap gap-x-2">
           <Button
             type="button"
             variant="secondary"
@@ -484,7 +508,7 @@ export function BookmarkTreeSelector({
             disableEdit
             width="100%"
             height={treeHeight}
-            rowHeight={34}
+            rowHeight={rowHeight}
             indent={16}
             overscanCount={4}
           >

@@ -39,9 +39,9 @@ export function OverviewAutoCheckinPanel({
   const secondaryActions = panel.actions.slice(1)
   const content = (
     <>
-      <div className="flex flex-1 flex-col gap-5 p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 space-y-2">
+      <div className="gap-y-density-5 py-density-5 flex flex-1 flex-col gap-x-5 px-5">
+        <div className="gap-y-density-3 flex items-start justify-between gap-x-3">
+          <div className="space-y-density-2 min-w-0">
             <Badge
               variant={AUTO_CHECKIN_STATUS_BADGE_VARIANTS[panel.status]}
               size="sm"
@@ -64,7 +64,7 @@ export function OverviewAutoCheckinPanel({
           <CalendarClock className="text-faint-foreground h-5 w-5 shrink-0" />
         </div>
 
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="gap-y-density-2 grid grid-cols-1 gap-x-2 sm:grid-cols-3">
           <OverviewMetricTile
             label={t("optionsOverview:autoCheckin.metrics.success")}
             value={panel.successCount}
@@ -79,7 +79,7 @@ export function OverviewAutoCheckinPanel({
           />
         </div>
 
-        <div className="text-muted-foreground space-y-1 text-xs">
+        <div className="text-muted-foreground space-y-density-1 text-xs">
           <TimeLine
             label={t("optionsOverview:autoCheckin.lastRun")}
             value={panel.lastRunAt}
@@ -100,7 +100,7 @@ export function OverviewAutoCheckinPanel({
         </div>
       </div>
 
-      <div className="border-border/70 bg-surface-subtle/70 dark:border-foreground/10 dark:bg-foreground/[0.03] flex flex-col gap-2 border-t p-4 sm:flex-row">
+      <div className="border-border/70 bg-surface-subtle/70 dark:border-foreground/10 dark:bg-foreground/[0.03] gap-y-density-2 py-density-4 flex flex-col gap-x-2 border-t px-4 sm:flex-row">
         {primaryAction ? (
           <WorkflowTransitionButton
             type="button"
@@ -166,7 +166,7 @@ function TimeLine({
   fallback: string
 }) {
   return (
-    <div className="flex min-w-0 justify-between gap-3">
+    <div className="gap-y-density-3 flex min-w-0 justify-between gap-x-3">
       <span className="shrink-0">{label}</span>
       <span className="text-secondary-foreground truncate font-medium">
         {value ? new Date(value).toLocaleString() : fallback}

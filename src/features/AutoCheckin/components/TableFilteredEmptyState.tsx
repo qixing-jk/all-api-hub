@@ -28,7 +28,7 @@ export default function TableFilteredEmptyState({
         onClick: onClearFilters,
         variant: "outline",
       }}
-      className="px-6 py-12"
+      className="py-density-12 px-6"
     />
   )
 }

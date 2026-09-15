@@ -26,7 +26,7 @@ export default function ProgressCard(props: ProgressCardProps) {
       <CardContent
         padding="default"
         spacing="none"
-        className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-center sm:gap-4 sm:text-left"
+        className="gap-y-density-3 sm:gap-y-density-4 flex flex-col items-center gap-x-3 text-center sm:flex-row sm:items-center sm:gap-x-4 sm:text-left"
       >
         <RefreshCw className="text-theme-600 dark:text-theme-400 h-5 w-5 shrink-0 animate-spin" />
         <div className="flex flex-col items-center sm:items-start">

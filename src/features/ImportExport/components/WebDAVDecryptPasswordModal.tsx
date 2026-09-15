@@ -63,7 +63,7 @@ export function WebDAVDecryptPasswordModal({
       }}
       size="md"
       header={
-        <div className="space-y-1">
+        <div className="space-y-density-1">
           <Heading4 className="m-0">
             {t("webdav.encryption.decryptDialogTitle")}
           </Heading4>
@@ -73,7 +73,7 @@ export function WebDAVDecryptPasswordModal({
         </div>
       }
       footer={
-        <div className="flex w-full justify-end gap-2">
+        <div className="gap-y-density-2 flex w-full justify-end gap-x-2">
           <Button
             variant="secondary"
             size="sm"
@@ -95,7 +95,7 @@ export function WebDAVDecryptPasswordModal({
         </div>
       }
     >
-      <div className="space-y-3">
+      <div className="space-y-density-3">
         <FormField label={t("webdav.encryption.decryptPassword")}>
           <Input
             id="decryptPassword"
@@ -112,7 +112,7 @@ export function WebDAVDecryptPasswordModal({
           />
         </FormField>
 
-        <label className="flex items-center gap-2">
+        <label className="gap-y-density-2 flex items-center gap-x-2">
           <Checkbox
             checked={savePassword}
             onCheckedChange={(v) => onSavePasswordChange(Boolean(v))}

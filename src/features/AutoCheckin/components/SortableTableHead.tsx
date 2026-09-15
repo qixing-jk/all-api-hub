@@ -30,13 +30,13 @@ export default function SortableTableHead<TData extends RowData>({
             : "none"
       }
       className={cn(
-        "text-muted-foreground h-auto px-4 py-2 text-xs font-medium tracking-wider uppercase",
+        "text-muted-foreground py-density-2 h-auto px-4 text-xs font-medium tracking-wider uppercase",
         className,
       )}
     >
       <button
         type="button"
-        className="hover:bg-muted focus-visible:ring-ring dark:hover:bg-secondary -mx-2 flex min-h-9 items-center gap-1.5 rounded-md px-2 text-left focus-visible:ring-2 focus-visible:outline-none"
+        className="hover:bg-muted focus-visible:ring-ring dark:hover:bg-secondary gap-y-density-1-5 -mx-2 flex min-h-(--density-control) items-center gap-x-1.5 rounded-md px-2 text-left focus-visible:ring-2 focus-visible:outline-none"
         onClick={() => {
           column.toggleSorting()
           onSort?.()

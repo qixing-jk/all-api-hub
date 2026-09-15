@@ -58,14 +58,16 @@ export function AnnouncementMarkdown({
     <div
       className={cn(
         "prose prose-sm dark:prose-invert text-secondary-foreground max-w-none",
-        "prose-headings:mb-3 prose-headings:font-semibold prose-headings:text-foreground",
-        "prose-p:my-2 prose-p:leading-7",
+        "prose-headings:mt-density-4 prose-headings:mb-density-3 prose-headings:font-semibold prose-headings:text-foreground",
+        "[&>:first-child]:mt-0 [&>:last-child]:mb-0",
+        "prose-p:my-density-2 prose-p:leading-7",
         "prose-a:text-theme-600 hover:prose-a:text-theme-700 dark:prose-a:text-theme-400 dark:hover:prose-a:text-theme-300",
         "prose-strong:text-foreground",
         "prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:text-sm dark:prose-code:bg-foreground/10",
         "prose-pre:border prose-pre:border-border prose-pre:bg-surface-inverse prose-pre:text-inverse-foreground dark:prose-pre:border-foreground/10",
-        "prose-blockquote:border-l-theme-400 prose-blockquote:text-muted-foreground dark:prose-blockquote:text-secondary-foreground",
-        "prose-ul:my-2 prose-ol:my-2",
+        "prose-blockquote:my-density-3 prose-blockquote:border-l-theme-400 prose-blockquote:text-muted-foreground dark:prose-blockquote:text-secondary-foreground",
+        "prose-pre:my-density-3",
+        "prose-ul:my-density-2 prose-ol:my-density-2",
         className,
       )}
       dangerouslySetInnerHTML={{ __html: html }}

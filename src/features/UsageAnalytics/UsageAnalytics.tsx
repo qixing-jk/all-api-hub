@@ -556,7 +556,10 @@ export default function UsageAnalytics() {
     PRODUCT_ANALYTICS_SURFACE_IDS.OptionsUsageAnalyticsHeader
 
   return (
-    <div className="space-y-6 p-6" data-testid={USAGE_ANALYTICS_TEST_IDS.page}>
+    <div
+      className="space-y-density-6 py-density-6 px-6"
+      data-testid={USAGE_ANALYTICS_TEST_IDS.page}
+    >
       <PageHeader
         icon={BarChart3}
         title={t("title")}
@@ -580,7 +583,7 @@ export default function UsageAnalytics() {
             featureId={PRODUCT_ANALYTICS_FEATURE_IDS.UsageAnalytics}
             surfaceId={headerSurface}
           >
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2">
               <Button
                 size="sm"
                 variant="secondary"
@@ -623,8 +626,8 @@ export default function UsageAnalytics() {
       {/* summary card*/}
       {exportPreview ? (
         <Card padding="md">
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
-            <div className="space-y-1">
+          <div className="gap-y-density-4 grid grid-cols-2 gap-x-4 md:grid-cols-5">
+            <div className="space-y-density-1">
               <div className="text-muted-foreground text-xs">
                 {t("summary.promptTokens")}
               </div>
@@ -632,7 +635,7 @@ export default function UsageAnalytics() {
                 {formatTokenCount(selectionTotals.promptTokens)}
               </div>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-density-1">
               <div className="text-muted-foreground text-xs">
                 {t("summary.completionTokens")}
               </div>
@@ -640,7 +643,7 @@ export default function UsageAnalytics() {
                 {formatTokenCount(selectionTotals.completionTokens)}
               </div>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-density-1">
               <div className="text-muted-foreground text-xs">
                 {t("summary.totalTokens")}
               </div>
@@ -648,7 +651,7 @@ export default function UsageAnalytics() {
                 {formatTokenCount(selectionTotals.totalTokens)}
               </div>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-density-1">
               <div className="text-muted-foreground text-xs">
                 {t("summary.requests")}
               </div>
@@ -656,7 +659,7 @@ export default function UsageAnalytics() {
                 {formatTokenCount(selectionTotals.requests)}
               </div>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-density-1">
               <div className="text-muted-foreground text-xs">
                 {t("summary.cost")}
               </div>
@@ -677,13 +680,13 @@ export default function UsageAnalytics() {
           }
         >
           <Card padding="md">
-            <div className="space-y-2">
+            <div className="space-y-density-2">
               <div className="text-sm font-medium">{t("empty.title")}</div>
               <div className="text-muted-foreground text-sm">
                 {t("empty.description")}
               </div>
               {/* Quick navigation so users can enable sync immediately. */}
-              <div className="pt-1">
+              <div className="pt-density-1">
                 <WorkflowTransitionButton
                   size="sm"
                   variant="outline"
@@ -703,7 +706,7 @@ export default function UsageAnalytics() {
         <>
           {/*Daily Overview*/}
           <Card padding="md">
-            <div className="mb-4 space-y-1">
+            <div className="mb-density-4 space-y-density-1">
               <div className="text-sm font-medium">
                 {t("charts.dailyOverview.title")}
               </div>
@@ -720,10 +723,10 @@ export default function UsageAnalytics() {
             </div>
           </Card>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="gap-y-density-6 grid grid-cols-1 gap-x-6 lg:grid-cols-2">
             <Card padding="md">
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div className="min-w-0 space-y-1">
+              <div className="mb-density-4 gap-y-density-3 flex items-start justify-between gap-x-3">
+                <div className="space-y-density-1 min-w-0">
                   <div className="text-sm font-medium">
                     {t("charts.modelDistribution.title")}
                   </div>
@@ -751,8 +754,8 @@ export default function UsageAnalytics() {
             </Card>
 
             <Card padding="md">
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div className="min-w-0 space-y-1">
+              <div className="mb-density-4 gap-y-density-3 flex items-start justify-between gap-x-3">
+                <div className="space-y-density-1 min-w-0">
                   <div className="text-sm font-medium">
                     {t("charts.modelCostDistribution.title")}
                   </div>
@@ -780,8 +783,8 @@ export default function UsageAnalytics() {
             </Card>
 
             <Card padding="md">
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div className="min-w-0 space-y-1">
+              <div className="mb-density-4 gap-y-density-3 flex items-start justify-between gap-x-3">
+                <div className="space-y-density-1 min-w-0">
                   <div className="text-sm font-medium">
                     {t("charts.accountComparison.title")}
                   </div>
@@ -807,7 +810,7 @@ export default function UsageAnalytics() {
           </div>
 
           <Card padding="md">
-            <div className="mb-4 space-y-1">
+            <div className="mb-density-4 space-y-density-1">
               <div className="text-sm font-medium">
                 {t("charts.usageTimeHeatmap.title")}
               </div>
@@ -822,7 +825,7 @@ export default function UsageAnalytics() {
           </Card>
 
           <Card padding="md">
-            <div className="mb-4 space-y-1">
+            <div className="mb-density-4 space-y-density-1">
               <div className="text-sm font-medium">
                 {t("charts.modelHeatmap.title")}
               </div>
@@ -836,9 +839,9 @@ export default function UsageAnalytics() {
             </div>
           </Card>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="gap-y-density-6 grid grid-cols-1 gap-x-6 lg:grid-cols-2">
             <Card padding="md">
-              <div className="mb-4 space-y-1">
+              <div className="mb-density-4 space-y-density-1">
                 <div className="text-sm font-medium">
                   {t("charts.latencyHistogram.title")}
                   {focusModelName && focusModelName !== t("charts.other")
@@ -858,7 +861,7 @@ export default function UsageAnalytics() {
             </Card>
 
             <Card padding="md">
-              <div className="mb-4 space-y-1">
+              <div className="mb-density-4 space-y-density-1">
                 <div className="text-sm font-medium">
                   {t("charts.latencyTrend.title")}
                 </div>
@@ -873,10 +876,10 @@ export default function UsageAnalytics() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="gap-y-density-6 grid grid-cols-1 gap-x-6 lg:grid-cols-2">
             <Card padding="md">
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div className="min-w-0 space-y-1">
+              <div className="mb-density-4 gap-y-density-3 flex items-start justify-between gap-x-3">
+                <div className="space-y-density-1 min-w-0">
                   <div className="text-sm font-medium">
                     {t("charts.slowModels.title")}
                   </div>
@@ -901,8 +904,8 @@ export default function UsageAnalytics() {
             </Card>
 
             <Card padding="md">
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div className="min-w-0 space-y-1">
+              <div className="mb-density-4 gap-y-density-3 flex items-start justify-between gap-x-3">
+                <div className="space-y-density-1 min-w-0">
                   <div className="text-sm font-medium">
                     {t("charts.slowTokens.title")}
                   </div>

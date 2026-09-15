@@ -53,7 +53,7 @@ export default function UsageAnalyticsFiltersCard({
 
   return (
     <Card padding="md">
-      <div className="space-y-3">
+      <div className="space-y-density-3">
         {/*site filter*/}
         <div>
           <Label className="text-sm font-medium">{t("filters.sites")}</Label>
@@ -106,8 +106,8 @@ export default function UsageAnalyticsFiltersCard({
         />
 
         {/*Date range filter*/}
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <div className="space-y-2">
+        <div className="gap-y-density-3 grid grid-cols-1 gap-x-3 md:grid-cols-2">
+          <div className="space-y-density-2">
             <Label className="text-sm font-medium">
               {t("filters.startDay")}
             </Label>
@@ -120,7 +120,7 @@ export default function UsageAnalyticsFiltersCard({
               disabled={!minDay}
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-density-2">
             <Label className="text-sm font-medium">{t("filters.endDay")}</Label>
             <Input
               type="date"

@@ -55,10 +55,24 @@ describe("KeyManagement AccountSummaryBar", () => {
     ).toBeNull()
     expect(primaryBadge).toHaveClass("bg-primary-soft")
     expect(backupBadge).toHaveClass("bg-secondary")
+    expect(screen.getByRole("button", { name: /Primary Account/ })).toBe(
+      primaryBadge,
+    )
+    expect(
+      screen.getByRole("button", { name: /Primary Account/ }),
+    ).toHaveAttribute("aria-pressed", "true")
+    expect(
+      screen.getByRole("button", { name: /Backup Account/ }),
+    ).toHaveAttribute("aria-pressed", "false")
 
     await user.click(screen.getByText("Backup Account"))
     expect(onAccountClick).toHaveBeenCalledWith("account-2")
     expect(onAccountClick).toHaveBeenCalledTimes(1)
+
+    screen.getByRole("button", { name: /Backup Account/ }).focus()
+    await user.keyboard("{Enter}")
+    expect(onAccountClick).toHaveBeenCalledWith("account-2")
+    expect(onAccountClick).toHaveBeenCalledTimes(2)
 
     rerender(
       <AccountSummaryBar

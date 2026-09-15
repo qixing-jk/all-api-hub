@@ -29,7 +29,7 @@ const ApiCredentialProfilesPopupView = forwardRef<
 
   return (
     <div
-      className="space-y-4 p-3 sm:p-4"
+      className="space-y-density-4 py-density-3 sm:py-density-4 px-3 sm:px-4"
       data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.popupView}
     >
       <ApiCredentialProfilesListView

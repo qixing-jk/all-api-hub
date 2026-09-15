@@ -134,7 +134,7 @@ export function NewApiManagedVerificationDialog(
   const [isSavingQuickConfig, setIsSavingQuickConfig] = useState(false)
 
   const header = (
-    <div className="flex flex-col gap-1 pr-8">
+    <div className="gap-y-density-1 flex flex-col gap-x-1 pr-8">
       <div className="text-foreground text-lg font-semibold">
         {getDialogTitle(t, props.request)}
       </div>
@@ -271,7 +271,7 @@ export function NewApiManagedVerificationDialog(
   }
 
   const footer = (
-    <div className="flex flex-wrap justify-end gap-2">
+    <div className="gap-y-density-2 flex flex-wrap justify-end gap-x-2">
       {props.step === NEW_API_MANAGED_VERIFICATION_STEPS.PASSKEY_MANUAL ? (
         <>
           <WorkflowTransitionButton
@@ -336,13 +336,13 @@ export function NewApiManagedVerificationDialog(
       closeOnBackdropClick={!props.isBusy}
       closeOnEsc={!props.isBusy}
     >
-      <div className="space-y-4">
+      <div className="space-y-density-4">
         {props.isBusy ? (
           <div
             role="status"
             aria-live="polite"
             aria-atomic="true"
-            className="border-theme-200 bg-theme-50 text-theme-700 dark:border-theme-900/60 dark:bg-theme-950/40 dark:text-theme-200 rounded-lg border px-3 py-2 text-sm"
+            className="border-theme-200 bg-theme-50 text-theme-700 dark:border-theme-900/60 dark:bg-theme-950/40 dark:text-theme-200 py-density-2 rounded-lg border px-3 text-sm"
           >
             {props.busyMessage || t("dialog.messages.starting")}
           </div>
@@ -353,14 +353,14 @@ export function NewApiManagedVerificationDialog(
             role="alert"
             aria-live="assertive"
             aria-atomic="true"
-            className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground rounded-lg border px-3 py-2 text-sm"
+            className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground py-density-2 rounded-lg border px-3 text-sm"
           >
             {props.errorMessage}
           </div>
         ) : null}
 
         {shouldShowSettingsAction ? (
-          <div className="border-border bg-surface-subtle/80 dark:border-border-subtle dark:bg-background/40 flex min-h-32 flex-col items-center justify-center rounded-xl border border-dashed px-4 py-6 text-center">
+          <div className="border-border bg-surface-subtle/80 dark:border-border-subtle dark:bg-background/40 py-density-6 flex min-h-32 flex-col items-center justify-center rounded-xl border border-dashed px-4 text-center">
             <p className="text-muted-foreground dark:text-secondary-foreground text-sm">
               {t("dialog.hints.openSettingsShortcut")}
             </p>
@@ -369,15 +369,15 @@ export function NewApiManagedVerificationDialog(
                 role="alert"
                 aria-live="assertive"
                 aria-atomic="true"
-                className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground mt-4 w-full rounded-lg border px-3 py-2 text-left text-sm"
+                className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground mt-density-4 py-density-2 w-full rounded-lg border px-3 text-left text-sm"
               >
                 {quickConfigError}
               </div>
             ) : null}
             {shouldShowQuickConfig ? (
-              <div className="mt-4 w-full max-w-md space-y-3 text-left">
+              <div className="mt-density-4 space-y-density-3 w-full max-w-md text-left">
                 {needsBaseUrl ? (
-                  <div className="space-y-2">
+                  <div className="space-y-density-2">
                     <label
                       htmlFor="new-api-quick-base-url"
                       className="text-secondary-foreground block text-sm font-medium"
@@ -397,7 +397,7 @@ export function NewApiManagedVerificationDialog(
                 ) : null}
                 {needsCredentials ? (
                   <>
-                    <div className="space-y-2">
+                    <div className="space-y-density-2">
                       <label
                         htmlFor="new-api-quick-username"
                         className="text-secondary-foreground block text-sm font-medium"
@@ -416,7 +416,7 @@ export function NewApiManagedVerificationDialog(
                         )}
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-density-2">
                       <label
                         htmlFor="new-api-quick-password"
                         className="text-secondary-foreground block text-sm font-medium"
@@ -442,7 +442,7 @@ export function NewApiManagedVerificationDialog(
                     </div>
                   </>
                 ) : null}
-                <div className="flex flex-wrap justify-center gap-2 pt-1">
+                <div className="gap-y-density-2 pt-density-1 flex flex-wrap justify-center gap-x-2">
                   <Button
                     onClick={() => void handleSaveQuickConfig()}
                     disabled={props.isBusy}
@@ -459,14 +459,14 @@ export function NewApiManagedVerificationDialog(
         ) : null}
 
         {isCodeEntryStep ? (
-          <div className="space-y-2">
+          <div className="space-y-density-2">
             <label
               htmlFor="new-api-verification-code"
               className="text-secondary-foreground block text-sm font-medium"
             >
               {t("dialog.fields.codeLabel")}
             </label>
-            <div className="border-border bg-surface-subtle/80 dark:border-border-subtle dark:bg-background/40 rounded-xl border px-4 py-4">
+            <div className="border-border bg-surface-subtle/80 dark:border-border-subtle dark:bg-background/40 py-density-4 rounded-xl border px-4">
               <div className="flex justify-center">
                 <InputOTP
                   id="new-api-verification-code"

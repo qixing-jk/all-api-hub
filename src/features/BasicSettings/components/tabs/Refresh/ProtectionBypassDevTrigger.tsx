@@ -319,10 +319,10 @@ export function ProtectionBypassDevTrigger() {
       rightContent={
         <div
           data-testid="shield-dev-trigger-form"
-          className="grid w-full min-w-0 gap-3 text-left"
+          className="gap-y-density-3 grid w-full min-w-0 gap-x-3 text-left"
         >
-          <div className="grid gap-3 [@container(min-width:42rem)]:grid-cols-[minmax(0,1fr)_8rem]">
-            <div className="space-y-1.5">
+          <div className="gap-y-density-3 grid gap-x-3 [@container(min-width:42rem)]:grid-cols-[minmax(0,1fr)_8rem]">
+            <div className="space-y-density-1-5">
               <Label htmlFor="shield-dev-trigger-preset">
                 {t("refresh.shieldDevTriggerPresetLabel")}
               </Label>
@@ -348,7 +348,7 @@ export function ProtectionBypassDevTrigger() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-density-1-5">
               <Label htmlFor="shield-dev-trigger-delay">
                 {t("refresh.shieldDevTriggerDelayLabel")}
               </Label>
@@ -364,7 +364,7 @@ export function ProtectionBypassDevTrigger() {
               />
             </div>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-density-1-5">
             <Label htmlFor="shield-dev-trigger-url">
               {t("refresh.shieldDevTriggerUrlLabel")}
             </Label>
@@ -377,7 +377,7 @@ export function ProtectionBypassDevTrigger() {
               disabled={isBusy}
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2">
             {isWaiting ? (
               <Button size="sm" variant="outline" onClick={handleCancel}>
                 {t("refresh.shieldDevTriggerCancel")}
@@ -413,7 +413,7 @@ export function ProtectionBypassDevTrigger() {
             <div
               role="group"
               aria-label={t("refresh.shieldDevFocusTitle")}
-              className="grid gap-1"
+              className="gap-y-density-1 grid gap-x-1"
             >
               <BodySmall className="font-medium">
                 {t("refresh.shieldDevFocusTitle")}

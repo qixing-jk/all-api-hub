@@ -148,17 +148,17 @@ function PricingConditionGroup({
   children: ReactNode
 }) {
   return (
-    <details className="group/condition py-1">
-      <summary className="text-foreground hover:bg-muted/50 focus-visible:ring-ring flex cursor-pointer list-none items-center gap-2 rounded-md px-1 py-2 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+    <details className="group/condition py-density-1">
+      <summary className="text-foreground hover:bg-muted/50 focus-visible:ring-ring gap-y-density-2 py-density-2 flex cursor-pointer list-none items-center gap-x-2 rounded-md px-1 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
         <ChevronDown
           className="text-muted-foreground size-4 shrink-0 -rotate-90 transition-transform group-open/condition:rotate-0"
           aria-hidden="true"
         />
         {title}
       </summary>
-      <div className="space-y-3 px-1 pt-1 pb-3">
+      <div className="space-y-density-3 pt-density-1 pb-density-3 px-1">
         <p className="text-muted-foreground text-xs leading-5">{description}</p>
-        <div className="grid grid-cols-1 gap-3 [@container(min-width:28rem)]:grid-cols-2 [@container(min-width:48rem)]:grid-cols-3">
+        <div className="gap-y-density-3 grid grid-cols-1 gap-x-3 [@container(min-width:28rem)]:grid-cols-2 [@container(min-width:48rem)]:grid-cols-3">
           {children}
         </div>
       </div>
@@ -411,7 +411,7 @@ export function PricingScenarioControls({
             description={t("scenario.mediaSettingsEffect")}
           >
             {hasAreaCondition && (
-              <div className="space-y-1">
+              <div className="space-y-density-1">
                 <QuantityField
                   target={PRICING_SCENARIO_EXTRA_FIELDS.IMAGE_MEGAPIXELS}
                   label={options.labels.imageMegapixels}
@@ -421,7 +421,7 @@ export function PricingScenarioControls({
                     onChange({ ...settings, imageMegapixels })
                   }
                 />
-                <div className="flex flex-wrap gap-2">
+                <div className="gap-y-density-2 flex flex-wrap gap-x-2">
                   {[1024, 1536, 2048].map((edge) => (
                     <button
                       key={edge}
@@ -478,7 +478,7 @@ export function PricingScenarioControls({
       </div>
     ) : null
   const summary = conditionFields ? (
-    <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
+    <div className="text-muted-foreground gap-y-density-1 flex flex-wrap gap-x-4 text-xs">
       {taskFields.map(({ meter, defaultValue }) => (
         <span key={meter}>
           {options.labels[meter]}:{" "}
@@ -545,9 +545,9 @@ export function PricingScenarioControls({
       ref={navigation?.controlsRef}
       tabIndex={-1}
       aria-label={t("scenario.configure")}
-      className="dark:bg-background/40 border-border bg-surface-subtle/70 [&_[data-pricing-highlight]]:ring-theme-500 relative mt-4 space-y-3 rounded-md border p-3 [&_[data-pricing-highlight]]:ring-2 [&_[data-pricing-highlight]]:ring-offset-2"
+      className="dark:bg-background/40 border-border bg-surface-subtle/70 [&_[data-pricing-highlight]]:ring-theme-500 mt-density-4 space-y-density-3 py-density-3 relative rounded-md border px-3 [&_[data-pricing-highlight]]:ring-2 [&_[data-pricing-highlight]]:ring-offset-2"
     >
-      <div className="space-y-1 [@container(min-width:48rem)]:pr-44">
+      <div className="space-y-density-1 [@container(min-width:48rem)]:pr-44">
         <h3
           id="model-price-comparison-title"
           className="text-foreground text-sm font-semibold"

@@ -38,17 +38,17 @@ export function FeedbackReportEditor({
       onToggle={(event) => setPreviewOpen(event.currentTarget.open)}
       className="group corners-concentric border-border rounded-lg border [--corner-inset:1px]"
     >
-      <summary className="hover:bg-surface-subtle focus-visible:outline-ring dark:hover:bg-card/50 flex cursor-pointer list-none items-center justify-between gap-2 rounded-[var(--corner-inner-radius)] px-4 py-3 text-sm font-medium group-open:rounded-b-none focus-visible:outline-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
+      <summary className="hover:bg-surface-subtle focus-visible:outline-ring dark:hover:bg-card/50 gap-y-density-2 py-density-3 flex cursor-pointer list-none items-center justify-between gap-x-2 rounded-[var(--corner-inner-radius)] px-4 text-sm font-medium group-open:rounded-b-none focus-visible:outline-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
         {t("checkInFeedback.preview")}
         <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
       </summary>
-      <div className="border-border space-y-4 border-t p-4">
+      <div className="border-border space-y-density-4 py-density-4 border-t px-4">
         <FeedbackReportPreview content={report} />
-        <details className="border-border border-t pt-3">
+        <details className="border-border pt-density-3 border-t">
           <summary className="cursor-pointer text-xs font-medium">
             {t("checkInFeedback.editReport")}
           </summary>
-          <div className="mt-3 space-y-3">
+          <div className="mt-density-3 space-y-density-3">
             <FormField
               label={t("checkInFeedback.details")}
               htmlFor={`${id}-details`}
@@ -82,12 +82,12 @@ export function FeedbackReportEditor({
         <details
           open={rawOpen}
           onToggle={(event) => setRawOpen(event.currentTarget.open)}
-          className="border-border border-t pt-3"
+          className="border-border pt-density-3 border-t"
         >
           <summary className="cursor-pointer text-xs font-medium">
             {t("checkInFeedback.fullReport")}
           </summary>
-          <div className="mt-3">
+          <div className="mt-density-3">
             <FormField
               label={t("checkInFeedback.fullReport")}
               labelClassName="sr-only"

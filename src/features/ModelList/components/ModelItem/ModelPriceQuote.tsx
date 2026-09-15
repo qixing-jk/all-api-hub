@@ -287,9 +287,9 @@ export function ModelPriceQuote({
       </button>
     ) : null
   return (
-    <div className="mt-2 space-y-2 text-xs">
+    <div className="mt-density-2 space-y-density-2 text-xs">
       {showSummary && (
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <div className="gap-y-density-1 flex flex-wrap items-baseline gap-x-2">
           {(hasKnownSubtotal || isPriceIndex) && (
             <span>
               {quote.unit === QUOTE_UNITS.IMAGE
@@ -336,7 +336,7 @@ export function ModelPriceQuote({
         </div>
       )}
       {showSummary && !details && (
-        <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
+        <div className="text-muted-foreground gap-y-density-1 flex flex-wrap items-center gap-x-3">
           {quote.unit === QUOTE_UNITS.MILLION_SELECTED_TOKENS && (
             <span>{t("scenario.calculationHint")}</span>
           )}
@@ -364,9 +364,9 @@ export function ModelPriceQuote({
       {showSummary &&
         publishedBase &&
         quote.status !== QUOTE_STATUSES.COMPLETE && (
-          <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+          <div className="text-muted-foreground gap-y-density-1 flex flex-wrap gap-x-4">
             <span>{t("scenario.publishedPrices")}</span>
-            <div className="flex flex-wrap gap-x-4 gap-y-1">
+            <div className="gap-y-density-1 flex flex-wrap gap-x-4">
               {Object.entries(publishedBase.rates).map(([meter, rate]) => (
                 <span key={meter}>
                   {meterLabels[meter as PriceMeter]}:{" "}
@@ -397,7 +397,7 @@ export function ModelPriceQuote({
           </p>
         )}
       {showSummary && activeRanges.length > 0 && (
-        <div className="bg-muted/20 border-primary/40 space-y-1 rounded-r-md border-l-2 py-1.5 pr-2 pl-2.5">
+        <div className="bg-muted/20 border-primary/40 space-y-density-1 py-density-1-5 rounded-r-md border-l-2 pr-2 pl-2.5">
           <Badge variant="secondary">{t("scenario.tiered")}</Badge>
           {activeRanges.map((condition, index) => (
             <p key={index}>

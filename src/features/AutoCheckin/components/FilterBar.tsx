@@ -206,7 +206,7 @@ export default function FilterBar({
           "",
         )
       }}
-      controlsClassName="grid gap-2 md:grid-cols-[minmax(14rem,1fr)_minmax(12rem,auto)] md:items-center"
+      controlsClassName="grid gap-x-2 gap-y-density-2 md:grid-cols-[minmax(14rem,1fr)_minmax(12rem,auto)] md:items-center"
     >
       <div className="relative w-full lg:max-w-xs">
         <Input
@@ -237,11 +237,11 @@ export default function FilterBar({
             className="w-full justify-between md:w-56"
             aria-label={`${t("execution.filters.statusLabel")}: ${selectedStatusSummary}`}
           >
-            <span className="flex min-w-0 items-center gap-2">
+            <span className="gap-y-density-2 flex min-w-0 items-center gap-x-2">
               <List className="h-4 w-4 shrink-0" />
               <span className="truncate">{selectedStatusSummary}</span>
             </span>
-            <span className="flex shrink-0 items-center gap-1.5">
+            <span className="gap-y-density-1-5 flex shrink-0 items-center gap-x-1.5">
               {selectedStatuses.length > 0 ? (
                 <Badge variant="secondary" size="sm">
                   {selectedStatuses.length}

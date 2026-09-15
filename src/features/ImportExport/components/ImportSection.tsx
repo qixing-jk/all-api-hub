@@ -191,7 +191,7 @@ const ImportSection = ({
     <section id="import-section" className="flex min-w-0 flex-col">
       <Card padding="none" className="flex flex-1 flex-col">
         <CardHeader>
-          <div className="flex items-center gap-2">
+          <div className="gap-y-density-2 flex items-center gap-x-2">
             <Download className="text-theme-600 dark:text-theme-400 h-5 w-5" />
             <CardTitle className="mb-0 text-base">
               {t("import.title")}
@@ -203,7 +203,7 @@ const ImportSection = ({
         <CardContent
           padding="md"
           spacing="none"
-          className="flex flex-1 flex-col gap-5"
+          className="gap-y-density-5 flex flex-1 flex-col gap-x-5"
         >
           {/* 文件选择 */}
           <FormField
@@ -220,7 +220,7 @@ const ImportSection = ({
                   handleFileImport(event)
                   setShowJson(false)
                 }}
-                className="text-muted-foreground file:bg-theme-50 file:text-theme-700 hover:file:bg-theme-100 dark:file:bg-theme-900/30 dark:file:text-theme-300 dark:hover:file:bg-theme-900/50 block w-full text-sm file:mr-4 file:rounded-md file:border-0 file:px-4 file:py-2 file:text-sm file:font-medium"
+                className="text-muted-foreground file:bg-theme-50 file:text-theme-700 hover:file:bg-theme-100 dark:file:bg-theme-900/30 dark:file:text-theme-300 dark:hover:file:bg-theme-900/50 file:py-density-2 block w-full text-sm file:mr-4 file:rounded-md file:border-0 file:px-4 file:text-sm file:font-medium"
               />
             </div>
           </FormField>
@@ -249,9 +249,9 @@ const ImportSection = ({
             (validation.valid ? (
               <div
                 role="status"
-                className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm"
+                className="gap-y-density-1 flex flex-wrap items-center gap-x-4 text-sm"
               >
-                <span className="text-success-text flex items-center gap-2">
+                <span className="text-success-text gap-y-density-2 flex items-center gap-x-2">
                   <CheckCircle2
                     className="size-4 shrink-0"
                     aria-hidden="true"
@@ -274,11 +274,15 @@ const ImportSection = ({
                 <CardList className="overflow-hidden">
                   {visibleImportSections.map(
                     ({ key, title, description, strategies }) => (
-                      <CardItem key={key} padding="none" className="py-3">
-                        <div className="flex w-full flex-wrap items-center justify-between gap-3">
+                      <CardItem
+                        key={key}
+                        padding="none"
+                        className="py-density-3"
+                      >
+                        <div className="gap-y-density-3 flex w-full flex-wrap items-center justify-between gap-x-3">
                           <div className="min-w-0 flex-1 basis-56">
                             <p className="text-sm font-medium">{title}</p>
-                            <p className="text-muted-foreground mt-1 text-sm">
+                            <p className="text-muted-foreground mt-density-1 text-sm">
                               {description}
                             </p>
                           </div>
@@ -322,7 +326,7 @@ const ImportSection = ({
                   )}
                 </CardList>
                 {hasReplaceStrategy && (
-                  <p className="text-warning-text mt-2 text-xs">
+                  <p className="text-warning-text mt-density-2 text-xs">
                     {t("import.replaceWarning")}
                   </p>
                 )}

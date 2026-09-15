@@ -264,7 +264,7 @@ export default function BookmarkDialog({
         size="md"
         panelTestId={SITE_BOOKMARKS_TEST_IDS.dialog}
         header={
-          <div className="space-y-1">
+          <div className="space-y-density-1">
             <div className="text-base font-semibold">{title}</div>
             <div className="text-muted-foreground text-xs">
               {t("bookmark:dialog.description")}
@@ -272,7 +272,7 @@ export default function BookmarkDialog({
           </div>
         }
         footer={
-          <div className="flex justify-end gap-2">
+          <div className="gap-y-density-2 flex justify-end gap-x-2">
             <Button
               type="button"
               variant="ghost"
@@ -305,14 +305,14 @@ export default function BookmarkDialog({
         }
       >
         {mode === "add" && (
-          <div className="bg-theme-50 text-theme-700 dark:bg-theme-900/20 dark:text-theme-300 rounded-md p-3 text-xs">
-            <div className="flex items-start justify-between gap-3">
+          <div className="bg-theme-50 text-theme-700 dark:bg-theme-900/20 dark:text-theme-300 py-density-3 rounded-md px-3 text-xs">
+            <div className="gap-y-density-3 flex items-start justify-between gap-x-3">
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1 font-medium">
+                <div className="gap-y-density-1 flex items-center gap-x-1 font-medium">
                   <Info className="h-4 w-4 shrink-0" />
                   <span>{t("bookmark:dialog.currentPageLabel")}</span>
                 </div>
-                <div className="mt-1 truncate font-medium">
+                <div className="mt-density-1 truncate font-medium">
                   {currentPage?.title ||
                     (!isCurrentPageLoading &&
                       t("bookmark:dialog.currentPageUnavailable"))}

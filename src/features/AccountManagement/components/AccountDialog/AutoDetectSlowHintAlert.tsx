@@ -42,15 +42,15 @@ export default function AutoDetectSlowHintAlert({
 
   return (
     <>
-      <Alert variant="default" className="mb-4">
+      <Alert variant="default" className="mb-density-4">
         <div>
-          <p className="mb-2 text-xs">
+          <p className="mb-density-2 text-xs">
             {t("accountDialog:messages.autoDetectTakingTooLong")}
           </p>
-          <p className="mb-2 text-xs">
+          <p className="mb-density-2 text-xs">
             {t("accountDialog:messages.autoDetectCookiePermissionReloadHint")}
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="gap-y-density-2 flex flex-wrap gap-x-2">
             <Button
               type="button"
               onClick={handleHelpClick}

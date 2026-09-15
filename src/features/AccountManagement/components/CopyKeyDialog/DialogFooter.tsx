@@ -30,7 +30,7 @@ export function DialogFooter({
           </div>
         )}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="gap-y-density-2 flex items-center gap-x-2">
         {onOpenKeyManagement ? (
           <Button
             type="button"

@@ -119,7 +119,7 @@ export default function BookmarkListItem({
               <Caption className="truncate">{bookmark.url}</Caption>
             </Button>
             {bookmark.tags && bookmark.tags.length > 0 && (
-              <div className="gap-density-1 mt-1 flex flex-wrap">
+              <div className="gap-density-1 mt-density-1 flex flex-wrap">
                 {bookmark.tags.slice(0, 6).map((tag) => (
                   <Badge key={tag} variant="secondary" className="text-[10px]">
                     {tag}
@@ -194,7 +194,7 @@ export default function BookmarkListItem({
                     }
                     testId={SITE_BOOKMARKS_TEST_IDS.rowPinToggleMenuItem}
                   />
-                  <DropdownMenuSeparator className="bg-secondary my-1" />
+                  <DropdownMenuSeparator className="bg-secondary my-density-1" />
                   <AccountActionMenuItem
                     onClick={() => onDelete()}
                     icon={Trash2}

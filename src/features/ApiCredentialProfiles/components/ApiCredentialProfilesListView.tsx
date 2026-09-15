@@ -293,7 +293,7 @@ export function ApiCredentialProfilesListView({
       API_CREDENTIAL_PROFILE_ASSOCIATION_UNAVAILABLE_REASONS.Error
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn("space-y-density-4", className)}>
       <ApiCredentialProfilesDialogs controller={controller} />
 
       {hasAssociationAvailabilityError ? (
@@ -338,7 +338,7 @@ export function ApiCredentialProfilesListView({
         />
       ) : null}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="gap-y-density-3 grid grid-cols-1 gap-x-3 sm:grid-cols-3">
         <div className="sm:col-span-2">
           <Input
             autoFocus={autoFocusSearch}
@@ -399,7 +399,7 @@ export function ApiCredentialProfilesListView({
       />
 
       {controller.isLoading && !isInitialLoading ? (
-        <div className="flex items-center gap-2 py-1">
+        <div className="gap-y-density-2 py-density-1 flex items-center gap-x-2">
           <Spinner size="sm" />
           <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
             {t("common:status.refreshing")}
@@ -408,14 +408,14 @@ export function ApiCredentialProfilesListView({
       ) : null}
 
       {isInitialLoading ? (
-        <div className="flex items-center gap-2 py-6">
+        <div className="gap-y-density-2 py-density-6 flex items-center gap-x-2">
           <Spinner size="sm" />
           <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
             {t("common:status.loading")}
           </div>
         </div>
       ) : filteredProfiles.length === 0 ? (
-        <div className="mx-auto flex max-w-md flex-col gap-4">
+        <div className="gap-y-density-4 mx-auto flex max-w-md flex-col gap-x-4">
           <EmptyState
             icon={<ApiCredentialLibraryIcon className="h-8 w-8" />}
             title={

@@ -343,7 +343,7 @@ export function TagPicker({
       : placeholder ?? t("form.tagsPlaceholder")
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-density-2">
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -357,11 +357,11 @@ export function TagPicker({
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="p-3"
+          className="py-density-3 px-3"
           align="start"
           container={portalContainer ?? undefined}
         >
-          <div className="space-y-3">
+          <div className="space-y-density-3">
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -403,10 +403,10 @@ export function TagPicker({
             <div
               id={listboxId}
               role="listbox"
-              className="max-h-64 space-y-1 overflow-auto"
+              className="space-y-density-1 max-h-64 overflow-auto"
             >
               {filteredTags.length === 0 ? (
-                <div className="text-muted-foreground px-2 py-1 text-sm">
+                <div className="text-muted-foreground py-density-1 px-2 text-sm">
                   {t("form.tagsNoResults")}
                 </div>
               ) : (
@@ -428,16 +428,16 @@ export function TagPicker({
                       aria-selected={isSelected}
                       data-active={isActive}
                       className={[
-                        "flex items-center justify-between gap-2 rounded-md px-2 py-1",
+                        "gap-y-density-2 py-density-1 flex items-center justify-between gap-x-2 rounded-md px-2",
                         isActive ? "bg-accent" : "hover:bg-accent",
                       ].join(" ")}
                     >
                       {isEditing ? (
-                        <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                        <div className="gap-y-density-2 flex min-w-0 flex-1 items-center gap-x-2 text-left">
                           <span className="flex h-4 w-4 items-center justify-center rounded-sm border">
                             {isSelected && <Check className="h-3 w-3" />}
                           </span>
-                          <span className="flex min-w-0 flex-1 items-center gap-2">
+                          <span className="gap-y-density-2 flex min-w-0 flex-1 items-center gap-x-2">
                             <Input
                               value={editingName}
                               onChange={(e) => setEditingName(e.target.value)}
@@ -482,14 +482,14 @@ export function TagPicker({
                       ) : (
                         <button
                           type="button"
-                          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                          className="gap-y-density-2 flex min-w-0 flex-1 items-center gap-x-2 text-left"
                           onClick={() => toggleTag(tag.id)}
                           disabled={disabled || isWorking}
                         >
                           <span className="flex h-4 w-4 items-center justify-center rounded-sm border">
                             {isSelected && <Check className="h-3 w-3" />}
                           </span>
-                          <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                          <span className="gap-y-density-2 flex min-w-0 flex-1 items-center justify-between gap-x-2">
                             <span className="truncate">{tag.name}</span>
                             {count > 0 && (
                               <Badge variant="outline" className="shrink-0">
@@ -501,7 +501,7 @@ export function TagPicker({
                       )}
 
                       {!isEditing && (
-                        <span className="flex shrink-0 items-center gap-1">
+                        <span className="gap-y-density-1 flex shrink-0 items-center gap-x-1">
                           <IconButton
                             type="button"
                             variant="ghost"
@@ -539,12 +539,12 @@ export function TagPicker({
       </Popover>
 
       {selectedTags.length > 0 && (
-        <div className="flex flex-wrap gap-1">
+        <div className="gap-y-density-1 flex flex-wrap gap-x-1">
           {selectedTags.map((tag) => (
             <Badge
               key={tag.id}
               variant="secondary"
-              className="flex items-center gap-1"
+              className="gap-y-density-1 flex items-center gap-x-1"
             >
               <span className="max-w-40 truncate">{tag.name}</span>
               {!disabled && (

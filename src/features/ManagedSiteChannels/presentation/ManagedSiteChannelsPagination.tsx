@@ -40,8 +40,8 @@ export function ManagedSiteChannelsPagination({
   const end = Math.min((pagination.pageIndex + 1) * pagination.pageSize, total)
 
   return (
-    <div className="border-border bg-surface-subtle/70 dark:bg-background/20 flex flex-wrap items-center gap-3 border-t px-4 py-3 text-sm">
-      <div className="flex items-center gap-2">
+    <div className="border-border bg-surface-subtle/70 dark:bg-background/20 gap-y-density-3 py-density-3 flex flex-wrap items-center gap-x-3 border-t px-4 text-sm">
+      <div className="gap-y-density-2 flex items-center gap-x-2">
         <Label htmlFor="rows-per-page" className="text-xs font-medium">
           {labels.rowsPerPage}
         </Label>
@@ -88,7 +88,7 @@ export function ManagedSiteChannelsPagination({
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="gap-y-density-2 flex items-center gap-x-2">
         <Button
           size="icon"
           variant="outline"

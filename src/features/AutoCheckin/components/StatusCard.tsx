@@ -146,13 +146,13 @@ export default function StatusCard({
 
   return (
     <Card>
-      <CardContent className="space-y-4" padding="md">
-        <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
+      <CardContent className="space-y-density-4" padding="md">
+        <div className="gap-y-density-4 grid grid-cols-1 gap-x-6 sm:grid-cols-2 xl:grid-cols-4">
           <div>
             <div className="text-muted-foreground text-sm font-medium">
               {t("status.lastRun")}
             </div>
-            <div className="mt-1 text-base font-semibold">
+            <div className="mt-density-1 text-base font-semibold">
               {formatLocaleDateTime(status.lastRunAt, t("status.notScheduled"))}
             </div>
           </div>
@@ -161,7 +161,7 @@ export default function StatusCard({
             <div className="text-muted-foreground text-sm font-medium">
               {t("status.nextDaily")}
             </div>
-            <div className="mt-1 text-base font-semibold">
+            <div className="mt-density-1 text-base font-semibold">
               {getNextDailyText()}
             </div>
           </div>
@@ -170,7 +170,7 @@ export default function StatusCard({
             <div className="text-muted-foreground text-sm font-medium">
               {t("status.nextRetry")}
             </div>
-            <div className="mt-1 text-base font-semibold">
+            <div className="mt-density-1 text-base font-semibold">
               {getNextRetryText()}
               {hasPendingRetry && isRetryEnabled && (
                 <span className="bg-warning-soft text-warning-soft-foreground ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold">
@@ -184,10 +184,10 @@ export default function StatusCard({
             <div className="text-muted-foreground text-sm font-medium">
               {t("execution.statistics.result")}
             </div>
-            <div className="mt-1">
+            <div className="mt-density-1">
               {status.lastRunResult && (
                 <span
-                  className={`inline-block rounded px-2 py-1 text-sm font-medium ${getResultBadgeColor(status.lastRunResult)}`}
+                  className={`py-density-1 inline-block rounded px-2 text-sm font-medium ${getResultBadgeColor(status.lastRunResult)}`}
                 >
                   {getAutoCheckinRunResultLabel(t, status.lastRunResult)}
                 </span>
@@ -200,11 +200,11 @@ export default function StatusCard({
             </div>
           </div>
         </div>
-        <div className="border-border border-t pt-4">
+        <div className="border-border pt-density-4 border-t">
           <div className="text-muted-foreground text-sm font-medium">
             {t("status.summary.title")}
           </div>
-          <div className="text-muted-foreground dark:text-secondary-foreground mt-2 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3 lg:grid-cols-7">
+          <div className="text-muted-foreground dark:text-secondary-foreground mt-density-2 gap-y-density-3 grid grid-cols-2 gap-x-6 text-sm sm:grid-cols-3 lg:grid-cols-7">
             {summaryItems.map((item) => (
               <div key={item.label} className="flex flex-col">
                 <span className="text-muted-foreground text-xs">
@@ -219,7 +219,7 @@ export default function StatusCard({
         </div>
       </CardContent>
       {actions ? (
-        <CardFooter className="block px-4 py-3 sm:px-6" padding="none">
+        <CardFooter className="py-density-3 block px-4 sm:px-6" padding="none">
           {actions}
         </CardFooter>
       ) : null}

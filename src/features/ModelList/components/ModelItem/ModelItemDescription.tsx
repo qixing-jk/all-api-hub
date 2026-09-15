@@ -21,7 +21,7 @@ export const ModelItemDescription: React.FC<ModelItemDescriptionProps> = ({
   }
 
   return (
-    <div className="mb-2">
+    <div className="mb-density-2">
       <p
         className={`text-sm leading-relaxed ${
           isAvailableForUser

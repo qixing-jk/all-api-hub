@@ -96,7 +96,7 @@ export default function CheckInFeedbackDialog({
       size="md"
     >
       {unavailable ? (
-        <div className="space-y-3">
+        <div className="space-y-density-3">
           <p role="alert">{t("checkInFeedback.accountUnavailable")}</p>
           <Button
             type="button"

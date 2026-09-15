@@ -134,8 +134,8 @@ export function AssociateApiCredentialProfileDialog({
       showCloseButton={!isWorking}
       size="md"
       header={
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-base font-semibold">
+        <div className="space-y-density-1">
+          <div className="gap-y-density-2 flex items-center gap-x-2 text-base font-semibold">
             <Link2 aria-hidden="true" className="h-4 w-4" />
             {t("apiCredentialProfiles:association.linkExisting")}
           </div>
@@ -145,7 +145,7 @@ export function AssociateApiCredentialProfileDialog({
         </div>
       }
       footer={
-        <div className="flex w-full items-center justify-end gap-2">
+        <div className="gap-y-density-2 flex w-full items-center justify-end gap-x-2">
           <Button
             type="button"
             variant="outline"
@@ -169,18 +169,18 @@ export function AssociateApiCredentialProfileDialog({
       }
       panelTestId={KEY_MANAGEMENT_TEST_IDS.associateCredentialDialog}
     >
-      <div className="space-y-4">
-        <div className="rounded-md border p-3 text-sm">
+      <div className="space-y-density-4">
+        <div className="py-density-3 rounded-md border px-3 text-sm">
           <div className="text-muted-foreground text-xs">
             {t("apiCredentialProfiles:association.resourceLabel")}
           </div>
-          <div className="mt-1 font-medium break-all">
+          <div className="mt-density-1 font-medium break-all">
             {getLocatorLabel(locator, t, displayLabel)}
           </div>
         </div>
 
         {existingProfileNames.length > 0 ? (
-          <div className="border-warning-border bg-warning-soft text-warning-soft-foreground rounded-md border p-3 text-sm">
+          <div className="border-warning-border bg-warning-soft text-warning-soft-foreground py-density-3 rounded-md border px-3 text-sm">
             {t("apiCredentialProfiles:association.replaceExisting", {
               names: existingProfileNames.join(", "),
             })}
@@ -190,7 +190,7 @@ export function AssociateApiCredentialProfileDialog({
         {isProfilesLoading ? (
           <div
             role="status"
-            className="text-muted-foreground flex items-center gap-2 text-sm"
+            className="text-muted-foreground gap-y-density-2 flex items-center gap-x-2 text-sm"
           >
             <Spinner size="sm" />
             {t("apiCredentialProfiles:association.loadingProfiles")}
@@ -227,7 +227,7 @@ export function AssociateApiCredentialProfileDialog({
             ) : null}
           </>
         ) : (
-          <div className="space-y-3 text-sm">
+          <div className="space-y-density-3 text-sm">
             <p className="text-muted-foreground">
               {t("apiCredentialProfiles:association.noProfiles")}
             </p>

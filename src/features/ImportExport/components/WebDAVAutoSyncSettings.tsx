@@ -115,8 +115,8 @@ export default function WebDAVAutoSyncSettings({
       aria-label={t("webdav.syncSettings.title")}
     >
       <CardHeader>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
+        <div className="gap-y-density-3 flex flex-wrap items-center justify-between gap-x-3">
+          <div className="gap-y-density-2 flex items-center gap-x-2">
             <RefreshCw
               className="text-theme-600 dark:text-theme-400 size-5"
               aria-hidden="true"
@@ -125,7 +125,7 @@ export default function WebDAVAutoSyncSettings({
               {t("webdav.syncSettings.title")}
             </CardTitle>
           </div>
-          <div className="flex max-w-full flex-wrap gap-2">
+          <div className="gap-y-density-2 flex max-w-full flex-wrap gap-x-2">
             <Badge variant={providerChangePending ? "warning" : "outline"}>
               {t("webdav.autoSync.currentProvider", {
                 provider: displayedProviderLabel,
@@ -135,8 +135,8 @@ export default function WebDAVAutoSyncSettings({
           </div>
         </div>
       </CardHeader>
-      <CardContent padding="md" className="space-y-4">
-        <section className="space-y-3">
+      <CardContent padding="md" className="space-y-density-4">
+        <section className="space-y-density-3">
           <FormField
             label={t("webdav.autoSync.strategy")}
             description={t("webdav.autoSync.strategyDesc")}
@@ -172,9 +172,9 @@ export default function WebDAVAutoSyncSettings({
           </FormField>
         </section>
 
-        <section className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0 flex-1 space-y-1">
+        <section className="space-y-density-3">
+          <div className="gap-y-density-3 flex flex-wrap items-center justify-between gap-x-3">
+            <div className="space-y-density-1 min-w-0 flex-1">
               <Heading4 className="m-0 text-sm">
                 {t("webdav.autoSync.title")}
               </Heading4>
@@ -182,7 +182,7 @@ export default function WebDAVAutoSyncSettings({
             </div>
             <div
               id={WEBDAV_AUTO_SYNC_TARGET_IDS.enable}
-              className="flex shrink-0 items-center gap-2"
+              className="gap-y-density-2 flex shrink-0 items-center gap-x-2"
             >
               <Switch
                 aria-label={t("webdav.autoSync.enable")}
@@ -220,7 +220,7 @@ export default function WebDAVAutoSyncSettings({
                 onBlur={saveInterval}
                 placeholder="3600"
               />
-              <p className="text-muted-foreground mt-1 text-xs">
+              <p className="text-muted-foreground mt-density-1 text-xs">
                 {t("webdav.autoSync.intervalHint", {
                   minutes: Math.floor(syncInterval / 60),
                 })}
@@ -231,7 +231,7 @@ export default function WebDAVAutoSyncSettings({
 
         {/* Status information */}
         {lastSyncTime > 0 && (
-          <div className="bg-surface-subtle dark:bg-card space-y-1 rounded-md p-3">
+          <div className="bg-surface-subtle dark:bg-card space-y-density-1 py-density-3 rounded-md px-3">
             <p className="text-secondary-foreground text-sm">
               <span className="font-medium">
                 {t("webdav.autoSync.lastSync")}:{" "}
@@ -239,7 +239,7 @@ export default function WebDAVAutoSyncSettings({
               {formatTimestamp(lastSyncTime)}
             </p>
             {lastSyncError && (
-              <p className="text-destructive-text mt-1 text-sm">
+              <p className="text-destructive-text mt-density-1 text-sm">
                 <span className="font-medium">
                   {t("common:status.error")}:{" "}
                 </span>
@@ -255,7 +255,7 @@ export default function WebDAVAutoSyncSettings({
           featureId={PRODUCT_ANALYTICS_FEATURE_IDS.WebDavSync}
           surfaceId={autoSyncSurface}
         >
-          <div className="border-border flex flex-wrap items-center gap-3 border-t pt-4">
+          <div className="border-border gap-y-density-3 pt-density-4 flex flex-wrap items-center gap-x-3 border-t">
             <BodySmall
               id={WEBDAV_AUTO_SYNC_TARGET_IDS.saveSettings}
               role="status"

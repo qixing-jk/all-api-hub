@@ -222,7 +222,7 @@ export default function AccountForm({
   )
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-density-3">
       <AccountFormSection
         title={t("sections.siteInfo.title")}
         defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["site-info"]}
@@ -252,7 +252,7 @@ export default function AccountForm({
               data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.siteTypeTrigger}
               data-site-type={siteType ?? SITE_TYPES.UNKNOWN}
             >
-              <div className="flex items-center gap-2">
+              <div className="gap-y-density-2 flex items-center gap-x-2">
                 <Globe2 className="text-muted-foreground h-5 w-5" />
                 <SelectValue placeholder={t("form.siteType")} />
               </div>
@@ -306,14 +306,14 @@ export default function AccountForm({
             </SelectTrigger>
             <SelectContent align="end" className="min-w-48">
               <SelectItem value={AuthTypeEnum.AccessToken}>
-                <div className="flex items-center gap-2">
+                <div className="gap-y-density-2 flex items-center gap-x-2">
                   <KeyRound className="h-4 w-4" />
                   <span>{t("siteInfo.authType.accessToken")}</span>
                 </div>
               </SelectItem>
               {canUseCookieAuth && (
                 <SelectItem value={AuthTypeEnum.Cookie}>
-                  <div className="flex items-center gap-2">
+                  <div className="gap-y-density-2 flex items-center gap-x-2">
                     <Cookie className="h-4 w-4" />
                     <span>{t("siteInfo.authType.cookieAuth")}</span>
                   </div>
@@ -396,8 +396,8 @@ export default function AccountForm({
         )}
 
         {canUseSub2ApiRefreshToken && (
-          <div className="space-y-4">
-            <div className="flex w-full items-center justify-between gap-4">
+          <div className="space-y-density-4">
+            <div className="gap-y-density-4 flex w-full items-center justify-between gap-x-4">
               <div className="flex-1">
                 <label
                   htmlFor="sub2api-refresh-token-mode"
@@ -405,7 +405,7 @@ export default function AccountForm({
                 >
                   {t("form.sub2apiRefreshTokenMode")}
                 </label>
-                <p className="text-muted-foreground mt-1 text-xs">
+                <p className="text-muted-foreground mt-density-1 text-xs">
                   {t("form.sub2apiRefreshTokenModeDesc")}
                 </p>
               </div>
@@ -420,7 +420,7 @@ export default function AccountForm({
             </div>
 
             {sub2apiUseRefreshToken && (
-              <div className="space-y-4">
+              <div className="space-y-density-4">
                 <Alert
                   variant="warning"
                   title={t("form.sub2apiRefreshTokenWarningTitle")}
@@ -428,7 +428,7 @@ export default function AccountForm({
                 />
 
                 <FormField label={t("form.sub2apiRefreshToken")} required>
-                  <div className="space-y-2">
+                  <div className="space-y-density-2">
                     <Button
                       type="button"
                       variant="outline"
@@ -490,7 +490,7 @@ export default function AccountForm({
             description={t("form.cookieAuthSessionCookieDesc")}
             required
           >
-            <div className="space-y-2">
+            <div className="space-y-density-2">
               <CookieAuthPermissionRecommendation
                 cookieAuthPermissionsGranted={cookieAuthPermissionsGranted}
                 isRequestingCookieAuthPermissions={
@@ -516,7 +516,7 @@ export default function AccountForm({
                   variant="warning"
                   description={t("messages.importCookiesPermissionDenied")}
                 >
-                  <div className="pt-1">
+                  <div className="pt-density-1">
                     <Button
                       type="button"
                       variant="outline"
@@ -667,7 +667,7 @@ export default function AccountForm({
           />
         </FormField>
 
-        <div className="flex w-full items-center justify-between gap-4">
+        <div className="gap-y-density-4 flex w-full items-center justify-between gap-x-4">
           <div className="flex-1">
             <label
               htmlFor="exclude-from-total-balance"
@@ -675,7 +675,7 @@ export default function AccountForm({
             >
               {t("form.excludeFromTotalBalance")}
             </label>
-            <p className="text-muted-foreground mt-1 text-xs">
+            <p className="text-muted-foreground mt-density-1 text-xs">
               {t("form.excludeFromTotalBalanceDesc")}
             </p>
           </div>
@@ -686,7 +686,7 @@ export default function AccountForm({
           />
         </div>
 
-        <div className="flex w-full items-center justify-between gap-4">
+        <div className="gap-y-density-4 flex w-full items-center justify-between gap-x-4">
           <div className="flex-1">
             <label
               htmlFor="exclude-from-today-income"
@@ -694,7 +694,7 @@ export default function AccountForm({
             >
               {t("form.excludeFromTodayIncome")}
             </label>
-            <p className="text-muted-foreground mt-1 text-xs">
+            <p className="text-muted-foreground mt-density-1 text-xs">
               {t("form.excludeFromTodayIncomeDesc")}
             </p>
           </div>

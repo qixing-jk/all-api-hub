@@ -132,7 +132,7 @@ export function ModelCapabilityBadges({
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 sm:justify-end",
+        "gap-y-density-1-5 flex min-w-0 flex-wrap items-center gap-x-3 sm:justify-end",
         className,
       )}
     >
@@ -146,7 +146,10 @@ export function ModelCapabilityBadges({
         }
 
         return (
-          <div key={id} className="flex min-w-0 flex-wrap items-center gap-1.5">
+          <div
+            key={id}
+            className="gap-y-density-1-5 flex min-w-0 flex-wrap items-center gap-x-1.5"
+          >
             <span className="text-muted-foreground shrink-0 text-[10px] font-medium sm:text-xs">
               {groupLabels[id]}
             </span>

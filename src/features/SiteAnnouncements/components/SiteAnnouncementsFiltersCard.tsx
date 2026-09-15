@@ -45,8 +45,8 @@ export function SiteAnnouncementsFiltersCard({
   const { t } = useTranslation("siteAnnouncements")
 
   return (
-    <div className="border-border bg-card dark:border-foreground/10 mb-4 rounded-lg border p-3 shadow-sm">
-      <div className="grid gap-3 md:grid-cols-3">
+    <div className="border-border bg-card dark:border-foreground/10 mb-density-4 py-density-3 rounded-lg border px-3 shadow-sm">
+      <div className="gap-y-density-3 grid gap-x-3 md:grid-cols-3">
         <SearchableSelect
           value={siteKey}
           onChange={onSiteKeyChange}
@@ -102,7 +102,7 @@ export function SiteAnnouncementsFiltersCard({
         </Select>
       </div>
 
-      <div className="border-border-subtle text-muted-foreground dark:border-foreground/10 mt-3 flex flex-col gap-1 border-t pt-3 text-xs sm:flex-row sm:items-center sm:justify-between">
+      <div className="border-border-subtle text-muted-foreground dark:border-foreground/10 mt-density-3 gap-y-density-1 pt-density-3 flex flex-col gap-x-1 border-t text-xs sm:flex-row sm:items-center sm:justify-between">
         <span>
           {t("summary.filtered", {
             count: filteredCount,

@@ -48,10 +48,10 @@ export function ResourceSecretListField({ value, onChange, ...props }: Props) {
       : []
   return (
     <fieldset className="min-w-0" disabled={props.disabled}>
-      <legend className="mb-1.5 text-sm leading-5 font-medium">
+      <legend className="mb-density-1-5 text-sm leading-5 font-medium">
         {props.label}
       </legend>
-      <div className="space-y-2">
+      <div className="space-y-density-2">
         {entries.map((entry, index) => (
           <SecretRow
             {...props}
@@ -112,7 +112,7 @@ export function ResourceSecretListField({ value, onChange, ...props }: Props) {
               <p
                 key={field.fieldId}
                 id={`${helpId}-${field.fieldId}`}
-                className="text-muted-foreground mt-1 text-xs"
+                className="text-muted-foreground mt-density-1 text-xs"
               >
                 {field.resolveLabel(props.t)}: {field.resolveHelp(props.t)}
               </p>
@@ -278,12 +278,12 @@ function SecretRow({
   )
   return (
     <fieldset
-      className={`border-border min-w-0 rounded-lg border ${open ? "space-y-2" : ""} ${presentation.compactSecretRows ? "px-2 py-1" : "p-3"}`}
+      className={`border-border min-w-0 rounded-lg border ${open ? "space-y-density-2" : ""} ${presentation.compactSecretRows ? "py-density-1 px-2" : "py-density-3 px-3"}`}
       aria-label={rowLabel}
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className="gap-y-density-2 flex items-start justify-between gap-x-2">
         <div
-          className={`flex min-w-0 flex-1 items-center gap-x-2 gap-y-1 ${open ? "flex-wrap" : ""}`}
+          className={`gap-y-density-1 flex min-w-0 flex-1 items-center gap-x-2 ${open ? "flex-wrap" : ""}`}
         >
           {presentation.compactSecretRows ? (
             <Button
@@ -312,7 +312,7 @@ function SecretRow({
               {heading}
             </Button>
           ) : (
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <div className="gap-y-density-2 flex min-w-0 flex-wrap items-center gap-x-2">
               {heading}
             </div>
           )}
@@ -343,11 +343,15 @@ function SecretRow({
           <Trash2 className="h-4 w-4" />
         </IconButton>
       </div>
-      <div id={`${id}-content`} hidden={!open} className="space-y-2 pb-1">
+      <div
+        id={`${id}-content`}
+        hidden={!open}
+        className="space-y-density-2 pb-density-1"
+      >
         {!presentation.compactSecretRows &&
           presentation.resolveEntrySummary &&
           summary && <p className="text-muted-foreground text-xs">{summary}</p>}
-        <div className="space-y-1">
+        <div className="space-y-density-1">
           <Label className="sr-only" htmlFor={`${id}-secret`}>
             {rowLabel}
           </Label>
@@ -416,7 +420,7 @@ function SecretRow({
         {description && (
           <p className="text-muted-foreground text-xs">{description}</p>
         )}
-        <div className="flex flex-wrap gap-2">
+        <div className="gap-y-density-2 flex flex-wrap gap-x-2">
           {descriptor.entryFields.map((field) => {
             const fieldPolicy = presentation.entryFields?.find(
               (item) => item.fieldId === field.fieldId,
@@ -428,7 +432,7 @@ function SecretRow({
             return (
               <div
                 key={field.fieldId}
-                className={`min-w-0 ${field.type === "boolean" ? "flex items-center justify-between gap-3" : ""} ${fieldPolicy.width === "wide" ? "w-full sm:w-auto sm:flex-1" : fieldPolicy.width === "compact" ? "w-24" : "w-full"}`}
+                className={`min-w-0 ${field.type === "boolean" ? "gap-y-density-3 flex items-center justify-between gap-x-3" : ""} ${fieldPolicy.width === "wide" ? "w-full sm:w-auto sm:flex-1" : fieldPolicy.width === "compact" ? "w-24" : "w-full"}`}
               >
                 <FieldLabel htmlFor={`${id}-${field.fieldId}`}>
                   {fieldPolicy.resolveLabel(t)}

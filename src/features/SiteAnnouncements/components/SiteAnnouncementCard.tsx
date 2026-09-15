@@ -122,7 +122,7 @@ export function SiteAnnouncementCard({
       >
         <div className="flex flex-col">
           <div
-            className="hover:bg-surface-subtle/50 dark:hover:bg-foreground/5 flex cursor-pointer items-start gap-4 p-4 transition-colors"
+            className="hover:bg-surface-subtle/50 dark:hover:bg-foreground/5 gap-y-density-4 py-density-4 flex cursor-pointer items-start gap-x-4 px-4 transition-colors"
             onClick={handleToggle}
             onKeyDown={handleHeaderKeyDown}
             role="button"
@@ -131,9 +131,9 @@ export function SiteAnnouncementCard({
             aria-controls={detailsRegionId}
           >
             <div className="min-w-0 flex-1">
-              <div className="flex items-start justify-between gap-4">
+              <div className="gap-y-density-4 flex items-start justify-between gap-x-4">
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2">
                     <h3
                       className={cn(
                         "text-foreground min-w-0 text-base leading-6 font-semibold break-words",
@@ -143,7 +143,7 @@ export function SiteAnnouncementCard({
                     >
                       {display.title}
                     </h3>
-                    <div className="flex shrink-0 gap-1.5">
+                    <div className="gap-y-density-1-5 flex shrink-0 gap-x-1.5">
                       {!record.read && (
                         <Badge variant="warning" size="sm">
                           {t("badges.unread")}
@@ -158,13 +158,13 @@ export function SiteAnnouncementCard({
                   </div>
 
                   {display.preview && !expanded && (
-                    <p className="text-muted-foreground mt-1 line-clamp-2 text-sm leading-6">
+                    <p className="text-muted-foreground mt-density-1 line-clamp-2 text-sm leading-6">
                       {display.preview}
                     </p>
                   )}
                 </div>
 
-                <div className="hidden shrink-0 lg:flex lg:items-center lg:gap-2">
+                <div className="lg:gap-y-density-2 hidden shrink-0 lg:flex lg:items-center lg:gap-x-2">
                   <AnnouncementSourceLink
                     sourceUrl={sourceUrl}
                     label={t("actions.viewSource")}
@@ -214,15 +214,15 @@ export function SiteAnnouncementCard({
                 </div>
               </div>
 
-              <div className="text-muted-foreground mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
-                <span className="text-secondary-foreground flex items-center gap-1.5 truncate font-medium">
+              <div className="text-muted-foreground mt-density-2-5 gap-y-density-1-5 flex flex-wrap items-center gap-x-4 text-xs">
+                <span className="text-secondary-foreground gap-y-density-1-5 flex items-center gap-x-1.5 truncate font-medium">
                   <Inbox className="h-3.5 w-3.5" />
                   {record.siteName || record.baseUrl}
                 </span>
                 <span className="bg-muted text-muted-foreground dark:bg-foreground/10 dark:text-secondary-foreground inline-flex items-center rounded-md px-1.5 py-0.5 font-medium">
                   {record.siteType}
                 </span>
-                <span className="inline-flex items-center gap-1.5">
+                <span className="gap-y-density-1-5 inline-flex items-center gap-x-1.5">
                   <CalendarClock className="h-3.5 w-3.5" />
                   {isSub2Api
                     ? formatSub2ApiRelativeTimestamp(record)
@@ -235,14 +235,14 @@ export function SiteAnnouncementCard({
           {expanded && (
             <div
               id={detailsRegionId}
-              className="animate-in fade-in slide-in-from-top-2 px-4 pb-4 duration-200"
+              className="animate-in fade-in slide-in-from-top-2 pb-density-4 px-4 duration-200"
             >
-              <div className="bg-muted dark:bg-foreground/5 mb-4 h-px" />
-              <div className="dark:bg-secondary bg-surface-subtle max-h-96 overflow-auto rounded-md p-4 shadow-inner">
+              <div className="bg-muted dark:bg-foreground/5 mb-density-4 h-px" />
+              <div className="dark:bg-secondary bg-surface-subtle py-density-4 max-h-96 overflow-auto rounded-md px-4 shadow-inner">
                 <AnnouncementMarkdown content={display.body} />
               </div>
 
-              <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+              <div className="mt-density-4 gap-y-density-2 flex flex-wrap items-center justify-end gap-x-2">
                 <AnnouncementSourceLink
                   sourceUrl={sourceUrl}
                   label={t("actions.viewSource")}
@@ -281,7 +281,7 @@ export function SiteAnnouncementCard({
           )}
 
           {!expanded && !record.read && (
-            <div className="flex justify-end gap-2 px-4 pb-3 lg:hidden">
+            <div className="gap-y-density-2 pb-density-3 flex justify-end gap-x-2 px-4 lg:hidden">
               <AnnouncementSourceLink
                 sourceUrl={sourceUrl}
                 label={t("actions.viewSource")}

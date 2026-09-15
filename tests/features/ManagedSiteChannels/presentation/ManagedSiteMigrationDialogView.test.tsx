@@ -115,14 +115,22 @@ describe("ManagedSiteMigrationDialogView", () => {
       "flex",
       "flex-col",
       "items-stretch",
-      "gap-3",
+      "gap-x-3",
+      "gap-y-density-3",
       "sm:flex-row",
       "sm:items-center",
       "sm:justify-between",
     )
     expect(
       screen.getByRole("button", { name: labels.start }).parentElement,
-    ).toHaveClass("flex", "w-full", "justify-end", "gap-2", "sm:w-auto")
+    ).toHaveClass(
+      "flex",
+      "w-full",
+      "justify-end",
+      "gap-x-2",
+      "gap-y-density-2",
+      "sm:w-auto",
+    )
 
     rerender(
       <ManagedSiteMigrationDialogView
@@ -136,14 +144,22 @@ describe("ManagedSiteMigrationDialogView", () => {
       "flex",
       "flex-col",
       "items-stretch",
-      "gap-3",
+      "gap-x-3",
+      "gap-y-density-3",
       "sm:flex-row",
       "sm:items-center",
       "sm:justify-between",
     )
     expect(
       screen.getByRole("button", { name: labels.close }).parentElement,
-    ).toHaveClass("flex", "w-full", "justify-end", "gap-2", "sm:w-auto")
+    ).toHaveClass(
+      "flex",
+      "w-full",
+      "justify-end",
+      "gap-x-2",
+      "gap-y-density-2",
+      "sm:w-auto",
+    )
   })
 
   it("renders seven ordered comparisons and uses controlled confirmation", async () => {

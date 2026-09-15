@@ -114,12 +114,12 @@ export function AccountSelector({
   }
 
   return (
-    <div className="mb-6">
-      <div className="mb-3 flex flex-wrap items-center gap-2">
+    <div className="mb-density-6">
+      <div className="mb-density-3 gap-y-density-2 flex flex-wrap items-center gap-x-2">
         <Heading3 className="mb-0">{t("selectSource")}</Heading3>
       </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+      <div className="gap-y-density-2 flex flex-col gap-x-2 sm:flex-row sm:items-stretch">
         <div className="min-w-0 flex-1">
           <SearchableSelect
             ref={selectorTriggerRef}

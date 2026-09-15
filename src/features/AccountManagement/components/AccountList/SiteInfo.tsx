@@ -462,18 +462,22 @@ export default function SiteInfo({
       return null
     }
 
-    return <div className="flex items-center gap-1">{indicators}</div>
+    return (
+      <div className="gap-y-density-1 flex items-center gap-x-1">
+        {indicators}
+      </div>
+    )
   }
 
   const checkInIndicator = renderCheckInIndicators()
   const healthStatusDisplay = getHealthStatusDisplay(site.health?.status, t)
 
   return (
-    <div className="flex w-full min-w-0 items-center gap-2">
-      <div className="flex shrink-0 flex-col items-center justify-center gap-2 self-stretch">
+    <div className="gap-y-density-2 flex w-full min-w-0 items-center gap-x-2">
+      <div className="gap-y-density-2 flex shrink-0 flex-col items-center justify-center gap-x-2 self-stretch">
         <Tooltip
           content={
-            <div className="space-y-1">
+            <div className="space-y-density-1">
               <p>
                 {t("list.site.status")}:{" "}
                 <span
@@ -579,8 +583,8 @@ export default function SiteInfo({
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+        <div className="gap-y-density-1 flex flex-wrap items-center gap-x-1">
+          <div className="gap-y-density-1-5 flex min-w-0 flex-wrap items-center gap-x-1.5">
             {(contextBoost || isDetectedAccount) && (
               <Tooltip content={contextHint} anchorAsChild position="top">
                 <Badge
@@ -618,7 +622,7 @@ export default function SiteInfo({
             </Tooltip>
           </div>
 
-          <div className="flex min-w-0 items-center gap-1 sm:gap-1.5">
+          <div className="gap-y-density-1 sm:gap-y-density-1-5 flex min-w-0 items-center gap-x-1 sm:gap-x-1.5">
             {/* Keep the site URL clickable even when the account is disabled so users can still open the provider site. */}
             {/* Avoid `bleed`/non-shrinking button layout that can overflow into the action buttons column. */}
             <Button
@@ -663,7 +667,7 @@ export default function SiteInfo({
           </div>
         </div>
 
-        <div className="mt-0.5 flex min-w-0 items-start gap-1">
+        <div className="gap-y-density-1 mt-0.5 flex min-w-0 items-start gap-x-1">
           <User className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
           <Caption className="truncate" title={site.username}>
             {highlights?.username && site.username
@@ -673,7 +677,7 @@ export default function SiteInfo({
         </div>
 
         {showCreatedAt && (
-          <div className="mt-0.5 flex min-w-0 items-start gap-1">
+          <div className="gap-y-density-1 mt-0.5 flex min-w-0 items-start gap-x-1">
             <CalendarDays className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
             <Caption
               className="truncate"
@@ -685,7 +689,7 @@ export default function SiteInfo({
         )}
 
         {highlights?.baseUrl && (
-          <div className="mt-0.5 flex min-w-0 items-start gap-1">
+          <div className="gap-y-density-1 mt-0.5 flex min-w-0 items-start gap-x-1">
             <Link className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
             <Caption className="truncate" title={site.baseUrl}>
               {renderHighlightedFragments(highlights.baseUrl, site.baseUrl)}
@@ -694,7 +698,7 @@ export default function SiteInfo({
         )}
 
         {highlights?.customCheckInUrl && customCheckInUrl && (
-          <div className="mt-0.5 flex min-w-0 items-start gap-1">
+          <div className="gap-y-density-1 mt-0.5 flex min-w-0 items-start gap-x-1">
             <RefreshCw className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
             <Caption className="truncate" title={customCheckInUrl}>
               {renderHighlightedFragments(
@@ -706,7 +710,7 @@ export default function SiteInfo({
         )}
 
         {highlights?.customRedeemUrl && customRedeemUrl && (
-          <div className="mt-0.5 flex min-w-0 items-start gap-1">
+          <div className="gap-y-density-1 mt-0.5 flex min-w-0 items-start gap-x-1">
             <Gift className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
             <Caption className="truncate" title={customRedeemUrl}>
               {renderHighlightedFragments(
@@ -718,7 +722,7 @@ export default function SiteInfo({
         )}
 
         {site.notes && (
-          <div className="mt-0.5 flex min-w-0 items-start gap-1 sm:mt-1">
+          <div className="gap-y-density-1 sm:mt-density-1 mt-0.5 flex min-w-0 items-start gap-x-1">
             <SquarePen className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
             <Caption className="truncate" title={site.notes}>
               {site.notes}
@@ -727,7 +731,7 @@ export default function SiteInfo({
         )}
 
         {hasTags && (
-          <div className="mt-0.5 flex min-w-0 items-start gap-1 sm:mt-1">
+          <div className="gap-y-density-1 sm:mt-density-1 mt-0.5 flex min-w-0 items-start gap-x-1">
             <Tag className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
             <Caption className="truncate" title={tagLabel}>
               {highlights?.tags

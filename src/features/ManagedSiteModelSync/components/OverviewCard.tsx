@@ -65,12 +65,12 @@ export default function OverviewCard(props: OverviewCardProps) {
   return (
     <Card>
       <CardContent padding="md">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="gap-y-density-4 grid grid-cols-1 gap-x-4 md:grid-cols-3">
           <div>
             <div className="text-muted-foreground text-sm font-medium">
               {t("execution.overview.autoSync")}
             </div>
-            <div className="mt-1 text-lg font-semibold">
+            <div className="mt-density-1 text-lg font-semibold">
               {enabled ? (
                 <span className="bg-success-soft text-success-soft-foreground inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold">
                   {t("execution.overview.enabled")}
@@ -90,7 +90,7 @@ export default function OverviewCard(props: OverviewCardProps) {
             <div className="text-muted-foreground text-sm font-medium">
               {t("execution.statistics.nextRun")}
             </div>
-            <div className="mt-1 text-lg font-semibold">
+            <div className="mt-density-1 text-lg font-semibold">
               {enabled
                 ? formatIsoOrFallback(
                     nextScheduledAt,
@@ -104,14 +104,14 @@ export default function OverviewCard(props: OverviewCardProps) {
             <div className="text-muted-foreground text-sm font-medium">
               {t("execution.overview.lastRun")}
             </div>
-            <div className="mt-1 text-lg font-semibold">
+            <div className="mt-density-1 text-lg font-semibold">
               {formatIsoOrFallback(lastRunAt, t("execution.overview.never"))}
             </div>
           </div>
         </div>
 
         {!enabled && onConfigureAutoSync ? (
-          <div className="border-border bg-surface-subtle dark:bg-card/60 flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="border-border bg-surface-subtle dark:bg-card/60 gap-y-density-3 py-density-3 flex flex-col gap-x-3 rounded-md border px-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-muted-foreground dark:text-secondary-foreground text-sm">
               {t("execution.overview.disabledHint")}
             </p>

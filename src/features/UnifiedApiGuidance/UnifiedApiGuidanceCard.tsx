@@ -65,9 +65,9 @@ export function UnifiedApiGuidanceCard({
     surface === UNIFIED_API_GUIDANCE_SURFACES.OptionsOverview
   if (isOptionsOverview) {
     return (
-      <div className="border-border/80 dark:border-foreground/10 space-y-5 rounded-xl border p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1.5">
+      <div className="border-border/80 dark:border-foreground/10 space-y-density-5 py-density-4 sm:py-density-5 rounded-xl border px-4 sm:px-5">
+        <div className="gap-y-density-3 flex items-start justify-between gap-x-3">
+          <div className="space-y-density-1-5 min-w-0">
             <h3 className="text-base font-semibold">
               {t("optionsOverview:unifiedApiGuidance.overview.title")}
             </h3>
@@ -95,7 +95,7 @@ export function UnifiedApiGuidanceCard({
           copy={getUnifiedApiGuidanceStepperCopy(t)}
           steps={model.steps}
         />
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2">
           <Button
             size="sm"
             data-testid={UNIFIED_API_GUIDANCE_TEST_IDS.primaryAction}
@@ -143,7 +143,7 @@ export function UnifiedApiGuidanceCard({
       dismissControls={dismissControls}
       actions={
         <>
-          <div className="grid gap-2">
+          <div className="gap-y-density-2 grid gap-x-2">
             <GuidanceActionButton
               action={model.primaryAction}
               copy={copy}
@@ -160,11 +160,11 @@ export function UnifiedApiGuidanceCard({
             ))}
           </div>
           {model.optionalActions.length > 0 ? (
-            <div className="border-border/70 dark:border-foreground/10 border-t pt-3">
-              <div className="text-muted-foreground mb-2 text-xs font-medium uppercase">
+            <div className="border-border/70 dark:border-foreground/10 pt-density-3 border-t">
+              <div className="text-muted-foreground mb-density-2 text-xs font-medium uppercase">
                 {copy.optionalLabel()}
               </div>
-              <div className="grid gap-2">
+              <div className="gap-y-density-2 grid gap-x-2">
                 {model.optionalActions.map((action) => (
                   <GuidanceActionButton
                     key={action.kind}
@@ -224,7 +224,7 @@ function GuidanceNotes({
   model: UnifiedApiGuidanceModel
 }) {
   return (
-    <div className="grid gap-2">
+    <div className="gap-y-density-2 grid gap-x-2">
       <GuidanceCardNote icon="managedSite">
         {copy.boundaryNote()}
       </GuidanceCardNote>

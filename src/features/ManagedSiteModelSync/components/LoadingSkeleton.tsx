@@ -4,8 +4,8 @@
  */
 export default function LoadingSkeleton() {
   return (
-    <div className="p-6">
-      <div className="mb-6 animate-pulse space-y-4">
+    <div className="py-density-6 px-6">
+      <div className="mb-density-6 space-y-density-4 animate-pulse">
         <div className="bg-secondary h-8 w-1/3 rounded"></div>
         <div className="bg-secondary h-24 rounded"></div>
         <div className="bg-secondary h-64 rounded"></div>

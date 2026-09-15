@@ -54,7 +54,7 @@ function BookmarkManagementContent({
   }, [createPrefill, openAddBookmark])
 
   return (
-    <div className="bg-card flex flex-col p-6">
+    <div className="bg-card py-density-6 flex flex-col px-6">
       <ProductAnalyticsScope
         entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
         featureId={PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement}

@@ -227,7 +227,7 @@ export function OneTimeSecretDialog({
             <h2 className="text-foreground truncate text-base font-semibold sm:text-lg">
               {t("keyManagement:oneTimeKey.title")}
             </h2>
-            <p className="text-muted-foreground mt-1 text-sm">
+            <p className="text-muted-foreground mt-density-1 text-sm">
               {result?.displayName
                 ? t("keyManagement:oneTimeKey.subtitle", {
                     name: result.displayName,
@@ -237,7 +237,7 @@ export function OneTimeSecretDialog({
           </div>
         }
         footer={
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <div className="gap-y-density-2 flex flex-col-reverse gap-x-2 sm:flex-row sm:justify-end">
             <Button
               ref={closeButtonRef}
               type="button"
@@ -281,7 +281,7 @@ export function OneTimeSecretDialog({
           </div>
         }
       >
-        <div className="space-y-4">
+        <div className="space-y-density-4">
           <Alert
             variant="warning"
             title={t("keyManagement:oneTimeKey.warningTitle")}
@@ -297,7 +297,7 @@ export function OneTimeSecretDialog({
             <Input
               id={secretInputId}
               data-testid={TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyInput}
-              className="mt-2 font-mono text-xs"
+              className="mt-density-2 font-mono text-xs"
               value={result?.secret ?? ""}
               readOnly
               autoFocus

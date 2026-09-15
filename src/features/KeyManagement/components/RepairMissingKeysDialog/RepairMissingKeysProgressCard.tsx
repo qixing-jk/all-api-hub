@@ -84,7 +84,7 @@ export function RepairMissingKeysProgressCard({
         <CardContent
           padding="sm"
           spacing="none"
-          className="flex flex-wrap items-center justify-between gap-3"
+          className="gap-y-density-3 flex flex-wrap items-center justify-between gap-x-3"
         >
           <p className="dark:text-secondary-foreground text-muted-foreground min-w-0 flex-1 basis-64 text-sm">
             {getRepairCompletionMessage(progress, t)}
@@ -101,9 +101,9 @@ export function RepairMissingKeysProgressCard({
 
   return (
     <Card variant="outlined">
-      <CardContent padding="sm" spacing="none" className="space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-baseline gap-2">
+      <CardContent padding="sm" spacing="none" className="space-y-density-2">
+        <div className="gap-y-density-3 flex flex-wrap items-center justify-between gap-x-3">
+          <div className="gap-y-density-2 flex min-w-0 items-baseline gap-x-2">
             <span className="text-secondary-foreground text-sm font-medium">
               {t("keyManagement:repairMissingKeys.progressChecked")}
             </span>

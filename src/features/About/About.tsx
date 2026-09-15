@@ -93,14 +93,14 @@ export default function About() {
   ]
 
   return (
-    <div className="p-6">
+    <div className="py-density-6 px-6">
       <PageHeader
         icon={Info}
         title={t("title")}
         description={t("ui:app.description")}
       />
 
-      <div className="space-y-6">
+      <div className="space-y-density-6">
         {/* 插件信息 */}
         <section>
           <PluginIntroCard version={version} />
@@ -112,8 +112,8 @@ export default function About() {
 
         {/* 项目链接 */}
         <section>
-          <Heading4 className="mb-4">{t("projectLinks")}</Heading4>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Heading4 className="mb-density-4">{t("projectLinks")}</Heading4>
+          <div className="gap-y-density-4 grid grid-cols-1 gap-x-4 md:grid-cols-2">
             <LinkCard
               Icon={Code2}
               title={t("githubRepo")}
@@ -136,13 +136,17 @@ export default function About() {
         </section>
 
         <section>
-          <Heading4 className="mb-4">{t("releaseUpdate.title")}</Heading4>
+          <Heading4 className="mb-density-4">
+            {t("releaseUpdate.title")}
+          </Heading4>
           <ReleaseUpdateStatusPanel />
         </section>
 
         <section>
-          <Heading4 className="mb-4">{t("feedbackSection.title")}</Heading4>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <Heading4 className="mb-density-4">
+            {t("feedbackSection.title")}
+          </Heading4>
+          <div className="gap-y-density-4 grid grid-cols-1 gap-x-4 md:grid-cols-2 xl:grid-cols-3">
             <LinkCard
               Icon={Bug}
               title={t("ui:feedback.bugReport")}
@@ -193,8 +197,10 @@ export default function About() {
 
         {/* 商店评分与下载 */}
         <section>
-          <Heading4 className="mb-4">{t("storesSection.title")}</Heading4>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Heading4 className="mb-density-4">
+            {t("storesSection.title")}
+          </Heading4>
+          <div className="gap-y-density-4 grid grid-cols-1 gap-x-4 md:grid-cols-2">
             <LinkCard
               Icon={Star}
               title={t("storesSection.review.title")}
@@ -232,8 +238,8 @@ export default function About() {
         {/* 功能特性 */}
         {isNotEmptyArray(FEATURES) && isNotEmptyArray(FUTURE_FEATURES) && (
           <section>
-            <Heading4 className="mb-4">{t("features")}</Heading4>
-            <div className="space-y-6">
+            <Heading4 className="mb-density-4">{t("features")}</Heading4>
+            <div className="space-y-density-6">
               {/* 主要功能 */}
               <FeatureList
                 title={t("implementedFeatures")}
@@ -253,13 +259,13 @@ export default function About() {
 
         {/* 技术栈 */}
         <section>
-          <Heading4 className="mb-4">{t("techStack.title")}</Heading4>
+          <Heading4 className="mb-density-4">{t("techStack.title")}</Heading4>
           <TechStackGrid items={techStack} />
         </section>
 
         {/* 版权和致谢 */}
         <section>
-          <Heading4 className="mb-4">{t("copyrightAck")}</Heading4>
+          <Heading4 className="mb-density-4">{t("copyrightAck")}</Heading4>
           <CreditsCard />
         </section>
 

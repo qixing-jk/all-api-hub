@@ -1020,7 +1020,7 @@ export default function AccountActionButtons({
       featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement}
       surfaceId={rowActionsSurface}
     >
-      <div className="grid grid-cols-2 justify-end gap-2 sm:grid-cols-4">
+      <div className="gap-y-density-2 grid grid-cols-2 justify-end gap-x-2 sm:grid-cols-4">
         {/* Primary Level - Standalone buttons */}
         <IconButton
           onClick={handleCopyUrlLocal}
@@ -1091,7 +1091,7 @@ export default function AccountActionButtons({
                 suppressMoreActionsFocusRestoreRef.current = false
               }
             }}
-            className="border-border bg-card z-50 rounded-lg border py-1 shadow-lg focus:outline-none"
+            className="border-border bg-card py-density-1 z-50 rounded-lg border shadow-lg focus:outline-none"
           >
             {isAccountDisabled ? (
               <>
@@ -1104,7 +1104,7 @@ export default function AccountActionButtons({
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowDisableToggleMenuItem}
                 />
 
-                <DropdownMenuSeparator className="bg-secondary my-1" />
+                <DropdownMenuSeparator className="bg-secondary my-density-1" />
 
                 <AccountActionMenuItem
                   onClick={handleDeleteLocal}
@@ -1177,7 +1177,7 @@ export default function AccountActionButtons({
                   </ProductAnalyticsScope>
                 )}
 
-                <DropdownMenuSeparator className="bg-secondary my-1" />
+                <DropdownMenuSeparator className="bg-secondary my-density-1" />
 
                 <AccountActionMenuItem
                   onClick={handleRefreshLocal}
@@ -1204,7 +1204,7 @@ export default function AccountActionButtons({
                   </ProductAnalyticsScope>
                 )}
 
-                <DropdownMenuSeparator className="bg-secondary my-1" />
+                <DropdownMenuSeparator className="bg-secondary my-density-1" />
 
                 {(pageRoutes.usagePath || canOpenRedeemPage) && (
                   <AccountActionSubmenu
@@ -1286,7 +1286,7 @@ export default function AccountActionButtons({
                   }
                 />
 
-                <DropdownMenuSeparator className="bg-secondary my-1" />
+                <DropdownMenuSeparator className="bg-secondary my-density-1" />
 
                 {/* Pin/Unpin */}
                 {isPinFeatureEnabled && (

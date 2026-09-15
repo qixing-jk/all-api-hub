@@ -67,7 +67,7 @@ export function WebdavManualActions({
         featureId={PRODUCT_ANALYTICS_FEATURE_IDS.WebDavSync}
         surfaceId={webDavSettingsSurface}
       >
-        <div className="flex flex-wrap gap-3">
+        <div className="gap-y-density-3 flex flex-wrap gap-x-3">
           <div
             id={
               provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
@@ -124,7 +124,7 @@ export function WebdavManualActions({
         }}
         size="md"
         header={
-          <div className="space-y-1">
+          <div className="space-y-density-1">
             <Heading4 className="m-0">
               {t(
                 pendingManualAction === "upload"
@@ -142,7 +142,7 @@ export function WebdavManualActions({
           </div>
         }
         footer={
-          <div className="flex w-full justify-end gap-2">
+          <div className="gap-y-density-2 flex w-full justify-end gap-x-2">
             <Button
               variant="secondary"
               size="sm"
@@ -178,7 +178,7 @@ export function WebdavManualActions({
         }}
         size="md"
         header={
-          <div className="space-y-1">
+          <div className="space-y-density-1">
             <Heading4 className="m-0">
               {t("webdav.rebuildDialog.title")}
             </Heading4>
@@ -188,7 +188,7 @@ export function WebdavManualActions({
           </div>
         }
         footer={
-          <div className="flex w-full justify-end gap-2">
+          <div className="gap-y-density-2 flex w-full justify-end gap-x-2">
             <Button
               variant="secondary"
               size="sm"
@@ -212,7 +212,7 @@ export function WebdavManualActions({
           </div>
         }
       >
-        <div className="space-y-3">
+        <div className="space-y-density-3">
           <Alert
             variant="warning"
             title={t("webdav.rebuildDialog.warningTitle")}

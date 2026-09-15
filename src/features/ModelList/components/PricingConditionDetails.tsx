@@ -63,7 +63,7 @@ export function PricingConditionDetails({
   if (!details?.length && !requirements?.length && !priceMessages.length)
     return null
   return (
-    <ul className="text-muted-foreground space-y-1 text-xs">
+    <ul className="text-muted-foreground space-y-density-1 text-xs">
       {priceMessages.map((message) => (
         <li key={message}>{message}</li>
       ))}

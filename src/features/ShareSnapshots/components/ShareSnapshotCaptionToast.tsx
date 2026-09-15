@@ -63,24 +63,26 @@ export const ShareSnapshotCaptionToast = ({
   }
 
   return (
-    <div className="border-border bg-card w-[340px] rounded-lg border p-3 shadow-lg">
-      <div className="dark:text-secondary-foreground text-muted-foreground mb-2 text-xs">
+    <div className="border-border bg-card py-density-3 w-[min(340px,calc(100vw-2rem))] rounded-lg border px-3 shadow-lg">
+      <div className="dark:text-secondary-foreground text-muted-foreground mb-density-2 text-xs">
         {hint}
       </div>
       <textarea
         readOnly
         value={caption}
         data-testid={SHARE_SNAPSHOT_TEST_IDS.captionTextarea}
-        className="dark:bg-background border-border bg-surface-subtle text-foreground mb-3 h-28 w-full resize-none rounded-md border p-2 text-xs focus:outline-none"
+        className="dark:bg-background border-border bg-surface-subtle text-foreground mb-density-3 py-density-2 focus-visible:ring-ring h-28 w-full resize-none rounded-md border px-2 text-xs focus:outline-none focus-visible:border-transparent focus-visible:ring-2 focus-visible:outline-none"
       />
       {copyError ? (
-        <div className="text-destructive-text mb-2 text-xs">{copyError}</div>
+        <div className="text-destructive-text mb-density-2 text-xs">
+          {copyError}
+        </div>
       ) : null}
-      <div className="flex items-center justify-end gap-2">
+      <div className="gap-y-density-2 flex items-center justify-end gap-x-2">
         <Button
           type="button"
           size="sm"
-          className="dark:bg-secondary dark:text-foreground bg-surface-inverse text-inverse-foreground h-auto min-h-0 px-3 py-1.5 text-xs"
+          className="dark:bg-secondary dark:text-foreground bg-surface-inverse text-inverse-foreground py-density-1-5 h-auto min-h-0 px-3 text-xs"
           onClick={handleCopy}
           loading={isCopying}
         >
@@ -88,7 +90,7 @@ export const ShareSnapshotCaptionToast = ({
         </Button>
         <button
           type="button"
-          className="dark:text-secondary-foreground text-muted-foreground rounded-md px-3 py-1.5 text-xs"
+          className="dark:text-secondary-foreground text-muted-foreground py-density-1-5 min-h-(--density-control-xs) rounded-md px-3 text-xs"
           onClick={onClose}
         >
           {closeLabel}

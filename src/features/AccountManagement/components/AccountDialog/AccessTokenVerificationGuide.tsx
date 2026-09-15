@@ -59,7 +59,7 @@ export function AccessTokenVerificationGuide({
 
   return (
     <Alert variant="warning" title={t("accessTokenVerification.title")}>
-      <div className="space-y-2 text-sm leading-relaxed">
+      <div className="space-y-density-2 text-sm leading-relaxed">
         <p data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage}>
           {message}
         </p>
@@ -89,7 +89,7 @@ export function AccessTokenVerificationGuide({
           </>
         ) : (
           <>
-            <ol className="list-decimal space-y-1 pl-5">
+            <ol className="space-y-density-1 list-decimal pl-5">
               <li>
                 {isApiYi
                   ? t("accessTokenVerification.apiyi.generateStep")
@@ -100,7 +100,7 @@ export function AccessTokenVerificationGuide({
             {siteType === SITE_TYPES.NEW_API && (
               <p>{t("accessTokenVerification.rotationWarning")}</p>
             )}
-            <div className="flex flex-wrap gap-2">
+            <div className="gap-y-density-2 flex flex-wrap gap-x-2">
               {accessTokenPath && siteUrl && isHttpUrl(siteUrl) && (
                 <Button
                   type="button"

@@ -64,14 +64,14 @@ export function AccountKeyScopeSelector({
   }))
 
   return (
-    <section aria-labelledby={headingId} className="space-y-2">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
+    <section aria-labelledby={headingId} className="space-y-density-2">
+      <div className="gap-y-density-2 flex flex-wrap items-baseline justify-between gap-x-2">
         <h2 id={headingId} className="text-sm font-medium">
           {messages.heading}
         </h2>
       </div>
       {isPartial ? (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2">
           <Alert
             variant="warning"
             compact

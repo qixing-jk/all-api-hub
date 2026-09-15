@@ -5,7 +5,7 @@ import BalanceHistorySettings from "./BalanceHistorySettings"
  */
 export default function BalanceHistoryTab() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-density-6">
       <BalanceHistorySettings />
     </div>
   )

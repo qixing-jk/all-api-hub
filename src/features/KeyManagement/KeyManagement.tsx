@@ -1131,7 +1131,7 @@ export default function KeyManagement(props: {
     associationRouteState !== KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Found
 
   return (
-    <div className="p-6">
+    <div className="py-density-6 px-6">
       <Header
         onAddToken={handleRequestAddToken}
         onRepairMissingKeys={handleRepairMissingKeys}
@@ -1181,7 +1181,7 @@ export default function KeyManagement(props: {
       {showAssociationRouteNotice ? (
         <Notice
           tone={isAssociationRoutePending ? "info" : "warning"}
-          className="mb-4"
+          className="mb-density-4"
           description={
             <span>
               {associationTargetStatusMessage}{" "}
@@ -1218,7 +1218,7 @@ export default function KeyManagement(props: {
       />
 
       {isSelectedNativeKeyAccount ? (
-        <div className="mb-4 space-y-3">
+        <div className="mb-density-4 space-y-density-3">
           <AccountKeyScopeSelector
             siteType={selectedAddTokenScopeAccount?.siteType}
             scopes={nativeKeys.scopes}
@@ -1360,7 +1360,7 @@ export default function KeyManagement(props: {
       {!isManagedSiteConfigComplete ? (
         <Notice
           tone="default"
-          className="mx-auto mt-6 max-w-2xl text-left"
+          className="mt-density-6 mx-auto max-w-2xl text-left"
           description={
             <span>
               {t("keyManagement:managedSiteSetupRecovery.description")}{" "}

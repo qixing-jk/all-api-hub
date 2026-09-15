@@ -44,8 +44,8 @@ export default function TablePagination({
   const pageSizeSelectId = `${id}-page-size`
 
   return (
-    <div className="border-border dark:border-border-subtle flex flex-col gap-3 border-t px-4 py-3 text-sm sm:flex-row sm:items-center">
-      <div className="flex items-center gap-2">
+    <div className="border-border dark:border-border-subtle gap-y-density-3 py-density-3 flex flex-col gap-x-3 border-t px-4 text-sm sm:flex-row sm:items-center">
+      <div className="gap-y-density-2 flex items-center gap-x-2">
         <Label htmlFor={pageSizeSelectId} className="text-xs font-medium">
           {t("execution.pagination.rowsPerPage")}
         </Label>
@@ -78,7 +78,7 @@ export default function TablePagination({
         {t("execution.pagination.summary", { start, end, total })}
       </span>
 
-      <div className="flex items-center gap-2">
+      <div className="gap-y-density-2 flex items-center gap-x-2">
         <Button
           type="button"
           size="icon-sm"

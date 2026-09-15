@@ -163,7 +163,7 @@ export function AllAccountsGroupFilterMenu({
           aria-label={t("accountGroupFilterTrigger")}
           className={cn("w-full justify-between px-3 sm:w-56")}
         >
-          <span className="flex items-center gap-2">
+          <span className="gap-y-density-2 flex items-center gap-x-2">
             <Funnel className="h-4 w-4" />
             <span>{t("accountGroupFilterTrigger")}</span>
           </span>
@@ -181,9 +181,9 @@ export function AllAccountsGroupFilterMenu({
         align="end"
         className="w-[min(42rem,calc(100vw-2rem))] p-0"
       >
-        <div className="dark:border-border border-b px-4 py-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1">
+        <div className="dark:border-border py-density-3 border-b px-4">
+          <div className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-density-1">
               <div className="text-foreground text-sm font-semibold">
                 {t("accountGroupFilterTitle")}
               </div>
@@ -203,9 +203,9 @@ export function AllAccountsGroupFilterMenu({
           </div>
         </div>
 
-        <div className="max-h-[70vh] space-y-3 overflow-y-auto p-4">
+        <div className="space-y-density-3 py-density-4 max-h-[70vh] overflow-y-auto px-4">
           {accountSections.length === 0 ? (
-            <div className="border-border text-muted-foreground rounded-lg border border-dashed px-4 py-6 text-sm">
+            <div className="border-border text-muted-foreground py-density-6 rounded-lg border border-dashed px-4 text-sm">
               {t("accountGroupFilterNoGroups")}
             </div>
           ) : (
@@ -221,10 +221,10 @@ export function AllAccountsGroupFilterMenu({
                 return (
                   <section
                     key={accountId}
-                    className="border-border space-y-3 rounded-lg border p-3"
+                    className="border-border space-y-density-3 py-density-3 rounded-lg border px-3"
                   >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="space-y-1">
+                    <div className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="space-y-density-1">
                         <div className="text-foreground text-sm font-medium">
                           {accountName}
                         </div>
@@ -236,7 +236,7 @@ export function AllAccountsGroupFilterMenu({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="gap-y-density-2 flex items-center gap-x-2">
                         <Button
                           type="button"
                           variant="ghost"

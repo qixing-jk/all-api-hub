@@ -210,7 +210,7 @@ export default function ProtectionBypassHistoryRow(props: HistoryRowProps) {
           </span>
           <ChevronDown
             aria-hidden="true"
-            className={`mt-1 size-4 shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+            className={`mt-density-1 size-4 shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
           />
         </span>
         <span className="line-clamp-2 space-x-2 text-sm">

@@ -278,7 +278,7 @@ export default function AccountDialog({
           <form
             id="account-form"
             onSubmit={handleSubmit}
-            className="flex flex-col gap-2"
+            className="gap-y-density-2 flex flex-col gap-x-2"
             data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountForm}
           >
             {state.detectionError && (
@@ -307,7 +307,7 @@ export default function AccountDialog({
                 aria-live="assertive"
                 aria-atomic="true"
               >
-                <div className="space-y-2 text-sm leading-relaxed">
+                <div className="space-y-density-2 text-sm leading-relaxed">
                   {openRouterRecovery.message && (
                     <p>{openRouterRecovery.message}</p>
                   )}
@@ -335,10 +335,10 @@ export default function AccountDialog({
               <AutoDetectSlowHintAlert />
             )}
 
-            <div className="grid gap-3">
+            <div className="gap-y-density-3 grid gap-x-3">
               <SiteInfoInput {...siteInfoInputProps} />
               {showEntryAuthTypeSelector && onOpenBookmarkImport ? (
-                <div className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs">
+                <div className="text-muted-foreground gap-y-density-1 flex flex-wrap items-center gap-x-1.5 text-xs">
                   <span>{tAccountDialog("bookmarkImportBatch.prompt")}</span>
                   <button
                     type="button"
@@ -354,7 +354,7 @@ export default function AccountDialog({
               ) : null}
               {selectedSponsorPostClickNote ? (
                 <div
-                  className="bg-theme-50 text-theme-700 dark:bg-theme-900/20 dark:text-theme-300 flex items-start gap-2 rounded-md p-2 text-xs leading-5"
+                  className="bg-theme-50 text-theme-700 dark:bg-theme-900/20 dark:text-theme-300 gap-y-density-2 py-density-2 flex items-start gap-x-2 rounded-md px-2 text-xs leading-5"
                   data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPostClickNote}
                 >
                   <Info

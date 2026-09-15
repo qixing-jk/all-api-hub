@@ -390,7 +390,7 @@ export default function ModelItem(props: ModelItemProps) {
       )}
     >
       <CardContent padding="default" spacing="default">
-        <div className="flex min-w-0 flex-wrap items-start gap-2">
+        <div className="gap-y-density-2 flex min-w-0 flex-wrap items-start gap-x-2">
           <ModelItemHeader
             model={model}
             resolvedVendor={resolvedVendor}
@@ -457,7 +457,7 @@ export default function ModelItem(props: ModelItemProps) {
           isAvailableForUser={isAvailableForUser}
         />
         <ModelPresentationSummary presentation={model.presentation} />
-        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="gap-y-density-2 flex min-w-0 flex-col gap-x-2 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0 flex-1">
             <ModelItemPricing
               sourceLabel={sourceLabel.label}
@@ -484,7 +484,7 @@ export default function ModelItem(props: ModelItemProps) {
           </div>
           <ModelCapabilityBadges
             modelMetadata={modelMetadata}
-            className="mt-1 sm:ml-auto sm:max-w-[48%]"
+            className="mt-density-1 sm:ml-auto sm:max-w-[48%]"
           />
         </div>
 
@@ -494,9 +494,9 @@ export default function ModelItem(props: ModelItemProps) {
             <div
               ref={detailsRef}
               tabIndex={-1}
-              className="dark:border-border border-t pt-4"
+              className="dark:border-border pt-density-4 border-t"
             >
-              <div className="space-y-4">
+              <div className="space-y-density-4">
                 {hasLegacyDetails && (
                   <ModelItemDetails
                     sourceLabel={sourceLabel.label}
@@ -520,8 +520,8 @@ export default function ModelItem(props: ModelItemProps) {
           )}
 
         {!isAvailableForUser && showGroupDetails && (
-          <div className="border-warning-border bg-warning-soft mt-3 rounded-lg border p-3">
-            <div className="text-warning-text flex items-center gap-2 text-sm">
+          <div className="border-warning-border bg-warning-soft mt-density-3 py-density-3 rounded-lg border px-3">
+            <div className="text-warning-text gap-y-density-2 flex items-center gap-x-2 text-sm">
               <Badge variant="warning" size="sm">
                 {t("unavailable")}
               </Badge>
@@ -537,7 +537,7 @@ export default function ModelItem(props: ModelItemProps) {
               </span>
             </div>
             {!hasKnownNoUsableGroup && usableGroupLabels.length > 0 && (
-              <div className="text-warning-text mt-2 text-sm">
+              <div className="text-warning-text mt-density-2 text-sm">
                 {t("currentUsableGroups")}: {usableGroupLabels.join(", ")}
               </div>
             )}

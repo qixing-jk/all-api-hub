@@ -13,7 +13,7 @@ import SiteAnnouncementNotificationSettings from "./SiteAnnouncementNotification
  */
 export default function GeneralTab() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-density-6">
       <DisplaySettings />
       <AppearanceSettings />
       <ActionClickBehaviorSettings />

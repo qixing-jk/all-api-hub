@@ -87,14 +87,14 @@ export default function InfoPanel({
   const description = getDescription()
 
   return (
-    <div className="bg-primary-soft text-primary-soft-foreground border-primary-soft-border rounded-lg border p-3">
+    <div className="bg-primary-soft text-primary-soft-foreground border-primary-soft-border py-density-3 rounded-lg border px-3">
       <div className="flex">
         <div className="shrink-0">
           <Icon className="h-5 w-5" />
         </div>
         <div className="ml-3">
           <h3 className="text-xs font-medium">{getTitle()}</h3>
-          <div className="mt-1 text-xs">
+          <div className="mt-density-1 text-xs">
             {typeof description === "string" ? (
               <p>{description}</p>
             ) : (
@@ -102,8 +102,10 @@ export default function InfoPanel({
             )}
 
             {showLdohSiteListLink && (
-              <div className="border-primary-soft-border mt-2 border-t pt-2">
-                <p className="mb-1">{t("infoPanel.ldohSiteListHint")}</p>
+              <div className="border-primary-soft-border mt-density-2 pt-density-2 border-t">
+                <p className="mb-density-1">
+                  {t("infoPanel.ldohSiteListHint")}
+                </p>
                 <Button
                   type="button"
                   onClick={handleOpenLdohSiteList}
@@ -122,7 +124,7 @@ export default function InfoPanel({
             )}
 
             {showManualAddGuideLink && (
-              <div className="border-primary-soft-border mt-2 border-t pt-2">
+              <div className="border-primary-soft-border mt-density-2 pt-density-2 border-t">
                 <ManualAddGuideButton
                   anchor={manualAddGuideAnchor}
                   className="h-auto min-h-0 justify-start p-0 text-left"

@@ -130,7 +130,7 @@ function DedupeAccountsGroupCard({
         </Badge>
       </div>
 
-      <Separator className="my-3" />
+      <Separator className="my-density-3" />
 
       <div className="space-y-density-2">
         {orderedGroupAccounts.map((account) => (

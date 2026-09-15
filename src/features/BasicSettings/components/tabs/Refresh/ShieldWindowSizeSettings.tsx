@@ -58,7 +58,7 @@ export function ShieldWindowSizeSettings() {
         >
           <fieldset
             disabled={sizeDraft.isCommitting}
-            className="flex flex-wrap items-end justify-end gap-2"
+            className="gap-y-density-2 flex flex-wrap items-end justify-end gap-x-2"
           >
             {(
               [
@@ -66,7 +66,10 @@ export function ShieldWindowSizeSettings() {
                 ["height", t("refresh.shieldWindowHeight")],
               ] as const
             ).map(([dimension, label]) => (
-              <label key={dimension} className="flex flex-col gap-1 text-sm">
+              <label
+                key={dimension}
+                className="gap-y-density-1 flex flex-col gap-x-1 text-sm"
+              >
                 {label}
                 <Input
                   type="number"

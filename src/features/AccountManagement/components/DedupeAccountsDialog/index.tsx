@@ -249,8 +249,8 @@ export default function DedupeAccountsDialog({
         size="lg"
         title={t("ui:dialog.dedupeAccounts.title")}
         header={
-          <div className="flex min-w-0 flex-col gap-1 pr-8">
-            <div className="flex items-center gap-2">
+          <div className="gap-y-density-1 flex min-w-0 flex-col gap-x-1 pr-8">
+            <div className="gap-y-density-2 flex items-center gap-x-2">
               <ScanSearch className="text-theme-600 dark:text-theme-400 h-5 w-5 shrink-0" />
               <h2 className="text-foreground text-lg font-semibold">
                 {t("ui:dialog.dedupeAccounts.title")}
@@ -259,7 +259,7 @@ export default function DedupeAccountsDialog({
             <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
               {t("ui:dialog.dedupeAccounts.description")}
             </p>
-            <div className="mt-2 flex flex-wrap gap-2">
+            <div className="mt-density-2 gap-y-density-2 flex flex-wrap gap-x-2">
               <Badge variant="secondary">
                 {t("ui:dialog.dedupeAccounts.exactTitle")} · {groups.length}
               </Badge>
@@ -273,7 +273,7 @@ export default function DedupeAccountsDialog({
           </div>
         }
         footer={
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <div className="gap-y-density-2 flex flex-col-reverse gap-x-2 sm:flex-row sm:justify-end">
             <Button
               type="button"
               variant="secondary"

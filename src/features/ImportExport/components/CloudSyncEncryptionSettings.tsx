@@ -36,10 +36,10 @@ export function CloudSyncEncryptionSettings({
   return (
     <div
       id={WEBDAV_TARGET_IDS.encryption}
-      className="bg-surface-subtle dark:bg-card space-y-3 rounded-md p-3"
+      className="bg-surface-subtle dark:bg-card space-y-density-3 py-density-3 rounded-md px-3"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
+      <div className="gap-y-density-3 flex items-start justify-between gap-x-3">
+        <div className="space-y-density-1 min-w-0">
           <Heading4 className="m-0 text-sm">
             {t("webdav.encryption.title")}
           </Heading4>
@@ -66,7 +66,7 @@ export function CloudSyncEncryptionSettings({
       </div>
       <FormField
         label={
-          <span className="inline-flex items-center gap-1">
+          <span className="gap-y-density-1 inline-flex items-center gap-x-1">
             {t("webdav.encryption.password")}
             <FieldHelpPopover
               label={t("webdav.encryption.password")}

@@ -9,9 +9,9 @@ export function Footer() {
   const { t } = useTranslation("keyManagement")
 
   return (
-    <Alert variant="warning" className="mt-8">
+    <Alert variant="warning" className="mt-density-8">
       <div>
-        <h4 className="mb-1 font-medium">{t("dialog.warningTitle")}</h4>
+        <h4 className="mb-density-1 font-medium">{t("dialog.warningTitle")}</h4>
         <p className="text-sm">• {t("dialog.warningText")}</p>
       </div>
     </Alert>

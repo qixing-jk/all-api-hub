@@ -58,7 +58,7 @@ export function ManagedSiteTokenBatchExportDialog({
         showCloseButton={!dialog.isRunning}
         size="lg"
         header={
-          <div className="space-y-1">
+          <div className="space-y-density-1">
             <div className="text-base font-semibold">
               {t("keyManagement:batchManagedSiteExport.title")}
             </div>
@@ -101,9 +101,9 @@ export function ManagedSiteTokenBatchExportDialog({
           />
         }
       >
-        <div className="space-y-4">
+        <div className="space-y-density-4">
           {dialog.preview?.targetSummary ? (
-            <div className="flex flex-wrap items-start justify-between gap-3 rounded-md border p-3 text-sm">
+            <div className="gap-y-density-3 py-density-3 flex flex-wrap items-start justify-between gap-x-3 rounded-md border px-3 text-sm">
               <div className="min-w-0">
                 <div className="font-medium">
                   {t("keyManagement:batchManagedSiteExport.target.title", {
@@ -130,7 +130,7 @@ export function ManagedSiteTokenBatchExportDialog({
 
           {dialog.intent.source === "repair-created" &&
           dialog.intent.verification === "trusted-new" ? (
-            <div className="border-theme-200 bg-theme-50/60 dark:border-theme-900/40 dark:bg-theme-950/20 space-y-2 rounded-md border p-3 text-sm">
+            <div className="border-theme-200 bg-theme-50/60 dark:border-theme-900/40 dark:bg-theme-950/20 space-y-density-2 py-density-3 rounded-md border px-3 text-sm">
               <div>
                 {t(
                   "keyManagement:batchManagedSiteExport.repairTrusted.description",

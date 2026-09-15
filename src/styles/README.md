@@ -130,9 +130,40 @@ baseline allowance because it is outside CSS theme scopes.
 ## Interface density
 
 `appearance.density` selects compact, default, or comfortable. The default scale
-is 1 and retains existing dimensions. Use `py-density-*`, `gap-density-*`, and
-`space-y-density-*` for vertical rhythm and list/form spacing; use the
+is 1. Use `py-density-*`, `gap-y-density-*`, and
+`space-y-density-*` for vertical rhythm and list/form spacing. Use
+`gap-density-*` when a local group intentionally scales both axes; keep horizontal
+gutters fixed where column alignment or content width depends on them. Use the
 `--density-control*` height tokens through shared controls. Keep text sizes,
 content widths, icon artwork, and structural shell dimensions independent.
-The navigation sidebar uses `density-default` to retain its existing layout.
+The navigation sidebar inherits density for its rows and spacing while retaining
+its width and shell header height. Calendar columns keep their width while day
+heights follow density. The bookmark import virtualizer measures
+`--density-tree-row` with a ResizeObserver so live changes update its offsets.
+For mixed-axis spacing, declare independent axes (`px-4 py-density-4`,
+`gap-x-4 gap-y-density-4`). Avoid combining a shorthand with its density axis
+in the same class string: formatting can reorder them, and Tailwind Merge then
+discards the density class. Let parents own spacing between siblings; keep
+component padding responsible for its internal content. Keep small artwork badges,
+checkbox/switch graphics, chart canvases, exported images and device touch-target
+floors independent; do not shrink them with the general spacing scale.
 `cn` registers density spacing with Tailwind Merge so caller overrides still win.
+
+Review the resulting layout, not just the presence of a density class:
+
+- Use one owner for space between siblings. Prefer a parent flex/grid gap for
+  stacks; check existing child margins before adding another spacing mechanism.
+  Padding still belongs to the component surface and serves a different role.
+- Preserve grouping: spacing within a related field group should remain smaller
+  than spacing between sections. Do not flatten all spacing to one token.
+- For fixed-height inputs, account for padding and borders when checking the
+  text's available line height. For wrapping actions, prefer a minimum height
+  and let content determine the final height.
+- Verify responsive overrides and actual containers, including narrow popups,
+  side panels, dialogs and portals. A page without horizontal overflow does not
+  prove that individual labels, controls or focus outlines fit.
+- Keep click targets usable when reducing visual whitespace. Do not scale down
+  typography, artwork or existing coarse-pointer target floors to achieve density.
+
+These principles follow [Carbon's spacing and stacking guidance](https://carbondesignsystem.com/elements/spacing/overview/)
+and [Atlassian's spacing foundation](https://atlassian.design/foundations/spacing).

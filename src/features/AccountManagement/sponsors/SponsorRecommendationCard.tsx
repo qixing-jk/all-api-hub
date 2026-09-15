@@ -257,13 +257,13 @@ export function SponsorRecommendationCard({
 
   return (
     <div
-      className="group dark:bg-card/40 corners-concentric border-border bg-card hover:border-theme-200 hover:bg-theme-50/50 dark:hover:border-theme-800/70 dark:hover:bg-theme-950/20 flex min-w-0 items-center gap-2 rounded-lg border p-1.5 shadow-xs transition-colors [--corner-inset:calc(--spacing(1.5)+1px)]"
+      className="group dark:bg-card/40 corners-concentric border-border bg-card hover:border-theme-200 hover:bg-theme-50/50 dark:hover:border-theme-800/70 dark:hover:bg-theme-950/20 gap-y-density-2 py-density-1-5 flex min-w-0 items-center gap-x-2 rounded-lg border px-1.5 shadow-xs transition-colors [--corner-inset:calc(--spacing(1.5)+1px)]"
       data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.sponsorRecommendationCard}
     >
       <button
         type="button"
         className={cn(
-          "focus-visible:ring-ring/50 flex min-h-9 min-w-0 flex-1 items-center gap-2 rounded-[var(--corner-inner-radius)] px-2.5 py-1.5 text-left transition-colors outline-none focus-visible:ring-[3px]",
+          "focus-visible:ring-ring/50 gap-y-density-2 py-density-1-5 flex min-h-(--density-control) min-w-0 flex-1 items-center gap-x-2 rounded-[var(--corner-inner-radius)] px-2.5 text-left transition-colors outline-none focus-visible:ring-[3px]",
           isIntegratedMainAction
             ? "text-theme-700 hover:bg-theme-100/70 dark:text-theme-300 dark:hover:bg-theme-900/30"
             : "dark:text-foreground dark:hover:bg-secondary/70 text-secondary-foreground hover:bg-muted",
@@ -283,7 +283,7 @@ export function SponsorRecommendationCard({
           {renderMainActionIcon(mainActionKind)}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="flex min-w-0 items-center gap-1.5">
+          <span className="gap-y-density-1-5 flex min-w-0 items-center gap-x-1.5">
             <span className="truncate text-sm leading-5 font-medium">
               {item.name}
             </span>
@@ -305,7 +305,7 @@ export function SponsorRecommendationCard({
       </button>
 
       {hasFallbackActions ? (
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="gap-y-density-1 flex shrink-0 items-center gap-x-1">
           {item.actions.bookmarkFallback ? (
             <IconButton
               size="sm"

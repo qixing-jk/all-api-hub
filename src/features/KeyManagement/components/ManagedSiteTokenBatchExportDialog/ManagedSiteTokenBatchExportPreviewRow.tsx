@@ -207,7 +207,7 @@ export function ManagedSiteTokenBatchExportPreviewRow({
             {t("keyManagement:batchManagedSiteExport.fields.models")}
           </span>
           {item.draft && !hasExecutionResult && canEditItemModels(item) ? (
-            <div className="mt-1">
+            <div className="mt-density-1">
               <CompactMultiSelect
                 options={modelOptions}
                 selected={item.draft.models}

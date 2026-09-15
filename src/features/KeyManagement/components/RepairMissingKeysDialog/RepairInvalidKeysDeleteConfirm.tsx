@@ -36,8 +36,8 @@ export function RepairInvalidKeysDeleteConfirm({
       selectedInvalidResources.length - previewResources.length
 
     return (
-      <div className="dark:bg-secondary/40 border-border bg-surface-subtle rounded-md border p-3">
-        <ul className="space-y-2 text-sm">
+      <div className="dark:bg-secondary/40 border-border bg-surface-subtle py-density-3 rounded-md border px-3">
+        <ul className="space-y-density-2 text-sm">
           {previewResources.map((resource) => (
             <li
               key={getInvalidResourceKey(resource)}
@@ -56,7 +56,7 @@ export function RepairInvalidKeysDeleteConfirm({
           ))}
         </ul>
         {hiddenCount > 0 ? (
-          <p className="dark:text-secondary-foreground text-muted-foreground mt-2 text-xs">
+          <p className="dark:text-secondary-foreground text-muted-foreground mt-density-2 text-xs">
             {t("keyManagement:repairMissingKeys.deleteConfirm.more", {
               count: hiddenCount,
             })}
@@ -82,7 +82,7 @@ export function RepairInvalidKeysDeleteConfirm({
       workingLabel={t("common:status.deleting")}
       cancelLabel={t("common:actions.cancel")}
       details={
-        <div className="space-y-3">
+        <div className="space-y-density-3">
           {details}
           <LinkedChannelCleanupOption
             checked={cleanupLinkedChannels}

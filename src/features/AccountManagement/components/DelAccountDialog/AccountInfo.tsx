@@ -8,7 +8,7 @@ const AccountInfoDetail: FC<{
   value: string
   isUrl?: boolean
 }> = ({ label, value, isUrl }) => (
-  <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+  <div className="gap-y-density-1 sm:gap-y-density-3 flex flex-col gap-x-1 sm:flex-row sm:items-start sm:justify-between sm:gap-x-3">
     <span className="dark:text-secondary-foreground text-muted-foreground shrink-0">
       {label}：
     </span>
@@ -31,7 +31,7 @@ export const AccountInfo: FC<{ account: DisplaySiteData }> = ({ account }) => {
   const { t } = useTranslation("ui")
 
   return (
-    <div className="dark:bg-card bg-surface-subtle space-y-1 rounded-lg p-3 text-sm">
+    <div className="dark:bg-card bg-surface-subtle space-y-density-1 py-density-3 rounded-lg px-3 text-sm">
       <AccountInfoDetail
         label={t("dialog.delete.siteName")}
         value={account.name}

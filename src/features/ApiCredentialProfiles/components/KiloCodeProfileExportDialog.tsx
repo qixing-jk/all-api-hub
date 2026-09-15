@@ -353,7 +353,7 @@ export function KiloCodeProfileExportDialog({
       isOpen={isOpen}
       onClose={onClose}
       header={
-        <div className="flex items-center gap-2">
+        <div className="gap-y-density-2 flex items-center gap-x-2">
           <KiloCodeIcon size="lg" className="text-muted-foreground" />
           <div className="min-w-0">
             <div className="text-foreground text-base font-semibold">
@@ -371,7 +371,7 @@ export function KiloCodeProfileExportDialog({
           featureId={exportDialogAnalyticsContext.featureId}
           surfaceId={exportDialogSurface}
         >
-          <div className="flex flex-wrap justify-end gap-2">
+          <div className="gap-y-density-2 flex flex-wrap justify-end gap-x-2">
             <Button variant="ghost" type="button" onClick={onClose}>
               {t("common:actions.cancel")}
             </Button>
@@ -398,7 +398,7 @@ export function KiloCodeProfileExportDialog({
         </ProductAnalyticsScope>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-density-4">
         {invalidProfile ? (
           <Alert
             variant="destructive"
@@ -546,7 +546,7 @@ export function KiloCodeProfileExportDialog({
         )}
 
         {isKiloV7Target && v7ManualModelId.trim() ? (
-          <div className="border-border flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm">
+          <div className="border-border gap-y-density-3 py-density-2 flex items-center justify-between gap-x-3 rounded-md border px-3 text-sm">
             <span className="min-w-0 flex-1 truncate">{v7ManualModelId}</span>
             <Button
               type="button"

@@ -1,6 +1,5 @@
 import {
   ArrowRightLeft,
-  CircleX,
   Columns3,
   Filter,
   Layers,
@@ -19,6 +18,7 @@ import { Badge, ConfirmDialog, IconButton, Input } from "~/components/ui"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/Alert"
 import { Button, BUTTON_LOADING_BEHAVIORS } from "~/components/ui/button"
 import { Checkbox } from "~/components/ui/checkbox"
+import { ClearableFieldButton } from "~/components/ui/clearableField"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -139,11 +139,22 @@ export function ManagedSiteChannelsView({
     callbacks.onStatusFilterChange(Array.from(new Set(next)))
   }
 
+  const handleClearSearch = () => {
+    callbacks.onSearchChange("")
+    callbacks.onReplaceRouteQuery({
+      ...state.routeQuery,
+      channelId: undefined,
+      resourceRef: undefined,
+      search: undefined,
+    })
+    searchInputRef.current?.focus()
+  }
+
   return (
-    <div className="space-y-4 p-4 sm:p-6">
+    <div className="space-y-density-4 py-density-4 sm:py-density-6 px-4 sm:px-6">
       <PageHeader
         spacing="compact"
-        className="mb-4"
+        className="mb-density-4"
         icon={Layers}
         title={title}
         titleActions={
@@ -233,7 +244,7 @@ export function ManagedSiteChannelsView({
       />
 
       {state.isConfigurationMissing ? (
-        <div className="space-y-4">
+        <div className="space-y-density-4">
           <ManagedSiteConfigRequiredState
             description={configurationMissingDescription}
             settingsTarget={configurationSettingsTarget}
@@ -273,7 +284,7 @@ export function ManagedSiteChannelsView({
           />
 
           <div className="border-border overflow-hidden rounded-xl border">
-            <div className="border-border bg-surface-subtle dark:bg-background/30 flex flex-col gap-3 border-b p-3 md:flex-row md:flex-wrap md:items-center">
+            <div className="border-border bg-surface-subtle dark:bg-background/30 gap-y-density-3 py-density-3 flex flex-col gap-x-3 border-b px-3 md:flex-row md:flex-wrap md:items-center">
               <div className="relative w-full md:max-w-xs">
                 <Input
                   ref={searchInputRef}
@@ -288,33 +299,24 @@ export function ManagedSiteChannelsView({
                       search: value || undefined,
                     })
                   }}
+                  onClear={handleClearSearch}
+                  clearButtonLabel={labels.clearSearch}
+                  rightIcon={
+                    state.channelIdFilterValue && !state.searchValue ? (
+                      <ClearableFieldButton
+                        label={labels.clearSearch}
+                        onClick={handleClearSearch}
+                      />
+                    ) : undefined
+                  }
                   placeholder={labels.searchPlaceholder}
                   className="ps-9"
                   data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.searchInput}
                 />
                 <ListFilter className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                {state.searchValue || state.channelIdFilterValue ? (
-                  <button
-                    type="button"
-                    aria-label={labels.clearSearch}
-                    className="text-muted-foreground/80 absolute top-1/2 right-2 -translate-y-1/2"
-                    onClick={() => {
-                      callbacks.onSearchChange("")
-                      callbacks.onReplaceRouteQuery({
-                        ...state.routeQuery,
-                        channelId: undefined,
-                        resourceRef: undefined,
-                        search: undefined,
-                      })
-                      searchInputRef.current?.focus()
-                    }}
-                  >
-                    <CircleX className="h-4 w-4" />
-                  </button>
-                ) : null}
               </div>
 
-              <div className="grid grid-cols-2 gap-2 md:flex md:flex-1 md:items-center md:gap-2">
+              <div className="gap-y-density-2 md:gap-y-density-2 grid grid-cols-2 gap-x-2 md:flex md:flex-1 md:items-center md:gap-x-2">
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -333,17 +335,17 @@ export function ManagedSiteChannelsView({
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-64" align="start">
-                    <div className="space-y-2">
+                    <div className="space-y-density-2">
                       <p className="text-muted-foreground text-xs font-medium">
                         {labels.statusLabel}
                       </p>
-                      <div className="space-y-2">
+                      <div className="space-y-density-2">
                         {uniqueStatusValues.map((value) => (
                           <div
                             key={value}
-                            className="flex items-center justify-between gap-2"
+                            className="gap-y-density-2 flex items-center justify-between gap-x-2"
                           >
-                            <div className="flex items-center gap-2">
+                            <div className="gap-y-density-2 flex items-center gap-x-2">
                               <Checkbox
                                 id={`status-${value}`}
                                 checked={state.statusFilterValues.includes(
@@ -405,7 +407,7 @@ export function ManagedSiteChannelsView({
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <div className="col-span-2 grid grid-cols-2 gap-2 md:ml-auto md:flex md:items-center md:justify-end md:gap-2">
+                <div className="gap-y-density-2 md:gap-y-density-2 col-span-2 grid grid-cols-2 gap-x-2 md:ml-auto md:flex md:items-center md:justify-end md:gap-x-2">
                   {state.migrationMode && capabilities.canMigrateSelected ? (
                     <Button
                       variant="outline"

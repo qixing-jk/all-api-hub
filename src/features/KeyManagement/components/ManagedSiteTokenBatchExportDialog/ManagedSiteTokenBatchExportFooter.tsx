@@ -44,7 +44,7 @@ export function ManagedSiteTokenBatchExportFooter({
 }: ManagedSiteTokenBatchExportFooterProps) {
   if (executionResult) {
     return (
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="gap-y-density-3 flex flex-wrap items-center justify-between gap-x-3">
         <div className="text-muted-foreground min-w-0 flex-1 text-sm break-words">
           {t("keyManagement:batchManagedSiteExport.results.summary", {
             created: executionResult.createdCount,
@@ -53,7 +53,7 @@ export function ManagedSiteTokenBatchExportFooter({
             total: executionResult.items.length,
           })}
         </div>
-        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+        <div className="gap-y-density-2 flex min-w-0 flex-wrap items-center justify-end gap-x-2">
           {canRetry ? (
             <Button
               type="button"
@@ -93,7 +93,7 @@ export function ManagedSiteTokenBatchExportFooter({
   }
 
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="gap-y-density-3 flex items-center justify-between gap-x-3">
       <div className="text-muted-foreground text-sm">
         {preview
           ? t("keyManagement:batchManagedSiteExport.preview.summary", {
@@ -107,7 +107,7 @@ export function ManagedSiteTokenBatchExportFooter({
               count: selectedItemCount,
             })}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="gap-y-density-2 flex items-center gap-x-2">
         <Button
           type="button"
           variant="outline"

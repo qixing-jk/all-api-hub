@@ -164,7 +164,7 @@ export default function CopyKeyDialog({
           />
         }
       >
-        <div className="flex-1 space-y-3 overflow-y-auto">
+        <div className="space-y-density-3 flex-1 overflow-y-auto">
           {showCreateResponseOnlyWarning ? (
             <Alert
               compact

@@ -680,7 +680,7 @@ export default function ManagedSiteModelSyncSettings() {
             title={t("managedSiteModelSync:settings.interval")}
             description={t("managedSiteModelSync:settings.intervalDesc")}
             rightContent={
-              <div className="flex items-center gap-2">
+              <div className="gap-y-density-2 flex items-center gap-x-2">
                 <Input
                   type="number"
                   min="1"
@@ -764,7 +764,7 @@ export default function ManagedSiteModelSyncSettings() {
               "managedSiteModelSync:settings.channelProcessingTimeoutDesc",
             )}
             rightContent={
-              <div className="flex items-center gap-2">
+              <div className="gap-y-density-2 flex items-center gap-x-2">
                 <Input
                   type="number"
                   min="0"
@@ -850,7 +850,7 @@ export default function ManagedSiteModelSyncSettings() {
             title={t("managedSiteModelSync:settings.allowedModels")}
             description={t("managedSiteModelSync:settings.allowedModelsDesc")}
           >
-            <div className="w-full space-y-2">
+            <div className="space-y-density-2 w-full">
               <CompactMultiSelect
                 allowCustom
                 options={channelUpstreamModelOptions}
@@ -912,7 +912,7 @@ export default function ManagedSiteModelSyncSettings() {
                 onClick={handleNavigateToExecution}
                 variant="default"
                 size="sm"
-                className="flex items-center gap-2"
+                className="gap-y-density-2 flex items-center gap-x-2"
               >
                 <span>
                   {t("managedSiteModelSync:settings.viewExecutionButton")}
@@ -943,7 +943,7 @@ export default function ManagedSiteModelSyncSettings() {
           </div>
         }
         footer={
-          <div className="flex justify-end gap-2">
+          <div className="gap-y-density-2 flex justify-end gap-x-2">
             <Button
               type="button"
               variant="secondary"

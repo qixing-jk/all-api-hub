@@ -67,7 +67,7 @@ export function ManagedSiteConfigPromptDialog({
         </div>
       }
     >
-      <div className="space-y-3">
+      <div className="space-y-density-3">
         <Alert
           variant="warning"
           title={t("accountDialog:warnings.managedSiteConfig.warningTitle", {

@@ -165,7 +165,10 @@ export default function OptionsOverview() {
   }
 
   return (
-    <div className="space-y-6 p-6" data-testid={OPTIONS_OVERVIEW_TEST_IDS.page}>
+    <div
+      className="space-y-density-6 py-density-6 px-6"
+      data-testid={OPTIONS_OVERVIEW_TEST_IDS.page}
+    >
       <PageHeader
         icon={LayoutDashboard}
         title={t("optionsOverview:title")}
@@ -187,7 +190,7 @@ export default function OptionsOverview() {
       {!showPermissionsOnboarding ? <ProductTourInvitation /> : null}
 
       {isLoading && !viewModel ? (
-        <div className="dark:text-secondary-foreground text-muted-foreground flex min-h-64 items-center justify-center gap-3 text-sm">
+        <div className="dark:text-secondary-foreground text-muted-foreground gap-y-density-3 flex min-h-64 items-center justify-center gap-x-3 text-sm">
           <Spinner size="default" aria-label={t("common:status.loading")} />
           <span>{t("optionsOverview:states.loading")}</span>
         </div>
@@ -200,7 +203,7 @@ export default function OptionsOverview() {
           title={t("optionsOverview:states.loadedWithError")}
           showIcon
         >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row sm:items-center sm:justify-between">
             <span className="text-sm">{error}</span>
             <Button
               type="button"

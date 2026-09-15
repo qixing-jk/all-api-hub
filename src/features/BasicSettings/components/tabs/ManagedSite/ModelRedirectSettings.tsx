@@ -225,7 +225,7 @@ export default function ModelRedirectSettings() {
               <p className="dark:text-foreground text-secondary-foreground text-sm font-medium">
                 {t("enable")}
               </p>
-              <p className="dark:text-secondary-foreground text-muted-foreground mt-1 text-sm">
+              <p className="dark:text-secondary-foreground text-muted-foreground mt-density-1 text-sm">
                 {t("enableDesc")}
               </p>
             </div>
@@ -256,14 +256,14 @@ export default function ModelRedirectSettings() {
                   disabled={isUpdating}
                   allowCustom
                 />
-                <p className="dark:text-secondary-foreground text-muted-foreground mt-1 text-sm">
+                <p className="dark:text-secondary-foreground text-muted-foreground mt-density-1 text-sm">
                   {t("standardModelsDesc")}
                 </p>
               </div>
 
               <div
                 id="managed-site-model-redirect-prune-missing-targets"
-                className="mt-4 flex items-start justify-between"
+                className="mt-density-4 flex items-start justify-between"
               >
                 <div className="flex-1">
                   <p className="dark:text-foreground text-secondary-foreground text-sm font-medium">
@@ -271,7 +271,7 @@ export default function ModelRedirectSettings() {
                   </p>
                   <p
                     id="prune-missing-targets-desc"
-                    className="dark:text-secondary-foreground text-muted-foreground mt-1 text-sm"
+                    className="dark:text-secondary-foreground text-muted-foreground mt-density-1 text-sm"
                   >
                     {t("pruneMissingTargetsOnModelSyncDesc")}
                   </p>
@@ -305,7 +305,7 @@ export default function ModelRedirectSettings() {
             </>
           )}
 
-          <div className="pt-2">
+          <div className="pt-density-2">
             <Button
               id="managed-site-model-redirect-bulk-clear"
               type="button"
@@ -318,7 +318,7 @@ export default function ModelRedirectSettings() {
             >
               {t("bulkClear.action")}
             </Button>
-            <p className="dark:text-secondary-foreground text-muted-foreground mt-1 text-sm">
+            <p className="dark:text-secondary-foreground text-muted-foreground mt-density-1 text-sm">
               {t("bulkClear.actionDesc")}
             </p>
           </div>

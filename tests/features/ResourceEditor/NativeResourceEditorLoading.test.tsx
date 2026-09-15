@@ -58,5 +58,10 @@ describe("NativeResourceEditorLoading", () => {
       "aria-hidden",
       "true",
     )
+
+    const fieldPlaceholders = Array.from(
+      screen.getByTestId("native-editor-loading").querySelectorAll("div"),
+    ).filter((element) => element.className.includes("h-(--density-control)"))
+    expect(fieldPlaceholders).toHaveLength(5)
   })
 })

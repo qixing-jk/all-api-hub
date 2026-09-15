@@ -361,7 +361,7 @@ function AccountManagementContent({
   }, [handleRefreshDisabledAccounts, t])
 
   return (
-    <div className="bg-card flex flex-col p-6">
+    <div className="bg-card py-density-6 flex flex-col px-6">
       <PageHeader
         icon={UserRound}
         title={t("account:title")}
@@ -379,7 +379,7 @@ function AccountManagementContent({
             surfaceId={headerSurface}
           >
             <div
-              className="flex w-full flex-wrap items-center justify-end gap-2"
+              className="gap-y-density-2 flex w-full flex-wrap items-center justify-end gap-x-2"
               data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.headerActions}
             >
               <Button
@@ -467,7 +467,7 @@ function AccountManagementContent({
       />
 
       {guidanceDismissal.shouldShow ? (
-        <div className="mb-4">
+        <div className="mb-density-4">
           <UnifiedApiGuidanceCard
             model={unifiedApiGuidance}
             surface={UNIFIED_API_GUIDANCE_SURFACES.Account}

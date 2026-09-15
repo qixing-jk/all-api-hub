@@ -54,10 +54,10 @@ export function SponsorRecommendationsSection({
   return (
     <section
       aria-labelledby={headingId}
-      className={showVisibleHeader ? "space-y-3" : "space-y-2"}
+      className={showVisibleHeader ? "space-y-density-3" : "space-y-density-2"}
       data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.sponsorRecommendations}
     >
-      <div className={showVisibleHeader ? "space-y-1" : "sr-only"}>
+      <div className={showVisibleHeader ? "space-y-density-1" : "sr-only"}>
         <h3 id={headingId} className="text-foreground text-sm font-medium">
           {heading}
         </h3>
@@ -67,7 +67,7 @@ export function SponsorRecommendationsSection({
           </p>
         ) : null}
       </div>
-      <div className="grid gap-2">
+      <div className="gap-y-density-2 grid gap-x-2">
         {items.map((item) => (
           <SponsorRecommendationCard
             key={item.id}

@@ -168,8 +168,8 @@ export function useManagedSiteChannelPageExperience({
     ),
     emptyContent:
       isLoadedEmpty && canImportChannel ? (
-        <div className="mx-auto flex max-w-md flex-col items-center gap-3 py-4 text-center">
-          <div className="space-y-1">
+        <div className="gap-y-density-3 py-density-4 mx-auto flex max-w-md flex-col items-center gap-x-3 text-center">
+          <div className="space-y-density-1">
             <div className="text-foreground text-sm font-medium">
               {t("gatewayGuidance.empty.title")}
             </div>
@@ -177,7 +177,7 @@ export function useManagedSiteChannelPageExperience({
               {t("gatewayGuidance.empty.description")}
             </div>
           </div>
-          <div className="flex w-full max-w-full flex-wrap items-center justify-center gap-2">
+          <div className="gap-y-density-2 flex w-full max-w-full flex-wrap items-center justify-center gap-x-2">
             {importActions.map((action, index) => (
               <Button
                 key={action.label}

@@ -54,13 +54,17 @@ describe("GuidanceCardLayout", () => {
     const actionRail = container.querySelector<HTMLElement>(
       "[data-guidance-action-rail]",
     )
+    const dismissHeader = container.querySelector<HTMLElement>(
+      "[data-guidance-dismiss-action-header]",
+    )
     const sessionDismiss = container.querySelector<HTMLElement>(
       "[data-guidance-session-dismiss]",
     )
 
     expect(permanentDismiss).toBeVisible()
     expect(screen.getByRole("button", { name: "Hide for now" })).toBeVisible()
-    expect(actionRail).toContainElement(sessionDismiss)
+    expect(dismissHeader).toContainElement(sessionDismiss)
+    expect(actionRail).not.toContainElement(sessionDismiss)
     expect(actionRail).toContainElement(permanentDismiss)
     expect(container.querySelector("[data-guidance-action-panel]")).toBeNull()
   })
@@ -91,6 +95,9 @@ describe("GuidanceCardLayout", () => {
     const actionRail = container.querySelector<HTMLElement>(
       "[data-guidance-action-rail]",
     )
+    const dismissHeader = container.querySelector<HTMLElement>(
+      "[data-guidance-dismiss-action-header]",
+    )
     const actionPanel = container.querySelector<HTMLElement>(
       "[data-guidance-action-panel]",
     )
@@ -105,7 +112,8 @@ describe("GuidanceCardLayout", () => {
     )
 
     expect(actionRail).toContainElement(actionPanel)
-    expect(actionRail).toContainElement(sessionDismiss)
+    expect(dismissHeader).toContainElement(sessionDismiss)
+    expect(actionRail).not.toContainElement(sessionDismiss)
     expect(actionRail).toContainElement(permanentDismiss)
     expect(actionPanel).toContainElement(businessAction)
     expect(actionPanel).not.toContainElement(sessionDismiss)

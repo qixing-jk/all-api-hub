@@ -235,6 +235,9 @@ for (const width of [1280, 390, 320]) {
       expect(metrics.compact[route].font).toBe(metrics.default[route].font)
       expect(metrics.comfortable[route].font).toBe(metrics.default[route].font)
       expect(metrics.compact[route].width).toBe(metrics.default[route].width)
+      expect(metrics.comfortable[route].width).toBe(
+        metrics.default[route].width,
+      )
     }
     await testInfo.attach("density-measurements", {
       body: JSON.stringify(metrics, null, 2),
@@ -250,6 +253,10 @@ for (const width of [1280, 390, 320]) {
     await page.getByRole("button", { name: /^Current:/ }).click()
     await page.getByRole("menuitem", { name: "Appearance settings" }).click()
     const drawer = page.getByRole("dialog", { name: "Appearance settings" })
+    await expect(drawer.locator('[data-slot="sheet-header"]')).toHaveCSS(
+      "padding-top",
+      "20px",
+    )
     const drawerDensity = drawer.getByRole("group", {
       name: "Interface density",
     })
@@ -268,6 +275,10 @@ for (const width of [1280, 390, 320]) {
     await expect(popup.locator("html")).toHaveAttribute(
       THEME_ATTRIBUTES.DENSITY,
       "compact",
+    )
+    await expect(drawer.locator('[data-slot="sheet-header"]')).toHaveCSS(
+      "padding-top",
+      "12px",
     )
     await drawer.getByRole("button", { name: "Reset density" }).click()
     for (const view of views)

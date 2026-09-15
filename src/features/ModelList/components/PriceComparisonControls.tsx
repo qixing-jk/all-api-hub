@@ -251,11 +251,11 @@ export function PriceComparisonControls({
       className={
         embedded
           ? undefined
-          : "dark:bg-background/40 border-border bg-surface-subtle/70 relative mt-4 rounded-md border p-3"
+          : "dark:bg-background/40 border-border bg-surface-subtle/70 mt-density-4 py-density-3 relative rounded-md border px-3"
       }
     >
       {!embedded && (
-        <div className="space-y-1 [@container(min-width:48rem)]:pr-44">
+        <div className="space-y-density-1 [@container(min-width:48rem)]:pr-44">
           <h3
             id="model-price-comparison-title"
             className="text-foreground text-sm font-semibold"
@@ -271,9 +271,9 @@ export function PriceComparisonControls({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5">
+      <div className="gap-y-density-3 flex flex-wrap items-center gap-x-6">
+        <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2">
+          <div className="gap-y-density-1-5 flex items-center gap-x-1.5">
             <label
               htmlFor="model-price-comparison-preset"
               className="text-foreground text-sm font-medium"
@@ -302,12 +302,15 @@ export function PriceComparisonControls({
             />
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <dl className="flex flex-wrap gap-x-6 gap-y-2">
+        <div className="gap-y-density-1 flex flex-wrap items-center gap-x-3">
+          <dl className="gap-y-density-2 flex flex-wrap gap-x-6">
             {MODEL_PRICE_COMPARISON_WEIGHT_KEYS.filter(
               (key) => (weights[key] ?? 0) > 0,
             ).map((key) => (
-              <div key={key} className="flex items-baseline gap-1">
+              <div
+                key={key}
+                className="gap-y-density-1 flex items-baseline gap-x-1"
+              >
                 <dt className="text-muted-foreground text-xs">
                   {weightLabels[key]}
                 </dt>
@@ -322,9 +325,11 @@ export function PriceComparisonControls({
           </dl>
         </div>
       </div>
-      {conditionSummary && <div className="mt-2">{conditionSummary}</div>}
-      <details className="group/comparison mt-2">
-        <summary className="bg-background text-foreground hover:bg-muted/70 focus-visible:ring-ring inline-flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-md border px-3 text-sm font-medium shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none [&::-webkit-details-marker]:hidden [@container(min-width:48rem)]:absolute [@container(min-width:48rem)]:top-3 [@container(min-width:48rem)]:right-3">
+      {conditionSummary && (
+        <div className="mt-density-2">{conditionSummary}</div>
+      )}
+      <details className="group/comparison mt-density-2">
+        <summary className="bg-background text-foreground hover:bg-muted/70 focus-visible:ring-ring gap-y-density-1-5 py-density-1 inline-flex min-h-(--density-control) cursor-pointer list-none items-center gap-x-1.5 rounded-md border px-3 text-sm font-medium shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none [&::-webkit-details-marker]:hidden [@container(min-width:48rem)]:absolute [@container(min-width:48rem)]:top-3 [@container(min-width:48rem)]:right-3">
           <SlidersHorizontal
             className="text-muted-foreground size-3.5"
             aria-hidden="true"
@@ -335,8 +340,8 @@ export function PriceComparisonControls({
             aria-hidden="true"
           />
         </summary>
-        <div className="mt-3 space-y-4 border-t pt-3">
-          <div className="min-w-0 space-y-3">
+        <div className="mt-density-3 space-y-density-4 pt-density-3 border-t">
+          <div className="space-y-density-3 min-w-0">
             <div className="space-y-0.5">
               <h4 className="text-sm font-medium">
                 {t("priceComparison.weightSectionTitle")}
@@ -345,7 +350,7 @@ export function PriceComparisonControls({
                 {t("priceComparison.weightEffect")}
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-3 [@container(min-width:48rem)]:grid-cols-4">
+            <div className="gap-y-density-3 grid grid-cols-2 gap-x-3 [@container(min-width:48rem)]:grid-cols-4">
               {MODEL_PRICE_COMPARISON_WEIGHT_KEYS.map((key) => (
                 <FormField
                   key={key}

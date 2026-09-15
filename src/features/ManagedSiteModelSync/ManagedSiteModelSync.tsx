@@ -1434,28 +1434,28 @@ export default function ManagedSiteModelSync({
       }}
     >
       <TabsList
-        className={`corners-concentric bg-muted dark:bg-card mb-4 flex space-x-2 rounded-lg p-1 [--corner-inset:--spacing(1)] ${CORNERS.buttonItems}`}
+        className={`corners-concentric bg-muted dark:bg-card mb-density-4 py-density-1 flex space-x-2 rounded-lg px-1 [--corner-inset:--spacing(1)] ${CORNERS.buttonItems}`}
       >
         <TabsTrigger
           value={TAB_VALUE.history}
-          className="text-muted-foreground hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-theme-700 dark:text-secondary-foreground dark:data-[state=active]:bg-background dark:data-[state=active]:text-theme-400 flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors data-[state=active]:shadow"
+          className="text-muted-foreground hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-theme-700 dark:text-secondary-foreground dark:data-[state=active]:bg-background dark:data-[state=active]:text-theme-400 py-density-2 flex-1 rounded-lg px-4 text-sm font-medium transition-colors data-[state=active]:shadow"
         >
           {historyTabLabel}
         </TabsTrigger>
         <TabsTrigger
           value={TAB_VALUE.manual}
-          className="text-muted-foreground hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-theme-700 dark:text-secondary-foreground dark:data-[state=active]:bg-background dark:data-[state=active]:text-theme-400 flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors data-[state=active]:shadow"
+          className="text-muted-foreground hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-theme-700 dark:text-secondary-foreground dark:data-[state=active]:bg-background dark:data-[state=active]:text-theme-400 py-density-2 flex-1 rounded-lg px-4 text-sm font-medium transition-colors data-[state=active]:shadow"
         >
           {manualTabLabel}
         </TabsTrigger>
       </TabsList>
       {routeResourceUnavailable && (
-        <Alert variant="warning" role="status" className="mb-4">
+        <Alert variant="warning" role="status" className="mb-density-4">
           {t("execution.table.resourceUnavailable")}
         </Alert>
       )}
       <TabsContent value={TAB_VALUE.history}>
-        <div className="space-y-4">
+        <div className="space-y-density-4">
           <ActionBar
             isRunning={isAnySyncPending || isLoading || isManualRefreshPending}
             activeAction={activeAction}
@@ -1469,7 +1469,7 @@ export default function ManagedSiteModelSync({
           />
 
           {hasHistory && (
-            <div className="mt-2">
+            <div className="mt-density-2">
               <FilterBar
                 statistics={lastExecution.statistics}
                 status={filterStatus}
@@ -1497,12 +1497,12 @@ export default function ManagedSiteModelSync({
         </div>
       </TabsContent>
       <TabsContent value={TAB_VALUE.manual}>
-        <div className="space-y-4">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-density-4">
+          <div className="gap-y-density-4 flex flex-col gap-x-4 md:flex-row md:items-center md:justify-between">
             <p className="text-muted-foreground text-sm">
               {t("execution.manual.description")}
             </p>
-            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <div className="gap-y-density-3 flex flex-col gap-x-3 md:flex-row md:items-center">
               <div className="md:w-64">
                 <Input
                   type="text"
@@ -1547,7 +1547,7 @@ export default function ManagedSiteModelSync({
           </div>
 
           {isChannelsLoading ? (
-            <div className="border-border-strong text-muted-foreground dark:border-border rounded-lg border border-dashed p-6 text-center text-sm">
+            <div className="border-border-strong text-muted-foreground dark:border-border py-density-6 rounded-lg border border-dashed px-6 text-center text-sm">
               {t("execution.manual.loading")}
             </div>
           ) : manualHasResults ? (
@@ -1588,7 +1588,7 @@ export default function ManagedSiteModelSync({
   )
 
   return (
-    <div className="p-6">
+    <div className="py-density-6 px-6">
       <PageHeader
         icon={RefreshCcw}
         title={t("execution.title")}
@@ -1611,14 +1611,14 @@ export default function ManagedSiteModelSync({
       />
 
       {!isModelSyncUnsupported && !isConfigMissing ? (
-        <p className="text-muted-foreground mb-6 text-sm leading-6">
+        <p className="text-muted-foreground mb-density-6 text-sm leading-6">
           {t("managedSiteModelSync:optionalGuidance.description")}
         </p>
       ) : null}
 
       {isModelSyncUnsupported ? (
         <EmptyState
-          className="mt-6"
+          className="mt-density-6"
           icon={<RefreshCcw className="text-faint-foreground h-12 w-12" />}
           title={t("managedSiteModelSync:execution.unsupported.title")}
           description={getManagedSiteUnsupportedModelSyncMessage(
@@ -1632,11 +1632,11 @@ export default function ManagedSiteModelSync({
             t,
             getManagedSiteMessagesKeyFromSiteType(managedSiteType),
           )}
-          className="mt-6"
+          className="mt-density-6"
         />
       ) : (
         <>
-          <div className="mb-6">
+          <div className="mb-density-6">
             <OverviewCard
               enabled={isAutoSyncEnabled}
               intervalMs={intervalMs}
@@ -1657,13 +1657,13 @@ export default function ManagedSiteModelSync({
           </div>
 
           {progress?.isRunning && (
-            <div className="mb-6">
+            <div className="mb-density-6">
               <ProgressCard progress={progress} />
             </div>
           )}
 
           {lastExecution?.statistics && (
-            <div className="mb-6">
+            <div className="mb-density-6">
               <StatisticsCard statistics={lastExecution.statistics} />
             </div>
           )}

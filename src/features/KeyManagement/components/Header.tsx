@@ -53,7 +53,7 @@ export function Header({
   const { t } = useTranslation(["keyManagement", "common"])
   const [isManualRefreshLoading, setIsManualRefreshLoading] = useState(false)
   const bridgeDescription = (
-    <span className="text-muted-foreground mt-1 block text-sm">
+    <span className="text-muted-foreground mt-density-1 block text-sm">
       {t("unifiedApiGuidance.headerBridge")}
     </span>
   )
@@ -91,7 +91,7 @@ export function Header({
       <>
         <span className="block">{t("description")}</span>
         {bridgeDescription}
-        <span className="text-warning-text mt-1 block font-medium">
+        <span className="text-warning-text mt-density-1 block font-medium">
           {managedSiteStatusHint}
         </span>
       </>
@@ -99,7 +99,7 @@ export function Header({
   }
 
   return (
-    <div className="mb-8">
+    <div className="mb-density-8">
       <ProductAnalyticsScope
         entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
         featureId={PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement}

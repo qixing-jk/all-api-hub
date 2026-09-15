@@ -136,7 +136,7 @@ const DESKTOP_TAB_GAP_PX = 8
  * Returns the shared desktop tab button classes for selected and idle states.
  */
 function getTabButtonClass(selected: boolean) {
-  return `border-b-2 px-3 py-3 text-sm font-medium whitespace-nowrap transition-colors focus:outline-none ${
+  return `border-b-2 px-3 py-density-3 text-sm font-medium whitespace-nowrap transition-colors focus:outline-none ${
     selected
       ? "border-theme-600 text-theme-600 dark:border-theme-500 dark:text-theme-400"
       : "border-transparent text-muted-foreground hover:border-border-strong hover:text-foreground dark:hover:text-secondary-foreground"
@@ -384,11 +384,11 @@ function DesktopTabs({
   return (
     <div
       ref={containerRef}
-      className="border-border relative -mb-px hidden items-center gap-2 border-b md:flex"
+      className="border-border gap-y-density-2 relative -mb-px hidden items-center gap-x-2 border-b md:flex"
     >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute top-0 left-0 -z-10 flex gap-2 opacity-0"
+        className="gap-y-density-2 pointer-events-none absolute top-0 left-0 -z-10 flex gap-x-2 opacity-0"
       >
         {tabs.map((tab) => (
           <button
@@ -409,14 +409,14 @@ function DesktopTabs({
           className={getTabButtonClass(false)}
           tabIndex={-1}
         >
-          <span className="inline-flex items-center gap-1.5">
+          <span className="gap-y-density-1-5 inline-flex items-center gap-x-1.5">
             {t("common:actions.more")}
             <ChevronDown className="h-4 w-4" />
           </span>
         </button>
       </div>
 
-      <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+      <div className="gap-y-density-2 flex min-w-0 flex-1 items-center gap-x-2 overflow-hidden">
         {visibleTabIds.map((tabId) => {
           const tab = tabsById[tabId]
           const isSelected = selectedTabId === tab.id
@@ -443,7 +443,7 @@ function DesktopTabs({
               className={getTabButtonClass(false)}
               aria-label={t("common:actions.more")}
             >
-              <span className="inline-flex items-center gap-1.5">
+              <span className="gap-y-density-1-5 inline-flex items-center gap-x-1.5">
                 {t("common:actions.more")}
                 <ChevronDown className="h-4 w-4" />
               </span>
@@ -592,7 +592,10 @@ export default function BasicSettings() {
   }
 
   return (
-    <div className="p-4 sm:p-6" data-testid={BASIC_SETTINGS_TEST_IDS.page}>
+    <div
+      className="py-density-4 sm:py-density-6 px-4 sm:px-6"
+      data-testid={BASIC_SETTINGS_TEST_IDS.page}
+    >
       <PageHeader
         icon={Settings}
         title={t("title")}
@@ -614,8 +617,8 @@ export default function BasicSettings() {
           ))}
         </TabsList>
 
-        <div className="mb-6">
-          <div className="mb-4 md:hidden">
+        <div className="mb-density-6">
+          <div className="mb-density-4 md:hidden">
             <label className="sr-only" htmlFor="settings-tab-select">
               {t("tabs.select")}
             </label>

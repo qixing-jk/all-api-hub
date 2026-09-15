@@ -305,14 +305,14 @@ export default function UnifiedApiGuidanceDevPreview() {
   }
 
   return (
-    <div className="p-6">
+    <div className="py-density-6 px-6">
       <PageHeader
         icon={PAGE_ICON}
         title="Unified API guidance preview"
         description="Dev-only fixture view for checking guidance status, copy, reasons, and CTA targets without changing account data."
       />
 
-      <div className="border-border bg-surface-subtle text-secondary-foreground dark:border-foreground/10 dark:bg-foreground/[0.04] mb-4 rounded-md border px-4 py-3 text-sm">
+      <div className="border-border bg-surface-subtle text-secondary-foreground dark:border-foreground/10 dark:bg-foreground/[0.04] mb-density-4 py-density-3 rounded-md border px-4 text-sm">
         <span className="font-medium">Last action:</span> {lastAction}
       </div>
 
@@ -324,7 +324,7 @@ export default function UnifiedApiGuidanceDevPreview() {
         matchedScenario={matchedScenario}
       />
 
-      <div className="space-y-6">
+      <div className="space-y-density-6">
         {scenarioModels.map(({ scenario, model }) => (
           <ScenarioPreview
             key={scenario.id}
@@ -364,11 +364,11 @@ function CurrentStatePreview({
 
   return (
     <Card
-      className="border-theme-200 bg-theme-50/60 dark:border-theme-900/50 dark:bg-theme-950/10 mb-6"
+      className="border-theme-200 bg-theme-50/60 dark:border-theme-900/50 dark:bg-theme-950/10 mb-density-6"
       data-testid={UNIFIED_API_GUIDANCE_TEST_IDS.currentPreviewState}
     >
       <CardHeader>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="gap-y-density-3 flex flex-col gap-x-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <CardTitle>Current user state</CardTitle>
             <CardDescription>
@@ -377,7 +377,7 @@ function CurrentStatePreview({
             </CardDescription>
           </div>
           {model ? (
-            <div className="flex flex-wrap gap-2">
+            <div className="gap-y-density-2 flex flex-wrap gap-x-2">
               <Badge variant="secondary">{model.status}</Badge>
               <Badge variant="outline">{model.sourceKind}</Badge>
             </div>
@@ -401,12 +401,12 @@ function CurrentStatePreview({
           </div>
         ) : null}
         {model && diagnostics ? (
-          <div className="grid gap-4 xl:grid-cols-[minmax(14rem,18rem)_minmax(0,1fr)]">
+          <div className="gap-y-density-4 grid gap-x-4 xl:grid-cols-[minmax(14rem,18rem)_minmax(0,1fr)]">
             <GuidanceDiagnostics diagnostics={diagnostics} model={model} />
-            <div className="border-theme-100 bg-card/80 text-secondary-foreground dark:border-theme-900/40 dark:bg-foreground/[0.03] space-y-3 rounded-md border p-3 text-sm leading-6">
+            <div className="border-theme-100 bg-card/80 text-secondary-foreground dark:border-theme-900/40 dark:bg-foreground/[0.03] space-y-density-3 py-density-3 rounded-md border px-3 text-sm leading-6">
               <div>{getCurrentStateReason(model)}</div>
               {matchedScenario ? (
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="gap-y-density-2 flex flex-col gap-x-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="text-foreground font-medium">
                     {matchedScenario.exact
                       ? "Matched fixture"
@@ -454,22 +454,22 @@ function ScenarioPreview({
     >
       <Card>
         <CardHeader>
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="gap-y-density-3 flex flex-col gap-x-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <CardTitle>{scenario.label}</CardTitle>
               <CardDescription>{scenario.reason}</CardDescription>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="gap-y-density-2 flex flex-wrap gap-x-2">
               <Badge variant="secondary">{model.status}</Badge>
               <Badge variant="outline">{model.sourceKind}</Badge>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 xl:grid-cols-[minmax(14rem,18rem)_minmax(0,1fr)]">
+          <div className="gap-y-density-4 grid gap-x-4 xl:grid-cols-[minmax(14rem,18rem)_minmax(0,1fr)]">
             <ScenarioDiagnostics scenario={scenario} model={model} />
 
-            <div className="grid min-w-0 gap-4">
+            <div className="gap-y-density-4 grid min-w-0 gap-x-4">
               <SurfacePreview
                 title="Overview surface"
                 surface={UNIFIED_API_GUIDANCE_SURFACES.OptionsOverview}
@@ -528,12 +528,12 @@ function GuidanceDiagnostics({
   model: UnifiedApiGuidanceModel
 }) {
   return (
-    <div className="border-border bg-card dark:border-foreground/10 dark:bg-foreground/[0.03] space-y-3 rounded-md border p-3 text-sm">
+    <div className="border-border bg-card dark:border-foreground/10 dark:bg-foreground/[0.03] space-y-density-3 py-density-3 rounded-md border px-3 text-sm">
       <div>
-        <div className="text-muted-foreground mb-1 text-xs font-medium uppercase">
+        <div className="text-muted-foreground mb-density-1 text-xs font-medium uppercase">
           Input
         </div>
-        <div className="space-y-1 font-mono text-xs">
+        <div className="space-y-density-1 font-mono text-xs">
           <div>enabledAccountCount: {diagnostics.enabledAccountCount}</div>
           <div>
             keyAccessibleAccountCount: {diagnostics.keyAccessibleAccountCount}
@@ -544,10 +544,10 @@ function GuidanceDiagnostics({
       </div>
 
       <div>
-        <div className="text-muted-foreground mb-1 text-xs font-medium uppercase">
+        <div className="text-muted-foreground mb-density-1 text-xs font-medium uppercase">
           Model
         </div>
-        <div className="space-y-1 font-mono text-xs">
+        <div className="space-y-density-1 font-mono text-xs">
           <div>status: {model.status}</div>
           <div>sourceKind: {model.sourceKind}</div>
           <div>primary: {formatTarget(model.primaryAction)}</div>
@@ -584,8 +584,8 @@ function SurfacePreview({
   ) => void
 }) {
   return (
-    <div className="min-w-0 space-y-2">
-      <div className="flex items-center gap-2">
+    <div className="space-y-density-2 min-w-0">
+      <div className="gap-y-density-2 flex items-center gap-x-2">
         <h3 className="text-secondary-foreground text-sm font-semibold">
           {title}
         </h3>
@@ -619,8 +619,8 @@ function ApiCredentialSurfacePreview({
   ) => void
 }) {
   return (
-    <div className="min-w-0 space-y-2">
-      <div className="flex items-center gap-2">
+    <div className="space-y-density-2 min-w-0">
+      <div className="gap-y-density-2 flex items-center gap-x-2">
         <h3 className="text-secondary-foreground text-sm font-semibold">
           API credential surface
         </h3>

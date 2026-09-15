@@ -55,7 +55,7 @@ export function WebdavConnectionSettings({
   return (
     <>
       <CardHeader>
-        <div className="flex items-center gap-2">
+        <div className="gap-y-density-2 flex items-center gap-x-2">
           <Plug
             className="text-theme-600 dark:text-theme-400 size-5"
             aria-hidden="true"
@@ -68,11 +68,11 @@ export function WebdavConnectionSettings({
       <CardContent
         id={WEBDAV_TARGET_IDS.saveConfig}
         padding="md"
-        className="space-y-4"
+        className="space-y-density-4"
       >
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <div className="space-y-1">
+        <div className="space-y-density-4">
+          <div className="space-y-density-2">
+            <div className="space-y-density-1">
               <BodySmall className="m-0">
                 {t("webdav.provider.description")}
               </BodySmall>
@@ -96,8 +96,8 @@ export function WebdavConnectionSettings({
             />
           </div>
 
-          <div className="space-y-4">
-            <div className="space-y-1">
+          <div className="space-y-density-4">
+            <div className="space-y-density-1">
               <BodySmall className="m-0">
                 {t(
                   provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
@@ -108,10 +108,10 @@ export function WebdavConnectionSettings({
             </div>
 
             {provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST ? (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="gap-y-density-4 grid grid-cols-1 gap-x-4 md:grid-cols-2">
                 <FormField
                   label={
-                    <span className="inline-flex items-center gap-1">
+                    <span className="gap-y-density-1 inline-flex items-center gap-x-1">
                       {t("webdav.gist.token")}
                       <FieldHelpPopover
                         label={t("webdav.gist.token")}
@@ -174,7 +174,7 @@ export function WebdavConnectionSettings({
                 </FormField>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="gap-y-density-4 grid grid-cols-1 gap-x-4 md:grid-cols-2">
                 <div className="md:col-span-2">
                   <FormField
                     label={t("webdav.webdavUrl")}
@@ -264,7 +264,7 @@ export function WebdavConnectionSettings({
           featureId={PRODUCT_ANALYTICS_FEATURE_IDS.WebDavSync}
           surfaceId={webDavSettingsSurface}
         >
-          <div className="border-border flex flex-wrap items-center gap-3 border-t pt-4">
+          <div className="border-border gap-y-density-3 pt-density-4 flex flex-wrap items-center gap-x-3 border-t">
             <Button
               id={WEBDAV_TARGET_IDS.testConnection}
               onClick={handleTestConnection}
@@ -300,7 +300,7 @@ export function WebdavConnectionSettings({
                   </a>
                 </Button>
               )}
-            <div className="flex flex-wrap gap-3 sm:ml-auto">
+            <div className="gap-y-density-3 flex flex-wrap gap-x-3 sm:ml-auto">
               {backupActions}
             </div>
           </div>

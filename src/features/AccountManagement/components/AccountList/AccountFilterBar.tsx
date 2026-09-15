@@ -70,14 +70,14 @@ export default function AccountFilterBar({
         <SelectTrigger
           size="sm"
           className={cn(
-            "border-border hover:bg-surface-subtle h-(--density-control-lg) w-full min-w-0 gap-1.5 rounded-md bg-transparent px-2 shadow-none data-[size=sm]:h-(--density-control-lg) [&_[data-slot='select-value']]:min-w-0 [&_[data-slot='select-value']]:flex-1 [&_[data-slot='select-value']]:overflow-hidden [&_[data-slot='select-value']>div]:min-w-0 [@container(min-width:40rem)]:data-[size=sm]:h-(--density-control)",
+            "border-border hover:bg-surface-subtle gap-y-density-1-5 h-(--density-control-lg) w-full min-w-0 gap-x-1.5 rounded-md bg-transparent px-2 shadow-none data-[size=sm]:h-(--density-control-lg) [&_[data-slot='select-value']]:min-w-0 [&_[data-slot='select-value']]:flex-1 [&_[data-slot='select-value']]:overflow-hidden [&_[data-slot='select-value']>div]:min-w-0 [@container(min-width:40rem)]:data-[size=sm]:h-(--density-control)",
             value !== "all" &&
               "border-theme-200 bg-theme-50/60 text-theme-700 dark:border-theme-800 dark:bg-theme-950/40 dark:text-theme-300",
           )}
           title={selectedLabel}
           data-testid={testId}
         >
-          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <div className="gap-y-density-1-5 flex min-w-0 flex-1 items-center gap-x-1.5">
             <span className="text-muted-foreground flex size-4 shrink-0 items-center justify-center">
               <Icon className="size-3.5" />
             </span>
@@ -96,7 +96,7 @@ export default function AccountFilterBar({
               value={option.value}
               data-count={option.count}
             >
-              <div className="flex w-full min-w-0 items-center gap-3">
+              <div className="gap-y-density-3 flex w-full min-w-0 items-center gap-x-3">
                 <span className="min-w-0 flex-1 truncate">{option.label}</span>
                 {typeof option.count === "number" && (
                   <span className="text-muted-foreground shrink-0 text-xs">
@@ -112,7 +112,7 @@ export default function AccountFilterBar({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-2 [@container(min-width:40rem)]:grid-cols-4">
+    <div className="gap-y-density-2 grid grid-cols-2 gap-x-2 [@container(min-width:40rem)]:grid-cols-4">
       {renderSelect(
         siteTypeValue,
         t("filter.siteType.placeholder"),

@@ -20,10 +20,10 @@ export default function StatisticsCard(props: StatisticsCardProps) {
   return (
     <Card>
       <CardContent padding="md">
-        <h4 className="text-foreground mb-4 text-lg font-semibold">
+        <h4 className="text-foreground mb-density-4 text-lg font-semibold">
           {t("execution.lastExecution")}
         </h4>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div className="gap-y-density-4 grid grid-cols-2 gap-x-4 md:grid-cols-4">
           <div>
             <p className="text-muted-foreground text-sm">
               {t("execution.statistics.total")}
@@ -57,8 +57,8 @@ export default function StatisticsCard(props: StatisticsCardProps) {
             </p>
           </div>
         </div>
-        <div className="border-border mt-4 border-t pt-4">
-          <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-2">
+        <div className="border-border mt-density-4 pt-density-4 border-t">
+          <div className="gap-y-density-2 grid grid-cols-1 gap-x-2 text-sm md:grid-cols-2">
             <div>
               <span className="text-muted-foreground">
                 {t("execution.statistics.startTime")}:{" "}

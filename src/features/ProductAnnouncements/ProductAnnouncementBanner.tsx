@@ -82,11 +82,11 @@ export function ProductAnnouncementBanner({
   return (
     <section
       className={cn(
-        "border-border/80 bg-card/95 text-foreground shadow-border/60 dark:border-foreground/10 dark:shadow-shadow/20 overflow-hidden rounded-lg border p-3 shadow-sm",
+        "border-border/80 bg-card/95 text-foreground shadow-border/60 dark:border-foreground/10 dark:shadow-shadow/20 py-density-3 overflow-hidden rounded-lg border px-3 shadow-sm",
       )}
     >
-      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
+      <div className="gap-y-density-3 flex min-w-0 flex-col gap-x-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="gap-y-density-3 flex min-w-0 items-start gap-x-3">
           <span
             className={cn(
               "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
@@ -95,8 +95,8 @@ export function ProductAnnouncementBanner({
           >
             <AlertTriangle className="h-4 w-4" aria-hidden="true" />
           </span>
-          <div className="min-w-0 space-y-1">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="space-y-density-1 min-w-0">
+            <div className="gap-y-density-2 flex min-w-0 flex-wrap items-center gap-x-2">
               <h2 className="min-w-0 text-sm leading-5 font-semibold break-words">
                 {notice.title}
               </h2>
@@ -118,7 +118,7 @@ export function ProductAnnouncementBanner({
             ) : null}
           </div>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+        <div className="gap-y-density-2 flex shrink-0 flex-wrap items-center gap-x-2 sm:justify-end">
           <Button
             type="button"
             variant="outline"

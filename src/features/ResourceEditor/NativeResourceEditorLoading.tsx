@@ -62,16 +62,16 @@ export function NativeResourceEditorLoadingSkeleton({
       </span>
       <div
         aria-hidden="true"
-        className="animate-pulse space-y-5 motion-reduce:animate-none"
+        className="space-y-density-5 animate-pulse motion-reduce:animate-none"
       >
         <div className="bg-secondary h-16 rounded-lg" />
         {sectionFieldCounts.map((fieldCount, sectionIndex) => (
-          <div key={sectionIndex} className="space-y-4">
+          <div key={sectionIndex} className="space-y-density-4">
             <div className="bg-secondary h-4 w-28 rounded" />
             {Array.from({ length: fieldCount }, (_, fieldIndex) => (
-              <div key={fieldIndex} className="space-y-2">
+              <div key={fieldIndex} className="space-y-density-2">
                 <div className="bg-secondary h-3 w-24 rounded" />
-                <div className="bg-secondary h-9 rounded-md" />
+                <div className="bg-secondary h-(--density-control) rounded-md" />
               </div>
             ))}
           </div>

@@ -383,7 +383,7 @@ export function RuntimeKeyActionControls({
       ) : null}
       {renderClaudeCodeRouterImportDialog()}
 
-      <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
+      <div className="gap-y-density-1 sm:gap-y-density-1-5 flex flex-wrap items-center gap-x-1 sm:gap-x-1.5">
         {actionPolicy.copySecret ? (
           <IconButton
             aria-label={

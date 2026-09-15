@@ -175,7 +175,7 @@ export default function ProtectionBypassHistoryDialog({
 
   return (
     <>
-      <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 p-4 sm:flex">
+      <div className="gap-y-density-2 py-density-4 grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 px-4 sm:flex">
         <Input
           type="search"
           aria-label={t("shieldBypass:history.search")}
@@ -251,7 +251,7 @@ export default function ProtectionBypassHistoryDialog({
           role="region"
           aria-label={t("shieldBypass:history.title")}
           tabIndex={0}
-          className="h-full overflow-y-auto overscroll-contain px-4 pb-4"
+          className="pb-density-4 h-full overflow-y-auto overscroll-contain px-4"
         >
           {hasReadError ? (
             <EmptyState
@@ -290,7 +290,7 @@ export default function ProtectionBypassHistoryDialog({
               }}
             />
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-density-3">
               {filteredEntries.map(({ entry, description }) => (
                 <ProtectionBypassHistoryRow
                   key={entry.id}
@@ -303,7 +303,7 @@ export default function ProtectionBypassHistoryDialog({
                   onExpandedChange={onExpandedChange}
                 />
               ))}
-              <div className="flex items-center justify-between gap-2">
+              <div className="gap-y-density-2 flex items-center justify-between gap-x-2">
                 <p className="text-muted-foreground text-sm">
                   {t("shieldBypass:history.shown", {
                     visible: filteredEntries.length,

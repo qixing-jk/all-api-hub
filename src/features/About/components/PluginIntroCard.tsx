@@ -23,8 +23,8 @@ const PluginIntroCard = ({ version }: PluginIntroCardProps) => {
             className="h-16 w-16 shrink-0 rounded-lg shadow-sm"
           />
           <div className="flex-1">
-            <Heading2 className="mb-2">{t("ui:app.name")}</Heading2>
-            <Body className="dark:text-secondary-foreground text-muted-foreground mb-4">
+            <Heading2 className="mb-density-2">{t("ui:app.name")}</Heading2>
+            <Body className="dark:text-secondary-foreground text-muted-foreground mb-density-4">
               {t("intro")}
             </Body>
             <div className="text-sm">

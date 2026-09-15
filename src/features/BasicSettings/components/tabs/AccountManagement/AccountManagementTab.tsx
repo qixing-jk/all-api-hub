@@ -27,21 +27,21 @@ export default function AccountManagementTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-density-6">
       <section id="account-management">
-        <Heading4 className="mb-2 flex items-center gap-2">
+        <Heading4 className="mb-density-2 gap-y-density-2 flex items-center gap-x-2">
           <Users className="text-theme-600 dark:text-theme-400 h-5 w-5" />
           <span>{t("accountManagement.title")}</span>
         </Heading4>
         <Card>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-density-4">
             <p className="text-secondary-foreground text-sm">
               {t("accountManagement.description")}
             </p>
             <WorkflowTransitionButton
               onClick={handleNavigate}
               variant="default"
-              className="flex items-center gap-2 self-start"
+              className="gap-y-density-2 flex items-center gap-x-2 self-start"
               leftIcon={<Users className="h-5 w-5" />}
             >
               <span>{t("accountManagement.openPage")}</span>

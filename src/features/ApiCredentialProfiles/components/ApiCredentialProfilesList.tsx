@@ -238,7 +238,7 @@ function DesktopEndpointNavigation({
                 >
                   {getEndpointLabel(group.baseUrl)}
                 </span>
-                <span className="text-muted-foreground mt-1 block text-xs">
+                <span className="text-muted-foreground mt-density-1 block text-xs">
                   {t("apiCredentialProfiles:grouping.credentialCount", {
                     count: group.profiles.length,
                   })}
@@ -279,7 +279,7 @@ function CompactEndpointSelector({
     <div className="border-border bg-surface-subtle/70 dark:border-border-subtle dark:bg-background/50 py-density-3 border-b px-3">
       <label
         htmlFor={API_CREDENTIAL_ENDPOINT_SELECT_ID}
-        className="text-muted-foreground mb-1.5 block text-xs font-medium"
+        className="text-muted-foreground mb-density-1-5 block text-xs font-medium"
       >
         {t("apiCredentialProfiles:grouping.baseUrlSelector")}
       </label>
@@ -536,7 +536,7 @@ export function ApiCredentialProfilesList({
           credentialCount={selectedGroup.profiles.length}
           onAddCredential={handleAddCredential}
           onCopyBaseUrl={controller.handleCopyBaseUrl}
-          className="mb-3"
+          className="mb-density-3"
         />
         <div className="space-y-density-3">
           <EndpointProfileList

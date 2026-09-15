@@ -112,7 +112,7 @@ export default function ManagedSiteTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-density-6">
       <ManagedSiteSelector />
 
       {renderSiteSettings()}

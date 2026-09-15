@@ -93,17 +93,17 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
           }
         />
       )}
-      <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
+      <div className="gap-y-density-4 grid grid-cols-1 gap-x-4 text-sm md:grid-cols-2">
         {/* 可用分组 */}
         {shouldShowGroupDetails && groupContext.usableGroups.length > 0 && (
           <div>
-            <div className="mb-2 flex items-center space-x-2">
+            <div className="mb-density-2 flex items-center space-x-2">
               <Tag className="dark:text-muted-foreground text-faint-foreground h-4 w-4" />
               <span className="text-secondary-foreground font-medium">
                 {t("currentUsableGroups")}
               </span>
             </div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="gap-y-density-1-5 flex flex-wrap gap-x-1.5">
               {groupContext.usableGroups.map((group) => {
                 const isCurrentGroup = group === effectiveGroup
                 const isClickable = Boolean(onGroupClick) && !isCurrentGroup
@@ -166,13 +166,13 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
 
         {shouldShowGroupDetails && supportedOnlyGroups.length > 0 && (
           <div>
-            <div className="mb-2 flex items-center space-x-2">
+            <div className="mb-density-2 flex items-center space-x-2">
               <Tag className="dark:text-muted-foreground text-faint-foreground h-4 w-4" />
               <span className="text-secondary-foreground font-medium">
                 {t("siteSupportedGroups")}
               </span>
             </div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="gap-y-density-1-5 flex flex-wrap gap-x-1.5">
               {supportedOnlyGroups.map((group) => (
                 <Badge key={group} variant="secondary" size="sm">
                   {group}
@@ -185,7 +185,7 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
         {/* 可用端点类型 */}
         {shouldShowEndpointTypes && (
           <div>
-            <div className="mb-2 flex items-center space-x-2">
+            <div className="mb-density-2 flex items-center space-x-2">
               <Server className="dark:text-muted-foreground text-faint-foreground h-4 w-4" />
               <span className="text-secondary-foreground font-medium">
                 {t("endpointType")}
@@ -202,7 +202,7 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
           !calculatedPrice.quote &&
           isTokenBillingType(model.quota_type) && (
             <div className="md:col-span-2">
-              <div className="mb-2 flex items-center space-x-2">
+              <div className="mb-density-2 flex items-center space-x-2">
                 <DollarSign className="dark:text-muted-foreground text-faint-foreground h-4 w-4" />
                 <span className="text-secondary-foreground font-medium">
                   {t("detailedPricing")}

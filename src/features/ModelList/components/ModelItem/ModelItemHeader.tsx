@@ -64,9 +64,9 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
   }
 
   return (
-    <div className="min-w-0 flex-1 space-y-1.5">
-      <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
-        <div className="flex min-w-0 flex-[1_1_10rem] items-center gap-2 sm:gap-3">
+    <div className="space-y-density-1-5 min-w-0 flex-1">
+      <div className="gap-y-density-2 sm:gap-y-density-3 flex min-w-0 flex-wrap items-center gap-x-2 sm:gap-x-3">
+        <div className="gap-y-density-2 sm:gap-y-density-3 flex min-w-0 flex-[1_1_10rem] items-center gap-x-2 sm:gap-x-3">
           <ModelVendorMark vendor={resolvedVendor} variant="badge" />
 
           <div className="min-w-0 flex-1">
@@ -93,7 +93,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
           featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ModelList}
           surfaceId={rowActionsSurface}
         >
-          <div className="ml-8 flex shrink-0 items-center gap-1 sm:ml-0">
+          <div className="gap-y-density-1 ml-8 flex shrink-0 items-center gap-x-1 sm:ml-0">
             <IconButton
               variant="ghost"
               size="sm"
@@ -157,7 +157,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
           </div>
         </ProductAnalyticsScope>
 
-        <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2">
+        <div className="gap-y-density-1-5 sm:gap-y-density-2 flex shrink-0 flex-wrap items-center gap-x-1.5 sm:gap-x-2">
           {showPricingMetadata && (
             <Badge
               variant={getBillingVariant(model.quota_type)}
@@ -187,7 +187,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
         </div>
 
         {trailingContent ? (
-          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:ml-auto">
+          <div className="gap-y-density-2 flex min-w-0 flex-wrap items-center gap-x-2 sm:ml-auto">
             {trailingContent}
           </div>
         ) : null}
@@ -196,7 +196,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
       {onVerifyApi && (
         <VerificationHistorySummary
           summary={verificationSummary}
-          className="ml-8 flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2"
+          className="gap-y-density-1-5 sm:gap-y-density-2 ml-8 flex min-w-0 flex-wrap items-center gap-x-1.5 sm:gap-x-2"
         />
       )}
     </div>

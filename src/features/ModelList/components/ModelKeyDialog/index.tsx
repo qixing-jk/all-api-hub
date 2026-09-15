@@ -249,7 +249,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
       <h2 className="text-foreground truncate text-base font-semibold sm:text-lg">
         {t("modelList:keyDialog.title")}
       </h2>
-      <p className="text-muted-foreground mt-1 truncate text-sm">
+      <p className="text-muted-foreground mt-density-1 truncate text-sm">
         {t("modelList:keyDialog.subtitle", {
           accountName: account.name,
           modelId,
@@ -258,7 +258,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
       <WorkflowTransitionButton
         onClick={handleOpenKeysPage}
         variant="link"
-        className="mt-1 h-auto min-h-0 px-0 py-0 text-sm"
+        className="mt-density-1 h-auto min-h-0 px-0 py-0 text-sm"
         data-testid={MODEL_LIST_TEST_IDS.openKeyManagementButton}
         analyticsAction={{
           featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
@@ -278,9 +278,9 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
   const renderContent = () => {
     if (isLoading) {
       return (
-        <div className="flex flex-col items-center justify-center py-10">
+        <div className="py-density-10 flex flex-col items-center justify-center">
           <Spinner size="lg" aria-label={t("common:status.loading")} />
-          <p className="dark:text-secondary-foreground text-muted-foreground mt-3 text-sm">
+          <p className="dark:text-secondary-foreground text-muted-foreground mt-density-3 text-sm">
             {t("modelList:keyDialog.loading")}
           </p>
         </div>
@@ -299,7 +299,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
             title={t("modelList:keyDialog.getFailed")}
           >
             <p className="text-sm">{error}</p>
-            <div className="mt-3">
+            <div className="mt-density-3">
               <Button
                 onClick={() => {
                   void handleRetryFetchRuntimeKeys()
@@ -321,7 +321,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
         featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ModelList}
         surfaceId={keyDialogSurface}
       >
-        <div className="space-y-4">
+        <div className="space-y-density-4">
           {!hasStrictEmptyGroupScope &&
           !canCreateToken &&
           ineligibleDescription ? (
@@ -348,7 +348,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                 description={t("modelList:noUsableGroupsForModel")}
               />
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-density-4">
                 <EmptyState
                   icon={<KeyRound className="h-12 w-12" />}
                   title={t("modelList:keyDialog.noCompatibleTitle", {
@@ -357,7 +357,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                   description={t("modelList:keyDialog.noCompatibleDescription")}
                 />
 
-                <div className="space-y-3">
+                <div className="space-y-density-3">
                   <div>
                     <label
                       htmlFor={createGroupSelectId}
@@ -365,7 +365,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                     >
                       {t("modelList:keyDialog.createGroupLabel")}
                     </label>
-                    <div className="mt-2">
+                    <div className="mt-density-2">
                       {requiresCreateGroupSelection ? (
                         <Select
                           value={createGroup}
@@ -395,20 +395,20 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                       ) : (
                         <div
                           id={createGroupSelectId}
-                          className="dark:bg-card dark:text-foreground border-border bg-surface-subtle text-secondary-foreground flex h-9 items-center rounded-md border px-3 text-sm font-medium"
+                          className="dark:bg-card dark:text-foreground border-border bg-surface-subtle text-secondary-foreground flex min-h-(--density-control) items-center rounded-md border px-3 text-sm font-medium"
                         >
                           {createGroupOptions[0]}
                         </div>
                       )}
                     </div>
-                    <p className="text-muted-foreground mt-2 text-sm">
+                    <p className="text-muted-foreground mt-density-2 text-sm">
                       {requiresCreateGroupSelection
                         ? t("modelList:keyDialog.createGroupHint")
                         : t("modelList:keyDialog.createGroupAutoSelectedHint")}
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="gap-y-density-2 flex flex-wrap gap-x-2">
                     <Button
                       onClick={() => {
                         void handleCreateCompatibleKey(
@@ -444,7 +444,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
               </div>
             )
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-density-4">
               <div>
                 <label
                   htmlFor={compatibleKeySelectId}
@@ -452,7 +452,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                 >
                   {t("modelList:keyDialog.selectLabel")}
                 </label>
-                <div className="mt-2">
+                <div className="mt-density-2">
                   <Select
                     value={
                       selectedRuntimeKeyId === null ? "" : selectedRuntimeKeyId
@@ -478,13 +478,13 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                   </Select>
                 </div>
                 {requiresExplicitSelection && selectedRuntimeKeyId === null ? (
-                  <p className="text-muted-foreground mt-2 text-sm">
+                  <p className="text-muted-foreground mt-density-2 text-sm">
                     {t("modelList:keyDialog.selectHint")}
                   </p>
                 ) : null}
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="gap-y-density-2 flex flex-wrap gap-x-2">
                 <Button
                   onClick={copySelectedKey}
                   disabled={!canCopy}

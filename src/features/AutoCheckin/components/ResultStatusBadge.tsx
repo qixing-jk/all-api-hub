@@ -16,42 +16,42 @@ export default function ResultStatusBadge({
   switch (status) {
     case CHECKIN_RESULT_STATUS.SUCCESS:
       return (
-        <span className="bg-success-soft text-success-soft-foreground inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium">
+        <span className="bg-success-soft text-success-soft-foreground gap-y-density-1 py-density-1 inline-flex items-center gap-x-1 rounded-full px-2 text-xs font-medium">
           <CircleCheck className="h-3 w-3" />
           {t("execution.status.success")}
         </span>
       )
     case CHECKIN_RESULT_STATUS.ALREADY_CHECKED:
       return (
-        <span className="bg-theme-100 text-theme-800 dark:bg-theme-900 dark:text-theme-200 inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium">
+        <span className="bg-theme-100 text-theme-800 dark:bg-theme-900 dark:text-theme-200 gap-y-density-1 py-density-1 inline-flex items-center gap-x-1 rounded-full px-2 text-xs font-medium">
           <CircleCheck className="h-3 w-3" />
           {t("execution.status.alreadyChecked")}
         </span>
       )
     case CHECKIN_RESULT_STATUS.FAILED:
       return (
-        <span className="bg-destructive-soft text-destructive-soft-foreground inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium">
+        <span className="bg-destructive-soft text-destructive-soft-foreground gap-y-density-1 py-density-1 inline-flex items-center gap-x-1 rounded-full px-2 text-xs font-medium">
           <CircleX className="h-3 w-3" />
           {t("execution.status.failed")}
         </span>
       )
     case CHECKIN_RESULT_STATUS.SKIPPED:
       return (
-        <span className="bg-warning-soft text-warning-soft-foreground inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
+        <span className="bg-warning-soft text-warning-soft-foreground gap-y-density-1 inline-flex items-center gap-x-1 rounded-full px-2 py-0.5 text-xs font-medium">
           <TriangleAlert className="h-3 w-3" />
           {t("execution.status.skipped")}
         </span>
       )
     case CHECKIN_RESULT_STATUS.UNCERTAIN:
       return (
-        <span className="bg-warning-soft text-warning-soft-foreground inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium">
+        <span className="bg-warning-soft text-warning-soft-foreground gap-y-density-1 py-density-1 inline-flex items-center gap-x-1 rounded-full px-2 text-xs font-medium">
           <TriangleAlert className="h-3 w-3" />
           {t("execution.status.uncertain")}
         </span>
       )
     default:
       return (
-        <span className="bg-muted text-secondary-foreground dark:bg-secondary inline-flex items-center rounded-full px-2 py-1 text-xs font-medium">
+        <span className="bg-muted text-secondary-foreground dark:bg-secondary py-density-1 inline-flex items-center rounded-full px-2 text-xs font-medium">
           {status}
         </span>
       )

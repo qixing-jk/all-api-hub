@@ -181,7 +181,7 @@ export default function ShieldSettings() {
           title={t("refresh.shieldPermissionWarningTitle")}
           description={t("refresh.shieldPermissionWarningDesc")}
         >
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-density-3 gap-y-density-2 flex flex-wrap gap-x-2">
             <WorkflowTransitionButton
               size="sm"
               onClick={() =>
@@ -219,7 +219,7 @@ export default function ShieldSettings() {
             description={t("refresh.shieldMethodDesc")}
             rightContentClassName="[@container(min-width:42rem)]:flex-1"
             rightContent={
-              <div className="flex flex-col items-stretch space-y-2 text-left">
+              <div className="space-y-density-2 flex flex-col items-stretch text-left">
                 <ResponsiveButtonGroup
                   variant="plain"
                   aria-label={t("refresh.shieldMethodTitle")}
@@ -311,7 +311,7 @@ export default function ShieldSettings() {
             title={t("refresh.shieldAutomaticFeaturesTitle")}
             description={t("refresh.shieldAutomaticFeaturesDesc")}
             rightContent={
-              <div className="grid grid-cols-1 gap-2 text-left md:grid-cols-2">
+              <div className="gap-y-density-2 grid grid-cols-1 gap-x-2 text-left md:grid-cols-2">
                 {automaticFeatures.map(([feature, label]) => (
                   <label
                     id={SHIELD_SETTINGS_TARGET_IDS.feature[feature]}

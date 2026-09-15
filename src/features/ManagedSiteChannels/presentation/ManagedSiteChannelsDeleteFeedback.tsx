@@ -67,7 +67,7 @@ export function ManagedSiteChannelsDeleteFeedback({
           variant={deleteState.failure.variant ?? "destructive"}
         >
           <AlertTitle>{deleteState.failure.category}</AlertTitle>
-          <AlertDescription className="space-y-3">
+          <AlertDescription className="space-y-density-3">
             <p className="whitespace-pre-line">{deleteState.failure.message}</p>
             {deleteState.requiresRefresh ? renderRefreshAction() : null}
           </AlertDescription>
@@ -76,7 +76,7 @@ export function ManagedSiteChannelsDeleteFeedback({
 
       {showRefreshNotice ? (
         <Alert>
-          <AlertDescription className="space-y-3">
+          <AlertDescription className="space-y-density-3">
             <p>{labels.deleteRefreshRequired}</p>
             {renderRefreshAction()}
           </AlertDescription>
@@ -87,9 +87,9 @@ export function ManagedSiteChannelsDeleteFeedback({
         <section
           role="status"
           aria-label={labels.deleteResultsTitle}
-          className="space-y-3 rounded-md border p-4"
+          className="space-y-density-3 py-density-4 rounded-md border px-4"
         >
-          <div className="flex items-center justify-between gap-3">
+          <div className="gap-y-density-3 flex items-center justify-between gap-x-3">
             <h3 className="font-medium">{labels.deleteResultsTitle}</h3>
             <Button
               type="button"
@@ -105,11 +105,11 @@ export function ManagedSiteChannelsDeleteFeedback({
               {labels.deleteRefreshRequired}
             </p>
           ) : null}
-          <ol className="space-y-2">
+          <ol className="space-y-density-2">
             {deleteState.results.map((result) => (
               <li
                 key={result.rowKey}
-                className="flex items-center justify-between gap-3"
+                className="gap-y-density-3 flex items-center justify-between gap-x-3"
               >
                 <span className="min-w-0 truncate text-sm">
                   {result.displayLabel}

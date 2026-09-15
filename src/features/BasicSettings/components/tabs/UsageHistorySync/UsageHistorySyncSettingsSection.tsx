@@ -63,8 +63,8 @@ export default function UsageHistorySyncSettingsSection({
       description={t("syncTab.settingsDescription")}
     >
       <Card>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
+        <CardContent className="space-y-density-4">
+          <div className="gap-y-density-3 flex items-center justify-between gap-x-3">
             <div id="usage-history-sync-enabled">
               <Label className="text-sm font-medium">
                 {t("settings.enabled")}
@@ -78,7 +78,7 @@ export default function UsageHistorySyncSettingsSection({
 
           <div
             id="usage-history-sync-retention-days"
-            className="grid grid-cols-1 gap-2"
+            className="gap-y-density-2 grid grid-cols-1 gap-x-2"
           >
             <Label className="text-sm font-medium">
               {t("settings.retentionDays")}
@@ -93,7 +93,7 @@ export default function UsageHistorySyncSettingsSection({
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-2">
+          <div className="gap-y-density-2 grid grid-cols-1 gap-x-2">
             <Label
               htmlFor="usage-history-sync-schedule-mode"
               className="text-sm font-medium"
@@ -140,7 +140,7 @@ export default function UsageHistorySyncSettingsSection({
 
           <div
             id="usage-history-sync-interval-hours"
-            className="grid grid-cols-1 gap-2"
+            className="gap-y-density-2 grid grid-cols-1 gap-x-2"
           >
             <Label className="text-sm font-medium">
               {t("settings.syncIntervalHours")}
@@ -157,7 +157,7 @@ export default function UsageHistorySyncSettingsSection({
             />
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="gap-y-density-2 flex flex-wrap gap-x-2">
             <Button
               id="usage-history-sync-apply-settings"
               variant="default"

@@ -109,7 +109,7 @@ export function TempWindowFallbackReminderDialog({
       title={title}
       header={<Heading4>{title}</Heading4>}
       footer={
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+        <div className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row sm:items-center sm:justify-end">
           <Button variant="outline" onClick={handleNeverRemind}>
             {t("ui:dialog.tempWindowFallbackReminder.actions.neverRemind")}
           </Button>
@@ -122,9 +122,9 @@ export function TempWindowFallbackReminderDialog({
         </div>
       }
     >
-      <div className="space-y-3">
+      <div className="space-y-density-3">
         <p className="text-sm leading-relaxed">{description}</p>
-        <div className="space-y-1">
+        <div className="space-y-density-1">
           <p className="text-muted-foreground text-xs">
             {t("shieldBypass:history.entryDescription")}
           </p>

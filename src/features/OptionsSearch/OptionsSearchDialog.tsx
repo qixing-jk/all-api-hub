@@ -69,7 +69,7 @@ function SearchResultItem({
     <CommandItem
       value={item.id}
       onSelect={onSelect}
-      className="items-start gap-3"
+      className="gap-y-density-3 items-start gap-x-3"
     >
       <div className="text-muted-foreground pt-0.5">{getIconForItem(item)}</div>
       <div className="min-w-0 flex-1">
@@ -203,7 +203,7 @@ export function OptionsSearchDialog({
               ))}
             </CommandGroup>
           ) : (
-            <div className="flex min-h-[280px] flex-col items-center justify-center gap-2 px-6 py-8 text-center">
+            <div className="gap-y-density-2 py-density-8 flex min-h-[280px] flex-col items-center justify-center gap-x-2 px-6 text-center">
               <SearchIcon className="h-5 w-5 opacity-50" />
               <div className="text-sm font-medium">
                 {t("optionsSearch.idleTitle")}
@@ -213,7 +213,7 @@ export function OptionsSearchDialog({
           )
         ) : (
           <CommandEmpty>
-            <div className="flex flex-col items-center gap-2 px-6 py-8 text-center">
+            <div className="gap-y-density-2 py-density-8 flex flex-col items-center gap-x-2 px-6 text-center">
               <SearchIcon className="h-5 w-5 opacity-50" />
               <div className="text-sm font-medium">
                 {t("optionsSearch.emptyTitle")}

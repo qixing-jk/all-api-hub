@@ -727,10 +727,10 @@ describe("TaskNotificationSettings", () => {
       /settings:taskNotifications\.channels\.ntfy\.topicUrlDescription/,
     )
 
-    expect(dingtalkHelperCopy.parentElement).toHaveClass("space-y-3")
+    expect(dingtalkHelperCopy.parentElement).toHaveClass("space-y-density-3")
     expect(dingtalkHelperCopy).toHaveClass("leading-relaxed")
     expect(dingtalkDocsLink.parentElement).toBe(dingtalkHelperCopy)
-    expect(ntfyHelperCopy.parentElement).toHaveClass("space-y-3")
+    expect(ntfyHelperCopy.parentElement).toHaveClass("space-y-density-3")
     expect(ntfyHelperCopy).toHaveClass("leading-relaxed")
     expect(ntfyDocsLink.parentElement).toBe(ntfyHelperCopy)
   })

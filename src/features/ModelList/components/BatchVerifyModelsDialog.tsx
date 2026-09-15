@@ -323,7 +323,7 @@ const BatchVerifyRowsItem = forwardRef<
   HTMLAttributes<HTMLDivElement>
 >(function BatchVerifyRowsItem({ children, className, ...props }, ref) {
   return (
-    <div ref={ref} className={cn("px-2 py-2", className)} {...props}>
+    <div ref={ref} className={cn("py-density-2 px-2", className)} {...props}>
       {children}
     </div>
   )
@@ -1022,9 +1022,9 @@ export function BatchVerifyModelsDialog({
     return (
       <div
         data-testid={getBatchVerifyRowTestId(row.item.key)}
-        className="dark:border-border border-border-subtle rounded-md border p-3"
+        className="dark:border-border border-border-subtle py-density-3 rounded-md border px-3"
       >
-        <div className="flex items-start justify-between gap-3">
+        <div className="gap-y-density-3 flex items-start justify-between gap-x-3">
           <Checkbox
             checked={selectedModelKeySet.has(row.item.key)}
             onCheckedChange={() => toggleModel(row.item.key)}
@@ -1036,7 +1036,7 @@ export function BatchVerifyModelsDialog({
             className="mt-0.5"
           />
           <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <div className="gap-y-density-2 flex min-w-0 flex-wrap items-center gap-x-2">
               <div className="text-foreground min-w-0 truncate text-sm font-medium">
                 {row.item.modelId}
               </div>
@@ -1063,19 +1063,19 @@ export function BatchVerifyModelsDialog({
                 {formatLatency(row.latencyMs)}
               </span>
             </div>
-            <div className="dark:text-secondary-foreground text-muted-foreground mt-1 text-xs">
+            <div className="dark:text-secondary-foreground text-muted-foreground mt-density-1 text-xs">
               {getRowSummary(t, row)}
             </div>
             {row.runtimeKeyName ? (
-              <div className="text-muted-foreground mt-1 text-xs">
+              <div className="text-muted-foreground mt-density-1 text-xs">
                 {t("modelList:batchVerify.runtimeKeyUsed", {
                   name: row.runtimeKeyName,
                 })}
               </div>
             ) : null}
             {row.results.length > 0 ? (
-              <div className="mt-2 space-y-1.5">
-                <div className="flex flex-wrap gap-1.5">
+              <div className="mt-density-2 space-y-density-1-5">
+                <div className="gap-y-density-1-5 flex flex-wrap gap-x-1.5">
                   {row.results.map((result) => (
                     <Badge
                       key={result.id}
@@ -1133,7 +1133,7 @@ export function BatchVerifyModelsDialog({
       <Heading5 className="truncate">
         {t("modelList:batchVerify.title")}
       </Heading5>
-      <div className="text-muted-foreground mt-1 truncate text-xs">
+      <div className="text-muted-foreground mt-density-1 truncate text-xs">
         {t("modelList:batchVerify.subtitle", { count: items.length })}
       </div>
     </div>
@@ -1147,7 +1147,7 @@ export function BatchVerifyModelsDialog({
         PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListBatchVerifyDialog
       }
     >
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="gap-y-density-2 flex flex-col gap-x-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-muted-foreground text-xs">
           {hasStarted
             ? t("modelList:batchVerify.summary", {
@@ -1156,7 +1156,7 @@ export function BatchVerifyModelsDialog({
               })
             : t("modelList:batchVerify.idleHint")}
         </div>
-        <div className="flex justify-end gap-2">
+        <div className="gap-y-density-2 flex justify-end gap-x-2">
           <Button variant="secondary" onClick={onClose} disabled={!canClose}>
             {t("aiApiVerification:verifyDialog.actions.close")}
           </Button>
@@ -1204,9 +1204,9 @@ export function BatchVerifyModelsDialog({
           PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListBatchVerifyDialog
         }
       >
-        <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
+        <div className="space-y-density-4">
+          <div className="gap-y-density-3 grid gap-x-3 sm:grid-cols-2">
+            <div className="space-y-density-1-5">
               <div className="text-muted-foreground text-xs">
                 {t("modelList:batchVerify.apiType.label")}
               </div>
@@ -1227,7 +1227,7 @@ export function BatchVerifyModelsDialog({
               disabled={isRunning}
             />
 
-            <div className="flex flex-wrap items-end gap-2 sm:col-span-2 sm:justify-end">
+            <div className="gap-y-density-2 flex flex-wrap items-end gap-x-2 sm:col-span-2 sm:justify-end">
               <Badge variant="secondary">
                 {t("modelList:batchVerify.counts.total", {
                   value: summary.total,
@@ -1251,15 +1251,15 @@ export function BatchVerifyModelsDialog({
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-density-2">
             <div className="text-muted-foreground text-xs">
               {t("modelList:batchVerify.probes.label")}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="gap-y-density-2 flex flex-wrap gap-x-2">
               {probeOptions.map((probe) => (
                 <label
                   key={probe.id}
-                  className="dark:border-border border-border-subtle flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-xs"
+                  className="dark:border-border border-border-subtle gap-y-density-2 py-density-1-5 flex cursor-pointer items-center gap-x-2 rounded-md border px-2 text-xs"
                 >
                   <Checkbox
                     checked={selectedProbeIds.includes(probe.id)}
@@ -1277,12 +1277,12 @@ export function BatchVerifyModelsDialog({
             ) : null}
           </div>
 
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="space-y-density-2">
+            <div className="gap-y-density-2 flex flex-wrap items-center justify-between gap-x-2">
               <div className="text-muted-foreground text-xs">
                 {t("modelList:batchVerify.modelSelection.label")}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="gap-y-density-2 flex items-center gap-x-2">
                 <span className="text-muted-foreground text-xs">
                   {t("modelList:batchVerify.modelSelection.selectedSummary", {
                     count: selectedModelKeys.length,

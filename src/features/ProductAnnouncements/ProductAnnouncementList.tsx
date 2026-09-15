@@ -178,7 +178,7 @@ export function ProductAnnouncementList({
                 </Button>
               )}
             </div>
-            <p className="dark:text-secondary-foreground text-muted-foreground mt-2 text-xs leading-5 break-words whitespace-pre-wrap">
+            <p className="dark:text-secondary-foreground text-muted-foreground mt-density-2 text-xs leading-5 break-words whitespace-pre-wrap">
               {notice.message}
             </p>
             {cta && ctaHref ? (
@@ -186,7 +186,7 @@ export function ProductAnnouncementList({
                 href={ctaHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-theme-600 dark:text-theme-300 gap-density-1 mt-2 inline-flex max-w-full items-center text-xs font-medium underline-offset-4 hover:underline"
+                className="text-theme-600 dark:text-theme-300 gap-density-1 mt-density-2 inline-flex max-w-full items-center text-xs font-medium underline-offset-4 hover:underline"
                 onClick={() => onOpenCta?.(notice)}
               >
                 <span className="min-w-0 break-words">{cta.label}</span>

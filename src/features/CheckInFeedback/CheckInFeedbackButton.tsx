@@ -20,7 +20,7 @@ export function CheckInFeedbackButton({
       <Button
         type="button"
         size="sm"
-        className="text-muted-foreground h-auto min-h-0 justify-start px-0 py-1 text-xs"
+        className="text-muted-foreground py-density-1 h-auto min-h-0 justify-start px-0 text-xs"
         variant="ghost"
         onClick={() => openFeedback({ accountId })}
         leftIcon={<MessageSquarePlus className="h-4 w-4" />}

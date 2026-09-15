@@ -1047,7 +1047,7 @@ export default function BalanceHistory() {
   const shouldShowEnableBalanceHistoryHint = !enabled && !isInitialLoading
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-density-6 py-density-6 px-6">
       <PageHeader
         icon={LineChart}
         title={t("title")}
@@ -1065,7 +1065,7 @@ export default function BalanceHistory() {
         }
         description={t("description")}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2">
             <Button
               size="sm"
               variant="secondary"
@@ -1100,7 +1100,7 @@ export default function BalanceHistory() {
           title={t("hints.disabled.title")}
           description={t("hints.disabled.description")}
         >
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-density-3 gap-y-density-2 flex flex-wrap gap-x-2">
             <WorkflowTransitionButton
               size="sm"
               variant="outline"
@@ -1121,7 +1121,7 @@ export default function BalanceHistory() {
       ) : (
         <>
           <Card padding="md">
-            <div className="space-y-4">
+            <div className="space-y-density-4">
               <div>
                 <Label className="text-sm font-medium">
                   {t("filters.tags")}
@@ -1168,7 +1168,7 @@ export default function BalanceHistory() {
               </div>
 
               <div
-                className={`inline-flex ${COLORS.background.tertiary} corners-concentric rounded-md p-1 shadow-sm [--corner-inset:--spacing(1)] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`}
+                className={`inline-flex ${COLORS.background.tertiary} corners-concentric py-density-1 rounded-md px-1 shadow-sm [--corner-inset:--spacing(1)] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`}
               >
                 <ToggleButton
                   onClick={() => handleCurrencyChange("USD")}
@@ -1197,8 +1197,8 @@ export default function BalanceHistory() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="space-y-2">
+              <div className="gap-y-density-3 grid grid-cols-1 gap-x-3 md:grid-cols-2">
+                <div className="space-y-density-2">
                   <Label className="text-sm font-medium">
                     {t("filters.startDay")}
                   </Label>
@@ -1212,7 +1212,7 @@ export default function BalanceHistory() {
                     disabled={!minDayKey}
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-density-2">
                   <Label className="text-sm font-medium">
                     {t("filters.endDay")}
                   </Label>
@@ -1228,7 +1228,7 @@ export default function BalanceHistory() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="gap-y-density-2 flex flex-wrap gap-x-2">
                 {QUICK_RANGES.map((preset) => {
                   const label = getBalanceHistoryQuickRangeLabel(t, preset.id)
                   return (
@@ -1268,7 +1268,7 @@ export default function BalanceHistory() {
             </div>
           ) : isStoreEmpty ? (
             <Card padding="md">
-              <div className="space-y-1">
+              <div className="space-y-density-1">
                 <div className="text-sm font-medium">{t("empty.title")}</div>
                 <div className="text-muted-foreground text-sm">
                   {t("empty.description")}
@@ -1277,7 +1277,7 @@ export default function BalanceHistory() {
             </Card>
           ) : snapshotAvailableDays === 0 ? (
             <Card padding="md">
-              <div className="space-y-1">
+              <div className="space-y-density-1">
                 <div className="text-sm font-medium">
                   {t("emptyRange.title")}
                 </div>
@@ -1287,17 +1287,17 @@ export default function BalanceHistory() {
               </div>
             </Card>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-density-6">
               <Card
                 padding="md"
                 data-testid={BALANCE_HISTORY_TEST_IDS.overview}
               >
-                <div className="space-y-4">
+                <div className="space-y-density-4">
                   <div className="text-sm font-medium">
                     {t("overview.title")}
                   </div>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="dark:bg-card bg-surface-subtle rounded-lg p-3">
+                  <div className="gap-y-density-3 grid grid-cols-1 gap-x-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="dark:bg-card bg-surface-subtle py-density-3 rounded-lg px-3">
                       <div className="text-muted-foreground text-xs">
                         {t("overview.kpis.endBalance.label")}
                       </div>
@@ -1314,7 +1314,7 @@ export default function BalanceHistory() {
                       </div>
                     </div>
 
-                    <div className="dark:bg-card bg-surface-subtle rounded-lg p-3">
+                    <div className="dark:bg-card bg-surface-subtle py-density-3 rounded-lg px-3">
                       <div className="text-muted-foreground text-xs">
                         {t("overview.kpis.rangeNet.label")}
                       </div>
@@ -1331,7 +1331,7 @@ export default function BalanceHistory() {
                       </div>
                     </div>
 
-                    <div className="dark:bg-card bg-surface-subtle rounded-lg p-3">
+                    <div className="dark:bg-card bg-surface-subtle py-density-3 rounded-lg px-3">
                       <div className="text-muted-foreground text-xs">
                         {t("overview.kpis.incomeTotal.label")}
                       </div>
@@ -1348,7 +1348,7 @@ export default function BalanceHistory() {
                       </div>
                     </div>
 
-                    <div className="dark:bg-card bg-surface-subtle rounded-lg p-3">
+                    <div className="dark:bg-card bg-surface-subtle py-density-3 rounded-lg px-3">
                       <div className="text-muted-foreground text-xs">
                         {t("overview.kpis.outcomeTotal.label")}
                       </div>
@@ -1368,16 +1368,16 @@ export default function BalanceHistory() {
                 </div>
               </Card>
 
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <div className="gap-y-density-6 grid grid-cols-1 gap-x-6 lg:grid-cols-2">
                 <Card padding="md">
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0 space-y-1">
+                  <div className="space-y-density-3">
+                    <div className="gap-y-density-3 flex flex-wrap items-start justify-between gap-x-3">
+                      <div className="space-y-density-1 min-w-0">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <button
                               type="button"
-                              className={`${ANIMATIONS.transition.base} dark:hover:bg-secondary hover:bg-muted focus-visible:ring-ring inline-flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none`}
+                              className={`${ANIMATIONS.transition.base} dark:hover:bg-secondary hover:bg-muted focus-visible:ring-ring gap-y-density-1 inline-flex min-w-0 items-center gap-x-1 rounded-md px-1 py-0.5 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none`}
                             >
                               <span className="min-w-0 truncate">
                                 {t("breakdown.title")}:{" "}
@@ -1427,7 +1427,7 @@ export default function BalanceHistory() {
                       </div>
 
                       <div
-                        className={`inline-flex ${COLORS.background.tertiary} corners-concentric rounded-md p-1 shadow-sm [--corner-inset:--spacing(1)] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`}
+                        className={`inline-flex ${COLORS.background.tertiary} corners-concentric py-density-1 rounded-md px-1 shadow-sm [--corner-inset:--spacing(1)] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`}
                         role="group"
                         aria-label={t("breakdown.controls.chartType")}
                       >
@@ -1454,7 +1454,7 @@ export default function BalanceHistory() {
                     </div>
 
                     {effectiveBreakdownMetric === "balance" && (
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2">
                         <Label className="text-muted-foreground text-xs">
                           {t("breakdown.controls.reference")}
                         </Label>
@@ -1494,15 +1494,15 @@ export default function BalanceHistory() {
                 </Card>
 
                 <Card padding="md">
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 space-y-1">
-                        <div className="flex min-w-0 items-center gap-2">
+                  <div className="space-y-density-3">
+                    <div className="gap-y-density-3 flex items-start justify-between gap-x-3">
+                      <div className="space-y-density-1 min-w-0">
+                        <div className="gap-y-density-2 flex min-w-0 items-center gap-x-2">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button
                                 type="button"
-                                className={`${ANIMATIONS.transition.base} dark:hover:bg-secondary hover:bg-muted focus-visible:ring-ring inline-flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none`}
+                                className={`${ANIMATIONS.transition.base} dark:hover:bg-secondary hover:bg-muted focus-visible:ring-ring gap-y-density-1 inline-flex min-w-0 items-center gap-x-1 rounded-md px-1 py-0.5 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none`}
                               >
                                 <span className="min-w-0 truncate">
                                   {t("trend.title")}:{" "}
@@ -1548,7 +1548,7 @@ export default function BalanceHistory() {
                             <DropdownMenuTrigger asChild>
                               <button
                                 type="button"
-                                className={`${ANIMATIONS.transition.base} dark:hover:bg-secondary hover:bg-muted focus-visible:ring-ring inline-flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none`}
+                                className={`${ANIMATIONS.transition.base} dark:hover:bg-secondary hover:bg-muted focus-visible:ring-ring gap-y-density-1 inline-flex min-w-0 items-center gap-x-1 rounded-md px-1 py-0.5 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none`}
                               >
                                 <span className="min-w-0 truncate">
                                   {t("trend.controls.scope")}:{" "}
@@ -1586,7 +1586,7 @@ export default function BalanceHistory() {
                         </div>
                       </div>
                       <div
-                        className={`inline-flex ${COLORS.background.tertiary} corners-concentric rounded-md p-1 shadow-sm [--corner-inset:--spacing(1)] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`}
+                        className={`inline-flex ${COLORS.background.tertiary} corners-concentric py-density-1 rounded-md px-1 shadow-sm [--corner-inset:--spacing(1)] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`}
                         role="group"
                         aria-label={t("trend.controls.chartType")}
                       >
@@ -1612,7 +1612,7 @@ export default function BalanceHistory() {
                     </div>
 
                     {hasAnyTrendMetricData ? (
-                      <div className="space-y-3">
+                      <div className="space-y-density-3">
                         <div className="h-80 w-full">
                           <EChart option={trendOption} />
                         </div>
@@ -1652,7 +1652,7 @@ export default function BalanceHistory() {
                 padding="md"
                 data-testid={BALANCE_HISTORY_TEST_IDS.accountSummary}
               >
-                <div className="space-y-3">
+                <div className="space-y-density-3">
                   <div className="text-sm font-medium">{t("table.title")}</div>
                   <BalanceHistoryAccountSummaryTable
                     rows={tableRows}

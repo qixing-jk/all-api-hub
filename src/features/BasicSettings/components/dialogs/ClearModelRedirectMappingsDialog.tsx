@@ -290,7 +290,7 @@ export function ClearModelRedirectMappingsDialog({
         showCloseButton={!isClearing}
         size="lg"
         header={
-          <div className="space-y-1">
+          <div className="space-y-density-1">
             <div className="text-base font-semibold">
               {t("bulkClear.preview.title")}
             </div>
@@ -300,7 +300,7 @@ export function ClearModelRedirectMappingsDialog({
           </div>
         }
         footer={
-          <div className="flex items-center justify-between gap-3">
+          <div className="gap-y-density-3 flex items-center justify-between gap-x-3">
             <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
               {t("bulkClear.preview.selectedCount", {
                 selected: selectedCount,
@@ -315,7 +315,7 @@ export function ClearModelRedirectMappingsDialog({
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="gap-y-density-2 flex items-center gap-x-2">
               <Button
                 type="button"
                 variant="outline"
@@ -339,12 +339,12 @@ export function ClearModelRedirectMappingsDialog({
           </div>
         }
       >
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="space-y-density-4">
+          <div className="gap-y-density-2 flex flex-wrap items-center justify-between gap-x-2">
             <div className="dark:text-foreground text-secondary-foreground text-sm">
               {t("bulkClear.preview.channelListLabel")}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="gap-y-density-2 flex items-center gap-x-2">
               <Button
                 type="button"
                 variant="outline"
@@ -379,19 +379,19 @@ export function ClearModelRedirectMappingsDialog({
           />
 
           {isLoading && (
-            <div className="dark:text-secondary-foreground border-border text-muted-foreground rounded-md border p-3 text-sm">
+            <div className="dark:text-secondary-foreground border-border text-muted-foreground py-density-3 rounded-md border px-3 text-sm">
               {t("bulkClear.status.loading")}
             </div>
           )}
 
           {loadError && (
-            <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground rounded-md border p-3 text-sm">
+            <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground py-density-3 rounded-md border px-3 text-sm">
               {t("bulkClear.status.loadFailed", { error: loadError })}
             </div>
           )}
 
           {!isLoading && !loadError && (
-            <div className="border-border max-h-[60vh] space-y-2 overflow-y-auto rounded-md border p-3 md:max-h-[min(70vh,48rem)]">
+            <div className="border-border space-y-density-2 py-density-3 max-h-[60vh] overflow-y-auto rounded-md border px-3 md:max-h-[min(70vh,48rem)]">
               {channels.length === 0 ? (
                 <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
                   {t("bulkClear.status.noChannels")}
@@ -411,9 +411,9 @@ export function ClearModelRedirectMappingsDialog({
                   return (
                     <div
                       key={getManagedResourceRefKey(channel.ref)}
-                      className="hover:bg-surface-subtle dark:hover:bg-card/50 space-y-2 rounded-md px-2 py-2"
+                      className="hover:bg-surface-subtle dark:hover:bg-card/50 space-y-density-2 py-density-2 rounded-md px-2"
                     >
-                      <div className="flex items-start gap-3">
+                      <div className="gap-y-density-3 flex items-start gap-x-3">
                         <Checkbox
                           aria-label={`${channel.name} (#${channel.ref.resourceId})`}
                           data-testid={`${BASIC_SETTINGS_TEST_IDS.managedSiteModelRedirectBulkClearChannelCheckboxPrefix}-${channel.ref.resourceId}`}
@@ -426,7 +426,7 @@ export function ClearModelRedirectMappingsDialog({
                           disabled={checkboxDisabled}
                         />
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-2">
+                          <div className="gap-y-density-2 flex items-center justify-between gap-x-2">
                             <div className="text-foreground truncate text-sm font-medium">
                               {channel.name}
                             </div>
@@ -463,7 +463,7 @@ export function ClearModelRedirectMappingsDialog({
                         >
                           <>
                             {meta.isInvalid && (
-                              <div className="text-warning-text mb-2 text-xs">
+                              <div className="text-warning-text mb-density-2 text-xs">
                                 {t("bulkClear.preview.mappingInvalid")}
                               </div>
                             )}
@@ -490,9 +490,9 @@ export function ClearModelRedirectMappingsDialog({
             )}
 
           {resultErrors.length > 0 && (
-            <div className="border-warning-border bg-warning-soft text-warning-soft-foreground rounded-md border p-3 text-sm">
+            <div className="border-warning-border bg-warning-soft text-warning-soft-foreground py-density-3 rounded-md border px-3 text-sm">
               <div className="font-medium">{t("bulkClear.result.title")}</div>
-              <ul className="mt-2 list-disc space-y-1 pl-5">
+              <ul className="mt-density-2 space-y-density-1 list-disc pl-5">
                 {resultErrors.map((err, index) => (
                   <li key={`${err}-${index}`}>{err}</li>
                 ))}

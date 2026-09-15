@@ -1433,7 +1433,7 @@ export default function AutoCheckin(props: {
   )
 
   return (
-    <div className="p-6">
+    <div className="py-density-6 px-6">
       <PageHeader
         icon={CalendarCheck2}
         title={
@@ -1454,7 +1454,7 @@ export default function AutoCheckin(props: {
         spacing="compact"
       />
 
-      <div className="space-y-4">
+      <div className="space-y-density-4">
         {status ? (
           <StatusCard
             status={status}
@@ -1521,11 +1521,11 @@ export default function AutoCheckin(props: {
           </div>
         }
       >
-        <div className="space-y-3">
+        <div className="space-y-density-3">
           <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
             {t("execution.debug.uiOpenPretriggerDiagnosticsDesc")}
           </p>
-          <pre className="dark:bg-secondary border-border bg-surface-subtle text-secondary-foreground max-h-[60vh] overflow-auto rounded-lg border p-3 text-xs md:max-h-[min(70vh,48rem)]">
+          <pre className="dark:bg-secondary border-border bg-surface-subtle text-secondary-foreground py-density-3 max-h-[60vh] overflow-auto rounded-lg border px-3 text-xs md:max-h-[min(70vh,48rem)]">
             {uiOpenPretriggerDiagnostics.payload
               ? JSON.stringify(uiOpenPretriggerDiagnostics.payload, null, 2)
               : ""}

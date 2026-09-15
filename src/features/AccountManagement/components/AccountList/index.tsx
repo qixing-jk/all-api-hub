@@ -1023,17 +1023,17 @@ export default function AccountList({
     return (
       <Card
         aria-label={t("account:emptyState")}
-        className="mb-2"
+        className="mb-density-2"
         data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListView}
         padding="md"
         role="region"
       >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="bg-theme-50 text-theme-600 dark:bg-theme-900/40 dark:text-theme-300 shrink-0 rounded-md p-2">
+        <div className="gap-y-density-4 flex flex-col gap-x-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="gap-y-density-3 flex items-start gap-x-3">
+            <div className="bg-theme-50 text-theme-600 dark:bg-theme-900/40 dark:text-theme-300 py-density-2 shrink-0 rounded-md px-2">
               <Inbox className="h-5 w-5" />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-density-1">
               <h2 className="text-foreground text-sm font-medium">
                 {t("account:emptyState")}
               </h2>
@@ -1141,9 +1141,9 @@ export default function AccountList({
     >
       <CardContent padding={"none"} spacing={"none"}>
         {/* Search + Filters */}
-        <div className="dark:border-border dark:bg-background bg-card p-3 sm:p-4">
-          <div className="flex flex-col gap-3">
-            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 [@container(min-width:40rem)]:grid-cols-1 [@container(min-width:68rem)]:grid-cols-[minmax(15rem,1fr)_minmax(0,2fr)]">
+        <div className="dark:border-border dark:bg-background bg-card py-density-3 sm:py-density-4 px-3 sm:px-4">
+          <div className="gap-y-density-3 flex flex-col gap-x-3">
+            <div className="gap-y-density-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 [@container(min-width:40rem)]:grid-cols-1 [@container(min-width:68rem)]:grid-cols-[minmax(15rem,1fr)_minmax(0,2fr)]">
               <div className="min-w-0">
                 <AccountSearchInput
                   disabled={isReorderMode}
@@ -1157,7 +1157,7 @@ export default function AccountList({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-(--density-control-lg) shrink-0 gap-1.5 px-2.5 text-xs shadow-none [@container(min-width:40rem)]:hidden"
+                className="gap-y-density-1-5 h-(--density-control-lg) shrink-0 gap-x-1.5 px-2.5 text-xs shadow-none [@container(min-width:40rem)]:hidden"
                 aria-expanded={filtersOpen}
                 aria-controls={filterPanelId}
                 onClick={() => setFiltersOpen((previous) => !previous)}
@@ -1228,13 +1228,13 @@ export default function AccountList({
               />
             )}
             {showFilteredSummary && (
-              <div className="text-muted-foreground dark:text-secondary-foreground flex flex-wrap items-center gap-3 text-xs">
+              <div className="text-muted-foreground dark:text-secondary-foreground gap-y-density-3 flex flex-wrap items-center gap-x-3 text-xs">
                 <span>
                   {t("account:filter.summary", {
                     count: filteredSites.length,
                   })}
                 </span>
-                <div className="flex flex-wrap gap-3">
+                <div className="gap-y-density-3 flex flex-wrap gap-x-3">
                   <span>
                     {t("account:filteredTotals.balance")}: USD{" "}
                     {formatMoneyFixed(filteredBalance.USD)} / CNY{" "}
@@ -1301,7 +1301,7 @@ export default function AccountList({
 
         {showGroupReorderHint ? (
           <div
-            className="dark:border-border border-theme-100 bg-theme-50/80 text-theme-800 dark:bg-theme-950/40 dark:text-theme-200 flex items-center gap-2 border-b px-3 py-1.5 text-xs leading-5"
+            className="dark:border-border border-theme-100 bg-theme-50/80 text-theme-800 dark:bg-theme-950/40 dark:text-theme-200 gap-y-density-2 py-density-1-5 flex items-center gap-x-2 border-b px-3 text-xs leading-5"
             role="note"
           >
             <Info
@@ -1380,11 +1380,11 @@ export default function AccountList({
         isWorking={isBulkDeleting}
         size="md"
         details={
-          <div className="space-y-3 text-sm">
+          <div className="space-y-density-3 text-sm">
             <div className="text-foreground font-medium">
               {t("account:bulk.deletePreviewTitle")}
             </div>
-            <div className="text-muted-foreground dark:text-secondary-foreground space-y-1">
+            <div className="text-muted-foreground dark:text-secondary-foreground space-y-density-1">
               {bulkDeletePreviewAccounts.map((account) => (
                 <div key={account.id}>{account.name}</div>
               ))}

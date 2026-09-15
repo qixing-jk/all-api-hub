@@ -28,6 +28,17 @@ describe("ShareSnapshotCaptionToast", () => {
       />,
     )
 
+    const captionTextarea = await screen.findByTestId(
+      "share-snapshot-caption-textarea",
+    )
+    expect(captionTextarea.parentElement).toHaveClass(
+      "w-[min(340px,calc(100vw-2rem))]",
+    )
+    expect(captionTextarea).toHaveClass(
+      "focus-visible:ring-2",
+      "focus-visible:ring-ring",
+    )
+
     const copyButton = await screen.findByRole("button", { name: "Copy" })
     expect(copyButton).not.toBeDisabled()
 

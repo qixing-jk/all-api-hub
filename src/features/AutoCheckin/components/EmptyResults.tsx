@@ -38,10 +38,12 @@ export default function EmptyResults({
       : t("execution.empty.noHistoryDesc")
 
   return (
-    <Card className="flex flex-col items-center justify-center gap-4 py-16">
+    <Card className="gap-y-density-4 py-density-16 flex flex-col items-center justify-center gap-x-4">
       <div className="text-center">
         <h3 className="text-foreground text-lg font-semibold">{title}</h3>
-        <p className="text-muted-foreground mt-2 text-sm">{description}</p>
+        <p className="text-muted-foreground mt-density-2 text-sm">
+          {description}
+        </p>
       </div>
       {needsAccountSetup && onOpenAccounts ? (
         <Button type="button" onClick={onOpenAccounts}>

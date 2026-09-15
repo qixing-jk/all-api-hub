@@ -295,7 +295,7 @@ export default function UsageHistorySyncTab() {
   const alarmsSupported = hasAlarmsAPI()
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-density-6">
       <UsageHistorySyncSettingsSection
         enabled={enabled}
         onEnabledChange={setEnabled}
@@ -319,8 +319,8 @@ export default function UsageHistorySyncTab() {
         description={t("syncTab.stateDescription")}
       >
         <Card>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
+          <CardContent className="space-y-density-4">
+            <div className="space-y-density-3">
               <Input
                 value={accountSearch}
                 onChange={(event) => setAccountSearch(event.target.value)}

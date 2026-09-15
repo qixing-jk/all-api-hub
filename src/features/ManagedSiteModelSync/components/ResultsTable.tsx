@@ -88,15 +88,17 @@ export default function ResultsTable({
           <thead className="border-border bg-surface-subtle dark:bg-card border-b">
             <tr>
               <th className="py-density-3 px-4 text-left">
-                <input
-                  ref={selectAllRef}
-                  type="checkbox"
-                  aria-label={t("execution.table.selectAllChannels")}
-                  checked={allSelected}
-                  disabled={selectableItems.length === 0}
-                  onChange={(e) => onSelectAll(e.target.checked)}
-                  className="border-border-strong text-theme-600 focus:ring-ring h-4 w-4 rounded"
-                />
+                <label className="inline-flex size-(--density-control-xs) cursor-pointer items-center justify-center rounded-xs has-[:disabled]:cursor-not-allowed">
+                  <input
+                    ref={selectAllRef}
+                    type="checkbox"
+                    aria-label={t("execution.table.selectAllChannels")}
+                    checked={allSelected}
+                    disabled={selectableItems.length === 0}
+                    onChange={(e) => onSelectAll(e.target.checked)}
+                    className="border-border-strong text-theme-600 focus:ring-ring h-4 w-4 rounded"
+                  />
+                </label>
               </th>
               {columns.status && (
                 <th className="text-secondary-foreground py-density-3 px-4 text-left text-sm font-medium">
@@ -143,18 +145,20 @@ export default function ResultsTable({
                   className="group hover:bg-surface-subtle dark:hover:bg-card"
                 >
                   <td className="py-density-3 px-4">
-                    <input
-                      type="checkbox"
-                      aria-label={t("execution.table.selectChannel", {
-                        name: item.channelName,
-                      })}
-                      checked={selectedKeys.has(resourceKey)}
-                      disabled={!available}
-                      onChange={(e) =>
-                        onSelectItem(resourceKey, e.target.checked)
-                      }
-                      className="border-border-strong text-theme-600 focus:ring-ring h-4 w-4 rounded"
-                    />
+                    <label className="inline-flex size-(--density-control-xs) cursor-pointer items-center justify-center rounded-xs has-[:disabled]:cursor-not-allowed">
+                      <input
+                        type="checkbox"
+                        aria-label={t("execution.table.selectChannel", {
+                          name: item.channelName,
+                        })}
+                        checked={selectedKeys.has(resourceKey)}
+                        disabled={!available}
+                        onChange={(e) =>
+                          onSelectItem(resourceKey, e.target.checked)
+                        }
+                        className="border-border-strong text-theme-600 focus:ring-ring h-4 w-4 rounded"
+                      />
+                    </label>
                   </td>
                   {columns.status && (
                     <td className="py-density-3 px-4">
@@ -177,7 +181,7 @@ export default function ResultsTable({
                       className="h-auto min-h-0 justify-start p-0 text-sm"
                     />
                     {!available && (
-                      <p className="text-muted-foreground mt-1 text-xs">
+                      <p className="text-muted-foreground mt-density-1 text-xs">
                         {t("execution.table.resourceUnavailable")}
                       </p>
                     )}
@@ -194,12 +198,12 @@ export default function ResultsTable({
                             {t("execution.status.failed")}
                           </Badge>
                           {item.message && (
-                            <p className="text-muted-foreground mt-1 text-xs">
+                            <p className="text-muted-foreground mt-density-1 text-xs">
                               {item.message}
                             </p>
                           )}
                           {item.httpStatus && (
-                            <p className="text-muted-foreground mt-1 text-xs">
+                            <p className="text-muted-foreground mt-density-1 text-xs">
                               HTTP: {item.httpStatus}
                             </p>
                           )}

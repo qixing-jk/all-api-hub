@@ -114,7 +114,11 @@ const fieldDomId = (fieldId: string) =>
 /** Announces a field-specific validation message to assistive technology. */
 function FieldMessage({ id, message }: { id: string; message: string }) {
   return (
-    <p id={id} role="alert" className="text-destructive-text mt-1 text-xs">
+    <p
+      id={id}
+      role="alert"
+      className="text-destructive-text mt-density-1 text-xs"
+    >
       {message}
     </p>
   )
@@ -245,7 +249,7 @@ export function NativeResourceEditorBody<TSection extends string>({
     }
     const help =
       presentation.resolveHelp && helpId ? (
-        <p id={helpId} className="text-muted-foreground mt-1 text-xs">
+        <p id={helpId} className="text-muted-foreground mt-density-1 text-xs">
           {fieldDisabled && presentation.resolveDisabledHelp
             ? presentation.resolveDisabledHelp(t)
             : presentation.resolveHelp(t)}
@@ -386,7 +390,7 @@ export function NativeResourceEditorBody<TSection extends string>({
     if (descriptor.type === RESOURCE_FIELD_TYPES.Boolean) {
       return (
         <div key={descriptor.fieldId}>
-          <div className="flex items-start justify-between gap-4">
+          <div className="gap-y-density-4 flex items-start justify-between gap-x-4">
             <div className="min-w-0">
               <Label htmlFor={id}>{label}</Label>
               {help}
@@ -545,7 +549,9 @@ export function NativeResourceEditorBody<TSection extends string>({
                   : retry(descriptor.fieldId)
               }
             />
-            {optionControl && <div className="mt-2">{optionControl}</div>}
+            {optionControl && (
+              <div className="mt-density-2">{optionControl}</div>
+            )}
             {help}
             {error}
           </div>
@@ -589,7 +595,7 @@ export function NativeResourceEditorBody<TSection extends string>({
                 : retry(descriptor.fieldId)
             }
           />
-          {optionControl && <div className="mt-2">{optionControl}</div>}
+          {optionControl && <div className="mt-density-2">{optionControl}</div>}
           {help}
           {error}
         </div>
@@ -599,7 +605,7 @@ export function NativeResourceEditorBody<TSection extends string>({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-density-4">
       {[...fieldsBySection.entries()].map(([section, sectionFields]) => {
         const sectionPolicy = policy.sections?.[section]
         const label =
@@ -621,7 +627,7 @@ export function NativeResourceEditorBody<TSection extends string>({
             return (
               <div
                 key={field.descriptor.fieldId}
-                className={`flex min-w-0 flex-wrap gap-x-4 gap-y-2 ${sectionPolicy?.columns === 2 ? "sm:col-span-2" : ""}`}
+                className={`gap-y-density-2 flex min-w-0 flex-wrap gap-x-4 ${sectionPolicy?.columns === 2 ? "sm:col-span-2" : ""}`}
               >
                 {group.map((item) => (
                   <div
@@ -667,10 +673,10 @@ export function NativeResourceEditorBody<TSection extends string>({
           </ResourceEditorSection>
         ) : (
           <fieldset key={section} className="min-w-0">
-            <legend className="text-foreground mb-3 text-sm font-semibold">
+            <legend className="text-foreground mb-density-3 text-sm font-semibold">
               {label}
             </legend>
-            <div className="space-y-4">{content}</div>
+            <div className="space-y-density-4">{content}</div>
           </fieldset>
         )
       })}

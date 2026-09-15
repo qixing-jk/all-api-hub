@@ -288,7 +288,7 @@ export default function RedemptionAssistSettings() {
           className="border-border border-t"
           spacing="sm"
         >
-          <div className="space-y-2">
+          <div className="space-y-density-2">
             <div className="text-sm font-medium">
               {t("redemptionAssist:settings.urlWhitelist.patterns")}
             </div>

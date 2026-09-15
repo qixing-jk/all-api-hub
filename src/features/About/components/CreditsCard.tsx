@@ -9,13 +9,13 @@ const CreditsCard = () => {
     <Card>
       <CardContent>
         <div className="flex items-start space-x-4">
-          <Heart className="text-destructive-text mt-1 h-6 w-6 shrink-0" />
+          <Heart className="text-destructive-text mt-density-1 h-6 w-6 shrink-0" />
           <div className="flex-1">
-            <Heading6 className="mb-2">{t("devMaintenance")}</Heading6>
-            <BodySmall className="dark:text-secondary-foreground text-muted-foreground mb-4">
+            <Heading6 className="mb-density-2">{t("devMaintenance")}</Heading6>
+            <BodySmall className="dark:text-secondary-foreground text-muted-foreground mb-density-4">
               {t("thanksDesc")}
             </BodySmall>
-            <div className="flex flex-wrap gap-2">
+            <div className="gap-y-density-2 flex flex-wrap gap-x-2">
               <Badge
                 variant="destructive"
                 size="sm"

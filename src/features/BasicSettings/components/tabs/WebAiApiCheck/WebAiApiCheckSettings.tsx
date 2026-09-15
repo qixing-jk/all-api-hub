@@ -100,16 +100,16 @@ function RegexPatternWarning({
   if (invalid.length === 0) return null
 
   return (
-    <div className="border-warning-border bg-warning-soft text-warning-soft-foreground rounded-md border p-3 text-xs">
+    <div className="border-warning-border bg-warning-soft text-warning-soft-foreground py-density-3 rounded-md border px-3 text-xs">
       <div className="font-medium">{title}</div>
-      <ul className="mt-1 list-disc space-y-0.5 pl-4">
+      <ul className="mt-density-1 list-disc space-y-0.5 pl-4">
         {invalid.slice(0, 10).map((pattern) => (
           <li key={pattern}>
             <code className="font-mono">{pattern}</code>
           </li>
         ))}
       </ul>
-      {invalid.length > 10 ? <div className="mt-1">{more}</div> : null}
+      {invalid.length > 10 ? <div className="mt-density-1">{more}</div> : null}
     </div>
   )
 }
@@ -311,7 +311,7 @@ export default function WebAiApiCheckSettings() {
         </CardList>
 
         <CardContent className="border-border border-t" spacing="sm">
-          <div className="space-y-2">
+          <div className="space-y-density-2">
             <div className="text-sm font-medium">
               {t("webAiApiCheck:settings.autoDetect.whitelist.patterns")}
             </div>
@@ -365,7 +365,7 @@ export default function WebAiApiCheckSettings() {
         </CardContent>
 
         <CardContent className="border-border border-t" spacing="sm">
-          <div className="space-y-2">
+          <div className="space-y-density-2">
             <div className="text-sm font-medium">
               {t("webAiApiCheck:settings.keyCleanup.patterns")}
             </div>

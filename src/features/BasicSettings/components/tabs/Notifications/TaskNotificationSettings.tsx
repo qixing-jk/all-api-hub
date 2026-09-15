@@ -92,12 +92,12 @@ function NotificationSettingItem({
 }: NotificationSettingItemProps) {
   return (
     <CardItem id={id} className="items-stretch sm:items-stretch">
-      <div className="w-full space-y-4">
+      <div className="space-y-density-4 w-full">
         <div
           data-slot="notification-setting-content"
-          className="flex flex-col gap-3 has-[>[data-slot=notification-setting-actions]>[data-slot=switch]]:flex-row has-[>[data-slot=notification-setting-actions]>[data-slot=switch]]:items-center has-[>[data-slot=notification-setting-actions]>[data-slot=switch]]:justify-between [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center [@container(min-width:42rem)]:justify-between"
+          className="gap-y-density-3 flex flex-col gap-x-3 has-[>[data-slot=notification-setting-actions]>[data-slot=switch]]:flex-row has-[>[data-slot=notification-setting-actions]>[data-slot=switch]]:items-center has-[>[data-slot=notification-setting-actions]>[data-slot=switch]]:justify-between [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center [@container(min-width:42rem)]:justify-between"
         >
-          <div className="min-w-0 flex-1 space-y-1">
+          <div className="space-y-density-1 min-w-0 flex-1">
             {title && (
               <Label className="text-base font-semibold tracking-tight">
                 {title}
@@ -112,14 +112,14 @@ function NotificationSettingItem({
           {actions && (
             <div
               data-slot="notification-setting-actions"
-              className="flex w-full flex-wrap items-center justify-end gap-3 has-[>[data-slot=switch]]:w-auto has-[>[data-slot=switch]]:shrink-0 [@container(min-width:42rem)]:w-auto [@container(min-width:42rem)]:shrink-0"
+              className="gap-y-density-3 flex w-full flex-wrap items-center justify-end gap-x-3 has-[>[data-slot=switch]]:w-auto has-[>[data-slot=switch]]:shrink-0 [@container(min-width:42rem)]:w-auto [@container(min-width:42rem)]:shrink-0"
             >
               {actions}
             </div>
           )}
         </div>
         {children && (
-          <div className="dark:bg-secondary/20 dark:border-border border-border-subtle bg-surface-subtle/30 rounded-lg border p-4">
+          <div className="dark:bg-secondary/20 dark:border-border border-border-subtle bg-surface-subtle/30 py-density-4 rounded-lg border px-4">
             {children}
           </div>
         )}
@@ -155,7 +155,7 @@ function NotificationChannelActions({
   const { t: commonT } = useTranslation("common")
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="gap-y-density-4 flex items-center gap-x-4">
       <Button
         type="button"
         size="sm"
@@ -634,7 +634,7 @@ export default function TaskNotificationSettings() {
   const ntfyDocsUrl = getDocsTaskNotificationsNtfyUrl(i18n.language)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-density-6">
       <SettingSection
         id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS}
         title={t("taskNotifications.groups.setup.title")}
@@ -670,7 +670,7 @@ export default function TaskNotificationSettings() {
               title={t("taskNotifications.permission.title")}
               description={t("taskNotifications.permission.description")}
               actions={
-                <div className="flex items-center gap-3">
+                <div className="gap-y-density-3 flex items-center gap-x-3">
                   {!permissionGranted && (
                     <Button
                       type="button"
@@ -754,7 +754,7 @@ export default function TaskNotificationSettings() {
                 />
               }
             >
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="gap-y-density-3 grid gap-x-3 sm:grid-cols-2">
                 <FormField
                   label={t("taskNotifications.channels.telegram.botToken")}
                   htmlFor={
@@ -904,8 +904,8 @@ export default function TaskNotificationSettings() {
                 />
               }
             >
-              <div className="space-y-3">
-                <div className="grid gap-3 [@container(min-width:42rem)]:grid-cols-2">
+              <div className="space-y-density-3">
+                <div className="gap-y-density-3 grid gap-x-3 [@container(min-width:42rem)]:grid-cols-2">
                   <FormField
                     label={t("taskNotifications.channels.dingtalk.webhookKey")}
                     htmlFor={
@@ -1073,8 +1073,8 @@ export default function TaskNotificationSettings() {
                 />
               }
             >
-              <div className="space-y-3">
-                <div className="grid gap-3 [@container(min-width:42rem)]:grid-cols-2">
+              <div className="space-y-density-3">
+                <div className="gap-y-density-3 grid gap-x-3 [@container(min-width:42rem)]:grid-cols-2">
                   <FormField
                     label={t("taskNotifications.channels.ntfy.topicUrl")}
                     htmlFor={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_NTFY_TOPIC_URL}

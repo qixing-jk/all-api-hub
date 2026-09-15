@@ -74,8 +74,8 @@ export function StatusIndicator({
 
   if (isLoading) {
     return (
-      <div className="py-12 text-center">
-        <Spinner size="lg" className="mx-auto mb-4" />
+      <div className="py-density-12 text-center">
+        <Spinner size="lg" className="mb-density-4 mx-auto" />
         <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
           {t("status.loading")}
         </p>
@@ -136,14 +136,14 @@ export function StatusIndicator({
         accountFallback.selectedRuntimeKeyId !== null)
 
     return (
-      <div className="border-border mt-4 space-y-4 border-t pt-4">
+      <div className="border-border mt-density-4 space-y-density-4 pt-density-4 border-t">
         <div>
           <h4 className="text-foreground text-sm font-semibold">
             {isKeyScopedStatus
               ? t("status.runtimeKeyScopedCatalogFallbackTitle")
               : t("status.fallback.title")}
           </h4>
-          <p className="dark:text-secondary-foreground text-muted-foreground mt-1 text-sm">
+          <p className="dark:text-secondary-foreground text-muted-foreground mt-density-1 text-sm">
             {isKeyScopedStatus
               ? t("status.runtimeKeyScopedCatalogFallbackDescription")
               : t("status.fallback.description")}
@@ -156,7 +156,7 @@ export function StatusIndicator({
             title={t("status.fallback.runtimeKeysLoadFailedTitle")}
             description={accountFallback.runtimeKeyLoadErrorMessage}
           >
-            <div className="mt-3">
+            <div className="mt-density-3">
               <Button
                 variant="secondary"
                 onClick={accountFallback.loadRuntimeKeys}
@@ -170,7 +170,7 @@ export function StatusIndicator({
 
         {!accountFallback.hasLoadedRuntimeKeys &&
         !accountFallback.runtimeKeyLoadErrorMessage ? (
-          <div className="flex items-center gap-3 py-1">
+          <div className="gap-y-density-3 py-density-1 flex items-center gap-x-3">
             <Spinner size="sm" />
             <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
               {t("status.fallback.loadingKeys")}
@@ -185,7 +185,7 @@ export function StatusIndicator({
             title={t("status.fallback.noKeysTitle")}
             description={t("status.fallback.noKeysDescription")}
           >
-            <div className="mt-3">
+            <div className="mt-density-3">
               <Button
                 variant="secondary"
                 onClick={accountFallback.loadRuntimeKeys}
@@ -201,7 +201,7 @@ export function StatusIndicator({
         ) : null}
 
         {accountFallback.runtimeKeys.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-density-3">
             <div>
               <label
                 htmlFor={fallbackRuntimeKeySelectId}
@@ -209,7 +209,7 @@ export function StatusIndicator({
               >
                 {t("status.fallback.selectLabel")}
               </label>
-              <div className="mt-2">
+              <div className="mt-density-2">
                 <Select
                   value={
                     accountFallback.selectedRuntimeKeyId === null
@@ -243,7 +243,7 @@ export function StatusIndicator({
               </div>
               {requiresExplicitSelection &&
               accountFallback.selectedRuntimeKeyId === null ? (
-                <p className="text-muted-foreground mt-2 text-sm">
+                <p className="text-muted-foreground mt-density-2 text-sm">
                   {t("status.fallback.selectHint")}
                 </p>
               ) : null}
@@ -257,7 +257,7 @@ export function StatusIndicator({
               />
             ) : null}
 
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row">
               <Button
                 onClick={accountFallback.loadCatalog}
                 loading={accountFallback.isLoadingCatalog}
@@ -291,7 +291,7 @@ export function StatusIndicator({
     return (
       <Alert
         variant="info"
-        className="mb-6"
+        className="mb-density-6"
         title={t("status.runtimeKeyScopedCatalogTitle")}
         description={t("status.runtimeKeyScopedCatalogDescription")}
         aria-live="polite"
@@ -305,7 +305,7 @@ export function StatusIndicator({
     return (
       <Alert
         variant="destructive"
-        className="mb-6"
+        className="mb-density-6"
         title={
           selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
             ? t("status.profileLoadFailedTitle")
@@ -313,7 +313,7 @@ export function StatusIndicator({
         }
         description={loadErrorMessage}
       >
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+        <div className="mt-density-4 gap-y-density-3 flex flex-col gap-x-3 sm:flex-row">
           <Button
             variant="secondary"
             onClick={loadPricingData}
@@ -335,13 +335,13 @@ export function StatusIndicator({
       baseUrl: currentAccount.baseUrl,
     })
     return (
-      <Alert variant="warning" className="mb-6">
+      <Alert variant="warning" className="mb-density-6">
         <div>
-          <h3 className="mb-2 text-lg font-medium">
+          <h3 className="mb-density-2 text-lg font-medium">
             {t("status.incompatibleFormat")}
           </h3>
-          <p className="mb-4 text-sm">{t("status.incompatibleDesc")}</p>
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <p className="mb-density-4 text-sm">{t("status.incompatibleDesc")}</p>
+          <div className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row">
             {pricingUrl && (
               <WorkflowTransitionButton
                 variant="warning"

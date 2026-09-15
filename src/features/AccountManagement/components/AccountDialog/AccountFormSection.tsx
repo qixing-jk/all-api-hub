@@ -52,7 +52,7 @@ export function AccountFormSection({
                 {title}
               </div>
               {description && (
-                <div className="dark:text-secondary-foreground text-muted-foreground mt-1 text-xs">
+                <div className="dark:text-secondary-foreground text-muted-foreground mt-density-1 text-xs">
                   {description}
                 </div>
               )}
@@ -61,11 +61,11 @@ export function AccountFormSection({
           defaultOpen={defaultOpen}
           open={open}
           onOpenChange={onOpenChange}
-          className="border-border bg-card rounded-lg border px-3 py-2 shadow-sm"
+          className="border-border bg-card py-density-2 rounded-lg border px-3 shadow-sm"
           buttonClassName="rounded-md px-0 py-0 text-left hover:bg-transparent"
-          panelClassName="mt-3 border-0 bg-transparent p-0"
+          panelClassName="mt-density-3 border-0 bg-transparent p-0"
         >
-          <div className="space-y-4">{children}</div>
+          <div className="space-y-density-4">{children}</div>
         </CollapsibleSection>
       </div>
     )

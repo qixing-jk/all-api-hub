@@ -482,7 +482,7 @@ export default function AutoCheckinSettings() {
                 onClick={handleNavigateToExecution}
                 variant="default"
                 size="sm"
-                className="flex items-center gap-2"
+                className="gap-y-density-2 flex items-center gap-x-2"
               >
                 <span>{t("autoCheckin:settings.viewExecutionButton")}</span>
               </WorkflowTransitionButton>

@@ -76,8 +76,11 @@ function ExportActionRow({
   rightContent: ReactNode
 }) {
   return (
-    <div id={id} className="flex items-center gap-4 px-6 py-4">
-      <div className="min-w-0 flex-1 space-y-1">
+    <div
+      id={id}
+      className="gap-y-density-4 py-density-4 flex items-center gap-x-4 px-6"
+    >
+      <div className="space-y-density-1 min-w-0 flex-1">
         <p className="text-sm font-medium">{title}</p>
         <p className="text-muted-foreground text-xs leading-5">{description}</p>
       </div>
@@ -95,7 +98,7 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
     <section id="export-section" className="flex min-w-0 flex-col">
       <Card padding="none" className="flex flex-1 flex-col">
         <CardHeader>
-          <div className="flex items-center gap-2">
+          <div className="gap-y-density-2 flex items-center gap-x-2">
             <Upload className="text-theme-600 dark:text-theme-400 h-5 w-5" />
             <CardTitle className="mb-0 text-base">
               {t("export.title")}
@@ -186,7 +189,7 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
             }
           />
         </CardList>
-        <p className="text-muted-foreground border-border flex items-start gap-2 border-t px-6 py-4 text-xs leading-5">
+        <p className="text-muted-foreground border-border gap-y-density-2 py-density-4 flex items-start gap-x-2 border-t px-6 text-xs leading-5">
           <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <span>{t("export.sensitiveDataNotice")}</span>
         </p>

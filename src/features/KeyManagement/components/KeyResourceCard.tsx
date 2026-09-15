@@ -126,8 +126,8 @@ export function KeyResourceCardHeader({
   const { t } = useTranslation(["keyManagement"])
 
   return (
-    <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+    <div className="gap-y-density-2 flex min-w-0 flex-col gap-x-2 sm:flex-row sm:items-start sm:justify-between">
+      <div className="gap-y-density-2 flex min-w-0 flex-1 flex-wrap items-center gap-x-2">
         {selection}
         <Heading6 className="min-w-0 text-sm break-words sm:text-base">
           {presentation.title}
@@ -144,7 +144,7 @@ export function KeyResourceCardHeader({
         </Badge>
         {providerBadges}
       </div>
-      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+      <div className="gap-y-density-1-5 flex min-w-0 flex-wrap items-center gap-x-1.5">
         {association ? (
           <KeyResourceActionGroup
             label={t("keyManagement:actionToolbar.apiCredential")}
@@ -213,7 +213,7 @@ export function KeyResourceActionToolbar({
       role="toolbar"
       aria-label={label}
       data-testid={testId}
-      className="flex w-full flex-wrap items-center justify-start gap-x-2 gap-y-1 sm:w-auto sm:shrink-0 sm:justify-end"
+      className="gap-y-density-1 flex w-full flex-wrap items-center justify-start gap-x-2 sm:w-auto sm:shrink-0 sm:justify-end"
     >
       {children}
     </div>
@@ -245,7 +245,7 @@ export function KeyResourceActionGroup({
   testId,
 }: KeyResourceActionGroupProps) {
   return (
-    <div className="inline-flex shrink-0 items-center gap-2">
+    <div className="gap-y-density-2 inline-flex shrink-0 items-center gap-x-2">
       {separated ? <KeyResourceActionSeparator /> : null}
       <div
         role="group"
@@ -273,8 +273,8 @@ export function KeyResourceFactList({
       className={cn(
         "grid",
         layout === KEY_RESOURCE_CONTENT_LAYOUTS.Adaptive
-          ? "grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-3.5"
-          : "xs:grid-cols-2 grid-cols-1 gap-2.5 sm:grid-cols-4 sm:gap-3.5",
+          ? "gap-y-density-3-5 grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-x-3.5"
+          : "xs:grid-cols-2 gap-y-density-2-5 sm:gap-y-density-3-5 grid-cols-1 gap-x-2.5 sm:grid-cols-4 sm:gap-x-3.5",
       )}
     >
       {facts.map((fact) => (
@@ -319,10 +319,12 @@ export function KeyResourceSecretDisplay({
     </div>
   ) : null
   const controlsContent = controls ? (
-    <div className="flex flex-wrap items-center gap-1.5">{controls}</div>
+    <div className="gap-y-density-1-5 flex flex-wrap items-center gap-x-1.5">
+      {controls}
+    </div>
   ) : null
   const messageContent = message ? (
-    <span className="text-muted-foreground inline-flex min-w-0 items-center gap-1.5 text-xs">
+    <span className="text-muted-foreground gap-y-density-1-5 inline-flex min-w-0 items-center gap-x-1.5 text-xs">
       <IconButton
         type="button"
         aria-label={message}
@@ -343,9 +345,9 @@ export function KeyResourceSecretDisplay({
     return (
       <div
         data-testid={KEY_MANAGEMENT_TEST_IDS.keyResourceSecretDisplay}
-        className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+        className="gap-y-density-2 grid min-w-0 grid-cols-1 gap-x-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
       >
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <div className="gap-y-density-2 flex min-w-0 flex-wrap items-center gap-x-2">
           {labelContent}
           {secretContent}
           {messageContent}
@@ -360,7 +362,7 @@ export function KeyResourceSecretDisplay({
   return (
     <div
       data-testid={KEY_MANAGEMENT_TEST_IDS.keyResourceSecretDisplay}
-      className="flex min-w-0 flex-wrap items-center gap-2"
+      className="gap-y-density-2 flex min-w-0 flex-wrap items-center gap-x-2"
     >
       {labelContent}
       {secretContent}
@@ -473,10 +475,13 @@ export function KeyResourceCard({
               id={detailsPanelId}
               role="region"
               aria-labelledby={detailsTriggerId}
-              className="border-border gap-density-3 flex min-w-0 flex-col border-t pt-3"
+              className="border-border gap-density-3 pt-density-3 flex min-w-0 flex-col border-t"
             >
               {detailState.status === "loading" ? (
-                <div role="status" className="flex items-center gap-2 text-sm">
+                <div
+                  role="status"
+                  className="gap-y-density-2 flex items-center gap-x-2 text-sm"
+                >
                   <Spinner aria-hidden="true" size="sm" />
                   <span>{t("details.loading")}</span>
                 </div>
@@ -484,7 +489,7 @@ export function KeyResourceCard({
               {detailState.status === "error" ? (
                 <div
                   role="alert"
-                  className="flex min-w-0 flex-wrap items-center gap-2 text-sm"
+                  className="gap-y-density-2 flex min-w-0 flex-wrap items-center gap-x-2 text-sm"
                 >
                   <span className="min-w-0 break-words">
                     {detailState.message || t("details.unavailable")}

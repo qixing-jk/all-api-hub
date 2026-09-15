@@ -31,7 +31,7 @@ const AUTO_CHECKIN_DATA_VIEW = {
 } as const
 
 const DATA_VIEW_TRIGGER_CLASS_NAME =
-  "flex min-h-10 min-w-0 items-center justify-center gap-2 rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:outline-none data-[state=active]:bg-card data-[state=active]:font-semibold data-[state=active]:text-foreground data-[state=active]:shadow-sm sm:flex-none sm:px-3"
+  "flex min-h-(--density-control-lg) min-w-0 items-center justify-center gap-x-2 gap-y-density-2 rounded-md px-2.5 py-density-1-5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:outline-none data-[state=active]:bg-card data-[state=active]:font-semibold data-[state=active]:text-foreground data-[state=active]:shadow-sm sm:flex-none sm:px-3"
 
 interface WorkspaceTabCountProps {
   attentionCount: number
@@ -123,10 +123,10 @@ export default function AutoCheckinDataWorkspace({
   }
 
   return (
-    <section aria-label={t("workspace.label")} className="space-y-3">
+    <section aria-label={t("workspace.label")} className="space-y-density-3">
       <Tabs value={activeView} onValueChange={handleViewChange}>
         <TabsList
-          className={`corners-concentric bg-muted dark:bg-background grid w-full grid-cols-2 gap-1 rounded-lg p-1 [--corner-inset:4px] sm:inline-flex sm:w-auto ${CORNERS.buttonItems}`}
+          className={`corners-concentric bg-muted dark:bg-background gap-y-density-1 py-density-1 grid w-full grid-cols-2 gap-x-1 rounded-lg px-1 [--corner-inset:4px] sm:inline-flex sm:w-auto ${CORNERS.buttonItems}`}
         >
           <TabsTrigger
             value={AUTO_CHECKIN_DATA_VIEW.Results}
@@ -172,7 +172,7 @@ export default function AutoCheckinDataWorkspace({
           value={AUTO_CHECKIN_DATA_VIEW.Results}
           forceMount
           hidden={activeView !== AUTO_CHECKIN_DATA_VIEW.Results}
-          className="mt-3 data-[state=inactive]:hidden"
+          className="mt-density-3 data-[state=inactive]:hidden"
         >
           {resultsContent}
         </TabsContent>
@@ -180,7 +180,7 @@ export default function AutoCheckinDataWorkspace({
           value={AUTO_CHECKIN_DATA_VIEW.Readiness}
           forceMount
           hidden={activeView !== AUTO_CHECKIN_DATA_VIEW.Readiness}
-          className="mt-3 space-y-3 data-[state=inactive]:hidden"
+          className="mt-density-3 space-y-density-3 data-[state=inactive]:hidden"
         >
           <p className="text-muted-foreground px-1 text-sm">
             {t("snapshot.description")}

@@ -45,7 +45,7 @@ export default function FilterBar({
       type="button"
       aria-pressed={status === value}
       onClick={() => onStatusChange(value)}
-      className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+      className={`gap-y-density-1-5 py-density-1-5 flex min-h-(--density-control-xs) items-center gap-x-1.5 rounded-lg px-3 text-sm font-medium transition-colors ${
         status === value
           ? selectedClassName
           : "bg-muted text-secondary-foreground hover:bg-secondary dark:bg-secondary dark:hover:bg-surface-strong"
@@ -68,8 +68,8 @@ export default function FilterBar({
   )
 
   return (
-    <div className="flex flex-wrap gap-3">
-      <div className="flex gap-2">
+    <div className="gap-y-density-3 flex flex-wrap gap-x-3">
+      <div className="gap-y-density-2 flex gap-x-2">
         {renderFilterButton(
           "all",
           t("execution.filters.all"),

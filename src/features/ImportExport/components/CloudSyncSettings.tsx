@@ -17,9 +17,15 @@ export default function CloudSyncSettings() {
     useState<string>()
 
   return (
-    <section id="cloud-sync" className="border-border space-y-4 border-t pt-6">
-      <div className="space-y-1">
-        <Heading3 as="h2" className="m-0 flex items-center gap-2 text-xl">
+    <section
+      id="cloud-sync"
+      className="border-border space-y-density-4 pt-density-6 border-t"
+    >
+      <div className="space-y-density-1">
+        <Heading3
+          as="h2"
+          className="gap-y-density-2 m-0 flex items-center gap-x-2 text-xl"
+        >
           <Cloud
             className="text-theme-600 dark:text-theme-400 size-5 shrink-0"
             aria-hidden="true"
@@ -29,7 +35,7 @@ export default function CloudSyncSettings() {
         <BodySmall className="m-0">{t("webdav.configDesc")}</BodySmall>
       </div>
       <CloudSyncSaveProvider>
-        <div className="space-y-6">
+        <div className="space-y-density-6">
           <WebDAVSettings
             onProviderDraftChange={setProviderPreview}
             gistEncryptionPasswordError={gistEncryptionPasswordError}

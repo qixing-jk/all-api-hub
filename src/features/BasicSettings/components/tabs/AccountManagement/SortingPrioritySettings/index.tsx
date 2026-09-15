@@ -113,13 +113,13 @@ export default function SortingPrioritySettings() {
       onReset={resetSortingPriorityConfig}
     >
       <Card>
-        <CardContent className="space-y-5">
-          <div className="space-y-3">
+        <CardContent className="space-y-density-5">
+          <div className="space-y-density-3">
             <div>
               <h3 className="text-sm font-medium">
                 {t("sorting.contextBoostTitle")}
               </h3>
-              <p className="text-muted-foreground mt-1 text-xs">
+              <p className="text-muted-foreground mt-density-1 text-xs">
                 {t("sorting.contextBoostDescription")}
               </p>
             </div>
@@ -131,7 +131,7 @@ export default function SortingPrioritySettings() {
                 <div
                   key={id}
                   id={targetId}
-                  className="flex items-center justify-between gap-4"
+                  className="gap-y-density-4 flex items-center justify-between gap-x-4"
                 >
                   <div className="min-w-0">
                     <label
@@ -142,7 +142,7 @@ export default function SortingPrioritySettings() {
                     </label>
                     <p
                       id={`${targetId}-description`}
-                      className="text-muted-foreground mt-1 text-xs"
+                      className="text-muted-foreground mt-density-1 text-xs"
                     >
                       {item.description}
                     </p>

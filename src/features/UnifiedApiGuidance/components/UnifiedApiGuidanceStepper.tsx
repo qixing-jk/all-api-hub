@@ -19,7 +19,7 @@ export function UnifiedApiGuidanceStepper({
   return (
     <ol
       aria-label={copy.label()}
-      className="grid grid-cols-1 gap-2 lg:grid-cols-3"
+      className="gap-y-density-2 grid grid-cols-1 gap-x-2 lg:grid-cols-3"
     >
       {steps.map((step, index) => {
         const isCurrent =
@@ -30,13 +30,13 @@ export function UnifiedApiGuidanceStepper({
         return (
           <li
             key={step.id}
-            className={`min-w-0 rounded-md border px-3 py-2.5 ${
+            className={`py-density-2-5 min-w-0 rounded-md border px-3 ${
               isCurrent
                 ? "border-theme-300 bg-theme-50/70 dark:border-theme-800 dark:bg-theme-950/20"
                 : "border-border/70 bg-card/50 dark:border-foreground/10 dark:bg-foreground/[0.025]"
             }`}
           >
-            <div className="flex min-w-0 gap-2.5">
+            <div className="gap-y-density-2-5 flex min-w-0 gap-x-2.5">
               <span
                 aria-hidden="true"
                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
@@ -50,7 +50,7 @@ export function UnifiedApiGuidanceStepper({
                 {index + 1}
               </span>
               <div className="min-w-0">
-                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                <div className="gap-y-density-1 flex min-w-0 flex-wrap items-center gap-x-2">
                   <span
                     aria-current={isCurrent ? "step" : undefined}
                     className="text-foreground text-sm font-medium"

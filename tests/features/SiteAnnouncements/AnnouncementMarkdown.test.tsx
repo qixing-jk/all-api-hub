@@ -15,6 +15,13 @@ describe("AnnouncementMarkdown", () => {
     expect(link).toHaveAttribute("href", "https://example.com/news")
     expect(link).toHaveAttribute("target", "_blank")
     expect(link).toHaveAttribute("rel", "noopener noreferrer")
+    expect(link.closest(".prose")).toHaveClass(
+      "prose-headings:mt-density-4",
+      "prose-blockquote:my-density-3",
+      "prose-pre:my-density-3",
+      "[&>:first-child]:mt-0",
+      "[&>:last-child]:mb-0",
+    )
   })
 
   it("forces sanitized HTML links to open in a new tab", async () => {

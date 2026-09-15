@@ -43,7 +43,7 @@ export function InviteLinkManualCopyDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-2">
+        <div className="space-y-density-2">
           <label htmlFor={textareaId} className="text-sm font-medium">
             {t("inviteLinkManualCopy.label")}
           </label>

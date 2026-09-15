@@ -307,7 +307,7 @@ export function RepairAccountCoverageList({
       <EmptyState
         icon={<Search className="h-12 w-12" />}
         title={t("keyManagement:repairMissingKeys.noMatchingResults")}
-        className="py-10"
+        className="py-density-10"
       />
     )
   }

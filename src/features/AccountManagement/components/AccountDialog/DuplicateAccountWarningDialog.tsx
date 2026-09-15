@@ -54,7 +54,7 @@ export function DuplicateAccountWarningDialog({
         </div>
       }
       footer={
-        <div className="space-y-2">
+        <div className="space-y-density-2">
           <div className="flex space-x-3">
             <Button
               type="button"

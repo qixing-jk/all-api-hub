@@ -24,9 +24,9 @@ export function DedupeAccountsConfirmDetails({
   t,
 }: DedupeAccountsConfirmDetailsProps) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-density-3">
       {(pinnedToDeleteCount > 0 || orderedToDeleteCount > 0) && (
-        <div className="dark:bg-secondary/40 bg-surface-subtle text-secondary-foreground rounded-md p-3 text-sm">
+        <div className="dark:bg-secondary/40 bg-surface-subtle text-secondary-foreground py-density-3 rounded-md px-3 text-sm">
           {pinnedToDeleteCount > 0 && (
             <div>
               {t("ui:dialog.dedupeAccounts.confirm.warningPinned", {
@@ -40,7 +40,7 @@ export function DedupeAccountsConfirmDetails({
         </div>
       )}
 
-      <div className="border-border bg-card max-h-[55vh] space-y-2 overflow-auto rounded-md border p-3 md:max-h-[min(65vh,40rem)]">
+      <div className="border-border bg-card space-y-density-2 py-density-3 max-h-[55vh] overflow-auto rounded-md border px-3 md:max-h-[min(65vh,40rem)]">
         {groups.map((group) => {
           const keep = group.accounts.find(
             (account) => account.id === group.keepAccountId,
@@ -51,7 +51,7 @@ export function DedupeAccountsConfirmDetails({
             .join(", ")
 
           return (
-            <div key={`confirm:${group.key.id}`} className="space-y-1">
+            <div key={`confirm:${group.key.id}`} className="space-y-density-1">
               <div className="text-muted-foreground text-xs">
                 {group.key.origin} ·{" "}
                 {formatDedupeGroupIdentityLabel(group.key, t)}
@@ -70,7 +70,7 @@ export function DedupeAccountsConfirmDetails({
                 </span>{" "}
                 {deleteLabels || "-"}
               </div>
-              <Separator className="my-2" />
+              <Separator className="my-density-2" />
             </div>
           )
         })}

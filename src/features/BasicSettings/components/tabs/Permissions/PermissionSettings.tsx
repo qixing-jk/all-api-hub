@@ -30,11 +30,11 @@ export default function PermissionSettings() {
       id="permissions"
       title={t("permissions.title")}
       description={t("permissions.description")}
-      className="space-y-4"
+      className="space-y-density-4"
     >
       <Alert variant="default" description={t("permissions.helper")} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="gap-y-density-3 flex flex-wrap items-center justify-between gap-x-3">
         <BodySmall className="text-muted-foreground">
           {t("permissions.statusCaption")}
         </BodySmall>
@@ -62,7 +62,7 @@ export default function PermissionSettings() {
               status: permission.granted,
               statusLabel: permission.statusLabel,
               rightContent: (
-                <div className="flex flex-col items-start gap-3 [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center">
+                <div className="gap-y-density-3 flex flex-col items-start gap-x-3 [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center">
                   <Button
                     size="sm"
                     variant={permission.granted ? "outline" : "default"}

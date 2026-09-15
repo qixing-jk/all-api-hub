@@ -5,7 +5,7 @@ import WebAiApiCheckSettings from "./WebAiApiCheckSettings"
  */
 export default function WebAiApiCheckTab() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-density-6">
       <WebAiApiCheckSettings />
     </div>
   )

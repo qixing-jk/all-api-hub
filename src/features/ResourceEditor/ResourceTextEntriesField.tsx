@@ -52,7 +52,7 @@ export function ResourceTextEntriesField({
       aria-invalid={invalid}
     >
       <legend className="sr-only">{label}</legend>
-      <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-density-1-5 gap-y-density-2 flex flex-wrap items-center justify-between gap-x-2">
         <span className="text-sm font-medium">{label}</span>
         <Button
           type="button"
@@ -63,7 +63,7 @@ export function ResourceTextEntriesField({
           {raw ? t("ui:textEntries.editRows") : t("ui:textEntries.editText")}
         </Button>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-density-2">
         {raw ? (
           <Textarea
             aria-label={label}
@@ -101,7 +101,7 @@ export function ResourceTextEntriesField({
               return (
                 <div
                   key={entry.id}
-                  className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+                  className="gap-y-density-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-x-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
                 >
                   <div className="col-span-2 min-w-0 sm:col-span-1">
                     <ResourceFieldLabel

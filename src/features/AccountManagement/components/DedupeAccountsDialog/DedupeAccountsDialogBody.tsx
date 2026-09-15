@@ -84,14 +84,14 @@ export function DedupeAccountsDialogBody({
   t,
 }: DedupeAccountsDialogBodyProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-density-4">
       {groups.length > 0 && (
         <>
           <h3 className="text-foreground text-sm font-semibold">
             {t("ui:dialog.dedupeAccounts.exactTitle")}
           </h3>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div className="min-w-0 space-y-1">
+          <div className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="space-y-density-1 min-w-0">
               <div className="text-foreground text-sm font-medium">
                 {t("ui:dialog.dedupeAccounts.strategyLabel")}
               </div>
@@ -133,7 +133,7 @@ export function DedupeAccountsDialogBody({
 
       {groups.length === 0 ? (
         !hasSuspectedGroups && (
-          <div className="dark:bg-secondary/30 dark:text-secondary-foreground border-border bg-surface-subtle text-muted-foreground rounded-lg border p-4 text-sm">
+          <div className="dark:bg-secondary/30 dark:text-secondary-foreground border-border bg-surface-subtle text-muted-foreground py-density-4 rounded-lg border px-4 text-sm">
             {t("ui:dialog.dedupeAccounts.empty")}
           </div>
         )
@@ -152,7 +152,7 @@ export function DedupeAccountsDialogBody({
       )}
 
       {unscannableCount > 0 && (
-        <div className="border-warning-border bg-warning-soft text-warning-soft-foreground rounded-lg border p-4 text-sm">
+        <div className="border-warning-border bg-warning-soft text-warning-soft-foreground py-density-4 rounded-lg border px-4 text-sm">
           <Trans
             t={t}
             i18nKey="ui:dialog.dedupeAccounts.unscannableHint"

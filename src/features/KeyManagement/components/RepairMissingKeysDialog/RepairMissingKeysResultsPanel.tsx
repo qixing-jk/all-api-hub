@@ -132,15 +132,15 @@ export function RepairMissingKeysResultsPanel({
         <CardHeader
           data-testid="repair-missing-keys-results-header"
           padding="sm"
-          className="flex flex-col gap-2 space-y-0 sm:flex-row sm:items-center sm:justify-between"
+          className="gap-y-density-2 flex flex-col space-y-0 gap-x-2 sm:flex-row sm:items-center sm:justify-between"
         >
           <div
             data-testid="repair-missing-keys-result-heading-row"
-            className="flex h-9 items-center"
+            className="flex min-h-(--density-control) items-center"
           >
             <div
               data-testid="repair-missing-keys-result-heading"
-              className="flex items-baseline gap-2"
+              className="gap-y-density-2 flex items-baseline gap-x-2"
             >
               <CardTitle className="text-sm">
                 {t("keyManagement:repairMissingKeys.resultsTitle")}
@@ -179,7 +179,7 @@ export function RepairMissingKeysResultsPanel({
                       onSearchTermChange("")
                       searchInputRef.current?.focus()
                     }}
-                    className="dark:hover:bg-secondary hover:bg-muted rounded p-1"
+                    className="dark:hover:bg-secondary hover:bg-muted py-density-1 min-h-(--density-control-xs) rounded px-1"
                     aria-label={t("common:actions.clear")}
                   >
                     <X className="h-4 w-4" />
@@ -197,7 +197,7 @@ export function RepairMissingKeysResultsPanel({
             spacing="none"
             className="border-border border-b"
           >
-            <div className="space-y-2">
+            <div className="space-y-density-2">
               <TagFilter
                 mode="single"
                 value={outcomeFilter}

@@ -308,8 +308,8 @@ export function ModelDisplay(props: ModelDisplayProps) {
               aria-labelledby={`${headingId} ${billingModeId}`}
               className="border-border bg-card overflow-hidden rounded-xl border shadow-sm"
             >
-              <header className="dark:bg-background/45 border-border bg-surface-subtle/80 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 border-b px-3 py-2.5 sm:px-4">
-                <div className="flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto lg:flex-1">
+              <header className="dark:bg-background/45 border-border bg-surface-subtle/80 gap-y-density-2 py-density-2-5 flex min-w-0 flex-wrap items-center gap-x-3 border-b px-3 sm:px-4">
+                <div className="gap-y-density-2 flex w-full min-w-0 flex-wrap items-center gap-x-2 lg:w-auto lg:flex-1">
                   <h2
                     id={headingId}
                     className="text-foreground max-w-full min-w-0 font-mono text-sm font-semibold break-all"
@@ -340,15 +340,15 @@ export function ModelDisplay(props: ModelDisplayProps) {
                     </span>
                   </Badge>
                 </div>
-                <div className="flex w-full flex-wrap items-center gap-1.5 text-xs lg:w-auto lg:shrink-0 lg:justify-end">
-                  <span className="dark:bg-card dark:text-secondary-foreground border-border bg-card/80 text-muted-foreground rounded-full border px-2.5 py-1">
+                <div className="gap-y-density-1-5 flex w-full flex-wrap items-center gap-x-1.5 text-xs lg:w-auto lg:shrink-0 lg:justify-end">
+                  <span className="dark:bg-card dark:text-secondary-foreground border-border bg-card/80 text-muted-foreground py-density-1 rounded-full border px-2.5">
                     {t("priceComparison.results.comparable")}:{" "}
                     <strong className="text-success-text font-semibold">
                       {group.comparableItems.length}
                     </strong>
                   </span>
                   {group.notComparedItems.length > 0 && (
-                    <span className="dark:bg-card dark:text-secondary-foreground border-border bg-card/80 text-muted-foreground rounded-full border px-2.5 py-1">
+                    <span className="dark:bg-card dark:text-secondary-foreground border-border bg-card/80 text-muted-foreground py-density-1 rounded-full border px-2.5">
                       {t("priceComparison.results.notCompared")}:{" "}
                       <strong className="text-foreground font-semibold">
                         {group.notComparedItems.length}
@@ -381,7 +381,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
                 >
                   <div
                     role="note"
-                    className="dark:border-border border-border/80 flex min-w-0 gap-2 border-b px-3 py-2.5 sm:px-4"
+                    className="dark:border-border border-border/80 gap-y-density-2 py-density-2-5 flex min-w-0 gap-x-2 border-b px-3 sm:px-4"
                   >
                     <Info
                       aria-hidden="true"

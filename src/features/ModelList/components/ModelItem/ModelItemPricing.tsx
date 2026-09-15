@@ -284,7 +284,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
 
   if (unavailableReason) {
     return (
-      <div className="mt-2">
+      <div className="mt-density-2">
         <span
           className={`block max-w-full text-xs leading-snug font-medium sm:text-sm ${
             isAvailableForUser
@@ -303,9 +303,9 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
   }
 
   return (
-    <div className="mt-2">
+    <div className="mt-density-2">
       {calculatedPrice.kind === CALCULATED_PRICE_KINDS.TOKEN ? (
-        <div className="flex flex-wrap items-center gap-3 sm:gap-4 md:gap-6">
+        <div className="gap-y-density-3 sm:gap-y-density-4 md:gap-y-density-6 flex flex-wrap items-center gap-x-3 sm:gap-x-4 md:gap-x-6">
           <PriceView
             usdPrices={calculatedPrice.usdPerMillionTokens}
             exchangeRate={exchangeRate}
@@ -316,7 +316,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
           />
 
           {(priceMeta || estimatedPriceMeta || hasContextTiers) && (
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <div className="gap-y-density-1-5 sm:gap-y-density-2 flex flex-wrap items-center gap-x-1.5 sm:gap-x-2">
               {hasContextTiers && (
                 <Badge
                   variant="secondary"
@@ -340,7 +340,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
         </div>
       ) : (
         calculatedPrice.kind === CALCULATED_PRICE_KINDS.PER_CALL && (
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <div className="gap-y-density-1-5 sm:gap-y-density-2 flex flex-wrap items-center gap-x-1.5 sm:gap-x-2">
             <span className="dark:text-secondary-foreground text-muted-foreground text-xs whitespace-nowrap sm:text-sm">
               {t("perCall")}
             </span>

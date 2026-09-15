@@ -20,7 +20,7 @@ export function ManagedSiteStatusDisclosure({
   const { t } = useTranslation("keyManagement")
   if (Children.toArray(children).length === 0) {
     return (
-      <div className="border-border inline-flex max-w-full items-center gap-1.5 border-l pl-3 text-xs">
+      <div className="border-border gap-y-density-1-5 inline-flex max-w-full items-center gap-x-1.5 border-l pl-3 text-xs">
         <span className="text-muted-foreground">
           {t("managedSiteStatus.label")}
         </span>
@@ -35,7 +35,7 @@ export function ManagedSiteStatusDisclosure({
           <Button
             variant="ghost"
             size="sm"
-            className="h-auto min-h-0 min-w-0 gap-1.5 px-1 py-0.5 text-xs"
+            className="gap-y-density-1-5 h-auto min-h-(--density-control-xs) min-w-0 gap-x-1.5 px-1 py-0.5 text-xs"
             data-testid="managed-site-status-details"
           >
             <span className="text-muted-foreground shrink-0 font-normal">
@@ -47,10 +47,10 @@ export function ManagedSiteStatusDisclosure({
         </PopoverTrigger>
         <PopoverContent
           align="start"
-          className="bg-card w-80 max-w-[calc(100vw-2rem)] p-3"
+          className="bg-card py-density-3 w-80 max-w-[calc(100vw-2rem)] px-3"
           aria-label={t("managedSiteStatus.label")}
         >
-          <div className="text-muted-foreground dark:text-secondary-foreground flex flex-wrap items-center gap-2 text-xs">
+          <div className="text-muted-foreground dark:text-secondary-foreground gap-y-density-2 flex flex-wrap items-center gap-x-2 text-xs">
             {children}
           </div>
         </PopoverContent>

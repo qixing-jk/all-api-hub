@@ -36,8 +36,8 @@ export function RuntimeKeyDetails({
   onOpenCCSwitchDialog,
 }: RuntimeKeyDetailsProps) {
   return (
-    <div className="dark:border-border dark:bg-background border-border-subtle bg-surface-subtle/30 rounded-b-[var(--corner-inner-radius)] border-t px-3 py-3">
-      <div className="dark:border-border border-border-subtle bg-card flex min-w-0 flex-wrap items-center justify-between gap-2 rounded border p-2">
+    <div className="dark:border-border dark:bg-background border-border-subtle bg-surface-subtle/30 py-density-3 rounded-b-[var(--corner-inner-radius)] border-t px-3">
+      <div className="dark:border-border border-border-subtle bg-card gap-y-density-2 py-density-2 flex min-w-0 flex-wrap items-center justify-between gap-x-2 rounded border px-2">
         <RuntimeKeySecretPreview secret={runtimeKey.secret} />
         <RuntimeKeyActionControls
           runtimeKey={runtimeKey}

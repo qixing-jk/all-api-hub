@@ -416,8 +416,8 @@ export function ServiceCredentialCard({
       >
         <CardContent padding="default" spacing="default">
           <div className="gap-density-3 flex min-w-0 flex-col">
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <div className="gap-y-density-2 flex min-w-0 flex-wrap items-center justify-between gap-x-2">
+              <div className="gap-y-density-2 flex min-w-0 flex-wrap items-center gap-x-2">
                 <BatchSelectionControl
                   checked={isSelected === true}
                   label={selectionLabel ?? credential.label}
@@ -474,7 +474,7 @@ export function ServiceCredentialCard({
                       <WorkflowTransitionButton
                         size="sm"
                         variant="outline"
-                        className="h-auto min-h-0 px-2 py-0.5 text-xs"
+                        className="h-auto min-h-(--density-control-xs) px-2 py-0.5 text-xs"
                         onClick={handleOpenManagedSiteSettings}
                       >
                         {getManagedSiteSettingsActionLabel(t, {
@@ -582,12 +582,12 @@ export function ServiceCredentialCard({
                 ) : null}
               </KeyResourceActionToolbar>
             </div>
-            <div className="dark:text-secondary-foreground text-muted-foreground space-y-2 text-xs sm:text-sm">
+            <div className="dark:text-secondary-foreground text-muted-foreground space-y-density-2 text-xs sm:text-sm">
               <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 break-words">
                 <span className="text-muted-foreground shrink-0">
                   {t("keyDetails.key")}
                 </span>
-                <code className="dark:bg-secondary bg-muted text-secondary-foreground inline-block max-w-full truncate rounded px-1.5 py-0.5 align-middle font-mono text-[10px] sm:px-2 sm:py-1 sm:text-xs">
+                <code className="dark:bg-secondary bg-muted text-secondary-foreground sm:py-density-1 inline-block max-w-full truncate rounded px-1.5 py-0.5 align-middle font-mono text-[10px] sm:px-2 sm:text-xs">
                   {formatKey(credential.key, identityKey, visibleKeys)}
                 </code>
               </div>

@@ -125,7 +125,7 @@ export function PermissionOnboardingDialog({
   }
 
   const header = (
-    <div className="flex flex-col gap-1">
+    <div className="gap-y-density-1 flex flex-col gap-x-1">
       <Heading3>{t("permissionsOnboarding.title")}</Heading3>
       <BodySmall className="dark:text-secondary-foreground text-muted-foreground">
         {t("permissionsOnboarding.subtitle")}
@@ -134,12 +134,12 @@ export function PermissionOnboardingDialog({
   )
 
   const footer = (
-    <div className="grid w-full gap-2 sm:grid-cols-2">
+    <div className="gap-y-density-2 grid w-full gap-x-2 sm:grid-cols-2">
       <Button
         onClick={handleGrantAll}
         loading={isRequesting}
         disabled={isAnyPending}
-        className="h-auto min-h-(--density-control) w-full py-2 text-center whitespace-normal"
+        className="py-density-2 h-auto min-h-(--density-control) w-full text-center whitespace-normal"
       >
         {isRequesting
           ? t("common:status.applying")
@@ -156,7 +156,7 @@ export function PermissionOnboardingDialog({
       </Button>
       <Button
         variant="secondary"
-        className="h-auto min-h-(--density-control) w-full py-2 text-center whitespace-normal sm:col-span-2"
+        className="py-density-2 h-auto min-h-(--density-control) w-full text-center whitespace-normal sm:col-span-2"
         onClick={handleOpenGithub}
         disabled={isRequesting}
         leftIcon={<Star className="text-link h-4 w-4" />}
@@ -175,7 +175,7 @@ export function PermissionOnboardingDialog({
       footer={footer}
     >
       <div
-        className="space-y-4"
+        className="space-y-density-4"
         data-testid={OPTIONS_OVERVIEW_TEST_IDS.permissionOnboardingDialog}
       >
         <Card padding="none" className="overflow-hidden">
@@ -184,7 +184,7 @@ export function PermissionOnboardingDialog({
             padding="sm"
             className="dark:bg-secondary/40 bg-primary-soft"
           >
-            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <CardTitle className="gap-y-density-2 flex items-center gap-x-2 text-base font-semibold">
               <Languages className="text-theme-600 dark:text-theme-400 h-5 w-5" />
               {t("appearanceLanguage.onboardingLabel")}
             </CardTitle>
@@ -195,7 +195,7 @@ export function PermissionOnboardingDialog({
           <CardContent
             padding="sm"
             spacing="none"
-            className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+            className="gap-y-density-2 flex flex-col gap-x-2 sm:flex-row sm:items-center sm:justify-between"
           >
             <LanguageSwitcher
               variant="select"
@@ -233,22 +233,22 @@ export function PermissionOnboardingDialog({
           }
         >
           <CardHeader bordered padding="sm">
-            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <CardTitle className="gap-y-density-2 flex items-center gap-x-2 text-base font-semibold">
               <Github className="text-secondary-foreground h-5 w-5" />
               {t("permissionsOnboarding.openSourceBadge")}
             </CardTitle>
-            <BodySmall className="dark:text-secondary-foreground text-muted-foreground mt-1">
+            <BodySmall className="dark:text-secondary-foreground text-muted-foreground mt-density-1">
               {t("permissionsOnboarding.intro")}
             </BodySmall>
           </CardHeader>
-          <CardContent padding="sm" spacing="sm" className="space-y-3">
+          <CardContent padding="sm" spacing="sm" className="space-y-density-3">
             <BodySmall className="dark:text-secondary-foreground text-muted-foreground">
               {t("permissionsOnboarding.analyticsDisclosure")}
             </BodySmall>
-            <Alert variant="primary" compact className="py-2.5">
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start md:gap-4">
-                <div className="min-w-0 space-y-1.5">
-                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <Alert variant="primary" compact className="py-density-2-5">
+              <div className="gap-y-density-3 md:gap-y-density-4 grid gap-x-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start md:gap-x-4">
+                <div className="space-y-density-1-5 min-w-0">
+                  <div className="gap-y-density-1 flex min-w-0 flex-wrap items-center gap-x-2">
                     <Heading6 className="shrink-0 tracking-tight">
                       {t("permissionsOnboarding.project.label")}
                     </Heading6>
@@ -257,7 +257,7 @@ export function PermissionOnboardingDialog({
                       target="_blank"
                       rel="noreferrer"
                       size="sm"
-                      className="inline-flex max-w-full items-center gap-1"
+                      className="gap-y-density-1 inline-flex max-w-full items-center gap-x-1"
                     >
                       <span className="break-all">{GITHUB_URL}</span>
                       <Github className="h-4 w-4 shrink-0" />
@@ -290,11 +290,11 @@ export function PermissionOnboardingDialog({
           }
         >
           <CardHeader bordered padding="sm">
-            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <CardTitle className="gap-y-density-2 flex items-center gap-x-2 text-base font-semibold">
               <Sparkles className="text-link h-5 w-5" />
               {t("permissionsOnboarding.permissionListTitle")}
             </CardTitle>
-            <BodySmall className="dark:text-secondary-foreground text-muted-foreground mt-1">
+            <BodySmall className="dark:text-secondary-foreground text-muted-foreground mt-density-1">
               {t("permissionsOnboarding.permissionListDescription")}
             </BodySmall>
           </CardHeader>
@@ -307,7 +307,7 @@ export function PermissionOnboardingDialog({
                 status: permission.granted,
                 statusLabel: permission.statusLabel,
                 rightContent: (
-                  <div className="flex flex-col items-start gap-3 [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center">
+                  <div className="gap-y-density-3 flex flex-col items-start gap-x-3 [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center">
                     <Button
                       size="sm"
                       variant={permission.granted ? "outline" : "default"}

@@ -165,7 +165,7 @@ export function ManagedResourceAdvancedField({
       )}
       <p
         id={`${id}-help`}
-        className="text-muted-foreground mt-1 text-xs leading-relaxed"
+        className="text-muted-foreground mt-density-1 text-xs leading-relaxed"
       >
         {help}
       </p>
@@ -173,7 +173,7 @@ export function ManagedResourceAdvancedField({
         <p
           id={`${id}-error`}
           role="alert"
-          className="text-destructive-text mt-1 text-xs"
+          className="text-destructive-text mt-density-1 text-xs"
         >
           {errorMessage}
         </p>

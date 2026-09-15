@@ -55,9 +55,9 @@ export function AccountSelectorPanel({
     .join(", ")
 
   return (
-    <div className="mb-6 space-y-4">
-      <div className="mb-2">
-        <Heading3 className="mb-1">{t("selectAccount")}</Heading3>
+    <div className="mb-density-6 space-y-density-4">
+      <div className="mb-density-2">
+        <Heading3 className="mb-density-1">{t("selectAccount")}</Heading3>
         <SearchableSelect
           ref={selectorTriggerRef}
           data-testid={KEY_MANAGEMENT_TEST_IDS.accountScopeSelect}
@@ -89,8 +89,8 @@ export function AccountSelectorPanel({
       </div>
 
       {selectedAccount && (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="dark:text-secondary-foreground text-muted-foreground flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+        <div className="gap-y-density-2 flex flex-col gap-x-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="dark:text-secondary-foreground text-muted-foreground gap-y-density-2 flex flex-wrap items-center gap-x-6 text-sm">
             {counts.total !== null ? (
               <span>{t("totalKeys", { count: counts.total })}</span>
             ) : counts.knownTotal > 0 ? (
@@ -118,7 +118,7 @@ export function AccountSelectorPanel({
           </div>
 
           {failedCount > 0 ? (
-            <div className="flex items-center gap-2">
+            <div className="gap-y-density-2 flex items-center gap-x-2">
               <Badge
                 variant="warning"
                 size="sm"

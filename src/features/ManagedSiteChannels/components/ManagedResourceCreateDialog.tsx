@@ -208,13 +208,13 @@ export function ManagedResourceCreateDialog({
           variant="warning"
           title={advisoryWarning.title}
           description={advisoryWarning.description}
-          className="mb-4"
+          className="mb-density-4"
         >
           {advisoryWarning.assessment ? (
             <ManagedSiteChannelAssessmentSignalsRow
               assessment={advisoryWarning.assessment}
               managedSiteType={siteType}
-              className="mt-3 min-w-0"
+              className="mt-density-3 min-w-0"
             />
           ) : null}
         </Alert>
@@ -235,7 +235,7 @@ export function ManagedResourceCreateDialog({
           description={t(
             "managedSiteChannels:alerts.editorSaveError.description",
           )}
-          className="mb-4"
+          className="mb-density-4"
         />
       ) : null}
       {feedback?.kind === "uncertain" ? (
@@ -245,7 +245,7 @@ export function ManagedResourceCreateDialog({
           description={t(
             "managedSiteChannels:alerts.partialMutation.description",
           )}
-          className="mb-4"
+          className="mb-density-4"
         />
       ) : null}
       {policy ? (

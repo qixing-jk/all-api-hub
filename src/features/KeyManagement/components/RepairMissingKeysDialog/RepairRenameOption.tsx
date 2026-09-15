@@ -19,8 +19,8 @@ export function RepairRenameOption({
   t,
 }: RepairRenameOptionProps) {
   return (
-    <div className="dark:bg-background/40 border-border bg-surface-subtle/70 rounded-lg border p-3">
-      <div className="flex items-start gap-3">
+    <div className="dark:bg-background/40 border-border bg-surface-subtle/70 py-density-3 rounded-lg border px-3">
+      <div className="gap-y-density-3 flex items-start gap-x-3">
         <Checkbox
           id="repair-missing-keys-rename-auto-template"
           checked={checked}
@@ -28,8 +28,8 @@ export function RepairRenameOption({
             onCheckedChange(nextChecked === true)
           }
         />
-        <div className="min-w-0 space-y-1">
-          <div className="flex min-w-0 items-center gap-1.5">
+        <div className="space-y-density-1 min-w-0">
+          <div className="gap-y-density-1-5 flex min-w-0 items-center gap-x-1.5">
             <Label
               htmlFor="repair-missing-keys-rename-auto-template"
               className="text-secondary-foreground cursor-pointer text-sm font-medium"

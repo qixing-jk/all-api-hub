@@ -68,7 +68,7 @@ export function AihubmixDefaultKeyPromptDialog({
         </div>
       }
     >
-      <div className="space-y-3">
+      <div className="space-y-density-3">
         <Alert
           variant="warning"
           title={t("accountDialog:aihubmixDefaultKeyPrompt.warningTitle")}

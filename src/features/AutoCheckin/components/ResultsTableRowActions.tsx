@@ -138,7 +138,7 @@ export default function ResultsTableRowActions({
       surfaceId={PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable}
     >
       {feedbackDialog}
-      <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+      <div className="gap-y-density-1-5 flex items-center justify-end gap-x-1.5 whitespace-nowrap">
         {showDirectFeedback && (
           <DirectResultActionButton
             type="button"

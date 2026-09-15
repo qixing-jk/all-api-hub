@@ -25,9 +25,9 @@ export function WebdavSyncDataSettings({
   return (
     <div
       id={WEBDAV_TARGET_IDS.syncData}
-      className="bg-surface-subtle dark:bg-card space-y-3 rounded-md p-3"
+      className="bg-surface-subtle dark:bg-card space-y-density-3 py-density-3 rounded-md px-3"
     >
-      <div className="space-y-1">
+      <div className="space-y-density-1">
         <p className="text-sm font-medium">{t("webdav.syncData.title")}</p>
         <BodySmall id={WEBDAV_TARGET_IDS.restorePolicy} className="m-0">
           {t(
@@ -38,9 +38,12 @@ export function WebdavSyncDataSettings({
         </BodySmall>
       </div>
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="gap-y-density-2 grid grid-cols-1 gap-x-2 sm:grid-cols-2">
         {syncDataOptions.map((option) => (
-          <div key={option.key} className="flex items-center gap-2">
+          <div
+            key={option.key}
+            className="gap-y-density-2 flex items-center gap-x-2"
+          >
             <Checkbox
               id={option.id}
               checked={syncDataSelection[option.key]}

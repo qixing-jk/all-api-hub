@@ -242,7 +242,7 @@ export async function saveAccountRuntimeKeysToApiCredentialProfiles({
 
     toast.success(
       (toastInstance) => (
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="gap-y-density-2 flex min-w-0 items-center gap-x-2">
           <span className="min-w-0 truncate">
             {t(
               associationConflictCount > 0
@@ -253,7 +253,7 @@ export async function saveAccountRuntimeKeysToApiCredentialProfiles({
           <button
             type="button"
             data-testid={TOKEN_PROVISIONING_TEST_IDS.openApiProfilesToastButton}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 rounded-md px-2 py-1 text-xs font-medium"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 py-density-1 min-h-(--density-control-xs) shrink-0 rounded-md px-2 text-xs font-medium"
             onClick={() => {
               openApiCredentialProfilesPage()
               toast.dismiss(toastInstance.id)

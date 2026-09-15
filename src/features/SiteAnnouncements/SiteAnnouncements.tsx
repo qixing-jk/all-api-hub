@@ -450,7 +450,7 @@ export default function SiteAnnouncementsPage({
   }, [])
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="py-density-4 sm:py-density-6 px-4 sm:px-6">
       <PageHeader
         icon={Megaphone}
         title={t("title")}
@@ -489,7 +489,7 @@ export default function SiteAnnouncementsPage({
             </button>
           </>
         }
-        className="mb-5"
+        className="mb-density-5"
         actions={
           <ProductAnalyticsScope
             entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}

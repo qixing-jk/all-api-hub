@@ -111,7 +111,7 @@ export default function ProtectionBypassHistory() {
           })
         }}
       >
-        <DialogHeader className="shrink-0 border-b p-4 pr-12 text-left">
+        <DialogHeader className="py-density-4 shrink-0 border-b px-4 pr-12 text-left">
           <DialogTitle ref={titleRef} tabIndex={-1} className="outline-none">
             {t("history.title")}
           </DialogTitle>

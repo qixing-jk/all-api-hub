@@ -47,12 +47,16 @@ export function ManagedResourceAdvancedProjectionField({
     .filter(Boolean)
     .join(" ")
   const help = (
-    <p id={helpId} className="text-muted-foreground mt-1 text-xs">
+    <p id={helpId} className="text-muted-foreground mt-density-1 text-xs">
       {presentation.resolveHelp?.(t)}
     </p>
   )
   const error = errorMessage ? (
-    <p id={errorId} role="alert" className="text-destructive-text mt-1 text-xs">
+    <p
+      id={errorId}
+      role="alert"
+      className="text-destructive-text mt-density-1 text-xs"
+    >
       {errorMessage}
     </p>
   ) : null
@@ -83,7 +87,7 @@ export function ManagedResourceAdvancedProjectionField({
   }
   return (
     <div>
-      <div className="mb-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+      <div className="mb-density-1-5 gap-y-density-1 flex flex-wrap items-center justify-between gap-x-3">
         <ResourceFieldLabel className="mb-0">{label}</ResourceFieldLabel>
         <Button
           type="button"
@@ -107,14 +111,14 @@ export function ManagedResourceAdvancedProjectionField({
           <option key={model} value={model} />
         ))}
       </datalist>
-      <div className="space-y-2">
+      <div className="space-y-density-2">
         {list.flatMap((source, index) =>
           index % 2
             ? []
             : [
                 <div
                   key={index}
-                  className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+                  className="gap-y-density-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-x-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
                 >
                   <div className="col-span-2 min-w-0 sm:col-span-1">
                     <ResourceFieldLabel
