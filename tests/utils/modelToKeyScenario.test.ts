@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { runModelListCatalogScenario } from "~~/e2e/scenarios/modelListCatalog"
