@@ -342,7 +342,7 @@ describe("automatic check-in preparation", () => {
     const latest = await updateAccount(update)
     response.resolve(detection("matched"))
 
-    await pending
+    expect(await pending).toEqual({ account: latest, discovered: false })
 
     const saved = await accountQueries.getAccountById(account.id)
     expect(saved?.checkIn.selection).toEqual(latest.checkIn.selection)
@@ -380,7 +380,7 @@ describe("automatic check-in preparation", () => {
     }))
     response.resolve(detection("matched"))
 
-    await pending
+    expect((await pending).discovered).toBe(false)
 
     expect(await accountQueries.getAccountById(account.id)).toMatchObject({
       notes: "Changed during discovery",

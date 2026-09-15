@@ -664,6 +664,31 @@ describe("daily automatic check-in preparation", () => {
     expect(storedStatus.perAccount[account.id].status).toBe("success")
   })
 
+  it("does not retry execution when recovery discovery is discarded", async () => {
+    const account = createAccount()
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+    mockedAccountStorage.getAccountById.mockResolvedValue(account)
+    mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+      kind: "skipped",
+      reason: "method_unsupported",
+    })
+    vi.mocked(prepareAutomaticCheckIn).mockImplementation(
+      async ({ account }) => ({
+        account,
+        discovered: false,
+      }),
+    )
+
+    await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+
+    expect(prepareAutomaticCheckIn).toHaveBeenCalledTimes(2)
+    expect(mockedMethods.executeSelectedCheckIn).toHaveBeenCalledTimes(1)
+    expect(storedStatus.perAccount[account.id]).toMatchObject({
+      status: "skipped",
+      reasonCode: "method_unsupported",
+    })
+  })
+
   it.each(["deleted account", "failed preparation"])(
     "does not execute a replacement after recovery finds a %s",
     async (failure) => {

@@ -104,11 +104,18 @@ class AccountCheckInState {
   async completeAutomaticCheckInDiscovery(
     snapshot: SiteAccount,
     discovered: SiteAccount["checkIn"],
-  ): Promise<SiteAccount | null> {
+  ): Promise<{ account: SiteAccount; applied: boolean } | null> {
     try {
-      return await accountConfigStore.mutateAccount(snapshot.id, (account) => {
+      return await accountConfigStore.mutateAccount<{
+        account: SiteAccount
+        applied: boolean
+      }>(snapshot.id, (account) => {
         if (!isAutomaticCheckInDiscoveryCurrent(account, snapshot)) {
-          return { nextAccount: account, result: account, changed: false }
+          return {
+            nextAccount: account,
+            result: { account, applied: false },
+            changed: false,
+          }
         }
 
         const merged = mergeDiscoveredCheckInDraft({
@@ -120,6 +127,9 @@ class AccountCheckInState {
           ),
           discoveryBaseSelection: snapshot.checkIn.selection,
         })
+        const applied =
+          (merged.methodKnowledge.lastFullDiscoveryAt ?? 0) >
+          (account.checkIn.methodKnowledge.lastFullDiscoveryAt ?? 0)
         // Discovery owns facts and automatic selection, never the form's fields.
         const checkIn = {
           ...account.checkIn,
@@ -132,7 +142,11 @@ class AccountCheckInState {
           now: Date.now(),
           userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
         })
-        return { nextAccount, result: nextAccount, changed: true }
+        return {
+          nextAccount,
+          result: { account: nextAccount, applied },
+          changed: true,
+        }
       })
     } catch (error) {
       logger.warn("Failed to save automatic check-in discovery", {

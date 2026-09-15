@@ -73,15 +73,18 @@ export async function prepareAutomaticCheckIn(input: {
       account,
       discovery.config,
     )
-    if (updated) {
+    if (updated?.applied) {
       logger.info("Automatic check-in discovery completed", {
         accountId: account.id,
         outcome: discovery.decision.outcome,
         previousMethodId: account.checkIn.selection.methodId,
-        selectedMethodId: updated.checkIn.selection.methodId,
+        selectedMethodId: updated.account.checkIn.selection.methodId,
       })
     }
-    return { account: updated, discovered: true }
+    return {
+      account: updated?.account ?? null,
+      discovered: updated?.applied ?? false,
+    }
   } catch (error) {
     logger.warn("Automatic check-in discovery preparation failed", {
       accountId: input.account.id,
