@@ -45,14 +45,20 @@ const { mockLoggerDebug, mockLoggerError, mockLoggerInfo, mockLoggerWarn } =
     mockLoggerWarn: vi.fn(),
   }))
 
-vi.mock("~/constants/ui", () => ({
-  UI_CONSTANTS: {
-    EXCHANGE_RATE: {
-      DEFAULT: 7,
-      CONVERSION_FACTOR: 100,
+vi.mock("~/constants/ui", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/constants/ui")>()
+  return {
+    ...actual,
+    UI_CONSTANTS: {
+      ...actual.UI_CONSTANTS,
+      EXCHANGE_RATE: {
+        ...actual.UI_CONSTANTS.EXCHANGE_RATE,
+        DEFAULT: 7,
+        CONVERSION_FACTOR: 100,
+      },
     },
-  },
-}))
+  }
+})
 
 vi.mock("~/services/apiTransport/constant", () => ({
   REQUEST_CONFIG: {
