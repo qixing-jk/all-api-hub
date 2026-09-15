@@ -96,6 +96,63 @@ describe("native account key creation", () => {
     inventory.mockReset()
   })
 
+  it("stops before creation when requirement inspection is incomplete", async () => {
+    const owner = account()
+    const { session, provision } = setup(owner, "select-requirement")
+    session.provisioning.inspect.mockResolvedValueOnce({
+      requirements: [],
+      items: [],
+      partialFailure: { code: "unavailable" },
+    })
+    await expect(prepareDefaultAccountKeyCreation(owner)).rejects.toMatchObject(
+      { failure: { code: "unavailable" } },
+    )
+    expect(provision).not.toHaveBeenCalled()
+  })
+
+  it("rejects an unknown requirement without dispatching", async () => {
+    const owner = account()
+    const { provision } = setup(owner, "select-requirement")
+    const plan = await prepareDefaultAccountKeyCreation(owner)
+    if (plan.kind !== "selection-required")
+      throw new Error("Expected selection")
+    expect(() => plan.create("unknown-requirement")).toThrow(
+      AccountKeyResourceError,
+    )
+    expect(provision).not.toHaveBeenCalled()
+  })
+
+  it.each(["automatic", "manual"])(
+    "handles a sole %s requirement without guessing",
+    async (kind) => {
+      const owner = account()
+      const { session, provision, requirements } = setup(
+        owner,
+        "select-requirement",
+      )
+      session.provisioning.inspect.mockResolvedValue({
+        requirements: [{ ...requirements[0], provisioning: { kind } }],
+        items: [],
+      })
+      const plan = await prepareDefaultAccountKeyCreation(owner)
+      if (kind === "automatic") {
+        expect(plan.kind).toBe("ready")
+        if (plan.kind !== "ready") throw new Error("Expected ready")
+        await expect(plan.create()).resolves.toMatchObject({
+          ref: facts(owner).ref,
+        })
+        expect(provision).toHaveBeenCalledTimes(1)
+      } else {
+        expect(plan.kind).toBe("input-required")
+        await expect(ensureAccountKey(owner)).resolves.toEqual({
+          kind: "input-required",
+          reason: "editor",
+        })
+        expect(provision).not.toHaveBeenCalled()
+      }
+    },
+  )
+
   it("reports unavailable creation without dispatching a write", async () => {
     const owner = account()
     context.mockReturnValue({ request: {} })
@@ -398,6 +455,24 @@ describe("native account key creation", () => {
         facts: null,
       }),
     ).toEqual(runtime)
+    expect(
+      await resolveCreatedAccountRuntimeKey(owner, {
+        ref: facts(owner).ref,
+        facts: null,
+        createdSecret: {
+          correlation: { kind: "account-key-resource", ref: facts(owner).ref },
+          displayName: "Created key",
+          secret: "sk-original-create-only",
+          secretAvailability: "create-response-only",
+          credential: {
+            accountName: owner.name,
+            apiType: "openai",
+            baseUrl: owner.baseUrl,
+            tagIds: [],
+          },
+        },
+      }),
+    ).toEqual({ ...runtime, secret: "sk-original-create-only" })
     inventory.mockResolvedValue([{ ...runtime, id: "different" }])
     expect(
       await resolveCreatedAccountRuntimeKey(owner, {
