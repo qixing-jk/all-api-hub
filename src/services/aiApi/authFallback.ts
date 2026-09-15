@@ -116,9 +116,11 @@ export function createUnauthorizedFallbackFetch<TMode extends string>(
     return fallbackResponse
   }
 
-  return Object.assign(fallbackFetch, {
-    preconnect: globalThis.fetch.preconnect,
-  })
+  // `FetchFunction` mirrors the ambient `fetch`, whose static members vary by
+  // environment: the DOM lib declares none, while Bun adds `preconnect`. Mirror
+  // the ambient implementation instead of naming one runtime's member, so this
+  // satisfies the SDK type under either `fetch` declaration.
+  return Object.assign(fallbackFetch, globalThis.fetch)
 }
 
 /** Return whether a transport error exposes the exact retryable status code. */
