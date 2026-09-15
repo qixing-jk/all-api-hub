@@ -67,7 +67,7 @@ describe("TokenList empty states", () => {
   it.each([true, false])(
     "omits unavailable setup actions when there are no accounts: %s",
     async (noAccounts) => {
-      const account = createAccount()
+      const account = createAccount({})
       render(
         <TokenEmptyState
           selectedAccount=""
@@ -89,7 +89,7 @@ describe("TokenList empty states", () => {
 
   it("keeps the unsupported-site recovery action usable after a failed navigation", async () => {
     const user = userEvent.setup()
-    const account = createAccount()
+    const account = createAccount({})
     openSiteSupportRequestPageMock.mockRejectedValueOnce(
       new Error("navigation unavailable"),
     )
