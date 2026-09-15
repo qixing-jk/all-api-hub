@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -135,3 +136,63 @@ describe("native key editor field policies", () => {
     },
   )
 })
+
+it.each([
+  ["required", "required"],
+  ["invalid_value", "invalidValue"],
+  ["out_of_range", "outOfRange"],
+  ["unsupported_option", "unsupportedOption"],
+  ["inconsistent_value", "inconsistentValue"],
+] as const)("labels native validation issue %s", (code, suffix) => {
+  const field = getNativeKeyResourceEditorPresentation(
+    SITE_TYPES.NEW_API,
+    "create",
+  ).policy.fields.find((field) => field.fieldId === "name")!
+  expect(
+    field.issueLabelResolvers?.[code]?.(((key: string) => key) as TFunction),
+  ).toBe(`keyManagement:openRouter.editor.issues.${suffix}`)
+})
+
+it.each([
+  [
+    SITE_TYPES.SUB2API,
+    "quota",
+    "native.editor.totalQuotaUsd",
+    "dialog.quotaPlaceholder",
+  ],
+  [
+    SITE_TYPES.AIHUBMIX,
+    "models",
+    "dialog.availableModels",
+    "dialog.selectModels",
+  ],
+  [
+    SITE_TYPES.AIHUBMIX,
+    "subnet",
+    "dialog.subnetLimits",
+    "dialog.subnetPlaceholder",
+  ],
+  [
+    SITE_TYPES.NEW_API,
+    "model_limits",
+    "dialog.availableModels",
+    "dialog.selectModels",
+  ],
+  [SITE_TYPES.NEW_API, "model_limits_enabled", "dialog.modelLimits", undefined],
+] as const)(
+  "provides native field labels for %s %s",
+  (siteType, fieldId, label, placeholder) => {
+    const field = getNativeKeyResourceEditorPresentation(
+      siteType,
+      "create",
+    ).policy.fields.find((field) => field.fieldId === fieldId)!
+    const t = ((key: string) => key) as TFunction
+    expect(field.resolveLabel?.(t)).toBe(`keyManagement:${label}`)
+    if (placeholder)
+      expect(field.resolvePlaceholder?.(t)).toBe(`keyManagement:${placeholder}`)
+    if (fieldId === "model_limits") {
+      expect(field.visibleWhen?.({ model_limits_enabled: true })).toBe(true)
+      expect(field.visibleWhen?.({ model_limits_enabled: false })).toBe(false)
+    }
+  },
+)

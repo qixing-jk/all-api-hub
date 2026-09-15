@@ -4,15 +4,18 @@ import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSessio
 import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
 import {
   createApiToken,
+  createSub2ApiKey,
   createSub2ApiTokenForGroupId,
   fetchAccountAvailableModels,
   fetchAccountTokens,
   fetchSub2ApiGroupDescriptors,
   fetchSub2ApiGroupRates,
+  fetchSub2ApiKey,
   fetchTokenById,
   fetchUserGroups,
   resolveApiTokenKey,
   updateApiToken,
+  updateSub2ApiKey,
 } from "~/services/apiService/sub2api"
 import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/authSession"
 import {
@@ -212,6 +215,75 @@ describe("apiService sub2api key management service", () => {
     getLatestAuthMock.mockResolvedValue(null)
     persistAuthUpdateMock.mockResolvedValue({ status: "persisted" })
   })
+
+  it("preserves native detail identity, USD quota and direct update fields", async () => {
+    const key = {
+      id: 7,
+      name: "Native",
+      key: "sk-test",
+      status: "active",
+      quota: 2.5,
+      group_id: 9,
+    }
+    fetchApiMock.mockResolvedValueOnce({ code: 0, message: "ok", data: key })
+    await expect(fetchSub2ApiKey(createRequest(), 7)).resolves.toMatchObject({
+      id: 7,
+      quota: 2.5,
+      group_id: 9,
+    })
+    fetchApiMock.mockResolvedValueOnce({ code: 0, message: "ok" })
+    await updateSub2ApiKey(createRequest(), 7, { name: "Renamed", quota: 3.5 })
+    expect(fetchApiMock).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        endpoint: "/api/v1/keys/7",
+        options: expect.objectContaining({
+          method: "PUT",
+          body: JSON.stringify({ name: "Renamed", quota: 3.5 }),
+        }),
+      }),
+    )
+  })
+
+  it("rejects a native detail response for another key", async () => {
+    fetchApiMock.mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: { id: 8, name: "Other", key: "sk-other" },
+    })
+    await expect(fetchSub2ApiKey(createRequest(), 7)).rejects.toBeInstanceOf(
+      ApiError,
+    )
+  })
+
+  it.each([true, false])(
+    "preserves native create acknowledgement with detail=%s",
+    async (withDetail) => {
+      const key = {
+        id: 7,
+        name: "Native",
+        key: "sk-test",
+        status: "active",
+        quota: 2.5,
+        group_id: 9,
+      }
+      fetchApiMock.mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        ...(withDetail ? { data: key } : {}),
+      })
+      const result = await createSub2ApiKey(createRequest(), {
+        name: "Native",
+        quota: 2.5,
+        group_id: 9,
+        expires_in_days: 3,
+      })
+      if (withDetail)
+        expect(result).toMatchObject({ id: 7, quota: 2.5, group_id: 9 })
+      else expect(result).toBeUndefined()
+      expect(fetchApiMock).toHaveBeenCalledTimes(1)
+    },
+  )
 
   it("combines available groups with rate data for shared forms", async () => {
     fetchApiMock

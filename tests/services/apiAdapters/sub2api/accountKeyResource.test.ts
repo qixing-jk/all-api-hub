@@ -81,6 +81,52 @@ describe("Sub2API account key resources", () => {
     mockUpdateSub2ApiKey.mockReset()
   })
 
+  it.each(["reconciled", "missing", "read-failed", "rejected"])(
+    "reconciles native creation without replay: %s",
+    async (outcome) => {
+      mockFetchSub2ApiKeys.mockResolvedValueOnce([token({ id: 1 })])
+      if (outcome === "read-failed")
+        mockFetchSub2ApiKeys.mockRejectedValueOnce(
+          new Error("inventory offline"),
+        )
+      else
+        mockFetchSub2ApiKeys.mockResolvedValueOnce(
+          outcome === "reconciled"
+            ? [token({ id: 2, name: "Recovered", group_id: undefined })]
+            : [],
+        )
+      mockCreateSub2ApiKey.mockImplementationOnce(async (request) => {
+        request.observer?.onDispatch()
+        if (outcome === "rejected")
+          throw new ApiError(
+            "denied",
+            undefined,
+            "/keys",
+            API_ERROR_CODES.BUSINESS_ERROR,
+          )
+        throw new Error("response lost")
+      })
+      const session = await sub2ApiAccountKeyResources.open({
+        account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+        request,
+      })
+      const editor = await session.openCreateEditor("account")
+      const result = editor.submit({
+        ...editor.initialValues,
+        name: "Recovered",
+      })
+      if (outcome === "reconciled")
+        await expect(result).resolves.toMatchObject({
+          facts: { ref: { resourceId: "2" } },
+        })
+      else await expect(result).rejects.toBeDefined()
+      expect(mockCreateSub2ApiKey).toHaveBeenCalledTimes(1)
+      expect(mockFetchSub2ApiKeys).toHaveBeenCalledTimes(
+        outcome === "rejected" ? 1 : 2,
+      )
+    },
+  )
+
   it("maps structured inventory authorization failures at the session boundary", async () => {
     mockFetchSub2ApiGroupDescriptors.mockRejectedValueOnce(
       new ApiError(

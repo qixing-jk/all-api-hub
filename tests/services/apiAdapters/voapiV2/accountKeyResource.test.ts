@@ -83,6 +83,63 @@ describe("VoAPI v2 account key resources", () => {
     mockResolveVoApiV2KeySecretById.mockReset()
   })
 
+  it.each(["reconciled", "missing", "read-failed", "rejected"])(
+    "reconciles native creation without replay: %s",
+    async (outcome) => {
+      mockFetchAllVoApiV2RawKeys.mockResolvedValueOnce([rawKey({ id: 1 })])
+      if (outcome === "read-failed")
+        mockFetchAllVoApiV2RawKeys.mockRejectedValueOnce(
+          new Error("inventory offline"),
+        )
+      else
+        mockFetchAllVoApiV2RawKeys.mockResolvedValueOnce(
+          outcome === "reconciled"
+            ? [
+                rawKey({
+                  id: 2,
+                  name: "Recovered",
+                  groups: [9],
+                  amount: "1",
+                  used: "0",
+                  note: "",
+                }),
+              ]
+            : [],
+        )
+      mockCreateVoApiV2Key.mockImplementationOnce(async (request) => {
+        request.observer?.onDispatch()
+        if (outcome === "rejected")
+          throw new ApiError(
+            "denied",
+            undefined,
+            "/keys",
+            API_ERROR_CODES.BUSINESS_ERROR,
+          )
+        throw new Error("response lost")
+      })
+      const session = await voApiV2AccountKeyResources.open({
+        account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
+        request,
+      })
+      const editor = await session.openCreateEditor("account")
+      const result = editor.submit({
+        ...editor.initialValues,
+        name: "Recovered",
+        groups: ["9"],
+        amount: 1,
+      })
+      if (outcome === "reconciled")
+        await expect(result).resolves.toMatchObject({
+          facts: { ref: { resourceId: "2" } },
+        })
+      else await expect(result).rejects.toBeDefined()
+      expect(mockCreateVoApiV2Key).toHaveBeenCalledTimes(1)
+      expect(mockFetchAllVoApiV2RawKeys).toHaveBeenCalledTimes(
+        outcome === "rejected" ? 1 : 2,
+      )
+    },
+  )
+
   it("maps structured upstream outages at the provisioning session boundary", async () => {
     mockFetchVoApiV2KeyGroupDescriptors.mockResolvedValueOnce([])
     mockFetchAllVoApiV2RawKeys.mockRejectedValueOnce({

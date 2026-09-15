@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { AIHUBMIX_API_ORIGIN, SITE_TYPES } from "~/constants/siteType"
 import { aihubmixAccountKeyResources } from "~/services/apiAdapters/aihubmix/accountKeyResource"
 import type { AIHubMixKey } from "~/services/apiService/aihubmix/keyTypes"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
 
 const mocks = vi.hoisted(() => ({
@@ -271,5 +272,107 @@ it("preserves the last-use timestamp in safe resource facts", async () => {
     fieldId: "accessed_time",
     kind: "number",
     value: 1750000000,
+  })
+})
+
+describe("AIHubMix native mutation recovery", () => {
+  beforeEach(() => Object.values(mocks).forEach((mock) => mock.mockReset()))
+
+  it.each([
+    { status: 2, expected: "disabled" },
+    { status: 7, expected: "unknown" },
+    { status: 1, expired_time: 1, expected: "expired" },
+  ])("preserves provider availability %j", async ({ expected, ...status }) => {
+    mocks.list.mockResolvedValue([key(status)])
+    const collection = await (
+      await aihubmixAccountKeyResources.open(input)
+    ).openCollection("account")
+    expect((await collection.list()).items[0].status).toBe(expected)
+  })
+
+  it.each(["0", "01", "9007199254740992"])(
+    "rejects an invalid locator %s before a read",
+    async (resourceId) => {
+      const collection = await (
+        await aihubmixAccountKeyResources.open(input)
+      ).openCollection("account")
+      await expect(
+        collection.openEditEditor({ ...ref, resourceId }),
+      ).rejects.toBeDefined()
+      expect(mocks.get).not.toHaveBeenCalled()
+    },
+  )
+
+  it("does not write unchanged fields", async () => {
+    mocks.get.mockResolvedValue(key())
+    const collection = await (
+      await aihubmixAccountKeyResources.open(input)
+    ).openCollection("account")
+    const editor = await collection.openEditEditor(ref)
+    await expect(editor.submit(editor.initialValues)).resolves.toMatchObject({
+      facts: { displayName: "Example" },
+    })
+    expect(mocks.update).not.toHaveBeenCalled()
+  })
+
+  it("retains uncertainty when the post-update read fails without replaying", async () => {
+    mocks.get
+      .mockResolvedValueOnce(key())
+      .mockResolvedValueOnce(key())
+      .mockRejectedValueOnce(new Error("read unavailable"))
+    const collection = await (
+      await aihubmixAccountKeyResources.open(input)
+    ).openCollection("account")
+    const editor = await collection.openEditEditor(ref)
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "Renamed" }),
+    ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+    expect(mocks.update).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(["create", "update", "delete"])(
+    "does not retry a definite %s rejection",
+    async (operation) => {
+      const denied = new ApiError(
+        "denied",
+        undefined,
+        "/api/token/",
+        API_ERROR_CODES.BUSINESS_ERROR,
+      )
+      mocks.list.mockResolvedValue([])
+      mocks.get.mockResolvedValue(key())
+      const session = await aihubmixAccountKeyResources.open(input)
+      const collection = await session.openCollection("account")
+      if (operation === "create") {
+        mocks.create.mockRejectedValueOnce(denied)
+        const editor = await session.openCreateEditor("account")
+        await expect(editor.submit(editor.initialValues)).rejects.toBeDefined()
+        expect(mocks.create).toHaveBeenCalledTimes(1)
+        expect(mocks.list).toHaveBeenCalledTimes(1)
+      } else if (operation === "update") {
+        mocks.update.mockRejectedValueOnce(denied)
+        const editor = await collection.openEditEditor(ref)
+        await expect(
+          editor.submit({ ...editor.initialValues, name: "Renamed" }),
+        ).rejects.toBeDefined()
+        expect(mocks.update).toHaveBeenCalledTimes(1)
+        expect(mocks.get).toHaveBeenCalledTimes(2)
+      } else {
+        mocks.remove.mockRejectedValueOnce(denied)
+        await expect(collection.delete(ref)).rejects.toBeDefined()
+        expect(mocks.remove).toHaveBeenCalledTimes(1)
+      }
+    },
+  )
+
+  it("deletes only the selected identity", async () => {
+    const collection = await (
+      await aihubmixAccountKeyResources.open(input)
+    ).openCollection("account")
+    await expect(collection.delete(ref)).resolves.toBeUndefined()
+    expect(mocks.remove).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: AIHUBMIX_API_ORIGIN }),
+      1,
+    )
   })
 })
