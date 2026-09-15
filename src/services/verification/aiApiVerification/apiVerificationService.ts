@@ -41,7 +41,8 @@ export async function runApiVerificationProbe(
   params: RunApiVerificationProbeParams,
 ): Promise<ApiVerificationProbeResult> {
   const registryEntry = apiVerificationProbeRegistry[params.probeId]
-  const resolvedModelId = params.modelId ?? params.fallbackModelId
+  const resolvedModelId =
+    params.modelId?.trim() || params.fallbackModelId?.trim() || undefined
 
   if (registryEntry.requiresModelId && !resolvedModelId?.trim()) {
     return {
@@ -75,7 +76,8 @@ export async function runApiVerification(
   params: RunApiVerificationParams,
 ): Promise<ApiVerificationReport> {
   const startedAt = Date.now()
-  const requestedModelId = params.modelId ?? params.fallbackModelId
+  const requestedModelId =
+    params.modelId?.trim() || params.fallbackModelId?.trim() || undefined
 
   const { results, modelId } = await runApiVerificationSuite({
     baseUrl: params.baseUrl,

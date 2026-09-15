@@ -158,6 +158,47 @@ describe("apiVerificationService", () => {
     expect(report.modelId).toBe("hint-model")
   })
 
+  it.each([
+    ["   ", " fallback ", "fallback"],
+    ["", "   ", "discovered"],
+    [" explicit ", "fallback", "explicit"],
+  ])(
+    "normalizes suite models %j and %j",
+    async (modelId, fallbackModelId, expected) => {
+      mockFetchOpenAICompatibleModelIds.mockResolvedValue(["discovered"])
+      mockGenerateText.mockResolvedValue({
+        text: "OK",
+        output: { ok: true },
+        toolCalls: [{ toolName: "verify_tool" }],
+      })
+      const report = await runApiVerification({
+        mode: "non-streaming",
+        baseUrl: "https://example.com",
+        apiKey: "secret",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        modelId,
+        fallbackModelId,
+      })
+      expect(report.modelId).toBe(expected)
+      expect(mockGenerateText.mock.calls[0][0].model.modelId).toBe(expected)
+    },
+  )
+
+  it("uses a trimmed fallback for a single probe with a blank explicit model", async () => {
+    mockGenerateText.mockResolvedValue({ text: "OK" })
+    const result = await runApiVerificationProbe({
+      mode: "non-streaming",
+      baseUrl: "https://example.com",
+      apiKey: "secret",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      probeId: "text-generation",
+      modelId: "   ",
+      fallbackModelId: " fallback ",
+    })
+    expect(result.status).toBe("pass")
+    expect(mockGenerateText.mock.calls[0][0].model.modelId).toBe("fallback")
+  })
+
   it("redacts apiKey from error summaries", async () => {
     mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["m1"])
     mockGenerateText

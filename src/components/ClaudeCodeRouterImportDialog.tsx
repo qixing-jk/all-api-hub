@@ -117,7 +117,8 @@ export function ClaudeCodeRouterImportDialog(
   useEffect(() => {
     if (!isOpen) return
     setSelectedModels([])
-  }, [isOpen])
+    setUpstreamModelOptions([])
+  }, [isOpen, source.cacheKey])
 
   useEffect(() => {
     if (!isOpen) return
