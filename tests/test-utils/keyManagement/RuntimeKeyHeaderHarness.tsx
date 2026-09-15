@@ -66,12 +66,13 @@ export function RuntimeKeyHeaderHarness({
       accountId: "acc-1",
       accountName: "Account 1",
     })
-  const runtimeKey =
-    runtimeKeyOverride ?? buildDisplayAccountTokenRuntimeKey(account, token)
-  const presentation = buildLegacyKeyResourceCardPresentation(
-    runtimeKey,
-    translate,
-  )
+  const legacyRuntimeKey = buildDisplayAccountTokenRuntimeKey(account, token)
+  const runtimeKey = runtimeKeyOverride ?? legacyRuntimeKey
+  const presentation = {
+    ...buildLegacyKeyResourceCardPresentation(legacyRuntimeKey, translate),
+    id: runtimeKey.id,
+    title: runtimeKey.label,
+  }
 
   return (
     <RuntimeKeyHeader
