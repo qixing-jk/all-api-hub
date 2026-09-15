@@ -80,6 +80,14 @@ function hasColorContext(node) {
         return true
       }
       // A selector/helper argument is not necessarily the returned style value.
+      if (
+        parent.parent &&
+        ts.isPropertyAssignment(parent.parent) &&
+        parent.parent.initializer === parent &&
+        isColorName(parent.parent.name.getText())
+      ) {
+        continue
+      }
       return false
     }
     if (ts.isStatement(parent)) break

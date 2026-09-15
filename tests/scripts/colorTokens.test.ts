@@ -167,6 +167,19 @@ describe("color token guard", () => {
     ).toEqual(["#456", "#789"])
   })
 
+  it("checks wrapped style literals without treating selector arguments as colors", () => {
+    const source = [
+      'const view = <div style={{ color: normalize("#fff"), borderColor: normalize("rgb(1 2 3)") }} />;',
+      'const style = document.querySelector("#abc");',
+      'const record = { id: normalize("#def") };',
+    ].join("\n")
+    expect(
+      findColorTokenViolations("src/example.tsx", source).map(
+        (item) => item.token,
+      ),
+    ).toEqual(["#fff", "rgb(1 2 3)"])
+  })
+
   it.each([
     "oklch(60% 0.2 250)",
     "oklab(60% 0.1 0.1)",
