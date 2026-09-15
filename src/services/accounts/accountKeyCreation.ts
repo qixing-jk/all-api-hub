@@ -251,7 +251,7 @@ export async function ensureAccountKey(
   const run = (async (): Promise<EnsureAccountKeyResult> => {
     const inventory = await fetchDisplayAccountRuntimeKeys(account, options)
     options.signal?.throwIfAborted()
-    const existing = inventory.findLast((key) => {
+    const existing = [...inventory].reverse().find((key) => {
       if (key.status !== "active") return false
       const intent = options.intent
       if (
