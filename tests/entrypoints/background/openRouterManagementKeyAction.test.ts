@@ -79,6 +79,7 @@ describe("OpenRouter Management Key background action", () => {
       label: message.operation.label,
     }))
     ;(globalThis as any).browser = {
+      storage: originalBrowser.storage,
       runtime: {
         getURL: vi.fn((path: string) => `chrome-extension://test/${path}`),
       },
