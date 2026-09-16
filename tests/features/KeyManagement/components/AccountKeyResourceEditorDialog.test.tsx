@@ -587,7 +587,9 @@ describe("AccountKeyResourceEditorDialog", () => {
 
     expect(
       screen
-        .getAllByRole("group")
+        .getAllByRole("group", {
+          name: /^keyManagement:openRouter\.editor\.sections\./,
+        })
         .map(
           (section) =>
             section.getAttribute("aria-label") ??

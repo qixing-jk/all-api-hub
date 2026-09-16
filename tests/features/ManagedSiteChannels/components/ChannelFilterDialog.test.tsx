@@ -53,7 +53,8 @@ vi.mock("~/utils/core/identifier", () => ({
   safeRandomUUID: vi.fn(() => "generated-filter-id"),
 }))
 
-vi.mock("~/components/ui", () => ({
+vi.mock("~/components/ui", async () => ({
+  ...(await vi.importActual("~/components/ui/ActionGroup")),
   Modal: ({
     isOpen,
     children,
