@@ -243,7 +243,7 @@ export default function UsageHistorySyncSettingsSection({
                 if (!isSavingSettings) void commitInterval()
               }}
               onClick={async () => {
-                await commitInterval()
+                if ((await commitInterval()) === false) return
                 await onApplySettings()
               }}
             >

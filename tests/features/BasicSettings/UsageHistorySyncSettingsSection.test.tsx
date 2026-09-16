@@ -11,64 +11,80 @@ import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 const noop = vi.fn()
 
 describe("UsageHistorySyncSettingsSection", () => {
-  it("applies retention after the interval save when Apply takes focus from an edited interval", async () => {
-    const user = userEvent.setup()
-    const pending = createDeferred<boolean>()
-    const apply = vi.fn()
-    const commit = vi.fn<(value: number) => Promise<boolean>>(
-      () => pending.promise,
-    )
-    function Subject() {
-      const [saving, setSaving] = useState(false)
-      return (
-        <UsageHistorySyncSettingsSection
-          reset={{
-            onReset: async () => ({ ok: true }),
-            resetDisabled: true,
-            resetRequiresConfirmation: false,
-          }}
-          enabled
-          onEnabledChange={noop}
-          retentionDays={14}
-          onRetentionDaysChange={noop}
-          scheduleMode={USAGE_HISTORY_SCHEDULE_MODE.AFTER_REFRESH}
-          onScheduleModeChange={noop}
-          syncIntervalMinutes={360}
-          onSyncIntervalMinutesChange={noop}
-          onSyncIntervalMinutesCommit={async (value) => {
-            setSaving(true)
-            try {
-              return await commit(value)
-            } finally {
-              setSaving(false)
-            }
-          }}
-          isSavingSettings={saving}
-          alarmsSupported
-          isLoading={false}
-          isSyncingAll={false}
-          onApplySettings={apply}
-          onSyncNow={noop}
-          onRefreshStatus={noop}
-        />
+  it.each([true, false])(
+    "sequences Apply after the interval save result %s and permits retry after failure",
+    async (saved) => {
+      const user = userEvent.setup()
+      const pending = createDeferred<boolean>()
+      const apply = vi.fn()
+      const commit = vi.fn<(value: number) => Promise<boolean>>(
+        () => pending.promise,
       )
-    }
-    render(<Subject />, {
-      withUserPreferencesProvider: false,
-      withThemeProvider: false,
-    })
-    const interval = screen.getAllByRole("spinbutton")[1]
-    await user.clear(interval)
-    await user.type(interval, "2")
-    await user.click(
-      screen.getByRole("button", {
-        name: "usageAnalytics:actions.applySettings",
-      }),
-    )
-    expect(commit).toHaveBeenCalledExactlyOnceWith(120)
-    await act(async () => pending.resolve(true))
-    await waitFor(() => expect(apply).toHaveBeenCalledOnce())
-  })
+      function Subject() {
+        const [saving, setSaving] = useState(false)
+        return (
+          <UsageHistorySyncSettingsSection
+            reset={{
+              onReset: async () => ({ ok: true }),
+              resetDisabled: true,
+              resetRequiresConfirmation: false,
+            }}
+            enabled
+            onEnabledChange={noop}
+            retentionDays={14}
+            onRetentionDaysChange={noop}
+            scheduleMode={USAGE_HISTORY_SCHEDULE_MODE.AFTER_REFRESH}
+            onScheduleModeChange={noop}
+            syncIntervalMinutes={360}
+            onSyncIntervalMinutesChange={noop}
+            onSyncIntervalMinutesCommit={async (value) => {
+              setSaving(true)
+              try {
+                return await commit(value)
+              } finally {
+                setSaving(false)
+              }
+            }}
+            isSavingSettings={saving}
+            alarmsSupported
+            isLoading={false}
+            isSyncingAll={false}
+            onApplySettings={apply}
+            onSyncNow={noop}
+            onRefreshStatus={noop}
+          />
+        )
+      }
+      render(<Subject />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      })
+      const interval = screen.getAllByRole("spinbutton")[1]
+      await user.clear(interval)
+      await user.type(interval, "2")
+      await user.click(
+        screen.getByRole("button", {
+          name: "usageAnalytics:actions.applySettings",
+        }),
+      )
+      expect(commit).toHaveBeenCalledExactlyOnceWith(120)
+      await act(async () => pending.resolve(saved))
+      if (saved) {
+        expect(apply).toHaveBeenCalledOnce()
+        return
+      }
+      expect(apply).not.toHaveBeenCalled()
+      expect(interval).toHaveValue(2)
+      commit.mockResolvedValue(true)
+      await user.click(
+        screen.getByRole("button", {
+          name: "usageAnalytics:actions.applySettings",
+        }),
+      )
+      await waitFor(() => expect(apply).toHaveBeenCalledOnce())
+      expect(commit).toHaveBeenCalledTimes(2)
+    },
+  )
 
   it("allows reset to discard an invalid interval draft even when saved preferences are default", async () => {
     const user = userEvent.setup()
