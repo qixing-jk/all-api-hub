@@ -208,6 +208,9 @@ test("updates usage-history sync settings and syncs only the selected account", 
     )
     .click()
   await page.locator("#usage-history-sync-interval-hours input").fill("2")
+  await expect(
+    page.locator("#usage-history-sync-retention-days input"),
+  ).toHaveValue("14")
   await page.locator("#usage-history-sync-apply-settings").click()
 
   await expect

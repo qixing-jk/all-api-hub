@@ -6,6 +6,7 @@ import SiteAnnouncementNotificationSettings, {
   normalizePollingIntervalInput,
 } from "~/features/BasicSettings/components/tabs/General/SiteAnnouncementNotificationSettings"
 import toast from "~/lib/notify"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -40,13 +41,37 @@ vi.mock("~/utils/navigation", () => ({
 }))
 
 vi.mock("~/lib/notify", () => ({
-  default: { error: vi.fn() },
+  default: { error: vi.fn(), success: vi.fn() },
 }))
 
 describe("SiteAnnouncementNotificationSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     updateSiteAnnouncementNotificationsMock.mockResolvedValue({ success: true })
+  })
+
+  it("resets polling defaults and its interval draft without changing notification delivery", async () => {
+    render(<SiteAnnouncementNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    const input = screen.getByRole("spinbutton")
+    fireEvent.change(input, { target: { value: "720" } })
+    fireEvent.click(
+      screen.getByRole("button", { name: "common:actions.reset" }),
+    )
+    await waitFor(() =>
+      expect(input).toHaveValue(
+        DEFAULT_PREFERENCES.siteAnnouncementNotifications!.intervalMinutes,
+      ),
+    )
+    expect(
+      updateSiteAnnouncementNotificationsMock,
+    ).toHaveBeenCalledExactlyOnceWith({
+      enabled: DEFAULT_PREFERENCES.siteAnnouncementNotifications!.enabled,
+      intervalMinutes:
+        DEFAULT_PREFERENCES.siteAnnouncementNotifications!.intervalMinutes,
+    })
   })
 
   it("updates the polling preference through the preferences context", async () => {

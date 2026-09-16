@@ -279,10 +279,14 @@ export default function BalanceHistorySettings() {
             id="balance-history-retention-days"
             className="gap-y-density-2 grid grid-cols-1 gap-x-2"
           >
-            <Label className="text-sm font-medium">
+            <Label
+              htmlFor="balance-history-retention-days-input"
+              className="text-sm font-medium"
+            >
               {t("settings.retentionDays")}
             </Label>
             <Input
+              id="balance-history-retention-days-input"
               type="number"
               min={1}
               value={retentionDays}

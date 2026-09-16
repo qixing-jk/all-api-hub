@@ -18,6 +18,7 @@ import {
 } from "~/features/BasicSettings/components/tabs/Refresh/protectionBypassDevTriggerRuntime"
 import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
 import ShieldSettings from "~/features/BasicSettings/components/tabs/Refresh/ShieldSettings"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
   PROTECTION_BYPASS_AUTOMATIC_FEATURES,
   type ProtectionBypassAutomaticFeature,
@@ -341,6 +342,42 @@ describe("ShieldSettings", () => {
       },
       updateTempWindowFallback,
     })
+  })
+
+  it("restores all shield preferences together", async () => {
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    fireEvent.click(
+      screen.getByRole("button", { name: "common:actions.reset" }),
+    )
+    await waitFor(() =>
+      expect(updateTempWindowFallback).toHaveBeenCalledExactlyOnceWith(
+        DEFAULT_PREFERENCES.tempWindowFallback,
+      ),
+    )
+  })
+
+  it("keeps window drafts and offers retry when a size reset throws", async () => {
+    updateTempWindowFallback.mockRejectedValueOnce(new Error("disk full"))
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    const input = screen.getByRole("spinbutton", {
+      name: "settings:refresh.shieldWindowWidth",
+    })
+    fireEvent.change(input, { target: { value: "1000" } })
+    const reset = screen.getByRole("button", {
+      name: "settings:refresh.shieldWindowSizeReset",
+    })
+    fireEvent.click(reset)
+    expect(
+      await screen.findByText("settings:messages.saveSettingsFailed"),
+    ).toHaveAttribute("role", "alert")
+    expect(input).toHaveValue(1000)
+    expect(reset).toBeEnabled()
   })
 
   it("lists all opening methods in accessible preference order", async () => {

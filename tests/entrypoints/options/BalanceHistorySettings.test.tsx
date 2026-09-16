@@ -55,6 +55,54 @@ describe("BalanceHistorySettings", () => {
 
   const renderSubject = () => render(<BalanceHistorySettings />)
 
+  it("focuses the retention input when its visible label is clicked", async () => {
+    const user = userEvent.setup()
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: {},
+      updateBalanceHistory: vi.fn(),
+    } as any)
+    render(<BalanceHistorySettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    await user.click(screen.getByText("balanceHistory:settings.retentionDays"))
+    expect(
+      screen.getByRole("spinbutton", {
+        name: "balanceHistory:settings.retentionDays",
+      }),
+    ).toHaveFocus()
+  })
+
+  it.each(["failure", "exception"])(
+    "keeps the end-of-day toggle unchanged after a save %s",
+    async (failure) => {
+      const updateBalanceHistory = vi.fn()
+      if (failure === "failure")
+        updateBalanceHistory.mockResolvedValue({ ok: false })
+      else updateBalanceHistory.mockRejectedValue(new Error("disk full"))
+      vi.mocked(useUserPreferencesContext).mockReturnValue({
+        preferences: {},
+        updateBalanceHistory,
+      } as any)
+      render(<BalanceHistorySettings />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      })
+      const toggle = screen.getByRole("switch", {
+        name: "balanceHistory:settings.endOfDayCapture",
+      })
+      const checked = toggle.getAttribute("aria-checked")
+      fireEvent.click(toggle)
+      await waitFor(() =>
+        expect(toast.error).toHaveBeenCalledWith(
+          "settings:messages.saveSettingsFailed",
+        ),
+      )
+      expect(toggle).toHaveAttribute("aria-checked", checked)
+      expect(toggle).toBeEnabled()
+    },
+  )
+
   it("does not turn an empty retention input into a one-day retention policy", async () => {
     const user = userEvent.setup()
     const updateBalanceHistory = vi.fn().mockResolvedValue({ ok: true })

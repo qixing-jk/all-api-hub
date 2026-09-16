@@ -123,6 +123,34 @@ describe("UsageHistorySyncTab", () => {
     vi.mocked(toast.loading).mockReturnValue("sync-toast")
   })
 
+  it("confirms a shorter retention reset and restores canonical settings", async () => {
+    const user = userEvent.setup()
+    renderSubject()
+    const reset = await screen.findByRole("button", {
+      name: "common:actions.reset",
+    })
+    await waitFor(() => expect(reset).toBeEnabled())
+    await user.click(reset)
+    expect(mockedSendUsageHistoryMessage).not.toHaveBeenCalledWith(
+      UsageHistoryMessageTypes.UpdateSettings,
+      expect.anything(),
+    )
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "common:actions.reset",
+      }),
+    )
+    await waitFor(() =>
+      expect(screen.getAllByRole("spinbutton")[0]).toHaveValue(
+        DEFAULT_USAGE_HISTORY_PREFERENCES.retentionDays,
+      ),
+    )
+    expect(mockedSendUsageHistoryMessage).toHaveBeenCalledWith(
+      UsageHistoryMessageTypes.UpdateSettings,
+      { settings: DEFAULT_USAGE_HISTORY_PREFERENCES },
+    )
+  })
+
   it.each([undefined, {}])(
     "uses canonical defaults for missing usage history fields (%j)",
     async (usageHistory) => {

@@ -39,6 +39,7 @@ for (const width of [1280, 390]) {
       const radio = drawer
         .getByRole("group", { name: "Text size", exact: true })
         .getByRole("radio", { name, exact: true })
+      await radio.evaluate((input) => input.scrollIntoView({ block: "start" }))
       await radio.locator("..").click()
       await expect(radio).toBeChecked()
       await expect(drawer.locator('[aria-busy="true"]')).toHaveCount(0)
@@ -53,9 +54,9 @@ for (const width of [1280, 390]) {
             )!
             const scroller = reset.closest("[aria-busy]")!.parentElement!
             scroller.scrollTop = scroller.scrollHeight
-            return (
+            return Math.abs(
               el.getBoundingClientRect().bottom -
-              reset.getBoundingClientRect().bottom
+                reset.getBoundingClientRect().bottom,
             )
           }),
         )

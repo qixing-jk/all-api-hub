@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import AutoCheckinSettings from "~/features/BasicSettings/components/tabs/CheckinRedeem/AutoCheckinSettings"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -121,6 +122,34 @@ describe("AutoCheckinSettings", () => {
       updateAutoCheckin,
       resetAutoCheckinConfig,
     })
+  })
+
+  it("allows discarding an invalid draft even when stored settings are default", async () => {
+    useUserPreferencesContextMock.mockReturnValue({
+      preferences: {
+        autoCheckin: structuredClone(DEFAULT_PREFERENCES.autoCheckin),
+      },
+      updateAutoCheckin,
+      resetAutoCheckinConfig,
+    })
+    render(<AutoCheckinSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    const reset = screen.getByRole("button", { name: "common:actions.reset" })
+    expect(reset).toBeDisabled()
+    const input = screen.getByRole("spinbutton", {
+      name: "autoCheckin:settings.retryInterval",
+    })
+    fireEvent.change(input, { target: { value: "" } })
+    expect(reset).toBeEnabled()
+    fireEvent.click(reset)
+    await waitFor(() =>
+      expect(input).toHaveValue(
+        DEFAULT_PREFERENCES.autoCheckin!.retryStrategy.intervalMinutes,
+      ),
+    )
+    expect(updateAutoCheckin).not.toHaveBeenCalled()
   })
 
   it("keeps the automatic settings title and explains manual availability when disabled", () => {

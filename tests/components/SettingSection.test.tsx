@@ -27,7 +27,10 @@ function Example() {
 describe("settings reset", () => {
   it("locks editing during reset and allows retry after a failed confirmed reset", async () => {
     const user = userEvent.setup()
-    const pending = createDeferred<{ ok: boolean }>()
+    const pending = createDeferred<{
+      ok: boolean
+      reason?: { type: "storage-error"; error: Error }
+    }>()
     const reset = vi
       .fn()
       .mockReturnValueOnce(pending.promise)
@@ -56,7 +59,12 @@ describe("settings reset", () => {
     expect(
       screen.getByRole("textbox", { name: "Address", hidden: true }),
     ).toBeDisabled()
-    await act(async () => pending.resolve({ ok: false }))
+    await act(async () =>
+      pending.resolve({
+        ok: false,
+        reason: { type: "storage-error", error: new Error("disk full") },
+      }),
+    )
     expect(screen.getByRole("dialog")).toBeVisible()
     await user.click(
       within(dialog).getByRole("button", { name: "common:actions.reset" }),

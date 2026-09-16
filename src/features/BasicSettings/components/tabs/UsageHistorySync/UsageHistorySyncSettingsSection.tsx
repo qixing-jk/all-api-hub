@@ -1,4 +1,4 @@
-import { useEffect, useState, type ComponentProps } from "react"
+import { useEffect, useRef, useState, type ComponentProps } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -71,17 +71,26 @@ export default function UsageHistorySyncSettingsSection({
   onRefreshStatus,
 }: UsageHistorySyncSettingsSectionProps) {
   const { t } = useTranslation("usageAnalytics")
+  const applyButtonRef = useRef<HTMLButtonElement>(null)
+  const intervalInputRef = useRef<HTMLInputElement>(null)
 
   const [intervalDraft, setIntervalDraft] = useState(
-    String(Math.max(1, Math.round(syncIntervalMinutes / 60))),
+    String(syncIntervalMinutes / 60),
   )
   useEffect(
-    () =>
-      setIntervalDraft(
-        String(Math.max(1, Math.round(syncIntervalMinutes / 60))),
-      ),
+    () => setIntervalDraft(String(syncIntervalMinutes / 60)),
     [syncIntervalMinutes],
   )
+
+  const commitInterval = () => {
+    if (
+      intervalInputRef.current?.reportValidity() &&
+      onSyncIntervalMinutesCommit &&
+      Number(intervalDraft) * 60 !== syncIntervalMinutes
+    ) {
+      return onSyncIntervalMinutesCommit(Number(intervalDraft) * 60)
+    }
+  }
 
   return (
     <SettingSection
@@ -197,17 +206,15 @@ export default function UsageHistorySyncSettingsSection({
               type="number"
               min={1}
               max={24}
+              ref={intervalInputRef}
               value={intervalDraft}
               disabled={isSavingSettings}
               required
               onBlur={(event) => {
-                if (
-                  event.currentTarget.reportValidity() &&
-                  onSyncIntervalMinutesCommit &&
-                  Number(intervalDraft) * 60 !== syncIntervalMinutes
-                ) {
-                  void onSyncIntervalMinutesCommit(Number(intervalDraft) * 60)
-                }
+                // Let Apply sequence both writes instead of disabling itself
+                // between the pointer-down blur and its click event.
+                if (event.relatedTarget !== applyButtonRef.current)
+                  void commitInterval()
               }}
               onKeyDown={blurInputOnEnter}
               onChange={(event) => {
@@ -224,6 +231,7 @@ export default function UsageHistorySyncSettingsSection({
           <div className="gap-y-density-2 flex flex-wrap gap-x-2">
             <Button
               id="usage-history-sync-apply-settings"
+              ref={applyButtonRef}
               disabled={
                 isSavingSettings ||
                 !Number.isSafeInteger(retentionDays) ||
@@ -231,7 +239,13 @@ export default function UsageHistorySyncSettingsSection({
               }
               variant="default"
               size="sm"
-              onClick={() => void onApplySettings()}
+              onBlur={() => {
+                if (!isSavingSettings) void commitInterval()
+              }}
+              onClick={async () => {
+                await commitInterval()
+                await onApplySettings()
+              }}
             >
               {t("actions.applySettings")}
             </Button>

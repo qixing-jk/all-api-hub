@@ -25,7 +25,7 @@ export function AppearanceDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         onCloseAutoFocus={onCloseAutoFocus}
-        className="w-full max-w-full sm:max-w-md"
+        className="w-full max-w-full overflow-clip sm:max-w-md"
       >
         <SheetHeader>
           <SheetTitle>{t("appearance.title")}</SheetTitle>
