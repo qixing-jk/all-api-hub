@@ -85,6 +85,10 @@ export function shouldAutomaticallyDiscoverAccountCheckIn(
     candidateMethodIds: getAutoCheckinCandidateMethodIds(
       account.site_type,
       account.site_url,
+      // Browser automation is user-declared, so it only becomes a candidate once
+      // this configuration opts in. Without it the candidate set is empty for the
+      // site types it alone covers, and discovery would never run at all.
+      account.checkIn,
     ),
     accountDisabled: account.disabled,
     now,
