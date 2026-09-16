@@ -30,28 +30,24 @@ export interface AccessTokenInfo {
   access_token: string
 }
 
-export interface SiteStatusInfo {
-  price?: number
-  stripe_unit_price?: number
-  PaymentUSDRate?: number
-  system_name?: string
-  theme?: string
-  /**
-   * 是否启用签到功能
-   */
-  checkin_enabled?: boolean
-  /**
-   * Veloera public status uses a distinct snake-case field.
-   */
-  check_in_enabled?: boolean
+/** Optional product facts from one provider-native bootstrap snapshot. */
+export type AccountBootstrapFacts = {
+  displayName?: string
+  defaultExchangeRate?: number
+  /** Undefined means unknown, not explicitly unsupported. */
+  checkInSupported?: boolean
+  frontendTheme?: string
 }
 
 export type AccountBootstrapCapability = {
   fetchUserInfo(request: ApiServiceRequest): Promise<UserInfo>
   getOrCreateAccessToken(request: ApiServiceRequest): Promise<AccessTokenInfo>
-  fetchSiteStatus(request: ApiServiceRequest): Promise<SiteStatusInfo | null>
-  fetchCheckInSupport(request: ApiServiceRequest): Promise<boolean | undefined>
-  extractDefaultExchangeRate(siteStatus: SiteStatusInfo | null): number | null
+  loadBootstrapFacts(request: ApiServiceRequest): Promise<AccountBootstrapFacts>
+  /** Reuse supplied facts; only independent support probes may perform another read. */
+  fetchCheckInSupport(
+    request: ApiServiceRequest,
+    facts: AccountBootstrapFacts,
+  ): Promise<boolean | undefined>
   resolveRoutePath(
     target: AccountBootstrapRouteTarget,
     route: AccountBootstrapRouteKind,

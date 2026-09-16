@@ -17,16 +17,14 @@ import {
 
 const {
   mockCreateNewApiAccountBootstrap,
-  mockExtractDefaultExchangeRate,
   mockFetchCheckInSupport,
-  mockFetchSiteStatus,
+  mockLoadBootstrapFacts,
   mockFetchUserInfo,
   mockGetOrCreateAccessToken,
 } = vi.hoisted(() => ({
   mockCreateNewApiAccountBootstrap: vi.fn(),
-  mockExtractDefaultExchangeRate: vi.fn(),
   mockFetchCheckInSupport: vi.fn(),
-  mockFetchSiteStatus: vi.fn(),
+  mockLoadBootstrapFacts: vi.fn(),
   mockFetchUserInfo: vi.fn(),
   mockGetOrCreateAccessToken: vi.fn(),
 }))
@@ -62,9 +60,11 @@ const {
 describe("newApiAccountCompletion", () => {
   beforeEach(() => {
     mockCreateNewApiAccountBootstrap.mockReset()
-    mockExtractDefaultExchangeRate.mockReset()
     mockFetchCheckInSupport.mockReset()
-    mockFetchSiteStatus.mockReset()
+    mockFetchCheckInSupport.mockImplementation(
+      async (_request, facts) => facts?.checkInSupported,
+    )
+    mockLoadBootstrapFacts.mockReset()
     mockFetchUserInfo.mockReset()
     mockGetOrCreateAccessToken.mockReset()
     createServiceRequest.mockClear()
@@ -75,9 +75,8 @@ describe("newApiAccountCompletion", () => {
     handleCheckInSupportFetchFailure.mockClear()
     captureRecoveryData.mockClear()
     mockCreateNewApiAccountBootstrap.mockReturnValue({
-      extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
       fetchCheckInSupport: mockFetchCheckInSupport,
-      fetchSiteStatus: mockFetchSiteStatus,
+      loadBootstrapFacts: mockLoadBootstrapFacts,
       fetchUserInfo: mockFetchUserInfo,
       getOrCreateAccessToken: mockGetOrCreateAccessToken,
       resolveRoutePath: vi.fn(),
@@ -89,12 +88,11 @@ describe("newApiAccountCompletion", () => {
       username: "  token-user  ",
       access_token: "  generated-token  ",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "  Token Portal  ",
-      checkin_enabled: true,
-      price: 6.8,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "  Token Portal  ",
+      checkInSupported: true,
+      defaultExchangeRate: 6.8,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(6.8)
 
     const result = await newApiAccountCompletion.complete(
       {
@@ -122,19 +120,14 @@ describe("newApiAccountCompletion", () => {
         userId: "7",
       },
     })
-    expect(mockFetchSiteStatus).toHaveBeenCalledWith({
+    expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
       baseUrl: "https://new.example.com",
       fetchContext: currentTabFetchContext,
       auth: {
         authType: AuthTypeEnum.AccessToken,
       },
     })
-    expect(mockFetchCheckInSupport).not.toHaveBeenCalled()
-    expect(mockExtractDefaultExchangeRate).toHaveBeenCalledWith({
-      system_name: "  Token Portal  ",
-      checkin_enabled: true,
-      price: 6.8,
-    })
+
     expect(createInitialCheckInConfig).toHaveBeenCalledWith({
       supported: true,
     })
@@ -164,11 +157,10 @@ describe("newApiAccountCompletion", () => {
       username: "  rc22-user  ",
       access_token: "  management-pat  ",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "  rc22 portal  ",
-      checkin_enabled: false,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "  rc22 portal  ",
+      checkInSupported: false,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await newApiAccountCompletion.complete(
       {
@@ -259,7 +251,7 @@ describe("newApiAccountCompletion", () => {
 
       expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
       expect(mockFetchUserInfo).not.toHaveBeenCalled()
-      expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+      expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
     },
   )
 
@@ -269,9 +261,9 @@ describe("newApiAccountCompletion", () => {
       username: "rc22-user",
       access_token: "management-pat",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "rc22 portal",
-      checkin_enabled: false,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "rc22 portal",
+      checkInSupported: false,
     })
 
     try {
@@ -303,7 +295,7 @@ describe("newApiAccountCompletion", () => {
     }
 
     expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
-    expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+    expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
   })
 
   it("sanitizes rc22 bootstrap failures before creating the completion error", async () => {
@@ -317,9 +309,9 @@ describe("newApiAccountCompletion", () => {
         API_ERROR_CODES.HTTP_OTHER,
       ),
     )
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "rc22 portal",
-      checkin_enabled: false,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "rc22 portal",
+      checkInSupported: false,
     })
 
     const error = await newApiAccountCompletion
@@ -396,7 +388,7 @@ describe("newApiAccountCompletion", () => {
     })
     expect(String(completionError.cause)).not.toContain("not a valid URL")
     expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
-    expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+    expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
   })
 
   it("ignores dashboard transient auth for other New API-family variants", async () => {
@@ -404,11 +396,10 @@ describe("newApiAccountCompletion", () => {
       username: "legacy-family-user",
       access_token: "legacy-visible-token",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Legacy Family Portal",
-      checkin_enabled: false,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "Legacy Family Portal",
+      checkInSupported: false,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await createNewApiAccountCompletion(
       SITE_TYPES.VELOERA,
@@ -448,11 +439,10 @@ describe("newApiAccountCompletion", () => {
       username: "  cookie-user  ",
       access_token: "  cookie-visible-token  ",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Cookie Portal",
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "Cookie Portal",
     })
     mockFetchCheckInSupport.mockResolvedValueOnce(true)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await newApiAccountCompletion.complete(
       {
@@ -475,18 +465,21 @@ describe("newApiAccountCompletion", () => {
       },
     })
     expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
-    expect(mockFetchSiteStatus).toHaveBeenCalledWith({
+    expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
       baseUrl: "https://cookie.example.com",
       auth: {
         authType: AuthTypeEnum.Cookie,
       },
     })
-    expect(mockFetchCheckInSupport).toHaveBeenCalledWith({
-      baseUrl: "https://cookie.example.com",
-      auth: {
-        authType: AuthTypeEnum.None,
+    expect(mockFetchCheckInSupport).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://cookie.example.com",
+        auth: {
+          authType: AuthTypeEnum.None,
+        },
       },
-    })
+      { displayName: "Cookie Portal" },
+    )
     expect(result).toMatchObject({
       username: "cookie-user",
       siteName: "Cookie Portal",
@@ -520,12 +513,11 @@ describe("newApiAccountCompletion", () => {
           email: "owner@example.invalid",
         },
       })
-      mockFetchSiteStatus.mockResolvedValueOnce({
-        system_name: "Example Portal",
-        checkin_enabled: false,
-        price: 1,
+      mockLoadBootstrapFacts.mockResolvedValueOnce({
+        displayName: "Example Portal",
+        checkInSupported: false,
+        defaultExchangeRate: 1,
       })
-      mockExtractDefaultExchangeRate.mockReturnValueOnce(1)
 
       const result = await createNewApiAccountCompletion(
         SITE_TYPES.MODELFLARE,
@@ -556,11 +548,10 @@ describe("newApiAccountCompletion", () => {
       username: "token-user",
       access_token: "  ",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Broken Portal",
-      checkin_enabled: false,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "Broken Portal",
+      checkInSupported: false,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     await expect(
       newApiAccountCompletion.complete(
@@ -585,11 +576,10 @@ describe("newApiAccountCompletion", () => {
   })
 
   it("does not fetch token info for unsupported auth and classifies missing username", async () => {
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "None Auth Portal",
-      checkin_enabled: false,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "None Auth Portal",
+      checkInSupported: false,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     await expect(
       newApiAccountCompletion.complete(
@@ -621,11 +611,10 @@ describe("newApiAccountCompletion", () => {
       username: "  ",
       access_token: "cookie-token",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Missing Username Portal",
-      checkin_enabled: false,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "Missing Username Portal",
+      checkInSupported: false,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     await expect(
       newApiAccountCompletion.complete(
@@ -656,7 +645,7 @@ describe("newApiAccountCompletion", () => {
       username: "token-user",
       access_token: "generated-token",
     })
-    mockFetchSiteStatus.mockRejectedValueOnce(siteStatusError)
+    mockLoadBootstrapFacts.mockRejectedValueOnce(siteStatusError)
 
     await expect(
       newApiAccountCompletion.complete(
@@ -689,12 +678,11 @@ describe("newApiAccountCompletion", () => {
       username: "token-user",
       access_token: "generated-token",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Fallback Portal",
-      checkin_enabled: false,
-      price: 7,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "Fallback Portal",
+      checkInSupported: false,
+      defaultExchangeRate: 7,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(7)
     fetchSiteName.mockRejectedValueOnce(siteNameError)
 
     await expect(
@@ -726,11 +714,10 @@ describe("newApiAccountCompletion", () => {
       username: "token-user",
       access_token: "generated-token",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Token Portal",
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "Token Portal",
     })
     mockFetchCheckInSupport.mockRejectedValueOnce(supportError)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await newApiAccountCompletion.complete(
       {

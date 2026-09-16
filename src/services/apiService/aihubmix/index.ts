@@ -1,5 +1,4 @@
 import { AIHUBMIX_API_ORIGIN, SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import type {
   AccountData,
   ApiServiceAccountRequest,
@@ -13,7 +12,6 @@ import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import type {
   AccessTokenInfo,
-  SiteStatusInfo,
   UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import {
@@ -648,30 +646,6 @@ export async function getOrCreateAccessToken(
     username: userInfo.username,
     access_token: accessToken,
   }
-}
-
-/**
- * Return static AIHubMix site metadata for account setup.
- */
-export async function fetchSiteStatus(
-  _request: ApiServiceRequest,
-): Promise<SiteStatusInfo> {
-  return {
-    system_name: "AIHubMix",
-    checkin_enabled: false,
-  }
-}
-
-/**
- * Return AIHubMix's app-level default exchange rate.
- */
-export function extractDefaultExchangeRate(
-  _statusInfo: SiteStatusInfo | null,
-): number {
-  // AIHubMix public management docs expose quota accounting
-  // (`used_quota / 500000`) but no site-status default exchange-rate field.
-  // Reference: https://docs.aihubmix.com/cn/api/CliEndpoints/list-keys
-  return UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
 }
 
 /**

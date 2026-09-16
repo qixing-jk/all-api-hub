@@ -25,12 +25,12 @@ export const voApiV2AccountBootstrap: AccountBootstrapCapability = {
     username: String(request.auth.userId ?? ""),
     access_token: request.auth.accessToken ?? "",
   }),
-  fetchSiteStatus: async () => ({
-    system_name: VOAPI_V2_SYSTEM_NAME,
-    checkin_enabled: true,
+  loadBootstrapFacts: async () => ({
+    displayName: VOAPI_V2_SYSTEM_NAME,
+    defaultExchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+    checkInSupported: true,
   }),
   fetchCheckInSupport: (request) => fetchSupportCheckIn(request),
-  extractDefaultExchangeRate: () => UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
   resolveRoutePath: async (target, route) =>
     resolveStaticAccountRoutePath(
       { ...target, siteType: SITE_TYPES.VO_API_V2 },

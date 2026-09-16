@@ -2,16 +2,13 @@ import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import {
-  extractDefaultExchangeRate,
   fetchAccountAvailableModels,
   fetchAccountData,
   fetchAccountQuota,
   fetchAllModels,
   fetchCheckInStatus,
   fetchModelPricing,
-  fetchSiteStatus,
   fetchSupportCheckIn,
   fetchTodayIncome,
   fetchTodayUsage,
@@ -692,23 +689,7 @@ describe("apiService AIHubMix", () => {
     })
   })
 
-  it("uses the app default exchange rate because AIHubMix exposes no site rate field", () => {
-    expect(extractDefaultExchangeRate(null)).toBe(
-      UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
-    )
-    expect(
-      extractDefaultExchangeRate({
-        system_name: "AIHubMix",
-        checkin_enabled: false,
-      }),
-    ).toBe(UI_CONSTANTS.EXCHANGE_RATE.DEFAULT)
-  })
-
-  it("returns static metadata and no built-in daily/check-in metrics", async () => {
-    await expect(fetchSiteStatus(baseRequest)).resolves.toEqual({
-      system_name: "AIHubMix",
-      checkin_enabled: false,
-    })
+  it("returns no built-in daily/check-in metrics", async () => {
     await expect(fetchSupportCheckIn(baseRequest)).resolves.toBe(false)
     await expect(fetchCheckInStatus(baseRequest)).resolves.toBeUndefined()
     await expect(fetchTodayUsage(baseRequest)).resolves.toEqual({

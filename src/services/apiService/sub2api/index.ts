@@ -21,10 +21,8 @@ import type {
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import type {
   AccessTokenInfo,
-  SiteStatusInfo,
   UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
-import { extractDefaultExchangeRate as extractNewApiFamilyDefaultExchangeRate } from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   fetchApi,
@@ -261,7 +259,7 @@ export async function performSub2ApiProDailyCheckIn(
  * Source: https://github.com/Wei-Shaw/sub2api/blob/2bc139ab527b4a687546d145dc7bb9063cf14510/backend/internal/handler/dto/settings.go
  * `PublicSettings.site_name` is the canonical public deployment name.
  */
-const fetchSub2ApiPublicSettings = async (
+export const fetchSub2ApiPublicSettings = async (
   request: ApiServiceRequest,
 ): Promise<Sub2ApiPublicSettingsData | undefined> => {
   const body = await fetchApi<unknown>(
@@ -699,43 +697,6 @@ export async function getOrCreateAccessToken(
     { recoverInvalidRefreshTokenViaBrowser: true },
   )
 }
-
-/**
- * Sub2API does not expose the One-API-style public `/api/status` endpoint, so
- * adapt its native public settings into the shared status contract. Name lookup
- * remains optional so a transient settings failure cannot block account setup.
- */
-export async function fetchSiteStatus(
-  request: ApiServiceRequest,
-): Promise<SiteStatusInfo> {
-  try {
-    const publicSettings = await fetchSub2ApiPublicSettings(request)
-    const siteName =
-      typeof publicSettings?.site_name === "string"
-        ? publicSettings.site_name.trim()
-        : ""
-
-    return {
-      ...(siteName ? { system_name: siteName } : {}),
-      checkin_enabled: false,
-    }
-  } catch (error) {
-    logger.warn("Failed to fetch optional Sub2API site name", {
-      endpoint: SUB2API_PUBLIC_SETTINGS_ENDPOINT,
-      error: getSafeErrorMessage(error),
-    })
-
-    return {
-      checkin_enabled: false,
-    }
-  }
-}
-
-/**
- * Keep strict Sub2API routing compatible with shared account completion code
- * while reusing the common status exchange-rate fallback order.
- */
-export const extractDefaultExchangeRate = extractNewApiFamilyDefaultExchangeRate
 
 /**
  * Sub2API does not support the extension's built-in check-in flow.

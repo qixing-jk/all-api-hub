@@ -60,8 +60,7 @@ vi.mock(
 const {
   loggerMock,
   mockAutoDetectSmart,
-  mockExtractDefaultExchangeRate,
-  mockFetchSiteStatus,
+  mockLoadBootstrapFacts,
   mockFetchSupportCheckIn,
   mockGetOrCreateAccessToken,
   mockOpenRouterPageAction,
@@ -360,8 +359,7 @@ describe("accountAutoDetection", () => {
         accessToken: "access-token-placeholder",
       },
     })
-    mockFetchSiteStatus.mockResolvedValueOnce(null)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+    mockLoadBootstrapFacts.mockResolvedValueOnce(null)
 
     const result = await autoDetectAccount(
       "  https://sub2.example.com  ",
@@ -373,7 +371,7 @@ describe("accountAutoDetection", () => {
       "https://sub2.example.com",
       undefined,
     )
-    expect(mockFetchSiteStatus).toHaveBeenCalledWith(
+    expect(mockLoadBootstrapFacts).toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl: "https://sub2.example.com" }),
     )
   })
@@ -391,12 +389,12 @@ describe("accountAutoDetection", () => {
       username: "tracked-user",
       access_token: "tracked-token",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      defaultExchangeRate: 8.8,
       quota_per_unit: 42,
-      system_name: "Tracked Portal",
+      displayName: "Tracked Portal",
     })
     mockFetchSupportCheckIn.mockResolvedValueOnce(undefined)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(8.8)
 
     const result = await autoDetectAccount(
       "https://tracked.example.com",
@@ -419,7 +417,7 @@ describe("accountAutoDetection", () => {
       action: expect.any(String),
       url: "https://tracked.example.com",
     })
-    expect(mockFetchSiteStatus).toHaveBeenCalledTimes(1)
+    expect(mockLoadBootstrapFacts).toHaveBeenCalledTimes(1)
   })
 
   it("returns the upstream detection failure reason when smart detection fails", async () => {

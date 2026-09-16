@@ -17,9 +17,9 @@ export const sub2ApiAccountCompletion: AccountCompletionCapability = {
       )
     }
 
-    let siteStatus = null
+    let bootstrapFacts = null
     try {
-      siteStatus = await sub2ApiAccountBootstrap.fetchSiteStatus(
+      bootstrapFacts = await sub2ApiAccountBootstrap.loadBootstrapFacts(
         helpers.createServiceRequest({
           baseUrl: url,
           context,
@@ -36,10 +36,9 @@ export const sub2ApiAccountCompletion: AccountCompletionCapability = {
     }
 
     const exchangeRate =
-      sub2ApiAccountBootstrap.extractDefaultExchangeRate(siteStatus) ??
-      UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+      bootstrapFacts?.defaultExchangeRate ?? UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
     helpers.captureRecoveryData({ exchangeRate })
-    const siteName = await helpers.fetchSiteName(siteStatus)
+    const siteName = await helpers.fetchSiteName(bootstrapFacts)
     helpers.captureRecoveryData({ siteName })
 
     return {

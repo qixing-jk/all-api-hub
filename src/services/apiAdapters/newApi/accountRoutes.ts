@@ -56,12 +56,12 @@ function setCachedTheme(
 /**
  * Fetch the current New API frontend theme, cached briefly per base URL.
  * @param baseUrl New API deployment base URL.
- * @param accountBootstrap Account bootstrap status capability.
+ * @param accountBootstrap Account bootstrap facts capability.
  * @returns Frontend theme identifier when available.
  */
 async function fetchNewApiFrontendTheme(
   baseUrl: string,
-  accountBootstrap: Pick<AccountBootstrapCapability, "fetchSiteStatus">,
+  accountBootstrap: Pick<AccountBootstrapCapability, "loadBootstrapFacts">,
 ): Promise<string | undefined> {
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl)
   const cached = themeCache.get(normalizedBaseUrl)
@@ -71,12 +71,12 @@ async function fetchNewApiFrontendTheme(
   }
 
   try {
-    const statusInfo = await accountBootstrap.fetchSiteStatus({
+    const facts = await accountBootstrap.loadBootstrapFacts({
       baseUrl: normalizedBaseUrl,
       auth: { authType: AuthTypeEnum.None },
     })
     const theme =
-      typeof statusInfo?.theme === "string" ? statusInfo.theme : undefined
+      typeof facts?.frontendTheme === "string" ? facts.frontendTheme : undefined
     setCachedTheme(normalizedBaseUrl, { fetchedAt: now, theme })
     return theme
   } catch {
@@ -89,7 +89,7 @@ async function fetchNewApiFrontendTheme(
 export async function resolveNewApiAccountRoutePath(
   target: AccountBootstrapRouteTarget,
   route: SiteRouteKind,
-  accountBootstrap: Pick<AccountBootstrapCapability, "fetchSiteStatus">,
+  accountBootstrap: Pick<AccountBootstrapCapability, "loadBootstrapFacts">,
 ): Promise<string | null> {
   const staticPath = resolveStaticAccountRoutePath(target, route)
   if (

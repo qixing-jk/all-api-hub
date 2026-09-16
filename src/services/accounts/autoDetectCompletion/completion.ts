@@ -6,7 +6,7 @@ import type { AccountSiteType } from "~/constants/siteType"
 import { createPersistedSiteAccount } from "~/services/accounts/accountDefaults"
 import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
 import { getSiteName } from "~/services/accounts/siteName"
-import type { SiteStatusInfo } from "~/services/apiAdapters/contracts/accountBootstrap"
+import type { AccountBootstrapFacts } from "~/services/apiAdapters/contracts/accountBootstrap"
 import type {
   AccountCompletionAdapterResult,
   AccountCompletionHelpers,
@@ -159,8 +159,8 @@ const createAccountCompletionHelpers = (params: {
       protectionBypassExecution: input.context.protectionBypassExecution,
     })
   },
-  fetchSiteName(siteStatus: SiteStatusInfo | null) {
-    return getSiteName(params.url, params.siteType, siteStatus)
+  fetchSiteName(bootstrapFacts: AccountBootstrapFacts | null) {
+    return getSiteName(params.url, params.siteType, bootstrapFacts)
   },
   createCompletionError,
   trimString,

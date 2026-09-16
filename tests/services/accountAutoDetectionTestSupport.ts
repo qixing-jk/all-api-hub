@@ -9,9 +9,8 @@ import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 export const accountAutoDetectionMocks = {
   mockAutoDetectSmart: vi.fn(),
   mockSendRuntimeMessage: vi.fn(),
-  mockFetchSiteStatus: vi.fn(),
+  mockLoadBootstrapFacts: vi.fn(),
   mockFetchSupportCheckIn: vi.fn(),
-  mockExtractDefaultExchangeRate: vi.fn(),
   mockFetchUserInfo: vi.fn(),
   mockFetchSharedChatUserInfo: vi.fn(),
   mockCreateNewApiAccountBootstrap: vi.fn(),
@@ -65,9 +64,7 @@ export const accountAutoDetectionModuleMocks = {
       fetchUserInfo: accountAutoDetectionMocks.mockFetchUserInfo,
       getOrCreateAccessToken:
         accountAutoDetectionMocks.mockGetOrCreateAccessToken,
-      fetchSiteStatus: accountAutoDetectionMocks.mockFetchSiteStatus,
-      extractDefaultExchangeRate:
-        accountAutoDetectionMocks.mockExtractDefaultExchangeRate,
+      loadBootstrapFacts: accountAutoDetectionMocks.mockLoadBootstrapFacts,
       fetchCheckInSupport: accountAutoDetectionMocks.mockFetchSupportCheckIn,
       resolveRoutePath: vi.fn(),
     },
@@ -77,9 +74,7 @@ export const accountAutoDetectionModuleMocks = {
       fetchUserInfo: accountAutoDetectionMocks.mockFetchUserInfo,
       getOrCreateAccessToken:
         accountAutoDetectionMocks.mockGetOrCreateAccessToken,
-      fetchSiteStatus: accountAutoDetectionMocks.mockFetchSiteStatus,
-      extractDefaultExchangeRate:
-        accountAutoDetectionMocks.mockExtractDefaultExchangeRate,
+      loadBootstrapFacts: accountAutoDetectionMocks.mockLoadBootstrapFacts,
       fetchCheckInSupport: accountAutoDetectionMocks.mockFetchSupportCheckIn,
       resolveRoutePath: vi.fn(),
     },
@@ -99,9 +94,8 @@ export const accountAutoDetectionModuleMocks = {
 const {
   mockAutoDetectSmart,
   mockSendRuntimeMessage,
-  mockFetchSiteStatus,
+  mockLoadBootstrapFacts,
   mockFetchSupportCheckIn,
-  mockExtractDefaultExchangeRate,
   mockFetchUserInfo,
   mockFetchSharedChatUserInfo,
   mockCreateNewApiAccountBootstrap,
@@ -172,9 +166,11 @@ export function resetAccountAutoDetectionMocks() {
   vi.clearAllMocks()
   mockAutoDetectSmart.mockReset()
   mockSendRuntimeMessage.mockReset()
-  mockFetchSiteStatus.mockReset()
+  mockLoadBootstrapFacts.mockReset()
   mockFetchSupportCheckIn.mockReset()
-  mockExtractDefaultExchangeRate.mockReset()
+  mockFetchSupportCheckIn.mockImplementation(
+    async (_request, facts) => facts?.checkInSupported,
+  )
   mockFetchUserInfo.mockReset()
   mockFetchSharedChatUserInfo.mockReset()
   mockCreateNewApiAccountBootstrap.mockReset()
@@ -194,8 +190,7 @@ export function resetAccountAutoDetectionMocks() {
   mockCreateNewApiAccountBootstrap.mockReturnValue({
     fetchUserInfo: mockFetchUserInfo,
     getOrCreateAccessToken: mockGetOrCreateAccessToken,
-    fetchSiteStatus: mockFetchSiteStatus,
-    extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
+    loadBootstrapFacts: mockLoadBootstrapFacts,
     fetchCheckInSupport: mockFetchSupportCheckIn,
     resolveRoutePath: vi.fn(),
   })

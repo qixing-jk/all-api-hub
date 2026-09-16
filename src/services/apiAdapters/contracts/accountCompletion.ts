@@ -5,7 +5,7 @@ import type {
   AutoDetectCompletionError,
   AutoDetectCompletionRequest,
 } from "~/services/accounts/autoDetectCompletion/types"
-import type { SiteStatusInfo } from "~/services/apiAdapters/contracts/accountBootstrap"
+import type { AccountBootstrapFacts } from "~/services/apiAdapters/contracts/accountBootstrap"
 import type {
   ApiServiceFetchContext,
   ApiServiceRequest,
@@ -43,7 +43,7 @@ export type AccountCompletionHelpers = {
   createServiceRequest(
     input: AccountCompletionServiceRequestInput,
   ): ApiServiceRequest
-  fetchSiteName(siteStatus: SiteStatusInfo | null): Promise<string>
+  fetchSiteName(bootstrapFacts: AccountBootstrapFacts | null): Promise<string>
   createCompletionError(
     reason: AutoDetectFailureReason,
     cause: unknown,

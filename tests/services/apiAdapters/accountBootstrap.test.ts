@@ -7,9 +7,9 @@ import {
   ACCOUNT_BOOTSTRAP_ROUTE_KINDS,
   type AccessTokenInfo,
   type AccountBootstrapCapability,
+  type AccountBootstrapFacts,
   type AccountBootstrapRouteKind,
   type AccountBootstrapRouteTarget,
-  type SiteStatusInfo,
   type UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { createNewApiAccountBootstrap } from "~/services/apiAdapters/newApi/accountBootstrap"
@@ -19,8 +19,6 @@ import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const {
-  mockAihubmixExtractDefaultExchangeRate,
-  mockAihubmixFetchSiteStatus,
   mockAihubmixFetchSupportCheckIn,
   mockAihubmixFetchUserInfo,
   mockAihubmixGetOrCreateAccessToken,
@@ -29,16 +27,13 @@ const {
   mockFetchSupportCheckIn,
   mockFetchUserInfo,
   mockGetOrCreateAccessToken,
-  mockSub2ApiExtractDefaultExchangeRate,
-  mockSub2ApiFetchSiteStatus,
+  mockSub2ApiFetchPublicSettings,
   mockSub2ApiFetchSupportCheckIn,
   mockSub2ApiFetchUserInfo,
   mockSub2ApiGetOrCreateAccessToken,
   mockVoApiV2FetchSupportCheckIn,
   mockVoApiV2FetchUserInfo,
 } = vi.hoisted(() => ({
-  mockAihubmixExtractDefaultExchangeRate: vi.fn(),
-  mockAihubmixFetchSiteStatus: vi.fn(),
   mockAihubmixFetchSupportCheckIn: vi.fn(),
   mockAihubmixFetchUserInfo: vi.fn(),
   mockAihubmixGetOrCreateAccessToken: vi.fn(),
@@ -47,8 +42,7 @@ const {
   mockFetchSupportCheckIn: vi.fn(),
   mockFetchUserInfo: vi.fn(),
   mockGetOrCreateAccessToken: vi.fn(),
-  mockSub2ApiExtractDefaultExchangeRate: vi.fn(),
-  mockSub2ApiFetchSiteStatus: vi.fn(),
+  mockSub2ApiFetchPublicSettings: vi.fn(),
   mockSub2ApiFetchSupportCheckIn: vi.fn(),
   mockSub2ApiFetchUserInfo: vi.fn(),
   mockSub2ApiGetOrCreateAccessToken: vi.fn(),
@@ -73,16 +67,13 @@ vi.mock(
 
 vi.mock("~/services/apiService/sub2api", async (importOriginal) => ({
   ...(await importOriginal()),
-  extractDefaultExchangeRate: mockSub2ApiExtractDefaultExchangeRate,
-  fetchSiteStatus: mockSub2ApiFetchSiteStatus,
+  fetchSub2ApiPublicSettings: mockSub2ApiFetchPublicSettings,
   fetchSupportCheckIn: mockSub2ApiFetchSupportCheckIn,
   fetchUserInfo: mockSub2ApiFetchUserInfo,
   getOrCreateAccessToken: mockSub2ApiGetOrCreateAccessToken,
 }))
 
 vi.mock("~/services/apiService/aihubmix", () => ({
-  extractDefaultExchangeRate: mockAihubmixExtractDefaultExchangeRate,
-  fetchSiteStatus: mockAihubmixFetchSiteStatus,
   fetchSupportCheckIn: mockAihubmixFetchSupportCheckIn,
   fetchUserInfo: mockAihubmixFetchUserInfo,
   getOrCreateAccessToken: mockAihubmixGetOrCreateAccessToken,
@@ -106,21 +97,19 @@ describe("account bootstrap adapters", () => {
     vi.clearAllMocks()
   })
 
-  it("keeps the bootstrap capability as six flat required operations", () => {
+  it("keeps the bootstrap capability as provider-neutral bootstrap contract", () => {
     expectTypeOf<AccountBootstrapCapability>().toEqualTypeOf<{
       fetchUserInfo(request: ApiServiceRequest): Promise<UserInfo>
       getOrCreateAccessToken(
         request: ApiServiceRequest,
       ): Promise<AccessTokenInfo>
-      fetchSiteStatus(
+      loadBootstrapFacts(
         request: ApiServiceRequest,
-      ): Promise<SiteStatusInfo | null>
+      ): Promise<AccountBootstrapFacts>
       fetchCheckInSupport(
         request: ApiServiceRequest,
+        facts: AccountBootstrapFacts,
       ): Promise<boolean | undefined>
-      extractDefaultExchangeRate(
-        siteStatus: SiteStatusInfo | null,
-      ): number | null
       resolveRoutePath(
         target: AccountBootstrapRouteTarget,
         route: AccountBootstrapRouteKind,
@@ -142,13 +131,16 @@ describe("account bootstrap adapters", () => {
     await expect(
       accountBootstrap.getOrCreateAccessToken(request),
     ).resolves.toBe(tokenInfo)
-    await expect(accountBootstrap.fetchSiteStatus(request)).resolves.toBe(
-      siteStatus,
+    await expect(accountBootstrap.loadBootstrapFacts(request)).resolves.toEqual(
+      {
+        displayName: "Example Portal",
+        defaultExchangeRate: 500000,
+        checkInSupported: true,
+      },
     )
-    await expect(accountBootstrap.fetchCheckInSupport(request)).resolves.toBe(
-      true,
-    )
-    expect(accountBootstrap.extractDefaultExchangeRate(siteStatus)).toBe(500000)
+    await expect(
+      accountBootstrap.fetchCheckInSupport(request, { checkInSupported: true }),
+    ).resolves.toBe(true)
     await expect(
       accountBootstrap.resolveRoutePath(
         { baseUrl: "https://example.invalid", siteType: SITE_TYPES.NEW_API },
@@ -159,7 +151,7 @@ describe("account bootstrap adapters", () => {
     expect(mockFetchUserInfo).toHaveBeenCalledWith(request)
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith(request)
     expect(mockFetchSiteStatus).toHaveBeenCalledWith(request)
-    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(request)
+    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
     expect(mockExtractDefaultExchangeRate).toHaveBeenCalledWith(siteStatus)
   })
 
@@ -225,9 +217,10 @@ describe("account bootstrap adapters", () => {
   it("delegates Sub2API bootstrap operations to Sub2API helpers", async () => {
     mockSub2ApiFetchUserInfo.mockResolvedValue(userInfo)
     mockSub2ApiGetOrCreateAccessToken.mockResolvedValue(tokenInfo)
-    mockSub2ApiFetchSiteStatus.mockResolvedValue(siteStatus)
+    mockSub2ApiFetchPublicSettings.mockResolvedValue({
+      site_name: "Example Portal",
+    })
     mockSub2ApiFetchSupportCheckIn.mockResolvedValue(false)
-    mockSub2ApiExtractDefaultExchangeRate.mockReturnValue(1000000)
 
     await expect(sub2ApiAccountBootstrap.fetchUserInfo(request)).resolves.toBe(
       userInfo,
@@ -236,14 +229,14 @@ describe("account bootstrap adapters", () => {
       sub2ApiAccountBootstrap.getOrCreateAccessToken(request),
     ).resolves.toBe(tokenInfo)
     await expect(
-      sub2ApiAccountBootstrap.fetchSiteStatus(request),
-    ).resolves.toBe(siteStatus)
+      sub2ApiAccountBootstrap.loadBootstrapFacts(request),
+    ).resolves.toEqual({
+      displayName: "Example Portal",
+      checkInSupported: false,
+    })
     await expect(
-      sub2ApiAccountBootstrap.fetchCheckInSupport(request),
+      sub2ApiAccountBootstrap.fetchCheckInSupport(request, {}),
     ).resolves.toBe(false)
-    expect(sub2ApiAccountBootstrap.extractDefaultExchangeRate(siteStatus)).toBe(
-      1000000,
-    )
     await expect(
       sub2ApiAccountBootstrap.resolveRoutePath(
         {
@@ -265,19 +258,14 @@ describe("account bootstrap adapters", () => {
 
     expect(mockSub2ApiFetchUserInfo).toHaveBeenCalledWith(request)
     expect(mockSub2ApiGetOrCreateAccessToken).toHaveBeenCalledWith(request)
-    expect(mockSub2ApiFetchSiteStatus).toHaveBeenCalledWith(request)
+    expect(mockSub2ApiFetchPublicSettings).toHaveBeenCalledWith(request)
     expect(mockSub2ApiFetchSupportCheckIn).toHaveBeenCalledWith(request)
-    expect(mockSub2ApiExtractDefaultExchangeRate).toHaveBeenCalledWith(
-      siteStatus,
-    )
   })
 
   it("delegates AIHubMix bootstrap operations to AIHubMix helpers", async () => {
     mockAihubmixFetchUserInfo.mockResolvedValue(userInfo)
     mockAihubmixGetOrCreateAccessToken.mockResolvedValue(tokenInfo)
-    mockAihubmixFetchSiteStatus.mockResolvedValue(siteStatus)
     mockAihubmixFetchSupportCheckIn.mockResolvedValue(undefined)
-    mockAihubmixExtractDefaultExchangeRate.mockReturnValue(null)
 
     await expect(aihubmixAccountBootstrap.fetchUserInfo(request)).resolves.toBe(
       userInfo,
@@ -286,14 +274,15 @@ describe("account bootstrap adapters", () => {
       aihubmixAccountBootstrap.getOrCreateAccessToken(request),
     ).resolves.toBe(tokenInfo)
     await expect(
-      aihubmixAccountBootstrap.fetchSiteStatus(request),
-    ).resolves.toBe(siteStatus)
+      aihubmixAccountBootstrap.loadBootstrapFacts(request),
+    ).resolves.toEqual({
+      displayName: "AIHubMix",
+      checkInSupported: false,
+      defaultExchangeRate: 7.2,
+    })
     await expect(
-      aihubmixAccountBootstrap.fetchCheckInSupport(request),
+      aihubmixAccountBootstrap.fetchCheckInSupport(request, {}),
     ).resolves.toBeUndefined()
-    expect(
-      aihubmixAccountBootstrap.extractDefaultExchangeRate(siteStatus),
-    ).toBe(null)
     await expect(
       aihubmixAccountBootstrap.resolveRoutePath(
         {
@@ -306,11 +295,7 @@ describe("account bootstrap adapters", () => {
 
     expect(mockAihubmixFetchUserInfo).toHaveBeenCalledWith(request)
     expect(mockAihubmixGetOrCreateAccessToken).toHaveBeenCalledWith(request)
-    expect(mockAihubmixFetchSiteStatus).toHaveBeenCalledWith(request)
     expect(mockAihubmixFetchSupportCheckIn).toHaveBeenCalledWith(request)
-    expect(mockAihubmixExtractDefaultExchangeRate).toHaveBeenCalledWith(
-      siteStatus,
-    )
   })
 
   it("maps VoAPI v2 bootstrap operations through the dashboard JWT account", async () => {
@@ -343,15 +328,15 @@ describe("account bootstrap adapters", () => {
       access_token: "dashboard-jwt",
     })
     await expect(
-      voApiV2AccountBootstrap.fetchSiteStatus(voapiRequest),
+      voApiV2AccountBootstrap.loadBootstrapFacts(voapiRequest),
     ).resolves.toEqual({
-      system_name: "VoAPI",
-      checkin_enabled: true,
+      displayName: "VoAPI",
+      checkInSupported: true,
+      defaultExchangeRate: 7.2,
     })
     await expect(
-      voApiV2AccountBootstrap.fetchCheckInSupport(voapiRequest),
+      voApiV2AccountBootstrap.fetchCheckInSupport(voapiRequest, {}),
     ).resolves.toBe(true)
-    expect(voApiV2AccountBootstrap.extractDefaultExchangeRate(null)).toBe(7.2)
     await expect(
       voApiV2AccountBootstrap.resolveRoutePath(
         {

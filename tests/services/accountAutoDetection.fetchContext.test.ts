@@ -55,8 +55,7 @@ vi.mock(
 
 const {
   mockAutoDetectSmart,
-  mockExtractDefaultExchangeRate,
-  mockFetchSiteStatus,
+  mockLoadBootstrapFacts,
   mockFetchSupportCheckIn,
   mockFetchUserInfo,
   mockGetOrCreateAccessToken,
@@ -98,11 +97,11 @@ describe("accountAutoDetection", () => {
       username: "detected-user",
       access_token: "detected-token",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Detected Portal",
-      checkin_enabled: false,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      defaultExchangeRate: 7,
+      displayName: "Detected Portal",
+      checkInSupported: false,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(7)
 
     const result = await autoDetectAccount(
       "https://status.example.com",
@@ -154,12 +153,11 @@ describe("accountAutoDetection", () => {
       username: "content-status-user",
       access_token: "content-status-token",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Content Status Portal",
-      price: 7.4,
-      checkin_enabled: true,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "Content Status Portal",
+      defaultExchangeRate: 7.4,
+      checkInSupported: true,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(7.4)
 
     const result = await autoDetectAccount(
       "https://status.example.com",
@@ -186,18 +184,12 @@ describe("accountAutoDetection", () => {
         userId: "7",
       },
     })
-    expect(mockFetchSiteStatus).toHaveBeenCalledWith({
+    expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
       baseUrl: "https://status.example.com",
       fetchContext: currentTabFetchContext("https://status.example.com"),
       auth: {
         authType: AuthTypeEnum.AccessToken,
       },
-    })
-    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
-    expect(mockExtractDefaultExchangeRate).toHaveBeenCalledWith({
-      system_name: "Content Status Portal",
-      price: 7.4,
-      checkin_enabled: true,
     })
   })
 
@@ -216,11 +208,10 @@ describe("accountAutoDetection", () => {
       username: "browser-context-user",
       access_token: "browser-context-token",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Browser Context Portal",
-      checkin_enabled: true,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "Browser Context Portal",
+      checkInSupported: true,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
       "https://browser-context.example.com",
@@ -237,7 +228,7 @@ describe("accountAutoDetection", () => {
         userId: "8",
       },
     })
-    expect(mockFetchSiteStatus).toHaveBeenCalledWith({
+    expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
       baseUrl: "https://browser-context.example.com",
       fetchContext,
       auth: {
@@ -266,11 +257,10 @@ describe("accountAutoDetection", () => {
       username: "malformed-context-user",
       access_token: "malformed-context-token",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Malformed Context Portal",
-      checkin_enabled: true,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "Malformed Context Portal",
+      checkInSupported: true,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
       "https://malformed.example.com",
@@ -286,7 +276,7 @@ describe("accountAutoDetection", () => {
         userId: "8",
       },
     })
-    expect(mockFetchSiteStatus).toHaveBeenCalledWith({
+    expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
       baseUrl: "https://malformed.example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -312,11 +302,10 @@ describe("accountAutoDetection", () => {
       username: "legacy-context-user",
       access_token: "legacy-context-token",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Legacy Context Portal",
-      checkin_enabled: true,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "Legacy Context Portal",
+      checkInSupported: true,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
       "https://legacy-context.example.com",
@@ -352,11 +341,10 @@ describe("accountAutoDetection", () => {
       username: "content-status-user",
       access_token: "content-status-token",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Content Status Portal",
-      checkin_enabled: true,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "Content Status Portal",
+      checkInSupported: true,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
       "https://status.example.com",
@@ -381,12 +369,11 @@ describe("accountAutoDetection", () => {
       username: "status-fallback-user",
       access_token: "status-fallback-token",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Service Status Portal",
-      price: 6.9,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "Service Status Portal",
+      defaultExchangeRate: 6.9,
     })
     mockFetchSupportCheckIn.mockResolvedValueOnce(false)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(6.9)
 
     const result = await autoDetectAccount(
       "https://status.example.com",
@@ -404,20 +391,23 @@ describe("accountAutoDetection", () => {
         selection: { mode: "automatic" },
       }),
     })
-    expect(mockFetchSiteStatus).toHaveBeenCalledWith({
+    expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
       baseUrl: "https://status.example.com",
       fetchContext: currentTabFetchContext("https://status.example.com"),
       auth: {
         authType: AuthTypeEnum.AccessToken,
       },
     })
-    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
-      baseUrl: "https://status.example.com",
-      fetchContext: currentTabFetchContext("https://status.example.com"),
-      auth: {
-        authType: AuthTypeEnum.None,
+    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://status.example.com",
+        fetchContext: currentTabFetchContext("https://status.example.com"),
+        auth: {
+          authType: AuthTypeEnum.None,
+        },
       },
-    })
+      { displayName: "Service Status Portal", defaultExchangeRate: 6.9 },
+    )
   })
 
   it("passes current-tab context to New API cookie-auth auto-detect completion", async () => {
@@ -434,12 +424,12 @@ describe("accountAutoDetection", () => {
       username: "incognito-cookie-user",
       access_token: "",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      defaultExchangeRate: 6.6,
       billing_mode: "quota",
-      system_name: "Incognito Portal",
-      checkin_enabled: true,
+      displayName: "Incognito Portal",
+      checkInSupported: true,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(6.6)
 
     const result = await autoDetectAccount(
       "https://cookie.example.com",
@@ -460,14 +450,13 @@ describe("accountAutoDetection", () => {
         userId: "7",
       },
     })
-    expect(mockFetchSiteStatus).toHaveBeenCalledWith({
+    expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
       baseUrl: "https://cookie.example.com",
       fetchContext: currentTabFetchContext("https://cookie.example.com"),
       auth: {
         authType: AuthTypeEnum.Cookie,
       },
     })
-    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
   })
 
   it("passes current-tab context to New API access-token auto-detect completion", async () => {
@@ -484,12 +473,12 @@ describe("accountAutoDetection", () => {
       username: "incognito-token-user",
       access_token: "incognito-created-token",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      defaultExchangeRate: 6.6,
       billing_mode: "quota",
-      system_name: "Incognito Token Portal",
-      checkin_enabled: true,
+      displayName: "Incognito Token Portal",
+      checkInSupported: true,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(6.6)
 
     const result = await autoDetectAccount(
       "https://cookie.example.com",
@@ -510,14 +499,13 @@ describe("accountAutoDetection", () => {
         userId: "7",
       },
     })
-    expect(mockFetchSiteStatus).toHaveBeenCalledWith({
+    expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
       baseUrl: "https://cookie.example.com",
       fetchContext: currentTabFetchContext("https://cookie.example.com"),
       auth: {
         authType: AuthTypeEnum.AccessToken,
       },
     })
-    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
   })
 
   it("lets the service layer handle New API current-tab token fallback", async () => {
@@ -534,11 +522,10 @@ describe("accountAutoDetection", () => {
       username: "fallback-user",
       access_token: "fallback-token",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Fallback Portal",
-      checkin_enabled: false,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "Fallback Portal",
+      checkInSupported: false,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
       "https://cookie.example.com",
@@ -558,7 +545,6 @@ describe("accountAutoDetection", () => {
         userId: "7",
       },
     })
-    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
   })
 
   it("passes current-tab context to Veloera access-token auto-detect completion", async () => {
@@ -575,11 +561,10 @@ describe("accountAutoDetection", () => {
       username: "veloera-user",
       access_token: "veloera-token",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Veloera Portal",
-      checkin_enabled: false,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "Veloera Portal",
+      checkInSupported: false,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
       "https://veloera.example.com",
@@ -600,14 +585,13 @@ describe("accountAutoDetection", () => {
         userId: "7",
       },
     })
-    expect(mockFetchSiteStatus).toHaveBeenCalledWith({
+    expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
       baseUrl: "https://veloera.example.com",
       fetchContext: currentTabFetchContext("https://veloera.example.com"),
       auth: {
         authType: AuthTypeEnum.AccessToken,
       },
     })
-    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
   })
 
   it("uses final hinted site type in metadata when completion validation fails", async () => {
@@ -632,11 +616,10 @@ describe("accountAutoDetection", () => {
       username: "",
       access_token: "veloera-token",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Veloera",
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "Veloera",
     })
     mockFetchSupportCheckIn.mockResolvedValueOnce(false)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
       "https://veloera.example.com",

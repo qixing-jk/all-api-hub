@@ -35,7 +35,7 @@ const expectAccountBootstrapCapability = (
 ) => {
   expect(capabilities.account?.bootstrap).toEqual(
     expect.objectContaining({
-      fetchSiteStatus: expect.any(Function),
+      loadBootstrapFacts: expect.any(Function),
       fetchUserInfo: expect.any(Function),
       resolveRoutePath: expect.any(Function),
     }),

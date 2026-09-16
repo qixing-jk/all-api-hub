@@ -16,7 +16,7 @@ import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const {
   mockFetchAccountData,
-  mockFetchSiteStatus,
+  mockLoadBootstrapFacts,
   mockgetSiteTypeCapabilities,
   mockUpdateAccount,
   mockUpdateAccountWithCheckInDraft,
@@ -25,7 +25,7 @@ const {
   mockValidateManagementKey,
 } = vi.hoisted(() => ({
   mockFetchAccountData: vi.fn(),
-  mockFetchSiteStatus: vi.fn(),
+  mockLoadBootstrapFacts: vi.fn(),
   mockgetSiteTypeCapabilities: vi.fn(),
   mockUpdateAccount: vi.fn(),
   mockUpdateAccountWithCheckInDraft: vi.fn(),
@@ -58,7 +58,7 @@ vi.mock("~/services/accounts/accountStorage/accountCheckInState", () => ({
 describe("account persistence and form validation", () => {
   beforeEach(() => {
     mockFetchAccountData.mockReset()
-    mockFetchSiteStatus.mockReset()
+    mockLoadBootstrapFacts.mockReset()
     mockgetSiteTypeCapabilities.mockReset()
     mockUpdateAccount.mockReset()
     mockUpdateAccountWithCheckInDraft.mockReset()
@@ -79,7 +79,7 @@ describe("account persistence and form validation", () => {
           fetchData: mockFetchAccountData,
         },
         bootstrap: {
-          fetchSiteStatus: mockFetchSiteStatus,
+          loadBootstrapFacts: mockLoadBootstrapFacts,
         },
       },
     }))
@@ -654,12 +654,12 @@ describe("account persistence and form validation", () => {
       } as browser.tabs.Tab)
 
       expect(result).toBe("Custom Portal")
-      expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+      expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
     })
 
     it("falls back to the normalized domain when no site-type hint is available", async () => {
-      mockFetchSiteStatus.mockResolvedValueOnce({
-        system_name: "Billing Center",
+      mockLoadBootstrapFacts.mockResolvedValueOnce({
+        displayName: "Billing Center",
       })
 
       const result = await getSiteName({
@@ -669,12 +669,12 @@ describe("account persistence and form validation", () => {
       } as browser.tabs.Tab)
 
       expect(result).toBe("Example")
-      expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+      expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
     })
 
     it("falls back to the normalized domain when site status also returns a default-like name", async () => {
-      mockFetchSiteStatus.mockResolvedValueOnce({
-        system_name: "one-api",
+      mockLoadBootstrapFacts.mockResolvedValueOnce({
+        displayName: "one-api",
       })
 
       const result = await getSiteName("https://api.example.co.uk/console")
@@ -683,8 +683,8 @@ describe("account persistence and form validation", () => {
     })
 
     it("uses the provided site-type hint when resolving site status", async () => {
-      mockFetchSiteStatus.mockResolvedValueOnce({
-        system_name: "Sub2 Portal",
+      mockLoadBootstrapFacts.mockResolvedValueOnce({
+        displayName: "Sub2 Portal",
       })
 
       const result = await getSiteName(
@@ -699,7 +699,7 @@ describe("account persistence and form validation", () => {
       expect(vi.mocked(getSiteTypeCapabilities)).toHaveBeenCalledWith(
         SITE_TYPES.SUB2API,
       )
-      expect(mockFetchSiteStatus).toHaveBeenCalledWith({
+      expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
         baseUrl: "https://example.com",
         auth: { authType: AuthTypeEnum.None },
       })
@@ -716,12 +716,12 @@ describe("account persistence and form validation", () => {
       )
 
       expect(result).toBe("Example")
-      expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+      expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
     })
 
-    it("falls back to system_name when a default tab title is paired with a site-type hint", async () => {
-      mockFetchSiteStatus.mockResolvedValueOnce({
-        system_name: "Billing Center",
+    it("falls back to displayName when a default tab title is paired with a site-type hint", async () => {
+      mockLoadBootstrapFacts.mockResolvedValueOnce({
+        displayName: "Billing Center",
       })
 
       const result = await getSiteName(
@@ -734,7 +734,7 @@ describe("account persistence and form validation", () => {
       )
 
       expect(result).toBe("Billing Center")
-      expect(mockFetchSiteStatus).toHaveBeenCalledWith({
+      expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
         baseUrl: "https://example.com",
         auth: { authType: AuthTypeEnum.None },
       })
@@ -745,17 +745,17 @@ describe("account persistence and form validation", () => {
         "https://example.com/console",
         "new-api",
         {
-          system_name: "Billing Center",
+          displayName: "Billing Center",
         },
       )
 
       expect(result).toBe("Billing Center")
-      expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+      expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
     })
 
     it("treats an explicit null site status as a completed lookup", async () => {
-      mockFetchSiteStatus.mockResolvedValueOnce({
-        system_name: "Unexpected second lookup",
+      mockLoadBootstrapFacts.mockResolvedValueOnce({
+        displayName: "Unexpected second lookup",
       })
 
       const result = await getSiteName(
@@ -765,18 +765,18 @@ describe("account persistence and form validation", () => {
       )
 
       expect(result).toBe("Example")
-      expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+      expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
     })
 
     it("falls back to the raw input prefix when the URL cannot be parsed", async () => {
       const result = await getSiteName("not a url/path", SITE_TYPES.NEW_API)
 
       expect(result).toBe("not a url")
-      expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+      expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
     })
 
     it("falls back to the domain name when site status fetch fails", async () => {
-      mockFetchSiteStatus.mockRejectedValueOnce(new Error("status failed"))
+      mockLoadBootstrapFacts.mockRejectedValueOnce(new Error("status failed"))
 
       const result = await getSiteName(
         "https://api.example.com/dashboard",

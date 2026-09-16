@@ -1,7 +1,6 @@
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import type {
   AccessTokenInfo,
-  SiteStatusInfo,
   UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
@@ -12,6 +11,22 @@ import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("NewApiFamilyAccountBootstrap")
+
+interface SiteStatusInfo {
+  price?: number
+  stripe_unit_price?: number
+  PaymentUSDRate?: number
+  system_name?: string
+  theme?: string
+  /**
+   * 是否启用签到功能
+   */
+  checkin_enabled?: boolean
+  /**
+   * Veloera public status uses a distinct snake-case field.
+   */
+  check_in_enabled?: boolean
+}
 
 interface AccountBootstrapImplementation {
   fetchUserInfo: typeof fetchUserInfo
@@ -59,16 +74,16 @@ export const extractDefaultExchangeRate = (
     return null
   }
 
-  if (statusInfo.price && statusInfo.price > 0) {
-    return statusInfo.price
-  }
-
-  if (statusInfo.stripe_unit_price && statusInfo.stripe_unit_price > 0) {
-    return statusInfo.stripe_unit_price
-  }
-
-  if (statusInfo.PaymentUSDRate && statusInfo.PaymentUSDRate > 0) {
-    return statusInfo.PaymentUSDRate
+  for (const rate of [
+    statusInfo.price,
+    statusInfo.stripe_unit_price,
+    statusInfo.PaymentUSDRate,
+  ]) {
+    // Preserve the existing upstream compatibility and precedence, including
+    // numeric strings; bootstrap normalization must not tighten this contract.
+    if (rate && rate > 0) {
+      return rate
+    }
   }
 
   return null
@@ -185,15 +200,20 @@ export async function getOrCreateAccessToken(
   }
 }
 
-/**
- * Check default New API-family check-in support from public site status.
- */
+/** Read the New API-family switch from an already-loaded public status. */
+export function extractCheckInSupport(
+  siteStatus: SiteStatusInfo | null,
+): boolean | undefined {
+  return siteStatus?.checkin_enabled
+}
+
+/** Check default New API-family check-in support from public site status. */
 export async function fetchSupportCheckIn(
   request: ApiServiceRequest,
   signal?: AbortSignal,
 ): Promise<boolean | undefined> {
   const siteStatus = await fetchSiteStatus(request, signal)
-  return siteStatus?.checkin_enabled
+  return extractCheckInSupport(siteStatus)
 }
 
 export const defaultAccountBootstrapImplementation: AccountBootstrapImplementation =

@@ -240,8 +240,8 @@ export const createNewApiAccountCompletion = (
       return normalizedTokenInfo
     })
 
-    const siteStatusPromise = accountBootstrap
-      .fetchSiteStatus(
+    const bootstrapFactsPromise = accountBootstrap
+      .loadBootstrapFacts(
         createRequest({
           authType: requestedAuthType || AuthTypeEnum.None,
         }),
@@ -253,27 +253,28 @@ export const createNewApiAccountCompletion = (
         )
       })
 
-    const checkSupportPromise = siteStatusPromise.then((siteStatus) =>
-      typeof siteStatus?.checkin_enabled === "boolean"
-        ? siteStatus.checkin_enabled
-        : accountBootstrap
-            .fetchCheckInSupport(
-              createRequest({
-                authType: AuthTypeEnum.None,
-              }),
-            )
-            .catch(helpers.handleCheckInSupportFetchFailure),
+    const checkSupportPromise = bootstrapFactsPromise.then((bootstrapFacts) =>
+      accountBootstrap
+        .fetchCheckInSupport(
+          createRequest({
+            authType: AuthTypeEnum.None,
+          }),
+          bootstrapFacts,
+        )
+        .catch(helpers.handleCheckInSupportFetchFailure),
     )
 
-    const siteMetadataPromise = siteStatusPromise.then(async (siteStatus) => {
-      const exchangeRate =
-        accountBootstrap.extractDefaultExchangeRate(siteStatus) ??
-        UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
-      helpers.captureRecoveryData({ exchangeRate })
-      const siteName = await helpers.fetchSiteName(siteStatus)
-      helpers.captureRecoveryData({ siteName })
-      return { siteName, exchangeRate }
-    })
+    const siteMetadataPromise = bootstrapFactsPromise.then(
+      async (bootstrapFacts) => {
+        const exchangeRate =
+          bootstrapFacts?.defaultExchangeRate ??
+          UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+        helpers.captureRecoveryData({ exchangeRate })
+        const siteName = await helpers.fetchSiteName(bootstrapFacts)
+        helpers.captureRecoveryData({ siteName })
+        return { siteName, exchangeRate }
+      },
+    )
 
     const [tokenResult, checkSupportResult, siteMetadataResult] =
       await Promise.allSettled([

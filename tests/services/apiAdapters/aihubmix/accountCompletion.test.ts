@@ -13,14 +13,12 @@ import {
 } from "../checkInFixtures"
 
 const {
-  mockExtractDefaultExchangeRate,
-  mockFetchSiteStatus,
+  mockLoadBootstrapFacts,
   mockFetchSupportCheckIn,
   mockFetchUserInfo,
   mockGetOrCreateAccessToken,
 } = vi.hoisted(() => ({
-  mockExtractDefaultExchangeRate: vi.fn(),
-  mockFetchSiteStatus: vi.fn(),
+  mockLoadBootstrapFacts: vi.fn(),
   mockFetchSupportCheckIn: vi.fn(),
   mockFetchUserInfo: vi.fn(),
   mockGetOrCreateAccessToken: vi.fn(),
@@ -28,9 +26,8 @@ const {
 
 vi.mock("~/services/apiAdapters/aihubmix/accountBootstrap", () => ({
   aihubmixAccountBootstrap: {
-    extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
     fetchCheckInSupport: mockFetchSupportCheckIn,
-    fetchSiteStatus: mockFetchSiteStatus,
+    loadBootstrapFacts: mockLoadBootstrapFacts,
     fetchUserInfo: mockFetchUserInfo,
     getOrCreateAccessToken: mockGetOrCreateAccessToken,
     resolveRoutePath: vi.fn(),
@@ -55,14 +52,16 @@ const {
 describe("aihubmixAccountCompletion", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockFetchSupportCheckIn.mockImplementation(
+      async (_request, facts) => facts?.checkInSupported,
+    )
   })
 
   it("uses detected access-token data and probes status with Cookie auth", async () => {
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "AIHubMix",
-      checkin_enabled: false,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "AIHubMix",
+      checkInSupported: false,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await aihubmixAccountCompletion.complete(
       {
@@ -85,14 +84,13 @@ describe("aihubmixAccountCompletion", () => {
     )
 
     expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
-    expect(mockFetchSiteStatus).toHaveBeenCalledWith({
+    expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
       baseUrl: "https://aihubmix.com",
       fetchContext: currentTabFetchContext,
       auth: {
         authType: AuthTypeEnum.Cookie,
       },
     })
-    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
     expect(createInitialCheckInConfig).toHaveBeenCalledWith({
       supported: false,
     })
@@ -123,11 +121,10 @@ describe("aihubmixAccountCompletion", () => {
       username: "  generated-aihubmix-user  ",
       access_token: "  generated-aihubmix-token  ",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "AIHubMix",
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "AIHubMix",
     })
     mockFetchSupportCheckIn.mockResolvedValueOnce(true)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await aihubmixAccountCompletion.complete(
       {
@@ -149,18 +146,21 @@ describe("aihubmixAccountCompletion", () => {
         userId: "12",
       },
     })
-    expect(mockFetchSiteStatus).toHaveBeenCalledWith({
+    expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
       baseUrl: "https://aihubmix.com",
       auth: {
         authType: AuthTypeEnum.Cookie,
       },
     })
-    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
-      baseUrl: "https://aihubmix.com",
-      auth: {
-        authType: AuthTypeEnum.None,
+    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://aihubmix.com",
+        auth: {
+          authType: AuthTypeEnum.None,
+        },
       },
-    })
+      { displayName: "AIHubMix" },
+    )
     expect(result).toMatchObject({
       username: "generated-aihubmix-user",
       accessToken: "generated-aihubmix-token",
@@ -174,11 +174,10 @@ describe("aihubmixAccountCompletion", () => {
   })
 
   it("classifies missing detected username and token as missing access token", async () => {
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "AIHubMix",
-      checkin_enabled: false,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "AIHubMix",
+      checkInSupported: false,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     await expect(
       aihubmixAccountCompletion.complete(
@@ -234,12 +233,12 @@ describe("aihubmixAccountCompletion", () => {
       AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
       tokenError,
     )
-    expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+    expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
   })
 
   it("classifies site status fetch failures", async () => {
     const siteStatusError = new Error("site status unavailable")
-    mockFetchSiteStatus.mockRejectedValueOnce(siteStatusError)
+    mockLoadBootstrapFacts.mockRejectedValueOnce(siteStatusError)
 
     await expect(
       aihubmixAccountCompletion.complete(
@@ -273,11 +272,10 @@ describe("aihubmixAccountCompletion", () => {
 
   it("falls back to disabled check-in detection when support probing fails", async () => {
     const supportError = new Error("support probe unavailable")
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "AIHubMix",
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "AIHubMix",
     })
     mockFetchSupportCheckIn.mockRejectedValueOnce(supportError)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await aihubmixAccountCompletion.complete(
       {
@@ -309,11 +307,10 @@ describe("aihubmixAccountCompletion", () => {
       username: "aihubmix-user",
       access_token: "  ",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "AIHubMix",
-      checkin_enabled: false,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "AIHubMix",
+      checkInSupported: false,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     await expect(
       aihubmixAccountCompletion.complete(
@@ -340,11 +337,10 @@ describe("aihubmixAccountCompletion", () => {
 
   it("classifies invalid generated token payloads as missing access token", async () => {
     mockGetOrCreateAccessToken.mockResolvedValueOnce(null)
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "AIHubMix",
-      checkin_enabled: false,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "AIHubMix",
+      checkInSupported: false,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     await expect(
       aihubmixAccountCompletion.complete(
@@ -374,11 +370,10 @@ describe("aihubmixAccountCompletion", () => {
       username: "  ",
       access_token: "generated-aihubmix-token",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "AIHubMix",
-      checkin_enabled: false,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "AIHubMix",
+      checkInSupported: false,
     })
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     await expect(
       aihubmixAccountCompletion.complete(

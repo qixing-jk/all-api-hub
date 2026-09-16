@@ -1,8 +1,8 @@
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
 import { UI_CONSTANTS } from "~/constants/ui"
 import type { AccountCompletionCapability } from "~/services/apiAdapters/contracts/accountCompletion"
+import { voApiV2AccountBootstrap } from "~/services/apiAdapters/voapiV2/accountBootstrap"
 import { fetchVoApiV2UserInfo } from "~/services/apiService/voapiV2"
-import { VOAPI_V2_SYSTEM_NAME } from "~/services/apiService/voapiV2/type"
 import { AuthTypeEnum } from "~/types"
 
 export const voApiV2AccountCompletion: AccountCompletionCapability = {
@@ -17,19 +17,18 @@ export const voApiV2AccountCompletion: AccountCompletionCapability = {
       )
     }
 
+    const serviceRequest = helpers.createServiceRequest({
+      baseUrl: url,
+      context,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken,
+        userId: detected.userId,
+      },
+    })
     let userInfo
     try {
-      userInfo = await fetchVoApiV2UserInfo(
-        helpers.createServiceRequest({
-          baseUrl: url,
-          context,
-          auth: {
-            authType: AuthTypeEnum.AccessToken,
-            accessToken,
-            userId: detected.userId,
-          },
-        }),
-      )
+      userInfo = await fetchVoApiV2UserInfo(serviceRequest)
     } catch (error) {
       throw helpers.createCompletionError(
         AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
@@ -53,17 +52,18 @@ export const voApiV2AccountCompletion: AccountCompletionCapability = {
       authType: AuthTypeEnum.AccessToken,
     })
 
+    const facts =
+      await voApiV2AccountBootstrap.loadBootstrapFacts(serviceRequest)
     return {
       username,
-      siteName: await helpers.fetchSiteName({
-        system_name: VOAPI_V2_SYSTEM_NAME,
-      }),
+      siteName: await helpers.fetchSiteName(facts),
       accessToken,
       userId,
-      exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+      exchangeRate:
+        facts.defaultExchangeRate ?? UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       authType: AuthTypeEnum.AccessToken,
       checkIn: helpers.createInitialCheckInConfig({
-        supported: true,
+        supported: facts.checkInSupported === true,
       }),
     }
   },

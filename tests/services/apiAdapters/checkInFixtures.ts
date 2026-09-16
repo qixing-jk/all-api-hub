@@ -119,8 +119,8 @@ export function createAccountCompletionHelpersMock(
     }),
   )
   const fetchSiteName = vi.fn(async (siteStatus) =>
-    typeof siteStatus?.system_name === "string" && siteStatus.system_name.trim()
-      ? siteStatus.system_name.trim()
+    typeof siteStatus?.displayName === "string" && siteStatus.displayName.trim()
+      ? siteStatus.displayName.trim()
       : "Example API",
   )
   const createCompletionError = vi.fn(

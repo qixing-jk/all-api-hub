@@ -55,8 +55,7 @@ vi.mock(
 const {
   loggerMock,
   mockAutoDetectSmart,
-  mockExtractDefaultExchangeRate,
-  mockFetchSiteStatus,
+  mockLoadBootstrapFacts,
   mockFetchSupportCheckIn,
   mockFetchUserInfo,
   mockGetOrCreateAccessToken,
@@ -107,9 +106,9 @@ describe("accountAutoDetection", () => {
           upstreamCode,
         ),
       )
-      mockFetchSiteStatus.mockResolvedValueOnce({
-        system_name: "New API portal",
-        checkin_enabled: false,
+      mockLoadBootstrapFacts.mockResolvedValueOnce({
+        displayName: "New API portal",
+        checkInSupported: false,
       })
 
       const result = await autoDetectAccount(
@@ -171,7 +170,7 @@ describe("accountAutoDetection", () => {
           upstreamCode,
         ),
       )
-      mockFetchSiteStatus.mockResolvedValueOnce({ checkin_enabled: false })
+      mockLoadBootstrapFacts.mockResolvedValueOnce({ checkInSupported: false })
 
       const result = await autoDetectAccount(
         "https://panel.example.invalid",
@@ -208,9 +207,9 @@ describe("accountAutoDetection", () => {
     mockGetOrCreateAccessToken.mockRejectedValueOnce(
       new Error(reflectedMessage),
     )
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "rc22 portal",
-      checkin_enabled: false,
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "rc22 portal",
+      checkInSupported: false,
     })
 
     const result = await autoDetectAccount(
@@ -294,7 +293,9 @@ describe("accountAutoDetection", () => {
       username: "recovered-user",
       access_token: "recovered-token",
     })
-    mockFetchSiteStatus.mockRejectedValueOnce(new Error("status unavailable"))
+    mockLoadBootstrapFacts.mockRejectedValueOnce(
+      new Error("status unavailable"),
+    )
 
     const result = await autoDetectAccount(
       "https://aihubmix.com",
@@ -326,11 +327,10 @@ describe("accountAutoDetection", () => {
         accessToken: "detected-console-token",
       },
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "AIHubMix",
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "AIHubMix",
     })
     mockFetchSupportCheckIn.mockResolvedValueOnce(false)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
       "https://aihubmix.com",
@@ -363,9 +363,8 @@ describe("accountAutoDetection", () => {
       username: "aihubmix-user",
       access_token: "",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({ system_name: "AIHubMix" })
+    mockLoadBootstrapFacts.mockResolvedValueOnce({ displayName: "AIHubMix" })
     mockFetchSupportCheckIn.mockResolvedValueOnce(false)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
       "https://aihubmix.com",
@@ -395,11 +394,10 @@ describe("accountAutoDetection", () => {
       username: "missing-token-user",
       access_token: "",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Missing Token Portal",
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "Missing Token Portal",
     })
     mockFetchSupportCheckIn.mockResolvedValueOnce(false)
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
       "https://token.example.com",
@@ -429,7 +427,7 @@ describe("accountAutoDetection", () => {
       username: "status-user",
       access_token: "status-token",
     })
-    mockFetchSiteStatus.mockRejectedValueOnce(
+    mockLoadBootstrapFacts.mockRejectedValueOnce(
       new Error("site status unavailable"),
     )
 
@@ -459,8 +457,8 @@ describe("accountAutoDetection", () => {
     mockGetOrCreateAccessToken.mockRejectedValueOnce(
       new Error("private token backend text"),
     )
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Token Failure Portal",
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "Token Failure Portal",
     })
     mockFetchSupportCheckIn.mockResolvedValueOnce(false)
 
@@ -491,7 +489,9 @@ describe("accountAutoDetection", () => {
       username: "parallel-recovered-user",
       access_token: "parallel-recovered-token",
     })
-    mockFetchSiteStatus.mockRejectedValueOnce(new Error("status unavailable"))
+    mockLoadBootstrapFacts.mockRejectedValueOnce(
+      new Error("status unavailable"),
+    )
 
     const result = await autoDetectAccount(
       "https://parallel.example.com",
@@ -526,7 +526,9 @@ describe("accountAutoDetection", () => {
       },
     })
     mockGetOrCreateAccessToken.mockReturnValueOnce(tokenDeferred.promise)
-    mockFetchSiteStatus.mockRejectedValueOnce(new Error("status unavailable"))
+    mockLoadBootstrapFacts.mockRejectedValueOnce(
+      new Error("status unavailable"),
+    )
 
     const resultPromise = autoDetectAccount(
       "https://parallel.example.com",
@@ -569,13 +571,12 @@ describe("accountAutoDetection", () => {
       username: "checkin-fallback-user",
       access_token: "checkin-fallback-token",
     })
-    mockFetchSiteStatus.mockResolvedValueOnce({
-      system_name: "Checkin Fallback Portal",
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "Checkin Fallback Portal",
     })
     mockFetchSupportCheckIn.mockRejectedValueOnce(
       new Error("private check-in backend text"),
     )
-    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
       "https://checkin-fallback.example.com",
