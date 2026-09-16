@@ -85,10 +85,10 @@ export function CredentialAssociationMenu({
       ? Link2Off
       : Link2
   const statusIconClassName = isNeedsConfirmation
-    ? "text-warning-text"
+    ? "text-warning-indicator"
     : isUnlinked
       ? "text-muted-foreground"
-      : "text-success-text"
+      : "text-success-indicator"
   const hasVisibleCount = count !== undefined
   const triggerSize = hasVisibleLabel || hasVisibleCount ? "sm" : "icon-sm"
   const triggerClassName = cn(
@@ -209,7 +209,7 @@ export function CredentialAssociationMenu({
             ) : null}
             {item.onConfirm && labels.confirm ? (
               <DropdownMenuItem onSelect={item.onConfirm}>
-                <Check className="text-success-text" />
+                <Check className="text-success-indicator" />
                 {labels.confirm}
               </DropdownMenuItem>
             ) : null}

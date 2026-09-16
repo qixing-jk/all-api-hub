@@ -41,7 +41,7 @@ export default function DuplicateAccountWarningOnAddSettings() {
         <CardList>
           <CardItem
             id="duplicate-account-warning-toggle"
-            icon={<TriangleAlert className="text-warning-text h-5 w-5" />}
+            icon={<TriangleAlert className="text-warning-indicator h-5 w-5" />}
             title={t("duplicateAccountWarningOnAdd.toggleLabel")}
             description={t("duplicateAccountWarningOnAdd.toggleDesc")}
             rightContent={

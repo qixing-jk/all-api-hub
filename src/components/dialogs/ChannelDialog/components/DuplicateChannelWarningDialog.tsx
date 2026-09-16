@@ -34,7 +34,7 @@ export function DuplicateChannelWarningDialog({
       header={
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <TriangleAlert className="text-warning-text h-5 w-5" />
+            <TriangleAlert className="text-warning-indicator h-5 w-5" />
             <h2 className="text-foreground text-lg font-semibold">
               {t("channelDialog:warnings.channelExists.title")}
             </h2>

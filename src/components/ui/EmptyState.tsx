@@ -78,7 +78,7 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
         <div
           className={cn(
             "text-disabled-foreground mb-density-4 flex h-12 w-12 items-center justify-center",
-            isDestructive && "text-destructive-text",
+            isDestructive && "text-destructive-indicator",
           )}
         >
           {icon}

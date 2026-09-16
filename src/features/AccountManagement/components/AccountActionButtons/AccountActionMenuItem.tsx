@@ -21,7 +21,7 @@ interface AccountActionMenuItemProps {
   /**
    * Non-destructive semantic tone for the menu item.
    * - `warning`: used for reversible, potentially risky actions (e.g., Disable).
-   * - `success`: used for recovery/positive actions (e.g., Enable).
+   * - `success`: reserved for confirmed positive feedback, not ordinary actions.
    */
   tone?: "default" | "warning" | "success"
   /** Disables the item and renders it with the disabled palette. */
@@ -38,16 +38,13 @@ interface AccountActionMenuItemProps {
   closeOnSelect?: boolean
 }
 
-const menuItemClassName =
-  "flex w-full items-start gap-density-2 px-3 py-density-2 text-left text-sm text-secondary-foreground hover:text-foreground data-[highlighted]:bg-surface-subtle dark:data-[highlighted]:bg-secondary"
-const warningMenuItemClassName =
-  "flex w-full items-start gap-density-2 px-3 py-density-2 text-left text-sm text-warning-text hover:text-warning-text data-[highlighted]:bg-warning-soft"
-const successMenuItemClassName =
-  "flex w-full items-start gap-density-2 px-3 py-density-2 text-left text-sm text-success-text hover:text-success-text data-[highlighted]:bg-success-soft"
-const destructiveMenuItemClassName =
-  "flex w-full items-start gap-density-2 px-3 py-density-2 text-left text-sm text-destructive-text hover:text-destructive-text data-[highlighted]:bg-destructive-soft"
-const disabledMenuItemClassName =
-  "flex w-full items-center gap-density-2 px-3 py-density-2 text-left text-sm text-faint-foreground dark:text-muted-foreground cursor-not-allowed"
+const menuItemLayoutClassName =
+  "flex w-full gap-density-2 px-3 py-density-2 text-left text-sm"
+const menuItemClassName = `${menuItemLayoutClassName} items-start text-secondary-foreground hover:text-foreground data-[highlighted]:bg-surface-subtle dark:data-[highlighted]:bg-secondary`
+const warningMenuItemClassName = `${menuItemLayoutClassName} items-start text-warning-text hover:text-warning-text data-[highlighted]:bg-warning-soft`
+const successMenuItemClassName = `${menuItemLayoutClassName} items-start text-success-text hover:text-success-text data-[highlighted]:bg-success-soft`
+const destructiveMenuItemClassName = `${menuItemLayoutClassName} items-start text-destructive-text hover:text-destructive-text data-[highlighted]:bg-destructive-soft`
+const disabledMenuItemClassName = `${menuItemLayoutClassName} items-center text-faint-foreground dark:text-muted-foreground cursor-not-allowed`
 
 export const AccountActionMenuItem: React.FC<AccountActionMenuItemProps> = ({
   onClick,

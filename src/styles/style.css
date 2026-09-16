@@ -123,6 +123,11 @@
   --color-info-soft-hover: var(--info-soft-hover);
   --color-info-soft-foreground: var(--info-soft-foreground);
   --color-info-border: var(--info-border);
+  --color-success-indicator: var(--success-indicator);
+  --color-warning-indicator: var(--warning-indicator);
+  --color-destructive-indicator: var(--destructive-indicator);
+  --color-info-indicator: var(--info-indicator);
+  --color-neutral-indicator: var(--neutral-indicator);
   --color-pricing-input: var(--pricing-input);
   --color-pricing-input-soft: var(--pricing-input-soft);
   --color-pricing-output: var(--pricing-output);

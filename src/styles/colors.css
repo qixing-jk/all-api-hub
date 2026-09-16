@@ -52,9 +52,14 @@
   --success-soft: var(--color-semantic-success-50);
   --success-soft-foreground: var(--color-semantic-success-800);
   --success-border: var(--color-semantic-success-200);
-  --warning: var(--color-semantic-warning-700);
-  --warning-hover: var(--color-semantic-warning-800);
-  --warning-foreground: #ffffff;
+  --warning: var(--color-semantic-warning-500);
+  --warning-hover: var(--color-semantic-warning-600);
+  /* Gold surfaces need dark text, including on hover and nested count badges. */
+  --warning-foreground: color-mix(
+    in srgb,
+    var(--status-warning-base),
+    black 80%
+  );
   --warning-text: var(--color-semantic-warning-800);
   --warning-soft: var(--color-semantic-warning-50);
   --warning-soft-foreground: var(--color-semantic-warning-800);
@@ -64,7 +69,7 @@
   --destructive-foreground: #ffffff;
   --destructive-text: var(--color-semantic-error-700);
   --destructive-soft: var(--color-semantic-error-50);
-  --destructive-soft-foreground: var(--color-semantic-error-800);
+  --destructive-soft-foreground: var(--color-semantic-error-700);
   --destructive-border: var(--color-semantic-error-200);
   --info: var(--color-semantic-info-700);
   --info-hover: var(--color-semantic-info-800);
@@ -73,6 +78,15 @@
   --info-soft: var(--color-semantic-info-50);
   --info-soft-foreground: var(--color-semantic-info-800);
   --info-border: var(--color-semantic-info-200);
+  /* Standalone status dots and icons share these roles. Text and filled controls
+     keep their own contrast contracts. Presets may adapt these roles to their
+     surfaces while preserving the success/warning/error/info hue families;
+     configurable accent colors must never change status meaning. */
+  --success-indicator: var(--color-semantic-success-600);
+  --warning-indicator: var(--color-semantic-warning-700);
+  --destructive-indicator: var(--color-semantic-error-600);
+  --info-indicator: var(--color-semantic-info-600);
+  --neutral-indicator: var(--status-neutral-base);
   /* Pricing categories convey different units, not success or warning. */
   --pricing-input: var(--link);
   --pricing-input-soft: var(--primary-soft);
@@ -144,6 +158,16 @@
   --table-header: var(--muted);
   --link: var(--theme-color-300);
   --ring: var(--theme-color-400);
+  /* Saturated highlights stay readable on dark surfaces without turning pink. */
+  --success-indicator: var(--color-semantic-success-400);
+  --warning-indicator: var(--color-semantic-warning-500);
+  --destructive-indicator: var(--color-semantic-error-400);
+  --info-indicator: var(--color-semantic-info-400);
+  --neutral-indicator: color-mix(
+    in srgb,
+    var(--status-neutral-base),
+    white 35%
+  );
   --success-text: var(--color-semantic-success-300);
   --success-soft: color-mix(
     in srgb,
@@ -222,7 +246,7 @@
   );
   --destructive-soft-hover: color-mix(
     in srgb,
-    var(--destructive-text) 8%,
+    var(--destructive-text) 3%,
     var(--destructive-soft)
   );
   --info-soft-hover: color-mix(in srgb, var(--info-text) 8%, var(--info-soft));
@@ -267,63 +291,227 @@
   --spinner-primary-color: var(--primary);
 }
 
+/* One seed per semantic family. All shades resolve inside the active theme scope,
+   so changing a seed updates icons, text, borders and filled controls together. */
+:root,
+:host,
+[data-color-scope] {
+  --status-success-base: #00b85c;
+  --status-warning-base: #ff9f00;
+  --status-destructive-base: #ff241a;
+  --status-info-base: #1670ff;
+  --status-neutral-base: #64748b;
+  --color-semantic-success-50: color-mix(
+    in srgb,
+    var(--status-success-base),
+    white 96%
+  );
+  --color-semantic-success-100: color-mix(
+    in srgb,
+    var(--status-success-base),
+    white 90%
+  );
+  --color-semantic-success-200: color-mix(
+    in srgb,
+    var(--status-success-base),
+    white 75%
+  );
+  --color-semantic-success-300: color-mix(
+    in srgb,
+    var(--status-success-base),
+    white 50%
+  );
+  --color-semantic-success-400: color-mix(
+    in srgb,
+    var(--status-success-base),
+    white 15%
+  );
+  --color-semantic-success-500: var(--status-success-base);
+  --color-semantic-success-600: color-mix(
+    in srgb,
+    var(--status-success-base),
+    black 20%
+  );
+  --color-semantic-success-700: color-mix(
+    in srgb,
+    var(--status-success-base),
+    black 30%
+  );
+  --color-semantic-success-800: color-mix(
+    in srgb,
+    var(--status-success-base),
+    black 45%
+  );
+  --color-semantic-success-900: color-mix(
+    in srgb,
+    var(--status-success-base),
+    black 60%
+  );
+  --color-semantic-success-950: color-mix(
+    in srgb,
+    var(--status-success-base),
+    black 75%
+  );
+  --color-semantic-warning-50: color-mix(
+    in srgb,
+    var(--status-warning-base),
+    white 96%
+  );
+  --color-semantic-warning-100: color-mix(
+    in srgb,
+    var(--status-warning-base),
+    white 90%
+  );
+  --color-semantic-warning-200: color-mix(
+    in srgb,
+    var(--status-warning-base),
+    white 75%
+  );
+  --color-semantic-warning-300: color-mix(
+    in srgb,
+    var(--status-warning-base),
+    white 50%
+  );
+  --color-semantic-warning-400: color-mix(
+    in srgb,
+    var(--status-warning-base),
+    white 15%
+  );
+  --color-semantic-warning-500: var(--status-warning-base);
+  --color-semantic-warning-600: color-mix(
+    in srgb,
+    var(--status-warning-base),
+    black 20%
+  );
+  --color-semantic-warning-700: color-mix(
+    in srgb,
+    var(--status-warning-base),
+    black 30%
+  );
+  --color-semantic-warning-800: color-mix(
+    in srgb,
+    var(--status-warning-base),
+    black 45%
+  );
+  --color-semantic-warning-900: color-mix(
+    in srgb,
+    var(--status-warning-base),
+    black 60%
+  );
+  --color-semantic-warning-950: color-mix(
+    in srgb,
+    var(--status-warning-base),
+    black 75%
+  );
+  --color-semantic-error-50: color-mix(
+    in srgb,
+    var(--status-destructive-base),
+    white 96%
+  );
+  --color-semantic-error-100: color-mix(
+    in srgb,
+    var(--status-destructive-base),
+    white 90%
+  );
+  --color-semantic-error-200: color-mix(
+    in srgb,
+    var(--status-destructive-base),
+    white 75%
+  );
+  --color-semantic-error-300: color-mix(
+    in srgb,
+    var(--status-destructive-base),
+    white 50%
+  );
+  --color-semantic-error-400: color-mix(
+    in srgb,
+    var(--status-destructive-base),
+    white 15%
+  );
+  --color-semantic-error-500: var(--status-destructive-base);
+  --color-semantic-error-600: color-mix(
+    in srgb,
+    var(--status-destructive-base),
+    black 15%
+  );
+  --color-semantic-error-700: color-mix(
+    in srgb,
+    var(--status-destructive-base),
+    black 30%
+  );
+  --color-semantic-error-800: color-mix(
+    in srgb,
+    var(--status-destructive-base),
+    black 45%
+  );
+  --color-semantic-error-900: color-mix(
+    in srgb,
+    var(--status-destructive-base),
+    black 60%
+  );
+  --color-semantic-error-950: color-mix(
+    in srgb,
+    var(--status-destructive-base),
+    black 75%
+  );
+  --color-semantic-info-50: color-mix(
+    in srgb,
+    var(--status-info-base),
+    white 96%
+  );
+  --color-semantic-info-100: color-mix(
+    in srgb,
+    var(--status-info-base),
+    white 90%
+  );
+  --color-semantic-info-200: color-mix(
+    in srgb,
+    var(--status-info-base),
+    white 75%
+  );
+  --color-semantic-info-300: color-mix(
+    in srgb,
+    var(--status-info-base),
+    white 50%
+  );
+  --color-semantic-info-400: color-mix(
+    in srgb,
+    var(--status-info-base),
+    white 20%
+  );
+  --color-semantic-info-500: var(--status-info-base);
+  --color-semantic-info-600: color-mix(
+    in srgb,
+    var(--status-info-base),
+    black 20%
+  );
+  --color-semantic-info-700: color-mix(
+    in srgb,
+    var(--status-info-base),
+    black 30%
+  );
+  --color-semantic-info-800: color-mix(
+    in srgb,
+    var(--status-info-base),
+    black 45%
+  );
+  --color-semantic-info-900: color-mix(
+    in srgb,
+    var(--status-info-base),
+    black 60%
+  );
+  --color-semantic-info-950: color-mix(
+    in srgb,
+    var(--status-info-base),
+    black 75%
+  );
+}
+
 @theme {
-  --color-semantic-info-950: var(--color-blue-950);
-  --color-semantic-error-950: var(--color-red-950);
-  --color-semantic-error-400: var(--color-red-400);
-  --color-semantic-error-300: var(--color-red-300);
-  --color-semantic-error-200: var(--color-red-200);
-  --color-semantic-warning-950: var(--color-amber-950);
-  --color-semantic-warning-400: var(--color-amber-400);
-  --color-semantic-warning-300: var(--color-amber-300);
-  --color-semantic-warning-200: var(--color-amber-200);
-  --color-semantic-success-950: var(--color-green-950);
-  --color-semantic-success-400: var(--color-green-400);
-  --color-semantic-success-300: var(--color-green-300);
-  --color-semantic-success-200: var(--color-green-200);
-  /* 品牌颜色 */
+  /* External brand colors are independent of status semantics. */
   --color-brand-blue: #3b82f6;
   --color-brand-green: #10b981;
   --color-brand-red: #ef4444;
   --color-brand-yellow: #f59e0b;
   --color-brand-purple: #a855f7;
-
-  /* 语义化颜色 - 成功 */
-  --color-semantic-success-50: #f0fdf4;
-  --color-semantic-success-100: #dcfce7;
-  --color-semantic-success-500: #22c55e;
-  --color-semantic-success-600: #16a34a;
-  --color-semantic-success-700: #15803d;
-  --color-semantic-success-800: #166534;
-  --color-semantic-success-900: #14532d;
-
-  /* 语义化颜色 - 警告 */
-  --color-semantic-warning-50: #fffbeb;
-  --color-semantic-warning-100: #fef3c7;
-  --color-semantic-warning-500: #f59e0b;
-  --color-semantic-warning-600: #d97706;
-  --color-semantic-warning-700: #b45309;
-  --color-semantic-warning-800: #92400e;
-  --color-semantic-warning-900: #78350f;
-
-  /* 语义化颜色 - 错误 */
-  --color-semantic-error-50: #fef2f2;
-  --color-semantic-error-100: #fee2e2;
-  --color-semantic-error-500: #ef4444;
-  --color-semantic-error-600: #dc2626;
-  --color-semantic-error-700: #b91c1c;
-  --color-semantic-error-800: #991b1b;
-  --color-semantic-error-900: #7f1d1d;
-
-  /* 语义化颜色 - 信息 */
-  --color-semantic-info-50: #eff6ff;
-  --color-semantic-info-100: #dbeafe;
-  --color-semantic-info-200: #bfdbfe;
-  --color-semantic-info-300: #93c5fd;
-  --color-semantic-info-400: #60a5fa;
-  --color-semantic-info-500: #3b82f6;
-  --color-semantic-info-600: #2563eb;
-  --color-semantic-info-700: #1d4ed8;
-  --color-semantic-info-800: #1e40af;
-  --color-semantic-info-900: #1e3a8a;
 }

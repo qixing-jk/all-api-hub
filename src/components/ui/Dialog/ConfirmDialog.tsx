@@ -81,12 +81,12 @@ const intentPresentation = {
   },
   warning: {
     icon: TriangleAlert,
-    iconClassName: "text-warning-text",
+    iconClassName: "text-warning-indicator",
     confirmVariant: "warning",
   },
   destructive: {
     icon: TriangleAlert,
-    iconClassName: "text-destructive-text",
+    iconClassName: "text-destructive-indicator",
     confirmVariant: "destructive",
   },
 } as const

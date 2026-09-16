@@ -259,7 +259,7 @@ export function ReleaseUpdateStatusPanel() {
     >
       <CardList>
         <CardItem
-          icon={<CloudDownload className="text-info-text h-5 w-5" />}
+          icon={<CloudDownload className="text-info-indicator h-5 w-5" />}
           title={statusTitle}
           description={statusDescription}
           leftContent={

@@ -151,7 +151,7 @@ export default function AutoCheckinDataWorkspace({
             className={DATA_VIEW_TRIGGER_CLASS_NAME}
           >
             {setupRequiredCount > 0 ? (
-              <CircleAlert className="text-warning-text h-4 w-4 shrink-0" />
+              <CircleAlert className="text-warning-indicator h-4 w-4 shrink-0" />
             ) : (
               <ClipboardCheck className="h-4 w-4 shrink-0" />
             )}

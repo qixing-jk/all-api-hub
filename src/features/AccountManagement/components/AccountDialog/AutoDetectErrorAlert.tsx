@@ -147,7 +147,18 @@ export default function AutoDetectErrorAlert({
 
   return (
     <div className="mb-density-4 space-y-density-3">
-      <Alert variant="warning">
+      <Alert
+        variant={
+          [
+            AutoDetectErrorType.UNAUTHORIZED,
+            AutoDetectErrorType.FORBIDDEN,
+            AutoDetectErrorType.NOT_FOUND,
+            AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED,
+          ].includes(error.type)
+            ? "warning"
+            : "destructive"
+        }
+      >
         <div className="gap-y-density-3 flex flex-wrap items-start gap-x-3">
           <p
             className="min-w-0 flex-1 text-sm leading-relaxed"

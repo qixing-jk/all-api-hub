@@ -23,26 +23,26 @@ const statuses = {
     solid: buttonVariants({ variant: "success" }),
     soft: "bg-success-soft text-success-soft-foreground border-success-border",
     text: "text-success-text",
-    rgb: [21, 128, 61],
+    rgb: [0, 129, 64],
   },
   warning: {
     solid: buttonVariants({ variant: "warning" }),
     soft: "bg-warning-soft text-warning-soft-foreground border-warning-border",
     text: "text-warning-text",
-    rgb: [180, 83, 9],
+    rgb: [255, 159, 0],
   },
   destructive: {
     solid: buttonVariants({ variant: "destructive" }),
     soft: "bg-destructive-soft text-destructive-soft-foreground border-destructive-border",
     text: "text-destructive-text",
-    rgb: [220, 38, 38],
+    rgb: [217, 31, 22],
   },
   info: {
     solid:
       "rounded-md px-4 py-2 text-sm bg-info text-info-foreground hover:bg-info-hover",
     soft: "bg-info-soft text-info-soft-foreground border-info-border",
     text: "text-info-text",
-    rgb: [29, 78, 216],
+    rgb: [15, 78, 179],
   },
 } as const
 

@@ -592,7 +592,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
           {t("verifyDialog.actions.close")}
         </Button>
         <Button
-          variant={isRunning ? "destructive" : "success"}
+          variant={isRunning ? "secondary" : "default"}
           onClick={isRunning ? stopRun : runAll}
           disabled={!isRunning && (isLoadingRuntimeKeys || !canRunAll)}
           loading={isRunning}
@@ -822,7 +822,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
 
                   <Button
                     size="sm"
-                    variant={probe.isRunning ? "destructive" : "secondary"}
+                    variant="secondary"
                     onClick={probe.isRunning ? stopProbe : runSingleProbe}
                     loading={probe.isRunning}
                     loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}

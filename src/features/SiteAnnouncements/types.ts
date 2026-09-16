@@ -7,5 +7,5 @@ export interface AnnouncementMetric {
   label: string
   value: number
   icon: LucideIcon
-  tone: "blue" | "amber" | "emerald"
+  tone: "accent" | "info" | "neutral"
 }

@@ -24,6 +24,7 @@ export const SNAPSHOT_STATUS_FILTER = {
   ALL: "all",
   SUCCESS: "success",
   FAILED: "failed",
+  UNCERTAIN: "uncertain",
   SKIPPED: "skipped",
   PENDING: "pending",
 } as const
@@ -94,8 +95,9 @@ export function getAutoCheckinSnapshotStatus(
     case CHECKIN_RESULT_STATUS.ALREADY_CHECKED:
       return SNAPSHOT_STATUS_FILTER.SUCCESS
     case CHECKIN_RESULT_STATUS.FAILED:
-    case CHECKIN_RESULT_STATUS.UNCERTAIN:
       return SNAPSHOT_STATUS_FILTER.FAILED
+    case CHECKIN_RESULT_STATUS.UNCERTAIN:
+      return SNAPSHOT_STATUS_FILTER.UNCERTAIN
     case CHECKIN_RESULT_STATUS.SKIPPED:
       return SNAPSHOT_STATUS_FILTER.SKIPPED
   }

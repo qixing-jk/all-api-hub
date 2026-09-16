@@ -24,6 +24,46 @@ const renderSnapshotTable = (snapshots: AutoCheckinAccountSnapshot[]) =>
   })
 
 describe("AutoCheckin AccountSnapshotTable", () => {
+  it("shows and filters uncertain check-ins separately from confirmed failures", async () => {
+    const user = userEvent.setup()
+    renderSnapshotTable([
+      {
+        accountId: "uncertain",
+        accountName: "Uncertain account",
+        siteType: "new-api",
+        detectionEnabled: true,
+        autoCheckinEnabled: true,
+        providerAvailable: true,
+        lastResult: {
+          accountId: "uncertain",
+          accountName: "Uncertain account",
+          status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+          reconciliation: "unknown",
+          timestamp: 1,
+        },
+      },
+    ])
+    expect(
+      screen.getByText("autoCheckin:execution.status.uncertain"),
+    ).toHaveClass("bg-warning-soft")
+    const filter = screen.getByRole("combobox", {
+      name: "autoCheckin:snapshot.filters.statusLabel",
+    })
+    await user.click(filter)
+    await user.click(
+      screen.getByRole("option", {
+        name: "autoCheckin:execution.status.uncertain",
+      }),
+    )
+    expect(screen.getByText("Uncertain account")).toBeVisible()
+    await user.click(filter)
+    await user.click(
+      screen.getByRole("option", {
+        name: "autoCheckin:execution.status.failed",
+      }),
+    )
+    expect(screen.queryByText("Uncertain account")).not.toBeInTheDocument()
+  })
   it.each([
     [AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD, "feedback"],
     [AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING, "feedback"],

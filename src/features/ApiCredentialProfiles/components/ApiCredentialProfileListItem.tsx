@@ -27,6 +27,7 @@ import {
   CollapsibleTrigger,
 } from "~/components/ui/collapsible"
 import type { ManagedSiteType } from "~/constants/siteType"
+import { UI_CONSTANTS } from "~/constants/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { cn } from "~/lib/utils"
 import {
@@ -101,10 +102,11 @@ interface ApiCredentialProfileListItemProps {
  * Maps telemetry health to the small status indicator color.
  */
 function getHealthIndicatorColor(status: SiteHealthStatus | undefined): string {
-  if (status === SiteHealthStatus.Healthy) return "bg-success"
-  if (status === SiteHealthStatus.Warning) return "bg-warning"
-  if (status === SiteHealthStatus.Error) return "bg-destructive"
-  return "bg-surface-inverse-muted"
+  const colors = UI_CONSTANTS.STYLES.STATUS_INDICATOR
+  if (status === SiteHealthStatus.Healthy) return colors.HEALTHY
+  if (status === SiteHealthStatus.Warning) return colors.WARNING
+  if (status === SiteHealthStatus.Error) return colors.ERROR
+  return colors.UNKNOWN
 }
 
 const COMPACT_AUDIT_TIME_FORMAT: Intl.DateTimeFormatOptions = {
@@ -522,7 +524,7 @@ export function ApiCredentialProfileListItem({
                         }
                       >
                         <span
-                          className={`h-2 w-2 shrink-0 rounded-full ${getHealthIndicatorColor(
+                          className={`h-2.5 w-2.5 shrink-0 rounded-full ${getHealthIndicatorColor(
                             health?.status,
                           )}`}
                           title={healthTitle}

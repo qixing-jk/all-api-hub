@@ -659,7 +659,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         {t("verifyDialog.actions.close")}
       </Button>
       <Button
-        variant={isRunning ? "destructive" : "success"}
+        variant={isRunning ? "secondary" : "default"}
         onClick={isRunning ? stopRun : runAll}
         disabled={!isRunning && (isLoadingRuntimeKeys || !canRunAll)}
         loading={isRunning}
@@ -854,7 +854,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
 
                   <Button
                     size="sm"
-                    variant={tool.isRunning ? "destructive" : "secondary"}
+                    variant="secondary"
                     onClick={tool.isRunning ? stopTool : runSingleTool}
                     loading={tool.isRunning}
                     loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}

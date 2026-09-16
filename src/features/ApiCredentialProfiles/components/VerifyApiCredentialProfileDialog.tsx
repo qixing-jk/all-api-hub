@@ -754,7 +754,7 @@ export function VerifyApiCredentialProfileDialog({
           {t("aiApiVerification:verifyDialog.actions.close")}
         </Button>
         <Button
-          variant="success"
+          variant="default"
           onClick={runAll}
           disabled={isPersisting || isAnyProbeRunning || !profile}
           loading={isRunning}

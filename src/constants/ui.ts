@@ -67,10 +67,10 @@ export const UI_CONSTANTS = {
 
     // 状态指示器
     STATUS_INDICATOR: {
-      HEALTHY: "bg-success",
-      ERROR: "bg-destructive",
-      WARNING: "bg-warning",
-      UNKNOWN: "bg-surface-inverse-muted",
+      HEALTHY: "bg-success-indicator",
+      ERROR: "bg-destructive-indicator",
+      WARNING: "bg-warning-indicator",
+      UNKNOWN: "bg-neutral-indicator",
     },
 
     // 文本颜色

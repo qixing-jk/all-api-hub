@@ -163,9 +163,9 @@ export default function ResultsTable({
                   {columns.status && (
                     <td className="py-density-3 px-4">
                       {item.ok ? (
-                        <CircleCheck className="text-success-text h-5 w-5" />
+                        <CircleCheck className="text-success-indicator h-5 w-5" />
                       ) : (
-                        <CircleAlert className="text-destructive-text h-5 w-5" />
+                        <CircleAlert className="text-destructive-indicator h-5 w-5" />
                       )}
                     </td>
                   )}

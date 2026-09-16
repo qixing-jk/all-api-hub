@@ -52,7 +52,7 @@ export const UpdateTimeAndWarning = () => {
         </Caption>
       </Tooltip>
       {detectedSiteAccounts.length > 0 && (
-        <Badge variant="warning" size="sm">
+        <Badge variant="info" size="sm">
           {detectedAccount
             ? t("currentLoginAdded", { siteName: detectedAccountName })
             : hasMultipleDetectedSiteAccounts

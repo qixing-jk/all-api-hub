@@ -273,7 +273,7 @@ export default function ShieldSettings() {
                             className={
                               mode === nextMode
                                 ? "size-3.5 fill-current text-current"
-                                : "text-warning-text size-3.5 fill-current"
+                                : "text-primary size-3.5 fill-current"
                             }
                           />
                         ) : undefined

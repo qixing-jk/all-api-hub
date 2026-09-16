@@ -1,80 +1,25 @@
-import {
-  CalendarDays,
-  CircleCheck,
-  CircleDollarSign,
-  CircleX,
-  Gift,
-  Link,
-  Pin,
-  RefreshCw,
-  SquarePen,
-  Tag,
-  TriangleAlert,
-  User,
-  type LucideIcon,
-} from "lucide-react"
+import { Pin } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { LdohIcon } from "~/components/icons/LdohIcon"
 import Tooltip from "~/components/Tooltip"
-import {
-  Badge,
-  BodySmall,
-  Button,
-  Caption,
-  IconButton,
-  WorkflowTransitionButton,
-} from "~/components/ui"
-import {
-  CHECK_IN_METHOD_AVAILABILITIES,
-  CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
-  CHECK_IN_METHOD_STATUS_OUTCOMES,
-  CHECK_IN_METHOD_TODAY_STATUSES,
-  CHECK_IN_SELECTION_STATUSES,
-} from "~/constants/checkIn"
-import { getAccountSiteApiRouter } from "~/constants/siteType"
-import { isSelectedCheckInStatusCurrent } from "~/features/AccountManagement/components/AccountList/checkInFilter"
+import { Badge, BodySmall, Button, IconButton } from "~/components/ui"
+import { SiteInfoCheckInIndicators } from "~/features/AccountManagement/components/AccountList/SiteInfoCheckInIndicators"
+import { SiteInfoDetails } from "~/features/AccountManagement/components/AccountList/SiteInfoDetails"
+import { SiteInfoHealthIndicator } from "~/features/AccountManagement/components/AccountList/SiteInfoHealthIndicator"
+import { SiteInfoHighlightedText } from "~/features/AccountManagement/components/AccountList/SiteInfoHighlightedText"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
-import type {
-  HighlightFragment,
-  SearchResultWithHighlight,
-} from "~/features/AccountManagement/hooks/useAccountSearch"
+import type { SearchResultWithHighlight } from "~/features/AccountManagement/hooks/useAccountSearch"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import {
-  getHealthStatusDisplay,
-  getStatusIndicatorColor,
-} from "~/features/AccountManagement/utils/healthStatusUtils"
-import {
-  getTempWindowFallbackSettingsAnchor,
-  getTempWindowFallbackSettingsTab,
-} from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
 import { useLdohSiteLookupContext } from "~/features/LdohSiteLookup/hooks/LdohSiteLookupContext"
-import { ProtectionBypassHistoryLink } from "~/features/ProtectionBypass/components/ProtectionBypassHistoryLink"
 import toast from "~/lib/notify"
-import { cn } from "~/lib/utils"
-import {
-  getSelectedCheckInStatus,
-  inspectAccountCheckIn,
-} from "~/services/checkin/autoCheckin/inspection"
-import {
-  SiteHealthStatus,
-  TEMP_WINDOW_HEALTH_STATUS_CODES,
-  type DisplaySiteData,
-} from "~/types"
+import type { DisplaySiteData } from "~/types"
 import { createTab } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
-import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
-import {
-  openAccountBaseUrl,
-  openCheckInAndRedeem,
-  openCheckInPage,
-  openCustomCheckInPage,
-  openProtectionBypassHistory,
-  openSettingsTab,
-} from "~/utils/navigation"
+import { openAccountBaseUrl } from "~/utils/navigation"
 
 interface SiteInfoProps {
   site: DisplaySiteData
@@ -96,75 +41,6 @@ type SiteInfoRefreshTarget =
  */
 const logger = createLogger("AccountList.SiteInfo")
 
-interface CheckInStatusButtonProps {
-  checkedIn: boolean
-  disabled?: boolean
-  icon: LucideIcon
-  label: string
-  onClick: () => void
-  testId: string
-}
-
-/** Renders a check-in action with its source-specific icon and shared status color. */
-function CheckInStatusButton({
-  checkedIn,
-  disabled,
-  icon: Icon,
-  label,
-  onClick,
-  testId,
-}: CheckInStatusButtonProps) {
-  return (
-    <Tooltip
-      content={label}
-      position="top"
-      wrapperClassName="flex items-center"
-    >
-      <IconButton
-        onClick={onClick}
-        disabled={disabled}
-        variant="ghost"
-        size="xs"
-        aria-label={label}
-        data-testid={testId}
-      >
-        <Icon
-          className={cn(
-            "h-4 w-4",
-            checkedIn ? "text-success-text" : "text-destructive-text",
-          )}
-        />
-      </IconButton>
-    </Tooltip>
-  )
-}
-
-/**
- * Renders highlighted fragments (such as search matches) with mark elements while preserving non-highlighted text.
- * Falls back to provided string when no highlight fragments exist.
- */
-function renderHighlightedFragments(
-  fragments: HighlightFragment[] | undefined,
-  fallback: string,
-) {
-  if (!fragments || fragments.length === 0) {
-    return fallback
-  }
-
-  return fragments.map((fragment, index) =>
-    fragment.highlighted ? (
-      <mark
-        key={`${fragment.text}-${index}`}
-        className="text-primary-soft-foreground bg-primary-soft rounded px-0.5"
-      >
-        {fragment.text}
-      </mark>
-    ) : (
-      <span key={`${fragment.text}-${index}`}>{fragment.text}</span>
-    ),
-  )
-}
-
 /**
  * Site info row combining metadata, status chips, and context actions for a display account entry.
  */
@@ -182,11 +58,8 @@ export default function SiteInfo({
     togglePinAccount,
     isPinFeatureEnabled,
   } = useAccountDataContext()
-  const {
-    handleRefreshAccount,
-    refreshingAccountId,
-    handleMarkCustomCheckInAsCheckedIn,
-  } = useAccountActionsContext()
+  const { handleRefreshAccount, refreshingAccountId } =
+    useAccountActionsContext()
   const { getLdohSearchUrlForAccountUrl } = useLdohSiteLookupContext()
   const [activeRefreshTarget, setActiveRefreshTarget] =
     useState<SiteInfoRefreshTarget | null>(null)
@@ -210,35 +83,7 @@ export default function SiteInfo({
   const isRefreshLocked = isRefreshing || activeRefreshTarget !== null
   const isAccountDisabled = site.disabled === true
   const ldohSearchUrl = getLdohSearchUrlForAccountUrl(site.baseUrl)
-  const customCheckInUrl = site.checkIn?.customCheckIn?.url
-  const customRedeemUrl = site.checkIn?.customCheckIn?.redeemUrl
-  const hasTags = Boolean(site.tags && site.tags.length > 0)
-  const tagLabel = hasTags ? site.tags?.join(", ") || "" : ""
-  const createdAtLabel = t("account:list.header.createdAt")
   const siteTypeLabel = t("list.site.siteType")
-  const createdAtText = formatLocaleDateTime(
-    site.created_at,
-    t("common:labels.notAvailable"),
-  )
-
-  const healthCode = site.health?.code
-  const canOpenProtectionBypassHistory =
-    site.health?.status === SiteHealthStatus.Warning &&
-    Object.values(TEMP_WINDOW_HEALTH_STATUS_CODES).some(
-      (code) => code === healthCode,
-    )
-  const canOpenHealthSettings =
-    site.health?.status === SiteHealthStatus.Warning &&
-    (healthCode === TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED ||
-      healthCode === TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED)
-  const healthSettingsTab =
-    canOpenHealthSettings && healthCode
-      ? getTempWindowFallbackSettingsTab(healthCode)
-      : null
-  const healthSettingsAnchor =
-    canOpenHealthSettings && healthCode
-      ? getTempWindowFallbackSettingsAnchor(healthCode)
-      : undefined
 
   const handleOpenAccountSite = async (e: React.MouseEvent) => {
     e.preventDefault()
@@ -286,284 +131,35 @@ export default function SiteInfo({
     }
   }
 
-  const handleSiteCheckIn = async () => {
-    if (isAccountDisabled) return
-    try {
-      await openCheckInPage(site)
-    } catch (error) {
-      logger.error("Failed to handle check-in navigation", {
-        error,
-        accountId: site.id,
-        baseUrl: site.baseUrl,
-      })
-    }
-  }
-
-  const handleCustomCheckIn = async () => {
-    if (isAccountDisabled) return
-    try {
-      await handleMarkCustomCheckInAsCheckedIn(site)
-      const shouldOpenRedeem =
-        site.checkIn?.customCheckIn?.openRedeemWithCheckIn ?? true
-      if (shouldOpenRedeem) {
-        await openCheckInAndRedeem(site)
-      } else {
-        await openCustomCheckInPage(site)
-      }
-    } catch (error) {
-      logger.error("Failed to handle custom check-in navigation", {
-        error,
-        accountId: site.id,
-        baseUrl: site.baseUrl,
-      })
-    }
-  }
-
-  const handleAccountRefresh = async (target: SiteInfoRefreshTarget) => {
+  const refreshAccount = async (target: SiteInfoRefreshTarget) => {
     if (isAccountDisabled || isRefreshLocked) return
 
     setActiveRefreshTarget(target)
     try {
       await handleRefreshAccount(site, true)
-    } finally {
-      setActiveRefreshTarget(null)
-    }
-  }
-
-  const refreshAccount = (target: SiteInfoRefreshTarget) => {
-    void handleAccountRefresh(target).catch((error) => {
+    } catch (error) {
       logger.error("Failed to refresh account row", {
         error,
         accountId: site.id,
         target,
       })
-    })
+    } finally {
+      setActiveRefreshTarget(null)
+    }
   }
-
-  const renderCheckInIndicators = () => {
-    if (isAccountDisabled) {
-      return null
-    }
-
-    const indicators: React.ReactNode[] = []
-
-    const customUrl = site.checkIn?.customCheckIn?.url
-    const hasCustomUrl =
-      typeof customUrl === "string" && customUrl.trim() !== ""
-
-    const checkInInspection = inspectAccountCheckIn({
-      config: site.checkIn,
-      siteType: site.siteType,
-      siteUrl: site.baseUrl,
-    })
-    const selectedStatus = getSelectedCheckInStatus({
-      config: site.checkIn,
-      siteType: site.siteType,
-      siteUrl: site.baseUrl,
-    })
-    const siteCheckedIn =
-      selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
-        ? selectedStatus.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked
-          ? true
-          : selectedStatus.today === CHECK_IN_METHOD_TODAY_STATUSES.NotChecked
-            ? false
-            : undefined
-        : undefined
-    const selectedStatusObservedAt =
-      selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
-        ? selectedStatus.evidence.source ===
-          CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.LegacyMigration
-          ? selectedStatus.evidence.legacyObservedAt
-          : selectedStatus.evidence.observedAt
-        : undefined
-
-    if (
-      checkInInspection.selectionState.status ===
-        CHECK_IN_SELECTION_STATUSES.Selected &&
-      selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
-      selectedStatus.availability !== CHECK_IN_METHOD_AVAILABILITIES.Disabled &&
-      siteCheckedIn !== undefined
-    ) {
-      if (!isSelectedCheckInStatusCurrent(site)) {
-        const staleStatusLabel = t("list.site.checkInStatusOutdated", {
-          time: formatLocaleDateTime(
-            selectedStatusObservedAt,
-            t("list.site.notAvailable"),
-          ),
-        })
-        indicators.push(
-          <Tooltip
-            key="site-checkin"
-            content={staleStatusLabel}
-            position="top"
-            wrapperClassName="flex items-center"
-          >
-            <IconButton
-              onClick={() =>
-                refreshAccount(SITE_INFO_REFRESH_TARGETS.STALE_CHECK_IN)
-              }
-              variant="ghost"
-              size="xs"
-              loading={
-                activeRefreshTarget === SITE_INFO_REFRESH_TARGETS.STALE_CHECK_IN
-              }
-              disabled={isRefreshLocked}
-              aria-label={staleStatusLabel}
-            >
-              <TriangleAlert className="text-warning-text h-4 w-4" />
-            </IconButton>
-          </Tooltip>,
-        )
-      } else if (siteCheckedIn) {
-        indicators.push(
-          <CheckInStatusButton
-            key="site-checkin"
-            checkedIn
-            icon={CircleCheck}
-            label={t("list.site.checkedInToday")}
-            onClick={handleSiteCheckIn}
-            disabled={!getAccountSiteApiRouter(site.siteType).checkInPath}
-            testId={ACCOUNT_MANAGEMENT_TEST_IDS.siteCheckInStatusButton}
-          />,
-        )
-      } else {
-        indicators.push(
-          <CheckInStatusButton
-            key="site-checkin"
-            checkedIn={false}
-            icon={CircleX}
-            label={t("list.site.notCheckedInToday")}
-            onClick={handleSiteCheckIn}
-            disabled={!getAccountSiteApiRouter(site.siteType).checkInPath}
-            testId={ACCOUNT_MANAGEMENT_TEST_IDS.siteCheckInStatusButton}
-          />,
-        )
-      }
-    }
-
-    if (hasCustomUrl) {
-      const isCustomCheckedIn = site.checkIn.customCheckIn?.isCheckedInToday
-      const customCheckInLabel = isCustomCheckedIn
-        ? t("list.site.checkedInToday")
-        : t("list.site.notCheckedInToday")
-      indicators.push(
-        <CheckInStatusButton
-          key="custom-checkin"
-          checkedIn={Boolean(isCustomCheckedIn)}
-          icon={CircleDollarSign}
-          label={customCheckInLabel}
-          onClick={handleCustomCheckIn}
-          testId={ACCOUNT_MANAGEMENT_TEST_IDS.customCheckInStatusButton}
-        />,
-      )
-    }
-
-    if (indicators.length === 0) {
-      return null
-    }
-
-    return (
-      <div className="gap-y-density-1 flex items-center gap-x-1">
-        {indicators}
-      </div>
-    )
-  }
-
-  const checkInIndicator = renderCheckInIndicators()
-  const healthStatusDisplay = getHealthStatusDisplay(site.health?.status, t)
 
   return (
     <div className="gap-y-density-2 flex w-full min-w-0 items-center gap-x-2">
       <div className="gap-y-density-2 flex shrink-0 flex-col items-center justify-center gap-x-2 self-stretch">
-        <Tooltip
-          content={
-            <div className="space-y-density-1">
-              <p>
-                {t("list.site.status")}:{" "}
-                <span
-                  className={
-                    healthStatusDisplay.color || "text-faint-foreground"
-                  }
-                >
-                  {healthStatusDisplay.text || t("list.site.unknown")}
-                </span>
-              </p>
-              {site.health?.reason && (
-                <p>
-                  {t("list.site.reason")}:{" "}
-                  {healthSettingsTab ? (
-                    <WorkflowTransitionButton
-                      variant="link"
-                      size="sm"
-                      className="h-auto min-h-0 p-0 text-left"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        void openSettingsTab(healthSettingsTab, {
-                          anchor: healthSettingsAnchor,
-                          preserveHistory: true,
-                        }).catch((error) => {
-                          const errorMessage = getErrorMessage(
-                            error,
-                            t("messages:toast.error.operationFailedGeneric"),
-                          )
-                          logger.error("Failed to open health settings tab", {
-                            error,
-                            errorMessage,
-                            accountId: site.id,
-                            healthSettingsTab,
-                          })
-                          toast.error(errorMessage)
-                        })
-                      }}
-                    >
-                      {site.health.reason}
-                    </WorkflowTransitionButton>
-                  ) : (
-                    site.health.reason
-                  )}
-                </p>
-              )}
-              <p>
-                {t("list.site.lastSync")}:{" "}
-                {formatLocaleDateTime(
-                  site.last_sync_time,
-                  t("list.site.notAvailable"),
-                )}
-              </p>
-              {canOpenProtectionBypassHistory && (
-                <ProtectionBypassHistoryLink
-                  className="text-xs"
-                  onOpen={openProtectionBypassHistory}
-                />
-              )}
-            </div>
+        <SiteInfoHealthIndicator
+          site={site}
+          isRefreshing={isRefreshing}
+          isHealthRefreshing={
+            activeRefreshTarget === SITE_INFO_REFRESH_TARGETS.HEALTH
           }
-          position="right"
-        >
-          <IconButton
-            variant="ghost"
-            size="none"
-            className={`h-4 w-4 shrink-0 rounded-full transition-all duration-200 hover:bg-transparent ${
-              isRefreshing
-                ? "animate-pulse opacity-60"
-                : isAccountDisabled
-                  ? "cursor-not-allowed opacity-60"
-                  : "cursor-pointer hover:scale-125"
-            }`}
-            onClick={() => refreshAccount(SITE_INFO_REFRESH_TARGETS.HEALTH)}
-            loading={activeRefreshTarget === SITE_INFO_REFRESH_TARGETS.HEALTH}
-            disabled={isAccountDisabled || isRefreshLocked}
-            aria-label={t("list.site.refreshHealthStatus")}
-          >
-            <span
-              className={`h-2 w-2 rounded-full ${getStatusIndicatorColor(
-                site.health?.status,
-              )}`}
-              aria-hidden="true"
-            />
-          </IconButton>
-        </Tooltip>
+          isRefreshLocked={isRefreshLocked}
+          onRefresh={() => refreshAccount(SITE_INFO_REFRESH_TARGETS.HEALTH)}
+        />
 
         {!isAccountDisabled && isPinFeatureEnabled && isPinned && (
           <Tooltip content={pinTooltipLabel} position="right">
@@ -589,7 +185,7 @@ export default function SiteInfo({
               <Tooltip content={contextHint} anchorAsChild position="top">
                 <Badge
                   tabIndex={0}
-                  variant="warning"
+                  variant="info"
                   size="sm"
                   className="whitespace-nowrap"
                 >
@@ -635,15 +231,23 @@ export default function SiteInfo({
               data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.rowOpenButton}
             >
               <BodySmall weight="medium" className="truncate">
-                {renderHighlightedFragments(highlights?.name, site.name)}
+                <SiteInfoHighlightedText
+                  fragments={highlights?.name}
+                  fallback={site.name}
+                />
               </BodySmall>
             </Button>
 
-            {checkInIndicator && (
-              <div className="flex shrink-0 items-center">
-                {checkInIndicator}
-              </div>
-            )}
+            <SiteInfoCheckInIndicators
+              site={site}
+              isRefreshing={
+                activeRefreshTarget === SITE_INFO_REFRESH_TARGETS.STALE_CHECK_IN
+              }
+              isRefreshLocked={isRefreshLocked}
+              onRefresh={() =>
+                refreshAccount(SITE_INFO_REFRESH_TARGETS.STALE_CHECK_IN)
+              }
+            />
 
             {ldohSearchUrl && (
               <Tooltip
@@ -667,79 +271,11 @@ export default function SiteInfo({
           </div>
         </div>
 
-        <div className="gap-y-density-1 mt-0.5 flex min-w-0 items-start gap-x-1">
-          <User className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
-          <Caption className="truncate" title={site.username}>
-            {highlights?.username && site.username
-              ? renderHighlightedFragments(highlights.username, site.username)
-              : site.username}
-          </Caption>
-        </div>
-
-        {showCreatedAt && (
-          <div className="gap-y-density-1 mt-0.5 flex min-w-0 items-start gap-x-1">
-            <CalendarDays className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
-            <Caption
-              className="truncate"
-              title={`${createdAtLabel}: ${createdAtText}`}
-            >
-              {createdAtLabel}: {createdAtText}
-            </Caption>
-          </div>
-        )}
-
-        {highlights?.baseUrl && (
-          <div className="gap-y-density-1 mt-0.5 flex min-w-0 items-start gap-x-1">
-            <Link className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
-            <Caption className="truncate" title={site.baseUrl}>
-              {renderHighlightedFragments(highlights.baseUrl, site.baseUrl)}
-            </Caption>
-          </div>
-        )}
-
-        {highlights?.customCheckInUrl && customCheckInUrl && (
-          <div className="gap-y-density-1 mt-0.5 flex min-w-0 items-start gap-x-1">
-            <RefreshCw className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
-            <Caption className="truncate" title={customCheckInUrl}>
-              {renderHighlightedFragments(
-                highlights.customCheckInUrl,
-                customCheckInUrl,
-              )}
-            </Caption>
-          </div>
-        )}
-
-        {highlights?.customRedeemUrl && customRedeemUrl && (
-          <div className="gap-y-density-1 mt-0.5 flex min-w-0 items-start gap-x-1">
-            <Gift className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
-            <Caption className="truncate" title={customRedeemUrl}>
-              {renderHighlightedFragments(
-                highlights.customRedeemUrl,
-                customRedeemUrl,
-              )}
-            </Caption>
-          </div>
-        )}
-
-        {site.notes && (
-          <div className="gap-y-density-1 sm:mt-density-1 mt-0.5 flex min-w-0 items-start gap-x-1">
-            <SquarePen className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
-            <Caption className="truncate" title={site.notes}>
-              {site.notes}
-            </Caption>
-          </div>
-        )}
-
-        {hasTags && (
-          <div className="gap-y-density-1 sm:mt-density-1 mt-0.5 flex min-w-0 items-start gap-x-1">
-            <Tag className="dark:text-muted-foreground text-faint-foreground mt-0.5 h-3 w-3 shrink-0" />
-            <Caption className="truncate" title={tagLabel}>
-              {highlights?.tags
-                ? renderHighlightedFragments(highlights.tags, tagLabel)
-                : tagLabel}
-            </Caption>
-          </div>
-        )}
+        <SiteInfoDetails
+          site={site}
+          highlights={highlights}
+          showCreatedAt={showCreatedAt}
+        />
       </div>
     </div>
   )

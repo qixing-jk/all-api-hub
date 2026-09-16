@@ -51,7 +51,9 @@ export function RepairMissingKeysStatusBadge({
     return (
       <Badge
         role="status"
-        variant="warning"
+        variant={
+          hasRepairAttentionOutcomes(progress.summary) ? "warning" : "secondary"
+        }
         size="sm"
         className="shrink-0 border-transparent"
       >

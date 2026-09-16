@@ -172,7 +172,7 @@ export function DedupeAccountCard({
             </Badge>
           )}
           {disabled && (
-            <Badge size="sm" variant="warning">
+            <Badge size="sm" variant="secondary">
               {t("account:list.site.disabled")}
             </Badge>
           )}
@@ -248,7 +248,7 @@ export function DedupeAccountCard({
               </dt>
               <dd className="text-secondary-foreground gap-y-density-2 flex items-center gap-x-2">
                 <span
-                  className={`h-2 w-2 rounded-full ${healthDisplay.color}`}
+                  className={`h-2.5 w-2.5 shrink-0 rounded-full ${healthDisplay.color}`}
                   aria-hidden="true"
                 />
                 <span>{healthDisplay.text}</span>

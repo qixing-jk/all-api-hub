@@ -1099,7 +1099,6 @@ export default function AccountActionButtons({
                   onClick={handleDisableToggle}
                   icon={CircleCheck}
                   label={t("actions.enableAccount")}
-                  tone="success"
                   closeOnSelect={false}
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowDisableToggleMenuItem}
                 />

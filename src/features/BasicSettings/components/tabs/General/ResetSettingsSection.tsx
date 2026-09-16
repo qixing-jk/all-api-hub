@@ -47,7 +47,7 @@ export default function ResetSettingsSection() {
   return (
     <>
       <section>
-        <Heading5 className="text-destructive-text mb-density-4 text-lg font-medium">
+        <Heading5 className="text-foreground mb-density-4 text-lg font-medium">
           {t("danger.title")}
         </Heading5>
         <Alert

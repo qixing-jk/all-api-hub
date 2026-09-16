@@ -997,7 +997,7 @@ export function BatchVerifyModelsDialog({
   const statusVariant = (status: BatchVerifyRowStatus) => {
     if (status === BATCH_VERIFY_ROW_STATUSES.PASS) return "success"
     if (status === BATCH_VERIFY_ROW_STATUSES.FAIL) return "danger"
-    if (status === BATCH_VERIFY_ROW_STATUSES.SKIPPED) return "warning"
+    if (status === BATCH_VERIFY_ROW_STATUSES.SKIPPED) return "secondary"
     if (status === BATCH_VERIFY_ROW_STATUSES.RUNNING) return "info"
     return "outline"
   }
@@ -1163,7 +1163,7 @@ export function BatchVerifyModelsDialog({
           </Button>
           {isRunning ? (
             <Button
-              variant="destructive"
+              variant="secondary"
               onClick={stopBatch}
               analyticsAction={
                 PRODUCT_ANALYTICS_ACTION_IDS.StopBatchModelVerify
@@ -1244,7 +1244,7 @@ export function BatchVerifyModelsDialog({
                   value: summary.fail,
                 })}
               </Badge>
-              <Badge variant="warning">
+              <Badge variant="secondary">
                 {t("modelList:batchVerify.counts.skipped", {
                   value: summary.skipped,
                 })}

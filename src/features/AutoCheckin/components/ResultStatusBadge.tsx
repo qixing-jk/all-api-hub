@@ -1,10 +1,32 @@
-import { CircleCheck, CircleX, TriangleAlert } from "lucide-react"
+import {
+  CircleCheck,
+  CircleMinus,
+  CircleX,
+  TriangleAlert,
+  type LucideIcon,
+} from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { cn } from "~/lib/utils"
 import {
   CHECKIN_RESULT_STATUS,
   type CheckinResultStatus,
 } from "~/types/autoCheckin"
+
+/** Keeps known result labels and icons on the same density-aware badge layout. */
+function renderResultBadge(Icon: LucideIcon, label: string, className: string) {
+  return (
+    <span
+      className={cn(
+        "gap-y-density-1 py-density-1 inline-flex items-center gap-x-1 rounded-full px-2 text-xs font-medium",
+        className,
+      )}
+    >
+      <Icon className="h-3 w-3" />
+      {label}
+    </span>
+  )
+}
 
 /** Shared result badge for execution history and adaptation reports. */
 export default function ResultStatusBadge({
@@ -15,39 +37,34 @@ export default function ResultStatusBadge({
   const { t } = useTranslation("autoCheckin")
   switch (status) {
     case CHECKIN_RESULT_STATUS.SUCCESS:
-      return (
-        <span className="bg-success-soft text-success-soft-foreground gap-y-density-1 py-density-1 inline-flex items-center gap-x-1 rounded-full px-2 text-xs font-medium">
-          <CircleCheck className="h-3 w-3" />
-          {t("execution.status.success")}
-        </span>
+      return renderResultBadge(
+        CircleCheck,
+        t("execution.status.success"),
+        "bg-success-soft text-success-soft-foreground",
       )
     case CHECKIN_RESULT_STATUS.ALREADY_CHECKED:
-      return (
-        <span className="bg-theme-100 text-theme-800 dark:bg-theme-900 dark:text-theme-200 gap-y-density-1 py-density-1 inline-flex items-center gap-x-1 rounded-full px-2 text-xs font-medium">
-          <CircleCheck className="h-3 w-3" />
-          {t("execution.status.alreadyChecked")}
-        </span>
+      return renderResultBadge(
+        CircleCheck,
+        t("execution.status.alreadyChecked"),
+        "bg-success-soft text-success-soft-foreground",
       )
     case CHECKIN_RESULT_STATUS.FAILED:
-      return (
-        <span className="bg-destructive-soft text-destructive-soft-foreground gap-y-density-1 py-density-1 inline-flex items-center gap-x-1 rounded-full px-2 text-xs font-medium">
-          <CircleX className="h-3 w-3" />
-          {t("execution.status.failed")}
-        </span>
+      return renderResultBadge(
+        CircleX,
+        t("execution.status.failed"),
+        "bg-destructive-soft text-destructive-soft-foreground",
       )
     case CHECKIN_RESULT_STATUS.SKIPPED:
-      return (
-        <span className="bg-warning-soft text-warning-soft-foreground gap-y-density-1 py-density-1 inline-flex items-center gap-x-1 rounded-full px-2 text-xs font-medium">
-          <TriangleAlert className="h-3 w-3" />
-          {t("execution.status.skipped")}
-        </span>
+      return renderResultBadge(
+        CircleMinus,
+        t("execution.status.skipped"),
+        "bg-muted text-secondary-foreground",
       )
     case CHECKIN_RESULT_STATUS.UNCERTAIN:
-      return (
-        <span className="bg-warning-soft text-warning-soft-foreground gap-y-density-1 py-density-1 inline-flex items-center gap-x-1 rounded-full px-2 text-xs font-medium">
-          <TriangleAlert className="h-3 w-3" />
-          {t("execution.status.uncertain")}
-        </span>
+      return renderResultBadge(
+        TriangleAlert,
+        t("execution.status.uncertain"),
+        "bg-warning-soft text-warning-soft-foreground",
       )
     default:
       return (

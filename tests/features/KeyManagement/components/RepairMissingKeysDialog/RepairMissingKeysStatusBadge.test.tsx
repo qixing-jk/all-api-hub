@@ -50,6 +50,21 @@ function buildProgress(
 
 describe("RepairMissingKeysStatusBadge", () => {
   it.each([
+    [0, "bg-secondary"],
+    [1, "bg-warning-soft"],
+  ])(
+    "keeps cancellation neutral unless %s uncertain writes need attention",
+    (uncertainRequirements, surface) => {
+      const progress = buildProgress({ uncertainRequirements })
+      progress.state = ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled
+      render(<RepairMissingKeysStatusBadge progress={progress} t={t} />)
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "common:status.cancelled",
+      )
+      expect(screen.getByRole("status")).toHaveClass(surface)
+    },
+  )
+  it.each([
     ["partial account", { partial: 1 }],
     ["blocked account", { blocked: 1 }],
     ["failed account", { failed: 1 }],

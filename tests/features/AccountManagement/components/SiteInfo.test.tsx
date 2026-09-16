@@ -311,7 +311,7 @@ describe("SiteInfo", () => {
     })
 
     expect(healthButton.querySelector('[aria-hidden="true"]')).toHaveClass(
-      "bg-surface-inverse-muted",
+      "bg-neutral-indicator",
     )
   })
 
@@ -489,6 +489,13 @@ describe("SiteInfo", () => {
         name: "account:list.site.notCheckedInToday",
       }),
     ).toBeVisible()
+    expect(
+      screen
+        .getByRole("button", {
+          name: "account:list.site.notCheckedInToday",
+        })
+        .querySelector("svg"),
+    ).toHaveClass("text-neutral-indicator")
     expect(
       screen.queryByRole("img", { name: /account:list.site.checkInStatus/ }),
     ).not.toBeInTheDocument()

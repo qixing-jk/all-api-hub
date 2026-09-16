@@ -305,7 +305,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                 onClick={() => {
                   void handleRetryFetchRuntimeKeys()
                 }}
-                variant="destructive"
+                variant="outline"
                 size="sm"
               >
                 {t("common:actions.retry")}

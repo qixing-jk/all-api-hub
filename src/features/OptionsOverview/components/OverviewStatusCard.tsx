@@ -10,10 +10,10 @@ import type { OptionsOverviewStatusCard } from "../types"
 import { getStatusCardLabel } from "./statusCardText"
 
 const severityClasses = {
-  error: "bg-destructive shadow-destructive/30",
-  warning: "bg-warning shadow-warning/30",
-  info: "bg-info shadow-info/30",
-  success: "bg-success shadow-success/30",
+  error: "bg-destructive-indicator",
+  warning: "bg-warning-indicator",
+  info: "bg-info-indicator",
+  success: "bg-success-indicator",
 } as const
 
 interface OverviewStatusSummaryProps {
@@ -164,7 +164,7 @@ function StatusMetricContent({
       <div className="gap-y-density-3-5 flex min-w-0 items-center gap-x-3.5">
         <span
           className={cn(
-            "h-2 w-2 shrink-0 rounded-full shadow-[0_0_0_4px]",
+            "h-2.5 w-2.5 shrink-0 rounded-full",
             severityClasses[item.severity],
           )}
         />

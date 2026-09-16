@@ -5,19 +5,21 @@
 
 import type { TFunction } from "i18next"
 
+import { UI_CONSTANTS } from "~/constants/ui"
+
 // Local configuration object for health status
 const HEALTH_STATUS_CONFIG = {
   healthy: {
-    color: "bg-success",
+    color: UI_CONSTANTS.STYLES.STATUS_INDICATOR.HEALTHY,
   },
   error: {
-    color: "bg-destructive",
+    color: UI_CONSTANTS.STYLES.STATUS_INDICATOR.ERROR,
   },
   warning: {
-    color: "bg-warning",
+    color: UI_CONSTANTS.STYLES.STATUS_INDICATOR.WARNING,
   },
   unknown: {
-    color: "bg-surface-inverse-muted",
+    color: UI_CONSTANTS.STYLES.STATUS_INDICATOR.UNKNOWN,
   },
 } as const
 

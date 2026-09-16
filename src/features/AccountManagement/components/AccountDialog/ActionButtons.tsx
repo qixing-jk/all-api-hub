@@ -162,7 +162,7 @@ export default function ActionButtons({
               ? "h-auto min-h-(--density-control) flex-1 whitespace-normal"
               : "flex-1"
           }
-          variant="warning"
+          variant="outline"
           leftIcon={!isDetecting ? <Sparkles className="h-4 w-4" /> : undefined}
         >
           {isDetecting
@@ -205,7 +205,7 @@ export default function ActionButtons({
         loading={isSaving}
         bleed
         className="flex-1"
-        variant={isAddMode ? "success" : "default"}
+        variant="default"
         data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton}
         leftIcon={!isSaving ? <Check className="h-4 w-4" /> : undefined}
       >

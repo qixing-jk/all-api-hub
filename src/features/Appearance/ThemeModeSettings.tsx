@@ -21,7 +21,7 @@ const ThemeModeSettings = () => {
   return (
     <CardItem
       id={SETTINGS_ANCHORS.APPEARANCE_THEME_MODE}
-      icon={<Sun className="text-warning-text h-5 w-5" />}
+      icon={<Sun className="text-primary h-5 w-5" />}
       title={t("theme.mode")}
       description={t("theme.selectTheme")}
       rightContent={

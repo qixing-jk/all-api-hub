@@ -1,4 +1,4 @@
-import { CircleCheck, CircleX, Clock, TriangleAlert } from "lucide-react"
+import { CircleCheck, CircleMinus, CircleX, Clock } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import AccountLinkButton from "~/components/AccountLinkButton"
@@ -13,11 +13,13 @@ import {
 import { CheckInFeedbackButton } from "~/features/CheckInFeedback/CheckInFeedbackButton"
 import { cn } from "~/lib/utils"
 import {
+  CHECKIN_RESULT_STATUS,
   translateAutoCheckinSkipReason,
   type AutoCheckinAccountSnapshot,
 } from "~/types/autoCheckin"
 
 import { formatTimestamp } from "../utils/tableUtils"
+import ResultStatusBadge from "./ResultStatusBadge"
 
 interface AccountSnapshotTableRowProps {
   snapshot: AutoCheckinAccountSnapshot
@@ -52,6 +54,8 @@ export default function AccountSnapshotTableRow({
 
   const statusBadge = (() => {
     switch (getAutoCheckinSnapshotStatus(snapshot)) {
+      case SNAPSHOT_STATUS_FILTER.UNCERTAIN:
+        return <ResultStatusBadge status={CHECKIN_RESULT_STATUS.UNCERTAIN} />
       case SNAPSHOT_STATUS_FILTER.SUCCESS:
         return (
           <span className="bg-success-soft text-success-soft-foreground gap-density-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium">
@@ -68,8 +72,8 @@ export default function AccountSnapshotTableRow({
         )
       case SNAPSHOT_STATUS_FILTER.SKIPPED:
         return (
-          <span className="bg-warning-soft text-warning-soft-foreground gap-density-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium">
-            <TriangleAlert className="h-3.5 w-3.5" />
+          <span className="bg-muted text-secondary-foreground gap-density-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium">
+            <CircleMinus className="h-3.5 w-3.5" />
             {t("execution.status.skipped")}
           </span>
         )

@@ -58,7 +58,9 @@ export function AccountSummaryBar({
                     </span>
                   ) : null}
                   {item.errorType && (
-                    <span className="text-destructive-text ml-2 text-xs">
+                    <span
+                      className={`ml-2 text-xs ${item.errorType === "unsupported" ? "text-muted-foreground" : "text-destructive-text"}`}
+                    >
                       {item.errorType === "unsupported"
                         ? t("accountSummary.unsupported")
                         : t("accountSummary.loadFailed")}

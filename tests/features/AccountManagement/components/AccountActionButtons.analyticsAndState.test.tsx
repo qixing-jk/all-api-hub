@@ -404,7 +404,7 @@ describe("AccountActionButtons", () => {
       name: "account:actions.delete",
     })
 
-    expect(enableButton).toHaveClass("text-success-text")
+    expect(enableButton).toHaveClass("text-secondary-foreground")
     expect(deleteButton).toHaveClass("text-destructive-text")
     expect(
       within(menu).queryByRole("menuitem", {

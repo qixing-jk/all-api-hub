@@ -458,7 +458,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
               ) : null}
 
               {view.testStoppedMessage ? (
-                <Notice tone="warning" description={view.testStoppedMessage} />
+                <Notice tone="info" description={view.testStoppedMessage} />
               ) : null}
 
               <ApiCheckProbeList

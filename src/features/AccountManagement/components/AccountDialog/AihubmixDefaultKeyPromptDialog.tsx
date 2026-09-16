@@ -37,7 +37,7 @@ export function AihubmixDefaultKeyPromptDialog({
       header={
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <KeyRound className="text-warning-text h-5 w-5" />
+            <KeyRound className="text-warning-indicator h-5 w-5" />
             <h2 className="text-foreground text-lg font-semibold">
               {t("accountDialog:aihubmixDefaultKeyPrompt.title")}
             </h2>

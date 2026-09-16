@@ -145,7 +145,7 @@ export function SiteAnnouncementCard({
                     </h3>
                     <div className="gap-y-density-1-5 flex shrink-0 gap-x-1.5">
                       {!record.read && (
-                        <Badge variant="warning" size="sm">
+                        <Badge variant="info" size="sm">
                           {t("badges.unread")}
                         </Badge>
                       )}
