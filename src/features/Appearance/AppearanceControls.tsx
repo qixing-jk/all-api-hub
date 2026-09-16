@@ -103,7 +103,7 @@ export function AppearanceControls({
           </legend>
           <div className="gap-y-density-2 grid grid-cols-3 gap-x-2">
             {THEME_MODES.map((mode) => (
-              <label key={mode} className="min-w-0 cursor-pointer">
+              <label key={mode} className="relative min-w-0 cursor-pointer">
                 <input
                   className="peer sr-only"
                   type="radio"
@@ -139,7 +139,7 @@ export function AppearanceControls({
         </legend>
         <div className="gap-y-density-3 grid grid-cols-2 gap-x-3">
           {THEME_PRESETS.map((preset) => (
-            <label key={preset} className="min-w-0 cursor-pointer">
+            <label key={preset} className="relative min-w-0 cursor-pointer">
               <input
                 className="peer sr-only"
                 type="radio"
@@ -186,7 +186,7 @@ export function AppearanceControls({
         ) : (
           <div className="gap-y-density-3 grid grid-cols-3 gap-x-3">
             {THEME_COLORS.map((color) => (
-              <label key={color} className="min-w-0 cursor-pointer">
+              <label key={color} className="relative min-w-0 cursor-pointer">
                 <input
                   className="peer sr-only"
                   type="radio"
@@ -229,7 +229,7 @@ export function AppearanceControls({
         </legend>
         <div className="gap-y-density-2 grid grid-cols-4 gap-x-2">
           {THEME_RADII.map((radius) => (
-            <label key={radius} className="min-w-0 cursor-pointer">
+            <label key={radius} className="relative min-w-0 cursor-pointer">
               <input
                 className="peer sr-only"
                 type="radio"
@@ -274,7 +274,7 @@ export function AppearanceControls({
         </p>
         <div className="gap-y-density-2 grid grid-cols-3 gap-x-2">
           {THEME_DENSITIES.map((density) => (
-            <label key={density} className="min-w-0 cursor-pointer">
+            <label key={density} className="relative min-w-0 cursor-pointer">
               <input
                 className="peer sr-only"
                 type="radio"
@@ -314,7 +314,7 @@ export function AppearanceControls({
         </p>
         <div className="gap-y-density-2 grid grid-cols-3 gap-x-2">
           {THEME_TEXT_SIZES.map((textSize) => (
-            <label key={textSize} className="min-w-0 cursor-pointer">
+            <label key={textSize} className="relative min-w-0 cursor-pointer">
               <input
                 className="peer sr-only"
                 type="radio"

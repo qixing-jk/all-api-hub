@@ -22,6 +22,48 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 
+for (const width of [1280, 390]) {
+  test(`changing text size keeps the appearance drawer bottom aligned at ${width}px`, async ({
+    context,
+    page,
+    extensionId,
+  }) => {
+    await forceExtensionLanguage(page, "en")
+    await stubLlmMetadataIndex(context)
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto(`chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}`)
+    await page.getByRole("button", { name: /^Current:/ }).click()
+    await page.getByRole("menuitem", { name: "Appearance settings" }).click()
+    const drawer = page.getByRole("dialog", { name: "Appearance settings" })
+    for (const name of ["Extra large", "Large", "Default"]) {
+      const radio = drawer
+        .getByRole("group", { name: "Text size", exact: true })
+        .getByRole("radio", { name, exact: true })
+      await radio.locator("..").click()
+      await expect(radio).toBeChecked()
+      await expect(drawer.locator('[aria-busy="true"]')).toHaveCount(0)
+      await expect(
+        drawer.getByRole("heading", { name: "Appearance settings" }),
+      ).toBeInViewport()
+      await expect
+        .poll(async () =>
+          drawer.evaluate((el) => {
+            const reset = Array.from(el.querySelectorAll("button")).find(
+              (button) => button.textContent?.includes("Reset appearance"),
+            )!
+            const scroller = reset.closest("[aria-busy]")!.parentElement!
+            scroller.scrollTop = scroller.scrollHeight
+            return (
+              el.getBoundingClientRect().bottom -
+              reset.getBoundingClientRect().bottom
+            )
+          }),
+        )
+        .toBeLessThan(48)
+    }
+  })
+}
+
 test("appearance applies across windows, survives reload, and resets", async ({
   context,
   page,
