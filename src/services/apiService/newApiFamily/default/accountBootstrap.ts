@@ -13,9 +13,9 @@ import { t } from "~/utils/i18n/core"
 const logger = createLogger("NewApiFamilyAccountBootstrap")
 
 interface SiteStatusInfo {
-  price?: number
-  stripe_unit_price?: number
-  PaymentUSDRate?: number
+  price?: number | string
+  stripe_unit_price?: number | string
+  PaymentUSDRate?: number | string
   system_name?: string
   theme?: string
   /**
@@ -79,10 +79,12 @@ export const extractDefaultExchangeRate = (
     statusInfo.stripe_unit_price,
     statusInfo.PaymentUSDRate,
   ]) {
-    // Preserve the existing upstream compatibility and precedence, including
-    // numeric strings; bootstrap normalization must not tighten this contract.
-    if (rate && rate > 0) {
-      return rate
+    // Accept numeric strings without allowing other payload types to coerce
+    // into rates. Keep the existing field precedence and positive-value rule.
+    if (typeof rate !== "number" && typeof rate !== "string") continue
+    const numericRate = Number(rate)
+    if (numericRate > 0) {
+      return numericRate
     }
   }
 

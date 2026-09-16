@@ -97,7 +97,7 @@ describe("provider-neutral bootstrap facts", () => {
         if (options.endpoint === "/api/status")
           return {
             system_name: "Portal",
-            stripe_unit_price: 6.8,
+            stripe_unit_price: "6.8",
             checkin_enabled: true,
             check_in_enabled: true,
           }
@@ -187,9 +187,14 @@ describe("provider-neutral bootstrap facts", () => {
     [{ stripe_unit_price: -1, PaymentUSDRate: 4 }, 4],
     [{ price: "invalid", stripe_unit_price: 3 }, 3],
     [{ price: Infinity, PaymentUSDRate: 4 }, Infinity],
-    [{ price: "2.5", PaymentUSDRate: 4 }, "2.5"],
+    [{ price: "2.5", PaymentUSDRate: 4 }, 2.5],
+    [{ price: "0", stripe_unit_price: "3.5", PaymentUSDRate: 4 }, 3.5],
+    [{ price: "-2", stripe_unit_price: "invalid", PaymentUSDRate: "4.5" }, 4.5],
+    [{ price: "  ", stripe_unit_price: " 6.8 " }, 6.8],
+    [{ price: true, stripe_unit_price: 3 }, 3],
+    [{ price: [2.5], PaymentUSDRate: 4 }, 4],
   ])(
-    "preserves existing exchange-rate compatibility and precedence for %j",
+    "returns numeric exchange rates while preserving field precedence for %j",
     async (status, rate) => {
       requestData.mockResolvedValue(status)
       await expect(
