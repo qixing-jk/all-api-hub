@@ -58,7 +58,11 @@ const normalizeAction = (value: unknown): BrowserCheckInAction | undefined => {
   if (value.kind === BROWSER_CHECK_IN_ACTION_KINDS.ClickText) {
     const textPattern = normalizePattern(value.textPattern)
     const candidateSelector = normalizeSelector(value.candidateSelector)
-    return textPattern
+    // A supplied selector that cannot be used must not be silently dropped, which
+    // would widen the click to the default candidate set.
+    const candidateSelectorIsUsable =
+      value.candidateSelector === undefined || !!candidateSelector
+    return textPattern && candidateSelectorIsUsable
       ? {
           kind: BROWSER_CHECK_IN_ACTION_KINDS.ClickText,
           textPattern,
@@ -116,9 +120,13 @@ export function normalizeBrowserCheckInConfig(
   const success = normalizeSuccessCondition(value.success)
   const identity = normalizeIdentityCondition(value.identity)
   const timeoutMs = normalizeTimeoutMs(value.timeoutMs)
+  // A supplied guard that cannot be used must not be dropped: the page treats a
+  // missing identity as satisfied, so the action would run unguarded.
+  const identityIsUsable = value.identity === undefined || !!identity
   const enabled =
     value.enabled === true &&
     !!action &&
+    identityIsUsable &&
     isBrowserCheckInSuccessCondition(success)
 
   return {

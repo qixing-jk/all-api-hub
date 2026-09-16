@@ -251,6 +251,13 @@ export function BrowserCheckInConfigFields({
                   action: {
                     kind: BROWSER_CHECK_IN_ACTION_KINDS.ClickText,
                     textPattern: event.target.value,
+                    // Editing the pattern must not discard the configured target
+                    // scope, which the next check-in would otherwise widen.
+                    candidateSelector:
+                      currentConfig.action.kind ===
+                      BROWSER_CHECK_IN_ACTION_KINDS.ClickText
+                        ? currentConfig.action.candidateSelector
+                        : undefined,
                   },
                 })
               }
@@ -402,12 +409,26 @@ export function BrowserCheckInConfigFields({
           step={1000}
           value={timeoutValue}
           onChange={(event) => {
-            const value = Number(event.target.value)
+            const rawValue = event.target.value
+            const value = Number(rawValue)
+            // `Number("")` is 0, so an empty field must not persist a timeout.
             updateConfig({
-              timeoutMs: Number.isFinite(value)
-                ? value
-                : BROWSER_CHECK_IN_DEFAULT_TIMEOUT_MS,
+              timeoutMs:
+                rawValue === "" || !Number.isFinite(value)
+                  ? BROWSER_CHECK_IN_DEFAULT_TIMEOUT_MS
+                  : value,
             })
+          }}
+          onBlur={() => {
+            // Clamp once editing finishes rather than on every keystroke, which
+            // would rewrite a partially typed value ("6" before "60000").
+            const value = currentConfig.timeoutMs
+            if (value === undefined) return
+            const clamped = Math.min(
+              BROWSER_CHECK_IN_MAX_TIMEOUT_MS,
+              Math.max(BROWSER_CHECK_IN_MIN_TIMEOUT_MS, Math.round(value)),
+            )
+            if (clamped !== value) updateConfig({ timeoutMs: clamped })
           }}
         />
       </FormField>

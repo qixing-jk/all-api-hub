@@ -102,6 +102,82 @@ describe("browser check-in configuration", () => {
     expect(isBrowserCheckInConfig(DEFAULT_BROWSER_CHECK_IN_CONFIG)).toBe(false)
   })
 
+  it("disables automation instead of dropping an unusable identity guard", () => {
+    // Each value is a guard the user supplied but normalization cannot honour.
+    // Dropping it would run the action unguarded, because the page treats a
+    // missing identity as satisfied.
+    const unusableIdentities: unknown[] = [
+      { selector: ".account-name" },
+      { textPattern: "user@example.com" },
+      { selector: "x".repeat(501), textPattern: "user@example.com" },
+      { selector: ".account-name", textPattern: "(a+)+$" },
+      "not-an-object",
+      null,
+    ]
+
+    for (const identity of unusableIdentities) {
+      const normalized = normalizeBrowserCheckInConfig({
+        ...VALID_BROWSER_CONFIG,
+        identity,
+      })
+
+      expect(normalized?.enabled).toBe(false)
+      expect(normalized).not.toHaveProperty("identity")
+    }
+  })
+
+  it("keeps automation enabled when the optional identity guard is omitted", () => {
+    const { identity: _identity, ...withoutIdentity } = VALID_BROWSER_CONFIG
+    const normalized = normalizeBrowserCheckInConfig(withoutIdentity)
+
+    expect(normalized?.enabled).toBe(true)
+    expect(normalized).not.toHaveProperty("identity")
+  })
+
+  it("rejects a click-text action whose supplied candidate selector is unusable", () => {
+    const normalized = normalizeBrowserCheckInConfig({
+      ...VALID_BROWSER_CONFIG,
+      action: {
+        kind: "click_text",
+        textPattern: "check in",
+        candidateSelector: "x".repeat(501),
+      },
+    })
+
+    // The action must not degrade into an unbounded click over every candidate.
+    expect(normalized?.enabled).toBe(false)
+    expect(normalized?.action).toEqual({ kind: "page_load" })
+  })
+
+  it("keeps a click-text action with a valid or absent candidate selector", () => {
+    const withSelector = normalizeBrowserCheckInConfig({
+      ...VALID_BROWSER_CONFIG,
+      action: {
+        kind: "click_text",
+        textPattern: "check in",
+        candidateSelector: ".actions",
+      },
+    })
+    expect(withSelector?.enabled).toBe(true)
+    expect(withSelector?.action).toEqual({
+      kind: "click_text",
+      textPattern: "check in",
+      candidateSelector: ".actions",
+    })
+
+    // An absent selector is the supported default: search the documented
+    // candidate set, rather than a silently narrowed one.
+    const withoutSelector = normalizeBrowserCheckInConfig({
+      ...VALID_BROWSER_CONFIG,
+      action: { kind: "click_text", textPattern: "check in" },
+    })
+    expect(withoutSelector?.enabled).toBe(true)
+    expect(withoutSelector?.action).toEqual({
+      kind: "click_text",
+      textPattern: "check in",
+    })
+  })
+
   it("registers a configured method and removes it when the configuration is disabled", () => {
     const configured = ensureBrowserAutomationMethodState(
       createConfiguredCheckIn(),

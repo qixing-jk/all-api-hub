@@ -112,11 +112,15 @@ export function isBrowserCheckInExecutionResult(
   }
 
   const result = value as Record<string, unknown>
+  const reason = result.reason as BrowserCheckInExecutionReason
   return (
     typeof result.success === "boolean" &&
-    Object.values(BROWSER_CHECK_IN_EXECUTION_REASONS).includes(
-      result.reason as BrowserCheckInExecutionReason,
-    ) &&
+    Object.values(BROWSER_CHECK_IN_EXECUTION_REASONS).includes(reason) &&
+    // Only `completed` proves a check-in. Without this, a contradictory pair such
+    // as `{ success: true, reason: "timeout" }` passes validation and
+    // `mapExecutionResult` reports it as successful.
+    result.success ===
+      (reason === BROWSER_CHECK_IN_EXECUTION_REASONS.Completed) &&
     (result.actionTriggered === undefined ||
       typeof result.actionTriggered === "boolean") &&
     (result.matchedCondition === undefined ||
