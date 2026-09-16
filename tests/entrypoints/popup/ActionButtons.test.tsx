@@ -72,6 +72,36 @@ const expectPopupAction = ({
 }
 
 describe("popup ActionButtons", () => {
+  it.each([false, true])(
+    "shows external check-in completion only when all accounts are checked: %s",
+    async (allChecked) => {
+      displayDataMock = [false, true].map((checked, index) => ({
+        id: `account-${index}`,
+        checkIn: {
+          customCheckIn: {
+            url: `https://example.com/${index}`,
+            isCheckedInToday: allChecked || checked,
+          },
+        },
+      }))
+      const { default: ActionButtons } = await import(
+        "~/entrypoints/popup/components/ActionButtons"
+      )
+      render(
+        <ActionButtons
+          primaryActionLabel="addAccount"
+          onPrimaryAction={vi.fn()}
+        />,
+      )
+      const button = await screen.findByRole("button", {
+        name: "ui:navigation.externalCheckinAll",
+      })
+      expect(button.querySelector("svg")).toHaveClass(
+        allChecked ? "text-success-indicator" : "text-neutral-indicator",
+      )
+    },
+  )
+
   it("tracks the account primary action with popup action bar metadata", async () => {
     const onPrimaryAction = vi.fn()
     const { default: ActionButtons } = await import(

@@ -312,10 +312,11 @@ test("account editing separates the re-detect action from warnings and the prima
   ])
   await page.goto(`chrome-extension://${extensionId}/options.html#account`)
   await waitForExtensionRoot(page)
-  await page
-    .getByTestId(getAccountManagementListItemTestId("edit-colors"))
-    .getByTestId(ids.rowEditButton)
-    .click()
+  const accountRow = page.getByTestId(
+    getAccountManagementListItemTestId("edit-colors"),
+  )
+  await accountRow.hover()
+  await accountRow.getByTestId(ids.rowEditButton).click()
   const dialog = page.getByRole("dialog")
   const redetect = dialog.getByRole("button", {
     name: "Re-detect",
