@@ -11,6 +11,7 @@ export type DeferredPreferenceFieldCommitResult =
 type UseDeferredPreferenceFieldOptions = {
   savedValue: string
   savedVersion: number
+  preserveDraftOnError?: boolean
   onCommit: (draft: string) => Promise<DeferredPreferenceFieldCommitResult>
 }
 
@@ -29,11 +30,13 @@ export function useDeferredPreferenceField({
   savedValue,
   savedVersion,
   onCommit,
+  preserveDraftOnError,
 }: UseDeferredPreferenceFieldOptions) {
   const deferredDraft = useDeferredPreferenceDraft({
     savedValue,
     savedVersion,
     onCommit,
+    preserveDraftOnError,
   })
 
   return {

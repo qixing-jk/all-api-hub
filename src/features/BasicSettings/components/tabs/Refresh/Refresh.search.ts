@@ -21,6 +21,7 @@ export const refreshSearchSections: OptionsSearchItemDefinition[] = [
     "shieldBypass:history.title",
     242,
     {
+      keywordKeys: ["common:actions.reset"],
       descriptionKey: "shieldBypass:history.entryDescription",
       breadcrumbsKeys: shieldBreadcrumbs,
       keywords: [
@@ -41,6 +42,7 @@ export const refreshSearchSections: OptionsSearchItemDefinition[] = [
     "auto-refresh",
     "settings:refresh.title",
     240,
+    { keywordKeys: ["common:actions.reset"] },
   ),
   buildSectionDefinition(
     "section:shield-settings",
@@ -48,7 +50,10 @@ export const refreshSearchSections: OptionsSearchItemDefinition[] = [
     SHIELD_SETTINGS_TARGET_IDS.root,
     "settings:refresh.shieldTitle",
     241,
-    { keywords: ["shield", "firewall", "cloudflare"] },
+    {
+      keywordKeys: ["common:actions.reset"],
+      keywords: ["shield", "firewall", "cloudflare"],
+    },
   ),
 ]
 

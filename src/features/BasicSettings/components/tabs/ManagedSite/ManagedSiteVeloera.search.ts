@@ -14,6 +14,7 @@ export const managedSiteVeloeraSearchSections: OptionsSearchItemDefinition[] = [
     "settings:veloera.title",
     343,
     {
+      keywordKeys: ["common:actions.reset"],
       keywords: ["veloera"],
       isVisible: (context) => context.managedSiteType === SITE_TYPES.VELOERA,
     },

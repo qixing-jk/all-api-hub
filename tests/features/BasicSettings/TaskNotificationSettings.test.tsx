@@ -1,4 +1,5 @@
 import { act, fireEvent, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
@@ -133,6 +134,42 @@ describe("TaskNotificationSettings", () => {
     taskNotificationsVersionMock.current = 1
     updateSiteAnnouncementNotificationsMock.mockResolvedValue(true)
     updateTaskNotificationsMock.mockResolvedValue(preferenceWriteSuccess())
+  })
+
+  it("confirms clearing channel credentials and resets only channels", async () => {
+    const user = userEvent.setup()
+    taskNotificationsMock.current!.channels.webhook.url =
+      "https://example.com/hook"
+    taskNotificationsMock.current!.tasks.autoCheckin = false
+    render(<TaskNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    const reset = within(
+      document.getElementById(SETTINGS_ANCHORS.TASK_NOTIFICATION_CHANNELS)!,
+    ).getByRole("button", { name: "common:actions.reset" })
+    const webhookInput = screen.getByDisplayValue("https://example.com/hook")
+    await user.click(reset)
+    expect(updateTaskNotificationsMock).not.toHaveBeenCalled()
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "common:actions.cancel",
+      }),
+    )
+    expect(updateTaskNotificationsMock).not.toHaveBeenCalled()
+    await user.click(reset)
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "common:actions.reset",
+      }),
+    )
+    expect(updateTaskNotificationsMock).toHaveBeenCalledExactlyOnceWith({
+      channels: DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+    })
+    expect(updateSiteAnnouncementNotificationsMock).not.toHaveBeenCalled()
+    expect(webhookInput).toHaveValue(
+      DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels.webhook.url,
+    )
   })
 
   it("renders permission controls and requests notification permission", async () => {

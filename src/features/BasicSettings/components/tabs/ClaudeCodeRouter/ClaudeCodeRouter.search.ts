@@ -13,6 +13,7 @@ export const claudeCodeRouterSearchSections: OptionsSearchItemDefinition[] = [
     "settings:claudeCodeRouter.title",
     380,
     {
+      keywordKeys: ["common:actions.reset"],
       keywords: ["claude-code-router", "router"],
     },
   ),

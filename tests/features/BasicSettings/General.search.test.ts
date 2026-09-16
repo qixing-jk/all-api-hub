@@ -7,6 +7,20 @@ import {
 } from "~/features/BasicSettings/components/tabs/General/General.search"
 
 describe("general settings search definitions", () => {
+  it("makes local reset discoverable through its existing section deep link", () => {
+    for (const id of [
+      "section:display",
+      "section:action-click",
+      "section:changelog",
+      "section:site-announcements",
+      "section:logging",
+    ]) {
+      const section = generalSearchSections.find((section) => section.id === id)
+      expect(section?.keywordKeys).toContain("common:actions.reset")
+      expect(section?.targetId).toBeTruthy()
+    }
+  })
+
   it("keeps section search order aligned with the rendered general settings order", () => {
     expect(generalSearchSections.map((section) => section.id)).toEqual([
       "section:display",

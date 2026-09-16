@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import {
   Button,
   Card,
@@ -13,10 +12,13 @@ import {
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { getSiteRouteConfigForKey, SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { createPreferenceDraftReset } from "~/features/BasicSettings/components/shared/createPreferenceDraftReset"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import toast from "~/lib/notify"
 import { validateSub2ApiManagedSiteConfig } from "~/services/managedSites/providers/sub2api"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { createTab } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { joinUrl } from "~/utils/core/url"
@@ -124,7 +126,16 @@ export default function Sub2ApiSettings() {
       id={SETTINGS_ANCHORS.SUB2API}
       title={t("sub2apiManagedSite.title")}
       description={t("sub2apiManagedSite.description")}
-      onReset={resetSub2ApiManagedSiteConfig}
+      {...createPreferenceDraftReset({
+        draft: localConfig,
+        storedValue: preferences?.sub2apiManagedSite,
+        savedValue: savedConfig,
+        defaults: DEFAULT_PREFERENCES.sub2apiManagedSite,
+        reset: resetSub2ApiManagedSiteConfig,
+        setDraft: setLocalConfig,
+      })}
+      resetRequiresConfirmation
+      resetDescription={t("settings:messages.resetConnectionConfirmDesc")}
     >
       <Card padding="none">
         <CardList>

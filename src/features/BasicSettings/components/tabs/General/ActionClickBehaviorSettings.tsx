@@ -2,11 +2,12 @@ import { MousePointerClick } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
-import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import {
+  DEFAULT_PREFERENCES,
   TOOLBAR_ACTION_CLICK_BEHAVIORS,
   type ToolbarActionClickBehavior,
 } from "~/services/preferences/userPreferences"
@@ -49,6 +50,13 @@ export default function ActionClickBehaviorSettings() {
 
   return (
     <SettingSection
+      onReset={() =>
+        updateActionClickBehavior(DEFAULT_PREFERENCES.actionClickBehavior!)
+      }
+      resetDisabled={
+        actionClickBehavior === DEFAULT_PREFERENCES.actionClickBehavior
+      }
+      resetRequiresConfirmation={false}
       id="action-click"
       title={t("actionClick.title")}
       description={t("actionClick.description")}

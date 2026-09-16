@@ -329,11 +329,16 @@
     "veloera": "Veloera"
   },
   "messages": {
+    "alreadyDefault": "Already at defaults",
     "confirmReset": "Confirm Reset",
     "preferencesChangedExternally": "Preferences changed externally. Refresh and try again.",
+    "resetAllConfirmDesc": "Restore all preferences and clear configured connection addresses and credentials? Saved accounts are kept; history retention policies also return to defaults.",
     "resetConfirmDesc": "Are you sure you want to reset {{name}} to default settings? This operation cannot be undone.",
+    "resetConnectionConfirmDesc": "This clears the connection addresses, credentials, and related settings in this group. You will need to configure them again. Restore defaults?",
     "resetFailed": "Failed to reset {{name}}",
+    "resetHistoryConfirmDesc": "Restoring defaults shortens the history retention period. Older records may be removed permanently. Continue?",
     "resetSuccess": "{{name}} has been reset to default settings",
+    "retentionSaveHint": "Other options save automatically. Apply retention days explicitly; shortening retention may remove history.",
     "runtimeRequestFailed": "Runtime request failed. Try again later.",
     "saveSettingsFailed": "Failed to save settings",
     "updateFailed": "{{name}} Update failed",

@@ -14,6 +14,7 @@ export const managedSiteDoneHubSearchSections: OptionsSearchItemDefinition[] = [
     "settings:doneHub.title",
     342,
     {
+      keywordKeys: ["common:actions.reset"],
       keywords: ["done-hub", "donehub"],
       isVisible: (context) => context.managedSiteType === SITE_TYPES.DONE_HUB,
     },

@@ -1,9 +1,10 @@
 import { Globe2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList, Switch } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 
 /**
@@ -27,6 +28,16 @@ export default function AutoFillCurrentSiteUrlOnAccountAddSettings() {
 
   return (
     <SettingSection
+      onReset={() =>
+        updateAutoFillCurrentSiteUrlOnAccountAdd(
+          DEFAULT_PREFERENCES.autoFillCurrentSiteUrlOnAccountAdd!,
+        )
+      }
+      resetDisabled={
+        autoFillCurrentSiteUrlOnAccountAdd ===
+        DEFAULT_PREFERENCES.autoFillCurrentSiteUrlOnAccountAdd
+      }
+      resetRequiresConfirmation={false}
       id="auto-fill-current-site-url-on-account-add"
       title={t("autoFillCurrentSiteUrlOnAccountAdd.title")}
       description={t("autoFillCurrentSiteUrlOnAccountAdd.description")}

@@ -14,6 +14,7 @@ export const managedSiteOctopusSearchSections: OptionsSearchItemDefinition[] = [
     "settings:octopus.title",
     344,
     {
+      keywordKeys: ["common:actions.reset"],
       keywords: ["octopus"],
       isVisible: (context) => context.managedSiteType === SITE_TYPES.OCTOPUS,
     },

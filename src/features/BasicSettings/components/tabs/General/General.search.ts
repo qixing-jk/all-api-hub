@@ -25,6 +25,7 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
     "general-display",
     "settings:display.title",
     200,
+    { keywordKeys: ["common:actions.reset"] },
   ),
   buildSectionDefinition(
     "section:appearance",
@@ -32,6 +33,7 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
     SETTINGS_ANCHORS.APPEARANCE,
     "settings:theme.appearance",
     201,
+    { keywordKeys: ["common:actions.reset"] },
   ),
   buildSectionDefinition(
     "section:action-click",
@@ -39,6 +41,7 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
     "action-click",
     "settings:actionClick.title",
     202,
+    { keywordKeys: ["common:actions.reset"] },
   ),
   buildSectionDefinition(
     "section:site-announcements",
@@ -47,6 +50,7 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
     "settings:siteAnnouncementNotifications.title",
     203,
     {
+      keywordKeys: ["common:actions.reset"],
       descriptionKey: "settings:siteAnnouncementNotifications.description",
       keywords: ["announcement", "notice", "polling"],
     },
@@ -57,6 +61,7 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
     "changelog-on-update",
     "settings:changelogOnUpdate.title",
     204,
+    { keywordKeys: ["common:actions.reset"] },
   ),
   buildSectionDefinition(
     "section:logging",
@@ -64,6 +69,7 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
     "logging",
     "settings:logging.title",
     205,
+    { keywordKeys: ["common:actions.reset"] },
   ),
   buildSectionDefinition(
     "section:product-analytics",

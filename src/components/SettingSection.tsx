@@ -1,9 +1,9 @@
-import { RefreshCw } from "lucide-react"
-import { useState, type ReactNode } from "react"
+import { RotateCcw } from "lucide-react"
+import { useRef, useState, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
-import { BodySmall, Button, Heading3 } from "~/components/ui"
-import { Modal } from "~/components/ui/Dialog/Modal"
+import { SettingsResetButton } from "~/components/SettingsResetButton"
+import { BodySmall, ConfirmDialog, Heading3 } from "~/components/ui"
 import toast from "~/lib/notify"
 import type { PreferenceWriteResult } from "~/services/preferences/userPreferences"
 import { createLogger } from "~/utils/core/logger"
@@ -20,7 +20,13 @@ interface SettingSectionProps {
   /** Contextual help displayed immediately after the section title. */
   titleActions?: ReactNode
   actions?: ReactNode
-  onReset?: () => Promise<PreferenceWriteResult>
+  onReset?: () => Promise<{
+    ok: boolean
+    reason?: Extract<PreferenceWriteResult, { ok: false }>["reason"]
+  }>
+  resetDisabled?: boolean
+  resetRequiresConfirmation?: boolean
+  resetDescription?: string
   resetButtonLabel?: string
   children: ReactNode
   id?: string
@@ -38,6 +44,9 @@ export function SettingSection({
   actions,
   onReset,
   resetButtonLabel,
+  resetDisabled = false,
+  resetRequiresConfirmation = true,
+  resetDescription,
   children,
   id,
   className = "",
@@ -46,24 +55,31 @@ export function SettingSection({
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
 
+  const resettingRef = useRef(false)
+
   const handleResetClick = () => {
-    setIsResetDialogOpen(true)
+    if (resetRequiresConfirmation) setIsResetDialogOpen(true)
+    else void handleResetConfirm()
   }
 
   const handleResetConfirm = async () => {
-    if (!onReset) return
+    if (!onReset || resetDisabled || resettingRef.current) return
+    resettingRef.current = true
 
     try {
       setIsResetting(true)
       const result = await onReset()
 
       if (result.ok) {
+        setIsResetDialogOpen(false)
         toast.success(t("messages.resetSuccess", { name: title }))
       } else {
         toast.error(
-          getPreferenceWriteFailureMessage(result.reason, {
-            fallback: t("messages.resetFailed", { name: title }),
-          }),
+          result.reason
+            ? getPreferenceWriteFailureMessage(result.reason, {
+                fallback: t("messages.resetFailed", { name: title }),
+              })
+            : t("messages.resetFailed", { name: title }),
         )
       }
     } catch (error) {
@@ -71,24 +87,23 @@ export function SettingSection({
       toast.error(t("messages.resetFailed", { name: title }))
     } finally {
       setIsResetting(false)
-      setIsResetDialogOpen(false)
+      resettingRef.current = false
     }
   }
 
   const handleResetCancel = () => {
-    setIsResetDialogOpen(false)
+    if (!resettingRef.current) setIsResetDialogOpen(false)
   }
 
   const resetButton = onReset && (
-    <Button
+    <SettingsResetButton
       onClick={handleResetClick}
-      variant="outline"
-      size="sm"
-      className="shrink-0"
-      leftIcon={<RefreshCw className="h-4 w-4" />}
-    >
-      {resetButtonLabel || t("common:actions.reset")}
-    </Button>
+      disabled={resetDisabled || isResetting}
+      disabledLabel={
+        resetDisabled && !isResetting ? t("messages.alreadyDefault") : undefined
+      }
+      label={resetButtonLabel || t("common:actions.reset")}
+    />
   )
 
   return (
@@ -118,46 +133,26 @@ export function SettingSection({
           </div>
         )}
 
-        {children}
+        <fieldset disabled={isResetting} className="space-y-density-6 min-w-0">
+          {children}
+        </fieldset>
       </section>
 
-      {/* Reset Confirmation Dialog */}
-      <Modal
+      <ConfirmDialog
         isOpen={isResetDialogOpen}
         onClose={handleResetCancel}
-        size="sm"
-        header={
-          <div className="pr-8">
-            <h3 className="text-foreground text-lg font-semibold">
-              {t("messages.confirmReset")}
-            </h3>
-          </div>
+        intent="warning"
+        icon={RotateCcw}
+        title={t("messages.confirmReset")}
+        description={
+          resetDescription ?? t("messages.resetConfirmDesc", { name: title })
         }
-        footer={
-          <div className="gap-y-density-3 flex justify-end gap-x-3">
-            <Button
-              onClick={handleResetCancel}
-              variant="outline"
-              disabled={isResetting}
-            >
-              {t("common:actions.cancel")}
-            </Button>
-            <Button
-              onClick={handleResetConfirm}
-              variant="destructive"
-              loading={isResetting}
-            >
-              {isResetting
-                ? t("common:status.resetting")
-                : t("common:actions.reset")}
-            </Button>
-          </div>
-        }
-      >
-        <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
-          {t("messages.resetConfirmDesc", { name: title })}
-        </p>
-      </Modal>
+        cancelLabel={t("common:actions.cancel")}
+        confirmLabel={resetButtonLabel || t("common:actions.reset")}
+        workingLabel={t("common:status.resetting")}
+        onConfirm={() => void handleResetConfirm()}
+        isWorking={isResetting}
+      />
     </>
   )
 }

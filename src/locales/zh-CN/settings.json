@@ -329,11 +329,16 @@
     "veloera": "Veloera"
   },
   "messages": {
+    "alreadyDefault": "已是默认值",
     "confirmReset": "确认重置",
     "preferencesChangedExternally": "偏好设置已在其他位置发生变化，请刷新后重试。",
+    "resetAllConfirmDesc": "将恢复全部偏好设置，并清空已配置的连接地址和凭据。账户列表不会被删除；历史保留策略也会恢复默认。是否继续？",
     "resetConfirmDesc": "确定要将{{name}}重置为默认设置吗？此操作无法撤销。",
+    "resetConnectionConfirmDesc": "将清空本组连接地址、凭据及相关配置。之后需要重新配置，是否恢复默认值？",
     "resetFailed": "重置{{name}}失败",
+    "resetHistoryConfirmDesc": "恢复默认值将缩短历史保留期限，超出期限的记录可能被清理且无法恢复。是否继续？",
     "resetSuccess": "{{name}}已重置为默认设置",
+    "retentionSaveHint": "其他选项自动保存；保留天数需点击应用，缩短期限可能清理历史记录。",
     "runtimeRequestFailed": "运行时请求失败，请稍后重试。",
     "saveSettingsFailed": "保存设置失败",
     "updateFailed": "{{name}}更新失败",

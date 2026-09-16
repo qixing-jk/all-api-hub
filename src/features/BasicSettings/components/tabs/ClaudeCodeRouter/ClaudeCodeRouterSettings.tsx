@@ -1,11 +1,13 @@
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList, Input } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { createPreferenceDraftReset } from "~/features/BasicSettings/components/shared/createPreferenceDraftReset"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
 /**
@@ -64,7 +66,16 @@ export default function ClaudeCodeRouterSettings() {
       id="claude-code-router"
       title={t("settings:claudeCodeRouter.title")}
       description={t("settings:claudeCodeRouter.description")}
-      onReset={resetClaudeCodeRouterConfig}
+      {...createPreferenceDraftReset({
+        draft: localConfig,
+        storedValue: preferences?.claudeCodeRouter,
+        savedValue: savedConfig,
+        defaults: DEFAULT_PREFERENCES.claudeCodeRouter,
+        reset: resetClaudeCodeRouterConfig,
+        setDraft: setLocalConfig,
+      })}
+      resetRequiresConfirmation
+      resetDescription={t("settings:messages.resetConnectionConfirmDesc")}
     >
       <Card padding="none">
         <CardList>

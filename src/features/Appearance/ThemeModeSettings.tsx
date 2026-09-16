@@ -2,6 +2,7 @@ import { Sun } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
+import { SettingsResetButton } from "~/components/SettingsResetButton"
 import { Caption, CardItem } from "~/components/ui"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
@@ -9,7 +10,6 @@ import { DEFAULT_THEME_MODE, THEME_MODE } from "~/constants/theme"
 import { useTheme } from "~/contexts/ThemeContext"
 import { isThemeMode, THEME_MODES } from "~/types/theme"
 
-import { AppearanceResetButton } from "./AppearanceResetButton"
 import { getThemeModeOptions } from "./themeModeOptions"
 
 /** Settings card for choosing an explicit or system theme. */
@@ -54,7 +54,9 @@ const ThemeModeSettings = () => {
               }
             })}
           />
-          <AppearanceResetButton
+          <SettingsResetButton
+            iconOnly
+            hidden={themeMode === DEFAULT_THEME_MODE}
             label={`${t("common:actions.reset")}: ${t("theme.mode")}`}
             onClick={() => setThemeMode(DEFAULT_THEME_MODE)}
           />

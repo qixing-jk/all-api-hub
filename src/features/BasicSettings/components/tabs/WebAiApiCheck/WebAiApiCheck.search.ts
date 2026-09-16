@@ -14,6 +14,7 @@ export const webAiApiCheckSearchSections: OptionsSearchItemDefinition[] = [
     "web-ai-api-check",
     "webAiApiCheck:settings.title",
     320,
+    { keywordKeys: ["common:actions.reset"] },
   ),
 ]
 

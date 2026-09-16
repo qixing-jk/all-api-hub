@@ -75,6 +75,11 @@ describe("ThemeModeSettings", () => {
     themeState.current.themeMode = THEME_MODE.SYSTEM
     render(<ThemeModeSettings />)
     expect(
+      screen.queryByRole("button", {
+        name: "common:actions.reset: theme.mode",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
       screen.getByText(
         'theme.currentTheme:{"theme":"settings:theme.followSystem","resolvedTheme":"theme.light"}',
       ),

@@ -329,11 +329,16 @@
     "veloera": "Veloera"
   },
   "messages": {
+    "alreadyDefault": "Já usa os valores padrão",
     "confirmReset": "Confirmar redefinição",
     "preferencesChangedExternally": "Preferências alteradas externamente. Atualize e tente novamente.",
+    "resetAllConfirmDesc": "Restaurar todas as preferências e apagar endereços e credenciais configurados? As contas salvas são mantidas; as políticas de retenção também voltam aos padrões.",
     "resetConfirmDesc": "Tem certeza de que deseja redefinir {{name}} para as configurações padrão? Esta operação não pode ser desfeita.",
+    "resetConnectionConfirmDesc": "Isso apaga os endereços de conexão, credenciais e configurações relacionadas deste grupo. Será necessário configurá-los novamente. Restaurar padrões?",
     "resetFailed": "Falha ao redefinir {{name}}",
+    "resetHistoryConfirmDesc": "Restaurar os padrões reduz o período de retenção. Registros antigos podem ser removidos permanentemente. Continuar?",
     "resetSuccess": "{{name}} foi redefinido para as configurações padrão",
+    "retentionSaveHint": "As outras opções são salvas automaticamente. Aplique os dias de retenção explicitamente; reduzi-los pode remover o histórico.",
     "runtimeRequestFailed": "Falha na solicitação de tempo de execução. Tente novamente mais tarde.",
     "saveSettingsFailed": "Falha ao salvar as configurações",
     "updateFailed": "Falha na atualização do {{name}}",

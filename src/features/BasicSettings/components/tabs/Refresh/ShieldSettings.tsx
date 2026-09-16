@@ -6,7 +6,6 @@ import {
   ResponsiveButtonGroup,
   responsiveButtonGroupItemClassName,
 } from "~/components/ResponsiveButtonGroup"
-import { SettingSection } from "~/components/SettingSection"
 import {
   Alert,
   BodySmall,
@@ -24,10 +23,12 @@ import {
   TEMP_CONTEXT_PREFERENCE_MODES,
 } from "~/constants/tempContextMode"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { SHIELD_AUTOMATIC_FEATURE_ITEMS } from "~/features/BasicSettings/components/tabs/Refresh/automaticFeatureSettings"
 import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
 import { cn } from "~/lib/utils"
 import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
   PROTECTION_BYPASS_AUTOMATIC_FEATURES,
   type ProtectionBypassAutomaticFeature,
@@ -38,6 +39,7 @@ import {
 } from "~/utils/browser/protectionBypass"
 import { canUseTempWindowFetch } from "~/utils/browser/tempWindowFetch"
 import { openSettingsTab } from "~/utils/navigation"
+import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
 
 import { ProtectionBypassDevTrigger } from "./ProtectionBypassDevTrigger"
 import ProtectionBypassHistory from "./ProtectionBypassHistory"
@@ -170,6 +172,14 @@ export default function ShieldSettings() {
 
   return (
     <SettingSection
+      resetRequiresConfirmation={false}
+      resetDisabled={matchesDefaultSettings(
+        normalizedPreferences,
+        DEFAULT_PREFERENCES.tempWindowFallback,
+      )}
+      onReset={() =>
+        updateTempWindowFallback(DEFAULT_PREFERENCES.tempWindowFallback!)
+      }
       id={SHIELD_SETTINGS_TARGET_IDS.root}
       title={t("refresh.shieldTitle")}
       description={shieldDescription}

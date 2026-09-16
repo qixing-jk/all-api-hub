@@ -1,7 +1,6 @@
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import {
   Card,
   CardItem,
@@ -11,9 +10,12 @@ import {
 } from "~/components/ui"
 import { getSiteRouteConfigForKey, SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { createPreferenceDraftReset } from "~/features/BasicSettings/components/shared/createPreferenceDraftReset"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { createTab } from "~/utils/browser/browserApi"
 import { joinUrl } from "~/utils/core/url"
 import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
@@ -121,7 +123,16 @@ export default function DoneHubSettings() {
       id="done-hub"
       title={t("doneHub.title")}
       description={t("doneHub.description")}
-      onReset={resetDoneHubConfig}
+      {...createPreferenceDraftReset({
+        draft: localConfig,
+        storedValue: preferences?.doneHub,
+        savedValue: savedConfig,
+        defaults: DEFAULT_PREFERENCES.doneHub,
+        reset: resetDoneHubConfig,
+        setDraft: setLocalConfig,
+      })}
+      resetRequiresConfirmation
+      resetDescription={t("settings:messages.resetConnectionConfirmDesc")}
     >
       <Card padding="none">
         <CardList>

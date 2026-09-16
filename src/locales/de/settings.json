@@ -329,11 +329,16 @@
     "veloera": "Veloera"
   },
   "messages": {
+    "alreadyDefault": "Bereits auf Standardwerten",
     "confirmReset": "Zurücksetzen bestätigen",
     "preferencesChangedExternally": "Einstellungen wurden extern geändert. Aktualisieren Sie und versuchen Sie es erneut.",
+    "resetAllConfirmDesc": "Alle Einstellungen zurücksetzen und konfigurierte Verbindungsadressen und Zugangsdaten löschen? Gespeicherte Konten bleiben erhalten; auch die Aufbewahrungsregeln werden zurückgesetzt.",
     "resetConfirmDesc": "Sind Sie sicher, dass Sie {{name}} auf die Standardeinstellungen zurücksetzen möchten? Dieser Vorgang kann nicht rückgängig gemacht werden.",
+    "resetConnectionConfirmDesc": "Die Verbindungsadressen, Zugangsdaten und zugehörigen Einstellungen dieser Gruppe werden gelöscht und müssen erneut eingerichtet werden. Standardwerte wiederherstellen?",
     "resetFailed": "Fehler beim Zurücksetzen von {{name}}",
+    "resetHistoryConfirmDesc": "Die Standardwerte verkürzen die Aufbewahrungsdauer. Ältere Einträge können dauerhaft gelöscht werden. Fortfahren?",
     "resetSuccess": "{{name}} wurde auf die Standardeinstellungen zurückgesetzt",
+    "retentionSaveHint": "Andere Optionen werden automatisch gespeichert. Die Aufbewahrungsdauer muss angewendet werden; eine Verkürzung kann Verlaufseinträge löschen.",
     "runtimeRequestFailed": "Laufzeitanforderung fehlgeschlagen. Versuchen Sie es später noch einmal.",
     "saveSettingsFailed": "Einstellungen konnten nicht gespeichert werden",
     "updateFailed": "{{name}} Update fehlgeschlagen",

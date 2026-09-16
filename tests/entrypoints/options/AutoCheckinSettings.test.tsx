@@ -429,9 +429,7 @@ describe("AutoCheckinSettings", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "common:actions.reset" }),
     )
-    fireEvent.click(
-      screen.getAllByRole("button", { name: "common:actions.reset" })[1],
-    )
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
 
     await waitFor(() => {
       expect(resetAutoCheckinConfig).toHaveBeenCalled()

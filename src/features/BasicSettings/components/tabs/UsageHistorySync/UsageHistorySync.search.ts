@@ -12,6 +12,7 @@ export const usageHistorySyncSearchSections: OptionsSearchItemDefinition[] = [
     "usage-history-sync",
     "usageAnalytics:syncTab.settingsTitle",
     300,
+    { keywordKeys: ["common:actions.reset"] },
   ),
   buildSectionDefinition(
     "section:usage-history-sync-state",

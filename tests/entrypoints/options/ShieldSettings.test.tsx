@@ -182,7 +182,7 @@ describe("ShieldSettings", () => {
   const updateTempWindowFallback = vi.fn()
   let focusObservationController = createFocusObservationController()
 
-  it("saves custom window dimensions on submit and restores defaults", async () => {
+  it("automatically saves valid window dimensions on blur and immediately restores defaults", async () => {
     const user = userEvent.setup()
     const { rerender } = render(<ShieldSettings />, {
       withUserPreferencesProvider: false,
@@ -198,16 +198,20 @@ describe("ShieldSettings", () => {
     expect(height).toHaveValue(720)
     await user.clear(width)
     await user.type(width, "800")
-    await user.clear(height)
-    await user.type(height, "1000")
     expect(updateTempWindowFallback).not.toHaveBeenCalled()
-    await user.click(
-      screen.getByRole("button", { name: "common:actions.save" }),
-    )
+    await user.tab()
     expect(updateTempWindowFallback).toHaveBeenLastCalledWith({
       windowWidth: 800,
+    })
+    await user.clear(height)
+    await user.type(height, "1000")
+    await user.tab()
+    expect(updateTempWindowFallback).toHaveBeenLastCalledWith({
       windowHeight: 1000,
     })
+    expect(
+      screen.queryByRole("button", { name: "common:actions.save" }),
+    ).not.toBeInTheDocument()
     const context = useUserPreferencesContextMock.mock.results.at(-1)!.value
     useUserPreferencesContextMock.mockReturnValue({
       ...context,
@@ -225,12 +229,34 @@ describe("ShieldSettings", () => {
     )
     expect(width).toHaveValue(600)
     expect(height).toHaveValue(720)
-    await user.click(
-      screen.getByRole("button", { name: "common:actions.save" }),
-    )
+    await user.tab()
     expect(updateTempWindowFallback).toHaveBeenLastCalledWith({
       windowWidth: 600,
       windowHeight: 720,
+    })
+  })
+
+  it("keeps a failed window-size draft available for retry", async () => {
+    const user = userEvent.setup()
+    updateTempWindowFallback
+      .mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({ ok: true })
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    const width = screen.getByRole("spinbutton", {
+      name: "settings:refresh.shieldWindowWidth",
+    })
+    await user.clear(width)
+    await user.type(width, "900")
+    await user.tab()
+    expect(width).toHaveValue(900)
+    await user.click(width)
+    await user.tab()
+    expect(updateTempWindowFallback).toHaveBeenCalledTimes(2)
+    expect(updateTempWindowFallback).toHaveBeenLastCalledWith({
+      windowWidth: 900,
     })
   })
 
@@ -244,14 +270,10 @@ describe("ShieldSettings", () => {
       name: "settings:refresh.shieldWindowHeight",
     })
     await user.clear(height)
-    await user.click(
-      screen.getByRole("button", { name: "common:actions.save" }),
-    )
+    await user.tab()
     expect(height).toBeInvalid()
     await user.type(height, "9999")
-    await user.click(
-      screen.getByRole("button", { name: "common:actions.save" }),
-    )
+    await user.tab()
     expect(height).toBeInvalid()
     expect(updateTempWindowFallback).not.toHaveBeenCalled()
   })

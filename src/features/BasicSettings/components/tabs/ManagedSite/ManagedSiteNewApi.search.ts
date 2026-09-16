@@ -15,6 +15,7 @@ export const managedSiteNewApiSearchSections: OptionsSearchItemDefinition[] = [
     "settings:newApi.title",
     341,
     {
+      keywordKeys: ["common:actions.reset"],
       keywords: ["new-api"],
       isVisible: (context) => context.managedSiteType === SITE_TYPES.NEW_API,
     },

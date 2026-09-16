@@ -2,7 +2,6 @@ import type { TFunction } from "i18next"
 import { SlidersHorizontal, Terminal } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import {
   Card,
   CardItem,
@@ -15,6 +14,8 @@ import {
   Switch,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { LOG_LEVELS, type LogLevel } from "~/types/logging"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 
@@ -65,6 +66,11 @@ export default function LoggingSettings() {
       title={t("logging.title")}
       description={t("logging.description")}
       onReset={resetLoggingSettings}
+      resetRequiresConfirmation={false}
+      resetDisabled={
+        loggingConsoleEnabled === DEFAULT_PREFERENCES.logging.consoleEnabled &&
+        loggingLevel === DEFAULT_PREFERENCES.logging.level
+      }
     >
       <Card padding="none">
         <CardList>

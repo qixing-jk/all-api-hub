@@ -1,25 +1,60 @@
+import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import UsageHistorySyncSettingsSection from "~/features/BasicSettings/components/tabs/UsageHistorySync/UsageHistorySyncSettingsSection"
 import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const noop = vi.fn()
 
-const createDeferred = <T,>() => {
-  let resolve!: (value: T | PromiseLike<T>) => void
-  const promise = new Promise<T>((res) => {
-    resolve = res
+describe("UsageHistorySyncSettingsSection", () => {
+  it("allows reset to discard an invalid interval draft even when saved preferences are default", async () => {
+    const user = userEvent.setup()
+    const onReset = vi.fn().mockResolvedValue({ ok: true })
+    render(
+      <UsageHistorySyncSettingsSection
+        reset={{
+          onReset,
+          resetDisabled: true,
+          resetRequiresConfirmation: false,
+        }}
+        enabled={false}
+        onEnabledChange={noop}
+        retentionDays={30}
+        onRetentionDaysChange={noop}
+        scheduleMode={USAGE_HISTORY_SCHEDULE_MODE.AFTER_REFRESH}
+        onScheduleModeChange={noop}
+        syncIntervalMinutes={360}
+        onSyncIntervalMinutesChange={noop}
+        onSyncIntervalMinutesCommit={async () => false}
+        alarmsSupported
+        isLoading={false}
+        isSyncingAll={false}
+        onApplySettings={noop}
+        onSyncNow={noop}
+        onRefreshStatus={noop}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+    const interval = screen.getAllByRole("spinbutton")[1]
+    await user.clear(interval)
+    const reset = screen.getByRole("button", { name: "common:actions.reset" })
+    expect(reset).toBeEnabled()
+    await user.click(reset)
+    expect(interval).toHaveValue(6)
+    expect(onReset).toHaveBeenCalledOnce()
   })
 
-  return { promise, resolve }
-}
-
-describe("UsageHistorySyncSettingsSection", () => {
   it("attaches the sync interval search target to the sync interval field", () => {
     const { container } = render(
       <UsageHistorySyncSettingsSection
+        reset={{
+          onReset: async () => ({ ok: true }),
+          resetDisabled: true,
+          resetRequiresConfirmation: false,
+        }}
         enabled={true}
         onEnabledChange={noop}
         retentionDays={30}
@@ -72,6 +107,11 @@ describe("UsageHistorySyncSettingsSection", () => {
 
       return (
         <UsageHistorySyncSettingsSection
+          reset={{
+            onReset: async () => ({ ok: true }),
+            resetDisabled: true,
+            resetRequiresConfirmation: false,
+          }}
           enabled={true}
           onEnabledChange={noop}
           retentionDays={30}

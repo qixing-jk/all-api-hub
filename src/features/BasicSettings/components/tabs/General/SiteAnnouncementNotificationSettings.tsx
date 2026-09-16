@@ -2,7 +2,6 @@ import { Clock, Megaphone } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
-import { SettingSection } from "~/components/SettingSection"
 import {
   Button,
   Card,
@@ -14,8 +13,10 @@ import {
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { useDeferredPreferenceField } from "~/hooks/useDeferredPreferenceField"
 import toast from "~/lib/notify"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
@@ -94,6 +95,24 @@ export default function SiteAnnouncementNotificationSettings() {
 
   return (
     <SettingSection
+      resetRequiresConfirmation={false}
+      resetDisabled={
+        siteAnnouncementNotifications.enabled ===
+          DEFAULT_PREFERENCES.siteAnnouncementNotifications!.enabled &&
+        siteAnnouncementNotifications.intervalMinutes ===
+          DEFAULT_PREFERENCES.siteAnnouncementNotifications!.intervalMinutes &&
+        !intervalField.isDirty
+      }
+      onReset={async () => {
+        const defaults = DEFAULT_PREFERENCES.siteAnnouncementNotifications!
+        const result = await updateSiteAnnouncementNotifications({
+          enabled: defaults.enabled,
+          intervalMinutes: defaults.intervalMinutes,
+        })
+        if (result.success)
+          intervalField.setDraft(String(defaults.intervalMinutes))
+        return { ok: result.success }
+      }}
       id={SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS}
       title={t("siteAnnouncementNotifications.title")}
       description={t("siteAnnouncementNotifications.description")}

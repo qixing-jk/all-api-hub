@@ -16,6 +16,7 @@ export const accountManagementSearchSections: OptionsSearchItemDefinition[] = [
     "account-management",
     "settings:accountManagement.title",
     220,
+    { keywordKeys: ["common:actions.reset"] },
   ),
   buildSectionDefinition(
     "section:auto-provision-key",
@@ -23,6 +24,7 @@ export const accountManagementSearchSections: OptionsSearchItemDefinition[] = [
     SETTINGS_ANCHORS.AUTO_PROVISION_KEY,
     "settings:autoProvisionKeyOnAccountAdd.title",
     221,
+    { keywordKeys: ["common:actions.reset"] },
   ),
   buildSectionDefinition(
     "section:auto-fill-current-site",
@@ -30,6 +32,7 @@ export const accountManagementSearchSections: OptionsSearchItemDefinition[] = [
     "auto-fill-current-site-url-on-account-add",
     "settings:autoFillCurrentSiteUrlOnAccountAdd.title",
     222,
+    { keywordKeys: ["common:actions.reset"] },
   ),
   buildSectionDefinition(
     "section:duplicate-account-warning",
@@ -37,6 +40,7 @@ export const accountManagementSearchSections: OptionsSearchItemDefinition[] = [
     "duplicate-account-warning-on-add",
     "settings:duplicateAccountWarningOnAdd.title",
     223,
+    { keywordKeys: ["common:actions.reset"] },
   ),
   buildSectionDefinition(
     "section:sorting-priority",
@@ -44,6 +48,7 @@ export const accountManagementSearchSections: OptionsSearchItemDefinition[] = [
     SETTINGS_ANCHORS.SORTING_PRIORITY,
     "settings:sorting.title",
     224,
+    { keywordKeys: ["common:actions.reset"] },
   ),
 ]
 

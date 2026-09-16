@@ -22,6 +22,9 @@ const { save, savedAppearance } = vi.hoisted(() => ({
     preset: "default",
     density: "default",
     textSize: "default",
+    color: "blue",
+    radius: "default",
+    themeMode: "system",
   },
 }))
 vi.mock("~/contexts/UserPreferencesContext", () => ({
@@ -29,11 +32,9 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
     preferences: {
       appearance: {
         ...savedAppearance,
-        color: THEME_COLOR.BLUE,
-        radius: THEME_RADIUS.DEFAULT,
       },
     },
-    themeMode: THEME_MODE.SYSTEM,
+    themeMode: savedAppearance.themeMode,
     updateAppearance: save,
   }),
 }))
@@ -47,10 +48,26 @@ const renderControls = () =>
 describe("appearance controls", () => {
   beforeEach(() => {
     save.mockReset()
-    save.mockResolvedValue({ ok: true })
+    save.mockImplementation(async (updates) => {
+      Object.assign(savedAppearance, updates)
+      return { ok: true }
+    })
     savedAppearance.preset = THEME_PRESET.DEFAULT
     savedAppearance.density = "default"
     savedAppearance.textSize = "default"
+    savedAppearance.color = "blue"
+    savedAppearance.radius = "default"
+    savedAppearance.themeMode = "system"
+  })
+
+  it("hides field resets at defaults while keeping the group reset disabled", () => {
+    renderControls()
+    for (const group of screen.getAllByRole("group")) {
+      expect(within(group).queryByRole("button")).not.toBeInTheDocument()
+    }
+    expect(
+      screen.getByRole("button", { name: "settings:appearance.reset" }),
+    ).toBeDisabled()
   })
 
   it.each([
@@ -62,6 +79,14 @@ describe("appearance controls", () => {
     ["appearance.textSize", { textSize: "default" }],
   ])("resets only the field in %s", async (label, expected) => {
     const user = userEvent.setup()
+    Object.assign(savedAppearance, {
+      preset: "anthropic",
+      color: "rose",
+      radius: "large",
+      density: "compact",
+      textSize: "large",
+      themeMode: "dark",
+    })
     renderControls()
     const group = screen.getByRole("group", { name: `settings:${label}` })
     await user.click(within(group).getByRole("button"))
@@ -356,6 +381,7 @@ describe("appearance controls", () => {
     "waits for all saves and ignores an older %s write after the latest success",
     async (outcome) => {
       const user = userEvent.setup()
+      savedAppearance.density = "compact"
       const older = createDeferred<{ ok: boolean }>()
       const latest = createDeferred<{ ok: boolean }>()
       save
@@ -394,6 +420,7 @@ describe("appearance controls", () => {
 
   it("preserves the latest failure when an older save succeeds afterwards", async () => {
     const user = userEvent.setup()
+    savedAppearance.density = "compact"
     const older = createDeferred<{ ok: boolean }>()
     const latest = createDeferred<{ ok: boolean }>()
     save.mockReturnValueOnce(older.promise).mockReturnValueOnce(latest.promise)

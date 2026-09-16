@@ -329,11 +329,16 @@
     "veloera": "Veloera"
   },
   "messages": {
+    "alreadyDefault": "Ya usa los valores predeterminados",
     "confirmReset": "Confirmar restablecimiento",
     "preferencesChangedExternally": "Las preferencias cambiaron externamente. Actualiza e inténtalo de nuevo.",
+    "resetAllConfirmDesc": "¿Restaurar todas las preferencias y borrar las direcciones y credenciales configuradas? Las cuentas guardadas se conservan; las políticas de retención también vuelven a sus valores predeterminados.",
     "resetConfirmDesc": "¿Seguro que quieres restablecer {{name}} a los ajustes predeterminados? Esta operación no se puede deshacer.",
+    "resetConnectionConfirmDesc": "Se borrarán las direcciones de conexión, credenciales y ajustes relacionados de este grupo. Tendrás que configurarlos de nuevo. ¿Restaurar valores predeterminados?",
     "resetFailed": "No se pudo restablecer {{name}}",
+    "resetHistoryConfirmDesc": "Restaurar los valores predeterminados acorta el período de retención. Los registros antiguos podrían eliminarse permanentemente. ¿Continuar?",
     "resetSuccess": "{{name}} se restableció a los ajustes predeterminados",
+    "retentionSaveHint": "Las demás opciones se guardan automáticamente. Aplica los días de retención explícitamente; reducirlos puede eliminar el historial.",
     "runtimeRequestFailed": "La solicitud de runtime falló. Inténtalo más tarde.",
     "saveSettingsFailed": "No se pudieron guardar los ajustes",
     "updateFailed": "Error al actualizar {{name}}",

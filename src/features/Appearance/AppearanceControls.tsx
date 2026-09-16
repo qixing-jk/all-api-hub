@@ -1,8 +1,7 @@
-import { RotateCcw } from "lucide-react"
 import { useId } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Button } from "~/components/ui"
+import { SettingsResetButton } from "~/components/SettingsResetButton"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   DEFAULT_THEME_MODE,
@@ -27,7 +26,6 @@ import {
 } from "~/types/theme"
 
 import { AppearancePreview, ThemePresetPreview } from "./AppearancePreview"
-import { AppearanceResetButton } from "./AppearanceResetButton"
 import { getThemeModeOptions } from "./themeModeOptions"
 import { useAppearanceSave } from "./useAppearanceSave"
 
@@ -94,9 +92,11 @@ export function AppearanceControls({
           <legend className="w-full text-sm font-medium">
             <span className="flex items-center justify-between gap-2">
               <span id={`${id}-mode-label`}>{t("theme.mode")}</span>
-              <AppearanceResetButton
+              <SettingsResetButton
+                iconOnly
                 label={`${t("common:actions.reset")}: ${t("theme.mode")}`}
                 disabled={saving}
+                hidden={themeMode === DEFAULT_THEME_MODE}
                 onClick={() => void save({ themeMode: DEFAULT_THEME_MODE })}
               />
             </span>
@@ -128,9 +128,11 @@ export function AppearanceControls({
         <legend className="w-full text-sm font-medium">
           <span className="flex items-center justify-between gap-2">
             <span id={`${id}-preset-label`}>{t("appearance.preset")}</span>
-            <AppearanceResetButton
+            <SettingsResetButton
+              iconOnly
               label={`${t("common:actions.reset")}: ${t("appearance.preset")}`}
               disabled={saving}
+              hidden={appearance.preset === DEFAULT_APPEARANCE.preset}
               onClick={() => void save({ preset: DEFAULT_APPEARANCE.preset })}
             />
           </span>
@@ -168,9 +170,11 @@ export function AppearanceControls({
         <legend className="w-full text-sm font-medium">
           <span className="flex items-center justify-between gap-2">
             <span id={`${id}-color-label`}>{t("appearance.color")}</span>
-            <AppearanceResetButton
+            <SettingsResetButton
+              iconOnly
               label={`${t("common:actions.reset")}: ${t("appearance.color")}`}
               disabled={saving}
+              hidden={appearance.color === DEFAULT_APPEARANCE.color}
               onClick={() => void save({ color: DEFAULT_APPEARANCE.color })}
             />
           </span>
@@ -214,9 +218,11 @@ export function AppearanceControls({
         <legend className="w-full text-sm font-medium">
           <span className="flex items-center justify-between gap-2">
             <span id={`${id}-radius-label`}>{t("appearance.radius")}</span>
-            <AppearanceResetButton
+            <SettingsResetButton
+              iconOnly
               label={`${t("common:actions.reset")}: ${t("appearance.radius")}`}
               disabled={saving}
+              hidden={appearance.radius === DEFAULT_APPEARANCE.radius}
               onClick={() => void save({ radius: DEFAULT_APPEARANCE.radius })}
             />
           </span>
@@ -254,9 +260,11 @@ export function AppearanceControls({
         <legend className="w-full text-sm font-medium">
           <span className="flex items-center justify-between gap-2">
             <span id={`${id}-density-label`}>{t("appearance.density")}</span>
-            <AppearanceResetButton
+            <SettingsResetButton
+              iconOnly
               label={t("appearance.resetDensity")}
               disabled={saving}
+              hidden={appearance.density === DEFAULT_APPEARANCE.density}
               onClick={() => void save({ density: DEFAULT_APPEARANCE.density })}
             />
           </span>
@@ -290,9 +298,11 @@ export function AppearanceControls({
         <legend className="w-full text-sm font-medium">
           <span className="flex items-center justify-between gap-2">
             <span id={`${id}-textSize-label`}>{t("appearance.textSize")}</span>
-            <AppearanceResetButton
+            <SettingsResetButton
+              iconOnly
               label={t("appearance.resetTextSize")}
               disabled={saving}
+              hidden={appearance.textSize === DEFAULT_APPEARANCE.textSize}
               onClick={() =>
                 void save({ textSize: DEFAULT_APPEARANCE.textSize })
               }
@@ -326,19 +336,20 @@ export function AppearanceControls({
           {t("appearance.saveFailed")}
         </p>
       )}
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="text-muted-foreground"
-        leftIcon={<RotateCcw aria-hidden="true" />}
-        disabled={saving}
+      <SettingsResetButton
+        label={t("appearance.reset")}
+        disabled={
+          saving ||
+          (themeMode === DEFAULT_THEME_MODE &&
+            Object.entries(DEFAULT_APPEARANCE).every(
+              ([key, value]) =>
+                appearance[key as keyof AppearancePreferences] === value,
+            ))
+        }
         onClick={() =>
           void save({ ...DEFAULT_APPEARANCE, themeMode: DEFAULT_THEME_MODE })
         }
-      >
-        {t("appearance.reset")}
-      </Button>
+      />
     </div>
   )
 }

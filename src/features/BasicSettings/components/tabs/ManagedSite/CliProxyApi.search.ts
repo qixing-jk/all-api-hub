@@ -14,6 +14,7 @@ export const cliProxyApiSearchSections: OptionsSearchItemDefinition[] = [
     "settings:cliProxyApi.title",
     360,
     {
+      keywordKeys: ["common:actions.reset"],
       keywords: ["cli", "cliproxy", "cliproxyapi"],
       isVisible: (context) =>
         context.managedSiteType === SITE_TYPES.CLI_PROXY_API,

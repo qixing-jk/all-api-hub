@@ -12,6 +12,7 @@ export const balanceHistorySearchSections: OptionsSearchItemDefinition[] = [
     "balance-history",
     "balanceHistory:title",
     280,
+    { keywordKeys: ["common:actions.reset"] },
   ),
 ]
 

@@ -329,11 +329,16 @@
     "veloera": "Veloera"
   },
   "messages": {
+    "alreadyDefault": "Đã ở giá trị mặc định",
     "confirmReset": "Xác nhận đặt lại",
     "preferencesChangedExternally": "Tùy chọn đã thay đổi ở nơi khác. Vui lòng làm mới rồi thử lại.",
+    "resetAllConfirmDesc": "Khôi phục mọi tùy chọn và xóa địa chỉ kết nối cùng thông tin xác thực đã cấu hình? Các tài khoản đã lưu được giữ lại; chính sách lưu lịch sử cũng trở về mặc định.",
     "resetConfirmDesc": "Bạn có chắc muốn đặt lại {{name}} về cài đặt mặc định không? Thao tác này không thể hoàn tác.",
+    "resetConnectionConfirmDesc": "Thao tác này xóa địa chỉ kết nối, thông tin xác thực và cài đặt liên quan trong nhóm này. Bạn sẽ cần cấu hình lại. Khôi phục mặc định?",
     "resetFailed": "Đặt lại {{name}} thất bại",
+    "resetHistoryConfirmDesc": "Khôi phục mặc định sẽ rút ngắn thời gian lưu lịch sử. Các bản ghi cũ có thể bị xóa vĩnh viễn. Tiếp tục?",
     "resetSuccess": "{{name}} đã được đặt lại về cài đặt mặc định",
+    "retentionSaveHint": "Các tùy chọn khác được lưu tự động. Số ngày lưu cần được áp dụng riêng; rút ngắn thời gian có thể xóa lịch sử.",
     "runtimeRequestFailed": "Yêu cầu runtime thất bại. Vui lòng thử lại sau.",
     "saveSettingsFailed": "Lưu cài đặt thất bại",
     "updateFailed": "Cập nhật {{name}} thất bại",

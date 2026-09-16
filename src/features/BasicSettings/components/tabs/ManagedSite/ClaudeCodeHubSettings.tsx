@@ -1,14 +1,16 @@
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { createPreferenceDraftReset } from "~/features/BasicSettings/components/shared/createPreferenceDraftReset"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import toast from "~/lib/notify"
 import { validateClaudeCodeHubConfig } from "~/services/apiService/claudeCodeHub"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
@@ -110,7 +112,16 @@ export default function ClaudeCodeHubSettings() {
       id="claude-code-hub"
       title={t("claudeCodeHub.title")}
       description={t("claudeCodeHub.description")}
-      onReset={resetClaudeCodeHubConfig}
+      {...createPreferenceDraftReset({
+        draft: localConfig,
+        storedValue: preferences?.claudeCodeHub,
+        savedValue: savedConfig,
+        defaults: DEFAULT_PREFERENCES.claudeCodeHub,
+        reset: resetClaudeCodeHubConfig,
+        setDraft: setLocalConfig,
+      })}
+      resetRequiresConfirmation
+      resetDescription={t("settings:messages.resetConnectionConfirmDesc")}
     >
       <Card padding="none">
         <CardList>

@@ -2,10 +2,11 @@ import { CalendarDays, Eye, Globe2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
-import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList, Switch } from "~/components/ui"
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import type { CurrencyType, DashboardTabType } from "~/types"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 
@@ -48,6 +49,12 @@ export default function DisplaySettings() {
       title={t("display.title")}
       description={t("display.description")}
       onReset={resetDisplaySettings}
+      resetRequiresConfirmation={false}
+      resetDisabled={
+        currencyType === DEFAULT_PREFERENCES.currencyType &&
+        activeTab === DEFAULT_PREFERENCES.activeTab &&
+        showTodayCashflow === DEFAULT_PREFERENCES.showTodayCashflow
+      }
     >
       <Card padding="none">
         <CardList>

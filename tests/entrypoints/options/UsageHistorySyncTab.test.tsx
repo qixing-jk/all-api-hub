@@ -8,6 +8,7 @@ import { accountQueries } from "~/services/accounts/accountStorage/accountQuerie
 import { sendUsageHistoryMessage } from "~/services/history/usageHistory/messaging"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { UsageHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import { DEFAULT_USAGE_HISTORY_PREFERENCES } from "~/types/usageHistory"
 import { hasAlarmsAPI } from "~/utils/browser/browserApi"
 import {
   fireEvent,
@@ -122,6 +123,108 @@ describe("UsageHistorySyncTab", () => {
     vi.mocked(toast.loading).mockReturnValue("sync-toast")
   })
 
+  it.each([undefined, {}])(
+    "uses canonical defaults for missing usage history fields (%j)",
+    async (usageHistory) => {
+      vi.mocked(useUserPreferencesContext).mockReturnValue(
+        createContextValue({ preferences: { usageHistory } }) as any,
+      )
+      renderSubject()
+
+      expect(await screen.findByRole("switch")).toBeChecked()
+      const [retention, interval] = screen.getAllByRole("spinbutton")
+      expect(retention).toHaveValue(
+        DEFAULT_USAGE_HISTORY_PREFERENCES.retentionDays,
+      )
+      expect(interval).toHaveValue(
+        DEFAULT_USAGE_HISTORY_PREFERENCES.syncIntervalMinutes / 60,
+      )
+      expect(
+        screen.getByRole("combobox", {
+          name: "usageAnalytics:settings.scheduleMode",
+        }),
+      ).toHaveTextContent(
+        `usageAnalytics:settings.scheduleModes.${DEFAULT_USAGE_HISTORY_PREFERENCES.scheduleMode}`,
+      )
+      expect(mockedSendUsageHistoryMessage).not.toHaveBeenCalled()
+    },
+  )
+
+  it("preserves explicit settings and fills only missing fields after preferences refresh", async () => {
+    vi.mocked(useUserPreferencesContext).mockReturnValue(
+      createContextValue({
+        preferences: {
+          usageHistory: {
+            enabled: false,
+            retentionDays: 30,
+            scheduleMode: "manual",
+            syncIntervalMinutes: 120,
+          },
+        },
+      }) as any,
+    )
+    const { rerender } = renderSubject()
+    expect(await screen.findByRole("switch")).not.toBeChecked()
+    const [retention, interval] = screen.getAllByRole("spinbutton")
+    expect(retention).toHaveValue(30)
+    expect(interval).toHaveValue(2)
+
+    vi.mocked(useUserPreferencesContext).mockReturnValue(
+      createContextValue({
+        preferences: { usageHistory: { retentionDays: 30 } },
+      }) as any,
+    )
+    rerender(<UsageHistorySyncTab />)
+    expect(screen.getByRole("switch")).toBeChecked()
+    expect(retention).toHaveValue(30)
+    expect(interval).toHaveValue(
+      DEFAULT_USAGE_HISTORY_PREFERENCES.syncIntervalMinutes / 60,
+    )
+    expect(
+      screen.getByRole("combobox", {
+        name: "usageAnalytics:settings.scheduleMode",
+      }),
+    ).toHaveTextContent(
+      `usageAnalytics:settings.scheduleModes.${DEFAULT_USAGE_HISTORY_PREFERENCES.scheduleMode}`,
+    )
+    expect(mockedSendUsageHistoryMessage).not.toHaveBeenCalled()
+  })
+
+  it("keeps the effective schedule when background falls back from alarms", async () => {
+    const user = userEvent.setup()
+    mockedSendUsageHistoryMessage.mockResolvedValueOnce({
+      success: true,
+      data: { warning: "alarms unavailable" },
+    })
+    renderSubject()
+    const schedule = await screen.findByRole("combobox", {
+      name: "usageAnalytics:settings.scheduleMode",
+    })
+    await user.click(schedule)
+    await user.click(
+      screen.getByRole("option", {
+        name: "usageAnalytics:settings.scheduleModes.alarm",
+      }),
+    )
+    await waitFor(() => expect(mockWarningToast).toHaveBeenCalled())
+    expect(schedule).toHaveTextContent(
+      "usageAnalytics:settings.scheduleModes.afterRefresh",
+    )
+  })
+
+  it("automatically saves only the changed toggle without applying retention drafts", async () => {
+    const user = userEvent.setup()
+    renderSubject()
+    const toggle = await screen.findByRole("switch")
+    await user.click(toggle)
+    await waitFor(() =>
+      expect(mockedSendUsageHistoryMessage).toHaveBeenCalledWith(
+        UsageHistoryMessageTypes.UpdateSettings,
+        { settings: { enabled: false } },
+      ),
+    )
+  })
+
   it("sends usageHistory:updateSettings with current form values", async () => {
     const loadPreferences = vi.fn().mockResolvedValue(undefined)
     vi.mocked(useUserPreferencesContext).mockReturnValue({
@@ -158,10 +261,7 @@ describe("UsageHistorySyncTab", () => {
         UsageHistoryMessageTypes.UpdateSettings,
         {
           settings: {
-            enabled: true,
             retentionDays: 14,
-            scheduleMode: "afterRefresh",
-            syncIntervalMinutes: 180,
           },
         },
       )
@@ -258,7 +358,15 @@ describe("UsageHistorySyncTab", () => {
 
     const numberInputs = screen.getAllByRole("spinbutton")
     fireEvent.change(numberInputs[0], { target: { value: "45" } })
+    await waitFor(() => expect(numberInputs[1]).toBeEnabled())
     fireEvent.change(numberInputs[1], { target: { value: "2" } })
+    fireEvent.blur(numberInputs[1])
+    await waitFor(() =>
+      expect(mockedSendUsageHistoryMessage).toHaveBeenCalledWith(
+        UsageHistoryMessageTypes.UpdateSettings,
+        { settings: { syncIntervalMinutes: 120 } },
+      ),
+    )
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -271,10 +379,7 @@ describe("UsageHistorySyncTab", () => {
         UsageHistoryMessageTypes.UpdateSettings,
         {
           settings: {
-            enabled: true,
             retentionDays: 45,
-            scheduleMode: "afterRefresh",
-            syncIntervalMinutes: 120,
           },
         },
       )

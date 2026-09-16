@@ -55,8 +55,58 @@ describe("BalanceHistorySettings", () => {
 
   const renderSubject = () => render(<BalanceHistorySettings />)
 
-  it("sends balanceHistory:updateSettings with current form values", async () => {
-    const updateBalanceHistory = vi.fn().mockResolvedValue(true)
+  it("does not turn an empty retention input into a one-day retention policy", async () => {
+    const user = userEvent.setup()
+    const updateBalanceHistory = vi.fn().mockResolvedValue({ ok: true })
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: {},
+      updateBalanceHistory,
+    } as any)
+    render(<BalanceHistorySettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    const input = screen.getByRole("spinbutton", {
+      name: "balanceHistory:settings.retentionDays",
+    })
+    await user.clear(input)
+    expect(input).toHaveValue(null)
+    expect(
+      screen.getByRole("button", {
+        name: "balanceHistory:actions.applySettings",
+      }),
+    ).toBeDisabled()
+    expect(updateBalanceHistory).not.toHaveBeenCalled()
+  })
+
+  it("preserves an unapplied retention draft when another option is saved", async () => {
+    const user = userEvent.setup()
+    const context = {
+      preferences: { balanceHistory: { enabled: true, retentionDays: 365 } },
+      updateBalanceHistory: vi.fn().mockResolvedValue({ ok: true }),
+    }
+    vi.mocked(useUserPreferencesContext).mockReturnValue(context as any)
+    const { rerender } = render(<BalanceHistorySettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    const input = screen.getByRole("spinbutton", {
+      name: "balanceHistory:settings.retentionDays",
+    })
+    fireEvent.change(input, { target: { value: "90" } })
+    await user.click(
+      screen.getByRole("switch", { name: "balanceHistory:settings.enabled" }),
+    )
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      ...context,
+      preferences: { balanceHistory: { enabled: false, retentionDays: 365 } },
+    } as any)
+    rerender(<BalanceHistorySettings />)
+    expect(input).toHaveValue(90)
+  })
+
+  it("applies only retention without overwriting other settings", async () => {
+    const updateBalanceHistory = vi.fn().mockResolvedValue({ ok: true })
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: {
         balanceHistory: {
@@ -76,16 +126,13 @@ describe("BalanceHistorySettings", () => {
 
     await waitFor(() => {
       expect(updateBalanceHistory).toHaveBeenCalledWith({
-        enabled: true,
-        endOfDayCapture: { enabled: true },
-        estimatedTodayIncome: { enabled: false },
         retentionDays: 14,
       })
     })
   })
 
   it("defaults to refresh-driven capture and default retention when preferences omit balance history", async () => {
-    const updateBalanceHistory = vi.fn().mockResolvedValue(true)
+    const updateBalanceHistory = vi.fn().mockResolvedValue({ ok: true })
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: {},
       updateBalanceHistory,
@@ -101,9 +148,6 @@ describe("BalanceHistorySettings", () => {
 
     await waitFor(() => {
       expect(updateBalanceHistory).toHaveBeenCalledWith({
-        enabled: true,
-        endOfDayCapture: { enabled: false },
-        estimatedTodayIncome: { enabled: false },
         retentionDays: 365,
       })
     })
@@ -118,7 +162,7 @@ describe("BalanceHistorySettings", () => {
           retentionDays: 30,
         },
       },
-      updateBalanceHistory: vi.fn().mockResolvedValue(false),
+      updateBalanceHistory: vi.fn().mockResolvedValue({ ok: false }),
     } as any)
 
     renderSubject()
@@ -162,7 +206,7 @@ describe("BalanceHistorySettings", () => {
   })
 
   it("saves estimated today income display preference", async () => {
-    const updateBalanceHistory = vi.fn().mockResolvedValue(true)
+    const updateBalanceHistory = vi.fn().mockResolvedValue({ ok: true })
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: {
         balanceHistory: {
@@ -182,16 +226,10 @@ describe("BalanceHistorySettings", () => {
         name: "balanceHistory:settings.estimatedTodayIncome",
       }),
     )
-    fireEvent.click(
-      await screen.findByText("balanceHistory:actions.applySettings"),
-    )
 
     await waitFor(() => {
       expect(updateBalanceHistory).toHaveBeenCalledWith({
-        enabled: true,
-        endOfDayCapture: { enabled: false },
         estimatedTodayIncome: { enabled: true },
-        retentionDays: 30,
       })
     })
   })
@@ -206,7 +244,7 @@ describe("BalanceHistorySettings", () => {
           retentionDays: 30,
         },
       },
-      updateBalanceHistory: vi.fn().mockResolvedValue(true),
+      updateBalanceHistory: vi.fn().mockResolvedValue({ ok: true }),
     } as any)
 
     renderSubject()
@@ -242,7 +280,7 @@ describe("BalanceHistorySettings", () => {
           retentionDays: 30,
         },
       },
-      updateBalanceHistory: vi.fn().mockResolvedValue(true),
+      updateBalanceHistory: vi.fn().mockResolvedValue({ ok: true }),
     } as any)
 
     renderSubject()
@@ -272,7 +310,7 @@ describe("BalanceHistorySettings", () => {
           retentionDays: 30,
         },
       },
-      updateBalanceHistory: vi.fn().mockResolvedValue(true),
+      updateBalanceHistory: vi.fn().mockResolvedValue({ ok: true }),
     } as any)
 
     renderSubject()
@@ -299,7 +337,7 @@ describe("BalanceHistorySettings", () => {
           retentionDays: 30,
         },
       },
-      updateBalanceHistory: vi.fn().mockResolvedValue(true),
+      updateBalanceHistory: vi.fn().mockResolvedValue({ ok: true }),
     } as any)
 
     renderSubject()
@@ -316,7 +354,7 @@ describe("BalanceHistorySettings", () => {
   it("saves long retention without a permission check", async () => {
     const user = userEvent.setup()
     const contains = vi.spyOn(browser.permissions, "contains")
-    const updateBalanceHistory = vi.fn().mockResolvedValue(true)
+    const updateBalanceHistory = vi.fn().mockResolvedValue({ ok: true })
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: {
         balanceHistory: {
@@ -359,7 +397,7 @@ describe("BalanceHistorySettings", () => {
           retentionDays: 30,
         },
       },
-      updateBalanceHistory: vi.fn().mockResolvedValue(true),
+      updateBalanceHistory: vi.fn().mockResolvedValue({ ok: true }),
     } as any)
 
     renderSubject()

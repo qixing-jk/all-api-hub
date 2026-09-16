@@ -1,6 +1,6 @@
+import { useEffect, useState, type ComponentProps } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import {
   Button,
   Card,
@@ -14,11 +14,24 @@ import {
   SelectValue,
   Switch,
 } from "~/components/ui"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
-import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
+import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
+import {
+  DEFAULT_USAGE_HISTORY_PREFERENCES,
+  USAGE_HISTORY_SCHEDULE_MODE,
+} from "~/types/usageHistory"
 import type { UsageHistoryScheduleMode } from "~/types/usageHistory"
 
 interface UsageHistorySyncSettingsSectionProps {
+  reset: Required<
+    Pick<
+      ComponentProps<typeof SettingSection>,
+      "onReset" | "resetDisabled" | "resetRequiresConfirmation"
+    >
+  >
+  isSavingSettings?: boolean
+  onSyncIntervalMinutesCommit?: (value: number) => Promise<boolean>
   enabled: boolean
   onEnabledChange: (value: boolean) => void
   retentionDays: number
@@ -39,6 +52,9 @@ interface UsageHistorySyncSettingsSectionProps {
  * Usage-history synchronization settings section (enable/retention/schedule + actions).
  */
 export default function UsageHistorySyncSettingsSection({
+  reset,
+  isSavingSettings = false,
+  onSyncIntervalMinutesCommit,
   enabled,
   onEnabledChange,
   retentionDays,
@@ -56,8 +72,35 @@ export default function UsageHistorySyncSettingsSection({
 }: UsageHistorySyncSettingsSectionProps) {
   const { t } = useTranslation("usageAnalytics")
 
+  const [intervalDraft, setIntervalDraft] = useState(
+    String(Math.max(1, Math.round(syncIntervalMinutes / 60))),
+  )
+  useEffect(
+    () =>
+      setIntervalDraft(
+        String(Math.max(1, Math.round(syncIntervalMinutes / 60))),
+      ),
+    [syncIntervalMinutes],
+  )
+
   return (
     <SettingSection
+      {...reset}
+      resetDisabled={
+        isSavingSettings ||
+        (reset.resetDisabled &&
+          Number(intervalDraft) * 60 ===
+            DEFAULT_USAGE_HISTORY_PREFERENCES.syncIntervalMinutes)
+      }
+      onReset={async () => {
+        const result = await reset.onReset()
+        if (result.ok)
+          setIntervalDraft(
+            String(DEFAULT_USAGE_HISTORY_PREFERENCES.syncIntervalMinutes / 60),
+          )
+        return result
+      }}
+      resetDescription={t("settings:messages.resetHistoryConfirmDesc")}
       id="usage-history-sync"
       title={t("syncTab.settingsTitle")}
       description={t("syncTab.settingsDescription")}
@@ -73,7 +116,11 @@ export default function UsageHistorySyncSettingsSection({
                 {t("settings.enabledHint")}
               </div>
             </div>
-            <Switch checked={enabled} onChange={onEnabledChange} />
+            <Switch
+              checked={enabled}
+              onChange={onEnabledChange}
+              disabled={isSavingSettings}
+            />
           </div>
 
           <div
@@ -102,6 +149,7 @@ export default function UsageHistorySyncSettingsSection({
             </Label>
             <Select
               value={scheduleMode}
+              disabled={isSavingSettings}
               onValueChange={(value) =>
                 onScheduleModeChange(value as UsageHistoryScheduleMode)
               }
@@ -149,17 +197,38 @@ export default function UsageHistorySyncSettingsSection({
               type="number"
               min={1}
               max={24}
-              value={Math.max(1, Math.round(syncIntervalMinutes / 60))}
+              value={intervalDraft}
+              disabled={isSavingSettings}
+              required
+              onBlur={(event) => {
+                if (
+                  event.currentTarget.reportValidity() &&
+                  onSyncIntervalMinutesCommit &&
+                  Number(intervalDraft) * 60 !== syncIntervalMinutes
+                ) {
+                  void onSyncIntervalMinutesCommit(Number(intervalDraft) * 60)
+                }
+              }}
+              onKeyDown={blurInputOnEnter}
               onChange={(event) => {
-                const hours = Number(event.target.value)
-                onSyncIntervalMinutesChange(Math.max(1, Math.trunc(hours)) * 60)
+                setIntervalDraft(event.target.value)
+                if (!onSyncIntervalMinutesCommit)
+                  onSyncIntervalMinutesChange(Number(event.target.value) * 60)
               }}
             />
           </div>
 
+          <p className="text-muted-foreground text-sm">
+            {t("settings:messages.retentionSaveHint")}
+          </p>
           <div className="gap-y-density-2 flex flex-wrap gap-x-2">
             <Button
               id="usage-history-sync-apply-settings"
+              disabled={
+                isSavingSettings ||
+                !Number.isSafeInteger(retentionDays) ||
+                retentionDays < 1
+              }
               variant="default"
               size="sm"
               onClick={() => void onApplySettings()}

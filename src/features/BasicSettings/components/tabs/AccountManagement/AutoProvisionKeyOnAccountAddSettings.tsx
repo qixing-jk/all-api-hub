@@ -3,11 +3,15 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
-import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList, Switch } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
+import {
+  DEFAULT_PREFERENCES,
+  userPreferences,
+} from "~/services/preferences/userPreferences"
 import {
   ACCOUNT_KEY_AUTO_PROVISION_MODES,
   type AccountKeyAutoProvisionMode,
@@ -25,6 +29,7 @@ export default function AutoProvisionKeyOnAccountAddSettings() {
     updateAutoProvisionKeyOnAccountAdd,
     updateAutoProvisionKeyOnAccountAddMode,
     isLoading,
+    loadPreferences,
   } = useUserPreferencesContext()
   const [isSaving, setIsSaving] = useState(false)
 
@@ -55,6 +60,25 @@ export default function AutoProvisionKeyOnAccountAddSettings() {
 
   return (
     <SettingSection
+      resetRequiresConfirmation={false}
+      resetDisabled={
+        isLoading ||
+        isSaving ||
+        (autoProvisionKeyOnAccountAdd ===
+          DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAdd &&
+          autoProvisionKeyOnAccountAddMode ===
+            DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAddMode)
+      }
+      onReset={async () => {
+        const result = await userPreferences.savePreferencesWithResult({
+          autoProvisionKeyOnAccountAdd:
+            DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAdd,
+          autoProvisionKeyOnAccountAddMode:
+            DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAddMode,
+        })
+        if (result.ok) await loadPreferences()
+        return result
+      }}
       id={SETTINGS_ANCHORS.AUTO_PROVISION_KEY}
       title={t("autoProvisionKeyOnAccountAdd.title")}
       description={t("autoProvisionKeyOnAccountAdd.description")}

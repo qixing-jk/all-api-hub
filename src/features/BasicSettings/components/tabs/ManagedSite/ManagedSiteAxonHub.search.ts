@@ -15,6 +15,7 @@ export const managedSiteAxonHubSearchSections: OptionsSearchItemDefinition[] = [
     "settings:axonHub.title",
     345,
     {
+      keywordKeys: ["common:actions.reset"],
       keywords: ["axonhub", "graphql"],
       isVisible: (context) => context.managedSiteType === SITE_TYPES.AXON_HUB,
     },

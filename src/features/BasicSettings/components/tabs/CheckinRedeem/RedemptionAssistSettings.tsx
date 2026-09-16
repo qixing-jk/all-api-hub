@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import {
   Button,
   Card,
@@ -11,6 +10,7 @@ import {
   Textarea,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { useSingleFlightActions } from "~/hooks/useSingleFlightActions"
 import toast from "~/lib/notify"
@@ -18,6 +18,7 @@ import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
+import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
 
 /**
  * Unified logger scoped to the Basic Settings redemption assist section.
@@ -118,10 +119,25 @@ export default function RedemptionAssistSettings() {
 
   return (
     <SettingSection
+      resetRequiresConfirmation
+      resetDisabled={
+        matchesDefaultSettings(config, DEFAULT_PREFERENCES.redemptionAssist) &&
+        !patternsDirty
+      }
       id="redemption-assist"
       title={t("redemptionAssist:settings.title")}
       description={t("redemptionAssist:settings.description")}
-      onReset={resetRedemptionAssistConfig}
+      onReset={async () => {
+        const result = await resetRedemptionAssistConfig()
+        if (result.ok) {
+          acceptPatternsDraft(
+            (
+              DEFAULT_PREFERENCES.redemptionAssist!.urlWhitelist.patterns ?? []
+            ).join("\n"),
+          )
+        }
+        return result
+      }}
     >
       <Card padding="none">
         <CardList>

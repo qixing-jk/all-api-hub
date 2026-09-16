@@ -1,10 +1,10 @@
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import { Alert } from "~/components/ui/Alert"
 import { Button } from "~/components/ui/button"
 import { Card } from "~/components/ui/Card"
 import { BodySmall } from "~/components/ui/Typography"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { PermissionList } from "~/features/Permissions/components/PermissionList"
 import { useOptionalPermissionControls } from "~/features/Permissions/hooks/useOptionalPermissionControls"
 import { OPTIONAL_PERMISSIONS } from "~/services/permissions/permissionManager"
@@ -27,6 +27,7 @@ export default function PermissionSettings() {
 
   return (
     <SettingSection
+      resetNotApplicable="browser-permissions"
       id="permissions"
       title={t("permissions.title")}
       description={t("permissions.description")}

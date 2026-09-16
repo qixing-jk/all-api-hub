@@ -1,15 +1,17 @@
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { SettingSection } from "~/components/SettingSection"
 import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { createPreferenceDraftReset } from "~/features/BasicSettings/components/shared/createPreferenceDraftReset"
+import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import toast from "~/lib/notify"
 import { signIn } from "~/services/apiService/axonHub"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { getErrorMessage } from "~/utils/core/error"
 import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
@@ -125,7 +127,16 @@ export default function AxonHubSettings() {
       id={SETTINGS_ANCHORS.AXON_HUB}
       title={t("axonHub.title")}
       description={t("axonHub.description")}
-      onReset={resetAxonHubConfig}
+      {...createPreferenceDraftReset({
+        draft: localConfig,
+        storedValue: preferences?.axonHub,
+        savedValue: savedConfig,
+        defaults: DEFAULT_PREFERENCES.axonHub,
+        reset: resetAxonHubConfig,
+        setDraft: setLocalConfig,
+      })}
+      resetRequiresConfirmation
+      resetDescription={t("settings:messages.resetConnectionConfirmDesc")}
     >
       <Card padding="none">
         <CardList>
