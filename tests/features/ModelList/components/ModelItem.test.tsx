@@ -259,13 +259,16 @@ function createDefaultProps() {
 
 describe("ModelItem", () => {
   it("marks a full-site fallback catalog on its model row", () => {
+    const props = createDefaultProps()
+    props.source.capabilities.supportsPricing = false
+    props.source.capabilities.supportsGroupFiltering = false
     const { rerender } = render(
-      <ModelItem {...createDefaultProps()} isProviderCatalogFallback />,
+      <ModelItem {...props} isProviderCatalogFallback />,
     )
     expect(
       screen.getByText("providerCatalogFallbackNotice.badge"),
     ).toBeInTheDocument()
-    rerender(<ModelItem {...createDefaultProps()} />)
+    rerender(<ModelItem {...props} />)
     expect(
       screen.queryByText("providerCatalogFallbackNotice.badge"),
     ).not.toBeInTheDocument()

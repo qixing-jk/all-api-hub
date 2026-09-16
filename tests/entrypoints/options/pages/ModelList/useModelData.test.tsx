@@ -2706,6 +2706,55 @@ describe("useModelData all-accounts loading", () => {
     ])
   })
 
+  it("reports invalid format when every runtime-key catalog is malformed", async () => {
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createMockSiteTypeCapabilities(vi.fn(), {
+        siteType: SITE_TYPES.SUB2API,
+        modelPricing: false,
+      }),
+    )
+    const account = createDisplayAccount({ siteType: SITE_TYPES.SUB2API })
+    mockFetchDisplayAccountTokens.mockResolvedValue([
+      {
+        id: 51,
+        user_id: 51,
+        key: "sk-invalid",
+        status: 1,
+        name: "Invalid key",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: -1,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ])
+    mockLoadAccountRuntimeKeyFallbackPricingResponse.mockResolvedValue({
+      data: null,
+      groupRatios: {},
+      success: true,
+      groupAccess: { kind: "authoritative", usableGroups: [] },
+    })
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAllAccountsSource(),
+          accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+    await waitFor(
+      () =>
+        expect(result.current.accountQueryStates).toEqual([
+          expect.objectContaining({
+            hasError: true,
+            errorType: "invalid-format",
+          }),
+        ]),
+      { timeout: 3000 },
+    )
+  })
+
   it("marks mixed Sub2API all-token failures as load failed instead of invalid format", async () => {
     const fetchPricing = vi.fn()
     vi.mocked(getSiteTypeCapabilities).mockReturnValue(

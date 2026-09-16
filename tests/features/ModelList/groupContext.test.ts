@@ -25,6 +25,7 @@ describe("normalizeGroupRatios", () => {
         " ": 3,
         infinite: Number.POSITIVE_INFINITY,
         invalid: Number.NaN,
+        negative: -1,
       }),
     ).toEqual({ vip: 0 })
   })
@@ -49,6 +50,18 @@ describe("normalizeGroupRatios", () => {
 })
 
 describe("resolveModelGroupContext", () => {
+  it("uses explicit model access without inheriting other source groups", () => {
+    const context = createModelGroupResolver({
+      groupSemantics: MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
+      groupAccess: { kind: "authoritative", usableGroups: ["default"] },
+      groupRatios: { default: 1, vip: 0 },
+    })({
+      ...BASE_MODEL,
+      groupAccess: { kind: "authoritative", usableGroups: ["vip"] },
+    })
+    expect(context.usableGroups).toEqual(["vip"])
+    expect(context.priceableGroups).toEqual(["vip"])
+  })
   it("keeps an explicit empty permission scope even when a price ratio exists", () => {
     const context = createModelGroupResolver({
       groupSemantics: MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,

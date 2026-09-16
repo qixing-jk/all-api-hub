@@ -105,6 +105,13 @@ export function normalizeNewApiModelPricingResponse(
   const vendorsById = buildVendorRegistry(response.vendors)
   const data = response.data.map((row) => {
     const canonicalRow: Record<string, unknown> = { ...row }
+    canonicalRow.enable_groups = normalizeGroupNames(
+      Array.isArray(row.enable_groups)
+        ? row.enable_groups.filter(
+            (group): group is string => typeof group === "string",
+          )
+        : [],
+    )
     const vendorId = canonicalRow.vendor_id
 
     delete canonicalRow.vendor_id

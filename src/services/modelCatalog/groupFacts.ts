@@ -13,7 +13,7 @@ export function normalizeGroupNames(groups: Iterable<string>): string[] {
   return normalized
 }
 
-/** Normalize finite ratios once at admission, preserving zero and own keys. */
+/** Normalize nonnegative finite ratios at admission, preserving zero and own keys. */
 export function normalizeGroupRatios(
   groupRatios: Readonly<Record<string, unknown>>,
 ): Record<string, number> {
@@ -25,6 +25,7 @@ export function normalizeGroupRatios(
       !group ||
       typeof ratio !== "number" ||
       !Number.isFinite(ratio) ||
+      ratio < 0 ||
       seen.has(group)
     )
       continue

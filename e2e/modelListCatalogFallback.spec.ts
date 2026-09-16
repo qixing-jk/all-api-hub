@@ -78,6 +78,7 @@ test("identifies full-site catalog accounts and rows at desktop and narrow width
   await expect(
     fallbackRow.getByText("站点完整目录", { exact: true }),
   ).toBeVisible()
+  await expect(scopedRow).toBeVisible()
   await expect(
     scopedRow.getByText("站点完整目录", { exact: true }),
   ).toHaveCount(0)

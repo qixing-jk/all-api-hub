@@ -60,6 +60,36 @@ const pricingResponse = (extensions: Record<string, unknown> = {}) => ({
 })
 
 describe("New API model pricing adapter", () => {
+  it("keeps access unknown for an empty catalog without pricing support", async () => {
+    fetchModelPricingMock.mockResolvedValueOnce(
+      pricingResponse({
+        data: [],
+        model_list_source: { supportsPricing: false },
+      }),
+    )
+    const catalog = await createNewApiModelPricing(
+      SITE_TYPES.NEW_API,
+    ).fetchPricing(request)
+    expect(catalog.data).toEqual([])
+    expect(catalog.groupAccess).toEqual({ kind: "unavailable" })
+  })
+  it.each([
+    [undefined, []],
+    [null, []],
+    ["default", []],
+    [
+      [null, 2, {}, " vip ", "", "vip", "default"],
+      ["vip", "default"],
+    ],
+  ])("normalizes malformed model group lists: %j", async (groups, expected) => {
+    fetchModelPricingMock.mockResolvedValueOnce(
+      pricingResponse({ data: [{ ...modelRow, enable_groups: groups }] }),
+    )
+    const catalog = await createNewApiModelPricing(
+      SITE_TYPES.NEW_API,
+    ).fetchPricing(request)
+    expect(catalog.data[0].enable_groups).toEqual(expected)
+  })
   it("retains per-model missing access evidence in a partially priced compatibility catalog", async () => {
     fetchModelPricingMock.mockResolvedValueOnce(
       pricingResponse({

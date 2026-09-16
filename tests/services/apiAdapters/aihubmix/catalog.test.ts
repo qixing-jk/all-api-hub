@@ -104,6 +104,43 @@ describe("AIHubMix catalog adapter", () => {
     }
   })
 
+  it("normalizes string prices and preserves developer labels", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/v1/models", () =>
+        HttpResponse.json({
+          data: [
+            {
+              id: "valid",
+              pricing: { input: "2.5", output: "5" },
+              developer: "Publisher",
+            },
+            {
+              id: "invalid",
+              pricing: { input: "not-a-number" },
+              developer: "Other",
+            },
+          ],
+        }),
+      ),
+      http.get("https://aihubmix.com/api/user/available_models", () =>
+        HttpResponse.json({ data: ["valid", "invalid"] }),
+      ),
+    )
+    const catalog = await fetchModelPricing(baseRequest)
+    expect(catalog.data.map((model) => model.owner_by)).toEqual([
+      "Publisher",
+      "Other",
+    ])
+    expect(catalog.data.map((model) => model.model_name)).toEqual([
+      "valid",
+      "invalid",
+    ])
+    expect(catalog.data[0].token_price_usd_per_million).toMatchObject({
+      input: 2.5,
+      output: 5,
+    })
+  })
+
   it.each([true, false])(
     "publishes display capabilities with confirmed account scope: %s",
     async (hasAccountScope) => {

@@ -594,6 +594,36 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
     ])
   })
 
+  it("keeps service-credential Sub2API models unpriced without account-key group lookup", async () => {
+    const runtimeKey = buildServiceCredentialRuntimeKey(ACCOUNT, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex",
+      key: "service-secret",
+      isAuthenticated: true,
+      baseUrl: ACCOUNT.baseUrl,
+    })
+    const result = await sub2ApiModelCatalog.enrichPricing!({
+      accountRequest: {
+        baseUrl: ACCOUNT.baseUrl,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: ACCOUNT.token,
+        },
+      },
+      runtimeKey,
+      models: [{ id: "claude-sonnet-4" }],
+    })
+    expect(result.data.map((model) => model.model_name)).toEqual([
+      "claude-sonnet-4",
+    ])
+    expect(result.data[0].price_metadata?.precision).toBe(
+      MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+    )
+    expect(fetchSub2ApiAvailableGroupsMock).not.toHaveBeenCalled()
+    expect(fetchSub2ApiKeysMock).not.toHaveBeenCalled()
+  })
+
   it("loads runtime catalog from a service-credential runtime key without token secret resolution", async () => {
     getSiteTypeCapabilitiesMock.mockReturnValueOnce(
       createModelCatalogAdapter(SITE_TYPES.SHAREDCHAT),

@@ -163,10 +163,7 @@ export async function fetchAIHubMixWebsiteModels(): Promise<
     payload
       .filter(
         (item): item is AIHubMixWebsiteModel =>
-          !!item &&
-          typeof item === "object" &&
-          typeof item.model === "string" &&
-          typeof item.billing_config === "string",
+          !!item && typeof item === "object" && typeof item.model === "string",
       )
       .map((item) => [item.model, item]),
   )
