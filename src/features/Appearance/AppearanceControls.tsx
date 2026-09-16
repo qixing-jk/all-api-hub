@@ -1,3 +1,4 @@
+import { RotateCcw } from "lucide-react"
 import { useId } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -26,6 +27,7 @@ import {
 } from "~/types/theme"
 
 import { AppearancePreview, ThemePresetPreview } from "./AppearancePreview"
+import { AppearanceResetButton } from "./AppearanceResetButton"
 import { getThemeModeOptions } from "./themeModeOptions"
 import { useAppearanceSave } from "./useAppearanceSave"
 
@@ -85,9 +87,19 @@ export function AppearanceControls({
   return (
     <div className="space-y-density-6" aria-busy={saving}>
       {showMode && (
-        <fieldset className="space-y-density-3 min-w-0">
-          <legend className="text-sm font-medium">
-            {t("theme.appearance")}
+        <fieldset
+          aria-labelledby={`${id}-mode-label`}
+          className="space-y-density-3 min-w-0"
+        >
+          <legend className="w-full text-sm font-medium">
+            <span className="flex items-center justify-between gap-2">
+              <span id={`${id}-mode-label`}>{t("theme.mode")}</span>
+              <AppearanceResetButton
+                label={`${t("common:actions.reset")}: ${t("theme.mode")}`}
+                disabled={saving}
+                onClick={() => void save({ themeMode: DEFAULT_THEME_MODE })}
+              />
+            </span>
           </legend>
           <div className="gap-y-density-2 grid grid-cols-3 gap-x-2">
             {THEME_MODES.map((mode) => (
@@ -110,10 +122,18 @@ export function AppearanceControls({
       )}
       <fieldset
         id={anchors ? SETTINGS_ANCHORS.APPEARANCE_PRESET : undefined}
+        aria-labelledby={`${id}-preset-label`}
         className="space-y-density-3 min-w-0"
       >
-        <legend className="text-sm font-medium">
-          {t("appearance.preset")}
+        <legend className="w-full text-sm font-medium">
+          <span className="flex items-center justify-between gap-2">
+            <span id={`${id}-preset-label`}>{t("appearance.preset")}</span>
+            <AppearanceResetButton
+              label={`${t("common:actions.reset")}: ${t("appearance.preset")}`}
+              disabled={saving}
+              onClick={() => void save({ preset: DEFAULT_APPEARANCE.preset })}
+            />
+          </span>
         </legend>
         <div className="gap-y-density-3 grid grid-cols-2 gap-x-3">
           {THEME_PRESETS.map((preset) => (
@@ -142,9 +162,19 @@ export function AppearanceControls({
       </fieldset>
       <fieldset
         id={anchors ? SETTINGS_ANCHORS.APPEARANCE_COLOR : undefined}
+        aria-labelledby={`${id}-color-label`}
         className="space-y-density-3 min-w-0"
       >
-        <legend className="text-sm font-medium">{t("appearance.color")}</legend>
+        <legend className="w-full text-sm font-medium">
+          <span className="flex items-center justify-between gap-2">
+            <span id={`${id}-color-label`}>{t("appearance.color")}</span>
+            <AppearanceResetButton
+              label={`${t("common:actions.reset")}: ${t("appearance.color")}`}
+              disabled={saving}
+              onClick={() => void save({ color: DEFAULT_APPEARANCE.color })}
+            />
+          </span>
+        </legend>
         {appearance.preset !== THEME_PRESET.DEFAULT ? (
           <p className="text-muted-foreground text-sm">
             {t("appearance.presetColorsHint")}
@@ -178,10 +208,18 @@ export function AppearanceControls({
       </fieldset>
       <fieldset
         id={anchors ? SETTINGS_ANCHORS.APPEARANCE_RADIUS : undefined}
+        aria-labelledby={`${id}-radius-label`}
         className="space-y-density-3 min-w-0"
       >
-        <legend className="text-sm font-medium">
-          {t("appearance.radius")}
+        <legend className="w-full text-sm font-medium">
+          <span className="flex items-center justify-between gap-2">
+            <span id={`${id}-radius-label`}>{t("appearance.radius")}</span>
+            <AppearanceResetButton
+              label={`${t("common:actions.reset")}: ${t("appearance.radius")}`}
+              disabled={saving}
+              onClick={() => void save({ radius: DEFAULT_APPEARANCE.radius })}
+            />
+          </span>
         </legend>
         <div className="gap-y-density-2 grid grid-cols-4 gap-x-2">
           {THEME_RADII.map((radius) => (
@@ -210,10 +248,18 @@ export function AppearanceControls({
       </fieldset>
       <fieldset
         id={anchors ? SETTINGS_ANCHORS.APPEARANCE_DENSITY : undefined}
+        aria-labelledby={`${id}-density-label`}
         className="space-y-density-3 min-w-0"
       >
-        <legend className="text-sm font-medium">
-          {t("appearance.density")}
+        <legend className="w-full text-sm font-medium">
+          <span className="flex items-center justify-between gap-2">
+            <span id={`${id}-density-label`}>{t("appearance.density")}</span>
+            <AppearanceResetButton
+              label={t("appearance.resetDensity")}
+              disabled={saving}
+              onClick={() => void save({ density: DEFAULT_APPEARANCE.density })}
+            />
+          </span>
         </legend>
         <p className="text-muted-foreground text-sm">
           {t("appearance.densityDescription")}
@@ -235,20 +281,23 @@ export function AppearanceControls({
             </label>
           ))}
         </div>
-        <Button
-          variant="outline"
-          disabled={saving}
-          onClick={() => void save({ density: DEFAULT_APPEARANCE.density })}
-        >
-          {t("appearance.resetDensity")}
-        </Button>
       </fieldset>
       <fieldset
         id={anchors ? SETTINGS_ANCHORS.APPEARANCE_TEXT_SIZE : undefined}
+        aria-labelledby={`${id}-textSize-label`}
         className="space-y-density-3 min-w-0"
       >
-        <legend className="text-sm font-medium">
-          {t("appearance.textSize")}
+        <legend className="w-full text-sm font-medium">
+          <span className="flex items-center justify-between gap-2">
+            <span id={`${id}-textSize-label`}>{t("appearance.textSize")}</span>
+            <AppearanceResetButton
+              label={t("appearance.resetTextSize")}
+              disabled={saving}
+              onClick={() =>
+                void save({ textSize: DEFAULT_APPEARANCE.textSize })
+              }
+            />
+          </span>
         </legend>
         <p className="text-muted-foreground text-sm">
           {t("appearance.textSizeDescription")}
@@ -270,13 +319,6 @@ export function AppearanceControls({
             </label>
           ))}
         </div>
-        <Button
-          variant="outline"
-          disabled={saving}
-          onClick={() => void save({ textSize: DEFAULT_APPEARANCE.textSize })}
-        >
-          {t("appearance.resetTextSize")}
-        </Button>
       </fieldset>
       <AppearancePreview presetLabel={presetLabels[appearance.preset]} />
       {failed && (
@@ -285,7 +327,11 @@ export function AppearanceControls({
         </p>
       )}
       <Button
-        variant="outline"
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="text-muted-foreground"
+        leftIcon={<RotateCcw aria-hidden="true" />}
         disabled={saving}
         onClick={() =>
           void save({ ...DEFAULT_APPEARANCE, themeMode: DEFAULT_THEME_MODE })

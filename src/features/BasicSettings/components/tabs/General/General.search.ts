@@ -210,7 +210,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "control:appearance-theme-mode",
     "general",
     SETTINGS_ANCHORS.APPEARANCE_THEME_MODE,
-    "settings:theme.appearance",
+    "settings:theme.mode",
     503,
     {
       descriptionKey: "settings:theme.selectTheme",

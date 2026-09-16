@@ -48,9 +48,7 @@ describe("ThemeModeSettings", () => {
         'theme.currentTheme:{"theme":"settings:theme.light","resolvedTheme":"theme.dark"}',
       ),
     ).toBeVisible()
-    const group = within(
-      screen.getByRole("group", { name: "theme.appearance" }),
-    )
+    const group = within(screen.getByRole("group", { name: "theme.mode" }))
     expect(
       group.getByRole("button", {
         name: /settings:theme.light/,
@@ -89,6 +87,19 @@ describe("ThemeModeSettings", () => {
     ).toHaveAttribute("title", "settings:theme.followSystemTheme")
   })
 
+  it("resets the settings-page theme to follow the system", async () => {
+    const user = userEvent.setup()
+    render(<ThemeModeSettings />)
+    await user.click(
+      screen.getByRole("button", {
+        name: "common:actions.reset: theme.mode",
+      }),
+    )
+    expect(themeState.current.setThemeMode).toHaveBeenCalledExactlyOnceWith(
+      THEME_MODE.SYSTEM,
+    )
+  })
+
   it("lets the user recover from an unrecognized stored theme mode", async () => {
     const user = userEvent.setup()
     themeState.current.themeMode = "legacy-theme" as ThemeMode
@@ -97,9 +108,7 @@ describe("ThemeModeSettings", () => {
     expect(
       screen.getByText('theme.currentTheme:{"resolvedTheme":"theme.light"}'),
     ).toBeVisible()
-    const group = within(
-      screen.getByRole("group", { name: "theme.appearance" }),
-    )
+    const group = within(screen.getByRole("group", { name: "theme.mode" }))
     expect(group.queryAllByRole("button", { pressed: true })).toHaveLength(0)
 
     await user.click(

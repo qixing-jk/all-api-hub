@@ -53,6 +53,21 @@ describe("appearance controls", () => {
     savedAppearance.textSize = "default"
   })
 
+  it.each([
+    ["theme.mode", { themeMode: THEME_MODE.SYSTEM }],
+    ["appearance.preset", { preset: THEME_PRESET.DEFAULT }],
+    ["appearance.color", { color: THEME_COLOR.BLUE }],
+    ["appearance.radius", { radius: THEME_RADIUS.DEFAULT }],
+    ["appearance.density", { density: "default" }],
+    ["appearance.textSize", { textSize: "default" }],
+  ])("resets only the field in %s", async (label, expected) => {
+    const user = userEvent.setup()
+    renderControls()
+    const group = screen.getByRole("group", { name: `settings:${label}` })
+    await user.click(within(group).getByRole("button"))
+    expect(save).toHaveBeenCalledExactlyOnceWith(expected)
+  })
+
   it("saves a selected light or dark mode without resetting appearance", async () => {
     const user = userEvent.setup()
     renderControls()
@@ -130,6 +145,11 @@ describe("appearance controls", () => {
 
   it("keeps searchable appearance controls linked to visible settings groups", () => {
     renderControls()
+    expect(
+      generalSearchControls.find(
+        (item) => item.targetId === SETTINGS_ANCHORS.APPEARANCE_THEME_MODE,
+      )?.titleKey,
+    ).toBe("settings:theme.mode")
     for (const targetId of [
       SETTINGS_ANCHORS.APPEARANCE_PRESET,
       SETTINGS_ANCHORS.APPEARANCE_COLOR,

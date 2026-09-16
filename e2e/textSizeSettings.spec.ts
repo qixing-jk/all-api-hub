@@ -327,6 +327,14 @@ for (const width of [1280, 390, 320]) {
     await preview.screenshot({
       path: testInfo.outputPath(`compact-extra-large-preview-${width}.png`),
     })
+    await textSize.screenshot({
+      path: testInfo.outputPath(`text-size-reset-${width}.png`),
+    })
+    await page
+      .locator(`#${SETTINGS_ANCHORS.APPEARANCE_THEME_MODE}`)
+      .screenshot({
+        path: testInfo.outputPath(`theme-mode-reset-${width}.png`),
+      })
     await page.reload()
     await expect(
       textSize.getByRole("radio", { name: "Extra large", exact: true }),
