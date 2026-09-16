@@ -5,6 +5,10 @@ import {
   Sub2ApiContentSessionLoginRequiredError,
 } from "~/services/accountSiteOnboarding/contentSession/sub2api"
 import { getContentSessionExtractors } from "~/services/accountSiteOnboarding/registry"
+import {
+  PAGE_CONTEXT,
+  readCurrentPageContext,
+} from "~/services/browsingContext/pageContext"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
 
@@ -60,6 +64,19 @@ export function handleGetUserFromLocalStorage(
       }
 
       if (request?.verifyIdentity === true) {
+        // Passive account highlighting needs ordinary browsing, while explicit
+        // temporary-page identity tasks must keep their existing protocol.
+        const pageContext =
+          request.forBrowsingContext === true
+            ? await readCurrentPageContext()
+            : undefined
+        if (
+          pageContext !== undefined &&
+          pageContext !== PAGE_CONTEXT.Ordinary
+        ) {
+          sendResponse({ success: false, pageContext })
+          return
+        }
         const userId = await verifyAccountBrowserIdentity({
           url: context.url,
           siteType: context.siteTypeHint,
@@ -67,11 +84,12 @@ export function handleGetUserFromLocalStorage(
             ? request.candidateUserIds
             : undefined,
         })
-        sendResponse(
-          userId
+        sendResponse({
+          ...(pageContext === undefined ? {} : { pageContext }),
+          ...(userId
             ? { success: true, data: { userId, identityVerified: true } }
-            : { success: false },
-        )
+            : { success: false }),
+        })
         return
       }
 

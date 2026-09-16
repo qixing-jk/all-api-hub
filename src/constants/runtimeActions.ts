@@ -77,6 +77,8 @@ export const RuntimeActionIds = {
   CloudflareGuardLog: "cloudflareGuardLog",
 
   CloseTempWindow: "closeTempWindow",
+  GetInternalTabIds: "getInternalTabIds",
+  GetSenderPageContext: "getSenderPageContext",
   CancelCheckinFeedbackScan: "cancelCheckinFeedbackScan",
   ContentCheckinFeedbackScan: "contentCheckinFeedbackScan",
   ContentCancelCheckinFeedbackScan: "contentCancelCheckinFeedbackScan",

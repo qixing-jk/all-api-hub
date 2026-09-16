@@ -6,6 +6,8 @@ import { setupAccountBrowserIdentityRateLimitMessaging } from "~/services/accoun
 import { setupAccountKeyRepairMessagingListeners } from "~/services/accounts/accountKeyAutoProvisioning"
 import { setupAutoRefreshMessagingListeners } from "~/services/accounts/autoRefreshService"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
+import { getInternalTabIds } from "~/services/browsingContext/internalTabsBackground"
+import { PAGE_CONTEXT } from "~/services/browsingContext/pageContext"
 import { setupAutoCheckinMessagingListeners } from "~/services/checkin/autoCheckin/scheduler"
 import { setupExternalCheckInMessagingListeners } from "~/services/checkin/externalCheckInService"
 import {
@@ -209,6 +211,51 @@ export function setupRuntimeMessageListeners() {
 
       if (request.action === RuntimeActionIds.CloseTempWindow) {
         void handleCloseTempWindow(request, sendResponse)
+        return true
+      }
+
+      if (request.action === RuntimeActionIds.GetInternalTabIds) {
+        if (
+          !Array.isArray(request.tabIds) ||
+          !request.tabIds.every(
+            (id: unknown) =>
+              typeof id === "number" && Number.isSafeInteger(id) && id >= 0,
+          )
+        ) {
+          sendResponse({ success: false })
+          return true
+        }
+        void getInternalTabIds(request.tabIds)
+          .then((tabIds) => sendResponse({ success: true, tabIds }))
+          .catch((error) => {
+            logger.warn("Unable to confirm internal tab ownership", { error })
+            sendResponse({ success: false })
+          })
+        return true
+      }
+
+      if (request.action === RuntimeActionIds.GetSenderPageContext) {
+        const tabId = sender.tab?.id
+        if (
+          typeof tabId !== "number" ||
+          !Number.isSafeInteger(tabId) ||
+          tabId < 0
+        ) {
+          sendResponse({ success: false, pageContext: PAGE_CONTEXT.Unknown })
+          return true
+        }
+        void getInternalTabIds([tabId])
+          .then((ids) =>
+            sendResponse({
+              success: true,
+              pageContext: ids.includes(tabId)
+                ? PAGE_CONTEXT.Internal
+                : PAGE_CONTEXT.Ordinary,
+            }),
+          )
+          .catch(() =>
+            sendResponse({ success: false, pageContext: PAGE_CONTEXT.Unknown }),
+          )
         return true
       }
 

@@ -14,6 +14,10 @@ import {
 } from "~/services/apiTransport/errors"
 import { applyLocalRemoteFetchResultEvidence } from "~/services/apiTransport/remoteLifecycle"
 import {
+  registerInternalTab,
+  unregisterInternalTab,
+} from "~/services/browsingContext/internalTabsBackground"
+import {
   DEFAULT_TEMP_CONTEXT_PREFERENCE,
   normalizeTempWindowFallbackPreferences,
 } from "~/services/preferences/tempWindowFallbackPreferences"
@@ -1345,6 +1349,7 @@ function handleTempWindowRemoved(windowId: number) {
  * Handles browser tab removal and destroys the matching tracked context.
  */
 function handleTempTabRemoved(tabId: number) {
+  void unregisterInternalTab(tabId)
   logTempWindow("tabRemoved", {
     tabId,
   })
@@ -2777,6 +2782,7 @@ async function createTempContextInstance(
         { requestId, origin, tabId: opened.tabId },
       )
     }
+    await registerInternalTab(opened.tabId)
     await updateTab(opened.tabId, { url })
 
     logTempWindow("createTempContextInstance", {

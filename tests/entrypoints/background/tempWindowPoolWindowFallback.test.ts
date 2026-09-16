@@ -1615,6 +1615,9 @@ describe("tempWindowPool window fallback", () => {
   it("installs and removes a temp-context download block rule for the owned tab", async () => {
     tempContextMode = "tab"
     const setupOrder: string[] = []
+    const { getInternalTabIds } = await import(
+      "~/services/browsingContext/internalTabsBackground"
+    )
     createTabMock.mockImplementationOnce(async () => {
       setupOrder.push("open")
       return { id: 601 }
@@ -1630,6 +1633,7 @@ describe("tempWindowPool window fallback", () => {
       },
     )
     tabsUpdateMock.mockImplementationOnce(async () => {
+      expect(await getInternalTabIds([601])).toContain(601)
       setupOrder.push("navigate")
       return undefined
     })
@@ -3056,8 +3060,13 @@ describe("tempWindowPool window fallback", () => {
     const onTabRemoved = onTabRemovedMock.mock.calls.at(0)?.[0]
     expect(onTabRemoved).toBeTypeOf("function")
 
+    const { getInternalTabIds } = await import(
+      "~/services/browsingContext/internalTabsBackground"
+    )
+    expect(await getInternalTabIds([513])).toContain(513)
     onTabRemoved?.(513)
     await vi.advanceTimersByTimeAsync(1)
+    expect(await getInternalTabIds([513])).not.toContain(513)
 
     const closeResponse = vi.fn()
     await handleCloseTempWindow(

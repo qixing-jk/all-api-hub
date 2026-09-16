@@ -36,6 +36,7 @@ import { accountQueries } from "~/services/accounts/accountStorage/accountQuerie
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
 import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import { createEmptyAccountStats } from "~/services/accounts/accountTodayStats"
+import { excludeInternalTabs } from "~/services/browsingContext/internalTabs"
 import { getDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
 import {
@@ -346,7 +347,7 @@ export const AccountDataProvider = ({
     try {
       // Look up the currently active tab. We need both the URL (for origin matching) and the
       // tab ID (for messaging + deduping repeated checks for the same tab).
-      const tabs = await getActiveTabs()
+      const tabs = await excludeInternalTabs(await getActiveTabs())
       const tab = tabs?.[0]
       const tabUrl = typeof tab?.url === "string" ? tab.url : null
       const tabId = typeof tab?.id === "number" ? tab.id : null
@@ -1200,10 +1201,13 @@ export const AccountDataProvider = ({
   const [matchedAccountScores, setMatchedAccountScores] = useState<
     Record<string, number>
   >({})
+  const openTabsCheckSeqRef = useRef(0)
   // Check and match open tabs with accounts
   const checkOpenTabs = useCallback(async () => {
+    const seq = (openTabsCheckSeqRef.current += 1)
     try {
-      const tabs = await getAllTabs()
+      const tabs = await excludeInternalTabs(await getAllTabs())
+      if (seq !== openTabsCheckSeqRef.current) return
       if (!tabs || tabs.length === 0 || displayData.length === 0) {
         setMatchedAccountScores({})
         return
@@ -1220,10 +1224,14 @@ export const AccountDataProvider = ({
 
       setMatchedAccountScores(scores)
     } catch (error) {
+      if (seq !== openTabsCheckSeqRef.current) return
       logger.error("Error matching open tabs", error)
       setMatchedAccountScores({})
     } finally {
-      if (!hasResolvedInitialOpenTabsRef.current) {
+      if (
+        seq === openTabsCheckSeqRef.current &&
+        !hasResolvedInitialOpenTabsRef.current
+      ) {
         setHasResolvedInitialOpenTabs(true)
       }
     }
@@ -1260,6 +1268,8 @@ export const AccountDataProvider = ({
     })
 
     return () => {
+      // Invalidate scans from the previous account snapshot or an unmounted UI.
+      openTabsCheckSeqRef.current += 1
       cleanupActivated()
       cleanupUpdated()
       cleanupRemoved()

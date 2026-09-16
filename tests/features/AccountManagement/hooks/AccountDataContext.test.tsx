@@ -337,6 +337,10 @@ afterEach(() => {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.spyOn(browser.runtime, "sendMessage").mockResolvedValue({
+    success: true,
+    tabIds: [],
+  })
   mockGetAllAccounts.mockReset()
   mockGetAllBookmarks.mockReset()
   mockGetOrderedList.mockReset()
@@ -2505,6 +2509,197 @@ describe("AccountDataContext sorting behavior", () => {
       })
       await waitFor(() => expect(getLatestCtx().sortOrder).toBe("asc"))
       expect(mockUpdateSortConfig).toHaveBeenLastCalledWith(field, "asc")
+    },
+  )
+
+  it.each([
+    [
+      "late match",
+      { success: true, tabIds: [] },
+      { success: true, tabIds: [10] },
+      undefined,
+    ],
+    [
+      "late exclusion",
+      { success: true, tabIds: [10] },
+      { success: true, tabIds: [] },
+      "open-tabs",
+    ],
+    ["late failure", undefined, { success: true, tabIds: [] }, "open-tabs"],
+  ])(
+    "keeps the latest related-page scan when an older query settles: %s",
+    async (_label, olderResponse, latestResponse, expectedBoost) => {
+      mockUserPreferencesContext.current.sortingPriorityConfig = {
+        lastModified: 1,
+        criteria: [
+          {
+            id: SortingCriteriaType.MATCHED_OPEN_TABS,
+            enabled: true,
+            priority: 0,
+          },
+        ],
+      }
+      mockGetAllAccounts.mockResolvedValue([
+        {
+          id: "acc-b",
+          site_url: "https://b.example.com",
+          account_info: { id: 2 },
+          last_sync_time: 0,
+        },
+      ])
+      mockConvertToDisplayData.mockReturnValue([
+        { id: "acc-b", name: "Beta", baseUrl: "https://b.example.com" },
+      ])
+      mockGetAllTabs.mockResolvedValue([
+        createBrowserTab({ id: 10, url: "https://b.example.com" }),
+      ])
+      const send = vi
+        .spyOn(browser.runtime, "sendMessage")
+        .mockResolvedValue({ success: true, tabIds: [10] })
+      const getLatestCtx = await renderAccountDataProvider()
+      await waitFor(() => expect(getLatestCtx().isInitialLoad).toBe(false))
+      const removed = mockOnTabRemoved.mock.calls.at(-1)![0]
+      const older = createDeferred<unknown>()
+      send.mockReturnValueOnce(older.promise)
+      const before = send.mock.calls.length
+      await act(async () =>
+        removed(99, { windowId: 1, isWindowClosing: false }),
+      )
+      await waitFor(() => expect(send).toHaveBeenCalledTimes(before + 1))
+      send.mockResolvedValue(latestResponse)
+      await act(async () =>
+        removed(98, { windowId: 1, isWindowClosing: false }),
+      )
+      await waitFor(() => expect(send).toHaveBeenCalledTimes(before + 2))
+      expect(getLatestCtx().getAccountContextBoost("acc-b")).toBe(expectedBoost)
+      await act(async () => {
+        older.resolve(olderResponse)
+        await older.promise
+      })
+      expect(getLatestCtx().getAccountContextBoost("acc-b")).toBe(expectedBoost)
+    },
+  )
+
+  it("clears unconfirmed browsing boosts and recovers on a later successful scan", async () => {
+    mockUserPreferencesContext.current.sortingPriorityConfig = {
+      lastModified: 1,
+      criteria: [
+        { id: SortingCriteriaType.CURRENT_SITE, enabled: true, priority: 0 },
+        {
+          id: SortingCriteriaType.MATCHED_OPEN_TABS,
+          enabled: true,
+          priority: 1,
+        },
+      ],
+    }
+    mockGetAllAccounts.mockResolvedValue([
+      {
+        id: "acc-b",
+        site_url: "https://b.example.com",
+        account_info: { id: 2 },
+        last_sync_time: 0,
+      },
+    ])
+    mockConvertToDisplayData.mockReturnValue([
+      { id: "acc-b", name: "Beta", baseUrl: "https://b.example.com" },
+    ])
+    const tab = createBrowserTab({ id: 10, url: "https://b.example.com" })
+    mockGetActiveTabs.mockResolvedValue([tab])
+    mockGetAllTabs.mockResolvedValue([tab])
+    mockReadAccountBrowserIdentityFromTab.mockResolvedValue("2")
+    const send = vi
+      .spyOn(browser.runtime, "sendMessage")
+      .mockResolvedValue({ success: true, tabIds: [] })
+    const getLatestCtx = await renderAccountDataProvider()
+    await waitFor(() =>
+      expect(getLatestCtx().getAccountContextBoost("acc-b")).toBe(
+        "current-site",
+      ),
+    )
+    const activated = mockOnTabActivated.mock.calls.map(
+      ([listener]) => listener,
+    )
+    send.mockResolvedValue(undefined)
+    await act(async () => {
+      for (const listener of activated) listener({ tabId: 10, windowId: 1 })
+    })
+    await waitFor(() => expect(getLatestCtx().isDetecting).toBe(false))
+    expect(getLatestCtx().getAccountContextBoost("acc-b")).toBeUndefined()
+    expect(getLatestCtx().detectedAccount).toBeNull()
+    expect(getLatestCtx().sortedData.map(({ id }) => id)).toEqual(["acc-b"])
+    send.mockResolvedValue({ success: true, tabIds: [] })
+    await act(async () => {
+      for (const listener of activated) listener({ tabId: 10, windowId: 1 })
+    })
+    await waitFor(() =>
+      expect(getLatestCtx().getAccountContextBoost("acc-b")).toBe(
+        "current-site",
+      ),
+    )
+  })
+
+  it.each([false, true])(
+    "ignores internal temporary pages while retaining ordinary same-site tabs: %s",
+    async (hasOrdinaryTab) => {
+      mockUserPreferencesContext.current.sortingPriorityConfig = {
+        lastModified: 1,
+        criteria: [
+          { id: SortingCriteriaType.CURRENT_SITE, enabled: true, priority: 0 },
+          {
+            id: SortingCriteriaType.MATCHED_OPEN_TABS,
+            enabled: true,
+            priority: 1,
+          },
+        ],
+      }
+      mockGetAllAccounts.mockResolvedValue([
+        {
+          id: "acc-a",
+          site_url: "https://a.example.com",
+          account_info: { id: 1 },
+          last_sync_time: 0,
+        },
+        {
+          id: "acc-b",
+          site_url: "https://b.example.com",
+          account_info: { id: 2 },
+          last_sync_time: 0,
+        },
+      ])
+      mockConvertToDisplayData.mockReturnValue([
+        { id: "acc-a", name: "Alpha", baseUrl: "https://a.example.com" },
+        { id: "acc-b", name: "Beta", baseUrl: "https://b.example.com" },
+      ])
+      const temporaryTab = createBrowserTab({
+        id: 10,
+        url: "https://b.example.com/dashboard",
+      })
+      mockGetActiveTabs.mockResolvedValue([temporaryTab])
+      mockGetAllTabs.mockResolvedValue(
+        hasOrdinaryTab
+          ? [temporaryTab, createBrowserTab({ id: 11, url: temporaryTab.url })]
+          : [temporaryTab],
+      )
+      mockReadAccountBrowserIdentityFromTab.mockResolvedValue("2")
+      const runtimeSpy = vi
+        .spyOn(browser.runtime, "sendMessage")
+        .mockResolvedValue({ success: true, tabIds: [10] })
+      try {
+        const getLatestCtx = await renderAccountDataProvider()
+        await waitFor(() => expect(getLatestCtx().isInitialLoad).toBe(false))
+        await waitFor(() => expect(getLatestCtx().isDetecting).toBe(false))
+        expect(getLatestCtx().getAccountContextBoost("acc-b")).toBe(
+          hasOrdinaryTab ? "open-tabs" : undefined,
+        )
+        expect(getLatestCtx().detectedAccount).toBeNull()
+        expect(getLatestCtx().detectedSiteAccounts).toEqual([])
+        expect(getLatestCtx().sortedData.map(({ id }) => id)).toEqual(
+          hasOrdinaryTab ? ["acc-b", "acc-a"] : ["acc-a", "acc-b"],
+        )
+        expect(mockReadAccountBrowserIdentityFromTab).not.toHaveBeenCalled()
+      } finally {
+        runtimeSpy.mockRestore()
+      }
     },
   )
 
