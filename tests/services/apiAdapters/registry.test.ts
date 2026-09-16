@@ -223,6 +223,7 @@ describe("apiAdapters registry", () => {
       markRead: expect.any(Function),
     })
     expect(capabilities.account?.modelCatalog).toEqual({
+      enrichPricing: expect.any(Function),
       fetchModels: expect.any(Function),
     })
     expectInviteLinkCapability(capabilities)
