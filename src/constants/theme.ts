@@ -27,6 +27,12 @@ export const THEME_DENSITY = {
   COMFORTABLE: "comfortable",
 } as const
 
+export const THEME_TEXT_SIZE = {
+  DEFAULT: "default",
+  LARGE: "large",
+  EXTRA_LARGE: "extra-large",
+} as const
+
 export const THEME_RADIUS = {
   NONE: "none",
   SMALL: "small",
@@ -43,6 +49,7 @@ export const THEME_ATTRIBUTES = {
   PRESET: "data-theme-preset",
   RADIUS: "data-theme-radius",
   DENSITY: "data-theme-density",
+  TEXT_SIZE: "data-theme-text-size",
   OWNER: "data-theme-owner",
 } as const
 

@@ -287,7 +287,7 @@ export function SiteAnnouncementCard({
                 label={t("actions.viewSource")}
                 size="sm"
                 variant="ghost"
-                className="text-theme-600 hover:bg-theme-50 dark:text-theme-400 dark:hover:bg-theme-400/10 h-(--density-control-tight) text-xs"
+                className="text-theme-600 hover:bg-theme-50 dark:text-theme-400 dark:hover:bg-theme-400/10 min-h-(--density-control-sm) text-xs"
                 leftIcon={<WorkflowTransitionIcon className="h-3.5 w-3.5" />}
               />
               <Button

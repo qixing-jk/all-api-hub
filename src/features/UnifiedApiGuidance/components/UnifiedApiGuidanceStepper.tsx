@@ -57,7 +57,7 @@ export function UnifiedApiGuidanceStepper({
                   >
                     {copy.stepTitle(step.id)}
                   </span>
-                  <span className="text-muted-foreground dark:text-secondary-foreground text-[11px] font-medium">
+                  <span className="text-muted-foreground dark:text-secondary-foreground text-2xs font-medium">
                     {copy.stateLabel(step.state)}
                   </span>
                 </div>

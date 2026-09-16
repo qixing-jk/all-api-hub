@@ -7,7 +7,33 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@plugin "@tailwindcss/typography";
+
 @theme inline {
+  --text-2xs: var(--font-size-2xs);
+  --text-2xs--line-height: var(--font-size-2xs--line-height);
+  --text-3xs: var(--font-size-3xs);
+  --text-3xs--line-height: var(--font-size-3xs--line-height);
+  --text-xs: var(--font-size-xs);
+  --text-xs--line-height: var(--font-size-xs--line-height);
+  --text-sm: var(--font-size-sm);
+  --text-sm--line-height: var(--font-size-sm--line-height);
+  --text-base: var(--font-size-base);
+  --text-base--line-height: var(--font-size-base--line-height);
+  --text-lg: var(--font-size-lg);
+  --text-lg--line-height: var(--font-size-lg--line-height);
+  --text-xl: var(--font-size-xl);
+  --text-xl--line-height: var(--font-size-xl--line-height);
+  --text-2xl: var(--font-size-2xl);
+  --text-2xl--line-height: var(--font-size-2xl--line-height);
+  --text-3xl: var(--font-size-3xl);
+  --text-3xl--line-height: var(--font-size-3xl--line-height);
+  --text-4xl: var(--font-size-4xl);
+  --text-4xl--line-height: var(--font-size-4xl--line-height);
+  --text-5xl: var(--font-size-5xl);
+  --text-5xl--line-height: var(--font-size-5xl--line-height);
+  --text-6xl: var(--font-size-6xl);
+  --text-6xl--line-height: var(--font-size-6xl--line-height);
   --spacing-density-1: calc(0.25rem * var(--density-space-scale));
   --spacing-density-1-5: calc(0.375rem * var(--density-space-scale));
   --spacing-density-2: calc(0.5rem * var(--density-space-scale));
@@ -142,28 +168,6 @@
   --breakpoint-sm: 480px;
   --breakpoint-md: 768px;
   --breakpoint-lg: 1024px;
-
-  /* 字体大小 */
-  --font-size-xs: 0.75rem;
-  --font-size-xs--line-height: 1rem;
-  --font-size-sm: 0.875rem;
-  --font-size-sm--line-height: 1.25rem;
-  --font-size-base: 1rem;
-  --font-size-base--line-height: 1.5rem;
-  --font-size-lg: 1.125rem;
-  --font-size-lg--line-height: 1.75rem;
-  --font-size-xl: 1.25rem;
-  --font-size-xl--line-height: 1.75rem;
-  --font-size-2xl: 1.5rem;
-  --font-size-2xl--line-height: 2rem;
-  --font-size-3xl: 1.875rem;
-  --font-size-3xl--line-height: 2.25rem;
-  --font-size-4xl: 2.25rem;
-  --font-size-4xl--line-height: 2.5rem;
-  --font-size-5xl: 3rem;
-  --font-size-5xl--line-height: 1;
-  --font-size-6xl: 3.75rem;
-  --font-size-6xl--line-height: 1;
 
   /* 字体粗细 */
   --font-weight-normal: 400;
@@ -376,10 +380,35 @@ html {
 body {
   background-color: var(--background);
   color: var(--foreground);
+  /* Preserve the extension document's 12px baseline. Browser-injected defaults
+     override layered typography, so inherited text also needs this rule. */
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
 }
 
 /* 禁用 Edge / IE 的密码显示按钮 */
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear {
   display: none;
+}
+
+/* Application-owned Markdown roles override the plugin's palette in both themes. */
+.app-markdown {
+  --tw-prose-body: var(--secondary-foreground);
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-lead: var(--secondary-foreground);
+  --tw-prose-links: var(--theme-link);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-counters: var(--muted-foreground);
+  --tw-prose-bullets: var(--muted-foreground);
+  --tw-prose-hr: var(--border);
+  --tw-prose-quotes: var(--secondary-foreground);
+  --tw-prose-quote-borders: var(--border-strong);
+  --tw-prose-captions: var(--muted-foreground);
+  --tw-prose-kbd: var(--foreground);
+  --tw-prose-code: var(--secondary-foreground);
+  --tw-prose-pre-code: var(--inverse-foreground);
+  --tw-prose-pre-bg: var(--surface-inverse);
+  --tw-prose-th-borders: var(--border-strong);
+  --tw-prose-td-borders: var(--border);
 }

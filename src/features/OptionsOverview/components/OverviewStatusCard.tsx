@@ -151,7 +151,7 @@ function StatusMetricContent({
       {visibleQualifier ? (
         <span
           aria-hidden="true"
-          className="text-muted-foreground ml-1.5 text-[10px] font-medium"
+          className="text-muted-foreground text-3xs ml-1.5 font-medium"
         >
           {visibleQualifier}
         </span>

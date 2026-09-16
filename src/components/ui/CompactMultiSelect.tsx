@@ -804,9 +804,6 @@ export function CompactMultiSelect({
               className={cn(
                 "dark:border-border dark:bg-card dark:text-foreground dark:hover:bg-card/80 gap-density-2 flex min-w-0 flex-1 items-center justify-between overflow-hidden text-left",
                 "whitespace-nowrap",
-                size === "default" && "h-(--density-control)",
-                size === "sm" && "h-(--density-control-sm)",
-                size === "lg" && "h-(--density-control-lg)",
                 !hasSelection && "text-muted-foreground",
                 className,
               )}

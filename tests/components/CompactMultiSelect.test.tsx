@@ -106,7 +106,7 @@ describe("CompactMultiSelect", () => {
 
     expect(
       screen.getByText("Alpha").closest('[data-slot="combobox-chip"]'),
-    ).toHaveClass("h-(--density-control-xs)")
+    ).toHaveClass("min-h-(--density-control-xs)")
   })
 
   it("shows a compact filtered-results toolbar by default in chips mode", async () => {
@@ -781,7 +781,7 @@ describe("CompactMultiSelect", () => {
     }
   })
 
-  it("defaults the summary trigger to regular button height", async () => {
+  it("defaults the summary trigger to regular button minimum height", async () => {
     renderCompact(
       <CompactMultiSelect
         displayMode="summary"
@@ -791,14 +791,16 @@ describe("CompactMultiSelect", () => {
       />,
     )
 
-    expect(screen.getByRole("combobox")).toHaveClass("h-(--density-control)")
+    expect(screen.getByRole("combobox")).toHaveClass(
+      "min-h-(--density-control)",
+    )
   })
 
   it.each([
-    ["small", "sm", "h-(--density-control-sm)"],
-    ["large", "lg", "h-(--density-control-lg)"],
+    ["small", "sm", "min-h-(--density-control-sm)"],
+    ["large", "lg", "min-h-(--density-control-lg)"],
   ] as const)(
-    "uses the shared %s summary trigger height",
+    "uses the shared %s summary trigger minimum height",
     async (_label, size, expectedClass) => {
       renderCompact(
         <CompactMultiSelect

@@ -85,10 +85,7 @@ export function FilteredTodayMetric({
           tabIndex={0}
         >
           <span aria-hidden="true">{formattedValue}</span>{" "}
-          <span
-            aria-hidden="true"
-            className="text-muted-foreground text-[10px]"
-          >
+          <span aria-hidden="true" className="text-muted-foreground text-3xs">
             {qualifier}
           </span>
         </span>

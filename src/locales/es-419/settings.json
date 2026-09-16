@@ -47,6 +47,10 @@
       "default": "Tema predeterminado"
     },
     "preview": "Vista previa",
+    "previewAccount": "Cuenta de ejemplo",
+    "previewDetails": "Uso de hoy: $8.20 · Actualizado ahora",
+    "previewInput": "Nota de la cuenta",
+    "previewNote": "Cuenta de uso diario",
     "primaryAction": "Acción principal",
     "radii": {
       "default": "Predeterminado",
@@ -57,8 +61,16 @@
     "radius": "Redondeado de esquinas",
     "reset": "Restablecer apariencia",
     "resetDensity": "Restablecer densidad",
+    "resetTextSize": "Restablecer tamaño del texto",
     "saveFailed": "No se pudo guardar. Inténtalo de nuevo.",
     "secondaryAction": "Acción secundaria",
+    "textSize": "Tamaño del texto",
+    "textSizeDescription": "Ajusta el tamaño del texto y la altura de las líneas. Los controles se adaptan al contenido sin cambiar la densidad elegida.",
+    "textSizes": {
+      "default": "Predeterminado",
+      "extraLarge": "Muy grande",
+      "large": "Grande"
+    },
     "title": "Configuración de apariencia"
   },
   "appearanceLanguage": {

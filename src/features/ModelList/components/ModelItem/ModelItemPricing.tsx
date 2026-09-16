@@ -248,7 +248,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
     <Badge
       variant={priceMetaBadge.variant}
       size="sm"
-      className="shrink-0 text-[10px] sm:text-xs"
+      className="text-3xs shrink-0 sm:text-xs"
       title={priceMetaTitle}
     >
       {priceMetaLabel}
@@ -260,7 +260,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
       <Badge
         variant="warning"
         size="sm"
-        className="shrink-0 text-[10px] sm:text-xs"
+        className="text-3xs shrink-0 sm:text-xs"
         title={t("estimatedPriceTitle")}
       >
         {t("estimatedPrice")}
@@ -321,7 +321,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
                 <Badge
                   variant="secondary"
                   size="sm"
-                  className="shrink-0 text-[10px] sm:text-xs"
+                  className="text-3xs shrink-0 sm:text-xs"
                 >
                   {model.pricingPlan?.rules.some((rule) =>
                     rule.conditions.some(

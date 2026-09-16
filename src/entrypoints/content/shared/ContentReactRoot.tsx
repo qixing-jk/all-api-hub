@@ -1,6 +1,6 @@
 import type React from "react"
 
-import "~/styles/style.css"
+import "~/styles/content.css"
 
 import { THEME_MODE } from "~/constants/theme"
 import { ApiCheckModalHost } from "~/entrypoints/content/webAiApiCheck/components/ApiCheckModalHost"
@@ -16,22 +16,23 @@ const stopHostPageKeyboardShortcuts = (
 }
 
 export const ContentReactRoot: React.FC = () => {
-  const { resolvedTheme, appearance } = useContentAppearance()
+  const { resolvedTheme, appearance, ready } = useContentAppearance()
 
   const wrapperClassName =
     resolvedTheme === THEME_MODE.DARK
-      ? "dark text-foreground bg-background"
-      : "text-foreground"
+      ? "dark text-foreground bg-background text-base"
+      : "text-foreground text-base"
 
   return (
     <div
       {...getAppearanceScopeAttributes(appearance)}
       className={wrapperClassName}
+      hidden={!ready}
       onKeyDown={stopHostPageKeyboardShortcuts}
       onKeyUp={stopHostPageKeyboardShortcuts}
     >
-      <ApiCheckModalHost />
-      <RedemptionToaster />
+      {ready && <ApiCheckModalHost />}
+      {ready && <RedemptionToaster />}
     </div>
   )
 }

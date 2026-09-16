@@ -121,7 +121,7 @@ export default function BookmarkListItem({
             {bookmark.tags && bookmark.tags.length > 0 && (
               <div className="gap-density-1 mt-density-1 flex flex-wrap">
                 {bookmark.tags.slice(0, 6).map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-[10px]">
+                  <Badge key={tag} variant="secondary" className="text-3xs">
                     {tag}
                   </Badge>
                 ))}

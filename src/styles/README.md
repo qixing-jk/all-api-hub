@@ -83,8 +83,8 @@ so neither React nor locale loading delays the appearance bootstrap.
 
 The bootstrap synchronously applies the Web Storage appearance hint, or system
 mode if no usable hint exists, then reads canonical extension preferences.
-`all-api-hub:appearance-bootstrap` contains only the theme mode, preset, accent
-and radius; it contains no account data. Old preference records and Plasmo JSON
+`all-api-hub:appearance-bootstrap` contains only the theme mode, preset, accent,
+radius, density and text size; it contains no account data. Old preference records and Plasmo JSON
 strings are normalized. Corrupt or inaccessible storage preserves the usable
 cached/system shell. React marks ownership when preferences finish loading,
 preventing a delayed bootstrap read from replacing a newer selection, and keeps
@@ -139,7 +139,8 @@ content widths, icon artwork, and structural shell dimensions independent.
 The navigation sidebar inherits density for its rows and spacing while retaining
 its width and shell header height. Calendar columns keep their width while day
 heights follow density. The bookmark import virtualizer measures
-`--density-tree-row` with a ResizeObserver so live changes update its offsets.
+the larger of `--density-tree-row` and the text line height plus row padding
+with a ResizeObserver so live density and text-size changes update its offsets.
 For mixed-axis spacing, declare independent axes (`px-4 py-density-4`,
 `gap-x-4 gap-y-density-4`). Avoid combining a shorthand with its density axis
 in the same class string: formatting can reorder them, and Tailwind Merge then
@@ -167,3 +168,92 @@ Review the resulting layout, not just the presence of a density class:
 
 These principles follow [Carbon's spacing and stacking guidance](https://carbondesignsystem.com/elements/spacing/overview/)
 and [Atlassian's spacing foundation](https://atlassian.design/foundations/spacing).
+
+## Text size
+
+`appearance.textSize` selects `default`, `large`, or `extra-large` independently
+of density, preset, accent, radius and theme mode. Missing or invalid values
+normalize to `default`. Each size control saves and resets only its own field;
+the full appearance reset restores both density and text size.
+
+`appearance.css` owns the `--font-size-*` values and their matching line heights.
+`style.css` maps them to Tailwind's actual `--text-*` tokens with `@theme inline`,
+so utilities resolve the variables from each element's scope. Do not change the
+root font size, rem spacing, icon artwork, or density tokens to enlarge text.
+The default utility sizes and line heights preserve the existing baseline.
+For example, `text-sm` uses 14/20px, 16/24px and 18/28px across the three sizes;
+`text-base` uses 16/24px, 18/28px and 20/32px at the default 16px root size.
+The unlayered document body rule preserves the extension's inherited 12px
+baseline and follows `text-xs` sizing, because Chromium injects an unlayered
+default font rule. Isolated content UI uses `text-base` inside its own scope.
+Shared badges and calendar labels with a smaller baseline use
+`--text-size-increment` while retaining their original default size.
+
+Use `text-3xs` for the 10px caption baseline and `text-2xs` for 11px. Their
+sizes follow the same shared increment and their line heights remain relative.
+Rare nonstandard baselines use `calc(... + var(--text-size-increment))`.
+Responsive overrides still use the shared scale (`sm:text-xs`). Relative `em`
+text such as badge counts follows its parent and must not receive a second
+increment.
+
+`MarkdownContent` owns Markdown parsing, sanitization, links, typography, and
+native disclosure state. Announcements and feedback previews share it. Enable
+only the typography plugin in the Tailwind v4 stylesheet; loading the legacy
+Tailwind config would also enable unrelated form resets. The `prose-sm` root
+uses `text-sm`; headings and other relative text follow it. Semantic prose
+colors apply in both themes. Authored style/class/id attributes and legacy
+font presentation are removed, preserving content and semantic structure;
+formatting must not override the reader's appearance settings.
+
+ECharts renders text outside the CSS utility system. `chartTypography.ts`
+resolves the shared increment into pixels for global text, axes, legends,
+visual maps, tooltips and explicit numeric font sizes in current chart options.
+The renderer reapplies it on text-size changes from the original options, so
+increments do not accumulate and chart interaction state survives.
+
+The text-size audit covers arbitrary Tailwind values and responsive variants,
+CSS declarations and custom properties, inline `fontSize`/`font` values,
+SVG text, Canvas fonts, library typography, and inherited/relative sizes.
+Intentional fixed-size exceptions are the monogram artwork in `InitialsIcon`
+and `ModelVendorMark`, plus Canvas lettering in exported share snapshots.
+These belong to icon/image geometry rather than interface text. Toast text
+inherits document sizing; content toasts already use shared text utilities.
+
+Apply text size through the existing appearance bootstrap, React ownership and
+preference watcher. Extension documents set `data-theme-text-size` on `html`;
+content UI sets it only on its Shadow DOM appearance wrapper. Never write these
+preferences to the host webpage's document or body.
+
+Content UI imports `content.css`, a separate stylesheet entry. The content-only
+PostCSS pass resolves declaration-level rem lengths at a 16px baseline,
+including typography, spacing, control geometry, and CSS variables. It leaves
+relative em values, strings, URLs, and media-query breakpoints intact. Merely
+setting a Shadow DOM wrapper's font-size cannot isolate rem from the host html.
+Extension document CSS keeps rem values, and browser page zoom continues to
+scale content UI. Do not load the content stylesheet into extension documents.
+
+Popup, options and sidepanel share the classic appearance bootstrap before
+application modules. Content UI waits for its first preference read before
+mounting interactive children, so autofocus and modal-ready signals run with
+the initial appearance applied. A failed preference read falls back to defaults.
+
+`pnpm lint:typography` scans source-owned arbitrary sizes, inline CSS/JS sizing,
+and Canvas font assignments. CI runs it through `pnpm lint`; pre-commit checks
+staged source through `validate:staged`. Exceptions are explicit in
+`scripts/utils/typography.mjs`: monogram artwork, export snapshot lettering,
+and numeric ECharts inputs routed through the common renderer. Browser tests
+remain necessary for inherited library styles and actual layout.
+
+Text controls use automatic height and density-driven minimum heights. Account
+for borders and padding when sizing inputs and input groups; long button and
+select labels must be able to wrap. Keep explicit icon-only dimensions intact.
+An extra-large text control may exceed its compact density minimum to fit its
+line box. Reserve room for trailing controls and dialog close actions.
+
+The live appearance preview includes an account name, amount, supporting text,
+input and actions. `e2e/textSizeSettings.spec.ts` checks independent saving,
+reset, search links, cross-view updates and host-page isolation at desktop and
+320px/390px widths. Locale and control tests cover long translated labels,
+menus and form popovers; the existing density and button tests retain their
+default-size assertions. Run these against the Chromium support floor as well
+as current Chromium when changing the shared typography contract.

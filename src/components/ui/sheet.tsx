@@ -81,7 +81,9 @@ function SheetContent({
       <FloatingLayerProvider layer="modal-contained">
         <SheetPrimitive.Content
           data-slot="sheet-content"
+          data-close-button={showCloseButton ? "" : undefined}
           className={cn(
+            "group/sheet",
             "bg-popover text-popover-foreground data-[state=closed]:animate-out data-[state=open]:animate-in gap-y-density-4 fixed flex flex-col gap-x-4 overflow-hidden shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
             Z_INDEX.modal,
             side === "right" &&
@@ -117,7 +119,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="sheet-header"
       className={cn(
-        "gap-y-density-1-5 py-density-4 flex flex-col gap-x-1.5 px-4",
+        "gap-y-density-1-5 py-density-4 flex flex-col gap-x-1.5 px-4 group-data-[close-button]/sheet:pr-[calc(var(--density-control-xs)+1.5rem)]",
         className,
       )}
       {...props}

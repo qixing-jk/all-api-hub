@@ -47,6 +47,10 @@
       "default": "Standarddesign"
     },
     "preview": "Vorschau",
+    "previewAccount": "Beispielkonto",
+    "previewDetails": "Heutige Nutzung: $8.20 · Gerade aktualisiert",
+    "previewInput": "Kontonotiz",
+    "previewNote": "Konto für den Alltag",
     "primaryAction": "Hauptaktion",
     "radii": {
       "default": "Standard",
@@ -57,8 +61,16 @@
     "radius": "Eckenradius",
     "reset": "Darstellung zurücksetzen",
     "resetDensity": "Dichte zurücksetzen",
+    "resetTextSize": "Textgröße zurücksetzen",
     "saveFailed": "Speichern fehlgeschlagen. Bitte erneut versuchen.",
     "secondaryAction": "Nebenaktion",
+    "textSize": "Textgröße",
+    "textSizeDescription": "Schriftgröße und Zeilenhöhe anpassen. Bedienelemente passen sich dem Inhalt an, ohne die eingestellte Dichte zu ändern.",
+    "textSizes": {
+      "default": "Standard",
+      "extraLarge": "Sehr groß",
+      "large": "Groß"
+    },
     "title": "Darstellung"
   },
   "appearanceLanguage": {

@@ -260,7 +260,7 @@ function AvailabilityAwareValue({
         >
           {value}
           {qualifier ? (
-            <span className="text-muted-foreground ml-1.5 text-[10px] font-medium">
+            <span className="text-muted-foreground text-3xs ml-1.5 font-medium">
               {qualifier}
             </span>
           ) : null}
@@ -355,7 +355,7 @@ function UsageShare({
           <span aria-hidden="true">{formattedValue}</span>{" "}
           <span
             aria-hidden="true"
-            className="text-muted-foreground text-[10px] font-medium"
+            className="text-muted-foreground text-3xs font-medium"
           >
             {qualifier}
           </span>

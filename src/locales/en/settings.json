@@ -47,6 +47,10 @@
       "default": "Default theme"
     },
     "preview": "Preview",
+    "previewAccount": "Example account",
+    "previewDetails": "Today's usage $8.20 · Updated just now",
+    "previewInput": "Account note",
+    "previewNote": "Daily account",
     "primaryAction": "Primary action",
     "radii": {
       "default": "Default",
@@ -57,8 +61,16 @@
     "radius": "Corner radius",
     "reset": "Reset appearance",
     "resetDensity": "Reset density",
+    "resetTextSize": "Reset text size",
     "saveFailed": "Could not save. Please try again.",
     "secondaryAction": "Secondary action",
+    "textSize": "Text size",
+    "textSizeDescription": "Adjust text size and line height. Controls grow to fit content without changing your density setting.",
+    "textSizes": {
+      "default": "Default",
+      "extraLarge": "Extra large",
+      "large": "Large"
+    },
     "title": "Appearance settings"
   },
   "appearanceLanguage": {

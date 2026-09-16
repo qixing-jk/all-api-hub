@@ -159,7 +159,16 @@ function createAnnouncementStore(): SiteAnnouncementStoreState["sites"] {
           accountId: "announcement-account-a",
           providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
           title: "Scheduled maintenance window",
-          content: "The provider will rotate billing infrastructure tonight.",
+          content: `# Maintenance details
+
+The provider will rotate billing infrastructure tonight.
+
+- Service resumes tomorrow
+
+<p style="font-size:10px;line-height:10px" class="text-xs">Styled announcement text</p>
+<font size="1">Legacy announcement text</font>
+
+\`announcement-code\``,
           fingerprint: "announcement-record-a-fp",
           firstSeenAt: now - 60_000,
           lastSeenAt: now,
@@ -238,6 +247,39 @@ test("filters cached site announcements and marks unread items as read", async (
   await expect(
     page.getByText("The provider will rotate billing infrastructure tonight."),
   ).toBeVisible()
+
+  const announcementBody = page.getByText(
+    "The provider will rotate billing infrastructure tonight.",
+    { exact: true },
+  )
+  for (const [textSize, font] of [
+    ["default", "14px"],
+    ["large", "16px"],
+    ["extra-large", "18px"],
+  ] as const) {
+    await seedUserPreferences(serviceWorker, { appearance: { textSize } })
+    await expect(announcementBody).toHaveCSS("font-size", font)
+    const markdown = page
+      .locator(".app-markdown")
+      .filter({ has: announcementBody })
+    await expect(markdown.getByText("Styled announcement text")).toHaveCSS(
+      "font-size",
+      font,
+    )
+    await expect(markdown).toContainText("Legacy announcement text")
+    await expect(markdown.locator("font, [style], .text-xs")).toHaveCount(0)
+    await expect(markdown.locator("ul")).toHaveCSS("list-style-type", "disc")
+    const heading = markdown.getByRole("heading", {
+      name: "Maintenance details",
+    })
+    await expect(heading).toHaveCSS("font-weight", "600")
+    expect(
+      await heading.evaluate((element) =>
+        parseFloat(getComputedStyle(element).fontSize),
+      ),
+    ).toBeGreaterThan(parseFloat(font))
+    await expect(markdown.locator("code")).toBeVisible()
+  }
 
   await page.getByRole("button", { name: "Mark read" }).click()
 

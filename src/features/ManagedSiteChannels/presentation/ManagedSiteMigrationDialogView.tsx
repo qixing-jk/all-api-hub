@@ -66,7 +66,7 @@ function PreviewComparisonRow({
 }) {
   return (
     <div className="bg-border grid gap-px md:grid-cols-[minmax(0,120px)_minmax(0,1fr)_minmax(0,1fr)]">
-      <div className="bg-muted/50 py-density-2 px-3 text-[11px] font-medium uppercase">
+      <div className="bg-muted/50 py-density-2 text-2xs px-3 font-medium uppercase">
         {label}
       </div>
       <div className="bg-background py-density-2 px-3 text-sm break-words">
@@ -378,7 +378,7 @@ export function ManagedSiteMigrationDialogView({
                           className="overflow-hidden rounded-md border"
                         >
                           <div className="bg-border grid gap-px md:grid-cols-[minmax(0,120px)_minmax(0,1fr)_minmax(0,1fr)]">
-                            <div className="bg-muted/50 py-density-2 px-3 text-[11px] font-medium uppercase">
+                            <div className="bg-muted/50 py-density-2 text-2xs px-3 font-medium uppercase">
                               {labels.fieldLabel}
                             </div>
                             <div className="bg-muted/50 py-density-2 px-3 text-xs font-medium">

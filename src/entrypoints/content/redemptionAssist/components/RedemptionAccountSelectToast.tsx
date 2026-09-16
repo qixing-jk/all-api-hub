@@ -239,13 +239,13 @@ export const RedemptionAccountSelectToast: React.FC<
                       </span>
                     </span>
                     {checkInUrl && (
-                      <div className="text-muted-foreground truncate pl-5 text-[11px]">
+                      <div className="text-muted-foreground text-2xs truncate pl-5">
                         {checkInUrl}
                       </div>
                     )}
                   </label>
                   {!isSupported && (
-                    <div className="text-muted-foreground gap-y-density-1 flex flex-wrap items-center gap-x-2 pl-5 text-[11px]">
+                    <div className="text-muted-foreground gap-y-density-1 text-2xs flex flex-wrap items-center gap-x-2 pl-5">
                       <span id={unsupportedReasonId}>
                         {t("accountSelect.unsupported")}
                       </span>

@@ -44,7 +44,7 @@ export function VerificationHistorySummary({
         status={summary?.status ?? API_VERIFICATION_HISTORY_STATUSES.Unverified}
       />
       {latencyMs !== null ? (
-        <span className="text-muted-foreground truncate text-[11px] sm:text-xs">
+        <span className="text-muted-foreground text-2xs truncate sm:text-xs">
           {formatLatency(latencyMs)}
         </span>
       ) : null}
@@ -57,7 +57,7 @@ export function VerificationHistorySummary({
           <time
             dateTime={verificationTimestampIso}
             title={t("verifyDialog.history.lastVerified")}
-            className="text-muted-foreground truncate text-[11px] sm:text-xs"
+            className="text-muted-foreground text-2xs truncate sm:text-xs"
           >
             {verificationTimestamp}
           </time>

@@ -126,6 +126,87 @@
   --theme-link: var(--theme-color-800);
 }
 
+/* Text size changes typography only. Keep rem spacing and density independent. */
+:root,
+:host,
+[data-theme-text-size="default"] {
+  --text-size-increment: 0rem;
+  --font-size-3xs: calc(0.625rem + var(--text-size-increment));
+  --font-size-3xs--line-height: 1.5;
+  --font-size-2xs: calc(0.6875rem + var(--text-size-increment));
+  --font-size-2xs--line-height: 1.5;
+  --font-size-xs: 0.75rem;
+  --font-size-xs--line-height: 1rem;
+  --font-size-sm: 0.875rem;
+  --font-size-sm--line-height: 1.25rem;
+  --font-size-base: 1rem;
+  --font-size-base--line-height: 1.5rem;
+  --font-size-lg: 1.125rem;
+  --font-size-lg--line-height: 1.75rem;
+  --font-size-xl: 1.25rem;
+  --font-size-xl--line-height: 1.75rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-2xl--line-height: 2rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-3xl--line-height: 2.25rem;
+  --font-size-4xl: 2.25rem;
+  --font-size-4xl--line-height: 2.5rem;
+  --font-size-5xl: 3rem;
+  --font-size-5xl--line-height: 3rem;
+  --font-size-6xl: 3.75rem;
+  --font-size-6xl--line-height: 3.75rem;
+}
+[data-theme-text-size="large"] {
+  --font-size-3xs: calc(0.625rem + var(--text-size-increment));
+  --font-size-2xs: calc(0.6875rem + var(--text-size-increment));
+  --text-size-increment: 0.125rem;
+  --font-size-xs: 0.875rem;
+  --font-size-xs--line-height: 1.25rem;
+  --font-size-sm: 1rem;
+  --font-size-sm--line-height: 1.5rem;
+  --font-size-base: 1.125rem;
+  --font-size-base--line-height: 1.75rem;
+  --font-size-lg: 1.25rem;
+  --font-size-lg--line-height: 1.875rem;
+  --font-size-xl: 1.375rem;
+  --font-size-xl--line-height: 2rem;
+  --font-size-2xl: 1.625rem;
+  --font-size-2xl--line-height: 2.25rem;
+  --font-size-3xl: 2rem;
+  --font-size-3xl--line-height: 2.5rem;
+  --font-size-4xl: 2.375rem;
+  --font-size-4xl--line-height: 2.75rem;
+  --font-size-5xl: 3.125rem;
+  --font-size-5xl--line-height: 3.375rem;
+  --font-size-6xl: 3.875rem;
+  --font-size-6xl--line-height: 4.125rem;
+}
+[data-theme-text-size="extra-large"] {
+  --font-size-3xs: calc(0.625rem + var(--text-size-increment));
+  --font-size-2xs: calc(0.6875rem + var(--text-size-increment));
+  --text-size-increment: 0.25rem;
+  --font-size-xs: 1rem;
+  --font-size-xs--line-height: 1.5rem;
+  --font-size-sm: 1.125rem;
+  --font-size-sm--line-height: 1.75rem;
+  --font-size-base: 1.25rem;
+  --font-size-base--line-height: 2rem;
+  --font-size-lg: 1.375rem;
+  --font-size-lg--line-height: 2.125rem;
+  --font-size-xl: 1.5rem;
+  --font-size-xl--line-height: 2.25rem;
+  --font-size-2xl: 1.75rem;
+  --font-size-2xl--line-height: 2.5rem;
+  --font-size-3xl: 2.125rem;
+  --font-size-3xl--line-height: 2.75rem;
+  --font-size-4xl: 2.5rem;
+  --font-size-4xl--line-height: 3rem;
+  --font-size-5xl: 3.25rem;
+  --font-size-5xl--line-height: 3.75rem;
+  --font-size-6xl: 4rem;
+  --font-size-6xl--line-height: 4.5rem;
+}
+
 /* Density is independent of color, typography, radius, and content width. */
 :root,
 :host {

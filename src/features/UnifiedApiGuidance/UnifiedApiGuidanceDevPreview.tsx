@@ -589,7 +589,7 @@ function SurfacePreview({
         <h3 className="text-secondary-foreground text-sm font-semibold">
           {title}
         </h3>
-        <span className="border-border bg-surface-subtle text-muted-foreground dark:border-foreground/10 dark:bg-foreground/[0.04] rounded-md border px-2 py-0.5 font-mono text-[11px]">
+        <span className="border-border bg-surface-subtle text-muted-foreground dark:border-foreground/10 dark:bg-foreground/[0.04] text-2xs rounded-md border px-2 py-0.5 font-mono">
           {scenario.id}:{surface}
         </span>
       </div>
@@ -624,7 +624,7 @@ function ApiCredentialSurfacePreview({
         <h3 className="text-secondary-foreground text-sm font-semibold">
           API credential surface
         </h3>
-        <span className="border-border bg-surface-subtle text-muted-foreground dark:border-foreground/10 dark:bg-foreground/[0.04] rounded-md border px-2 py-0.5 font-mono text-[11px]">
+        <span className="border-border bg-surface-subtle text-muted-foreground dark:border-foreground/10 dark:bg-foreground/[0.04] text-2xs rounded-md border px-2 py-0.5 font-mono">
           {scenario.id}:apiCredentialProfiles
         </span>
       </div>

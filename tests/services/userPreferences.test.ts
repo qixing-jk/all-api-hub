@@ -38,14 +38,33 @@ describe("userPreferences", () => {
     await userPreferences.savePreferences({
       appearance: { density: "comfortable" },
     })
+    await userPreferences.savePreferences({
+      appearance: { textSize: "extra-large" },
+    })
     const preferences = await userPreferences.getPreferences()
     expect(preferences.appearance).toEqual({
       preset: "anthropic",
       color: "rose",
       radius: "small",
       density: "comfortable",
+      textSize: "extra-large",
     })
     expect(preferences.currencyType).toBe("CNY")
+    await userPreferences.savePreferences({
+      appearance: { density: "default" },
+    })
+    expect((await userPreferences.getPreferences()).appearance).toEqual({
+      ...preferences.appearance,
+      density: "default",
+    })
+    await userPreferences.savePreferences({
+      appearance: { textSize: "default" },
+    })
+    expect((await userPreferences.getPreferences()).appearance).toEqual({
+      ...preferences.appearance,
+      density: "default",
+      textSize: "default",
+    })
   })
 
   describe("DEFAULT_PREFERENCES", () => {

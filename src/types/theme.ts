@@ -4,6 +4,7 @@ import {
   THEME_MODE,
   THEME_PRESET,
   THEME_RADIUS,
+  THEME_TEXT_SIZE,
 } from "~/constants/theme"
 
 export const THEME_MODES = [
@@ -44,8 +45,15 @@ export const THEME_DENSITIES = [
   THEME_DENSITY.COMFORTABLE,
 ] as const
 
+export const THEME_TEXT_SIZES = [
+  THEME_TEXT_SIZE.DEFAULT,
+  THEME_TEXT_SIZE.LARGE,
+  THEME_TEXT_SIZE.EXTRA_LARGE,
+] as const
+
 export interface AppearancePreferences {
   density: (typeof THEME_DENSITIES)[number]
+  textSize: (typeof THEME_TEXT_SIZES)[number]
   preset: (typeof THEME_PRESETS)[number]
   color: (typeof THEME_COLORS)[number]
   radius: (typeof THEME_RADII)[number]
@@ -59,6 +67,7 @@ export const DEFAULT_APPEARANCE: AppearancePreferences = {
   color: THEME_COLOR.BLUE,
   radius: THEME_RADIUS.DEFAULT,
   density: THEME_DENSITY.DEFAULT,
+  textSize: THEME_TEXT_SIZE.DEFAULT,
 }
 
 /** Old backups and unknown imported values retain supported appearance defaults. */
@@ -80,6 +89,10 @@ export function normalizeAppearance(value: unknown): AppearancePreferences {
       input.density && THEME_DENSITIES.includes(input.density)
         ? input.density
         : DEFAULT_APPEARANCE.density,
+    textSize:
+      input.textSize && THEME_TEXT_SIZES.includes(input.textSize)
+        ? input.textSize
+        : DEFAULT_APPEARANCE.textSize,
     radius:
       input.radius && THEME_RADII.includes(input.radius)
         ? input.radius

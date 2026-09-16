@@ -163,6 +163,44 @@ test("filters balance history by tag/account and persists the selected currency"
   // Library-generated tooltip surfaces need the same curve as their shadows.
   const chart = page.locator("canvas").last()
   await expect(chart).toBeVisible()
+  // Observe actual Canvas draw calls: CSS assertions cannot establish chart sizing.
+  await page.evaluate(() => {
+    const original = CanvasRenderingContext2D.prototype.fillText
+    CanvasRenderingContext2D.prototype.fillText = function (...args) {
+      const fonts = new Set(JSON.parse(this.canvas.dataset.drawnFonts || "[]"))
+      fonts.add(this.font)
+      this.canvas.dataset.drawnFonts = JSON.stringify([...fonts])
+      return original.apply(this, args)
+    }
+  })
+  for (const [size, pixels] of [
+    ["extra-large", 16],
+    ["default", 12],
+  ] as const) {
+    await page.locator("canvas").evaluateAll((canvases) => {
+      for (const canvas of canvases) delete canvas.dataset.drawnFonts
+    })
+    await setVisualThemeAttribute(
+      page.locator("html"),
+      THEME_ATTRIBUTES.TEXT_SIZE,
+      size,
+    )
+    await expect
+      .poll(() =>
+        page
+          .locator("canvas")
+          .evaluateAll(
+            (canvases, pixels) =>
+              canvases.some((canvas) =>
+                (
+                  JSON.parse(canvas.dataset.drawnFonts || "[]") as string[]
+                ).some((font) => font.includes(`${pixels}px`)),
+              ),
+            pixels,
+          ),
+      )
+      .toBe(true)
+  }
   // Canvas must consume resolved colors and repaint without a reload.
   const countSeriesPixels = (rgb: number[]) =>
     page.locator("canvas").evaluateAll((canvases, target) => {
@@ -330,3 +368,64 @@ test("refreshes balance snapshots through the background runtime", async ({
       .getByText("Balance Refresh Hub", { exact: true }),
   ).toBeVisible()
 })
+
+for (const width of [320, 390]) {
+  test(`large balance charts remain within ${width}px layouts`, async ({
+    context,
+    page,
+    extensionId,
+  }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    const worker = await getServiceWorker(context)
+    await seedStoredAccounts(worker, [
+      createStoredAccount({
+        id: "balance-account-a",
+        site_name: "Balance Hub A",
+      }),
+      createStoredAccount({
+        id: "balance-account-b",
+        site_name: "Balance Hub B",
+      }),
+    ])
+    await seedDailyBalanceHistoryStore(worker, createBalanceSnapshots())
+    await seedUserPreferences(worker, {
+      appearance: { density: "compact", textSize: "extra-large" },
+      balanceHistory: {
+        enabled: true,
+        endOfDayCapture: { enabled: false },
+        retentionDays: 365,
+      },
+    })
+    await page.goto(BALANCE_HISTORY_URL(extensionId))
+    await expect(page.locator("html")).toHaveAttribute(
+      THEME_ATTRIBUTES.TEXT_SIZE,
+      "extra-large",
+    )
+    await expect(page.locator("canvas").last()).toBeVisible()
+    for (const [breakdown, trend] of [
+      ["Pie", "Line"],
+      ["Histogram", "Bar"],
+    ]) {
+      await page.getByRole("button", { name: breakdown, exact: true }).click()
+      await page.getByRole("button", { name: trend, exact: true }).click()
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth,
+          ),
+        )
+        .toBe(true)
+      for (const chart of await page.locator("canvas").all()) {
+        await chart.scrollIntoViewIfNeeded()
+        const bounds = (await chart.boundingBox())!
+        expect(bounds.x).toBeGreaterThanOrEqual(0)
+        expect(bounds.x + bounds.width).toBeLessThanOrEqual(width)
+      }
+      await page.screenshot({
+        fullPage: true,
+        animations: "disabled",
+        path: testInfo.outputPath(`${breakdown}-${trend}-${width}.png`),
+      })
+    }
+  })
+}

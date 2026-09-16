@@ -17,7 +17,7 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
       role="group"
       className={cn(
         "group/input-group border-input dark:bg-input/30 relative flex w-full items-center rounded-md border shadow-xs transition-[color,box-shadow] outline-none",
-        "h-(--density-control) min-w-0 has-[>textarea]:h-auto",
+        "h-auto min-h-(--density-control) min-w-0",
 
         // Variants based on alignment.
         "has-[>[data-align=inline-start]]:[&>input]:pl-2",
@@ -90,8 +90,8 @@ const inputGroupButtonVariants = cva(
   {
     variants: {
       size: {
-        xs: "h-(--density-control-xs) gap-density-1 py-0 px-2 rounded-xs [&>svg:not([class*='size-'])]:size-3.5 has-[>svg]:px-2",
-        sm: "h-(--density-control-sm) py-0 px-2.5 gap-density-1-5 rounded-sm has-[>svg]:px-2.5",
+        xs: "h-auto min-h-(--density-control-xs) gap-density-1 py-0 px-2 rounded-xs [&>svg:not([class*='size-'])]:size-3.5 has-[>svg]:px-2",
+        sm: "h-auto min-h-(--density-control-sm) py-0 px-2.5 gap-density-1-5 rounded-sm has-[>svg]:px-2.5",
         "icon-xs": "size-(--density-control-xs) rounded-xs p-0 has-[>svg]:p-0",
         "icon-sm": "size-(--density-control-sm) rounded-sm p-0 has-[>svg]:p-0",
       },
@@ -151,7 +151,7 @@ function InputGroupInput({
       data-slot="input-group-control"
       containerClassName="min-w-0 flex-1"
       className={cn(
-        "flex-1 rounded-none border-0 bg-transparent shadow-none focus:ring-0 focus-visible:ring-0",
+        "min-h-[calc(var(--density-control)-2px)] flex-1 rounded-none border-0 bg-transparent shadow-none focus:ring-0 focus-visible:ring-0",
         className,
       )}
       {...props}

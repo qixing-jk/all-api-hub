@@ -207,7 +207,7 @@ export default function HeaderSection({
             {/* Current extension version (links to the changelog). */}
             <VersionBadge
               size="sm"
-              className="[&>a]:gap-y-density-1 w-fit self-start px-1.5 py-0 text-[0.65rem] leading-tight [&>a]:gap-x-1 [&>a]:leading-tight [&>a>svg]:size-3"
+              className="[&>a]:gap-y-density-1 w-fit self-start px-1.5 py-0 text-[length:calc(0.65rem+var(--text-size-increment))] leading-tight [&>a]:gap-x-1 [&>a]:leading-tight [&>a>svg]:size-3"
             />
           </div>
         </div>

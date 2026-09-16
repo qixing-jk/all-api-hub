@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from "react"
 import { THEME_ATTRIBUTES } from "~/constants/theme"
 
 import { applyChartColors, readChartColors } from "./chartColors"
+import { applyChartTypography, readChartTextIncrement } from "./chartTypography"
 import { echarts, type EChartsOption, type SetOptionOpts } from "./echarts"
 
 export type EChartRenderer = "canvas" | "svg"
@@ -86,11 +87,17 @@ export function EChart(props: EChartProps) {
     const container = containerRef.current
     if (!instance || !container) return
     const updateColors = (themeChanged = false) => {
-      instance.setOption(applyChartColors(option, readChartColors(container)), {
-        ...resolvedSetOptionOpts,
-        // Keep chart interaction state (zoom and legend selection) when recoloring.
-        ...(themeChanged ? { notMerge: false } : {}),
-      })
+      instance.setOption(
+        applyChartTypography(
+          applyChartColors(option, readChartColors(container)),
+          readChartTextIncrement(container),
+        ),
+        {
+          ...resolvedSetOptionOpts,
+          // Keep chart interaction state (zoom and legend selection) when recoloring.
+          ...(themeChanged ? { notMerge: false } : {}),
+        },
+      )
     }
     updateColors()
     let frame: number | undefined
@@ -106,6 +113,7 @@ export function EChart(props: EChartProps) {
         "style",
         THEME_ATTRIBUTES.COLOR,
         THEME_ATTRIBUTES.PRESET,
+        THEME_ATTRIBUTES.TEXT_SIZE,
       ],
     })
     return () => {

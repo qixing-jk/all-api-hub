@@ -159,7 +159,9 @@ test("appearance applies across windows, survives reload, and resets", async ({
     })
   await defaultRadius.focus()
   await page.keyboard.press("ArrowRight")
-  const largeRadius = drawer.getByRole("radio", { name: "Large", exact: true })
+  const largeRadius = drawer
+    .getByRole("group", { name: "Corner radius" })
+    .getByRole("radio", { name: "Large", exact: true })
   await expect(largeRadius).toBeChecked()
   await expect(largeRadius).toBeFocused()
   await expect(sidepanel.locator("html")).toHaveAttribute(

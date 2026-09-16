@@ -82,7 +82,7 @@ export const TokenStats = React.memo(() => {
         >
           {totalText}
           {qualifier ? (
-            <span className="text-muted-foreground ml-1.5 text-[10px] font-medium">
+            <span className="text-muted-foreground text-3xs ml-1.5 font-medium">
               {qualifier}
             </span>
           ) : null}

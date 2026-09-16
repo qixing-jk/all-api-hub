@@ -47,6 +47,10 @@
       "default": "標準テーマ"
     },
     "preview": "プレビュー",
+    "previewAccount": "サンプルアカウント",
+    "previewDetails": "本日の使用量 $8.20 · たった今更新",
+    "previewInput": "アカウントのメモ",
+    "previewNote": "普段使いのアカウント",
     "primaryAction": "メイン操作",
     "radii": {
       "default": "標準",
@@ -57,8 +61,16 @@
     "radius": "角の丸み",
     "reset": "外観をリセット",
     "resetDensity": "表示密度をリセット",
+    "resetTextSize": "文字サイズをリセット",
     "saveFailed": "保存できませんでした。もう一度お試しください。",
     "secondaryAction": "サブ操作",
+    "textSize": "文字サイズ",
+    "textSizeDescription": "文字サイズと行の高さを調整します。表示密度の設定を変えずに、内容に合わせて操作部品の高さが変わります。",
+    "textSizes": {
+      "default": "標準",
+      "extraLarge": "特大",
+      "large": "大"
+    },
     "title": "外観設定"
   },
   "appearanceLanguage": {

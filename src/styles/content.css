@@ -1,0 +1,2 @@
+/* Separate entry: the content-only PostCSS pass isolates rem declaration values. */
+@import "./style.css";

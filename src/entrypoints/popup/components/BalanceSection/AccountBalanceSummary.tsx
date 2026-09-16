@@ -92,7 +92,7 @@ const BalanceDisplay: React.FC<{
           {qualifier ? (
             <span
               aria-hidden="true"
-              className="text-muted-foreground text-[10px] font-medium"
+              className="text-muted-foreground text-3xs font-medium"
             >
               {qualifier}
             </span>

@@ -87,6 +87,30 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
 
 export const generalSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
+    "control:appearance-text-size",
+    "general",
+    SETTINGS_ANCHORS.APPEARANCE_TEXT_SIZE,
+    "settings:appearance.textSize",
+    533,
+    {
+      descriptionKey: "settings:appearance.textSizeDescription",
+      keywords: [
+        "text size",
+        "font size",
+        "large",
+        "readability",
+        "文字大小",
+        "字体大小",
+        "字體大小",
+        "字号",
+        "字號",
+        "大字",
+        "超大",
+        "読みやすさ",
+      ],
+    },
+  ),
+  buildControlDefinition(
     "control:appearance-density",
     "general",
     SETTINGS_ANCHORS.APPEARANCE_DENSITY,

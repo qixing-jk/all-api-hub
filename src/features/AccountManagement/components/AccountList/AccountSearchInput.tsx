@@ -41,7 +41,7 @@ export default function AccountSearchInput({
         disabled={disabled}
         type="text"
         size="sm"
-        className="border-border bg-surface-subtle/70 dark:bg-foreground/5 h-(--density-control-lg) shadow-none [@container(min-width:40rem)]:h-(--density-control)"
+        className="border-border bg-surface-subtle/70 dark:bg-foreground/5 min-h-(--density-control-lg) shadow-none [@container(min-width:40rem)]:min-h-(--density-control)"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}

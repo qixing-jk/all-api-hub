@@ -18,7 +18,7 @@ interface CompactTagFilterProps {
 }
 
 const chipClassName =
-  "inline-flex h-(--density-control) max-w-36 shrink-0 items-center gap-x-1.5 gap-y-density-1-5 rounded-md px-2.5 text-xs font-medium whitespace-nowrap sm:h-(--density-control-sm)"
+  "inline-flex min-h-(--density-control) max-w-36 shrink-0 items-center gap-x-1.5 gap-y-density-1-5 rounded-md px-2.5 text-xs font-medium whitespace-nowrap sm:min-h-(--density-control-sm)"
 
 /** A single row of stable shortcuts with searchable access to every tag. */
 export function CompactTagFilter({
@@ -74,7 +74,7 @@ export function CompactTagFilter({
     <>
       <span className="truncate">{option.label}</span>
       {typeof option.count === "number" && (
-        <span className="shrink-0 text-[11px] opacity-70">{option.count}</span>
+        <span className="text-2xs shrink-0 opacity-70">{option.count}</span>
       )}
     </>
   )
@@ -156,7 +156,7 @@ export function CompactTagFilter({
             aria-label={`${value.length > 0 ? t("tagFilter.selected") : t("tagFilter.allTags")} ${value.length > 0 ? value.length : options.length}`}
             variant="outline"
             size="sm"
-            className="gap-y-density-1-5 h-(--density-control) max-w-[60%] shrink-0 gap-x-1.5 px-2.5 text-xs shadow-none sm:h-(--density-control-sm)"
+            className="gap-y-density-1-5 min-h-(--density-control) max-w-[60%] shrink-0 gap-x-1.5 px-2.5 text-xs shadow-none sm:min-h-(--density-control-sm)"
           >
             <span aria-hidden="true" className="grid min-w-0">
               <span

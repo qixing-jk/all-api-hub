@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next"
 
-import { Badge } from "~/components/ui"
+import { Badge, Button, Input } from "~/components/ui"
 import { THEME_COLOR, THEME_MODE } from "~/constants/theme"
 import type { AppearancePreferences } from "~/types/theme"
 import { getAppearanceScopeAttributes } from "~/utils/ui/themePreferences"
@@ -35,26 +35,39 @@ export function AppearancePreview({ presetLabel }: { presetLabel: string }) {
   const { t } = useTranslation("settings")
 
   return (
-    <div
-      className="bg-muted/40 space-y-density-3 py-density-4 rounded-lg border px-4"
+    <section
+      className="bg-muted/40 space-y-density-3 py-density-4 min-w-0 rounded-lg border px-4"
       aria-label={t("appearance.preview")}
     >
       <div className="gap-y-density-2 flex flex-wrap items-center justify-between gap-x-2">
         <p className="text-sm font-medium">{t("appearance.preview")}</p>
         <Badge>{presetLabel}</Badge>
       </div>
-      <div
-        className="gap-y-density-2 flex items-center gap-x-2"
-        aria-hidden="true"
-      >
-        <span className="bg-primary text-primary-foreground py-density-2 rounded-md px-3 text-sm">
-          {t("appearance.primaryAction")}
-        </span>
-        <span className="py-density-2 rounded-md border border-(--button-outline-border) bg-(--button-outline-bg) px-3 text-sm text-(--button-outline-foreground)">
-          {t("appearance.secondaryAction")}
-        </span>
-        <span className="bg-primary ml-auto size-3 shrink-0 rounded-full" />
+      <div className="bg-card space-y-density-3 py-density-3 rounded-md border px-3">
+        <div className="gap-density-2 flex flex-wrap items-baseline justify-between">
+          <p className="min-w-0 text-base font-medium break-words">
+            {t("appearance.previewAccount")}
+          </p>
+          <p className="text-lg font-semibold tabular-nums">$128.50</p>
+        </div>
+        <p className="text-muted-foreground text-xs">
+          {t("appearance.previewDetails")}
+        </p>
+        <Input
+          aria-label={t("appearance.previewInput")}
+          value={t("appearance.previewNote")}
+          readOnly
+          tabIndex={-1}
+        />
+        <div className="gap-density-2 flex flex-wrap items-center">
+          <Button asChild>
+            <span>{t("appearance.primaryAction")}</span>
+          </Button>
+          <Button asChild variant="outline">
+            <span>{t("appearance.secondaryAction")}</span>
+          </Button>
+        </div>
       </div>
-    </div>
+    </section>
   )
 }

@@ -103,17 +103,14 @@ export const Notice = React.forwardRef<HTMLDivElement, NoticeProps>(
           ) : null}
           <div className="min-w-0 flex-1">
             {title ? (
-              <div
-                id={titleId}
-                className="text-foreground text-sm leading-5 font-medium"
-              >
+              <div id={titleId} className="text-foreground text-sm font-medium">
                 {title}
               </div>
             ) : null}
             {description ? (
               <p
                 id={descriptionId}
-                className="dark:text-secondary-foreground text-muted-foreground mt-0.5 text-xs leading-5"
+                className="dark:text-secondary-foreground text-muted-foreground mt-0.5 text-xs leading-[max(1.25rem,var(--font-size-xs--line-height))]"
               >
                 {description}
               </p>

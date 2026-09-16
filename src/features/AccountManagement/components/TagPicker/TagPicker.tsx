@@ -441,7 +441,7 @@ export function TagPicker({
                             <Input
                               value={editingName}
                               onChange={(e) => setEditingName(e.target.value)}
-                              className="h-(--density-control-sm)"
+                              className="min-h-(--density-control-sm)"
                               containerClassName="w-full"
                               disabled={disabled || isWorking}
                               autoFocus

@@ -47,6 +47,10 @@
       "default": "Chủ đề mặc định"
     },
     "preview": "Xem trước",
+    "previewAccount": "Tài khoản mẫu",
+    "previewDetails": "Sử dụng hôm nay: $8.20 · Vừa cập nhật",
+    "previewInput": "Ghi chú tài khoản",
+    "previewNote": "Tài khoản dùng hằng ngày",
     "primaryAction": "Thao tác chính",
     "radii": {
       "default": "Mặc định",
@@ -57,8 +61,16 @@
     "radius": "Độ bo góc",
     "reset": "Đặt lại giao diện",
     "resetDensity": "Đặt lại mật độ",
+    "resetTextSize": "Đặt lại cỡ chữ",
     "saveFailed": "Không thể lưu. Vui lòng thử lại.",
     "secondaryAction": "Thao tác phụ",
+    "textSize": "Cỡ chữ",
+    "textSizeDescription": "Điều chỉnh cỡ chữ và chiều cao dòng. Các thành phần điều khiển giãn theo nội dung mà không đổi thiết lập mật độ.",
+    "textSizes": {
+      "default": "Mặc định",
+      "extraLarge": "Rất lớn",
+      "large": "Lớn"
+    },
     "title": "Cài đặt giao diện"
   },
   "appearanceLanguage": {

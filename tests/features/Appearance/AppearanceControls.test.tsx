@@ -1,4 +1,4 @@
-import { act, screen } from "@testing-library/react"
+import { act, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -18,7 +18,11 @@ import { render } from "~~/tests/test-utils/render"
 
 const { save, savedAppearance } = vi.hoisted(() => ({
   save: vi.fn(),
-  savedAppearance: { preset: "default" },
+  savedAppearance: {
+    preset: "default",
+    density: "default",
+    textSize: "default",
+  },
 }))
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => ({
@@ -27,7 +31,6 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
         ...savedAppearance,
         color: THEME_COLOR.BLUE,
         radius: THEME_RADIUS.DEFAULT,
-        density: "default",
       },
     },
     themeMode: THEME_MODE.SYSTEM,
@@ -46,6 +49,8 @@ describe("appearance controls", () => {
     save.mockReset()
     save.mockResolvedValue({ ok: true })
     savedAppearance.preset = THEME_PRESET.DEFAULT
+    savedAppearance.density = "default"
+    savedAppearance.textSize = "default"
   })
 
   it("saves a selected light or dark mode without resetting appearance", async () => {
@@ -130,6 +135,7 @@ describe("appearance controls", () => {
       SETTINGS_ANCHORS.APPEARANCE_COLOR,
       SETTINGS_ANCHORS.APPEARANCE_RADIUS,
       SETTINGS_ANCHORS.APPEARANCE_DENSITY,
+      SETTINGS_ANCHORS.APPEARANCE_TEXT_SIZE,
     ]) {
       const definition = generalSearchControls.find(
         (item) => item.targetId === targetId,
@@ -141,12 +147,109 @@ describe("appearance controls", () => {
     }
   })
 
+  it("saves and resets text size independently from compact density", async () => {
+    const user = userEvent.setup()
+    savedAppearance.density = "compact"
+    renderControls()
+    const group = screen.getByRole("group", {
+      name: "settings:appearance.textSize",
+    })
+    expect(
+      within(group).getByRole("radio", {
+        name: "settings:appearance.textSizes.default",
+      }),
+    ).toBeChecked()
+    for (const [label, textSize] of [
+      ["large", "large"],
+      ["extraLarge", "extra-large"],
+    ]) {
+      await user.click(
+        within(group).getByRole("radio", {
+          name: `settings:appearance.textSizes.${label}`,
+        }),
+      )
+      expect(save).toHaveBeenLastCalledWith({ textSize })
+      expect(
+        screen.getByRole("radio", {
+          name: "settings:appearance.densities.compact",
+        }),
+      ).toBeChecked()
+    }
+    await user.click(
+      within(group).getByRole("button", {
+        name: "settings:appearance.resetTextSize",
+      }),
+    )
+    expect(save).toHaveBeenLastCalledWith({ textSize: "default" })
+  })
+
+  it.each([undefined, null, "unknown", 2, {}])(
+    "defaults an invalid text size %j without resetting density",
+    (textSize) => {
+      expect(
+        normalizeAppearance({
+          textSize,
+          density: "compact",
+          preset: "anthropic",
+        }),
+      ).toMatchObject({
+        textSize: "default",
+        density: "compact",
+        preset: "anthropic",
+      })
+    },
+  )
+
+  it("keeps the saved text size after a failed save and allows retry", async () => {
+    const user = userEvent.setup()
+    save.mockResolvedValueOnce({ ok: false })
+    renderControls()
+    const larger = screen.getByRole("radio", {
+      name: "settings:appearance.textSizes.extraLarge",
+    })
+    await user.click(larger)
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "settings:appearance.saveFailed",
+    )
+    expect(
+      screen.getByRole("radio", {
+        name: "settings:appearance.textSizes.default",
+      }),
+    ).toBeChecked()
+    await user.click(larger)
+    expect(save).toHaveBeenLastCalledWith({ textSize: "extra-large" })
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it("previews an account, balance, supporting text and shared controls", () => {
+    renderControls()
+    const preview = screen.getByRole("region", {
+      name: "settings:appearance.preview",
+    })
+    expect(
+      within(preview).getByText("settings:appearance.previewAccount"),
+    ).toBeVisible()
+    expect(within(preview).getByText("$128.50")).toBeVisible()
+    expect(
+      within(preview).getByText("settings:appearance.previewDetails"),
+    ).toBeVisible()
+    expect(
+      within(preview).getByRole("textbox", {
+        name: "settings:appearance.previewInput",
+      }),
+    ).toHaveValue("settings:appearance.previewNote")
+    expect(
+      within(preview).getByText("settings:appearance.primaryAction"),
+    ).toBeVisible()
+  })
+
   it("normalizes missing and unsupported backup values independently", () => {
     expect(normalizeAppearance(undefined)).toEqual({
       preset: "default",
       color: "blue",
       radius: "default",
       density: "default",
+      textSize: "default",
     })
     expect(
       normalizeAppearance({ color: "custom", radius: THEME_RADIUS.SMALL }),
@@ -155,6 +258,7 @@ describe("appearance controls", () => {
       color: "blue",
       radius: "small",
       density: "default",
+      textSize: "default",
     })
     expect(
       normalizeAppearance({ color: THEME_COLOR.ROSE, radius: -10 }),
@@ -163,6 +267,7 @@ describe("appearance controls", () => {
       color: "rose",
       radius: "default",
       density: "default",
+      textSize: "default",
     })
   })
 
@@ -178,6 +283,7 @@ describe("appearance controls", () => {
       color: "rose",
       radius: "small",
       density: "default",
+      textSize: "default",
     })
     expect(
       normalizeAppearance({
@@ -190,6 +296,7 @@ describe("appearance controls", () => {
       color: "violet",
       radius: "large",
       density: "default",
+      textSize: "default",
     })
     const user = userEvent.setup()
     renderControls()
@@ -220,6 +327,7 @@ describe("appearance controls", () => {
       color: THEME_COLOR.BLUE,
       radius: THEME_RADIUS.DEFAULT,
       density: "default",
+      textSize: "default",
       themeMode: THEME_MODE.SYSTEM,
     })
   })

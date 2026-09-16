@@ -275,7 +275,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
             value={consumptionPresentation.value}
             startValue={0}
             prefix="-"
-            className={`text-[10px] sm:text-xs ${
+            className={`text-3xs sm:text-xs ${
               (consumptionPresentation.value ?? 0) > 0
                 ? "text-cashflow-expense"
                 : "dark:text-muted-foreground text-faint-foreground"
@@ -302,7 +302,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
             value={incomePresentation.value}
             startValue={0}
             prefix="+"
-            className={`text-[10px] sm:text-xs ${
+            className={`text-3xs sm:text-xs ${
               (incomePresentation.value ?? 0) > 0
                 ? "text-cashflow-income"
                 : "dark:text-muted-foreground text-faint-foreground"
@@ -330,7 +330,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
                 value={estimatedTodayIncome}
                 startValue={0}
                 prefix="~"
-                className={`text-[10px] sm:text-xs ${
+                className={`text-3xs sm:text-xs ${
                   estimatedTodayIncome > 0
                     ? "text-cashflow-income"
                     : "dark:text-muted-foreground text-faint-foreground"
@@ -358,7 +358,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
       )}
 
       {(site.usage || site.subscription) && (
-        <div className="text-muted-foreground mt-0.5 flex max-w-full flex-wrap justify-end gap-x-1.5 gap-y-0.5 text-[10px] sm:text-xs">
+        <div className="text-muted-foreground text-3xs mt-0.5 flex max-w-full flex-wrap justify-end gap-x-1.5 gap-y-0.5 sm:text-xs">
           {site.subscription?.name && (
             <span
               className="max-w-full truncate"

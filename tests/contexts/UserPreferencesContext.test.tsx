@@ -561,6 +561,7 @@ describe("UserPreferencesContext", () => {
       preset: THEME_PRESET.ANTHROPIC,
       color: THEME_COLOR.VIOLET,
       radius: THEME_RADIUS.LARGE,
+      textSize: "large",
     }
     render(
       <UserPreferencesProvider>
@@ -595,6 +596,7 @@ describe("UserPreferencesContext", () => {
 
     const appearance = {
       density: "compact",
+      textSize: "extra-large",
       preset: THEME_PRESET.ANTHROPIC,
       color: THEME_COLOR.ROSE,
       radius: THEME_RADIUS.SMALL,

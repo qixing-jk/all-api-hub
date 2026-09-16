@@ -1,7 +1,11 @@
 import { readFile } from "node:fs/promises"
 import path from "node:path"
 
-import { POPUP_PAGE_PATH } from "~/constants/extensionPages"
+import {
+  OPTIONS_PAGE_PATH,
+  POPUP_PAGE_PATH,
+  SIDEPANEL_PAGE_PATH,
+} from "~/constants/extensionPages"
 import {
   THEME_ATTRIBUTES,
   THEME_COLOR,
@@ -53,6 +57,8 @@ for (const preset of THEME_PRESETS) {
           preset,
           color: THEME_COLOR.VIOLET,
           radius: THEME_RADIUS.LARGE,
+          density: "compact",
+          textSize: "extra-large",
         },
       })
       await page.goto(`chrome-extension://${extensionId}/${POPUP_PAGE_PATH}`)
@@ -65,6 +71,11 @@ for (const preset of THEME_PRESETS) {
         THEME_ATTRIBUTES.PRESET,
         preset,
       )
+      await expect(page.locator("html")).toHaveAttribute(
+        THEME_ATTRIBUTES.TEXT_SIZE,
+        "extra-large",
+      )
+      await expect(page.locator("body")).toHaveCSS("font-size", "16px")
       const expectedBackground =
         preset === THEME_PRESET.ANTHROPIC
           ? themeMode === THEME_MODE.DARK
@@ -102,10 +113,46 @@ for (const preset of THEME_PRESETS) {
         THEME_OWNER.REACT,
       )
       await expect(skeleton).toHaveCount(0)
+      await expect(page.locator("html")).toHaveAttribute(
+        THEME_ATTRIBUTES.TEXT_SIZE,
+        "extra-large",
+      )
       await expect(page.locator("body")).toHaveCSS(
         "background-color",
         expectedBackground,
       )
     })
   }
+}
+
+for (const documentPath of [OPTIONS_PAGE_PATH, SIDEPANEL_PAGE_PATH]) {
+  test(`${documentPath} restores text size before its application bundle`, async ({
+    context,
+    page,
+    extensionId,
+    extensionDir,
+  }) => {
+    const html = await readFile(path.join(extensionDir, documentPath), "utf8")
+    const mainScript = html.match(
+      /<script[^>]*type="module"[^>]*src="([^"]+)"/u,
+    )?.[1]
+    expect(mainScript).toBeTruthy()
+    await page.route(
+      `chrome-extension://${extensionId}${mainScript}`,
+      (route) => route.abort(),
+    )
+    await seedUserPreferences(await getServiceWorker(context), {
+      appearance: { textSize: "extra-large" },
+    })
+    await page.goto(`chrome-extension://${extensionId}/${documentPath}`)
+    await expect(page.locator("html")).toHaveAttribute(
+      THEME_ATTRIBUTES.OWNER,
+      THEME_OWNER.BOOTSTRAP,
+    )
+    await expect(page.locator("html")).toHaveAttribute(
+      THEME_ATTRIBUTES.TEXT_SIZE,
+      "extra-large",
+    )
+    await expect(page.locator("body")).toHaveCSS("font-size", "16px")
+  })
 }

@@ -27,6 +27,7 @@ const saved = {
     color: THEME_COLOR.VIOLET,
     radius: THEME_RADIUS.LARGE,
     density: "compact" as const,
+    textSize: "extra-large" as const,
   },
 }
 
@@ -59,12 +60,20 @@ describe("popup appearance bootstrap", () => {
     const ready = bootstrapAppearance()
     expect(document.documentElement).toHaveClass(THEME_MODE.DARK)
     expect(document.documentElement).toHaveAttribute(
+      THEME_ATTRIBUTES.TEXT_SIZE,
+      "extra-large",
+    )
+    expect(document.documentElement).toHaveAttribute(
       THEME_ATTRIBUTES.PRESET,
       THEME_PRESET.ANTHROPIC,
     )
     pending.resolve({ [key]: JSON.stringify({ themeMode: THEME_MODE.LIGHT }) })
     await ready
     expect(document.documentElement).not.toHaveClass(THEME_MODE.DARK)
+    expect(document.documentElement).toHaveAttribute(
+      THEME_ATTRIBUTES.TEXT_SIZE,
+      "default",
+    )
     expect(document.documentElement).toHaveAttribute(
       THEME_ATTRIBUTES.PRESET,
       THEME_PRESET.DEFAULT,
@@ -76,6 +85,10 @@ describe("popup appearance bootstrap", () => {
     async (stored) => {
       getStorage.mockResolvedValue({ [key]: stored })
       await bootstrapAppearance()
+      expect(document.documentElement).toHaveAttribute(
+        THEME_ATTRIBUTES.TEXT_SIZE,
+        "extra-large",
+      )
       expect(document.documentElement).toHaveClass(THEME_MODE.DARK)
       expect(document.documentElement).toHaveAttribute(
         THEME_ATTRIBUTES.PRESET,
@@ -208,6 +221,7 @@ describe("popup appearance bootstrap", () => {
         color: "green",
         radius: "default",
         density: "default",
+        textSize: "default",
       },
     })
   })

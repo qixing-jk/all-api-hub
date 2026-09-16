@@ -72,7 +72,7 @@ function RepairAccountSummary({
           <Badge
             variant="outline"
             size="sm"
-            className="border-border shrink-0 px-2 py-0.5 text-[11px] font-medium"
+            className="border-border text-2xs shrink-0 px-2 py-0.5 font-medium"
             title={result.siteType}
           >
             {result.siteType}

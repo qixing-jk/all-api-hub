@@ -165,7 +165,7 @@ function EndpointHeader({
               API_CREDENTIAL_PROFILES_TEST_IDS.endpointAddCredentialButton
             }
             aria-label={t("apiCredentialProfiles:grouping.addCredential")}
-            className="gap-density-1-5 h-(--density-control-sm) shrink-0 px-2 text-xs"
+            className="gap-density-1-5 min-h-(--density-control-sm) shrink-0 px-2 text-xs"
             leftIcon={<Plus className="h-4 w-4" />}
             analyticsAction={
               PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateApiCredentialProfileDialog

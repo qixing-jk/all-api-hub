@@ -150,7 +150,7 @@ export function ApiCredentialProfileTelemetryDetails({
                 >
                   <div>{formatProviderQuotaWindow(window, t)}</div>
                   {window.resetTime !== undefined ? (
-                    <div className="text-muted-foreground mt-0.5 text-[10px] font-normal">
+                    <div className="text-muted-foreground text-3xs mt-0.5 font-normal">
                       {t(
                         "apiCredentialProfiles:telemetry.quotaWindows.resetAt",
                       )}{" "}
@@ -190,7 +190,7 @@ export function ApiCredentialProfileTelemetryDetails({
                             {formatProviderBalance(balance, t)}
                           </span>
                           {semanticsLabel ? (
-                            <span className="text-muted-foreground text-[10px]">
+                            <span className="text-muted-foreground text-3xs">
                               {semanticsLabel}
                             </span>
                           ) : null}

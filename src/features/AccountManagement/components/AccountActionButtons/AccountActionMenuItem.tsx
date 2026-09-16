@@ -119,7 +119,7 @@ export const AccountActionMenuItem: React.FC<AccountActionMenuItemProps> = ({
             </span>
             {hint ? (
               <span
-                className="border-border-strong text-muted-foreground shrink-0 rounded-full border px-1.5 py-0.5 text-[11px] leading-none font-medium"
+                className="border-border-strong text-muted-foreground text-2xs shrink-0 rounded-full border px-1.5 py-0.5 leading-none font-medium"
                 aria-hidden="true"
               >
                 {hint}

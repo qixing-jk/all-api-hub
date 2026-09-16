@@ -182,7 +182,7 @@ function Header({
                       {/* Current extension version (links to the changelog). */}
                       <VersionBadge
                         size="sm"
-                        className="[&>a]:gap-y-density-1 w-fit self-start text-[0.7rem] leading-tight [&>a]:gap-x-1 [&>a]:leading-tight [&>a>svg]:size-3"
+                        className="[&>a]:gap-y-density-1 w-fit self-start text-[length:calc(0.7rem+var(--text-size-increment))] leading-tight [&>a]:gap-x-1 [&>a]:leading-tight [&>a>svg]:size-3"
                       />
                     </div>
                   </div>

@@ -64,6 +64,37 @@ describe("EChart", () => {
     off: vi.fn(),
   })
 
+  it("updates text size live and resets without accumulating increments", async () => {
+    const instance = createInstance()
+    echartsInitMock.mockReturnValueOnce(instance)
+    const { container, unmount } = render(
+      <EChart option={{ xAxis: { type: "category" } }} />,
+    )
+    await waitFor(() => expect(instance.setOption).toHaveBeenCalledOnce())
+    const chart = container.firstElementChild as HTMLElement
+    for (const [size, increment, fontSize] of [
+      ["large", "0.125rem", 14],
+      ["extra-large", "0.25rem", 16],
+      ["default", "0rem", 12],
+    ] as const) {
+      chart.style.setProperty("--text-size-increment", increment)
+      document.documentElement.setAttribute(THEME_ATTRIBUTES.TEXT_SIZE, size)
+      await waitFor(() =>
+        expect(instance.setOption).toHaveBeenLastCalledWith(
+          expect.objectContaining({
+            xAxis: expect.objectContaining({
+              axisLabel: expect.objectContaining({ fontSize }),
+            }),
+          }),
+          expect.objectContaining({ notMerge: false }),
+        ),
+      )
+    }
+    expect(echartsInitMock).toHaveBeenCalledTimes(1)
+    unmount()
+    document.documentElement.removeAttribute(THEME_ATTRIBUTES.TEXT_SIZE)
+  })
+
   it("recolors on root changes without replacing the chart or resetting interactions", async () => {
     const instance = createInstance()
     echartsInitMock.mockReturnValueOnce(instance)

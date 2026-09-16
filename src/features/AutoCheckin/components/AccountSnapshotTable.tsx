@@ -214,7 +214,7 @@ export default function AccountSnapshotTable({
           }}
         >
           <SelectTrigger
-            className="h-(--density-control) w-full"
+            className="min-h-(--density-control) w-full"
             aria-label={t("snapshot.filters.readinessLabel")}
           >
             <SelectValue />
@@ -250,7 +250,7 @@ export default function AccountSnapshotTable({
           }}
         >
           <SelectTrigger
-            className="h-(--density-control) w-full"
+            className="min-h-(--density-control) w-full"
             aria-label={t("snapshot.filters.statusLabel")}
           >
             <SelectValue />

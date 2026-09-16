@@ -30,7 +30,7 @@ vi.mock("@plasmohq/storage", () => ({
 }))
 
 vi.mock("~/utils/i18n", () => ({}))
-vi.mock("~/styles/style.css", () => ({}))
+vi.mock("~/styles/content.css", () => ({}))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
@@ -66,16 +66,47 @@ describe("ContentReactRoot", () => {
     vi.resetAllMocks()
   })
 
+  it("waits for initial appearance before mounting interactive UI", async () => {
+    const pending = createDeferred<Partial<UserPreferences>>()
+    getPreferencesMock.mockReturnValue(pending.promise)
+    const { ContentReactRoot } = await import(
+      "~/entrypoints/content/shared/ContentReactRoot"
+    )
+    const { container } = render(<ContentReactRoot />)
+    expect(container.firstChild).not.toBeVisible()
+    expect(screen.queryByTestId("api-check-modal-host")).not.toBeInTheDocument()
+    await act(async () => {
+      pending.resolve({
+        themeMode: THEME_MODE.LIGHT,
+        appearance: { textSize: "extra-large" },
+      } as Partial<UserPreferences>)
+      await pending.promise
+    })
+    expect(container.firstChild).toBeVisible()
+    expect(container.firstChild).toHaveAttribute(
+      THEME_ATTRIBUTES.TEXT_SIZE,
+      "extra-large",
+    )
+    expect(screen.getByTestId("api-check-modal-host")).toBeVisible()
+  })
+
   it("applies live accent preferences inside its scope without modifying the host document", async () => {
     getPreferencesMock.mockResolvedValue({
       themeMode: THEME_MODE.LIGHT,
-      appearance: { color: THEME_COLOR.ROSE, density: "compact" },
+      appearance: {
+        color: THEME_COLOR.ROSE,
+        density: "compact",
+        textSize: "large",
+      },
     })
     const { ContentReactRoot } = await import(
       "~/entrypoints/content/shared/ContentReactRoot"
     )
     const originalHostTheme = document.documentElement.getAttribute(
       THEME_ATTRIBUTES.COLOR,
+    )
+    const originalHostTextSize = document.documentElement.getAttribute(
+      THEME_ATTRIBUTES.TEXT_SIZE,
     )
     const { container, unmount } = render(<ContentReactRoot />)
     await waitFor(() =>
@@ -86,7 +117,12 @@ describe("ContentReactRoot", () => {
     )
     getPreferencesMock.mockResolvedValue({
       themeMode: THEME_MODE.DARK,
-      appearance: { color: THEME_COLOR.GREEN, preset: THEME_PRESET.ANTHROPIC },
+      appearance: {
+        color: THEME_COLOR.GREEN,
+        preset: THEME_PRESET.ANTHROPIC,
+        textSize: "extra-large",
+        density: "compact",
+      },
     })
     act(() => {
       watchMock.mock.calls[0][0][
@@ -100,6 +136,17 @@ describe("ContentReactRoot", () => {
       ),
     )
     expect(container.firstChild).toHaveClass(THEME_MODE.DARK)
+    expect(container.firstChild).toHaveAttribute(
+      THEME_ATTRIBUTES.TEXT_SIZE,
+      "extra-large",
+    )
+    expect(container.firstChild).toHaveAttribute(
+      THEME_ATTRIBUTES.DENSITY,
+      "compact",
+    )
+    expect(
+      document.documentElement.getAttribute(THEME_ATTRIBUTES.TEXT_SIZE),
+    ).toBe(originalHostTextSize)
     expect(container.firstChild).toHaveAttribute(THEME_ATTRIBUTES.COLOR_SCOPE)
     expect(container.firstChild).toHaveAttribute(
       THEME_ATTRIBUTES.PRESET,
@@ -147,6 +194,7 @@ describe("ContentReactRoot", () => {
           color: THEME_COLOR.ROSE,
           radius: THEME_RADIUS.SMALL,
           density: "default",
+          textSize: "default",
         },
       })
       await initial.promise
@@ -196,7 +244,9 @@ describe("ContentReactRoot", () => {
 
     const { container, unmount } = render(<ContentReactRoot />)
 
-    expect(screen.getByTestId("api-check-modal-host")).toBeInTheDocument()
+    expect(
+      await screen.findByTestId("api-check-modal-host"),
+    ).toBeInTheDocument()
     expect(screen.getByTestId("redemption-toaster")).toBeInTheDocument()
 
     await waitFor(() => {
@@ -296,9 +346,9 @@ describe("ContentReactRoot", () => {
 
     render(<ContentReactRoot />)
 
-    const input = screen.getByRole("textbox", {
+    const input = (await screen.findByRole("textbox", {
       name: "API credential",
-    }) as HTMLInputElement
+    })) as HTMLInputElement
 
     input.focus()
     await user.keyboard("a")

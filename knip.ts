@@ -33,7 +33,7 @@ const config: KnipConfig = {
     "tests/**/*.{ts,tsx}",
     "e2e/**/*.{ts,tsx}",
     "scripts/**/*.{js,mjs}",
-    "plugins/**/*.ts",
+    "plugins/**/*.{ts,mjs}",
     "*.{js,mjs,ts}",
   ],
   ignoreDependencies: [

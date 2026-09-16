@@ -448,7 +448,7 @@ export function ApiCredentialProfileListItem({
                     {t("apiCredentialProfiles:list.apiKey")}
                   </span>
                   <div className="flex w-full min-w-0 items-center gap-0.5 sm:flex-1">
-                    <code className="dark:bg-secondary bg-muted text-secondary-foreground py-density-1 min-w-0 flex-1 truncate rounded px-2 font-mono text-[10px] sm:text-xs">
+                    <code className="dark:bg-secondary bg-muted text-secondary-foreground py-density-1 text-3xs min-w-0 flex-1 truncate rounded px-2 font-mono sm:text-xs">
                       {visibleKeys.has(profile.id)
                         ? profile.apiKey
                         : maskSecretForDisplay(profile.apiKey)}
@@ -554,7 +554,7 @@ export function ApiCredentialProfileListItem({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="dark:hover:text-foreground text-muted-foreground hover:text-secondary-foreground gap-density-1 py-density-1 h-auto min-h-0 shrink-0 px-1.5 text-[11px]"
+                      className="dark:hover:text-foreground text-muted-foreground hover:text-secondary-foreground gap-density-1 py-density-1 text-2xs h-auto min-h-0 shrink-0 px-1.5"
                       onClick={handleRefreshTelemetry}
                       loading={isTelemetryRefreshing}
                       leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
@@ -576,7 +576,7 @@ export function ApiCredentialProfileListItem({
 
               {profile.notes?.trim() ? (
                 <div className="dark:border-border dark:bg-secondary/40 dark:text-secondary-foreground border-theme-200 bg-theme-50/60 text-muted-foreground py-density-2 border-l-2 px-3 text-xs">
-                  <div className="text-theme-600 dark:text-theme-300 mb-density-1 text-[11px] font-medium tracking-wide">
+                  <div className="text-theme-600 dark:text-theme-300 mb-density-1 text-2xs font-medium tracking-wide">
                     {t("apiCredentialProfiles:dialog.fields.notes")}
                   </div>
                   <div className="max-h-24 overflow-y-auto leading-relaxed break-words whitespace-pre-wrap">

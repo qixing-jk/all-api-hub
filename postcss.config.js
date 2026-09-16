@@ -1,6 +1,8 @@
 import tailwindcss from "@tailwindcss/postcss"
 import autoprefixer from "autoprefixer"
 
+import { contentRemIsolation } from "./plugins/content-rem-isolation.mjs"
+
 const allApiHubRewriteTwProperties = () => ({
   postcssPlugin: "all-api-hub-rewrite-tw-properties",
   Once(root) {
@@ -52,6 +54,8 @@ export default {
 
     // Rewrite Tailwind internal CSS variables to an extension-specific prefix
     allApiHubRewriteTwProperties(),
+
+    contentRemIsolation(),
 
     // Vendor prefixes last
     autoprefixer(),

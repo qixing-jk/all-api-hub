@@ -202,7 +202,7 @@ export function ProductAnnouncementButton({
           size="sm"
           aria-hidden="true"
           data-testid={PRODUCT_ANNOUNCEMENT_TEST_IDS.badge}
-          className="pointer-events-none absolute -top-1 -right-1 min-w-4 px-1 text-[0.6rem] leading-3"
+          className="pointer-events-none absolute -top-1 -right-1 min-w-4 px-1 text-[length:calc(0.6rem+var(--text-size-increment))] leading-[max(0.75rem,1em)]"
         >
           {activeRiskCount > 99 ? "99+" : activeRiskCount}
         </Badge>

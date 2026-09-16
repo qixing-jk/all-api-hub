@@ -587,7 +587,7 @@ export function ServiceCredentialCard({
                 <span className="text-muted-foreground shrink-0">
                   {t("keyDetails.key")}
                 </span>
-                <code className="dark:bg-secondary bg-muted text-secondary-foreground sm:py-density-1 inline-block max-w-full truncate rounded px-1.5 py-0.5 align-middle font-mono text-[10px] sm:px-2 sm:text-xs">
+                <code className="dark:bg-secondary bg-muted text-secondary-foreground sm:py-density-1 text-3xs inline-block max-w-full truncate rounded px-1.5 py-0.5 align-middle font-mono sm:px-2 sm:text-xs">
                   {formatKey(credential.key, identityKey, visibleKeys)}
                 </code>
               </div>

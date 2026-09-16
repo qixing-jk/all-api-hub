@@ -123,7 +123,7 @@ export function ProductAnnouncementBanner({
             type="button"
             variant="outline"
             size="sm"
-            className="border-border bg-card/70 text-secondary-foreground hover:bg-surface-subtle dark:border-foreground/10 dark:bg-foreground/[0.04] dark:hover:bg-foreground/[0.08] h-(--density-control-sm) px-3 text-xs"
+            className="border-border bg-card/70 text-secondary-foreground hover:bg-surface-subtle dark:border-foreground/10 dark:bg-foreground/[0.04] dark:hover:bg-foreground/[0.08] min-h-(--density-control-sm) px-3 text-xs"
             onClick={handleViewAll}
           >
             {t("actions.viewAll")}
@@ -132,7 +132,7 @@ export function ProductAnnouncementBanner({
             type="button"
             variant="ghost"
             size="sm"
-            className="dark:text-secondary-foreground text-muted-foreground hover:bg-muted dark:hover:bg-foreground/[0.08] h-(--density-control-sm) px-3 text-xs"
+            className="dark:text-secondary-foreground text-muted-foreground hover:bg-muted dark:hover:bg-foreground/[0.08] min-h-(--density-control-sm) px-3 text-xs"
             onClick={handleDismiss}
           >
             {t("actions.dismiss")}

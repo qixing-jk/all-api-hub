@@ -160,7 +160,7 @@ function NotificationChannelActions({
         type="button"
         size="sm"
         variant="outline"
-        className="h-(--density-control-sm) shadow-none"
+        className="min-h-(--density-control-sm) shadow-none"
         loading={loading}
         disabled={testDisabled}
         data-testid={testButtonTestId}
@@ -676,7 +676,7 @@ export default function TaskNotificationSettings() {
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="h-(--density-control-sm) shadow-none"
+                      className="min-h-(--density-control-sm) shadow-none"
                       loading={isRequestingPermission}
                       data-testid={
                         BASIC_SETTINGS_TEST_IDS.taskNotificationsPermissionGrantButton
