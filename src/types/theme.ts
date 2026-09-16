@@ -1,5 +1,6 @@
 import {
   THEME_COLOR,
+  THEME_CONTENT_WIDTH,
   THEME_DENSITY,
   THEME_FONT,
   THEME_MODE,
@@ -60,6 +61,8 @@ export const THEME_FONTS = [
 
 export interface AppearancePreferences {
   fontFamily: (typeof THEME_FONTS)[number]
+  contentWidth: (typeof THEME_CONTENT_WIDTH)[keyof typeof THEME_CONTENT_WIDTH]
+  sidebarCollapsed: boolean
   density: (typeof THEME_DENSITIES)[number]
   textSize: (typeof THEME_TEXT_SIZES)[number]
   preset: (typeof THEME_PRESETS)[number]
@@ -72,6 +75,8 @@ export type AppearanceUpdates = Partial<AppearancePreferences> & {
 
 export const DEFAULT_APPEARANCE: AppearancePreferences = {
   fontFamily: THEME_FONT.DEFAULT,
+  contentWidth: THEME_CONTENT_WIDTH.CENTERED,
+  sidebarCollapsed: false,
   preset: THEME_PRESET.DEFAULT,
   color: THEME_COLOR.BLUE,
   radius: THEME_RADIUS.DEFAULT,
@@ -90,6 +95,11 @@ export function normalizeAppearance(value: unknown): AppearancePreferences {
       input.fontFamily && THEME_FONTS.includes(input.fontFamily)
         ? input.fontFamily
         : DEFAULT_APPEARANCE.fontFamily,
+    contentWidth:
+      input.contentWidth === THEME_CONTENT_WIDTH.FULL
+        ? THEME_CONTENT_WIDTH.FULL
+        : DEFAULT_APPEARANCE.contentWidth,
+    sidebarCollapsed: input.sidebarCollapsed === true,
     preset:
       input.preset && THEME_PRESETS.includes(input.preset)
         ? input.preset

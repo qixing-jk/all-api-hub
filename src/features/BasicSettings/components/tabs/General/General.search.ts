@@ -93,6 +93,21 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
 
 export const generalSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
+    "control:appearance-content-width",
+    "general",
+    SETTINGS_ANCHORS.APPEARANCE_CONTENT_WIDTH,
+    "settings:appearance.contentWidth",
+    534,
+    {
+      descriptionKey: "settings:appearance.contentWidthDescription",
+      keywordKeys: [
+        "settings:appearance.contentWidths.centered",
+        "settings:appearance.contentWidths.full",
+      ],
+      keywords: ["layout", "width", "布局", "宽度"],
+    },
+  ),
+  buildControlDefinition(
     "control:appearance-font",
     "general",
     SETTINGS_ANCHORS.APPEARANCE_FONT,

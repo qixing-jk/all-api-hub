@@ -121,7 +121,14 @@ describe("popup appearance bootstrap", () => {
       )
       expect(
         JSON.parse(window.localStorage.getItem(THEME_BOOTSTRAP_CACHE_KEY)!),
-      ).toEqual(saved)
+      ).toEqual({
+        ...saved,
+        appearance: {
+          ...saved.appearance,
+          contentWidth: "centered",
+          sidebarCollapsed: false,
+        },
+      })
       expect(document.documentElement).toHaveAttribute(
         THEME_ATTRIBUTES.DENSITY,
         "compact",
@@ -238,6 +245,8 @@ describe("popup appearance bootstrap", () => {
     ).toEqual({
       themeMode: "system",
       appearance: {
+        contentWidth: "centered",
+        sidebarCollapsed: false,
         preset: "default",
         color: "green",
         radius: "default",

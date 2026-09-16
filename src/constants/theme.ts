@@ -39,6 +39,11 @@ export const THEME_TEXT_SIZE = {
   EXTRA_LARGE: "extra-large",
 } as const
 
+export const THEME_CONTENT_WIDTH = {
+  CENTERED: "centered",
+  FULL: "full",
+} as const
+
 export const THEME_RADIUS = {
   NONE: "none",
   SMALL: "small",

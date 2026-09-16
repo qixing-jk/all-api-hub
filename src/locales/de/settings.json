@@ -28,6 +28,12 @@
       "slate": "Schiefergrau",
       "violet": "Violett"
     },
+    "contentWidth": "Inhaltsbreite",
+    "contentWidthDescription": "Gilt nur für die vollständige Verwaltungsseite.",
+    "contentWidths": {
+      "centered": "Zentriert",
+      "full": "Volle Breite"
+    },
     "densities": {
       "comfortable": "Geräumig",
       "compact": "Kompakt",

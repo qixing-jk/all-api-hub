@@ -28,6 +28,12 @@
       "slate": "Cinza ardósia",
       "violet": "Violeta"
     },
+    "contentWidth": "Largura do conteúdo",
+    "contentWidthDescription": "Aplica-se apenas à página completa de gerenciamento.",
+    "contentWidths": {
+      "centered": "Centralizado",
+      "full": "Largura total"
+    },
     "densities": {
       "comfortable": "Confortável",
       "compact": "Compacta",

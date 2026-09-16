@@ -28,6 +28,12 @@
       "slate": "Gris pizarra",
       "violet": "Violeta"
     },
+    "contentWidth": "Ancho del contenido",
+    "contentWidthDescription": "Solo se aplica a la página de administración completa.",
+    "contentWidths": {
+      "centered": "Centrado",
+      "full": "Ancho completo"
+    },
     "densities": {
       "comfortable": "Amplia",
       "compact": "Compacta",

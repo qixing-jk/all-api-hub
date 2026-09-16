@@ -28,6 +28,12 @@
       "slate": "Slate",
       "violet": "Violet"
     },
+    "contentWidth": "Content width",
+    "contentWidthDescription": "Applies to the full management page only.",
+    "contentWidths": {
+      "centered": "Centered",
+      "full": "Full width"
+    },
     "densities": {
       "comfortable": "Comfortable",
       "compact": "Compact",

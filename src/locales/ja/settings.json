@@ -28,6 +28,12 @@
       "slate": "スレート",
       "violet": "紫"
     },
+    "contentWidth": "コンテンツ幅",
+    "contentWidthDescription": "管理ページ全体にのみ適用されます。",
+    "contentWidths": {
+      "centered": "中央揃え",
+      "full": "全幅"
+    },
     "densities": {
       "comfortable": "ゆったり",
       "compact": "コンパクト",

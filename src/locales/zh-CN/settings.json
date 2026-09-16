@@ -28,6 +28,12 @@
       "slate": "石板灰",
       "violet": "紫色"
     },
+    "contentWidth": "内容宽度",
+    "contentWidthDescription": "仅影响完整管理页面。",
+    "contentWidths": {
+      "centered": "居中",
+      "full": "全宽"
+    },
     "densities": {
       "comfortable": "宽松",
       "compact": "紧凑",

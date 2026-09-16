@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   THEME_ATTRIBUTES,
   THEME_COLOR,
+  THEME_CONTENT_WIDTH,
   THEME_MODE,
   THEME_PRESET,
   THEME_RADIUS,
@@ -190,6 +191,8 @@ describe("ContentReactRoot", () => {
       initial.resolve({
         themeMode: THEME_MODE.SYSTEM,
         appearance: {
+          contentWidth: THEME_CONTENT_WIDTH.CENTERED,
+          sidebarCollapsed: false,
           preset: THEME_PRESET.DEFAULT,
           color: THEME_COLOR.ROSE,
           radius: THEME_RADIUS.SMALL,

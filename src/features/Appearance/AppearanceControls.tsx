@@ -7,6 +7,7 @@ import {
   DEFAULT_THEME_MODE,
   THEME_ATTRIBUTES,
   THEME_COLOR,
+  THEME_CONTENT_WIDTH,
   THEME_DENSITY,
   THEME_FONT,
   THEME_PRESET,
@@ -372,6 +373,68 @@ export function AppearanceControls({
               />
               <span className="border-border peer-checked:border-primary peer-checked:bg-primary/10 peer-focus-visible:ring-ring py-density-2 flex h-full min-h-11 items-center justify-center rounded-md border px-2 text-center text-sm wrap-anywhere peer-focus-visible:ring-2">
                 {fontLabels[font]}
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <fieldset
+        id={anchors ? SETTINGS_ANCHORS.APPEARANCE_CONTENT_WIDTH : undefined}
+        aria-labelledby={`${id}-content-width-label`}
+        className="space-y-density-3 min-w-0"
+      >
+        <legend className="w-full text-sm font-medium">
+          <span className="flex items-center justify-between gap-2">
+            <span id={`${id}-content-width-label`}>
+              {t("appearance.contentWidth")}
+            </span>
+            <SettingsResetButton
+              iconOnly
+              label={`${t("common:actions.reset")}: ${t("appearance.contentWidth")}`}
+              disabled={saving}
+              hidden={
+                appearance.contentWidth === DEFAULT_APPEARANCE.contentWidth
+              }
+              onClick={() =>
+                void save({ contentWidth: DEFAULT_APPEARANCE.contentWidth })
+              }
+            />
+          </span>
+        </legend>
+        <p className="text-muted-foreground text-sm">
+          {t("appearance.contentWidthDescription")}
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {(
+            [
+              [THEME_CONTENT_WIDTH.CENTERED, t("appearance.contentWidths.centered")],
+              [THEME_CONTENT_WIDTH.FULL, t("appearance.contentWidths.full")],
+            ] as const
+          ).map(([contentWidth, label]) => (
+            <label
+              key={contentWidth}
+              className="relative min-w-0 cursor-pointer"
+            >
+              <input
+                className="peer sr-only"
+                type="radio"
+                name={`${id}-content-width`}
+                checked={appearance.contentWidth === contentWidth}
+                onChange={() => void save({ contentWidth })}
+              />
+              <span className="border-border peer-checked:border-primary peer-checked:bg-primary/10 peer-focus-visible:ring-ring py-density-3 flex h-full flex-col items-center gap-2 rounded-md border px-3 text-center text-sm peer-focus-visible:ring-2">
+                <span
+                  aria-hidden="true"
+                  className="border-border bg-background flex h-12 w-full gap-1 rounded border p-1"
+                >
+                  <span className="bg-muted w-2 shrink-0 rounded-xs" />
+                  <span className="flex min-w-0 flex-1 justify-center">
+                    <span
+                      className={`bg-primary/20 rounded-xs ${contentWidth === THEME_CONTENT_WIDTH.CENTERED ? "w-2/3" : "w-full"}`}
+                    />
+                  </span>
+                </span>
+                {label}
               </span>
             </label>
           ))}

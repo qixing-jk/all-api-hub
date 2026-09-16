@@ -167,7 +167,7 @@ describe("Options Sidebar", () => {
       screen.getAllByRole("button", {
         name: "ui:navigation.expandSidebar",
       }),
-    ).toHaveLength(2)
+    ).toHaveLength(1)
   })
 
   it("opens mobile mode with an overlay, locks body scroll, and closes through mobile actions", () => {
@@ -195,7 +195,7 @@ describe("Options Sidebar", () => {
     expect(onCollapseToggle).not.toHaveBeenCalled()
 
     const closeButtons = screen.getAllByRole("button", {
-      name: "ui:navigation.collapseSidebar",
+      name: "common:actions.close",
     })
     fireEvent.click(closeButtons[closeButtons.length - 1]!)
 

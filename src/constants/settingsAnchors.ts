@@ -7,6 +7,7 @@ export const SETTINGS_ANCHORS = {
   APPEARANCE_DENSITY: "appearance-density",
   APPEARANCE_FONT: "appearance-font",
   APPEARANCE_TEXT_SIZE: "appearance-text-size",
+  APPEARANCE_CONTENT_WIDTH: "appearance-content-width",
   APPEARANCE_RADIUS: "appearance-radius",
   NEW_API_TOTP_SECRET: "new-api-totp-secret",
   MANAGED_SITE_DEPLOYMENT_DOCS: "managed-site-deployment-docs",

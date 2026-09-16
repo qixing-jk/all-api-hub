@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   THEME_ATTRIBUTES,
   THEME_COLOR,
+  THEME_CONTENT_WIDTH,
   THEME_MODE,
   THEME_OWNER,
   THEME_PRESET,
@@ -106,6 +107,8 @@ describe("ThemeContext", () => {
       themeMode: THEME_MODE.LIGHT,
       preferences: {
         appearance: {
+          contentWidth: THEME_CONTENT_WIDTH.CENTERED,
+          sidebarCollapsed: false,
           preset: THEME_PRESET.DEFAULT,
           color: THEME_COLOR.ROSE,
           radius: THEME_RADIUS.SMALL,
@@ -130,6 +133,8 @@ describe("ThemeContext", () => {
     ).toEqual({
       themeMode: "light",
       appearance: {
+        contentWidth: "centered",
+        sidebarCollapsed: false,
         preset: "default",
         color: "rose",
         radius: "small",

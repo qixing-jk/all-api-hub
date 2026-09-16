@@ -28,6 +28,12 @@
       "slate": "Xám đá",
       "violet": "Tím"
     },
+    "contentWidth": "Chiều rộng nội dung",
+    "contentWidthDescription": "Chỉ áp dụng cho trang quản lý đầy đủ.",
+    "contentWidths": {
+      "centered": "Căn giữa",
+      "full": "Toàn chiều rộng"
+    },
     "densities": {
       "comfortable": "Thoáng",
       "compact": "Gọn",
