@@ -171,7 +171,8 @@ describe("useFilteredModels", () => {
             : {},
         ),
       })
-      const count = kind === "priced" ? 0 : 1
+      // Known access obeys group selection even when its prices are missing.
+      const count = kind === "catalog" ? 1 : 0
       await waitFor(() =>
         expect(result.current?.allVendorsFilteredCount).toBe(count),
       )
@@ -3933,15 +3934,164 @@ describe("useFilteredModels", () => {
     })
   })
 
-  it("keeps known-empty direct account rows visible without group options", async () => {
+  it.each([
+    SITE_TYPES.NEW_API,
+    SITE_TYPES.ONE_HUB,
+    SITE_TYPES.DONE_HUB,
+    SITE_TYPES.UNKNOWN,
+  ])(
+    "treats all as a literal permission, pricing and action group for %s",
+    async (siteType) => {
+      const selectedSource = createAccountSource(
+        createDisplayAccount({ siteType }),
+      )
+      const model = {
+        model_name: "all-group-model",
+        enable_groups: ["all"],
+        model_ratio: 1,
+      }
+      const denied = {
+        selectedSource,
+        pricingData: createPricingResponse([model]),
+      }
+      const { result, rerender } = renderUseFilteredModels(denied)
+      await waitFor(() => expect(result.current?.filteredModels).toEqual([]))
+
+      rerender({ ...denied, showUnavailableModels: true })
+      await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+      expect(result.current.filteredModels[0]).toMatchObject({
+        groupContext: { supportedGroups: ["all"], usableGroups: [] },
+        activeGroupContext: { actionGroups: [] },
+        calculatedPrice: {
+          kind: "unavailable",
+          reason: MODEL_UNAVAILABLE_PRICE_REASONS.NO_USABLE_GROUP,
+        },
+      })
+
+      const allowed = {
+        selectedSource,
+        pricingData: createPricingResponse([model], {
+          usable_group: {
+            all: "An ordinary account group",
+            default: "Default",
+          },
+          group_ratio: { all: 0.25, default: 1 },
+        }),
+        selectedGroups: ["all"],
+      }
+      rerender(allowed)
+      await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+      expect(result.current.availableGroups).toEqual(["all"])
+      expect(result.current.filteredModels[0]).toMatchObject({
+        effectiveGroup: "all",
+        groupContext: { usableGroups: ["all"], priceableGroups: ["all"] },
+        activeGroupContext: { actionGroups: ["all"] },
+        calculatedPrice: { usdPerMillionTokens: { input: 0.5, output: 0.5 } },
+      })
+
+      rerender({ ...allowed, selectedGroups: ["default"] })
+      await waitFor(() => expect(result.current.filteredModels).toEqual([]))
+
+      rerender({
+        selectedSource,
+        pricingData: createPricingResponse([
+          { ...model, enable_groups: ["all", "default"] },
+        ]),
+      })
+      await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+      expect(result.current.filteredModels[0]).toMatchObject({
+        effectiveGroup: "default",
+        groupContext: {
+          supportedGroups: ["all", "default"],
+          usableGroups: ["default"],
+        },
+        activeGroupContext: { actionGroups: ["default"] },
+      })
+    },
+  )
+
+  it("applies default all-account groups, exclusions and unavailable visibility in one scope", async () => {
+    const account = createDisplayAccount({ id: "group-scope" })
+    const unknownAccount = createDisplayAccount({ id: "unknown-scope" })
+    const inputs = {
+      selectedSource: createAllAccountsSource(),
+      pricingContexts: [
+        {
+          account,
+          pricing: createPricingResponse([
+            { model_name: "allowed", enable_groups: ["default"] },
+            { model_name: "denied", enable_groups: ["contributors"] },
+          ]),
+        },
+        {
+          account: unknownAccount,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "unknown",
+                enable_groups: ["contributors"],
+                price_metadata: {
+                  source: MODEL_PRICE_SOURCE_KINDS.NONE,
+                  precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+                  unavailable_reason:
+                    MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE,
+                },
+              },
+            ],
+            { usable_group: {}, group_ratio: {} },
+          ),
+        },
+      ],
+    }
+    const { result, rerender } = renderUseFilteredModels(inputs)
+    await waitFor(() =>
+      expect(
+        result.current?.filteredModels
+          .map((row) => row.model.model_name)
+          .sort(),
+      ).toEqual(["allowed", "unknown"]),
+    )
+    const excluded = {
+      ...inputs,
+      allAccountsExcludedGroupsByAccountId: { [account.id]: ["default"] },
+    }
+    rerender(excluded)
+    await waitFor(() =>
+      expect(
+        result.current.filteredModels.map((row) => row.model.model_name),
+      ).toEqual(["unknown"]),
+    )
+    rerender({ ...excluded, showUnavailableModels: true })
+    await waitFor(() =>
+      expect(
+        result.current.filteredModels.map((row) => row.model.model_name).sort(),
+      ).toEqual(["denied", "unknown"]),
+    )
+    expect(result.current.getFilteredResultCount()).toBe(
+      result.current.filteredModels.length,
+    )
+    expect(
+      result.current.filteredModels.find(
+        (row) => row.model.model_name === "denied",
+      )?.activeGroupContext.actionGroups,
+    ).toEqual([])
+    rerender({ ...inputs, showUnavailableModels: true })
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(3))
+  })
+
+  it("hides known-empty rows by default and reveals them without enabling actions", async () => {
     const account = createDisplayAccount({ id: "account-known-empty" })
-    const { result } = renderUseFilteredModels({
+    const inputs = {
       pricingData: createPricingResponse(
         [{ model_name: "shared-model", enable_groups: ["default"] }],
         { group_ratio: {}, usable_group: {} },
       ),
       selectedSource: createAccountSource(account),
-    })
+    }
+    const { result, rerender } = renderUseFilteredModels(inputs)
+
+    await waitFor(() => expect(result.current?.filteredModels).toEqual([]))
+    rerender({ ...inputs, showUnavailableModels: true })
 
     await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
 
@@ -3949,11 +4099,52 @@ describe("useFilteredModels", () => {
     expect(result.current.availableGroups).toEqual([])
     expect(row.groupContext.accessState).toBe(MODEL_GROUP_ACCESS_STATES.KNOWN)
     expect(row.activeGroupContext.activeUsableGroups).toEqual([])
+    expect(row.activeGroupContext.actionGroups).toEqual([])
     expect(row.calculatedPrice).toEqual({
       kind: "unavailable",
       billingMode: "token",
       reason: MODEL_UNAVAILABLE_PRICE_REASONS.NO_USABLE_GROUP,
     })
+    rerender({ ...inputs, showUnavailableModels: false })
+    await waitFor(() => expect(result.current.filteredModels).toEqual([]))
+  })
+
+  it("updates visibility when refreshed access becomes known without hiding unknown rows", async () => {
+    const inputs = {
+      selectedSource: createAccountSource(
+        createDisplayAccount({ id: "refresh" }),
+      ),
+      pricingData: createPricingResponse(
+        [
+          {
+            model_name: "restricted",
+            enable_groups: ["vip"],
+            price_metadata: {
+              source: MODEL_PRICE_SOURCE_KINDS.NONE,
+              precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+              unavailable_reason:
+                MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE,
+            },
+          },
+        ],
+        { usable_group: {}, group_ratio: {} },
+      ),
+    }
+    const { result, rerender } = renderUseFilteredModels(inputs)
+    await waitFor(() => expect(result.current?.filteredModels).toHaveLength(1))
+    expect(result.current.filteredModels[0].groupContext.accessState).toBe(
+      MODEL_GROUP_ACCESS_STATES.UNKNOWN,
+    )
+    const refreshed = {
+      ...inputs,
+      pricingData: createPricingResponse([
+        { model_name: "restricted", enable_groups: ["vip"] },
+      ]),
+    }
+    rerender(refreshed)
+    await waitFor(() => expect(result.current.filteredModels).toEqual([]))
+    rerender({ ...refreshed, showUnavailableModels: true })
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
   })
 
   it("omits globally supported-only groups from all-account controls", async () => {

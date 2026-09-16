@@ -269,7 +269,7 @@ function resolveBestCalculatedItem(
   priceComparisonWeights: ModelPriceComparisonWeights,
   pricingScenario?: PricingScenario,
   isPriceComparisonActive = pricingScenario !== undefined,
-): CalculatedModelItem | null {
+): CalculatedModelItem {
   const calculatePrice = (
     model: typeof rawItem.model,
     groupMultiplier: number,
@@ -355,13 +355,6 @@ function resolveBestCalculatedItem(
     })
   }
 
-  if (
-    groupCandidates !== undefined &&
-    activeGroupContext.activeUsableGroups.length === 0
-  ) {
-    return null
-  }
-
   if (activeGroupContext.activePriceableGroups.length === 0) {
     const unavailableReason =
       rawItem.groupContext.accessState === MODEL_GROUP_ACCESS_STATES.KNOWN &&
@@ -445,7 +438,7 @@ function resolveBestCalculatedItem(
   }
 }
 
-/** Maps raw priced rows into calculated display rows for the current filters. */
+/** Prices already-filtered rows without changing their visibility. */
 export function calculateModelListPrices(params: {
   rawItems: ModelListItem[]
   getGroupCandidates: (item: ModelListItem) => string[] | undefined
@@ -463,18 +456,16 @@ export function calculateModelListPrices(params: {
     isPriceComparisonActive,
   } = params
 
-  return rawItems
-    .map((item) =>
-      resolveBestCalculatedItem(
-        item,
-        getGroupCandidates(item),
-        showRealPrice,
-        priceComparisonWeights,
-        pricingScenario,
-        isPriceComparisonActive,
-      ),
-    )
-    .filter((item): item is CalculatedModelItem => item !== null)
+  return rawItems.map((item) =>
+    resolveBestCalculatedItem(
+      item,
+      getGroupCandidates(item),
+      showRealPrice,
+      priceComparisonWeights,
+      pricingScenario,
+      isPriceComparisonActive,
+    ),
+  )
 }
 
 /** Orders evaluated rows and marks comparable minima within matching model and billing units. */

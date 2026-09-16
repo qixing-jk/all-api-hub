@@ -135,6 +135,8 @@ export default function ModelList(props: {
     setAllAccountsExcludedGroupsByAccountId,
 
     // Display options
+    showUnavailableModels,
+    setShowUnavailableModels,
     showRealPrice,
     setShowRealPrice,
     showEndpointTypes,
@@ -805,6 +807,8 @@ export default function ModelList(props: {
           )}
 
           <ControlPanel
+            showUnavailableModels={showUnavailableModels}
+            setShowUnavailableModels={setShowUnavailableModels}
             selectedSource={selectedSource}
             sourceCapabilities={sourceCapabilities}
             selectedSourceValue={selectedSourceValue}

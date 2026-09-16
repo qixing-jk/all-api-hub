@@ -605,6 +605,7 @@
   "showing_one": "Mostrando {{count}} modelo",
   "showing_many": "Mostrando {{count}} modelos",
   "showing_other": "Mostrando {{count}} modelos",
+  "showUnavailableModels": "Mostrar también modelos sin acceso para la cuenta",
   "siteDescription": "Descripción del sitio:",
   "siteSupportedGroups": "Grupos compatibles con el sitio",
   "sortBy": "Ordenar por",
@@ -666,6 +667,7 @@
   "totalModels_many": "Total {{count}} modelos",
   "totalModels_other": "Total {{count}} modelos",
   "unavailable": "No disponible",
+  "unavailableModelsHint": "Incluir modelos ya cargados sin grupos utilizables para esta cuenta. Estos modelos omiten la selección de grupos, pero siguen sujetos a los demás filtros. No se obtienen modelos adicionales de todo el sitio. Solo se aplica durante esta sesión de la página.",
   "unavailablePriceReasons": {
     "groupRatioUnavailable": "El precio no está disponible porque este grupo utilizable no tiene multiplicador.",
     "keyGroupUnknown": "Los precios no están disponibles porque no se pudo resolver el grupo de Sub2API de esta clave.",

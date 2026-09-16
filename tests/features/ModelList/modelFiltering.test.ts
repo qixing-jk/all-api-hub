@@ -105,6 +105,86 @@ function pipeline(
   })
 }
 describe("model list filtering scopes", () => {
+  it("hides denied account offers by default and restores them in visibility previews", () => {
+    const denied = row("a", { vip: 1 }, ["vip"])
+    const allowed = row("b", { a: 1 }, ["a"])
+    const result = pipeline([denied, allowed], { accountFilterAccountIds: [] })
+    const view = result.forVendor(MODEL_VENDOR_FILTER_VALUES.All)
+    expect(view.getFilteredModels()).toEqual([allowed])
+    expect(view.getFilteredResultCount()).toBe(1)
+    expect(view.getFilteredModels({ showUnavailableModels: true })).toEqual([
+      denied,
+      allowed,
+    ])
+    expect(view.getFilteredResultCount({ showUnavailableModels: true })).toBe(2)
+    expect(
+      pipeline([denied, allowed], { accountFilterAccountIds: ["a"] })
+        .forVendor(MODEL_VENDOR_FILTER_VALUES.All)
+        .getFilteredModels(),
+    ).toEqual([])
+  })
+
+  it("preserves unknown, non-group, missing-support and usable-but-unpriced rows", () => {
+    const unknown = row("a", {})
+    unknown.groupContext = {
+      ...unknown.groupContext,
+      accessState: "unknown",
+      usableGroups: [],
+    }
+    const nonGroup = row("a", {})
+    nonGroup.groupContext = {
+      ...nonGroup.groupContext,
+      accessState: "not-applicable",
+      usableGroups: [],
+    }
+    const missingSupport = row("a", {}, [])
+    missingSupport.groupContext.supportedGroups = []
+    const unpriced = row("a", {}, ["a"])
+    const items = [unknown, nonGroup, missingSupport, unpriced]
+    expect(
+      pipeline(items)
+        .forVendor(MODEL_VENDOR_FILTER_VALUES.All)
+        .getFilteredModels(),
+    ).toEqual(items)
+  })
+
+  it("reveals denied rows explicitly without widening selected usable groups", () => {
+    const denied = row("a", { vip: 1 }, ["vip"])
+    const usable = row("a", { b: 1 }, ["b"])
+    const result = pipeline([denied, usable]).forVendor(
+      MODEL_VENDOR_FILTER_VALUES.All,
+    )
+    expect(
+      result.getFilteredResultCount({
+        showUnavailableModels: true,
+        selectedGroups: ["a"],
+      }),
+    ).toBe(1)
+    expect(
+      result.getFilteredResultCount({
+        showUnavailableModels: true,
+        selectedGroups: [],
+      }),
+    ).toBe(2)
+  })
+
+  it("honors an explicitly empty group selection while retaining unknown rows", () => {
+    const usable = row("a", {}, ["a"])
+    // Missing pricing does not exempt a known usable row from group selection.
+    usable.source.capabilities.supportsPricing = false
+    const unknown = row("a", {}, [])
+    unknown.groupContext.accessState = "unknown"
+    const denied = row("a", { vip: 1 }, ["vip"])
+    const view = pipeline([usable, unknown, denied], {
+      getGroupCandidates: () => [],
+    }).forVendor(MODEL_VENDOR_FILTER_VALUES.All)
+    expect(view.getFilteredModels()).toEqual([unknown])
+    expect(view.getFilteredModels({ showUnavailableModels: true })).toEqual([
+      unknown,
+      denied,
+    ])
+  })
+
   it("keeps account summaries independent of account selection and the selected vendor", () => {
     const result = pipeline([
       item("a", "first", "one"),
@@ -171,6 +251,12 @@ describe("model list filtering scopes", () => {
   it("keeps catalog-only rows visible under billing and group filters", () => {
     const catalog = item("a", "catalog", "one")
     catalog.source.capabilities.supportsPricing = false
+    catalog.groupContext = {
+      ...catalog.groupContext,
+      accessState: "unknown",
+      usableGroups: [],
+      priceableGroups: [],
+    }
     const result = pipeline([catalog], {
       filters: {
         searchTerm: "",

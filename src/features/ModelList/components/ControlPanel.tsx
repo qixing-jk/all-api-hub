@@ -36,6 +36,7 @@ import {
 } from "~/features/ModelList/modelCapabilityFilters"
 import {
   ALL_ACCOUNTS_SOURCE_VALUE,
+  MODEL_LIST_GROUP_SEMANTICS,
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelManagementSource,
   type ModelManagementSourceCapabilities,
@@ -78,6 +79,8 @@ import { PriceComparisonControls } from "./PriceComparisonControls"
 import { PricingScenarioControls } from "./PricingScenarioControls"
 
 interface ControlPanelProps {
+  showUnavailableModels?: boolean
+  setShowUnavailableModels?: (show: boolean) => void
   pricingScenarioSettings?: ModelPricingScenarioSettings
   setPricingScenarioSettings?: (settings: ModelPricingScenarioSettings) => void
   selectedSource: ModelManagementSource | null
@@ -165,6 +168,8 @@ interface ControlPanelProps {
  * @returns Card with filters, toggles, and actions.
  */
 export function ControlPanel({
+  showUnavailableModels = false,
+  setShowUnavailableModels,
   pricingScenarioSettings,
   setPricingScenarioSettings,
   selectedSource,
@@ -682,6 +687,23 @@ export function ControlPanel({
             <fieldset className="max-w-full shrink-0">
               <legend className="sr-only">{t("displayOptions")}</legend>
               <div className="gap-y-density-2 flex flex-wrap items-center gap-x-4 text-sm">
+                {setShowUnavailableModels &&
+                  selectedSource?.groupSemantics ===
+                    MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY && (
+                    <Tooltip content={t("unavailableModelsHint")}>
+                      <label className="flex cursor-pointer items-center space-x-2">
+                        <Switch
+                          checked={showUnavailableModels}
+                          onChange={setShowUnavailableModels}
+                          aria-label={t("showUnavailableModels")}
+                          size="sm"
+                        />
+                        <Label className="cursor-pointer">
+                          {t("showUnavailableModels")}
+                        </Label>
+                      </label>
+                    </Tooltip>
+                  )}
                 {sourceCapabilities.supportsPricing && (
                   <label className="flex cursor-pointer items-center space-x-2">
                     <Switch

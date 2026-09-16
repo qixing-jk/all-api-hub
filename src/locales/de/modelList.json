@@ -594,6 +594,7 @@
   "selectSourceToContinue": "Wählen Sie oben eine Quelle aus, bevor Sie die Modellliste anzeigen.",
   "showing_one": "Zeigt {{count}} Modell",
   "showing_other": "Zeigt {{count}} Modelle",
+  "showUnavailableModels": "Auch Modelle ohne Kontozugriff anzeigen",
   "siteDescription": "Website-Beschreibung:",
   "siteSupportedGroups": "Von der Website unterstützte Gruppen",
   "sortBy": "Sortieren nach",
@@ -654,6 +655,7 @@
   "totalModels_one": "Gesamt {{count}} Modell",
   "totalModels_other": "Insgesamt {{count}} Modelle",
   "unavailable": "Nicht verfügbar",
+  "unavailableModelsHint": "Bereits geladene Modelle ohne nutzbare Gruppen für dieses Konto einbeziehen. Diese Modelle umgehen die Gruppenauswahl, unterliegen aber weiterhin anderen Filtern. Es werden keine zusätzlichen Modelle der gesamten Website abgerufen. Gilt nur für diese Seitensitzung.",
   "unavailablePriceReasons": {
     "groupRatioUnavailable": "Preise sind nicht verfügbar, da diese verwendbare Gruppe keinen Multiplikator hat.",
     "keyGroupUnknown": "Preise sind nicht verfügbar, weil die Sub2API-Gruppe dieses Schlüssels nicht ermittelt werden konnte.",

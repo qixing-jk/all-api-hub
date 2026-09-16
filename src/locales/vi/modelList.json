@@ -584,6 +584,7 @@
   "selectSource": "Chọn nguồn dữ liệu",
   "selectSourceToContinue": "Vui lòng chọn một nguồn dữ liệu ở trên trước, sau đó xem danh sách mô hình.",
   "showing_other": "Đang hiển thị {{count}} mô hình",
+  "showUnavailableModels": "Hiển thị cả mô hình tài khoản không có quyền sử dụng",
   "siteDescription": "Mô tả từ trang web:",
   "siteSupportedGroups": "Nhóm được trang hỗ trợ",
   "sortBy": "Sắp xếp theo",
@@ -643,6 +644,7 @@
   "title": "Danh sách mô hình",
   "totalModels_other": "Tổng cộng {{count}} mô hình",
   "unavailable": "Không khả dụng",
+  "unavailableModelsHint": "Bao gồm các mô hình đã tải không có nhóm sử dụng được cho tài khoản này. Các mô hình này bỏ qua lựa chọn nhóm nhưng vẫn tuân theo các bộ lọc khác. Không tải thêm mô hình trên toàn trang web. Chỉ áp dụng trong phiên trang hiện tại.",
   "unavailablePriceReasons": {
     "groupRatioUnavailable": "Không thể hiển thị giá vì nhóm dùng được này không có hệ số.",
     "keyGroupUnknown": "Không có giá vì không thể xác định nhóm Sub2API của khóa này.",

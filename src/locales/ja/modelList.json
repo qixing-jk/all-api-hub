@@ -584,6 +584,7 @@
   "selectSource": "ソースを選択",
   "selectSourceToContinue": "上のデータソースを選択してから、モデル一覧を表示してください。",
   "showing_other": "{{count}} モデルを表示中",
+  "showUnavailableModels": "アカウントに利用権限がないモデルも表示",
   "siteDescription": "サイトの説明：",
   "siteSupportedGroups": "サイトが対応するグループ",
   "sortBy": "並び順",
@@ -643,6 +644,7 @@
   "title": "モデル一覧",
   "totalModels_other": "合計 {{count}} モデル",
   "unavailable": "利用不可",
+  "unavailableModelsHint": "取得済みのモデルのうち、現在のアカウントで利用可能なグループがないものも表示します。これらのモデルにはグループ選択が適用されませんが、他のフィルターは適用されます。サイト全体のモデルを追加取得する機能ではありません。このページのセッション中のみ有効です。",
   "unavailablePriceReasons": {
     "groupRatioUnavailable": "利用可能なグループの倍率を取得できないため、価格を表示できません。",
     "keyGroupUnknown": "このキーの Sub2API グループを解決できないため、料金は利用できません。",

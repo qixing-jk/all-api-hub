@@ -594,6 +594,7 @@
   "selectSourceToContinue": "Select a source above before viewing the model list.",
   "showing_one": "Showing {{count}} model",
   "showing_other": "Showing {{count}} models",
+  "showUnavailableModels": "Also show models without account access",
   "siteDescription": "Site description:",
   "siteSupportedGroups": "Site-supported groups",
   "sortBy": "Sort By",
@@ -654,6 +655,7 @@
   "totalModels_one": "Total {{count}} model",
   "totalModels_other": "Total {{count}} models",
   "unavailable": "Unavailable",
+  "unavailableModelsHint": "Include already loaded models with no usable groups for this account. These models bypass group selection but still follow other filters. This does not fetch additional site-wide models. Applies to this page session only.",
   "unavailablePriceReasons": {
     "groupRatioUnavailable": "Prices are unavailable because this usable group has no multiplier.",
     "keyGroupUnknown": "Prices are unavailable because this key's Sub2API group could not be resolved.",

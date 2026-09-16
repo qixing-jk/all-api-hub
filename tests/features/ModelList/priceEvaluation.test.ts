@@ -272,10 +272,12 @@ describe("model list price evaluation", () => {
       undefined,
     ])
   })
-  it("distinguishes unrestricted candidates from an explicitly empty action scope", () => {
-    const item = row("a", { a: 1, b: 2 })
-    expect(calculate([item])).toHaveLength(1)
-    expect(calculate([item], [])).toEqual([])
+  it("retains revealed unavailable rows without fabricating prices or actions", () => {
+    const denied = row("a", {}, [])
+    const [item] = calculate([denied], [])
+    expect(item.calculatedPrice.kind).toBe(CALCULATED_PRICE_KINDS.UNAVAILABLE)
+    expect(item.activeGroupContext.actionGroups).toEqual([])
+    expect(item.effectiveGroup).toBeUndefined()
   })
   it("selects a valid zero multiplier and limits action scope to the selected best group", () => {
     const item = calculate([row("a", { a: 1, b: 0 })])[0]

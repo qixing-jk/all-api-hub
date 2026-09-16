@@ -34,6 +34,20 @@ export interface ActiveModelGroupContext {
   actionGroups: string[]
 }
 
+/** Only explicit group-access denial can hide a catalog row. */
+export function isModelKnownUnavailable(context: ModelGroupContext): boolean {
+  // Group names (including `all`) are literal access identities. New API's
+  // pricing controller lets `all` through its catalog filter, but channel
+  // selection still matches the actual group; catalog visibility grants no access.
+  // https://github.com/QuantumNous/new-api/blob/v0.12.4/model/channel_cache.go
+  // Preserve missing-support metadata conservatively.
+  return (
+    context.accessState === MODEL_GROUP_ACCESS_STATES.KNOWN &&
+    context.usableGroups.length === 0 &&
+    context.supportedGroups.length > 0
+  )
+}
+
 interface ResolveModelGroupContextParams {
   groupSemantics: ModelListGroupSemantics
   model: Pick<ModelPricing, "enable_groups" | "price_metadata">

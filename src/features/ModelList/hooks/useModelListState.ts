@@ -71,10 +71,13 @@ export function useModelListState() {
     )
 
   // 显示选项
+  const [showUnavailableModels, setShowUnavailableModels] = useState(false)
   const [showRealPrice, setShowRealPrice] = useState(false) // 是否显示真实价格
   const [showEndpointTypes, setShowEndpointTypes] = useState(true) // 是否显示端点类型
 
   return {
+    showUnavailableModels,
+    setShowUnavailableModels,
     pricingScenarioSettings,
     setPricingScenarioSettings,
     selectedSourceValue,

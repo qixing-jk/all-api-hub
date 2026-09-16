@@ -582,6 +582,7 @@
   "selectSource": "选择数据源",
   "selectSourceToContinue": "请先在上方选择一个数据源，然后查看模型列表。",
   "showing": "显示 {{count}} 个模型",
+  "showUnavailableModels": "同时显示无权使用的模型",
   "siteDescription": "站点说明：",
   "siteSupportedGroups": "站点支持的分组",
   "sortBy": "排序方式",
@@ -641,6 +642,7 @@
   "title": "模型列表",
   "totalModels": "总计 {{count}} 个模型",
   "unavailable": "不可用",
+  "unavailableModelsHint": "额外显示已获取数据中，当前账号明确没有可用分组的模型。这些模型不受分组选择限制，但仍受其他筛选条件限制；不会额外获取全站模型。仅当前页面会话有效。",
   "unavailablePriceReasons": {
     "groupRatioUnavailable": "价格不可用，因为当前可用分组没有分组倍率。",
     "keyGroupUnknown": "价格不可用，因为无法解析此密钥的 Sub2API 分组。",

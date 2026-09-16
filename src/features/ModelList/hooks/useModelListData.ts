@@ -80,6 +80,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
   // UI state
   const state = useModelListState()
   const {
+    showUnavailableModels,
     selectedSourceValue,
     setSelectedSourceValue,
     selectedBillingMode,
@@ -339,6 +340,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
     [state.pricingScenarioSettings, priceComparisonWeights],
   )
   const filteredData = useFilteredModels({
+    showUnavailableModels,
     pricingScenario,
     isPriceComparisonActive: isModelListPriceSortMode(sortMode),
     pricingData: modelData.pricingData,

@@ -40,6 +40,7 @@ const EMPTY_EXCLUDED_GROUPS: Record<string, string[]> = {}
 const EMPTY_ACCOUNT_IDS: string[] = []
 
 interface UseFilteredModelsProps {
+  showUnavailableModels?: boolean
   pricingData: PricingResponse | null
   pricingContexts: AccountPricingContext[]
   selectedSource: ModelManagementSource | null
@@ -74,6 +75,7 @@ interface UseFilteredModelsProps {
  */
 export function useFilteredModels(params: UseFilteredModelsProps) {
   const {
+    showUnavailableModels = false,
     pricingData,
     pricingContexts,
     selectedSource,
@@ -230,10 +232,6 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS &&
         item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
       ) {
-        if (item.groupContext.usableGroups.length === 0) {
-          return undefined
-        }
-
         return (
           includedAllAccountsGroupsBySourceId[
             getModelListSourceIdentityKey(item)
@@ -254,6 +252,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       createModelListFilterPipeline({
         items: rawModelItems,
         filters: {
+          showUnavailableModels,
           searchTerm,
           selectedBillingMode,
           selectedGroups,
@@ -266,6 +265,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       }),
     [
       rawModelItems,
+      showUnavailableModels,
       searchTerm,
       selectedBillingMode,
       selectedGroups,
