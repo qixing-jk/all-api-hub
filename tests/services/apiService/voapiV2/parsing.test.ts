@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { UI_CONSTANTS } from "~/constants/ui"
+import { QUOTA_PER_USD } from "~/constants/money"
 import {
   amountToQuota,
   isVoApiV2AuthExpiredError,
@@ -68,15 +68,9 @@ describe("VoAPI v2 parsing", () => {
   })
 
   it("converts decimal amounts to internal quota points", () => {
-    expect(amountToQuota(1.25)).toBe(
-      Math.round(1.25 * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR),
-    )
-    expect(amountToQuota("1.25")).toBe(
-      Math.round(1.25 * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR),
-    )
+    expect(amountToQuota(1.25)).toBe(Math.round(1.25 * QUOTA_PER_USD))
+    expect(amountToQuota("1.25")).toBe(Math.round(1.25 * QUOTA_PER_USD))
     expect(amountToQuota("invalid")).toBe(0)
-    expect(
-      quotaToAmountString(UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR),
-    ).toBe("1")
+    expect(quotaToAmountString(QUOTA_PER_USD)).toBe("1")
   })
 })

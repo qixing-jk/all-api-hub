@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event"
 import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { ModelDisplay } from "~/features/ModelList/components/ModelDisplay"
 import {
   createModelGroupResolver,
@@ -687,7 +687,7 @@ describe("ModelDisplay", () => {
 
     expect(defaultRateItem).toHaveAttribute(
       "data-exchange-rate",
-      String(UI_CONSTANTS.EXCHANGE_RATE.DEFAULT),
+      String(DEFAULT_USD_TO_CNY_RATE),
     )
     expect(defaultRateItem).toHaveAttribute("data-summary-status", "none")
 

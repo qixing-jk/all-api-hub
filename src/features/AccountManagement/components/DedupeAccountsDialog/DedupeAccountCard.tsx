@@ -9,8 +9,8 @@ import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection
 import type { AccountTodayStatsAvailability, SiteAccount } from "~/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import { getTodayMetricPresentation } from "~/utils/core/formatters"
+import { getHealthStatusDisplay } from "~/utils/healthStatus"
 
-import { getHealthStatusDisplay } from "../../utils/healthStatusUtils"
 import type {
   DedupeAccountsDialogGroup,
   DedupeAccountsKeepChangeInput,

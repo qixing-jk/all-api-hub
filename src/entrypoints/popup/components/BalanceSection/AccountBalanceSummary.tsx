@@ -4,8 +4,8 @@ import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
 import { BodySmall, Caption } from "~/components/ui"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { SUMMARY_ANIMATION_DURATION } from "~/entrypoints/popup/summaryConfig"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import {
@@ -16,6 +16,7 @@ import {
   getOppositeCurrency,
   getTodayMetricPresentation,
 } from "~/utils/core/formatters"
+import { MONEY_DECIMAL_PLACES } from "~/utils/core/money"
 
 const BalanceDisplay: React.FC<{
   value: number | null
@@ -47,7 +48,7 @@ const BalanceDisplay: React.FC<{
     value === null
       ? undefined
       : `${prefix ?? ""}${getCurrencySymbol(currencyType)}${value.toFixed(
-          UI_CONSTANTS.MONEY.DECIMALS,
+          MONEY_DECIMAL_PLACES,
         )}`
 
   const button = (
@@ -80,8 +81,8 @@ const BalanceDisplay: React.FC<{
                   end={value}
                   duration={
                     isInitialLoad
-                      ? UI_CONSTANTS.ANIMATION.INITIAL_DURATION
-                      : UI_CONSTANTS.ANIMATION.UPDATE_DURATION
+                      ? SUMMARY_ANIMATION_DURATION.INITIAL
+                      : SUMMARY_ANIMATION_DURATION.UPDATE
                   }
                   decimals={2}
                   preserveValue

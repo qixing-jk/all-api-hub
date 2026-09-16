@@ -1,5 +1,8 @@
-import { CURRENCY_SYMBOLS, UI_CONSTANTS } from "~/constants/ui"
+import { CURRENCY_SYMBOLS, DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import type { CurrencyType } from "~/types"
+
+/** Decimal precision shared by static and animated money displays. */
+export const MONEY_DECIMAL_PLACES = 2
 
 /**
  * Formatting options for money-like numeric values used across the UI.
@@ -13,8 +16,8 @@ type MoneyFormatOptions = {
  * Default money formatting options for the application UI.
  */
 const DEFAULT_MONEY_FORMAT_OPTIONS: MoneyFormatOptions = {
-  decimals: UI_CONSTANTS.MONEY.DECIMALS,
-  minNonZero: UI_CONSTANTS.MONEY.MIN_NON_ZERO,
+  decimals: MONEY_DECIMAL_PLACES,
+  minNonZero: 0.01,
 }
 
 /**
@@ -77,11 +80,9 @@ export const formatTelemetryMoney = (
   if (typeof valueUsd !== "number" || !Number.isFinite(valueUsd)) return "-"
 
   const value =
-    currencyType === "CNY"
-      ? valueUsd * UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
-      : valueUsd
+    currencyType === "CNY" ? valueUsd * DEFAULT_USD_TO_CNY_RATE : valueUsd
 
   return `${CURRENCY_SYMBOLS[currencyType]}${getDisplayMoneyValue(
     value,
-  ).toFixed(UI_CONSTANTS.MONEY.DECIMALS)}`
+  ).toFixed(MONEY_DECIMAL_PLACES)}`
 }

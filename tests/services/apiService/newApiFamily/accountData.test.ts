@@ -45,18 +45,12 @@ const { mockLoggerDebug, mockLoggerError, mockLoggerInfo, mockLoggerWarn } =
     mockLoggerWarn: vi.fn(),
   }))
 
-vi.mock("~/constants/ui", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/constants/ui")>()
+vi.mock("~/constants/money", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/constants/money")>()
   return {
     ...actual,
-    UI_CONSTANTS: {
-      ...actual.UI_CONSTANTS,
-      EXCHANGE_RATE: {
-        ...actual.UI_CONSTANTS.EXCHANGE_RATE,
-        DEFAULT: 7,
-        CONVERSION_FACTOR: 100,
-      },
-    },
+    DEFAULT_USD_TO_CNY_RATE: 7,
+    QUOTA_PER_USD: 100,
   }
 })
 

@@ -1,25 +1,22 @@
 /**
- * Health status utility functions for AccountManagement feature
- * This module encapsulates health status logic and provides i18n support
+ * Shared health status presentation for saved accounts and API credentials.
  */
 
 import type { TFunction } from "i18next"
 
-import { UI_CONSTANTS } from "~/constants/ui"
-
 // Local configuration object for health status
 const HEALTH_STATUS_CONFIG = {
   healthy: {
-    color: UI_CONSTANTS.STYLES.STATUS_INDICATOR.HEALTHY,
+    color: "bg-success-indicator",
   },
   error: {
-    color: UI_CONSTANTS.STYLES.STATUS_INDICATOR.ERROR,
+    color: "bg-destructive-indicator",
   },
   warning: {
-    color: UI_CONSTANTS.STYLES.STATUS_INDICATOR.WARNING,
+    color: "bg-warning-indicator",
   },
   unknown: {
-    color: UI_CONSTANTS.STYLES.STATUS_INDICATOR.UNKNOWN,
+    color: "bg-neutral-indicator",
   },
 } as const
 

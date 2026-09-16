@@ -1,5 +1,5 @@
+import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { getDefaultAccountKeyName } from "~/services/accounts/accountKeyNames"
 import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/factory"
 import type { AccountKeyCreationIntent } from "~/services/apiAdapters/contracts/accountKeyResource"
@@ -29,7 +29,7 @@ const NEW_API_KEY_FIELD_IDS = {
 } as const
 
 const field = NEW_API_KEY_FIELD_IDS
-const quotaPerUsd = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+const quotaPerUsd = QUOTA_PER_USD
 
 export type NewApiKeyEditCommand = {
   baseline: NewApiTokenWrite

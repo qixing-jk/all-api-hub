@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { aihubmixAccountCompletion } from "~/services/apiAdapters/aihubmix/accountCompletion"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
@@ -99,7 +99,7 @@ describe("aihubmixAccountCompletion", () => {
       siteName: "AIHubMix",
       accessToken: "detected-console-token",
       userId: "11",
-      exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+      exchangeRate: DEFAULT_USD_TO_CNY_RATE,
       authType: AuthTypeEnum.AccessToken,
       checkIn: {
         ...createCheckInConfig(SITE_TYPES.AIHUBMIX, {
@@ -165,7 +165,7 @@ describe("aihubmixAccountCompletion", () => {
       username: "generated-aihubmix-user",
       accessToken: "generated-aihubmix-token",
       userId: "12",
-      exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+      exchangeRate: DEFAULT_USD_TO_CNY_RATE,
       authType: AuthTypeEnum.AccessToken,
       checkIn: expect.objectContaining({
         automaticExecutionEnabled: false,

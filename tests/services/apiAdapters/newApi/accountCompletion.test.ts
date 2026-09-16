@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { AutoDetectCompletionError } from "~/services/accounts/autoDetectCompletion/types"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { createNewApiAccountCompletion } from "~/services/apiAdapters/newApi/accountCompletion"
@@ -485,7 +485,7 @@ describe("newApiAccountCompletion", () => {
       siteName: "Cookie Portal",
       accessToken: "cookie-visible-token",
       userId: "8",
-      exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+      exchangeRate: DEFAULT_USD_TO_CNY_RATE,
       authType: AuthTypeEnum.Cookie,
       checkIn: expect.objectContaining({
         automaticExecutionEnabled: true,

@@ -1,4 +1,4 @@
-import { UI_CONSTANTS } from "~/constants/ui"
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import type { DisplaySiteData } from "~/types"
 
 /** Returns an evidenced recharge conversion, even when the balance is empty. */
@@ -17,8 +17,5 @@ export function resolveKnownAccountExchangeRate(
 
 /** Resolves the CNY-per-USD rate for display, with the UI fallback. */
 export function resolveAccountExchangeRate(account?: DisplaySiteData): number {
-  return (
-    resolveKnownAccountExchangeRate(account) ??
-    UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
-  )
+  return resolveKnownAccountExchangeRate(account) ?? DEFAULT_USD_TO_CNY_RATE
 }

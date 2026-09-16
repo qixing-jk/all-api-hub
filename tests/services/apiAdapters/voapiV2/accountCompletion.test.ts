@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { voApiV2AccountCompletion } from "~/services/apiAdapters/voapiV2/accountCompletion"
 import { fetchVoApiV2UserInfo } from "~/services/apiService/voapiV2"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
@@ -84,7 +84,7 @@ describe("voApiV2AccountCompletion", () => {
       siteName: "VoAPI",
       accessToken: "dashboard-jwt",
       userId: "42",
-      exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+      exchangeRate: DEFAULT_USD_TO_CNY_RATE,
       authType: AuthTypeEnum.AccessToken,
       checkIn: {
         ...createCheckInConfig(SITE_TYPES.VO_API_V2, {

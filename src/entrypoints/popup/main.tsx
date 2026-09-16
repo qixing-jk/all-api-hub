@@ -1,12 +1,13 @@
-import { UI_CONSTANTS } from "~/constants/ui"
 import { renderExtensionPage } from "~/entrypoints/shared/renderExtensionPage"
 import { isMobileDevice } from "~/utils/browser"
 
 import App from "./App"
 
+const WIDTH_PX = 410
+const HEIGHT_PX = 600
+
 if (!isMobileDevice()) {
   const popupDocument = document.documentElement
-  const { HEIGHT_PX, WIDTH_PX } = UI_CONSTANTS.POPUP
   const syncPopupDocumentSize = () => {
     // Ignore the transient tiny viewport Edge exposes before it measures the
     // seeded popup content. The following resize will carry the usable size.

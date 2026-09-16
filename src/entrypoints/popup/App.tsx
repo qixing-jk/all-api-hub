@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next"
 import { AppLayout } from "~/components/AppLayout"
 import PopupInterruptionHintBanner from "~/components/PopupInterruptionHintBanner"
 import { SelectViewportResizeProvider } from "~/components/ui/select"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { AccountManagementProvider } from "~/features/AccountManagement/hooks/AccountManagementProvider"
@@ -123,17 +122,9 @@ function PopupContent({ inPopup }: { inPopup: boolean }) {
     }
   }, [inPopup])
 
-  const popupWidthClass = onMobile
-    ? "w-full"
-    : inSidePanel
-      ? ""
-      : UI_CONSTANTS.POPUP.WIDTH
+  const popupWidthClass = onMobile ? "w-full" : inSidePanel ? "" : "w-full"
 
-  const popupHeightClass = onMobile
-    ? ""
-    : inSidePanel
-      ? ""
-      : UI_CONSTANTS.POPUP.HEIGHT
+  const popupHeightClass = onMobile ? "" : inSidePanel ? "" : "h-full"
 
   return (
     <div

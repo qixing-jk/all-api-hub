@@ -1,5 +1,5 @@
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import type { AccountBootstrapCapability } from "~/services/apiAdapters/contracts/accountBootstrap"
 import {
   fetchSupportCheckIn,
@@ -17,7 +17,7 @@ export const aihubmixAccountBootstrap: AccountBootstrapCapability = {
   loadBootstrapFacts: async () => ({
     displayName: "AIHubMix",
     checkInSupported: false,
-    defaultExchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+    defaultExchangeRate: DEFAULT_USD_TO_CNY_RATE,
   }),
   fetchCheckInSupport: (request) => fetchSupportCheckIn(request),
   resolveRoutePath: async (target, route) =>

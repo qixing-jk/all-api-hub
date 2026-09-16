@@ -1,5 +1,5 @@
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { resolveStaticAccountRoutePath } from "~/services/apiAdapters/accountRoutes"
 import type { AccountBootstrapCapability } from "~/services/apiAdapters/contracts/accountBootstrap"
 import {
@@ -27,7 +27,7 @@ export const voApiV2AccountBootstrap: AccountBootstrapCapability = {
   }),
   loadBootstrapFacts: async () => ({
     displayName: VOAPI_V2_SYSTEM_NAME,
-    defaultExchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+    defaultExchangeRate: DEFAULT_USD_TO_CNY_RATE,
     checkInSupported: true,
   }),
   fetchCheckInSupport: (request) => fetchSupportCheckIn(request),

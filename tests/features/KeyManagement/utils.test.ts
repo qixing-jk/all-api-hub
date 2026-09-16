@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
+import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { KEY_MANAGEMENT_LOAD_STATUSES } from "~/features/KeyManagement/types"
 import {
   buildServiceCredentialKeyManagementEntry,
@@ -165,7 +165,7 @@ describe("KeyManagement utils", () => {
     })
 
     it("formats finite quota values as USD with two decimals", () => {
-      const quota = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR * 1.25
+      const quota = QUOTA_PER_USD * 1.25
 
       expect(formatQuota(quota, false)).toBe("$1.25")
     })

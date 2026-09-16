@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
 import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
 import { useFilteredModels } from "~/features/ModelList/hooks/useFilteredModels"
@@ -3472,7 +3472,7 @@ describe("useFilteredModels", () => {
     const explicitRateAccount = createDisplayAccount({
       id: "account-explicit-rate",
       name: "Explicit Rate",
-      balance: { USD: 2, CNY: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT },
+      balance: { USD: 2, CNY: DEFAULT_USD_TO_CNY_RATE },
     })
 
     const pricingContexts = [

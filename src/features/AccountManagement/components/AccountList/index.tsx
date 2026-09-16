@@ -34,7 +34,6 @@ import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementSelectionCheckboxTestId,
 } from "~/features/AccountManagement/testIds"
-import { getHealthStatusDisplay } from "~/features/AccountManagement/utils/healthStatusUtils"
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
 import toast from "~/lib/notify"
 import { cn } from "~/lib/utils"
@@ -60,6 +59,7 @@ import {
   calculateTotalIncomeForSites,
 } from "~/utils/core/formatters"
 import { formatMoneyFixed } from "~/utils/core/money"
+import { getHealthStatusDisplay } from "~/utils/healthStatus"
 
 import CopyKeyDialog from "../CopyKeyDialog"
 import DelAccountDialog from "../DelAccountDialog"

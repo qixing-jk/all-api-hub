@@ -1,4 +1,4 @@
-import { UI_CONSTANTS } from "~/constants/ui"
+import { QUOTA_PER_USD } from "~/constants/money"
 import type {
   AccountData,
   ApiServiceAccountRequest,
@@ -132,7 +132,7 @@ const toOptionalBoolean = (value: unknown): boolean | undefined =>
 // SharedChat's `/frontend-api/vibe-code/quota` returns USD amounts; AccountData
 // balance and consumption fields are stored as internal quota points.
 const amountToQuota = (amount: number): number =>
-  Math.round(amount * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR)
+  Math.round(amount * QUOTA_PER_USD)
 
 const extractSharedChatData = <T>(
   body: SharedChatEnvelope<T>,

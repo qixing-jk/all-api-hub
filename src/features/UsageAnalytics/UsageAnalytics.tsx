@@ -6,8 +6,8 @@ import { EChart } from "~/components/charts/EChart"
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
 import { Button, Card, WorkflowTransitionButton } from "~/components/ui"
+import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { parseDayKey } from "~/services/history/usageHistory/core"
@@ -212,7 +212,7 @@ export default function UsageAnalytics() {
   }, [fusedDailyForTokens])
 
   const selectionCost = useMemo(() => {
-    const conversionFactor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const conversionFactor = QUOTA_PER_USD
     const totalQuotaConsumed = accountTotalsFullRows.reduce(
       (sum, row) => sum + row.quotaConsumed,
       0,
@@ -232,8 +232,7 @@ export default function UsageAnalytics() {
 
     return accountTotalsFullRows.reduce((sum, row) => {
       const exchangeRate =
-        exchangeRateByAccountId.get(row.accountId) ??
-        UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+        exchangeRateByAccountId.get(row.accountId) ?? DEFAULT_USD_TO_CNY_RATE
       return sum + (row.quotaConsumed / conversionFactor) * exchangeRate
     }, 0)
   }, [accountTotalsFullRows, currencyType, enabledAccounts])
@@ -294,7 +293,7 @@ export default function UsageAnalytics() {
   }, [breakdownChartTypeByKey.modelDistribution, modelTotalsRows, t])
 
   const modelCostDistributionOption = useMemo(() => {
-    const conversionFactor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const conversionFactor = QUOTA_PER_USD
     const categories = modelTotalsRows.map((row) => row.modelName)
     const values = modelTotalsRows.map(
       (row) => row.quotaConsumed / conversionFactor,

@@ -1,7 +1,7 @@
 import dayjs from "dayjs"
 import relativeTime from "dayjs/plugin/relativeTime.js"
 
-import { CURRENCY_SYMBOLS, UI_CONSTANTS } from "~/constants/ui"
+import { CURRENCY_SYMBOLS } from "~/constants/money"
 import {
   collectAccountMetricContributors,
   isAccountTodayMetricAvailable,
@@ -48,10 +48,10 @@ export const getTodayMetricPresentation = (
  * 格式化 Token 数量
  */
 export const formatTokenCount = (count: number): string => {
-  if (count >= UI_CONSTANTS.TOKEN.MILLION_THRESHOLD) {
-    return (count / UI_CONSTANTS.TOKEN.MILLION_THRESHOLD).toFixed(1) + "M"
-  } else if (count >= UI_CONSTANTS.TOKEN.THOUSAND_THRESHOLD) {
-    return (count / UI_CONSTANTS.TOKEN.THOUSAND_THRESHOLD).toFixed(1) + "K"
+  if (count >= 1_000_000) {
+    return (count / 1_000_000).toFixed(1) + "M"
+  } else if (count >= 1_000) {
+    return (count / 1_000).toFixed(1) + "K"
   }
   return count.toString()
 }

@@ -1,6 +1,6 @@
 import CountUp from "react-countup"
 
-import { UI_CONSTANTS } from "~/constants/ui"
+import { SUMMARY_ANIMATION_DURATION } from "~/entrypoints/popup/summaryConfig"
 
 /**
  * AnimatedStatValue component animates the display of a numeric value using react-countup.
@@ -25,8 +25,8 @@ export function AnimatedStatValue({
         end={value}
         duration={
           isInitialLoad
-            ? UI_CONSTANTS.ANIMATION.INITIAL_DURATION
-            : UI_CONSTANTS.ANIMATION.UPDATE_DURATION
+            ? SUMMARY_ANIMATION_DURATION.INITIAL
+            : SUMMARY_ANIMATION_DURATION.UPDATE
         }
         decimals={0}
         preserveValue

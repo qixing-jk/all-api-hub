@@ -1,4 +1,4 @@
-import { UI_CONSTANTS } from "~/constants/ui"
+import { QUOTA_PER_USD } from "~/constants/money"
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
@@ -74,9 +74,7 @@ class RedeemService {
 
       const amountStr =
         typeof creditedAmount === "number"
-          ? formatMoneyFixed(
-              creditedAmount / UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
-            )
+          ? formatMoneyFixed(creditedAmount / QUOTA_PER_USD)
           : ""
 
       const message = t("redemptionAssist:messages.redeemSuccess", {

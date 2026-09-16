@@ -1,4 +1,4 @@
-import { UI_CONSTANTS } from "~/constants/ui"
+import { QUOTA_PER_USD } from "~/constants/money"
 import type {
   AccountData,
   ApiServiceAccountRequest,
@@ -162,9 +162,7 @@ const normalizeCredits = (
     throw createInvalidResponseError(OPENROUTER_CREDITS_ENDPOINT)
   }
 
-  const quota = Math.round(
-    remainingUsd * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
-  )
+  const quota = Math.round(remainingUsd * QUOTA_PER_USD)
   if (!Number.isFinite(quota)) {
     throw createInvalidResponseError(OPENROUTER_CREDITS_ENDPOINT)
   }

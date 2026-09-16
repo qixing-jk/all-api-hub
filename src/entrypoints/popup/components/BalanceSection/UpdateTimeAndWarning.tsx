@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
 import { Badge, Caption } from "~/components/ui"
-import { UI_CONSTANTS } from "~/constants/ui"
+import { RELATIVE_TIME_REFRESH_INTERVAL_MS } from "~/entrypoints/popup/summaryConfig"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { formatFullTime, formatRelativeTime } from "~/utils/core/formatters"
 
@@ -37,7 +37,7 @@ export const UpdateTimeAndWarning = () => {
     // 而不是仅在组件初次渲染时计算一次
     const timer = setInterval(
       () => setTick((t) => t + 1),
-      UI_CONSTANTS.UPDATE_INTERVAL,
+      RELATIVE_TIME_REFRESH_INTERVAL_MS,
     )
     return () => clearInterval(timer)
   }, [])

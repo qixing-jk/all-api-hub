@@ -1,6 +1,6 @@
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { AutoDetectCompletionError } from "~/services/accounts/autoDetectCompletion/types"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
@@ -267,8 +267,7 @@ export const createNewApiAccountCompletion = (
     const siteMetadataPromise = bootstrapFactsPromise.then(
       async (bootstrapFacts) => {
         const exchangeRate =
-          bootstrapFacts?.defaultExchangeRate ??
-          UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+          bootstrapFacts?.defaultExchangeRate ?? DEFAULT_USD_TO_CNY_RATE
         helpers.captureRecoveryData({ exchangeRate })
         const siteName = await helpers.fetchSiteName(bootstrapFacts)
         helpers.captureRecoveryData({ siteName })

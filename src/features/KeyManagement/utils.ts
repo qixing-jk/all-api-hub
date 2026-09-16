@@ -1,4 +1,4 @@
-import { UI_CONSTANTS } from "~/constants/ui"
+import { QUOTA_PER_USD } from "~/constants/money"
 import {
   ACCOUNT_RUNTIME_KEY_SOURCES,
   buildServiceCredentialRuntimeKey,
@@ -83,5 +83,5 @@ export const formatKey = (
 // 格式化额度
 export const formatQuota = (quota: number, unlimited: boolean) => {
   if (unlimited || quota < 0) return t("keyManagement:dialog.unlimitedQuota")
-  return `$${(quota / UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR).toFixed(2)}`
+  return `$${(quota / QUOTA_PER_USD).toFixed(2)}`
 }

@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { UI_CONSTANTS } from "~/constants/ui"
+import { QUOTA_PER_USD } from "~/constants/money"
 import { validateAndSaveAccount } from "~/services/accounts/accountCreation"
 import { validateAndUpdateAccount } from "~/services/accounts/accountUpdate"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
@@ -46,8 +46,7 @@ describe("accountPersistence manual quota", () => {
 
     const manualBalanceUsd = "1.23"
     const expectedQuota = Math.round(
-      Number.parseFloat(manualBalanceUsd) *
-        UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+      Number.parseFloat(manualBalanceUsd) * QUOTA_PER_USD,
     )
 
     const createResult = await validateAndSaveAccount(
@@ -103,8 +102,6 @@ describe("accountPersistence manual quota", () => {
     expect(updatedResult.success).toBe(true)
     const updated = await accountStorage.getAccountById(accountId)
     expect((updated as any)?.manualBalanceUsd).toBe("2")
-    expect(updated?.account_info.quota).toBe(
-      2 * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
-    )
+    expect(updated?.account_info.quota).toBe(2 * QUOTA_PER_USD)
   })
 })

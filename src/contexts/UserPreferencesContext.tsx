@@ -18,7 +18,6 @@ import {
 } from "~/constants"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { DEFAULT_THEME_MODE } from "~/constants/theme"
-import { UI_CONSTANTS } from "~/constants/ui"
 import {
   AutoRefreshMessageTypes,
   sendAutoRefreshMessage,
@@ -884,7 +883,7 @@ export const UserPreferencesProvider = ({
     async (enabled: boolean) => {
       const currentActiveTab = preferences?.activeTab ?? DATA_TYPE_CASHFLOW
       const currentSortField =
-        preferences?.sortField ?? UI_CONSTANTS.SORT.DEFAULT_FIELD
+        preferences?.sortField ?? DEFAULT_PREFERENCES.sortField
 
       const nextActiveTab =
         enabled || currentActiveTab !== DATA_TYPE_CASHFLOW
@@ -1950,9 +1949,9 @@ export const UserPreferencesProvider = ({
     showTodayCashflow: preferences?.showTodayCashflow ?? true,
     sortField:
       preferences?.sortField === undefined
-        ? UI_CONSTANTS.SORT.DEFAULT_FIELD
+        ? DEFAULT_PREFERENCES.sortField
         : preferences.sortField,
-    sortOrder: preferences?.sortOrder || UI_CONSTANTS.SORT.DEFAULT_ORDER,
+    sortOrder: preferences?.sortOrder || DEFAULT_PREFERENCES.sortOrder,
     sortingPriorityConfig:
       preferences?.sortingPriorityConfig || DEFAULT_SORTING_PRIORITY_CONFIG,
     autoRefresh:

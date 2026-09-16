@@ -1,4 +1,4 @@
-import { UI_CONSTANTS } from "~/constants/ui"
+import { QUOTA_PER_USD } from "~/constants/money"
 import { normalizeSiteAccount } from "~/services/accounts/accountDefaults"
 import { resolveAccountTodayStatsAvailability } from "~/services/accounts/accountTodayStatsResolver"
 import {
@@ -8,7 +8,7 @@ import {
 import type { DisplaySiteData, SiteAccount } from "~/types"
 
 const convertQuotaToCurrency = (quota: number, exchangeRate: number) => {
-  const USD = quota / UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+  const USD = quota / QUOTA_PER_USD
   return { USD, CNY: USD * exchangeRate }
 }
 

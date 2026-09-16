@@ -1,4 +1,4 @@
-import { UI_CONSTANTS } from "~/constants/ui"
+import { QUOTA_PER_USD } from "~/constants/money"
 import { subtractDaysFromDayKey } from "~/services/history/dailyBalanceHistory/dayKeys"
 import type { CurrencyAmount, SiteAccount } from "~/types"
 import type {
@@ -122,7 +122,7 @@ export function convertQuotaToMoney(params: {
   quota: number
   exchangeRate: number
 }): CurrencyAmount {
-  const usd = params.quota / UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+  const usd = params.quota / QUOTA_PER_USD
   return {
     USD: usd,
     CNY: usd * params.exchangeRate,

@@ -1,5 +1,5 @@
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
-import { UI_CONSTANTS } from "~/constants/ui"
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import type { AccountCompletionCapability } from "~/services/apiAdapters/contracts/accountCompletion"
 import { voApiV2AccountBootstrap } from "~/services/apiAdapters/voapiV2/accountBootstrap"
 import { fetchVoApiV2UserInfo } from "~/services/apiService/voapiV2"
@@ -59,8 +59,7 @@ export const voApiV2AccountCompletion: AccountCompletionCapability = {
       siteName: await helpers.fetchSiteName(facts),
       accessToken,
       userId,
-      exchangeRate:
-        facts.defaultExchangeRate ?? UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+      exchangeRate: facts.defaultExchangeRate ?? DEFAULT_USD_TO_CNY_RATE,
       authType: AuthTypeEnum.AccessToken,
       checkIn: helpers.createInitialCheckInConfig({
         supported: facts.checkInSupported === true,

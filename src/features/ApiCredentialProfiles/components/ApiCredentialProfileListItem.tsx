@@ -27,7 +27,6 @@ import {
   CollapsibleTrigger,
 } from "~/components/ui/collapsible"
 import type { ManagedSiteType } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { cn } from "~/lib/utils"
 import {
@@ -38,7 +37,6 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVerification/i18n"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
-import { SiteHealthStatus } from "~/types"
 import {
   API_CREDENTIAL_TELEMETRY_HEALTH_REASONS,
   API_CREDENTIAL_TELEMETRY_SOURCES,
@@ -50,6 +48,10 @@ import {
   formatLocaleDateTime,
   maskSecretForDisplay,
 } from "~/utils/core/formatters"
+import {
+  getHealthStatusDisplay,
+  getStatusIndicatorColor,
+} from "~/utils/healthStatus"
 
 import {
   type ApiCredentialProfileAssociatedKeyState,
@@ -96,17 +98,6 @@ interface ApiCredentialProfileListItemProps {
   onOpenAssociatedKey?: (associationId: string) => void
   onConfirmAssociatedKey?: (associationId: string) => void
   onUnlinkAssociatedKey?: (associationId: string) => void
-}
-
-/**
- * Maps telemetry health to the small status indicator color.
- */
-function getHealthIndicatorColor(status: SiteHealthStatus | undefined): string {
-  const colors = UI_CONSTANTS.STYLES.STATUS_INDICATOR
-  if (status === SiteHealthStatus.Healthy) return colors.HEALTHY
-  if (status === SiteHealthStatus.Warning) return colors.WARNING
-  if (status === SiteHealthStatus.Error) return colors.ERROR
-  return colors.UNKNOWN
 }
 
 const COMPACT_AUDIT_TIME_FORMAT: Intl.DateTimeFormatOptions = {
@@ -190,21 +181,6 @@ function getTelemetrySourceLabel(
     return t("apiCredentialProfiles:telemetry.source.customReadOnlyEndpoint")
   }
   return source
-}
-
-/**
- * Returns a localized label for telemetry health states.
- */
-function getHealthStatusLabel(
-  t: TFunction,
-  status: SiteHealthStatus | undefined,
-): string {
-  if (status === SiteHealthStatus.Healthy)
-    return t("account:healthStatus.healthy")
-  if (status === SiteHealthStatus.Warning)
-    return t("account:healthStatus.warning")
-  if (status === SiteHealthStatus.Error) return t("account:healthStatus.error")
-  return t("account:healthStatus.unknown")
 }
 
 /** Localizes known product-owned health reasons while preserving unknown diagnostics. */
@@ -311,7 +287,7 @@ export function ApiCredentialProfileListItem({
   const health = telemetry?.health
   const healthTitle = [
     t("apiCredentialProfiles:telemetry.health"),
-    getHealthStatusLabel(t, health?.status),
+    getHealthStatusDisplay(health?.status, t).text,
     getTelemetryHealthReason(t, health?.reason) || telemetry?.lastError || "",
   ]
     .filter(Boolean)
@@ -524,7 +500,7 @@ export function ApiCredentialProfileListItem({
                         }
                       >
                         <span
-                          className={`h-2.5 w-2.5 shrink-0 rounded-full ${getHealthIndicatorColor(
+                          className={`h-2.5 w-2.5 shrink-0 rounded-full ${getStatusIndicatorColor(
                             health?.status,
                           )}`}
                           title={healthTitle}

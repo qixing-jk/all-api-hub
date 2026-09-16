@@ -1,5 +1,5 @@
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
-import { UI_CONSTANTS } from "~/constants/ui"
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { fetchUserInfo } from "~/services/apiService/sharedchat"
 import { AuthTypeEnum } from "~/types"
 
@@ -47,7 +47,7 @@ export const sharedChatAccountCompletion: AccountCompletionCapability = {
       siteName: await helpers.fetchSiteName(null),
       accessToken: userInfo.access_token,
       userId: userInfo.id,
-      exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+      exchangeRate: DEFAULT_USD_TO_CNY_RATE,
       authType: AuthTypeEnum.Cookie,
       checkIn: helpers.createInitialCheckInConfig({
         supported: false,

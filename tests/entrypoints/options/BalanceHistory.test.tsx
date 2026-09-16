@@ -3,8 +3,8 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { echarts } from "~/components/charts/echarts"
+import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import BalanceHistory from "~/entrypoints/options/pages/BalanceHistory"
 import { BALANCE_HISTORY_TEST_IDS } from "~/features/BalanceHistory/testIds"
@@ -372,7 +372,7 @@ describe("BalanceHistory options page", () => {
   })
 
   it("renders non-empty per-account trend series for multi-account partial coverage", async () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
     const fixedNowMs = FIXED_NOW.getTime()
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
@@ -473,7 +473,7 @@ describe("BalanceHistory options page", () => {
       today_quota_consumption,
       expectedValue,
     }) => {
-      const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+      const factor = QUOTA_PER_USD
       const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
       const fixedNowMs = FIXED_NOW.getTime()
       const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
@@ -554,7 +554,7 @@ describe("BalanceHistory options page", () => {
   )
 
   it("uses shared duplicate-name labels in account selectors and trend series", async () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
     const fixedNowMs = FIXED_NOW.getTime()
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
@@ -640,7 +640,7 @@ describe("BalanceHistory options page", () => {
   })
 
   it("refreshes the selected accounts and reloads history after a successful runtime refresh", async () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
     const fixedNowMs = FIXED_NOW.getTime()
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
@@ -744,7 +744,7 @@ describe("BalanceHistory options page", () => {
   })
 
   it("keeps the current balance history content visible while a refresh reload is pending", async () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
     const fixedNowMs = FIXED_NOW.getTime()
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
@@ -850,7 +850,7 @@ describe("BalanceHistory options page", () => {
   })
 
   it("shows a fallback runtime error when refresh fails without a server message", async () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
     const fixedNowMs = FIXED_NOW.getTime()
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
@@ -1060,7 +1060,7 @@ describe("BalanceHistory options page", () => {
   })
 
   it("forces histogram mode for negative net breakdown values", async () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
     const fixedNowMs = FIXED_NOW.getTime()
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
@@ -1167,7 +1167,7 @@ describe("BalanceHistory options page", () => {
   })
 
   it("updates currency and manual date controls", async () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
     const fixedNowMs = FIXED_NOW.getTime()
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
@@ -1251,7 +1251,7 @@ describe("BalanceHistory options page", () => {
   })
 
   it("does not expose selected estimated income metrics after the preference is disabled", async () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
     const fixedNowMs = FIXED_NOW.getTime()
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)

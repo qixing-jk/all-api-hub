@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { BodySmall, Caption } from "~/components/ui"
-import { UI_CONSTANTS } from "~/constants/ui"
+import { RELATIVE_TIME_REFRESH_INTERVAL_MS } from "~/entrypoints/popup/summaryConfig"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 
 import { AnimatedStatValue } from "./AnimatedStatValue"
@@ -18,7 +18,7 @@ export default function BookmarkStatsSection() {
   useEffect(() => {
     const timer = setInterval(
       () => setTick((tick) => tick + 1),
-      UI_CONSTANTS.UPDATE_INTERVAL,
+      RELATIVE_TIME_REFRESH_INTERVAL_MS,
     )
     return () => clearInterval(timer)
   }, [])

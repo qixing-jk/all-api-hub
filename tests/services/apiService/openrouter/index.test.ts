@@ -10,7 +10,7 @@ import {
   vi,
 } from "vitest"
 
-import { UI_CONSTANTS } from "~/constants/ui"
+import { QUOTA_PER_USD } from "~/constants/money"
 import { OPENROUTER_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
 import {
   createOpenRouterManagementRequest,
@@ -262,7 +262,7 @@ describe("apiService OpenRouter", () => {
     )
 
     await expect(fetchAccountData(baseRequest)).resolves.toEqual({
-      quota: Math.round(-2.5 * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR),
+      quota: Math.round(-2.5 * QUOTA_PER_USD),
       today_quota_consumption: 0,
       today_prompt_tokens: 0,
       today_completion_tokens: 0,

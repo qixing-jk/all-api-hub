@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import {
   AccountUpdateUserTimestampMode,
   applySiteAccountUpdates,
@@ -373,7 +373,7 @@ describe("accountDefaults", () => {
       } as any)
 
       expect(normalized.site_type).toBe(SITE_TYPES.UNKNOWN)
-      expect(normalized.exchange_rate).toBe(UI_CONSTANTS.EXCHANGE_RATE.DEFAULT)
+      expect(normalized.exchange_rate).toBe(DEFAULT_USD_TO_CNY_RATE)
       expect(normalized.authType).toBe(AuthTypeEnum.AccessToken)
       expect(normalized.account_info.id).toBe("12")
       expect(normalized.account_info.quota).toBe(15)

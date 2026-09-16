@@ -1,5 +1,5 @@
+import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import type {
   AccountData,
   ApiServiceAccountRequest,
@@ -589,7 +589,7 @@ export async function fetchTodayIncome(
     typeof request.exchangeRate === "number" &&
     Number.isFinite(request.exchangeRate)
       ? request.exchangeRate
-      : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+      : DEFAULT_USD_TO_CNY_RATE
   const incomeCoverageBySource = new Map<LogType, MetricAggregationCoverage>()
   const incomeAggregator = (
     accumulator: AggregatedIncomeData,
@@ -599,7 +599,7 @@ export async function fetchTodayIncome(
     const next = aggregateIncomeData(
       items,
       exchangeRate,
-      UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
+      QUOTA_PER_USD,
       accumulator,
     )
     const sourceCoverage = incomeCoverageBySource.get(logType) ?? {
@@ -618,11 +618,7 @@ export async function fetchTodayIncome(
     request,
     [LogType.Topup, LogType.System],
     incomeAggregator,
-    aggregateIncomeData(
-      [],
-      exchangeRate,
-      UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
-    ),
+    aggregateIncomeData([], exchangeRate, QUOTA_PER_USD),
     timestampRange,
     (error, logType) => {
       const typeName = logType === LogType.Topup ? "充值" : "签到"

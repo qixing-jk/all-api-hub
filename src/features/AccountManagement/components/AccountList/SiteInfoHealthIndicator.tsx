@@ -3,10 +3,6 @@ import { useTranslation } from "react-i18next"
 import Tooltip from "~/components/Tooltip"
 import { IconButton, WorkflowTransitionButton } from "~/components/ui"
 import {
-  getHealthStatusDisplay,
-  getStatusIndicatorColor,
-} from "~/features/AccountManagement/utils/healthStatusUtils"
-import {
   getTempWindowFallbackSettingsAnchor,
   getTempWindowFallbackSettingsTab,
   isTempWindowFallbackReminderCode,
@@ -21,6 +17,10 @@ import {
 import { getErrorMessage } from "~/utils/core/error"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
+import {
+  getHealthStatusDisplay,
+  getStatusIndicatorColor,
+} from "~/utils/healthStatus"
 import {
   openProtectionBypassHistory,
   openSettingsTab,

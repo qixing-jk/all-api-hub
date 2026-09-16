@@ -1,5 +1,5 @@
+import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import type { RefreshAccountResult } from "~/services/accounts/accountDataModel"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile"
@@ -139,9 +139,7 @@ class AccountRefresh {
             ? (() => {
                 const amount = Number.parseFloat(manualBalanceUsd)
                 if (!Number.isFinite(amount) || amount < 0) return undefined
-                return Math.round(
-                  amount * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
-                )
+                return Math.round(amount * QUOTA_PER_USD)
               })()
             : undefined
 

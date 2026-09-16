@@ -14,8 +14,8 @@ import {
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
+import { QUOTA_PER_USD } from "~/constants/money"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { UI_CONSTANTS } from "~/constants/ui"
 import {
   AccountDataProvider,
   useAccountDataContext,
@@ -782,7 +782,7 @@ describe("AccountDataContext handleReorder", () => {
 
 describe("AccountDataContext initial load orchestration", () => {
   it("excludes today-income opt-outs from estimated income totals", async () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
 
     mockUserPreferencesContext.current = {
       ...mockUserPreferencesContext.current,
@@ -862,7 +862,7 @@ describe("AccountDataContext initial load orchestration", () => {
   })
 
   it("projects available estimated income onto display account rows", async () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
 
     mockUserPreferencesContext.current = {
       ...mockUserPreferencesContext.current,
@@ -2934,7 +2934,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
   })
 
   it("preserves estimated today income on targeted reload display rows", async () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
 
     mockUserPreferencesContext.current = {
       ...mockUserPreferencesContext.current,

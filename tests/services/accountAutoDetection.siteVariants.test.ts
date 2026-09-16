@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
@@ -103,7 +103,7 @@ describe("accountAutoDetection", () => {
     expect(result.data?.username).toBe("")
     expect(result.data?.siteName).toBe("Example Portal")
     expect(result.data?.accessToken).toBe("jwt-token")
-    expect(result.data?.exchangeRate).toBe(UI_CONSTANTS.EXCHANGE_RATE.DEFAULT)
+    expect(result.data?.exchangeRate).toBe(DEFAULT_USD_TO_CNY_RATE)
     expect(mockLoadBootstrapFacts).toHaveBeenCalledTimes(1)
     expect(
       mockLoadBootstrapFacts.mock.calls[0]?.[0].protectionBypassExecution,
@@ -135,7 +135,7 @@ describe("accountAutoDetection", () => {
       siteType: SITE_TYPES.SUB2API,
       username: "alice",
       accessToken: "jwt-token",
-      exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+      exchangeRate: DEFAULT_USD_TO_CNY_RATE,
     })
   })
 
@@ -178,7 +178,7 @@ describe("accountAutoDetection", () => {
       accessToken: "shared-user-token",
       userId: "shared-user-id",
       authType: AuthTypeEnum.Cookie,
-      exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+      exchangeRate: DEFAULT_USD_TO_CNY_RATE,
       checkIn: {
         automaticExecutionEnabled: false,
         methodKnowledge: { methods: {} },

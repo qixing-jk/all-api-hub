@@ -1,4 +1,4 @@
-import { UI_CONSTANTS } from "~/constants/ui"
+import { QUOTA_PER_USD } from "~/constants/money"
 import {
   TELEMETRY_PROVIDER_PROTOCOL,
   type TelemetryPatch,
@@ -41,7 +41,7 @@ export function readNumber(value: unknown): number | undefined {
  */
 function quotaToUsd(value: number | undefined): number | undefined {
   if (value === undefined) return undefined
-  return value / UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+  return value / QUOTA_PER_USD
 }
 
 /**

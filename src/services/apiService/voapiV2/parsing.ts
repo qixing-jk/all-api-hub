@@ -1,4 +1,4 @@
-import { UI_CONSTANTS } from "~/constants/ui"
+import { QUOTA_PER_USD } from "~/constants/money"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { getErrorMessage } from "~/utils/core/error"
 
@@ -90,13 +90,13 @@ export const amountToQuota = (amount: unknown): number => {
   const parsed = toFiniteNumber(amount)
   if (parsed <= 0) return 0
 
-  return Math.round(parsed * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR)
+  return Math.round(parsed * QUOTA_PER_USD)
 }
 
 export const quotaToAmountString = (quota: unknown): string => {
   const parsed = typeof quota === "number" && Number.isFinite(quota) ? quota : 0
   if (parsed <= 0) return "0"
 
-  const amount = parsed / UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+  const amount = parsed / QUOTA_PER_USD
   return Number(amount.toFixed(6)).toString()
 }

@@ -1,4 +1,4 @@
-import { UI_CONSTANTS } from "~/constants/ui"
+import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
 import { listDayKeysInRange } from "~/services/history/dailyBalanceHistory/dayKeys"
 import { estimateTodayIncomeForAccount } from "~/services/history/dailyBalanceHistory/todayIncomeEstimate"
 import type { CurrencyType } from "~/types"
@@ -77,7 +77,7 @@ function resolveExchangeRate(params: {
 
   return typeof value === "number" && Number.isFinite(value) && value > 0
     ? value
-    : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+    : DEFAULT_USD_TO_CNY_RATE
 }
 
 /**
@@ -216,9 +216,9 @@ export function buildAggregatedDailyBalanceSeries(params: {
  *
  * Notes:
  * - The underlying snapshots are stored in the extension's quota unit, which maps to USD
- *   via {@link UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR}.
+ *   via {@link QUOTA_PER_USD}.
  * - For CNY, each account can have its own exchange rate (CNY per USD). When missing/invalid,
- *   {@link UI_CONSTANTS.EXCHANGE_RATE.DEFAULT} is used.
+ *   {@link DEFAULT_USD_TO_CNY_RATE} is used.
  * - Missing snapshots and missing cashflow values are treated as gaps by returning `null`
  *   values for those days (same behavior as {@link buildAggregatedDailyBalanceSeries}).
  */
@@ -265,7 +265,7 @@ export function buildAggregatedDailyBalanceMoneySeries(params: {
     }
   }
 
-  const conversionFactor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+  const conversionFactor = QUOTA_PER_USD
 
   const balanceTotals: Array<number | null> = []
   const incomeTotals: Array<number | null> = []
@@ -381,7 +381,7 @@ export function buildPerAccountDailyBalanceMoneySeries(params: {
     return { dayKeys, seriesByAccountId, coverageByDay }
   }
 
-  const conversionFactor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+  const conversionFactor = QUOTA_PER_USD
 
   for (const accountId of accountIds) {
     const exchangeRate = resolveExchangeRate({
@@ -501,7 +501,7 @@ export function buildAccountRangeSummaries(params: {
     return { dayKeys, summaries: [] }
   }
 
-  const conversionFactor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+  const conversionFactor = QUOTA_PER_USD
 
   const summaries: AccountRangeSummary[] = []
 

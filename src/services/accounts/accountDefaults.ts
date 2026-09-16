@@ -1,6 +1,6 @@
 import { CHECK_IN_SELECTION_MODES } from "~/constants/checkIn"
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { coerceAccountIdentity } from "~/services/accounts/accountIdentity"
 import { normalizeAccountSiteProfileUrlForStorage } from "~/services/accounts/accountSiteProfile/urls"
 import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
@@ -56,7 +56,7 @@ const DEFAULT_SITE_ACCOUNT: SiteAccount = {
   site_url: "",
   health: DEFAULT_HEALTH_STATUS,
   site_type: SITE_TYPES.UNKNOWN,
-  exchange_rate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+  exchange_rate: DEFAULT_USD_TO_CNY_RATE,
   account_info: DEFAULT_ACCOUNT_INFO,
   last_sync_time: 0,
   updated_at: 0,
@@ -404,10 +404,7 @@ export function normalizeSiteAccount(raw: SiteAccount): SiteAccount {
         : SITE_TYPES.UNKNOWN,
       url: coerceString(merged.site_url, ""),
     }),
-    exchange_rate: coerceNumber(
-      merged.exchange_rate,
-      UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
-    ),
+    exchange_rate: coerceNumber(merged.exchange_rate, DEFAULT_USD_TO_CNY_RATE),
     account_info: normalizeAccountInfo(merged.account_info),
     health: normalizeHealthStatus(merged.health),
     last_sync_time: coerceNumber(merged.last_sync_time, 0),

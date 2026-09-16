@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import {
   isValidAccount,
@@ -590,7 +590,7 @@ describe("account persistence and form validation", () => {
   describe("parseManualQuotaFromUsd", () => {
     it("rounds valid manual balances into quota units", () => {
       expect(parseManualQuotaFromUsd("1.234")).toBe(
-        Math.round(1.234 * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR),
+        Math.round(1.234 * QUOTA_PER_USD),
       )
     })
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { UI_CONSTANTS } from "~/constants/ui"
+import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
 import {
   buildAccountRangeSummaries,
   buildAggregatedDailyBalanceMoneySeries,
@@ -64,7 +64,7 @@ describe("dailyBalanceHistory selectors", () => {
   })
 
   it("converts aggregated quota snapshots into USD amounts", () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const store = createStore({
       a1: {
         "2026-02-07": {
@@ -101,7 +101,7 @@ describe("dailyBalanceHistory selectors", () => {
   })
 
   it("converts aggregated quota snapshots into CNY amounts using per-account exchange rates", () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const store = createStore({
       a1: {
         "2026-02-07": {
@@ -304,7 +304,7 @@ describe("dailyBalanceHistory selectors", () => {
       expectedIncome,
       expectedOutcome,
     }) => {
-      const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+      const factor = QUOTA_PER_USD
       const result = buildAggregatedDailyBalanceMoneySeries({
         store: createStore({
           a1: {
@@ -407,7 +407,7 @@ describe("dailyBalanceHistory selectors", () => {
   })
 
   it("falls back to the default exchange rate when a CNY account rate is missing or invalid", () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const store = createStore({
       a1: {
         "2026-02-07": {
@@ -441,14 +441,14 @@ describe("dailyBalanceHistory selectors", () => {
       },
     })
 
-    const fallbackRate = UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+    const fallbackRate = DEFAULT_USD_TO_CNY_RATE
     expect(result.balanceTotals).toEqual([(2 + 3) * fallbackRate])
     expect(result.incomeTotals).toEqual([(1 + 2) * fallbackRate])
     expect(result.outcomeTotals).toEqual([(0.5 + 1) * fallbackRate])
   })
 
   it("builds per-account daily series with per-account gaps (does not blank other accounts)", () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const store = createStore({
       a1: {
         "2026-02-07": {
@@ -517,7 +517,7 @@ describe("dailyBalanceHistory selectors", () => {
       expectedIncomeAccounts,
       expectedOutcomeAccounts,
     }) => {
-      const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+      const factor = QUOTA_PER_USD
       const result = buildPerAccountDailyBalanceMoneySeries({
         store: createStore({
           a1: {
@@ -552,7 +552,7 @@ describe("dailyBalanceHistory selectors", () => {
   )
 
   it("builds estimated income per-account series without changing trusted income", () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const store = createStore({
       a1: {
         "2026-02-06": {
@@ -592,7 +592,7 @@ describe("dailyBalanceHistory selectors", () => {
   })
 
   it("returns null estimated income per-account series when estimates are disabled", () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const store = createStore({
       a1: {
         "2026-02-06": {
@@ -630,7 +630,7 @@ describe("dailyBalanceHistory selectors", () => {
   })
 
   it("returns null estimated income for manual balance accounts", () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const store = createStore({
       a1: {
         "2026-02-06": {
@@ -669,7 +669,7 @@ describe("dailyBalanceHistory selectors", () => {
   })
 
   it("converts per-account daily series into CNY using per-account exchange rates", () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const store = createStore({
       a1: {
         "2026-02-07": {
@@ -738,7 +738,7 @@ describe("dailyBalanceHistory selectors", () => {
   })
 
   it("summarizes per-account range totals and coverage", () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const store = createStore({
       a1: {
         "2026-02-07": {
@@ -839,7 +839,7 @@ describe("dailyBalanceHistory selectors", () => {
       expectedIncomeDays,
       expectedOutcomeDays,
     }) => {
-      const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+      const factor = QUOTA_PER_USD
       const result = buildAccountRangeSummaries({
         store: createStore({
           a1: {
@@ -874,7 +874,7 @@ describe("dailyBalanceHistory selectors", () => {
   )
 
   it("sums range net only from days with paired income and outcome", () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const result = buildAccountRangeSummaries({
       store: createStore({
         a1: {
@@ -918,7 +918,7 @@ describe("dailyBalanceHistory selectors", () => {
   })
 
   it("summarizes estimated income separately from trusted income", () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const store = createStore({
       a1: {
         "2026-02-06": {
@@ -955,7 +955,7 @@ describe("dailyBalanceHistory selectors", () => {
   })
 
   it("excludes disabled estimated income from range summaries", () => {
-    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const factor = QUOTA_PER_USD
     const store = createStore({
       a1: {
         "2026-02-06": {

@@ -1,5 +1,5 @@
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
-import { UI_CONSTANTS } from "~/constants/ui"
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { AuthTypeEnum } from "~/types"
 
 import type { AccountCompletionCapability } from "../contracts/accountCompletion"
@@ -72,7 +72,7 @@ export const aihubmixAccountCompletion: AccountCompletionCapability = {
     }
 
     const exchangeRate =
-      bootstrapFacts?.defaultExchangeRate ?? UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+      bootstrapFacts?.defaultExchangeRate ?? DEFAULT_USD_TO_CNY_RATE
     helpers.captureRecoveryData({ exchangeRate })
 
     const checkSupport = await aihubmixAccountBootstrap
