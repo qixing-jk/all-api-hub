@@ -262,6 +262,7 @@ async function openKeyManagementPageFromAccountRow(params: {
 async function submitCreateTokenForm(params: {
   page: Page
   tokenName: string
+  prepareEditor?: (editor: Locator) => Promise<void>
 }) {
   await params.page.getByRole("button", { name: "Add API Key" }).click()
   const editor = params.page.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditor)
@@ -270,6 +271,7 @@ async function submitCreateTokenForm(params: {
     timeout: 30_000,
   })
   await nameInput.fill(params.tokenName)
+  await params.prepareEditor?.(editor)
   await params.page
     .getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton)
     .click()
@@ -524,10 +526,12 @@ export async function openKeyManagementForAccount(params: {
 export async function submitTokenCreationFromKeyManagementPage(params: {
   page: Page
   tokenName: string
+  prepareEditor?: (editor: Locator) => Promise<void>
 }) {
   await submitCreateTokenForm({
     page: params.page,
     tokenName: params.tokenName,
+    prepareEditor: params.prepareEditor,
   })
 }
 

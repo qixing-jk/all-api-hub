@@ -2384,7 +2384,7 @@ describe("useModelData all-accounts loading", () => {
     ])
   })
 
-  it("loads only active Sub2API fallback keys in all-accounts mode", async () => {
+  it("loads only active recoverable Sub2API keys in all-accounts mode", async () => {
     const fetchPricing = vi.fn()
     vi.mocked(getSiteTypeCapabilities).mockReturnValue(
       createMockSiteTypeCapabilities(fetchPricing, {
@@ -2403,7 +2403,7 @@ describe("useModelData all-accounts loading", () => {
       {
         id: 21,
         user_id: 21,
-        key: "sk-active",
+        key: "",
         status: 1,
         name: "Active runtime key",
         created_time: 0,
@@ -4391,7 +4391,7 @@ describe("useModelData all-accounts loading", () => {
     )
   })
 
-  it("auto-loads Sub2API runtime models when a single fallback key is available", async () => {
+  it("auto-loads Sub2API runtime models with a single recoverable key", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
@@ -4414,7 +4414,7 @@ describe("useModelData all-accounts loading", () => {
     const fallbackToken = {
       id: 19,
       user_id: 19,
-      key: "sk-sub2api-auto-masked",
+      key: "",
       status: 1,
       name: "Only runtime key",
       created_time: 0,

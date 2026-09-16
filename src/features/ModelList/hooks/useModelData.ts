@@ -20,7 +20,8 @@ import {
 } from "~/features/ModelList/modelManagementSources"
 import toast from "~/lib/notify"
 import {
-  hasUsableAccountRuntimeKeySecret,
+  ACCOUNT_RUNTIME_KEY_STATUSES,
+  isSelectableAccountRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import {
@@ -851,6 +852,12 @@ async function loadRuntimeKeyScopedCatalogPricingContext(params: {
   }
 }
 
+// Native resource inventories intentionally omit secrets; resolve them only
+// when loading the selected key's catalog, as other runtime-key actions do.
+const isUsableCatalogRuntimeKey = (runtimeKey: AccountRuntimeKey) =>
+  runtimeKey.status === ACCOUNT_RUNTIME_KEY_STATUSES.Active &&
+  isSelectableAccountRuntimeKey(runtimeKey)
+
 /** Loads runtime-key-scoped catalog fallbacks for every account runtime key in comparison mode. */
 async function fetchRuntimeKeyScopedCatalogPricingContexts(
   account: DisplaySiteData,
@@ -861,7 +868,7 @@ async function fetchRuntimeKeyScopedCatalogPricingContexts(
   }
 
   const runtimeKeys = (await fetchDisplayAccountRuntimeKeys(account)).filter(
-    hasUsableAccountRuntimeKeySecret,
+    isUsableCatalogRuntimeKey,
   )
   if (abortSignal?.aborted) {
     throw abortSignal.reason ?? new DOMException("Aborted", "AbortError")
@@ -1231,7 +1238,7 @@ function useSingleAccountModelData(params: {
     try {
       const runtimeKeys = (
         await fetchDisplayAccountRuntimeKeys(currentAccount)
-      ).filter(hasUsableAccountRuntimeKeySecret)
+      ).filter(isUsableCatalogRuntimeKey)
 
       if (!isActiveFallbackRuntimeKeysRequest(requestScopeKey, requestId)) {
         return

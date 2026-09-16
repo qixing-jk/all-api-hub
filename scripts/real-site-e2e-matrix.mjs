@@ -70,6 +70,7 @@ const REAL_SITE_E2E_MATRIX = [
     env_prefix: "VELOERA",
     kind: "managed-site",
     managed_site_target: "Veloera",
+    resource_group: REAL_SITE_E2E_RESOURCE_GROUPS.newApiAccount,
     spec: "e2e/realSite/managedSiteChannels.spec.ts",
   },
   {
@@ -79,6 +80,7 @@ const REAL_SITE_E2E_MATRIX = [
     env_prefix: "DONE_HUB",
     kind: "managed-site",
     managed_site_target: "done-hub",
+    resource_group: REAL_SITE_E2E_RESOURCE_GROUPS.newApiAccount,
     spec: "e2e/realSite/managedSiteChannels.spec.ts",
   },
   {
@@ -98,6 +100,7 @@ const REAL_SITE_E2E_MATRIX = [
     env_prefix: "AXON_HUB",
     kind: "managed-site",
     managed_site_target: "axonhub",
+    resource_group: REAL_SITE_E2E_RESOURCE_GROUPS.newApiAccount,
     spec: "e2e/realSite/managedSiteChannels.spec.ts",
   },
   {
@@ -107,6 +110,7 @@ const REAL_SITE_E2E_MATRIX = [
     env_prefix: "CLAUDE_CODE_HUB",
     kind: "managed-site",
     managed_site_target: "claude-code-hub",
+    resource_group: REAL_SITE_E2E_RESOURCE_GROUPS.newApiAccount,
     spec: "e2e/realSite/managedSiteChannels.spec.ts",
   },
   {

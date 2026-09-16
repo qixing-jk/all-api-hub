@@ -387,10 +387,7 @@ test.describe("real-site E2E: managed-site channel management", () => {
               }))
 
           if (statusResult.skipped) {
-            testInfo.annotations.push({
-              type: "skip",
-              description: statusResult.reason,
-            })
+            throw new Error(statusResult.reason)
           }
         } finally {
           await sourceAccount.cleanup()

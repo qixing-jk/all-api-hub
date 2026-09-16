@@ -58,7 +58,8 @@ export async function expectOctopusImportModels(params: {
   const body = await response.json()
   expect(body.code, "Octopus model probe result code").toBe(200)
   expect(Array.isArray(body.data), "Octopus returned a model list").toBe(true)
-  expect(body.data.length, "Octopus fetched upstream models").toBeGreaterThan(0)
+  // An authenticated upstream may legitimately expose no models. Discovery must
+  // complete successfully without making channel creation depend on its catalog.
   await expect(
     models.getByRole("button", {
       name: "Refresh Available Models",
@@ -66,4 +67,7 @@ export async function expectOctopusImportModels(params: {
     }),
   ).toBeEnabled({ timeout: 30_000 })
   await expect(models.getByRole("alert")).toHaveCount(0)
+  await expect(
+    params.page.getByTestId(CHANNEL_DIALOG_TEST_IDS.modelsInput),
+  ).toBeEnabled()
 }

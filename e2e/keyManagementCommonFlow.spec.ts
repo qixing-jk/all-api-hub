@@ -33,6 +33,7 @@ import {
   verifyAccountTokenCcSwitchModelPickerUsage,
 } from "~~/e2e/scenarios/accountUsage"
 import { verifyCcSwitchModelExportDeepLink } from "~~/e2e/scenarios/ccSwitchExport"
+import { runManagedSiteTokenChannelStatusScenario } from "~~/e2e/scenarios/managedSiteChannels"
 import {
   deleteTokenFromKeyManagementPage,
   getAccountKeyResourceRow,
@@ -98,6 +99,16 @@ async function stubManagedSiteImportTargetRoutes(
       const request = route.request()
       const url = new URL(request.url())
       const method = request.method()
+
+      if (
+        method === "DELETE" &&
+        createdChannel &&
+        url.pathname === `/api/channel/${createdChannel.id}`
+      ) {
+        createdChannel = null
+        await route.fulfill({ json: { success: true, message: "deleted" } })
+        return
+      }
 
       if (
         method === "GET" &&
@@ -209,8 +220,57 @@ async function stubManagedSiteImportTargetRoutes(
     },
   )
 
-  return { createPayloads }
+  return {
+    createPayloads,
+    getRemainingChannelCount: () => (createdChannel ? 1 : 0),
+  }
 }
+
+test("imports a New API key with no upstream models using a custom channel model", async ({
+  context,
+  page,
+  extensionId,
+}) => {
+  test.setTimeout(120_000)
+  await forceExtensionLanguage(page, "en")
+  await stubLlmMetadataIndex(context)
+  await stubNewApiSiteRoutes(context, { models: [] })
+  const fixture = await stubManagedSiteImportTargetRoutes(context)
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    managedSiteType: SITE_TYPES.NEW_API,
+    newApi: {
+      baseUrl: MANAGED_SITE_IMPORT_TARGET_ORIGIN,
+      adminToken: "fixture-admin-token",
+      userId: "1",
+      username: "",
+      password: "",
+      totpSecret: "",
+    },
+    autoCheckin: { globalEnabled: false, pretriggerDailyOnUiOpen: false },
+    openChangelogOnUpdate: false,
+  })
+  const sourceAccount = await seedMockAccountFixture({ serviceWorker })
+  try {
+    const result = await runManagedSiteTokenChannelStatusScenario({
+      page,
+      extensionId,
+      siteType: SITE_TYPES.NEW_API,
+      label: "New API",
+      runPrefix: "AAH E2E New API empty catalog",
+      tokenName: "AAH E2E empty catalog source",
+      sourceAccount,
+    })
+    expect(result.skipped).toBe(false)
+    expect(fixture.createPayloads).toHaveLength(1)
+    expect(fixture.createPayloads[0]).toMatchObject({
+      channel: { models: "aah-e2e-custom-model" },
+    })
+    expect(fixture.getRemainingChannelCount()).toBe(0)
+  } finally {
+    await sourceAccount.cleanup()
+  }
+})
 
 async function stubSharedChatServiceCredentialRoutes(
   context: Parameters<typeof stubNewApiSiteRoutes>[0],

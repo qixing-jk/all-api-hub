@@ -225,8 +225,8 @@ jobs:
             echo "${REAL_SITE_CATEGORY}/${prefix} real-site E2E required secrets are configured."
           fi
 
-      - name: Export Octopus import source environment
-        if: matrix.managed_site_target == 'octopus'
+      - name: Export managed-site import source environment
+        if: matrix.category == 'managed-site' && matrix.resource_group == 'new-api-account'
         env:
           AAH_E2E_NEW_API_BASE_URL: ${{ secrets.AAH_E2E_NEW_API_BASE_URL }}
           AAH_E2E_NEW_API_USERNAME: ${{ secrets.AAH_E2E_NEW_API_USERNAME }}
@@ -251,7 +251,8 @@ jobs:
             [ -z "${!key}" ] && missing+=("$key")
           done
           if [ "${#missing[@]}" -gt 0 ]; then
-            echo "::warning::Octopus cross-site import E2E will skip without source-account secrets: ${missing[*]}"
+            echo "::error::Managed-site import E2E requires source-account secrets: ${missing[*]}"
+            exit 1
           fi
 
       - name: Run real-site E2E

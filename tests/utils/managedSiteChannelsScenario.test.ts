@@ -18,7 +18,17 @@ describe("getManagedSiteStatusSourceAccountType", () => {
     expect(getManagedSiteStatusSourceAccountType(SITE_TYPES.OCTOPUS)).toBe(
       SITE_TYPES.NEW_API,
     )
-    expect(getManagedSiteStatusSourceAccountType(SITE_TYPES.VELOERA)).toBeNull()
+  })
+
+  it.each([
+    SITE_TYPES.VELOERA,
+    SITE_TYPES.DONE_HUB,
+    SITE_TYPES.AXON_HUB,
+    SITE_TYPES.CLAUDE_CODE_HUB,
+  ])("provides a New API source account for %s imports", (siteType) => {
+    expect(getManagedSiteStatusSourceAccountType(siteType)).toBe(
+      SITE_TYPES.NEW_API,
+    )
   })
 })
 

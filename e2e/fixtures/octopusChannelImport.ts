@@ -9,8 +9,10 @@ type Channel = Record<string, unknown> & { id: number; name: string }
 export async function stubOctopusChannelImport(params: {
   context: BrowserContext
   version: OctopusVersion
+  models?: string[]
 }) {
   const channels: Channel[] = []
+  const models = params.models ?? ["gpt-4o-mini", "gpt-4.1-mini"]
   const createPayloads: Record<string, unknown>[] = []
   let detailReads = 0
   let modelProbes = 0
@@ -163,9 +165,7 @@ export async function stubOctopusChannelImport(params: {
         return
       }
       await fulfill(
-        params.version === "v0.13"
-          ? [{ name: "gpt-4o-mini" }, { name: "gpt-4.1-mini" }]
-          : ["gpt-4o-mini", "gpt-4.1-mini"],
+        params.version === "v0.13" ? models.map((name) => ({ name })) : models,
       )
       return
     }
