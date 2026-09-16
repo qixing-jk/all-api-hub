@@ -143,9 +143,9 @@ function createOpenRouterCatalogPricingResponse(
 ) {
   return {
     data: models.map(adaptOpenRouterModel),
-    group_ratio: {},
+    groupRatios: {},
     success: true,
-    usable_group: {},
+    groupAccess: { kind: "not-applicable" },
     model_list_source: {
       kind: MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG,
       provider: SITE_TYPES.OPENROUTER,

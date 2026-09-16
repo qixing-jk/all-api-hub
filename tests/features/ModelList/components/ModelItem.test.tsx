@@ -5,13 +5,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelItem from "~/features/ModelList/components/ModelItem"
 import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
+import toast from "~/lib/notify"
+import { SITE_TYPES } from "~/services/accountSiteDefinitions/identifiers"
 import {
   createAccountTokenModelListSourceIdentity,
   createPersonalizedCatalogModelListSourceIdentity,
   createProviderCatalogModelListSourceIdentity,
-} from "~/features/ModelList/modelManagementSources"
-import toast from "~/lib/notify"
-import { SITE_TYPES } from "~/services/accountSiteDefinitions/identifiers"
+} from "~/services/modelCatalog/sourceIdentity"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 import {
   MODEL_DISPLAY_FACT_LABELS,

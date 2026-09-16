@@ -1,6 +1,6 @@
 import { expect, it } from "vitest"
 
-import { buildAIHubMixPricingPlan } from "~/services/apiService/aihubmix/pricingPlan"
+import { buildAIHubMixPricingPlan } from "~/services/apiAdapters/aihubmix/pricingPlan"
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
 
 it.each([

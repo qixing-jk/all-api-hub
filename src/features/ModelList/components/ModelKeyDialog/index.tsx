@@ -16,7 +16,6 @@ import {
   WorkflowTransitionButton,
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
-import { normalizeGroupNames } from "~/features/ModelList/groupNormalization"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
@@ -26,6 +25,7 @@ import {
   getPreferredAccountKeyGroup,
 } from "~/services/accounts/accountKeyNames"
 import { type AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { normalizeGroupNames } from "~/services/modelCatalog/groupFacts"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {

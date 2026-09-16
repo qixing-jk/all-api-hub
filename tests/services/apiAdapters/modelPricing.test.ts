@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { aihubmixModelPricing } from "~/services/apiAdapters/aihubmix/modelPricing"
 import { createNewApiModelPricing } from "~/services/apiAdapters/newApi/modelPricing"
-import type { PricingResponse } from "~/services/modelList/pricingModel"
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import { AuthTypeEnum } from "~/types"
 
@@ -23,7 +23,7 @@ vi.mock("~/services/apiService/newApiFamily/default/modelPricing", () => ({
   },
 }))
 
-vi.mock("~/services/apiService/aihubmix", () => ({
+vi.mock("~/services/apiAdapters/aihubmix/catalog", () => ({
   fetchModelPricing: mockAihubmixFetchModelPricing,
   invalidateAIHubMixPublicCatalogs: vi.fn(),
 }))
@@ -42,7 +42,7 @@ const request = {
   },
 }
 
-const pricingResponse: PricingResponse = {
+const pricingResponse: ModelCatalogSnapshot = {
   data: [
     {
       model_name: "example-model",
@@ -54,9 +54,9 @@ const pricingResponse: PricingResponse = {
       supported_endpoint_types: [],
     },
   ],
-  group_ratio: {},
+  groupRatios: {},
   success: true,
-  usable_group: {},
+  groupAccess: { kind: "authoritative", usableGroups: [] },
 }
 
 describe("apiAdapter modelPricing", () => {
@@ -65,7 +65,12 @@ describe("apiAdapter modelPricing", () => {
   })
 
   it("delegates New API-family model pricing through the New API-family implementation", async () => {
-    mockFetchModelPricing.mockResolvedValueOnce(pricingResponse)
+    mockFetchModelPricing.mockResolvedValueOnce({
+      data: pricingResponse.data,
+      success: true,
+      group_ratio: {},
+      usable_group: {},
+    })
 
     const modelPricing = createNewApiModelPricing(SITE_TYPES.NEW_API)
 
@@ -98,7 +103,7 @@ describe("apiAdapter modelPricing", () => {
 
   it("delegates AIHubMix model pricing to the AIHubMix helper", async () => {
     expect(aihubmixModelPricing.runtimeKeyFallback).toBe("account-pricing")
-    const aihubmixPricingResponse: PricingResponse = {
+    const aihubmixPricingResponse: ModelCatalogSnapshot = {
       ...pricingResponse,
       data: [
         {

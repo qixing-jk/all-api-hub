@@ -1,11 +1,9 @@
 import { describe, expect, it } from "vitest"
 
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
 import {
-  createAccountRuntimeKeyModelListSourceIdentity,
   createAccountSource,
-  createAccountTokenModelListSourceIdentity,
   createAllAccountsSource,
   createProfileSource,
   MODEL_LIST_GROUP_SEMANTICS,
@@ -14,33 +12,15 @@ import {
   prepareModelListSource,
   prepareModelListSources,
 } from "~/features/ModelList/sourcePreparation"
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import {
-  MODEL_LIST_SOURCE_KINDS,
-  type PricingResponse,
-} from "~/services/modelList/pricingModel"
+  createAccountRuntimeKeyModelListSourceIdentity,
+  createAccountTokenModelListSourceIdentity,
+} from "~/services/modelCatalog/sourceIdentity"
+import { MODEL_LIST_SOURCE_KINDS } from "~/services/modelList/pricingModel"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
-import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
-import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
-
-const createAccountFixture = (siteType: AccountSiteType): DisplaySiteData => ({
-  id: `account-${siteType}`,
-  name: "Example Account",
-  username: "example-user",
-  balance: { USD: 0, CNY: 0 },
-  todayConsumption: { USD: 0, CNY: 0 },
-  todayIncome: { USD: 0, CNY: 0 },
-  todayTokens: { upload: 0, download: 0 },
-  todayStatsAvailability: buildCompleteTodayStatsAvailability(),
-  health: { status: SiteHealthStatus.Healthy },
-  siteType,
-  baseUrl: "https://account.example.invalid",
-  token: "example-token",
-  userId: "example-user-id",
-  authType: AuthTypeEnum.AccessToken,
-  checkIn: buildCheckInConfig(),
-})
+import { buildModelListAccountFixture } from "~~/tests/test-utils/modelListSource"
 
 const PROFILE_FIXTURE: ApiCredentialProfile = {
   id: "profile-1",
@@ -55,8 +35,8 @@ const PROFILE_FIXTURE: ApiCredentialProfile = {
 }
 
 const pricing = (
-  overrides: Partial<PricingResponse> = {},
-): PricingResponse => ({
+  overrides: Partial<ModelCatalogSnapshot> = {},
+): ModelCatalogSnapshot => ({
   success: true,
   data: [
     {
@@ -69,11 +49,14 @@ const pricing = (
       supported_endpoint_types: [],
     },
   ],
-  usable_group: { default: true },
-  group_ratio: { default: 1 },
+  groupAccess: {
+    kind: "authoritative",
+    usableGroups: ["default"],
+  },
+  groupRatios: { default: 1 },
   ...overrides,
 })
-const account = createAccountFixture(SITE_TYPES.NEW_API)
+const account = buildModelListAccountFixture(SITE_TYPES.NEW_API)
 const source = createAccountSource(account)
 const fallback = {
   kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
@@ -83,8 +66,11 @@ const fallback = {
 describe("model list source preparation", () => {
   it("separates support, access, and priceability without mutating inputs", () => {
     const response = pricing({
-      usable_group: { " vip ": true, default: true },
-      group_ratio: { " vip ": 0, default: Infinity },
+      groupAccess: {
+        kind: "authoritative",
+        usableGroups: [" vip ", "default"],
+      },
+      groupRatios: { " vip ": 0, default: Infinity },
     })
     const before = structuredClone(response)
     const prepared = prepareModelListSource({ source, pricing: response })
@@ -95,45 +81,58 @@ describe("model list source preparation", () => {
       priceableGroups: ["vip"],
     })
     expect(prepared.groupRatios).toEqual({ vip: 0 })
-    expect(prepared.groupAccessEvidence).toBe("authoritative")
+    expect(prepared.canRepairGroupSelection).toBe(true)
     expect(response).toEqual(before)
     expect(source.capabilities.supportsPricing).toBe(true)
   })
 
   it.each([
-    { name: "missing response", response: null, evidence: "insufficient" },
+    { name: "missing response", response: null, evidence: false },
     {
       name: "empty priced response",
       response: pricing({ data: [] }),
-      evidence: "authoritative",
+      evidence: true,
     },
     {
       name: "empty catalog fallback",
-      response: pricing({ data: [], model_list_source: fallback }),
-      evidence: "insufficient",
+      response: pricing({
+        data: [],
+        groupAccess: { kind: "unavailable" },
+        model_list_source: fallback,
+      }),
+      evidence: false,
     },
     {
       name: "known empty access",
-      response: pricing({ usable_group: {}, group_ratio: {} }),
-      evidence: "authoritative",
+      response: pricing({
+        groupAccess: { kind: "authoritative", usableGroups: [] },
+        groupRatios: {},
+      }),
+      evidence: true,
     },
     {
       name: "unknown catalog access",
       response: pricing({
-        usable_group: {},
-        group_ratio: {},
+        groupAccess: { kind: "unavailable" },
+        groupRatios: {},
         model_list_source: fallback,
       }),
-      evidence: "insufficient",
+      evidence: false,
     },
     {
       name: "compatible priced fallback",
-      response: pricing({ usable_group: {} }),
-      evidence: "authoritative",
+      response: pricing({
+        groupAccess: {
+          kind: "compatible-priced-fallback",
+          candidateGroups: ["default"],
+        },
+      }),
+      evidence: true,
     },
   ])("preserves evidence for $name", ({ response, evidence }) => {
     expect(
-      prepareModelListSource({ source, pricing: response }).groupAccessEvidence,
+      prepareModelListSource({ source, pricing: response })
+        .canRepairGroupSelection,
     ).toBe(evidence)
   })
 
@@ -172,7 +171,7 @@ describe("model list source preparation", () => {
     )
     expect(prepared.items[0].exchangeRate).toBe(1)
     expect(prepared.source.capabilities).toEqual(profile.capabilities)
-    expect(prepared.groupAccessEvidence).toBe("authoritative")
+    expect(prepared.canRepairGroupSelection).toBe(true)
   })
 
   it("uses the same account facts for single and aggregate inputs while enabling aggregate summaries", () => {
@@ -191,7 +190,9 @@ describe("model list source preparation", () => {
       single.items[0].groupContext,
     )
     expect(aggregate.items[0].exchangeRate).toBe(single.items[0].exchangeRate)
-    expect(aggregate.groupAccessEvidence).toBe(single.groupAccessEvidence)
+    expect(aggregate.canRepairGroupSelection).toBe(
+      single.canRepairGroupSelection,
+    )
     expect(single.source.capabilities.supportsAccountSummary).toBe(false)
     expect(aggregate.source.capabilities.supportsAccountSummary).toBe(true)
   })
@@ -204,7 +205,7 @@ describe("model list source preparation", () => {
     })
     expect(prepared).toHaveLength(1)
     expect(prepared[0].items).toEqual([])
-    expect(prepared[0].groupAccessEvidence).toBe("insufficient")
+    expect(prepared[0].canRepairGroupSelection).toBe(false)
   })
 
   it("keeps token and runtime-key identities and access isolated for the same account", () => {
@@ -225,8 +226,11 @@ describe("model list source preparation", () => {
           account,
           sourceIdentity: runtimeKey,
           pricing: pricing({
-            usable_group: { vip: true },
-            group_ratio: { vip: 0.5 },
+            groupAccess: {
+              kind: "authoritative",
+              usableGroups: ["vip"],
+            },
+            groupRatios: { vip: 0.5 },
           }),
         },
       ],

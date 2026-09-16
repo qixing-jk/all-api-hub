@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import type { PricingResponse } from "~/services/modelList/pricingModel"
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import {
   MODEL_VENDOR_EVIDENCE_KINDS,
   type ModelVendorEvidence,
@@ -9,10 +9,10 @@ import {
 const createPricingResponse = (
   modelName: string,
   vendorEvidence?: ModelVendorEvidence,
-): PricingResponse => ({
+): ModelCatalogSnapshot => ({
   success: true,
-  group_ratio: {},
-  usable_group: {},
+  groupRatios: {},
+  groupAccess: { kind: "authoritative", usableGroups: [] },
   data: [
     {
       model_name: modelName,
@@ -83,7 +83,7 @@ describe("modelPricingCache", () => {
     await modelPricingCache.set("account-alpha", pricing)
 
     expect(mocks.set).toHaveBeenCalledWith(
-      "modelPricing_cache_v28",
+      "modelCatalog_cache_v1",
       expect.objectContaining({
         "account-alpha": {
           pricing,
@@ -99,7 +99,7 @@ describe("modelPricingCache", () => {
 
   it("accepts evidence-free pricing rows stored under the current key", async () => {
     const pricing = createPricingResponse("model-without-evidence")
-    mocks.storageMap.set("modelPricing_cache_v28", {
+    mocks.storageMap.set("modelCatalog_cache_v1", {
       "account-without-evidence": {
         pricing,
         lastUpdated: 1_000,
@@ -142,6 +142,9 @@ describe("modelPricingCache", () => {
     "v23",
     "v24",
     "v25",
+    "v26",
+    "v27",
+    "v28",
   ])("ignores pricing entries stored under the %s key", async (version) => {
     mocks.storageMap.set(`modelPricing_cache_${version}`, {
       "account-legacy": {
@@ -156,7 +159,7 @@ describe("modelPricingCache", () => {
     )
 
     await expect(modelPricingCache.get("account-legacy")).resolves.toBeNull()
-    expect(mocks.get).toHaveBeenCalledWith("modelPricing_cache_v28")
+    expect(mocks.get).toHaveBeenCalledWith("modelCatalog_cache_v1")
   })
 
   it("keeps independent vendor evidence for each account cache entry", async () => {
@@ -177,7 +180,7 @@ describe("modelPricingCache", () => {
     await modelPricingCache.set("account-alpha", accountAlphaPricing)
     await modelPricingCache.set("account-beta", accountBetaPricing)
 
-    expect(mocks.storageMap.get("modelPricing_cache_v28")).toEqual({
+    expect(mocks.storageMap.get("modelCatalog_cache_v1")).toEqual({
       "account-alpha": {
         pricing: accountAlphaPricing,
         lastUpdated: 1_000,
@@ -196,7 +199,7 @@ describe("modelPricingCache", () => {
   })
 
   it("returns null for missing or expired cache entries", async () => {
-    mocks.storageMap.set("modelPricing_cache_v28", {
+    mocks.storageMap.set("modelCatalog_cache_v1", {
       missing: {
         pricing: { success: true, data: [] },
         lastUpdated: 1_000,
@@ -222,7 +225,7 @@ describe("modelPricingCache", () => {
   })
 
   it("invalidates only the requested account entry", async () => {
-    mocks.storageMap.set("modelPricing_cache_v28", {
+    mocks.storageMap.set("modelCatalog_cache_v1", {
       "account-1": {
         pricing: { success: true, data: [{ model_name: "gpt-4.1" }] },
         lastUpdated: 100,
@@ -239,7 +242,7 @@ describe("modelPricingCache", () => {
 
     await modelPricingCache.invalidate("account-1")
 
-    expect(mocks.storageMap.get("modelPricing_cache_v28")).toEqual({
+    expect(mocks.storageMap.get("modelCatalog_cache_v1")).toEqual({
       "account-2": {
         pricing: { success: true, data: [{ model_name: "claude-3-7-sonnet" }] },
         lastUpdated: 200,
@@ -262,7 +265,7 @@ describe("modelPricingCache", () => {
   })
 
   it("swallows storage write failures for set and invalidate operations", async () => {
-    mocks.storageMap.set("modelPricing_cache_v28", {
+    mocks.storageMap.set("modelCatalog_cache_v1", {
       "account-1": {
         pricing: { success: true, data: [] },
         lastUpdated: 100,

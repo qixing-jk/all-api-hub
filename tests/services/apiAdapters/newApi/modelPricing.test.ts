@@ -60,6 +60,52 @@ const pricingResponse = (extensions: Record<string, unknown> = {}) => ({
 })
 
 describe("New API model pricing adapter", () => {
+  it("retains per-model missing access evidence in a partially priced compatibility catalog", async () => {
+    fetchModelPricingMock.mockResolvedValueOnce(
+      pricingResponse({
+        data: [
+          { ...modelRow, model_name: "priced", enable_groups: ["default"] },
+          {
+            ...modelRow,
+            model_name: "unknown",
+            enable_groups: ["vip"],
+            price_metadata: { source: "none", precision: "unavailable" },
+          },
+        ],
+        group_ratio: { default: 1 },
+        usable_group: {},
+      }),
+    )
+    const catalog = await createNewApiModelPricing(
+      SITE_TYPES.NEW_API,
+    ).fetchPricing(request)
+    expect(catalog.groupAccess).toEqual({
+      kind: "compatible-priced-fallback",
+      candidateGroups: ["default"],
+    })
+    expect(catalog.data[0].groupAccess).toBeUndefined()
+    expect(catalog.data[1].groupAccess).toEqual({ kind: "unavailable" })
+  })
+  it("publishes normalized access evidence and preserves a zero multiplier", async () => {
+    fetchModelPricingMock.mockResolvedValueOnce(
+      pricingResponse({
+        usable_group: { " vip ": "VIP" },
+        group_ratio: { " vip ": 0, invalid: Number.NaN },
+        message: "native envelope detail",
+      }),
+    )
+    const catalog = await createNewApiModelPricing(
+      SITE_TYPES.NEW_API,
+    ).fetchPricing(request)
+    expect(catalog.groupAccess).toEqual({
+      kind: "authoritative",
+      usableGroups: ["vip"],
+    })
+    expect(catalog.groupRatios).toEqual({ vip: 0 })
+    expect(catalog).not.toHaveProperty("usable_group")
+    expect(catalog).not.toHaveProperty("group_ratio")
+    expect(catalog).not.toHaveProperty("message")
+  })
   it.each([
     ["2026-09-09T00:59:59Z", 3],
     ["2026-09-09T01:00:00Z", 6],
@@ -966,9 +1012,9 @@ describe("New API model pricing adapter", () => {
       createNewApiModelPricing(SITE_TYPES.NEW_API).fetchPricing(request),
     ).resolves.toEqual({
       data: [canonicalModelRow],
-      group_ratio: { standard: 1 },
+      groupRatios: { standard: 1 },
       success: true,
-      usable_group: { standard: "Standard" },
+      groupAccess: { kind: "authoritative", usableGroups: ["standard"] },
       model_list_source: { kind: "catalog-fallback" },
     })
   })
@@ -985,9 +1031,9 @@ describe("New API model pricing adapter", () => {
       createNewApiModelPricing(SITE_TYPES.V_API).fetchPricing(request),
     ).resolves.toEqual({
       data: [canonicalModelRow],
-      group_ratio: { standard: 1 },
+      groupRatios: { standard: 1 },
       success: true,
-      usable_group: { standard: "Standard" },
+      groupAccess: { kind: "authoritative", usableGroups: ["standard"] },
     })
   })
 
@@ -1004,9 +1050,9 @@ describe("New API model pricing adapter", () => {
       createNewApiModelPricing(SITE_TYPES.V_API).fetchPricing(request),
     ).resolves.toEqual({
       data: [canonicalModelRow],
-      group_ratio: { legacy: 1 },
+      groupRatios: { legacy: 1 },
       success: true,
-      usable_group: { legacy: "Legacy" },
+      groupAccess: { kind: "authoritative", usableGroups: ["legacy"] },
     })
   })
 

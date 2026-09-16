@@ -33,7 +33,6 @@ import {
 } from "~/constants/veloera"
 import {
   ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING,
-  ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
@@ -334,8 +333,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
         storedUserIdentityFields: ["id"],
       },
       modelList: {
-        dashboardEstimateLoader:
-          ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.Sub2Api,
         statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token,
         displayCapabilitiesSource:
           ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
@@ -396,8 +393,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
         storedUserIdentityFields: ["username"],
       },
       modelList: {
-        dashboardEstimateLoader:
-          ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
         statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
         displayCapabilitiesSource:
           ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
@@ -447,8 +442,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
         storedUserIdentityFields: ["id", "username"],
       },
       modelList: {
-        dashboardEstimateLoader:
-          ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
         statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
         displayCapabilitiesSource:
           ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
@@ -490,8 +483,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
         storedUserIdentityFields: ["id", "username"],
       },
       modelList: {
-        dashboardEstimateLoader:
-          ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
         statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
         displayCapabilitiesSource:
           ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
@@ -539,8 +530,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
         storedUserIdentityFields: [],
       },
       modelList: {
-        dashboardEstimateLoader:
-          ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
         statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
         displayCapabilitiesSource:
           ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,

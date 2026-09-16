@@ -10,13 +10,13 @@ import {
 } from "~/services/apiAdapters/sub2api/stationPricing"
 import { parseSub2ApiGroupRates } from "~/services/apiService/sub2api/parsing"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import {
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
   type ModelPricing,
-  type PricingResponse,
 } from "~/services/modelList/pricingModel"
 import { buildModelListCatalogPricingResponse } from "~/services/modelList/pricingResponse"
 import {
@@ -27,7 +27,7 @@ import { PRICING_GROUP_MULTIPLIERS } from "~/services/modelPricing/pricingConsta
 import { scalePricingRates } from "~/services/modelPricing/pricingRates"
 import type { ModelDescriptor } from "~/services/models/modelDescriptor"
 import { isAbortError } from "~/services/verification/aiApiVerification/utils"
-import { AuthTypeEnum, type DisplaySiteData } from "~/types"
+import { AuthTypeEnum } from "~/types"
 
 interface ApplySub2ApiPriceEstimatesParams {
   models: readonly ModelDescriptor[]
@@ -37,23 +37,11 @@ interface ApplySub2ApiPriceEstimatesParams {
   pricingCatalogs?: Sub2ApiPricingCatalogs
 }
 
-type Sub2ApiEstimateAccount = Pick<
-  DisplaySiteData,
-  | "siteType"
-  | "baseUrl"
-  | "id"
-  | "authType"
-  | "userId"
-  | "token"
-  | "cookieAuthSessionCookie"
->
-
 interface LoadSub2ApiEstimatedPricingResponseParams {
-  account: Sub2ApiEstimateAccount
+  request: ApiServiceRequest
   selectedRef: AccountKeyResourceRef
   resolvedKey: string
   runtimeModels: readonly ModelDescriptor[]
-  abortSignal?: AbortSignal
 }
 
 const toFiniteNumber = (value: unknown): number | undefined => {
@@ -108,8 +96,8 @@ const createEstimatedModel = (
         }
       : {}),
     token_price_usd_per_million: {
-      ...(hasFinitePrice(input) ? { input: input * effectiveRate } : {}),
-      ...(hasFinitePrice(output) ? { output: output * effectiveRate } : {}),
+      input: input * effectiveRate,
+      output: output * effectiveRate,
       ...(hasFinitePrice(cacheRead)
         ? { cache_read: cacheRead * effectiveRate }
         : {}),
@@ -138,7 +126,7 @@ const createEstimatedModel = (
  */
 export function applySub2ApiPriceEstimates(
   params: ApplySub2ApiPriceEstimatesParams,
-): PricingResponse {
+): ModelCatalogSnapshot {
   if (!params.group) {
     return buildSub2ApiRuntimePricingResponse(
       params.models,
@@ -158,12 +146,10 @@ export function applySub2ApiPriceEstimates(
   return {
     ...response,
     success: true,
-    group_ratio: {
+    groupRatios: {
       [group.groupName]: effectiveRate,
     },
-    usable_group: {
-      [group.groupName]: group.groupName,
-    },
+    groupAccess: { kind: "authoritative", usableGroups: [group.groupName] },
     model_list_source: {
       kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
       provider: SITE_TYPES.SUB2API,
@@ -191,7 +177,7 @@ export function applySub2ApiPriceEstimates(
 export function buildSub2ApiRuntimePricingResponse(
   models: readonly ModelDescriptor[],
   unavailableReason: (typeof MODEL_UNAVAILABLE_PRICE_REASONS)[keyof typeof MODEL_UNAVAILABLE_PRICE_REASONS] = MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
-): PricingResponse {
+): ModelCatalogSnapshot {
   return buildModelListCatalogPricingResponse({
     models,
     unavailableReason,
@@ -204,48 +190,25 @@ export function buildSub2ApiRuntimePricingResponse(
   })
 }
 
-const hasSub2ApiDashboardAuth = (account: Sub2ApiEstimateAccount): boolean => {
-  return (
-    account.authType === AuthTypeEnum.AccessToken &&
-    typeof account.token === "string" &&
-    account.token.trim().length > 0
-  )
-}
-
-const createSub2ApiDashboardRequest = (
-  account: Sub2ApiEstimateAccount,
-  abortSignal?: AbortSignal,
-): ApiServiceRequest => ({
-  baseUrl: account.baseUrl,
-  accountId: account.id,
-  abortSignal,
-  auth: {
-    authType: AuthTypeEnum.AccessToken,
-    userId: account.userId,
-    accessToken: account.token,
-    cookie: account.cookieAuthSessionCookie,
-  },
-})
-
 export const loadSub2ApiEstimatedPricingResponse = async (
   params: LoadSub2ApiEstimatedPricingResponseParams,
-): Promise<PricingResponse> => {
-  if (!hasSub2ApiDashboardAuth(params.account)) {
+): Promise<ModelCatalogSnapshot> => {
+  if (
+    params.request.auth.authType !== AuthTypeEnum.AccessToken ||
+    typeof params.request.auth.accessToken !== "string" ||
+    !params.request.auth.accessToken.trim()
+  ) {
     return buildSub2ApiRuntimePricingResponse(params.runtimeModels)
   }
 
   try {
-    const dashboardRequest = createSub2ApiDashboardRequest(
-      params.account,
-      params.abortSignal,
-    )
     const [dashboardEstimateData, priceTable] = await Promise.all([
-      loadSub2ApiDashboardEstimateData(dashboardRequest, {
+      loadSub2ApiDashboardEstimateData(params.request, {
         ref: params.selectedRef,
         resolvedKey: params.resolvedKey,
       }),
-      loadModelPriceTable(params.abortSignal).catch((error) => {
-        if (isAbortError(error, params.abortSignal)) throw error
+      loadModelPriceTable(params.request.abortSignal).catch((error) => {
+        if (isAbortError(error, params.request.abortSignal)) throw error
         return { source: "unavailable", models: {} }
       }),
     ])
@@ -259,7 +222,7 @@ export const loadSub2ApiEstimatedPricingResponse = async (
       pricingCatalogs: dashboardEstimateData.pricingCatalogs,
     })
   } catch (error) {
-    if (isAbortError(error, params.abortSignal)) {
+    if (isAbortError(error, params.request.abortSignal)) {
       throw error
     }
 

@@ -14,17 +14,15 @@ import {
   type ModelListGroupSelectionScope,
 } from "~/features/ModelList/groupSelectionScopes"
 import type {
-  ModelListSourceIdentity,
   ModelManagementItemSource,
   ModelManagementSourceCapabilities,
 } from "~/features/ModelList/modelManagementSources"
-import {
-  MODEL_LIST_SOURCE_IDENTITY_KINDS,
-  MODEL_MANAGEMENT_SOURCE_KINDS,
-} from "~/features/ModelList/modelManagementSources"
+import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
 import { formatModelListSourceLabel } from "~/features/ModelList/sourceLabels"
 import toast from "~/lib/notify"
 import { cn } from "~/lib/utils"
+import type { ModelListSourceIdentity } from "~/services/modelCatalog/sourceIdentity"
+import { MODEL_LIST_SOURCE_IDENTITY_KINDS } from "~/services/modelCatalog/sourceIdentity"
 import {
   isModelPriceUnavailable,
   type ModelPricing,

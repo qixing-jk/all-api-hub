@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
 } from "~/services/accounts/accountSiteProfile"
@@ -108,8 +107,7 @@ describe("resolveModelListAccountSourceReadiness", () => {
       route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog,
       modelCatalog,
       requiresTokenKeyResolution: false,
-      dashboardEstimateLoader:
-        ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.Sub2Api,
+
       statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token,
       displayCapabilitiesSource:
         ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,

@@ -4,7 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   applySub2ApiPriceEstimates,
   buildSub2ApiRuntimePricingResponse,
-} from "~/services/modelList/accountSources/sub2apiEstimates"
+} from "~/services/apiAdapters/sub2api/catalogPricing"
 import {
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
@@ -105,7 +105,7 @@ describe("applySub2ApiPriceEstimates", () => {
         source_date: "2026-06-14",
       },
     })
-    expect(result.group_ratio).toEqual({ vip: 2 })
+    expect(result.groupRatios).toEqual({ vip: 2 })
     expect(result.model_list_source?.supportsPricing).toBe(true)
   })
 

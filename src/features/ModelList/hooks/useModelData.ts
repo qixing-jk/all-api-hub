@@ -4,26 +4,15 @@ import {
   useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query"
-import type { TFunction } from "i18next"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
-  createAccountModelListSourceIdentity,
-  createAccountRuntimeKeyModelListSourceIdentity,
-  createPersonalizedCatalogModelListSourceIdentity,
-  createProviderCatalogModelListSourceIdentity,
-  MODEL_LIST_SOURCE_IDENTITY_KINDS,
   MODEL_MANAGEMENT_SOURCE_KINDS,
-  type ModelListSourceIdentity,
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
 import toast from "~/lib/notify"
-import {
-  ACCOUNT_RUNTIME_KEY_STATUSES,
-  isSelectableAccountRuntimeKey,
-  type AccountRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+import { type AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
   getAccountSiteModelListProfile,
@@ -31,64 +20,58 @@ import {
 import { canListAccountRuntimeKeys } from "~/services/accounts/keyProductCapabilities"
 import { fetchDisplayAccountRuntimeKeys } from "~/services/accounts/utils/apiServiceRequest"
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
-import type { ModelPricingRequest } from "~/services/apiAdapters/contracts/modelPricing"
 import type { ProviderModelCatalogCapability } from "~/services/apiAdapters/contracts/providerModelCatalog"
+import { MODEL_LIST_DATA_ERROR_CODES } from "~/services/modelCatalog/errors"
+import type { AccountPricingContext } from "~/services/modelCatalog/loader"
 import {
-  buildApiCredentialProfilePricingResponse,
-  fetchApiCredentialModelIds,
-} from "~/services/apiCredentialProfiles/modelCatalog"
-import { API_ERROR_CODES } from "~/services/apiTransport/errors"
+  createAllAccountsModelLoadTargets,
+  createModelPricingCacheKey,
+  createProviderModelCatalogCacheKey,
+  isUnsupportedModelPricingError,
+  isUsableCatalogRuntimeKey,
+  loadAccountCatalogSource,
+  loadProfileModelCatalog,
+  loadRuntimeKeyCatalogSource,
+  type AllAccountsModelLoadTarget,
+} from "~/services/modelCatalog/loader"
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import { MODEL_LIST_SOURCE_IDENTITY_KINDS } from "~/services/modelCatalog/sourceIdentity"
 import {
   ACCOUNT_RUNTIME_KEY_FALLBACK_LOAD_FAILED,
   canLoadModelListAccountFallbackRuntimeKeys,
-  loadAccountRuntimeKeyFallbackPricingResponse,
   MODEL_LIST_ACCOUNT_SOURCE_ROUTES,
   resolveModelListAccountSourceReadiness,
 } from "~/services/modelList/accountSources"
 import {
-  MODEL_CATALOG_FAILURE_CATEGORIES,
   MODEL_CATALOG_SCOPES,
   MODEL_LIST_SOURCE_KINDS,
   type ModelCatalogFailureCategory,
-  type PricingResponse,
 } from "~/services/modelList/pricingModel"
-import { isValidProviderModelCatalogPricing } from "~/services/modelList/providerCatalogAdmission"
 import {
   MODEL_PRICING_CACHE_TTL_MS,
   modelPricingCache,
 } from "~/services/models/modelPricingCache"
 import {
-  resolveProductAnalyticsErrorCategoryFromError,
-  trackProductAnalyticsActionCompleted,
-} from "~/services/productAnalytics/actions"
-import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
-  PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
-  PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
-  PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
-  PRODUCT_ANALYTICS_SURFACE_IDS,
-  type ProductAnalyticsApiType,
-  type ProductAnalyticsErrorCategory,
-  type ProductAnalyticsFailureReason,
-  type ProductAnalyticsFailureStage,
-  type ProductAnalyticsResult,
-  type ProductAnalyticsSourceKind,
 } from "~/services/productAnalytics/contracts"
-import { buildModelListDiagnostics } from "~/services/productAnalytics/modelListDiagnostics"
-import {
-  isAbortError,
-  toSanitizedErrorSummary,
-} from "~/services/verification/aiApiVerification/utils"
+import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 
 import {
+  getAggregateModelDataFailureDiagnostics,
+  getFirstModelDataDisplayErrorReason,
+  getModelDataDisplayErrorReason,
+  getModelDataErrorCategory,
+  getPersonalizedCatalogFallbackMessage,
+  getPricingModelCount,
+  trackModelDataLoadCompletion,
+} from "../modelDataDiagnostics"
+import {
   MODEL_LIST_ACCOUNT_ERROR_TYPES,
-  MODEL_LIST_DATA_ERROR_CODES,
   MODEL_LIST_QUERY_KEYS,
   MODEL_LIST_QUERY_SCOPE_VALUES,
   type ModelListAccountErrorType,
@@ -99,12 +82,6 @@ interface UseModelDataProps {
   accounts: DisplaySiteData[]
 }
 
-export interface AccountPricingContext {
-  account: DisplaySiteData
-  pricing: PricingResponse
-  sourceIdentity?: ModelListSourceIdentity
-}
-
 interface AccountQueryState {
   account: DisplaySiteData
   isLoading: boolean
@@ -112,17 +89,6 @@ interface AccountQueryState {
   hasError: boolean
   errorType?: ModelListAccountErrorType
   errorMessage?: string
-}
-
-interface AccountPricingQueryResult {
-  contexts: AccountPricingContext[]
-  partialFailureCount?: number
-  partialFailureErrors?: unknown[]
-}
-
-interface SettledContextResult {
-  context?: AccountPricingContext
-  error?: unknown
 }
 
 export interface AccountFallbackControls {
@@ -151,7 +117,7 @@ export interface PersonalizedCatalogFallbackControls {
 }
 
 interface UseModelDataReturn {
-  pricingData: PricingResponse | null
+  pricingData: ModelCatalogSnapshot | null
   pricingContexts: AccountPricingContext[]
   isLoading: boolean
   hasAuthoritativePricingData: boolean
@@ -164,231 +130,8 @@ interface UseModelDataReturn {
   personalizedCatalogFallback: PersonalizedCatalogFallbackControls | null
 }
 
-/** Creates the normalized invalid-format error used by pricing loaders. */
-function createInvalidFormatError() {
-  const error = new Error(MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT)
-  ;(error as { code?: string }).code =
-    MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT
-  return error
-}
-
-const MODEL_PRICING_UNSUPPORTED_ERROR = "model_pricing_unsupported"
-
-const createUnsupportedModelPricingError = () => {
-  const error = new Error(MODEL_PRICING_UNSUPPORTED_ERROR)
-  ;(error as { code?: string }).code =
-    MODEL_LIST_DATA_ERROR_CODES.UNSUPPORTED_SOURCE
-  return error
-}
-
-const isUnsupportedModelPricingError = (error: unknown) =>
-  error instanceof Error &&
-  (error.message === MODEL_PRICING_UNSUPPORTED_ERROR ||
-    (error as { code?: string }).code ===
-      MODEL_LIST_DATA_ERROR_CODES.UNSUPPORTED_SOURCE)
-
 const shouldRetryModelPricingQuery = (failureCount: number, error: Error) =>
   !isUnsupportedModelPricingError(error) && failureCount < 1
-
-/** Counts only valid model rows so analytics never includes raw model ids. */
-function getPricingModelCount(pricing: PricingResponse | null | undefined) {
-  return Array.isArray(pricing?.data) ? pricing.data.length : 0
-}
-
-/**
- * Maps known loader failures into coarse analytics buckets for telemetry.
- * Unknown is intentionally the fallback to avoid guessing from raw messages.
- */
-function getModelDataErrorCategory(
-  error: unknown,
-): ProductAnalyticsErrorCategory {
-  const code =
-    error && typeof error === "object"
-      ? (error as { code?: unknown }).code
-      : undefined
-
-  if (code === MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT) {
-    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
-  }
-
-  return resolveProductAnalyticsErrorCategoryFromError(error)
-}
-
-/** Classify whether model catalog loading failed during parsing or execution. */
-function getModelDataFailureStage(
-  error: unknown,
-): ProductAnalyticsFailureStage {
-  const code =
-    error && typeof error === "object"
-      ? (error as { code?: unknown }).code
-      : undefined
-
-  return code === MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT
-    ? PRODUCT_ANALYTICS_FAILURE_STAGES.Parse
-    : PRODUCT_ANALYTICS_FAILURE_STAGES.Execute
-}
-
-/** Derive coupled analytics diagnostics from a single model-data failure. */
-function getModelDataFailureDiagnostics(error: unknown): {
-  errorCategory: ProductAnalyticsErrorCategory
-  failureStage: ProductAnalyticsFailureStage
-  failureReason?: ProductAnalyticsFailureReason
-} {
-  const code =
-    error && typeof error === "object"
-      ? (error as { code?: unknown }).code
-      : undefined
-
-  return {
-    errorCategory: getModelDataErrorCategory(error),
-    failureStage: getModelDataFailureStage(error),
-    ...(code === MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT
-      ? {
-          failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.InvalidResponseShape,
-        }
-      : {}),
-  }
-}
-
-/** Derive aggregate model catalog diagnostics from the failed account queries. */
-function getAggregateModelDataFailureDiagnostics(errors: unknown[]): {
-  errorCategory: ProductAnalyticsErrorCategory
-  failureStage: ProductAnalyticsFailureStage
-  failureReason?: ProductAnalyticsFailureReason
-  error?: unknown
-} {
-  const diagnostics = errors.map((error) => ({
-    ...getModelDataFailureDiagnostics(error),
-    error,
-  }))
-  const representativeDiagnostic =
-    diagnostics.find(
-      (diagnostic) =>
-        diagnostic.failureStage === PRODUCT_ANALYTICS_FAILURE_STAGES.Parse,
-    ) ??
-    diagnostics.find(
-      (diagnostic) =>
-        diagnostic.errorCategory !== PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-    )
-
-  return (
-    representativeDiagnostic ?? {
-      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
-    }
-  )
-}
-
-/** Returns a user-facing, non-secret reason for model-data load failures. */
-function getModelDataDisplayErrorReason(
-  error: unknown,
-  t: TFunction<"modelList">,
-) {
-  const code =
-    error && typeof error === "object"
-      ? (error as { code?: unknown }).code
-      : undefined
-
-  if (code === MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT) {
-    return t("accountSummary.failureReasons.invalidFormat")
-  }
-
-  return getErrorMessage(error) || t("accountSummary.failureReasons.unknown")
-}
-
-/** Selects the first useful display reason from a set of load failures. */
-function getFirstModelDataDisplayErrorReason(
-  errors: unknown[],
-  t: TFunction<"modelList">,
-) {
-  return (
-    errors
-      .map((error) => getModelDataDisplayErrorReason(error, t))
-      .find(Boolean) ?? t("accountSummary.failureReasons.unknown")
-  )
-}
-
-const MODEL_DATA_ANALYTICS_CONTEXT = {
-  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
-  actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshModelPricingData,
-  surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
-  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-} as const
-
-/**
- * Tracks a coarse, sanitized model-data load completion outcome.
- * @param params Completion metadata to bucket and forward to analytics.
- * @param params.result Coarse load outcome.
- * @param params.sourceKind Selected model source kind.
- * @param params.errorCategory Optional sanitized failure category.
- * @param params.failureStage Optional sanitized failure stage.
- * @param params.failureReason Optional sanitized failure reason.
- * @param params.error Optional structured error object.
- * @param params.siteType Optional sanitized site type.
- * @param params.requestedAuthMode Optional sanitized auth mode.
- * @param params.apiType Optional sanitized API type.
- * @param params.cacheHit Whether the pricing cache was hit.
- * @param params.fallbackAvailable Whether fallback data was available.
- * @param params.fallbackUsed Whether fallback data was used.
- * @param params.modelCount Number of models loaded, when available.
- * @param params.successCount Number of successful account loads, when available.
- * @param params.failureCount Number of failed account loads, when available.
- */
-function trackModelDataLoadCompletion(params: {
-  result: ProductAnalyticsResult
-  sourceKind: ProductAnalyticsSourceKind
-  errorCategory?: ProductAnalyticsErrorCategory
-  failureStage?: ProductAnalyticsFailureStage
-  failureReason?: ProductAnalyticsFailureReason
-  error?: unknown
-  siteType?: DisplaySiteData["siteType"]
-  requestedAuthMode?: DisplaySiteData["authType"]
-  apiType?: ProductAnalyticsApiType
-  cacheHit?: boolean
-  fallbackAvailable?: boolean
-  fallbackUsed?: boolean
-  modelCount?: number
-  successCount?: number
-  failureCount?: number
-}) {
-  const diagnostics = buildModelListDiagnostics({
-    sourceKind: params.sourceKind,
-    ...(params.siteType ? { siteType: params.siteType } : {}),
-    ...(params.requestedAuthMode
-      ? { requestedAuthMode: params.requestedAuthMode }
-      : {}),
-    ...(params.apiType ? { apiType: params.apiType } : {}),
-    ...(typeof params.cacheHit === "boolean"
-      ? { cacheHit: params.cacheHit }
-      : {}),
-    ...(typeof params.fallbackAvailable === "boolean"
-      ? { fallbackAvailable: params.fallbackAvailable }
-      : {}),
-    ...(typeof params.fallbackUsed === "boolean"
-      ? { fallbackUsed: params.fallbackUsed }
-      : {}),
-    ...(typeof params.modelCount === "number"
-      ? { modelCount: params.modelCount }
-      : {}),
-    ...(typeof params.successCount === "number"
-      ? { successCount: params.successCount }
-      : {}),
-    ...(typeof params.failureCount === "number"
-      ? { failureCount: params.failureCount }
-      : {}),
-    ...(params.error ? { error: params.error } : {}),
-    ...(params.errorCategory ? { errorCategory: params.errorCategory } : {}),
-    ...(params.failureStage ? { stage: params.failureStage } : {}),
-    ...(params.failureReason ? { reason: params.failureReason } : {}),
-  })
-
-  void trackProductAnalyticsActionCompleted({
-    ...MODEL_DATA_ANALYTICS_CONTEXT,
-    result: params.result,
-    ...(params.errorCategory ? { errorCategory: params.errorCategory } : {}),
-    diagnostics,
-  })
-}
 
 /** Builds an account- or provider-scoped pricing query key. */
 function createModelPricingQueryKey(
@@ -461,64 +204,6 @@ function createAllAccountsModelPricingQueryKey(
   ]
 }
 
-/** Builds the persisted pricing-cache key from non-secret account fields. */
-function createModelPricingCacheKey(
-  account: Pick<
-    DisplaySiteData,
-    "id" | "baseUrl" | "userId" | "siteType" | "authType"
-  >,
-) {
-  return [
-    account.id,
-    account.baseUrl,
-    account.userId,
-    account.siteType,
-    account.authType,
-  ].join("|")
-}
-
-type ModelListAccountSourceReadiness = ReturnType<
-  typeof resolveModelListAccountSourceReadiness
->
-
-interface AllAccountsModelLoadTarget {
-  id: string
-  accounts: DisplaySiteData[]
-  account: DisplaySiteData
-  readiness: ModelListAccountSourceReadiness
-}
-
-/** Collapses provider-wide catalogs while retaining each affected account. */
-function createAllAccountsModelLoadTargets(
-  accounts: DisplaySiteData[],
-): AllAccountsModelLoadTarget[] {
-  const targets = new Map<string, AllAccountsModelLoadTarget>()
-
-  for (const account of accounts) {
-    const readiness = resolveModelListAccountSourceReadiness(account)
-    const id =
-      readiness.route === MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog &&
-      !readiness.providerModelCatalog.personalized
-        ? `provider-catalog:${readiness.providerModelCatalog.source.id}`
-        : `account:${account.id}`
-    const existing = targets.get(id)
-
-    if (existing) {
-      existing.accounts.push(account)
-      continue
-    }
-
-    targets.set(id, {
-      id,
-      accounts: [account],
-      account,
-      readiness,
-    })
-  }
-
-  return Array.from(targets.values())
-}
-
 /** Builds a query key for one account or collapsed provider catalog target. */
 function createAllAccountsModelLoadTargetQueryKey(
   target: AllAccountsModelLoadTarget,
@@ -531,11 +216,6 @@ function createAllAccountsModelLoadTargetQueryKey(
         MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
       )
     : createAllAccountsModelPricingQueryKey(target.account)
-}
-
-/** Builds the provider-wide cache key independently of any saved account. */
-function createProviderModelCatalogCacheKey(sourceId: string) {
-  return `provider-catalog|${sourceId}`
 }
 
 /** Marks every in-memory provider scope stale after a catalog refresh. */
@@ -552,373 +232,6 @@ async function invalidateProviderModelCatalogCaches(params: {
       refetchType: "none",
     }),
   ])
-}
-
-/** Maps provider schema failures into Model List's stable format classification. */
-function normalizeProviderModelCatalogError(error: unknown) {
-  const code = (error as { code?: string } | null | undefined)?.code
-  return code === API_ERROR_CODES.JSON_PARSE_ERROR
-    ? createInvalidFormatError()
-    : error
-}
-
-/** Classifies personalized catalog failures for stable user-facing recovery. */
-function getPersonalizedCatalogFailureCategory(
-  error: unknown,
-): ModelCatalogFailureCategory {
-  if (error instanceof TypeError) {
-    return MODEL_CATALOG_FAILURE_CATEGORIES.NETWORK
-  }
-
-  const code = (error as { code?: string } | null | undefined)?.code
-  switch (code) {
-    case API_ERROR_CODES.HTTP_401:
-      return MODEL_CATALOG_FAILURE_CATEGORIES.AUTH
-    case API_ERROR_CODES.HTTP_403:
-      return MODEL_CATALOG_FAILURE_CATEGORIES.PERMISSION
-    case API_ERROR_CODES.JSON_PARSE_ERROR:
-    case API_ERROR_CODES.CONTENT_TYPE_MISMATCH:
-    case MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT:
-      return MODEL_CATALOG_FAILURE_CATEGORIES.INVALID_RESPONSE
-    case API_ERROR_CODES.HTTP_429:
-      return MODEL_CATALOG_FAILURE_CATEGORIES.RATE_LIMIT
-    case API_ERROR_CODES.NETWORK_ERROR:
-      return MODEL_CATALOG_FAILURE_CATEGORIES.NETWORK
-    default:
-      return MODEL_CATALOG_FAILURE_CATEGORIES.UPSTREAM
-  }
-}
-
-/** Resolves localized recovery copy without exposing unstable backend details. */
-function getPersonalizedCatalogFallbackMessage(
-  category: ModelCatalogFailureCategory,
-  t: TFunction<"modelList">,
-) {
-  switch (category) {
-    case MODEL_CATALOG_FAILURE_CATEGORIES.AUTH:
-      return t("personalizedCatalogFallback.failures.auth")
-    case MODEL_CATALOG_FAILURE_CATEGORIES.PERMISSION:
-      return t("personalizedCatalogFallback.failures.permission")
-    case MODEL_CATALOG_FAILURE_CATEGORIES.INVALID_RESPONSE:
-      return t("personalizedCatalogFallback.failures.invalidResponse")
-    case MODEL_CATALOG_FAILURE_CATEGORIES.RATE_LIMIT:
-      return t("personalizedCatalogFallback.failures.rateLimit")
-    case MODEL_CATALOG_FAILURE_CATEGORIES.NETWORK:
-      return t("personalizedCatalogFallback.failures.network")
-    case MODEL_CATALOG_FAILURE_CATEGORIES.CANCELLATION:
-      return t("personalizedCatalogFallback.failures.cancellation")
-    default:
-      return t("personalizedCatalogFallback.failures.upstream")
-  }
-}
-
-/** Loads one provider-wide catalog without persisting incomplete failures. */
-async function loadProviderModelCatalogPricing(params: {
-  capability: ProviderModelCatalogCapability
-  abortSignal?: AbortSignal
-}): Promise<{ pricing: PricingResponse; cacheHit: boolean }> {
-  const { capability, abortSignal } = params
-  const cacheKey = createProviderModelCatalogCacheKey(capability.source.id)
-  const cached = await modelPricingCache.get(
-    cacheKey,
-    capability.source.cacheTtlMs,
-  )
-  if (
-    cached &&
-    isValidProviderModelCatalogPricing(cached, capability.source.provider)
-  ) {
-    return { pricing: cached, cacheHit: true }
-  }
-  if (cached) await modelPricingCache.invalidate(cacheKey)
-
-  let pricing: PricingResponse
-  try {
-    pricing = await capability.fetchPricing({ abortSignal })
-  } catch (error) {
-    throw normalizeProviderModelCatalogError(error)
-  }
-
-  if (
-    !isValidProviderModelCatalogPricing(pricing, capability.source.provider)
-  ) {
-    throw createInvalidFormatError()
-  }
-
-  await modelPricingCache.set(cacheKey, pricing)
-  return { pricing, cacheHit: false }
-}
-
-interface PersonalizedProviderModelCatalogLoadResult {
-  pricing: PricingResponse
-  cacheHit: boolean
-  personalizedFailure?: {
-    category: ModelCatalogFailureCategory
-    error: unknown
-  }
-}
-
-const providerCatalogFallbackLoads = new WeakMap<
-  QueryClient,
-  Map<string, Promise<{ pricing: PricingResponse; cacheHit: boolean }>>
->()
-
-/** Preserves each account query's cancellation boundary around shared loads. */
-function throwIfCatalogLoadAborted(abortSignal?: AbortSignal) {
-  if (abortSignal?.aborted) {
-    throw abortSignal.reason ?? new DOMException("Aborted", "AbortError")
-  }
-}
-
-/** Shares one credential-free provider fallback request across account queries. */
-async function loadSharedProviderModelCatalogFallback(params: {
-  queryClient: QueryClient
-  capability: ProviderModelCatalogCapability
-  abortSignal?: AbortSignal
-}) {
-  throwIfCatalogLoadAborted(params.abortSignal)
-  const sourceId = params.capability.source.id
-  let queryClientLoads = providerCatalogFallbackLoads.get(params.queryClient)
-  if (!queryClientLoads) {
-    queryClientLoads = new Map()
-    providerCatalogFallbackLoads.set(params.queryClient, queryClientLoads)
-  }
-  let load = queryClientLoads.get(sourceId)
-
-  if (!load) {
-    // A caller cancellation must not abort the shared public request for
-    // other accounts; each waiter still observes its own abort signal.
-    const pendingLoad = loadProviderModelCatalogPricing({
-      capability: params.capability,
-    }).finally(() => {
-      if (queryClientLoads.get(sourceId) === pendingLoad) {
-        queryClientLoads.delete(sourceId)
-        if (queryClientLoads.size === 0) {
-          providerCatalogFallbackLoads.delete(params.queryClient)
-        }
-      }
-    })
-    load = pendingLoad
-    queryClientLoads.set(sourceId, load)
-  }
-
-  const result = await load
-  throwIfCatalogLoadAborted(params.abortSignal)
-  return result
-}
-
-/** Owns personalized validation, failure classification, and public fallback. */
-async function loadPersonalizedProviderModelCatalogPricing(params: {
-  queryClient: QueryClient
-  capability: ProviderModelCatalogCapability
-  personalized: NonNullable<ProviderModelCatalogCapability["personalized"]>
-  account: DisplaySiteData
-  abortSignal?: AbortSignal
-}): Promise<PersonalizedProviderModelCatalogLoadResult> {
-  if (!params.account.token.trim()) {
-    return loadSharedProviderModelCatalogFallback({
-      queryClient: params.queryClient,
-      capability: params.capability,
-      abortSignal: params.abortSignal,
-    })
-  }
-
-  try {
-    const pricing = await params.personalized.fetchPricing({
-      accountId: params.account.id,
-      credential: params.account.token,
-      abortSignal: params.abortSignal,
-    })
-    if (
-      !isValidProviderModelCatalogPricing(
-        pricing,
-        params.capability.source.provider,
-      )
-    ) {
-      throw createInvalidFormatError()
-    }
-    return { pricing, cacheHit: false }
-  } catch (error) {
-    if (isAbortError(error, params.abortSignal)) throw error
-
-    const category = getPersonalizedCatalogFailureCategory(error)
-    const { pricing, cacheHit } = await loadSharedProviderModelCatalogFallback({
-      queryClient: params.queryClient,
-      capability: params.capability,
-      abortSignal: params.abortSignal,
-    })
-    if (!pricing.model_list_source) {
-      throw createInvalidFormatError()
-    }
-
-    return {
-      cacheHit,
-      personalizedFailure: { category, error },
-      pricing: {
-        ...pricing,
-        model_list_source: {
-          ...pricing.model_list_source,
-          catalogScope: MODEL_CATALOG_SCOPES.PROVIDER,
-          catalogFallback: {
-            from: MODEL_CATALOG_SCOPES.PERSONALIZED,
-            failureCategory: category,
-          },
-        },
-      },
-    }
-  }
-}
-
-/** Builds the adapter pricing request from a display account. */
-function createDisplayAccountModelPricingRequest(
-  account: DisplaySiteData,
-  abortSignal?: AbortSignal,
-): ModelPricingRequest {
-  return {
-    baseUrl: account.baseUrl,
-    accountId: account.id,
-    abortSignal,
-    auth: {
-      authType: account.authType,
-      userId: account.userId,
-      accessToken: account.token,
-      cookie: account.cookieAuthSessionCookie,
-    },
-  }
-}
-
-const RUNTIME_KEY_SCOPED_CATALOG_CONCURRENCY = 4
-
-/** Checks that a pricing response exposes the expected model row array. */
-function hasValidPricingData(data: PricingResponse) {
-  return Array.isArray(data.data)
-}
-
-/** Maps items through async workers while preserving input order. */
-async function mapWithConcurrency<T, R>(
-  items: T[],
-  concurrency: number,
-  mapper: (item: T) => Promise<R>,
-  abortSignal?: AbortSignal,
-) {
-  const results = new Array<R>(items.length)
-  let nextIndex = 0
-  const workerCount = Math.min(Math.max(concurrency, 1), items.length)
-
-  await Promise.all(
-    Array.from({ length: workerCount }, async () => {
-      while (nextIndex < items.length) {
-        if (abortSignal?.aborted) {
-          throw abortSignal.reason ?? new DOMException("Aborted", "AbortError")
-        }
-        const currentIndex = nextIndex
-        nextIndex += 1
-        results[currentIndex] = await mapper(items[currentIndex])
-      }
-    }),
-  )
-
-  return results
-}
-
-/** Loads one runtime-key-scoped catalog as a row source context. */
-async function loadRuntimeKeyScopedCatalogPricingContext(params: {
-  account: DisplaySiteData
-  runtimeKey: AccountRuntimeKey
-  abortSignal?: AbortSignal
-}): Promise<SettledContextResult> {
-  try {
-    const pricing = await loadAccountRuntimeKeyFallbackPricingResponse(params)
-    if (!hasValidPricingData(pricing)) {
-      throw createInvalidFormatError()
-    }
-
-    return {
-      context: {
-        account: params.account,
-        pricing,
-        sourceIdentity: createAccountRuntimeKeyModelListSourceIdentity({
-          accountId: params.account.id,
-          runtimeKeyId: params.runtimeKey.id,
-          runtimeKeyName: params.runtimeKey.label,
-        }),
-      },
-    }
-  } catch (error) {
-    if (isAbortError(error, params.abortSignal)) {
-      throw error
-    }
-
-    return { error }
-  }
-}
-
-// Native resource inventories intentionally omit secrets; resolve them only
-// when loading the selected key's catalog, as other runtime-key actions do.
-const isUsableCatalogRuntimeKey = (runtimeKey: AccountRuntimeKey) =>
-  runtimeKey.status === ACCOUNT_RUNTIME_KEY_STATUSES.Active &&
-  isSelectableAccountRuntimeKey(runtimeKey)
-
-/** Loads runtime-key-scoped catalog fallbacks for every account runtime key in comparison mode. */
-async function fetchRuntimeKeyScopedCatalogPricingContexts(
-  account: DisplaySiteData,
-  abortSignal?: AbortSignal,
-): Promise<AccountPricingQueryResult> {
-  if (abortSignal?.aborted) {
-    throw abortSignal.reason ?? new DOMException("Aborted", "AbortError")
-  }
-
-  const runtimeKeys = (await fetchDisplayAccountRuntimeKeys(account)).filter(
-    isUsableCatalogRuntimeKey,
-  )
-  if (abortSignal?.aborted) {
-    throw abortSignal.reason ?? new DOMException("Aborted", "AbortError")
-  }
-  if (runtimeKeys.length === 0) {
-    throw createUnsupportedModelPricingError()
-  }
-
-  const settledResults = await mapWithConcurrency(
-    runtimeKeys,
-    RUNTIME_KEY_SCOPED_CATALOG_CONCURRENCY,
-    (runtimeKey) =>
-      loadRuntimeKeyScopedCatalogPricingContext({
-        account,
-        runtimeKey,
-        abortSignal,
-      }),
-    abortSignal,
-  )
-  const contexts = settledResults.flatMap((result) =>
-    result.context ? [result.context] : [],
-  )
-  const errors = settledResults.flatMap((result) =>
-    result.error ? [result.error] : [],
-  )
-
-  if (contexts.length === 0) {
-    const invalidFormatErrors = errors.filter((error) => {
-      const typedError = error as { code?: string } | null | undefined
-      return typedError?.code === MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT
-    })
-    if (
-      invalidFormatErrors.length > 0 &&
-      invalidFormatErrors.length === errors.length
-    ) {
-      throw invalidFormatErrors[0]
-    }
-
-    const nonInvalidFormatError = errors.find((error) => {
-      const typedError = error as { code?: string } | null | undefined
-      return typedError?.code !== MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT
-    })
-    throw nonInvalidFormatError ?? createUnsupportedModelPricingError()
-  }
-
-  return {
-    contexts,
-    ...(errors.length > 0 ? { partialFailureCount: errors.length } : {}),
-    ...(errors.length > 0 ? { partialFailureErrors: errors } : {}),
-  }
 }
 
 /** Builds the profile catalog query key from stable profile revision data. */
@@ -957,8 +270,8 @@ function useSingleAccountModelData(params: {
   const [dataFormatError, setDataFormatError] = useState(false)
   const [loadFailed, setLoadFailed] = useState(false)
   const loadErrorMessage = loadFailed ? t("status.loadFailed") : null
-  const [fallbackPricingData, setFallbackPricingData] =
-    useState<PricingResponse | null>(null)
+  const [fallbackCatalogContext, setFallbackCatalogContext] =
+    useState<AccountPricingContext | null>(null)
   const [fallbackRuntimeKeys, setFallbackRuntimeKeys] = useState<
     AccountRuntimeKey[]
   >([])
@@ -1017,7 +330,7 @@ function useSingleAccountModelData(params: {
     fallbackCatalogAbortControllerRef.current?.abort()
     fallbackCatalogAbortControllerRef.current = null
     setFallbackStateScopeKey(MODEL_LIST_QUERY_SCOPE_VALUES.NONE)
-    setFallbackPricingData(null)
+    setFallbackCatalogContext(null)
     setFallbackRuntimeKeys([])
     setHasLoadedFallbackRuntimeKeys(false)
     setIsLoadingFallbackRuntimeKeys(false)
@@ -1077,7 +390,9 @@ function useSingleAccountModelData(params: {
       !!currentAccount && fallbackStateScopeKey === currentAccountScopeKey
 
     return {
-      fallbackPricingData: isCurrentFallbackScope ? fallbackPricingData : null,
+      fallbackCatalogContext: isCurrentFallbackScope
+        ? fallbackCatalogContext
+        : null,
       fallbackRuntimeKeys: isCurrentFallbackScope ? fallbackRuntimeKeys : [],
       hasLoadedFallbackRuntimeKeys: isCurrentFallbackScope
         ? hasLoadedFallbackRuntimeKeys
@@ -1102,7 +417,7 @@ function useSingleAccountModelData(params: {
     currentAccount,
     currentAccountScopeKey,
     fallbackCatalogLoadErrorMessage,
-    fallbackPricingData,
+    fallbackCatalogContext,
     fallbackStateScopeKey,
     fallbackRuntimeKeyLoadErrorMessage,
     fallbackRuntimeKeys,
@@ -1112,7 +427,10 @@ function useSingleAccountModelData(params: {
     selectedFallbackRuntimeKeyId,
   ])
 
-  const scopedFallbackPricingData = scopedFallbackState.fallbackPricingData
+  const scopedFallbackCatalogContext =
+    scopedFallbackState.fallbackCatalogContext
+  const scopedFallbackPricingData =
+    scopedFallbackCatalogContext?.pricing ?? null
   const scopedFallbackRuntimeKeys = scopedFallbackState.fallbackRuntimeKeys
   const scopedHasLoadedFallbackRuntimeKeys =
     scopedFallbackState.hasLoadedFallbackRuntimeKeys
@@ -1141,7 +459,10 @@ function useSingleAccountModelData(params: {
   const trackedDirectLoadKeyRef = useRef<string | null>(null)
   const directLoadCacheHitRef = useRef(false)
 
-  const query = useQuery<PricingResponse, Error>({
+  const query = useQuery<
+    Awaited<ReturnType<typeof loadAccountCatalogSource>>,
+    Error
+  >({
     queryKey,
     enabled: !!currentAccount,
     staleTime:
@@ -1157,57 +478,17 @@ function useSingleAccountModelData(params: {
         throw new Error("No account selected")
       }
 
-      const readiness = resolveModelListAccountSourceReadiness(currentAccount)
-      if (
-        readiness.route === MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
-      ) {
-        directLoadCacheHitRef.current = false
-        if (readiness.providerModelCatalog.personalized) {
-          const { pricing, cacheHit } =
-            await loadPersonalizedProviderModelCatalogPricing({
-              queryClient,
-              capability: readiness.providerModelCatalog,
-              personalized: readiness.providerModelCatalog.personalized,
-              account: currentAccount,
-              abortSignal: signal,
-            })
-          directLoadCacheHitRef.current = cacheHit
-          return pricing
-        }
-        const { pricing, cacheHit } = await loadProviderModelCatalogPricing({
-          capability: readiness.providerModelCatalog,
-          abortSignal: signal,
-        })
-        directLoadCacheHitRef.current = cacheHit
-        return pricing
-      }
-
-      if (readiness.route !== MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing) {
-        throw createUnsupportedModelPricingError()
-      }
-
-      const cacheKey = createModelPricingCacheKey(currentAccount)
-
-      const cached = await modelPricingCache.get(cacheKey)
-      if (cached && Array.isArray(cached.data)) {
-        directLoadCacheHitRef.current = true
-        return cached
-      }
-      directLoadCacheHitRef.current = false
-
-      const data = await readiness.modelPricing.fetchPricing(
-        createDisplayAccountModelPricingRequest(currentAccount, signal),
-      )
-
-      if (!Array.isArray(data.data)) {
-        throw createInvalidFormatError()
-      }
-
-      await modelPricingCache.set(cacheKey, data)
-
-      return data
+      const result = await loadAccountCatalogSource({
+        account: currentAccount,
+        loadScope: queryClient,
+        abortSignal: signal,
+      })
+      directLoadCacheHitRef.current = result.cacheHit ?? false
+      return result
     },
   })
+
+  const directPricingData = query.data?.contexts[0]?.pricing
 
   const selectedFallbackRuntimeKey = useMemo(() => {
     if (scopedSelectedFallbackRuntimeKeyId !== null) {
@@ -1300,7 +581,7 @@ function useSingleAccountModelData(params: {
     setFallbackCatalogLoadDiagnostic(null)
 
     try {
-      const pricing = await loadAccountRuntimeKeyFallbackPricingResponse({
+      const context = await loadRuntimeKeyCatalogSource({
         account: currentAccount,
         runtimeKey: selectedFallbackRuntimeKey,
         abortSignal: abortController.signal,
@@ -1311,7 +592,7 @@ function useSingleAccountModelData(params: {
       }
 
       setFallbackStateScopeKey(requestScopeKey)
-      setFallbackPricingData(pricing)
+      setFallbackCatalogContext(context)
       setLoadFailed(false)
       setDataFormatError(false)
       toast.success(i18n.t("modelList:status.dataLoaded"))
@@ -1320,7 +601,7 @@ function useSingleAccountModelData(params: {
         sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelFallbackCatalog,
         fallbackAvailable: true,
         fallbackUsed: true,
-        modelCount: getPricingModelCount(pricing),
+        modelCount: getPricingModelCount(context.pricing),
       })
     } catch (error) {
       if (
@@ -1479,10 +760,10 @@ function useSingleAccountModelData(params: {
           siteType: currentAccount.siteType,
           requestedAuthMode: currentAccount.authType,
           cacheHit: directLoadCacheHitRef.current,
-          ...(query.data.model_list_source?.catalogFallback
+          ...(directPricingData?.model_list_source?.catalogFallback
             ? { fallbackAvailable: true, fallbackUsed: true }
             : {}),
-          modelCount: getPricingModelCount(query.data),
+          modelCount: getPricingModelCount(directPricingData),
         })
       }
       return
@@ -1551,6 +832,7 @@ function useSingleAccountModelData(params: {
     }
   }, [
     query.data,
+    directPricingData,
     query.isError,
     query.isFetching,
     query.isSuccess,
@@ -1600,7 +882,7 @@ function useSingleAccountModelData(params: {
     selectedFallbackRuntimeKey,
   ])
 
-  const pricingData = query.data ?? scopedFallbackPricingData ?? null
+  const pricingData = directPricingData ?? scopedFallbackPricingData ?? null
   const isFallbackCatalogActive = Boolean(
     scopedFallbackPricingData && !query.data,
   )
@@ -1619,49 +901,19 @@ function useSingleAccountModelData(params: {
   const pricingContexts: AccountPricingContext[] = useMemo(() => {
     if (!currentAccount || !pricingData) return []
 
-    const resolveSourceIdentity = () => {
-      if (isFallbackCatalogActive && selectedFallbackRuntimeKey) {
-        return createAccountRuntimeKeyModelListSourceIdentity({
-          accountId: currentAccount.id,
-          runtimeKeyId: selectedFallbackRuntimeKey.id,
-          runtimeKeyName: selectedFallbackRuntimeKey.label,
-        })
-      }
-      if (
-        pricingData.model_list_source?.catalogScope ===
-        MODEL_CATALOG_SCOPES.PERSONALIZED
-      ) {
-        return createPersonalizedCatalogModelListSourceIdentity(
-          currentAccount.id,
-        )
-      }
-      if (
-        currentReadiness?.route ===
-        MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
-      ) {
-        return createProviderCatalogModelListSourceIdentity({
-          sourceId: currentReadiness.providerModelCatalog.source.id,
-          provider: currentReadiness.providerModelCatalog.source.provider,
-          providerName:
-            currentReadiness.providerModelCatalog.source.displayName,
-        })
-      }
-      return createAccountModelListSourceIdentity(currentAccount.id)
-    }
-
-    return [
-      {
-        account: currentAccount,
-        pricing: pricingData,
-        sourceIdentity: resolveSourceIdentity(),
-      },
-    ]
+    const contexts = isFallbackCatalogActive
+      ? scopedFallbackCatalogContext
+        ? [scopedFallbackCatalogContext]
+        : []
+      : query.data?.contexts ?? []
+    // Catalog facts are cached; account display/action inputs remain live.
+    return contexts.map((context) => ({ ...context, account: currentAccount }))
   }, [
     currentAccount,
-    currentReadiness,
     isFallbackCatalogActive,
     pricingData,
-    selectedFallbackRuntimeKey,
+    query.data,
+    scopedFallbackCatalogContext,
   ])
 
   const accountFallback = useMemo<AccountFallbackControls | null>(() => {
@@ -1782,106 +1034,12 @@ function useAllAccountsModelData(
       refetchOnWindowFocus: false,
       retry: shouldRetryModelPricingQuery,
       queryFn: async ({ signal }) => {
-        const { account, readiness } = target
-        if (
-          readiness.route === MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
-        ) {
-          const source = readiness.providerModelCatalog.source
-          if (readiness.providerModelCatalog.personalized) {
-            const { pricing, personalizedFailure } =
-              await loadPersonalizedProviderModelCatalogPricing({
-                queryClient,
-                capability: readiness.providerModelCatalog,
-                personalized: readiness.providerModelCatalog.personalized,
-                account,
-                abortSignal: signal,
-              })
-            const sourceIdentity = personalizedFailure
-              ? createProviderCatalogModelListSourceIdentity({
-                  sourceId: source.id,
-                  provider: source.provider,
-                  providerName: source.displayName,
-                })
-              : createPersonalizedCatalogModelListSourceIdentity(account.id)
-
-            return {
-              contexts: [{ account, pricing, sourceIdentity }],
-              ...(personalizedFailure
-                ? {
-                    partialFailureCount: 1,
-                    partialFailureErrors: [personalizedFailure.error],
-                  }
-                : {}),
-            }
-          }
-          const { pricing } = await loadProviderModelCatalogPricing({
-            capability: readiness.providerModelCatalog,
-            abortSignal: signal,
-          })
-
-          return {
-            contexts: [
-              {
-                account,
-                pricing,
-                sourceIdentity: createProviderCatalogModelListSourceIdentity({
-                  sourceId: source.id,
-                  provider: source.provider,
-                  providerName: source.displayName,
-                }),
-              },
-            ],
-          }
-        }
-
-        if (
-          readiness.route ===
-          MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog
-        ) {
-          return fetchRuntimeKeyScopedCatalogPricingContexts(account, signal)
-        }
-
-        if (
-          readiness.route !== MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing
-        ) {
-          throw createUnsupportedModelPricingError()
-        }
-
-        const cacheKey = createModelPricingCacheKey(account)
-        const cached = await modelPricingCache.get(cacheKey)
-        if (cached && Array.isArray(cached.data)) {
-          return {
-            contexts: [
-              {
-                account,
-                pricing: cached,
-                sourceIdentity: createAccountModelListSourceIdentity(
-                  account.id,
-                ),
-              },
-            ],
-          }
-        }
-
-        const data = await readiness.modelPricing.fetchPricing(
-          createDisplayAccountModelPricingRequest(account, signal),
-        )
-
-        if (!Array.isArray(data.data)) {
-          throw createInvalidFormatError()
-        }
-
-        await modelPricingCache.set(cacheKey, data)
-
-        return {
-          contexts: [
-            {
-              account,
-              pricing: data,
-              sourceIdentity: createAccountModelListSourceIdentity(account.id),
-            },
-          ],
-        }
+        return loadAccountCatalogSource({
+          account: target.account,
+          loadScope: queryClient,
+          abortSignal: signal,
+          includeRuntimeKeyCatalogs: true,
+        })
       },
     })),
   })
@@ -1985,21 +1143,24 @@ function useAllAccountsModelData(
     const contexts: AccountPricingContext[] = []
     const representedProviderCatalogs = new Set<string>()
 
-    for (const context of queries.flatMap(
-      (query) => query.data?.contexts ?? [],
-    )) {
-      if (
-        context.sourceIdentity?.kind ===
-        MODEL_LIST_SOURCE_IDENTITY_KINDS.PROVIDER_CATALOG
-      ) {
-        if (representedProviderCatalogs.has(context.sourceIdentity.id)) continue
-        representedProviderCatalogs.add(context.sourceIdentity.id)
+    for (const [index, query] of queries.entries()) {
+      const account = loadTargets[index]?.account
+      if (!account) continue
+      for (const context of query.data?.contexts ?? []) {
+        if (
+          context.sourceIdentity?.kind ===
+          MODEL_LIST_SOURCE_IDENTITY_KINDS.PROVIDER_CATALOG
+        ) {
+          if (representedProviderCatalogs.has(context.sourceIdentity.id))
+            continue
+          representedProviderCatalogs.add(context.sourceIdentity.id)
+        }
+        contexts.push({ ...context, account })
       }
-      contexts.push(context)
     }
 
     return contexts
-  }, [queries])
+  }, [loadTargets, queries])
 
   const isLoading = queries.some((query) => query.isFetching)
 
@@ -2176,7 +1337,7 @@ function useAllAccountsModelData(
 /**
  * Loads a model catalog directly from a stored API credential profile.
  * @param selectedSource Profile-backed source, when selected.
- * @returns Profile-backed pricing response shim plus loading metadata.
+ * @returns Profile catalog facts plus loading metadata.
  */
 function useProfileModelData(
   selectedSource: ModelManagementSource | null,
@@ -2188,7 +1349,7 @@ function useProfileModelData(
       ? selectedSource.profile
       : null
 
-  const query = useQuery<PricingResponse, Error>({
+  const query = useQuery<ModelCatalogSnapshot, Error>({
     queryKey: createProfileCatalogQueryKey(currentProfile ?? undefined),
     enabled: !!currentProfile,
     staleTime: MODEL_PRICING_CACHE_TTL_MS,
@@ -2199,14 +1360,12 @@ function useProfileModelData(
         throw new Error("No profile selected")
       }
 
-      const modelIds = await fetchApiCredentialModelIds({
+      return loadProfileModelCatalog({
         apiType: currentProfile.apiType,
         baseUrl: currentProfile.baseUrl,
         apiKey: currentProfile.apiKey,
         abortSignal: signal,
       })
-
-      return buildApiCredentialProfilePricingResponse(modelIds)
     },
   })
   const trackedProfileLoadKeyRef = useRef<string | null>(null)

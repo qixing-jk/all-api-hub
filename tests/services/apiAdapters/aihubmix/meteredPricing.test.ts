@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { buildAIHubMixMeteredImagePlan } from "~/services/apiService/aihubmix/meteredImagePricing"
+import { buildAIHubMixMeteredImagePlan } from "~/services/apiAdapters/aihubmix/meteredImagePricing"
 import {
   buildAIHubMixAudioDurationPlan,
   buildAIHubMixCharacterPlan,
@@ -11,8 +11,8 @@ import {
   buildAIHubMixMeteredVideoPlan,
   buildAIHubMixReferenceVideoPlan,
   checkAIHubMixVideoPriceEvidence,
-} from "~/services/apiService/aihubmix/meteredPricing"
-import { buildAIHubMixWebsitePricingPlan } from "~/services/apiService/aihubmix/websitePricing"
+} from "~/services/apiAdapters/aihubmix/meteredPricing"
+import { buildAIHubMixWebsitePricingPlan } from "~/services/apiAdapters/aihubmix/websitePricing"
 import {
   PRICE_RATE_UNITS,
   PRICING_METERS,

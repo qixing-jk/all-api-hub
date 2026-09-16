@@ -44,8 +44,8 @@ describe("modelList pricingResponse", () => {
 
     expect(response).toMatchObject({
       success: true,
-      group_ratio: {},
-      usable_group: {},
+      groupRatios: {},
+      groupAccess: { kind: "unavailable" },
       model_list_source: {
         kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
         supportsPricing: false,

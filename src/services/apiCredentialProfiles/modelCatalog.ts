@@ -1,7 +1,7 @@
 import { fetchAnthropicModelIds } from "~/services/aiApi/anthropic"
 import { fetchGoogleModelIds } from "~/services/aiApi/google"
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
-import type { PricingResponse } from "~/services/modelList/pricingModel"
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import {
   buildModelListCatalogPricingResponse,
   normalizeModelListModelIds,
@@ -57,11 +57,11 @@ export async function fetchApiCredentialModelIds(
 export const normalizeApiCredentialModelIds = normalizeModelListModelIds
 
 /**
- * Build a minimal model-pricing response shim for profile-backed catalogs.
+ * Build catalog facts for model ids discovered using a credential.
  */
 export function buildApiCredentialProfilePricingResponse(
   modelIds: string[],
-): PricingResponse {
+): ModelCatalogSnapshot {
   return buildModelListCatalogPricingResponse({
     models: modelIds.map((id) => ({ id })),
   })

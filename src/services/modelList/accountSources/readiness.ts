@@ -1,7 +1,6 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import {
   getAccountSiteModelListProfile,
-  type AccountSiteModelListDashboardEstimateLoader,
   type AccountSiteModelListDisplayCapabilitySource,
   type AccountSiteModelListStatusScope,
 } from "~/services/accounts/accountSiteProfile"
@@ -43,7 +42,6 @@ type ModelListAccountSourceReadiness =
       route: typeof MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog
       modelCatalog: ModelCatalogCapability
       requiresTokenKeyResolution: boolean
-      dashboardEstimateLoader: AccountSiteModelListDashboardEstimateLoader
     })
   | (ModelListAccountSourceBaseReadiness & {
       route: typeof MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
@@ -98,7 +96,6 @@ export function resolveModelListAccountSourceReadiness(account: {
             accountCapabilities.keyResourceManagement,
           ) === INVENTORY_SECRET_AVAILABILITIES.Recoverable,
       ),
-      dashboardEstimateLoader: profile.dashboardEstimateLoader,
     }
   }
 

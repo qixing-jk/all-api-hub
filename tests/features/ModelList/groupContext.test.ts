@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  createModelGroupResolver,
   MODEL_GROUP_ACCESS_STATES,
-  normalizeGroupRatios,
   resolveActiveModelGroupContext,
-  resolveModelGroupContext,
 } from "~/features/ModelList/groupContext"
 import { MODEL_LIST_GROUP_SEMANTICS } from "~/features/ModelList/modelManagementSources"
+import { normalizeGroupRatios } from "~/services/modelCatalog/groupFacts"
 import {
-  MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
 } from "~/services/modelList/pricingModel"
@@ -50,14 +49,28 @@ describe("normalizeGroupRatios", () => {
 })
 
 describe("resolveModelGroupContext", () => {
+  it("keeps an explicit empty permission scope even when a price ratio exists", () => {
+    const context = createModelGroupResolver({
+      groupSemantics: MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
+      groupAccess: { kind: "authoritative", usableGroups: [] },
+      groupRatios: { default: 1 },
+    })(BASE_MODEL)
+    expect(context).toMatchObject({
+      accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+      usableGroups: [],
+      priceableGroups: [],
+    })
+  })
   it("separates supported, usable, and priceable groups", () => {
     expect(
-      resolveModelGroupContext({
+      createModelGroupResolver({
         groupSemantics: MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
-        model: BASE_MODEL,
-        usableGroup: { default: { description: "Default" } },
         groupRatios: { default: 1 },
-      }),
+        groupAccess: {
+          kind: "authoritative",
+          usableGroups: ["default"],
+        },
+      })(BASE_MODEL),
     ).toEqual({
       accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
       supportedGroups: ["default", "vip"],
@@ -68,12 +81,14 @@ describe("resolveModelGroupContext", () => {
 
   it("normalizes group names without sorting and leaves usable unpriced groups usable", () => {
     expect(
-      resolveModelGroupContext({
+      createModelGroupResolver({
         groupSemantics: MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
-        model: { enable_groups: [" vip ", "", "default", "vip"] },
-        usableGroup: { " vip ": true, default: true },
         groupRatios: { default: 1 },
-      }),
+        groupAccess: {
+          kind: "authoritative",
+          usableGroups: [" vip ", "default"],
+        },
+      })({ enable_groups: [" vip ", "", "default", "vip"] }),
     ).toEqual({
       accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
       supportedGroups: ["vip", "default"],
@@ -84,12 +99,14 @@ describe("resolveModelGroupContext", () => {
 
   it("uses finite priced groups as a compatible fallback when usable access is empty", () => {
     expect(
-      resolveModelGroupContext({
+      createModelGroupResolver({
         groupSemantics: MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
-        model: BASE_MODEL,
-        usableGroup: {},
-        groupRatios: { default: 0, vip: Number.NaN },
-      }),
+        groupRatios: { default: 0 },
+        groupAccess: {
+          kind: "compatible-priced-fallback",
+          candidateGroups: ["default"],
+        },
+      })(BASE_MODEL),
     ).toEqual({
       accessState: MODEL_GROUP_ACCESS_STATES.COMPATIBLE_PRICED_FALLBACK,
       supportedGroups: ["default", "vip"],
@@ -100,12 +117,14 @@ describe("resolveModelGroupContext", () => {
 
   it("keeps a nonempty usable map authoritative when it does not support the model", () => {
     expect(
-      resolveModelGroupContext({
+      createModelGroupResolver({
         groupSemantics: MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
-        model: { enable_groups: ["vip"] },
-        usableGroup: { default: true },
         groupRatios: { vip: 1 },
-      }),
+        groupAccess: {
+          kind: "authoritative",
+          usableGroups: ["default"],
+        },
+      })({ enable_groups: ["vip"] }),
     ).toEqual({
       accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
       supportedGroups: ["vip"],
@@ -114,25 +133,23 @@ describe("resolveModelGroupContext", () => {
     })
   })
 
-  it("distinguishes unavailable price precision from known empty direct access", () => {
-    const unknown = resolveModelGroupContext({
+  it("distinguishes unavailable access evidence from authoritative empty access", () => {
+    const unknown = createModelGroupResolver({
       groupSemantics: MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
-      model: {
-        ...BASE_MODEL,
-        price_metadata: {
-          source: MODEL_PRICE_SOURCE_KINDS.NONE,
-          precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
-        },
+      groupRatios: {},
+      groupAccess: { kind: "unavailable" },
+    })({
+      ...BASE_MODEL,
+      price_metadata: {
+        source: MODEL_PRICE_SOURCE_KINDS.NONE,
+        precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
       },
-      usableGroup: {},
-      groupRatios: {},
     })
-    const knownEmpty = resolveModelGroupContext({
+    const knownEmpty = createModelGroupResolver({
       groupSemantics: MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
-      model: BASE_MODEL,
-      usableGroup: {},
       groupRatios: {},
-    })
+      groupAccess: { kind: "authoritative", usableGroups: [] },
+    })(BASE_MODEL)
 
     expect(unknown.accessState).toBe(MODEL_GROUP_ACCESS_STATES.UNKNOWN)
     expect(knownEmpty).toMatchObject({
@@ -143,28 +160,25 @@ describe("resolveModelGroupContext", () => {
   })
 
   it("treats a catalog source without pricing as unknown group access", () => {
-    const context = resolveModelGroupContext({
+    const context = createModelGroupResolver({
       groupSemantics: MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
-      model: BASE_MODEL,
-      usableGroup: {},
       groupRatios: {},
-      modelListSource: {
-        kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
-        supportsPricing: false,
-      },
-    })
+      groupAccess: { kind: "unavailable" },
+    })(BASE_MODEL)
 
     expect(context.accessState).toBe(MODEL_GROUP_ACCESS_STATES.UNKNOWN)
   })
 
   it("preserves supported metadata when group semantics are not applicable", () => {
     expect(
-      resolveModelGroupContext({
+      createModelGroupResolver({
         groupSemantics: MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
-        model: BASE_MODEL,
-        usableGroup: { default: true },
         groupRatios: { default: 1 },
-      }),
+        groupAccess: {
+          kind: "authoritative",
+          usableGroups: ["default"],
+        },
+      })(BASE_MODEL),
     ).toEqual({
       accessState: MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
       supportedGroups: ["default", "vip"],

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { buildAIHubMixWebsitePricingPlan } from "~/services/apiService/aihubmix/websitePricing"
+import { buildAIHubMixWebsitePricingPlan } from "~/services/apiAdapters/aihubmix/websitePricing"
 import {
   PRICING_IMAGE_SIZES,
   PRICING_PURPOSES,

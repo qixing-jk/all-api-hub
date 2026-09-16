@@ -26,14 +26,6 @@ export const ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES = {
 export type AccountSiteTokenFormNetworkLimitPolicy =
   (typeof ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES)[keyof typeof ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES]
 
-export const ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS = {
-  None: "none",
-  Sub2Api: "sub2api",
-} as const
-
-export type AccountSiteModelListDashboardEstimateLoader =
-  (typeof ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS)[keyof typeof ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS]
-
 export const ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES = {
   Account: "account",
   Token: "token",
@@ -95,7 +87,6 @@ export type AccountSiteTokenFormProfile = {
 }
 
 export type AccountSiteModelListProfile = {
-  dashboardEstimateLoader: AccountSiteModelListDashboardEstimateLoader
   statusScope: AccountSiteModelListStatusScope
   displayCapabilitiesSource: AccountSiteModelListDisplayCapabilitySource
   groupSemantics: AccountSiteModelListGroupSemantics

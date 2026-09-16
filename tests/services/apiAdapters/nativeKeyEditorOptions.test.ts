@@ -1,12 +1,12 @@
 import { afterEach, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import * as aihubmix from "~/services/apiAdapters/aihubmix/catalog"
 import { createAIHubMixKeyEditor } from "~/services/apiAdapters/aihubmix/keyResourceEditor"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResourceEditor"
 import { resolveNewApiFamilyTokenTransport } from "~/services/apiAdapters/newApi/tokenTransport"
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keyResourceEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
-import * as aihubmix from "~/services/apiService/aihubmix"
 import * as sub2api from "~/services/apiService/sub2api"
 import * as voapi from "~/services/apiService/voapiV2"
 import { AuthTypeEnum } from "~/types"

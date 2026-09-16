@@ -1,6 +1,6 @@
 import { Storage } from "@plasmohq/storage"
 
-import type { PricingResponse } from "~/services/modelList/pricingModel"
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -9,13 +9,13 @@ import { createLogger } from "~/utils/core/logger"
 const logger = createLogger("ModelPricingCache")
 
 const STORAGE_KEYS = {
-  PRICING_CACHE: "modelPricing_cache_v28",
+  PRICING_CACHE: "modelCatalog_cache_v1",
 } as const
 
 export const MODEL_PRICING_CACHE_TTL_MS = 10 * 60 * 1000
 
 interface CachedPricingEntry {
-  pricing: PricingResponse
+  pricing: ModelCatalogSnapshot
   lastUpdated: number
 }
 
@@ -33,7 +33,7 @@ class ModelPricingCacheService {
   async get(
     cacheKey: string,
     ttlMs: number = MODEL_PRICING_CACHE_TTL_MS,
-  ): Promise<PricingResponse | null> {
+  ): Promise<ModelCatalogSnapshot | null> {
     try {
       const cache =
         (await this.storage.get<PricingCacheMap>(STORAGE_KEYS.PRICING_CACHE)) ||
@@ -51,7 +51,7 @@ class ModelPricingCacheService {
     }
   }
 
-  async set(cacheKey: string, pricing: PricingResponse): Promise<void> {
+  async set(cacheKey: string, pricing: ModelCatalogSnapshot): Promise<void> {
     try {
       const cache =
         (await this.storage.get<PricingCacheMap>(STORAGE_KEYS.PRICING_CACHE)) ||

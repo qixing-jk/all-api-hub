@@ -1,8 +1,8 @@
 import { delay, http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { fetchModelPricing } from "~/services/apiAdapters/aihubmix/catalog"
 import { aihubmixModelPricing } from "~/services/apiAdapters/aihubmix/modelPricing"
-import { fetchModelPricing } from "~/services/apiService/aihubmix"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 

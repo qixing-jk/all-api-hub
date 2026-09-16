@@ -309,17 +309,15 @@ describe("APIyi account capabilities", () => {
           vendorEvidence: { name: "OpenAI" },
         },
       ],
-      group_ratio: {
+      groupRatios: {
         CodexResponses: 1,
         CodexReverse: 0.5,
         default: 1,
         svip: 1,
       },
-      usable_group: {
-        CodexResponses: "CodexResponses",
-        CodexReverse: "Codex_Reverse",
-        default: "Default",
-        svip: "SVIP",
+      groupAccess: {
+        kind: "authoritative",
+        usableGroups: ["CodexResponses", "CodexReverse", "default", "svip"],
       },
     })
     expect(keyModelRequests).toBe(0)

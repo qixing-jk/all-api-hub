@@ -1,8 +1,7 @@
 import { resolveAccountExchangeRate } from "~/features/ModelList/accountExchangeRate"
 import {
+  createModelGroupResolver,
   MODEL_GROUP_ACCESS_STATES,
-  normalizeGroupRatios,
-  resolveModelGroupContext,
   type ModelGroupContext,
 } from "~/features/ModelList/groupContext"
 import {
@@ -10,15 +9,16 @@ import {
   deriveModelListSourceCapabilities,
   MODEL_LIST_GROUP_SEMANTICS,
   MODEL_MANAGEMENT_SOURCE_KINDS,
-  type ModelListSourceIdentity,
   type ModelManagementItemSource,
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
-import type { PricingResponse } from "~/services/modelList/pricingModel"
+import { normalizeGroupRatios } from "~/services/modelCatalog/groupFacts"
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import { type ModelListSourceIdentity } from "~/services/modelCatalog/sourceIdentity"
 import type { DisplaySiteData } from "~/types"
 
 export interface PreparedModelListItem {
-  model: PricingResponse["data"][number]
+  model: ModelCatalogSnapshot["data"][number]
   source: ModelManagementItemSource
   sourceIdentity?: ModelListSourceIdentity
   groupRatios: Record<string, number>
@@ -31,23 +31,23 @@ export interface PreparedModelListSource {
   sourceIdentity?: ModelListSourceIdentity
   items: PreparedModelListItem[]
   groupRatios: Record<string, number>
-  groupAccessEvidence: "authoritative" | "insufficient"
+  canRepairGroupSelection: boolean
 }
 
 interface SourcePricingInput {
   source: ModelManagementItemSource
-  pricing: PricingResponse | null
+  pricing: ModelCatalogSnapshot | null
   sourceIdentity?: ModelListSourceIdentity
 }
 
 /**
- * Describes group-access evidence without deciding whether to clear a selection.
- * Preserve the existing empty-response convention: pricing-capable responses
- * establish an empty scope; catalog-only responses do not establish access.
+ * Selection repair remains a domain policy. Both authoritative access and the
+ * existing priced compatibility fallback can repair selections; unknown access
+ * cannot. This does not upgrade compatibility evidence to authority.
  */
-function hasAuthoritativeGroupAccess(params: {
+function canRepairSourceGroupSelection(params: {
   groupSemantics: ModelManagementSource["groupSemantics"]
-  pricing: PricingResponse
+  pricing: ModelCatalogSnapshot
   groupContexts: readonly ModelGroupContext[]
 }) {
   if (params.groupSemantics === MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE) {
@@ -63,7 +63,7 @@ function hasAuthoritativeGroupAccess(params: {
   }
 
   if (params.groupContexts.length === 0) {
-    return params.pricing.model_list_source?.supportsPricing !== false
+    return params.pricing.groupAccess.kind !== "unavailable"
   }
 
   return true
@@ -80,7 +80,7 @@ export function prepareModelListSource(
       sourceIdentity,
       items: [],
       groupRatios: {},
-      groupAccessEvidence: "insufficient",
+      canRepairGroupSelection: false,
     }
   }
   const isAccount = input.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
@@ -93,7 +93,12 @@ export function prepareModelListSource(
         }),
       }
     : input.source
-  const groupRatios = normalizeGroupRatios(pricing.group_ratio ?? {})
+  const groupRatios = normalizeGroupRatios(pricing.groupRatios ?? {})
+  const resolveGroupContext = createModelGroupResolver({
+    groupSemantics: source.groupSemantics,
+    groupAccess: pricing.groupAccess,
+    groupRatios,
+  })
   const exchangeRate =
     source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
       ? resolveAccountExchangeRate(source.account)
@@ -105,13 +110,7 @@ export function prepareModelListSource(
       sourceIdentity,
       groupRatios,
       exchangeRate,
-      groupContext: resolveModelGroupContext({
-        groupSemantics: source.groupSemantics,
-        model,
-        usableGroup: isAccount ? pricing.usable_group ?? {} : {},
-        groupRatios,
-        modelListSource: pricing.model_list_source,
-      }),
+      groupContext: resolveGroupContext(model),
     }),
   )
   return {
@@ -119,13 +118,11 @@ export function prepareModelListSource(
     sourceIdentity,
     items,
     groupRatios,
-    groupAccessEvidence: hasAuthoritativeGroupAccess({
+    canRepairGroupSelection: canRepairSourceGroupSelection({
       groupSemantics: source.groupSemantics,
       pricing,
       groupContexts: items.map((item) => item.groupContext),
-    })
-      ? "authoritative"
-      : "insufficient",
+    }),
   }
 }
 
@@ -138,10 +135,10 @@ export function prepareModelListSource(
 export function prepareModelListSources(params: {
   pricingContexts: readonly {
     account: DisplaySiteData
-    pricing: PricingResponse | null
+    pricing: ModelCatalogSnapshot | null
     sourceIdentity?: ModelListSourceIdentity
   }[]
-  pricingData: PricingResponse | null
+  pricingData: ModelCatalogSnapshot | null
   selectedSource: ModelManagementSource | null
 }): PreparedModelListSource[] {
   if (params.pricingContexts?.length) {

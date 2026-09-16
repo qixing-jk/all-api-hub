@@ -2,7 +2,6 @@ import { useCallback, useMemo } from "react"
 
 import { summarizeModelListGroupAccess } from "~/features/ModelList/groupAccessSummary"
 import { deriveGroupAvailability } from "~/features/ModelList/groupAvailability"
-import { normalizeGroupNames } from "~/features/ModelList/groupNormalization"
 import {
   createModelMetadataIndex,
   hasFilterableModelCapabilityMetadata,
@@ -27,21 +26,22 @@ import {
 } from "~/features/ModelList/priceEvaluation"
 import { type ModelListSortMode } from "~/features/ModelList/sortModes"
 import { prepareModelListSources } from "~/features/ModelList/sourcePreparation"
-import { type PricingResponse } from "~/services/modelList/pricingModel"
+import { normalizeGroupNames } from "~/services/modelCatalog/groupFacts"
+import type { AccountPricingContext } from "~/services/modelCatalog/loader"
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import type { PricingScenario } from "~/services/modelPricing/pricingPlan"
 import type { ModelMetadata } from "~/services/models/modelMetadata/types"
 import { type ModelVendorFilterValue } from "~/services/models/modelVendor"
 
 import { type ModelListBillingMode } from "../billingModes"
 import { type ModelPriceComparisonWeights } from "../priceComparison"
-import type { AccountPricingContext } from "./useModelData"
 
 const EMPTY_EXCLUDED_GROUPS: Record<string, string[]> = {}
 const EMPTY_ACCOUNT_IDS: string[] = []
 
 interface UseFilteredModelsProps {
   showUnavailableModels?: boolean
-  pricingData: PricingResponse | null
+  pricingData: ModelCatalogSnapshot | null
   pricingContexts: AccountPricingContext[]
   selectedSource: ModelManagementSource | null
   selectedBillingMode: ModelListBillingMode
@@ -115,9 +115,9 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       ? selectedSource.account.id
       : undefined
   const {
-    isGroupAccessAuthoritative,
+    canRepairGroupSelection,
     singleSourceGroupRatios,
-    authoritativeGroupAccessByAccountId,
+    canRepairGroupSelectionByAccountId,
   } = useMemo(
     () =>
       summarizeModelListGroupAccess({
@@ -348,9 +348,9 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     getFilteredModels,
     getFilteredResultCount,
     modelCapabilityMetadataCoverage,
-    isGroupAccessAuthoritative,
+    canRepairGroupSelection,
     singleSourceGroupRatios,
-    authoritativeGroupAccessByAccountId,
+    canRepairGroupSelectionByAccountId,
     availableGroups,
     availableAccountGroupsByAccountId,
     availableAccountGroupOptionsByAccountId,

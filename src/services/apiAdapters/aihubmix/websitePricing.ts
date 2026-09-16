@@ -1,12 +1,12 @@
 import { z } from "zod"
 
 import { AIHUBMIX_API_ORIGIN } from "~/constants/siteType"
-import { buildAIHubMixMeteredImagePlan } from "~/services/apiService/aihubmix/meteredImagePricing"
+import { buildAIHubMixMeteredImagePlan } from "~/services/apiAdapters/aihubmix/meteredImagePricing"
 import {
   buildAIHubMixMeteredVideoPlan,
   buildAIHubMixSearchUnitPlan,
-} from "~/services/apiService/aihubmix/meteredPricing"
-import { buildAIHubMixPricingPlan } from "~/services/apiService/aihubmix/pricingPlan"
+} from "~/services/apiAdapters/aihubmix/meteredPricing"
+import { buildAIHubMixPricingPlan } from "~/services/apiAdapters/aihubmix/pricingPlan"
 import {
   PRICE_RATE_UNITS,
   PRICING_CONDITION_KINDS,

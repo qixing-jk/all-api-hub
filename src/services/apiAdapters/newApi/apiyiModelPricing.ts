@@ -1,9 +1,9 @@
 import { normalizeNewApiModelPricingResponse } from "~/services/apiAdapters/newApi/modelPricingDto"
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import {
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
-  type PricingResponse,
 } from "~/services/modelList/pricingModel"
 import {
   PRICE_RATE_UNITS,
@@ -121,7 +121,7 @@ function normalizeContextTiers(
 export function normalizeApiYiModelPricingResponse(
   value: unknown,
   status?: unknown,
-): PricingResponse {
+): ModelCatalogSnapshot {
   const response = normalizeNewApiModelPricingResponse(value)
   if (!isRecord(value)) return response
 

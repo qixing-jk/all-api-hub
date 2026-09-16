@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
 } from "~/services/accounts/accountSiteProfile"
@@ -36,8 +35,6 @@ describe("resolveModelListAccountSourceReadiness route fallbacks", () => {
     getSiteTypeCapabilitiesMock.mockReset()
 
     getAccountSiteModelListProfileMock.mockReturnValue({
-      dashboardEstimateLoader:
-        ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
       statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
       displayCapabilitiesSource:
         ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,

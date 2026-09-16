@@ -2,16 +2,18 @@ import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import {
-  createAccountModelListSourceIdentity,
-  createAccountRuntimeKeyModelListSourceIdentity,
   createAccountSource,
-  createAccountTokenModelListSourceIdentity,
-  createPersonalizedCatalogModelListSourceIdentity,
   createProfileSource,
-  createProviderCatalogModelListSourceIdentity,
-  MODEL_LIST_SOURCE_IDENTITY_KINDS,
 } from "~/features/ModelList/modelManagementSources"
 import { formatModelListSourceLabel } from "~/features/ModelList/sourceLabels"
+import {
+  createAccountModelListSourceIdentity,
+  createAccountRuntimeKeyModelListSourceIdentity,
+  createAccountTokenModelListSourceIdentity,
+  createPersonalizedCatalogModelListSourceIdentity,
+  createProviderCatalogModelListSourceIdentity,
+  MODEL_LIST_SOURCE_IDENTITY_KINDS,
+} from "~/services/modelCatalog/sourceIdentity"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"

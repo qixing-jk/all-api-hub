@@ -1,14 +1,14 @@
 import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
-import {
-  MODEL_LIST_SOURCE_IDENTITY_KINDS,
-  type ModelListSourceIdentity,
-  type ModelManagementItemSource,
-} from "~/features/ModelList/modelManagementSources"
+import { type ModelManagementItemSource } from "~/features/ModelList/modelManagementSources"
 import {
   isAccountKeyResourceRuntimeKey,
   isAccountRuntimeKeyCompatibleWithModel,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
+import {
+  MODEL_LIST_SOURCE_IDENTITY_KINDS,
+  type ModelListSourceIdentity,
+} from "~/services/modelCatalog/sourceIdentity"
 import { identifyProvider } from "~/services/models/utils/modelProviders"
 import {
   API_TYPES,

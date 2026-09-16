@@ -4,11 +4,11 @@ import type {
 } from "~/features/ModelList/groupContext"
 import {
   MODEL_MANAGEMENT_SOURCE_KINDS,
-  type ModelListSourceIdentity,
   type ModelManagementItemSource,
 } from "~/features/ModelList/modelManagementSources"
 import type { PreparedModelListItem } from "~/features/ModelList/sourcePreparation"
-import type { PricingResponse } from "~/services/modelList/pricingModel"
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import { type ModelListSourceIdentity } from "~/services/modelCatalog/sourceIdentity"
 import { isModelPriceUnavailable } from "~/services/modelList/pricingModel"
 import type { ComparableModelIdentity } from "~/services/models/modelMetadata/modelIdentityIndex"
 import type {
@@ -23,7 +23,7 @@ export interface AccountGroupOption {
 }
 
 export type CalculatedModelItem = {
-  model: PricingResponse["data"][number]
+  model: ModelCatalogSnapshot["data"][number]
   calculatedPrice: ReturnType<typeof calculateModelPrice>
   source: ModelManagementItemSource
   sourceIdentity?: ModelListSourceIdentity

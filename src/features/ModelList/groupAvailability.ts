@@ -1,5 +1,5 @@
-import { normalizeGroupNames } from "~/features/ModelList/groupNormalization"
 import type { AccountGroupOption } from "~/features/ModelList/modelListItems"
+import { normalizeGroupNames } from "~/services/modelCatalog/groupFacts"
 
 interface GroupAvailabilityInput {
   sourceId: string

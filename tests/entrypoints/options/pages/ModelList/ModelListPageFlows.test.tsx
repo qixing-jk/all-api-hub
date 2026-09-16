@@ -616,8 +616,8 @@ describe("ModelList page flows", () => {
         pricingData: {
           success: true,
           data: [{ model_name: "gpt-aihubmix" }],
-          group_ratio: {},
-          usable_group: {},
+          groupRatios: {},
+          groupAccess: { kind: "authoritative", usableGroups: [] },
         },
         baseFilteredModels: [
           {
@@ -660,8 +660,8 @@ describe("ModelList page flows", () => {
         pricingData: {
           success: true,
           data: [{ model_name: "gpt-runtime" }],
-          group_ratio: {},
-          usable_group: {},
+          groupRatios: {},
+          groupAccess: { kind: "authoritative", usableGroups: [] },
         },
         baseFilteredModels: [
           {

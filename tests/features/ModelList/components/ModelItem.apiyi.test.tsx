@@ -10,7 +10,7 @@ import { useFilteredModels } from "~/features/ModelList/hooks/useFilteredModels"
 import { createAccountSource } from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import type { PricingResponse } from "~/services/modelList/pricingModel"
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import { PRICING_PURPOSES } from "~/services/modelPricing/pricingConstants"
 import type { PricingScenario } from "~/services/modelPricing/pricingPlan"
 import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
@@ -37,7 +37,7 @@ function ApiYiModelRow({
   pricing,
   pricingScenario,
 }: {
-  pricing: PricingResponse
+  pricing: ModelCatalogSnapshot
   pricingScenario?: PricingScenario
 }) {
   const [selectedGroups, setSelectedGroups] = useState<string[]>([])

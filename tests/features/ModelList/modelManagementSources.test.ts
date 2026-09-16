@@ -1,39 +1,18 @@
 import { describe, expect, it } from "vitest"
 
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   createAccountSource,
   createAllAccountsSource,
   createProfileSource,
-  createProviderCatalogModelListSourceIdentity,
   deriveAllAccountsModelListCapabilities,
   deriveModelListSourceCapabilities,
   MODEL_LIST_GROUP_SEMANTICS,
 } from "~/features/ModelList/modelManagementSources"
+import { createProviderCatalogModelListSourceIdentity } from "~/services/modelCatalog/sourceIdentity"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
-import type { DisplaySiteData } from "~/types"
-import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
-import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
-
-const createAccountFixture = (siteType: AccountSiteType): DisplaySiteData => ({
-  id: `account-${siteType}`,
-  name: "Example Account",
-  username: "example-user",
-  balance: { USD: 0, CNY: 0 },
-  todayConsumption: { USD: 0, CNY: 0 },
-  todayIncome: { USD: 0, CNY: 0 },
-  todayTokens: { upload: 0, download: 0 },
-  todayStatsAvailability: buildCompleteTodayStatsAvailability(),
-  health: { status: SiteHealthStatus.Healthy },
-  siteType,
-  baseUrl: "https://account.example.invalid",
-  token: "example-token",
-  userId: "example-user-id",
-  authType: AuthTypeEnum.AccessToken,
-  checkIn: buildCheckInConfig(),
-})
+import { buildModelListAccountFixture } from "~~/tests/test-utils/modelListSource"
 
 const PROFILE_FIXTURE: ApiCredentialProfile = {
   id: "profile-1",
@@ -50,7 +29,7 @@ const PROFILE_FIXTURE: ApiCredentialProfile = {
 describe("modelManagementSources group semantics", () => {
   it("marks account and aggregate sources as account-or-runtime-key scoped", () => {
     expect(
-      createAccountSource(createAccountFixture(SITE_TYPES.NEW_API)),
+      createAccountSource(buildModelListAccountFixture(SITE_TYPES.NEW_API)),
     ).toHaveProperty(
       "groupSemantics",
       MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
@@ -69,7 +48,9 @@ describe("modelManagementSources group semantics", () => {
   })
 
   it("preserves stable group semantics when response capabilities downgrade", () => {
-    const source = createAccountSource(createAccountFixture(SITE_TYPES.NEW_API))
+    const source = createAccountSource(
+      buildModelListAccountFixture(SITE_TYPES.NEW_API),
+    )
     const downgradedSource = {
       ...source,
       capabilities: deriveModelListSourceCapabilities({
@@ -86,7 +67,7 @@ describe("modelManagementSources group semantics", () => {
 
   it("applies provider-neutral source action policy as a capability downgrade", () => {
     const source = createAccountSource(
-      createAccountFixture(SITE_TYPES.OPENROUTER),
+      buildModelListAccountFixture(SITE_TYPES.OPENROUTER),
     )
 
     expect(
@@ -175,7 +156,7 @@ describe("modelManagementSources group semantics", () => {
     "marks %s groups as not applicable before a response loads",
     (siteType) => {
       expect(
-        createAccountSource(createAccountFixture(siteType)),
+        createAccountSource(buildModelListAccountFixture(siteType)),
       ).toHaveProperty(
         "groupSemantics",
         MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
@@ -187,7 +168,7 @@ describe("modelManagementSources group semantics", () => {
     "keeps %s account-or-runtime-key semantics before a model-list response loads",
     (siteType) => {
       expect(
-        createAccountSource(createAccountFixture(siteType)),
+        createAccountSource(buildModelListAccountFixture(siteType)),
       ).toHaveProperty(
         "groupSemantics",
         MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,

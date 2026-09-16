@@ -13,7 +13,6 @@ import {
 import { getAccountSiteProductProfile } from "~/services/accounts/accountSiteProfile"
 import {
   ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING,
-  ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
@@ -719,8 +718,6 @@ describe("account site definition registry", () => {
         storedUserIdentityFields: ["id"],
       },
       modelList: {
-        dashboardEstimateLoader:
-          ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.Sub2Api,
         statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token,
         displayCapabilitiesSource:
           ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
@@ -743,8 +740,6 @@ describe("account site definition registry", () => {
         storedUserIdentityFields: ["username"],
       },
       modelList: {
-        dashboardEstimateLoader:
-          ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
         statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
         displayCapabilitiesSource:
           ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,

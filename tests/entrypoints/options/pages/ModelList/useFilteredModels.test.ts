@@ -11,22 +11,24 @@ import {
   MODEL_CAPABILITY_FILTER_VALUES,
 } from "~/features/ModelList/modelCapabilityFilters"
 import {
-  createAccountRuntimeKeyModelListSourceIdentity,
   createAccountSource,
-  createAccountTokenModelListSourceIdentity,
   createAllAccountsSource,
   createProfileSource,
-  createProviderCatalogModelListSourceIdentity,
-  MODEL_LIST_SOURCE_IDENTITY_KINDS,
 } from "~/features/ModelList/modelManagementSources"
 import type { ModelPriceComparisonWeights } from "~/features/ModelList/priceComparison"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
+import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  createAccountRuntimeKeyModelListSourceIdentity,
+  createAccountTokenModelListSourceIdentity,
+  createProviderCatalogModelListSourceIdentity,
+  MODEL_LIST_SOURCE_IDENTITY_KINDS,
+} from "~/services/modelCatalog/sourceIdentity"
 import {
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
-  type PricingResponse,
 } from "~/services/modelList/pricingModel"
 import {
   CALCULATED_PRICE_KINDS,
@@ -76,8 +78,8 @@ const createDisplayAccount = (
 })
 
 const createPricingModel = (
-  overrides: Partial<PricingResponse["data"][number]>,
-): PricingResponse["data"][number] => ({
+  overrides: Partial<ModelCatalogSnapshot["data"][number]>,
+): ModelCatalogSnapshot["data"][number] => ({
   model_name: "gpt-4o-mini",
   quota_type: 0,
   model_ratio: 0,
@@ -89,19 +91,22 @@ const createPricingModel = (
 })
 
 const createPricingResponse = (
-  models: Array<string | Partial<PricingResponse["data"][number]>>,
-  overrides: Partial<PricingResponse> = {},
-): PricingResponse => {
+  models: Array<string | Partial<ModelCatalogSnapshot["data"][number]>>,
+  overrides: Partial<ModelCatalogSnapshot> = {},
+): ModelCatalogSnapshot => {
   return {
     data: models.map((model) =>
       typeof model === "string"
         ? createPricingModel({ model_name: model })
         : createPricingModel(model),
     ),
-    group_ratio: { default: 1 },
+    groupRatios: { default: 1 },
     success: true,
     // Access and pricing are independent facts; scenarios override each explicitly.
-    usable_group: { default: "default" },
+    groupAccess: {
+      kind: "authoritative",
+      usableGroups: ["default"],
+    },
     ...overrides,
   }
 }
@@ -688,8 +693,11 @@ describe("useFilteredModels", () => {
           },
         ],
         {
-          group_ratio: { vip: 2, "": 5 },
-          usable_group: { vip: "vip" },
+          groupRatios: { vip: 2, "": 5 },
+          groupAccess: {
+            kind: "authoritative",
+            usableGroups: ["vip"],
+          },
         },
       ),
       selectedSource: source,
@@ -777,8 +785,8 @@ describe("useFilteredModels", () => {
           },
         ],
         {
-          group_ratio: {},
-          usable_group: {},
+          groupRatios: {},
+          groupAccess: { kind: "authoritative", usableGroups: [] },
           model_list_source: {
             kind: MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG,
             provider: SITE_TYPES.OPENROUTER,
@@ -1068,8 +1076,11 @@ describe("useFilteredModels", () => {
               },
             ],
             {
-              group_ratio: { vip: 1 },
-              usable_group: { vip: "vip" },
+              groupRatios: { vip: 1 },
+              groupAccess: {
+                kind: "authoritative",
+                usableGroups: ["vip"],
+              },
             },
           ),
         },
@@ -1111,8 +1122,11 @@ describe("useFilteredModels", () => {
               },
             ],
             {
-              usable_group: { default: "default", vip: "vip" },
-              group_ratio: { default: 1, vip: 1 },
+              groupAccess: {
+                kind: "authoritative",
+                usableGroups: ["default", "vip"],
+              },
+              groupRatios: { default: 1, vip: 1 },
             },
           ),
         },
@@ -1549,7 +1563,10 @@ describe("useFilteredModels", () => {
           pricing: {
             data: null,
             success: true,
-            usable_group: {},
+            groupAccess: {
+              kind: "authoritative",
+              usableGroups: [],
+            },
           } as any,
         },
       ],
@@ -1596,8 +1613,8 @@ describe("useFilteredModels", () => {
           },
         ],
         {
-          group_ratio: {},
-          usable_group: {},
+          groupRatios: {},
+          groupAccess: { kind: "authoritative", usableGroups: [] },
         },
       ),
       selectedSource: createAccountSource(account),
@@ -1648,8 +1665,11 @@ describe("useFilteredModels", () => {
               },
             ],
             {
-              group_ratio: {},
-              usable_group: {},
+              groupRatios: {},
+              groupAccess: {
+                kind: "authoritative",
+                usableGroups: [],
+              },
             },
           ),
         },
@@ -1695,7 +1715,7 @@ describe("useFilteredModels", () => {
               },
             ],
             {
-              group_ratio: undefined as any,
+              groupRatios: undefined as any,
             },
           ),
         },
@@ -2053,7 +2073,7 @@ describe("useFilteredModels", () => {
           },
         ],
         {
-          group_ratio: undefined as any,
+          groupRatios: undefined as any,
         },
       ),
       selectedSource: sourceWithoutGroupFiltering,
@@ -2201,8 +2221,11 @@ describe("useFilteredModels", () => {
           },
         ],
         {
-          usable_group: { alpha: "alpha", beta: "beta" },
-          group_ratio: { alpha: 1, beta: 1 },
+          groupAccess: {
+            kind: "authoritative",
+            usableGroups: ["alpha", "beta"],
+          },
+          groupRatios: { alpha: 1, beta: 1 },
         },
       ),
       selectedSource: createAccountSource(account),
@@ -2235,8 +2258,11 @@ describe("useFilteredModels", () => {
           },
         ],
         {
-          usable_group: { a: "a", B: "B" },
-          group_ratio: { a: 1, B: 1 },
+          groupAccess: {
+            kind: "authoritative",
+            usableGroups: ["a", "B"],
+          },
+          groupRatios: { a: 1, B: 1 },
         },
       ),
       selectedSource: createAccountSource(account),
@@ -2570,8 +2596,11 @@ describe("useFilteredModels", () => {
             },
           ],
           {
-            usable_group: { default: "default", vip: "vip" },
-            group_ratio: { default: 1, vip: 0.5 },
+            groupAccess: {
+              kind: "authoritative",
+              usableGroups: ["default", "vip"],
+            },
+            groupRatios: { default: 1, vip: 0.5 },
           },
         ),
       },
@@ -2588,7 +2617,7 @@ describe("useFilteredModels", () => {
             },
           ],
           {
-            group_ratio: { default: 0.6 },
+            groupRatios: { default: 0.6 },
           },
         ),
       },
@@ -2695,8 +2724,11 @@ describe("useFilteredModels", () => {
               },
             ],
             {
-              usable_group: {},
-              group_ratio: {},
+              groupAccess: {
+                kind: "authoritative",
+                usableGroups: [],
+              },
+              groupRatios: {},
               model_list_source: buildAIHubMixModelListSource(
                 MODEL_LIST_SOURCE_KINDS.USER_SCOPED,
               ),
@@ -2820,8 +2852,11 @@ describe("useFilteredModels", () => {
               { model_name: "example/provider-only", enable_groups: [] },
             ],
             {
-              group_ratio: {},
-              usable_group: {},
+              groupRatios: {},
+              groupAccess: {
+                kind: "authoritative",
+                usableGroups: [],
+              },
               model_list_source: {
                 kind: MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG,
                 provider: SITE_TYPES.OPENROUTER,
@@ -2916,7 +2951,7 @@ describe("useFilteredModels", () => {
               },
             ],
             {
-              group_ratio: { default: 1 },
+              groupRatios: { default: 1 },
               model_list_source: {
                 kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
                 provider: SITE_TYPES.SUB2API,
@@ -2939,7 +2974,7 @@ describe("useFilteredModels", () => {
               },
             ],
             {
-              group_ratio: { default: 1 },
+              groupRatios: { default: 1 },
             },
           ),
         },
@@ -3010,7 +3045,7 @@ describe("useFilteredModels", () => {
               },
             ],
             {
-              group_ratio: { default: 1 },
+              groupRatios: { default: 1 },
               model_list_source: {
                 kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
                 provider: SITE_TYPES.SUB2API,
@@ -3042,8 +3077,11 @@ describe("useFilteredModels", () => {
               },
             ],
             {
-              usable_group: { vip: "vip" },
-              group_ratio: { vip: 0.5 },
+              groupAccess: {
+                kind: "authoritative",
+                usableGroups: ["vip"],
+              },
+              groupRatios: { vip: 0.5 },
               model_list_source: {
                 kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
                 provider: SITE_TYPES.SUB2API,
@@ -3117,8 +3155,11 @@ describe("useFilteredModels", () => {
               },
             ],
             {
-              usable_group: { vip: "vip" },
-              group_ratio: { vip: 0.5 },
+              groupAccess: {
+                kind: "authoritative",
+                usableGroups: ["vip"],
+              },
+              groupRatios: { vip: 0.5 },
             },
           ),
         },
@@ -3134,8 +3175,11 @@ describe("useFilteredModels", () => {
               },
             ],
             {
-              usable_group: { vip: "vip" },
-              group_ratio: { vip: 0.8 },
+              groupAccess: {
+                kind: "authoritative",
+                usableGroups: ["vip"],
+              },
+              groupRatios: { vip: 0.8 },
             },
           ),
         },
@@ -3193,7 +3237,7 @@ describe("useFilteredModels", () => {
               },
             ],
             {
-              group_ratio: { default: 1 },
+              groupRatios: { default: 1 },
             },
           ),
         },
@@ -3214,8 +3258,11 @@ describe("useFilteredModels", () => {
               },
             ],
             {
-              usable_group: { vip: "vip" },
-              group_ratio: { vip: 0.5 },
+              groupAccess: {
+                kind: "authoritative",
+                usableGroups: ["vip"],
+              },
+              groupRatios: { vip: 0.5 },
             },
           ),
         },
@@ -3269,8 +3316,11 @@ describe("useFilteredModels", () => {
           },
         ],
         {
-          usable_group: { default: "default", vip: "vip" },
-          group_ratio: { default: 1, vip: 2 },
+          groupAccess: {
+            kind: "authoritative",
+            usableGroups: ["default", "vip"],
+          },
+          groupRatios: { default: 1, vip: 2 },
         },
       ),
       selectedSource: createAccountSource(account),
@@ -3843,8 +3893,11 @@ describe("useFilteredModels", () => {
       pricingData: createPricingResponse(
         [{ model_name: "shared-model", enable_groups: ["vip", "default"] }],
         {
-          group_ratio: { default: 1 },
-          usable_group: { default: "default" },
+          groupRatios: { default: 1 },
+          groupAccess: {
+            kind: "authoritative",
+            usableGroups: ["default"],
+          },
         },
       ),
       selectedSource: createAccountSource(account),
@@ -3880,8 +3933,11 @@ describe("useFilteredModels", () => {
           },
         ],
         {
-          group_ratio: { default: 1 },
-          usable_group: { default: "default", vip: "vip" },
+          groupRatios: { default: 1 },
+          groupAccess: {
+            kind: "authoritative",
+            usableGroups: ["default", "vip"],
+          },
         },
       ),
       selectedSource: createAccountSource(account),
@@ -3917,8 +3973,11 @@ describe("useFilteredModels", () => {
           },
         ],
         {
-          group_ratio: { default: 1 },
-          usable_group: { default: "default", vip: "vip" },
+          groupRatios: { default: 1 },
+          groupAccess: {
+            kind: "authoritative",
+            usableGroups: ["default", "vip"],
+          },
         },
       ),
       selectedSource: createAccountSource(account),
@@ -3971,11 +4030,11 @@ describe("useFilteredModels", () => {
       const allowed = {
         selectedSource,
         pricingData: createPricingResponse([model], {
-          usable_group: {
-            all: "An ordinary account group",
-            default: "Default",
+          groupAccess: {
+            kind: "authoritative",
+            usableGroups: ["all", "default"],
           },
-          group_ratio: { all: 0.25, default: 1 },
+          groupRatios: { all: 0.25, default: 1 },
         }),
         selectedGroups: ["all"],
       }
@@ -4038,7 +4097,7 @@ describe("useFilteredModels", () => {
                 },
               },
             ],
-            { usable_group: {}, group_ratio: {} },
+            { groupAccess: { kind: "unavailable" }, groupRatios: {} },
           ),
         },
       ],
@@ -4084,7 +4143,10 @@ describe("useFilteredModels", () => {
     const inputs = {
       pricingData: createPricingResponse(
         [{ model_name: "shared-model", enable_groups: ["default"] }],
-        { group_ratio: {}, usable_group: {} },
+        {
+          groupRatios: {},
+          groupAccess: { kind: "authoritative", usableGroups: [] },
+        },
       ),
       selectedSource: createAccountSource(account),
     }
@@ -4127,7 +4189,7 @@ describe("useFilteredModels", () => {
             },
           },
         ],
-        { usable_group: {}, group_ratio: {} },
+        { groupAccess: { kind: "unavailable" }, groupRatios: {} },
       ),
     }
     const { result, rerender } = renderUseFilteredModels(inputs)
@@ -4161,8 +4223,11 @@ describe("useFilteredModels", () => {
               },
             ],
             {
-              group_ratio: { default: 1 },
-              usable_group: { default: "default" },
+              groupRatios: { default: 1 },
+              groupAccess: {
+                kind: "authoritative",
+                usableGroups: ["default"],
+              },
             },
           ),
         },
@@ -4196,8 +4261,11 @@ describe("useFilteredModels", () => {
               },
             ],
             {
-              group_ratio: { default: 1, vip: 0.1 },
-              usable_group: { default: "default" },
+              groupRatios: { default: 1, vip: 0.1 },
+              groupAccess: {
+                kind: "authoritative",
+                usableGroups: ["default"],
+              },
             },
           ),
         },
@@ -4212,8 +4280,11 @@ describe("useFilteredModels", () => {
               },
             ],
             {
-              group_ratio: { team: 0.5 },
-              usable_group: { team: "team" },
+              groupRatios: { team: 0.5 },
+              groupAccess: {
+                kind: "authoritative",
+                usableGroups: ["team"],
+              },
             },
           ),
         },
@@ -4266,8 +4337,11 @@ describe("useFilteredModels", () => {
               },
             ],
             {
-              group_ratio: { " vip ": 0.5 },
-              usable_group: { " vip ": true },
+              groupRatios: { " vip ": 0.5 },
+              groupAccess: {
+                kind: "authoritative",
+                usableGroups: [" vip "],
+              },
             },
           ),
         },
@@ -4301,8 +4375,11 @@ describe("useFilteredModels", () => {
           },
         ],
         {
-          group_ratio: { " vip ": 0.5 },
-          usable_group: { " vip ": true },
+          groupRatios: { " vip ": 0.5 },
+          groupAccess: {
+            kind: "authoritative",
+            usableGroups: [" vip "],
+          },
         },
       ),
       selectedSource: createAccountSource(account),
@@ -4320,8 +4397,11 @@ describe("useFilteredModels", () => {
     const pricing = createPricingResponse(
       [{ model_name: "shared-model", enable_groups: [" vip "] }],
       {
-        group_ratio: { " vip ": 0.5 },
-        usable_group: { " vip ": true },
+        groupRatios: { " vip ": 0.5 },
+        groupAccess: {
+          kind: "authoritative",
+          usableGroups: [" vip "],
+        },
       },
     )
     const sourceIdentity = createAccountRuntimeKeyModelListSourceIdentity({
@@ -4342,7 +4422,7 @@ describe("useFilteredModels", () => {
       groupRatios: { vip: 0.5 },
       effectiveGroup: "vip",
     })
-    expect(result.current.isGroupAccessAuthoritative).toBe(true)
+    expect(result.current.canRepairGroupSelection).toBe(true)
     expect(result.current.singleSourceGroupRatios).toEqual({ vip: 0.5 })
     expect(result.current.availableGroups).toEqual(["vip"])
   })
@@ -4352,13 +4432,19 @@ describe("useFilteredModels", () => {
     const otherAccount = createDisplayAccount({ id: "account-other-context" })
     const selectedPricing = createPricingResponse(
       [{ model_name: "selected-model", enable_groups: ["vip"] }],
-      { group_ratio: { vip: 0.5 }, usable_group: { vip: true } },
+      {
+        groupRatios: { vip: 0.5 },
+        groupAccess: {
+          kind: "authoritative",
+          usableGroups: ["vip"],
+        },
+      },
     )
     const otherPricing = createPricingResponse(
       [{ model_name: "other-model", enable_groups: ["team"] }],
       {
-        group_ratio: {},
-        usable_group: {},
+        groupRatios: {},
+        groupAccess: { kind: "unavailable" },
         model_list_source: {
           kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
           supportsPricing: false,
@@ -4375,7 +4461,7 @@ describe("useFilteredModels", () => {
     })
 
     await waitFor(() => {
-      expect(result.current.isGroupAccessAuthoritative).toBe(true)
+      expect(result.current.canRepairGroupSelection).toBe(true)
     })
     expect(result.current.singleSourceGroupRatios).toEqual({ vip: 0.5 })
 
@@ -4388,8 +4474,8 @@ describe("useFilteredModels", () => {
           pricing: createPricingResponse(
             [{ model_name: "unknown-model", enable_groups: ["vip"] }],
             {
-              group_ratio: { team: 0.8 },
-              usable_group: {},
+              groupRatios: { team: 0.8 },
+              groupAccess: { kind: "unavailable" },
               model_list_source: {
                 kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
                 supportsPricing: false,
@@ -4402,7 +4488,7 @@ describe("useFilteredModels", () => {
     })
 
     await waitFor(() => {
-      expect(result.current.isGroupAccessAuthoritative).toBe(false)
+      expect(result.current.canRepairGroupSelection).toBe(false)
     })
     expect(result.current.singleSourceGroupRatios).toEqual({})
   })
@@ -4420,8 +4506,11 @@ describe("useFilteredModels", () => {
           pricing: createPricingResponse(
             [{ model_name: "priced-vip", enable_groups: ["vip"] }],
             {
-              group_ratio: { vip: 0.5 },
-              usable_group: { vip: "vip" },
+              groupRatios: { vip: 0.5 },
+              groupAccess: {
+                kind: "authoritative",
+                usableGroups: ["vip"],
+              },
             },
           ),
         },
@@ -4433,7 +4522,13 @@ describe("useFilteredModels", () => {
           }),
           pricing: createPricingResponse(
             [{ model_name: "unpriced-vip", enable_groups: ["vip"] }],
-            { group_ratio: {}, usable_group: { vip: "vip" } },
+            {
+              groupRatios: {},
+              groupAccess: {
+                kind: "authoritative",
+                usableGroups: ["vip"],
+              },
+            },
           ),
         },
       ],
@@ -4462,8 +4557,11 @@ describe("useFilteredModels", () => {
           pricing: createPricingResponse(
             [{ model_name: "vip-half", enable_groups: ["vip"] }],
             {
-              group_ratio: { vip: 0.5 },
-              usable_group: { vip: "vip" },
+              groupRatios: { vip: 0.5 },
+              groupAccess: {
+                kind: "authoritative",
+                usableGroups: ["vip"],
+              },
             },
           ),
         },
@@ -4476,8 +4574,11 @@ describe("useFilteredModels", () => {
           pricing: createPricingResponse(
             [{ model_name: "vip-four-fifths", enable_groups: ["vip"] }],
             {
-              group_ratio: { vip: 0.8 },
-              usable_group: { vip: "vip" },
+              groupRatios: { vip: 0.8 },
+              groupAccess: {
+                kind: "authoritative",
+                usableGroups: ["vip"],
+              },
             },
           ),
         },
@@ -4500,7 +4601,13 @@ describe("useFilteredModels", () => {
       ),
       pricing: createPricingResponse(
         [{ model_name: "known-model", enable_groups: ["vip"] }],
-        { group_ratio: { vip: 1 }, usable_group: { vip: "vip" } },
+        {
+          groupRatios: { vip: 1 },
+          groupAccess: {
+            kind: "authoritative",
+            usableGroups: ["vip"],
+          },
+        },
       ),
       expected: true,
     },
@@ -4511,7 +4618,13 @@ describe("useFilteredModels", () => {
       ),
       pricing: createPricingResponse(
         [{ model_name: "compatible-model", enable_groups: ["vip"] }],
-        { group_ratio: { vip: 1 }, usable_group: {} },
+        {
+          groupRatios: { vip: 1 },
+          groupAccess: {
+            kind: "compatible-priced-fallback",
+            candidateGroups: ["vip"],
+          },
+        },
       ),
       expected: true,
     },
@@ -4523,8 +4636,8 @@ describe("useFilteredModels", () => {
       pricing: createPricingResponse(
         [{ model_name: "unknown-model", enable_groups: ["vip"] }],
         {
-          group_ratio: {},
-          usable_group: {},
+          groupRatios: {},
+          groupAccess: { kind: "unavailable" },
           model_list_source: {
             kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
             supportsPricing: false,
@@ -4549,8 +4662,8 @@ describe("useFilteredModels", () => {
       pricing: createPricingResponse(
         [{ model_name: "profile-model", enable_groups: ["vip"] }],
         {
-          group_ratio: {},
-          usable_group: {},
+          groupRatios: {},
+          groupAccess: { kind: "unavailable" },
           model_list_source: {
             kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
             supportsPricing: false,
@@ -4565,8 +4678,8 @@ describe("useFilteredModels", () => {
         createDisplayAccount({ id: "authority-empty-direct" }),
       ),
       pricing: createPricingResponse([], {
-        group_ratio: {},
-        usable_group: {},
+        groupRatios: {},
+        groupAccess: { kind: "authoritative", usableGroups: [] },
       }),
       expected: true,
     },
@@ -4576,8 +4689,8 @@ describe("useFilteredModels", () => {
         createDisplayAccount({ id: "authority-empty-catalog" }),
       ),
       pricing: createPricingResponse([], {
-        group_ratio: {},
-        usable_group: {},
+        groupRatios: {},
+        groupAccess: { kind: "unavailable" },
         model_list_source: {
           kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
           supportsPricing: false,
@@ -4592,7 +4705,7 @@ describe("useFilteredModels", () => {
     })
 
     await waitFor(() => {
-      expect(result.current.isGroupAccessAuthoritative).toBe(testCase.expected)
+      expect(result.current.canRepairGroupSelection).toBe(testCase.expected)
     })
   })
 
@@ -4609,7 +4722,13 @@ describe("useFilteredModels", () => {
           }),
           pricing: createPricingResponse(
             [{ model_name: "known-context", enable_groups: ["vip"] }],
-            { group_ratio: { vip: 1 }, usable_group: { vip: "vip" } },
+            {
+              groupRatios: { vip: 1 },
+              groupAccess: {
+                kind: "authoritative",
+                usableGroups: ["vip"],
+              },
+            },
           ),
         },
         {
@@ -4621,8 +4740,8 @@ describe("useFilteredModels", () => {
           pricing: createPricingResponse(
             [{ model_name: "unknown-context", enable_groups: ["vip"] }],
             {
-              group_ratio: {},
-              usable_group: {},
+              groupRatios: {},
+              groupAccess: { kind: "unavailable" },
               model_list_source: {
                 kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
                 supportsPricing: false,
@@ -4634,7 +4753,13 @@ describe("useFilteredModels", () => {
           account: knownAccount,
           pricing: createPricingResponse(
             [{ model_name: "known-only-context", enable_groups: ["vip"] }],
-            { group_ratio: { vip: 1 }, usable_group: { vip: "vip" } },
+            {
+              groupRatios: { vip: 1 },
+              groupAccess: {
+                kind: "authoritative",
+                usableGroups: ["vip"],
+              },
+            },
           ),
         },
       ],
@@ -4642,7 +4767,7 @@ describe("useFilteredModels", () => {
     })
 
     await waitFor(() => {
-      expect(result.current.authoritativeGroupAccessByAccountId).toEqual({
+      expect(result.current.canRepairGroupSelectionByAccountId).toEqual({
         "authority-mixed": false,
         "authority-known-only": true,
       })
@@ -4701,13 +4826,11 @@ it("reverses same-model rankings across context thresholds using one shared quot
             },
           ],
           {
-            usable_group: {
-              default: "default",
-              half: "half",
-              third: "third",
-              fourth: "fourth",
+            groupAccess: {
+              kind: "authoritative",
+              usableGroups: ["default", "half", "third", "fourth"],
             },
-            group_ratio: { default: 1, half: 0.5, third: 2, fourth: 3 },
+            groupRatios: { default: 1, half: 0.5, third: 2, fourth: 3 },
           },
         ),
       },

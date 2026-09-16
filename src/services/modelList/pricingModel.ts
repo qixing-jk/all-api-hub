@@ -150,11 +150,3 @@ export function isModelPriceUnavailable(
     model.price_metadata?.precision === MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE
   )
 }
-
-export interface PricingResponse {
-  data: ModelPricing[]
-  group_ratio: Record<string, number>
-  success: boolean
-  usable_group: Record<string, unknown>
-  model_list_source?: ModelListSourceInfo
-}

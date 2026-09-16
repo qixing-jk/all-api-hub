@@ -7,9 +7,9 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { ModelDisplay } from "~/features/ModelList/components/ModelDisplay"
 import {
+  createModelGroupResolver,
   MODEL_GROUP_ACCESS_STATES,
   resolveActiveModelGroupContext,
-  resolveModelGroupContext,
 } from "~/features/ModelList/groupContext"
 import type { CalculatedModelItem } from "~/features/ModelList/modelListItems"
 import {
@@ -260,14 +260,11 @@ const createCalculatedModel = (
   const groupRatios = Object.fromEntries(
     model.enable_groups.map((group, index) => [group, index + 1]),
   )
-  const groupContext = resolveModelGroupContext({
+  const groupContext = createModelGroupResolver({
     groupSemantics: source.groupSemantics,
-    model,
-    usableGroup: Object.fromEntries(
-      model.enable_groups.map((group) => [group, true]),
-    ),
+    groupAccess: { kind: "authoritative", usableGroups: model.enable_groups },
     groupRatios,
-  })
+  })(model)
   const activeGroupContext = resolveActiveModelGroupContext({
     context: groupContext,
     effectiveGroup: overrides.effectiveGroup,

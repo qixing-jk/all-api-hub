@@ -1,12 +1,12 @@
 import { UI_CONSTANTS } from "~/constants/ui"
 import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/accountKeyNames"
 import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/factory"
+import { fetchAccountAvailableModels } from "~/services/apiAdapters/aihubmix/catalog"
 import type { AccountKeyCreationIntent } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   RESOURCE_FIELD_TYPES,
   type ResourceFieldIssue,
 } from "~/services/apiAdapters/contracts/resourceNative"
-import { fetchAccountAvailableModels } from "~/services/apiService/aihubmix"
 import type {
   AIHubMixKey,
   AIHubMixKeyWrite,

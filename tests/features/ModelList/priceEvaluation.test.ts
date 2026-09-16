@@ -1,75 +1,19 @@
 import { describe, expect, it } from "vitest"
 
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import type {
   CalculatedModelItem,
   ModelListItem,
 } from "~/features/ModelList/modelListItems"
-import {
-  createAccountSource,
-  createProfileSource,
-} from "~/features/ModelList/modelManagementSources"
+import { createProfileSource } from "~/features/ModelList/modelManagementSources"
 import {
   calculateModelListPrices,
   rankModelListPrices,
 } from "~/features/ModelList/priceEvaluation"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
-import { prepareModelListSource } from "~/features/ModelList/sourcePreparation"
 import { CALCULATED_PRICE_KINDS } from "~/services/modelPricing/pricingConstants"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
-import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
-import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
-import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { buildModelListItemFixture } from "~~/tests/test-utils/modelListSource"
 
-const createAccountFixture = (siteType: AccountSiteType): DisplaySiteData => ({
-  id: `account-${siteType}`,
-  name: "Example Account",
-  username: "example-user",
-  balance: { USD: 0, CNY: 0 },
-  todayConsumption: { USD: 0, CNY: 0 },
-  todayIncome: { USD: 0, CNY: 0 },
-  todayTokens: { upload: 0, download: 0 },
-  todayStatsAvailability: buildCompleteTodayStatsAvailability(),
-  health: { status: SiteHealthStatus.Healthy },
-  siteType,
-  baseUrl: "https://account.example.invalid",
-  token: "example-token",
-  userId: "example-user-id",
-  authType: AuthTypeEnum.AccessToken,
-  checkIn: buildCheckInConfig(),
-})
-
-function row(
-  id: string,
-  ratios: Record<string, number>,
-  usableGroups = ["a", "b"],
-): ModelListItem {
-  const account = { ...createAccountFixture(SITE_TYPES.NEW_API), id }
-  const prepared = prepareModelListSource({
-    source: createAccountSource(account),
-    pricing: {
-      success: true,
-      data: [
-        {
-          model_name: "model",
-          model_ratio: 1,
-          model_price: 0,
-          completion_ratio: 1,
-          quota_type: 0,
-          enable_groups: ["a", "b"],
-          supported_endpoint_types: [],
-        },
-      ],
-      usable_group: Object.fromEntries(usableGroups.map((g) => [g, true])),
-      group_ratio: ratios,
-    },
-  })
-  return {
-    ...prepared.items[0],
-    comparableModelIdentity: { key: "exact:model", displayName: "model" },
-    resolvedVendor: { state: "unknown" },
-  }
-}
 const options = {
   showRealPrice: false,
   priceComparisonWeights: { input: 1, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -87,8 +31,8 @@ describe("model list price evaluation", () => {
     "sorts finite secondary prices before missing ones in either input order (reverse: %s)",
     (reverse) => {
       const items = calculate([
-        row("missing-secondary", { a: 1 }),
-        row("finite-secondary", { a: 1 }),
+        buildModelListItemFixture("missing-secondary", { a: 1 }),
+        buildModelListItemFixture("finite-secondary", { a: 1 }),
       ])
       for (const [index, item] of items.entries()) {
         item.model = { ...item.model, quota_type: 1 }
@@ -111,7 +55,10 @@ describe("model list price evaluation", () => {
     },
   )
   it("uses profile names to order equal legacy prices without account currency conversion", () => {
-    const items = calculate([row("zulu", { a: 1 }), row("alpha", { a: 1 })])
+    const items = calculate([
+      buildModelListItemFixture("zulu", { a: 1 }),
+      buildModelListItemFixture("alpha", { a: 1 }),
+    ])
     for (const [index, item] of items.entries()) {
       item.source = createProfileSource({
         id: `profile-${index}`,
@@ -144,8 +91,8 @@ describe("model list price evaluation", () => {
   })
   it("ranks legacy token prices using output and cache weights in the account currency", () => {
     const items = calculate([
-      row("cached", { a: 1 }),
-      row("uncached", { a: 1 }),
+      buildModelListItemFixture("cached", { a: 1 }),
+      buildModelListItemFixture("uncached", { a: 1 }),
     ])
     items[0].calculatedPrice = {
       kind: CALCULATED_PRICE_KINDS.TOKEN,
@@ -185,9 +132,9 @@ describe("model list price evaluation", () => {
   })
   it("orders legacy per-call prices by input then output and keeps missing prices last", () => {
     const items = calculate([
-      row("high-output", { a: 1 }),
-      row("low-output", { a: 1 }),
-      row("missing", { a: 1 }),
+      buildModelListItemFixture("high-output", { a: 1 }),
+      buildModelListItemFixture("low-output", { a: 1 }),
+      buildModelListItemFixture("missing", { a: 1 }),
     ])
     for (const item of items) item.model = { ...item.model, quota_type: 1 }
     items[0].calculatedPrice = {
@@ -227,8 +174,8 @@ describe("model list price evaluation", () => {
   })
   it("compares finite legacy secondary prices even when the primary price is missing", () => {
     const items = calculate([
-      row("missing-output", { a: 1 }),
-      row("finite-output", { a: 1 }),
+      buildModelListItemFixture("missing-output", { a: 1 }),
+      buildModelListItemFixture("finite-output", { a: 1 }),
     ])
     for (const [index, item] of items.entries()) {
       item.model = { ...item.model, quota_type: 1 }
@@ -247,8 +194,8 @@ describe("model list price evaluation", () => {
     expect(result[0].source).toEqual(items[1].source)
   })
   it("breaks equal prices by source labels and preserves order for identical row keys", () => {
-    const first = calculate([row("first", { a: 1 })])[0]
-    const second = calculate([row("second", { a: 1 })])[0]
+    const first = calculate([buildModelListItemFixture("first", { a: 1 })])[0]
+    const second = calculate([buildModelListItemFixture("second", { a: 1 })])[0]
     if (first.source.kind === "account") first.source.account.name = "Zulu"
     if (second.source.kind === "account") second.source.account.name = "Alpha"
     const duplicate: CalculatedModelItem = {
@@ -273,34 +220,37 @@ describe("model list price evaluation", () => {
     ])
   })
   it("retains revealed unavailable rows without fabricating prices or actions", () => {
-    const denied = row("a", {}, [])
+    const denied = buildModelListItemFixture("a", {}, [])
     const [item] = calculate([denied], [])
     expect(item.calculatedPrice.kind).toBe(CALCULATED_PRICE_KINDS.UNAVAILABLE)
     expect(item.activeGroupContext.actionGroups).toEqual([])
     expect(item.effectiveGroup).toBeUndefined()
   })
   it("selects a valid zero multiplier and limits action scope to the selected best group", () => {
-    const item = calculate([row("a", { a: 1, b: 0 })])[0]
+    const item = calculate([buildModelListItemFixture("a", { a: 1, b: 0 })])[0]
     expect(item.effectiveGroup).toBe("b")
     expect(item.activeGroupContext.actionGroups).toEqual(["b"])
     expect(item.hasUniquelyOptimalGroup).toBe(true)
   })
   it("breaks tied group prices deterministically without claiming a unique optimum", () => {
-    const item = calculate([row("a", { a: 1, b: 1 })], ["b", "a"])[0]
+    const item = calculate(
+      [buildModelListItemFixture("a", { a: 1, b: 1 })],
+      ["b", "a"],
+    )[0]
     expect(item.effectiveGroup).toBe("a")
     expect(item.hasUniquelyOptimalGroup).toBe(false)
   })
   it("keeps a usable unpriced group visible without inventing a multiplier", () => {
-    const item = calculate([row("a", {})], ["b"])[0]
+    const item = calculate([buildModelListItemFixture("a", {})], ["b"])[0]
     expect(item.calculatedPrice.kind).toBe(CALCULATED_PRICE_KINDS.UNAVAILABLE)
     expect(item.activeGroupContext.actionGroups).toEqual(["b"])
   })
   it("marks tied complete minima and keeps unpriced rows last without mutating the input", () => {
     const items = calculate([
-      row("missing", {}),
-      row("costly", { a: 2 }),
-      row("first", { a: 1 }),
-      row("second", { a: 1 }),
+      buildModelListItemFixture("missing", {}),
+      buildModelListItemFixture("costly", { a: 2 }),
+      buildModelListItemFixture("first", { a: 1 }),
+      buildModelListItemFixture("second", { a: 1 }),
     ])
     const before = structuredClone(items)
     const result = rankModelListPrices({

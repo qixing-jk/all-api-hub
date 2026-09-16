@@ -1,4 +1,4 @@
-import { normalizeGroupNames } from "./groupNormalization"
+import { normalizeGroupNames } from "~/services/modelCatalog/groupFacts"
 
 /** Checks whether two normalized group lists represent the same selection. */
 function hasSameGroups(left: readonly string[], right: readonly string[]) {
