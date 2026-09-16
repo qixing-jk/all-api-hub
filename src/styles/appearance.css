@@ -233,7 +233,8 @@ html[data-theme-font="serif"] body {
 
 /* Density is independent of color, typography, radius, and content width. */
 :root,
-:host {
+:host,
+[data-theme-density="default"] {
   --density-space-scale: 1;
   --density-control-xxs: 1.25rem;
   --density-control-xs: 1.5rem;

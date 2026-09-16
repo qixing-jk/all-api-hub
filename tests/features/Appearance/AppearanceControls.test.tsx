@@ -6,11 +6,13 @@ import { BASIC_SETTINGS_ANCHOR_TO_TAB } from "~/constants/basicSettingsTabs"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   THEME_COLOR,
+  THEME_CONTENT_WIDTH,
   THEME_MODE,
   THEME_PRESET,
   THEME_RADIUS,
 } from "~/constants/theme"
 import { AppearanceControls } from "~/features/Appearance/AppearanceControls"
+import { AppearanceDrawer } from "~/features/Appearance/AppearanceDrawer"
 import { generalSearchControls } from "~/features/BasicSettings/components/tabs/General/General.search"
 import { normalizeAppearance } from "~/types/theme"
 import { createDeferred } from "~~/tests/test-utils/deferred"
@@ -19,6 +21,8 @@ import { render } from "~~/tests/test-utils/render"
 const { save, savedAppearance } = vi.hoisted(() => ({
   save: vi.fn(),
   savedAppearance: {
+    contentWidth: "centered",
+    sidebarCollapsed: false,
     preset: "default",
     density: "default",
     textSize: "default",
@@ -105,6 +109,8 @@ describe("appearance controls", () => {
       Object.assign(savedAppearance, updates)
       return { ok: true }
     })
+    savedAppearance.contentWidth = THEME_CONTENT_WIDTH.CENTERED
+    savedAppearance.sidebarCollapsed = false
     savedAppearance.preset = THEME_PRESET.DEFAULT
     savedAppearance.density = "default"
     savedAppearance.textSize = "default"
@@ -342,6 +348,24 @@ describe("appearance controls", () => {
     await user.click(larger)
     expect(save).toHaveBeenLastCalledWith({ textSize: "extra-large" })
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it("keeps the drawer focused on choices without a separate preview region", () => {
+    render(<AppearanceDrawer open onOpenChange={() => {}} />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    const drawer = screen.getByRole("dialog")
+    expect(
+      within(drawer).getByRole("group", {
+        name: "settings:appearance.textSize",
+      }),
+    ).toBeVisible()
+    expect(
+      within(drawer).queryByRole("region", {
+        name: "settings:appearance.preview",
+      }),
+    ).not.toBeInTheDocument()
   })
 
   it("previews an account, balance, supporting text and shared controls", () => {

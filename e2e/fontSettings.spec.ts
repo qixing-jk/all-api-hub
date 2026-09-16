@@ -87,9 +87,8 @@ for (const width of [390, 320]) {
       .click()
     await expect(sample).toHaveCSS("font-family", initialFont)
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }))
-    await page.getByRole("button", { name: /^Current:/ }).click()
     await page
-      .getByRole("menuitem", { name: "Appearance settings", exact: true })
+      .getByRole("button", { name: "Appearance settings", exact: true })
       .click()
     const drawer = page.getByRole("dialog", {
       name: "Appearance settings",
@@ -103,10 +102,9 @@ for (const width of [390, 320]) {
     await expect(
       drawerFont.getByRole("radio", { name: "Serif", exact: true }),
     ).toBeChecked()
-    await expect(drawer.getByRole("textbox")).toHaveCSS(
-      "font-family",
-      /Georgia/,
-    )
+    await expect(
+      drawer.getByRole("heading", { name: "Appearance settings" }),
+    ).toHaveCSS("font-family", /Georgia/)
     await expect
       .poll(async () => {
         const bounds = await drawer.boundingBox()
