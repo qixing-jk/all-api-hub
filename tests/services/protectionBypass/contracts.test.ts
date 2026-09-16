@@ -42,6 +42,15 @@ const canonicalTasks = [
     },
   },
   {
+    kind: TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch,
+    params: {
+      originUrl: "https://example.invalid",
+      fetchUrl: "https://example.invalid/api/user/sign_in",
+      tempContextTaskKind: TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch,
+      fetchOptions: { method: "POST", body: "{}" },
+    },
+  },
+  {
     kind: TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch,
     params: {
       originUrl: "https://example.invalid",
@@ -308,6 +317,7 @@ describe("protection bypass runtime contracts", () => {
     expect(new Set(Object.values(TEMP_CONTEXT_TASK_KINDS))).toEqual(
       new Set([
         "api_fallback_fetch",
+        "explicit_page_fetch",
         "profile_isolated_fetch",
         "turnstile_fetch",
         "native_page_action",
@@ -541,6 +551,8 @@ describe("protection bypass runtime contracts", () => {
   const urlFields = [
     [TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, "originUrl"],
     [TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, "fetchUrl"],
+    [TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch, "originUrl"],
+    [TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch, "fetchUrl"],
     [TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch, "originUrl"],
     [TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch, "fetchUrl"],
     [TEMP_CONTEXT_TASK_KINDS.TurnstileFetch, "originUrl"],

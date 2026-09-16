@@ -63,6 +63,7 @@ const taskParams = {
 
 const allTaskKinds: TempContextTask[] = [
   { kind: TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, params: taskParams },
+  { kind: TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch, params: taskParams },
   { kind: TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch, params: taskParams },
   { kind: TEMP_CONTEXT_TASK_KINDS.TurnstileFetch, params: taskParams },
   { kind: TEMP_CONTEXT_TASK_KINDS.NativePageAction, params: taskParams },

@@ -21,6 +21,8 @@ import {
 } from "~/services/apiTransport/type"
 import { DEFAULT_AUTOMATIC_FEATURE_BYPASS } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
+  getTempContextTaskMetadata,
+  isProtectionBypassTaskPermitted,
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_EXECUTION_VERSION,
   PROTECTION_BYPASS_FEATURES,
@@ -2281,65 +2283,101 @@ describe("apiTransport request helpers", () => {
     onResponse: vi.fn(),
   })
 
-  it("uses the temp-window route for an explicitly forced request", async () => {
-    forceTempWindowRoute()
-    mockSendRuntimeMessage.mockResolvedValueOnce({
-      success: true,
-      status: 200,
-      data: {
-        success: true,
-        data: { ok: true },
-        message: "temp",
-      },
-    })
-
-    let normalFetchCount = 0
-    server.use(
-      http.post(API_URL, () => {
-        normalFetchCount += 1
-        return HttpResponse.json({
-          success: true,
-          data: { ok: false },
-          message: "normal",
+  it.each([
+    {
+      version: 2,
+      kind: "user_command",
+      command: "retry_checkin_account",
+      surface: "options",
+    } as const,
+    {
+      version: 2,
+      kind: "automatic",
+      feature: "checkin",
+      trigger: "scheduled",
+      surface: "background",
+    } as const,
+  ])(
+    "allows a forced check-in POST through the $kind temp-window route",
+    async (execution) => {
+      forceTempWindowRoute()
+      mockSendRuntimeMessage.mockImplementationOnce(async ({ task }) => {
+        expect(getTempContextTaskMetadata(task)).toEqual({
+          operation: "fetch",
+          cause: "explicit_context",
         })
-      }),
-    )
-
-    await expect(
-      fetchApiData<{ ok: boolean }>(
-        {
-          baseUrl: BASE_URL,
-          auth: {
-            authType: AuthTypeEnum.Cookie,
-            cookie: "session=abc123",
+        if (
+          !isProtectionBypassTaskPermitted(
+            PROTECTION_BYPASS_FEATURES.Checkin,
+            task.kind,
+          )
+        ) {
+          return {
+            success: false,
+            error: "task_not_permitted",
+            code: ApiErrorCodes.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+          }
+        }
+        return {
+          success: true,
+          status: 200,
+          data: {
+            success: true,
+            data: { ok: true },
+            message: "temp",
           },
-          fetchContext: {
-            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
-            tabId: 456,
-            origin: "https://example.com",
-          },
-          forceTempWindow: true,
-          protectionBypassExecution: backgroundProtectionBypassExecution,
-        },
-        { endpoint: ENDPOINT, options: { method: "POST", body: "{}" } },
-      ),
-    ).resolves.toEqual({ ok: true })
+        }
+      })
 
-    expect(normalFetchCount).toBe(0)
-    expect(mockSendTabMessageWithRetry).not.toHaveBeenCalled()
-    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: RuntimeActionIds.ProtectionBypassExecuteTask,
-        task: {
-          kind: "profile_isolated_fetch",
-          params: expect.objectContaining({
-            originUrl: BASE_URL,
-            fetchUrl: API_URL,
-          }),
-        },
-      }),
-    )
-  })
+      let normalFetchCount = 0
+      server.use(
+        http.post(API_URL, () => {
+          normalFetchCount += 1
+          return HttpResponse.json({
+            success: true,
+            data: { ok: false },
+            message: "normal",
+          })
+        }),
+      )
+
+      await expect(
+        fetchApiData<{ ok: boolean }>(
+          {
+            baseUrl: BASE_URL,
+            auth: {
+              authType: AuthTypeEnum.Cookie,
+              cookie: "session=abc123",
+            },
+            fetchContext: {
+              kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+              tabId: 456,
+              origin: "https://example.com",
+            },
+            forceTempWindow: true,
+            protectionBypassExecution: execution,
+          },
+          { endpoint: ENDPOINT, options: { method: "POST", body: "{}" } },
+        ),
+      ).resolves.toEqual({ ok: true })
+
+      expect(normalFetchCount).toBe(0)
+      expect(mockSendTabMessageWithRetry).not.toHaveBeenCalled()
+      expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: RuntimeActionIds.ProtectionBypassExecuteTask,
+          task: {
+            kind: "explicit_page_fetch",
+            params: expect.objectContaining({
+              originUrl: BASE_URL,
+              fetchUrl: API_URL,
+            }),
+          },
+        }),
+      )
+      expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
+    },
+  )
 
   it("applies the provider decoder to a forced temp-window error response", async () => {
     forceTempWindowRoute()

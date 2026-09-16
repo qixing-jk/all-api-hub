@@ -574,7 +574,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
         async () => ({ success: true, data: { ok: false }, message: "direct" }),
       )
 
-      expectRuntimeTask(TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch, {})
+      expectRuntimeTask(TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch, {})
       expect(
         mocks.sendRuntimeMessageMock.mock.calls[0]?.[0].task.params,
       ).not.toHaveProperty("tempWindowRequestSource")
@@ -638,7 +638,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       models: ["gpt-4.1"],
     })
     expect(mocks.getPreferencesMock).not.toHaveBeenCalled()
-    expectRuntimeTask(TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, {
+    expectRuntimeTask(TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch, {
       originUrl: "https://example.com",
       fetchUrl: "https://example.com/api/models",
       requestId: "opaque-request-id",

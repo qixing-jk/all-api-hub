@@ -714,6 +714,7 @@ export async function executeAuthorizedTempContextTask(
   await runTempPageHandler(url, { incognito }, async () => {
     switch (task.kind) {
       case TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch:
+      case TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch:
       case TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch:
         await executeTempWindowFetch(
           task.params,
@@ -1469,6 +1470,7 @@ async function executeAutoDetectSite(
 async function executeTempWindowFetch(
   request: TaskParams<
     | typeof TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch
+    | typeof TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch
     | typeof TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch
     | typeof TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch
   >,

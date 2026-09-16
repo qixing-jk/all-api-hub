@@ -393,6 +393,7 @@ export interface OpenTempContextParams {
 
 export const TEMP_CONTEXT_TASK_KINDS = {
   ApiFallbackFetch: "api_fallback_fetch",
+  ExplicitPageFetch: "explicit_page_fetch",
   ProfileIsolatedFetch: "profile_isolated_fetch",
   TurnstileFetch: "turnstile_fetch",
   NativePageAction: "native_page_action",
@@ -414,6 +415,7 @@ export type TempContextTaskKind =
 
 export type TempWindowFetchTaskKind =
   | typeof TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch
+  | typeof TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch
   | typeof TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch
 
 type WithoutProtectionBypassIntent<T> = Omit<
@@ -432,6 +434,10 @@ export type TempContextTask =
     }
   | {
       kind: typeof TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch
+      params: WithoutProtectionBypassIntent<TempWindowFetchParams>
+    }
+  | {
+      kind: typeof TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch
       params: WithoutProtectionBypassIntent<TempWindowFetchParams>
     }
   | {
@@ -484,6 +490,7 @@ type TempContextTaskResultMap = {
     data?: CheckInFeedbackClues
   }
   [TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch]: TempWindowFetch
+  [TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch]: TempWindowFetch
   [TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch]: TempWindowFetch
   [TEMP_CONTEXT_TASK_KINDS.TurnstileFetch]: TempWindowTurnstileFetch
   [TEMP_CONTEXT_TASK_KINDS.NativePageAction]: TempWindowCheckinPageAction
@@ -579,6 +586,7 @@ function hasValidSharedFetchParams(value: Record<string, unknown>): boolean {
       )) &&
     (value.tempContextTaskKind === undefined ||
       value.tempContextTaskKind === TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch ||
+      value.tempContextTaskKind === TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch ||
       value.tempContextTaskKind ===
         TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch) &&
     isOptionalBoolean(value.suppressMinimize) &&
@@ -761,6 +769,7 @@ export function isTempContextTask(value: unknown): value is TempContextTask {
   }
   switch (task.kind) {
     case TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch:
+    case TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch:
     case TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch:
       return hasValidSharedFetchParams(params)
     case TEMP_CONTEXT_TASK_KINDS.TurnstileFetch:
@@ -825,6 +834,10 @@ const TEMP_CONTEXT_TASK_METADATA = {
     operation: PROTECTION_BYPASS_OPERATIONS.Fetch,
     cause: PROTECTION_BYPASS_CAUSES.BrowserProfileIsolation,
   },
+  [TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch]: {
+    operation: PROTECTION_BYPASS_OPERATIONS.Fetch,
+    cause: PROTECTION_BYPASS_CAUSES.ExplicitContext,
+  },
   [TEMP_CONTEXT_TASK_KINDS.TurnstileFetch]: {
     operation: PROTECTION_BYPASS_OPERATIONS.TurnstileFetch,
     cause: PROTECTION_BYPASS_CAUSES.VerificationRequired,
@@ -869,28 +882,34 @@ export function getTempContextTaskMetadata(
 export const PROTECTION_BYPASS_FEATURE_TASK_KINDS = {
   [PROTECTION_BYPASS_FEATURES.AccountRefresh]: [
     TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
+    TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch,
     TEMP_CONTEXT_TASK_KINDS.SessionRead,
   ],
   [PROTECTION_BYPASS_FEATURES.BalanceHistory]: [
     TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
+    TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch,
     TEMP_CONTEXT_TASK_KINDS.SessionRead,
   ],
   [PROTECTION_BYPASS_FEATURES.Checkin]: [
     TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan,
     TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
+    TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch,
     TEMP_CONTEXT_TASK_KINDS.TurnstileFetch,
     TEMP_CONTEXT_TASK_KINDS.NativePageAction,
     TEMP_CONTEXT_TASK_KINDS.SessionRead,
   ],
   [PROTECTION_BYPASS_FEATURES.RedemptionAssist]: [
     TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
+    TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch,
     TEMP_CONTEXT_TASK_KINDS.SessionRead,
   ],
   [PROTECTION_BYPASS_FEATURES.LdohSiteLookup]: [
     TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
+    TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch,
   ],
   [PROTECTION_BYPASS_FEATURES.KeyManagement]: [
     TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
+    TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch,
     TEMP_CONTEXT_TASK_KINDS.SessionRead,
     TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead,
   ],
@@ -904,6 +923,7 @@ export const PROTECTION_BYPASS_FEATURE_TASK_KINDS = {
   ],
   [PROTECTION_BYPASS_FEATURES.AccountOnboarding]: [
     TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
+    TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch,
     TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch,
     TEMP_CONTEXT_TASK_KINDS.SessionRead,
     TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction,

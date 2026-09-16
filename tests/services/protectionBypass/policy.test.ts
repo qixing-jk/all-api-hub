@@ -521,19 +521,33 @@ describe("evaluateProtectionBypassPolicy", () => {
       ProtectionBypassFeature,
       readonly TempContextTask["kind"][]
     > = {
-      account_refresh: ["api_fallback_fetch", "session_read"],
-      balance_history: ["api_fallback_fetch", "session_read"],
+      account_refresh: [
+        "api_fallback_fetch",
+        "explicit_page_fetch",
+        "session_read",
+      ],
+      balance_history: [
+        "api_fallback_fetch",
+        "explicit_page_fetch",
+        "session_read",
+      ],
       checkin: [
         "checkin_feedback_scan",
         "api_fallback_fetch",
+        "explicit_page_fetch",
         "turnstile_fetch",
         "native_page_action",
         "session_read",
       ],
-      redemption_assist: ["api_fallback_fetch", "session_read"],
-      ldoh_site_lookup: ["api_fallback_fetch"],
+      redemption_assist: [
+        "api_fallback_fetch",
+        "explicit_page_fetch",
+        "session_read",
+      ],
+      ldoh_site_lookup: ["api_fallback_fetch", "explicit_page_fetch"],
       key_management: [
         "api_fallback_fetch",
+        "explicit_page_fetch",
         "session_read",
         "new_api_session_read",
       ],
@@ -541,6 +555,7 @@ describe("evaluateProtectionBypassPolicy", () => {
       managed_site_model_sync: ["new_api_session_read", "octopus_api_fetch"],
       account_onboarding: [
         "api_fallback_fetch",
+        "explicit_page_fetch",
         "profile_isolated_fetch",
         "session_read",
         "openrouter_management_key_action",
@@ -548,6 +563,7 @@ describe("evaluateProtectionBypassPolicy", () => {
     }
     const taskForKind = (kind: TempContextTask["kind"]): TempContextTask => {
       switch (kind) {
+        case "explicit_page_fetch":
         case "api_fallback_fetch":
         case "profile_isolated_fetch":
         case "octopus_api_fetch":

@@ -228,6 +228,17 @@ export async function tempWindowFetch(
     ...taskParams
   } = payload
   if (
+    payload.tempContextTaskKind === TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch
+  ) {
+    return await executeProtectionBypassTask({
+      execution,
+      task: {
+        kind: TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch,
+        params: taskParams,
+      },
+    })
+  }
+  if (
     payload.tempContextTaskKind === TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch
   ) {
     return await executeProtectionBypassTask({
@@ -583,9 +594,14 @@ async function fetchViaTempWindow<TResult>(
     responseType,
     tempWindowRequestSource: context.tempWindowRequestSource,
     protectionBypassExecution: context.protectionBypassExecution,
-    tempContextTaskKind: context.forceTempWindow
-      ? TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch
-      : TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
+    // Forcing a page request (for example, AnyRouter check-in) does not
+    // imply browser-profile isolation. Preserve isolation only when requested.
+    tempContextTaskKind:
+      context.useIncognito === true || Boolean(context.cookieStoreId)
+        ? TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch
+        : context.forceTempWindow
+          ? TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch
+          : TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
     ...(fallbackDiagnostic ? { fallbackDiagnostic } : {}),
     accountId: context.accountId,
     authType: context.authType,

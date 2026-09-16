@@ -24,6 +24,7 @@ export const validateProtectionBypassTaskResource: ValidateProtectionBypassTaskR
       case TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch:
         return await validateOctopusApiFetchResource(task, execution)
       case TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch:
+      case TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch:
       case TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch:
       case TEMP_CONTEXT_TASK_KINDS.TurnstileFetch:
       case TEMP_CONTEXT_TASK_KINDS.NativePageAction:
