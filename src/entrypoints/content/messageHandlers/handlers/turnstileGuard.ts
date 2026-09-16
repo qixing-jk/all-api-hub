@@ -15,6 +15,11 @@ interface WaitForTurnstileTokenRequest {
   timeoutMs?: number
   preTrigger?: TurnstilePreTrigger
   waitForLateAppearanceMs?: number
+  /**
+   * Set by the background only when it has foregrounded the page for the user,
+   * which is what makes a longer wait meaningful.
+   */
+  allowExtendedWait?: boolean
 }
 
 interface WaitForTurnstileTokenSuccessResponse
@@ -72,6 +77,7 @@ export function handleWaitForTurnstileToken(
         timeoutMs: request.timeoutMs,
         preTrigger: request.preTrigger,
         waitForLateAppearanceMs: request.waitForLateAppearanceMs,
+        allowExtendedWait: request.allowExtendedWait === true,
       })
 
       logger.debug("Turnstile token wait completed", {

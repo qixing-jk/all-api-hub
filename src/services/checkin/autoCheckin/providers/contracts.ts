@@ -56,6 +56,12 @@ export type KnownCheckInMethodStatus = Extract<
 export interface AutoCheckinProviderContext {
   tempWindowRequestSource: TempWindowRequestSource
   protectionBypassExecution: ProtectionBypassExecution
+  /**
+   * True only for user-initiated runs, where a provider may foreground a
+   * verification window and wait for the user to complete an interactive
+   * challenge. Automatic runs leave this unset so they never disturb the user.
+   */
+  allowInteractiveVerification?: boolean
   /** Process-local evidence for classifying a lost mutation response. */
   mutationLifecycle?: AutoCheckinMutationLifecycle
   /** Fresh status read by the Module in this execution cycle. */

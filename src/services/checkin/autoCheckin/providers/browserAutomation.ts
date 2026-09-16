@@ -155,6 +155,11 @@ export const browserAutomationProvider: AutoCheckinProvider = {
         ...(configuration.timeoutMs !== undefined
           ? { timeoutMs: configuration.timeoutMs }
           : {}),
+        // Only a user-initiated run may open the page in the foreground; the
+        // scheduled daily run must never interrupt the user.
+        ...(context.allowInteractiveVerification === true
+          ? { allowInteractiveVerification: true }
+          : {}),
         tempWindowRequestSource: normalizeTempWindowRequestSource(
           context.tempWindowRequestSource,
         ),

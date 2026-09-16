@@ -63,6 +63,7 @@ describe("content turnstile guard handler", () => {
       requestId: "req-turnstile",
       timeoutMs: 2500,
       preTrigger,
+      allowExtendedWait: false,
     })
     expect(loggerMocks.debug).toHaveBeenCalledWith(
       "Turnstile token wait completed",
@@ -78,6 +79,35 @@ describe("content turnstile guard handler", () => {
       success: true,
       ...result,
     })
+  })
+
+  it("forwards the extended-wait opt-in when the background foregrounded the page", async () => {
+    waitForTurnstileTokenMock.mockResolvedValue({
+      status: "timeout",
+      token: null,
+      detection: { hasTurnstile: true, reasons: [], score: 0 },
+    })
+
+    await new Promise<any>((resolve) => {
+      expect(
+        handleWaitForTurnstileToken(
+          {
+            requestId: "req-extended",
+            timeoutMs: 120_000,
+            allowExtendedWait: true,
+          },
+          resolve,
+        ),
+      ).toBe(true)
+    })
+
+    expect(waitForTurnstileTokenMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestId: "req-extended",
+        timeoutMs: 120_000,
+        allowExtendedWait: true,
+      }),
+    )
   })
 
   it("returns an error response when the token wait rejects", async () => {
@@ -122,6 +152,7 @@ describe("content turnstile guard handler", () => {
       requestId: undefined,
       timeoutMs: 500,
       preTrigger: undefined,
+      allowExtendedWait: false,
     })
     expect(loggerMocks.debug).toHaveBeenCalledWith(
       "Turnstile token wait completed",

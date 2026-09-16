@@ -22,3 +22,12 @@ export const TURNSTILE_IFRAME_SELECTOR =
 export const TURNSTILE_DEFAULT_QUERY_PARAM_NAME = "turnstile" as const
 
 export const TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS = 12_000
+
+/**
+ * Upper bound for waits the user can actually see and act on.
+ *
+ * Only a caller that has foregrounded the page for the user may request this;
+ * invisible waits stay within {@link TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS} so a
+ * background run can never be blocked indefinitely.
+ */
+export const TURNSTILE_INTERACTIVE_WAIT_TIMEOUT_MS = 120_000

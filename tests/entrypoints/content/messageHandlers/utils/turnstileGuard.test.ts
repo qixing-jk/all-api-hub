@@ -384,6 +384,56 @@ describe("turnstileGuard", () => {
       expect(result.detection.hasTurnstile).toBe(true)
     })
 
+    it("clamps an invisible wait to the default ceiling", async () => {
+      vi.useFakeTimers()
+      try {
+        document.body.innerHTML = '<div class="cf-turnstile"></div>'
+
+        const pending = waitForTurnstileToken({
+          requestId: "req-ceiling-default",
+          timeoutMs: 60_000,
+        })
+        let settled = false
+        void pending.then(() => {
+          settled = true
+        })
+
+        await vi.advanceTimersByTimeAsync(31_000)
+
+        expect(settled).toBe(true)
+        await expect(pending).resolves.toMatchObject({ status: "timeout" })
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it("honours a longer wait when the caller opted into an interactive one", async () => {
+      vi.useFakeTimers()
+      try {
+        document.body.innerHTML = '<div class="cf-turnstile"></div>'
+
+        const pending = waitForTurnstileToken({
+          requestId: "req-ceiling-extended",
+          timeoutMs: 60_000,
+          allowExtendedWait: true,
+        })
+        let settled = false
+        void pending.then(() => {
+          settled = true
+        })
+
+        // Past the default ceiling the invisible wait would already have given
+        // up, so a still-pending promise proves the opt-in took effect.
+        await vi.advanceTimersByTimeAsync(31_000)
+        expect(settled).toBe(false)
+
+        await vi.advanceTimersByTimeAsync(30_000)
+        await expect(pending).resolves.toMatchObject({ status: "timeout" })
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
     it("auto-starts an existing turnstile widget and resolves once the token field appears", async () => {
       const container = createMockElement("div", (el) => {
         el.className = "cf-turnstile"

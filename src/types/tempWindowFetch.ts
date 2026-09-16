@@ -118,6 +118,14 @@ export interface TempWindowTurnstileFetchParams extends TempWindowFetchParams {
   useIncognito?: boolean
   /** Timeout (ms) for Turnstile token wait in the content script. */
   turnstileTimeoutMs?: number
+  /**
+   * Allow foregrounding the temporary context and waiting longer so the user can
+   * complete an interactive challenge in person.
+   *
+   * Only user-initiated runs may set this. Automatic runs must stay in the
+   * background and fail fast rather than steal focus from the user.
+   */
+  allowInteractiveVerification?: boolean
   /** Query parameter name used for token attachment (default: `turnstile`). */
   turnstileParamName?: string
   /** Optional pre-trigger used to render the Turnstile widget (best-effort). */
@@ -165,6 +173,11 @@ export interface TempWindowBrowserCheckInParams {
   success: BrowserCheckInSuccessCondition
   identity?: BrowserCheckInIdentityCondition
   timeoutMs?: number
+  /**
+   * Allow foregrounding the temporary context so the user can complete an
+   * interactive challenge in person. Set only for user-initiated runs.
+   */
+  allowInteractiveVerification?: boolean
   protectionBypassExecution: ProtectionBypassExecution
 }
 

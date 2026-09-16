@@ -1096,9 +1096,11 @@ class AutoCheckinScheduler {
     {
       requireStatusConfirmationBeforeMutation = false,
       allowAutomaticDiscovery = false,
+      allowInteractiveVerification = false,
     }: {
       requireStatusConfirmationBeforeMutation?: boolean
       allowAutomaticDiscovery?: boolean
+      allowInteractiveVerification?: boolean
     } = {},
   ): Promise<{
     result: CheckinAccountResult
@@ -1129,7 +1131,15 @@ class AutoCheckinScheduler {
       }) as CheckinAccountResult
 
     try {
-      const context = { tempWindowRequestSource, protectionBypassExecution }
+      const context = {
+        tempWindowRequestSource,
+        protectionBypassExecution,
+        // Only a user-initiated run may foreground a verification window and
+        // wait for the user; scheduled runs must fail quietly instead.
+        ...(allowInteractiveVerification
+          ? { allowInteractiveVerification: true }
+          : {}),
+      }
       const execute = async () =>
         executeSelectedCheckIn({
           account,
@@ -1275,6 +1285,7 @@ class AutoCheckinScheduler {
     tempWindowRequestSource: TempWindowRequestSource
     protectionBypassExecution: ProtectionBypassExecution
     allowAutomaticDiscovery?: boolean
+    allowInteractiveVerification?: boolean
   }): Promise<
     Array<{
       result: CheckinAccountResult
@@ -1290,7 +1301,10 @@ class AutoCheckinScheduler {
             accountName,
             params.tempWindowRequestSource,
             params.protectionBypassExecution,
-            { allowAutomaticDiscovery: params.allowAutomaticDiscovery },
+            {
+              allowAutomaticDiscovery: params.allowAutomaticDiscovery,
+              allowInteractiveVerification: params.allowInteractiveVerification,
+            },
           )
         } catch (error) {
           return {
@@ -2403,6 +2417,9 @@ class AutoCheckinScheduler {
         tempWindowRequestSource,
         protectionBypassExecution,
         allowAutomaticDiscovery: isDailyRun,
+        // A user-triggered run may open a verification window the user can see;
+        // the scheduled daily run must never interrupt them.
+        allowInteractiveVerification: !isDailyRun,
       })
 
       for (const outcome of checkinOutcomes) {
@@ -2940,6 +2957,8 @@ class AutoCheckinScheduler {
               accountDisplayNameById.get(account.id) ?? account.id,
               tempWindowRequestSource,
               protectionBypassExecution,
+              // This entry point only serves the user's own retry action.
+              { allowInteractiveVerification: true },
             )
           ).result
 

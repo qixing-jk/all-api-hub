@@ -6,7 +6,10 @@ import {
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
   CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
-import { TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS } from "~/constants/turnstile"
+import {
+  TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS,
+  TURNSTILE_INTERACTIVE_WAIT_TIMEOUT_MS,
+} from "~/constants/turnstile"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import {
   resolveAccountSiteRouteUrl,
@@ -120,6 +123,13 @@ async function isCheckInDisabled(
  */
 const ENDPOINT = AUTO_CHECKIN_USER_CHECKIN_ENDPOINT
 const TURNSTILE_ASSIST_TIMEOUT_MS = TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS
+/**
+ * Assist window used when the run was started by the user and the background
+ * has foregrounded the page, so an interactive challenge can be completed by
+ * hand before the attempt gives up.
+ */
+const TURNSTILE_INTERACTIVE_ASSIST_TIMEOUT_MS =
+  TURNSTILE_INTERACTIVE_WAIT_TIMEOUT_MS
 const NATIVE_PAGE_STATUS_POLL_TIMEOUT_MS = 8_000
 const NATIVE_PAGE_STATUS_POLL_INTERVAL_MS = 1_000
 const CHECKIN_STATUS_MONTH_FORMAT_LENGTH = 7
@@ -469,6 +479,7 @@ function buildTurnstileAssistedParams(
   checkInUrl: string,
   tempWindowRequestSource: TempWindowRequestSource,
   protectionBypassExecution: ProtectionBypassExecution,
+  allowInteractiveVerification: boolean,
 ) {
   const fetchUrl = joinUrl(account.site_url, ENDPOINT)
 
@@ -481,10 +492,17 @@ function buildTurnstileAssistedParams(
     accountId: account.id,
     authType: getEffectiveAuthType(account),
     cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
-    turnstileTimeoutMs: TURNSTILE_ASSIST_TIMEOUT_MS,
+    // A user-initiated run may wait long enough for the user to complete an
+    // interactive challenge; an automatic run must fail fast and quietly.
+    turnstileTimeoutMs: allowInteractiveVerification
+      ? TURNSTILE_INTERACTIVE_ASSIST_TIMEOUT_MS
+      : TURNSTILE_ASSIST_TIMEOUT_MS,
     turnstilePreTrigger: resolveTurnstilePreTrigger(account),
     tempWindowRequestSource,
     protectionBypassExecution,
+    ...(allowInteractiveVerification
+      ? { allowInteractiveVerification: true }
+      : {}),
   } as const
 }
 
@@ -727,6 +745,7 @@ async function resolveTurnstileAssistedCheckinResult(params: {
   responseMessage: string
   tempWindowRequestSource: TempWindowRequestSource
   protectionBypassExecution: ProtectionBypassExecution
+  allowInteractiveVerification?: boolean
 }): Promise<CheckinResult> {
   const checkInUrl = await resolveCheckInUrl(params.account)
   if (!checkInUrl) {
@@ -741,6 +760,7 @@ async function resolveTurnstileAssistedCheckinResult(params: {
     checkInUrl,
     params.tempWindowRequestSource,
     params.protectionBypassExecution,
+    params.allowInteractiveVerification === true,
   )
 
   const initialAttempt = await runPreferredTurnstileAssistedAttempt({
@@ -1010,6 +1030,9 @@ async function checkinNewApi(
         responseMessage,
         tempWindowRequestSource,
         protectionBypassExecution: context.protectionBypassExecution,
+        ...(context.allowInteractiveVerification === true
+          ? { allowInteractiveVerification: true }
+          : {}),
       })
     }
 

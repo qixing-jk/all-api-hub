@@ -2,6 +2,7 @@ import {
   TURNSTILE_CONTAINER_SELECTOR,
   TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS,
   TURNSTILE_IFRAME_SELECTOR,
+  TURNSTILE_INTERACTIVE_WAIT_TIMEOUT_MS,
   TURNSTILE_RESPONSE_FIELD_SELECTOR,
   TURNSTILE_SCRIPT_SELECTOR,
 } from "~/constants/turnstile"
@@ -56,6 +57,14 @@ const DEFAULT_CHECKIN_TRIGGER_NEGATIVE_PATTERN = "(已签到|already)"
 const DEFAULT_WAIT_TIMEOUT_MS = TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS
 const MIN_WAIT_TIMEOUT_MS = 500
 const MAX_WAIT_TIMEOUT_MS = 30_000
+/**
+ * Ceiling for waits that a human is expected to satisfy in person.
+ *
+ * Only callers that can actually show the user the widget may opt into this;
+ * an invisible wait must stay within {@link MAX_WAIT_TIMEOUT_MS} so it cannot
+ * block a background run indefinitely.
+ */
+const MAX_INTERACTIVE_WAIT_TIMEOUT_MS = TURNSTILE_INTERACTIVE_WAIT_TIMEOUT_MS
 const WAIT_POLL_INTERVAL_MS = 250
 
 /**
@@ -683,8 +692,10 @@ export function maybeAutoStartTurnstile(params: {
 
 /**
  * Normalize a user-provided timeout into a safe bounded value (ms).
+ *
+ * `allowExtended` raises the ceiling for waits the user can see and act on.
  */
-function normalizeTimeoutMs(timeoutMs: unknown): number {
+function normalizeTimeoutMs(timeoutMs: unknown, allowExtended = false): number {
   const raw =
     typeof timeoutMs === "number"
       ? timeoutMs
@@ -693,7 +704,10 @@ function normalizeTimeoutMs(timeoutMs: unknown): number {
         : NaN
 
   const resolved = Number.isFinite(raw) ? raw : DEFAULT_WAIT_TIMEOUT_MS
-  return Math.min(Math.max(resolved, MIN_WAIT_TIMEOUT_MS), MAX_WAIT_TIMEOUT_MS)
+  const ceiling = allowExtended
+    ? MAX_INTERACTIVE_WAIT_TIMEOUT_MS
+    : MAX_WAIT_TIMEOUT_MS
+  return Math.min(Math.max(resolved, MIN_WAIT_TIMEOUT_MS), ceiling)
 }
 
 /**
@@ -714,12 +728,17 @@ function normalizeLateAppearanceTimeoutMs(timeoutMs: unknown): number {
 
 /**
  * Wait for a Turnstile token to appear in the DOM.
+ *
+ * `allowExtendedWait` is opt-in and must only be set when the user can see the
+ * page; it raises the wait ceiling so an interactive challenge has time to be
+ * completed by hand.
  */
 export async function waitForTurnstileToken(params: {
   requestId?: string | null
   timeoutMs?: unknown
   preTrigger?: TurnstilePreTrigger
   waitForLateAppearanceMs?: unknown
+  allowExtendedWait?: boolean
 }): Promise<TurnstileTokenWaitResult> {
   let detection = detectTurnstileWidget()
 
@@ -733,7 +752,10 @@ export async function waitForTurnstileToken(params: {
     return { status: "token_obtained", token: existing, detection }
   }
 
-  const timeoutMs = normalizeTimeoutMs(params.timeoutMs)
+  const timeoutMs = normalizeTimeoutMs(
+    params.timeoutMs,
+    params.allowExtendedWait === true,
+  )
   const deadline = Date.now() + timeoutMs
   const lateAppearanceTimeoutMs = normalizeLateAppearanceTimeoutMs(
     params.waitForLateAppearanceMs,

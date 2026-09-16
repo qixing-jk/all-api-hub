@@ -1937,7 +1937,15 @@ async function executeTempWindowBrowserCheckIn(
   sendResponse: (response?: TempWindowBrowserCheckIn) => void,
   authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
 ) {
-  const { pageUrl, requestId, action, success, identity, timeoutMs } = request
+  const {
+    pageUrl,
+    requestId,
+    action,
+    success,
+    identity,
+    timeoutMs,
+    allowInteractiveVerification,
+  } = request
   const tempRequestId =
     requestId || safeRandomUUID(`temp-browser-checkin-${pageUrl}`)
   const waitTimeoutMs = Math.min(
@@ -1996,9 +2004,12 @@ async function executeTempWindowBrowserCheckIn(
         requestId: tempRequestId,
         origin: normalizeOrigin(pageUrl),
       })
-      // The user may need to complete login or an interactive challenge in
-      // this page; browser check-in contexts are intentionally foregrounded.
-      await focusTab(await getTab(context.tabId))
+      // A user-initiated run may need the user to complete login or an
+      // interactive challenge here, so it is foregrounded deliberately. An
+      // automatic run stays in the background and must not steal focus.
+      if (allowInteractiveVerification === true) {
+        await focusTab(await getTab(context.tabId))
+      }
 
       const deadlineAt = Date.now() + waitTimeoutMs
       let shouldTrigger = true
@@ -2164,6 +2175,7 @@ async function executeTempWindowTurnstileFetch(
     turnstileTimeoutMs,
     turnstileParamName,
     turnstilePreTrigger,
+    allowInteractiveVerification,
   } = request
   const turnstile: TempWindowTurnstileMeta = {
     status: "error",
@@ -2245,11 +2257,23 @@ async function executeTempWindowTurnstileFetch(
       origin: normalizeOrigin(originUrl),
     })
 
+    // A user-initiated run may foreground the page so the user can complete an
+    // interactive challenge in person. Automatic runs stay in the background
+    // and must never steal focus.
+    if (allowInteractiveVerification === true) {
+      await focusTab(await getTab(tabId))
+    }
+
     const turnstileResponse = await sendTabMessageWithRetry(tabId, {
       action: RuntimeActionIds.ContentWaitForTurnstileToken,
       requestId: tempRequestId,
       timeoutMs: turnstileTimeoutMs,
       preTrigger: turnstilePreTrigger,
+      // Only an interaction the user can actually see may exceed the default
+      // wait ceiling.
+      ...(allowInteractiveVerification === true
+        ? { allowExtendedWait: true }
+        : {}),
     })
 
     const token =

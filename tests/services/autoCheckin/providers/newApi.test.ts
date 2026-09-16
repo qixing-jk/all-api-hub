@@ -822,6 +822,55 @@ describe("newApiProvider", () => {
       expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
     })
 
+    it("keeps the short Turnstile assist window for automatic runs", async () => {
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: false,
+        message: "Turnstile token invalid",
+        data: null,
+      })
+      vi.mocked(isAllowedIncognitoAccess).mockResolvedValueOnce(false)
+      vi.mocked(tempWindowTurnstileFetch).mockResolvedValueOnce({
+        success: false,
+        error: "Turnstile token not available",
+        turnstile: { status: "timeout", hasTurnstile: true },
+      })
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
+        stats: { checked_in_today: false },
+      } as any)
+
+      await checkInForTest(mockAccount)
+
+      const params = vi.mocked(tempWindowTurnstileFetch).mock.calls[0]?.[0]
+      expect(params?.turnstileTimeoutMs).toBe(12_000)
+      expect(params?.allowInteractiveVerification).toBeUndefined()
+    })
+
+    it("extends the Turnstile assist window when the user started the run", async () => {
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: false,
+        message: "Turnstile token invalid",
+        data: null,
+      })
+      vi.mocked(isAllowedIncognitoAccess).mockResolvedValueOnce(false)
+      vi.mocked(tempWindowTurnstileFetch).mockResolvedValueOnce({
+        success: false,
+        error: "Turnstile token not available",
+        turnstile: { status: "timeout", hasTurnstile: true },
+      })
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
+        stats: { checked_in_today: false },
+      } as any)
+
+      await checkInForTest(mockAccount, {
+        ...DEFAULT_PROVIDER_CONTEXT,
+        allowInteractiveVerification: true,
+      })
+
+      const params = vi.mocked(tempWindowTurnstileFetch).mock.calls[0]?.[0]
+      expect(params?.turnstileTimeoutMs).toBe(120_000)
+      expect(params?.allowInteractiveVerification).toBe(true)
+    })
+
     it("uses native page check-in for thrown dynamic signature errors", async () => {
       vi.mocked(newApiFamilyRequests.envelope).mockRejectedValueOnce(
         new Error("missing check-in signature header"),

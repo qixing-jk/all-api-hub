@@ -531,6 +531,35 @@ describe("daily automatic check-in preparation", () => {
     })
   })
 
+  it("keeps the interactive-verification opt-in out of the scheduled daily run", async () => {
+    const account = createAccount()
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+
+    await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+
+    expect(mockedMethods.executeSelectedCheckIn).toHaveBeenCalledTimes(1)
+    expect(
+      mockedMethods.executeSelectedCheckIn.mock.calls[0][0].context
+        .allowInteractiveVerification,
+    ).toBeUndefined()
+  })
+
+  it("allows the interactive-verification opt-in for a user-triggered run", async () => {
+    const account = createAccount()
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+
+    await runCheckinsForTest({
+      runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
+      targetAccountIds: [account.id],
+    })
+
+    expect(mockedMethods.executeSelectedCheckIn).toHaveBeenCalledTimes(1)
+    expect(
+      mockedMethods.executeSelectedCheckIn.mock.calls[0][0].context
+        .allowInteractiveVerification,
+    ).toBe(true)
+  })
+
   it.each(["manual", "globally disabled"])(
     "does not run automatic discovery for a %s run",
     async (mode) => {
@@ -4026,6 +4055,7 @@ describe("autoCheckinScheduler targeting support", () => {
         protectionBypassExecution: manualExecution(
           TEMP_WINDOW_REQUEST_SOURCES.Background,
         ),
+        allowInteractiveVerification: true,
       },
     )
     expect(storedStatus.perAccount.target).toMatchObject({
@@ -4197,6 +4227,7 @@ describe("autoCheckinScheduler targeting support", () => {
         protectionBypassExecution: manualExecution(
           TEMP_WINDOW_REQUEST_SOURCES.Background,
         ),
+        allowInteractiveVerification: true,
       },
     )
 
@@ -5389,6 +5420,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       protectionBypassExecution: retryAccountExecution(
         TEMP_WINDOW_REQUEST_SOURCES.Popup,
       ),
+      allowInteractiveVerification: true,
     })
     expect(scheduleRetrySpy).toHaveBeenCalledWith(
       expect.objectContaining({

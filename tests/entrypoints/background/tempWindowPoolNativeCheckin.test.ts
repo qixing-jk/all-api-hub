@@ -823,6 +823,7 @@ describe("tempWindowPool native check-in page action", () => {
         action: { kind: "page_load" },
         success: { textPattern: "check-in complete" },
         timeoutMs: 5_000,
+        allowInteractiveVerification: true,
       },
       sendResponse,
     )
@@ -839,6 +840,98 @@ describe("tempWindowPool native check-in page action", () => {
     expect((globalThis as any).browser.tabs.update).toHaveBeenCalledWith(701, {
       active: true,
     })
+    expect(browserCheckInSteps).toBe(2)
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      reason: "completed",
+      actionTriggered: true,
+      matchedCondition: "text",
+      currentUrl: "https://example.invalid/checkin",
+    })
+  })
+
+  it("keeps an automatic run in the background so it cannot steal focus", async () => {
+    let browserCheckInSteps = 0
+    tabsGetMock.mockResolvedValue({
+      id: 703,
+      windowId: 79,
+      status: "complete",
+      url: "https://example.invalid/checkin",
+    })
+    sendMessageMock.mockImplementation(
+      async (_tabId: number, message: RuntimeMessage) => {
+        switch (message.action) {
+          case RuntimeActionIds.ContentShowShieldBypassUi:
+            return undefined
+          case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckCloudflareGuard:
+            return { success: true, passed: true }
+          case RuntimeActionIds.ContentWaitForTurnstileToken:
+            return {
+              success: true,
+              status: "not_present",
+              token: null,
+              detection: {
+                hasTurnstile: false,
+                reasons: [],
+                score: 0,
+                title: "Check in",
+                url: "https://example.invalid/checkin",
+              },
+            }
+          case RuntimeActionIds.ContentRunBrowserCheckIn:
+            browserCheckInSteps += 1
+            return browserCheckInSteps === 1
+              ? {
+                  success: false,
+                  reason: "action_triggered",
+                  actionTriggered: true,
+                  currentUrl: "https://example.invalid/checkin",
+                }
+              : {
+                  success: true,
+                  reason: "completed",
+                  actionTriggered: true,
+                  matchedCondition: "text",
+                  currentUrl: "https://example.invalid/checkin",
+                }
+          default:
+            throw new Error(`Unexpected action: ${message.action}`)
+        }
+      },
+    )
+
+    const { handleTempWindowBrowserCheckIn } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+
+    const sendResponse = vi.fn()
+    const request = handleTempWindowBrowserCheckIn(
+      {
+        pageUrl: "https://example.invalid/checkin",
+        requestId: "req-browser-checkin-background",
+        action: { kind: "page_load" },
+        success: { textPattern: "check-in complete" },
+        timeoutMs: 5_000,
+      },
+      sendResponse,
+    )
+
+    await settleTempContextReadiness()
+    await request
+
+    // A scheduled run must never pull the user away from whatever they are doing.
+    expect((globalThis as any).browser.windows.update).not.toHaveBeenCalledWith(
+      79,
+      { focused: true },
+    )
+    expect((globalThis as any).browser.tabs.update).not.toHaveBeenCalledWith(
+      703,
+      {
+        active: true,
+      },
+    )
+    // It still performs the check-in; it simply does so invisibly.
     expect(browserCheckInSteps).toBe(2)
     expect(sendResponse).toHaveBeenCalledWith({
       success: true,
