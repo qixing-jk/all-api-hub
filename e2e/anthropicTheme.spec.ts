@@ -171,6 +171,7 @@ test("Anthropic supplies complete light/dark palettes and restores the user's de
       radius: "large",
       density: "default",
       textSize: "default",
+      fontFamily: "default",
     })
   await expect(popup.locator("html")).toHaveAttribute(
     THEME_ATTRIBUTES.PRESET,
