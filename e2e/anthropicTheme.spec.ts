@@ -86,8 +86,7 @@ test("Anthropic supplies complete light/dark palettes and restores the user's de
   await expect(
     presetGroup.getByRole("radio", { name: "Anthropic", exact: true }),
   ).toBeChecked()
-  await page.getByRole("button", { name: /^Current:/ }).click()
-  await page.getByRole("menuitem", { name: "Appearance settings" }).click()
+  await page.getByRole("button", { name: "Appearance settings" }).click()
   const drawer = page.getByRole("dialog", { name: "Appearance settings" })
   for (const mode of ["Light", "Dark", "Follow system"] as const) {
     if (mode === "Follow system")
@@ -105,7 +104,7 @@ test("Anthropic supplies complete light/dark palettes and restores the user's de
       "background-color",
       dark ? "rgb(53, 50, 45)" : "rgb(255, 253, 247)",
     )
-    await expect(page.locator("aside .bg-sidebar")).toHaveCSS(
+    await expect(page.locator("aside div.bg-sidebar")).toHaveCSS(
       "background-color",
       dark ? "rgb(32, 31, 28)" : "rgb(238, 235, 226)",
     )
@@ -172,6 +171,8 @@ test("Anthropic supplies complete light/dark palettes and restores the user's de
       density: "default",
       textSize: "default",
       fontFamily: "default",
+      contentWidth: "centered",
+      sidebarCollapsed: false,
     })
   await expect(popup.locator("html")).toHaveAttribute(
     THEME_ATTRIBUTES.PRESET,

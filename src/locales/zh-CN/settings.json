@@ -845,7 +845,6 @@
   },
   "theme": {
     "appearance": "外观",
-    "clickSwitch": "点击切换到{{nextMode}}模式",
     "current": "当前: {{theme}} ({{resolvedTheme}})",
     "currentTheme": "当前: 跟随系统 ({{theme}})",
     "dark": "深色",
@@ -855,7 +854,6 @@
     "mode": "明暗模式",
     "selectTheme": "选择浅色、深色或跟随系统",
     "switchTo": "切换到{{theme}}主题: {{description}}",
-    "toggle": "主题切换，当前{{currentMode}}模式，点击切换到{{nextMode}}模式",
     "useDarkTheme": "使用深色主题",
     "useLightTheme": "使用浅色主题"
   },

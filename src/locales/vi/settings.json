@@ -845,7 +845,6 @@
   },
   "theme": {
     "appearance": "Giao diện",
-    "clickSwitch": "Bấm để chuyển sang chế độ {{nextMode}}",
     "current": "Hiện tại: {{theme}} ({{resolvedTheme}})",
     "currentTheme": "Hiện tại: theo hệ thống ({{theme}})",
     "dark": "Tối",
@@ -855,7 +854,6 @@
     "mode": "Chế độ giao diện",
     "selectTheme": "Chọn sáng, tối hoặc theo hệ thống",
     "switchTo": "Chuyển sang chủ đề {{theme}}: {{description}}",
-    "toggle": "Chuyển chủ đề, hiện ở chế độ {{currentMode}}, bấm để chuyển sang chế độ {{nextMode}}",
     "useDarkTheme": "Dùng chủ đề tối",
     "useLightTheme": "Dùng chủ đề sáng"
   },

@@ -847,7 +847,6 @@
   },
   "theme": {
     "appearance": "Apariencia",
-    "clickSwitch": "Haz clic para cambiar al modo {{nextMode}}",
     "current": "Actual: {{theme}} ({{resolvedTheme}})",
     "currentTheme": "Actual: seguir sistema ({{theme}})",
     "dark": "Oscuro",
@@ -857,7 +856,6 @@
     "mode": "Modo de apariencia",
     "selectTheme": "Elige claro, oscuro o seguir el sistema",
     "switchTo": "Cambiar al tema {{theme}}: {{description}}",
-    "toggle": "Alternador de tema, modo actual {{currentMode}}, haz clic para cambiar al modo {{nextMode}}",
     "useDarkTheme": "Usar tema oscuro",
     "useLightTheme": "Usar tema claro"
   },

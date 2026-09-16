@@ -75,7 +75,7 @@ test("custom color roles reach page content, controls and portals in both modes"
       "rgb(241, 228, 211)",
     )
     await expect(page.locator("body")).toHaveCSS("color", "rgb(37, 56, 65)")
-    await expect(page.locator("aside .bg-sidebar")).toHaveCSS(
+    await expect(page.locator("aside div.bg-sidebar")).toHaveCSS(
       "background-color",
       "rgb(228, 222, 240)",
     )
@@ -90,7 +90,8 @@ test("custom color roles reach page content, controls and portals in both modes"
       "background-color",
       "rgb(226, 239, 220)",
     )
-    await page.getByRole("menuitem", { name: "Appearance settings" }).click()
+    await page.keyboard.press("Escape")
+    await page.getByRole("button", { name: "Appearance settings" }).click()
     const drawer = page.getByRole("dialog", { name: "Appearance settings" })
     await expect(drawer).toHaveCSS("background-color", "rgb(226, 239, 220)")
     await expect(drawer).toHaveCSS("color", "rgb(35, 69, 45)")

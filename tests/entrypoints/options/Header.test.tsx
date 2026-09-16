@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
@@ -105,6 +106,23 @@ describe("options Header", () => {
     expect(
       await screen.findByRole("button", { name: "Dev: Dialog debug menu" }),
     ).toBeInTheDocument()
+  })
+
+  it("opens appearance directly and restores focus to its independent button", async () => {
+    const user = userEvent.setup()
+    render(<Header onSearchOpen={vi.fn()} onTitleClick={vi.fn()} />)
+    const trigger = await screen.findByRole("button", {
+      name: "settings:appearance.title",
+    })
+    await user.click(trigger)
+    expect(
+      await screen.findByRole("dialog", { name: "settings:appearance.title" }),
+    ).toBeVisible()
+    await user.keyboard("{Escape}")
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    )
+    expect(trigger).toHaveFocus()
   })
 
   it("attaches the workspace tour target to the search control", async () => {

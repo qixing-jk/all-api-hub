@@ -846,7 +846,6 @@
   },
   "theme": {
     "appearance": "Appearance",
-    "clickSwitch": "Click to switch to {{nextMode}} mode",
     "current": "Current: {{theme}} ({{resolvedTheme}})",
     "currentTheme": "Current: Follow system ({{theme}})",
     "dark": "Dark",
@@ -856,7 +855,6 @@
     "mode": "Theme mode",
     "selectTheme": "Choose light, dark, or follow system",
     "switchTo": "Switch to {{theme}} theme: {{description}}",
-    "toggle": "Theme toggle, current {{currentMode}} mode, click to switch to {{nextMode}} mode",
     "useDarkTheme": "Use dark theme",
     "useLightTheme": "Use light theme"
   },

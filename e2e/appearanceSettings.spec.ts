@@ -22,7 +22,7 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 
-for (const width of [1280, 390]) {
+for (const width of [1280, 390, 320]) {
   test(`changing text size keeps the appearance drawer bottom aligned at ${width}px`, async ({
     context,
     page,
@@ -32,8 +32,18 @@ for (const width of [1280, 390]) {
     await stubLlmMetadataIndex(context)
     await page.setViewportSize({ width, height: 900 })
     await page.goto(`chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}`)
-    await page.getByRole("button", { name: /^Current:/ }).click()
-    await page.getByRole("menuitem", { name: "Appearance settings" }).click()
+    const appearanceButton = page.getByRole("button", {
+      name: "Appearance settings",
+    })
+    await expect(appearanceButton).toBeInViewport()
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      )
+      .toBe(true)
+    await appearanceButton.click()
     const drawer = page.getByRole("dialog", { name: "Appearance settings" })
     for (const name of ["Extra large", "Large", "Default"]) {
       const radio = drawer
@@ -135,9 +145,8 @@ test("appearance applies across windows, survives reload, and resets", async ({
     .locator("..")
     .click()
   await expect(primary).toHaveCSS("border-top-left-radius", "18px")
-  // The menu retains quick light/dark changes and opens the full panel in place.
-  await page.getByRole("button", { name: /^Current:/ }).click()
-  await page.getByRole("menuitem", { name: "Appearance settings" }).click()
+  // The independent appearance button opens the full panel in place.
+  await page.getByRole("button", { name: "Appearance settings" }).click()
   const drawer = page.getByRole("dialog", { name: "Appearance settings" })
   await expect(drawer).toBeVisible()
   await drawer
@@ -162,7 +171,7 @@ test("appearance applies across windows, survives reload, and resets", async ({
       color,
     )
   }
-  for (const width of [1280, 390]) {
+  for (const width of [1280, 390, 320]) {
     await page.setViewportSize({ width, height: 900 })
     await expect(drawer).toBeVisible()
     expect(
@@ -214,6 +223,8 @@ test("appearance applies across windows, survives reload, and resets", async ({
   await page.setViewportSize({ width: 1280, height: 900 })
   await page.keyboard.press("Escape")
   await expect(drawer).not.toBeVisible()
-  await expect(page.getByRole("button", { name: /^Current:/ })).toBeFocused()
+  await expect(
+    page.getByRole("button", { name: "Appearance settings" }),
+  ).toBeFocused()
   await closeExtensionViews(context, page)
 })

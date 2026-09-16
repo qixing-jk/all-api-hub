@@ -170,9 +170,8 @@ for (const preview of [
       expect(box!.x).toBeGreaterThanOrEqual(tourBox.x)
       expect(box!.x + box!.width).toBeLessThanOrEqual(tourBox.x + tourBox.width)
     }
-    await page.getByRole("button", { name: /^Current:/ }).click()
     await page
-      .getByRole("menuitem", { name: "Appearance settings", exact: true })
+      .getByRole("button", { name: "Appearance settings", exact: true })
       .click()
     const drawer = page.getByRole("dialog", {
       name: "Appearance settings",

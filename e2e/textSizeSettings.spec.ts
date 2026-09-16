@@ -352,9 +352,8 @@ for (const width of [1280, 390, 320]) {
     // and keeps its title clear of its close action on narrow screens.
     // The mobile header replaces its actions with search while scrolled down.
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }))
-    await page.getByRole("button", { name: /^Current:/ }).click()
     await page
-      .getByRole("menuitem", { name: "Appearance settings", exact: true })
+      .getByRole("button", { name: "Appearance settings", exact: true })
       .click()
     const drawer = page.getByRole("dialog", {
       name: "Appearance settings",

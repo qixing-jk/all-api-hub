@@ -846,7 +846,6 @@
   },
   "theme": {
     "appearance": "Aussehen",
-    "clickSwitch": "Klicken Sie hier, um in den {{nextMode}}-Modus zu wechseln",
     "current": "Aktuell: {{theme}} ({{resolvedTheme}})",
     "currentTheme": "Aktuell: Systemeinstellung ({{theme}})",
     "dark": "Dunkel",
@@ -856,7 +855,6 @@
     "mode": "Darstellungsmodus",
     "selectTheme": "Hell, Dunkel oder Systemeinstellung wählen",
     "switchTo": "Zum Thema {{theme}} wechseln: {{description}}",
-    "toggle": "Designumschalter: aktuell {{currentMode}}; klicken, um zu {{nextMode}} zu wechseln",
     "useDarkTheme": "Dunkles Thema verwenden",
     "useLightTheme": "Verwenden Sie ein helles Thema"
   },

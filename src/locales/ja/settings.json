@@ -845,7 +845,6 @@
   },
   "theme": {
     "appearance": "外観",
-    "clickSwitch": "クリックして {{nextMode}} モードへ切り替え",
     "current": "現在: {{theme}}（{{resolvedTheme}}）",
     "currentTheme": "現在: システムに従う（{{theme}}）",
     "dark": "ダーク",
@@ -855,7 +854,6 @@
     "mode": "表示モード",
     "selectTheme": "ライト、ダーク、またはシステム設定に従う",
     "switchTo": "{{theme}} テーマへ切り替え: {{description}}",
-    "toggle": "テーマ切り替え。現在は {{currentMode}} モードです。クリックして {{nextMode}} モードへ切り替えます",
     "useDarkTheme": "ダークテーマを使用",
     "useLightTheme": "ライトテーマを使用"
   },

@@ -25,14 +25,6 @@ vi.mock("~/contexts/ThemeContext", () => ({
   useTheme: () => themeState.current,
 }))
 
-vi.mock("~/contexts/UserPreferencesContext", () => ({
-  useUserPreferencesContext: () => ({
-    preferences: {},
-    themeMode: themeState.current.themeMode,
-    updateAppearance: vi.fn(),
-  }),
-}))
-
 describe("HeaderThemeSwitcher", () => {
   beforeEach(() => {
     themeState.current = {
@@ -97,19 +89,13 @@ describe("HeaderThemeSwitcher", () => {
     },
   )
 
-  it("opens the appearance drawer from the menu and restores trigger focus on close", async () => {
+  it("keeps the theme menu limited to theme modes", async () => {
     const user = userEvent.setup()
     render(<HeaderThemeSwitcher />)
-    const trigger = screen.getByRole("button", { name: /^theme.current:/ })
-    await user.click(trigger)
-    await user.click(screen.getByRole("menuitem", { name: "appearance.title" }))
+    await user.click(screen.getByRole("button", { name: /^theme.current:/ }))
+    expect(screen.getAllByRole("menuitemradio")).toHaveLength(3)
     expect(
-      await screen.findByRole("dialog", { name: "appearance.title" }),
-    ).toBeVisible()
-    await user.keyboard("{Escape}")
-    await waitFor(() =>
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
-    )
-    expect(trigger).toHaveFocus()
+      screen.queryByRole("menuitem", { name: "appearance.title" }),
+    ).not.toBeInTheDocument()
   })
 })

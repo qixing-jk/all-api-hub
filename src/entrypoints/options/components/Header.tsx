@@ -9,6 +9,7 @@ import { LanguageSwitcher } from "~/components/LanguageSwitcher"
 import { Heading5, IconButton } from "~/components/ui"
 import { VersionBadge } from "~/components/VersionBadge"
 import { Z_INDEX } from "~/constants/designTokens"
+import HeaderAppearanceButton from "~/features/Appearance/HeaderAppearanceButton"
 import HeaderThemeSwitcher from "~/features/Appearance/HeaderThemeSwitcher"
 import { ProductAnnouncementButton } from "~/features/ProductAnnouncements/ProductAnnouncementButton"
 import {
@@ -216,10 +217,6 @@ function Header({
               showMobileExpandedSearch && "hidden md:flex",
             )}
           >
-            <ProductAnnouncementButton surface="options-header" />
-            <HeaderThemeSwitcher />
-            <FeedbackDropdownMenu language={i18n.language} />
-            <LanguageSwitcher variant="icon-dropdown" />
             <DevDialogDebugMenu />
             <IconButton
               onClick={onSearchOpen}
@@ -230,6 +227,15 @@ function Header({
             >
               <Search className="h-5 w-5" />
             </IconButton>
+            <div className="flex items-center gap-x-1.5 sm:gap-x-2">
+              <ProductAnnouncementButton surface="options-header" />
+              <FeedbackDropdownMenu language={i18n.language} />
+            </div>
+            <div className="border-border flex items-center gap-x-1.5 sm:gap-x-2 sm:border-s sm:ps-2">
+              <LanguageSwitcher variant="icon-dropdown" />
+              <HeaderThemeSwitcher />
+              <HeaderAppearanceButton />
+            </div>
           </div>
         </div>
       </div>
