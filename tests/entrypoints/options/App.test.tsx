@@ -11,7 +11,8 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_PAGE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { render, screen } from "~~/tests/test-utils/render"
+import { createDeferred } from "~~/tests/test-utils/deferred"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
   mockedHandleMenuItemChange,
@@ -19,7 +20,9 @@ const {
   mockedUseProductAnalyticsPageView,
   mockedUseSearchHotkeys,
   mockUseHashNavigationState,
+  mockedUpdateAppearance,
 } = vi.hoisted(() => ({
+  mockedUpdateAppearance: vi.fn(),
   mockedHandleMenuItemChange: vi.fn(),
   mockedOptionsSearchDialog: vi.fn(),
   mockedUseProductAnalyticsPageView: vi.fn(),
@@ -60,6 +63,7 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
       },
     },
     showTodayCashflow: true,
+    updateAppearance: mockedUpdateAppearance,
   }),
 }))
 
@@ -94,12 +98,27 @@ vi.mock("~/entrypoints/options/components/Header", () => ({
 vi.mock("~/entrypoints/options/components/Sidebar", () => ({
   default: ({
     onMenuItemClick,
+    onCollapseToggle,
+    isCollapsed,
+    isCollapsePending,
   }: {
     onMenuItemClick: (itemId: string) => void
+    onCollapseToggle: () => void
+    isCollapsed: boolean
+    isCollapsePending: boolean
   }) => (
-    <button onClick={() => onMenuItemClick(MENU_ITEM_IDS.ACCOUNT)}>
-      sidebar account
-    </button>
+    <>
+      <button onClick={() => onMenuItemClick(MENU_ITEM_IDS.ACCOUNT)}>
+        sidebar account
+      </button>
+      <button
+        onClick={onCollapseToggle}
+        disabled={isCollapsePending}
+        aria-expanded={!isCollapsed}
+      >
+        toggle sidebar
+      </button>
+    </>
   ),
 }))
 
@@ -177,9 +196,43 @@ describe("options App", () => {
     mockedOptionsSearchDialog.mockReset()
     mockedUseProductAnalyticsPageView.mockReset()
     mockedUseSearchHotkeys.mockReset()
+    mockedUpdateAppearance.mockReset().mockResolvedValue({ ok: true })
     mockUseHashNavigationState.activeMenuItem = "overview"
     mockUseHashNavigationState.routeParams = { source: "test" }
     mockUseHashNavigationState.refreshKey = 7
+  })
+
+  it("reports a failed layout save without changing the saved collapse state and allows retry", async () => {
+    const user = userEvent.setup()
+    mockUseHashNavigationState.activeMenuItem = MENU_ITEM_IDS.BASIC
+    const pending = createDeferred<{ ok: boolean }>()
+    mockedUpdateAppearance.mockReturnValueOnce(pending.promise)
+    render(<App />, {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+    const toggle = screen.getByRole("button", { name: "toggle sidebar" })
+    await user.click(toggle)
+    expect(mockedUpdateAppearance).toHaveBeenCalledExactlyOnceWith({
+      sidebarCollapsed: true,
+    })
+    expect(toggle).toBeDisabled()
+    await act(async () => pending.resolve({ ok: false }))
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "settings:appearance.saveFailed",
+    )
+    expect(toggle).toBeEnabled()
+    expect(toggle).toHaveAttribute("aria-expanded", "true")
+
+    await user.click(toggle)
+    await waitFor(() =>
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument(),
+    )
+    expect(mockedUpdateAppearance).toHaveBeenCalledTimes(2)
+    expect(mockedUpdateAppearance).toHaveBeenLastCalledWith({
+      sidebarCollapsed: true,
+    })
   })
 
   it("shows the lazy page fallback and wires the search dialog interactions", async () => {

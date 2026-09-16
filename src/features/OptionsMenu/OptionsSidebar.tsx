@@ -75,7 +75,7 @@ function OptionsSidebar({
   >((groups, item) => {
     const previousGroup = groups[groups.length - 1]
 
-    if (previousGroup?.category === item.category) {
+    if (previousGroup && previousGroup.category === item.category) {
       previousGroup.items.push(item)
     } else {
       groups.push({ category: item.category, items: [item] })
@@ -107,6 +107,7 @@ function OptionsSidebar({
       onMobileClose()
       return
     }
+    if (isCollapsePending) return
     onCollapseToggle?.()
   }
 
@@ -159,7 +160,7 @@ function OptionsSidebar({
             aria-expanded={!shouldShowCollapsedState}
             variant="ghost"
             size="icon-sm"
-            disabled={isCollapsePending}
+            aria-disabled={isCollapsePending}
             onClick={handleCollapseButtonClick}
             style={{ top: "calc(50vh - var(--options-header-height))" }}
             className="border-sidebar-border bg-sidebar text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground absolute right-0 z-10 hidden h-13 w-6 translate-x-1/2 -translate-y-1/2 rounded-full border shadow-md md:inline-flex"

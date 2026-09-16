@@ -52,9 +52,10 @@ test("Anthropic supplies complete light/dark palettes and restores the user's de
   const originalBackground = await page
     .locator("body")
     .evaluate((el) => getComputedStyle(el).backgroundColor)
-  const originalAccent = await page
-    .getByText("Primary action", { exact: true })
-    .evaluate((el) => getComputedStyle(el).backgroundColor)
+  const primaryAction = page.getByText("Primary action", { exact: true })
+  const originalAccent = await primaryAction.evaluate(
+    (el) => getComputedStyle(el).backgroundColor,
+  )
   const popup = await context.newPage()
   await popup.goto(`chrome-extension://${extensionId}/${POPUP_PAGE_PATH}`)
   const sidepanel = await context.newPage()
@@ -109,10 +110,14 @@ test("Anthropic supplies complete light/dark palettes and restores the user's de
       dark ? "rgb(32, 31, 28)" : "rgb(238, 235, 226)",
     )
     // Readability is checked against actual browser-resolved foreground/background pairs.
-    const contrast = await readColorContrast(
-      drawer.getByText("Primary action", { exact: true }),
-    )
-    expect(contrast.ratio).toBeGreaterThanOrEqual(MIN_CONTRAST_RATIO.TEXT)
+    // The complete preview lives on the settings page; the drawer has option previews.
+    for (const sample of [
+      primaryAction,
+      drawer.getByRole("heading", { name: "Appearance settings", exact: true }),
+    ]) {
+      const contrast = await readColorContrast(sample)
+      expect(contrast.ratio).toBeGreaterThanOrEqual(MIN_CONTRAST_RATIO.TEXT)
+    }
     if (mode !== "Follow system") {
       for (const width of [1280, 390]) {
         await page.setViewportSize({ width, height: 900 })
@@ -150,10 +155,7 @@ test("Anthropic supplies complete light/dark palettes and restores the user's de
     "background-color",
     originalBackground,
   )
-  await expect(drawer.getByText("Primary action", { exact: true })).toHaveCSS(
-    "background-color",
-    originalAccent,
-  )
+  await expect(primaryAction).toHaveCSS("background-color", originalAccent)
   await expect(
     drawer.getByRole("radio", { name: "Violet", exact: true }),
   ).toBeChecked()

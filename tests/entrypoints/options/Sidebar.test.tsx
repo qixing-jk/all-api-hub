@@ -1,8 +1,10 @@
+import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import Sidebar from "~/entrypoints/options/components/Sidebar"
+import OptionsSidebar from "~/features/OptionsMenu/OptionsSidebar"
 import {
   PRODUCT_TOUR_TARGET_ATTRIBUTE,
   PRODUCT_TOUR_TARGETS,
@@ -170,7 +172,58 @@ describe("Options Sidebar", () => {
     ).toHaveLength(1)
   })
 
-  it("opens mobile mode with an overlay, locks body scroll, and closes through mobile actions", () => {
+  it("keeps the pending desktop toggle focusable and blocks repeated activation until saving completes", async () => {
+    const user = userEvent.setup()
+    const onCollapseToggle = vi.fn()
+    const props = {
+      activeMenuItem: MENU_ITEM_IDS.BASIC,
+      onMenuItemClick: vi.fn(),
+      onCollapseToggle,
+    }
+    const { rerender } = render(<Sidebar {...props} isCollapsePending />)
+    const toggle = screen.getByRole("button", {
+      name: "ui:navigation.collapseSidebar",
+    })
+
+    toggle.focus()
+    expect(toggle).toHaveFocus()
+    expect(toggle).toHaveAttribute("aria-disabled", "true")
+    await user.keyboard("{Enter} ")
+    await user.click(toggle)
+    expect(onCollapseToggle).not.toHaveBeenCalled()
+
+    rerender(<Sidebar {...props} isCollapsePending={false} />)
+    expect(toggle).toHaveFocus()
+    await user.keyboard("{Enter}")
+    expect(onCollapseToggle).toHaveBeenCalledTimes(1)
+  })
+
+  it("renders consecutive uncategorized entries and routes their actions", async () => {
+    const user = userEvent.setup()
+    const onMenuItemClick = vi.fn()
+    const icon = () => <span />
+    render(
+      <OptionsSidebar
+        menuItems={[
+          { id: MENU_ITEM_IDS.OVERVIEW, icon },
+          { id: MENU_ITEM_IDS.ACCOUNT, icon },
+        ]}
+        activeMenuItem={MENU_ITEM_IDS.OVERVIEW}
+        onMenuItemClick={onMenuItemClick}
+      />,
+    )
+    const nav = screen.getByRole("navigation", {
+      name: "ui:navigation.settingsOptions",
+    })
+    expect(within(nav).queryByRole("heading")).not.toBeInTheDocument()
+    expect(within(nav).getAllByRole("button")).toHaveLength(2)
+    await user.click(
+      within(nav).getByRole("button", { name: "ui:navigation.account" }),
+    )
+    expect(onMenuItemClick).toHaveBeenCalledWith(MENU_ITEM_IDS.ACCOUNT)
+  })
+
+  it("opens mobile mode with an overlay, locks body scroll, and closes through mobile actions while saving", () => {
     const onMobileClose = vi.fn()
     const onCollapseToggle = vi.fn()
 
@@ -179,6 +232,7 @@ describe("Options Sidebar", () => {
         activeMenuItem={MENU_ITEM_IDS.BASIC}
         onMenuItemClick={vi.fn()}
         isMobileOpen={true}
+        isCollapsePending
         onMobileClose={onMobileClose}
         isCollapsed={false}
         onCollapseToggle={onCollapseToggle}

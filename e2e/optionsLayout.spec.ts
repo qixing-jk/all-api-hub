@@ -64,14 +64,14 @@ test("sidebar collapse and content width survive reload and reset", async ({
       return Math.abs(box!.y + box!.height / 2 - 540)
     })
     .toBeLessThan(2)
-  await page
-    .getByRole("button", { name: "Collapse sidebar", exact: true })
-    .click()
+  await collapse.focus()
+  await page.keyboard.press("Enter")
   const expand = page.getByRole("button", {
     name: "Expand sidebar",
     exact: true,
   })
   await expect(expand).toBeEnabled()
+  await expect(expand).toBeFocused()
   await page.reload()
   await expect(expand).toBeVisible()
   await expect
