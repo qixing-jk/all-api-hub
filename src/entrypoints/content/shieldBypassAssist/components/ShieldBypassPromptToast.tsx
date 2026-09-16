@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  ActionGroup,
   Body,
   Button,
   Card,
@@ -142,7 +143,7 @@ export function ShieldBypassPromptToast({
             className="mt-density-3"
             onOpen={onOpenHistory}
           />
-          <div className="mt-density-3 gap-y-density-2 flex flex-wrap justify-end gap-x-2">
+          <ActionGroup className="mt-density-3">
             <Button
               variant="secondary"
               analyticsAction={
@@ -160,7 +161,7 @@ export function ShieldBypassPromptToast({
             >
               {t("toast.actions.openSettings")}
             </Button>
-          </div>
+          </ActionGroup>
         </CardContent>
       </Card>
     </ProductAnalyticsScope>

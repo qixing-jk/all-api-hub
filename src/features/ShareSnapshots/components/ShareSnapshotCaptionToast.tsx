@@ -5,6 +5,7 @@
  */
 import { useEffect, useRef, useState } from "react"
 
+import { ActionGroup } from "~/components/ui/ActionGroup"
 import { Button } from "~/components/ui/button"
 import { SHARE_SNAPSHOT_TEST_IDS } from "~/features/ShareSnapshots/testIds"
 import { getErrorMessage } from "~/utils/core/error"
@@ -78,7 +79,7 @@ export const ShareSnapshotCaptionToast = ({
           {copyError}
         </div>
       ) : null}
-      <div className="gap-y-density-2 flex items-center justify-end gap-x-2">
+      <ActionGroup>
         <Button
           type="button"
           size="sm"
@@ -95,7 +96,7 @@ export const ShareSnapshotCaptionToast = ({
         >
           {closeLabel}
         </button>
-      </div>
+      </ActionGroup>
     </div>
   )
 }

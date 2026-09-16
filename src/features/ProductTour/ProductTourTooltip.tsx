@@ -1,7 +1,7 @@
 import { Compass, X } from "lucide-react"
 import type { TooltipRenderProps } from "react-joyride"
 
-import { Button } from "~/components/ui"
+import { ActionGroup, Button } from "~/components/ui"
 
 import { PRODUCT_TOUR_TEST_IDS } from "./testIds"
 
@@ -78,7 +78,7 @@ export function ProductTourTooltip({
             </Button>
           ) : null}
         </div>
-        <div className="gap-y-density-2 ml-auto flex flex-wrap items-center justify-end gap-x-2">
+        <ActionGroup className="ml-auto">
           {index > 0 ? (
             <Button
               type="button"
@@ -102,7 +102,7 @@ export function ProductTourTooltip({
           >
             {isLastStep ? step.locale.last : step.locale.next}
           </Button>
-        </div>
+        </ActionGroup>
       </div>
     </section>
   )

@@ -16,7 +16,7 @@ import { useTranslation } from "react-i18next"
 
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
-import { Button } from "~/components/ui"
+import { ActionGroup, Button } from "~/components/ui"
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -378,8 +378,8 @@ function AccountManagementContent({
             featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement}
             surfaceId={headerSurface}
           >
-            <div
-              className="gap-y-density-2 flex w-full flex-wrap items-center justify-end gap-x-2"
+            <ActionGroup
+              className="w-full"
               data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.headerActions}
             >
               <Button
@@ -461,7 +461,7 @@ function AccountManagementContent({
               >
                 {t("account:addAccount")}
               </Button>
-            </div>
+            </ActionGroup>
           </ProductAnalyticsScope>
         }
       />

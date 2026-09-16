@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  ActionGroup,
   Alert,
   Button,
   CompactMultiSelect,
@@ -241,7 +242,7 @@ export function CursorPlusExportDialog({
         </div>
       }
       footer={
-        <div className="gap-y-density-2 flex justify-end gap-x-2">
+        <ActionGroup>
           <Button type="button" variant="ghost" onClick={handleClose}>
             {t("common:actions.cancel")}
           </Button>
@@ -254,7 +255,7 @@ export function CursorPlusExportDialog({
           >
             {t("ui:dialog.cursorPlus.actions.copy")}
           </Button>
-        </div>
+        </ActionGroup>
       }
     >
       <Alert

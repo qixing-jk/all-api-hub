@@ -67,6 +67,9 @@ describe("ApiCheckConfirmToast", () => {
         "Do you want to open the AI API test Panel to check and test the AI API's availability?",
       ),
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Open" }).parentElement,
+    ).toHaveClass("flex-wrap")
 
     await user.click(screen.getByRole("button", { name: "Cancel" }))
     await user.click(

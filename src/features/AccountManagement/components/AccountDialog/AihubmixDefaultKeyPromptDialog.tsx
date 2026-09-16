@@ -1,6 +1,7 @@
 import { KeyRound } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { ActionGroup } from "~/components/ui/ActionGroup"
 import { Alert } from "~/components/ui/Alert"
 import { Button } from "~/components/ui/button"
 import { Modal } from "~/components/ui/Dialog/Modal"
@@ -44,7 +45,10 @@ export function AihubmixDefaultKeyPromptDialog({
         </div>
       }
       footer={
-        <div className="flex space-x-3">
+        <ActionGroup
+          layout="stack-on-narrow"
+          className="gap-y-density-3 gap-x-3"
+        >
           <Button
             type="button"
             onClick={onCancel}
@@ -65,7 +69,7 @@ export function AihubmixDefaultKeyPromptDialog({
               ? t("accountDialog:aihubmixDefaultKeyPrompt.creating")
               : t("accountDialog:aihubmixDefaultKeyPrompt.confirm")}
           </Button>
-        </div>
+        </ActionGroup>
       }
     >
       <div className="space-y-density-3">

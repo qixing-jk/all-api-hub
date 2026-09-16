@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
 import {
+  ActionGroup,
   Button,
   Input,
   Label,
@@ -300,7 +301,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
         </div>
       }
       footer={
-        <div className="gap-y-density-2 flex flex-wrap justify-end gap-x-2">
+        <ActionGroup>
           <Button
             variant="ghost"
             type="button"
@@ -316,7 +317,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
           >
             {t("ui:dialog.ccswitch.actions.export")}
           </Button>
-        </div>
+        </ActionGroup>
       }
     >
       <form className="space-y-density-4" id={formId} onSubmit={handleSubmit}>

@@ -3,6 +3,7 @@ import React from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  ActionGroup,
   Body,
   Button,
   Card,
@@ -82,7 +83,7 @@ export const ApiCheckConfirmToast: React.FC<{
               </div>
             </div>
           ) : null}
-          <div className="gap-y-density-2 flex justify-end gap-x-2">
+          <ActionGroup>
             <Button
               variant="secondary"
               analyticsAction={
@@ -106,7 +107,7 @@ export const ApiCheckConfirmToast: React.FC<{
             >
               {t("webAiApiCheck:confirmToast.open")}
             </Button>
-          </div>
+          </ActionGroup>
         </CardContent>
       </Card>
     </ProductAnalyticsScope>

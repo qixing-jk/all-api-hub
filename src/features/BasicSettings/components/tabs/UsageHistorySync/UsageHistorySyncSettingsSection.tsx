@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ComponentProps } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  ActionGroup,
   Button,
   Card,
   CardContent,
@@ -228,7 +229,7 @@ export default function UsageHistorySyncSettingsSection({
           <p className="text-muted-foreground text-sm">
             {t("settings:messages.retentionSaveHint")}
           </p>
-          <div className="gap-y-density-2 flex flex-wrap gap-x-2">
+          <ActionGroup className="items-stretch justify-start">
             <Button
               id="usage-history-sync-apply-settings"
               ref={applyButtonRef}
@@ -272,7 +273,7 @@ export default function UsageHistorySyncSettingsSection({
                 ? t("common:status.refreshing")
                 : t("syncTab.actions.refreshStatus")}
             </Button>
-          </div>
+          </ActionGroup>
         </CardContent>
       </Card>
     </SettingSection>

@@ -7,6 +7,7 @@ import type {
 } from "react"
 
 import {
+  ActionGroup,
   Button,
   BUTTON_LOADING_BEHAVIORS,
   DatePicker,
@@ -405,7 +406,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                 </div>
               ) : null}
 
-              <div className="gap-y-density-2 flex flex-wrap items-center justify-end gap-x-2">
+              <ActionGroup>
                 {view.modelListSupported ? (
                   <Button
                     type="button"
@@ -448,7 +449,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                     ? t("webAiApiCheck:modal.actions.saving")
                     : t("webAiApiCheck:modal.actions.saveToProfiles")}
                 </Button>
-              </div>
+              </ActionGroup>
 
               {view.fetchModelsError ? (
                 <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground py-density-3 rounded-md border px-3 text-sm">

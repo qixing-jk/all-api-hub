@@ -1,7 +1,7 @@
 import type { FormEvent, ReactNode } from "react"
 
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
-import { Button, Modal } from "~/components/ui"
+import { ActionGroup, Button, Modal } from "~/components/ui"
 
 /** Shared modal and form shell for legacy and resource-native channel editors. */
 export function ChannelEditorShell({
@@ -50,7 +50,7 @@ export function ChannelEditorShell({
     </div>
   )
   const footer = (
-    <div className="gap-y-density-3 flex justify-end gap-x-3">
+    <ActionGroup className="gap-y-density-3 gap-x-3">
       <Button
         variant="outline"
         onClick={handleClose}
@@ -71,7 +71,7 @@ export function ChannelEditorShell({
           {submitLabel}
         </Button>
       ) : null}
-    </div>
+    </ActionGroup>
   )
   return (
     <Modal

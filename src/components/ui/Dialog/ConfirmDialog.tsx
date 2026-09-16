@@ -1,6 +1,7 @@
 import { CircleHelp, TriangleAlert, type LucideIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
+import { ActionGroup } from "~/components/ui/ActionGroup"
 import { Button } from "~/components/ui/button"
 import { Modal } from "~/components/ui/Dialog/Modal"
 
@@ -136,7 +137,10 @@ export function ConfirmDialog({
         </div>
       }
       footer={
-        <div className="flex space-x-3">
+        <ActionGroup
+          layout="stack-on-narrow"
+          className="gap-y-density-3 gap-x-3"
+        >
           <Button
             type="button"
             onClick={onClose}
@@ -158,7 +162,7 @@ export function ConfirmDialog({
           >
             {isWorking ? workingLabel ?? confirmLabel : confirmLabel}
           </Button>
-        </div>
+        </ActionGroup>
       }
     >
       <div className="space-y-density-4">

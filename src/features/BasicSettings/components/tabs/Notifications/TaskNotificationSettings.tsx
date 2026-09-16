@@ -10,6 +10,7 @@ import {
 import { useTranslation } from "react-i18next"
 
 import {
+  ActionGroup,
   Badge,
   BodySmall,
   Button,
@@ -114,12 +115,12 @@ function NotificationSettingItem({
             )}
           </div>
           {actions && (
-            <div
+            <ActionGroup
               data-slot="notification-setting-actions"
-              className="gap-y-density-3 flex w-full flex-wrap items-center justify-end gap-x-3 has-[>[data-slot=switch]]:w-auto has-[>[data-slot=switch]]:shrink-0 [@container(min-width:42rem)]:w-auto [@container(min-width:42rem)]:shrink-0"
+              className="gap-y-density-3 w-full gap-x-3 has-[>[data-slot=switch]]:w-auto has-[>[data-slot=switch]]:shrink-0 [@container(min-width:42rem)]:w-auto [@container(min-width:42rem)]:shrink-0"
             >
               {actions}
-            </div>
+            </ActionGroup>
           )}
         </div>
         {children && (

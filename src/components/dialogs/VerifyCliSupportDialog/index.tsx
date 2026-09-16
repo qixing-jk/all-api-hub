@@ -6,6 +6,7 @@ import {
   VerificationModeSelect,
 } from "~/components/dialogs/VerifyApiDialog/VerificationMode"
 import {
+  ActionGroup,
   Alert,
   Badge,
   Button,
@@ -653,7 +654,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   const canRunAll = hasRunnableSource && resolvedModelId.trim().length > 0
 
   const footer = (
-    <div className="gap-y-density-2 flex justify-end gap-x-2">
+    <ActionGroup>
       <Button variant="secondary" onClick={onClose} disabled={!canClose}>
         {t("verifyDialog.actions.close")}
       </Button>
@@ -668,7 +669,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
           ? t("verifyDialog.actions.stop")
           : t("verifyDialog.actions.run")}
       </Button>
-    </div>
+    </ActionGroup>
   )
 
   return (

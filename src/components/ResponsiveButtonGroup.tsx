@@ -7,14 +7,20 @@ import {
 import { ANIMATIONS, COLORS, CORNERS } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
 
-type ResponsiveButtonGroupVariant = "segmented" | "plain"
-
 export const responsiveButtonGroupItemClassName =
   "min-w-fit flex-1 scale-100 [@container(min-width:42rem)]:flex-none"
 
 interface ResponsiveButtonGroupProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode
-  variant?: ResponsiveButtonGroupVariant
+}
+
+/** Resolves the shared responsive group layout for runtime CSS validation. */
+export function responsiveButtonGroupClassName(className?: string) {
+  return cn(
+    "flex w-full flex-wrap [@container(min-width:42rem)]:w-auto",
+    `${COLORS.background.tertiary} corners-concentric py-density-1 rounded-md px-1 shadow-sm [--corner-inset:4px] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`,
+    className,
+  )
 }
 
 /**
@@ -23,19 +29,12 @@ interface ResponsiveButtonGroupProps extends HTMLAttributes<HTMLDivElement> {
 export function ResponsiveButtonGroup({
   children,
   className,
-  variant = "segmented",
   ...props
 }: ResponsiveButtonGroupProps) {
   return (
     <div
       role="group"
-      className={cn(
-        "flex w-full flex-wrap [@container(min-width:42rem)]:w-auto",
-        variant === "segmented"
-          ? `${COLORS.background.tertiary} corners-concentric py-density-1 rounded-md px-1 shadow-sm [--corner-inset:4px] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`
-          : "gap-y-density-2 gap-x-2",
-        className,
-      )}
+      className={responsiveButtonGroupClassName(className)}
       {...props}
     >
       {children}

@@ -14,6 +14,7 @@ import { Virtuoso } from "react-virtuoso"
 import { formatLatency } from "~/components/dialogs/VerifyApiDialog/utils"
 import { VerificationModeSelect } from "~/components/dialogs/VerifyApiDialog/VerificationMode"
 import {
+  ActionGroup,
   Alert,
   Badge,
   Button,
@@ -1156,7 +1157,7 @@ export function BatchVerifyModelsDialog({
               })
             : t("modelList:batchVerify.idleHint")}
         </div>
-        <div className="gap-y-density-2 flex justify-end gap-x-2">
+        <ActionGroup>
           <Button variant="secondary" onClick={onClose} disabled={!canClose}>
             {t("aiApiVerification:verifyDialog.actions.close")}
           </Button>
@@ -1177,7 +1178,7 @@ export function BatchVerifyModelsDialog({
                 : t("modelList:batchVerify.actions.start")}
             </Button>
           )}
-        </div>
+        </ActionGroup>
       </div>
     </ProductAnalyticsScope>
   )

@@ -67,6 +67,18 @@ describe("CopyKeyDialog subcomponents", () => {
     ).toBeEnabled()
   })
 
+  it("groups footer actions in a wrapping container", () => {
+    render(
+      <DialogFooter
+        keyCount={2}
+        onClose={() => {}}
+        onOpenKeyManagement={() => {}}
+      />,
+    )
+
+    expect(screen.getByRole("group")).toHaveClass("flex-wrap", "justify-end")
+  })
+
   it("renders unknown quick-key status without duplicating its header fact", () => {
     const contextFact = {
       id: "workspace",

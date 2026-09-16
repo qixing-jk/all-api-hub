@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import ChannelFiltersEditor from "~/components/ChannelFiltersEditor"
 import type { EditableFilterField } from "~/components/ChannelFiltersEditor"
-import { Modal } from "~/components/ui"
+import { ActionGroup, Modal } from "~/components/ui"
 import { Button } from "~/components/ui/button"
 import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
 import toast from "~/lib/notify"
@@ -408,7 +408,7 @@ export default function ChannelFilterDialog({
         </div>
       }
       footer={
-        <div className="gap-y-density-2 flex justify-end gap-x-2">
+        <ActionGroup>
           <Button
             type="button"
             variant="secondary"
@@ -426,7 +426,7 @@ export default function ChannelFilterDialog({
           >
             {isSaving ? t("common:status.saving") : t("filters.actions.save")}
           </Button>
-        </div>
+        </ActionGroup>
       }
     >
       <ChannelFiltersEditor

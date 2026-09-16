@@ -1,7 +1,7 @@
 import { KeyRound } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { Button } from "~/components/ui"
+import { ActionGroup, Button } from "~/components/ui"
 import { PRODUCT_ANALYTICS_ACTION_IDS } from "~/services/productAnalytics/contracts"
 
 interface DialogFooterProps {
@@ -21,7 +21,7 @@ export function DialogFooter({
   const { t } = useTranslation(["ui", "common", "account"])
 
   return (
-    <div className="flex items-center justify-between">
+    <div className="gap-y-density-2 flex flex-wrap items-center justify-between gap-x-2">
       <div className="flex items-center space-x-2">
         {keyCount > 0 && (
           <div className="dark:text-secondary-foreground text-muted-foreground flex items-center space-x-1.5 text-xs">
@@ -30,7 +30,7 @@ export function DialogFooter({
           </div>
         )}
       </div>
-      <div className="gap-y-density-2 flex items-center gap-x-2">
+      <ActionGroup className="ml-auto w-full [@container(min-width:42rem)]:w-auto">
         {onOpenKeyManagement ? (
           <Button
             type="button"
@@ -46,7 +46,7 @@ export function DialogFooter({
         <Button onClick={onClose} variant="secondary" size="sm">
           {t("common:actions.close")}
         </Button>
-      </div>
+      </ActionGroup>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next"
 import { SendToBack } from "lucide-react"
 
-import { Button } from "~/components/ui"
+import { ActionGroup, Button } from "~/components/ui"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import type {
   ManagedSiteTokenBatchExportExecutionResult,
@@ -53,7 +53,7 @@ export function ManagedSiteTokenBatchExportFooter({
             total: executionResult.items.length,
           })}
         </div>
-        <div className="gap-y-density-2 flex min-w-0 flex-wrap items-center justify-end gap-x-2">
+        <ActionGroup className="min-w-0">
           {canRetry ? (
             <Button
               type="button"
@@ -87,14 +87,14 @@ export function ManagedSiteTokenBatchExportFooter({
           >
             {t("common:actions.close")}
           </Button>
-        </div>
+        </ActionGroup>
       </div>
     )
   }
 
   return (
-    <div className="gap-y-density-3 flex items-center justify-between gap-x-3">
-      <div className="text-muted-foreground text-sm">
+    <div className="gap-y-density-3 flex flex-col items-stretch justify-between gap-x-3 sm:flex-row sm:items-center">
+      <div className="text-muted-foreground min-w-0 text-sm break-words">
         {preview
           ? t("keyManagement:batchManagedSiteExport.preview.summary", {
               ready: preview.readyCount,
@@ -107,7 +107,7 @@ export function ManagedSiteTokenBatchExportFooter({
               count: selectedItemCount,
             })}
       </div>
-      <div className="gap-y-density-2 flex items-center gap-x-2">
+      <ActionGroup>
         <Button
           type="button"
           variant="outline"
@@ -138,7 +138,7 @@ export function ManagedSiteTokenBatchExportFooter({
             ? t("keyManagement:batchManagedSiteExport.actions.running")
             : t("keyManagement:batchManagedSiteExport.actions.start")}
         </Button>
-      </div>
+      </ActionGroup>
     </div>
   )
 }

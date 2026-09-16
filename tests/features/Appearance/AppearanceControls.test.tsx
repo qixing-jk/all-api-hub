@@ -108,6 +108,25 @@ describe("appearance controls", () => {
     expect(save).toHaveBeenLastCalledWith({ themeMode: THEME_MODE.LIGHT })
   })
 
+  it("keeps concise three-choice settings in a compact three-column group", () => {
+    const { container } = renderControls()
+
+    expect(container.firstElementChild).not.toHaveClass(
+      "[container-type:inline-size]",
+    )
+    for (const name of [
+      "settings:theme.mode",
+      "settings:appearance.density",
+      "settings:appearance.textSize",
+    ]) {
+      const group = screen.getByRole("group", { name })
+      const firstChoice = within(group).getAllByRole("radio")[0]
+      expect(firstChoice.parentElement?.parentElement).toHaveClass(
+        "grid-cols-3",
+      )
+    }
+  })
+
   it("explains preset-owned colors and restores accent choices after returning to the default preset", async () => {
     const user = userEvent.setup()
     savedAppearance.preset = THEME_PRESET.ANTHROPIC

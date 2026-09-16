@@ -2,7 +2,7 @@ import { CircleHelp, RefreshCw } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Alert, Button } from "~/components/ui"
+import { ActionGroup, Alert, Button } from "~/components/ui"
 import { ConfirmDialog } from "~/components/ui/Dialog/ConfirmDialog"
 import { createTab, reloadRuntime } from "~/utils/browser/browserApi"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
@@ -50,7 +50,7 @@ export default function AutoDetectSlowHintAlert({
           <p className="mb-density-2 text-xs">
             {t("accountDialog:messages.autoDetectCookiePermissionReloadHint")}
           </p>
-          <div className="gap-y-density-2 flex flex-wrap gap-x-2">
+          <ActionGroup className="items-stretch justify-start">
             <Button
               type="button"
               onClick={handleHelpClick}
@@ -69,7 +69,7 @@ export default function AutoDetectSlowHintAlert({
             >
               {t("accountDialog:actions.reloadExtensionAndRetry")}
             </Button>
-          </div>
+          </ActionGroup>
         </div>
       </Alert>
 

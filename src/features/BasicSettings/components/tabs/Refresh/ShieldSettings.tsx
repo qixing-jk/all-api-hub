@@ -2,11 +2,9 @@ import { AppWindow, Layers2, PanelTop, Sparkles, Star } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { responsiveButtonGroupItemClassName } from "~/components/ResponsiveButtonGroup"
 import {
-  ResponsiveButtonGroup,
-  responsiveButtonGroupItemClassName,
-} from "~/components/ResponsiveButtonGroup"
-import {
+  ActionGroup,
   Alert,
   BodySmall,
   Button,
@@ -191,7 +189,7 @@ export default function ShieldSettings() {
           title={t("refresh.shieldPermissionWarningTitle")}
           description={t("refresh.shieldPermissionWarningDesc")}
         >
-          <div className="mt-density-3 gap-y-density-2 flex flex-wrap gap-x-2">
+          <ActionGroup className="mt-density-3 items-stretch justify-start">
             <WorkflowTransitionButton
               size="sm"
               onClick={() =>
@@ -207,7 +205,7 @@ export default function ShieldSettings() {
             >
               {t("permissions.actions.refresh")}
             </Button>
-          </div>
+          </ActionGroup>
         </Alert>
       )}
       <Card padding="none">
@@ -230,8 +228,7 @@ export default function ShieldSettings() {
             rightContentClassName="[@container(min-width:42rem)]:flex-1"
             rightContent={
               <div className="space-y-density-2 flex flex-col items-stretch text-left">
-                <ResponsiveButtonGroup
-                  variant="plain"
+                <ActionGroup
                   aria-label={t("refresh.shieldMethodTitle")}
                   className="max-w-full justify-end [@container(min-width:42rem)]:w-full"
                 >
@@ -293,7 +290,7 @@ export default function ShieldSettings() {
                       )}
                     </Button>
                   ))}
-                </ResponsiveButtonGroup>
+                </ActionGroup>
                 <div className="grid w-0 min-w-full">
                   {methodHints.map(([hintMode, hint]) => {
                     const isSelected = mode === hintMode

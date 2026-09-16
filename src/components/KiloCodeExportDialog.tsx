@@ -9,6 +9,7 @@ import {
 import { useTranslation } from "react-i18next"
 
 import {
+  ActionGroup,
   Alert,
   Badge,
   Button,
@@ -1558,7 +1559,7 @@ export function KiloCodeExportDialog({
           </div>
         }
         footer={
-          <div className="gap-y-density-2 flex flex-wrap items-center justify-end gap-x-2">
+          <ActionGroup>
             {selectedSiteIds.length > 0 && (
               <div className="text-muted-foreground mr-auto text-xs">
                 {selectionSummary}
@@ -1584,7 +1585,7 @@ export function KiloCodeExportDialog({
             >
               {downloadActionLabel}
             </Button>
-          </div>
+          </ActionGroup>
         }
       >
         <Alert

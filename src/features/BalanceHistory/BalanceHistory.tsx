@@ -13,6 +13,7 @@ import { EChart } from "~/components/charts/EChart"
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
 import {
+  ActionGroup,
   Alert,
   Button,
   Card,
@@ -1100,7 +1101,7 @@ export default function BalanceHistory() {
           title={t("hints.disabled.title")}
           description={t("hints.disabled.description")}
         >
-          <div className="mt-density-3 gap-y-density-2 flex flex-wrap gap-x-2">
+          <ActionGroup className="mt-density-3 items-stretch justify-start">
             <WorkflowTransitionButton
               size="sm"
               variant="outline"
@@ -1116,7 +1117,7 @@ export default function BalanceHistory() {
             >
               {t("hints.disabled.actions.openSettings")}
             </WorkflowTransitionButton>
-          </div>
+          </ActionGroup>
         </Alert>
       ) : (
         <>
@@ -1228,7 +1229,7 @@ export default function BalanceHistory() {
                 </div>
               </div>
 
-              <div className="gap-y-density-2 flex flex-wrap gap-x-2">
+              <ActionGroup className="items-stretch justify-start">
                 {QUICK_RANGES.map((preset) => {
                   const label = getBalanceHistoryQuickRangeLabel(t, preset.id)
                   return (
@@ -1248,7 +1249,7 @@ export default function BalanceHistory() {
                     </Button>
                   )
                 })}
-              </div>
+              </ActionGroup>
 
               <div className="text-muted-foreground text-xs">
                 {t("summary.coverage", {

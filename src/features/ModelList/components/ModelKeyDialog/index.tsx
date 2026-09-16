@@ -3,6 +3,7 @@ import { useEffect, useId, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  ActionGroup,
   Alert,
   Button,
   EmptyState,
@@ -408,7 +409,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                     </p>
                   </div>
 
-                  <div className="gap-y-density-2 flex flex-wrap gap-x-2">
+                  <ActionGroup className="items-stretch justify-start">
                     <Button
                       onClick={() => {
                         void handleCreateCompatibleKey(
@@ -439,7 +440,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                     >
                       {t("modelList:keyDialog.createCustomKey")}
                     </Button>
-                  </div>
+                  </ActionGroup>
                 </div>
               </div>
             )
@@ -484,7 +485,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                 ) : null}
               </div>
 
-              <div className="gap-y-density-2 flex flex-wrap gap-x-2">
+              <ActionGroup className="items-stretch justify-start">
                 <Button
                   onClick={copySelectedKey}
                   disabled={!canCopy}
@@ -506,7 +507,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                 >
                   {t("modelList:keyDialog.createAnotherKey")}
                 </Button>
-              </div>
+              </ActionGroup>
             </div>
           )}
         </div>

@@ -3,7 +3,7 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
-import { Alert, Button } from "~/components/ui"
+import { ActionGroup, Alert, Button } from "~/components/ui"
 import {
   getAccountSiteApiRouter,
   SITE_TYPES,
@@ -100,7 +100,7 @@ export function AccessTokenVerificationGuide({
             {siteType === SITE_TYPES.NEW_API && (
               <p>{t("accessTokenVerification.rotationWarning")}</p>
             )}
-            <div className="gap-y-density-2 flex flex-wrap gap-x-2">
+            <ActionGroup className="items-stretch justify-start">
               {accessTokenPath && siteUrl && isHttpUrl(siteUrl) && (
                 <Button
                   type="button"
@@ -116,7 +116,7 @@ export function AccessTokenVerificationGuide({
               {manualAddGuideAnchor && (
                 <ManualAddGuideButton anchor={manualAddGuideAnchor} />
               )}
-            </div>
+            </ActionGroup>
             {navigationFailed && (
               <p role="alert">
                 {isApiYi

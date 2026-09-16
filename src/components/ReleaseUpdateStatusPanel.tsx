@@ -4,7 +4,14 @@ import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { RELEASE_UPDATE_STATUS_PANEL_TEST_IDS } from "~/components/ReleaseUpdateStatusPanel.testIds"
-import { BodySmall, Button, Card, CardItem, CardList } from "~/components/ui"
+import {
+  ActionGroup,
+  BodySmall,
+  Button,
+  Card,
+  CardItem,
+  CardList,
+} from "~/components/ui"
 import { useReleaseUpdateStatus } from "~/contexts/ReleaseUpdateStatusContext"
 import toast from "~/lib/notify"
 import {
@@ -275,7 +282,7 @@ export function ReleaseUpdateStatusPanel() {
             </div>
           }
           rightContent={
-            <div className="gap-y-density-2 flex flex-wrap justify-end gap-x-2">
+            <ActionGroup>
               <Button
                 type="button"
                 variant="outline"
@@ -323,7 +330,7 @@ export function ReleaseUpdateStatusPanel() {
                   </a>
                 </Button>
               )}
-            </div>
+            </ActionGroup>
           }
         />
       </CardList>

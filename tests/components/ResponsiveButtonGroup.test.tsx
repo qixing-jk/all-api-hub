@@ -22,23 +22,6 @@ describe("ResponsiveButtonGroup", () => {
       "[@container(min-width:42rem)]:w-auto",
     )
   })
-
-  it("can render a plain wrapping container for regular buttons", () => {
-    render(
-      <ResponsiveButtonGroup variant="plain" aria-label="Shield method">
-        <button type="button">Composite</button>
-      </ResponsiveButtonGroup>,
-    )
-
-    expect(screen.getByRole("group", { name: "Shield method" })).toHaveClass(
-      "flex",
-      "w-full",
-      "flex-wrap",
-      "gap-x-2",
-      "gap-y-density-2",
-      "[@container(min-width:42rem)]:w-auto",
-    )
-  })
 })
 
 describe("ResponsiveToggleGroup", () => {

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  ActionGroup,
   Button,
   Card,
   CardContent,
@@ -300,7 +301,7 @@ export default function BalanceHistorySettings() {
           <p className="text-muted-foreground text-sm">
             {t("settings:messages.retentionSaveHint")}
           </p>
-          <div className="gap-y-density-2 flex flex-wrap gap-x-2">
+          <ActionGroup className="items-stretch justify-start">
             <Button
               id="balance-history-apply-settings"
               disabled={!retentionValid || isSaving}
@@ -320,7 +321,7 @@ export default function BalanceHistorySettings() {
                 Dev: Seed estimate snapshots
               </Button>
             )}
-          </div>
+          </ActionGroup>
         </CardContent>
       </Card>
     </SettingSection>

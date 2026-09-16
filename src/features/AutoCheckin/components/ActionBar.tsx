@@ -3,7 +3,7 @@ import type { MouseEventHandler } from "react"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
-import { Button } from "~/components/ui"
+import { ActionGroup, Button } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
   AUTO_CHECKIN_DEBUG_ACTIONS,
@@ -100,7 +100,7 @@ export default function ActionBar({
       surfaceId={toolbarSurface}
     >
       <div className="space-y-density-1-5">
-        <div className="gap-y-density-2 flex flex-wrap gap-x-2">
+        <ActionGroup className="items-stretch justify-start">
           <Button
             onClick={onRunNow}
             disabled={isBusy}
@@ -245,7 +245,7 @@ export default function ActionBar({
               </Button>
             </>
           )}
-        </div>
+        </ActionGroup>
         {canOpenFailedManualSignIns && onOpenFailedManualSignIns ? (
           <p className="text-muted-foreground text-xs">{bulkManualHint}</p>
         ) : null}

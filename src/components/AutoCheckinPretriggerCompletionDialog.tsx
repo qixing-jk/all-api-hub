@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next"
 
 import { Button, WorkflowTransitionButton } from "~/components/ui"
+import { ActionGroup } from "~/components/ui/ActionGroup"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
@@ -83,7 +84,7 @@ export function AutoCheckinPretriggerCompletionDialog({
   }
 
   const footer = (
-    <div className="gap-y-density-2 flex gap-x-2">
+    <ActionGroup layout="stack-on-narrow">
       <Button
         type="button"
         variant="secondary"
@@ -100,7 +101,7 @@ export function AutoCheckinPretriggerCompletionDialog({
       >
         {t("uiOpenPretrigger.viewDetails")}
       </WorkflowTransitionButton>
-    </div>
+    </ActionGroup>
   )
 
   return (

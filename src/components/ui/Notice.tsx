@@ -3,6 +3,8 @@ import React, { useId } from "react"
 
 import { cn } from "~/lib/utils"
 
+import { ActionGroup } from "./ActionGroup"
+
 // General guidance follows the theme; explicit status tones keep their meaning.
 type NoticeTone = "default" | "info" | "warning" | "success" | "destructive"
 
@@ -117,9 +119,9 @@ export const Notice = React.forwardRef<HTMLDivElement, NoticeProps>(
             ) : null}
             {children}
             {actions ? (
-              <div className="mt-density-2 gap-y-density-2 flex flex-wrap gap-x-2">
+              <ActionGroup className="mt-density-2 items-stretch justify-start">
                 {actions}
-              </div>
+              </ActionGroup>
             ) : null}
           </div>
         </div>

@@ -1,6 +1,7 @@
 import type { ComponentType, ReactNode } from "react"
 
 import { BodySmall, Heading2 } from "~/components/ui"
+import { actionGroupClassName } from "~/components/ui/ActionGroup"
 import { cn } from "~/lib/utils"
 
 interface PageHeaderProps {
@@ -14,6 +15,11 @@ interface PageHeaderProps {
   className?: string
   iconClassName?: string
 }
+
+export const pageHeaderActionsClassName = actionGroupClassName(
+  "wrap",
+  "gap-y-density-3 w-full min-w-0 justify-start gap-x-3 [@container(min-width:42rem)]:w-auto [@container(min-width:42rem)]:flex-1 [@container(min-width:42rem)]:justify-end",
+)
 
 /**
  * Shared section header for pages with icon, title, description, and action slots.
@@ -63,11 +69,7 @@ export function PageHeader({
             {titleActions}
           </div>
         </div>
-        {actions && (
-          <div className="gap-y-density-3 flex w-full min-w-0 flex-wrap items-center gap-x-3 [&_[data-slot=button]]:h-auto [&_[data-slot=button]]:min-h-9 [&_[data-slot=button]]:max-w-full [&_[data-slot=button]]:whitespace-normal [&_[data-slot=button][data-size=default]]:min-h-9 [&_[data-slot=button][data-size=icon-lg]]:min-h-10 [&_[data-slot=button][data-size=icon-sm]]:min-h-8 [&_[data-slot=button][data-size=icon-xs]]:min-h-6 [&_[data-slot=button][data-size=icon]]:min-h-9 [&_[data-slot=button][data-size=lg]]:min-h-10 [&_[data-slot=button][data-size=sm]]:min-h-8 [@container(min-width:42rem)]:w-auto [@container(min-width:42rem)]:flex-1 [@container(min-width:42rem)]:justify-end">
-            {actions}
-          </div>
-        )}
+        {actions && <div className={pageHeaderActionsClassName}>{actions}</div>}
       </div>
       {description && (
         <BodySmall className="dark:text-secondary-foreground text-muted-foreground mt-density-2">

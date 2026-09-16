@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  ActionGroup,
   Button,
   Input,
   InputOTP,
@@ -271,7 +272,7 @@ export function NewApiManagedVerificationDialog(
   }
 
   const footer = (
-    <div className="gap-y-density-2 flex flex-wrap justify-end gap-x-2">
+    <ActionGroup>
       {props.step === NEW_API_MANAGED_VERIFICATION_STEPS.PASSKEY_MANUAL ? (
         <>
           <WorkflowTransitionButton
@@ -324,7 +325,7 @@ export function NewApiManagedVerificationDialog(
       >
         {t("dialog.actions.close")}
       </Button>
-    </div>
+    </ActionGroup>
   )
 
   return (

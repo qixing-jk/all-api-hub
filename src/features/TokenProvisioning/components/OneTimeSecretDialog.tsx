@@ -3,6 +3,7 @@ import { useCallback, useId, useLayoutEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Alert, Button, ConfirmDialog, Input, Modal } from "~/components/ui"
+import { ActionGroup } from "~/components/ui/ActionGroup"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import toast from "~/lib/notify"
 
@@ -237,7 +238,7 @@ export function OneTimeSecretDialog({
           </div>
         }
         footer={
-          <div className="gap-y-density-2 flex flex-col-reverse gap-x-2 sm:flex-row sm:justify-end">
+          <ActionGroup layout="stack-on-narrow">
             <Button
               ref={closeButtonRef}
               type="button"
@@ -278,7 +279,7 @@ export function OneTimeSecretDialog({
                 ? t("keyManagement:oneTimeKey.copiedAction")
                 : t("keyManagement:oneTimeKey.copy")}
             </Button>
-          </div>
+          </ActionGroup>
         }
       >
         <div className="space-y-density-4">

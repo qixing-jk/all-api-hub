@@ -2,6 +2,7 @@ import { useEffect, useId, useState, type FormEvent } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  ActionGroup,
   Button,
   Checkbox,
   CompactMultiSelect,
@@ -240,7 +241,7 @@ export function ClaudeCodeRouterImportDialog(
         </div>
       }
       footer={
-        <div className="gap-y-density-2 flex flex-wrap justify-end gap-x-2">
+        <ActionGroup>
           <Button variant="ghost" type="button" onClick={onClose}>
             {t("common:actions.cancel")}
           </Button>
@@ -249,7 +250,7 @@ export function ClaudeCodeRouterImportDialog(
               ? t("common:status.importing")
               : t("common:actions.import")}
           </Button>
-        </div>
+        </ActionGroup>
       }
     >
       <form className="space-y-density-4" id={formId} onSubmit={handleSubmit}>

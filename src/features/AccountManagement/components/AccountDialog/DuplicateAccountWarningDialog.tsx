@@ -1,6 +1,7 @@
 import { TriangleAlert } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { ActionGroup } from "~/components/ui/ActionGroup"
 import { Alert } from "~/components/ui/Alert"
 import { Button } from "~/components/ui/button"
 import { Modal } from "~/components/ui/Dialog/Modal"
@@ -55,7 +56,10 @@ export function DuplicateAccountWarningDialog({
       }
       footer={
         <div className="space-y-density-2">
-          <div className="flex space-x-3">
+          <ActionGroup
+            layout="stack-on-narrow"
+            className="gap-y-density-3 gap-x-3"
+          >
             <Button
               type="button"
               onClick={onCancel}
@@ -75,7 +79,7 @@ export function DuplicateAccountWarningDialog({
             >
               {t("accountDialog:warnings.duplicateAccount.actions.continue")}
             </Button>
-          </div>
+          </ActionGroup>
           <Button
             type="button"
             onClick={onDisableWarningAndContinue}

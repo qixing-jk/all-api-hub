@@ -2,7 +2,14 @@ import { Globe2, Info } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Button, FormField, Input, Modal, Textarea } from "~/components/ui"
+import {
+  ActionGroup,
+  Button,
+  FormField,
+  Input,
+  Modal,
+  Textarea,
+} from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
@@ -272,7 +279,7 @@ export default function BookmarkDialog({
           </div>
         }
         footer={
-          <div className="gap-y-density-2 flex justify-end gap-x-2">
+          <ActionGroup>
             <Button
               type="button"
               variant="ghost"
@@ -301,7 +308,7 @@ export default function BookmarkDialog({
                   ? t("bookmark:actions.add")
                   : t("common:actions.save")}
             </Button>
-          </div>
+          </ActionGroup>
         }
       >
         {mode === "add" && (

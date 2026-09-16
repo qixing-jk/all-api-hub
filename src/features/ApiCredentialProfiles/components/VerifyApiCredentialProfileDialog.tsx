@@ -12,6 +12,7 @@ import {
 import { VerificationHistorySummary } from "~/components/dialogs/VerifyApiDialog/VerificationHistorySummary"
 import { VerificationModeSelect } from "~/components/dialogs/VerifyApiDialog/VerificationMode"
 import {
+  ActionGroup,
   Alert,
   Badge,
   Button,
@@ -743,7 +744,7 @@ export function VerifyApiCredentialProfileDialog({
           </Button>
         ) : null}
       </div>
-      <div className="gap-y-density-2 flex justify-end gap-x-2">
+      <ActionGroup>
         <Button
           variant="secondary"
           onClick={onClose}
@@ -762,7 +763,7 @@ export function VerifyApiCredentialProfileDialog({
             ? t("aiApiVerification:verifyDialog.actions.running")
             : t("aiApiVerification:verifyDialog.actions.run")}
         </Button>
-      </div>
+      </ActionGroup>
     </div>
   )
 

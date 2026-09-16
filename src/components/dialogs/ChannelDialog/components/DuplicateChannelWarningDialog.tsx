@@ -1,6 +1,7 @@
 import { TriangleAlert } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { ActionGroup } from "~/components/ui/ActionGroup"
 import { Alert } from "~/components/ui/Alert"
 import { Button } from "~/components/ui/button"
 import { Modal } from "~/components/ui/Dialog/Modal"
@@ -41,7 +42,10 @@ export function DuplicateChannelWarningDialog({
         </div>
       }
       footer={
-        <div className="flex space-x-3">
+        <ActionGroup
+          layout="stack-on-narrow"
+          className="gap-y-density-3 gap-x-3"
+        >
           <Button
             type="button"
             onClick={onCancel}
@@ -58,7 +62,7 @@ export function DuplicateChannelWarningDialog({
           >
             {t("channelDialog:warnings.channelExists.actions.continue")}
           </Button>
-        </div>
+        </ActionGroup>
       }
     >
       <Alert

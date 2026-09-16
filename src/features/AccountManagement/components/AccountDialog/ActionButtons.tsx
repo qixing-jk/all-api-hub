@@ -1,7 +1,7 @@
 import { Check, Pencil, Sparkles, Zap } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { Button } from "~/components/ui"
+import { ActionGroup, Button } from "~/components/ui"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
@@ -110,7 +110,7 @@ export default function ActionButtons({
 
   if (shouldShowAddDetectionActions) {
     return (
-      <div className="gap-y-density-2 flex flex-wrap gap-x-2">
+      <ActionGroup className="items-stretch justify-start">
         <Button
           type="button"
           onClick={onAutoDetect}
@@ -140,12 +140,12 @@ export default function ActionButtons({
         >
           {t("accountDialog:mode.manualAdd")}
         </Button>
-      </div>
+      </ActionGroup>
     )
   }
 
   return (
-    <div className="gap-y-density-2 flex flex-wrap gap-x-2">
+    <ActionGroup className="items-stretch justify-start">
       <Button type="button" onClick={onClose} variant="secondary">
         {t("common:actions.cancel")}
       </Button>
@@ -217,6 +217,6 @@ export default function ActionButtons({
               : t("accountDialog:actions.saveAccount")
             : t("accountDialog:actions.saveChanges")}
       </Button>
-    </div>
+    </ActionGroup>
   )
 }
