@@ -1,3 +1,4 @@
+import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { THEME_ATTRIBUTES } from "~/constants/theme"
 import deSettings from "~/locales/de/settings.json" with { type: "json" }
@@ -34,7 +35,7 @@ for (const width of [390, 320]) {
         appearance: { density: "compact", textSize: "extra-large" },
       })
       await page.goto(
-        `chrome-extension://${extensionId}/options.html#basic?tab=general&anchor=${SETTINGS_ANCHORS.APPEARANCE_TEXT_SIZE}`,
+        `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#basic?tab=general&anchor=${SETTINGS_ANCHORS.APPEARANCE_TEXT_SIZE}`,
       )
       await expect(page.locator("html")).toHaveAttribute(
         THEME_ATTRIBUTES.TEXT_SIZE,

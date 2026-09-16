@@ -58,7 +58,7 @@ async function expectControlsToFit(scope: Locator) {
         const lineHeight = parseFloat(style.lineHeight)
         return (
           isInput
-            ? contentHeight + 1 < lineHeight
+            ? !Number.isFinite(lineHeight) || contentHeight + 1 < lineHeight
             : element.scrollHeight > element.clientHeight + 1
         )
           ? [
@@ -463,7 +463,10 @@ for (const width of [1280, 390, 320]) {
       exact: true,
     })
     await search.getByRole("combobox").fill("font size")
-    await search.getByRole("option").filter({ hasText: "Text size" }).click()
+    await search
+      .getByRole("option")
+      .filter({ has: page.getByText("Text size", { exact: true }) })
+      .click()
     await expect(page).toHaveURL(/appearance-text-size/)
     await expect(textSize).toBeVisible()
     await textSize

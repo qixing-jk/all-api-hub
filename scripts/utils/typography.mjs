@@ -53,15 +53,20 @@ export function findTypographyViolations(file, source) {
     }
   }
   if (file.endsWith(".css")) {
-    postcss
-      .parse(source, { from: file })
-      .walkDecls(/^(?:font-size|font)$/u, (decl) => {
-        if (!RELATIVE_SIZE.test(decl.value))
-          report(
-            decl.source?.start?.offset ?? 0,
-            "CSS typography must use shared tokens",
-          )
-      })
+    const root = postcss.parse(source, { from: file })
+    root.walkAtRules("apply", (rule) => {
+      inspectText(
+        rule.params,
+        source.indexOf(rule.params, rule.source?.start?.offset ?? 0),
+      )
+    })
+    root.walkDecls(/^(?:font-size|font)$/u, (decl) => {
+      if (!RELATIVE_SIZE.test(decl.value))
+        report(
+          decl.source?.start?.offset ?? 0,
+          "CSS typography must use shared tokens",
+        )
+    })
     return problems
   }
   if (file.endsWith(".html")) {
@@ -108,11 +113,16 @@ export function findTypographyViolations(file, source) {
       node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
       ts.isPropertyAccessExpression(node.left) &&
       ["font", "fontSize"].includes(node.left.name.text) &&
+      !(
+        node.left.name.text === "fontSize" &&
+        ts.isStringLiteralLike(node.right) &&
+        RELATIVE_SIZE.test(node.right.text)
+      ) &&
       file !== "src/services/sharing/shareSnapshots/shareSnapshotOverlay.ts"
     )
       report(
         node.getStart(ast),
-        "Canvas fonts need an explicit typography adapter",
+        "Font assignments need shared typography or an explicit adapter",
       )
     if (
       ts.isCallExpression(node) &&

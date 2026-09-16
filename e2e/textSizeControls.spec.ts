@@ -60,7 +60,8 @@ async function expectSurfaceToFit(surface: Locator, width: number) {
           parseFloat(style.paddingTop) -
           parseFloat(style.paddingBottom)
         const line = parseFloat(style.lineHeight)
-        return available + 1 < line ||
+        return !Number.isFinite(line) ||
+          available + 1 < line ||
           element.scrollHeight > element.clientHeight + 1
           ? [
               {

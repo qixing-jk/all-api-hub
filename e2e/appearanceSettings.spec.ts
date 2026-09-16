@@ -50,7 +50,7 @@ test("appearance applies across windows, survives reload, and resets", async ({
   const originalColor = await preview.evaluate(
     (el) => getComputedStyle(el).backgroundColor,
   )
-  const primary = page.getByRole("button", { name: "Reset appearance" })
+  const primary = preview
   await page
     .locator(`#${SETTINGS_ANCHORS.APPEARANCE_COLOR}`)
     .getByRole("radio", { name: "Violet" })

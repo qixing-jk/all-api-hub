@@ -82,9 +82,9 @@ test("custom color roles reach page content, controls and portals in both modes"
     const preview = page.getByText("Primary action", { exact: true })
     await expect(preview).toHaveCSS("background-color", "rgb(135, 63, 160)")
     await expect(preview).toHaveCSS("color", "rgb(255, 242, 207)")
-    const reset = page.getByRole("button", { name: "Reset appearance" })
-    await expect(reset).toHaveCSS("background-color", "rgb(247, 237, 222)")
-    await expect(reset).toHaveCSS("border-top-color", "rgb(137, 98, 73)")
+    const outline = page.getByText("Secondary action", { exact: true })
+    await expect(outline).toHaveCSS("background-color", "rgb(247, 237, 222)")
+    await expect(outline).toHaveCSS("border-top-color", "rgb(137, 98, 73)")
     await page.getByRole("button", { name: /^Current:/ }).click()
     await expect(page.getByRole("menu")).toHaveCSS(
       "background-color",

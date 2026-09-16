@@ -151,6 +151,15 @@ describe("ModelVendorMark", () => {
     }
   })
 
+  it("keeps a single-letter vendor badge as fixed-size artwork", () => {
+    render(<ModelVendorMark vendor={knownVendor("nomic")} variant="badge" />)
+    const mark = screen.getByText("N")
+    expect(mark).toHaveAttribute("aria-hidden", "true")
+    expect(mark).toHaveClass("size-4", "text-[12px]")
+    expect(mark).not.toHaveClass("text-xs")
+    expectNeutralBadgeSurface(getBadgeSurface(mark))
+  })
+
   it("uses one circular badge silhouette for brand, initials, generic, and unknown marks", () => {
     render(
       <>

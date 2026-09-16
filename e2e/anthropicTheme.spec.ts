@@ -159,7 +159,9 @@ test("Anthropic supplies complete light/dark palettes and restores the user's de
     drawer.getByRole("radio", { name: "Violet", exact: true }),
   ).toBeChecked()
   await expect(
-    drawer.getByRole("radio", { name: "Large", exact: true }),
+    drawer
+      .getByRole("group", { name: "Corner radius", exact: true })
+      .getByRole("radio", { name: "Large", exact: true }),
   ).toBeChecked()
   await expect
     .poll(async () => (await getStoredUserPreferences(worker)).appearance)
@@ -168,6 +170,7 @@ test("Anthropic supplies complete light/dark palettes and restores the user's de
       color: "violet",
       radius: "large",
       density: "default",
+      textSize: "default",
     })
   await expect(popup.locator("html")).toHaveAttribute(
     THEME_ATTRIBUTES.PRESET,
