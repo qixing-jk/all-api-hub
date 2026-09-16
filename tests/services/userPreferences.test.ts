@@ -41,6 +41,9 @@ describe("userPreferences", () => {
     await userPreferences.savePreferences({
       appearance: { textSize: "extra-large" },
     })
+    await userPreferences.savePreferences({
+      appearance: { fontFamily: "serif" },
+    })
     const preferences = await userPreferences.getPreferences()
     expect(preferences.appearance).toEqual({
       preset: "anthropic",
@@ -48,6 +51,7 @@ describe("userPreferences", () => {
       radius: "small",
       density: "comfortable",
       textSize: "extra-large",
+      fontFamily: "serif",
     })
     expect(preferences.currencyType).toBe("CNY")
     await userPreferences.savePreferences({

@@ -36,6 +36,13 @@
     "density": "界面密度",
     "densityDescription": "调整列表间距和控件高度，不改变字号。",
     "description": "修改后自动保存，应用于设置页、弹窗和侧栏。",
+    "font": "字体",
+    "fontDescription": "选择界面字体。跟随主题时，默认主题使用无衬线字体，Anthropic 使用衬线字体。",
+    "fonts": {
+      "default": "跟随主题",
+      "sans": "无衬线",
+      "serif": "衬线"
+    },
     "preset": "主题风格",
     "presetColorsHint": "当前主题自带完整配色。切换到默认主题可单独选择强调色。",
     "presetDescriptions": {
@@ -61,6 +68,7 @@
     "radius": "圆角大小",
     "reset": "恢复默认外观",
     "resetDensity": "重置密度",
+    "resetFont": "重置字体",
     "resetTextSize": "重置文字大小",
     "saveFailed": "保存失败，请重试。",
     "secondaryAction": "次要操作",

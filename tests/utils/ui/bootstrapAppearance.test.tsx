@@ -28,10 +28,31 @@ const saved = {
     radius: THEME_RADIUS.LARGE,
     density: "compact" as const,
     textSize: "extra-large" as const,
+    fontFamily: "default" as const,
   },
 }
 
 describe("popup appearance bootstrap", () => {
+  it.each([
+    ["default", "default", "sans"],
+    ["anthropic", "default", "serif"],
+    ["anthropic", "sans", "sans"],
+    ["default", "serif", "serif"],
+    ["anthropic", "unknown", "serif"],
+  ])(
+    "restores %s with font %s as %s before rendering",
+    async (preset, font, resolved) => {
+      getStorage.mockResolvedValue({
+        [key]: JSON.stringify({ appearance: { preset, fontFamily: font } }),
+      })
+      await bootstrapAppearance()
+      expect(document.documentElement).toHaveAttribute(
+        "data-theme-font",
+        resolved,
+      )
+    },
+  )
+
   beforeEach(() => {
     vi.restoreAllMocks()
     getStorage.mockReset()
@@ -222,6 +243,7 @@ describe("popup appearance bootstrap", () => {
         radius: "default",
         density: "default",
         textSize: "default",
+        fontFamily: "default",
       },
     })
   })

@@ -36,6 +36,13 @@
     "density": "Mật độ giao diện",
     "densityDescription": "Điều chỉnh khoảng cách giữa các hàng và chiều cao điều khiển mà không đổi cỡ chữ.",
     "description": "Thay đổi được lưu tự động và áp dụng cho trang cài đặt, cửa sổ bật lên và bảng bên.",
+    "font": "Phông chữ",
+    "fontDescription": "Chọn phông chữ giao diện. Khi theo chủ đề, chủ đề mặc định dùng chữ không chân và Anthropic dùng chữ có chân.",
+    "fonts": {
+      "default": "Theo chủ đề",
+      "sans": "Không chân",
+      "serif": "Có chân"
+    },
     "preset": "Chủ đề có sẵn",
     "presetColorsHint": "Chủ đề này có bảng màu riêng. Chọn chủ đề mặc định để chọn màu nhấn riêng.",
     "presetDescriptions": {
@@ -61,6 +68,7 @@
     "radius": "Độ bo góc",
     "reset": "Đặt lại giao diện",
     "resetDensity": "Đặt lại mật độ",
+    "resetFont": "Đặt lại phông chữ",
     "resetTextSize": "Đặt lại cỡ chữ",
     "saveFailed": "Không thể lưu. Vui lòng thử lại.",
     "secondaryAction": "Thao tác phụ",

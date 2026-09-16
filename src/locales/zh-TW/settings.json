@@ -36,6 +36,13 @@
     "density": "介面密度",
     "densityDescription": "調整清單間距和控制項高度，不改變字級。",
     "description": "修改後自動儲存，套用至設定頁、彈出視窗和側欄。",
+    "font": "字體",
+    "fontDescription": "選擇介面字體。跟隨主題時，預設主題使用無襯線字體，Anthropic 使用襯線字體。",
+    "fonts": {
+      "default": "跟隨主題",
+      "sans": "無襯線",
+      "serif": "襯線"
+    },
     "preset": "主題風格",
     "presetColorsHint": "目前主題自帶完整配色。切換到預設主題可單獨選擇強調色。",
     "presetDescriptions": {
@@ -61,6 +68,7 @@
     "radius": "圓角大小",
     "reset": "恢復預設外觀",
     "resetDensity": "重設密度",
+    "resetFont": "重設字體",
     "resetTextSize": "重設文字大小",
     "saveFailed": "儲存失敗，請重試。",
     "secondaryAction": "次要操作",

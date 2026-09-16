@@ -84,7 +84,7 @@ so neither React nor locale loading delays the appearance bootstrap.
 The bootstrap synchronously applies the Web Storage appearance hint, or system
 mode if no usable hint exists, then reads canonical extension preferences.
 `all-api-hub:appearance-bootstrap` contains only the theme mode, preset, accent,
-radius, density and text size; it contains no account data. Old preference records and Plasmo JSON
+radius, density, text size and font family; it contains no account data. Old preference records and Plasmo JSON
 strings are normalized. Corrupt or inaccessible storage preserves the usable
 cached/system shell. React marks ownership when preferences finish loading,
 preventing a delayed bootstrap read from replacing a newer selection, and keeps
@@ -257,3 +257,23 @@ reset, search links, cross-view updates and host-page isolation at desktop and
 menus and form popovers; the existing density and button tests retain their
 default-size assertions. Run these against the Chromium support floor as well
 as current Chromium when changing the shared typography contract.
+## Interface font
+
+`appearance.fontFamily` offers `default` (follow theme), `sans`, and `serif` in both
+appearance settings and the shared drawer. The default theme resolves to sans;
+Anthropic resolves to serif. Explicit choices survive preset changes. Font,
+text size, and density save and reset independently through existing preferences.
+Older backups without a font use the theme default.
+
+`resolveThemeFont` supplies the concrete `data-theme-font` value to startup,
+React-owned documents, and the isolated content wrapper. The serif stack uses
+local Georgia with CJK serif fallbacks (including Songti and SimSun), so it works
+offline without font downloads. Actual glyphs depend on fonts installed locally.
+Sans keeps the existing browser extension body font. The serif body rule is
+unlayered to override Chrome's injected, unlayered extension stylesheet; ordinary
+content uses inheritance, leaving code and `font-mono` contexts monospace.
+
+Charts read their container's font family and update on font-attribute changes,
+using the existing typography adapter without resetting chart interactions.
+`e2e/fontSettings.spec.ts` covers rendered fonts, persistence, cross-view updates,
+theme defaults, the keyboard-operated drawer, and isolated injected UI.

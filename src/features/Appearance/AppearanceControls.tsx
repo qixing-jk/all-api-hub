@@ -8,6 +8,7 @@ import {
   THEME_ATTRIBUTES,
   THEME_COLOR,
   THEME_DENSITY,
+  THEME_FONT,
   THEME_PRESET,
   THEME_RADIUS,
   THEME_TEXT_SIZE,
@@ -18,6 +19,7 @@ import {
   normalizeAppearance,
   THEME_COLORS,
   THEME_DENSITIES,
+  THEME_FONTS,
   THEME_MODES,
   THEME_PRESETS,
   THEME_RADII,
@@ -71,6 +73,11 @@ export function AppearanceControls({
     [THEME_DENSITY.DEFAULT]: t("appearance.densities.default"),
     [THEME_DENSITY.COMFORTABLE]: t("appearance.densities.comfortable"),
   } satisfies Record<AppearancePreferences["density"], string>
+  const fontLabels = {
+    [THEME_FONT.DEFAULT]: t("appearance.fonts.default"),
+    [THEME_FONT.SANS]: t("appearance.fonts.sans"),
+    [THEME_FONT.SERIF]: t("appearance.fonts.serif"),
+  } satisfies Record<AppearancePreferences["fontFamily"], string>
   const textSizeLabels = {
     [THEME_TEXT_SIZE.DEFAULT]: t("appearance.textSizes.default"),
     [THEME_TEXT_SIZE.LARGE]: t("appearance.textSizes.large"),
@@ -325,6 +332,46 @@ export function AppearanceControls({
               />
               <span className="border-border peer-checked:border-primary peer-checked:bg-primary/10 peer-focus-visible:ring-ring py-density-2 flex h-full min-h-11 items-center justify-center rounded-md border px-2 text-center text-sm wrap-anywhere peer-focus-visible:ring-2">
                 {textSizeLabels[textSize]}
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <fieldset
+        id={anchors ? SETTINGS_ANCHORS.APPEARANCE_FONT : undefined}
+        aria-labelledby={`${id}-font-label`}
+        className="space-y-density-3 min-w-0"
+      >
+        <legend className="w-full text-sm font-medium">
+          <span className="flex items-center justify-between gap-2">
+            <span id={`${id}-font-label`}>{t("appearance.font")}</span>
+            <SettingsResetButton
+              iconOnly
+              label={t("appearance.resetFont")}
+              disabled={saving}
+              hidden={appearance.fontFamily === DEFAULT_APPEARANCE.fontFamily}
+              onClick={() =>
+                void save({ fontFamily: DEFAULT_APPEARANCE.fontFamily })
+              }
+            />
+          </span>
+        </legend>
+        <p className="text-muted-foreground text-sm">
+          {t("appearance.fontDescription")}
+        </p>
+        <div className="gap-y-density-2 grid grid-cols-3 gap-x-2">
+          {THEME_FONTS.map((font) => (
+            <label key={font} className="relative min-w-0 cursor-pointer">
+              <input
+                className="peer sr-only"
+                type="radio"
+                name={`${id}-font`}
+                value={font}
+                checked={appearance.fontFamily === font}
+                onChange={() => void save({ fontFamily: font })}
+              />
+              <span className="border-border peer-checked:border-primary peer-checked:bg-primary/10 peer-focus-visible:ring-ring py-density-2 flex h-full min-h-11 items-center justify-center rounded-md border px-2 text-center text-sm wrap-anywhere peer-focus-visible:ring-2">
+                {fontLabels[font]}
               </span>
             </label>
           ))}

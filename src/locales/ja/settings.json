@@ -36,6 +36,13 @@
     "density": "表示密度",
     "densityDescription": "文字サイズを変えずに、行の間隔とコントロールの高さを調整します。",
     "description": "変更は自動保存され、設定画面、ポップアップ、サイドパネルに適用されます。",
+    "font": "フォント",
+    "fontDescription": "画面のフォントを選択します。テーマに合わせる場合、標準テーマはサンセリフ、Anthropic はセリフを使用します。",
+    "fonts": {
+      "default": "テーマに合わせる",
+      "sans": "サンセリフ",
+      "serif": "セリフ"
+    },
     "preset": "テーマプリセット",
     "presetColorsHint": "このテーマは専用の配色を使用します。アクセントカラーを個別に選ぶには標準テーマに切り替えてください。",
     "presetDescriptions": {
@@ -61,6 +68,7 @@
     "radius": "角の丸み",
     "reset": "外観をリセット",
     "resetDensity": "表示密度をリセット",
+    "resetFont": "フォントをリセット",
     "resetTextSize": "文字サイズをリセット",
     "saveFailed": "保存できませんでした。もう一度お試しください。",
     "secondaryAction": "サブ操作",

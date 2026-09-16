@@ -36,6 +36,13 @@
     "density": "Oberflächendichte",
     "densityDescription": "Zeilenabstände und Höhe der Bedienelemente anpassen, ohne die Schriftgröße zu ändern.",
     "description": "Änderungen werden automatisch gespeichert und auf Einstellungen, Popup und Seitenleiste angewendet.",
+    "font": "Schriftart",
+    "fontDescription": "Wählen Sie die Schriftart der Oberfläche. Bei „Dem Design folgen“ verwendet das Standarddesign eine serifenlose Schrift und Anthropic eine Serifenschrift.",
+    "fonts": {
+      "default": "Dem Design folgen",
+      "sans": "Serifenlos",
+      "serif": "Serifen"
+    },
     "preset": "Designvorlage",
     "presetColorsHint": "Dieses Design hat eine eigene Farbpalette. Im Standarddesign können Sie die Akzentfarbe separat wählen.",
     "presetDescriptions": {
@@ -61,6 +68,7 @@
     "radius": "Eckenradius",
     "reset": "Darstellung zurücksetzen",
     "resetDensity": "Dichte zurücksetzen",
+    "resetFont": "Schriftart zurücksetzen",
     "resetTextSize": "Textgröße zurücksetzen",
     "saveFailed": "Speichern fehlgeschlagen. Bitte erneut versuchen.",
     "secondaryAction": "Nebenaktion",

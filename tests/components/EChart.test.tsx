@@ -50,6 +50,51 @@ class MockResizeObserver {
 }
 
 describe("EChart", () => {
+  it("updates chart fonts with appearance without replacing the chart or resetting interactions", async () => {
+    const instance = createInstance()
+    echartsInitMock.mockReturnValueOnce(instance)
+    const { container, unmount } = render(
+      <EChart
+        option={{
+          xAxis: {},
+          tooltip: {},
+          legend: {},
+          series: [{ type: "line", data: [1, 2] }],
+        }}
+      />,
+    )
+    await waitFor(() => expect(instance.setOption).toHaveBeenCalledOnce())
+    const chart = container.firstElementChild as HTMLElement
+    chart.style.fontFamily = "Georgia, serif"
+    document.documentElement.setAttribute("data-theme-font", "serif")
+    await waitFor(() =>
+      expect(instance.setOption).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          textStyle: expect.objectContaining({ fontFamily: "Georgia, serif" }),
+          xAxis: expect.objectContaining({
+            axisLabel: expect.objectContaining({
+              fontFamily: "Georgia, serif",
+            }),
+          }),
+          tooltip: expect.objectContaining({
+            textStyle: expect.objectContaining({
+              fontFamily: "Georgia, serif",
+            }),
+          }),
+          legend: expect.objectContaining({
+            textStyle: expect.objectContaining({
+              fontFamily: "Georgia, serif",
+            }),
+          }),
+        }),
+        expect.objectContaining({ notMerge: false }),
+      ),
+    )
+    expect(echartsInitMock).toHaveBeenCalledOnce()
+    unmount()
+    document.documentElement.removeAttribute("data-theme-font")
+  })
+
   beforeEach(() => {
     echartsInitMock.mockReset()
     MockResizeObserver.reset()

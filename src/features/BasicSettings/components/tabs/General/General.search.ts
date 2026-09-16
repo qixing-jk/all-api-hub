@@ -93,6 +93,26 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
 
 export const generalSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
+    "control:appearance-font",
+    "general",
+    SETTINGS_ANCHORS.APPEARANCE_FONT,
+    "settings:appearance.font",
+    534,
+    {
+      descriptionKey: "settings:appearance.fontDescription",
+      keywords: [
+        "font",
+        "serif",
+        "sans",
+        "typography",
+        "字体",
+        "字體",
+        "衬线",
+        "襯線",
+      ],
+    },
+  ),
+  buildControlDefinition(
     "control:appearance-text-size",
     "general",
     SETTINGS_ANCHORS.APPEARANCE_TEXT_SIZE,

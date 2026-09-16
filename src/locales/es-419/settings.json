@@ -36,6 +36,13 @@
     "density": "Densidad de la interfaz",
     "densityDescription": "Ajusta el espacio entre filas y la altura de los controles sin cambiar el tamaño del texto.",
     "description": "Los cambios se guardan automáticamente y se aplican a la configuración, la ventana emergente y el panel lateral.",
+    "font": "Fuente",
+    "fontDescription": "Elige la fuente de la interfaz. Al seguir el tema, el predeterminado usa una fuente sin serifas y Anthropic una con serifas.",
+    "fonts": {
+      "default": "Seguir el tema",
+      "sans": "Sin serifas",
+      "serif": "Con serifas"
+    },
     "preset": "Tema predefinido",
     "presetColorsHint": "Este tema incluye su propia paleta. Elige el tema predeterminado para seleccionar el color de acento por separado.",
     "presetDescriptions": {
@@ -61,6 +68,7 @@
     "radius": "Redondeado de esquinas",
     "reset": "Restablecer apariencia",
     "resetDensity": "Restablecer densidad",
+    "resetFont": "Restablecer fuente",
     "resetTextSize": "Restablecer tamaño del texto",
     "saveFailed": "No se pudo guardar. Inténtalo de nuevo.",
     "secondaryAction": "Acción secundaria",

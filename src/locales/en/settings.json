@@ -36,6 +36,13 @@
     "density": "Interface density",
     "densityDescription": "Adjust row spacing and control height without changing text size.",
     "description": "Changes are saved automatically and apply to options, popup and side panel.",
+    "font": "Font",
+    "fontDescription": "Choose the interface font. Follow theme uses sans serif for the default theme and serif for Anthropic.",
+    "fonts": {
+      "default": "Follow theme",
+      "sans": "Sans serif",
+      "serif": "Serif"
+    },
     "preset": "Theme preset",
     "presetColorsHint": "This theme includes its own palette. Choose Default theme to pick an accent color separately.",
     "presetDescriptions": {
@@ -61,6 +68,7 @@
     "radius": "Corner radius",
     "reset": "Reset appearance",
     "resetDensity": "Reset density",
+    "resetFont": "Reset font",
     "resetTextSize": "Reset text size",
     "saveFailed": "Could not save. Please try again.",
     "secondaryAction": "Secondary action",

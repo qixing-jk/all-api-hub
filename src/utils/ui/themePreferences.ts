@@ -6,6 +6,7 @@ import {
 import {
   isThemeMode,
   normalizeAppearance,
+  resolveThemeFont,
   type AppearancePreferences,
   type ResolvedTheme,
   type ThemeMode,
@@ -47,10 +48,18 @@ export function resolveThemeMode(
 /** Scope content appearance without applying preferences to the host page. */
 export function getAppearanceScopeAttributes(
   appearance: Pick<AppearancePreferences, "color" | "preset"> &
-    Partial<Pick<AppearancePreferences, "density" | "textSize">>,
+    Partial<Pick<AppearancePreferences, "density" | "textSize" | "fontFamily">>,
 ) {
   return {
     [THEME_ATTRIBUTES.COLOR_SCOPE]: "",
+    ...(appearance.fontFamily
+      ? {
+          [THEME_ATTRIBUTES.FONT]: resolveThemeFont({
+            fontFamily: appearance.fontFamily,
+            preset: appearance.preset,
+          }),
+        }
+      : {}),
     ...(appearance.density
       ? { [THEME_ATTRIBUTES.DENSITY]: appearance.density }
       : {}),
@@ -76,6 +85,7 @@ export function applyThemePreferences(
   root.setAttribute(THEME_ATTRIBUTES.RADIUS, appearance.radius)
   root.setAttribute(THEME_ATTRIBUTES.DENSITY, appearance.density)
   root.setAttribute(THEME_ATTRIBUTES.TEXT_SIZE, appearance.textSize)
+  root.setAttribute(THEME_ATTRIBUTES.FONT, resolveThemeFont(appearance))
   root.style.colorScheme = resolvedTheme
 }
 

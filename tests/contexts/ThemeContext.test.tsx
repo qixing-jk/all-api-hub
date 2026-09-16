@@ -111,6 +111,7 @@ describe("ThemeContext", () => {
           radius: THEME_RADIUS.SMALL,
           density: "default",
           textSize: "large",
+          fontFamily: "default",
         },
       },
     }
@@ -134,6 +135,7 @@ describe("ThemeContext", () => {
         radius: "small",
         density: "default",
         textSize: "large",
+        fontFamily: "default",
       },
     })
   })

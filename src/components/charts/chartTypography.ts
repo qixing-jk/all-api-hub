@@ -18,7 +18,9 @@ export function readChartTextIncrement(element: HTMLElement): number {
 export function applyChartTypography(
   option: EChartsOption,
   increment: number,
+  fontFamily?: string,
 ): EChartsOption {
+  const font = fontFamily ? { fontFamily } : {}
   const resolve = (value: unknown, key = ""): unknown => {
     if (Array.isArray(value)) return value.map((item) => resolve(item, key))
     if (
@@ -34,6 +36,7 @@ export function applyChartTypography(
     const defaults: Record<string, unknown> = {}
     if (["xAxis", "yAxis"].includes(key)) {
       defaults.axisLabel = {
+        ...font,
         fontSize: 12,
         hideOverlap: true,
         ...(key === "xAxis"
@@ -45,8 +48,8 @@ export function applyChartTypography(
       }
     }
     if (["legend", "visualMap"].includes(key))
-      defaults.textStyle = { fontSize: 12 }
-    if (key === "tooltip") defaults.textStyle = { fontSize: 14 }
+      defaults.textStyle = { ...font, fontSize: 12 }
+    if (key === "tooltip") defaults.textStyle = { ...font, fontSize: 14 }
     const merged = { ...defaults, ...input }
     for (const [styleKey, style] of Object.entries(defaults)) {
       merged[styleKey] = {
@@ -68,6 +71,6 @@ export function applyChartTypography(
   }
   return resolve({
     ...option,
-    textStyle: { fontSize: 12, ...option.textStyle },
+    textStyle: { ...font, fontSize: 12, ...option.textStyle },
   }) as EChartsOption
 }

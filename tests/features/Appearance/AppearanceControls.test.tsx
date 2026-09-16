@@ -22,6 +22,7 @@ const { save, savedAppearance } = vi.hoisted(() => ({
     preset: "default",
     density: "default",
     textSize: "default",
+    fontFamily: "default",
     color: "blue",
     radius: "default",
     themeMode: "system",
@@ -46,6 +47,37 @@ const renderControls = () =>
   })
 
 describe("appearance controls", () => {
+  it("selects and resets font independently from the theme, density and text size", async () => {
+    const user = userEvent.setup()
+    savedAppearance.preset = "anthropic"
+    savedAppearance.density = "compact"
+    savedAppearance.textSize = "extra-large"
+    renderControls()
+    const group = screen.getByRole("group", {
+      name: "settings:appearance.font",
+    })
+    expect(
+      within(group).getByRole("radio", {
+        name: "settings:appearance.fonts.default",
+      }),
+    ).toBeChecked()
+    for (const font of ["sans", "serif"]) {
+      await user.click(
+        within(group).getByRole("radio", {
+          name: `settings:appearance.fonts.${font}`,
+        }),
+      )
+      expect(save).toHaveBeenLastCalledWith({ fontFamily: font })
+    }
+    await user.click(within(group).getByRole("button"))
+    expect(save).toHaveBeenLastCalledWith({ fontFamily: "default" })
+    expect(savedAppearance).toMatchObject({
+      preset: "anthropic",
+      density: "compact",
+      textSize: "extra-large",
+    })
+  })
+
   beforeEach(() => {
     save.mockReset()
     save.mockImplementation(async (updates) => {
@@ -55,6 +87,7 @@ describe("appearance controls", () => {
     savedAppearance.preset = THEME_PRESET.DEFAULT
     savedAppearance.density = "default"
     savedAppearance.textSize = "default"
+    savedAppearance.fontFamily = "default"
     savedAppearance.color = "blue"
     savedAppearance.radius = "default"
     savedAppearance.themeMode = "system"
@@ -77,6 +110,7 @@ describe("appearance controls", () => {
     ["appearance.radius", { radius: THEME_RADIUS.DEFAULT }],
     ["appearance.density", { density: "default" }],
     ["appearance.textSize", { textSize: "default" }],
+    ["appearance.font", { fontFamily: "default" }],
   ])("resets only the field in %s", async (label, expected) => {
     const user = userEvent.setup()
     Object.assign(savedAppearance, {
@@ -85,6 +119,7 @@ describe("appearance controls", () => {
       radius: "large",
       density: "compact",
       textSize: "large",
+      fontFamily: "serif",
       themeMode: "dark",
     })
     renderControls()
@@ -200,6 +235,7 @@ describe("appearance controls", () => {
       SETTINGS_ANCHORS.APPEARANCE_RADIUS,
       SETTINGS_ANCHORS.APPEARANCE_DENSITY,
       SETTINGS_ANCHORS.APPEARANCE_TEXT_SIZE,
+      SETTINGS_ANCHORS.APPEARANCE_FONT,
     ]) {
       const definition = generalSearchControls.find(
         (item) => item.targetId === targetId,
@@ -258,6 +294,7 @@ describe("appearance controls", () => {
         }),
       ).toMatchObject({
         textSize: "default",
+        fontFamily: "default",
         density: "compact",
         preset: "anthropic",
       })
@@ -314,6 +351,7 @@ describe("appearance controls", () => {
       radius: "default",
       density: "default",
       textSize: "default",
+      fontFamily: "default",
     })
     expect(
       normalizeAppearance({ color: "custom", radius: THEME_RADIUS.SMALL }),
@@ -323,6 +361,7 @@ describe("appearance controls", () => {
       radius: "small",
       density: "default",
       textSize: "default",
+      fontFamily: "default",
     })
     expect(
       normalizeAppearance({ color: THEME_COLOR.ROSE, radius: -10 }),
@@ -332,6 +371,7 @@ describe("appearance controls", () => {
       radius: "default",
       density: "default",
       textSize: "default",
+      fontFamily: "default",
     })
   })
 
@@ -348,6 +388,7 @@ describe("appearance controls", () => {
       radius: "small",
       density: "default",
       textSize: "default",
+      fontFamily: "default",
     })
     expect(
       normalizeAppearance({
@@ -361,6 +402,7 @@ describe("appearance controls", () => {
       radius: "large",
       density: "default",
       textSize: "default",
+      fontFamily: "default",
     })
     const user = userEvent.setup()
     renderControls()
@@ -392,6 +434,7 @@ describe("appearance controls", () => {
       radius: THEME_RADIUS.DEFAULT,
       density: "default",
       textSize: "default",
+      fontFamily: "default",
       themeMode: THEME_MODE.SYSTEM,
     })
   })

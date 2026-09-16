@@ -91,6 +91,7 @@ export function EChart(props: EChartProps) {
         applyChartTypography(
           applyChartColors(option, readChartColors(container)),
           readChartTextIncrement(container),
+          getComputedStyle(container).fontFamily,
         ),
         {
           ...resolvedSetOptionOpts,
@@ -114,6 +115,7 @@ export function EChart(props: EChartProps) {
         THEME_ATTRIBUTES.COLOR,
         THEME_ATTRIBUTES.PRESET,
         THEME_ATTRIBUTES.TEXT_SIZE,
+        THEME_ATTRIBUTES.FONT,
       ],
     })
     return () => {

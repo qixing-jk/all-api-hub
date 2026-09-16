@@ -1,6 +1,7 @@
 import {
   THEME_COLOR,
   THEME_DENSITY,
+  THEME_FONT,
   THEME_MODE,
   THEME_PRESET,
   THEME_RADIUS,
@@ -51,7 +52,14 @@ export const THEME_TEXT_SIZES = [
   THEME_TEXT_SIZE.EXTRA_LARGE,
 ] as const
 
+export const THEME_FONTS = [
+  THEME_FONT.DEFAULT,
+  THEME_FONT.SANS,
+  THEME_FONT.SERIF,
+] as const
+
 export interface AppearancePreferences {
+  fontFamily: (typeof THEME_FONTS)[number]
   density: (typeof THEME_DENSITIES)[number]
   textSize: (typeof THEME_TEXT_SIZES)[number]
   preset: (typeof THEME_PRESETS)[number]
@@ -63,6 +71,7 @@ export type AppearanceUpdates = Partial<AppearancePreferences> & {
 }
 
 export const DEFAULT_APPEARANCE: AppearancePreferences = {
+  fontFamily: THEME_FONT.DEFAULT,
   preset: THEME_PRESET.DEFAULT,
   color: THEME_COLOR.BLUE,
   radius: THEME_RADIUS.DEFAULT,
@@ -77,6 +86,10 @@ export function normalizeAppearance(value: unknown): AppearancePreferences {
       ? (value as Partial<AppearancePreferences>)
       : {}
   return {
+    fontFamily:
+      input.fontFamily && THEME_FONTS.includes(input.fontFamily)
+        ? input.fontFamily
+        : DEFAULT_APPEARANCE.fontFamily,
     preset:
       input.preset && THEME_PRESETS.includes(input.preset)
         ? input.preset
@@ -98,4 +111,16 @@ export function normalizeAppearance(value: unknown): AppearancePreferences {
         ? input.radius
         : DEFAULT_APPEARANCE.radius,
   }
+}
+
+/** Resolve the theme default while allowing an explicit font to survive preset changes. */
+export function resolveThemeFont({
+  fontFamily,
+  preset,
+}: Pick<AppearancePreferences, "fontFamily" | "preset">) {
+  return fontFamily === THEME_FONT.DEFAULT
+    ? preset === THEME_PRESET.ANTHROPIC
+      ? THEME_FONT.SERIF
+      : THEME_FONT.SANS
+    : fontFamily
 }

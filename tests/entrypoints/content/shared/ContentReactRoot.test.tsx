@@ -195,6 +195,7 @@ describe("ContentReactRoot", () => {
           radius: THEME_RADIUS.SMALL,
           density: "default",
           textSize: "default",
+          fontFamily: "default",
         },
       })
       await initial.promise

@@ -1,3 +1,27 @@
+/* Local font stacks work offline, including CJK glyphs absent from Georgia. */
+@layer base {
+  :root,
+  :host {
+    --appearance-font-serif: Georgia, "Noto Serif SC", "Noto Serif TC",
+      "Noto Serif JP", "Noto Serif KR", "Source Han Serif SC",
+      "Source Han Serif TC", "Songti SC", "Songti TC", SimSun, PMingLiU,
+      "Yu Mincho", "Batang", "Times New Roman", serif;
+  }
+
+  [data-theme-font="sans"] {
+    font-family: var(--font-sans);
+  }
+
+  [data-theme-font="serif"] {
+    font-family: var(--appearance-font-serif);
+  }
+}
+
+/* Chrome injects an unlayered extension body font; a layered rule cannot win. */
+html[data-theme-font="serif"] body {
+  font-family: var(--appearance-font-serif);
+}
+
 /* Configurable accent palette. Never redefine named Tailwind or brand colors. */
 :root,
 :host,
