@@ -218,6 +218,29 @@ describe("UsageHistorySyncTab", () => {
     expect(mockedSendUsageHistoryMessage).not.toHaveBeenCalled()
   })
 
+  it("reflects a confirmed scheduling change without applying retention", async () => {
+    const user = userEvent.setup()
+    renderSubject()
+    const schedule = await screen.findByRole("combobox", {
+      name: "usageAnalytics:settings.scheduleMode",
+    })
+    await user.click(schedule)
+    await user.click(
+      screen.getByRole("option", {
+        name: "usageAnalytics:settings.scheduleModes.alarm",
+      }),
+    )
+    await waitFor(() =>
+      expect(schedule).toHaveTextContent(
+        "usageAnalytics:settings.scheduleModes.alarm",
+      ),
+    )
+    expect(mockedSendUsageHistoryMessage).toHaveBeenCalledWith(
+      UsageHistoryMessageTypes.UpdateSettings,
+      { settings: { scheduleMode: "alarm" } },
+    )
+  })
+
   it("keeps the effective schedule when background falls back from alarms", async () => {
     const user = userEvent.setup()
     mockedSendUsageHistoryMessage.mockResolvedValueOnce({

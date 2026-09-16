@@ -73,6 +73,26 @@ describe("BalanceHistorySettings", () => {
     ).toHaveFocus()
   })
 
+  it("reflects a confirmed end-of-day capture change without applying retention", async () => {
+    const updateBalanceHistory = vi.fn().mockResolvedValue({ ok: true })
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: {},
+      updateBalanceHistory,
+    } as any)
+    render(<BalanceHistorySettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    const toggle = screen.getByRole("switch", {
+      name: "balanceHistory:settings.endOfDayCapture",
+    })
+    fireEvent.click(toggle)
+    await waitFor(() => expect(toggle).toBeChecked())
+    expect(updateBalanceHistory).toHaveBeenCalledExactlyOnceWith({
+      endOfDayCapture: { enabled: true },
+    })
+  })
+
   it.each(["failure", "exception"])(
     "keeps the end-of-day toggle unchanged after a save %s",
     async (failure) => {
