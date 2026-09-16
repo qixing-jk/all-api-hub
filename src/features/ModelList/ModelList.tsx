@@ -8,6 +8,7 @@ import { PageHeader } from "~/components/PageHeader"
 import Tooltip from "~/components/Tooltip"
 import {
   Alert,
+  Badge,
   Button,
   EmptyState,
   IconButton,
@@ -59,6 +60,7 @@ import {
 } from "~/utils/navigation"
 
 import { sortModelListAccounts } from "./accountOrdering"
+import { isProviderCatalogFallback } from "./catalogFallback"
 import { AccountSelector } from "./components/AccountSelector"
 import { AccountSummaryBar } from "./components/AccountSummaryBar"
 import { BatchVerifyModelsDialog } from "./components/BatchVerifyModelsDialog"
@@ -292,6 +294,18 @@ export default function ModelList(props: {
   const shouldShowSourceSetupEmptyState = !hasAnySources
   const shouldShowSourceSelectionEmptyState =
     !shouldShowSourceSetupEmptyState && !selectedSource
+
+  const providerCatalogFallbackAccounts = useMemo(
+    () =>
+      Array.from(
+        new Map(
+          pricingContexts
+            .filter(({ pricing }) => isProviderCatalogFallback(pricing))
+            .map(({ account }) => [account.id, account]),
+        ).values(),
+      ),
+    [pricingContexts],
+  )
 
   const accountSummaryItems = useMemo(() => {
     const stateByAccountId = new Map(
@@ -743,8 +757,29 @@ export default function ModelList(props: {
               variant="warning"
               className="mb-density-6"
               title={t("providerCatalogFallbackNotice.title")}
-              description={t("providerCatalogFallbackNotice.description")}
-            />
+              description={t(
+                selectedSource.kind ===
+                  MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
+                  ? "providerCatalogFallbackNotice.allAccountsDescription"
+                  : "providerCatalogFallbackNotice.description",
+              )}
+            >
+              {selectedSource.kind ===
+                MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS && (
+                <ul className="mt-2 flex flex-wrap gap-2">
+                  {providerCatalogFallbackAccounts.map((account) => (
+                    <li key={account.id} className="max-w-full break-words">
+                      <Badge
+                        variant="warning"
+                        className="max-w-full break-words whitespace-normal"
+                      >
+                        {account.name}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Alert>
           )}
 
           {verifyContext && (

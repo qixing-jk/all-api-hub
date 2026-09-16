@@ -80,6 +80,7 @@ interface ModelItemProps {
   isGroupSelectionInteractive?: boolean
   source: ModelManagementItemSource
   sourceIdentity?: ModelListSourceIdentity
+  isProviderCatalogFallback?: boolean
   displayCapabilities?: ModelManagementSourceCapabilities
   isLowestPrice?: boolean
   isComparisonOffer?: boolean
@@ -128,6 +129,7 @@ export default function ModelItem(props: ModelItemProps) {
     isGroupSelectionInteractive = true,
     source,
     sourceIdentity,
+    isProviderCatalogFallback = false,
     displayCapabilities = source.capabilities,
     isLowestPrice = false,
     isComparisonOffer = false,
@@ -427,9 +429,20 @@ export default function ModelItem(props: ModelItemProps) {
                 : undefined
             }
             trailingContent={
-              sourceBadge || sourceUrlActions || canExpand ? (
+              sourceBadge ||
+              sourceUrlActions ||
+              canExpand ||
+              isProviderCatalogFallback ? (
                 <>
                   {sourceBadge}
+                  {isProviderCatalogFallback && (
+                    <Badge
+                      variant="warning"
+                      title={t("providerCatalogFallbackNotice.description")}
+                    >
+                      {t("providerCatalogFallbackNotice.badge")}
+                    </Badge>
+                  )}
                   {sourceUrlActions}
                   {canExpand && (
                     <ModelItemExpandButton

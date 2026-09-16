@@ -437,6 +437,8 @@
     "title": "Profilgestützter Modellkatalog"
   },
   "providerCatalogFallbackNotice": {
+    "allAccountsDescription": "Der Modellzugriff für die folgenden Konten wurde nicht bestätigt. Die vollständigen Modellkataloge der Websites werden angezeigt; einige Modelle sind mit diesen Konten möglicherweise nicht aufrufbar. Prüfen Sie die Kontoberechtigungen und Verifizierungsergebnisse.",
+    "badge": "Vollständiger Website-Katalog",
     "description": "Der tatsächlich verfügbare Modellumfang dieses Kontos konnte nicht bestätigt werden, daher wird der vollständige Modellkatalog des Anbieters angezeigt. Einige Modelle können mit diesem Konto möglicherweise nicht aufgerufen werden. Maßgeblich sind die Kontoberechtigungen der Website und die tatsächlichen Verifizierungsergebnisse.",
     "title": "Zurück zum vollständigen Modellkatalog des Anbieters"
   },

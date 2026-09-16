@@ -447,6 +447,8 @@
     "title": "Catálogo baseado em credencial"
   },
   "providerCatalogFallbackNotice": {
+    "allAccountsDescription": "O acesso aos modelos das contas abaixo não foi confirmado. Os catálogos completos dos sites são exibidos; alguns modelos podem não estar disponíveis para essas contas. Confira as permissões das contas e os resultados da verificação.",
+    "badge": "Catálogo completo do site",
     "description": "Não foi possível confirmar o conjunto de modelos realmente disponível para esta conta, por isso o catálogo completo do provedor é exibido. Alguns modelos talvez não possam ser usados por esta conta; considere as permissões da conta no site e os resultados de verificações reais como a fonte definitiva.",
     "title": "Usando o catálogo completo de modelos do provedor"
   },

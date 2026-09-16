@@ -24,6 +24,7 @@ export interface AccountGroupOption {
 
 export type CalculatedModelItem = {
   model: ModelCatalogSnapshot["data"][number]
+  isProviderCatalogFallback?: boolean
   calculatedPrice: ReturnType<typeof calculateModelPrice>
   source: ModelManagementItemSource
   sourceIdentity?: ModelListSourceIdentity

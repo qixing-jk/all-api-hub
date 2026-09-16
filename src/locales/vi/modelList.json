@@ -428,6 +428,8 @@
     "title": "Thư mục mô hình thông tin xác thực API"
   },
   "providerCatalogFallbackNotice": {
+    "allAccountsDescription": "Chưa xác nhận phạm vi mô hình mà các tài khoản bên dưới có thể sử dụng. Hiện đang hiển thị toàn bộ danh mục mô hình của trang; một số mô hình có thể không gọi được bằng các tài khoản này. Hãy kiểm tra quyền tài khoản và kết quả xác minh.",
+    "badge": "Toàn bộ danh mục của trang",
     "description": "Chưa thể xác nhận phạm vi mô hình thực sự khả dụng của tài khoản này, nên toàn bộ danh mục mô hình của nhà cung cấp đang được hiển thị. Một số mô hình có thể không gọi được bằng tài khoản này; hãy lấy quyền của tài khoản trên trang và kết quả xác minh thực tế làm nguồn xác thực cuối cùng.",
     "title": "Đã chuyển về toàn bộ danh mục mô hình của nhà cung cấp"
   },

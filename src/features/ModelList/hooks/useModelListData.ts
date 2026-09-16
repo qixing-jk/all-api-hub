@@ -3,14 +3,10 @@ import { useEffect, useMemo, useState } from "react"
 import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles"
 import { resolvePricingScenario } from "~/features/ModelList/pricingScenario"
 import { useAccountData } from "~/hooks/useAccountData"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
-import {
-  MODEL_CATALOG_SCOPES,
-  MODEL_LIST_SOURCE_KINDS,
-} from "~/services/modelList/pricingModel"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import type { ModelMetadata } from "~/services/models/modelMetadata/types"
 
+import { isProviderCatalogFallback } from "../catalogFallback"
 import {
   repairAllAccountGroupExclusions,
   repairSelectedGroups,
@@ -35,15 +31,6 @@ import { useModelData } from "./useModelData"
 import { useModelListState } from "./useModelListState"
 
 const ROUTE_SOURCE_PENDING = Symbol("route-source-pending")
-
-/** Identifies provider-wide fallback catalogs using the normalized response scope. */
-function isProviderCatalogFallback(pricing: ModelCatalogSnapshot | null) {
-  return (
-    pricing?.model_list_source?.kind ===
-      MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK &&
-    pricing.model_list_source.catalogScope === MODEL_CATALOG_SCOPES.PROVIDER
-  )
-}
 
 /** Resolves account routing after profile-route precedence has been settled. */
 function resolveRouteAccountSourceValue(

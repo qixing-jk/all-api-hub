@@ -17,8 +17,11 @@ import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import { type ModelListSourceIdentity } from "~/services/modelCatalog/sourceIdentity"
 import type { DisplaySiteData } from "~/types"
 
+import { isProviderCatalogFallback } from "./catalogFallback"
+
 export interface PreparedModelListItem {
   model: ModelCatalogSnapshot["data"][number]
+  isProviderCatalogFallback?: boolean
   source: ModelManagementItemSource
   sourceIdentity?: ModelListSourceIdentity
   groupRatios: Record<string, number>
@@ -103,6 +106,7 @@ export function prepareModelListSource(
     source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
       ? resolveAccountExchangeRate(source.account)
       : 1
+  const providerCatalogFallback = isProviderCatalogFallback(pricing)
   const items = pricing.data.map(
     (model): PreparedModelListItem => ({
       model,
@@ -111,6 +115,7 @@ export function prepareModelListSource(
       groupRatios,
       exchangeRate,
       groupContext: resolveGroupContext(model),
+      ...(providerCatalogFallback ? { isProviderCatalogFallback: true } : {}),
     }),
   )
   return {

@@ -437,6 +437,8 @@
     "title": "Profile-backed model catalog"
   },
   "providerCatalogFallbackNotice": {
+    "allAccountsDescription": "Model access has not been confirmed for the accounts below. Their full site catalogs are shown; some models may not be callable with these accounts. Check account permissions and verification results.",
+    "badge": "Full site catalog",
     "description": "This account's actual available model scope could not be confirmed, so the provider’s full model catalog is shown. Some models may not be callable with this account; use the site's account permissions and real verification results as the final source of truth.",
     "title": "Fell back to the provider’s full model catalog"
   },

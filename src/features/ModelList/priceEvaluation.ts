@@ -328,6 +328,9 @@ function resolveBestCalculatedItem(
     calculatedPrice: params.calculatedPrice,
     source: rawItem.source,
     sourceIdentity: rawItem.sourceIdentity,
+    ...(rawItem.isProviderCatalogFallback
+      ? { isProviderCatalogFallback: true }
+      : {}),
     groupRatios: rawItem.groupRatios,
     groupContext: rawItem.groupContext,
     activeGroupContext: params.activeGroupContext,

@@ -258,6 +258,19 @@ function createDefaultProps() {
 }
 
 describe("ModelItem", () => {
+  it("marks a full-site fallback catalog on its model row", () => {
+    const { rerender } = render(
+      <ModelItem {...createDefaultProps()} isProviderCatalogFallback />,
+    )
+    expect(
+      screen.getByText("providerCatalogFallbackNotice.badge"),
+    ).toBeInTheDocument()
+    rerender(<ModelItem {...createDefaultProps()} />)
+    expect(
+      screen.queryByText("providerCatalogFallbackNotice.badge"),
+    ).not.toBeInTheDocument()
+  })
+
   it("expands and focuses calculation details from the price summary", async () => {
     const user = userEvent.setup()
     render(<ModelItem {...createDefaultProps()} />)

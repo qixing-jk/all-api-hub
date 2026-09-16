@@ -447,6 +447,8 @@
     "title": "Catálogo de modelos respaldado por perfil"
   },
   "providerCatalogFallbackNotice": {
+    "allAccountsDescription": "No se confirmó el acceso a los modelos de las siguientes cuentas. Se muestran los catálogos completos de sus sitios; es posible que algunos modelos no puedan usarse con estas cuentas. Consulta los permisos de las cuentas y los resultados de verificación.",
+    "badge": "Catálogo completo del sitio",
     "description": "No se pudo confirmar el alcance real de modelos disponibles de esta cuenta, por lo que se muestra el catálogo completo de modelos del proveedor. Es posible que algunos modelos no se puedan llamar con esta cuenta; usa los permisos de la cuenta del sitio y los resultados reales de verificación como fuente final de verdad.",
     "title": "Se recurrió al catálogo completo de modelos del proveedor"
   },
