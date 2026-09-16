@@ -85,6 +85,7 @@ describe("tempWindowPool native check-in page action", () => {
       }
     })
     ;(globalThis as any).browser = {
+      storage: originalBrowser.storage,
       runtime: {
         getURL: vi.fn((path: string) => `chrome-extension://test/${path}`),
       },

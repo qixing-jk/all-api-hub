@@ -9,14 +9,10 @@ const KEY_PREFIX = "internalBrowsingTab:"
 const internalTabIds = new Set<number>()
 const logger = createLogger("InternalBrowsingTabs")
 
-/** Register before navigation, including the period before the pool is ready. */
-export async function registerInternalTab(tabId: number): Promise<void> {
+/** Register before navigation; only persisted ownership survives worker restarts. */
+export async function registerInternalTab(tabId: number): Promise<boolean> {
   internalTabIds.add(tabId)
-  try {
-    await setSessionStorageValues({ [`${KEY_PREFIX}${tabId}`]: true })
-  } catch (error) {
-    logger.warn("Unable to persist internal tab ownership", error)
-  }
+  return setSessionStorageValues({ [`${KEY_PREFIX}${tabId}`]: true })
 }
 
 /** Remove ownership only after the browser reports that the tab was removed. */

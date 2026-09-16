@@ -3,6 +3,22 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 describe("internal browsing tab ownership", () => {
   afterEach(() => vi.restoreAllMocks())
 
+  it("reports failed persistence even when subsequent reads succeed after restart", async () => {
+    const owner = await import(
+      "~/services/browsingContext/internalTabsBackground"
+    )
+    vi.spyOn(browser.storage.session, "set").mockRejectedValueOnce(
+      new Error("write failed"),
+    )
+    expect(await owner.registerInternalTab(814)).toBe(false)
+    expect(await owner.getInternalTabIds([814])).toEqual([814])
+    vi.resetModules()
+    const restarted = await import(
+      "~/services/browsingContext/internalTabsBackground"
+    )
+    expect(await restarted.getInternalTabIds([814])).toEqual([])
+  })
+
   it("reads only candidate markers and never reads unrelated session data", async () => {
     const owner = await import(
       "~/services/browsingContext/internalTabsBackground"
@@ -51,5 +67,23 @@ describe("internal browsing tab ownership", () => {
     expect(await owner.getInternalTabIds([802])).toContain(802)
     await owner.unregisterInternalTab(802)
     await expect(owner.getInternalTabIds([802])).rejects.toThrow("unavailable")
+  })
+
+  it("allows cleanup to retry when removing the persisted marker fails", async () => {
+    const owner = await import(
+      "~/services/browsingContext/internalTabsBackground"
+    )
+    expect(await owner.registerInternalTab(815)).toBe(true)
+    vi.spyOn(browser.storage.session, "remove").mockRejectedValueOnce(
+      new Error("remove failed"),
+    )
+    await expect(owner.unregisterInternalTab(815)).resolves.toBeUndefined()
+    vi.resetModules()
+    const restarted = await import(
+      "~/services/browsingContext/internalTabsBackground"
+    )
+    expect(await restarted.getInternalTabIds([815])).toEqual([815])
+    await restarted.unregisterInternalTab(815)
+    expect(await restarted.getInternalTabIds([815])).toEqual([])
   })
 })

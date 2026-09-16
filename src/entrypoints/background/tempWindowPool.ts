@@ -2782,7 +2782,9 @@ async function createTempContextInstance(
         { requestId, origin, tabId: opened.tabId },
       )
     }
-    await registerInternalTab(opened.tabId)
+    if (!(await registerInternalTab(opened.tabId))) {
+      throw new Error("Unable to persist internal tab ownership")
+    }
     await updateTab(opened.tabId, { url })
 
     logTempWindow("createTempContextInstance", {
