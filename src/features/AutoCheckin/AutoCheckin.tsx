@@ -256,7 +256,7 @@ export default function AutoCheckin(props: {
   >({})
   const activeStatusLoadCountRef = useRef(0)
   const latestStatusLoadIdRef = useRef(0)
-  const prefetchingAccountInfoIdsRef = useRef<Set<string>>(new Set())
+  const attemptedAccountInfoIdsRef = useRef<Set<string>>(new Set())
 
   // Dev-only: diagnostics and simulation state for the UI-open pre-trigger flow.
   // These controls are shown only in development mode.
@@ -896,7 +896,7 @@ export default function AutoCheckin(props: {
     const missingAccountIds = accountResultIds.filter(
       (accountId) =>
         !accountInfoById[accountId] &&
-        !prefetchingAccountInfoIdsRef.current.has(accountId),
+        !attemptedAccountInfoIdsRef.current.has(accountId),
     )
 
     if (!missingAccountIds.length) {
@@ -904,38 +904,34 @@ export default function AutoCheckin(props: {
     }
 
     let cancelled = false
+    // A failed display lookup must not be retried on every status update.
+    // Explicit account actions still perform their own fresh lookup.
     for (const accountId of missingAccountIds) {
-      prefetchingAccountInfoIdsRef.current.add(accountId)
+      attemptedAccountInfoIdsRef.current.add(accountId)
     }
 
     void Promise.allSettled(
       missingAccountIds.map((accountId) =>
-        resolveAutoCheckinAccount(accountId),
+        resolveAutoCheckinAccount(accountId, { includeDisabled: true }),
       ),
-    )
-      .then((results) => {
-        if (cancelled) return
+    ).then((results) => {
+      if (cancelled) return
 
-        const loadedAccounts = results.flatMap((result) =>
-          result.status === "fulfilled" ? [result.value] : [],
-        )
+      const loadedAccounts = results.flatMap((result) =>
+        result.status === "fulfilled" ? [result.value] : [],
+      )
 
-        if (!loadedAccounts.length) {
-          return
-        }
+      if (!loadedAccounts.length) {
+        return
+      }
 
-        setAccountInfoById((prev) => ({
-          ...prev,
-          ...Object.fromEntries(
-            loadedAccounts.map((account) => [account.id, account]),
-          ),
-        }))
-      })
-      .finally(() => {
-        for (const accountId of missingAccountIds) {
-          prefetchingAccountInfoIdsRef.current.delete(accountId)
-        }
-      })
+      setAccountInfoById((prev) => ({
+        ...prev,
+        ...Object.fromEntries(
+          loadedAccounts.map((account) => [account.id, account]),
+        ),
+      }))
+    })
 
     return () => {
       cancelled = true
