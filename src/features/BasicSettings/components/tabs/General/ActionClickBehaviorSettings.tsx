@@ -1,7 +1,7 @@
 import { MousePointerClick } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
+import { SegmentedControl } from "~/components/SegmentedControl"
 import { Card, CardItem, CardList } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
@@ -75,7 +75,7 @@ export default function ActionClickBehaviorSettings() {
                 : t("actionClick.sidepanelUnsupportedHelper")
             }
             rightContent={
-              <ResponsiveToggleGroup
+              <SegmentedControl
                 aria-label={t("actionClick.actionIconClickTitle")}
                 value={actionClickBehavior}
                 onValueChange={handleChange}

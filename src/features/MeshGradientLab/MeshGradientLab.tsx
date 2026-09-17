@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "~/components/PageHeader"
+import { SegmentedControl } from "~/components/SegmentedControl"
 import {
   Button,
   Card,
@@ -10,9 +11,7 @@ import {
   Input,
   Label,
   Switch,
-  ToggleButton,
 } from "~/components/ui"
-import { CORNERS } from "~/constants/designTokens"
 import {
   MESH_GRADIENT_LAYOUT_COUNT,
   MESH_GRADIENT_PALETTES,
@@ -215,24 +214,23 @@ export default function MeshGradientLab() {
               <div className="gap-y-density-3 flex flex-col gap-x-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <div className="flex items-center gap-x-2">
                   <Label size="sm">{t("meshGradientLab:labels.view")}</Label>
-                  <div
-                    className={`dark:bg-secondary corners-concentric bg-surface-subtle inline-flex rounded-md p-1 [--corner-inset:--spacing(1)] ${CORNERS.buttonItems}`}
-                  >
-                    <ToggleButton
-                      size="sm"
-                      isActive={viewMode === "palettes"}
-                      onClick={() => setViewMode("palettes")}
-                    >
-                      {t("meshGradientLab:view.palettes")}
-                    </ToggleButton>
-                    <ToggleButton
-                      size="sm"
-                      isActive={viewMode === "layouts"}
-                      onClick={() => setViewMode("layouts")}
-                    >
-                      {t("meshGradientLab:view.layouts")}
-                    </ToggleButton>
-                  </div>
+                  <SegmentedControl
+                    layout="fit"
+                    size="sm"
+                    aria-label={t("meshGradientLab:labels.view")}
+                    value={viewMode}
+                    onValueChange={setViewMode}
+                    options={[
+                      {
+                        value: "palettes",
+                        label: t("meshGradientLab:view.palettes"),
+                      },
+                      {
+                        value: "layouts",
+                        label: t("meshGradientLab:view.layouts"),
+                      },
+                    ]}
+                  />
                 </div>
 
                 <div className="flex items-center gap-x-2">

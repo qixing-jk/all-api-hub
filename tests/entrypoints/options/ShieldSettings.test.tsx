@@ -437,10 +437,7 @@ describe("ShieldSettings", () => {
     expect(methodLayout).not.toHaveClass(
       "[@container(min-width:42rem)]:items-end",
     )
-    expect(methodGroup).toHaveClass(
-      "max-w-full",
-      "[@container(min-width:42rem)]:w-full",
-    )
+    expect(methodGroup).toHaveClass("max-w-full", "w-full")
   })
 
   it("renders the opening methods at their canonical target", async () => {

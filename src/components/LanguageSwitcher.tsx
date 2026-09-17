@@ -2,7 +2,7 @@ import type { TFunction } from "i18next"
 import { Languages } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
+import { SegmentedControl } from "~/components/SegmentedControl"
 import {
   IconButton,
   Select,
@@ -234,13 +234,15 @@ export function LanguageSwitcher({
           )}
         />
       )}
-      <ResponsiveToggleGroup
+      <SegmentedControl
         aria-label={t("appearanceLanguage.switcher.groupLabel")}
         value={activeLanguage}
         onValueChange={queueLanguageChange}
-        buttonSize="sm"
-        showActiveIndicator
-        className={cn("p-0.5", !compact && "sm:py-density-1 sm:px-1")}
+        size="sm"
+        className={cn(
+          "p-0.5 [--corner-inset:2px]",
+          !compact && "sm:py-density-1 sm:px-1 sm:[--corner-inset:4px]",
+        )}
         options={SUPPORTED_UI_LANGUAGES.map((code) => {
           const label = getLanguageOptionLabel(t, code)
           const languageName = getLanguageOptionName(t, code)
@@ -259,7 +261,7 @@ export function LanguageSwitcher({
             ariaLabel: accessibleLabel,
             title: accessibleLabel,
             buttonClassName: cn(
-              "min-w-[3rem] flex-1 [@container(min-width:42rem)]:flex-none",
+              "min-w-[3rem]",
               !compact && "sm:min-w-[3.5rem]",
             ),
           }

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 import { EChart } from "~/components/charts/EChart"
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
+import { SegmentedControl } from "~/components/SegmentedControl"
 import { Button, Card, WorkflowTransitionButton } from "~/components/ui"
 import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
@@ -39,7 +40,6 @@ import {
   resolveLatencyDailyForTokens,
   topNWithOther,
 } from "./charts/echartsOptions"
-import UsageAnalyticsChartTypeToggle from "./components/UsageAnalyticsChartTypeToggle"
 import UsageAnalyticsFiltersCard from "./components/UsageAnalyticsFiltersCard"
 import { useUsageAnalyticsData } from "./hooks/useUsageAnalyticsData"
 import { useUsageAnalyticsExport } from "./hooks/useUsageAnalyticsExport"
@@ -55,6 +55,10 @@ import type {
  */
 export default function UsageAnalytics() {
   const { t } = useTranslation("usageAnalytics")
+  const chartTypeOptions = [
+    { value: "pie", label: t("charts.common.chartType.pie") },
+    { value: "bar", label: t("charts.common.chartType.histogram") },
+  ] as const
   const { currencyType } = useUserPreferencesContext()
 
   const { enabledAccounts, disabledAccountIdSet, store, isLoading, loadData } =
@@ -733,14 +737,15 @@ export default function UsageAnalytics() {
                     {t("charts.modelDistribution.description")}
                   </div>
                 </div>
-                <UsageAnalyticsChartTypeToggle
+                <SegmentedControl
+                  layout="fit"
+                  size="sm"
+                  options={chartTypeOptions}
                   value={breakdownChartTypeByKey.modelDistribution}
-                  onChange={(value) =>
+                  onValueChange={(value) =>
                     setBreakdownChartType("modelDistribution", value)
                   }
-                  pieLabel={t("charts.common.chartType.pie")}
-                  barLabel={t("charts.common.chartType.histogram")}
-                  ariaLabel={t("charts.common.chartType.ariaLabel")}
+                  aria-label={t("charts.common.chartType.ariaLabel")}
                 />
               </div>
 
@@ -762,14 +767,15 @@ export default function UsageAnalytics() {
                     {t("charts.modelCostDistribution.description")}
                   </div>
                 </div>
-                <UsageAnalyticsChartTypeToggle
+                <SegmentedControl
+                  layout="fit"
+                  size="sm"
+                  options={chartTypeOptions}
                   value={breakdownChartTypeByKey.modelCostDistribution}
-                  onChange={(value) =>
+                  onValueChange={(value) =>
                     setBreakdownChartType("modelCostDistribution", value)
                   }
-                  pieLabel={t("charts.common.chartType.pie")}
-                  barLabel={t("charts.common.chartType.histogram")}
-                  ariaLabel={t("charts.common.chartType.ariaLabel")}
+                  aria-label={t("charts.common.chartType.ariaLabel")}
                 />
               </div>
 
@@ -791,14 +797,15 @@ export default function UsageAnalytics() {
                     {t("charts.accountComparison.description")}
                   </div>
                 </div>
-                <UsageAnalyticsChartTypeToggle
+                <SegmentedControl
+                  layout="fit"
+                  size="sm"
+                  options={chartTypeOptions}
                   value={breakdownChartTypeByKey.accountComparison}
-                  onChange={(value) =>
+                  onValueChange={(value) =>
                     setBreakdownChartType("accountComparison", value)
                   }
-                  pieLabel={t("charts.common.chartType.pie")}
-                  barLabel={t("charts.common.chartType.histogram")}
-                  ariaLabel={t("charts.common.chartType.ariaLabel")}
+                  aria-label={t("charts.common.chartType.ariaLabel")}
                 />
               </div>
 
@@ -886,14 +893,15 @@ export default function UsageAnalytics() {
                     {t("charts.slowModels.description")}
                   </div>
                 </div>
-                <UsageAnalyticsChartTypeToggle
+                <SegmentedControl
+                  layout="fit"
+                  size="sm"
+                  options={chartTypeOptions}
                   value={breakdownChartTypeByKey.slowModels}
-                  onChange={(value) =>
+                  onValueChange={(value) =>
                     setBreakdownChartType("slowModels", value)
                   }
-                  pieLabel={t("charts.common.chartType.pie")}
-                  barLabel={t("charts.common.chartType.histogram")}
-                  ariaLabel={t("charts.common.chartType.ariaLabel")}
+                  aria-label={t("charts.common.chartType.ariaLabel")}
                 />
               </div>
 
@@ -912,14 +920,15 @@ export default function UsageAnalytics() {
                     {t("charts.slowTokens.description")}
                   </div>
                 </div>
-                <UsageAnalyticsChartTypeToggle
+                <SegmentedControl
+                  layout="fit"
+                  size="sm"
+                  options={chartTypeOptions}
                   value={breakdownChartTypeByKey.slowTokens}
-                  onChange={(value) =>
+                  onValueChange={(value) =>
                     setBreakdownChartType("slowTokens", value)
                   }
-                  pieLabel={t("charts.common.chartType.pie")}
-                  barLabel={t("charts.common.chartType.histogram")}
-                  ariaLabel={t("charts.common.chartType.ariaLabel")}
+                  aria-label={t("charts.common.chartType.ariaLabel")}
                 />
               </div>
 

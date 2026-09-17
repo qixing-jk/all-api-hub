@@ -14,9 +14,8 @@ import {
   CardTitle,
   CollapsibleSection,
   FormField,
-  ResponsiveButtonGroup,
+  SegmentedControl,
   Textarea,
-  ToggleButton,
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
@@ -286,40 +285,25 @@ const ImportSection = ({
                               {description}
                             </p>
                           </div>
-                          <ResponsiveButtonGroup
+                          <SegmentedControl
                             aria-label={title}
-                            className="w-fit max-w-full shrink-0"
-                          >
-                            {strategies.map(
-                              ({ strategy, label, help, testId }) => {
-                                const selected = importPlan[key] === strategy
-                                const helpId = `import-plan-${key}-${strategy}-help`
-
-                                return (
-                                  <span key={strategy} className="contents">
-                                    <ToggleButton
-                                      type="button"
-                                      size="sm"
-                                      isActive={selected}
-                                      title={help}
-                                      aria-label={label}
-                                      aria-describedby={helpId}
-                                      onClick={() =>
-                                        updateImportPlan(key, strategy)
-                                      }
-                                      data-testid={testId}
-                                      className="min-w-fit flex-1"
-                                    >
-                                      {label}
-                                    </ToggleButton>
-                                    <span id={helpId} className="sr-only">
-                                      {help}
-                                    </span>
-                                  </span>
-                                )
-                              },
+                            layout="fit"
+                            size="sm"
+                            className="shrink-0"
+                            value={importPlan[key]}
+                            onValueChange={(strategy) =>
+                              updateImportPlan(key, strategy)
+                            }
+                            options={strategies.map(
+                              ({ strategy, label, help, testId }) => ({
+                                value: strategy,
+                                label,
+                                description: help,
+                                title: help,
+                                testId,
+                              }),
                             )}
-                          </ResponsiveButtonGroup>
+                          />
                         </div>
                       </CardItem>
                     ),

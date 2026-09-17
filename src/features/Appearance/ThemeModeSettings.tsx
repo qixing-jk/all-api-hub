@@ -1,7 +1,7 @@
 import { Sun } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
+import { SegmentedControl } from "~/components/SegmentedControl"
 import { SettingsResetButton } from "~/components/SettingsResetButton"
 import { Caption, CardItem } from "~/components/ui"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
@@ -26,11 +26,10 @@ const ThemeModeSettings = () => {
       description={t("theme.selectTheme")}
       rightContent={
         <div className="flex min-w-0 items-center gap-2">
-          <ResponsiveToggleGroup
+          <SegmentedControl
             aria-label={t("theme.mode")}
             value={themeMode}
             onValueChange={setThemeMode}
-            showActiveIndicator
             options={THEME_MODES.map((mode) => {
               const { label, icon: Icon, description } = themeOptions[mode]
               const isActive = themeMode === mode
@@ -43,9 +42,7 @@ const ThemeModeSettings = () => {
                   <span className="flex items-center">
                     <Icon
                       className={`mr-2 h-4 w-4 transition-colors ${
-                        isActive
-                          ? "text-theme-500 dark:text-theme-400"
-                          : "text-muted-foreground"
+                        isActive ? "text-foreground" : "text-muted-foreground"
                       } `}
                     />
                     {label}

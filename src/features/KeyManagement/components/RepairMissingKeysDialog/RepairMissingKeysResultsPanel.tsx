@@ -10,7 +10,7 @@ import {
   CardTitle,
   Input,
   Label,
-  ResponsiveToggleGroup,
+  SegmentedControl,
   TagFilter,
 } from "~/components/ui"
 import type {
@@ -79,11 +79,11 @@ export function RepairMissingKeysResultsPanel({
 
   return (
     <>
-      <ResponsiveToggleGroup
+      <SegmentedControl
         aria-label={t("keyManagement:repairMissingKeys.views.label")}
         value={activeView}
         onValueChange={onActiveViewChange}
-        buttonSize="sm"
+        size="sm"
         className="w-full"
         options={[
           {

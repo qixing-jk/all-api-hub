@@ -2,7 +2,7 @@ import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { AutoCheckinRiskHint } from "~/components/AutoCheckinRiskHint"
-import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
+import { SegmentedControl } from "~/components/SegmentedControl"
 import {
   Card,
   CardItem,
@@ -393,7 +393,7 @@ export default function AutoCheckinSettings() {
             title={t("autoCheckin:settings.scheduleModeTitle")}
             description={t("autoCheckin:settings.scheduleModeDesc")}
             rightContent={
-              <ResponsiveToggleGroup
+              <SegmentedControl
                 aria-label={t("autoCheckin:settings.scheduleModeTitle")}
                 value={preferences.scheduleMode}
                 onValueChange={(scheduleMode) => {

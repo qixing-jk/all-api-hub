@@ -1,7 +1,7 @@
 import { CalendarDays, Eye, Globe2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
+import { SegmentedControl } from "~/components/SegmentedControl"
 import { Card, CardItem, CardList, Switch } from "~/components/ui"
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -64,7 +64,7 @@ export default function DisplaySettings() {
             title={t("display.currencyUnit")}
             description={t("display.currencyDesc")}
             rightContent={
-              <ResponsiveToggleGroup
+              <SegmentedControl
                 aria-label={t("display.currencyUnit")}
                 value={currencyType}
                 onValueChange={handleCurrencyChange}
@@ -105,7 +105,7 @@ export default function DisplaySettings() {
             title={t("display.defaultTab")}
             description={t("display.defaultTabDesc")}
             rightContent={
-              <ResponsiveToggleGroup
+              <SegmentedControl
                 aria-label={t("display.defaultTab")}
                 value={activeTab}
                 onValueChange={handleDefaultTabChange}

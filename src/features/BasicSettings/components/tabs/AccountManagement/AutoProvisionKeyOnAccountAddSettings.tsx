@@ -2,7 +2,7 @@ import { KeyRound } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
+import { SegmentedControl } from "~/components/SegmentedControl"
 import { Card, CardItem, CardList, Switch } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -107,7 +107,7 @@ export default function AutoProvisionKeyOnAccountAddSettings() {
             title={t("autoProvisionKeyOnAccountAdd.modeLabel")}
             description={t("autoProvisionKeyOnAccountAdd.modeDescription")}
             rightContent={
-              <ResponsiveToggleGroup
+              <SegmentedControl
                 aria-label={t("autoProvisionKeyOnAccountAdd.modeLabel")}
                 value={autoProvisionKeyOnAccountAddMode}
                 onValueChange={handleModeChange}

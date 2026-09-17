@@ -83,10 +83,9 @@ export {
   type ActionGroupProps,
 } from "./ActionGroup"
 export {
-  ResponsiveButtonGroup,
-  ResponsiveToggleGroup,
-  type ResponsiveToggleGroupOption,
-} from "../ResponsiveButtonGroup"
+  SegmentedControl,
+  type SegmentedControlOption,
+} from "../SegmentedControl"
 export { Switch, switchVariants } from "./Switch"
 export { EmptyState } from "./EmptyState"
 export { Modal } from "./Dialog/Modal"

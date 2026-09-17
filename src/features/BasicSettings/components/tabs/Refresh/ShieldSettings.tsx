@@ -2,7 +2,7 @@ import { AppWindow, Layers2, PanelTop, Sparkles, Star } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { responsiveButtonGroupItemClassName } from "~/components/ResponsiveButtonGroup"
+import { SegmentedControl } from "~/components/SegmentedControl"
 import {
   ActionGroup,
   Alert,
@@ -158,11 +158,31 @@ export default function ShieldSettings() {
   )
 
   const mode = normalizedPreferences.tempContextMode
-  const methodHints = [
-    [TEMP_CONTEXT_PREFERENCE_MODES.Auto, t("refresh.shieldMethodHintAuto")],
-    [TEMP_CONTEXT_MODES.Tab, t("refresh.shieldMethodHintTab")],
-    [TEMP_CONTEXT_MODES.Composite, t("refresh.shieldMethodHintComposite")],
-    [TEMP_CONTEXT_MODES.Window, t("refresh.shieldMethodHintWindow")],
+  const methods = [
+    {
+      value: TEMP_CONTEXT_PREFERENCE_MODES.Auto,
+      label: t("refresh.shieldMethodAuto"),
+      hint: t("refresh.shieldMethodHintAuto"),
+      icon: Sparkles,
+    },
+    {
+      value: TEMP_CONTEXT_MODES.Tab,
+      label: t("refresh.shieldMethodTab"),
+      hint: t("refresh.shieldMethodHintTab"),
+      icon: PanelTop,
+    },
+    {
+      value: TEMP_CONTEXT_MODES.Composite,
+      label: t("refresh.shieldMethodComposite"),
+      hint: t("refresh.shieldMethodHintComposite"),
+      icon: AppWindow,
+    },
+    {
+      value: TEMP_CONTEXT_MODES.Window,
+      label: t("refresh.shieldMethodWindow"),
+      hint: t("refresh.shieldMethodHintWindow"),
+      icon: Layers2,
+    },
   ] as const
   const automaticFeatures = SHIELD_AUTOMATIC_FEATURE_ITEMS.map(
     ({ feature, titleKey }) => [feature, t(titleKey)] as const,
@@ -228,76 +248,46 @@ export default function ShieldSettings() {
             rightContentClassName="[@container(min-width:42rem)]:flex-1"
             rightContent={
               <div className="space-y-density-2 flex flex-col items-stretch text-left">
-                <ActionGroup
+                <SegmentedControl
                   aria-label={t("refresh.shieldMethodTitle")}
-                  className="max-w-full justify-end [@container(min-width:42rem)]:w-full"
-                >
-                  {(
-                    [
-                      [
-                        TEMP_CONTEXT_PREFERENCE_MODES.Auto,
-                        t("refresh.shieldMethodAuto"),
-                        <Sparkles aria-hidden="true" className="size-4" />,
-                      ],
-                      [
-                        TEMP_CONTEXT_MODES.Tab,
-                        t("refresh.shieldMethodTab"),
-                        <PanelTop aria-hidden="true" className="size-4" />,
-                      ],
-                      [
-                        TEMP_CONTEXT_MODES.Composite,
-                        t("refresh.shieldMethodComposite"),
-                        <AppWindow aria-hidden="true" className="size-4" />,
-                      ],
-                      [
-                        TEMP_CONTEXT_MODES.Window,
-                        t("refresh.shieldMethodWindow"),
-                        <Layers2 aria-hidden="true" className="size-4" />,
-                      ],
-                    ] as const
-                  ).map(([nextMode, label, modeIcon]) => (
-                    <Button
-                      key={nextMode}
-                      aria-pressed={mode === nextMode}
-                      size="sm"
-                      variant={mode === nextMode ? "default" : "outline"}
-                      onClick={() =>
-                        updateTempWindowFallback({ tempContextMode: nextMode })
-                      }
-                      className={responsiveButtonGroupItemClassName}
-                      leftIcon={modeIcon}
-                      rightIcon={
-                        nextMode === TEMP_CONTEXT_PREFERENCE_MODES.Auto ? (
-                          <Star
-                            aria-hidden="true"
-                            className={
-                              mode === nextMode
-                                ? "size-3.5 fill-current text-current"
-                                : "text-primary size-3.5 fill-current"
-                            }
-                          />
-                        ) : undefined
-                      }
-                    >
-                      {label}
-                      {nextMode === TEMP_CONTEXT_PREFERENCE_MODES.Auto && (
-                        <>
-                          {" "}
-                          <span className="sr-only">
-                            {t("refresh.shieldMethodRecommended")}
-                          </span>
-                        </>
-                      )}
-                    </Button>
-                  ))}
-                </ActionGroup>
+                  size="sm"
+                  layout="fill"
+                  value={mode}
+                  onValueChange={(tempContextMode) =>
+                    updateTempWindowFallback({ tempContextMode })
+                  }
+                  options={methods.map(({ value, label, icon: Icon }) => ({
+                    value,
+                    label: (
+                      <>
+                        {label}
+                        {value === TEMP_CONTEXT_PREFERENCE_MODES.Auto && (
+                          <>
+                            {" "}
+                            <span className="sr-only">
+                              {t("refresh.shieldMethodRecommended")}
+                            </span>
+                          </>
+                        )}
+                      </>
+                    ),
+                    leftIcon: <Icon aria-hidden="true" className="size-4" />,
+                    rightIcon:
+                      value === TEMP_CONTEXT_PREFERENCE_MODES.Auto ? (
+                        <Star
+                          aria-hidden="true"
+                          className="size-3.5 fill-current"
+                        />
+                      ) : undefined,
+                  }))}
+                />
                 <div className="grid w-0 min-w-full">
-                  {methodHints.map(([hintMode, hint]) => {
-                    const isSelected = mode === hintMode
+                  {methods.map(({ value, hint }) => {
+                    const isSelected = mode === value
 
                     return (
                       <Muted
-                        key={hintMode}
+                        key={value}
                         aria-hidden={isSelected ? undefined : true}
                         className={cn(
                           "col-start-1 row-start-1",

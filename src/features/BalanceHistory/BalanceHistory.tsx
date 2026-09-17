@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next"
 import { EChart } from "~/components/charts/EChart"
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
+import { SegmentedControl } from "~/components/SegmentedControl"
 import {
   ActionGroup,
   Alert,
@@ -20,7 +21,6 @@ import {
   Input,
   Label,
   TagFilter,
-  ToggleButton,
   WorkflowTransitionButton,
 } from "~/components/ui"
 import {
@@ -30,7 +30,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import { ANIMATIONS, COLORS, CORNERS } from "~/constants/designTokens"
+import { ANIMATIONS } from "~/constants/designTokens"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import toast from "~/lib/notify"
@@ -1168,26 +1168,17 @@ export default function BalanceHistory() {
                 </div>
               </div>
 
-              <div
-                className={`inline-flex ${COLORS.background.tertiary} corners-concentric py-density-1 rounded-md px-1 shadow-sm [--corner-inset:--spacing(1)] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`}
-              >
-                <ToggleButton
-                  onClick={() => handleCurrencyChange("USD")}
-                  isActive={currencyType === "USD"}
-                  size="default"
-                  aria-label={t("settings:display.usd")}
-                >
-                  {t("settings:display.usd")}
-                </ToggleButton>
-                <ToggleButton
-                  onClick={() => handleCurrencyChange("CNY")}
-                  isActive={currencyType === "CNY"}
-                  size="default"
-                  aria-label={t("settings:display.cny")}
-                >
-                  {t("settings:display.cny")}
-                </ToggleButton>
-              </div>
+              <SegmentedControl
+                layout="fit"
+                size="default"
+                aria-label={t("settings:display.currencyUnit")}
+                value={currencyType}
+                onValueChange={handleCurrencyChange}
+                options={[
+                  { value: "USD", label: t("settings:display.usd") },
+                  { value: "CNY", label: t("settings:display.cny") },
+                ]}
+              />
 
               <div>
                 <Label className="text-sm font-medium">
@@ -1427,31 +1418,24 @@ export default function BalanceHistory() {
                         </div>
                       </div>
 
-                      <div
-                        className={`inline-flex ${COLORS.background.tertiary} corners-concentric py-density-1 rounded-md px-1 shadow-sm [--corner-inset:--spacing(1)] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`}
-                        role="group"
+                      <SegmentedControl
+                        layout="fit"
+                        size="sm"
                         aria-label={t("breakdown.controls.chartType")}
-                      >
-                        <ToggleButton
-                          type="button"
-                          size="sm"
-                          isActive={breakdownChartType === "pie"}
-                          onClick={() => setBreakdownChartType("pie")}
-                          disabled={breakdownData.hasNegativeValues}
-                          aria-label={t("breakdown.chartTypes.pie")}
-                        >
-                          {t("breakdown.chartTypes.pie")}
-                        </ToggleButton>
-                        <ToggleButton
-                          type="button"
-                          size="sm"
-                          isActive={breakdownChartType === "bar"}
-                          onClick={() => setBreakdownChartType("bar")}
-                          aria-label={t("breakdown.chartTypes.histogram")}
-                        >
-                          {t("breakdown.chartTypes.histogram")}
-                        </ToggleButton>
-                      </div>
+                        value={breakdownChartType}
+                        onValueChange={setBreakdownChartType}
+                        options={[
+                          {
+                            value: "pie",
+                            label: t("breakdown.chartTypes.pie"),
+                            disabled: breakdownData.hasNegativeValues,
+                          },
+                          {
+                            value: "bar",
+                            label: t("breakdown.chartTypes.histogram"),
+                          },
+                        ]}
+                      />
                     </div>
 
                     {effectiveBreakdownMetric === "balance" && (
@@ -1586,30 +1570,17 @@ export default function BalanceHistory() {
                             : t("trend.subtitle")}
                         </div>
                       </div>
-                      <div
-                        className={`inline-flex ${COLORS.background.tertiary} corners-concentric py-density-1 rounded-md px-1 shadow-sm [--corner-inset:--spacing(1)] ${CORNERS.buttonItems} ${ANIMATIONS.transition.base}`}
-                        role="group"
+                      <SegmentedControl
+                        layout="fit"
+                        size="sm"
                         aria-label={t("trend.controls.chartType")}
-                      >
-                        <ToggleButton
-                          type="button"
-                          size="sm"
-                          isActive={trendChartType === "line"}
-                          onClick={() => setTrendChartType("line")}
-                          aria-label={t("trend.chartTypes.line")}
-                        >
-                          {t("trend.chartTypes.line")}
-                        </ToggleButton>
-                        <ToggleButton
-                          type="button"
-                          size="sm"
-                          isActive={trendChartType === "bar"}
-                          onClick={() => setTrendChartType("bar")}
-                          aria-label={t("trend.chartTypes.bar")}
-                        >
-                          {t("trend.chartTypes.bar")}
-                        </ToggleButton>
-                      </div>
+                        value={trendChartType}
+                        onValueChange={setTrendChartType}
+                        options={[
+                          { value: "line", label: t("trend.chartTypes.line") },
+                          { value: "bar", label: t("trend.chartTypes.bar") },
+                        ]}
+                      />
                     </div>
 
                     {hasAnyTrendMetricData ? (
