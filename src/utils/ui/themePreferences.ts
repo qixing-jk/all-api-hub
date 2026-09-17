@@ -79,6 +79,13 @@ export function applyThemePreferences(
 ) {
   const { themeMode, appearance } = preferences
   const resolvedTheme = resolveThemeMode(themeMode, systemDark)
+  const paletteChanged =
+    root.classList.contains(THEME_MODE.DARK) !==
+      (resolvedTheme === THEME_MODE.DARK) ||
+    root.getAttribute(THEME_ATTRIBUTES.COLOR) !== appearance.color ||
+    root.getAttribute(THEME_ATTRIBUTES.PRESET) !== appearance.preset
+
+  if (paletteChanged) root.setAttribute(THEME_ATTRIBUTES.SWITCHING, "")
   root.classList.toggle(THEME_MODE.DARK, resolvedTheme === THEME_MODE.DARK)
   root.setAttribute(THEME_ATTRIBUTES.COLOR, appearance.color)
   root.setAttribute(THEME_ATTRIBUTES.PRESET, appearance.preset)
@@ -87,6 +94,16 @@ export function applyThemePreferences(
   root.setAttribute(THEME_ATTRIBUTES.TEXT_SIZE, appearance.textSize)
   root.setAttribute(THEME_ATTRIBUTES.FONT, resolveThemeFont(appearance))
   root.style.colorScheme = resolvedTheme
+  if (paletteChanged) {
+    // Resolve the new palette with transitions suppressed before restoring local
+    // interaction effects. Synchronous cleanup also works in background views,
+    // where animation frames can be paused, and cannot leave hover disabled.
+    try {
+      void root.ownerDocument.defaultView?.getComputedStyle(root).color
+    } finally {
+      root.removeAttribute(THEME_ATTRIBUTES.SWITCHING)
+    }
+  }
 }
 
 /** Cache only display choices; browser storage remains the authoritative source. */

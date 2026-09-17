@@ -63,6 +63,7 @@ export const THEME_ATTRIBUTES = {
   TEXT_SIZE: "data-theme-text-size",
   FONT: "data-theme-font",
   OWNER: "data-theme-owner",
+  SWITCHING: "data-theme-switching",
 } as const
 
 /** React takes ownership once authoritative preferences have loaded. */

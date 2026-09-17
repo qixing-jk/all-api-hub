@@ -384,6 +384,16 @@ html {
     color 0.2s ease;
 }
 
+/* Palette changes are atomic; ordinary hover/selection transitions resume as
+   soon as the new document colors have been resolved. Include portal content
+   and pseudo-elements so they do not animate independently of the page. */
+html[data-theme-switching],
+html[data-theme-switching] *,
+html[data-theme-switching] *::before,
+html[data-theme-switching] *::after {
+  transition: none !important;
+}
+
 body {
   background-color: var(--background);
   color: var(--foreground);
