@@ -2,7 +2,10 @@
   "accountSummary": {
     "keys_other": "{{count}} 個金鑰",
     "loadFailed": "載入失敗",
+    "loading": "載入中",
+    "partialLoadFailed": "部分載入",
     "title": "帳號概覽",
+    "unavailableAccounts_other": "無法載入金鑰 · {{count}}",
     "unsupported": "不支援"
   },
   "actions": {

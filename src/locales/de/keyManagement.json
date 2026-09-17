@@ -3,7 +3,11 @@
     "keys_one": "{{count}} Schlüssel",
     "keys_other": "{{count}} Schlüssel",
     "loadFailed": "Laden fehlgeschlagen",
+    "loading": "wird geladen",
+    "partialLoadFailed": "teilweise",
     "title": "Kontoübersicht",
+    "unavailableAccounts_one": "Schlüssel nicht verfügbar · {{count}}",
+    "unavailableAccounts_other": "Schlüssel nicht verfügbar · {{count}}",
     "unsupported": "nicht unterstützt"
   },
   "actions": {

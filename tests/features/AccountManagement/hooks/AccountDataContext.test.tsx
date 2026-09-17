@@ -219,6 +219,7 @@ vi.mock("~/services/accounts/accountStorage/accountCheckInState", () => ({
 }))
 vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
   accountQueries: {
+    getAllAccounts: mockGetAllAccounts,
     getAccountById: mockGetAccountById,
     checkUrlExists: vi.fn(async () => null),
   },
@@ -442,6 +443,40 @@ function createEmptyStats() {
 }
 
 describe("AccountDataContext initial statistics", () => {
+  it("reads a batch of updated accounts once instead of loading the full envelope per account", async () => {
+    const accounts = Array.from({ length: 100 }, (_, index) => ({
+      id: `account-${index}`,
+      tagIds: [],
+    }))
+    mockGetAllAccounts.mockResolvedValue(accounts)
+    mockGetAccountById.mockImplementation(async (id: string) =>
+      accounts.find((account) => account.id === id),
+    )
+    const getContext = await renderAccountDataProvider()
+    await waitFor(() => expect(getContext().displayData).toHaveLength(100))
+    mockGetAllAccounts.mockClear()
+    await act(async () => {
+      await getContext().reloadAccountsById(
+        accounts.map((account) => account.id),
+      )
+    })
+    expect(getContext().displayData).toHaveLength(100)
+    expect(mockGetAccountById).not.toHaveBeenCalled()
+    expect(mockGetAllAccounts).toHaveBeenCalledTimes(1)
+  })
+  it("does not read balance history when estimated income is disabled", async () => {
+    mockGetAllAccounts.mockResolvedValue([{ id: "a", tagIds: [] }])
+    const getContext = await renderAccountDataProvider()
+    await waitFor(() => expect(getContext().displayData).toHaveLength(1))
+    expect(mockGetDailyBalanceHistoryStore).not.toHaveBeenCalled()
+
+    mockGetAccountById.mockResolvedValue({ id: "a", tagIds: [] })
+    await act(async () => {
+      await getContext().reloadAccountsById(["a"])
+    })
+    expect(mockGetDailyBalanceHistoryStore).not.toHaveBeenCalled()
+    expect(getContext().displayData[0].estimatedTodayIncome).toBeNull()
+  })
   it("starts with unavailable empty statistics coverage", async () => {
     mockGetAllAccounts.mockReturnValue(new Promise(() => undefined))
     const getContext = await renderAccountDataProvider()
@@ -2260,6 +2295,8 @@ describe("AccountDataContext refresh orchestration", () => {
   })
 
   it("does not let an older targeted reload overwrite a newer reload after balance history loads", async () => {
+    mockUserPreferencesContext.current.preferences.balanceHistory.estimatedTodayIncome.enabled =
+      true
     mockGetAllAccounts.mockResolvedValue([
       { id: "saved-account-id", name: "before", last_sync_time: 0 },
     ])
@@ -3198,6 +3235,8 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
   })
 
   it("merges concurrent targeted reloads against the latest account snapshot", async () => {
+    mockUserPreferencesContext.current.preferences.balanceHistory.estimatedTodayIncome.enabled =
+      true
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
     mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
     const emptyStore = {
@@ -3354,6 +3393,8 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
   })
 
   it("ignores older targeted reloads for the same account after a newer reload completes", async () => {
+    mockUserPreferencesContext.current.preferences.balanceHistory.estimatedTodayIncome.enabled =
+      true
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
     mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
     const emptyStore = {

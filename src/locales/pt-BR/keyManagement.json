@@ -4,7 +4,12 @@
     "keys_many": "{{count}} chaves",
     "keys_other": "{{count}} chaves",
     "loadFailed": "Falha ao carregar",
+    "loading": "carregando",
+    "partialLoadFailed": "parcial",
     "title": "Visão geral das contas",
+    "unavailableAccounts_one": "Chaves indisponíveis · {{count}}",
+    "unavailableAccounts_many": "Chaves indisponíveis · {{count}}",
+    "unavailableAccounts_other": "Chaves indisponíveis · {{count}}",
     "unsupported": "não compatível"
   },
   "actions": {

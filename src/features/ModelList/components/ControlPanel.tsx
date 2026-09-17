@@ -131,6 +131,8 @@ interface ControlPanelProps {
 /**
  * Top control strip for searching, filtering, and display options.
  * @param props Component props bundle.
+ * @param props.showUnavailableModels Whether unavailable models are included.
+ * @param props.setShowUnavailableModels Setter for unavailable model visibility.
  * @param props.selectedSource Active model-management source.
  * @param props.sourceCapabilities Capability flags for the active source.
  * @param props.selectedSourceValue Active model-management source value.

@@ -13,6 +13,7 @@ import type {
   SiteAccount,
 } from "~/types"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
+import { calculateTotalConsumption } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -82,6 +83,10 @@ export const useAccountData = (): UseAccountDataResult => {
   const [prevBalances, setPrevBalances] = useState<{
     [id: string]: CurrencyAmount
   }>({})
+  const animationSnapshotRef = useRef<{
+    consumption: CurrencyAmount
+    balances: CurrencyAmountMap
+  }>({ consumption: { USD: 0, CNY: 0 }, balances: {} })
 
   const enabledAccounts = useMemo(
     () => accounts.filter((account) => account.disabled !== true),
@@ -95,7 +100,7 @@ export const useAccountData = (): UseAccountDataResult => {
 
   /**
    * Load the persisted account payloads and recompute UI-ready aggregates.
-   * Ensures animations have previous values to interpolate between renders.
+   * Keep the callback stable so completing the initial load does not reload it.
    */
   const loadAccountData = useCallback(async () => {
     try {
@@ -105,19 +110,13 @@ export const useAccountData = (): UseAccountDataResult => {
         displayAccounts: displaySiteData,
       } = await accountReadModels.getAccountOverviewSnapshot()
 
-      // 计算新的余额数据
-      const newBalances: CurrencyAmountMap = {}
-      displaySiteData.forEach((site) => {
-        newBalances[site.id] = {
-          USD: site.balance.USD,
-          CNY: site.balance.CNY,
-        }
-      })
-
-      // 如果不是初始加载，保存之前的数值供动画使用
-      if (!isInitialLoad) {
-        setPrevTotalConsumption(prevTotalConsumption)
-        setPrevBalances(prevBalances)
+      setPrevTotalConsumption(animationSnapshotRef.current.consumption)
+      setPrevBalances(animationSnapshotRef.current.balances)
+      animationSnapshotRef.current = {
+        consumption: calculateTotalConsumption(displaySiteData).amount,
+        balances: Object.fromEntries(
+          displaySiteData.map((site) => [site.id, { ...site.balance }]),
+        ),
       }
 
       // 更新状态
@@ -136,9 +135,7 @@ export const useAccountData = (): UseAccountDataResult => {
       }
 
       // 标记为非初始加载
-      if (isInitialLoad) {
-        setIsInitialLoad(false)
-      }
+      setIsInitialLoad(false)
 
       logger.debug("账号数据加载完成", {
         accountCount: allAccounts.length,
@@ -147,7 +144,7 @@ export const useAccountData = (): UseAccountDataResult => {
     } catch (error) {
       logger.error("加载账号数据失败", error)
     }
-  }, [isInitialLoad, prevTotalConsumption, prevBalances])
+  }, [])
 
   /**
    * Trigger remote refresh followed by a local reload, bubbling the result

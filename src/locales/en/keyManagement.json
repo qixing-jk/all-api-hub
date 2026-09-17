@@ -3,7 +3,11 @@
     "keys_one": "{{count}} key",
     "keys_other": "{{count}} keys",
     "loadFailed": "Load failed",
+    "loading": "loading",
+    "partialLoadFailed": "partial",
     "title": "Accounts overview",
+    "unavailableAccounts_one": "Keys unavailable · {{count}}",
+    "unavailableAccounts_other": "Keys unavailable · {{count}}",
     "unsupported": "unsupported"
   },
   "actions": {
