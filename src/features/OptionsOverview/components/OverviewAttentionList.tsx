@@ -66,39 +66,53 @@ function AttentionFilterRow<Filter extends string>({
       aria-label={label}
       className="gap-x-density-2 gap-y-density-1 flex min-w-0 flex-wrap items-center"
     >
-      <span className="text-faint-foreground text-xs">{label}</span>
+      <span className="text-muted-foreground shrink-0 text-xs font-medium select-none sm:min-w-12 sm:text-right">
+        {label}
+      </span>
       <ul
-        className="gap-x-density-1 gap-y-density-1 m-0 flex list-none flex-wrap items-center p-0"
+        className="gap-density-1 m-0 flex list-none flex-wrap items-center p-0"
         data-testid={testId}
       >
-        {options.map((option) => (
-          <li key={option.filter}>
-            <button
-              type="button"
-              aria-pressed={option.filter === activeFilter}
-              onClick={() => onSelect(option.filter)}
-              className={cn(
-                "gap-x-density-1-5 inline-flex items-center rounded-full px-2 py-1 text-xs transition-colors",
-                option.filter === activeFilter
-                  ? "bg-surface-subtle text-foreground dark:bg-foreground/[0.08] font-medium"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {option.indicatorClassName ? (
+        {options.map((option) => {
+          const isActive = option.filter === activeFilter
+
+          return (
+            <li key={option.filter}>
+              <button
+                type="button"
+                aria-pressed={isActive}
+                aria-label={`${option.label} ${option.count}`}
+                onClick={() => onSelect(option.filter)}
+                className={cn(
+                  "gap-x-density-1-5 inline-flex items-center rounded-full border px-2 py-0.5 text-xs transition-colors select-none",
+                  "focus-visible:ring-ring focus-visible:ring-1 focus-visible:outline-none",
+                  isActive
+                    ? "border-border-strong bg-surface-strong text-foreground font-medium"
+                    : "border-border-subtle text-secondary-foreground hover:bg-surface-subtle hover:text-foreground",
+                )}
+              >
+                {option.indicatorClassName ? (
+                  <span
+                    className={cn(
+                      "h-1.5 w-1.5 shrink-0 rounded-full",
+                      option.indicatorClassName,
+                    )}
+                    aria-hidden
+                  />
+                ) : null}
+                <span>{option.label}</span>
                 <span
                   className={cn(
-                    "h-2 w-2 shrink-0 rounded-full",
-                    option.indicatorClassName,
+                    "text-2xs tabular-nums",
+                    isActive ? "text-foreground/70" : "text-faint-foreground",
                   )}
-                  aria-hidden
-                />
-              ) : null}
-              <span>
-                {option.label} {option.count}
-              </span>
-            </button>
-          </li>
-        ))}
+                >
+                  {option.count}
+                </span>
+              </button>
+            </li>
+          )
+        })}
       </ul>
     </div>
   )
@@ -197,12 +211,12 @@ export function OverviewAttentionList({
 
   return (
     <Card className="border-border/80 bg-card/95 shadow-border/60 dark:border-foreground/10 dark:shadow-shadow/20 h-full max-h-[28rem] overflow-x-hidden overflow-y-auto shadow-sm">
-      <div className="border-border-subtle dark:border-foreground/10 gap-x-density-3 gap-y-density-2 py-density-3 flex flex-wrap items-center justify-between border-b px-4">
-        <div className="space-y-density-1 min-w-0">
+      <div className="border-border-subtle dark:border-foreground/10 gap-x-density-3 gap-y-density-2 py-density-3 flex flex-wrap items-center justify-between border-b px-4 sm:items-start">
+        <div className="space-y-density-1 min-w-0 sm:pt-0.5">
           <div className="text-sm font-medium">
             {t("optionsOverview:attention.summary", { total: items.length })}
           </div>
-          <div className="text-muted-foreground text-xs">
+          <div className="text-faint-foreground text-xs">
             {t("optionsOverview:attention.sortHint")}
           </div>
         </div>

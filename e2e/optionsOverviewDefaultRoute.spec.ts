@@ -330,13 +330,18 @@ test("overview attention list surfaces skipped check-ins that need action", asyn
   const severityFilters = attention.getByTestId(
     OPTIONS_OVERVIEW_TEST_IDS.attentionSeverityFilters,
   )
-  await expect(severityFilters).toContainText("Warning 1")
+  await expect(
+    severityFilters.getByRole("button", { name: "Warning 1" }),
+  ).toBeVisible()
 
   const categoryFilters = attention.getByTestId(
     OPTIONS_OVERVIEW_TEST_IDS.attentionCategoryFilters,
   )
-  await expect(categoryFilters).toContainText("Automation 1")
-  await categoryFilters.getByRole("button", { name: "Automation 1" }).click()
+  const automationFilter = categoryFilters.getByRole("button", {
+    name: "Automation 1",
+  })
+  await expect(automationFilter).toBeVisible()
+  await automationFilter.click()
   await expect(attention.getByText("No API profiles yet")).toHaveCount(0)
   await expect(attention.getByText(itemTitle)).toBeVisible()
 
