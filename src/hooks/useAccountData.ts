@@ -13,6 +13,7 @@ import type {
   SiteAccount,
 } from "~/types"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
+import { calculateTotalConsumption } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -75,13 +76,17 @@ export const useAccountData = (): UseAccountDataResult => {
   > | null>(null)
 
   // 动画相关状态
-  const [prevTotalConsumption] = useState({
+  const [prevTotalConsumption, setPrevTotalConsumption] = useState({
     USD: 0,
     CNY: 0,
   })
-  const [prevBalances] = useState<{
+  const [prevBalances, setPrevBalances] = useState<{
     [id: string]: CurrencyAmount
   }>({})
+  const animationSnapshotRef = useRef<{
+    consumption: CurrencyAmount
+    balances: CurrencyAmountMap
+  }>({ consumption: { USD: 0, CNY: 0 }, balances: {} })
 
   const enabledAccounts = useMemo(
     () => accounts.filter((account) => account.disabled !== true),
@@ -104,6 +109,15 @@ export const useAccountData = (): UseAccountDataResult => {
         stats: accountStats,
         displayAccounts: displaySiteData,
       } = await accountReadModels.getAccountOverviewSnapshot()
+
+      setPrevTotalConsumption(animationSnapshotRef.current.consumption)
+      setPrevBalances(animationSnapshotRef.current.balances)
+      animationSnapshotRef.current = {
+        consumption: calculateTotalConsumption(displaySiteData).amount,
+        balances: Object.fromEntries(
+          displaySiteData.map((site) => [site.id, { ...site.balance }]),
+        ),
+      }
 
       // 更新状态
       setAccounts(allAccounts)
