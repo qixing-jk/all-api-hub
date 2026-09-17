@@ -2,7 +2,10 @@
   "accountSummary": {
     "keys_other": "{{count}} key",
     "loadFailed": "Tải thất bại",
+    "loading": "Đang tải",
+    "partialLoadFailed": "Tải một phần",
     "title": "Tổng quan tài khoản",
+    "unavailableAccounts_other": "Không thể tải khóa · {{count}}",
     "unsupported": "chưa hỗ trợ"
   },
   "actions": {

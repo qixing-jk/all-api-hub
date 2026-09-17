@@ -1274,7 +1274,12 @@ describe("KeyManagement native page integration", () => {
       expect(accountSummaryBarPropsSpy.mock.lastCall?.[0]).toMatchObject({
         items: expect.arrayContaining([
           expect.objectContaining({ accountId: loadedAccount.id, count: null }),
-          expect.objectContaining({ accountId: emptyAccount.id, count: null }),
+          expect.objectContaining({
+            accountId: emptyAccount.id,
+            count: null,
+            hasData: false,
+            isLoading: true,
+          }),
           expect.objectContaining({ accountId: failedAccount.id, count: null }),
         ]),
       }),
@@ -1302,8 +1307,18 @@ describe("KeyManagement native page integration", () => {
     )
     expect(accountSummaryBarPropsSpy.mock.lastCall?.[0]).toMatchObject({
       items: expect.arrayContaining([
-        expect.objectContaining({ accountId: loadedAccount.id, count: 1 }),
-        expect.objectContaining({ accountId: emptyAccount.id, count: null }),
+        expect.objectContaining({
+          accountId: loadedAccount.id,
+          count: 1,
+          hasData: true,
+          isLoading: false,
+        }),
+        expect.objectContaining({
+          accountId: emptyAccount.id,
+          count: null,
+          hasData: false,
+          isLoading: true,
+        }),
         expect.objectContaining({ accountId: failedAccount.id, count: null }),
       ]),
     })
@@ -1313,7 +1328,12 @@ describe("KeyManagement native page integration", () => {
     await waitFor(() =>
       expect(accountSummaryBarPropsSpy.mock.lastCall?.[0]).toMatchObject({
         items: expect.arrayContaining([
-          expect.objectContaining({ accountId: emptyAccount.id, count: 0 }),
+          expect.objectContaining({
+            accountId: emptyAccount.id,
+            count: 0,
+            hasData: false,
+            isLoading: false,
+          }),
         ]),
       }),
     )
@@ -1322,7 +1342,12 @@ describe("KeyManagement native page integration", () => {
     await waitFor(() =>
       expect(accountSummaryBarPropsSpy.mock.lastCall?.[0]).toMatchObject({
         items: expect.arrayContaining([
-          expect.objectContaining({ accountId: loadedAccount.id, count: 1 }),
+          expect.objectContaining({
+            accountId: loadedAccount.id,
+            count: 1,
+            hasData: true,
+            isLoading: false,
+          }),
           expect.objectContaining({
             accountId: failedAccount.id,
             count: null,
@@ -2026,7 +2051,7 @@ describe("KeyManagement native page integration", () => {
         ]),
       }),
     )
-    expect(accountSelectorPanelPropsSpy.mock.lastCall?.[0]).toMatchObject({
+    expect(accountSummaryBarPropsSpy.mock.lastCall?.[0]).toMatchObject({
       failedAccounts: [
         {
           accountId: failedNativeAccount.id,
@@ -2039,6 +2064,8 @@ describe("KeyManagement native page integration", () => {
         loading: 0,
         error: 1,
       },
+    })
+    expect(accountSelectorPanelPropsSpy.mock.lastCall?.[0]).toMatchObject({
       aggregateCounts: {
         total: null,
         enabled: null,
@@ -2077,6 +2104,11 @@ describe("KeyManagement native page integration", () => {
       ).toBeNull(),
     )
     expect(screen.getAllByText(nativeAccount.name).length).toBeGreaterThan(0)
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:accountSummary.unavailableAccounts",
+      }),
+    )
     expect(
       screen.getAllByText(failedNativeAccount.name).length,
     ).toBeGreaterThan(0)

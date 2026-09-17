@@ -2,7 +2,10 @@
   "accountSummary": {
     "keys": "{{count}} 个密钥",
     "loadFailed": "加载失败",
+    "loading": "加载中",
+    "partialLoadFailed": "部分加载",
     "title": "账号概览",
+    "unavailableAccounts": "未能加载密钥 · {{count}}",
     "unsupported": "不支持"
   },
   "actions": {

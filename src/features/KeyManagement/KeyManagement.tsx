@@ -956,6 +956,9 @@ export default function KeyManagement(props: {
     const itemByAccount = new Map<string, KeyManagementAccountSummaryItem>(
       accountSummaryItems.map((item) => [item.accountId, item]),
     )
+    const accountsWithNativeRows = new Set(
+      nativeKeys.allRows.map((facts) => facts.ref.accountId),
+    )
     const settledNativeAccountIds = new Set(nativeKeys.settledAccountIds)
     for (const account of displayData) {
       const isNativeAccount = Boolean(
@@ -971,6 +974,9 @@ export default function KeyManagement(props: {
         accountId: account.id,
         name: account.name,
         count: hasCompleteCount ? nativeCount : null,
+        hasData: accountsWithNativeRows.has(account.id),
+        isLoading:
+          nativeKeys.isLoading && !settledNativeAccountIds.has(account.id),
         ...(!hasCompleteCount && nativeCount > 0
           ? { knownCount: nativeCount }
           : {}),
@@ -982,6 +988,8 @@ export default function KeyManagement(props: {
     accountSummaryItems,
     displayData,
     nativeKeys.failures,
+    nativeKeys.isLoading,
+    nativeKeys.allRows,
     nativeKeys.settledAccountIds,
     nativeKeys.rows,
   ])
@@ -1211,9 +1219,6 @@ export default function KeyManagement(props: {
         selectorOpen={isAccountSelectorOpen}
         onSelectorOpenChange={setIsAccountSelectorOpen}
         selectorTriggerRef={accountSelectorTriggerRef}
-        tokenLoadProgress={combinedTokenLoadProgress}
-        failedAccounts={combinedFailedAccounts}
-        onRetryFailedAccounts={retryCombinedFailedAccounts}
         aggregateCounts={aggregateCounts}
       />
 
@@ -1281,6 +1286,9 @@ export default function KeyManagement(props: {
         combinedAccountSummaryItems.length > 0 && (
           <AccountSummaryBar
             items={combinedAccountSummaryItems}
+            tokenLoadProgress={combinedTokenLoadProgress}
+            failedAccounts={combinedFailedAccounts}
+            onRetryFailedAccounts={retryCombinedFailedAccounts}
             activeAccountIds={allAccountsFilterAccountIds}
             onAccountClick={handleAccountSummaryClick}
           />
