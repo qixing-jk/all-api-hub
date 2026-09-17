@@ -23,7 +23,24 @@ const ThemeModeSettings = () => {
       id={SETTINGS_ANCHORS.APPEARANCE_THEME_MODE}
       icon={<Sun className="text-primary h-5 w-5" />}
       title={t("theme.mode")}
-      description={t("theme.selectTheme")}
+      description={
+        <span className="gap-density-1 flex flex-col">
+          <span>{t("theme.selectTheme")}</span>
+          <Caption
+            className={`${COLORS.text.tertiary} ${ANIMATIONS.transition.base}`}
+          >
+            {t("theme.currentTheme", {
+              theme: isThemeMode(themeMode)
+                ? themeOptions[themeMode].label
+                : undefined,
+              resolvedTheme:
+                resolvedTheme === THEME_MODE.DARK
+                  ? t("theme.dark")
+                  : t("theme.light"),
+            })}
+          </Caption>
+        </span>
+      }
       rightContent={
         <div className="flex min-w-0 items-center gap-2">
           <SegmentedControl
@@ -51,28 +68,14 @@ const ThemeModeSettings = () => {
               }
             })}
           />
-          <SettingsResetButton
-            iconOnly
-            hidden={themeMode === DEFAULT_THEME_MODE}
-            label={`${t("common:actions.reset")}: ${t("theme.mode")}`}
-            onClick={() => setThemeMode(DEFAULT_THEME_MODE)}
-          />
+          {themeMode !== DEFAULT_THEME_MODE && (
+            <SettingsResetButton
+              iconOnly
+              label={`${t("common:actions.reset")}: ${t("theme.mode")}`}
+              onClick={() => setThemeMode(DEFAULT_THEME_MODE)}
+            />
+          )}
         </div>
-      }
-      leftContent={
-        <Caption
-          className={`${COLORS.text.tertiary} ${ANIMATIONS.transition.base}`}
-        >
-          {t("theme.currentTheme", {
-            theme: isThemeMode(themeMode)
-              ? themeOptions[themeMode].label
-              : undefined,
-            resolvedTheme:
-              resolvedTheme === THEME_MODE.DARK
-                ? t("theme.dark")
-                : t("theme.light"),
-          })}
-        </Caption>
       }
     />
   )

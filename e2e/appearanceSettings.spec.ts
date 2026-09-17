@@ -22,6 +22,45 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 
+test("theme mode keeps supporting copy close and does not reserve an invisible reset slot", async ({
+  context,
+  page,
+  extensionId,
+}) => {
+  await forceExtensionLanguage(page, "en")
+  await stubLlmMetadataIndex(context)
+  await seedUserPreferences(await getServiceWorker(context), {
+    themeMode: THEME_MODE.SYSTEM,
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BASIC}`,
+  )
+  const card = page.locator(`#${SETTINGS_ANCHORS.APPEARANCE_THEME_MODE}`)
+  const group = card.getByRole("group")
+  await expect(group).toBeVisible()
+  const control = card.locator('[data-slot="card-item-control"]')
+  await expect
+    .configure({ soft: true })
+    .poll(async () => {
+      const groupBox = (await group.boundingBox())!
+      const controlBox = (await control.boundingBox())!
+      return controlBox.x + controlBox.width - groupBox.x - groupBox.width
+    })
+    .toBeLessThanOrEqual(1)
+  const description = card.getByText("Choose light, dark, or follow system", {
+    exact: true,
+  })
+  const currentTheme = card.getByText(/^Current:/)
+  await expect
+    .poll(async () => {
+      const descriptionBox = (await description.boundingBox())!
+      const currentBox = (await currentTheme.boundingBox())!
+      return currentBox.y - descriptionBox.y - descriptionBox.height
+    })
+    .toBeLessThanOrEqual(4)
+})
+
 for (const width of [1280, 390, 320]) {
   test(`changing text size keeps the appearance drawer bottom aligned at ${width}px`, async ({
     context,

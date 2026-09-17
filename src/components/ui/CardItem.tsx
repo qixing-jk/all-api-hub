@@ -37,7 +37,7 @@ export interface CardSectionProps
   icon?: React.ReactNode
   title?: string
   titleContent?: React.ReactNode
-  description?: string
+  description?: React.ReactNode
   onClick?: () => void
 }
 
